@@ -8,6 +8,9 @@ use Test::More;
 
 use Ravada;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -178,6 +181,21 @@ sub test_rename_twice {
 
 }
 
+sub test_rename_and_base($vm) {
+    my $base = create_domain($vm,undef, undef, 1);
+
+    my $new_domain_name = new_domain_name();
+    $base->rename(name => $new_domain_name, user => user_admin);
+    is($base->name , $new_domain_name);
+
+    $base->prepare_base(user_admin);
+    for my $vol ($base->list_files_base) {
+        next if $vol =~ /iso$/;
+        like($vol,qr{/$new_domain_name});
+    }
+
+}
+
 #######################################################################
 
 clean();
@@ -186,8 +204,7 @@ for my $vm_name (qw( Void KVM )) {
 
     my $vm_ok;
     eval {
-        my $vm = rvd_back()->search_vm($vm_name);
-        $vm_ok = 1 if $vm;
+        $vm_ok = rvd_back()->search_vm($vm_name);
     };
     diag($@) if $@;
     
@@ -203,6 +220,7 @@ for my $vm_name (qw( Void KVM )) {
 
         diag("Testing rename domains with $vm_name");
     
+        test_rename_and_base($vm_ok);
         test_rename_twice($vm_name);
 
         my $domain_name = test_create_domain($vm_name);

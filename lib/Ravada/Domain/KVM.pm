@@ -904,12 +904,18 @@ sub add_volume {
     my $bus = delete $args{driver};# or 'virtio');
     my $boot = (delete $args{boot} or undef);
     my $device = (delete $args{device} or 'disk');
+    my $type = delete $args{type};
     my %valid_arg = map { $_ => 1 } ( qw( driver name size vm xml swap target file allocation));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
             if !$valid_arg{$arg_name};
     }
+
+    $type = 'swap'  if !defined $type && $args{swap};
+    $type = ''   if !defined $type || $type eq 'sys';
+    confess "Error: type $type can't have swap flag" if $args{swap} && $type ne 'swap';
+
 #    confess "Missing vm"    if !$args{vm};
     $args{vm} = $self->_vm if !$args{vm};
     my ($target_dev) = ($args{target} or $self->_new_target_dev());
@@ -927,6 +933,7 @@ sub add_volume {
         ,xml =>  $args{xml}
         ,swap => ($args{swap} or 0)
         ,size => ($args{size} or undef)
+        ,type => $type
         ,allocation => ($args{allocation} or undef)
         ,target => $target_dev
     )   if !$path;

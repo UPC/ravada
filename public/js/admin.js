@@ -95,9 +95,6 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.type = function(v) {
         return typeof(v);
       }
-      $scope.show_swap = function() {
-        $scope.seeswap = !($scope.seeswap);
-      };
 
       $scope.get_machine_info = function(id) {
           $http.get('/machine/info/'+id+'.json')
@@ -113,6 +110,16 @@ ravadaApp.directive("solShowMachine", swMach)
       $http.get('/list_machines.json').then(function(response) {
               $scope.base = response.data;
       });
+
+      $scope.swap = {
+          enabled: true
+          ,value: 1
+      };
+
+      $scope.data = {
+          enabled: true
+          ,value: 1
+      };
   };
 
   function machinesPageC($scope, $http, $interval, $timeout, request, listMach) {

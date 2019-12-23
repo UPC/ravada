@@ -72,6 +72,7 @@ has 'clone_base_after_prepare' => (
 
 sub _type ($file) {
     my ($ext) = $file =~ m{.*\.(.*)};
+    confess if !defined $ext;
     confess if $ext =~ /-/;
     my %type = (
         void => 'Void'
@@ -128,6 +129,15 @@ sub type($self) {
 }
 
 sub base_filename($self) {
+    return $self->_default_base_filename() if !$self->domain;
+
+    my $base_img = $self->vm->dir_base($self->capacity)
+        ."/".$self->domain->name."-".$self->info->{target}.".".$self->base_extension;
+
+    return $base_img;
+}
+
+sub _default_base_filename($self) {
 
     my $ext = $self->base_extension();
     my $base_img = $self->file;
@@ -136,7 +146,10 @@ sub base_filename($self) {
 
     my $dir_base = $self->vm->dir_base($self->capacity);
 
-    $base_img =~ s{(.*)/(.*)\.\w+$}{$dir_base/$2\.ro.$ext};
+    $base_img =~ s{\.\w+$}{};
+    $base_img =~ s{\.[A-Z]+$}{};
+
+    $base_img .= ".$ext";
 
     confess "Error: base and original file are the same"
         if $base_img eq $self->file;
@@ -151,8 +164,8 @@ sub clone_filename($self, $name = undef) {
     my ($dir,$base_name,$ext) = $file_base =~ m{(.*)/(.*)\.ro\.(.*)};
     confess "Error: $file_base doesn't look like a base" if !$base_name;
 
-    $base_name =~ s/(.*)\.(SWAP)$/$1/;
-    $ext = "SWAP.$ext" if $2 eq 'SWAP';
+    $base_name =~ s/(.*)\.([A-Z]+)$/$1/;
+    $ext = "$2.$ext" if $2;
 
     $name = $base_name."-".Ravada::Utils::random_name(4) if !$name;
 
@@ -173,8 +186,11 @@ sub restore ($self) {
 }
 
 sub base_extension($self) {
+    my ($swap) = $self->file =~ /(\.[A-Z]+)\.\w+$/;
+    $swap = '' if !defined $swap;
+
     my ($ext) = ref($self) =~ /.*::(\w+)/;
-    return lc($ext);
+    return "ro$swap.".lc($ext);
 }
 
 sub set_info($self, $name, $value) {

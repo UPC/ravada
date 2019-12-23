@@ -1524,6 +1524,9 @@ sub req_new_domain {
     my $vm = ( $c->param('backend') or 'KVM');
     $swap *= 1024*1024*1024;
 
+    my $data = ($c->param('data') or 0);
+    $data *= 1024*1024*1024;
+
     my %args = (
            name => $name
         ,id_iso => $c->param('id_iso')
@@ -1532,6 +1535,7 @@ sub req_new_domain {
         ,vm=> $vm
         ,id_owner => $USER->id
         ,swap => $swap
+        ,data => $data
     );
     $args{memory} = int($c->param('memory')*1024*1024)  if $c->param('memory');
     $args{disk} = int($c->param('disk')*1024*1024*1024) if $c->param('disk');

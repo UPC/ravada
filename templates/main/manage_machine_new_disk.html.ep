@@ -13,6 +13,23 @@
     </div>
     <div class="row" ng-show="add_disk.device == 'disk'">
         <div class="col-lg-2">
+            <label for="type">type</label>
+        </div>
+        <div class="col-lg-2">
+           <select name="type" ng-model="add_disk.type">
+                <option value='sys'>system</option>
+                <option value='swap'>tmp</option>
+                <option value='data'>data</option>
+            </select>
+         </div>
+         <div class="col-lg-6">
+            <span ng-show="add_disk.type == 'sys'">Content will be cleaned on restore</span>
+            <span ng-show="add_disk.type == 'swap'">Content will be cleaned on restore and shutdown</span>
+            <span ng-show="add_disk.type == 'data'">Content will be kept on restore</span>
+        </div>
+    </div>
+    <div class="row" ng-show="add_disk.device == 'disk'">
+        <div class="col-lg-2">
             <label for="capacity">size</label>
         </div>
         <div class="col-lg-2">

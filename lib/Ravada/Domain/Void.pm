@@ -3,7 +3,7 @@ package Ravada::Domain::Void;
 use warnings;
 use strict;
 
-use Carp qw(cluck croak);
+use Carp qw(carp cluck croak);
 use Data::Dumper;
 use Fcntl qw(:flock SEEK_END);
 use File::Copy;
@@ -285,14 +285,18 @@ sub add_volume {
     my %args = @_;
 
     my $device = ( delete $args{device} or 'disk' );
+    my $type = ( delete $args{type} or '');
 
-    my $suffix = ".void";
-    $suffix = '.SWAP.void' if $args{swap};
+    $type = 'swap' if $args{swap};
+    $type = '' if $type eq 'sys';
+    $type = uc($type)."."   if $type;
+
+    my $suffix = "void";
 
     if ( !$args{file} ) {
         my $vol_name = ($args{name} or Ravada::Utils::random_name(4) );
         $args{file} = $self->_config_dir."/$vol_name";
-        $args{file} .= $suffix if $args{file} !~ /\.\w+$/;
+        $args{file} .= ".$type$suffix" if $args{file} !~ /\.\w+$/;
     }
 
     ($args{name}) = $args{file} =~ m{.*/(.*)};
