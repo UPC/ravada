@@ -351,6 +351,9 @@ sub remove_volume($self, $file) {
     confess "Missing file" if ! defined $file || !length($file);
 
     $self->_vol_remove($file);
+}
+
+sub _remove_controller_disk($self,$file) {
     return if ! $self->_vm->file_exists($self->_config_file);
     my $data = $self->_load();
     my $hardware = $data->{hardware};
@@ -669,6 +672,7 @@ sub _remove_disk {
     confess "Index is '$index' not number" if !defined $index || $index !~ /^\d+$/;
     my @volumes = $self->list_volumes();
     $self->remove_volume($volumes[$index]);
+    $self->_remove_controller_disk($volumes[$index]);
 }
 
 sub remove_controller {
