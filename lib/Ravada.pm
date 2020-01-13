@@ -2838,7 +2838,7 @@ sub _cmd_dettach($self, $request) {
     $domain->dettach($user);
 }
 
-sub _cmd_rebase_volumes($self, $request) {
+sub _cmd_rebase($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain);
 
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
@@ -2846,14 +2846,15 @@ sub _cmd_rebase_volumes($self, $request) {
         if !$user->is_admin;
 
     if ($domain->is_active) {
-        Ravada::Request->shutdown_domain(uid => $user->id, id_domain => $domain->id, timeout => 120);
-        $request->status("requested");
-        die "Error: domain ".$domain->name." is still active, shut it down to rebase\n"
+        my $req_shutdown = Ravada::Request->shutdown_domain(uid => $user->id, id_domain => $domain->id, timeout => 120);
+        $request->after_request($req_shutdown->id);
+        die "Warning: domain ".$domain->name." is up, retry.\n"
     }
     $request->status('working');
 
     my $new_base = Ravada::Domain->open($request->args('id_base'));
-    $domain->rebase_volumes($new_base);
+
+    $domain->rebase($user, $new_base);
 }
 
 
@@ -3540,7 +3541,8 @@ sub _req_method {
  ,list_vm_types => \&_cmd_list_vm_types
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
-,rebase_volumes => \&_cmd_rebase_volumes
+        ,rebase => \&_cmd_rebase
+
 ,refresh_storage => \&_cmd_refresh_storage
 ,refresh_machine => \&_cmd_refresh_machine
 ,domain_autostart=> \&_cmd_domain_autostart
