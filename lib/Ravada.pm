@@ -3758,7 +3758,6 @@ sub _cmd_open_exposed_ports($self, $request) {
 }
 
 sub DESTROY($self) {
-    $self->_wait_pids();
 }
 
 =head2 version
