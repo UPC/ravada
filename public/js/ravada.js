@@ -188,6 +188,8 @@
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
                         $scope.showmachine = data;
+                        $scope.list_bases();
+                        subscribe_nodes(url,data.type);
                     });
                 }
             };
@@ -214,15 +216,26 @@
                 }
             };
 
+            subscribe_nodes = function(url, type) {
+                var ws = new WebSocket(url);
+                ws.onopen = function(event) { ws.send('list_nodes/'+type) };
+                ws.onmessage = function(event) {
+                    var data = JSON.parse(event.data);
+                    $scope.$apply(function () {
+                        $scope.nodes = data;
+                    });
+                }
+            };
 
-            subscribe_ws = function(url) {
+
+            subscribe_ws = function(url, is_admin) {
                 subscribe_machine_info(url);
                 subscribe_requests(url);
                 subscribe_isos(url);
             };
 
           var url_ws;
-          $scope.init = function(id, url) {
+          $scope.init = function(id, url,is_admin) {
                 url_ws = url;
                 $scope.showmachineId=id;
                 $scope.tab_access=['client']
@@ -230,8 +243,7 @@
                    , 'Accept', 'Connection', 'Accept-Language', 'DNT', 'Host'
                    , 'Accept-Encoding', 'Cache-Control', 'X-Forwarded-For'
                 ];
-
-                subscribe_ws(url_ws);
+                subscribe_ws(url_ws, is_admin);
                 $http.get('/machine/info/'+$scope.showmachineId+'.json')
                     .then(function(response) {
                             $scope.showmachine=response.data;
@@ -459,13 +471,11 @@
               });
           };
           $scope.expose = function(port, name, restricted, id_port) {
-              console.log(restricted);
               if (restricted == "1" || restricted == true) {
                   restricted = 1;
               } else {
                   restricted = 0;
               }
-              console.log(restricted);
               $http.post('/request/expose/'
                   ,JSON.stringify({
                         'id_domain': $scope.showmachine.id
@@ -574,12 +584,6 @@
               $scope.new_port_name = null;
               $scope.new_port_restricted = false;
           };
-          list_nodes = function() {
-                $http.get('/list_nodes.json').then(function(response) {
-                $scope.nodes = response.data;
-            });
-
-          };
             $scope.change_disk = function(id_machine, index ) {
                 var new_settings={
                   driver: $scope.showmachine.hardware.disk[index].driver,
@@ -589,7 +593,6 @@
                 if ($scope.showmachine.hardware.disk[index].device === 'disk') {
                   new_settings.capacity = $scope.showmachine.hardware.disk[index].capacity;
                 }
-                console.log(new_settings);
                 $http.post('/machine/hardware/change'
                     ,JSON.stringify({
                         'id_domain': id_machine
@@ -622,6 +625,43 @@
                 ).then(function(response) {
                 });
             };
+            $scope.list_bases = function() {
+                $http.get('/list_bases.json')
+                    .then(function(response) {
+                            $scope.bases=response.data;
+                            if(typeof($scope.new_base) == 'undefined') {
+                                for (var i = 0; i < $scope.bases.length; i++) {
+                                    if ($scope.bases[i].id == $scope.showmachine.id_base) {
+                                        $scope.new_base = $scope.bases[i];
+                                    } else if ($scope.showmachine.is_base
+                                        && $scope.bases[i].id == $scope.showmachine.id) {
+                                        $scope.new_base = $scope.bases[i];
+                                    }
+                                }
+                            }
+                    });
+            };
+            $scope.rebase= function() {
+                $scope.req_new_base = $scope.new_base;
+                $http.post('/request/rebase/'
+                    , JSON.stringify({ 'id_base': $scope.new_base.id
+                        ,'id_domain': $scope.showmachine.id
+                        ,'retry': 5
+                    })
+                ).then(function(response) {
+                    // if there are many , we pick the last one
+                    id_request = response.data.request;
+                    subscribe_request(id_request, function(data) {
+                        $scope.$apply(function () {
+                            $scope.rebase_request=data;
+                            if ($scope.rebase_request.status == 'done') {
+                                $scope.list_bases();
+                            }
+                        });
+                    });
+                });
+            };
+
             $scope.add_disk = {
                 device: 'disk',
                 type: 'sys',
@@ -629,6 +669,23 @@
                 capacity: '1G',
                 allocation: '0.1G'
             };
+
+            $scope.request = function(request, args) {
+                $http.post('/request/'+request+'/'
+                    ,JSON.stringify(args)
+                ).then(function(response) {
+                    id_request = response.data.request;
+                    subscribe_request(id_request, function(data) {
+                        $scope.$apply(function () {
+                            $scope.pending_request=data;
+                            if ($scope.pending_request.status == 'done') {
+                                $scope.list_bases();
+                            }
+                        });
+                    });
+                });
+            };
+
             $scope.message = [];
             $scope.disk_remove = [];
             $scope.pending_before = 10;
