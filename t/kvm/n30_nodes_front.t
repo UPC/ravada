@@ -58,8 +58,7 @@ sub test_list_vms($vm_name) {
     my @list_domains2_b = $vm->list_domains();
     is(scalar @list_domains_b+1, scalar @list_domains2_b);
 
-    my @list_domains_active2_b = $vm->list_domains( active => 1);
-    is(scalar ($vm->list_domains(active => 1)), 0);
+    my @list_domains_active_b = $vm->list_domains( active => 1);
 
     my $list_domains2 = rvd_front->list_domains();
 
@@ -83,6 +82,9 @@ sub test_list_vms($vm_name) {
     is($front_domain3->{is_active}, 1);
     is($front_domain3->{remote_ip}, $ip);
 
+    my @list_domains_active_b_after = $vm->list_domains( active => 1);
+    is(scalar(@list_domains_active_b_after),scalar(@list_domains_active_b) + 1);
+
     $domain->remove(user_admin());
 }
 
@@ -98,8 +100,7 @@ sub test_list_vms_refresh($vm_name) {
     my @list_domains2_b = $vm->list_domains();
     is(scalar @list_domains_b+1, scalar @list_domains2_b);
 
-    my @list_domains_active2_b = $vm->list_domains( active => 1);
-    is(scalar ($vm->list_domains(active => 1)), 0);
+    my @list_domains_active_b = $vm->list_domains( active => 1);
 
     my $list_domains2 = rvd_front->list_domains();
 
@@ -123,6 +124,9 @@ sub test_list_vms_refresh($vm_name) {
     is($front_domain3->{name}, $domain->name);
     is($front_domain3->{is_active}, 1) or exit;
     is($front_domain3->{remote_ip}, $ip);
+
+    my @list_domains_active_b_after = $vm->list_domains( active => 1);
+    is(scalar(@list_domains_active_b_after),scalar(@list_domains_active_b) + 1);
 
     $domain->remove(user_admin());
 }
