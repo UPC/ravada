@@ -34,7 +34,7 @@
                 </div>
             </div>
             <div ng-show="copy_request" class="alert alert-warning">
-                Copy {{shownamchine.name}} {{copy_request.status}}.
+                Copy {{showmachine.name}} {{copy_request.status}}.
                 <br/>
                 {{copy_request.error}}
             </div>

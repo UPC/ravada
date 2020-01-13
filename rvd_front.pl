@@ -957,7 +957,7 @@ post '/request/(:name)/' => sub {
         ,uid => $USER->id
         ,%$args
     );
-    return $c->render(json => { ok => 1, request => $req });
+    return $c->render(json => { ok => 1, request => $req->id });
 };
 
 get '/request/(:id).(:type)' => sub {
