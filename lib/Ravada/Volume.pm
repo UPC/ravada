@@ -266,8 +266,6 @@ sub _cache_volume_info($self) {
     $sth->execute(encode_json(\%info), $name, $file, $self->domain->id, $n_order, $row->{id});
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 sub _bump_order($self, $n_order) {
     my $sth = $self->domain->_dbh->prepare(
         "SELECT id FROM volumes where n_order=? AND id_domain=?"
@@ -304,46 +302,4 @@ sub _swap_order($self, $id, $new_order, $old_order) {
     $sth_sw->execute($old_order, $id_conflict);
 }
 
-||||||| merged common ancestors
-=======
-||||||| merged common ancestors
-=======
-sub _bump_order($self, $n_order) {
-    my $sth = $self->domain->_dbh->prepare(
-        "SELECT id FROM volumes where n_order=? AND id_domain=?"
-    );
-    $sth->execute($n_order, $self->domain->id);
-
-    my ($id) = $sth->fetchrow();
-    return if !defined $id;
-
-    $self->_bump_order($n_order+1);
-
-    $sth = $self->domain->_dbh->prepare(
-        "UPDATE volumes set n_order=? WHERE id=?"
-    );
-    $sth->execute($n_order+1, $id);
-
-}
-
->>>>>>> refactor(volumes): fix duplicated volume order
-sub _swap_order($self, $id, $new_order, $old_order) {
-    return if $new_order == $old_order;
-
-    my $sth = $self->domain->_dbh->prepare(
-        "SELECT id FROM volumes where n_order=? AND id<>? AND id_domain=?"
-    );
-    $sth->execute($new_order, $id, $self->domain->id);
-    my ($id_conflict) = $sth->fetchrow();
-
-    my $sth_sw = $self->domain->_dbh->prepare(
-        "UPDATE volumes set n_order = ? WHERE id = ?"
-    );
-    # tmp bogus
-    $sth_sw->execute(-$new_order, $id_conflict);
-    $sth_sw->execute($new_order, $id);
-    $sth_sw->execute($old_order, $id_conflict);
-}
-
->>>>>>> wip(volumes): update cached instead of recreating
 1;
