@@ -3176,9 +3176,11 @@ Check if the domain has swap volumes defined, and clean them
 sub clean_swap_volumes {
     my $self = shift;
     for my $vol ( $self->list_volumes_info) {
-        $vol->restore()
-            if $vol->file && $vol->file =~ /\.SWAP\.\w+$/
-            && $vol->info->{backing_file};
+        if ($vol->file && $vol->file =~ /\.SWAP\.\w+$/) {
+            eval { $vol->backing_file };
+            confess $@ if $@ && $@ !~ /No backing file/i;
+            $vol->restore() if !$@;
+        }
     }
 }
 
@@ -4337,25 +4339,6 @@ sub _create_base_as_old($self, $user, $new_base) {
 
     $new_base->is_public($old_base->is_public);
     return @reqs;
-}
-
-sub _rebase_volumes_old($self, $new_base, $hard=0) {
-    die "Error: domain ".$new_base->name." is not a base\n"
-        if !$new_base->is_base;
-
-    return $self->_rebase_volumes_hard($new_base) if $hard;
-
-    my @files_target = $new_base->list_files_base_target();
-    my %file_target = map { $_->[1] => $_->[0] } @files_target;
-
-    for my $vol ( $self->list_volumes_info) {
-        next if $vol->info->{device} ne 'disk';
-        my $new_base = $file_target{$vol->info->{target}};
-        die "I can't find new base file for ".Dumper($vol) if !$new_base;
-        my @cmd = ('/usr/bin/qemu-img','rebase','-b',$new_base,$vol->file);
-        my ($out, $err) = $self->_vm->run_command(@cmd);
-    }
-    $self->id_base($new_base->id);
 }
 
 sub _rebase_volumes($self, $new_base) {
