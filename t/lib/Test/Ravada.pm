@@ -254,6 +254,7 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
     user_admin();
     $RVD_BACK = $rvd;
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') , disk => 1024 * 1024 ];
+    $ARG_CREATE_DOM{Void} = [ id_iso => search_id_iso('Alpine') ];
 
     Ravada::Utils::user_daemon->_reload_grants();
     return $rvd;
@@ -673,6 +674,8 @@ sub wait_request {
         my @list_requests = map { Ravada::Request->open($_) }
             _list_requests();
         $request = \@list_requests;
+    } elsif (!ref($request)) {
+        $request = [$request];
     }
 
     my $background = delete $args{background};
@@ -707,7 +710,13 @@ sub wait_request {
                 $done_all = 0;
             } elsif (!$done{$req->id}) {
                 $done{$req->{id}}++;
-                is($req->error,'') or confess if $check_error;
+                if ($check_error) {
+                    if ($req->command eq 'remove') {
+                        like($req->error,qr(^$|Unknown domain));
+                    } else {
+                        is($req->error,'') or confess;
+                    }
+                }
             }
         }
         my $post = join(".",_list_requests);
@@ -854,40 +863,29 @@ sub _clean_db {
 }
 
 sub clean_remote {
-    my $conf = _load_remote_config() or return;
-    for my $vm_name (keys %$conf) {
-        my $vm;
-        eval { $vm = rvd_back->search_vm($vm_name) };
-        warn $@ if $@;
-        next if !$vm;
-
-        my $node;
-        eval { $node = $vm->new(%{$conf->{$vm_name}}) };
-        next if ! $node;
-        if ( !$node->_do_is_active ) {
-            $node->remove;
-            next;
-        }
-
-        clean_remote_node($node);
-        _remove_old_domains_vm($node);
-        _remove_old_disks_kvm($node) if $vm_name =~ /^kvm/i;
-        $node->remove();
-    }
+    my $config = _load_remote_config() or return;
+    return _clean_remote_nodes($config);
 }
 
 sub _clean_remote_nodes {
     my $config = shift;
     for my $name (keys %$config) {
-        diag("Cleaning $name");
-        my $node;
-        my $vm = rvd_back->search_vm($config->{$name}->{type});
-        eval { $node = $vm->new($config->{$name}) };
-        warn $@ if $@;
-        next if !$node || !$node->_do_is_active;
+        my @vms = @{$config->{$name}->{vm}};
+        die "Error: $name has no vms ".Dumper($config->{$name})
+            if !scalar @vms;
+        delete $config->{$name}->{vm};
+        $config->{$name}->{name} = $name;
+        for my $type (@vms) {
+            diag("Cleaning $name $type");
+            my $node;
+            my $vm = rvd_back->search_vm($type);
+            eval { $node = $vm->new($config->{$name}) };
+            warn $@ if $@;
 
-        clean_remote_node($node);
-
+            start_node($node);
+            clean_remote_node($node);
+            $node->remove();
+        }
     }
 }
 
@@ -937,6 +935,20 @@ sub search_id_iso {
     die "There is no iso called $name%" if !$id;
     return $id;
 }
+
+sub _search_cd {
+    my $name = shift;
+    connector() if !$CONNECTOR;
+    rvd_back();
+    my $sth = $CONNECTOR->dbh->prepare("SELECT device FROM iso_images "
+        ." WHERE name like ?"
+    );
+    $sth->execute("$name%");
+    my ($cd) = $sth->fetchrow;
+    die "There is no CD in iso called $name%" if !$cd;
+    return $cd;
+}
+
 
 sub search_iptable_remote {
     my %args = @_;
