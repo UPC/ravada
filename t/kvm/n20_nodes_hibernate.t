@@ -110,5 +110,4 @@ for my $vm_name ('Void' , 'KVM' ) {
 }
 
 clean();
-clean_remote();
 done_testing();

@@ -974,7 +974,7 @@ sub test_migrate_back($node) {
     shutdown_domain_internal($clone);
 
     eval { $clone->migrate($vm) };
-    is($@, '');
+    is(''.$@, '');
 
     for my $file ($clone->list_volumes) {
         my $md5 = _md5($file, $vm);
