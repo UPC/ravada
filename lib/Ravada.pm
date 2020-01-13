@@ -2423,10 +2423,11 @@ sub _do_execute_command {
             $err =~ s/(.*?)retry.?/$1/i;
             $request->error($err)   if $err;
         }
-    }
+    } else {
     $request->status('done')
         if $request->status() ne 'done'
             && $request->status() !~ /^retry/i;
+    }
 }
 
 sub _cmd_manage_pools($self, $request) {
