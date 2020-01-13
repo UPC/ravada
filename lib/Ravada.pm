@@ -3465,7 +3465,6 @@ sub _cmd_cleanup($self, $request) {
     $self->_clean_requests('cleanup', $request,'done');
     $self->_clean_requests('enforce_limits', $request,'done');
     $self->_clean_requests('refresh_vms', $request,'done');
-    $self->_wait_pids();
 }
 
 sub _req_method {
