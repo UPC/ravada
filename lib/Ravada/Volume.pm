@@ -234,6 +234,7 @@ sub _cache_volume_info($self) {
         my $file = (delete $info{file} or '');
         confess "Error: Missing n_order field ".Dumper(\%info) if !exists $info{n_order};
         my $n_order = delete $info{n_order};
+        $self->_bump_order($n_order);
 
         eval {
         my $sth = $self->domain->_dbh->prepare(
@@ -257,12 +258,28 @@ sub _cache_volume_info($self) {
 
     $self->_swap_order($row->{id}, $n_order, $row->{n_order});
 
-    warn "Error: Missing file field ".Dumper(\%info, $row)
-        if !defined $file || !length($file);
     my $sth = $self->domain->_dbh->prepare(
         "UPDATE volumes set info=?, name=?,file=?,id_domain=?,n_order=? WHERE id=?"
     );
     $sth->execute(encode_json(\%info), $name, $file, $self->domain->id, $n_order, $row->{id});
+}
+
+sub _bump_order($self, $n_order) {
+    my $sth = $self->domain->_dbh->prepare(
+        "SELECT id FROM volumes where n_order=? AND id_domain=?"
+    );
+    $sth->execute($n_order, $self->domain->id);
+
+    my ($id) = $sth->fetchrow();
+    return if !defined $id;
+
+    $self->_bump_order($n_order+1);
+
+    $sth = $self->domain->_dbh->prepare(
+        "UPDATE volumes set n_order=? WHERE id=?"
+    );
+    $sth->execute($n_order+1, $id);
+
 }
 
 sub _swap_order($self, $id, $new_order, $old_order) {
