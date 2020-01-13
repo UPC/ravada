@@ -1373,7 +1373,7 @@ sub balance_vm($self, $base=undef) {
         @vms = $self->list_nodes();
     }
 #    warn Dumper([ map { $_->name } @vms]);
-    return $self if !@vms;
+    return $self if scalar(@vms)<2;
     for my $vm (_random_list( @vms )) {
         next if !$vm->enabled();
         my $active = 0;
