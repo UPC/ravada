@@ -4235,6 +4235,8 @@ sub rebase($self, $user, $new_base) {
     if ( !$self->is_base ) {
         return $self->_rebase_volumes($new_base);
     }
+    $self->pool_clones(0);
+    $self->pool_start(0);
     # if I am a base, we rebase all the clones
     for my $clone_info ( $self->clones ) {
         next if $clone_info->{id} == $new_base->id;
