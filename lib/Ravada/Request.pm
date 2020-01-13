@@ -97,7 +97,7 @@ our %VALID_ARG = (
     ,change_curr_memory => {uid => 1, id_domain => 1, ram => 1}
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
-    ,rebase_volumes => { uid => 1, id_base => 1, id_domain => 1 }
+    ,rebase => { uid => 1, id_base => 1, id_domain => 1 }
     # ports
     ,expose => { uid => 1, id_domain => 1, port => 1, name => 2, restricted => 2, id_port => 2}
     ,remove_expose => { uid => 1, id_domain => 1, port => 1}
@@ -132,6 +132,7 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             add_hardware remove_hardware set_driver change_hardware
             expose remove_expose
             set_base_vm
+            rebase rebase_volumes
             shutdown_node start_node
     );
 
