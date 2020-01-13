@@ -258,8 +258,6 @@ sub _cache_volume_info($self) {
 
     $self->_swap_order($row->{id}, $n_order, $row->{n_order});
 
-    warn "Error: Missing file field ".Dumper(\%info, $row)
-        if !defined $file || !length($file);
     my $sth = $self->domain->_dbh->prepare(
         "UPDATE volumes set info=?, name=?,file=?,id_domain=?,n_order=? WHERE id=?"
     );
