@@ -1,4 +1,4 @@
-<div ng-hide="showmachine.is_base">
+<div ng-hide="showmachine.is_base || new_base.id != showmachine.id_base">
     <p>
        You can prepare this machine as a base to create clones from it.
     </p>
