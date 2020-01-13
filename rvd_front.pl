@@ -957,7 +957,7 @@ post '/request/(:name)/' => sub {
         ,uid => $USER->id
         ,%$args
     );
-    return $c->render(json => { ok => 1, request => $req });
+    return $c->render(json => { ok => 1, request => $req->id });
 };
 
 get '/request/(:id).(:type)' => sub {
@@ -1523,9 +1523,6 @@ sub req_new_domain {
     my $swap = ($c->param('swap') or 0);
     my $vm = ( $c->param('backend') or 'KVM');
     $swap = int($swap * 1024*1024*1024);
-
-    my $data = ($c->param('data') or 0);
-    $data *= 1024*1024*1024;
 
     my $data = ($c->param('data') or 0);
     $data *= 1024*1024*1024;
