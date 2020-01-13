@@ -673,6 +673,7 @@ sub create_volume {
     my $file_xml = delete $args{xml}   or confess "ERROR: Missing XML template";
 
     my $size        = delete $args{size};
+    $size = int($size) if defined $size;
     my $swap        =(delete $args{swap} or 0);
     my $target      = delete $args{target};
     my $capacity    = delete $args{capacity};
