@@ -1246,6 +1246,39 @@ get '/session/(#tag)/(#value)' => sub {
     $c->session($tag => $value);
     return $c->render( json => { ok => "Session $tag set to $value " });
 };
+
+###################################################
+# reports
+#
+get '/report/request/:command/*dates' => { dates => undef } => sub($c) {
+    my $command = $c->stash('command');
+    my ($from,$to) = _parse_dates($c->stash('dates'));
+
+    return $c->render( template => 'report_logins'
+        , json => $RAVADA->report_request($command,$from, $to));
+};
+
+get '/report/request_by_domain/:command/*dates' => { dates => undef } => sub($c) {
+    my $command = $c->stash('command');
+    my ($from,$to) = _parse_dates($c->stash('dates'));
+
+    return $c->render( template => 'report_logins'
+        , json => $RAVADA->report_request_by_domain($command,$from, $to));
+};
+
+sub _parse_dates($dates) {
+    return if !$dates;
+
+    my ($from, $to);
+    if ($dates =~ /-/) {
+        ($from, $to) = $dates =~ /(.*)-(.*)/;
+    } else {
+        $from = $dates;
+    }
+    return ($from, $to);
+}
+
+
 ###################################################
 
 sub _init_error {

@@ -10,6 +10,7 @@ Ravada::Front - Web Frontend library for Ravada
 =cut
 
 use Carp qw(carp);
+use Date::Calc( qw(Delta_Days Today Add_Delta_Days));
 use DateTime;
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
@@ -1146,6 +1147,114 @@ sub list_network_interfaces($self, %args) {
     $self->{$cache_key} = $interfaces;
 
     return $interfaces;
+}
+
+sub report_request($self, $command, $from=undef, $to=undef) {
+    my @args = ($command);
+    my $sql = "SELECT id, date_req FROM requests WHERE command= ? ";
+    my $where = '';
+    if ($from) {
+        push @args, ($from);
+        $where .="AND date_req >= ?";
+    }
+    if ($to) {
+        push @args, ($to);
+        $where .= " AND date_req <= ?";
+    }
+    my $sth = $CONNECTOR->dbh->prepare("$sql $where");
+    $sth->execute(@args);
+
+    my %day;
+    while (my $row = $sth->fetchrow_hashref) {
+        my ($date) = $row->{date_req};
+        $date =~ s{\s.*}{};
+        $day{$date}++;
+        $from = $date if !$from;
+    }
+
+    _fill_all_days(\%day, 0, $from, $to);
+    return  { map { $_ => $day{$_} } sort keys %day};
+}
+
+sub report_request_by_domain($self, $command, $from=undef, $to=undef) {
+    my $sql = "SELECT id, id_domain,date_req,args FROM requests WHERE command= ? ";
+    my @args = ($command);
+    my $where = '';
+    if ($from) {
+        push @args, ($from);
+        $where .="AND date_req >= ?";
+    }
+    if ($to) {
+        push @args, ($to);
+        $where .= " AND date_req <= ?";
+    }
+    my $sth = $CONNECTOR->dbh->prepare("$sql $where");
+    $sth->execute(@args);
+
+    my $name = _domain_names($self);
+    my %day;
+    while (my ($id, $id_domain, $date, $args_json) = $sth->fetchrow) {
+        my $domain_name;
+        if (defined $id_domain) {
+            $domain_name = ($name->{$id_domain} or $id_domain);
+        } else {
+            my $args = decode_json($args_json);
+            if (exists $args->{name}) {
+                $domain_name = $args->{name};
+            } elsif (exists $args->{id_domain}) {
+                $id_domain = $args->{id_domain};
+                $domain_name = ($name->{$id_domain} or $id_domain);
+            }
+        }
+        $date =~ s{\s.*}{};
+        $day{$date}->{$domain_name}++;
+        $from = $date if !$from;
+    }
+    _fill_all_days(\%day, {}, $from, $to);
+    return  { map { $_ => $day{$_} } sort keys %day};
+}
+
+sub _fill_all_days($day, $value, $from, $to=undef) {
+    my ($y,$m,$d);
+
+    if ($from) {
+        ($y,$m,$d) = $from =~ /^(\d+\d\d\d)(\d\d)(\d\d)/;
+        ($y,$m,$d) = $from =~ /^(\d+\d\d\d)-(\d\d)-(\d\d)/
+        if !$y;
+
+        confess "Error: I can't parse '$from' to YYYY-MM-DD"
+        unless $y && $m && $d;
+    }
+
+    my ($y2,$m2,$d2);
+    if (defined $to) {
+        ($y2,$m2,$d2) = $to =~ /^(\d+\d\d\d)(\d\d)(\d\d)/;
+
+        confess "Error: I can't parse '$to' to YYYY-MM-DD"
+            unless $y2 && $m2 && $d2;
+    } else {
+        ($y2, $m2, $d2) = Today();
+    }
+
+    my $delta_days = Delta_Days( $y, $m, $d, $y2, $m2, $d2);
+    for (0 .. $delta_days) {
+        $m = "0$m" if length $m < 2;
+        $d = "0$d" if length $d < 2;
+        my $key = "$y-$m-$d";
+        $day->{$key} = $value unless exists $day->{$key};
+        ($y, $m, $d) = Add_Delta_Days($y, $m ,$d, 1);
+    }
+
+}
+
+sub _domain_names($self) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, name FROM domains");
+    $sth->execute;
+    my %dom_name;
+    while (my ($id, $name) = $sth->fetchrow) {
+        $dom_name{$id} = $name;
+    }
+    return \%dom_name;
 }
 
 =head2 version
