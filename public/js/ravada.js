@@ -243,9 +243,6 @@
           };
           $scope.domain_remove = 0;
           $scope.new_name_invalid = false;
-          $http.get('/pingbackend.json').then(function(response) {
-            $scope.pingbe_fail = !response.data;
-          });
           $scope.machine_info = function(id) {
                $http.get('/machine/info/'+$scope.showmachineId+'.json')
                     .then(function(response) {

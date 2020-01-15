@@ -116,9 +116,6 @@ ravadaApp.directive("solShowMachine", swMach)
   };
 
   function machinesPageC($scope, $http, $interval, $timeout, request, listMach) {
-    $http.get('/pingbackend.json').then(function(response) {
-      $scope.pingbe_fail = !response.data;
-    });
         if( $scope.check_netdata && $scope.check_netdata != "0" ) {
             var url = $scope.check_netdata;
             $scope.check_netdata = 0;
@@ -299,9 +296,6 @@ ravadaApp.directive("solShowMachine", swMach)
   };
 
   function usersPageC($scope, $http, $interval, request) {
-    $http.get('/pingbackend.json').then(function(response) {
-      $scope.pingbe_fail = !response.data;
-    });
     $scope.action = function(target,action,machineId){
       $http.get('/'+target+'/'+action+'/'+machineId+'.json');
     };
@@ -309,9 +303,6 @@ ravadaApp.directive("solShowMachine", swMach)
   };
 
   function messagesPageC($scope, $http, $interval, request) {
-    $http.get('/pingbackend.json').then(function(response) {
-      $scope.pingbe_fail = !response.data;
-    });
     $scope.getMessages = function() {
       $http.get('/messages.json').then(function(response) {
         $scope.list_message= response.data;
