@@ -133,15 +133,54 @@ sub _get_machine_info($rvd, $args) {
     return $info;
 }
 
+sub _list_recent_requests($rvd, $seconds) {
+    my @now = localtime(time-$seconds);
+    $now[4]++;
+    for (0 .. 4) {
+        $now[$_] = "0".$now[$_] if length($now[$_])<2;
+    }
+    my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
+        ." ".$now[2].":".$now[1].":".$now[0];
+    my $sth = $rvd->_dbh->prepare(
+        "SELECT id,command, status "
+        ." FROM requests "
+        ." WHERE "
+        ."  date_changed >= ? "
+        ." ORDER BY date_changed "
+    );
+    $sth->execute($time_recent);
+    my @reqs;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @reqs,($row);
+    }
+    return @reqs;
+}
+
 sub _ping_backend($rvd, $args) {
-    my $requests = $rvd->list_requests(undef, 120);
-    warn Dumper($requests);
-    my @requests2 = grep { $_->{status} ne 'requested' } @$requests;
+    my @reqs = _list_recent_requests($rvd, 20);
 
-    return 0 if !scalar(@requests2) && grep { $_->{command} eq 'ping_backend'} @$requests;
+    my $requested = scalar( grep { $_->{status} eq 'requested' } @reqs );
 
-    warn "***".Dumper(map { [ $_->{command} => $_->{status} ] } @requests2);
-    return scalar (@requests2);
+    # If there are requests in state different that requested it's ok
+    return 1 if scalar(@reqs) > $requested;
+
+    my ($ping_backend)
+    = grep {
+        $_->{command} eq 'ping_backend'
+    } @reqs ;
+
+    if (!$ping_backend) {
+        return 0 if $requested;
+        my @now = localtime(time);
+        my $seconds = $now[0];
+        warn $seconds;
+        Ravada::Request->ping_backend() if $seconds < 5;
+        return 1;
+    }
+
+    return 0 if $ping_backend->{status} eq 'requested';
+
+    return 1;
 }
 
 sub _different_list($list1, $list2) {
