@@ -117,6 +117,8 @@ our $SESSION_TIMEOUT = ($CONFIG_FRONT->{session_timeout} or 5 * 60);
 our $SESSION_TIMEOUT_ADMIN = ($CONFIG_FRONT->{session_timeout_admin} or 15 * 60);
 
 my $WS = Ravada::WebSocket->new(ravada => $RAVADA);
+my %ALLOWED_ANONYMOUS_WS = map { $_ => 1 } qw(list_bases_anonymous list_alerts);
+
 init();
 ############################################################################3
 
@@ -154,6 +156,7 @@ hook before_routes => sub {
     # anonymous URLs
     if (($url =~ m{^/machine/(clone|display|info|view)/}
         || $url =~ m{^/(list_bases_anonymous|request/)}i
+        || $url =~ m{^/ws/subscribe}
         ) && !_logged_in($c)) {
         $USER = _anonymous_user($c);
         return if $USER->is_temporary;
@@ -440,12 +443,6 @@ get '/list_bases_anonymous.json' => sub {
 get '/list_lxc_templates.json' => sub {
     my $c = shift;
     $c->render(json => $RAVADA->list_lxc_templates);
-};
-
-get '/pingbackend.json' => sub {
-
-    my $c = shift;
-    $c->render(json => $RAVADA->ping_backend);
 };
 
 # machine commands
@@ -1220,6 +1217,9 @@ websocket '/ws/subscribe' => sub {
     $c->inactivity_timeout( $expiration );
     $c->on(message => sub {
             my ($ws, $channel ) = @_;
+            return access_denied($c)
+              if !$ALLOWED_ANONYMOUS_WS{$channel} && $USER->is_temporary;
+
             $WS->subscribe( ws => $ws
                 , channel => $channel
                 , login => $USER->name
@@ -2353,10 +2353,9 @@ sub _random_name {
 sub _new_anonymous_user {
     my $c = shift;
 
-    my $name_mojo = reverse($c->signed_cookie('mojolicious'));
-
     my $length = 32;
-    $name_mojo = _random_name($length)    if !$name_mojo;
+    my $cookie = ($c->signed_cookie('mojolicious') or _random_name($length));
+    my $name_mojo = reverse($cookie);
 
     $name_mojo =~ tr/[^a-z][^A-Z][^0-9]/___/c;
 

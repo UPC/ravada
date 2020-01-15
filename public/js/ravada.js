@@ -157,9 +157,6 @@
                 subscribe_ping_backend(url);
             };
 
-            $http.get('/pingbackend.json').then(function(response) {
-                $scope.pingbe_fail = !response.data;
-            });
             $scope.only_public = false;
             $scope.toggle_only_public=function() {
                     $scope.only_public = !$scope.only_public;
