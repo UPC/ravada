@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.5.0-beta9';
+our $VERSION = '0.6.0';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -15,8 +15,9 @@ use Moose;
 use POSIX qw(WNOHANG);
 use Time::HiRes qw(gettimeofday tv_interval);
 use YAML;
-
+use MIME::Base64;
 use Socket qw( inet_aton inet_ntoa );
+use Image::Magick::Q16;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -138,6 +139,7 @@ sub BUILD {
 sub _install($self) {
     $self->_create_tables();
     $self->_upgrade_tables();
+    $self->_upgrade_timestamps();
     $self->_update_data();
     $self->_init_user_daemon();
 }
@@ -1267,6 +1269,13 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','is_pool','int NOT NULL default 0');
 
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
+
+    if ($self->_upgrade_table('domains','screenshot','BLOB')) {
+
+    $self->_upgrade_screenshots();
+
+    }
+
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
     $self->_upgrade_table('iptables','id_vm','int DEFAULT NULL');
@@ -1280,6 +1289,30 @@ sub _upgrade_tables {
     $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
 }
 
+sub _upgrade_timestamps($self) {
+    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/;
+
+    my $req = Ravada::Request->ping_backend();
+    return if $req->{date_changed};
+
+    my @commands = qw(cleanup enforce_limits list_isos list_network_interfaces
+    manage_pools open_exposed_ports open_iptables ping_backend
+    refresh_machine refresh_storage refresh_vms
+    screenshot);
+    my $sql ="DELETE FROM requests WHERE "
+        .join(" OR ", map { "command = '$_'" } @commands);
+    my $sth = $CONNECTOR->dbh->prepare($sql);
+    $sth->execute();
+
+    $self->_upgrade_timestamp('requests','date_changed');
+}
+
+sub _upgrade_timestamp($self, $table, $field) {
+
+    my $sth = $CONNECTOR->dbh->prepare("ALTER TABLE $table change $field "
+        ."$field timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+    $sth->execute();
+}
 
 sub _connect_dbh {
     my $driver= ($CONFIG->{db}->{driver} or 'mysql');;
@@ -1407,6 +1440,12 @@ sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG ) {
         warn "Error: Unknown config entry \n".Dumper(\%config) if ! $0 =~ /\.t$/;
         return 0;
     }
+    warn "Warning: LDAP authentication with match is discouraged. Try bind.\n"
+        if exists $config_orig->{ldap}
+        && exists $config_orig->{ldap}->{auth}
+        && $config_orig->{ldap}->{auth} =~ /match/
+        && $0 !~ /\.t$/;
+
     return 1;
 }
 
@@ -2231,7 +2270,7 @@ sub _kill_stale_process($self) {
         ." AND pid IS NOT NULL "
         ." AND start_time IS NOT NULL "
     );
-    $sth->execute(time - 5*scalar(@domains) + 60 );
+    $sth->execute(time - 5*scalar(@domains) - 60 );
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
@@ -2267,7 +2306,8 @@ sub _domain_working {
     }
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, status FROM requests "
         ." WHERE id <> ? AND id_domain=? "
-        ." AND (status <> 'requested' AND status <> 'done' AND command <> 'set_base_vm')");
+        ." AND (status <> 'requested' AND status <> 'done' AND status <> 'waiting' "
+        ." AND command <> 'set_base_vm')");
     $sth->execute($id_request, $id_domain);
     my ($id, $status) = $sth->fetchrow;
 #    warn "CHECKING DOMAIN WORKING "
@@ -2320,9 +2360,10 @@ sub _execute {
         return;
     }
 
+    $request->status('working','') unless $request->status() eq 'waiting';
+    $request->pid($$);
     $request->start_time(time);
     $request->error('');
-        $request->status('working','');
     if ($dont_fork || !$CAN_FORK) {
         $self->_do_execute_command($sub, $request);
         return;
@@ -2355,6 +2396,7 @@ sub _do_execute_command {
 #        local *STDERR = $f_err;
 #    }
 
+    $request->status('working','') unless $request->status() eq 'working';
     $request->pid($$);
     my $t0 = [gettimeofday];
     eval {
@@ -2364,6 +2406,18 @@ sub _do_execute_command {
     my $elapsed = tv_interval($t0,[gettimeofday]);
     $request->run_time($elapsed);
     $request->error($err)   if $err;
+    if ($err) {
+        my $user = $request->defined_arg('user');
+        if ($user) {
+            my $subject = $err;
+            my $message = '';
+            if (length($subject) > 40 ) {
+                $message = $subject;
+                $subject = substr($subject,0,40);
+                $user->send_message($subject, $message);
+            }
+        }
+    }
     if ($err && $err =~ /retry.?$/i) {
         my $retry = $request->retry;
         if (defined $retry && $retry>0) {
@@ -2454,14 +2508,11 @@ sub _cmd_screenshot {
 
     my $id_domain = $request->args('id_domain');
     my $domain = $self->search_domain_by_id($id_domain);
-    my $bytes = 0;
     if (!$domain->can_screenshot) {
         die "I can't take a screenshot of the domain ".$domain->name;
     } else {
-        $bytes = $domain->screenshot($request->args('filename'));
-        $bytes = $domain->screenshot($request->args('filename'))    if !$bytes;
-    }
-    $request->error("No data received") if !$bytes;
+        $domain->screenshot();
+        }
 }
 
 sub _cmd_copy_screenshot {
@@ -2485,6 +2536,21 @@ sub _cmd_copy_screenshot {
 
         copy($domain->file_screenshot, $base_screenshot);
     }
+}
+
+sub _upgrade_screenshots() {
+
+    my $self = shift;
+    my $id = shift  or confess "ERROR: missing argument id";
+
+    my $sth = $CONNECTOR->dbh->prepare("SELECT file_screenshot FROM domains WHERE id=?");
+    $sth->execute($id);
+    my ($file_path)= $sth->fetchrow;
+
+    my $file= new Image::Magick::Q16;
+    $file->Read($file_path);
+    
+    $self->_data(screenshot => encode_base64($file));
 }
 
 sub _cmd_create{
@@ -2556,6 +2622,7 @@ sub _can_fork {
     $req->error($msg);
     $req->at_time(time+10);
     $req->status('waiting') if $req->status() !~ 'waiting';
+    $req->at_time(time+10);
     return 0;
 }
 sub _wait_pids {
@@ -2565,8 +2632,7 @@ sub _wait_pids {
     for my $type ( keys %{$self->{pids}} ) {
         for my $pid ( keys %{$self->{pids}->{$type}}) {
             my $kid = waitpid($pid , WNOHANG);
-            last if $kid <= 0 ;
-            push @done, ($kid);
+            push @done, ($pid) if $kid == $pid || $kid == -1;
         }
     }
     return if !@done;
@@ -2987,6 +3053,11 @@ sub _cmd_shutdown {
         die "Unknown domain '$id_domain'\n" if !$domain
     }
 
+    Ravada::Request->refresh_machine(
+                   uid => $uid
+            ,id_domain => $id_domain
+        ,after_request => $request->id
+    );
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
     $domain->shutdown(timeout => $timeout, user => $user
@@ -3090,8 +3161,8 @@ sub _cmd_refresh_machine($self, $request) {
     my $domain = Ravada::Domain->open($id_domain) or confess "Error: domain $id_domain not found";
     $domain->check_status();
     $domain->list_volumes_info();
+    $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
     $domain->info($user);
-    $self->_remove_unnecessary_downs($domain);
 
 }
 
@@ -3426,7 +3497,6 @@ sub _cmd_cleanup($self, $request) {
     $self->_clean_requests('cleanup', $request,'done');
     $self->_clean_requests('enforce_limits', $request,'done');
     $self->_clean_requests('refresh_vms', $request,'done');
-    $self->_wait_pids();
 }
 
 sub _req_method {
@@ -3719,7 +3789,6 @@ sub _cmd_open_exposed_ports($self, $request) {
 }
 
 sub DESTROY($self) {
-    $self->_wait_pids();
 }
 
 =head2 version

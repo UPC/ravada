@@ -673,6 +673,7 @@ sub create_volume {
     my $file_xml = delete $args{xml}   or confess "ERROR: Missing XML template";
 
     my $size        = delete $args{size};
+    $size = int($size) if defined $size;
     my $swap        =(delete $args{swap} or 0);
     my $target      = delete $args{target};
     my $capacity    = delete $args{capacity};
@@ -680,7 +681,7 @@ sub create_volume {
 
     confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
 
-    confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+$/);
+    confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+(\.\d+)?$/);
 
     confess "Invalid capacity"
         if defined $capacity && ( $capacity == 0 || $capacity !~ /^\d+$/);

@@ -4,6 +4,8 @@ use strict;
 #####
 use locale ':not_characters';
 #####
+use lib 'lib';
+
 use Carp qw(confess);
 use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
@@ -23,11 +25,11 @@ use I18N::LangTags::Detect;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-use lib 'lib';
 
 use Ravada::Front;
 use Ravada::Front::Domain;
 use Ravada::Auth;
+use Ravada::WebSocket;
 use POSIX qw(locale_h);
 
 my $help;
@@ -114,6 +116,7 @@ our $SESSION_TIMEOUT = ($CONFIG_FRONT->{session_timeout} or 5 * 60);
 # session times out in 15 minutes for admin users
 our $SESSION_TIMEOUT_ADMIN = ($CONFIG_FRONT->{session_timeout_admin} or 15 * 60);
 
+my $WS = Ravada::WebSocket->new(ravada => $RAVADA);
 init();
 ############################################################################3
 
@@ -672,6 +675,8 @@ get '/machine/set/#id/#field/#value' => sub {
     return access_denied($c)       if !$USER->can_manage_machine($c->stash('id'));
 
     my $domain = Ravada::Front::Domain->open($id) or die "Unkown domain $id";
+    $USER->send_message("Setting $field to $value in ".$domain->name)
+        if $domain->_data($field) ne $value;
     return $c->render(json => { $field => $domain->_data($field, $value)});
 };
 
@@ -952,7 +957,7 @@ post '/request/(:name)/' => sub {
         ,uid => $USER->id
         ,%$args
     );
-    return $c->render(json => { ok => 1 });
+    return $c->render(json => { ok => 1, request => $req });
 };
 
 get '/request/(:id).(:type)' => sub {
@@ -1169,17 +1174,19 @@ sub user_settings {
 
 get '/img/screenshots/:file' => sub {
     my $c = shift;
-
     my $file = $c->param('file');
     my $path = $DOCUMENT_ROOT."/".$c->req->url->to_abs->path;
+    my ($id_domain) =$path =~ m{/(\d+)\..+$};
+    my $domain = $RAVADA->search_domain_by_id($id_domain);
 
-    my ($id_domain ) =$path =~ m{/(\d+)\..+$};
+    my $image = new Image::Magick;
+    my $sshot = $image->BlobToImage($domain->get_info()->{screenshot});
     if (!$id_domain) {
         warn"ERROR : no id domain in $path";
         return $c->reply->not_found;
     }
     if ($USER && !$USER->is_admin) {
-        my $domain = $RAVADA->search_domain_by_id($id_domain);
+        #my $domain = $RAVADA->search_domain_by_id($id_domain);
         return $c->reply->not_found if !$domain;
         unless ($domain->is_base && $domain->is_public) {
             return access_denied($c) if $USER->id != $domain->id_owner;
@@ -1205,6 +1212,23 @@ get '/iso/download/(#id).json' => sub {
 
     return $c->render(json => {request => $req->id});
 };
+
+websocket '/ws/subscribe' => sub {
+    my $c = shift;
+    my $expiration = $SESSION_TIMEOUT;
+    $expiration = $SESSION_TIMEOUT_ADMIN    if $USER->is_admin;
+    $c->inactivity_timeout( $expiration );
+    $c->on(message => sub {
+            my ($ws, $channel ) = @_;
+            $WS->subscribe( ws => $ws
+                , channel => $channel
+                , login => $USER->name
+                , remote_ip => _remote_ip($c)
+            );
+    });
+
+    $c->on(finish => sub { my $ws = shift; $WS->unsubscribe($ws) });
+} => 'ws_subscribe';
 
 ###################################################
 #
@@ -1284,7 +1308,7 @@ sub login {
             my @languages = I18N::LangTags::implicate_supers(
                 I18N::LangTags::Detect::detect()
             );
-            my $header = $c->req->headers->header('accept-language');
+            my $header = ( $c->req->headers->header('accept-language') or '');
             my @languages2 = map {s/^(.*?)[;-].*/$1/; $_ } split /,/,$header;
 
             Ravada::Request->post_login(
@@ -1438,6 +1462,7 @@ sub admin {
         $c->stash(n_clones_hide => ($CONFIG_FRONT->{admin}->{hide_clones} or 10) );
         $c->stash(autostart => ( $CONFIG_FRONT->{admin}->{autostart} or 0));
 
+        $c->stash(USER => $USER);
         if ($USER && $USER->is_admin && $CONFIG_FRONT->{monitoring}) {
             if (!defined $c->session('monitoring')) {
                 my $host = $c->req->url->to_abs->host;
@@ -1497,7 +1522,7 @@ sub req_new_domain {
     my $name = $c->param('name');
     my $swap = ($c->param('swap') or 0);
     my $vm = ( $c->param('backend') or 'KVM');
-    $swap *= 1024*1024*1024;
+    $swap = int($swap * 1024*1024*1024);
 
     my %args = (
            name => $name
@@ -1698,7 +1723,8 @@ sub init {
     $home->detect();
 
     if (exists $ENV{MORBO_VERBOSE}
-        || (exists $ENV{MOJO_MODE} && $ENV{MOJO_MODE} =~ /devel/i )) {
+        || (exists $ENV{MOJO_MODE} && defined $ENV{MOJO_MODE}
+                && $ENV{MOJO_MODE} =~ /devel/i )) {
             return if -e $home->rel_file("public");
     }
     app->static->paths->[0] = ($CONFIG_FRONT->{dir}->{public}
@@ -1881,7 +1907,6 @@ sub manage_machine {
     $c->stash(errors => \@errors);
     return $c->render(template => 'main/settings_machine'
         , nodes => [$RAVADA->list_vms($domain->type)]
-        , isos => $RAVADA->iso_file($domain->type)
         , list_clones => [map { $_->{name} } $domain->clones]
         , action => $c->req->url->to_abs->path
     );
@@ -2129,7 +2154,7 @@ sub copy_machine {
     } else {
         push @reqs,(copy_machine_many($base, $number, \@create_args));
     }
-    return $c->render(json => { request => [map { $_->id } @ reqs ] } );
+    return $c->render(json => { request => [map { $_->id } @reqs ] } );
 }
 
 sub new_machine_copy($c) {
