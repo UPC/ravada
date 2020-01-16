@@ -77,7 +77,7 @@
                     </div>
 %			        if ($user
 %                       && ( $user->can_change_settings || $user->can_change_settings_all)){
-                        <a ng-show="machine.id_clone && (machine.action && host_restore != machine.id_clone)"
+                        <a ng-show="machine.id_clone && !machine.action && host_restore != machine.id_clone"
                             align="right" href="/machine/manage/{{machine.id_clone}}.html"><i class="fa fa-fw fa-cog" title="<%=l 'Settings' %>"></i></a>
 %                   }
 
