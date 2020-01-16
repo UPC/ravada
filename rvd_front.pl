@@ -6,7 +6,7 @@ use locale ':not_characters';
 #####
 use lib 'lib';
 
-use Carp qw(confess);
+use Carp qw(confess cluck);
 use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
 use Hash::Util qw(lock_hash);
@@ -1217,6 +1217,10 @@ websocket '/ws/subscribe' => sub {
     $c->inactivity_timeout( $expiration );
     $c->on(message => sub {
             my ($ws, $channel ) = @_;
+            if (!$USER) {
+                cluck "Warning: USER unknown";
+                return;
+            }
             return access_denied($c)
               if !$ALLOWED_ANONYMOUS_WS{$channel} && $USER->is_temporary;
 

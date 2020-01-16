@@ -1240,6 +1240,7 @@ sub _upgrade_tables {
         $sth->execute;
     }
     $self->_upgrade_table('users','external_auth','char(32) DEFAULT NULL');
+    $self->_upgrade_table('users','date_created','timestamp DEFAULT CURRENT_TIMESTAMP');
 
     $self->_upgrade_table('networks','requires_password','int(11)');
     $self->_upgrade_table('networks','n_order','int(11) not null default 0');
@@ -3437,15 +3438,19 @@ sub _remove_unnecessary_downs($self, $domain) {
 
 sub _refresh_volatile_domains($self) {
    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, id_vm FROM domains WHERE is_volatile=1"
+        "SELECT id, name, id_vm, id_owner FROM domains WHERE is_volatile=1"
     );
     $sth->execute();
-    while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
+    while ( my ($id_domain, $name, $id_vm, $id_owner) = $sth->fetchrow ) {
         my $domain = Ravada::Domain->open(id => $id_domain, _force => 1);
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
             if ($domain) {
                 $domain->_post_shutdown(user => $USER_DAEMON);
                 $domain->remove($USER_DAEMON);
+            } else {
+                my $sth= $CONNECTOR->dbh->prepare("DELETE FROM users WHERE id=?");
+                $sth->execute($id_owner);
+                $sth->finish;
             }
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
             $sth_del->execute($id_domain);
@@ -3493,6 +3498,7 @@ sub _cmd_set_base_vm {
 
 sub _cmd_cleanup($self, $request) {
     $self->_clean_volatile_machines( request => $request);
+    $self->_clean_temporary_users( );
     $self->_clean_requests('cleanup', $request);
     $self->_clean_requests('cleanup', $request,'done');
     $self->_clean_requests('enforce_limits', $request,'done');
@@ -3726,6 +3732,26 @@ sub _enforce_limits_active($self, $request) {
     }
 }
 
+sub _clean_temporary_users($self) {
+    my $sth_users = $CONNECTOR->dbh->prepare(
+        "SELECT u.id, d.id, u.date_created"
+        ." FROM users u LEFT JOIN domains d "
+        ." ON u.id = d.id_owner "
+        ." WHERE u.is_temporary = 1 AND u.date_created < ?"
+    );
+
+    my $sth_del = $CONNECTOR->dbh->prepare(
+        "DELETE FROM users "
+        ." WHERE is_temporary = 1 AND id=?"
+    );
+    my $one_day = _date_now(-24 * 60 * 60);
+    $sth_users->execute( $one_day );
+    while ( my ( $id_user, $id_domain, $date_created ) = $sth_users->fetchrow ) {
+        next if $id_domain;
+        $sth_del->execute($id_user);
+    }
+}
+
 sub _clean_volatile_machines($self, %args) {
     my $request = delete $args{request};
 
@@ -3740,8 +3766,13 @@ sub _clean_volatile_machines($self, %args) {
         );
         if ($domain_real) {
             next if $domain_real->domain && $domain_real->is_active;
-            $domain_real->_post_shutdown();
-            $domain_real->remove($USER_DAEMON);
+            eval { $domain_real->_post_shutdown() };
+            warn $@ if $@;
+            eval { $domain_real->remove($USER_DAEMON) };
+            warn $@ if $@;
+        } elsif ($domain->{id_owner}) {
+            my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users where id=?");
+            $sth->execute($domain->{id_owner});
         }
 
         $sth_remove->execute($domain->{id});
