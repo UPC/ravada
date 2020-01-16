@@ -93,15 +93,14 @@
                 var toGet = '/machine/remove/'+machineId+'.html?sure=yes';
                 $http.get(toGet);
             };
-            $scope.action = function(machineId, action) {
-                $scope.refresh = 2;
+            $scope.action = function(machine, action) {
+                machine.action = false;
                 if ( action == 'restore' ) {
-                    $scope.host_restore = machineId;
+                    $scope.host_restore = machine.id_clone;
                     $scope.host_shutdown = 0;
                 } else if (action == 'shutdown' || action == 'hibernate') {
                     $scope.host_restore = 0;
-                    $scope.host_action = -1;
-                    $http.get( '/machine/'+action+'/'+machineId+'.json');
+                    $http.get( '/machine/'+action+'/'+machine.id_clone+'.json');
                 } else {
                     alert("unknown action "+action);
                 }
@@ -112,9 +111,10 @@
                 if (!ws_connected) {
                     $scope.ws_fail = true;
                 }
-            }, 5 * 1000 );
+            }, 60 * 1000 );
 
             $scope.subscribe_list_machines_user = function(url) {
+                $scope.machines = [];
                 var channel = 'list_machines_user';
                 if ($scope.anonymous) {
                     channel = 'list_bases_anonymous';
@@ -128,11 +128,15 @@
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
-                        $scope.machines = data;
                         $scope.public_bases = 0;
                         $scope.private_bases = 0;
-                        for (var i = 0; i < $scope.machines.length; i++) {
-                            if ( $scope.machines[i].is_public == 1) {
+                        for (var i = 0; i < data.length; i++) {
+                            if (!$scope.machines[i] || !$scope.machines[i].action ) {
+                                $scope.machines[i] = data[i];
+                            } else {
+                                $scope.machines[i].screenshot = data[i].screenshot;
+                            }
+                            if ( data[i].is_public == 1) {
                                 $scope.public_bases++;
                             } else {
                                 $scope.private_bases++;
@@ -157,16 +161,11 @@
                 subscribe_ping_backend(url);
             };
 
-            $http.get('/pingbackend.json').then(function(response) {
-                $scope.pingbe_fail = !response.data;
-            });
             $scope.only_public = false;
             $scope.toggle_only_public=function() {
                     $scope.only_public = !$scope.only_public;
             };
             $scope.startIntro = startIntro;
-            $scope.host_action = 0;
-            $scope.refresh = 0;
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
@@ -253,9 +252,6 @@
           };
           $scope.domain_remove = 0;
           $scope.new_name_invalid = false;
-          $http.get('/pingbackend.json').then(function(response) {
-            $scope.pingbe_fail = !response.data;
-          });
           $scope.machine_info = function(id) {
                $http.get('/machine/info/'+$scope.showmachineId+'.json')
                     .then(function(response) {

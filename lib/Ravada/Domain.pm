@@ -1450,6 +1450,9 @@ sub _pre_remove_domain($self, $user, @) {
     $self->_remove_iptables()   if $self->is_known();
     $self->shutdown_now($user)  if $self->is_active;
 
+    my $owner;
+    $owner= Ravada::Auth::SQL->search_by_id($self->id_owner)    if $self->is_known();
+    $owner->remove() if $owner && $owner->is_temporary();
 }
 
 # check the node is active
@@ -1493,6 +1496,7 @@ sub _after_remove_domain {
     $self->_remove_volumes_db();
     $self->_remove_bases_vm_db();
     $self->_remove_domain_db();
+
 }
 
 sub _remove_all_volumes($self) {
@@ -2636,34 +2640,20 @@ sub _test_iptables_jump {
 }
 
 
-sub _remove_temporary_machine {
-    my $self = shift;
+sub _remove_temporary_machine($self) {
 
     return if !$self->is_volatile;
 
-    my %args = @_;
-
-    return if !$self->is_known();
-    return if !$self->is_volatile();
-
-    my $user;
-    eval { $user = Ravada::Auth::SQL->search_by_id($self->id_owner) };
-    return if !$user;
-
-    my $req= $args{request};
-        $req->status(
-            "removing"
-            ,"Removing volatile machine ".$self->name)
-                if $req;
+    my $owner;
+    $owner= Ravada::Auth::SQL->search_by_id($self->id_owner)    if $self->is_known();
 
         if ($self->is_removed) {
             $self->remove_disks();
             $self->_after_remove_domain();
-        } else {
-            $self->remove($user)    if $user->is_temporary;
         }
-    $self->remove($user);
+    $self->remove(Ravada::Utils::user_daemon);
 
+    $owner->remove() if $owner && $owner->is_temporary();
 }
 
 sub _post_resume {
