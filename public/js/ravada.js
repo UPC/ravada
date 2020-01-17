@@ -131,10 +131,17 @@
                         $scope.public_bases = 0;
                         $scope.private_bases = 0;
                         for (var i = 0; i < data.length; i++) {
-                            if (!$scope.machines[i] || !$scope.machines[i].action ) {
+                            if ( !$scope.machines[i] ) {
                                 $scope.machines[i] = data[i];
                             } else {
-                                $scope.machines[i].screenshot = data[i].screenshot;
+                                $scope.machines[i].can_hibernate = data[i].can_hibernate;
+                                $scope.machines[i].id= data[i].id;
+                                $scope.machines[i].id_clone = data[i].id_clone;
+                                $scope.machines[i].is_active = data[i].is_active;
+                                $scope.machines[i].is_locked = data[i].is_locked;
+                                $scope.machines[i].is_public = data[i].is_public;
+                                $scope.machines[i].name = data[i].name;
+                                $scope.machines[i].name_clone = data[i].name_clone;
                             }
                             if ( data[i].is_public == 1) {
                                 $scope.public_bases++;
