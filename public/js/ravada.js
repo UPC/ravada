@@ -130,8 +130,11 @@
                     $scope.$apply(function () {
                         $scope.public_bases = 0;
                         $scope.private_bases = 0;
+                        if ($scope.machines && $scope.machines.length != data.length) {
+                            $scope.machines = [];
+                        }
                         for (var i = 0; i < data.length; i++) {
-                            if ( !$scope.machines[i] ) {
+                            if ( !$scope.machines[i] || $scope.machines[i].id != data[i].id ) {
                                 $scope.machines[i] = data[i];
                             } else {
                                 $scope.machines[i].can_hibernate = data[i].can_hibernate;

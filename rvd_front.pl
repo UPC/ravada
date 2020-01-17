@@ -1342,11 +1342,20 @@ websocket '/ws/subscribe' => sub {
                 , channel => $channel
                 , login => $USER->name
                 , remote_ip => _remote_ip($c)
+                , client => _headers($c)
             );
     });
 
     $c->on(finish => sub { my $ws = shift; $WS->unsubscribe($ws) });
 } => 'ws_subscribe';
+
+sub _headers($c) {
+    my %client;
+    for my $name (@{$c->req->headers->names}) {
+        $client{$name}= $c->req->headers->header($name);
+    }
+    return \%client
+}
 
 ###################################################
 #

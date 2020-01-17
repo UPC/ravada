@@ -10,7 +10,7 @@ use Moose;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my $DEBUG=1;
+my $DEBUG=0;
 
 has clients => (
     is => 'ro'
@@ -98,7 +98,9 @@ sub _list_machines_user($rvd, $args) {
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
 
-    return $rvd->list_machines_user($user)
+    my $client = $args->{client} if exists $args->{client};
+    my $ret = $rvd->list_machines_user($user, {client => $client});
+    return $ret;
 }
 
 sub _list_bases_anonymous($rvd, $args) {
@@ -173,7 +175,6 @@ sub _ping_backend($rvd, $args) {
         return 0 if $requested;
         my @now = localtime(time);
         my $seconds = $now[0];
-        warn $seconds;
         Ravada::Request->ping_backend() if $seconds < 5;
         return 1;
     }
