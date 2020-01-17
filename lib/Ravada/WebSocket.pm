@@ -10,7 +10,7 @@ use Moose;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my $DEBUG=1;
+my $DEBUG=0;
 
 has clients => (
     is => 'ro'

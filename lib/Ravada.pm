@@ -2539,19 +2539,26 @@ sub _cmd_copy_screenshot {
     }
 }
 
-sub _upgrade_screenshots() {
+sub _upgrade_screenshots($self) {
 
-    my $self = shift;
-    my $id = shift  or confess "ERROR: missing argument id";
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id, name, file_screenshot FROM domains WHERE file_screenshot like '%' "
+    );
+    $sth->execute();
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT file_screenshot FROM domains WHERE id=?");
-    $sth->execute($id);
-    my ($file_path)= $sth->fetchrow;
-
-    my $file= new Image::Magick::Q16;
-    $file->Read($file_path);
-    
-    $self->_data(screenshot => encode_base64($file));
+    my $sth_update = $CONNECTOR->dbh->prepare(
+        "UPDATE domains set screenshot = ? WHERE id=?"
+    );
+    while ( my ($id, $name, $file_path)= $sth->fetchrow ) {
+        next if ! -e $file_path;
+        warn "INFO: converting screenshot from $name";
+        my $file= new Image::Magick::Q16;
+        $file->Read($file_path);
+        eval {
+            $sth_update->execute(encode_base64($file), $id);
+        };
+        warn $@;
+    }
 }
 
 sub _cmd_create{
