@@ -28,20 +28,21 @@ my $BACKEND = 'KVM';
 ################################################################
 sub test_create_domain {
     my $vm_name = shift;
-
     my $vm = rvd_back->search_vm($vm_name);
     ok($vm,"I can't find VM $vm_name") or return;
 
     my $name = new_domain_name();
 
     my $domain;
-    eval { $domain = $vm->create_domain(name => $name
+    $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
                     , disk => 1024 * 1024
-                    , arg_create_dom($vm_name))
-    };
+                    , arg_create_dom($vm_name));
 
-    ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or return;
+	my $req = Ravada::Request->add_hardware(name => 'network', id_domain => $domain->id, uid => user_admin->id);
+	wait_request();
+
+	ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or return;
     ok($domain->name
         && $domain->name eq $name,"Expecting domain name '$name' , got "
         .($domain->name or '<UNDEF>')
@@ -57,8 +58,8 @@ sub test_req_prepare_base{
     my $domain0 = $RAVADA->search_domain($name);
     ok(!$domain0->is_base,"Domain $name should not be base");
 
-    my $req = Ravada::Request->prepare_base(id_domain => $domain0->id, uid => user_admin->id);
-    $RAVADA->_process_all_requests_dont_fork();
+	my $req = Ravada::Request->prepare_base(id_domain => $domain0->id, uid => user_admin->id);
+    wait_request();
 
     ok($req->status('done'),"Request should be done, it is".$req->status);
     ok(!$req->error(),"Request error ".$req->error);
@@ -76,15 +77,8 @@ sub test_add_nic {
     my $vm_name = shift;
 
 #    diag("Testing add description $vm_name");
-    my $vm =rvd_back->search_vm($vm_name);
+    my $vm = rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name);
-    my $req = Ravada::Request->add_hardware(name => 'network',
-                , id_domain => $domain->id
-                , uid => $USER->id
-            );
-    wait_request();
-    is($req->error,"");
-    is($req->status,"done");
 
     #Read xml
     sub read_mac{
@@ -94,16 +88,16 @@ sub test_add_nic {
         my (@if_mac) = $xml->findnodes('/domain/devices/interface/mac');
         for my $if_mac (@if_mac) {
             my $mac = $if_mac->getAttribute('address');
-            warn $mac;
+            diag "\n$mac";
             push @mac, $mac;
         }
         return(@mac);
     }
 
     #Prepare base
-    test_req_prepare_base($domain->name);
+	test_req_prepare_base($domain->name);
 
-    #Clone domain
+	#Clone domain
     my $name = new_domain_name();
     my $domain_father = $domain;
     diag("requesting create domain $name, cloned from ".$domain_father->name);
