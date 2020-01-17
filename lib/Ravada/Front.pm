@@ -132,7 +132,7 @@ sub list_machines_user {
     my $user = shift;
 
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,is_public, file_screenshot"
+        "SELECT id,name,is_public, screenshot"
         ." FROM domains "
         ." WHERE is_base=1"
         ." ORDER BY name "
@@ -169,7 +169,7 @@ sub list_machines_user {
                 );
             }
             $base{name_clone} = $clone->name;
-            $base{screenshot} = ( $clone->_data('file_screenshot') 
+            $base{screenshot} = ( $clone->_data('screenshot')
                                 or $base{screenshot});
             $base{is_active} = $clone->is_active;
             $base{id_clone} = $clone->id;
@@ -585,13 +585,20 @@ Returns a reference to a list of the ISOs known by the system
 =cut
 
 sub iso_file ($self, $vm_type) {
+
+    my $cache = $self->_cache_get("list_isos");
+    return $cache if $cache;
+
     my $req = Ravada::Request->list_isos(
         vm_type => $vm_type
     );
+    return [] if !$req;
     $self->wait_request($req);
     return [] if $req->status ne 'done';
 
     my $isos = decode_json($req->output());
+
+    $self->_cache_store("list_isos",$isos);
 
     return $isos;
 }
@@ -705,8 +712,6 @@ Return true if alive, false otherwise.
 
 sub ping_backend {
     my $self = shift;
-
-    return 1 if $self->_ping_backend_localhost();
 
     my $req = Ravada::Request->ping_backend();
     $self->wait_request($req, 2);
@@ -1098,6 +1103,22 @@ sub add_node($self,%arg) {
     return $req->id;
 }
 
+sub _cache_store($self, $key, $value, $timeout=60) {
+    $self->{cache}->{$key} = [ $value, time+$timeout ];
+}
+
+sub _cache_get($self, $key) {
+
+    delete $self->{cache}->{$key}
+        if exists $self->{cache}->{$key}
+            && $self->{cache}->{$key}->[1] < time;
+
+    return if !exists $self->{cache}->{$key};
+
+    return $self->{cache}->{$key}->[0];
+
+}
+
 sub list_network_interfaces($self, %args) {
 
     my $vm_type = delete $args{vm_type}or confess "Error: missing vm_type";
@@ -1125,6 +1146,10 @@ sub list_network_interfaces($self, %args) {
     $self->{$cache_key} = $interfaces;
 
     return $interfaces;
+}
+
+sub _dbh {
+    return $CONNECTOR->dbh;
 }
 
 =head2 version

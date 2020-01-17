@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.5.0-rc7';
+our $VERSION = '0.6.0';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -15,8 +15,9 @@ use Moose;
 use POSIX qw(WNOHANG);
 use Time::HiRes qw(gettimeofday tv_interval);
 use YAML;
-
+use MIME::Base64;
 use Socket qw( inet_aton inet_ntoa );
+use Image::Magick::Q16;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -138,6 +139,7 @@ sub BUILD {
 sub _install($self) {
     $self->_create_tables();
     $self->_upgrade_tables();
+    $self->_upgrade_timestamps();
     $self->_update_data();
     $self->_init_user_daemon();
 }
@@ -159,7 +161,7 @@ sub _init_user_daemon {
 sub _update_user_grants {
     my $self = shift;
     $self->_init_user_daemon();
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM users");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM users WHERE is_temporary=0");
     my $id;
     $sth->execute;
     $sth->bind_columns(\$id);
@@ -167,7 +169,13 @@ sub _update_user_grants {
         my $user = Ravada::Auth::SQL->search_by_id($id);
         next if $user->name() eq $USER_DAEMON_NAME;
 
-        next if $user->grants();
+        my %grants = $user->grants();
+
+        for my $key (keys %grants) {
+            delete $grants{$key} if !defined $grants{$key};
+        }
+        next if keys %grants;
+
         $USER_DAEMON->grant_user_permissions($user);
         $USER_DAEMON->grant_admin_permissions($user)    if $user->is_admin;
     }
@@ -989,7 +997,7 @@ sub _null_grants($self) {
     $sth->execute;
     my ($count) = $sth->fetchrow;
 
-    exit if !$count && $self->{_null}++;
+    warn "No null grants found" if !$count && $self->{_null_grants}++;
     return $count;
 }
 
@@ -1232,6 +1240,7 @@ sub _upgrade_tables {
         $sth->execute;
     }
     $self->_upgrade_table('users','external_auth','char(32) DEFAULT NULL');
+    $self->_upgrade_table('users','date_created','timestamp DEFAULT CURRENT_TIMESTAMP');
 
     $self->_upgrade_table('networks','requires_password','int(11)');
     $self->_upgrade_table('networks','n_order','int(11) not null default 0');
@@ -1261,6 +1270,13 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','is_pool','int NOT NULL default 0');
 
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
+
+    if ($self->_upgrade_table('domains','screenshot','BLOB')) {
+
+    $self->_upgrade_screenshots();
+
+    }
+
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
     $self->_upgrade_table('iptables','id_vm','int DEFAULT NULL');
@@ -1274,6 +1290,30 @@ sub _upgrade_tables {
     $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
 }
 
+sub _upgrade_timestamps($self) {
+    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/;
+
+    my $req = Ravada::Request->ping_backend();
+    return if $req->{date_changed};
+
+    my @commands = qw(cleanup enforce_limits list_isos list_network_interfaces
+    manage_pools open_exposed_ports open_iptables ping_backend
+    refresh_machine refresh_storage refresh_vms
+    screenshot);
+    my $sql ="DELETE FROM requests WHERE "
+        .join(" OR ", map { "command = '$_'" } @commands);
+    my $sth = $CONNECTOR->dbh->prepare($sql);
+    $sth->execute();
+
+    $self->_upgrade_timestamp('requests','date_changed');
+}
+
+sub _upgrade_timestamp($self, $table, $field) {
+
+    my $sth = $CONNECTOR->dbh->prepare("ALTER TABLE $table change $field "
+        ."$field timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+    $sth->execute();
+}
 
 sub _connect_dbh {
     my $driver= ($CONFIG->{db}->{driver} or 'mysql');;
@@ -1401,6 +1441,12 @@ sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG ) {
         warn "Error: Unknown config entry \n".Dumper(\%config) if ! $0 =~ /\.t$/;
         return 0;
     }
+    warn "Warning: LDAP authentication with match is discouraged. Try bind.\n"
+        if exists $config_orig->{ldap}
+        && exists $config_orig->{ldap}->{auth}
+        && $config_orig->{ldap}->{auth} =~ /match/
+        && $0 !~ /\.t$/;
+
     return 1;
 }
 
@@ -2225,7 +2271,7 @@ sub _kill_stale_process($self) {
         ." AND pid IS NOT NULL "
         ." AND start_time IS NOT NULL "
     );
-    $sth->execute(time - 5*scalar(@domains) + 60 );
+    $sth->execute(time - 5*scalar(@domains) - 60 );
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
@@ -2261,7 +2307,8 @@ sub _domain_working {
     }
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, status FROM requests "
         ." WHERE id <> ? AND id_domain=? "
-        ." AND (status <> 'requested' AND status <> 'done' AND command <> 'set_base_vm')");
+        ." AND (status <> 'requested' AND status <> 'done' AND status <> 'waiting' "
+        ." AND command <> 'set_base_vm')");
     $sth->execute($id_request, $id_domain);
     my ($id, $status) = $sth->fetchrow;
 #    warn "CHECKING DOMAIN WORKING "
@@ -2315,9 +2362,9 @@ sub _execute {
     }
 
     $request->status('working','') unless $request->status() eq 'waiting';
+    $request->pid($$);
     $request->start_time(time);
     $request->error('');
-        $request->status('working','');
     if ($dont_fork || !$CAN_FORK) {
         $self->_do_execute_command($sub, $request);
         return;
@@ -2363,7 +2410,6 @@ sub _do_execute_command {
     if ($err) {
         my $user = $request->defined_arg('user');
         if ($user) {
-            warn "sending message to ".$user->id." ".$user->name;
             my $subject = $err;
             my $message = '';
             if (length($subject) > 40 ) {
@@ -2463,14 +2509,11 @@ sub _cmd_screenshot {
 
     my $id_domain = $request->args('id_domain');
     my $domain = $self->search_domain_by_id($id_domain);
-    my $bytes = 0;
     if (!$domain->can_screenshot) {
         die "I can't take a screenshot of the domain ".$domain->name;
     } else {
-        $bytes = $domain->screenshot($request->args('filename'));
-        $bytes = $domain->screenshot($request->args('filename'))    if !$bytes;
-    }
-    $request->error("No data received") if !$bytes;
+        $domain->screenshot();
+        }
 }
 
 sub _cmd_copy_screenshot {
@@ -2493,6 +2536,28 @@ sub _cmd_copy_screenshot {
         $base->_post_screenshot($base_screenshot);
 
         copy($domain->file_screenshot, $base_screenshot);
+    }
+}
+
+sub _upgrade_screenshots($self) {
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id, name, file_screenshot FROM domains WHERE file_screenshot like '%' "
+    );
+    $sth->execute();
+
+    my $sth_update = $CONNECTOR->dbh->prepare(
+        "UPDATE domains set screenshot = ? WHERE id=?"
+    );
+    while ( my ($id, $name, $file_path)= $sth->fetchrow ) {
+        next if ! -e $file_path;
+        warn "INFO: converting screenshot from $name";
+        my $file= new Image::Magick::Q16;
+        $file->Read($file_path);
+        eval {
+            $sth_update->execute(encode_base64($file), $id);
+        };
+        warn $@;
     }
 }
 
@@ -2575,8 +2640,7 @@ sub _wait_pids {
     for my $type ( keys %{$self->{pids}} ) {
         for my $pid ( keys %{$self->{pids}->{$type}}) {
             my $kid = waitpid($pid , WNOHANG);
-            last if $kid <= 0 ;
-            push @done, ($kid);
+            push @done, ($pid) if $kid == $pid || $kid == -1;
         }
     }
     return if !@done;
@@ -3381,15 +3445,19 @@ sub _remove_unnecessary_downs($self, $domain) {
 
 sub _refresh_volatile_domains($self) {
    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, id_vm FROM domains WHERE is_volatile=1"
+        "SELECT id, name, id_vm, id_owner FROM domains WHERE is_volatile=1"
     );
     $sth->execute();
-    while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
+    while ( my ($id_domain, $name, $id_vm, $id_owner) = $sth->fetchrow ) {
         my $domain = Ravada::Domain->open(id => $id_domain, _force => 1);
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
             if ($domain) {
                 $domain->_post_shutdown(user => $USER_DAEMON);
                 $domain->remove($USER_DAEMON);
+            } else {
+                my $sth= $CONNECTOR->dbh->prepare("DELETE FROM users WHERE id=?");
+                $sth->execute($id_owner);
+                $sth->finish;
             }
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
             $sth_del->execute($id_domain);
@@ -3437,11 +3505,11 @@ sub _cmd_set_base_vm {
 
 sub _cmd_cleanup($self, $request) {
     $self->_clean_volatile_machines( request => $request);
+    $self->_clean_temporary_users( );
     $self->_clean_requests('cleanup', $request);
     $self->_clean_requests('cleanup', $request,'done');
     $self->_clean_requests('enforce_limits', $request,'done');
     $self->_clean_requests('refresh_vms', $request,'done');
-    $self->_wait_pids();
 }
 
 sub _req_method {
@@ -3671,6 +3739,26 @@ sub _enforce_limits_active($self, $request) {
     }
 }
 
+sub _clean_temporary_users($self) {
+    my $sth_users = $CONNECTOR->dbh->prepare(
+        "SELECT u.id, d.id, u.date_created"
+        ." FROM users u LEFT JOIN domains d "
+        ." ON u.id = d.id_owner "
+        ." WHERE u.is_temporary = 1 AND u.date_created < ?"
+    );
+
+    my $sth_del = $CONNECTOR->dbh->prepare(
+        "DELETE FROM users "
+        ." WHERE is_temporary = 1 AND id=?"
+    );
+    my $one_day = _date_now(-24 * 60 * 60);
+    $sth_users->execute( $one_day );
+    while ( my ( $id_user, $id_domain, $date_created ) = $sth_users->fetchrow ) {
+        next if $id_domain;
+        $sth_del->execute($id_user);
+    }
+}
+
 sub _clean_volatile_machines($self, %args) {
     my $request = delete $args{request};
 
@@ -3685,8 +3773,13 @@ sub _clean_volatile_machines($self, %args) {
         );
         if ($domain_real) {
             next if $domain_real->domain && $domain_real->is_active;
-            $domain_real->_post_shutdown();
-            $domain_real->remove($USER_DAEMON);
+            eval { $domain_real->_post_shutdown() };
+            warn $@ if $@;
+            eval { $domain_real->remove($USER_DAEMON) };
+            warn $@ if $@;
+        } elsif ($domain->{id_owner}) {
+            my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users where id=?");
+            $sth->execute($domain->{id_owner});
         }
 
         $sth_remove->execute($domain->{id});
@@ -3734,7 +3827,6 @@ sub _cmd_open_exposed_ports($self, $request) {
 }
 
 sub DESTROY($self) {
-    $self->_wait_pids();
 }
 
 =head2 version

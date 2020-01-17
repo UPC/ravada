@@ -10,6 +10,7 @@ use Moose;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
+my $DEBUG=0;
 
 has clients => (
     is => 'ro'
@@ -25,9 +26,14 @@ has ravada => (
 
 my %SUB = (
                   list_alerts => \&_list_alerts
+                  ,list_isos  => \&_list_isos
                ,list_machines => \&_list_machines
+          ,list_machines_user => \&_list_machines_user
+        ,list_bases_anonymous => \&_list_bases_anonymous
                ,list_requests => \&_list_requests
                 ,machine_info => \&_get_machine_info
+                ,ping_backend => \&_ping_backend
+                     ,request => \&_request
 );
 
 ######################################################################
@@ -59,6 +65,19 @@ sub _list_alerts($rvd, $args) {
     return [@ret2,@ret];
 }
 
+sub _list_isos($rvd, $args) {
+    my ($type) = $args->{channel} =~ m{/(.*)};
+    $type = 'KVM' if !defined $type;
+
+    return $rvd->iso_file($type);
+}
+
+sub _request($rvd, $args) {
+    my ($id_request) = $args->{channel} =~ m{/(.*)};
+    my $req = Ravada::Request->open($id_request);
+    return {status => $req->status, error => $req->error};
+}
+
 sub _list_machines($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login)
@@ -73,6 +92,20 @@ sub _list_machines($rvd, $args) {
         );
     return $rvd->list_machines($user);
 }
+
+sub _list_machines_user($rvd, $args) {
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login)
+        or die "Error: uknown user $login";
+
+    return $rvd->list_machines_user($user)
+}
+
+sub _list_bases_anonymous($rvd, $args) {
+    my $remote_ip = $args->{remote_ip} or die "Error: no remote_ip arg ".Dumper($args);
+    return $rvd->list_bases_anonymous($remote_ip);
+}
+
 
 sub _list_requests($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
@@ -98,6 +131,56 @@ sub _get_machine_info($rvd, $args) {
     }
 
     return $info;
+}
+
+sub _list_recent_requests($rvd, $seconds) {
+    my @now = localtime(time-$seconds);
+    $now[4]++;
+    for (0 .. 4) {
+        $now[$_] = "0".$now[$_] if length($now[$_])<2;
+    }
+    my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
+        ." ".$now[2].":".$now[1].":".$now[0];
+    my $sth = $rvd->_dbh->prepare(
+        "SELECT id,command, status "
+        ." FROM requests "
+        ." WHERE "
+        ."  date_changed >= ? "
+        ." ORDER BY date_changed "
+    );
+    $sth->execute($time_recent);
+    my @reqs;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @reqs,($row);
+    }
+    return @reqs;
+}
+
+sub _ping_backend($rvd, $args) {
+    my @reqs = _list_recent_requests($rvd, 20);
+
+    my $requested = scalar( grep { $_->{status} eq 'requested' } @reqs );
+
+    # If there are requests in state different that requested it's ok
+    return 1 if scalar(@reqs) > $requested;
+
+    my ($ping_backend)
+    = grep {
+        $_->{command} eq 'ping_backend'
+    } @reqs ;
+
+    if (!$ping_backend) {
+        return 0 if $requested;
+        my @now = localtime(time);
+        my $seconds = $now[0];
+        warn $seconds;
+        Ravada::Request->ping_backend() if $seconds < 5;
+        return 1;
+    }
+
+    return 0 if $ping_backend->{status} eq 'requested';
+
+    return 1;
 }
 
 sub _different_list($list1, $list2) {
@@ -143,6 +226,7 @@ sub BUILD {
                 my $ret = $exec->($self->ravada, $self->clients->{$key});
                 my $old_ret = $self->clients->{$key}->{ret};
                 if ( _different($ret, $old_ret )) {
+                    warn "WS: send $channel" if $DEBUG;
                     $ws_client->send( { json => $ret } );
                     $self->clients->{$key}->{ret} = $ret;
                 }
@@ -153,6 +237,9 @@ sub BUILD {
 
 sub subscribe($self, %args) {
     my $ws = $args{ws};
+    my %args2 = %args;
+    delete $args2{ws};
+    warn "Subscribe ".Dumper(\%args2) if $DEBUG;
     $self->clients->{$ws} = {
         ws => $ws
         , %args
