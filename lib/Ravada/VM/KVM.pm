@@ -2023,7 +2023,6 @@ sub _xml_modify_mac {
 				die "Missing num " if !defined $num;
 				$macparts[$pos] = $num;
 				$new_mac = lc(join(":",@macparts));
-				warn $new_mac;
 				push @tried,($new_mac);
 
 				last if !grep /^$new_mac$/i,@old_macs && $self->_unique_mac($new_mac);
