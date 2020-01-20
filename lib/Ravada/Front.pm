@@ -1160,6 +1160,10 @@ sub list_network_interfaces($self, %args) {
     return $interfaces;
 }
 
+sub _dbh {
+    return $CONNECTOR->dbh;
+}
+
 =head2 version
 
 Returns the version of the main module
