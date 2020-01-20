@@ -69,7 +69,7 @@ SKIP: {
     my @volumes = $clone->list_volumes();
     is(scalar @volumes,1);
 
-    $domain->add_volume( name => 'vdb' , size => 1000 *1024);
+    $domain->add_volume( name => $domain->name.'.vdb' , size => 1000 *1024);
 
     my @volumes_domain = $domain->list_volumes();
     is(scalar @volumes_domain, 3);
