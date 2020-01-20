@@ -8,6 +8,7 @@ use File::Path qw(make_path);
 use YAML qw(DumpFile);
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
+use Mojo::File 'path';
 use  Test::More;
 use YAML qw(LoadFile DumpFile);
 
@@ -59,6 +60,13 @@ create_domain
     delete_request
 
     remove_old_domains_req
+    mojo_init
+    mojo_clean
+    mojo_create_domain
+    mojo_login
+    mojo_request
+
+    remove_old_user
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -94,6 +102,7 @@ our %VM_VALID = ( KVM => 1
 );
 
 our @NODES;
+my $URL_LOGOUT = '/logout';
 
 sub user_admin {
 
@@ -366,8 +375,12 @@ sub remote_config_nodes {
 sub remove_old_domains_req() {
     my $base_name = base_domain_name();
     my $machines = rvd_front->list_machines(user_admin);
+    my @reqs;
     for my $machine ( @$machines) {
-        my $domain = Ravada::Front::Domain->open($machine->{id});
+        my $domain;
+        eval { $domain = Ravada::Front::Domain->open($machine->{id}) };
+        next if $@ && $@ =~ /nknown domain/i;
+        die if $@;
         next if $domain->name !~ /^$base_name/;
         my $n_clones = scalar($domain->clones);
         my $req_clone;
@@ -379,14 +392,17 @@ sub remove_old_domains_req() {
         }
         wait_request(debug => 1, background => 1, check_error => 0, timeout => 60+2*$n_clones);
 
-        my @after_req = ();
-        @after_req = ( after_request => $req_clone->id ) if $req_clone;
         my $req = Ravada::Request->remove_domain(
             name => $machine->{name}
             ,uid => user_admin->id
         );
+        push @reqs,($req);
     }
-    wait_request(debug => 1, background => 1, timeout => 120);
+    if (!@reqs) {
+        push @reqs,(Ravada::Request->ping_backend);
+    }
+    wait_request(debug => 1, background => 1, timeout => 120, check_error => 0);
+    return $reqs[-1]->status eq 'done';
 
 }
 
@@ -519,6 +535,56 @@ sub remove_old_domains {
     _remove_old_domains_vm('KVM');
     _remove_old_domains_vm('Void');
     _remove_old_domains_kvm();
+}
+
+sub mojo_init() {
+    my $script = path(__FILE__)->dirname->sibling('../../rvd_front.pl');
+
+    my $t = Test::Mojo->new($script);
+    $t->ua->inactivity_timeout(900);
+    $t->ua->connect_timeout(60);
+    return $t;
+}
+
+sub mojo_clean {
+    return remove_old_domains_req();
+}
+
+sub mojo_login( $t, $user, $pass ) {
+    $t->ua->get($URL_LOGOUT);
+
+    $t->post_ok('/login' => form => {login => $user, password => $pass});
+    like($t->tx->res->code(),qr/^(200|302)$/);
+    #    ->status_is(302);
+
+    return $t->success;
+}
+
+sub mojo_create_domain($t, $vm_name) {
+    my $name = new_domain_name()."-".$vm_name;
+    $t->post_ok('/new_machine.html' => form => {
+            backend => $vm_name
+            ,id_iso => search_id_iso('Alpine%')
+            ,name => $name
+            ,disk => 1
+            ,ram => 1
+            ,swap => 1
+            ,submit => 1
+        }
+    )->status_is(302);
+
+    wait_request(debug => 0, background => 1);
+    return rvd_front->search_domain($name);
+
+}
+
+sub mojo_request($t, $req_name, $args) {
+    $t->post_ok("/request/$req_name/" => json => $args);
+    like($t->tx->res->code(),qr/^(200|302)$/);
+
+    my $response = $t->tx->res->json();
+    ok(exists $response->{request}) or return;
+    wait_request(background => 1);
 }
 
 sub _activate_storage_pools($vm) {
@@ -910,11 +976,22 @@ sub _remove_old_disks {
     }
 }
 
-sub remove_old_user {
-    $USER_ADMIN->remove if $USER_ADMIN;
+sub remove_old_user($user_name=undef) {
+
+    if (!$user_name) {
+        if ($USER_ADMIN) {
+            $user_name = $USER_ADMIN->name;
+            $USER_ADMIN->remove;
+        }
+    }
+    return if !$user_name;
+
+    my $user = Ravada::Auth::SQL->new(name => $user_name);
+    $user->remove if $user;
+
     confess "Undefined connector" if !defined $CONNECTOR;
-    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users WHERE name=?");
-    $sth->execute(base_domain_name());
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users WHERE name = ?");
+    $sth->execute($user_name);
 }
 
 sub remove_old_user_ldap {
