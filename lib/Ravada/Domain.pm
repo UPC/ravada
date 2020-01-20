@@ -2989,12 +2989,6 @@ sub _rename_domain_db {
     my $new_name = $args{name} or confess "Missing new name";
 
     $self->_data(name => $new_name);
-    return;
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set name=?"
-                ." WHERE id=?");
-    $sth->execute($new_name, $self->id);
-    $sth->finish;
-
 }
 
 =head2 is_public
