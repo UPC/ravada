@@ -203,7 +203,7 @@ sub test_volume_contents2($vm, $file, $name, $expected=1) {
         chomp $file_type;
         if ($file_type =~ /ASCII/) {
             my $data = LoadFile($file);
-            ok($data->{iso});
+            ok($data->{iso},Dumper($file,$data)) or confess;
         } else {
             like($file_type , qr/DOS\/MBR/);
         }
@@ -305,6 +305,7 @@ sub _create_part($dev) {
     ok(!$err) or die join(" ",@cmd)."\n$?\nIN: $in\nOUT:\n$out\nERR:\n$err";
 }
 sub _umount_qcow() {
+    mkdir $MNT_RVD if ! -e $MNT_RVD;
     my @cmd = ("umount",$MNT_RVD);
     my ($in, $out, $err);
     for ( ;; ) {
@@ -391,6 +392,23 @@ sub test_rebase($vm, $swap, $data, $with_cd) {
     $base->remove(user_admin);
 }
 
+sub test_prepare_remove($vm) {
+    my $domain = create_domain($vm);
+    $domain->add_volume(type => 'swap');
+    $domain->add_volume(type => 'data');
+
+    _mangle_vol2($vm, "zipizape",$domain->list_volumes);
+
+    $domain->prepare_base(user_admin);
+    $domain->remove_base(user_admin);
+
+    for my $file ( $domain->list_volumes ) {
+        test_volume_contents2($vm, $file,"zipizape");
+    }
+    $domain->remove(user_admin);
+
+}
+
 ######################################################################
 
 
@@ -410,6 +428,8 @@ for my $vm_name (reverse vm_names() ) {
 
         skip($msg,10)   if !$vm;
         diag("Testing rebase for $vm_name");
+
+        test_prepare_remove($vm);
 
         for my $swap0 ( 0 , 1 ) {
             for my $data0 ( 0 , 1 ) {

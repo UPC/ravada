@@ -164,7 +164,7 @@ sub _add_cdrom($self, $domain, %args) {
             $iso_file =~ s/\s/_/g;
             $iso_file=$self->dir_img."/".lc($iso_file).".iso";
             if (! -e $iso_file ) {
-                $self->write_file($iso_file,Dump(iso => "ISO mock $row->{name}"));
+                $self->write_file($iso_file,Dump({iso => "ISO mock $row->{name}"}));
             }
         }
     }
