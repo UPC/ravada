@@ -10,7 +10,7 @@ use Moose;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my $DEBUG=1;
+my $DEBUG=0;
 
 has clients => (
     is => 'ro'
@@ -183,7 +183,6 @@ sub _ping_backend($rvd, $args) {
         return 0 if $requested;
         my @now = localtime(time);
         my $seconds = $now[0];
-        warn $seconds;
         Ravada::Request->ping_backend() if $seconds < 5;
         return 1;
     }
