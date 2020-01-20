@@ -39,8 +39,8 @@ sub _init_mojo_client {
 
 =cut
 
-sub list_machines_user($t){
-    $t->websocket_ok("/ws/subscribe")->send_ok("list_machines_user")->message_ok->finish_ok;
+sub list_machines_user($t, $headers={}){
+    $t->websocket_ok("/ws/subscribe" => $headers)->send_ok("list_machines_user")->message_ok->finish_ok;
 
     return if !$t->message || !$t->message->[1];
 
@@ -96,12 +96,14 @@ sub test_bases($t, $bases) {
     }
 }
 
-sub test_bases_non_admin($t,$bases) {
+sub _login_non_admin($t) {
     my $user_name = base_domain_name().".doe";
     remove_old_user($user_name);
     $USER = create_user($user_name, $$);
     mojo_login($t, $user_name,$$);
+}
 
+sub test_bases_non_admin($t,$bases) {
     my $n_public = 0;
     for my $base (@$bases) {
         is(list_machines_user($t),$n_public);
@@ -133,6 +135,33 @@ sub test_list_machines_non_admin($t, $bases) {
     is(scalar(@list_machines),1) or exit;
 }
 
+sub test_bases_access($t,$bases) {
+    my $base0 = $bases->[0];
+    my      $type = 'client';
+    my     $value = 'ca-ca';
+    my $attribute = 'Accept-Language';
+    $base0->grant_access(
+              type => $type
+        ,attribute => $attribute
+            ,value => $value
+    );
+
+    my @list_machines = list_machines_user($t);
+    is(scalar(@list_machines),1);
+
+    $t->tx->req->headers->add( $attribute => $value );
+    @list_machines = list_machines_user($t ,{ $attribute => $value });
+    is(scalar(@list_machines),2) or exit;
+
+    my @access = $base0->list_access('client');
+    $base0->delete_access($access[0]->{id});
+    @access = $base0->list_access;
+    is(scalar(@access),0);
+
+    @list_machines = list_machines_user($t);
+    is(scalar(@list_machines),2) or exit;
+}
+
 ########################################################################################
 
 init('/etc/ravada.conf',0);
@@ -158,9 +187,12 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     is(list_machines($t), scalar(@bases)) or exit;
 
     test_bases($t,\@bases);
-    test_bases_non_admin($t, \@bases);
 
+    _login_non_admin($t);
+
+    test_bases_non_admin($t, \@bases);
     test_list_machines_non_admin($t,\@bases);
+    test_bases_access($t,\@bases);
 
     remove_old_domains_req();
     while( list_machines_user($t) ) {
