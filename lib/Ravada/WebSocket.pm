@@ -173,7 +173,6 @@ sub _ping_backend($rvd, $args) {
         return 0 if $requested;
         my @now = localtime(time);
         my $seconds = $now[0];
-        warn $seconds;
         Ravada::Request->ping_backend() if $seconds < 5;
         return 1;
     }
@@ -207,6 +206,8 @@ sub _different_hash($h1,$h2) {
     return 0;
 }
 sub _different($var1, $var2) {
+    return 1 if !defined $var1 &&  defined $var2;
+    return 1 if  defined $var1 && !defined $var2;
     return 1 if ref($var1) ne ref($var2);
     return _different_list($var1, $var2) if ref($var1) eq 'ARRAY';
     return _different_hash($var1, $var2) if ref($var1) eq 'HASH';
@@ -243,7 +244,7 @@ sub subscribe($self, %args) {
     $self->clients->{$ws} = {
         ws => $ws
         , %args
-        , ret => []
+        , ret => undef
     };
 }
 
