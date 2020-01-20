@@ -76,6 +76,9 @@ sub test_many_clones($base) {
 
     my $n_clones = 30;
     $n_clones = 100 if $base->type =~ /Void/i;
+
+    $n_clones = 4 if !$ENV{TEST_STRESS} && ! $ENV{TEST_LONG};
+
     $t->post_ok('/machine/copy' => json => {id_base => $base->id, copy_number => $n_clones});
     like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body->to_string;
 
@@ -115,6 +118,19 @@ sub _init_mojo_client {
 
     login($user_admin->name, $pass);
     $t->get_ok('/')->status_is(200)->content_like(qr/choose a machine/i);
+}
+
+sub test_copy_without_prepare($clone) {
+    is ($clone->is_base,0) or die "Clone ".$clone->name." is supposed to be non-base";
+
+    my $n_clones = 3;
+    mojo_request($t, "clone", { id_domain => $clone->id, number => $n_clones });
+    wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+
+    my @clones = $clone->clones();
+    is(scalar @clones, $n_clones) or exit;
+
+    remove_machines($clone);
 }
 
 ########################################################################################
@@ -171,10 +187,13 @@ for my $vm_name ( vm_names() ) {
         is(scalar($clone->list_ports),0);
     }
 
+    push @bases, ( $clone );
+    test_copy_without_prepare($clone);
     test_many_clones($base);
 }
 ok(@bases,"Expecting some machines created");
 remove_machines(@bases);
 _wait_request(background => 1);
+remove_old_domains_req();
 
 done_testing();

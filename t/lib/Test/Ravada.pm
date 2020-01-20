@@ -772,6 +772,7 @@ sub wait_request {
                     ." ".($req->error or '')) if $debug && (time%5 == 0);
                 $done_all = 0;
             } elsif (!$done{$req->id}) {
+                $t0 = time;
                 $done{$req->{id}}++;
                 is($req->error,'') or confess if $check_error;
             }

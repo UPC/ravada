@@ -2777,6 +2777,15 @@ sub _req_clone_many($self, $request) {
     my $domains = $self->list_domains_data();
     my %domain_exists = map { $_->{name} => 1 } @$domains;
 
+    if (!$base->is_base) {
+        my $uid = $request->defined_arg('uid');
+        confess Dumper($request) if !$uid;
+        my $req_prepare = Ravada::Request->prepare_base(
+                    id_domain => $base->id
+                        , uid => $uid
+        );
+        $args->{after_request} = $req_prepare->id;
+    }
     my @reqs;
     for ( 1 .. $number ) {
         my $n = $_;
