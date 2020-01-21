@@ -4177,7 +4177,7 @@ sub _fix_default_access($self, $type) {
 sub _mangle_client_attributes($attribute) {
     for my $name (keys %$attribute) {
         next if ref($attribute->{$name});
-        if ($name =~ /Accept-Language/) {
+        if ($name =~ /Accept-\w+/) {
 
             my @values = map {my $item = $_ ; $item =~ s/^(.*?)[;].*/$1/; $item}
             split /,/,$attribute->{$name};
@@ -4250,11 +4250,28 @@ sub list_access($self, $type=undef) {
     return @list;
 }
 
-sub delete_access($self, $id_access) {
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "DELETE FROM domain_access"
-        ." WHERE id_domain=? AND id=? ");
-    $sth->execute($self->id, $id_access);
+sub delete_access($self, @id_access) {
+    for my $id_access (@id_access) {
+        $id_access = $id_access->{id} if ref($id_access);
+
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "SELECT * FROM domain_access"
+            ." WHERE id=? ");
+        $sth->execute($id_access);
+        my $row = $sth->fetchrow_hashref();
+        confess "Error: domain access id $id_access not found"
+        if !keys %$row;
+
+        confess "Error: domain access id $id_access not from domain "
+        .$self->id
+        ." it belongs to domain ".$row->{id_domain}
+        if $row->{id_domain} != $self->id;
+
+        $sth = $$CONNECTOR->dbh->prepare(
+            "DELETE FROM domain_access"
+            ." WHERE id_domain=? AND id=? ");
+        $sth->execute($self->id, $id_access);
+    }
 }
 
 #TODO: check something has been deleted
