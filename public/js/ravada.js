@@ -226,8 +226,6 @@
                     });
                 }
             };
-
-
             subscribe_ws = function(url, is_admin) {
                 subscribe_machine_info(url);
                 subscribe_requests(url);
