@@ -506,6 +506,7 @@ sub _around_add_volume {
     my %args = @_;
 
     my $file = ($args{file} or $args{path});
+    confess if $args{id_iso} && !$file;
     my $name = $args{name};
     $args{target} = $self->_new_target_dev() if !exists $args{target};
 
@@ -584,10 +585,6 @@ sub _around_list_volumes_info($orig, $self, $attribute=undef, $value=undef) {
     if defined $attribute && !defined $value;
 
     return $self->$orig($attribute, $value) if ref($self) =~ /^Ravada::Front/i;
-
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
-    $sth->execute($self->id);
-    $sth->finish;
 
     my @volumes = $self->$orig($attribute => $value);
 
@@ -1453,6 +1450,30 @@ sub _pre_remove_domain($self, $user, @) {
     my $owner;
     $owner= Ravada::Auth::SQL->search_by_id($self->id_owner)    if $self->is_known();
     $owner->remove() if $owner && $owner->is_temporary();
+}
+
+sub restore($self,$user){
+    die "Error: ".$self->name." is not a clone. Only clones can be restored."
+        if !$self->id_base;
+
+    $self->_pre_remove_domain($user);
+
+    my $base = Ravada::Domain->open($self->id_base);
+    my @volumes = $self->list_volumes_info();
+    my %file = map { $_->info->{target} => $_->file } @volumes;
+
+    for my $file_data ( $base->list_files_base_target ) {
+        my ($file_base,$target) = @$file_data;
+        my $vol_base = Ravada::Volume->new(
+            file => $file_base
+            ,is_base => 1
+            ,vm => $self->_vm
+        );
+        next if $vol_base->file =~ /\.DATA\.\w+$/;
+        my $file_clone = $file{$target} or die Dumper(\%file);
+        unlink $file_clone;
+        my $clone = $vol_base->clone(file => $file_clone);
+    }
 }
 
 # check the node is active
@@ -2978,10 +2999,7 @@ sub _rename_domain_db {
 
     my $new_name = $args{name} or confess "Missing new name";
 
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set name=?"
-                ." WHERE id=?");
-    $sth->execute($new_name, $self->id);
-    $sth->finish;
+    $self->_data(name => $new_name);
 }
 
 =head2 is_public
@@ -3091,8 +3109,11 @@ Check if the domain has swap volumes defined, and clean them
 sub clean_swap_volumes {
     my $self = shift;
     for my $vol ( $self->list_volumes_info) {
-        $vol->restore()
-            if $vol->file && $vol->file =~ /\.SWAP\.\w+$/;
+        if ($vol->file && $vol->file =~ /\.SWAP\.\w+$/) {
+            eval { $vol->backing_file };
+            confess $@ if $@ && $@ !~ /No backing file/i;
+            $vol->restore() if !$@;
+        }
     }
 }
 
@@ -3113,7 +3134,11 @@ sub _post_rename {
     my $self = shift;
     my %args = @_;
 
+    my $new_name = $args{new_name};
+
     $self->_rename_domain_db(@_);
+
+    $self->{_name} = $new_name;
 }
 
 sub _post_dettach($self, @) {
@@ -4057,6 +4082,8 @@ sub _pre_change_hardware($self, @) {
 
 sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     if ($hardware eq 'disk' && ( defined $index || $data ) && $self->is_known() ) {
+        my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
+        $sth->execute($self->id);
         my @volumes = $self->list_volumes_info();
     }
     $self->info(Ravada::Utils::user_daemon) if $self->is_known();
@@ -4429,34 +4456,18 @@ sub set_access($self, $id_access, $allowed, $last) {
     $sth->execute($allowed, $last, $id_access);
 }
 
-
-
 sub rebase($self, $user, $new_base) {
-    croak "Error: ".$self->name." is not a base\n"  if !$self->is_base;
 
-    my @reqs = Ravada::Request->dettach(
-        uid => $user->id
-        ,id_domain => $new_base->id
-    );
+    my @reqs;
 
-    push @reqs, Ravada::Request->prepare_base(
-        uid => $user->id
-        ,id_domain => $new_base->id
-        ,after_request => $reqs[0]->id
-    );
+    _create_base_as_old($self, $user, $new_base) if !$new_base->is_base;
 
-    for my $vm ($self->list_vms) {
-        next if $vm->is_local;
-        push @reqs, Ravada::Request->set_base_vm(
-            uid => $user->id
-            ,id_vm => $vm->id
-            ,id_domain => $new_base->id
-        ,after_request => $reqs[-1]->id
-        );
+    if ( !$self->is_base ) {
+        return $self->_rebase_volumes($new_base);
     }
-
-    $new_base->is_public($self->is_public);
-
+    $self->pool_clones(0);
+    $self->pool_start(0);
+    # if I am a base, we rebase all the clones
     for my $clone_info ( $self->clones ) {
         next if $clone_info->{id} == $new_base->id;
         Ravada::Request->shutdown_domain(
@@ -4464,30 +4475,116 @@ sub rebase($self, $user, $new_base) {
             , id_domain => $clone_info->{id}
         );
 
-        push @reqs,Ravada::Request->rebase_volumes(
+        my @args;
+        push @args, ( after_request => $reqs[-1]->id ) if $reqs[-1];
+        push @reqs,Ravada::Request->rebase (
                    uid => $user->id
               ,id_base => $new_base->id
             ,id_domain => $clone_info->{id}
-        ,after_request => $reqs[-1]->id
+                ,@args
+                ,retry => 5
         );
     }
     return @reqs;
 }
 
-sub rebase_volumes($self, $new_base) {
-    die "Error: domain ".$new_base->name." is not a base\n"
-        if !$new_base->is_base;
-    my @files_target = $new_base->list_files_base_target();
-    my %file_target = map { $_->[1] => $_->[0] } @files_target;
+sub _create_base_as_old($self, $user, $new_base) {
+    $new_base->dettach($user);
+    $new_base->prepare_base($user);
 
-    for my $vol ( $self->list_volumes_info) {
-        next if $vol->info->{device} ne 'disk';
-        my $new_base = $file_target{$vol->info->{target}};
-        die "I can't find new base file for ".Dumper($vol) if !$new_base;
-        my @cmd = ('/usr/bin/qemu-img','rebase','-b',$new_base,$vol->file);
-        my ($out, $err) = $self->_vm->run_command(@cmd);
+    my $old_base = $self;
+    $old_base = Ravada::Domain->open($self->id_base) if $self->id_base;
+
+    my @reqs;
+    for my $vm ($old_base->list_vms) {
+        next if $vm->is_local;
+        my @after = (after_request => $reqs[0]->id ) if @reqs;
+        push @reqs, Ravada::Request->set_base_vm(
+            uid => $user->id
+            ,id_vm => $vm->id
+            ,id_domain => $new_base->id
+            ,@after
+        );
     }
+
+    $new_base->is_public($old_base->is_public);
+    return @reqs;
+}
+
+sub _rebase_volumes($self, $new_base) {
+    my %old;
+    for my $vol ( $self->list_volumes_info ) {
+        $old{$vol->info->{target}} = $vol;
+    }
+    _check_rebase_vols($self, $new_base, \%old);
+
+   # clone all volumes from new base but keep DATA volumes
+    for my $file_data ( $new_base->list_files_base_target ) {
+        my ($file_base,$target) = @$file_data;
+
+        my $vol = $old{$target};
+
+        #rebase DATA volumes
+        if ( $vol && $vol->file && $vol->file =~ /\.(DATA)\.\w+$/ ) {
+            $vol->rebase($file_base);
+            next;
+        }
+        #keep CDs
+        next if $vol
+            && ( $vol->info->{device} eq 'cdrom'
+                || ( $vol->file && $vol->file =~ /\.iso$/)
+            );
+
+        my $vol_base = Ravada::Volume->new(
+            file => $file_base
+            ,is_base => 1
+            ,vm => $self->_vm
+        );
+        my $vol_clone;
+        if ($vol) {
+            if ($vol->info->{device} eq 'disk' && $vol->file) {
+                $self->remove_volume($vol->file);
+                $vol_clone = $vol_base->clone(file => $vol->file);
+            } else {
+                confess "I don't know how to rebase ".Dumper($vol->info);
+            }
+        } else {
+            $vol_clone = $vol_base->clone(name => $self->name."-$target");
+            $self->add_volume(
+                file => $vol_clone->file
+                ,target => $target
+            );
+        }
+    }
+
     $self->id_base($new_base->id);
+}
+
+sub _check_rebase_vols($self, $new_base, $old) {
+
+    my %new = map {
+        my ($ext) = $_->[0] =~ /\.(\w+)$/;
+        my ($type) = $_->[0] =~ /\.([A-Z]+)\.\w+$/;
+        $type = 'SYS' if !defined $type;
+
+        $_->[1] => "$type.$ext"
+    } grep { $_->[0] }
+    $new_base->list_files_base_target;
+
+    my %old = map {
+        my $file = ($old->{$_}->file or '');
+        my ($ext) = $file =~ /\.(\w+)$/;
+        my ($type) = $file =~ /\.([A-Z]+)\.\w+$/;
+
+        $_ => ($type or 'SYS').".".($ext or "")
+    } grep { $old->{$_}->file } keys %$old;
+
+    for my $target (keys %new, keys %old) {
+        next if exists $old{$target} && exists $new{$target}
+            && $old{$target} eq $new{$target};
+        die "Error: volume outline different in new base ".Dumper(\%new)
+        .". Expecting ".Dumper(\%old);
+    }
 }
 
 1;

@@ -251,7 +251,10 @@ sub test_prepare_base_with_cd {
 
     my ($cd_clone ) = grep { defined $_->file && $_->file =~ /\.iso$/ } @volumes_clone;
     ok($cd_clone,"Expecting a CD in clone ".Dumper([ map { delete $_->{domain}; delete $_->{vm}; $_ } @volumes_clone])) or exit;
+    is($cd_clone->info->{target}, $cd_base->[1]) or exit;
 
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
 }
 sub test_prepare_base_with_cd_req {
     my $vm = shift;
@@ -865,6 +868,8 @@ for my $vm_name ('KVM', 'Void') {
         use_ok($CLASS);
 
         test_prepare_fail($vm);
+
+        test_prepare_remove($vm);
 
         test_domain_limit_already_requested($vm_name);
 

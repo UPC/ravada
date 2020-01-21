@@ -1599,6 +1599,7 @@ sub create_domain {
 
     my $start = $args{start};
     my $id_base = $args{id_base};
+    my $data = delete $args{data};
     my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
     _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool));
 
@@ -1657,6 +1658,12 @@ sub create_domain {
         die $error if $error && !$request;
         $request->error($error) if $error;
     }
+    Ravada::Request->add_hardware(
+        uid => $args{id_owner}
+        ,id_domain => $domain->id
+        ,name => 'disk'
+        ,data => { size => $data, type => 'data' }
+    ) if $domain && $data;
     return $domain;
 }
 
@@ -2687,6 +2694,11 @@ sub _cmd_remove {
     $self->remove_domain(name => $request->args('name'), uid => $request->args('uid'));
 }
 
+sub _cmd_restore_domain($self,$request) {
+    my $domain = Ravada::Domain->open($request->args('id_domain'));
+    return $domain->restore(Ravada::Auth::SQL->search_by_id($request->args('uid')));
+}
+
 sub _cmd_pause {
     my $self = shift;
     my $request = shift;
@@ -2850,7 +2862,7 @@ sub _cmd_dettach($self, $request) {
     $domain->dettach($user);
 }
 
-sub _cmd_rebase_volumes($self, $request) {
+sub _cmd_rebase($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain);
 
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
@@ -2858,14 +2870,15 @@ sub _cmd_rebase_volumes($self, $request) {
         if !$user->is_admin;
 
     if ($domain->is_active) {
-        Ravada::Request->shutdown_domain(uid => $user->id, id_domain => $domain->id, timeout => 120);
-        $request->status("requested");
-        die "Error: domain ".$domain->name." is still active, shut it down to rebase\n"
+        my $req_shutdown = Ravada::Request->shutdown_domain(uid => $user->id, id_domain => $domain->id, timeout => 120);
+        $request->after_request($req_shutdown->id);
+        die "Warning: domain ".$domain->name." is up, retry.\n"
     }
     $request->status('working');
 
     my $new_base = Ravada::Domain->open($request->args('id_base'));
-    $domain->rebase_volumes($new_base);
+
+    $domain->rebase($user, $new_base);
 }
 
 
@@ -3533,6 +3546,7 @@ sub _req_method {
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
+        ,restore_domain => \&_cmd_restore_domain
         ,resume => \&_cmd_resume
        ,dettach => \&_cmd_dettach
        ,cleanup => \&_cmd_cleanup
@@ -3555,7 +3569,8 @@ sub _req_method {
  ,list_vm_types => \&_cmd_list_vm_types
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
-,rebase_volumes => \&_cmd_rebase_volumes
+        ,rebase => \&_cmd_rebase
+
 ,refresh_storage => \&_cmd_refresh_storage
 ,refresh_machine => \&_cmd_refresh_machine
 ,domain_autostart=> \&_cmd_domain_autostart

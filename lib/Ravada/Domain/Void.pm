@@ -3,7 +3,7 @@ package Ravada::Domain::Void;
 use warnings;
 use strict;
 
-use Carp qw(cluck croak);
+use Carp qw(carp cluck croak);
 use Data::Dumper;
 use Fcntl qw(:flock SEEK_END);
 use File::Copy;
@@ -285,14 +285,18 @@ sub add_volume {
     my %args = @_;
 
     my $device = ( delete $args{device} or 'disk' );
+    my $type = ( delete $args{type} or '');
 
-    my $suffix = ".void";
-    $suffix = '.SWAP.void' if $args{swap};
+    $type = 'swap' if $args{swap};
+    $type = '' if $type eq 'sys';
+    $type = uc($type)."."   if $type;
+
+    my $suffix = "void";
 
     if ( !$args{file} ) {
         my $vol_name = ($args{name} or Ravada::Utils::random_name(4) );
         $args{file} = $self->_config_dir."/$vol_name";
-        $args{file} .= $suffix if $args{file} !~ /\.\w+$/;
+        $args{file} .= ".$type$suffix" if $args{file} !~ /\.\w+$/;
     }
 
     ($args{name}) = $args{file} =~ m{.*/(.*)};
@@ -347,6 +351,9 @@ sub remove_volume($self, $file) {
     confess "Missing file" if ! defined $file || !length($file);
 
     $self->_vol_remove($file);
+}
+
+sub _remove_controller_disk($self,$file) {
     return if ! $self->_vm->file_exists($self->_config_file);
     my $data = $self->_load();
     my $hardware = $data->{hardware};
@@ -665,6 +672,7 @@ sub _remove_disk {
     confess "Index is '$index' not number" if !defined $index || $index !~ /^\d+$/;
     my @volumes = $self->list_volumes();
     $self->remove_volume($volumes[$index]);
+    $self->_remove_controller_disk($volumes[$index]);
 }
 
 sub remove_controller {

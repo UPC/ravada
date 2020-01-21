@@ -27,6 +27,7 @@ has ravada => (
 my %SUB = (
                   list_alerts => \&_list_alerts
                   ,list_isos  => \&_list_isos
+                  ,list_nodes => \&_list_nodes
                ,list_machines => \&_list_machines
           ,list_machines_user => \&_list_machines_user
         ,list_bases_anonymous => \&_list_bases_anonymous
@@ -72,10 +73,19 @@ sub _list_isos($rvd, $args) {
     return $rvd->iso_file($type);
 }
 
+sub _list_nodes($rvd, $args) {
+    my ($type) = $args->{channel} =~ m{/(.*)};
+    my @nodes = $rvd->list_vms($type);
+    return \@nodes;
+}
+
 sub _request($rvd, $args) {
     my ($id_request) = $args->{channel} =~ m{/(.*)};
     my $req = Ravada::Request->open($id_request);
-    return {status => $req->status, error => $req->error};
+    my $command_text = $req->command;
+    $command_text =~ s/_/ /g;
+    return {command => $req->command, command_text => $command_text
+            ,status => $req->status, error => $req->error};
 }
 
 sub _list_machines($rvd, $args) {

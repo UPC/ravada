@@ -245,6 +245,12 @@ sub test_remove_hardware {
         ,"Removing hardware $index ".$domain->name."\n"
             .Dumper(\@list_hardware2, \@list_hardware1)) or exit;
     }
+    test_volume_removed($list_hardware1[$index]) if $hardware eq 'disk';
+}
+
+sub test_volume_removed($disk) {
+    my $file = $disk->{file};
+    ok(! -e $file,"Expecting $file removed") unless $file =~ /\.iso$/;
 }
 
 sub test_remove_almost_all_hardware {

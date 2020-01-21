@@ -21,6 +21,7 @@ sub prepare_base($self) {
 
     my $file_img = $self->file;
     my $base_img = $self->base_filename();
+    confess $base_img if $base_img !~ /\.ro/;
 
     confess "Error: '$base_img' already exists" if -e $base_img;
 
@@ -95,9 +96,16 @@ sub backing_file($self) {
     die $err if $err;
 
     my ($base) = $out =~ m{^backing file: (.*)}mi;
-    confess "No base for ".$self->file." in $out" if !$base;
+    confess "No backing file for ".$self->file." in $out" if !$base;
 
     return $base;
+}
+
+sub rebase($self, $new_base) {
+    my @cmd = ($QEMU_IMG,'rebase','-b',$new_base,$self->file);
+    my ($out, $err) = $self->vm->run_command(@cmd);
+    die $err if $err;
+
 }
 
 1;
