@@ -98,7 +98,9 @@ sub _list_machines_user($rvd, $args) {
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
 
-    return $rvd->list_machines_user($user)
+    my $client = $args->{client};
+    my $ret = $rvd->list_machines_user($user, {client => $client});
+    return $ret;
 }
 
 sub _list_bases_anonymous($rvd, $args) {
