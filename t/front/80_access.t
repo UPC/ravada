@@ -111,6 +111,42 @@ sub test_access_by_lang($vm, $do_clones=0) {
     _remove_bases($base);
 }
 
+sub test_access_by_encoding($vm) {
+
+    my $base = create_domain($vm->type);
+    $base->prepare_base(user_admin);
+    $base->is_public(1);
+
+    my $clone = $base->clone(
+        name => new_domain_name
+        ,user => user_admin
+    );
+
+    my      $type = 'client';
+    my     $value = 'gzip';
+    my    $value2 = 'gzip,deflate';
+    my $attribute = 'Accept-Encoding';
+    $base->grant_access(
+              type => $type
+        ,attribute => $attribute
+            ,value => $value
+    );
+    is(scalar($base->list_access),2);
+    is($base->access_allowed( $type => { $attribute => $value} ),1);
+    is($base->access_allowed( $type => { $attribute => $value2} ),1) or exit;
+    is($base->access_allowed( $type => { $attribute => 'fail'} ),0) or exit;
+    my $list_bases = rvd_front->list_machines_user(user_admin());
+    is(scalar (@$list_bases), 0) or exit;
+
+    $list_bases = rvd_front->list_machines_user(user_admin(), { $type =>{ $attribute => $value }});
+    is(scalar (@$list_bases), 1);
+
+    $list_bases = rvd_front->list_machines_user(user_admin(), { $type =>{ $attribute => $value2 }});
+    is(scalar (@$list_bases), 1);
+
+    _remove_bases($base);
+}
+
 sub test_access_by_lang_2_entries($vm, $do_clones=0) {
 
     my $base = create_domain($vm->type);
@@ -270,6 +306,8 @@ for my $vm_name (vm_names()) {
 
         test_access_by_lang_default($vm, 0);
         test_access_by_lang_default($vm, 1, 1); # do clones too
+
+        test_access_by_encoding($vm);
 
         test_move($vm);
 
