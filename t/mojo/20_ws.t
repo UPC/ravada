@@ -136,6 +136,8 @@ sub test_list_machines_non_admin($t, $bases) {
 }
 
 sub test_bases_access($t,$bases) {
+    for (@$bases) { $_->is_public(1) };
+
     my $base0 = $bases->[0];
     my      $type = 'client';
     my     $value = 'ca-ca';
@@ -147,19 +149,21 @@ sub test_bases_access($t,$bases) {
     );
 
     my @list_machines = list_machines_user($t);
-    is(scalar(@list_machines),1);
+    is(scalar(@list_machines),1,Dumper(\@list_machines));
 
     $t->tx->req->headers->add( $attribute => $value );
     @list_machines = list_machines_user($t ,{ $attribute => $value });
     is(scalar(@list_machines),2) or exit;
 
     my @access = $base0->list_access('client');
-    $base0->delete_access($access[0]->{id});
+    $base0->delete_access(@access);
     @access = $base0->list_access;
-    is(scalar(@access),0);
+    is(scalar(@access),0,Dumper(\@access));
 
     @list_machines = list_machines_user($t);
-    is(scalar(@list_machines),2) or exit;
+    is(scalar(@list_machines),2);
+
+    for (@$bases) { $_->is_public(0) };
 }
 
 ########################################################################################
@@ -189,6 +193,7 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     test_bases($t,\@bases);
 
     _login_non_admin($t);
+    test_bases_access($t,\@bases);
 
     test_bases_non_admin($t, \@bases);
     test_list_machines_non_admin($t,\@bases);
