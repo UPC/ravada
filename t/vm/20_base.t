@@ -869,8 +869,6 @@ for my $vm_name ('KVM', 'Void') {
 
         test_prepare_fail($vm);
 
-        test_prepare_remove($vm);
-
         test_domain_limit_already_requested($vm_name);
 
         test_prepare_base_with_cd($vm);

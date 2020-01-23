@@ -30,10 +30,13 @@ sub test_reuse_vm($node) {
     is($clone1->_vm, $clone2->_vm, $clone1->_vm->name);
     is($clone1->_vm->id, $clone2->_vm->id);
 
+    is($clone1->list_instances,1);
+
     $clone1->migrate($node);
     is($clone1->_data('id_vm'), $node->id);
     $clone2->migrate($node);
     is($clone2->_data('id_vm'), $node->id);
+    is($clone1->list_instances,2);
 
     is($clone1->_vm, $clone2->_vm);
     is($clone1->_vm, $clone2->_vm);
@@ -85,6 +88,7 @@ sub test_remove($clone, $node) {
         ok($out, "Expecting file '$file' in ".$node->name) or exit;
     }
 
+    is($clone->list_instances,2) or confess;
     $clone->remove(user_admin);
     for my $file ( @volumes ) {
         ok(! -e $file, "Expecting no file '$file' in localhost") or exit;
@@ -264,12 +268,23 @@ sub test_set_vm($vm, $node) {
     is($info->{bases}->{$node->id},1,$node->id." "
         .Dumper($info->{bases})) or exit;
 
+    is($base->list_instances,2) or exit;
+
     my $base_f = Ravada::Front::Domain->open($base->id);
     $info = $base_f->info(user_admin);
     is($info->{bases}->{$vm->id},1) or exit;
     is($info->{bases}->{$node->id},1) or exit;
 
+    is($base_f->list_instances,2) or exit;
+
     $base->remove(user_admin);
+    is(scalar($base->list_instances),undef);
+}
+
+sub test_instances($clone, $expected) {
+    confess;
+    my @instances = $clone->list_instances();
+    is(@instances,$expected,Dumper(\@instances)) or exit;
 }
 
 sub test_volatile($vm, $node) {
@@ -288,10 +303,13 @@ sub test_volatile($vm, $node) {
     }
     is($clones[-1]->_vm->id, $node->id);
 
+    is($clones[-1]->list_instances,1,Dumper([$clones[-1]->list_instances])) or exit;
+
     for (@clones) {
         $_->remove(user_admin);
     }
     $base->remove(user_admin);
+    is(scalar($base->list_instances),undef,Dumper([$base->list_instances])) or exit;
 }
 
 sub test_volatile_req($vm, $node) {
@@ -365,11 +383,13 @@ sub test_volatile_tmp_owner($vm, $node) {
 
 sub test_clone_remote($vm, $node) {
     my $base = create_domain($vm);
+    is($base->list_instances,1);
     $base->prepare_base(user_admin);
 
     my $bases_vm = $base->_bases_vm();
     is($bases_vm->{$vm->id},1) or exit;
     $base->set_base_vm(user => user_admin, node => $node);
+    is($base->list_instances,2);
 
     $bases_vm = $base->_bases_vm();
     is($bases_vm->{$node->id},1) or exit;
@@ -382,10 +402,14 @@ sub test_clone_remote($vm, $node) {
     );
     ok($clone->_vm->name, $node->name);
 
+    is($clone->list_instances,1);
+
     _test_old_base($base, $vm);
     _test_clones($base, $vm);
     $clone->remove(user_admin);
+    is($clone->list_instances,undef);
     $base->remove(user_admin);
+    is($base->list_instances,undef);
 }
 
 sub _test_old_base($base, $vm) {

@@ -154,7 +154,8 @@ sub add_ubuntu_minimal_iso {
 }
 
 sub vm_names {
-    return sort keys %ARG_CREATE_DOM;
+   return (sort keys %ARG_CREATE_DOM) if wantarray;
+   confess;
 }
 
 sub create_domain {
@@ -194,7 +195,7 @@ sub create_domain {
     my %arg_create = (id_iso => $id_iso);
     $arg_create{swap} = 1024 * 1024 if $swap;
 
-    eval { $domain = $vm->create_domain(name => $name
+    { $domain = $vm->create_domain(name => $name
                     , id_owner => $user->id
                     , %arg_create
                     , active => 0
@@ -203,6 +204,7 @@ sub create_domain {
            );
     };
     is('',''.$@);
+    #    exit if time - $t0 > 9;
 
     return $domain;
 
@@ -471,7 +473,7 @@ sub _remove_old_domains_void {
 }
 
 sub _remove_old_domains_void_remote($vm) {
-    return if !$vm->ping;
+    return if !$vm->ping(undef,0);
     eval { $vm->connect };
     warn $@ if $@;
     return if !$vm->_do_is_active;
@@ -636,7 +638,7 @@ sub _remove_old_disks_void($node=undef){
 
 sub _remove_old_disks_void_remote($node) {
     confess "Remote node must be defined"   if !defined $node;
-    return if !$node->ping;
+    return if !$node->ping(undef,0);
 
     my $cmd = "rm -rfv ".$node->dir_img."/".base_domain_name().'_*';
     $node->run_command($cmd);
@@ -1143,7 +1145,7 @@ sub hibernate_node($node) {
     my $ping;
     for ( 1 .. $max_wait ) {
         diag("Waiting for node ".$node->name." to be inactive ...")  if !($_ % 10);
-        $ping = $node->ping;
+        $ping = $node->ping(undef, 0);
         last if !$ping;
         sleep 1;
     }
@@ -1166,12 +1168,12 @@ sub shutdown_node($node) {
     eval {
         $domain_node->shutdown(user => user_admin);# if !$domain_node->is_active;
     };
-    sleep 2 if !$node->ping;
+    sleep 2 if !$node->ping(undef, 0);
 
     my $max_wait = 120;
     for ( 1 .. $max_wait / 2 ) {
         diag("Waiting for node ".$node->name." to be inactive ...")  if !($_ % 10);
-        last if !$node->ping;
+        last if !$node->ping(undef, 0);
         sleep 1;
     }
     is($node->ping,0);
@@ -1197,12 +1199,12 @@ sub start_node($node) {
     $domain->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain->is_active;
 
     for ( 1 .. 60 ) {
-        last if $node->ping;
+        last if $node->ping(undef,0); # no cache
         sleep 1;
-        diag("Waiting for ping node ".$node->name." ".$node->ip." $_") if !($_ % 10);
+        diag("Waiting for ping node ".$node->name." ".$node->ip." $_");#  if !($_ % 10);
     }
 
-    is($node->ping('debug'),1,"[".$node->type."] Expecting ping node ".$node->name) or exit;
+    is($node->ping('debug',0),1,"[".$node->type."] Expecting ping node ".$node->name) or exit;
 
     for ( 1 .. 60 ) {
         my $is_active;
@@ -1433,7 +1435,7 @@ sub _do_remote_node($vm_name, $remote_config) {
     eval { $node->ping };
     is($@,'',"[$vm_name] ping ".$node->name);
 
-    if ( $node->ping && !$node->_connect_ssh() ) {
+    if ( $node->ping(undef,0) && !$node->_connect_ssh() ) {
         my $ssh;
         for ( 1 .. 60 ) {
             $ssh = $node->_connect_ssh();

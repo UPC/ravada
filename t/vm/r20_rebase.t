@@ -284,7 +284,7 @@ sub _create_part($dev) {
     my ($in,$out, $err);
     for my $retry ( 1 .. 10 ) {
         run3(\@cmd, \$in, \$out, \$err);
-        last if !$err;
+        last if !$err && $err =~ /(Input\/output error|Unexpected end-of-file)/i;
         warn $err if $err && $retry>2;
         sleep 1;
     }
