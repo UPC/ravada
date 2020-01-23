@@ -292,6 +292,8 @@ sub _search_volume_remote($self, $pattern) {
 
     my ($out, $err) = $self->run_command("ls -1 ".$self->dir_img);
 
+    confess $err if $err;
+
     my $found;
     for my $file ( split /\n/,$out ) {
         $found = $self->dir_img."/".$file if $file eq $pattern;

@@ -350,7 +350,7 @@ sub _ssh_channel($self) {
         sleep 1;
     }
     if (!$ssh_channel) {
-        $ssh = $self->_connect_ssh(1);
+        $ssh = $self->_connect_ssh(1) or die "Error: I can't connect to ".$self->name;
         $ssh_channel = $ssh->channel();
     }
     die $ssh->die_with_error    if !$ssh_channel;
@@ -421,6 +421,7 @@ sub _around_create_domain {
     return $base->_search_pool_clone($owner) if $from_pool;
 
     my $domain = $self->$orig(%args_create, volatile => $volatile);
+    $self->_add_instance_db($domain->id);
     $domain->add_volume_swap( size => $swap )   if $swap;
 
     if ($id_base) {
@@ -450,6 +451,23 @@ sub _around_create_domain {
 
     $domain->is_pool(1) if $add_to_pool;
     return $domain;
+}
+
+sub _add_instance_db($self, $id_domain) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_instances "
+        ." WHERE id_domain=? AND id_vm=?"
+    );
+    $sth->execute($id_domain, $self->id);
+    my ($row) = $sth->fetchrow;
+    return if $row;
+
+    $sth = $$CONNECTOR->dbh->prepare("INSERT INTO domain_instances (id_domain, id_vm) "
+        ." VALUES (?, ?)"
+    );
+    eval {
+        $sth->execute($id_domain, $self->id);
+    };
+    confess $@ if $@;
 }
 
 sub _define_spice_password($self, $remote_ip) {
@@ -997,23 +1015,31 @@ Returns if the virtual manager connection is available
 
 =cut
 
-sub ping($self, $option=undef) {
+sub ping($self, $option=undef, $cache=1) {
     confess "ERROR: option unknown" if defined $option && $option ne 'debug';
 
     return 1 if $self->is_local();
 
     my $cache_key = "ping_".$self->host;
-    my $ping = $self->_get_cache($cache_key);
-    return $ping if defined $ping;
+    if ($cache) {
+        my $ping = $self->_get_cache($cache_key);
+        return $ping if defined $ping;
+    } else {
+        $self->_delete_cache($cache_key);
+    }
 
     my $debug = 0;
     $debug = 1 if defined $option && $option eq 'debug';
 
-    $ping = $self->_do_ping($self->host, $debug);
-    $self->_set_cache($cache_key => $ping);
+    my $ping = $self->_do_ping($self->host, $debug);
+    $self->_set_cache($cache_key => $ping)  if $cache;
     return $ping;
 }
 
+sub _delete_cache($self, $key) {
+    $key = "_cache_$key";
+    delete $self->{$key};
+}
 sub _set_cache($self, $key, $value) {
     $key = "_cache_$key";
     $self->{$key} = [ $value, time ];
@@ -1053,11 +1079,14 @@ sub _do_ping($self, $host, $debug=0) {
     return 0;
 }
 
-sub _around_ping($orig, $self, $option=undef) {
+sub _around_ping($orig, $self, $option=undef, $cache=1) {
 
-    my $ping = $self->$orig($option);
-    $self->_cached_active($ping);
-    $self->_cached_active_time(time);
+    my $ping = $self->$orig($option, $cache);
+
+    if ($cache) {
+        $self->_cached_active($ping);
+        $self->_cached_active_time(time);
+    }
 
     return $ping;
 }

@@ -1514,6 +1514,7 @@ sub _after_remove_domain {
     $self->_remove_access_attributes_db();
     $self->_remove_access_grants_db();
     $self->_remove_ports_db();
+    $self->_remove_instance_db();
     $self->_remove_volumes_db();
     $self->_remove_bases_vm_db();
     $self->_remove_domain_db();
@@ -1532,13 +1533,11 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
     return if !$self->_vm;
     my $domain_name = $self->name or confess "Unknown my self name $self ".Dumper($self->{_data});
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,name FROM vms WHERE is_active=1");
-    my ($id, $name);
-    $sth->execute();
-    $sth->bind_columns(\($id, $name));
-    while ($sth->fetchrow) {
-        next if $id == $self->_vm->id;
-        my $vm = Ravada::VM->open($id);
+    my @instances = $self->list_instances();
+    return if !scalar(@instances);
+    for my $instance ( @instances ) {
+        next if $instance->{id_vm} == $self->_vm->id;
+        my $vm = Ravada::VM->open($instance->{id_vm});
         my $domain;
         eval { $domain = $vm->search_domain($domain_name) };
         $domain->remove($user, $cascade) if $domain;
@@ -1586,6 +1585,13 @@ sub _remove_bases_vm_db($self) {
         ." WHERE id_domain=?");
     $sth->execute($self->id);
     $sth->finish;
+}
+
+sub _remove_instance_db($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domain_instances "
+        ." WHERE id_domain=? AND id_vm=?"
+    );
+    $sth->execute($self->id, $self->_vm->id);
 }
 
 sub _remove_domain_db {
@@ -3578,6 +3584,7 @@ sub _pre_migrate($self, $node, $request = undef) {
     }
 
     $self->_set_base_vm_db($node->id,0);
+    $node->_add_instance_db($self->id);
 }
 
 sub _post_migrate($self, $node, $request = undef) {
@@ -3700,6 +3707,7 @@ sub set_base_vm($self, %args) {
         my $vm_local = $self->_vm->new( host => 'localhost' );
         $self->_set_vm($vm_local, 1);
     }
+    $vm->_add_instance_db($self->id);
     return $self->_set_base_vm_db($vm->id, $value);
 }
 
@@ -4087,7 +4095,7 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
         my @volumes = $self->list_volumes_info();
     }
     $self->info(Ravada::Utils::user_daemon) if $self->is_known();
-    $self->_remove_domain_cascade(Ravada::Utils::user_daemon,1);
+    $self->_remove_domain_cascade(Ravada::Utils::user_daemon,1) if $self->is_known();
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
 }
 
@@ -4498,7 +4506,8 @@ sub _create_base_as_old($self, $user, $new_base) {
     my @reqs;
     for my $vm ($old_base->list_vms) {
         next if $vm->is_local;
-        my @after = (after_request => $reqs[0]->id ) if @reqs;
+        my @after;
+        @after = (after_request => $reqs[0]->id ) if @reqs;
         push @reqs, Ravada::Request->set_base_vm(
             uid => $user->id
             ,id_vm => $vm->id
@@ -4585,6 +4594,21 @@ sub _check_rebase_vols($self, $new_base, $old) {
         die "Error: volume outline different in new base ".Dumper(\%new)
         .". Expecting ".Dumper(\%old);
     }
+}
+
+sub list_instances($self) {
+    return () if !$self->is_known();
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_instances "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+
+    my @instances;
+    while (my $row = $sth->fetchrow_hashref) {
+        lock_hash(%$row);
+        push @instances, ( $row );
+    }
+    return @instances;
 }
 
 1;
