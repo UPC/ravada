@@ -676,7 +676,6 @@
             $scope.pending_before = 10;
 //          $scope.getSingleMachine();
 //          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
-            list_nodes();
             $scope.access_attribute = [ ];
             $scope.access_value = [ ];
             $scope.access_allowed = [ ];
