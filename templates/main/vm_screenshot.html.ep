@@ -22,7 +22,7 @@
                 <i ng-show="reload_page_msg" ng-cloak><font color="green"><%=l 'Saving the screenshot, please wait a moment...' %></font></i>
                 <i ng-show="!showmachine.is_active" ng-cloak><font color="red"><%=l 'You need to run the machine in order to take a screenshot.' %></font></i>
                 <i ng-show="reload_page_copy_msg" ng-cloak><font color="green"><%=l 'Copying the screenshot, please wait a moment...' %></font></i>
-                <i ng-show="!showmachine.screenshot" ng-cloak><font color="red"><%=l 'You need a screenshot in order to copy it to the base machine.' %>></font></i>
+                <i ng-show="!showmachine.screenshot" ng-cloak><font color="red"><%=l 'You need a screenshot in order to copy it to the base machine.' %></font></i>
             </div>
         </div>
         <div class="row">
