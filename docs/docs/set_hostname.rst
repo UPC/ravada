@@ -68,6 +68,7 @@ Type this so the script is executed on startup:
 
 .. prompt:: bash $
 
+   sudo chmod +x /usr/local/bin/set_hostname.sh
    sudo systemctl enable sethostname
 
 Reboot and check if the hostname is applied. You should find a log file
