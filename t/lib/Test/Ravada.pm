@@ -8,6 +8,7 @@ use File::Path qw(make_path);
 use YAML qw(DumpFile);
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
+use Mojo::File 'path';
 use  Test::More;
 use YAML qw(LoadFile DumpFile);
 
@@ -59,6 +60,13 @@ create_domain
     delete_request
 
     remove_old_domains_req
+    mojo_init
+    mojo_clean
+    mojo_create_domain
+    mojo_login
+    mojo_request
+
+    remove_old_user
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -94,6 +102,7 @@ our %VM_VALID = ( KVM => 1
 );
 
 our @NODES;
+my $URL_LOGOUT = '/logout';
 
 sub user_admin {
 
@@ -145,7 +154,8 @@ sub add_ubuntu_minimal_iso {
 }
 
 sub vm_names {
-    return sort keys %ARG_CREATE_DOM;
+   return (sort keys %ARG_CREATE_DOM) if wantarray;
+   confess;
 }
 
 sub create_domain {
@@ -185,7 +195,7 @@ sub create_domain {
     my %arg_create = (id_iso => $id_iso);
     $arg_create{swap} = 1024 * 1024 if $swap;
 
-    eval { $domain = $vm->create_domain(name => $name
+    { $domain = $vm->create_domain(name => $name
                     , id_owner => $user->id
                     , %arg_create
                     , active => 0
@@ -194,6 +204,7 @@ sub create_domain {
            );
     };
     is('',''.$@);
+    #    exit if time - $t0 > 9;
 
     return $domain;
 
@@ -254,6 +265,7 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
     user_admin();
     $RVD_BACK = $rvd;
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') , disk => 1024 * 1024 ];
+    $ARG_CREATE_DOM{Void} = [ id_iso => search_id_iso('Alpine') ];
 
     Ravada::Utils::user_daemon->_reload_grants();
     return $rvd;
@@ -366,8 +378,12 @@ sub remote_config_nodes {
 sub remove_old_domains_req() {
     my $base_name = base_domain_name();
     my $machines = rvd_front->list_machines(user_admin);
+    my @reqs;
     for my $machine ( @$machines) {
-        my $domain = Ravada::Front::Domain->open($machine->{id});
+        my $domain;
+        eval { $domain = Ravada::Front::Domain->open($machine->{id}) };
+        next if $@ && $@ =~ /nknown domain/i;
+        die if $@;
         next if $domain->name !~ /^$base_name/;
         my $n_clones = scalar($domain->clones);
         my $req_clone;
@@ -379,14 +395,17 @@ sub remove_old_domains_req() {
         }
         wait_request(debug => 1, background => 1, check_error => 0, timeout => 60+2*$n_clones);
 
-        my @after_req = ();
-        @after_req = ( after_request => $req_clone->id ) if $req_clone;
         my $req = Ravada::Request->remove_domain(
             name => $machine->{name}
             ,uid => user_admin->id
         );
+        push @reqs,($req);
     }
-    wait_request(debug => 1, background => 1, timeout => 120);
+    if (!@reqs) {
+        push @reqs,(Ravada::Request->ping_backend);
+    }
+    wait_request(debug => 1, background => 1, timeout => 120, check_error => 0);
+    return $reqs[-1]->status eq 'done';
 
 }
 
@@ -454,7 +473,7 @@ sub _remove_old_domains_void {
 }
 
 sub _remove_old_domains_void_remote($vm) {
-    return if !$vm->ping;
+    return if !$vm->ping(undef,0);
     eval { $vm->connect };
     warn $@ if $@;
     return if !$vm->_do_is_active;
@@ -521,6 +540,56 @@ sub remove_old_domains {
     _remove_old_domains_kvm();
 }
 
+sub mojo_init() {
+    my $script = path(__FILE__)->dirname->sibling('../../rvd_front.pl');
+
+    my $t = Test::Mojo->new($script);
+    $t->ua->inactivity_timeout(900);
+    $t->ua->connect_timeout(60);
+    return $t;
+}
+
+sub mojo_clean {
+    return remove_old_domains_req();
+}
+
+sub mojo_login( $t, $user, $pass ) {
+    $t->ua->get($URL_LOGOUT);
+
+    $t->post_ok('/login' => form => {login => $user, password => $pass});
+    like($t->tx->res->code(),qr/^(200|302)$/);
+    #    ->status_is(302);
+
+    return $t->success;
+}
+
+sub mojo_create_domain($t, $vm_name) {
+    my $name = new_domain_name()."-".$vm_name;
+    $t->post_ok('/new_machine.html' => form => {
+            backend => $vm_name
+            ,id_iso => search_id_iso('Alpine%')
+            ,name => $name
+            ,disk => 1
+            ,ram => 1
+            ,swap => 1
+            ,submit => 1
+        }
+    )->status_is(302);
+
+    wait_request(debug => 0, background => 1);
+    return rvd_front->search_domain($name);
+
+}
+
+sub mojo_request($t, $req_name, $args) {
+    $t->post_ok("/request/$req_name/" => json => $args);
+    like($t->tx->res->code(),qr/^(200|302)$/);
+
+    my $response = $t->tx->res->json();
+    ok(exists $response->{request}) or return;
+    wait_request(background => 1);
+}
+
 sub _activate_storage_pools($vm) {
     for my $sp ($vm->vm->list_all_storage_pools()) {
         next if $sp->is_active;
@@ -569,7 +638,7 @@ sub _remove_old_disks_void($node=undef){
 
 sub _remove_old_disks_void_remote($node) {
     confess "Remote node must be defined"   if !defined $node;
-    return if !$node->ping;
+    return if !$node->ping(undef,0);
 
     my $cmd = "rm -rfv ".$node->dir_img."/".base_domain_name().'_*';
     $node->run_command($cmd);
@@ -673,6 +742,8 @@ sub wait_request {
         my @list_requests = map { Ravada::Request->open($_) }
             _list_requests();
         $request = \@list_requests;
+    } elsif (!ref($request)) {
+        $request = [$request];
     }
 
     my $background = delete $args{background};
@@ -706,8 +777,15 @@ sub wait_request {
                     ." ".($req->error or '')) if $debug && (time%5 == 0);
                 $done_all = 0;
             } elsif (!$done{$req->id}) {
+                $t0 = time;
                 $done{$req->{id}}++;
-                is($req->error,'') or confess if $check_error;
+                if ($check_error) {
+                    if ($req->command eq 'remove') {
+                        like($req->error,qr(^$|Unknown domain));
+                    } else {
+                        is($req->error,'') or confess;
+                    }
+                }
             }
         }
         my $post = join(".",_list_requests);
@@ -854,40 +932,29 @@ sub _clean_db {
 }
 
 sub clean_remote {
-    my $conf = _load_remote_config() or return;
-    for my $vm_name (keys %$conf) {
-        my $vm;
-        eval { $vm = rvd_back->search_vm($vm_name) };
-        warn $@ if $@;
-        next if !$vm;
-
-        my $node;
-        eval { $node = $vm->new(%{$conf->{$vm_name}}) };
-        next if ! $node;
-        if ( !$node->_do_is_active ) {
-            $node->remove;
-            next;
-        }
-
-        clean_remote_node($node);
-        _remove_old_domains_vm($node);
-        _remove_old_disks_kvm($node) if $vm_name =~ /^kvm/i;
-        $node->remove();
-    }
+    my $config = _load_remote_config() or return;
+    return _clean_remote_nodes($config);
 }
 
 sub _clean_remote_nodes {
     my $config = shift;
     for my $name (keys %$config) {
-        diag("Cleaning $name");
-        my $node;
-        my $vm = rvd_back->search_vm($config->{$name}->{type});
-        eval { $node = $vm->new($config->{$name}) };
-        warn $@ if $@;
-        next if !$node || !$node->_do_is_active;
+        my @vms = @{$config->{$name}->{vm}};
+        die "Error: $name has no vms ".Dumper($config->{$name})
+            if !scalar @vms;
+        delete $config->{$name}->{vm};
+        $config->{$name}->{name} = $name;
+        for my $type (@vms) {
+            diag("Cleaning $name $type");
+            my $node;
+            my $vm = rvd_back->search_vm($type);
+            eval { $node = $vm->new($config->{$name}) };
+            warn $@ if $@;
 
-        clean_remote_node($node);
-
+            start_node($node);
+            clean_remote_node($node);
+            $node->remove();
+        }
     }
 }
 
@@ -910,11 +977,22 @@ sub _remove_old_disks {
     }
 }
 
-sub remove_old_user {
-    $USER_ADMIN->remove if $USER_ADMIN;
+sub remove_old_user($user_name=undef) {
+
+    if (!$user_name) {
+        if ($USER_ADMIN) {
+            $user_name = $USER_ADMIN->name;
+            $USER_ADMIN->remove;
+        }
+    }
+    return if !$user_name;
+
+    my $user = Ravada::Auth::SQL->new(name => $user_name);
+    $user->remove if $user;
+
     confess "Undefined connector" if !defined $CONNECTOR;
-    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users WHERE name=?");
-    $sth->execute(base_domain_name());
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users WHERE name = ?");
+    $sth->execute($user_name);
 }
 
 sub remove_old_user_ldap {
@@ -937,6 +1015,20 @@ sub search_id_iso {
     die "There is no iso called $name%" if !$id;
     return $id;
 }
+
+sub _search_cd {
+    my $name = shift;
+    connector() if !$CONNECTOR;
+    rvd_back();
+    my $sth = $CONNECTOR->dbh->prepare("SELECT device FROM iso_images "
+        ." WHERE name like ?"
+    );
+    $sth->execute("$name%");
+    my ($cd) = $sth->fetchrow;
+    die "There is no CD in iso called $name%" if !$cd;
+    return $cd;
+}
+
 
 sub search_iptable_remote {
     my %args = @_;
@@ -1053,7 +1145,7 @@ sub hibernate_node($node) {
     my $ping;
     for ( 1 .. $max_wait ) {
         diag("Waiting for node ".$node->name." to be inactive ...")  if !($_ % 10);
-        $ping = $node->ping;
+        $ping = $node->ping(undef, 0);
         last if !$ping;
         sleep 1;
     }
@@ -1076,12 +1168,12 @@ sub shutdown_node($node) {
     eval {
         $domain_node->shutdown(user => user_admin);# if !$domain_node->is_active;
     };
-    sleep 2 if !$node->ping;
+    sleep 2 if !$node->ping(undef, 0);
 
     my $max_wait = 120;
     for ( 1 .. $max_wait / 2 ) {
         diag("Waiting for node ".$node->name." to be inactive ...")  if !($_ % 10);
-        last if !$node->ping;
+        last if !$node->ping(undef, 0);
         sleep 1;
     }
     is($node->ping,0);
@@ -1107,12 +1199,12 @@ sub start_node($node) {
     $domain->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain->is_active;
 
     for ( 1 .. 60 ) {
-        last if $node->ping;
+        last if $node->ping(undef,0); # no cache
         sleep 1;
-        diag("Waiting for ping node ".$node->name." ".$node->ip." $_") if !($_ % 10);
+        diag("Waiting for ping node ".$node->name." ".$node->ip." $_");#  if !($_ % 10);
     }
 
-    is($node->ping('debug'),1,"[".$node->type."] Expecting ping node ".$node->name) or exit;
+    is($node->ping('debug',0),1,"[".$node->type."] Expecting ping node ".$node->name) or exit;
 
     for ( 1 .. 60 ) {
         my $is_active;
@@ -1343,7 +1435,7 @@ sub _do_remote_node($vm_name, $remote_config) {
     eval { $node->ping };
     is($@,'',"[$vm_name] ping ".$node->name);
 
-    if ( $node->ping && !$node->_connect_ssh() ) {
+    if ( $node->ping(undef,0) && !$node->_connect_ssh() ) {
         my $ssh;
         for ( 1 .. 60 ) {
             $ssh = $node->_connect_ssh();

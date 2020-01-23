@@ -27,6 +27,7 @@ has ravada => (
 my %SUB = (
                   list_alerts => \&_list_alerts
                   ,list_isos  => \&_list_isos
+                  ,list_nodes => \&_list_nodes
                ,list_machines => \&_list_machines
           ,list_machines_user => \&_list_machines_user
         ,list_bases_anonymous => \&_list_bases_anonymous
@@ -72,10 +73,19 @@ sub _list_isos($rvd, $args) {
     return $rvd->iso_file($type);
 }
 
+sub _list_nodes($rvd, $args) {
+    my ($type) = $args->{channel} =~ m{/(.*)};
+    my @nodes = $rvd->list_vms($type);
+    return \@nodes;
+}
+
 sub _request($rvd, $args) {
     my ($id_request) = $args->{channel} =~ m{/(.*)};
     my $req = Ravada::Request->open($id_request);
-    return {status => $req->status, error => $req->error};
+    my $command_text = $req->command;
+    $command_text =~ s/_/ /g;
+    return {command => $req->command, command_text => $command_text
+            ,status => $req->status, error => $req->error};
 }
 
 sub _list_machines($rvd, $args) {
@@ -98,7 +108,9 @@ sub _list_machines_user($rvd, $args) {
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
 
-    return $rvd->list_machines_user($user)
+    my $client = $args->{client};
+    my $ret = $rvd->list_machines_user($user, {client => $client});
+    return $ret;
 }
 
 sub _list_bases_anonymous($rvd, $args) {
@@ -133,16 +145,53 @@ sub _get_machine_info($rvd, $args) {
     return $info;
 }
 
+sub _list_recent_requests($rvd, $seconds) {
+    my @now = localtime(time-$seconds);
+    $now[4]++;
+    for (0 .. 4) {
+        $now[$_] = "0".$now[$_] if length($now[$_])<2;
+    }
+    my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
+        ." ".$now[2].":".$now[1].":".$now[0];
+    my $sth = $rvd->_dbh->prepare(
+        "SELECT id,command, status "
+        ." FROM requests "
+        ." WHERE "
+        ."  date_changed >= ? "
+        ." ORDER BY date_changed "
+    );
+    $sth->execute($time_recent);
+    my @reqs;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @reqs,($row);
+    }
+    return @reqs;
+}
+
 sub _ping_backend($rvd, $args) {
-    my $requests = $rvd->list_requests(undef, 120, 1);
-    return 1 if !scalar(@$requests);
-    warn Dumper($requests);
-    my @requests2 = grep { $_->{status} ne 'requested' } @$requests;
+    my @reqs = _list_recent_requests($rvd, 20);
 
-    return 0 if !scalar(@requests2) && grep { $_->{command} eq 'ping_backend'} @$requests;
+    my $requested = scalar( grep { $_->{status} eq 'requested' } @reqs );
 
-    warn "***".Dumper(map { [ $_->{command} => $_->{status} ] } @requests2);
-    return scalar (@requests2);
+    # If there are requests in state different that requested it's ok
+    return 1 if scalar(@reqs) > $requested;
+
+    my ($ping_backend)
+    = grep {
+        $_->{command} eq 'ping_backend'
+    } @reqs ;
+
+    if (!$ping_backend) {
+        return 0 if $requested;
+        my @now = localtime(time);
+        my $seconds = $now[0];
+        Ravada::Request->ping_backend() if $seconds < 5;
+        return 1;
+    }
+
+    return 0 if $ping_backend->{status} eq 'requested';
+
+    return 1;
 }
 
 sub _different_list($list1, $list2) {
@@ -169,6 +218,8 @@ sub _different_hash($h1,$h2) {
     return 0;
 }
 sub _different($var1, $var2) {
+    return 1 if !defined $var1 &&  defined $var2;
+    return 1 if  defined $var1 && !defined $var2;
     return 1 if ref($var1) ne ref($var2);
     return _different_list($var1, $var2) if ref($var1) eq 'ARRAY';
     return _different_hash($var1, $var2) if ref($var1) eq 'HASH';
@@ -205,7 +256,7 @@ sub subscribe($self, %args) {
     $self->clients->{$ws} = {
         ws => $ws
         , %args
-        , ret => []
+        , ret => undef
     };
 }
 

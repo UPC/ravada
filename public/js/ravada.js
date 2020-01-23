@@ -90,18 +90,19 @@
                 $scope.host_restore = machineId;
             };
             $scope.restore= function(machineId){
-                var toGet = '/machine/remove/'+machineId+'.html?sure=yes';
-                $http.get(toGet);
+              $http.post('/request/restore_domain/'
+                      , JSON.stringify({ 'id_domain': machineId
+                      })
+              );
             };
-            $scope.action = function(machineId, action) {
-                $scope.refresh = 2;
+            $scope.action = function(machine, action) {
+                machine.action = false;
                 if ( action == 'restore' ) {
-                    $scope.host_restore = machineId;
+                    $scope.host_restore = machine.id_clone;
                     $scope.host_shutdown = 0;
                 } else if (action == 'shutdown' || action == 'hibernate') {
                     $scope.host_restore = 0;
-                    $scope.host_action = -1;
-                    $http.get( '/machine/'+action+'/'+machineId+'.json');
+                    $http.get( '/machine/'+action+'/'+machine.id_clone+'.json');
                 } else {
                     alert("unknown action "+action);
                 }
@@ -112,9 +113,10 @@
                 if (!ws_connected) {
                     $scope.ws_fail = true;
                 }
-            }, 5 * 1000 );
+            }, 60 * 1000 );
 
             $scope.subscribe_list_machines_user = function(url) {
+                $scope.machines = [];
                 var channel = 'list_machines_user';
                 if ($scope.anonymous) {
                     channel = 'list_bases_anonymous';
@@ -128,11 +130,25 @@
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
-                        $scope.machines = data;
                         $scope.public_bases = 0;
                         $scope.private_bases = 0;
-                        for (var i = 0; i < $scope.machines.length; i++) {
-                            if ( $scope.machines[i].is_public == 1) {
+                        if ($scope.machines && $scope.machines.length != data.length) {
+                            $scope.machines = [];
+                        }
+                        for (var i = 0; i < data.length; i++) {
+                            if ( !$scope.machines[i] || $scope.machines[i].id != data[i].id ) {
+                                $scope.machines[i] = data[i];
+                            } else {
+                                $scope.machines[i].can_hibernate = data[i].can_hibernate;
+                                $scope.machines[i].id= data[i].id;
+                                $scope.machines[i].id_clone = data[i].id_clone;
+                                $scope.machines[i].is_active = data[i].is_active;
+                                $scope.machines[i].is_locked = data[i].is_locked;
+                                $scope.machines[i].is_public = data[i].is_public;
+                                $scope.machines[i].name = data[i].name;
+                                $scope.machines[i].name_clone = data[i].name_clone;
+                            }
+                            if ( data[i].is_public == 1) {
                                 $scope.public_bases++;
                             } else {
                                 $scope.private_bases++;
@@ -157,16 +173,11 @@
                 subscribe_ping_backend(url);
             };
 
-            $http.get('/pingbackend.json').then(function(response) {
-                $scope.pingbe_fail = !response.data;
-            });
             $scope.only_public = false;
             $scope.toggle_only_public=function() {
                     $scope.only_public = !$scope.only_public;
             };
             $scope.startIntro = startIntro;
-            $scope.host_action = 0;
-            $scope.refresh = 0;
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
@@ -177,6 +188,8 @@
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
                         $scope.showmachine = data;
+                        $scope.list_bases();
+                        subscribe_nodes(url,data.type);
                     });
                 }
             };
@@ -203,18 +216,32 @@
                 }
             };
 
-
-            subscribe_ws = function(url) {
+            subscribe_nodes = function(url, type) {
+                var ws = new WebSocket(url);
+                ws.onopen = function(event) { ws.send('list_nodes/'+type) };
+                ws.onmessage = function(event) {
+                    var data = JSON.parse(event.data);
+                    $scope.$apply(function () {
+                        $scope.nodes = data;
+                    });
+                }
+            };
+            subscribe_ws = function(url, is_admin) {
                 subscribe_machine_info(url);
                 subscribe_requests(url);
                 subscribe_isos(url);
             };
 
           var url_ws;
-          $scope.init = function(id, url) {
+          $scope.init = function(id, url,is_admin) {
                 url_ws = url;
                 $scope.showmachineId=id;
-                subscribe_ws(url_ws);
+                $scope.tab_access=['client']
+                $scope.client_attributes = [ 'User-Agent'
+                   , 'Accept', 'Connection', 'Accept-Language', 'DNT', 'Host'
+                   , 'Accept-Encoding', 'Cache-Control', 'X-Forwarded-For'
+                ];
+                subscribe_ws(url_ws, is_admin);
                 $http.get('/machine/info/'+$scope.showmachineId+'.json')
                     .then(function(response) {
                             $scope.showmachine=response.data;
@@ -222,6 +249,7 @@
                                 $scope.new_name=$scope.showmachine.name+"-2";
                                 $scope.validate_new_name($scope.showmachine.name);
                             }
+                            $scope.init_domain_access();
                             $scope.init_ldap_access();
                             $scope.list_ldap_attributes();
                             list_interfaces();
@@ -246,9 +274,6 @@
           };
           $scope.domain_remove = 0;
           $scope.new_name_invalid = false;
-          $http.get('/pingbackend.json').then(function(response) {
-            $scope.pingbe_fail = !response.data;
-          });
           $scope.machine_info = function(id) {
                $http.get('/machine/info/'+$scope.showmachineId+'.json')
                     .then(function(response) {
@@ -431,13 +456,11 @@
               });
           };
           $scope.expose = function(port, name, restricted, id_port) {
-              console.log(restricted);
               if (restricted == "1" || restricted == true) {
                   restricted = 1;
               } else {
                   restricted = 0;
               }
-              console.log(restricted);
               $http.post('/request/expose/'
                   ,JSON.stringify({
                         'id_domain': $scope.showmachine.id
@@ -461,14 +484,21 @@
           };
 
 
-          $scope.add_ldap_access = function() {
-              $http.get('/add_ldap_access/'+$scope.showmachine.id+'/'+$scope.ldap_attribute+'/'
-                            +$scope.ldap_attribute_value+"/"+$scope.ldap_attribute_allowed
-                            +'/'+$scope.ldap_attribute_last)
-                    .then(function(response) {
-                        $scope.init_ldap_access();
+          $scope.add_access = function(type) {
+              $http.post('/machine/add_access/'+$scope.showmachine.id
+                    ,JSON.stringify({
+                        'type': type
+                        ,'attribute': $scope.access_attribute[type]
+                        ,'value': $scope.access_value[type]
+                        ,'allowed': $scope.access_allowed[type]
+                        ,'last': $scope.access_last[type]
+                    })
+                    ).then(function(response) {
+                        if (type == 'ldap') { $scope.init_ldap_access() }
+                        else { $scope.init_domain_access() }
                     });
           };
+
            $scope.delete_ldap_access= function(id_access) {
               $http.get('/delete_ldap_access/'+$scope.showmachine.id+'/'+id_access)
                     .then(function(response) {
@@ -488,6 +518,22 @@
                         $scope.init_ldap_access();
                     });
           };
+          $scope.move_access= function(type, id_access, count) {
+              $http.get('/machine/move_access/'+$scope.showmachine.id+'/'
+                        +id_access+'/'+count)
+                    .then(function(response) {
+                        $scope.init_domain_access();
+                    });
+          };
+ 
+          $scope.set_access = function(id_access, allowed, last) {
+              $http.get('/machine/set_access/'+$scope.showmachine.id+'/'+id_access+'/'+allowed
+                        +'/'+last)
+                    .then(function(response) {
+                        $scope.init_domain_access();
+                    });
+          };
+
           $scope.init_ldap_access = function() {
               $scope.ldap_entries = 0;
               $scope.ldap_verified = 0;
@@ -500,16 +546,28 @@
                   $scope.ldap_attributes_default = response.data.default;
               });
           };
+          $scope.init_domain_access = function() {
+              $http.get('/machine/list_access/'+$scope.showmachine.id).then(function(response) {
+                  $scope.domain_access  = response.data.list;
+                  $scope.domain_access_default = response.data.default;
+              });
+
+              $http.get('/machine/check_access/'+$scope.showmachine.id)
+                      .then(function(response) {
+                          $scope.check_client_access = response.data.ok;
+                  });
+          };
+          $scope.delete_access= function(id_access) {
+              $http.get('/machine/delete_access/'+$scope.showmachine.id+'/'+id_access)
+                    .then(function(response) {
+                        $scope.init_domain_access();
+                    });
+          };
+
           $scope.init_new_port = function() {
               $scope.new_port = null;
               $scope.new_port_name = null;
               $scope.new_port_restricted = false;
-          };
-          list_nodes = function() {
-                $http.get('/list_nodes.json').then(function(response) {
-                $scope.nodes = response.data;
-            });
-
           };
             $scope.change_disk = function(id_machine, index ) {
                 var new_settings={
@@ -520,7 +578,6 @@
                 if ($scope.showmachine.hardware.disk[index].device === 'disk') {
                   new_settings.capacity = $scope.showmachine.hardware.disk[index].capacity;
                 }
-                console.log(new_settings);
                 $http.post('/machine/hardware/change'
                     ,JSON.stringify({
                         'id_domain': id_machine
@@ -553,18 +610,77 @@
                 ).then(function(response) {
                 });
             };
+            $scope.list_bases = function() {
+                $http.get('/list_bases.json')
+                    .then(function(response) {
+                            $scope.bases=response.data;
+                            if(typeof($scope.new_base) == 'undefined') {
+                                for (var i = 0; i < $scope.bases.length; i++) {
+                                    if ($scope.bases[i].id == $scope.showmachine.id_base) {
+                                        $scope.new_base = $scope.bases[i];
+                                    } else if ($scope.showmachine.is_base
+                                        && $scope.bases[i].id == $scope.showmachine.id) {
+                                        $scope.new_base = $scope.bases[i];
+                                    }
+                                }
+                            }
+                    });
+            };
+            $scope.rebase= function() {
+                $scope.req_new_base = $scope.new_base;
+                $http.post('/request/rebase/'
+                    , JSON.stringify({ 'id_base': $scope.new_base.id
+                        ,'id_domain': $scope.showmachine.id
+                        ,'retry': 5
+                    })
+                ).then(function(response) {
+                    // if there are many , we pick the last one
+                    id_request = response.data.request;
+                    subscribe_request(id_request, function(data) {
+                        $scope.$apply(function () {
+                            $scope.rebase_request=data;
+                            if ($scope.rebase_request.status == 'done') {
+                                $scope.list_bases();
+                            }
+                        });
+                    });
+                });
+            };
+
             $scope.add_disk = {
                 device: 'disk',
+                type: 'sys',
                 driver: 'virtio',
                 capacity: '1G',
                 allocation: '0.1G'
             };
+
+            $scope.request = function(request, args) {
+                $http.post('/request/'+request+'/'
+                    ,JSON.stringify(args)
+                ).then(function(response) {
+                    id_request = response.data.request;
+                    subscribe_request(id_request, function(data) {
+                        $scope.$apply(function () {
+                            $scope.pending_request=data;
+                            if ($scope.pending_request.status == 'done') {
+                                $scope.list_bases();
+                            }
+                        });
+                    });
+                });
+            };
+
             $scope.message = [];
             $scope.disk_remove = [];
             $scope.pending_before = 10;
 //          $scope.getSingleMachine();
 //          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
             list_nodes();
+            $scope.access_attribute = [ ];
+            $scope.access_value = [ ];
+            $scope.access_allowed = [ ];
+            $scope.access_last = [ ];
           $scope.list_ldap_attributes();
         };
 

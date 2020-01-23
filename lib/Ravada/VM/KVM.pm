@@ -673,14 +673,17 @@ sub create_volume {
     my $file_xml = delete $args{xml}   or confess "ERROR: Missing XML template";
 
     my $size        = delete $args{size};
+    $size = int($size) if defined $size;
+    my $type        =(delete $args{type} or 'sys');
     my $swap        =(delete $args{swap} or 0);
     my $target      = delete $args{target};
     my $capacity    = delete $args{capacity};
     my $allocation  = delete $args{allocation};
 
     confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
+    confess "Error: type $type can't have swap flag" if $args{swap} && $type ne 'swap';
 
-    confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+$/);
+    confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+(\.\d+)?$/);
 
     confess "Invalid capacity"
         if defined $capacity && ( $capacity == 0 || $capacity !~ /^\d+$/);
@@ -705,7 +708,7 @@ sub create_volume {
 
     my $img_file = $self->_volume_path(
         target => $target
-        , swap => $swap
+        , type => $type
         , name => $name
         , storage => $storage_pool
     );
@@ -734,15 +737,16 @@ sub _volume_path {
     my $self = shift;
 
     my %args = @_;
-    my $swap     =(delete $args{swap} or 0);
+    my $type = (delete $args{type} or 'sys');
     my $storage  = delete $args{storage} or confess "ERROR: Missing storage";
     my $filename = $args{name}  or confess "ERROR: Missing name";
     my $target = delete $args{target};
 
     my $dir_img = $self->_storage_path($storage);
     my $suffix = "qcow2";
-    $suffix = "SWAP.qcow2"   if $swap;
-    return "$dir_img/$filename.$suffix";
+    $type = ''  if $type eq 'sys';
+    $type = uc($type)."."   if $type;
+    return "$dir_img/$filename.$type$suffix";
 }
 
 sub _domain_create_from_iso {
@@ -944,7 +948,7 @@ sub _domain_create_from_base {
     confess "argument id_base or base required ".Dumper(\%args)
         if !$args{id_base} && !$args{base};
 
-    die "Domain $args{name} already exists"
+    confess "Domain $args{name} already exists"
         if $self->search_domain($args{name});
 
     my $base = $args{base};

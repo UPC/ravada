@@ -44,6 +44,15 @@ sub test_domain_with_swap {
 
     is(scalar($clone2->list_volumes),2);
 
+    # add extra volumes and test down
+    $clone2->add_volume(type => 'swap');
+    is(scalar($clone2->list_volumes),3);
+    $clone2->start(user_admin);
+    $clone2->shutdown(user => user_admin);
+
+    $clone2->remove(user_admin);
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
 }
 ####################################################################
 
@@ -63,7 +72,7 @@ for my $vm_name ('Void','KVM') {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
-        my $domain = test_domain_with_swap($vm_name);
+        test_domain_with_swap($vm_name);
     }
 }
 

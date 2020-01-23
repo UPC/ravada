@@ -518,13 +518,20 @@ sub test_clone_exports_add_ports($vm) {
     my @clone_ports = $clone->list_ports();
     is(scalar @clone_ports,2 );
 
+    my @req = $clone->list_requests;
+    is(scalar(@req) , 1);
+
     for my $n ( 0 .. 1 ) {
         is($base_ports[$n]->{internal_port}, $clone_ports[$n]->{internal_port});
         isnt($base_ports[$n]->{public_port}, $clone_ports[$n]->{public_port},"Same public port in clone and base for ".$base_ports[$n]->{internal_port});
         is($base_ports[$n]->{name}, $clone_ports[$n]->{name});
     }
     _wait_ip($vm, $clone);
-    wait_request( );
+    wait_request( debug => 0, request => \@req );
+    for (@req) {
+        is($_->status,'done')   or exit;
+        is($_->error,'')        or exit;
+    }
     my @out = split /\n/, `iptables -t nat -L PREROUTING -n`;
     ok(grep /dpt:\d+.*\d+:22/, @out);
     ok(grep /dpt:\d+.*\d+:80/, @out);

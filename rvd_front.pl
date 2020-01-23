@@ -6,7 +6,7 @@ use locale ':not_characters';
 #####
 use lib 'lib';
 
-use Carp qw(confess);
+use Carp qw(confess cluck);
 use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
 use Hash::Util qw(lock_hash);
@@ -117,6 +117,8 @@ our $SESSION_TIMEOUT = ($CONFIG_FRONT->{session_timeout} or 5 * 60);
 our $SESSION_TIMEOUT_ADMIN = ($CONFIG_FRONT->{session_timeout_admin} or 15 * 60);
 
 my $WS = Ravada::WebSocket->new(ravada => $RAVADA);
+my %ALLOWED_ANONYMOUS_WS = map { $_ => 1 } qw(list_bases_anonymous list_alerts);
+
 init();
 ############################################################################3
 
@@ -154,6 +156,7 @@ hook before_routes => sub {
     # anonymous URLs
     if (($url =~ m{^/machine/(clone|display|info|view)/}
         || $url =~ m{^/(list_bases_anonymous|request/)}i
+        || $url =~ m{^/ws/subscribe}
         ) && !_logged_in($c)) {
         $USER = _anonymous_user($c);
         return if $USER->is_temporary;
@@ -442,12 +445,6 @@ get '/list_lxc_templates.json' => sub {
     $c->render(json => $RAVADA->list_lxc_templates);
 };
 
-get '/pingbackend.json' => sub {
-
-    my $c = shift;
-    $c->render(json => $RAVADA->ping_backend);
-};
-
 # machine commands
 
 get '/machine/info/(:id).(:type)' => sub {
@@ -635,6 +632,76 @@ post '/machine/hardware/change' => sub {
                 ,uid => $USER->id
             )
     });
+};
+
+get '/machine/list_access/(#id_domain)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    my @access0 = $domain->list_access();
+    my $default = {};
+    my @access;
+    for my $access (@access0) {
+        if ($access->{value} eq '*') {
+            $default = $access;
+            next;
+        }
+        push @access,($access);
+    }
+
+    return $c->render(json => {list => \@access, default => $default} );
+};
+
+get '/machine/check_access/(#id_domain)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    my %client;
+    for my $name (@{$c->req->headers->names}) {
+        $client{$name}= $c->req->headers->header($name);
+    }
+    return $c->render( json => { ok => $domain->access_allowed(client => \%client)});
+};
+
+get '/machine/delete_access/(#id_domain)/(#id_access)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+    $domain->delete_access($c->stash('id_access'));
+
+    # delete default if it is the only one left
+    my @access = $domain->list_access();
+    if (scalar @access == 1 && $access[0]->{value} eq '*') {
+        $domain->delete_access($access[0]->{id});
+    }
+
+    return $c->render(json => { ok => 1 });
+
+};
+
+get '/machine/move_access/(#id_domain)/(#id_access)/(#position)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    $domain->move_access($c->stash('id_access'),$c->stash('position'));
+
+    return $c->render(json => { ok => 1 });
+
 };
 
 get '/node/exists/#name' => sub {
@@ -825,7 +892,7 @@ get '/count_ldap_entries/(#attribute)/(#value)' => sub {
     return $c->render(json => { entries => scalar @entries });
 };
 
-get '/add_ldap_access/(#id_domain)/(#attribute)/(#value)/(#allowed)/(#last)' => sub {
+post '/machine/add_access/(#id_domain)' => sub {
     my $c = shift;
 
     return _access_denied($c) if !$USER->is_admin;
@@ -833,26 +900,40 @@ get '/add_ldap_access/(#id_domain)/(#attribute)/(#value)/(#allowed)/(#last)' => 
     my $domain_id = $c->stash('id_domain');
     my $domain = Ravada::Front::Domain->open($domain_id);
 
-    my $attribute = $c->stash('attribute');
-    my $value = $c->stash('value');
-    my $allowed = 1;
-    if ($c->stash('allowed') eq 'false') {
-        $allowed = 0;
-    }
-    my $last = 1;
-    if ($c->stash('last') eq 'false') {
-        $last = 0;
-    }
-    $last = 1 if !$allowed;
+    my $args = decode_json($c->req->body);
 
-    eval { $domain->allow_ldap_access($attribute => $value, $allowed, $last ) };
-    _fix_default_ldap_access($c, $domain, $allowed) if !$@;
-    return $c->render(json => { error => $@ }) if $@;
+    my $attribute = delete $args->{attribute};
+    my $value = delete $args->{value};
+    my $type = delete $args->{type};
+
+    my $allowed = delete $args->{allowed};
+    if (!defined $allowed || !$allowed || $allowed =~ /false|undefined/) {
+        $allowed = 0;
+    } else {
+        $allowed= 1;
+    }
+    my $last = delete $args->{last};
+    if (!defined $last || !$last || $last =~ /false|undefined/) {
+        $last = 0;
+    } else {
+        $last = 1;
+    }
+    confess "Error: unknown args ".Dumper($args) if keys %$args;
+
+    $domain->grant_access(type => $type
+            , attribute => $attribute
+            , allowed => $allowed
+            , value => $value
+            , last => $last
+    );
+    _fix_default_ldap_access($c, $domain, $allowed)
+    if $type eq 'ldap';
+
     return $c->render(json => { ok => 1 });
 
 };
 
-sub _fix_default_ldap_access($c, $domain, $allowed) {
+sub _fix_default_ldap_access($c, $type, $domain, $allowed) {
     my @list = $domain->list_ldap_access();
     my $default_found;
     for ( @list ) {
@@ -866,8 +947,12 @@ sub _fix_default_ldap_access($c, $domain, $allowed) {
     }
     my $allowed_default = 0;
     $allowed_default = 1 if !$allowed;
-    eval { $domain->allow_ldap_access('DEFAULT' => '*', $allowed_default ) };
-    warn $@ if $@;
+    eval { $domain->grant_access(type => $type
+            , attribute => 'DEFAULT'
+            , value => '*'
+            , last => $allowed_default
+    ) };
+    die $@ if $@;
 }
 
 get '/delete_ldap_access/(#id_domain)/(#id_access)' => sub {
@@ -943,6 +1028,32 @@ get '/set_ldap_access/(#id_domain)/(#id_access)/(#allowed)/(#last)' => sub {
     $domain->set_ldap_access($c->stash('id_access'), $allowed, $last);
     return $c->render(json => { ok => 1});
 };
+
+get '/machine/set_access/(#id_domain)/(#id_access)/(#allowed)/(#last)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    my $allowed = $c->stash('allowed');
+    if ($allowed =~ /false|undefined/ || !$allowed) {
+        $allowed = 0;
+    } else {
+        $allowed = 1;
+    }
+    my $last= $c->stash('last');
+    if ($last=~ /false|undefined/ || !$last) {
+        $last= 0;
+    } else {
+        $last= 1;
+    }
+
+    $domain->set_access($c->stash('id_access'), $allowed, $last);
+    return $c->render(json => { ok => 1});
+};
+
 ##############################################
 
 post '/request/(:name)/' => sub {
@@ -957,7 +1068,7 @@ post '/request/(:name)/' => sub {
         ,uid => $USER->id
         ,%$args
     );
-    return $c->render(json => { ok => 1, request => $req });
+    return $c->render(json => { ok => 1, request => $req->id });
 };
 
 get '/request/(:id).(:type)' => sub {
@@ -1220,15 +1331,31 @@ websocket '/ws/subscribe' => sub {
     $c->inactivity_timeout( $expiration );
     $c->on(message => sub {
             my ($ws, $channel ) = @_;
+            if (!$USER) {
+                cluck "Warning: USER unknown";
+                return;
+            }
+            return access_denied($c)
+              if !$ALLOWED_ANONYMOUS_WS{$channel} && $USER->is_temporary;
+
             $WS->subscribe( ws => $ws
                 , channel => $channel
                 , login => $USER->name
                 , remote_ip => _remote_ip($c)
+                , client => _headers($c)
             );
     });
 
     $c->on(finish => sub { my $ws = shift; $WS->unsubscribe($ws) });
 } => 'ws_subscribe';
+
+sub _headers($c) {
+    my %client;
+    for my $name (@{$c->req->headers->names}) {
+        $client{$name}= $c->req->headers->header($name);
+    }
+    return \%client
+}
 
 ###################################################
 #
@@ -1309,7 +1436,7 @@ sub login {
                 I18N::LangTags::Detect::detect()
             );
             my $header = ( $c->req->headers->header('accept-language') or '');
-            my @languages2 = map {s/^(.*?)[;-].*/$1/; $_ } split /,/,$header;
+            my @languages2 = map {my $lang = $_ ; $lang =~ s/^(.*?)[;-].*/$1/; $lang } split /,/,$header;
 
             Ravada::Request->post_login(
                 user => $auth_ok->name
@@ -1522,7 +1649,10 @@ sub req_new_domain {
     my $name = $c->param('name');
     my $swap = ($c->param('swap') or 0);
     my $vm = ( $c->param('backend') or 'KVM');
-    $swap *= 1024*1024*1024;
+    $swap = int($swap * 1024*1024*1024);
+
+    my $data = ($c->param('data') or 0);
+    $data *= 1024*1024*1024;
 
     my %args = (
            name => $name
@@ -1532,6 +1662,7 @@ sub req_new_domain {
         ,vm=> $vm
         ,id_owner => $USER->id
         ,swap => $swap
+        ,data => $data
     );
     $args{memory} = int($c->param('memory')*1024*1024)  if $c->param('memory');
     $args{disk} = int($c->param('disk')*1024*1024*1024) if $c->param('disk');
@@ -1829,7 +1960,8 @@ sub manage_machine {
             ,remote_ip => _remote_ip($c)
         );
     }
-    my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
+    my $req;
+    $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
             if $c->param('shutdown') && $domain->is_active;
 
     $req = Ravada::Request->start_domain(
@@ -1909,6 +2041,7 @@ sub manage_machine {
         , nodes => [$RAVADA->list_vms($domain->type)]
         , list_clones => [map { $_->{name} } $domain->clones]
         , action => $c->req->url->to_abs->path
+        , headers => $c->req->headers
     );
 }
 
@@ -2347,10 +2480,9 @@ sub _random_name {
 sub _new_anonymous_user {
     my $c = shift;
 
-    my $name_mojo = reverse($c->signed_cookie('mojolicious'));
-
     my $length = 32;
-    $name_mojo = _random_name($length)    if !$name_mojo;
+    my $cookie = ($c->signed_cookie('mojolicious') or _random_name($length));
+    my $name_mojo = reverse($cookie);
 
     $name_mojo =~ tr/[^a-z][^A-Z][^0-9]/___/c;
 
