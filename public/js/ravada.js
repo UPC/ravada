@@ -289,37 +289,24 @@
 
           $scope.reload_page_msg = false;
           $scope.fail_page_msg = false;
-          $scope.screenshot = function(machineId, isActive){
-              if (isActive) {
-                  $http.get('/machine/screenshot/'+machineId+'.json');
-                  $scope.fail_page_msg = false;
+          $scope.screenshot = function(machineId) {
                   $scope.reload_page_msg = true;
                   setTimeout(function () {
-                      window.location.reload(false);
-                  }, 5000);
-              }
-              else {
-                  $scope.reload_page_msg = false;
-                  $scope.fail_page_msg = true;
-              }
+                    $scope.reload_page_msg = false;
+                  }, 2000);
+                  $http.get('/machine/screenshot/'+machineId+'.json');
           };
           
           $scope.reload_page_copy_msg = false;
           $scope.fail_page_copy_msg = false;
           $scope.copy_done = false;
-          $scope.copy_screenshot = function(machineId, fileScreenshot){
-              if (fileScreenshot != '') {
-                $http.get('/machine/copy_screenshot/'+machineId+'.json');
-                $scope.fail_page_copy_msg = false;
+          $scope.copy_screenshot = function(machineId){
+                $scope.reload_page_msg = false;
                 $scope.reload_page_copy_msg = true;
                 setTimeout(function () {
                     $scope.reload_page_copy_msg = false;
                 }, 2000);
-              }
-              else {
-                  $scope.reload_page_copy_msg = false;
-                  $scope.fail_page_copy_msg = true;
-              }
+                $http.get('/machine/copy_screenshot/'+machineId+'.json');
           };
 
           subscribe_request = function(id_request, action) {
@@ -689,7 +676,6 @@
             $scope.pending_before = 10;
 //          $scope.getSingleMachine();
 //          $scope.updatePromise = $interval($scope.getSingleMachine,3000);
-            list_nodes();
             $scope.access_attribute = [ ];
             $scope.access_value = [ ];
             $scope.access_allowed = [ ];
