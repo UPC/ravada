@@ -1,5 +1,29 @@
 Run Hypnotoad service and Apache as a proxy for it.
 
+Configure Hypnotoad proxy
+-------------------------
+
+First of all you need to tell *hypnotoad* we are behind a proxy.
+This allows Mojolicious to automatically pick up the X-Forwarded-For
+and X-Forwarded-Proto headers.
+
+Edit the file */etc/rvd_front.conf* and make sure there is a line with *proxy => 1*
+inside hypnotoad.
+
+   hypnotoad => {
+       pid_file => '/var/run/ravada/rvd_front.pid'
+      ,listen => ['http://*:8081']
+      ,proxy => 1
+   }
+
+Restart the front server to reload this configuration:
+
+
+.. prompt:: bash $
+
+    $ sudo systemctl restart rvd_front
+
+
 Install Apache
 --------------
 
@@ -51,3 +75,8 @@ Edit /etc/apache2/sites-enabled/000-default.conf
     </virtualhost>
     
 .. Tip:: Remember restart Apache2 service, with ``systemctl restart apache2`` or ``services apache2 restart``.
+
+.. prompt:: bash $
+
+    $ sudo systemctl restart apache2
+
