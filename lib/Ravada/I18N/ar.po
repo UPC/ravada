@@ -16,13 +16,13 @@ msgstr ""
 "X-Generator: Poedit 1.8.7.1\n"
 
 msgid "Ravada broker"
-msgstr ""
+msgstr "وسيط رافادا"
 
 msgid "Machine Name"
-msgstr ""
+msgstr "إسم الألة"
 
 msgid "Tools"
-msgstr ""
+msgstr "أدوات"
 
 msgid "Choose a Machine to Start"
 msgstr "اختر آلة للبدء"
@@ -34,19 +34,19 @@ msgid "Stop"
 msgstr "اوقف"
 
 msgid "View"
-msgstr ""
+msgstr "شاهد"
 
 msgid "Prepare base"
-msgstr ""
+msgstr "إعداد قاعدة"
 
 msgid "Clone"
-msgstr ""
+msgstr "استنساخ"
 
 msgid "Clone/s"
-msgstr ""
+msgstr "استنساخ"
 
 msgid "Users List"
-msgstr ""
+msgstr "قائمة المستخدمين"
 
 msgid "Name"
 msgstr "اسم"
@@ -55,115 +55,115 @@ msgid "Log Out"
 msgstr "الخروج"
 
 msgid "Available Machines"
-msgstr ""
+msgstr "الآلات المتاحة"
 
 msgid "Help"
-msgstr ""
+msgstr "مساعدة"
 
 msgid "Requirements"
-msgstr ""
+msgstr "المتطلبات"
 
 msgid "About"
-msgstr ""
+msgstr "حول"
 
 msgid "Mark all as read"
-msgstr ""
+msgstr "اجعل الكل مقروء"
 
 msgid "Settings"
-msgstr ""
+msgstr "الإعدادا"
 
 msgid "New Machine"
-msgstr ""
+msgstr "جهاز الجديد"
 
 msgid "I want to change my password"
 msgstr ""
 
 msgid "I want to change my language"
-msgstr ""
+msgstr "أريد تغيير كلمة المرور"
 
 msgid "Language:"
-msgstr ""
+msgstr "اللغة"
 
 msgid "English"
-msgstr ""
+msgstr "الإنجليزية"
 
 msgid "Spanish"
-msgstr ""
+msgstr "الأسبانية"
 
 msgid "Catalan"
-msgstr ""
+msgstr "الكاتالانية"
 
 msgid "Galician"
-msgstr ""
+msgstr "الجاليكية"
 
 msgid "French"
-msgstr ""
+msgstr "الفرنسية"
 
 msgid "Hindi"
-msgstr ""
+msgstr "الهندية"
 
 msgid "Indonesian"
-msgstr ""
+msgstr "إندونيسي"
 
 msgid "Persian"
-msgstr ""
+msgstr "الفارسية"
 
 msgid "Japanese"
-msgstr ""
+msgstr "اليابانية"
 
 msgid "German"
-msgstr ""
+msgstr "الألمانية"
 
 msgid "New Password:"
-msgstr ""
+msgstr "كلمة المرور الجديدة"
 
 msgid "Confirm Password:"
-msgstr ""
+msgstr "تأكيد كلمة المرور"
 
 msgid "Submit"
-msgstr ""
+msgstr "إرسال"
 
 msgid "Your language has been changed successfully"
-msgstr ""
+msgstr "تم تغيير لغتك بنجاح"
 
 msgid "Your password has been changed successfully"
-msgstr ""
+msgstr "تم تغيير كلمة مرورك بنجاح"
 
 msgid "Password is too short"
-msgstr ""
+msgstr "كلمة المرور قصيرة جدا"
 
 msgid "Password fields do not match"
-msgstr ""
+msgstr "مجال كلمة المرور غير متطابقة"
 
 msgid "Some of the password fields are empty"
-msgstr ""
+msgstr "بعض مجاللة كلمة المرور فارغة"
 
 msgid "Status"
-msgstr ""
+msgstr "الحالة"
 
 msgid "Actions"
-msgstr ""
+msgstr "الإجراءات"
 
 msgid "Down"
-msgstr ""
+msgstr "أسفل"
 
 msgid "Running"
-msgstr ""
+msgstr "في العملية"
 
 msgid "Shutdown"
-msgstr ""
+msgstr "إيقاف التشغيل"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "لقطة شاشة"
 
 msgid "Paused"
-msgstr ""
+msgstr "وقفة"
 
 msgid "Machine locked by request"
-msgstr ""
+msgstr "آلة مغلقة"
 
 msgid "Process"
-msgstr ""
+msgstr "العملية"
 
 msgid "Copy"
 msgstr ""
