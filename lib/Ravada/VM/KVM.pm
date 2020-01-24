@@ -1609,7 +1609,7 @@ sub _xml_modify_memory {
 
 sub _xml_modify_network {
     my $self = shift;
-    my $doc = shift;
+     my $doc = shift;
     my $network = shift;
 
 	my ($type, $source );
@@ -1994,14 +1994,14 @@ sub _new_uuid {
 }
 
 sub _xml_modify_mac {
-	my $self = shift;
+    my $self = shift;
     my $doc = shift or confess "Missing XML doc";
-	my @old_macs;
+    my @old_macs;
 
    	for my $dom ($self->vm->list_all_domains) {
 		my $doc = $XML->load_xml(string => $dom->get_xml_description()) or die "ERROR: $!\n";
 
-    	for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
+        for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
             my $nic_mac = $nic->getAttribute('address');
             push @old_macs,($nic_mac);
         }
