@@ -302,10 +302,6 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.cancel_modal=function(){
       $scope.modalOpened=false;
     }
-    $scope.refresh_machines=function() {
-      $scope.getMachines();
-    }
-
     //On load code
     $scope.modalOpened=false;
     $scope.rename= {new_name: 'new_name'};
