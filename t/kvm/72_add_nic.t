@@ -99,7 +99,6 @@ sub test_add_nic {
 	#Clone domain
     my $name = new_domain_name();
     my $domain_father = $domain;
-    diag("requesting create domain $name, cloned from ".$domain_father->name);
     my $req2 = Ravada::Request->create_domain(
         name => $name
         ,id_base => $domain_father->id
