@@ -2365,31 +2365,46 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
     return $public_port;
 }
 
+sub _set_public_port($self, $id_port, $internal_port, $name, $restricted) {
+    my $public_port = $self->_vm->_new_free_port();
+    for (;;) {
+        if ($id_port) {
+            my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set public_port=?"
+                ." WHERE id_domain=? AND internal_port=?"
+            );
+            eval {
+                $sth->execute($public_port, $self->id, $internal_port);
+            };
+            die $@ if $@ && $@ !~ /uplicate entry/;
+            return $public_port if !$@;
+        } else {
+            my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO domain_ports "
+                ."(id_domain, public_port, internal_port, name, restricted)"
+                ." VALUES(?,?,?,?,?) "
+            );
+            eval {
+                $sth->execute( $self->id
+                    ,$public_port, $internal_port
+                    ,( $name or undef )
+                    ,$restricted
+                );
+            };
+            die $@ if $@ && $@ !~ /uplicate entry/;
+            return $public_port if !$@;
+        }
+        $public_port += int(rand(10))+1;
+    }
+}
+
 sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,public_port FROM domain_ports"
         ." WHERE id_domain=? AND internal_port=?"
     );
     $sth->execute($self->id, $internal_port);
     my ($id_port, $public_port) = $sth->fetchrow();
-    if (!$public_port) {
-        $public_port = $self->_vm->_new_free_port();
-        if ($id_port) {
-            my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set public_port=?"
-                ." WHERE id_domain=? AND internal_port=?"
-            );
-            $sth->execute($public_port, $self->id, $internal_port);
-        } else {
-            my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO domain_ports "
-                 ."(id_domain, public_port, internal_port, name, restricted)"
-                 ." VALUES(?,?,?,?,?) "
-            );
-            $sth->execute( $self->id
-                ,$public_port, $internal_port
-                ,( $name or undef )
-                ,$restricted
-            );
-        }
-    }
+
+    $public_port = $self->_set_public_port($id_port, $internal_port, $name, $restricted)
+    if !$public_port;
 
     my $local_ip = $self->_vm->ip;
     my $internal_ip = $self->ip;
