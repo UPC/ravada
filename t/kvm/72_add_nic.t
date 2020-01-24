@@ -88,7 +88,6 @@ sub test_add_nic {
         my (@if_mac) = $xml->findnodes('/domain/devices/interface/mac');
         for my $if_mac (@if_mac) {
             my $mac = $if_mac->getAttribute('address');
-            diag "\n$mac";
             push @mac, $mac;
         }
         return(@mac);
