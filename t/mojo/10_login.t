@@ -64,7 +64,7 @@ sub _wait_request(@args) {
 sub login( $user=$USERNAME, $pass=$PASSWORD ) {
     $t->ua->get($URL_LOGOUT);
 
-    $t->post_ok('/' => form => {login => $user, password => $pass});
+    $t->post_ok('/login' => form => {login => $user, password => $pass});
     like($t->tx->res->code(),qr/^(200|302)$/);
     #    ->status_is(302);
 
@@ -77,7 +77,7 @@ sub test_many_clones($base) {
     my $n_clones = 30;
     $n_clones = 100 if $base->type =~ /Void/i;
 
-    $n_clones = 4 if !$ENV{TEST_STRESS} && ! $ENV{TEST_LONG};
+    $n_clones = 10 if !$ENV{TEST_STRESS} && ! $ENV{TEST_LONG};
 
     $t->post_ok('/machine/copy' => json => {id_base => $base->id, copy_number => $n_clones});
     like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body->to_string;
@@ -98,6 +98,7 @@ sub test_many_clones($base) {
         wait_request(request => $response->{request}, background => 1);
     };
 
+    test_re_expose($base) if $base->type eq 'Void';
     for my $clone ( $base->clones ) {
         my $req = Ravada::Request->remove_domain(
             name => $clone->{name}
@@ -106,10 +107,28 @@ sub test_many_clones($base) {
     }
 }
 
-sub _init_mojo_client {
-    return if $USERNAME;
-    $t->get_ok('/')->status_is(200)->content_like(qr/name="login"/);
+sub test_re_expose($base) {
+    diag("Test re-expose");
+    for my $clone ( $base->clones ) {
+        my $req = Ravada::Request->force_shutdown_domain(
+            id_domain => $clone->{id}
+            , uid => user_admin->id
+        )
+    }
+    wait_request(background => 1);
+    Ravada::Request->expose(uid => user_admin->id, id_domain => $base->id, port => 22);
+    wait_request(background => 1);
 
+    for my $clone ( $base->clones ) {
+        my $req = Ravada::Request->start_domain(
+            id_domain => $clone->{id}
+            , uid => user_admin->id
+            , remote_ip => '1.2.3.4'
+        );
+    }
+    wait_request(background => 1, check_error => 1);
+}
+sub _init_mojo_client {
     my $user_admin = user_admin();
     my $pass = "$$ $$";
 
