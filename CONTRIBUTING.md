@@ -28,14 +28,6 @@ mentor first timers.
 
 If this is something you think you can fix, then
 [fork Ravada](https://help.github.com/articles/fork-a-repo)
-and create a branch with a descriptive name. We prepend the issue number to
-the branch so it is easier to follow.
-
-A good branch name would be (where issue #77 is the one you're working on):
-
-```sh
-git checkout -b fix/77_start_machine
-```
 
 ## 4. Code Style
 
@@ -172,25 +164,15 @@ After working on your changes you need to Push it (upload) your newly created br
 
 Pull requests or PR are proposed changes to a repository submitted by a user and accepted or rejected by a repository's collaborators.
 
-When your changes are done, you should switch back to your master branch and make sure it's
-up to date with Ravada's master branch:
+
+Send your changes to github *pushing* them up:
 
 ```sh
-git remote add upstream git@github.com:UPC/ravada.git
-git checkout master
-git pull --rebase origin master
+git push
 ```
 
-Then update your feature branch from your local copy of master, and push it!
-
-```sh
-git checkout 325_boost_performance
-git rebase master
-git push --set-upstream origin 325_boost_performance
-```
-
-Finally, go to our GitHub repository and
-[create a Pull Request](https://github.com/UPC/ravada/pulls)
+Finally, go to your GitHub repository and
+[create a Pull Request](https://github.com/pulls)
 
 ### 10.1 How to Write a Title for a Pull Request
 
@@ -211,9 +193,9 @@ To learn more about rebasing in Git, there are a lot of
 but here's the suggested workflow:
 
 ```sh
-git checkout 325_boost_performance
-git pull --rebase origin master
-git push --force-with-lease origin 325_boost_performance
+git remote add upstream git@github.com:UPC/ravada.git
+git fetch upstream
+git rebase upstream/develop
 ```
 
 ### 10.3 Merging a PR (maintainers only)
