@@ -1536,6 +1536,65 @@ sub rename_volumes {
     }
 }
 
+=cut
+
+=head2 spinoff_volumes
+
+Makes volumes indpendent from base
+
+=cut
+
+sub spinoff_volumes {
+    my $self = shift;
+
+    $self->_do_force_shutdown() if $self->is_active;
+
+    for my $volume ($self->list_volumes_info ) {
+        #        $volume->spinoff;
+    }
+}
+
+
+sub _old_spinoff_volumes {
+    my $self = shift;
+
+    $self->_do_force_shutdown() if $self->is_active;
+
+    for my $volume ($self->list_disks) {
+
+        confess "ERROR: Domain ".$self->name
+                ." volume '$volume' does not exists"
+            if ! -e $volume;
+
+        #TODO check mktemp or something
+        my $volume_tmp  = "$volume.$$.tmp";
+
+        unlink($volume_tmp) or die "ERROR $! removing $volume.tmp"
+            if -e $volume_tmp;
+
+        my @cmd = ('qemu-img'
+              ,'convert'
+              ,'-O','qcow2'
+              ,$volume
+              ,$volume_tmp
+        );
+        my ($in, $out, $err);
+        run3(\@cmd,\$in,\$out,\$err);
+        warn $out  if $out;
+        warn $err   if $err;
+        die "ERROR: Temporary output file $volume_tmp not created at "
+                .join(" ",@cmd)
+                .($out or '')
+                .($err or '')
+                ."\n"
+            if (! -e $volume_tmp );
+
+        copy($volume_tmp,$volume) or die "$! $volume_tmp -> $volume";
+        unlink($volume_tmp) or die "ERROR $! removing $volume_tmp";
+    }
+}
+
+
 sub _set_spice_ip($self, $set_password, $ip=undef) {
 
     my $doc = XML::LibXML->load_xml(string
