@@ -1,5 +1,6 @@
 package Ravada::Volume::QCOW2;
 
+use Data::Dumper;
 use Moose;
 
 extends 'Ravada::Volume';
@@ -96,7 +97,6 @@ sub backing_file($self) {
     die $err if $err;
 
     my ($base) = $out =~ m{^backing file: (.*)}mi;
-    confess "No backing file for ".$self->file." in $out" if !$base;
 
     return $base;
 }
@@ -106,6 +106,32 @@ sub rebase($self, $new_base) {
     my ($out, $err) = $self->vm->run_command(@cmd);
     die $err if $err;
 
+}
+
+sub spinoff($self) {
+    my $file = $self->file;
+    my $volume_tmp  = $self->file.".$$.tmp";
+
+    $self->vm->remove_file($volume_tmp);
+
+    my @cmd = ($QEMU_IMG
+        ,'convert'
+        ,'-O','qcow2'
+        ,$file
+        ,$volume_tmp
+    );
+    my ($out, $err) = $self->vm->run_command(@cmd);
+    warn $out  if $out;
+    warn $err   if $err;
+    confess "ERROR: Temporary output file $volume_tmp not created at "
+    .join(" ",@cmd)
+    .($out or '')
+    .($err or '')
+    ."\n"
+    if (! $self->vm->file_exists($volume_tmp) );
+
+    $self->copy_file($volume_tmp,$file) or die "$! $volume_tmp -> $file";
+    $self->vm->remove_file($volume_tmp) or die "ERROR $! removing $volume_tmp";
 }
 
 1;

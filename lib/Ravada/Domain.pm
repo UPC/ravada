@@ -70,8 +70,6 @@ requires 'disk_device';
 
 requires 'disk_size';
 
-requires 'spinoff_volumes';
-
 #hardware info
 
 requires 'get_info';
@@ -530,7 +528,7 @@ sub _around_add_volume {
     my $free = $self->_vm->free_disk();
     my $free_out = int($free / 1024 / 1024 / 1024 ) * 1024 *1024 *1024;
 
-    die "Error creating volume, out of space $size . Disk free: "
+    confess "Error creating volume, out of space $size . Disk free: "
             .Ravada::Utils::number_to_size($free_out)
             ."\n"
         if exists $args{size} && $args{size} >= $free;
@@ -605,6 +603,10 @@ sub _around_prepare_base($orig, $self, @args) {
     }
     $self->_pre_prepare_base($user, $request);
 
+    if (!$self->is_local) {
+        my $vm_local = $self->_vm->new( host => 'localhost' );
+        $self->_vm($vm_local);
+    }
     my @base_img = $self->$orig($with_cd);
 
     die "Error: No information files returned from prepare_base"
@@ -678,12 +680,12 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
             sleep 1;
         }
     }
-    if ($self->id_base ) {
-        $self->spinoff_volumes();
-    }
     if (!$self->is_local) {
         my $vm_local = Ravada::VM->open( type => $self->vm );
         $self->migrate($vm_local);
+    }
+    if ($self->id_base ) {
+        $self->spinoff_volumes();
     }
     $self->_check_free_space_prepare_base();
 }
@@ -713,6 +715,32 @@ sub _post_prepare_base {
     $self->_set_base_vm_db($self->_vm->id,1);
     $self->autostart(0,$user);
 };
+
+=pod
+
+=head2 spinoff_volumes
+
+Makes volumes indpendent from base
+
+=cut
+
+sub spinoff_volumes {
+    my $self = shift;
+
+    $self->_do_force_shutdown() if $self->is_active;
+    confess "Error: spinoff from remote nodes not available. Node: ".$self->_vm->name
+        if !$self->is_local;
+
+    for my $volume ($self->list_volumes_info ) {
+        next if !$volume->file || $volume->file =~ /\.iso$/i;
+        my $bf;
+        eval { $bf = $volume->backing_file };
+        die $@ if $@ && $@ !~ /No backing file/;
+        next if !$bf;
+        $volume->spinoff;
+    }
+}
+
 
 sub _around_autostart($orig, $self, @arg) {
     my ($value, $user) = @arg;
@@ -1864,8 +1892,10 @@ sub _pre_remove_base {
     
     if (!$domain->is_local) {
         my $vm_local = $domain->_vm->new( host => 'localhost' );
-        my $domain_local = $vm_local->search_domain($domain->name);
-        $domain = $domain_local if $domain_local;
+        confess "Error: I can't find local virtual manager ".$domain->type
+            if !$vm_local;
+
+        $domain->_vm($vm_local);
     }
     $domain->spinoff_volumes();
 }
@@ -3131,8 +3161,10 @@ sub clean_swap_volumes {
     my $self = shift;
     for my $vol ( $self->list_volumes_info) {
         if ($vol->file && $vol->file =~ /\.SWAP\.\w+$/) {
-            eval { $vol->backing_file };
+            my $backing_file;
+            eval { $backing_file = $vol->backing_file };
             confess $@ if $@ && $@ !~ /No backing file/i;
+            next if !$backing_file;
             $vol->restore() if !$@;
         }
     }

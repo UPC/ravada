@@ -55,8 +55,8 @@ sub _restore_req($domain) {
 
 sub test_restore($vm , $restore) {
     my $domain = create_domain($vm);
-    $domain->add_volume(type => 'data');
-    $domain->add_volume(type => 'swap');
+    $domain->add_volume(type => 'data', size => 1024 * 1024);
+    $domain->add_volume(type => 'swap', size => 1024 * 1024);
 
     my $clone = $domain->clone(name => new_domain_name, user => user_admin);
     my @files_base = $domain->list_files_base;

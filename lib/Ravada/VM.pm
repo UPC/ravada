@@ -1266,6 +1266,7 @@ sub read_file( $self, $file ) {
 }
 
 sub _read_file_local( $self, $file ) {
+    confess "Error: file undefined" if !defined $file;
     CORE::open my $in,'<',$file or die "$! $file";
     return join('',<$in>);
 }
@@ -1605,7 +1606,7 @@ sub _check_free_disk($self, $size, $storage_pool=undef) {
     my $free = $self->free_disk($storage_pool);
     my $free_out = int($free / 1024 / 1024 / 1024 ) * 1024 *1024 *1024;
 
-    die "Error creating volume, out of space."
+    confess "Error creating volume, out of space."
     ." Requested: ".Ravada::Utils::number_to_size($size_out)
     ." , Disk free: ".Ravada::Utils::number_to_size($free_out)
     ."\n"

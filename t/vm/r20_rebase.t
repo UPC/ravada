@@ -144,7 +144,7 @@ sub test_rebase_with_vols($vm, $swap0, $data0, $with_cd0, $swap1, $data1, $with_
 
     for my $vol ($clone1->list_volumes_info) {
         my $file = $vol->file or next;
-        test_volume_contents($vm,$file);
+        _test_volume_contents($vm,$file);
 
         my $bf2 = $base2->name;
         if ( $file !~ /\.iso$/ ) {
@@ -158,7 +158,7 @@ sub test_rebase_with_vols($vm, $swap0, $data0, $with_cd0, $swap1, $data1, $with_
     _remove_domains($base, $base2);
 }
 
-sub test_volume_contents($vm, $file) {
+sub _test_volume_contents($vm, $file) {
     if ($file =~ /\.iso$/) {
         my $file_type = `file $file`;
         chomp $file_type;
@@ -394,8 +394,8 @@ sub test_rebase($vm, $swap, $data, $with_cd) {
 
 sub test_prepare_remove($vm) {
     my $domain = create_domain($vm);
-    $domain->add_volume(type => 'swap');
-    $domain->add_volume(type => 'data');
+    $domain->add_volume(type => 'swap', size => 1024*1024);
+    $domain->add_volume(type => 'data', size => 1024*1024);
 
     _mangle_vol2($vm, "zipizape",$domain->list_volumes);
 

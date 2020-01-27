@@ -575,10 +575,6 @@ sub disk_size {
     return -s $disk;
 }
 
-sub spinoff_volumes {
-    return;
-}
-
 sub ip {
     my $self = shift;
     my $info = $self->_value('info');

@@ -2945,8 +2945,6 @@ sub _cmd_remove_base {
 
     die "Unknown domain id '$id_domain'\n" if !$domain;
 
-    $domain->_vm->disconnect();
-    $self->_disconnect_vm();
     $domain->remove_base($user);
 
 }

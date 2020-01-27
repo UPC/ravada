@@ -147,6 +147,7 @@
                                 $scope.machines[i].is_public = data[i].is_public;
                                 $scope.machines[i].name = data[i].name;
                                 $scope.machines[i].name_clone = data[i].name_clone;
+                                $scope.machines[i].screenshot = data[i].screenshot;
                             }
                             if ( data[i].is_public == 1) {
                                 $scope.public_bases++;
