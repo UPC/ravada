@@ -248,6 +248,7 @@
                             if (typeof $scope.new_name == 'undefined' ) {
                                 $scope.new_name=$scope.showmachine.name+"-2";
                                 $scope.validate_new_name($scope.showmachine.name);
+                                $scope.new_n_virt_cpu= $scope.showmachine.n_virt_cpu;
                             }
                             $scope.init_domain_access();
                             $scope.init_ldap_access();
@@ -659,6 +660,13 @@
                 $http.post('/request/'+request+'/'
                     ,JSON.stringify(args)
                 ).then(function(response) {
+                    if (! response.data.request ) {
+                        $scope.pending_request = {
+                            'status': 'done'
+                            ,'error': response.data.error
+                        };
+                        return;
+                    }
                     id_request = response.data.request;
                     subscribe_request(id_request, function(data) {
                         $scope.$apply(function () {

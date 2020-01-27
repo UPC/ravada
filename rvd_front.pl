@@ -1059,15 +1059,21 @@ get '/machine/set_access/(#id_domain)/(#id_access)/(#allowed)/(#last)' => sub {
 post '/request/(:name)/' => sub {
     my $c = shift;
 
+    warn $c->req->body;
     my $args = decode_json($c->req->body);
+    warn Dumper($args);
     confess "Error: uid should not be provided".Dumper($args)
         if exists $args->{uid};
 
-    my $req = Ravada::Request->new_request(
-        $c->stash('name')
-        ,uid => $USER->id
-        ,%$args
-    );
+    my $req;
+    eval {
+        $req = Ravada::Request->new_request(
+            $c->stash('name')
+            ,uid => $USER->id
+            ,%$args
+        );
+    };
+    return $c->render(json => { ok => 0, error => $@ }) if !$req;
     return $c->render(json => { ok => 1, request => $req->id });
 };
 

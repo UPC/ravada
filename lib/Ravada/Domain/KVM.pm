@@ -81,6 +81,7 @@ our %REMOVE_CONTROLLER_SUB = (
 
 our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
+    ,vcpus => \&_change_hardware_vcpus
     ,network => \&_change_hardware_network
 );
 ##################################################
@@ -1323,7 +1324,8 @@ sub get_info {
     $info->{max_mem} = $mem_xml if $mem_xml ne $info->{max_mem};
 
     $info->{cpu_time} = $info->{cpuTime};
-    $info->{n_virt_cpu} = $info->{nVirtCpu};
+    $info->{n_virt_cpu} = $info->{nrVirtCpu};
+    confess Dumper($info) if !$info->{n_virt_cpu};
     $info->{ip} = $self->ip()   if $self->is_active();
 
     lock_keys(%$info);
@@ -1539,6 +1541,17 @@ Makes volumes indpendent from base
 =cut
 
 sub spinoff_volumes {
+    my $self = shift;
+
+    $self->_do_force_shutdown() if $self->is_active;
+
+    for my $volume ($self->list_volumes_info ) {
+        #        $volume->spinoff;
+    }
+}
+
+
+sub _old_spinoff_volumes {
     my $self = shift;
 
     $self->_do_force_shutdown() if $self->is_active;
@@ -2197,6 +2210,23 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
     $self->_post_change_hardware($doc);
 }
 
+
+sub _change_hardware_vcpus($self, $index, $data) {
+    confess "Error: I don't understand vcpus index = '$index' , only 0"
+    if defined $index && $index != 0;
+    my $n_virt_cpu = delete $data->{n_virt_cpu};
+    confess "Error: Unkown args ".Dumper($data) if keys %$data;
+
+    if ($self->domain->is_active) {
+        $self->domain->set_vcpus($n_virt_cpu);
+    }
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my ($vcpus) = ($doc->findnodes('/domain/vcpu/text()'));
+    $vcpus->setData($n_virt_cpu);
+    $self->_post_change_hardware($doc);
+
+}
 
 sub _change_hardware_network($self, $index, $data) {
     confess if !defined $index;

@@ -3042,7 +3042,7 @@ sub _cmd_change_hardware {
 
     $domain->change_hardware(
          $request->args('hardware')
-        ,$request->args('index')
+        ,$request->defined_arg('index')
         ,$request->args('data')
     );
 }
