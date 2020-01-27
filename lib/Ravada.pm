@@ -533,7 +533,7 @@ sub _scheduled_fedora_releases($self,$data) {
             name => 'Fedora '.$release
             ,description => "RedHat Fedora $release Workstation 64 bits"
             ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/'.$release
-                    .'/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-'.$release
+                    .'/Workstation/x86_64/iso/Fedora-Workstation-.*-x86_64-'.$release
                     .'-.*\.iso'
             ,arch => 'amd64'
             ,xml => 'xenial64-amd64.xml'
