@@ -93,7 +93,7 @@ our %VALID_ARG = (
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }
     ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
-    ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 1, data => 1 }
+    ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 2, data => 1 }
     ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
     ,change_curr_memory => {uid => 1, id_domain => 1, ram => 1}
     ,enforce_limits => { timeout => 2, _force => 2 }
