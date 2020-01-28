@@ -2555,8 +2555,9 @@ sub _upgrade_screenshots($self) {
         warn "INFO: converting screenshot from $name";
         my $file= new Image::Magick::Q16;
         $file->Read($file_path);
+        my @blobs = $file->ImageToBlob(magick => 'png');
         eval {
-            $sth_update->execute(encode_base64($file), $id);
+            $sth_update->execute(encode_base64($blobs[0]), $id);
         };
         warn $@;
     }
