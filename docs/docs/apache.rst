@@ -23,7 +23,7 @@ Restart the front server to reload this configuration:
 
 .. prompt:: bash $
 
-    $ sudo systemctl restart rvd_front
+    sudo systemctl restart rvd_front
 
 
 Install Apache
@@ -80,5 +80,5 @@ Edit /etc/apache2/sites-enabled/000-default.conf
 
 .. prompt:: bash $
 
-    $ sudo systemctl restart apache2
+    sudo systemctl restart apache2
 
