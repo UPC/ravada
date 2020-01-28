@@ -10,6 +10,8 @@ and X-Forwarded-Proto headers.
 Edit the file */etc/rvd_front.conf* and make sure there is a line with *proxy => 1*
 inside hypnotoad.
 
+::
+
    hypnotoad => {
        pid_file => '/var/run/ravada/rvd_front.pid'
       ,listen => ['http://*:8081']
