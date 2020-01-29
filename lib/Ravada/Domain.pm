@@ -2357,7 +2357,7 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
             $sth->finish;
         };
         last if !$@;
-        confess $@ if $@ && $@ !~ /Duplicate entry .*for key 'public/;
+        confess $@ if $@ && $@ !~ /Duplicate entry .*for key /;
     }
 
     $self->_open_exposed_port($internal_port, $name, $restricted)

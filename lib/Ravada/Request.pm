@@ -512,8 +512,6 @@ sub _duplicated_request($command, $args) {
         my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
         next if $args_d_s ne $args_found_s;
 
-        warn "$id\n$args_d_s\n$args_found_s\n"
-            if $command eq 'clone' && $args =~ /a-1/;
         return $id;
     }
     return 0;

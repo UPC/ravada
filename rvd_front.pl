@@ -2269,19 +2269,14 @@ sub copy_machine {
 
     my @create_args = ( from_pool => 0 );
     push @create_args,( memory => $ram ) if $ram;
-    my @reqs;
-    if ($number == 1 ) {
-        my $req2 = Ravada::Request->clone(
+    push @create_args, ( name => $name ) if $number == 1;
+    my $req2 = Ravada::Request->clone(
             uid => $USER->id
-            ,name => $name
             , id_domain => $base->id
+            , number => $number
             ,@create_args
-        );
-        push @reqs, ( $req2 );
-    } else {
-        push @reqs,(copy_machine_many($base, $number, \@create_args));
-    }
-    return $c->render(json => { request => [map { $_->id } @reqs ] } );
+    );
+    return $c->render(json => { request => $req2->id } );
 }
 
 sub new_machine_copy($c) {
@@ -2300,31 +2295,6 @@ sub new_machine_copy($c) {
     );
 
    return $c->redirect_to("/admin/machines");
-}
-
-sub copy_machine_many($base, $number, $create_args) {
-    my $domains = $RAVADA->list_domains;
-    my %domain_exists = map { $_->{name} => 1 } @$domains;
-
-    my @reqs;
-    for ( 1 .. $number ) {
-        my $n = $_;
-        my $name;
-        for ( ;; ) {
-            while (length($n) < length($number)) { $n = "0".$n };
-            $name = $base->name."-".$n;
-            last if !$domain_exists{$name}++;
-            $n++;
-        }
-        my $req2 = Ravada::Request->clone(
-            uid => $USER->id
-            ,name => $name
-            , id_domain => $base->id
-            ,@$create_args
-        );
-        push @reqs, ( $req2 );
-    }
-    return @reqs;
 }
 
 sub machine_is_public {
