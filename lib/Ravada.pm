@@ -456,7 +456,28 @@ sub _update_isos {
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
-
+        ,kali_64 => {
+            name => 'Kali Linux'
+            ,description => 'Kali Linux 2020 64 Bits'
+            ,arch => 'amd64'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,url => 'https://cdimage.kali.org/kali-2020.\d+/'
+            ,file_re => 'kali-linux-2020.\d+-installer-amd64.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,min_disk_size => '10'
+        }
+        ,kali_64_netinst => {
+            name => 'Kali Linux (NetInstaller)'
+            ,description => 'Kali Linux 2020 64 Bits (light NetInstall)'
+            ,arch => 'amd64'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,url => 'https://cdimage.kali.org/kali-2020.\d+/'
+            ,file_re => 'kali-linux-2020.\d+-installer-netinst-amd64.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,min_disk_size => '10'
+        }
         ,windows_7 => {
           name => 'Windows 7'
           ,description => 'Windows 7 64 bits. Requires an user provided ISO image.'
