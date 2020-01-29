@@ -1246,9 +1246,9 @@ sub _download($self, $url) {
 }
 
 sub _match_url($self,$url) {
-    return $url if $url !~ m{\*};
+    return $url if $url !~ m{\*|\+};
 
-    my ($url1, $match,$url2) = $url =~ m{(.*/)([^/]*\*[^/]*)/?(.*)};
+    my ($url1, $match,$url2) = $url =~ m{(.*/)([^/]*[*+][^/]*)/?(.*)};
     $url2 = '' if !$url2;
 
     confess "No url1 from $url" if !defined $url1;
