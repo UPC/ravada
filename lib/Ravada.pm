@@ -457,7 +457,7 @@ sub _update_isos {
             ,min_disk_size => '10'
         }
         ,kali_64 => {
-            name => 'Kali Linux'
+            name => 'Kali Linux 2020'
             ,description => 'Kali Linux 2020 64 Bits'
             ,arch => 'amd64'
             ,xml => 'jessie-amd64.xml'
@@ -468,7 +468,7 @@ sub _update_isos {
             ,min_disk_size => '10'
         }
         ,kali_64_netinst => {
-            name => 'Kali Linux (NetInstaller)'
+            name => 'Kali Linux 2020 (NetInstaller)'
             ,description => 'Kali Linux 2020 64 Bits (light NetInstall)'
             ,arch => 'amd64'
             ,xml => 'jessie-amd64.xml'
