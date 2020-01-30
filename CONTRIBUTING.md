@@ -193,7 +193,7 @@ To learn more about rebasing in Git, there are a lot of
 but here's the suggested workflow:
 
 ```sh
-git remote add upstream git@github.com:UPC/ravada.git
+git remote add upstream https://github.com/UPC/ravada.git
 git fetch upstream
 git rebase upstream/develop
 ```
