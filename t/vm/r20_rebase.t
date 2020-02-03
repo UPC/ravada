@@ -20,6 +20,8 @@ my $MNT_RVD= "/mnt/test_rvd";
 my $QEMU_NBD = `which qemu-nbd`;
 chomp $QEMU_NBD;
 
+my $VOL_SIZE = 1024 * 256;
+
 ok($QEMU_NBD,"Expecting qemu-nbd command") or do {
     done_testing;
     exit;
@@ -31,8 +33,8 @@ init();
 sub test_rebase_3times($vm, $swap, $data, $with_cd) {
 
     my $base1 = create_domain($vm);
-    $base1->add_volume(type => 'swap', size => 1024*1024) if $swap;
-    $base1->add_volume(type => 'data', size => 1024*1024) if $data;
+    $base1->add_volume(type => 'swap', size=>$VOL_SIZE) if $swap;
+    $base1->add_volume(type => 'data', size=>$VOL_SIZE) if $data;
 
     _mangle_vol2($vm, "base1",$base1->list_volumes);
     $base1->prepare_base(user => user_admin, with_cd => $with_cd);
@@ -110,8 +112,8 @@ sub test_rebase_with_vols($vm, $swap0, $data0, $with_cd0, $swap1, $data1, $with_
     $same_outline = ( $swap0 == $swap1 ) && ($data0 == $data1) && ($with_cd0 == $with_cd1);
 
     my $base = create_domain($vm);
-    $base->add_volume(type => 'swap', size => 1024*1024)    if $swap0;
-    $base->add_volume(type => 'data', size => 1024*1024)    if $data0;
+    $base->add_volume(type => 'swap', size=>$VOL_SIZE)    if $swap0;
+    $base->add_volume(type => 'data', size=>$VOL_SIZE)    if $data0;
     $base->prepare_base(user => user_admin, with_cd => $with_cd0);
 
     my $clone1 = $base->clone( name => new_domain_name, user => user_admin);
@@ -119,12 +121,12 @@ sub test_rebase_with_vols($vm, $swap0, $data0, $with_cd0, $swap1, $data1, $with_
     my @volumes_before = $clone1->list_volumes();
     _mangle_vol($vm,@volumes_before);
 
-    my %backing_file = map { $_->file => $_->backing_file }
+    my %backing_file = map { $_->file => ($_->backing_file or undef) }
         grep { $_->file } $clone1->list_volumes_info;
 
     my $base2 = create_domain($vm);
-    $base2->add_volume(type => 'swap', size => 1024*1024)    if $swap1;
-    $base2->add_volume(type => 'data', size => 1024*1024)    if $data1;
+    $base2->add_volume(type => 'swap', size=>$VOL_SIZE)    if $swap1;
+    $base2->add_volume(type => 'data', size=>$VOL_SIZE)    if $data1;
     $base2->prepare_base(user => user_admin, with_cd => $with_cd1);
 
     my @reqs;
@@ -267,13 +269,14 @@ sub _mount_qcow($vm, $vol) {
     $vm->run_command($QEMU_NBD,"-d", $DEV_NBD);
     for ( 1 .. 10 ) {
         ($out, $err) = $vm->run_command($QEMU_NBD,"-c",$DEV_NBD, $vol);
-        last if !$err || $err !~ /NBD socket/;
+        last if !$err || $err !~ /(NBD socket|Unexpected end)/;
         sleep 1;
+        diag("$_ $err");
     }
     confess "qemu-nbd -c $DEV_NBD $vol\n?:$?\n$out\n$err" if $? || $err;
     _create_part($DEV_NBD);
-    $vm->run_command("/sbin/mkfs.ext4","${DEV_NBD}p1");
-    die "Error on mkfs" if $?;
+    ($out, $err) = $vm->run_command("/sbin/mkfs.ext2","${DEV_NBD}p1");
+    die "Error on mkfs: $out\n $err" if $?;
     mkdir "$MNT_RVD" if ! -e $MNT_RVD;
     $vm->run_command("/bin/mount","${DEV_NBD}p1",$MNT_RVD);
     exit if $?;
@@ -358,8 +361,8 @@ sub test_rebase($vm, $swap, $data, $with_cd) {
     #diag("sw: $swap , da: $data , cd: $with_cd");
     my $base = create_domain($vm);
 
-    $base->add_volume(type => 'swap', size => 1024*1024)    if $swap;
-    $base->add_volume(type => 'data', size => 1024*1024)    if $data;
+    $base->add_volume(type => 'swap', size=>$VOL_SIZE)    if $swap;
+    $base->add_volume(type => 'data', size=>$VOL_SIZE)    if $data;
     $base->prepare_base(user => user_admin, with_cd => $with_cd);
 
     my $clone1 = $base->clone( name => new_domain_name, user => user_admin);
@@ -394,8 +397,8 @@ sub test_rebase($vm, $swap, $data, $with_cd) {
 
 sub test_prepare_remove($vm) {
     my $domain = create_domain($vm);
-    $domain->add_volume(type => 'swap', size => 1024*1024);
-    $domain->add_volume(type => 'data', size => 1024*1024);
+    $domain->add_volume(type => 'swap', size=>$VOL_SIZE);
+    $domain->add_volume(type => 'data', size=>$VOL_SIZE);
 
     _mangle_vol2($vm, "zipizape",$domain->list_volumes);
 
@@ -416,7 +419,7 @@ clean();
 $ENV{LANG}='C';
 _umount_qcow();
 
-for my $vm_name (reverse vm_names() ) {
+for my $vm_name (vm_names() ) {
     ok($vm_name);
     SKIP: {
         my $vm = rvd_back->search_vm($vm_name);

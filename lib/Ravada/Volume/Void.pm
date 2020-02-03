@@ -44,8 +44,8 @@ sub _load($self) {
     return Load($self->vm->read_file($self->file));
 }
 
-sub _save($self, $data) {
-    $self->vm->write_file($self->file, Dump($data));
+sub _save($self, $data, $file = $self->file) {
+    $self->vm->write_file($file, Dump($data));
 }
 
 sub clone($self, $clone_file) {
@@ -87,6 +87,19 @@ sub spinoff($self) {
     }
     delete $data->{backing_file};
     $self->_save($data);
+}
+
+sub block_commit($self) {
+    my $data = $self->_load();
+    confess "Error: no backing file ".Dumper($self->file,$data)
+        if !$self->backing_file;
+    my $data_bf = Load($self->vm->read_file($self->backing_file));
+    for my $key (keys %$data) {
+        next if $key =~ /^(origin|capacity|is_base|backing_file)$/;
+        $data_bf->{$key} = $data->{$key};
+    }
+    $self->_save($data_bf, $self->backing_file);
+
 }
 
 1;

@@ -134,4 +134,18 @@ sub spinoff($self) {
     $self->vm->remove_file($volume_tmp) or die "ERROR $! removing $volume_tmp";
 }
 
+sub block_commit($self) {
+    my @cmd = ($QEMU_IMG,'commit','-q','-d');
+    my ($out, $err) = $self->vm->run_command(@cmd, $self->file);
+    warn $err   if $err;
+
+    for (;;) {
+        return if !-e $self->file;
+        my $t0 = time;
+        my @stat = stat($self->file);
+        my $mtime = $stat[9];
+        return if $t0 - $mtime > 0;
+        sleep 1;
+    }
+}
 1;

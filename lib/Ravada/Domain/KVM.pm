@@ -383,7 +383,7 @@ sub _volume_info($self, $file, $refresh=0) {
     }
 
     if (!$vol) {
-        warn "Error: Volume $file not found";
+        confess "Error: Volume $file not found ".$self->name;
         return;
     }
 

@@ -11,7 +11,7 @@ Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
 
 use Carp qw(carp confess croak cluck);
 use Data::Dumper;
-use File::Copy;
+use File::Copy qw(copy move);
 use File::Rsync;
 use Hash::Util qw(lock_hash unlock_hash);
 use Image::Magick;
@@ -685,7 +685,7 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
         $self->migrate($vm_local);
     }
     if ($self->id_base ) {
-        $self->spinoff_volumes();
+        $self->spinoff();
     }
     $self->_check_free_space_prepare_base();
 }
@@ -718,13 +718,13 @@ sub _post_prepare_base {
 
 =pod
 
-=head2 spinoff_volumes
+=head2 spinoff
 
 Makes volumes indpendent from base
 
 =cut
 
-sub spinoff_volumes {
+sub spinoff {
     my $self = shift;
 
     $self->_do_force_shutdown() if $self->is_active;
@@ -1531,7 +1531,7 @@ sub _after_remove_domain {
     $self->_remove_domain_cascade($user)   if !$cascade;
 
     if ($self->is_known && $self->is_base) {
-        $self->_do_remove_base($user);
+        #        $self->_do_remove_base($user);
         $self->_remove_files_base();
     }
     $self->_remove_all_volumes();
@@ -1877,11 +1877,29 @@ sub _do_remove_base($self, $user) {
         }
     }
     $self->is_base(0);
+    for my $vol ($self->list_volumes_info) {
+        next if !$vol->file || $vol->file =~ /\.iso$/;
+        my $backing_file = $vol->backing_file;
+        next if !$backing_file;
+        #        confess "Error: no backing file for ".$vol->file if !$backing_file;
+        $vol->block_commit();
+        unlink $vol->file or die "$! ".$vol->file;
+        my @stat = stat($backing_file);
+        move($backing_file, $vol->file) or die "$! $backing_file -> ".$vol->file;
+        my $mask = oct(7777);
+        my $mode = $stat[2] & $mask;
+        my $w = oct(200);
+        $mode = $mode ^ $w;
+        chmod($mode,$vol->file);
+        chown($stat[4],$stat[5], $vol->file);
+    }
+
     for my $file ($self->list_files_base) {
         next if $file =~ /\.iso$/i;
         next if ! -e $file;
         unlink $file or die "$! unlinking $file";
     }
+
     $self->storage_refresh()    if $self->storage();
 }
 
@@ -1897,7 +1915,6 @@ sub _pre_remove_base {
 
         $domain->_vm($vm_local);
     }
-    $domain->spinoff_volumes();
 }
 
 sub _post_remove_base {
