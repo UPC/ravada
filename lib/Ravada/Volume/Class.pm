@@ -10,6 +10,7 @@ use feature qw(signatures);
 requires 'clone';
 requires 'backing_file';
 requires 'prepare_base';
+requires 'spinoff';
 
 around 'prepare_base' => \&_around_prepare_base;
 around 'clone' => \&_around_clone;

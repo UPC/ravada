@@ -14,6 +14,8 @@
 
     %= include "/main/vm_rebase"
 
+    %= include "/main/vm_spinoff"
+
     %= include "/main/vm_prepare_base"
 
     %= include "/main/vm_remove_base"

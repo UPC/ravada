@@ -10,7 +10,7 @@ use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use Mojo::File 'path';
 use  Test::More;
-use YAML qw(LoadFile DumpFile);
+use YAML qw(Load LoadFile Dump DumpFile);
 
 use feature qw(signatures);
 no warnings "experimental::signatures";
@@ -67,6 +67,9 @@ create_domain
     mojo_request
 
     remove_old_user
+
+    mangle_volume
+    test_volume_contents
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -103,6 +106,12 @@ our %VM_VALID = ( KVM => 1
 
 our @NODES;
 my $URL_LOGOUT = '/logout';
+
+my $MOD_NBD= 0;
+my $DEV_NBD = "/dev/nbd10";
+my $MNT_RVD= "/mnt/test_rvd";
+my $QEMU_NBD = `which qemu-nbd`;
+chomp $QEMU_NBD;
 
 sub user_admin {
 
@@ -1629,6 +1638,142 @@ sub create_storage_pool($vm) {
 
     return $pool_name;
 
+}
+
+sub mangle_volume($vm,$name,@vol) {
+    for my $file (@vol) {
+
+        if ($file =~ /\.void$/) {
+            my $data = Load($vm->read_file($file));
+            $data->{$name} = "c" x 20;
+            $vm->write_file($file, Dump($data));
+
+        } elsif ($file =~ /\.qcow2$/) {
+            _mount_qcow($vm, $file);
+            open my $out,">","/mnt/test_rvd/$name";
+            print $out ("c" x 20)."\n";
+            close $out;
+            _umount_qcow();
+        } else {
+            confess "Error: I don't know how to mangle volume $file";
+        }
+    }
+}
+
+sub _mount_qcow($vm, $vol) {
+    my ($in,$out, $err);
+    if (!$MOD_NBD++) {
+        my @cmd =("/sbin/modprobe","nbd", "max_part=63");
+        run3(\@cmd, \$in, \$out, \$err);
+        die join(" ",@cmd)." : $? $err" if $?;
+    }
+    $vm->run_command($QEMU_NBD,"-d", $DEV_NBD);
+    for ( 1 .. 10 ) {
+        ($out, $err) = $vm->run_command($QEMU_NBD,"-c",$DEV_NBD, $vol);
+        last if !$err || $err !~ /NBD socket/;
+        sleep 1;
+    }
+    confess "qemu-nbd -c $DEV_NBD $vol\n?:$?\n$out\n$err" if $? || $err;
+    _create_part($DEV_NBD);
+    ($out, $err) = $vm->run_command("/sbin/mkfs.ext4","${DEV_NBD}p1");
+    die "Error on mkfs $err" if $?;
+    mkdir "$MNT_RVD" if ! -e $MNT_RVD;
+    $vm->run_command("/bin/mount","${DEV_NBD}p1",$MNT_RVD);
+    exit if $?;
+}
+
+sub _create_part($dev) {
+    my @cmd = ("/sbin/fdisk","-l",$dev);
+    my ($in,$out, $err);
+    for my $retry ( 1 .. 10 ) {
+        run3(\@cmd, \$in, \$out, \$err);
+        last if !$err && $err =~ /(Input\/output error|Unexpected end-of-file)/i;
+        warn $err if $err && $retry>2;
+        sleep 1;
+    }
+    confess join(" ",@cmd)."\n$?\n$out\n$err\n" if $err || $?;
+
+    return if $out =~ m{/dev/\w+\d+p\d+}mi;
+
+    for (1 .. 10) {
+        @cmd = ("/sbin/fdisk",$dev);
+        $in = "n\np\n1\n\n\n\nw\np\n";
+
+        run3(\@cmd, \$in, \$out, \$err);
+        chomp $err;
+        last if !$err || $err !~ /evice.*busy/;
+        diag($err." retrying");
+        sleep 1;
+    }
+    ok(!$err) or die join(" ",@cmd)."\n$?\nIN: $in\nOUT:\n$out\nERR:\n$err";
+}
+sub _umount_qcow() {
+    mkdir $MNT_RVD if ! -e $MNT_RVD;
+    my @cmd = ("umount",$MNT_RVD);
+    my ($in, $out, $err);
+    for ( ;; ) {
+        run3(\@cmd, \$in, \$out, \$err);
+        last if $err !~ /busy/i || $err =~ /not mounted/;
+        sleep 1;
+    }
+    die $err if $err && $err !~ /busy/ && $err !~ /not mounted/;
+    `qemu-nbd -d $DEV_NBD`;
+}
+
+sub _mangle_vol2($vm,$name,@vol) {
+    for my $file (@vol) {
+
+        if ($file =~ /\.void$/) {
+            my $data = Load($vm->read_file($file));
+            $data->{$name} = "c" x 20;
+            $vm->write_file($file, Dump($data));
+
+        } elsif ($file =~ /\.qcow2$/) {
+            _mount_qcow($vm, $file);
+            open my $out,">","/mnt/test_rvd/$name";
+            print $out ("c" x 20)."\n";
+            close $out;
+            _umount_qcow();
+        }
+    }
+}
+
+
+sub _test_file_exists($vm, $vol, $name, $expected=1) {
+    _mount_qcow($vm,$vol);
+    my $ok = -e $MNT_RVD."/".$name;
+    _umount_qcow();
+    return 1 if $ok && $expected;
+    return 1 if !$ok && !$expected;
+    return 0;
+}
+
+sub _test_file_not_exists($vm, $vol) {
+    return test_file_exists($vm,$vol, 0);
+}
+
+sub test_volume_contents($vm, $name, $file, $expected=1) {
+    if ($file =~ /\.void$/) {
+        my $data = LoadFile($file);
+        if ($expected) {
+            ok(exists $data->{$name}, "Expecting $name in ".Dumper($file,$data)) or confess;
+        } else {
+            ok(!exists $data->{$name}, "Expecting no $name in ".Dumper($file,$data)) or confess;
+        }
+    } elsif ($file =~ /\.qcow2$/) {
+            _test_file_exists($vm, $file, $name, $expected);
+    } elsif ($file =~ /\.iso$/) {
+        my $file_type = `file $file`;
+        chomp $file_type;
+        if ($file_type =~ /ASCII/) {
+            my $data = LoadFile($file);
+            ok($data->{iso},Dumper($file,$data)) or confess;
+        } else {
+            like($file_type , qr/DOS\/MBR/);
+        }
+    } else {
+        confess "I don't know how to check vol contents of '$file'";
+    }
 }
 
 1;

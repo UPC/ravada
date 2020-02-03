@@ -44,8 +44,8 @@ sub _load($self) {
     return Load($self->vm->read_file($self->file));
 }
 
-sub _save($self, $data) {
-    $self->vm->write_file($self->file, Dump($data));
+sub _save($self, $data, $file = $self->file) {
+    $self->vm->write_file($file, Dump($data));
 }
 
 sub clone($self, $clone_file) {
@@ -67,14 +67,39 @@ sub clone($self, $clone_file) {
 
 sub backing_file($self) {
     my $data = $self->_load();
-    my $backing_file = $data->{backing_file}
-        or confess "Error: No backing file from ".Dumper($data);
+    return ( $data->{backing_file} or undef);
 }
 
 sub rebase($self, $file) {
     my $data = $self->_load();
     $data->{backing_file} = $file;
     $self->_save($data);
+}
+
+sub spinoff($self) {
+    my $data = $self->_load();
+    confess "Error: no backing file ".Dumper($self->file,$data)
+        if !$self->backing_file;
+    my $data_bf = Load($self->vm->read_file($self->backing_file));
+    for my $key (keys %$data_bf) {
+        next if $key =~ /^(origin|capacity|is_base)$/;
+        $data->{$key} = $data_bf->{$key} unless exists $data->{$key};
+    }
+    delete $data->{backing_file};
+    $self->_save($data);
+}
+
+sub block_commit($self) {
+    my $data = $self->_load();
+    confess "Error: no backing file ".Dumper($self->file,$data)
+        if !$self->backing_file;
+    my $data_bf = Load($self->vm->read_file($self->backing_file));
+    for my $key (keys %$data) {
+        next if $key =~ /^(origin|capacity|is_base|backing_file)$/;
+        $data_bf->{$key} = $data->{$key};
+    }
+    $self->_save($data_bf, $self->backing_file);
+
 }
 
 1;

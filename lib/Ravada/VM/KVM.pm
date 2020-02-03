@@ -83,6 +83,8 @@ our $CACHE_DOWNLOAD = 1;
 our $VERIFY_ISO = 1;
 
 our %_CREATED_DEFAULT_STORAGE = ();
+
+our $MIN_CAPACITY = 1024 * 10;
 ##########################################################################
 
 
@@ -721,7 +723,8 @@ sub create_volume {
                         $img_file);
 
     if ($capacity) {
-        confess "Size '$capacity' too small" if $capacity< 1024*10;
+        confess "Size '$capacity' too small, min : $MIN_CAPACITY"
+        if $capacity< $MIN_CAPACITY;
         $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($allocation));
         $doc->findnodes('/volume/capacity/text()')->[0]->setData($capacity);
     }

@@ -2967,11 +2967,25 @@ sub _cmd_remove_base {
 
     die "Unknown domain id '$id_domain'\n" if !$domain;
 
-    $domain->_vm->disconnect();
-    $self->_disconnect_vm();
     $domain->remove_base($user);
 
 }
+
+sub _cmd_spinoff($self, $request) {
+
+    my $id_domain = $request->id_domain or confess "Missing request id_domain";
+    my $uid = $request->args('uid')     or confess "Missing argument uid";
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    die "Unknown domain id '$id_domain'\n" if !$domain;
+
+    $domain->spinoff();
+
+}
+
 
 
 sub _cmd_hybernate {
@@ -3574,9 +3588,12 @@ sub _req_method {
     ,add_disk => \&_cmd_add_disk
     ,copy_screenshot => \&_cmd_copy_screenshot
    ,cmd_cleanup => \&_cmd_cleanup
+
    ,remove_base => \&_cmd_remove_base
+   ,spinoff => \&_cmd_spinoff
    ,set_base_vm => \&_cmd_set_base_vm
 ,remove_base_vm => \&_cmd_set_base_vm
+
    ,refresh_vms => \&_cmd_refresh_vms
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
