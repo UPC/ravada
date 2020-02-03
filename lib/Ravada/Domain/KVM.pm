@@ -82,6 +82,7 @@ our %REMOVE_CONTROLLER_SUB = (
 our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
     ,vcpus => \&_change_hardware_vcpus
+    ,memory => \&_change_hardware_memory
     ,network => \&_change_hardware_network
 );
 ##################################################
@@ -2218,13 +2219,26 @@ sub _change_hardware_vcpus($self, $index, $data) {
     confess "Error: Unkown args ".Dumper($data) if keys %$data;
 
     if ($self->domain->is_active) {
-        $self->domain->set_vcpus($n_virt_cpu);
+        $self->domain->set_vcpus($n_virt_cpu, Sys::Virt::Domain::VCPU_GUEST);
     }
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
     my ($vcpus) = ($doc->findnodes('/domain/vcpu/text()'));
     $vcpus->setData($n_virt_cpu);
     $self->_post_change_hardware($doc);
+
+}
+
+sub _change_hardware_memory($self, $index, $data) {
+    confess "Error: I don't understand memory index = '$index' , only 0"
+    if defined $index && $index != 0;
+
+    my $memory = delete $data->{memory};
+    my $max_mem= delete $data->{max_mem};
+    confess "Error: Unkown args ".Dumper($data) if keys %$data;
+
+    $self->set_memory($memory)      if defined $memory;
+    $self->set_max_mem($max_mem)    if defined $max_mem;
 
 }
 

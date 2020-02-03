@@ -3249,24 +3249,6 @@ sub _cmd_refresh_vms($self, $request=undef) {
     $self->_refresh_volatile_domains();
 }
 
-sub _cmd_change_max_memory($self, $request) {
-    my $uid = $request->args('uid');
-    my $id_domain = $request->args('id_domain');
-    my $memory = $request->args('ram');
-
-    my $domain = $self->search_domain_by_id($id_domain);
-    $domain->set_max_mem($memory);
-}
-
-sub _cmd_change_curr_memory($self, $request) {
-    my $uid = $request->args('uid');
-    my $id_domain = $request->args('id_domain');
-    my $memory = $request->args('ram');
-
-    my $domain = $self->search_domain_by_id($id_domain);
-    $domain->set_memory($memory);
-}
-
 sub _cmd_shutdown_node($self, $request) {
     my $id_node = $request->args('id_node');
     my $node = Ravada::VM->open($id_node);
@@ -3594,8 +3576,6 @@ sub _req_method {
 ,add_hardware => \&_cmd_add_hardware
 ,remove_hardware => \&_cmd_remove_hardware
 ,change_hardware => \&_cmd_change_hardware
-,change_max_memory => \&_cmd_change_max_memory
-,change_curr_memory => \&_cmd_change_curr_memory
 
 # Domain ports
 ,expose => \&_cmd_expose

@@ -93,8 +93,6 @@ our %VALID_ARG = (
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }
     ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
     ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 2, data => 1 }
-    ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
-    ,change_curr_memory => {uid => 1, id_domain => 1, ram => 1}
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
     ,rebase => { uid => 1, id_base => 1, id_domain => 1 }
@@ -128,7 +126,6 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             set_base_vm remove_base_vm
             domain_autostart hibernate hybernate
             change_owner
-            change_max_memory change_curr_memory
             add_hardware remove_hardware set_driver change_hardware
             expose remove_expose
             set_base_vm

@@ -1240,6 +1240,12 @@ post '/machine/hardware/add' => sub {
     );
     return $c->render( json => { request => $req->id } );
 };
+
+get '/list_users.json' => sub($c) {
+    return access_denied($c) if !$USER->is_admin;
+    return $c->render(json => $RAVADA->list_users );
+};
+
 ###################################################
 
 ## user_settings
@@ -1928,12 +1934,8 @@ sub manage_machine {
 
     $c->stash(domain => $domain);
     $c->stash(USER => $USER);
-    $c->stash(list_users => $RAVADA->list_users);
     $c->stash(ldap_attributes_cn => ( $c->session('ldap_attributes_cn') or $USER->name or ''));
 
-    $c->stash(  ram => int( $domain->get_info()->{max_mem} / 1024 ));
-    $c->stash( cram => int( $domain->get_info()->{memory} / 1024 ));
-    $c->stash( needs_restart => $domain->needs_restart );
     my @messages;
     my @errors;
     my @reqs = ();
@@ -1947,35 +1949,6 @@ sub manage_machine {
         push @messages,("MAx memory changed from "
                     .int($domain->get_info()->{max_mem}/1024)." to ".$c->param('ram'));
     }
-    if ($c->param("cram") && int($domain->get_info()->{memory} / 1024) !=$c->param("cram")){
-        $c->stash(cram => $c->param('cram'));
-        if ($c->param("cram")*1024<=($domain->get_info())->{max_mem}){
-            my $req_mem = Ravada::Request->change_curr_memory(uid => $USER->id, id_domain => $domain->id, ram => $c->param("cram")*1024);
-            push @reqs,($req_mem);
-            push @messages,("Current memory changed from "
-                    .int($domain->get_info()->{memory} / 1024)." to ".$c->param('cram'));
-        }  else {
-            push @errors, ('Current memory must be less than max memory');
-        }
-    }
-
-    if (defined $c->param("start-clones") && $c->param("start-clones") ne "") {
-        my $req = Ravada::Request->start_clones(
-            id_domain => $domain->id,
-            ,uid => $USER->id
-            ,remote_ip => _remote_ip($c)
-        );
-    }
-    my $req;
-    $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
-            if $c->param('shutdown') && $domain->is_active;
-
-    $req = Ravada::Request->start_domain(
-                        uid => $USER->id
-                     , name => $domain->name
-                , remote_ip => _remote_ip($c)
-            ) if $c->param('start') && !$domain->is_active;
-
     _enable_buttons($c, $domain);
 
     my %cur_driver;
@@ -2013,34 +1986,6 @@ sub manage_machine {
         }
     }
 
-    for my $option (qw(autostart description run_timeout volatile_clones id_owner)) {
-
-        next if $option eq 'description' && !$c->param('btn_description');
-        next if $option ne 'description' && !$c->param('btn_options');
-
-            return access_denied($c)
-                if $option =~ /^(id_owner|run_timeout)$/ && !$USER->is_admin;
-
-
-            my $old_value = $domain->_data($option);
-            my $value = $c->param($option);
-            
-            $value= 0 if $option =~ /volatile_clones|autostart/ && !$value;
-
-            if ( $option eq 'run_timeout' ) {
-                $value = 0 if !$value;
-                $value *= 60;
-            }
-
-            next if defined $domain->_data($option) && defined $value
-                    && $domain->_data($option) eq $value;
-            next if !$domain->_data($option) && !$value;
-
-            $domain->set_option($option, $value);
-            my $option_txt = $option;
-            $option_txt =~ s/_/ /g;
-            push @messages,("\u$option_txt changed.");
-    }
     $c->stash(messages => \@messages);
     $c->stash(errors => \@errors);
     return $c->render(template => 'main/settings_machine'

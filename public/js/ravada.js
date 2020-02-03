@@ -250,6 +250,14 @@
                                 $scope.new_name=$scope.showmachine.name+"-2";
                                 $scope.validate_new_name($scope.showmachine.name);
                                 $scope.new_n_virt_cpu= $scope.showmachine.n_virt_cpu;
+                                $scope.new_memory = ($scope.showmachine.memory / 1024);
+                                $scope.new_max_mem = ($scope.showmachine.max_mem / 1024);
+
+                                $scope.new_run_timeout = ($scope.showmachine.run_timeout / 60);
+                                if (!$scope.new_run_timeout) $scope.new_run_timeout = undefined;
+
+                                $scope.new_volatile_clones = $scope.showmachine.volatile_clones;
+                                $scope.new_autostart = $scope.showmachine.autostart;
                             }
                             $scope.init_domain_access();
                             $scope.init_ldap_access();
@@ -257,6 +265,7 @@
                             list_interfaces();
                             $scope.hardware_types = Object.keys(response.data.hardware);
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
+                            if (is_admin) list_users();
                 });
           };
 
@@ -369,11 +378,23 @@
             if (! value) {
                 value_show = false;
             }
+            if ($scope.pending_request && $scope.pending_request.status == 'done' ) {
+                $scope.pending_request = undefined;
+            }
             $http.get("/machine/set/"+$scope.showmachine.id+"/"+field+"/"+value);
           };
 
           $scope.set = function(field) {
+            if ($scope.pending_request && $scope.pending_request.status == 'done' ) {
+                $scope.pending_request = undefined;
+            }
             $http.get("/machine/set/"+$scope.showmachine.id+"/"+field+"/"+$scope.showmachine[field]);
+          };
+          $scope.set_value = function(field,value) {
+            if ($scope.pending_request && $scope.pending_request.status == 'done' ) {
+                $scope.pending_request = undefined;
+            }
+            $http.get("/machine/set/"+$scope.showmachine.id+"/"+field+"/"+value);
           };
           $scope.set_public = function(machineId, value) {
             if (value) value=1;
@@ -628,6 +649,17 @@
                             }
                     });
             };
+            list_users= function() {
+                $http.get('/list_users.json')
+                    .then(function(response) {
+                        $scope.list_users=response.data;
+                        for (var i = 0; i < response.data.length; i++) {
+                            if (response.data[i].id == $scope.showmachine.id_owner) {
+                                $scope.new_owner = response.data[i];
+                            }
+                        }
+                    });
+            }
             $scope.rebase= function() {
                 $scope.req_new_base = $scope.new_base;
                 $http.post('/request/rebase/'
@@ -658,6 +690,7 @@
             };
 
             $scope.request = function(request, args) {
+                $scope.pending_request = undefined;
                 $http.post('/request/'+request+'/'
                     ,JSON.stringify(args)
                 ).then(function(response) {
