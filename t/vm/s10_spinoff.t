@@ -15,12 +15,17 @@ use Test::Ravada;
 
 sub test_spinoff($base) {
     my $clone = $base->clone(name => new_domain_name, user => user_admin);
+    is($clone->id_base,$base->id);
     for my $vol ( $clone->list_volumes_info ) {
         next if ref($vol) =~ /ISO/;
         like($vol->backing_file, qr(.),$vol->file) or exit;
     }
     mangle_volume($base->_vm, "spinoff", $clone->list_volumes);
     $clone->spinoff();
+
+    $clone = Ravada::Domain->open($clone->id);
+    is($clone->id_base,undef) or exit;
+
     for my $vol ( $clone->list_volumes_info ) {
         next if ref($vol) =~ /ISO/;
 

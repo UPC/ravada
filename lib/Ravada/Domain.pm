@@ -175,6 +175,7 @@ around 'force_shutdown' => \&_around_shutdown_now;
 
 before 'remove_base' => \&_pre_remove_base;
 after 'remove_base' => \&_post_remove_base;
+after 'spinoff' => \&_post_spinoff;
 
 before 'rename' => \&_pre_rename;
 after 'rename' => \&_post_rename;
@@ -1933,6 +1934,11 @@ sub _remove_all_bases($self) {
     while ( my ($id_vm) = $sth->fetchrow ) {
         $self->remove_base_vm( id_vm => $id_vm );
     }
+}
+
+sub _post_spinoff($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set id_base=NULL WHERE id=?");
+    $sth->execute($self->id);
 }
 
 sub _pre_shutdown_domain {}

@@ -3566,9 +3566,12 @@ sub _req_method {
     ,add_disk => \&_cmd_add_disk
     ,copy_screenshot => \&_cmd_copy_screenshot
    ,cmd_cleanup => \&_cmd_cleanup
+
    ,remove_base => \&_cmd_remove_base
+   ,spinoff => \&_cmd_spinoff
    ,set_base_vm => \&_cmd_set_base_vm
 ,remove_base_vm => \&_cmd_set_base_vm
+
    ,refresh_vms => \&_cmd_refresh_vms
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base

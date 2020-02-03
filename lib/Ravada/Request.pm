@@ -58,7 +58,7 @@ our %VALID_ARG = (
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
      ,prepare_base => $args_prepare
-     ,spinoff => { id_domain => 1 }
+     ,spinoff => { id_domain => 1, uid => 1 }
      ,pause_domain => $args_manage
     ,resume_domain => {%$args_manage, remote_ip => 1 }
     ,remove_domain => $args_manage
