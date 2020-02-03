@@ -1,10 +1,16 @@
-<div ng-hide="showmachine.is_base || new_base.id != showmachine.id_base">
-    <p>
-       You can prepare this machine as a base to create clones from it.
-    </p>
+<div ng-hide="showmachine.is_base || new_base.id != showmachine.id_base" class="row">
+    <div class="col-sm-3">
     <button ng-click="confirm_prepare_base=true"
         ng-hide="confirm_prepare_base"
     ><%= l 'Prepare Base' %></button>
+    </div>
+    <div class="col-sm-8">
+    <p>
+       Prepare this machine as a base to create clones from it.
+    </p>
+    </div>
+</div>
+<div class="row">
     <div ng-show="confirm_prepare_base" class="alert alert-warning">
          <div ng-show="showmachine.info.cdrom">
             <p>This machine has a CD-ROM</p>
