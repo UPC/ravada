@@ -559,7 +559,7 @@ sub _check_volume_added($self, $file) {
 
     return if !$id;
 
-    confess "Volume $file already in domain id $id_domain";
+    confess "Volume $file already in domain id $id_domain, this is ".$self->id;
 }
 
 sub _around_remove_volume {

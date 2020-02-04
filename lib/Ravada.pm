@@ -2774,7 +2774,8 @@ sub _cmd_open_iptables {
 
 sub _cmd_clone($self, $request) {
 
-    return _req_clone_many($self, $request) if $request->defined_arg('number');
+    return _req_clone_many($self, $request) if $request->defined_arg('number')
+    && $request->defined_arg('number') > 1;
 
     my $domain = Ravada::Domain->open($request->args('id_domain'))
         or confess "Error: Domain ".$request->args('id_domain')." not found";
@@ -2785,7 +2786,7 @@ sub _cmd_clone($self, $request) {
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'))
         or die "Error: User missing, id: ".$request->args('uid');
     $args->{user} = $user;
-    for (qw(id_domain uid at )) {
+    for (qw(id_domain uid at number )) {
         delete $args->{$_};
     }
 
