@@ -500,7 +500,7 @@ sub _around_import_domain {
     if ($spinoff) {
         warn "Spinning volumes off their backing files ...\n"
             if $ENV{TERM} && $0 !~ /\.t$/;
-        $domain->spinoff_volumes();
+        $domain->spinoff();
     }
     return $domain;
 }

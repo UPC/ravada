@@ -176,7 +176,7 @@ sub set_max_mem         { confess "TODO" }
 sub set_memory          { confess "TODO" }
 sub shutdown            { confess "TODO" }
 sub shutdown_now        { confess "TODO" }
-sub spinoff_volumes     { confess "TODO" }
+sub spinoff             { confess "TODO" }
 sub start               { confess "TODO" }
 
 sub dettach             { confess "TODO" }
