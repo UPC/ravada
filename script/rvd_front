@@ -1118,7 +1118,6 @@ post '/request/(:name)/' => sub {
     my $c = shift;
     my $name = $c->stash('name');
 
-    warn $c->req->body;
     my $args = decode_json($c->req->body);
 
     for (qw(remote_ip uid)) {
