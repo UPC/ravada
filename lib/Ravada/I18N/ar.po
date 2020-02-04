@@ -67,7 +67,7 @@ msgid "About"
 msgstr "حول"
 
 msgid "Mark all as read"
-msgstr "اجعل الكل مقروء"
+msgstr "اجعله مقروء"
 
 msgid "Settings"
 msgstr "الإعدادا"
@@ -166,248 +166,250 @@ msgid "Process"
 msgstr "العملية"
 
 msgid "Copy"
-msgstr ""
+msgstr "نسخ"
 
 msgid "Error!"
-msgstr ""
+msgstr "خطأ"
 
 msgid "Error"
-msgstr ""
+msgstr "خطأ"
 
 msgid "Backend not available!"
-msgstr ""
+msgstr "Backend غير متوفر"
 
 msgid "Subject"
-msgstr ""
+msgstr "الموضوع"
 
 msgid "Date"
-msgstr ""
+msgstr "التاريخ"
+
 
 msgid "Mark as read"
-msgstr ""
+msgstr "اجعله مقروء"
 
 msgid "Mark as unread"
-msgstr ""
+msgstr "اجعله ليس مقروء"
 
 msgid "No messages to show"
-msgstr ""
+msgstr "لا توجد رسائل لإظهارها"
 
 msgid "Admin"
-msgstr ""
+msgstr "المسؤول"
 
 msgid "Machines"
-msgstr ""
+msgstr "الآلات"
 
 msgid "machines"
-msgstr ""
+msgstr "الآلات"
 
 msgid "Users"
-msgstr ""
+msgstr "المستخدمون"
 
 msgid "users"
-msgstr ""
+msgstr "المستخدمون"
 
 msgid "Messages"
-msgstr ""
+msgstr "الرسائل"
 
 msgid "messages"
-msgstr ""
+msgstr "الرسائل"
 
 msgid "Admin tools"
-msgstr ""
+msgstr "أدوات الإدارة"
 
 msgid "Remove base"
-msgstr ""
+msgstr "إزالة القاعدة"
 
 msgid "Restore"
-msgstr ""
+msgstr "استعادة"
 
 msgid "Hibernate"
-msgstr ""
+msgstr "السبات"
 
 msgid "Are you sure?"
-msgstr ""
+msgstr "هل أنت متأكد؟"
 
 msgid "Yes"
-msgstr ""
+msgstr "نعم"
 
 msgid "No"
-msgstr ""
+msgstr "لا"
 
 msgid "Make public"
-msgstr ""
+msgstr "اجعل المعلومات عامة"
 
 msgid "Machine settings"
-msgstr ""
+msgstr "إعدادات الجهاز"
 
 msgid "Cannot remove base, machine has clones"
-msgstr ""
+msgstr "لا يمكن إزالة الأساس ، يحتوي الجهاز على نسخ"
 
 msgid "show clones"
-msgstr ""
+msgstr " عرض الاستنساخ"
 
 msgid "hide clones"
-msgstr ""
+msgstr "اخفاء الاستنساخ"
 
 msgid "For Spice redirection you will need to install"
-msgstr ""
+msgstr " توجيه الى SPICE,  ستحتاج إلى تثبيت"
 
 msgid "in your computer."
 msgstr ""
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr ""
+msgstr "ابحث في توزيعاتك ، على سبيل المثال في Debian / Ubuntu with"
 
 msgid "You will need to install"
-msgstr ""
+msgstr "سوف تحتاج إلى تثبيت"
 
 msgid "and USB drivers ("
-msgstr ""
+msgstr "وبرامج تشغيل USB"
 
 msgid ""
 "Be aware that in Windows, Spice redirection is not automatic. It is "
 "necessary to associate protocol with the app."
-msgstr ""
+msgstr "كن على علم بأنه في نظام ويندوس ، فإن إعادة توجيه سبايس ليست تلقائية. إنه ضروري لربط البروتوكول بالتطبيق."
 
 msgid "To make this possible, download"
-msgstr ""
+msgstr "لجعل هذا ممكنًا ، قم بتنزيل"
 
 msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
-msgstr ""
+msgstr "أو انسخ الأسطر التالية في ملف" "ASCII" " واحفظها بالملح " ".reg " " ثم قم بتنفيذ الملف."
 
 msgid "Login"
-msgstr ""
+msgstr "تسجيل الدخول"
 
 msgid "Welcome"
-msgstr ""
+msgstr "مرحبًا"
 
 msgid "A viewer is required to run the virtual machines."
-msgstr ""
+msgstr "مطلوب عارض لتشغيل الأجهزة الافتراضية."
 
 msgid "It is required a viewer to run the virtual machines."
-msgstr ""
+msgstr "مطلوب المشاهد لتشغيل الأجهزة الافتراضية."
 
 msgid "Virtual Machines"
-msgstr ""
+msgstr "الأجهزة الافتراضية"
 
 msgid "User"
-msgstr ""
+msgstr "المستخدم"
 
 msgid "Password"
-msgstr ""
+msgstr "كلمة المرور"
 
 msgid "Start session"
-msgstr ""
+msgstr "بدء الجلسة"
 
 msgid "bits) in your computer."
-msgstr ""
+msgstr "البتات) في جهاز الكمبيوتر الخاص بك."
 
 msgid "Permissions"
-msgstr ""
+msgstr "أذونات"
 
 msgid "can change the settings of owned virtual machines."
-msgstr ""
+msgstr "يمكن تغيير إعدادات الأجهزة الافتراضية المملوكة."
 
 msgid "can change the settings of any virtual machines."
-msgstr ""
+msgstr "يمكن تغيير إعدادات أي أجهزة افتراضية."
 
 msgid "can change the settings of any virtual machines "
-msgstr ""
+msgstr "يمكن تغيير إعدادات أي أجهزة افتراضية"
 
 msgid "cloned from one base owned by the user."
-msgstr ""
+msgstr "تم استنساخه من قاعدة واحدة يملكها المستخدم."
 
 msgid "can clone public virtual machines."
-msgstr ""
+msgstr "يمكن استنساخ الأجهزة الافتراضية العامة"
 
 msgid "can clone any virtual machine."
-msgstr ""
+msgstr "يمكن استنساخ أي جهاز افتراضي"
 
 msgid "can create bases."
-msgstr ""
+msgstr "يمكنه إنشاء قواعد"
 
 msgid "can create virtual machines."
-msgstr ""
+msgstr "يمكنه إنشاء أجهزة افتراضية"
 
 msgid "can grant permissions to other users"
-msgstr ""
+msgstr "يمكن منح أذونات للمستخدمين الآخرين"
 
 msgid "can hibernate any virtual machine."
-msgstr ""
+msgstr "يمكنه إسبات أي جهاز افتراضي"
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr ""
+msgstr "يمكن السبات من المستنسخة من الأجهزة الافتراضية التي يملكها المستخدم"
 
 msgid "can hibernate any clone."
-msgstr ""
+msgstr "يمكنه إسبات أي استنساخ"
 
 msgid "can remove any virtual machines owned by the user."
-msgstr ""
+msgstr "يمكن إزالة أي أجهزة افتراضية يملكها المستخدم"
 
 msgid "can remove any virtual machine."
-msgstr ""
+msgstr "يمكن إزالة أي جهاز ظاهري"
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr ""
+msgstr "يمكن إزالة النسخ من الأجهزة الافتراضية التي يملكها المستخدم"
 
 msgid "can remove any clone."
-msgstr ""
+msgstr "يمكن إزالة أي استنساخ"
 
 msgid "can take a screenshot of any virtual machine owned by the user."
-msgstr ""
+msgstr "مكن أن يأخذ لقطة شاشة لأي جهاز افتراضي يمتلكه المستخدم"
 
 msgid "can take a screenshot of any virtual machine."
-msgstr ""
+msgstr "يمكن أن يأخذ لقطة شاشة لأي جهاز افتراضي"
 
 msgid "can shutdown any virtual machine."
-msgstr ""
+msgstr "يمكن إيقاف تشغيل أي جهاز افتراضي"
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr ""
+msgstr "يمكن إيقاف تشغيل المستنسخة من الأجهزة الافتراضية التي يملكها المستخدم"
 
 msgid "Submit Query"
-msgstr ""
+msgstr "إرسال استعلام"
 
 msgid "From Template"
-msgstr ""
+msgstr "من القالب"
 
 msgid "From Machine"
-msgstr ""
+msgstr "من الجهاز"
 
 msgid "Backend"
 msgstr ""
 
 msgid "Select Template"
-msgstr ""
+msgstr "اختر قالب"
 
 msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
-msgstr ""
+msgstr "لم يتم تنزيل صورة إيسو بعد. قد يستغرق الأمر بضع دقائق ، حتى ساعات حتى يتم جلب الملف من الإنترنت"
 
 msgid "Download now"
-msgstr ""
+msgstr "تنزيل الآن"
 
 msgid "Select ISO"
-msgstr ""
+msgstr "اختر إيسو" 
+
 
 msgid "Template"
-msgstr ""
+msgstr "القالب"
 
 msgid "Disk Size: (GB)"
-msgstr ""
+msgstr "حجم القرص: (GB)"
 
 msgid "Swap Size: (GB)"
-msgstr ""
+msgstr "حجم المبادلة: (GB)"
 
 msgid "Ram: (GB)"
-msgstr ""
+msgstr "Ram: (GB)"
 
 msgid "Machine name is required."
-msgstr ""
+msgstr "اسم الجهاز مطلوب"
 
 msgid "Machine name can't exceed 20 characters."
-msgstr ""
+msgstr "اسم الجهاز لا يمكن أن يتجاوز 20 حرفا"
 
 msgid "Backend selection is required."
 msgstr ""
