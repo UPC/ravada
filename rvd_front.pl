@@ -734,12 +734,15 @@ get '/machine/public/#id/#value' => sub {
 };
 
 get '/machine/set/#id/#field/#value' => sub {
+    my %privileged = map { $_ => 1 } qw(timeout id_owner);
+
     my $c = shift;
     my $id = $c->stash('id');
     my $field = $c->stash('field');
     my $value = $c->stash('value');
 
     return access_denied($c)       if !$USER->can_manage_machine($c->stash('id'));
+    return access_denied($c) if $privileged{$field} && !$USER->is_admin;
 
     my $domain = Ravada::Front::Domain->open($id) or die "Unkown domain $id";
     $USER->send_message("Setting $field to $value in ".$domain->name)
@@ -1058,17 +1061,22 @@ get '/machine/set_access/(#id_domain)/(#id_access)/(#allowed)/(#last)' => sub {
 
 post '/request/(:name)/' => sub {
     my $c = shift;
+    my $name = $c->stash('name');
 
-    warn $c->req->body;
     my $args = decode_json($c->req->body);
-    warn Dumper($args);
-    confess "Error: uid should not be provided".Dumper($args)
-        if exists $args->{uid};
+
+    for (qw(remote_ip uid)) {
+        confess "Error: $_ should not be provided".Dumper($args)
+        if exists $args->{$_};
+    }
+    if ($name eq 'start_clones') {
+        $args->{remote_ip} = _remote_ip($c);
+    }
 
     my $req;
     eval {
         $req = Ravada::Request->new_request(
-            $c->stash('name')
+            $name
             ,uid => $USER->id
             ,%$args
         );
@@ -1940,17 +1948,6 @@ sub manage_machine {
     my @errors;
     my @reqs = ();
 
-    if ($c->param("ram") && ($domain->get_info())->{max_mem}!=$c->param("ram")*1024 && $USER->is_admin){
-        $c->stash( needs_restart => 1 ) if $domain->is_active;
-        my $req_mem = Ravada::Request->change_max_memory(uid => $USER->id, id_domain => $domain->id, ram => $c->param("ram")*1024);
-        push @reqs,($req_mem);
-        $c->stash(ram => $c->param('ram'));
-        
-        push @messages,("MAx memory changed from "
-                    .int($domain->get_info()->{max_mem}/1024)." to ".$c->param('ram'));
-    }
-    _enable_buttons($c, $domain);
-
     my %cur_driver;
     for my $driver (qw(sound video network image jpeg zlib playback streaming)) {
         next if !$domain->drivers($driver);
@@ -1984,6 +1981,22 @@ sub manage_machine {
             push @messages,('Changes will apply on next start');
             push @reqs, ($req3);
         }
+    }
+    for my $option (qw(description)) {
+
+        next if $option eq 'description' && !$c->param('btn_description');
+
+            my $old_value = $domain->_data($option);
+            my $value = $c->param($option);
+
+            next if defined $domain->_data($option) && defined $value
+                    && $domain->_data($option) eq $value;
+            next if !$domain->_data($option) && !$value;
+
+            $domain->set_option($option, $value);
+            my $option_txt = $option;
+            $option_txt =~ s/_/ /g;
+            push @messages,("\u$option_txt changed.");
     }
 
     $c->stash(messages => \@messages);
