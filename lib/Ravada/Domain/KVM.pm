@@ -81,6 +81,8 @@ our %REMOVE_CONTROLLER_SUB = (
 
 our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
+    ,vcpus => \&_change_hardware_vcpus
+    ,memory => \&_change_hardware_memory
     ,network => \&_change_hardware_network
 );
 ##################################################
@@ -1325,7 +1327,8 @@ sub get_info {
     $info->{max_mem} = $mem_xml if $mem_xml ne $info->{max_mem};
 
     $info->{cpu_time} = $info->{cpuTime};
-    $info->{n_virt_cpu} = $info->{nVirtCpu};
+    $info->{n_virt_cpu} = $info->{nrVirtCpu};
+    confess Dumper($info) if !$info->{n_virt_cpu};
     $info->{ip} = $self->ip()   if $self->is_active();
 
     lock_keys(%$info);
@@ -1533,6 +1536,65 @@ sub rename_volumes {
         $self->domain->attach_device($disk);
     }
 }
+
+=cut
+
+=head2 spinoff_volumes
+
+Makes volumes indpendent from base
+
+=cut
+
+sub spinoff_volumes {
+    my $self = shift;
+
+    $self->_do_force_shutdown() if $self->is_active;
+
+    for my $volume ($self->list_volumes_info ) {
+        #        $volume->spinoff;
+    }
+}
+
+
+sub _old_spinoff_volumes {
+    my $self = shift;
+
+    $self->_do_force_shutdown() if $self->is_active;
+
+    for my $volume ($self->list_disks) {
+
+        confess "ERROR: Domain ".$self->name
+                ." volume '$volume' does not exists"
+            if ! -e $volume;
+
+        #TODO check mktemp or something
+        my $volume_tmp  = "$volume.$$.tmp";
+
+        unlink($volume_tmp) or die "ERROR $! removing $volume.tmp"
+            if -e $volume_tmp;
+
+        my @cmd = ('qemu-img'
+              ,'convert'
+              ,'-O','qcow2'
+              ,$volume
+              ,$volume_tmp
+        );
+        my ($in, $out, $err);
+        run3(\@cmd,\$in,\$out,\$err);
+        warn $out  if $out;
+        warn $err   if $err;
+        die "ERROR: Temporary output file $volume_tmp not created at "
+                .join(" ",@cmd)
+                .($out or '')
+                .($err or '')
+                ."\n"
+            if (! -e $volume_tmp );
+
+        copy($volume_tmp,$volume) or die "$! $volume_tmp -> $volume";
+        unlink($volume_tmp) or die "ERROR $! removing $volume_tmp";
+    }
+}
+
 
 sub _set_spice_ip($self, $set_password, $ip=undef) {
 
@@ -2153,6 +2215,36 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
     $self->_post_change_hardware($doc);
 }
 
+
+sub _change_hardware_vcpus($self, $index, $data) {
+    confess "Error: I don't understand vcpus index = '$index' , only 0"
+    if defined $index && $index != 0;
+    my $n_virt_cpu = delete $data->{n_virt_cpu};
+    confess "Error: Unkown args ".Dumper($data) if keys %$data;
+
+    if ($self->domain->is_active) {
+        $self->domain->set_vcpus($n_virt_cpu, Sys::Virt::Domain::VCPU_GUEST);
+    }
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my ($vcpus) = ($doc->findnodes('/domain/vcpu/text()'));
+    $vcpus->setData($n_virt_cpu);
+    $self->_post_change_hardware($doc);
+
+}
+
+sub _change_hardware_memory($self, $index, $data) {
+    confess "Error: I don't understand memory index = '$index' , only 0"
+    if defined $index && $index != 0;
+
+    my $memory = delete $data->{memory};
+    my $max_mem= delete $data->{max_mem};
+    confess "Error: Unkown args ".Dumper($data) if keys %$data;
+
+    $self->set_memory($memory)      if defined $memory;
+    $self->set_max_mem($max_mem)    if defined $max_mem;
+
+}
 
 sub _change_hardware_network($self, $index, $data) {
     confess if !defined $index;

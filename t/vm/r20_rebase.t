@@ -266,12 +266,19 @@ sub _mount_qcow($vm, $vol) {
         run3(\@cmd, \$in, \$out, \$err);
         die join(" ",@cmd)." : $? $err" if $?;
     }
-    $vm->run_command($QEMU_NBD,"-d", $DEV_NBD);
+    for ( 1 .. 10 ) {
+        ($out,$err) = $vm->run_command($QEMU_NBD,"-d", $DEV_NBD);
+        last if !$err;
+        sleep 1;
+        diag($err);
+    }
+    confess "qemu-nbd -d $DEV_NBD\n?:$?\n$out\n$err" if $? || $err;
     for ( 1 .. 10 ) {
         ($out, $err) = $vm->run_command($QEMU_NBD,"-c",$DEV_NBD, $vol);
         last if !$err || $err !~ /(NBD socket|Unexpected end)/;
         sleep 1;
         diag("$_ $err");
+        ($out,$err) = $vm->run_command($QEMU_NBD,"-d", $DEV_NBD);
     }
     confess "qemu-nbd -c $DEV_NBD $vol\n?:$?\n$out\n$err" if $? || $err;
     _create_part($DEV_NBD);
@@ -434,6 +441,9 @@ for my $vm_name (vm_names() ) {
 
         test_prepare_remove($vm);
 
+        if (!$ENV{TEST_LONG} ) {
+            test_rebase_with_vols($vm,1,1,1,0,0,1);
+        }
         for my $swap0 ( 0 , 1 ) {
             for my $data0 ( 0 , 1 ) {
                 for my $with_cd0 ( 0 , 1 ) {
@@ -442,8 +452,10 @@ for my $vm_name (vm_names() ) {
                     for my $swap1 ( 0 , 1 ) {
                         for my $with_cd1 ( 0 , 1 ) {
                             for my $data1 ( 0 , 1 ) {
+                                if ($ENV{TEST_LONG}) {
                                 test_rebase_with_vols($vm, $swap0, $data0, $with_cd0
                                     , $swap1, $data1, $with_cd1);
+                                }
 
                             }
                         }

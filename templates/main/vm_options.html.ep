@@ -13,70 +13,93 @@
                 <div class="col-lg-3 mt-2">
                     <label class="control-label" for="ram"><%=l 'Max memory (MB)' %></label>
                 </div>
-                <div class="col-lg-3">
-                    <input class="form-control" type="text" name="ram" size="5" value="<%= $ram %>">
+                <div class="col-lg-2">
+                    <input class="form-control" type="text" name="ram" size="5"
+                    ng-blur="request('change_hardware',{
+                        'id_domain': showmachine.id
+                        ,'hardware': 'memory'
+                        ,'data': { 'max_mem': new_max_mem*1024}
+                        })"
+                    ng-model="new_max_mem">
+
                 </div>
-%               if ( $needs_restart) {
+                <div class="col-lg-4" ng-show="showmachine.needs_restart">
                     <%=l 'The changes will apply on next restart' %>
-%               }
-                <!--<div class="col-md-6">
-                    <b>MB</b> of <%= int($domain->get_info->{max_mem}/1024) %>
-                            <%=l 'MB available' %>.
-                </div>-->
+                </div>
             </div>
            <div class="row">
                 <div class="col-lg-3 mt-2">
                     <label class="control-label" for="cram"><%=l 'Current memory (MB)' %></label>
                 </div>
                 <div class="col-lg-2">
-                    <input class="form-control" type="text" name="cram" size="5" value="<%= $cram %>">
+                    <input class="form-control" type="text" name="cram" size="5"
+                    ng-blur="request('change_hardware',{
+                        'id_domain': showmachine.id
+                        ,'hardware': 'memory'
+                        ,'data': { 'memory': new_memory*1024}
+                        })"
+                    ng-model="new_memory">
                 </div>
-           </div> 
+           </div>
+           <div class="row">
+                <div class="col-lg-3 mt-2">
+                    <label class="control-label" for="cpus"><%=l 'CPUs' %></label>
+                </div>
+                <div class="col-lg-2">
+                    <input class="form-control" type="text" name="cpus" size="5"
+                    ng-change="request('change_hardware',{
+                        'id_domain': showmachine.id
+                        ,'hardware': 'vcpus'
+                        ,'data': { 'n_virt_cpu': new_n_virt_cpu }
+                        })"
+                    ng-model="new_n_virt_cpu">
+                </div>
+           </div>
+
 %   if ($USER->is_admin){
             <div class="row">
                 <div class="col-lg-3 mt-2">
                     <label class="control-label" for="timeout">Timeout</label>
                 </div>
                 <div class="col-lg-2">
-                    <input name="run_timeout" type="text"
-%                       my $timeout = '';
-%                       $timeout = int($domain->run_timeout / 60) if $domain->run_timeout;
-%                       $timeout = '' if $timeout eq '0';
-                        value="<%= $timeout %>" size="5">
+                    <input type="text" size="5" name="timeout"
+                    ng-change="set_value('run_timeout',new_run_timeout*60)"
+                    ng-model="new_run_timeout"
+                    >
                 </div>
                 <div class="col-lg-6"><small class="text-secondary"><%=l 'The machine will shutdown after these minutes' %></small></div>
             </div>
 %   }
 %   if ($USER->is_admin){
-            <div class="row">
+            <div class="row" ng-show="showmachine.is_base">
                 <div class="col-lg-3 mt-2">
                     <label class="control-label" for="volatile_clones"><%=l 'Volatile Clones' %></label>
                 </div>
-                <div class="col-lg-1">
-                    <input type="checkbox" name="volatile_clones"
-%               my $vclones = int($domain->is_volatile_clones);
-%               if ( $vclones ){
-                    checked
-%               }
-                    value="1">
+                <div class="col-lg-2">
+                    <input type="checkbox" ng-model="new_volatile_clones"
+                    name="volatile_clones"
+                    ng-true-value="1" ng-false-value="0"
+                    ng-change="set_bool('volatile_clones',new_volatile_clones)"
+                    >
                 </div>
-                <div class="col-md-8"><small class="text-secondary">
+                <div class="col-md-7"><small class="text-secondary">
                     <%=l 'Clones created from this machine will be removed on shutdown.' %></small>
                 </div>
             </div>
-            <div class="row" ng-show="!showmachine.id_base">
+            <div class="row" ng-hide="showmachine.is_base">
                 <div class="col-lg-3 mt-2">
                     <label class="control-label" for="autostart"><%=l 'Auto Start' %></label>
                 </div>
-                <div class="col-lg-1">
-                    <input type="checkbox" name="autostart"
-%               my $auto_start = $domain->autostart;
-%               if ( $auto_start){
-                    checked
-%               }
-                    value="1">
+                <div class="col-lg-2">
+                    <input type="checkbox" ng-model="new_autostart" name="autostart"
+                    ng-true-value="1" ng-false-value="0"
+                    ng-change="request('domain_autostart',
+                        { 'value': new_autostart
+                        ,'id_domain': showmachine.id
+                        })"
+                    >
                 </div>
-                <div class="col-md-8"><small class="text-secondary">
+                <div class="col-md-7"><small class="text-secondary">
                     <%=l 'Virtual Machine will start on host start.' %></small>
                 </div>
             </div>
@@ -88,23 +111,24 @@
                      <label class="control-label" for="new_owner"><%=l 'Owner' %></label>
                 </div>
                 <div class="col-lg-4">
-                    <select id="new_owner" name="id_owner" >
-%       for my $user (@$list_users) {
-                        <option <%= $user->{id} eq $domain->id_owner ? "selected" : "" %> value="<%= $user->{id} %>"><%= $user->{name} %></option>
-%        }
+                    <select ng-model="new_owner" name="id_owner"
+                        ng-options="user.name for user in list_users track by user.id"
+                        ng-change="set_value('id_owner',new_owner.id)"
+                    >
                     </select>
                 </div>
                 <div class="col-md-5"><small class="text-secondary"><%=l 'Change the owner of the machine' %></small></div>
             </div>
 %   }
-            <div class="row">
-                <div class="col-md-12 mt-2">
-                    <input type="button" class="btn btn-outline-secondary mt-3" value="<%=l 'Cancel' %>" onclick = "location='/admin/machines'"/>
-                    <input type="submit" class="btn btn-primary mt-3" name="btn_options" value="<%=l 'Submit' %>">
-                </div>
-            </div>
         </div><!-- of form-group -->
     </form>
+
+            <div ng-show="pending_request"
+                class="alert alert-warning">
+                {{pending_request.command_text}} {{showmachine.name}} {{pending_request.status}}.
+                <br/>
+                {{pending_request.error}}
+            </div>
 
 </div><!-- of panel-body -->
 

@@ -1339,6 +1339,10 @@ sub info($self, $user) {
         ,is_pool => $self->is_pool
         ,comment => $self->_data('comment')
         ,screenshot => $self->_data('screenshot')
+        ,run_timeout => $self->run_timeout
+        ,autostart => $self->autostart
+        ,volatile_clones => $self->volatile_clones
+        ,id_owner => $self->_data('id_owner')
     };
     if ($is_active) {
         eval {

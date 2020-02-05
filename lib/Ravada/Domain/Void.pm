@@ -32,6 +32,8 @@ has 'domain' => (
 
 our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
+    ,vcpus => \&_change_hardware_vcpus
+    ,memory => \&_change_hardware_memory
 );
 
 our $CONVERT = `which convert`;
@@ -735,6 +737,28 @@ sub _change_hardware_disk($self, $index, $data_new) {
     }
     $self->_vm->write_file($file, Dump($data));
 }
+
+sub _change_hardware_vcpus($self, $index, $data) {
+    my $n = delete $data->{n_virt_cpu};
+    confess "Error: unknown args ".Dumper($data) if keys %$data;
+
+    my $info = $self->_value('info');
+    $info->{n_virt_cpu} = $n;
+    $self->_store(info => $info);
+}
+
+sub _change_hardware_memory($self, $index, $data) {
+    my $memory = delete $data->{memory};
+    my $max_mem = delete $data->{max_mem};
+    confess "Error: unknown args ".Dumper($data) if keys %$data;
+
+    my $info = $self->_value('info');
+    $info->{memory} = $memory       if defined $memory;
+    $info->{max_mem} = $max_mem     if defined $max_mem;
+
+    $self->_store(info => $info);
+}
+
 
 sub change_hardware($self, $hardware, $index, $data) {
     my $sub = $CHANGE_HARDWARE_SUB{$hardware};
