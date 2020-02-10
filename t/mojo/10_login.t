@@ -89,7 +89,6 @@ sub test_many_clones($base) {
     login();
     $t->post_ok('/request/start_clones' => json =>
         {   id_domain => $base->id
-           ,remote_ip => '1.2.3.4'
         }
     );
     like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body->to_string;
