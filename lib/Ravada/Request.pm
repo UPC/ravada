@@ -53,19 +53,22 @@ our %VALID_ARG = (
            #        ,network => 2
       ,remote_ip => 2
           ,start => 2
+           ,data => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
      ,prepare_base => $args_prepare
+     ,spinoff => { id_domain => 1, uid => 1 }
      ,pause_domain => $args_manage
     ,resume_domain => {%$args_manage, remote_ip => 1 }
     ,remove_domain => $args_manage
+    ,restore_domain => { id_domain => 1, uid => 1 }
     ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
                        , id_vm => 2 }
     ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
-    ,screenshot_domain => { id_domain => 1, filename => 2 }
+    ,screenshot => { id_domain => 1 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
-    ,copy_screenshot => { id_domain => 1, filename => 2 }
+    ,copy_screenshot => { id_domain => 1 }
     ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2 }
     ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
@@ -90,12 +93,10 @@ our %VALID_ARG = (
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }
     ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
-    ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 1, data => 1 }
-    ,change_max_memory => {uid => 1, id_domain => 1, ram => 1}
-    ,change_curr_memory => {uid => 1, id_domain => 1, ram => 1}
+    ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 2, data => 1 }
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
-    ,rebase_volumes => { uid => 1, id_base => 1, id_domain => 1 }
+    ,rebase => { uid => 1, id_base => 1, id_domain => 1 }
     # ports
     ,expose => { uid => 1, id_domain => 1, port => 1, name => 2, restricted => 2, id_port => 2}
     ,remove_expose => { uid => 1, id_domain => 1, port => 1}
@@ -126,10 +127,10 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             set_base_vm remove_base_vm
             domain_autostart hibernate hybernate
             change_owner
-            change_max_memory change_curr_memory
             add_hardware remove_hardware set_driver change_hardware
             expose remove_expose
             set_base_vm
+            rebase rebase_volumes
             shutdown_node start_node
     );
 
@@ -150,6 +151,7 @@ our %COMMAND = (
     ,disk => {
         limit => 1
         ,commands => ['prepare_base','remove_base','set_base_vm','rebase_volumes'
+                    , 'screenshot'
                     , 'manage_pools']
         ,priority => 6
     }
@@ -415,7 +417,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request retry)) {
+    for (qw(at after_request retry _no_duplicate)) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
@@ -508,8 +510,6 @@ sub _duplicated_request($command, $args) {
         my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
         next if $args_d_s ne $args_found_s;
 
-        warn "$id\n$args_d_s\n$args_found_s\n"
-            if $command eq 'clone' && $args =~ /a-1/;
         return $id;
     }
     return 0;
@@ -531,6 +531,7 @@ sub _new_request {
         $args{domain_name} = $args{name};
         delete $args{name};
     }
+    my $no_duplicate = delete $args{_no_duplicate};
     my $uid;
     if ( ref $args{args} ) {
         $args{args}->{uid} = $args{args}->{id_owner}
@@ -553,7 +554,8 @@ sub _new_request {
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
-    if ($args{command} =~ /^(clone|manage_pools)$/) {
+    if ($args{command} =~ /^(clone|manage_pools|list_isos)$/
+        || ($no_duplicate && $args{command} =~ /^(screenshot)$/)) {
         if ( _duplicated_request($args{command}, $args{args})
             || ( $args{command} ne 'clone' && done_recently(undef, 60, $args{command}))) {
             #            warn "Warning: duplicated request for $args{command} $args{args}";
@@ -677,6 +679,11 @@ sub _send_message {
 
     $uid = $self->args('id_owner') if $self->defined_arg('id_owner');
     $uid = $self->args('uid')      if !$uid && $self->defined_arg('uid');
+
+    if (!$uid) {
+        my $user = $self->defined_arg('user');
+        $uid = $user->id if $user;
+    }
 
     return if !$uid;
 
@@ -837,34 +844,6 @@ sub defined_arg {
     return $self->{args}->{$name};
 }
 
-=head2 screenshot_domain
-
-Request the screenshot of a domain.
-
-Arguments:
-
-- optional filename , defaults to "storage_path/$id_domain.png"
-
-Returns a Ravada::Request;
-
-=cut
-
-sub screenshot_domain {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my $args = _check_args('screenshot_domain', @_ );
-
-    $args->{filename} = '' if !exists $args->{filename};
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(command => 'screenshot' , id_domain => $args->{id_domain}
-        ,args => $args);
-
-}
-
 =head2 copy_screenshot
 
 Request to copy a screenshot from a domain to another
@@ -876,8 +855,6 @@ sub copy_screenshot {
   my $class=ref($proto) || $proto;
 
   my $args = _check_args('copy_screenshot', @_ );
-
-  $args->{filename} = '' if !exists $args->{filename};
 
   my $self = {};
   bless($self,$class);

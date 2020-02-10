@@ -16,7 +16,10 @@ has 'clone_original' => (
 );
 
 sub base_extension($self) {
-    return 'qcow2';
+    my ($swap) = $self->file =~ /(\.[A-Z]+)\.\w+$/;
+    $swap = '' if !defined $swap;
+
+    return "ro$swap.qcow2";
 }
 
 1;

@@ -83,6 +83,8 @@ our $CACHE_DOWNLOAD = 1;
 our $VERIFY_ISO = 1;
 
 our %_CREATED_DEFAULT_STORAGE = ();
+
+our $MIN_CAPACITY = 1024 * 10;
 ##########################################################################
 
 
@@ -673,14 +675,17 @@ sub create_volume {
     my $file_xml = delete $args{xml}   or confess "ERROR: Missing XML template";
 
     my $size        = delete $args{size};
+    $size = int($size) if defined $size;
+    my $type        =(delete $args{type} or 'sys');
     my $swap        =(delete $args{swap} or 0);
     my $target      = delete $args{target};
     my $capacity    = delete $args{capacity};
     my $allocation  = delete $args{allocation};
 
     confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
+    confess "Error: type $type can't have swap flag" if $args{swap} && $type ne 'swap';
 
-    confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+$/);
+    confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+(\.\d+)?$/);
 
     confess "Invalid capacity"
         if defined $capacity && ( $capacity == 0 || $capacity !~ /^\d+$/);
@@ -705,7 +710,7 @@ sub create_volume {
 
     my $img_file = $self->_volume_path(
         target => $target
-        , swap => $swap
+        , type => $type
         , name => $name
         , storage => $storage_pool
     );
@@ -718,7 +723,8 @@ sub create_volume {
                         $img_file);
 
     if ($capacity) {
-        confess "Size '$capacity' too small" if $capacity< 1024*10;
+        confess "Size '$capacity' too small, min : $MIN_CAPACITY"
+        if $capacity< $MIN_CAPACITY;
         $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($allocation));
         $doc->findnodes('/volume/capacity/text()')->[0]->setData($capacity);
     }
@@ -734,15 +740,16 @@ sub _volume_path {
     my $self = shift;
 
     my %args = @_;
-    my $swap     =(delete $args{swap} or 0);
+    my $type = (delete $args{type} or 'sys');
     my $storage  = delete $args{storage} or confess "ERROR: Missing storage";
     my $filename = $args{name}  or confess "ERROR: Missing name";
     my $target = delete $args{target};
 
     my $dir_img = $self->_storage_path($storage);
     my $suffix = "qcow2";
-    $suffix = "SWAP.qcow2"   if $swap;
-    return "$dir_img/$filename.$suffix";
+    $type = ''  if $type eq 'sys';
+    $type = uc($type)."."   if $type;
+    return "$dir_img/$filename.$type$suffix";
 }
 
 sub _domain_create_from_iso {
@@ -944,7 +951,7 @@ sub _domain_create_from_base {
     confess "argument id_base or base required ".Dumper(\%args)
         if !$args{id_base} && !$args{base};
 
-    die "Domain $args{name} already exists"
+    confess "Domain $args{name} already exists"
         if $self->search_domain($args{name});
 
     my $base = $args{base};
@@ -1242,9 +1249,9 @@ sub _download($self, $url) {
 }
 
 sub _match_url($self,$url) {
-    return $url if $url !~ m{\*};
+    return $url if $url !~ m{\*|\+};
 
-    my ($url1, $match,$url2) = $url =~ m{(.*/)([^/]*\*[^/]*)/?(.*)};
+    my ($url1, $match,$url2) = $url =~ m{(.*/)([^/]*[*+][^/]*)/?(.*)};
     $url2 = '' if !$url2;
 
     confess "No url1 from $url" if !defined $url1;
@@ -1995,16 +2002,9 @@ sub _new_uuid {
 sub _xml_modify_mac {
     my $self = shift;
     my $doc = shift or confess "Missing XML doc";
-
-    my ($if_mac) = $doc->findnodes('/domain/devices/interface/mac')
-        or exit;
-    my $mac = $if_mac->getAttribute('address');
-
-    my @macparts0 = split/:/,$mac;
-
     my @old_macs;
 
-    for my $dom ($self->vm->list_all_domains) {
+   	for my $dom ($self->vm->list_all_domains) {
         my $doc = $XML->load_xml(string => $dom->get_xml_description()) or die "ERROR: $!\n";
 
         for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
@@ -2013,32 +2013,38 @@ sub _xml_modify_mac {
         }
     }
 
+    for my $if_mac ($doc->findnodes('/domain/devices/interface/mac') ) {
+        my $mac = $if_mac->getAttribute('address');
 
-    my $new_mac;
+        my @macparts0 = split/:/,$mac;
 
-    my @tried;
-    for ( 1 .. 1000 ) {
-        for my $cont ( 1 .. 1000 ) {
-            my @macparts = @macparts0;
-            my $pos = int(rand(scalar(@macparts)-3))+3;
-            my $num =sprintf "%02X", rand(0xff);
-            die "Missing num " if !defined $num;
-            $macparts[$pos] = $num;
-            $new_mac = lc(join(":",@macparts));
-            push @tried,($new_mac);
+        my $new_mac;
 
-            last if !grep /^$new_mac$/i,@old_macs && $self->_unique_mac($new_mac);
-            push @old_macs,($new_mac);
+        my @tried;
+        my $foundit;
+        for ( 1 .. 1000 ) {
+            for my $cont ( 1 .. 1000 ) {
+                my @macparts = @macparts0;
+                my $pos = int(rand(scalar(@macparts)-3))+3;
+                my $num =sprintf "%02X", rand(0xff);
+                die "Missing num " if !defined $num;
+                $macparts[$pos] = $num;
+                $new_mac = lc(join(":",@macparts));
+                push @tried,($new_mac);
+
+                last if !grep /^$new_mac$/i,@old_macs && $self->_unique_mac($new_mac);
+                push @old_macs,($new_mac);
+            }
+
+            if ( $self->_unique_mac($new_mac) ) {
+                $if_mac->setAttribute(address => $new_mac);
+                $foundit = 1;
+                last;
+            }
         }
-
-        if ( $self->_unique_mac($new_mac) ) {
-            $if_mac->setAttribute(address => $new_mac);
-            return;
-        }
+        die "I can't find a new unique mac '$new_mac'\n".Dumper(\@tried) if !$foundit;
     }
-    die "I can't find a new unique mac '$new_mac'\n".Dumper(\@tried);
 }
-
 
 =pod
 

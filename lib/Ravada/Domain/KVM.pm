@@ -15,6 +15,7 @@ use File::Copy;
 use File::Path qw(make_path);
 use Hash::Util qw(lock_keys lock_hash);
 use IPC::Run3 qw(run3);
+use MIME::Base64;
 use Moose;
 use Sys::Virt::Stream;
 use Sys::Virt::Domain;
@@ -80,6 +81,8 @@ our %REMOVE_CONTROLLER_SUB = (
 
 our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
+    ,vcpus => \&_change_hardware_vcpus
+    ,memory => \&_change_hardware_memory
     ,network => \&_change_hardware_network
 );
 ##################################################
@@ -366,6 +369,8 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
 }
 
 sub _volume_info($self, $file, $refresh=0) {
+    confess "Error: No vm connected" if !$self->_vm->vm;
+
     my ($name) = $file =~ m{.*/(.*)};
 
     my $vol;
@@ -380,7 +385,7 @@ sub _volume_info($self, $file, $refresh=0) {
     }
 
     if (!$vol) {
-        warn "Error: Volume $file not found";
+        confess "Error: Volume $file not found ".$self->name;
         return;
     }
 
@@ -903,12 +908,18 @@ sub add_volume {
     my $bus = delete $args{driver};# or 'virtio');
     my $boot = (delete $args{boot} or undef);
     my $device = (delete $args{device} or 'disk');
+    my $type = delete $args{type};
     my %valid_arg = map { $_ => 1 } ( qw( driver name size vm xml swap target file allocation));
 
     for my $arg_name (keys %args) {
         confess "Unknown arg $arg_name"
             if !$valid_arg{$arg_name};
     }
+
+    $type = 'swap'  if !defined $type && $args{swap};
+    $type = ''   if !defined $type || $type eq 'sys';
+    confess "Error: type $type can't have swap flag" if $args{swap} && $type ne 'swap';
+
 #    confess "Missing vm"    if !$args{vm};
     $args{vm} = $self->_vm if !$args{vm};
     my ($target_dev) = ($args{target} or $self->_new_target_dev());
@@ -926,6 +937,7 @@ sub add_volume {
         ,xml =>  $args{xml}
         ,swap => ($args{swap} or 0)
         ,size => ($args{size} or undef)
+        ,type => $type
         ,allocation => ($args{allocation} or undef)
         ,target => $target_dev
     )   if !$path;
@@ -1213,13 +1225,7 @@ sub handler {
     return $n;
 }
 
-sub screenshot {
-    my $self = shift;
-    my $file = (shift or $self->_file_screenshot);
-
-    my ($path) = $file =~ m{(.*)/};
-    make_path($path) if ! -e $path;
-
+sub screenshot($self) {
     $self->domain($self->_vm->vm->get_domain_by_name($self->name));
     my $stream = $self->{_vm}->vm->new_stream();
 
@@ -1229,7 +1235,9 @@ sub screenshot {
     my $file_tmp = "/var/tmp/$$.tmp";
     $stream->finish;
 
-    $self->_convert_png($file_tmp,$file);
+    my $file = "$file_tmp.png";
+    my $blob_file = $self->_convert_png($file_tmp,$file);
+    $self->_data(screenshot => encode_base64($blob_file));
     unlink $file_tmp or warn "$! removing $file_tmp";
 }
 
@@ -1319,7 +1327,8 @@ sub get_info {
     $info->{max_mem} = $mem_xml if $mem_xml ne $info->{max_mem};
 
     $info->{cpu_time} = $info->{cpuTime};
-    $info->{n_virt_cpu} = $info->{nVirtCpu};
+    $info->{n_virt_cpu} = $info->{nrVirtCpu};
+    confess Dumper($info) if !$info->{n_virt_cpu};
     $info->{ip} = $self->ip()   if $self->is_active();
 
     lock_keys(%$info);
@@ -1487,6 +1496,8 @@ sub disk_size {
 
 =pod
 
+=cut
+
 sub rename_volumes {
     my $self = shift;
     my $new_dom_name = shift;
@@ -1535,6 +1546,17 @@ Makes volumes indpendent from base
 =cut
 
 sub spinoff_volumes {
+    my $self = shift;
+
+    $self->_do_force_shutdown() if $self->is_active;
+
+    for my $volume ($self->list_volumes_info ) {
+        #        $volume->spinoff;
+    }
+}
+
+
+sub _old_spinoff_volumes {
     my $self = shift;
 
     $self->_do_force_shutdown() if $self->is_active;
@@ -2193,6 +2215,36 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
     $self->_post_change_hardware($doc);
 }
 
+
+sub _change_hardware_vcpus($self, $index, $data) {
+    confess "Error: I don't understand vcpus index = '$index' , only 0"
+    if defined $index && $index != 0;
+    my $n_virt_cpu = delete $data->{n_virt_cpu};
+    confess "Error: Unkown args ".Dumper($data) if keys %$data;
+
+    if ($self->domain->is_active) {
+        $self->domain->set_vcpus($n_virt_cpu, Sys::Virt::Domain::VCPU_GUEST);
+    }
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my ($vcpus) = ($doc->findnodes('/domain/vcpu/text()'));
+    $vcpus->setData($n_virt_cpu);
+    $self->_post_change_hardware($doc);
+
+}
+
+sub _change_hardware_memory($self, $index, $data) {
+    confess "Error: I don't understand memory index = '$index' , only 0"
+    if defined $index && $index != 0;
+
+    my $memory = delete $data->{memory};
+    my $max_mem= delete $data->{max_mem};
+    confess "Error: Unkown args ".Dumper($data) if keys %$data;
+
+    $self->set_memory($memory)      if defined $memory;
+    $self->set_max_mem($max_mem)    if defined $max_mem;
+
+}
 
 sub _change_hardware_network($self, $index, $data) {
     confess if !defined $index;

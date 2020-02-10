@@ -17,26 +17,34 @@ use feature qw(signatures);
 sub test_remove($vm, $node1, $node2) {
     my $domain = create_domain($vm);
 
+    is($domain->list_instances,1);
     $domain->prepare_base(user_admin);
+    is($domain->list_instances,1);
     $domain->set_base_vm(vm => $node1, user => user_admin);
+    is($domain->list_instances,2);
     $domain->set_base_vm(vm => $node2, user => user_admin);
+    is($domain->list_instances,3);
 
     my $clone1 = $domain->clone( user => user_admin
         , name => new_domain_name
     );
+    is($clone1->list_instances,1);
     $clone1->migrate($node1);
+    is($clone1->list_instances,2);
 
     my $clone2 = $domain->clone( user => user_admin
         , name => new_domain_name
     );
     $clone2->migrate($node1);
     $clone2->migrate($node2);
+    is($clone2->list_instances,3);
 
     my @name = ( $clone1->name, $clone2->name, $domain->name);
     my @id = ( $clone1->id, $clone2->id, $domain->id);
 
     $clone1->remove(user_admin);
     $clone2->remove(user_admin);
+    is($clone2->list_instances,undef);
     $domain->remove(user_admin);
 
     for my $name (@name) {

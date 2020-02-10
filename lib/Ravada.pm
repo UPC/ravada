@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.5.1';
+our $VERSION = '0.6.0';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -15,8 +15,9 @@ use Moose;
 use POSIX qw(WNOHANG);
 use Time::HiRes qw(gettimeofday tv_interval);
 use YAML;
-
+use MIME::Base64;
 use Socket qw( inet_aton inet_ntoa );
+use Image::Magick::Q16;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -160,7 +161,7 @@ sub _init_user_daemon {
 sub _update_user_grants {
     my $self = shift;
     $self->_init_user_daemon();
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM users");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM users WHERE is_temporary=0");
     my $id;
     $sth->execute;
     $sth->bind_columns(\$id);
@@ -168,7 +169,13 @@ sub _update_user_grants {
         my $user = Ravada::Auth::SQL->search_by_id($id);
         next if $user->name() eq $USER_DAEMON_NAME;
 
-        next if $user->grants();
+        my %grants = $user->grants();
+
+        for my $key (keys %grants) {
+            delete $grants{$key} if !defined $grants{$key};
+        }
+        next if keys %grants;
+
         $USER_DAEMON->grant_user_permissions($user);
         $USER_DAEMON->grant_admin_permissions($user)    if $user->is_admin;
     }
@@ -449,7 +456,28 @@ sub _update_isos {
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
-
+        ,kali_64 => {
+            name => 'Kali Linux 2020'
+            ,description => 'Kali Linux 2020 64 Bits'
+            ,arch => 'amd64'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,url => 'https://cdimage.kali.org/kali-2020.\d+/'
+            ,file_re => 'kali-linux-2020.\d+-installer-amd64.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,min_disk_size => '10'
+        }
+        ,kali_64_netinst => {
+            name => 'Kali Linux 2020 (NetInstaller)'
+            ,description => 'Kali Linux 2020 64 Bits (light NetInstall)'
+            ,arch => 'amd64'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,url => 'https://cdimage.kali.org/kali-2020.\d+/'
+            ,file_re => 'kali-linux-2020.\d+-installer-netinst-amd64.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,min_disk_size => '10'
+        }
         ,windows_7 => {
           name => 'Windows 7'
           ,description => 'Windows 7 64 bits. Requires an user provided ISO image.'
@@ -526,7 +554,7 @@ sub _scheduled_fedora_releases($self,$data) {
             name => 'Fedora '.$release
             ,description => "RedHat Fedora $release Workstation 64 bits"
             ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/'.$release
-                    .'/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-'.$release
+                    .'/Workstation/x86_64/iso/Fedora-Workstation-.*-x86_64-'.$release
                     .'-.*\.iso'
             ,arch => 'amd64'
             ,xml => 'xenial64-amd64.xml'
@@ -990,7 +1018,7 @@ sub _null_grants($self) {
     $sth->execute;
     my ($count) = $sth->fetchrow;
 
-    exit if !$count && $self->{_null}++;
+    warn "No null grants found" if !$count && $self->{_null_grants}++;
     return $count;
 }
 
@@ -1233,6 +1261,7 @@ sub _upgrade_tables {
         $sth->execute;
     }
     $self->_upgrade_table('users','external_auth','char(32) DEFAULT NULL');
+    $self->_upgrade_table('users','date_created','timestamp DEFAULT CURRENT_TIMESTAMP');
 
     $self->_upgrade_table('networks','requires_password','int(11)');
     $self->_upgrade_table('networks','n_order','int(11) not null default 0');
@@ -1262,6 +1291,13 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','is_pool','int NOT NULL default 0');
 
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
+
+    if ($self->_upgrade_table('domains','screenshot','BLOB')) {
+
+    $self->_upgrade_screenshots();
+
+    }
+
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
     $self->_upgrade_table('iptables','id_vm','int DEFAULT NULL');
@@ -1426,6 +1462,12 @@ sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG ) {
         warn "Error: Unknown config entry \n".Dumper(\%config) if ! $0 =~ /\.t$/;
         return 0;
     }
+    warn "Warning: LDAP authentication with match is discouraged. Try bind.\n"
+        if exists $config_orig->{ldap}
+        && exists $config_orig->{ldap}->{auth}
+        && $config_orig->{ldap}->{auth} =~ /match/
+        && $0 !~ /\.t$/;
+
     return 1;
 }
 
@@ -1578,6 +1620,7 @@ sub create_domain {
 
     my $start = $args{start};
     my $id_base = $args{id_base};
+    my $data = delete $args{data};
     my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
     _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool));
 
@@ -1636,6 +1679,12 @@ sub create_domain {
         die $error if $error && !$request;
         $request->error($error) if $error;
     }
+    Ravada::Request->add_hardware(
+        uid => $args{id_owner}
+        ,id_domain => $domain->id
+        ,name => 'disk'
+        ,data => { size => $data, type => 'data' }
+    ) if $domain && $data;
     return $domain;
 }
 
@@ -2488,14 +2537,11 @@ sub _cmd_screenshot {
 
     my $id_domain = $request->args('id_domain');
     my $domain = $self->search_domain_by_id($id_domain);
-    my $bytes = 0;
     if (!$domain->can_screenshot) {
         die "I can't take a screenshot of the domain ".$domain->name;
     } else {
-        $bytes = $domain->screenshot($request->args('filename'));
-        $bytes = $domain->screenshot($request->args('filename'))    if !$bytes;
-    }
-    $request->error("No data received") if !$bytes;
+        $domain->screenshot();
+        }
 }
 
 sub _cmd_copy_screenshot {
@@ -2508,16 +2554,33 @@ sub _cmd_copy_screenshot {
     my $id_base = $domain->id_base;
     my $base = $self->search_domain_by_id($id_base);
 
-    if (!$domain->file_screenshot) {
+    if (!$domain->screenshot) {
         die "I don't have the screenshot of the domain ".$domain->name;
     } else {
+        $base->_data(screenshot => $domain->_data('screenshot'));
+    }
+}
 
-        my $base_screenshot = $domain->file_screenshot();
+sub _upgrade_screenshots($self) {
 
-        $base_screenshot =~ s{(.*)/\d+\.(\w+)}{$1/$id_base.$2};
-        $base->_post_screenshot($base_screenshot);
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id, name, file_screenshot FROM domains WHERE file_screenshot like '%' "
+    );
+    $sth->execute();
 
-        copy($domain->file_screenshot, $base_screenshot);
+    my $sth_update = $CONNECTOR->dbh->prepare(
+        "UPDATE domains set screenshot = ? WHERE id=?"
+    );
+    while ( my ($id, $name, $file_path)= $sth->fetchrow ) {
+        next if ! -e $file_path;
+        warn "INFO: converting screenshot from $name";
+        my $file= new Image::Magick::Q16;
+        $file->Read($file_path);
+        my @blobs = $file->ImageToBlob(magick => 'png');
+        eval {
+            $sth_update->execute(encode_base64($blobs[0]), $id);
+        };
+        warn $@;
     }
 }
 
@@ -2647,6 +2710,11 @@ sub _cmd_remove {
     $self->remove_domain(name => $request->args('name'), uid => $request->args('uid'));
 }
 
+sub _cmd_restore_domain($self,$request) {
+    my $domain = Ravada::Domain->open($request->args('id_domain'));
+    return $domain->restore(Ravada::Auth::SQL->search_by_id($request->args('uid')));
+}
+
 sub _cmd_pause {
     my $self = shift;
     my $request = shift;
@@ -2706,7 +2774,8 @@ sub _cmd_open_iptables {
 
 sub _cmd_clone($self, $request) {
 
-    return _req_clone_many($self, $request) if $request->defined_arg('number');
+    return _req_clone_many($self, $request) if $request->defined_arg('number')
+    && $request->defined_arg('number') > 1;
 
     my $domain = Ravada::Domain->open($request->args('id_domain'))
         or confess "Error: Domain ".$request->args('id_domain')." not found";
@@ -2717,7 +2786,7 @@ sub _cmd_clone($self, $request) {
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'))
         or die "Error: User missing, id: ".$request->args('uid');
     $args->{user} = $user;
-    for (qw(id_domain uid at )) {
+    for (qw(id_domain uid at number )) {
         delete $args->{$_};
     }
 
@@ -2737,6 +2806,15 @@ sub _req_clone_many($self, $request) {
     my $domains = $self->list_domains_data();
     my %domain_exists = map { $_->{name} => 1 } @$domains;
 
+    if (!$base->is_base) {
+        my $uid = $request->defined_arg('uid');
+        confess Dumper($request) if !$uid;
+        my $req_prepare = Ravada::Request->prepare_base(
+                    id_domain => $base->id
+                        , uid => $uid
+        );
+        $args->{after_request} = $req_prepare->id;
+    }
     my @reqs;
     for ( 1 .. $number ) {
         my $n = $_;
@@ -2801,7 +2879,7 @@ sub _cmd_dettach($self, $request) {
     $domain->dettach($user);
 }
 
-sub _cmd_rebase_volumes($self, $request) {
+sub _cmd_rebase($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain);
 
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
@@ -2809,14 +2887,15 @@ sub _cmd_rebase_volumes($self, $request) {
         if !$user->is_admin;
 
     if ($domain->is_active) {
-        Ravada::Request->shutdown_domain(uid => $user->id, id_domain => $domain->id, timeout => 120);
-        $request->status("requested");
-        die "Error: domain ".$domain->name." is still active, shut it down to rebase\n"
+        my $req_shutdown = Ravada::Request->shutdown_domain(uid => $user->id, id_domain => $domain->id, timeout => 120);
+        $request->after_request($req_shutdown->id);
+        die "Warning: domain ".$domain->name." is up, retry.\n"
     }
     $request->status('working');
 
     my $new_base = Ravada::Domain->open($request->args('id_base'));
-    $domain->rebase_volumes($new_base);
+
+    $domain->rebase($user, $new_base);
 }
 
 
@@ -2889,11 +2968,25 @@ sub _cmd_remove_base {
 
     die "Unknown domain id '$id_domain'\n" if !$domain;
 
-    $domain->_vm->disconnect();
-    $self->_disconnect_vm();
     $domain->remove_base($user);
 
 }
+
+sub _cmd_spinoff($self, $request) {
+
+    my $id_domain = $request->id_domain or confess "Missing request id_domain";
+    my $uid = $request->args('uid')     or confess "Missing argument uid";
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    die "Unknown domain id '$id_domain'\n" if !$domain;
+
+    $domain->spinoff();
+
+}
+
 
 
 sub _cmd_hybernate {
@@ -2986,7 +3079,7 @@ sub _cmd_change_hardware {
 
     $domain->change_hardware(
          $request->args('hardware')
-        ,$request->args('index')
+        ,$request->defined_arg('index')
         ,$request->args('data')
     );
 }
@@ -3169,24 +3262,6 @@ sub _cmd_refresh_vms($self, $request=undef) {
 
     $self->_clean_requests('refresh_vms', $request);
     $self->_refresh_volatile_domains();
-}
-
-sub _cmd_change_max_memory($self, $request) {
-    my $uid = $request->args('uid');
-    my $id_domain = $request->args('id_domain');
-    my $memory = $request->args('ram');
-
-    my $domain = $self->search_domain_by_id($id_domain);
-    $domain->set_max_mem($memory);
-}
-
-sub _cmd_change_curr_memory($self, $request) {
-    my $uid = $request->args('uid');
-    my $id_domain = $request->args('id_domain');
-    my $memory = $request->args('ram');
-
-    my $domain = $self->search_domain_by_id($id_domain);
-    $domain->set_memory($memory);
 }
 
 sub _cmd_shutdown_node($self, $request) {
@@ -3405,15 +3480,19 @@ sub _remove_unnecessary_downs($self, $domain) {
 
 sub _refresh_volatile_domains($self) {
    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, id_vm FROM domains WHERE is_volatile=1"
+        "SELECT id, name, id_vm, id_owner FROM domains WHERE is_volatile=1"
     );
     $sth->execute();
-    while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
+    while ( my ($id_domain, $name, $id_vm, $id_owner) = $sth->fetchrow ) {
         my $domain = Ravada::Domain->open(id => $id_domain, _force => 1);
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
             if ($domain) {
                 $domain->_post_shutdown(user => $USER_DAEMON);
                 $domain->remove($USER_DAEMON);
+            } else {
+                my $sth= $CONNECTOR->dbh->prepare("DELETE FROM users WHERE id=?");
+                $sth->execute($id_owner);
+                $sth->finish;
             }
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
             $sth_del->execute($id_domain);
@@ -3461,6 +3540,7 @@ sub _cmd_set_base_vm {
 
 sub _cmd_cleanup($self, $request) {
     $self->_clean_volatile_machines( request => $request);
+    $self->_clean_temporary_users( );
     $self->_clean_requests('cleanup', $request);
     $self->_clean_requests('cleanup', $request,'done');
     $self->_clean_requests('enforce_limits', $request,'done');
@@ -3479,6 +3559,7 @@ sub _req_method {
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
+        ,restore_domain => \&_cmd_restore_domain
         ,resume => \&_cmd_resume
        ,dettach => \&_cmd_dettach
        ,cleanup => \&_cmd_cleanup
@@ -3490,9 +3571,12 @@ sub _req_method {
     ,add_disk => \&_cmd_add_disk
     ,copy_screenshot => \&_cmd_copy_screenshot
    ,cmd_cleanup => \&_cmd_cleanup
+
    ,remove_base => \&_cmd_remove_base
+   ,spinoff => \&_cmd_spinoff
    ,set_base_vm => \&_cmd_set_base_vm
 ,remove_base_vm => \&_cmd_set_base_vm
+
    ,refresh_vms => \&_cmd_refresh_vms
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
@@ -3501,7 +3585,8 @@ sub _req_method {
  ,list_vm_types => \&_cmd_list_vm_types
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
-,rebase_volumes => \&_cmd_rebase_volumes
+        ,rebase => \&_cmd_rebase
+
 ,refresh_storage => \&_cmd_refresh_storage
 ,refresh_machine => \&_cmd_refresh_machine
 ,domain_autostart=> \&_cmd_domain_autostart
@@ -3509,8 +3594,6 @@ sub _req_method {
 ,add_hardware => \&_cmd_add_hardware
 ,remove_hardware => \&_cmd_remove_hardware
 ,change_hardware => \&_cmd_change_hardware
-,change_max_memory => \&_cmd_change_max_memory
-,change_curr_memory => \&_cmd_change_curr_memory
 
 # Domain ports
 ,expose => \&_cmd_expose
@@ -3694,6 +3777,26 @@ sub _enforce_limits_active($self, $request) {
     }
 }
 
+sub _clean_temporary_users($self) {
+    my $sth_users = $CONNECTOR->dbh->prepare(
+        "SELECT u.id, d.id, u.date_created"
+        ." FROM users u LEFT JOIN domains d "
+        ." ON u.id = d.id_owner "
+        ." WHERE u.is_temporary = 1 AND u.date_created < ?"
+    );
+
+    my $sth_del = $CONNECTOR->dbh->prepare(
+        "DELETE FROM users "
+        ." WHERE is_temporary = 1 AND id=?"
+    );
+    my $one_day = _date_now(-24 * 60 * 60);
+    $sth_users->execute( $one_day );
+    while ( my ( $id_user, $id_domain, $date_created ) = $sth_users->fetchrow ) {
+        next if $id_domain;
+        $sth_del->execute($id_user);
+    }
+}
+
 sub _clean_volatile_machines($self, %args) {
     my $request = delete $args{request};
 
@@ -3708,8 +3811,13 @@ sub _clean_volatile_machines($self, %args) {
         );
         if ($domain_real) {
             next if $domain_real->domain && $domain_real->is_active;
-            $domain_real->_post_shutdown();
-            $domain_real->remove($USER_DAEMON);
+            eval { $domain_real->_post_shutdown() };
+            warn $@ if $@;
+            eval { $domain_real->remove($USER_DAEMON) };
+            warn $@ if $@;
+        } elsif ($domain->{id_owner}) {
+            my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users where id=?");
+            $sth->execute($domain->{id_owner});
         }
 
         $sth_remove->execute($domain->{id});

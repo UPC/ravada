@@ -2,6 +2,7 @@
   hypnotoad => {
     pid_file => '/var/run/ravada/rvd_front.pid'
     ,listen => ['http://*:8081']
+    ,proxy => 1
   }
   ,dir => {
       templates => '/usr/share/ravada/templates'

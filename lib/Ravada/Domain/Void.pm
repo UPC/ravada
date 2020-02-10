@@ -3,7 +3,7 @@ package Ravada::Domain::Void;
 use warnings;
 use strict;
 
-use Carp qw(cluck croak);
+use Carp qw(carp cluck croak);
 use Data::Dumper;
 use Fcntl qw(:flock SEEK_END);
 use File::Copy;
@@ -13,6 +13,8 @@ use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
 use Moose;
 use YAML qw(Load Dump  LoadFile DumpFile);
+use Image::Magick;
+use MIME::Base64;
 
 use Ravada::Volume;
 
@@ -30,6 +32,8 @@ has 'domain' => (
 
 our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
+    ,vcpus => \&_change_hardware_vcpus
+    ,memory => \&_change_hardware_memory
 );
 
 our $CONVERT = `which convert`;
@@ -283,14 +287,18 @@ sub add_volume {
     my %args = @_;
 
     my $device = ( delete $args{device} or 'disk' );
+    my $type = ( delete $args{type} or '');
 
-    my $suffix = ".void";
-    $suffix = '.SWAP.void' if $args{swap};
+    $type = 'swap' if $args{swap};
+    $type = '' if $type eq 'sys';
+    $type = uc($type)."."   if $type;
+
+    my $suffix = "void";
 
     if ( !$args{file} ) {
         my $vol_name = ($args{name} or Ravada::Utils::random_name(4) );
         $args{file} = $self->_config_dir."/$vol_name";
-        $args{file} .= $suffix if $args{file} !~ /\.\w+$/;
+        $args{file} .= ".$type$suffix" if $args{file} !~ /\.\w+$/;
     }
 
     ($args{name}) = $args{file} =~ m{.*/(.*)};
@@ -345,6 +353,9 @@ sub remove_volume($self, $file) {
     confess "Missing file" if ! defined $file || !length($file);
 
     $self->_vol_remove($file);
+}
+
+sub _remove_controller_disk($self,$file) {
     return if ! $self->_vm->file_exists($self->_config_file);
     my $data = $self->_load();
     my $hardware = $data->{hardware};
@@ -450,13 +461,12 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
 
 sub screenshot {
     my $self = shift;
-    my $file = (shift or $self->_file_screenshot);
-
-    my @cmd =($CONVERT,'-size', '400x300', 'xc:white'
-        ,$file
-    );
-    my ($in,$out,$err);
-    run3(\@cmd, \$in, \$out, \$err);
+    my $DPI = 300; # 600;
+    my $image = Image::Magick->new(density => $DPI,width=>250, height=>188);
+    $image->Set(size=>'250x188');
+    $image->ReadImage('canvas:#'.int(rand(10)).int(rand(10)).int(rand(10)));
+    my @blobs = $image->ImageToBlob(magick => 'png');
+    $self->_data(screenshot => encode_base64($blobs[0]));
 }
 
 sub _file_screenshot {
@@ -567,10 +577,6 @@ sub disk_size {
     return -s $disk;
 }
 
-sub spinoff_volumes {
-    return;
-}
-
 sub ip {
     my $self = shift;
     my $info = $self->_value('info');
@@ -663,6 +669,7 @@ sub _remove_disk {
     confess "Index is '$index' not number" if !defined $index || $index !~ /^\d+$/;
     my @volumes = $self->list_volumes();
     $self->remove_volume($volumes[$index]);
+    $self->_remove_controller_disk($volumes[$index]);
 }
 
 sub remove_controller {
@@ -730,6 +737,28 @@ sub _change_hardware_disk($self, $index, $data_new) {
     }
     $self->_vm->write_file($file, Dump($data));
 }
+
+sub _change_hardware_vcpus($self, $index, $data) {
+    my $n = delete $data->{n_virt_cpu};
+    confess "Error: unknown args ".Dumper($data) if keys %$data;
+
+    my $info = $self->_value('info');
+    $info->{n_virt_cpu} = $n;
+    $self->_store(info => $info);
+}
+
+sub _change_hardware_memory($self, $index, $data) {
+    my $memory = delete $data->{memory};
+    my $max_mem = delete $data->{max_mem};
+    confess "Error: unknown args ".Dumper($data) if keys %$data;
+
+    my $info = $self->_value('info');
+    $info->{memory} = $memory       if defined $memory;
+    $info->{max_mem} = $max_mem     if defined $max_mem;
+
+    $self->_store(info => $info);
+}
+
 
 sub change_hardware($self, $hardware, $index, $data) {
     my $sub = $CHANGE_HARDWARE_SUB{$hardware};

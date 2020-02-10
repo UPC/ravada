@@ -127,12 +127,10 @@ Returns: listref of machines
 
 =cut
 
-sub list_machines_user {
-    my $self = shift;
-    my $user = shift;
+sub list_machines_user($self, $user, $access_data={}) {
 
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,is_public, file_screenshot"
+        "SELECT id,name,is_public, screenshot"
         ." FROM domains "
         ." WHERE is_base=1"
         ." ORDER BY name "
@@ -163,13 +161,15 @@ sub list_machines_user {
         if ($clone) {
             $base{is_locked} = $clone->is_locked;
             if ($clone->is_active && !$clone->is_locked && $user->can_screenshot) {
-                my $req = Ravada::Request->screenshot_domain(
-                id_domain => $clone->id
-                ,filename => "$DIR_SCREENSHOTS/".$clone->id.".png"
-                );
+                if (!Ravada::Request::done_recently(undef,10,'screenshot')) {
+                    my $req = Ravada::Request->screenshot(
+                        id_domain => $clone->id
+                        ,_no_duplicate => 1
+                    );
+                }
             }
             $base{name_clone} = $clone->name;
-            $base{screenshot} = ( $clone->_data('file_screenshot') 
+            $base{screenshot} = ( $clone->_data('screenshot')
                                 or $base{screenshot});
             $base{is_active} = $clone->is_active;
             $base{id_clone} = $clone->id;
@@ -177,6 +177,7 @@ sub list_machines_user {
             $base{can_remove} = 1 if $user->can_remove && $clone->id_owner == $user->id;
             $base{can_hibernate} = 1 if $clone->is_active && !$clone->is_volatile;
         }
+        next if !$self->_access_allowed($id, $base{id_clone}, $access_data);
         $base{screenshot} =~ s{^/var/www}{};
         lock_hash(%base);
         push @list,(\%base);
@@ -185,6 +186,19 @@ sub list_machines_user {
     return \@list;
 }
 
+sub _access_allowed($self, $id_base, $id_clone, $access_data) {
+    if ($id_clone) {
+        my $clone = Ravada::Front::Domain->open($id_clone);
+        my $allowed = $clone->access_allowed(%$access_data);
+        return $allowed if $allowed;
+    }
+    my $base = Ravada::Front::Domain->open($id_base);
+
+    my $allowed = $base->access_allowed(%$access_data);
+    return 1 if !defined $allowed;
+    return $allowed;
+
+}
 
 sub list_machines($self, $user) {
     return $self->list_domains() if $user->can_list_machines();
@@ -585,13 +599,20 @@ Returns a reference to a list of the ISOs known by the system
 =cut
 
 sub iso_file ($self, $vm_type) {
+
+    my $cache = $self->_cache_get("list_isos");
+    return $cache if $cache;
+
     my $req = Ravada::Request->list_isos(
         vm_type => $vm_type
     );
+    return [] if !$req;
     $self->wait_request($req);
     return [] if $req->status ne 'done';
 
     my $isos = decode_json($req->output());
+
+    $self->_cache_store("list_isos",$isos);
 
     return $isos;
 }
@@ -705,8 +726,6 @@ Return true if alive, false otherwise.
 
 sub ping_backend {
     my $self = shift;
-
-    return 1 if $self->_ping_backend_localhost();
 
     my $req = Ravada::Request->ping_backend();
     $self->wait_request($req, 2);
@@ -1098,6 +1117,22 @@ sub add_node($self,%arg) {
     return $req->id;
 }
 
+sub _cache_store($self, $key, $value, $timeout=60) {
+    $self->{cache}->{$key} = [ $value, time+$timeout ];
+}
+
+sub _cache_get($self, $key) {
+
+    delete $self->{cache}->{$key}
+        if exists $self->{cache}->{$key}
+            && $self->{cache}->{$key}->[1] < time;
+
+    return if !exists $self->{cache}->{$key};
+
+    return $self->{cache}->{$key}->[0];
+
+}
+
 sub list_network_interfaces($self, %args) {
 
     my $vm_type = delete $args{vm_type}or confess "Error: missing vm_type";
@@ -1125,6 +1160,10 @@ sub list_network_interfaces($self, %args) {
     $self->{$cache_key} = $interfaces;
 
     return $interfaces;
+}
+
+sub _dbh {
+    return $CONNECTOR->dbh;
 }
 
 =head2 version

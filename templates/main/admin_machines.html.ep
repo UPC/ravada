@@ -3,7 +3,7 @@
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
     <div id="wrapper">
-        <div ng-controller="machinesPage" ng-init="n_clones_hide=<%= $n_clones_hide %>;check_netdata='<%= $check_netdata %>'" >
+        <div ng-controller="machinesPage" ng-init="subscribe_all('<%= url_for('ws_subscribe')->to_abs %>');n_clones_hide=<%= $n_clones_hide %>;check_netdata='<%= $check_netdata %>'" >
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
       <div id="admin-content">
@@ -12,6 +12,9 @@
       <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
         <strong><%=l 'Error!' %></strong><%=l 'Backend no available!' %>
       </div>
+%       if ($USER->is_operator || $USER->is_admin) {
+            %= include 'main/check_ws'
+%       }
     <div class="row">
       <div style="margin-right: 10px;" data-netdata="system.swap"
           data-dimensions="used"
@@ -98,7 +101,7 @@
             <div class="col-md-4" align="right">
 % 		if ($_user->can_create_machine){
                 <h2>
-                    <button class="btn btn-warning" ng-click="refresh_machines()"><i class="fa fa-sync-alt" aria-hidden="true"></i></button>
+                    <button class="btn btn-warning" ng-click="list_machines=[];subscribe_all('<%= url_for('ws_subscribe')->to_abs %>');"><i class="fa fa-sync-alt" aria-hidden="true"></i></button>
                     <a type="button" class="btn btn-success" href="/new_machine.html">
                         <b><%=l 'New Machine' %></b>
                     <i ng-show="download_working"
@@ -126,10 +129,10 @@
                        ng-hide="orderParam[0] !== '-name'"></i>
                       <%=l 'Machine Name' %></div>
                         <div style="float:right" ng-show="n_clones">
-                            <a ng-show="hide_clones" ng-click="hideClones()"
+                            <a ng-show="hide_clones" ng-click="showClones(true)"
                               class="badge badge-primary dropdown-toggle text-white"
                               align="right"><%=l 'show clones' %></a>
-                            <a ng-show="!hide_clones" ng-click="hideClones()"
+                            <a ng-show="!hide_clones" ng-click="showClones(false)"
                               class="badge badge-primary dropdown-toggle text-white"
                               align="right"><%=l 'hide clones' %></a>
                         </div>
@@ -161,6 +164,14 @@
                                          ng-class="{disabled: !machine.can_manage}"
                         title ="<%=l 'Manage machine' %>"><b
                                                               ng-cloak>{{machine.name}}</b></a> {{machine.comment}}
+                        <button ng-show="machine.has_clones" type="button"
+                        class="badge badge-light text-blue"
+                        ng-click="show_clones[machine.id] = !show_clones[machine.id]"
+                        title="<%=l 'Show/Hide clones' %>">
+                        <b ng-show="show_clones[machine.id]" >-</b>
+                        <b ng-show="!show_clones[machine.id]">+</b>
+                        </button>
+
                     </td>
                     <td class="lgMachToggle">
 %                       if ($_user->can_create_base ) {
@@ -275,13 +286,13 @@
                           <i class="fa fa-desktop"></i>
                         </a>
                       </div>
-                      <div ng-show="{{machine.is_locked}}" ng-cloak>Machine locked by <a href="/request/{{machine.is_locked}}.html"><%=l 'process' %></a></div>
+                      <div ng-show="{{machine.is_locked}}" ng-cloak>Machine <a href="/request/{{machine.is_locked}}.html"><%=l 'locked' %></a></div>
                       <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
                           ng-cloak><span class="badge badge-pill badge-light"><%=l 'This Machine is a base' %></span></div>
                     </td>
                     <td class="lgMachNode"></td>
                 </tr>
-                    <tr ng-hide="hide_clones" ng-repeat="child in machine.childs | orderBy : orderParam">
+                    <tr ng-show="show_clones[machine.id]" ng-repeat="child in machine.childs | orderBy : orderParam">
                       <td class="lgMachName">
                       &nbsp;<i title="[cloned]" class="fa fa-fw fa-long-arrow-right"
                               style="color:white"></i>
@@ -406,7 +417,7 @@
                             <i class="fa fa-desktop"></i>
                           </a>
                         </div>
-                        <div ng-show="{{child.is_locked}}" ng-cloak><%=l 'Machine locked by' %><a href="/request/{{child.is_locked}}.html"> <%=l 'process' %></a></div>
+                        <div ng-show="{{child.is_locked}}" ng-cloak><%=l 'Machine' %> <a href="/request/{{child.is_locked}}.html"> <%=l 'locked' %></a></div>
                       </td>
                       <td class="lgMachToggle"><span class="badge badge-info" title="<%=l 'Node'%>">{{child.node}}</span></td>
                     </tr>

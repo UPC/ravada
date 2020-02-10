@@ -7,5 +7,6 @@ CREATE TABLE `users` (
 ,  `is_temporary` integer DEFAULT 0
 ,  `is_external` integer DEFAULT 0
 ,  `language` char(3) DEFAULT NULL
+,   `date_created` timestamp default CURRENT_TIMESTAMP
 ,  UNIQUE (`name`)
 );
