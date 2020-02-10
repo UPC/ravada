@@ -41,7 +41,7 @@ If so, install those dependencies automatically running:
 Step 3 
 ~~~~~~
 
-Reconfigurate the systemd.
+Reconfigure systemd.
 
 .. prompt:: bash
 
@@ -56,3 +56,11 @@ Restart the services.
 
     sudo systemctl restart rvd_back
     sudo systemctl restart rvd_front
+
+Step 5
+~~~~~~
+
+Check the apache configuration
+
+If you upgrade from older releases you may have to add some lines to the apache
+proxy configuration. Check the `Apache proxy guide <http://ravada.readthedocs.io/en/latest/docs/apache.html>`__.
