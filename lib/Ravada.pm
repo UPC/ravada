@@ -1253,7 +1253,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','device','varchar(255)');
     $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
 
-    $self->_upgrade_table('users','language','char(3) DEFAULT NULL');
+    $self->_upgrade_table('users','language','char(40) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
         my $sth = $CONNECTOR->dbh->prepare(
             "UPDATE users set is_external=1 WHERE password='*LK* no pss'"
