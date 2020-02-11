@@ -36,15 +36,15 @@ sub test_rebase_3times($vm, $swap, $data, $with_cd) {
     $base1->add_volume(type => 'swap', size=>$VOL_SIZE) if $swap;
     $base1->add_volume(type => 'data', size=>$VOL_SIZE) if $data;
 
-    _mangle_vol2($vm, "base1",$base1->list_volumes);
+    mangle_volume($vm, "base1",$base1->list_volumes);
     $base1->prepare_base(user => user_admin, with_cd => $with_cd);
 
     my $base2 = $base1->clone( name => new_domain_name, user => user_admin);
-    _mangle_vol2($vm, "base2",$base2->list_volumes);
+    mangle_volume($vm, "base2",$base2->list_volumes);
 
     my $clone = $base1->clone( name => new_domain_name, user => user_admin);
     for my $file ( $clone->list_volumes ) {
-        test_volume_contents2($vm, $file,"base1");
+        test_volume_contents($vm, "base1", $file);
     }
     $base2->prepare_base(user => user_admin, with_cd => $with_cd);
 
@@ -52,49 +52,45 @@ sub test_rebase_3times($vm, $swap, $data, $with_cd) {
     is($clone->id_base, $base2->id);
     for my $file ( $clone->list_volumes() ) {
         my ($type) =$file =~ /\.([A-Z]+)\./;
+        test_volume_contents($vm,"base1",$file);
         if ($type && $type eq 'DATA') {
-            test_volume_contents2($vm,$file,"base1");
-            test_volume_contents2($vm,$file,"base2",0);
+            test_volume_contents($vm,"base2",$file,0);
         } else {
-            test_volume_contents2($vm,$file,"base1");
-            test_volume_contents2($vm,$file,"base2");
+            test_volume_contents($vm,"base2",$file);
         }
     }
 
-    _mangle_vol2($vm, "clone", $clone->list_volumes);
+    mangle_volume($vm, "clone", $clone->list_volumes);
     $clone->rebase(user_admin, $base1);
     is($clone->id_base, $base1->id);
     for my $file ( $clone->list_volumes() ) {
         my ($type) =$file =~ /\.([A-Z]+)\./;
+        test_volume_contents($vm,"base1",$file);
+        test_volume_contents($vm,"base2",$file,0);
         if ($type && $type eq 'DATA') {
-            test_volume_contents2($vm,$file,"base1");
-            test_volume_contents2($vm,$file,"base2",0);
-            test_volume_contents2($vm,$file,"clone",1);
+            test_volume_contents($vm,"clone",$file,1);
         } else {
-            test_volume_contents2($vm,$file,"base1");
-            test_volume_contents2($vm,$file,"base2",0);
-            test_volume_contents2($vm,$file,"clone",0);
+            test_volume_contents($vm,"clone",$file,0);
         }
     }
 
     my $base3 = $base2->clone(name => new_domain_name, user => user_admin);
-    _mangle_vol2($vm, "clone", $base3->list_volumes);
+    mangle_volume($vm, "base3", $base3->list_volumes);
     $base3->prepare_base(user => user_admin, with_cd => $with_cd);
 
     $clone->rebase(user_admin, $base3);
     is($clone->id_base, $base3->id);
     for my $file ( $clone->list_volumes() ) {
         my ($type) =$file =~ /\.([A-Z]+)\./;
+        test_volume_contents($vm,"base1",$file);
         if ($type && $type eq 'DATA') {
-            test_volume_contents2($vm,$file,"base1");
-            test_volume_contents2($vm,$file,"base2",0);
-            test_volume_contents2($vm,$file,"base3",0);
-            test_volume_contents2($vm,$file,"clone",1);
+            test_volume_contents($vm,"base2",$file,0);
+            test_volume_contents($vm,"base3",$file,0);
+            test_volume_contents($vm,"clone",$file,1);
         } else {
-            test_volume_contents2($vm,$file,"base1");
-            test_volume_contents2($vm,$file,"base2",0);
-            test_volume_contents2($vm,$file,"base3",1);
-            test_volume_contents2($vm,$file,"clone",0);
+            test_volume_contents($vm,"base2",$file,1);
+            test_volume_contents($vm,"base3",$file,1);
+            test_volume_contents($vm,"clone",$file,0);
         }
     }
 
@@ -119,7 +115,7 @@ sub test_rebase_with_vols($vm, $swap0, $data0, $with_cd0, $swap1, $data1, $with_
     my $clone1 = $base->clone( name => new_domain_name, user => user_admin);
 
     my @volumes_before = $clone1->list_volumes();
-    _mangle_vol($vm,@volumes_before);
+    mangle_volume($vm,"clone",@volumes_before);
 
     my %backing_file = map { $_->file => ($_->backing_file or undef) }
         grep { $_->file } $clone1->list_volumes_info;
@@ -146,7 +142,12 @@ sub test_rebase_with_vols($vm, $swap0, $data0, $with_cd0, $swap1, $data1, $with_
 
     for my $vol ($clone1->list_volumes_info) {
         my $file = $vol->file or next;
-        _test_volume_contents($vm,$file);
+        my ($type) =$file =~ /\.([A-Z]+)\./;
+        if ($type && $type eq 'DATA') {
+            test_volume_contents($vm,"clone",$file);
+        } else {
+            test_volume_contents($vm,"clone",$file,0);
+        }
 
         my $bf2 = $base2->name;
         if ( $file !~ /\.iso$/ ) {
@@ -159,6 +160,8 @@ sub test_rebase_with_vols($vm, $swap0, $data0, $with_cd0, $swap1, $data1, $with_
     }
     _remove_domains($base, $base2);
 }
+
+=pod
 
 sub _test_volume_contents($vm, $file) {
     if ($file =~ /\.iso$/) {
@@ -186,33 +189,7 @@ sub _test_volume_contents($vm, $file) {
     }
 }
 
-sub test_volume_contents2($vm, $file, $name, $expected=1) {
-    if ($file =~ /\.void$/) {
-        my $data = LoadFile($file);
-        if ($file =~ /\.DATA\./) {
-            if ($expected) {
-                ok(exists $data->{$name}, "Expecting $name in ".Dumper($file,$data)) or confess;
-            } else {
-                ok(!exists $data->{$name}, "Expecting no $name in ".Dumper($file,$data)) or confess;
-            }
-        }
-    } elsif ($file =~ /\.qcow2$/) {
-        if ($file =~ /\.DATA\./) {
-            test_file_exists2($vm, $file, $name, $expected);
-        }
-    } elsif ($file =~ /\.iso$/) {
-        my $file_type = `file $file`;
-        chomp $file_type;
-        if ($file_type =~ /ASCII/) {
-            my $data = LoadFile($file);
-            ok($data->{iso},Dumper($file,$data)) or confess;
-        } else {
-            like($file_type , qr/DOS\/MBR/);
-        }
-    } else {
-        confess "I don't know how to check vol contents of '$file'";
-    }
-}
+=cut
 
 sub _remove_domains(@bases) {
     for my $base (@bases) {
@@ -223,6 +200,8 @@ sub _remove_domains(@bases) {
         $base->remove(user_admin);
     }
 }
+
+=pod
 
 sub _mangle_vol($vm,@vol) {
     for my $file (@vol) {
@@ -240,45 +219,31 @@ sub _mangle_vol($vm,@vol) {
     }
 }
 
-sub _mangle_vol2($vm,$name,@vol) {
-    for my $file (@vol) {
-
-        if ($file =~ /\.void$/) {
-            my $data = Load($vm->read_file($file));
-            $data->{$name} = "c" x 20;
-            $vm->write_file($file, Dump($data));
-
-        } elsif ($file =~ /\.qcow2$/) {
-            _mount_qcow($vm, $file);
-            open my $out,">","/mnt/test_rvd/$name";
-            print $out ("c" x 20)."\n";
-            close $out;
-            _umount_qcow();
-        }
+sub _retry_command($vm,$cmd,$re_err=undef) {
+    my ($out,$err);
+    for ( 1 .. 10) {
+        ($out,$err) = $vm->run_command(@$cmd);
+        return if !$err;
+        return if $re_err && $err && $err =~ $re_err;
+        sleep 1;
+        diag("@$cmd $err");
     }
+    die join(" ",@$cmd)." : $? $err" if $?;
 }
-
 
 sub _mount_qcow($vm, $vol) {
     my ($in,$out, $err);
-    if (!$MOD_NBD++) {
-        my @cmd =("/sbin/modprobe","nbd", "max_part=63");
-        run3(\@cmd, \$in, \$out, \$err);
-        die join(" ",@cmd)." : $? $err" if $?;
-    }
-    for ( 1 .. 10 ) {
-        ($out,$err) = $vm->run_command($QEMU_NBD,"-d", $DEV_NBD);
-        last if !$err;
-        sleep 1;
-        diag($err);
-    }
-    confess "qemu-nbd -d $DEV_NBD\n?:$?\n$out\n$err" if $? || $err;
+    _retry_command($vm,["/sbin/modprobe","nbd", "max_part=63"])
+        if !$MOD_NBD++;
+
+    _retry_command($vm, ["/bin/umount", $DEV_NBD],qr(not mounted));
+    _retry_command($vm, [$QEMU_NBD,"-d", $DEV_NBD]);
     for ( 1 .. 10 ) {
         ($out, $err) = $vm->run_command($QEMU_NBD,"-c",$DEV_NBD, $vol);
         last if !$err || $err !~ /(NBD socket|Unexpected end)/;
-        sleep 1;
         diag("$_ $err");
-        ($out,$err) = $vm->run_command($QEMU_NBD,"-d", $DEV_NBD);
+        ($out, $err) = $vm->run_command($QEMU_NBD,"-d",$DEV_NBD);
+        sleep 1;
     }
     confess "qemu-nbd -c $DEV_NBD $vol\n?:$?\n$out\n$err" if $? || $err;
     _create_part($DEV_NBD);
@@ -291,6 +256,7 @@ sub _mount_qcow($vm, $vol) {
 
 sub _create_part($dev) {
     my @cmd = ("/sbin/fdisk","-l",$dev);
+    warn "@cmd";
     my ($in,$out, $err);
     for my $retry ( 1 .. 10 ) {
         run3(\@cmd, \$in, \$out, \$err);
@@ -335,19 +301,12 @@ sub test_file_exists($vm, $vol, $expected=1) {
     return 1 if !$ok && !$expected;
     return 0;
 }
-sub test_file_exists2($vm, $vol,$name, $expected=1) {
-    _mount_qcow($vm,$vol);
-    my $ok = -e $MNT_RVD."/".base_domain_name.".txt";
-    _umount_qcow();
-    return 1 if $ok && $expected;
-    return 1 if !$ok && !$expected;
-    return 0;
-}
-
 
 sub test_file_not_exists($vm, $vol) {
     return test_file_exists($vm,$vol, 0);
 }
+
+=cut
 
 sub _key_for($a) {
     my($key) = $a =~ /\.([A-Z]+)\.\w+$/;
@@ -407,13 +366,14 @@ sub test_prepare_remove($vm) {
     $domain->add_volume(type => 'swap', size=>$VOL_SIZE);
     $domain->add_volume(type => 'data', size=>$VOL_SIZE);
 
-    _mangle_vol2($vm, "zipizape",$domain->list_volumes);
+    mangle_volume($vm, "zipizape", grep { !/\.iso$/ }  $domain->list_volumes);
 
     $domain->prepare_base(user_admin);
     $domain->remove_base(user_admin);
 
     for my $file ( $domain->list_volumes ) {
-        test_volume_contents2($vm, $file,"zipizape");
+        next if $file =~ /\.iso$/;
+        test_volume_contents($vm, "zipizape", $file);
     }
     $domain->remove(user_admin);
 
@@ -424,7 +384,6 @@ sub test_prepare_remove($vm) {
 
 clean();
 $ENV{LANG}='C';
-_umount_qcow();
 
 for my $vm_name (vm_names() ) {
     ok($vm_name);
@@ -442,13 +401,18 @@ for my $vm_name (vm_names() ) {
         test_prepare_remove($vm);
 
         if (!$ENV{TEST_LONG} ) {
+            test_rebase_3times($vm, 1, 1, 1);
+            test_rebase_with_vols($vm,0,0,0,0,0,0);
             test_rebase_with_vols($vm,1,1,1,0,0,1);
+            test_rebase_with_vols($vm,1,1,1,1,1,1);
         }
         for my $swap0 ( 0 , 1 ) {
             for my $data0 ( 0 , 1 ) {
                 for my $with_cd0 ( 0 , 1 ) {
                     test_rebase($vm, $swap0, $data0, $with_cd0);
-                    test_rebase_3times($vm, $swap0, $data0, $with_cd0);
+                    if ($ENV{TEST_LONG}) {
+                        test_rebase_3times($vm, $swap0, $data0, $with_cd0);
+                    }
                     for my $swap1 ( 0 , 1 ) {
                         for my $with_cd1 ( 0 , 1 ) {
                             for my $data1 ( 0 , 1 ) {
