@@ -209,3 +209,14 @@ A PR can only be merged into master by a maintainer if:
 
 Any maintainer is allowed to merge a PR if all of these conditions are
 met.
+
+### 11 Reset my fork to upstream
+
+```sh
+git remote add upstream https://github.com/UPC/ravada
+git fetch upstream
+git checkout develop
+git reset --hard upstream/develop
+git push origin develop --force
+```
+
