@@ -1457,10 +1457,11 @@ sub login {
             );
             my $header = ( $c->req->headers->header('accept-language') or '');
             my @languages2 = map {my $lang = $_ ; $lang =~ s/^(.*?)[;-].*/$1/; $lang } split /,/,$header;
+            my @languages_browser = map {my $lang = $_ ;$lang =~ s/;.*//; $lang } split /,/,$header;
 
             Ravada::Request->post_login(
                 user => $auth_ok->name
-                , locale => [@languages, @languages2]
+                , locale => [@languages_browser, @languages, @languages2]
             );
 
             $auth_ok = Ravada::Auth::SQL->new(name => $auth_ok->name);
