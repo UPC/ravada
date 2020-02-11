@@ -24,13 +24,13 @@ msgid "Ravada broker"
 msgstr "Broker Ravada"
 
 msgid "Machine Name"
-msgstr "Nombre de la máquina"
+msgstr "Nom de la màquina"
 
 msgid "Tools"
-msgstr "Herramientas"
+msgstr "Eines"
 
 msgid "Choose a Machine to Start"
-msgstr "Elige una máquina para iniciar"
+msgstr "Tria una màquina per a iniciar"
 
 msgid "Start"
 msgstr "Iniciar"
@@ -39,7 +39,7 @@ msgid "Stop"
 msgstr "Parar"
 
 msgid "View"
-msgstr "Ver"
+msgstr "Veure"
 
 msgid "Prepare base"
 msgstr "Preparar base"
@@ -48,43 +48,43 @@ msgid "Clone"
 msgstr "Clonar"
 
 msgid "Clone/s"
-msgstr "clon/es"
+msgstr "clon/s"
 
 msgid "Users List"
-msgstr "Lista de usuarios"
+msgstr "Llista d'usuaris"
 
 msgid "Name"
-msgstr "Nombre"
+msgstr "Nom"
 
 msgid "Log Out"
-msgstr "Salir"
+msgstr "Eixir"
 
 msgid "Available Machines"
-msgstr "Máquinas disponibles"
+msgstr "Màquinas disponibles"
 
 msgid "Help"
-msgstr "Ayuda"
+msgstr "Ajuda"
 
 msgid "Requirements"
-msgstr "Requerimientos"
+msgstr "Requeriments"
 
 msgid "About"
 msgstr "Info"
 
 msgid "Mark all as read"
-msgstr "Marcar todo como leído"
+msgstr "Marcar tot com llegit"
 
 msgid "Settings"
-msgstr "Preferencias"
+msgstr "Preferències"
 
 msgid "New Machine"
-msgstr "Nueva máquina"
+msgstr "Nova màquina"
 
 msgid "I want to change my password"
-msgstr "Quiero cambiar mi contraseña"
+msgstr "Vull canviar la meua contrasenya"
 
 msgid "I want to change my language"
-msgstr "Quiero cambiar mi idioma"
+msgstr "Vull canviar el meu idioma"
 
 msgid "Language:"
 msgstr "Idioma:"
@@ -119,8 +119,11 @@ msgstr "Japonés"
 msgid "German"
 msgstr "Aleman"
 
+msgid "Valencia"
+msgstr "Valencià"
+
 msgid "New Password:"
-msgstr "Nueva Contraseña:"
+msgstr "Nova Contrasenya:"
 
 msgid "Confirm Password:"
 msgstr "Confirmar Contraseña:"
@@ -129,31 +132,31 @@ msgid "Submit"
 msgstr "Enviar"
 
 msgid "Your language has been changed successfully"
-msgstr "Su idioma ha sido cambiado con éxito"
+msgstr "El seu idioma ha sigut canviat amb èxit"
 
 msgid "Your password has been changed successfully"
-msgstr "Su contraseña ha sido cambiada con éxito"
+msgstr "La seua contrasenya ha sigut camviada amb èxit"
 
 msgid "Password is too short"
-msgstr "Contraseña demasiado corta"
+msgstr "Contraseña massa curta"
 
 msgid "Password fields do not match"
-msgstr "Los campos de contraseña no coinciden"
+msgstr "Els camps de contrasenya no coincideixen"
 
 msgid "Some of the password fields are empty"
-msgstr "Algún campo de contraseña esta vacío"
+msgstr "Algun camp de contrasenya està buit"
 
 msgid "Status"
-msgstr "Estado"
+msgstr "Estat"
 
 msgid "Actions"
-msgstr "Acciones"
+msgstr "Accions"
 
 msgid "Down"
 msgstr "Parada"
 
 msgid "Running"
-msgstr "En marcha"
+msgstr "En marxa"
 
 msgid "Shutdown"
 msgstr "Apagar"
@@ -162,16 +165,16 @@ msgid "Screenshot"
 msgstr "Captura de pantalla"
 
 msgid "Paused"
-msgstr "Pausado"
+msgstr "Pausat"
 
 msgid "Machine locked by request"
-msgstr "Máquina bloqueada por"
+msgstr "Màquina bloquejada per"
 
 msgid "Process"
-msgstr "Proceso"
+msgstr "Procés"
 
 msgid "Copy"
-msgstr "Copia"
+msgstr "Còpia"
 
 msgid "Error!"
 msgstr "¡Error!"
@@ -183,43 +186,43 @@ msgid "Backend not available!"
 msgstr "Backend no disponible!"
 
 msgid "Subject"
-msgstr "Asunto"
+msgstr "Assumpte"
 
 msgid "Date"
-msgstr "Fecha"
+msgstr "Data"
 
 msgid "Mark as read"
-msgstr "Marca como leído"
+msgstr "Marca com llegit"
 
 msgid "Mark as unread"
-msgstr "Marca como no leído"
+msgstr "Marca com no llegit"
 
 msgid "No messages to show"
-msgstr "No hay mensajes para mostrar"
+msgstr "No hi ha missatges per a mostrar"
 
 msgid "Admin"
 msgstr "Admin"
 
 msgid "Machines"
-msgstr "Máquinas"
+msgstr "Màquines"
 
 msgid "machines"
-msgstr "máquinas"
+msgstr "màquines"
 
 msgid "Users"
-msgstr "Usuarios"
+msgstr "Usuaris"
 
 msgid "users"
-msgstr "usuarios"
+msgstr "usuaris"
 
 msgid "Messages"
-msgstr "Mensajes"
+msgstr "Missatges"
 
 msgid "messages"
-msgstr "mensajes"
+msgstr "missatges"
 
 msgid "Admin tools"
-msgstr "Herramientas de administración"
+msgstr "Eines d'administració"
 
 msgid "Remove base"
 msgstr "Elimina base"
@@ -231,7 +234,7 @@ msgid "Hibernate"
 msgstr "Hibernar"
 
 msgid "Are you sure?"
-msgstr "Estás seguro/a?"
+msgstr "Estàs segur/a?"
 
 msgid "Yes"
 msgstr "Sí"
@@ -240,152 +243,153 @@ msgid "No"
 msgstr "No"
 
 msgid "Make public"
-msgstr "Haz público"
+msgstr "Fes públic"
 
 msgid "Machine settings"
-msgstr "Preferencias de la máquina"
+msgstr "Preferèncias de la máquina"
 
 msgid "Cannot remove base, machine has clones"
-msgstr "No se puede borrar la base, la máquina tiene clones"
+msgstr "No es pot esborrar la base, la màquina té clons"
 
 msgid "show clones"
-msgstr "muestra clones"
+msgstr "mostra clons"
 
 msgid "hide clones"
-msgstr "esconde clones"
+msgstr "amaga clons"
 
 msgid "For Spice redirection you will need to install"
-msgstr "Para la redirección de spice, necesitarás instalar"
+msgstr "Per a la redirecció de spice, necessitaràs instal·lar"
 
 msgid "in your computer."
-msgstr "en tu ordenador."
+msgstr "en el teu ordinador."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr "Busca en tu distro, p.e. en Debian/Ubuntu con"
+msgstr "Cerca en la teua distro, p.e. en Debian/Ubuntu amb"
 
 msgid "You will need to install"
-msgstr "Necesitarás instalar"
+msgstr "Necessitaràs instal·lar"
 
 msgid "and USB drivers ("
-msgstr "y los drivers USB ("
+msgstr "i els drivers USB ("
 
 msgid ""
 "Be aware that in Windows, Spice redirection is not automatic. It is "
 "necessary to associate protocol with the app."
 msgstr ""
-"Ten en cuenta que en Windows, la redirección de Spice no es automática. Es "
-"necesario asociar el protocolo con la aplicación."
+"Tingues en compte que en Windows, la redirecció de Spice no és automàtica. És "
+"necessari associar el protocol amb l'aplicació."
 
 msgid "To make this possible, download"
-msgstr "Para hacer esto posible, descarga"
+msgstr "Per a fer això possible, descàrrega"
 
 msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
 msgstr ""
-"o copia las siguientes líneas en un archivo ASCII y guarda con la extensión "
-".reg, luego ejecuta el archivo."
+"o còpia les següents línies en un arxiu ASCII i guarda amb l'extensió  "
+".reg, després executa l'arxiu."
 
 msgid "Login"
-msgstr "Conéctate"
+msgstr "Connecta't"
 
 msgid "Welcome"
-msgstr "Bienvenido"
+msgstr "Benvigut"
 
 msgid "A viewer is required to run the virtual machines."
-msgstr "Se precisa de un visualizador para encender la máquina virtual."
+msgstr "Es precisa d'un visualitzador per a encendre la màquina virtual."
 
 msgid "It is required a viewer to run the virtual machines."
-msgstr "Es necesario un visor para ejecutar las máquinas virtuales."
+msgstr "És necessari un visor per a executar les màquines virtuals."
 
 msgid "Virtual Machines"
-msgstr "Máquinas Virtuales"
+msgstr "Màquines Virtuals"
 
 msgid "User"
-msgstr "Usuario"
+msgstr "Usuari"
 
 msgid "Password"
-msgstr "Contraseña"
+msgstr "Contrasenya"
 
 msgid "Start session"
-msgstr "Iniciar sesión"
+msgstr "Iniciar sessió"
 
 msgid "bits) in your computer."
-msgstr "bits) en tu ordenador."
+msgstr "bits) en el teu ordinador."
 
 msgid "Permissions"
 msgstr "Permisos"
 
 msgid "can change the settings of owned virtual machines."
-msgstr "puede cambiar los ajustes de las máquinas virtuales en posesión."
+msgstr "pot canviar els ajustos de les màquines virtuals en possessió."
 
 msgid "can change the settings of any virtual machines."
-msgstr "puede cambiar los ajustes de cualquier máquina virtual."
+msgstr "pot canviar els ajustos de qualsevol màquina virtual."
 
 msgid "can change the settings of any virtual machines "
-msgstr "puede cambiar los ajustes de cualquier máquina virtual "
+msgstr "pot canviar els ajustos de qualsevol màquina virtual "
 
 msgid "cloned from one base owned by the user."
-msgstr "clonado desde una base en posesión del usuario."
+msgstr "clonat des d'una base en possessió de l'usuari."
 
 msgid "can clone public virtual machines."
-msgstr "puede clonar máquinas virtuales públicas."
+msgstr "pot clonar màquines virtuals públiques."
 
 msgid "can clone any virtual machine."
-msgstr "puede clonar cualquier máquina virtual."
+msgstr "pot clonar màquines virtual."
 
 msgid "can create bases."
-msgstr "puede crear bases."
+msgstr "pot crear bases."
 
 msgid "can create virtual machines."
-msgstr "puede crear máquinas virtuales."
+msgstr "pot crear màquines virtuals."
 
 msgid "can grant permissions to other users"
-msgstr "puede otorgar permisos a otros usuarios"
+msgstr "pot atorgar permisos a altres usuaris"
 
 msgid "can hibernate any virtual machine."
-msgstr "puede hibernar cualquier máquina virtual."
+msgstr "pot hibernar qualsevol màquina virtual."
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr "puede hibernar clones de máquinas virtuales en posesión del usuario."
+msgstr "pot hibernar clons de màquines virtuals en possessió de l'usuari."
 
 msgid "can hibernate any clone."
-msgstr "puede hibernar cualquier clon."
+msgstr "pot hibernar qualsevol clon."
 
 msgid "can remove any virtual machines owned by the user."
-msgstr "puede quitar cualquier máquina virtual en posesión del usuario."
+msgstr "pot llevar qualsevol màquina virtual en possessió de l'usuari."
 
 msgid "can remove any virtual machine."
-msgstr "puede quitar cualquier máquina virtual."
+msgstr "pot llevar qualsevol màquina virtual."
+
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr "puede quitar clones de máquinas virtuales en posesión del usuario."
+msgstr "pot llevar clons de màquines virtuals en possessió de l'usuari."
 
 msgid "can remove any clone."
-msgstr "puede quitar cualquier clon."
+msgstr "pot llevar qualsevol clon."
 
 msgid "can take a screenshot of any virtual machine owned by the user."
 msgstr ""
-"puede tomar una captura de pantalla de cualquier máquina virtual en posesión"
-" del usuario"
+"pot prendre una captura de pantalla de qualsevol màquina virtual en possessió"
+" de l'usuari"
 
 msgid "can take a screenshot of any virtual machine."
-msgstr "puede tomar una captura de pantalla de cualquier máquina virtual."
+msgstr "pot prendre una captura de pantalla de qualsevol màquina virtual."
 
 msgid "can shutdown any virtual machine."
-msgstr "puede apagar cualquier máquina virtual."
+msgstr "pot apagar qualsevol màquina virtual."
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr "puede apagar clones de máquinas virtuales en posesión del usuario."
+msgstr "pot apagar clons de màquines virtuals en possessió de l'usuari."
 
 msgid "Submit Query"
 msgstr "Enviar Consulta"
 
 msgid "From Template"
-msgstr "Desde Plantilla"
+msgstr "Des de Plantilla"
 
 msgid "From Machine"
-msgstr "Desde Máquina"
+msgstr "Des de Màquina"
 
 msgid "Backend"
 msgstr "Backend"
@@ -397,11 +401,11 @@ msgid ""
 "This ISO image has not been downloaded yet. It may take some minutes, even "
 "hours until the file is fetched from the Internet."
 msgstr ""
-"Esta imagen ISO no se ha descargado todavía. Pueden pasar algunos minutos, "
-"incluso horas, hasta que el archivo se obtenga de Internet."
+"Aquesta imatge ISO no s'ha descarregat encara. Poden passar alguns minuts, "
+"fins i tot hores, fins que l'arxiu s'obtinga d'Internet."
 
 msgid "Download now"
-msgstr "Descargar ahora"
+msgstr "Descarregar ara"
 
 msgid "Select ISO"
 msgstr "Seleccionar ISO"
@@ -410,38 +414,38 @@ msgid "Template"
 msgstr "Plantilla"
 
 msgid "Disk Size: (GB)"
-msgstr "Tamaño del Disco: (GB)"
+msgstr "Grandària del Disc: (GB)"
 
 msgid "Swap Size: (GB)"
-msgstr "Tamaño de Swap: (GB)"
+msgstr "Grandària del Swap: (GB)"
 
 msgid "Ram: (GB)"
 msgstr "Ram: (GB)"
 
 msgid "Machine name is required."
-msgstr "El nombre de la máquina es necesario."
+msgstr "El nom de la màquina és necessari."
 
 msgid "Machine name can't exceed 20 characters."
-msgstr "El nombre de la máquina no puede superar los 20 carácteres."
+msgstr "El nom de la màquina no pot superar els 20 caràcters."
 
 msgid "Backend selection is required."
-msgstr "Hace falta seleccionar un backend."
+msgstr "Fa falta seleccionar un backend."
 
 msgid "ISO image selection is required."
-msgstr "Hace falta seleccionar una imagen de ISO."
+msgstr "Fa falta seleccionar una imatge d'ISO."
 
 msgid "Template selection is required."
-msgstr "Hace falta seleccionar una plantilla."
+msgstr "Fa falta seleccionar una plantilla."
 
 msgid "A machine with that name already exists."
-msgstr "Una máquina con ese nombre ya existe."
+msgstr "Una màquina amb aqueix nom ja existeix."
 
 msgid ""
 "The machine name is only allowed to consist of alphabetic characters, "
 "numbers, dashes and points."
 msgstr ""
-"El nombre de la máquina solo puede contener caracteres alfabéticos, números,"
-" guiones y puntos."
+"El nom de la màquina només pot contindre caràcters alfabètics, números,"
+" guions i punts."
 
 msgid "Create"
 msgstr "Crear"
@@ -450,29 +454,29 @@ msgid ""
 "can change the settings of all virtual machines cloned from one base owned "
 "by the user."
 msgstr ""
-"puede cambiar la configuración de todas las máquinas virtuales clonadas "
-"desde una base propiedad del usuario."
+"pot canviar la configuració de totes les màquines virtuals clonades "
+"des d'una base propietat de l'usuari."
 
 msgid "monitoring"
-msgstr "monitorización"
+msgstr "monitoratge"
 
 msgid "Are you sure you want to remove the Base of"
-msgstr "Estás seguro de querer eliminar la base de"
+msgstr "Estàs segur de voler eliminar la base de"
 
 msgid "Are you sure you want to prepare the Base of"
-msgstr "Estás seguro de querer preparar la base de"
+msgstr "Estàs segur de voler convertir la base de"
 
 msgid "Are you sure you want to change the Public state of"
-msgstr "Estás seguro de querer cambiar el estado público de"
+msgstr "Estàs segur de voler canviar l'estat públic de"
 
 msgid "Search"
 msgstr "Buscar"
 
 msgid "There are no public bases available in this system."
-msgstr "No hay bases públicas disponibles en este sistema."
+msgstr "No hi ha bases públiques disponibles en aquest sistema."
 
 msgid "There are no machines available in this system."
-msgstr "No hay máquinas disponibles en este sistema."
+msgstr "No hi ha màquines disponibles en aquest sistema."
 
 msgid "Create one."
 msgstr "Crea una."
@@ -481,358 +485,358 @@ msgid "not public"
 msgstr "no pública"
 
 msgid "User Settings"
-msgstr "Configuración de usuario"
+msgstr "Configuració d'usuari"
 
 msgid "Create a new account"
-msgstr "Crear una cuenta nueva"
+msgstr "Crear un compte nou"
 
 msgid "Username"
-msgstr "Nombre de usuario"
+msgstr "Nom d'usuari"
 
 msgid "Hide Private"
-msgstr "Esconder Privadas"
+msgstr "Amagar Privades"
 
 msgid "Show All"
-msgstr "Mostrar Todo"
+msgstr "Mostrar Tot"
 
 msgid "Shutting down ..."
-msgstr "Apagando ..."
+msgstr "Apagant ..."
 
 msgid "It may take a couple of minutes."
-msgstr "Puede tardar un par de minutos."
+msgstr "Pot tardar un parell de minuts."
 
 msgid "Hybernating ..."
-msgstr "Hibernando ..."
+msgstr "Hibernant ..."
 
 msgid "Description"
-msgstr "Descripción"
+msgstr "Descripció"
 
 msgid "Rename"
-msgstr "Renombrar"
+msgstr "Canviar de nom"
 
 msgid "Options"
-msgstr "Opciones"
+msgstr "Opcions"
 
 msgid "Drivers"
-msgstr "Controladores"
+msgstr "Controladors"
 
 msgid "Graphics"
-msgstr "Gráficos"
+msgstr "Gràfics"
 
 msgid "Remove Machine"
-msgstr "Eliminar Máquina"
+msgstr "Eliminar Màquina"
 
 msgid "System overview"
-msgstr "Resumen del sistema"
+msgstr "Resum del sistema"
 
 msgid "Danger Zone"
-msgstr "Zona Peligrosa"
+msgstr "Zona Perillosa"
 
 msgid ""
 "Once you delete the machine, there is no going back. Please be certain."
 msgstr ""
-"Una vez que eliminas la máquina, no hay marcha atrás. Por favor, asegurate."
+"Una vegada que elimines la màquina, no hi ha marxa arrere. Per favor, *asegurate."
 
 msgid "Danger"
-msgstr "Peligro"
+msgstr "Perill"
 
 msgid "This will remove all the contents of the machine"
-msgstr "Esto borrará todo el contenido de la máquina"
+msgstr "Això esborrarà tot el contingut de la màquina"
 
 msgid "This action can't be undone"
-msgstr "Esta acción no puede deshacerse"
+msgstr "Aquesta acció no pot desfer-se"
 
 msgid "Are you sure ?"
-msgstr "Estás seguro?"
+msgstr "Estàs segur?"
 
 msgid "Yes, remove"
 msgstr "Sí, eliminar"
 
 msgid "Virtual Machine"
-msgstr "Máquina virtual"
+msgstr "Màquina virtual"
 
 msgid "removed"
-msgstr "eliminado"
+msgstr "eliminat"
 
 msgid "This will remove all the"
-msgstr "Esto eliminará todo"
+msgstr "Això eliminarà tot"
 
 msgid "clones of the machine"
-msgstr "clones de la máquina"
+msgstr "clons de la màquina"
 
 msgid "Yes, remove all the clones"
-msgstr "Sí, eliminar todos los clones"
+msgstr "Sí, eliminar tots els clons"
 
 msgid "This virtual machine can't be removed because it has"
-msgstr "Esta máquina virtual no se puede eliminar porque tiene"
+msgstr "Aquesta màquina virtual no es pot eliminar perquè té"
 
 msgid "clones"
-msgstr "clones"
+msgstr "clons"
 
 msgid "Clones"
-msgstr "Clones"
+msgstr "Clons"
 
 msgid "This machine has not Graphics parameters!"
-msgstr "¡Esta máquina no tiene parámetros Gráficos!"
+msgstr "¡Aquesta màquina no té paràmetres Gràfics!!"
 
 msgid "recommended"
-msgstr "recomendado"
+msgstr "recomanat"
 
 msgid "to"
 msgstr "a"
 
 msgid "Changing Public State"
-msgstr "Cambio de Estado Público"
+msgstr "Canvi d'Estat Públic"
 
 msgid "Changing Base State"
-msgstr "Cambio de Estado Base"
+msgstr "Canvi d'Estat Base"
 
 msgid "action"
-msgstr "acción"
+msgstr "acció"
 
 msgid "Grants"
 msgstr "Permisos"
 
 msgid "public"
-msgstr "público"
+msgstr "públic"
 
 msgid "New Base"
-msgstr "Nueva Base"
+msgstr "Nova Base"
 
 msgid "Version"
-msgstr "Versión"
+msgstr "Versió"
 
 msgid "Authors"
-msgstr "Autores"
+msgstr "Autors"
 
 msgid "Development"
-msgstr "Desarrollo"
+msgstr "Desenvolupament"
 
 msgid "Below are listed the technologies used in this project:"
-msgstr "A continuación está la lista de tecnologías usadas en este proyecto:"
+msgstr "A continuació està la llista de tecnologies usades en aquest projecte:"
 
 msgid "The code is available on "
-msgstr "El código está disponible en "
+msgstr "El codi està disponible en "
 
 msgid "The code is "
-msgstr "El código está"
+msgstr "El codi està"
 
 msgid "License"
-msgstr "Licencia"
+msgstr "Llicència"
 
 msgid "Machine locked by"
-msgstr "Máquina bloqueada por"
+msgstr "Màquina bloquejada per"
 
 msgid "This Machine is a base"
-msgstr "Esta máquina es una base"
+msgstr "Aquesta màquina és una base"
 
 msgid "Cloned"
 msgstr "Clonada"
 
 msgid "is admin"
-msgstr "es administrador"
+msgstr "és administrador"
 
 msgid "Add new user"
-msgstr "Añadir nuevo usuario"
+msgstr "Afegir nou usuari"
 
 msgid "Register"
 msgstr "Registrar"
 
 msgid "Current Password:"
-msgstr "Contraseña actual:"
+msgstr "Contrasenya actual:"
 
 msgid "For more information, check"
-msgstr "Para más información, revisa"
+msgstr "Per a més informació, revisa"
 
 msgid "the Windows Clients documentation"
-msgstr "la documentación de clientes de Windows"
+msgstr "la documentació de clients de Windows"
 
 msgid "It is programmed in"
-msgstr "Está programado en"
+msgstr "Està programat en"
 
 msgid "with perl framework"
-msgstr "con framework Perl"
+msgstr "amb framework Perl"
 
 msgid "and"
-msgstr "y"
+msgstr "i"
 
 msgid "Memory"
-msgstr "Memoria"
+msgstr "Memòria"
 
 msgid "MB available"
 msgstr "MB disponible"
 
 msgid "The machine will shutdown after these minutes"
-msgstr "La máquina se apagará después de estos minutos"
+msgstr "La màquina s'apagarà després d'aquests minuts"
 
 msgid "Cancel"
-msgstr "Cancelar"
+msgstr "Cancel·lar"
 
 msgid "Please enter the following information to create the account"
-msgstr "Por favor introduce la siguiente información para crear la cuenta"
+msgstr "Per favor introdueix la següent informació per a crear el compte"
 
 msgid "Enter Username"
-msgstr "Introduce el nombre de usuario"
+msgstr "Introdueix el nom d'usuari"
 
 msgid "Enter Password"
-msgstr "Introduce la  contraseña"
+msgstr "Introdueix la  contrasenya"
 
 msgid "Confirm Password"
-msgstr "Confirmar Contraseña"
+msgstr "Confirmar Contrasenya"
 
 msgid "Username is required"
-msgstr "Se requiere nombre de usuario"
+msgstr "Es requereix nom d'usuari"
 
 msgid "Username can not exceed 20 characters"
-msgstr "El nombre de usuario no puede exceder los 20 caracteres"
+msgstr "El nom d'usuari no pot excedir els 20 caràcters"
 
 msgid "Username must be at least 5 characters"
-msgstr "El nombre de usuario debe tener al menos 5 caracteres"
+msgstr "El nom d'usuari ha de tindre almenys 5 caràcters"
 
 msgid "Username can only contain words, numbers, dashes, dots and underscores"
 msgstr ""
-"El nombre de usuario solo puede contener palabras, números, guiones, puntos "
-"y guiones bajos"
+"El nom d'usuari només pot contindre paraules, números, guions, punts "
+"i guions baixos"
 
 msgid "Password is required"
-msgstr "Se requiere contraseña"
+msgstr "Es requereix contrasenya"
 
 msgid "Password can not exceed 20 characters"
-msgstr "La contraseña no puede exceder los 20 caracteres"
+msgstr "La contrasenya no pot excedir els 20 caràcters"
 
 msgid "Password must be at least 5 characters"
-msgstr "La contraseña debe tener al menos 5 caracteres"
+msgstr "La contrasenya ha de tindre almenys 5 caràcters"
 
 msgid "Password can only contain words and numbers"
-msgstr "La contraseña solo puede contener palabras y números"
+msgstr "La contrasenya només pot contindre paraules i números"
 
 msgid "Confirm Password is required"
-msgstr "Es obligatorio confirmar la contraseña"
+msgstr "És obligatori confirmar la contrasenya"
 
 msgid "Confirm Password can not exceed 20 characters"
 msgstr "La contraseña no puede exceder los 20 caracteres"
 
 msgid "Confirm Password must be at least 5 characters"
-msgstr "La contraseña debe tener al menos 5 caracteres"
+msgstr "La contrasenya no pot excedir els 20 caràcters"
 
 msgid "Confirm Password can only contain words and numbers"
-msgstr "La contraseña solo puede contener palabras y números"
+msgstr "La contrasenya només pot contindre palaules i números"
 
 msgid "This information will be available to the users"
-msgstr "Esta Información será visible por los usuarios"
+msgstr "Aquesta Informació serà visible pels usuaris"
 
 msgid "Volatile Clones"
-msgstr "Clones volátiles"
+msgstr "Clons volàtils"
 
 msgid "Owner"
-msgstr "Propietario"
+msgstr "Propietari"
 
 msgid "Change the owner of the machine"
-msgstr "Cambiar el propietario de la máquina"
+msgstr "Canviar el propietari de la màquina"
 
 msgid "Press SHIFT + F12 to exit"
-msgstr "Presione SHIFT + F12 para salir"
+msgstr "Pressione SHIFT + F12 per a eixir"
 
 msgid ""
 "If you can not see the machine screen in a few seconds check for a file "
 "called"
 msgstr ""
-"Si no puedes ver la pantalla de la máquina en unos pocos segundos, busca un "
-"archivo llamado"
+"Si no pots veure la pantalla de la màquina en uns pocs segons, cerca un "
+"arxiu anomenat"
 
 msgid "in your downloads folder."
-msgstr "en tu carpeta de descargas."
+msgstr "en la teua carpeta de descàrregues."
 
 msgid "copied to clipboard"
-msgstr "copiado en el portapapeles"
+msgstr "copiat en el portapapers"
 
 msgid "Portuguese"
 msgstr "Portugués"
 
 msgid "Read more."
-msgstr "Leer más."
+msgstr "Llegir més."
 
 msgid "The password for this virtual machine connection is :"
-msgstr "La contraseña para la conexión de esta máquina virtual es:"
+msgstr "La contrasenya per a la connexió d'aquesta màquina virtual és:"
 
 msgid "view"
-msgstr "Ver"
+msgstr "Veure"
 
 msgid "Start again"
-msgstr "Iniciar de nuevo"
+msgstr "Iniciar de nou"
 
 msgid "The machine is down."
-msgstr "La máquina está parada."
+msgstr "La màquina està parada."
 
 msgid "Remove"
 msgstr "Eliminar"
 
 msgid "The machine must be started to take the screenshot."
-msgstr "La máquina ha de estar en marcha para hacer una captura de pantalla."
+msgstr "La màquina ha d'estar en marxa per a fer una captura de pantalla."
 
 msgid "Take screenshot"
-msgstr "Hacer una captura de pantalla"
+msgstr "Fer una captura de pantalla"
 
 msgid "Set base picture"
-msgstr "Establer imagen para la base"
+msgstr "Establir imatge per a la base"
 
 msgid "Saving the screenshot, please wait a moment..."
-msgstr "Grabando la captura de pantalla, espere un momento por favor..."
+msgstr "Gravant la captura de pantalla, espere un moment per favor..."
 
 msgid "You need to run the machine in order to take a screenshot."
 msgstr ""
-"Necesitas la máquina en marcha para poder hacer una captura de pantalla."
+"Necessites la màquina en marxa per a poder fer una captura de pantalla."
 
 msgid "Copying the screenshot, please wait a moment..."
-msgstr "Copiando la captura de pantalla, espere un momento por favor..."
+msgstr "Copiant la captura de pantalla, espere un moment per favor..."
 
 msgid "You need a screenshot in order to copy it to the base machine."
-msgstr "Necesitas una captura de pantalla para copiar a la máquina base."
+msgstr "Necessites una captura de pantalla per a copiar a la màquina base."
 
 msgid "Add"
-msgstr "Añadir"
+msgstr "Afegir"
 
 msgid "The changes will apply on next restart"
-msgstr "Los cambios se aplicarán en la próxima puesta en marcha"
+msgstr "Els canvis s'aplicaran en la pròxima posada en marxa"
 
 msgid "This VM is running and can't be renamed."
-msgstr "Esta VM se está ejecutando y no puede ser renombrada."
+msgstr "Aquesta VM s'està executant i no pot ser canviada de nom."
 
 msgid "Thanks to:"
-msgstr "Gracias a:"
+msgstr "Gràcies a:"
 
 msgid "licensed."
-msgstr "licenciado."
+msgstr "llicenciat."
 
 msgid "New Node"
-msgstr "Nuevo Nodo"
+msgstr "Nou Node"
 
 msgid "Address"
-msgstr "Dirección"
+msgstr "Direcció"
 
 msgid "A node with that name already exists."
-msgstr "Ya existe un node con ese nombre."
+msgstr "Ja existeix un node amb aqueix nom."
 
 msgid "Setting your default language"
-msgstr "Configuración del idioma por defecto"
+msgstr "Configuració de l'idioma per defecte"
 
 msgid "Change password"
-msgstr "Cambiar contraseña"
+msgstr "Canviar contrasenya"
 
 msgid "Update password"
-msgstr "Actualiza contraseña"
+msgstr "Actualitza contrasenya"
 
 msgid "Start all clones"
-msgstr "Iniciar todos los clones"
+msgstr "Iniciar tots els clons"
 
 msgid "Access denied"
-msgstr "Acceso denegado"
+msgstr "Accés denegat"
 
 msgid "Empty login name"
-msgstr "Nombre de inicio de sesión vacío"
+msgstr "Nom d'inici de sessió buit"
 
 msgid "Empty password"
-msgstr "Contraseña vacía"
+msgstr "Contrasenya buida"
 
 msgid "Session timeout"
-msgstr "El tiempo de espera de la sesión finalizo."
+msgstr "El temps d'espera de la sessió va finalitzar."
