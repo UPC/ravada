@@ -73,6 +73,15 @@ Allow only a group of users to access ravada:
         password: secretpassword
 
 
+Advanced Options
+----------------
+
+There are other options you can add to ldap:
+
+* ravada_posix_group : allows only this group to access ravada
+* sslversion : force the connection to LDAP with this SSL version: choose one of sslv2, sslv3, sslv23, tlsv1
+* filter: filter attributes for the LDAP search
+
 Example: Posix Group
 -----------------------
 
