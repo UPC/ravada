@@ -1120,7 +1120,7 @@ sub flush_rules {
     run3(["/sbin/iptables","-X", $CHAIN], \$in, \$out, \$err);
 
     # flush forward too. this is only supposed to run on test servers
-    run3(["/sbin/iptables","-F", ], \$in, \$out, \$err);
+    run3(["/sbin/iptables","-F","FORWARD" ], \$in, \$out, \$err);
 
 }
 
