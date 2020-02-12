@@ -116,7 +116,8 @@
 
 %=      include 'bootstrap/requests'
 
-        <table class="table admin-cont-body" border="0">
+        <div ng-show="!list_machines"><%=l 'Loading ...' %> </div>
+        <table class="table admin-cont-body" border="0" ng-show="list_machines" ng-cloak="1">
             <thead>
                 <tr>
                     <th ><div class="lgMachName machine-button" style="display:inline;float:down"

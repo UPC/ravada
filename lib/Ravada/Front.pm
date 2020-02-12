@@ -217,7 +217,7 @@ sub list_machines($self, $user) {
 sub _around_list_machines($orig, $self, $user) {
     my $machines = $self->$orig($user);
     for my $m (@$machines) {
-        $m->{can_shutdown} = $user->can_shutdown($m->{id});
+        eval { $m->{can_shutdown} = $user->can_shutdown($m->{id}) };
 
         $m->{can_start} = 0;
         $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
