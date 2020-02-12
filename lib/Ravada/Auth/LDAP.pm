@@ -585,7 +585,7 @@ sub _connect_ldap {
     
     for my $retry ( 1 .. 3 ) {
         if ($secure ) {
-            $ldap = Net::LDAPS->new($host, port => $port, verify => 'none') 
+            $ldap = _connect_ldaps($host, $port);
         } else {
             $ldap = Net::LDAP->new($host, port => $port, verify => 'none') 
         }
@@ -603,6 +603,17 @@ sub _connect_ldap {
     }
 
     return $ldap;
+}
+
+sub _connect_ldaps($host, $port) {
+    my @args;
+    push @args,(sslversion => $$CONFIG->{ldap}->{sslversion})
+    if exists $$CONFIG->{ldap}->{sslversion};
+
+    return Net::LDAPS->new($host, port => $port, verify => 'none'
+        ,@args
+    )
+
 }
 
 sub _init_ldap_admin {
