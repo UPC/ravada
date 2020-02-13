@@ -254,7 +254,7 @@ msgid "For Spice redirection you will need to install"
 msgstr " توجيه الى SPICE,  ستحتاج إلى تثبيت"
 
 msgid "in your computer."
-msgstr ""
+msgstr "في جهاز الكمبيوتر الخاص بك"
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr "ابحث في توزيعاتك ، على سبيل المثال في Debian / Ubuntu with"
@@ -412,456 +412,456 @@ msgid "Machine name can't exceed 20 characters."
 msgstr "اسم الجهاز لا يمكن أن يتجاوز 20 حرفا"
 
 msgid "Backend selection is required."
-msgstr ""
+msgstr "تحديد الواجهة الخلفية مطلوب"
 
 msgid "ISO image selection is required."
-msgstr ""
+msgstr "اختيار صورة إيسو مطلوب"
 
 msgid "Template selection is required."
-msgstr ""
+msgstr "اختيار القالب مطلوب"
 
 msgid "A machine with that name already exists."
-msgstr ""
+msgstr "جهاز بهذا الاسم موجود بالفعل"
 
 msgid "The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points."
-msgstr ""
+msgstr "اسم الجهاز مسموح فقط أن يتكون من أحرف أبجدية وأرقام وشرطات ونقاط"
 
 msgid "Create"
-msgstr ""
+msgstr "إنشاء"
 
 msgid ""
 "can change the settings of all virtual machines "
 "cloned from one base owned by the user."
-msgstr ""
+msgstr "يمكن تغيير إعدادات جميع الأجهزة الافتراضية""تم استنساخها من قاعدة واحدة يملكها المستخدم"
 
 msgid "monitoring"
-msgstr ""
+msgstr "مراقبة"
 
 msgid "Are you sure you want to remove the Base of"
-msgstr ""
+msgstr "هل أنت متأكد أنك تريد إزالة" "Base of"
 
 msgid "Are you sure you want to prepare the Base of"
-msgstr ""
+msgstr "هل أنت متأكد أنك تريد تحضير "
 
 msgid "Are you sure you want to change the Public state of"
-msgstr ""
+msgstr "هل أنت متأكد أنك تريد تغيير الحالة العامة لـ"
 
 msgid "Search"
-msgstr ""
+msgstr "بحث"
 
 msgid "There are no public bases available in this system."
-msgstr ""
+msgstr "لا توجد قواعد عامة متاحة في هذا النظام"
 
 msgid "There are no machines available in this system."
-msgstr ""
+msgstr "لا توجد آلات متوفرة في هذا النظام"
 
 msgid "Create one."
-msgstr ""
+msgstr "إنشاء واحد"
 
 msgid "not public"
-msgstr ""
+msgstr "ليست عامة"
 
 msgid "User Settings"
-msgstr ""
+msgstr "إعدادات المستخدم"
 
 msgid "Create a new account"
-msgstr ""
+msgstr "إنشاء حساب جديد"
 
 msgid "Username"
-msgstr ""
+msgstr "اسم المستخدم"
 
 msgid "Hide Private"
-msgstr ""
+msgstr "إخفاء الخاص"
 
 msgid "Show All"
-msgstr ""
+msgstr "إظهار الكل"
 
 msgid "Shutting down ..."
-msgstr ""
+msgstr "اغلاق ..."
 
 msgid "It may take a couple of minutes."
-msgstr ""
+msgstr "قد يستغرق الأمر بضع دقائق"
 
 msgid "Hybernating ..."
 msgstr ""
 
 msgid "Description"
-msgstr ""
+msgstr "الوصف"
 
 msgid "Rename"
-msgstr ""
+msgstr "إعادة تسمية"
 
 msgid "Options"
-msgstr ""
+msgstr "الخيارات"
 
 msgid "Drivers"
 msgstr ""
 
 msgid "Graphics"
-msgstr ""
+msgstr "الرسومات"
 
 msgid "Remove Machine"
-msgstr ""
+msgstr "إزالة الجهاز"
 
 msgid "System overview"
-msgstr ""
+msgstr "نظرة عامة على النظام"
 
 msgid "Danger Zone"
-msgstr ""
+msgstr "منطقة الخطر"
 
 msgid "Once you delete the machine, there is no going back. Please be certain."
-msgstr ""
+msgstr "بمجرد حذف الجهاز ، لن يكون هناك عودة. يرجى التأكد"
 
 msgid "Danger"
-msgstr ""
+msgstr "خطر"
 
 msgid "This will remove all the contents of the machine"
-msgstr ""
+msgstr "سيؤدي هذا إلى إزالة جميع محتويات الجهاز"
 
 msgid "This action can't be undone"
-msgstr ""
+msgstr "لا يمكن التراجع عن هذا الإجراء"
 
 msgid "Are you sure ?"
-msgstr ""
+msgstr "هل أنت متأكد؟"
 
 msgid "Yes, remove"
-msgstr ""
+msgstr "نعم ، أزل"
 
 msgid "Virtual Machine"
-msgstr ""
+msgstr "آلة افتراضية"
 
 msgid "removed"
-msgstr ""
+msgstr "تمت الإزالة"
 
 msgid "This will remove all the"
-msgstr ""
+msgstr "سيؤدي هذا إلى إزالة الكل"
 
 msgid "clones of the machine"
-msgstr ""
+msgstr "استنساخ الآلة"
 
 msgid "Yes, remove all the clones"
-msgstr ""
+msgstr "نعم ، أزل كل النسخ"
 
 msgid "This virtual machine can't be removed because it has"
-msgstr ""
+msgstr "هذا الجهاز الظاهري لا يمكن إزالته لأنه يحتوي على"
 
 msgid "clones"
-msgstr ""
+msgstr "المستنسخة"
 
 msgid "Clones"
-msgstr ""
+msgstr "المستنسخة"
 
 msgid "This machine has not Graphics parameters!"
-msgstr ""
+msgstr "هذا الجهاز لا يحتوي على معلمات رسومات!"
 
 msgid "recommended"
-msgstr ""
+msgstr "مستحسن"
 
 msgid "to"
-msgstr ""
+msgstr "إلى"
 
 msgid "Changing Public State"
-msgstr ""
+msgstr "تغيير الدولة العامة"
 
 msgid "Changing Base State"
-msgstr ""
+msgstr "تغيير حالة الأساس"
 
 msgid "action"
-msgstr ""
+msgstr "الإجراء"
 
 msgid "Grants"
-msgstr ""
+msgstr "منح"
 
 msgid "public"
-msgstr ""
+msgstr "عام"
 
 msgid "New Base"
-msgstr ""
+msgstr "قاعدة جديدة"
 
 msgid "Version"
-msgstr ""
+msgstr "الإصدار"
 
 msgid "Authors"
-msgstr ""
+msgstr "المؤلفون"
 
 msgid "Development"
-msgstr ""
+msgstr "التنمية"
 
 msgid "Below are listed the technologies used in this project:"
-msgstr ""
+msgstr "أدناه مدرجة التقنيات المستخدمة في هذا المشروع:"
 
 msgid "The code is available on "
-msgstr ""
+msgstr "الكود متوفر على"
 
 msgid "The code is "
-msgstr ""
+msgstr "الكود هو"
 
 msgid "License"
-msgstr ""
+msgstr "الترخيص"
 
 msgid "Machine locked by"
-msgstr ""
+msgstr "الجهاز مغلق بواسطة"
 
 msgid "This Machine is a base"
-msgstr ""
+msgstr "هذا الجهاز قاعدة"
 
 msgid "Cloned"
-msgstr ""
+msgstr "مستنسخ"
 
 msgid "is admin"
-msgstr ""
+msgstr "هو المسؤول"
 
 msgid "Add new user"
-msgstr ""
+msgstr "إضافة مستخدم جديد"
 
 msgid "Register"
-msgstr ""
+msgstr "التسجيل"
 
 msgid "Current Password:"
-msgstr ""
+msgstr "كلمة المرور الحالية:"
 
 msgid "For more information, check"
-msgstr ""
+msgstr "لمزيد من المعلومات ، راجع"
 
 msgid "the Windows Clients documentation"
-msgstr ""
+msgstr "وثائق عملاء Windows"
 
 msgid "It is programmed in"
-msgstr ""
+msgstr "مبرمجة في"
 
 msgid "with perl framework"
 msgstr ""
 
 msgid "and"
-msgstr ""
+msgstr "و"
 
 msgid "Memory"
-msgstr ""
+msgstr "الذاكرة"
 
 msgid "MB available"
 msgstr ""
 
 msgid "The machine will shutdown after these minutes"
-msgstr ""
+msgstr "سيتم إيقاف تشغيل الجهاز بعد هذه الدقائق"
 
 msgid "Cancel"
-msgstr ""
+msgstr "إلغاء"
 
 msgid "Please enter the following information to create the account"
-msgstr ""
+msgstr "الرجاء إدخال المعلومات التالية لإنشاء الحساب"
 
 msgid "Enter Username"
-msgstr ""
+msgstr "أدخل اسم المستخدم"
 
 msgid "Enter Password"
-msgstr ""
+msgstr "أدخل كلمة المرور"
 
 msgid "Confirm Password"
-msgstr ""
+msgstr "تأكيد كلمة المرور"
 
 msgid "Username is required"
-msgstr ""
+msgstr "اسم المستخدم مطلوب"
 
 msgid "Username can not exceed 20 characters"
-msgstr ""
+msgstr "اسم المستخدم لا يمكن أن يتجاوز 20 حرفًا"
 
 msgid "Username must be at least 5 characters"
-msgstr ""
+msgstr "يجب أن يكون اسم المستخدم 5 أحرف على الأقل"
 
 msgid "Username can only contain words, numbers, dashes, dots and underscores"
-msgstr ""
+msgstr "اسم المستخدم يمكن أن يحتوي فقط على الكلمات والأرقام والشرطات والنقاط والشرطات السفلية"
 
 msgid "Password is required"
-msgstr ""
+msgstr "كلمة المرور مطلوبة"
 
 msgid "Password can not exceed 20 characters"
-msgstr ""
+msgstr "لا يمكن أن تتجاوز كلمة المرور 20 حرفًا"
 
 msgid "Password must be at least 5 characters"
-msgstr ""
+msgstr "يجب أن تتكون كلمة المرور من 5 أحرف على الأقل"
 
 msgid "Password can only contain words and numbers"
-msgstr ""
+msgstr "لمة المرور يمكن أن تحتوي فقط على كلمات وأرقام"
 
 msgid "Confirm Password is required"
-msgstr ""
+msgstr "تأكيد كلمة المرور مطلوبة"
 
 msgid "Confirm Password can not exceed 20 characters"
-msgstr ""
+msgstr "تأكيد كلمة المرور لا يمكن أن يتجاوز 20 حرفًا"
 
 msgid "Confirm Password must be at least 5 characters"
-msgstr ""
+msgstr "تأكيد كلمة المرور يجب أن تكون على الأقل 5 أحرف"
 
 msgid "Confirm Password can only contain words and numbers"
-msgstr ""
+msgstr "تأكيد كلمة المرور يمكن أن يحتوي فقط على كلمات وأرقام"
 
 msgid "This information will be available to the users"
-msgstr ""
+msgstr "هذه المعلومات ستكون متاحة للمستخدمين"
 
 msgid "Volatile Clones"
-msgstr ""
+msgstr "متقلبة استنساخ"
 
 msgid "Owner"
-msgstr ""
+msgstr "صاحب"
 
 msgid "Change the owner of the machine"
-msgstr ""
+msgstr "تغيير مالك الجهاز"
 
 msgid "Press SHIFT + F12 to exit"
-msgstr ""
+msgstr "اضغط SHIFT + F12 للخروج"
 
 msgid "If you can not see the machine screen in a few seconds check for a file called"
-msgstr ""
+msgstr "إذا لم تتمكن من رؤية شاشة الجهاز في بضع ثوانٍ ، ابحث عن ملف يسمى"
 
 msgid "in your downloads folder."
-msgstr ""
+msgstr "في مجلد التنزيلات."
 
 msgid "copied to clipboard"
-msgstr ""
+msgstr "تم النسخ إلى الحافظة"
 
 msgid "Portuguese"
-msgstr ""
+msgstr "البرتغالية"
 
 msgid "Read more."
-msgstr ""
+msgstr "اقرأ المزيد"
 
 msgid "The password for this virtual machine connection is :"
-msgstr ""
+msgstr "كلمة المرور لاتصال الجهاز الظاهري هذا هي"
 
 msgid "view"
-msgstr ""
+msgstr "عرض"
 
 msgid "Start again"
-msgstr ""
+msgstr "ابدأ مرة أخرى"
 
 msgid "The machine is down."
-msgstr ""
+msgstr "الآلة معطلة"
 
 msgid "Remove"
-msgstr ""
+msgstr "إزالة"
 
 msgid "The machine must be started to take the screenshot."
-msgstr ""
+msgstr "يجب تشغيل الجهاز لالتقاط لقطة الشاشة"
 
 msgid "Take screenshot"
-msgstr ""
+msgstr "خد لقطة للشاشة"
 
 msgid "Set base picture"
-msgstr ""
+msgstr "ضبط الصورة الأساسية"
 
 msgid "Saving the screenshot, please wait a moment..."
-msgstr ""
+msgstr "حفظ لقطة الشاشة ، يرجى الانتظار لحظة"
 
 msgid "You need to run the machine in order to take a screenshot."
-msgstr ""
+msgstr "أنت بحاجة إلى تشغيل الجهاز من أجل التقاط لقطة شاشة"
 
 msgid "Copying the screenshot, please wait a moment..."
-msgstr ""
+msgstr "نسخ لقطة الشاشة ، يرجى الانتظار لحظة"
 
 msgid "You need a screenshot in order to copy it to the base machine."
-msgstr ""
+msgstr "أنت بحاجة إلى لقطة شاشة لنسخها إلى الجهاز الأساسي"
 
 msgid "Add"
-msgstr ""
+msgstr "إضافة"
 
 msgid "The changes will apply on next restart"
-msgstr ""
+msgstr "سيتم تطبيق التغييرات على إعادة التشغيل التالية"
 
 msgid "This VM is running and can't be renamed."
-msgstr ""
+msgstr "هذا VM قيد التشغيل ولا يمكن إعادة تسميته"
 
 msgid "Thanks to:"
-msgstr ""
+msgstr "شكرا ل"
 
 msgid "licensed."
-msgstr ""
+msgstr "محتوى مرخص"
 
 msgid "New Node"
-msgstr ""
+msgstr "عقدة جديدة"
 
 msgid "Address"
-msgstr ""
+msgstr "العنوان"
 
 msgid "A node with that name already exists."
-msgstr ""
+msgstr "توجد  عقدة بهذا الاسم"
 
 msgid "Setting your default language"
-msgstr ""
+msgstr "ضبط لغتك الافتراضية"
 
 msgid "Change password"
-msgstr ""
+msgstr "تغيير كلمة المرور"
 
 msgid "Update password"
-msgstr ""
+msgstr "تحديث كلمة المرور"
 
 msgid "Start all clones"
-msgstr ""
+msgstr "بدء جميع المستنسخة"
 
 msgid "Access denied"
-msgstr ""
+msgstr "تم رفض الوصول"
 
 msgid "Empty login name"
-msgstr ""
+msgstr "اسم تسجيل الدخول فارغ"
 
 msgid "Empty password"
-msgstr ""
+msgstr "كلمة مرور فارغة"
 
 msgid "Session timeout"
-msgstr ""
+msgstr "وقت الجلسة قد انتهى"
 
 msgid "Vietnamese"
-msgstr ""
+msgstr "الفيتنامية"
 
 msgid "Italian"
-msgstr ""
+msgstr "الإيطالية"
 
 msgid "Type a typical LDAP user name to fetch the attribute list"
-msgstr ""
+msgstr  "نموذجي لجلب قائمة السمات" "LDAP" "اكتب اسم مستخدم"
 
 msgid "User name"
-msgstr ""
+msgstr "اسم المستخدم"
 
 msgid "not found in LDAP server"
-msgstr ""
+msgstr "LDAP" "غير موجود في خادم"
 
 msgid "Attribute"
-msgstr ""
+msgstr "ينسب"
 
 msgid "Value"
-msgstr ""
+msgstr "القيمة"
 
 msgid "Allowed"
-msgstr ""
+msgstr "مسموح"
 
 msgid "Last"
-msgstr ""
+msgstr "الأخير"
 
 msgid "Default"
-msgstr ""
+msgstr "افتراضي"
 
 msgid "If none of the previous match, access is allowed."
-msgstr ""
+msgstr "إذا لم يكن أي من المطابقة السابقة ، يُسمح بالوصول"
 
 msgid "If none of the previous match, access is denied."
-msgstr ""
+msgstr "إذا لم يكن أي من المطابقة السابقة ، فسيتم رفض الوصول"
 
 msgid "verify"
-msgstr ""
+msgstr "تحقق"
 
 msgid "save"
-msgstr ""
+msgstr "حفظ"
 
 msgid "Verifying"
-msgstr ""
+msgstr "التحقق"
 
 msgid "No entries found"
-msgstr ""
+msgstr "لم يتم العثور على إدخالات"
 
 msgid "has at least"
-msgstr ""
+msgstr "لديه على الأقل"
 
 msgid "entries."
-msgstr ""
+msgstr "الإدخالات"
 
 msgid "Enable last for not allowed restrictions."
-msgstr ""
+msgstr "تمكين آخر القيود غير المسموح بها"
