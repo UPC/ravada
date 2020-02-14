@@ -208,7 +208,7 @@ sub create_domain {
                     , id_owner => $user->id
                     , %arg_create
                     , active => 0
-                    , memory => 1024*1024
+                    , memory => 512*1024
                     , disk => 1024 * 1024 * 1024
            );
     };
@@ -1120,7 +1120,7 @@ sub flush_rules {
     run3(["/sbin/iptables","-X", $CHAIN], \$in, \$out, \$err);
 
     # flush forward too. this is only supposed to run on test servers
-    run3(["/sbin/iptables","-F", ], \$in, \$out, \$err);
+    run3(["/sbin/iptables","-F","FORWARD" ], \$in, \$out, \$err);
 
 }
 
@@ -1654,6 +1654,8 @@ sub mangle_volume($vm,$name,@vol) {
             print $out ("c" x 20)."\n";
             close $out;
             _umount_qcow();
+        } elsif ($file =~ /\.iso$/) {
+            # do nothing
         } else {
             confess "Error: I don't know how to mangle volume $file";
         }
@@ -1667,10 +1669,13 @@ sub _mount_qcow($vm, $vol) {
         run3(\@cmd, \$in, \$out, \$err);
         die join(" ",@cmd)." : $? $err" if $?;
     }
-    $vm->run_command($QEMU_NBD,"-d", $DEV_NBD);
+    my @cmd = ($QEMU_NBD,"-d", $DEV_NBD);
+    ($out,$err) = $vm->run_command(@cmd);
+    die "@cmd : $err" if $err;
     for ( 1 .. 10 ) {
         ($out, $err) = $vm->run_command($QEMU_NBD,"-c",$DEV_NBD, $vol);
-        last if !$err || $err !~ /NBD socket/;
+        last if !$err;
+        diag("$_: $out\n$err");
         sleep 1;
     }
     confess "qemu-nbd -c $DEV_NBD $vol\n?:$?\n$out\n$err" if $? || $err;
