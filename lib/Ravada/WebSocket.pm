@@ -274,7 +274,7 @@ sub subscribe($self, %args) {
         , %args
         , ret => undef
     };
-    if ( $args{channel} eq 'list_machines') {
+    if ( $args{channel} eq 'list_machines' && $0 !~ /\.t$/) {
         $self->_list_machines_fast($ws, $args{login})
     }
 }
