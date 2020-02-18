@@ -36,6 +36,7 @@ Follow the usual procedure to install Windows10.
 When the installations it's finished, you need to install:
 
 * qemu-guest agent, see the instructions here: https://pve.proxmox.com/wiki/Qemu-guest-agent#Windows
+* Windows guest tools - `spice-guest-tools <https://www.spice-space.org/download/windows/spice-guest-tools/spice-guest-tools-latest.exe>`_ .
 * make sure that acpi service it's activated.
 
                                                      
