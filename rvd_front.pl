@@ -1416,7 +1416,7 @@ sub _logged_in {
     if ($login) {
         $USER = Ravada::Auth::SQL->new(name => $login);
         #Mojolicious::Plugin::I18N::
-        $c->languages($USER->language);
+        $c->languages($USER->language) if $USER->language();
 
         $c->stash(_logged_in => $login );
         $c->stash(_user => $USER);
