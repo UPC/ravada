@@ -18,7 +18,7 @@
 						<h3 class="mb-3"><%=l 'Setting your default language' %></h3>
                         <form method='post' enctype="multipart/form-data">
                             <%=l 'Language:' %> <select onchange="this.form.submit();" id="tongue" name="tongue" >
-				<option <%= $c->param("tongue") eq 'tr' ? "selected" : "" %> value="tr" ><%=l 'turkish' %></option>
+				<option <%= $c->param("tongue") eq 'tr' ? "selected" : "" %> value="tr" ><%=l 'Turkish' %></option>
                                 <option <%= $c->param("tongue") eq 'ar' ? "selected" : "" %> value="ar" ><%=l 'Arab' %></option>
                                 <option <%= $c->param("tongue") eq 'en' ? "selected" : "" %> value="en" ><%=l 'English' %></option>
                                 <option <%= $c->param("tongue") eq 'ca' ? "selected" : "" %> value="ca" ><%=l 'Catalan' %></option>

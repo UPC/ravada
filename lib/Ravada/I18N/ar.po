@@ -280,6 +280,12 @@ msgstr "أو انسخ الأسطر التالية في ملف" "ASCII" " واح�
 msgid "Login"
 msgstr "تسجيل الدخول"
 
+msgid "Valencian"
+msgstr "بلنسية اسبانيا"
+
+msgid "Turkish"
+msgstr "التركية"
+
 msgid "Welcome"
 msgstr "مرحبًا"
 
