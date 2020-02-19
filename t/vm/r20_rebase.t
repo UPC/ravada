@@ -186,156 +186,6 @@ sub test_match_vols($vols_before, $vols_after) {
     }
 }
 
-sub test_rebase($vm, $swap, $data, $with_cd) {
-    #diag("sw: $swap , da: $data , cd: $with_cd");
-    my $base = create_domain($vm);
-    $base->add_volume(type => 'swap', size=>$VOL_SIZE)    if $swap0;
-    $base->add_volume(type => 'data', size=>$VOL_SIZE)    if $data0;
-    $base->prepare_base(user => user_admin, with_cd => $with_cd0);
-
-    my $clone1 = $base->clone( name => new_domain_name, user => user_admin);
-
-    my @volumes_before = $clone1->list_volumes();
-    _mangle_vol($vm,@volumes_before);
-
-    my %backing_file = map { $_->file => ($_->backing_file or undef) }
-        grep { $_->file } $clone1->list_volumes_info;
-
-    my $base2 = create_domain($vm);
-    $base2->add_volume(type => 'swap', size=>$VOL_SIZE)    if $swap1;
-    $base2->add_volume(type => 'data', size=>$VOL_SIZE)    if $data1;
-    $base2->prepare_base(user => user_admin, with_cd => $with_cd1);
-
-    my @reqs;
-    eval { @reqs = $clone1->rebase(user_admin, $base2) };
-    if (!$same_outline) {
-        like($@,qr/outline different/i) or exit;
-        _remove_domains($base, $base2);
-        return;
-    } else {
-        is($@, '') or exit;
-    }
-    my @volumes_after = $clone1->list_volumes();
-    ok(scalar @volumes_after >= scalar @volumes_before,Dumper(\@volumes_after,\@volumes_before))
-        or exit;
-
-    test_match_vols(\@volumes_before, \@volumes_after);
-
-    for my $vol ($clone1->list_volumes_info) {
-        my $file = $vol->file or next;
-        _test_volume_contents($vm,$file);
-
-        my $bf2 = $base2->name;
-        if ( $file !~ /\.iso$/ ) {
-            like ($vol->backing_file, qr($bf2), $vol->file) or exit;
-            isnt($vol->backing_file, $backing_file{$vol->file}) if $backing_file{$file};
-        } else {
-            is($vol->backing_file, $backing_file{$vol->file}) if $backing_file{$file};
-        }
-        # we may check inside eventually but it is costly
-    }
-    _remove_domains($base, $base2);
-}
-
-sub _test_volume_contents($vm, $file) {
-    if ($file =~ /\.iso$/) {
-        my $file_type = `file $file`;
-        chomp $file_type;
-        if ($file_type =~ /ASCII/) {
-            my $data = LoadFile($file);
-            ok($data->{iso});
-        } else {
-            like($file_type , qr/DOS\/MBR/);
-        }
-    } elsif ($file =~ /\.void$/) {
-        my $data = LoadFile($file);
-        if ($file =~ /\.DATA\./) {
-            like($data->{a},qr(b{20}), $file);
-        } else {
-            is($data->{a},undef);
-        }
-    } elsif ($file =~ /\.qcow2$/) {
-        if ($file =~ /\.DATA\./) {
-            test_file_exists($vm,$file);
-        } else {
-            test_file_not_exists($vm,$file)
-        }
-    }
-}
-
-sub test_volume_contents2($vm, $file, $name, $expected=1) {
-    if ($file =~ /\.void$/) {
-        my $data = LoadFile($file);
-        if ($file =~ /\.DATA\./) {
-            if ($expected) {
-                ok(exists $data->{$name}, "Expecting $name in ".Dumper($file,$data)) or confess;
-            } else {
-                ok(!exists $data->{$name}, "Expecting no $name in ".Dumper($file,$data)) or confess;
-            }
-        }
-    } elsif ($file =~ /\.qcow2$/) {
-        if ($file =~ /\.DATA\./) {
-            test_file_exists2($vm, $file, $name, $expected);
-        }
-    } elsif ($file =~ /\.iso$/) {
-        my $file_type = `file $file`;
-        chomp $file_type;
-        if ($file_type =~ /ASCII/) {
-            my $data = LoadFile($file);
-            ok($data->{iso},Dumper($file,$data)) or confess;
-        } else {
-            like($file_type , qr/DOS\/MBR/);
-        }
-    } else {
-        confess "I don't know how to check vol contents of '$file'";
-    }
-}
-
-sub _remove_domains(@bases) {
-    for my $base (@bases) {
-        for my $clone ($base->clones) {
-            my $d_clone = Ravada::Domain->open($clone->{id});
-            $d_clone->remove(user_admin);
-        }
-        $base->remove(user_admin);
-    }
-}
-
-sub _mangle_vol($vm,@vol) {
-    for my $file (@vol) {
-        if ($file =~ /\.void$/) {
-            my $data = Load($vm->read_file($file));
-            $data->{a} = "b" x 20;
-            $vm->write_file($file, Dump($data));
-        } elsif ($file =~ /\.qcow2$/) {
-            _mount_qcow($vm, $file);
-            open my $out,">","/mnt/test_rvd/".base_domain_name.".txt";
-            print $out "hola\n";
-            close $out;
-            _umount_qcow();
-        }
-    }
-}
-
-sub _mangle_vol2($vm,$name,@vol) {
-    for my $file (@vol) {
-
-        if ($file =~ /\.void$/) {
-            my $data = Load($vm->read_file($file));
-            $data->{$name} = "c" x 20;
-            $vm->write_file($file, Dump($data));
-
-        } elsif ($file =~ /\.qcow2$/) {
-            _mount_qcow($vm, $file);
-            open my $out,">","/mnt/test_rvd/$name";
-            print $out ("c" x 20)."\n";
-            close $out;
-            _umount_qcow();
-        }
-    }
-}
-
-
 sub _mount_qcow($vm, $vol) {
     my ($in,$out, $err);
     if (!$MOD_NBD++) {
@@ -412,42 +262,14 @@ sub test_file_exists($vm, $vol, $expected=1) {
     return 1 if !$ok && !$expected;
     return 0;
 }
-sub test_file_exists2($vm, $vol,$name, $expected=1) {
-    _mount_qcow($vm,$vol);
-    my $ok = -e $MNT_RVD."/".base_domain_name.".txt";
-    _umount_qcow();
-    return 1 if $ok && $expected;
-    return 1 if !$ok && !$expected;
-    return 0;
-}
-
 
 sub test_file_not_exists($vm, $vol) {
     return test_file_exists($vm,$vol, 0);
 }
 
-sub _key_for($a) {
-    my($key) = $a =~ /\.([A-Z]+)\.\w+$/;
-    $key = 'SYS' if !defined $key;
-    return $key;
-}
-sub test_match_vols($vols_before, $vols_after) {
-    return if scalar(@$vols_before) != scalar (@$vols_after);
-    my %vols_before = map { _key_for($_) => $_ } @$vols_before;
-    my %vols_after  = map { _key_for($_) => $_ } @$vols_after;
-
-    for my $key (keys %vols_before, keys %vols_after) {
-        is($vols_before{$key}, $vols_after{$key}, $key) or die Dumper($vols_before, $vols_after);
-    }
-}
-
 sub test_rebase($vm, $swap, $data, $with_cd) {
     #diag("sw: $swap , da: $data , cd: $with_cd");
     my $base = create_domain($vm);
-
-    $base->add_volume(type => 'swap', size=>$VOL_SIZE)    if $swap;
-    $base->add_volume(type => 'data', size=>$VOL_SIZE)    if $data;
-    $base->prepare_base(user => user_admin, with_cd => $with_cd);
 
     $base->add_volume(type => 'swap', size=>$VOL_SIZE)    if $swap;
     $base->add_volume(type => 'data', size=>$VOL_SIZE)    if $data;

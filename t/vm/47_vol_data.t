@@ -19,11 +19,11 @@ init();
 sub test_domain_with_data($vm) {
 
     my $domain = create_domain($vm);
-    $domain->add_volume(type => 'data');
-    my $vol_swap1 = $domain->add_volume(type => 'swap');
+    $domain->add_volume(type => 'data', size => 512*1024);
+    my $vol_swap1 = $domain->add_volume(type => 'swap', size => 512 * 1024);
     like ($vol_swap1 , qr{\.SWAP\.}) or exit;
 
-    my $vol_swap2 = $domain->add_volume(swap => 1);
+    my $vol_swap2 = $domain->add_volume(swap => 1, size => 512 * 1024);
     like ($vol_swap2 , qr{\.SWAP\.}) or exit;
 
     my ($sys) = grep { !/.SWAP./ && !/.DATA./ } $domain->list_volumes();
@@ -55,8 +55,8 @@ sub _restore_req($domain) {
 
 sub test_restore($vm , $restore) {
     my $domain = create_domain($vm);
-    $domain->add_volume(type => 'data', size => 1024 * 1024);
-    $domain->add_volume(type => 'swap', size => 1024 * 1024);
+    $domain->add_volume(type => 'data', size => 512 * 1024);
+    $domain->add_volume(type => 'swap', size => 512 * 1024);
 
     my $clone = $domain->clone(name => new_domain_name, user => user_admin);
     my @files_base = $domain->list_files_base;
