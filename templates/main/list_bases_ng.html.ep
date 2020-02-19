@@ -32,55 +32,56 @@
                     width="260"></a>
             </div>
             <div class="card-body" id="step2">
-                <a type="button" class="btn btn-success" ng-hide="host_action == machine.id"
+                <div class="row">
+                <a type="button" class="btn btn-success" ng-hide="machine.action"
                    href="/machine/clone/{{machine.id}}.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
                 <a type="button" class="btn btn-danger text-white"
-                    ng-show="machine.id_clone && !machine.is_active && machine.can_remove"
-                    ng-click="host_restore=machine.id_clone; $parent.refresh=20"
+                    ng-show="machine.id_clone && !machine.is_active && machine.can_remove && !host_restore"
+                    ng-click="host_restore=machine.id_clone;machine.action=true "
                     ><strong><i class="fas fa-redo" aria-hidden="true"></i>&nbsp;<%=l 'Restore' %></strong></a>
                     <div ng-show="machine.id_clone && host_restore == machine.id_clone">
                         <b><%=l 'Restore' %></b> <%=l 'will remove all the contents of the machine' %>
                         <i><b>{{machine.name_clone}}</b></i>.
                         <%=l 'Are you sure?' %><br/>
                         <a type="button" class="btn btn-primary text-white"
-                            ng-click="host_restore=0; host_action=0"
+                            ng-click="host_restore=0; machine.action=false"
                         ><%=l 'No' %></a>
                         <a type="button" class="btn btn-danger text-white"
-                            ng-click="restore(machine.id_clone);host_restore=0;host_action=0"
+                            ng-click="restore(machine.id_clone);host_restore=0;machine.action=false"
                             ><%=l 'Yes' %></a>
                     </div>
-                 <a ng-show="machine.is_active && host_action != machine.id"
-                        class="btn btn-light"
-                        ng-click="host_action=machine.id;$parent.refresh=20"
+                 <a ng-show="machine.is_active && !machine.action"
+                        class="btn btn-outline-secondary"
+                        ng-click="machine.action=true;$parent.refresh=20"
                         type="button"><%=l 'action'%></a>
                     <div class="btn-group"
-                            ng-show="host_action == machine.id && !host_restore"
+                            ng-show="machine.action && !host_restore"
                             >
-                        <a type="button" class="btn btn-light btn-sm"
+                        <button type="button" class="btn btn-outline-dark btn-sm"
                             ng-show="machine.can_remove"
                             ng-click="host_restore=machine.id_clone"
-                        ><%=l 'Restore' %></a>
+                        ><%=l 'Restore' %></button>
 
-                        <a ng-show="machine.is_active" type="button"
-                                                       class="btn btn-light btn-sm"
-                            ng-click="action(machine.id_clone,'shutdown');host_action=-1"
-                        ><%=l 'Shutdown'%></a>
+                        <button ng-show="machine.is_active" type="button"
+                                                       class="btn btn-outline-dark btn-sm"
+                            ng-click="machine.action=false;action(machine,'shutdown')"
+                        ><%=l 'Shutdown'%></button>
 
-                        <a ng-show="machine.is_active && machine.can_hibernate" type="button"
-                                                       class="btn btn-light btn-sm"
-                            ng-click="action(machine.id_clone,'hibernate');host_action=-1"
-                        ><%=l 'Hibernate' %></a>
+                        <button ng-show="machine.is_active && machine.can_hibernate" type="button"
+                                                       class="btn btn-outline-dark"
+                            ng-click="machine.action=false;action(machine,'hibernate')"
+                        ><%=l 'Hibernate' %></button>
 
                         <a
-                           ng-click="host_action=0"
+                           ng-click="machine.action=false"
                            ><i class="align-bottom fas fa-chevron-circle-left"></i></a>
                     </div>
 %			        if ($user
 %                       && ( $user->can_change_settings || $user->can_change_settings_all)){
-                        <a ng-show="machine.id_clone && (host_action != machine.id && host_restore != machine.id_clone)"
+                        <a ng-show="machine.id_clone && !machine.action && host_restore != machine.id_clone"
                             align="right" href="/machine/manage/{{machine.id_clone}}.html"><i class="fa fa-fw fa-cog" title="<%=l 'Settings' %>"></i></a>
 %                   }
-
+                    </div>
             </div>
         </div>
     </div>

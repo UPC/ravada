@@ -1,0 +1,892 @@
+# Translators:
+# ergün elvan bilsel <bilselergun@gmail.com>, 2020
+# Joel Alarcón <joelalju100@gmail.com>, 2017
+# Fernando Verdugo <fv3rdugo@gmail.com>, 2017
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.1.0-alpha\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2017-01-03 10:12+0300\n"
+"PO-Revision-Date: 2017-01-03 11:17+0000\n"
+"Last-Translator: ergün elvan bilsel <bilselergun@gmail.com>, 2020\n"
+"Language-Team: Turkish (Turkey) (https://www.transifex.com/ravada/teams/70385/tr_TR/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: tr_TR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 1.8.7.1\n"
+
+msgid "Ravada broker"
+msgstr "Ravada Aracı"
+
+msgid "Machine Name"
+msgstr "Makine Adı"
+
+msgid "Tools"
+msgstr "Araçlar"
+
+msgid "Choose a Machine to Start"
+msgstr "Başlatmak için bir Makine Seç"
+
+msgid "Start"
+msgstr "Başlat"
+
+msgid "Stop"
+msgstr "Durdur"
+
+msgid "View"
+msgstr "Görüntüle"
+
+msgid "Prepare base"
+msgstr "Temel Hazırlık"
+
+msgid "Clone"
+msgstr "Klon"
+
+msgid "Clone/s"
+msgstr "Klon/s"
+
+msgid "Users List"
+msgstr "Kullanıcılar Listesi"
+
+msgid "Name"
+msgstr "İsim"
+
+msgid "Log Out"
+msgstr "Oturumu Kapat"
+
+msgid "Available Machines"
+msgstr "Hazır Makineler"
+
+msgid "Help"
+msgstr "Yardım"
+
+msgid "Requirements"
+msgstr "Gereksinimler"
+
+msgid "About"
+msgstr "Hakkında"
+
+msgid "Mark all as read"
+msgstr "Tümünü okundu olarak işaretle"
+
+msgid "Settings"
+msgstr "Ayarlar"
+
+msgid "New Machine"
+msgstr "Yeni Makine"
+
+msgid "I want to change my password"
+msgstr "Şifremi değiştirmek istiyorum"
+
+msgid "I want to change my language"
+msgstr "Lisanımı değiştirmek istiyorum"
+
+msgid "Language:"
+msgstr "Lisan"
+
+msgid "English"
+msgstr "İngilizce"
+
+msgid "Spanish"
+msgstr "İspanyolca"
+
+msgid "Catalan"
+msgstr "Katalanca"
+
+msgid "Galician"
+msgstr "Galiçyaca"
+
+msgid "French"
+msgstr "Fransızca"
+
+msgid "Hindi"
+msgstr "Hintçe"
+
+msgid "Indonesian"
+msgstr "Endonezce"
+
+msgid "Persian"
+msgstr "Farsça"
+
+msgid "Japanese"
+msgstr "Japonca"
+
+msgid "German"
+msgstr "Almanca"
+
+msgid "New Password:"
+msgstr "Yeni Şifre"
+
+msgid "Confirm Password:"
+msgstr "Şifreyi Onayla"
+
+msgid "Submit"
+msgstr "Sunmak"
+
+msgid "Your language has been changed successfully"
+msgstr "Diliniz başarılı bir şekilde değiştirildi"
+
+msgid "Your password has been changed successfully"
+msgstr "Şifreniz başarılı bir şekilde değiştrildi"
+
+msgid "Password is too short"
+msgstr "Şifre çok kısa"
+
+msgid "Password fields do not match"
+msgstr "Şifre alanları eşleşmiyor"
+
+msgid "Some of the password fields are empty"
+msgstr "şifre alanlarından bazıları boş"
+
+msgid "Status"
+msgstr "Durum"
+
+msgid "Actions"
+msgstr "Eylemler"
+
+msgid "Down"
+msgstr "Düştü"
+
+msgid "Running"
+msgstr "Çalışıyor"
+
+msgid "Shutdown"
+msgstr "kapat"
+
+msgid "Screenshot"
+msgstr "Ekran Görüntüsü"
+
+msgid "Paused"
+msgstr "Durdur"
+
+msgid "Machine locked by request"
+msgstr "Makine istek tarafından kilitlendi"
+
+msgid "Process"
+msgstr "Süreç"
+
+msgid "Copy"
+msgstr "Kopyala"
+
+msgid "Error!"
+msgstr "Hata!"
+
+msgid "Error"
+msgstr "Hata"
+
+msgid "Backend not available!"
+msgstr "Arka uç etkin değil"
+
+msgid "Subject"
+msgstr "Konu"
+
+msgid "Date"
+msgstr "Tarih"
+
+msgid "Mark as read"
+msgstr "Okundu olarak işaretle"
+
+msgid "Mark as unread"
+msgstr "Okumamış olarak işaretle"
+
+msgid "No messages to show"
+msgstr "Gösterilecek mesaj yok"
+
+msgid "Admin"
+msgstr "Yönetici"
+
+msgid "Machines"
+msgstr "Makineler"
+
+msgid "machines"
+msgstr "makineler"
+
+msgid "Users"
+msgstr "Kullanıcılar"
+
+msgid "users"
+msgstr "kullanıcılar"
+
+msgid "Messages"
+msgstr "Mesaj"
+
+msgid "messages"
+msgstr "mesaj"
+
+msgid "Admin tools"
+msgstr "Yönetici araçları"
+
+msgid "Remove base"
+msgstr "Tabanı kaldır"
+
+msgid "Restore"
+msgstr "Yeniden Yükle"
+
+msgid "Hibernate"
+msgstr "Hazırda beklet"
+
+msgid "Are you sure?"
+msgstr "Emin misiniz?"
+
+msgid "Yes"
+msgstr "Evet"
+
+msgid "No"
+msgstr "Hayır"
+
+msgid "Make public"
+msgstr "Görünür Yap"
+
+msgid "Machine settings"
+msgstr "Makine Ayarları"
+
+msgid "Cannot remove base, machine has clones"
+msgstr "Taban kaldırılamıyor, makinede klonlar mevcut"
+
+msgid "show clones"
+msgstr "klonları göster"
+
+msgid "hide clones"
+msgstr "klonları gizle"
+
+msgid "For Spice redirection you will need to install"
+msgstr "Ajanı yeniden yönledirmeniz için yüklemeniz gerekecek"
+
+msgid "in your computer."
+msgstr "bilgisayarınızda"
+
+msgid "Search in your distro, e.g. in Debian/Ubuntu with"
+msgstr "Sürümünüzde arama yapın, örneğin Debian / Ubuntu"
+
+msgid "You will need to install"
+msgstr "Yüklemeniz gerekecek"
+
+msgid "and USB drivers ("
+msgstr "ve USB sürücüleri("
+
+msgid ""
+"Be aware that in Windows, Spice redirection is not automatic. It is "
+"necessary to associate protocol with the app."
+msgstr ""
+"Windows'ta, Spice yönlendirmenin otomatik olmadığını unutmayın. Protokolü "
+"uygulamayla ilişkilendirmek gerekir."
+
+msgid "To make this possible, download"
+msgstr "Bunu mümkün kılmak için, indir"
+
+msgid ""
+"or copy the following lines in an ASCII file and save with extension .reg, "
+"then execute the file."
+msgstr ""
+"veya aşağıdaki satırları bir ASCII dosyasına kopyalayın ve .reg uzantılı "
+"olarak kaydedin, ardından dosyayı çalıştırın."
+
+msgid "Login"
+msgstr "Giriş"
+
+msgid "Welcome"
+msgstr "Hoş Geldiniz"
+
+msgid "A viewer is required to run the virtual machines."
+msgstr "Sanal makineleri çalıştırmak için bir görüntüleyici gerekir."
+
+msgid "It is required a viewer to run the virtual machines."
+msgstr "Sanal makineleri çalıştırmak için bir görüntüleyici gerekir."
+
+msgid "Virtual Machines"
+msgstr "Sanal Makineler"
+
+msgid "User"
+msgstr "Kullanıcı"
+
+msgid "Password"
+msgstr "Şifre"
+
+msgid "Start session"
+msgstr "oturumu başlat"
+
+msgid "bits) in your computer."
+msgstr "bit) bilgisayarınızda"
+
+msgid "Permissions"
+msgstr "İzinler"
+
+msgid "can change the settings of owned virtual machines."
+msgstr "Kendi sanal makinelerin ayarlarını değiştirebilir."
+
+msgid "can change the settings of any virtual machines."
+msgstr "Herhangi bir sanal makinenin ayarlarını değiştirebilir."
+
+msgid "can change the settings of any virtual machines "
+msgstr "Herhangi bir sanal makinenin ayarlarını değiştirebilir"
+
+msgid "cloned from one base owned by the user."
+msgstr " sahip olunan bir tabandan klonlanmış"
+
+msgid "can clone public virtual machines."
+msgstr "genel sanal makineleri klonlayabilir."
+
+msgid "can clone any virtual machine."
+msgstr "herhangi bir sanal makineyi klonlayabilir"
+
+msgid "can create bases."
+msgstr "tabanlar oluşturabilir."
+
+msgid "can create virtual machines."
+msgstr "sanal makineler oluşturulabilir"
+
+msgid "can grant permissions to other users"
+msgstr "diğer kullanıcılara izin verebilir"
+
+msgid "can hibernate any virtual machine."
+msgstr "herhangi bir sanal makineyi hazırda bekletebilir."
+
+msgid "can hibernate clones from virtual machines owned by the user."
+msgstr ""
+"Klonları, kullanıcının sahip olduğu sanal makinelerden hazırda bırakabilir."
+
+msgid "can hibernate any clone."
+msgstr "herhangi bir klonu hazırda bekletebilir."
+
+msgid "can remove any virtual machines owned by the user."
+msgstr "herhangi bir klonu hazırda bekletebilir."
+
+msgid "can remove any virtual machine."
+msgstr "herhangi bir sanal makineyi kaldırabilir."
+
+msgid "can remove clones from virtual machines owned by the user."
+msgstr "Kullanıcının sahip olduğu sanal makinelerden Klonları kaldırabilir."
+
+msgid "can remove any clone."
+msgstr "Herhangi bir klonu kaldırabilir."
+
+msgid "can take a screenshot of any virtual machine owned by the user."
+msgstr ""
+"Kullanıcının sahip olduğu herhangi bir sanal makinenin ekran görüntüsünü "
+"alabilir."
+
+msgid "can take a screenshot of any virtual machine."
+msgstr "Herhangi bir sanal makinenin ekran görüntüsünü alabilir."
+
+msgid "can shutdown any virtual machine."
+msgstr "Herhangi bir sanal makineyi kapatabilir."
+
+msgid "can shutdown clones from virtual machines owned by the user."
+msgstr "Klonları, kullanıcının sahip olduğu sanal makinelerden kapatabilir."
+
+msgid "Submit Query"
+msgstr "Sorguyu Gönder"
+
+msgid "From Template"
+msgstr "Şablondan"
+
+msgid "From Machine"
+msgstr "makinesinden"
+
+msgid "Backend"
+msgstr "arka uç"
+
+msgid "Select Template"
+msgstr "şablon seç"
+
+msgid ""
+"This ISO image has not been downloaded yet. It may take some minutes, even "
+"hours until the file is fetched from the Internet."
+msgstr ""
+"Bu ISO imajı henüz indirilmedi. Dosya Internet'ten alınana kadar birkaç "
+"dakika, hatta saatler sürebilir."
+
+msgid "Download now"
+msgstr "Şimdi karşıdan yükle"
+
+msgid "Select ISO"
+msgstr "ISO seç"
+
+msgid "Template"
+msgstr "Şablon"
+
+msgid "Disk Size: (GB)"
+msgstr "Disk Boyutu:(GB)"
+
+msgid "Swap Size: (GB)"
+msgstr "Takas Boyutu:(GB)"
+
+msgid "Ram: (GB)"
+msgstr "Ram:(GB)"
+
+msgid "Machine name is required."
+msgstr "Makine adı gerekli"
+
+msgid "Machine name can't exceed 20 characters."
+msgstr "Makine adı 20 karakteri aşamaz"
+
+msgid "Backend selection is required."
+msgstr "Arka uç seçimi gerekli"
+
+msgid "ISO image selection is required."
+msgstr "ISO imajı seçimi gerekli"
+
+msgid "Template selection is required."
+msgstr "Şablon seçimi gereklidir."
+
+msgid "A machine with that name already exists."
+msgstr "Bu ada sahip bir makine zaten var."
+
+msgid ""
+"The machine name is only allowed to consist of alphabetic characters, "
+"numbers, dashes and points."
+msgstr ""
+"Makine adı yalnızca alfabetik karakterler, sayılar, kısa çizgiler ve "
+"noktalardan oluşabilir."
+
+msgid "Create"
+msgstr "Oluştur"
+
+msgid ""
+"can change the settings of all virtual machines cloned from one base owned "
+"by the user."
+msgstr ""
+"Klonlanan tüm sanal makinelerin ayarlarını kullanıcının sahip olduğu tek bir"
+" tabandan değiştirebilir."
+
+msgid "monitoring"
+msgstr "İzleme"
+
+msgid "Are you sure you want to remove the Base of"
+msgstr "Tabanı  çıkarmak istediğinize emin misiniz?"
+
+msgid "Are you sure you want to prepare the Base of"
+msgstr "Tabanı hazırlamak istediğinden emin misin?"
+
+msgid "Are you sure you want to change the Public state of"
+msgstr "Genel durumunu değiştirmek istediğinize emin misiniz?"
+
+msgid "Search"
+msgstr "Arama"
+
+msgid "There are no public bases available in this system."
+msgstr "Bu sistemde ortak bir taban yok."
+
+msgid "There are no machines available in this system."
+msgstr "Bu sistemde hiç makine yok."
+
+msgid "Create one."
+msgstr "Bir tane oluştur."
+
+msgid "not public"
+msgstr "herkese açık değil"
+
+msgid "User Settings"
+msgstr "Kullanıcı Ayarları"
+
+msgid "Create a new account"
+msgstr "Yeni bir hesap oluştur"
+
+msgid "Username"
+msgstr "Kullanıcı adı"
+
+msgid "Hide Private"
+msgstr "Gizle"
+
+msgid "Show All"
+msgstr "Hepsini Göster"
+
+msgid "Shutting down ..."
+msgstr "kapatma..."
+
+msgid "It may take a couple of minutes."
+msgstr "Birkaç dakika sürebilir."
+
+msgid "Hybernating ..."
+msgstr "uykuya alınıyor."
+
+msgid "Description"
+msgstr "Tanım"
+
+msgid "Rename"
+msgstr "Yeni isim vermek"
+
+msgid "Options"
+msgstr "Seçenekler"
+
+msgid "Drivers"
+msgstr "Sürücüler"
+
+msgid "Graphics"
+msgstr "Grafikler"
+
+msgid "Remove Machine"
+msgstr "Makineyi Kaldır"
+
+msgid "System overview"
+msgstr "Sistem görünümü"
+
+msgid "Danger Zone"
+msgstr "Tehlikeli Alan"
+
+msgid ""
+"Once you delete the machine, there is no going back. Please be certain."
+msgstr "Makineyi sildikten sonra geri dönüş olmaz. Lütfen emin ol."
+
+msgid "Danger"
+msgstr "Tehlike"
+
+msgid "This will remove all the contents of the machine"
+msgstr "Bu, makinenin tüm içeriğini kaldıracak"
+
+msgid "This action can't be undone"
+msgstr "Bu işlem geri alınamaz"
+
+msgid "Are you sure ?"
+msgstr "Emin misin?"
+
+msgid "Yes, remove"
+msgstr "Evet, kaldır"
+
+msgid "Virtual Machine"
+msgstr "Sanal Makine"
+
+msgid "removed"
+msgstr "silindi"
+
+msgid "This will remove all the"
+msgstr "Hepsi kaldırılacak"
+
+msgid "clones of the machine"
+msgstr "Makinenin klonları"
+
+msgid "Yes, remove all the clones"
+msgstr "Evet, tüm klonları kaldır"
+
+msgid "This virtual machine can't be removed because it has"
+msgstr "Bu sanal makine kaldırılamıyor. çünkü makine ..."
+
+msgid "clones"
+msgstr "klon"
+
+msgid "Clones"
+msgstr "Klon"
+
+msgid "This machine has not Graphics parameters!"
+msgstr "Bu makine Grafik parametrelerine sahip değil!"
+
+msgid "recommended"
+msgstr "önerilen"
+
+msgid "to"
+msgstr "karşı"
+
+msgid "Changing Public State"
+msgstr "Genel Durumu değiştirme"
+
+msgid "Changing Base State"
+msgstr "Temel Durumun Değiştirilmesi"
+
+msgid "action"
+msgstr "eylem"
+
+msgid "Grants"
+msgstr "İzinler"
+
+msgid "public"
+msgstr "halka açık"
+
+msgid "New Base"
+msgstr "Yeni Taban"
+
+msgid "Version"
+msgstr "Versiyon"
+
+msgid "Authors"
+msgstr "Yazarlar"
+
+msgid "Development"
+msgstr "Geliştirme"
+
+msgid "Below are listed the technologies used in this project:"
+msgstr "Aşağıda bu projede kullanılan teknolojiler listelenmiştir:"
+
+msgid "The code is available on "
+msgstr "Kod şurda bulunabilir ..."
+
+msgid "The code is "
+msgstr "Kod"
+
+msgid "License"
+msgstr "Lisans"
+
+msgid "Machine locked by"
+msgstr "Makine ... tarafından kilitlendi"
+
+msgid "This Machine is a base"
+msgstr "Bu makine bir taban"
+
+msgid "Cloned"
+msgstr "Klonlandı"
+
+msgid "is admin"
+msgstr "admin"
+
+msgid "Add new user"
+msgstr "Yeni kullanıcı Ekle"
+
+msgid "Register"
+msgstr "Kaydetmek"
+
+msgid "Current Password:"
+msgstr "Mevcut Şifre:"
+
+msgid "For more information, check"
+msgstr "Daha fazla bilgi için kontrol edin"
+
+msgid "the Windows Clients documentation"
+msgstr "Windows İstemcileri belgeleri"
+
+msgid "It is programmed in"
+msgstr "Programlanmıştır"
+
+msgid "with perl framework"
+msgstr "perl çatılı"
+
+msgid "and"
+msgstr "ve"
+
+msgid "Memory"
+msgstr "Bellek"
+
+msgid "MB available"
+msgstr "MB kullanılabilir"
+
+msgid "The machine will shutdown after these minutes"
+msgstr "Makine şu dakikalardan sonra kapanacak"
+
+msgid "Cancel"
+msgstr "İptal"
+
+msgid "Please enter the following information to create the account"
+msgstr "Hesap oluşturmak için lütfen aşağıdaki bilgileri girin"
+
+msgid "Enter Username"
+msgstr "Kullanıcı adını gir"
+
+msgid "Enter Password"
+msgstr "Parolanı gir"
+
+msgid "Confirm Password"
+msgstr "Şifreyi Onayla"
+
+msgid "Username is required"
+msgstr "Kullanıcı adı gerekli"
+
+msgid "Username can not exceed 20 characters"
+msgstr "Kullanıcı adı 20 karakteri aşamaz"
+
+msgid "Username must be at least 5 characters"
+msgstr "Kullanıcı adı en az 5 karakter olmalı"
+
+msgid "Username can only contain words, numbers, dashes, dots and underscores"
+msgstr ""
+" Kullanıcı adı yalnızca kelimeler, sayılar, kısa çizgiler, noktalar ve alt "
+"çizgiler içerebilir"
+
+msgid "Password is required"
+msgstr "Şifre gerekli"
+
+msgid "Password can not exceed 20 characters"
+msgstr "Şifre 20 karakteri aşamaz"
+
+msgid "Password must be at least 5 characters"
+msgstr "Şifre en az 5 karakter olmalı"
+
+msgid "Password can only contain words and numbers"
+msgstr "Şifre sadece kelimeler ve rakamlar içerebilir"
+
+msgid "Confirm Password is required"
+msgstr "Parolayı Doğrula gerekli"
+
+msgid "Confirm Password can not exceed 20 characters"
+msgstr "Şifre 20 karakteri aşamaz"
+
+msgid "Confirm Password must be at least 5 characters"
+msgstr "Şifre 5 karakterden az olamaz"
+
+msgid "Confirm Password can only contain words and numbers"
+msgstr "Şifre sadece kelimeler ve rakamlar içerebilir"
+
+msgid "This information will be available to the users"
+msgstr "Bu bilgi kullanıcılara açık olacak"
+
+msgid "Volatile Clones"
+msgstr "Geçici Klonlar"
+
+msgid "Owner"
+msgstr "Sahip"
+
+msgid "Change the owner of the machine"
+msgstr "Makinenin sahibini değiştirin"
+
+msgid "Press SHIFT + F12 to exit"
+msgstr "SHIFT +F12 ye Basarak çıkınız"
+
+msgid ""
+"If you can not see the machine screen in a few seconds check for a file "
+"called"
+msgstr ""
+"Birkaç saniye içinde makine ekranını göremiyorsanız,  dosyayı kontrol edin."
+
+msgid "in your downloads folder."
+msgstr "indirilenler klasörünüzde."
+
+msgid "copied to clipboard"
+msgstr "panoya kopyalandı"
+
+msgid "Portuguese"
+msgstr "Portekizce"
+
+msgid "Read more."
+msgstr "Daha fazla oku"
+
+msgid "The password for this virtual machine connection is :"
+msgstr "Bu sanal makine bağlantısının şifresi:"
+
+msgid "view"
+msgstr "görünüm"
+
+msgid "Start again"
+msgstr "Tekrar başla"
+
+msgid "The machine is down."
+msgstr "Makine çalışmıyor."
+
+msgid "Remove"
+msgstr "Kaldırmak"
+
+msgid "The machine must be started to take the screenshot."
+msgstr "Ekran görüntüsünü almak için makine çalıştırılmalıdır."
+
+msgid "Take screenshot"
+msgstr "Ekran görüntüsü almak"
+
+msgid "Set base picture"
+msgstr "Temel resmi ayarla"
+
+msgid "Saving the screenshot, please wait a moment..."
+msgstr "Ekran görüntüsü kaydediliyor, lütfen biraz bekleyin ..."
+
+msgid "You need to run the machine in order to take a screenshot."
+msgstr "Ekran görüntüsü almak için makineyi çalıştırmanız gerekir."
+
+msgid "Copying the screenshot, please wait a moment..."
+msgstr "Ekran görüntüsü kopyalanıyor, lütfen biraz bekleyin ..."
+
+msgid "You need a screenshot in order to copy it to the base machine."
+msgstr "Ana makineye kopyalamak için bir ekran görüntüsüne ihtiyacınız var."
+
+msgid "Add"
+msgstr "Ekle"
+
+msgid "The changes will apply on next restart"
+msgstr "Değişiklikler bir sonraki yeniden başlatmada uygulanacak"
+
+msgid "This VM is running and can't be renamed."
+msgstr "Bu VM çalışıyor ve yeniden adlandırılamıyor."
+
+msgid "Thanks to:"
+msgstr "Teşekkürler"
+
+msgid "licensed."
+msgstr "lisanslı."
+
+msgid "New Node"
+msgstr "Yeni Düğüm"
+
+msgid "Address"
+msgstr "adres"
+
+msgid "A node with that name already exists."
+msgstr "Bu ada sahip bir düğüm zaten var."
+
+msgid "Setting your default language"
+msgstr "Varsayılan dilinizi ayarlama"
+
+msgid "Change password"
+msgstr "Şifre değiştir"
+
+msgid "Update password"
+msgstr "şifre güncelle"
+
+msgid "Start all clones"
+msgstr "Tüm klonları başlat"
+
+msgid "Access denied"
+msgstr "Erişim reddedildi"
+
+msgid "Empty login name"
+msgstr "Giriş ismi boş"
+
+msgid "Empty password"
+msgstr "Şifre boş"
+
+msgid "Session timeout"
+msgstr "Oturum zaman aşımına uğradı"
+
+msgid "Vietnamese"
+msgstr "Vietnam"
+
+msgid "Italian"
+msgstr ""
+"İtalyanca\n"
+" "
+
+msgid "Type a typical LDAP user name to fetch the attribute list"
+msgstr "Özellik listesini getirmek için tipik bir LDAP kullanıcı adı yazın"
+
+msgid "User name"
+msgstr "Kullanıcı adı"
+
+msgid "not found in LDAP server"
+msgstr "LDAP sunucusunda bulunamadı"
+
+msgid "Attribute"
+msgstr "Özellik"
+
+msgid "Value"
+msgstr "Değer"
+
+msgid "Allowed"
+msgstr "İzin"
+
+msgid "Last"
+msgstr "Son"
+
+msgid "Default"
+msgstr "Varsayılan"
+
+msgid "If none of the previous match, access is allowed."
+msgstr "Önceki eşleşmelerin hiçbiri değilse erişime izin verilir."
+
+msgid "If none of the previous match, access is denied."
+msgstr "Önceki eşleşmelerden hiçbiri değilse erişim reddedilir."
+
+msgid "verify"
+msgstr "Doğrulayın"
+
+msgid "save"
+msgstr "kaydet"
+
+msgid "Verifying"
+msgstr "Doğrulanıyor"
+
+msgid "No entries found"
+msgstr "Hiçbir girdi bulunamadı"
+
+msgid "has at least"
+msgstr "en azından"
+
+msgid "entries."
+msgstr "kayıt"
+
+msgid "Enable last for not allowed restrictions."
+msgstr "İzin verilmeyen kısıtlamalar için sonuncuyu etkinleştir."

@@ -47,11 +47,7 @@ sub _remove_user_ldap($name) {
     }
 }
 
-sub test_user{
-    my $name = (shift or 'jimmy.mcnulty');
-    my $with_posix_group = ( shift or 0);
-    my $password = 'jameson';
-
+sub test_user($name, $with_posix_group=0, $password='jameson', $storage=undef, $algorithm=undef) {
     if ( Ravada::Auth::LDAP::search_user($name) ) {
         diag("Removing $name");
         Ravada::Auth::LDAP::remove_user($name)  
@@ -72,7 +68,11 @@ sub test_user{
     ok(!$row->{name},"I shouldn't find $name in the SQL db ".Dumper($row));
 
 
-    eval { Ravada::Auth::LDAP::add_user($name,$password) };
+    my @options;
+    push @options, ( $storage )      if defined $storage;
+    push @options, ( $algorithm )  if defined $algorithm;
+
+    eval { Ravada::Auth::LDAP::add_user($name,$password, @options) };
     push @USERS,($name);
 
     ok(!$@, $@) or return;
@@ -155,6 +155,7 @@ sub remove_users {
 
 sub test_add_group {
 
+    Ravada::Auth::LDAP::init();
     my $name = "grup.test";
 
     Ravada::Auth::LDAP::remove_group($name)
@@ -202,6 +203,7 @@ sub test_manage_group {
     ok(!$@,$@);
     ok(!$is_admin,"User $uid should not be admin");
 
+    Ravada::Auth::LDAP::init();
     Ravada::Auth::LDAP::add_to_group($uid, $name);
 
     if ($with_admin) {
@@ -492,6 +494,35 @@ sub test_login_fields($data) {
     }
 }
 
+sub test_pass_storage($with_posix_group) {
+    my %data = (
+        rfc2307 => 'MD5'
+        ,PBKDF2 => 'SHA-256'
+    );
+    for my $storage ( keys %data ) {
+        for my $algorithm ( undef, $data{$storage} ) {
+            my $name = "tst_".lc($storage)."_".lc($algorithm or 'none');
+            my @args = ( $name, $with_posix_group, $$, $storage);
+            push @args, ($algorithm) if $algorithm;
+
+            Ravada::Auth::LDAP::init();
+
+            my $user = test_user(@args);
+            my $sign = $storage;
+            $sign = $data{$storage} if $sign eq 'rfc2307';
+            like($user->{_ldap_entry}->get_value('userPassword'), qr/^{$sign/);
+
+            $user->_login_match();
+            $user->_login_bind();
+            $user->_login_match();
+            $user->_login_bind();
+
+            _remove_user_ldap($name);
+        }
+    }
+    Ravada::Auth::LDAP::init();
+}
+
 SKIP: {
     test_filter();
     my $file_config = "t/etc/ravada_ldap.conf";
@@ -524,6 +555,8 @@ SKIP: {
         ok($ldap) and do {
 
             test_user_fail();
+            test_pass_storage($with_posix_group);
+
             my $user = test_user( 'pepe.mcnulty', $with_posix_group );
 
             test_add_group();
@@ -531,7 +564,6 @@ SKIP: {
             test_posix_group($with_posix_group);
 
             test_user_bind($user, $fly_config, $with_posix_group);
-
 
             remove_users();
         };

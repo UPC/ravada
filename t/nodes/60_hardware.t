@@ -12,7 +12,141 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
+my %HAS_NOT_VALUE = map { $_ => 1 } qw(image jpeg zlib playback streaming);
+
 ##################################################################################
+#
+
+sub test_graphics($vm, $node) {
+    my $domain = create_domain($vm->type);
+    for my $driver_name ( qw( image jpeg zlib playback streaming )) {
+        my $driver = $domain->drivers($driver_name) or do {
+            diag("No driver for $driver_name in ".$domain->type);
+            next;
+        };
+        test_driver_migrate($vm, $node, $domain, $driver_name);
+        for my $option ($driver->get_options) {
+            next if $domain->get_driver($driver_name)
+                && $domain->get_driver($driver_name) eq $option->{value};
+
+            diag("Testing $driver_name $option->{value} in ".$vm->type);
+
+            test_driver_clone($vm, $node, $domain, $driver_name, $option);
+
+            last unless $ENV{TEST_LONG};
+        }
+    }
+    $domain->remove(user_admin);
+}
+
+sub test_driver_clone($vm, $node, $domain, $driver_name, $option) {
+    $domain->remove_base(user_admin) if $domain->is_base;
+    my $req = Ravada::Request->set_driver(uid => user_admin->id
+        , id_domain => $domain->id
+        , id_option => $option->{id}
+    );
+    wait_request();
+    is($req->status,'done');
+    is($req->error,'');
+    is($domain->get_driver($driver_name), $option->{value}
+        , $driver_name);
+    $domain->prepare_base(user_admin);
+    $domain->set_base_vm(node => $node, user => user_admin);
+
+    my $clone = $domain->clone(name => new_domain_name, user => user_admin);
+    $clone->migrate($node);
+    my $clone2 = Ravada::Domain->open($clone->id);
+    is($clone2->_vm->id,$node->id);
+    is($clone2->get_driver($driver_name), $option->{value}
+        , $driver_name);
+
+    $clone->remove(user_admin);
+
+    $domain->remove_base(user_admin);
+}
+
+sub test_driver_migrate($vm, $node, $domain, $driver_name) {
+    my $option;
+    my $driver = $domain->drivers($driver_name) or do {
+            diag("No driver for $driver_name in ".$domain->type);
+            next;
+    };
+    $domain->prepare_base(user_admin);
+    $domain->set_base_vm(node => $node, user => user_admin);
+    for my $option ($driver->get_options) {
+        next if defined $domain->get_driver($driver_name)
+        && $domain->get_driver($driver_name) eq $option->{value};
+
+        diag("Testing $driver_name $option->{value} then migrate");
+        my $clone = $domain->clone(name => new_domain_name, user => user_admin);
+        my $req = Ravada::Request->set_driver(uid => user_admin->id
+            , id_domain => $clone->id
+            , id_option => $option->{id}
+        );
+        wait_request();
+        is($req->status,'done');
+        is($req->error,'');
+
+        $clone->migrate($node);
+        my $clone2 = Ravada::Domain->open($clone->id);
+        is($clone2->_vm->id,$node->id);
+        is($clone2->get_driver($driver_name), $option->{value}
+            , $driver_name) or exit;
+
+        $clone->remove(user_admin);
+        last unless $ENV{TEST_LONG};
+    }
+    $domain->remove_base(user_admin);
+}
+
+sub test_drivers_type($type, $vm, $node) {
+
+    my $domain = create_domain($vm->type);
+    my $driver_type = $domain->drivers($type);
+
+    if (!$HAS_NOT_VALUE{$type}) {
+        my $value = $driver_type->get_value();
+        ok($value,"Expecting value for driver type: $type ".ref($driver_type)."->get_value")
+            or exit;
+    }
+
+    my @options = $driver_type->get_options();
+    isa_ok(\@options,'ARRAY');
+    ok(scalar @options > 1,"Expecting more than 1 options , got ".scalar(@options));
+
+    for my $option (@options) {
+        die "No value for driver ".Dumper($option)  if !$option->{value};
+
+        diag("Testing $type $option->{value}");
+
+        eval { $domain->set_driver($type => $option->{value}) };
+        ok(!$@,"Expecting no error, got : ".($@ or ''));
+
+        is($domain->get_driver($type), $option->{value}, $type);
+        $domain->prepare_base(user_admin);
+        $domain->set_base_vm(node => $node, user => user_admin);
+
+        my $clone = $domain->clone(name => new_domain_name, user => user_admin);
+        is($clone->get_driver($type), $option->{value}, $type);
+        $clone->migrate($node);
+        my $clone2 = Ravada::Domain->open($clone->id);
+        is($clone2->_vm->id,$node->id);
+        is($clone2->get_driver($type), $option->{value}, $type);
+
+        $clone->remove(user_admin);
+        $domain->remove_base(user_admin);
+
+    }
+    $domain->remove(user_admin);
+}
+
+sub test_drivers($vm, $node) {
+    my @drivers = $vm->list_drivers();
+     for my $driver ( @drivers ) {
+         test_drivers_type($driver->name, $vm, $node);
+     }
+
+}
 
 sub test_change_hardware($vm, @nodes) {
     diag("[".$vm->type."] testing remove with ".scalar(@nodes)." node ".join(",",map { $_->name } @nodes));
@@ -82,6 +216,9 @@ for my $vm_name ( 'Void', 'KVM') {
 
         clean_remote_node($node1);
         clean_remote_node($node2)   if $node2;
+
+        test_graphics($vm, $node1);
+        test_drivers($vm, $node1);
 
         test_change_hardware($vm);
         test_change_hardware($vm, $node1);

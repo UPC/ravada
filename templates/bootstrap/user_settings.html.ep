@@ -18,6 +18,7 @@
 						<h3 class="mb-3"><%=l 'Setting your default language' %></h3>
                         <form method='post' enctype="multipart/form-data">
                             <%=l 'Language:' %> <select onchange="this.form.submit();" id="tongue" name="tongue" >
+                                <option <%= $c->param("tongue") eq 'ar' ? "selected" : "" %> value="ar" ><%=l 'Arab' %></option>
                                 <option <%= $c->param("tongue") eq 'en' ? "selected" : "" %> value="en" ><%=l 'English' %></option>
                                 <option <%= $c->param("tongue") eq 'ca' ? "selected" : "" %> value="ca" ><%=l 'Catalan' %></option>
                                 <option <%= $c->param("tongue") eq 'es' ? "selected" : "" %> value="es" ><%=l 'Spanish' %></option>
@@ -31,6 +32,7 @@
                                 <option <%= $c->param("tongue") eq 'pt' ? "selected" : "" %> value="pt" ><%=l 'Portuguese' %></option>
                                 <option <%= $c->param("tongue") eq 'ja' ? "selected" : "" %> value="ja" ><%=l 'Japanese' %></option>
                                 <option <%= $c->param("tongue") eq 'vi' ? "selected" : "" %> value="vi" ><%=l 'Vietnamese' %></option>
+				<option <%= $c->param("tongue") eq 'cat@valencia' ? "selected" : "" %> value="cat@valencia" ><%=l 'Valenciano' %></option>
                              </select>
 %                            if ($changed_lang) {
                                  <font color="green">   <%=l 'Your language has been changed successfully' %></font>

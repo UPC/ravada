@@ -84,7 +84,8 @@ sub test_display {
     is($@,'');
     ok($display,"Expecting a display URI, got '".($display or '')."'") or return;
 
-    my ($ip) = $display =~ m{^\w+://(.*):\d+} if defined $display;
+    my $ip;
+    ($ip) = $display =~ m{^\w+://(.*):\d+} if defined $display;
 
     ok($ip,"Expecting an IP , got ''") or return;
 
@@ -251,7 +252,10 @@ sub test_prepare_base_with_cd {
 
     my ($cd_clone ) = grep { defined $_->file && $_->file =~ /\.iso$/ } @volumes_clone;
     ok($cd_clone,"Expecting a CD in clone ".Dumper([ map { delete $_->{domain}; delete $_->{vm}; $_ } @volumes_clone])) or exit;
+    is($cd_clone->info->{target}, $cd_base->[1]) or exit;
 
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
 }
 sub test_prepare_base_with_cd_req {
     my $vm = shift;
@@ -810,9 +814,10 @@ sub test_prepare_fail($vm) {
     like($@,qr/already exists/);
     is($domain->is_base,0) or exit;
     for my $vol ( @volumes ) {
-        eval { $vol->backing_file };
-        like($@,qr/./, $vol->file)
-            if $vol->file !~ /\.iso$/;
+        my $backing_file;
+        eval { $backing_file = $vol->backing_file };
+        is($backing_file,undef) if $vol->file =~ /\.iso/;
+        like($@,qr/./, $vol->file) if $@;
     }
 
     # Now we only have the second file already there
@@ -824,9 +829,8 @@ sub test_prepare_fail($vm) {
     };
     like($@,qr/already exists/);
     for my $vol ( @volumes ) {
-        eval { $vol->backing_file };
-        like($@,qr/./, "Expecting ".$vol->file." not prepared")
-            if $vol->file !~ /\.iso$/;
+        my $backing_file = $vol->backing_file;
+        is($backing_file,undef);
     }
 
 

@@ -11,7 +11,7 @@ Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
 
 use Carp qw(carp confess croak cluck);
 use Data::Dumper;
-use File::Copy;
+use File::Copy qw(copy move);
 use File::Rsync;
 use Hash::Util qw(lock_hash unlock_hash);
 use Image::Magick;
@@ -69,8 +69,6 @@ requires 'list_volumes_info';
 requires 'disk_device';
 
 requires 'disk_size';
-
-requires 'spinoff_volumes';
 
 #hardware info
 
@@ -177,6 +175,7 @@ around 'force_shutdown' => \&_around_shutdown_now;
 
 before 'remove_base' => \&_pre_remove_base;
 after 'remove_base' => \&_post_remove_base;
+after 'spinoff' => \&_post_spinoff;
 
 before 'rename' => \&_pre_rename;
 after 'rename' => \&_post_rename;
@@ -506,6 +505,7 @@ sub _around_add_volume {
     my %args = @_;
 
     my $file = ($args{file} or $args{path});
+    confess if $args{id_iso} && !$file;
     my $name = $args{name};
     $args{target} = $self->_new_target_dev() if !exists $args{target};
 
@@ -529,7 +529,7 @@ sub _around_add_volume {
     my $free = $self->_vm->free_disk();
     my $free_out = int($free / 1024 / 1024 / 1024 ) * 1024 *1024 *1024;
 
-    die "Error creating volume, out of space $size . Disk free: "
+    confess "Error creating volume, out of space $size . Disk free: "
             .Ravada::Utils::number_to_size($free_out)
             ."\n"
         if exists $args{size} && $args{size} >= $free;
@@ -559,7 +559,7 @@ sub _check_volume_added($self, $file) {
 
     return if !$id;
 
-    confess "Volume $file already in domain id $id_domain";
+    confess "Volume $file already in domain id $id_domain, this is ".$self->id;
 }
 
 sub _around_remove_volume {
@@ -585,10 +585,6 @@ sub _around_list_volumes_info($orig, $self, $attribute=undef, $value=undef) {
 
     return $self->$orig($attribute, $value) if ref($self) =~ /^Ravada::Front/i;
 
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
-    $sth->execute($self->id);
-    $sth->finish;
-
     my @volumes = $self->$orig($attribute => $value);
 
     return @volumes;
@@ -608,6 +604,10 @@ sub _around_prepare_base($orig, $self, @args) {
     }
     $self->_pre_prepare_base($user, $request);
 
+    if (!$self->is_local) {
+        my $vm_local = $self->_vm->new( host => 'localhost' );
+        $self->_vm($vm_local);
+    }
     my @base_img = $self->$orig($with_cd);
 
     die "Error: No information files returned from prepare_base"
@@ -681,12 +681,12 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
             sleep 1;
         }
     }
-    if ($self->id_base ) {
-        $self->spinoff_volumes();
-    }
     if (!$self->is_local) {
         my $vm_local = Ravada::VM->open( type => $self->vm );
         $self->migrate($vm_local);
+    }
+    if ($self->id_base ) {
+        $self->spinoff();
     }
     $self->_check_free_space_prepare_base();
 }
@@ -716,6 +716,32 @@ sub _post_prepare_base {
     $self->_set_base_vm_db($self->_vm->id,1);
     $self->autostart(0,$user);
 };
+
+=pod
+
+=head2 spinoff
+
+Makes volumes indpendent from base
+
+=cut
+
+sub spinoff {
+    my $self = shift;
+
+    $self->_do_force_shutdown() if $self->is_active;
+    confess "Error: spinoff from remote nodes not available. Node: ".$self->_vm->name
+        if !$self->is_local;
+
+    for my $volume ($self->list_volumes_info ) {
+        next if !$volume->file || $volume->file =~ /\.iso$/i;
+        my $bf;
+        eval { $bf = $volume->backing_file };
+        die $@ if $@ && $@ !~ /No backing file/;
+        next if !$bf;
+        $volume->spinoff;
+    }
+}
+
 
 sub _around_autostart($orig, $self, @arg) {
     my ($value, $user) = @arg;
@@ -1313,6 +1339,10 @@ sub info($self, $user) {
         ,is_pool => $self->is_pool
         ,comment => $self->_data('comment')
         ,screenshot => $self->_data('screenshot')
+        ,run_timeout => $self->run_timeout
+        ,autostart => $self->autostart
+        ,volatile_clones => $self->volatile_clones
+        ,id_owner => $self->_data('id_owner')
     };
     if ($is_active) {
         eval {
@@ -1450,6 +1480,33 @@ sub _pre_remove_domain($self, $user, @) {
     $self->_remove_iptables()   if $self->is_known();
     $self->shutdown_now($user)  if $self->is_active;
 
+    my $owner;
+    $owner= Ravada::Auth::SQL->search_by_id($self->id_owner)    if $self->is_known();
+    $owner->remove() if $owner && $owner->is_temporary();
+}
+
+sub restore($self,$user){
+    die "Error: ".$self->name." is not a clone. Only clones can be restored."
+        if !$self->id_base;
+
+    $self->_pre_remove_domain($user);
+
+    my $base = Ravada::Domain->open($self->id_base);
+    my @volumes = $self->list_volumes_info();
+    my %file = map { $_->info->{target} => $_->file } @volumes;
+
+    for my $file_data ( $base->list_files_base_target ) {
+        my ($file_base,$target) = @$file_data;
+        my $vol_base = Ravada::Volume->new(
+            file => $file_base
+            ,is_base => 1
+            ,vm => $self->_vm
+        );
+        next if $vol_base->file =~ /\.DATA\.\w+$/;
+        my $file_clone = $file{$target} or die Dumper(\%file);
+        unlink $file_clone;
+        my $clone = $vol_base->clone(file => $file_clone);
+    }
 }
 
 # check the node is active
@@ -1479,7 +1536,7 @@ sub _after_remove_domain {
     $self->_remove_domain_cascade($user)   if !$cascade;
 
     if ($self->is_known && $self->is_base) {
-        $self->_do_remove_base($user);
+        #        $self->_do_remove_base($user);
         $self->_remove_files_base();
     }
     $self->_remove_all_volumes();
@@ -1488,10 +1545,13 @@ sub _after_remove_domain {
     $self->_finish_requests_db();
     $self->_remove_base_db();
     $self->_remove_access_attributes_db();
+    $self->_remove_access_grants_db();
     $self->_remove_ports_db();
+    $self->_remove_instance_db();
     $self->_remove_volumes_db();
     $self->_remove_bases_vm_db();
     $self->_remove_domain_db();
+
 }
 
 sub _remove_all_volumes($self) {
@@ -1506,13 +1566,11 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
     return if !$self->_vm;
     my $domain_name = $self->name or confess "Unknown my self name $self ".Dumper($self->{_data});
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,name FROM vms WHERE is_active=1");
-    my ($id, $name);
-    $sth->execute();
-    $sth->bind_columns(\($id, $name));
-    while ($sth->fetchrow) {
-        next if $id == $self->_vm->id;
-        my $vm = Ravada::VM->open($id);
+    my @instances = $self->list_instances();
+    return if !scalar(@instances);
+    for my $instance ( @instances ) {
+        next if $instance->{id_vm} == $self->_vm->id;
+        my $vm = Ravada::VM->open($instance->{id_vm});
         my $domain;
         eval { $domain = $vm->search_domain($domain_name) };
         $domain->remove($user, $cascade) if $domain;
@@ -1536,6 +1594,16 @@ sub _remove_access_attributes_db($self) {
     $sth->finish;
 }
 
+sub _remove_access_grants_db($self) {
+
+    return if !$self->{_data}->{id};
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domain_access"
+        ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    $sth->finish;
+}
+
+
 sub _remove_volumes_db($self) {
     return if !$self->{_data}->{id};
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes"
@@ -1550,6 +1618,13 @@ sub _remove_bases_vm_db($self) {
         ." WHERE id_domain=?");
     $sth->execute($self->id);
     $sth->finish;
+}
+
+sub _remove_instance_db($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domain_instances "
+        ." WHERE id_domain=? AND id_vm=?"
+    );
+    $sth->execute($self->id, $self->_vm->id);
 }
 
 sub _remove_domain_db {
@@ -1807,11 +1882,29 @@ sub _do_remove_base($self, $user) {
         }
     }
     $self->is_base(0);
+    for my $vol ($self->list_volumes_info) {
+        next if !$vol->file || $vol->file =~ /\.iso$/;
+        my $backing_file = $vol->backing_file;
+        next if !$backing_file;
+        #        confess "Error: no backing file for ".$vol->file if !$backing_file;
+        $vol->block_commit();
+        unlink $vol->file or die "$! ".$vol->file;
+        my @stat = stat($backing_file);
+        move($backing_file, $vol->file) or die "$! $backing_file -> ".$vol->file;
+        my $mask = oct(7777);
+        my $mode = $stat[2] & $mask;
+        my $w = oct(200);
+        $mode = $mode ^ $w;
+        chmod($mode,$vol->file);
+        chown($stat[4],$stat[5], $vol->file);
+    }
+
     for my $file ($self->list_files_base) {
         next if $file =~ /\.iso$/i;
         next if ! -e $file;
         unlink $file or die "$! unlinking $file";
     }
+
     $self->storage_refresh()    if $self->storage();
 }
 
@@ -1822,10 +1915,11 @@ sub _pre_remove_base {
     
     if (!$domain->is_local) {
         my $vm_local = $domain->_vm->new( host => 'localhost' );
-        my $domain_local = $vm_local->search_domain($domain->name);
-        $domain = $domain_local if $domain_local;
+        confess "Error: I can't find local virtual manager ".$domain->type
+            if !$vm_local;
+
+        $domain->_vm($vm_local);
     }
-    $domain->spinoff_volumes();
 }
 
 sub _post_remove_base {
@@ -1844,6 +1938,11 @@ sub _remove_all_bases($self) {
     while ( my ($id_vm) = $sth->fetchrow ) {
         $self->remove_base_vm( id_vm => $id_vm );
     }
+}
+
+sub _post_spinoff($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set id_base=NULL WHERE id=?");
+    $sth->execute($self->id);
 }
 
 sub _pre_shutdown_domain {}
@@ -2315,12 +2414,43 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
             $sth->finish;
         };
         last if !$@;
-        confess $@ if $@ && $@ !~ /Duplicate entry .*for key 'public/;
+        confess $@ if $@ && $@ !~ /Duplicate entry .*for key /;
     }
 
     $self->_open_exposed_port($internal_port, $name, $restricted)
         if $self->is_active && $self->ip;
     return $public_port;
+}
+
+sub _set_public_port($self, $id_port, $internal_port, $name, $restricted) {
+    my $public_port = $self->_vm->_new_free_port();
+    for (;;) {
+        if ($id_port) {
+            my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set public_port=?"
+                ." WHERE id_domain=? AND internal_port=?"
+            );
+            eval {
+                $sth->execute($public_port, $self->id, $internal_port);
+            };
+            die $@ if $@ && $@ !~ /uplicate entry/;
+            return $public_port if !$@;
+        } else {
+            my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO domain_ports "
+                ."(id_domain, public_port, internal_port, name, restricted)"
+                ." VALUES(?,?,?,?,?) "
+            );
+            eval {
+                $sth->execute( $self->id
+                    ,$public_port, $internal_port
+                    ,( $name or undef )
+                    ,$restricted
+                );
+            };
+            die $@ if $@ && $@ !~ /uplicate entry/;
+            return $public_port if !$@;
+        }
+        $public_port += int(rand(10))+1;
+    }
 }
 
 sub _open_exposed_port($self, $internal_port, $name, $restricted) {
@@ -2329,25 +2459,9 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     );
     $sth->execute($self->id, $internal_port);
     my ($id_port, $public_port) = $sth->fetchrow();
-    if (!$public_port) {
-        $public_port = $self->_vm->_new_free_port();
-        if ($id_port) {
-            my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set public_port=?"
-                ." WHERE id_domain=? AND internal_port=?"
-            );
-            $sth->execute($public_port, $self->id, $internal_port);
-        } else {
-            my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO domain_ports "
-                 ."(id_domain, public_port, internal_port, name, restricted)"
-                 ." VALUES(?,?,?,?,?) "
-            );
-            $sth->execute( $self->id
-                ,$public_port, $internal_port
-                ,( $name or undef )
-                ,$restricted
-            );
-        }
-    }
+
+    $public_port = $self->_set_public_port($id_port, $internal_port, $name, $restricted)
+    if !$public_port;
 
     my $local_ip = $self->_vm->ip;
     my $internal_ip = $self->ip;
@@ -2625,34 +2739,20 @@ sub _test_iptables_jump {
 }
 
 
-sub _remove_temporary_machine {
-    my $self = shift;
+sub _remove_temporary_machine($self) {
 
     return if !$self->is_volatile;
 
-    my %args = @_;
-
-    return if !$self->is_known();
-    return if !$self->is_volatile();
-
-    my $user;
-    eval { $user = Ravada::Auth::SQL->search_by_id($self->id_owner) };
-    return if !$user;
-
-    my $req= $args{request};
-        $req->status(
-            "removing"
-            ,"Removing volatile machine ".$self->name)
-                if $req;
+    my $owner;
+    $owner= Ravada::Auth::SQL->search_by_id($self->id_owner)    if $self->is_known();
 
         if ($self->is_removed) {
             $self->remove_disks();
             $self->_after_remove_domain();
-        } else {
-            $self->remove($user)    if $user->is_temporary;
         }
-    $self->remove($user);
+    $self->remove(Ravada::Utils::user_daemon);
 
+    $owner->remove() if $owner && $owner->is_temporary();
 }
 
 sub _post_resume {
@@ -2977,10 +3077,7 @@ sub _rename_domain_db {
 
     my $new_name = $args{name} or confess "Missing new name";
 
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set name=?"
-                ." WHERE id=?");
-    $sth->execute($new_name, $self->id);
-    $sth->finish;
+    $self->_data(name => $new_name);
 }
 
 =head2 is_public
@@ -3090,8 +3187,13 @@ Check if the domain has swap volumes defined, and clean them
 sub clean_swap_volumes {
     my $self = shift;
     for my $vol ( $self->list_volumes_info) {
-        $vol->restore()
-            if $vol->file && $vol->file =~ /\.SWAP\.\w+$/;
+        if ($vol->file && $vol->file =~ /\.SWAP\.\w+$/) {
+            my $backing_file;
+            eval { $backing_file = $vol->backing_file };
+            confess $@ if $@ && $@ !~ /No backing file/i;
+            next if !$backing_file;
+            $vol->restore() if !$@;
+        }
     }
 }
 
@@ -3112,7 +3214,11 @@ sub _post_rename {
     my $self = shift;
     my %args = @_;
 
+    my $new_name = $args{new_name};
+
     $self->_rename_domain_db(@_);
+
+    $self->{_name} = $new_name;
 }
 
 sub _post_dettach($self, @) {
@@ -3552,6 +3658,7 @@ sub _pre_migrate($self, $node, $request = undef) {
     }
 
     $self->_set_base_vm_db($node->id,0);
+    $node->_add_instance_db($self->id);
 }
 
 sub _post_migrate($self, $node, $request = undef) {
@@ -3674,6 +3781,7 @@ sub set_base_vm($self, %args) {
         my $vm_local = $self->_vm->new( host => 'localhost' );
         $self->_set_vm($vm_local, 1);
     }
+    $vm->_add_instance_db($self->id);
     return $self->_set_base_vm_db($vm->id, $value);
 }
 
@@ -4056,10 +4164,12 @@ sub _pre_change_hardware($self, @) {
 
 sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     if ($hardware eq 'disk' && ( defined $index || $data ) && $self->is_known() ) {
+        my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
+        $sth->execute($self->id);
         my @volumes = $self->list_volumes_info();
     }
     $self->info(Ravada::Utils::user_daemon) if $self->is_known();
-    $self->_remove_domain_cascade(Ravada::Utils::user_daemon,1);
+    $self->_remove_domain_cascade(Ravada::Utils::user_daemon,1) if $self->is_known();
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
 }
 
@@ -4096,6 +4206,181 @@ sub allow_ldap_access($self, $attribute, $value, $allowed=1, $last=0 ) {
         ."(id_domain, attribute, value, allowed, n_order, last) "
         ."VALUES(?,?,?,?,?,?)");
     $sth->execute($self->id, $attribute, $value, $allowed, $n_order+1, $last);
+}
+
+sub default_access($self, $type, $allowed) {
+    my @list = $self->list_access($type);
+    my ($default) = grep { $_->{value} eq '*' } @list;
+    if ($default) {
+        my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_access "
+            ." SET allowed = ? "
+            ." WHERE type=? AND id_domain=? AND value='*'"
+        );
+        $sth->execute($allowed, $type, $self->id);
+    } else {
+        $self->grant_access(attribute => '_DEFAULT_'
+            ,value => '*'
+            ,allowed => 0
+            ,type => $type
+        );
+    }
+}
+
+sub grant_access($self, %args) {
+    my $attribute = delete $args{attribute} or confess "Error: Missing attribute";
+    my $value     = delete $args{value}     or confess "Error: Missing value";
+    my $type      = delete $args{type}      or confess "Error: Missing type";
+    my $allowed   = delete $args{allowed};
+    $allowed = 1 if !defined $allowed;
+    my $last      = ( delete $args{last} or 0 );
+
+    confess "Error: unknown args ".Dumper(\%args) if keys %args;
+
+    return $self->allow_ldap_access($attribute, $value, $allowed,$last)
+        if $type eq 'ldap';
+
+    my $sth ;
+    if ($value eq '*') {
+        $sth=$$CONNECTOR->dbh->prepare("DELETE FROM domain_access "
+            ." WHERE id_domain=? AND type=? AND value='*' ");
+        $sth->execute($self->id,$type);
+    }
+
+    $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT max(n_order) FROM domain_access"
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+    my ($n_order) = ($sth->fetchrow or 0);
+    $sth->finish;
+
+    $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO domain_access"
+        ."(id_domain, type, attribute, value, allowed, n_order, last) "
+        ."VALUES(?,?,?,?,?,?,?)");
+    $sth->execute($self->id, $type, $attribute, $value, $allowed, $n_order+1, $last);
+
+    $self->_fix_default_access($type) unless $value eq '*';
+}
+
+sub _fix_default_access($self, $type) {
+    my @list = $self->list_access($type);
+    my $id_default;
+    my $max=0;
+    for ( @list ) {
+        $max = $_->{n_order} if $_->{n_order} > $max;
+        if ( $_->{value} eq '*' ) {
+            $id_default = $_->{id};
+        }
+    }
+    if ( $id_default ) {
+        my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_access "
+            ."SET n_order = ? WHERE id=? "
+        );
+        $sth->execute($max+2, $id_default);
+        return;
+    }
+    $self->default_access($type,0);
+}
+
+sub _mangle_client_attributes($attribute) {
+    for my $name (keys %$attribute) {
+        next if ref($attribute->{$name});
+        if ($name =~ /Accept-\w+/) {
+
+            my @values = map {my $item = $_ ; $item =~ s/^(.*?)[;].*/$1/; $item}
+            split /,/,$attribute->{$name};
+
+            $attribute->{$name} = \@values;
+        } else {
+            $attribute->{$name} = [$attribute->{$name}]
+            if !ref($attribute->{$name});
+        }
+    }
+}
+
+sub _mangle_access_attributes($args) {
+    for my $type (sort keys %$args) {
+        _mangle_client_attributes($args->{$type}) if $type eq 'client';
+    }
+}
+
+sub access_allowed($self, %args) {
+    _mangle_access_attributes(\%args);
+    lock_hash(%args);
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT type, attribute, value, allowed, last FROM domain_access "
+        ." WHERE id_domain=? "
+        ." ORDER BY type,n_order"
+    );
+    $sth->execute($self->id);
+    my $default_allowed = undef;
+    while ( my ($type, $attribute, $value, $allowed, $last) = $sth->fetchrow) {
+        if ($value eq '*') {
+            $default_allowed = $allowed if !defined $default_allowed;
+            next;
+        }
+
+        next unless exists $args{$type} && exists $args{$type}->{$attribute};
+        my $req_value = $args{$type}->{$attribute};
+
+        my $found;
+        for (@$req_value) {
+            $found =1 if $value eq $_;
+        }
+        if ($found) {
+            return $allowed if $last || !$allowed;
+            $default_allowed = $allowed;
+        }
+
+    }
+    return $default_allowed;
+}
+
+sub list_access($self, $type=undef) {
+    return $self->list_ldap_access()
+    if defined $type && $type eq 'ldap';
+
+    my $sql =
+        "SELECT * from domain_access"
+        ." WHERE id_domain = ? ";
+
+    $sql .= " AND type= ".$$CONNECTOR->dbh->quote($type)
+        if defined $type;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "$sql ORDER BY n_order"
+    );
+    $sth->execute($self->id);
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @list,($row) if keys %$row;
+    }
+    return @list;
+}
+
+sub delete_access($self, @id_access) {
+    for my $id_access (@id_access) {
+        $id_access = $id_access->{id} if ref($id_access);
+
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "SELECT * FROM domain_access"
+            ." WHERE id=? ");
+        $sth->execute($id_access);
+        my $row = $sth->fetchrow_hashref();
+        confess "Error: domain access id $id_access not found"
+        if !keys %$row;
+
+        confess "Error: domain access id $id_access not from domain "
+        .$self->id
+        ." it belongs to domain ".$row->{id_domain}
+        if $row->{id_domain} != $self->id;
+
+        $sth = $$CONNECTOR->dbh->prepare(
+            "DELETE FROM domain_access"
+            ." WHERE id_domain=? AND id=? ");
+        $sth->execute($self->id, $id_access);
+    }
 }
 
 #TODO: check something has been deleted
@@ -4140,7 +4425,13 @@ sub deny_ldap_access($self, $attribute, $value) {
 }
 
 sub _set_access_order($self, $id_access, $n_order) {
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE access_ldap_attribute "
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_access"
+        ." SET n_order=? WHERE id=? AND id_domain=?");
+    $sth->execute($n_order, $id_access, $self->id);
+}
+
+sub _set_ldap_access_order($self, $id_access, $n_order) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE access_ldap_attribute"
         ." SET n_order=? WHERE id=? AND id_domain=?");
     $sth->execute($n_order, $id_access, $self->id);
 }
@@ -4150,6 +4441,53 @@ sub move_ldap_access($self, $id_access, $position) {
         if ($position != -1 && $position != 1);
 
     my @list = $self->list_ldap_access();
+
+    my $index;
+    for my $n (0 .. $#list) {
+        if (defined $list[$n] && $list[$n]->{id} == $id_access ) {
+            $index = $n;
+            last;
+        }
+    }
+    confess "Error: access id: $id_access not found for domain ".$self->id
+            ."\n".Dumper(\@list)
+        if !defined $index;
+
+    my ($n_order)   = $list[$index]->{n_order};
+    die "Error: position $index has no n_order for domain ".$self->id
+            ."\n".Dumper(\@list)
+        if !defined $n_order;
+
+    my $index2 = $index + $position;
+    die "Error: position $index2 has no id for domain ".$self->id
+            ."\n".Dumper(\@list)
+        if !defined $list[$index2] || !defined$list[$index2]->{id};
+
+    my ($id_access2, $n_order2) = ($list[$index2]->{id}, $list[$index2]->{n_order});
+
+    die "Error: position ".$index2." not found for domain ".$self->id
+            ."\n".Dumper(\@list)
+        if !defined $id_access2;
+
+    die "Error: n_orders are the same for index $index and ".($index+$position)
+            ."in \n".Dumper(\@list)
+            if $n_order == $n_order2;
+
+    $self->_set_ldap_access_order($id_access, $n_order2);
+    $self->_set_ldap_access_order($id_access2, $n_order);
+}
+
+sub move_access($self, $id_access, $position) {
+    confess "Error: You can only move position +1 or -1"
+        if ($position != -1 && $position != 1);
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT type FROM domain_access "
+        ." WHERE id=?");
+    $sth->execute($id_access);
+    my ($type) = $sth->fetchrow();
+    confess "Error: I can't find accedd id=$id_access" if !defined $type;
+
+    my @list = $self->list_access($type);
 
     my $index;
     for my $n (0 .. $#list) {
@@ -4193,33 +4531,25 @@ sub set_ldap_access($self, $id_access, $allowed, $last) {
     $sth->execute($allowed, $last, $id_access);
 }
 
+sub set_access($self, $id_access, $allowed, $last) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_access"
+        ." SET allowed=?, last=?"
+        ." WHERE id=?");
+    $sth->execute($allowed, $last, $id_access);
+}
 
 sub rebase($self, $user, $new_base) {
-    croak "Error: ".$self->name." is not a base\n"  if !$self->is_base;
 
-    my @reqs = Ravada::Request->dettach(
-        uid => $user->id
-        ,id_domain => $new_base->id
-    );
+    my @reqs;
 
-    push @reqs, Ravada::Request->prepare_base(
-        uid => $user->id
-        ,id_domain => $new_base->id
-        ,after_request => $reqs[0]->id
-    );
+    _create_base_as_old($self, $user, $new_base) if !$new_base->is_base;
 
-    for my $vm ($self->list_vms) {
-        next if $vm->is_local;
-        push @reqs, Ravada::Request->set_base_vm(
-            uid => $user->id
-            ,id_vm => $vm->id
-            ,id_domain => $new_base->id
-        ,after_request => $reqs[-1]->id
-        );
+    if ( !$self->is_base ) {
+        return $self->_rebase_volumes($new_base);
     }
-
-    $new_base->is_public($self->is_public);
-
+    $self->pool_clones(0);
+    $self->pool_start(0);
+    # if I am a base, we rebase all the clones
     for my $clone_info ( $self->clones ) {
         next if $clone_info->{id} == $new_base->id;
         Ravada::Request->shutdown_domain(
@@ -4227,30 +4557,132 @@ sub rebase($self, $user, $new_base) {
             , id_domain => $clone_info->{id}
         );
 
-        push @reqs,Ravada::Request->rebase_volumes(
+        my @args;
+        push @args, ( after_request => $reqs[-1]->id ) if $reqs[-1];
+        push @reqs,Ravada::Request->rebase (
                    uid => $user->id
               ,id_base => $new_base->id
             ,id_domain => $clone_info->{id}
-        ,after_request => $reqs[-1]->id
+                ,@args
+                ,retry => 5
         );
     }
     return @reqs;
 }
 
-sub rebase_volumes($self, $new_base) {
-    die "Error: domain ".$new_base->name." is not a base\n"
-        if !$new_base->is_base;
-    my @files_target = $new_base->list_files_base_target();
-    my %file_target = map { $_->[1] => $_->[0] } @files_target;
+sub _create_base_as_old($self, $user, $new_base) {
+    $new_base->dettach($user);
+    $new_base->prepare_base($user);
 
-    for my $vol ( $self->list_volumes_info) {
-        next if $vol->info->{device} ne 'disk';
-        my $new_base = $file_target{$vol->info->{target}};
-        die "I can't find new base file for ".Dumper($vol) if !$new_base;
-        my @cmd = ('/usr/bin/qemu-img','rebase','-b',$new_base,$vol->file);
-        my ($out, $err) = $self->_vm->run_command(@cmd);
+    my $old_base = $self;
+    $old_base = Ravada::Domain->open($self->id_base) if $self->id_base;
+
+    my @reqs;
+    for my $vm ($old_base->list_vms) {
+        next if $vm->is_local;
+        my @after;
+        @after = (after_request => $reqs[0]->id ) if @reqs;
+        push @reqs, Ravada::Request->set_base_vm(
+            uid => $user->id
+            ,id_vm => $vm->id
+            ,id_domain => $new_base->id
+            ,@after
+        );
     }
+
+    $new_base->is_public($old_base->is_public);
+    return @reqs;
+}
+
+sub _rebase_volumes($self, $new_base) {
+    my %old;
+    for my $vol ( $self->list_volumes_info ) {
+        $old{$vol->info->{target}} = $vol;
+    }
+    _check_rebase_vols($self, $new_base, \%old);
+
+   # clone all volumes from new base but keep DATA volumes
+    for my $file_data ( $new_base->list_files_base_target ) {
+        my ($file_base,$target) = @$file_data;
+
+        my $vol = $old{$target};
+
+        #rebase DATA volumes
+        if ( $vol && $vol->file && $vol->file =~ /\.(DATA)\.\w+$/ ) {
+            $vol->rebase($file_base);
+            next;
+        }
+        #keep CDs
+        next if $vol
+            && ( $vol->info->{device} eq 'cdrom'
+                || ( $vol->file && $vol->file =~ /\.iso$/)
+            );
+
+        my $vol_base = Ravada::Volume->new(
+            file => $file_base
+            ,is_base => 1
+            ,vm => $self->_vm
+        );
+        my $vol_clone;
+        if ($vol) {
+            if ($vol->info->{device} eq 'disk' && $vol->file) {
+                $self->remove_volume($vol->file);
+                $vol_clone = $vol_base->clone(file => $vol->file);
+            } else {
+                confess "I don't know how to rebase ".Dumper($vol->info);
+            }
+        } else {
+            $vol_clone = $vol_base->clone(name => $self->name."-$target");
+            $self->add_volume(
+                file => $vol_clone->file
+                ,target => $target
+            );
+        }
+    }
+
     $self->id_base($new_base->id);
+}
+
+sub _check_rebase_vols($self, $new_base, $old) {
+
+    my %new = map {
+        my ($ext) = $_->[0] =~ /\.(\w+)$/;
+        my ($type) = $_->[0] =~ /\.([A-Z]+)\.\w+$/;
+        $type = 'SYS' if !defined $type;
+
+        $_->[1] => "$type.$ext"
+    } grep { $_->[0] }
+    $new_base->list_files_base_target;
+
+    my %old = map {
+        my $file = ($old->{$_}->file or '');
+        my ($ext) = $file =~ /\.(\w+)$/;
+        my ($type) = $file =~ /\.([A-Z]+)\.\w+$/;
+
+        $_ => ($type or 'SYS').".".($ext or "")
+    } grep { $old->{$_}->file } keys %$old;
+
+    for my $target (keys %new, keys %old) {
+        next if exists $old{$target} && exists $new{$target}
+            && $old{$target} eq $new{$target};
+        die "Error: volume outline different in new base ".Dumper(\%new)
+        .". Expecting ".Dumper(\%old);
+    }
+}
+
+sub list_instances($self) {
+    return () if !$self->is_known();
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_instances "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+
+    my @instances;
+    while (my $row = $sth->fetchrow_hashref) {
+        lock_hash(%$row);
+        push @instances, ( $row );
+    }
+    return @instances;
 }
 
 1;

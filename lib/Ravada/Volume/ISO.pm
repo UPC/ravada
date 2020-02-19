@@ -24,7 +24,7 @@ sub capacity($self) {
 }
 
 sub backing_file($self) {
-    return $self->file;
+    return;
 }
 
 sub clone($self, $filename) {
@@ -39,6 +39,10 @@ sub clone_filename($self, $name=undef) {
 
 sub base_filename($self) {
     return $self->file;
+}
+
+sub spinoff($self) {
+    confess "Error: ISO files can't be spinned off";
 }
 
 1;

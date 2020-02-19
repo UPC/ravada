@@ -95,9 +95,6 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.type = function(v) {
         return typeof(v);
       }
-      $scope.show_swap = function() {
-        $scope.seeswap = !($scope.seeswap);
-      };
 
       $scope.get_machine_info = function(id) {
           $http.get('/machine/info/'+id+'.json')
@@ -113,12 +110,19 @@ ravadaApp.directive("solShowMachine", swMach)
       $http.get('/list_machines.json').then(function(response) {
               $scope.base = response.data;
       });
+
+      $scope.swap = {
+          enabled: true
+          ,value: 1
+      };
+
+      $scope.data = {
+          enabled: true
+          ,value: 1
+      };
   };
 
   function machinesPageC($scope, $http, $interval, $timeout, request, listMach) {
-    $http.get('/pingbackend.json').then(function(response) {
-      $scope.pingbe_fail = !response.data;
-    });
         if( $scope.check_netdata && $scope.check_netdata != "0" ) {
             var url = $scope.check_netdata;
             $scope.check_netdata = 0;
@@ -140,6 +144,7 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.subscribe_all=function(url) {
           subscribe_list_machines(url);
           subscribe_list_requests(url);
+          subscribe_ping_backend(url);
       };
       subscribe_list_machines= function(url) {
 
@@ -178,9 +183,9 @@ ravadaApp.directive("solShowMachine", swMach)
                       }
                   }
                   if ($scope.auto_hide_clones) {
-                      $scope.hide_clones = 0;
+                      $scope.hide_clones = false;
                       if ($scope.n_clones > $scope.n_clones_hide ) {
-                          $scope.hide_clones = 1;
+                          $scope.hide_clones = true;
                       }
                   }
                   for (var i = $scope.list_machines.length-1; i >= 0; i--){
@@ -188,7 +193,10 @@ ravadaApp.directive("solShowMachine", swMach)
                           $scope.list_machines.splice(i,1);
                       }
                       mach = $scope.list_machines[i];
-                      if (!mach.id_base && typeof $scope.show_clones[mach.id] == 'undefined') {
+                      if (!mach.id_base && typeof $scope.show_clones[mach.id] == 'undefined'
+                        && typeof mach.childs != 'undefined'
+                        && mach.childs.length > 0
+                        ) {
                           $scope.show_clones[mach.id] = !$scope.hide_clones;
                       }
                   }
@@ -218,6 +226,17 @@ ravadaApp.directive("solShowMachine", swMach)
               });
           }
       }
+
+      subscribe_ping_backend= function(url) {
+          var ws = new WebSocket(url);
+          ws.onopen = function(event) { ws.send('ping_backend') };
+          ws.onmessage = function(event) {
+            var data = JSON.parse(event.data);
+            $scope.$apply(function () {
+                        $scope.pingbe_fail = !data;
+            });
+          }
+      };
 
     $scope.orderParam = ['name'];
     $scope.auto_hide_clones = true;
@@ -286,10 +305,6 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.cancel_modal=function(){
       $scope.modalOpened=false;
     }
-    $scope.refresh_machines=function() {
-      $scope.getMachines();
-    }
-
     //On load code
     $scope.modalOpened=false;
     $scope.rename= {new_name: 'new_name'};
@@ -299,9 +314,6 @@ ravadaApp.directive("solShowMachine", swMach)
   };
 
   function usersPageC($scope, $http, $interval, request) {
-    $http.get('/pingbackend.json').then(function(response) {
-      $scope.pingbe_fail = !response.data;
-    });
     $scope.action = function(target,action,machineId){
       $http.get('/'+target+'/'+action+'/'+machineId+'.json');
     };
@@ -309,9 +321,6 @@ ravadaApp.directive("solShowMachine", swMach)
   };
 
   function messagesPageC($scope, $http, $interval, request) {
-    $http.get('/pingbackend.json').then(function(response) {
-      $scope.pingbe_fail = !response.data;
-    });
     $scope.getMessages = function() {
       $http.get('/messages.json').then(function(response) {
         $scope.list_message= response.data;
