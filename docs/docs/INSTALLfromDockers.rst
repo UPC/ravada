@@ -9,6 +9,10 @@ OS
 
 Install `Docker <https://docs.docker.com/v17.12/install/>`_ and `docker-compose <https://docs.docker.com/compose/install/>`_ on your local machine.
 
+.. warning ::
+  There are several versions of the Compose file format – 1, 2, 2.x, and 3.x. For now, we use 3.5
+  keep this in mind https://docs.docker.com/compose/compose-file/
+    
 Hardware
 --------
 
