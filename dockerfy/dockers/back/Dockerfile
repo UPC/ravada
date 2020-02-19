@@ -11,7 +11,7 @@ RUN apt-get update \
     libio-interface-perl libiptables-chainmgr-perl libnet-dns-perl liblocale-maketext-lexicon-perl \
     libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl debconf adduser libdigest-sha-perl libnet-ssh2-perl \
     libfile-rsync-perl libdate-calc-perl libparallel-forkmanager-perl libdatetime-perl libencode-locale-perl netcat-openbsd \
-    liblwp-useragent-determined-perl libvirt-clients supervisor net-tools openssh-client apt-utils curl \
+    liblwp-useragent-determined-perl libvirt-clients supervisor net-tools openssh-client apt-utils curl libpbkdf2-tiny-perl \
     libio-stringy-perl libvirt-daemon-system libvirt-clients netcat-openbsd qemu-kvm qemu-utils iproute2 wget bridge-utils firewalld dnsmasq iptables ebtables \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
