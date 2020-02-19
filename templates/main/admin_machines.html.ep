@@ -101,7 +101,7 @@
             <div class="col-md-4" align="right">
 % 		if ($_user->can_create_machine){
                 <h2>
-                    <button class="btn btn-warning" ng-click="refresh_machines()"><i class="fa fa-sync-alt" aria-hidden="true"></i></button>
+                    <button class="btn btn-warning" ng-click="list_machines=[];subscribe_all('<%= url_for('ws_subscribe')->to_abs %>');"><i class="fa fa-sync-alt" aria-hidden="true"></i></button>
                     <a type="button" class="btn btn-success" href="/new_machine.html">
                         <b><%=l 'New Machine' %></b>
                     <i ng-show="download_working"
@@ -116,7 +116,8 @@
 
 %=      include 'bootstrap/requests'
 
-        <table class="table admin-cont-body" border="0">
+        <div ng-show="!list_machines"><%=l 'Loading ...' %> </div>
+        <table class="table admin-cont-body" border="0" ng-show="list_machines" ng-cloak="1">
             <thead>
                 <tr>
                     <th ><div class="lgMachName machine-button" style="display:inline;float:down"

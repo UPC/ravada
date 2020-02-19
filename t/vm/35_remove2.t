@@ -42,8 +42,14 @@ sub test_remove_domain_volumes_already_gone {
     my $vm = shift;
     my $domain = create_domain($vm->type);
     for my $file ($domain->list_disks) {
-        die $file if $file =~ /iso/;
+        next if $file =~ /iso/;
         unlink $file or die "$! $file";
+    }
+    $domain->storage_refresh() if $vm->type ne 'Void';
+    my @volumes = $domain->list_volumes_info();
+    for my $vol (@volumes) {
+        next if $vol->file =~ /\.iso$/;
+        ok(!-e $vol->file);
     }
     eval { $domain->remove(user_admin) };
     is(''.$@,'',$vm->type);

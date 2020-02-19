@@ -4,6 +4,7 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use File::Copy;
+use File::Path qw(make_path);
 use IPC::Run3 qw(run3);
 use Test::More;
 use YAML qw(Dump Load);
@@ -81,15 +82,19 @@ sub _test_base_qcow2($volume, $base) {
     my ($out, $err) = $volume->vm->run_command(@cmd);
     is($err,'');
 
-    my ($ext) = $volume->file =~ m{.*\.(\w+)$};
-    $ext = 'qcow2' if $ext =~ m{^(img|raw)};
+    my ($ext) = $volume->file =~ m{.*(\.\w+)$};
+    $ext = '.qcow2' if $ext =~ m{\.(img|raw)};
+    my ($type) = $volume->file =~ m{(\.[A-Z]+)\.\w+$};
+    $type = '' if !$type;
 
-    like($out,qr/^image:.*\.ro\.$ext$/m);
+    $ext = "$type$ext";
+
+    like($out,qr/^image:.*\.ro$ext$/m);
 
     @cmd = ("/usr/bin/qemu-img","info",$volume->file);
     ($out, $err) = $volume->vm->run_command(@cmd);
     is($err,'');
-    like($out,qr/backing file:.*\.ro\.$ext$/m);
+    like($out,qr/backing file:.*\.ro$ext$/m);
 }
 
 sub _test_base_raw($volume, $base) {
@@ -109,12 +114,15 @@ sub _test_base_raw($volume, $base) {
 
 
 sub _test_clone_qcow2($vol_base, $clone) {
-    my ($ext) = $vol_base->file =~ m{.*\.(\w+)$};
+    my ($ext) = $vol_base->file =~ m{.*(\.\w+)$};
+    my ($type) = $vol_base->file =~ m{(\.[A-Z]+)\.\w+$};
+    $type = '' if !$type;
+    $ext = "$type$ext";
 
     my @cmd = ("/usr/bin/qemu-img","info",$clone);
     my ($out, $err) = $vol_base->vm->run_command(@cmd);
     is($err,'');
-    like($out,qr/backing file:.*\.ro\.$ext$/m) or exit;
+    like($out,qr/backing file:.*\.ro$ext$/m) or exit;
 }
 
 
@@ -127,8 +135,8 @@ sub test_base($volume) {
     my $base = $volume->prepare_base();
 
     if ($ext ne 'iso') {
-        like($base,qr{\.ro\.$ext$});
-        like($base,qr{\.SWAP\.ro\.$ext$})   if $volume =~ /\.SWAP\./;
+        like($base,qr{(vd.|\d+)\.ro\.$ext$}, $volume->file) or exit       if $volume->file !~ /\.SWAP\./;
+        like($base,qr{(vd.|\d)\.ro\.SWAP\.$ext$}, $volume->file) or exit if $volume->file =~ /\.SWAP\./;
     }
     $test->($volume, $base);
 
@@ -239,6 +247,7 @@ sub test_raw($vm, $swap = 0) {
     $file .= ".SWAP" if $swap;
     $file .= ".raw";
 
+    make_path($vm->dir_img) if ! -e $vm->dir_img;
     my @cmd = ("qemu-img","create","-f","raw",$file,"1M");
     my ($in, $out, $err);
     run3(\@cmd,\$in, \$out, \$err);

@@ -127,9 +127,7 @@ Returns: listref of machines
 
 =cut
 
-sub list_machines_user {
-    my $self = shift;
-    my $user = shift;
+sub list_machines_user($self, $user, $access_data={}) {
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,name,is_public, screenshot"
@@ -163,10 +161,12 @@ sub list_machines_user {
         if ($clone) {
             $base{is_locked} = $clone->is_locked;
             if ($clone->is_active && !$clone->is_locked && $user->can_screenshot) {
-                my $req = Ravada::Request->screenshot_domain(
-                id_domain => $clone->id
-                ,filename => "$DIR_SCREENSHOTS/".$clone->id.".png"
-                );
+                if (!Ravada::Request::done_recently(undef,10,'screenshot')) {
+                    my $req = Ravada::Request->screenshot(
+                        id_domain => $clone->id
+                        ,_no_duplicate => 1
+                    );
+                }
             }
             $base{name_clone} = $clone->name;
             $base{screenshot} = ( $clone->_data('screenshot')
@@ -177,6 +177,7 @@ sub list_machines_user {
             $base{can_remove} = 1 if $user->can_remove && $clone->id_owner == $user->id;
             $base{can_hibernate} = 1 if $clone->is_active && !$clone->is_volatile;
         }
+        next if !$self->_access_allowed($id, $base{id_clone}, $access_data);
         $base{screenshot} =~ s{^/var/www}{};
         lock_hash(%base);
         push @list,(\%base);
@@ -185,6 +186,19 @@ sub list_machines_user {
     return \@list;
 }
 
+sub _access_allowed($self, $id_base, $id_clone, $access_data) {
+    if ($id_clone) {
+        my $clone = Ravada::Front::Domain->open($id_clone);
+        my $allowed = $clone->access_allowed(%$access_data);
+        return $allowed if $allowed;
+    }
+    my $base = Ravada::Front::Domain->open($id_base);
+
+    my $allowed = $base->access_allowed(%$access_data);
+    return 1 if !defined $allowed;
+    return $allowed;
+
+}
 
 sub list_machines($self, $user) {
     return $self->list_domains() if $user->can_list_machines();
@@ -203,7 +217,7 @@ sub list_machines($self, $user) {
 sub _around_list_machines($orig, $self, $user) {
     my $machines = $self->$orig($user);
     for my $m (@$machines) {
-        $m->{can_shutdown} = $user->can_shutdown($m->{id});
+        eval { $m->{can_shutdown} = $user->can_shutdown($m->{id}) };
 
         $m->{can_start} = 0;
         $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
@@ -1146,6 +1160,10 @@ sub list_network_interfaces($self, %args) {
     $self->{$cache_key} = $interfaces;
 
     return $interfaces;
+}
+
+sub _dbh {
+    return $CONNECTOR->dbh;
 }
 
 =head2 version

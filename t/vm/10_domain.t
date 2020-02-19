@@ -502,6 +502,19 @@ sub test_vm_in_db {
     is($vm3->host, $vm->host);
 }
 
+# TODO: check permissions after prepare and after remove base
+sub test_permissions {
+    my ($stat) = @_;
+    for my $vol ( keys %$stat ) {
+        my @stat_new = stat($vol);
+        my $mode = sprintf('%o',$stat_new[2] & 07777);
+        my $mode_expected = sprintf('%o',$stat->{$vol}->[2] & 07777);
+        is($mode, $mode_expected);
+        is($stat_new[4],$stat->{$vol}->[4]);
+        is($stat_new[5],$stat->{$vol}->[5]);
+    }
+}
+
 #######################################################
 
 remove_old_domains();
@@ -564,10 +577,13 @@ for my $vm_name ( vm_names() ) {
         test_change_interface($vm_name,$domain);
         ok($domain->has_clones==0,"[$vm_name] has_clones expecting 0, got ".$domain->has_clones);
         $domain->is_public(1);
+        my %stat = map { $_ => [stat($_)] } $domain->list_volumes;
+
         my $clone1 = $domain->clone( user=>user_admin, name=>new_domain_name );
         ok($clone1, "Expecting clone ");
         ok($domain->has_clones==1,"[$vm_name] has_clones expecting 1, got ".$domain->has_clones);
         $clone1->shutdown_now($USER);
+
 
         my $clone2 = $domain->clone(user=>$USER,name=>new_domain_name);
         ok($clone2, "Expecting clone ");
@@ -581,6 +597,8 @@ for my $vm_name ( vm_names() ) {
         test_remove_domain($vm_name, $clone2);
 
         $domain->remove_base($USER);
+#        test_permissions(\%stat);
+
         test_manage_domain($vm_name, $domain);
         test_screenshot_db($vm_name, $domain);
 

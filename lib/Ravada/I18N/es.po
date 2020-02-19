@@ -460,7 +460,7 @@ msgid "Are you sure you want to remove the Base of"
 msgstr "Estás seguro de querer eliminar la base de"
 
 msgid "Are you sure you want to prepare the Base of"
-msgstr "Estás seguro de querer convertir en base a"
+msgstr "Estás seguro de querer preparar la base de"
 
 msgid "Are you sure you want to change the Public state of"
 msgstr "Estás seguro de querer cambiar el estado público de"
@@ -722,7 +722,7 @@ msgid "This information will be available to the users"
 msgstr "Esta Información será visible por los usuarios"
 
 msgid "Volatile Clones"
-msgstr "Clones volatiles"
+msgstr "Clones volátiles"
 
 msgid "Owner"
 msgstr "Propietario"

@@ -60,7 +60,7 @@ sub open($self, $id) {
     } elsif ($domain->type eq 'Void') {
         $domain = Ravada::Front::Domain::Void->new( id => $id );
     }
-    die "ERROR: Unknown domain id: $id\n"
+    confess "ERROR: Unknown domain id: $id\n"
         unless exists $domain->{_data}->{name} && $domain->{_data}->{name};
     return $domain;
 }
@@ -176,7 +176,7 @@ sub set_max_mem         { confess "TODO" }
 sub set_memory          { confess "TODO" }
 sub shutdown            { confess "TODO" }
 sub shutdown_now        { confess "TODO" }
-sub spinoff_volumes     { confess "TODO" }
+sub spinoff             { confess "TODO" }
 sub start               { confess "TODO" }
 
 sub dettach             { confess "TODO" }

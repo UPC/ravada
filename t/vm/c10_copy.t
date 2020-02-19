@@ -17,9 +17,9 @@ use_ok('Ravada');
 
 sub add_volumes {
     my ($base, $volumes) = @_;
-    $base->add_volume_swap(name => "vol_swap", size => 512 * 1024);
+    $base->add_volume_swap(name => $base->name."-vol_swap", size => 512 * 1024);
     for my $n ( 1 .. $volumes ) {
-        $base->add_volume(name => "vol_$n", size => 512 * 1024);
+        $base->add_volume(name => $base->name."-vol_$n", size => 512 * 1024);
     }
 }
 
@@ -181,10 +181,50 @@ sub test_copy_req_nonbase {
 
     is($domain->is_base,1);
 
+    my $id_copy = $copy->id;
     $copy->remove(user_admin);
+    my $sth = connector->dbh->prepare("SELECT count(*) FROM volumes WHERE id_domain=?");
+    $sth->execute($id_copy);
+    my ($found) = $sth->fetchrow;
+    is($found, 0, "Expected no volumes for domain $id_copy");
+
     $domain->remove(user_admin);
 
 }
+
+sub test_copy_req_many {
+    my $vm_name = shift;
+    my $domain = create_domain($vm_name);
+
+    my $name_copy = new_domain_name();
+
+    my $number = 3;
+    my $req;
+    eval { $req = Ravada::Request->clone(
+            id_domain => $domain->id
+              ,number => $number
+                , uid => user_admin->id
+        );
+    };
+    is($@,'') or return;
+    is($req->status(),'requested');
+    wait_request(check_error => 1);
+    is($req->status(),'done');
+    is($req->error,'');
+
+    is($domain->is_base,1);
+
+    my @clones = $domain->clones();
+    is(scalar @clones, $number);
+
+    for (@clones) {
+        my $clone = Ravada::Domain->open($_->{id} );
+        $clone->remove(user_admin);
+    }
+    $domain->remove(user_admin);
+
+}
+
 
 ##########################################################################3
 
@@ -204,6 +244,8 @@ for my $vm_name ('Void', 'KVM') {
         skip($msg,10)   if !$vm;
 
         init( { vm => [$vm_name] });
+
+        test_copy_req_many($vm_name);
 
         test_copy_clone($vm_name);
         test_copy_clone($vm_name,1);

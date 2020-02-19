@@ -452,13 +452,14 @@ for my $vm_name ('KVM', 'Void') {
     my $vm = rvd_back->search_vm($vm_name);
 
     SKIP: {
+        my $fly_config;
 
         my $msg = "SKIPPED: No virtual managers found";
         if ($vm && $vm_name =~ /kvm/i && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         } else {
-            my $fly_config = init_ldap_config();
+            $fly_config = init_ldap_config();
             init($fly_config);
         }
         my $ldap;
@@ -492,10 +493,12 @@ for my $vm_name ('KVM', 'Void') {
         test_access_by_attribute_move($vm);
         test_access_by_attribute_move_removed($vm);
 
+        unlink $fly_config;
     }
 
 }
 
 clean();
+
 
 done_testing();
