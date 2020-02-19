@@ -7,11 +7,11 @@ use Encode::Locale;
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
-use LWP::UserAgent;
 use Moose;
 use Socket qw( inet_aton inet_ntoa );
 use Sys::Hostname;
 use URI;
+use YAML qw(Dump);
 
 use Ravada::Domain::Void;
 use Ravada::NetInterface::Void;
@@ -33,6 +33,8 @@ has 'vm' => (
     ,builder => '_connect'
     ,lazy => 1
 );
+
+our $CONNECTOR = \$Ravada::CONNECTOR;
 
 ##########################################################################
 #
@@ -115,8 +117,10 @@ sub create_domain {
             );
             my $vol_clone = $vol_base->clone(name => "$args{name}-$target");
             $domain->add_volume(name => $vol_clone->name
+                              , target => $target
                                 , file => $vol_clone->file
-                                 ,type => 'file');
+                                 ,type => 'file'
+                             );
         }
         my $drivers = {};
         $drivers = $domain_base->_value('drivers');
@@ -131,15 +135,8 @@ sub create_domain {
                         , type => 'file'
                         , target => 'vda'
         );
-        my $cdrom_file = $domain->_config_dir()."/$args{name}-cdrom-"
-            .Ravada::Utils::random_name(4).".iso";
-        my ($cdrom_name) = $cdrom_file =~ m{.*/(.*)};
-        $domain->add_volume(name => $cdrom_name
-                        , file => $cdrom_file
-                        , device => 'cdrom'
-                        , type => 'cdrom'
-                        , target => 'hdc'
-        );
+
+        $self->_add_cdrom($domain, %args);
         $domain->_set_default_drivers();
         $domain->_set_default_info($listen_ip);
         $domain->_store( is_active => 0 );
@@ -150,6 +147,34 @@ sub create_domain {
     $domain->set_memory($args{memory}) if $args{memory};
 #    $domain->start();
     return $domain;
+}
+
+sub _add_cdrom($self, $domain, %args) {
+    my $id_iso = delete $args{id_iso};
+    my $iso_file = delete $args{iso_file};
+    return if !$id_iso && !$iso_file;
+
+    if ($id_iso && ! $iso_file) {
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE id=?");
+        $sth->execute($id_iso);
+        my $row = $sth->fetchrow_hashref();
+        $iso_file = $row->{device};
+        if (!$iso_file) {
+            $iso_file = $row->{name};
+            $iso_file =~ s/\s/_/g;
+            $iso_file=$self->dir_img."/".lc($iso_file).".iso";
+            if (! -e $iso_file ) {
+                $self->write_file($iso_file,Dump({iso => "ISO mock $row->{name}"}));
+            }
+        }
+    }
+    $iso_file = '' if $iso_file eq '<NONE>';
+    $domain->add_volume(
+        file => $iso_file
+        , device => 'cdrom'
+        , type => 'cdrom'
+        , target => 'hdc'
+    );
 }
 
 sub create_volume {
@@ -266,6 +291,8 @@ sub search_volume($self, $pattern) {
 sub _search_volume_remote($self, $pattern) {
 
     my ($out, $err) = $self->run_command("ls -1 ".$self->dir_img);
+
+    confess $err if $err;
 
     my $found;
     for my $file ( split /\n/,$out ) {

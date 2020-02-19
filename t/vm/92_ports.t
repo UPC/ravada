@@ -497,6 +497,49 @@ sub test_clone_exports($vm) {
     $base->remove(user_admin);
 }
 
+sub test_clone_exports_add_ports($vm) {
+
+    my $base = create_domain($vm, user_admin,'debian stretch');
+    $base->expose(port => 22, name => "ssh");
+    my @base_ports0 = $base->list_ports();
+
+    $base->prepare_base(user => user_admin, with_cd => 1);
+
+    my $clone = $base->clone(name => new_domain_name, user => user_admin);
+    $base->expose(port => 80, name => "web");
+    my @base_ports = $base->list_ports();
+    is(scalar @base_ports, scalar @base_ports0 + 1);
+
+    my $clone_f = Ravada::Front::Domain->open($clone->id);
+    eval { my $info = $clone_f->info(user_admin) };
+    is($@,'');
+
+    $clone->start(remote_ip => '10.1.1.1', user => user_admin);
+    my @clone_ports = $clone->list_ports();
+    is(scalar @clone_ports,2 );
+
+    my @req = $clone->list_requests;
+    is(scalar(@req) , 1);
+
+    for my $n ( 0 .. 1 ) {
+        is($base_ports[$n]->{internal_port}, $clone_ports[$n]->{internal_port});
+        isnt($base_ports[$n]->{public_port}, $clone_ports[$n]->{public_port},"Same public port in clone and base for ".$base_ports[$n]->{internal_port});
+        is($base_ports[$n]->{name}, $clone_ports[$n]->{name});
+    }
+    _wait_ip($vm, $clone);
+    wait_request( debug => 0, request => \@req );
+    for (@req) {
+        is($_->status,'done')   or exit;
+        is($_->error,'')        or exit;
+    }
+    my @out = split /\n/, `iptables -t nat -L PREROUTING -n`;
+    ok(grep /dpt:\d+.*\d+:22/, @out);
+    ok(grep /dpt:\d+.*\d+:80/, @out);
+
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+}
+
 sub _wait_ip {
     my $vm_name = shift;
     my $domain = shift  or confess "Missing domain arg";
@@ -894,10 +937,20 @@ add_network_10(0);
 test_can_expose_ports();
 for my $vm_name ( 'KVM', 'Void' ) {
 
+    SKIP: {
     my $vm = rvd_back->search_vm($vm_name);
-    next if !$vm;
+
+    my $msg = "SKIPPED test: No $vm_name VM found ";
+    if ($vm && $>) {
+            $msg = "SKIPPED: Test must run as root";
+            $vm = undef;
+    }
+
+    diag($msg)      if !$vm;
+    skip $msg,10    if !$vm;
 
     diag("Testing $vm_name");
+    test_clone_exports_add_ports($vm);
 
     test_no_dupe($vm);
 
@@ -920,6 +973,7 @@ for my $vm_name ( 'KVM', 'Void' ) {
 
     test_clone_exports($vm);
 
+    }; # of SKIP
 }
 
 flush_rules();

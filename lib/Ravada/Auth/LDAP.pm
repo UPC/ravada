@@ -13,7 +13,10 @@ use Authen::Passphrase;
 use Authen::Passphrase::SaltedDigest;
 use Carp qw(carp);
 use Data::Dumper;
-use Digest::SHA qw(sha1_hex);
+use Digest::SHA qw(sha1_hex sha256_hex);
+use Encode;
+use PBKDF2::Tiny qw/derive/;
+use MIME::Base64;
 use Moose;
 use Net::LDAP;
 use Net::LDAPS;
@@ -43,6 +46,11 @@ our $STATUS_EOF = 1;
 our $STATUS_DISCONNECTED = 81;
 our $STATUS_BAD_FILTER = 89;
 
+our $PBKDF2_SALT_LENGTH = 64;
+our $PBKDF2_ITERATIONS_LENGTH = 4;
+our $PBKDF2_HASH_LENGTH = 256;
+our $PBKDF2_LENGTH = $PBKDF2_SALT_LENGTH + $PBKDF2_ITERATIONS_LENGTH + $PBKDF2_HASH_LENGTH;
+
 =head2 BUILD
 
 Internal OO build
@@ -64,8 +72,7 @@ Adds a new user in the LDAP directory
 
 =cut
 
-sub add_user {
-    my ($name, $password, $is_admin) = @_;
+sub add_user($name, $password, $storage='rfc2307', $algorithm=undef ) {
 
     _init_ldap_admin();
 
@@ -76,8 +83,6 @@ sub add_user {
         if !_dc_base();
     my ($givenName, $sn) = $name =~ m{(\w+)\.(.*)};
 
-    my $apr=Authen::Passphrase::SaltedDigest->new(passphrase => $password, algorithm => "MD5");
-
     my %entry = (
         cn => $name
         , uid => $name
@@ -87,7 +92,7 @@ sub add_user {
         , givenName => ($givenName or $name)
         , sn => ($sn or $name)
 #        , homeDirectory => "/home/$name"
-        ,userPassword => $apr->as_rfc2307()
+        ,userPassword => _password_store($password, $storage, $algorithm)
     );
     my $dn = "cn=$name,"._dc_base();
 
@@ -95,6 +100,51 @@ sub add_user {
     if ($mesg->code) {
         die "Error afegint $name to $dn ".$mesg->error;
     }
+}
+
+sub _password_store($password, $storage, $algorithm) {
+    return _password_rfc2307($password, $algorithm) if lc($storage) eq 'rfc2307';
+    return _password_pbkdf2($password, $algorithm)  if lc($storage) eq 'pbkdf2';
+
+    confess "Error: Unknown storage '$storage'";
+
+}
+
+sub _password_pbkdf2($password, $algorithm='SHA-256') {
+    $algorithm = 'SHA-256' if ! defined $algorithm;
+
+    my $salt = encode('ascii',Ravada::Utils::random_name($PBKDF2_SALT_LENGTH));
+
+    die "wrong salt length ".length($salt)." != $PBKDF2_SALT_LENGTH"
+    if length($salt) != $PBKDF2_SALT_LENGTH;
+
+    my $iterations = 1024;
+    my $derive = derive($algorithm
+        , encode('ascii',$password)
+        , $salt
+        , $iterations
+        , $PBKDF2_HASH_LENGTH);
+
+    my $iterations_n = pack('N', $iterations);
+
+    die "wrong iterations length ".length($iterations_n)." != $PBKDF2_ITERATIONS_LENGTH"
+    if length($iterations_n) != $PBKDF2_ITERATIONS_LENGTH;
+
+    my $pbkdf2 = $iterations_n.$salt.$derive;
+
+    die "wrong pass length ".length($pbkdf2)." != $PBKDF2_LENGTH"
+    if length($pbkdf2) != $PBKDF2_LENGTH;
+
+    $algorithm =~ s/-//;
+    return "\{PBKDF2_$algorithm}"
+        .encode_base64($pbkdf2,"");
+}
+
+sub _password_rfc2307($password, $algorithm='MD5') {
+
+    my $apr=Authen::Passphrase::SaltedDigest->new(passphrase => $password
+        , algorithm => ($algorithm or 'MD5'));
+    return $apr->as_rfc2307();
 }
 
 =head2 remove_user
@@ -139,7 +189,7 @@ sub search_user {
 
     my $username = delete $args{name} or confess "Missing user name";
     my $retry = (delete $args{retry} or 0);
-    my $field = (delete $args{field} or 'uid');
+    my $field = (delete $args{field} or $$CONFIG->{ldap}->{field} or 'uid');
     my $ldap = (delete $args{ldap} or _init_ldap_admin());
     my $base = (delete $args{base} or _dc_base());
     my $typesonly= (delete $args{typesonly} or 0);
@@ -348,10 +398,11 @@ sub login($self) {
     }
 
         $user_ok = $self->_login_bind()
-            if !exists $$CONFIG->{ldap}->{auth}
-                || !$$CONFIG->{ldap}->{auth}
-                || $$CONFIG->{ldap}->{auth} =~ /bind|all/i;
-        $user_ok = $self->_login_match()    if !$user_ok;
+        if !exists $$CONFIG->{ldap}->{auth} || $$CONFIG->{ldap}->{auth} =~ /bind|all/i;
+
+        $user_ok = $self->_login_match()
+            if !$user_ok && exists $$CONFIG->{ldap}->{auth}
+            && $$CONFIG->{ldap}->{auth} =~ /match|all/i;
 
         $self->_check_user_profile($self->name)   if $user_ok;
         $LDAP_ADMIN->unbind if $LDAP_ADMIN && exists $self->{_auth} && $self->{_auth} eq 'bind';
@@ -364,8 +415,15 @@ sub _login_bind {
     my ($username, $password) = ($self->name , $self->password);
 
     my $found = 0;
-    for my $user (search_user( name => $self->name , field => 'uid' )
-                ,search_user( name => $self->name, field => 'cn')) {
+
+    my @user;
+    if (exists $$CONFIG->{ldap}->{field} && defined $$CONFIG->{ldap}->{field} ) {
+        @user = search_user( name => $self->name );
+    } else {
+        @user = (search_user(name => $self->name, field => 'uid')
+                ,search_user(name => $self->name, field => 'cn'));
+    }
+    for my $user (@user) {
         my $dn = $user->dn;
         $found++;
         my $mesg = $LDAP_ADMIN->bind($dn, password => $password);
@@ -454,7 +512,47 @@ sub _match_password {
 #        ."\n"
 #        .sha1_hex($password);
 
-    return Authen::Passphrase->from_rfc2307($password_ldap)->match($password);
+    my ($storage) = $password_ldap =~ /^{([a-z0-9]+)[_}]/i;
+    my ($password_ldap_hex) = $password_ldap =~ /.*?}(.*)/;
+    return Authen::Passphrase->from_rfc2307($password_ldap)->match($password)
+        if $storage =~ /rfc2307|md5/i;
+
+    return _match_pbkdf2($password_ldap,$password) if $storage =~ /pbkdf2|SSHA/i;
+
+    confess "Error: storage $storage can't do match. Use bind.";
+}
+
+sub _ntohl {
+    return unless defined wantarray;
+    confess "Wrong number of arguments ($#_) to " . __PACKAGE__ . "::ntohl, called"
+    if @_ != 1 and !wantarray;
+    unpack('L*', pack('N*', @_));
+}
+
+sub _match_pbkdf2($password_db_64, $password) {
+
+    my ($sign,$password_db) = $password_db_64 =~ /(\{.*?})(.*)/;
+    $password_db=decode_base64($password_db);
+
+    my ($algorithm,$n) = $sign =~ /_(.*?)(\d+)}/;
+
+    die "password_db length wrong: ".length($password_db)
+    ." != $PBKDF2_LENGTH"
+        if length($password_db) != $PBKDF2_LENGTH;
+
+    my ($iterations_db) = substr($password_db, 0, $PBKDF2_ITERATIONS_LENGTH);
+    my $iterations = unpack 'V', $iterations_db;
+    ($iterations) = _ntohl($iterations);
+
+    my ($salt)
+    = substr($password_db, $PBKDF2_ITERATIONS_LENGTH, $PBKDF2_SALT_LENGTH);
+    my $derive = derive("$algorithm-$n", encode('ascii',$password), $salt
+        , $iterations, $PBKDF2_HASH_LENGTH);
+
+    my $match = $sign.encode_base64($iterations_db.$salt.$derive,"");
+
+    return $password_db_64 eq $match;
+
 }
 
 sub _dc_base {
@@ -487,7 +585,7 @@ sub _connect_ldap {
     
     for my $retry ( 1 .. 3 ) {
         if ($secure ) {
-            $ldap = Net::LDAPS->new($host, port => $port, verify => 'none') 
+            $ldap = _connect_ldaps($host, $port);
         } else {
             $ldap = Net::LDAP->new($host, port => $port, verify => 'none') 
         }
@@ -505,6 +603,17 @@ sub _connect_ldap {
     }
 
     return $ldap;
+}
+
+sub _connect_ldaps($host, $port) {
+    my @args;
+    push @args,(sslversion => $$CONFIG->{ldap}->{sslversion})
+    if exists $$CONFIG->{ldap}->{sslversion};
+
+    return Net::LDAPS->new($host, port => $port, verify => 'none'
+        ,@args
+    )
+
 }
 
 sub _init_ldap_admin {

@@ -4,7 +4,8 @@
 %   if ( $guide ) {
         <a ng-show="public_bases" class="btn btn-large btn-success" href="javascript:void(0);" ng-click="startIntro();"><%= l 'Step-by-step guide' %></a>
 %   }
-%   if ($user && $user->is_admin) {
+%   if ($user && ( $user->is_operator || $user->is_admin)) {
+        %= include 'main/check_ws'
         <div ng-cloak ng-show="public_bases && private_bases">
             <a ng-click="toggle_only_public()" class="badge badge-primary text-white dropdown-toggle"
               align="right" ng-show="!only_public"><%=l 'Hide Private' %></a>

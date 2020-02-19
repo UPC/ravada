@@ -73,7 +73,8 @@ sub test_remove_corrupt_clone {
     eval { $clone->start(user_admin) };
     diag($@);
     eval { $clone->shutdown_now(user_admin) };
-    like($@,qr{(No base for|Image not in qcow)});
+    # will silentlty shut the machine down when bogus clone file
+    # like($@,qr{(No base for|Image not in qcow)});
     is($clone->is_active,0);
 
     $clone->remove(user_admin);
