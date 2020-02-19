@@ -6,7 +6,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
 "PO-Revision-Date: 2017-05-02 16:20+0200\n"
-"Last-Translator: Fernando Verdugo fernando@etsetb.upc.edu\n"
+"Last-Translator: Mohamed Guennoun mohamedguennoun@gmail.com\n"
 "Language-Team: \n"
 "Language: ca\n"
 "MIME-Version: 1.0\n"
@@ -279,6 +279,12 @@ msgstr "أو انسخ الأسطر التالية في ملف" "ASCII" " واح�
 
 msgid "Login"
 msgstr "تسجيل الدخول"
+
+msgid "Valencian"
+msgstr "بلنسية اسبانيا"
+
+msgid "Turkish"
+msgstr "التركية"
 
 msgid "Welcome"
 msgstr "مرحبًا"
