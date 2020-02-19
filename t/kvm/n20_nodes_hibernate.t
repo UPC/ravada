@@ -79,7 +79,7 @@ sub _hibernate_domain($domain) {
 #######################################################################
 
 clean();
-clean_remote();
+clean_remote() if !$>;
 
 for my $vm_name ('Void' , 'KVM' ) {
     my $vm;
