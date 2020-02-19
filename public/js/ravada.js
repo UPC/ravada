@@ -110,6 +110,7 @@
             };
             ws_connected = false;
             $timeout(function() {
+                if (typeof $scope.public_bases === 'undefined') $scope.public_bases = 0;
                 if (!ws_connected) {
                     $scope.ws_fail = true;
                 }
