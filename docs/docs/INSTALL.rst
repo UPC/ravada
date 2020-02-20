@@ -39,10 +39,10 @@ if you are only upgrading Ravada from a previous version already installed.
 
 Ravada can be installed from package or using docker.
 
-* `Ubuntu<http://ravada.readthedocs.io/en/latest/docs/INSTALL_ubuntu.html>`_
-* `Debian<http://ravada.readthedocs.io/en/latest/docs/INSTALL_debian.html>`_
-* `RedHat Fedora<http://ravada.readthedocs.io/en/latest/docs/INSTALL_fedora.html>`_
-* `Docker<http://ravada.readthedocs.io/en/latest/docs/INSTALLfromDockers.rst>`_
+* `Ubuntu <http://ravada.readthedocs.io/en/latest/docs/INSTALL_ubuntu.html>`_
+* `Debian <http://ravada.readthedocs.io/en/latest/docs/INSTALL_debian.html>`_
+* `RedHat Fedora <http://ravada.readthedocs.io/en/latest/docs/INSTALL_fedora.html>`_
+* `Docker <http://ravada.readthedocs.io/en/latest/docs/INSTALLfromDockers.rst>`_
 
 Client
 ------
