@@ -1,5 +1,5 @@
-[WIP] Install Ravada from dockers for devel purpose
-===================================================
+Install Ravada from dockers for devel purpose
+=============================================
 
 Requirements
 ------------
@@ -9,8 +9,8 @@ OS
 
 Install `Docker <https://docs.docker.com/v17.12/install/>`_ and `docker-compose <https://docs.docker.com/compose/install/>`_ on your local machine.
 
-.. warning ::
-  There are several versions of the Compose file format – 1, 2, 2.x, and 3.x. For now, we use 3.5
+.. note ::
+  There are several versions of the Compose file format – 1, 2, 2.x, and 3.x. For now, we use 2.2
   keep this in mind https://docs.docker.com/compose/compose-file/
     
 Hardware
@@ -44,7 +44,6 @@ For now, ravada source must be (locally) in: ``~/src/ravada`` , you need to clon
    cd ~
    mkdir src
    git clone https://github.com/UPC/ravada.git
-   git checkout 369_dockers 
    cd dockerfy
    
 .. prompt:: bash $
