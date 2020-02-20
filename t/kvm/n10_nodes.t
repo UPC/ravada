@@ -1136,7 +1136,7 @@ sub test_status($node) {
 
 #############################################################
 clean();
-clean_remote();
+clean_remote() if !$>;
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
@@ -1151,7 +1151,8 @@ SKIP: {
     if ($vm && $>) {
         $msg = "SKIPPED: Test must run as root";
         $vm = undef;
-    } else {
+    }
+    if ($vm) {
         $node = remote_node($vm_name);
         $node = test_node($vm_name, $node) if $node;
         $vm = undef if !$node;

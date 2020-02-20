@@ -157,6 +157,12 @@ init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
 like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
 
+if (!rvd_front->ping_backend) {
+    diag("SKIPPED: no backend");
+    done_testing();
+    exit;
+}
+
 remove_old_domains_req();
 
 $t = Test::Mojo->new($SCRIPT);

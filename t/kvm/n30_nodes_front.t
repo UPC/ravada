@@ -17,7 +17,7 @@ $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 init();
 
 clean();
-clean_remote();
+clean_remote() if !$<;
 
 my $REMOTE_CONFIG;
 #############################################################
@@ -228,6 +228,6 @@ for my $vm_name ('KVM' , 'Void' ) {
 #################################################################
 
 clean();
-clean_remote();
+clean_remote() if !$<;
 
 done_testing();

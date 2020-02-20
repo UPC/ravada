@@ -138,7 +138,7 @@ for my $vm_name ( 'KVM', 'Void') {
             skip($msg,10);
         }
 
-        if ($vm && $vm_name =~ /kvm/i && $>) {
+        if ($vm && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         }
