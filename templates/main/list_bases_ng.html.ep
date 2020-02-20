@@ -32,6 +32,7 @@
                     width="260"></a>
             </div>
             <div class="card-body" id="step2">
+                <div class="row">
                 <a type="button" class="btn btn-success" ng-hide="machine.action"
                    href="/machine/clone/{{machine.id}}.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
                 <a type="button" class="btn btn-danger text-white"
@@ -50,26 +51,26 @@
                             ><%=l 'Yes' %></a>
                     </div>
                  <a ng-show="machine.is_active && !machine.action"
-                        class="btn btn-light"
+                        class="btn btn-outline-secondary"
                         ng-click="machine.action=true;$parent.refresh=20"
                         type="button"><%=l 'action'%></a>
                     <div class="btn-group"
                             ng-show="machine.action && !host_restore"
                             >
-                        <a type="button" class="btn btn-light btn-sm"
+                        <button type="button" class="btn btn-outline-dark btn-sm"
                             ng-show="machine.can_remove"
                             ng-click="host_restore=machine.id_clone"
-                        ><%=l 'Restore' %></a>
+                        ><%=l 'Restore' %></button>
 
-                        <a ng-show="machine.is_active" type="button"
-                                                       class="btn btn-light btn-sm"
+                        <button ng-show="machine.is_active" type="button"
+                                                       class="btn btn-outline-dark btn-sm"
                             ng-click="machine.action=false;action(machine,'shutdown')"
-                        ><%=l 'Shutdown'%></a>
+                        ><%=l 'Shutdown'%></button>
 
-                        <a ng-show="machine.is_active && machine.can_hibernate" type="button"
-                                                       class="btn btn-light btn-sm"
+                        <button ng-show="machine.is_active && machine.can_hibernate" type="button"
+                                                       class="btn btn-outline-dark"
                             ng-click="machine.action=false;action(machine,'hibernate')"
-                        ><%=l 'Hibernate' %></a>
+                        ><%=l 'Hibernate' %></button>
 
                         <a
                            ng-click="machine.action=false"
@@ -80,7 +81,7 @@
                         <a ng-show="machine.id_clone && !machine.action && host_restore != machine.id_clone"
                             align="right" href="/machine/manage/{{machine.id_clone}}.html"><i class="fa fa-fw fa-cog" title="<%=l 'Settings' %>"></i></a>
 %                   }
-
+                    </div>
             </div>
         </div>
     </div>
