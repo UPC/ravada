@@ -53,34 +53,23 @@ You must enable spice KVM manually:
 Mysql Database
 --------------
 
-MySQL server
+MariaDB server
 ~~~~~~~~~~~~
-.. Warning::  MySql required minimum version 5.6
 
-It is required a MySQL server, it can be installed in another host or in
+It is required a MySQL or MariaDB server, it can be installed in another host or in
 the same one as the ravada package.
 
 .. prompt:: bash $
 
-     sudo apt-get install mysql-server
-
-After completion of mysql installation, run command:
-
-.. prompt:: bash $
-
-     sudo mysql_secure_installation
+     sudo apt-get install mariadb-server
 
 
-MySQL database and user
+MariaDB database and user
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 It is required a database for internal use. In this examples we call it *ravada*.
 We also need an user and a password to connect to the database. It is customary to call it *rvd_user*.
 In this stage the system wants you to set a password for the sql connection.
-
-.. Warning:: When installing MySQL you wont be asked for a password, you can set a password for the root user in MySQL via *mysql_secure_installation* or type your user's password when it ask's you for a password.
-
-Create the database:
 
 .. prompt:: bash $
 
