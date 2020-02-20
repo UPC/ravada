@@ -3330,6 +3330,7 @@ sub _cmd_list_isos($self, $request){
     my $vm_type = $request->args('vm_type');
    
     my $vm = Ravada::VM->open( type => $vm_type );
+    $vm->refresh_storage();
     my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
 
     $request->output(encode_json(\@isos));
