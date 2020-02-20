@@ -34,9 +34,6 @@ disks images, so clones won't require many space.
 Install Ravada from dockers
 ---------------------------
 
-.. note :: 
-   We are working to improve this steps and to make it all automatic
-
 For now, ravada source must be (locally) in: ``~/src/ravada`` , you need to clone repository:
 
 .. prompt:: bash $
