@@ -104,6 +104,8 @@ Help
 Struggling with the installation procedure ? We tried to make it easy but
 let us know if you need `assistance <http://ravada.upc.edu/#help>`__.
 
+Maybe this `slides <https://fv3rdugo.github.io/ravada-docker-slides/index.html#/>`_ can help you.
+
 There is also a `troubleshooting <troubleshooting.html>`__ page with common problems that
 admins may face.
 
