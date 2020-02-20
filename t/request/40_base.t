@@ -534,7 +534,7 @@ ok($Ravada::CONNECTOR,"Expecting conector, got ".($Ravada::CONNECTOR or '<unde>'
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(KVM Void)) {
+for my $vm_name ( vm_names ) {
     my $vm_connected;
     eval {
         my $rvd_back = rvd_back();
