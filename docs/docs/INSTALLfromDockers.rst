@@ -45,7 +45,6 @@ For now, ravada source must be (locally) in: ``~/src/ravada`` , you need to clon
    
 .. prompt:: bash $
 
-   cd dockerfy
    docker-compose pull
    docker-compose up -d
 
