@@ -1,5 +1,5 @@
-Install Ravada from dockers for devel purpose
-=============================================
+Install Ravada from dockers
+===========================
 
 Requirements
 ------------
