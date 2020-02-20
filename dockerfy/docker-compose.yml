@@ -1,4 +1,4 @@
-version: "3.5"
+version: "2.2"
 services:
   ravada-mysql:
     container_name: ravada-mysql
