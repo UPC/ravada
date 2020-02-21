@@ -99,6 +99,7 @@ setlocale(LC_CTYPE, $old_locale);
 #####
 #####
 #####
+BEGIN { $ENV{MOJO_I18N_DEBUG} = 1 };
 plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
 plugin 'RenderFile';
 
