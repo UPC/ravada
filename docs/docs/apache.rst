@@ -1,5 +1,12 @@
 Run Hypnotoad service and Apache as a proxy for it.
 
+Upgrading
+---------
+
+Even if you had Apache proxy already set up you must add some
+configuration options. Check Hypnotoad, modules and configuration
+and make sure it is exactly like this.
+
 Configure Hypnotoad proxy
 -------------------------
 
