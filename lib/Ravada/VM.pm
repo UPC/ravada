@@ -302,8 +302,8 @@ sub _connect_ssh($self, $disconnect=0) {
     confess "Don't connect to local ssh"
         if $self->is_local;
 
-    if ( $self->readonly ) {
-        warn $self->name." readonly, don't do ssh";
+    if ( $self->readonly || $> ) {
+        confess $self->name." readonly or not root, don't do ssh";
         return;
     }
 

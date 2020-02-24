@@ -2113,7 +2113,9 @@ sub internal_id($self) {
     return $self->domain->get_id();
 }
 
-sub autostart($self, $value=undef, $user=undef) {
+sub autostart { return _internal_autostart(@_) }
+
+sub _internal_autostart($self, $value=undef, $user=undef) {
     $self->domain->set_autostart($value) if defined $value;
     return $self->domain->get_autostart();
 }
