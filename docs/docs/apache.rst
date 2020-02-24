@@ -43,6 +43,10 @@ Install Apache
 Enable apache modules
 ---------------------
 
+Enable these modules.
+
+.. Tip:: Do it even it is not the first time you set up Apache. We added some modules in the latest release.
+
 .. prompt:: bash #
 
     a2enmod ssl proxy proxy_http proxy_connect proxy_wstunnel headers
@@ -56,7 +60,9 @@ Link the https configuration and add the proxy lines.
 
     a2ensite default-ssl
 
-Edit /etc/apache2/sites-enabled/default-ssl.conf
+Edit /etc/apache2/sites-enabled/default-ssl.conf.
+
+.. Tip:: Do not forget new *ProxyPass* and *RequestHeader* lines added in the last release.
 
 ::
 
