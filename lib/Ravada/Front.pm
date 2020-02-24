@@ -313,7 +313,7 @@ sub list_domains($self, %args) {
             $row->{node} = $domain->_vm->name if $domain->_vm;
             $row->{remote_ip} = $domain->client_status
                 if $domain->client_status && $domain->client_status ne 'connected';
-            $row->{autostart} = $domain->autostart;
+            $row->{autostart} = $domain->_data('autostart');
             if (!$row->{status} ) {
                 if ($row->{is_active}) {
                     $row->{status} = 'active';

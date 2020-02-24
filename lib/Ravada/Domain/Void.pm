@@ -629,7 +629,9 @@ sub is_removed {
     return 1;
 }
 
-sub autostart {
+sub autostart { return _internal_autostart(@_) }
+
+sub _internal_autostart {
     my $self = shift;
     my $value = shift;
 

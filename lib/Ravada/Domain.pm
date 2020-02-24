@@ -754,7 +754,15 @@ sub _around_autostart($orig, $self, @arg) {
     my $autostart = 0;
     my @orig_args = ();
     push @orig_args, ( $value) if defined $value;
-    if ( $self->$orig(@orig_args) ) {
+
+    # We only set the internal autostart when domain is not in nodes
+    if ($self->_domain_in_nodes) {
+        if (defined $value) {
+            $autostart = $value;
+        } else {
+            $autostart = $self->_data('autostart');
+        }
+    } elsif ( $self->$orig(@orig_args) ) {
         $autostart = 1;
     }
     $self->_data(autostart => $autostart)   if defined $value;
@@ -3634,6 +3642,7 @@ sub _pre_migrate($self, $node, $request = undef) {
 
     $self->_check_equal_storage_pools($node) if $self->_vm->is_active;
 
+    $self->_internal_autostart(0);
     return if !$self->id_base;
 
     $self->check_status();
@@ -3760,6 +3769,7 @@ sub set_base_vm($self, %args) {
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
         $self->migrate($vm, $request);
+        $self->_set_clones_autostart(0);
     } else {
         if ($vm->is_active) {
             my $vm_local = $self->_vm->new( host => 'localhost' );
@@ -3783,6 +3793,13 @@ sub set_base_vm($self, %args) {
     }
     $vm->_add_instance_db($self->id);
     return $self->_set_base_vm_db($vm->id, $value);
+}
+
+sub _set_clones_autostart($self, $value) {
+    for my $clone_data ($self->clones) {
+        my $clone = Ravada::Domain->open($clone_data->{id});
+        $clone->_internal_autostart(0);
+    }
 }
 
 sub migrate_base($self, %args) {
@@ -4683,6 +4700,18 @@ sub list_instances($self) {
         push @instances, ( $row );
     }
     return @instances;
+}
+
+sub _base_in_nodes($self) {
+    my $base = Ravada::Front::Domain->open($self->id_base);
+    confess "Error: no id_base ".($self->id_base or '<NULL>')
+        .Dumper($self) if !$base;
+    return $base->list_instances > 1;
+}
+
+sub _domain_in_nodes($self) {
+    return $self->_base_in_nodes() if $self->id_base;
+    return $self->list_instances > 1;
 }
 
 1;
