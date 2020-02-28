@@ -1176,4 +1176,10 @@ sub version {
     return Ravada::version();
 }
 
+sub _dbh_disconnect {
+    return if ! $CONNECTOR;
+    $CONNECTOR->dbh->disconnect() if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite/i;
+}
+
+
 1;

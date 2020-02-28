@@ -1336,6 +1336,33 @@ sub _upgrade_timestamp($self, $table, $field) {
     $sth->execute();
 }
 
+sub _data_source_sqlite($config) {
+    my $file = ($config->{file} or "/var/lib/sqlite3/ravada.db");
+    my @pwd =getpwnam($config->{user})
+            or die "Error: user '$config->{user}' unkonwn defined in config file";
+    my ($dir) = $file =~ m{(.*)/};
+    if (! -e $dir ) {
+        make_path($dir);
+        chown $pwd[2],$pwd[3],$dir  if !$<;
+    }
+    if (! -e $file) {
+        warn "creating $file";
+        open my $db,">",$file or die "$! $file";
+        close $db;
+        chown $pwd[2],$pwd[3],$file if !$<;
+    }
+    return "DBI:$config->{driver}:$file";
+}
+
+sub _db_options_sqlite($config) {
+    return   {sqlite_allow_multiple_statements=> 1
+                        , AutoCommit => 1
+                        , RaiseError => 1
+                        , PrintError => 1
+                        ,
+                }
+}
+
 sub _connect_dbh {
     my $driver= ($CONFIG->{db}->{driver} or 'mysql');;
     my $db_user = ($CONFIG->{db}->{user} or getpwnam($>));;
@@ -1347,14 +1374,20 @@ sub _connect_dbh {
     $data_source = "DBI:$driver:database=$db;host=$host"
         if $host && $host ne 'localhost';
 
+    my $db_options = {RaiseError => 1 , PrintError=> 0 };
+
+    $data_source = _data_source_sqlite($CONFIG->{db})   if $driver =~ /sqlite/i;
+    $db_options  = _db_options_sqlite($CONFIG->{db})    if $driver =~ /sqlite/i;
+
     my $con;
     for my $try ( 1 .. 10 ) {
-        eval { $con = DBIx::Connector->new($data_source
-                        ,$db_user,$db_pass,{RaiseError => 1
-                        , PrintError=> 0 });
+        eval {
+            $con = DBIx::Connector->new($data_source ,$db_user,$db_pass,);
             $con->dbh();
         };
-        return $con if $con && !$@;
+        if ( $con && !$@ ) {
+            return $con;
+        }
         sleep 1;
         warn "Try $try $@\n";
     }
@@ -2401,6 +2434,7 @@ sub _execute {
     $self->_wait_pids;
     return if !$self->_can_fork($request);
 
+    $CONNECTOR->dbh->disconnect if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite/i;
     my $pid = fork();
     die "I can't fork" if !defined $pid;
 
