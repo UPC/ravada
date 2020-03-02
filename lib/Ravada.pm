@@ -64,7 +64,7 @@ our %VALID_CONFIG = (
 
 =head1 NAME
 
-Ravada - Remove Virtual Desktop Manager
+Ravada - Remote Virtual Desktop Manager
 
 =head1 SYNOPSIS
 
