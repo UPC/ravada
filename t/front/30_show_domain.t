@@ -166,9 +166,9 @@ sub test_vm_ro {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (qw(Void KVM)) {
+for my $vm_name ( vm_names() ) {
     my $vm = $RVD_BACK->search_vm($vm_name);
-    if ( !$vm ) {
+    if ( !$vm || ($vm_name eq 'KVM' && $<) ) {
         diag("Skipping VM $vm_name in this system");
         next;
     }
@@ -178,7 +178,5 @@ for my $vm_name (qw(Void KVM)) {
     test_shutdown_domain($vm_name, $dom_name);
 }
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();

@@ -98,5 +98,5 @@ SKIP: {
     test_tls($vm_name);
 }
 
-clean();
+end();
 done_testing();

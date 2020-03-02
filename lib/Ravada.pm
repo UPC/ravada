@@ -2281,6 +2281,12 @@ sub process_all_requests {
 
 }
 
+=head2 process_priority_requests
+
+Process all the priority requests, long and short
+
+=cut
+
 sub process_priority_requests($self, $debug=0, $dont_fork=0) {
 
     $self->process_requests($debug, $dont_fork,'priority');
@@ -3670,6 +3676,12 @@ sub search_vm {
     }
     return;
 }
+
+=head2 vm
+
+Returns the list of Virtual Managers
+
+=cut
 
 sub vm($self) {
     my $sth = $CONNECTOR->dbh->prepare(

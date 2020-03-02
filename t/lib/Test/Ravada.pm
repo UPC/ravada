@@ -70,6 +70,8 @@ create_domain
 
     mangle_volume
     test_volume_contents
+
+    end
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
@@ -544,13 +546,13 @@ sub _remove_old_domains_kvm {
 }
 
 sub remove_old_domains {
-    _remove_old_domains_vm('KVM');
+    _remove_old_domains_vm('KVM') if !$<;
     _remove_old_domains_vm('Void');
-    _remove_old_domains_kvm();
+    _remove_old_domains_kvm()   if !$<;
 }
 
 sub mojo_init() {
-    my $script = path(__FILE__)->dirname->sibling('../../rvd_front.pl');
+    my $script = path(__FILE__)->dirname->sibling('../../script/rvd_front');
 
     my $t = Test::Mojo->new($script);
     $t->ua->inactivity_timeout(900);
@@ -630,12 +632,16 @@ sub _remove_old_disks_kvm {
         ." after refresh storage pool") or return;
 
     for my $pool( $vm->vm->list_all_storage_pools ) {
+        next if !$pool->is_active;
         for my $volume  ( $pool->list_volumes ) {
             next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2|void)$/;
             $volume->delete();
         }
     }
-    $vm->storage_pool->refresh();
+    eval {
+        $vm->storage_pool->refresh();
+    };
+    die $@ if $@ && $@ !~ /is not active/;
 }
 sub _remove_old_disks_void($node=undef){
     if (! defined $node || $node->is_local) {
@@ -819,7 +825,12 @@ sub wait_request {
 sub init_vm {
     my $vm = shift;
     return if $vm->type =~ /void/i;
-    _qemu_storage_pool($vm) if $vm->type =~ /qemu/i;
+    _init_vm_kvm($vm)   if $vm->type eq 'KVM';
+}
+
+sub _init_vm_kvm($vm) {
+    _qemu_storage_pool($vm) if $>;
+    _remove_old_disks_kvm($vm);
 }
 
 sub _exists_storage_pool {
@@ -835,41 +846,41 @@ sub _qemu_storage_pool {
 
     my $pool_name = new_pool_name();
 
-    if ( _exists_storage_pool($vm, $pool_name)) {
-        $vm->default_storage_pool_name($pool_name);
-        return;
+    if (! _exists_storage_pool($vm, $pool_name)) {
+
+        my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+
+        my $dir = "/var/tmp/$pool_name";
+        mkdir $dir if ! -e $dir;
+
+        my $xml =
+        "<pool type='dir'>
+        <name>$pool_name</name>
+        <uuid>$uuid</uuid>
+        <capacity unit='bytes'></capacity>
+        <allocation unit='bytes'></allocation>
+        <available unit='bytes'></available>
+        <source>
+        </source>
+        <target>
+        <path>$dir</path>
+        <permissions>
+        <mode>0711</mode>
+        <owner>0</owner>
+        <group>0</group>
+        </permissions>
+        </target>
+        </pool>"
+        ;
+        my $pool;
+        eval { $pool = $vm->vm->create_storage_pool($xml) };
+        ok(!$@,"Expecting \$@='', got '".($@ or '')."'") or return;
+        ok($pool,"Expecting a pool , got ".($pool or ''));
     }
 
-    my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
-
-    my $dir = "/var/tmp/$pool_name";
-    mkdir $dir if ! -e $dir;
-
-    my $xml =
-"<pool type='dir'>
-  <name>$pool_name</name>
-  <uuid>$uuid</uuid>
-  <capacity unit='bytes'></capacity>
-  <allocation unit='bytes'></allocation>
-  <available unit='bytes'></available>
-  <source>
-  </source>
-  <target>
-    <path>$dir</path>
-    <permissions>
-      <mode>0711</mode>
-      <owner>0</owner>
-      <group>0</group>
-    </permissions>
-  </target>
-</pool>"
-;
-    my $pool;
-    eval { $pool = $vm->vm->create_storage_pool($xml) };
-    ok(!$@,"Expecting \$@='', got '".($@ or '')."'") or return;
-    ok($pool,"Expecting a pool , got ".($pool or ''));
-
     $vm->default_storage_pool_name($pool_name);
+
+    return $pool_name;
 }
 
 sub remove_qemu_pools {
@@ -926,13 +937,16 @@ sub clean {
 }
 
 sub _clean_db {
-    my $sth = $CONNECTOR->dbh->prepare(
+    my $connector = connector();
+    return if $connector->{driver} =~ /mysql/i;
+
+    my $sth = $connector->dbh->prepare(
         "DELETE FROM vms "
     );
     $sth->execute;
     $sth->finish;
 
-    $sth = $CONNECTOR->dbh->prepare(
+    $sth = $connector->dbh->prepare(
         "DELETE FROM domains"
     );
     $sth->execute;
@@ -1250,7 +1264,7 @@ sub start_node($node) {
     ok($domain->ip,"Make sure the virtual machine ".$domain->name." has installed the qemu-guest-agent") or exit;
 
     $node->is_active(1);
-    $node->is_enabled(1);
+    $node->enabled(1);
     for ( 1 .. 60 ) {
         my $node2 = Ravada::VM->open(id => $node->id);
         last if $node2->is_active(1);
@@ -1471,9 +1485,7 @@ sub _do_remote_node($vm_name, $remote_config) {
 }
 
 sub _dir_db {
-    my $dir_db= $0;
-    $dir_db =~ s{(t)/(.*)/.*}{$1/.db/$2};
-    $dir_db =~ s{(t)/.*}{$1/.db} if !defined $2;
+    my $dir_db = "t/.db";
     if (! -e $dir_db ) {
             make_path $dir_db or die "$! $dir_db";
     }
@@ -1486,8 +1498,9 @@ sub _file_db {
 
     if (! $file_db ) {
         $file_db = $0;
-        $file_db =~ s{.*/(.*)\.\w+$}{$dir_db/$1\.db};
-        mkpath $dir_db or die "$! '$dir_db'" if ! -d $dir_db;
+        $file_db =~ s{t/}{};
+        $file_db =~ tr{/}{_};
+        $file_db =~ s{(.*)\.\w+$}{$dir_db/$1\.db};
     }
     if ( -e $file_db ) {
         unlink $file_db or die("$! $file_db");
@@ -1549,6 +1562,12 @@ sub connector {
 sub DESTROY {
     shutdown_nodes();
     remove_old_user_ldap() if $CONNECTOR;
+}
+
+sub end {
+    clean();
+    _file_db();
+    rmdir _dir_db();
 }
 
 sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'

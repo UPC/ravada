@@ -98,7 +98,9 @@ sub _connect {
     $con_type = 'qemu' if $self->type eq 'KVM';
 
     if ($self->host eq 'localhost') {
-        $vm = Sys::Virt->new( address => $con_type.":///system" , readonly => $self->readonly);
+        my $address = "system";
+        $address = "session" if $<;
+        $vm = Sys::Virt->new( address => $con_type.":///$address" , readonly => $self->readonly);
     } else {
         confess "Error: You can't connect to remote VMs in readonly mode"
             if $self->readonly;

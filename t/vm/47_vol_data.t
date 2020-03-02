@@ -146,7 +146,6 @@ for my $vm_name (vm_names()) {
     }
 }
 
-clean();
-
+end();
 done_testing();
 

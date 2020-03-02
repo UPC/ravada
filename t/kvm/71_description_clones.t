@@ -257,6 +257,5 @@ SKIP: {
     test_remove_base($vm_name);
 }
 
-clean();
-
+end();
 done_testing();

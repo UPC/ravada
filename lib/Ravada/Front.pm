@@ -205,8 +205,8 @@ sub list_machines($self, $user) {
 
     my @list = ();
     push @list,(@{filter_base_without_clones($self->list_domains())}) if $user->can_list_clones();
-    push @list,(@{$self->list_own_clones($user)}) if $user->can_list_clones_from_own_base();
-    push @list,(@{$self->list_own($user)}) if $user->can_list_own_machines();
+    push @list,(@{$self->_list_own_clones($user)}) if $user->can_list_clones_from_own_base();
+    push @list,(@{$self->_list_own_machines($user)}) if $user->can_list_own_machines();
     
     return [@list] if scalar @list < 2;
 
@@ -360,7 +360,7 @@ sub filter_base_without_clones($domains) {
     return \@list;
 }
 
-sub list_own_clones($self, $user) {
+sub _list_own_clones($self, $user) {
     my $machines = $self->list_bases( id_owner => $user->id );
     for my $base (@$machines) {
         confess "ERROR: BAse without id ".Dumper($base) if !$base->{id};
@@ -369,7 +369,7 @@ sub list_own_clones($self, $user) {
     return $machines;
 }
 
-sub list_own($self, $user) {
+sub _list_own_machines($self, $user) {
     my $machines = $self->list_domains(id_owner => $user->id);
     for my $clone (@$machines) {
         next if !$clone->{id_base};
@@ -481,6 +481,7 @@ sub node_exists {
     return 0 if !defined $id;
     return 1;
 }
+
 =head2 list_vm_types
 
 Returns a reference to a list of Virtual Machine Managers known by the system
@@ -568,6 +569,7 @@ sub _list_machines_vm($self, $id_node) {
     $sth->finish;
     return \@bases;
 }
+
 =head2 list_iso_images
 
 Returns a reference to a list of the ISO images known by the system
@@ -1094,6 +1096,12 @@ sub enable_node($self, $id_node, $value) {
     return $value;
 }
 
+=head2 remove_node
+
+Remove new node from the table VMs
+
+=cut
+
 sub remove_node($self, $id_node, $value) {
     my $sth = $CONNECTOR->dbh->prepare("DELETE FROM vms WHERE id=?");
     $sth->execute($id_node);
@@ -1101,6 +1109,12 @@ sub remove_node($self, $id_node, $value) {
 
     return $value;
 }
+
+=head2 add_node
+
+Inserts a new node in the table VMs
+
+=cut
 
 sub add_node($self,%arg) {
     my $sql = "INSERT INTO vms "
@@ -1132,6 +1146,18 @@ sub _cache_get($self, $key) {
     return $self->{cache}->{$key}->[0];
 
 }
+
+=head2 list_network_interfaces
+
+Request to list the network interfaces. Returns a reference to the list.
+
+    my $interfaces = $rvd_front->list_network_interfaces(
+        vm_type => 'KVM'
+        ,type => 'bridge'
+        ,user => $user
+    )
+
+=cut
 
 sub list_network_interfaces($self, %args) {
 

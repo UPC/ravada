@@ -1231,7 +1231,7 @@ SKIP: {
 }
 
 END: {
-clean();
+end();
 
 done_testing();
 }

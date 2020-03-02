@@ -20,4 +20,5 @@ eval { $iso = rvd_front->list_iso_images() };
 is($@,'');
 ok(scalar @$iso,"Expecting ISOs, got :".Dumper($iso));
 
+end();
 done_testing();

@@ -97,6 +97,5 @@ SKIP: {
 
 };
 
-clean();
-
+end();
 done_testing();

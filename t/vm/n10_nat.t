@@ -229,7 +229,6 @@ for my $vm_name ( 'Void', 'KVM' ) {
     }
 }
 
-clean();
-flush_rules();
-
+flush_rules() if $<;
+end();
 done_testing();

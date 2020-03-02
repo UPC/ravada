@@ -88,5 +88,5 @@ for my $vm_name (reverse sort @VMS) {
    }
 }
 
-clean();
+end();
 done_testing();

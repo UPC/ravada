@@ -25,4 +25,5 @@ ok(scalar @$vm_front,"Expecting some VMs in front, got none");
 ok(grep({$_ eq 'Void' } @{$vm_front}),
         "Expecting a VM type Void in front, got ".Dumper($vm_front));
 
+end();
 done_testing();

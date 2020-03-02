@@ -787,5 +787,5 @@ for my $vm_name (vm_names()) {
     test_clone_all($vm_name);
 
 }
-clean();
+end();
 done_testing();

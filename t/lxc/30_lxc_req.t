@@ -93,4 +93,5 @@ SKIP: {
     test_new_req();
 };
 
+end();
 done_testing();

@@ -3,8 +3,6 @@
 use warnings;
 use strict;
 
-use lib './lib';
-
 use Data::Dumper;
 use Getopt::Long;
 use POSIX ":sys_wait_h";

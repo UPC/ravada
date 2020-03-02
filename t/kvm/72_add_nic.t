@@ -142,6 +142,6 @@ SKIP: {
     test_add_nic($vm_name);
 }
 
-clean();
+end();
 
 done_testing();

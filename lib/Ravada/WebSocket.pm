@@ -236,6 +236,7 @@ sub BUILD {
                 $channel =~ s{/.*}{};
                 my $exec = $SUB{$channel} or die "Error: unknown channel $channel";
 
+                $self->ravada->_dbh_disconnect();
                 my $ret = $exec->($self->ravada, $self->clients->{$key});
                 my $old_ret = $self->clients->{$key}->{ret};
                 if ( _different($ret, $old_ret )) {
@@ -269,6 +270,7 @@ sub subscribe($self, %args) {
     my %args2 = %args;
     delete $args2{ws};
     warn "Subscribe ".Dumper(\%args2) if $DEBUG;
+    $self->ravada->_dbh_disconnect();
     $self->clients->{$ws} = {
         ws => $ws
         , %args

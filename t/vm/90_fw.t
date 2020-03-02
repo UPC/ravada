@@ -182,16 +182,14 @@ sub test_fw_ssh {
 
 sub test_jump {
     my ($vm_name, $domain_name) = @_;
-    my $out = `iptables -L INPUT -n`;
-    my $count = 0;
+    my $out = `iptables-save`;
     for my $line ( split /\n/,$out ) {
-        next if $line !~ /^[A-Z]+ /;
-        $count++;
-        next if $line !~ /^RAVADA/;
-        `iptables -D INPUT $count`;
+        next if $line !~ /^-A (.*RAVADA.*)/;
+        my $rule = $1;
+        `iptables -D $rule`;
     }
     $out = `iptables -L INPUT -n`;
-    ok(! grep(/^RAVADA /, split(/\n/,$out)),"Expecting no RAVADA jump in $out");
+    ok(! grep(/^RAVADA /, split(/\n/,$out)),"Expecting no RAVADA jump in $out") or exit;
 
     my $vm =$RVD_BACK->search_vm($vm_name);
     my $domain = $vm->search_domain($domain_name);
@@ -443,7 +441,6 @@ for my $vm_name (qw( Void KVM )) {
         test_jump($vm_name, $domain2->name);
     };
 }
-remove_old_domains();
-remove_old_disks();
 
+end();
 done_testing();

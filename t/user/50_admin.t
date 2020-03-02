@@ -25,4 +25,5 @@ user_admin->remove_admin($user->id);
 $user = Ravada::Auth::SQL->search_by_id($user->id);
 is($user->is_admin,0 );
 
+end();
 done_testing();

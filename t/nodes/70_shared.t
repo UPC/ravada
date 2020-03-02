@@ -131,7 +131,7 @@ the file "
 }
 
 END: {
-    clean();
+    end();
     done_testing();
 }
 

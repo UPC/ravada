@@ -163,6 +163,6 @@ for my $vm_name ( q(KVM) ) {
 
     }
 }
-clean();
 
+end();
 done_testing();

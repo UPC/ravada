@@ -166,8 +166,6 @@ for my $vm_name (reverse sort @VMS) {
     }
 }
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();
 

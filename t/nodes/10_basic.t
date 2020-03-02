@@ -569,6 +569,6 @@ for my $vm_name ( 'Void', 'KVM') {
 }
 
 END: {
-    clean();
+    end();
     done_testing();
 }

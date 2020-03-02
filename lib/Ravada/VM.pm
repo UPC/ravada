@@ -255,6 +255,10 @@ sub _open_type {
 
 }
 
+=head1 Methods
+
+=cut
+
 sub _check_readonly {
     my $self = shift;
     confess "ERROR: You can't create domains in read-only mode "
@@ -645,6 +649,14 @@ sub _interface_ip($self, $remote_ip=undef) {
     }
     return $default_ip;
 }
+
+=head2 listen_ip
+
+Returns the IP where virtual machines must be bound to
+
+Arguments: optional remote ip
+
+=cut
 
 sub listen_ip($self, $remote_ip=undef) {
     return Ravada::display_ip() if Ravada::display_ip();
@@ -1150,9 +1162,12 @@ sub enabled($self, $value=undef) {
     return $self->_data('enabled', $value);
 }
 
-sub is_enabled($self, $value=undef) {
-    return $self->enabled($value);
-}
+=head2 public_ip
+
+Returns the public IP of the virtual manager if defined
+
+=cut
+
 
 sub public_ip($self, $value=undef) {
     return $self->_data('public_ip', $value);
@@ -1203,6 +1218,14 @@ sub run_command($self, @command) {
     return ($out, $err);
 }
 
+=head2 run_command_nowait
+
+Run a command on the node
+
+    $self->run_command_nowait("/sbin/poweroff");
+
+=cut
+
 sub run_command_nowait($self, @command) {
 
     return $self->_run_command_local(@command) if $self->is_local();
@@ -1252,6 +1275,12 @@ sub _write_file_local( $self, $file, $contents ) {
     close $out or die "$! $file";
 }
 
+=head2 read_file
+
+Reads a file in memory from the storage of the virtual manager
+
+=cut
+
 sub read_file( $self, $file ) {
     return $self->_read_file_local($file) if $self->is_local;
 
@@ -1271,6 +1300,12 @@ sub _read_file_local( $self, $file ) {
     return join('',<$in>);
 }
 
+=head2 file_exists
+
+Returns true if the file exists in this virtual manager storage
+
+=cut
+
 sub file_exists( $self, $file ) {
     return -e $file if $self->is_local;
 
@@ -1283,10 +1318,22 @@ sub file_exists( $self, $file ) {
     return $ok;
 }
 
+=head2 remove_file
+
+Removes a file from the storage of the virtual manager
+
+=cut
+
 sub remove_file( $self, $file ) {
     unlink $file if $self->is_local;
     return $self->run_command("/bin/rm", $file);
 }
+
+=head2 create_iptables_chain
+
+Creates a new chain in the system iptables
+
+=cut
 
 sub create_iptables_chain($self, $chain, $jchain='INPUT') {
     my ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",$chain);
@@ -1300,6 +1347,16 @@ sub create_iptables_chain($self, $chain, $jchain='INPUT') {
     $self->run_command("/sbin/iptables", '-I', $jchain, '-j' => $chain);
 
 }
+
+=head2 iptables
+
+Runs an iptables command in the virtual manager
+
+Example:
+
+    $vm->iptables( A => 'INPUT', p => 22, j => 'ACCEPT');
+
+=cut
 
 sub iptables($self, @args) {
     my @cmd = ('/sbin/iptables','-w');
@@ -1315,12 +1372,22 @@ sub iptables($self, @args) {
     warn $err if $err;
 }
 
+=head2 iptables_unique
+
+Runs an iptables command in the virtual manager only if it wasn't already there
+
+Example:
+
+    $vm->iptables_unique( A => 'INPUT', p => 22, j => 'ACCEPT');
+
+=cut
+
 sub iptables_unique($self,@rule) {
-    return if $self->search_iptables(@rule);
+    return if $self->_search_iptables(@rule);
     return $self->iptables(@rule);
 }
 
-sub search_iptables($self, %rule) {
+sub _search_iptables($self, %rule) {
     my $table = 'filter';
     $table = delete $rule{t} if exists $rule{t};
     my $iptables = $self->iptables_list();
@@ -1346,6 +1413,12 @@ sub search_iptables($self, %rule) {
     }
     return 0;
 }
+
+=head2 iptables_list
+
+Returns the list of the system iptables
+
+=cut
 
 sub iptables_list($self) {
 #   Extracted from Rex::Commands::Iptables
@@ -1388,6 +1461,16 @@ sub _random_list(@list) {
     return (sort { $a cmp $b } @list);
 }
 
+=head2 balance_vm
+
+Returns a Virtual Manager from all the nodes to run a virtual machine.
+When the optional base argument is passed it returns a node from the list
+of VMs where the base is prepared.
+
+Argument: base [optional]
+
+=cut
+
 sub balance_vm($self, $base=undef) {
 
     my $min_memory = $Ravada::Domain::MIN_FREE_MEMORY;
@@ -1426,8 +1509,8 @@ sub balance_vm($self, $base=undef) {
             next;
         }
 
-        my $n_active = $vm->count_domains(status => 'active')
-                        + $vm->count_domains(status => 'starting');
+        my $n_active = $vm->_count_domains(status => 'active')
+                        + $vm->_count_domains(status => 'starting');
 
         my $key = $n_active.".".$free_memory;
         $vm_list{$key} = $vm;
@@ -1442,7 +1525,7 @@ sub balance_vm($self, $base=undef) {
     return $self;
 }
 
-sub count_domains($self, %args) {
+sub _count_domains($self, %args) {
     my $query = "SELECT count(*) FROM domains WHERE id_vm = ? AND ";
     $query .= join(" AND ",map { "$_ = ?" } sort keys %args );
     my $sth = $$CONNECTOR->dbh->prepare($query);
@@ -1450,6 +1533,12 @@ sub count_domains($self, %args) {
     my ($count) = $sth->fetchrow;
     return $count;
 }
+
+=head2 shutdown_domains
+
+Shuts down all the virtual machines in the node
+
+=cut
 
 sub shutdown_domains($self) {
     my $sth_inactive
@@ -1489,6 +1578,22 @@ sub _shared_storage_cache($self, $node, $dir, $value=undef) {
     $sth->execute($self->id, $node->id, $dir, $value);
     return $value;
 }
+
+=head2 shared_storage
+
+Returns true if there is shared storage among to nodes
+
+Arguments:
+
+=over
+
+=item * node
+
+=item * directory
+
+=back
+
+=cut
 
 sub shared_storage($self, $node, $dir) {
     $dir .= '/' if $dir !~ m{/$};
@@ -1589,9 +1694,21 @@ sub _wake_on_lan( $self ) {
 
 }
 
+=head2 start
+
+Starts the node
+
+=cut
+
 sub start($self) {
     $self->_wake_on_lan();
 }
+
+=head2 shutdown
+
+Shuts down the node
+
+=cut
 
 sub shutdown($self) {
     die "Error: local VM can't be shut down\n" if $self->is_local;

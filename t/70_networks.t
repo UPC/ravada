@@ -200,7 +200,5 @@ test_deny_all($domain);
 
 test_allow_domain($domain);
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();

@@ -62,5 +62,5 @@ Ravada::Auth::SQL::add_user(name => 'mcnulty', password => 'jameson');
 
 }
     
-    
+end();
 done_testing();
