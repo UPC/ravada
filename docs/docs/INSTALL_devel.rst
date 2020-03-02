@@ -109,7 +109,7 @@ Add a new user for the ravada web. Use ``rvd_back`` to create it.
 .. prompt:: bash $
 
     cd ravada
-    sudo ./bin/rvd_back.pl --add-user user.name
+    sudo PERL5LIB=./lib ./script/rvd_back --add-user user.name
 
 
 Firewall(Optional)
@@ -141,7 +141,7 @@ The client must have a spice viewer such as virt-viewer. There is a package for 
 Daemons
 -------
 
-Ravada has two daemons that must run on the production server:
+Ravada has two daemons that must run on the server:
 
 - ``rvd_back`` : must run as root and manages the virtual machines
 - ``rvd_front`` : is the web frontend that sends requests to the backend
@@ -149,53 +149,38 @@ Ravada has two daemons that must run on the production server:
 
 Run each one of these commands in a separate terminal
 
-.. prompt:: bash $ 
+Run the backend in a terminal:
 
-    morbo ./rvd_front.pl
-    sudo ./bin/rvd_back.pl
+.. prompt:: bash
+
+    $ sudo PERL5LIB=./lib ./script/rvd_back --debug
+    Starting rvd_back v1.2.0
+
+The backend must be stopped and started again when you change a library file.
+Stop it pressing CTRL-C
+
+Run the frontend in another terminal:
+
+.. prompt:: bash $
+
+    $ PERL5LIB=./lib morbo ./script/rvd_front
+    Server available at http://127.0.0.1:3000
 
 Now you must be able to reach ravada at the location http://your.ip:3000/
+or http://127.0.0.1:3000 if you run it in your own workstation.
+
+The frontend will restart itself when it detects a change in the
+libraries. There is no need to stop it and start it again.
+
+
+Start/Shutdown scripts
+----------------------
 
 If you wish to create a script to automatize the start and shutdown of the ravada server, you can use these two bash scripts:
 
-start_ravada.sh:
+.. literalinclude:: start_ravada.sh
+   :linenos:
 
-::
+.. literalinclude:: shutdown_ravada.sh
+   :linenos:
 
-    #!/bin/bash
-    #script to initialize ravada server
-    
-    display_usage()
-    {
-	echo "./start_ravada 1 (messages not prompting to terminal)
-	echo "./start_ravada 0 (prompts enables to this terminal)
-    }
-
-    if [ $# -eq 0 ]
-    then
-	display_usage
-    	exit 1
-    else
-	SHOW_MESSAGES=$1
-	if [ $SHOW_MESSAGES -eq 1 ]
-	then
-	    morbo ./rvd_front.pl > /dev/null 2>&1 &
-	    sudo ./bin/rvd_back.pl > /dev/null 2>&1 &
-	else
-	    morbo ./rvd_front.pl &
-	    sudo ./bin/rvd_back.pl &
-	fi
-	echo "Server initialized succesfully."
-    fi
-
-shutdown_ravada.sh:
-
-::
-
-    #!/bin/bash
-    #script to shutdown the ravada server
-
-    sudo kill -15 $(pidof './rvd_front.pl')
-    sudo kill -15 $(pidof -x 'rvd_back.pl')
-    echo "Server closed succesfully"
-    
