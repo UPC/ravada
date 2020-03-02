@@ -289,7 +289,6 @@ SKIP: {
 
 };
 }
-remove_old_domains();
-remove_old_disks();
-done_testing();
 
+end();
+done_testing();

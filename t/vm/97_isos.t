@@ -27,5 +27,5 @@ while (my ($xml) = $sth->fetchrow ){
     ok(-e "etc/xml/$xml", $xml);
 }
 
-
+end();
 done_testing();

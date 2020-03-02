@@ -93,8 +93,6 @@ test_display($domain,$user_foo , $user_bar );
 my $user_admin = create_admin_user('mcnulty');
 test_display($domain,$user_admin , $user_bar );
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();
 

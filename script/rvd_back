@@ -3,8 +3,6 @@
 use warnings;
 use strict;
 
-use lib './lib';
-
 use Data::Dumper;
 use Getopt::Long;
 use POSIX ":sys_wait_h";
@@ -170,6 +168,7 @@ sub do_start {
     my $t_refresh = 0;
 
     my $ravada = Ravada->new( %CONFIG );
+    autostart_machines($ravada);
     #    Ravada::Request->enforce_limits();
     #Ravada::Request->refresh_vms();
     for (;;) {
@@ -205,6 +204,21 @@ sub done_request {
 sub clean_old_requests {
     my $ravada = Ravada->new( %CONFIG );
     $ravada->clean_old_requests();
+}
+
+sub autostart_machines {
+    my $ravada = shift;
+    for my $domain ( $ravada->list_domains_data ) {
+        next unless $domain->{autostart} && ! $domain->{is_base}
+              && $domain->{status} !~ /active/i;
+
+        print "Auto start $domain->{name} [$domain->{status}]\n" if $VERBOSE;
+
+        Ravada::Request->start_domain(
+            id_domain => $domain->{id}
+            ,uid => $domain->{id_owner}
+        );
+    }
 }
 
 sub start {

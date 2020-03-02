@@ -151,7 +151,7 @@ SKIP: {
     use_ok('Ravada::Domain::KVM');
     test_settings($vm_name, "t/kvm/etc/winxp.xml" );
 };
-remove_old_domains();
-remove_old_disks();
+
+end();
 done_testing();
 

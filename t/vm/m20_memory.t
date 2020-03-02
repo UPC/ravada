@@ -100,16 +100,18 @@ sub test_req_change_mem($vm) {
     my $new_max_mem = int($max_mem * 1.5 ) + 1;
     my $new_mem = int($mem * 1.5 ) + 1;
 
-    my $req1 = Ravada::Request->change_max_memory(
+    my $req1 = Ravada::Request->change_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
-        ,ram => $new_max_mem
+        ,hardware => 'memory'
+        ,data => { max_mem => $new_max_mem }
     );
 
-    my $req2 = Ravada::Request->change_curr_memory(
+    my $req2 = Ravada::Request->change_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
-        ,ram => $new_max_mem
+        ,hardware => 'memory'
+        ,data => { memory => $new_mem }
     );
 
     wait_request(check_error => 1, background => 0);
@@ -161,6 +163,6 @@ for my $vm_name ( q(KVM) ) {
 
     }
 }
-clean();
 
+end();
 done_testing();

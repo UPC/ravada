@@ -73,12 +73,14 @@ for my $vm_type( @{rvd_front->list_vm_types}) {
     my $vm = Ravada::VM->open($id);
     is(ref($vm),$exp_class);
 
-    test_create_domain($vm, $vm_type) if rvd_back->search_vm($vm_type);
+    if (!$< || $vm_type ne 'KVM') {
+        init_vm($vm);
+        test_create_domain($vm, $vm_type) if rvd_back->search_vm($vm_type);
+    }
 
     $id++;
     };
 }
 
-clean();
-
+end();
 done_testing();

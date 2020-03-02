@@ -4,7 +4,6 @@ use strict;
 #####
 use locale ':not_characters';
 #####
-use lib 'lib';
 
 use Carp qw(confess cluck);
 use Data::Dumper;
@@ -1416,7 +1415,7 @@ sub _logged_in {
     if ($login) {
         $USER = Ravada::Auth::SQL->new(name => $login);
         #Mojolicious::Plugin::I18N::
-        $c->languages($USER->language);
+        $c->languages($USER->language) if $USER->language();
 
         $c->stash(_logged_in => $login );
         $c->stash(_user => $USER);
@@ -1457,10 +1456,11 @@ sub login {
             );
             my $header = ( $c->req->headers->header('accept-language') or '');
             my @languages2 = map {my $lang = $_ ; $lang =~ s/^(.*?)[;-].*/$1/; $lang } split /,/,$header;
+            my @languages_browser = map {my $lang = $_ ;$lang =~ s/;.*//; $lang } split /,/,$header;
 
             Ravada::Request->post_login(
                 user => $auth_ok->name
-                , locale => [@languages, @languages2]
+                , locale => [@languages_browser, @languages, @languages2]
             );
 
             $auth_ok = Ravada::Auth::SQL->new(name => $auth_ok->name);
@@ -1830,11 +1830,6 @@ sub _open_iptables {
 
 }
 
-sub check_back_running {
-    #TODO;
-    return 1;
-}
-
 sub _init_user_group {
     return if $>;
 
@@ -1867,8 +1862,6 @@ sub _init_user_group {
 }
 
 sub init {
-    check_back_running() or warn "CRITICAL: rvd_back is not running\n";
-
     _init_user_group();
     my $home = Mojo::Home->new();
     $home->detect();
@@ -1876,7 +1869,10 @@ sub init {
     if (exists $ENV{MORBO_VERBOSE}
         || (exists $ENV{MOJO_MODE} && defined $ENV{MOJO_MODE}
                 && $ENV{MOJO_MODE} =~ /devel/i )) {
-            return if -e $home->rel_file("public");
+            app->static->paths->[0] = $home->rel_file("public");
+            app->renderer->paths->[0] = $home->rel_file("templates");
+            app->renderer->paths->[1] = $home->rel_file("custom");
+            return;
     }
     app->static->paths->[0] = ($CONFIG_FRONT->{dir}->{public}
             or $home->rel_file("public"));

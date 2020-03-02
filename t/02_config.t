@@ -44,7 +44,7 @@ check_empty();
 check_fail();
 check_db();
 
-clean();
+end();
 
 done_testing();
 

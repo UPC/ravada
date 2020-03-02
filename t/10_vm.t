@@ -13,4 +13,5 @@ init();
 ok(rvd_back);
 isa_ok(rvd_back,'Ravada');
 
+end();
 done_testing();

@@ -14,7 +14,7 @@ use feature qw(signatures);
 
 my $SECONDS_TIMEOUT = 15;
 
-my $USERNAME = user_admin->name;
+my $USERNAME;
 my $PASSWORD = "$$ $$";
 
 my $USER;
@@ -172,13 +172,14 @@ init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
 like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
 
-if (!mojo_clean()) {
-    diag("Backend not available");
-    ok(0);
+if (!rvd_front->ping_backend()) {
+    diag("SKIPPING: Backend not available");
     done_testing();
     exit;
 }
+mojo_clean();
 
+$USERNAME = user_admin->name;
 my $t = mojo_init();
 
 for my $vm_name ( @{rvd_front->list_vm_types} ) {

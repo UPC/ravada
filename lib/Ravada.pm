@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.6.0';
+our $VERSION = '0.7.0';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -64,7 +64,7 @@ our %VALID_CONFIG = (
 
 =head1 NAME
 
-Ravada - Remove Virtual Desktop Manager
+Ravada - Remote Virtual Desktop Manager
 
 =head1 SYNOPSIS
 
@@ -1253,7 +1253,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','device','varchar(255)');
     $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
 
-    $self->_upgrade_table('users','language','char(3) DEFAULT NULL');
+    $self->_upgrade_table('users','language','char(40) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
         my $sth = $CONNECTOR->dbh->prepare(
             "UPDATE users set is_external=1 WHERE password='*LK* no pss'"
@@ -2280,6 +2280,12 @@ sub process_all_requests {
     $self->process_requests($debug, $dont_fork,'all');
 
 }
+
+=head2 process_priority_requests
+
+Process all the priority requests, long and short
+
+=cut
 
 sub process_priority_requests($self, $debug=0, $dont_fork=0) {
 
@@ -3330,6 +3336,7 @@ sub _cmd_list_isos($self, $request){
     my $vm_type = $request->args('vm_type');
    
     my $vm = Ravada::VM->open( type => $vm_type );
+    $vm->refresh_storage();
     my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
 
     $request->output(encode_json(\@isos));
@@ -3669,6 +3676,12 @@ sub search_vm {
     }
     return;
 }
+
+=head2 vm
+
+Returns the list of Virtual Managers
+
+=cut
 
 sub vm($self) {
     my $sth = $CONNECTOR->dbh->prepare(

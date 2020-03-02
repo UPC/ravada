@@ -378,7 +378,7 @@ sub test_change_disk_cdrom($vm, $domain) {
     ok(defined $cdrom->{file},"Expecting file field in ".Dumper($cdrom));
 
     my $file_old = $cdrom->{file};
-    my $file_new = '/tmp/test.iso';
+    my $file_new = '/tmp/test-".base_domain_name.".iso';
     open my $out,'>',$file_new or die "$! $file_new";
     print $out Dump({ data => $$ });
     close $out;
@@ -386,6 +386,7 @@ sub test_change_disk_cdrom($vm, $domain) {
     test_cdrom($domain, $index, $file_new);
     test_cdrom($domain, $index, '');
     test_cdrom($domain, $index, $file_old);
+    unlink $file_new or die "$! $file_new";
 }
 
 sub _search_cdrom($domain) {
@@ -640,7 +641,5 @@ for my $vm_name ( qw(Void KVM )) {
     }
 }
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();

@@ -54,6 +54,5 @@ for my $vm_name ( 'Void' ) {
     }
 }
 
-clean();
-
+end();
 done_testing();

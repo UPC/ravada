@@ -339,7 +339,8 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
 
         my ($boot_node) = $disk->findnodes('boot');
         my $info = {};
-        $info = $self->_volume_info($file) if $file && $device eq 'disk';
+        eval { $info = $self->_volume_info($file) if $file && $device eq 'disk' };
+        die $@ if $@ && $@ !~ /not found/i;
         $info->{device} = $device;
         if (!$info->{name} ) {
             if ($file) {
@@ -2112,7 +2113,9 @@ sub internal_id($self) {
     return $self->domain->get_id();
 }
 
-sub autostart($self, $value=undef, $user=undef) {
+sub autostart { return _internal_autostart(@_) }
+
+sub _internal_autostart($self, $value=undef, $user=undef) {
     $self->domain->set_autostart($value) if defined $value;
     return $self->domain->get_autostart();
 }

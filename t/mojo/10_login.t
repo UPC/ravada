@@ -18,7 +18,7 @@ my $t;
 
 my $URL_LOGOUT = '/logout';
 my ($USERNAME, $PASSWORD);
-my $SCRIPT = path(__FILE__)->dirname->sibling('../rvd_front.pl');
+my $SCRIPT = path(__FILE__)->dirname->sibling('../script/rvd_front');
 
 
 ########################################################################################
@@ -89,7 +89,6 @@ sub test_many_clones($base) {
     login();
     $t->post_ok('/request/start_clones' => json =>
         {   id_domain => $base->id
-           ,remote_ip => '1.2.3.4'
         }
     );
     like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body->to_string;
@@ -157,6 +156,12 @@ sub test_copy_without_prepare($clone) {
 init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
 like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
+
+if (!rvd_front->ping_backend) {
+    diag("SKIPPED: no backend");
+    done_testing();
+    exit;
+}
 
 remove_old_domains_req();
 

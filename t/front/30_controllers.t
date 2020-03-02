@@ -68,8 +68,11 @@ sub test_vm_controllers_fe {
 	my $domain_f = $RVD_FRONT->search_domain($name);
 	isa_ok($domain_f, "Ravada::Front::Domain::$vm_name");
 	
-	my @usbs = $domain_f->get_controller('usb');
-	ok(scalar @usbs > 0, "Got USB: @usbs");
+    my %ctrl = $domain_f->list_controllers;
+    for my $name (keys %ctrl) {
+        my @usbs = $domain_f->get_controller($name);
+        ok(scalar @usbs > 0, "Got USB: @usbs");
+    }
 	
 	#my $nusb = $domain_f->set_controller('usb' , 'spicevmc');
 	#ok($nusb, "Added usb: $nusb");
@@ -83,9 +86,9 @@ sub test_vm_controllers_fe {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (qw(KVM)) {
+for my $vm_name ( vm_names() ) {
     my $vm = $RVD_BACK->search_vm($vm_name);
-    if ( !$vm ) {
+    if ( !$vm || ( $vm_name eq 'KVM' && $< ) ) {
         diag("Skipping VM $vm_name in this system");
         next;
     }
@@ -93,7 +96,5 @@ for my $vm_name (qw(KVM)) {
     test_vm_controllers_fe($vm_name, $dom_name);
 }
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();

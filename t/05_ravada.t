@@ -29,4 +29,5 @@ eval {
 };
 like($@,qr/Format error/);
 
+end();
 done_testing();

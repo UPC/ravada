@@ -50,6 +50,13 @@ sub prepare_base($self) {
 }
 
 sub clone($self, $file_clone) {
+    my $n = 10;
+    for (;;) {
+        my @stat = stat($self->file);
+        last if time-$stat[9] || $n--<0;
+        sleep 1;
+        die "Error: ".$self->file." looks active" if $n-- <0;
+    }
     my @cmd = ($QEMU_IMG,'create'
         ,'-f','qcow2'
         ,"-b", $self->file
@@ -66,7 +73,7 @@ sub _get_capacity($self) {
     my @cmd = ($QEMU_IMG,"info", $self->file);
     my ($out, $err) = $self->vm->run_command(@cmd);
 
-    die $err if $err;
+    confess $err if $err;
     my ($size) = $out =~ /virtual size: .*\((\d+) /ms;
     confess "I can't find size from $out" if !defined $size;
 
@@ -138,14 +145,5 @@ sub block_commit($self) {
     my @cmd = ($QEMU_IMG,'commit','-q','-d');
     my ($out, $err) = $self->vm->run_command(@cmd, $self->file);
     warn $err   if $err;
-
-    for (;;) {
-        return if !-e $self->file;
-        my $t0 = time;
-        my @stat = stat($self->file);
-        my $mtime = $stat[9];
-        return if $t0 - $mtime > 0;
-        sleep 1;
-    }
 }
 1;

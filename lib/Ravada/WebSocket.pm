@@ -236,6 +236,7 @@ sub BUILD {
                 $channel =~ s{/.*}{};
                 my $exec = $SUB{$channel} or die "Error: unknown channel $channel";
 
+                $self->ravada->_dbh_disconnect();
                 my $ret = $exec->($self->ravada, $self->clients->{$key});
                 my $old_ret = $self->clients->{$key}->{ret};
                 if ( _different($ret, $old_ret )) {
@@ -248,16 +249,36 @@ sub BUILD {
 
 }
 
+sub _list_machines_fast($self, $ws, $login) {
+    my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
+    my $ret0 = $self->ravada->list_domains();
+
+    my @ret;
+    for my $dom (@$ret0) {
+        next if !$user->is_admin && $dom->{id_owner} != $user->id;
+        $dom->{can_start} = 1;
+        $dom->{can_view} = 1;
+        $dom->{can_manage} = 1;
+        push @ret,($dom) if !$dom->{id_base};
+    }
+    $ws->send( { json => \@ret } );
+
+}
+
 sub subscribe($self, %args) {
     my $ws = $args{ws};
     my %args2 = %args;
     delete $args2{ws};
     warn "Subscribe ".Dumper(\%args2) if $DEBUG;
+    $self->ravada->_dbh_disconnect();
     $self->clients->{$ws} = {
         ws => $ws
         , %args
         , ret => undef
     };
+    if ( $args{channel} eq 'list_machines' && $0 !~ /\.t$/) {
+        $self->_list_machines_fast($ws, $args{login})
+    }
 }
 
 sub unsubscribe($self, $ws) {

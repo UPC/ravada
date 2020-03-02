@@ -25,7 +25,7 @@ sub test_node_down($node, $action, $action_name) {
 
     start_node($node);
     is($node->is_active,1) or exit;
-    is($node->is_enabled,1) or exit;
+    is($node->enabled,1) or exit;
 
     my $domain = create_domain($node->type);
     $domain->prepare_base(user_admin);
@@ -79,7 +79,7 @@ sub _hibernate_domain($domain) {
 #######################################################################
 
 clean();
-clean_remote();
+clean_remote() if !$>;
 
 for my $vm_name ('Void' , 'KVM' ) {
     my $vm;
@@ -109,5 +109,5 @@ for my $vm_name ('Void' , 'KVM' ) {
     }
 }
 
-clean();
+end();
 done_testing();

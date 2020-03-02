@@ -611,7 +611,6 @@ for my $vm_name ( vm_names() ) {
     };
 }
 }
-remove_old_domains();
-remove_old_disks();
 
+end();
 done_testing();

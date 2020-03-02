@@ -20,10 +20,10 @@ my $USER = create_user("foo","bar", 1);
 sub test_get_cpu_usage {
 	chomp(my $cpu_count = `grep -c -P '^processor\\s+:' /proc/cpuinfo`);
 	#warn $cpu_count;
-	open(STAT, '/proc/loadavg') or die "WTF: $!";
-	my @cpu = split /\s+/, <STAT>;
+	open(my $stat,"<", '/proc/loadavg') or die "WTF: $!";
+	my @cpu = split /\s+/, <$stat>;
 	warn $cpu[1]/$cpu_count;
-	close STAT;
+	close $stat;
 
 }
 
@@ -48,5 +48,5 @@ SKIP: {
     test_get_cpu_usage();
 }
 
-clean();
+end();
 done_testing();
