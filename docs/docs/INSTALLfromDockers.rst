@@ -7,7 +7,7 @@ Requirements
 OS
 --
 
-Install `Docker <https://docs.docker.com/v17.12/install/>`_ and `docker-compose <https://docs.docker.com/compose/install/>`_ on your local machine.
+Install `Docker <https://docs.docker.com/>`_ and `docker-compose <https://docs.docker.com/compose/install/>`_ on your local machine.
 
 .. note ::
   There are several versions of the Compose file format – 1, 2, 2.x, and 3.x. For now, we use 2.2
