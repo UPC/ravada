@@ -34,15 +34,15 @@ disks images, so clones won't require many space.
 Install Ravada
 --------------
 
-Follow `this guide <http://ravada.readthedocs.io/en/latest/docs/update.html>`_
-if you are only upgrading Ravada from a previous version already installed.
-
 Ravada can be installed from package or using docker.
 
 * `Ubuntu <http://ravada.readthedocs.io/en/latest/docs/INSTALL_ubuntu.html>`_
 * `Debian <http://ravada.readthedocs.io/en/latest/docs/INSTALL_debian.html>`_
 * `RedHat Fedora <http://ravada.readthedocs.io/en/latest/docs/INSTALL_fedora.html>`_
 * `Docker <http://ravada.readthedocs.io/en/latest/docs/INSTALLfromDockers.rst>`_
+
+Follow `this guide <http://ravada.readthedocs.io/en/latest/docs/update.html>`_
+if you are only upgrading Ravada from a previous version already installed.
 
 Client
 ------
