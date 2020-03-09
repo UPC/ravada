@@ -120,7 +120,7 @@ sub _connect {
          };
          confess $@ if $@;
     }
-    if ( ! $vm->list_storage_pools && !$_CREATED_DEFAULT_STORAGE{$self->host}) {
+    if ( ! _list_storage_pools($vm) && !$_CREATED_DEFAULT_STORAGE{$self->host}) {
 	    warn "WARNING: No storage pools creating default\n";
     	$self->_create_default_pool($vm);
         $_CREATED_DEFAULT_STORAGE{$self->host}++;
@@ -128,6 +128,17 @@ sub _connect {
     $self->_check_networks($vm);
     return $vm;
 }
+
+sub _list_storage_pools($vm) {
+   for ( ;; ) {
+       my @pools;
+       eval { @pools = $vm->list_storage_pools };
+       return @pools if !$@;
+       die $@ if $@ && $@ !~ /libvirt error code: 1,/;
+       sleep 1;
+   }
+}
+
 
 sub _check_networks {
     my $self = shift;
@@ -174,6 +185,16 @@ sub _reconnect($self) {
     return $self->connect();
 }
 
+sub _get_pool_info($pool) {
+   my $info;
+   for (;;) {
+       eval { $info = $pool->get_info() };
+       return $info if $info;
+       die $@ if $@ && $@ !~ /libvirt error code: 1,/;
+       sleep 1;
+   }
+}
+
 sub _load_storage_pool {
     my $self = shift;
 
@@ -187,8 +208,8 @@ sub _load_storage_pool {
             or confess "ERROR: Unknown storage pool: ".$self->default_storage_pool_name);
     }
 
-    for my $pool ($self->vm->list_storage_pools) {
-        my $info = $pool->get_info();
+    for my $pool (_list_storage_pools($self->vm)) {
+        my $info = _get_pool_info($pool);
         next if defined $available
                 && $info->{available} <= $available;
 
@@ -241,9 +262,14 @@ sub search_volume($self,$file,$refresh=0) {
     $name = $file if !defined $name;
 
     my $vol;
-    for my $pool ($self->vm->list_storage_pools) {
+    for my $pool (_list_storage_pools($self->vm)) {
         if ($refresh) {
-            $pool->refresh();
+            for ( 1 .. 10 ) {
+               eval { $pool->refresh() };
+               last if !$@;
+               warn "WARNING: on search volume $@";
+               sleep 1;
+            }
             sleep 1;
         }
         eval { $vol = $pool->get_volume_by_name($name) };
@@ -302,14 +328,24 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     $self->_refresh_storage_pools()    if $refresh;
 
     my @volume;
-    for my $pool ($self->vm->list_storage_pools) {
-        for my $vol ( $pool->list_all_volumes()) {
-            my ($file) = $vol->get_path =~ m{.*/(.*)};
-            next if $file !~ $pattern;
+    for my $pool (_list_storage_pools($self->vm)) {
+       my @vols;
+       for ( 1 .. 10) {
+           eval { @vols = $pool->list_all_volumes() };
+           last if !$@ || $@ =~ / no storage pool with matching uuid/;
+           warn "WARNING: on search volume_re: $@";
+           sleep 1;
+       }
+       for my $vol ( @vols ) {
+           my $file;
+           eval { ($file) = $vol->get_path =~ m{.*/(.*)} };
+           confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
+           next if !$file || $file !~ $pattern;
 
-            return $vol if !wantarray;
-            push @volume,($vol);
-        }
+
+           return $vol if !wantarray;
+           push @volume,($vol);
+       }
     }
     if (!scalar @volume && !$refresh && !$self->readonly
             && time - ($self->{_time_refreshed} or 0) > 60) {
@@ -326,7 +362,7 @@ sub refresh_storage_pools($self) {
 }
 
 sub _refresh_storage_pools($self) {
-    for my $pool ($self->vm->list_storage_pools) {
+    for my $pool (_list_storage_pools($self->vm)) {
         for ( 1 .. 10 ) {
             eval { $pool->refresh() };
             last if !$@;
@@ -1554,14 +1590,16 @@ sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
     my @uuids = @_;
     if (!scalar @uuids) {
         for my $dom ($self->vm->list_all_domains) {
-            push @uuids,($dom->get_uuid_string);
+            eval { push @uuids,($dom->get_uuid_string) };
+            confess $@ if $@ && $@ !~ /^libvirt error code: 42,/;
         }
     }
     my ($pre,$first,$last) = $uuid =~ m{^([0-9a0-f]{6})(.*)([0-9a-f]{6})$};
     confess "I can't split model uuid '$uuid'" if !$first;
 
     for my $domain ($self->vm->list_all_domains) {
-        push @uuids,($domain->get_uuid_string);
+        eval { push @uuids,($domain->get_uuid_string) };
+        confess $@ if $@ && $@ !~ /^libvirt error code: 42,/;
     }
 
     for (1..100) {
@@ -1980,7 +2018,9 @@ sub _unique_mac {
     $mac = lc($mac);
 
     for my $dom ($self->vm->list_all_domains) {
-        my $doc = $XML->load_xml(string => $dom->get_xml_description()) or die "ERROR: $!\n";
+        my $doc;
+        eval { $doc = $XML->load_xml(string => $dom->get_xml_description()) } ;
+        next if !$doc;
 
         for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
             my $nic_mac = $nic->getAttribute('address');
@@ -2006,8 +2046,10 @@ sub _xml_modify_mac {
     my $doc = shift or confess "Missing XML doc";
     my @old_macs;
 
-   	for my $dom ($self->vm->list_all_domains) {
-        my $doc = $XML->load_xml(string => $dom->get_xml_description()) or die "ERROR: $!\n";
+    for my $dom ($self->vm->list_all_domains) {
+        my $doc;
+        eval { $doc = $XML->load_xml(string => $dom->get_xml_description()) } ;
+        next if !$doc;
 
         for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
             my $nic_mac = $nic->getAttribute('address');
@@ -2168,7 +2210,10 @@ Imports a KVM domain in Ravada
 
 sub import_domain($self, $name, $user) {
 
-    my $domain_kvm = $self->vm->get_domain_by_name($name);
+    my $domain_kvm;
+    eval { $domain_kvm = $self->vm->get_domain_by_name($name) };
+    confess $@ if $@;
+
     confess "ERROR: unknown domain $name in KVM" if !$domain_kvm;
 
     my $domain = Ravada::Domain::KVM->new(
@@ -2203,7 +2248,7 @@ sub list_storage_pools($self) {
     return
         map { $_->get_name }
         grep { $_-> is_active }
-        $self->vm->list_storage_pools();
+        _list_storage_pools($self->vm);
 }
 
 sub free_memory($self) {
@@ -2334,7 +2379,13 @@ sub free_disk($self, $pool_name = undef ) {
     } else {
         $pool = $self->storage_pool();
     }
-    my $info = $pool->get_info();
+    my $info;
+    for ( ;; ) {
+        eval { $info = $pool->get_info() };
+        last if !$@;
+        warn "WARNING: free disk $@" if $@;
+        sleep 1;
+    }
     return $info->{available};
 }
 

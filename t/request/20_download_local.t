@@ -10,7 +10,12 @@ use Mojo::UserAgent;
 use lib 't/lib';
 use Test::Ravada;
 
-use_ok('Ravada');
+if (! $ENV{TEST_DOWLOAD}) {
+    diag("Skipped: enable setting environment variable TEST_DOWNLOAD");
+    done_testing();
+    exit;
+}
+
 init();
 
 $Ravada::DEBUG=0;
