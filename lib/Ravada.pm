@@ -64,7 +64,7 @@ our %VALID_CONFIG = (
 
 =head1 NAME
 
-Ravada - Remove Virtual Desktop Manager
+Ravada - Remote Virtual Desktop Manager
 
 =head1 SYNOPSIS
 
@@ -1726,12 +1726,16 @@ sub remove_domain {
     die "Error: user ".$user->name." can't remove domain $id"
         if !$user->can_remove_machine($id);
 
-    my $domain0 = Ravada::Domain->open( $id );
+    my $domain0;
+    eval { $domain0 = Ravada::Domain->open( $id ) };
+    warn $@ if $@;
     $domain0->shutdown_now($user) if $domain0 && $domain0->is_active;
 
     my $vm = Ravada::VM->open(type => $vm_type);
-    my $domain = Ravada::Domain->open(id => $id, _force => 1, id_vm => $vm->id)
-        or do {
+    my $domain;
+    eval { $domain = Ravada::Domain->open(id => $id, _force => 1, id_vm => $vm->id) };
+    warn $@ if $@;
+    if (!$domain) {
             warn "Warning: I can't find domain '$id', maybe already removed.";
             $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains where id=?");
             $sth->execute($id);
