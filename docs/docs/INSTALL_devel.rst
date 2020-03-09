@@ -33,7 +33,7 @@ In that case you can test on a nested KVM, that is, a KVM inside another KVM.
 Ubuntu required packages
 ------------------------
 
-Check this  `file <https://github.com/UPC/ravada/blob/master/debian/control>`_ at the line *depends* for a list of required packages. You must install it running:
+Check this  `file <https://github.com/UPC/ravada/blob/master/debian>`_ at the line *depends* for a list of required packages. You must install it running:
 
 .. note:: The libvirt-bin package was dropped since Ubuntu 18.10. The package was split into two parts: **libvirt-daemon-system** and **libvirt-clients**.
 
