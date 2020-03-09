@@ -602,7 +602,8 @@ sub mojo_request($t, $req_name, $args) {
 }
 
 sub _activate_storage_pools($vm) {
-    for my $sp ($vm->vm->list_all_storage_pools()) {
+    my @sp = $vm->vm->list_all_storage_pools();
+    for my $sp (@sp) {
         next if $sp->is_active;
         diag("Activating sp ".$sp->get_name." on ".$vm->name);
         $sp->create();
@@ -630,18 +631,28 @@ sub _remove_old_disks_kvm {
 
     ok(!$@,"Expecting error = '' , got '".($@ or '')."'"
         ." after refresh storage pool") or return;
-
-    for my $pool( $vm->vm->list_all_storage_pools ) {
+    my @sp = $vm->vm->list_all_storage_pools();
+    for my $pool( @sp ) {
         next if !$pool->is_active;
-        for my $volume  ( $pool->list_volumes ) {
+        my @volumes;
+        for ( 1 .. 10) {
+            eval { @volumes = $pool->list_volumes };
+            last if !$@;
+            warn $@;
+            sleep 1;
+        }
+        for my $volume  ( @volumes ) {
             next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2|void)$/;
-            $volume->delete();
+
+            eval { $volume->delete() };
+            warn $@ if $@;
         }
     }
     eval {
         $vm->storage_pool->refresh();
     };
-    die $@ if $@ && $@ !~ /is not active/;
+    chomp $@ if $@;
+    die $@ if $@ && $@ !~ /is not active|libvirt error code: 1,/;
 }
 sub _remove_old_disks_void($node=undef){
     if (! defined $node || $node->is_local) {
@@ -835,7 +846,8 @@ sub _init_vm_kvm($vm) {
 
 sub _exists_storage_pool {
     my ($vm, $pool_name) = @_;
-    for my $pool ($vm->vm->list_storage_pools) {
+    my @sp = Ravada::VM::_list_storage_pools($vm->vm);
+    for my $pool ( @sp ) {
         return 1 if $pool->get_name eq $pool_name;
     }
     return;
@@ -896,7 +908,7 @@ sub remove_qemu_pools {
     }
 
     my $base = base_pool_name();
-    for my $pool  ( $vm->vm->list_all_storage_pools) {
+    for my $pool  ( Ravada::VM::KVM::_list_storage_pools($vm->vm)) {
         my $name = $pool->get_name;
         next if $name !~ qr/^$base/;
         diag("Removing ".$pool->get_name." storage_pool");
