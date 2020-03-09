@@ -227,7 +227,7 @@ sub _vol_remove {
 
     my $removed = 0;
     for my $pool ( $self->_vm->vm->list_storage_pools ) {
-        $pool->refresh;
+        _pool_refresh($pool);
         my $vol;
         eval { $vol = $pool->get_volume_by_name($name) };
         if (! $vol ) {
@@ -235,8 +235,14 @@ sub _vol_remove {
                 if $@ !~ /libvirt error code: 50,/i;
             next;
         }
-        $vol->delete();
-        $pool->refresh;
+        for ( ;; ) {
+            eval { $vol->delete() };
+            last if !$@;
+            warn "WARNING: on vol remove , pool refresh $@" if $@;
+            sleep 1;
+        }
+        eval { $pool->refresh };
+        warn $@ if $@;
     }
     return 1;
 }
@@ -257,7 +263,14 @@ sub remove {
 
     my @volumes;
     if (!$self->is_removed ) {
-        for my $vol ( $self->list_volumes_info ) {
+       my @vols_info;
+       for ( 1 .. 10 ) {
+           eval { @vols_info = $self->list_volumes_info };
+           last if !$@;
+           warn "WARNING: remove, volumes info: $@";
+           sleep 1;
+       }
+       for my $vol ( @vols_info ) {
             push @volumes,($vol->{file})
                 if exists $vol->{file}
                    && exists $vol->{device}
@@ -266,7 +279,8 @@ sub remove {
     }
 
     if (!$self->is_removed && $self->domain && $self->domain->is_active) {
-        $self->_do_force_shutdown();
+        eval { $self->_do_force_shutdown() };
+        warn $@ if $@;
     }
 
     eval { $self->domain->undefine()    if $self->domain && !$self->is_removed };
@@ -369,6 +383,15 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
 
 }
 
+sub _pool_refresh($pool) {
+    for ( ;; ) {
+        eval { $pool->refresh };
+        return if !$@;
+        warn "WARNING: on vol remove , pool refresh $@" if $@;
+        sleep 1;
+    }
+}
+
 sub _volume_info($self, $file, $refresh=0) {
     confess "Error: No vm connected" if !$self->_vm->vm;
 
@@ -376,7 +399,7 @@ sub _volume_info($self, $file, $refresh=0) {
 
     my $vol;
     for my $pool ( $self->_vm->vm->list_storage_pools ) {
-        $pool->refresh() if $refresh;
+        _pool_refresh($pool) if $refresh;
         eval { $vol = $pool->get_volume_by_name($name) };
         warn $@ if $@ && $@ !~ /^libvirt error code: 50,/;
         last if $vol;
