@@ -8,9 +8,6 @@ use Test::More;
 use lib 't/lib';
 use Test::Ravada;
 
-
-use_ok('Ravada');
-
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my $RVD_BACK = rvd_back();

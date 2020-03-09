@@ -12,7 +12,6 @@ no warnings "experimental::signatures";
 use lib 't/lib';
 use Test::Ravada;
 
-use_ok('Ravada');
 use_ok('Ravada::Request');
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
@@ -258,6 +257,5 @@ for my $vm_name (qw( Void KVM )) {
     };
 }
 flush_rules() if !$>;
-
 end();
 done_testing();

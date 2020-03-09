@@ -4,6 +4,7 @@ use warnings;
 
 use  Carp qw(carp confess);
 use Data::Dumper;
+use Fcntl qw(:flock SEEK_END);
 use File::Path qw(make_path);
 use YAML qw(DumpFile);
 use Hash::Util qw(lock_hash unlock_hash);
@@ -114,6 +115,10 @@ my $DEV_NBD = "/dev/nbd10";
 my $MNT_RVD= "/mnt/test_rvd";
 my $QEMU_NBD = `which qemu-nbd`;
 chomp $QEMU_NBD;
+
+my $FH_FW;
+my $FH_NODE;
+my %LOCKED_FH;
 
 sub user_admin {
 
@@ -1109,7 +1114,42 @@ sub search_iptable_remote {
     return $found[0];
 }
 
+sub _lock_fh($fh) {
+    flock($fh, LOCK_EX);
+    seek($fh, 0, SEEK_END) or die "Cannot seek - $!\n";
+    print $fh,''.localtime(time)." $0\n";
+    warn "Locking $fh\n";
+    $LOCKED_FH{$FH_FW} = $FH_FW;
+}
+
+sub _unlock_fh($fh) {
+    warn "Unlocking $fh\n";
+    flock($fh,LOCK_UN) or die "Cannot unlock - $!\n";
+    close $fh;
+}
+
+sub _lock_fw {
+    return if $FH_FW;
+    open $FH_FW,">>","/var/tmp/fw.lock" or die "$!";
+    _lock_fh($FH_FW);
+}
+
+sub _lock_node {
+    return if $FH_NODE;
+    open $FH_NODE,">>","/var/tmp/node.lock" or die "$!";
+    _lock_fh($FH_NODE);
+}
+
+
+sub _unlock_all {
+    for my $key (keys %LOCKED_FH) {
+        _unlock_fh($LOCKED_FH{$key});
+        delete $LOCKED_FH{$key};
+    }
+}
+
 sub flush_rules_node($node) {
+    _lock_fw();
     $node->create_iptables_chain($CHAIN);
     $node->run_command("/sbin/iptables","-F", $CHAIN);
     $node->run_command("/sbin/iptables","-X", $CHAIN);
@@ -1122,6 +1162,7 @@ sub flush_rules_node($node) {
 sub flush_rules {
     return if $>;
 
+    _lock_fw();
     my @cmd = ('iptables','-t','nat','-F','PREROUTING');
     my ($in,$out,$err);
     run3(\@cmd, \$in, \$out, \$err);
@@ -1414,6 +1455,7 @@ sub _clean_file_config {
 }
 
 sub remote_node($vm_name) {
+    _lock_node();
     my $remote_config = remote_config($vm_name);
     SKIP: {
         if (!keys %$remote_config) {
@@ -1427,6 +1469,7 @@ sub remote_node($vm_name) {
 }
 
 sub remote_node_2($vm_name) {
+    _lock_node();
     my $remote_config = _load_remote_config();
 
     my @nodes;
@@ -1574,10 +1617,12 @@ sub connector {
 sub DESTROY {
     shutdown_nodes();
     remove_old_user_ldap() if $CONNECTOR;
+    _unlock_all();
 }
 
 sub end {
     clean();
+    _unlock_all();
     _file_db();
     rmdir _dir_db();
 }
