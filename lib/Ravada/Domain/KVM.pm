@@ -238,7 +238,6 @@ sub _vol_remove {
         for ( ;; ) {
             eval { $vol->delete() };
             last if !$@;
-            warn "WARNING: on vol remove , pool refresh $@" if $@;
             sleep 1;
         }
         eval { $pool->refresh };
