@@ -1118,12 +1118,10 @@ sub _lock_fh($fh) {
     flock($fh, LOCK_EX);
     seek($fh, 0, SEEK_END) or die "Cannot seek - $!\n";
     print $fh,''.localtime(time)." $0\n";
-    warn "Locking $fh\n";
-    $LOCKED_FH{$FH_FW} = $FH_FW;
+    $LOCKED_FH{$fh} = $fh;
 }
 
 sub _unlock_fh($fh) {
-    warn "Unlocking $fh\n";
     flock($fh,LOCK_UN) or die "Cannot unlock - $!\n";
     close $fh;
 }
