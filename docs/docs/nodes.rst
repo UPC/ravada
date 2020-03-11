@@ -154,6 +154,35 @@ It is advisable have a firewall configured in the node. Access restrictions
 should be enforced carefully. Only allow ssh login from the master server
 and other operational hosts from your network.
 
+Networking and Firewall
+=======================
+
+For the master node to start the other nodes it must have some open ports.
+
+Master
+------
+
+Master must be able to send packets on udp port 9 and tcp and udp port 7
+
+.. code-block::
+
+   # wake on lan
+   -A OUTPUT -p udp -m udp --dport 7 -j ACCEPT
+   -A OUTPUT -p tcp -m tcp --dport 7 -j ACCEPT
+   -A OUTPUT -p udp -m udp --dport 9 -j ACCEPT
+
+Nodes
+------
+
+Nodes must accept packets on udp port 9 and tcp and udp port 7
+
+.. code-block::
+
+   # wake on lan
+   -A INPUT -p udp -m udp --dport 7 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 7 -j ACCEPT
+   -A INPUT -p udp -m udp --dport 9 -j ACCEPT
+
 Operation
 =========
 
