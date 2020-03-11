@@ -871,6 +871,46 @@ sub _add_indexes($self) {
     $self->_add_indexes_vms();
     $self->_add_indexes_domains();
     $self->_add_indexes_requests();
+    $self->_add_indexes_generic();
+}
+
+sub _add_indexes_generic($self) {
+    my %index = (
+        requests => [
+            "index(status,at_time)"
+            ,"index(date_changed)"
+            ,"index(start_time,command,status,pid)"
+        ]
+        ,grants_user => [
+            "index(id_user,id_grant)"
+        ]
+        ,iptables => [
+            "index(id_domain,time_deleted,time_req)"
+        ]
+    );
+    for my $table ( keys %index ) {
+        my $known = $self->_get_indexes($table);
+        for my $change (@{$index{$table}} ) {
+            my ($type,$fields ) =$change =~ /(\w+)\((.*)\)/;
+            my $name = $fields;
+            $name =~ s/,/_/g;
+            next if $known->{$name};
+            my $sql = "ALTER TABLE $table add $type $name ($fields)";
+            warn "INFO: Adding index to vms: $name";
+            my $sth = $CONNECTOR->dbh->prepare($sql);
+            $sth->execute();
+        }
+    }
+}
+
+sub _get_indexes($self,$table) {
+    my $sth = $CONNECTOR->dbh->prepare("show index from $table");
+    $sth->execute;
+    my %index;
+    while (my $row = $sth->fetchrow_hashref) {
+        $index{$row->{Key_name}}->{$row->{Column_name}}++;
+    }
+    return \%index;
 }
 
 sub _add_indexes_vms($self) {
