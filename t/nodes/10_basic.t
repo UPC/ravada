@@ -277,8 +277,40 @@ sub test_set_vm($vm, $node) {
 
     is($base_f->list_instances,2) or exit;
 
+    test_bind_ip($node, $base,'1.2.3.4');
+    test_bind_ip($node, $base);
     $base->remove(user_admin);
     is(scalar($base->list_instances),undef);
+}
+
+sub test_bind_ip($node, $base, $remote_ip=undef) {
+    my @clone;
+    my $clone_2;
+    my @remote_ip;
+    @remote_ip = ( remote_ip => $remote_ip ) if $remote_ip;
+    for (1 .. 20) {
+        my $clone= $base->clone( user => user_admin, name => new_domain_name);
+        if ($clone->type eq 'KVM') {
+            $clone->_set_spice_ip(undef,'2.3.4.5');
+            my $cloneb = Ravada::Domain->open($clone->id);
+        }
+        my $req = Ravada::Request->start_domain(uid => user_admin->id
+            ,id_domain => $clone->id
+            ,@remote_ip
+        );
+        wait_request();
+        is($req->status,'done');
+        is($req->error, '');
+        push @clone,($clone);
+        $clone_2 = Ravada::Domain->open($clone->id);
+        last if $clone_2->_vm->id == $node->id;
+    }
+    my $node_ip = $node->ip;
+    is($clone_2->_vm->id, $node->id) or exit;
+    like($clone_2->display(user_admin),qr($node_ip)) or exit;
+    for (@clone) {
+        $_->remove(user_admin);
+    }
 }
 
 sub test_instances($clone, $expected) {

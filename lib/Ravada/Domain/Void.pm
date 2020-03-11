@@ -601,6 +601,7 @@ sub hibernate($self, $user) {
 sub type { 'Void' }
 
 sub migrate($self, $node, $request=undef) {
+    $self->_set_display($node->ip);
     my $config_remote;
     $config_remote = $self->_load();
     my $device = $config_remote->{hardware}->{device}

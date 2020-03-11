@@ -3367,7 +3367,7 @@ sub set_driver_id {
     $sth->finish;
 }
 
-sub _listen_ip($self, $remote_ip) {
+sub _listen_ip($self, $remote_ip=undef) {
     return $self->_vm->listen_ip($remote_ip);
 }
 

@@ -589,10 +589,8 @@ sub display_info($self, $user) {
     my ($tls_port) = $graph->getAttribute('tlsPort');
     my ($address) = $graph->getAttribute('listen');
 
-    confess "ERROR: Machine ".$self->name." is not active in node ".$self->_vm->name."\n"
+    warn "ERROR: Machine ".$self->name." is not active in node ".$self->_vm->name."\n"
         if !$port && !$self->is_active;
-    die "Unable to get port for domain ".$self->name." ".$graph->toString
-        if !$port;
 
     my $display = $type."://$address:$port";
 
@@ -650,7 +648,7 @@ sub start {
     my $remote_ip = delete $arg{remote_ip};
     my $request = delete $arg{request};
 
-    my $display_ip;
+    my $display_ip = $self->_listen_ip();
     if ($remote_ip) {
         $set_password = 0;
         my $network = Ravada::Network->new(address => $remote_ip);
@@ -2066,6 +2064,7 @@ sub migrate($self, $node, $request=undef) {
         #dom already in remote node
         $self->domain($dom);
     } else {
+        $self->_set_spice_ip(1, $node->ip);
         my $xml = $self->domain->get_xml_description();
 
         my $doc = XML::LibXML->load_xml(string => $xml);
