@@ -51,10 +51,12 @@ Requirements
 ------------
 
 To add a new node to a Ravada cluster you have to install a minimal Linux operating
-system with these packages:
+system with these packages. Some distributions have different package names.
 
 - openssh-server
-- libvirt-bin
+- libvirt-bin or libvirt-daemon
+- libvirt-daemon-system
+- libvirt-clients
 - qemu-kvm
 
 It is possible to have nodes with heterogeneous operative systems: different Ubuntus,
@@ -146,6 +148,10 @@ Check it works:
 
 Now you can restore the *PermitRootLogin* entry to the former state in
 the file */etc/ssh/sshd_config* at *node*.
+
+.. code-block:: bash
+
+   PermitRootLogin prohibit-password
 
 Security
 --------
