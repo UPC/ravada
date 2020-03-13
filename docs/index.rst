@@ -81,6 +81,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/migrate_manual
    docs/Kiosk_mode
    docs/volatile
+   docs/cluster
 
 .. _feature-docs:
 
