@@ -1332,7 +1332,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
 
-    if ($self->_upgrade_table('domains','screenshot','BLOB')) {
+    if ($self->_upgrade_table('domains','screenshot','MEDIUMBLOB')) {
 
     $self->_upgrade_screenshots();
 
@@ -1407,7 +1407,14 @@ Returns the default display IP read from the config file
 
 =cut
 
-sub display_ip {
+sub display_ip($self=undef, $new_ip=undef) {
+    if (defined $new_ip) {
+        if (!length $new_ip) {
+            delete $CONFIG->{display_ip};
+        } else {
+            $CONFIG->{display_ip} = $new_ip;
+        }
+    }
     my $ip = $CONFIG->{display_ip};
     return $ip if $ip;
 }

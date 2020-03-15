@@ -1372,6 +1372,7 @@ sub shutdown_domain_internal($domain) {
 
 sub start_domain_internal($domain) {
     if ($domain->type eq 'KVM') {
+        $domain->_set_spice_ip(1,$domain->_vm->ip);
         $domain->domain->create();
     } elsif ($domain->type eq 'Void') {
         $domain->_store(is_active => 1 );

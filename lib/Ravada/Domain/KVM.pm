@@ -592,15 +592,16 @@ sub display_info($self, $user) {
     warn "ERROR: Machine ".$self->name." is not active in node ".$self->_vm->name."\n"
         if !$port && !$self->is_active;
 
-    my $display = $type."://$address:$port";
 
     my %display = (
                 type => $type
                ,port => $port
                  ,ip => $address
-            ,display => $display
           ,tls_port => $tls_port
     );
+    $port = '' if !defined $port;
+    my $display = $type."://$address:$port";
+    $display{display} = $display;
     lock_hash(%display);
     return \%display;
 }
@@ -644,18 +645,12 @@ sub start {
         %arg = @_;
     }
 
-    my $set_password=0;
     my $remote_ip = delete $arg{remote_ip};
     my $request = delete $arg{request};
+    my $listen_ip = ( delete $arg{listen_ip} or $self->_listen_ip);
+    my $set_password = delete $arg{set_password};
 
-    my $display_ip = $self->_listen_ip();
-    if ($remote_ip) {
-        $set_password = 0;
-        my $network = Ravada::Network->new(address => $remote_ip);
-        $set_password = 1 if $network->requires_password();
-        $display_ip = $self->_listen_ip($remote_ip);
-    }
-    $self->_set_spice_ip($set_password, $display_ip);
+    $self->_set_spice_ip($set_password, $listen_ip);
     $self->status('starting');
 
     my $error;

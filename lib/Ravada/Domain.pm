@@ -152,8 +152,9 @@ around 'prepare_base' => \&_around_prepare_base;
 #before 'prepare_base' => \&_pre_prepare_base;
 # after 'prepare_base' => \&_post_prepare_base;
 
-before 'start' => \&_start_preconditions;
- after 'start' => \&_post_start;
+#before 'start' => \&_start_preconditions;
+# after 'start' => \&_post_start;
+around 'start' => \&_around_start;
 
 before 'pause' => \&_allow_shutdown;
  after 'pause' => \&_post_pause;
@@ -289,6 +290,38 @@ sub _vm_connect {
 sub _vm_disconnect {
     my $self = shift;
     $self->_vm->disconnect();
+}
+
+sub _around_start($orig, $self, @arg) {
+    $self->_start_preconditions(@arg);
+
+    my %arg;
+    if (!(scalar(@arg) % 2) ) {
+        %arg = @arg;
+    } else {
+        $arg{user} = $arg[0];
+    }
+
+    my $listen_ip = delete $arg{listen_ip};
+    my $remote_ip = $arg{remote_ip};
+
+    if (!defined $listen_ip) {
+        my $display_ip;
+        if ($remote_ip) {
+            my $set_password = 0;
+            my $network = Ravada::Network->new(address => $remote_ip);
+            $set_password = 1 if $network->requires_password();
+            $display_ip = $self->_listen_ip($remote_ip);
+            $arg{set_password} = $set_password;
+        } else {
+            $display_ip = $self->_listen_ip();
+        }
+        $arg{listen_ip} = $display_ip;
+    }
+    my $ret = $self->$orig(%arg);
+
+    $self->_post_start(%arg);
+
 }
 
 sub _start_preconditions{
@@ -876,7 +909,7 @@ sub _around_display_info($orig,$self,$user ) {
 
     if (!$self->readonly) {
         $self->_set_display_ip($display);
-        $self->_data(display => encode_json($display));
+        $self->_data(display => encode_json($display)) if $self->is_active;
     }
     return $display;
 }

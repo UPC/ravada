@@ -67,7 +67,7 @@ sub test_remove_req($vm, $node) {
              ,name => $clone1->name
     );
 
-    rvd_back->_process_requests_dont_fork(1);
+    rvd_back->_process_requests_dont_fork();
 
     is($req->status, 'done');
     is($req->error, '');
@@ -254,7 +254,7 @@ sub test_set_vm($vm, $node) {
         , value => 1
         , uid => user_admin->id
     );
-    rvd_back->_process_requests_dont_fork(1);
+    rvd_back->_process_requests_dont_fork();
     is($req->status, 'done');
     is($req->error, '');
 
@@ -277,13 +277,17 @@ sub test_set_vm($vm, $node) {
 
     is($base_f->list_instances,2) or exit;
 
+    test_bind_ip($node, $base,'1.2.3.4',1);
     test_bind_ip($node, $base,'1.2.3.4');
     test_bind_ip($node, $base);
     $base->remove(user_admin);
     is(scalar($base->list_instances),undef);
 }
 
-sub test_bind_ip($node, $base, $remote_ip=undef) {
+sub test_bind_ip($node, $base, $remote_ip=undef, $config=undef) {
+    if ($config) {
+        rvd_back->display_ip("127.0.0.1");
+    }
     my @clone;
     my $clone_2;
     my @remote_ip;
@@ -299,6 +303,19 @@ sub test_bind_ip($node, $base, $remote_ip=undef) {
             ,@remote_ip
         );
         wait_request();
+        is($req->error, '');
+        my $clone_v = Ravada::Domain->open($clone->id);
+        if ($clone_v->is_local) {
+            if (!$config) {
+                my $vm_ip = $clone_v->_vm->ip;
+                like($clone_v->display(user_admin),qr($vm_ip)) or confess $clone_v->name;
+            } else {
+                like($clone_v->display(user_admin),qr(127.0.0.1)) or die $clone_v->name;
+            }
+        } else {
+            my $node_ip = $node->ip;
+            like($clone_v->display(user_admin), qr($node_ip));
+        }
         is($req->status,'done');
         is($req->error, '');
         push @clone,($clone);
@@ -311,12 +328,7 @@ sub test_bind_ip($node, $base, $remote_ip=undef) {
     for (@clone) {
         $_->remove(user_admin);
     }
-}
-
-sub test_instances($clone, $expected) {
-    confess;
-    my @instances = $clone->list_instances();
-    is(@instances,$expected,Dumper(\@instances)) or exit;
+    rvd_back->display_ip("") if $config;
 }
 
 sub test_volatile($vm, $node) {

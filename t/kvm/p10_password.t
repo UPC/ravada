@@ -130,7 +130,7 @@ sub test_domain_password1 {
     my $vm2 = rvd_back->search_vm($vm_name);
     my $domain2 = $vm2->search_domain($domain->name);
     my $password = $domain2->spice_password();
-    like($password,qr/./,"Expecting a password, got '".($password or '')."'");
+    like($password,qr/./,"Expecting a password, got '".($password or '')."'") or die $domain2->name;
 
     $password = $domain->spice_password();
     like($password,qr/./,"Expecting a password, got '".($password or '')."'");

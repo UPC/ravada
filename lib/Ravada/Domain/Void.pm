@@ -64,6 +64,10 @@ sub _set_display($self, $listen_ip=$self->_vm->listen_ip) {
     return $display_data;
 }
 
+sub _set_spice_ip($self, $password=undef, $listen_ip=$self->_vm->listen_ip) {
+    return $self->_set_display($listen_ip);
+}
+
 sub is_active {
     my $self = shift;
     return ($self->_value('is_active') or 0);
@@ -223,6 +227,7 @@ sub start($self, @args) {
     %args = @args if scalar(@args) % 2 == 0;
     my $listen_ip = delete $args{listen_ip};
     my $remote_ip = delete $args{remote_ip};
+    my $set_password = delete $args{set_password}; # unused
     my $user = delete $args{user};
     delete $args{'id_vm'};
     confess "Error: unknown args ".Dumper(\%args) if keys %args;
