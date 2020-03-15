@@ -636,6 +636,8 @@ sub _interface_ip($self, $remote_ip=undef) {
             my ($network, $ip) = ($1, $2);
             $route{$network} = $ip;
 
+            return $ip if $remote_ip && $remote_ip eq $ip;
+
             my $netaddr = NetAddr::IP->new($network);
             return $ip if $remote_ip_addr->within($netaddr);
 
