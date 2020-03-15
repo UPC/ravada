@@ -1292,7 +1292,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
 
-    if ($self->_upgrade_table('domains','screenshot','BLOB')) {
+    if ($self->_upgrade_table('domains','screenshot','MEDIUMBLOB')) {
 
     $self->_upgrade_screenshots();
 
