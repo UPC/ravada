@@ -349,7 +349,8 @@ sub _start_preconditions{
     }
     #_check_used_memory(@_);
 
-    return if $self->_search_already_started();
+    return if $self->_search_already_started('fast');
+    $self->status('starting');
     # if it is a clone ( it is not a base )
     if ($self->id_base) {
 #        $self->_set_last_vm(1)
@@ -382,10 +383,10 @@ sub _start_preconditions{
     #$self->_check_cpu_usage($request);
 }
 
-sub _search_already_started($self) {
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id FROM vms where vm_type=?"
-    );
+sub _search_already_started($self, $fast = 0) {
+    my $sql = "SELECT id FROM vms where vm_type=?";
+    $sql .= " AND is_active=1" if $fast;
+    my $sth = $$CONNECTOR->dbh->prepare($sql);
     $sth->execute($self->_vm->type);
     my %started;
     while (my ($id) = $sth->fetchrow) {
