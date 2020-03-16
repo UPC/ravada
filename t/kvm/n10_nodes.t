@@ -436,6 +436,7 @@ sub test_already_started_hibernated($vm_name, $node) {
     start_domain_internal($clone);
     $clone_local->_set_spice_ip(1,$vm->ip) if $clone_local->type eq 'KVM';
     hibernate_domain_internal($clone_local);
+    $clone->_timeout_shutdown(4);
 
     is($clone->is_active, 1,"expecting clone active on remote");
     is($clone_local->is_hibernated, 1, "expecting clone hibernated on local");
@@ -444,16 +445,17 @@ sub test_already_started_hibernated($vm_name, $node) {
     eval { $clone2->start(user => user_admin) };
     like($@,qr/already running/)    if $@;
 
-    rvd_back->_process_all_requests_dont_fork();
+    rvd_back->_process_all_requests_dont_fork(1);
     for ( 1 .. 120 ) {
         last if $clone->is_active
                 && !$clone_local->is_active
                 && !$clone_local->is_hibernated;
         sleep 1;
     }
-    rvd_back->_process_all_requests_dont_fork();
+    wait_request( debug => 1 );
 
-    is($clone->is_active, 0,"[$vm_name] expected ".$clone->name." down");
+    is($clone->is_active, 0,"[$vm_name] expected ".$clone->name." down in "
+        .$clone->_vm->name." ".$clone->_vm->id) or exit;
     is($clone_local->is_active, 0,"[$vm_name] expected ".$clone->name." down") or exit;
 
     $clone->remove(user_admin);
@@ -1171,6 +1173,7 @@ SKIP: {
         next;
     };
     is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
+    test_already_started_hibernated($vm_name, $node);
 
     is($vm->shared_storage($node,'/var/tmp/'),0) or exit;
     test_already_started_twice($vm_name, $node);

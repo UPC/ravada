@@ -2794,6 +2794,11 @@ sub _post_resume {
     return $self->_post_start(@_);
 }
 
+sub _timeout_shutdown($self, $value) {
+    $TIMEOUT_SHUTDOWN = $value if defined $value;
+    return $TIMEOUT_SHUTDOWN;
+}
+
 sub _post_start {
     my $self = shift;
     my %arg;
