@@ -647,7 +647,7 @@ sub _interface_ip($self, $remote_ip=undef) {
 }
 
 sub listen_ip($self, $remote_ip=undef) {
-    return Ravada::display_ip() if Ravada::display_ip();
+    return Ravada::display_ip() if $self->is_local && Ravada::display_ip();
     return $self->public_ip     if $self->public_ip;
 
     return $self->_interface_ip($remote_ip) if $remote_ip;
@@ -1486,7 +1486,8 @@ sub _shared_storage_cache($self, $node, $dir, $value=undef) {
         "INSERT INTO storage_nodes (id_node1, id_node2, dir, is_shared) "
         ." VALUES (?,?,?,?)"
     );
-    $sth->execute($self->id, $node->id, $dir, $value);
+    eval { $sth->execute($self->id, $node->id, $dir, $value) };
+    confess $@ if $@ && $@ !~ /Duplicate entry/i;
     return $value;
 }
 

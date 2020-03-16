@@ -176,7 +176,6 @@ sub test_domain {
     is($clone->is_active,1) or return;
 
     my $local_ip = $node->ip;
-
     like($clone->display(user_admin),qr($local_ip));
 
     my ($local_port) = $clone->display(user_admin) =~ m{:(\d+)};
@@ -392,6 +391,9 @@ sub test_already_started_twice($vm_name, $node) {
 
     my $clone_local = $vm->search_domain($clone->name);
     is($clone_local->_vm->is_local, 1);
+    my $ip_local = $vm->ip;
+    $clone_local->_set_spice_ip(1,$vm->ip);# if $clone_local->type eq 'KVM';
+    like($clone_local->display(user_admin),qr($ip_local)) or exit;
 
     start_domain_internal($clone);
     start_domain_internal($clone_local);
@@ -430,7 +432,9 @@ sub test_already_started_hibernated($vm_name, $node) {
     my $clone_local = $vm->search_domain($clone->name);
     is($clone_local->_vm->is_local, 1);
 
+    $clone->_set_spice_ip(1,$node->ip) if $clone_local->type eq 'KVM';
     start_domain_internal($clone);
+    $clone_local->_set_spice_ip(1,$vm->ip) if $clone_local->type eq 'KVM';
     hibernate_domain_internal($clone_local);
 
     is($clone->is_active, 1,"expecting clone active on remote");
@@ -1169,6 +1173,7 @@ SKIP: {
     is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
     is($vm->shared_storage($node,'/var/tmp/'),0) or exit;
+    test_already_started_twice($vm_name, $node);
 
     test_domain($vm_name, $node);
 
