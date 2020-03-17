@@ -293,7 +293,6 @@ sub _vm_disconnect {
 }
 
 sub _around_start($orig, $self, @arg) {
-    $self->_start_preconditions(@arg);
 
     my %arg;
     if (!(scalar(@arg) % 2) ) {
@@ -305,21 +304,36 @@ sub _around_start($orig, $self, @arg) {
     my $listen_ip = delete $arg{listen_ip};
     my $remote_ip = $arg{remote_ip};
 
-    if (!defined $listen_ip) {
-        my $display_ip;
-        if ($remote_ip) {
-            my $set_password = 0;
-            my $network = Ravada::Network->new(address => $remote_ip);
-            $set_password = 1 if $network->requires_password();
-            $display_ip = $self->_listen_ip($remote_ip);
-            $arg{set_password} = $set_password;
-        } else {
-            $display_ip = $self->_listen_ip();
+    for (;;) {
+        $self->_start_preconditions(@arg);
+        if (!defined $listen_ip) {
+            my $display_ip;
+            if ($remote_ip) {
+                my $set_password = 0;
+                my $network = Ravada::Network->new(address => $remote_ip);
+                $set_password = 1 if $network->requires_password();
+                $display_ip = $self->_listen_ip($remote_ip);
+                $arg{set_password} = $set_password;
+            } else {
+                $display_ip = $self->_listen_ip();
+            }
+            $arg{listen_ip} = $display_ip;
         }
-        $arg{listen_ip} = $display_ip;
+        eval { $self->$orig(%arg) };
+        last if !$@;
+        warn $@ if $@;
+        if ($@ && $self->id_base && !$self->_vm->is_local) {
+            my $base = Ravada::Domain->open($self->id_base);
+            $base->_set_base_vm_db($self->_vm->id,0);
+            Ravada::Request->set_base_vm(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $base->id
+                ,id_vm => $self->_vm->id
+            );
+            next;
+        }
+        die $@;
     }
-    my $ret = $self->$orig(%arg);
-
     $self->_post_start(%arg);
 
 }
