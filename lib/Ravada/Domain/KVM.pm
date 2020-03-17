@@ -662,6 +662,7 @@ sub start {
     }
     return if !$error || $error =~ /already running/i;
     if ($error =~ /libvirt error code: 38,/) {
+        warn "Error starting ".$self->name." on ".$self->_vm->name;
         if (!$self->_vm->is_local) {
             warn "Disabling node ".$self->_vm->name();
             $self->_vm->enabled(0);

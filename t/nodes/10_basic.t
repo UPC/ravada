@@ -243,6 +243,42 @@ sub _create_2_clones_same_port($vm, $node, $base, $ip_local, $ip_remote) {
     }
 }
 
+sub test_removed_base_file($vm, $node) {
+    diag("Testing removed base in ".$vm->type);
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+    $base->set_base_vm(node => $node, user => user_admin);
+
+    for my $file ( $base->list_files_base ) {
+        $node->remove_file($file);
+    }
+    $node->refresh_storage_pools();
+    my $found_req;
+    for my $try ( 1 .. 20 ) {
+        diag("try $try");
+        my $clone1 = $base->clone(name => new_domain_name, user => user_admin);
+        $clone1->start(user_admin);
+        my @req = $base->list_requests();
+        if (scalar @req) {
+            for my $req (@req) {
+                if($req->command eq 'set_base_vm') {
+                    $found_req = $req;
+                    last;
+                }
+            }
+            last if $found_req;
+        }
+        last if $clone1->_vm->id == $node->id;
+    }
+    ok($found_req,"Expecting request to set base vm");
+    is($base->base_in_vm($node->id),0);
+    for my $clone_data ($base->clones) {
+        my $clone = Ravada::Domain->open($clone_data->{id});
+        $clone->remove(user_admin);
+    }
+    $base->remove(user_admin);
+}
+
 sub test_set_vm($vm, $node) {
     my $base = create_domain($vm);
     my $info = $base->info(user_admin);
@@ -554,6 +590,7 @@ for my $vm_name ( 'Void', 'KVM') {
             next;
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
+        test_removed_base_file($vm, $node);
 
         test_set_vm($vm, $node);
 

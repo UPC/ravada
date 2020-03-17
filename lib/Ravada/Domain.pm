@@ -441,10 +441,25 @@ sub _balance_vm($self) {
     my $base;
     $base = Ravada::Domain->open($self->id_base) if $self->id_base;
 
-    my $vm_free = $self->_vm->balance_vm($base);
-    return if !$vm_free;
+    my $vm_free;
+    for (;;) {
+        $vm_free = $self->_vm->balance_vm($base);
+        return if !$vm_free;
 
-    $self->migrate($vm_free) if $vm_free->id != $self->_vm->id;
+        last if $vm_free->id == $self->_vm->id;
+        eval { $self->migrate($vm_free) };
+        last if !$@;
+        if ($@ && $@ =~ /file not found/i) {
+            $base->_set_base_vm_db($vm_free->id,0);
+            Ravada::Request->set_base_vm(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $base->id
+                ,id_vm => $vm_free->id
+            );
+            next;
+        }
+        die $@;
+    }
     return $vm_free->id;
 }
 
@@ -3689,7 +3704,7 @@ sub _pre_migrate($self, $node, $request = undef) {
         my ($name) = $file =~ m{.*/(.*)};
 
         my $vol_path = $node->search_volume_path($name);
-        die "ERROR: $file not found in ".$node->host
+        confess "ERROR: file not found $file in ".$node->host
             if !$vol_path;
 
         die "ERROR: $name found at $vol_path instead $file"
