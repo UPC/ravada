@@ -2689,7 +2689,7 @@ sub _can_fork {
         delete $reqs{$pid} if !$request || $request->status eq 'done';
     }
     my $n_pids = scalar(keys %reqs);
-    return 1 if $n_pids <= $req->requests_limit();
+    return 1 if $n_pids < $req->requests_limit();
 
     my $msg = $req->command
                 ." waiting for processes to finish"

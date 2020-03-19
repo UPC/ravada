@@ -329,7 +329,10 @@ sub _around_start($orig, $self, @arg) {
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $base->id
                 ,id_vm => $self->_vm->id
+                ,at => time + int(rand(10))
             );
+            my $vm_local = $self->_vm->new( host => 'localhost' );
+            $self->_set_vm($vm_local, 1);
             next;
         }
         die $@;
@@ -3912,7 +3915,7 @@ Returns a list for virtual machine managers where this domain is base
 sub list_vms($self) {
     confess "Domain is not base" if !$self->is_base;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm FROM bases_vm WHERE id_domain=?");
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm FROM bases_vm WHERE id_domain=? AND enabled = 1");
     $sth->execute($self->id);
     my @vms;
     while (my $id_vm = $sth->fetchrow) {

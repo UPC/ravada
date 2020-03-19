@@ -252,26 +252,29 @@ sub test_removed_base_file($vm, $node) {
     for my $file ( $base->list_files_base ) {
         $node->remove_file($file);
     }
-    $node->refresh_storage_pools();
+
     my $found_req;
+    my $found_clone;
     for my $try ( 1 .. 20 ) {
         diag("try $try");
         my $clone1 = $base->clone(name => new_domain_name, user => user_admin);
         $clone1->start(user_admin);
+        $found_clone = $clone1;
         my @req = $base->list_requests();
-        if (scalar @req) {
-            for my $req (@req) {
-                if($req->command eq 'set_base_vm') {
-                    $found_req = $req;
-                    last;
-                }
+        next if !scalar @req;
+        for my $req (@req) {
+            if($req->command eq 'set_base_vm') {
+                $found_req = $req;
+                last;
             }
-            last if $found_req;
         }
-        last if $clone1->_vm->id == $node->id;
+        last if $found_req;
     }
     ok($found_req,"Expecting request to set base vm");
     is($base->base_in_vm($node->id),0);
+    is(scalar($base->list_vms),1) or exit;
+    my $node2 = Ravada::VM->open($node->id);
+    is($node2->is_enabled,1);
     for my $clone_data ($base->clones) {
         my $clone = Ravada::Domain->open($clone_data->{id});
         $clone->remove(user_admin);
@@ -553,6 +556,20 @@ sub test_remove_base($vm, $node, $volatile) {
 
 }
 
+sub test_duplicated_set_base_vm($vm, $node) {
+    my $req = Ravada::Request->set_base_vm(id_vm => $node->id
+        , uid => 1
+        , id_domain => 1
+        , at => time + 3
+    );
+    my $req2 = Ravada::Request->set_base_vm(id_vm => $node->id
+        , uid => 2
+        , id_domain => 1
+        , at => time + 4
+    );
+    ok(!$req2) or exit;
+}
+
 ##################################################################################
 clean();
 
@@ -590,6 +607,8 @@ for my $vm_name ( 'Void', 'KVM') {
             next;
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
+
+        test_duplicated_set_base_vm($vm, $node);
         test_removed_base_file($vm, $node);
 
         test_set_vm($vm, $node);

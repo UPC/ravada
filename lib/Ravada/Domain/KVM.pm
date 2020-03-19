@@ -664,8 +664,10 @@ sub start {
     if ($error =~ /libvirt error code: 38,/) {
         warn "Error starting ".$self->name." on ".$self->_vm->name;
         if (!$self->_vm->is_local) {
-            warn "Disabling node ".$self->_vm->name();
-            $self->_vm->enabled(0);
+            if ($error !~ /backing file/) {
+                warn "Disabling node ".$self->_vm->name();
+                $self->_vm->enabled(0);
+            }
         }
         die $error;
     } elsif ( $error =~ /libvirt error code: 9, .*already defined with uuid/) {
