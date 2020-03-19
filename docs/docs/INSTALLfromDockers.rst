@@ -41,7 +41,7 @@ For now, ravada source must be (locally) in: ``~/src/ravada`` , you need to clon
    cd ~
    mkdir src
    git clone https://github.com/UPC/ravada.git
-   cd dockerfy
+   cd ravada/dockerfy
    
 .. prompt:: bash $
 
