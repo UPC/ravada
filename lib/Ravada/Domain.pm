@@ -526,6 +526,8 @@ sub _allow_remove($self, $user) {
 
     return if !$self->is_known(); # already removed
 
+    confess "Error: arg user is not Ravada::Auth object" if !ref($user);
+
     die "ERROR: remove not allowed for user ".$user->name
         unless $user->can_remove_machine($self);
 
@@ -844,7 +846,7 @@ sub _check_free_vm_memory {
 
     return if $vm_free_mem > $self->_vm->min_free_memory;
 
-    my $msg = "Error: No free memory. Only "._gb($vm_free_mem)." out of "
+    my $msg = "Error: No free memory in ".$self->_vm->name.". Only "._gb($vm_free_mem)." out of "
         ._gb($self->_vm->min_free_memory)." GB required.\n";
 
     die $msg;
@@ -1941,18 +1943,53 @@ sub remove_base($self, $user) {
     return $self->_do_remove_base($user);
 }
 
-sub _do_remove_base($self, $user) {
-    if ($self->is_base) {
-        for my $vm ( $self->list_vms ) {
-            $self->remove_base_vm(vm => $vm, user => $user) if !$vm->is_local;
-        }
+sub _cascade_remove_base_in_nodes($self) {
+    my $req_nodes;
+    for my $vm ( $self->list_vms ) {
+        next if $vm->is_local;
+        my @after;
+        push @after,(after_request => $req_nodes->id) if $req_nodes;
+        $req_nodes = Ravada::Request->remove_base_vm(
+            id_vm => $vm->id
+            ,id_domain => $self->id
+            ,uid => Ravada::Utils::user_daemon->id
+            ,@after
+        );
     }
-    $self->is_base(0);
+    if ( $req_nodes ) {
+        my $vm_local = $self->_vm->new( host => 'localhost' );
+        Ravada::Request->remove_base_vm(
+            id_vm => $vm_local->id
+            ,id_domain => $self->id
+            ,uid => Ravada::Utils::user_daemon->id
+            ,after_request => $req_nodes->id
+        );
+    }
+    return $req_nodes;
+}
+
+sub _do_remove_base($self, $user) {
+    return
+        if $self->is_base && $self->is_local
+        && $self->_cascade_remove_base_in_nodes ();
+
+    $self->is_base(0) if $self->is_local;
+    my $vm_local = $self->_vm->new( host => 'localhost' );
     for my $vol ($self->list_volumes_info) {
         next if !$vol->file || $vol->file =~ /\.iso$/;
         my $backing_file = $vol->backing_file;
         next if !$backing_file;
         #        confess "Error: no backing file for ".$vol->file if !$backing_file;
+        if (!$self->is_local) {
+            my ($dir) = $backing_file =~ m{(.*/)};
+            if ( $self->_vm->shared_storage($vm_local, $dir) ) {
+                next;
+            }
+            $self->_vm->remove_file($vol->file);
+            $self->_vm->remove_file($backing_file);
+            $self->_vm->refresh_storage_pools();
+            return ;
+        }
         $vol->block_commit();
         unlink $vol->file or die "$! ".$vol->file;
         my @stat = stat($backing_file);
@@ -1990,20 +2027,10 @@ sub _pre_remove_base {
 
 sub _post_remove_base {
     my $self = shift;
+    return if !$self->_vm->is_local;
     $self->_remove_base_db(@_);
     $self->_post_remove_base_domain();
 
-    $self->_remove_all_bases();
-}
-
-sub _remove_all_bases($self) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm FROM bases_vm "
-            ." WHERE id_domain=? AND enabled=1"
-    );
-    $sth->execute($self->id);
-    while ( my ($id_vm) = $sth->fetchrow ) {
-        $self->remove_base_vm( id_vm => $id_vm );
-    }
 }
 
 sub _post_spinoff($self) {
@@ -3814,13 +3841,9 @@ sub set_base_vm($self, %args) {
     $value = 1 if !defined $value;
 
     if ($vm->is_local) {
-        $self->_set_vm($vm,1);
+        $self->_set_vm($vm,1); # force set vm on domain
         if (!$value) {
             $request->status("working","Removing base")     if $request;
-            for my $vm_node ( $self->list_vms ) {
-                $self->set_base_vm(vm => $vm_node, user => $user, value => 0
-                    , request => $request) if !$vm_node->is_local;
-            }
             $self->_set_base_vm_db($vm->id, $value);
             $self->remove_base($user);
         } else {
@@ -3832,20 +3855,8 @@ sub set_base_vm($self, %args) {
             if $request;
         $self->migrate($vm, $request);
     } else {
-        if ($vm->is_active) {
-            my $vm_local = $self->_vm->new( host => 'localhost' );
-            for my $file ($self->list_files_base()) {
-                my ($path) = $file =~ m{(.*/)};
-                next if $vm_local->shared_storage($vm, $path);
-                confess "Error: file has non-valid characters" if $file =~ /[*;&'" ]/;
-                my ($out, $err);
-                eval { ($out, $err) = $vm->remove_file($file)
-                    if $vm->file_exists($file);
-                };
-                $err = $@ if !$err && $@;
-                warn $err if $err;
-            }
-        }
+        $self->_set_vm($vm,1); # force set vm on domain
+        $self->_do_remove_base($user);
     }
 
     if (!$vm->is_local) {
@@ -3875,6 +3886,7 @@ sub remove_base_vm($self, %args) {
     confess "ERROR: Unknown arguments ".join(',',sort keys %args).", valid are user and vm."
         if keys %args;
 
+        warn $vm->name;
     return $self->set_base_vm(vm => $vm, user => $user, value => 0);
 }
 

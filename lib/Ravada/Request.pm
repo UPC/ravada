@@ -136,6 +136,7 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
 our %CMD_NO_DUPLICATE = map { $_ => 1 }
 qw(
     set_base_vm
+    remove_base_vm
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -155,6 +156,7 @@ our %COMMAND = (
     ,disk => {
         limit => 1
         ,commands => ['prepare_base','remove_base','set_base_vm','rebase_volumes'
+                    , 'remove_base_vm'
                     , 'screenshot'
                     , 'manage_pools']
         ,priority => 6
@@ -1209,13 +1211,18 @@ sub _requested($command, %fields) {
 }
 
 sub stop($self) {
+    my $stale = '';
+    my $run_time = '';
+    if ($self->start_time) {
+        $run_time = time - $self->start_time;
+        $stale = ", stale for $run_time seconds.";
+    }
     warn "Killing ".$self->command
-        ." , pid: ".$self->pid
-        .", stale for ".(time - $self->start_time)." seconds\n";
-    my $ok = kill (15,$self->pid);
-    $self->status('done',"Killed start process after "
-           .(time - $self->start_time)." seconds\n");
-
+        ." , pid: ".( $self->pid or '<UNDEF>')
+        .$stale
+        ."\n";
+    kill (15,$self->pid) if $self->pid;
+    $self->status('done',"Killed start process after $run_time seconds.");
 }
 
 sub priority($self) {

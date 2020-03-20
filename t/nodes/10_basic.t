@@ -279,6 +279,10 @@ sub test_removed_base_file($vm, $node) {
         my $clone = Ravada::Domain->open($clone_data->{id});
         $clone->remove(user_admin);
     }
+    for my $req ( $base->list_requests ) {
+        warn $req->id;
+        $req->stop;
+    }
     $base->remove(user_admin);
 }
 
@@ -533,18 +537,21 @@ sub test_remove_base($vm, $node, $volatile) {
     }
 
     $base->remove_base_vm(node => $node, user => user_admin);
-    for my $file ( @volumes ) {
+    for my $file ( @volumes , @volumes0 ) {
         my ($out, $err) = $node->run_command("ls $file");
         ok(!$out, "Expecting no file '$file' in ".$node->name) or exit;
+        ok(-e $file, "Expecting file '$file' in local") or exit;
     }
     isnt($base->_data('id_vm'), $node->id);
 
-    for my $file ( @volumes0 ) {
-        my ($out, $err) = $node->run_command("ls $file");
-        ok($out, "Expecting file '$file' in ".$node->name) or exit;
-    }
     $base->set_base_vm(node => $node, user => user_admin);
+    is(scalar($base->list_vms), 2) or exit;
     $base->remove_base(user_admin);
+
+    my @req = $base->list_requests();
+    is(scalar @req,2);
+    ok(grep {$_->command eq 'remove_base_vm' } @req) or die Dumper(\@req);
+    wait_request( debug => 1 );
 
     for my $file ( @volumes ) {
         ok(!-e $file, "Expecting no file '$file' in local") or exit;
@@ -568,6 +575,25 @@ sub test_duplicated_set_base_vm($vm, $node) {
         , at => time + 4
     );
     ok(!$req2) or exit;
+    my $req3 = Ravada::Request->remove_base_vm(id_vm => $node->id
+        , uid => 1
+        , id_domain => 1
+        , at => time + 3
+    );
+    my $req4 = Ravada::Request->remove_base_vm(id_vm => $node->id
+        , uid => 2
+        , id_domain => 1
+        , at => time + 4
+    );
+    ok(!$req4);
+    my $req5 = Ravada::Request->set_base_vm(id_vm => 999
+        , uid => 2
+        , id_domain => 1
+        , at => time + 4
+    );
+    ok($req5) or exit;
+    my $sth = connector->dbh->prepare("DELETE FROM requests");
+    $sth->execute;
 }
 
 ##################################################################################
@@ -607,6 +633,9 @@ for my $vm_name ( 'Void', 'KVM') {
             next;
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
+
+        test_remove_base($vm, $node, 0);
+        goto NEXT;
 
         test_duplicated_set_base_vm($vm, $node);
         test_removed_base_file($vm, $node);

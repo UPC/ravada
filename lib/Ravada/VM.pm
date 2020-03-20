@@ -930,7 +930,7 @@ Returns the minimun free memory necessary to start a new virtual machine
 
 sub min_free_memory {
     my $self = shift;
-    return $self->_data('min_free_memory');
+    return ($self->_data('min_free_memory') or $Ravada::Domain::MIN_FREE_MEMORY);
 }
 
 =head2 max_load 
@@ -1427,21 +1427,32 @@ sub balance_vm($self, $base=undef) {
             $vm->enabled(0) if !$vm->is_local();
             next;
         }
+        next if $free_memory < $Ravada::Domain::MIN_FREE_MEMORY;
 
         my $n_active = $vm->count_domains(status => 'active')
                         + $vm->count_domains(status => 'starting');
 
+        $free_memory = int($free_memory / 1024 );
         my $key = $n_active.".".$free_memory;
         $vm_list{$key} = $vm;
         last if $key =~ /^[01]+\./; # don't look for other nodes when this one is empty !
     }
-    my @sorted_vm = map { $vm_list{$_} } sort { $a <=> $b } keys %vm_list;
+    my @sorted_vm = _sort_vms(\%vm_list);
 #    warn Dumper([ map {  [$_ , $vm_list{$_}->name ] } keys %vm_list]);
 #    warn "sorted ".Dumper([ map { $_->name } @sorted_vm ]);
     for my $vm (@sorted_vm) {
         return $vm;
     }
     return $self;
+}
+
+sub _sort_vms($vm_list) {
+    my @sorted_vm = map { $vm_list->{$_} } sort {
+        my ($ad, $am) = $a =~ m{(\d+)\.(\d+)};
+        my ($bd, $bm) = $b =~ m{(\d+)\.(\d+)};
+        $ad <=> $bd || $bm <=> $am;
+    } keys %$vm_list;
+    return @sorted_vm;
 }
 
 sub count_domains($self, %args) {
