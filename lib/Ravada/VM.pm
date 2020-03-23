@@ -985,6 +985,27 @@ sub is_local($self) {
     return 0;
 }
 
+=head2 is_locked
+
+This node has requests running or waiting to be run
+
+=cut
+
+sub is_locked($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, at_time, args FROM requests "
+        ." WHERE status <> 'done' "
+    );
+    $sth->execute;
+    my ($id, $at, $args);
+    $sth->bind_columns(\($id, $at, $args));
+    while ( $sth->fetch ) {
+        next if defined $at && $at < time + 2;
+        next if !$args;
+        my $args_d = decode_json($args);
+        return 1 if exists $args_d->{id_vm} && $args_d->{id_vm} == $self->id
+    }
+    return 0;
+}
 
 =head2 list_nodes
 
@@ -1279,10 +1300,12 @@ sub file_exists( $self, $file ) {
     my $ssh = ($self->{_ssh} or $self->_connect_ssh());
     die "Error: no ssh connection to ".$self->name if ! $ssh;
 
-    my $io = IO::Scalar->new();
-    my $ok = $ssh->scp_get($file, $io);
+    confess "Error: dangerous filename '$file'"
+        if $file =~ /[`|"(\\\[]/;
+    my ($out, $err) = $self->run_command("/bin/ls -1 $file");
 
-    return $ok;
+    return 1 if !$err;
+    return 0;
 }
 
 sub remove_file( $self, $file ) {
@@ -1419,6 +1442,7 @@ sub balance_vm($self, $base=undef) {
         next if !$vm->enabled();
         next if !$active;
         next if $base && !$vm->is_local && !$base->base_in_vm($vm->id);
+        next if $vm->is_locked();
 
         my $free_memory;
         eval { $free_memory = $vm->free_memory };

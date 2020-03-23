@@ -294,6 +294,8 @@ sub _vm_disconnect {
 
 sub _around_start($orig, $self, @arg) {
 
+    $self->_start_preconditions(@arg);
+
     my %arg;
     if (!(scalar(@arg) % 2) ) {
         %arg = @arg;
@@ -305,7 +307,11 @@ sub _around_start($orig, $self, @arg) {
     my $remote_ip = $arg{remote_ip};
 
     for (;;) {
-        $self->_start_preconditions(@arg);
+        eval { $self->_start_checks(@arg) };
+        if ($@ && $@ =~/base file not found/ && !$self->_vm->is_local) {
+            $self->_request_set_base();
+            next;
+        }
         if (!defined $listen_ip) {
             my $display_ip;
             if ($remote_ip) {
@@ -322,23 +328,27 @@ sub _around_start($orig, $self, @arg) {
         eval { $self->$orig(%arg) };
         last if !$@;
         warn $@ if $@;
-        if ($@ && $self->id_base && !$self->_vm->is_local) {
-            my $base = Ravada::Domain->open($self->id_base);
-            $base->_set_base_vm_db($self->_vm->id,0);
-            Ravada::Request->set_base_vm(
-                uid => Ravada::Utils::user_daemon->id
-                ,id_domain => $base->id
-                ,id_vm => $self->_vm->id
-                ,at => time + int(rand(10))
-            );
-            my $vm_local = $self->_vm->new( host => 'localhost' );
-            $self->_set_vm($vm_local, 1);
+        if ($@ && $self->id_base && !$self->_vm->is_local && $self->_vm->enabled) {
+            $self->_request_set_base();
             next;
         }
         die $@;
     }
     $self->_post_start(%arg);
 
+}
+
+sub _request_set_base($self) {
+    my $base = Ravada::Domain->open($self->id_base);
+    $base->_set_base_vm_db($self->_vm->id,0);
+    Ravada::Request->set_base_vm(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_domain => $base->id
+        ,id_vm => $self->_vm->id
+        ,at => time + int(rand(10))
+    );
+    my $vm_local = $self->_vm->new( host => 'localhost' );
+    $self->_set_vm($vm_local, 1);
 }
 
 sub _start_preconditions{
@@ -365,9 +375,18 @@ sub _start_preconditions{
         _allow_manage(@_);
     }
     #_check_used_memory(@_);
-
-    return if $self->_search_already_started('fast');
     $self->status('starting');
+}
+
+sub _start_checks($self, @args) {
+    return if $self->_search_already_started('fast');
+    my ($id_vm, $request);
+    if (!scalar(@args) % 2) {
+        my %args = @args;
+        $id_vm = delete $args{id_vm};
+        $request = delete $args{request} if exists $args{request};
+    }
+
     # if it is a clone ( it is not a base )
     if ($self->id_base) {
 #        $self->_set_last_vm(1)
@@ -375,6 +394,7 @@ sub _start_preconditions{
             my $vm_local = $self->_vm->new( host => 'localhost' );
             $self->_set_vm($vm_local, 1);
         }
+        $self->_check_tmp_volumes();
         my $vm;
         if ($id_vm) {
             $vm = Ravada::VM->open($id_vm);
@@ -394,7 +414,6 @@ sub _start_preconditions{
         my $vm_local = $self->_vm->new( host => 'localhost' );
         $self->_set_vm($vm_local, 1);
     }
-    $self->status('starting');
     $self->_check_free_vm_memory();
     #TODO: remove them and make it more general now we have nodes
     #$self->_check_cpu_usage($request);
@@ -691,7 +710,7 @@ sub prepare_base($self, $with_cd) {
     for my $volume ($self->list_volumes_info()) {
         my $base_file = $volume->base_filename;
         next if !$base_file || $base_file =~ /\.iso$/;
-        die "Error: file '$base_file' already exists" if $self->_vm->file_exists($base_file);
+        confess "Error: file '$base_file' already exists" if $self->_vm->file_exists($base_file);
     }
 
     for my $volume ($self->list_volumes_info()) {
@@ -850,6 +869,37 @@ sub _check_free_vm_memory {
         ._gb($self->_vm->min_free_memory)." GB required.\n";
 
     die $msg;
+}
+
+sub _check_tmp_volumes($self) {
+    confess "Error: only clones temporary volumes can be checked."
+        if !$self->id_base;
+    for my $vol ( $self->list_volumes_info) {
+        next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\./;
+        next if $self->_vm->file_exists($vol->file);
+
+        my $base = Ravada::Domain->open($self->id_base);
+        if (! $self->is_local) {
+            Ravada::Request->set_base_vm(
+                id_domain => $base->id
+                ,id_vm => $self->_vm->id
+                ,uid => Ravada::Utils::user_daemon->id
+            );
+            confess "Error: base file not found in node ".$self->_vm->name." ".$vol->file;
+        }
+        my @volumes = $base->list_files_base_target;
+        my ($file_base) = grep { $_->[1] eq $vol->info->{target} } @volumes;
+        if (!$file_base) {
+            warn "Error: I can't find base volume for target ".$vol->info->{target}
+                .Dumper(\@volumes);
+        }
+        my $vol_base = Ravada::Volume->new( file => $file_base->[0]
+            , vm => $self->_vm
+        );
+        $vol_base->clone(file => $vol->file);
+        warn "cloned ".$self->name." ".$self->_vm->name." ".$vol_base->vm->name." "
+            .$vol->info->{target};
+    }
 }
 
 sub _check_cpu_usage($self, $request=undef){
@@ -1964,6 +2014,7 @@ sub _cascade_remove_base_in_nodes($self) {
             ,uid => Ravada::Utils::user_daemon->id
             ,after_request => $req_nodes->id
         );
+        $self->is_base(0);
     }
     return $req_nodes;
 }
@@ -3740,19 +3791,12 @@ sub _pre_migrate($self, $node, $request = undef) {
     my $base = Ravada::Domain->open($self->id_base);
     confess "ERROR: base id ".$self->id_base." not found."  if !$base;
 
-    die "ERROR: Base ".$base->name." files not migrated to ".$node->name
+    confess "ERROR: Base ".$base->name." files not migrated to ".$node->name
         if !$base->base_in_vm($node->id);
 
     for my $file ( $base->list_files_base ) {
-
-        my ($name) = $file =~ m{.*/(.*)};
-
-        my $vol_path = $node->search_volume_path($name);
-        confess "ERROR: file not found $file in ".$node->host
-            if !$vol_path;
-
-        die "ERROR: $name found at $vol_path instead $file"
-            if $vol_path ne $file;
+        next if $node->file_exists($file);
+        confess "ERROR: file not found $file in ".$node->host;
     }
 
     $self->_set_base_vm_db($node->id,0);

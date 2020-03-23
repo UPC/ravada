@@ -275,10 +275,6 @@ sub test_rebase($vm, $swap, $data, $with_cd) {
     $base->add_volume(type => 'data', size=>$VOL_SIZE)    if $data;
     $base->prepare_base(user => user_admin, with_cd => $with_cd);
 
-    $base->add_volume(type => 'swap', size=>$VOL_SIZE)    if $swap;
-    $base->add_volume(type => 'data', size=>$VOL_SIZE)    if $data;
-    $base->prepare_base(user => user_admin, with_cd => $with_cd);
-
     my $clone1 = $base->clone( name => new_domain_name, user => user_admin);
     my $clone2 = $base->clone( name => new_domain_name, user => user_admin);
 

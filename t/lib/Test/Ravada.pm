@@ -792,7 +792,7 @@ sub wait_request {
                     if ($req->command eq 'remove') {
                         like($req->error,qr(^$|Unknown domain));
                     } else {
-                        is($req->error,'') or confess;
+                        is($req->error,'') or confess $req->command;
                     }
                 }
             }

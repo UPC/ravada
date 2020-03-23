@@ -243,6 +243,65 @@ sub _create_2_clones_same_port($vm, $node, $base, $ip_local, $ip_remote) {
     }
 }
 
+sub test_removed_local_swap($vm, $node) {
+    diag("Testing removed local swap in ".$vm->type);
+    my $base = create_domain($vm);
+    $base->add_volume(size => 128*1024 , type => 'tmp');
+    $base->add_volume(size => 128*1024 , type => 'swap');
+    $base->add_volume(size => 128*1024 , type => 'data');
+    $base->prepare_base(user_admin);
+    $base->set_base_vm(node => $node, user => user_admin);
+
+    my $found_clone;
+    for my $try ( 1 .. 20 ) {
+        diag("try $try");
+        my $clone1 = $base->clone(name => new_domain_name, user => user_admin);
+        _remove_tmp($clone1,$vm);
+        $clone1->start(user_admin);
+        $found_clone = $clone1;
+        last if $clone1->_vm->id == $node->id;
+    }
+    is($found_clone->_vm->id, $node->id);
+    for my $clone_data ($base->clones) {
+        my $clone = Ravada::Domain->open($clone_data->{id});
+        $clone->remove(user_admin);
+    }
+    for my $req ( $base->list_requests ) {
+        $req->stop;
+    }
+    $base->remove(user_admin);
+}
+
+sub test_removed_remote_swap($vm, $node) {
+    diag("Testing removed remote swap in ".$vm->type);
+    my $base = create_domain($vm);
+    $base->add_volume(size => 128*1024 , type => 'tmp');
+    $base->add_volume(size => 128*1024 , type => 'swap');
+    $base->add_volume(size => 128*1024 , type => 'data');
+    $base->prepare_base(user_admin);
+    $base->set_base_vm(node => $node, user => user_admin);
+
+    my $found_clone;
+    for my $try ( 1 .. 20 ) {
+        diag("try $try");
+        my $clone1 = $base->clone(name => new_domain_name, user => user_admin);
+        $clone1->migrate($node);
+        _remove_tmp($clone1,$node);
+        $clone1->start(user_admin);
+        $found_clone = $clone1;
+        last if $base->list_requests;
+    }
+    ok(grep { $_->command eq 'set_base_vm' } $base->list_requests );
+    for my $clone_data ($base->clones) {
+        my $clone = Ravada::Domain->open($clone_data->{id});
+        $clone->remove(user_admin);
+    }
+    for my $req ( $base->list_requests ) {
+        $req->stop;
+    }
+    $base->remove(user_admin);
+}
+
 sub test_removed_base_file($vm, $node) {
     diag("Testing removed base in ".$vm->type);
     my $base = create_domain($vm);
@@ -280,11 +339,80 @@ sub test_removed_base_file($vm, $node) {
         $clone->remove(user_admin);
     }
     for my $req ( $base->list_requests ) {
-        warn $req->id;
         $req->stop;
     }
     $base->remove(user_admin);
 }
+
+sub _remove_base_files($base, $node) {
+    for my $file ( $base->list_files_base ) {
+        $node->remove_file($file);
+    }
+    $node->refresh_storage_pools();
+}
+
+sub _remove_tmp($domain, $vm = $domain->_vm) {
+    my ($found_swap, $found_tmp);
+    for my $vol ( $domain->list_volumes ) {
+        if ( $vol =~ /TMP/ ) {
+            $vm->remove_file($vol);
+            $found_tmp= 1;
+        }
+        if ( $vol =~ /SWAP/ ) {
+            $vm->remove_file($vol);
+            $found_swap = 1;
+        }
+    }
+    die "Error: no swap found in ".$domain->name if !$found_swap;
+    die "Error: no tmp found in ".$domain->name if !$found_tmp;
+    $vm->refresh_storage_pools();
+
+}
+
+sub test_removed_base_file_and_swap_remote($vm, $node) {
+    diag("Testing removed remote base in ".$vm->type);
+    my $base = create_domain($vm);
+    $base->add_volume(size => 128*1024 , type => 'tmp');
+    $base->add_volume(size => 128*1024 , type => 'swap');
+    $base->add_volume(size => 128*1024 , type => 'data');
+    $base->prepare_base(user_admin);
+    $base->set_base_vm(node => $node, user => user_admin);
+
+    my $found_req;
+    my $found_clone;
+    for my $try ( 1 .. 20 ) {
+        diag("try $try");
+        my $clone1 = $base->clone(name => new_domain_name, user => user_admin);
+        $clone1->migrate($node);
+        _remove_tmp($clone1,$node);
+        _remove_base_files($base,$node);
+        $clone1->start(user_admin);
+        $found_clone = $clone1;
+        my @req = $base->list_requests();
+        next if !scalar @req;
+        for my $req (@req) {
+            if($req->command eq 'set_base_vm') {
+                $found_req = $req;
+                last;
+            }
+        }
+        last if $found_req;
+    }
+    ok($found_req,"Expecting request to set base vm");
+    is($base->base_in_vm($node->id),0);
+    is(scalar($base->list_vms),1) or exit;
+    my $node2 = Ravada::VM->open($node->id);
+    is($node2->is_enabled,1);
+    for my $clone_data ($base->clones) {
+        my $clone = Ravada::Domain->open($clone_data->{id});
+        $clone->remove(user_admin);
+    }
+    for my $req ( $base->list_requests ) {
+        $req->stop;
+    }
+    $base->remove(user_admin);
+}
+
 
 sub test_set_vm($vm, $node) {
     my $base = create_domain($vm);
@@ -592,6 +720,8 @@ sub test_duplicated_set_base_vm($vm, $node) {
         , at => time + 4
     );
     ok($req5) or exit;
+
+    is($node->is_locked,1);
     my $sth = connector->dbh->prepare("DELETE FROM requests");
     $sth->execute;
 }
@@ -634,9 +764,9 @@ for my $vm_name ( 'Void', 'KVM') {
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
-        test_remove_base($vm, $node, 0);
-        goto NEXT;
-
+        test_removed_base_file_and_swap_remote($vm, $node);
+        test_removed_remote_swap($vm, $node);
+        test_removed_local_swap($vm, $node);
         test_duplicated_set_base_vm($vm, $node);
         test_removed_base_file($vm, $node);
 

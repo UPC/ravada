@@ -158,7 +158,7 @@ our %COMMAND = (
         ,commands => ['prepare_base','remove_base','set_base_vm','rebase_volumes'
                     , 'remove_base_vm'
                     , 'screenshot'
-                    , 'manage_pools']
+                ]
         ,priority => 6
     }
     ,important=> {
@@ -169,7 +169,7 @@ our %COMMAND = (
     ,secondary => {
         limit => 50
         ,priority => 2
-        ,commands => ['shutdown','shutdown_now']
+        ,commands => ['shutdown','shutdown_now', 'manage_pools']
     }
 );
 lock_hash %COMMAND;

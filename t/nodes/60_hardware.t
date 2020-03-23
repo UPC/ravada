@@ -123,7 +123,7 @@ sub test_drivers_type($type, $vm, $node) {
         ok(!$@,"Expecting no error, got : ".($@ or ''));
 
         is($domain->get_driver($type), $option->{value}, $type);
-        $domain->prepare_base(user_admin);
+        $domain->prepare_base(user_admin) if !$domain->is_base;
         $domain->set_base_vm(node => $node, user => user_admin);
 
         my $clone = $domain->clone(name => new_domain_name, user => user_admin);
