@@ -878,6 +878,7 @@ sub _add_indexes_generic($self) {
     my %index = (
         requests => [
             "index(status,at_time)"
+            ,"index(id,date_changed,status,at_time)"
             ,"index(date_changed)"
             ,"index(start_time,command,status,pid)"
         ]
@@ -886,6 +887,9 @@ sub _add_indexes_generic($self) {
         ]
         ,iptables => [
             "index(id_domain,time_deleted,time_req)"
+        ]
+        ,messages => [
+             "index(id_request,date_send)"
         ]
     );
     for my $table ( keys %index ) {
@@ -3590,9 +3594,12 @@ sub _cmd_cleanup($self, $request) {
     $self->_clean_volatile_machines( request => $request);
     $self->_clean_temporary_users( );
     $self->_clean_requests('cleanup', $request);
-    $self->_clean_requests('cleanup', $request,'done');
-    $self->_clean_requests('enforce_limits', $request,'done');
-    $self->_clean_requests('refresh_vms', $request,'done');
+    for my $cmd ( qw(cleanup enforce_limits refresh_vms
+        manage_pools refresh_machine screenshot
+        open_iptables ping_backend
+        )) {
+            $self->_clean_requests($cmd, $request,'done');
+    }
 }
 
 sub _req_method {
