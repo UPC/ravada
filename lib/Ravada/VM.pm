@@ -626,7 +626,8 @@ sub _interface_ip($self, $remote_ip=undef) {
     my %route;
     my ($default_gw , $default_ip);
 
-    my $remote_ip_addr = NetAddr::IP->new($remote_ip);
+    my $remote_ip_addr = NetAddr::IP->new($remote_ip)
+                or confess "I can't find netaddr for $remote_ip";
 
     for my $line ( split( /\n/, $out ) ) {
         if ( $line =~ m{^default via ([\d\.]+)} ) {
@@ -638,7 +639,8 @@ sub _interface_ip($self, $remote_ip=undef) {
 
             return $ip if $remote_ip && $remote_ip eq $ip;
 
-            my $netaddr = NetAddr::IP->new($network);
+            my $netaddr = NetAddr::IP->new($network)
+                or confess "I can't find netaddr for $network";
             return $ip if $remote_ip_addr->within($netaddr);
 
             $default_ip = $ip if !defined $default_ip && $ip !~ /^127\./;

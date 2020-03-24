@@ -41,6 +41,7 @@ sub test_graphics($vm, $node) {
 
 sub test_driver_clone($vm, $node, $domain, $driver_name, $option) {
     $domain->remove_base(user_admin) if $domain->is_base;
+    wait_request();
     my $req = Ravada::Request->set_driver(uid => user_admin->id
         , id_domain => $domain->id
         , id_option => $option->{id}
@@ -63,6 +64,7 @@ sub test_driver_clone($vm, $node, $domain, $driver_name, $option) {
     $clone->remove(user_admin);
 
     $domain->remove_base(user_admin);
+    wait_request();
 }
 
 sub test_driver_migrate($vm, $node, $domain, $driver_name) {
@@ -97,6 +99,7 @@ sub test_driver_migrate($vm, $node, $domain, $driver_name) {
         last unless $ENV{TEST_LONG};
     }
     $domain->remove_base(user_admin);
+    wait_request();
 }
 
 sub test_drivers_type($type, $vm, $node) {
@@ -123,7 +126,7 @@ sub test_drivers_type($type, $vm, $node) {
         ok(!$@,"Expecting no error, got : ".($@ or ''));
 
         is($domain->get_driver($type), $option->{value}, $type);
-        $domain->prepare_base(user_admin) if !$domain->is_base;
+        $domain->prepare_base(user_admin);
         $domain->set_base_vm(node => $node, user => user_admin);
 
         my $clone = $domain->clone(name => new_domain_name, user => user_admin);
@@ -134,7 +137,12 @@ sub test_drivers_type($type, $vm, $node) {
         is($clone2->get_driver($type), $option->{value}, $type);
 
         $clone->remove(user_admin);
+        my @vols = $domain->list_files_base();
         $domain->remove_base(user_admin);
+        wait_request(debug => 0);
+        for my $vol (@vols) {
+            ok (! -e $vol ) or die "$vol";
+        }
 
     }
     $domain->remove(user_admin);

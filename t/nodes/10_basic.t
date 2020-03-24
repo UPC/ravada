@@ -206,6 +206,10 @@ sub test_iptables_close($vm, $node) {
     );
     is(scalar @found,1,$vm->name." $remote_ip2:$local_port2".Dumper(\@found));
 
+    _remove_domain($domain);
+}
+
+sub _remove_domain($domain) {
     for my $clone0 ( $domain->clones) {
         my $clone = Ravada::Domain->open($clone0->{id});
         $clone->remove(user_admin);
@@ -254,7 +258,6 @@ sub test_removed_local_swap($vm, $node) {
 
     my $found_clone;
     for my $try ( 1 .. 20 ) {
-        diag("try $try");
         my $clone1 = $base->clone(name => new_domain_name, user => user_admin);
         _remove_tmp($clone1,$vm);
         $clone1->start(user_admin);
@@ -535,7 +538,8 @@ sub test_volatile_req($vm, $node) {
     ok($base->base_in_vm($node->id));
 
     my @clones;
-    for ( 1 .. 4 ) {
+    my $clone;
+    for ( 1 .. 20 ) {
         my $clone_name = new_domain_name;
         my $req = Ravada::Request->create_domain(
            id_base => $base->id
@@ -546,13 +550,13 @@ sub test_volatile_req($vm, $node) {
         is($req->status, 'done');
         is($req->error,'');
 
-        my $clone = rvd_back->search_domain($clone_name);
+        $clone = rvd_back->search_domain($clone_name);
         is($clone->is_active(),1,"[".$vm->type."] expecting clone ".$clone->name
             ." active on node ".$clone->_vm->name);
         push @clones,($clone);
         last if $clone->_vm->id == $node->id;
     }
-    is($clones[-1]->_vm->id, $node->id) or exit;
+    is($clone->_vm->id, $node->id) or exit;
 
     for (@clones) {
         $_->remove(user_admin);
@@ -567,9 +571,11 @@ sub test_volatile_tmp_owner($vm, $node) {
     $base->set_base_vm(user => user_admin, node => $node);
 
     my $user = Ravada::Auth::SQL::add_user(name => 'mcnulty', is_temporary => 1);
+    my $owner = Ravada::Auth::SQL->search_by_id($user->id);
+    ok($owner) or exit;
 
     my @clones;
-    for ( 1 .. 4 ) {
+    for ( 1 .. 10 ) {
         my $clone_name = new_domain_name;
         my $req = Ravada::Request->create_domain(
            id_base => $base->id
@@ -586,7 +592,7 @@ sub test_volatile_tmp_owner($vm, $node) {
         push @clones,($clone);
         last if $clone->_vm->id == $node->id;
     }
-    is($clones[-1]->_vm->id, $node->id);
+    is($clones[-1]->_vm->id, $node->id) or exit;
 
     for (@clones) {
         $_->shutdown_now(user_admin);
@@ -726,6 +732,37 @@ sub test_duplicated_set_base_vm($vm, $node) {
     $sth->execute;
 }
 
+sub test_create_active($vm, $node) {
+    diag("Test create active machine");
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+    $base->set_base_vm(vm => $node, user => user_admin);
+    my $remote_ip = $node->ip or confess "No node ip";
+
+    my $clone;
+    for ( 1 .. 20 ) {
+        my $name = new_domain_name();
+        my $req = Ravada::Request->create_domain(
+            id_base => $base->id
+            ,name => $name
+            ,start => 1
+            ,remote_ip => '1.2.3.4'
+            ,id_owner => user_admin->id
+        );
+        wait_request(debug => 1);
+        $clone = rvd_front->search_domain($name);
+        ok($vm->search_domain($name),"Expecting clone $name in master node") or exit;
+        last if $clone->display(user_admin) =~ /$remote_ip/;
+    }
+    like($clone->display(user_admin), qr($remote_ip));
+
+    my $clone2 = rvd_front->search_domain($clone->name);
+    my $info = $clone2->info(user_admin);
+    like($info->{display}->{display}, qr($remote_ip)) or die Dumper($info->{display});
+
+    _remove_domain($base);
+}
+
 ##################################################################################
 clean();
 
@@ -763,6 +800,8 @@ for my $vm_name ( 'Void', 'KVM') {
             next;
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
+
+        test_create_active($vm, $node);
 
         test_removed_base_file_and_swap_remote($vm, $node);
         test_removed_remote_swap($vm, $node);

@@ -710,7 +710,8 @@ sub prepare_base($self, $with_cd) {
     for my $volume ($self->list_volumes_info()) {
         my $base_file = $volume->base_filename;
         next if !$base_file || $base_file =~ /\.iso$/;
-        confess "Error: file '$base_file' already exists" if $self->_vm->file_exists($base_file);
+        confess "Error: file '$base_file' already exists in ".$self->_vm->name
+            if $self->_vm->file_exists($base_file);
     }
 
     for my $volume ($self->list_volumes_info()) {
