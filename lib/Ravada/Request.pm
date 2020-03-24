@@ -129,10 +129,15 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             change_owner
             add_hardware remove_hardware set_driver change_hardware
             expose remove_expose
-            set_base_vm
             rebase rebase_volumes
             shutdown_node start_node
     );
+
+our %CMD_NO_DUPLICATE = map { $_ => 1 }
+qw(
+    set_base_vm
+    remove_base_vm
+);
 
 our $TIMEOUT_SHUTDOWN = 120;
 
@@ -151,8 +156,9 @@ our %COMMAND = (
     ,disk => {
         limit => 1
         ,commands => ['prepare_base','remove_base','set_base_vm','rebase_volumes'
+                    , 'remove_base_vm'
                     , 'screenshot'
-                    , 'manage_pools']
+                ]
         ,priority => 6
     }
     ,important=> {
@@ -163,7 +169,7 @@ our %COMMAND = (
     ,secondary => {
         limit => 50
         ,priority => 2
-        ,commands => ['shutdown','shutdown_now']
+        ,commands => ['shutdown','shutdown_now', 'manage_pools']
     }
 );
 lock_hash %COMMAND;
@@ -491,19 +497,30 @@ sub new_request($self, $command, @args) {
     );
 }
 
-sub _duplicated_request($command, $args) {
-    return if !$args;
-    my $args_d = decode_json($args);
+sub _duplicated_request($self=undef, $command=undef, $args=undef) {
+
+    my $args_d;
+    if ($self) {
+        confess "Error: do not supply args if you supply request" if $args;
+        confess "Error: do not supply command if you supply request" if $command;
+        $args_d = $self->args;
+        $command = $self->command;
+    } else {
+        $args_d = decode_json($args);
+    }
     delete $args_d->{uid};
+    delete $args_d->{at};
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id,args FROM requests WHERE status='requested'"
         ." AND command=?"
     );
     $sth->execute($command);
     while (my ($id,$args_found) = $sth->fetchrow) {
+        next if $self && $self->id == $id;
 
         my $args_found_d = decode_json($args_found);
         delete $args_found_d->{uid};
+        delete $args_found_d->{at};
 
         next if join(".",sort keys %$args_d) ne join(".",sort keys %$args_found_d);
         my $args_d_s = join(".",map { $args_d->{$_} } sort keys %$args_d);
@@ -555,8 +572,9 @@ sub _new_request {
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
     if ($args{command} =~ /^(clone|manage_pools|list_isos)$/
+        || $CMD_NO_DUPLICATE{$args{command}}
         || ($no_duplicate && $args{command} =~ /^(screenshot)$/)) {
-        if ( _duplicated_request($args{command}, $args{args})
+        if ( _duplicated_request(undef, $args{command}, $args{args})
             || ( $args{command} ne 'clone' && done_recently(undef, 60, $args{command}))) {
             #            warn "Warning: duplicated request for $args{command} $args{args}";
             return;
@@ -1193,13 +1211,18 @@ sub _requested($command, %fields) {
 }
 
 sub stop($self) {
+    my $stale = '';
+    my $run_time = '';
+    if ($self->start_time) {
+        $run_time = time - $self->start_time;
+        $stale = ", stale for $run_time seconds.";
+    }
     warn "Killing ".$self->command
-        ." , pid: ".$self->pid
-        .", stale for ".(time - $self->start_time)." seconds\n";
-    my $ok = kill (15,$self->pid);
-    $self->status('done',"Killed start process after "
-           .(time - $self->start_time)." seconds\n");
-
+        ." , pid: ".( $self->pid or '<UNDEF>')
+        .$stale
+        ."\n";
+    kill (15,$self->pid) if $self->pid;
+    $self->status('done',"Killed start process after $run_time seconds.");
 }
 
 sub priority($self) {

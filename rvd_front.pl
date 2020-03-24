@@ -2161,6 +2161,7 @@ sub set_base_vm( $c, $new_value) {
         return $c->render(json => {message => 'access denied'});
     }
 
+    $domain->_set_base_vm_db($id_vm, $new_value);
     if ($new_value) {
         my $req = Ravada::Request->set_base_vm(
         id_vm => $id_vm

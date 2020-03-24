@@ -878,6 +878,7 @@ sub _add_indexes_generic($self) {
     my %index = (
         requests => [
             "index(status,at_time)"
+            ,"index(id,date_changed,status,at_time)"
             ,"index(date_changed)"
             ,"index(start_time,command,status,pid)"
         ]
@@ -886,6 +887,9 @@ sub _add_indexes_generic($self) {
         ]
         ,iptables => [
             "index(id_domain,time_deleted,time_req)"
+        ]
+        ,messages => [
+             "index(id_request,date_send)"
         ]
     );
     for my $table ( keys %index ) {
@@ -1687,18 +1691,13 @@ sub create_domain {
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
 
     $request->status("creating machine")    if $request;
-    if ( $base && $base->is_base ) {
+    if ( $base && $base->is_base && $base->volatile_clones || $user->is_temporary ) {
         $request->status("balancing")                       if $request;
         $vm = $vm->balance_vm($base) or die "Error: No free nodes available.";
         $request->status("creating machine on ".$vm->name)  if $request;
     }
 
-    confess "No vm found, request = ".Dumper(request => $request)   if !$vm;
-
-    carp "WARNING: no VM defined, we will use ".$vm->name
-        if !$vm_name && !$id_base;
-
-    confess "I can't find any vm ".Dumper($self->vm) if !$vm;
+    confess "Error: missing vm " if !$vm;
 
     my $domain;
     eval { $domain = $vm->create_domain(%args)};
@@ -2689,7 +2688,7 @@ sub _can_fork {
         delete $reqs{$pid} if !$request || $request->status eq 'done';
     }
     my $n_pids = scalar(keys %reqs);
-    return 1 if $n_pids <= $req->requests_limit();
+    return 1 if $n_pids < $req->requests_limit();
 
     my $msg = $req->command
                 ." waiting for processes to finish"
@@ -3590,9 +3589,12 @@ sub _cmd_cleanup($self, $request) {
     $self->_clean_volatile_machines( request => $request);
     $self->_clean_temporary_users( );
     $self->_clean_requests('cleanup', $request);
-    $self->_clean_requests('cleanup', $request,'done');
-    $self->_clean_requests('enforce_limits', $request,'done');
-    $self->_clean_requests('refresh_vms', $request,'done');
+    for my $cmd ( qw(cleanup enforce_limits refresh_vms
+        manage_pools refresh_machine screenshot
+        open_iptables ping_backend
+        )) {
+            $self->_clean_requests($cmd, $request,'done');
+    }
 }
 
 sub _req_method {
