@@ -293,6 +293,7 @@ sub _vm_disconnect {
 }
 
 sub _around_start($orig, $self, @arg) {
+
     $self->_start_preconditions(@arg);
 
     my %arg;
@@ -305,23 +306,49 @@ sub _around_start($orig, $self, @arg) {
     my $listen_ip = delete $arg{listen_ip};
     my $remote_ip = $arg{remote_ip};
 
-    if (!defined $listen_ip) {
-        my $display_ip;
-        if ($remote_ip) {
-            my $set_password = 0;
-            my $network = Ravada::Network->new(address => $remote_ip);
-            $set_password = 1 if $network->requires_password();
-            $display_ip = $self->_listen_ip($remote_ip);
-            $arg{set_password} = $set_password;
-        } else {
-            $display_ip = $self->_listen_ip();
+    for (;;) {
+        eval { $self->_start_checks(@arg) };
+        if ($@ && $@ =~/base file not found/ && !$self->_vm->is_local) {
+            $self->_request_set_base();
+            next;
         }
-        $arg{listen_ip} = $display_ip;
+        if (!defined $listen_ip) {
+            my $display_ip;
+            if ($remote_ip) {
+                my $set_password = 0;
+                my $network = Ravada::Network->new(address => $remote_ip);
+                $set_password = 1 if $network->requires_password();
+                $display_ip = $self->_listen_ip($remote_ip);
+                $arg{set_password} = $set_password;
+            } else {
+                $display_ip = $self->_listen_ip();
+            }
+            $arg{listen_ip} = $display_ip;
+        }
+        eval { $self->$orig(%arg) };
+        last if !$@;
+        warn $@ if $@;
+        if ($@ && $self->id_base && !$self->_vm->is_local && $self->_vm->enabled) {
+            $self->_request_set_base();
+            next;
+        }
+        die $@;
     }
-    my $ret = $self->$orig(%arg);
-
     $self->_post_start(%arg);
 
+}
+
+sub _request_set_base($self) {
+    my $base = Ravada::Domain->open($self->id_base);
+    $base->_set_base_vm_db($self->_vm->id,0);
+    Ravada::Request->set_base_vm(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_domain => $base->id
+        ,id_vm => $self->_vm->id
+        ,at => time + int(rand(10))
+    );
+    my $vm_local = $self->_vm->new( host => 'localhost' );
+    $self->_set_vm($vm_local, 1);
 }
 
 sub _start_preconditions{
@@ -348,9 +375,18 @@ sub _start_preconditions{
         _allow_manage(@_);
     }
     #_check_used_memory(@_);
-
-    return if $self->_search_already_started('fast');
     $self->status('starting');
+}
+
+sub _start_checks($self, @args) {
+    return if $self->_search_already_started('fast');
+    my ($id_vm, $request);
+    if (!scalar(@args) % 2) {
+        my %args = @args;
+        $id_vm = delete $args{id_vm};
+        $request = delete $args{request} if exists $args{request};
+    }
+
     # if it is a clone ( it is not a base )
     if ($self->id_base) {
 #        $self->_set_last_vm(1)
@@ -358,6 +394,7 @@ sub _start_preconditions{
             my $vm_local = $self->_vm->new( host => 'localhost' );
             $self->_set_vm($vm_local, 1);
         }
+        $self->_check_tmp_volumes();
         my $vm;
         if ($id_vm) {
             $vm = Ravada::VM->open($id_vm);
@@ -377,7 +414,6 @@ sub _start_preconditions{
         my $vm_local = $self->_vm->new( host => 'localhost' );
         $self->_set_vm($vm_local, 1);
     }
-    $self->status('starting');
     $self->_check_free_vm_memory();
     #TODO: remove them and make it more general now we have nodes
     #$self->_check_cpu_usage($request);
@@ -441,10 +477,25 @@ sub _balance_vm($self) {
     my $base;
     $base = Ravada::Domain->open($self->id_base) if $self->id_base;
 
-    my $vm_free = $self->_vm->balance_vm($base);
-    return if !$vm_free;
+    my $vm_free;
+    for (;;) {
+        $vm_free = $self->_vm->balance_vm($base);
+        return if !$vm_free;
 
-    $self->migrate($vm_free) if $vm_free->id != $self->_vm->id;
+        last if $vm_free->id == $self->_vm->id;
+        eval { $self->migrate($vm_free) };
+        last if !$@;
+        if ($@ && $@ =~ /file not found/i) {
+            $base->_set_base_vm_db($vm_free->id,0);
+            Ravada::Request->set_base_vm(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $base->id
+                ,id_vm => $vm_free->id
+            );
+            next;
+        }
+        die $@;
+    }
     return $vm_free->id;
 }
 
@@ -493,6 +544,8 @@ sub _allow_remove($self, $user) {
     confess "ERROR: Undefined user" if !defined $user;
 
     return if !$self->is_known(); # already removed
+
+    confess "Error: arg user is not Ravada::Auth object" if !ref($user);
 
     die "ERROR: remove not allowed for user ".$user->name
         unless $user->can_remove_machine($self);
@@ -657,7 +710,8 @@ sub prepare_base($self, $with_cd) {
     for my $volume ($self->list_volumes_info()) {
         my $base_file = $volume->base_filename;
         next if !$base_file || $base_file =~ /\.iso$/;
-        die "Error: file '$base_file' already exists" if $self->_vm->file_exists($base_file);
+        confess "Error: file '$base_file' already exists in ".$self->_vm->name
+            if $self->_vm->file_exists($base_file);
     }
 
     for my $volume ($self->list_volumes_info()) {
@@ -812,10 +866,41 @@ sub _check_free_vm_memory {
 
     return if $vm_free_mem > $self->_vm->min_free_memory;
 
-    my $msg = "Error: No free memory. Only "._gb($vm_free_mem)." out of "
+    my $msg = "Error: No free memory in ".$self->_vm->name.". Only "._gb($vm_free_mem)." out of "
         ._gb($self->_vm->min_free_memory)." GB required.\n";
 
     die $msg;
+}
+
+sub _check_tmp_volumes($self) {
+    confess "Error: only clones temporary volumes can be checked."
+        if !$self->id_base;
+    for my $vol ( $self->list_volumes_info) {
+        next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\./;
+        next if $self->_vm->file_exists($vol->file);
+
+        my $base = Ravada::Domain->open($self->id_base);
+        if (! $self->is_local) {
+            Ravada::Request->set_base_vm(
+                id_domain => $base->id
+                ,id_vm => $self->_vm->id
+                ,uid => Ravada::Utils::user_daemon->id
+            );
+            confess "Error: base file not found in node ".$self->_vm->name." ".$vol->file;
+        }
+        my @volumes = $base->list_files_base_target;
+        my ($file_base) = grep { $_->[1] eq $vol->info->{target} } @volumes;
+        if (!$file_base) {
+            warn "Error: I can't find base volume for target ".$vol->info->{target}
+                .Dumper(\@volumes);
+        }
+        my $vol_base = Ravada::Volume->new( file => $file_base->[0]
+            , vm => $self->_vm
+        );
+        $vol_base->clone(file => $vol->file);
+        warn "cloned ".$self->name." ".$self->_vm->name." ".$vol_base->vm->name." "
+            .$vol->info->{target};
+    }
 }
 
 sub _check_cpu_usage($self, $request=undef){
@@ -1909,18 +1994,54 @@ sub remove_base($self, $user) {
     return $self->_do_remove_base($user);
 }
 
-sub _do_remove_base($self, $user) {
-    if ($self->is_base) {
-        for my $vm ( $self->list_vms ) {
-            $self->remove_base_vm(vm => $vm, user => $user) if !$vm->is_local;
-        }
+sub _cascade_remove_base_in_nodes($self) {
+    my $req_nodes;
+    for my $vm ( $self->list_vms ) {
+        next if $vm->is_local;
+        my @after;
+        push @after,(after_request => $req_nodes->id) if $req_nodes;
+        $req_nodes = Ravada::Request->remove_base_vm(
+            id_vm => $vm->id
+            ,id_domain => $self->id
+            ,uid => Ravada::Utils::user_daemon->id
+            ,@after
+        );
     }
-    $self->is_base(0);
+    if ( $req_nodes ) {
+        my $vm_local = $self->_vm->new( host => 'localhost' );
+        Ravada::Request->remove_base_vm(
+            id_vm => $vm_local->id
+            ,id_domain => $self->id
+            ,uid => Ravada::Utils::user_daemon->id
+            ,after_request => $req_nodes->id
+        );
+        $self->is_base(0);
+    }
+    return $req_nodes;
+}
+
+sub _do_remove_base($self, $user) {
+    return
+        if $self->is_base && $self->is_local
+        && $self->_cascade_remove_base_in_nodes ();
+
+    $self->is_base(0) if $self->is_local;
+    my $vm_local = $self->_vm->new( host => 'localhost' );
     for my $vol ($self->list_volumes_info) {
         next if !$vol->file || $vol->file =~ /\.iso$/;
         my $backing_file = $vol->backing_file;
         next if !$backing_file;
         #        confess "Error: no backing file for ".$vol->file if !$backing_file;
+        if (!$self->is_local) {
+            my ($dir) = $backing_file =~ m{(.*/)};
+            if ( $self->_vm->shared_storage($vm_local, $dir) ) {
+                next;
+            }
+            $self->_vm->remove_file($vol->file);
+            $self->_vm->remove_file($backing_file);
+            $self->_vm->refresh_storage_pools();
+            return ;
+        }
         $vol->block_commit();
         unlink $vol->file or die "$! ".$vol->file;
         my @stat = stat($backing_file);
@@ -1958,20 +2079,10 @@ sub _pre_remove_base {
 
 sub _post_remove_base {
     my $self = shift;
+    return if !$self->_vm->is_local;
     $self->_remove_base_db(@_);
     $self->_post_remove_base_domain();
 
-    $self->_remove_all_bases();
-}
-
-sub _remove_all_bases($self) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm FROM bases_vm "
-            ." WHERE id_domain=? AND enabled=1"
-    );
-    $sth->execute($self->id);
-    while ( my ($id_vm) = $sth->fetchrow ) {
-        $self->remove_base_vm( id_vm => $id_vm );
-    }
 }
 
 sub _post_spinoff($self) {
@@ -3681,19 +3792,12 @@ sub _pre_migrate($self, $node, $request = undef) {
     my $base = Ravada::Domain->open($self->id_base);
     confess "ERROR: base id ".$self->id_base." not found."  if !$base;
 
-    die "ERROR: Base ".$base->name." files not migrated to ".$node->name
+    confess "ERROR: Base ".$base->name." files not migrated to ".$node->name
         if !$base->base_in_vm($node->id);
 
     for my $file ( $base->list_files_base ) {
-
-        my ($name) = $file =~ m{.*/(.*)};
-
-        my $vol_path = $node->search_volume_path($name);
-        die "ERROR: $file not found in ".$node->host
-            if !$vol_path;
-
-        die "ERROR: $name found at $vol_path instead $file"
-            if $vol_path ne $file;
+        next if $node->file_exists($file);
+        confess "ERROR: file not found $file in ".$node->host;
     }
 
     $self->_set_base_vm_db($node->id,0);
@@ -3782,13 +3886,9 @@ sub set_base_vm($self, %args) {
     $value = 1 if !defined $value;
 
     if ($vm->is_local) {
-        $self->_set_vm($vm,1);
+        $self->_set_vm($vm,1); # force set vm on domain
         if (!$value) {
             $request->status("working","Removing base")     if $request;
-            for my $vm_node ( $self->list_vms ) {
-                $self->set_base_vm(vm => $vm_node, user => $user, value => 0
-                    , request => $request) if !$vm_node->is_local;
-            }
             $self->_set_base_vm_db($vm->id, $value);
             $self->remove_base($user);
         } else {
@@ -3800,20 +3900,8 @@ sub set_base_vm($self, %args) {
             if $request;
         $self->migrate($vm, $request);
     } else {
-        if ($vm->is_active) {
-            my $vm_local = $self->_vm->new( host => 'localhost' );
-            for my $file ($self->list_files_base()) {
-                my ($path) = $file =~ m{(.*/)};
-                next if $vm_local->shared_storage($vm, $path);
-                confess "Error: file has non-valid characters" if $file =~ /[*;&'" ]/;
-                my ($out, $err);
-                eval { ($out, $err) = $vm->remove_file($file)
-                    if $vm->file_exists($file);
-                };
-                $err = $@ if !$err && $@;
-                warn $err if $err;
-            }
-        }
+        $self->_set_vm($vm,1); # force set vm on domain
+        $self->_do_remove_base($user);
     }
 
     if (!$vm->is_local) {
@@ -3843,6 +3931,7 @@ sub remove_base_vm($self, %args) {
     confess "ERROR: Unknown arguments ".join(',',sort keys %args).", valid are user and vm."
         if keys %args;
 
+        warn $vm->name;
     return $self->set_base_vm(vm => $vm, user => $user, value => 0);
 }
 
@@ -3883,7 +3972,7 @@ Returns a list for virtual machine managers where this domain is base
 sub list_vms($self) {
     confess "Domain is not base" if !$self->is_base;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm FROM bases_vm WHERE id_domain=?");
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm FROM bases_vm WHERE id_domain=? AND enabled = 1");
     $sth->execute($self->id);
     my @vms;
     while (my $id_vm = $sth->fetchrow) {

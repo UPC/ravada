@@ -62,9 +62,8 @@ sub clone($self, $file_clone) {
         ,"-b", $self->file
         ,$file_clone
     );
-
     my ($out, $err) = $self->vm->run_command(@cmd);
-    die $err if $err;
+    confess $err if $err;
 
     return $file_clone;
 }

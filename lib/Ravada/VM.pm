@@ -626,7 +626,8 @@ sub _interface_ip($self, $remote_ip=undef) {
     my %route;
     my ($default_gw , $default_ip);
 
-    my $remote_ip_addr = NetAddr::IP->new($remote_ip);
+    my $remote_ip_addr = NetAddr::IP->new($remote_ip)
+                or confess "I can't find netaddr for $remote_ip";
 
     for my $line ( split( /\n/, $out ) ) {
         if ( $line =~ m{^default via ([\d\.]+)} ) {
@@ -638,7 +639,8 @@ sub _interface_ip($self, $remote_ip=undef) {
 
             return $ip if $remote_ip && $remote_ip eq $ip;
 
-            my $netaddr = NetAddr::IP->new($network);
+            my $netaddr = NetAddr::IP->new($network)
+                or confess "I can't find netaddr for $network";
             return $ip if $remote_ip_addr->within($netaddr);
 
             $default_ip = $ip if !defined $default_ip && $ip !~ /^127\./;
@@ -930,7 +932,7 @@ Returns the minimun free memory necessary to start a new virtual machine
 
 sub min_free_memory {
     my $self = shift;
-    return $self->_data('min_free_memory');
+    return ($self->_data('min_free_memory') or $Ravada::Domain::MIN_FREE_MEMORY);
 }
 
 =head2 max_load 
@@ -985,6 +987,27 @@ sub is_local($self) {
     return 0;
 }
 
+=head2 is_locked
+
+This node has requests running or waiting to be run
+
+=cut
+
+sub is_locked($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, at_time, args FROM requests "
+        ." WHERE status <> 'done' "
+    );
+    $sth->execute;
+    my ($id, $at, $args);
+    $sth->bind_columns(\($id, $at, $args));
+    while ( $sth->fetch ) {
+        next if defined $at && $at < time + 2;
+        next if !$args;
+        my $args_d = decode_json($args);
+        return 1 if exists $args_d->{id_vm} && $args_d->{id_vm} == $self->id
+    }
+    return 0;
+}
 
 =head2 list_nodes
 
@@ -1279,10 +1302,12 @@ sub file_exists( $self, $file ) {
     my $ssh = ($self->{_ssh} or $self->_connect_ssh());
     die "Error: no ssh connection to ".$self->name if ! $ssh;
 
-    my $io = IO::Scalar->new();
-    my $ok = $ssh->scp_get($file, $io);
+    confess "Error: dangerous filename '$file'"
+        if $file =~ /[`|"(\\\[]/;
+    my ($out, $err) = $self->run_command("/bin/ls -1 $file");
 
-    return $ok;
+    return 1 if !$err;
+    return 0;
 }
 
 sub remove_file( $self, $file ) {
@@ -1419,6 +1444,7 @@ sub balance_vm($self, $base=undef) {
         next if !$vm->enabled();
         next if !$active;
         next if $base && !$vm->is_local && !$base->base_in_vm($vm->id);
+        next if $vm->is_locked();
 
         my $free_memory;
         eval { $free_memory = $vm->free_memory };
@@ -1427,21 +1453,32 @@ sub balance_vm($self, $base=undef) {
             $vm->enabled(0) if !$vm->is_local();
             next;
         }
+        next if $free_memory < $Ravada::Domain::MIN_FREE_MEMORY;
 
         my $n_active = $vm->count_domains(status => 'active')
                         + $vm->count_domains(status => 'starting');
 
+        $free_memory = int($free_memory / 1024 );
         my $key = $n_active.".".$free_memory;
         $vm_list{$key} = $vm;
         last if $key =~ /^[01]+\./; # don't look for other nodes when this one is empty !
     }
-    my @sorted_vm = map { $vm_list{$_} } sort { $a <=> $b } keys %vm_list;
+    my @sorted_vm = _sort_vms(\%vm_list);
 #    warn Dumper([ map {  [$_ , $vm_list{$_}->name ] } keys %vm_list]);
 #    warn "sorted ".Dumper([ map { $_->name } @sorted_vm ]);
     for my $vm (@sorted_vm) {
         return $vm;
     }
     return $self;
+}
+
+sub _sort_vms($vm_list) {
+    my @sorted_vm = map { $vm_list->{$_} } sort {
+        my ($ad, $am) = $a =~ m{(\d+)\.(\d+)};
+        my ($bd, $bm) = $b =~ m{(\d+)\.(\d+)};
+        $ad <=> $bd || $bm <=> $am;
+    } keys %$vm_list;
+    return @sorted_vm;
 }
 
 sub count_domains($self, %args) {

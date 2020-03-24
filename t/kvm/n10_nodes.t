@@ -445,18 +445,8 @@ sub test_already_started_hibernated($vm_name, $node) {
     eval { $clone2->start(user => user_admin) };
     like($@,qr/already running/)    if $@;
 
-    rvd_back->_process_all_requests_dont_fork(1);
-    for ( 1 .. 120 ) {
-        last if $clone->is_active
-                && !$clone_local->is_active
-                && !$clone_local->is_hibernated;
-        sleep 1;
-    }
-    wait_request( debug => 1 );
-
-    is($clone->is_active, 0,"[$vm_name] expected ".$clone->name." down in "
-        .$clone->_vm->name." ".$clone->_vm->id) or exit;
-    is($clone_local->is_active, 0,"[$vm_name] expected ".$clone->name." down") or exit;
+    ok(grep { $_->command =~ /shutdown/i  } $clone->list_requests ) or
+    die Dumper($clone->list_requests);
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
@@ -865,6 +855,7 @@ sub test_remove_base($node) {
     $domain->remove_base_vm(user => user_admin, vm => $vm);
 
     is($domain->is_base,0);
+    wait_request(debug => 0);
 
     $domain->prepare_base(user_admin);
     is($domain->base_in_vm($vm->id),1);
@@ -885,6 +876,8 @@ sub test_remove_base_main($node) {
     is($domain->base_in_vm($node->id),1);
 
     $domain->remove_base(user_admin);
+    wait_request(debug => 0);
+    is($domain->is_base,0);
     $domain->prepare_base(user_admin);
 
     is($domain->base_in_vm($vm->id),1);
@@ -1024,7 +1017,7 @@ sub test_shutdown($node) {
     is($clone->_data('status'),'shutdown',"[".$clone->type."] Expecting clone ".$clone->name." data active") or return;
 
     my $req = Ravada::Request->refresh_vms();
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     is($req->status,'done');
     is($req->error,'');
 
@@ -1175,6 +1168,7 @@ SKIP: {
     is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
     test_already_started_hibernated($vm_name, $node);
 
+    is($vm->is_active,1);
     is($vm->shared_storage($node,'/var/tmp/'),0) or exit;
     test_already_started_twice($vm_name, $node);
 
