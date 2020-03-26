@@ -4,14 +4,16 @@ How to make a virtual machine disk sparse
 When someone had deleted files to reduce the virtual machine img size, you need to do some actions in the server to return this free space to the server.
 
 1. Install libguestfs-tools
+	
 	apt install libguestfs-tools
-2. Consult the real size of the virtual machine size
+
+2. Check the real size of the virtual machine size
+	
 	qemu-img info file.qcow2
 
 The output will be something like that: 
 
 	disk size: 10G
-
 
 3. Make a backup copy of the img file
 
