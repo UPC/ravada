@@ -38,7 +38,7 @@ The output will be something that contains this information:
 
 .. prompt:: bash $
 
-	qemu-img infor file.qcow2
+	qemu-img info file.qcow2
 
 The output now shows that the size has decreased:
 
