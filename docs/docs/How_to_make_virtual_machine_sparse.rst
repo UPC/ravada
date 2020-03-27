@@ -45,3 +45,5 @@ The output now shows that the size has decreased:
 	*disk size: 5G*
 
 6. Check if the virtual machine works.
+
+7. If the virtual machine works, then remove the img file backup.
