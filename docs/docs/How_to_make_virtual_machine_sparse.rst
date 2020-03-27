@@ -8,11 +8,11 @@ Steps
 
 1. Install libguestfs-tools
 
-.. prompt::apt install libguestfs-tools
+.. prompt:: apt install libguestfs-tools
 
 2. Check the real size of the virtual machine size
 	
-.. prompt::qemu-img info file.qcow2
+.. prompt:: qemu-img info file.qcow2
 
 The output will be something that contains this information: 
 
@@ -20,15 +20,15 @@ The output will be something that contains this information:
 
 3. Make a backup copy of the img file
 
-.. prompt::cp -p file.qcow2 /another/directory/file.backup.qcow2
+.. prompt:: cp -p file.qcow2 /another/directory/file.backup.qcow2
 
 4. Now use virt-sparsify
 	
-.. prompt::virt-sparsify --in-place file.qcow2
+.. prompt:: virt-sparsify --in-place file.qcow2
 
 5. Check if the virtual img size has been reduced
 
-.. prompt::qemu-img infor file.qcow2
+.. prompt:: qemu-img infor file.qcow2
 
 	*disk size: 5G*
 
