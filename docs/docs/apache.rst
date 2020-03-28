@@ -75,6 +75,8 @@ Edit /etc/apache2/sites-enabled/default-ssl.conf.
             ProxyPassReverse / http://localhost:8081/
             RequestHeader set X-Forwarded-Proto "https"
 
+More information about SSL configuration from `Mozilla <https://ssl-config.mozilla.org/#server=apache&version=2.4.41&config=modern&openssl=1.1.1d&guideline=5.4>`_ and `Letsencrypt <https://letsencrypt.org>`_ non profit CA.
+
 Apache redirect to https
 ------------------------
 
