@@ -499,6 +499,7 @@ sub _set_default_info($self, $listen_ip=undef) {
             ,n_virt_cpu => 1
             ,state => 'UNKNOWN'
             ,ip =>'1.1.1.'.int(rand(254)+1)
+            ,time => time
     };
     $self->_store(info => $info);
     $self->_set_display($listen_ip);
@@ -508,6 +509,10 @@ sub _set_default_info($self, $listen_ip=undef) {
         $self->set_controller($name,2);
     }
     return $info;
+}
+
+sub set_time($self) {
+    $self->_set_info(time => time );
 }
 
 sub set_max_memory {

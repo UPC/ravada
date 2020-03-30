@@ -59,6 +59,7 @@ requires 'resume';
 
 requires 'rename';
 requires 'dettach';
+requires 'set_time';
 
 #storage
 requires 'add_volume';
@@ -1843,7 +1844,10 @@ sub is_locked {
     $self->_init_connector() if !defined $$CONNECTOR;
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,at_time FROM requests "
-        ." WHERE id_domain=? AND status <> 'done'");
+        ." WHERE id_domain=? AND status <> 'done'"
+        ."   AND command <> 'open_iptables' "
+        ."   AND command <> 'set_time'"
+    );
     $sth->execute($self->id);
     my ($id, $at_time) = $sth->fetchrow;
     $sth->finish;
@@ -2958,6 +2962,10 @@ sub _post_start {
         $self->display_file($arg{user});
         $self->info($arg{user});
     }
+    Ravada::Request->set_time(uid => Ravada::Utils::user_daemon->id
+        , id_domain => $self->id
+        , retry => 10
+    );
     Ravada::Request->enforce_limits(at => time + 60);
     Ravada::Request->manage_pools(
             uid => Ravada::Utils::user_daemon->id
@@ -4248,7 +4256,7 @@ sub _run_netstat($self, $force=undef) {
         && ( time - $self->_vm->{_netstat_time} < $TIME_CACHE_NETSTAT+1 ) ) {
         return $self->_vm->{_netstat};
     }
-    my @cmd = ("/bin/netstat", "-tan");
+    my @cmd = ("/bin/ss", "-tn","-o","state","established");
     my ( $out, $err) = $self->_vm->run_command(@cmd);
     $self->_vm->{_netstat} = $out;
     $self->_vm->{_netstat_time} = time;
@@ -4265,8 +4273,8 @@ sub _client_connection_status($self, $force=undef) {
     my @out = split(/\n/,$netstat_out);
     for my $line (@out) {
         my @netstat_info = split(/\s+/,$line);
-        if ( $netstat_info[3] eq $ip.":".$port ) {
-            return 'connected' if $netstat_info[5] eq 'ESTABLISHED';
+        if ( $netstat_info[2] eq $ip.":".$port ) {
+            return 'connected';
         }
     }
     return 'disconnected';
