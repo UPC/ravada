@@ -292,6 +292,20 @@ sub test_access_by_attribute($vm, $do_clones=0) {
 
     my $data = _create_users();
 
+    my @entries = Ravada::Auth::LDAP::search_user(
+            field => 'givenName'
+            ,name => $data->{student}->{name}
+            ,typesonly => 1
+    );
+    is(scalar(@entries),1) or exit;
+
+    @entries = Ravada::Auth::LDAP::search_user(
+            field => 'givenName'
+            ,name => " ".$data->{student}->{name}
+            ,typesonly => 1
+    );
+    is(scalar(@entries),0) or exit;
+
     my $base = create_domain($vm->type);
     $base->prepare_base(user_admin);
     $base->is_public(1);

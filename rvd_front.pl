@@ -936,6 +936,33 @@ post '/machine/add_access/(#id_domain)' => sub {
 
 };
 
+get '/add_ldap_access/(#id_domain)/(#attribute)/(#value)/(#allowed)/(#last)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+
+    my $attribute = $c->stash('attribute');
+    my $value = $c->stash('value');
+    my $allowed = 1;
+    if ($c->stash('allowed') eq 'false') {
+        $allowed = 0;
+    }
+    my $last = 1;
+    if ($c->stash('last') eq 'false') {
+        $last = 0;
+    }
+    $last = 1 if !$allowed;
+
+    eval { $domain->allow_ldap_access($attribute => $value, $allowed, $last ) };
+    _fix_default_ldap_access($c,'ldap', $domain, $allowed) if !$@;
+    return $c->render(json => { error => $@ }) if $@;
+    return $c->render(json => { ok => 1 });
+
+};
+
 sub _fix_default_ldap_access($c, $type, $domain, $allowed) {
     my @list = $domain->list_ldap_access();
     my $default_found;

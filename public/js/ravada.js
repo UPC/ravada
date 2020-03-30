@@ -523,7 +523,15 @@
                     });
           };
 
-           $scope.delete_ldap_access= function(id_access) {
+          $scope.add_ldap_access = function() {
+              $http.get('/add_ldap_access/'+$scope.showmachine.id+'/'+$scope.ldap_attribute+'/'
+                            +$scope.ldap_attribute_value+"/"+$scope.ldap_attribute_allowed
+                            +'/'+$scope.ldap_attribute_last)
+                    .then(function(response) {
+                        $scope.init_ldap_access();
+                    });
+          };
+          $scope.delete_ldap_access= function(id_access) {
               $http.get('/delete_ldap_access/'+$scope.showmachine.id+'/'+id_access)
                     .then(function(response) {
                         $scope.init_ldap_access();
