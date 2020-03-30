@@ -174,7 +174,6 @@ for my $vm_name (@VMS) {
         test_vm($vm_name);
     }
 }
-remove_old_domains();
-remove_old_disks();
 
+end();
 done_testing();

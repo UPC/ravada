@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.6.0';
+our $VERSION = '0.7.0';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -64,7 +64,7 @@ our %VALID_CONFIG = (
 
 =head1 NAME
 
-Ravada - Remove Virtual Desktop Manager
+Ravada - Remote Virtual Desktop Manager
 
 =head1 SYNOPSIS
 
@@ -871,6 +871,46 @@ sub _add_indexes($self) {
     $self->_add_indexes_vms();
     $self->_add_indexes_domains();
     $self->_add_indexes_requests();
+    $self->_add_indexes_generic();
+}
+
+sub _add_indexes_generic($self) {
+    my %index = (
+        requests => [
+            "index(status,at_time)"
+            ,"index(date_changed)"
+            ,"index(start_time,command,status,pid)"
+        ]
+        ,grants_user => [
+            "index(id_user,id_grant)"
+        ]
+        ,iptables => [
+            "index(id_domain,time_deleted,time_req)"
+        ]
+    );
+    for my $table ( keys %index ) {
+        my $known = $self->_get_indexes($table);
+        for my $change (@{$index{$table}} ) {
+            my ($type,$fields ) =$change =~ /(\w+)\((.*)\)/;
+            my $name = $fields;
+            $name =~ s/,/_/g;
+            next if $known->{$name};
+            my $sql = "ALTER TABLE $table add $type $name ($fields)";
+            warn "INFO: Adding index to vms: $name";
+            my $sth = $CONNECTOR->dbh->prepare($sql);
+            $sth->execute();
+        }
+    }
+}
+
+sub _get_indexes($self,$table) {
+    my $sth = $CONNECTOR->dbh->prepare("show index from $table");
+    $sth->execute;
+    my %index;
+    while (my $row = $sth->fetchrow_hashref) {
+        $index{$row->{Key_name}}->{$row->{Column_name}}++;
+    }
+    return \%index;
 }
 
 sub _add_indexes_vms($self) {
@@ -1292,7 +1332,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
 
-    if ($self->_upgrade_table('domains','screenshot','BLOB')) {
+    if ($self->_upgrade_table('domains','screenshot','MEDIUMBLOB')) {
 
     $self->_upgrade_screenshots();
 
@@ -1726,12 +1766,16 @@ sub remove_domain {
     die "Error: user ".$user->name." can't remove domain $id"
         if !$user->can_remove_machine($id);
 
-    my $domain0 = Ravada::Domain->open( $id );
+    my $domain0;
+    eval { $domain0 = Ravada::Domain->open( $id ) };
+    warn $@ if $@;
     $domain0->shutdown_now($user) if $domain0 && $domain0->is_active;
 
     my $vm = Ravada::VM->open(type => $vm_type);
-    my $domain = Ravada::Domain->open(id => $id, _force => 1, id_vm => $vm->id)
-        or do {
+    my $domain;
+    eval { $domain = Ravada::Domain->open(id => $id, _force => 1, id_vm => $vm->id) };
+    warn $@ if $@;
+    if (!$domain) {
             warn "Warning: I can't find domain '$id', maybe already removed.";
             $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains where id=?");
             $sth->execute($id);
@@ -2280,6 +2324,12 @@ sub process_all_requests {
     $self->process_requests($debug, $dont_fork,'all');
 
 }
+
+=head2 process_priority_requests
+
+Process all the priority requests, long and short
+
+=cut
 
 sub process_priority_requests($self, $debug=0, $dont_fork=0) {
 
@@ -3330,6 +3380,7 @@ sub _cmd_list_isos($self, $request){
     my $vm_type = $request->args('vm_type');
    
     my $vm = Ravada::VM->open( type => $vm_type );
+    $vm->refresh_storage();
     my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
 
     $request->output(encode_json(\@isos));
@@ -3669,6 +3720,12 @@ sub search_vm {
     }
     return;
 }
+
+=head2 vm
+
+Returns the list of Virtual Managers
+
+=cut
 
 sub vm($self) {
     my $sth = $CONNECTOR->dbh->prepare(

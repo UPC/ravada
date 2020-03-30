@@ -18,7 +18,7 @@ my $t;
 
 my $URL_LOGOUT = '/logout';
 my ($USERNAME, $PASSWORD);
-my $SCRIPT = path(__FILE__)->dirname->sibling('../rvd_front.pl');
+my $SCRIPT = path(__FILE__)->dirname->sibling('../script/rvd_front');
 
 
 ########################################################################################

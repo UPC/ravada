@@ -29,4 +29,5 @@ ok($row->{name} eq 'test' ,"I can't find test user in the database ".Dumper($row
 
 ok(Ravada::Auth::SQL::login('test',$$),"I can't login test/$$");
 
+end();
 done_testing();

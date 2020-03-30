@@ -33,7 +33,7 @@ sub test_disable_node($vm, $node) {
     }
     is($clone->is_active,1,"Expecting clone active") or return;
 
-    $node->is_enabled(0);
+    $node->enabled(0);
 
     is($clone->_vm->name, $node->name);
 
@@ -109,6 +109,6 @@ for my $vm_name ( 'KVM', 'Void') {
 }
 
 END: {
-    clean();
+    end();
     done_testing();
 }

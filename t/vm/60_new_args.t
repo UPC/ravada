@@ -283,7 +283,5 @@ for my $vm_name (qw( Void KVM )) {
     };
 }
 
-clean();
-
+end();
 done_testing();
-

@@ -44,6 +44,10 @@ remove_old_disks();
 eval { $VMM = $RAVADA->search_vm('kvm') } if $RAVADA;
 SKIP: {
     my $msg = "SKIPPED test: No KVM backend found";
+    if ( $< ) {
+        $msg = "SKIPPED: Test must run as root";
+        $VMM = undef;
+    }
     diag($msg)      if !$VMM;
     skip $msg,10    if !$VMM;
 
@@ -89,6 +93,5 @@ ok($domain,"Expected a domain class, got :".ref($domain)) and do {
 };
 }
 
+end();
 done_testing();
-
-

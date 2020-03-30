@@ -211,7 +211,5 @@ for my $vm_name (@VMS) {
     }
 }
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();

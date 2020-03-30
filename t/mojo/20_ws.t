@@ -173,8 +173,7 @@ my $connector = rvd_back->connector;
 like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
 
 if (!rvd_front->ping_backend()) {
-    diag("Backend not available");
-    ok(0);
+    diag("SKIPPING: Backend not available");
     done_testing();
     exit;
 }

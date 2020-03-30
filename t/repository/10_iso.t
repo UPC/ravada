@@ -77,5 +77,7 @@ test_insert_locale();
 test_insert_request();
 
 test_download('linkat');
+
+end();
 done_testing();
 

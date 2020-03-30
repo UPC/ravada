@@ -227,7 +227,7 @@ for my $vm_name ('KVM' , 'Void' ) {
 
 #################################################################
 
-clean();
 clean_remote() if !$<;
+end();
 
 done_testing();

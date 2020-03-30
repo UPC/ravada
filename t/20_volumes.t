@@ -238,6 +238,7 @@ sub test_qcow2($vm, $swap = 0) {
     is($err,'') or return;
 
     _do_test_file("QCOW2", $vm, $file);
+    $vm->remove_file($file);
 }
 
 sub test_raw($vm, $swap = 0) {
@@ -254,6 +255,7 @@ sub test_raw($vm, $swap = 0) {
     is($err,'') or return;
 
     _do_test_file("RAW", $vm, $file);
+    $vm->remove_file($file);
 }
 
 
@@ -279,6 +281,8 @@ sub test_void($vm, $swap=0) {
     };
     $vm->write_file($file, Dump($data));
     _do_test_file("Void", $vm, $file);
+
+    $vm->remove_file($file);
 }
 
 sub test_void_swap($vm) {
@@ -298,6 +302,7 @@ sub test_defaults($vm) {
     my $domain = create_domain($vm);
     $domain->add_volume(swap => 1, size => 1024*1024);
     for my $volume ( $domain->list_volumes_info ) {
+        ok(-e $volume->file,$volume->file) or exit;
         test_base($volume);
     }
     my $info = $domain->info(user_admin);
@@ -326,6 +331,7 @@ sub test_defaults($vm) {
 }
 #########################################################
 
+init();
 clean();
 for my $vm_name (reverse vm_names() ) {
     my $vm;
@@ -334,7 +340,7 @@ for my $vm_name (reverse vm_names() ) {
     };
     SKIP: {
         my $msg = "SKIPPED: $vm_name virtual manager not found ".($@ or '');
-        if ($vm && $vm_name =~ /kvm/i && $>) {
+        if (0 && $vm && $vm_name =~ /kvm/i && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         }
@@ -343,6 +349,7 @@ for my $vm_name (reverse vm_names() ) {
         skip($msg,10)   if !$vm;
 
         diag("Testing volumes in $vm_name");
+        init_vm($vm);
         test_raw($vm);
         test_raw_swap($vm);
 
@@ -353,9 +360,9 @@ for my $vm_name (reverse vm_names() ) {
         test_void_swap($vm);
         test_qcow2_swap($vm);
 
-        test_defaults($vm);
+        test_defaults($vm) if !$>;
     }
 }
 
-clean();
+end();
 done_testing();

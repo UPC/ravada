@@ -268,7 +268,7 @@ for my $vm_name (qw(KVM Void)) {
         test_screenshot_db($vm_name, $domain_name);
     };
 }
-clean();
+end();
 
 done_testing();
 

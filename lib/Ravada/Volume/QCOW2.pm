@@ -73,7 +73,7 @@ sub _get_capacity($self) {
     my @cmd = ($QEMU_IMG,"info", $self->file);
     my ($out, $err) = $self->vm->run_command(@cmd);
 
-    die $err if $err;
+    confess $err if $err;
     my ($size) = $out =~ /virtual size: .*\((\d+) /ms;
     confess "I can't find size from $out" if !defined $size;
 

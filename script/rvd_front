@@ -4,7 +4,6 @@ use strict;
 #####
 use locale ':not_characters';
 #####
-use lib 'lib';
 
 use Carp qw(confess cluck);
 use Data::Dumper;
@@ -1831,11 +1830,6 @@ sub _open_iptables {
 
 }
 
-sub check_back_running {
-    #TODO;
-    return 1;
-}
-
 sub _init_user_group {
     return if $>;
 
@@ -1868,8 +1862,6 @@ sub _init_user_group {
 }
 
 sub init {
-    check_back_running() or warn "CRITICAL: rvd_back is not running\n";
-
     _init_user_group();
     my $home = Mojo::Home->new();
     $home->detect();
@@ -1877,7 +1869,10 @@ sub init {
     if (exists $ENV{MORBO_VERBOSE}
         || (exists $ENV{MOJO_MODE} && defined $ENV{MOJO_MODE}
                 && $ENV{MOJO_MODE} =~ /devel/i )) {
-            return if -e $home->rel_file("public");
+            app->static->paths->[0] = $home->rel_file("public");
+            app->renderer->paths->[0] = $home->rel_file("templates");
+            app->renderer->paths->[1] = $home->rel_file("custom");
+            return;
     }
     app->static->paths->[0] = ($CONFIG_FRONT->{dir}->{public}
             or $home->rel_file("public"));

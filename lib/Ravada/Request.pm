@@ -482,6 +482,18 @@ sub shutdown_domain {
     return $self->_new_request(command => 'shutdown' , args => $args);
 }
 
+=head2 new_request
+
+Creates a new request
+
+    $req = Ravada::Request->new_request(
+        start_domain
+        ,uid => $user->id
+        ,id_domain => $domain->id
+    );
+
+=cut
+
 sub new_request($self, $command, @args) {
     die "Error: Unknown request '$command'" if !$VALID_ARG{$command};
     return _new_request(
@@ -655,6 +667,12 @@ sub status {
     return $status;
 }
 
+=head2 at
+
+Sets the time when the request will be scheduled
+
+=cut
+
 sub at($self, $value) {
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set at_time=? "
             ." WHERE id=?");
@@ -821,6 +839,12 @@ sub args {
     return $self->{args}->{$name};
 }
 
+=head2 arg
+
+Sets or gets de value of an argument of a Request
+
+=cut
+
 sub arg($self, $name, $value) {
 
     confess "Unknown argument $name ".Dumper($self->{args})
@@ -969,7 +993,7 @@ sub _set_priority ($self) {
 }
 
 
-=head2 working_requests
+=head2 count_requests
 
 Returns the number of working requests of the same type
 
@@ -1192,6 +1216,14 @@ sub _requested($command, %fields) {
 
 }
 
+=head2 stop
+
+Stops a request killing the process.
+
+    $request->stop();
+
+=cut
+
 sub stop($self) {
     warn "Killing ".$self->command
         ." , pid: ".$self->pid
@@ -1202,9 +1234,23 @@ sub stop($self) {
 
 }
 
+=head2 priority
+
+Returns the priority of the request
+
+=cut
+
 sub priority($self) {
     return $self->{priority};
 }
+
+=head2 requirements_done
+
+    Returns wether a request requirements have been fulfilled
+
+    ie when a request must execute after another request completes.
+
+=cut
 
 sub requirements_done($self) {
     my $after_request = $self->after_request();

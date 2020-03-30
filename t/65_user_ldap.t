@@ -572,4 +572,5 @@ SKIP: {
     }
 };
 
+end();
 done_testing();

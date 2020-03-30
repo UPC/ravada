@@ -107,5 +107,5 @@ for my $vm_name ( @{rvd_front->list_vm_types},'Void') {
     }
 }
 
-clean();
+end();
 done_testing();

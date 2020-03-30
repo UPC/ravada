@@ -307,5 +307,5 @@ if (ok($domain,"test domain not created")) {
 }
 
 };
-clean();
+end();
 done_testing();

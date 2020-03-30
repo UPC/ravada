@@ -908,7 +908,5 @@ for my $vm_name ('KVM', 'Void') {
     }
 }
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();

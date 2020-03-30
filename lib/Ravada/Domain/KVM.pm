@@ -227,7 +227,7 @@ sub _vol_remove {
 
     my $removed = 0;
     for my $pool ( $self->_vm->vm->list_storage_pools ) {
-        $pool->refresh;
+        _pool_refresh($pool);
         my $vol;
         eval { $vol = $pool->get_volume_by_name($name) };
         if (! $vol ) {
@@ -235,8 +235,13 @@ sub _vol_remove {
                 if $@ !~ /libvirt error code: 50,/i;
             next;
         }
-        $vol->delete();
-        $pool->refresh;
+        for ( ;; ) {
+            eval { $vol->delete() };
+            last if !$@;
+            sleep 1;
+        }
+        eval { $pool->refresh };
+        warn $@ if $@;
     }
     return 1;
 }
@@ -257,7 +262,14 @@ sub remove {
 
     my @volumes;
     if (!$self->is_removed ) {
-        for my $vol ( $self->list_volumes_info ) {
+       my @vols_info;
+       for ( 1 .. 10 ) {
+           eval { @vols_info = $self->list_volumes_info };
+           last if !$@;
+           warn "WARNING: remove, volumes info: $@";
+           sleep 1;
+       }
+       for my $vol ( @vols_info ) {
             push @volumes,($vol->{file})
                 if exists $vol->{file}
                    && exists $vol->{device}
@@ -266,7 +278,8 @@ sub remove {
     }
 
     if (!$self->is_removed && $self->domain && $self->domain->is_active) {
-        $self->_do_force_shutdown();
+        eval { $self->_do_force_shutdown() };
+        warn $@ if $@;
     }
 
     eval { $self->domain->undefine()    if $self->domain && !$self->is_removed };
@@ -369,6 +382,15 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
 
 }
 
+sub _pool_refresh($pool) {
+    for ( ;; ) {
+        eval { $pool->refresh };
+        return if !$@;
+        warn "WARNING: on vol remove , pool refresh $@" if $@;
+        sleep 1;
+    }
+}
+
 sub _volume_info($self, $file, $refresh=0) {
     confess "Error: No vm connected" if !$self->_vm->vm;
 
@@ -376,7 +398,7 @@ sub _volume_info($self, $file, $refresh=0) {
 
     my $vol;
     for my $pool ( $self->_vm->vm->list_storage_pools ) {
-        $pool->refresh() if $refresh;
+        _pool_refresh($pool) if $refresh;
         eval { $vol = $pool->get_volume_by_name($name) };
         warn $@ if $@ && $@ !~ /^libvirt error code: 50,/;
         last if $vol;
@@ -589,10 +611,8 @@ sub display_info($self, $user) {
     my ($tls_port) = $graph->getAttribute('tlsPort');
     my ($address) = $graph->getAttribute('listen');
 
-    confess "ERROR: Machine ".$self->name." is not active in node ".$self->_vm->name."\n"
+    warn "ERROR: Machine ".$self->name." is not active in node ".$self->_vm->name."\n"
         if !$port && !$self->is_active;
-    die "Unable to get port for domain ".$self->name." ".$graph->toString
-        if !$port;
 
     my $display = $type."://$address:$port";
 
@@ -650,7 +670,7 @@ sub start {
     my $remote_ip = delete $arg{remote_ip};
     my $request = delete $arg{request};
 
-    my $display_ip;
+    my $display_ip = $self->_listen_ip();
     if ($remote_ip) {
         $set_password = 0;
         my $network = Ravada::Network->new(address => $remote_ip);
@@ -2066,6 +2086,7 @@ sub migrate($self, $node, $request=undef) {
         #dom already in remote node
         $self->domain($dom);
     } else {
+        $self->_set_spice_ip(1, $node->ip);
         my $xml = $self->domain->get_xml_description();
 
         my $doc = XML::LibXML->load_xml(string => $xml);
@@ -2113,7 +2134,9 @@ sub internal_id($self) {
     return $self->domain->get_id();
 }
 
-sub autostart($self, $value=undef, $user=undef) {
+sub autostart { return _internal_autostart(@_) }
+
+sub _internal_autostart($self, $value=undef, $user=undef) {
     $self->domain->set_autostart($value) if defined $value;
     return $self->domain->get_autostart();
 }
