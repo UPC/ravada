@@ -835,7 +835,7 @@ sub test_base_unset($vm, $node) {
     $base->set_base_vm(id_vm => $node->id,value => 0, user => user_admin);
     $clone->start(user_admin);
 
-    is($clone->_vm->name, $vm->name) or exit;
+    is($clone->_vm->id, $vm->id);
 
     _remove_domain($base);
 }
