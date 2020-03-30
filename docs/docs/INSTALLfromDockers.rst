@@ -12,7 +12,16 @@ Install `Docker <https://docs.docker.com/>`_ and `docker-compose <https://docs.d
 .. note ::
   There are several versions of the Compose file format – 1, 2, 2.x, and 3.x. For now, we use 2.2
   keep this in mind https://docs.docker.com/compose/compose-file/
-    
+
+As of now[at the time of writing this doc], we recommend
+
+.. prompt:: bash $
+
+  $ docker --version
+  Docker version 19.03.3, build a872fc2f86
+  $ docker-compose --version
+  docker-compose version 1.25.3, build d4d1b42b
+
 Hardware
 --------
 
@@ -33,6 +42,8 @@ disks images, so clones won't require many space.
 
 Install Ravada from dockers
 ---------------------------
+
+.. Note:: Ravada source must be (locally) in: ``~/src/ravada``  
 
 For now, ravada source must be (locally) in: ``~/src/ravada`` , you need to clone repository:
 
@@ -81,21 +92,20 @@ The Ravada server is now installed, learn
 Dockers troubleshoots
 ---------------------
 
+* Check if all dockers are up
+
+.. prompt:: bash $
+   
+  $ docker-compose ps
+
 * Let's do a reset:
    We want to return to an initial starting point
-   Remove all dockers and volume associated.
+   Remove all dockers and volume associated. 
    
 .. prompt:: bash $
-
-   $ docker-compose rm -s -v
-   Stopping ravada-back  ... done
-   Stopping ravada-front ... done
-   Stopping ravada-mysql ... done
-   Going to remove ravada-back, ravada-front, ravada-mysql
-   Are you sure? [yN] y
-   Removing ravada-back  ... done
-   Removing ravada-front ... done
-   Removing ravada-mysql ... done
+  
+  $ cd ~/src/ravada/dockerfy/utils
+  $ ./remove_all.sh 
 
 Help
 ----
