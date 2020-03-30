@@ -193,4 +193,10 @@ sub _get_controller_disk($self) {
     return map { $_->info } $self->list_volumes_info();
 }
 
+sub set_time($self) {
+    Ravada::Request->set_time(uid => Ravada::Utils::user_daemon->id
+        , id_domain => $self->id
+        , retry => 10
+    );
+}
 1;
