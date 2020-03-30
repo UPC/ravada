@@ -1688,7 +1688,8 @@ sub create_domain {
             or confess "Unknown base id: $id_base";
         $vm = $base->_vm;
     }
-    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner)
+        or confess "Error: Unkown user '$id_owner'";
 
     $request->status("creating machine")    if $request;
     if ( $base && $base->is_base && $base->volatile_clones || $user->is_temporary ) {
