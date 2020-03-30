@@ -30,6 +30,7 @@ sub test_node_down($node, $action, $action_name) {
     my $domain = create_domain($node->type);
     $domain->prepare_base(user_admin);
     $domain->migrate_base(user => user_admin, node => $node);
+    is($domain->base_in_vm($node->id),1);
 
     my $clone = $domain->clone(
          user => user_admin
@@ -49,8 +50,12 @@ sub test_node_down($node, $action, $action_name) {
     is($@,'');
     is($clone->is_active, 1, "Expecting clone ".$clone->name." active");
     is($clone->is_local, 1,"Expecting clone ".$clone->name." local");
+    is($domain->base_in_vm($node->id),0);
 
+    $node->_clean_cache();
     start_node($node);
+    is($node->is_active,1);
+    wait_request(debug => 0);
 
     is($domain->_vm->is_active, 1);
 

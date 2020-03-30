@@ -326,9 +326,10 @@ sub _around_start($orig, $self, @arg) {
             $arg{listen_ip} = $display_ip;
         }
         eval { $self->$orig(%arg) };
-        last if !$@;
-        warn $@ if $@;
-        if ($@ && $self->id_base && !$self->_vm->is_local && $self->_vm->enabled) {
+        my $error = $@;
+        last if !$error;
+        warn "WARNING: $error ".$self->_vm->name." ".$self->_vm->enabled if $error;
+        if ($error && $self->id_base && !$self->is_local && $self->_vm->enabled) {
             $self->_request_set_base();
             next;
         }
@@ -345,7 +346,6 @@ sub _request_set_base($self) {
         uid => Ravada::Utils::user_daemon->id
         ,id_domain => $base->id
         ,id_vm => $self->_vm->id
-        ,at => time + int(rand(10))
     );
     my $vm_local = $self->_vm->new( host => 'localhost' );
     $self->_set_vm($vm_local, 1);
@@ -380,38 +380,52 @@ sub _start_preconditions{
 
 sub _start_checks($self, @args) {
     return if $self->_search_already_started('fast');
+    my $vm_local = $self->_vm->new( host => 'localhost' );
+    my $vm = $vm_local;
+
     my ($id_vm, $request);
     if (!scalar(@args) % 2) {
         my %args = @args;
+
+        # We may be asked to start the machine in a specific id_vmanager
         $id_vm = delete $args{id_vm};
         $request = delete $args{request} if exists $args{request};
     }
+    # If not specific id_manager we go to the last id_vmanager unless it was localhost
+    # If the last VManager was localhost it will try to balance here.
+    $id_vm = $self->_data('id_vm')
+    if !$id_vm && defined $self->_data('id_vm')
+    && $self->_data('id_vm') != $vm_local->id;
+
+    if ($id_vm) {
+        $vm = Ravada::VM->open($id_vm);
+        if ( !$vm->is_enabled || !$vm->ping ) {
+            $vm = $vm_local;
+            $id_vm = undef;
+        }
+    }
+    $self->_check_tmp_volumes();
 
     # if it is a clone ( it is not a base )
     if ($self->id_base) {
 #        $self->_set_last_vm(1)
-        if ( !$self->is_local && ( !$self->_vm->enabled || !$self->_vm->ping) ) {
-            my $vm_local = $self->_vm->new( host => 'localhost' );
+        if ( !$self->is_local
+            && ( !$self->_vm->enabled || !base_in_vm($self->id_base,$self->_vm->id)
+                || !$self->_vm->ping) ) {
             $self->_set_vm($vm_local, 1);
         }
-        $self->_check_tmp_volumes();
-        my $vm;
-        if ($id_vm) {
-            $vm = Ravada::VM->open($id_vm);
-            if ( !$vm->is_alive ) {
-                $vm->disconnect();
-                $vm->connect;
-            }
+        if ( !$vm->is_alive ) {
+            $vm->disconnect();
+            $vm->connect;
+            $vm = $vm_local if !$vm->is_local && !$vm->is_alive;
         };
-        warn $@ if $@;
-        if ($vm) {
+        if ($id_vm) {
             $self->_set_vm($vm);
         } else {
             $self->_balance_vm();
         }
         $self->rsync(request => $request)  if !$self->is_volatile && !$self->_vm->is_local();
     } elsif (!$self->is_local) {
-        my $vm_local = $self->_vm->new( host => 'localhost' );
         $self->_set_vm($vm_local, 1);
     }
     $self->_check_free_vm_memory();
@@ -875,19 +889,12 @@ sub _check_free_vm_memory {
 sub _check_tmp_volumes($self) {
     confess "Error: only clones temporary volumes can be checked."
         if !$self->id_base;
+    my $vm_local = $self->_vm->new( host => 'localhost' );
     for my $vol ( $self->list_volumes_info) {
         next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\./;
-        next if $self->_vm->file_exists($vol->file);
+        next if $vm_local->file_exists($vol->file);
 
         my $base = Ravada::Domain->open($self->id_base);
-        if (! $self->is_local) {
-            Ravada::Request->set_base_vm(
-                id_domain => $base->id
-                ,id_vm => $self->_vm->id
-                ,uid => Ravada::Utils::user_daemon->id
-            );
-            confess "Error: base file not found in node ".$self->_vm->name." ".$vol->file;
-        }
         my @volumes = $base->list_files_base_target;
         my ($file_base) = grep { $_->[1] eq $vol->info->{target} } @volumes;
         if (!$file_base) {
@@ -895,11 +902,9 @@ sub _check_tmp_volumes($self) {
                 .Dumper(\@volumes);
         }
         my $vol_base = Ravada::Volume->new( file => $file_base->[0]
-            , vm => $self->_vm
+            , vm => $vm_local
         );
         $vol_base->clone(file => $vol->file);
-        warn "cloned ".$self->name." ".$self->_vm->name." ".$vol_base->vm->name." "
-            .$vol->info->{target};
     }
 }
 
@@ -3338,10 +3343,12 @@ sub clean_swap_volumes {
     my $self = shift;
     for my $vol ( $self->list_volumes_info) {
         if ($vol->file && $vol->file =~ /\.SWAP\.\w+$/) {
+            next if !$self->_vm->file_exists($vol->file);
             my $backing_file;
             eval { $backing_file = $vol->backing_file };
             confess $@ if $@ && $@ !~ /No backing file/i;
             next if !$backing_file;
+            next if !$self->_vm->file_exists($backing_file);
             $vol->restore() if !$@;
         }
     }
@@ -3790,14 +3797,19 @@ sub _pre_migrate($self, $node, $request = undef) {
     confess "ERROR: Active domains can't be migrated"   if $self->is_active;
 
     my $base = Ravada::Domain->open($self->id_base);
-    confess "ERROR: base id ".$self->id_base." not found."  if !$base;
-
-    confess "ERROR: Base ".$base->name." files not migrated to ".$node->name
+    confess "ERROR: base ".$base->name." not prepared in node ".$node->name
         if !$base->base_in_vm($node->id);
+    confess "ERROR: base id ".$self->id_base." not found."  if !$base;
 
     for my $file ( $base->list_files_base ) {
         next if $node->file_exists($file);
-        confess "ERROR: file not found $file in ".$node->host;
+        warn "Warning: file not found $file in ".$node->name;
+        Ravada::Request->set_base_vm(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $base->id
+            ,id_vm => $node->id
+        );
+        return;
     }
 
     $self->_set_base_vm_db($node->id,0);
@@ -3979,7 +3991,7 @@ sub list_vms($self) {
         my $vm;
         eval { $vm = Ravada::VM->open($id_vm) };
         warn "id_domain: ".$self->id."\n".$@ if $@;
-        push @vms,($vm) if $vm;
+        push @vms,($vm) if $vm && !$vm->is_locked();
     }
     my $vm_local = $self->_vm->new( host => 'localhost' );
     if ( !grep { $_->name eq $vm_local->name } @vms) {
@@ -3999,18 +4011,22 @@ Returns if this domain has a base prepared in this virtual manager
 
 sub base_in_vm($self,$id_vm) {
 
+    my $id = $self;
+    $id = $self->id if ref($self);
+
     confess "ERROR: id_vm must be a number, it is '$id_vm'"
         if $id_vm !~ /^\d+$/;
 
     confess "ERROR: Domain ".$self->name." is not a base"
-        if !$self->is_base;
+        if ref($self) && !$self->is_base;
 
     confess "Undefined id_vm " if !defined $id_vm;
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT enabled FROM bases_vm "
         ." WHERE id_domain = ? AND id_vm = ?"
     );
-    $sth->execute($self->id, $id_vm);
+    $sth->execute($id, $id_vm);
     my ( $enabled ) = $sth->fetchrow;
     $sth->finish;
 #    return 1 if !defined $enabled

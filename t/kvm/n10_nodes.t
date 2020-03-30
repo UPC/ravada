@@ -285,7 +285,7 @@ sub test_sync_base {
     );
 
     eval { $clone->migrate($node); };
-    like($@, qr'.');
+    like($@, qr'.'); # base not in node
 
     eval { $base->migrate_base(user => user_admin, vm => $node); };
     is(''.$@,'');

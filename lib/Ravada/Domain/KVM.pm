@@ -662,14 +662,8 @@ sub start {
     }
     return if !$error || $error =~ /already running/i;
     if ($error =~ /libvirt error code: 38,/) {
-        warn "Error starting ".$self->name." on ".$self->_vm->name;
-        if (!$self->_vm->is_local) {
-            if ($error !~ /backing file/) {
-                warn "Disabling node ".$self->_vm->name();
-                $self->_vm->enabled(0);
-            }
-        }
-        die $error;
+        die "Error starting ".$self->name." on ".$self->_vm->name
+            ."\n$error";
     } elsif ( $error =~ /libvirt error code: 9, .*already defined with uuid/) {
         die "TODO";
     } elsif ( $error =~ /libvirt error code: 1,.*smbios/) {
