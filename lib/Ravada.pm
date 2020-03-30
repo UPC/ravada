@@ -3383,6 +3383,15 @@ sub _cmd_list_isos($self, $request){
     $request->output(encode_json(\@isos));
 }
 
+sub _cmd_set_time($self, $request) {
+    my $id_domain = $request->args('id_domain');
+    my $domain = Ravada::Domain->open($id_domain)
+        or confess "Error: domain $id_domain not found";
+    return if !$domain->is_active;
+    eval { $domain->set_time() };
+    die "$@ , retry.\n" if $@;
+}
+
 sub _clean_requests($self, $command, $request=undef, $status='requested') {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
@@ -3645,6 +3654,7 @@ sub _req_method {
 ,add_hardware => \&_cmd_add_hardware
 ,remove_hardware => \&_cmd_remove_hardware
 ,change_hardware => \&_cmd_change_hardware
+,set_time => \&_cmd_set_time
 
 # Domain ports
 ,expose => \&_cmd_expose

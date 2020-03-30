@@ -562,14 +562,15 @@ sub _post_remove_base_domain {
 
 
 sub post_resume_aux($self) {
-    my $time = time();
     eval {
-        $self->domain->set_time($time, 0, 0);
+        $self->set_time();
     };
-    if ($@) {
-        $@='' if $@ !~ /libvirt error code: 86 /;
-        die $@ if $@;
-    }
+    die "$@\n" if $@ && $@ !~ /libvirt error code: 86,/;
+}
+
+sub set_time($self) {
+    my $time = time();
+    $self->domain->set_time($time, 0, 0);
 }
 
 =head2 display_info
