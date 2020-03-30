@@ -37,6 +37,7 @@ my %SUB = (
                      ,request => \&_request
 );
 
+my $A_WHILE;
 ######################################################################
 
 
@@ -154,7 +155,7 @@ sub _list_recent_requests($rvd, $seconds) {
     my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
         ." ".$now[2].":".$now[1].":".$now[0];
     my $sth = $rvd->_dbh->prepare(
-        "SELECT id,command, status "
+        "SELECT id,command, status,date_req "
         ." FROM requests "
         ." WHERE "
         ."  date_changed >= ? "
@@ -174,7 +175,10 @@ sub _ping_backend($rvd, $args) {
     my $requested = scalar( grep { $_->{status} eq 'requested' } @reqs );
 
     # If there are requests in state different that requested it's ok
-    return 1 if scalar(@reqs) > $requested;
+    if ( scalar(@reqs) > $requested ) {
+        _its_been_a_while(1);
+        return 1;
+    }
 
     my ($ping_backend)
     = grep {
@@ -182,16 +186,31 @@ sub _ping_backend($rvd, $args) {
     } @reqs ;
 
     if (!$ping_backend) {
-        return 0 if $requested;
+        return 0 if $requested && _its_been_a_while();
         my @now = localtime(time);
         my $seconds = $now[0];
         Ravada::Request->ping_backend() if $seconds < 5;
         return 1;
     }
 
-    return 0 if $ping_backend->{status} eq 'requested';
+    if ($ping_backend->{status} eq 'requested') {
+        return 0 if _its_been_a_while();
+        return 1;
+    }
 
+    _its_been_a_while(1);
     return 1;
+}
+
+sub _its_been_a_while($reset=0) {
+    if ($reset) {
+        $A_WHILE = 0;
+    }
+    if (!$A_WHILE) {
+        $A_WHILE = time;
+        return 0;
+    }
+    return time - $A_WHILE > 5;
 }
 
 sub _different_list($list1, $list2) {
