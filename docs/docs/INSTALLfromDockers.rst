@@ -17,10 +17,10 @@ As of now[at the time of writing this doc], we recommend
 
 .. prompt:: bash $
 
-  $ docker --version
-  Docker version 19.03.3, build a872fc2f86
-  $ docker-compose --version
-  docker-compose version 1.25.3, build d4d1b42b
+  docker --version
+   Docker version 19.03.3, build a872fc2f86
+  docker-compose --version
+   docker-compose version 1.25.3, build d4d1b42b
 
 Hardware
 --------
@@ -43,9 +43,9 @@ disks images, so clones won't require many space.
 Install Ravada from dockers
 ---------------------------
 
-.. Note:: Ravada source must be (locally) in: ``~/src/ravada``  
+.. Info:: Ravada source must be (locally) in: ``~/src/ravada``  
 
-For now, ravada source must be (locally) in: ``~/src/ravada`` , you need to clone repository:
+Follow this steps:
 
 .. prompt:: bash $
 
@@ -96,7 +96,7 @@ Dockers troubleshoots
 
 .. prompt:: bash $
    
-  $ docker-compose ps
+  docker-compose ps
 
 * Let's do a reset:
    We want to return to an initial starting point
@@ -104,8 +104,8 @@ Dockers troubleshoots
    
 .. prompt:: bash $
   
-  $ cd ~/src/ravada/dockerfy/utils
-  $ ./remove_all.sh 
+  cd ~/src/ravada/dockerfy/utils
+  ./remove_all.sh 
 
 Help
 ----
