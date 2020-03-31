@@ -565,7 +565,10 @@ sub post_resume_aux($self) {
     eval {
         $self->set_time();
     };
-    die "$@\n" if $@ && $@ !~ /libvirt error code: 86,/;
+    # 55: domain is not running
+    # 74: not configured
+    # 86: no agent
+    die "$@\n" if $@ && $@ !~ /libvirt error code: (55|74|86),/;
 }
 
 sub set_time($self) {
@@ -792,7 +795,7 @@ Resumes a paused the domain
 sub resume {
     my $self = shift;
     eval { $self->domain->resume() };
-    die $@ if $@ && $@ !~ /libvirt error code: 55/;
+    confess $@ if $@ && $@ !~ /libvirt error code: 55/;
 }
 
 

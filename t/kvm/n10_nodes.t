@@ -405,7 +405,8 @@ sub test_already_started_twice($vm_name, $node) {
     eval { $clone2->start(user => user_admin) };
     like($@,qr/already running/)    if $@;
 
-    is($clone2->list_requests,2);
+    # includes set_time request
+    is($clone2->list_requests,3);
     for ( 1 .. 6 ) {
         for ( 1 .. 10 ) {
             last if !$clone->is_active

@@ -774,7 +774,7 @@ sub test_domain_limit_already_requested {
     is(rvd_back->list_domains(user => $user, active => 1),1);
 
     $domain2->start( $user );
-    my @list_requests = $domain->list_requests;
+    my @list_requests = grep { $_->command ne 'set_time'} $domain->list_requests;
     is(scalar @list_requests,0,"Expecting 0 requests ".Dumper(\@list_requests));
 
     is(rvd_back->list_domains(user => $user, active => 1),2);

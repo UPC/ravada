@@ -36,6 +36,7 @@ our $IPTABLES_CHAIN = 'RAVADA';
 our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout );
 
 our $TIME_CACHE_NETSTAT = 60; # seconds to cache netstat data output
+our $RETRY_SET_TIME=10;
 
 _init_connector();
 
@@ -2293,7 +2294,14 @@ sub _pre_shutdown {
         $self->resume(user => Ravada::Utils::user_daemon);
     }
     $self->list_disks;
+    $self->_remove_start_requests();
 
+}
+
+sub _remove_start_requests($self) {
+    for my $req ($self->list_requests(1)) {
+        $req->_delete if $req->command =~ /^set_time$/;
+    }
 }
 
 sub _post_shutdown {
@@ -2969,7 +2977,7 @@ sub _post_start {
     }
     Ravada::Request->set_time(uid => Ravada::Utils::user_daemon->id
         , id_domain => $self->id
-        , retry => 10
+        , retry => $RETRY_SET_TIME
     );
     Ravada::Request->enforce_limits(at => time + 60);
     Ravada::Request->manage_pools(
