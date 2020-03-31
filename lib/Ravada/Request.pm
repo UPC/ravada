@@ -1211,6 +1211,11 @@ sub _requested($command, %fields) {
 
 }
 
+sub _delete($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM requests where id=?");
+    $sth->execute($self->id);
+}
+
 sub stop($self) {
     my $stale = '';
     my $run_time = '';

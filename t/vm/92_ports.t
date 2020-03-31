@@ -37,7 +37,7 @@ sub test_no_dupe($vm) {
     is(grep(m{^ACCEPT.*192.168.\d+\.0/24\sstate NEW},@out),0);
 
     $domain->start(user => user_admin, remote_ip => $remote_ip);
-    my @request = $domain->list_requests();
+    my @request = grep { $_->command ne 'set_time'} $domain->list_requests();
 
     # No requests because no ports exposed
     is(scalar @request,0) or exit;
@@ -519,7 +519,7 @@ sub test_clone_exports_add_ports($vm) {
     is(scalar @clone_ports,2 );
 
     my @req = $clone->list_requests;
-    is(scalar(@req) , 1);
+    is(scalar(@req) , 2);
 
     for my $n ( 0 .. 1 ) {
         is($base_ports[$n]->{internal_port}, $clone_ports[$n]->{internal_port});
@@ -529,6 +529,7 @@ sub test_clone_exports_add_ports($vm) {
     _wait_ip($vm, $clone);
     wait_request( debug => 0, request => \@req );
     for (@req) {
+        next if $_->command eq 'set_time';
         is($_->status,'done')   or exit;
         is($_->error,'')        or exit;
     }

@@ -62,7 +62,7 @@ sub test_active($domain, $n_start) {
     $domain->pool_start($n_start);
     is($domain->pool_start, $n_start);
     _remove_enforce_limits();
-    wait_request(skip => 'enforce_limits');
+    wait_request(skip => ['set_time','enforce_limits']);
 
     Ravada::Request->manage_pools(uid => user_admin->id);
     _remove_enforce_limits();
@@ -77,7 +77,7 @@ sub test_active($domain, $n_start) {
 
 sub _remove_enforce_limits {
     my $sth = connector->dbh->prepare("DELETE FROM requests "
-        ."WHERE command = 'enforce_limits'"
+        ."WHERE command = 'enforce_limits' OR command = 'set_time'"
     );
     $sth->execute();
     $sth->finish;
@@ -108,7 +108,7 @@ sub test_user_create($base, $n_start) {
          ,remote_ip => '1.2.3.4'
     );
     ok($req);
-    wait_request(debug => 0,skip => 'enforce_limits');
+    wait_request(debug => 0,skip => ['enforce_limits','set_time']);
     _remove_enforce_limits();
     is($req->status,'done');
     is($req->error,'');
@@ -140,7 +140,7 @@ sub test_user($base, $n_start) {
          ,remote_ip => '1.2.3.4'
     );
     ok($req);
-    wait_request(debug => 0,skip => 'enforce_limits');
+    wait_request(debug => 1,skip => ['enforce_limits','set_time']);
     _remove_enforce_limits();
     is($req->status,'done');
     is($req->error,'');
@@ -185,7 +185,7 @@ sub test_user($base, $n_start) {
     );
     ok($req);
     _remove_enforce_limits();
-    wait_request( skip => 'enforce_limits');
+    wait_request( skip => ['enforce_limits','set_time']);
     is($req->status,'done');
     is($req->error,'');
 

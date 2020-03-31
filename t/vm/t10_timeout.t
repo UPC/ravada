@@ -42,7 +42,7 @@ sub test_run_timeout {
     is($clone->run_timeout(),$timeout);
 
     $clone->start(user => $USER);
-    is(scalar($clone->list_requests(1)),1) or exit;
+    is(scalar($clone->list_requests(1)),2) or exit;
 
     is($clone->is_active,1);
     rvd_back->_process_all_requests_dont_fork();

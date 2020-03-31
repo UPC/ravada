@@ -182,13 +182,11 @@ sub test_fw_ssh {
 
 sub test_jump {
     my ($vm_name, $domain_name) = @_;
-    my $out = `iptables -L INPUT -n`;
-    my $count = 0;
+    my $out = `iptables-save`;
     for my $line ( split /\n/,$out ) {
-        next if $line !~ /^[A-Z]+ /;
-        $count++;
-        next if $line !~ /^RAVADA/;
-        `iptables -D INPUT $count`;
+        next if $line !~ /^-A (.*RAVADA.*)/;
+        my $rule = $1;
+        `iptables -D $rule`;
     }
     $out = `iptables -L INPUT -n`;
     ok(! grep(/^RAVADA /, split(/\n/,$out)),"Expecting no RAVADA jump in $out");

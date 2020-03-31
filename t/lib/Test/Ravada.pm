@@ -760,7 +760,7 @@ sub wait_request {
 
     $timeout = 60 if !defined $timeout && $background;
     my $debug = ( delete $args{debug} or 0 );
-    my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms'] );
+    my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms','set_time'] );
     $skip = [ $skip ] if !ref($skip);
     my %skip = map { $_ => 1 } @$skip;
     %skip = ( enforce_limits => 1 ) if !keys %skip;
@@ -791,6 +791,8 @@ sub wait_request {
                 if ($check_error) {
                     if ($req->command eq 'remove') {
                         like($req->error,qr(^$|Unknown domain));
+                    } elsif($req->command eq 'set_time') {
+                        like($req->error,qr(^$|libvirt error code));
                     } else {
                         is($req->error,'') or confess $req->command;
                     }
