@@ -10,6 +10,20 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("new_node", newNodeCtrl)
     ;
 
+    ravadaApp.filter('orderObjectBy', function() {
+        return function(items, field, reverse) {
+            var filtered = [];
+            angular.forEach(items, function(item) {
+                filtered.push(item);
+            });
+            filtered.sort(function (a, b) {
+                return (a[field] > b[field] ? 1 : -1);
+            });
+            if(reverse) filtered.reverse();
+            return filtered;
+        };
+    });
+
   function swMach() {
     return {
       restrict: "E",
@@ -165,20 +179,33 @@ ravadaApp.directive("solShowMachine", swMach)
               var data = JSON.parse(event.data);
 
               $scope.$apply(function () {
-                  $scope.list_machines = [];
                   var mach;
+                  if (Object.keys($scope.list_machines).length != data.length) {
+                      $scope.list_machines = {};
+                  }
                   for (var i=0, iLength = data.length; i<iLength; i++){
                       mach = data[i];
-                      if (!mach.id_base){
+                      if (!mach.id_base
+                          && (typeof $scope.list_machines[mach.id] == 'undefined'
+                              || $scope.list_machines[mach.id]._timestamp != mach._timestamp)
+                      ){
                           $scope.list_machines[mach.id] = mach;
-                          $scope.list_machines[mach.id].childs = [];
+                          $scope.list_machines[mach.id].childs = {};
                       }
                   }
                   $scope.n_clones = 0;
                   for (var i=0, iLength = data.length; i<iLength; i++){
                       mach = data[i];
-                      if (mach.id_base){
-                          $scope.list_machines[mach.id_base].childs.push(mach);
+                      var childs;
+                      if (mach.id_base) {
+                          childs = $scope.list_machines[mach.id_base].childs;
+                      }
+                      if (mach.id_base
+                          && ( typeof childs[mach.id] == 'undefined'
+                              || childs[mach.id]._timestamp != mach._timestamp
+                          )
+                      ){
+                          childs[mach.id] = mach;
                           $scope.n_clones++;
                       }
                   }
@@ -188,10 +215,7 @@ ravadaApp.directive("solShowMachine", swMach)
                           $scope.hide_clones = true;
                       }
                   }
-                  for (var i = $scope.list_machines.length-1; i >= 0; i--){
-                      if (!$scope.list_machines[i]){
-                          $scope.list_machines.splice(i,1);
-                      }
+                  for (var i in $scope.list_machines){
                       mach = $scope.list_machines[i];
                       if (!mach.id_base && typeof $scope.show_clones[mach.id] == 'undefined'
                         && typeof mach.childs != 'undefined'
@@ -238,6 +262,7 @@ ravadaApp.directive("solShowMachine", swMach)
           }
       };
 
+    $scope.list_machines = {};
     $scope.orderParam = ['name'];
     $scope.auto_hide_clones = true;
     $scope.orderMachineList = function(type1,type2){
@@ -251,7 +276,7 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.showClones = function(value){
         $scope.auto_hide_clones = false;
         $scope.hide_clones = !value;
-        for (var i = $scope.list_machines.length-1; i >= 0; i--){
+        for (var i in $scope.list_machines){
             mach = $scope.list_machines[i];
             if (!mach.id_base) {
                 $scope.show_clones[mach.id] = value;
@@ -305,12 +330,15 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.cancel_modal=function(){
       $scope.modalOpened=false;
     }
+    $scope.toggle_show_clones =function(id) {
+        $scope.show_clones[id] = !$scope.show_clones[id];
+    }
     //On load code
     $scope.modalOpened=false;
     $scope.rename= {new_name: 'new_name'};
     $scope.show_rename = false;
     $scope.new_name_duplicated=false;
-    $scope.show_clones = {};
+    $scope.show_clones = { '0': false };
   };
 
   function usersPageC($scope, $http, $interval, request) {

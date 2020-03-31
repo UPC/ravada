@@ -11,6 +11,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 my $DEBUG=0;
+my $T0 = time;
 
 has clients => (
     is => 'ro'
@@ -224,17 +225,31 @@ sub _different_list($list1, $list2) {
 }
 
 sub _different_hash($h1,$h2) {
-    return 1 if keys %$h1 != keys %$h2;
+    my $different = 0;
     for my $key (keys %$h1) {
+        next if $key =~ /^_/;
         next if !defined $h1->{$key} && !defined $h2->{$key};
         if (!exists $h2->{$key}
             || !defined $h1->{$key} && defined $h2->{$key}
             || defined $h1->{$key} && !defined $h2->{$key}
             || _different($h1->{$key}, $h2->{$key})) {
-            return 1;
+            unlock_hash(%$h1);
+            $h1->{_timestamp} = time - $T0;
+            lock_hash(%$h1);
+            $different = 1;
         }
     }
-    return 0;
+    if (!exists $h1->{_timestamp}) {
+        unlock_hash(%$h1);
+        if (exists $h2->{_timestamp}) {
+            $h1->{_timestamp} = $h2->{_timestamp}
+        } else {
+            $h1->{_timestamp} = time - $T0;
+        }
+        lock_hash(%$h1);
+    }
+
+    return $different;
 }
 sub _different($var1, $var2) {
     return 1 if !defined $var1 &&  defined $var2;
