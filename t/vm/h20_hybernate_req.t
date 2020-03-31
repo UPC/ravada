@@ -37,7 +37,7 @@ for my $vm_name ( @{rvd_front->list_vm_types}) {
 
         next if !$domain->can_hybernate();
 
-        for my $fork ( 0, 1 ) {
+        my $fork = 0;
         $domain->start($USER)   if !$domain->is_active;
         for ( 1 .. 10 ) {
             last if $domain->is_active;
@@ -57,8 +57,11 @@ for my $vm_name ( @{rvd_front->list_vm_types}) {
         }
         wait_request( background => $fork );
 
+        is($req->status ,'done');
+        is($req->error,'');
+
         $domain = rvd_back->search_domain($domain->name);
-        is($domain->is_active,0);
+        is($domain->is_active,0,"Expecting domain ".$domain->name." not active , fork=$fork");
 
         $domain->start($USER)   if !$domain->is_active;
         if (!$domain->is_active) {
@@ -67,8 +70,6 @@ for my $vm_name ( @{rvd_front->list_vm_types}) {
         }
 
         is($domain->is_active,1);
-
-        }# for my $fork
 
     }
 }

@@ -779,7 +779,10 @@ sub wait_request {
         my @req = _list_requests();
         rvd_back->_process_requests_dont_fork($debug) if !$background;
         for my $req_id ( @req ) {
-            my $req = Ravada::Request->open($req_id);
+            my $req;
+            eval { $req = Ravada::Request->open($req_id) };
+            next if $@ && $@ =~ /I can't find id=$req_id/;
+            die $@ if $@;
             next if $skip{$req->command};
             if ( $req->status ne 'done' ) {
                 diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
