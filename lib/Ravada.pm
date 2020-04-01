@@ -2900,7 +2900,7 @@ sub _cmd_start {
     my $domain;
     $domain = $self->search_domain($name)               if $name;
     $domain = $self->search_domain_by_id($id_domain)    if $id_domain;
-    die "Unknown domain '$name'" if !$domain;
+    die "Unknown domain '".($name or $id_domain)."'" if !$domain;
 
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
