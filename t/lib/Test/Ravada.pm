@@ -782,7 +782,7 @@ sub wait_request {
 
     $timeout = 60 if !defined $timeout && $background;
     my $debug = ( delete $args{debug} or 0 );
-    my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms'] );
+    my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms','set_time'] );
     $skip = [ $skip ] if !ref($skip);
     my %skip = map { $_ => 1 } @$skip;
     %skip = ( enforce_limits => 1 ) if !keys %skip;
@@ -801,7 +801,10 @@ sub wait_request {
         my @req = _list_requests();
         rvd_back->_process_requests_dont_fork($debug) if !$background;
         for my $req_id ( @req ) {
-            my $req = Ravada::Request->open($req_id);
+            my $req;
+            eval { $req = Ravada::Request->open($req_id) };
+            next if $@ && $@ =~ /I can't find id=$req_id/;
+            die $@ if $@;
             next if $skip{$req->command};
             if ( $req->status ne 'done' ) {
                 diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
@@ -813,8 +816,10 @@ sub wait_request {
                 if ($check_error) {
                     if ($req->command eq 'remove') {
                         like($req->error,qr(^$|Unknown domain));
+                    } elsif($req->command eq 'set_time') {
+                        like($req->error,qr(^$|libvirt error code));
                     } else {
-                        is($req->error,'') or confess;
+                        is($req->error,'') or confess $req->command;
                     }
                 }
             }
@@ -1002,6 +1007,7 @@ sub clean_remote_node {
     my $node = shift;
 
     _remove_old_domains_vm($node);
+    wait_request(debug => 0);
     _remove_old_disks($node);
     flush_rules_node($node)  if !$node->is_local() && $node->is_active;
 }
@@ -1437,6 +1443,7 @@ sub shutdown_domain_internal($domain) {
 
 sub start_domain_internal($domain) {
     if ($domain->type eq 'KVM') {
+        $domain->_set_spice_ip(1,$domain->_vm->ip);
         $domain->domain->create();
     } elsif ($domain->type eq 'Void') {
         $domain->_store(is_active => 1 );

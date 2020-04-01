@@ -198,6 +198,7 @@ sub search_user {
     confess "ERROR: I can't connect to LDAP " if!$ldap;
 
     $username = escape_filter_value($username);
+    $username =~ s/ /\\ /g;
 
     my $filter = "($field=$username)";
     if ( exists $$CONFIG->{ldap}->{filter} ) {
@@ -237,12 +238,7 @@ sub search_user {
 
     return if !$mesg->count();
 
-    my @entries;
-    for my $entry ($mesg->entries) {
-        push @entries,($entry) if $entry->get_value($field) eq $username;
-    }
-
-    return @entries;
+    return $mesg->entries;
 }
 
 =head2 add_group

@@ -64,6 +64,10 @@ sub _set_display($self, $listen_ip=$self->_vm->listen_ip) {
     return $display_data;
 }
 
+sub _set_spice_ip($self, $password=undef, $listen_ip=$self->_vm->listen_ip) {
+    return $self->_set_display($listen_ip);
+}
+
 sub is_active {
     my $self = shift;
     return ($self->_value('is_active') or 0);
@@ -223,6 +227,7 @@ sub start($self, @args) {
     %args = @args if scalar(@args) % 2 == 0;
     my $listen_ip = delete $args{listen_ip};
     my $remote_ip = delete $args{remote_ip};
+    my $set_password = delete $args{set_password}; # unused
     my $user = delete $args{user};
     delete $args{'id_vm'};
     confess "Error: unknown args ".Dumper(\%args) if keys %args;
@@ -494,6 +499,7 @@ sub _set_default_info($self, $listen_ip=undef) {
             ,n_virt_cpu => 1
             ,state => 'UNKNOWN'
             ,ip =>'1.1.1.'.int(rand(254)+1)
+            ,time => time
     };
     $self->_store(info => $info);
     $self->_set_display($listen_ip);
@@ -503,6 +509,10 @@ sub _set_default_info($self, $listen_ip=undef) {
         $self->set_controller($name,2);
     }
     return $info;
+}
+
+sub set_time($self) {
+    $self->_set_info(time => time );
 }
 
 sub set_max_memory {

@@ -240,7 +240,7 @@ sub test_shutdown {
     my @req_other = grep { $_->command ne 'refresh_machine' } @reqs;
     is(scalar(@req_other),0);
 
-    is(scalar @reqs,1,$domain->name) or exit;
+    is(scalar @reqs,1,$domain->name) or die Dumper([ map { [$_->id,$_->command,$_->status,$_->error] } @reqs]);
 
     $domain->remove(user_admin);
 }
@@ -458,7 +458,7 @@ sub test_create_domain_nocd {
         ,id_owner => $USER->id
         ,iso_file => '<NONE>'
     );};
-    is($@,'');
+    is(''.$@,'');
     ok($domain,"Expecting a domain");
 
     my ($cdrom) = grep { /iso/ } $domain->list_volumes;

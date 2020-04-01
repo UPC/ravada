@@ -78,7 +78,7 @@ sub test_request_iptables($vm_name) {
     is($req->status, 'done');
     is($req->error,'');
 
-    is(scalar($domain->list_requests), 0);
+    is(scalar($domain->list_requests), 1);
 
     is($domain->remote_ip,'127.0.0.1');
 

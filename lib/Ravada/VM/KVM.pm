@@ -2254,6 +2254,9 @@ sub list_storage_pools($self) {
 sub free_memory($self) {
     confess "ERROR: VM ".$self->name." inactive"
         if !$self->is_alive;
+
+    return $self->_free_memory_overcommit();
+
     my $free_available = $self->_free_memory_available();
     my $free_stats = $self->_free_memory_overcommit();
 

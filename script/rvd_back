@@ -615,6 +615,17 @@ sub rebase {
     $base->rebase(Ravada::Utils::user_daemon, $domain);
 }
 
+sub run_request {
+    my $id_request = shift;
+    my $rvd_back = Ravada->new(%CONFIG);
+    my $req = Ravada::Request->open($id_request);
+    $req->status('requested');
+    $rvd_back->_execute($req,1);
+    warn $req->command." ".$req->status
+        .($req->error or '')
+    ."\n";
+}
+
 sub DESTROY {
 }
 
@@ -645,6 +656,8 @@ shutdown_domain($SHUTDOWN_DOMAIN, $ALL, $HIBERNATED)
                                     if defined $SHUTDOWN_DOMAIN;
 
 add_locale_repository($ADD_LOCALE_REPOSITORY) if $ADD_LOCALE_REPOSITORY;
+
+run_request($RUN_REQUEST)           if $RUN_REQUEST;
 }
 
 

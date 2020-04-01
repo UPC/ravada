@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.7.0';
+our $VERSION = '0.8.0';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -878,6 +878,7 @@ sub _add_indexes_generic($self) {
     my %index = (
         requests => [
             "index(status,at_time)"
+            ,"index(id,date_changed,status,at_time)"
             ,"index(date_changed)"
             ,"index(start_time,command,status,pid)"
         ]
@@ -886,6 +887,9 @@ sub _add_indexes_generic($self) {
         ]
         ,iptables => [
             "index(id_domain,time_deleted,time_req)"
+        ]
+        ,messages => [
+             "index(id_request,date_send)"
         ]
     );
     for my $table ( keys %index ) {
@@ -1407,7 +1411,14 @@ Returns the default display IP read from the config file
 
 =cut
 
-sub display_ip {
+sub display_ip($self=undef, $new_ip=undef) {
+    if (defined $new_ip) {
+        if (!length $new_ip) {
+            delete $CONFIG->{display_ip};
+        } else {
+            $CONFIG->{display_ip} = $new_ip;
+        }
+    }
     my $ip = $CONFIG->{display_ip};
     return $ip if $ip;
 }
@@ -1677,21 +1688,17 @@ sub create_domain {
             or confess "Unknown base id: $id_base";
         $vm = $base->_vm;
     }
-    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner)
+        or confess "Error: Unkown user '$id_owner'";
 
     $request->status("creating machine")    if $request;
-    if ( $base && $base->is_base ) {
+    if ( $base && $base->is_base && $base->volatile_clones || $user->is_temporary ) {
         $request->status("balancing")                       if $request;
         $vm = $vm->balance_vm($base) or die "Error: No free nodes available.";
         $request->status("creating machine on ".$vm->name)  if $request;
     }
 
-    confess "No vm found, request = ".Dumper(request => $request)   if !$vm;
-
-    carp "WARNING: no VM defined, we will use ".$vm->name
-        if !$vm_name && !$id_base;
-
-    confess "I can't find any vm ".Dumper($self->vm) if !$vm;
+    confess "Error: missing vm " if !$vm;
 
     my $domain;
     eval { $domain = $vm->create_domain(%args)};
@@ -2692,7 +2699,7 @@ sub _can_fork {
         delete $reqs{$pid} if !$request || $request->status eq 'done';
     }
     my $n_pids = scalar(keys %reqs);
-    return 1 if $n_pids <= $req->requests_limit();
+    return 1 if $n_pids < $req->requests_limit();
 
     my $msg = $req->command
                 ." waiting for processes to finish"
@@ -3386,6 +3393,15 @@ sub _cmd_list_isos($self, $request){
     $request->output(encode_json(\@isos));
 }
 
+sub _cmd_set_time($self, $request) {
+    my $id_domain = $request->args('id_domain');
+    my $domain = Ravada::Domain->open($id_domain)
+        or confess "Error: domain $id_domain not found";
+    return if !$domain->is_active;
+    eval { $domain->set_time() };
+    die "$@ , retry.\n" if $@;
+}
+
 sub _clean_requests($self, $command, $request=undef, $status='requested') {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
@@ -3593,9 +3609,12 @@ sub _cmd_cleanup($self, $request) {
     $self->_clean_volatile_machines( request => $request);
     $self->_clean_temporary_users( );
     $self->_clean_requests('cleanup', $request);
-    $self->_clean_requests('cleanup', $request,'done');
-    $self->_clean_requests('enforce_limits', $request,'done');
-    $self->_clean_requests('refresh_vms', $request,'done');
+    for my $cmd ( qw(cleanup enforce_limits refresh_vms
+        manage_pools refresh_machine screenshot
+        open_iptables ping_backend
+        )) {
+            $self->_clean_requests($cmd, $request,'done');
+    }
 }
 
 sub _req_method {
@@ -3645,6 +3664,7 @@ sub _req_method {
 ,add_hardware => \&_cmd_add_hardware
 ,remove_hardware => \&_cmd_remove_hardware
 ,change_hardware => \&_cmd_change_hardware
+,set_time => \&_cmd_set_time
 
 # Domain ports
 ,expose => \&_cmd_expose
