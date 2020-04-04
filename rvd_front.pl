@@ -861,6 +861,14 @@ any '/admin/user/(:id).(:type)' => sub {
     return $c->render(template => 'main/manage_user');
 };
 
+##add notices in view machine
+
+any '/admin/notices' => sub {
+    my $c = shift;
+
+    $c->render(template => 'main/notices');
+};
+
 get '/list_ldap_attributes/(#cn)' => sub {
     my $c = shift;
 

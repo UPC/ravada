@@ -11,6 +11,7 @@
               align="right" ng-show="!only_public"><%=l 'Hide Private' %></a>
             <a ng-click="toggle_only_public()" class="badge badge-primary text-white dropdown-toggle"
               align="right" ng-show="only_public"><%=l 'Show All' %></a>
+            <a class="badge badge-info text-white dropdown-toggle" href="/admin/notices"><%=l 'Notices' %></a>
         </div>
 %   }
 
