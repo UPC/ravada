@@ -47,6 +47,6 @@ The output now shows that the size has decreased:
 6. Check if the virtual machine works.
 
 7. If the virtual machine works, then remove the img file backup.
-
-More information about https://pve.proxmox.com/wiki/Shrink_Qcow2_Disk_Files#
+ 
+Extended information `about <https://pve.proxmox.com/wiki/Shrink_Qcow2_Disk_Files#>`_ to reduce image size.
 
