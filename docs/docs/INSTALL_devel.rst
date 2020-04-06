@@ -153,7 +153,7 @@ Run the backend in a terminal:
 
 .. prompt:: bash
 
-    $ sudo PERL5LIB=./lib ./script/rvd_back --debug
+    sudo PERL5LIB=./lib ./script/rvd_back --debug
     Starting rvd_back v1.2.0
 
 The backend must be stopped and started again when you change a library file.
@@ -163,7 +163,7 @@ Run the frontend in another terminal:
 
 .. prompt:: bash $
 
-    $ PERL5LIB=./lib morbo ./script/rvd_front
+    PERL5LIB=./lib morbo ./script/rvd_front
     Server available at http://127.0.0.1:3000
 
 Now you must be able to reach ravada at the location http://your.ip:3000/
