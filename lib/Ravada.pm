@@ -1335,6 +1335,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','is_pool','int NOT NULL default 0');
 
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
+    $self->_upgrade_table('domains','shutdown_disconnected','int not null default 0');
+    $self->_upgrade_table('domains','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 
     if ($self->_upgrade_table('domains','screenshot','MEDIUMBLOB')) {
 
@@ -2858,7 +2860,7 @@ sub _cmd_clone($self, $request) {
 sub _req_clone_many($self, $request) {
     my $args = $request->args();
     my $id_domain = $args->{id_domain};
-    my $base = Ravada::Domain->open($id_domain);
+    my $base = Ravada::Domain->open($id_domain) or die "Error: Domain '$id_domain' not found";
     my $number = ( delete $args->{number} or 1 );
     my $domains = $self->list_domains_data();
     my %domain_exists = map { $_->{name} => 1 } @$domains;
@@ -3617,6 +3619,27 @@ sub _cmd_cleanup($self, $request) {
     }
 }
 
+sub _shutdown_disconnected($self) {
+    for my $dom ( $self->list_domains_data(status => 'active') ) {
+        warn $dom->{name}." ".$dom->{shutdown_disconnected}." "
+        .$dom->{client_status};
+        next if !$dom->{shutdown_disconnected};
+        my $domain = Ravada::Domain->open($dom->{id});
+        my $is_active = $domain->is_active;
+        my ($req_shutdown) = grep { $_->command eq 'shutdown' } $domain->list_requests(1);
+        if ($is_active && $domain->client_status eq 'disconnected') {
+            next if $req_shutdown;
+            Ravada::Request->shutdown_domain(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $domain->id
+                ,at => time + 120
+            );
+        } else {
+            $req_shutdown->status('done','Canceled') if $req_shutdown;
+        }
+    }
+}
+
 sub _req_method {
     my $self = shift;
     my  $cmd = shift;
@@ -3805,6 +3828,7 @@ sub import_domain {
 
 sub _cmd_enforce_limits($self, $request=undef) {
     _enforce_limits_active($self, $request);
+    $self->_shutdown_disconnected();
 }
 
 sub _enforce_limits_active($self, $request) {
