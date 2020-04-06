@@ -151,7 +151,7 @@ Run each one of these commands in a separate terminal
 
 Run the backend in a terminal:
 
-.. prompt:: bash
+.. prompt:: bash $
 
     sudo PERL5LIB=./lib ./script/rvd_back --debug
     Starting rvd_back v1.2.0
