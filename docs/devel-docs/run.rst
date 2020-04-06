@@ -11,7 +11,7 @@ source code:
 
 ::
 
-    ~/src/ravada$ morbo -v ./rvd_front.pl
+    ~/src/ravada$ PERL5LIB=./lib morbo ./script/rvd_front
 
 The backend runs as root because it has to deal with the VM processes.
 It won't reload automatically when there is a change, so it has to be
@@ -19,7 +19,7 @@ restarted manually when the code is modified:
 
 ::
 
-    ~/src/ravada$ sudo ./bin/rvd_back.pl --debug
+    ~/src/ravada$ sudo PERL5LIB=./lib ./script/rvd_back --debug
 
 Stop system Ravada
 ==================
