@@ -310,6 +310,7 @@ sub _around_start($orig, $self, @arg) {
 
     for (;;) {
         eval { $self->_start_checks(@arg) };
+        die $@ if $@ && $@!~ /base file not found/i;
         if ($@ && $@ =~/base file not found/ && !$self->_vm->is_local) {
             $self->_request_set_base();
             next;
@@ -401,12 +402,12 @@ sub _start_checks($self, @args) {
 
     if ($id_vm) {
         $vm = Ravada::VM->open($id_vm);
-        if ( !$vm->is_enabled || !$vm->ping ) {
+        if ( !$vm->enabled || !$vm->ping ) {
             $vm = $vm_local;
             $id_vm = undef;
         }
     }
-    $self->_check_tmp_volumes();
+    $self->_check_tmp_volumes() if $self->id_base;
 
     # if it is a clone ( it is not a base )
     if ($self->id_base) {
@@ -625,6 +626,7 @@ sub _around_add_volume {
     if ( $file ) {
         $self->_check_volume_added($file);
     }
+    $self->_check_volume_added($name);
     $args{size} = Ravada::Utils::size_to_number($size) if defined $size;
     $args{allocation} = Ravada::Utils::size_to_number($args{allocation})
         if exists $args{allocation} && defined $args{allocation};
@@ -654,9 +656,9 @@ sub _check_volume_added($self, $file) {
     return if $file =~ /\.iso$/i;
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,id_domain FROM volumes "
-        ." WHERE file=?"
+        ." WHERE file=? or name=?"
     );
-    $sth->execute($file);
+    $sth->execute($file,$file);
     my ($id, $id_domain) = $sth->fetchrow();
     $sth->finish;
 
@@ -919,6 +921,7 @@ sub _check_tmp_volumes($self) {
     for my $vol ( $self->list_volumes_info) {
         next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\./;
         next if $vm_local->file_exists($vol->file);
+        $vol->delete();
 
         my $base = Ravada::Domain->open($self->id_base);
         my @volumes = $base->list_files_base_target;
@@ -1697,7 +1700,7 @@ sub restore($self,$user){
         my $vol_base = Ravada::Volume->new(
             file => $file_base
             ,is_base => 1
-            ,vm => $self->_vm
+            ,domain => $self
         );
         next if $vol_base->file =~ /\.DATA\.\w+$/;
         my $file_clone = $file{$target} or die Dumper(\%file);
@@ -1765,12 +1768,18 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
 
     my @instances = $self->list_instances();
     return if !scalar(@instances);
+
+    my $sth_delete = $$CONNECTOR->dbh->prepare("DELETE FROM domain_instances "
+        ." WHERE id=? ");
     for my $instance ( @instances ) {
         next if $instance->{id_vm} == $self->_vm->id;
-        my $vm = Ravada::VM->open($instance->{id_vm});
+        my $vm;
+        eval { $vm = Ravada::VM->open($instance->{id_vm}) };
+        die $@ if $@ && $@ !~ /I can't find VM/i;
         my $domain;
         eval { $domain = $vm->search_domain($domain_name) };
         $domain->remove($user, $cascade) if $domain;
+        $sth_delete->execute($instance->{id});
     }
 }
 
@@ -3458,6 +3467,7 @@ Check if the domain has swap volumes defined, and clean them
 sub clean_swap_volumes {
     my $self = shift;
     for my $vol ( $self->list_volumes_info) {
+        confess if !$vol->domain;
         if ($vol->file && $vol->file =~ /\.SWAP\.\w+$/) {
             next if !$self->_vm->file_exists($vol->file);
             my $backing_file;
@@ -3473,6 +3483,8 @@ sub clean_swap_volumes {
 
 sub _pre_rename {
     my $self = shift;
+
+    confess "Error: odd number of arguments" if scalar(@_) % 2;
 
     my %args = @_;
     my $name = $args{name};
@@ -3492,6 +3504,10 @@ sub _post_rename {
     $self->_rename_domain_db(@_);
 
     $self->{_name} = $new_name;
+
+    for my $vol ($self->list_volumes_info) {
+        #        die Dumper($vol);
+    }
 }
 
 sub _post_dettach($self, @) {

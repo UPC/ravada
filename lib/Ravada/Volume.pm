@@ -175,10 +175,13 @@ sub clone_filename($self, $name = undef) {
 }
 
 sub restore ($self) {
+    my @domain;
+    @domain = ( domain => $self->domain ) if $self->domain;
     my $base = Ravada::Volume->new(
               vm => $self->vm
            ,file => $self->backing_file
         ,is_base => 1
+        ,@domain
     );
     $base->clone(
         file => $self->file
@@ -196,6 +199,13 @@ sub base_extension($self) {
 sub set_info($self, $name, $value) {
     $self->{info}->{$name} = $value;
     $self->_cache_volume_info() if $self->domain();
+}
+
+sub delete($self) {
+    my $file = $self->file;
+    $self->vm->remove_file($file) if $file;
+    my $sth = $self->_dbh->prepare("DELETE FROM volumes WHERE file=? AND id_domain=?");
+    $sth->execute($file, $self->domain->id);
 }
 
 sub _dbh($self) {
