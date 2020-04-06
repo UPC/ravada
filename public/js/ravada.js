@@ -128,6 +128,11 @@
                     ws_connected = true;
                     ws.send(channel);
                 };
+                ws.onclose = function() {
+                    console.log("ws closed "+url);
+                    ws = new WebSocket(url);
+                    console.log(ws.readyState);
+                };
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
@@ -199,6 +204,11 @@
             subscribe_requests = function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_requests') };
+                ws.onclose = function() {
+                    console.log("ws closed "+url);
+                    ws = new WebSocket(url);
+                    console.log(ws.readyState);
+                };
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
@@ -949,6 +959,12 @@
       $scope.subscribe_alerts = function(url) {
           var ws = new WebSocket(url);
           ws.onopen = function(event) { ws.send('list_alerts') };
+          ws.onclose = function() {
+                console.log("ws closed alerts "+url);
+                ws = new WebSocket(url);
+                console.log(ws.readyState);
+          };
+
           ws.onmessage = function(event) {
               var data = JSON.parse(event.data);
               $scope.$apply(function () {

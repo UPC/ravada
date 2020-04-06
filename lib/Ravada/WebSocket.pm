@@ -6,6 +6,7 @@ use strict;
 use Data::Dumper;
 use Hash::Util qw( lock_hash unlock_hash);
 use Moose;
+use Time::HiRes qw(gettimeofday tv_interval);
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -36,6 +37,11 @@ my %SUB = (
                 ,machine_info => \&_get_machine_info
                 ,ping_backend => \&_ping_backend
                      ,request => \&_request
+);
+
+our %TABLE_CHANNEL = (
+    list_machines_user => '_none_'
+    ,list_alerts => 'messages'
 );
 
 my $A_WHILE;
@@ -102,7 +108,35 @@ sub _list_machines($rvd, $args) {
             || $user->can_list_clones_from_own_base()
             || $user->is_admin()
         );
-    return $rvd->list_machines($user);
+
+    my $old_ret = $args->{ret};
+    my $old_count = ($args->{_count_machines}  or 0 );
+    my $new_count = _count_machines($rvd);
+    my $old_changed = ($args->{_date_changed}  or 0 );
+
+    my $new_changed = _date_changed_machines($rvd);
+
+    if ( !$old_ret || $old_count != $new_count || $old_changed ne $new_changed) {
+        my $list_machines = $rvd->list_machines($user);
+        $args->{_count_machines} = $new_count;
+        $args->{_date_changed} = $new_changed;
+        return $list_machines;
+    }
+    return $old_ret;
+}
+
+sub _date_changed_machines($rvd) {
+    my $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM domains");
+    $sth->execute;
+    my ($date) = $sth->fetchrow;
+    return $date;
+}
+
+sub _count_machines($rvd) {
+    my $sth = $rvd->_dbh->prepare("SELECT count(*) FROM domains");
+    $sth->execute;
+    my ($count) = $sth->fetchrow;
+    return $count;
 }
 
 sub _list_machines_user($rvd, $args) {
@@ -225,31 +259,18 @@ sub _different_list($list1, $list2) {
 }
 
 sub _different_hash($h1,$h2) {
-    my $different = 0;
     for my $key (keys %$h1) {
-        next if $key =~ /^_/;
         next if !defined $h1->{$key} && !defined $h2->{$key};
         if (!exists $h2->{$key}
             || !defined $h1->{$key} && defined $h2->{$key}
             || defined $h1->{$key} && !defined $h2->{$key}
             || _different($h1->{$key}, $h2->{$key})) {
             unlock_hash(%$h1);
-            $h1->{_timestamp} = time - $T0;
             lock_hash(%$h1);
-            $different = 1;
+            return 1;
         }
     }
-    if (!exists $h1->{_timestamp}) {
-        unlock_hash(%$h1);
-        if (exists $h2->{_timestamp}) {
-            $h1->{_timestamp} = $h2->{_timestamp}
-        } else {
-            $h1->{_timestamp} = time - $T0;
-        }
-        lock_hash(%$h1);
-    }
-
-    return $different;
+    return 0;
 }
 sub _different($var1, $var2) {
     return 1 if !defined $var1 &&  defined $var2;
@@ -266,36 +287,71 @@ sub BUILD {
             for my $key ( keys %{$self->clients} ) {
                 my $ws_client = $self->clients->{$key}->{ws};
                 my $channel = $self->clients->{$key}->{channel};
-
-                $channel =~ s{/.*}{};
-                my $exec = $SUB{$channel} or die "Error: unknown channel $channel";
-
-                my $ret = $exec->($self->ravada, $self->clients->{$key});
-                my $old_ret = $self->clients->{$key}->{ret};
-                if ( _different($ret, $old_ret )) {
-                    warn "WS: send $channel" if $DEBUG;
-                    $ws_client->send( { json => $ret } );
-                    $self->clients->{$key}->{ret} = $ret;
-                }
+                _send_answer($self, $ws_client, $channel, $key);
             }
         });
 
 }
 
-sub _list_machines_fast($self, $ws, $login) {
-    my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
-    my $ret0 = $self->ravada->list_domains();
+sub _old_info($self, $key, $new_count=undef, $new_changed=undef) {
+    my $args = $self->clients->{$key};
+    my $old_count = ($args->{"_count_$key"}  or 0 );
+    my $old_changed = ($args->{"_changed_$key"}  or '' );
 
-    my @ret;
-    for my $dom (@$ret0) {
-        next if !$user->is_admin && $dom->{id_owner} != $user->id;
-        $dom->{can_start} = 1;
-        $dom->{can_view} = 1;
-        $dom->{can_manage} = 1;
-        push @ret,($dom) if !$dom->{id_base};
+    return ($old_count, $old_changed);
+}
+
+sub _date_changed_table($self, $table) {
+    my $rvd = $self->ravada;
+    my $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM $table");
+    $sth->execute;
+    my ($date) = $sth->fetchrow;
+    return $date;
+}
+
+sub _count_table($self, $table) {
+    my $rvd = $self->ravada;
+    my $sth = $rvd->_dbh->prepare("SELECT count(*) FROM $table");
+    $sth->execute;
+    my ($count) = $sth->fetchrow;
+    return $count;
+}
+
+
+sub _new_info($self, $key) {
+    my $channel = $self->clients->{$key}->{channel};
+    $channel =~ s{/.*}{};
+
+    my $table = $TABLE_CHANNEL{$channel} or die "WARNING: no table for $channel";
+    return if $table eq '_none_';
+
+    return ($self->_count_table($table),$self->_date_changed_table($table));
+
+}
+
+sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
+    $channel =~ s{/.*}{};
+    my $exec = $SUB{$channel} or die "Error: unknown channel $channel";
+
+    my $t0 = [gettimeofday];
+    my $old_ret = $self->clients->{$key}->{ret};
+    my ($old_count, $old_changed) = $self->_old_info($key);
+    my ($new_count, $new_changed) = $self->_new_info($key);
+
+    return $old_ret if defined $new_count && defined $new_changed
+    && $old_count eq $new_count && $old_changed eq $new_changed;
+
+    $self->_old_info($channel, $new_count, $new_changed);
+    my $ret = $exec->($self->ravada, $self->clients->{$key});
+
+    my $tv_interval = tv_interval($t0, [gettimeofday]);
+    warn $channel." $tv_interval\n";# if $tv_interval > 0.5;
+    if ( _different($ret, $old_ret )) {
+
+        warn "WS: send $channel" if $DEBUG;
+        $ws_client->send( { json => $ret } );
+        $self->clients->{$key}->{ret} = $ret;
     }
-    $ws->send( { json => \@ret } );
-
 }
 
 sub subscribe($self, %args) {
@@ -308,9 +364,7 @@ sub subscribe($self, %args) {
         , %args
         , ret => undef
     };
-    if ( $args{channel} eq 'list_machines' && $0 !~ /\.t$/) {
-        $self->_list_machines_fast($ws, $args{login})
-    }
+    $self->_send_answer($ws,$args{channel});
 }
 
 sub unsubscribe($self, $ws) {

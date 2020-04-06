@@ -226,7 +226,12 @@ sub _around_list_machines($orig, $self, $user) {
         $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
 
         $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
+        eval {
         $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
+        };
+        #may have been deleted just now
+        next if $@ && $@ =~ /Unknown domain/;
+        die $@ if $@;
 
         $m->{can_hibernate} = 0;
         $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
@@ -875,15 +880,15 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
     my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
         ." ".$now[2].":".$now[1].":".$now[0];
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT requests.id, command, args, date_changed, requests.status"
+        "SELECT requests.id, command, args, requests.date_changed, requests.status"
             ." ,requests.error, id_domain ,domains.name as domain"
-            ." ,date_changed "
+            ." ,requests.date_changed "
         ." FROM requests left join domains "
         ."  ON requests.id_domain = domains.id"
         ." WHERE "
         ."    requests.status <> 'done' "
-        ."  OR ( date_changed >= ?) "
-        ." ORDER BY date_changed "
+        ."  OR ( requests.date_changed >= ?) "
+        ." ORDER BY requests.date_changed "
     );
     $sth->execute($time_recent);
     my @reqs;

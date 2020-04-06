@@ -175,6 +175,11 @@ ravadaApp.directive("solShowMachine", swMach)
               $scope.ws_fail = false;
               ws.send('list_machines');
           };
+          ws.onclose = function() {
+              console.log("ws closed "+url);
+              ws = new WebSocket(url);
+              console.log(ws.readyState);
+          };
           ws.onmessage = function (event) {
               var data = JSON.parse(event.data);
 
@@ -187,7 +192,7 @@ ravadaApp.directive("solShowMachine", swMach)
                       mach = data[i];
                       if (!mach.id_base
                           && (typeof $scope.list_machines[mach.id] == 'undefined'
-                              || $scope.list_machines[mach.id]._timestamp != mach._timestamp)
+                             || $scope.list_machines[mach.id].date_changed != mach.date_changed)
                       ){
                           $scope.list_machines[mach.id] = mach;
                           $scope.list_machines[mach.id].childs = {};
@@ -202,7 +207,7 @@ ravadaApp.directive("solShowMachine", swMach)
                       }
                       if (mach.id_base
                           && ( typeof childs[mach.id] == 'undefined'
-                              || childs[mach.id]._timestamp != mach._timestamp
+                              || childs[mach.id].date_changed != mach.date_changed
                           )
                       ){
                           childs[mach.id] = mach;
@@ -231,6 +236,12 @@ ravadaApp.directive("solShowMachine", swMach)
           $scope.show_requests = false;
           var ws = new WebSocket(url);
           ws.onopen    = function (event) { ws.send('list_requests') };
+          ws.onclose = function() {
+              console.log("ws closed "+url);
+              ws = new WebSocket(url);
+              console.log(ws.readyState);
+          };
+
           ws.onmessage = function (event) {
               var data = JSON.parse(event.data);
               $scope.$apply(function () {
@@ -294,7 +305,10 @@ ravadaApp.directive("solShowMachine", swMach)
 
     $scope.action = function(target,action,machineId){
       $http.get('/'+target+'/'+action+'/'+machineId+'.json')
-        .then(function() {
+        .success(function() {
+        }).error(function(data,status) {
+              console.error('Repos error', status, data);
+              window.location.reload();
         });
     };
     $scope.set_autostart= function(machineId, value) {
@@ -303,7 +317,12 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.set_public = function(machineId, value) {
       if (value) value=1;
       else value = 0;
-      $http.get("/machine/public/"+machineId+"/"+value);
+      $http.get("/machine/public/"+machineId+"/"+value)
+        .error(function(data,status) {
+              console.error('Repos error', status, data);
+              window.location.reload();
+        });
+
     };
 
     $scope.can_remove_base = function(machine) {
