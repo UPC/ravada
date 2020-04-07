@@ -40,8 +40,9 @@ my %SUB = (
 );
 
 our %TABLE_CHANNEL = (
-    list_machines_user => '_none_'
-    ,list_alerts => 'messages'
+    list_alerts => 'messages'
+    ,list_machines => 'domains'
+    ,list_requests => 'requests'
 );
 
 my $A_WHILE;
@@ -212,7 +213,7 @@ sub _ping_backend($rvd, $args) {
     # If there are requests in state different that requested it's ok
     if ( scalar(@reqs) > $requested ) {
         _its_been_a_while(1);
-        return 1;
+        return 2;
     }
 
     my ($ping_backend)
@@ -295,6 +296,10 @@ sub BUILD {
 
 sub _old_info($self, $key, $new_count=undef, $new_changed=undef) {
     my $args = $self->clients->{$key};
+
+    $args->{"_count_$key"} = $new_count if defined $new_count;
+    $args->{"_changed_$key"} = $new_changed if defined $new_changed;
+
     my $old_count = ($args->{"_count_$key"}  or 0 );
     my $old_changed = ($args->{"_changed_$key"}  or '' );
 
@@ -322,8 +327,7 @@ sub _new_info($self, $key) {
     my $channel = $self->clients->{$key}->{channel};
     $channel =~ s{/.*}{};
 
-    my $table = $TABLE_CHANNEL{$channel} or die "WARNING: no table for $channel";
-    return if $table eq '_none_';
+    my $table = $TABLE_CHANNEL{$channel} or return;
 
     return ($self->_count_table($table),$self->_date_changed_table($table));
 
@@ -341,17 +345,18 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
     return $old_ret if defined $new_count && defined $new_changed
     && $old_count eq $new_count && $old_changed eq $new_changed;
 
-    $self->_old_info($channel, $new_count, $new_changed);
+    $self->_old_info($key, $new_count, $new_changed);
     my $ret = $exec->($self->ravada, $self->clients->{$key});
 
     my $tv_interval = tv_interval($t0, [gettimeofday]);
-    warn $channel." $tv_interval\n";# if $tv_interval > 0.5;
+    warn ''.localtime(time)." ".$channel." $tv_interval\n";# if $tv_interval > 0.5;
     if ( _different($ret, $old_ret )) {
 
         warn "WS: send $channel" if $DEBUG;
         $ws_client->send( { json => $ret } );
         $self->clients->{$key}->{ret} = $ret;
     }
+    $self->unsubscribe($key) if $channel eq 'ping_backend' && $ret eq 2;
 }
 
 sub subscribe($self, %args) {

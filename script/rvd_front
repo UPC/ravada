@@ -113,7 +113,7 @@ our $DOCUMENT_ROOT = "/var/www";
 # session times out in 5 minutes
 our $SESSION_TIMEOUT = ($CONFIG_FRONT->{session_timeout} or 5 * 60);
 # session times out in 15 minutes for admin users
-our $SESSION_TIMEOUT_ADMIN = ($CONFIG_FRONT->{session_timeout_admin} or 1 * 60);
+our $SESSION_TIMEOUT_ADMIN = ($CONFIG_FRONT->{session_timeout_admin} or 15 * 60);
 
 my $WS = Ravada::WebSocket->new(ravada => $RAVADA);
 my %ALLOWED_ANONYMOUS_WS = map { $_ => 1 } qw(list_bases_anonymous list_alerts);
