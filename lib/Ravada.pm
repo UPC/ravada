@@ -1169,9 +1169,29 @@ sub _upgrade_table {
 
     return if $row;
 
+    my $sqlite_trigger;
+    if ($dbh->{Driver}{Name} =~ /sqlite/i) {
+        $definition =~ s/DEFAULT.*ON UPDATE(.*)//i;
+        $sqlite_trigger = $1;
+    }
     warn "INFO: adding $field $definition to $table\n"  if $0 !~ /\.t$/;
     $dbh->do("alter table $table add $field $definition");
+    $self->_sqlite_trigger($dbh,$table, $field, $sqlite_trigger) if $sqlite_trigger;
     return 1;
+}
+
+sub _sqlite_trigger($self, $dbh, $table,$field, $trigger) {
+    my $sql =
+    "CREATE TRIGGER Update$field
+    AFTER UPDATE
+    ON $table
+    FOR EACH ROW
+    WHEN NEW.$field < OLD.$field
+    BEGIN
+    UPDATE $table SET $field=$trigger WHERE id=OLD.id;
+    END;
+    ";
+    $dbh->do($sql);
 }
 
 sub _remove_field {
