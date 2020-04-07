@@ -55,6 +55,8 @@ Do you feel like giving us a hand? Here you have all the information you need as
    :maxdepth: 2
 
    docs/INSTALL
+   docs/INSTALL_Ubuntu
+   docs/INSTALL_Debian
    docs/INSTALL_Fedora
    docs/INSTALL_ubuntu_xenial.rst
    docs/INSTALLfromDockers.rst
