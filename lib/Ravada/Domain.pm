@@ -310,10 +310,12 @@ sub _around_start($orig, $self, @arg) {
 
     for (;;) {
         eval { $self->_start_checks(@arg) };
-        if ($@ && $@ =~/base file not found/ && !$self->_vm->is_local) {
+        my $error = $@;
+        if ($error && $error =~/base file not found/ && !$self->_vm->is_local) {
             $self->_request_set_base();
             next;
         }
+        die $error if $error;
         if (!defined $listen_ip) {
             my $display_ip;
             if ($remote_ip) {
@@ -328,7 +330,7 @@ sub _around_start($orig, $self, @arg) {
             $arg{listen_ip} = $display_ip;
         }
         eval { $self->$orig(%arg) };
-        my $error = $@;
+        $error = $@;
         last if !$error;
         warn "WARNING: $error ".$self->_vm->name." ".$self->_vm->enabled if $error;
         if ($error && $self->id_base && !$self->is_local && $self->_vm->enabled) {
@@ -401,15 +403,15 @@ sub _start_checks($self, @args) {
 
     if ($id_vm) {
         $vm = Ravada::VM->open($id_vm);
-        if ( !$vm->is_enabled || !$vm->ping ) {
+        if ( !$vm->enabled || !$vm->ping ) {
             $vm = $vm_local;
             $id_vm = undef;
         }
     }
-    $self->_check_tmp_volumes();
 
     # if it is a clone ( it is not a base )
     if ($self->id_base) {
+        $self->_check_tmp_volumes();
 #        $self->_set_last_vm(1)
         if ( !$self->is_local
             && ( !$self->_vm->enabled || !base_in_vm($self->id_base,$self->_vm->id)
