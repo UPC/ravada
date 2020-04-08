@@ -97,6 +97,16 @@ Dockers troubleshoots
 .. prompt:: bash $
    
   docker-compose ps
+  
+* No such file or directory
+   If you see this message remember that the source project must be in your HOME directory inside src directory:
+   ~/src/ravada
+   
+.. prompt:: bash
+  
+  root@6f8d2946c40c:/ravada# PERL5LIB=./lib ./script/rvd_back --add-user soporte
+  bash: ./script/rvd_back: No such file or directory
+
 
 * Let's do a reset:
    We want to return to an initial starting point
