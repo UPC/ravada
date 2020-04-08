@@ -3018,6 +3018,39 @@ sub _cmd_start_clones {
     }
 }
 
+sub _cmd_shutdown_clones {
+    my $self = shift;
+    my $request = shift;
+
+    my $id_domain = $request->defined_arg('id_domain');
+    my $domain = $self->search_domain_by_id($id_domain);
+    die "Unknown domain '$id_domain'\n" if !$domain;
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id, name, is_base FROM domains WHERE id_base = ?"
+    );
+    $sth->execute($id_domain);
+    while ( my ($id, $name, $is_base) = $sth->fetchrow) {
+        if ($is_base == 0) {
+            my $domain2;
+            my $is_active;
+            eval {
+                $domain2 = $self->search_domain_by_id($id);
+                $is_active = $domain2->is_active;
+            };
+            warn $@ if $@;
+            if ($is_active) {
+                my $req = Ravada::Request->shutdown_domain(
+                    uid => $uid
+                   ,name => $name);
+            }
+        }
+    }
+}
+
 sub _cmd_prepare_base {
     my $self = shift;
     my $request = shift;
@@ -3674,6 +3707,7 @@ sub _req_method {
           clone => \&_cmd_clone
          ,start => \&_cmd_start
   ,start_clones => \&_cmd_start_clones
+,shutdown_clones => \&_cmd_shutdown_clones
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
