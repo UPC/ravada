@@ -9,16 +9,9 @@ services:
     networks:
       - ravada_network
     image: mysql:5.7
+    env_file: .env
     command: --default-authentication-plugin=mysql_native_password
     restart: unless-stopped
-    environment:
-        - MYSQL_DATABASE=ravada
-        - MYSQL_ROOT_PASSWORD=Pword12345*
-        - MYSQL_HOST=127.0.0.1
-        - MYSQL_PORT=33306
-        - MYSQL_USER=rvd_user
-        - MYSQL_PASSWORD=Pword12345*
-        - MYSQL_MY_DATABASE=ravada
 
   ravada-front:
     container_name: ravada-front
@@ -27,17 +20,13 @@ services:
       - "/etc/localtime:/etc/localtime:ro"
       - "~/src/ravada:/ravada"
       - "/opt/ravada/screenshots:/var/www/img/screenshots"
-
     ports:
       - "3000:3000"
     expose:
       - "3000"
     networks:
       - ravada_network
-    #image download from dockerhub
     image: ravada/front
-    #build to build from sources
-    #build: dockers/front/.
     restart: unless-stopped
 
     depends_on:
@@ -59,13 +48,10 @@ services:
       - "55900-55999:55900-55999"
     networks:
       - ravada_network
-    #image download from dockerhub 
     image: ravada/back
-    #build to build from sources
-    #build: dockers/back/.
     privileged: true
     restart: unless-stopped
- 
+
     depends_on:
       - ravada-mysql
 
