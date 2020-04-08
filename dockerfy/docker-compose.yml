@@ -26,7 +26,10 @@ services:
       - "3000"
     networks:
       - ravada_network
+    #By default download from dockerhub
     image: ravada/front
+    #If you want to local build
+    #build: dockers/front/.
     restart: unless-stopped
 
     depends_on:
@@ -48,7 +51,10 @@ services:
       - "55900-55999:55900-55999"
     networks:
       - ravada_network
+    #By default download from dockerhub
     image: ravada/back
+    #If you want to local build
+    #build: dockers/back/.
     privileged: true
     restart: unless-stopped
 
