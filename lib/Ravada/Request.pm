@@ -377,26 +377,6 @@ sub start_clones {
     return $self->_new_request(command => 'start_clones' , args => $args);
 }
 
-=head2 shutdown_clones
-
-Requests to shutdown the clones of a base
-
-  my $req = Ravada::Request->shutdown_clones( name => 'name', uid => $user->id );
-
-=cut
-
-sub shutdown_clones {
-    my $proto = shift;
-    my $class=ref($proto) || $proto;
-
-    my $args = _check_args('shutdown_clones', @_);
-
-    my $self = {};
-    bless($self,$class);
-
-    return $self->_new_request(command => 'shutdown_clones' , args => $args);
-}
-
 =head2 pause_domain
 
 Requests to pause a domain
