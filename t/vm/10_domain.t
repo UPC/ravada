@@ -266,7 +266,7 @@ sub test_auto_shutdown_disconnected($vm) {
             .$clone->client_status);
     }
     is($clone->client_status, 'disconnected');
-    my $req = Ravada::Request->cleanup();
+    my $req = Ravada::Request->enforce_limits( _force => 1);
     rvd_back->_process_requests_dont_fork(undef,1);
     is($req->status,'done');
     is($req->error, '');
@@ -281,7 +281,7 @@ sub test_auto_shutdown_disconnected($vm) {
     is($req->status,'done');
     is($req->error, '');
 
-    is($req_shutdown->status,'done');
+    like($req_shutdown->status,qr(done|requested));
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
