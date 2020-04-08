@@ -6,6 +6,9 @@ use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Test::More;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -243,6 +246,45 @@ sub test_shutdown {
     is(scalar @reqs,1,$domain->name) or die Dumper([ map { [$_->id,$_->command,$_->status,$_->error] } @reqs]);
 
     $domain->remove(user_admin);
+}
+
+sub test_auto_shutdown_disconnected($vm) {
+    my $base= create_domain($vm);
+    $base->_data('shutdown_disconnected',1);
+
+    my $domainb = Ravada::Domain->open($base->id);
+    is($domainb->_data('shutdown_disconnected'),1);
+
+    my $clone = $base->clone(name => new_domain_name, user => user_admin);
+    is($clone->_data('shutdown_disconnected'),1);
+
+    $clone->start(user => user_admin, remote_ip => '1.2.3.4');
+    for (1 .. 60) {
+        last if $clone->client_status(1) eq 'disconnected';
+        sleep 1;
+        diag("waiting for ".$clone->name." to disconnect "
+            .$clone->client_status);
+    }
+    is($clone->client_status, 'disconnected');
+    my $req = Ravada::Request->enforce_limits( _force => 1);
+    rvd_back->_process_requests_dont_fork(undef,1);
+    is($req->status,'done');
+    is($req->error, '');
+
+    my ($req_shutdown) = grep { $_->command eq 'shutdown' } $clone->list_requests(1);
+    ok($req_shutdown) or return;
+    is($req_shutdown->status,'requested');
+
+    $clone->start(user => user_admin, remote_ip => '1.2.3.4');
+    $req = Ravada::Request->cleanup();
+    rvd_back->_process_requests_dont_fork(undef,1);
+    is($req->status,'done');
+    is($req->error, '');
+
+    like($req_shutdown->status,qr(done|requested));
+
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
 }
 
 sub test_shutdown_paused_domain {
@@ -557,6 +599,7 @@ for my $vm_name ( vm_names() ) {
         test_vm_in_db($vm_name, $conf)    if $conf;
 
         test_shutdown($vm);
+        test_auto_shutdown_disconnected($vm);
 
         test_vm_connect($vm_name, $host, $conf);
         test_search_vm($vm_name, $host, $conf);

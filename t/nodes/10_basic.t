@@ -342,7 +342,7 @@ sub test_removed_base_file($vm, $node) {
     is($base->base_in_vm($node->id),1);
     is(scalar($base->list_vms),2) or exit;
     my $node2 = Ravada::VM->open($node->id);
-    is($node2->is_enabled,1);
+    is($node2->enabled,1);
     for my $clone_data ($base->clones) {
         my $clone = Ravada::Domain->open($clone_data->{id});
         $clone->remove(user_admin);
@@ -406,7 +406,7 @@ sub test_removed_base_file_and_swap_remote($vm, $node) {
     wait_request(debug => 0);
     is($base->base_in_vm($node->id),1);
     my $node2 = Ravada::VM->open($node->id);
-    is($node2->is_enabled,1);
+    is($node2->enabled,1);
     for my $clone_data ($base->clones) {
         my $clone = Ravada::Domain->open($clone_data->{id});
         $clone->remove(user_admin);

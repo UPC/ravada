@@ -33,7 +33,7 @@ our $CONNECTOR;
 our $MIN_FREE_MEMORY = 1024*1024;
 our $IPTABLES_CHAIN = 'RAVADA';
 
-our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout );
+our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout shutdown_disconnected);
 
 our $TIME_CACHE_NETSTAT = 60; # seconds to cache netstat data output
 our $RETRY_SET_TIME=10;
@@ -310,10 +310,12 @@ sub _around_start($orig, $self, @arg) {
 
     for (;;) {
         eval { $self->_start_checks(@arg) };
-        if ($@ && $@ =~/base file not found/ && !$self->_vm->is_local) {
+        my $error = $@;
+        if ($error && $error =~/base file not found/ && !$self->_vm->is_local) {
             $self->_request_set_base();
             next;
         }
+        die $error if $error;
         if (!defined $listen_ip) {
             my $display_ip;
             if ($remote_ip) {
@@ -328,7 +330,7 @@ sub _around_start($orig, $self, @arg) {
             $arg{listen_ip} = $display_ip;
         }
         eval { $self->$orig(%arg) };
-        my $error = $@;
+        $error = $@;
         last if !$error;
         warn "WARNING: $error ".$self->_vm->name." ".$self->_vm->enabled if $error;
         if ($error && $self->id_base && !$self->is_local && $self->_vm->enabled) {
@@ -401,15 +403,15 @@ sub _start_checks($self, @args) {
 
     if ($id_vm) {
         $vm = Ravada::VM->open($id_vm);
-        if ( !$vm->is_enabled || !$vm->ping ) {
+        if ( !$vm->enabled || !$vm->ping ) {
             $vm = $vm_local;
             $id_vm = undef;
         }
     }
-    $self->_check_tmp_volumes();
 
     # if it is a clone ( it is not a base )
     if ($self->id_base) {
+        $self->_check_tmp_volumes();
 #        $self->_set_last_vm(1)
         if ( !$self->is_local
             && ( !$self->_vm->enabled || !base_in_vm($self->id_base,$self->_vm->id)
@@ -1516,13 +1518,13 @@ sub info($self, $user) {
         ,pool_start => $self->pool_start
         ,pool_clones => $self->pool_clones
         ,is_pool => $self->is_pool
-        ,comment => $self->_data('comment')
-        ,screenshot => $self->_data('screenshot')
         ,run_timeout => $self->run_timeout
         ,autostart => $self->autostart
         ,volatile_clones => $self->volatile_clones
-        ,id_owner => $self->_data('id_owner')
     };
+    for (qw(comment screenshot id_owner shutdown_disconnected)) {
+        $info->{$_} = $self->_data($_);
+    }
     if ($is_active) {
         eval {
             $info->{display_url} = $self->display($user);
