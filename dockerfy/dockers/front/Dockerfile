@@ -28,8 +28,6 @@ ENV PERL5LIB /root/local/lib/perl5:/root/lib/:/ravada
 
 COPY supervisord.conf /etc/supervisord.conf
 
-#RUN mkdir /ravada
-#ADD src/ravada /ravada
 COPY ravada.conf /etc/ravada.conf
 WORKDIR /ravada
 
