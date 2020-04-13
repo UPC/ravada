@@ -3679,8 +3679,6 @@ sub _cmd_cleanup($self, $request) {
 
 sub _shutdown_disconnected($self) {
     for my $dom ( $self->list_domains_data(status => 'active') ) {
-        warn $dom->{name}." ".$dom->{shutdown_disconnected}." "
-        .$dom->{client_status};
         next if !$dom->{shutdown_disconnected};
         my $domain = Ravada::Domain->open($dom->{id});
         my $is_active = $domain->is_active;
