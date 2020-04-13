@@ -29,6 +29,7 @@ use Ravada::VM::Void;
 
 our %VALID_VM;
 our %ERROR_VM;
+our $TIMEOUT_STALE_PROCESS;
 
 eval {
     require Ravada::VM::KVM and do {
@@ -2368,7 +2369,10 @@ sub process_priority_requests($self, $debug=0, $dont_fork=0) {
 
 sub _kill_stale_process($self) {
 
-    my @domains = $self->list_domains_data();
+    if (!$TIMEOUT_STALE_PROCESS) {
+        my @domains = $self->list_domains_data();
+        $TIMEOUT_STALE_PROCESS = scalar(@domains)*5 + 60;
+    }
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,pid,command,start_time "
         ." FROM requests "
@@ -2378,7 +2382,7 @@ sub _kill_stale_process($self) {
         ." AND pid IS NOT NULL "
         ." AND start_time IS NOT NULL "
     );
-    $sth->execute(time - 5*scalar(@domains) - 60 );
+    $sth->execute(time - $TIMEOUT_STALE_PROCESS);
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
