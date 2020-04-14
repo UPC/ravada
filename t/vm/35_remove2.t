@@ -38,7 +38,7 @@ sub test_remove_domain {
     is($@,"");
 
     my $list = rvd_front->list_domains();
-    is(scalar @$list , 0) or die Dumper($list);
+    is(scalar @$list , 0);
 
 }
 
