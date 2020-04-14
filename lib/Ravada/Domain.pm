@@ -310,11 +310,12 @@ sub _around_start($orig, $self, @arg) {
 
     for (;;) {
         eval { $self->_start_checks(@arg) };
-        die $@ if $@ && $@!~ /base file not found/i;
-        if ($@ && $@ =~/base file not found/ && !$self->_vm->is_local) {
+        my $error = $@;
+        if ($error && $error =~/base file not found/ && !$self->_vm->is_local) {
             $self->_request_set_base();
             next;
         }
+        die $error if $error;
         if (!defined $listen_ip) {
             my $display_ip;
             if ($remote_ip) {
@@ -329,7 +330,7 @@ sub _around_start($orig, $self, @arg) {
             $arg{listen_ip} = $display_ip;
         }
         eval { $self->$orig(%arg) };
-        my $error = $@;
+        $error = $@;
         last if !$error;
         warn "WARNING: $error ".$self->_vm->name." ".$self->_vm->enabled if $error;
         if ($error && $self->id_base && !$self->is_local && $self->_vm->enabled) {
@@ -407,10 +408,10 @@ sub _start_checks($self, @args) {
             $id_vm = undef;
         }
     }
-    $self->_check_tmp_volumes() if $self->id_base;
 
     # if it is a clone ( it is not a base )
     if ($self->id_base) {
+        $self->_check_tmp_volumes();
 #        $self->_set_last_vm(1)
         if ( !$self->is_local
             && ( !$self->_vm->enabled || !base_in_vm($self->id_base,$self->_vm->id)
@@ -626,7 +627,6 @@ sub _around_add_volume {
     if ( $file ) {
         $self->_check_volume_added($file);
     }
-    $self->_check_volume_added($name);
     $args{size} = Ravada::Utils::size_to_number($size) if defined $size;
     $args{allocation} = Ravada::Utils::size_to_number($args{allocation})
         if exists $args{allocation} && defined $args{allocation};
@@ -1778,6 +1778,7 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         die $@ if $@ && $@ !~ /I can't find VM/i;
         my $domain;
         eval { $domain = $vm->search_domain($domain_name) };
+        warn $@ if $@;
         $domain->remove($user, $cascade) if $domain;
         $sth_delete->execute($instance->{id});
     }
@@ -3504,10 +3505,6 @@ sub _post_rename {
     $self->_rename_domain_db(@_);
 
     $self->{_name} = $new_name;
-
-    for my $vol ($self->list_volumes_info) {
-        #        die Dumper($vol);
-    }
 }
 
 sub _post_dettach($self, @) {
