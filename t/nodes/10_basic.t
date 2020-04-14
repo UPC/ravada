@@ -833,9 +833,12 @@ sub test_base_unset($vm, $node) {
     my $clone = $base->clone(name => new_domain_name, user => user_admin);
     $clone->migrate($node);
     $base->set_base_vm(id_vm => $node->id,value => 0, user => user_admin);
-    $clone->start(user_admin);
+    is($base->base_in_vm($node->id),0) or exit;
+    is(Ravada::Domain::base_in_vm($base->id,$node->id),0) or exit;
+    my $clone2 = Ravada::Domain->open($clone->id);
+    $clone2->start(user_admin);
 
-    is($clone->_vm->id, $vm->id);
+    is($clone2->_vm->name, $vm->name) or exit;
 
     _remove_domain($base);
 }

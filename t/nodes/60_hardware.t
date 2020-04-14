@@ -163,6 +163,12 @@ sub test_change_hardware($vm, @nodes) {
     my @volumes = $clone->list_volumes();
 
     for my $node (@nodes) {
+        for ( 1 .. 10 ) {
+            last if $node->ping(undef,0);
+            diag("Waiting for ".$node->name." ping $_");
+            sleep 1;
+        }
+        is($node->ping(),1) or die "Error: I can't ping ".$node->ip;
         $domain->set_base_vm( vm => $node, user => user_admin);
         my $clone2 = $node->search_domain($clone->name);
         ok(!$clone2);
@@ -174,6 +180,12 @@ sub test_change_hardware($vm, @nodes) {
     my $info = $domain->info(user_admin);
     my ($hardware) = grep { !/disk|volume/ } keys %{$info->{hardware}};
     $clone->remove_controller($hardware,0);
+
+    my $sth = connector->dbh->prepare("SELECT count(*) FROM domain_instances "
+        ."WHERE id_domain = ".$clone->id );
+    $sth->execute();
+    my ($count) = $sth->fetchrow;
+    is($count,1,"Expecting other instances removed when hardware changed") or exit;
 
     for my $node (@nodes) {
         my $clone2 = $node->search_domain($clone->name);

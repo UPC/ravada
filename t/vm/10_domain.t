@@ -119,10 +119,13 @@ sub test_shutdown_clones {
     is($req->error,'');
 
     # The first requests creates 3 more requests, process them
-    rvd_back->_process_all_requests_dont_fork();
-    is($clone1->is_active,0);
-    is($clone2->is_active,0);
-    is($clone3->is_active,0);
+    for my $clone ($clone1, $clone2, $clone3) {
+        my ($req) = grep({$_->command eq 'shutdown'} $clone->list_requests),
+        ok($req);
+
+        is($req->command,'shutdown') or die Dumper($clone->list_requests)
+        if $req;
+    }
 
     $clone1->remove(user_admin);
     $clone2->remove(user_admin);
