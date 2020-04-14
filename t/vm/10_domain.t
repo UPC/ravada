@@ -6,6 +6,9 @@ use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Test::More;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -81,6 +84,53 @@ sub test_start_clones {
 
     $domain->remove(user_admin);
 }
+
+sub test_shutdown_clones {
+    my $vm_name = shift;
+    my $ravada = Ravada->new(@ARG_RVD);
+    my $vm = $ravada->search_vm($vm_name);
+    ok($vm,"I can't find VM $vm_name") or return;
+    diag("Testing shutdown clones");
+    my $name = new_domain_name();
+    my $user_name = $USER->id;
+    my $domain = $vm->create_domain(name => $name
+                    , id_owner => $user_name
+                    , arg_create_dom($vm_name));
+    my $clone1 = $domain->clone( user=>$USER, name=>new_domain_name() );
+    my $clone2 = $domain->clone( user=>$USER, name=>new_domain_name() );
+    my $clone3 = $domain->clone( user=>$USER, name=>new_domain_name() );
+    is($clone1->is_active,0);
+    is($clone2->is_active,0);
+    is($clone3->is_active,0);
+    my $req = Ravada::Request->start_clones(uid => $USER->id, id_domain => $domain->id, remote_ip => '127.0.0.1' );
+    rvd_back->_process_all_requests_dont_fork(); #we make sure that the sql has updated.
+    is($req->status,'done');
+    is($req->error,'');
+
+    # The first requests creates 3 more requests, process them
+    rvd_back->_process_all_requests_dont_fork();
+    is($clone1->is_active,1);
+    is($clone2->is_active,1);
+    is($clone3->is_active,1);
+
+     $req = Ravada::Request->shutdown_clones(uid => $USER->id, id_domain => $domain->id);
+    rvd_back->_process_all_requests_dont_fork(); #we make sure that the sql has updated.
+    is($req->status,'done');
+    is($req->error,'');
+
+    # The first requests creates 3 more requests, process them
+    rvd_back->_process_all_requests_dont_fork();
+    is($clone1->is_active,0);
+    is($clone2->is_active,0);
+    is($clone3->is_active,0);
+
+    $clone1->remove(user_admin);
+    $clone2->remove(user_admin);
+    $clone3->remove(user_admin);
+
+    $domain->remove(user_admin);
+}
+
 
 sub test_vm_connect {
     my $vm_name = shift;
@@ -243,6 +293,45 @@ sub test_shutdown {
     is(scalar @reqs,1,$domain->name) or die Dumper([ map { [$_->id,$_->command,$_->status,$_->error] } @reqs]);
 
     $domain->remove(user_admin);
+}
+
+sub test_auto_shutdown_disconnected($vm) {
+    my $base= create_domain($vm);
+    $base->_data('shutdown_disconnected',1);
+
+    my $domainb = Ravada::Domain->open($base->id);
+    is($domainb->_data('shutdown_disconnected'),1);
+
+    my $clone = $base->clone(name => new_domain_name, user => user_admin);
+    is($clone->_data('shutdown_disconnected'),1);
+
+    $clone->start(user => user_admin, remote_ip => '1.2.3.4');
+    for (1 .. 60) {
+        last if $clone->client_status(1) eq 'disconnected';
+        sleep 1;
+        diag("waiting for ".$clone->name." to disconnect "
+            .$clone->client_status);
+    }
+    is($clone->client_status, 'disconnected');
+    my $req = Ravada::Request->enforce_limits( _force => 1);
+    rvd_back->_process_requests_dont_fork(undef,1);
+    is($req->status,'done');
+    is($req->error, '');
+
+    my ($req_shutdown) = grep { $_->command eq 'shutdown' } $clone->list_requests(1);
+    ok($req_shutdown) or return;
+    is($req_shutdown->status,'requested');
+
+    $clone->start(user => user_admin, remote_ip => '1.2.3.4');
+    $req = Ravada::Request->cleanup();
+    rvd_back->_process_requests_dont_fork(undef,1);
+    is($req->status,'done');
+    is($req->error, '');
+
+    like($req_shutdown->status,qr(done|requested));
+
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
 }
 
 sub test_shutdown_paused_domain {
@@ -557,6 +646,7 @@ for my $vm_name ( vm_names() ) {
         test_vm_in_db($vm_name, $conf)    if $conf;
 
         test_shutdown($vm);
+        test_auto_shutdown_disconnected($vm);
 
         test_vm_connect($vm_name, $host, $conf);
         test_search_vm($vm_name, $host, $conf);
@@ -605,6 +695,7 @@ for my $vm_name ( vm_names() ) {
         test_shutdown_suspended_domain($vm_name, $domain);
         test_pause_domain($vm_name, $domain);
         test_shutdown_paused_domain($vm_name, $domain);
+        test_shutdown_clones($vm_name);
 
         test_remove_domain($vm_name, $domain);
 

@@ -33,7 +33,7 @@ our $CONNECTOR;
 our $MIN_FREE_MEMORY = 1024*1024;
 our $IPTABLES_CHAIN = 'RAVADA';
 
-our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout );
+our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout shutdown_disconnected);
 
 our $TIME_CACHE_NETSTAT = 60; # seconds to cache netstat data output
 our $RETRY_SET_TIME=10;
@@ -1519,13 +1519,13 @@ sub info($self, $user) {
         ,pool_start => $self->pool_start
         ,pool_clones => $self->pool_clones
         ,is_pool => $self->is_pool
-        ,comment => $self->_data('comment')
-        ,screenshot => $self->_data('screenshot')
         ,run_timeout => $self->run_timeout
         ,autostart => $self->autostart
         ,volatile_clones => $self->volatile_clones
-        ,id_owner => $self->_data('id_owner')
     };
+    for (qw(comment screenshot id_owner shutdown_disconnected)) {
+        $info->{$_} = $self->_data($_);
+    }
     if ($is_active) {
         eval {
             $info->{display_url} = $self->display($user);

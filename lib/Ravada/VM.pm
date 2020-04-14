@@ -431,7 +431,7 @@ sub _around_create_domain {
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
             if defined $base->run_timeout();
-
+        $domain->_data(shutdown_disconnected => $base->_data('shutdown_disconnected'));
         for my $port ( $base->list_ports ) {
             my %port = %$port;
             delete @port{'id','id_domain','public_port'};
@@ -722,7 +722,7 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones);
     my @requests;
     for my $req ( $base->list_requests ) {
         push @requests,($req) if !$ignore_requests{$req->command};

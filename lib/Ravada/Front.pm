@@ -875,22 +875,21 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
     my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
         ." ".$now[2].":".$now[1].":".$now[0];
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT requests.id, command, args, date_changed, requests.status"
+        "SELECT requests.id, command, args, requests.date_changed, requests.status"
             ." ,requests.error, id_domain ,domains.name as domain"
-            ." ,date_changed "
         ." FROM requests left join domains "
         ."  ON requests.id_domain = domains.id"
         ." WHERE "
         ."    requests.status <> 'done' "
-        ."  OR ( date_changed >= ?) "
-        ." ORDER BY date_changed "
+        ."  OR ( requests.date_changed >= ?) "
+        ." ORDER BY requests.date_changed "
     );
     $sth->execute($time_recent);
     my @reqs;
     my ($id_request, $command, $j_args, $date_changed, $status
-        , $error, $id_domain, $domain, $date);
+        , $error, $id_domain, $domain);
     $sth->bind_columns(\($id_request, $command, $j_args, $date_changed, $status
-        , $error, $id_domain, $domain, $date));
+        , $error, $id_domain, $domain));
 
     while ( $sth->fetch) {
         my $epoch_date_changed = time;
@@ -938,7 +937,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
 
         push @reqs,{ id => $id_request,  command => $command, date_changed => $date_changed, status => $status, name => $args->{name}
             ,domain => $domain
-            ,date => $date
+            ,date => $date_changed
             ,message => $message
             ,error => $error
         };
