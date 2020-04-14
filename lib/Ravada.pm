@@ -3045,7 +3045,7 @@ sub _cmd_shutdown_clones {
             if ($is_active) {
                 my $req = Ravada::Request->shutdown_domain(
                     uid => $uid
-                   ,name => $name);
+                   ,id_domain => $domain2->id);
             }
         }
     }
