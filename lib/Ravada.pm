@@ -2489,6 +2489,7 @@ sub _execute {
     die "I can't fork" if !defined $pid;
 
     if ( $pid == 0 ) {
+        srand();
         $self->_do_execute_command($sub, $request);
         exit;
     }
