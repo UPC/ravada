@@ -6,8 +6,6 @@ use strict;
 use Data::Dumper;
 use Hash::Util qw( lock_hash unlock_hash);
 use Moose;
-use Time::HiRes qw(gettimeofday tv_interval);
-
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
@@ -316,7 +314,6 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
     $channel =~ s{/.*}{};
     my $exec = $SUB{$channel} or die "Error: unknown channel $channel";
 
-    my $t0 = [gettimeofday];
     my $old_ret = $self->clients->{$key}->{ret};
     my ($old_count, $old_changed) = $self->_old_info($key);
     my ($new_count, $new_changed) = $self->_new_info($key);
@@ -329,8 +326,6 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
 
     my $ret = $exec->($self->ravada, $self->clients->{$key});
 
-    my $tv_interval = tv_interval($t0, [gettimeofday]);
-    warn ''.localtime(time)." ".$channel." $tv_interval\n";# if $tv_interval > 0.5;
     if ( _different($ret, $old_ret )) {
 
         warn "WS: send $channel" if $DEBUG;

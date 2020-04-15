@@ -200,11 +200,11 @@ sub _access_allowed($self, $id_base, $id_clone, $access_data) {
 
 }
 
-sub list_machines($self, $user) {
-    return $self->list_domains() if $user->can_list_machines();
+sub list_machines($self, $user, @filter) {
+    return $self->list_domains(@filter) if $user->can_list_machines();
 
     my @list = ();
-    push @list,(@{filter_base_without_clones($self->list_domains())}) if $user->can_list_clones();
+    push @list,(@{filter_base_without_clones($self->list_domains(@filter))}) if $user->can_list_clones();
     push @list,(@{$self->_list_own_clones($user)}) if $user->can_list_clones_from_own_base();
     push @list,(@{$self->_list_own_machines($user)}) if $user->can_list_own_machines();
     
@@ -214,8 +214,8 @@ sub list_machines($self, $user) {
     return [sort { $a->{name} cmp $b->{name} } values %uniq];
 }
 
-sub _around_list_machines($orig, $self, $user) {
-    my $machines = $self->$orig($user);
+sub _around_list_machines($orig, $self, $user, @filter) {
+    my $machines = $self->$orig($user, @filter);
     for my $m (@$machines) {
         eval { $m->{can_shutdown} = $user->can_shutdown($m->{id}) };
 
@@ -279,6 +279,11 @@ sub list_domains($self, %args) {
     my $where = '';
     for my $field ( sort keys %args ) {
         $where .= " AND " if $where;
+        if (!defined $args{$field}) {
+            $where .= " $field IS NULL ";
+            delete $args{$field};
+            next;
+        }
         $where .= " d.$field=?"
     }
     $where = "WHERE $where" if $where;
