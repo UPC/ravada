@@ -1182,8 +1182,19 @@ sub _upgrade_table {
     }
     warn "INFO: adding $field $definition to $table\n"  if $0 !~ /\.t$/;
     $dbh->do("alter table $table add $field $definition");
-    $self->_sqlite_trigger($dbh,$table, $field, $sqlite_trigger) if $sqlite_trigger;
+    if ( $sqlite_trigger && !$self->_exists_trigger($dbh, "Update$field") ) {
+        $self->_sqlite_trigger($dbh,$table, $field, $sqlite_trigger);
+    }
     return 1;
+}
+
+sub _exists_trigger($self, $dbh, $name) {
+    my $sth = $dbh->prepare("select name from sqlite_master where type = 'trigger'"
+        ." AND name=?"
+    );
+    $sth->execute($name);
+    my ($found) = $sth->fetchrow;
+    return $found;
 }
 
 sub _sqlite_trigger($self, $dbh, $table,$field, $trigger) {
