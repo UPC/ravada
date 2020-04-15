@@ -882,7 +882,6 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT requests.id, command, args, requests.date_changed, requests.status"
             ." ,requests.error, id_domain ,domains.name as domain"
-            ." ,requests.date_changed "
         ." FROM requests left join domains "
         ."  ON requests.id_domain = domains.id"
         ." WHERE "
@@ -893,9 +892,9 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
     $sth->execute($time_recent);
     my @reqs;
     my ($id_request, $command, $j_args, $date_changed, $status
-        , $error, $id_domain, $domain, $date);
+        , $error, $id_domain, $domain);
     $sth->bind_columns(\($id_request, $command, $j_args, $date_changed, $status
-        , $error, $id_domain, $domain, $date));
+        , $error, $id_domain, $domain));
 
     while ( $sth->fetch) {
         my $epoch_date_changed = time;
@@ -943,7 +942,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
 
         push @reqs,{ id => $id_request,  command => $command, date_changed => $date_changed, status => $status, name => $args->{name}
             ,domain => $domain
-            ,date => $date
+            ,date => $date_changed
             ,message => $message
             ,error => $error
         };

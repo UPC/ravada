@@ -1,7 +1,7 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: ravada
 Upstream-Contact: Francesc Guasch <frankie@telecos.upc.edu>
-Source: https://github.com/frankiejol/ravada
+Source: https://github.com/UPC/ravada/
 
 Files: *
 Copyright: 2017 UPC

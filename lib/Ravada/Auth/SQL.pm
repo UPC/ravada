@@ -632,17 +632,36 @@ sub can_do_domain($self, $grant, $domain) {
     my %valid_grant = map { $_ => 1 } qw(change_settings shutdown rename);
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
-    return 0 if !$self->can_do($grant) && !$domain->id_base;
+    return 0 if !$self->can_do($grant) && !$self->_domain_id_base($domain);
 
     return 1 if $self->can_do("${grant}_all");
-    return 1 if $domain->id_owner == $self->id && $self->can_do($grant);
+    return 1 if $self->_domain_id_owner($domain) == $self->id && $self->can_do($grant);
 
-    if ($self->can_do("${grant}_clones") && $domain->id_base) {
-        my $base = Ravada::Front::Domain->open($domain->id_base);
+    if ($self->can_do("${grant}_clones") && $self->_domain_id_base($domain)) {
+        my $base = Ravada::Front::Domain->open($self->_domain_id_base($domain));
         return 1 if $base->id_owner == $self->id;
     }
     return 0;
 }
+
+sub _domain_id_base($self, $domain) {
+    return $domain->id_base if ref($domain);
+
+    my $sth = $$CON->dbh->prepare("SELECT id_base FROM domains WHERE id=?");
+    $sth->execute($domain);
+    my ($id_base) = $sth->fetchrow;
+    return $id_base;
+}
+
+sub _domain_id_owner($self, $domain) {
+    return $domain->id_owner if ref($domain);
+
+    my $sth = $$CON->dbh->prepare("SELECT id_owner FROM domains WHERE id=?");
+    $sth->execute($domain);
+    my ($id_owner) = $sth->fetchrow;
+    return $id_owner;
+}
+
 
 sub _load_grants($self) {
     $self->_load_aliases();
@@ -1058,7 +1077,6 @@ sub AUTOLOAD($self, $domain=undef) {
     my ($permission) = $name =~ /^can_([a-z_]+)/;
     return $self->can_do($permission)   if !$domain;
 
-    $domain = Ravada::Front::Domain->open($domain)      if !ref $domain;
     return $self->can_do_domain($permission,$domain);
 }
 

@@ -71,6 +71,7 @@ our %VALID_ARG = (
     ,copy_screenshot => { id_domain => 1 }
     ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2 }
     ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1 }
+    ,shutdown_clones => { id_domain => 1, uid => 1, timeout => 2 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,dettach => { uid => 1, id_domain => 1 }
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
@@ -165,7 +166,7 @@ our %COMMAND = (
     ,important=> {
         limit => 20
         ,priority => 1
-        ,commands => ['clone','start','start_clones','create','open_iptables','list_network_interfaces','list_isos']
+        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos']
     }
     ,secondary => {
         limit => 50

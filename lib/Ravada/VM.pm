@@ -722,7 +722,7 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones);
     my @requests;
     for my $req ( $base->list_requests ) {
         push @requests,($req) if !$ignore_requests{$req->command};

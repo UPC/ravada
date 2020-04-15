@@ -1963,7 +1963,7 @@ sub _set_controller_network($self, $number, $data) {
     my $pci_slot = $self->_new_pci_slot();
 
     my $device = "<interface type='network'>
-        <mac address='52:54:00:a7:49:71'/>
+        <mac address='".$self->_vm->_new_mac()."'/>
         <source network='default'/>
         <model type='$driver'/>
         <address type='pci' domain='0x0000' bus='0x00' slot='$pci_slot' function='0x0'/>

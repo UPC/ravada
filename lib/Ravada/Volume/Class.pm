@@ -29,22 +29,55 @@ sub _around_prepare_base($orig, $self) {
 
     $self->vm->remove_file($self->file);
 
+    my @domain = ();
+    @domain = ( domain => $self->domain) if $self->domain;
+    @domain = ( vm => $self->vm ) if !$self->domain && $self->vm;
     my $base = Ravada::Volume->new(
         file => $base_file
         ,is_base => 1
-        ,vm => $self->vm
+        ,@domain
     );
     $base->clone(file => $self->file);
 
     return $base_file;
 }
 
+sub _domain_file($self, $file) {
+    my $sth = $self->_dbh->prepare("SELECT id_domain FROM volumes WHERE file=? "
+    ." OR name=?");
+    $sth->execute($file,$file);
+    my ($id_domain) = $sth->fetchrow;
+    return $id_domain;
+}
+
+sub _new_clone_filename($self,$name0) {
+    my $extra='';
+    my $clone_filename = $self->clone_filename($name0);
+    return $clone_filename if $clone_filename =~ /\.iso$/;
+    for (1 .. 10) {
+        return $clone_filename if !$self->_domain_file($clone_filename);
+        $clone_filename = $self->clone_filename($name0."-"
+        .Ravada::Utils::random_name());
+    }
+    die "Error: I can't produce a random filename";
+}
+
 sub _around_clone($orig, $self, %args) {
     my $name = delete $args{name};
-    my $file_clone = ( delete $args{file} or $self->clone_filename($name));
+    my $file_clone = ( delete $args{file} or $self->_new_clone_filename($name));
 
     confess "Error: unkonwn args ".Dumper(\%args) if keys %args;
     confess "Error: empty clone filename" if !defined $file_clone || !length($file_clone);
+
+    my $id_domain_file= $self->_domain_file($file_clone);
+    if ($id_domain_file && $file_clone !~ /\.iso$/) {
+        my $we = '';
+        $we = "We are domain id: ".($self->domain->id)." [ ".$self->domain->name." ]"
+        if $self->domain;
+
+        confess "Error: file $file_clone already exists in domain $id_domain_file.$we"
+        if !$self->domain || $self->domain->id != $id_domain_file;
+    }
 
     return Ravada::Volume->new(
         file => $orig->($self, $file_clone)

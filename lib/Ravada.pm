@@ -29,6 +29,7 @@ use Ravada::VM::Void;
 
 our %VALID_VM;
 our %ERROR_VM;
+our $TIMEOUT_STALE_PROCESS;
 
 eval {
     require Ravada::VM::KVM and do {
@@ -887,6 +888,7 @@ sub _add_indexes_generic($self) {
         ]
         ,grants_user => [
             "index(id_user,id_grant)"
+            ,"index(id_user)"
         ]
         ,iptables => [
             "index(id_domain,time_deleted,time_req)"
@@ -2374,7 +2376,10 @@ sub process_priority_requests($self, $debug=0, $dont_fork=0) {
 
 sub _kill_stale_process($self) {
 
-    my @domains = $self->list_domains_data();
+    if (!$TIMEOUT_STALE_PROCESS) {
+        my @domains = $self->list_domains_data();
+        $TIMEOUT_STALE_PROCESS = scalar(@domains)*5 + 60;
+    }
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,pid,command,start_time "
         ." FROM requests "
@@ -2384,7 +2389,7 @@ sub _kill_stale_process($self) {
         ." AND pid IS NOT NULL "
         ." AND start_time IS NOT NULL "
     );
-    $sth->execute(time - 5*scalar(@domains) - 60 );
+    $sth->execute(time - $TIMEOUT_STALE_PROCESS);
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
@@ -2490,6 +2495,7 @@ sub _execute {
     die "I can't fork" if !defined $pid;
 
     if ( $pid == 0 ) {
+        srand();
         $self->_do_execute_command($sub, $request);
         exit;
     }
@@ -2928,7 +2934,7 @@ sub _cmd_start {
     my $domain;
     $domain = $self->search_domain($name)               if $name;
     $domain = $self->search_domain_by_id($id_domain)    if $id_domain;
-    die "Unknown domain '$name'" if !$domain;
+    die "Unknown domain '".($name or $id_domain)."'" if !$domain;
     $domain->status('starting');
 
     my $uid = $request->args('uid');
@@ -3015,6 +3021,39 @@ sub _cmd_start_clones {
                     uid => $uid
                    ,name => $name
                    ,remote_ip => $remote_ip);
+            }
+        }
+    }
+}
+
+sub _cmd_shutdown_clones {
+    my $self = shift;
+    my $request = shift;
+
+    my $id_domain = $request->defined_arg('id_domain');
+    my $domain = $self->search_domain_by_id($id_domain);
+    die "Unknown domain '$id_domain'\n" if !$domain;
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id, name, is_base FROM domains WHERE id_base = ?"
+    );
+    $sth->execute($id_domain);
+    while ( my ($id, $name, $is_base) = $sth->fetchrow) {
+        if ($is_base == 0) {
+            my $domain2;
+            my $is_active;
+            eval {
+                $domain2 = $self->search_domain_by_id($id);
+                $is_active = $domain2->is_active;
+            };
+            warn $@ if $@;
+            if ($is_active) {
+                my $req = Ravada::Request->shutdown_domain(
+                    uid => $uid
+                   ,id_domain => $domain2->id);
             }
         }
     }
@@ -3648,8 +3687,6 @@ sub _cmd_cleanup($self, $request) {
 
 sub _shutdown_disconnected($self) {
     for my $dom ( $self->list_domains_data(status => 'active') ) {
-        warn $dom->{name}." ".$dom->{shutdown_disconnected}." "
-        .$dom->{client_status};
         next if !$dom->{shutdown_disconnected};
         my $domain = Ravada::Domain->open($dom->{id});
         my $is_active = $domain->is_active;
@@ -3676,6 +3713,7 @@ sub _req_method {
           clone => \&_cmd_clone
          ,start => \&_cmd_start
   ,start_clones => \&_cmd_start_clones
+,shutdown_clones => \&_cmd_shutdown_clones
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
