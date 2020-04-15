@@ -176,9 +176,7 @@ ravadaApp.directive("solShowMachine", swMach)
               ws.send('list_machines');
           };
           ws.onclose = function() {
-              console.log("ws closed "+url);
               ws = new WebSocket(url);
-              console.log(ws.readyState);
           };
           ws.onmessage = function (event) {
               var data = JSON.parse(event.data);
@@ -240,9 +238,7 @@ ravadaApp.directive("solShowMachine", swMach)
           var ws = new WebSocket(url);
           ws.onopen    = function (event) { ws.send('list_requests') };
           ws.onclose = function() {
-              console.log("ws closed "+url);
               ws = new WebSocket(url);
-              console.log(ws.readyState);
           };
 
           ws.onmessage = function (event) {
