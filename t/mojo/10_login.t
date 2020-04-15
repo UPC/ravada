@@ -98,11 +98,28 @@ sub test_many_clones($base) {
     };
 
     test_re_expose($base) if $base->type eq 'Void';
+    test_different_mac($base, $base->clones) if $base->type ne 'Void';
     for my $clone ( $base->clones ) {
         my $req = Ravada::Request->remove_domain(
             name => $clone->{name}
             ,uid => user_admin->id
         );
+    }
+}
+
+sub test_different_mac(@domain) {
+    my %found;
+    for my $domain (@domain) {
+        $domain = Ravada::Front::Domain->open($domain->{id})
+            if ref($domain) !~/^Ravada/;
+        my $xml = XML::LibXML->load_xml(string => $domain->_data_extra('xml'));
+        my (@if_mac) = $xml->findnodes('/domain/devices/interface/mac');
+        for my $if_mac (@if_mac) {
+            my $mac = $if_mac->getAttribute('address');
+            ok(!exists $found{$mac},"Error: MAC $mac from ".$domain->name
+                ." also in domain : ".($found{$mac} or '')) or exit;
+            $found{$mac} = $domain->name;
+        }
     }
 }
 
@@ -195,6 +212,9 @@ for my $vm_name ( vm_names() ) {
     my $base = rvd_front->search_domain($name);
     ok($base) or next;
     push @bases,($base->name);
+
+    mojo_request($t, "add_hardware", { id_domain => $base->id, name => 'network' });
+    wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
 
     $t->get_ok("/machine/prepare/".$base->id.".json")->status_is(200);
     _wait_request(debug => 0, background => 1);
