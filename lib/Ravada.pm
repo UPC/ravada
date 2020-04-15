@@ -877,7 +877,10 @@ sub _add_indexes($self) {
 
 sub _add_indexes_generic($self) {
     my %index = (
-        requests => [
+        domains => [
+            "index(date_changed)"
+        ]
+        ,requests => [
             "index(status,at_time)"
             ,"index(id,date_changed,status,at_time)"
             ,"index(date_changed)"
@@ -892,6 +895,7 @@ sub _add_indexes_generic($self) {
         ]
         ,messages => [
              "index(id_request,date_send)"
+             ,"index(date_changed)"
         ]
     );
     for my $table ( keys %index ) {
@@ -1377,6 +1381,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('volumes','name','char(200)');
 
     $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
+
+    $self->_upgrade_table('messages','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 }
 
 sub _upgrade_timestamps($self) {
@@ -2929,6 +2935,7 @@ sub _cmd_start {
     $domain = $self->search_domain($name)               if $name;
     $domain = $self->search_domain_by_id($id_domain)    if $id_domain;
     die "Unknown domain '".($name or $id_domain)."'" if !$domain;
+    $domain->status('starting');
 
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);

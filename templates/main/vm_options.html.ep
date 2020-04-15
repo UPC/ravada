@@ -103,6 +103,21 @@
                     <%=l 'Virtual Machine will start on host start.' %></small>
                 </div>
             </div>
+            <div class="row">
+                <div class="col-lg-3 mt-2">
+                    <label class="control-label" for="autostart"><%=l 'Shutdown disconnected' %></label>
+                </div>
+                <div class="col-lg-2">
+                    <input type="checkbox" ng-model="new_shutdown_disconnected" name="autostart"
+                    ng-true-value="1" ng-false-value="0"
+                    ng-change="set_bool('shutdown_disconnected',new_shutdown_disconnected)"
+                    >
+                </div>
+                <div class="col-md-7"><small class="text-secondary">
+                    <%=l 'Virtual Machine will be shut down when user disconnects.' %></small>
+                </div>
+            </div>
+
 
 %   }
 %   if ($USER->is_admin){
