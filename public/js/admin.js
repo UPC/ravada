@@ -196,14 +196,16 @@ ravadaApp.directive("solShowMachine", swMach)
                       ){
                           $scope.list_machines[mach.id] = mach;
                           $scope.list_machines[mach.id].childs = {};
+                          $scope.list_machines[mach.id].childs_loading = true;
                       }
                   }
                   $scope.n_clones = 0;
                   for (var i=0, iLength = data.length; i<iLength; i++){
                       mach = data[i];
-                      var childs;
+                      var childs = {};
                       if (mach.id_base) {
                           childs = $scope.list_machines[mach.id_base].childs;
+                          $scope.list_machines[mach.id_base].childs_loading = false;
                       }
                       if (mach.id_base
                           && ( typeof childs[mach.id] == 'undefined'
@@ -212,6 +214,7 @@ ravadaApp.directive("solShowMachine", swMach)
                       ){
                           childs[mach.id] = mach;
                           $scope.n_clones++;
+                          $scope.list_machines[mach.id_base].childs_loading = false;
                       }
                   }
                   if ($scope.auto_hide_clones) {

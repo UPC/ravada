@@ -309,7 +309,7 @@ sub list_domains($self, %args) {
             $row->{is_locked} = $domain->is_locked;
             $row->{is_hibernated} = ( $domain->is_hibernated or 0);
             $row->{is_paused} = 1 if $domain->is_paused;
-            $row->{is_active} = 1 if $row->{status} eq 'active';
+            $row->{is_active} = 1 if $row->{status} =~ /active|starting/;
             $row->{has_clones} = $domain->has_clones;
 #            $row->{disk_size} = ( $domain->disk_size or 0);
 #            $row->{disk_size} /= (1024*1024*1024);

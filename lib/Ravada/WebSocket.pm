@@ -46,6 +46,7 @@ our %TABLE_CHANNEL = (
 );
 
 my $A_WHILE;
+my $LIST_MACHINES_FIRST_TIME = 1;
 ######################################################################
 
 
@@ -110,34 +111,12 @@ sub _list_machines($rvd, $args) {
             || $user->is_admin()
         );
 
-    my $old_ret = $args->{ret};
-    my $old_count = ($args->{_count_machines}  or 0 );
-    my $new_count = _count_machines($rvd);
-    my $old_changed = ($args->{_date_changed}  or 0 );
-
-    my $new_changed = _date_changed_machines($rvd);
-
-    if ( !$old_ret || $old_count != $new_count || $old_changed ne $new_changed) {
-        my $list_machines = $rvd->list_machines($user);
-        $args->{_count_machines} = $new_count;
-        $args->{_date_changed} = $new_changed;
-        return $list_machines;
+    if ($LIST_MACHINES_FIRST_TIME) {
+        $LIST_MACHINES_FIRST_TIME = 0;
+        return $rvd->list_machines($user, id_base => undef);
     }
-    return $old_ret;
-}
 
-sub _date_changed_machines($rvd) {
-    my $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM domains");
-    $sth->execute;
-    my ($date) = $sth->fetchrow;
-    return $date;
-}
-
-sub _count_machines($rvd) {
-    my $sth = $rvd->_dbh->prepare("SELECT count(*) FROM domains");
-    $sth->execute;
-    my ($count) = $sth->fetchrow;
-    return $count;
+    return $rvd->list_machines($user);
 }
 
 sub _list_machines_user($rvd, $args) {
@@ -345,7 +324,9 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
     return $old_ret if defined $new_count && defined $new_changed
     && $old_count eq $new_count && $old_changed eq $new_changed;
 
-    $self->_old_info($key, $new_count, $new_changed);
+    $self->_old_info($key, $new_count, $new_changed)
+    unless $channel eq 'list_machines' && $LIST_MACHINES_FIRST_TIME;
+
     my $ret = $exec->($self->ravada, $self->clients->{$key});
 
     my $tv_interval = tv_interval($t0, [gettimeofday]);
@@ -369,6 +350,9 @@ sub subscribe($self, %args) {
         , %args
         , ret => undef
     };
+    if ($args{channel} eq 'list_machines') {
+        $LIST_MACHINES_FIRST_TIME = 1 ;
+    }
     $self->_send_answer($ws,$args{channel});
 }
 
