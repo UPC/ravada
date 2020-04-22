@@ -34,6 +34,7 @@ Configuration
 
 Kernel
 ~~~~~
+
 Make sure that you're booting the kernel with the following parameters:
   GRUB_CMDLINE_LINUX="i915.enable_gvt=1 kvm.ignore_msrs=1 intel_iommu=igfx_off drm.debug=0"
 
@@ -42,11 +43,11 @@ Create a virtual GPU
 You need to generate a unique identifier for each virtual GPU. Note that we were only able to create a single GPU, although in the `official tutorial <https://github.com/intel/gvt-linux/wiki/GVTg_Setup_Guide#51-check-mdev-module-kvmgt-only>_` 3 are created.
 
 Mind that you may have to alter the following command depending on your hardware.
+.. prompt:: bash #
+  uuid
+  fff6f017-3417-4ad3-b05e-17ae3e1a4615
 
-    # uuid
-    fff6f017-3417-4ad3-b05e-17ae3e1a4615
-
-    # echo "fff6f017-3417-4ad3-b05e-17ae3e1a4615" > "/sys/bus/pci/devices/0000:00:02.0/mdev_supported_types/i915-GVTg_V5_4/create"
+  echo "fff6f017-3417-4ad3-b05e-17ae3e1a4615" > "/sys/bus/pci/devices/0000:00:02.0/mdev_supported_types/i915-GVTg_V5_4/create"
     
 Assign the GPU to a VM
 ~~~~~~~
@@ -297,4 +298,24 @@ There are a few very important elements here:
 
 
 You can now import it to libvirt using
-  # virsh define win10_gvt_preinstall.xml
+.. prompt:: bash #
+  virsh define win10_gvt_preinstall.xml
+
+You should now modify the VM definition accordingly to your hardware and preferences (cpus, disk images and so), and boot it. 
+Mouse support might be funny and wonky, but Windows can be installed using the keyboard solely.
+
+In Windows it seems you need to disable the non-Intel video adapter and make the second display (Intel) the primary one.
+
+Make sure the guest OS has the required drivers for the Intel GPU before proceeding further.
+
+Disable the non-intel video adapter
+~~~~~~~
+
+With the VM powered off, change the video adapter type from *qxl* to *none*. You can use *virt-manager* or virsh-edit. Make sure that the xml definition now looks like:
+
+.. code-block:: xml
+  <video>
+    <model type='none'/>
+  </video>
+
+And that's it!
