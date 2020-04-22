@@ -43,8 +43,6 @@ The main documentation for the site is divided into three main sections:
 * :ref:`admin-docs`
 * :ref:`feature-docs`
 * :ref:`guest-docs`
-* :ref:`dev-docs`
-
 
 Do you feel like giving us a hand? Here you have all the information you need as *a developer*:
 
