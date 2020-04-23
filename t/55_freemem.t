@@ -36,7 +36,6 @@ sub test_new_domain {
         ok($@,"Expecting failed because we ran out of free RAM");
         return;
     }
-    warn $vm->type." ".$freemem;
     ok(!$@,"Domain $name not created: $@");
 
     ok($domain,"Domain not created") or return;
@@ -126,8 +125,8 @@ for my $vm_name (vm_names()) {
 SKIP: {
     my $msg = "SKIPPED test: No $vm_name backend found";
     my $vm = $RVD_BACK->search_vm($vm_name);
-    $msg = "SKIPPED: todo review overcommitting issue #1164";
-    $vm = undef;
+    #    $msg = "SKIPPED: todo review overcommitting issue #1164";
+    #$vm = undef;
 
     if ($vm_name eq 'KVM' && $>) {
         $msg = "SKIPPED test: $vm_name must be run from root";

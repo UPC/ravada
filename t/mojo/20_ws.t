@@ -92,7 +92,7 @@ sub test_bases($t, $bases) {
         $n_machines += $n_clones;
 
         my @machines = list_machines($t);
-        is( scalar(@machines), $n_machines, Dumper(\@machines)) or exit;
+        is( scalar(@machines), scalar(@$bases), Dumper(\@machines)) or exit;
     }
 }
 
