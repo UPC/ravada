@@ -85,6 +85,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/volatile
    docs/cluster
    docs/How_to_make_virtual_machine_sparse
+   docs/intel_gvt
 
 .. _feature-docs:
 
