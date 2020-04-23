@@ -12,6 +12,7 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
+my $BASE_NAME = "zz-test-base";
 
 use_ok('Ravada');
 init();
@@ -209,12 +210,16 @@ sub test_iptables_close($vm, $node) {
     _remove_domain($domain);
 }
 
-sub _remove_domain($domain) {
+sub _remove_clones($domain) {
+    _remove_domain($domain,0);
+}
+
+sub _remove_domain($domain, $remove_base=0) {
     for my $clone0 ( $domain->clones) {
         my $clone = Ravada::Domain->open($clone0->{id});
         $clone->remove(user_admin);
     }
-    $domain->remove(user_admin);
+    $domain->remove(user_admin) if $remove_base;
 
 }
 
@@ -843,6 +848,52 @@ sub test_base_unset($vm, $node) {
     _remove_domain($base);
 }
 
+sub test_fill_memory($vm, $node, $migrate) {
+    #TODO: Void VMs
+    return if $vm->type eq 'Void';
+    diag("Testing fill memory ".$vm->type.", migrate=$migrate");
+
+    my $base = rvd_back->search_domain($BASE_NAME);
+    $base = import_domain('KVM', $BASE_NAME, 1) if !$base;
+    if (!$base) {
+        diag("SKIPPING: base $BASE_NAME must be installed to test");
+        return;
+    }
+    $base->prepare_base(user_admin) if !$base->is_base;
+    $base->set_base_vm(vm => $node, user => user_admin);
+    wait_request();
+
+    my $master_free_memory = $vm->free_memory;
+    my $node_free_memory = $node->free_memory;
+
+    my $error;
+    my %nodes;
+    my @clones;
+    for ( 1 .. 100  ) {
+        my $clone_name = new_domain_name();
+        my $req = Ravada::Request->create_domain(
+            name => $clone_name
+            ,id_owner => user_admin->id
+            ,id_base => $base->id
+        );
+        wait_request(debug => 0);
+        is($req->error, '');
+        is($req->status,'done');
+        push @clones,($clone_name);
+        my $clone = rvd_back->search_domain($clone_name) or last;
+        ok($clone,"Expecting clone $clone_name") or exit;
+        $clone->migrate($node) if $migrate;
+        eval { $clone->start(user_admin) };
+        $error = $@;
+        like($error, qr/(^$|No free memory)/);
+        last if $error;
+        $nodes{$clone->_vm->name}++;
+    }
+    ok(exists $nodes{$vm->name},"Expecting some clones to node ".$vm->name." ".$vm->id);
+    ok(exists $nodes{$node->name},"Expecting some clones to node ".$node->name." ".$node->id);
+    _remove_clones($base);
+}
+
 ##################################################################################
 clean();
 
@@ -881,6 +932,8 @@ for my $vm_name ( 'Void', 'KVM') {
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
+        test_fill_memory($vm, $node, 0); # balance
+        test_fill_memory($vm, $node, 1); # migrate
         test_create_active($vm, $node);
         test_base_unset($vm,$node);
 

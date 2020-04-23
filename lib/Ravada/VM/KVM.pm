@@ -2212,7 +2212,7 @@ Imports a KVM domain in Ravada
 
 =cut
 
-sub import_domain($self, $name, $user) {
+sub import_domain($self, $name, $user, $spinoff=1) {
 
     my $domain_kvm;
     eval { $domain_kvm = $self->vm->get_domain_by_name($name) };

@@ -311,9 +311,17 @@ sub _around_start($orig, $self, @arg) {
     for (;;) {
         eval { $self->_start_checks(@arg) };
         my $error = $@;
-        if ($error && $error =~/base file not found/ && !$self->_vm->is_local) {
-            $self->_request_set_base();
-            next;
+        if ($error) {
+            if ( $error =~/base file not found/ && !$self->_vm->is_local) {
+                $self->_request_set_base();
+                next;
+            } elsif ($error =~ /No free memory/) {
+                warn $error;
+                die $error if $self->is_local;
+                my $vm_local = $self->_vm->new( host => 'localhost' );
+                $self->migrate($vm_local);
+                next;
+            }
         }
         die $error if $error;
         if (!defined $listen_ip) {
@@ -903,13 +911,17 @@ sub _check_has_clones {
 sub _check_free_vm_memory {
     my $self = shift;
 
-    return if !$self->_vm->min_free_memory;
     my $vm_free_mem = $self->_vm->free_memory;
 
-    return if $vm_free_mem > $self->_vm->min_free_memory;
+    my $domain_memory = $self->info(Ravada::Utils::user_daemon)->{memory};
+    my $min_free_memory = ($self->_vm->min_free_memory or $MIN_FREE_MEMORY)+$domain_memory;
+
+    return if $vm_free_mem > $min_free_memory;
+
+    $self->_data(status => 'down');
 
     my $msg = "Error: No free memory in ".$self->_vm->name.". Only "._gb($vm_free_mem)." out of "
-        ._gb($self->_vm->min_free_memory)." GB required.\n";
+        ._gb($min_free_memory)." GB required.\n";
 
     die $msg;
 }
@@ -1777,7 +1789,8 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         eval { $vm = Ravada::VM->open($instance->{id_vm}) };
         die $@ if $@ && $@ !~ /I can't find VM/i;
         my $domain;
-        eval { $domain = $vm->search_domain($domain_name) };
+        $@ = '';
+        eval { $domain = $vm->search_domain($domain_name) } if $vm;
         warn $@ if $@;
         $domain->remove($user, $cascade) if $domain;
         $sth_delete->execute($instance->{id});

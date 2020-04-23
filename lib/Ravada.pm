@@ -1309,7 +1309,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','is_active',"int DEFAULT 0");
     $self->_upgrade_table('vms','enabled',"int DEFAULT 1");
 
-    $self->_upgrade_table('vms','min_free_memory',"text DEFAULT NULL");
+    $self->_upgrade_table('vms','min_free_memory',"int DEFAULT 600000");
     $self->_upgrade_table('vms', 'max_load', 'int not null default 10');
     $self->_upgrade_table('vms', 'active_limit','int DEFAULT NULL');
     $self->_upgrade_table('vms', 'base_storage','varchar(64) DEFAULT NULL');
@@ -3885,11 +3885,14 @@ sub import_domain {
     my $self = shift;
     my %args = @_;
 
-    my $vm_name = $args{vm} or die "ERROR: mandatory argument vm required";
-    my $name = $args{name} or die "ERROR: mandatory argument domain name required";
-    my $user_name = $args{user} or die "ERROR: mandatory argument user required";
+    my $vm_name = delete $args{vm} or die "ERROR: mandatory argument vm required";
+    my $name = delete $args{name} or die "ERROR: mandatory argument domain name required";
+    my $user_name = delete $args{user} or die "ERROR: mandatory argument user required";
     my $spinoff_disks = delete $args{spinoff_disks};
     $spinoff_disks = 1 if !defined $spinoff_disks;
+    my $import_base = delete $args{import_base};
+
+    confess "Error : unknown args ".Dumper(\%args) if keys %args;
 
     my $vm = $self->search_vm($vm_name) or die "ERROR: unknown VM '$vm_name'";
     my $user = Ravada::Auth::SQL->new(name => $user_name);
@@ -3899,7 +3902,7 @@ sub import_domain {
     eval { $domain = $self->search_domain($name) };
     die "ERROR: Domain '$name' already in RVD"  if $domain;
 
-    return $vm->import_domain($name, $user, $spinoff_disks);
+    return $vm->import_domain($name, $user, $spinoff_disks, $import_base);
 }
 
 sub _cmd_enforce_limits($self, $request=undef) {

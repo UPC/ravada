@@ -495,9 +495,9 @@ sub _check_duplicate_name($self, $name) {
 sub _around_import_domain {
     my $orig = shift;
     my $self = shift;
-    my ($name, $user, $spinoff) = @_;
+    my ($name, $user, $spinoff, $import_base) = @_;
 
-    my $domain = $self->$orig($name, $user);
+    my $domain = $self->$orig($name, $user, $spinoff);
 
     $domain->_insert_db(name => $name, id_owner => $user->id);
 
@@ -506,8 +506,24 @@ sub _around_import_domain {
             if $ENV{TERM} && $0 !~ /\.t$/;
         $domain->spinoff();
     }
+    if ($import_base) {
+        $self->_import_base($domain);
+    }
     return $domain;
 }
+
+sub _import_base($self, $domain) {
+    my @img;
+    for my $vol ( $domain->list_volumes_info ) {
+        next if !$vol->file;
+        next if !$vol->backing_file;
+        push @img,[$vol->backing_file, $vol->info->{target}];
+    }
+    return if !@img;
+    $domain->_prepare_base_db(@img);
+    $domain->_post_prepare_base( Ravada::Utils::user_daemon());
+}
+
 
 ############################################################
 #
@@ -1535,7 +1551,7 @@ sub balance_vm($self, $base=undef) {
             $vm->enabled(0) if !$vm->is_local();
             next;
         }
-        next if $free_memory < $Ravada::Domain::MIN_FREE_MEMORY;
+        next if $free_memory < $min_memory;
 
         my $n_active = $vm->_count_domains(status => 'active')
                         + $vm->_count_domains(status => 'starting');
