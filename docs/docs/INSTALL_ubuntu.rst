@@ -10,29 +10,26 @@ if you are only upgrading Ravada from a previous version already installed.
 Ubuntu
 ------
 
-.. note:: We only provide support for Ubuntu 18.04 LTS (bionic).
+.. note:: We only provide support for Ubuntu 18.04 and 20.04.
 
-We provide *deb* Ubuntu packages. Download it from the `UPC ETSETB
+We provide *deb* Ubuntu packages on the `UPC ETSETB
 repository <http://infoteleco.upc.edu/img/debian/>`__.
 
-Install *libmojolicious-plugin-renderfile-perl* package:
 
-.. prompt:: bash $
-
-     sudo apt-get install libmojolicious-plugin-renderfile-perl
-
-Then install the ravada package. Choose the one that matches your OS release:
+Install the ravada package. Choose the one that matches your OS release:
 
 - ravada_0.7.0_ubuntu-18.04_all.deb
 - ravada_0.7.0_ubuntu-18.10_all.deb
 - ravada_0.7.0_ubuntu-19.04_all.deb
+- ravada_0.7.0_ubuntu-19.10_all.deb
+- ravada_0.7.0_ubuntu-20.04_all.deb
 
 When you run dpkg now it may show some errors, it is ok, keep reading.
 
 .. prompt:: bash $
 
-     wget http://infoteleco.upc.edu/img/debian/ravada_0.7.0_ubuntu-18.04_all.deb
-     sudo dpkg -i ravada_0.7.0_ubuntu-18.04_all.deb
+     wget http://infoteleco.upc.edu/img/debian/ravada_0.7.0_ubuntu-20.04_all.deb
+     sudo dpkg -i ravada_0.7.0_ubuntu-20.04_all.deb
 
 The last command will show a warning about missing dependencies. Install
 them running:

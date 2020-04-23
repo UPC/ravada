@@ -13,16 +13,11 @@ Debian
 This is the guide to install Ravada in Debian Buster.
 Follow this `guide <http://disbauxes.upc.es/code/installing-and-using-ravadavdi-on-debian-jessie/>`_ if you prefer Debian Jessie.
 
-We provide *deb* packages. Download it from the `UPC ETSETB
+We provide *deb* packages on the `UPC ETSETB
 repository <http://infoteleco.upc.edu/img/debian/>`__.
 
-Install *libmojolicious-plugin-renderfile-perl* package:
 
-.. prompt:: bash $
-
-     sudo apt-get install libmojolicious-plugin-renderfile-perl
-
-Then install the ravada package. Choose the one that matches your OS release:
+Install the ravada package. Choose the one that matches your OS release:
 
 - ravada_0.7.0_debian-10_all.deb
 
