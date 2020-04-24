@@ -21,7 +21,7 @@ Outline
 -------
 This approach creates a unique PCIe device that cannot be shared between VM instances.
 It is then assigned as managed device to a virtual machine (similarly to a passthrough GPU).
-The virtual machine _must_ have a primary video device (qxl or cirrus) with a _lower_ PCIe ID than the managed device (the supplied sample XML configuration already satisfies this).
+The virtual machine **must** have a primary video device (qxl or cirrus) with a **lower** PCIe ID than the managed device (the supplied sample XML configuration already satisfies this).
 
 During the first boot, 2 displays will be available through SPICE (remote-viewer), one for each video device where the second one is likely a black screen. Once the OS is loaded, the second one should start displaying something. It then time to check that Intel drivers are properly installed and disable the first display in the OS and power off.
 
@@ -56,8 +56,8 @@ Assign the GPU to a VM
 The following XML configuration can be used to install and configure the guest OS.
 
 .. code-block:: xml
-   :emphasize-lines: 1,187-209,223-230
-   :caption: pre.xml
+  :emphasize-lines: 1,187-209,223-230
+  :caption: pre.xml
    
   <domain type='kvm' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
     <name>win10-gvt</name>
@@ -293,6 +293,7 @@ The following XML configuration can be used to install and configure the guest O
   </domain>
 
 There are a few very important elements here:
+
 * The document namespace (xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'). If this attribute is not set, libvirt will probably refuse to understand the XML file.
 * A QXL video adapter. Its PCI device (0:0:3:0) is lower than the virtual gpu (mdev, 0:0:4:0), making it the first display adapter.
 * The Spice protocol has GL disabled, but a rendernode attribute is set.
