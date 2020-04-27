@@ -34,6 +34,7 @@ my %SUB = (
         ,list_bases_anonymous => \&_list_bases_anonymous
                ,list_requests => \&_list_requests
                 ,machine_info => \&_get_machine_info
+                   ,node_info => \&_get_node_info
                 ,ping_backend => \&_ping_backend
                      ,request => \&_request
 );
@@ -87,6 +88,7 @@ sub _request($rvd, $args) {
     my $command_text = $req->command;
     $command_text =~ s/_/ /g;
     return {command => $req->command, command_text => $command_text
+            ,output => $req->output
             ,status => $req->status, error => $req->error};
 }
 
@@ -145,6 +147,19 @@ sub _get_machine_info($rvd, $args) {
     }
 
     return $info;
+}
+
+sub _get_node_info($rvd, $args) {
+    my ($id_node) = $args->{channel} =~ m{/(\d+)};
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
+
+    return {} if!$user->is_admin;
+
+    my $node = Ravada::VM->open(id => $id_node, readonly => 1);
+    $node->_data('hostname');
+    return $node->{_data};
+
 }
 
 sub _list_recent_requests($rvd, $seconds) {

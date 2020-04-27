@@ -7,8 +7,37 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("usersPage", usersPageC)
         .controller("messagesPage", messagesPageC)
         .controller("manage_nodes",manage_nodes)
+        .controller("manage_networks",manage_networks)
+        .controller("settings_node",settings_node)
+        .controller("settings_network",settings_network)
         .controller("new_node", newNodeCtrl)
     ;
+
+    ravadaApp.directive('ipaddress', function() {
+        return {
+            require: 'ngModel',
+            link: function(scope, elm, attrs, ctrl) {
+                ctrl.$parsers.unshift(function(inputText) {
+                    var ipformat = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]|[0-1][0-9]|2[0-4])$/;
+                    console.log(inputText);
+                    if(ipformat.test(inputText))
+                    {
+                        console.log(" ok" );
+                        ctrl.$setValidity('ipformat', true);
+                        return inputText;
+                    }
+                    else
+                    {
+                        //alert("You have entered an invalid IP address!");
+                        //document.form1.text1.focus();
+                        ctrl.$setValidity('ipformat', false);
+                        return undefined;
+                    }
+                });
+
+            }
+        };
+    });
 
     ravadaApp.filter('orderObjectBy', function() {
         return function(items, field, reverse) {
@@ -339,6 +368,7 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.show_rename = false;
     $scope.new_name_duplicated=false;
     $scope.show_clones = { '0': false };
+    $scope.filter_name = '';
   };
 
   function usersPageC($scope, $http, $interval, request) {
@@ -451,6 +481,27 @@ ravadaApp.directive("solShowMachine", swMach)
         $interval($scope.list_nodes,30 * 1000);
     };
 
+    function manage_networks($scope, $http, $interval, $timeout) {
+        list_networks= function() {
+            $http.get('/list_networks.json').then(function(response) {
+                    for (var i=0; i<response.data.length; i++) {
+                        var item = response.data[i];
+                        $scope.networks[item.id] = item;
+                    }
+                });
+        }
+        $scope.update_network= function(id, field) {
+            var value = $scope.networks[id][field];
+            $http.get('/network/set/'+id+'/'+field+'/'+value)
+            .then(function(response) {
+            });
+        };
+
+
+        $scope.networks={};
+        list_networks();
+    }
+
     function newNodeCtrl($scope, $http, $timeout) {
         $http.get('/list_vm_types.json').then(function(response) {
             $scope.backends = response.data;
@@ -491,5 +542,143 @@ ravadaApp.directive("solShowMachine", swMach)
                 }
             });
         };
+    };
+
+    function settings_network($scope, $http, $timeout) {
+        var url_ws;
+        $scope.init = function(id_network) {
+            if (typeof id_network == 'undefined') {
+                $scope.network = {
+                    'name': 'new_nework'
+                };
+            } else {
+                $scope.load_network(id_network);
+                $scope.list_domains_network(id_network);
+            }
+        }
+        $scope.check_no_domains = function() {
+            if ( $scope.network.no_domains == 1 ){
+                $scope.network.all_domains = 0;
+            }
+        };
+        $scope.check_all_domains = function() {
+            if ( $scope.network.all_domains == 1 ){
+                $scope.network.no_domains = 0;
+            }
+        };
+        $scope.update_network= function(field) {
+            var data = $scope.network;
+            if (typeof field != 'undefined') {
+                var data = {};
+                data[field] = $scope.network[field];
+            }
+            $http.post('/network/set/'
+                , JSON.stringify(data))
+            //                    , JSON.stringify({ value: $scope.network[field]}))
+                .then(function(response) {
+                    if (!data.id) {
+                        $scope.new_saved = true;
+                    }
+                });
+            $scope.formNetwork.$setPristine();
+            $scope.saved = true;
+        };
+
+        $scope.load_network = function(id_network) {
+                $http.get('/network/info/'+id_network+'.json').then(function(response) {
+                    $scope.network = response.data;
+                    $scope.formNetwork.$setPristine();
+                });
+        };
+        $scope.list_domains_network = function(id_network) {
+                $http.get('/network/list_domains/'+id_network).then(function(response) {
+                    $scope.machines = response.data;
+                });
+        };
+        $scope.set_network_domain = function(id_domain, allowed) {
+            $http.get("/network/set/domain/"+$scope.network.id+ "/" +id_domain+"/"
+                    +allowed)
+                .then(function(response) {
+                });
+        };
+
+
+        $scope.remove_network = function(id_network) {
+            $http.get('/network/remove/'+id_network).then(function(response) {
+                $scope.message = "Network "+$scope.network.name+" removed";
+                $scope.network ={};
+            });
+        };
+        $scope.new_saved = false;
+    };
+
+    function settings_node($scope, $http, $timeout) {
+        var url_ws;
+        $scope.init = function(id_node, url) {
+            url_ws = url;
+            list_storage_pools(id_node);
+            list_bases(id_node);
+            subscribe_node_info(id_node, url);
+        };
+        subscribe_node_info = function(id_node, url) {
+            var ws = new WebSocket(url);
+            ws.onopen = function(event) { ws.send('node_info/'+id_node) };
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                $scope.$apply(function () {
+                    $scope.node = data;
+                });
+            }
+        };
+        $scope.update_node = function(field) {
+            $http.get('/node/set/'+$scope.node.id+'/'+field+'/'+$scope.node[field]).then(function(response) {
+            });
+        };
+
+        subscribe_request = function(id_request, action) {
+            var ws = new WebSocket(url_ws);
+            ws.onopen = function(event) { ws.send('request/'+id_request) };
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                action(data);
+            }
+        };
+
+
+        list_storage_pools = function(id_vm) {
+            $http.post('/request/list_storage_pools/'
+             ,JSON.stringify({ 'id_vm': id_vm })
+            ).then(function(response) {
+                if (response.data.ok == 1 ) {
+                    subscribe_request(response.data.request, function(data) {
+                        $scope.$apply(function () {
+                            if (data['output'] && data.output.length) {
+                                $scope.storage_pools=JSON.parse(data.output);
+                                $scope.storage_pools.splice(0,0,'');
+                            }
+                        });
+                    });
+                } else {
+                    $scope.storage_pools = response.data.error;
+                }
+            });
+        };
+
+        list_bases = function(id_vm) {
+            $http.get('/node/list_bases/'+id_vm).then(function(response) {
+                $scope.bases = response.data;
+            });
+        };
+
+        $scope.set_base_vm = function(id_base, value) {
+            var url = 'set_base_vm';
+            if (value == 0 || !value) {
+                url = 'remove_base_vm';
+            }
+            $http.get("/machine/"+url+"/" +$scope.node.id+ "/" +id_base+".json")
+                .then(function(response) {
+                });
+        };
+
     };
 }());

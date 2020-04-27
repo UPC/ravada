@@ -30,7 +30,9 @@
         </div>
         <div class="row" ng-repeat="node in nodes | orderBy:'is_local':true">
                 <div class="col-md-1">{{node.type}}</div>
-                <div class="col-md-2">{{node.name}}</div>
+                <div class="col-md-2">
+                    <a href="/node/settings/{{node.id}}.html">{{node.name}}</a>
+                </div>
                 <div class="col-md-2">{{node.hostname}}</div>
                 <div class="col-md-1">{{node.bases.length}}</div>
                 <div class="col-md-1">{{node.machines.length}}</div>

@@ -3405,6 +3405,12 @@ sub _cmd_list_network_interfaces($self, $request) {
     $request->output(encode_json(\@ifs));
 }
 
+sub _cmd_list_storage_pools($self, $request) {
+    my $id_vm = $request->args('id_vm');
+    my $vm = Ravada::VM->open( $id_vm );
+    $request->output(encode_json([ $vm->list_storage_pools ]));
+}
+
 sub _cmd_list_isos($self, $request){
     my $vm_type = $request->args('vm_type');
    
@@ -3708,6 +3714,8 @@ sub _req_method {
 ,remove_hardware => \&_cmd_remove_hardware
 ,change_hardware => \&_cmd_change_hardware
 ,set_time => \&_cmd_set_time
+
+,list_storage_pools => \&_cmd_list_storage_pools
 
 # Domain ports
 ,expose => \&_cmd_expose

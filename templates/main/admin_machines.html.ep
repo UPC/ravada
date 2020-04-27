@@ -97,8 +97,11 @@
                 role="application"></div>
       </div>
         <div class="row">
-            <div class="col-md-8"><h2><%=l 'Virtual Machines' %></h2></div>
-            <div class="col-md-4" align="right">
+            <div class="col-md-5"><h2><%=l 'Virtual Machines' %></h2></div>
+            <div class="col-md-3" align="right">
+                <input type="text" ng-model="filter_name">
+            </div>
+            <div class="col-md-4" align="left">
 % 		if ($_user->can_create_machine){
                 <h2>
                     <button class="btn btn-warning" ng-click="list_machines={};subscribe_all('<%= url_for('ws_subscribe')->to_abs %>');"><i class="fa fa-sync-alt" aria-hidden="true"></i></button>
@@ -282,7 +285,7 @@
                     </td>
                     <td class="lgMachNode"></td>
                 </tr>
-                    <tr ng-show="show_clones[machine.id]" ng-repeat="child in machine.childs | orderObjectBy:'name'">
+                <tr ng-show="show_clones[machine.id]" ng-repeat="child in machine.childs | orderObjectBy:'name' | filter:{name: filter_name}">
                       <td class="lgMachName">
                       &nbsp;<i title="[cloned]" class="fa fa-fw fa-long-arrow-right"
                               style="color:white"></i>

@@ -28,6 +28,7 @@ use feature qw(signatures);
 use Ravada::Front;
 use Ravada::Front::Domain;
 use Ravada::Auth;
+use Ravada::Network;
 use Ravada::WebSocket;
 use POSIX qw(locale_h);
 
@@ -285,6 +286,76 @@ get '/list_nodes.json' => sub {
     $c->render(json => [$RAVADA->list_vms]);
 };
 
+get '/list_networks.json' => sub {
+    my $c = shift;
+    $c->render(json => [ Ravada::Network->list_networks ]);
+};
+
+get '/network/info/#id' => sub($c) {
+    my $sth = $RAVADA->_dbh->prepare("SELECT * from networks WHERE id=?");
+    $sth->execute($c->stash('id'));
+    my $row = $sth->fetchrow_hashref;
+    return $c->render(json => $row);
+};
+
+get '/network/remove/#id' => sub($c) {
+    my $sth = $RAVADA->_dbh->prepare("DELETE from networks WHERE id=?");
+    $sth->execute($c->stash('id'));
+    return $c->render(json => { ok => 1 });
+};
+
+get '/network/list_domains/#id' => sub($c) {
+    return $c->render( json => $RAVADA->list_bases_network($c->stash('id')));
+};
+
+get '/network/new.html' => sub($c) {
+    push @{$c->stash->{css}}, '/css/admin.css';
+    push @{$c->stash->{js}}, '/js/admin.js';
+    return $c->render(template => "/main/network_new");
+};
+
+post '/network/set' => sub($c) {
+    my $arg = decode_json($c->req->body);
+    return _update_fields($c, "networks", $arg);
+};
+
+get '/network/set/domain/#id/#id_domain/#value' => sub ($c) {
+    my $id_network = $c->stash('id');
+    my $id_domain = $c->stash('id_domain');
+    my $value = $c->stash('value');
+    $value = 0 if !defined $value;
+
+    my $sth = $RAVADA->_dbh->prepare(
+        "SELECT id,allowed "
+        ." FROM domains_network WHERE id_network = ? "
+        ." AND id_domain= ? "
+    );
+    $sth->execute($id_network, $id_domain);
+    my ($id, $allowed) = $sth->fetchrow();
+    warn " $id, $allowed" ;
+    $allowed = 0 if !$allowed;
+
+    return $c->render( json => { ok => 1 } ) if $value == $allowed;
+
+    if ($id) {
+        $sth = $RAVADA->_dbh->prepare(
+            "UPDATE domains_network set allowed=? "
+            ." WHERE id=?"
+        );
+        $sth->execute($value, $id);
+    } else {
+        warn " insert ";
+        $sth = $RAVADA->_dbh->prepare(
+            "INSERT INTO domains_network "
+            ."( id_network, id_domain, allowed) "
+            ." VALUES(?,?,?) "
+        );
+        $sth->execute($id_network, $id_domain, $value);
+    }
+    return $c->render( json => { ok => 1 } );
+
+};
+
 get '/node/enable/(:id).json' => sub {
     my $c = shift;
     return access_denied($c) if !$USER->is_admin;
@@ -475,6 +546,18 @@ any '/machine/manage/(:id).(:type)' => sub {
    	 my $c = shift;
      Ravada::Request->refresh_machine(id_domain => $c->stash('id'), uid => $USER->id);
      return manage_machine($c);
+};
+
+any '/(:item)/settings/(:id)' => sub($c) {
+
+    push @{$c->stash->{css}}, '/css/admin.css';
+    push @{$c->stash->{js}}, '/js/admin.js';
+
+    return $c->render( template => '/main/settings_generic' );
+};
+
+get '/node/list_bases/(:id)' => sub($c) {
+    return $c->render( json => $RAVADA->_list_bases_vm_all($c->stash('id')));
 };
 
 any '/hardware/(:id).(:type)' => sub {
@@ -748,6 +831,22 @@ get '/machine/set/#id/#field/#value' => sub {
         if $domain->_data($field) ne $value;
     return $c->render(json => { $field => $domain->_data($field, $value)});
 };
+
+get '/node/set/#id/#field/#value' => {value => ''} => sub($c) {
+
+    return access_denied($c) if !$USER->is_admin;
+
+    my $id = $c->stash('id');
+    my $field = $c->stash('field');
+    my $value = $c->stash('value');
+
+    my $node = Ravada::VM->open(id => $id , readonly => 1) or die "Unkown node $id";
+    $USER->send_message("Setting $field to '$value' in ".$node->name)
+        if $node->_data($field) ne $value;
+    return $c->render(json => { $field => $node->_data($field, $value)});
+
+};
+
 
 get '/machine/autostart/#id/#value' => sub {
     my $c = shift;
@@ -2458,6 +2557,41 @@ sub _new_anonymous_user {
 
     return $name;
 }
+
+sub _insert_fields($c, $table, $arg) {
+    my $sql = "INSERT INTO $table " ;
+    my $fields = join("," , sort keys %$arg);
+    my $values = join("," , map { '?' } keys %$arg);
+
+    my $sth = $RAVADA->_dbh->prepare("$sql ($fields) VALUES ($values)" );
+    $sth->execute(map {$arg->{$_} } sort keys %$arg);
+    return $c->render(json => { 'ok' => 1 } );
+
+}
+
+sub _update_fields($c, $table, $arg) {
+    my $id = delete $arg->{id};
+    return _insert_fields($c, $table, $arg) if !$id;
+
+    my $sth = $RAVADA->_dbh->prepare("SELECT * FROM $table WHERE id=?");
+    $sth->execute($id);
+    my $old = $sth->fetchrow_hashref;
+    for my $field ( keys %$arg ) {
+        next if
+        !defined $old->{$field} && !defined $arg->{field}
+        || !defined $old->{$field} && defined $arg->{$field}
+        || $old->{$field} eq $arg->{$field};
+        $sth = $RAVADA->_dbh->prepare("UPDATE $table set $field=? WHERE id=?");
+        $sth->execute($arg->{$field},$id);
+
+        $USER->send_message("Setting $field to ".$arg->{$field}
+            ." in $table");
+    }
+
+    return $c->render(json => $arg );
+
+};
+
 
 my $routes = app->routes->children;
 for my $route (@$routes){

@@ -555,6 +555,36 @@ sub _list_bases_vm($self, $id_node) {
     return \@bases;
 }
 
+sub _list_bases_vm_all($self, $id_node) {
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT d.id, d.name FROM domains d, vms v "
+        ." WHERE is_base=? AND vm=v.vm_type"
+        ."   AND d.vm =v.vm_type"
+        ."   AND v.id=?"
+    );
+    $sth->execute(1, $id_node);
+    my $sth_bv = $CONNECTOR->dbh->prepare(
+        "SELECT bv.enabled FROM bases_vm bv, domains d "
+        ." WHERE bv.id_domain=? AND bv.id_vm=?"
+        ."   AND d.id = bv.id_domain "
+    );
+    my ($id_domain, $name_domain);
+    $sth->bind_columns(\($id_domain, $name_domain));
+    my @bases;
+    while ( $sth->fetch ) {
+        $sth_bv->execute($id_domain, $id_node);
+        my ($enabled) = $sth_bv->fetchrow;
+        push @bases,{
+                  id => $id_domain
+               ,name => $name_domain
+            ,enabled => ( $enabled or 0)
+        };
+    }
+
+    return \@bases;
+}
+
 sub _list_machines_vm($self, $id_node) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT d.id, name FROM domains d"
@@ -569,6 +599,7 @@ sub _list_machines_vm($self, $id_node) {
     $sth->finish;
     return \@bases;
 }
+
 
 =head2 list_iso_images
 
@@ -612,7 +643,8 @@ sub iso_file ($self, $vm_type) {
     $self->wait_request($req);
     return [] if $req->status ne 'done';
 
-    my $isos = decode_json($req->output());
+    my $isos = [];
+    $isos = decode_json($req->output()) if $req->output;
 
     $self->_cache_store("list_isos",$isos);
 
@@ -660,6 +692,23 @@ sub list_users($self,$name=undef) {
     $sth->finish;
 
     return \@users;
+}
+
+
+sub list_bases_network($self, $id_network) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "select d.id, d.name, dn.allowed, dn.id_network from domains d left join domains_network dn on d.id = dn.id_domain WHERE ( dn.id_network=? OR dn.id_network IS NULL) "
+    );
+    $sth->execute($id_network);
+
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        $row->{anonymous} = 0 if !defined $row->{anonymous};
+        $row->{allowed} = 0 if !defined $row->{allowed};
+        warn Dumper($row);
+        push @list,($row);
+    }
+    return \@list;
 }
 
 =head2 create_domain
@@ -875,7 +924,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
     my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
         ." ".$now[2].":".$now[1].":".$now[0];
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT requests.id, command, args, date_changed, requests.status"
+        "SELECT requests.id, command, args, requests.date_changed, requests.status"
             ." ,requests.error, id_domain ,domains.name as domain"
             ." ,date_changed "
         ." FROM requests left join domains "
