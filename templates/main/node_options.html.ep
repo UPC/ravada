@@ -1,0 +1,58 @@
+<div class="container-fluid">
+<div class="row">
+    <div class="col-md-3" align="right">name</div>
+    <div class="col-md-8">
+        <input type="text" ng-model="node.name" ng-blur="update_node('name')">
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3" align="right">host</div>
+    <div class="col-md-8" align="left">
+        <input type="text" ng-model="node.hostname" ng-blur="update_node('hostname')">
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3" align="right">base storage</div>
+    <div class="col-md-8">
+        <input type="text" ng-model="node.base_storage" ng-hide="storage_pools"
+            ng-blur="update_node('base_storage')"
+        />
+        <select ng-model="node.base_storage" ng-show="storage_pools"
+            ng-options="x for x in storage_pools | orderBy:x"
+            ng-change="update_node('base_storage')"
+        >
+        </select>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3" align="right">clone storage</div>
+    <div class="col-md-8">
+        <input type="text" ng-model="node.clone_storage" ng-hide="storage_pools"
+            ng-blur="update_node('clone_storage')"
+        />
+        <select ng-model="node.clone_storage" ng-show="storage_pools"
+            ng-options="x for x in storage_pools | orderBy:x"
+            ng-change="update_node('clone_storage')"
+        >
+        </select>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3" align="right">default storage</div>
+    <div class="col-md-8">
+        <input type="text" ng-model="node.default_storage" ng-hide="storage_pools"
+            ng-blur="update_node('default_storage')"
+        />
+        <select ng-model="node.default_storage" ng-show="storage_pools"
+            ng-options="x for x in storage_pools | orderBy:x"
+            ng-change="update_node('default_storage')"
+        >
+        </select>
+    </div>
+</div>
+
+</div>
