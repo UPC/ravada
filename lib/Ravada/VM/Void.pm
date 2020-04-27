@@ -321,7 +321,7 @@ sub search_volume_path_re {
 
 }
 
-sub import_domain($self, $name, $user) {
+sub import_domain($self, $name, $user, $backing_file) {
 
     my $file = $self->dir_img."/$name.yml";
 
@@ -347,7 +347,7 @@ sub list_storage_pools {
 
 sub is_alive($self) {
     return 0 if !$self->vm;
-    return 1;
+    return $self->ping(undef,0);
 }
 
 sub free_memory {

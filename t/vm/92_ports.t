@@ -977,6 +977,6 @@ for my $vm_name ( 'KVM', 'Void' ) {
     }; # of SKIP
 }
 
-flush_rules();
-clean();
+flush_rules() if $<;
+end();
 done_testing();

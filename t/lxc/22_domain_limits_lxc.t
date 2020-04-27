@@ -180,4 +180,5 @@ test_with_limits_base($newdomain);
 
 }
 
+end();
 done_testing();

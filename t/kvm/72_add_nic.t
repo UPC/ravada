@@ -72,16 +72,8 @@ sub test_req_prepare_base{
     $domain->is_public(1);
 }
 
-
-sub test_add_nic {
-    my $vm_name = shift;
-
-#    diag("Testing add description $vm_name");
-    my $vm = rvd_back->search_vm($vm_name);
-    my $domain = test_create_domain($vm_name);
-
-    #Read xml
-    sub read_mac{
+#Read xml
+sub read_mac{
         my $domain = shift;
         my $xml = XML::LibXML->load_xml(string => $domain->get_xml_base());
         my @mac;
@@ -91,7 +83,15 @@ sub test_add_nic {
             push @mac, $mac;
         }
         return(@mac);
-    }
+}
+
+sub test_add_nic {
+    my $vm_name = shift;
+
+#    diag("Testing add description $vm_name");
+    my $vm = rvd_back->search_vm($vm_name);
+    my $domain = test_create_domain($vm_name);
+    my $domain_other = test_create_domain($vm_name);
 
     #Prepare base
 	test_req_prepare_base($domain->name);
@@ -112,10 +112,15 @@ sub test_add_nic {
     my $domain_clon = $RAVADA->search_domain($name);
 
     my @mac = read_mac($domain);
+    my @mac_other = read_mac($domain_other);
     my @mac2 = read_mac($domain_clon);
     isnt($mac[0],$mac2[0], "1st MAC from 1st NIC cloned are the same");
     isnt($mac[1],$mac2[1], "2nd MAC from 2nd NIC cloned are the same");
 
+    my %dupe_mac = ();
+    for my $mac (@mac, @mac_other, @mac2) {
+        ok(!$dupe_mac{$mac}++,"MAC $mac duplicated");
+    }
 }
 
 
@@ -142,6 +147,6 @@ SKIP: {
     test_add_nic($vm_name);
 }
 
-clean();
+end();
 
 done_testing();

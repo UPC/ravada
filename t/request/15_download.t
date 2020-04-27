@@ -74,4 +74,5 @@ for my $vm_name ('KVM') {
     #test_download($vm, $id_iso,0);
     }
 }
+end();
 done_testing();

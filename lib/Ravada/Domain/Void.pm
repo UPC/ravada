@@ -640,7 +640,9 @@ sub is_removed {
     return 1;
 }
 
-sub autostart {
+sub autostart { return _internal_autostart(@_) }
+
+sub _internal_autostart {
     my $self = shift;
     my $value = shift;
 
@@ -778,6 +780,7 @@ sub change_hardware($self, $hardware, $index, $data) {
     my $hardware_def = $self->_value('hardware');
 
     my $devices = $hardware_def->{$hardware};
+    confess "Error: $hardware not found ".Dumper($hardware_def) if !$devices;
 
     die "Error: Missing hardware $hardware\[$index], only ".scalar(@$devices)." found"
         if $index > scalar(@$devices);

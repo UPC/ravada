@@ -534,18 +534,14 @@ ok($Ravada::CONNECTOR,"Expecting conector, got ".($Ravada::CONNECTOR or '<unde>'
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(KVM Void)) {
+for my $vm_name ( vm_names ) {
     my $vm_connected;
     eval {
         my $rvd_back = rvd_back();
         my $vm= $rvd_back->search_vm($vm_name)  if rvd_back();
-        $vm_connected = 1 if $vm;
+        $vm_connected = $vm if $vm;
         @ARG_CREATE_DOM = ( id_iso => search_id_iso('Alpine'), vm => $vm_name, id_owner => $USER->id, disk => 1024 * 1024 );
 
-        if ($vm_name eq 'KVM') {
-            my $iso = $vm->_search_iso($ID_ISO);
-            $vm->_iso_name($iso);
-        }
     };
 
     SKIP: {
@@ -558,6 +554,10 @@ for my $vm_name ( qw(KVM Void)) {
         skip($msg,10)   if !$vm_connected;
 
         diag("Testing requests with $vm_name");
+        if ($vm_name eq 'KVM') {
+            my $iso = $vm_connected->_search_iso($ID_ISO);
+            $vm_connected->_iso_name($iso, undef);
+        }
         test_swap($vm_name);
 
         my $domain_name = test_req_create_domain_iso($vm_name);
@@ -581,7 +581,6 @@ for my $vm_name ( qw(KVM Void)) {
     };
 }
 
-remove_old_domains();
-remove_old_disks();
+end();
 
 done_testing();

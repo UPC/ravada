@@ -958,5 +958,5 @@ for my $vm_name (reverse sort @vm_names) {
         test_remove_base($vm_name, $domain_name);
         clean_leftovers($vm_name);
 }
-clean() if @vm_names;
+end() if @vm_names;
 done_testing();

@@ -2,7 +2,11 @@
 
 use strict;
 use warnings;
+use Data::Dumper;
 use Test::More;
+
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 use lib 't/lib';
 use Test::Ravada;
@@ -54,6 +58,50 @@ sub test_remove_domain_volumes_already_gone {
     eval { $domain->remove(user_admin) };
     is(''.$@,'',$vm->type);
 }
+sub _clone($base, $name=new_domain_name) {
+    return $base->clone(
+        name => $name
+        ,user => user_admin
+    );
+}
+
+sub test_remove_rename($vm) {
+    my $base= create_domain($vm->type);
+    my $name = new_domain_name();
+    my $base2 = _clone($base, $name);
+    $base2->prepare_base(user_admin);
+    my @volumes_base = $base->list_files_base();
+    my $clone = _clone($base);
+
+    $base2->remove_base(user_admin);
+    $base2->rename(name => new_domain_name, user => user_admin);
+
+    my $clone2;
+    eval { $clone2 = _clone($base, $name); };
+    is($@,'') or exit;
+    $clone2 = rvd_back->search_domain($name);
+    ok($clone2);
+    $clone2->remove(user_admin);
+
+    for my $vol (@volumes_base, $base2->list_volumes) {
+        ok( -e $vol,$vol);
+    }
+
+    my $clone3 = _clone($base);
+    $clone3->start(user_admin);
+
+    _remove_domain($base, $base2);
+}
+
+sub _remove_domain(@domain) {
+    for my $domain (@domain) {
+        for my $clone_data ($domain->clones) {
+            my $clone = Ravada::Domain->open($clone_data->{id});
+            $clone->remove(user_admin);
+        }
+        $domain->remove(user_admin);
+    }
+}
 
 ##############################################################################
 
@@ -78,12 +126,13 @@ for my $vm_name ( vm_names() ) {
 
         diag("Testing remove on $vm_name");
 
+        test_remove_rename($vm);
 		test_remove_domain($vm);        
         test_remove_domain_volumes_already_gone($vm);
 
     }
 }
 
-clean();
+end();
 
 done_testing();

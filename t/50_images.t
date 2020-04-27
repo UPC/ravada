@@ -16,4 +16,5 @@ my @images = $ravada->list_images();
 
 ok(scalar @images,"No images ".Dumper(\@images));
 
+end();
 done_testing();

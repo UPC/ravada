@@ -63,4 +63,5 @@ test_vm_connect();
 test_search_vm();
 
 };
+end();
 done_testing();

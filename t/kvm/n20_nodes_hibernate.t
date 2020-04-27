@@ -25,7 +25,7 @@ sub test_node_down($node, $action, $action_name) {
 
     start_node($node);
     is($node->is_active,1) or exit;
-    is($node->is_enabled,1) or exit;
+    is($node->enabled,1) or exit;
 
     my $domain = create_domain($node->type);
     $domain->prepare_base(user_admin);
@@ -45,12 +45,15 @@ sub test_node_down($node, $action, $action_name) {
     $action->($clone);
 
     shutdown_node($node);
+    $node->_clean_cache();
+
+    $clone = Ravada::Domain->open($clone->id);
 
     eval { $clone->start(user_admin) };
-    is($@,'');
+    is(''.$@,'');
     is($clone->is_active, 1, "Expecting clone ".$clone->name." active");
     is($clone->is_local, 1,"Expecting clone ".$clone->name." local");
-    is($domain->base_in_vm($node->id),0);
+    is($domain->base_in_vm($node->id),1);
 
     $node->_clean_cache();
     start_node($node);
@@ -84,7 +87,7 @@ sub _hibernate_domain($domain) {
 #######################################################################
 
 clean();
-clean_remote();
+clean_remote() if !$>;
 
 for my $vm_name ('Void' , 'KVM' ) {
     my $vm;
@@ -114,5 +117,5 @@ for my $vm_name ('Void' , 'KVM' ) {
     }
 }
 
-clean();
+end();
 done_testing();

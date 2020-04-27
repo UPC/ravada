@@ -4,7 +4,6 @@ use strict;
 #####
 use locale ':not_characters';
 #####
-use lib 'lib';
 
 use Carp qw(confess cluck);
 use Data::Dumper;
@@ -487,6 +486,8 @@ get '/machine/view/(:id).(:type)' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     my $type = $c->stash('type');
+
+    return $c->redirect_to('/login') if !_logged_in($c);
 
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
@@ -1858,11 +1859,6 @@ sub _open_iptables {
 
 }
 
-sub check_back_running {
-    #TODO;
-    return 1;
-}
-
 sub _init_user_group {
     return if $>;
 
@@ -1895,8 +1891,6 @@ sub _init_user_group {
 }
 
 sub init {
-    check_back_running() or warn "CRITICAL: rvd_back is not running\n";
-
     _init_user_group();
     my $home = Mojo::Home->new();
     $home->detect();
@@ -1904,7 +1898,10 @@ sub init {
     if (exists $ENV{MORBO_VERBOSE}
         || (exists $ENV{MOJO_MODE} && defined $ENV{MOJO_MODE}
                 && $ENV{MOJO_MODE} =~ /devel/i )) {
-            return if -e $home->rel_file("public");
+            app->static->paths->[0] = $home->rel_file("public");
+            app->renderer->paths->[0] = $home->rel_file("templates");
+            app->renderer->paths->[1] = $home->rel_file("custom");
+            return;
     }
     app->static->paths->[0] = ($CONFIG_FRONT->{dir}->{public}
             or $home->rel_file("public"));
@@ -2235,6 +2232,7 @@ sub start_machine {
 
     my ($domain, $type) = _search_requested_machine($c);
     return $c->render(text => "Domain not found") if !$domain;
+    $domain->_data(status => 'starting');
 
     my $req = Ravada::Request->start_domain( uid => $USER->id
                                            ,name => $domain->name

@@ -122,6 +122,5 @@ for my $vm_name (qw(KVM)) {
 
 }
 
-clean();
+end();
 done_testing();
-

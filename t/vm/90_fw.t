@@ -8,9 +8,6 @@ use Test::More;
 use lib 't/lib';
 use Test::Ravada;
 
-
-use_ok('Ravada');
-
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
 my $RVD_BACK = rvd_back();
@@ -189,7 +186,7 @@ sub test_jump {
         `iptables -D $rule`;
     }
     $out = `iptables -L INPUT -n`;
-    ok(! grep(/^RAVADA /, split(/\n/,$out)),"Expecting no RAVADA jump in $out");
+    ok(! grep(/^RAVADA /, split(/\n/,$out)),"Expecting no RAVADA jump in $out") or exit;
 
     my $vm =$RVD_BACK->search_vm($vm_name);
     my $domain = $vm->search_domain($domain_name);
@@ -441,7 +438,6 @@ for my $vm_name (qw( Void KVM )) {
         test_jump($vm_name, $domain2->name);
     };
 }
-remove_old_domains();
-remove_old_disks();
 
+end();
 done_testing();

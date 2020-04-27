@@ -68,6 +68,7 @@ sub test_remove_domain {
     }
 
     test_ports_remove($id_domain);
+    test_instances_remove($id_domain);
 }
 
 sub test_ports_remove {
@@ -79,6 +80,17 @@ sub test_ports_remove {
     my ($count) = $sth->fetchrow;
     is($count,undef);
 }
+
+sub test_instances_remove {
+    my $id_domain = shift;
+    my $sth = connector->dbh->prepare(
+        "SELECT count(*) FROM domain_instances"
+        ." WHERE id_domain = ? "
+    );
+    my ($count) = $sth->fetchrow;
+    is($count,undef);
+}
+
 
 sub test_remove_domain_base {
     my $vm_name = shift;
@@ -211,7 +223,5 @@ for my $vm_name (@VMS) {
     }
 }
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();

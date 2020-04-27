@@ -88,4 +88,5 @@ for my $vm_name ('KVM') {
         diag($req2->error)  if $req2->error;
     }
 }
+end();
 done_testing();

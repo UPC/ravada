@@ -200,13 +200,13 @@ sub _access_allowed($self, $id_base, $id_clone, $access_data) {
 
 }
 
-sub list_machines($self, $user) {
-    return $self->list_domains() if $user->can_list_machines();
+sub list_machines($self, $user, @filter) {
+    return $self->list_domains(@filter) if $user->can_list_machines();
 
     my @list = ();
-    push @list,(@{filter_base_without_clones($self->list_domains())}) if $user->can_list_clones();
-    push @list,(@{$self->list_own_clones($user)}) if $user->can_list_clones_from_own_base();
-    push @list,(@{$self->list_own($user)}) if $user->can_list_own_machines();
+    push @list,(@{filter_base_without_clones($self->list_domains(@filter))}) if $user->can_list_clones();
+    push @list,(@{$self->_list_own_clones($user)}) if $user->can_list_clones_from_own_base();
+    push @list,(@{$self->_list_own_machines($user)}) if $user->can_list_own_machines();
     
     return [@list] if scalar @list < 2;
 
@@ -214,8 +214,8 @@ sub list_machines($self, $user) {
     return [sort { $a->{name} cmp $b->{name} } values %uniq];
 }
 
-sub _around_list_machines($orig, $self, $user) {
-    my $machines = $self->$orig($user);
+sub _around_list_machines($orig, $self, $user, @filter) {
+    my $machines = $self->$orig($user, @filter);
     for my $m (@$machines) {
         eval { $m->{can_shutdown} = $user->can_shutdown($m->{id}) };
 
@@ -226,7 +226,12 @@ sub _around_list_machines($orig, $self, $user) {
         $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
 
         $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
+        eval {
         $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
+        };
+        #may have been deleted just now
+        next if $@ && $@ =~ /Unknown domain/;
+        die $@ if $@;
 
         $m->{can_hibernate} = 0;
         $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
@@ -274,6 +279,11 @@ sub list_domains($self, %args) {
     my $where = '';
     for my $field ( sort keys %args ) {
         $where .= " AND " if $where;
+        if (!defined $args{$field}) {
+            $where .= " $field IS NULL ";
+            delete $args{$field};
+            next;
+        }
         $where .= " d.$field=?"
     }
     $where = "WHERE $where" if $where;
@@ -304,7 +314,7 @@ sub list_domains($self, %args) {
             $row->{is_locked} = $domain->is_locked;
             $row->{is_hibernated} = ( $domain->is_hibernated or 0);
             $row->{is_paused} = 1 if $domain->is_paused;
-            $row->{is_active} = 1 if $row->{status} eq 'active';
+            $row->{is_active} = 1 if $row->{status} =~ /active|starting/;
             $row->{has_clones} = $domain->has_clones;
 #            $row->{disk_size} = ( $domain->disk_size or 0);
 #            $row->{disk_size} /= (1024*1024*1024);
@@ -313,7 +323,7 @@ sub list_domains($self, %args) {
             $row->{node} = $domain->_vm->name if $domain->_vm;
             $row->{remote_ip} = $domain->client_status
                 if $domain->client_status && $domain->client_status ne 'connected';
-            $row->{autostart} = $domain->autostart;
+            $row->{autostart} = $domain->_data('autostart');
             if (!$row->{status} ) {
                 if ($row->{is_active}) {
                     $row->{status} = 'active';
@@ -360,7 +370,7 @@ sub filter_base_without_clones($domains) {
     return \@list;
 }
 
-sub list_own_clones($self, $user) {
+sub _list_own_clones($self, $user) {
     my $machines = $self->list_bases( id_owner => $user->id );
     for my $base (@$machines) {
         confess "ERROR: BAse without id ".Dumper($base) if !$base->{id};
@@ -369,7 +379,7 @@ sub list_own_clones($self, $user) {
     return $machines;
 }
 
-sub list_own($self, $user) {
+sub _list_own_machines($self, $user) {
     my $machines = $self->list_domains(id_owner => $user->id);
     for my $clone (@$machines) {
         next if !$clone->{id_base};
@@ -481,6 +491,7 @@ sub node_exists {
     return 0 if !defined $id;
     return 1;
 }
+
 =head2 list_vm_types
 
 Returns a reference to a list of Virtual Machine Managers known by the system
@@ -568,6 +579,7 @@ sub _list_machines_vm($self, $id_node) {
     $sth->finish;
     return \@bases;
 }
+
 =head2 list_iso_images
 
 Returns a reference to a list of the ISO images known by the system
@@ -873,22 +885,21 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
     my $time_recent = ($now[5]+=1900)."-".$now[4]."-".$now[3]
         ." ".$now[2].":".$now[1].":".$now[0];
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT requests.id, command, args, date_changed, requests.status"
+        "SELECT requests.id, command, args, requests.date_changed, requests.status"
             ." ,requests.error, id_domain ,domains.name as domain"
-            ." ,date_changed "
         ." FROM requests left join domains "
         ."  ON requests.id_domain = domains.id"
         ." WHERE "
         ."    requests.status <> 'done' "
-        ."  OR ( date_changed >= ?) "
-        ." ORDER BY date_changed "
+        ."  OR ( requests.date_changed >= ?) "
+        ." ORDER BY requests.date_changed "
     );
     $sth->execute($time_recent);
     my @reqs;
     my ($id_request, $command, $j_args, $date_changed, $status
-        , $error, $id_domain, $domain, $date);
+        , $error, $id_domain, $domain);
     $sth->bind_columns(\($id_request, $command, $j_args, $date_changed, $status
-        , $error, $id_domain, $domain, $date));
+        , $error, $id_domain, $domain));
 
     while ( $sth->fetch) {
         my $epoch_date_changed = time;
@@ -936,7 +947,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
 
         push @reqs,{ id => $id_request,  command => $command, date_changed => $date_changed, status => $status, name => $args->{name}
             ,domain => $domain
-            ,date => $date
+            ,date => $date_changed
             ,message => $message
             ,error => $error
         };
@@ -1094,6 +1105,12 @@ sub enable_node($self, $id_node, $value) {
     return $value;
 }
 
+=head2 remove_node
+
+Remove new node from the table VMs
+
+=cut
+
 sub remove_node($self, $id_node, $value) {
     my $sth = $CONNECTOR->dbh->prepare("DELETE FROM vms WHERE id=?");
     $sth->execute($id_node);
@@ -1101,6 +1118,12 @@ sub remove_node($self, $id_node, $value) {
 
     return $value;
 }
+
+=head2 add_node
+
+Inserts a new node in the table VMs
+
+=cut
 
 sub add_node($self,%arg) {
     my $sql = "INSERT INTO vms "
@@ -1132,6 +1155,18 @@ sub _cache_get($self, $key) {
     return $self->{cache}->{$key}->[0];
 
 }
+
+=head2 list_network_interfaces
+
+Request to list the network interfaces. Returns a reference to the list.
+
+    my $interfaces = $rvd_front->list_network_interfaces(
+        vm_type => 'KVM'
+        ,type => 'bridge'
+        ,user => $user
+    )
+
+=cut
 
 sub list_network_interfaces($self, %args) {
 

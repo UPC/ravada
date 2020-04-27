@@ -71,4 +71,5 @@ for my $vm_name ( 'KVM') {
 
     }
 }
+end();
 done_testing();

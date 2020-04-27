@@ -115,7 +115,5 @@ for my $vm_name ( @{rvd_front->list_vm_types}) {
     }
 }
 
-clean();
-
+end();
 done_testing();
-

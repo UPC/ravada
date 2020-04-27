@@ -401,6 +401,6 @@ SKIP: {
     test_any_network_password_hybernate($vm_name);
 }
 
-clean();
+end();
 
 done_testing();

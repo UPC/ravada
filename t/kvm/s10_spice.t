@@ -59,5 +59,5 @@ SKIP: {
     test_spice($vm_name);
 }
 
-clean();
+end();
 done_testing();

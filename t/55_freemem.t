@@ -28,7 +28,7 @@ sub test_new_domain {
                                         , id_iso => search_id_iso('Alpine')
                                         ,vm => $vm->type
                                         ,id_owner => $USER->id
-                                        ,memory => 1.5*1024*1024
+                                        ,memory => 4*1024*1024
                                         ,disk => 1 * 1024*1024
             ) 
     };
@@ -125,6 +125,9 @@ for my $vm_name (vm_names()) {
 SKIP: {
     my $msg = "SKIPPED test: No $vm_name backend found";
     my $vm = $RVD_BACK->search_vm($vm_name);
+    #    $msg = "SKIPPED: todo review overcommitting issue #1164";
+    #$vm = undef;
+
     if ($vm_name eq 'KVM' && $>) {
         $msg = "SKIPPED test: $vm_name must be run from root";
         $vm = undef;
@@ -135,7 +138,7 @@ SKIP: {
     use_ok("Ravada::Domain::$vm_name");
 
     my $freemem = _check_free_memory();
-    my $n_domains = int($freemem)+2;
+    my $n_domains = int($freemem)*2+2;
 
     if ($n_domains > 50 ) {
         my $msg = "Skipped freemem check, too many memory in this host";
@@ -146,7 +149,7 @@ SKIP: {
 
     $freemem =~ s/(\d+\.\d)\d+/$1/;
 
-#    diag("Checking it won't start more than $n_domains domains with $freemem free memory");
+    diag("Checking it won't start more than $n_domains domains with $freemem free memory");
 
     my @domains;
     for ( 0 .. $n_domains ) {

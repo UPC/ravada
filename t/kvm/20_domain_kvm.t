@@ -340,5 +340,5 @@ test_domain_by_name();
 test_prepare_import();
 
 };
-clean();
+end();
 done_testing();

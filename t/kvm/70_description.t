@@ -84,6 +84,5 @@ SKIP: {
     test_description($vm_name);
 }
 
-clean();
-
+end();
 done_testing();

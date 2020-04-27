@@ -163,7 +163,6 @@ for my $vm_name (@VMS) {
     }
 }
 
-clean();
-
+end();
 done_testing();
 

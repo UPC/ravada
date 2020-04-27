@@ -273,7 +273,7 @@ sub test_prepare_base_with_cd_req {
         ,uid => user_admin->id
         ,with_cd => 1
     );
-    wait_request( debug => 1 );
+    wait_request( debug => 0 );
     is($req->status, 'done');
     is($req->error, '');
 
@@ -380,7 +380,7 @@ sub test_clone_with_cd_req {
                 ,name => $clone_name
                  ,uid => user_admin->id
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     is($domain->is_base,1);
     is($req->status, 'done');
     is($req->error,'');
@@ -908,7 +908,5 @@ for my $vm_name ('KVM', 'Void') {
     }
 }
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();

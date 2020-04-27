@@ -12,6 +12,7 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
+my $BASE_NAME = "zz-test-base";
 
 use_ok('Ravada');
 init();
@@ -209,13 +210,24 @@ sub test_iptables_close($vm, $node) {
     _remove_domain($domain);
 }
 
-sub _remove_domain($domain) {
-    for my $clone0 ( $domain->clones) {
-        my $clone = Ravada::Domain->open($clone0->{id});
-        $clone->remove(user_admin);
-    }
-    $domain->remove(user_admin);
+sub _remove_clones($domain) {
+    _remove_domain($domain,0);
+}
 
+sub _remove_domain($domain, $remove_base=0) {
+    for my $clone0 ( $domain->clones) {
+        Ravada::Request->remove_domain(
+            uid => user_admin->id
+            ,name=> $clone0->{name}
+        );
+    }
+    Ravada::Request->remove_domain(
+        uid => user_admin->id
+        ,name=> $domain->{name}
+    )
+    if $remove_base;
+
+    wait_request();
 }
 
 sub _create_2_clones_same_port($vm, $node, $base, $ip_local, $ip_remote) {
@@ -342,7 +354,7 @@ sub test_removed_base_file($vm, $node) {
     is($base->base_in_vm($node->id),1);
     is(scalar($base->list_vms),2) or exit;
     my $node2 = Ravada::VM->open($node->id);
-    is($node2->is_enabled,1);
+    is($node2->enabled,1);
     for my $clone_data ($base->clones) {
         my $clone = Ravada::Domain->open($clone_data->{id});
         $clone->remove(user_admin);
@@ -406,7 +418,7 @@ sub test_removed_base_file_and_swap_remote($vm, $node) {
     wait_request(debug => 0);
     is($base->base_in_vm($node->id),1);
     my $node2 = Ravada::VM->open($node->id);
-    is($node2->is_enabled,1);
+    is($node2->enabled,1);
     for my $clone_data ($base->clones) {
         my $clone = Ravada::Domain->open($clone_data->{id});
         $clone->remove(user_admin);
@@ -698,6 +710,35 @@ sub test_remove_base($vm, $node, $volatile) {
 
 }
 
+sub _check_internal_autostart($domain, $expected) {
+    if ($domain->type eq 'KVM') {
+        ok($domain->domain->get_autostart)  if $expected;
+        ok(!$domain->domain->get_autostart) if !$expected;
+    } elsif ($domain->type eq 'Void') {
+        ok($domain->_value('autostart'))    if $expected;
+        ok(!$domain->_value('autostart'),$domain->name) or exit   if !$expected;
+    } else {
+        diag("WARNING: I don't know how to check ".$domain->type." internal autostart");
+    }
+}
+
+# check autostart is managed by Ravada when nodes
+sub test_autostart($vm, $node) {
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+    my $domain = $base->clone(name => new_domain_name , user => user_admin);
+    $domain->autostart(1,user_admin);
+    is($domain->autostart,1);
+    _check_internal_autostart($domain,1);
+
+    $base->set_base_vm(node => $node, user => user_admin);
+    is($domain->autostart,1) or exit;
+    _check_internal_autostart($domain,0);
+
+    $domain->remove(user_admin);
+    $base->remove(user_admin);
+}
+
 sub test_duplicated_set_base_vm($vm, $node) {
     my $req = Ravada::Request->set_base_vm(id_vm => $node->id
         , uid => 1
@@ -804,11 +845,63 @@ sub test_base_unset($vm, $node) {
     my $clone = $base->clone(name => new_domain_name, user => user_admin);
     $clone->migrate($node);
     $base->set_base_vm(id_vm => $node->id,value => 0, user => user_admin);
-    $clone->start(user_admin);
+    is($base->base_in_vm($node->id),0) or exit;
+    is(Ravada::Domain::base_in_vm($base->id,$node->id),0) or exit;
+    my $clone2 = Ravada::Domain->open($clone->id);
+    $clone2->start(user_admin);
 
-    is($clone->_vm->id, $vm->id);
+    is($clone2->_vm->name, $vm->name) or exit;
 
     _remove_domain($base);
+}
+
+sub test_fill_memory($vm, $node, $migrate) {
+    #TODO: Void VMs
+    return if $vm->type eq 'Void';
+    diag("Testing fill memory ".$vm->type.", migrate=$migrate");
+
+    my $base = rvd_back->search_domain($BASE_NAME);
+    $base = import_domain('KVM', $BASE_NAME, 1) if !$base;
+    if (!$base) {
+        diag("SKIPPING: base $BASE_NAME must be installed to test");
+        return;
+    }
+    $base->prepare_base(user_admin) if !$base->is_base;
+    Ravada::Request->set_base_vm(id_vm => $node->id
+        ,uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    wait_request();
+
+    my $master_free_memory = $vm->free_memory;
+    my $node_free_memory = $node->free_memory;
+
+    my $error;
+    my %nodes;
+    my @clones;
+    for ( 1 .. 100  ) {
+        my $clone_name = new_domain_name();
+        my $req = Ravada::Request->create_domain(
+            name => $clone_name
+            ,id_owner => user_admin->id
+            ,id_base => $base->id
+        );
+        wait_request(debug => 0);
+        is($req->error, '');
+        is($req->status,'done');
+        push @clones,($clone_name);
+        my $clone = rvd_back->search_domain($clone_name) or last;
+        ok($clone,"Expecting clone $clone_name") or exit;
+        $clone->migrate($node) if $migrate;
+        eval { $clone->start(user_admin) };
+        $error = $@;
+        like($error, qr/(^$|No free memory)/);
+        last if $error;
+        $nodes{$clone->_vm->name}++;
+    }
+    ok(exists $nodes{$vm->name},"Expecting some clones to node ".$vm->name." ".$vm->id);
+    ok(exists $nodes{$node->name},"Expecting some clones to node ".$node->name." ".$node->id);
+    _remove_clones($base);
 }
 
 ##################################################################################
@@ -849,6 +942,9 @@ for my $vm_name ( 'Void', 'KVM') {
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
+        start_node($node);
+        test_fill_memory($vm, $node, 0); # balance
+        test_fill_memory($vm, $node, 1); # migrate
         test_create_active($vm, $node);
         test_base_unset($vm,$node);
 
@@ -860,6 +956,7 @@ for my $vm_name ( 'Void', 'KVM') {
 
         test_set_vm($vm, $node);
 
+        test_autostart($vm, $node);
         test_volatile($vm, $node);
 
         test_remove_req($vm, $node);
@@ -886,6 +983,6 @@ for my $vm_name ( 'Void', 'KVM') {
 }
 
 END: {
-    clean();
+    end();
     done_testing();
 }

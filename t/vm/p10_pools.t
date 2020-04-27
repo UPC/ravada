@@ -327,5 +327,5 @@ for my $vm_name (reverse vm_names() ) {
    }
 }
 
-clean();
+end();
 done_testing();
