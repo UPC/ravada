@@ -216,11 +216,18 @@ sub _remove_clones($domain) {
 
 sub _remove_domain($domain, $remove_base=0) {
     for my $clone0 ( $domain->clones) {
-        my $clone = Ravada::Domain->open($clone0->{id});
-        $clone->remove(user_admin);
+        Ravada::Request->remove_domain(
+            uid => user_admin->id
+            ,name=> $clone0->{name}
+        );
     }
-    $domain->remove(user_admin) if $remove_base;
+    Ravada::Request->remove_domain(
+        uid => user_admin->id
+        ,name=> $domain->{name}
+    )
+    if $remove_base;
 
+    wait_request();
 }
 
 sub _create_2_clones_same_port($vm, $node, $base, $ip_local, $ip_remote) {
@@ -860,7 +867,10 @@ sub test_fill_memory($vm, $node, $migrate) {
         return;
     }
     $base->prepare_base(user_admin) if !$base->is_base;
-    $base->set_base_vm(vm => $node, user => user_admin);
+    Ravada::Request->set_base_vm(id_vm => $node->id
+        ,uid => user_admin->id
+        ,id_domain => $base->id
+    );
     wait_request();
 
     my $master_free_memory = $vm->free_memory;
@@ -932,6 +942,7 @@ for my $vm_name ( 'Void', 'KVM') {
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
+        start_node($node);
         test_fill_memory($vm, $node, 0); # balance
         test_fill_memory($vm, $node, 1); # migrate
         test_create_active($vm, $node);

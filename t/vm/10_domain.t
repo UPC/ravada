@@ -78,6 +78,10 @@ sub test_start_clones {
     is($clone2->is_active,1);
     is($clone3->is_active,1);
 
+    # testing assert for change is_base
+    eval { $domain->_data( is_base => 0) };
+    like($@,qr/Error.*clones/);
+
     $clone1->remove(user_admin);
     $clone2->remove(user_admin);
     $clone3->remove(user_admin);

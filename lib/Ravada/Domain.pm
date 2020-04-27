@@ -337,6 +337,7 @@ sub _around_start($orig, $self, @arg) {
             }
             $arg{listen_ip} = $display_ip;
         }
+        $$CONNECTOR->disconnect;
         eval { $self->$orig(%arg) };
         $error = $@;
         last if !$error;
@@ -512,7 +513,7 @@ sub _balance_vm($self) {
         eval { $self->migrate($vm_free) };
         last if !$@;
         if ($@ && $@ =~ /file not found/i) {
-            $base->_set_base_vm_db($vm_free->id,0);
+            $base->_set_base_vm_db($vm_free->id,0) unless $vm_free->is_local;
             Ravada::Request->set_base_vm(
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $base->id
@@ -943,6 +944,7 @@ sub _check_tmp_volumes($self) {
                 .Dumper(\@volumes);
         }
         my $vol_base = Ravada::Volume->new( file => $file_base->[0]
+            , is_base => 1
             , vm => $vm_local
         );
         $vol_base->clone(file => $vol->file);
@@ -1152,6 +1154,7 @@ sub _data($self, $field, $value=undef, $table='domains') {
         confess "ERROR: Invalid field '$field'"
             if $field !~ /^[a-z]+[a-z0-9_]*$/;
 
+        $self->_assert_update($table, $field => $value);
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE $table set $field=? WHERE $field_id=?"
         );
@@ -1188,6 +1191,13 @@ sub _data($self, $field, $value=undef, $table='domains') {
 sub _data_extra($self, $field, $value=undef) {
     $self->_insert_db_extra()   if !$self->is_known_extra();
     return $self->_data($field, $value, "domains_".lc($self->type));
+}
+
+sub _assert_update($self, $table, $field, $value) {
+    return if $table =~ /extra$/;
+    if ($field eq 'is_base' && !$value && $self->clones ) {
+        confess "Error: You can set $field=$value if there are clones";
+    }
 }
 
 =head2 open
@@ -3955,7 +3965,7 @@ sub _pre_migrate($self, $node, $request = undef) {
         return;
     }
 
-    $self->_set_base_vm_db($node->id,0);
+    $self->_set_base_vm_db($node->id,0) unless $node->is_local;
     $node->_add_instance_db($self->id);
 }
 

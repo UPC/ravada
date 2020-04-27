@@ -176,7 +176,6 @@ sub vm_names {
 }
 
 sub import_domain($vm, $name, $import_base=0) {
-    diag("importing domain $name");
     my $t0 = time;
     my $domain = $RVD_BACK->import_domain(
         vm => $vm
@@ -185,7 +184,6 @@ sub import_domain($vm, $name, $import_base=0) {
         ,spinoff_disks => 0
         ,import_base => $import_base
     );
-    diag("imported $name ".(time - $t0));
     return $domain;
 }
 
