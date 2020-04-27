@@ -7,6 +7,7 @@
 <li>Daniel Sanchez</li>
 <li>Dayyan O'Brien</li>
 <li>Dito Baskoro</li>
+<li>ergün elvan bilsel</li>
 <li>Fernando Verdugo</li>
 <li>Fernando Verdugo Arias</li>
 <li>Francesc Guasch</li>
@@ -37,5 +38,5 @@
 <%=l 'Thanks to:' %>
 <ul>
     <li>Jorge Mata</li>
-    <li>Francesc Oller<li>
+    <li>Francesc Oller</li>
 </ul>

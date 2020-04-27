@@ -3,22 +3,14 @@
 
 **Implemented enhancements:**
 
-- Define volume types [\#529]
-- User experience acces directly to virtual desktop [\#1145]
-- Restrict access using client headers [\#1213]
-- Rebase virtual machines [\#1224]
-- Change number of virtual CPUs [\#1238]
-- Added Kali 2020 to the default ISO list [\#1236]
-- Add turkish translation [\#1239]
-- Arabic translation [\#1244]
+- Improve set date #1279
+- Slow response on admin machines page #1276
+- Launch virtual machine in same node if possible #1274
+- Slow start when nodes down #1265
+- Cope with base file missing on node #1264
 
 **Bugfixes**
 
-- Anonymous users don't get deleted [\#1023]
-- Graphic parameters are removed on remote node base [\#1135]
-- Renew mac with 2 devices [\#1232]
-
-**Refactor**
-
-- Turn frontend pulling to websockets [\#1187]
-- Save screenshot database [\#1207]
+- LDAP access settings broken #1277
+- Wrong display ip on nodes #1262
+- Do not use forced display ip on nodes #1261

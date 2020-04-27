@@ -138,7 +138,6 @@ sub test_shutdown_clones {
     $domain->remove(user_admin);
 }
 
-
 sub test_vm_connect {
     my $vm_name = shift;
     my $host = (shift or 'localhost');
