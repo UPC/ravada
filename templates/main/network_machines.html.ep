@@ -1,0 +1,36 @@
+<div ng-show="machines && ! machines.length">
+    <%= l 'No machines found' %>
+</div>
+
+<div class="row">
+    <div class="col-md-2">
+        Allowed
+    </div>
+
+    <div class="col-md-2">
+        Anonymous
+    </div>
+</div>
+
+<div ng-repeat="machine in machines | orderBy: name"
+    class="row"
+>
+
+    <div class="col-md-2">
+        <input type="checkbox" ng-model="machine.allowed"
+        ng-true-value="1" ng-false-value="0"
+        ng-change="set_network_domain(machine.id, machine.allowed)"
+        >
+    </div>
+
+    <div class="col-md-2">
+        <input type="checkbox" ng-model="machine.anonymous"
+        ng-true-value="1" ng-false-value="0"
+        ng-change="set_network_anonymous(machine.id,machine.anonymous)"
+        >
+    </div>
+
+    <div class="col-md-4">
+        {{machine.name}} {{machine}}
+    </div>
+</div>
