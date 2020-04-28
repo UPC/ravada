@@ -29,6 +29,7 @@ use Ravada::VM::Void;
 
 our %VALID_VM;
 our %ERROR_VM;
+our $TIMEOUT_STALE_PROCESS;
 
 eval {
     require Ravada::VM::KVM and do {
@@ -876,7 +877,10 @@ sub _add_indexes($self) {
 
 sub _add_indexes_generic($self) {
     my %index = (
-        requests => [
+        domains => [
+            "index(date_changed)"
+        ]
+        ,requests => [
             "index(status,at_time)"
             ,"index(id,date_changed,status,at_time)"
             ,"index(date_changed)"
@@ -884,12 +888,14 @@ sub _add_indexes_generic($self) {
         ]
         ,grants_user => [
             "index(id_user,id_grant)"
+            ,"index(id_user)"
         ]
         ,iptables => [
             "index(id_domain,time_deleted,time_req)"
         ]
         ,messages => [
              "index(id_request,date_send)"
+             ,"index(date_changed)"
         ]
     );
     for my $table ( keys %index ) {
@@ -1176,8 +1182,19 @@ sub _upgrade_table {
     }
     warn "INFO: adding $field $definition to $table\n"  if $0 !~ /\.t$/;
     $dbh->do("alter table $table add $field $definition");
-    $self->_sqlite_trigger($dbh,$table, $field, $sqlite_trigger) if $sqlite_trigger;
+    if ( $sqlite_trigger && !$self->_exists_trigger($dbh, "Update$field") ) {
+        $self->_sqlite_trigger($dbh,$table, $field, $sqlite_trigger);
+    }
     return 1;
+}
+
+sub _exists_trigger($self, $dbh, $name) {
+    my $sth = $dbh->prepare("select name from sqlite_master where type = 'trigger'"
+        ." AND name=?"
+    );
+    $sth->execute($name);
+    my ($found) = $sth->fetchrow;
+    return $found;
 }
 
 sub _sqlite_trigger($self, $dbh, $table,$field, $trigger) {
@@ -1292,7 +1309,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','is_active',"int DEFAULT 0");
     $self->_upgrade_table('vms','enabled',"int DEFAULT 1");
 
-    $self->_upgrade_table('vms','min_free_memory',"text DEFAULT NULL");
+    $self->_upgrade_table('vms','min_free_memory',"int DEFAULT 600000");
     $self->_upgrade_table('vms', 'max_load', 'int not null default 10');
     $self->_upgrade_table('vms', 'active_limit','int DEFAULT NULL');
     $self->_upgrade_table('vms', 'base_storage','varchar(64) DEFAULT NULL');
@@ -1375,6 +1392,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('volumes','name','char(200)');
 
     $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
+
+    $self->_upgrade_table('messages','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 }
 
 sub _upgrade_timestamps($self) {
@@ -2368,7 +2387,10 @@ sub process_priority_requests($self, $debug=0, $dont_fork=0) {
 
 sub _kill_stale_process($self) {
 
-    my @domains = $self->list_domains_data();
+    if (!$TIMEOUT_STALE_PROCESS) {
+        my @domains = $self->list_domains_data();
+        $TIMEOUT_STALE_PROCESS = scalar(@domains)*5 + 60;
+    }
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,pid,command,start_time "
         ." FROM requests "
@@ -2378,7 +2400,7 @@ sub _kill_stale_process($self) {
         ." AND pid IS NOT NULL "
         ." AND start_time IS NOT NULL "
     );
-    $sth->execute(time - 5*scalar(@domains) - 60 );
+    $sth->execute(time - $TIMEOUT_STALE_PROCESS);
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
@@ -2484,6 +2506,7 @@ sub _execute {
     die "I can't fork" if !defined $pid;
 
     if ( $pid == 0 ) {
+        srand();
         $self->_do_execute_command($sub, $request);
         exit;
     }
@@ -2922,7 +2945,8 @@ sub _cmd_start {
     my $domain;
     $domain = $self->search_domain($name)               if $name;
     $domain = $self->search_domain_by_id($id_domain)    if $id_domain;
-    die "Unknown domain '$name'" if !$domain;
+    die "Unknown domain '".($name or $id_domain)."'" if !$domain;
+    $domain->status('starting');
 
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
@@ -3008,6 +3032,39 @@ sub _cmd_start_clones {
                     uid => $uid
                    ,name => $name
                    ,remote_ip => $remote_ip);
+            }
+        }
+    }
+}
+
+sub _cmd_shutdown_clones {
+    my $self = shift;
+    my $request = shift;
+
+    my $id_domain = $request->defined_arg('id_domain');
+    my $domain = $self->search_domain_by_id($id_domain);
+    die "Unknown domain '$id_domain'\n" if !$domain;
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id, name, is_base FROM domains WHERE id_base = ?"
+    );
+    $sth->execute($id_domain);
+    while ( my ($id, $name, $is_base) = $sth->fetchrow) {
+        if ($is_base == 0) {
+            my $domain2;
+            my $is_active;
+            eval {
+                $domain2 = $self->search_domain_by_id($id);
+                $is_active = $domain2->is_active;
+            };
+            warn $@ if $@;
+            if ($is_active) {
+                my $req = Ravada::Request->shutdown_domain(
+                    uid => $uid
+                   ,id_domain => $domain2->id);
             }
         }
     }
@@ -3647,8 +3704,6 @@ sub _cmd_cleanup($self, $request) {
 
 sub _shutdown_disconnected($self) {
     for my $dom ( $self->list_domains_data(status => 'active') ) {
-        warn $dom->{name}." ".$dom->{shutdown_disconnected}." "
-        .$dom->{client_status};
         next if !$dom->{shutdown_disconnected};
         my $domain = Ravada::Domain->open($dom->{id});
         my $is_active = $domain->is_active;
@@ -3675,6 +3730,7 @@ sub _req_method {
           clone => \&_cmd_clone
          ,start => \&_cmd_start
   ,start_clones => \&_cmd_start_clones
+,shutdown_clones => \&_cmd_shutdown_clones
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
@@ -3837,11 +3893,14 @@ sub import_domain {
     my $self = shift;
     my %args = @_;
 
-    my $vm_name = $args{vm} or die "ERROR: mandatory argument vm required";
-    my $name = $args{name} or die "ERROR: mandatory argument domain name required";
-    my $user_name = $args{user} or die "ERROR: mandatory argument user required";
+    my $vm_name = delete $args{vm} or die "ERROR: mandatory argument vm required";
+    my $name = delete $args{name} or die "ERROR: mandatory argument domain name required";
+    my $user_name = delete $args{user} or die "ERROR: mandatory argument user required";
     my $spinoff_disks = delete $args{spinoff_disks};
     $spinoff_disks = 1 if !defined $spinoff_disks;
+    my $import_base = delete $args{import_base};
+
+    confess "Error : unknown args ".Dumper(\%args) if keys %args;
 
     my $vm = $self->search_vm($vm_name) or die "ERROR: unknown VM '$vm_name'";
     my $user = Ravada::Auth::SQL->new(name => $user_name);
@@ -3851,7 +3910,7 @@ sub import_domain {
     eval { $domain = $self->search_domain($name) };
     die "ERROR: Domain '$name' already in RVD"  if $domain;
 
-    return $vm->import_domain($name, $user, $spinoff_disks);
+    return $vm->import_domain($name, $user, $spinoff_disks, $import_base);
 }
 
 sub _cmd_enforce_limits($self, $request=undef) {

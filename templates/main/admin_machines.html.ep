@@ -285,8 +285,11 @@
                     </td>
                     <td class="lgMachNode"></td>
                 </tr>
-                <tr ng-show="show_clones[machine.id]" ng-repeat="child in machine.childs | orderObjectBy:'name' | filter:{name: filter_name}">
-                      <td class="lgMachName">
+                <tr ng-show="show_clones[machine.id] && machine.childs_loading ">
+                    <td> <%=l 'Loading ...' %> </td>
+                </tr>
+                <tr ng-show="show_clones[machine.id]" ng-repeat="child in machine.childs | orderObjectBy:'name' | filter:{ name: filter_name}">
+                    <td class="lgMachName">
                       &nbsp;<i title="[cloned]" class="fa fa-fw fa-long-arrow-right"
                               style="color:white"></i>
                           <i class="far fa-clone" title="Cloned" ng-hide="child.is_pool"></i>

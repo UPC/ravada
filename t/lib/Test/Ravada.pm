@@ -31,6 +31,7 @@ require Exporter;
 
 @EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front init init_vm clean new_pool_name new_volume_name
 create_domain
+    import_domain
     test_chain_prerouting
     find_ip_rule
     search_id_iso
@@ -172,6 +173,18 @@ sub add_ubuntu_minimal_iso {
 sub vm_names {
    return (sort keys %ARG_CREATE_DOM) if wantarray;
    confess;
+}
+
+sub import_domain($vm, $name, $import_base=0) {
+    my $t0 = time;
+    my $domain = $RVD_BACK->import_domain(
+        vm => $vm
+        ,name => $name
+        ,user => user_admin->name
+        ,spinoff_disks => 0
+        ,import_base => $import_base
+    );
+    return $domain;
 }
 
 sub create_domain {

@@ -49,7 +49,7 @@ sub _save($self, $data, $file = $self->file) {
 }
 
 sub clone($self, $clone_file) {
-    warn "Warning: volume ".$self->file." is not a base" if !$self->is_base;
+    confess "Warning: volume ".$self->file." is not a base" if !$self->is_base;
     my $data = {
         backing_file => $self->file
         ,capacity => $self->capacity

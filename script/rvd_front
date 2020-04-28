@@ -570,6 +570,8 @@ get '/machine/view/(:id).(:type)' => sub {
     my $id = $c->stash('id');
     my $type = $c->stash('type');
 
+    return $c->redirect_to('/login') if !_logged_in($c);
+
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
 
@@ -2329,6 +2331,7 @@ sub start_machine {
 
     my ($domain, $type) = _search_requested_machine($c);
     return $c->render(text => "Domain not found") if !$domain;
+    $domain->_data(status => 'starting');
 
     my $req = Ravada::Request->start_domain( uid => $USER->id
                                            ,name => $domain->name

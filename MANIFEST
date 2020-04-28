@@ -56,5 +56,5 @@ lib/Ravada/NetInterface.pm
 lib/Ravada/Auth.pm
 lib/Ravada/Domain.pm
 lib/Ravada/Network.pm
-rvd_front.pl
-bin/rvd_back.pl
+script/rvd_front
+script/rvd_back

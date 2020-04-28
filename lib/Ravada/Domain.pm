@@ -311,9 +311,17 @@ sub _around_start($orig, $self, @arg) {
     for (;;) {
         eval { $self->_start_checks(@arg) };
         my $error = $@;
-        if ($error && $error =~/base file not found/ && !$self->_vm->is_local) {
-            $self->_request_set_base();
-            next;
+        if ($error) {
+            if ( $error =~/base file not found/ && !$self->_vm->is_local) {
+                $self->_request_set_base();
+                next;
+            } elsif ($error =~ /No free memory/) {
+                warn $error;
+                die $error if $self->is_local;
+                my $vm_local = $self->_vm->new( host => 'localhost' );
+                $self->migrate($vm_local);
+                next;
+            }
         }
         die $error if $error;
         if (!defined $listen_ip) {
@@ -329,6 +337,7 @@ sub _around_start($orig, $self, @arg) {
             }
             $arg{listen_ip} = $display_ip;
         }
+        $$CONNECTOR->disconnect;
         eval { $self->$orig(%arg) };
         $error = $@;
         last if !$error;
@@ -504,7 +513,7 @@ sub _balance_vm($self) {
         eval { $self->migrate($vm_free) };
         last if !$@;
         if ($@ && $@ =~ /file not found/i) {
-            $base->_set_base_vm_db($vm_free->id,0);
+            $base->_set_base_vm_db($vm_free->id,0) unless $vm_free->is_local;
             Ravada::Request->set_base_vm(
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $base->id
@@ -656,9 +665,9 @@ sub _check_volume_added($self, $file) {
     return if $file =~ /\.iso$/i;
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,id_domain FROM volumes "
-        ." WHERE file=?"
+        ." WHERE file=? or name=?"
     );
-    $sth->execute($file);
+    $sth->execute($file,$file);
     my ($id, $id_domain) = $sth->fetchrow();
     $sth->finish;
 
@@ -903,13 +912,17 @@ sub _check_has_clones {
 sub _check_free_vm_memory {
     my $self = shift;
 
-    return if !$self->_vm->min_free_memory;
     my $vm_free_mem = $self->_vm->free_memory;
 
-    return if $vm_free_mem > $self->_vm->min_free_memory;
+    my $domain_memory = $self->info(Ravada::Utils::user_daemon)->{memory};
+    my $min_free_memory = ($self->_vm->min_free_memory or $MIN_FREE_MEMORY)+$domain_memory;
+
+    return if $vm_free_mem > $min_free_memory;
+
+    $self->_data(status => 'down');
 
     my $msg = "Error: No free memory in ".$self->_vm->name.". Only "._gb($vm_free_mem)." out of "
-        ._gb($self->_vm->min_free_memory)." GB required.\n";
+        ._gb($min_free_memory)." GB required.\n";
 
     die $msg;
 }
@@ -921,6 +934,7 @@ sub _check_tmp_volumes($self) {
     for my $vol ( $self->list_volumes_info) {
         next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\./;
         next if $vm_local->file_exists($vol->file);
+        $vol->delete();
 
         my $base = Ravada::Domain->open($self->id_base);
         my @volumes = $base->list_files_base_target;
@@ -930,6 +944,7 @@ sub _check_tmp_volumes($self) {
                 .Dumper(\@volumes);
         }
         my $vol_base = Ravada::Volume->new( file => $file_base->[0]
+            , is_base => 1
             , vm => $vm_local
         );
         $vol_base->clone(file => $vol->file);
@@ -1139,6 +1154,7 @@ sub _data($self, $field, $value=undef, $table='domains') {
         confess "ERROR: Invalid field '$field'"
             if $field !~ /^[a-z]+[a-z0-9_]*$/;
 
+        $self->_assert_update($table, $field => $value);
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE $table set $field=? WHERE $field_id=?"
         );
@@ -1175,6 +1191,13 @@ sub _data($self, $field, $value=undef, $table='domains') {
 sub _data_extra($self, $field, $value=undef) {
     $self->_insert_db_extra()   if !$self->is_known_extra();
     return $self->_data($field, $value, "domains_".lc($self->type));
+}
+
+sub _assert_update($self, $table, $field, $value) {
+    return if $table =~ /extra$/;
+    if ($field eq 'is_base' && !$value && $self->clones ) {
+        confess "Error: You can set $field=$value if there are clones";
+    }
 }
 
 =head2 open
@@ -1699,7 +1722,7 @@ sub restore($self,$user){
         my $vol_base = Ravada::Volume->new(
             file => $file_base
             ,is_base => 1
-            ,vm => $self->_vm
+            ,domain => $self
         );
         next if $vol_base->file =~ /\.DATA\.\w+$/;
         my $file_clone = $file{$target} or die Dumper(\%file);
@@ -1767,12 +1790,20 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
 
     my @instances = $self->list_instances();
     return if !scalar(@instances);
+
+    my $sth_delete = $$CONNECTOR->dbh->prepare("DELETE FROM domain_instances "
+        ." WHERE id=? ");
     for my $instance ( @instances ) {
         next if $instance->{id_vm} == $self->_vm->id;
-        my $vm = Ravada::VM->open($instance->{id_vm});
+        my $vm;
+        eval { $vm = Ravada::VM->open($instance->{id_vm}) };
+        die $@ if $@ && $@ !~ /I can't find VM/i;
         my $domain;
-        eval { $domain = $vm->search_domain($domain_name) };
+        $@ = '';
+        eval { $domain = $vm->search_domain($domain_name) } if $vm;
+        warn $@ if $@;
         $domain->remove($user, $cascade) if $domain;
+        $sth_delete->execute($instance->{id});
     }
 }
 
@@ -3460,6 +3491,7 @@ Check if the domain has swap volumes defined, and clean them
 sub clean_swap_volumes {
     my $self = shift;
     for my $vol ( $self->list_volumes_info) {
+        confess if !$vol->domain;
         if ($vol->file && $vol->file =~ /\.SWAP\.\w+$/) {
             next if !$self->_vm->file_exists($vol->file);
             my $backing_file;
@@ -3475,6 +3507,8 @@ sub clean_swap_volumes {
 
 sub _pre_rename {
     my $self = shift;
+
+    confess "Error: odd number of arguments" if scalar(@_) % 2;
 
     my %args = @_;
     my $name = $args{name};
@@ -3931,7 +3965,7 @@ sub _pre_migrate($self, $node, $request = undef) {
         return;
     }
 
-    $self->_set_base_vm_db($node->id,0);
+    $self->_set_base_vm_db($node->id,0) unless $node->is_local;
     $node->_add_instance_db($self->id);
 }
 

@@ -45,12 +45,15 @@ sub test_node_down($node, $action, $action_name) {
     $action->($clone);
 
     shutdown_node($node);
+    $node->_clean_cache();
+
+    $clone = Ravada::Domain->open($clone->id);
 
     eval { $clone->start(user_admin) };
-    is($@,'');
+    is(''.$@,'');
     is($clone->is_active, 1, "Expecting clone ".$clone->name." active");
     is($clone->is_local, 1,"Expecting clone ".$clone->name." local");
-    is($domain->base_in_vm($node->id),0);
+    is($domain->base_in_vm($node->id),1);
 
     $node->_clean_cache();
     start_node($node);
