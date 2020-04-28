@@ -158,6 +158,8 @@ sub _get_node_info($rvd, $args) {
 
     my $node = Ravada::VM->open(id => $id_node, readonly => 1);
     $node->_data('hostname');
+    $node->{_data}->{is_local} = $node->is_local;
+    $node->{_data}->{has_bases} = scalar($node->list_bases);
     return $node->{_data};
 
 }

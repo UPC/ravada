@@ -1046,6 +1046,29 @@ sub list_nodes($self) {
     return @nodes;
 }
 
+=head2 list_bases
+
+Returns a list of domains that are base in this node
+
+=cut
+
+sub list_bases($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT d.id FROM domains d,bases_vm bv"
+        ." WHERE d.is_base=1"
+        ."  AND d.id = bv.id_domain "
+        ."  AND bv.id_vm=?"
+        ."  AND bv.enabled=1"
+    );
+    my @bases;
+    $sth->execute($self->id);
+    while ( my ($id_domain) = $sth->fetchrow ) {
+        push @bases,($id_domain);
+    }
+    $sth->finish;
+    return \@bases;
+}
+
 =head2 ping
 
 Returns if the virtual manager connection is available
