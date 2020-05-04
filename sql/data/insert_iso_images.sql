@@ -43,3 +43,13 @@ VALUES('Ubuntu Zesty Zapus',' Ubuntu 17.04 Zesty Zapus 64 bits'
     ,'ubuntu-17.04.*desktop-amd64.iso'
     ,'http://releases.ubuntu.com/17.04/MD5SUMS'
     );
+INSERT INTO iso_images
+(name,description,arch,xml,xml_volume,url, file_re, md5_url)
+VALUES('Ubuntu Focal Fossa 64 bits',' Ubuntu 20.04 Focal Fossa 64 bits'
+    ,'amd64'
+    ,'focal-amd64.xml'
+    ,'focal64-volume.xml'
+    ,'http://releases.ubuntu.com/20.04/'
+    ,'ubuntu-20.04-desktop-amd64.iso'
+    ,'http://releases.ubuntu.com/20.04/MD5SUMS'
+    );

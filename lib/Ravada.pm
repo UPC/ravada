@@ -197,6 +197,27 @@ sub _update_isos {
                     ,url => 'http://mirrors.evowise.com/archlinux/iso/2019.09..*/archlinux-2019.09..*-x86_64.iso'
                 ,md5_url => '$url/md5sums.txt'
         },
+        focal=> {
+                    name => 'Ubuntu Focal Fossa'
+            ,description => 'Ubuntu 20.04 Focal Fossa 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'focal-amd64.xml'
+             ,xml_volume => 'focal64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/20.04/'
+                ,file_re => '^ubuntu-20.04-desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+          ,min_disk_size => '9'
+        },
+        mate_focal => {
+                    name => 'Ubuntu Mate Focal 64 bits'
+            ,description => 'Ubuntu Mate 20.04 (Focal Fossa) 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'focal-amd64.xml'
+             ,xml_volume => 'focal64-volume.xml'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04/release/'
+                ,file_re => 'ubuntu-mate-20.04-desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+        },
         mate_bionic => {
                     name => 'Ubuntu Mate Bionic 64 bits'
             ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 64 bits'
@@ -305,6 +326,17 @@ sub _update_isos {
             ,sha256_url => '$url/Fedora-Workstation-28-.*-x86_64-CHECKSUM'
             ,min_disk_size => '10'
         }
+        ,kubuntu_focal_64 => {
+            name => 'Kubuntu Focal Fossa 64 bits'
+            ,description => 'Kubuntu 20.04 Focal Fossa 64 bits'
+            ,arch => 'amd64'
+            ,xml => 'bionic-amd64.xml'
+            ,xml_volume => 'bionic64-volume.xml'
+            ,md5_url => '$url/MD5SUMS'
+            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/20.04/release/'
+            ,file_re => 'kubuntu-20.04-desktop-amd64.iso'
+            ,rename_file => 'kubuntu_focal_64.iso'
+        }
         ,kubuntu_64 => {
             name => 'Kubuntu Bionic Beaver 64 bits'
             ,description => 'Kubuntu 18.04 Bionic Beaver 64 bits'
@@ -338,6 +370,15 @@ sub _update_isos {
             ,file_re => 'openSUSE-Leap-15.\d+-NET-x86_64.iso'
 
         }
+        ,xubuntu_focal_64 => {
+            name => 'Xubuntu Focal Fossa 64 bits'
+            ,description => 'Xubuntu 20.04 Focal Fossa 64 bits'
+            ,arch => 'amd64'
+            ,xml => 'focal-amd64.xml'
+            ,xml_volume => 'focal64-volume.xml'
+            ,md5_url => '$url/../MD5SUMS'
+            ,url => 'http://cdimage.ubuntu.com/xubuntu/releases/focal/release/xubuntu-20.04-desktop-amd64.iso'
+        }
         ,xubuntu_beaver_64 => {
             name => 'Xubuntu Bionic Beaver 64 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 64 bits'
@@ -369,6 +410,15 @@ sub _update_isos {
             ,md5 => 'fe495d34188a9568c8d166efc5898d22'
             ,rename_file => 'xubuntu_xenial_mini.iso'
             ,min_disk_size => '10'
+        }
+        ,lubuntu_focal_64 => {
+            name => 'Lubuntu Focal Fossa 64 bits'
+            ,description => 'Lubuntu 20.04 Focal Fossa 64 bits'
+            ,arch => 'amd64'
+            ,xml => 'focal-amd64.xml'
+            ,xml_volume => 'focal64-volume.xml'
+            ,md5_url => '$url/../MD5SUMS'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/20.04/release/lubuntu-20.04-desktop-amd64.iso'
         }
         ,lubuntu_bionic_64 => {
              name => 'Lubuntu Bionic Beaver 64 bits'
