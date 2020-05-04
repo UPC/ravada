@@ -265,6 +265,8 @@
 
                                 $scope.new_volatile_clones = $scope.showmachine.volatile_clones;
                                 $scope.new_autostart = $scope.showmachine.autostart;
+                                $scope.new_shutdown_disconnected
+                                    = $scope.showmachine.shutdown_disconnected;
                             }
                             $scope.init_domain_access();
                             $scope.init_ldap_access();
