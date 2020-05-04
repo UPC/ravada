@@ -152,6 +152,7 @@
                                 $scope.machines[i].name = data[i].name;
                                 $scope.machines[i].name_clone = data[i].name_clone;
                                 $scope.machines[i].screenshot = data[i].screenshot;
+                                $scope.machines[i].description = data[i].description;
                             }
                             if ( data[i].is_public == 1) {
                                 $scope.public_bases++;
