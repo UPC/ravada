@@ -420,6 +420,7 @@ ul.alert-dropdown {
   border-bottom-right-radius: 0px;
   border-bottom-left-radius: 0px;
   border: 5px solid #FFFFFF;
+  pointer-events: none;
 }
 
 .container:hover .overlay {
