@@ -23,17 +23,22 @@
                         role="button">{{machine.name}}</a>
                     <i ng-show="!machine.is_public"><i class="far fa-eye-slash fa-xs" title="<%=l 'not public' %>"></i></i>
                 </h3>
+                <div class="container">
                  <a ng-show="machine.screenshot" href="/machine/clone/{{machine.id}}.html"><img
-                    ng-src="data:image/png;base64,{{machine.screenshot}}" title="{{machine.description}}" alt="{{machine.name}}" class="img-thumbnail" width="260"
+                    ng-src="data:image/png;base64,{{machine.screenshot}}" alt="{{machine.name}}" class="img-thumbnail" width="260"
                     ></a>
                 <a ng-show="!machine.screenshot" href="/machine/clone/{{machine.id}}.html"><img
                     src="/img/default_screenshot.png" class="screenshot-default img-thumbnail"
-                    title="{{machine.description}}" alt="{{machine.name}}"
-                    width="260"></a>
+                    alt="{{machine.name}}" width="260"
+                    ></a>
+                <div class="overlay">
+                    <div class="text" ng-bind-html="machine.description"></div>
+                </div>
+                </div>
             </div>
             <div class="card-body" id="step2">
                 <div class="row">
-                <a type="button" class="btn btn-success" ng-hide="machine.action"
+                <a type="button" class="btn btn-success mr-2" ng-hide="machine.action"
                    href="/machine/clone/{{machine.id}}.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
                 <a type="button" class="btn btn-danger text-white"
                     ng-show="machine.id_clone && !machine.is_active && machine.can_remove && !host_restore"
