@@ -172,7 +172,8 @@ sub list_machines_user($self, $user, $access_data={}) {
             $base{name_clone} = $clone->name;
             $base{screenshot} = ( $clone->_data('screenshot')
                                 or $base{screenshot});
-            $base{description} = $clone->description;
+            $base{description} = ( $clone->_data('description')
+                                or $base{description});
             $base{is_active} = $clone->is_active;
             $base{id_clone} = $clone->id;
             $base{can_remove} = 0;
