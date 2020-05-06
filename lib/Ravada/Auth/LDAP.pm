@@ -367,17 +367,35 @@ sub add_to_group {
 
 =cut
 
+sub _search_posix_group($self, $name) {
+    my $base = 'ou=groups,'._dc_base();
+    my $field = 'cn';
+    if ($name =~ /(.*?)=(.*)/) {
+        $field = $1;
+        $name = $2;
+        if ($name =~ /(.*?),(.*)/) {
+            $name = $1;
+            $base = $2;
+        }
+    }
+    my @posix_group = search_user (
+        name => $name
+        ,base => $base
+        ,field => $field
+    );
+    warn "WARNING: found too many entries for posix_group $name"
+    .Dumper([map {$_->dn } @posix_group])
+        if (scalar @posix_group > 1);
+    return $posix_group[0];
+}
+
 sub login($self) {
     my $user_ok;
     my $allowed;
     my $posix_group_name = $$CONFIG->{ldap}->{ravada_posix_group};
 
     if ($posix_group_name) {
-        my ($posix_group) = search_user (
-              name => $posix_group_name
-            ,field => 'cn'
-            , base => 'ou=groups,'._dc_base()
-        );
+        my $posix_group = $self->_search_posix_group($posix_group_name);
         if (!$posix_group) {
             warn "Warning: posix group $posix_group_name not found";
             return;
