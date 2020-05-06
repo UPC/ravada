@@ -8,7 +8,7 @@
     $_anonymous=<%= ($_anonymous or 0) %>;
 </script>
 
-<div id="page-wrapper" ng-controller="bases" ng-init="anonymous=<%= $_anonymous or 0 %>;subscribe_list_machines_user('<%= url_for('ws_subscribe')->to_abs %>', $scope)">
+<div id="page-wrapper" ng-controller="bases" ng-init="is_admin=<%= $user->is_admin %>;anonymous=<%= $_anonymous or 0 %>;subscribe_list_machines_user('<%= url_for('ws_subscribe')->to_abs %>', $scope)">
 %= include 'main/list_bases_ng_head'
     <!--MACHINES SELECTION-->
     <div class="card-body">
@@ -31,7 +31,7 @@
                     src="/img/default_screenshot.png" class="screenshot-default img-thumbnail"
                     alt="{{machine.name}}" width="260"
                     ></a>
-                <div class="overlay">
+                <div ng-show="machine.description || (!machine.description && is_admin)" class="overlay">
                     <div ng-show="machine.description" class="text" ng-bind-html="machine.description"></div>
                     <div ng-show="!machine.description" class="text"><a style="background-color: white; pointer-events: auto;" href="/machine/manage/{{machine.id}}.html#v-pills-description">Add description</a></div>
                 </div>
