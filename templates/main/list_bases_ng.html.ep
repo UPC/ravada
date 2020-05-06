@@ -32,7 +32,8 @@
                     alt="{{machine.name}}" width="260"
                     ></a>
                 <div class="overlay">
-                    <div class="text" ng-bind-html="machine.description"></div>
+                    <div ng-show="machine.description" class="text" ng-bind-html="machine.description"></div>
+                    <div ng-show="!machine.description" class="text"><a style="background-color: white; pointer-events: auto;" href="/machine/manage/{{machine.id}}.html#v-pills-description">Add description</a></div>
                 </div>
                 </div>
             </div>
