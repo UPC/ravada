@@ -2395,7 +2395,7 @@ sub _pre_shutdown {
     $self->_pre_shutdown_domain();
 
     if ($self->is_paused) {
-        $self->resume(user => Ravada::Utils::user_daemon);
+        $self->resume(user => Ravada::Utils::user_daemon, set_time => 0);
     }
     $self->list_disks;
     $self->_remove_start_requests();
@@ -3071,6 +3071,9 @@ sub _post_start {
     }
     my $remote_ip = $arg{remote_ip};
 
+    my $set_time = delete $arg{set_time};
+    $set_time = 1 if !defined $set_time;
+
     $self->_data('status','active') if $self->is_active();
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains set start_time=? "
@@ -3111,14 +3114,14 @@ sub _post_start {
     Ravada::Request->set_time(uid => Ravada::Utils::user_daemon->id
         , id_domain => $self->id
         , retry => $RETRY_SET_TIME
-    );
+    ) if $set_time;
     Ravada::Request->enforce_limits(at => time + 60);
     Ravada::Request->manage_pools(
             uid => Ravada::Utils::user_daemon->id
     )   if $self->is_pool;
 
 
-    $self->post_resume_aux;
+    $self->post_resume_aux(set_time => $set_time);
 }
 
 sub _update_id_vm($self) {
@@ -4112,7 +4115,6 @@ sub remove_base_vm($self, %args) {
     confess "ERROR: Unknown arguments ".join(',',sort keys %args).", valid are user and vm."
         if keys %args;
 
-        warn $vm->name;
     return $self->set_base_vm(vm => $vm, user => $user, value => 0);
 }
 

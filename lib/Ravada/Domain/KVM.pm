@@ -583,9 +583,11 @@ sub _post_remove_base_domain {
 }
 
 
-sub post_resume_aux($self) {
+sub post_resume_aux($self, %args) {
+    my $set_time = delete $args{set_time};
+    $set_time = 1 if !defined $set_time;
     eval {
-        $self->set_time();
+        $self->set_time() if $set_time;
     };
     # 55: domain is not running
     # 74: not configured

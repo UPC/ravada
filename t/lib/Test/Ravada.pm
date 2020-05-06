@@ -1136,7 +1136,8 @@ sub search_iptable_remote {
 sub _lock_fh($fh) {
     flock($fh, LOCK_EX);
     seek($fh, 0, SEEK_END) or die "Cannot seek - $!\n";
-    print $fh,''.localtime(time)." $0\n";
+    print $fh,$$." ".localtime(time)." $0\n";
+    $fh->flush();
     $LOCKED_FH{$fh} = $fh;
 }
 
