@@ -31,3 +31,11 @@ Open your remote desktop client and configure the new connection. Pay attention 
 
 .. image:: images/rdp-open-port.png
 
+
+In the next table you have the recommended software to do a RDP connection with 3 Operating Systems:
+
+/***
+|___Linux___|___________Windows____________|__________MacOSX__________|
+|-----------|------------------------------|--------------------------|
+|  Remmina  |  Included (Remote Desktop)   | Microsoft Remote Desktop |
+***/
