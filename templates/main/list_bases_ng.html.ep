@@ -33,7 +33,7 @@
                     ></a>
                 <div ng-show="machine.description || (!machine.description && is_admin)" class="overlay">
                     <div ng-show="machine.description" class="text" ng-bind-html="machine.description"></div>
-                    <div ng-show="!machine.description" class="text"><a style="background-color: white; pointer-events: auto;" href="/machine/manage/{{machine.id}}.html#v-pills-description">Add description</a></div>
+                    <div ng-show="!machine.description" class="text"><a style="background-color: white; pointer-events: auto;" href="/machine/manage/{{machine.id}}.html#v-pills-description"><%=l 'Add description' %></a></div>
                 </div>
                 </div>
             </div>
