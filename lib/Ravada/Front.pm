@@ -11,6 +11,7 @@ Ravada::Front - Web Frontend library for Ravada
 
 use Carp qw(carp);
 use DateTime;
+use DateTime::Format::DateParse;
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use JSON::XS;
@@ -1199,6 +1200,43 @@ sub list_network_interfaces($self, %args) {
 
 sub _dbh {
     return $CONNECTOR->dbh;
+}
+
+sub _get_settings($self, $id_parent=0) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,name,value"
+        ." FROM settings "
+        ." WHERE id_parent= ? "
+    );
+    $sth->execute($id_parent);
+    my $ret;
+    while ( my ( $id, $name, $value) = $sth->fetchrow) {
+        $value = 0+$value if defined $value && $value =~ /^\d+$/;
+        my $setting_sons = $self->_get_settings($id);
+        if ($setting_sons) {
+            $ret->{$name} = $setting_sons;
+        } else {
+            $ret->{$name} = { id => $id, value => $value};
+        }
+    }
+    return $ret;
+}
+
+sub settings_global($self) {
+    return $self->_get_settings();
+}
+
+sub is_in_maintenance($self) {
+    my $settings = $self->settings_global();
+    return 0 if ! $settings->{frontend}->{maintenance}->{value};
+
+    my $start = DateTime::Format::DateParse->parse_datetime(
+        $settings->{frontend}->{maintenance_start}->{value});
+    my $end= DateTime::Format::DateParse->parse_datetime(
+        $settings->{frontend}->{maintenance_end}->{value});
+    my $now = DateTime->now();
+
+    return $now >= $start && $now <= $end;
 }
 
 =head2 version

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target="fixed-top" role="document">
+<div id="wrapper">
+    %= include 'bootstrap/navigation'
+<div id="page-wrapper"
+                ng-controller="settings_global"
+                ng-init="init('<%= url_for('ws_subscribe')->to_abs %>')"
+>
+    <div class="page-header">
+        <div class="card">
+            <div class="card-header">
+                <h2>Global Settings</h2>
+            </div>
+        </div>
+    </div>
+    <div>
+        <form name="formSettings">
+        <div class="row" ng-hide="true">
+            <div class="col-md-2">
+            <label for="falback">Fallback</label>
+            </div>
+            <div class="col-md-2">
+            <input name="fallback" ng-model="settings.frontend.fallback.value" type="checkbox"
+                ng-true-value="1" ng-false-value="0"
+            >
+            </div>
+        </div>
+        <div class="row" ng-hide="true">
+            <div class="col-md-2">
+            <label for="session timeout">Session timeout</label>
+            </div>
+            <div class="col-md-2">
+            <input name="fallback" ng-model="settings.frontend.session_timeout.value"
+                type="text">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+            <label for="maintenance">Maintenance</label>
+            </div>
+            <div class="col-md-2">
+            <input name="maintenance" ng-model="settings.frontend.maintenance.value"
+                ng-true-value="1" ng-false-value="0"
+                type="checkbox">
+            </div>
+        </div>
+        <div class="row" ng-show="settings.frontend.maintenance.value == 1">
+            <div class="col-md-2">
+            <label for="maintenance_start">Maintenance Start</label>
+            </div>
+            <div class="col-md-4">
+            <input name="maintenance_start" ng-model="settings.frontend.maintenance_start.value"
+                type="datetime-local">
+            </div>
+        </div>
+
+        <div class="row" ng-show="settings.frontend.maintenance.value == 1">
+            <div class="col-md-2">
+            <label for="maintenance_end">Maintenance End</label>
+            </div>
+            <div class="col-md-4">
+            <input name="maintenance_end" ng-model="settings.frontend.maintenance_end.value"
+                type="datetime-local">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-2">
+                <button ng-click="update_settings()"
+                    ng-disabled="!formSettings.$valid || formSettings.$pristine">
+                    save
+                </button>
+                <button ng-click="load_settings()"
+                    ng-disabled="formSettings.$pristine">cancel</button>
+            </div>
+        </div>
+
+
+        </form>
+    </div>
+</div>
+</div>
+
+    %= include 'bootstrap/scripts'
+    %= include 'bootstrap/messages'
+
+</body>
+</html>

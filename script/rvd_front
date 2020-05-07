@@ -99,7 +99,6 @@ setlocale(LC_CTYPE, $old_locale);
 #####
 #####
 plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
-plugin 'RenderFile';
 
 my %config;
 %config = (config => $CONFIG_FRONT->{config}) if $CONFIG_FRONT->{config};
@@ -147,7 +146,10 @@ hook before_routes => sub {
             ,host => $host
             );
 
-    return if _logged_in($c);
+    $USER = _logged_in($c);
+    return maintenance($c, $RAVADA->settings_global->{frontend}->{maintenance_end}->{value})
+        if (!$USER || !$USER->is_operator) && $RAVADA->is_in_maintenance();
+
     return if $url =~ m{^/(anonymous|login|logout|requirements|robots.txt)}
            || $url =~ m{^/(css|font|img|js)}
 	   || $url =~ m{^/fallback/.*\.(css|js|map)$};
@@ -242,6 +244,25 @@ get '/anonymous/(#base_id).html' => sub {
 
     $USER = _anonymous_user($c);
     return quick_start_domain($c,$base->id, $USER->name);
+};
+
+get '/settings_global.json' => sub($c) {
+    return $c->render(json => $RAVADA->settings_global );
+};
+
+post '/settings_global' => sub($c) {
+    my $arg = decode_json($c->req->body);
+
+    my $orig_settings;
+    my $sth = $RAVADA->_dbh->prepare("SELECT id,value FROM settings");
+    $sth->execute();
+    while (my ($id, $value) = $sth->fetchrow) {
+        $orig_settings->{$id} = $value;
+    }
+
+    _update_settings($arg, $orig_settings);
+
+    return $c->render(json => { ok => 1 });
 };
 
 any '/admin/#type' => sub {
@@ -2460,6 +2481,34 @@ sub _new_anonymous_user {
     Ravada::Auth::SQL::add_user(name => $name, is_temporary => 1);
 
     return $name;
+}
+
+sub _update_settings($arg, $orig_settings) {
+    for my $field (keys %$arg) {
+        if ( !exists $arg->{$field}->{id} ) {
+            _update_settings($arg->{$field}, $orig_settings);
+            next;
+        }
+        confess "Error: invalid field $field" if $field !~ /^\w+$/;
+        my ( $value, $id )
+                   = ($arg->{$field}->{value}
+                    , $arg->{$field}->{id}
+        );
+        next if $orig_settings->{$id} eq $value;
+        my $sth = $RAVADA->_dbh->prepare(
+            "UPDATE settings set value=?"
+            ." WHERE id=? "
+        );
+        $sth->execute($value, $id);
+
+        $USER->send_message("Setting $field to $value");
+    }
+};
+
+sub maintenance($c, $maintenance_end) {
+    my $localtime_end = DateTime::Format::DateParse->parse_datetime($maintenance_end
+    );
+    return $c->render(text => "Maintenance until ".$localtime_end->strftime('%Y-%m-%d %H:%M [%Z]'));
 }
 
 my $routes = app->routes->children;
