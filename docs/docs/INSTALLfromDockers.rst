@@ -20,7 +20,7 @@ As of now[at the time of writing this doc], we recommend
   docker --version
    Docker version 10.7.0, build a872fc2f86
   docker-compose --version
-   docker-compose version 0.7.0, build d4d1b42b
+   docker-compose version 0.8.0, build d4d1b42b
 
 Hardware
 --------
