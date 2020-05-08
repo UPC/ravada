@@ -147,12 +147,14 @@ hook before_routes => sub {
             );
 
     $USER = _logged_in($c);
+
+    return if $url =~ m{^/(css|font|img|js)}
+	   || $url =~ m{^/fallback/.*\.(css|js|map)$};
+
+    return if $url =~ m{^/(anonymous|login|logout|requirements|robots.txt)};
+
     return maintenance($c, $RAVADA->settings_global->{frontend}->{maintenance_end}->{value})
         if (!$USER || !$USER->is_operator) && $RAVADA->is_in_maintenance();
-
-    return if $url =~ m{^/(anonymous|login|logout|requirements|robots.txt)}
-           || $url =~ m{^/(css|font|img|js)}
-	   || $url =~ m{^/fallback/.*\.(css|js|map)$};
 
     # anonymous URLs
     if (($url =~ m{^/machine/(clone|display|info|view)/}
@@ -2508,7 +2510,11 @@ sub _update_settings($arg, $orig_settings) {
 sub maintenance($c, $maintenance_end) {
     my $localtime_end = DateTime::Format::DateParse->parse_datetime($maintenance_end
     );
-    return $c->render(text => "Maintenance until ".$localtime_end->strftime('%Y-%m-%d %H:%M [%Z]'));
+    #    return $c->render(text => "Maintenance until ".$localtime_end->strftime('%Y-%m-%d %H:%M [%Z]'));
+    return $c->render(
+        maintenance_end => $maintenance_end
+        ,template => '/main/maintenance'
+    );
 }
 
 my $routes = app->routes->children;

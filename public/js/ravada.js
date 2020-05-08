@@ -27,6 +27,7 @@
             .controller("users", usersCrtl)
             .controller("bases", mainpageCrtl)
             .controller("singleMachinePage", singleMachinePageC)
+            .controller("maintenance",maintenanceCtrl)
             .controller("notifCrtl", notifCrtl)
             .controller("run_domain",run_domain_ctrl)
             .controller("run_domain_req",run_domain_req_ctrl)
@@ -973,6 +974,12 @@
 
 
   };
+
+    function maintenanceCtrl($scope, $interval, $http, request){
+        $scope.init = function(end) {
+            $scope.maintenance_end = new Date(end);
+        };
+    };
 
 /*
   function requestsCrtlSingle($scope, $interval, $http, request){
