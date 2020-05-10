@@ -4,12 +4,10 @@ services:
     container_name: ravada-mysql
     volumes:
       - "/opt/ravada/mysql:/var/lib/mysql"
-      - "/opt/ravada/log:/var/log/mysql"
       - "/etc/localtime:/etc/localtime:ro"
+      - "/opt/ravada/log:/var/log/mysql"
     networks:
       - ravada_network
-    environment:
-      - TZ=Europe/Madrid #change to your timezone
     image: mysql:5.7
     env_file: .env
     command: --default-authentication-plugin=mysql_native_password
@@ -19,7 +17,6 @@ services:
     container_name: ravada-front
     volumes:
       - "/etc/localtime:/etc/localtime:ro"
-      - "/home/src/ravada:/ravada" #change accordingly and please use absolute path
       - "/opt/ravada/screenshots:/var/www/img/screenshots"
     ports:
       - "3000:3000"
@@ -27,12 +24,11 @@ services:
       - "3000"
     networks:
       - ravada_network
-    environment:
-      - TZ=Europe/Madrid #change to your timezone
+    env_file: .env
     #By default download from dockerhub
-    #image: ravada/front
+    image: ravada/front
     #If you want to local build
-    build: dockers/front/.
+    #build: dockers/front/.
     restart: unless-stopped
 
     depends_on:
@@ -47,18 +43,18 @@ services:
       - "/opt/ravada/screenshots:/var/www/img/screenshots"
       - "/opt/ravada/etc:/etc/libvirt/qemu"
       - "/etc/localtime:/etc/localtime:ro"
-      - "/home/src/ravada:/ravada" #change accordingly and please use absolute path
     ports:
       - "5900-5999:5900-5999"
       - "55900-55999:55900-55999"
     networks:
       - ravada_network
+    env_file: .env
     environment:
-      - TZ=Europe/Madrid #change to your timezone
+      - TZ=Europe/Athens
     #By default download from dockerhub
-    #image: ravada/back
+    image: ravada/back
     #If you want to local build
-    build: dockers/back/.
+    #build: dockers/back/.
     privileged: true
     restart: unless-stopped
 
