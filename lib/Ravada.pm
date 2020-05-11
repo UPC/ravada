@@ -4076,7 +4076,7 @@ sub _enforce_limits_active($self, $request) {
 #        my @list = map { $_->name => $_->start_time } @domains_user;
         my $active = scalar(@domains_user);
         DOMAIN: for my $domain (@domains_user) {
-            last if $active-- <= $start_limit;
+            last if $active <= $start_limit;
             for my $request ($domain->list_requests) {
                 next DOMAIN if $request->command =~ /shutdown/;
             }
@@ -4089,6 +4089,7 @@ sub _enforce_limits_active($self, $request) {
                 return;
             }
             $user->send_message("Too many machines started. $active out of $start_limit. Stopping ".$domain->name);
+            $active--;
             if ($domain->can_hybernate && !$domain->is_volatile) {
                 $domain->hybernate($USER_DAEMON);
             } else {
