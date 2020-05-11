@@ -61,11 +61,11 @@
     </div>
 </div>
 
+</form>
+</div>
+
 <div class="row">
     <div class="col-md-8 alert alert-info" ng-show="saved && formNetwork.$pristine">
         Network {{network.name}} saved.
     </div>
-</div>
-
-</form>
 </div>

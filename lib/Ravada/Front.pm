@@ -706,19 +706,37 @@ sub list_users($self,$name=undef) {
 
 
 sub list_bases_network($self, $id_network) {
-    my $sth = $CONNECTOR->dbh->prepare(
-        "select d.id, d.name, dn.allowed, dn.id_network from domains d left join domains_network dn on d.id = dn.id_domain WHERE ( dn.id_network=? OR dn.id_network IS NULL) "
-    );
-    $sth->execute($id_network);
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM networks where name = 'default'");
+    $sth->execute;
+    my $default = $sth->fetchrow_hashref();
+    $sth->finish;
 
-    my @list;
+
+    my $sth_nd = $CONNECTOR->dbh->prepare("SELECT id,allowed,anonymous FROM domains_network"
+            ." WHERE id_domain=? AND id_network=? "
+    );
+
+    $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1 " 
+        ." ORDER BY name");
+    $sth->execute();
+    my @bases;
     while (my $row = $sth->fetchrow_hashref) {
-        $row->{anonymous} = 0 if !defined $row->{anonymous};
-        $row->{allowed} = 0 if !defined $row->{allowed};
-        warn Dumper($row);
-        push @list,($row);
+        $row->{anonymous} = ( $default->{anonymous} or 0);
+
+        $sth_nd->execute($row->{id}, $id_network);
+        my ($id,$allowed, $anonymous) = $sth_nd->fetchrow;
+        $row->{anonymous} = $anonymous  if defined $anonymous;
+        if (defined $allowed) {
+            $row->{allowed} = $allowed;
+        } else {
+            $row->{allowed} = 1;
+        }
+
+        lock_hash(%$row);
+        push @bases,($row);
     }
-    return \@list;
+
+    return \@bases;
 }
 
 =head2 create_domain

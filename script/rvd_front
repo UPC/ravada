@@ -319,39 +319,44 @@ post '/network/set' => sub($c) {
     return _update_fields($c, "networks", $arg);
 };
 
-get '/network/set/domain/#id/#id_domain/#value' => sub ($c) {
+get '/network/set/#id/#field/#id_domain/#value' => sub ($c) {
     my $id_network = $c->stash('id');
+    my $field = $c->stash('field');
     my $id_domain = $c->stash('id_domain');
     my $value = $c->stash('value');
-    $value = 0 if !defined $value;
 
     my $sth = $RAVADA->_dbh->prepare(
-        "SELECT id,allowed "
+        "SELECT * "
         ." FROM domains_network WHERE id_network = ? "
         ." AND id_domain= ? "
     );
     $sth->execute($id_network, $id_domain);
-    my ($id, $allowed) = $sth->fetchrow();
-    warn " $id, $allowed" ;
-    $allowed = 0 if !$allowed;
+    my $domain_network = $sth->fetchrow_hashref();
+    my $id = $domain_network->{id};
 
-    return $c->render( json => { ok => 1 } ) if $value == $allowed;
+    return $c->render( json => { ok => 1 } )
+        if $id && exists $domain_network->{$field}
+        && $domain_network->{$field} eq $value;
 
+    my $change = '';
     if ($id) {
+        $change = "Updating";
         $sth = $RAVADA->_dbh->prepare(
-            "UPDATE domains_network set allowed=? "
+            "UPDATE domains_network set $field=? "
             ." WHERE id=?"
         );
         $sth->execute($value, $id);
     } else {
-        warn " insert ";
+        $change = "Inserting";
         $sth = $RAVADA->_dbh->prepare(
             "INSERT INTO domains_network "
-            ."( id_network, id_domain, allowed) "
+            ."( id_network, id_domain, $field) "
             ." VALUES(?,?,?) "
         );
         $sth->execute($id_network, $id_domain, $value);
     }
+    $USER->send_message("$change $field = $value for network $id_network "
+        .", machine $id_domain");
     return $c->render( json => { ok => 1 } );
 
 };
@@ -2567,8 +2572,11 @@ sub _insert_fields($c, $table, $arg) {
     my $values = join("," , map { '?' } keys %$arg);
 
     my $sth = $RAVADA->_dbh->prepare("$sql ($fields) VALUES ($values)" );
-    $sth->execute(map {$arg->{$_} } sort keys %$arg);
-    return $c->render(json => { 'ok' => 1 } );
+    eval { $sth->execute(map {$arg->{$_} } sort keys %$arg) };
+    my $error = $@;
+    warn $error if $error;
+    $error =~ s{ at /.*}{};
+    return $c->render(json => { 'ok' => !$error, error => ($error or '') } );
 
 }
 
@@ -2579,19 +2587,26 @@ sub _update_fields($c, $table, $arg) {
     my $sth = $RAVADA->_dbh->prepare("SELECT * FROM $table WHERE id=?");
     $sth->execute($id);
     my $old = $sth->fetchrow_hashref;
+    my $error = '';
     for my $field ( keys %$arg ) {
         next if
         !defined $old->{$field} && !defined $arg->{field}
         || !defined $old->{$field} && defined $arg->{$field}
         || $old->{$field} eq $arg->{$field};
         $sth = $RAVADA->_dbh->prepare("UPDATE $table set $field=? WHERE id=?");
-        $sth->execute($arg->{$field},$id);
+        eval { $sth->execute($arg->{$field},$id) };
+        $error = $@;
+        last if $error;
 
         $USER->send_message("Setting $field to ".$arg->{$field}
             ." in $table");
     }
-
-    return $c->render(json => $arg );
+    if ($error) {
+        warn $error;
+        chomp $error;
+        $error =~ s{ at .*}{};
+    }
+    return $c->render(json => { ok => !$error , error => ($error  or '') });
 
 };
 

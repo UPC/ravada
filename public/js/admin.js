@@ -19,10 +19,8 @@ ravadaApp.directive("solShowMachine", swMach)
             link: function(scope, elm, attrs, ctrl) {
                 ctrl.$parsers.unshift(function(inputText) {
                     var ipformat = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]|[0-1][0-9]|2[0-4])$/;
-                    console.log(inputText);
                     if(ipformat.test(inputText))
                     {
-                        console.log(" ok" );
                         ctrl.$setValidity('ipformat', true);
                         return inputText;
                     }
@@ -567,7 +565,7 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.init = function(id_network) {
             if (typeof id_network == 'undefined') {
                 $scope.network = {
-                    'name': 'new_nework'
+                    'name': ''
                 };
             } else {
                 $scope.load_network(id_network);
@@ -590,16 +588,21 @@ ravadaApp.directive("solShowMachine", swMach)
                 var data = {};
                 data[field] = $scope.network[field];
             }
+            $scope.saved = false;
+            $scope.error = '';
             $http.post('/network/set/'
                 , JSON.stringify(data))
             //                    , JSON.stringify({ value: $scope.network[field]}))
                 .then(function(response) {
-                    if (!data.id) {
-                        $scope.new_saved = true;
+                    if (response.data.ok == 1){
+                        $scope.saved = true;
+                        if (!$scope.network.id) {
+                            $scope.new_saved = true;
+                        }
                     }
+                    $scope.error = response.data.error;
                 });
             $scope.formNetwork.$setPristine();
-            $scope.saved = true;
         };
 
         $scope.load_network = function(id_network) {
@@ -613,15 +616,23 @@ ravadaApp.directive("solShowMachine", swMach)
                     $scope.machines = response.data;
                 });
         };
-        $scope.set_network_domain = function(id_domain, allowed) {
-            $http.get("/network/set/domain/"+$scope.network.id+ "/" +id_domain+"/"
+        $scope.set_network_domain= function(id_domain, field, allowed) {
+            $http.get("/network/set/"+$scope.network.id+ "/" + field+ "/" +id_domain+"/"
                     +allowed)
                 .then(function(response) {
                 });
         };
-
+        $scope.set_domain_public = function( id_domain, is_public) {
+            $http.get('/machine/set/'+id_domain+'/is_public/'+is_public)
+                .then(function(response) {
+            });
+        };
 
         $scope.remove_network = function(id_network) {
+            if ($scope.network.name == 'default') {
+                $scope.error = $scope.network.name + " network can't be removed";
+                return;
+            }
             $http.get('/network/remove/'+id_network).then(function(response) {
                 $scope.message = "Network "+$scope.network.name+" removed";
                 $scope.network ={};

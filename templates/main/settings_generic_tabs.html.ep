@@ -38,5 +38,9 @@
 %   $active = '';
 % }
 </div>
+<div class="col-md-8 alert alert-warning" ng-show="error && formNetwork.$pristine">
+    {{error}}
+</div>
+
 </div>
 </div>

@@ -17,6 +17,11 @@
         <div class="card-body">
 %=          include '/main/network_options'
         </div>
+        <div class="col-md-8 alert alert-info" ng-show="error && formNetwork.$pristine">
+            {{error}}
+        </div>
+    </div>
+
         </div>
     </div><!-- page-header-->
 </div><!-- page-wrapper -->
