@@ -264,7 +264,23 @@ sub test_user_bind {
 
 }
 
-sub _init_config($file_config, $with_admin, $with_posix_group, $with_filter = 0) {
+sub _init_config(%arg) {
+    my $with_admin = delete $arg{with_admin};
+    my $with_filter = ( delete $arg{with_filter} or 0 );
+    my $file_config = delete $arg{file_config};
+    my $with_posix_group = delete $arg{with_posix_group};
+    my $with_dn_posix_group = delete $arg{with_dn_posix_group};
+    my $with_cn_posix_group = delete $arg{with_cn_posix_group};
+
+    confess "Error: unknown args ".Dumper(\%arg) if keys %arg;
+
+    my $ravada_posix_group = $RAVADA_POSIX_GROUP;
+    if ( $with_dn_posix_group ) {
+        my ($entry) = _search_ldap($ravada_posix_group);
+        $ravada_posix_group = $entry->dn;
+    } elsif ( $with_cn_posix_group ) {
+        $ravada_posix_group = "cn=$ravada_posix_group";
+    }
     if ( ! -e $file_config) {
         my $config = {
         ldap => {
@@ -272,7 +288,7 @@ sub _init_config($file_config, $with_admin, $with_posix_group, $with_filter = 0)
             ,base => "dc=example,dc=com"
             ,admin_group => $ADMIN_GROUP
             ,auth => 'match'
-            ,ravada_posix_group => $RAVADA_POSIX_GROUP
+            ,ravada_posix_group => $ravada_posix_group
         }
         };
         DumpFile($file_config,$config);
@@ -280,11 +296,8 @@ sub _init_config($file_config, $with_admin, $with_posix_group, $with_filter = 0)
     my $config = LoadFile($file_config);
     delete $config->{ldap}->{admin_group}   if !$with_admin;
     if ($with_posix_group) {
-        if ( !exists $config->{ldap}->{ravada_posix_group}
-                || !$config->{ldap}->{ravada_posix_group}) {
-            $config->{ldap}->{ravada_posix_group} = $RAVADA_POSIX_GROUP;
-            diag("Adding ravada_posix_group = $RAVADA_POSIX_GROUP in $file_config");
-        }
+            $config->{ldap}->{ravada_posix_group} = $ravada_posix_group;
+            diag("Adding ravada_posix_group = $ravada_posix_group in $file_config");
     } else {
         delete $config->{ldap}->{ravada_posix_group};
     }
@@ -339,6 +352,13 @@ sub _add_posix_group {
     return $group[0];
 }
 
+sub _search_ldap($cn) {
+    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    my $mesg = $ldap->search( filter => "cn=$cn" );
+    my @found = $mesg->entries;
+    return @found;
+}
+
 sub _add_to_posix_group($user_name, $with_posix_group) {
     my $group = _add_posix_group();
 
@@ -364,7 +384,7 @@ sub _add_to_posix_group($user_name, $with_posix_group) {
 
 sub test_filter {
     my $file_config = "t/etc/ravada_ldap.conf";
-    my $fly_config = _init_config($file_config, 0, 0, 1);
+    my $fly_config = _init_config(file_config => $file_config, with_filter =>  1);
     SKIP: {
         my $ravada;
         eval { $ravada = Ravada->new(config => $fly_config
@@ -528,7 +548,16 @@ SKIP: {
     my $file_config = "t/etc/ravada_ldap.conf";
     for my $with_posix_group (0,1) {
     for my $with_admin (0,1) {
-        my $fly_config = _init_config($file_config, $with_admin, $with_posix_group);
+    for my $with_dn_posix_group (0,1) {
+    next if !$with_posix_group;
+    for my $with_cn_posix_group (0,1) {
+        my $fly_config = _init_config(
+            file_config => $file_config
+            ,with_admin => $with_admin
+            ,with_posix_group => $with_posix_group
+            ,with_dn_posix_group => $with_dn_posix_group
+            ,with_cn_posix_group => $with_cn_posix_group
+        );
         my $ravada = Ravada->new(config => $fly_config
                         , connector => connector);
         $ravada->_install();
@@ -568,6 +597,8 @@ SKIP: {
             remove_users();
         };
         unlink($fly_config) if -e $fly_config;
+    }
+    }
     }
     }
 };
