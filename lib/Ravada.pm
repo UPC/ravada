@@ -1324,6 +1324,9 @@ sub _sql_create_tables($self) {
 
 sub _sql_insert_defaults($self){
     my $cont = 1;
+    require Mojolicious::Plugin::Config;
+    my $plugin = Mojolicious::Plugin::Config->new();
+    my $conf = $plugin->load("/etc/rvd_front.conf");
     my %values = (
         settings => [
             {
@@ -1334,7 +1337,7 @@ sub _sql_insert_defaults($self){
             ,{  id => $cont++
                 ,id_parent => 1
                 ,name => 'fallback'
-                ,value => '0'
+                ,value => $conf->{fallback}
             }
             ,{  id => $cont++
                 ,id_parent => 1
@@ -1355,17 +1358,17 @@ sub _sql_insert_defaults($self){
             ,{  id => $cont++
                 ,id_parent => 1
                 ,name => 'session_timeout'
-                ,value => 5*60
+                ,value => $conf->{session_timeout}
             }
             ,{  id => $cont++
                 ,id_parent => 1
                 ,name => 'session_timeout_admin'
-                ,value => 15*60
+                ,value => $conf->{session_timeout_admin}
             }
             ,{  id => $cont++
                 ,id_parent => 1
                 ,name => 'auto_view'
-                ,value => 0
+                ,value => $conf->{auto_view}
             }
         ]
     );
