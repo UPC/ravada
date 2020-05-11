@@ -262,6 +262,10 @@ post '/settings_global' => sub($c) {
         $orig_settings->{$id} = $value;
     }
 
+    if (!$arg->{frontend}->{maintenance}->{value}) {
+        delete $arg->{frontend}->{maintenance_end};
+        delete $arg->{frontend}->{maintenance_start};
+    }
     _update_settings($arg, $orig_settings);
 
     return $c->render(json => { ok => 1 });
