@@ -1673,6 +1673,11 @@ sub admin {
     if ($page eq 'nodes') {
         Ravada::Request->refresh_vms();
     }
+    if ($page eq 'settings') {
+        my $url = $c->req->url->to_abs->path;
+        my $host = $c->req->url->to_abs->host;
+        $c->stash(url_login => "/login");
+    }
     $c->render( template => 'main/admin_'.$page);
 };
 

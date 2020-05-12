@@ -45,6 +45,10 @@
                 ng-true-value="1" ng-false-value="0"
                 type="checkbox">
             </div>
+            <div>
+                <%= l 'Admin users can still log in from' %>
+                <a href="<%= $url_login %>"><%= $url_login %></a>
+            </div>
         </div>
         <div class="row" ng-show="settings.frontend.maintenance.value == 1">
             <div class="col-md-2">
