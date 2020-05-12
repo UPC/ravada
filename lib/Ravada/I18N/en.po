@@ -863,3 +863,6 @@ msgstr ""
 
 msgid "Enable last for not allowed restrictions."
 msgstr ""
+
+msgid "Add description"
+msgstr ""

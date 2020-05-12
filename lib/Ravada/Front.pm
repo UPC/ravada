@@ -130,14 +130,14 @@ Returns: listref of machines
 sub list_machines_user($self, $user, $access_data={}) {
 
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,is_public, screenshot"
+        "SELECT id,name,is_public, description, screenshot"
         ." FROM domains "
         ." WHERE is_base=1"
         ." ORDER BY name "
     );
-    my ($id, $name, $is_public, $screenshot);
+    my ($id, $name, $is_public, $description, $screenshot);
     $sth->execute;
-    $sth->bind_columns(\($id, $name, $is_public, $screenshot ));
+    $sth->bind_columns(\($id, $name, $is_public, $description, $screenshot));
 
     my @list;
     while ( $sth->fetch ) {
@@ -151,6 +151,7 @@ sub list_machines_user($self, $user, $access_data={}) {
         my %base = ( id => $id, name => $name
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
+            , description => ($description or '')
             , is_active => 0
             , id_clone => undef
             , name_clone => undef
@@ -171,6 +172,8 @@ sub list_machines_user($self, $user, $access_data={}) {
             $base{name_clone} = $clone->name;
             $base{screenshot} = ( $clone->_data('screenshot')
                                 or $base{screenshot});
+            $base{description} = ( $clone->_data('description')
+                                or $base{description});
             $base{is_active} = $clone->is_active;
             $base{id_clone} = $clone->id;
             $base{can_remove} = 0;
