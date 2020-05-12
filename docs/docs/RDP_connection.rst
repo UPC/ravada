@@ -34,9 +34,11 @@ Open your remote desktop client and configure the new connection. Pay attention 
 
 In the next list you have the recommended software to do a RDP connection with 3 Operating Systems:
 
-- *Linux*: Remmina
+- *Linux*: `Remmina <https://remmina.org/>`__.
 
-- *Windows*: Included in the System as Remote Desktop
+- *Windows*: Included in the System as Remote Desktop, `more information <https://docs.microsoft.com/en-us/windows-server/remote/remote-desktop-services/clients/windowsdesktop#install-the-client>`__.
 
 - *MacOSX*: `Microsoft Remote Desktop <https://apps.apple.com/es/app/microsoft-remote-desktop-10/id1295203466?mt=12>`__.
+
+In this `link <https://docs.microsoft.com/en-us/windows-server/remote/remote-desktop-services/clients/remote-desktop-clients>`__ are other RDP clients, depending on differents Operating Systems.
 
