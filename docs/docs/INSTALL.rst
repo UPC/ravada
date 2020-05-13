@@ -36,8 +36,8 @@ Install Ravada
 
 Ravada can be installed from package or using docker.
 
-* `Ubuntu <http://ravada.readthedocs.io/en/latest/docs/INSTALL_ubuntu.html>`_
-* `Debian <http://ravada.readthedocs.io/en/latest/docs/INSTALL_debian.html>`_
+* `Ubuntu <http://ravada.readthedocs.io/en/latest/docs/INSTALL_Ubuntu.html>`_
+* `Debian <http://ravada.readthedocs.io/en/latest/docs/INSTALL_Debian.html>`_
 * `RedHat Fedora <http://ravada.readthedocs.io/en/latest/docs/INSTALL_Fedora.html>`_
 * `Docker <http://ravada.readthedocs.io/en/latest/docs/INSTALLfromDockers.html>`_
 
