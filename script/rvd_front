@@ -1521,7 +1521,10 @@ sub login {
             );
 
             $auth_ok = Ravada::Auth::SQL->new(name => $auth_ok->name);
-            return maintenance($c) if $RAVADA->is_in_maintenance() && !$auth_ok->is_operator;
+            if ( $RAVADA->is_in_maintenance() ) {
+                return maintenance($c) unless $auth_ok->is_operator;
+                $auth_ok->send_message('Warning: Server under maintenance. <a href="/admin/settings">Settings</a>');
+            }
 
             my $machines = $RAVADA->list_machines_user($auth_ok);
 
