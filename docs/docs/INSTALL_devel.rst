@@ -47,16 +47,8 @@ Check this  `file <https://github.com/UPC/ravada/blob/master/debian>`_ at the li
     wget liblocale-maketext-lexicon-perl libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl \
     debconf adduser libdigest-sha-perl qemu-kvm libnet-ssh2-perl libfile-rsync-perl \
     libdate-calc-perl libdatetime-perl libdatetime-format-dateparse-perl libnet-openssh-perl \
-    libpbkdf2-tiny-perl
+    libpbkdf2-tiny-perl libdatetime-perl
     
-In addition you need one package that it still may not be in Ubuntu repository, download from our own server at the `UPC ETSETB
-repository <http://infoteleco.upc.edu/img/debian/>`__ and install it this way:
-
-.. prompt:: bash $
-
-    wget http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-    sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-
 
 Mysql Database
 --------------
