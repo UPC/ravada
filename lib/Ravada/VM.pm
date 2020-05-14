@@ -1240,6 +1240,11 @@ Run a command on the node
 
 sub run_command($self, @command) {
 
+    my ($exec) = $command[0];
+    if ($exec !~ m{^/}) {
+        $exec = $self->_findbin($exec);
+        $command[0] = $exec;
+    }
     return $self->_run_command_local(@command) if $self->is_local();
 
     my $chan = $self->_ssh_channel() or die "ERROR: No SSH channel to host ".$self->host;
@@ -1379,16 +1384,25 @@ Creates a new chain in the system iptables
 =cut
 
 sub create_iptables_chain($self, $chain, $jchain='INPUT') {
-    my ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",$chain);
+    my ($out, $err) = $self->run_command("iptables","-n","-L",$chain);
 
-    $self->run_command("/sbin/iptables", '-N' => $chain)
+    $self->run_command('iptables', '-N' => $chain)
         if $out !~ /^Chain $chain/;
 
-    ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",$jchain);
+    ($out, $err) = $self->run_command("iptables","-n","-L",$jchain);
     return if grep(/^$chain /, split(/\n/,$out));
 
-    $self->run_command("/sbin/iptables", '-I', $jchain, '-j' => $chain);
+    $self->run_command("iptables", '-I', $jchain, '-j' => $chain);
 
+}
+
+sub _findbin($self, $name) {
+    my $exec = "_exec_$name";
+    return $self->{$exec} if $self->{$exec};
+    my ($out, $err) = $self->run_command('/usr/bin/which', $name);
+    chomp $out;
+    $self->{$exec} = $out;
+    return $out;
 }
 
 =head2 iptables
@@ -1402,7 +1416,7 @@ Example:
 =cut
 
 sub iptables($self, @args) {
-    my @cmd = ('/sbin/iptables','-w');
+    my @cmd = ('iptables','-w');
     for ( ;; ) {
         my $key = shift @args or last;
         my $field = "-$key";
@@ -1466,7 +1480,7 @@ Returns the list of the system iptables
 sub iptables_list($self) {
 #   Extracted from Rex::Commands::Iptables
 #   (c) Jan Gehring <jan.gehring@gmail.com>
-    my ($out,$err) = $self->run_command("/sbin/iptables-save");
+    my ($out,$err) = $self->run_command("iptables-save");
     my ( %tables, $ret );
 
     my ($current_table);

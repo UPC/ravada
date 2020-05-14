@@ -58,6 +58,7 @@ sub clone($self, $file_clone) {
         die "Error: ".$self->file." looks active" if $n-- <0;
     }
     my @cmd = ($QEMU_IMG,'create'
+        ,'-F','qcow2'
         ,'-f','qcow2'
         ,"-b", $self->file
         ,$file_clone
@@ -108,7 +109,10 @@ sub backing_file($self) {
 }
 
 sub rebase($self, $new_base) {
-    my @cmd = ($QEMU_IMG,'rebase','-b',$new_base,$self->file);
+    my @cmd = ($QEMU_IMG,'rebase'
+        ,'-f','qcow2'
+        ,'-F','qcow2'
+        ,'-b',$new_base,$self->file);
     my ($out, $err) = $self->vm->run_command(@cmd);
     die $err if $err;
 

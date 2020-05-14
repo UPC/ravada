@@ -677,6 +677,7 @@ sub start {
     my $set_password = delete $arg{set_password};
 
     $self->_set_spice_ip($set_password, $listen_ip);
+    $self->_check_qcow_format($request);
     $self->status('starting');
 
     my $error;
@@ -701,6 +702,25 @@ sub start {
         $self->domain->create();
     } else {
         die $error;
+    }
+}
+
+sub _check_qcow_format($self, $request) {
+    return if $self->is_active;
+    my $qemu_img = $Ravada::Volume::QCOW2::QEMU_IMG;
+    for my $vol ( $self->list_volumes_info ) {
+        next if !$vol->file || $vol->file =~ /iso$/;
+        next if !$vol->backing_file;
+
+        my @cmd_info = ($qemu_img, 'info', $vol->file);
+        my ($out, $err) = $self->_vm->run_command(@cmd_info);
+        my ($backing_format) = $out =~ /backing file format: (\w+)/m;
+        next if $backing_format;
+        $request->status("rebasing","rebasing to release 0.8 "
+            .$vol->file."\n".$vol->backing_file);
+        warn "rebasing ".$vol->backing_file;
+        $vol->rebase($vol->backing_file);
+        $self->remove_backingstore($vol->file);
     }
 }
 
@@ -1079,7 +1099,6 @@ sub _xml_new_device($self , %arg) {
     <disk type='file' device='$device'>
       <driver name='qemu' type='$arg{type}' cache='$arg{cache}'/>
       <source file='$file'/>
-      <backingStore/>
       <target bus='$bus' dev='$arg{target}'/>
       <address type=''/>
       <boot/>
@@ -2414,6 +2433,25 @@ sub dettach($self, $user) {
     for my $vol ($self->list_disks ) {
         $self->domain->block_pull($vol,0);
     }
+}
+
+sub remove_backingstore($self, $file) {
+
+    my $doc = XML::LibXML->load_xml(string
+            => $self->xml_description(Sys::Virt::Domain::XML_INACTIVE))
+        or die "ERROR: $!\n";
+
+    my $n_order = 0;
+    for my $disk ($doc->findnodes('/domain/devices/disk')) {
+        my ($source_node) = $disk->findnodes('source');
+        next if !$source_node;
+        my $file_found = $source_node->getAttribute('file');
+        next if !$file_found || $file_found ne $file;
+
+        my ($backingstore) = $disk->findnodes('backingStore');
+        $disk->removeChild($backingstore) if $backingstore;
+    }
+    $self->_post_change_hardware($doc);
 }
 
 1;
