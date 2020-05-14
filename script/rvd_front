@@ -154,8 +154,8 @@ hook before_routes => sub {
     return if $url =~ m{^/(login|logout|requirements|robots.txt)};
 
     if ( $RAVADA->is_in_maintenance ) {
-        return login($c) if !$USER && $url =~ m{^/};
-        return maintenance($c) if !$USER->is_operator;
+        return login($c) if !$USER && $url =~ m{^/$};
+        return maintenance($c) if !$USER || !$USER->is_operator;
     }
 
     return if $url =~ m{^/anonymous};
@@ -252,6 +252,7 @@ get '/anonymous/(#base_id).html' => sub {
 };
 
 get '/settings_global.json' => sub($c) {
+    $RAVADA->is_in_maintenance();
     return $c->render(json => $RAVADA->settings_global );
 };
 

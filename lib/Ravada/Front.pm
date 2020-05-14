@@ -1236,7 +1236,15 @@ sub is_in_maintenance($self) {
         $settings->{frontend}->{maintenance_end}->{value});
     my $now = DateTime->now();
 
-    return $now >= $start && $now <= $end;
+    if ( $now >= $start && $now <= $end ) {
+        return 1;
+    }
+    my $sth = $self->_dbh->prepare("UPDATE settings set value = 0 "
+        ." WHERE id=? "
+    );
+    $sth->execute($settings->{frontend}->{maintenance}->{id});
+
+    return 0;
 }
 
 =head2 version
