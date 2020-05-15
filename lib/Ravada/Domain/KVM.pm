@@ -712,13 +712,10 @@ sub _check_qcow_format($self, $request) {
         next if !$vol->file || $vol->file =~ /iso$/;
         next if !$vol->backing_file;
 
-        my @cmd_info = ($qemu_img, 'info', $vol->file);
-        my ($out, $err) = $self->_vm->run_command(@cmd_info);
-        my ($backing_format) = $out =~ /backing file format: (\w+)/m;
-        next if $backing_format;
+        next if $vol->_qemu_info('backing file format') eq 'qcow2';
+
         $request->status("rebasing","rebasing to release 0.8 "
-            .$vol->file."\n".$vol->backing_file);
-        warn "rebasing ".$vol->backing_file;
+            .$vol->file."\n".$vol->backing_file) if $request;
         $vol->rebase($vol->backing_file);
         $self->remove_backingstore($vol->file);
     }
