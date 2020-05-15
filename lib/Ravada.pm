@@ -190,6 +190,14 @@ sub _update_isos {
     my $table = 'iso_images';
     my $field = 'name';
     my %data = (
+	    androidx86 => {
+                    name => 'Android 8.1 x86'
+            ,description => 'Android-x86 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'android-amd64.xml'
+             ,xml_volume => 'android-volume.xml'
+                    ,url => 'https://osdn.net/dl/android-x86/android-x86_64-8.1-r5.iso'
+        },
         arch_1909 => {
                     name => 'Arch Linux 19.09'
             ,description => 'Arch Linux 19.09.01 64 bits'
