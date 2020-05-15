@@ -151,12 +151,15 @@ hook before_routes => sub {
     return if $url =~ m{^/(css|font|img|js)}
 	   || $url =~ m{^/fallback/.*\.(css|js|map)$};
 
-    return if $url =~ m{^/(anonymous|login|logout|requirements|robots.txt)};
+    return if $url =~ m{^/(login|logout|requirements|robots.txt)};
 
-    return maintenance($c, $RAVADA->settings_global->{frontend}->{maintenance_end}->{value})
-        if (!$USER || !$USER->is_operator) && $RAVADA->is_in_maintenance();
+    if ( $RAVADA->is_in_maintenance ) {
+        return login($c) if !$USER && $url =~ m{^/$};
+        return maintenance($c) if !$USER || !$USER->is_operator;
+    }
 
-    # anonymous URLs
+    return if $url =~ m{^/anonymous};
+
     if (($url =~ m{^/machine/(clone|display|info|view)/}
         || $url =~ m{^/(list_bases_anonymous|request/)}i
         || $url =~ m{^/ws/subscribe}
@@ -249,6 +252,7 @@ get '/anonymous/(#base_id).html' => sub {
 };
 
 get '/settings_global.json' => sub($c) {
+    $RAVADA->is_in_maintenance();
     return $c->render(json => $RAVADA->settings_global );
 };
 
@@ -1402,6 +1406,7 @@ get '/iso/download/(#id).json' => sub {
 websocket '/ws/subscribe' => sub {
     my $c = shift;
     my $expiration = $SESSION_TIMEOUT;
+    return if !$USER;
     $expiration = $SESSION_TIMEOUT_ADMIN    if $USER->is_admin;
     $c->inactivity_timeout( $expiration );
     $c->on(message => sub {
@@ -1520,7 +1525,13 @@ sub login {
             );
 
             $auth_ok = Ravada::Auth::SQL->new(name => $auth_ok->name);
+            if ( $RAVADA->is_in_maintenance() ) {
+                return maintenance($c) unless $auth_ok->is_operator;
+                $auth_ok->send_message('Warning: Server under maintenance. <a href="/admin/settings">Settings</a>');
+            }
+
             my $machines = $RAVADA->list_machines_user($auth_ok);
+
             $url = "/machine/clone/". $machines->[0]->{id}.".html" if scalar(@$machines) == 1 && !($auth_ok->is_admin);
             my $auto_view = 1;
 
@@ -1676,6 +1687,11 @@ sub admin {
     }
     if ($page eq 'nodes') {
         Ravada::Request->refresh_vms();
+    }
+    if ($page eq 'settings') {
+        my $url = $c->req->url->to_abs->path;
+        my $host = $c->req->url->to_abs->host;
+        $c->stash(url_login => "/login");
     }
     $c->render( template => 'main/admin_'.$page);
 };
@@ -2511,7 +2527,10 @@ sub _update_settings($arg, $orig_settings) {
     }
 };
 
-sub maintenance($c, $maintenance_end) {
+sub maintenance($c) {
+
+    my $maintenance_end = $RAVADA->settings_global->{frontend}->{maintenance_end}
+                                                            ->{value};
     my $localtime_end = DateTime::Format::DateParse->parse_datetime($maintenance_end
     );
     #    return $c->render(text => "Maintenance until ".$localtime_end->strftime('%Y-%m-%d %H:%M [%Z]'));
