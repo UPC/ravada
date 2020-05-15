@@ -3073,9 +3073,6 @@ sub _post_start {
     my $set_time = delete $arg{set_time};
     $set_time = 1 if !defined $set_time;
 
-    my $set_time = delete $arg{set_time};
-    $set_time = 1 if !defined $set_time;
-
     $self->_data('status','active') if $self->is_active();
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domains set start_time=? "
