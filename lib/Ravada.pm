@@ -1327,12 +1327,18 @@ sub _sql_insert_defaults($self){
     require Mojolicious::Plugin::Config;
     my $plugin = Mojolicious::Plugin::Config->new();
     my $conf = $plugin->load("/etc/rvd_front.conf");
+    my $id_backend = 2;
     my %values = (
         settings => [
             {
                 id => $cont++
                 ,id_parent => 0
                 ,name => 'frontend'
+            }
+            ,{
+                id => $id_backend
+                ,id_parent => 0
+                ,name => 'backend'
             }
             ,{  id => $cont++
                 ,id_parent => 1
@@ -1369,6 +1375,16 @@ sub _sql_insert_defaults($self){
                 ,id_parent => 1
                 ,name => 'auto_view'
                 ,value => $conf->{auto_view}
+            }
+            ,{  id => $cont++
+                ,id_parent => 1
+                ,name => 'maintenance'
+                ,value => 0
+            }
+            ,{ id => $cont++
+                ,id_parent => $id_backend
+                ,name => 'start_limit'
+                ,value => 1
             }
         ]
     );
@@ -4040,6 +4056,7 @@ sub _enforce_limits_active($self, $request) {
         die "Command ".$request->command." run recently by $id_recent.\n";
     }
     my $timeout = ($request->defined_arg('timeout') or 10);
+    my $start_limit = $self->setting('/backend/start_limit');
 
     my %domains;
     for my $domain ($self->list_domains( active => 1 )) {
@@ -4047,7 +4064,7 @@ sub _enforce_limits_active($self, $request) {
         $domain->client_status();
     }
     for my $id_user(keys %domains) {
-        next if scalar @{$domains{$id_user}}<2;
+        next if scalar @{$domains{$id_user}} <= $start_limit;
         my $user = Ravada::Auth::SQL->search_by_id($id_user);
         next if $user->is_admin;
         next if $user->can_start_many;
@@ -4057,9 +4074,9 @@ sub _enforce_limits_active($self, $request) {
                         @{$domains{$id_user}};
 
 #        my @list = map { $_->name => $_->start_time } @domains_user;
-        my $last = pop @domains_user;
+        my $active = scalar(@domains_user);
         DOMAIN: for my $domain (@domains_user) {
-            #TODO check the domain shutdown has been already requested
+            last if $active <= $start_limit;
             for my $request ($domain->list_requests) {
                 next DOMAIN if $request->command =~ /shutdown/;
             }
@@ -4071,6 +4088,8 @@ sub _enforce_limits_active($self, $request) {
                 );
                 return;
             }
+            $user->send_message("Too many machines started. $active out of $start_limit. Stopping ".$domain->name);
+            $active--;
             if ($domain->can_hybernate && !$domain->is_volatile) {
                 $domain->hybernate($USER_DAEMON);
             } else {
@@ -4165,6 +4184,26 @@ sub _cmd_remove_expose($self, $request) {
 sub _cmd_open_exposed_ports($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain);
     $domain->open_exposed_ports();
+}
+
+sub setting($self, $name) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,value "
+        ." FROM settings "
+        ." WHERE id_parent=? AND name=?"
+    );
+    my ($id, $value);
+    my $id_parent = 0;
+    for my $item (split m{/},$name) {
+        next if !$item;
+        $sth->execute($id_parent, $item);
+        ($id, $value) = $sth->fetchrow;
+        die "Error: I can-t find setting $item inside id_parent: $id_parent"
+        if !$id;
+
+        $id_parent = $id;
+    }
+    return $value;
 }
 
 sub DESTROY($self) {
