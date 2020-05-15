@@ -31,6 +31,7 @@ WriteMakefile(
     ,'Net::DNS' => 0
     ,'Net::OpenSSH' => 0
     ,'File::Rsync' => 0
+    ,'DateTime::Format::DateParse'=> 0
   },
   BUILD_REQUIRES => {
     'Test::Perl::Critic' => 0

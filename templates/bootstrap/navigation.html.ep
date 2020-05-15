@@ -33,6 +33,9 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
 % if ($monitoring) {
                             <a class="dropdown-item" href="/admin/monitoring"><i class="fas fa-tachometer-alt" aria-hidden="true"></i>&nbsp<%=l 'monitoring' %></a>
 % }
+% if ($_user->is_admin) {
+                            <a class="dropdown-item" href="/admin/settings"><i class="fas fa-tachometer-alt" aria-hidden="true"></i>&nbsp<%=l 'settings' %></a>
+% }
                       </div>
                     </li>
 % }

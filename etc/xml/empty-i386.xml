@@ -73,7 +73,7 @@
     <input type='keyboard' bus='ps2'>
       <alias name='input1'/>
     </input>
-    <graphics type='spice' port='5900' autoport='yes' listen='127.0.0.1'>
+    <graphics type='spice' autoport='yes' listen='127.0.0.1'>
       <listen type='address' address='127.0.0.1'/>
       <image compression='auto_glz'/>
       <jpeg compression='auto'/>

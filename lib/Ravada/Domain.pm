@@ -3070,6 +3070,8 @@ sub _post_start {
         %arg = @_;
     }
     my $remote_ip = $arg{remote_ip};
+    my $set_time = delete $arg{set_time};
+    $set_time = 1 if !defined $set_time;
 
     my $set_time = delete $arg{set_time};
     $set_time = 1 if !defined $set_time;

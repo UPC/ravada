@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.8.0';
+our $VERSION = '0.9.0';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -138,11 +138,13 @@ sub BUILD {
 }
 
 sub _install($self) {
+    $self->_sql_create_tables();
     $self->_create_tables();
     $self->_upgrade_tables();
     $self->_upgrade_timestamps();
     $self->_update_data();
     $self->_init_user_daemon();
+    $self->_sql_insert_defaults();
 }
 
 sub _init_user_daemon {
@@ -897,6 +899,9 @@ sub _add_indexes_generic($self) {
              "index(id_request,date_send)"
              ,"index(date_changed)"
         ]
+        ,settings => [
+            "index(id_parent,name)"
+        ]
     );
     for my $table ( keys %index ) {
         my $known = $self->_get_indexes($table);
@@ -906,7 +911,7 @@ sub _add_indexes_generic($self) {
             $name =~ s/,/_/g;
             next if $known->{$name};
             my $sql = "ALTER TABLE $table add $type $name ($fields)";
-            warn "INFO: Adding index to vms: $name";
+            warn "INFO: Adding index to $table: $name";
             my $sth = $CONNECTOR->dbh->prepare($sql);
             $sth->execute();
         }
@@ -1284,6 +1289,140 @@ sub _create_tables {
         $self->_insert_data($table)     if $self->_create_table($table);
     }
     closedir $ls;
+}
+
+sub _sql_create_tables($self) {
+    my $driver = lc($CONNECTOR->dbh->{Driver}{Name});
+    my %tables = (
+        settings => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            , id_parent => 'INT NOT NULL'
+            , name => 'varchar(64) NOT NULL'
+            , value => 'varchar(128) DEFAULT NULL'
+        }
+    );
+    for my $table ( keys %tables ) {
+        my $sth = $CONNECTOR->dbh->table_info('%',undef,$table,'TABLE');
+        my $info = $sth->fetchrow_hashref();
+        $sth->finish;
+        next if keys %$info;
+
+        warn "INFO: creating table $table\n"    if $0 !~ /\.t$/;
+
+        my $sql_fields;
+        for my $field (sort keys %{$tables{$table}} ) {
+            my $definition = _port_definition($driver, $tables{$table}->{$field});
+            $sql_fields .= ", " if $sql_fields;
+            $sql_fields .= " $field $definition";
+        }
+
+        my $sql = "CREATE TABLE $table ( $sql_fields )";
+        $CONNECTOR->dbh->do($sql);
+
+    }
+}
+
+sub _sql_insert_defaults($self){
+    my $cont = 1;
+    require Mojolicious::Plugin::Config;
+    my $plugin = Mojolicious::Plugin::Config->new();
+    my $conf = $plugin->load("/etc/rvd_front.conf");
+    my $id_backend = 2;
+    my %values = (
+        settings => [
+            {
+                id => $cont++
+                ,id_parent => 0
+                ,name => 'frontend'
+            }
+            ,{
+                id => $id_backend
+                ,id_parent => 0
+                ,name => 'backend'
+            }
+            ,{  id => $cont++
+                ,id_parent => 1
+                ,name => 'fallback'
+                ,value => $conf->{fallback}
+            }
+            ,{  id => $cont++
+                ,id_parent => 1
+                ,name => 'maintenance'
+                ,value => 0
+            }
+            ,{  id => $cont++
+                ,id_parent => 1
+                ,name => 'maintenance_start'
+                ,value => ''
+            }
+            ,{  id => $cont++
+                ,id_parent => 1
+                ,name => 'maintenance_end'
+                ,value => ''
+            }
+
+            ,{  id => $cont++
+                ,id_parent => 1
+                ,name => 'session_timeout'
+                ,value => $conf->{session_timeout}
+            }
+            ,{  id => $cont++
+                ,id_parent => 1
+                ,name => 'session_timeout_admin'
+                ,value => $conf->{session_timeout_admin}
+            }
+            ,{  id => $cont++
+                ,id_parent => 1
+                ,name => 'auto_view'
+                ,value => $conf->{auto_view}
+            }
+            ,{  id => $cont++
+                ,id_parent => 1
+                ,name => 'maintenance'
+                ,value => 0
+            }
+            ,{ id => $cont++
+                ,id_parent => $id_backend
+                ,name => 'start_limit'
+                ,value => 1
+            }
+        ]
+    );
+
+    for my $table (sort keys %values) {
+        my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM $table "
+            ." WHERE id = ? "
+        );
+        for my $entry (@{$values{$table}}) {
+            $sth->execute($entry->{id});
+            my ($found) = $sth->fetchrow;
+            next if $found;
+            warn "INFO adding default $table ".Dumper($entry) if $0 !~ /t$/;
+            $self->_sql_insert_values($table, $entry);
+        }
+    }
+}
+
+sub _sql_insert_values($self, $table, $entry) {
+    my $sql = "INSERT INTO $table "
+    ."( "
+        .join(" , ",sort keys %$entry)
+    .") "
+    ." VALUES ( "
+        .join(" , ", map { '? ' } keys %$entry)
+    ." ) ";
+
+    my $sth = $CONNECTOR->dbh->prepare($sql);
+    $sth->execute(map { $entry->{$_} } sort keys %$entry);
+
+}
+
+sub _port_definition($driver, $definition0){
+    return $definition0 if $driver eq 'mysql';
+    if ($driver eq 'sqlite') {
+        $definition0 =~ s/(.*) AUTO_INCREMENT$/$1 AUTOINCREMENT/i;
+        return $definition0 if $definition0 =~ /^(int|integer|char|varchar) /i;
+    }
 }
 
 sub _clean_iso_mini {
@@ -3917,6 +4056,7 @@ sub _enforce_limits_active($self, $request) {
         die "Command ".$request->command." run recently by $id_recent.\n";
     }
     my $timeout = ($request->defined_arg('timeout') or 10);
+    my $start_limit = $self->setting('/backend/start_limit');
 
     my %domains;
     for my $domain ($self->list_domains( active => 1 )) {
@@ -3924,7 +4064,7 @@ sub _enforce_limits_active($self, $request) {
         $domain->client_status();
     }
     for my $id_user(keys %domains) {
-        next if scalar @{$domains{$id_user}}<2;
+        next if scalar @{$domains{$id_user}} <= $start_limit;
         my $user = Ravada::Auth::SQL->search_by_id($id_user);
         next if $user->is_admin;
         next if $user->can_start_many;
@@ -3934,9 +4074,9 @@ sub _enforce_limits_active($self, $request) {
                         @{$domains{$id_user}};
 
 #        my @list = map { $_->name => $_->start_time } @domains_user;
-        my $last = pop @domains_user;
+        my $active = scalar(@domains_user);
         DOMAIN: for my $domain (@domains_user) {
-            #TODO check the domain shutdown has been already requested
+            last if $active <= $start_limit;
             for my $request ($domain->list_requests) {
                 next DOMAIN if $request->command =~ /shutdown/;
             }
@@ -3948,6 +4088,8 @@ sub _enforce_limits_active($self, $request) {
                 );
                 return;
             }
+            $user->send_message("Too many machines started. $active out of $start_limit. Stopping ".$domain->name);
+            $active--;
             if ($domain->can_hybernate && !$domain->is_volatile) {
                 $domain->hybernate($USER_DAEMON);
             } else {
@@ -4042,6 +4184,26 @@ sub _cmd_remove_expose($self, $request) {
 sub _cmd_open_exposed_ports($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain);
     $domain->open_exposed_ports();
+}
+
+sub setting($self, $name) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,value "
+        ." FROM settings "
+        ." WHERE id_parent=? AND name=?"
+    );
+    my ($id, $value);
+    my $id_parent = 0;
+    for my $item (split m{/},$name) {
+        next if !$item;
+        $sth->execute($id_parent, $item);
+        ($id, $value) = $sth->fetchrow;
+        die "Error: I can-t find setting $item inside id_parent: $id_parent"
+        if !$id;
+
+        $id_parent = $id;
+    }
+    return $value;
 }
 
 sub DESTROY($self) {

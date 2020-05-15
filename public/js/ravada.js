@@ -27,6 +27,7 @@
             .controller("users", usersCrtl)
             .controller("bases", mainpageCrtl)
             .controller("singleMachinePage", singleMachinePageC)
+            .controller("maintenance",maintenanceCtrl)
             .controller("notifCrtl", notifCrtl)
             .controller("run_domain",run_domain_ctrl)
             .controller("run_domain_req",run_domain_req_ctrl)
@@ -142,6 +143,7 @@
                         for (var i = 0; i < data.length; i++) {
                             if ( !$scope.machines[i] || $scope.machines[i].id != data[i].id ) {
                                 $scope.machines[i] = data[i];
+                                $scope.machines[i].description = data[i].description;
                             } else {
                                 $scope.machines[i].can_hibernate = data[i].can_hibernate;
                                 $scope.machines[i].id= data[i].id;
@@ -152,6 +154,7 @@
                                 $scope.machines[i].name = data[i].name;
                                 $scope.machines[i].name_clone = data[i].name_clone;
                                 $scope.machines[i].screenshot = data[i].screenshot;
+                                $scope.machines[i].description = data[i].description;
                             }
                             if ( data[i].is_public == 1) {
                                 $scope.public_bases++;
@@ -973,6 +976,12 @@
 
 
   };
+
+    function maintenanceCtrl($scope, $interval, $http, request){
+        $scope.init = function(end) {
+            $scope.maintenance_end = new Date(end);
+        };
+    };
 
 /*
   function requestsCrtlSingle($scope, $interval, $http, request){
