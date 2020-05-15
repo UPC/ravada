@@ -61,6 +61,7 @@ sub clone($self, $file_clone) {
     my @cmd = ($QEMU_IMG,'create'
         ,'-F','qcow2'
         ,'-f','qcow2'
+        ,'-F','qcow2'
         ,"-b", $self->file
         ,$file_clone
     );

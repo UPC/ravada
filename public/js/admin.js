@@ -8,6 +8,7 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("messagesPage", messagesPageC)
         .controller("manage_nodes",manage_nodes)
         .controller("new_node", newNodeCtrl)
+        .controller("settings_global", settings_global_ctrl)
     ;
 
     ravadaApp.filter('orderObjectBy', function() {
@@ -507,6 +508,43 @@ ravadaApp.directive("solShowMachine", swMach)
                         $scope.fetch_request(id_req);
                     }, 3 * 1000 );
                 }
+            });
+        };
+    };
+
+    function settings_global_ctrl($scope, $http) {
+        $scope.init = function() {
+            $http.get('/settings_global.json').then(function(response) {
+                $scope.settings = response.data;
+                var now = new Date();
+                if ($scope.settings.frontend.maintenance.value == 0 ) {
+                    console.log("default");
+                    $scope.settings.frontend.maintenance_start.value
+                        = new Date(now.getFullYear(), now.getMonth(), now.getDate()
+                            , now.getHours(), now.getMinutes());
+
+                    $scope.settings.frontend.maintenance_end.value
+                        = new Date(now.getFullYear(), now.getMonth(), now.getDate()
+                            , now.getHours(), now.getMinutes() + 15);
+                } else {
+                    $scope.settings.frontend.maintenance_start.value
+                    =new Date($scope.settings.frontend.maintenance_start.value);
+
+                    $scope.settings.frontend.maintenance_end.value
+                    =new Date($scope.settings.frontend.maintenance_end.value);
+                }
+            });
+        };
+        $scope.load_settings = function() {
+            $scope.init();
+            $scope.formSettings.$setPristine();
+        };
+        $scope.update_settings = function() {
+            $scope.formSettings.$setPristine();
+            console.log($scope.settings);
+            $http.post('/settings_global'
+                ,JSON.stringify($scope.settings)
+            ).then(function(response) {
             });
         };
     };
