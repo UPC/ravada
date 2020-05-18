@@ -41,12 +41,13 @@ Check this  `file <https://github.com/UPC/ravada/blob/master/debian>`_ at the li
 
     sudo apt-get install perl libmojolicious-perl mysql-common libauthen-passphrase-perl \
     libdbd-mysql-perl libdbi-perl libdbix-connector-perl libipc-run3-perl libnet-ldap-perl \
-    libproc-pid-file-perl libvirt-bin libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl \
+    libproc-pid-file-perl libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl \
     libmoose-perl libjson-xs-perl qemu-utils perlmagick libmoosex-types-netaddr-ip-perl \
     libsys-statistics-linux-perl libio-interface-perl libiptables-chainmgr-perl libnet-dns-perl \
     wget liblocale-maketext-lexicon-perl libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl \
     debconf adduser libdigest-sha-perl qemu-kvm libnet-ssh2-perl libfile-rsync-perl \
-    libdate-calc-perl libdatetime-perl
+    libdate-calc-perl libdatetime-perl libdatetime-format-dateparse-perl libnet-openssh-perl \
+    libpbkdf2-tiny-perl
     
 In addition you need one package that it still may not be in Ubuntu repository, download from our own server at the `UPC ETSETB
 repository <http://infoteleco.upc.edu/img/debian/>`__ and install it this way:
