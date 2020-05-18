@@ -33,7 +33,7 @@
                                 <option <%= $c->param("tongue") eq 'pt' ? "selected" : "" %> value="pt" ><%=l 'Portuguese' %></option>
                                 <option <%= $c->param("tongue") eq 'ja' ? "selected" : "" %> value="ja" ><%=l 'Japanese' %></option>
                                 <option <%= $c->param("tongue") eq 'vi' ? "selected" : "" %> value="vi" ><%=l 'Vietnamese' %></option>
-				                        <option <%= $c->param("tongue") eq 'cat@valencia' ? "selected" : "" %> value="cat@valencia" ><%=l 'Valencian' %></option>
+				                        <option <%= $c->param("tongue") eq 'ca-valencia' ? "selected" : "" %> value="ca-valencia" ><%=l 'Valencian' %></option>
                              </select>
 %                            if ($changed_lang) {
                                  <font color="green">   <%=l 'Your language has been changed successfully' %></font>
