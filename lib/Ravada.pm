@@ -192,11 +192,11 @@ sub _update_isos {
     my %data = (
 	    androidx86 => {
                     name => 'Android 8.1 x86'
-            ,description => 'Android-x86 64 bits'
+            ,description => 'Android-x86 64 bits. Requires an user provided ISO image.'
                    ,arch => 'amd64'
                     ,xml => 'android-amd64.xml'
              ,xml_volume => 'android-volume.xml'
-                    ,url => 'https://www.fosshub.com/Android-x86-old.html?dwl=android-x86_64-8.1-r5.iso'
+	     ,min_disk_size => '4'
         },
         arch_1909 => {
                     name => 'Arch Linux 19.09'
