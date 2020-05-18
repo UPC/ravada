@@ -49,28 +49,7 @@ Check this  `file <https://github.com/UPC/ravada/blob/master/debian>`_ at the li
     libdate-calc-perl libdatetime-perl
 
 
-Mysql Database
---------------
-
-MySQL server is required to run ravada. You can use one from another server you already have or you can install it in the
-same host as Ravada.
-
-MySQL user
-~~~~~~~~~~
-
-Create a database named "ravada". in this stage the system wants you to identify a password for your sql.
-
-.. prompt:: bash $
-
-    mysqladmin -u root -p create ravada
-
-Grant all permissions to your user:
-
-.. prompt:: bash $,(env)... auto
-
-    mysql -u root -p
-    mysql> grant all on ravada.* to rvd_user@'localhost' identified by 'choose a password';
-    exit
+.. literalinclude:: INSTALL_mysql.rst
 
 Config file
 -----------
