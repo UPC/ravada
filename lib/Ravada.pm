@@ -196,7 +196,7 @@ sub _update_isos {
                    ,arch => 'amd64'
                     ,xml => 'android-amd64.xml'
              ,xml_volume => 'android-volume.xml'
-                    ,url => 'https://osdn.net/dl/android-x86/android-x86_64-8.1-r5.iso'
+                    ,url => 'https://www.fosshub.com/Android-x86-old.html?dwl=android-x86_64-8.1-r5.iso'
         },
         arch_1909 => {
                     name => 'Arch Linux 19.09'
