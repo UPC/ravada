@@ -47,39 +47,10 @@ Check this  `file <https://github.com/UPC/ravada/blob/master/debian>`_ at the li
     wget liblocale-maketext-lexicon-perl libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl \
     debconf adduser libdigest-sha-perl qemu-kvm libnet-ssh2-perl libfile-rsync-perl \
     libdate-calc-perl libdatetime-perl libdatetime-format-dateparse-perl libnet-openssh-perl \
-    libpbkdf2-tiny-perl
-    
-In addition you need one package that it still may not be in Ubuntu repository, download from our own server at the `UPC ETSETB
-repository <http://infoteleco.upc.edu/img/debian/>`__ and install it this way:
-
-.. prompt:: bash $
-
-    wget http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-    sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
+    libpbkdf2-tiny-perl libdatetime-perl
 
 
-Mysql Database
---------------
-
-MySQL server is required to run ravada. You can use one from another server you already have or you can install it in the
-same host as Ravada.
-
-MySQL user
-~~~~~~~~~~
-
-Create a database named "ravada". in this stage the system wants you to identify a password for your sql.
-
-.. prompt:: bash $
-
-    mysqladmin -u root -p create ravada
-
-Grant all permissions to your user:
-
-.. prompt:: bash $,(env)... auto
-
-    mysql -u root -p
-    mysql> grant all on ravada.* to rvd_user@'localhost' identified by 'choose a password';
-    exit
+.. literalinclude:: INSTALL_mysql.rst
 
 Config file
 -----------
