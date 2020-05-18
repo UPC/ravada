@@ -1326,7 +1326,15 @@ sub _sql_insert_defaults($self){
     my $cont = 1;
     require Mojolicious::Plugin::Config;
     my $plugin = Mojolicious::Plugin::Config->new();
-    my $conf = $plugin->load("/etc/rvd_front.conf");
+    my $conf = {
+        fallback => 0
+        ,session_timeout => 10*60
+        ,admin_session_timeout => 30*60
+        ,auto_view => 1
+    };
+    if ( -e "/etc/rvd_front.conf" ){
+        $conf = $plugin->load("/etc/rvd_front.conf");
+    }
     my $id_backend = 2;
     my %values = (
         settings => [
