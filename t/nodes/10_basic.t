@@ -898,6 +898,8 @@ sub test_fill_memory($vm, $node, $migrate) {
         like($error, qr/(^$|No free memory)/);
         last if $error;
         $nodes{$clone->_vm->name}++;
+
+        last if $migrate && $nodes{$vm->name} > 2;
     }
     ok(exists $nodes{$vm->name},"Expecting some clones to node ".$vm->name." ".$vm->id);
     ok(exists $nodes{$node->name},"Expecting some clones to node ".$node->name." ".$node->id);
@@ -909,7 +911,7 @@ clean();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
-for my $vm_name ( 'Void', 'KVM') {
+for my $vm_name ( vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
