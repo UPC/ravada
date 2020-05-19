@@ -1270,7 +1270,7 @@ sub shutdown_node($node) {
         last if !$node->ping(undef, 0);
         sleep 1;
     }
-    is($node->ping,0);
+    is($node->ping(undef,0),0);
 }
 
 sub start_node($node) {
@@ -1535,9 +1535,11 @@ sub _do_remote_node($vm_name, $remote_config) {
     if ( $node->ping(undef,0) && !$node->_connect_ssh() ) {
         my $ssh;
         for ( 1 .. 60 ) {
-            $ssh = $node->_connect_ssh();
+            eval { $ssh = $node->_connect_ssh() };
             last if $ssh;
             sleep 1;
+            warn $@ if $@;
+            next if !$ssh;
             diag("I can ping node ".$node->name." but I can't connect to ssh");
         }
         if (! $ssh ) {

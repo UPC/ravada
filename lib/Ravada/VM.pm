@@ -328,8 +328,11 @@ sub _connect_ssh($self) {
         return if !$self->ping();
         for ( 1 .. 3 ) {
             $ssh = Net::OpenSSH->new($self->host
+                    ,timeout => 2
                  ,batch_mode => 1
                 ,forward_X11 => 0
+              ,forward_agent => 0
+        ,kill_ssh_on_timeout => 1
             );
             last if !$ssh->error;
             warn "RETRYING ssh ".$self->host." ".join(" ",$ssh->error);
@@ -1234,7 +1237,7 @@ sub run_command($self, @command) {
 
     my $ssh = $self->ssh;
 
-    my ($out, $err) = $ssh->capture2(join " ",@command);
+    my ($out, $err) = $ssh->capture2({timeout => 10},join " ",@command);
     chomp $err if $err;
     $err = '' if !defined $err;
 
