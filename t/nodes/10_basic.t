@@ -899,7 +899,7 @@ sub test_fill_memory($vm, $node, $migrate) {
         last if $error;
         $nodes{$clone->_vm->name}++;
 
-        last if $migrate && exists $node{$vm->name} && $nodes{$vm->name} > 2;
+        last if $migrate && exists $nodes{$vm->name} && $nodes{$vm->name} > 2;
     }
     ok(exists $nodes{$vm->name},"Expecting some clones to node ".$vm->name." ".$vm->id);
     ok(exists $nodes{$node->name},"Expecting some clones to node ".$node->name." ".$node->id);
