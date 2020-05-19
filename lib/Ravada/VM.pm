@@ -332,7 +332,7 @@ sub _connect_ssh($self) {
                  ,batch_mode => 1
                 ,forward_X11 => 0
               ,forward_agent => 0
-        ,kill_ssh_on_timeout => 1
+        ,kill_ssh_on_timeout => 0
             );
             last if !$ssh->error;
             warn "RETRYING ssh ".$self->host." ".join(" ",$ssh->error);
@@ -340,7 +340,7 @@ sub _connect_ssh($self) {
         }
         if ( $ssh->error ) {
             $self->_cached_active(0);
-            confess $ssh->error();
+            warn "Error connecting to ".$self->host." : ".$ssh->error();
         }
     }
     $SSH{$self->host} = $ssh;
@@ -1241,7 +1241,6 @@ sub run_command($self, @command) {
     chomp $err if $err;
     $err = '' if !defined $err;
 
-    warn 222 if $ssh->error =~  /child exited with code 1 /;
     die "Error: Failed remote command on ".$self->host." @command : '$err'\n"
     ."'".$ssh->error."'"
     if $ssh->error && $ssh->error !~ /^child exited with code/;
