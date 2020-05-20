@@ -1798,6 +1798,7 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         my $vm;
         eval { $vm = Ravada::VM->open($instance->{id_vm}) };
         die $@ if $@ && $@ !~ /I can't find VM/i;
+        next if !$vm->is_active;
         my $domain;
         $@ = '';
         eval { $domain = $vm->search_domain($domain_name) } if $vm;
@@ -2488,6 +2489,7 @@ sub _around_is_active($orig, $self) {
             return 0 if $self->_vm->is_active && $self->is_removed;
         };
         if ( $@ ) {
+            return 0 if ref($@) && $@->code == 38; # broken pipe
             return 0 if $@ =~ /can't connect/;
             die $@;
         }
