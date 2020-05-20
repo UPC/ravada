@@ -2714,7 +2714,7 @@ sub _set_domain_changed($self, $request) {
     }
     return if !defined $id_domain;
 
-    my $sth = $CONNECTOR->dbh->prepare("UPDATE domains set date_changed=NULL "
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE domains set date_changed=CURRENT_TIMESTAMP"
         ." WHERE id=? ");
     $sth->execute($id_domain);
 
