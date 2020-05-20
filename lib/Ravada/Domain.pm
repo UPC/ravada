@@ -2483,11 +2483,17 @@ sub _around_is_active($orig, $self) {
         return 1 if $self->_data('status') eq 'active';
         return 0;
     }
-    if ($self->_vm && $self->_vm->is_active ) {
-        return 0 if $self->is_removed;
+    if ($self->_vm) {
+        eval {
+            return 0 if $self->_vm->is_active && $self->is_removed;
+        };
+        if ( $@ ) {
+            return 0 if $@ =~ /can't connect/;
+            die $@;
+        }
     }
     my $is_active = 0;
-    $is_active = $self->$orig() if $self->_vm->is_active;
+    $is_active = $self->$orig();
 
     return $is_active if $self->readonly
         || !$self->is_known
@@ -3943,6 +3949,8 @@ sub _rsync_volumes_back($self, $request=undef) {
 
 sub _pre_migrate($self, $node, $request = undef) {
 
+    die "Error: node not active" if !$node->is_active(1);
+
     $self->_check_equal_storage_pools($node) if $self->_vm->is_active;
 
     $self->_internal_autostart(0);
@@ -4065,7 +4073,8 @@ sub set_base_vm($self, %args) {
     } elsif ($value) {
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
-        $self->migrate($vm, $request);
+        eval { $self->migrate($vm, $request) if $vm->is_active(1) };
+        die $@ if $@ && $@ !~ /no ssh connection/;
         $self->_set_clones_autostart(0);
     } else {
         $self->_set_vm($vm,1); # force set vm on domain

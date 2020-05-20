@@ -115,7 +115,7 @@ has 'store' => (
 );
 
 has 'netssh' => (
-    isa => 'Net::OpenSSH'
+    isa => 'Any'
     ,is => 'ro'
     , builder => '_connect_ssh'
     , lazy => 1
@@ -320,12 +320,8 @@ sub _connect_ssh($self) {
     my $ssh;
     $ssh = $SSH{$self->host}    if exists $SSH{$self->host};
 
-
-    my @pwd = getpwuid($>);
-    my $home = $pwd[7];
-
     if (!$ssh || !$ssh->check_master) {
-        return if !$self->ping();
+        delete $SSH{$self->host};
         for ( 1 .. 3 ) {
             $ssh = Net::OpenSSH->new($self->host
                     ,timeout => 2
@@ -341,6 +337,7 @@ sub _connect_ssh($self) {
         if ( $ssh->error ) {
             $self->_cached_active(0);
             warn "Error connecting to ".$self->host." : ".$ssh->error();
+            return;
         }
     }
     $SSH{$self->host} = $ssh;
@@ -348,8 +345,10 @@ sub _connect_ssh($self) {
 }
 
 sub ssh($self) {
-    return $self->netssh if $self->netssh && $self->netssh->check_master;
-    warn "WARNING: ssh error '".$self->netssh->error."'";
+    my $ssh = $self->netssh;
+    return if !$ssh;
+    return $ssh if $ssh->check_master;
+    warn "WARNING: ssh error '".$ssh->error."'" if $ssh->error;
     $self->netssh->disconnect;
     $self->clear_netssh();
     return $self->netssh;
@@ -1154,18 +1153,20 @@ Arguments: optional force mode
 =cut
 
 sub is_active($self, $force=0) {
-    return $self->_do_is_active() if $self->is_local || $force;
+    return $self->_do_is_active($force) if $self->is_local || $force;
 
     return $self->_cached_active if time - $self->_cached_active_time < 60;
     return $self->_do_is_active();
 }
 
-sub _do_is_active($self) {
+sub _do_is_active($self, $force=undef) {
     my $ret = 0;
     if ( $self->is_local ) {
         $ret = 1 if $self->vm;
     } else {
-        if ( !$self->ping() ) {
+        my @ping_args = ();
+        @ping_args = (undef,0) if $force; # no cache
+        if ( !$self->ping(@ping_args) ) {
             $ret = 0;
         } else {
             if ( $self->is_alive ) {
@@ -1235,7 +1236,7 @@ sub run_command($self, @command) {
 
     return $self->_run_command_local(@command) if $self->is_local();
 
-    my $ssh = $self->ssh;
+    my $ssh = $self->ssh or confess "Error: I can't connect to ".$self->host;
 
     my ($out, $err) = $ssh->capture2({timeout => 10},join " ",@command);
     chomp $err if $err;
@@ -1298,6 +1299,7 @@ Writes a file to the node
 sub write_file( $self, $file, $contents ) {
     return $self->_write_file_local($file, $contents )  if $self->is_local;
 
+    my $ssh = $self->ssh or confess "Error: no ssh connection";
     my ($rin, $pid) = $self->ssh->pipe_in("cat > $file")
         or die "pipe_in method failed ".$self->ssh->error;
 
@@ -1345,7 +1347,7 @@ sub file_exists( $self, $file ) {
     return -e $file if $self->is_local;
 
     my $ssh = $self->ssh;
-    die "Error: no ssh connection to ".$self->name if ! $ssh;
+    confess "Error: no ssh connection to ".$self->name if ! $ssh;
 
     confess "Error: dangerous filename '$file'"
         if $file =~ /[`|"(\\\[]/;

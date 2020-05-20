@@ -645,6 +645,8 @@ sub is_active {
     return 0 if $self->is_removed;
     my $is_active = 0;
     eval { $is_active = $self->domain->is_active };
+    return 0 if $@ && $@->code == 1;    # client socket is closed
+
     die $@ if $@ && $@ !~ /code: 42,/;
     return $is_active;
 }
@@ -2123,6 +2125,9 @@ sub is_removed($self) {
         $@ = '';
         $is_removed = 1;
     }
+    return if $@ && ($@->code == 38  # cannot recv data
+                    || $@->code == 1 # client socket is closed
+    );
     die $@ if $@;
     return $is_removed;
 }

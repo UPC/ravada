@@ -1279,7 +1279,8 @@ sub start_node($node) {
     confess "Undefined node " if!$node;
 
     $node->disconnect;
-    if ( $node->_do_is_active ) {
+    $node->clear_netssh();
+    if ( $node->_do_is_active(1) ) {
         my $connect;
         eval { $connect = $node->connect };
         return if $connect;
@@ -1303,6 +1304,8 @@ sub start_node($node) {
     for ( 1 .. 60 ) {
         my $is_active;
         eval {
+            $node->disconnect;
+            $node->clear_netssh();
             $node->connect();
             $is_active = $node->is_active(1)
         };
@@ -1336,10 +1339,14 @@ sub start_node($node) {
 
     $node->is_active(1);
     $node->enabled(1);
-    for ( 1 .. 60 ) {
+    for ( reverse 1 .. 120 ) {
         my $node2 = Ravada::VM->open(id => $node->id);
-        last if $node2->is_active(1);
-        diag("Waiting for node ".$node->name." active ...")  if !($_ % 10);
+        last if $node2->is_active(1) && $node->ssh;
+        diag("Waiting for node ".$node2->name." active ... $_")  if !($_ % 10);
+        $node2->disconnect();
+        $node2->connect();
+        $node2->clear_netssh();
+        sleep 1;
     }
     eval { $node->run_command("hwclock","--hctosys") };
     is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
