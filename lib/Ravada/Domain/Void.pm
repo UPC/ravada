@@ -70,7 +70,11 @@ sub _set_spice_ip($self, $password=undef, $listen_ip=$self->_vm->listen_ip) {
 
 sub is_active {
     my $self = shift;
-    return ($self->_value('is_active') or 0);
+    my $ret = 0;
+    eval { $ret = $self->_value('is_active') };
+    return $ret if !$@;
+    return 0 if $@ =~ /Error connecting/;
+    die $@;
 }
 
 sub pause {
