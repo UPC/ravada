@@ -1236,7 +1236,7 @@ sub run_command($self, @command) {
 
     return $self->_run_command_local(@command) if $self->is_local();
 
-    my $ssh = $self->ssh or confess "Error: I can't connect to ".$self->host;
+    my $ssh = $self->ssh or die "Error: I can't connect to ".$self->host;
 
     my ($out, $err) = $ssh->capture2({timeout => 10},join " ",@command);
     chomp $err if $err;

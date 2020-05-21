@@ -1265,9 +1265,9 @@ sub shutdown_node($node) {
     sleep 2 if !$node->ping(undef, 0);
 
     my $max_wait = 180;
-    for ( 1 .. $max_wait / 2 ) {
-        diag("Waiting for node ".$node->name." to be inactive ...")  if !($_ % 10);
+    for ( reverse 1 .. $max_wait ) {
         last if !$node->ping(undef, 0);
+        diag("Waiting for node ".$node->name." to be inactive ... $_")  if !($_ % 10);
         sleep 1;
     }
     is($node->ping(undef,0),0);
