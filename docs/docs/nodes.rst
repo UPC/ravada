@@ -51,10 +51,12 @@ Requirements
 ------------
 
 To add a new node to a Ravada cluster you have to install a minimal Linux operating
-system with these packages:
+system with these packages. Some distributions have different package names.
 
 - openssh-server
-- libvirt-bin
+- libvirt-bin or libvirt-daemon
+- libvirt-daemon-system
+- libvirt-clients
 - qemu-kvm
 
 It is possible to have nodes with heterogeneous operative systems: different Ubuntus,
@@ -147,12 +149,45 @@ Check it works:
 Now you can restore the *PermitRootLogin* entry to the former state in
 the file */etc/ssh/sshd_config* at *node*.
 
+.. code-block:: bash
+
+   PermitRootLogin prohibit-password
+
 Security
 --------
 
 It is advisable have a firewall configured in the node. Access restrictions
 should be enforced carefully. Only allow ssh login from the master server
 and other operational hosts from your network.
+
+Networking and Firewall
+=======================
+
+For the master node to start the other nodes it must have some open ports.
+
+Master
+------
+
+Master must be able to send packets on udp port 9 and tcp and udp port 7
+
+.. code-block::
+
+   # wake on lan
+   -A OUTPUT -p udp -m udp --dport 7 -j ACCEPT
+   -A OUTPUT -p tcp -m tcp --dport 7 -j ACCEPT
+   -A OUTPUT -p udp -m udp --dport 9 -j ACCEPT
+
+Nodes
+------
+
+Nodes must accept packets on udp port 9 and tcp and udp port 7
+
+.. code-block::
+
+   # wake on lan
+   -A INPUT -p udp -m udp --dport 7 -j ACCEPT
+   -A INPUT -p tcp -m tcp --dport 7 -j ACCEPT
+   -A INPUT -p udp -m udp --dport 9 -j ACCEPT
 
 Operation
 =========

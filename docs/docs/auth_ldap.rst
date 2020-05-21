@@ -78,9 +78,29 @@ Advanced Options
 
 There are other options you can add to ldap:
 
+* field: searches users using this field
 * ravada_posix_group : allows only this group to access ravada
 * sslversion : force the connection to LDAP with this SSL version: choose one of sslv2, sslv3, sslv23, tlsv1
 * filter: filter attributes for the LDAP search
+
+Example: Field
+--------------
+
+Add a new parameter field to search users with. In this example we search users
+with the cn attribute.
+
+::
+
+  ldap:
+    server: 192.168.1.44
+    port: 636
+    base: ou=users,ou=groupname,dc=upc,dc=edu
+    field: cn
+    admin_user:
+        dn: cn=admin.user,dc=domain,dc=com
+        password: secretpassword
+
+
 
 Example: Posix Group
 -----------------------

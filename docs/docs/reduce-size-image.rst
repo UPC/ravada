@@ -72,6 +72,8 @@ Disk size now is 60G, below you can see that reduce image size in 30GB.
         refcount bits: 16
         corrupt: false
 
+More information about https://pve.proxmox.com/wiki/Shrink_Qcow2_Disk_Files#
+
 Now it is advisable to let Windows do a CHKDSK, do not interrupt it.
 Finally, you need to install the `Spice guest-tools <https://www.spice-space.org/download/windows/spice-guest-tools/spice-guest-tools-latest.exe>`_.
 This improves features of the VM, such as the screen settings, it adjusts automatically, etc.

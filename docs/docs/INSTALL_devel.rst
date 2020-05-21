@@ -33,7 +33,7 @@ In that case you can test on a nested KVM, that is, a KVM inside another KVM.
 Ubuntu required packages
 ------------------------
 
-Check this  `file <https://github.com/UPC/ravada/blob/master/debian/control>`_ at the line *depends* for a list of required packages. You must install it running:
+Check this  `file <https://github.com/UPC/ravada/blob/master/debian>`_ at the line *depends* for a list of required packages. You must install it running:
 
 .. note:: The libvirt-bin package was dropped since Ubuntu 18.10. The package was split into two parts: **libvirt-daemon-system** and **libvirt-clients**.
 
@@ -41,44 +41,16 @@ Check this  `file <https://github.com/UPC/ravada/blob/master/debian/control>`_ a
 
     sudo apt-get install perl libmojolicious-perl mysql-common libauthen-passphrase-perl \
     libdbd-mysql-perl libdbi-perl libdbix-connector-perl libipc-run3-perl libnet-ldap-perl \
-    libproc-pid-file-perl libvirt-bin libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl \
+    libproc-pid-file-perl libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl \
     libmoose-perl libjson-xs-perl qemu-utils perlmagick libmoosex-types-netaddr-ip-perl \
     libsys-statistics-linux-perl libio-interface-perl libiptables-chainmgr-perl libnet-dns-perl \
     wget liblocale-maketext-lexicon-perl libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl \
     debconf adduser libdigest-sha-perl qemu-kvm libnet-ssh2-perl libfile-rsync-perl \
-    libdate-calc-perl libdatetime-perl
-    
-In addition you need one package that it still may not be in Ubuntu repository, download from our own server at the `UPC ETSETB
-repository <http://infoteleco.upc.edu/img/debian/>`__ and install it this way:
-
-.. prompt:: bash $
-
-    wget http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
-    sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb
+    libdate-calc-perl libdatetime-perl libdatetime-format-dateparse-perl libnet-openssh-perl \
+    libpbkdf2-tiny-perl libdatetime-perl
 
 
-Mysql Database
---------------
-
-MySQL server is required to run ravada. You can use one from another server you already have or you can install it in the
-same host as Ravada.
-
-MySQL user
-~~~~~~~~~~
-
-Create a database named "ravada". in this stage the system wants you to identify a password for your sql.
-
-.. prompt:: bash $
-
-    mysqladmin -u root -p create ravada
-
-Grant all permissions to your user:
-
-.. prompt:: bash $,(env)... auto
-
-    mysql -u root -p
-    mysql> grant all on ravada.* to rvd_user@'localhost' identified by 'choose a password';
-    exit
+.. literalinclude:: INSTALL_mysql.rst
 
 Config file
 -----------
@@ -151,9 +123,9 @@ Run each one of these commands in a separate terminal
 
 Run the backend in a terminal:
 
-.. prompt:: bash
+.. prompt:: bash $
 
-    $ sudo PERL5LIB=./lib ./script/rvd_back --debug
+    sudo PERL5LIB=./lib ./script/rvd_back --debug
     Starting rvd_back v1.2.0
 
 The backend must be stopped and started again when you change a library file.
@@ -163,7 +135,7 @@ Run the frontend in another terminal:
 
 .. prompt:: bash $
 
-    $ PERL5LIB=./lib morbo ./script/rvd_front
+    PERL5LIB=./lib morbo ./script/rvd_front
     Server available at http://127.0.0.1:3000
 
 Now you must be able to reach ravada at the location http://your.ip:3000/

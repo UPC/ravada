@@ -40,7 +40,7 @@ Ravada VDI documentation
 
 The main documentation for the site is divided into three main sections:
 
-* :ref:`user-docs`
+* :ref:`admin-docs`
 * :ref:`feature-docs`
 * :ref:`guest-docs`
 
@@ -55,6 +55,8 @@ Do you feel like giving us a hand? Here you have all the information you need as
    :maxdepth: 2
 
    docs/INSTALL
+   docs/INSTALL_Ubuntu
+   docs/INSTALL_Debian
    docs/INSTALL_Fedora
    docs/INSTALL_ubuntu_xenial.rst
    docs/INSTALLfromDockers.rst
@@ -81,6 +83,9 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/migrate_manual
    docs/Kiosk_mode
    docs/volatile
+   docs/cluster
+   docs/How_to_make_virtual_machine_sparse
+   docs/intel_gvt
 
 .. _feature-docs:
 

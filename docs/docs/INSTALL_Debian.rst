@@ -1,4 +1,4 @@
-Install Ravada in Ubuntu
+Install Ravada in Debian
 ========================
 
 Upgrade Ravada
@@ -7,32 +7,26 @@ Upgrade Ravada
 Follow `this guide <http://ravada.readthedocs.io/en/latest/docs/update.html>`_
 if you are only upgrading Ravada from a previous version already installed.
 
-Ubuntu
+Debian
 ------
 
-.. note:: We only provide support for Ubuntu 18.04 LTS (bionic).
+This is the guide to install Ravada in Debian Buster.
+Follow this `guide <http://disbauxes.upc.es/code/installing-and-using-ravadavdi-on-debian-jessie/>`_ if you prefer Debian Jessie.
 
-We provide *deb* Ubuntu packages. Download it from the `UPC ETSETB
+We provide *deb* packages on the `UPC ETSETB
 repository <http://infoteleco.upc.edu/img/debian/>`__.
 
-Install *libmojolicious-plugin-renderfile-perl* package:
 
-.. prompt:: bash $
+Install the ravada package. Choose the one that matches your OS release:
 
-     sudo apt-get install libmojolicious-plugin-renderfile-perl
-
-Then install the ravada package. Choose the one that matches your OS release:
-
-- ravada_0.6.0_ubuntu-18.04_all.deb
-- ravada_0.6.0_ubuntu-18.10_all.deb
-- ravada_0.6.0_ubuntu-19.04_all.deb
+- ravada_0.8.0_debian-10_all.deb
 
 When you run dpkg now it may show some errors, it is ok, keep reading.
 
 .. prompt:: bash $
 
-     wget http://infoteleco.upc.edu/img/debian/ravada_0.6.0_ubuntu-18.04_all.deb
-     sudo dpkg -i ravada_0.6.0_ubuntu-18.04_all.deb
+     wget http://infoteleco.upc.edu/img/debian/ravada_0.8.0_debian-10_all.deb
+     sudo dpkg -i ravada_0.8.0_debian-10_all.deb
 
 The last command will show a warning about missing dependencies. Install
 them running:
@@ -42,37 +36,35 @@ them running:
      sudo apt-get update
      sudo apt-get -f install
 
+Debian KVM
+~~~~~~~~~~
+
+You must enable spice KVM manually:
+
+.. prompt:: bash $
+
+   sudo ln -s /usr/bin/kvm /usr/bin/kvm-spice
+
 Mysql Database
 --------------
 
-MySQL server
+MariaDB server
 ~~~~~~~~~~~~
-.. Warning::  MySql required minimum version 5.6
 
-It is required a MySQL server, it can be installed in another host or in
+It is required a MySQL or MariaDB server, it can be installed in another host or in
 the same one as the ravada package.
 
 .. prompt:: bash $
 
-     sudo apt-get install mysql-server
-
-After completion of mysql installation, run command:
-
-.. prompt:: bash $
-
-     sudo mysql_secure_installation
+     sudo apt-get install mariadb-server
 
 
-MySQL database and user
+MariaDB database and user
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 It is required a database for internal use. In this examples we call it *ravada*.
 We also need an user and a password to connect to the database. It is customary to call it *rvd_user*.
 In this stage the system wants you to set a password for the sql connection.
-
-.. Warning:: When installing MySQL you wont be asked for a password, you can set a password for the root user in MySQL via *mysql_secure_installation* or type your user's password when it ask's you for a password.
-
-Create the database:
 
 .. prompt:: bash $
 

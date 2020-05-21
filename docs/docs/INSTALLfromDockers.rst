@@ -7,12 +7,21 @@ Requirements
 OS
 --
 
-Install `Docker <https://docs.docker.com/v17.12/install/>`_ and `docker-compose <https://docs.docker.com/compose/install/>`_ on your local machine.
+Install `Docker <https://docs.docker.com/>`_ and `docker-compose <https://docs.docker.com/compose/install/>`_ on your local machine.
 
 .. note ::
   There are several versions of the Compose file format – 1, 2, 2.x, and 3.x. For now, we use 2.2
   keep this in mind https://docs.docker.com/compose/compose-file/
-    
+
+As of now[at the time of writing this doc], we recommend
+
+.. prompt:: bash $
+
+  docker --version
+   Docker version 10.7.0, build a872fc2f86
+  docker-compose --version
+   docker-compose version 0.8.0, build d4d1b42b
+
 Hardware
 --------
 
@@ -34,14 +43,16 @@ disks images, so clones won't require many space.
 Install Ravada from dockers
 ---------------------------
 
-For now, ravada source must be (locally) in: ``~/src/ravada`` , you need to clone repository:
+.. Info:: Ravada source must be (locally) in: ``~/src/ravada``  
+
+Follow this steps:
 
 .. prompt:: bash $
 
    cd ~
    mkdir src
    git clone https://github.com/UPC/ravada.git
-   cd dockerfy
+   cd ravada/dockerfy
    
 .. prompt:: bash $
 
@@ -59,7 +70,7 @@ Connect to ravada-back docker: (We'll implement an automatically solution to avo
 .. prompt:: bash $
 
    ~/src/ravada/dockerfy> docker exec -it ravada-back bash
-   root@6c3089f22e77:/ravada# bin/rvd_back.pl --add-user admin
+   root@6c3089f22e77:/ravada# PERL5LIB=./lib ./script/rvd_back --add-user admin
    admin password: acme
    is admin ? : [y/n] y
 
@@ -81,21 +92,30 @@ The Ravada server is now installed, learn
 Dockers troubleshoots
 ---------------------
 
+* Check if all dockers are up
+
+.. prompt:: bash $
+   
+  docker-compose ps
+  
+* No such file or directory
+   If you see this message remember that the source project must be in your HOME directory inside src directory:
+   ~/src/ravada
+   
+.. prompt:: bash
+  
+  root@6f8d2946c40c:/ravada# PERL5LIB=./lib ./script/rvd_back --add-user soporte
+  bash: ./script/rvd_back: No such file or directory
+
+
 * Let's do a reset:
    We want to return to an initial starting point
-   Remove all dockers and volume associated.
+   Remove all dockers and volume associated. 
    
 .. prompt:: bash $
-
-   $ docker-compose rm -s -v
-   Stopping ravada-back  ... done
-   Stopping ravada-front ... done
-   Stopping ravada-mysql ... done
-   Going to remove ravada-back, ravada-front, ravada-mysql
-   Are you sure? [yN] y
-   Removing ravada-back  ... done
-   Removing ravada-front ... done
-   Removing ravada-mysql ... done
+  
+  cd ~/src/ravada/dockerfy/utils
+  ./remove_all.sh 
 
 Help
 ----
