@@ -34,11 +34,14 @@ disks images, so clones won't require many space.
 Install Ravada
 --------------
 
-Ravada can be installed from package or using docker.
+Follow the detailed instructions in this section to install on different operating systems:
 
 * `Ubuntu <http://ravada.readthedocs.io/en/latest/docs/INSTALL_Ubuntu.html>`_
 * `Debian <http://ravada.readthedocs.io/en/latest/docs/INSTALL_Debian.html>`_
 * `RedHat Fedora <http://ravada.readthedocs.io/en/latest/docs/INSTALL_Fedora.html>`_
+
+Ravada can be installed from package or using docker.
+
 * `Docker <http://ravada.readthedocs.io/en/latest/docs/INSTALLfromDockers.html>`_
 
 Follow `this guide <http://ravada.readthedocs.io/en/latest/docs/update.html>`_
