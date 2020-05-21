@@ -34,7 +34,7 @@ disks images, so clones won't require many space.
 Install Ravada
 --------------
 
-Follow the detailed instructions in this section to install on different operating system:
+Follow the detailed instructions in this section to install on different operating systems:
 
 * `Ubuntu <http://ravada.readthedocs.io/en/latest/docs/INSTALL_ubuntu.html>`_
 * `Debian <http://ravada.readthedocs.io/en/latest/docs/INSTALL_debian.html>`_
