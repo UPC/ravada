@@ -2565,6 +2565,20 @@ sub _do_execute_command {
         if $request->status() ne 'done'
             && $request->status() !~ /^retry/i;
     }
+    $self->_set_domain_changed($request) if $request->status eq 'done';
+}
+
+sub _set_domain_changed($self, $request) {
+    my $id_domain = $request->id_domain;
+    if (!defined $id_domain) {
+        $id_domain = $request->defined_arg('id_domain');
+    }
+    return if !defined $id_domain;
+
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE domains set date_changed=CURRENT_TIMESTAMP"
+        ." WHERE id=? ");
+    $sth->execute($id_domain);
+
 }
 
 sub _cmd_manage_pools($self, $request) {
