@@ -204,7 +204,7 @@ sub _update_isos {
                    ,arch => 'amd64'
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
-                    ,url => 'http://mirrors.evowise.com/archlinux/iso/2019.09..*/archlinux-2019.09..*-x86_64.iso'
+                    ,url => 'https://archive.archlinux.org/iso/2019.09..*/archlinux-2019.09..*-x86_64.iso'
                 ,md5_url => '$url/md5sums.txt'
         },
         mate_bionic => {
