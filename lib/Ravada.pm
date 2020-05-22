@@ -401,7 +401,7 @@ sub _update_isos {
             ,file_re => 'openSUSE-Leap-15.\d+-NET-x86_64.iso'
 
         }
-	  xubuntu_focal_fossa_64 => {
+	  ,xubuntu_focal_fossa_64 => {
             name => 'Xubuntu Focal Fossa 64 bits'
             ,description => 'Xubuntu 20.04 Focal Fossa 64 bits'
             ,arch => 'amd64'
