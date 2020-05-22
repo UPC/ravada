@@ -142,7 +142,7 @@ ok(scalar $RVD_FRONT->list_vm_types(),"Expecting some in list_vm_types , got "
     .scalar $RVD_FRONT->list_vm_types());
 
 SKIP: {
-for my $vm_name ('Void','KVM','LXC') {
+for my $vm_name ( vm_names() ) {
 
     my $vm = $RVD_BACK->search_vm($vm_name);
     my $msg = "Skipping VM $vm_name in this system";

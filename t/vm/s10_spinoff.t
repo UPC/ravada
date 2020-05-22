@@ -72,6 +72,7 @@ sub test_remove_base($base) {
 clean();
 
 for my $vm_name ( vm_names() ) {
+    warn $vm_name;
     SKIP: {
         my $vm = rvd_back->search_vm($vm_name);
         my $msg = "SKIPPED: No virtual managers found";

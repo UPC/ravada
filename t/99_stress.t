@@ -892,7 +892,7 @@ sub clean_leftovers($vm_name) {
 
 flush_rules();
 my @vm_names;
-for my $vm_name ( 'KVM', 'Void' ) {
+for my $vm_name ( vm_names() ) {
 
     SKIP: {
         if (!$ENV{TEST_STRESS} && !$ENV{"TEST_STRESS_$vm_name"}) {

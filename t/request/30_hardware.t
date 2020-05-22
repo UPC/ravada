@@ -597,7 +597,7 @@ ok($Ravada::CONNECTOR,"Expecting conector, got ".($Ravada::CONNECTOR or '<unde>'
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(Void KVM )) {
+for my $vm_name ( vm_names()) {
     my $vm;
     $vm = rvd_back->search_vm($vm_name)  if rvd_back();
 	if ( !$vm || ($vm_name eq 'KVM' && $>)) {

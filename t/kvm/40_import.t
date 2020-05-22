@@ -12,7 +12,7 @@ use_ok('Ravada');
 my $RVD_BACK = rvd_back();
 my $RVD_FRONT= rvd_front();
 
-my @VMS = ('KVM','Void');
+my @VMS = vm_names();
 my $USER = create_user("foo","bar", 1);
 
 #############################################################################

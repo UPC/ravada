@@ -39,6 +39,7 @@ create_domain
     flush_rules
     arg_create_dom
     vm_names
+
     remote_config
     remote_config_nodes
     clean_remote_node
@@ -171,6 +172,8 @@ sub add_ubuntu_minimal_iso {
 }
 
 sub vm_names {
+
+   delete $ARG_CREATE_DOM{KVM} if $<;
    return (sort keys %ARG_CREATE_DOM) if wantarray;
    confess;
 }
@@ -295,6 +298,8 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
     $RVD_BACK = $rvd;
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') , disk => 1024 * 1024 ];
     $ARG_CREATE_DOM{Void} = [ id_iso => search_id_iso('Alpine') ];
+
+    delete $ARG_CREATE_DOM{KVM} if $<;
 
     Ravada::Utils::user_daemon->_reload_grants();
     return $rvd;
@@ -707,7 +712,7 @@ sub _remove_old_disks_void_local {
 
 sub remove_old_disks {
     _remove_old_disks_void();
-    _remove_old_disks_kvm();
+    _remove_old_disks_kvm() if !$>;
 }
 
 sub create_user {
@@ -921,7 +926,7 @@ sub _qemu_storage_pool {
 sub remove_qemu_pools {
     return if !$VM_VALID{'KVM'} || $>;
     my $vm;
-    eval { $vm = rvd_back->search_vm('kvm') };
+    eval { $vm = rvd_back->search_vm('KVM') };
     if ($@ && $@ !~ /Missing qemu-img/) {
         warn $@;
     }
