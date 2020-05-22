@@ -1746,7 +1746,7 @@ sub _connect_vm {
 sub _create_vm_lxc {
     my $self = shift;
 
-    return Ravada::VM::LXC->new( connector => ( $self->connector or $CONNECTOR ));
+    return undef;
 }
 
 sub _create_vm_void {
@@ -1755,8 +1755,7 @@ sub _create_vm_void {
     return Ravada::VM::Void->new( connector => ( $self->connector or $CONNECTOR ));
 }
 
-sub _create_vm {
-    my $self = shift;
+sub _create_vm($self, $type=undef) {
 
     # TODO: add a _create_vm_default for VMs that just are created with ->new
     #       like Void or LXC
@@ -1769,9 +1768,13 @@ sub _create_vm {
     my @vms = ();
     my $err = '';
 
-    for my $vm_name (keys %VALID_VM) {
+    my @vm_types = keys %VALID_VM;
+    @vm_types = ($type) if defined $type;
+    for my $vm_name (@vm_types) {
         my $vm;
-        eval { $vm = $create{$vm_name}->($self) };
+        my $sub = $create{$vm_name}
+            or confess "Error: Unknown VM $vm_name";
+        eval { $vm = $sub->($self) };
         warn $@ if $@;
         $err.= $@ if $@;
         push @vms,$vm if $vm;
@@ -3985,7 +3988,7 @@ sub search_vm {
     return Ravada::VM->open($id)    if $id;
     return if $host ne 'localhost';
 
-    my $vms = $self->_create_vm();
+    my $vms = $self->_create_vm($type);
 
     for my $vm (@$vms) {
         return $vm if ref($vm) eq $class && $vm->host eq $host;
