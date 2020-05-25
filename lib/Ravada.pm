@@ -204,7 +204,7 @@ sub _update_isos {
                    ,arch => 'amd64'
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
-                    ,url => 'https://archive.archlinux.org/iso/2019.09..*/archlinux-2019.09..*-x86_64.iso'
+                    ,url => 'https://archive.archlinux.org/iso/2019.09.01/archlinux-2019.09.01-x86_64.iso'
                 ,md5_url => '$url/md5sums.txt'
         },
 	mate_focal_fossa => {
@@ -213,19 +213,9 @@ sub _update_isos {
                    ,arch => 'amd64'
                     ,xml => 'focal_fossa-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
-                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04.*/release/ubuntu-mate-20.04.*-desktop-amd64.iso'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04/release/ubuntu-mate-20.04-desktop-amd64.iso'
                 ,md5_url => '$url/MD5SUMS'
         },
-        mate_focal_fossa_i386 => {
-                    name => 'Ubuntu Mate Focal Fossa 32 bits'
-            ,description => 'Ubuntu Mate 20.04 (Focal Fossa) 32 bits'
-                   ,arch => 'i386'
-                    ,xml => 'focal_fossa-i386.xml'
-             ,xml_volume => 'focal_fossa32-volume.xml'
-                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04.*/release/ubuntu-mate-20.04.*-desktop-i386.iso'
-                ,md5_url => '$url/MD5SUMS'
-        },
-	
         mate_bionic => {
                     name => 'Ubuntu Mate Bionic 64 bits'
             ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 64 bits'
@@ -244,7 +234,6 @@ sub _update_isos {
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
                 ,md5_url => '$url/MD5SUMS'
         },
-
         mate_xenial => {
                     name => 'Ubuntu Mate Xenial'
             ,description => 'Ubuntu Mate 16.04.3 (Xenial) 64 bits'
@@ -357,17 +346,6 @@ sub _update_isos {
             ,file_re => 'kubuntu-20.04-desktop-amd64.iso'
             ,rename_file => 'kubuntu_focal_fossa_64.iso'
         }
-        ,kubuntu_32_focal_fossa => {
-            name => 'Kubuntu Focal Fossa 32 bits'
-            ,description => 'Kubuntu 20.04 Focal Fossa 32 bits'
-            ,arch => 'i386'
-            ,xml => 'focal_fossa-i386.xml'
-            ,xml_volume => 'focal_fossa-volume.xml'
-            ,md5_url => '$url/MD5SUMS'
-            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/20.04/release/'
-            ,file_re => 'kubuntu-20.04-desktop-i386.iso'
-            ,rename_file => 'kubuntu_focal_fossa_32.iso'
-        }
         ,kubuntu_64 => {
             name => 'Kubuntu Bionic Beaver 64 bits'
             ,description => 'Kubuntu 18.04 Bionic Beaver 64 bits'
@@ -401,28 +379,6 @@ sub _update_isos {
             ,file_re => 'openSUSE-Leap-15.\d+-NET-x86_64.iso'
 
         }
-	  ,xubuntu_focal_fossa_64 => {
-            name => 'Xubuntu Focal Fossa 64 bits'
-            ,description => 'Xubuntu 20.04 Focal Fossa 64 bits'
-            ,arch => 'amd64'
-            ,xml => 'focal_fossa-amd64.xml'
-            ,xml_volume => 'focal_fossa64-volume.xml'
-            ,md5_url => '$url/../MD5SUMS'
-            ,url => 'http://archive.ubuntu.com/ubuntu/dists/focal/main/installer-amd64/current/images/netboot/'
-            ,file_re => 'mini.iso'
-            ,rename_file => 'xubuntu_focal_fossa_64.iso'
-        }
-        ,xubuntu_focal_fossa_32 => {
-            name => 'Xubuntu Focal Fossa 32 bits'
-            ,description => 'Xubuntu 20.04 Focal Fossa 32 bits'
-            ,arch => 'i386'
-            ,xml => 'focal_fossa-i386.xml'
-            ,xml_volume => 'focal_fossa32-volume.xml'
-            ,md5_url => '$url/../MD5SUMS'
-            ,url => 'http://archive.ubuntu.com/ubuntu/dists/focal/main/installer-i386/current/images/netboot/'
-            ,file_re => 'mini.iso'
-            ,rename_file => 'xubuntu_focal_fossa_32.iso'
-        }
         ,xubuntu_beaver_64 => {
             name => 'Xubuntu Bionic Beaver 64 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 64 bits'
@@ -455,24 +411,7 @@ sub _update_isos {
             ,rename_file => 'xubuntu_xenial_mini.iso'
             ,min_disk_size => '10'
         }
-	   ,lubuntu_focal_fossa_64 => {
-             name => 'Lubuntu Focal Fossa 64 bits'
-             ,description => 'Lubuntu 18.04 Focal Fossa  64 bits'
-             ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/20.04.*/release/lubuntu-18.04.*-desktop-amd64.iso'
-             ,md5_url => '$url/MD5SUMS'
-             ,xml => 'focal_fossa-amd64.xml'
-             ,xml_volume => 'focal_fossa64-volume.xml'
-         }
-         ,lubuntu_focal_fossa_32 => {
-             name => 'Lubuntu Focal Fossa  32 bits'
-             ,description => 'Lubuntu 18.04 Focal Fossa  32 bits'
-             ,arch => 'i386'
-             ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/20.04.*/release/lubuntu-18.04.*-desktop-i386.iso'
-             ,md5_url => '$url/MD5SUMS'
-             ,xml => 'focal_fossa-i386.xml'
-             ,xml_volume => 'focal_fossa-volume.xml'
-        }
-        ,lubuntu_bionic_64 => {
+	,lubuntu_bionic_64 => {
              name => 'Lubuntu Bionic Beaver 64 bits'
              ,description => 'Lubuntu 18.04 Bionic Beaver 64 bits'
              ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-amd64.iso'
