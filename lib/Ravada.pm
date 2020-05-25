@@ -212,7 +212,7 @@ sub _update_isos {
             ,description => 'Ubuntu Mate 20.04 (Focal Fossa) 64 bits'
                    ,arch => 'amd64'
                     ,xml => 'focal_fossa-amd64.xml'
-             ,xml_volume => 'focal_fossa-64-volume.xml'
+             ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04.*/release/ubuntu-mate-20.04.*-desktop-amd64.iso'
                 ,md5_url => '$url/MD5SUMS'
         },
