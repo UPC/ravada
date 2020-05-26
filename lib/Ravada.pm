@@ -342,7 +342,7 @@ sub _update_isos {
             ,description => 'Kubuntu 20.04 Focal Fossa 64 bits'
             ,arch => 'amd64'
             ,xml => 'focal_fossa-amd64.xml'
-            ,xml_volume => 'focal_fossa-volume.xml'
+            ,xml_volume => 'focal_fossa64-volume.xml'
             ,md5_url => '$url/MD5SUMS'
             ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/20.04/release/'
             ,file_re => 'kubuntu-20.04-desktop-amd64.iso'
