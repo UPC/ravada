@@ -204,8 +204,10 @@ sub _update_isos {
                    ,arch => 'amd64'
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
-                    ,url => 'https://archive.archlinux.org/iso/2019.09.01/archlinux-2019.09.01-x86_64.iso'
-                ,md5_url => '$url/MD5SUMS'
+                    ,url => 'https://archive.archlinux.org/iso/2019.09.01/'
+                    ,file_re => 'archlinux-2019.09.01-x86_64.iso'
+                    ,md5_url => ''
+                    ,md5 => '1d6bdf5cbc6ca98c31f02d23e418dd96'
         },
 	mate_focal_fossa => {
                     name => 'Ubuntu Mate Focal Fossa 64 bits'
