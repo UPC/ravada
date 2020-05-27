@@ -1798,7 +1798,7 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         my $vm;
         eval { $vm = Ravada::VM->open($instance->{id_vm}) };
         die $@ if $@ && $@ !~ /I can't find VM/i;
-        next if !$vm->is_active;
+        next if !$vm || !$vm->is_active;
         my $domain;
         $@ = '';
         eval { $domain = $vm->search_domain($domain_name) } if $vm;
@@ -2490,7 +2490,7 @@ sub _around_is_active($orig, $self) {
         };
         if ( $@ ) {
             return 0 if ref($@) && $@->code == 38; # broken pipe
-            return 0 if $@ =~ /can't connect/;
+            return 0 if $@ =~ /can't connect|error connecting/i;
             die $@;
         }
     }
@@ -3951,7 +3951,7 @@ sub _rsync_volumes_back($self, $request=undef) {
 
 sub _pre_migrate($self, $node, $request = undef) {
 
-    die "Error: node not active" if !$node->is_active(1);
+    confess "Error: node not active" if !$node->is_active(1);
 
     $self->_check_equal_storage_pools($node) if $self->_vm->is_active;
 

@@ -137,6 +137,7 @@ around 'import_domain' => \&_around_import_domain;
 
 around 'ping' => \&_around_ping;
 around 'connect' => \&_around_connect;
+after 'disconnect' => \&_post_disconnect;
 
 #############################################################
 #
@@ -293,6 +294,16 @@ sub _around_connect($orig, $self) {
     return $result;
 }
 
+sub _post_disconnect($self) {
+    if (!$self->is_local) {
+        if ($self->netssh) {
+            $self->netssh->disconnect();
+	    }
+        $self->clear_netssh();
+        delete $SSH{$self->host};
+    }
+}
+
 sub _pre_create_domain {
     _check_create_domain(@_);
     _connect(@_);
@@ -328,7 +339,7 @@ sub _connect_ssh($self) {
                  ,batch_mode => 1
                 ,forward_X11 => 0
               ,forward_agent => 0
-        ,kill_ssh_on_timeout => 0
+        ,kill_ssh_on_timeout => 1
             );
             last if !$ssh->error;
             warn "RETRYING ssh ".$self->host." ".join(" ",$ssh->error);
@@ -1081,6 +1092,10 @@ sub ping($self, $option=undef, $cache=1) {
     return $ping;
 }
 
+sub _ping_nocache($self,$option=undef) {
+    return $self->ping($option,0);
+}
+
 sub _delete_cache($self, $key) {
     $key = "_cache_$key";
     delete $self->{$key};
@@ -1176,6 +1191,9 @@ sub _do_is_active($self, $force=undef) {
     }
     $self->_cached_active($ret);
     $self->_cached_active_time(time);
+
+    my $cache_key = "ping_".$self->host;
+    $self->_delete_cache($cache_key);
     return $ret;
 }
 
@@ -1236,7 +1254,7 @@ sub run_command($self, @command) {
 
     return $self->_run_command_local(@command) if $self->is_local();
 
-    my $ssh = $self->ssh or confess "Error: I can't connect to ".$self->host;
+    my $ssh = $self->ssh or confess "Error: Error connecting to ".$self->host;
 
     my ($out, $err) = $ssh->capture2({timeout => 10},join " ",@command);
     chomp $err if $err;

@@ -1230,10 +1230,15 @@ sub hibernate_node($node) {
             $domain->shutdown_now(user_admin);
         }
     }
-    $node->disconnect;
 
-    my $domain_node = _domain_node($node);
-    $domain_node->hibernate( user_admin );
+    for (;;) {
+        $node->disconnect;
+        my $domain_node = _domain_node($node);
+        eval { $domain_node->hibernate( user_admin ) };
+        my $error = $@;
+        warn $error if $error;
+        last if !$error || $error =~ /is not active/;
+    }
 
     my $max_wait = 30;
     my $ping;
@@ -1248,16 +1253,18 @@ sub hibernate_node($node) {
 
 sub shutdown_node($node) {
 
-    if ($node->is_active) {
-        $node->run_command("service lightdm stop");
+    if ($node->_do_is_active(1)) {
+        eval {
+		$node->run_command("service lightdm stop");
         $node->run_command("service gdm stop");
+	};
+	confess $@ if $@ && $@ !~ /ssh error|error connecting|control command failed/i;
         for my $domain ($node->list_domains()) {
             diag("Shutting down ".$domain->name." on node ".$node->name);
             $domain->shutdown_now(user_admin);
         }
     }
     $node->disconnect;
-
     my $domain_node = _domain_node($node);
     eval {
         $domain_node->shutdown(user => user_admin);# if !$domain_node->is_active;
@@ -1267,9 +1274,14 @@ sub shutdown_node($node) {
     my $max_wait = 180;
     for ( reverse 1 .. $max_wait ) {
         last if !$node->ping(undef, 0);
-        diag("Waiting for node ".$node->name." to be inactive ... $_")  if !($_ % 10);
+        if ( !($_ % 10) ) {
+            eval { $domain_node->shutdown(user => user_admin) };
+            warn $@ if $@;
+            diag("Waiting for node ".$node->name." to be inactive ... $_");
+        }
         sleep 1;
     }
+    $domain_node->shutdown_now(user_admin) if $domain_node->is_active;
     is($node->ping(undef,0),0);
 }
 
@@ -1301,18 +1313,29 @@ sub start_node($node) {
 
     is($node->ping('debug',0),1,"[".$node->type."] Expecting ping node ".$node->name) or exit;
 
-    for ( 1 .. 60 ) {
+    for my $try ( 1 .. 3) {
         my $is_active;
-        eval {
-            $node->disconnect;
-            $node->clear_netssh();
-            $node->connect();
-            $is_active = $node->is_active(1)
-        };
-        warn $@ if $@;
+        for ( 1 .. 60 ) {
+            eval {
+                $node->disconnect;
+                $node->clear_netssh();
+                $node->connect();
+                $is_active = $node->is_active(1)
+            };
+            warn $@ if $@;
+            last if $is_active;
+            sleep 1;
+            diag("Waiting for active node ".$node->name." $_") if !($_ % 10);
+        }
         last if $is_active;
-        sleep 1;
-        diag("Waiting for active node ".$node->name." $_") if !($_ % 10);
+        if ($try == 1 ) {
+            $domain->shutdown(user => user_admin);
+            sleep 2;
+        } elsif ( $try == 2 ) {
+            $domain->shutdown_now(user_admin);
+            sleep 2;
+        }
+        $domain->start(user => user_admin, remote_ip => '127.0.0.1');
     }
     is($node->_do_is_active,1,"Expecting active node ".$node->name) or exit;
 
