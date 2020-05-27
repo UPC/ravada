@@ -855,6 +855,62 @@ sub test_base_unset($vm, $node) {
     _remove_domain($base);
 }
 
+sub test_change_base($vm, $node) {
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+    $base->set_base_vm(vm => $node, user => user_admin);
+    my @volumes = ($base->list_files_base(), $base->list_volumes);
+    my $req = Ravada::Request->change_hardware(
+        uid => 1
+        ,id_domain => $base->id
+        ,hardware => 'memory'
+        ,data => { memory => 100 }
+
+    );
+    wait_request();
+    is($req->status,'done');
+    is($req->error,'');
+    for my $vol (@volumes) {
+        ok(-e $vol,$vol);
+        ok($node->file_exists($vol), $vol)  if $vol !~ /iso$/;
+    }
+    $base->remove(user_admin);
+}
+
+sub test_change_clone($vm, $node) {
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+    $base->set_base_vm(vm => $node, user => user_admin);
+    my @volumes_base = ($base->list_files_base() ,$base->list_volumes);
+
+    my $clone = $base->clone( user => user_admin,name => new_domain_name());
+    my @volumes_clone = ($clone->list_files_base(), $clone->list_volumes);
+
+    my @args = (
+        uid => 1
+        ,hardware => 'memory'
+        ,data => { memory => 100 }
+    );
+
+    my $reqb = Ravada::Request->change_hardware(@args ,id_domain => $base->id);
+    my $reqc = Ravada::Request->change_hardware(@args ,id_domain => $clone->id);
+    wait_request();
+    is($reqb->status,'done');
+    is($reqb->error,'');
+    is($reqc->status,'done');
+    is($reqc->error,'');
+    for my $vol (@volumes_base) {
+        ok(-e $vol);
+        ok($node->file_exists($vol), $vol)  if $vol !~ /iso$/;
+    }
+    for my $vol (@volumes_clone) {
+        ok(-e $vol, $vol);
+        ok(!$node->file_exists($vol), $vol) if $vol !~ /iso$/;
+    }
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+}
+
 sub test_fill_memory($vm, $node, $migrate) {
     #TODO: Void VMs
     return if $vm->type eq 'Void';
@@ -943,6 +999,10 @@ for my $vm_name ( 'Void', 'KVM') {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+
+        test_change_base($vm, $node);
+        test_change_clone($vm, $node);
+
         test_fill_memory($vm, $node, 0); # balance
         test_fill_memory($vm, $node, 1); # migrate
         test_create_active($vm, $node);

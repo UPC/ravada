@@ -4490,7 +4490,10 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
         my @volumes = $self->list_volumes_info();
     }
     $self->info(Ravada::Utils::user_daemon) if $self->is_known();
-    $self->_remove_domain_cascade(Ravada::Utils::user_daemon,1) if $self->is_known();
+
+    $self->_remove_domain_cascade(Ravada::Utils::user_daemon,1)
+    if $self->is_known() && !$self->is_base;
+
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
 }
 
