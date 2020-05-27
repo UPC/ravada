@@ -264,6 +264,19 @@ sub test_user_bind {
 
 }
 
+sub _search_posix_group($ravada_posix_group) {
+    my $base = "ou=groups,".Ravada::Auth::LDAP::_dc_base();
+    my ($entry) = _search_ldap($ravada_posix_group, $base);
+    if (!$entry) {
+        _add_posix_group();
+        ($entry) = _search_ldap($ravada_posix_group, $base);
+    }
+    confess "Error, no ravada_posix_group $ravada_posix_group"
+    if !$entry;
+
+    return $entry->dn;
+}
+
 sub _init_config(%arg) {
     my $with_admin = delete $arg{with_admin};
     my $with_filter = ( delete $arg{with_filter} or 0 );
@@ -276,8 +289,7 @@ sub _init_config(%arg) {
 
     my $ravada_posix_group = $RAVADA_POSIX_GROUP;
     if ( $with_dn_posix_group ) {
-        my ($entry) = _search_ldap($ravada_posix_group);
-        $ravada_posix_group = $entry->dn;
+         $ravada_posix_group = _search_posix_group($ravada_posix_group);
     } elsif ( $with_cn_posix_group ) {
         $ravada_posix_group = "cn=$ravada_posix_group";
     }
@@ -352,9 +364,9 @@ sub _add_posix_group {
     return $group[0];
 }
 
-sub _search_ldap($cn) {
+sub _search_ldap($cn, $base=Ravada::Auth::LDAP::_dc_base()) {
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
-    my $mesg = $ldap->search( filter => "cn=$cn" );
+    my $mesg = $ldap->search( filter => "cn=$cn", base => $base );
     my @found = $mesg->entries;
     return @found;
 }
