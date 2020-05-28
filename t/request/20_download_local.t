@@ -3,6 +3,7 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use File::Copy;
 use IPC::Run3;
 use Test::More;
 use Mojo::UserAgent;
@@ -10,7 +11,7 @@ use Mojo::UserAgent;
 use lib 't/lib';
 use Test::Ravada;
 
-if (! $ENV{TEST_DOWLOAD}) {
+if (! $ENV{TEST_DOWNLOAD}) {
     diag("Skipped: enable setting environment variable TEST_DOWNLOAD");
     done_testing();
     exit;
@@ -31,8 +32,10 @@ sub test_download {
     }
     is($@,'');
     if ($clean && $iso->{device}) {
-        unlink($iso->{device}) or die "$! $iso->{device}"
-            if -e $iso->{device};
+        if ( -e $iso->{device} ) {
+            copy($iso->{device},"$iso->{device}.old") or die "$! $iso->{device}";
+            unlink $iso->{device} or die "$! $iso->{device}";
+        }
         my $sth = connector->dbh->prepare(
         "UPDATE iso_images set device=NULL WHERE id=?"
         );
