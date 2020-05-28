@@ -190,14 +190,33 @@ sub _update_isos {
     my $table = 'iso_images';
     my $field = 'name';
     my %data = (
+	    androidx86 => {
+                    name => 'Android 8.1 x86'
+            ,description => 'Android-x86 64 bits. Requires an user provided ISO image.'
+                   ,arch => 'amd64'
+                    ,xml => 'android-amd64.xml'
+             ,xml_volume => 'android-volume.xml'
+	     ,min_disk_size => '4'
+        },
         arch_1909 => {
                     name => 'Arch Linux 19.09'
             ,description => 'Arch Linux 19.09.01 64 bits'
                    ,arch => 'amd64'
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
-                    ,url => 'http://mirrors.evowise.com/archlinux/iso/2019.09..*/archlinux-2019.09..*-x86_64.iso'
-                ,md5_url => '$url/md5sums.txt'
+                    ,url => 'https://archive.archlinux.org/iso/2019.09.01/'
+                    ,file_re => 'archlinux-2019.09.01-x86_64.iso'
+                    ,md5_url => ''
+                    ,md5 => '1d6bdf5cbc6ca98c31f02d23e418dd96'
+        },
+	mate_focal_fossa => {
+                    name => 'Ubuntu Mate Focal Fossa 64 bits'
+            ,description => 'Ubuntu Mate 20.04 (Focal Fossa) 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'focal_fossa-amd64.xml'
+             ,xml_volume => 'focal_fossa64-volume.xml'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04/release/ubuntu-mate-20.04-desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
         },
         mate_bionic => {
                     name => 'Ubuntu Mate Bionic 64 bits'
@@ -217,7 +236,6 @@ sub _update_isos {
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
                 ,md5_url => '$url/MD5SUMS'
         },
-
         mate_xenial => {
                     name => 'Ubuntu Mate Xenial'
             ,description => 'Ubuntu Mate 16.04.3 (Xenial) 64 bits'
@@ -228,6 +246,18 @@ sub _update_isos {
                 ,md5_url => '$url/MD5SUMS'
                 ,min_disk_size => '10'
         },
+	,focal_fossa=> {
+                    name => 'Ubuntu Focal Fossa'
+            ,description => 'Ubuntu 20.04 Focal Fossa 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'focal_fossa-amd64.xml'
+             ,xml_volume => 'focal_fossa64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/20.04/'
+                ,file_re => '^ubuntu-20.04.*desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+          ,min_disk_size => '9'
+        }
+
         ,bionic=> {
                     name => 'Ubuntu Bionic Beaver'
             ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
@@ -307,6 +337,17 @@ sub _update_isos {
             ,sha256_url => '$url/Fedora-Workstation-28-.*-x86_64-CHECKSUM'
             ,min_disk_size => '10'
         }
+	      ,kubuntu_64_focal_fossa => {
+            name => 'Kubuntu Focal Fossa 64 bits'
+            ,description => 'Kubuntu 20.04 Focal Fossa 64 bits'
+            ,arch => 'amd64'
+            ,xml => 'focal_fossa-amd64.xml'
+            ,xml_volume => 'focal_fossa64-volume.xml'
+            ,md5_url => '$url/MD5SUMS'
+            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/20.04/release/'
+            ,file_re => 'kubuntu-20.04-desktop-amd64.iso'
+            ,rename_file => 'kubuntu_focal_fossa_64.iso'
+        }
         ,kubuntu_64 => {
             name => 'Kubuntu Bionic Beaver 64 bits'
             ,description => 'Kubuntu 18.04 Bionic Beaver 64 bits'
@@ -372,7 +413,7 @@ sub _update_isos {
             ,rename_file => 'xubuntu_xenial_mini.iso'
             ,min_disk_size => '10'
         }
-        ,lubuntu_bionic_64 => {
+	,lubuntu_bionic_64 => {
              name => 'Lubuntu Bionic Beaver 64 bits'
              ,description => 'Lubuntu 18.04 Bionic Beaver 64 bits'
              ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-amd64.iso'
