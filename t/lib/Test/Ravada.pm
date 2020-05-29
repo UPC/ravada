@@ -1141,7 +1141,8 @@ sub search_iptable_remote {
 sub _lock_fh($fh) {
     flock($fh, LOCK_EX);
     seek($fh, 0, SEEK_END) or die "Cannot seek - $!\n";
-    print $fh,''.localtime(time)." $0\n";
+    print $fh,$$." ".localtime(time)." $0\n";
+    $fh->flush();
     $LOCKED_FH{$fh} = $fh;
 }
 
@@ -1234,10 +1235,15 @@ sub hibernate_node($node) {
             $domain->shutdown_now(user_admin);
         }
     }
-    $node->disconnect;
 
-    my $domain_node = _domain_node($node);
-    $domain_node->hibernate( user_admin );
+    for (;;) {
+        $node->disconnect;
+        my $domain_node = _domain_node($node);
+        eval { $domain_node->hibernate( user_admin ) };
+        my $error = $@;
+        warn $error if $error;
+        last if !$error || $error =~ /is not active/;
+    }
 
     my $max_wait = 30;
     my $ping;
@@ -1252,29 +1258,36 @@ sub hibernate_node($node) {
 
 sub shutdown_node($node) {
 
-    if ($node->is_active) {
-        $node->run_command("service lightdm stop");
+    if ($node->_do_is_active(1)) {
+        eval {
+		$node->run_command("service lightdm stop");
         $node->run_command("service gdm stop");
+	};
+	confess $@ if $@ && $@ !~ /ssh error|error connecting|control command failed/i;
         for my $domain ($node->list_domains()) {
             diag("Shutting down ".$domain->name." on node ".$node->name);
             $domain->shutdown_now(user_admin);
         }
     }
     $node->disconnect;
-
     my $domain_node = _domain_node($node);
     eval {
         $domain_node->shutdown(user => user_admin);# if !$domain_node->is_active;
     };
     sleep 2 if !$node->ping(undef, 0);
 
-    my $max_wait = 120;
-    for ( 1 .. $max_wait / 2 ) {
-        diag("Waiting for node ".$node->name." to be inactive ...")  if !($_ % 10);
+    my $max_wait = 180;
+    for ( reverse 1 .. $max_wait ) {
         last if !$node->ping(undef, 0);
+        if ( !($_ % 10) ) {
+            eval { $domain_node->shutdown(user => user_admin) };
+            warn $@ if $@;
+            diag("Waiting for node ".$node->name." to be inactive ... $_");
+        }
         sleep 1;
     }
-    is($node->ping,0);
+    $domain_node->shutdown_now(user_admin) if $domain_node->is_active;
+    is($node->ping(undef,0),0);
 }
 
 sub start_node($node) {
@@ -1283,7 +1296,8 @@ sub start_node($node) {
     confess "Undefined node " if!$node;
 
     $node->disconnect;
-    if ( $node->_do_is_active ) {
+    $node->clear_netssh();
+    if ( $node->_do_is_active(1) ) {
         my $connect;
         eval { $connect = $node->connect };
         return if $connect;
@@ -1304,16 +1318,29 @@ sub start_node($node) {
 
     is($node->ping('debug',0),1,"[".$node->type."] Expecting ping node ".$node->name) or exit;
 
-    for ( 1 .. 60 ) {
+    for my $try ( 1 .. 3) {
         my $is_active;
-        eval {
-            $node->connect();
-            $is_active = $node->is_active(1)
-        };
-        warn $@ if $@;
+        for ( 1 .. 60 ) {
+            eval {
+                $node->disconnect;
+                $node->clear_netssh();
+                $node->connect();
+                $is_active = $node->is_active(1)
+            };
+            warn $@ if $@;
+            last if $is_active;
+            sleep 1;
+            diag("Waiting for active node ".$node->name." $_") if !($_ % 10);
+        }
         last if $is_active;
-        sleep 1;
-        diag("Waiting for active node ".$node->name." $_") if !($_ % 10);
+        if ($try == 1 ) {
+            $domain->shutdown(user => user_admin);
+            sleep 2;
+        } elsif ( $try == 2 ) {
+            $domain->shutdown_now(user_admin);
+            sleep 2;
+        }
+        $domain->start(user => user_admin, remote_ip => '127.0.0.1');
     }
     is($node->_do_is_active,1,"Expecting active node ".$node->name) or exit;
 
@@ -1340,10 +1367,14 @@ sub start_node($node) {
 
     $node->is_active(1);
     $node->enabled(1);
-    for ( 1 .. 60 ) {
+    for ( reverse 1 .. 120 ) {
         my $node2 = Ravada::VM->open(id => $node->id);
-        last if $node2->is_active(1);
-        diag("Waiting for node ".$node->name." active ...")  if !($_ % 10);
+        last if $node2->is_active(1) && $node->ssh;
+        diag("Waiting for node ".$node2->name." active ... $_")  if !($_ % 10);
+        $node2->disconnect();
+        $node2->connect();
+        $node2->clear_netssh();
+        sleep 1;
     }
     eval { $node->run_command("hwclock","--hctosys") };
     is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
@@ -1539,9 +1570,11 @@ sub _do_remote_node($vm_name, $remote_config) {
     if ( $node->ping(undef,0) && !$node->_connect_ssh() ) {
         my $ssh;
         for ( 1 .. 60 ) {
-            $ssh = $node->_connect_ssh();
+            eval { $ssh = $node->_connect_ssh() };
             last if $ssh;
             sleep 1;
+            warn $@ if $@;
+            next if !$ssh;
             diag("I can ping node ".$node->name." but I can't connect to ssh");
         }
         if (! $ssh ) {

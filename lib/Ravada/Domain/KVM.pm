@@ -585,6 +585,7 @@ sub _post_remove_base_domain {
 
 sub post_resume_aux($self, %args) {
     my $set_time = delete $args{set_time};
+    $set_time = 1 if !defined $set_time;
     eval {
         $self->set_time() if $set_time;
     };
@@ -644,6 +645,9 @@ sub is_active {
     return 0 if $self->is_removed;
     my $is_active = 0;
     eval { $is_active = $self->domain->is_active };
+    return 0 if $@ && (    $@->code == 1    # client socket is closed
+                        || $@->code == 38   # broken pipe
+                    );
     die $@ if $@ && $@ !~ /code: 42,/;
     return $is_active;
 }
@@ -2122,6 +2126,9 @@ sub is_removed($self) {
         $@ = '';
         $is_removed = 1;
     }
+    return if $@ && ($@->code == 38  # cannot recv data
+                    || $@->code == 1 # client socket is closed
+    );
     die $@ if $@;
     return $is_removed;
 }

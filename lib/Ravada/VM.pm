@@ -19,8 +19,7 @@ use Socket qw( inet_aton inet_ntoa );
 use Moose::Role;
 use Net::DNS;
 use Net::Ping;
-use Net::SSH2 qw(LIBSSH2_FLAG_SIGPIPE);
-use IO::Scalar;
+use Net::OpenSSH;
 use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
@@ -39,7 +38,6 @@ our $CONFIG = \$Ravada::CONFIG;
 
 our $MIN_MEMORY_MB = 128 * 1024;
 
-our $SSH_TIMEOUT = 20 * 1000;
 our $CACHE_TIMEOUT = 60;
 our $FIELD_TIMEOUT = '_data_timeout';
 
@@ -115,6 +113,14 @@ has 'store' => (
     , is => 'rw'
     , default => 1
 );
+
+has 'netssh' => (
+    isa => 'Any'
+    ,is => 'ro'
+    , builder => '_connect_ssh'
+    , lazy => 1
+    , clearer => 'clear_netssh'
+);
 ############################################################
 #
 # Method Modifiers definition
@@ -131,6 +137,7 @@ around 'import_domain' => \&_around_import_domain;
 
 around 'ping' => \&_around_ping;
 around 'connect' => \&_around_connect;
+after 'disconnect' => \&_post_disconnect;
 
 #############################################################
 #
@@ -287,6 +294,16 @@ sub _around_connect($orig, $self) {
     return $result;
 }
 
+sub _post_disconnect($self) {
+    if (!$self->is_local) {
+        if ($self->netssh) {
+            $self->netssh->disconnect();
+	    }
+        $self->clear_netssh();
+        delete $SSH{$self->host};
+    }
+}
+
 sub _pre_create_domain {
     _check_create_domain(@_);
     _connect(@_);
@@ -302,7 +319,7 @@ sub _pre_list_domains($self,@) {
     die "ERROR: VM ".$self->name." unavailable" if !$self->ping();
 }
 
-sub _connect_ssh($self, $disconnect=0) {
+sub _connect_ssh($self) {
     confess "Don't connect to local ssh"
         if $self->is_local;
 
@@ -311,55 +328,41 @@ sub _connect_ssh($self, $disconnect=0) {
         return;
     }
 
-    my @pwd = getpwuid($>);
-    my $home = $pwd[7];
-
-    my $ssh= $self->{_ssh};
+    my $ssh;
     $ssh = $SSH{$self->host}    if exists $SSH{$self->host};
 
-    if (! $ssh || $disconnect ) {
-        return if !$self->ping();
-        $ssh->disconnect if $ssh && $disconnect;
-        $ssh = Net::SSH2->new( timeout => $SSH_TIMEOUT );
-        my $connect;
+    if (!$ssh || !$ssh->check_master) {
+        delete $SSH{$self->host};
         for ( 1 .. 3 ) {
-            eval { $connect = $ssh->connect($self->host) };
-            last if $connect;
+            $ssh = Net::OpenSSH->new($self->host
+                    ,timeout => 2
+                 ,batch_mode => 1
+                ,forward_X11 => 0
+              ,forward_agent => 0
+        ,kill_ssh_on_timeout => 1
+            );
+            last if !$ssh->error;
             warn "RETRYING ssh ".$self->host." ".join(" ",$ssh->error);
             sleep 1;
         }
-        if ( !$connect) {
-            eval { $connect = $ssh->connect($self->host) };
-            if (!$connect) {
-                $self->_cached_active(0);
-                confess $ssh->error();
-            }
+        if ( $ssh->error ) {
+            $self->_cached_active(0);
+            warn "Error connecting to ".$self->host." : ".$ssh->error();
+            return;
         }
-        $ssh->auth_publickey( 'root'
-            , "$home/.ssh/id_rsa.pub"
-            , "$home/.ssh/id_rsa"
-        ) or $ssh->die_with_error();
-        $self->{_ssh} = $ssh;
-        $SSH{$self->host} = $ssh;
     }
+    $SSH{$self->host} = $ssh;
     return $ssh;
 }
 
-sub _ssh_channel($self) {
-    my $ssh = $self->_connect_ssh() or confess "ERROR: I can't connect to SSH in ".$self->host;
-    my $ssh_channel;
-    for ( 1 .. 5 ) {
-        $ssh_channel = $ssh->channel();
-        last if $ssh_channel;
-        sleep 1;
-    }
-    if (!$ssh_channel) {
-        $ssh = $self->_connect_ssh(1) or die "Error: I can't connect to ".$self->name;
-        $ssh_channel = $ssh->channel();
-    }
-    die $ssh->die_with_error    if !$ssh_channel;
-    $ssh->blocking(1);
-    return $ssh_channel;
+sub ssh($self) {
+    my $ssh = $self->netssh;
+    return if !$ssh;
+    return $ssh if $ssh->check_master;
+    warn "WARNING: ssh error '".$ssh->error."'" if $ssh->error;
+    $self->netssh->disconnect;
+    $self->clear_netssh();
+    return $self->netssh;
 }
 
 sub _around_create_domain {
@@ -1089,6 +1092,10 @@ sub ping($self, $option=undef, $cache=1) {
     return $ping;
 }
 
+sub _ping_nocache($self,$option=undef) {
+    return $self->ping($option,0);
+}
+
 sub _delete_cache($self, $key) {
     $key = "_cache_$key";
     delete $self->{$key};
@@ -1161,18 +1168,20 @@ Arguments: optional force mode
 =cut
 
 sub is_active($self, $force=0) {
-    return $self->_do_is_active() if $self->is_local || $force;
+    return $self->_do_is_active($force) if $self->is_local || $force;
 
     return $self->_cached_active if time - $self->_cached_active_time < 60;
     return $self->_do_is_active();
 }
 
-sub _do_is_active($self) {
+sub _do_is_active($self, $force=undef) {
     my $ret = 0;
     if ( $self->is_local ) {
         $ret = 1 if $self->vm;
     } else {
-        if ( !$self->ping() ) {
+        my @ping_args = ();
+        @ping_args = (undef,0) if $force; # no cache
+        if ( !$self->ping(@ping_args) ) {
             $ret = 0;
         } else {
             if ( $self->is_alive ) {
@@ -1182,6 +1191,9 @@ sub _do_is_active($self) {
     }
     $self->_cached_active($ret);
     $self->_cached_active_time(time);
+
+    my $cache_key = "ping_".$self->host;
+    $self->_delete_cache($cache_key);
     return $ret;
 }
 
@@ -1242,20 +1254,17 @@ sub run_command($self, @command) {
 
     return $self->_run_command_local(@command) if $self->is_local();
 
-    my $chan = $self->_ssh_channel() or die "ERROR: No SSH channel to host ".$self->host;
+    my $ssh = $self->ssh or confess "Error: Error connecting to ".$self->host;
 
-    my $command = join(" ",@command);
-    $chan->exec($command);# or $self->{_ssh}->die_with_error;
+    my ($out, $err) = $ssh->capture2({timeout => 10},join " ",@command);
+    chomp $err if $err;
+    $err = '' if !defined $err;
 
-    $chan->send_eof();
+    die "Error: Failed remote command on ".$self->host." @command : '$err'\n"
+    ."'".$ssh->error."'"
+    if $ssh->error && $ssh->error !~ /^child exited with code/;
 
-    my ($out, $err) = ('', '');
-    while (!$chan->eof) {
-        if (my ($o, $e) = $chan->read2) {
-            $out .= $o;
-            $err .= $e;
-        }
-    }
+
     return ($out, $err);
 }
 
@@ -1271,6 +1280,10 @@ sub run_command_nowait($self, @command) {
 
     return $self->_run_command_local(@command) if $self->is_local();
 
+    return $self->run_command(@command);
+
+=pod
+
     my $chan = $self->_ssh_channel() or die "ERROR: No SSH channel to host ".$self->host;
 
     my $command = join(" ",@command);
@@ -1279,6 +1292,9 @@ sub run_command_nowait($self, @command) {
     $chan->send_eof();
 
     return;
+
+=cut
+
 }
 
 
@@ -1301,10 +1317,12 @@ Writes a file to the node
 sub write_file( $self, $file, $contents ) {
     return $self->_write_file_local($file, $contents )  if $self->is_local;
 
-    my $chan = $self->_ssh_channel();
-    $chan->exec("cat > $file");
-    my $bytes = $chan->write($contents);
-    $chan->send_eof();
+    my $ssh = $self->ssh or confess "Error: no ssh connection";
+    my ($rin, $pid) = $self->ssh->pipe_in("cat > $file")
+        or die "pipe_in method failed ".$self->ssh->error;
+
+    print $rin $contents;
+    close $rin;
 }
 
 sub _write_file_local( $self, $file, $contents ) {
@@ -1325,14 +1343,10 @@ Reads a file in memory from the storage of the virtual manager
 sub read_file( $self, $file ) {
     return $self->_read_file_local($file) if $self->is_local;
 
-    my $ssh = ($self->{_ssh} or $self->_connect_ssh());
-    die "Error: no ssh connection to ".$self->name if ! $ssh;
+    my ($rout, $pid) = $self->ssh->pipe_out("cat $file")
+        or die "pipe_out method failed ".$self->ssh->error;
 
-    my $data = '';
-    my $io = IO::Scalar->new(\$data);
-    my $ok = $ssh->scp_get($file, $io);
-
-    return $data;
+    return join ("",<$rout>);
 }
 
 sub _read_file_local( $self, $file ) {
@@ -1350,8 +1364,8 @@ Returns true if the file exists in this virtual manager storage
 sub file_exists( $self, $file ) {
     return -e $file if $self->is_local;
 
-    my $ssh = ($self->{_ssh} or $self->_connect_ssh());
-    die "Error: no ssh connection to ".$self->name if ! $ssh;
+    my $ssh = $self->ssh;
+    confess "Error: no ssh connection to ".$self->name if ! $ssh;
 
     confess "Error: dangerous filename '$file'"
         if $file =~ /[`|"(\\\[]/;

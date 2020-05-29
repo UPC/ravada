@@ -51,15 +51,16 @@ for my $vm_name ( 'KVM') {
         is( $node->is_active, 1 );
         $node->shutdown();
         for ( 1 .. 60 ) {
-            last if !$node->ping;
             sleep 1;
+            last if !$node->_ping_nocache();
         }
-        is( $node->ping, 0 );
-        is( $node->is_active, 0 );
+        my $node2 = Ravada::VM->open(id => $node->id);
+        is( $node2->_ping_nocache(), 0 );
+        is( $node2->is_active(1), 0 );
 
         # it actually dows nothing on virtual machines, just check it won't fail
         eval { $node->_wake_on_lan() };
-        is($@,'');
+        is($@,'',"Expecting no error on wake on lan");
 #        KVM testing machines can't Wake On LAN
 #        sleep 1;
 #        $node->start();
