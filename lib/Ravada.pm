@@ -1364,7 +1364,6 @@ sub _sql_create_tables($self) {
 }
 
 sub _sql_insert_defaults($self){
-    my $cont = 1;
     require Mojolicious::Plugin::Config;
     my $plugin = Mojolicious::Plugin::Config->new();
     my $conf = {
@@ -1376,11 +1375,12 @@ sub _sql_insert_defaults($self){
     if ( -e "/etc/rvd_front.conf" ){
         $conf = $plugin->load("/etc/rvd_front.conf");
     }
+    my $id_frontend = 1;
     my $id_backend = 2;
     my %values = (
         settings => [
             {
-                id => $cont++
+                id => $id_frontend
                 ,id_parent => 0
                 ,name => 'frontend'
             }
@@ -1389,61 +1389,56 @@ sub _sql_insert_defaults($self){
                 ,id_parent => 0
                 ,name => 'backend'
             }
-            ,{  id => $cont++
-                ,id_parent => 1
+            ,{
+                id_parent => $id_frontend
                 ,name => 'fallback'
                 ,value => $conf->{fallback}
             }
-            ,{  id => $cont++
-                ,id_parent => 1
+            ,{
+                id_parent => $id_frontend
                 ,name => 'maintenance'
                 ,value => 0
             }
-            ,{  id => $cont++
-                ,id_parent => 1
+            ,{
+                id_parent => $id_frontend
                 ,name => 'maintenance_start'
                 ,value => ''
             }
-            ,{  id => $cont++
-                ,id_parent => 1
+            ,{
+                id_parent => $id_frontend
                 ,name => 'maintenance_end'
                 ,value => ''
             }
 
-            ,{  id => $cont++
-                ,id_parent => 1
+            ,{
+                id_parent => $id_frontend
                 ,name => 'session_timeout'
                 ,value => $conf->{session_timeout}
             }
-            ,{  id => $cont++
-                ,id_parent => 1
+            ,{
+                id_parent => $id_frontend
                 ,name => 'session_timeout_admin'
                 ,value => $conf->{session_timeout_admin}
             }
-            ,{  id => $cont++
-                ,id_parent => 1
+            ,{
+                id_parent => $id_frontend
                 ,name => 'auto_view'
                 ,value => $conf->{auto_view}
             }
-            ,{  id => $cont++
-                ,id_parent => 1
-                ,name => 'maintenance'
-                ,value => 0
-            }
-            ,{ id => $cont++
-                ,id_parent => $id_backend
+            ,{
+                id_parent => $id_backend
                 ,name => 'start_limit'
                 ,value => 1
             }
         ]
     );
-
+    my %field = ( settings => 'name' );
     for my $table (sort keys %values) {
         my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM $table "
-            ." WHERE id = ? "
+            ." WHERE $field{$table} = ? "
         );
         for my $entry (@{$values{$table}}) {
-            $sth->execute($entry->{id});
+            $sth->execute($entry->{$field{$table}});
             my ($found) = $sth->fetchrow;
             next if $found;
             warn "INFO adding default $table ".Dumper($entry) if $0 !~ /t$/;
