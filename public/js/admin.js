@@ -513,12 +513,12 @@ ravadaApp.directive("solShowMachine", swMach)
     };
 
     function settings_global_ctrl($scope, $http) {
+        $scope.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         $scope.init = function() {
             $http.get('/settings_global.json').then(function(response) {
                 $scope.settings = response.data;
                 var now = new Date();
                 if ($scope.settings.frontend.maintenance.value == 0 ) {
-                    console.log("default");
                     $scope.settings.frontend.maintenance_start.value
                         = new Date(now.getFullYear(), now.getMonth(), now.getDate()
                             , now.getHours(), now.getMinutes());
