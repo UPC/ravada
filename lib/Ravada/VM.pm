@@ -388,7 +388,7 @@ sub _around_create_domain {
      # args get deleted but kept on %args_create so when we call $self->$orig below are passed
      delete $args{disk};
      delete $args{memory};
-     delete $args{request};
+     my $request = delete $args{request};
      delete $args{iso_file};
      delete $args{id_template};
      delete @args{'description','remove_cpu','vm','start'};
@@ -426,6 +426,14 @@ sub _around_create_domain {
     $self->_pre_create_domain(%args_create);
 
     return $base->_search_pool_clone($owner) if $from_pool;
+
+    if ($self->is_local && $base && $base->is_base
+            && ( $base->volatile_clones || $owner->is_temporary )) {
+        $request->status("balancing")                       if $request;
+        my $vm = $self->balance_vm($base) or die "Error: No free nodes available.";
+        $request->status("creating machine on ".$vm->name)  if $request;
+        $self = $vm;
+    }
 
     my $domain = $self->$orig(%args_create, volatile => $volatile);
     $self->_add_instance_db($domain->id);

@@ -1924,13 +1924,6 @@ sub create_domain {
         or confess "Error: Unkown user '$id_owner'";
 
     $request->status("creating machine")    if $request;
-    if ( $base && $base->is_base && $base->volatile_clones || $user->is_temporary ) {
-        $request->status("balancing")                       if $request;
-        $vm = $vm->balance_vm($base) or die "Error: No free nodes available.";
-        $request->status("creating machine on ".$vm->name)  if $request;
-    }
-
-    confess "Error: missing vm " if !$vm;
 
     my $domain;
     eval { $domain = $vm->create_domain(%args)};

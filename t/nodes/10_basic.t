@@ -571,6 +571,10 @@ sub test_volatile_req($vm, $node) {
     }
     is($clone->_vm->id, $node->id) or exit;
 
+    shutdown_domain_internal($clone);
+    for my $vol ( $clone->list_volumes ) {
+        ok(!$vm->file_exists($vol),$vol) or exit;
+    }
     for (@clones) {
         $_->remove(user_admin);
     }
