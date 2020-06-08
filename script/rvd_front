@@ -265,18 +265,7 @@ get '/settings_global.json' => sub($c) {
 post '/settings_global' => sub($c) {
     my $arg = decode_json($c->req->body);
 
-    my $orig_settings;
-    my $sth = $RAVADA->_dbh->prepare("SELECT id,value FROM settings");
-    $sth->execute();
-    while (my ($id, $value) = $sth->fetchrow) {
-        $orig_settings->{$id} = $value;
-    }
-
-    if (!$arg->{frontend}->{maintenance}->{value}) {
-        delete $arg->{frontend}->{maintenance_end};
-        delete $arg->{frontend}->{maintenance_start};
-    }
-    _update_settings($arg, $orig_settings);
+    $RAVADA->update_settings_global($arg, $USER);
 
     return $c->render(json => { ok => 1 });
 };
@@ -2530,28 +2519,6 @@ sub _new_anonymous_user {
 
     return $name;
 }
-
-sub _update_settings($arg, $orig_settings) {
-    for my $field (keys %$arg) {
-        if ( !exists $arg->{$field}->{id} ) {
-            _update_settings($arg->{$field}, $orig_settings);
-            next;
-        }
-        confess "Error: invalid field $field" if $field !~ /^\w+$/;
-        my ( $value, $id )
-                   = ($arg->{$field}->{value}
-                    , $arg->{$field}->{id}
-        );
-        next if $orig_settings->{$id} eq $value;
-        my $sth = $RAVADA->_dbh->prepare(
-            "UPDATE settings set value=?"
-            ." WHERE id=? "
-        );
-        $sth->execute($value, $id);
-
-        $USER->send_message("Setting $field to $value");
-    }
-};
 
 sub maintenance($c) {
 
