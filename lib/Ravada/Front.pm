@@ -626,6 +626,7 @@ sub iso_file ($self, $vm_type) {
     $self->wait_request($req);
     return [] if $req->status ne 'done';
 
+    return [] if !length($req->output);
     my $isos = decode_json($req->output());
 
     $self->_cache_store("list_isos",$isos);
@@ -1193,7 +1194,7 @@ sub list_network_interfaces($self, %args) {
     if  ( defined $timeout ) {
         $self->wait_request($req, $timeout);
     }
-    return [] if $req->status ne 'done';
+    return [] if $req->status ne 'done' || !length($req->output);
 
     my $interfaces = decode_json($req->output());
     $self->{$cache_key} = $interfaces;

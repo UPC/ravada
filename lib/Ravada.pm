@@ -23,6 +23,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 use Ravada::Auth;
+use Ravada::Booking;
 use Ravada::Request;
 use Ravada::Repository::ISO;
 use Ravada::VM::Void;
@@ -943,13 +944,17 @@ sub _add_indexes_generic($self) {
         ,settings => [
             "index(id_parent,name)"
         ]
+        ,booking_entries => [
+            "index(id_booking)"
+        ]
     );
     for my $table ( keys %index ) {
-        my $known = $self->_get_indexes($table);
+        my $known;
         for my $change (@{$index{$table}} ) {
             my ($type,$fields ) =$change =~ /(\w+)\((.*)\)/;
             my $name = $fields;
             $name =~ s/,/_/g;
+            $known = $self->_get_indexes($table) if !defined $known;
             next if $known->{$name};
             my $sql = "ALTER TABLE $table add $type $name ($fields)";
             warn "INFO: Adding index to $table: $name";
@@ -1188,6 +1193,7 @@ sub _set_url_isos($self, $new_url='http://localhost/iso/') {
     $sth->finish;
 
 }
+
 sub _upgrade_table {
     my $self = shift;
     my ($table, $field, $definition) = @_;
@@ -1341,6 +1347,40 @@ sub _sql_create_tables($self) {
             , name => 'varchar(64) NOT NULL'
             , value => 'varchar(128) DEFAULT NULL'
         }
+        ,bookings => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,title => 'varchar(80)'
+            ,description => 'varchar(255)'
+            ,date_start => 'date not null'
+            ,date_end => 'date not null'
+            ,day_of_week => 'char(8)'
+            ,id_owner => 'int not null'
+            ,date_created => 'datetime'
+            ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+        }
+        ,booking_entries => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,title => 'varchar(80)'
+            ,description => 'varchar(255)'
+            ,id_booking => 'int not null references bookings(id) ON DELETE CASCADE'
+            ,time_start => 'time not null'
+            ,time_end => 'time not null'
+            ,id_base => 'int not null'
+            ,date_booking => 'date'
+        }
+        ,booking_entry_ldap_groups => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_booking_entry
+                => 'int not null references booking_entries(id) ON DELETE CASCADE'
+            ,ldap_group => 'varchar(255) not null'
+        }
+        ,booking_entry_users => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_booking_entry
+                => 'int not null references booking_entries(id) ON DELETE CASCADE'
+            ,id_user => 'int not null references users(id) ON DELETE CASCADE'
+        }
+
     );
     for my $table ( keys %tables ) {
         my $sth = $CONNECTOR->dbh->table_info('%',undef,$table,'TABLE');
@@ -1548,7 +1588,6 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','display_file','text DEFAULT NULL');
     $self->_upgrade_table('domains','info','varchar(255) DEFAULT NULL');
     $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
-    $self->_upgrade_table('domains','id_vm','int default null');
     $self->_upgrade_table('domains','volatile_clones','int NOT NULL default 0');
     $self->_upgrade_table('domains','comment',"varchar(80) DEFAULT ''");
 
@@ -1627,6 +1666,8 @@ sub _connect_dbh {
                         , PrintError=> 0 });
             $con->dbh();
         };
+        $con->dbh->do("PRAGMA foreign_keys = ON") if $driver =~ /sqlite/i;
+
         return $con if $con && !$@;
         sleep 1;
         warn "Try $try $@\n";
@@ -4113,6 +4154,37 @@ sub import_domain {
 sub _cmd_enforce_limits($self, $request=undef) {
     _enforce_limits_active($self, $request);
     $self->_shutdown_disconnected();
+    $self->_shutdown_bookings();
+}
+
+sub _shutdown_bookings($self) {
+    my @bookings = Ravada::Booking::bookings();
+    return if !scalar(@bookings);
+
+
+    my @domains = $self->list_domains_data(status => 'active');
+    for my $dom ( @domains ) {
+        warn "$dom->{name} $dom->{id_base}\n";
+        next if $dom->{autostart};
+        next if $self->_user_is_admin($dom->{id_owner});
+
+        if ( Ravada::Booking::user_allowed($dom->{id_owner}, $dom->{id_base}) ) {
+            # warn "\tuser $dom->{id_owner} allowed to start clones from $dom->{id_base}";
+            next;
+        }
+
+        Ravada::Request->shutdown_domain(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $dom->{id}
+        );
+    }
+}
+
+sub _user_is_admin($self, $id_user) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT is_admin FROM users where id=? ");
+    $sth->execute($id_user);
+    my ($is_admin) = $sth->fetchrow;
+    return $is_admin;
 }
 
 sub _enforce_limits_active($self, $request) {

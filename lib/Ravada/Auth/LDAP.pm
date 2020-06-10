@@ -301,16 +301,13 @@ sub remove_group {
 sub search_group {
     my %args = @_;
 
-    my $name = delete $args{name} or confess "Missing group name";
+    my $name = delete $args{name};
     my $base = ( delete $args{base} or "ou=groups,"._dc_base() );
     my $ldap = ( delete $args{ldap} or _init_ldap_admin());
     my $retry =( delete $args{retry} or 0);
 
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
     confess "ERROR: I can't connect to LDAP " if!$ldap;
-
-    $name = escape_filter_value($name);
-
 
     my $mesg = $ldap ->search (
         filter => "cn=$name"
@@ -332,7 +329,8 @@ sub search_group {
     }
     my @entries = $mesg->entries;
 
-    return $entries[0]
+    return @entries if wantarray;
+    return $entries[0];
 }
 
 =head2 add_to_group

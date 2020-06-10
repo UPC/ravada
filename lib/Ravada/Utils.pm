@@ -5,6 +5,9 @@ use strict;
 
 use Carp qw(confess);
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 =head1 NAME
 
 Ravada::Utils - Misc util libraries for Ravada
@@ -101,6 +104,35 @@ sub number_to_size {
         $previous_unit = $unit;
         $previous_ret = $ret;
     }
+}
+
+sub last_insert_id($dbh) {
+    my $driver = $dbh->{Driver}->{Name};
+
+    if ( $driver =~ /sqlite/i ) {
+        return _last_insert_id_sqlite($dbh);
+    } elsif ( $driver =~ /mysql/i ) {
+        return _last_insert_id_mysql($dbh);
+    } else {
+        confess "I don't know how to get last_insert_id for $driver";
+    }
+}
+
+sub _last_insert_id_mysql($dbh) {
+    my $sth = $dbh->prepare("SELECT last_insert_id()");
+    $sth->execute;
+    my ($id) = $sth->fetchrow;
+    $sth->finish;
+    return $id;
+
+}
+
+sub _last_insert_id_sqlite($dbh) {
+    my $sth = $dbh->prepare("SELECT last_insert_rowid()");
+    $sth->execute;
+    my ($id) = $sth->fetchrow;
+    $sth->finish;
+    return $id;
 }
 
 1;

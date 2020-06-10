@@ -24,6 +24,7 @@ use Time::Piece;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
+use Ravada::Booking;
 use Ravada::Domain::Driver;
 use Ravada::Utils;
 
@@ -372,11 +373,12 @@ sub _start_preconditions{
 
     my $request;
     my $id_vm;
+    my $user;
     if (scalar @_ %2 ) {
         my @args = @_;
         shift @args;
         my %args = @args;
-        my $user = delete $args{user};
+        $user = delete $args{user};
         my $remote_ip = delete $args{remote_ip};
         $request = delete $args{request} if exists $args{request};
         $id_vm = delete $args{id_vm};
@@ -387,8 +389,14 @@ sub _start_preconditions{
     } else {
         _allow_manage(@_);
     }
+    $self->_allow_booking( $user );
     #_check_used_memory(@_);
     $self->status('starting');
+}
+
+sub _allow_booking($self, $user) {
+    my $id_base = $self->_data('id_base') or return;
+    die "Error: resource booked " if !Ravada::Booking::user_allowed($user, $id_base);
 }
 
 sub _start_checks($self, @args) {
