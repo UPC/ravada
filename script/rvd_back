@@ -25,6 +25,7 @@ my $FILE_CONFIG_DEFAULT = "/etc/ravada.conf";
 my $FILE_CONFIG;
 
 my $ADD_USER_LDAP;
+my $ADD_GROUP_LDAP;
 my $REMOVE_USER;
 my $IMPORT_DOMAIN;
 my $IMPORT_VBOX;
@@ -113,6 +114,7 @@ GetOptions (       help => \$help
       ,'remove-admin=s' => \$REMOVE_ADMIN_USER
       ,'change-password'=> \$CHANGE_PASSWORD
       ,'add-user-ldap=s'=> \$ADD_USER_LDAP
+     ,'add-group-ldap=s'=> \$ADD_GROUP_LDAP
       ,'import-domain=s' => \$IMPORT_DOMAIN
       ,'import-vbox=s' => \$IMPORT_VBOX
 ,'import-domain-owner=s' => \$IMPORT_DOMAIN_OWNER
@@ -272,6 +274,15 @@ sub add_user_ldap {
 
     Ravada::Auth::LDAP::add_user($login, $password);
 }
+
+sub add_group_ldap {
+    my $login = shift;
+
+    my $ravada = Ravada->new( %CONFIG);
+    Ravada::Auth::LDAP::_init_ldap_admin();
+    Ravada::Auth::LDAP::add_group($login);
+}
+
 
 sub remove_user {
     my $login = shift;
@@ -637,6 +648,7 @@ my $rvd_back = Ravada->new(%CONFIG);
 
 add_user($ADD_USER)                 if $ADD_USER;
 add_user_ldap($ADD_USER_LDAP)       if $ADD_USER_LDAP;
+add_group_ldap($ADD_GROUP_LDAP)     if $ADD_GROUP_LDAP;
 remove_user($REMOVE_USER)           if $REMOVE_USER;
 change_password()                   if $CHANGE_PASSWORD;
 import_domain($IMPORT_DOMAIN)       if $IMPORT_DOMAIN;
