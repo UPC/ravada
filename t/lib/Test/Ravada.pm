@@ -728,9 +728,10 @@ sub create_user {
     return $user;
 }
 
-sub create_ldap_user($name, $password) {
+sub create_ldap_user($name, $password, $keep=0) {
 
     if ( Ravada::Auth::LDAP::search_user($name) ) {
+        return if $keep;
         diag("Removing $name");
         Ravada::Auth::LDAP::remove_user($name)  
     }
@@ -754,6 +755,7 @@ sub create_ldap_user($name, $password) {
     push @USERS_LDAP,($name);
 
     my @user = Ravada::Auth::LDAP::search_user($name);
+    diag("Adding $name to ldap");
     return $user[0];
 }
 
@@ -1662,7 +1664,7 @@ sub connector {
                         , RaiseError => 1
                         , PrintError => 1
                 });
-
+    $connector->dbh->do("PRAGMA foreign_keys = ON");
     _create_db_tables($connector);
 
     $CONNECTOR = $connector;
