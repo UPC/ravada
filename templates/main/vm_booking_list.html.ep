@@ -1,0 +1,18 @@
+<div class="containter">
+
+<div class="row">
+    <div class="col col-xl-1">time</div>
+    <div class="col col-xl-1" ng-repeat="day in week">
+        <small>{{day.dow}}</small><br/>{{day.day}}
+    </div>
+</div>
+<div class="row" ng-repeat="hour in ['08','09',10,11,12,13,14,15,16,17,18,19,20]">
+    <div class="col col-xl-1">
+        <small>{{hour}}:00</small>
+    </div>
+    <div class="col col-xl-1" ng-repeat="dow in [0,1,2,3,4,5,6]">
+        <a href="/bookings/edit/{{bookings_week[dow+"."+hour].id}}">{{bookings_week[dow+"."+hour].title}}</a>
+    </div>
+</div>
+
+</div>

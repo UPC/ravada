@@ -244,6 +244,7 @@
             };
 
           var url_ws;
+          $scope.booking_monday = new Date();
           $scope.init = function(id, url,is_admin) {
                 url_ws = url;
                 $scope.showmachineId=id;
@@ -252,6 +253,7 @@
                    , 'Accept', 'Connection', 'Accept-Language', 'DNT', 'Host'
                    , 'Accept-Encoding', 'Cache-Control', 'X-Forwarded-For'
                 ];
+
                 subscribe_ws(url_ws, is_admin);
                 $http.get('/machine/info/'+$scope.showmachineId+'.json')
                     .then(function(response) {
@@ -279,6 +281,7 @@
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
                             if (is_admin) list_users();
                 });
+                $scope.list_bookings_week();
           };
 
           list_interfaces = function() {
@@ -680,6 +683,12 @@
                         }
                     });
             }
+            list_ldap_groups = function() {
+                $http.get('/list_ldap_groups/')
+                    .then(function(response) {
+                        $scope.ldap_groups=response.data;
+                    });
+            };
             $scope.rebase= function() {
                 $scope.req_new_base = $scope.new_base;
                 $http.post('/request/rebase/'
@@ -733,6 +742,64 @@
                 });
             };
 
+            init_booking = function() {
+                var now = new Date();
+                var monday = now;
+                var diff = now.getDay() - 1;
+                if (diff < 0 ) { diff = 6 }
+                monday.setDate(now.getDate() - diff);
+            }
+
+            $scope.init_new_booking = function() {
+                $scope.new_booking = true;
+
+                var now = new Date();
+                $scope.booking = { title: ''
+                };
+                $scope.booking.date_start = new Date(now.getFullYear(), now.getMonth()
+                                                    , now.getDate());
+                $scope.booking.date_end = new Date(now.getFullYear(), now.getMonth()
+                                                    , now.getDate());
+                $scope.booking.time_start = "08:00";
+                $scope.booking.time_end = "09:00";
+                $scope.booking.dow = [0,0,0,0,0,0,0]
+                $scope.update_booking_dow();
+            };
+            $scope.list_bookings_week = function() {
+                $http.get('/machine/bookings/week/'+$scope.showmachineId+'/'
+                                                    +$scope.booking_monday.getDate())
+                    .then(function(response) {
+                        $scope.bookings_week=response.data;
+                });
+                var day_name
+                  = ['Sun', 'Mon','Tue','Wed','Thu','Fri', 'Sat'];
+                $scope.week = [];
+                var monday = new Date($scope.booking_monday.getDate());
+                for (var i=0; i<7;i++) {
+                    $scope.week[i] ={ dow: day_name[monday.getDay()], day: monday.getDate() };
+                    monday.setDate(monday.getDate() +1);
+                }
+
+            };
+            $scope.save_booking = function() {
+                $scope.booking.id_base = $scope.showmachineId;
+                console.log($scope.booking);
+                $http.post('/booking/save'
+                    ,JSON.stringify($scope.booking)
+                ).then(function(response) {
+                    $scope.error = response.data.error;
+                    if ($scope.error == '') {
+                        $scope.new_booking=false;
+                        $scope.message_booking = "Booking "+$scope.booking.title+ " saved.";
+                        $scope.list_bookings_week();
+                    }
+                });
+            };
+            $scope.update_booking_dow = function() {
+                var dow = $scope.booking.dow;
+                $scope.booking.day_of_week = ''+dow[0]+dow[1]+dow[2]
+                    +dow[3]+dow[4]+dow[5]+dow[6];
+            };
             $scope.message = [];
             $scope.disk_remove = [];
             $scope.pending_before = 10;
@@ -742,7 +809,11 @@
             $scope.access_value = [ ];
             $scope.access_allowed = [ ];
             $scope.access_last = [ ];
-          $scope.list_ldap_attributes();
+            $scope.list_ldap_attributes();
+            list_ldap_groups();
+
+            init_booking();
+
         };
 
     function swListMach() {

@@ -25,6 +25,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 
+use Ravada::Booking;
 use Ravada::Front;
 use Ravada::Front::Domain;
 use Ravada::Auth;
@@ -830,6 +831,18 @@ get '/machine/display-tls/(:id)-tls.vv' => sub {
     return $c->render(data => $domain->display_file_tls($USER), format => 'vv');
 };
 
+get '/machine/bookings/week/(#id_domain)/(#date)' => sub {
+    my $c = shift;
+
+    my $id_domain = $c->stash('id_domain');
+    my $date = $c->stash('date');
+    #TODO fix date
+    warn $date;
+    return $c->render(
+        json => Ravada::Booking::bookings_week(id_base => $id_domain)
+    );
+};
+
 # Network ##########################################################3
 
 get '/network/interfaces/(:vm_type)/(:type)' => sub {
@@ -1312,6 +1325,34 @@ get '/list_users.json' => sub($c) {
     return access_denied($c) if !$USER->is_admin;
     return $c->render(json => $RAVADA->list_users );
 };
+
+
+get '/list_ldap_groups' => sub($c) {
+    return _list_ldap_groups($c,'*');
+};
+
+get '/list_ldap_groups/:name' => sub($c) {
+    my $name = $c->stash('name');
+    return access_denied($c) if !$USER->is_admin;
+
+    return _list_ldap_groups($c,$name);
+};
+
+post '/booking/save' => sub($c) {
+    my $arg = decode_json($c->req->body);
+    delete $arg->{dow};
+    $arg->{id_owner} = $USER->id;
+    $arg->{date_start} =~ s/(^[\d-]+).*/$1/;
+    $arg->{date_end} =~ s/(^[\d-]+).*/$1/;
+    eval {
+        my $booking = Ravada::Booking->new(%$arg);
+    };
+    my ($error) = split /\n/,$@;
+    warn $error if $error;
+    $error =~ s/ at .*// if $error;
+    return $c->render(json => { ok => !$error, error => ($error  or '')} );
+};
+
 
 ###################################################
 
@@ -2540,6 +2581,13 @@ sub maintenance($c) {
     );
 }
 
+sub _list_ldap_groups($c, $name='*') {
+    $name = '*'.$name.'*' if $name !~ /\*/;
+    my @groups = Ravada::Auth::LDAP::search_group( name => $name );
+    return $c->render(json => [ sort { $a cmp $b } map { $_->get_value('cn') } @groups ] );
+};
+
+#################################################################################
 my $routes = app->routes->children;
 for my $route (@$routes){
     $route->pattern->quote_start('(');

@@ -94,6 +94,9 @@
     <div class="tab-pane fade" id="v-pills-pool" role="tabpanel" aria-labelledby="v-pills-pool-tab">
         %= include 'main/vm_pool'
     </div>
+    <div class="tab-pane fade" id="v-pills-booking" role="tabpanel" aria-labelledby="v-pills-booking-tab">
+        %= include 'main/vm_booking'
+    </div>
 % }
 
 </div>
