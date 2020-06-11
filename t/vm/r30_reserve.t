@@ -213,13 +213,8 @@ sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as) {
 
 sub test_bookings_week($id_base) {
     my $today = DateTime->now();
-    my $hour_start =7; $hour_start = $today->hour -1 if $today->hour>= $hour_start;
-    my $hour_end =21; $hour_end = $today->hour -1 if $today->hour>= $hour_end;
 
-    my $bookings = Ravada::Booking::bookings_week(id_base => $id_base
-        , hour_start => $hour_start
-        , hour_end => $hour_end
-    );
+    my $bookings = Ravada::Booking::bookings_week(id_base => $id_base);
     my $dow = $today->day_of_week - 1;
     my $hour = $today->hour;
     $hour = "0$hour" if length($hour) < 2;
@@ -235,6 +230,19 @@ sub test_bookings_week($id_base) {
     # expect 1 booking if today is sunday
     $n_exp = 1 if $today->day_of_week ==7 ;
     is(scalar (keys %$bookings),$n_exp,"Expecting $n_exp bookings for this week");
+
+    my $bookings_no = Ravada::Booking::bookings_week(id_base => $id_base
+        , user_name => $USER_NO->name
+    );
+    is(scalar(keys %$bookings_no),0);
+    $bookings_no = Ravada::Booking::bookings_week( user_name => $USER_NO->name);
+    is(scalar(keys %$bookings_no),0);
+
+    my $bookings_yes = Ravada::Booking::bookings_week(id_base => $id_base
+        , user_name => $USER_YES_1->name
+    );
+    is_deeply($bookings_yes, $bookings);
+
 }
 
 sub test_shut_others($clone_no1, $clone_no2, $clone_as) {
