@@ -26,6 +26,7 @@
 //            .controller("messages", messagesCrtl)
             .controller("users", usersCrtl)
             .controller("bases", mainpageCrtl)
+            .controller("bookings", bookingCtrl)
             .controller("singleMachinePage", singleMachinePageC)
             .controller("maintenance",maintenanceCtrl)
             .controller("notifCrtl", notifCrtl)
@@ -1054,6 +1055,40 @@
         };
     };
 
+    function bookingCtrl($scope, $interval, $http, request){
+        $scope.list_bookings_week = function() {
+            $http.get('/bookings/week/'+$scope.booking_monday.toISOString().slice(0,10))
+                .then(function(response) {
+                    $scope.bookings_week=response.data;
+                });
+            var day_name
+                = ['Sun', 'Mon','Tue','Wed','Thu','Fri', 'Sat'];
+            $scope.week = [];
+            var monday = new Date($scope.booking_monday.getDate());
+            for (var i=0; i<7;i++) {
+                $scope.week[i] ={ dow: day_name[monday.getDay()], day: monday.getDate() };
+                monday.setDate(monday.getDate() +1);
+            }
+
+        };
+
+        load_booking = function(id) {
+            $http.get('/booking/'+id)
+                .then(function(response) {
+                    $scope.booking=response.data;
+                });
+        };
+
+        $scope.load_entry = function(id) {
+            $http.get('/booking/entry/'+id)
+                .then(function(response) {
+                    $scope.booking_entry=response.data;
+                    load_booking(response.data.id_booking);
+                });
+        };
+        $scope.booking_monday = new Date();
+        $scope.list_bookings_week();
+    };
 /*
   function requestsCrtlSingle($scope, $interval, $http, request){
     $scope.getReqs= function() {

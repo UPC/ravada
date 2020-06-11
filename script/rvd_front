@@ -73,6 +73,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               }
                                               ,config => $FILE_CONFIG_RAVADA
                                               ,auto_view => 0
+                                              ,bookings => 1
                                               }
                                       ,file => $FILE_CONFIG
 };
@@ -145,6 +146,7 @@ hook before_routes => sub {
             ,check_netdata => 0
             ,guide => $CONFIG_FRONT->{guide}
             ,host => $host
+            ,bookings => $CONFIG_FRONT->{bookings}
             );
 
     $USER = _logged_in($c);
@@ -1336,6 +1338,45 @@ get '/list_ldap_groups/:name' => sub($c) {
     return access_denied($c) if !$USER->is_admin;
 
     return _list_ldap_groups($c,$name);
+};
+
+get '/booking/:range' => { range => 'week' } => sub($c) {
+    my $range = $c->stash('range');
+
+    if ( $range =~ /^\d+$/ ) {
+        my $booking= Ravada::Booking->new( id =>  $range );
+        return $c->render( json => $booking->{_data} );
+    }
+
+    my %valid = map { $_ => 1 } qw (day week month');
+
+    return $c->render( text => "Invalid range $range ".$c->req->url->to_abs->path)
+    if !$valid{$range};
+
+    return $c->render(template => '/ng-templates/booking/'.$range);
+};
+
+get '/bookings/:range/:date' => { range => 'week', date => undef } => sub($c) {
+    my $range = $c->stash('range');
+    my @args = (
+            date => $c->stash('daate')
+            ,user_name => $USER->name
+    );
+    if ($range eq 'week') {
+        return $c->render( json => Ravada::Booking::bookings_week( @args) );
+    } else {
+        return $c->render( text => "Error: I don't know how to list $range bookings");
+    }
+
+};
+
+get '/booking/view/:id' => sub($c) {
+    return $c->render(template => '/ng-templates/booking/view');
+};
+
+get '/booking/entry/:id' => sub($c) {
+    my $booking_entry = Ravada::Booking::Entry->new( id => $c->stash('id'));
+    return $c->render( json => $booking_entry->{_data} );
 };
 
 post '/booking/save' => sub($c) {

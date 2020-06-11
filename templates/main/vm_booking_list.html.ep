@@ -1,4 +1,4 @@
-<div class="containter">
+<div class="containter" ng-cloak="1">
 
 <div class="row">
     <div class="col col-xl-1">time</div>
@@ -11,7 +11,9 @@
         <small>{{hour}}:00</small>
     </div>
     <div class="col col-xl-1" ng-repeat="dow in [0,1,2,3,4,5,6]">
-        <a href="/bookings/edit/{{bookings_week[dow+"."+hour].id}}">{{bookings_week[dow+"."+hour].title}}</a>
+        <a href="/booking/view/{{bookings_week[dow+'.'+hour].id}}">
+        {{bookings_week[dow+"."+hour].title}}
+        </a>
     </div>
 </div>
 
