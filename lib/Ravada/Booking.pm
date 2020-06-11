@@ -302,24 +302,18 @@ sub user_allowed($user,$id_base) {
     for my $entry (Ravada::Booking::bookings( date => $today, time => $now)) {
         $allowed = 0;
         next if $entry->_data('id_base') != $id_base;
-        for my $group_name ($entry->groups) {
-            my $group = Ravada::Auth::LDAP->_search_posix_group($group_name);
-            my @member = $group->get_value('memberUid');
-            my ($found) = grep /^$user_name$/,@member;
-            return 1 if $found;
-        }
-        for my $allowed_user_name ( $entry->users ) {
-            return 1 if $user_name eq $allowed_user_name;
-        }
+        return 1 if $entry->user_allowed($user_name);
     }
     return $allowed;
 }
 
+
 #sub bookings_week($id_base, $date=_monday(), $hour_start=8, $hour_end=20) {
 sub bookings_week(%args) {
-    # TODO: withou id_base
     my $id_base = delete $args{id_base};
     my $date = ( delete $args{date} or _monday) ;
+    my $user_name = delete $args{user_name};
+    confess "Error: unknown field ".Dumper(\%args) if keys %args;
 
     my %booking;
     for my $dow ( 0 .. 6 ) {
@@ -331,7 +325,8 @@ sub bookings_week(%args) {
             for (;;) {
                 $hour = "0".$hour while length($hour)<2;
                 my $key = "$dow.$hour";
-                $booking{$key} = $entry->{_data};
+                $booking{$key} = $entry->{_data} if !$user_name
+                                                    || $entry->user_allowed($user_name);
                 last if ++$hour>$hour_end;
             }
         }
