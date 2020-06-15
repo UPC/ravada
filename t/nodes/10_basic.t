@@ -581,6 +581,45 @@ sub test_volatile_req($vm, $node) {
     $base->remove(user_admin);
 }
 
+sub test_volatile_req_clone($vm, $node) {
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+    $base->set_base_vm(user => user_admin, node => $node);
+    $base->volatile_clones(1);
+    ok($base->base_in_vm($node->id));
+
+    my @clones;
+    my $clone;
+    for ( 1 .. 20 ) {
+        my $clone_name = new_domain_name;
+        my $req = Ravada::Request->clone(
+           id_base => $base->id
+            ,number => 3
+            ,id_owner => user_admin->id
+        );
+        rvd_back->_process_all_requests_dont_fork();
+        is($req->status, 'done');
+        is($req->error,'');
+
+        $clone = rvd_back->search_domain($clone_name);
+        is($clone->is_active(),1,"[".$vm->type."] expecting clone ".$clone->name
+            ." active on node ".$clone->_vm->name);
+        push @clones,($clone);
+        last if $clone->_vm->id == $node->id;
+    }
+    is($clone->_vm->id, $node->id) or exit;
+
+    shutdown_domain_internal($clone);
+    for my $vol ( $clone->list_volumes ) {
+        ok(!$vm->file_exists($vol),$vol) or exit;
+    }
+    for (@clones) {
+        $_->remove(user_admin);
+    }
+    $base->remove(user_admin);
+}
+
+
 sub test_volatile_tmp_owner($vm, $node) {
     my $base = create_domain($vm);
     $base->prepare_base(user_admin);
@@ -1003,6 +1042,7 @@ for my $vm_name ( 'Void', 'KVM') {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+        test_volatile_req($vm, $node);
 
         test_change_base($vm, $node);
         test_change_clone($vm, $node);
