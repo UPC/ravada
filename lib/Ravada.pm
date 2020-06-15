@@ -3605,8 +3605,9 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
     while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
         next if exists $active_domain->{$id_domain};
 
-        my $domain = Ravada::Domain->open($id_domain) or next;
-        next if $domain->is_hibernated;
+        my $domain;
+        eval { $domain = Ravada::Domain->open($id_domain) };
+        next if !$domain || $domain->is_hibernated;
 
         if (defined $id_vm && !$active_vm->{$id_vm} ) {
             $domain->_set_data(status => 'shutdown');
@@ -3637,7 +3638,8 @@ sub _refresh_volatile_domains($self) {
     );
     $sth->execute();
     while ( my ($id_domain, $name, $id_vm, $id_owner) = $sth->fetchrow ) {
-        my $domain = Ravada::Domain->open(id => $id_domain, _force => 1);
+        my $domain;
+        eval { $domain = Ravada::Domain->open(id => $id_domain, _force => 1) } ;
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
             if ($domain) {
                 $domain->_post_shutdown(user => $USER_DAEMON);

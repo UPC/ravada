@@ -394,7 +394,9 @@ sub _around_create_domain {
 
     $self->_check_duplicate_name($name);
     if ($id_base) {
-        $base = $self->search_domain_by_id($id_base)
+        my $vm_local = $self;
+        $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
+        $base = $vm_local->search_domain_by_id($id_base)
             or confess "Error: I can't find domain $id_base on ".$self->name;
         $volatile = 1 if $base->volatile_clones;
         if ($add_to_pool) {
@@ -418,9 +420,9 @@ sub _around_create_domain {
         confess("Error: Requested to add a clone for the pool but this base has no pools")
             if !$base->pools;
     }
-    $args_create{listen_ip} = $self->listen_ip($remote_ip);
     $args_create{spice_password} = $self->_define_spice_password($remote_ip);
     $self->_pre_create_domain(%args_create);
+    $args_create{listen_ip} = $self->listen_ip($remote_ip);
 
     return $base->_search_pool_clone($owner) if $from_pool;
 
@@ -430,6 +432,7 @@ sub _around_create_domain {
         my $vm = $self->balance_vm($base) or die "Error: No free nodes available.";
         $request->status("creating machine on ".$vm->name)  if $request;
         $self = $vm;
+        $args_create{listen_ip} = $self->listen_ip($remote_ip);
     }
 
     my $domain = $self->$orig(%args_create, volatile => $volatile);
@@ -1534,6 +1537,7 @@ sub balance_vm($self, $base=undef) {
     if ($base) {
         @vms = $base->list_vms();
     } else {
+        confess "Error: we need a base to balance ";
         @vms = $self->list_nodes();
     }
     return $vms[0] if scalar(@vms)<1;

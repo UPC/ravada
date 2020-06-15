@@ -137,6 +137,7 @@ ravadaApp.directive("solShowMachine", swMach)
   };
 
   function machinesPageC($scope, $http, $interval, $timeout, request, listMach) {
+        $scope.list_machines_time = 0;
         if( $scope.check_netdata && $scope.check_netdata != "0" ) {
             var url = $scope.check_netdata;
             $scope.check_netdata = 0;
@@ -161,7 +162,6 @@ ravadaApp.directive("solShowMachine", swMach)
           subscribe_ping_backend(url);
       };
       subscribe_list_machines= function(url) {
-
           ws_connected = false;
           $timeout(function() {
               if (!ws_connected) {
@@ -179,6 +179,7 @@ ravadaApp.directive("solShowMachine", swMach)
               ws = new WebSocket(url);
           };
           ws.onmessage = function (event) {
+              $scope.list_machines_time++;
               var data = JSON.parse(event.data);
 
               $scope.$apply(function () {
@@ -194,7 +195,11 @@ ravadaApp.directive("solShowMachine", swMach)
                       ){
                           $scope.list_machines[mach.id] = mach;
                           $scope.list_machines[mach.id].childs = {};
-                          $scope.list_machines[mach.id].childs_loading = true;
+                          if ($scope.list_machines_time < 3) {
+                              $scope.list_machines[mach.id].childs_loading = true;
+                          } else {
+                              $scope.list_machines[mach.id].childs_loading = false;
+			  }
                       }
                   }
                   $scope.n_clones = 0;
@@ -212,7 +217,6 @@ ravadaApp.directive("solShowMachine", swMach)
                       ){
                           childs[mach.id] = mach;
                           $scope.n_clones++;
-                          $scope.list_machines[mach.id_base].childs_loading = false;
                       }
                   }
                   if ($scope.auto_hide_clones) {

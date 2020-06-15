@@ -2292,7 +2292,7 @@ sub clone {
 
     my $vm = $self->_vm;
     if ($self->volatile_clones ) {
-        $vm = $vm->balance_vm();
+        $vm = $vm->balance_vm($self);
     } elsif( !$vm->is_local ) {
         for my $node ($self->_vm->list_nodes) {
             $vm = $node if $node->is_local;
@@ -4112,7 +4112,6 @@ sub remove_base_vm($self, %args) {
     confess "ERROR: Unknown arguments ".join(',',sort keys %args).", valid are user and vm."
         if keys %args;
 
-        warn $vm->name;
     return $self->set_base_vm(vm => $vm, user => $user, value => 0);
 }
 
