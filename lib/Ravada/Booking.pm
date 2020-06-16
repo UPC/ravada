@@ -3,6 +3,7 @@ package Ravada::Booking;
 use Carp qw(carp croak);
 use Data::Dumper;
 
+use DateTime::Format::DateParse;
 use Moose;
 
 use Ravada::Booking::Entry;
@@ -231,8 +232,12 @@ sub _monday($date = DateTime->now) {
     confess "I didn find a monday from ".$date;
 }
 
-sub _date($dt) {
-    return $dt->ymd;
+sub _seconds($time) {
+    $time .= ":00" if $time =~ /^\d+:\d+$/;
+    confess "Error: time format wrong '$time'" if $time !~/^(\d+):(\d+):(\d+)?$/;
+    confess "Error: time format wrong '$time'" if !defined $1 || !defined $2 || !defined $3;
+
+    return $1 * 60*60 + $2*60 + $3;
 }
 
 sub entries($self) {
@@ -251,6 +256,7 @@ sub entries($self) {
 
 sub bookings(%args) {
     my $date = ( delete $args{date} or _today() );
+    $date = $date->ymd if ref($date) =~ /DateTime/;
     my $time = delete $args{time};
     #    my $time = ( delete $args{time} or   _now() );
     my $id_base = delete $args{id_base};
@@ -312,12 +318,14 @@ sub user_allowed($user,$id_base) {
 sub bookings_week(%args) {
     my $id_base = delete $args{id_base};
     my $date = ( delete $args{date} or _monday) ;
+    $date = DateTime::Format::DateParse->parse_datetime($date) if !ref($date);
+
     my $user_name = delete $args{user_name};
     confess "Error: unknown field ".Dumper(\%args) if keys %args;
 
     my %booking;
     for my $dow ( 0 .. 6 ) {
-        for my $entry ( Ravada::Booking::bookings( date => _date($date)
+        for my $entry ( Ravada::Booking::bookings( date => $date
                 ,id_base => $id_base
             ) ) {
             my ($hour) = $entry->_data('time_start') =~ /^(\d+)/;
@@ -325,7 +333,7 @@ sub bookings_week(%args) {
             for (;;) {
                 $hour = "0".$hour while length($hour)<2;
                 my $key = "$dow.$hour";
-                $booking{$key} = $entry->{_data} if !$user_name
+                push @{$booking{$key}}, $entry->{_data} if !$user_name
                                                     || $entry->user_allowed($user_name);
                 last if ++$hour>$hour_end;
             }
@@ -333,6 +341,68 @@ sub bookings_week(%args) {
         $date->add(days => 1);
     }
     return \%booking;
+}
+
+sub bookings_range(%args) {
+    my $id_base = delete $args{id_base};
+    my $date_start = ( delete $args{date_start} or _today ) ;
+    $date_start = DateTime::Format::DateParse->parse_datetime($date_start) if !ref($date_start);
+    $date_start->set( hour => 0, minute => 0, second => 0);
+
+    my $date_end = ( delete $args{date_end} or _today ) ;
+    $date_end = DateTime::Format::DateParse->parse_datetime($date_end) if !ref($date_end);
+    $date_end->set( hour => 0, minute => 0, second => 0);
+
+    my $time_start = ( delete $args{time_start} or '00:00');
+    my $time_end = ( delete $args{time_end} or '23:59');
+
+    my $day_of_week = ( delete $args{day_of_week} or '');
+    confess "Error: day of week must be between 0 and 7 , $day_of_week"
+    if $day_of_week && $day_of_week !~ /^[0-7]+/;
+
+    my %day_of_week = map { $_ => 1 } split //,$day_of_week;
+
+    #todo check date_end > date_start
+    die "Error end must be after start ".$date_start." ".$date_end
+    if DateTime->compare( $date_start, $date_end) > 0;
+
+    confess "Error: unknown field ".Dumper(\%args) if keys %args;
+
+    #    warn "\n\nchecking $date_start - $date_end | $time_start - $time_end\n";
+
+    my @booking;
+    for (# no init
+        # check last
+        ; DateTime->compare( $date_start, $date_end) <= 0
+        # next
+        ; $date_start->add( days => 1)) {
+
+        if ($day_of_week) {
+            next if !$day_of_week{$date_start->day_of_week};
+        }
+        for my $entry ( Ravada::Booking::bookings(date => $date_start ) ) {
+#                        warn Dumper($entry);
+#            warn "$date_start - $date_end |  $time_start - $time_end\n";
+            if (
+                (_seconds($entry->{_data}->{time_start}) <= _seconds($time_start)
+                && _seconds($entry->{_data}->{time_end}) >= _seconds($time_start))
+             ||
+                (_seconds($entry->{_data}->{time_end}) >= _seconds($time_end)
+                && _seconds($entry->{_data}->{time_start}) <= _seconds($time_end))
+            ||
+                (_seconds($entry->{_data}->{time_start}) <= _seconds($time_end)
+                && _seconds($entry->{_data}->{time_end}) >= _seconds($time_end))
+            ||
+                (_seconds($entry->{_data}->{time_start}) >= _seconds($time_start)
+                && _seconds($entry->{_data}->{time_start}) <= _seconds($time_end))
+            ) {
+#                warn "** matches **\n";
+                push @booking,($entry->{_data})
+            }
+
+        }
+    }
+    return @booking;
 }
 
 1;

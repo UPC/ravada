@@ -43,9 +43,6 @@
         ng-show="showmachine.is_base || showmachine.id_base"
         ><%=l 'Pool' %></a>
 
-        <a class="nav-link" id="v-pills-booking-tab" href="#v-pills-booking" data-toggle="pill" role="tab" aria-controls="v-pills-booking" aria-selected="false"
-        ng-show="showmachine.is_base"
-        ><%=l 'Book' %></a>
 %   }
     % if ( $monitoring && $USER->is_admin && $domain->is_active ) {
         <a class="nav-link" id="v-pills-monitoring-tab" ng-click="refresh_machine()" href="#v-pills-monitoring" data-toggle="pill" role="tab" aria-controls="v-pills-monitoring" aria-selected="false"><%=l 'System overview' %></a>

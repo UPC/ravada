@@ -224,7 +224,8 @@ sub test_bookings_week($id_base) {
     my $book_tomorrow = $bookings->{$key_tomorrow};
 
     ok($book_today," Expecting a booking for $dow.$hour ".Dumper($bookings)) or exit;
-    ok($book_tomorrow," Expecting a booking for $key_tomorrow ".Dumper($bookings));
+    ok($book_tomorrow," Expecting a booking for $key_tomorrow ".Dumper($bookings))
+    if $dow != 6;
 
     my $n_exp = 2;
     # expect 1 booking if today is sunday
@@ -271,6 +272,97 @@ sub _change_seconds($booking) {
         $sth->execute("00:00", $entry->id);
     }
 }
+
+sub test_conflict_exact($vm, $base) {
+    test_conflict_generic($vm,$base,"09:00","11:00");
+}
+
+sub test_conflict_before($vm, $base) {
+    test_conflict_generic($vm,$base,"08:00","10:00");
+}
+
+sub test_conflict_after($vm, $base) {
+    test_conflict_generic($vm,$base,"10:00","11:00");
+}
+
+sub test_conflict_over($vm, $base) {
+    test_conflict_generic($vm,$base,"08:30","11:30");
+}
+
+sub test_conflict_inside($vm, $base) {
+    test_conflict_generic($vm,$base,"09:30","10:30");
+}
+
+sub test_non_conflict_before($vm, $base) {
+    test_conflict_generic($vm,$base,"08:00","08:30",0);
+}
+
+sub test_non_conflict_after($vm, $base) {
+    test_conflict_generic($vm,$base,"12:00","13:00",0);
+}
+
+sub test_conflict_day_of_week_exact($vm, $base) {
+    my $today = DateTime->now();
+    my $tomorrow = DateTime->now()->add(days => 1);
+    my $dow = $today->day_of_week.''.$tomorrow->day_of_week;
+    test_conflict_generic_dow($vm,$base,"09:00","11:00",$dow,6);
+}
+
+sub test_conflict_day_of_week_partial($vm, $base) {
+    my $today = DateTime->now();
+    my $tomorrow = DateTime->now()->add(days => 1);
+    my $dow = $tomorrow->day_of_week;
+    test_conflict_generic_dow($vm,$base,"09:00","11:00",$dow,3);
+}
+
+sub test_non_conflict_day_of_week($vm, $base) {
+    my $day_after_tomorrow = DateTime->now()->add(days => 2);
+    my $dow = $day_after_tomorrow->day_of_week;
+    test_conflict_generic_dow($vm,$base,"09:00","11:00",$dow,0);
+}
+
+sub test_conflict_generic_dow($vm, $base, $conflict_start, $conflict_end, $dow, $n_expected=undef) {
+    return test_conflict_generic( $vm, $base, $conflict_start, $conflict_end, $n_expected, $dow);
+}
+
+
+sub test_conflict_generic($vm, $base, $conflict_start, $conflict_end, $n_expected=undef, $dow=undef) {
+
+    my $date_start = _yesterday();
+    my $date_end = _now_days(15);
+    my $time_start = "09:00";
+    my $time_end = "11:00";
+
+    my $today = DateTime->now();
+    my $tomorrow = DateTime->now()->add(days => 1);
+    my $booking = Ravada::Booking->new(
+        id_base => $base->id
+        , ldap_groups => $GROUP
+        , date_start => $date_start
+        , date_end => $date_end
+        , time_start => $time_start
+        , time_end => $time_end
+        , day_of_week => $today->day_of_week.''.$tomorrow->day_of_week
+        , title => 'garden'
+        , description => 'blablabla long'
+        , id_owner => user_admin->id
+    );
+    $n_expected = scalar($booking->entries()) if !defined $n_expected;
+
+    my @conflicts = Ravada::Booking::bookings_range(
+        date_start => _now_days(0)
+        ,date_end => $date_end
+        ,time_start => $conflict_start
+        ,time_end => $conflict_end
+        ,day_of_week => $dow
+    );
+    is(scalar(@conflicts), $n_expected,Dumper(\@conflicts)) or confess;
+    $booking->remove();
+
+    $base->remove(user_admin);
+}
+
+
 
 sub test_search_booking($vm) {
 
@@ -377,6 +469,23 @@ sub _create_clones($vm) {
     return($clone_no1, $clone_no2, $clone_as);
 }
 
+sub test_conflict($vm) {
+    my $base = create_domain($vm);
+    test_conflict_exact($vm, $base);
+    test_conflict_before($vm, $base);
+    test_conflict_after($vm, $base);
+    test_conflict_over($vm, $base);
+
+    test_non_conflict_before($vm, $base);
+    test_non_conflict_after($vm, $base);
+
+    test_conflict_day_of_week_exact($vm, $base);
+    test_conflict_day_of_week_partial($vm, $base);
+    test_non_conflict_day_of_week($vm, $base);
+
+    $base->remove(user_admin);
+}
+
 ###################################################################
 
 init('t/etc/ravada_ldap.conf');
@@ -396,6 +505,7 @@ for my $vm_name ( vm_names()) {
 
         skip($msg,10)   if !$vm;
 
+        test_conflict($vm);
         test_search_booking($vm);
 
         test_booking($vm , _create_clones($vm));

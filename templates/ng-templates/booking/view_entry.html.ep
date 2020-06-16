@@ -1,16 +1,76 @@
+<a href="/booking"><i class="fa fa-arrow-left"></i></a>
 <button ng-show="!edit && (<%= $_user->is_operator %> || booking.id_owner == <%= $_user->id %>)"
     ng-click="edit=true">
     Edit
 </button>
 
-<form ng-show="edit">
+<div class="container">
+<form ng-show="edit" name="formBooking">
+    <div class="row">
     <input type="text" ng-model="booking_entry.title">
-    <input type="date" ng-model="booking_entry.date_booking">
-    <input type="time" ng-model="booking_entry.time_start">
-    <input type="time" ng-model="booking_entry.time_end">
+    </div>
 
-    <button ng-click="edit=false">cancel</button>
+    <div class="row">
+    <textarea ng-model="booking_entry.description"></textarea>
+    </div>
+
+    <div class="row">
+    <input type="date" ng-model="booking_entry.date_booking">
+    </div>
+
+    <div class="row">
+    <input type="text" ng-model="booking_entry.time_start">
+    </div>
+
+    <div class="row">
+    <input type="text" ng-model="booking_entry.time_end">
+    </div>
+
+
+
+    <div class="row" ng-show="confirm_update_all">
+        <div>
+        Do you want to update all the bookings from this one ?
+        </div>
+        <div>
+            <button ng-click="save_update_all">Update all</button>
+            <button ng-click="save">Change only this one</button>
+            <button ng-click="edit=false;confirm_update_all=false"
+                    ng-disabled="formBooking.$pristine">
+                cancel</button>
+
+        </div>
+    </div>
+
+    <div class="row" ng-show="confirm_remove">
+        <div>
+        Do you want to remove all the bookings from this one ?
+        </div>
+        <div>
+            <button ng-click="remove_update_all">Remove all</button>
+            <button ng-click="remove">Remove only this one</button>
+            <button ng-click="edit=false;confirm_remove=false"
+                    ng-disabled="formBooking.$pristine">
+                cancel</button>
+
+        </div>
+    </div>
+
+    <div class="row" ng-hide="confirm_update_all">
+        <div class="col">
+            <button ng-click="confirm_update_all=true"
+                ng-disabled="!formBooking.$valid || formBooking.$pristine"
+                >save</button>
+            <button ng-click="edit=false">cancel</button>
+        </div>
+        <div class="col">
+            <button ng-click="confirm_remove=true">remove</button>
+        </div>
+    </div>
+
 </form>
+</div>
+
 <hr/>
 booking:<br/>
 {{booking}}

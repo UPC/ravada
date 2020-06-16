@@ -1340,6 +1340,11 @@ get '/list_ldap_groups/:name' => sub($c) {
     return _list_ldap_groups($c,$name);
 };
 
+get '/booking/new.html' => sub($c) {
+    push @{$c->stash('css')},('/css/booking.css');
+    return $c->render(template => '/ng-templates/booking/new' ,id => undef);
+};
+
 get '/booking/:range' => { range => 'week' } => sub($c) {
     my $range = $c->stash('range');
 
@@ -1353,15 +1358,16 @@ get '/booking/:range' => { range => 'week' } => sub($c) {
     return $c->render( text => "Invalid range $range ".$c->req->url->to_abs->path)
     if !$valid{$range};
 
+    push @{$c->stash('css')},('/css/booking.css');
     return $c->render(template => '/ng-templates/booking/'.$range);
 };
 
 get '/bookings/:range/:date' => { range => 'week', date => undef } => sub($c) {
     my $range = $c->stash('range');
     my @args = (
-            date => $c->stash('daate')
-            ,user_name => $USER->name
+            date => $c->stash('date')
     );
+    push @args , (user_name => $USER->name) unless $USER->is_operator;
     if ($range eq 'week') {
         return $c->render( json => Ravada::Booking::bookings_week( @args) );
     } else {
@@ -1370,9 +1376,15 @@ get '/bookings/:range/:date' => { range => 'week', date => undef } => sub($c) {
 
 };
 
+post '/booking/list'=> sub($c) {
+    my $arg = decode_json($c->req->body);
+    return $c->render(json => [ Ravada::Booking::bookings_range(%$arg) ]);
+};
+
 get '/booking/view/:id' => sub($c) {
     return $c->render(template => '/ng-templates/booking/view');
 };
+
 
 get '/booking/entry/:id' => sub($c) {
     my $booking_entry = Ravada::Booking::Entry->new( id => $c->stash('id'));
