@@ -3482,7 +3482,11 @@ sub _cmd_list_isos($self, $request){
 sub _cmd_set_time($self, $request) {
     my $id_domain = $request->args('id_domain');
     my $domain = Ravada::Domain->open($id_domain)
-        or confess "Error: domain $id_domain not found";
+        or do {
+            $request->retry(0);
+            Ravada::Request->refresh_vms();
+            die "Error: domain $id_domain not found";
+        };
     return if !$domain->is_active;
     eval { $domain->set_time() };
     die "$@ , retry.\n" if $@;
@@ -3645,7 +3649,10 @@ sub _refresh_volatile_domains($self) {
                 $domain->_post_shutdown(user => $USER_DAEMON);
                 $domain->remove($USER_DAEMON);
             } else {
-                my $sth= $CONNECTOR->dbh->prepare("DELETE FROM users WHERE id=?");
+                confess;
+                my $sth= $CONNECTOR->dbh->prepare(
+                "DELETE FROM users where id=? "
+                ." AND is_temporary=1");
                 $sth->execute($id_owner);
                 $sth->finish;
             }
@@ -4005,7 +4012,9 @@ sub _clean_volatile_machines($self, %args) {
             eval { $domain_real->remove($USER_DAEMON) };
             warn $@ if $@;
         } elsif ($domain->{id_owner}) {
-            my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users where id=?");
+            my $sth = $CONNECTOR->dbh->prepare(
+                "DELETE FROM users where id=? "
+                ."AND is_temporary=1");
             $sth->execute($domain->{id_owner});
         }
 

@@ -4063,7 +4063,14 @@ sub set_base_vm($self, %args) {
     } elsif ($value) {
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
-        $self->migrate($vm, $request);
+        eval {
+            $self->migrate($vm, $request);
+        };
+        my $err = $@;
+        if ( $err ) {
+            $self->_set_base_vm_db($vm->id, 0);
+            die $err;
+        }
         $self->_set_clones_autostart(0);
     } else {
         $self->_set_vm($vm,1); # force set vm on domain
