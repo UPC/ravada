@@ -45,13 +45,13 @@
 						<h3><%=l 'Change password' %></h3>
                         <form method='post' enctype="multipart/form-data">
                             <div class="from-group row">
+                                <label for="password" class="col-xl-3 col-form-label"><%=l 'Current Password:' %></label><input type='password' name='current_password' id='current_password'>
+                            </div>
+			    <div class="from-group row">
                                 <label for="password" class="col-xl-3 col-form-label"><%=l 'New Password:' %></label><input type= 'password' name= 'password' id='password'>
                             </div>
                             <div class="from-group row">
                                 <label for="password" class="col-xl-3 col-form-label"><%=l 'Confirm Password:' %></label><input type='password' name='conf_password' id='conf_password'>
-                            </div>
-                            <div class="from-group row">
-                                <label for="password" class="col-xl-3 col-form-label"><%=l 'Current Password:' %></label><input type='password' name='current_password' id='current_password'>
                             </div>
 %                           if (scalar @$errors) {
                                     <div class="alert alert-danger mt-2">
