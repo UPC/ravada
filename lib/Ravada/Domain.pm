@@ -2292,7 +2292,7 @@ sub clone {
 
     my $vm = $self->_vm;
     if ($self->volatile_clones ) {
-        $vm = $vm->balance_vm();
+        $vm = $vm->balance_vm($self);
     } elsif( !$vm->is_local ) {
         for my $node ($self->_vm->list_nodes) {
             $vm = $node if $node->is_local;
@@ -4063,7 +4063,14 @@ sub set_base_vm($self, %args) {
     } elsif ($value) {
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
-        $self->migrate($vm, $request);
+        eval {
+            $self->migrate($vm, $request);
+        };
+        my $err = $@;
+        if ( $err ) {
+            $self->_set_base_vm_db($vm->id, 0);
+            die $err;
+        }
         $self->_set_clones_autostart(0);
     } else {
         $self->_set_vm($vm,1); # force set vm on domain
@@ -4112,7 +4119,6 @@ sub remove_base_vm($self, %args) {
     confess "ERROR: Unknown arguments ".join(',',sort keys %args).", valid are user and vm."
         if keys %args;
 
-        warn $vm->name;
     return $self->set_base_vm(vm => $vm, user => $user, value => 0);
 }
 
