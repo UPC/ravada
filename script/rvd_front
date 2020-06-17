@@ -1305,7 +1305,6 @@ sub user_settings {
     }
     $c->param('tongue' => $USER->language);
     my @errors;
-    use Data::Dumper;
     if ($c->param('button_click')) {
 	my $auth_ok;
         eval { $auth_ok = Ravada::Auth::login($USER->name, $c->param('current_password'))};
