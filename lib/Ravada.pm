@@ -3485,7 +3485,7 @@ sub _cmd_set_time($self, $request) {
         or do {
             $request->retry(0);
             Ravada::Request->refresh_vms();
-            die "Error: domain $id_domain not found";
+            die "Error: domain $id_domain not found\n";
         };
     return if !$domain->is_active;
     eval { $domain->set_time() };
