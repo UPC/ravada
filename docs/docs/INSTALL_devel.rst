@@ -50,7 +50,7 @@ Check this  `file <https://github.com/UPC/ravada/blob/master/debian>`_ at the li
     libpbkdf2-tiny-perl libdatetime-perl
 
 
-.. literalinclude:: INSTALL_mysql.rst
+.. include:: INSTALL_mysql.rst
 
 Config file
 -----------
