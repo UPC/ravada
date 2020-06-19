@@ -210,3 +210,4 @@ Add it to the system
 Now the swap space is configured, after rebooting the system it should show typing
 the *free* command.
 
+Alpine troubleshoots
