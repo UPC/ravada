@@ -211,3 +211,32 @@ Now the swap space is configured, after rebooting the system it should show typi
 the *free* command.
 
 Alpine troubleshoots
+````````````````````
+
+How to fix this Alpine message "libvirt error code:86,message: Guest agent is not responding: QEMU guest agent is not connected, retry."
+
+Because the agent cannot find the path to the virtual port correctly, an error message appears. Modify a couple of files and it no longer appears
+
+You update the file: 
+::
+localhost:~# /etc/rc.conf 
+
+Modify the following:
+.. prompt:: #rc_env_allow 
+you take away # and add this rc_env_allow = "GA_PATH"
+
+Create the file: 
+::
+/etc/profile.env 
+
+With the following content:
+.. prompt:: GA_PATH = /dev/vport1p1
+
+You install the agent if you don't have it with but first update: 
+.. prompt:: update apk update
+.. prompt:: apk add qemu-guest-agent
+
+Finally activate the service:
+.. prompt:: rc-update add qemu-guest-agent default
+
+And now the message no longer comes out. Because you have the agent and the correct path installed.
