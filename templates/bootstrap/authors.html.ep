@@ -12,6 +12,7 @@
 <li>Fernando Verdugo</li>
 <li>Francesc Guasch</li>
 <li>Gabriel Silva</li>
+<li>Gloria Rodríguez</li>
 <li>Guillermo Miranda</li>
 <li>Jirayu Laungwilawan</li>
 <li>Joan Sanchez</li>
@@ -37,6 +38,8 @@
 </ul>
 <%=l 'Thanks to:' %>
 <ul>
+    <li>Albert Petit</li>
     <li>Jorge Mata</li>
     <li>Francesc Oller</li>
+    <li>Jose Manuel Martin Torilo</li>
 </ul>
