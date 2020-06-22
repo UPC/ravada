@@ -219,7 +219,7 @@ Because the agent cannot find the path to the virtual port correctly, an error m
 
 You update the file: 
 ::
-localhost:~# /etc/rc.conf 
+localhost:~#vi /etc/rc.conf 
 
 Modify the following:
 .. prompt:: #rc_env_allow 
@@ -227,13 +227,13 @@ you take away # and add this rc_env_allow = "GA_PATH"
 
 Create the file: 
 ::
-/etc/profile.env 
+localhost:~#vi /etc/profile.env 
 
 With the following content:
 .. prompt:: GA_PATH = /dev/vport1p1
 
 You install the agent if you don't have it with but first update: 
-.. prompt:: update apk update
+.. prompt:: apk update
 .. prompt:: apk add qemu-guest-agent
 
 Finally activate the service:
