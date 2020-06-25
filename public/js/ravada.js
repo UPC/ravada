@@ -1000,11 +1000,8 @@
     function bookingCtrl($scope, $interval, $http, request){
         $scope.list_bookings_week = function() {
             $http.get('/v1/booking/week/'+$scope.booking_monday.toISOString().slice(0,10))
-                .success(function(response) {
+                .then(function(response) {
                     $scope.bookings_week=response.data;
-                }).error(function(data,status) {
-                    console.log(error,status,data);
-                    window.location.reload();
                 });
             var day_name
                 = ['Sun', 'Mon','Tue','Wed','Thu','Fri', 'Sat'];
