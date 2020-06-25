@@ -6,7 +6,7 @@
     %= include 'bootstrap/navigation'
 <div id="page-wrapper"
                 ng-controller="bookings"
-                ng-init="today()"
+                ng-init="init_date('<%= $date %>')"
 >
     <div class="page-header">
         <div class="card">

@@ -130,6 +130,31 @@ sub _wait_end_of_hour() {
     }
 }
 
+sub test_booking_oneday($vm) {
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+    $base->is_public(1);
+
+    my $today = DateTime->now();
+    my $booking = Ravada::Booking->new(
+        id_base => $base->id
+        , ldap_groups => $GROUP
+        , users => [$USER_2_NAME , $USER_3->id]
+        , date_start => $today->ymd
+        , date_end => $today->ymd
+        , time_start => "08:00"
+        , time_end => "09:00"
+        , day_of_week => $today->day_of_week
+        , title => 'comunicacions multimedia'
+        , description => 'blablabla'
+        , id_owner => user_admin->id
+    );
+
+    is(scalar($booking->entries),1) or exit;
+    $booking->remove();
+}
+
+
 sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as) {
 
     $clone0_no1->start(user => user_admin);
@@ -256,7 +281,7 @@ sub test_shut_others($clone_no1, $clone_no2, $clone_as) {
     rvd_back->_process_requests_dont_fork();
     is($req->status , 'done');
     is($req->error, '');
-    rvd_back->_process_requests_dont_fork(1);
+    rvd_back->_process_requests_dont_fork();
 
     is($clone_as->is_active,1) or exit;
     is($clone_no1->is_active,0,$clone_no1->name." should be down") or exit;
@@ -363,10 +388,7 @@ sub test_conflict_generic($vm, $base, $conflict_start, $conflict_end, $n_expecte
 }
 
 
-
-sub test_search_booking($vm) {
-
-    my $base = create_domain($vm);
+sub _create_booking( $base ) {
     _wait_end_of_hour();
     my $date_start = _yesterday();
     my $date_end = _now_days(15);
@@ -389,6 +411,12 @@ sub test_search_booking($vm) {
         , date_created => time
         , date_changed => time
     );
+    return $booking;
+}
+sub test_search_change_remove_booking($vm) {
+
+    my $base = create_domain($vm);
+    my $booking = _create_booking($base);
     my @entries = $booking->entries();
     is(scalar @entries,6,Dumper(\@entries)) or exit;
 
@@ -402,18 +430,195 @@ sub test_search_booking($vm) {
     $booking2 = Ravada::Booking->search( title => 'arden' , description => 'lon' );
     is($booking2->id, $booking->id);
 
-    $booking2->change( description => 'beblebleble do do');
+    my $new_description = "beblebleble do do ".time;
+    $booking2->change( description => $new_description);
 
     my $booking3 = Ravada::Booking->new( id => $booking2->id );
     is($booking3->id, $booking2->id);
+    is($booking3->_data('description'), $new_description );
 
-    $booking2->remove();
+    test_change_entry($booking);
+    test_change_entry_next($booking);
+    test_change_entry_day_of_week($booking);
 
-    $booking2 = Ravada::Booking->search( title => 'arden' );
-    is($booking2, undef);
-    test_booking_removed($booking3->id, @entries);
+    test_remove_entry($booking);
+    $booking->remove();
+
+    $booking = _create_booking($base);
+    test_remove_entry_next($booking);
+    $booking->remove();
+
+    $booking = _create_booking($base);
+    test_remove_entry_day_of_week($booking);
+
+    $booking->remove();
+    test_booking_removed($booking);
+}
+
+sub test_change_entry($booking) {
+    my ($entry) = $booking->entries();
+    my $time_start = $entry->_data('time_start');
+
+    my ($min) = $time_start =~ /:(\d+)/;
+    my $new_min = '03';
+    $new_min = '00' if $min eq $new_min;
+
+    my $new_time = "00:$new_min";
+
+    isnt($new_time,$time_start) or exit;
+
+    $entry->change( time_start => $new_time );
+
+    my $new_entry = Ravada::Booking::Entry->new( id => $entry->id );
+    is($new_entry->_data('time_start'), $new_time);
+}
+
+sub test_change_entry_next($booking) {
+    my ($entry0, $entry,@next) = $booking->entries();
+    my $time_start = $entry->_data('time_start');
+
+    my ($min,$sec) = $time_start =~ /:(\d+):(\d+)/;
+    my $new_min = ($min+1) % 60;
+    $new_min = "0$new_min" if length($new_min)<2;
+
+    my $new_time = "00:$new_min:$sec";
+
+    isnt($new_time,$time_start) or exit;
+
+    $entry->change_next( time_start => $new_time );
+
+    my $new_entry = Ravada::Booking::Entry->new( id => $entry->id );
+    is($new_entry->_data('time_start'), $new_time) or exit;
+
+    my ($entry0_b, $entry_b,@next_b) = $booking->entries();
+    is($entry0_b->_data('time_start'), $entry0->_data('time_start'));
+    is($entry_b->_data('time_start'), $new_time
+        ,"Expecting changed ".$entry_b->id." ".$entry_b->_data('date_booking')) or exit;
+    my $found = 0;
+    for (@next_b) {
+       is( $_->_data('time_start'), $new_time
+         ,"Expecting no changed ".$_->id." ".$_->_data('date_booking')) or exit;
+        $found++;
+    }
+    ok($found) or exit;
 
 }
+
+sub test_change_entry_day_of_week($booking) {
+    my ($entry0, $entry,@next) = $booking->entries();
+    my $time_start = $entry->_data('time_start');
+
+    my ($min,$sec) = $time_start =~ /:(\d+):(\d+)/;
+    my $new_min = ($min+1) % 60;
+    $new_min = "0$new_min" if length($new_min)<2;
+
+    my $new_time = "00:$new_min:$sec";
+
+    isnt($new_time,$time_start) or exit;
+
+    my $dow = DateTime::Format::DateParse
+            ->parse_datetime($entry->_data('date_booking'))->day_of_week;
+
+    $entry->change_next_dow( time_start => $new_time );
+
+    my $new_entry = Ravada::Booking::Entry->new( id => $entry->id );
+    is($new_entry->_data('time_start'), $new_time) or exit;
+
+    my ($entry0_b, $entry_b,@next_b) = $booking->entries();
+    is($entry0_b->_data('time_start'), $entry0->_data('time_start'));
+    is($entry_b->_data('time_start'), $new_time
+        ,"Expecting changed ".$entry_b->id." ".$entry_b->_data('date_booking')) or exit;
+
+    is(scalar(@next),scalar(@next_b));
+
+    my ($found_yes, $found_no) = (0,0);
+
+    for my $curr_entry (@next_b) {
+        my $date = DateTime::Format::DateParse
+            ->parse_datetime($curr_entry->_data('date_booking'));
+        if ($date->day_of_week eq $dow) {
+            is( $curr_entry->_data('time_start'), $new_time
+            ,"Expecting changed ".$curr_entry->id." ".$curr_entry->_data('date_booking'))
+            or exit;
+            $found_yes++;
+        } else {
+            isnt( $curr_entry->_data('time_start'), $new_time
+            ,"Expecting no changed ".$curr_entry->id." ".$curr_entry->_data('date_booking'))
+            or exit;
+            $found_no++;
+        }
+    }
+    ok($found_yes);
+    ok($found_no);
+
+}
+
+sub test_remove_entry($booking) {
+    my ($entry) = $booking->entries();
+
+    $entry->remove();
+
+    my $removed_entry;
+    eval { $removed_entry = Ravada::Booking::Entry->new( id => $entry->id ) };
+    like($@,qr(not found));
+    is($removed_entry,undef,Dumper($removed_entry)) or exit;
+}
+
+sub test_remove_entry_next($booking) {
+    my ($entry0, $entry,@next) = $booking->entries();
+
+    $entry->remove_next();
+
+    my $removed_entry;
+    eval { $removed_entry = Ravada::Booking::Entry->new( id => $entry->id ) };
+    like($@,qr(not found));
+    is($removed_entry, undef);
+
+    my ($entry0_b, $entry_b,@next_b) = $booking->entries();
+    is($entry0_b->id(), $entry0->id);
+    is($entry_b,undef);
+    is(scalar ( @next_b ), 0);
+
+    is(scalar($booking->entries),1);
+
+}
+
+sub test_remove_entry_day_of_week($booking) {
+    my ($entry0, $entry,@next) = $booking->entries();
+
+    my $dow = DateTime::Format::DateParse
+            ->parse_datetime($entry->_data('date_booking'))->day_of_week;
+
+    $entry->remove_next_dow( );
+
+    my ($entry0_b, @next_b) = $booking->entries();
+    is($entry0_b->id(), $entry0->id);
+
+    my $removed_entry;
+    my ($removed_yes, $removed_no) = (0,0);
+    for my $curr_entry ($entry,@next) {
+        my $date = DateTime::Format::DateParse
+            ->parse_datetime($curr_entry->_data('date_booking'));
+        $removed_entry = undef;
+        eval { $removed_entry = Ravada::Booking::Entry->new( id => $curr_entry->id) };
+        my $error = $@;
+        like($@,qr/^$|not found/);
+        if ($date->day_of_week == $dow) {
+            is($removed_entry,undef, Dumper($removed_entry)) or exit;
+            like($error, qr/ not found/);
+            $removed_yes++;
+        } else {
+            ok($removed_entry);
+            is($error,'') or exit;
+            $removed_no++;
+        }
+    }
+    ok($removed_yes);
+    ok($removed_no);
+
+}
+
+
 
 sub test_booking_removed($id,@entries) {
     my $sth = connector->dbh->prepare("SELECT * from bookings where id=?");
@@ -505,8 +710,10 @@ for my $vm_name ( vm_names()) {
 
         skip($msg,10)   if !$vm;
 
+        test_booking_oneday($vm);
+
+        test_search_change_remove_booking($vm);
         test_conflict($vm);
-        test_search_booking($vm);
 
         test_booking($vm , _create_clones($vm));
     }

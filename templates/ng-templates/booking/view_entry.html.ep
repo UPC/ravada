@@ -1,41 +1,57 @@
 <a href="/booking"><i class="fa fa-arrow-left"></i></a>
-<button ng-show="!edit && (<%= $_user->is_operator %> || booking.id_owner == <%= $_user->id %>)"
-    ng-click="edit=true">
-    Edit
-</button>
 
-<div class="container">
-<form ng-show="edit" name="formBooking">
-    <div class="row">
+<div class="container" ng-hide="entry_removed">
+<form name="formBooking">
+    <div class="row" ng-hide="edit">
+    {{booking_entry.title}}
+    </div>
+    <div class="row" ng-show="edit">
     <input type="text" ng-model="booking_entry.title">
     </div>
 
     <div class="row">
-    <textarea ng-model="booking_entry.description"></textarea>
+    <textarea ng-disabled="!edit" ng-model="booking_entry.description"></textarea>
     </div>
 
     <div class="row">
-    <input type="date" ng-model="booking_entry.date_booking">
+    <input type="date" ng-disabled="!edit" ng-model="booking_entry.date_booking">
     </div>
 
-    <div class="row">
+    <div class="row" ng-hide="edit">
+    {{booking_entry.time_start}}
+    </div>
+    <div class="row" ng-show="edit">
     <input type="text" ng-model="booking_entry.time_start">
     </div>
 
-    <div class="row">
+    <div class="row" ng-hide="edit">
+    {{booking_entry.time_end}}
+    </div>
+    <div class="row" ng-show="edit">
     <input type="text" ng-model="booking_entry.time_end">
     </div>
 
+    <div class="row">
+        <div class="col-md-2">
+            Group
+        </div>
+        <div class="col-md-2">
+        <select ng-disabled="!edit" ng-options="name for name in ldap_groups"
+        ng-model="booking_entry.ldap_groups" required></select>
+        </div>
+    </div>
 
 
-    <div class="row" ng-show="confirm_update_all">
+    <div class="row" ng-show="confirm_update">
         <div>
         Do you want to update all the bookings from this one ?
         </div>
+    </div>
+    <div class="row" ng-show="confirm_update">
         <div>
-            <button ng-click="save_update_all">Update all</button>
-            <button ng-click="save">Change only this one</button>
-            <button ng-click="edit=false;confirm_update_all=false"
+            <button ng-click="save_entry('next_dow')">Update all</button>
+            <button ng-click="save_entry('current')">Change only this entry</button>
+            <button ng-click="edit=false;confirm_update=false"
                     ng-disabled="formBooking.$pristine">
                 cancel</button>
 
@@ -46,19 +62,20 @@
         <div>
         Do you want to remove all the bookings from this one ?
         </div>
+    </div>
+    <div class="row" ng-show="confirm_remove">
         <div>
-            <button ng-click="remove_update_all">Remove all</button>
-            <button ng-click="remove">Remove only this one</button>
-            <button ng-click="edit=false;confirm_remove=false"
-                    ng-disabled="formBooking.$pristine">
+            <button ng-click="remove_entry('next_dow')">Remove all</button>
+            <button ng-click="remove_entry('current')">Remove only this one</button>
+            <button ng-click="edit=false;confirm_remove=false">
                 cancel</button>
 
         </div>
     </div>
 
-    <div class="row" ng-hide="confirm_update_all">
+    <div class="row" ng-hide="!edit || confirm_update || confirm_remove">
         <div class="col">
-            <button ng-click="confirm_update_all=true"
+            <button ng-click="confirm_update=true"
                 ng-disabled="!formBooking.$valid || formBooking.$pristine"
                 >save</button>
             <button ng-click="edit=false">cancel</button>
@@ -68,12 +85,15 @@
         </div>
     </div>
 
+    <div class="row" ng-hide="edit">
+    <button ng-show="!edit && (<%= $_user->is_operator %> || booking.id_owner == <%= $_user->id %>)"
+        ng-click="edit=true">
+        Edit
+    </button>
+    </div>
 </form>
 </div>
 
-<hr/>
-booking:<br/>
-{{booking}}
-<hr/>
-booking entry:<br/>
 {{booking_entry}}
+
+<div ng-show = "error">{{error}}</div>

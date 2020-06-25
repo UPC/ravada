@@ -4164,7 +4164,6 @@ sub _shutdown_bookings($self) {
 
     my @domains = $self->list_domains_data(status => 'active');
     for my $dom ( @domains ) {
-        warn "$dom->{name} $dom->{id_base}\n";
         next if $dom->{autostart};
         next if $self->_user_is_admin($dom->{id_owner});
 

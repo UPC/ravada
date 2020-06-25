@@ -1345,13 +1345,8 @@ get '/booking/new.html' => sub($c) {
     return $c->render(template => '/ng-templates/booking/new' ,id => undef);
 };
 
-get '/booking/:range' => { range => 'week' } => sub($c) {
+get '/booking/:range/:date' => { range => 'week' , date => DateTime->now->ymd} => sub($c) {
     my $range = $c->stash('range');
-
-    if ( $range =~ /^\d+$/ ) {
-        my $booking= Ravada::Booking->new( id =>  $range );
-        return $c->render( json => $booking->{_data} );
-    }
 
     my %valid = map { $_ => 1 } qw (day week month');
 
@@ -1362,13 +1357,16 @@ get '/booking/:range' => { range => 'week' } => sub($c) {
     return $c->render(template => '/ng-templates/booking/'.$range);
 };
 
-get '/bookings/:range/:date' => { range => 'week', date => undef } => sub($c) {
+get '/v1/booking/:range/:date' => { range => 'week', date => undef } => sub($c) {
     my $range = $c->stash('range');
     my @args = (
             date => $c->stash('date')
     );
     push @args , (user_name => $USER->name) unless $USER->is_operator;
-    if ($range eq 'week') {
+    if ( $range =~ /^\d+$/ ) {
+        my $booking= Ravada::Booking->new( id =>  $range );
+        return $c->render( json => $booking->{_data} );
+    } elsif ($range eq 'week') {
         return $c->render( json => Ravada::Booking::bookings_week( @args) );
     } else {
         return $c->render( text => "Error: I don't know how to list $range bookings");
@@ -1376,27 +1374,57 @@ get '/bookings/:range/:date' => { range => 'week', date => undef } => sub($c) {
 
 };
 
-post '/booking/list'=> sub($c) {
+post '/v1/booking/list'=> sub($c) {
     my $arg = decode_json($c->req->body);
     return $c->render(json => [ Ravada::Booking::bookings_range(%$arg) ]);
 };
 
-get '/booking/view/:id' => sub($c) {
+get '/booking_entry/view/:id' => sub($c) {
     return $c->render(template => '/ng-templates/booking/view');
 };
 
-
-get '/booking/entry/:id' => sub($c) {
+get '/v1/booking_entry/:id' => sub($c) {
     my $booking_entry = Ravada::Booking::Entry->new( id => $c->stash('id'));
     return $c->render( json => $booking_entry->{_data} );
 };
 
-post '/booking/save' => sub($c) {
+post '/v1/booking_entry/save/:mode' => sub($c) {
+    my $arg = decode_json($c->req->body);
+    my $mode = $c->stash('mode');
+
+    my $entry = Ravada::Booking::Entry->new( id => delete $arg->{id} );
+    my $booking = Ravada::Booking->new( id => $entry->_data('id_booking'));
+
+    return _access_denied($c)
+    unless $booking->_data('id_owner') == $USER->id
+        || $USER->is_operator;
+
+    if (!$mode || $mode eq 'current') {
+        $entry->change(%$arg);
+    } elsif ( $mode eq 'next' ) {
+        $entry->change_next(%$arg);
+    } elsif ($mode eq 'next_dow') {
+        $entry->change_next_dow(%$arg);
+    } else {
+        return $c->render( json => { error => "Mode '$mode' unknown" } );
+    }
+    return $c->render( json => { error => '' } );
+};
+
+post '/v1/booking/save' => sub($c) {
+    return _access_denied($c) if !$USER->is_operator();
+
     my $arg = decode_json($c->req->body);
     delete $arg->{dow};
     $arg->{id_owner} = $USER->id;
     $arg->{date_start} =~ s/(^[\d-]+).*/$1/;
     $arg->{date_end} =~ s/(^[\d-]+).*/$1/;
+    my $dow = '';
+    for my $curr ( split//,$arg->{day_of_week} ) {
+        $dow .= $curr -1 if $curr;
+    }
+
+    $arg->{day_of_week} = $dow;
     eval {
         my $booking = Ravada::Booking->new(%$arg);
     };
@@ -1407,6 +1435,31 @@ post '/booking/save' => sub($c) {
 };
 
 
+get '/v1/booking_entry/remove/:mode/:id' => sub($c) {
+
+    my $entry = Ravada::Booking::Entry->new(id => $c->stash('id'));
+    my $booking = Ravada::Booking->new( id => $entry->_data('id_booking'));
+
+    return _access_denied($c)
+    unless $booking->_data('id_owner') == $USER->id
+        || $USER->is_operator;
+
+
+    my $mode = $c->stash('mode');
+    eval {
+        if ($mode eq 'current') {
+            $entry->remove();
+        } elsif ($mode eq 'next') {
+            $entry->remove_next();
+        } elsif ($mode eq 'next_dow') {
+            $entry->remove_next_dow();
+        } else {
+            die "Mode '$mode' unknown";
+        }
+    };
+    my $error = ($@ or '');
+    return $c->render(json => { error => $error } );
+};
 ###################################################
 
 ## user_settings

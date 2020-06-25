@@ -71,6 +71,9 @@ my %dow = (
         <select ng-options="name for name in ldap_groups"
         ng-model="booking.ldap_groups" required></select>
     </div>
+    <div class="col-md-2">
+        <span class="badge badge-primary">add</span>
+    </div>
 </div>
 
 <div class="row">

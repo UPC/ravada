@@ -82,6 +82,7 @@ my %dow = (
 %   }
    </div>
 </div>
+{{booking.dow}}
 
 <div class="row">
     <div class="col-md-2">
@@ -100,7 +101,26 @@ my %dow = (
     </div>
     <div class="col-md-2">
         <select ng-options="name for name in ldap_groups"
-        ng-model="booking.ldap_groups" required></select>
+        ng-model="booking.ldap_group_new"></select>
+    </div>
+    <div class="col-md-2">
+        <span ng-click="add_ldap_group(booking)"
+            ng-show="booking.ldap_group_new"
+            class="badge badge-primary">add</span>
+    </div>
+</div>
+
+<div class="row" ng-show="typeof(group) != 'undefined'"
+    ng-repeat="group in booking.ldap_groups">
+    <div class="col-md-2">
+    </div>
+    <div class="col-md-2">
+    {{group}}
+    </div>
+
+    <div class="col-md-2">
+        <span ng-click="remove_ldap_group(booking,group)"
+            class="badge badge-danger">remove</span>
     </div>
 </div>
 
@@ -108,7 +128,9 @@ my %dow = (
     <div class="col-md-6">
             <button ng-click="save_booking()"
                     ng-disabled="!form_booking.$valid || form_booking.$pristine
-                        || booking.day_of_week == '0000000'">
+                        || booking.day_of_week == '0000000'
+                        || ( booking.ldap_groups.length == 0 && !booking.ldap_group_new)
+                        ">
                     save
             </button>
     </div>

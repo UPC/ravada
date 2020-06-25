@@ -33,7 +33,7 @@
     </div>
     <div class="col col-xl-1 pt-2 pb-2 border border-dark" ng-repeat="dow in [0,1,2,3,4,5,6]">
         <div class="border border-primary" ng-repeat="entry in bookings_week[dow+'.'+hour]">
-        <a href="/booking/view/{{entry.id}}">
+        <a href="/booking_entry/view/{{entry.id}}">
         {{entry.title}}
         </a>
         </div>
