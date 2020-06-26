@@ -1704,7 +1704,7 @@ sub _init_config_vm {
 
 sub _create_vm_kvm {
     my $self = shift;
-    die "KVM not installed" if !$VALID_VM{KVM};
+    die "KVM not installed" if !exists $VALID_VM{KVM} ||!$VALID_VM{KVM};
 
     my $cmd_qemu_img = `which qemu-img`;
     chomp $cmd_qemu_img;
@@ -3669,7 +3669,11 @@ sub _cmd_list_isos($self, $request){
 sub _cmd_set_time($self, $request) {
     my $id_domain = $request->args('id_domain');
     my $domain = Ravada::Domain->open($id_domain)
-        or confess "Error: domain $id_domain not found";
+        or do {
+            $request->retry(0);
+            Ravada::Request->refresh_vms();
+            die "Error: domain $id_domain not found\n";
+        };
     return if !$domain->is_active;
     eval { $domain->set_time() };
     die "$@ , retry.\n" if $@;
@@ -3792,8 +3796,9 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
     while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
         next if exists $active_domain->{$id_domain};
 
-        my $domain = Ravada::Domain->open($id_domain) or next;
-        next if $domain->is_hibernated;
+        my $domain;
+        eval { $domain = Ravada::Domain->open($id_domain) };
+        next if !$domain || $domain->is_hibernated;
 
         if (defined $id_vm && !$active_vm->{$id_vm} ) {
             $domain->_set_data(status => 'shutdown');
@@ -3824,13 +3829,17 @@ sub _refresh_volatile_domains($self) {
     );
     $sth->execute();
     while ( my ($id_domain, $name, $id_vm, $id_owner) = $sth->fetchrow ) {
-        my $domain = Ravada::Domain->open(id => $id_domain, _force => 1);
+        my $domain;
+        eval { $domain = Ravada::Domain->open(id => $id_domain, _force => 1) } ;
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
             if ($domain) {
                 $domain->_post_shutdown(user => $USER_DAEMON);
                 $domain->remove($USER_DAEMON);
             } else {
-                my $sth= $CONNECTOR->dbh->prepare("DELETE FROM users WHERE id=?");
+                confess;
+                my $sth= $CONNECTOR->dbh->prepare(
+                "DELETE FROM users where id=? "
+                ." AND is_temporary=1");
                 $sth->execute($id_owner);
                 $sth->finish;
             }
@@ -4193,7 +4202,9 @@ sub _clean_volatile_machines($self, %args) {
             eval { $domain_real->remove($USER_DAEMON) };
             warn $@ if $@;
         } elsif ($domain->{id_owner}) {
-            my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users where id=?");
+            my $sth = $CONNECTOR->dbh->prepare(
+                "DELETE FROM users where id=? "
+                ."AND is_temporary=1");
             $sth->execute($domain->{id_owner});
         }
 

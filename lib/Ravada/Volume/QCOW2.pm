@@ -64,7 +64,7 @@ sub clone($self, $file_clone) {
         ,$file_clone
     );
     my ($out, $err) = $self->vm->run_command(@cmd);
-    confess $err if $err;
+    confess $self->vm->name." ".$err if $err;
 
     return $file_clone;
 }

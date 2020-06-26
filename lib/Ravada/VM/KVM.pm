@@ -930,7 +930,7 @@ sub _domain_create_common {
         };
         close $out;
         warn "$! $name_out" if !$out;
-        confess $@ if !$dom;
+        confess $@;# if !$dom;
     }
 
     my $domain = Ravada::Domain::KVM->new(
@@ -996,7 +996,9 @@ sub _domain_create_from_base {
     my $base = $args{base};
     my $with_cd = delete $args{with_cd};
 
-    $base = $self->_search_domain_by_id($args{id_base}) if $args{id_base};
+    my $vm_local = $self;
+    $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
+    $base = $vm_local->_search_domain_by_id($args{id_base}) if $args{id_base};
     confess "Unknown base id: $args{id_base}" if !$base;
 
     my $vm = $self->vm;

@@ -584,6 +584,7 @@ Removes the user
 =cut
 
 sub remove($self) {
+    confess if $self->name eq 'f';
     my $sth = $$CON->dbh->prepare("DELETE FROM users where id=?");
     $sth->execute($self->id);
     $sth->finish;

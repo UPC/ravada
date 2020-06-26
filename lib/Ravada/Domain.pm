@@ -2293,7 +2293,7 @@ sub clone {
 
     my $vm = $self->_vm;
     if ($self->volatile_clones ) {
-        $vm = $vm->balance_vm();
+        $vm = $vm->balance_vm($self);
     } elsif( !$vm->is_local ) {
         for my $node ($self->_vm->list_nodes) {
             $vm = $node if $node->is_local;
@@ -4075,8 +4075,14 @@ sub set_base_vm($self, %args) {
     } elsif ($value) {
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
-        eval { $self->migrate($vm, $request) if $vm->is_active(1) };
-        die $@ if $@ && $@ !~ /no ssh connection/;
+        eval {
+            $self->migrate($vm, $request);
+        };
+        my $err = $@;
+        if ( $err ) {
+            $self->_set_base_vm_db($vm->id, 0);
+            die $err;
+        }
         $self->_set_clones_autostart(0);
     } else {
         $self->_set_vm($vm,1); # force set vm on domain
