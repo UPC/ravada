@@ -150,4 +150,5 @@ Do you feel like giving us a hand? Here you have all the information you need as
    devel-docs/create_test
    devel-docs/translations
    devel-docs/documentation
+   devel-docs/frontend_libraries.rst
    docs/spice_tls
