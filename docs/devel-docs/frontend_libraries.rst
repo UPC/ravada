@@ -1,7 +1,13 @@
 Frontend Libraries
 ==================
 
-When upgrading frontend libraries they must be changed in two places: scripts and fallback.
+When upgrading frontend libraries they must be changed in three places: packages.json, scripts and fallback.
+
+Packages.json
+-------------
+
+This file is a MANIFEST and is only used so we receive security alerts from github.
+Update it with latest updates of the libraries.
 
 Scripts
 -------
