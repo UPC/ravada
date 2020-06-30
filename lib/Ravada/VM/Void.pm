@@ -83,7 +83,7 @@ sub create_domain {
     my $volatile = delete $args{volatile};
     my $active = ( delete $args{active} or $volatile or $user->is_temporary or 0);
     my $listen_ip = delete $args{listen_ip};
-    my $description = (delete $args{description} or '' );
+    my $description = delete $args{description};
     confess if $args{name} eq 'tst_vm_v20_volatile_clones_02' && !$listen_ip;
     my $domain = Ravada::Domain::Void->new(
                                            %args

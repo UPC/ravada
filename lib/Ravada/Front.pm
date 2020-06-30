@@ -1231,6 +1231,47 @@ sub settings_global($self) {
     return $self->_get_settings();
 }
 
+sub _settings_by_id($self) {
+    my $orig_settings;
+    my $sth = $self->_dbh->prepare("SELECT id,value FROM settings");
+    $sth->execute();
+    while (my ($id, $value) = $sth->fetchrow) {
+        $orig_settings->{$id} = $value;
+    }
+    return $orig_settings;
+}
+
+sub update_settings_global($self, $arg, $user, $orig_settings = $self->_settings_by_id) {
+    confess if !ref($arg);
+    if (exists $arg->{frontend}
+        && exists $arg->{frontend}->{maintenance}
+        && !$arg->{frontend}->{maintenance}->{value}) {
+        delete $arg->{frontend}->{maintenance_end};
+        delete $arg->{frontend}->{maintenance_start};
+    }
+    for my $field (sort keys %$arg) {
+        if ( !exists $arg->{$field}->{id} ) {
+            confess if !keys %{$arg->{$field}};
+            $self->update_settings_global($arg->{$field}, $user, $orig_settings);
+            next;
+        }
+        confess "Error: invalid field $field" if $field !~ /^\w+$/;
+        my ( $value, $id )
+                   = ($arg->{$field}->{value}
+                    , $arg->{$field}->{id}
+        );
+        next if $orig_settings->{$id} eq $value;
+        my $sth = $self->_dbh->prepare(
+            "UPDATE settings set value=?"
+            ." WHERE id=? "
+        );
+        $sth->execute($value, $id);
+
+        $user->send_message("Setting $field to $value");
+    }
+
+}
+
 sub is_in_maintenance($self) {
     my $settings = $self->settings_global();
     return 0 if ! $settings->{frontend}->{maintenance}->{value};
@@ -1244,6 +1285,7 @@ sub is_in_maintenance($self) {
     if ( $now >= $start && $now <= $end ) {
         return 1;
     }
+    return 0 if $now <= $start;
     my $sth = $self->_dbh->prepare("UPDATE settings set value = 0 "
         ." WHERE id=? "
     );

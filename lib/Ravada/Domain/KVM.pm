@@ -182,11 +182,14 @@ sub remove_disks {
 
     $self->_vm->connect();
     for my $file ($self->list_disks( device => 'disk')) {
-        if (! -e $file ) {
+        if (! $self->_vm->file_exists($file) ) {
             next;
         }
+        eval {
         $self->_vol_remove($file);
         $self->_vol_remove($file);
+        };
+        warn "Error: removing $file $@" if $@;
 #        if ( -e $file ) {
 #            unlink $file or die "$! $file";
 #        }

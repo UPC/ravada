@@ -74,6 +74,11 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,config => $FILE_CONFIG_RAVADA
                                               ,auto_view => 0
                                               ,bookings => 1
+                                              ,log => {
+                                                log => 0
+                                                ,file => '/var/log/ravada/rvd_front.log'
+                                                ,level => 'debug'
+                                              }
                                               }
                                       ,file => $FILE_CONFIG
 };
@@ -129,6 +134,7 @@ hook before_routes => sub {
 
   $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
+  app->log->info($url) if $CONFIG_FRONT->{log}->{log};
   my $host = $c->req->url->to_abs->host;
   $c->stash(css=>['/css/sb-admin.css']
             ,js=>[
@@ -262,18 +268,7 @@ get '/settings_global.json' => sub($c) {
 post '/settings_global' => sub($c) {
     my $arg = decode_json($c->req->body);
 
-    my $orig_settings;
-    my $sth = $RAVADA->_dbh->prepare("SELECT id,value FROM settings");
-    $sth->execute();
-    while (my ($id, $value) = $sth->fetchrow) {
-        $orig_settings->{$id} = $value;
-    }
-
-    if (!$arg->{frontend}->{maintenance}->{value}) {
-        delete $arg->{frontend}->{maintenance_end};
-        delete $arg->{frontend}->{maintenance_start};
-    }
-    _update_settings($arg, $orig_settings);
+    $RAVADA->update_settings_global($arg, $USER);
 
     return $c->render(json => { ok => 1 });
 };
@@ -1147,6 +1142,7 @@ post '/request/(:name)/' => sub {
         $args->{remote_ip} = _remote_ip($c);
     }
 
+    app->log->info($USER->name." requesting $name ".encode_json($args)) if $CONFIG_FRONT->{log}->{log};
     my $req;
     eval {
         $req = Ravada::Request->new_request(
@@ -1486,26 +1482,34 @@ sub user_settings {
     $c->param('tongue' => $USER->language);
     my @errors;
     if ($c->param('button_click')) {
-        if (($c->param('password') eq "") || ($c->param('conf_password') eq "") || ($c->param('current_password') eq "")) {
-            push @errors,("Some of the password's fields are empty");
-        }
-        else {
-            if ($c->param('password') eq $c->param('conf_password')) {
-                eval {
-                    $USER->change_password($c->param('password'));
-                    _logged_in($c);
-                };
-                if ($@ =~ /Password too small/) {
-                    push @errors,("Password too small")
-                }
-                else {
-                    $changed_pass = 1;
-                }
-            }
-            else {
-                    push @errors,("Password fields aren't equal")
-            }
-        }
+	my $auth_ok;
+        eval { $auth_ok = Ravada::Auth::login($USER->name, $c->param('current_password'))};
+        if (!$auth_ok || $@) {
+		push @errors, ("Current password is wrong");
+	}
+	else {
+
+        	if (($c->param('password') eq "") || ($c->param('conf_password') eq "") || ($c->param('current_password') eq "")) {
+	            push @errors,("Some of the password's fields are empty");
+	        }
+        	else {
+	            if ($c->param('password') eq $c->param('conf_password')) {
+        	        eval {
+                	    $USER->change_password($c->param('password'));
+	                    _logged_in($c);
+        	        };
+	                if ($@ =~ /Password too small/) {
+	                    push @errors,("Password too small")
+	                }
+	                else {
+	                    $changed_pass = 1;
+	                }
+	            }
+	            else {
+	                    push @errors,("Password fields aren't equal")
+	            }
+	        }
+	    }
     }
     $c->render(template => 'bootstrap/user_settings', changed_lang=> $changed_lang, changed_pass => $changed_pass
       ,errors =>\@errors);
@@ -1685,8 +1689,10 @@ sub login {
             my $auto_view = 1;
 
             $c->session(auto_view => $auto_view, expiration => $expiration);
+            app->log->info("Access granted to $login from "._remote_ip($c)) if $CONFIG_FRONT->{log}->{log};
             return $c->redirect_to($url);
         } else {
+            app->log->error("Access denied to $login from "._remote_ip($c)) if $CONFIG_FRONT->{log}->{log};
             push @error,("Access denied");
         }
     }
@@ -1998,6 +2004,10 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
                 , id_domain => $domain->id
                 );
             }
+
+            app->log->info($USER->name." start_domain ".$domain->name." from "._remote_ip($c))
+            if $CONFIG_FRONT->{log}->{log};
+
             return Ravada::Request->start_domain(
                 uid => $USER->id
                 , id_domain => $domain->id
@@ -2006,6 +2016,10 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
         }
         $name = _new_domain_name($name);
     }
+
+    app->log->info($USER->name." requesting create_domain ".$name." from "._remote_ip($c))
+    if $CONFIG_FRONT->{log}->{log};
+
     my @create_args = ( start => 1, remote_ip => _remote_ip($c));
     push @create_args, ( memory => $ram ) if $ram;
     push @create_args, (   disk => $disk) if $disk;
@@ -2083,6 +2097,9 @@ sub _init_user_group {
 }
 
 sub init {
+
+    app->log( Mojo::Log->new( path => $CONFIG_FRONT->{log}->{file}, level => $CONFIG_FRONT->{log}->{level} ) )
+            if $CONFIG_FRONT->{log}->{log};
     _init_user_group();
     my $home = Mojo::Home->new();
     $home->detect();
@@ -2259,6 +2276,9 @@ sub view_machine {
     $domain =  _search_requested_machine($c) if !$domain;
     return $c->render(template => 'main/fail') if !$domain;
 
+    app->log->info($USER->name." requesting start_domain ".$domain->name." from "._remote_ip($c))
+    if $CONFIG_FRONT->{log}->{log};
+
     return run_request($c, Ravada::Request->start_domain(
                     uid => $USER->id
              ,id_domain => $domain->id
@@ -2425,6 +2445,9 @@ sub start_machine {
     my ($domain, $type) = _search_requested_machine($c);
     return $c->render(text => "Domain not found") if !$domain;
     $domain->_data(status => 'starting');
+
+    app->log->info($USER->name." start_domain ".$domain->name." from "._remote_ip($c))
+    if $CONFIG_FRONT->{log}->{log};
 
     my $req = Ravada::Request->start_domain( uid => $USER->id
                                            ,name => $domain->name
@@ -2653,28 +2676,6 @@ sub _new_anonymous_user {
 
     return $name;
 }
-
-sub _update_settings($arg, $orig_settings) {
-    for my $field (keys %$arg) {
-        if ( !exists $arg->{$field}->{id} ) {
-            _update_settings($arg->{$field}, $orig_settings);
-            next;
-        }
-        confess "Error: invalid field $field" if $field !~ /^\w+$/;
-        my ( $value, $id )
-                   = ($arg->{$field}->{value}
-                    , $arg->{$field}->{id}
-        );
-        next if $orig_settings->{$id} eq $value;
-        my $sth = $RAVADA->_dbh->prepare(
-            "UPDATE settings set value=?"
-            ." WHERE id=? "
-        );
-        $sth->execute($value, $id);
-
-        $USER->send_message("Setting $field to $value");
-    }
-};
 
 sub maintenance($c) {
 

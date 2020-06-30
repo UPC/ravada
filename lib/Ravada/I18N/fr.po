@@ -517,7 +517,7 @@ msgid "Hybernating ..."
 msgstr "Mise en veille..."
 
 msgid "Description"
-msgstr "Déscription"
+msgstr "Description"
 
 msgid "Rename"
 msgstr "Renommer"

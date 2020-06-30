@@ -586,7 +586,7 @@ sub _new_request {
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
-    if ($args{command} =~ /^(clone|manage_pools|list_isos)$/
+    if ($args{command} =~ /^(clone|manage_pools)$/
         || $CMD_NO_DUPLICATE{$args{command}}
         || ($no_duplicate && $args{command} =~ /^(screenshot)$/)) {
         if ( _duplicated_request(undef, $args{command}, $args{args})
