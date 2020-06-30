@@ -219,8 +219,8 @@ It means you didn't install libvirt in the node. Fix it this way:
 But now, the libvirt-bin package was dropped in release 18.10 ubuntu. The package was split into two parts:
 
 .. code-block:: bash
-root@node:~# apt-get installlibvirt-daemon-system
-root@node:~# apt-get installlibvirt-clients
+root@node:~# apt-get install libvirt-daemon-system
+root@node:~# apt-get install libvirt-clients
 
 so instead of libvirt-bin you need install libvirt-daemon-system and libvirt-clients.
 
