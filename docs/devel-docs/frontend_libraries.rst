@@ -19,14 +19,10 @@ Change the fallback files list in the file ``etc/fallback.conf``
 
 This file format is:
 
-.. ::
-
-  URL [optional directory/]
+   URL [optional directory/]
 
 So the lines are like this. Notice the first one has the directory and the second line
 doesn't need one.
-
-.. ::
 
    https://cdnjs.cloudflare.com/ajax/libs/morris.js/0.5.1/morris.css morris.js/
    https://use.fontawesome.com/releases/v5.10.1/fontawesome-free-5.10.1-web.zip
