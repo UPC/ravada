@@ -911,10 +911,6 @@ sub _update_data {
 }
 
 sub _add_indexes($self) {
-    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
-    $self->_add_indexes_vms();
-    $self->_add_indexes_domains();
-    $self->_add_indexes_requests();
     $self->_add_indexes_generic();
 }
 
@@ -922,12 +918,14 @@ sub _add_indexes_generic($self) {
     my %index = (
         domains => [
             "index(date_changed)"
+            ,"index(id_base):id_base_index"
         ]
         ,requests => [
             "index(status,at_time)"
             ,"index(id,date_changed,status,at_time)"
             ,"index(date_changed)"
             ,"index(start_time,command,status,pid)"
+            ,"index(id_domain,status):domain_status"
         ]
         ,grants_user => [
             "index(id_user,id_grant)"
@@ -943,16 +941,24 @@ sub _add_indexes_generic($self) {
         ,settings => [
             "index(id_parent,name)"
         ]
+        ,vms=> [
+            "unique(hostname, vm_type)"
+        ]
     );
     for my $table ( keys %index ) {
         my $known = $self->_get_indexes($table);
         for my $change (@{$index{$table}} ) {
             my ($type,$fields ) =$change =~ /(\w+)\((.*)\)/;
-            my $name = $fields;
+            my ($name) = $change =~ /:(.*)/;
+            $name = $fields if !$name;
             $name =~ s/,/_/g;
+            $name =~ s/ //g;
             next if $known->{$name};
-            my $sql = "ALTER TABLE $table add $type $name ($fields)";
-            warn "INFO: Adding index to $table: $name";
+
+            $type .=" INDEX " if $type=~ /^unique/i;
+            my $sql = "CREATE $type IF NOT EXISTS $name on $table ($fields)";
+
+            warn "INFO: Adding index to $table: $name" if $0 !~ /\.t$/;
             my $sth = $CONNECTOR->dbh->prepare($sql);
             $sth->execute();
         }
@@ -960,6 +966,9 @@ sub _add_indexes_generic($self) {
 }
 
 sub _get_indexes($self,$table) {
+
+    return {} if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/;
+
     my $sth = $CONNECTOR->dbh->prepare("show index from $table");
     $sth->execute;
     my %index;
@@ -967,50 +976,6 @@ sub _get_indexes($self,$table) {
         $index{$row->{Key_name}}->{$row->{Column_name}}++;
     }
     return \%index;
-}
-
-sub _add_indexes_vms($self) {
-    my %index;
-    my $sth = $CONNECTOR->dbh->prepare("show index from vms");
-    $sth->execute;
-    while (my $row = $sth->fetchrow_hashref) {
-        $index{$row->{Key_name}}->{$row->{Column_name}}++;
-    }
-
-    my $index_name = 'hostname_vm_type';
-    return if $index{$index_name};
-    warn "INFO: Adding index to vms: $index_name";
-    $sth = $CONNECTOR->dbh->prepare("ALTER TABLE vms add unique $index_name"
-        ." (hostname, vm_type)");
-    $sth->execute;
-}
-
-sub _add_indexes_domains($self) {
-    my %index;
-    my $sth = $CONNECTOR->dbh->prepare("show index from domains");
-    $sth->execute;
-    while (my $row = $sth->fetchrow_hashref) {
-        $index{$row->{Key_name}}->{$row->{Column_name}}++;
-    }
-    return if $index{id_base_index};
-    warn "INFO: Adding domains . id_base index";
-    $sth = $CONNECTOR->dbh->prepare("ALTER TABLE domains add index id_base_index "
-        ."(id_base)");
-    $sth->execute;
-}
-
-sub _add_indexes_requests($self) {
-    my %index;
-    my $sth = $CONNECTOR->dbh->prepare("show index from requests");
-    $sth->execute;
-    while (my $row = $sth->fetchrow_hashref) {
-        $index{$row->{Key_name}}->{$row->{Column_name}}++;
-    }
-    return if $index{domain_status};
-    warn "INFO: Adding requests . id_domain,status index";
-    $sth = $CONNECTOR->dbh->prepare("ALTER TABLE requests add index domain_status "
-        ."(id_domain, status)");
-    $sth->execute;
 }
 
 sub _rename_grants($self) {
