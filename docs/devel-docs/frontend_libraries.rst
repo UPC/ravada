@@ -6,7 +6,9 @@ When upgrading frontend libraries they must be changed in two places: scripts an
 Scripts
 -------
 
-Change scripts pointed in the file ``templates/bootstrap/scripts.html.ep``
+Change scripts pointed in the files ``templates/bootstrap/scripts.html.ep`` and
+``templates/bootstrap/header.html.ep``
+
 
 Fallback
 --------
