@@ -217,7 +217,26 @@ It means you didn't install libvirt in the node. Fix it this way:
     root@node:~# apt get install libvirt-bin
 
 
+Balance algorithm
+=================
 
+How does Ravada decides which node will handle the next virtual machine ?
+
+We may choose a different algorithm in the future, or even allow a setting
+to change it. Right now it goes that way:
+
+The list of nodes gets sorted by the number of virtual machines running.
+If there is a tie, the node with more free memory is chosen.
+
+We have an extra step for speeding things up, when checking the nodes
+status, if one has less than 2 virtual machines running, and it has
+free available memory, it is picked.
+
+There is a drawback we have yet to fix: if many virtual machines are
+started at the same time, some may probably go to the same node. This
+is because a lot of work is done in parallel.
+
+If you think this could be improved we are open to suggestions.
 
 TODO
 ====
