@@ -10,7 +10,7 @@
             <i class="fa fa-arrow-right" aria-hidden="true"></i>
         </button>
 
-        <big>{{booking_monday.getMonth()}} {{booking_monday.getFullYear() }}</big>
+        <big>{{booking_monday.getMonth()+1}} {{booking_monday.getFullYear() }}</big>
     </div>
     <div class="col" align="right">
         <a type ="button" class="btn btn-success" href="/booking/new.html">Crea</a>

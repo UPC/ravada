@@ -1,12 +1,12 @@
 <a href="/booking"><i class="fa fa-arrow-left"></i></a>
 
 <div class="container" ng-hide="entry_removed">
-<form name="formBooking">
+<form name="form_booking">
     <div class="row" ng-hide="edit">
     {{booking_entry.title}}
     </div>
     <div class="row" ng-show="edit">
-    <input type="text" ng-model="booking_entry.title">
+    <input type="text" ng-model="booking_entry.title" required>
     </div>
 
     <div class="row">
@@ -14,33 +14,105 @@
     </div>
 
     <div class="row">
-    <input type="date" ng-disabled="!edit" ng-model="booking_entry.date_booking">
+        <div class="col-md-2">Date</div>
+        <div class="col-md-3">
+            <input type="date" ng-disabled="!edit" ng-model="booking_entry.date_booking"
+                ng-change="check_conflicts()"
+            >
+            {{timezone}}
+        </div>
     </div>
+
+    <div class="row" ng-show="booking_entry.repeat">
+        <div class="col-md-2">Until</div>
+        <div class="col-md-3">
+            <input type="date" ng-disabled="!edit" ng-model="booking_entry.date_end"
+                ng-change="check_conflicts()"
+            >
+            {{timezone}}
+        </div>
+
+    </div>
+
+    <div class="row" ng-show="new_booking">
+        <b>Repeat</b>
+        <select ng-model="booking_entry.repeat">
+            <option value="">No</option>
+            <option value="weekly">Weekly</option>
+        </select>
+    </div>
+
+    <div class="row" ng-show="new_booking && booking_entry.repeat == 'weekly'">
+<%
+my %dow = (
+    1 => 'Monday'
+    ,2 => 'Tuesday'
+    ,3 => 'Wednesday'
+    ,4 => 'Thursday'
+    ,5 => 'Friday'
+    ,6 => 'Saturday'
+    ,7 => 'Sunday'
+);
+%>
+    <div class="col-md-11">
+%   for my $code (sort keys %dow ) {
+        <input type="checkbox" name="dow_<%= $code %>"
+            ng-true-value="<%= $code %>"
+            ng-false-value="0"
+            ng-change="update_booking_dow();check_conflicts()"
+            ng-model="booking_entry.dow[<%= $code-1 %>]"
+        >
+        <label for="dow_<%= $code %>"><%=l $dow{$code} %></label>
+%   }
+   </div>
+</div>
+
 
     <div class="row" ng-hide="edit">
     {{booking_entry.time_start}}
     </div>
     <div class="row" ng-show="edit">
-    <input type="text" ng-model="booking_entry.time_start">
+    <input type="text" ng-model="booking_entry.time_start" required
+        ng-change="check_conflicts()"
+    >
     </div>
 
     <div class="row" ng-hide="edit">
     {{booking_entry.time_end}}
     </div>
     <div class="row" ng-show="edit">
-    <input type="text" ng-model="booking_entry.time_end">
+    <input type="text" ng-model="booking_entry.time_end" required
+        ng-change="check_conflicts()"
+    >
     </div>
 
     <div class="row">
+        <b>Groups</b>
+    </div>
+    <div class="row">
         <div class="col-md-2">
-            Group
+        <select ng-show="edit" ng-options="name for name in ldap_groups"
+            ng-model="booking_entry.ldap_group_new">
+        </select>
         </div>
         <div class="col-md-2">
-        <select ng-disabled="!edit" ng-options="name for name in ldap_groups"
-        ng-model="booking_entry.ldap_groups" required></select>
+        <span ng-click="add_ldap_group(booking_entry)"
+            ng-show="booking_entry.ldap_group_new"
+            class="badge badge-primary">add</span>
         </div>
     </div>
 
+    <div class="row" ng-show="typeof(group) != 'undefined'"
+    ng-repeat="group in booking_entry.ldap_groups">
+        <div class="col-md-2">
+            {{group}}
+        </div>
+
+        <div class="col-md-2" ng-show="edit">
+        <span ng-click="remove_ldap_group(booking_entry,group)"
+            class="badge badge-danger">remove</span>
+        </div>
+    </div>
 
     <div class="row" ng-show="confirm_update">
         <div>
@@ -73,7 +145,7 @@
         </div>
     </div>
 
-    <div class="row" ng-hide="!edit || confirm_update || confirm_remove">
+    <div class="row" ng-hide="new_booking || !edit || confirm_update || confirm_remove">
         <div class="col">
             <button ng-click="confirm_update=true"
                 ng-disabled="!formBooking.$valid || formBooking.$pristine"
@@ -83,6 +155,17 @@
         <div class="col">
             <button ng-click="confirm_remove=true">remove</button>
         </div>
+    </div>
+
+    <div class="row" ng-show="new_booking">
+    <div class="col-md-6">
+            <button ng-click="save_booking()"
+                    ng-disabled="!form_booking.$valid || form_booking.$pristine
+                        || ( booking.ldap_groups.length == 0 && !booking.ldap_group_new)
+                        ">
+                    save
+            </button>
+    </div>
     </div>
 
     <div class="row" ng-hide="edit">
@@ -97,3 +180,12 @@
 {{booking_entry}}
 
 <div ng-show = "error">{{error}}</div>
+<div ng-show="conflicts && conflicts.length">
+    This booking overlaps already scheduled reservations
+    <div ng-repeat="conflict in conflicts">
+        {{conflict.date_booking}}
+        <b>{{conflict.title}}</b></br>
+        {{conflict.time_start}} - {{conflict.time_end}}
+    </div>
+</div>
+
