@@ -26,6 +26,8 @@ This file format is:
 So the lines are like this. Notice the first one has the directory and the second line
 doesn't need one.
 
+etc/fallback.conf::
+
    https://cdnjs.cloudflare.com/ajax/libs/morris.js/0.5.1/morris.css morris.js/
    https://use.fontawesome.com/releases/v5.10.1/fontawesome-free-5.10.1-web.zip
    ...
