@@ -6,8 +6,11 @@ use Data::Dumper;
 use DateTime;
 use Test::More;
 
+use 5.010;
+
 no warnings "experimental::signatures";
 use feature qw(signatures);
+
 
 use lib 't/lib';
 use Test::Ravada;
@@ -26,7 +29,7 @@ sub _init_ldap(){
     my $group = _add_posix_group();
     my $n = 0;
     for my $name ($USER_YES_NAME_1, $USER_YES_NAME_2, $USER_NO_NAME, $USER_2_NAME, $USER_3_NAME) {
-        create_ldap_user($name,$n,1);
+        create_ldap_user($name,$n, 1);
 
         _add_to_posix_group($group,$name)
         if $name eq $USER_YES_NAME_1 || $name eq $USER_YES_NAME_2;
@@ -120,42 +123,112 @@ sub _date($dt) {
 }
 
 # our tests won't work if we are at hh:59
-sub _wait_end_of_hour() {
+sub _wait_end_of_hour($seconds=0) {
     for (;;) {
         my $now = DateTime->now();
-        return if $now->minute <59;
+        last if $now->minute <59
+        && ( $now->minute>0 || $now->seconds>$seconds);
         diag("Waiting for end of hour to run booking tests "
             .$now->hour.":".$now->minute.".".$now->second);
         sleep 1;
     }
+
 }
 
-sub test_booking_oneday($vm) {
+sub test_booking_oneday_dow($vm) {
+    return test_booking_oneday($vm,1);
+}
+
+sub test_booking_oneday_date_end($vm) {
+    return test_booking_oneday($vm,0,1);
+}
+
+sub test_booking_oneday_date_end_dow($vm) {
+    return test_booking_oneday($vm,1,1);
+}
+
+
+sub test_booking_oneday($vm, $dow=0, $date_end=0) {
     my $base = create_domain($vm);
     $base->prepare_base(user_admin);
     $base->is_public(1);
 
     my $today = DateTime->now();
+    my @args;
+    push @args, ( day_of_week => $today->day_of_week)   if $dow;
+    push @args, ( date_end => $today->ymd)              if $date_end;
+
     my $booking = Ravada::Booking->new(
-        id_base => $base->id
+        bases => $base->id
         , ldap_groups => $GROUP
         , users => [$USER_2_NAME , $USER_3->id]
         , date_start => $today->ymd
-        , date_end => $today->ymd
         , time_start => "08:00"
         , time_end => "09:00"
-        , day_of_week => $today->day_of_week
         , title => 'comunicacions multimedia'
         , description => 'blablabla'
         , id_owner => user_admin->id
+        , @args
     );
 
     is(scalar($booking->entries),1) or exit;
     $booking->remove();
 }
 
+sub test_booking_datetime($vm) {
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+    $base->is_public(1);
+
+    my $today = DateTime->now();
+    my $week = DateTime->now()->add( days => 7 );
+    my $booking = Ravada::Booking->new(
+        bases => $base->id
+        , ldap_groups => $GROUP
+        , users => [$USER_2_NAME , $USER_3->id]
+        , date_start => ''.$today
+        , date_end => ''.$week
+        , time_start => "08:00"
+        , time_end => "09:00"
+        , title => 'comunicacions multimedia'
+        , description => 'blablabla'
+        , id_owner => user_admin->id
+    );
+
+    is(scalar($booking->entries),2) or exit;
+    my @bookings = Ravada::Booking::bookings(
+        date => $today->ymd
+        ,time => '08:00'
+    );
+    is(scalar(@bookings),1) or die Dumper(\@bookings);
+
+    @bookings = Ravada::Booking::bookings(
+        date => $today->ymd
+        ,time => '08:44'
+    );
+    is(scalar(@bookings),1) or die Dumper(\@bookings);
+
+    @bookings = Ravada::Booking::bookings(
+        date => $today->ymd
+        ,time => '09:00'
+    );
+    is(scalar(@bookings),0) or die Dumper(\@bookings);
+
+    @bookings = Ravada::Booking::bookings(
+        date => $today->ymd
+        ,time => '09:01'
+    );
+    is(scalar(@bookings),0) or die Dumper(\@bookings);
+
+
+    $booking->remove();
+}
+
+
 
 sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as) {
+
+    my $base2 = create_domain($vm);
 
     $clone0_no1->start(user => user_admin);
     $clone0_no2->start(user => user_admin);
@@ -168,10 +241,11 @@ sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as) {
     my $clone_no = $base->clone(name => new_domain_name, user => $USER_NO);
     my $clone_yes = $base->clone(name => new_domain_name, user => $USER_YES_1);
 
-    _wait_end_of_hour();
+    my $seconds_wait = 20;
+    _wait_end_of_hour(+$seconds_wait);
     my $date_start = _yesterday();
     my $date_end = _date(_now_days(7));
-    my $time_start = _now_seconds(-10);
+    my $time_start = _now_seconds(-$seconds_wait);
     my $time_end = _now_seconds($seconds);
 
     my $today = DateTime->now();
@@ -181,7 +255,7 @@ sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as) {
     $sth->execute($USER_2->id);
 
     my $booking = Ravada::Booking->new(
-        id_base => $base->id
+        bases => $base->id
         , ldap_groups => $GROUP
         , users => [$USER_2_NAME , $USER_3->id]
         , date_start => $date_start
@@ -194,12 +268,14 @@ sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as) {
         , id_owner => user_admin->id
     );
 
+    test_list_machines_user($vm);
+
     test_bookings_week($base->id);
 
     my @entries = $booking->entries();
     is(scalar(@entries),3);
     for my $entry ( @entries ) {
-        my @groups = $entry->groups;
+        my @groups = $entry->ldap_groups;
         is($groups[0], $GROUP);
         my @users = $entry->users();
         is(scalar(@users),2,Dumper(\@users));
@@ -224,7 +300,6 @@ sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as) {
 
     test_shut_others($clone0_no1, $clone0_no2, $clone0_as);
 
-
     _change_seconds($booking);
 
     eval { $clone_no->start(user => $USER_NO) };
@@ -232,6 +307,7 @@ sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as) {
     is($clone_no->is_active,1);
 
     $booking->remove();
+    test_booking_removed($booking, @entries);
     _remove_domains($base);
 
 }
@@ -326,6 +402,10 @@ sub test_non_conflict_after($vm, $base) {
     test_conflict_generic($vm,$base,"12:00","13:00",0);
 }
 
+sub test_conflict_hour_sharp($vm, $base) {
+    test_conflict_generic($vm,$base,"11:00","12:00",0);
+}
+
 sub test_conflict_day_of_week_exact($vm, $base) {
     my $today = DateTime->now();
     my $tomorrow = DateTime->now()->add(days => 1);
@@ -353,6 +433,8 @@ sub test_conflict_generic_dow($vm, $base, $conflict_start, $conflict_end, $dow, 
 
 sub test_conflict_generic($vm, $base, $conflict_start, $conflict_end, $n_expected=undef, $dow=undef) {
 
+    state $count_booking_generic = 0;
+
     my $date_start = _yesterday();
     my $date_end = _now_days(15);
     my $time_start = "09:00";
@@ -361,14 +443,14 @@ sub test_conflict_generic($vm, $base, $conflict_start, $conflict_end, $n_expecte
     my $today = DateTime->now();
     my $tomorrow = DateTime->now()->add(days => 1);
     my $booking = Ravada::Booking->new(
-        id_base => $base->id
+        bases => $base->id
         , ldap_groups => $GROUP
         , date_start => $date_start
         , date_end => $date_end
         , time_start => $time_start
         , time_end => $time_end
         , day_of_week => $today->day_of_week.''.$tomorrow->day_of_week
-        , title => 'garden'
+        , title => 'garden '.$count_booking_generic
         , description => 'blablabla long'
         , id_owner => user_admin->id
     );
@@ -384,7 +466,6 @@ sub test_conflict_generic($vm, $base, $conflict_start, $conflict_end, $n_expecte
     is(scalar(@conflicts), $n_expected,Dumper(\@conflicts)) or confess;
     $booking->remove();
 
-    $base->remove(user_admin);
 }
 
 
@@ -398,8 +479,9 @@ sub _create_booking( $base ) {
     my $today = DateTime->now();
     my $tomorrow = DateTime->now()->add(days => 1);
     my $booking = Ravada::Booking->new(
-        id_base => $base->id
+        bases => $base->id
         , ldap_groups => $GROUP
+        , users => $USER_YES_NAME_1
         , date_start => $date_start
         , date_end => $date_end
         , time_start => $time_start
@@ -471,6 +553,34 @@ sub test_change_entry($booking) {
 
     my $new_entry = Ravada::Booking::Entry->new( id => $entry->id );
     is($new_entry->_data('time_start'), $new_time);
+
+    my @groups = $entry->ldap_groups();
+    my @groups2 = sort (@groups,"new.group");
+
+    $entry->change( ldap_groups => \@groups2 );
+    my @new_groups = sort $entry->ldap_groups;
+    is_deeply( \@new_groups ,\@groups2) or die Dumper(\@new_groups,\@groups2);
+
+    #clear groups
+    @groups2 = sort ("new.group");
+    $entry->change( ldap_groups => \@groups2 );
+    @new_groups = sort $entry->ldap_groups;
+    is_deeply( \@new_groups ,\@groups2) or die Dumper(\@new_groups,\@groups2);
+
+    my $user_new = create_user('new.user','a');
+    my @users = $entry->users();
+    my @users2 = sort (@users,$user_new->name);
+
+    $entry->change( users => \@users2 );
+    my @new_users = sort $entry->users;
+    is_deeply( \@new_users ,\@users2) or die Dumper(\@new_users,\@users2);
+
+    #clear users
+    @users2 = ('new.user');
+    $entry->change( users => \@users2 );
+    @new_users = sort $entry->users;
+    is_deeply( \@new_users ,\@users2) or die Dumper(\@new_users,\@users2);
+
 }
 
 sub test_change_entry_next($booking) {
@@ -641,12 +751,12 @@ sub test_booking_removed($id,@entries) {
         ($found) = $sth->fetchrow;
         is($found,undef,"Expecting $id removed from booking_entries");
 
-        for my $table (qw(booking_entry_users booking_entry_ldap_groups)) {
+        for my $table (qw(booking_entry_users booking_entry_ldap_groups booking_entry_bases)) {
             $sth = connector->dbh->prepare("SELECT * from $table where id=?");
             $sth->execute($id_entry);
             ($found) = $sth->fetchrow;
 
-            is($found,undef,"Expecting $id_entry removed from $table ");
+            is($found,undef,"Expecting $id_entry removed from $table ") or exit;
         }
     }
 }
@@ -676,6 +786,7 @@ sub _create_clones($vm) {
 
 sub test_conflict($vm) {
     my $base = create_domain($vm);
+    test_conflict_hour_sharp($vm, $base);
     test_conflict_exact($vm, $base);
     test_conflict_before($vm, $base);
     test_conflict_after($vm, $base);
@@ -689,6 +800,23 @@ sub test_conflict($vm) {
     test_non_conflict_day_of_week($vm, $base);
 
     $base->remove(user_admin);
+}
+
+sub test_list_machines_user($vm) {
+
+    my $list = rvd_front->list_machines_user(user_admin);
+
+    # admin can see all the bases
+    is(scalar(@$list),2) or exit;
+
+    # user allowed can see booked base
+    $list= rvd_front->list_machines_user($USER_YES_1);
+    is(scalar(@$list),1) or exit;
+
+    # user not allowed sees no bases
+    $list= rvd_front->list_machines_user($USER_NO);
+    is(scalar(@$list),0,"Expecting no access to ".$USER_NO->name
+        ." (admin = ".$USER_NO->is_admin.")") or exit;
 }
 
 ###################################################################
@@ -710,12 +838,18 @@ for my $vm_name ( vm_names()) {
 
         skip($msg,10)   if !$vm;
 
+        test_booking($vm , _create_clones($vm));
+
+        test_conflict($vm);
+        test_booking_datetime($vm);
+
         test_booking_oneday($vm);
+        test_booking_oneday_dow($vm);
+        test_booking_oneday_date_end($vm);
+        test_booking_oneday_date_end_dow($vm);
 
         test_search_change_remove_booking($vm);
-        test_conflict($vm);
 
-        test_booking($vm , _create_clones($vm));
     }
 }
 
