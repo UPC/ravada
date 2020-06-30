@@ -389,14 +389,31 @@ sub _start_preconditions{
     } else {
         _allow_manage(@_);
     }
-    $self->_allow_booking( $user );
+    if ( !$self->allowed_booking( $user ) ) {
+        my @bookings = Ravada::Booking::bookings(date => DateTime->now()->ymd
+            ,time => DateTime->now()->hms);
+        confess "Error: resource booked ".Dumper(\@bookings);
+    }
     #_check_used_memory(@_);
     $self->status('starting');
 }
 
-sub _allow_booking($self, $user) {
-    my $id_base = $self->_data('id_base') or return;
-    die "Error: resource booked " if !Ravada::Booking::user_allowed($user, $id_base);
+=head2 allowed_booking
+
+Returns true if an user is allowed in a booking for this virtual machine
+or its base. Returns false otherwise.
+
+   $machine->allowed_booking($user);
+
+=cut
+
+
+sub allowed_booking($self, $user) {
+    my $id_base = $self->id;
+    if (!$self->is_base) {
+        $id_base = $self->_data('id_base') or return;
+    }
+    return Ravada::Booking::user_allowed($user, $id_base);
 }
 
 sub _start_checks($self, @args) {

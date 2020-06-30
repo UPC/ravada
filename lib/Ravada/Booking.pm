@@ -16,17 +16,34 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 sub BUILD($self, $args) {
     return $self->_open($args->{id}) if $args->{id};
 
+    my $date = delete $args->{date_booking};
+    my $date_start = delete $args->{date_start};
+    my $date_end = delete $args->{date_end};
+
+    confess "Error: supply either date or date_start"
+    if (defined $date && defined $date_start)
+        || (!defined $date && !defined $date_start);
+
+    $date = $date_start     if !defined $date;
+    $date_end = $date       if !defined $date_end;
+
+    $date = _datetime($date);
+    $date_end = _datetime($date_end);
+
     my $time_start = delete $args->{time_start} or confess "Error: missing time start";
     my $time_end = delete $args->{time_end} or confess "Error: missing time end";
-    my $day_of_week = delete $args->{day_of_week} or confess "Error: missing day_of_week";
+    my $day_of_week = delete $args->{day_of_week};
 
     my %entry;
-    my @fields_entry = qw ( id_base ldap_groups users time_start time_end );
+    my @fields_entry = qw ( bases ldap_groups users time_start time_end );
     for (@fields_entry) {
         $entry{$_} = delete $args->{$_};
     }
 
-    $self->_insert_db($args);
+    $self->_insert_db(%$args
+        , date_start => $date->ymd
+        , date_end => $date_end->ymd
+    );
 
     $entry{id_booking} = $self->id;
     $entry{time_start} = $time_start;
@@ -34,26 +51,28 @@ sub BUILD($self, $args) {
     $entry{title} = $args->{title};
     $entry{description} = $args->{description};
 
-    my $date_start = _datetime(delete $args->{date_start});
-    my $date_end = _datetime(delete $args->{date_end});
+    $day_of_week = $date->day_of_week   if !$day_of_week || $day_of_week =~ /^0+$/;
 
-    my $date = $date_start;
     my %dow = map { $_ => 1 } split //,$day_of_week;
+    my $saved = 0 ;
     for (;;) {
-        if ( exists $dow{$date->day_of_week} ) {
+        if ( $dow{$date->day_of_week()} ) {
             my $entry = Ravada::Booking::Entry->new(%entry, date_booking => $date->ymd);
+            $saved++;
         }
         $date->add( days => 1 );
         last if DateTime->compare($date, $date_end) >0;
     }
 
+    die "Error: No entries were saved $date - $date_end\n".Dumper(\%dow)
+    if !$saved;
+
     return $self;
 }
 
 sub _datetime($dt) {
-    return if ref($dt);
-    my ($y,$m,$d) = split /-/,$dt;
-    return DateTime->new( year => $y, month => $m, day => $d);
+    return $dt if ref($dt);
+    return DateTime::Format::DateParse->parse_datetime($dt);
 }
 
 sub _init_connector {
@@ -63,32 +82,24 @@ sub _init_connector {
                                                 && defined $Ravada::Front::CONNECTOR;
 }
 
-sub _insert_db($self, $field) {
+sub _insert_db($self, %field) {
 
-    _fix_date_field('date_start',$field);
-    _fix_date_field('date_end',$field);
     my $query = "INSERT INTO bookings "
-            ."(" . join(",",sort keys %$field )." )"
-            ." VALUES (". join(",", map { '?' } keys %$field )." ) "
+            ."(" . join(",",sort keys %field )." )"
+            ." VALUES (". join(",", map { '?' } keys %field )." ) "
     ;
     my $sth = $self->_dbh->prepare($query);
-    eval { $sth->execute( map { $field->{$_} } sort keys %$field ) };
+    eval { $sth->execute( map { $field{$_} } sort keys %field ) };
     if ($@) {
-        #warn "$query\n".Dumper(\%field);
+        warn "$query\n".Dumper(\%field);
         confess $@;
     }
     $sth->finish;
 
     $sth = $self->_dbh->prepare("SELECT * FROM bookings WHERE title=? ");
-    $sth->execute($field->{title});
+    $sth->execute($field{title});
     $self->{_data} = $sth->fetchrow_hashref;
 
-}
-
-sub _fix_date_field($name, $field) {
-    return if !ref($field->{$name});
-    my $dt = $field->{$name};
-    $field->{$name} = $dt->year."-".$dt->month."-".$dt->day;
 }
 
 sub _fix_date($dt) {
@@ -125,6 +136,7 @@ sub search($self, %args) {
 }
 
 sub _data($self, $field) {
+    confess if !ref($self);
     confess "Error: field '$field' doesn't exist in ".Dumper($self->{_data}, $self)
         if !exists $self->{_data}->{$field};
 
@@ -217,6 +229,10 @@ sub change($self, %field) {
 }
 
 sub remove($self) {
+    # TODO: make foreign keys delete cascade work
+    for my $entry ( $self->entries ) {
+        $entry->remove();
+    }
     my $sth = $self->_dbh->prepare("DELETE FROM bookings WHERE id=? ");
     $sth->execute($self->id);
     delete $self->{_data};
@@ -270,12 +286,8 @@ sub bookings(%args) {
 
     $sql = "SELECT id FROM booking_entries WHERE date_booking=?";
     if ($time) {
-        $sql .= " AND time_start<=? AND time_end>=? ";
+        $sql .= " AND time_start<=? AND time_end>? ";
         push @args,($time, $time);
-    }
-    if ($id_base ) {
-        $sql .= "AND id_base=? ";
-        push @args,($id_base);
     }
     my $sth = _dbh->prepare($sql);
     $sth->execute(@args);
@@ -283,7 +295,9 @@ sub bookings(%args) {
     my @found;
     $sth->bind_columns(\$id);
     while ($sth->fetch ) {
-        push @found,Ravada::Booking::Entry->new(id => $id);
+        my $entry = Ravada::Booking::Entry->new(id => $id);
+        push @found,($entry)
+        if !defined $id_base || grep { $_ == $id_base } $entry->bases_id;
     }
     return @found;
 }
@@ -297,18 +311,29 @@ sub _search_user_name($id_user) {
 
 sub user_allowed($user,$id_base) {
     my $user_name = $user;
-    $user_name = $user->name if ref($user);
+    if ( ref($user) ) {
+        $user_name = $user->name;
+        return 1 if $user->is_admin;
+    }
     $user_name = _search_user_name($user) if !ref($user) && $user =~ /^\d+$/;
 
     confess"Undefined user name " if !defined $user_name;
 
     my $today = _today();
     my $now = _now();
+
+    # allowed by default if there are no current bookings right now
     my $allowed =  1;
     for my $entry (Ravada::Booking::bookings( date => $today, time => $now)) {
+        # first we disallow because there is a booking
         $allowed = 0;
-        next if $entry->_data('id_base') != $id_base;
+        next unless grep { $_ == $id_base } $entry->bases_id;
+        # look no further if user is allowed
         return 1 if $entry->user_allowed($user_name);
+    }
+    if (!$allowed && !ref($user)) {
+        my $user0 = Ravada::Auth::SQL->new(name => $user_name);
+        return 1 if $user0->is_admin;
     }
     return $allowed;
 }
@@ -325,9 +350,8 @@ sub bookings_week(%args) {
 
     my %booking;
     for my $dow ( 0 .. 6 ) {
-        for my $entry ( Ravada::Booking::bookings( date => $date
-                ,id_base => $id_base
-            ) ) {
+        for my $entry ( Ravada::Booking::bookings( date => $date) ) {
+            next if defined $id_base && ! grep { $_ == $id_base } $entry->bases_id;
             my ($hour) = $entry->_data('time_start') =~ /^(\d+)/;
             my ($hour_end) = $entry->_data('time_end') =~ /^(\d+)/;
             for (;;) {
@@ -335,7 +359,7 @@ sub bookings_week(%args) {
                 my $key = "$dow.$hour";
                 push @{$booking{$key}}, $entry->{_data} if !$user_name
                                                     || $entry->user_allowed($user_name);
-                last if ++$hour>$hour_end;
+                last if ++$hour>=$hour_end;
             }
         }
         $date->add(days => 1);
@@ -359,6 +383,7 @@ sub bookings_range(%args) {
     my $day_of_week = ( delete $args{day_of_week} or '');
     confess "Error: day of week must be between 0 and 7 , $day_of_week"
     if $day_of_week && $day_of_week !~ /^[0-7]+/;
+    $day_of_week = '' if !$day_of_week || $day_of_week =~ /^0+$/;
 
     my %day_of_week = map { $_ => 1 } split //,$day_of_week;
 
@@ -368,7 +393,7 @@ sub bookings_range(%args) {
 
     confess "Error: unknown field ".Dumper(\%args) if keys %args;
 
-    #    warn "\n\nchecking $date_start - $date_end | $time_start - $time_end\n";
+    #    warn "\n\nchecking $date_start - $date_end | $time_start - $time_end $day_of_week\n".Dumper(\%day_of_week);
 
     my @booking;
     for (# no init
@@ -381,20 +406,18 @@ sub bookings_range(%args) {
             next if !$day_of_week{$date_start->day_of_week};
         }
         for my $entry ( Ravada::Booking::bookings(date => $date_start ) ) {
-#                        warn Dumper($entry);
-#            warn "$date_start - $date_end |  $time_start - $time_end\n";
             if (
                 (_seconds($entry->{_data}->{time_start}) <= _seconds($time_start)
-                && _seconds($entry->{_data}->{time_end}) >= _seconds($time_start))
+                && _seconds($entry->{_data}->{time_end}) > _seconds($time_start))
              ||
                 (_seconds($entry->{_data}->{time_end}) >= _seconds($time_end)
-                && _seconds($entry->{_data}->{time_start}) <= _seconds($time_end))
+                && _seconds($entry->{_data}->{time_start}) < _seconds($time_end))
             ||
-                (_seconds($entry->{_data}->{time_start}) <= _seconds($time_end)
+                (_seconds($entry->{_data}->{time_start}) < _seconds($time_end)
                 && _seconds($entry->{_data}->{time_end}) >= _seconds($time_end))
             ||
                 (_seconds($entry->{_data}->{time_start}) >= _seconds($time_start)
-                && _seconds($entry->{_data}->{time_start}) <= _seconds($time_end))
+                && _seconds($entry->{_data}->{time_start}) < _seconds($time_end))
             ) {
 #                warn "** matches **\n";
                 push @booking,($entry->{_data})

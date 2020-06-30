@@ -144,6 +144,7 @@ sub list_machines_user($self, $user, $access_data={}) {
     while ( $sth->fetch ) {
         next if !$is_public && !$user->is_admin;
         next if !$user->allowed_access($id);
+        next if !Ravada::Front::Domain->open($id)->allowed_booking($user);
         my $is_active = 0;
         my $clone = $self->search_clone(
             id_owner =>$user->id

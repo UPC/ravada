@@ -19,10 +19,12 @@ sub BUILD($self, $args) {
 
     my $ldap_groups = delete $args->{ldap_groups};
     my $users = delete $args->{users};
+    my $bases = delete $args->{bases};
 
     $self->_insert_db($args);
-    $self->_add_group($ldap_groups);
+    $self->_add_ldap_groups($ldap_groups);
     $self->_add_users($users);
+    $self->_add_bases($bases);
 
     return $self;
 }
@@ -58,8 +60,9 @@ sub _insert_db($self, $field) {
 
 }
 
-sub _add_group($self, $ldap_groups) {
+sub _add_ldap_groups($self, $ldap_groups) {
     my $id = $self->_data('id');
+    my %already_added = map { $_ => 1 } $self->ldap_groups();
     $ldap_groups = [ $ldap_groups ] if !ref($ldap_groups);
 
     my $sth = $self->_dbh->prepare("INSERT INTO booking_entry_ldap_groups "
@@ -67,6 +70,7 @@ sub _add_group($self, $ldap_groups) {
             ."values( ?,? ) "
     );
     for my $current_group(@$ldap_groups) {
+        next if $already_added{$current_group};
         $sth->execute($id, $current_group);
     }
 }
@@ -75,16 +79,36 @@ sub _add_users ($self, $users) {
     return if !defined $users;
     my $id = $self->_data('id');
     $users = [ $users] if !ref($users);
+    my %already_added = map { $_ => 1 } $self->users();
 
     my $sth = $self->_dbh->prepare("INSERT INTO booking_entry_users"
             ."(  id_booking_entry, id_user)"
             ."values( ?,? ) "
     );
     for my $current_user (@$users) {
-        $current_user = $self->_search_user_id($current_user);
-        $sth->execute($id, $current_user);
+        next if $already_added{$current_user};
+        my $current_user_id = $self->_search_user_id($current_user);
+        $sth->execute($id, $current_user_id);
     }
 }
+
+sub _add_bases ($self, $bases) {
+    return if !defined $bases;
+    my $id = $self->_data('id');
+    $bases = [ $bases] if !ref($bases);
+    my %already_added = map { $_ => 1 } $self->bases();
+
+    my $sth = $self->_dbh->prepare("INSERT INTO booking_entry_bases"
+            ."(  id_booking_entry, id_base)"
+            ."values( ?,? ) "
+    );
+    for my $current_base (@$bases) {
+        next if $already_added{$current_base};
+        eval { $sth->execute($id, $current_base) };
+        confess $@ if $@;
+    }
+}
+
 
 sub _search_user_id($self, $user) {
     confess if !defined $user;
@@ -127,6 +151,14 @@ sub _data($self, $field) {
 
 sub change($self, %fields) {
     for my $field (keys %fields ) {
+
+        if ($field eq 'ldap_groups') {
+            $self->_add_ldap_groups($fields{$field});
+            next;
+        } elsif ($field eq 'users') {
+            $self->_add_users($fields{$field});
+            next;
+        }
         my $old_value = $self->_data($field);
         my $value = $fields{$field};
         $value =~ s/(^\d{4}-\d\d-\d\d).*/$1/ if ($field eq 'date_booking');
@@ -193,7 +225,7 @@ sub change_next_dow($self, %fields) {
 
 sub id($self) { return $self->_data('id') }
 
-sub groups($self) {
+sub ldap_groups($self) {
     my $sth = $self->_dbh->prepare("SELECT ldap_group FROM booking_entry_ldap_groups"
         ." WHERE id_booking_entry=?");
     $sth->execute($self->id);
@@ -218,11 +250,40 @@ sub users ($self) {
     return @users;
 }
 
+sub bases ($self) {
+    my $sth = $self->_dbh->prepare("SELECT b.id_base,d.name "
+        ." FROM booking_entry_bases b,domains d"
+        ." WHERE id_booking_entry=?"
+        ." AND b.id_base=d.id "
+    );
+    $sth->execute($self->id);
+    my @bases;
+    while ( my ($id_base, $base_name) = $sth->fetchrow ) {
+        push @bases,($base_name);
+    }
+    return @bases;
+}
+
+sub bases_id ($self) {
+    my $sth = $self->_dbh->prepare("SELECT b.id_base,d.name "
+        ." FROM booking_entry_bases b,domains d"
+        ." WHERE id_booking_entry=?"
+        ." AND b.id_base=d.id "
+    );
+    $sth->execute($self->id);
+    my @bases;
+    while ( my ($id_base, $base_name) = $sth->fetchrow ) {
+        push @bases,($id_base);
+    }
+    return @bases;
+}
+
+
 sub user_allowed($entry, $user_name) {
     for my $allowed_user_name ( $entry->users ) {
         return 1 if $user_name eq $allowed_user_name;
     }
-    for my $group_name ($entry->groups) {
+    for my $group_name ($entry->ldap_groups) {
         my $group = Ravada::Auth::LDAP->_search_posix_group($group_name);
         my @member = $group->get_value('memberUid');
         my ($found) = grep /^$user_name$/,@member;
@@ -231,7 +292,27 @@ sub user_allowed($entry, $user_name) {
     return 0;
 }
 
+sub _remove_users($self) {
+    my $sth =$self->_dbh->prepare("DELETE FROM booking_entry_users WHERE id_booking_entry=? ");
+    $sth->execute($self->id);
+}
+sub _remove_groups($self) {
+    my $sth =$self->_dbh->prepare("DELETE FROM booking_entry_ldap_groups "
+        ." WHERE id_booking_entry=? ");
+    $sth->execute($self->id);
+}
+sub _remove_bases($self) {
+    my $sth =$self->_dbh->prepare("DELETE FROM booking_entry_bases WHERE id_booking_entry=? ");
+    $sth->execute($self->id);
+}
+
+
+
 sub remove($self) {
+    $self->_remove_users();
+    $self->_remove_groups();
+    $self->_remove_bases();
+
     my $sth = $self->_dbh->prepare("DELETE FROM booking_entries "
         ." WHERE id=? "
     );
@@ -241,19 +322,17 @@ sub remove($self) {
 sub remove_next($self) {
     my $date_booking = $self->_data('date_booking');
     my $sth = $self->_dbh->prepare(
-        "DELETE FROM booking_entries"
+        "SELECT id FROM booking_entries"
         ." WHERE id_booking=? "
         ." AND date_booking>=? "
     );
     $sth->execute($self->_data('id_booking'), $date_booking);
+    while ( my ($id) = $sth->fetchrow ) {
+        Ravada::Booking::Entry->_open( $id )->remove();
+    }
 }
 
 sub remove_next_dow($self) {
-    my $sth_delete = $self->_dbh->prepare(
-        "DELETE FROM booking_entries "
-        ." WHERE id=? "
-        ." AND id_booking>=? "
-    );
 
     my $dow = DateTime::Format::DateParse
         ->parse_datetime($self->_data('date_booking'))->day_of_week;
@@ -266,10 +345,9 @@ sub remove_next_dow($self) {
         my $curr_dow = DateTime::Format::DateParse
         ->parse_datetime($date)->day_of_week;
         if ($dow == $curr_dow) {
-            $sth_delete->execute($id, $self->_data('id_booking'));
+            Ravada::Booking::Entry->_open( $id )->remove();
         }
     }
 }
-
 
 1;
