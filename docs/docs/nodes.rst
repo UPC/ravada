@@ -214,8 +214,15 @@ It means you didn't install libvirt in the node. Fix it this way:
 
 .. code-block:: bash
 
-    root@node:~# apt get install libvirt-bin
+    root@node:~# apt-get install libvirt-bin
+    
+But now, the libvirt-bin package was dropped in release 18.10 ubuntu. The package was split into two parts:
 
+.. code-block:: bash
+root@node:~# apt-get installlibvirt-daemon-system
+root@node:~# apt-get installlibvirt-clients
+
+so instead of libvirt-bin you need install libvirt-daemon-system and libvirt-clients.
 
 Balance algorithm
 =================
