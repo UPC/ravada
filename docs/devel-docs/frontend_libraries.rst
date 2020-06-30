@@ -13,7 +13,7 @@ Change scripts pointed in the files ``templates/bootstrap/scripts.html.ep`` and
 Fallback
 --------
 
-Fallback mode can be set up when the libraries are storedc in the
+Fallback mode can be set up when the libraries are stored in the
 same Ravada server. A copy of all the libraries is downloaded following
 the fallback_ guide.
 
