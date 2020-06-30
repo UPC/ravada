@@ -15,7 +15,9 @@ Fallback
 
 Fallback mode can be set up when the libraries are storedc in the
 same Ravada server. A copy of all the libraries is downloaded following
-`this guide </en/latest/docs/local_resources.html`_.
+the fallback_ guide.
+
+.. _fallback: https://ravada.readthedocs.io/en/latest/docs/local_resources.html
 
 Change the fallback files list in the file ``etc/fallback.conf``
 
