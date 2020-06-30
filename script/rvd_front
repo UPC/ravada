@@ -1385,6 +1385,8 @@ get '/booking_entry/view/:id' => sub($c) {
 
 get '/v1/booking_entry/:id' => sub($c) {
     my $booking_entry = Ravada::Booking::Entry->new( id => $c->stash('id'));
+    $booking_entry->{_data}->{ldap_groups} = [ $booking_entry->ldap_groups ];
+    $booking_entry->{_data}->{users} = [ $booking_entry->users ];
     return $c->render( json => $booking_entry->{_data} );
 };
 
@@ -1416,12 +1418,12 @@ post '/v1/booking/save' => sub($c) {
 
     my $arg = decode_json($c->req->body);
     delete $arg->{dow};
+    delete $arg->{repeat};
     $arg->{id_owner} = $USER->id;
-    $arg->{date_start} =~ s/(^[\d-]+).*/$1/;
-    $arg->{date_end} =~ s/(^[\d-]+).*/$1/;
+
     my $dow = '';
     for my $curr ( split//,$arg->{day_of_week} ) {
-        $dow .= $curr -1 if $curr;
+        $dow .= $curr if $curr;
     }
 
     $arg->{day_of_week} = $dow;

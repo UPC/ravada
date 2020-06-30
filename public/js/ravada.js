@@ -1001,8 +1001,13 @@
         $scope.list_bookings_week = function() {
             $http.get('/v1/booking/week/'+$scope.booking_monday.toISOString().slice(0,10))
                 .then(function(response) {
+                    if ( response.status != 200 ) {
+                        console.log("error ",response.status);
+                        window.location.reload();
+                    }
                     $scope.bookings_week=response.data;
                 });
+            ;
             var day_name
                 = ['Sun', 'Mon','Tue','Wed','Thu','Fri', 'Sat'];
             $scope.week = [];
@@ -1060,64 +1065,65 @@
             //$scope.new_booking = true;
 
             var now = new Date();
-            $scope.booking = { title: ''
-            };
-            $scope.booking.date_start = new Date(now.getFullYear(), now.getMonth()
-                , now.getDate());
-            $scope.booking.date_end = new Date(now.getFullYear(), now.getMonth()
-                , now.getDate());
-            $scope.booking.time_start = "08:00";
-            $scope.booking.time_end = "09:00";
-            $scope.booking.dow = [0,0,0,0,0,0,0]
-            var today_dow = now.getDay();
-            $scope.booking.dow[today_dow-1]=today_dow;
+            $scope.booking_entry = { title: '' };
+            $scope.booking_entry.date_booking = new Date();
+            $scope.booking_entry.date_end = new Date();
+            $scope.booking_entry.time_start = now.getHours()+":00";
+            $scope.booking_entry.time_end = 1+now.getHours();
+            if ( $scope.booking_entry.time_end > 23 ) {
+                $scope.booking_entry.time_end = '00';
+                $scope.booking_entry.date_end.setDate($scope.booking_entry.date_end.getDate()+1);
+            }
+            $scope.booking_entry.time_end += ':00';
+            $scope.booking_entry.dow = [0,0,0,0,0,0,0]
+            var today_dow = $scope.booking_entry.date_booking.getDay() - 1;
+            if (today_dow <0 ) {
+                today_dow = 6;
+            }
+            $scope.booking_entry.dow[today_dow]=today_dow+1;
             $scope.update_booking_dow();
             $scope.new_booking=true;
-            $scope.booking.ldap_groups = [];
+            $scope.edit = true;
+            $scope.booking_entry.ldap_groups = [];
+            $scope.check_conflicts();
         };
         $scope.update_booking_dow = function() {
-            var dow = $scope.booking.dow;
-            $scope.booking.day_of_week = ''+dow[0]+dow[1]+dow[2]
+            console.log($scope.booking_entry.dow);
+            var dow = $scope.booking_entry.dow;
+            $scope.booking_entry.day_of_week = ''+dow[0]+dow[1]+dow[2]
                 +dow[3]+dow[4]+dow[5]+dow[6];
+            console.log($scope.booking_entry.day_of_week);
         };
         $scope.save_booking = function() {
-            $scope.booking.id_base = $scope.booking.id_base.id;
-            if ($scope.booking.ldap_group_new) {
-                $scope.add_ldap_group($scope.booking);
+            if ($scope.booking_entry.ldap_group_new) {
+                $scope.add_ldap_group($scope.booking_entry);
+            }
+            if (!$scope.booking_entry.repeat || $scope.booking_entry.repeat == 'no') {
+                $scope.booking_entry.dow = '';
+                $scope.booking_entry.date_end = undefined;
             }
             $http.post('/v1/booking/save'
-                ,JSON.stringify($scope.booking)
+                ,JSON.stringify($scope.booking_entry)
             ).then(function(response) {
                 $scope.error = response.data.error;
-                if ($scope.error == '') {
-                    $scope.new_booking=false;
-                    $scope.message_booking = "Booking "+$scope.booking.title+ " saved.";
-                    $scope.booking_monday = $scope.booking.date_start;
-                    console.log($scope.booking.date_start);
-                    console.log($scope.booking_monday);
-                    var diff = $scope.booking_monday.getDay() - 1;
-                    if (diff < 0 ) { diff = 6 }
-                    $scope.booking_monday.setDate($scope.booking_monday.getDate() - diff);
-                    console.log($scope.booking_monday);
-
-                    $scope.conflicts = [];
-                    $scope.list_bookings_week();
+                if (response.status == 200 && $scope.error == '') {
+                    location_week($scope.booking_entry);
                 }
             });
         };
 
         $scope.check_conflicts = function() {
-            if ($scope.booking.date_start > $scope.booking.date_end) {
+            if ($scope.booking_entry.date_booking > $scope.booking_entry.date_end) {
                 $scope.conflicts = [];
                 return;
             }
             $http.post('/v1/booking/list'
                 ,JSON.stringify({
-                    date_start: $scope.booking.date_start
-                    ,date_end: $scope.booking.date_end
-                    ,time_start: $scope.booking.time_start
-                    ,time_end: $scope.booking.time_end
-                    ,day_of_week: $scope.booking.day_of_week
+                    date_start: $scope.booking_entry.date_booking
+                    ,date_end: $scope.booking_entry.date_end
+                    ,time_start: $scope.booking_entry.time_start
+                    ,time_end: $scope.booking_entry.time_end
+                    ,day_of_week: $scope.booking_entry.day_of_week
                     })
                 ).then(function(response) {
                     $scope.conflicts = response.data
@@ -1139,14 +1145,28 @@
                     if(response.data.error.length) {
                         $scope.error = response.data.error;
                     } else {
-                        location.href='/booking/week/'
-                            +$scope.booking_entry.date_booking.getFullYear()
-                            +'-'+$scope.booking_entry.date_booking.getMonth()
-                            +'-'+$scope.booking_entry.date_booking.getDay()
-
+                        location_week($scope.booking_entry);
                     }
                 }
             );
+        };
+        location_week = function(entry) {
+            var month = ''+(1+ entry.date_booking.getMonth());
+            if (month.length<2) {
+                month = "0"+month;
+            }
+
+            var date = ''+entry.date_booking.getDate();
+            if (date.length<2) {
+                date = "0"+date;
+            }
+
+            location.href='/booking/week/'
+                            +entry.date_booking.getFullYear()
+                            +'-'+month
+                            +'-'+date;
+
+
         };
 
         $scope.add_ldap_group = function(item) {
@@ -1156,11 +1176,9 @@
             }
             item.ldap_groups[item.ldap_groups.length] = item.ldap_group_new;
             item.ldap_group_new = undefined;
-            console.log(item.ldap_groups);
         };
         $scope.remove_ldap_group = function(item, group) {
             var index = item.ldap_groups.indexOf(group);
-            console.log(index+' '+group);
             if (index >= 0) {
                 item.ldap_groups.splice(index,1);
             }
@@ -1174,7 +1192,7 @@
                     .then(function(response) {
                          $scope.bases=response.data;
         });
-
+        $scope.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     };
 /*
   function requestsCrtlSingle($scope, $interval, $http, request){
