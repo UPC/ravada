@@ -411,7 +411,7 @@ or its base. Returns false otherwise.
 sub allowed_booking($self, $user) {
     my $id_base = $self->id;
     if (!$self->is_base) {
-        $id_base = $self->_data('id_base') or return;
+        $id_base = $self->_data('id_base') or return 1;
     }
     return Ravada::Booking::user_allowed($user, $id_base);
 }
