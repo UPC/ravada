@@ -385,10 +385,10 @@ sub _start_preconditions{
 
         confess "ERROR: Unknown argument ".join("," , sort keys %args)
             ."\n\tknown: remote_ip, user"   if keys %args;
-        _allow_manage_args(@_);
     } else {
-        _allow_manage(@_);
+        ($user) = $_[1];
     }
+    $self->_allow_manage($user);
     if ( !$self->allowed_booking( $user ) ) {
         my @bookings = Ravada::Booking::bookings(date => DateTime->now()->ymd
             ,time => DateTime->now()->hms);
