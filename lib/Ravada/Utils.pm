@@ -111,7 +111,7 @@ sub last_insert_id($dbh) {
 
     if ( $driver =~ /sqlite/i ) {
         return _last_insert_id_sqlite($dbh);
-    } elsif ( $driver =~ /mysql/i ) {
+    } elsif ( $driver =~ /mysql|mariadb/i ) {
         return _last_insert_id_mysql($dbh);
     } else {
         confess "I don't know how to get last_insert_id for $driver";

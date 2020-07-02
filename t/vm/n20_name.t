@@ -150,15 +150,16 @@ sub test_nat($vm_name) {
 
     $domain->remove(user_admin);
 
-    unlink($file_config);
+    DumpFile($file_config,{ vm => \@VMS });
     $rvd_back = Ravada->new(
             connector => connector()
-                , config => $FILE_CONFIG
+                , config => $file_config
                 , warn_error => 0
     );
 
 
-    rvd_back($FILE_CONFIG);
+    rvd_back($file_config);
+    unlink($file_config);
 }
 
 sub test_chain($vm_name, %args) {
@@ -199,7 +200,7 @@ for my $vm_name ( @VMS ) {
     my $vm;
 
     init( $FILE_CONFIG );
-    { $vm = rvd_back->search_vm($vm_name) };
+    eval { $vm = rvd_back->search_vm($vm_name) };
 
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ".($@ or '');

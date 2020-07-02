@@ -9,7 +9,7 @@ use Carp qw(carp croak);
 use Data::Dumper;
 use DBIx::Connector;
 use File::Copy;
-use Hash::Util qw(lock_hash);
+use Hash::Util qw(lock_hash unlock_hash);
 use JSON::XS;
 use Moose;
 use POSIX qw(WNOHANG);
@@ -949,6 +949,8 @@ sub _add_indexes_generic($self) {
             "unique(hostname, vm_type)"
         ]
     );
+    my $if_not_exists = '';
+    $if_not_exists = ' IF NOT EXISTS ' if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite|mariadb/i;
     for my $table ( keys %index ) {
         my $known;
         for my $change (@{$index{$table}} ) {
@@ -961,9 +963,9 @@ sub _add_indexes_generic($self) {
             next if $known->{$name};
 
             $type .=" INDEX " if $type=~ /^unique/i;
-            my $sql = "CREATE $type IF NOT EXISTS $name on $table ($fields)";
+            my $sql = "CREATE $type $if_not_exists $name on $table ($fields)";
 
-            warn "INFO: Adding index to $table: $name" if $0 !~ /\.t$/;
+            warn "INFO: Adding index to $table: $name\n" if $0 !~ /\.t$/;
             my $sth = $CONNECTOR->dbh->prepare($sql);
             $sth->execute();
         }
@@ -1291,6 +1293,8 @@ sub _create_tables {
 #    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
 
     my $driver = lc($CONNECTOR->dbh->{Driver}{Name});
+    $driver = 'mysql' if $driver =~ /mariadb/i;
+
     $DIR_SQL =~ s{(.*)/.*}{$1/$driver};
 
     opendir my $ls,$DIR_SQL or die "$! $DIR_SQL";
@@ -1691,16 +1695,20 @@ sub _init_config {
 sub _init_config_vm {
 
     for my $vm ( @{$CONFIG->{vm}} ) {
-        die "$vm not available in this system.\n".($ERROR_VM{$vm})
+        confess "$vm not available in this system.\n".($ERROR_VM{$vm})
             if !exists $VALID_VM{$vm} || !$VALID_VM{$vm};
     }
 
     for my $vm ( keys %VALID_VM ) {
-        delete $VALID_VM{$vm}
-            if exists $VALID_VM{$vm}
-                && exists $CONFIG->{vm}
-                && scalar @{$CONFIG->{vm}}
-                && !grep /^$vm$/,@{$CONFIG->{vm}};
+        if ( exists $VALID_VM{$vm}
+            && exists $CONFIG->{vm}
+            && scalar @{$CONFIG->{vm}}
+            && !grep /^$vm$/,@{$CONFIG->{vm}} ) {
+
+            unlock_hash(%VALID_VM);
+            delete $VALID_VM{$vm};
+            lock_hash(%VALID_VM);
+        }
     }
 
     lock_hash(%VALID_VM);
