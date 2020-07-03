@@ -17,10 +17,7 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-ADD http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb /tmp/
-RUN dpkg -i /tmp/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb \
- && rm /tmp/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb \
- && echo "listen_tls = 0" >> /etc/libvirt/libvirtd.conf \
+RUN echo "listen_tls = 0" >> /etc/libvirt/libvirtd.conf \
  && echo 'listen_tcp = 1' >> /etc/libvirt/libvirtd.conf \
 #  && mkdir -p /root/.ssh \
 #  && echo "Host ravada-kvm StrictHostKeyChecking no" >/root/.ssh/config \

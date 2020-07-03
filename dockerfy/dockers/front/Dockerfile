@@ -16,10 +16,7 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-ADD http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb /tmp/
-RUN dpkg -i /tmp/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb \
- && rm /tmp/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb \
- && mkdir -p /var/log/supervisor \
+RUN mkdir -p /var/log/supervisor \
  && mkdir -p /run/sshd
 
 EXPOSE 3000
