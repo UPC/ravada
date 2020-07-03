@@ -1596,9 +1596,17 @@ sub _do_remote_node($vm_name, $remote_config) {
 }
 
 sub _dir_db {
-    my $dir_db = "t/.db";
+    my $dir_db = "/var/run/ravada/$>/db";
     if (! -e $dir_db ) {
-            make_path $dir_db or die "$! $dir_db";
+        eval {
+            make_path $dir_db
+        };
+        die $@ if $@ && $@ !~ /Permission denied/;
+        if ($@) {
+                warn "$! on mkdir $dir_db";
+                $dir_db = "t/.db";
+                make_path $dir_db or die "$! $dir_db";
+        }
     }
     return $dir_db;
 }
