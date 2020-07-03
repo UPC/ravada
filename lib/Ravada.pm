@@ -945,6 +945,9 @@ sub _add_indexes_generic($self) {
             "unique(hostname, vm_type)"
         ]
     );
+    my $if_not_exists = '';
+    $if_not_exists = ' IF NOT EXISTS ' if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite|mariadb/i;
+
     for my $table ( keys %index ) {
         my $known = $self->_get_indexes($table);
         for my $change (@{$index{$table}} ) {
@@ -956,7 +959,7 @@ sub _add_indexes_generic($self) {
             next if $known->{$name};
 
             $type .=" INDEX " if $type=~ /^unique/i;
-            my $sql = "CREATE $type IF NOT EXISTS $name on $table ($fields)";
+            my $sql = "CREATE $type $if_not_exists $name on $table ($fields)";
 
             warn "INFO: Adding index to $table: $name" if $0 !~ /\.t$/;
             my $sth = $CONNECTOR->dbh->prepare($sql);
