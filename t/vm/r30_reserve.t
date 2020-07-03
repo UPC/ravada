@@ -15,7 +15,7 @@ use feature qw(signatures);
 use lib 't/lib';
 use Test::Ravada;
 
-my $GROUP = 'students';
+my $GROUP = 'test_bookings';
 my ($USER_YES_NAME_1, $USER_YES_NAME_2, $USER_NO_NAME) = ( 'mcnulty','bunk','stringer');
 my ($USER_2_NAME,$USER_3_NAME)=('bubbles','walon');
 
@@ -127,7 +127,7 @@ sub _wait_end_of_hour($seconds=0) {
     for (;;) {
         my $now = DateTime->now();
         last if $now->minute <59
-        && ( $now->minute>0 || $now->seconds>$seconds);
+        && ( $now->minute>0 || $now->second>$seconds);
         diag("Waiting for end of hour to run booking tests "
             .$now->hour.":".$now->minute.".".$now->second);
         sleep 1;
@@ -495,6 +495,7 @@ sub _create_booking( $base ) {
     );
     return $booking;
 }
+
 sub test_search_change_remove_booking($vm) {
 
     my $base = create_domain($vm);
@@ -519,7 +520,7 @@ sub test_search_change_remove_booking($vm) {
     is($booking3->id, $booking2->id);
     is($booking3->_data('description'), $new_description );
 
-    test_change_entry($booking);
+    test_change_entry($vm,$booking);
     test_change_entry_next($booking);
     test_change_entry_day_of_week($booking);
 
@@ -537,7 +538,7 @@ sub test_search_change_remove_booking($vm) {
     test_booking_removed($booking);
 }
 
-sub test_change_entry($booking) {
+sub test_change_entry($vm, $booking) {
     my ($entry) = $booking->entries();
     my $time_start = $entry->_data('time_start');
 
@@ -554,6 +555,12 @@ sub test_change_entry($booking) {
     my $new_entry = Ravada::Booking::Entry->new( id => $entry->id );
     is($new_entry->_data('time_start'), $new_time);
 
+    test_change_groups($entry);
+    test_change_users($entry);
+    test_change_bases($vm,$entry);
+}
+
+sub test_change_groups($entry) {
     my @groups = $entry->ldap_groups();
     my @groups2 = sort (@groups,"new.group");
 
@@ -562,12 +569,19 @@ sub test_change_entry($booking) {
     is_deeply( \@new_groups ,\@groups2) or die Dumper(\@new_groups,\@groups2);
 
     #clear groups
-    @groups2 = sort ("new.group");
+    @groups2 = sort ("new.group2");
     $entry->change( ldap_groups => \@groups2 );
     @new_groups = sort $entry->ldap_groups;
     is_deeply( \@new_groups ,\@groups2) or die Dumper(\@new_groups,\@groups2);
+}
 
-    my $user_new = create_user('new.user','a');
+sub test_change_users($entry) {
+    test_change_users_with_name($entry);
+    test_change_users_with_id($entry);
+}
+
+sub test_change_users_with_name($entry) {
+    my $user_new = create_user(new_domain_name(),'a');
     my @users = $entry->users();
     my @users2 = sort (@users,$user_new->name);
 
@@ -576,12 +590,78 @@ sub test_change_entry($booking) {
     is_deeply( \@new_users ,\@users2) or die Dumper(\@new_users,\@users2);
 
     #clear users
-    @users2 = ('new.user');
+    my $user_new2 = create_user(new_domain_name(),'a');
+    @users2 = ($user_new2->name);
     $entry->change( users => \@users2 );
     @new_users = sort $entry->users;
     is_deeply( \@new_users ,\@users2) or die Dumper(\@new_users,\@users2);
 
 }
+sub test_change_users_with_id($entry) {
+    my $user_new = create_user(new_domain_name(),'a');
+    my @users = $entry->users();
+    my @users2 = sort (@users,$user_new->id);
+    my @users2_expected = sort (@users,$user_new->name);
+
+    $entry->change( users => \@users2 );
+    my @new_users = sort $entry->users;
+    is_deeply( \@new_users ,\@users2_expected) or die Dumper(\@new_users,\@users2_expected);
+
+    #clear users
+    my $user_new2 = create_user(new_domain_name(),'a');
+    @users2 = ($user_new2->id);
+    @users2_expected = ($user_new2->name);
+    $entry->change( users => \@users2 );
+    @new_users = sort $entry->users;
+    is_deeply( \@new_users ,\@users2_expected) or die Dumper(\@new_users,\@users2_expected);
+
+}
+
+
+sub test_change_bases($vm,$entry) {
+    test_change_bases_with_name($vm,$entry);
+    test_change_bases_with_id($vm,$entry);
+}
+
+sub test_change_bases_with_name($vm,$entry) {
+    my $base_new = create_domain($vm);
+    my @bases = $entry->bases();
+    my @bases2 = sort (@bases,$base_new->name);
+
+    $entry->change( bases => \@bases2 );
+    my @new_bases = sort $entry->bases;
+    is_deeply( \@new_bases ,\@bases2) or die Dumper(\@new_bases,\@bases2);
+
+    #clear bases
+    my $base_new2 = create_domain($vm);
+    @bases2 = ($base_new2->name);
+    $entry->change( bases => \@bases2 );
+    @new_bases = sort $entry->bases;
+    is_deeply( \@new_bases ,\@bases2) or die Dumper(\@new_bases,\@bases2);
+
+}
+
+sub test_change_bases_with_id($vm,$entry) {
+    my $base_new = create_domain($vm);
+    my @bases = $entry->bases();
+    my @bases2 = sort (@bases,$base_new->id);
+    my @bases2_expected = sort (@bases,$base_new->name);
+
+    $entry->change( bases => \@bases2 );
+    my @new_bases = sort $entry->bases;
+    is_deeply( \@new_bases ,\@bases2_expected) or die Dumper(\@new_bases,\@bases2_expected);
+
+    #clear bases
+    my $base_new2 = create_domain($vm);
+    @bases2 = ($base_new2->id);
+    @bases2_expected = ($base_new2->name);
+    $entry->change( bases => \@bases2 );
+    @new_bases = sort $entry->bases;
+    is_deeply( \@new_bases ,\@bases2_expected) or die Dumper(\@new_bases,\@bases2_expected);
+
+}
+
+
 
 sub test_change_entry_next($booking) {
     my ($entry0, $entry,@next) = $booking->entries();
@@ -838,6 +918,8 @@ for my $vm_name ( vm_names()) {
 
         skip($msg,10)   if !$vm;
 
+        test_search_change_remove_booking($vm);
+
         test_booking($vm , _create_clones($vm));
 
         test_conflict($vm);
@@ -848,7 +930,6 @@ for my $vm_name ( vm_names()) {
         test_booking_oneday_date_end($vm);
         test_booking_oneday_date_end_dow($vm);
 
-        test_search_change_remove_booking($vm);
 
     }
 }

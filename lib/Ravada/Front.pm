@@ -1241,6 +1241,10 @@ sub _settings_by_id($self) {
     return $orig_settings;
 }
 
+sub feature($self,$name) {
+    return 1 if exists $Ravada::CONFIG->{$name} && $Ravada::CONFIG->{$name};
+}
+
 sub update_settings_global($self, $arg, $user, $orig_settings = $self->_settings_by_id) {
     confess if !ref($arg);
     if (exists $arg->{frontend}

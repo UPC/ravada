@@ -945,6 +945,16 @@ sub _add_indexes_generic($self) {
         ,booking_entries => [
             "index(id_booking)"
         ]
+        ,booking_entry_ldap_groups => [
+            "index(id_booking_entry,ldap_group)"
+        ]
+        ,booking_entry_users => [
+            "index(id_booking_entry,id_user)"
+        ]
+        ,booking_entry_bases => [
+            "index(id_booking_entry,id_base)"
+        ]
+
         ,vms=> [
             "unique(hostname, vm_type)"
         ]
@@ -1334,7 +1344,6 @@ sub _sql_create_tables($self) {
             ,id_booking => 'int not null references bookings(id) ON DELETE CASCADE'
             ,time_start => 'time not null'
             ,time_end => 'time not null'
-            ,id_base => 'int not null'
             ,date_booking => 'date'
         }
         ,booking_entry_ldap_groups => {
@@ -1349,6 +1358,13 @@ sub _sql_create_tables($self) {
                 => 'int not null references booking_entries(id) ON DELETE CASCADE'
             ,id_user => 'int not null references users(id) ON DELETE CASCADE'
         }
+        ,booking_entry_bases=> {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_booking_entry
+                => 'int not null references booking_entries(id) ON DELETE CASCADE'
+            ,id_base => 'int not null references domains(id) ON DELETE CASCADE'
+        }
+
 
     );
     for my $table ( keys %tables ) {

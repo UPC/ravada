@@ -315,6 +315,7 @@ sub user_allowed($user,$id_base) {
         $user_name = $user->name;
         return 1 if $user->is_admin;
     }
+    confess "Error: undefined user " if !defined $user;
     $user_name = _search_user_name($user) if !ref($user) && $user =~ /^\d+$/;
 
     confess"Undefined user name " if !defined $user_name;

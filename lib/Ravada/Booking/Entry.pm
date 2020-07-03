@@ -60,6 +60,11 @@ sub _insert_db($self, $field) {
 
 }
 
+sub _change_ldap_groups($self, $ldap_groups) {
+    $self->_add_ldap_groups($ldap_groups);
+    $self->_purge_table('booking_entry_ldap_groups','ldap_group',$ldap_groups,[ $self->ldap_groups ]);
+}
+
 sub _add_ldap_groups($self, $ldap_groups) {
     my $id = $self->_data('id');
     my %already_added = map { $_ => 1 } $self->ldap_groups();
@@ -69,11 +74,53 @@ sub _add_ldap_groups($self, $ldap_groups) {
             ."(  id_booking_entry, ldap_group )"
             ."values( ?,? ) "
     );
-    for my $current_group(@$ldap_groups) {
-        next if $already_added{$current_group};
+    for my $current_group (@$ldap_groups) {
+        next if $already_added{$current_group}++;
         $sth->execute($id, $current_group);
     }
+
 }
+
+# removes ldap groups not in list
+sub _purge_table($self, $table, $field, $entries, $old_entries, $sub_search_id = undef ) {
+    my $sth = $self->_dbh->prepare("DELETE FROM $table"
+        ." WHERE $field=? "
+    );
+    my %keep;
+    for my $current ( @$entries ) {
+
+        my $current_id = $current;
+        $current_id = $sub_search_id->($self, $current)
+        if $sub_search_id;
+
+        $keep{$current_id}++;
+    }
+    for my $current( @$old_entries ) {
+
+        my $current_id = $current;
+        $current_id = $sub_search_id->($self, $current)
+        if $sub_search_id;
+
+        next if $keep{$current_id};
+        $sth->execute($current_id);
+    }
+}
+
+sub _change_users($self, $users) {
+    $self->_add_users($users);
+    my @current_users = $self->users;
+    $self->_purge_table('booking_entry_users','id_user',$users, \@current_users
+        ,\&_search_user_id);
+}
+
+sub _change_bases($self, $bases) {
+    $self->_add_bases($bases);
+    my @current_bases = $self->bases;
+    $self->_purge_table('booking_entry_bases','id_base',$bases, \@current_bases
+        ,\&_search_base_id);
+}
+
+
 
 sub _add_users ($self, $users) {
     return if !defined $users;
@@ -103,10 +150,12 @@ sub _add_bases ($self, $bases) {
             ."values( ?,? ) "
     );
     for my $current_base (@$bases) {
+        my $current_base_id = $self->_search_base_id($current_base);
         next if $already_added{$current_base};
-        eval { $sth->execute($id, $current_base) };
-        confess $@ if $@;
+        eval { $sth->execute($id, $current_base_id) };
+        confess $@." $id, $current_base_id" if $@;
     }
+
 }
 
 
@@ -131,7 +180,16 @@ sub _search_user_id($self, $user) {
     return $user_new->id;
 }
 
+sub _search_base_id($self, $base) {
+    return $base if $base =~ /^\d+$/;
+    my $sth = $self->_dbh->prepare("SELECT id FROM domains WHERE name=? ");
+    $sth->execute($base);
+    my ($id) = $sth->fetchrow;
+    return $id;
+}
+
 sub _open($self, $id) {
+    confess if !ref($self);
     my $sth = $self->_dbh->prepare("SELECT * FROM booking_entries WHERE id=?");
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
@@ -153,10 +211,13 @@ sub change($self, %fields) {
     for my $field (keys %fields ) {
 
         if ($field eq 'ldap_groups') {
-            $self->_add_ldap_groups($fields{$field});
+            $self->_change_ldap_groups($fields{$field});
             next;
         } elsif ($field eq 'users') {
-            $self->_add_users($fields{$field});
+            $self->_change_users($fields{$field});
+            next;
+        } elsif ($field eq 'bases') {
+            $self->_change_bases($fields{$field});
             next;
         }
         my $old_value = $self->_data($field);
@@ -328,7 +389,7 @@ sub remove_next($self) {
     );
     $sth->execute($self->_data('id_booking'), $date_booking);
     while ( my ($id) = $sth->fetchrow ) {
-        Ravada::Booking::Entry->_open( $id )->remove();
+        Ravada::Booking::Entry->new( id => $id )->remove();
     }
 }
 
@@ -345,7 +406,7 @@ sub remove_next_dow($self) {
         my $curr_dow = DateTime::Format::DateParse
         ->parse_datetime($date)->day_of_week;
         if ($dow == $curr_dow) {
-            Ravada::Booking::Entry->_open( $id )->remove();
+            Ravada::Booking::Entry->new( id => $id )->remove();
         }
     }
 }

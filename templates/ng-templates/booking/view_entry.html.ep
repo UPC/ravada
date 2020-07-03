@@ -86,10 +86,10 @@ my %dow = (
     >
     </div>
 
-    <div class="row">
+    <div class="row" ng-show="ldap_groups.length">
         <b>Groups</b>
     </div>
-    <div class="row">
+    <div class="row" ng-show="ldap_groups.length">
         <div class="col-md-2">
         <select ng-show="edit" ng-options="name for name in ldap_groups"
             ng-model="booking_entry.ldap_group_new">
