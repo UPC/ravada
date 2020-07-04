@@ -29,7 +29,8 @@ RUN dpkg -i /tmp/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb \
 
 COPY network.sh default.xml /
 
-EXPOSE 5900-5950
+EXPOSE 5900-5938
+EXPOSE 5940-5950
 EXPOSE 55900-55950
 
 COPY supervisord.conf /etc/supervisord.conf
