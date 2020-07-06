@@ -27,7 +27,8 @@ RUN echo "listen_tls = 0" >> /etc/libvirt/libvirtd.conf \
 
 COPY network.sh default.xml /
 
-EXPOSE 5900-5950
+EXPOSE 5900-5938
+EXPOSE 5940-5950
 EXPOSE 55900-55950
 
 COPY supervisord.conf /etc/supervisord.conf
