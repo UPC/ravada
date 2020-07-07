@@ -1759,7 +1759,7 @@ sub _connect_vm {
 sub _create_vm_lxc {
     my $self = shift;
 
-    return undef;
+    return;
 }
 
 sub _create_vm_void {
