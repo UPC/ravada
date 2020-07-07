@@ -13,6 +13,9 @@ use Ravada::Auth::SQL;
 use Ravada::Auth::LDAP;
 use Ravada::Utils;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 $|=1;
 
 my $help;
@@ -67,6 +70,7 @@ my $USAGE = "$0 "
         ." --add-user-ldap : adds a new LDAP user\n"
         ." --remove-user : removes a db user\n"
         ." --add-group-ldap : creates a new LDAP group\n"
+        ." --add-user-group : adds user to a LDAP group\n"
         ." --change-password : changes the password of an user\n"
         ." --import-domain : import a domain\n"
         ." --import-domain-owner : owner of the domain to import\n"
@@ -300,8 +304,28 @@ sub add_user_group {
     die "Error: User authentication is not LDAP : ".($user->external_auth)
         if $user->external_auth !~ /LDAP/i;
 
-    my $user_name = $user->name;
+    _show_ldap_group_membership($login);
 
+    print "Add user to LDAP group: ";
+    my $new_group = <stdin>;
+    chomp $new_group;
+
+    my @groups = Ravada::Auth::LDAP::search_group( name => '*' );
+    my ($group_ldap) = grep {$_->get_value('cn') eq $new_group } @groups;
+    die "Error: group $new_group doesn't exist\n"
+    unless $group_ldap;
+
+    my $mesg  = $group_ldap->add(memberUid => $login)
+    ->update(Ravada::Auth::LDAP::_init_ldap_admin());
+
+    if ($mesg->code) {
+        die "Error: adding $login to $new_group ".$mesg->error;
+    }
+
+    _show_ldap_group_membership($login);
+}
+
+sub _show_ldap_group_membership($user_name) {
     my $member = 0;
     my @groups = Ravada::Auth::LDAP::search_group( name => '*' );
     print "Groups:\n";
@@ -314,19 +338,10 @@ sub add_user_group {
         }
         print "\n";
     }
-    print "  ".$user->name." is member of $member groups\n";
-
-    print "Add user to LDAP group: ";
-    my $new_group = <stdin>;
-    chomp $new_group;
-
-    my ($group_ldap) = grep {$_->get_value('cn') eq $new_group } @groups;
-    die "Error: group $new_group doesn't exist\n"
-    unless $group_ldap;
-
-    $group_ldap->add(memberUid => $login)->update(Ravada::Auth::LDAP::_init_ldap_admin());
+    print "  $user_name is member of $member groups\n";
 
 }
+
 
 sub remove_user {
     my $login = shift;

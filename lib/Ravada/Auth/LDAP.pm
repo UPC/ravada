@@ -250,6 +250,9 @@ Add a group to the LDAP
 sub add_group {
     my $name = shift;
     my $base = (shift or _dc_base());
+    my $class = ( shift or [
+            'groupOfUniqueNames','nsMemberOf','posixGroup','top'
+        ]);
 
     $name = escape_filter_value($name);
 
@@ -257,15 +260,30 @@ sub add_group {
         cn => $name
         ,dn => "cn=$name,ou=groups,$base"
         , attrs => [ cn=>$name
-                    ,objectClass => ['groupOfUniqueNames','top']
+                    ,objectClass => $class
                     ,ou => 'Groups'
                     ,description => "Group for $name"
+                    ,gidNumber => _search_new_gid()
           ]
     );
     if ($mesg->code) {
-        die "Error afegint $name ".$mesg->error;
+        die "Error creating group $name ".$mesg->error;
     }
 
+}
+
+sub _search_new_gid() {
+    my %gid;
+    for my $group (  search_group( name => '*' ) ) {
+        my $gid_number = $group->get_value('gidNumber');
+        next if !$gid_number;
+        $gid{$gid_number}++;
+    }
+    my $new_gid = 100;
+    for (;;) {
+        return $new_gid if !$gid{$new_gid};
+        $new_gid++;
+    }
 }
 
 =head2 remove_group

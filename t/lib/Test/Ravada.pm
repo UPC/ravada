@@ -292,6 +292,7 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
                 , warn_error => 1
     );
     $rvd->_install();
+    $rvd->setting('/backend/bookings' => 1);
     $CONNECTOR = $rvd->connector if !$sqlite;
 
     user_admin();
@@ -349,6 +350,7 @@ sub init($config=undef, $sqlite = 1) {
 
     rvd_front($config)  if !$RVD_FRONT;
     $Ravada::VM::KVM::VERIFY_ISO = 0;
+
 }
 
 sub _load_remote_config() {
@@ -583,7 +585,16 @@ sub mojo_init() {
     return $t;
 }
 
+sub remove_old_bookings() {
+    my $sth = connector()->dbh->prepare("SELECT id FROM bookings WHERE title like ? ");
+    $sth->execute(base_domain_name().'%');
+    while (my ($id) = $sth->fetchrow) {
+        Ravada::Booking->new(id => $id)->remove();
+    }
+}
+
 sub mojo_clean {
+    remove_old_bookings();
     return remove_old_domains_req();
 }
 
@@ -732,7 +743,7 @@ sub create_ldap_user($name, $password, $keep=0) {
 
     if ( Ravada::Auth::LDAP::search_user($name) ) {
         return if $keep;
-        diag("Removing $name");
+        #        diag("Removing $name");
         Ravada::Auth::LDAP::remove_user($name)  
     }
 
@@ -755,7 +766,7 @@ sub create_ldap_user($name, $password, $keep=0) {
     push @USERS_LDAP,($name);
 
     my @user = Ravada::Auth::LDAP::search_user($name);
-    diag("Adding $name to ldap");
+    #    diag("Adding $name to ldap");
     return $user[0];
 }
 
@@ -805,7 +816,7 @@ sub wait_request {
     my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms','set_time'] );
     $skip = [ $skip ] if !ref($skip);
     my %skip = map { $_ => 1 } @$skip;
-    %skip = ( enforce_limits => 1 ) if !keys %skip;
+    %skip = ( enforce_limits => 1, cleanup => 1 ) if !keys %skip;
 
     my $check_error = delete $args{check_error};
     $check_error = 1 if !defined $check_error;
@@ -1598,7 +1609,7 @@ sub _do_remote_node($vm_name, $remote_config) {
 }
 
 sub _dir_db {
-    my $dir_db = "/var/run/ravada/$>/db";
+    my $dir_db = "/run/ravada/$>/db";
     if (! -e $dir_db ) {
         eval {
             make_path $dir_db

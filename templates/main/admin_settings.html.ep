@@ -103,6 +103,19 @@
             </div>
         </div>
 
+        <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-2">
+            <label for="start_limit">Bookings</label>
+            </div>
+            <div class="col-md-4">
+                <input name="start_limit" ng-model="settings.backend.bookings.value"
+                                          type="checkbox"
+                    ng-true-value="1" ng-false-value="0"
+                >
+            </div>
+        </div>
+
         <hr>
 
         <div class="row">

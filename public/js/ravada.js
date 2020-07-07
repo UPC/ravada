@@ -118,7 +118,7 @@
                 }
             }, 60 * 1000 );
 
-            $scope.subscribe_list_machines_user = function(url) {
+            subscribe_list_machines_user = function(url) {
                 $scope.machines = [];
                 var channel = 'list_machines_user';
                 if ($scope.anonymous) {
@@ -177,11 +177,25 @@
                     });
                 }
             };
-            $scope.subscribe_ws = function(url) {
-                subscribe_list_machines_user(url);
-                subscribe_ping_backend(url);
-            };
 
+            subscribe_list_bookings = function(url) {
+                var ws = new WebSocket(url);
+                ws.onopen = function(event) { ws.send('list_next_bookings_today') };
+                ws.onmessage = function(event) {
+                    var data = JSON.parse(event.data);
+                    $scope.$apply(function () {
+                        $scope.bookings_today = data;
+                    });
+                }
+
+            }
+
+            $scope.subscribe_ws = function(url, enabled_bookings) {
+                subscribe_list_machines_user(url);
+                if (enabled_bookings) {
+                    subscribe_list_bookings(url);
+                }
+            };
             $scope.only_public = false;
             $scope.toggle_only_public=function() {
                     $scope.only_public = !$scope.only_public;
@@ -245,7 +259,6 @@
             };
 
           var url_ws;
-          $scope.booking_monday = new Date();
           $scope.init = function(id, url,is_admin) {
                 url_ws = url;
                 $scope.showmachineId=id;
@@ -282,7 +295,6 @@
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
                             if (is_admin) list_users();
                 });
-                $scope.list_bookings_week();
           };
 
           list_interfaces = function() {
@@ -755,8 +767,6 @@
             $scope.list_ldap_attributes();
             list_ldap_groups();
 
-            init_booking();
-
         };
 
     function swListMach() {
@@ -1176,11 +1186,13 @@
             }
             item.ldap_groups[item.ldap_groups.length] = item.ldap_group_new;
             item.ldap_group_new = undefined;
+            $scope.form_booking.$pristine = false;
         };
         $scope.remove_ldap_group = function(item, group) {
             var index = item.ldap_groups.indexOf(group);
             if (index >= 0) {
                 item.ldap_groups.splice(index,1);
+                $scope.form_booking.$pristine = false;
             }
         };
 

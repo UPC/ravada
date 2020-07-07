@@ -389,7 +389,7 @@ sub _start_preconditions{
         ($user) = $_[1];
     }
     $self->_allow_manage($user);
-    if ( !$self->allowed_booking( $user ) ) {
+    if ( Ravada->setting('/backend/bookings') && !$self->allowed_booking( $user ) ) {
         my @bookings = Ravada::Booking::bookings(date => DateTime->now()->ymd
             ,time => DateTime->now()->hms);
         confess "Error: resource booked ".Dumper(\@bookings);

@@ -7,11 +7,13 @@ use DateTime::Format::DateParse;
 use Moose;
 
 use Ravada::Booking::Entry;
+use Ravada::Front;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
 our $CONNECTOR = \$Ravada::CONNECTOR;
+our $TZ;
 
 sub BUILD($self, $args) {
     return $self->_open($args->{id}) if $args->{id};
@@ -238,9 +240,14 @@ sub remove($self) {
     delete $self->{_data};
 }
 
-sub _today() { return  DateTime->now->ymd }
-sub _now() { return DateTime->now->hms }
-sub _monday($date = DateTime->now) {
+sub TZ() {
+    return $TZ if defined $TZ;
+    $TZ = Ravada::Front->setting('/backend/time_zone');
+}
+
+sub _today() { return  DateTime->from_epoch( epoch => time(), time_zone => TZ())->ymd }
+sub _now() { return DateTime->from_epoch( epoch => time(), time_zone => TZ())->hms }
+sub _monday($date = DateTime->from_epoch( epoch => time(), time_zone => TZ())) {
     for (0..6) {
         return $date if $date->day_of_week == 1;
         $date->add( days => -1);
@@ -325,10 +332,11 @@ sub user_allowed($user,$id_base) {
 
     # allowed by default if there are no current bookings right now
     my $allowed =  1;
+
     for my $entry (Ravada::Booking::bookings( date => $today, time => $now)) {
         # first we disallow because there is a booking
         $allowed = 0;
-        next unless grep { $_ == $id_base } $entry->bases_id;
+        next unless !scalar($entry->bases_id) || grep { $_ == $id_base } $entry->bases_id;
         # look no further if user is allowed
         return 1 if $entry->user_allowed($user_name);
     }
@@ -392,6 +400,8 @@ sub bookings_range(%args) {
     die "Error end must be after start ".$date_start." ".$date_end
     if DateTime->compare( $date_start, $date_end) > 0;
 
+    my $show_user_allowed = delete $args{show_user_allowed};
+
     confess "Error: unknown field ".Dumper(\%args) if keys %args;
 
     #    warn "\n\nchecking $date_start - $date_end | $time_start - $time_end $day_of_week\n".Dumper(\%day_of_week);
@@ -420,7 +430,10 @@ sub bookings_range(%args) {
                 (_seconds($entry->{_data}->{time_start}) >= _seconds($time_start)
                 && _seconds($entry->{_data}->{time_start}) < _seconds($time_end))
             ) {
-#                warn "** matches **\n";
+
+                $entry->{_data}->{user_allowed} = $entry->user_allowed($show_user_allowed)
+                if $show_user_allowed;
+
                 push @booking,($entry->{_data})
             }
 

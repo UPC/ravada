@@ -124,7 +124,7 @@ my %dow = (
             <button ng-click="save_entry('next_dow')">Update all</button>
             <button ng-click="save_entry('current')">Change only this entry</button>
             <button ng-click="edit=false;confirm_update=false"
-                    ng-disabled="formBooking.$pristine">
+                    ng-disabled="form_booking.$pristine">
                 cancel</button>
 
         </div>
@@ -148,7 +148,7 @@ my %dow = (
     <div class="row" ng-hide="new_booking || !edit || confirm_update || confirm_remove">
         <div class="col">
             <button ng-click="confirm_update=true"
-                ng-disabled="!formBooking.$valid || formBooking.$pristine"
+                ng-disabled="!form_booking.$valid || form_booking.$pristine"
                 >save</button>
             <button ng-click="edit=false">cancel</button>
         </div>
@@ -168,16 +168,15 @@ my %dow = (
     </div>
     </div>
 
+    </form>
+
     <div class="row" ng-hide="edit">
     <button ng-show="!edit && (<%= $_user->is_operator %> || booking.id_owner == <%= $_user->id %>)"
         ng-click="edit=true">
         Edit
     </button>
     </div>
-</form>
 </div>
-
-{{booking_entry}}
 
 <div ng-show = "error">{{error}}</div>
 <div ng-show="conflicts && conflicts.length">

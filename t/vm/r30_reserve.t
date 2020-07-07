@@ -19,6 +19,8 @@ my $GROUP = 'test_bookings';
 my ($USER_YES_NAME_1, $USER_YES_NAME_2, $USER_NO_NAME) = ( 'mcnulty','bunk','stringer');
 my ($USER_2_NAME,$USER_3_NAME)=('bubbles','walon');
 
+our $TZ;
+
 use_ok('Ravada::Booking');
 
 ###################################################################
@@ -50,9 +52,7 @@ sub _init_ldap(){
 sub _add_to_posix_group($group, $user_name) {
 
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
-    $group->add(memberUid => $user_name);
-    my $mesg = $group->update($ldap);
-    # 20: no such object
+    my $mesg = $group->add(memberUid => $user_name)->update($ldap);
     die $mesg->code." ".$mesg->error if $mesg->code && $mesg->code != 20;
 
     my @member = $group->get_value('memberUid');
@@ -105,15 +105,19 @@ sub _remove_domains(@bases) {
 sub _now() { return _now_days(0) }
 sub _today() { return _date(_now_days(0)) }
 sub _yesterday() { return _date(_now_days(-1)) }
+sub _monday() {
+    my $now = DateTime->from_epoch( epoch => time() , time_zone => $TZ );
+    return $now->add( days => -$now->day_of_week+1);
+}
 
 sub _now_days($days) {
-    my $now = DateTime->now();
+    my $now = DateTime->from_epoch( epoch => time() , time_zone => $TZ );
     return $now->add( days => $days );
 }
 
 
 sub _now_seconds($seconds) {
-    my $now = DateTime->now();
+    my $now = DateTime->from_epoch( epoch => time() , time_zone => $TZ );
     return $now->add( seconds => $seconds)->hms();
 }
 
@@ -125,7 +129,7 @@ sub _date($dt) {
 # our tests won't work if we are at hh:59
 sub _wait_end_of_hour($seconds=0) {
     for (;;) {
-        my $now = DateTime->now();
+        my $now = DateTime->from_epoch( epoch => time() , time_zone => $TZ );
         last if $now->minute <59
         && ( $now->minute>0 || $now->second>$seconds);
         diag("Waiting for end of hour to run booking tests "
@@ -153,7 +157,7 @@ sub test_booking_oneday($vm, $dow=0, $date_end=0) {
     $base->prepare_base(user_admin);
     $base->is_public(1);
 
-    my $today = DateTime->now();
+    my $today = DateTime->from_epoch( epoch => time(), time_zone => $TZ);
     my @args;
     push @args, ( day_of_week => $today->day_of_week)   if $dow;
     push @args, ( date_end => $today->ymd)              if $date_end;
@@ -180,8 +184,8 @@ sub test_booking_datetime($vm) {
     $base->prepare_base(user_admin);
     $base->is_public(1);
 
-    my $today = DateTime->now();
-    my $week = DateTime->now()->add( days => 7 );
+    my $today = DateTime->from_epoch( epoch => time() , time_zone => $TZ );
+    my $week = DateTime->from_epoch( epoch => time() , time_zone => $TZ )->add( days => 7 );
     my $booking = Ravada::Booking->new(
         bases => $base->id
         , ldap_groups => $GROUP
@@ -248,8 +252,8 @@ sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as) {
     my $time_start = _now_seconds(-$seconds_wait);
     my $time_end = _now_seconds($seconds);
 
-    my $today = DateTime->now();
-    my $tomorrow = DateTime->now()->add(days => 1);
+    my $today = DateTime->from_epoch( epoch => time() , time_zone => $TZ );
+    my $tomorrow = DateTime->from_epoch( epoch => time() , time_zone => $TZ )->add(days => 1);
 
     my $sth = connector->dbh->prepare("DELETE FROM users WHERE id=? ");
     $sth->execute($USER_2->id);
@@ -268,12 +272,15 @@ sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as) {
         , id_owner => user_admin->id
     );
 
+    my @entries0 = $booking->entries();
+    is(scalar(@entries0),3) or die Dumper(\@entries0);
+
     test_list_machines_user($vm);
 
     test_bookings_week($base->id);
 
     my @entries = $booking->entries();
-    is(scalar(@entries),3);
+    is(scalar(@entries),3) or die Dumper(\@entries);
     for my $entry ( @entries ) {
         my @groups = $entry->ldap_groups;
         is($groups[0], $GROUP);
@@ -312,8 +319,59 @@ sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as) {
 
 }
 
+sub test_bookings_week_2days($vm) {
+    my $base = create_domain($vm);
+
+    my $dow1 = _monday()->day_of_week;
+    my $dow2 = _monday()->add(days=>1)->day_of_week;
+
+    my $hour = "08";
+    my $time_start = "$hour:00";
+    my $time_end = ($hour + 1).":00";
+
+    my $booking = Ravada::Booking->new(
+        bases => $base->id
+        , date_start => _monday()->ymd
+        , date_end => _monday()->add(days=>3)->ymd
+        , time_start => $time_start
+        , time_end => $time_end
+        , day_of_week => $dow1.$dow2
+        , title => 'comunicacions multimedia'
+        , description => 'blablabla'
+        , id_owner => user_admin->id
+    );
+
+    is(scalar($booking->entries),2);
+    $hour = "0$hour" if length($hour) < 2;
+
+    my $bookings = Ravada::Booking::bookings_week(id_base => $base->id);
+    my $key1 = ($dow1-1).".$hour";
+    my $key2 = ($dow2-1).".$hour";
+    my $book1 = $bookings->{$key1};
+    my $book2 = $bookings->{$key2};
+
+    ok($book1," Expecting a booking for $key1 ".Dumper($booking->id,$bookings)) or exit;
+    ok($book2," Expecting a booking for $key2.".Dumper($bookings)) or exit;
+
+    my ($entry) = $booking->entries;
+    my @bases = $entry->bases;
+    $entry->change( bases => [] );
+
+    is(scalar(keys %{Ravada::Booking::bookings_week()}),2);
+    is(scalar(keys %{Ravada::Booking::bookings_week( id_base => $base->id)}),1);
+
+    $entry->change( bases => \@bases );
+    is(scalar(keys %{Ravada::Booking::bookings_week()}),2);
+    my $bookings_after_reset = Ravada::Booking::bookings_week( id_base => $base->id);
+    is_deeply($bookings_after_reset, $bookings,''.Dumper($bookings_after_reset,$bookings));
+
+    $base->remove(user_admin);
+    $booking->remove();
+}
+
+
 sub test_bookings_week($id_base) {
-    my $today = DateTime->now();
+    my $today = DateTime->from_epoch( epoch => time() , time_zone => $TZ );
 
     my $bookings = Ravada::Booking::bookings_week(id_base => $id_base);
     my $dow = $today->day_of_week - 1;
@@ -325,7 +383,7 @@ sub test_bookings_week($id_base) {
     my $book_tomorrow = $bookings->{$key_tomorrow};
 
     ok($book_today," Expecting a booking for $dow.$hour ".Dumper($bookings)) or exit;
-    ok($book_tomorrow," Expecting a booking for $key_tomorrow ".Dumper($bookings))
+    ok($book_tomorrow," Expecting a booking for $key_tomorrow ".Dumper($bookings)) or confess
     if $dow != 6;
 
     my $n_exp = 2;
@@ -407,21 +465,21 @@ sub test_conflict_hour_sharp($vm, $base) {
 }
 
 sub test_conflict_day_of_week_exact($vm, $base) {
-    my $today = DateTime->now();
-    my $tomorrow = DateTime->now()->add(days => 1);
+    my $today = DateTime->from_epoch( epoch => time() , time_zone => $TZ );
+    my $tomorrow = DateTime->from_epoch( epoch => time() , time_zone => $TZ )->add(days => 1);
     my $dow = $today->day_of_week.''.$tomorrow->day_of_week;
     test_conflict_generic_dow($vm,$base,"09:00","11:00",$dow,6);
 }
 
 sub test_conflict_day_of_week_partial($vm, $base) {
-    my $today = DateTime->now();
-    my $tomorrow = DateTime->now()->add(days => 1);
+    my $today = DateTime->from_epoch( epoch => time(), time_zone => $TZ);
+    my $tomorrow = DateTime->from_epoch( epoch => time(), time_zone => $TZ)->add(days => 1);
     my $dow = $tomorrow->day_of_week;
     test_conflict_generic_dow($vm,$base,"09:00","11:00",$dow,3);
 }
 
 sub test_non_conflict_day_of_week($vm, $base) {
-    my $day_after_tomorrow = DateTime->now()->add(days => 2);
+    my $day_after_tomorrow = DateTime->from_epoch( epoch => time(), time_zone => $TZ)->add(days => 2);
     my $dow = $day_after_tomorrow->day_of_week;
     test_conflict_generic_dow($vm,$base,"09:00","11:00",$dow,0);
 }
@@ -440,8 +498,8 @@ sub test_conflict_generic($vm, $base, $conflict_start, $conflict_end, $n_expecte
     my $time_start = "09:00";
     my $time_end = "11:00";
 
-    my $today = DateTime->now();
-    my $tomorrow = DateTime->now()->add(days => 1);
+    my $today = DateTime->from_epoch( epoch => time(), time_zone => $TZ);
+    my $tomorrow = DateTime->from_epoch( epoch => time(), time_zone => $TZ)->add(days => 1);
     my $booking = Ravada::Booking->new(
         bases => $base->id
         , ldap_groups => $GROUP
@@ -476,8 +534,8 @@ sub _create_booking( $base ) {
     my $time_start = _now()->hms;
     my $time_end = _now_seconds(5);
 
-    my $today = DateTime->now();
-    my $tomorrow = DateTime->now()->add(days => 1);
+    my $today = DateTime->from_epoch( epoch => time(), time_zone => $TZ);
+    my $tomorrow = DateTime->from_epoch( epoch => time(), time_zone => $TZ)->add(days => 1);
     my $booking = Ravada::Booking->new(
         bases => $base->id
         , ldap_groups => $GROUP
@@ -491,7 +549,6 @@ sub _create_booking( $base ) {
         , description => 'blablabla long'
         , id_owner => user_admin->id
         , date_created => time
-        , date_changed => time
     );
     return $booking;
 }
@@ -521,8 +578,8 @@ sub test_search_change_remove_booking($vm) {
     is($booking3->_data('description'), $new_description );
 
     test_change_entry($vm,$booking);
-    test_change_entry_next($booking);
-    test_change_entry_day_of_week($booking);
+    test_change_entry_next($vm, $booking);
+    test_change_entry_day_of_week($vm, $booking);
 
     test_remove_entry($booking);
     $booking->remove();
@@ -661,9 +718,95 @@ sub test_change_bases_with_id($vm,$entry) {
 
 }
 
+sub test_change_entry_next($vm, $booking) {
+    test_change_entry_next_time($booking);
+    test_change_entry_next_users($booking);
+    test_change_entry_next_groups($booking);
+    test_change_entry_next_bases($vm, $booking);
+}
 
+sub test_change_entry_next_users ($booking) {
+    my ($entry0, $entry,@next) = $booking->entries();
 
-sub test_change_entry_next($booking) {
+    my @users = $entry->users();
+    my $user_new = create_user(new_domain_name(),'a');
+    my @users2 = sort (@users,$user_new->name);
+
+    $entry->change_next( users => \@users2);
+
+    my $new_entry = Ravada::Booking::Entry->new( id => $entry->id );
+
+    is_deeply([sort $new_entry->users],\@users2);
+
+    my ($entry0_b, $entry_b,@next_b) = $booking->entries();
+    is_deeply([sort $entry0_b->users],[sort $entry0->users])
+        or die Dumper($entry0_b->id,[sort $entry0_b->users], [sort $entry0->users]);
+
+    is_deeply([sort $entry_b->users],\@users2);
+    my $found = 0;
+    for (@next_b) {
+        is_deeply([sort $_->users],\@users2);
+        $found++;
+    }
+    ok($found) or exit;
+
+}
+
+sub test_change_entry_next_groups($booking) {
+    my ($entry0, $entry,@next) = $booking->entries();
+
+    my @ldap_groups = $entry->ldap_groups();
+    my $user_new = create_user(new_domain_name(),'a');
+    my @ldap_groups2 = sort (@ldap_groups,$user_new->name);
+
+    $entry->change_next( ldap_groups => \@ldap_groups2);
+
+    my $new_entry = Ravada::Booking::Entry->new( id => $entry->id );
+
+    is_deeply([sort $new_entry->ldap_groups],\@ldap_groups2);
+
+    my ($entry0_b, $entry_b,@next_b) = $booking->entries();
+    is_deeply([sort $entry0_b->ldap_groups],[sort $entry0->ldap_groups])
+        or die Dumper($entry0_b->id,[sort $entry0_b->ldap_groups], [sort $entry0->ldap_groups]);
+
+    is_deeply([sort $entry_b->ldap_groups],\@ldap_groups2);
+    my $found = 0;
+    for (@next_b) {
+        is_deeply([sort $_->ldap_groups],\@ldap_groups2);
+        $found++;
+    }
+    ok($found) or exit;
+
+}
+
+sub test_change_entry_next_bases($vm,$booking) {
+    my ($entry0, $entry,@next) = $booking->entries();
+
+    my @bases = $entry->bases();
+    my $base_new = create_domain($vm);
+    my @bases2 = sort (@bases,$base_new->name);
+
+    $entry->change_next( bases => \@bases2);
+
+    my $new_entry = Ravada::Booking::Entry->new( id => $entry->id );
+
+    is_deeply([sort $new_entry->bases],\@bases2);
+
+    my ($entry0_b, $entry_b,@next_b) = $booking->entries();
+    is_deeply([sort $entry0_b->bases],[sort $entry0->bases])
+        or die Dumper($entry0_b->id,[sort $entry0_b->bases], [sort $entry0->bases]);
+
+    is_deeply([sort $entry_b->bases],\@bases2);
+    my $found = 0;
+    for (@next_b) {
+        is_deeply([sort $_->bases],\@bases2);
+        $found++;
+    }
+    ok($found) or exit;
+
+}
+
+sub test_change_entry_next_time($booking) {
     my ($entry0, $entry,@next) = $booking->entries();
     my $time_start = $entry->_data('time_start');
 
@@ -694,7 +837,137 @@ sub test_change_entry_next($booking) {
 
 }
 
-sub test_change_entry_day_of_week($booking) {
+sub test_change_entry_day_of_week($vm, $booking) {
+    test_change_entry_dow_time($booking);
+    test_change_entry_dow_users($booking);
+    test_change_entry_dow_groups($booking);
+    test_change_entry_dow_bases($vm, $booking);
+
+}
+
+sub test_change_entry_dow_users ($booking) {
+    my ($entry0, $entry,@next) = $booking->entries();
+
+    my @users = $entry->users();
+    my $user_new = create_user(new_domain_name(),'a');
+    my @users2 = sort (@users,$user_new->name);
+
+    $entry->change_next_dow( users => \@users2);
+
+    my $new_entry = Ravada::Booking::Entry->new( id => $entry->id );
+
+    is_deeply([sort $new_entry->users],\@users2);
+
+    my ($entry0_b, $entry_b,@next_b) = $booking->entries();
+    is_deeply([sort $entry0_b->users],[sort $entry0->users])
+        or die Dumper($entry0_b->id,[sort $entry0_b->users], [sort $entry0->users]);
+
+    is_deeply([sort $entry_b->users],\@users2);
+
+    my $dow = DateTime::Format::DateParse
+            ->parse_datetime($entry->_data('date_booking'))
+            ->day_of_week;
+
+    my ($found_yes, $found_no) = ( 0,0 );
+    for my $curr_entry (@next_b) {
+        my $date = DateTime::Format::DateParse
+            ->parse_datetime($curr_entry->_data('date_booking'));
+        if ($date->day_of_week eq $dow) {
+            is_deeply([sort $curr_entry->users],\@users2)
+            or die Dumper( $curr_entry->id ,[sort $curr_entry->users],\@users2);
+            $found_yes++;
+        } else {
+            is_deeply([sort $curr_entry->users],\@users)
+            or die Dumper( $curr_entry->id ,[sort $curr_entry->users],\@users);
+            $found_no++;
+        }
+
+    }
+    ok($found_yes);
+    ok($found_no);
+}
+
+sub test_change_entry_dow_groups($booking) {
+    my ($entry0, $entry,@next) = $booking->entries();
+
+    my @ldap_groups = $entry->ldap_groups();
+    my $user_new = create_user(new_domain_name(),'a');
+    my @ldap_groups2 = sort (@ldap_groups,$user_new->name);
+
+    $entry->change_next_dow( ldap_groups => \@ldap_groups2);
+
+    my $new_entry = Ravada::Booking::Entry->new( id => $entry->id );
+
+    is_deeply([sort $new_entry->ldap_groups],\@ldap_groups2);
+
+    my ($entry0_b, $entry_b,@next_b) = $booking->entries();
+    is_deeply([sort $entry0_b->ldap_groups],[sort $entry0->ldap_groups])
+        or die Dumper($entry0_b->id,[sort $entry0_b->ldap_groups], [sort $entry0->ldap_groups]);
+
+    is_deeply([sort $entry_b->ldap_groups],\@ldap_groups2);
+
+    my $dow = DateTime::Format::DateParse
+            ->parse_datetime($entry->_data('date_booking'))
+            ->day_of_week;
+
+    my ($found_yes, $found_no) = ( 0,0 );
+    for my $curr_entry (@next_b) {
+        my $date = DateTime::Format::DateParse
+            ->parse_datetime($curr_entry->_data('date_booking'));
+        if ($date->day_of_week eq $dow) {
+            is_deeply([sort $curr_entry->ldap_groups],\@ldap_groups2);
+            $found_yes++;
+        } else {
+            is_deeply([sort $curr_entry->ldap_groups],\@ldap_groups);
+            $found_no++;
+        }
+
+    }
+    ok($found_yes);
+    ok($found_no);
+
+}
+
+sub test_change_entry_dow_bases($vm,$booking) {
+    my ($entry0, $entry,@next) = $booking->entries();
+
+    my @bases = $entry->bases();
+    my $base_new = create_domain($vm);
+    my @bases2 = sort (@bases,$base_new->name);
+
+    $entry->change_next_dow( bases => \@bases2);
+
+    my $new_entry = Ravada::Booking::Entry->new( id => $entry->id );
+
+    is_deeply([sort $new_entry->bases],\@bases2);
+
+    my ($entry0_b, $entry_b,@next_b) = $booking->entries();
+    is_deeply([sort $entry0_b->bases],[sort $entry0->bases])
+        or die Dumper($entry0_b->id,[sort $entry0_b->bases], [sort $entry0->bases]);
+
+    is_deeply([sort $entry_b->bases],\@bases2);
+    my $dow = DateTime::Format::DateParse
+            ->parse_datetime($entry->_data('date_booking'))
+            ->day_of_week;
+
+    my ($found_yes, $found_no) = ( 0,0 );
+    for my $curr_entry (@next_b) {
+        my $date = DateTime::Format::DateParse
+            ->parse_datetime($curr_entry->_data('date_booking'));
+        if ($date->day_of_week eq $dow) {
+            is_deeply([sort $curr_entry->bases],\@bases2);
+            $found_yes++;
+        } else {
+            is_deeply([sort $curr_entry->bases],\@bases);
+            $found_no++;
+        }
+
+    }
+    ok($found_yes);
+    ok($found_no);
+
+}
+sub test_change_entry_dow_time($booking) {
     my ($entry0, $entry,@next) = $booking->entries();
     my $time_start = $entry->_data('time_start');
 
@@ -897,15 +1170,37 @@ sub test_list_machines_user($vm) {
     $list= rvd_front->list_machines_user($USER_NO);
     is(scalar(@$list),0,"Expecting no access to ".$USER_NO->name
         ." (admin = ".$USER_NO->is_admin.")") or exit;
+
+    my ($entry_data) = Ravada::Booking::bookings_range();
+    my $entry = Ravada::Booking::Entry->new( id => $entry_data->{id} );
+    my @bases = $entry->bases_id();
+    my $id_base = $bases[0];
+    my $bookings = Ravada::Booking::bookings_week(id_base => $id_base);
+
+    # Booking with no bases allows all the bases
+    $entry->change( bases => [] );
+    my $entry2 = Ravada::Booking::Entry->new( id => $entry_data->{id} );
+    is(scalar($entry2->bases),0);
+    $list= rvd_front->list_machines_user($USER_YES_1);
+    is(scalar(@$list),2) or exit;
+    $entry->change( bases => \@bases );
+    $entry2 = Ravada::Booking::Entry->new( id => $entry_data->{id} );
+    is_deeply([$entry2->bases_id],\@bases);
+    my $bookings2 = Ravada::Booking::bookings_week(id_base => $id_base);
+
+    is_deeply($bookings2, $bookings) or exit;
 }
 
 ###################################################################
 
 init('t/etc/ravada_ldap.conf');
 clean();
+$TZ = DateTime::TimeZone->new(name => rvd_front->setting('/backend/time_zone'));
 
 delete $Ravada::CONFIG->{ldap}->{ravada_posix_group};
 _init_ldap();
+
+rvd_back->setting('/backend/bookings', 1);
 
 for my $vm_name ( vm_names()) {
     SKIP: {
@@ -918,6 +1213,7 @@ for my $vm_name ( vm_names()) {
 
         skip($msg,10)   if !$vm;
 
+        test_bookings_week_2days($vm);
         test_search_change_remove_booking($vm);
 
         test_booking($vm , _create_clones($vm));

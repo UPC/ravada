@@ -140,11 +140,16 @@ sub list_machines_user($self, $user, $access_data={}) {
     $sth->execute;
     $sth->bind_columns(\($id, $name, $is_public, $description, $screenshot));
 
+    my $bookings_enabled = $self->setting('/backend/bookings');
     my @list;
+
     while ( $sth->fetch ) {
         next if !$is_public && !$user->is_admin;
         next if !$user->allowed_access($id);
-        next if !Ravada::Front::Domain->open($id)->allowed_booking($user);
+
+        # check if enabled settings and this user not allowed
+        next if $bookings_enabled && !Ravada::Front::Domain->open($id)->allowed_booking($user);
+
         my $is_active = 0;
         my $clone = $self->search_clone(
             id_owner =>$user->id
@@ -1204,6 +1209,8 @@ sub list_network_interfaces($self, %args) {
 }
 
 sub _dbh {
+    $CONNECTOR = $Ravada::CONNECTOR if !defined $CONNECTOR;
+    confess if !defined $CONNECTOR;
     return $CONNECTOR->dbh;
 }
 
@@ -1229,6 +1236,37 @@ sub _get_settings($self, $id_parent=0) {
 
 sub settings_global($self) {
     return $self->_get_settings();
+}
+
+sub setting($self, $name, $new_value=undef) {
+
+    confess "Error: wrong new value '$new_value' for $name"
+    if ref($new_value);
+
+    my $sth = _dbh->prepare(
+        "SELECT id,value "
+        ." FROM settings "
+        ." WHERE id_parent=? AND name=?"
+    );
+    my ($id, $value);
+    my $id_parent = 0;
+    for my $item (split m{/},$name) {
+        next if !$item;
+        $sth->execute($id_parent, $item);
+        ($id, $value) = $sth->fetchrow;
+        confess "Error: I can't find setting $item inside id_parent: $id_parent"
+        if !$id;
+
+        $id_parent = $id;
+    }
+
+    if (defined $new_value && $new_value ne $value) {
+        my $sth_update = _dbh->prepare(
+            "UPDATE settings set value=? WHERE id=? "
+        );
+        $sth_update->execute($new_value,$id);
+    }
+    return $value;
 }
 
 sub _settings_by_id($self) {

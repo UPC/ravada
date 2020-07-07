@@ -10,6 +10,7 @@ use Data::Dumper;
 use DBIx::Connector;
 use File::Copy;
 use Hash::Util qw(lock_hash unlock_hash);
+use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
 use POSIX qw(WNOHANG);
@@ -1335,7 +1336,6 @@ sub _sql_create_tables($self) {
             ,day_of_week => 'char(8)'
             ,id_owner => 'int not null'
             ,date_created => 'datetime'
-            ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
         }
         ,booking_entries => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
@@ -1345,6 +1345,7 @@ sub _sql_create_tables($self) {
             ,time_start => 'time not null'
             ,time_end => 'time not null'
             ,date_booking => 'date'
+            ,visibility => "enum ('private','public') default 'public'"
         }
         ,booking_entry_ldap_groups => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
@@ -1455,6 +1456,15 @@ sub _sql_insert_defaults($self){
                 ,name => 'start_limit'
                 ,value => 1
             }
+            ,{
+                id_parent => $id_backend
+                ,name => 'time_zone'
+            }
+            ,{
+                id_parent => $id_backend
+                ,name => 'bookings'
+                ,value => 0
+            }
         ]
     );
     my %field = ( settings => 'name' );
@@ -1466,10 +1476,31 @@ sub _sql_insert_defaults($self){
             $sth->execute($entry->{$field{$table}});
             my ($found) = $sth->fetchrow;
             next if $found;
+            $entry->{value} = _default_time_zone() if $entry->{name} eq 'time_zone';
             warn "INFO adding default $table ".Dumper($entry) if $0 !~ /t$/;
             $self->_sql_insert_values($table, $entry);
         }
     }
+}
+
+sub _default_time_zone() {
+    return $ENV{TZ} if exists $ENV{TZ};
+    my $timedatectl = `which timedatectl`;
+    chomp $timedatectl;
+    if (!$timedatectl) {
+        warn "Warning: No time zone found, checked TZ, missing timedatectl";
+        return 'UTC';
+    }
+    my @cmd = ( $timedatectl, '-p', 'Timezone','show');
+    my ($in, $out, $err);
+    run3(\@cmd,\$in,\$out,\$err);
+    my ($tz) = $out =~ /=(.*)/;
+    chomp $out;
+    if (!$tz) {
+        warn "Warning: No timezone found in @cmd\n$out";
+        return 'UTC'
+    }
+    return $tz;
 }
 
 sub _sql_insert_values($self, $table, $entry) {
@@ -1487,11 +1518,21 @@ sub _sql_insert_values($self, $table, $entry) {
 }
 
 sub _port_definition($driver, $definition0){
-    return $definition0 if $driver eq 'mysql';
+    return $definition0 if $driver =~ /mysql|mariadb/i;
     if ($driver eq 'sqlite') {
         $definition0 =~ s/(.*) AUTO_INCREMENT$/$1 AUTOINCREMENT/i;
         return $definition0 if $definition0 =~ /^(int|integer|char|varchar) /i;
+
+        if ($definition0 =~ /^enum /) {
+            my ($default) = $definition0 =~ / (default.*)/i;
+            $default = '' if !defined $default;
+
+            my @found = $definition0 =~ /'(.*?)'/g;
+            my ($size) = sort map { length($_) } @found;
+            return " varchar($size) $default";
+        }
     }
+    return $definition0;
 }
 
 sub _clean_iso_mini {
@@ -1821,7 +1862,7 @@ sub _connect_vm {
 sub _create_vm_lxc {
     my $self = shift;
 
-    return undef;
+    return ;
 }
 
 sub _create_vm_void {
@@ -2459,6 +2500,7 @@ sub process_requests {
 
         push @reqs,($req);
     }
+    $sth->finish;
 
     for my $req (sort { $a->priority <=> $b->priority } @reqs) {
         next if $req eq 'refresh_vms' && scalar@reqs > 2;
@@ -2479,7 +2521,6 @@ sub process_requests {
             #        sleep 1 if $DEBUG;
 
     }
-    $sth->finish;
 
     $self->_timeout_requests();
 }
@@ -4141,7 +4182,7 @@ sub import_domain {
 sub _cmd_enforce_limits($self, $request=undef) {
     _enforce_limits_active($self, $request);
     $self->_shutdown_disconnected();
-    $self->_shutdown_bookings();
+    $self->_shutdown_bookings() if $self->setting('/backend/bookings');
 }
 
 sub _shutdown_bookings($self) {
@@ -4159,6 +4200,8 @@ sub _shutdown_bookings($self) {
             next;
         }
 
+        my $user = Ravada::Auth::SQL->search_by_id($dom->{id_owner});
+        $user->send_message("The server is booked. Shutting down ".$dom->{name});
         Ravada::Request->shutdown_domain(
             uid => Ravada::Utils::user_daemon->id
             ,id_domain => $dom->{id}
@@ -4312,24 +4355,8 @@ sub _cmd_open_exposed_ports($self, $request) {
     $domain->open_exposed_ports();
 }
 
-sub setting($self, $name) {
-    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,value "
-        ." FROM settings "
-        ." WHERE id_parent=? AND name=?"
-    );
-    my ($id, $value);
-    my $id_parent = 0;
-    for my $item (split m{/},$name) {
-        next if !$item;
-        $sth->execute($id_parent, $item);
-        ($id, $value) = $sth->fetchrow;
-        die "Error: I can-t find setting $item inside id_parent: $id_parent"
-        if !$id;
-
-        $id_parent = $id;
-    }
-    return $value;
+sub setting {
+    return Ravada::Front::setting(@_);
 }
 
 sub DESTROY($self) {

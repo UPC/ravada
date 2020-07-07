@@ -152,7 +152,7 @@ hook before_routes => sub {
             ,check_netdata => 0
             ,guide => $CONFIG_FRONT->{guide}
             ,host => $host
-            ,bookings => $CONFIG_FRONT->{bookings}
+            ,bookings => $RAVADA->setting('/backend/bookings')
             );
 
     $USER = _logged_in($c);
@@ -1397,6 +1397,12 @@ post '/v1/booking_entry/save/:mode' => sub($c) {
     unless $booking->_data('id_owner') == $USER->id
         || $USER->is_operator;
 
+    # we are changing only this entry, so date_end doesn't make sense
+    # anyway in the future we may use it to create other entries
+    # so it is only removed if null
+    delete $arg->{date_end} if !defined $arg->{date_end};
+    _push_new_values($arg);
+
     if (!$mode || $mode eq 'current') {
         $entry->change(%$arg);
     } elsif ( $mode eq 'next' ) {
@@ -1408,6 +1414,13 @@ post '/v1/booking_entry/save/:mode' => sub($c) {
     }
     return $c->render( json => { error => '' } );
 };
+
+sub _push_new_values($arg) {
+    if ($arg->{ldap_group_new}) {
+        push @{$arg->{ldap_groups}},($arg->{ldap_group_new});
+    }
+    delete $arg->{ldap_group_new};
+}
 
 post '/v1/booking/save' => sub($c) {
     return _access_denied($c) if !$USER->is_operator();
@@ -1421,7 +1434,7 @@ post '/v1/booking/save' => sub($c) {
     for my $curr ( split//,$arg->{day_of_week} ) {
         $dow .= $curr if $curr;
     }
-
+    _push_new_values($arg);
     $arg->{day_of_week} = $dow;
     eval {
         my $booking = Ravada::Booking->new(%$arg);

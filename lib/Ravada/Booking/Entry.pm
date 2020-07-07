@@ -21,12 +21,21 @@ sub BUILD($self, $args) {
     my $users = delete $args->{users};
     my $bases = delete $args->{bases};
 
+    _fix_time($args,'time_start');
+    _fix_time($args,'time_end');
+
     $self->_insert_db($args);
     $self->_add_ldap_groups($ldap_groups);
     $self->_add_users($users);
     $self->_add_bases($bases);
 
     return $self;
+}
+
+sub _fix_time($args,$field) {
+    my @items = map { $a=$_; $a ="0".$a if length($a)<2 ; $a } split /:/,$args->{$field};
+    my $fixed = join(":",@items);
+    $args->{$field} = $fixed;
 }
 
 sub _init_connector {
@@ -66,6 +75,7 @@ sub _change_ldap_groups($self, $ldap_groups) {
 }
 
 sub _add_ldap_groups($self, $ldap_groups) {
+    return if !$ldap_groups;
     my $id = $self->_data('id');
     my %already_added = map { $_ => 1 } $self->ldap_groups();
     $ldap_groups = [ $ldap_groups ] if !ref($ldap_groups);
@@ -81,10 +91,11 @@ sub _add_ldap_groups($self, $ldap_groups) {
 
 }
 
-# removes ldap groups not in list
+# removes item not in list
 sub _purge_table($self, $table, $field, $entries, $old_entries, $sub_search_id = undef ) {
     my $sth = $self->_dbh->prepare("DELETE FROM $table"
         ." WHERE $field=? "
+        ." AND id_booking_entry=? "
     );
     my %keep;
     for my $current ( @$entries ) {
@@ -102,7 +113,7 @@ sub _purge_table($self, $table, $field, $entries, $old_entries, $sub_search_id =
         if $sub_search_id;
 
         next if $keep{$current_id};
-        $sth->execute($current_id);
+        $sth->execute($current_id, $self->id);
     }
 }
 
@@ -233,52 +244,31 @@ sub change($self, %fields) {
 }
 
 sub change_next($self, %fields) {
-    my $date_booking = $self->_data('date_booking');
-    for my $field ( keys %fields) {
-        my $old_value = $self->_data($field);
-        my $value = $fields{$field};
-        $value =~ s/(^\d{4}-\d\d-\d\d).*/$1/ if ($field eq 'date_booking');
-        next if defined $old_value && defined $value && $value eq $old_value;
-        $self->{_data}->{$field} = $value;
-
-        my $sth = $self->_dbh->prepare(
-            "UPDATE booking_entries SET $field=? "
+    my $sth = $self->_dbh->prepare(
+            "SELECT id FROM booking_entries "
             ." WHERE id_booking=? "
             ." AND date_booking>=? "
         );
-        $sth->execute($value,$self->_data('id_booking'), $date_booking);
+    $sth->execute($self->_data('id_booking'), $self->_data('date_booking'));
+    while (my ($id) = $sth->fetchrow) {
+        Ravada::Booking::Entry->new(id => $id)->change(%fields);
     }
 }
 
 sub change_next_dow($self, %fields) {
     my $date_booking = $self->_data('date_booking');
     my $dow = DateTime::Format::DateParse
-        ->parse_datetime($self->_data('date_booking'))->day_of_week;
-    for my $field ( keys %fields) {
-        my $old_value = $self->_data($field);
-        my $value = $fields{$field};
-        $value =~ s/(^\d{4}-\d\d-\d\d).*/$1/ if $field eq 'date_booking';
+    ->parse_datetime($self->_data('date_booking'))->day_of_week;
+    my $sth = $self->_dbh->prepare("SELECT id,date_booking "
+        ." FROM booking_entries WHERE id_booking=? "
+        ." AND date_booking  >= ? ");
 
-        next if defined $old_value && defined $value && $value eq $old_value;
-        $self->{_data}->{$field} = $value;
-
-        my $sth_update = $self->_dbh->prepare(
-            "UPDATE booking_entries SET $field=? "
-            ." WHERE id=? "
-            ." AND id_booking>=? "
-        );
-
-        my $sth = $self->_dbh->prepare("SELECT id,date_booking "
-            ." FROM booking_entries WHERE id_booking=? "
-            ." AND date_booking  >= ? ");
-
-        $sth->execute($self->_data('id_booking'), $date_booking);
-        while (my ($id, $date) = $sth->fetchrow ) {
-            my $curr_dow = DateTime::Format::DateParse
-            ->parse_datetime($date)->day_of_week;
-            if ($dow == $curr_dow) {
-                $sth_update->execute($value, $id, $self->_data('id_booking'));
-            }
+    $sth->execute($self->_data('id_booking'), $date_booking);
+    while (my ($id, $date) = $sth->fetchrow ) {
+        my $curr_dow = DateTime::Format::DateParse
+        ->parse_datetime($date)->day_of_week;
+        if ($dow == $curr_dow) {
+            Ravada::Booking::Entry->new(id => $id)->change(%fields);
         }
     }
 }
@@ -339,8 +329,19 @@ sub bases_id ($self) {
     return @bases;
 }
 
+sub _user_is_admin($self, $user_name) {
+
+    my $user_id = $self->_search_user_id($user_name);
+    my $sth =$self->_dbh->prepare("SELECT is_admin FROM users WHERE id=? ");
+    $sth->execute($user_id);
+    my ($is_admin) = $sth->fetchrow;
+    return $is_admin;
+
+}
 
 sub user_allowed($entry, $user_name) {
+    return 1 if $entry->_user_is_admin($user_name);
+
     for my $allowed_user_name ( $entry->users ) {
         return 1 if $user_name eq $allowed_user_name;
     }

@@ -2,6 +2,7 @@ use warnings;
 use strict;
 
 use Data::Dumper;
+use DateTime;
 use Mojo::JSON 'decode_json';
 use Test::More;
 use Test::Mojo;
@@ -18,6 +19,8 @@ my $USERNAME;
 my $PASSWORD = "$$ $$";
 
 my $USER;
+
+my $TZ;
 
 ########################################################################################
 
@@ -166,17 +169,102 @@ sub test_bases_access($t,$bases) {
     for (@$bases) { $_->is_public(0) };
 }
 
+sub _monday() {
+    my $now = DateTime->from_epoch( epoch => time() , time_zone => $TZ );
+
+    return $now->add( days => 1-$now->day_of_week);
+
+}
+
+sub _now() {
+    return DateTime->from_epoch( epoch => time() , time_zone => $TZ )
+}
+
+sub _wait_tomorrow() {
+    for (;;) {
+        my $now = _now();
+        if ( $now->hour == 23 && $now->minute > 57 ) {
+            diag("Waiting for 00:00 ".$now);
+            sleep 1;
+        } else {
+            return;
+        }
+    }
+}
+
+sub test_bookings($t) {
+
+    _wait_tomorrow();
+
+    my $monday = _monday();
+    my $dow1 = $monday->day_of_week;
+    my $tomorrow = _monday();
+    my $dow2 = $tomorrow->add(days=>1)->day_of_week;
+    my $now = _now();
+    my $dow_today = $now->day_of_week;
+
+    my $time_start = _now()->add(minutes => 1);
+    my $time_end = _now()->add(minutes => 2);
+
+    my $booking_title = new_domain_name();
+    my %args_booking  = (
+        date_start => $monday->ymd
+        ,date_end => $monday->add( days => 7 )->ymd
+        ,time_start => $time_start->hms
+        ,time_end => $time_end->hms
+        ,day_of_week => "$dow1$dow2$dow_today"
+        ,title => $booking_title
+        ,users => $USERNAME
+    );
+
+    $t->post_ok('/v1/booking/save' => json => \%args_booking);
+    like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body->to_string;
+    my $response = $t->tx->res->json();
+
+    my $booking = Ravada::Booking->search( title => $booking_title);
+    ok($booking,"Expecting booking titled '$booking_title'");
+    is(scalar($booking->entries),3,"Expecting some entries") or exit;
+
+    $t->websocket_ok("/ws/subscribe")->send_ok("list_next_bookings_today")
+    ->message_ok->finish_ok;
+
+    if ( !$t->message || !$t->message->[1] ) {
+        ok(0,"Wrong webservice message for list next bookings today");
+        $booking->remove() if $booking;
+        return;
+    }
+
+    my @bookings = @{decode_json($t->message->[1])};
+
+    my ($found) = grep { $_->{title} eq $booking_title } @bookings;
+    ok($found, "Expecting $booking_title in ".Dumper(''._now()->hms,\@bookings)) or exit;
+
+    is($found->{user_allowed},1);
+
+    $booking->remove() if $booking;
+
+
+}
+
 ########################################################################################
 
 init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
-like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
+unlike($connector->{driver} , qr/sqlite/i) or BAIL_OUT;
 
 if (!rvd_front->ping_backend()) {
     diag("SKIPPING: Backend not available");
     done_testing();
     exit;
 }
+
+$TZ = DateTime::TimeZone->new(name => rvd_front->settings_global()->{backend}->{time_zone}->{value});
+my @bookings = Ravada::Booking::bookings_range(
+        time_start => _now()->add(seconds => 1)->hms
+);
+die "Error: bookings scheduled for today will spoil tests ".Dumper(\@bookings)
+if @bookings;
+
 mojo_clean();
 
 $USERNAME = user_admin->name;
@@ -187,7 +275,10 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     diag("Testing Web Services in $vm_name");
 
     mojo_login($t, $USERNAME, $PASSWORD);
+    test_bookings($t);
     my @bases = _create_bases($t, $vm_name);
+
+
     is(list_machines_user($t), 0);
     is(list_machines($t), scalar(@bases)) or exit;
 

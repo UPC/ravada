@@ -8,8 +8,9 @@
     $_anonymous=<%= ($_anonymous or 0) %>;
 </script>
 
-<div id="page-wrapper" ng-controller="bases" ng-init="is_admin=<%= $user->is_admin %>;anonymous=<%= $_anonymous or 0 %>;subscribe_list_machines_user('<%= url_for('ws_subscribe')->to_abs %>', $scope)">
+<div id="page-wrapper" ng-controller="bases" ng-init="is_admin=<%= $user->is_admin %>;anonymous=<%= $_anonymous or 0 %>;subscribe_ws('<%= url_for('ws_subscribe')->to_abs %>', <%= $bookings %> )">
 %= include 'main/list_bases_ng_head'
+    %= include '/ng-templates/booking/list_next_bookings_today'
     <!--MACHINES SELECTION-->
     <div class="card-body">
     <div ng-repeat="machine in machines | orderBy: 'id_clone'"
