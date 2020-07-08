@@ -9,7 +9,7 @@ use Carp qw(carp croak);
 use Data::Dumper;
 use DBIx::Connector;
 use File::Copy;
-use Hash::Util qw(lock_hash);
+use Hash::Util qw(unlock_hash lock_hash);
 use JSON::XS;
 use Moose;
 use POSIX qw(WNOHANG);
@@ -1653,16 +1653,19 @@ sub _init_config {
 sub _init_config_vm {
 
     for my $vm ( @{$CONFIG->{vm}} ) {
-        die "$vm not available in this system.\n".($ERROR_VM{$vm})
+        confess "$vm not available in this system.\n".($ERROR_VM{$vm})
             if !exists $VALID_VM{$vm} || !$VALID_VM{$vm};
     }
 
     for my $vm ( keys %VALID_VM ) {
-        delete $VALID_VM{$vm}
-            if exists $VALID_VM{$vm}
+        if ( exists $VALID_VM{$vm}
                 && exists $CONFIG->{vm}
                 && scalar @{$CONFIG->{vm}}
-                && !grep /^$vm$/,@{$CONFIG->{vm}};
+                && !grep /^$vm$/,@{$CONFIG->{vm}}) {
+            unlock_hash(%VALID_VM);
+            delete $VALID_VM{$vm};
+            lock_hash(%VALID_VM);
+        }
     }
 
     lock_hash(%VALID_VM);
