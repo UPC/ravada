@@ -1596,7 +1596,7 @@ sub _do_remote_node($vm_name, $remote_config) {
 }
 
 sub _dir_db {
-    my $dir_db = "/var/run/ravada/$>/db";
+    my $dir_db = "/run/ravada/$>/db";
     if (! -e $dir_db ) {
         eval {
             make_path $dir_db
