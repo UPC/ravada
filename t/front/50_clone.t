@@ -44,7 +44,7 @@ sub create_args {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (keys %CREATE_ARGS) {
+for my $vm_name ( vm_names() ) {
 
     diag("Testing $vm_name");
     my $vm = $RVD_BACK->search_vm($vm_name);

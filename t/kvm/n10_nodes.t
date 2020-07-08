@@ -1067,20 +1067,6 @@ sub _write_in_volumes($clone) {
     }
 }
 
-sub _domain_node($node) {
-    my $vm = rvd_back->search_vm('KVM','localhost');
-    my $domain = $vm->search_domain($node->name);
-    $domain = rvd_back->import_domain(name => $node->name
-            ,user => user_admin->name
-            ,vm => 'KVM'
-            ,spinoff_disks => 0
-    )   if !$domain || !$domain->is_known;
-
-    ok($domain->id,"Expecting an ID for domain ".Dumper($domain)) or exit;
-    $domain->_set_vm($vm, 'force');
-    return $domain;
-}
-
 sub test_status($node) {
     diag("[".$node->type."] testing domain status in front");
     my ($base, $clone)= _create_clone($node);

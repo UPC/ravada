@@ -17,8 +17,14 @@
     </div>
     <div>
         <form name="formSettings">
+        <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-1">
             <h3>Frontend</h3>
+            </div>
+        </div>
         <div class="row" ng-hide="true">
+            <div class="col-md-1"></div>
             <div class="col-md-2">
             <label for="falback">Fallback</label>
             </div>
@@ -29,6 +35,7 @@
             </div>
         </div>
         <div class="row" ng-hide="true">
+            <div class="col-md-1"></div>
             <div class="col-md-2">
             <label for="session timeout">Session timeout</label>
             </div>
@@ -38,30 +45,32 @@
             </div>
         </div>
         <div class="row">
+            <div class="col-md-1"></div>
             <div class="col-md-2">
             <label for="maintenance">Maintenance</label>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-6">
             <input name="maintenance" ng-model="settings.frontend.maintenance.value"
                 ng-true-value="1" ng-false-value="0"
                 type="checkbox">
-            </div>
-            <div>
                 <%= l 'Admin users can still log in from' %>
                 <a href="<%= $url_login %>"><%= $url_login %></a>
             </div>
         </div>
         <div class="row" ng-show="settings.frontend.maintenance.value == 1">
+            <div class="col-md-1"></div>
             <div class="col-md-2">
             <label for="maintenance_start">Maintenance Start</label>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-8">
             <input name="maintenance_start" ng-model="settings.frontend.maintenance_start.value"
                 type="datetime-local">
+            [ {{timezone}} ]
             </div>
         </div>
 
         <div class="row" ng-show="settings.frontend.maintenance.value == 1">
+            <div class="col-md-1"></div>
             <div class="col-md-2">
             <label for="maintenance_end">Maintenance End</label>
             </div>
@@ -70,9 +79,20 @@
                 type="datetime-local">
             </div>
         </div>
-        <hr>
-        <h3>Backend</h3>
         <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-6">
+            <hr>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-1">
+            <h3>Backend</h3>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-1"></div>
             <div class="col-md-2">
             <label for="start_limit">Start Limit</label>
             </div>
@@ -82,6 +102,8 @@
                 >
             </div>
         </div>
+
+        <hr>
 
         <div class="row">
             <div class="col-md-2">

@@ -87,7 +87,7 @@ sub test_run_timeout_propagate {
 ######################################################
 clean();
 
-for my $vm_name ( @{rvd_front->list_vm_types},'Void') {
+for my $vm_name ( vm_names() ) {
 
     my $vm = rvd_back->search_vm($vm_name);
 

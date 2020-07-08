@@ -97,7 +97,7 @@ sub _expected_bridges($vm) {
 
 ############################################################
 
-for my $vm_name (qw(KVM)) {
+for my $vm_name (vm_names()) {
     my $vm;
     my $msg = "SKIPPED: virtual manager $vm_name not found";
     eval {

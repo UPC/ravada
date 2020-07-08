@@ -17,7 +17,7 @@ sub test_create_domain_xml {
     my $file_xml = shift;
 
     die "Missing '$file_xml'" if !-e $file_xml;
-    my $vm = rvd_back->search_vm('kvm');
+    my $vm = rvd_back->search_vm('KVM');
 
     my $device_disk = $vm->create_volume(
         name => $name
@@ -96,7 +96,7 @@ sub test_clone_domain {
     my $name = shift;
     my $file_xml = shift;
 
-    my $vm = rvd_back->search_vm('kvm');
+    my $vm = rvd_back->search_vm('KVM');
     my $domain = $vm->search_domain($name);
 
     my $clone_name = new_domain_name();
@@ -142,7 +142,7 @@ remove_old_domains();
 remove_old_disks();
 
 my $vm;
-eval { $vm = rvd_back->search_vm('KVM') };
+eval { $vm = rvd_back->search_vm('KVM') } if !$<;
 SKIP: {
     my $msg = "SKIPPED test: No KVM backend found";
     if ($vm && $>) {

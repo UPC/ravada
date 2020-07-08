@@ -200,7 +200,7 @@ sub test_rename_and_base($vm) {
 
 clean();
 
-for my $vm_name (qw( Void KVM )) {
+for my $vm_name ( vm_names()) {
 
     my $vm_ok;
     eval {

@@ -9,7 +9,7 @@ use Carp qw(carp croak);
 use Data::Dumper;
 use DBIx::Connector;
 use File::Copy;
-use Hash::Util qw(lock_hash);
+use Hash::Util qw(unlock_hash lock_hash);
 use JSON::XS;
 use Moose;
 use POSIX qw(WNOHANG);
@@ -190,14 +190,33 @@ sub _update_isos {
     my $table = 'iso_images';
     my $field = 'name';
     my %data = (
+	    androidx86 => {
+                    name => 'Android 8.1 x86'
+            ,description => 'Android-x86 64 bits. Requires an user provided ISO image.'
+                   ,arch => 'amd64'
+                    ,xml => 'android-amd64.xml'
+             ,xml_volume => 'android-volume.xml'
+	     ,min_disk_size => '4'
+        },
         arch_1909 => {
                     name => 'Arch Linux 19.09'
             ,description => 'Arch Linux 19.09.01 64 bits'
                    ,arch => 'amd64'
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
-                    ,url => 'http://mirrors.evowise.com/archlinux/iso/2019.09..*/archlinux-2019.09..*-x86_64.iso'
-                ,md5_url => '$url/md5sums.txt'
+                    ,url => 'https://archive.archlinux.org/iso/2019.09.01/'
+                    ,file_re => 'archlinux-2019.09.01-x86_64.iso'
+                    ,md5_url => ''
+                    ,md5 => '1d6bdf5cbc6ca98c31f02d23e418dd96'
+        },
+	mate_focal_fossa => {
+                    name => 'Ubuntu Mate Focal Fossa 64 bits'
+            ,description => 'Ubuntu Mate 20.04 (Focal Fossa) 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'focal_fossa-amd64.xml'
+             ,xml_volume => 'focal_fossa64-volume.xml'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04/release/ubuntu-mate-20.04-desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
         },
         mate_bionic => {
                     name => 'Ubuntu Mate Bionic 64 bits'
@@ -217,7 +236,6 @@ sub _update_isos {
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
                 ,md5_url => '$url/MD5SUMS'
         },
-
         mate_xenial => {
                     name => 'Ubuntu Mate Xenial'
             ,description => 'Ubuntu Mate 16.04.3 (Xenial) 64 bits'
@@ -228,6 +246,18 @@ sub _update_isos {
                 ,md5_url => '$url/MD5SUMS'
                 ,min_disk_size => '10'
         },
+	,focal_fossa=> {
+                    name => 'Ubuntu Focal Fossa'
+            ,description => 'Ubuntu 20.04 Focal Fossa 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'focal_fossa-amd64.xml'
+             ,xml_volume => 'focal_fossa64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/20.04/'
+                ,file_re => '^ubuntu-20.04.*desktop-amd64.iso'
+                ,md5_url => '$url/MD5SUMS'
+          ,min_disk_size => '9'
+        }
+
         ,bionic=> {
                     name => 'Ubuntu Bionic Beaver'
             ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
@@ -307,6 +337,17 @@ sub _update_isos {
             ,sha256_url => '$url/Fedora-Workstation-28-.*-x86_64-CHECKSUM'
             ,min_disk_size => '10'
         }
+	      ,kubuntu_64_focal_fossa => {
+            name => 'Kubuntu Focal Fossa 64 bits'
+            ,description => 'Kubuntu 20.04 Focal Fossa 64 bits'
+            ,arch => 'amd64'
+            ,xml => 'focal_fossa-amd64.xml'
+            ,xml_volume => 'focal_fossa64-volume.xml'
+            ,md5_url => '$url/MD5SUMS'
+            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/20.04/release/'
+            ,file_re => 'kubuntu-20.04-desktop-amd64.iso'
+            ,rename_file => 'kubuntu_focal_fossa_64.iso'
+        }
         ,kubuntu_64 => {
             name => 'Kubuntu Bionic Beaver 64 bits'
             ,description => 'Kubuntu 18.04 Bionic Beaver 64 bits'
@@ -372,7 +413,7 @@ sub _update_isos {
             ,rename_file => 'xubuntu_xenial_mini.iso'
             ,min_disk_size => '10'
         }
-        ,lubuntu_bionic_64 => {
+	,lubuntu_bionic_64 => {
              name => 'Lubuntu Bionic Beaver 64 bits'
              ,description => 'Lubuntu 18.04 Bionic Beaver 64 bits'
              ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-amd64.iso'
@@ -870,10 +911,6 @@ sub _update_data {
 }
 
 sub _add_indexes($self) {
-    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
-    $self->_add_indexes_vms();
-    $self->_add_indexes_domains();
-    $self->_add_indexes_requests();
     $self->_add_indexes_generic();
 }
 
@@ -881,12 +918,14 @@ sub _add_indexes_generic($self) {
     my %index = (
         domains => [
             "index(date_changed)"
+            ,"index(id_base):id_base_index"
         ]
         ,requests => [
             "index(status,at_time)"
             ,"index(id,date_changed,status,at_time)"
             ,"index(date_changed)"
             ,"index(start_time,command,status,pid)"
+            ,"index(id_domain,status):domain_status"
         ]
         ,grants_user => [
             "index(id_user,id_grant)"
@@ -902,16 +941,27 @@ sub _add_indexes_generic($self) {
         ,settings => [
             "index(id_parent,name)"
         ]
+        ,vms=> [
+            "unique(hostname, vm_type)"
+        ]
     );
+    my $if_not_exists = '';
+    $if_not_exists = ' IF NOT EXISTS ' if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite|mariadb/i;
+
     for my $table ( keys %index ) {
         my $known = $self->_get_indexes($table);
         for my $change (@{$index{$table}} ) {
             my ($type,$fields ) =$change =~ /(\w+)\((.*)\)/;
-            my $name = $fields;
+            my ($name) = $change =~ /:(.*)/;
+            $name = $fields if !$name;
             $name =~ s/,/_/g;
+            $name =~ s/ //g;
             next if $known->{$name};
-            my $sql = "ALTER TABLE $table add $type $name ($fields)";
-            warn "INFO: Adding index to $table: $name";
+
+            $type .=" INDEX " if $type=~ /^unique/i;
+            my $sql = "CREATE $type $if_not_exists $name on $table ($fields)";
+
+            warn "INFO: Adding index to $table: $name" if $0 !~ /\.t$/;
             my $sth = $CONNECTOR->dbh->prepare($sql);
             $sth->execute();
         }
@@ -919,6 +969,9 @@ sub _add_indexes_generic($self) {
 }
 
 sub _get_indexes($self,$table) {
+
+    return {} if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/;
+
     my $sth = $CONNECTOR->dbh->prepare("show index from $table");
     $sth->execute;
     my %index;
@@ -926,50 +979,6 @@ sub _get_indexes($self,$table) {
         $index{$row->{Key_name}}->{$row->{Column_name}}++;
     }
     return \%index;
-}
-
-sub _add_indexes_vms($self) {
-    my %index;
-    my $sth = $CONNECTOR->dbh->prepare("show index from vms");
-    $sth->execute;
-    while (my $row = $sth->fetchrow_hashref) {
-        $index{$row->{Key_name}}->{$row->{Column_name}}++;
-    }
-
-    my $index_name = 'hostname_vm_type';
-    return if $index{$index_name};
-    warn "INFO: Adding index to vms: $index_name";
-    $sth = $CONNECTOR->dbh->prepare("ALTER TABLE vms add unique $index_name"
-        ." (hostname, vm_type)");
-    $sth->execute;
-}
-
-sub _add_indexes_domains($self) {
-    my %index;
-    my $sth = $CONNECTOR->dbh->prepare("show index from domains");
-    $sth->execute;
-    while (my $row = $sth->fetchrow_hashref) {
-        $index{$row->{Key_name}}->{$row->{Column_name}}++;
-    }
-    return if $index{id_base_index};
-    warn "INFO: Adding domains . id_base index";
-    $sth = $CONNECTOR->dbh->prepare("ALTER TABLE domains add index id_base_index "
-        ."(id_base)");
-    $sth->execute;
-}
-
-sub _add_indexes_requests($self) {
-    my %index;
-    my $sth = $CONNECTOR->dbh->prepare("show index from requests");
-    $sth->execute;
-    while (my $row = $sth->fetchrow_hashref) {
-        $index{$row->{Key_name}}->{$row->{Column_name}}++;
-    }
-    return if $index{domain_status};
-    warn "INFO: Adding requests . id_domain,status index";
-    $sth = $CONNECTOR->dbh->prepare("ALTER TABLE requests add index domain_status "
-        ."(id_domain, status)");
-    $sth->execute;
 }
 
 sub _rename_grants($self) {
@@ -1323,15 +1332,23 @@ sub _sql_create_tables($self) {
 }
 
 sub _sql_insert_defaults($self){
-    my $cont = 1;
     require Mojolicious::Plugin::Config;
     my $plugin = Mojolicious::Plugin::Config->new();
-    my $conf = $plugin->load("/etc/rvd_front.conf");
+    my $conf = {
+        fallback => 0
+        ,session_timeout => 10*60
+        ,admin_session_timeout => 30*60
+        ,auto_view => 1
+    };
+    if ( -e "/etc/rvd_front.conf" ){
+        $conf = $plugin->load("/etc/rvd_front.conf");
+    }
+    my $id_frontend = 1;
     my $id_backend = 2;
     my %values = (
         settings => [
             {
-                id => $cont++
+                id => $id_frontend
                 ,id_parent => 0
                 ,name => 'frontend'
             }
@@ -1340,61 +1357,56 @@ sub _sql_insert_defaults($self){
                 ,id_parent => 0
                 ,name => 'backend'
             }
-            ,{  id => $cont++
-                ,id_parent => 1
+            ,{
+                id_parent => $id_frontend
                 ,name => 'fallback'
                 ,value => $conf->{fallback}
             }
-            ,{  id => $cont++
-                ,id_parent => 1
+            ,{
+                id_parent => $id_frontend
                 ,name => 'maintenance'
                 ,value => 0
             }
-            ,{  id => $cont++
-                ,id_parent => 1
+            ,{
+                id_parent => $id_frontend
                 ,name => 'maintenance_start'
                 ,value => ''
             }
-            ,{  id => $cont++
-                ,id_parent => 1
+            ,{
+                id_parent => $id_frontend
                 ,name => 'maintenance_end'
                 ,value => ''
             }
 
-            ,{  id => $cont++
-                ,id_parent => 1
+            ,{
+                id_parent => $id_frontend
                 ,name => 'session_timeout'
                 ,value => $conf->{session_timeout}
             }
-            ,{  id => $cont++
-                ,id_parent => 1
+            ,{
+                id_parent => $id_frontend
                 ,name => 'session_timeout_admin'
                 ,value => $conf->{session_timeout_admin}
             }
-            ,{  id => $cont++
-                ,id_parent => 1
+            ,{
+                id_parent => $id_frontend
                 ,name => 'auto_view'
                 ,value => $conf->{auto_view}
             }
-            ,{  id => $cont++
-                ,id_parent => 1
-                ,name => 'maintenance'
-                ,value => 0
-            }
-            ,{ id => $cont++
-                ,id_parent => $id_backend
+            ,{
+                id_parent => $id_backend
                 ,name => 'start_limit'
                 ,value => 1
             }
         ]
     );
-
+    my %field = ( settings => 'name' );
     for my $table (sort keys %values) {
         my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM $table "
-            ." WHERE id = ? "
+            ." WHERE $field{$table} = ? "
         );
         for my $entry (@{$values{$table}}) {
-            $sth->execute($entry->{id});
+            $sth->execute($entry->{$field{$table}});
             my ($found) = $sth->fetchrow;
             next if $found;
             warn "INFO adding default $table ".Dumper($entry) if $0 !~ /t$/;
@@ -1531,6 +1543,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('volumes','name','char(200)');
 
     $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
+    $self->_upgrade_table('domain_ports', 'restricted','int(1) DEFAULT 0');
 
     $self->_upgrade_table('messages','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 }
@@ -1640,16 +1653,19 @@ sub _init_config {
 sub _init_config_vm {
 
     for my $vm ( @{$CONFIG->{vm}} ) {
-        die "$vm not available in this system.\n".($ERROR_VM{$vm})
+        confess "$vm not available in this system.\n".($ERROR_VM{$vm})
             if !exists $VALID_VM{$vm} || !$VALID_VM{$vm};
     }
 
     for my $vm ( keys %VALID_VM ) {
-        delete $VALID_VM{$vm}
-            if exists $VALID_VM{$vm}
+        if ( exists $VALID_VM{$vm}
                 && exists $CONFIG->{vm}
                 && scalar @{$CONFIG->{vm}}
-                && !grep /^$vm$/,@{$CONFIG->{vm}};
+                && !grep /^$vm$/,@{$CONFIG->{vm}}) {
+            unlock_hash(%VALID_VM);
+            delete $VALID_VM{$vm};
+            lock_hash(%VALID_VM);
+        }
     }
 
     lock_hash(%VALID_VM);
@@ -1659,7 +1675,7 @@ sub _init_config_vm {
 
 sub _create_vm_kvm {
     my $self = shift;
-    die "KVM not installed" if !$VALID_VM{KVM};
+    die "KVM not installed" if !exists $VALID_VM{KVM} ||!$VALID_VM{KVM};
 
     my $cmd_qemu_img = `which qemu-img`;
     chomp $cmd_qemu_img;
@@ -1746,7 +1762,7 @@ sub _connect_vm {
 sub _create_vm_lxc {
     my $self = shift;
 
-    return Ravada::VM::LXC->new( connector => ( $self->connector or $CONNECTOR ));
+    return;
 }
 
 sub _create_vm_void {
@@ -1755,8 +1771,7 @@ sub _create_vm_void {
     return Ravada::VM::Void->new( connector => ( $self->connector or $CONNECTOR ));
 }
 
-sub _create_vm {
-    my $self = shift;
+sub _create_vm($self, $type=undef) {
 
     # TODO: add a _create_vm_default for VMs that just are created with ->new
     #       like Void or LXC
@@ -1769,9 +1784,13 @@ sub _create_vm {
     my @vms = ();
     my $err = '';
 
-    for my $vm_name (keys %VALID_VM) {
+    my @vm_types = keys %VALID_VM;
+    @vm_types = ($type) if defined $type;
+    for my $vm_name (@vm_types) {
         my $vm;
-        eval { $vm = $create{$vm_name}->($self) };
+        my $sub = $create{$vm_name}
+            or confess "Error: Unknown VM $vm_name";
+        eval { $vm = $sub->($self) };
         warn $@ if $@;
         $err.= $@ if $@;
         push @vms,$vm if $vm;
@@ -1872,13 +1891,6 @@ sub create_domain {
         or confess "Error: Unkown user '$id_owner'";
 
     $request->status("creating machine")    if $request;
-    if ( $base && $base->is_base && $base->volatile_clones || $user->is_temporary ) {
-        $request->status("balancing")                       if $request;
-        $vm = $vm->balance_vm($base) or die "Error: No free nodes available.";
-        $request->status("creating machine on ".$vm->name)  if $request;
-    }
-
-    confess "Error: missing vm " if !$vm;
 
     my $domain;
     eval { $domain = $vm->create_domain(%args)};
@@ -2704,6 +2716,20 @@ sub _do_execute_command {
         if $request->status() ne 'done'
             && $request->status() !~ /^retry/i;
     }
+    $self->_set_domain_changed($request) if $request->status eq 'done';
+}
+
+sub _set_domain_changed($self, $request) {
+    my $id_domain = $request->id_domain;
+    if (!defined $id_domain) {
+        $id_domain = $request->defined_arg('id_domain');
+    }
+    return if !defined $id_domain;
+
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE domains set date_changed=CURRENT_TIMESTAMP"
+        ." WHERE id=? ");
+    $sth->execute($id_domain);
+
 }
 
 sub _cmd_manage_pools($self, $request) {
@@ -3614,7 +3640,11 @@ sub _cmd_list_isos($self, $request){
 sub _cmd_set_time($self, $request) {
     my $id_domain = $request->args('id_domain');
     my $domain = Ravada::Domain->open($id_domain)
-        or confess "Error: domain $id_domain not found";
+        or do {
+            $request->retry(0);
+            Ravada::Request->refresh_vms();
+            die "Error: domain $id_domain not found\n";
+        };
     return if !$domain->is_active;
     eval { $domain->set_time() };
     die "$@ , retry.\n" if $@;
@@ -3737,8 +3767,9 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
     while ( my ($id_domain, $name, $id_vm) = $sth->fetchrow ) {
         next if exists $active_domain->{$id_domain};
 
-        my $domain = Ravada::Domain->open($id_domain) or next;
-        next if $domain->is_hibernated;
+        my $domain;
+        eval { $domain = Ravada::Domain->open($id_domain) };
+        next if !$domain || $domain->is_hibernated;
 
         if (defined $id_vm && !$active_vm->{$id_vm} ) {
             $domain->_set_data(status => 'shutdown');
@@ -3769,13 +3800,17 @@ sub _refresh_volatile_domains($self) {
     );
     $sth->execute();
     while ( my ($id_domain, $name, $id_vm, $id_owner) = $sth->fetchrow ) {
-        my $domain = Ravada::Domain->open(id => $id_domain, _force => 1);
+        my $domain;
+        eval { $domain = Ravada::Domain->open(id => $id_domain, _force => 1) } ;
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
             if ($domain) {
                 $domain->_post_shutdown(user => $USER_DAEMON);
                 $domain->remove($USER_DAEMON);
             } else {
-                my $sth= $CONNECTOR->dbh->prepare("DELETE FROM users WHERE id=?");
+                confess;
+                my $sth= $CONNECTOR->dbh->prepare(
+                "DELETE FROM users where id=? "
+                ." AND is_temporary=1");
                 $sth->execute($id_owner);
                 $sth->finish;
             }
@@ -3971,7 +4006,7 @@ sub search_vm {
     return Ravada::VM->open($id)    if $id;
     return if $host ne 'localhost';
 
-    my $vms = $self->_create_vm();
+    my $vms = $self->_create_vm($type);
 
     for my $vm (@$vms) {
         return $vm if ref($vm) eq $class && $vm->host eq $host;
@@ -4138,7 +4173,9 @@ sub _clean_volatile_machines($self, %args) {
             eval { $domain_real->remove($USER_DAEMON) };
             warn $@ if $@;
         } elsif ($domain->{id_owner}) {
-            my $sth = $CONNECTOR->dbh->prepare("DELETE FROM users where id=?");
+            my $sth = $CONNECTOR->dbh->prepare(
+                "DELETE FROM users where id=? "
+                ."AND is_temporary=1");
             $sth->execute($domain->{id_owner});
         }
 

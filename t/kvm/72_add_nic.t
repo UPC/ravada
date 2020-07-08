@@ -133,7 +133,8 @@ eval { $RAVADA = rvd_back() };
 ok($RAVADA,"I can't launch a new Ravada");# or exit;
 
 my $vm_name = 'KVM';
-my $vm = rvd_back->search_vm($vm_name);
+my $vm;
+eval { $vm = rvd_back->search_vm($vm_name) } if !$<;
 
 SKIP: {
 

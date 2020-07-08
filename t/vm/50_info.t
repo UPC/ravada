@@ -97,7 +97,7 @@ remove_old_domains();
 remove_old_disks();
 $Data::Dumper::Sortkeys = 1;
 
-for my $vm_name (qw( Void KVM )) {
+for my $vm_name ( vm_names()) {
 
     diag("Testing $vm_name VM");
 

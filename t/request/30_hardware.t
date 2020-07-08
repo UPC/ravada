@@ -29,6 +29,8 @@ my %CREATE_ARGS = (
     ,Void => { id_owner => $USER->id }
 );
 
+my $TEST_TIMESTAMP = 0;
+
 ########################################################################
 sub create_args {
     my $backend = shift;
@@ -68,6 +70,9 @@ sub test_add_hardware_request_drivers {
 sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
 
     confess if !ref($data) || ref($data) ne 'HASH';
+
+    my $date_changed = $domain->_data('date_changed');
+
     my @list_hardware1 = $domain->get_controller($hardware);
 	my $numero = scalar(@list_hardware1)+1;
     while ($hardware eq 'usb' && $numero > 4) {
@@ -87,6 +92,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
 	is($@,'') or return;
     $USER->unread_messages();
 	ok($req, 'Request');
+    sleep 1 if !$TEST_TIMESTAMP;
 	rvd_back->_process_all_requests_dont_fork();
     is($req->status(),'done');
     is($req->error(),'') or exit;
@@ -116,6 +122,9 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
         like($new_hardware->{name}, qr/$name-vd[a-z]-\w{4}\.\w+$/) or die Dumper($data);
     } elsif($hardware eq 'disk') {
         like($new_hardware->{file},qr(\.iso$)) or die Dumper($info->{hardware}->{$hardware});
+    }
+    if (!$TEST_TIMESTAMP++) {
+        isnt($domain->_data('date_changed'), $date_changed);
     }
 }
 
@@ -588,7 +597,7 @@ ok($Ravada::CONNECTOR,"Expecting conector, got ".($Ravada::CONNECTOR or '<unde>'
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(Void KVM )) {
+for my $vm_name ( vm_names()) {
     my $vm;
     $vm = rvd_back->search_vm($vm_name)  if rvd_back();
 	if ( !$vm || ($vm_name eq 'KVM' && $>)) {
@@ -639,6 +648,7 @@ for my $vm_name ( qw(Void KVM )) {
         ok(!$domain_b->is_active);
 
     }
+    ok($TEST_TIMESTAMP);
 }
 
 end();
