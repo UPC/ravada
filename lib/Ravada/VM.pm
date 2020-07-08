@@ -1854,6 +1854,82 @@ sub _new_free_port($self) {
     return $free_port;
 }
 
+sub list_network_interfaces($self, $type) {
+    my $sub = {
+        nat => \&_list_nat_interfaces
+        ,bridge => \&_list_bridges
+    };
+
+    my $cmd = $sub->{$type} or confess "Error: Unknown interface type $type";
+    return $cmd->($self);
+}
+
+sub _list_nat_interfaces($self) {
+
+    my @cmd = ( '/usr/bin/virsh','net-list');
+    my ($out,$err) = $self->run_command(@cmd);
+
+    my @lines = split /\n/,$out;
+    shift @lines;
+    shift @lines;
+
+    my @networks;
+    for (@lines) {
+        /\s*(.*?)\s+.*/;
+        push @networks,($1) if $1;
+    }
+    return @networks;
+}
+
+sub _get_nat_bridge($self, $net) {
+    my @cmd = ( '/usr/bin/virsh','net-info', $net);
+    my ($out,$err) = $self->run_command(@cmd);
+
+    for my $line (split /\n/, $out) {
+        my ($bridge) = $line =~ /^Bridge:\s+(.*)/;
+        return $bridge if $bridge;
+    }
+}
+
+sub _list_qemu_bridges($self) {
+    my %bridge;
+    my @networks = $self->_list_nat_interfaces();
+    for my $net (@networks) {
+        my $nat_bridge = $self->_get_nat_bridge($net);
+        $bridge{$nat_bridge}++;
+    }
+    return keys %bridge;
+}
+
+sub _which($self, $command) {
+    return $self->{_which}->{$command} if exists $self->{_which} && exists $self->{_which}->{$command};
+    my @cmd = ( '/bin/which',$command);
+    my ($out,$err) = $self->run_command(@cmd);
+    chomp $out;
+    $self->{_which}->{$command} = $out;
+    return $out;
+}
+
+sub _list_bridges($self) {
+
+    my %qemu_bridge = map { $_ => 1 } $self->_list_qemu_bridges();
+
+    my @cmd = ( $self->_which('brctl'),'show');
+    my ($out,$err) = $self->run_command(@cmd);
+
+    die $err if $err;
+    my @lines = split /\n/,$out;
+    shift @lines;
+
+    my @networks;
+    for (@lines) {
+        my ($bridge, $interface) = /\s*(.*?)\s+.*\s(.*)/;
+        push @networks,($bridge) if $bridge && !$qemu_bridge{$bridge};
+    }
+    $self->{_bridges} = \@networks;
+    return @networks;
+}
+
 1;
 
 
