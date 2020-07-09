@@ -14,7 +14,7 @@ SERVER_KEY=server-key.pem
 
 # creating a key for our ca
 if [ ! -e ca-key.pem ]; then
-    openssl genrsa -des3 -out ca-key.pem 1024
+    openssl genrsa -aes256 -out ca-key.pem
 fi
 # creating a ca
 if [ ! -e ca-cert.pem ]; then
@@ -23,7 +23,7 @@ if [ ! -e ca-cert.pem ]; then
 fi
 # create server key
 if [ ! -e $SERVER_KEY ]; then
-    openssl genrsa -out $SERVER_KEY 1024
+    openssl genrsa -out $SERVER_KEY
 fi
 # create a certificate signing request (csr)
 if [ ! -e server-key.csr ]; then
