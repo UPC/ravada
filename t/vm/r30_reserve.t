@@ -177,6 +177,7 @@ sub test_booking_oneday($vm, $dow=0, $date_end=0) {
 
     is(scalar($booking->entries),1) or exit;
     $booking->remove();
+    $base->remove(user_admin);
 }
 
 sub test_booking_datetime($vm) {
@@ -224,13 +225,13 @@ sub test_booking_datetime($vm) {
     );
     is(scalar(@bookings),0) or die Dumper(\@bookings);
 
-
     $booking->remove();
+    $base->remove(user_admin);
 }
 
 
 
-sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as) {
+sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as, $base0) {
 
     my $base2 = create_domain($vm);
 
@@ -315,7 +316,7 @@ sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as) {
 
     $booking->remove();
     test_booking_removed($booking, @entries);
-    _remove_domains($base);
+    _remove_domains($base, $base2, $base0);
 
 }
 
@@ -416,9 +417,16 @@ sub test_shut_others($clone_no1, $clone_no2, $clone_as) {
     is($req->status , 'done');
     is($req->error, '');
     rvd_back->_process_requests_dont_fork();
+    for my $clone ( $clone_no1, $clone_no2, $clone_as ){
+        for my $req ( $clone->list_requests(1) ) {
+            $req->at(time);
+        }
+    }
+    rvd_back->_process_requests_dont_fork();
 
     is($clone_as->is_active,1) or exit;
-    is($clone_no1->is_active,0,$clone_no1->name." should be down") or exit;
+    is($clone_no1->is_active,0,$clone_no1->name." should be down, owner: "
+        .$clone_no1->_data('id_owner')) or exit;
     is($clone_no2->is_active,0,$clone_no2->name." should be down") or exit;
 
 }
@@ -593,6 +601,7 @@ sub test_search_change_remove_booking($vm) {
 
     $booking->remove();
     test_booking_removed($booking);
+    $base->remove(user_admin);
 }
 
 sub test_change_entry($vm, $booking) {
@@ -696,6 +705,7 @@ sub test_change_bases_with_name($vm,$entry) {
     @new_bases = sort $entry->bases;
     is_deeply( \@new_bases ,\@bases2) or die Dumper(\@new_bases,\@bases2);
 
+    _remove_domains($base_new, $base_new2);
 }
 
 sub test_change_bases_with_id($vm,$entry) {
@@ -716,6 +726,7 @@ sub test_change_bases_with_id($vm,$entry) {
     @new_bases = sort $entry->bases;
     is_deeply( \@new_bases ,\@bases2_expected) or die Dumper(\@new_bases,\@bases2_expected);
 
+    _remove_domains($base_new, $base_new2);
 }
 
 sub test_change_entry_next($vm, $booking) {
@@ -804,6 +815,7 @@ sub test_change_entry_next_bases($vm,$booking) {
     }
     ok($found) or exit;
 
+    $base_new->remove(user_admin);
 }
 
 sub test_change_entry_next_time($booking) {
@@ -966,7 +978,9 @@ sub test_change_entry_dow_bases($vm,$booking) {
     ok($found_yes);
     ok($found_no);
 
+    $base_new->remove(user_admin);
 }
+
 sub test_change_entry_dow_time($booking) {
     my ($entry0, $entry,@next) = $booking->entries();
     my $time_start = $entry->_data('time_start');
@@ -1134,7 +1148,7 @@ sub _create_clones($vm) {
     );
     $clone_as->autostart(1, user_admin);
 
-    return($clone_no1, $clone_no2, $clone_as);
+    return($clone_no1, $clone_no2, $clone_as, $base);
 }
 
 sub test_conflict($vm) {
@@ -1160,7 +1174,7 @@ sub test_list_machines_user($vm) {
     my $list = rvd_front->list_machines_user(user_admin);
 
     # admin can see all the bases
-    is(scalar(@$list),2) or exit;
+    is(scalar(@$list),2) or confess Dumper($list);
 
     # user allowed can see booked base
     $list= rvd_front->list_machines_user($USER_YES_1);
@@ -1189,6 +1203,19 @@ sub test_list_machines_user($vm) {
     my $bookings2 = Ravada::Booking::bookings_week(id_base => $id_base);
 
     is_deeply($bookings2, $bookings) or exit;
+}
+
+sub _check_no_bookings() {
+    for my $table ( qw(Bookings Booking_entries Booking_entry_users Booking_entry_ldap_groups Booking_entry_bases Domains)) {
+        my $sth = connector->dbh->prepare("SELECT * FROM $table");
+        $sth->execute();
+        my @found;
+
+        while ( my $row = $sth->fetchrow_hashref ) {
+            push @found,($row);
+        }
+        is(scalar(@found),0,"checking $table empty") or confess Dumper(\@found);
+    }
 }
 
 ###################################################################
@@ -1226,6 +1253,7 @@ for my $vm_name ( vm_names()) {
         test_booking_oneday_date_end($vm);
         test_booking_oneday_date_end_dow($vm);
 
+        _check_no_bookings();
 
     }
 }
