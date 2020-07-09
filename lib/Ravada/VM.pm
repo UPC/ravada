@@ -1265,8 +1265,11 @@ sub run_command($self, @command) {
 
     my ($exec) = $command[0];
     if ($exec !~ m{^/}) {
-        $exec = $self->_findbin($exec);
+        my ($exec_command,$args) = $exec =~ /(.*?) (.*)/;
+        $exec_command = $exec if !defined $exec_command;
+        $exec = $self->_findbin($exec_command);
         $command[0] = $exec;
+        $command[0] .= " $args" if $args;
     }
     return $self->_run_command_local(@command) if $self->is_local();
 
@@ -1276,8 +1279,9 @@ sub run_command($self, @command) {
     chomp $err if $err;
     $err = '' if !defined $err;
 
-    die "Error: Failed remote command on ".$self->host." @command : '$err'\n"
-    ."'".$ssh->error."'"
+    confess "Error: Failed remote command on ".$self->host." err='$err'\n"
+    ."ssh error: '".$ssh->error."'\n"
+    ."command: ". Dumper(\@command)
     if $ssh->error && $ssh->error !~ /^child exited with code/;
 
 
@@ -1427,6 +1431,7 @@ sub _findbin($self, $name) {
     my ($out, $err) = $self->run_command('/usr/bin/which', $name);
     chomp $out;
     $self->{$exec} = $out;
+    confess "Error: Command '$name' not found" if !$out;
     return $out;
 }
 
