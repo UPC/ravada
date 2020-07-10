@@ -98,19 +98,24 @@ Configuration Examples
 
 Really cheap server
 
-- Operative System: 2 Hard Disk Drives 100 GB in RAID1
-- Volumes: 1 Solid State Disk drives
+- Operative System: 2 x Hard Disk Drives 100 GB in RAID1
+- Volumes: 1 x Solid State Disk drives
 
 Budget perfomance server
 
-- Operative System: 2 HDD 100 GB in RAID1
-- Bases Volumes: 1 SSD 500 GB
-- Clones Volumes: 1 HDD 1 TB
+- Operative System: 2 x HDD 100 GB in RAID1
+- Bases Volumes: 1 x SSD 500 GB
+- Clones Volumes: 1 x HDD 1 TB
 
 From this example you can grow as long as your budget allows it. Having more
 drives may give you more space. If you need high availability 24x7 you have
 to duplicate the volumes disk drives and set RAID1.
 
+High Availability and performance server
+
+- Operative System: 2 x HDD 100 GB in RAID1
+- Bases Volumes: 2 x SSD 500 GB in RAID1
+- Clones Volumes: 2 x HDD 1 TB in RAID1
 
 Growing and Scaling
 -------------------
