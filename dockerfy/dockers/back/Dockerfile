@@ -13,13 +13,14 @@ RUN apt-get update \
     libfile-rsync-perl libdate-calc-perl libparallel-forkmanager-perl libdatetime-perl libencode-locale-perl netcat-openbsd \
     liblwp-useragent-determined-perl libvirt-clients supervisor net-tools openssh-client apt-utils curl libpbkdf2-tiny-perl \
     libio-stringy-perl libvirt-daemon-system libvirt-clients netcat-openbsd qemu-kvm qemu-utils iproute2 wget bridge-utils firewalld dnsmasq iptables ebtables \
- && apt-get clean \
+    libnet-openssh-perl libdatetime-format-dateparse-perl \
+ && apt-get clean
+
+ENV TZ=Europe/Madrid
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata \
  && rm -rf /var/lib/apt/lists/*
 
-ADD http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb /tmp/
-RUN dpkg -i /tmp/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb \
- && rm /tmp/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb \
- && echo "listen_tls = 0" >> /etc/libvirt/libvirtd.conf \
+RUN echo "listen_tls = 0" >> /etc/libvirt/libvirtd.conf \
  && echo 'listen_tcp = 1' >> /etc/libvirt/libvirtd.conf \
 #  && mkdir -p /root/.ssh \
 #  && echo "Host ravada-kvm StrictHostKeyChecking no" >/root/.ssh/config \
@@ -29,7 +30,8 @@ RUN dpkg -i /tmp/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb \
 
 COPY network.sh default.xml /
 
-EXPOSE 5900-5950
+EXPOSE 5900-5938
+EXPOSE 5940-5950
 EXPOSE 55900-55950
 
 COPY supervisord.conf /etc/supervisord.conf
