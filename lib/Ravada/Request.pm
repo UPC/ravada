@@ -53,7 +53,9 @@ our %VALID_ARG = (
            #        ,network => 2
       ,remote_ip => 2
           ,start => 2
-           ,data => 2
+          #           ,data => 2
+           ,info => 2
+        ,is_base => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
@@ -90,6 +92,7 @@ our %VALID_ARG = (
                 ,start => 2,
                 ,remote_ip => 2
                 ,with_cd => 2
+                ,info => 2
     }
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }

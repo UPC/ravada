@@ -26,8 +26,9 @@ use Ravada::Auth;
 use Ravada::Request;
 use Ravada::Repository::ISO;
 use Ravada::VM::Void;
+use Ravada::VM::RemotePC;
 
-our %VALID_VM;
+our %VALID_VM = map { $_ => 1 } qw(Void RemotePC);
 our %ERROR_VM;
 our $TIMEOUT_STALE_PROCESS;
 
@@ -38,14 +39,6 @@ eval {
     $VALID_VM{KVM} = 1;
 };
 $ERROR_VM{KVM} = $@;
-
-eval {
-    require Ravada::VM::Void and do {
-        Ravada::VM::Void->import;
-    };
-    $VALID_VM{Void} = 1;
-};
-$ERROR_VM{Void} = $@;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -1653,7 +1646,7 @@ sub _init_config {
 sub _init_config_vm {
 
     for my $vm ( @{$CONFIG->{vm}} ) {
-        confess "$vm not available in this system.\n".($ERROR_VM{$vm})
+        confess "$vm not available in this system.\n".($ERROR_VM{$vm} or '')
             if !exists $VALID_VM{$vm} || !$VALID_VM{$vm};
     }
 
@@ -1771,6 +1764,10 @@ sub _create_vm_void {
     return Ravada::VM::Void->new( connector => ( $self->connector or $CONNECTOR ));
 }
 
+sub _create_vm_default($self, $type) {
+    return Ravada::VM->_open_type(type => $type);
+}
+
 sub _create_vm($self, $type=undef) {
 
     # TODO: add a _create_vm_default for VMs that just are created with ->new
@@ -1788,9 +1785,10 @@ sub _create_vm($self, $type=undef) {
     @vm_types = ($type) if defined $type;
     for my $vm_name (@vm_types) {
         my $vm;
-        my $sub = $create{$vm_name}
-            or confess "Error: Unknown VM $vm_name";
-        eval { $vm = $sub->($self) };
+        my $sub = $create{$vm_name};
+        $sub = \&_create_vm_default if !$sub;
+
+        eval { $vm = $sub->($self, $type) };
         warn $@ if $@;
         $err.= $@ if $@;
         push @vms,$vm if $vm;
@@ -3983,14 +3981,9 @@ Searches for a VM of a given type
 
 =cut
 
-sub search_vm {
-    my $self = shift;
-    my $type = shift;
-    my $host = (shift or 'localhost');
+sub search_vm($self, $type, $host = 'localhost') {
 
-    confess "Missing VM type"   if !$type;
-
-    my $class = 'Ravada::VM::'.uc($type);
+    my $class = "Ravada::VM::$type";
 
     if ($type =~ /Void/i) {
         return Ravada::VM::Void->new(host => $host);

@@ -324,7 +324,7 @@ sub search_volume_path_re {
 
 }
 
-sub import_domain($self, $name, $user, $backing_file) {
+sub import_domain($self, $name, $user, $backing_file, $spinoff=0) {
 
     my $file = $self->dir_img."/$name.yml";
 

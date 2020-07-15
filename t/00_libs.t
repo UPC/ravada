@@ -3,6 +3,9 @@ use warnings;
 
 use Test::More;
 
+use lib 't/lib';
+use Test::Ravada;
+
 use_ok('Ravada::Auth');
 use_ok('Ravada::Auth::LDAP');
 use_ok('Ravada::Auth::SQL');
@@ -21,8 +24,9 @@ eval {
 };
 diag($@)    if $@;
 
-for my $vm_name (@vms) {
+for my $vm_name (vm_names()) {
     use_ok("Ravada::VM::$vm_name");
+    use_ok("Ravada::Front::Domain::$vm_name");
     use_ok("Ravada::Domain::$vm_name");
 }
 

@@ -37,14 +37,13 @@ create_domain
     search_id_iso
     flush_rules_node
     flush_rules
-    arg_create_dom
     vm_names
 
     remote_config
     remote_config_nodes
     clean_remote_node
     arg_create_dom
-    vm_names
+    arg_clone_dom
     search_iptable_remote
     clean_remote
     start_node shutdown_node remove_node hibernate_node
@@ -56,6 +55,7 @@ create_domain
     create_ldap_user
     connector
     init_ldap_config
+    wait_ip
 
     create_storage_pool
     local_ips
@@ -101,8 +101,9 @@ my $RAVADA_POSIX_GROUP = "rvd_posix_group";
 my ($LDAP_USER , $LDAP_PASS) = ("cn=Directory Manager","saysomething");
 
 our %ARG_CREATE_DOM = (
-    KVM => []
-    ,Void => []
+    KVM => {}
+    ,Void => {}
+    ,RemotePC => {}
 );
 
 our %VM_VALID = ( KVM => 1
@@ -117,6 +118,10 @@ my $DEV_NBD = "/dev/nbd10";
 my $MNT_RVD= "/mnt/test_rvd";
 my $QEMU_NBD = `which qemu-nbd`;
 chomp $QEMU_NBD;
+
+our $BASE_NAME_REMOTEPC = "zz-test-remotepc";
+my @REMOTE_PC_IPS;
+
 
 my $FH_FW;
 my $FH_NODE;
@@ -146,11 +151,67 @@ sub user_admin {
     return $USER_ADMIN;
 }
 
-sub arg_create_dom {
-    my $vm_name = shift;
+sub arg_create_dom($vm_name, %args0 ) {
+    confess Dumper(\%args0) if grep { /HASH/ } keys %args0;
+
     confess "Unknown vm $vm_name"
         if !$ARG_CREATE_DOM{$vm_name};
-    return @{$ARG_CREATE_DOM{$vm_name}};
+
+    my %args = %{$ARG_CREATE_DOM{$vm_name}};
+
+    for my $key (keys %args0) {
+        $args{$key} = $args0{$key};
+    }
+    my $domain_name = delete $args0{name} or confess "Error: name of the domain required";
+
+    _add_arg_create_dom($vm_name, $domain_name, \%args);
+    return %args;
+}
+
+sub wait_ip($domain, $timeout=60) {
+    my $ip;
+    for ( 1 .. 60 ) {
+        $ip = $domain->ip;
+        last if $ip;
+        sleep 1;
+    }
+    return $ip;
+}
+
+sub _add_arg_create_dom($vm_name, $domain_name, $args) {
+    if ($vm_name eq 'RemotePC') {
+        my $vm = $RVD_BACK->search_vm('KVM');
+        my $base = $vm->search_domain($BASE_NAME_REMOTEPC, 1);
+        $base= $RVD_BACK->import_domain(name => $BASE_NAME_REMOTEPC
+            ,user => user_admin->name
+            ,vm => 'KVM'
+            ,spinoff_disks => 0
+            ,import_base => 1
+        )   if !$base|| !$base->is_known;
+        is($base->is_base,1) or die "Error: $BASE_NAME_REMOTEPC must be a base";
+
+        my $clone = $base->clone(name => $domain_name, user => user_admin);
+        $clone->start(user_admin);
+
+        if (!exists $args->{info} || !exists $args->{info}->{ip}) {
+            my $ip = wait_ip($clone) or die "Error: no ip for clone ".$domain_name;
+            push @REMOTE_PC_IPS,($ip);
+            $args->{info}->{ip} = $ip;
+        }
+
+        $args->{info}->{admin_access} = 'ssh';
+
+        my $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains where id=? ");
+        $sth->execute($clone->id);
+        warn "$domain_name created";
+    }
+}
+
+sub arg_clone_dom($vm_name, $domain_name) {
+    my %args = ( name => $domain_name );
+    _add_arg_create_dom($vm_name, $domain_name, \%args);
+    return %args;
+
 }
 
 sub add_ubuntu_minimal_iso {
@@ -173,10 +234,12 @@ sub add_ubuntu_minimal_iso {
 
 sub vm_names {
 
-   delete $ARG_CREATE_DOM{KVM} if $<;
+   delete @ARG_CREATE_DOM{'KVM','RemotePC'} if $<;
    return (sort keys %ARG_CREATE_DOM) if wantarray;
    confess;
 }
+
+
 
 sub import_domain($vm, $name, $import_base=0) {
     my $t0 = time;
@@ -224,15 +287,21 @@ sub create_domain {
 
     return $domain if $domain;
 
-    my %arg_create = (id_iso => $id_iso);
-    $arg_create{swap} = 1024 * 1024 if $swap;
+    my %arg_create = arg_create_dom($vm_name, name => $name);
+    if ($vm_name =~ /(KVM|Void)/) {
+        %arg_create = (id_iso => $id_iso
+            , %arg_create
+            , active => 0
+            , memory => 512*1024
+            , disk => 1024 * 1024 * 1024
+        );
+        $arg_create{swap} = 1024 * 1024 if $swap;
+    }
+
 
     { $domain = $vm->create_domain(name => $name
                     , id_owner => $user->id
                     , %arg_create
-                    , active => 0
-                    , memory => 512*1024
-                    , disk => 1024 * 1024 * 1024
            );
     };
     is('',''.$@);
@@ -296,8 +365,9 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
 
     user_admin();
     $RVD_BACK = $rvd;
-    $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') , disk => 1024 * 1024 ];
-    $ARG_CREATE_DOM{Void} = [ id_iso => search_id_iso('Alpine') ];
+    $ARG_CREATE_DOM{KVM} = { id_iso => search_id_iso('Alpine') , disk => 1024 * 1024 };
+    $ARG_CREATE_DOM{Void} = { id_iso => search_id_iso('Alpine') };
+    $ARG_CREATE_DOM{RemotePC} = { };
 
     delete $ARG_CREATE_DOM{KVM} if $<;
 
@@ -956,12 +1026,23 @@ sub remove_old_pools {
     remove_qemu_pools();
 }
 
+sub remove_old_ssh_keys {
+    my ($in, $out, $err);
+    for my $ip ( @REMOTE_PC_IPS ) {
+        my @cmd = ( '/usr/bin/ssh-keygen','-F', $ip );
+        run3(\@cmd, \$in,\ $out,\$err);
+        if ($err) {
+            warn "Warning: error removing key: @cmd $err";
+        }
+    }
+}
+
 sub clean {
     my $file_remote_config = shift;
     remove_old_domains();
     remove_old_disks();
     remove_old_pools();
-
+    remove_old_ssh_keys();
 
     if ($file_remote_config) {
         my $config;
@@ -1222,6 +1303,7 @@ sub _domain_node($node) {
             ,user => user_admin->name
             ,vm => 'KVM'
             ,spinoff_disks => 0
+            ,import_base => 1
     )   if !$domain || !$domain->is_known;
 
     ok($domain->id,"Expecting an ID for domain ") or exit;
@@ -1491,6 +1573,11 @@ sub shutdown_domain_internal($domain) {
 }
 
 sub start_domain_internal($domain) {
+    if (! ref($domain) ) {
+        my $vm = rvd_back->search_vm('KVM');
+        $domain = $vm->vm->get_domain_by_name($domain);
+        $domain->create();
+    }
     if ($domain->type eq 'KVM') {
         $domain->_set_spice_ip(1,$domain->_vm->ip);
         $domain->domain->create();

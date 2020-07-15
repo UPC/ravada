@@ -91,6 +91,8 @@ requires 'list_controllers';
 requires 'set_controller';
 requires 'remove_controller';
 requires 'change_hardware';
+
+requires 'autostart';
 #
 ##########################################################
 
@@ -1068,7 +1070,7 @@ sub _set_display_ip($self, $display) {
 sub _around_get_info($orig, $self) {
     my $info = $self->$orig();
     if (ref($self) =~ /^Ravada::Domain/ && $self->is_known()) {
-        $info->{ip} = $self->ip() if $self->is_active;
+        $info->{ip} = $self->ip() if !exists $info->{ip} && $self->ip();
         $self->_data(info => encode_json($info));
     }
     return $info;
@@ -1682,7 +1684,8 @@ sub _pre_remove_domain($self, $user, @) {
     }
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
-    $self->shutdown_now($user)  if $self->is_active;
+    $self->shutdown_now($user)  if $self->_vm->features->{shutdown_before_remove}
+    && $self->is_active;
 
     my $owner;
     $owner= Ravada::Auth::SQL->search_by_id($self->id_owner)    if $self->is_known();
@@ -2258,6 +2261,7 @@ sub clone {
     my $is_pool = delete $args{is_pool};
     my $no_pool = delete $args{no_pool};
     my $with_cd = delete $args{with_cd};
+    my $info = delete $args{'info'};
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
@@ -2284,6 +2288,7 @@ sub clone {
     }
 
     my @args_copy = ();
+    push @args_copy, ( info => $info )          if $info;
     push @args_copy, ( start => $start )        if $start;
     push @args_copy, ( memory => $memory )      if $memory;
     push @args_copy, ( request => $request )    if $request;
@@ -4156,7 +4161,7 @@ sub _pre_clone($self,%args) {
 
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
-    for (qw(is_pool start add_to_pool from_pool with_cd)) {
+    for (qw(is_pool start add_to_pool from_pool with_cd info)) {
         delete $args{$_};
     }
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;

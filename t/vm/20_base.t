@@ -837,6 +837,35 @@ sub test_prepare_fail($vm) {
     $domain->remove(user_admin);
 }
 
+sub test_create_base($vm) {
+    my $name = new_domain_name();
+    my %args = arg_create_dom($vm->type, name => $name, info => { ip => ''} );
+    if ($vm->type =~ /RemotePC/i) {
+        is($vm->has_feature('new_base'),1);
+        $args{is_base} = 1;
+        delete @args{qw(id_iso id_template)};
+    } else {
+        is($vm->has_feature('new_base'),0);
+        delete $args{info};
+    }
+    warn Dumper(\%args);
+    my $req_create = Ravada::Request->create_domain(%args
+        , vm => $vm->type
+        , id_owner => user_admin->id
+    );
+    wait_request();
+    is($req_create->status,'done');
+    is($req_create->error,'') or exit;
+
+    my $domain = rvd_back->search_domain($name);
+    ok($domain) or return;
+
+    is($domain->is_base, $vm->has_feature('new_base'));
+
+    $domain->remove(user_admin);
+}
+
+
 #######################################################################33
 
 
@@ -868,6 +897,7 @@ for my $vm_name ( vm_names() ) {
 
         use_ok($CLASS);
 
+        test_create_base($vm);
         test_prepare_fail($vm);
 
         test_domain_limit_already_requested($vm_name);

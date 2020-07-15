@@ -56,7 +56,11 @@ sub test_new_domain {
 
     diag("[$vm_name] Creating domain $name");
     $vm->connect();
-    my $domain = $vm->create_domain(name => $name, @ARG_CREATE_DOM, active => 0, disk => 1024 * 1024);
+    my $domain = $vm->create_domain(
+        arg_create_dom($vm_name, name => $name)
+        ,id_owner => $USER->id
+    );
+
 
     ok($domain,"Domain not created");
 
@@ -101,6 +105,7 @@ sub test_start {
     {
         my $vm = $RAVADA->search_vm($vm_name);
         my $domain = $vm->search_domain($name);
+        $domain->shutdown_now(user_admin) if $domain->type =~ /RemotePC/i;
         ok(!$domain->is_active,"Domain $name should be inactive") or return;
     }
     my $req2 = Ravada::Request->start_domain(name => $name, uid => $USER->id
@@ -117,6 +122,7 @@ sub test_start {
         my $domain = $RAVADA->search_domain($name);
         $id_domain = $domain->id;
         $domain->start($USER)    if !$domain->is_active();
+        wait_ip($domain) if $vm_name =~ /RemotePC/i;
         ok($domain->is_active);
         is($domain->is_volatile,0);
 

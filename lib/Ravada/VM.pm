@@ -44,8 +44,7 @@ our $FIELD_TIMEOUT = '_data_timeout';
 our %VM; # cache Virtual Manager Connection
 our %SSH;
 
-our $ARP = `which arp`;
-chomp $ARP;
+our $ARP;
 
 # domain
 requires 'create_domain';
@@ -66,7 +65,7 @@ requires 'is_alive';
 requires 'free_memory';
 requires 'free_disk';
 
-requires '_fetch_dir_cert';
+#requires '_fetch_dir_cert';
 
 ############################################################
 
@@ -112,6 +111,29 @@ has 'store' => (
     isa => 'Bool'
     , is => 'rw'
     , default => 1
+);
+
+has 'vm' => (
+    is => 'rw'
+    ,isa => 'Any'
+    ,builder => '_connect'
+    ,lazy => 1
+);
+
+has 'features' => (
+    is => 'ro'
+    ,isa => 'HashRef'
+    ,default => sub {
+        my %f = (
+            spice => 1
+            ,bind_ip => 1  # the display is binded to an IP
+            ,new_base => 0 # can create new machines as base without preparing
+            ,volumes => 1
+            ,shutdown_before_remove => 0
+        );
+        lock_hash(%f);
+        return \%f;
+    }
 );
 
 has 'netssh' => (
@@ -244,9 +266,7 @@ sub BUILD {
 
 }
 
-sub _open_type {
-    my $self = shift;
-    my %args = @_;
+sub _open_type($self, %args) {
 
     my $type = delete $args{type} or confess "ERROR: Missing VM type";
     my $class = "Ravada::VM::$type";
@@ -254,9 +274,12 @@ sub _open_type {
     my $proto = {};
     bless $proto,$class;
 
-    my $vm = $proto->new(%args);
-    eval { $vm->vm };
-    warn $@ if $@;
+    my $vm;
+    eval {
+        $vm = $proto->new(%args);
+        $vm->vm;
+    };
+    confess $@ if $@;
 
     return $vm;
 
@@ -384,6 +407,7 @@ sub _around_create_domain {
        my $name = delete $args{name};
        my $swap = delete $args{swap};
        my $from_pool = delete $args{from_pool};
+       my $is_base = delete $args{is_base};
 
      # args get deleted but kept on %args_create so when we call $self->$orig below are passed
      delete $args{disk};
@@ -391,7 +415,7 @@ sub _around_create_domain {
      my $request = delete $args{request};
      delete $args{iso_file};
      delete $args{id_template};
-     delete @args{'description','remove_cpu','vm','start'};
+     delete @args{'description','remove_cpu','vm','start','info'};
 
     confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
 
@@ -423,9 +447,10 @@ sub _around_create_domain {
         confess("Error: Requested to add a clone for the pool but this base has no pools")
             if !$base->pools;
     }
-    $args_create{spice_password} = $self->_define_spice_password($remote_ip);
+    $args_create{spice_password} = $self->_define_spice_password($remote_ip)
+    if $self->features->{spice};
     $self->_pre_create_domain(%args_create);
-    $args_create{listen_ip} = $self->listen_ip($remote_ip);
+    $args_create{listen_ip} = $self->listen_ip($remote_ip) if $self->features->{bind_ip};
 
     return $base->_search_pool_clone($owner) if $from_pool;
 
@@ -458,7 +483,7 @@ sub _around_create_domain {
     my @start_args = ( user => $owner );
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
 
-    $domain->_post_start(@start_args) if $domain->is_active;
+    $domain->_post_start(@start_args) if !$domain->is_base && $domain->is_active;
     eval {
            $domain->start(@start_args)      if $active || ($domain->is_volatile && ! $domain->is_active);
     };
@@ -468,6 +493,8 @@ sub _around_create_domain {
     $domain->display($owner)    if $domain->is_active;
 
     $domain->is_pool(1) if $add_to_pool;
+    $domain->prepare_base($owner) if $is_base;
+
     return $domain;
 }
 
@@ -506,10 +533,7 @@ sub _check_duplicate_name($self, $name) {
     return 1;
 }
 
-sub _around_import_domain {
-    my $orig = shift;
-    my $self = shift;
-    my ($name, $user, $spinoff, $import_base) = @_;
+sub _around_import_domain($orig, $self, $name, $user, $spinoff=0, $import_base=0) {
 
     my $domain = $self->$orig($name, $user, $spinoff);
 

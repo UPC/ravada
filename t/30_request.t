@@ -13,6 +13,9 @@ use_ok('Ravada::Request');
 use lib 't/lib';
 use Test::Ravada;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 my $ravada;
 
 my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
@@ -98,10 +101,8 @@ sub test_req_create_domain_iso {
 
     my $req;
     eval { $req = Ravada::Request->create_domain( 
-        name => $name
-        ,id_iso => search_id_iso('Alpine')
-        ,disk => 1024 * 1024
-        ,@ARG_CREATE_DOM
+        @ARG_CREATE_DOM
+        ,arg_create_dom($vm_name, name => $name)
         );
     };
     ok(!$@,"Expecting \$@=''  , got='".($@ or '')."'") or return;
@@ -142,15 +143,17 @@ sub test_req_create_domain_iso {
     return $domain;
 }
 
-sub test_req_create_base {
+sub test_req_create_base($vm) {
 
     my $name = new_domain_name();
 
-    my $req = Ravada::Request->create_domain( 
-        name => $name
-        ,disk => 1024 * 1024
-        ,@ARG_CREATE_DOM
-    );
+    my %args = (
+        @ARG_CREATE_DOM
+        ,arg_create_dom($vm->type, name => $name)
+     );
+
+    my $req = Ravada::Request->create_domain( %args );
+
     ok($req);
     ok($req->status);
     ok(defined $req->args->{name} 
@@ -172,6 +175,7 @@ sub test_req_create_base {
     ok($domain,"I can't find domain $name") && do {
         $domain->prepare_base(user_admin);
         ok($domain && $domain->is_base,"Domain $name should be base");
+        is($domain->is_base,0);
     };
     return $domain;
 }
@@ -238,10 +242,10 @@ sub test_requests_by_domain {
 
     my $clone_name = new_domain_name();
     my $req_clone = Ravada::Request->create_domain (
-        name => $clone_name
-        ,id_owner => user_admin->id
+        id_owner => user_admin->id
         ,id_base => $domain->id
         ,vm => $vm_name
+        ,arg_clone_dom($vm_name, $clone_name)
     );
 
     my $req4 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
@@ -253,14 +257,15 @@ sub test_requests_by_domain {
     is($req2->status , 'done');
 
     is($req4->status , 'done');
+    is($req4->error, '');
     is($domain->is_base,1) or exit;
 
     my $req4b = Ravada::Request->open($req4->id);
     is($req4b->status , 'done') or exit;
 
     rvd_back->_process_all_requests_dont_fork();
-    like($req_clone->status,qr(done)) or exit;
     is($req_clone->error, '') or exit;
+    like($req_clone->status,qr(done)) or exit;
 
     my $clone = $vm->search_domain($clone_name);
     ok($clone,"Expecting domain $clone_name created") or exit;
@@ -273,14 +278,14 @@ sub test_req_many_clones {
 
     my ($name1, $name2) = (new_domain_name, new_domain_name);
     my $req1 = Ravada::Request->clone(
-        name => $name1
-        ,uid => user_admin->id
+        uid => user_admin->id
         ,id_domain => $base->id
+        ,arg_clone_dom($vm->type, $name1)
     );
     my $req2 = Ravada::Request->clone(
-        name => $name2
-        ,uid => user_admin->id
+        uid => user_admin->id
         ,id_domain => $base->id
+        ,arg_clone_dom($vm->type, $name2)
     );
 
     rvd_back->_process_all_requests_dont_fork();
@@ -308,14 +313,18 @@ sub test_req_many_clones {
 eval { $ravada = rvd_back () };
 
 ok($ravada,"I can't launch a new Ravada");# or exit;
-remove_old_domains();
-remove_old_disks();
+clean();
 
 for my $vm_name ( vm_names() ) {
     my $vm;
     eval {
         $vm= $ravada->search_vm($vm_name)  if $ravada;
-        @ARG_CREATE_DOM = ( id_iso => search_id_iso('alpine'), vm => $vm_name, id_owner => $USER->id , disk => 1024 * 1024 )       if $vm;
+        if ($vm) {
+            @ARG_CREATE_DOM = (
+                vm => $vm_name
+                ,id_owner => $USER->id
+            );
+        }
     };
 
     SKIP: {
@@ -341,11 +350,18 @@ for my $vm_name ( vm_names() ) {
             $domain_base->is_public(1);
             is ($domain_base->_vm->readonly, 0) or next;
 
-            my $domain_clone = $domain_base->clone(user => $USER, name => new_domain_name);
+            my $domain_clone = $domain_base->clone(
+                user => $USER
+                ,arg_clone_dom($vm_name, new_domain_name)
+            );
             $domain_clone = Ravada::Domain->open($domain_clone->id);
             meta_ok($domain_clone,'Ravada::Domain::KVM');
             does_ok($domain_clone, 'Ravada::Domain');
             role_wraps_after_method_ok 'Ravada::Domain',('remove');
+
+            like($domain_clone->get_info()->{ip},qr/\d+\./) or exit
+                if $vm_name eq 'RemotePC';
+
             test_req_start_domain($vm,$domain_clone->name);
             $domain_clone->remove($USER);
             is(scalar @{rvd_front->list_domains( id => $domain_clone->id)}, 0) or exit;
