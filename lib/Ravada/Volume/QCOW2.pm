@@ -155,7 +155,7 @@ sub _qemu_info($self, $field=undef) {
     die $err if $err;
 
     my %info = (
-        'backing file'=> ''
+        'backing file'=> undef
         ,'backing file format' => ''
     );
     for my $line (split /\n/, $out) {
