@@ -1573,7 +1573,7 @@ sub balance_vm($self, $base=undef) {
         confess "Error: we need a base to balance ";
         @vms = $self->list_nodes();
     }
-    return $vms[0] if scalar(@vms)<1;
+    return $vms[0] if scalar(@vms)<=1;
     for my $vm (_random_list( @vms )) {
         next if !$vm->enabled();
         my $active = 0;

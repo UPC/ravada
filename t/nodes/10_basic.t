@@ -1033,6 +1033,11 @@ sub test_fill_memory($vm, $node, $migrate) {
     my $master_free_memory = $vm->free_memory;
     my $node_free_memory = $node->free_memory;
 
+    my $memory = $master_free_memory/3;
+    if ($migrate && $node_free_memory < $master_free_memory ) {
+        $memory = $node_free_memory/3;
+    }
+
     my $error;
     my %nodes;
     my @clones;
@@ -1042,6 +1047,7 @@ sub test_fill_memory($vm, $node, $migrate) {
             name => $clone_name
             ,id_owner => user_admin->id
             ,id_base => $base->id
+            ,memory => int($memory)
         );
         wait_request(debug => 0);
         is($req->error, '');
@@ -1057,6 +1063,9 @@ sub test_fill_memory($vm, $node, $migrate) {
         $nodes{$clone->_vm->name}++;
 
         last if $migrate && exists $nodes{$vm->name} && $nodes{$vm->name} > 2;
+        if (keys(%nodes) > 1) {
+            $memory = int($memory*1.5);
+        }
     }
     ok(exists $nodes{$vm->name},"Expecting some clones to node ".$vm->name." ".$vm->id);
     ok(exists $nodes{$node->name},"Expecting some clones to node ".$node->name." ".$node->id);

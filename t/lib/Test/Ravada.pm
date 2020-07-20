@@ -5,12 +5,13 @@ use warnings;
 use  Carp qw(carp confess);
 use Data::Dumper;
 use Fcntl qw(:flock SEEK_END);
-use File::Path qw(make_path);
+use File::Path qw(make_path remove_tree);
 use YAML qw(DumpFile);
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use Mojo::File 'path';
 use  Test::More;
+use XML::LibXML;
 use YAML qw(Load LoadFile Dump DumpFile);
 
 use feature qw(signatures);
@@ -940,6 +941,7 @@ sub remove_qemu_pools {
         my $name = $pool->get_name;
         next if $name !~ qr/^$base/;
         diag("Removing ".$pool->get_name." storage_pool");
+        _delete_qemu_pool($pool);
         for my $vol ( $pool->list_volumes ) {
             diag("Removing ".$pool->get_name." vol ".$vol->get_name);
             $vol->delete();
@@ -949,6 +951,21 @@ sub remove_qemu_pools {
         warn $@ if$@ && $@ !~ /libvirt error code: 49,/;
         ok(!$@ or $@ =~ /Storage pool not found/i);
     }
+
+    opendir my $ls ,"/var/tmp" or die $!;
+    while (my $file = readdir($ls)) {
+        next if $file !~ qr/^$base/;
+
+        my $dir = "/var/tmp/$file";
+        remove_tree($dir,{ safe => 1, verbose => 1}) or die "$! $dir";
+    }
+}
+
+sub _delete_qemu_pool($pool) {
+    my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
+    my ($path) = $xml->findnodes('/pool/target/path');
+    my $dir = $path->textContent();
+    rmdir($dir) or die "$! $dir";
 
 }
 
@@ -1179,7 +1196,7 @@ sub flush_rules_node($node) {
     ($out, $err) = $node->run_command("iptables","-D","INPUT","-j",$CHAIN);
     is($err,'');
     ($out, $err) = $node->run_command("iptables","-X", $CHAIN);
-    is($err,'');
+    is($err,'') or die `iptables-save`;
 
     # flush forward too. this is only supposed to run on test servers
     ($out, $err) = $node->run_command("iptables","-F", 'FORWARD');
