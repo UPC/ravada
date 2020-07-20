@@ -329,6 +329,61 @@ sub test_defaults($vm) {
 
     $domain->remove(user_admin);
 }
+
+sub test_qcow_format($vm) {
+    return if $vm->type ne 'KVM';
+    my $base = create_domain($vm);
+    $base->add_volume(type => 'swap', size => 1024*1024);
+    $base->add_volume(type => 'data', size => 1024*1024);
+
+    my $clone = $base->clone(
+         name => new_domain_name
+        ,user => user_admin
+    );
+    my $QEMU_IMG = `which qemu-img`;
+    chomp $QEMU_IMG;
+    for my $vol ( $clone->list_volumes_info ) {
+        next if $vol->file && $vol->file =~ /iso$/;
+        my @cmd = ($QEMU_IMG,'create'
+            ,'-f','qcow2'
+            ,"-b", $vol->backing_file
+            ,$vol->file
+        );
+        $clone->_vm->run_command(@cmd);
+        my @cmd_info = ($QEMU_IMG , 'info', $vol->file);
+        my ($out, $err) = $clone->_vm->run_command(@cmd_info);
+        my ($bff) = $out =~ /^backing file format: (.*)/m;
+        is($bff, undef);
+    }
+    eval { $clone->start(user_admin) };
+    is(''.$@,'');
+    $clone->shutdown_now(user_admin);
+
+    for my $vol ( $clone->list_volumes_info ) {
+        next if !$vol->file || $vol->file =~ /iso$/;
+
+        my @cmd_info = ($QEMU_IMG , 'info', $vol->file);
+        my ($out, $err) = $clone->_vm->run_command(@cmd_info);
+        my ($bff) = $out =~ /^backing file format: (.*)/m;
+        is($bff, 'qcow2');
+    }
+
+    eval { $clone->start(user_admin) };
+    is(''.$@,'');
+
+    _remove_domains($base);
+}
+
+sub _remove_domains(@bases) {
+    for my $base (@bases) {
+        for my $clone ($base->clones) {
+            my $d_clone = Ravada::Domain->open($clone->{id});
+            $d_clone->remove(user_admin);
+        }
+        $base->remove(user_admin);
+    }
+}
+
 #########################################################
 
 init();
@@ -350,6 +405,9 @@ for my $vm_name (reverse vm_names() ) {
 
         diag("Testing volumes in $vm_name");
         init_vm($vm);
+
+        test_qcow_format($vm);
+
         test_raw($vm);
         test_raw_swap($vm);
 

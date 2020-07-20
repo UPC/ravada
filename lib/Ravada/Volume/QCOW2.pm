@@ -1,6 +1,7 @@
 package Ravada::Volume::QCOW2;
 
 use Data::Dumper;
+use Hash::Util qw(lock_hash);
 use Moose;
 
 extends 'Ravada::Volume';
@@ -58,6 +59,7 @@ sub clone($self, $file_clone) {
         die "Error: ".$self->file." looks active" if $n-- <0;
     }
     my @cmd = ($QEMU_IMG,'create'
+        ,'-F','qcow2'
         ,'-f','qcow2'
         ,'-F','qcow2'
         ,"-b", $self->file
@@ -70,14 +72,9 @@ sub clone($self, $file_clone) {
 }
 
 sub _get_capacity($self) {
-    my @cmd = ($QEMU_IMG,"info", $self->file);
-    my ($out, $err) = $self->vm->run_command(@cmd);
-
-    confess $err if $err;
-    my ($size) = $out =~ /virtual size: .*\((\d+) /ms;
-    confess "I can't find size from $out" if !defined $size;
-
-    return $size;
+    my $size = $self->_qemu_info('virtual size');
+    my ($capacity) = $size =~ /\((\d+) /;
+    return $capacity;
 }
 
 sub _cmd_convert($base_img, $qcow_img) {
@@ -98,18 +95,14 @@ sub _cmd_copy {
 }
 
 sub backing_file($self) {
-    my @cmd = ( $QEMU_IMG,'info',$self->file);
-
-    my ($out, $err) = $self->vm->run_command(@cmd);
-    die $err if $err;
-
-    my ($base) = $out =~ m{^backing file: (.*)}mi;
-
-    return $base;
+    return $self->_qemu_info('backing file');
 }
 
 sub rebase($self, $new_base) {
-    my @cmd = ($QEMU_IMG,'rebase','-b',$new_base,$self->file);
+    my @cmd = ($QEMU_IMG,'rebase'
+        ,'-f','qcow2'
+        ,'-F','qcow2'
+        ,'-b',$new_base,$self->file);
     my ($out, $err) = $self->vm->run_command(@cmd);
     die $err if $err;
 
@@ -146,4 +139,34 @@ sub block_commit($self) {
     my ($out, $err) = $self->vm->run_command(@cmd, $self->file);
     warn $err   if $err;
 }
+
+sub _qemu_info($self, $field=undef) {
+    if ( exists $self->{_qemu_info} ) {
+        return $self->{_qemu_info} if !defined $field;
+        confess "Unknown field $field ".Dumper($self->{_qemu_info})
+            if !exists $self->{_qemu_info}->{$field};
+
+        return $self->{_qemu_info}->{$field};
+    }
+
+    my @cmd = ( $QEMU_IMG,'info',$self->file);
+
+    my ($out, $err) = $self->vm->run_command(@cmd);
+    die $err if $err;
+
+    my %info = (
+        'backing file'=> undef
+        ,'backing file format' => ''
+    );
+    for my $line (split /\n/, $out) {
+        last if $line =~ /^Format/;
+        my ($field, $value) = $line =~ /(.*?):\s*(.*)/;
+        $info{$field} = $value;
+    }
+    lock_hash(%info);
+    $self->{_qemu_info} = \%info;
+
+    return $info{$field};
+}
+
 1;
