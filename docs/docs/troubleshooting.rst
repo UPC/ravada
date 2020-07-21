@@ -169,3 +169,21 @@ You can modify XML file from the command:
 .. prompt:: bash #
 
     virsh edit <machine_name>
+
+Content is empty after upgrade
+------------------------------
+
+If after upgrade you get an almost blank screen it is probably a matter of cached javascript
+or CSS. Type SHIFT+F5 or SHIFT+Reload button in your browser. You could also clean browser
+history so it gets refreshed the next time you access the Ravada frontend.
+
+Error: Web Service connection failed
+------------------------------------
+
+If you get this error on the frontend, carefully review this documentation :
+
+https://ravada.readthedocs.io/en/latest/docs/apache.html
+
+It is very common to miss some step, so please take your time and restart all
+the services afterwards.
+
