@@ -3004,7 +3004,7 @@ sub _remove_iptables {
     confess "ERROR: Unknown args ".Dumper(\%args)    if keys %args;
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE iptables SET time_deleted=?"
+        "DELETE FROM iptables "
         ." WHERE id=?"
     );
     my @iptables;
@@ -3022,7 +3022,7 @@ sub _remove_iptables {
         for my $entry (@ {$rule{$id_vm}}) {
             my ($id, $iptables) = @$entry;
             $self->_delete_ip_rule($iptables, $vm) if !$>;
-            $sth->execute(Ravada::Utils::now(), $id);
+            $sth->execute($id);
         }
     }
 }
