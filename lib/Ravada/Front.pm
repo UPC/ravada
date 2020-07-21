@@ -11,6 +11,7 @@ Ravada::Front - Web Frontend library for Ravada
 
 use Carp qw(carp);
 use DateTime;
+use DateTime::Format::DateParse;
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use JSON::XS;
@@ -130,14 +131,14 @@ Returns: listref of machines
 sub list_machines_user($self, $user, $access_data={}) {
 
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,is_public, screenshot"
+        "SELECT id,name,is_public, description, screenshot"
         ." FROM domains "
         ." WHERE is_base=1"
         ." ORDER BY name "
     );
-    my ($id, $name, $is_public, $screenshot);
+    my ($id, $name, $is_public, $description, $screenshot);
     $sth->execute;
-    $sth->bind_columns(\($id, $name, $is_public, $screenshot ));
+    $sth->bind_columns(\($id, $name, $is_public, $description, $screenshot));
 
     my @list;
     while ( $sth->fetch ) {
@@ -151,6 +152,7 @@ sub list_machines_user($self, $user, $access_data={}) {
         my %base = ( id => $id, name => $name
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
+            , description => ($description or '')
             , is_active => 0
             , id_clone => undef
             , name_clone => undef
@@ -171,6 +173,8 @@ sub list_machines_user($self, $user, $access_data={}) {
             $base{name_clone} = $clone->name;
             $base{screenshot} = ( $clone->_data('screenshot')
                                 or $base{screenshot});
+            $base{description} = ( $clone->_data('description')
+                                or $base{description});
             $base{is_active} = $clone->is_active;
             $base{id_clone} = $clone->id;
             $base{can_remove} = 0;
@@ -1199,6 +1203,93 @@ sub list_network_interfaces($self, %args) {
 
 sub _dbh {
     return $CONNECTOR->dbh;
+}
+
+sub _get_settings($self, $id_parent=0) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,name,value"
+        ." FROM settings "
+        ." WHERE id_parent= ? "
+    );
+    $sth->execute($id_parent);
+    my $ret;
+    while ( my ( $id, $name, $value) = $sth->fetchrow) {
+        $value = 0+$value if defined $value && $value =~ /^\d+$/;
+        my $setting_sons = $self->_get_settings($id);
+        if ($setting_sons) {
+            $ret->{$name} = $setting_sons;
+        } else {
+            $ret->{$name} = { id => $id, value => $value};
+        }
+    }
+    return $ret;
+}
+
+sub settings_global($self) {
+    return $self->_get_settings();
+}
+
+sub _settings_by_id($self) {
+    my $orig_settings;
+    my $sth = $self->_dbh->prepare("SELECT id,value FROM settings");
+    $sth->execute();
+    while (my ($id, $value) = $sth->fetchrow) {
+        $orig_settings->{$id} = $value;
+    }
+    return $orig_settings;
+}
+
+sub update_settings_global($self, $arg, $user, $orig_settings = $self->_settings_by_id) {
+    confess if !ref($arg);
+    if (exists $arg->{frontend}
+        && exists $arg->{frontend}->{maintenance}
+        && !$arg->{frontend}->{maintenance}->{value}) {
+        delete $arg->{frontend}->{maintenance_end};
+        delete $arg->{frontend}->{maintenance_start};
+    }
+    for my $field (sort keys %$arg) {
+        if ( !exists $arg->{$field}->{id} ) {
+            confess if !keys %{$arg->{$field}};
+            $self->update_settings_global($arg->{$field}, $user, $orig_settings);
+            next;
+        }
+        confess "Error: invalid field $field" if $field !~ /^\w+$/;
+        my ( $value, $id )
+                   = ($arg->{$field}->{value}
+                    , $arg->{$field}->{id}
+        );
+        next if $orig_settings->{$id} eq $value;
+        my $sth = $self->_dbh->prepare(
+            "UPDATE settings set value=?"
+            ." WHERE id=? "
+        );
+        $sth->execute($value, $id);
+
+        $user->send_message("Setting $field to $value");
+    }
+
+}
+
+sub is_in_maintenance($self) {
+    my $settings = $self->settings_global();
+    return 0 if ! $settings->{frontend}->{maintenance}->{value};
+
+    my $start = DateTime::Format::DateParse->parse_datetime(
+        $settings->{frontend}->{maintenance_start}->{value});
+    my $end= DateTime::Format::DateParse->parse_datetime(
+        $settings->{frontend}->{maintenance_end}->{value});
+    my $now = DateTime->now();
+
+    if ( $now >= $start && $now <= $end ) {
+        return 1;
+    }
+    return 0 if $now <= $start;
+    my $sth = $self->_dbh->prepare("UPDATE settings set value = 0 "
+        ." WHERE id=? "
+    );
+    $sth->execute($settings->{frontend}->{maintenance}->{id});
+
+    return 0;
 }
 
 =head2 version

@@ -1,5 +1,6 @@
 <ul>
 <li>Alex Muntada</li>
+<li>Amparo Gombau</li>
 <li>Antonio Mesones</li>
 <li>Angel Aguilera</li>
 <li>Carlos Juan</li>
@@ -7,8 +8,8 @@
 <li>Daniel Sanchez</li>
 <li>Dayyan O'Brien</li>
 <li>Dito Baskoro</li>
+<li>Ergün Elvan Bilsel</li>
 <li>Fernando Verdugo</li>
-<li>Fernando Verdugo Arias</li>
 <li>Francesc Guasch</li>
 <li>Gabriel Silva</li>
 <li>Guillermo Miranda</li>
@@ -36,6 +37,8 @@
 </ul>
 <%=l 'Thanks to:' %>
 <ul>
+    <li>Albert Petit</li>
+    <li>Francesc Oller</li>
     <li>Jorge Mata</li>
-    <li>Francesc Oller<li>
+    <li>Jose Manuel Martin Torilo</li>
 </ul>

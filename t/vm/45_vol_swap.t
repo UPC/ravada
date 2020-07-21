@@ -57,7 +57,7 @@ sub test_domain_with_swap {
 ####################################################################
 
 clean();
-for my $vm_name ('Void','KVM') {
+for my $vm_name ( vm_names() ) {
 
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };

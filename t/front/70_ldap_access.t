@@ -462,7 +462,7 @@ sub test_access_by_attribute_2bases($vm, $do_clones=0) {
 init();
 clean();
 
-for my $vm_name ('KVM', 'Void') {
+for my $vm_name ( vm_names() ) {
     my $vm = rvd_back->search_vm($vm_name);
 
     SKIP: {

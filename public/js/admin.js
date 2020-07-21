@@ -8,6 +8,7 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("messagesPage", messagesPageC)
         .controller("manage_nodes",manage_nodes)
         .controller("new_node", newNodeCtrl)
+        .controller("settings_global", settings_global_ctrl)
     ;
 
     ravadaApp.filter('orderObjectBy', function() {
@@ -137,6 +138,7 @@ ravadaApp.directive("solShowMachine", swMach)
   };
 
   function machinesPageC($scope, $http, $interval, $timeout, request, listMach) {
+        $scope.list_machines_time = 0;
         if( $scope.check_netdata && $scope.check_netdata != "0" ) {
             var url = $scope.check_netdata;
             $scope.check_netdata = 0;
@@ -161,7 +163,6 @@ ravadaApp.directive("solShowMachine", swMach)
           subscribe_ping_backend(url);
       };
       subscribe_list_machines= function(url) {
-
           ws_connected = false;
           $timeout(function() {
               if (!ws_connected) {
@@ -179,6 +180,7 @@ ravadaApp.directive("solShowMachine", swMach)
               ws = new WebSocket(url);
           };
           ws.onmessage = function (event) {
+              $scope.list_machines_time++;
               var data = JSON.parse(event.data);
 
               $scope.$apply(function () {
@@ -194,7 +196,11 @@ ravadaApp.directive("solShowMachine", swMach)
                       ){
                           $scope.list_machines[mach.id] = mach;
                           $scope.list_machines[mach.id].childs = {};
-                          $scope.list_machines[mach.id].childs_loading = true;
+                          if ($scope.list_machines_time < 3) {
+                              $scope.list_machines[mach.id].childs_loading = true;
+                          } else {
+                              $scope.list_machines[mach.id].childs_loading = false;
+                          }
                       }
                   }
                   $scope.n_clones = 0;
@@ -507,6 +513,43 @@ ravadaApp.directive("solShowMachine", swMach)
                         $scope.fetch_request(id_req);
                     }, 3 * 1000 );
                 }
+            });
+        };
+    };
+
+    function settings_global_ctrl($scope, $http) {
+        $scope.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        $scope.init = function() {
+            $http.get('/settings_global.json').then(function(response) {
+                $scope.settings = response.data;
+                var now = new Date();
+                if ($scope.settings.frontend.maintenance.value == 0 ) {
+                    $scope.settings.frontend.maintenance_start.value
+                        = new Date(now.getFullYear(), now.getMonth(), now.getDate()
+                            , now.getHours(), now.getMinutes());
+
+                    $scope.settings.frontend.maintenance_end.value
+                        = new Date(now.getFullYear(), now.getMonth(), now.getDate()
+                            , now.getHours(), now.getMinutes() + 15);
+                } else {
+                    $scope.settings.frontend.maintenance_start.value
+                    =new Date($scope.settings.frontend.maintenance_start.value);
+
+                    $scope.settings.frontend.maintenance_end.value
+                    =new Date($scope.settings.frontend.maintenance_end.value);
+                }
+            });
+        };
+        $scope.load_settings = function() {
+            $scope.init();
+            $scope.formSettings.$setPristine();
+        };
+        $scope.update_settings = function() {
+            $scope.formSettings.$setPristine();
+            console.log($scope.settings);
+            $http.post('/settings_global'
+                ,JSON.stringify($scope.settings)
+            ).then(function(response) {
             });
         };
     };

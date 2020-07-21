@@ -182,11 +182,14 @@ sub remove_disks {
 
     $self->_vm->connect();
     for my $file ($self->list_disks( device => 'disk')) {
-        if (! -e $file ) {
+        if (! $self->_vm->file_exists($file) ) {
             next;
         }
+        eval {
         $self->_vol_remove($file);
         $self->_vol_remove($file);
+        };
+        warn "Error: removing $file $@" if $@;
 #        if ( -e $file ) {
 #            unlink $file or die "$! $file";
 #        }
@@ -583,9 +586,11 @@ sub _post_remove_base_domain {
 }
 
 
-sub post_resume_aux($self) {
+sub post_resume_aux($self, %args) {
+    my $set_time = delete $args{set_time};
+    $set_time = 1 if !defined $set_time;
     eval {
-        $self->set_time();
+        $self->set_time() if $set_time;
     };
     # 55: domain is not running
     # 74: not configured
@@ -643,6 +648,9 @@ sub is_active {
     return 0 if $self->is_removed;
     my $is_active = 0;
     eval { $is_active = $self->domain->is_active };
+    return 0 if $@ && (    $@->code == 1    # client socket is closed
+                        || $@->code == 38   # broken pipe
+                    );
     die $@ if $@ && $@ !~ /code: 42,/;
     return $is_active;
 }
@@ -677,6 +685,7 @@ sub start {
     my $set_password = delete $arg{set_password};
 
     $self->_set_spice_ip($set_password, $listen_ip);
+    $self->_check_qcow_format($request);
     $self->status('starting');
 
     my $error;
@@ -701,6 +710,22 @@ sub start {
         $self->domain->create();
     } else {
         die $error;
+    }
+}
+
+sub _check_qcow_format($self, $request) {
+    return if $self->is_active;
+    my $qemu_img = $Ravada::Volume::QCOW2::QEMU_IMG;
+    for my $vol ( $self->list_volumes_info ) {
+        next if !$vol->file || $vol->file =~ /iso$/;
+        next if !$vol->backing_file;
+
+        next if $vol->_qemu_info('backing file format') eq 'qcow2';
+
+        $request->status("rebasing","rebasing to release 0.8 "
+            .$vol->file."\n".$vol->backing_file) if $request;
+        $vol->rebase($vol->backing_file);
+        $self->remove_backingstore($vol->file);
     }
 }
 
@@ -1079,7 +1104,6 @@ sub _xml_new_device($self , %arg) {
     <disk type='file' device='$device'>
       <driver name='qemu' type='$arg{type}' cache='$arg{cache}'/>
       <source file='$file'/>
-      <backingStore/>
       <target bus='$bus' dev='$arg{target}'/>
       <address type=''/>
       <boot/>
@@ -2121,6 +2145,9 @@ sub is_removed($self) {
         $@ = '';
         $is_removed = 1;
     }
+    return if $@ && ($@->code == 38  # cannot recv data
+                    || $@->code == 1 # client socket is closed
+    );
     die $@ if $@;
     return $is_removed;
 }
@@ -2414,6 +2441,25 @@ sub dettach($self, $user) {
     for my $vol ($self->list_disks ) {
         $self->domain->block_pull($vol,0);
     }
+}
+
+sub remove_backingstore($self, $file) {
+
+    my $doc = XML::LibXML->load_xml(string
+            => $self->xml_description(Sys::Virt::Domain::XML_INACTIVE))
+        or die "ERROR: $!\n";
+
+    my $n_order = 0;
+    for my $disk ($doc->findnodes('/domain/devices/disk')) {
+        my ($source_node) = $disk->findnodes('source');
+        next if !$source_node;
+        my $file_found = $source_node->getAttribute('file');
+        next if !$file_found || $file_found ne $file;
+
+        my ($backingstore) = $disk->findnodes('backingStore');
+        $disk->removeChild($backingstore) if $backingstore;
+    }
+    $self->_post_change_hardware($doc);
 }
 
 1;

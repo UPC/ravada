@@ -1798,6 +1798,7 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         my $vm;
         eval { $vm = Ravada::VM->open($instance->{id_vm}) };
         die $@ if $@ && $@ !~ /I can't find VM/i;
+        next if !$vm || !$vm->is_active;
         my $domain;
         $@ = '';
         eval { $domain = $vm->search_domain($domain_name) } if $vm;
@@ -2292,7 +2293,7 @@ sub clone {
 
     my $vm = $self->_vm;
     if ($self->volatile_clones ) {
-        $vm = $vm->balance_vm();
+        $vm = $vm->balance_vm($self);
     } elsif( !$vm->is_local ) {
         for my $node ($self->_vm->list_nodes) {
             $vm = $node if $node->is_local;
@@ -2395,7 +2396,7 @@ sub _pre_shutdown {
     $self->_pre_shutdown_domain();
 
     if ($self->is_paused) {
-        $self->resume(user => Ravada::Utils::user_daemon);
+        $self->resume(user => Ravada::Utils::user_daemon, set_time => 0);
     }
     $self->list_disks;
     $self->_remove_start_requests();
@@ -2483,11 +2484,18 @@ sub _around_is_active($orig, $self) {
         return 1 if $self->_data('status') eq 'active';
         return 0;
     }
-    if ($self->_vm && $self->_vm->is_active ) {
-        return 0 if $self->is_removed;
+    if ($self->_vm) {
+        eval {
+            return 0 if $self->_vm->is_active && $self->is_removed;
+        };
+        if ( $@ ) {
+            return 0 if ref($@) && $@->code == 38; # broken pipe
+            return 0 if $@ =~ /can't connect|error connecting/i;
+            die $@;
+        }
     }
     my $is_active = 0;
-    $is_active = $self->$orig() if $self->_vm->is_active;
+    $is_active = $self->$orig();
 
     return $is_active if $self->readonly
         || !$self->is_known
@@ -3070,6 +3078,8 @@ sub _post_start {
         %arg = @_;
     }
     my $remote_ip = $arg{remote_ip};
+    my $set_time = delete $arg{set_time};
+    $set_time = 1 if !defined $set_time;
 
     $self->_data('status','active') if $self->is_active();
     my $sth = $$CONNECTOR->dbh->prepare(
@@ -3111,14 +3121,14 @@ sub _post_start {
     Ravada::Request->set_time(uid => Ravada::Utils::user_daemon->id
         , id_domain => $self->id
         , retry => $RETRY_SET_TIME
-    );
+    ) if $set_time;
     Ravada::Request->enforce_limits(at => time + 60);
     Ravada::Request->manage_pools(
             uid => Ravada::Utils::user_daemon->id
     )   if $self->is_pool;
 
 
-    $self->post_resume_aux;
+    $self->post_resume_aux(set_time => $set_time);
 }
 
 sub _update_id_vm($self) {
@@ -3191,7 +3201,7 @@ sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
            && ( $args{dport} eq $extra->{d_port}))
         {
 
-           $vm->run_command("/sbin/iptables", "-t", $filter, "-D", $chain, $count)
+           $vm->run_command("iptables", "-t", $filter, "-D", $chain, $count)
                 if $vm->is_active;
            $removed++;
            $count--;
@@ -3941,6 +3951,8 @@ sub _rsync_volumes_back($self, $request=undef) {
 
 sub _pre_migrate($self, $node, $request = undef) {
 
+    confess "Error: node not active" if !$node->is_active(1);
+
     $self->_check_equal_storage_pools($node) if $self->_vm->is_active;
 
     $self->_internal_autostart(0);
@@ -4063,7 +4075,14 @@ sub set_base_vm($self, %args) {
     } elsif ($value) {
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
-        $self->migrate($vm, $request);
+        eval {
+            $self->migrate($vm, $request);
+        };
+        my $err = $@;
+        if ( $err ) {
+            $self->_set_base_vm_db($vm->id, 0);
+            die $err;
+        }
         $self->_set_clones_autostart(0);
     } else {
         $self->_set_vm($vm,1); # force set vm on domain
@@ -4112,7 +4131,6 @@ sub remove_base_vm($self, %args) {
     confess "ERROR: Unknown arguments ".join(',',sort keys %args).", valid are user and vm."
         if keys %args;
 
-        warn $vm->name;
     return $self->set_base_vm(vm => $vm, user => $user, value => 0);
 }
 
@@ -4488,7 +4506,10 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
         my @volumes = $self->list_volumes_info();
     }
     $self->info(Ravada::Utils::user_daemon) if $self->is_known();
-    $self->_remove_domain_cascade(Ravada::Utils::user_daemon,1) if $self->is_known();
+
+    $self->_remove_domain_cascade(Ravada::Utils::user_daemon,1)
+    if $self->is_known() && !$self->is_base;
+
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
 }
 

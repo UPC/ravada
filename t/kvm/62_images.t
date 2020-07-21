@@ -136,7 +136,7 @@ remove_old_disks();
 
 my $vm_name = 'KVM';
 my $vm;
-eval { $vm =rvd_back->search_vm($vm_name) };
+eval { $vm =rvd_back->search_vm($vm_name) } if !$<;
 SKIP: {
     my $msg = "SKIPPED test: No $vm_name backend found"
                 ." error: (".($@ or '').")";

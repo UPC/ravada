@@ -83,6 +83,7 @@ sub create_domain {
     my $volatile = delete $args{volatile};
     my $active = ( delete $args{active} or $volatile or $user->is_temporary or 0);
     my $listen_ip = delete $args{listen_ip};
+    my $description = delete $args{description};
     confess if $args{name} eq 'tst_vm_v20_volatile_clones_02' && !$listen_ip;
     my $domain = Ravada::Domain::Void->new(
                                            %args
@@ -100,7 +101,9 @@ sub create_domain {
 
     $domain->_insert_db(name => $args{name} , id_owner => $user->id
         , id_vm => $self->id
-        , id_base => $args{id_base} );
+        , id_base => $args{id_base} 
+        , description => $description
+    );
 
     if ($args{id_base}) {
         my $owner = $user;

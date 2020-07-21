@@ -1,26 +1,21 @@
 <domain type='kvm'>
-  <name>winequispe</name>
-  <uuid>d9a9583a-4f84-4d80-8ef6-d8aa139dd102</uuid>
-  <memory unit='KiB'>524288</memory>
-  <currentMemory unit='KiB'>524288</currentMemory>
+  <name>Android 8</name>
+  <uuid>9da2f426-3f43-4f4f-bd07-5a505a2bc1d4</uuid>
+  <memory unit='KiB'>2097152</memory>
+  <currentMemory unit='KiB'>2097152</currentMemory>
   <vcpu placement='static'>1</vcpu>
   <os>
-    <type arch='x86_64' machine='pc'>hvm</type>
+    <type arch='x86_64' machine='pc-i440fx-2.9'>hvm</type>
   </os>
   <features>
     <acpi/>
     <apic/>
-    <hyperv>
-      <relaxed state='on'/>
-      <vapic state='on'/>
-      <spinlocks state='on' retries='8191'/>
-    </hyperv>
+    <vmport state='off'/>
   </features>
-  <clock offset='localtime'>
+  <clock offset='utc'>
     <timer name='rtc' tickpolicy='catchup'/>
     <timer name='pit' tickpolicy='delay'/>
     <timer name='hpet' present='no'/>
-    <timer name='hypervclock' present='yes'/>
   </clock>
   <on_poweroff>destroy</on_poweroff>
   <on_reboot>restart</on_reboot>
@@ -33,15 +28,15 @@
     <emulator>/usr/bin/kvm-spice</emulator>
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2'/>
-      <source file='/var/lib/libvirt/images/winequispe.qcow2'/>
-      <target dev='hda' bus='ide'/>
-      <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+      <source file='/var/lib/libvirt/images/generic.qcow2'/>
+      <target dev='sda' bus='sata'/>
+       <address type='drive' controller='0' bus='0' target='0' unit='0'/>
       <boot order='1'/>
     </disk>
     <disk type='file' device='cdrom'>
       <driver name='qemu' type='raw'/>
-      <source file='/home/TELECOMBCN/jalarcon/Baixades/pcriver.com_Windows_XP_Professional_64-bit.iso'/>
       <target dev='hdb' bus='ide'/>
+      <source file=''/>
       <readonly/>
       <address type='drive' controller='0' bus='0' target='0' unit='1'/>
       <boot order='2'/>
@@ -69,7 +64,7 @@
       <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
     </controller>
     <interface type='network'>
-      <mac address='52:54:00:26:06:9e'/>
+      <mac address='52:54:00:2e:3e:2e'/>
       <source network='default'/>
       <model type='rtl8139'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
@@ -84,14 +79,14 @@
       <target type='virtio' name='com.redhat.spice.0'/>
       <address type='virtio-serial' controller='0' bus='0' port='1'/>
     </channel>
-    <input type='tablet' bus='usb'>
-      <address type='usb' bus='0' port='1'/>
-    </input>
     <input type='mouse' bus='ps2'/>
     <input type='keyboard' bus='ps2'/>
+    <input type='tablet' bus='usb'>
+      <address type='usb' bus='0' port='3'/>
+      </input>
     <graphics type='spice' autoport='yes' listen='127.0.0.1'>
       <listen type='address' address='127.0.0.1'/>
-	  <image compression='auto_glz'/>
+          <image compression='auto_glz'/>
       <jpeg compression='auto'/>
       <zlib compression='auto'/>
       <playback compression='on'/>
@@ -105,10 +100,10 @@
       <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
     </video>
     <redirdev bus='usb' type='spicevmc'>
-      <address type='usb' bus='0' port='2'/>
+      <address type='usb' bus='0' port='1'/>
     </redirdev>
     <redirdev bus='usb' type='spicevmc'>
-      <address type='usb' bus='0' port='3'/>
+      <address type='usb' bus='0' port='2'/>
     </redirdev>
     <memballoon model='virtio'>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>

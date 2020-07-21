@@ -191,7 +191,7 @@ eval { $vm_lxc = Ravada::VM::LXC->new() } if $CAN_LXC;
 SKIP: {
     my $msg = ($@ or "No LXC vitual manager found");
 
-    my $vm = $RAVADA->search_vm('lxc') if $RAVADA;
+    my $vm = $RAVADA->search_vm('LXC') if $RAVADA;
 
     if (!$vm_lxc) {
         ok(!$vm,"There should be no LXC backends");

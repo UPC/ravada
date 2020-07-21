@@ -238,9 +238,10 @@ sub test_remove_base {
 
 #######################################################
 
+init();
 clean();
 
-my $vm_name = 'KVM';
+for my $vm_name (vm_names()) {
 my $vm = rvd_back->search_vm($vm_name);
 my $description = 'This is a description test';
 
@@ -255,6 +256,8 @@ SKIP: {
 
     test_description($vm_name);
     test_remove_base($vm_name);
+}
+
 }
 
 end();

@@ -243,7 +243,7 @@ sub test_screenshot_file {
 init();
 clean();
 
-for my $vm_name (qw(KVM Void)) {
+for my $vm_name ( vm_names() ) {
     my $vmm = $RAVADA->search_vm($vm_name);
 
     SKIP: {
