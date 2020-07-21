@@ -118,6 +118,7 @@ our $DOCUMENT_ROOT = "/var/www";
 our $SESSION_TIMEOUT = ($CONFIG_FRONT->{session_timeout} or 5 * 60);
 # session times out in 15 minutes for admin users
 our $SESSION_TIMEOUT_ADMIN = ($CONFIG_FRONT->{session_timeout_admin} or 15 * 60);
+our $SESSION_TIMEOUT_ADMIN2 = ($CONFIG_FRONT->{session_timeout_admin2} or 60 * 60);
 
 my $WS = Ravada::WebSocket->new(ravada => $RAVADA);
 my %ALLOWED_ANONYMOUS_WS = map { $_ => 1 } qw(list_bases_anonymous list_alerts);
@@ -1411,7 +1412,7 @@ websocket '/ws/subscribe' => sub {
     my $c = shift;
     my $expiration = $SESSION_TIMEOUT;
     return if !$USER;
-    $expiration = $SESSION_TIMEOUT_ADMIN    if $USER->is_admin;
+    $expiration = $SESSION_TIMEOUT_ADMIN    if $USER->is_operator;
     $c->inactivity_timeout( $expiration );
     $c->on(message => sub {
             my ($ws, $channel ) = @_;
@@ -1694,6 +1695,7 @@ sub admin {
     if ($page eq 'nodes') {
         Ravada::Request->refresh_vms();
     }
+    $c->session(expiration => $SESSION_TIMEOUT_ADMIN2);
     if ($page eq 'settings') {
         my $url = $c->req->url->to_abs->path;
         my $host = $c->req->url->to_abs->host;
