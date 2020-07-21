@@ -349,14 +349,13 @@ sub user_allowed($user,$id_base) {
 
 
 #sub bookings_week($id_base, $date=_monday(), $hour_start=8, $hour_end=20) {
+=json old
 sub bookings_week(%args) {
     my $id_base = delete $args{id_base};
     my $date = ( delete $args{date} or _monday) ;
     $date = DateTime::Format::DateParse->parse_datetime($date) if !ref($date);
-
     my $user_name = delete $args{user_name};
     confess "Error: unknown field ".Dumper(\%args) if keys %args;
-
     my %booking;
     for my $dow ( 0 .. 6 ) {
         for my $entry ( Ravada::Booking::bookings( date => $date) ) {
@@ -367,13 +366,33 @@ sub bookings_week(%args) {
                 $hour = "0".$hour while length($hour)<2;
                 my $key = "$dow.$hour";
                 push @{$booking{$key}}, $entry->{_data} if !$user_name
-                                                    || $entry->user_allowed($user_name);
+                    || $entry->user_allowed($user_name);
                 last if ++$hour>=$hour_end;
             }
         }
         $date->add(days => 1);
     }
     return \%booking;
+}
+=cut
+sub bookings_week(%args) {
+    my $id_base = delete $args{id_base};
+    my $date = ( delete $args{date} or _monday) ;
+    $date = DateTime::Format::DateParse->parse_datetime($date) if !ref($date);
+    $date = _monday($date); # Force monday day of week
+    my $user_name = delete $args{user_name};
+    confess "Error: unknown field ".Dumper(\%args) if keys %args;
+
+    my $booking = [];
+    for ( 0 .. 6 ) {
+        for my $entry ( Ravada::Booking::bookings( date => $date) ) {
+            next if defined $id_base && ! grep { $_ == $id_base } $entry->bases_id;
+            push @$booking, $entry->{_data} if !$user_name
+                || $entry->user_allowed($user_name);
+        }
+        $date->add(days => 1);
+    }
+    return { data => $booking };
 }
 
 sub bookings_range(%args) {

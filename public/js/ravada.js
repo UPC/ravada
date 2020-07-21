@@ -1,6 +1,6 @@
+'use strict';
 
-
-    var ravadaApp = angular.module("ravada.app",['ngResource','ngSanitize'])
+    var ravadaApp = angular.module("ravada.app",['ngResource','ngSanitize','ravada.booking'])
             .config( [
                 '$compileProvider',
                 function( $compileProvider )
@@ -64,7 +64,7 @@
     };
 
     function swSupForm() {
-	
+
         return {
             restrict: "E",
             templateUrl: '/ng-templates/support_form.html',
@@ -74,8 +74,8 @@
 
 
     function addUserFormCrtl($scope, $http, request){
-               
-       
+
+
     };
 
     function swNewMach() {
@@ -335,7 +335,7 @@
                   }, 2000);
                   $http.get('/machine/screenshot/'+machineId+'.json');
           };
-          
+
           $scope.reload_page_copy_msg = false;
           $scope.fail_page_copy_msg = false;
           $scope.copy_done = false;
@@ -584,7 +584,7 @@
                         $scope.init_domain_access();
                     });
           };
- 
+
           $scope.set_access = function(id_access, allowed, last) {
               $http.get('/machine/set_access/'+$scope.showmachine.id+'/'+id_access+'/'+allowed
                         +'/'+last)
@@ -880,7 +880,7 @@
             if (!$scope.redirect_done) {
                 $timeout(function() {
                     if(typeof $_anonymous != "undefined" && $_anonymous){
-                        window.location.href="/anonymous";                        
+                        window.location.href="/anonymous";
                     }
                     else {
                         window.location.href="/logout";
@@ -938,13 +938,13 @@
 
 	$scope.add_user = function() {
             $http.get('/users/register')
-            
+
         };
 
         $scope.checkbox = [];
 
         //if it is checked make the user admin, otherwise remove admin
-        $scope.stateChanged = function(id,userid) { 
+        $scope.stateChanged = function(id,userid) {
            if($scope.checkbox[id]) { //if it is checked
                 $http.get('/users/make_admin/' + userid + '.json')
                 location.reload();
@@ -958,7 +958,7 @@
     };
 
     function swListUsers() {
-	
+
         return {
             restrict: "E",
             templateUrl: '/ng-templates/list_users.html',
@@ -1008,6 +1008,7 @@
     };
 
     function bookingCtrl($scope, $interval, $http, request){
+        /* migrated to booking module
         $scope.list_bookings_week = function() {
             $http.get('/v1/booking/week/'+$scope.booking_monday.toISOString().slice(0,10))
                 .then(function(response) {
@@ -1036,7 +1037,30 @@
 
         };
 
-        load_booking = function(id) {
+        $scope.init_date= function(date) {
+            $scope.booking_monday = new Date(date);
+            var diff = $scope.booking_monday.getDay() - 1;
+            if (diff < 0 ) { diff = 6 }
+            $scope.booking_monday.setDate($scope.booking_monday.getDate() - diff);
+
+            //$scope.list_bookings_week();
+        };
+        $scope.today = function() {
+            return $scope.init_date(new Date());
+        }
+
+        $scope.previous = function() {
+            $scope.booking_monday.setDate($scope.booking_monday.getDate()-7);
+            $scope.list_bookings_week();
+        };
+        $scope.next = function() {
+            $scope.booking_monday.setDate($scope.booking_monday.getDate()+7);
+            $scope.list_bookings_week();
+        };
+
+        */
+
+        var load_booking = function(id) {
             $http.get('/v1/booking/'+id)
                 .then(function(response) {
                     $scope.booking=response.data;
@@ -1051,26 +1075,7 @@
                     load_booking(response.data.id_booking);
                 });
         };
-        $scope.init_date= function(date) {
-            $scope.booking_monday = new Date(date);
-            var diff = $scope.booking_monday.getDay() - 1;
-            if (diff < 0 ) { diff = 6 }
-            $scope.booking_monday.setDate($scope.booking_monday.getDate() - diff);
 
-            $scope.list_bookings_week();
-        };
-        $scope.today = function() {
-            return $scope.init_date(new Date());
-        }
-
-        $scope.previous = function() {
-            $scope.booking_monday.setDate($scope.booking_monday.getDate()-7);
-            $scope.list_bookings_week();
-        };
-        $scope.next = function() {
-            $scope.booking_monday.setDate($scope.booking_monday.getDate()+7);
-            $scope.list_bookings_week();
-        };
         $scope.init_new_booking = function() {
             //$scope.new_booking = true;
 
@@ -1160,7 +1165,7 @@
                 }
             );
         };
-        location_week = function(entry) {
+        var location_week = function(entry) {
             var month = ''+(1+ entry.date_booking.getMonth());
             if (month.length<2) {
                 month = "0"+month;
@@ -1248,7 +1253,7 @@
 
         //here you should access the backend, to check if username exists
         //and return a promise
-        //here we're using $q and $timeout to mimic a backend call 
+        //here we're using $q and $timeout to mimic a backend call
         //that will resolve after 1 sec
 
             var defer = $q.defer();

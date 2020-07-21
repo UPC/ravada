@@ -1,4 +1,4 @@
-% if ( !$fallback ) { 
+% if ( !$fallback ) {
 <script src="https://code.jquery.com/jquery-3.5.0.slim.min.js"integrity="sha256-MlusDLJIP1GRgLrOflUQtshyP0TwT/RHXsI1wWGnQhs="crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
@@ -19,7 +19,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.7/js/bootstrap-select.js"></script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/2.7.0/intro.js"></script>
+<!-- booking module -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.1.0/main.css">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.1.0/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@5.1.0/locales-all.min.js"></script>
 
+<!-- end booking module -->
 % } else {
 <script src="/fallback/jquery/jquery-3.5.0.min.js"></script>
 <script src="/fallback/jquery-ui-1.11.4/jquery-ui.min.js"></script>
@@ -47,6 +52,10 @@
 % if ($monitoring && $_user && $_user->is_admin ) {
 <script>var netdataNoBootstrap = true;</script>
 <script type="text/javascript" src="https://<%= $host %>:19999/dashboard.js"></script>
+% }
+
+% foreach my $jslink (@$js_mod) {
+<script type="module" src="<%= $jslink %>"></script>
 % }
 
 % foreach my $jslink (@$js) {

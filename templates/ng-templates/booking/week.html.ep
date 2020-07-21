@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html ng-app="ravada.app">
 %= include 'bootstrap/header'
-<body id="page-top" data-spy="scroll" data-target="fixed-top" role="document">
+<body id="page-top" data-spy="scroll" data-target="fixed-top" role="document" ng-cloak>
 <div id="wrapper">
     %= include 'bootstrap/navigation'
 <div id="page-wrapper"
@@ -15,12 +15,12 @@
             </div>
         </div>
     </div>
-%= include '/main/vm_booking_list'
-</div>
-</div>
 
+    <rvd-calendar></rvd-calendar>
+
+</div>
+</div>
     %= include 'bootstrap/scripts'
     %= include 'bootstrap/messages'
-
 </body>
 </html>
