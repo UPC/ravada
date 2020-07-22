@@ -110,7 +110,7 @@
                 }
 
             };
-            ws_connected = false;
+            var ws_connected = false;
             $timeout(function() {
                 if (typeof $scope.public_bases === 'undefined') $scope.public_bases = 0;
                 if (!ws_connected) {
@@ -118,7 +118,7 @@
                 }
             }, 60 * 1000 );
 
-            subscribe_list_machines_user = function(url) {
+            var subscribe_list_machines_user = function(url) {
                 $scope.machines = [];
                 var channel = 'list_machines_user';
                 if ($scope.anonymous) {
@@ -167,7 +167,7 @@
                 }
             };
 
-            subscribe_ping_backend= function(url) {
+            var subscribe_ping_backend= function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('ping_backend') };
                 ws.onmessage = function(event) {
@@ -178,7 +178,7 @@
                 }
             };
 
-            subscribe_list_bookings = function(url) {
+            var subscribe_list_bookings = function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_next_bookings_today') };
                 ws.onmessage = function(event) {
