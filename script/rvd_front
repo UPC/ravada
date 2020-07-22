@@ -1319,19 +1319,53 @@ any '/user_settings' => sub {
     user_settings($c);
 };
 
+sub _translations($c) {
+    my %lang_name=(
+        ar => 'Arab'
+        ,en => 'English'
+        ,ca => 'Catalan'
+        ,es => 'Spanish'
+        ,gl => 'Galician'
+        ,fr => 'French'
+        ,de => 'German'
+        ,hi => 'Hindi'
+        ,id => 'Indonesian'
+        ,it => 'Italian'
+        ,fa => 'Persian'
+        ,pt => 'Portuguese'
+        ,pt => 'Portuguese'
+        ,tr => 'Turkish'
+        ,ja => 'Japanese'
+        ,'cat@valencia' => 'Valencian'
+        ,vi => 'Vietnamese'
+    );
+    $c->stash(lang_name => \%lang_name);
+    my $language = $USER->language;
+    if (!$language) {
+        for my $detected_lang (_detect_languages($c)) {
+            if ( $lang_name{$detected_lang}) {
+                $language = $detected_lang;
+                last;
+            }
+        }
+    }
+    $c->stash( language => ( $language or 'en') );
+
+}
+
 sub user_settings {
     my $c = shift;
     my $changed_lang;
     my $changed_pass;
-    if ($c->req->method('POST')) {
-        $USER->language($c->param('tongue'));
-        $changed_lang = $c->param('tongue');
+    if ($c->param('language')) {
+        $USER->language($c->param('language'));
+        $changed_lang = $c->param('language');
         Ravada::Request->post_login(
                 user => $USER->name
             , locale => $changed_lang);
         _logged_in($c);
     }
-    $c->param('tongue' => $USER->language);
+    _translations($c);
     my @errors;
     if ($c->param('button_click')) {
 	my $auth_ok;
@@ -1493,6 +1527,18 @@ sub _logged_in {
     return $USER;
 }
 
+sub _detect_languages($c) {
+    my @languages = I18N::LangTags::implicate_supers(
+        I18N::LangTags::Detect::detect()
+    );
+    my $header = ( $c->req->headers->header('accept-language') or '');
+    my @languages2 = map {my $lang = $_ ; $lang =~ s/^(.*?)[;-].*/$1/; $lang } split /,/,$header;
+    my @languages_browser = map {my $lang = $_ ;$lang =~ s/;.*//; $lang } split /,/,$header;
+
+    return (@languages_browser, @languages, @languages2);
+
+
+}
 
 sub login {
     my $c = shift;
@@ -1517,16 +1563,9 @@ sub login {
             $c->session('login' => $login);
             my $expiration = $SESSION_TIMEOUT;
             $expiration = $SESSION_TIMEOUT_ADMIN    if $auth_ok->is_admin;
-            my @languages = I18N::LangTags::implicate_supers(
-                I18N::LangTags::Detect::detect()
-            );
-            my $header = ( $c->req->headers->header('accept-language') or '');
-            my @languages2 = map {my $lang = $_ ; $lang =~ s/^(.*?)[;-].*/$1/; $lang } split /,/,$header;
-            my @languages_browser = map {my $lang = $_ ;$lang =~ s/;.*//; $lang } split /,/,$header;
-
             Ravada::Request->post_login(
                 user => $auth_ok->name
-                , locale => [@languages_browser, @languages, @languages2]
+                , locale => [_detect_languages($c)]
             );
 
             $auth_ok = Ravada::Auth::SQL->new(name => $auth_ok->name);
