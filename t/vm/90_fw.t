@@ -5,6 +5,9 @@ use Data::Dumper;
 use JSON::XS;
 use Test::More;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -64,6 +67,15 @@ sub test_fw_domain {
 
     $domain->shutdown_now( $USER );
     test_chain($vm_name, $local_ip,$local_port, $remote_ip, 0);
+
+    test_iptables_table_clean($vm_name, $domain);
+}
+
+sub test_iptables_table_clean($vm_name, $domain) {
+    my $sth = connector->dbh->prepare("SELECT count(*) FROM iptables WHERE id_domain=? ");
+    $sth->execute($domain->id);
+    my ($n) = $sth->fetchrow;
+    is($n,0) or exit;
 }
 
 sub test_fw_domain_stored {
