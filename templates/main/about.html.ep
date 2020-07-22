@@ -5,7 +5,7 @@
     <div id="wrapper">
 %= include 'bootstrap/navigation'
         <div id="page-wrapper">
-            <div ng-controller="about">
+            <div>
                 <div class="page-title">
                     <div class="card col-lg-8 offset-md-2 bg-light">
                         <h2 class="text-center"><%=l 'About' %></h2>

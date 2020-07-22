@@ -1367,10 +1367,10 @@ sub user_settings {
     }
     _translations($c);
     my @errors;
-    if ($c->param('button_click')) {
+    if ($c->param('password-form') && $c->req->method eq 'POST') {
 	my $auth_ok;
         eval { $auth_ok = Ravada::Auth::login($USER->name, $c->param('current_password'))};
-        if (!$auth_ok || $@) {
+	if (!$auth_ok || $@ || ($c->param('current_password') eq "")) {
 		push @errors, ("Current password is wrong");
 	}
 	else {
