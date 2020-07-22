@@ -349,7 +349,6 @@ sub user_allowed($user,$id_base) {
 
 
 #sub bookings_week($id_base, $date=_monday(), $hour_start=8, $hour_end=20) {
-=json old
 sub bookings_week(%args) {
     my $id_base = delete $args{id_base};
     my $date = ( delete $args{date} or _monday) ;
@@ -374,28 +373,9 @@ sub bookings_week(%args) {
     }
     return \%booking;
 }
-=cut
-sub bookings_week(%args) {
-    my $id_base = delete $args{id_base};
-    my $date = ( delete $args{date} or _monday) ;
-    $date = DateTime::Format::DateParse->parse_datetime($date) if !ref($date);
-    $date = _monday($date); # Force monday day of week
-    my $user_name = delete $args{user_name};
-    confess "Error: unknown field ".Dumper(\%args) if keys %args;
 
-    my $booking = [];
-    for ( 0 .. 6 ) {
-        for my $entry ( Ravada::Booking::bookings( date => $date) ) {
-            next if defined $id_base && ! grep { $_ == $id_base } $entry->bases_id;
-            push @$booking, $entry->{_data} if !$user_name
-                || $entry->user_allowed($user_name);
-        }
-        $date->add(days => 1);
-    }
-    return { data => $booking };
-}
-
-sub bookings_range(%args) {
+sub bookings_range($params) {
+    my %args = %{$params};
     my $id_base = delete $args{id_base};
     my $date_start = ( delete $args{date_start} or _today ) ;
     $date_start = DateTime::Format::DateParse->parse_datetime($date_start) if !ref($date_start);
@@ -425,7 +405,7 @@ sub bookings_range(%args) {
 
     #    warn "\n\nchecking $date_start - $date_end | $time_start - $time_end $day_of_week\n".Dumper(\%day_of_week);
 
-    my @booking;
+    my $bookings = [];
     for (# no init
         # check last
         ; DateTime->compare( $date_start, $date_end) <= 0
@@ -453,12 +433,12 @@ sub bookings_range(%args) {
                 $entry->{_data}->{user_allowed} = $entry->user_allowed($show_user_allowed)
                 if $show_user_allowed;
 
-                push @booking,($entry->{_data})
+                push @$bookings,$entry->{_data}
             }
 
         }
     }
-    return @booking;
+    return { data => $bookings };
 }
 
 1;

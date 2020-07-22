@@ -23,7 +23,7 @@ function calendarCtrl($element, $window, apiBookings) {
             firstDay: 1,
             events: getEvents,
             headerToolbar: {
-                left: 'dayGridMonth,timeGridWeek,timeGridDay create',
+                left: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek create',
                 center: 'title',
                 end: 'today prev,next'
             },
@@ -48,8 +48,9 @@ function calendarCtrl($element, $window, apiBookings) {
     }
 
     function getEvents(info, successCallback, failureCallback) {
-        var date = info.startStr.valueOf().slice(0,10);
-        apiBookings.get({range: 'week', date: date},
+        var date_start = info.startStr.valueOf().slice(0,10);
+        var date_end = info.endStr.valueOf().slice(0,10);
+        apiBookings.get({date_start, date_end},
             res => {
                 successCallback(
                     Array.prototype.slice.call( // convert to array
