@@ -841,7 +841,7 @@ sub test_prepare_fail($vm) {
 sub test_create_base($vm) {
     my $name = new_domain_name();
     my %args = arg_create_dom($vm->type, name => $name, info => { ip => ''} );
-    if ($vm->type =~ /RemotePC/i) {
+    if ($vm->has_feature('new_base')) {
         is($vm->has_feature('new_base'),1);
         $args{is_base} = 1;
         delete @args{qw(id_iso id_template)};
