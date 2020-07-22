@@ -344,7 +344,7 @@ for my $vm_name (reverse vm_names() ) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         }
-        if ($vm && ! $vm->features->{volumes}) {
+        if ($vm && ! $vm->has_feature('volumes')) {
             $msg = "Feature volumes not in $vm_name";
             $vm = undef;
         }

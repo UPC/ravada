@@ -1363,8 +1363,9 @@ sub get_info {
 sub _ip_agent($self) {
     my @ip;
     eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_AGENT) };
-    return if $@ && $@ =~ /^libvirt error code: (74|86),/;
-    warn $@ if $@;
+    return if $@ && ( !ref($@) || $@->code =~ /^(55|74|86)$/);
+    # 55: Requested operation is not valid: domain is not running
+    warn "Warning: error getting ip from agent :$@" if $@;
 
     for my $if (@ip) {
         next if $if->{name} =~ /^lo/;
@@ -1378,7 +1379,7 @@ sub _ip_agent($self) {
 sub ip($self) {
     my @ip;
     eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
-    warn $@ if $@;
+    warn "Error getting interface addresses ".$@ if $@ && ( !ref($@) || ( $@->code != 55 ));
     return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
 
     return $self->_ip_agent();

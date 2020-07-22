@@ -20,20 +20,7 @@ my $RVD_FRONT = Ravada::Front->new(
 
 my $USER = create_user('foo','bar', 1);
 
-my %CREATE_ARGS = (
-     KVM => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
-    ,LXC => { id_template => 1, id_owner => $USER->id }
-    ,Void => { id_owner => $USER->id }
-);
-
 ###################################################################
-
-sub create_args {
-    my $backend = shift;
-
-    die "Unknown backend $backend" if !$CREATE_ARGS{$backend};
-    return %{$CREATE_ARGS{$backend}};
-}
 
 sub test_create_domain {
     my $vm_name = shift;
@@ -44,13 +31,12 @@ sub test_create_domain {
     ok($vm,"Expecting VM $vm , got '".ref($vm)) or return;
     
     my $domain_b = $vm->create_domain(
-        name => $name
+        arg_create_dom($vm_name, name => $name, id_owner => $USER->id)
         ,active => 0
-        ,create_args($vm_name)
-	,disk => 1024 * 1024
     );
     
     ok($domain_b);
+    is($domain_b->_data('id_owner'),$USER->id);
 
     my $domain_f = $RVD_FRONT->search_domain($name);
     ok($domain_f);
@@ -74,11 +60,14 @@ sub test_start_domain {
     isa_ok($domain_f, 'Ravada::Front::Domain');
 
     if ($domain_b->is_active) {
+        diag("shutting down ".$domain_b->name);
+        wait_port($domain_b,22);
         eval { $domain_b->shutdown(user => $USER)};
-        ok(!$@,"[$vm_name] Start domain $name expecting error: '' , got $@");
+        is($@,'',"[$vm_name] Shutdown domain $name expecting error: '' , got $@");
     }
-
-    ok(!$domain_f->is_active);
+    wait_inactive($domain_f);
+    $domain_f = $RVD_FRONT->search_domain($name);
+    is($domain_f->is_active,0) or exit;
 
     eval { $domain_f->start($USER ) };
     ok($@,"[$vm_name] Start should be denied from front ");
@@ -94,9 +83,10 @@ sub test_start_domain {
     eval { $domain_b->start($USER) };
     ok(!$@,$@);
 
+    wait_active($domain_b) if $vm_name eq 'RemotePC';
 
     $domain_f = $RVD_FRONT->search_domain($name);
-    is($domain_f->is_active,1);# && !$domain_f->is_active);
+    is($domain_f->is_active,1,"Expecting $name active") or exit;
 
 }
 

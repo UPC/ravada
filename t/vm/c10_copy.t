@@ -3,11 +3,15 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use IO::File;
 use Test::More;
 use YAML qw(DumpFile);
 
 use lib 't/lib';
 use Test::Ravada;
+
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 init();
 
@@ -23,11 +27,16 @@ sub add_volumes {
     }
 }
 
-sub test_copy_clone {
-    my $vm_name = shift;
-    my $volumes = shift;
+sub test_copy_clone($vm,$volumes=undef) {
+    diag("Test copy clone ".$vm->type." ".($volumes or 'UNDEF'));
+    my $vm_name = $vm->type;
 
-    my $base = create_domain($vm_name);
+    return if !$vm->has_feature('change_hardware') && $volumes;
+
+    my %args_create;
+    %args_create = ( info=> { ip => '1.2.2.3' } ) if $vm->type eq 'RemotePC';
+
+    my $base = create_domain($vm_name, %args_create);
 
     add_volumes($base, $volumes)  if $volumes;
 
@@ -43,9 +52,9 @@ sub test_copy_clone {
         next if $vol->info->{device} ne 'disk';
         confess Dumper($vol) if !$vol->file;
 
-        open my $out ,'>>', $vol->file;
-        print $out,"data : hola\n" ;
-        close $out;
+        my $out = IO::File->new($vol->file , O_WRONLY|O_APPEND);
+        $out->print("data : hola\n");
+        $out->close();
     }
 
     my $name_copy = new_domain_name();
@@ -66,7 +75,7 @@ sub test_copy_clone {
     my %clone_volumes = map { $_->info->{target} => $_->file } @clone_volumes;
 
     for my $target ( keys %copy_volumes ) {
-        isnt($copy_volumes{$target}, $clone_volumes{$target}, Dumper(\@copy_volumes,\@clone_volumes)) or exit;
+        isnt($copy_volumes{$target}, $clone_volumes{$target}) or die Dumper(\@copy_volumes,\@clone_volumes);
         my @stat_copy = stat($copy_volumes{$target});
         my @stat_clone = stat($clone_volumes{$target});
         is($stat_copy[7],$stat_clone[7],"[$vm_name] size different "
@@ -80,8 +89,9 @@ sub test_copy_clone {
     $base->remove(user_admin);
 }
 
-sub test_copy_request {
-    my $vm_name = shift;
+sub test_copy_request($vm) {
+    return if !$vm->has_feature('change_hardware');
+    my $vm_name = $vm->type;
 
     my $base = create_domain($vm_name);
     my $memory = $base->get_info->{memory};
@@ -129,8 +139,9 @@ sub test_copy_request {
     isnt($clone2->get_info->{memory}, $copy->get_info->{memory});
 }
 
-sub test_copy_change_ram {
-    my $vm_name = shift;
+sub test_copy_change_ram($vm) {
+    return if !$vm->has_feature('change_hardware');
+    my $vm_name = $vm->type;
 
     my $base = create_domain($vm_name);
 
@@ -192,14 +203,57 @@ sub test_copy_req_nonbase {
 
 }
 
-sub test_copy_req_many {
-    my $vm_name = shift;
-    my $domain = create_domain($vm_name);
+sub test_copy_req_many_with_names($vm_name) {
+    diag("Test copy req many with names $vm_name");
+    my %args_create;
+    %args_create = ( info=> { ip => '1.2.2.3' } ) if $vm_name eq 'RemotePC';
 
-    my $name_copy = new_domain_name();
+    my $domain = create_domain($vm_name, %args_create);
+
+    my $req;
+
+    eval { $req = Ravada::Request->clone(
+           id_domain => $domain->id
+                , uid => user_admin->id
+                ,name => base_domain_name()."-(04-07)-whoaa"
+        );
+    };
+    is($@,'') or return;
+    is($req->status(),'requested');
+    wait_request(check_error => 1, debug => 0);
+    is($req->status(),'done');
+    is($req->error,'');
+
+    is($domain->is_base,1);
+
+    my @clones = $domain->clones();
+    is(scalar @clones, 4);
+
+    for my $n ( 4 .. 7 ) {
+        my $expected_new = base_domain_name()."-0$n-whoaa";
+        ok(grep({ $_->{name} eq $expected_new} @clones),"Expecting $expected_new created ")
+        or die Dumper(\@clones);
+    }
+
+    for (@clones) {
+        my $clone = Ravada::Domain->open($_->{id} );
+        $clone->remove(user_admin);
+    }
+    $domain->remove(user_admin);
+
+}
+
+
+sub test_copy_req_many($vm_name) {
+    diag("Test copy req many $vm_name");
+    my %args_create;
+    %args_create = ( info=> { ip => '1.2.2.3' } ) if $vm_name eq 'RemotePC';
+
+    my $domain = create_domain($vm_name, %args_create);
 
     my $number = 3;
     my $req;
+
     eval { $req = Ravada::Request->clone(
             id_domain => $domain->id
               ,number => $number
@@ -208,7 +262,7 @@ sub test_copy_req_many {
     };
     is($@,'') or return;
     is($req->status(),'requested');
-    wait_request(check_error => 1);
+    wait_request(check_error => 1, debug => 0);
     is($req->status(),'done');
     is($req->error,'');
 
@@ -228,8 +282,9 @@ sub test_copy_req_many {
 
 ##########################################################################3
 
+clean();
 
-for my $vm_name ('Void', 'KVM') {
+for my $vm_name ( vm_names() ) {
     diag($vm_name);
     my $vm = rvd_back->search_vm($vm_name);
 
@@ -245,19 +300,19 @@ for my $vm_name ('Void', 'KVM') {
 
         init( { vm => [$vm_name] });
 
+        test_copy_req_many_with_names($vm_name);
         test_copy_req_many($vm_name);
 
-        test_copy_clone($vm_name);
-        test_copy_clone($vm_name,1);
-        test_copy_clone($vm_name,2);
-        test_copy_clone($vm_name,10);
+        test_copy_clone($vm);
+        test_copy_clone($vm,1);
+        test_copy_clone($vm,2);
+        test_copy_clone($vm,10);
 
-        test_copy_request($vm_name);
+        test_copy_request($vm);
 
-        test_copy_change_ram($vm_name);
+        test_copy_change_ram($vm);
 
         test_copy_req_nonbase($vm_name);
-        clean();
     }
 
 }

@@ -125,15 +125,24 @@ has 'features' => (
     ,isa => 'HashRef'
     ,default => sub {
         my %f = (
-            spice => 1
-            ,bind_ip => 1  # the display is binded to an IP
+            bind_ip => 1  # the display is binded to an IP
+            ,change_hardware => 1
+            ,iptables => 1
+            ,memory => 1
             ,new_base => 0 # can create new machines as base without preparing
-            ,volumes => 1
             ,shutdown_before_remove => 0
+            ,spice => 1
+            ,volumes => 1
         );
         lock_hash(%f);
         return \%f;
     }
+);
+
+has 'features_vm'=> (
+   is => 'ro'
+    ,isa => 'HashRef'
+    ,default => sub { return {} }
 );
 
 has 'netssh' => (
@@ -448,9 +457,9 @@ sub _around_create_domain {
             if !$base->pools;
     }
     $args_create{spice_password} = $self->_define_spice_password($remote_ip)
-    if $self->features->{spice};
+    if $self->has_feature('spice');
     $self->_pre_create_domain(%args_create);
-    $args_create{listen_ip} = $self->listen_ip($remote_ip) if $self->features->{bind_ip};
+    $args_create{listen_ip} = $self->listen_ip($remote_ip) if $self->has_feature('bind_ip');
 
     return $base->_search_pool_clone($owner) if $from_pool;
 
@@ -460,7 +469,9 @@ sub _around_create_domain {
         my $vm = $self->balance_vm($base) or die "Error: No free nodes available.";
         $request->status("creating machine on ".$vm->name)  if $request;
         $self = $vm;
-        $args_create{listen_ip} = $self->listen_ip($remote_ip);
+
+        $args_create{listen_ip} = $self->listen_ip($remote_ip)
+        if $self->has_feature('bind_ip');
     }
 
     my $domain = $self->$orig(%args_create, volatile => $volatile);
@@ -483,6 +494,7 @@ sub _around_create_domain {
     my @start_args = ( user => $owner );
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
 
+    $domain->is_active if !$domain->is_base;
     $domain->_post_start(@start_args) if !$domain->is_base && $domain->is_active;
     eval {
            $domain->start(@start_args)      if $active || ($domain->is_volatile && ! $domain->is_active);
@@ -770,7 +782,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'info'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
@@ -825,6 +837,7 @@ sub _data($self, $field, $value=undef) {
 
 #    _init_connector();
 
+    confess if !ref($self);
     $self->_timed_data_cache()  if $self->{_data}->{$field} && $field ne 'name';
     return $self->{_data}->{$field} if exists $self->{_data}->{$field};
     return if !$self->store();
@@ -1159,16 +1172,17 @@ sub _do_ping($self, $host, $debug=0) {
     confess $@ if $@;
     warn "$@ pinging host $host" if $@;
 
-    $self->_store_mac_address() if $ping_ok && $self;
-    return 1 if $ping_ok;
+    $self->_store_mac_address() if $ping_ok && $self && ref($self);
     $p->close();
+    return 1 if $ping_ok;
 
     return if $>; # icmp ping requires root privilege
+    confess if $debug;
     warn "trying icmp"   if $debug;
     $p= Net::Ping->new('icmp',2);
     eval { $ping_ok = $p->ping($host) };
     warn $@ if $@;
-    $self->_store_mac_address() if $ping_ok && $self;
+    $self->_store_mac_address() if $ping_ok && $self && ref($self);
     return 1 if $ping_ok;
 
     return 0;
@@ -1336,6 +1350,7 @@ sub run_command_nowait($self, @command) {
 sub _run_command_local($self, @command) {
     my ( $in, $out, $err);
     my ($exec) = $command[0];
+    $exec = $self->_which($exec) if $exec !~ m{^/};
     confess "ERROR: Missing command $exec"  if ! -e $exec;
     run3(\@command, \$in, \$out, \$err);
     return ($out, $err);
@@ -1578,7 +1593,7 @@ sub balance_vm($self, $base=undef) {
         confess "Error: we need a base to balance ";
         @vms = $self->list_nodes();
     }
-    return $vms[0] if scalar(@vms)<1;
+    return $vms[0] if scalar(@vms)<=1;
     for my $vm (_random_list( @vms )) {
         next if !$vm->enabled();
         my $active = 0;
@@ -1759,34 +1774,43 @@ sub _fetch_tls_ca($self) {
 
 sub _store_mac_address($self, $force=0 ) {
     return if !$force && $self->_data('mac');
-    die "Error: I can't find arp" if !$ARP;
 
     my %done;
     for my $ip ($self->host,$self->ip, $self->public_ip) {
         next if !$ip || $done{$ip}++;
-        CORE::open (my $arp,'-|',"$ARP -n ".$ip) or die "$! $ARP";
-        while (my $line = <$arp>) {
-            chomp $line;
-            my ($mac) = $line =~ /(..:..:..:..:..:..)/ or next;
+        my $mac = $self->_find_mac_address($ip) or next;
+        $self->_data(mac => $mac);
 
-            $self->_data(mac => $mac);
-            return;
-        }
-        close $arp;
     }
+    return '';
 }
 
-sub _wake_on_lan( $self ) {
-    return if $self->is_local;
+sub _find_mac_address($self,$ip) {
+    my ($out, $err) = $self->run_command("arp","-n",$ip);
+    die "Error: arp -n $ip : $err" if$err;
 
+    for my $line (split /\n/,$out) {
+        chomp $line;
+        my ($mac) = $line =~ /(..:..:..:..:..:..)/ or next;
+        return $mac
+    }
+    return;
+}
+
+sub wake_on_lan($self, $mac_addr = $self->_data('mac')) {
     die "Error: I don't know the MAC address for node ".$self->name
-        if !$self->_data('mac');
+        if !$mac_addr;
+
+    $self->_wake_on_lan($mac_addr);
+}
+
+sub _wake_on_lan( $self, $mac_addr ) {
+
 
     my $sock = new IO::Socket::INET(Proto=>'udp', Timeout => 60)
         or die "Error: I can't create an UDP socket";
     my $host = '255.255.255.255';
     my $port = 9;
-    my $mac_addr = $self->_data('mac');
 
     my $ip_addr = inet_aton($host);
     my $sock_addr = sockaddr_in($port, $ip_addr);
@@ -1806,7 +1830,8 @@ Starts the node
 =cut
 
 sub start($self) {
-    $self->_wake_on_lan();
+    return if $self->is_local;
+    $self->wake_on_lan();
 }
 
 =head2 shutdown
@@ -1953,6 +1978,20 @@ sub _list_bridges($self) {
     $self->{_bridges} = \@networks;
     return @networks;
 }
+
+sub has_feature($self, $name) {
+
+    my $features_class = $self->features;
+    my $features_vm = $self->features_vm;
+
+    my %features = (%$features_class, %$features_vm);
+    confess "Error: unknown feature '$name'. Known features "
+    .Dumper([keys %features])
+    if !exists $features{$name};
+
+    return $features{$name};
+}
+
 
 1;
 

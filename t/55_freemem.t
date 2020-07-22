@@ -132,6 +132,10 @@ SKIP: {
         $msg = "SKIPPED test: $vm_name must be run from root";
         $vm = undef;
     }
+    if ($vm && !$vm->has_feature('memory')) {
+        $msg = "SKIPPED test: $vm_name has no memory feature";
+        $vm = undef;
+    }
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 

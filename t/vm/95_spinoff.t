@@ -34,10 +34,11 @@ sub test_create_domain {
     my $name = new_domain_name();
 
     my $domain;
-    eval { $domain = $vm->create_domain(name => $name
-                    , id_owner => $USER->id
-                    , disk => 1024 * 1024
-                    , arg_create_dom($vm_name))
+    eval { $domain = $vm->create_domain(
+                    arg_create_dom($vm_name
+                        , name => $name
+                    , id_owner => $USER->id)
+            )
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -62,6 +63,8 @@ sub test_clone {
 
 sub test_files_base {
     my ($domain, $n_expected) = @_;
+
+    return if !$domain->_vm->has_feature('volumes');
 
     confess("Expecting a domain , got ".Dumper(\@_))
         if !ref $domain;
@@ -98,8 +101,11 @@ sub test_remove_base {
     my $domain = shift;
     my $domain_clone = shift;
 
-    my @files = $domain->list_files_base();
-    ok(scalar @files,"Expecting files base, got ".Dumper(\@files)) or return;
+    my @files;
+    if ( $domain->_vm->has_feature('volumes') ) {
+        @files = $domain->list_files_base();
+        ok(scalar @files,"Expecting files base, got ".Dumper(\@files)) or return;
+    }
 
     eval { $domain->remove_base($USER) };
     is($@,'');

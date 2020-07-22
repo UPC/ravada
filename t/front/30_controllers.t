@@ -22,22 +22,9 @@ my $RVD_FRONT = Ravada::Front->new(
 
 my $USER = create_user('foo','bar', 1);
 
-my %CREATE_ARGS = (
-     KVM => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
-    ,LXC => { id_template => 1, id_owner => $USER->id }
-    ,Void => { id_owner => $USER->id }
-);
-
 our $XML = XML::LibXML->new();
 
 ###################################################################
-
-sub create_args {
-    my $backend = shift;
-
-    die "Unknown backend $backend" if !$CREATE_ARGS{$backend};
-    return %{$CREATE_ARGS{$backend}};
-}
 
 sub test_create_domain {
     my $vm_name = shift;
@@ -48,10 +35,7 @@ sub test_create_domain {
     ok($vm,"Expecting VM $vm , got '".ref($vm)) or return;
     
     my $domain_b = $vm->create_domain(
-        name => $name
-        ,active => 0
-        ,create_args($vm_name)
-	,disk => 1024 * 1024
+        arg_create_dom_mock($vm,name => $name)
     );
     
     ok($domain_b);

@@ -29,7 +29,8 @@ my $TIMEOUT_SHUTDOWN = 60;
 
 my %HELPER = (
     ssh => {
-        shutdown => \&_shutdown_ssh
+        hibernate => \&_ssh_hibernate
+        ,shutdown => \&_ssh_shutdown
     }
 );
 
@@ -43,8 +44,12 @@ sub start($self, @args) {
     return $self->_vm->wake_on_lan($mac);
 }
 
-sub _shutdown_ssh($self,@args) {
+sub _ssh_shutdown($self,@args) {
     $self->_execute_ssh('/sbin/poweroff');
+}
+
+sub _ssh_hibernate($self,@args) {
+    $self->_execute_ssh('/usr/sbin/pm-suspend');
 }
 
 sub _execute_ssh($self,$command) {
@@ -77,9 +82,17 @@ sub _connect_ssh($self) {
     $self->_add_key($self->ip);
     my $ssh = Net::OpenSSH->new($self->ip);
     $ssh->error and
-        die "Couldn't establish SSH connection to ".$self->ip." : ". $ssh->error;
+        confess "Couldn't establish SSH connection to ".$self->ip." : ". $ssh->error;
 
     return $ssh;
+}
+
+sub _run_command($self, $command,@args) {
+    my $info = $self->get_info();
+    my $access = $info->{admin_access};
+    my $helper_type = $HELPER{$access} or die "Error: Unsupported admin helper $access";
+    my $sub = $helper_type->{$command} or die "Error: Unsupported $command for $access";
+    $sub->($self,@args);
 }
 
 sub shutdown($self,@args) {
@@ -101,26 +114,28 @@ sub force_shutdown($self, $user) {
 
 sub shutdown_now { return force_shutdown(@_) }
 
+sub hibernate($self,@args) {
+    $self->_run_command('hibernate');
+}
+
 sub remove($self, $user) {
     return;
 }
 
 sub mac_address($self) {
-    my $mac = $self->_data_extra('mac');
+    my $mac = $self->_get_info_internal()->{mac};
     return $mac if $mac;
 
     my $ip = $self->ip or confess "Error: Unknown ip for machine ". $self->name;
 
-    $mac = $self->_vm->find_mac_address($ip) or return;
+    $mac = $self->_vm->_find_mac_address($ip) or return;
 
-    $self->_data_extra(mac => $mac);
+    $self->_set_info_internal(mac => $mac);
     return $mac;
 }
 
 sub ip($self) {
-    my $info = $self->_get_info_internal();
-    confess if !defined $info;
-    return $info->{ip};
+    return $self->_get_info_internal()->{ip};
 }
 
 sub autostart($self,$value=undef) {
@@ -128,8 +143,10 @@ sub autostart($self,$value=undef) {
 }
 
 sub is_active($self) {
-    return 0 if !$self->ip;
-    return $self->_vm->_do_ping($self->ip);
+    my $ip = $self->ip;
+    return 0 if !$ip;
+    my $ping = Ravada::VM->_do_ping($ip);
+    return $ping;
 }
 
 sub display_info($self, $user) {
@@ -148,6 +165,14 @@ sub _get_info_internal($self) {
     $info = decode_json($info_json) if length($info_json) && $info_json ne 'null';
     return $info;
 }
+
+sub _set_info_internal($self, $field, $value) {
+    my $info = $self->_get_info_internal();
+    $info->{$field}=$value;
+    $self->_data_extra('info' => encode_json($info));
+    return $info;
+}
+
 
 sub get_info($self) {
     return $self->_get_info_internal();

@@ -12,7 +12,7 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my $BASE_NAME = "zz-test-base";
+my $BASE_NAME = "z-test-base";
 
 use_ok('Ravada');
 init();

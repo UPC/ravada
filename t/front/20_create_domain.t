@@ -29,6 +29,7 @@ my %CREATE_ARGS = (
     Void => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
     ,KVM => { id_iso => search_id_iso('Ubuntu % Minimal'),       id_owner => $USER->id }
     ,LXC => { id_template => 1, id_owner => $USER->id }
+    ,RemotePC => { id_owner => $USER->id }
 );
 
 
@@ -57,6 +58,8 @@ sub test_remove_domain {
     my $domain_f = $RVD_FRONT->search_domain($name);
     ok($domain_f,"Expecting domain $name in front");
 
+    my $vm_name = $domain_f->type;
+
     my $domain;
     $domain = $RVD_BACK->search_domain($name,1);
 
@@ -75,16 +78,17 @@ sub test_remove_domain {
     ok(!$domain_f,"Expecting no domain $name in front ".Dumper($domain_f));
 
     my $list_domains = $RVD_FRONT->list_domains;
-    is(scalar@$list_domains,0, Dumper($list_domains));
+
+    is(scalar( grep { $_->{name} eq $name} @$list_domains), 0 , Dumper($list_domains));
 }
 
 sub test_list_bases {
     my $vm_name = shift;
     my $expected = shift;
 
-    my $bases = $RVD_FRONT->list_bases();
+    my $bases = [ grep { $_->{name} !~ /^z*-test/ } @{$RVD_FRONT->list_bases()}];
 
-    ok(scalar @$bases == $expected,"Expecting '$expected' bases, got ".scalar @$bases);
+    ok(scalar @$bases == $expected,"[$vm_name] Expecting '$expected' bases, got ".scalar @$bases) or die Dumper($bases);
 }
 
 sub test_domain_name {
@@ -157,11 +161,10 @@ for my $vm_name ( vm_names() ) {
     }
 
     my $name = new_domain_name();
-    my $req = $RVD_FRONT->create_domain( name => $name 
-        , create_args($vm_name)
-        , vm => $vm_name
-        , disk => 1024 * 1024
-    );
+    my %create_args = arg_create_dom($vm_name, name => $name);
+    $create_args{disk} = 1024 * 1024 if $vm_name =~ /Void|KVM/;
+
+    my $req = $RVD_FRONT->create_domain(%create_args, id_owner => $USER->id, vm => $vm_name);
     ok($req, "Request $name not created");
 
     $RVD_FRONT->wait_request($req);

@@ -913,6 +913,9 @@ sub _add_indexes_generic($self) {
             "index(date_changed)"
             ,"index(id_base):id_base_index"
         ]
+        ,domains_remotepc => [
+            "unique(id_domain)"
+        ]
         ,requests => [
             "index(status,at_time)"
             ,"index(id,date_changed,status,at_time)"
@@ -1294,6 +1297,8 @@ sub _create_tables {
 }
 
 sub _sql_create_tables($self) {
+    # remember add indexes in sub _add_indexes_generic
+
     my $driver = lc($CONNECTOR->dbh->{Driver}{Name});
     my %tables = (
         settings => {
@@ -1301,6 +1306,12 @@ sub _sql_create_tables($self) {
             , id_parent => 'INT NOT NULL'
             , name => 'varchar(64) NOT NULL'
             , value => 'varchar(128) DEFAULT NULL'
+        }
+        ,domains_remotepc => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain =>  'int(11) NOT NULL'
+            ,autostart => 'int(11) default 0'
+            ,info => 'varchar(255)'
         }
     );
     for my $table ( keys %tables ) {
@@ -1870,7 +1881,7 @@ sub create_domain {
     my $id_base = $args{id_base};
     my $data = delete $args{data};
     my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
-    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool));
+    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool info));
 
     confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
 
@@ -2886,7 +2897,6 @@ sub _cmd_create{
         $request->status('done',$msg);
     }
 
-
 }
 
 sub _can_fork {
@@ -3042,6 +3052,9 @@ sub _cmd_clone($self, $request) {
     return _req_clone_many($self, $request) if $request->defined_arg('number')
     && $request->defined_arg('number') > 1;
 
+    return _req_clone_list($self, $request) if $request->defined_arg('name')
+    && $request->defined_arg('name') =~ /\(\d+\-\d+\)/;
+
     my $domain = Ravada::Domain->open($request->args('id_domain'))
         or confess "Error: Domain ".$request->args('id_domain')." not found";
 
@@ -3061,6 +3074,57 @@ sub _cmd_clone($self, $request) {
         name => $name
         ,%$args
     );
+}
+
+sub _req_clone_list($self, $request) {
+    my $args = $request->args();
+    my $id_domain = $args->{id_domain};
+    my $base = Ravada::Domain->open($id_domain) or die "Error: Domain '$id_domain' not found";
+    my $number = ( delete $args->{number} or 1 );
+    my $domains = $self->list_domains_data();
+    my %domain_exists = map { $_->{name} => 1 } @$domains;
+
+    if (!$base->is_base) {
+        my $uid = $request->defined_arg('uid');
+        confess Dumper($request) if !$uid;
+        my $req_prepare = Ravada::Request->prepare_base(
+                    id_domain => $base->id
+                        , uid => $uid
+        );
+        $args->{after_request} = $req_prepare->id;
+    }
+    my @reqs;
+
+    my ($name_prefix,$start,$end,$name_postfix) = $request->args('name')
+    =~ /(.*)\((\d+)-(\d+)\)(.*)/;
+
+    confess "Error: wrong name list definition ".$request->args('name')
+    .". It should be : prefix(start-end)postfix"
+    if !$name_prefix || !defined $start || !defined $end;
+
+    die "Error: end ( $end ) should be greater than start ( $start ) "
+    ."in ".$request->args('name')
+    if $end<= $start;
+
+    $name_prefix = '' if !defined $name_prefix;
+    $name_postfix = '' if !defined $name_postfix;
+
+    my $base_ip;
+    $base_ip = $base->get_info()->{ip} if exists $base->get_info()->{ip};
+    $base_ip =~ s/\.\d+// if $base_ip;
+
+    my $n = $start;
+    for ( ;; ) {
+        while (length($n) < length($start)) { $n = "0".$n };
+        my $name = "$name_prefix$n$name_postfix";
+        $args->{name} = $name;
+        $args->{info}->{ip} = $base_ip.".$n" if $base_ip;
+        my $req2 = Ravada::Request->clone( %$args );
+        push @reqs, ( $req2 );
+        $n++;
+        last if $n>$end;
+    }
+    return @reqs;
 }
 
 sub _req_clone_many($self, $request) {

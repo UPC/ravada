@@ -59,6 +59,8 @@ sub open($self, $id) {
         $domain = Ravada::Front::Domain::KVM->new( id => $id );
     } elsif ($domain->type eq 'Void') {
         $domain = Ravada::Front::Domain::Void->new( id => $id );
+    } elsif ($domain->type eq 'RemotePC') {
+        $domain = Ravada::Front::Domain::RemotePC->new( id => $id );
     }
     confess "ERROR: Unknown domain id: $id\n"
         unless exists $domain->{_data}->{name} && $domain->{_data}->{name};

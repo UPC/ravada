@@ -31,10 +31,9 @@ sub test_create_domain {
     my $name = new_domain_name();
 
     my $domain;
-    eval { $domain = $vm->create_domain(name => $name
-                    , id_owner => $USER->id
-                    , disk => 1024 * 1024
-                    , arg_create_dom($vm_name))
+    eval { $domain = $vm->create_domain(
+                    arg_create_dom($vm_name, name => $name, id_owner => $USER->id)
+                )
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -51,14 +50,14 @@ sub test_list_domains {
     my $vm_name = shift;
     my $domain = shift;
 
-    my $list_domains = rvd_front->list_domains();
+    my $list_domains = [ grep { $_->{name} !~ /^z-test/ } @{rvd_front->list_domains()}];
     is(scalar@$list_domains,1,Dumper($list_domains));
 
     is($list_domains->[0]->{remote_ip},undef);
 
     $domain->start($USER);
     ok($domain->is_active,"Domain should be active, got ".$domain->is_active);
-    $list_domains = rvd_front->list_domains();
+    $list_domains = [ grep { $_->{name} !~ /^z-test/ } @{rvd_front->list_domains()}];
     is($list_domains->[0]->{remote_ip},undef);
     is($list_domains->[0]->{is_active}, 1 );
 
@@ -71,9 +70,10 @@ sub test_list_domains {
 
     my $remote_ip = '99.88.77.66';
     $domain->start(user => $USER, remote_ip => $remote_ip);
+    wait_active($domain);
     ok($domain->is_active,"Domain should be active, got ".$domain->is_active);
-    $list_domains = rvd_front->list_domains();
-    is($list_domains->[0]->{remote_ip}, $remote_ip);
+    $list_domains = [ grep { $_->{name} !~ /^z-test/ } @{rvd_front->list_domains()}];
+    is($list_domains->[0]->{remote_ip}, $remote_ip) if $domain->_vm->has_feature('iptables');
     is($list_domains->[0]->{is_active}, 1);
     is($list_domains->[0]->{is_hibernated}, 0);
 
@@ -81,14 +81,14 @@ sub test_list_domains {
     is($domain->is_hibernated, 1);
     is($domain->status, 'hibernated');
 
-    $list_domains = rvd_front->list_domains();
+    $list_domains = [ grep { $_->{name} !~ /^z-test/ } @{rvd_front->list_domains()}];
     is($list_domains->[0]->{is_active}, 0);
     is($list_domains->[0]->{is_hibernated}, 1);
     is($list_domains->[0]->{status}, 'hibernated');
 
     rvd_back->_cmd_refresh_vms();
 
-    $list_domains = rvd_front->list_domains();
+    $list_domains = [ grep { $_->{name} !~ /^z-test/ } @{rvd_front->list_domains()}];
     is($list_domains->[0]->{is_active}, 0);
     is($list_domains->[0]->{is_hibernated}, 1);
     is($list_domains->[0]->{status}, 'hibernated');

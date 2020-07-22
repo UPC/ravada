@@ -40,9 +40,10 @@ sub _search_other_ip($ip) {
 }
 
 sub test_nat($vm_name) {
+
     my $domain = create_domain($vm_name);
 
-    $domain->shutdown_now() if $domain->is_active;
+    $domain->shutdown_now(user_admin) if $domain->is_active;
     $domain->start(user => user_admin, remote_ip => $REMOTE_IP );
 
     #-------------------------------------------------------------------------------
@@ -206,6 +207,10 @@ for my $vm_name ( @VMS ) {
         my $msg = "SKIPPED test: No $vm_name VM found ".($@ or '');
         if ($vm && $vm_name =~ /kvm/i && $>) {
             $msg = "SKIPPED: Test must run as root";
+            $vm = undef;
+        }
+        if ($vm && !$vm->has_feature('iptables')) {
+            $msg = "SKIPPED: $vm_name has not iptables feature";
             $vm = undef;
         }
 

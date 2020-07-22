@@ -755,6 +755,7 @@ sub test_domain_limit_already_requested {
     user_admin->grant($user, 'create_machine');
     my $domain = create_domain($vm_name, $user);
     ok($domain,"Expecting a new domain created") or return;
+    is($domain->id_owner , $user->id) or exit;
     $domain->shutdown_now($user)    if $domain->is_active;
 
     is(rvd_back->list_domains(user => $USER, active => 1),0

@@ -45,7 +45,8 @@ sub test_remove_domain {
     my $vm = shift;
     my $name = shift;
 
-    my $domain = $name if ref($name);
+    my $domain;
+    $domain = $name if ref($name);
     $domain = $vm->search_domain($name,1);
 
     if ($domain) {
@@ -102,7 +103,8 @@ sub test_req_create_domain_iso {
     my $req;
     eval { $req = Ravada::Request->create_domain( 
         @ARG_CREATE_DOM
-        ,arg_create_dom($vm_name, name => $name)
+        ,arg_create_dom_mock($vm_name, name => $name)
+        ,id_owner => $USER->id
         );
     };
     ok(!$@,"Expecting \$@=''  , got='".($@ or '')."'") or return;
@@ -175,7 +177,7 @@ sub test_req_create_base($vm) {
     ok($domain,"I can't find domain $name") && do {
         $domain->prepare_base(user_admin);
         ok($domain && $domain->is_base,"Domain $name should be base");
-        is($domain->is_base,0);
+        is($domain->is_base,1,"Expecting ".$domain->name." is base") or exit;
     };
     return $domain;
 }
@@ -222,7 +224,7 @@ sub test_unread_messages {
     my @messages = $user->unread_messages();
 
     ok(scalar @messages == $n_unread,"$test: Expecting $n_unread unread messages , got "
-        .scalar@messages." ".Dumper(\@messages));
+        .scalar@messages) or confess Dumper(\@messages);
 
     $user->mark_all_messages_read();
 }
@@ -231,27 +233,28 @@ sub test_requests_by_domain {
     my $vm_name = shift;
 
     my $vm = rvd_back->search_vm($vm_name);
-    my $domain = create_domain($vm_name, user_admin);
+    my $domain = create_domain_mock($vm_name, user => user_admin);
     ok($domain,"Expecting new domain created") or exit;
 
     my $req1 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
-    ok($domain->list_requests == 1);
+    ok(grep { $_->{command} eq 'prepare_base' } $domain->list_requests );
 
     my $req2 = Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id);
-    ok($domain->list_requests == 2);
+    ok(grep { $_->{command} eq 'remove_base' } $domain->list_requests )
+        or die Dumper($domain->list_requests);
 
     my $clone_name = new_domain_name();
     my $req_clone = Ravada::Request->create_domain (
         id_owner => user_admin->id
         ,id_base => $domain->id
         ,vm => $vm_name
-        ,arg_clone_dom($vm_name, $clone_name)
+        ,arg_clone_dom_mock($vm_name, $clone_name)
     );
 
     my $req4 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
-    is($domain->list_requests,3,Dumper([map { $_->{command} } $domain->list_requests]));
+    ok($domain->list_requests >= 3,Dumper([map { $_->{command} } $domain->list_requests]));
 
-    rvd_back->_process_all_requests_dont_fork();
+    rvd_back->_process_all_requests_dont_fork(1);
 
     is($req1->status , 'done');
     is($req2->status , 'done');
@@ -280,12 +283,12 @@ sub test_req_many_clones {
     my $req1 = Ravada::Request->clone(
         uid => user_admin->id
         ,id_domain => $base->id
-        ,arg_clone_dom($vm->type, $name1)
+        ,arg_clone_dom_mock($vm->type, $name1)
     );
     my $req2 = Ravada::Request->clone(
         uid => user_admin->id
         ,id_domain => $base->id
-        ,arg_clone_dom($vm->type, $name2)
+        ,arg_clone_dom_mock($vm->type, $name2)
     );
 
     rvd_back->_process_all_requests_dont_fork();

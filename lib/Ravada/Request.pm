@@ -50,6 +50,7 @@ our %VALID_ARG = (
     ,id_template => 2
          ,memory => 2
            ,disk => 2
+           ,data => 2
            #        ,network => 2
       ,remote_ip => 2
           ,start => 2

@@ -122,7 +122,7 @@ sub test_start {
         my $domain = $RAVADA->search_domain($name);
         $id_domain = $domain->id;
         $domain->start($USER)    if !$domain->is_active();
-        wait_ip($domain) if $vm_name =~ /RemotePC/i;
+        wait_port($domain,22) if $vm_name eq 'RemotePC';
         ok($domain->is_active);
         is($domain->is_volatile,0);
 
@@ -137,6 +137,7 @@ sub test_start {
     #####################################################################3
     #
     # stop
+
 
     my $req3 = Ravada::Request->force_shutdown_domain(id_domain => $id_domain, uid => $USER->id);
     $RAVADA->_process_all_requests_dont_fork(0);
@@ -269,9 +270,10 @@ for my $vm_name ( vm_names() ) {
 #        $domain->_vm->disconnect;
         next if !$domain;
         my $domain_name = $domain->name;
-        $domain = undef;
 
         test_screenshot_db($vm_name, $domain_name);
+
+        $domain->remove(user_admin);
     };
 }
 end();

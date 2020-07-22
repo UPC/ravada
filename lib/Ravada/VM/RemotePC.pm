@@ -30,17 +30,20 @@ has type => (
     ,default => 'RemotePC'
 );
 
-has 'features' => (
+has 'features_vm' => (
     is => 'ro'
     ,isa => 'HashRef'
     ,default => sub {
         my %f = (
             bind_ip => 0
+            ,change_hardware => 0
             ,extra_data => 0
-             ,new_base => 1
-             ,spice => 0
-             ,volumes => 0
-             ,shutdown_before_remove => 0
+            ,iptables => 0
+            ,memory => 0
+            ,new_base => 1
+            ,spice => 0
+            ,volumes => 0
+            ,shutdown_before_remove => 0
         );
         lock_hash(%f);
         return \%f;
@@ -74,10 +77,11 @@ sub create_domain($self,%args) {
     confess "Error: unsupported volatile machines in ".$self->type
         if $volatile;
 
-    my $info = delete $args{info};
+    my $info = ( delete $args{info} or {} );
 
-    confess "Error: machine should be base or you should provide ip"
-    if !$is_base && !$info->{ip};
+    my $from_pool = delete $args{from_pool};
+    confess "Error: create from pool shouldn't reach here "
+    if $from_pool;
 
     confess "Error: unknown args ".Dumper(\%args) if keys %args;
 

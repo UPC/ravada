@@ -6,6 +6,7 @@ use  Carp qw(carp confess);
 use Data::Dumper;
 use Fcntl qw(:flock SEEK_END);
 use File::Path qw(make_path);
+use IO::Socket::INET;
 use YAML qw(DumpFile);
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
@@ -31,6 +32,7 @@ require Exporter;
 
 @EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front init init_vm clean new_pool_name new_volume_name
 create_domain
+    create_domain_mock
     import_domain
     test_chain_prerouting
     find_ip_rule
@@ -43,7 +45,9 @@ create_domain
     remote_config_nodes
     clean_remote_node
     arg_create_dom
+    arg_create_dom_mock
     arg_clone_dom
+    arg_clone_dom_mock
     search_iptable_remote
     clean_remote
     start_node shutdown_node remove_node hibernate_node
@@ -56,6 +60,9 @@ create_domain
     connector
     init_ldap_config
     wait_ip
+    wait_port
+    wait_active
+    wait_inactive
 
     create_storage_pool
     local_ips
@@ -119,9 +126,10 @@ my $MNT_RVD= "/mnt/test_rvd";
 my $QEMU_NBD = `which qemu-nbd`;
 chomp $QEMU_NBD;
 
-our $BASE_NAME_REMOTEPC = "zz-test-remotepc";
+our $BASE_NAME_REMOTEPC = "z-test-base";
 my @REMOTE_PC_IPS;
 
+my $MOCK_IP = "192.168.127.2";
 
 my $FH_FW;
 my $FH_NODE;
@@ -151,8 +159,18 @@ sub user_admin {
     return $USER_ADMIN;
 }
 
+sub arg_create_dom_mock($vm_name, %args) {
+    if ($vm_name eq 'RemotePC' or ( ref($vm_name) && $vm_name->type eq 'RemotePC')) {
+        $args{info} = {} if  !exists $args{info};
+        $args{info}->{ip} = _new_mock_ip() if !exists $args{info}->{ip};
+    }
+    return arg_create_dom($vm_name, %args);
+}
+
 sub arg_create_dom($vm_name, %args0 ) {
     confess Dumper(\%args0) if grep { /HASH/ } keys %args0;
+
+    $vm_name = $vm_name->type if ref($vm_name);
 
     confess "Unknown vm $vm_name"
         if !$ARG_CREATE_DOM{$vm_name};
@@ -162,15 +180,16 @@ sub arg_create_dom($vm_name, %args0 ) {
     for my $key (keys %args0) {
         $args{$key} = $args0{$key};
     }
-    my $domain_name = delete $args0{name} or confess "Error: name of the domain required";
+    my $domain_name = delete $args0{name};
 
     _add_arg_create_dom($vm_name, $domain_name, \%args);
+    $args{id_owner} = user_admin->id if !$args{id_owner};
     return %args;
 }
 
 sub wait_ip($domain, $timeout=60) {
     my $ip;
-    for ( 1 .. 60 ) {
+    for ( 1 .. $timeout ) {
         $ip = $domain->ip;
         last if $ip;
         sleep 1;
@@ -178,8 +197,40 @@ sub wait_ip($domain, $timeout=60) {
     return $ip;
 }
 
+sub wait_port($domain, $port, $timeout=60) {
+    my $ip = wait_ip($domain);
+    for ( 1 .. $timeout ) {
+        my $sock = IO::Socket::INET->new(PeerAddr => $ip
+                                         ,PeerPort => $port
+                                         ,Proto    => 'tcp');
+        return if $sock;
+        diag("Trying to connect to $ip $port");
+        sleep 1;
+    }
+}
+
+sub wait_active($domain, $timeout=60) {
+    for ( 1 .. $timeout ) {
+        return if $domain->is_active;
+        sleep 1;
+        $domain = Ravada::Domain->open($domain->id);
+        diag("$_ wait active ".$domain->name);
+    }
+
+}
+sub wait_inactive($domain, $timeout=60) {
+    for ( 1 .. $timeout ) {
+        return if !$domain->is_active;
+        sleep 1;
+        $domain = Ravada::Domain->open($domain->id);
+        diag("$_ wait inactive ".$domain->name);
+    }
+}
+
+
 sub _add_arg_create_dom($vm_name, $domain_name, $args) {
     if ($vm_name eq 'RemotePC') {
+        confess "Error: domain_name must be defined" if !defined $domain_name;
         my $vm = $RVD_BACK->search_vm('KVM');
         my $base = $vm->search_domain($BASE_NAME_REMOTEPC, 1);
         $base= $RVD_BACK->import_domain(name => $BASE_NAME_REMOTEPC
@@ -194,6 +245,7 @@ sub _add_arg_create_dom($vm_name, $domain_name, $args) {
         $clone->start(user_admin);
 
         if (!exists $args->{info} || !exists $args->{info}->{ip}) {
+            #            confess "No necessary";
             my $ip = wait_ip($clone) or die "Error: no ip for clone ".$domain_name;
             push @REMOTE_PC_IPS,($ip);
             $args->{info}->{ip} = $ip;
@@ -203,7 +255,6 @@ sub _add_arg_create_dom($vm_name, $domain_name, $args) {
 
         my $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains where id=? ");
         $sth->execute($clone->id);
-        warn "$domain_name created";
     }
 }
 
@@ -211,8 +262,25 @@ sub arg_clone_dom($vm_name, $domain_name) {
     my %args = ( name => $domain_name );
     _add_arg_create_dom($vm_name, $domain_name, \%args);
     return %args;
-
 }
+
+sub _new_mock_ip {
+    my $new_ip = $MOCK_IP;
+    my ($net,$last) = $new_ip =~ /(.*)\.(\d+)/;
+    $last++;
+
+    confess "Out ouf IPs" if $last > 254;
+
+    $MOCK_IP = "$net.$last";
+    return $MOCK_IP;
+}
+
+sub arg_clone_dom_mock($vm_name, $domain_name) {
+    my %args = ( name => $domain_name , info => { ip => _new_mock_ip()} );
+    _add_arg_create_dom($vm_name, $domain_name, \%args);
+    return %args;
+}
+
 
 sub add_ubuntu_minimal_iso {
     my $distro = 'bionic_minimal';
@@ -232,9 +300,24 @@ sub add_ubuntu_minimal_iso {
     $RVD_BACK->_update_table('iso_images','name',\%info);
 }
 
+sub _kernel_module($pattern) {
+    confess "Error: pattern required" if !$pattern;
+    confess "Error: '$pattern' doesn't look like a regular expression to me"
+    if !ref($pattern) || ref($pattern) ne 'Regexp';
+
+    my ($in, $out, $err);
+    run3(['lsmod'],\$in, \$out, \$err);
+    die $err if $err;
+    for my $line ( split /\n/, $out) {
+        return 1 if $line =~ $pattern;
+    }
+    return 0;
+}
+
 sub vm_names {
 
    delete @ARG_CREATE_DOM{'KVM','RemotePC'} if $<;
+   delete $ARG_CREATE_DOM{'KVM'} if !_kernel_module(qr'kvm');
    return (sort keys %ARG_CREATE_DOM) if wantarray;
    confess;
 }
@@ -253,11 +336,35 @@ sub import_domain($vm, $name, $import_base=0) {
     return $domain;
 }
 
-sub create_domain {
-    my $vm_name = shift;
-    my $user = (shift or $USER_ADMIN);
-    my $id_iso = (shift or 'Alpine');
-    my $swap = (shift or undef);
+# use create_domain_mock when you want a create a new machine but it won't ever be started
+# handy for RemotePC
+sub create_domain_mock($vm_name, %args) {
+    if ($vm_name eq 'RemotePC' or ( ref($vm_name) && $vm_name->type eq 'RemotePC')) {
+        $args{info} = {} if  !exists $args{info};
+        $args{info}->{ip} = _new_mock_ip() if !exists $args{info}->{ip};
+    }
+    create_domain($vm_name, %args);
+}
+
+sub create_domain($vm_name, @args) {
+
+    my $user = ($args[0] or $USER_ADMIN);
+    my $id_iso = ($args[1] or 'Alpine');
+    my $swap = ($args[2] or undef);
+    my %args0;
+    if (scalar(@args)%1 == 0 && !ref($user)) {
+        %args0 = @args;
+        $user = (delete $args0{user} or $USER_ADMIN);
+        $id_iso = (delete $args0{id_iso} or 'Alpine');
+        $swap = delete $args0{swap};
+        my $info = delete $args0{info};
+        confess "Error: unknown args ".Dumper(\%args0) if keys %args0;
+
+        $args0{info} = $info if defined $info;
+    } else {
+        $args0{id_owner} = $user->id    if defined $user;
+        $args0{swap} = $swap            if defined $swap;
+    }
 
     $vm_name = 'KVM' if $vm_name eq 'qemu';
 
@@ -272,7 +379,6 @@ sub create_domain {
         $vm_name = $vm->type;
     } else {
         $vm = rvd_back()->search_vm($vm_name);
-        ok($vm,"Expecting VM $vm_name, got ".$vm->type) or return;
     }
 
     confess "ERROR: Domains can only be created at localhost"
@@ -287,7 +393,7 @@ sub create_domain {
 
     return $domain if $domain;
 
-    my %arg_create = arg_create_dom($vm_name, name => $name);
+    my %arg_create = arg_create_dom($vm_name, name => $name, %args0);
     if ($vm_name =~ /(KVM|Void)/) {
         %arg_create = (id_iso => $id_iso
             , %arg_create
@@ -298,8 +404,7 @@ sub create_domain {
         $arg_create{swap} = 1024 * 1024 if $swap;
     }
 
-
-    { $domain = $vm->create_domain(name => $name
+    eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $user->id
                     , %arg_create
            );
@@ -1157,7 +1262,7 @@ sub search_id_iso {
     );
     $sth->execute("$name%");
     my ($id) = $sth->fetchrow;
-    die "There is no iso called $name%" if !$id;
+    confess "There is no iso called $name%" if !$id;
     return $id;
 }
 
@@ -1567,6 +1672,9 @@ sub shutdown_domain_internal($domain) {
         $domain->domain->destroy();
     } elsif ($domain->type eq 'Void') {
         $domain->_store(is_active => 0 );
+    } elsif ($domain->type eq 'RemotePC') {
+        $domain->shutdown(user => user_admin);
+        wait_inactive($domain);
     } else {
         confess "ERROR: I don't know how to shutdown internal domain of type ".$domain->type;
     }

@@ -620,6 +620,9 @@ sub _around_add_volume {
         if scalar @_ % 2;
     my %args = @_;
 
+    confess "Error: feature change hardware unsupported on ".$self->_vm->type
+    if !$self->_vm->has_feature('change_hardware');
+
     my $file = ($args{file} or $args{path});
     confess if $args{id_iso} && !$file;
     my $name = $args{name};
@@ -913,6 +916,8 @@ sub _check_has_clones {
 
 sub _check_free_vm_memory {
     my $self = shift;
+
+    return if !$self->_vm->has_feature('memory');
 
     my $vm_free_mem = $self->_vm->free_memory;
 
@@ -1683,7 +1688,7 @@ sub _pre_remove_domain($self, $user, @) {
         $self->{_volumes} = [$self->list_disks()];
     }
     $self->pre_remove();
-    $self->_remove_iptables()   if $self->is_known();
+    $self->_remove_iptables()   if $self->_vm->has_feature('iptables') && $self->is_known();
     $self->shutdown_now($user)  if $self->_vm->features->{shutdown_before_remove}
     && $self->is_active;
 
@@ -1921,9 +1926,7 @@ sub _remove_id_base {
 Returns true or  false if the domain is a prepared base
 =cut
 
-sub is_base {
-    my $self = shift;
-    my $value = shift;
+sub is_base($self, $value=undef) {
 
     $self->_select_domain_db or return 0;
 
@@ -3096,7 +3099,7 @@ sub _post_start {
 
     $self->_data('internal_id',$self->internal_id);
 
-    $self->_add_iptable(@_);
+    $self->_add_iptable(@_) if $self->_vm->has_feature('iptables');
     $self->_update_id_vm();
     Ravada::Request->open_exposed_ports(
             uid => Ravada::Utils::user_daemon->id
