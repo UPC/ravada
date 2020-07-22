@@ -1344,6 +1344,11 @@ get '/booking/new.html' => sub($c) {
     return $c->render(template => '/ng-templates/booking/new' ,id => undef);
 };
 
+get '/booking' => sub($c) {
+    return $c->render(template => '/ng-templates/booking/calendar');
+};
+
+=replaced by single page /booking
 get '/booking/:range/:date' => { range => 'week' , date => DateTime->now->ymd} => sub($c) {
     my $range = $c->stash('range');
 
@@ -1355,7 +1360,9 @@ get '/booking/:range/:date' => { range => 'week' , date => DateTime->now->ymd} =
     push @{$c->stash('css')},('/css/booking.css');
     return $c->render(template => '/ng-templates/booking/'.$range);
 };
+=cut
 
+=replaced by /v1/bookings
 get '/v1/booking/:range/:date' => { range => 'week', date => undef } => sub($c) {
     my $range = $c->stash('range');
     my @args = (
@@ -1372,6 +1379,7 @@ get '/v1/booking/:range/:date' => { range => 'week', date => undef } => sub($c) 
     }
 
 };
+=cut
 
 get '/v1/bookings/'=> sub($c) {
     my $arg = $c->req->params->to_hash;

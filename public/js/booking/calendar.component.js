@@ -21,6 +21,7 @@ function calendarCtrl($element, $window, apiBookings) {
         calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'timeGridWeek',
             firstDay: 1,
+            editable: true,
             events: getEvents,
             headerToolbar: {
                 left: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek create',
