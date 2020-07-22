@@ -13,7 +13,6 @@ Help
 
     sudo rvd_back --help
 
-
 LDAP
 ----
 
@@ -35,7 +34,7 @@ type an username and password to confirm it is a valid user.
     LOGIN OK bind
 
 Create LDAP user
-----------------
+~~~~~~~~~~~~~~~~
 
 Add a new entry in your LDAP server. Warning the password will be shown in the
 clear.
@@ -45,7 +44,7 @@ clear.
     $ sudo rvd_back --add-user-ldap jimmy.mcnulty
 
 Create LDAP group
-----------------
+~~~~~~~~~~~~~~~~~
 
 Add a new group in your LDAP server. These are POSIX groups with member uids
 inside.
@@ -55,7 +54,7 @@ inside.
     $ sudo rvd_back --add-group-ldap staff
 
 Add users to LDAP groups
-------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Once you have users and groups in your LDAP server you can easily add member entries
 to a group. *Warning* : the user must have logged in at least once.

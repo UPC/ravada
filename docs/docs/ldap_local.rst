@@ -68,4 +68,9 @@ The ravada backend script allows creating users in the LDAP
 
 .. prompt:: bash
 
-    sudo ./bin/rvd_back.pl --add-user-ldap jimmy.mcnulty
+    sudo rvd_back --add-user-ldap jimmy.mcnulty
+
+There are more commands to easily manage LDAP entries. Check the
+`LDAP section from the CLI  <http://ravada.readthedocs.io/en/latest/docs/CLI.html>`_
+documentation.
+
