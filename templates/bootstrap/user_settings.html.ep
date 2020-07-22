@@ -7,16 +7,17 @@
     <div id="page-wrapper">
 
         <!--BASES AND DOMAINS LIST-->
-        <div ng-controller="user_settings">
+        <div>
             <div class="page-header">
                 <div class="card card-dark">
                     <div class="card-header">
                         <h2 class="text-center"><%=l 'User Settings' %></h2>
                     </div>
                     <div>
-                        <div class="card-body">
+                      <div class="card-body">
 						<h3 class="mb-3"><%=l 'Setting your default language' %></h3>
                         <form method='post' enctype="multipart/form-data">
+            			<input type="hidden" name="tongue-form" value="1">
                             <%=l 'Language:' %> <select onchange="this.form.submit();" id="tongue" name="tongue" >
 				<option <%= $c->param("tongue") eq 'tr' ? "selected" : "" %> value="tr" ><%=l 'Turkish' %></option>
                                 <option <%= $c->param("tongue") eq 'ar' ? "selected" : "" %> value="ar" ><%=l 'Arab' %></option>
@@ -38,8 +39,8 @@
 %                            if ($changed_lang) {
                                  <font color="green">   <%=l 'Your language has been changed successfully' %></font>
 %                            }
-                        </form>
-                        </div>
+</form>
+			</div>
 %   if (!$_user->is_external) {
                         <div class="card-body">
 						<h3><%=l 'Change password' %></h3>
@@ -62,7 +63,8 @@
 %                         }
                             <div class="form-group row mt-3 ml-2">
                                 <button type="reset" class="btn btn-outline-secondary mr-2" onclick = "location='/'"><%=l 'Cancel' %></button>
-                                <input class="btn btn-primary" type='submit' onclick='this.form.submit();' id='button_click' name='button_click' value='<%=l 'Update password' %>'>
+				<input type="hidden" name="password-form" value="1">
+				<input class="btn btn-primary" type='submit' onclick='this.form.submit();' id='button_click' name='button_click' value='<%=l 'Update password' %>'>
     %                               if ($changed_pass) {
                                         <font color="green">   <%=l 'Your password has been changed successfully' %></font>
     %                               }

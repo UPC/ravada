@@ -1322,7 +1322,7 @@ sub user_settings {
     my $c = shift;
     my $changed_lang;
     my $changed_pass;
-    if ($c->req->method('POST')) {
+    if ($c->param('tongue-form') && $c->req->method eq 'POST') {
         $USER->language($c->param('tongue'));
         $changed_lang = $c->param('tongue');
         Ravada::Request->post_login(
@@ -1332,10 +1332,10 @@ sub user_settings {
     }
     $c->param('tongue' => $USER->language);
     my @errors;
-    if ($c->param('button_click')) {
+    if ($c->param('password-form') && $c->req->method eq 'POST') {
 	my $auth_ok;
         eval { $auth_ok = Ravada::Auth::login($USER->name, $c->param('current_password'))};
-        if (!$auth_ok || $@) {
+	if (!$auth_ok || $@ || ($c->param('current_password') eq "")) {
 		push @errors, ("Current password is wrong");
 	}
 	else {
