@@ -722,6 +722,7 @@ sub _around_prepare_base($orig, $self, @args) {
         my $vm_local = $self->_vm->new( host => 'localhost' );
         $self->_vm($vm_local);
     }
+    $self->pre_prepare_base();
     my @base_img = $self->$orig($with_cd);
 
     die "Error: No information files returned from prepare_base"
@@ -731,6 +732,8 @@ sub _around_prepare_base($orig, $self, @args) {
 
     $self->_post_prepare_base($user, $request);
 }
+
+sub pre_prepare_base($self) {}
 
 =head2 prepare_base
 
@@ -797,7 +800,6 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
     $self->_check_has_clones();
 
     $self->is_base(0);
-    $self->_post_remove_base();
     if ($self->is_active) {
         $self->shutdown(user => $user);
         for ( 1 .. $TIMEOUT_SHUTDOWN ) {
@@ -812,6 +814,7 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
             sleep 1;
         }
     }
+    $self->_post_remove_base();
     if (!$self->is_local) {
         my $vm_local = Ravada::VM->open( type => $self->vm );
         $self->migrate($vm_local);
