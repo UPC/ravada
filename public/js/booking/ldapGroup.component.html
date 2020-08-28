@@ -1,0 +1,26 @@
+<div>
+    <select class="form-control"
+            ng-options="name for name in $ctrl.available_groups"
+            ng-model="$ctrl.group_selected"
+            ng-change="$ctrl.add_ldap_group()">
+        <option selected value="">Select groups</option>
+    </select>
+    <div class="text-danger" role="alert" ng-show="$ctrl.err">
+        {{ $ctrl.err }}
+    </div>
+    <div class="container-fluid">
+        <div class="row"
+             ng-repeat="group in $ctrl.selected_groups">
+            <div class="col-6">
+                {{group}}
+            </div>
+
+            <div class="col-6 text-danger">
+                <span ng-click="$ctrl.remove_ldap_group(group)">
+                    <i class="fas fa-trash"></i>
+                </span>
+            </div>
+        </div>
+    </div>
+
+</div>

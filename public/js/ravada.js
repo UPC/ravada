@@ -1132,7 +1132,7 @@
                 $scope.conflicts = [];
                 return;
             }
-            $http.post('/v1/booking/list'
+            $http.get('/v1/bookings'
                 ,JSON.stringify({
                     date_start: $scope.booking_entry.date_booking
                     ,date_end: $scope.booking_entry.date_end
@@ -1183,7 +1183,7 @@
 
 
         };
-
+/* moved to component ldapGroups
         $scope.add_ldap_group = function(item) {
             if (item.ldap_groups.indexOf(item.ldap_group_new)>=0) {
                 console.log(item.ldap_group_new+' already there');
@@ -1200,7 +1200,7 @@
                 $scope.form_booking.$pristine = false;
             }
         };
-
+*/
         $http.get('/list_ldap_groups')
                     .then(function(response) {
                         $scope.ldap_groups=response.data;

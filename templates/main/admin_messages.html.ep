@@ -21,7 +21,7 @@
                     <th><%=l 'Date' %></th>
 
                     <th><%=l 'Actions' %></th>
-                    
+
                 </tr>
             </thead>
             <tbody >
@@ -29,7 +29,7 @@
                     <td><div ng-bind-html="message.subject" ng-show="{{message.date_read == null}}"><i class="fa fa-circle" aria-hidden="true" style="color:#33ccff; margin:0 5px 0 0; size: 0.5em;"></i><b>{{message.subject}}</b></div>
                         <div ng-show="{{message.date_read != null}}" ng-bind-html="message.subject">{{message.subject}}</div>
                     </td>
-                    
+
                     <td><div ng-show="{{message.date_read == null}}"><b>{{message.date_send}}</b></div>
                         <div ng-show="{{message.date_read != null}}">{{message.date_send}}</div></td>
 
@@ -40,12 +40,12 @@
                         <a ng-show="{{message.date_read == null}}" ng-click="asRead(message.id)" class="btn btn-success text-white"><%=l 'Mark as read' %></a>
                         <a ng-show="{{message.date_read != null}}" ng-click="asUnread(message.id)" class="btn btn-warning text-white"><%=l 'Mark as unread' %></a>
                     </td>
-                    
-                </tr>      
-            </tbody>
-        </table> 
 
-        <div ng-repeat="message in list_message">       
+                </tr>
+            </tbody>
+        </table>
+
+        <div ng-repeat="message in list_message">
         <div id="modal{{message.id}}" class="modal fade" role="dialog">
           <div class="modal-dialog">
 
@@ -55,7 +55,7 @@
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
                 <h4 class="modal-title">
                     <div ng-show="{{message.date_read == null}}"><i class="fa fa-circle" aria-hidden="true" style="color:#33ccff; margin:0 5px 0 0; size: 0.5em;"></i><b>{{message.subject}}</b></div>
-                            
+
                     <div ng-show="{{message.date_read != null}}">{{message.subject}}</div>
                 </h4>
               </div>

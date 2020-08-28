@@ -1,0 +1,57 @@
+<form name="form_booking" class="floating-labels container-fluid">
+    <div class="form-group m-b-40">
+        <label for="title">Title</label>
+        <input type="text" class="form-control" id="title" ng-model="$ctrl.entry.title" required>
+    </div>
+
+    <div class="form-group">
+        <label for="description">Description</label>
+        <textarea class="form-control" id="description"
+                  ng-model="$ctrl.entry.description" rows="3"></textarea>
+    </div>
+    <div class="row justify-content-start">
+        <div class="form-group col-sm-6 col-md-12">
+            <label for="date_ini">Date</label>
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <div class="input-group-text"><i class="far fa-calendar"></i></div>
+                </div>
+                <input type="text" class="form-control" uib-datepicker-popup
+                       id="date_ini"
+                       ng-model="$ctrl.entry_parsed.date_booking"
+                       ng-click="$ctrl.openCal('ini_opened')"
+                       is-open="$ctrl.cal.ini_opened" datepicker-options="dateOptions"
+                       ng-required="true" close-text="Close"/>
+            </div>
+        </div>
+        <div class="form-group col-sm">
+            <rvd-time-picker label="From" ng-model="$ctrl.entry.time_start"></rvd-time-picker>
+        </div>
+        <div class="form-group col-sm">
+            <rvd-time-picker label="To" ng-model="$ctrl.entry.time_end"></rvd-time-picker>
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="repat">Repeat</label>
+        <select class="custom-select" ng-model="$ctrl.entry.repeat" id="repat">
+            <option value="">No</option>
+            <option value="weekly">Weekly</option>
+        </select>
+    </div>
+    <div class="row justify-content-start" ng-show="$ctrl.entry.repeat === 'weekly'">
+        <div class="form-group col-sm" ng-repeat="d in $ctrl.dow">
+        <label>
+        <input type="checkbox" name="dow_{{$index+1}}"
+               ng-true-value="{{$index+1}}"
+               ng-false-value="0"
+               ng-change="$ctrl.update_booking_dow()"
+               ng-model="$ctrl.entry.dow[$index]"
+        >
+            {{ d }}
+        </label>
+        </div>
+    </div>
+    <div class="form-group">
+        <ldap-groups ng-model="$ctrl.entry.ldap_groups"></ldap-groups>
+    </div>
+</form>
