@@ -74,6 +74,7 @@ create_domain
 
     mangle_volume
     test_volume_contents
+    test_volume_format
 
     end
 );
@@ -1947,5 +1948,49 @@ sub test_volume_contents($vm, $name, $file, $expected=1) {
         confess "I don't know how to check vol contents of '$file'";
     }
 }
+
+sub _check_file($volume,$expected) {
+    my ($in, $out, $err);
+    run3(['file',$volume->file],\$in, \$out, \$err);
+    like($out,$expected) or confess;
+}
+
+sub _check_yaml($filename) {
+    _check_file($filename,qr(: ASCII text));
+}
+
+sub _check_qcow2($filename) {
+    _check_file($filename,qr(: QEMU QCOW2));
+}
+
+sub test_volume_format(@volume) {
+    for my $volume (@volume) {
+        next if !$volume->file;
+        my ($extension) = $volume->file =~ /\.(\w+)$/;
+        return if $extension eq 'iso';
+        my %sub = (
+            qcow2 => \&_check_qcow2
+            ,void => \&_check_yaml
+        );
+        is($volume->info->{driver_type}, $extension) or confess Dumper($volume->file, $volume->info);
+        my $exec = $sub{$extension} or confess "Error: I don't know how to check "
+            .$volume->file." [$extension]";
+        $exec->($volume);
+        next if $extension eq 'void';
+        if ($volume->backing_file) {
+            like($volume->info->{backing},qr(backingStore.*type.*file),"Expecting Backing for ".$volume->file." in ".$volume->domain->name)
+                or confess Dumper($volume->info);
+        } else {
+            # backing store info missing or only with <backingStore/>
+            if (!exists $volume->info->{backing} ) {
+                ok(1);
+            } else {
+                is($volume->info->{backing},'<backingStore/>',"Expecting empty backing for "
+                    .Dumper($volume->domain->name,$volume->info)) or exit;
+            }
+        }
+    }
+}
+
 
 1;
