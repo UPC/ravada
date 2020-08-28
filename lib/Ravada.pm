@@ -3161,7 +3161,10 @@ sub _cmd_rebase($self, $request) {
     }
     $request->status('working');
 
-    my $new_base = Ravada::Domain->open($request->args('id_base'));
+    my $id_base = $request->args('id_base')
+    or confess "Error: missing id_base";
+    my $new_base = Ravada::Domain->open($id_base)
+        or confess "Error: domain $id_base not found";
 
     $domain->rebase($user, $new_base);
 }
