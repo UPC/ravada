@@ -150,7 +150,7 @@ sub _qemu_info($self, $field=undef) {
     }
 
     return {} if ! $self->vm->file_exists($self->file);
-    my @cmd = ( $QEMU_IMG,'info',$self->file);
+    my @cmd = ( $QEMU_IMG,'info',$self->file,'-U');
 
     my ($out, $err) = $self->vm->run_command(@cmd);
     confess $err if $err;
