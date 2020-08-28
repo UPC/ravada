@@ -104,7 +104,7 @@ sub rebase($self, $new_base) {
         ,'-F','qcow2'
         ,'-b',$new_base,$self->file);
     my ($out, $err) = $self->vm->run_command(@cmd);
-    die $err if $err;
+    confess $err if $err;
 
 }
 
@@ -149,10 +149,11 @@ sub _qemu_info($self, $field=undef) {
         return $self->{_qemu_info}->{$field};
     }
 
-    my @cmd = ( $QEMU_IMG,'info',$self->file);
+    return {} if ! $self->vm->file_exists($self->file);
+    my @cmd = ( $QEMU_IMG,'info',$self->file,'-U');
 
     my ($out, $err) = $self->vm->run_command(@cmd);
-    die $err if $err;
+    confess $err if $err;
 
     my %info = (
         'backing file'=> undef
