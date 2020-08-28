@@ -301,12 +301,21 @@ sub add_volume {
 
     my $device = ( delete $args{device} or 'disk' );
     my $type = ( delete $args{type} or '');
+    my $format = delete $args{format};
+
+    if (!$format) {
+        if ( $args{file}) {
+            ($format) = $args{file} =~ /\.(\w+)$/;
+        } else {
+            $format = 'void';
+        }
+    }
 
     $type = 'swap' if $args{swap};
     $type = '' if $type eq 'sys';
     $type = uc($type)."."   if $type;
 
-    my $suffix = "void";
+    my $suffix = $format;
 
     if ( !$args{file} ) {
         my $vol_name = ($args{name} or Ravada::Utils::random_name(4) );
@@ -355,11 +364,21 @@ sub add_volume {
     $self->_store(hardware => $hardware);
 
     delete @args{'name', 'target', 'driver'};
-    if ( ! -e $file ) {
-        $self->_vm->write_file($file, Dump(\%args)),
-    }
+    $self->_create_volume($file, $format, \%args) if ! -e $file;
 
     return $file;
+}
+
+sub _create_volume($self, $file, $format, $data=undef) {
+    if ($format eq 'void') {
+        $self->_vm->write_file($file, Dump($data)),
+    } elsif ($format eq 'qcow2') {
+        my @cmd = ('qemu-img','create','-f','qcow2', $file, $data->{capacity});
+        my ($out, $err) = $self->_vm->run_command(@cmd);
+        confess $err if $err;
+    } else {
+        confess "Error: unknown format '$format'";
+    }
 }
 
 sub remove_volume($self, $file) {
