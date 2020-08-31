@@ -701,7 +701,7 @@ sub test_upgrade($vm) {
     $standalone->remove(user_admin);
 }
 
-sub test_base_clone($vm) {
+sub test_base_clone($vm, $remove_base_first=0) {
     my $base = create_domain($vm);
     my $clone = $base->clone(
         name => new_domain_name()
@@ -712,10 +712,15 @@ sub test_base_clone($vm) {
         name => new_domain_name()
         ,user => user_admin()
     );
-    $base->remove_base(user_admin);
+    if ($remove_base_first) {
+        $base->remove_base(user_admin);
+    }
     eval { $clone2->start(user_admin) };
     is('',''.$@, "Error starting ".$base->name) or exit;
 
+    if (!$remove_base_first) {
+        $base->remove_base(user_admin);
+    }
     eval { $base->start(user_admin) };
     is('',''.$@, "Error starting ".$base->name);
     is($base->is_active,1) or exit;
@@ -747,6 +752,7 @@ for my $vm_name (reverse sort @VMS) {
         skip $msg,10    if !$vm;
 
         test_base_clone($vm);
+        test_base_clone($vm,1);
         test_upgrade($vm);
 
         test_too_big_prepare($vm);
