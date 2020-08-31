@@ -881,6 +881,9 @@ sub _remove_old_isos {
             ."      AND url NOT LIKE '%*%' "
         ,"DELETE FROM iso_images "
             ."  WHERE name like 'Lubuntu Zesty%'"
+        ,"DELETE FROM iso_images "
+            ."  WHERE name like 'Debian Buster 32%'"
+            ."  AND file_re like '%xfce-CD-1.iso'"
 
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
