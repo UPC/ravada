@@ -510,9 +510,9 @@ sub _set_volumes_backing_store($self) {
                 $format = $backing_store->addNewChild(undef,'format');
                 $format->setAttribute('type' => $backing_file_format);
 
-                my $source = $backing_store->findnodes('source');
-                $source = $backing_store->addNewChild(undef,'source');
-                $source->setAttribute('file' => $backing_file);
+                my ($source_bf) = $backing_store->findnodes('source');
+                $source_bf = $backing_store->addNewChild(undef,'source') if !$source_bf;
+                $source_bf->setAttribute('file' => $backing_file);
             } else {
                 $disk->removeChild($backing_store) if $backing_store;
                 $backing_store = $disk->addNewChild(undef,'backingStore') if !$backing_store;
