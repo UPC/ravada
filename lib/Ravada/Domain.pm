@@ -908,7 +908,7 @@ sub _check_has_clones {
     return if !$self->is_known();
 
     my @clones = $self->clones;
-    die "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
+    confess "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
         if $#clones>=0;
 }
 
