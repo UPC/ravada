@@ -188,7 +188,7 @@ $t->ua->connect_timeout(60);
 my @bases;
 my @clones;
 
-for my $vm_name ( vm_names() ) {
+for my $vm_name (@{rvd_front->list_vm_types} ) {
 
     diag("Testing new machine in $vm_name");
 

@@ -1681,11 +1681,13 @@ sub _pre_remove_domain($self, $user, @) {
     $self->is_volatile()        if $self->is_known || $self->domain;
     if (($self->is_known && $self->is_known_extra)
         || $self->domain ) {
-        $self->{_volumes} = [$self->list_disks()];
+        eval { $self->{_volumes} = [$self->list_disks()] };
+        warn "Warning: $@" if $@;
     }
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
-    $self->shutdown_now($user)  if $self->is_active;
+    eval { $self->shutdown_now($user)  if $self->is_active };
+    warn "Warning: $@" if $@;
 
     my $owner;
     $owner= Ravada::Auth::SQL->search_by_id($self->id_owner)    if $self->is_known();

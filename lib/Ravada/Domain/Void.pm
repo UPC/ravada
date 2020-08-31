@@ -146,12 +146,17 @@ sub _store {
 
     $self->_check_value_disk($value) if $var eq 'hardware';
 
+    my $file_lock = $self->_config_file().".lock";
+    open my $lock,">>",$file_lock or die "Can't open $file_lock";
+    _lock($lock);
+
     my $data = $self->_load();
     $data->{$var} = $value;
 
     make_path($self->_config_dir()) if !-e $self->_config_dir;
     eval { DumpFile($self->_config_file(), $data) };
     chomp $@;
+    _unlock($lock);
     confess $@ if $@;
 
 }
@@ -185,6 +190,7 @@ sub _store_remote($self, $var, $value) {
     $data->{$var} = $value;
 
     open my $lock,">>","$disk.lock" or die "I can't open lock: $disk.lock: $!";
+    _lock($lock);
     $self->_vm->run_command("mkdir","-p ".$self->_config_dir);
     $self->_vm->write_file($disk, Dump($data));
 
@@ -200,13 +206,11 @@ sub _value($self,$var){
 
 }
 
-sub _lock {
-    my ($fh) = @_;
+sub _lock($fh) {
     flock($fh, LOCK_EX) or die "Cannot lock - $!\n";
 }
 
-sub _unlock {
-    my ($fh) = @_;
+sub _unlock($fh) {
     flock($fh, LOCK_UN) or die "Cannot unlock - $!\n";
 }
 
@@ -370,7 +374,7 @@ sub add_volume {
 }
 
 sub _create_volume($self, $file, $format, $data=undef) {
-    if ($format eq 'void') {
+    if ($format =~ /iso|void/) {
         $self->_vm->write_file($file, Dump($data)),
     } elsif ($format eq 'qcow2') {
         my @cmd = ('qemu-img','create','-f','qcow2', $file, $data->{capacity});

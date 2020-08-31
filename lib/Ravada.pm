@@ -1965,9 +1965,11 @@ sub remove_domain {
         if !$user->can_remove_machine($id);
 
     my $domain0;
-    eval { $domain0 = Ravada::Domain->open( $id ) };
-    warn $@ if $@;
-    $domain0->shutdown_now($user) if $domain0 && $domain0->is_active;
+    eval {
+        $domain0 = Ravada::Domain->open( $id );
+        $domain0->shutdown_now($user) if $domain0 && $domain0->is_active;
+    };
+    warn "Warning: $@" if $@;
 
     my $vm = Ravada::VM->open(type => $vm_type);
     my $domain;

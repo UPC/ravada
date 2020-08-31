@@ -8,6 +8,9 @@ use IPC::Run3;
 use Test::More;
 use Mojo::UserAgent;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -22,6 +25,31 @@ init();
 $Ravada::DEBUG=0;
 $Ravada::SECONDS_WAIT_CHILDREN = 1;
 
+sub _backup_iso($iso, $clean) {
+    my $backup_iso;
+    if ($iso->{device} && -e $iso->{device} ) {
+        $backup_iso = "$iso->{device}.old";
+        copy($iso->{device},$backup_iso) or die "$! $iso->{device} -> $backup_iso";
+
+        unlink $iso->{device} or die "$! $iso->{device}"
+        if $clean;
+    }
+    if ($clean) {
+        my $sth = connector->dbh->prepare(
+            "UPDATE iso_images set device=NULL WHERE id=?"
+        );
+        $sth->execute($iso->{id});
+    }
+    return $backup_iso;
+}
+
+sub _restore_iso($iso, $backup_iso) {
+    confess "Error: undefined backup_iso" if !defined $backup_iso;
+    confess "Error: missing backup iso '$backup_iso'" if ! -e $backup_iso;
+
+    copy($backup_iso, $iso->{device}) or die "$! $backup_iso -> $iso->{device}";
+}
+
 sub test_download {
     my ($vm, $id_iso, $clean) = @_;
     my $iso;
@@ -30,17 +58,10 @@ sub test_download {
         warn "Probably this release file is obsolete.\n$@";
         return;
     }
-    is($@,'');
-    if ($clean && $iso->{device}) {
-        if ( -e $iso->{device} ) {
-            copy($iso->{device},"$iso->{device}.old") or die "$! $iso->{device}";
-            unlink $iso->{device} or die "$! $iso->{device}";
-        }
-        my $sth = connector->dbh->prepare(
-        "UPDATE iso_images set device=NULL WHERE id=?"
-        );
-        $sth->execute($id_iso);
-    }
+    is($@,'') or return;
+
+    my $backup_iso = _backup_iso($iso,$clean);# if ($clean && $iso->{device});
+
     confess "Missing name in ".Dumper($iso) if !$iso->{name};
     diag("Testing download $iso->{name}");
     my $req1 = Ravada::Request->download(
@@ -53,7 +74,10 @@ sub test_download {
 
     rvd_back->_process_all_requests_dont_fork();
     is($req1->status, 'done');
-    is($req1->error, '') or exit;
+    is($req1->error, '') or do {
+        _restore_iso($iso, $backup_iso) if $backup_iso;
+        exit;
+    };
 
     my $iso2;
     eval { $iso2 = $vm->_search_iso($id_iso) };
