@@ -32,4 +32,9 @@
 
   ,auto_view => 0
   ,fallback => 0
+  ,log => {
+      log => 0
+      ,file => '/var/log/ravada/rvd_front.log'
+      ,level => 'debug'
+  }
 };
