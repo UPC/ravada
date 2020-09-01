@@ -29,6 +29,14 @@ sub prepare_base($self) {
 
     my @cmd = _cmd_convert($file_img,$base_img);
 
+    my $format;
+    eval {
+        $format = $self->_qemu_info('file format')
+    };
+    confess $@ if $@;
+    @cmd = _cmd_copy($file_img, $base_img)
+    if $format && $format eq 'qcow2' && !$self->backing_file;
+
     my ($out, $err) = $self->vm->run_command( @cmd );
     warn $out  if $out;
     confess "$?: $err"   if $err;

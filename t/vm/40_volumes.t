@@ -196,7 +196,7 @@ sub test_files_base {
 
     if ($vm_name eq 'KVM'){
         for my $volume ($domain->list_volumes) {
-            my $info = `qemu-img info $volume`;
+            my $info = `qemu-img info $volume -U`;
             my ($backing) = $info =~ m{(backing.*)}gm;
             if ($volume =~ /iso$/) {
                 is($backing,undef) or exit;
@@ -701,6 +701,35 @@ sub test_upgrade($vm) {
     $standalone->remove(user_admin);
 }
 
+sub test_base_clone($vm, $remove_base_first=0) {
+    my $base = create_domain($vm);
+    my $clone = $base->clone(
+        name => new_domain_name()
+        ,user => user_admin()
+    );
+    $clone->prepare_base(user_admin);
+    my $clone2 = $clone->clone(
+        name => new_domain_name()
+        ,user => user_admin()
+    );
+    if ($remove_base_first) {
+        $base->remove_base(user_admin);
+    }
+    eval { $clone2->start(user_admin) };
+    is('',''.$@, "Error starting ".$base->name) or exit;
+
+    if (!$remove_base_first) {
+        $base->remove_base(user_admin);
+    }
+    eval { $base->start(user_admin) };
+    is('',''.$@, "Error starting ".$base->name);
+    is($base->is_active,1) or exit;
+
+    $clone2->remove(user_admin);
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+}
+
 #######################################################################33
 
 clean();
@@ -722,6 +751,8 @@ for my $vm_name (reverse sort @VMS) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        test_base_clone($vm);
+        test_base_clone($vm,1);
         test_upgrade($vm);
 
         test_too_big_prepare($vm);

@@ -45,7 +45,6 @@ create_domain
     remote_config_nodes
     clean_remote_node
     arg_create_dom
-    vm_names
     search_iptable_remote
     clean_remote
     start_node shutdown_node remove_node hibernate_node

@@ -1968,9 +1968,11 @@ sub remove_domain {
         if !$user->can_remove_machine($id);
 
     my $domain0;
-    eval { $domain0 = Ravada::Domain->open( $id ) };
-    warn $@ if $@;
-    $domain0->shutdown_now($user) if $domain0 && $domain0->is_active;
+    eval {
+        $domain0 = Ravada::Domain->open( $id );
+        $domain0->shutdown_now($user) if $domain0 && $domain0->is_active;
+    };
+    warn "Warning: $@" if $@;
 
     my $vm = Ravada::VM->open(type => $vm_type);
     my $domain;
@@ -3163,7 +3165,10 @@ sub _cmd_rebase($self, $request) {
     }
     $request->status('working');
 
-    my $new_base = Ravada::Domain->open($request->args('id_base'));
+    my $id_base = $request->args('id_base')
+    or confess "Error: missing id_base";
+    my $new_base = Ravada::Domain->open($id_base)
+        or confess "Error: domain $id_base not found";
 
     $domain->rebase($user, $new_base);
 }

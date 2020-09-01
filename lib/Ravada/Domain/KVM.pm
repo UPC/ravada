@@ -510,9 +510,9 @@ sub _set_volumes_backing_store($self) {
                 $format = $backing_store->addNewChild(undef,'format');
                 $format->setAttribute('type' => $backing_file_format);
 
-                my $source = $backing_store->findnodes('source');
-                $source = $backing_store->addNewChild(undef,'source');
-                $source->setAttribute('file' => $backing_file);
+                my ($source_bf) = $backing_store->findnodes('source');
+                $source_bf = $backing_store->addNewChild(undef,'source') if !$source_bf;
+                $source_bf->setAttribute('file' => $backing_file);
             } else {
                 $disk->removeChild($backing_store) if $backing_store;
                 $backing_store = $disk->addNewChild(undef,'backingStore') if !$backing_store;
@@ -1589,65 +1589,6 @@ sub rename_volumes {
         $self->domain->attach_device($disk);
     }
 }
-
-=cut
-
-=head2 spinoff_volumes
-
-Makes volumes indpendent from base
-
-=cut
-
-sub spinoff_volumes {
-    my $self = shift;
-
-    $self->_do_force_shutdown() if $self->is_active;
-
-    for my $volume ($self->list_volumes_info ) {
-        #        $volume->spinoff;
-    }
-}
-
-
-sub _old_spinoff_volumes {
-    my $self = shift;
-
-    $self->_do_force_shutdown() if $self->is_active;
-
-    for my $volume ($self->list_disks) {
-
-        confess "ERROR: Domain ".$self->name
-                ." volume '$volume' does not exists"
-            if ! -e $volume;
-
-        #TODO check mktemp or something
-        my $volume_tmp  = "$volume.$$.tmp";
-
-        unlink($volume_tmp) or die "ERROR $! removing $volume.tmp"
-            if -e $volume_tmp;
-
-        my @cmd = ('qemu-img'
-              ,'convert'
-              ,'-O','qcow2'
-              ,$volume
-              ,$volume_tmp
-        );
-        my ($in, $out, $err);
-        run3(\@cmd,\$in,\$out,\$err);
-        warn $out  if $out;
-        warn $err   if $err;
-        die "ERROR: Temporary output file $volume_tmp not created at "
-                .join(" ",@cmd)
-                .($out or '')
-                .($err or '')
-                ."\n"
-            if (! -e $volume_tmp );
-
-        copy($volume_tmp,$volume) or die "$! $volume_tmp -> $volume";
-        unlink($volume_tmp) or die "ERROR $! removing $volume_tmp";
-    }
-}
-
 
 sub _set_spice_ip($self, $set_password, $ip=undef) {
 

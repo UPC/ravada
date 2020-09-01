@@ -129,33 +129,21 @@ sub type($self) {
 }
 
 sub base_filename($self) {
-    return $self->_default_base_filename() if !$self->domain;
 
-    my $base_img = $self->vm->dir_base($self->capacity)
-        ."/".$self->domain->name."-".$self->info->{target}.".".$self->base_extension;
+    my $backing_file = $self->backing_file;
+    my $extra = '';
+    if ($backing_file) {
+        $extra = "-".Ravada::Utils::random_name(2)."-";
+    }
+    my ($dir, $name) = $self->file =~ m{(.*)/(.*)\.};
+    $dir = $self->vm->dir_base($self->capacity) if $self->vm;
+    $name =~ s{\.(SWAP|DATA|TMP)}{};
+    $name = $self->domain->name if $self->domain;
+    $extra .= "-".$self->info->{target} if $self->info->{target};
 
-    return $base_img;
-}
-
-sub _default_base_filename($self) {
-
-    my $ext = $self->base_extension();
-    my $base_img = $self->file;
-
-    confess "Error: Undefined VM" if !defined $self->vm;
-
-    my $dir_base = $self->vm->dir_base($self->capacity);
-
-    $base_img =~ s{\.\w+$}{};
-    $base_img =~ s{\.[A-Z]+$}{};
-
-    $base_img .= ".$ext";
-
-    confess "Error: base and original file are the same"
-        if $base_img eq $self->file;
+    my $base_img = "$dir/$name$extra.".$self->base_extension;
 
     return $base_img;
-
 }
 
 sub clone_filename($self, $name = undef) {
