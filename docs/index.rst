@@ -61,9 +61,9 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/INSTALL_ubuntu_xenial.rst
    docs/INSTALLfromDockers.rst
    docs/production
+   docs/logs
    docs/recomendations
    docs/INSTALL_devel
-   docs/Ubuntu_Installation
    docs/add_kvm_storage_pool
    docs/apache
    docs/convert_from_virtualbox
