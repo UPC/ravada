@@ -733,6 +733,15 @@ sub _around_prepare_base($orig, $self, @args) {
     $self->_post_prepare_base($user, $request);
 }
 
+=head2 pre_prepare_base
+
+Run this before preparing the base. By default does nothing and may
+be implemented in the object.
+
+This is executed automatically so it shouldn't been called.
+
+=cut
+
 sub pre_prepare_base($self) {}
 
 =head2 prepare_base

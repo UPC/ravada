@@ -469,6 +469,15 @@ sub disk_device {
 }
 
 
+=head2 pre_prepare_base
+
+Run this before preparing the base. It is necessary to correctly
+detect disks drivers for newer libvirts.
+
+This is executed automatically so it shouldn't been called.
+
+=cut
+
 sub pre_prepare_base($self) {
     $self->_detect_disks_driver();
 }

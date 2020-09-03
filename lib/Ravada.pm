@@ -4230,6 +4230,12 @@ sub _cmd_open_exposed_ports($self, $request) {
     $domain->open_exposed_ports();
 }
 
+=head2 setting
+
+Returns the value of a configuration setting
+
+=cut
+
 sub setting($self, $name) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,value "

@@ -355,7 +355,7 @@ sub _connect_ssh($self) {
     return $ssh;
 }
 
-sub ssh($self) {
+sub _ssh($self) {
     my $ssh = $self->netssh;
     return if !$ssh;
     return $ssh if $ssh->check_master;
@@ -1273,7 +1273,7 @@ sub run_command($self, @command) {
     }
     return $self->_run_command_local(@command) if $self->is_local();
 
-    my $ssh = $self->ssh or confess "Error: Error connecting to ".$self->host;
+    my $ssh = $self->_ssh or confess "Error: Error connecting to ".$self->host;
 
     my ($out, $err) = $ssh->capture2({timeout => 10},join " ",@command);
     chomp $err if $err;
@@ -1337,9 +1337,9 @@ Writes a file to the node
 sub write_file( $self, $file, $contents ) {
     return $self->_write_file_local($file, $contents )  if $self->is_local;
 
-    my $ssh = $self->ssh or confess "Error: no ssh connection";
-    my ($rin, $pid) = $self->ssh->pipe_in("cat > $file")
-        or die "pipe_in method failed ".$self->ssh->error;
+    my $ssh = $self->_ssh or confess "Error: no ssh connection";
+    my ($rin, $pid) = $self->_ssh->pipe_in("cat > $file")
+        or die "pipe_in method failed ".$self->_ssh->error;
 
     print $rin $contents;
     close $rin;
@@ -1363,8 +1363,8 @@ Reads a file in memory from the storage of the virtual manager
 sub read_file( $self, $file ) {
     return $self->_read_file_local($file) if $self->is_local;
 
-    my ($rout, $pid) = $self->ssh->pipe_out("cat $file")
-        or die "pipe_out method failed ".$self->ssh->error;
+    my ($rout, $pid) = $self->_ssh->pipe_out("cat $file")
+        or die "pipe_out method failed ".$self->_ssh->error;
 
     return join ("",<$rout>);
 }
@@ -1384,7 +1384,7 @@ Returns true if the file exists in this virtual manager storage
 sub file_exists( $self, $file ) {
     return -e $file if $self->is_local;
 
-    my $ssh = $self->ssh;
+    my $ssh = $self->_ssh;
     confess "Error: no ssh connection to ".$self->name if ! $ssh;
 
     confess "Error: dangerous filename '$file'"
@@ -1872,6 +1872,14 @@ sub _new_free_port($self) {
     }
     return $free_port;
 }
+
+=head2 list_network_interfaces
+
+Returns a list of all the known interface
+
+Argument: type ( nat or bridge )
+
+=cut
 
 sub list_network_interfaces($self, $type) {
     my $sub = {
