@@ -1396,7 +1396,7 @@ sub start_node($node) {
     $node->enabled(1);
     for ( reverse 1 .. 120 ) {
         my $node2 = Ravada::VM->open(id => $node->id);
-        last if $node2->is_active(1) && $node->ssh;
+        last if $node2->is_active(1) && $node->_ssh;
         diag("Waiting for node ".$node2->name." active ... $_")  if !($_ % 10);
         $node2->disconnect();
         $node2->connect();

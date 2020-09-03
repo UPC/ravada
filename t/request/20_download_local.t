@@ -14,12 +14,6 @@ use feature qw(signatures);
 use lib 't/lib';
 use Test::Ravada;
 
-if (! $ENV{TEST_DOWNLOAD}) {
-    diag("Skipped: enable setting environment variable TEST_DOWNLOAD");
-    done_testing();
-    exit;
-}
-
 init();
 
 $Ravada::DEBUG=0;
@@ -176,19 +170,26 @@ sub test_refresh_isos {
 
 ##################################################################
 
+my $msg;
+if (! $ENV{TEST_DOWNLOAD}) {
+    $msg = "Skipped: enable setting environment variable TEST_DOWNLOAD";
+} else {
+    init();
+}
 
 for my $vm_name ('KVM') {
     my $rvd_back = rvd_back();
     add_locales();
     local_urls();
-    my $vm = $rvd_back->search_vm($vm_name);
+    my $vm;
+    $vm = $rvd_back->search_vm($vm_name) if !$msg;
     SKIP: {
-        my $msg = "SKIPPED: No virtual managers found";
+        $msg = "SKIPPED: No virtual managers found" if !$vm && !$msg;
         if ($vm && $vm_name =~ /kvm/i && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         }
-        if (!httpd_localhost()) {
+        if (!$msg && !httpd_localhost()) {
             $vm = undef;
             $msg = "SKIPPED: No http on localhost with /iso";
         }
