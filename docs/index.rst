@@ -120,6 +120,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    :maxdepth: 2
    :caption: Guest VM section
 
+   docs/install_guest_linux
    docs/install_guest_alpine
    docs/install_guest_windows10
    docs/resize_hard_drive
