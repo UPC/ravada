@@ -10,16 +10,10 @@ export default {
 }
 
 function modalCtrl() {
-    var self = this;
+    const self = this;
     self.$onInit = () => {
         self.eventInfo = self.resolve.info
     }
-    self.ok = () => {
-        console.info("in handle close");
-        self.modalInstance.close();
-    };
-    self.cancel = function() {
-        console.info("in handle dismiss");
-        self.modalInstance.dismiss("cancel");
-    };
+    self.cancel =  () => self.modalInstance.dismiss("cancel");
+    self.formSaved = () => self.modalInstance.close();
 }

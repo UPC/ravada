@@ -2,13 +2,20 @@
 
 export {
     svcBookings,
+    svcEntry,
     svcLDAP
 }
 
 svcBookings.$inject = ["$resource"];
 
 function svcBookings($resource) {
-    return $resource('/v1/bookings');
+    return $resource('/v1/bookings/');
+}
+
+svcEntry.$inject = ["$resource"];
+
+function svcEntry($resource) {
+    return $resource('/v1/booking_entry/:id/:mode');
 }
 
 svcLDAP.$inject = ["$resource"];

@@ -4,22 +4,27 @@ export default {
     template: '<div id="rvdCalendar"></div>',
     controller: calendarCtrl
 }
-calendarCtrl.$inject = ['$element', '$window', 'apiBookings','$uibModal','moment'];
+calendarCtrl.$inject = ['$element', '$window', 'apiBookings','$uibModal','moment','apiEntry'];
 
-function calendarCtrl($element, $window, apiBookings,$uibModal,moment) {
-    var self = this;
-    var parseDate = (data, time) => data + "T" + time;
-    var TimeFormat = {
+function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) {
+    const self = this;
+    const parseDate = (data, time) => data + "T" + time;
+    const TimeFormat = {
             hour: '2-digit',
             minute: '2-digit',
             hour12: false,
             omitZeroMinute: false
     };
+    let calendar;
     self.$postLink = () => {
-        var calendarEl = $element.find("#rvdCalendar")[0];
-        var calendar = new FullCalendar.Calendar(calendarEl, {
+        const calendarEl = $element.find("#rvdCalendar")[0];
+        calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'timeGridWeek',
             firstDay: 1,
+            selectOverlap: false,
+            eventStartEditable: false,
+            eventDurationEditable: false,
+            droppable: false,
             editable: true,
             selectable: true,
             events: getEvents,
@@ -57,8 +62,8 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment) {
     }
 
     function getEvents(info, successCallback, failureCallback) {
-        var date_start = info.startStr.valueOf().slice(0,10);
-        var date_end = info.endStr.valueOf().slice(0,10);
+        const date_start = info.startStr.valueOf().slice(0,10);
+        const date_end = info.endStr.valueOf().slice(0,10);
         apiBookings.get({date_start, date_end},
             res => {
                 successCallback(
@@ -66,9 +71,13 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment) {
                         res.data
                     ).map(ev => ({
                             id: ev.id,
+                            groupId: ev.id_booking,
                             start: parseDate(ev.date_booking, ev.time_start),
                             end: parseDate(ev.date_booking, ev.time_end),
-                            title: ev.title
+                            title: ev.title,
+                            extendedProps: {
+
+                            }
                         })
                     )
                 )
@@ -78,7 +87,7 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment) {
     }
 
     function openEntry(entry) {
-        $uibModal.open({
+        return $uibModal.open({
             component: 'rvdEntryModal',
             size: 'md',
             resolve: {
@@ -88,7 +97,7 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment) {
     }
     function newEntry(selectionInfo) {
         // parameter object details in https://fullcalendar.io/docs/select-callback
-        var booking_entry = {
+        const booking_entry = {
             title: '',
             date_booking: moment(selectionInfo.startStr).format("YYYY-MM-DD"),
             date_end : moment(selectionInfo.endStr).format("YYYY-MM-DD"),
@@ -97,12 +106,17 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment) {
             dow : [0,0,0,0,0,0,0],
             ldap_groups: []
         };
-        var today_dow = moment(selectionInfo.startStr,"e");
+        const today_dow = moment(selectionInfo.startStr).weekday();
         booking_entry.dow[today_dow]=today_dow+1;
         booking_entry.day_of_week = booking_entry.dow.join("");
-        openEntry(booking_entry)
+        openEntry(booking_entry).result.then(
+            () => calendar.refetchEvents() // ok
+        )
     }
-    function editEntry(eventClickInfo) {
+    async function editEntry(eventClickInfo) {
         // parameter object details in https://fullcalendar.io/docs/eventClick
+        const res = await apiEntry.get({ id: eventClickInfo.event.id}).$promise;
+        await openEntry(res).result;
+        calendar.refetchEvents();
     }
 }

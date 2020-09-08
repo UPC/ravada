@@ -1109,6 +1109,7 @@
                 +dow[3]+dow[4]+dow[5]+dow[6];
             console.log($scope.booking_entry.day_of_week);
         };
+        /* migrated to formEvent component
         $scope.save_booking = function() {
             if ($scope.booking_entry.ldap_group_new) {
                 $scope.add_ldap_group($scope.booking_entry);
@@ -1126,7 +1127,7 @@
                 }
             });
         };
-
+        */
         $scope.check_conflicts = function() {
             if ($scope.booking_entry.date_booking > $scope.booking_entry.date_end) {
                 $scope.conflicts = [];
@@ -1144,7 +1145,7 @@
                     $scope.conflicts = response.data
             })
         };
-
+/* migrated to formEvent component
         $scope.save_entry = function(mode) {
             $http.post('/v1/booking_entry/save/'+mode,JSON.stringify($scope.booking_entry))
                 .then(function(response) {
@@ -1165,6 +1166,9 @@
                 }
             );
         };
+
+ */
+        /* Not required reload, migrated to SP
         var location_week = function(entry) {
             var month = ''+(1+ entry.date_booking.getMonth());
             if (month.length<2) {
@@ -1183,6 +1187,8 @@
 
 
         };
+        */
+
 /* moved to component ldapGroups
         $scope.add_ldap_group = function(item) {
             if (item.ldap_groups.indexOf(item.ldap_group_new)>=0) {

@@ -9,6 +9,13 @@
         <textarea class="form-control" id="description"
                   ng-model="$ctrl.entry.description" rows="3"></textarea>
     </div>
+    <div class="form-group" ng-if="$ctrl.isNew">
+        <label for="repat">Repeat</label>
+        <select class="custom-select" ng-model="$ctrl.entry.repeat" id="repat">
+            <option value="">No</option>
+            <option value="weekly">Weekly</option>
+        </select>
+    </div>
     <div class="row justify-content-start">
         <div class="form-group col-sm-6 col-md-12">
             <label for="date_ini">Date</label>
@@ -20,10 +27,30 @@
                        id="date_ini"
                        ng-model="$ctrl.entry_parsed.date_booking"
                        ng-click="$ctrl.openCal('ini_opened')"
-                       is-open="$ctrl.cal.ini_opened" datepicker-options="dateOptions"
+                       ng-change="$ctrl.updateDates()"
+                       is-open="$ctrl.cal.ini_opened"
+                       max-date="$ctrl.entry_parsed.date_end"
                        ng-required="true" close-text="Close"/>
             </div>
         </div>
+        <!-- repeat until date -->
+        <div class="form-group col-sm-6 col-md-12" ng-show="$ctrl.entry.repeat">
+            <label for="date_until">Until</label>
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <div class="input-group-text"><i class="far fa-calendar"></i></div>
+                </div>
+                <input type="text" class="form-control" uib-datepicker-popup
+                       id="date_until"
+                       ng-model="$ctrl.entry_parsed.date_end"
+                       ng-change="$ctrl.updateDates()"
+                       ng-click="$ctrl.openCal('until_opened')"
+                       is-open="$ctrl.cal.until_opened"
+                       min-date="$ctrl.entry_parsed.date_booking"
+                       ng-required="true" close-text="Close"/>
+            </div>
+        </div>
+        <!-- end repear -->
         <div class="form-group col-sm">
             <rvd-time-picker label="From" ng-model="$ctrl.entry.time_start"></rvd-time-picker>
         </div>
@@ -31,27 +58,55 @@
             <rvd-time-picker label="To" ng-model="$ctrl.entry.time_end"></rvd-time-picker>
         </div>
     </div>
-    <div class="form-group">
-        <label for="repat">Repeat</label>
-        <select class="custom-select" ng-model="$ctrl.entry.repeat" id="repat">
-            <option value="">No</option>
-            <option value="weekly">Weekly</option>
-        </select>
-    </div>
-    <div class="row justify-content-start" ng-show="$ctrl.entry.repeat === 'weekly'">
+    <!-- repeat -->
+    <div class="row no-gutters justify-content-start" ng-show="$ctrl.entry.repeat === 'weekly'">
         <div class="form-group col-sm" ng-repeat="d in $ctrl.dow">
-        <label>
-        <input type="checkbox" name="dow_{{$index+1}}"
-               ng-true-value="{{$index+1}}"
-               ng-false-value="0"
-               ng-change="$ctrl.update_booking_dow()"
-               ng-model="$ctrl.entry.dow[$index]"
-        >
-            {{ d }}
-        </label>
+            <label class="text-nowrap">
+                <input type="checkbox" name="dow_{{$index+1}}"
+                       ng-true-value="{{$index+1}}"
+                       ng-false-value="0"
+                       ng-change="$ctrl.update_booking_dow()"
+                       ng-model="$ctrl.entry.dow[$index]"
+                >
+                {{ d }}
+            </label>
         </div>
     </div>
     <div class="form-group">
         <ldap-groups ng-model="$ctrl.entry.ldap_groups"></ldap-groups>
     </div>
+    <div class="d-flex" ng-show="!$ctrl.confirm_update">
+        <div class="mr-auto">
+            <button type="button" class="btn btn-danger"
+                    ng-click="$ctrl.remove()"
+                    ng-if="!$ctrl.isNew"
+            >Remove</button>
+        </div>
+        <button type="button" class="btn btn-secondary" ng-click="$ctrl.onCancel()"
+                data-dismiss="modal"
+        >Cancel</button>
+        <button type="button" class="btn btn-primary ml-2"
+                ng-disabled="!form_booking.$valid || form_booking.$pristine"
+                ng-click="$ctrl.save()"
+        >Save changes</button>
+    </div>
+    <rvd-confirm-buttons
+            ng-show="$ctrl.confirm_update"
+            text="Do you want to update all the bookings from this one ?"
+            label-primary="Change only this entry"
+            label-secondary="Update all"
+            on-cancel="$ctrl.confirmCancel()"
+            on-primary-click="$ctrl.save_entry(mode)"
+            on-secondary-click="$ctrl.save_entry(mode)"
+    ></rvd-confirm-buttons>
+    <rvd-confirm-buttons
+            ng-show="$ctrl.confirm_delete"
+            text="Do you want to remove all the bookings from this one ?"
+            label-primary="Remove only this one"
+            label-secondary="Remove all"
+            on-cancel="$ctrl.confirmCancel()"
+            on-primary-click="$ctrl.remove_entry(mode)"
+            on-secondary-click="$ctrl.remove_entry(mode)"
+    ></rvd-confirm-buttons>
+
 </form>

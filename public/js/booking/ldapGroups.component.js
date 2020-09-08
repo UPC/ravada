@@ -10,9 +10,9 @@ export default {
 grpCtrl.$inject = ["apiLDAP","$scope","$timeout"];
 
 function grpCtrl(apiLDAP, $scope, $timeout) {
-    var self = this;
-    var remove_array_element = (arr,el) => arr.filter(e => e !== el);
-    var msgError = msg => { self.err = msg; $timeout(() => self.err=null,2000)};
+    const self = this;
+    const remove_array_element = (arr,el) => arr.filter(e => e !== el);
+    const msgError = msg => { self.err = msg; $timeout(() => self.err=null,2000)};
     self.available_groups = [];
     self.group_selected = null;
     self.$onInit = () => {

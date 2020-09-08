@@ -12,7 +12,7 @@ export default {
 };
 timeCtrl.$inject = ["$element","$scope"]
 function timeCtrl($element, $scope) {
-    var self = this;
+    const self = this;
     self.$postLink = () => {
         $element.find(".clockpicker").clockpicker();
     };

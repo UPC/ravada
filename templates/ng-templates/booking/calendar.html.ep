@@ -3,7 +3,7 @@
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target="fixed-top" role="document" ng-cloak>
 <div id="wrapper">
-    %= include 'bootstrap/navigation'
+%= include 'bootstrap/navigation'
 <div id="page-wrapper"
                 ng-controller="bookings"
 >
@@ -19,7 +19,8 @@
 
 </div>
 </div>
-    %= include 'bootstrap/scripts'
+<toast></toast>
+%= include 'bootstrap/scripts'
     %= include 'bootstrap/messages'
 </body>
 </html>

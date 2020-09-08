@@ -96,10 +96,11 @@ sub _insert_db($self, %field) {
         warn "$query\n".Dumper(\%field);
         confess $@;
     }
+    my $new_id = $sth->{mysql_insertid};
     $sth->finish;
 
-    $sth = $self->_dbh->prepare("SELECT * FROM bookings WHERE title=? ");
-    $sth->execute($field{title});
+    $sth = $self->_dbh->prepare("SELECT * FROM bookings WHERE id=? ");
+    $sth->execute($new_id);
     $self->{_data} = $sth->fetchrow_hashref;
 
 }

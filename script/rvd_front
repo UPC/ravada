@@ -1386,6 +1386,34 @@ get '/v1/bookings/'=> sub($c) {
     return $c->render(json => Ravada::Booking::bookings_range($arg) );
 };
 
+get '/v1/bookings/:id'=> sub($c) {
+    my $booking= Ravada::Booking->new( id =>  $c->stash('id') );
+    return $c->render( json => $booking->{_data} );
+};
+
+post '/v1/bookings/' => sub($c) {
+    return _access_denied($c) if !$USER->is_operator();
+
+    my $arg = decode_json($c->req->body);
+    delete $arg->{dow};
+    delete $arg->{repeat};
+    $arg->{id_owner} = $USER->id;
+
+    my $dow = '';
+    for my $curr ( split//,$arg->{day_of_week} ) {
+        $dow .= $curr if $curr;
+    }
+    _push_new_values($arg);
+    $arg->{day_of_week} = $dow;
+    eval {
+        my $booking = Ravada::Booking->new(%$arg);
+    };
+    my ($error) = split /\n/,$@;
+    warn $error if $error;
+    $error =~ s/ at .*// if $error;
+    return $c->render(json => { ok => !$error, error => ($error  or '')} );
+};
+
 get '/booking_entry/view/:id' => sub($c) {
     return $c->render(template => '/ng-templates/booking/view');
 };
@@ -1397,11 +1425,11 @@ get '/v1/booking_entry/:id' => sub($c) {
     return $c->render( json => $booking_entry->{_data} );
 };
 
-post '/v1/booking_entry/save/:mode' => sub($c) {
+post '/v1/booking_entry/:id' => sub($c) {
     my $arg = decode_json($c->req->body);
-    my $mode = $c->stash('mode');
+    my $mode = delete $arg->{mode};
 
-    my $entry = Ravada::Booking::Entry->new( id => delete $arg->{id} );
+    my $entry = Ravada::Booking::Entry->new( id => $c->stash('id') );
     my $booking = Ravada::Booking->new( id => $entry->_data('id_booking'));
 
     return _access_denied($c)
@@ -1433,32 +1461,7 @@ sub _push_new_values($arg) {
     delete $arg->{ldap_group_new};
 }
 
-post '/v1/booking/save' => sub($c) {
-    return _access_denied($c) if !$USER->is_operator();
-
-    my $arg = decode_json($c->req->body);
-    delete $arg->{dow};
-    delete $arg->{repeat};
-    $arg->{id_owner} = $USER->id;
-
-    my $dow = '';
-    for my $curr ( split//,$arg->{day_of_week} ) {
-        $dow .= $curr if $curr;
-    }
-    _push_new_values($arg);
-    $arg->{day_of_week} = $dow;
-    eval {
-        my $booking = Ravada::Booking->new(%$arg);
-    };
-    my ($error) = split /\n/,$@;
-    warn $error if $error;
-    $error =~ s/ at .*// if $error;
-    return $c->render(json => { ok => !$error, error => ($error  or '')} );
-};
-
-
-get '/v1/booking_entry/remove/:mode/:id' => sub($c) {
-
+del '/v1/booking_entry/:id/:mode' => sub($c) {
     my $entry = Ravada::Booking::Entry->new(id => $c->stash('id'));
     my $booking = Ravada::Booking->new( id => $entry->_data('id_booking'));
 

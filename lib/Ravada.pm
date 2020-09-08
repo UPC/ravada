@@ -1333,9 +1333,9 @@ sub _sql_create_tables($self) {
             ,description => 'varchar(255)'
             ,date_start => 'date not null'
             ,date_end => 'date not null'
-            ,day_of_week => 'char(8)'
             ,id_owner => 'int not null'
-            ,date_created => 'datetime'
+            ,backgroundColor => 'varchar(20)'
+            ,date_created => 'datetime DEFAULT CURRENT_TIMESTAMP'
         }
         ,booking_entries => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
@@ -3729,7 +3729,7 @@ sub _cmd_list_network_interfaces($self, $request) {
 
 sub _cmd_list_isos($self, $request){
     my $vm_type = $request->args('vm_type');
-   
+
     my $vm = Ravada::VM->open( type => $vm_type );
     $vm->refresh_storage();
     my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));

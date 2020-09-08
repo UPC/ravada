@@ -1,4 +1,5 @@
 <div class="modal-header">
+    <h3 class="modal-title" id="modal-title">Entry properties</h3>
     <button type="button" class="close"
             ng-click="$ctrl.cancel()"
             data-dismiss="modal" aria-label="Close">
@@ -6,13 +7,13 @@
     </button>
 </div>
 <div class="modal-body">
-    <rvd-form-event entry="$ctrl.eventInfo"></rvd-form-event>
+    <rvd-form-event entry="$ctrl.eventInfo"
+                    on-save="$ctrl.formSaved()"
+                    on-cancel="$ctrl.cancel()"
+    ></rvd-form-event>
     <p>{{ $ctrl.eventInfo }}</p>
 </div>
-<div class="modal-footer">
-    <button type="button" class="btn btn-secondary" ng-click="$ctrl.cancel()" data-dismiss="modal">Close</button>
-    <button type="button" class="btn btn-primary" ng-click="$ctrl.ok()">Save changes</button>
-</div>
+
 </div>
 
 
