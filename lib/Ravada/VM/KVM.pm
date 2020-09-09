@@ -410,6 +410,8 @@ sub _refresh_isos($self) {
             warn "Error: ISO mismatch ".Dumper($row);
             next;
         }
+        $file_re = "$file_re\$" unless $file_re =~ /\$$/;
+        $file_re = "^$file_re"  unless $file_re =~ /^\$/;
 
         my $iso_file = $self->search_volume_path_re(qr($file_re));
         if ($iso_file) {

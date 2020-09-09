@@ -29,7 +29,7 @@ use Ravada::Front;
 use Ravada::Front::Domain;
 use Ravada::Auth;
 use Ravada::WebSocket;
-use POSIX qw(locale_h);
+use POSIX qw(locale_h strftime);
 
 my $help;
 
@@ -126,6 +126,10 @@ my %ALLOWED_ANONYMOUS_WS = map { $_ => 1 } qw(list_bases_anonymous list_alerts);
 init();
 ############################################################################3
 
+sub _time() {
+    return strftime('%Y/%m/%d:%H:%M:%S %z',localtime);
+}
+
 hook before_routes => sub {
   my $c = shift;
 
@@ -133,7 +137,6 @@ hook before_routes => sub {
 
   $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
-  app->log->info($url) if $CONFIG_FRONT->{log}->{log};
   my $host = $c->req->url->to_abs->host;
   $c->stash(css=>['/css/sb-admin.css']
             ,js=>[
@@ -154,6 +157,11 @@ hook before_routes => sub {
             );
 
     $USER = _logged_in($c);
+
+    my $user = '-';
+    $user = $USER->name if defined $USER;
+    app->log->info(_remote_ip($c)." $user ["._time()."] ".$c->req->method." ".$url)
+    if $CONFIG_FRONT->{log}->{log};
 
     return if $url =~ m{^/(css|font|img|js)}
 	   || $url =~ m{^/fallback/.*\.(css|js|map)$};

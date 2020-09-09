@@ -29,6 +29,14 @@ sub prepare_base($self) {
 
     my @cmd = _cmd_convert($file_img,$base_img);
 
+    my $format;
+    eval {
+        $format = $self->_qemu_info('file format')
+    };
+    confess $@ if $@;
+    @cmd = _cmd_copy($file_img, $base_img)
+    if $format && $format eq 'qcow2' && !$self->backing_file;
+
     my ($out, $err) = $self->vm->run_command( @cmd );
     warn $out  if $out;
     confess "$?: $err"   if $err;
@@ -104,7 +112,7 @@ sub rebase($self, $new_base) {
         ,'-F','qcow2'
         ,'-b',$new_base,$self->file);
     my ($out, $err) = $self->vm->run_command(@cmd);
-    die $err if $err;
+    confess $err if $err;
 
 }
 
@@ -149,10 +157,11 @@ sub _qemu_info($self, $field=undef) {
         return $self->{_qemu_info}->{$field};
     }
 
-    my @cmd = ( $QEMU_IMG,'info',$self->file);
+    return {} if ! $self->vm->file_exists($self->file);
+    my @cmd = ( $QEMU_IMG,'info',$self->file,'-U');
 
     my ($out, $err) = $self->vm->run_command(@cmd);
-    die $err if $err;
+    confess $err if $err;
 
     my %info = (
         'backing file'=> undef

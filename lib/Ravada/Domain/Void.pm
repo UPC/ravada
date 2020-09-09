@@ -146,12 +146,17 @@ sub _store {
 
     $self->_check_value_disk($value) if $var eq 'hardware';
 
+    my $file_lock = $self->_config_file().".lock";
+    open my $lock,">>",$file_lock or die "Can't open $file_lock";
+    _lock($lock);
+
     my $data = $self->_load();
     $data->{$var} = $value;
 
     make_path($self->_config_dir()) if !-e $self->_config_dir;
     eval { DumpFile($self->_config_file(), $data) };
     chomp $@;
+    _unlock($lock);
     confess $@ if $@;
 
 }
@@ -185,6 +190,7 @@ sub _store_remote($self, $var, $value) {
     $data->{$var} = $value;
 
     open my $lock,">>","$disk.lock" or die "I can't open lock: $disk.lock: $!";
+    _lock($lock);
     $self->_vm->run_command("mkdir","-p ".$self->_config_dir);
     $self->_vm->write_file($disk, Dump($data));
 
@@ -200,13 +206,11 @@ sub _value($self,$var){
 
 }
 
-sub _lock {
-    my ($fh) = @_;
+sub _lock($fh) {
     flock($fh, LOCK_EX) or die "Cannot lock - $!\n";
 }
 
-sub _unlock {
-    my ($fh) = @_;
+sub _unlock($fh) {
     flock($fh, LOCK_UN) or die "Cannot unlock - $!\n";
 }
 
@@ -301,12 +305,21 @@ sub add_volume {
 
     my $device = ( delete $args{device} or 'disk' );
     my $type = ( delete $args{type} or '');
+    my $format = delete $args{format};
+
+    if (!$format) {
+        if ( $args{file}) {
+            ($format) = $args{file} =~ /\.(\w+)$/;
+        } else {
+            $format = 'void';
+        }
+    }
 
     $type = 'swap' if $args{swap};
     $type = '' if $type eq 'sys';
     $type = uc($type)."."   if $type;
 
-    my $suffix = "void";
+    my $suffix = $format;
 
     if ( !$args{file} ) {
         my $vol_name = ($args{name} or Ravada::Utils::random_name(4) );
@@ -355,11 +368,21 @@ sub add_volume {
     $self->_store(hardware => $hardware);
 
     delete @args{'name', 'target', 'driver'};
-    if ( ! -e $file ) {
-        $self->_vm->write_file($file, Dump(\%args)),
-    }
+    $self->_create_volume($file, $format, \%args) if ! -e $file;
 
     return $file;
+}
+
+sub _create_volume($self, $file, $format, $data=undef) {
+    if ($format =~ /iso|void/) {
+        $self->_vm->write_file($file, Dump($data)),
+    } elsif ($format eq 'qcow2') {
+        my @cmd = ('qemu-img','create','-f','qcow2', $file, $data->{capacity});
+        my ($out, $err) = $self->_vm->run_command(@cmd);
+        confess $err if $err;
+    } else {
+        confess "Error: unknown format '$format'";
+    }
 }
 
 sub remove_volume($self, $file) {
@@ -461,6 +484,7 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
                 && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);
         }
         $dev->{n_order} = $n_order++;
+        $dev->{driver_type} = 'void';
         my $vol = Ravada::Volume->new(
             file => $dev->{file}
             ,info => $dev

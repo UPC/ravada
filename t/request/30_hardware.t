@@ -553,7 +553,7 @@ sub test_all_drivers($domain, $hardware) {
     my $domain_b = Ravada::Domain->open($domain->id);
     for my $option1 (@$options) {
         for my $option2 (@$options) {
-            diag("Testing $hardware type from $option1 to $option2");
+            # diag("Testing $hardware type from $option1 to $option2");
             my $req = Ravada::Request->change_hardware(
                 id_domain => $domain->id
                 ,hardware => $hardware

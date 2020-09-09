@@ -283,26 +283,15 @@ sub _update_isos {
             ,min_disk_size => '10'
 
         }
-        ,mint19_64 => {
-            name => 'Mint 19 Mate 64 bits'
-    ,description => 'Mint Tara 19 with Mate Desktop 64 bits'
+        ,mint20_64 => {
+            name => 'Mint 20 Mate 64 bits'
+    ,description => 'Mint Ulyana 20 with Mate Desktop 64 bits'
            ,arch => 'amd64'
             ,xml => 'xenial64-amd64.xml'
      ,xml_volume => 'xenial64-volume.xml'
-            ,url => 'http://ftp.cixug.es/mint/linuxmint.com/stable/19/'
-        ,file_re => 'linuxmint-19-mate-64bit-v2.iso'
-        ,sha256_url => 'http://ftp.cixug.es/mint/linuxmint.com/stable/19/sha256sum.txt'
-            ,min_disk_size => '15'
-        }
-        ,mint19_32 => {
-            name => 'Mint 19 Mate 32 bits'
-    ,description => 'Mint Tara 19 with Mate Desktop 32 bits'
-           ,arch => 'i386'
-            ,xml => 'mint19-i386.xml'
-     ,xml_volume => 'mint19_32-volume.xml'
-            ,url => 'http://ftp.cixug.es/mint/linuxmint.com/stable/19/'
-        ,file_re => 'linuxmint-19-mate-32bit.iso'
-     ,sha256_url => 'http://ftp.cixug.es/mint/linuxmint.com/stable/19/sha256sum.txt'
+            ,url => 'http://mirrors.evowise.com/linuxmint/stable/20/'
+        ,file_re => 'linuxmint-20-mate-64bit.iso'
+        ,sha256_url => '$url/sha256sum.txt'
             ,min_disk_size => '15'
         }
         ,alpine381_64 => {
@@ -330,7 +319,7 @@ sub _update_isos {
         ,fedora_28 => {
             name => 'Fedora 28'
             ,description => 'RedHat Fedora 28 Workstation 64 bits'
-            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/28/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-28-.*\.iso'
+            ,url => 'https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/28/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-28-.*\.iso'
             ,arch => 'amd64'
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
@@ -494,7 +483,7 @@ sub _update_isos {
             name =>'Debian Buster 32 bits'
             ,description => 'Debian 10 Buster 32 bits (XFCE desktop)'
             ,url => 'https://cdimage.debian.org/debian-cd/^10\..*\d$/i386/iso-cd/'
-            ,file_re => 'debian-10.[\d\.]+-i386-xfce-CD-1.iso'
+            ,file_re => 'debian-10.[\d\.]+-i386-(netinst|xfce-CD-1).iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
@@ -587,6 +576,12 @@ sub _scheduled_fedora_releases($self,$data) {
     my $year = $now[5]+1900;
     my $month = $now[4]+1;
 
+    my $url_archive
+    = 'https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/';
+
+    my $url_current
+    = 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/';
+
     my $release = 27;
     for my $y ( 2018 .. $year ) {
         for my $m ( 5, 11 ) {
@@ -594,10 +589,14 @@ sub _scheduled_fedora_releases($self,$data) {
             $release++;
             my $name = "fedora_".$release;
             next if exists $data->{$name};
+
+            my $url = $url_archive;
+            $url = $url_current if $y>=$year-1;
+
             $data->{$name} = {
             name => 'Fedora '.$release
             ,description => "RedHat Fedora $release Workstation 64 bits"
-            ,url => 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/'.$release
+            ,url => $url.$release
                     .'/Workstation/x86_64/iso/Fedora-Workstation-.*-x86_64-'.$release
                     .'-.*\.iso'
             ,arch => 'amd64'
@@ -882,6 +881,9 @@ sub _remove_old_isos {
             ."      AND url NOT LIKE '%*%' "
         ,"DELETE FROM iso_images "
             ."  WHERE name like 'Lubuntu Zesty%'"
+        ,"DELETE FROM iso_images "
+            ."  WHERE name like 'Debian Buster 32%'"
+            ."  AND file_re like '%xfce-CD-1.iso'"
 
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
@@ -1966,9 +1968,11 @@ sub remove_domain {
         if !$user->can_remove_machine($id);
 
     my $domain0;
-    eval { $domain0 = Ravada::Domain->open( $id ) };
-    warn $@ if $@;
-    $domain0->shutdown_now($user) if $domain0 && $domain0->is_active;
+    eval {
+        $domain0 = Ravada::Domain->open( $id );
+        $domain0->shutdown_now($user) if $domain0 && $domain0->is_active;
+    };
+    warn "Warning: $@" if $@;
 
     my $vm = Ravada::VM->open(type => $vm_type);
     my $domain;
@@ -3161,7 +3165,10 @@ sub _cmd_rebase($self, $request) {
     }
     $request->status('working');
 
-    my $new_base = Ravada::Domain->open($request->args('id_base'));
+    my $id_base = $request->args('id_base')
+    or confess "Error: missing id_base";
+    my $new_base = Ravada::Domain->open($id_base)
+        or confess "Error: domain $id_base not found";
 
     $domain->rebase($user, $new_base);
 }
@@ -4222,6 +4229,12 @@ sub _cmd_open_exposed_ports($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain);
     $domain->open_exposed_ports();
 }
+
+=head2 setting
+
+Returns the value of a configuration setting
+
+=cut
 
 sub setting($self, $name) {
     my $sth = $CONNECTOR->dbh->prepare(
