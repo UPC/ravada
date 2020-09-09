@@ -1,6 +1,5 @@
 <div ng-show="(showmachine.is_base && showmachine.has_clones>0 ) || showmachine.id_base">
 
-    <div ng-show="!bases"> ... Loading ... </div>
     <div ng-show="bases" class="row">
         <div class="col-md-1">
             <label>Base</label>
