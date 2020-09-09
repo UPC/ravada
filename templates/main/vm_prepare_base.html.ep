@@ -1,7 +1,6 @@
-<div ng-hide="showmachine.is_base || new_base.id != showmachine.id_base" class="row">
-    <div class="col-sm-3">
+<div ng-hide="showmachine.is_base || new_base.id != showmachine.id_base || confirm_prepare_base" class="row">
+    <div class="col-sm-3" ng-hide="">
     <button ng-click="confirm_prepare_base=true"
-        ng-hide="confirm_prepare_base"
     ><%= l 'Prepare Base' %></button>
     </div>
     <div class="col-sm-8">

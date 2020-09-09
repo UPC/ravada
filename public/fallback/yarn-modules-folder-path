@@ -1,2 +1,0 @@
-Execute 
-yarn config set -- --modules-folder <path>
