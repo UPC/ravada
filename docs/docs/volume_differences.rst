@@ -5,8 +5,9 @@ It is important to keep the clones as small as possible. Because if the disk
 volumes of the virtual machines grow you may run out of disk space.
 
 
-It is important to check if some files change unnecessarily, as
-package upgrades. To do so create two clones and keep one shut down.
+You can check if some files change unnecessarily, they could be
+from unexpected activity like unattended package upgrades or system logs.
+To do so create two clones and keep one shut down.
 Start the second and do some stuff, check the disk volume grow:
 
 Check volume size
