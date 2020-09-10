@@ -36,3 +36,7 @@ Temporay disk volumes
 If you need temporary space or a place to store files that change and then
 get removed, use a TMP Ravada disk volume. Add it in the hardware settings
 for the virtual machine.
+
+.. figure:: images/new_disk_tmp.jpg
+
+    New temporary disk volume
