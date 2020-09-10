@@ -378,6 +378,7 @@ sub bookings_week(%args) {
 sub bookings_range($params) {
     my %args = %{$params};
     my $id_base = delete $args{id_base};
+    my $id_entry = delete $args{id};
     my $date_start = ( delete $args{date_start} or _today ) ;
     $date_start = DateTime::Format::DateParse->parse_datetime($date_start) if !ref($date_start);
     $date_start->set( hour => 0, minute => 0, second => 0);
@@ -417,6 +418,8 @@ sub bookings_range($params) {
             next if !$day_of_week{$date_start->day_of_week};
         }
         for my $entry ( Ravada::Booking::bookings(date => $date_start ) ) {
+            # prevent check conflict in same entry
+            next if $id_entry && $entry->{_data}->{id} eq $id_entry;
             if (
                 (_seconds($entry->{_data}->{time_start}) <= _seconds($time_start)
                 && _seconds($entry->{_data}->{time_end}) > _seconds($time_start))

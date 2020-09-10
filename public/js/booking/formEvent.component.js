@@ -13,7 +13,9 @@ export default {
 formEventCtrl.$inject = ["moment", "$scope", "apiBookings","toast","apiEntry"]
 
 function formEventCtrl(moment, $scope, apiBookings,toast,apiEntry) {
+    // init
     const self = this;
+    const conflictFields = ["date_start","date_end","time_start","time_end","day_of_week","id"];
     const showResponse = res => {
         if (res.error) {
             toast.create({
@@ -29,24 +31,39 @@ function formEventCtrl(moment, $scope, apiBookings,toast,apiEntry) {
         }
     };
     self.cal = {};
-    self.confirm_update = false;
-    self.confirm_delete = false;
-    moment.updateLocale('en', {
-        week: {
-            dow: 1,
-        }
-    });
-
+    self.dateFormat = "EEEE dd MMMM yyyy";
     self.dow = moment.weekdaysShort(true);
+
     self.$onInit = () => {
         self.isNew = !Object.hasOwnProperty.call(self.entry,"id") || !self.entry.id;
         self.entry_parsed = {
             date_booking: moment(self.entry.date_booking).toDate(),
             date_end: moment(self.entry.date_end).toDate()
         }
+        self.updateDates();
+        self.entry_clone = angular.copy(self.entry);
+    }
+
+    self.$doCheck = () => {
+        if (!angular.equals(self.entry_clone, self.entry)) {
+            const fieldsConflictModif = Object.keys(self.entry)
+                .filter(k => self.entry[k] !== self.entry_clone[k])
+                .filter(field => conflictFields.includes(field))
+            if ( fieldsConflictModif.length ) check_conflicts();
+            self.entry_clone = angular.copy(self.entry);
+        }
+    }
+
+    // methods
+
+    const check_conflicts = () => {
+        let filtred = {};
+        conflictFields.forEach( k => filtred[k] = self.entry[k]);
+        apiBookings.get(filtred, res => self.conflicts = res.data )
     }
 
     self.confirmCancel = () => self.confirm_update=self.confirm_delete=false;
+    self.hasConflicts = () => !!(self.conflicts && self.conflicts.length);
     self.openCal = id => self.cal[id] = true;
     self.remove = () => self.confirm_delete = true;
     self.remove_entry = mode => apiEntry.delete({ id:self.entry.id, mode }, res => showResponse(res));
@@ -68,16 +85,38 @@ function formEventCtrl(moment, $scope, apiBookings,toast,apiEntry) {
             res => showResponse(res)
         );
 
-    self.update_booking_dow = () => {
-        self.entry.day_of_week = self.entry.dow.join("");
-        //self.check_conflicts()
-    };
+    self.update_booking_dow = () => self.entry.day_of_week = self.entry.dow.join("");
+
     self.updateDates = () => {
+        // check and update date_end limit
+        if ( !self.entry.repeat
+            || ( self.entry.repeat && moment(self.entry_parsed.date_booking).isAfter(self.entry_parsed.date_end) ) )
+            self.entry_parsed.date_end = self.entry_parsed.date_booking
+
+        // update main model entry
         Object.assign(self.entry,{
             date_booking: moment(self.entry_parsed.date_booking).format("YYYY-MM-DD"),
             date_end: moment(self.entry_parsed.date_end).format("YYYY-MM-DD")
         });
+        self.entry.date_start = self.entry.date_booking;
+
+        // update dow
+        if ( !self.entry.repeat ) resetDow();
+
+        // set calendar limits
+        setDateLimits();
+    }
+    const setDateLimits = () => {
+        self.optionsDateEnd = {
+            minDate: new Date(self.entry.date_booking)
+        }
     }
 
+    const resetDow = () => {
+        self.entry.dow =  [0,0,0,0,0,0,0];
+        const actual_dow = moment(self.entry_parsed.date_booking).weekday();
+        self.entry.dow[actual_dow]=actual_dow+1;
+        self.update_booking_dow();
+    }
 
 }

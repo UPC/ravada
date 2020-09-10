@@ -1127,7 +1127,7 @@
                 }
             });
         };
-        */
+
         $scope.check_conflicts = function() {
             if ($scope.booking_entry.date_booking > $scope.booking_entry.date_end) {
                 $scope.conflicts = [];
@@ -1145,7 +1145,7 @@
                     $scope.conflicts = response.data
             })
         };
-/* migrated to formEvent component
+
         $scope.save_entry = function(mode) {
             $http.post('/v1/booking_entry/save/'+mode,JSON.stringify($scope.booking_entry))
                 .then(function(response) {

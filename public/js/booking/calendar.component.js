@@ -16,6 +16,11 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
             omitZeroMinute: false
     };
     let calendar;
+    moment.updateLocale('en', {
+        week: {
+            dow: 1,
+        }
+    });
     self.$postLink = () => {
         const calendarEl = $element.find("#rvdCalendar")[0];
         calendar = new FullCalendar.Calendar(calendarEl, {
@@ -31,7 +36,7 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
             select: newEntry,
             eventClick: editEntry,
             headerToolbar: {
-                left: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek create',
+                left: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
                 center: 'title',
                 end: 'today prev,next'
             },
