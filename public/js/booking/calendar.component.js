@@ -80,6 +80,7 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
                             start: parseDate(ev.date_booking, ev.time_start),
                             end: parseDate(ev.date_booking, ev.time_end),
                             title: ev.title,
+                            backgroundColor: ev.background_color,
                             extendedProps: {}
                         })
                     )
@@ -108,6 +109,7 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
             time_end : moment(selectionInfo.endStr).format("HH:mm"),
             dow : [0,0,0,0,0,0,0],
             editable: true,
+            background_color: "#7ab2fa",
             ldap_groups: []
         };
         const today_dow = moment(selectionInfo.startStr).weekday();
@@ -122,6 +124,7 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
         const res = await apiEntry.get({ id: eventClickInfo.event.id}).$promise;
         const resBooking = await apiBookings.get({ id: eventClickInfo.event.groupId}).$promise;
         res.editable = self.userId === resBooking.id_owner;
+        res.background_color = resBooking.background_color;
         res.id_owner = resBooking.id_ownler;
         await openEntry(res).result;
         calendar.refetchEvents();

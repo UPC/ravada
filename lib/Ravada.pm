@@ -1334,7 +1334,7 @@ sub _sql_create_tables($self) {
             ,date_start => 'date not null'
             ,date_end => 'date not null'
             ,id_owner => 'int not null'
-            ,backgroundColor => 'varchar(20)'
+            ,background_color => 'varchar(20)'
             ,date_created => 'datetime DEFAULT CURRENT_TIMESTAMP'
         }
         ,booking_entries => {

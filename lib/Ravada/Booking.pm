@@ -440,7 +440,8 @@ sub bookings_range($params) {
 
                 $entry->{_data}->{user_allowed} = $entry->user_allowed($show_user_allowed)
                 if $show_user_allowed;
-
+                my $booking = Ravada::Booking->new( id => $entry->{_data}->{id_booking});
+                $entry->{_data}->{background_color} = $booking->{_data}->{background_color};
                 push @$bookings,$entry->{_data}
             }
 

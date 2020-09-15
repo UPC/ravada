@@ -3,6 +3,7 @@
     <div class="form-group m-b-40">
         <label for="title">Title</label>
         <input type="text" class="form-control" id="title" ng-model="$ctrl.entry.title" required>
+        <input type="color" ng-model="$ctrl.entry.background_color" name="favcolor" ng-if="$ctrl.isNew">
     </div>
 
     <div class="form-group">
