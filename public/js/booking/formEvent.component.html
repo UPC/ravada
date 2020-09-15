@@ -1,4 +1,5 @@
 <form name="form_booking" class="floating-labels container-fluid">
+    <fieldset ng-disabled="!$ctrl.entry.editable">
     <div class="form-group m-b-40">
         <label for="title">Title</label>
         <input type="text" class="form-control" id="title" ng-model="$ctrl.entry.title" required>
@@ -72,9 +73,10 @@
         </div>
     </div>
     <div class="form-group">
-        <ldap-groups ng-model="$ctrl.entry.ldap_groups"></ldap-groups>
+        <label for="date_until">Groups with permissions</label>
+        <ldap-groups ng-model="$ctrl.entry.ldap_groups" editable="$ctrl.entry.editable"></ldap-groups>
     </div>
-    <div class="d-flex" ng-show="!$ctrl.confirm_update">
+    <div class="d-flex" ng-show="!$ctrl.confirm_update && $ctrl.entry.editable">
         <div class="mr-auto">
             <button type="button" class="btn btn-danger"
                     ng-click="$ctrl.remove()"
@@ -116,4 +118,5 @@
             </div>
         </div>
     </div>
+    </fieldset>
 </form>

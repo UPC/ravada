@@ -2,7 +2,10 @@
 
 export default {
     require: {
-        ngModel: '^ngModel'
+        ngModel: '^ngModel',
+    },
+    bindings: {
+        editable: '<'
     },
     templateUrl: '/js/booking/ldapGroup.component.html',
     controller: grpCtrl

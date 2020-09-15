@@ -1,6 +1,9 @@
 'use strict';
 
 export default {
+    bindings: {
+        userId: '<'
+    },
     template: '<div id="rvdCalendar"></div>',
     controller: calendarCtrl
 }
@@ -27,10 +30,7 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
             initialView: 'timeGridWeek',
             firstDay: 1,
             selectOverlap: false,
-            eventStartEditable: false,
-            eventDurationEditable: false,
-            droppable: false,
-            editable: true,
+            editable: false,
             selectable: true,
             events: getEvents,
             select: newEntry,
@@ -80,9 +80,7 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
                             start: parseDate(ev.date_booking, ev.time_start),
                             end: parseDate(ev.date_booking, ev.time_end),
                             title: ev.title,
-                            extendedProps: {
-
-                            }
+                            extendedProps: {}
                         })
                     )
                 )
@@ -109,6 +107,7 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
             time_start : moment(selectionInfo.startStr).format("HH:mm"),
             time_end : moment(selectionInfo.endStr).format("HH:mm"),
             dow : [0,0,0,0,0,0,0],
+            editable: true,
             ldap_groups: []
         };
         const today_dow = moment(selectionInfo.startStr).weekday();
@@ -121,6 +120,9 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
     async function editEntry(eventClickInfo) {
         // parameter object details in https://fullcalendar.io/docs/eventClick
         const res = await apiEntry.get({ id: eventClickInfo.event.id}).$promise;
+        const resBooking = await apiBookings.get({ id: eventClickInfo.event.groupId}).$promise;
+        res.editable = self.userId === resBooking.id_owner;
+        res.id_owner = resBooking.id_ownler;
         await openEntry(res).result;
         calendar.refetchEvents();
     }

@@ -1383,7 +1383,6 @@ get '/v1/booking/:range/:date' => { range => 'week', date => undef } => sub($c) 
 
 get '/v1/bookings/'=> sub($c) {
     my $arg = $c->req->params->to_hash;
-    $arg->{id_owner} = $USER->id;
     return $c->render(json => Ravada::Booking::bookings_range($arg) );
 };
 
@@ -1399,7 +1398,6 @@ post '/v1/bookings/' => sub($c) {
     delete $arg->{dow};
     delete $arg->{repeat};
     $arg->{id_owner} = $USER->id;
-
     my $dow = '';
     for my $curr ( split//,$arg->{day_of_week} ) {
         $dow .= $curr if $curr;
@@ -1429,7 +1427,6 @@ get '/v1/booking_entry/:id' => sub($c) {
 post '/v1/booking_entry/:id' => sub($c) {
     my $arg = decode_json($c->req->body);
     my $mode = delete $arg->{mode};
-
     my $entry = Ravada::Booking::Entry->new( id => $c->stash('id') );
     my $booking = Ravada::Booking->new( id => $entry->_data('id_booking'));
 

@@ -1,5 +1,6 @@
 <div>
     <select class="form-control"
+            ng-if="$ctrl.editable"
             ng-options="name for name in $ctrl.available_groups"
             ng-model="$ctrl.group_selected"
             ng-change="$ctrl.add_ldap_group()">
@@ -9,17 +10,17 @@
         {{ $ctrl.err }}
     </div>
     <div class="container-fluid">
-        <div class="row"
+        <div class="d-inline-flex mr-2 mt-2"
              ng-repeat="group in $ctrl.selected_groups">
-            <div class="col-6">
-                {{group}}
-            </div>
-
-            <div class="col-6 text-danger">
-                <span ng-click="$ctrl.remove_ldap_group(group)">
-                    <i class="fas fa-trash"></i>
+            <div>
+                <span class="badge badge-pill badge-primary p-2">
+                    {{group}}
+                    <span ng-click="$ctrl.remove_ldap_group(group)" ng-if="$ctrl.editable">
+                        <i class="fas fa-times"></i>
+                    </span>
                 </span>
             </div>
+
         </div>
     </div>
 

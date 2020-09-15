@@ -23,8 +23,7 @@ sub BUILD($self, $args) {
     my $date_end = delete $args->{date_end};
 
     confess "Error: supply either date or date_start"
-    if (defined $date && defined $date_start)
-        || (!defined $date && !defined $date_start);
+    if (!defined $date && !defined $date_start);
 
     $date = $date_start     if !defined $date;
     $date_end = $date       if !defined $date_end;
@@ -85,12 +84,17 @@ sub _init_connector {
 }
 
 sub _insert_db($self, %field) {
-
+    my $sth = $self->_dbh->prepare("SELECT * FROM bookings");
+    $sth->execute();
+    my $cols = $sth->{NAME};
+    foreach my $col (keys %field) {
+        delete $field{$col} if !grep( /^$col$/, @$cols );
+    }
     my $query = "INSERT INTO bookings "
             ."(" . join(",",sort keys %field )." )"
             ." VALUES (". join(",", map { '?' } keys %field )." ) "
     ;
-    my $sth = $self->_dbh->prepare($query);
+    $sth = $self->_dbh->prepare($query);
     eval { $sth->execute( map { $field{$_} } sort keys %field ) };
     if ($@) {
         warn "$query\n".Dumper(\%field);

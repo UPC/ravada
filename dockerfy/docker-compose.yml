@@ -12,6 +12,8 @@ services:
     env_file: .env
     command: --default-authentication-plugin=mysql_native_password
     restart: unless-stopped
+    ports:
+      - "33306:33306"
 
   ravada-front:
     container_name: ravada-front

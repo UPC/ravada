@@ -15,7 +15,7 @@
         </div>
     </div>
 
-    <rvd-calendar></rvd-calendar>
+    <rvd-calendar user_id="<%= $_user->id %>"></rvd-calendar>
 
 </div>
 </div>

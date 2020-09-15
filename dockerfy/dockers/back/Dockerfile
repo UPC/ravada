@@ -40,5 +40,5 @@ COPY supervisord.conf /etc/supervisord.conf
 #ADD src/ravada /ravada
 COPY ravada.conf /etc/ravada.conf
 WORKDIR /ravada
-
+ENV PERL5LIB /ravada/lib
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

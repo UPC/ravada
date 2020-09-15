@@ -231,6 +231,7 @@ sub change($self, %fields) {
             $self->_change_bases($fields{$field});
             next;
         }
+        next if !exists $self->{_data}->{$field};
         my $old_value = $self->_data($field);
         my $value = $fields{$field};
         $value =~ s/(^\d{4}-\d\d-\d\d).*/$1/ if ($field eq 'date_booking');
