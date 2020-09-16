@@ -715,6 +715,7 @@ sub create_volume {
     my $size        = delete $args{size};
     $size = int($size) if defined $size;
     my $type        =(delete $args{type} or 'sys');
+    my $format      =(delete $args{format} or 'qcow2');
     my $swap        =(delete $args{swap} or 0);
     my $target      = delete $args{target};
     my $capacity    = delete $args{capacity};
@@ -750,6 +751,7 @@ sub create_volume {
         target => $target
         , type => $type
         , name => $name
+        , format => $format
         , storage => $storage_pool
     );
 
@@ -757,6 +759,8 @@ sub create_volume {
     my ($volume_name) = $img_file =~m{.*/(.*)};
     $doc->findnodes('/volume/name/text()')->[0]->setData($volume_name);
     $doc->findnodes('/volume/key/text()')->[0]->setData($img_file);
+    my ($format_doc) = $doc->findnodes('/volume/target/format');
+    $format_doc->setAttribute(type => $format);
     $doc->findnodes('/volume/target/path/text()')->[0]->setData(
                         $img_file);
 
@@ -782,9 +786,11 @@ sub _volume_path {
     my $storage  = delete $args{storage} or confess "ERROR: Missing storage";
     my $filename = $args{name}  or confess "ERROR: Missing name";
     my $target = delete $args{target};
+    my $format = delete $args{format};
 
     my $dir_img = $self->_storage_path($storage);
     my $suffix = "qcow2";
+    $suffix = 'img' if $format && $format eq 'raw';
     $type = ''  if $type eq 'sys';
     $type = uc($type)."."   if $type;
     return "$dir_img/$filename.$type$suffix";

@@ -2909,7 +2909,8 @@ sub _can_fork {
 
     for my $pid (keys %reqs) {
         my $id_req = $reqs{$pid};
-        my $request = Ravada::Request->open($id_req);
+        my $request;
+        $request = Ravada::Request->open($id_req)   if defined $id_req;
         delete $reqs{$pid} if !$request || $request->status eq 'done';
     }
     my $n_pids = scalar(keys %reqs);

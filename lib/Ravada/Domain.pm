@@ -2844,7 +2844,7 @@ sub open_exposed_ports($self) {
     return if !@ports;
 
     if ( ! $self->ip ) {
-        die "Error: No ip in domain. Retry.\n";
+        die "Error: No ip in domain ".$self->name.". Retry.\n";
     }
 
     for my $expose ( @ports ) {

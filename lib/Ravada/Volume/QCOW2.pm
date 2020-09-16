@@ -26,6 +26,7 @@ sub prepare_base($self) {
     confess $base_img if $base_img !~ /\.ro/;
 
     confess "Error: '$base_img' already exists" if -e $base_img;
+    confess if $file_img =~ /\.iso/i;
 
     my @cmd = _cmd_convert($file_img,$base_img);
 
@@ -58,6 +59,24 @@ sub prepare_base($self) {
 
 }
 
+sub _convert_to_qcow($self) {
+    my ($out, $err) = $self->vm->run_command("file",$self->file);
+    return if $out =~ /QEMU QCOW/;
+    warn "converting to qcow $out";
+
+    my $tmp = $self->file.".tmp";
+    ($out, $err) = $self->vm->run_command(_cmd_convert($self->file, $tmp));
+    confess $err if $err;
+
+    my @cmd = ("cp",$self->file,$self->file.".".time().".backup");
+    ($out, $err) = $self->vm->run_command(@cmd);
+    confess "@cmd $err" if $err;
+
+    @cmd = ("cp",$tmp,$self->file);
+    ($out, $err) = $self->vm->run_command(@cmd);
+    confess "@cmd $err" if $err;
+}
+
 sub clone($self, $file_clone) {
     my $n = 10;
     for (;;) {
@@ -66,10 +85,13 @@ sub clone($self, $file_clone) {
         sleep 1;
         die "Error: ".$self->file." looks active" if $n-- <0;
     }
+    confess if $self->file =~ /ISO/i;
+    confess if $file_clone =~ /ISO/i;
+
+    $self->_convert_to_qcow();
     my @cmd = ($QEMU_IMG,'create'
         ,'-F','qcow2'
         ,'-f','qcow2'
-        ,'-F','qcow2'
         ,"-b", $self->file
         ,$file_clone
     );
