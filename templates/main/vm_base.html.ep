@@ -6,11 +6,11 @@
         <%=l 'This base can\'t be removed because the domain has clones.' %>
     </div>
 
-    <div ng-hide="showmachine && nodes">
+    <div ng-hide="showmachine">
     ... Loading ...
     </div>
 
-<div ng-hide="!showmachine || !nodes || (pending_request && pending_request.status != 'done')">
+<div ng-hide="!showmachine || (pending_request && pending_request.status != 'done')">
 
     %= include "/main/vm_rebase"
 
