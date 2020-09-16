@@ -1034,7 +1034,7 @@ sub test_fill_memory($vm, $node, $migrate) {
     my $node_free_memory = $node->free_memory;
 
     my $memory = $master_free_memory/3;
-    if ($migrate && $node_free_memory < $master_free_memory ) {
+    if ( $node_free_memory < $master_free_memory ) {
         $memory = $node_free_memory/3;
     }
 
