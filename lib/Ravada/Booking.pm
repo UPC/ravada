@@ -100,7 +100,7 @@ sub _insert_db($self, %field) {
         warn "$query\n".Dumper(\%field);
         confess $@;
     }
-    my $new_id = $sth->{mysql_insertid};
+    my $new_id = Ravada::Utils::last_insert_id($self->_dbh) or confess "Unkown last id";
     $sth->finish;
 
     $sth = $self->_dbh->prepare("SELECT * FROM bookings WHERE id=? ");
@@ -379,8 +379,7 @@ sub bookings_week(%args) {
     return \%booking;
 }
 
-sub bookings_range($params) {
-    my %args = %{$params};
+sub bookings_range(%args) {
     my $id_base = delete $args{id_base};
     my $id_entry = delete $args{id};
     my $date_start = ( delete $args{date_start} or _today ) ;
@@ -411,7 +410,7 @@ sub bookings_range($params) {
 
     #    warn "\n\nchecking $date_start - $date_end | $time_start - $time_end $day_of_week\n".Dumper(\%day_of_week);
 
-    my $bookings = [];
+    my @bookings ;
     for (# no init
         # check last
         ; DateTime->compare( $date_start, $date_end) <= 0
@@ -442,12 +441,12 @@ sub bookings_range($params) {
                 if $show_user_allowed;
                 my $booking = Ravada::Booking->new( id => $entry->{_data}->{id_booking});
                 $entry->{_data}->{background_color} = $booking->{_data}->{background_color};
-                push @$bookings,$entry->{_data}
+                push @bookings,$entry->{_data}
             }
 
         }
     }
-    return { data => $bookings };
+    return @bookings;
 }
 
 1;

@@ -1383,7 +1383,7 @@ get '/v1/booking/:range/:date' => { range => 'week', date => undef } => sub($c) 
 
 get '/v1/bookings/'=> sub($c) {
     my $arg = $c->req->params->to_hash;
-    return $c->render(json => Ravada::Booking::bookings_range($arg) );
+    return $c->render(json => { data => [Ravada::Booking::bookings_range(%$arg)] } );
 };
 
 get '/v1/bookings/:id'=> sub($c) {

@@ -77,12 +77,12 @@
         <label for="date_until">Groups with permissions</label>
         <ldap-groups ng-model="$ctrl.entry.ldap_groups" editable="$ctrl.entry.editable"></ldap-groups>
     </div>
-    <div class="d-flex" ng-show="!$ctrl.confirm_update && $ctrl.entry.editable">
+    <div class="d-flex" ng-show="!$ctrl.confirm_update && !$ctrl.confirm_remove && $ctrl.entry.editable">
         <div class="mr-auto">
             <button type="button" class="btn btn-danger"
                     ng-click="$ctrl.remove()"
                     ng-if="!$ctrl.isNew"
-            >Remove</button>
+            >Delete</button>
         </div>
         <button type="button" class="btn btn-secondary" ng-click="$ctrl.onCancel()"
                 data-dismiss="modal"
@@ -94,18 +94,18 @@
     </div>
     <rvd-confirm-buttons
             ng-show="$ctrl.confirm_update"
-            text="Do you want to update all the bookings from this one ?"
-            label-primary="Change only this entry"
-            label-secondary="Update all"
+            text="Do you want to change all this event ?"
+            label-primary="Only this event"
+            label-secondary="This and following events"
             on-cancel="$ctrl.confirmCancel()"
             on-primary-click="$ctrl.save_entry(mode)"
             on-secondary-click="$ctrl.save_entry(mode)"
     ></rvd-confirm-buttons>
     <rvd-confirm-buttons
             ng-show="$ctrl.confirm_delete"
-            text="Do you want to remove all the bookings from this one ?"
-            label-primary="Remove only this one"
-            label-secondary="Remove all"
+            text="Do you want to delete this event ?"
+            label-primary="Only this event"
+            label-secondary="This and following events"
             on-cancel="$ctrl.confirmCancel()"
             on-primary-click="$ctrl.remove_entry(mode)"
             on-secondary-click="$ctrl.remove_entry(mode)"

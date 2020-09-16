@@ -1186,6 +1186,9 @@ sub test_list_machines_user($vm) {
         ." (admin = ".$USER_NO->is_admin.")") or exit;
 
     my ($entry_data) = Ravada::Booking::bookings_range();
+    ok($entry_data,"Expected defined first entry data in bookings range");
+    ok(exists $entry_data->{id} && defined $entry_data->{id},"Expecting entry data id "
+        .Dumper($entry_data)) or exit;
     my $entry = Ravada::Booking::Entry->new( id => $entry_data->{id} );
     my @bases = $entry->bases_id();
     my $id_base = $bases[0];
