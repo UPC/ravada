@@ -374,7 +374,8 @@ sub add_volume {
 }
 
 sub _create_volume($self, $file, $format, $data=undef) {
-    if ($format =~ /iso|void/) {
+    if ($format =~ /iso|raw|void/) {
+        $data->{format} = $format;
         $self->_vm->write_file($file, Dump($data)),
     } elsif ($format eq 'qcow2') {
         my @cmd = ('qemu-img','create','-f','qcow2', $file, $data->{capacity});

@@ -70,23 +70,44 @@ has 'clone_base_after_prepare' => (
     ,default => sub { 1 }
 );
 
-sub _type ($file) {
+sub _type_from_file($file, $vm) {
+    return 'ISO'    if $file =~ /\.iso$/i;
+    return 'Void'   if $file =~ /void$/i;
+
+    my ($out, $err) = $vm->run_command("file",$file);
+    return 'QCOW2'  if $out =~ /QEMU QCOW/;
+    return 'RAW';
+}
+
+sub _type_from_extension($file) {
     my ($ext) = $file =~ m{.*\.(.*)};
     confess if !defined $ext;
     confess if $ext =~ /-/;
     my %type = (
         void => 'Void'
         ,img => 'QCOW2'
+        ,iso => 'ISO'
     );
 
     return $type{$ext} if exists $type{$ext};
     return uc($ext);
 }
 
+sub _type($file,$vm = undef) {
+    return _type_from_file($file,$vm)   if $vm;
+    return _type_from_extension($file);
+}
+
 sub BUILD($self, $arg) {
     my $class;
-    if (exists $arg->{file} && $arg->{file}) {
-        $class = "Ravada::Volume::"._type($arg->{file});
+    if (ref($self) && ref($self) =~ /^Ravada::Volume::/) {
+        $class=ref($self);
+    } elsif (exists $arg->{file} && $arg->{file}) {
+        my $vm;
+        $vm = $arg->{vm}            if exists $arg->{vm} && $arg->{vm};
+        $vm = $arg->{domain}->_vm   if exists $arg->{domain} && $arg->{domain};
+        $class = "Ravada::Volume::"._type($arg->{file}, $vm);
+
     } elsif (exists $arg->{info}) {
         if (exists $arg->{info}->{device} && $arg->{info}->{device} eq 'cdrom') {
             $class = "Ravada::Volume::ISO";

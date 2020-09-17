@@ -376,8 +376,10 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
         $info->{n_order} = $n_order++;
         $info->{boot} = $boot_node->getAttribute('order') if $boot_node;
         $info->{file} = $file if defined $file;
-        for my $attr  ($driver_node->attributes()) {
-            $info->{"driver_".$attr->name} = $attr->getValue();
+        if ($driver_node) {
+            for my $attr  ($driver_node->attributes()) {
+                $info->{"driver_".$attr->name} = $attr->getValue();
+            }
         }
         $info->{backing} = $backing_node->toString()
         if $backing_node && $backing_node->attributes();
@@ -972,6 +974,7 @@ sub add_volume {
     my $boot = (delete $args{boot} or undef);
     my $device = (delete $args{device} or 'disk');
     my $type = delete $args{type};
+    my $format = delete $args{format};
     my %valid_arg = map { $_ => 1 } ( qw( driver name size vm xml swap target file allocation));
 
     for my $arg_name (keys %args) {
@@ -1001,6 +1004,7 @@ sub add_volume {
         ,swap => ($args{swap} or 0)
         ,size => ($args{size} or undef)
         ,type => $type
+        ,format => $format
         ,allocation => ($args{allocation} or undef)
         ,target => $target_dev
     )   if !$path;
@@ -1009,12 +1013,12 @@ sub add_volume {
 # TODO check if <target dev="/dev/vda" bus='virtio'/> widhout dev works it out
 # change dev=vd*  , slot=*
 #
-    my $driver_type = 'qcow2';
+    my $driver_type = ( $format or 'qcow2');
     my $cache = 'default';
 
     if ( $args{swap} || $device eq 'cdrom' ) {
         $cache = 'none';
-        $driver_type = 'raw';
+        $driver_type = 'raw'    if !defined $format;
     }
 
     if ( !defined $bus ) {
