@@ -30,3 +30,11 @@ Automatic or unattended upgrades
 --------------------------------
 
 Upgrades may cause the disk volumes to grow unexpectedly. They should be disabled.
+
+For Debian, Ubuntu and similar systems:
+
+.. prompt:: bash $
+
+    sudo dpkg-reconfigure unattended-upgrades
+
+Other Linux flavours may have similar tools. Contributions welcome.
