@@ -5,7 +5,7 @@ export default {
         ngModel: '^ngModel',
     },
     bindings: {
-        editable: '<'
+        editable: '<',
     },
     templateUrl: '/js/booking/ldapGroup.component.html',
     controller: grpCtrl
@@ -19,18 +19,20 @@ function grpCtrl(apiLDAP, $scope, $timeout) {
     self.available_groups = [];
     self.group_selected = null;
     self.$onInit = () => {
-        this.ngModel.$render = () => {
+        self.ngModel.$render = () => {
             self.selected_groups = self.ngModel.$viewValue;
         };
-        $scope.$watch(function() { return self.selected_groups; }, function(value) {
+        $scope.$watchCollection( () => self.selected_groups, value => {
             self.ngModel.$setViewValue(value);
+            self.required = Object.prototype.hasOwnProperty.call(self.ngModel.$validators,"required");
+            if (self.required) self.ngModel.$setValidity("required",!!value.length);
         });
         apiLDAP.list_groups({}, res => self.available_groups = res)
-
     };
     self.add_ldap_group = () => {
+        if (!self.group_selected) return;
         if (self.selected_groups.indexOf(self.group_selected) >= 0) {
-            msgError(self.selected_groups + ' already there');
+            msgError(self.group_selected + ' already there');
         } else {
             self.selected_groups.push(self.group_selected);
         }

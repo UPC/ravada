@@ -3,6 +3,7 @@
             ng-if="$ctrl.editable"
             ng-options="name for name in $ctrl.available_groups"
             ng-model="$ctrl.group_selected"
+            ng-required="!$ctrl.ngModel.$valid"
             ng-change="$ctrl.add_ldap_group()">
         <option selected value="">Select groups</option>
     </select>

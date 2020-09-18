@@ -2,7 +2,8 @@
 
 export default {
     bindings: {
-        label: "@"
+        label: "@",
+        onChange: '&'
     },
     require: {
         ngModel: '^ngModel'
@@ -17,11 +18,7 @@ function timeCtrl($element, $scope) {
         $element.find(".clockpicker").clockpicker();
     };
     self.$onInit = () => {
-        this.ngModel.$render = () => {
-            self.model = self.ngModel.$viewValue;
-        };
-        $scope.$watch(function() { return self.model; }, function(value) {
-            self.ngModel.$setViewValue(value);
-        });
+        this.ngModel.$render = () => self.model = self.ngModel.$viewValue;
+        $scope.$watch( () => self.model, value => self.ngModel.$setViewValue(value) );
     };
 }

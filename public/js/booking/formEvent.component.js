@@ -43,7 +43,7 @@ function formEventCtrl(moment, $scope, apiBookings,toast,apiEntry) {
         self.updateDates();
         self.entry_clone = angular.copy(self.entry);
     }
-
+    // Called on each turn of the digest cycle. Detect entry changes
     self.$doCheck = () => {
         if (!angular.equals(self.entry_clone, self.entry)) {
             const fieldsConflictModif = Object.keys(self.entry)

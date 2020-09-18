@@ -2,7 +2,8 @@
 
 export default {
     bindings: {
-        userId: '<'
+        userId: '<',
+        editable: '<'
     },
     template: '<div id="rvdCalendar"></div>',
     controller: calendarCtrl
@@ -29,9 +30,10 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
         calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'timeGridWeek',
             firstDay: 1,
+            allDaySlot: false,
             selectOverlap: false,
             editable: false,
-            selectable: true,
+            selectable: !!self.editable,
             events: getEvents,
             select: newEntry,
             eventClick: editEntry,
@@ -123,9 +125,9 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
         // parameter object details in https://fullcalendar.io/docs/eventClick
         const res = await apiEntry.get({ id: eventClickInfo.event.id}).$promise;
         const resBooking = await apiBookings.get({ id: eventClickInfo.event.groupId}).$promise;
-        res.editable = self.userId === resBooking.id_owner;
+        res.editable = self.userId === resBooking.id_owner && self.editable;
         res.background_color = resBooking.background_color;
-        res.id_owner = resBooking.id_ownler;
+        res.id_owner = resBooking.id_owner;
         await openEntry(res).result;
         calendar.refetchEvents();
     }

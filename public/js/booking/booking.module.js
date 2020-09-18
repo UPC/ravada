@@ -8,7 +8,7 @@ import ldapGroupsComponent from "./ldapGroups.component.js"
 import timeComponent from "./time.component.js"
 import { svcBookings, svcEntry, svcLDAP } from "./booking.services.js"
 
-angular.module("ravada.booking", ['ui.bootstrap','angularMoment','angularjsToast'])
+angular.module("ravada.booking", ['ui.bootstrap','angularMoment','angularjsToast','ngMessages'])
     .component("rvdCalendar", calendarComponent)
     .component("rvdConfirmButtons",confirmButtons)
     .component("rvdEntryModal",entryModalComponent)
