@@ -36,6 +36,7 @@ sub test_list_nats($vm) {
            user => user_admin
           ,type => 'nat'
        ,vm_type => $vm->type
+       ,timeout => 1
     );
     ok($nats);
 
@@ -74,6 +75,7 @@ sub test_list_bridges($vm) {
            user => user_admin
           ,type => 'bridge'
        ,vm_type => $vm->type
+       ,timeout => 1
       );
     ok($bridges);
 

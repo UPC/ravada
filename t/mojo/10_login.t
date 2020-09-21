@@ -188,7 +188,7 @@ $t->ua->connect_timeout(60);
 my @bases;
 my @clones;
 
-for my $vm_name ( vm_names() ) {
+for my $vm_name (@{rvd_front->list_vm_types} ) {
 
     diag("Testing new machine in $vm_name");
 
@@ -208,24 +208,24 @@ for my $vm_name ( vm_names() ) {
         }
     )->status_is(302);
 
-    _wait_request(debug => 0, background => 1);
+    _wait_request(debug => 1, background => 1, check_error => 1);
     my $base = rvd_front->search_domain($name);
-    ok($base) or next;
+    ok($base, "Expecting domain $name create") or next;
     push @bases,($base->name);
 
     mojo_request($t, "add_hardware", { id_domain => $base->id, name => 'network' });
     wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
 
     $t->get_ok("/machine/prepare/".$base->id.".json")->status_is(200);
-    _wait_request(debug => 0, background => 1);
+    _wait_request(debug => 0, background => 1, check_error => 1);
     $base = rvd_front->search_domain($name);
     is($base->is_base,1);
 
     is(scalar($base->list_ports),0);
     $t->get_ok("/machine/clone/".$base->id.".json")->status_is(200);
-    _wait_request(debug => 0, background => 1);
+    _wait_request(debug => 0, background => 1, check_error => 1);
     my $clone = rvd_front->search_domain($name."-".user_admin->name);
-    ok($clone,"Expecting clone created");
+    ok($clone,"Expecting clone created") or next;
     if ($clone) {
         is($clone->is_volatile,0) or exit;
         is(scalar($clone->list_ports),0);

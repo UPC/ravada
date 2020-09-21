@@ -6,7 +6,7 @@
         ng-hide="confirm_remove_base"
     ><%= l 'Remove Base' %></button>
     </div>
-    <div class="col-sm-8">
+    <div class="col-sm-8" ng-hide="confirm_remove_base">
         <p><%=l 'Remove the base prepared from this machine' %></p>
     </div>
 </div>

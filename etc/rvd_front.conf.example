@@ -22,8 +22,19 @@
   ,monitoring => 0
   ,guide => ''
   ,guide_custom => ''
+
+# normal users session timeout
   ,session_timeout => 5*60
+# session timeout when admin logs in
   ,session_timeout_admin => 15*60
+# session timeout when admin enters management pages
+  ,session_timeout_admin2 => 60*60
+
   ,auto_view => 0
   ,fallback => 0
+  ,log => {
+      log => 0
+      ,file => '/var/log/ravada/rvd_front.log'
+      ,level => 'debug'
+  }
 };

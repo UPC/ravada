@@ -30,7 +30,7 @@ use Ravada::Front;
 use Ravada::Front::Domain;
 use Ravada::Auth;
 use Ravada::WebSocket;
-use POSIX qw(locale_h);
+use POSIX qw(locale_h strftime);
 
 my $help;
 
@@ -120,12 +120,17 @@ our $DOCUMENT_ROOT = "/var/www";
 our $SESSION_TIMEOUT = ($CONFIG_FRONT->{session_timeout} or 5 * 60);
 # session times out in 15 minutes for admin users
 our $SESSION_TIMEOUT_ADMIN = ($CONFIG_FRONT->{session_timeout_admin} or 15 * 60);
+our $SESSION_TIMEOUT_ADMIN2 = ($CONFIG_FRONT->{session_timeout_admin2} or 60 * 60);
 
 my $WS = Ravada::WebSocket->new(ravada => $RAVADA);
 my %ALLOWED_ANONYMOUS_WS = map { $_ => 1 } qw(list_bases_anonymous list_alerts);
 
 init();
 ############################################################################3
+
+sub _time() {
+    return strftime('%Y/%m/%d:%H:%M:%S %z',localtime);
+}
 
 hook before_routes => sub {
   my $c = shift;
@@ -134,7 +139,6 @@ hook before_routes => sub {
 
   $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
-  app->log->info($url) if $CONFIG_FRONT->{log}->{log};
   my $host = $c->req->url->to_abs->host;
   $c->stash(css=>['/css/sb-admin.css']
             ,js_mod=>[ ## angular modules
@@ -160,6 +164,11 @@ hook before_routes => sub {
             );
 
     $USER = _logged_in($c);
+
+    my $user = '-';
+    $user = $USER->name if defined $USER;
+    app->log->info(_remote_ip($c)." $user ["._time()."] ".$c->req->method." ".$url)
+    if $CONFIG_FRONT->{log}->{log};
 
     return if $url =~ m{^/(css|font|img|js)}
 	   || $url =~ m{^/fallback/.*\.(css|js|map)$};
@@ -1514,24 +1523,58 @@ any '/user_settings' => sub {
     user_settings($c);
 };
 
+sub _translations($c) {
+    my %lang_name=(
+        ar => 'Arab'
+        ,en => 'English'
+        ,ca => 'Catalan'
+        ,es => 'Spanish'
+        ,gl => 'Galician'
+        ,fr => 'French'
+        ,de => 'German'
+        ,hi => 'Hindi'
+        ,id => 'Indonesian'
+        ,it => 'Italian'
+        ,fa => 'Persian'
+        ,pt => 'Portuguese'
+        ,pt => 'Portuguese'
+        ,tr => 'Turkish'
+        ,ja => 'Japanese'
+        ,'cat@valencia' => 'Valencian'
+        ,vi => 'Vietnamese'
+    );
+    $c->stash(lang_name => \%lang_name);
+    my $language = $USER->language;
+    if (!$language) {
+        for my $detected_lang (_detect_languages($c)) {
+            if ( $lang_name{$detected_lang}) {
+                $language = $detected_lang;
+                last;
+            }
+        }
+    }
+    $c->stash( language => ( $language or 'en') );
+
+}
+
 sub user_settings {
     my $c = shift;
     my $changed_lang;
     my $changed_pass;
-    if ($c->req->method('POST')) {
-        $USER->language($c->param('tongue'));
-        $changed_lang = $c->param('tongue');
+    if ($c->param('language')) {
+        $USER->language($c->param('language'));
+        $changed_lang = $c->param('language');
         Ravada::Request->post_login(
                 user => $USER->name
             , locale => $changed_lang);
         _logged_in($c);
     }
-    $c->param('tongue' => $USER->language);
+    _translations($c);
     my @errors;
-    if ($c->param('button_click')) {
+    if ($c->param('password-form') && $c->req->method eq 'POST') {
 	my $auth_ok;
         eval { $auth_ok = Ravada::Auth::login($USER->name, $c->param('current_password'))};
-        if (!$auth_ok || $@) {
+	if (!$auth_ok || $@ || ($c->param('current_password') eq "")) {
 		push @errors, ("Current password is wrong");
 	}
 	else {
@@ -1607,7 +1650,7 @@ websocket '/ws/subscribe' => sub {
     my $c = shift;
     my $expiration = $SESSION_TIMEOUT;
     return if !$USER;
-    $expiration = $SESSION_TIMEOUT_ADMIN    if $USER->is_admin;
+    $expiration = $SESSION_TIMEOUT_ADMIN    if $USER->is_operator;
     $c->inactivity_timeout( $expiration );
     $c->on(message => sub {
             my ($ws, $channel ) = @_;
@@ -1688,6 +1731,18 @@ sub _logged_in {
     return $USER;
 }
 
+sub _detect_languages($c) {
+    my @languages = I18N::LangTags::implicate_supers(
+        I18N::LangTags::Detect::detect()
+    );
+    my $header = ( $c->req->headers->header('accept-language') or '');
+    my @languages2 = map {my $lang = $_ ; $lang =~ s/^(.*?)[;-].*/$1/; $lang } split /,/,$header;
+    my @languages_browser = map {my $lang = $_ ;$lang =~ s/;.*//; $lang } split /,/,$header;
+
+    return (@languages_browser, @languages, @languages2);
+
+
+}
 
 sub login {
     my $c = shift;
@@ -1712,16 +1767,9 @@ sub login {
             $c->session('login' => $login);
             my $expiration = $SESSION_TIMEOUT;
             $expiration = $SESSION_TIMEOUT_ADMIN    if $auth_ok->is_admin;
-            my @languages = I18N::LangTags::implicate_supers(
-                I18N::LangTags::Detect::detect()
-            );
-            my $header = ( $c->req->headers->header('accept-language') or '');
-            my @languages2 = map {my $lang = $_ ; $lang =~ s/^(.*?)[;-].*/$1/; $lang } split /,/,$header;
-            my @languages_browser = map {my $lang = $_ ;$lang =~ s/;.*//; $lang } split /,/,$header;
-
             Ravada::Request->post_login(
                 user => $auth_ok->name
-                , locale => [@languages_browser, @languages, @languages2]
+                , locale => [_detect_languages($c)]
             );
 
             $auth_ok = Ravada::Auth::SQL->new(name => $auth_ok->name);
@@ -1895,6 +1943,7 @@ sub admin {
         return access_denied($c) unless $USER->is_admin;
         Ravada::Request->refresh_vms();
     }
+    $c->session(expiration => $SESSION_TIMEOUT_ADMIN2);
     if ($page eq 'settings') {
         return access_denied($c) unless $USER->is_admin;
         my $url = $c->req->url->to_abs->path;

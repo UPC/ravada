@@ -747,6 +747,7 @@ sub _around_prepare_base($orig, $self, @args) {
         my $vm_local = $self->_vm->new( host => 'localhost' );
         $self->_vm($vm_local);
     }
+    $self->pre_prepare_base();
     my @base_img = $self->$orig($with_cd);
 
     die "Error: No information files returned from prepare_base"
@@ -756,6 +757,17 @@ sub _around_prepare_base($orig, $self, @args) {
 
     $self->_post_prepare_base($user, $request);
 }
+
+=head2 pre_prepare_base
+
+Run this before preparing the base. By default does nothing and may
+be implemented in the object.
+
+This is executed automatically so it shouldn't been called.
+
+=cut
+
+sub pre_prepare_base($self) {}
 
 =head2 prepare_base
 
@@ -822,7 +834,6 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
     $self->_check_has_clones();
 
     $self->is_base(0);
-    $self->_post_remove_base();
     if ($self->is_active) {
         $self->shutdown(user => $user);
         for ( 1 .. $TIMEOUT_SHUTDOWN ) {
@@ -837,6 +848,7 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
             sleep 1;
         }
     }
+    $self->_post_remove_base();
     if (!$self->is_local) {
         my $vm_local = Ravada::VM->open( type => $self->vm );
         $self->migrate($vm_local);
@@ -930,7 +942,7 @@ sub _check_has_clones {
     return if !$self->is_known();
 
     my @clones = $self->clones;
-    die "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
+    confess "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
         if $#clones>=0;
 }
 
@@ -1703,11 +1715,13 @@ sub _pre_remove_domain($self, $user, @) {
     $self->is_volatile()        if $self->is_known || $self->domain;
     if (($self->is_known && $self->is_known_extra)
         || $self->domain ) {
-        $self->{_volumes} = [$self->list_disks()];
+        eval { $self->{_volumes} = [$self->list_disks()] };
+        warn "Warning: $@" if $@;
     }
     $self->pre_remove();
     $self->_remove_iptables()   if $self->is_known();
-    $self->shutdown_now($user)  if $self->is_active;
+    eval { $self->shutdown_now($user)  if $self->is_active };
+    warn "Warning: $@" if $@;
 
     my $owner;
     $owner= Ravada::Auth::SQL->search_by_id($self->id_owner)    if $self->is_known();
@@ -2855,7 +2869,7 @@ sub open_exposed_ports($self) {
     return if !@ports;
 
     if ( ! $self->ip ) {
-        die "Error: No ip in domain. Retry.\n";
+        die "Error: No ip in domain ".$self->name.". Retry.\n";
     }
 
     for my $expose ( @ports ) {
@@ -3029,7 +3043,7 @@ sub _remove_iptables {
     confess "ERROR: Unknown args ".Dumper(\%args)    if keys %args;
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE iptables SET time_deleted=?"
+        "DELETE FROM iptables "
         ." WHERE id=?"
     );
     my @iptables;
@@ -3047,7 +3061,7 @@ sub _remove_iptables {
         for my $entry (@ {$rule{$id_vm}}) {
             my ($id, $iptables) = @$entry;
             $self->_delete_ip_rule($iptables, $vm) if !$>;
-            $sth->execute(Ravada::Utils::now(), $id);
+            $sth->execute($id);
         }
     }
 }
@@ -3226,7 +3240,7 @@ sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
            && ( $args{dport} eq $extra->{d_port}))
         {
 
-           $vm->run_command("/sbin/iptables", "-t", $filter, "-D", $chain, $count)
+           $vm->run_command("iptables", "-t", $filter, "-D", $chain, $count)
                 if $vm->is_active;
            $removed++;
            $count--;

@@ -77,9 +77,6 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 our $WGET = `which wget`;
 chomp $WGET;
 
-our $BRCTL = `which brctl`;
-chomp $BRCTL;
-
 our $CACHE_DOWNLOAD = 1;
 our $VERIFY_ISO = 1;
 
@@ -413,6 +410,8 @@ sub _refresh_isos($self) {
             warn "Error: ISO mismatch ".Dumper($row);
             next;
         }
+        $file_re = "$file_re\$" unless $file_re =~ /\$$/;
+        $file_re = "^$file_re"  unless $file_re =~ /^\$/;
 
         my $iso_file = $self->search_volume_path_re(qr($file_re));
         if ($iso_file) {
@@ -716,6 +715,7 @@ sub create_volume {
     my $size        = delete $args{size};
     $size = int($size) if defined $size;
     my $type        =(delete $args{type} or 'sys');
+    my $format      =(delete $args{format} or 'qcow2');
     my $swap        =(delete $args{swap} or 0);
     my $target      = delete $args{target};
     my $capacity    = delete $args{capacity};
@@ -751,6 +751,7 @@ sub create_volume {
         target => $target
         , type => $type
         , name => $name
+        , format => $format
         , storage => $storage_pool
     );
 
@@ -758,6 +759,8 @@ sub create_volume {
     my ($volume_name) = $img_file =~m{.*/(.*)};
     $doc->findnodes('/volume/name/text()')->[0]->setData($volume_name);
     $doc->findnodes('/volume/key/text()')->[0]->setData($img_file);
+    my ($format_doc) = $doc->findnodes('/volume/target/format');
+    $format_doc->setAttribute(type => $format);
     $doc->findnodes('/volume/target/path/text()')->[0]->setData(
                         $img_file);
 
@@ -783,9 +786,11 @@ sub _volume_path {
     my $storage  = delete $args{storage} or confess "ERROR: Missing storage";
     my $filename = $args{name}  or confess "ERROR: Missing name";
     my $target = delete $args{target};
+    my $format = delete $args{format};
 
     my $dir_img = $self->_storage_path($storage);
     my $suffix = "qcow2";
+    $suffix = 'img' if $format && $format eq 'raw';
     $type = ''  if $type eq 'sys';
     $type = uc($type)."."   if $type;
     return "$dir_img/$filename.$type$suffix";
@@ -2309,76 +2314,6 @@ sub _fetch_dir_cert($self) {
         return $1 if $1;
     }
     close $in;
-}
-
-sub list_network_interfaces($self, $type) {
-    my $sub = {
-        nat => \&_list_nat_interfaces
-        ,bridge => \&_list_bridges
-    };
-
-    my $cmd = $sub->{$type} or confess "Error: Unknown interface type $type";
-    return $cmd->($self);
-}
-
-sub _list_nat_interfaces($self) {
-
-    my ($in, $out, $err);
-    my @cmd = ( '/usr/bin/virsh','net-list');
-    run3(\@cmd, \$in, \$out, \$err);
-
-    my @lines = split /\n/,$out;
-    shift @lines;
-    shift @lines;
-
-    my @networks;
-    for (@lines) {
-        /\s*(.*?)\s+.*/;
-        push @networks,($1) if $1;
-    }
-    return @networks;
-}
-
-sub _get_nat_bridge($net) {
-    my ($in, $out, $err);
-    my @cmd = ( '/usr/bin/virsh','net-info', $net);
-    run3(\@cmd, \$in, \$out, \$err);
-
-    for my $line (split /\n/, $out) {
-        my ($bridge) = $line =~ /^Bridge:\s+(.*)/;
-        return $bridge if $bridge;
-    }
-}
-
-sub _list_qemu_bridges($self) {
-    my %bridge;
-    my @networks = $self->_list_nat_interfaces();
-    for my $net (@networks) {
-        my $nat_bridge = _get_nat_bridge($net);
-        $bridge{$nat_bridge}++;
-    }
-    return keys %bridge;
-}
-
-sub _list_bridges($self) {
-
-    return () if !-e $BRCTL;
-    my %qemu_bridge = map { $_ => 1 } $self->_list_qemu_bridges();
-
-    my @cmd = ( $BRCTL,'show');
-    my ($out,$err) = $self->run_command(@cmd);
-
-    die $err if $err;
-    my @lines = split /\n/,$out;
-    shift @lines;
-
-    my @networks;
-    for (@lines) {
-        my ($bridge, $interface) = /\s*(.*?)\s+.*\s(.*)/;
-        push @networks,($bridge) if $bridge && !$qemu_bridge{$bridge};
-    }
-    $self->{_bridges} = \@networks;
-    return @networks;
 }
 
 sub free_disk($self, $pool_name = undef ) {

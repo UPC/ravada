@@ -1234,6 +1234,12 @@ sub _get_settings($self, $id_parent=0) {
     return $ret;
 }
 
+=head2 settings_global
+
+Returns the list of global settings as a hash
+
+=cut
+
 sub settings_global($self) {
     return $self->_get_settings();
 }
@@ -1290,6 +1296,12 @@ sub feature($self,$name=undef) {
     return 1 if exists $Ravada::CONFIG->{$name} && $Ravada::CONFIG->{$name};
 }
 
+=head2 update_settings_global
+
+Updates the global settings
+
+=cut
+
 sub update_settings_global($self, $arg, $user, $orig_settings = $self->_settings_by_id) {
     confess if !ref($arg);
     if (exists $arg->{frontend}
@@ -1320,6 +1332,12 @@ sub update_settings_global($self, $arg, $user, $orig_settings = $self->_settings
     }
 
 }
+
+=head2 is_in_maintenance
+
+Returns wether the service is in maintenance mode
+
+=cut
 
 sub is_in_maintenance($self) {
     my $settings = $self->settings_global();

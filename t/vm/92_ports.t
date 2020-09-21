@@ -28,11 +28,13 @@ sub test_no_dupe($vm) {
     my ($internal_port, $name_port) = (22, 'ssh');
 
     my ($in, $out, $err);
-    run3(['/sbin/iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    die $err if $err;
     my @out = split /\n/,$out;
     is(grep(/^DNAT.*/,@out),0);
 
-    run3(['/sbin/iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    die $err if $err;
     @out = split /\n/,$out;
     is(grep(m{^ACCEPT.*192.168.\d+\.0/24\sstate NEW},@out),0);
 
@@ -59,16 +61,18 @@ sub test_no_dupe($vm) {
     delete_request('enforce_limits');
     wait_request(background => 0, debug => 0);
 
-    run3(['/sbin/iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
     @out = split /\n/,$out;
     is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1);
 
-    run3(['/sbin/iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    die $err if $err;
     @out = split /\n/,$out;
     is(grep(m{^ACCEPT.*$internal_net\s+state NEW},@out),1,"Expecting rule for $internal_net")
         or die $out;
 
-    run3(['/sbin/iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    die $err if $err;
     @out = split /\n/,$out;
     is(grep(m{^ACCEPT.*$remote_ip\s+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
     is(grep(m{^DROP.*0.0.0.0.+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
@@ -79,15 +83,18 @@ sub test_no_dupe($vm) {
     #
     $domain->start(user => user_admin, remote_ip => $remote_ip);
     is($domain->is_active,1);
-    run3(['/sbin/iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    die $err if $err;
     @out = split /\n/,$out;
     is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1);
 
-    run3(['/sbin/iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    die $err if $err;
     @out = split /\n/,$out;
     is(grep(m{^ACCEPT.*$internal_net\s+state NEW},@out),1) or die $out;
 
-    run3(['/sbin/iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    die $err if $err;
     @out = split /\n/,$out;
     is(grep(m{^ACCEPT.*$remote_ip\s+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
     is(grep(m{^DROP.*0.0.0.0.+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
@@ -105,15 +112,18 @@ sub test_hibernate($domain
     is($domain->is_hibernated,1);
 
     my ($in,$out,$err);
-    run3(['/sbin/iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    die $err if $err;
     my @out = split /\n/,$out;
     is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),0);
 
-    run3(['/sbin/iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    die $err if $err;
     @out = split /\n/,$out;
     is(grep(m{^ACCEPT.*192.168.\d+\.0/24\sstate NEW},@out),0);
 
-    run3(['/sbin/iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    die $err if $err;
     @out = split /\n/,$out;
     is(grep(m{^ACCEPT.*$remote_ip\s+$internal_ip.*dpt:$internal_port},@out),0) or die $out;
     is(grep(m{^DROP.*0.0.0.0.+$internal_ip.*dpt:$internal_port},@out),0) or die $out;
@@ -132,15 +142,18 @@ sub test_start_after_hibernate($domain
     wait_request(debug => 0, background => 0);
 
     my ($in,$out,$err);
-    run3(['/sbin/iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    die $err if $err;
     my @out = split /\n/,$out;
     is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1);
 
-    run3(['/sbin/iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    die $err if $err;
     @out = split /\n/,$out;
     is(grep(m{^ACCEPT.*$internal_net\s+state NEW},@out),1) or die $out;
 
-    run3(['/sbin/iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    die $err if $err;
     @out = split /\n/,$out;
     is(grep(m{^ACCEPT.*$remote_ip\s+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
     is(grep(m{^DROP.*0.0.0.0.+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
@@ -852,7 +865,8 @@ sub test_change_expose_3($vm) {
         $domain->expose(id_port => $port->{id}, restricted => $restricted);
         wait_request(background => 0, debug => 0);
         my ($in, $out, $err);
-        run3(['/sbin/iptables','-L','FORWARD','-n'],\($in, $out, $err));
+        run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
+        die $err if $err;
         my @out = split /\n/,$out;
         if ($restricted) {
             my $port_re = qr{^ACCEPT.*$remote_ip\s+$internal_ip.*dpt:$port->{internal_port}};

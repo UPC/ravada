@@ -673,7 +673,6 @@
                 $http.get('/list_bases.json')
                     .then(function(response) {
                             $scope.bases=response.data;
-                            if(typeof($scope.new_base) == 'undefined') {
                                 for (var i = 0; i < $scope.bases.length; i++) {
                                     if ($scope.bases[i].id == $scope.showmachine.id_base) {
                                         $scope.new_base = $scope.bases[i];
@@ -682,7 +681,6 @@
                                         $scope.new_base = $scope.bases[i];
                                     }
                                 }
-                            }
                     });
             };
             list_users= function() {

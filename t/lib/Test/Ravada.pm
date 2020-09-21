@@ -5,12 +5,13 @@ use warnings;
 use  Carp qw(carp confess);
 use Data::Dumper;
 use Fcntl qw(:flock SEEK_END);
-use File::Path qw(make_path);
+use File::Path qw(make_path remove_tree);
 use YAML qw(DumpFile);
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use Mojo::File 'path';
 use  Test::More;
+use XML::LibXML;
 use YAML qw(Load LoadFile Dump DumpFile);
 
 use feature qw(signatures);
@@ -44,7 +45,6 @@ create_domain
     remote_config_nodes
     clean_remote_node
     arg_create_dom
-    vm_names
     search_iptable_remote
     clean_remote
     start_node shutdown_node remove_node hibernate_node
@@ -73,6 +73,7 @@ create_domain
 
     mangle_volume
     test_volume_contents
+    test_volume_format
 
     end
 );
@@ -953,6 +954,7 @@ sub remove_qemu_pools {
         my $name = $pool->get_name;
         next if $name !~ qr/^$base/;
         diag("Removing ".$pool->get_name." storage_pool");
+        _delete_qemu_pool($pool);
         for my $vol ( $pool->list_volumes ) {
             diag("Removing ".$pool->get_name." vol ".$vol->get_name);
             $vol->delete();
@@ -962,6 +964,21 @@ sub remove_qemu_pools {
         warn $@ if$@ && $@ !~ /libvirt error code: 49,/;
         ok(!$@ or $@ =~ /Storage pool not found/i);
     }
+
+    opendir my $ls ,"/var/tmp" or die $!;
+    while (my $file = readdir($ls)) {
+        next if $file !~ qr/^$base/;
+
+        my $dir = "/var/tmp/$file";
+        remove_tree($dir,{ safe => 1, verbose => 1}) or die "$! $dir";
+    }
+}
+
+sub _delete_qemu_pool($pool) {
+    my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
+    my ($path) = $xml->findnodes('/pool/target/path');
+    my $dir = $path->textContent();
+    rmdir($dir) or die "$! $dir";
 
 }
 
@@ -1187,12 +1204,16 @@ sub _unlock_all {
 sub flush_rules_node($node) {
     _lock_fw();
     $node->create_iptables_chain($CHAIN);
-    $node->run_command("/sbin/iptables","-F", $CHAIN);
-    $node->run_command("/sbin/iptables","-X", $CHAIN);
+    my ($out, $err) = $node->run_command("iptables","-F", $CHAIN);
+    is($err,'');
+    ($out, $err) = $node->run_command("iptables","-D","INPUT","-j",$CHAIN);
+    is($err,'');
+    ($out, $err) = $node->run_command("iptables","-X", $CHAIN);
+    is($err,'') or die `iptables-save`;
 
     # flush forward too. this is only supposed to run on test servers
-    $node->run_command("/sbin/iptables","-F", 'FORWARD');
-
+    ($out, $err) = $node->run_command("iptables","-F", 'FORWARD');
+    is($err,'');
 }
 
 sub flush_rules {
@@ -1206,6 +1227,7 @@ sub flush_rules {
 
     @cmd = ('iptables','-L','INPUT');
     run3(\@cmd, \$in, \$out, \$err);
+    is($err,'');
 
     my $count = -2;
     my @found;
@@ -1219,11 +1241,16 @@ sub flush_rules {
         run3([@cmd, $n], \$in, \$out, \$err);
         warn $err if $err;
     }
-    run3(["/sbin/iptables","-F", $CHAIN], \$in, \$out, \$err);
-    run3(["/sbin/iptables","-X", $CHAIN], \$in, \$out, \$err);
+    run3(["iptables","-F", $CHAIN], \$in, \$out, \$err);
+    like($err,qr(^$|chain/target/match by that name));
+    ($out, $err) = run3(["iptables","-D","INPUT","-j",$CHAIN],\$in, \$out, \$err);
+    like($err,qr(^$|chain/target/match by that name));
+    run3(["iptables","-X", $CHAIN], \$in, \$out, \$err);
+    like($err,qr(^$|chain/target/match by that name));
 
     # flush forward too. this is only supposed to run on test servers
-    run3(["/sbin/iptables","-F","FORWARD" ], \$in, \$out, \$err);
+    run3(["iptables","-F","FORWARD" ], \$in, \$out, \$err);
+    is($err,'');
 
 }
 
@@ -1382,7 +1409,7 @@ sub start_node($node) {
     $node->enabled(1);
     for ( reverse 1 .. 120 ) {
         my $node2 = Ravada::VM->open(id => $node->id);
-        last if $node2->is_active(1) && $node->ssh;
+        last if $node2->is_active(1) && $node->_ssh;
         diag("Waiting for node ".$node2->name." active ... $_")  if !($_ % 10);
         $node2->disconnect();
         $node2->connect();
@@ -1416,7 +1443,7 @@ sub hibernate_domain_internal($domain) {
 
 sub _iptables_list {
     my ($in, $out, $err);
-    run3(['/sbin/iptables-save'], \$in, \$out, \$err);
+    run3(['iptables-save'], \$in, \$out, \$err);
     my ( %tables, $ret );
 
     my ($current_table);
@@ -1933,5 +1960,49 @@ sub test_volume_contents($vm, $name, $file, $expected=1) {
         confess "I don't know how to check vol contents of '$file'";
     }
 }
+
+sub _check_file($volume,$expected) {
+    my ($in, $out, $err);
+    run3(['file',$volume->file],\$in, \$out, \$err);
+    like($out,$expected) or confess;
+}
+
+sub _check_yaml($filename) {
+    _check_file($filename,qr(: ASCII text));
+}
+
+sub _check_qcow2($filename) {
+    _check_file($filename,qr(: QEMU QCOW2));
+}
+
+sub test_volume_format(@volume) {
+    for my $volume (@volume) {
+        next if !$volume->file;
+        my ($extension) = $volume->file =~ /\.(\w+)$/;
+        return if $extension eq 'iso';
+        my %sub = (
+            qcow2 => \&_check_qcow2
+            ,void => \&_check_yaml
+        );
+        is($volume->info->{driver_type}, $extension) or confess Dumper($volume->file, $volume->info);
+        my $exec = $sub{$extension} or confess "Error: I don't know how to check "
+            .$volume->file." [$extension]";
+        $exec->($volume);
+        next if $extension eq 'void';
+        if ($volume->backing_file) {
+            like($volume->info->{backing},qr(backingStore.*type.*file),"Expecting Backing for ".$volume->file." in ".$volume->domain->name)
+                or confess Dumper($volume->info);
+        } else {
+            # backing store info missing or only with <backingStore/>
+            if (!exists $volume->info->{backing} ) {
+                ok(1);
+            } else {
+                is($volume->info->{backing},'<backingStore/>',"Expecting empty backing for "
+                    .Dumper($volume->domain->name,$volume->info)) or exit;
+            }
+        }
+    }
+}
+
 
 1;
