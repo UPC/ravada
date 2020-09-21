@@ -193,11 +193,13 @@ sub search_user {
     my $ldap = (delete $args{ldap} or _init_ldap_admin());
     my $base = (delete $args{base} or _dc_base());
     my $typesonly= (delete $args{typesonly} or 0);
+    my $escape_username = 1;
+    $escape_username = delete $args{escape_username} if exists $args{escape_username};
 
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
     confess "ERROR: I can't connect to LDAP " if!$ldap;
 
-    $username = escape_filter_value($username);
+    $username = escape_filter_value($username) if $escape_username;
     $username =~ s/ /\\ /g;
 
     my $filter = "($field=$username)";

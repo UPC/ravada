@@ -16,7 +16,7 @@
 <script src="//cdnjs.cloudflare.com/ajax/libs/raphael/2.1.0/raphael-min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/morris.js/0.5.1/morris.min.js"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.7/js/bootstrap-select.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.15/js/bootstrap-select.js"></script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/2.7.0/intro.js"></script>
 <!-- booking module -->
@@ -47,7 +47,7 @@
 <script src="/fallback/raphael.js/raphael-min.js"></script>
 <script src="/fallback/morris.js/morris.min.js"></script>
 
-<script src="/fallback/bootstrap-select-1.13.9/dist/js/bootstrap-select.js"></script>
+<script src="/fallback/bootstrap-select-1.13.15/dist/js/bootstrap-select.js"></script>
 
 <script src="/fallback/intro.js/intro.js"></script>
 % }

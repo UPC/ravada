@@ -1,10 +1,9 @@
 <div ng-show="showmachine.id_base && new_base.id == showmachine.id_base" class="row">
-    <div class="col-sm-3">
+    <div class="col-sm-3" ng-hide="confirm_spinoff">
         <button ng-click="confirm_spinoff=true"
-            ng-hide="confirm_spinoff"
         ><%= l 'Spinoff clone' %></button>
     </div>
-    <div class="col-sm-8">
+    <div class="col-sm-8" ng-hide="confirm_spinoff">
         <p>
             Spinoff this clone from its base.
         </p>

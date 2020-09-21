@@ -62,7 +62,7 @@ sub test_domain_raw {
     ok($disk) or return;
 
     my ($driver) = $disk->findnodes('./driver');
-    is($driver->getAttribute('type'),'raw');
+    is($driver->getAttribute('type'),'qcow2');
 
     my ($source) = $disk->findnodes('./source');
     my $file = $source->getAttribute('file');

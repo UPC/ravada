@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 
-use Carp qw(confess);
+use Carp qw(confess croak);
 use Data::Dumper;
 use File::Copy;
 use Test::More;
@@ -103,6 +103,27 @@ sub test_add_volume {
         or exit;
 }
 
+sub test_backing_store($domain) {
+
+    my $doc = XML::LibXML->load_xml(string => $domain->get_xml_base);
+    my$found = 0;
+    for my $disk ($doc->findnodes('/domain/devices/disk')) {
+        next if $disk->getAttribute('device') eq 'cdrom';
+        my $found_bs = 0;
+        for my $backing_store ($disk->findnodes('backingStore')) {
+            $found_bs++;
+            my ($format) = $backing_store->findnodes('format');
+            ok($format) or die "Expecting format in backing store ".$backing_store->toString();
+
+            my ($source) = $backing_store->findnodes('source');
+            ok($source) or die "Expecting source in backing store ".$backing_store->toString();
+        }
+        ok($found_bs) or die "Expecting backingstore ".$disk->toString;
+        $found++;
+    }
+    ok($found) or die "Expecting disks ".$domain->get_xml_base;
+}
+
 sub test_prepare_base {
     my $vm_name = shift;
     my $domain = shift;
@@ -114,6 +135,7 @@ sub test_prepare_base {
     is($@,'');
 #    diag("[$vm_name] ".Dumper(\@img));
 
+    test_backing_store($domain) if $vm_name eq 'KVM';
 
     my @files_base= $domain->list_files_base();
     return(scalar @files_base == scalar @volumes
@@ -174,7 +196,7 @@ sub test_files_base {
 
     if ($vm_name eq 'KVM'){
         for my $volume ($domain->list_volumes) {
-            my $info = `qemu-img info $volume`;
+            my $info = `qemu-img info $volume -U`;
             my ($backing) = $info =~ m{(backing.*)}gm;
             if ($volume =~ /iso$/) {
                 is($backing,undef) or exit;
@@ -258,6 +280,14 @@ sub test_domain_n_volumes {
         }
         ok($vol->info->{driver}) or exit;
     }
+    test_volume_format(@volumes_clone);
+    $domain_clone->remove(user_admin);
+
+    $domain->remove_base(user_admin);
+    test_volume_format($domain->list_volumes_info);
+    $domain->remove(user_admin);
+
+
 }
 
 sub test_add_volume_path {
@@ -362,8 +392,11 @@ sub test_domain_swap {
     ok($domain_clone->is_active,"Domain ".$domain_clone->name
                                 ." should be active");
 
-    my $min_size = 197120 if $vm_name eq 'KVM';
+    my $min_size;
+    $min_size = 197120 if $vm_name eq 'KVM';
     $min_size = 100 if $vm_name eq 'Void';
+    confess "Error: unknown min_size for $vm_name" if !defined $min_size;
+
     # after start, all the files should be there
      my $found_swap = 0;
     for my $file ( $domain_clone->list_volumes) {
@@ -402,6 +435,7 @@ sub test_domain_swap {
 
     }
 
+    test_volume_format($domain_clone->list_volumes_info);
 }
 
 sub test_too_big($vm) {
@@ -477,6 +511,225 @@ sub test_search($vm_name) {
     ok(scalar @isos,"Expecting isos, got : ".Dumper(\@isos));
 }
 
+sub _remove_backing_store($xml) {
+
+    my $doc = XML::LibXML->load_xml(string => $xml)
+        or die "ERROR: $!\n";
+
+    my $n_order = 0;
+    for my $disk ($doc->findnodes('/domain/devices/disk')) {
+        my ($source_node) = $disk->findnodes('source');
+        next if !$source_node;
+        my $file_found = $source_node->getAttribute('file');
+        next if !$file_found;
+
+        my ($backingstore) = $disk->findnodes('backingStore');
+        $disk->removeChild($backingstore) if $backingstore;
+    }
+    return $doc;
+}
+
+sub _empty_backing_store($xml) {
+
+    my $doc = XML::LibXML->load_xml(string => $xml)
+        or croak "ERROR: $!\n";
+
+    my $n_order = 0;
+    for my $disk ($doc->findnodes('/domain/devices/disk')) {
+        my ($source_node) = $disk->findnodes('source');
+        next if !$source_node;
+
+        my ($backingstore) = $disk->findnodes('backingStore');
+        $disk->removeChild($backingstore) if $backingstore;
+        $disk->addNewChild(undef,'backingStore');
+    }
+    return $doc;
+}
+
+sub _set_driver_raw($domain) {
+    my $doc = XML::LibXML->load_xml(string => $domain->domain->get_xml_description)
+        or croak "ERROR: $!\n";
+
+    for my $disk ($doc->findnodes('/domain/devices/disk')) {
+        my ($source_node) = $disk->findnodes('source');
+        next if !$source_node;
+        my $file_found = $source_node->getAttribute('file');
+        next if !$file_found;
+
+        my ($driver) = $disk->findnodes('driver');
+        $driver->setAttribute(type => 'raw');
+    }
+    $domain->_post_change_hardware($doc);
+}
+
+sub test_driver_qcow($domain) {
+
+    my $doc = XML::LibXML->load_xml(string => $domain->domain->get_xml_description)
+        or croak "ERROR: $!\n";
+
+    my $found = 0;
+    for my $disk ($doc->findnodes('/domain/devices/disk')) {
+        my ($source_node) = $disk->findnodes('source');
+        next if !$source_node;
+        my $file_found = $source_node->getAttribute('file');
+        next if !$file_found || $file_found =~ /iso$/;
+
+        my ($driver) = $disk->findnodes('driver');
+        is($driver->getAttribute('type'),'qcow2',$file_found) or exit;
+        $found++;
+    }
+    ok($found,"Expecting some drivers in ".$domain->name) or exit;
+}
+
+
+
+sub _check_no_backing_store($xml, $name=undef) {
+    if ( ref($xml) ) {
+        $name = $xml->name if !defined $name;
+        $xml=$xml->domain->get_xml_description();
+    }
+    my $doc = XML::LibXML->load_xml(string => $xml)
+        or croak "ERROR: $!\n";
+    my @backing_store = $doc->findnodes('/domain/devices/disk/backingStore');
+
+    die "Error : ".scalar(@backing_store)." found in $name"
+    if @backing_store;
+
+    return 1 if scalar(@backing_store) == 0;
+}
+
+sub _check_empty_backing_store($xml, $name=undef) {
+    if ( ref($xml) ) {
+        $name = $xml->name if !defined $name;
+        $xml=$xml->domain->get_xml_description();
+    }
+    my $doc = XML::LibXML->load_xml(string => $xml)
+        or croak "ERROR: $!\n";
+    my @backing_store = $doc->findnodes('/domain/devices/disk/backingStore');
+    croak "Error : ".scalar(@backing_store)." backing stores found in $name"
+    if !@backing_store;
+
+    for (@backing_store) {
+        my $string = $_->toString();
+        die "Expecting empty backing store, found ".($string or 'UNDEF')
+        unless defined $string && $string eq '<backingStore/>';
+    }
+
+    return 1;
+}
+
+sub _check_backing_store($xml, $name=undef) {
+    if ( ref($xml) ) {
+        $name = $xml->name if !defined $name;
+        $xml=$xml->domain->get_xml_description();
+    }
+    my $doc = XML::LibXML->load_xml(string => $xml)
+        or croak "ERROR: $!\n";
+    my @backing_store = $doc->findnodes('/domain/devices/disk/backingStore');
+    ok(scalar(@backing_store),"Expecting backing stores , got ".scalar(@backing_store));
+
+    for (@backing_store) {
+        my $string = $_->toString();
+        isnt($string,'<backingStore/>');
+    }
+
+    return 1;
+}
+
+
+
+sub _create_domain_no_backing_store($vm) {
+    #standalone has no backingStore entries
+    my $standalone = create_domain($vm);
+    my $doc = _remove_backing_store($standalone->domain->get_xml_description);
+    $standalone->_post_change_hardware($doc);
+    _check_no_backing_store($standalone->domain->get_xml_description, $standalone->name);
+
+    # base XML has no backingStore entries
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+    my $base_doc = _remove_backing_store($base->get_xml_base);
+    my $sth = connector->_dbh->prepare(
+        "UPDATE base_xml set xml=? WHERE id_domain = ? "
+    );
+    $sth->execute($base_doc->toString() , $base->id);
+    $sth->finish;
+    _check_no_backing_store($base_doc->toString,"base ".$base->name );
+
+    # clone has a <backingStore/>
+    my $clone = $base->clone(name => new_domain_name, user => user_admin);
+    my $clone_doc = _empty_backing_store($clone->domain->get_xml_description);
+    $clone->_post_change_hardware($clone_doc);
+    _check_empty_backing_store($clone_doc->toString, $clone->name );
+
+    my $removed_base = create_domain($vm);
+    $removed_base->prepare_base(user_admin);
+    $removed_base->remove_base(user_admin);
+
+    _set_driver_raw($removed_base);
+    return($standalone, $base, $clone, $removed_base);
+}
+
+# new releases of QEMU require backingStore entries on the disk volumes
+sub test_upgrade($vm) {
+    return if $vm->type ne 'KVM';
+
+    my ($standalone, $base, $clone, $removed_base) = _create_domain_no_backing_store($vm);
+    $standalone->start(user_admin);
+    $standalone->shutdown_now(user_admin);
+    ok(_check_empty_backing_store($standalone));
+
+    $clone->start(user_admin);
+    is($clone->is_active,1);
+    $clone->shutdown_now(user_admin);
+    ok(_check_backing_store($clone));
+    ok(_check_backing_store($base));
+    ok(_check_backing_store($base->domain->get_xml_description,"base ".$base->name));
+
+    $clone->remove(user_admin);
+    $base->remove_base(user_admin);
+    ok(_check_no_backing_store($base));
+    $base->start(user_admin);
+    is($base->is_active,1);
+    $base->shutdown_now(user_admin);
+
+    $removed_base->start(user_admin);
+    $removed_base->shutdown_now(user_admin);
+    test_driver_qcow($removed_base);
+
+    $base->remove(user_admin);
+    $standalone->remove(user_admin);
+}
+
+sub test_base_clone($vm, $remove_base_first=0) {
+    my $base = create_domain($vm);
+    my $clone = $base->clone(
+        name => new_domain_name()
+        ,user => user_admin()
+    );
+    $clone->prepare_base(user_admin);
+    my $clone2 = $clone->clone(
+        name => new_domain_name()
+        ,user => user_admin()
+    );
+    if ($remove_base_first) {
+        $base->remove_base(user_admin);
+    }
+    eval { $clone2->start(user_admin) };
+    is('',''.$@, "Error starting ".$base->name) or exit;
+
+    if (!$remove_base_first) {
+        $base->remove_base(user_admin);
+    }
+    eval { $base->start(user_admin) };
+    is('',''.$@, "Error starting ".$base->name);
+    is($base->is_active,1) or exit;
+
+    $clone2->remove(user_admin);
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+}
+
 #######################################################################33
 
 clean();
@@ -498,7 +751,9 @@ for my $vm_name (reverse sort @VMS) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
-        use_ok("Ravada::VM::$vm_name");
+        test_base_clone($vm);
+        test_base_clone($vm,1);
+        test_upgrade($vm);
 
         test_too_big_prepare($vm);
 

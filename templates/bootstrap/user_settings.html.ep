@@ -14,32 +14,23 @@
                         <h2 class="text-center"><%=l 'User Settings' %></h2>
                     </div>
                     <div>
-                        <div class="card-body">
+                      <div class="card-body">
 						<h3 class="mb-3"><%=l 'Setting your default language' %></h3>
                         <form method='post' enctype="multipart/form-data">
-                            <%=l 'Language:' %> <select onchange="this.form.submit();" id="tongue" name="tongue" >
-				<option <%= $c->param("tongue") eq 'tr' ? "selected" : "" %> value="tr" ><%=l 'Turkish' %></option>
-                                <option <%= $c->param("tongue") eq 'ar' ? "selected" : "" %> value="ar" ><%=l 'Arab' %></option>
-                                <option <%= $c->param("tongue") eq 'en' ? "selected" : "" %> value="en" ><%=l 'English' %></option>
-                                <option <%= $c->param("tongue") eq 'ca' ? "selected" : "" %> value="ca" ><%=l 'Catalan' %></option>
-                                <option <%= $c->param("tongue") eq 'es' ? "selected" : "" %> value="es" ><%=l 'Spanish' %></option>
-                                <option <%= $c->param("tongue") eq 'gl' ? "selected" : "" %> value="gl" ><%=l 'Galician' %></option>
-                                <option <%= $c->param("tongue") eq 'fr' ? "selected" : "" %> value="fr" ><%=l 'French' %></option>
-                                <option <%= $c->param("tongue") eq 'de' ? "selected" : "" %> value="de" ><%=l 'German' %></option>
-                                <option <%= $c->param("tongue") eq 'hi' ? "selected" : "" %> value="hi" ><%=l 'Hindi' %></option>
-                                <option <%= $c->param("tongue") eq 'id' ? "selected" : "" %> value="id" ><%=l 'Indonesian' %></option>
-                                <option <%= $c->param("tongue") eq 'it' ? "selected" : "" %> value="it" ><%=l 'Italian' %></option>
-                                <option <%= $c->param("tongue") eq 'fa' ? "selected" : "" %> value="fa" ><%=l 'Persian' %></option>
-                                <option <%= $c->param("tongue") eq 'pt' ? "selected" : "" %> value="pt" ><%=l 'Portuguese' %></option>
-                                <option <%= $c->param("tongue") eq 'ja' ? "selected" : "" %> value="ja" ><%=l 'Japanese' %></option>
-                                <option <%= $c->param("tongue") eq 'vi' ? "selected" : "" %> value="vi" ><%=l 'Vietnamese' %></option>
-				                        <option <%= $c->param("tongue") eq 'ca-valencia' ? "selected" : "" %> value="ca-valencia" ><%=l 'Valencian' %></option>
-                             </select>
+
+                            <%=l 'Language:' %> <select onchange="this.form.submit();" id="language" name="language" >
+                                %                           for my $code (sort { $i18n->localize($lang_name->{$a}) cmp $i18n->localize($lang_name->{$b}) } keys %$lang_name) {
+                                <option <%= $language eq $code ? "selected" : "" %>
+                                    value="<%= $code %>">
+                                    <%=l $lang_name->{$code} %>
+                                </option>
+% }
+                            </select>
 %                            if ($changed_lang) {
                                  <font color="green">   <%=l 'Your language has been changed successfully' %></font>
 %                            }
-                        </form>
-                        </div>
+</form>
+			</div>
 %   if (!$_user->is_external) {
                         <div class="card-body">
 						<h3><%=l 'Change password' %></h3>
@@ -47,7 +38,7 @@
                             <div class="from-group row">
                                 <label for="password" class="col-xl-3 col-form-label"><%=l 'Current Password:' %></label><input type='password' name='current_password' id='current_password'>
                             </div>
-			    <div class="from-group row">
+                            <div class="from-group row">
                                 <label for="password" class="col-xl-3 col-form-label"><%=l 'New Password:' %></label><input type= 'password' name= 'password' id='password'>
                             </div>
                             <div class="from-group row">
@@ -62,7 +53,8 @@
 %                         }
                             <div class="form-group row mt-3 ml-2">
                                 <button type="reset" class="btn btn-outline-secondary mr-2" onclick = "location='/'"><%=l 'Cancel' %></button>
-                                <input class="btn btn-primary" type='submit' onclick='this.form.submit();' id='button_click' name='button_click' value='<%=l 'Update password' %>'>
+				<input type="hidden" name="password-form" value="1">
+				<input class="btn btn-primary" type='submit' onclick='this.form.submit();' id='button_click' name='button_click' value='<%=l 'Update password' %>'>
     %                               if ($changed_pass) {
                                         <font color="green">   <%=l 'Your password has been changed successfully' %></font>
     %                               }

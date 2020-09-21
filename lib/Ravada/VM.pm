@@ -355,7 +355,7 @@ sub _connect_ssh($self) {
     return $ssh;
 }
 
-sub ssh($self) {
+sub _ssh($self) {
     my $ssh = $self->netssh;
     return if !$ssh;
     return $ssh if $ssh->check_master;
@@ -1263,16 +1263,25 @@ Run a command on the node
 
 sub run_command($self, @command) {
 
+    my ($exec) = $command[0];
+    if ($exec !~ m{^/}) {
+        my ($exec_command,$args) = $exec =~ /(.*?) (.*)/;
+        $exec_command = $exec if !defined $exec_command;
+        $exec = $self->_findbin($exec_command);
+        $command[0] = $exec;
+        $command[0] .= " $args" if $args;
+    }
     return $self->_run_command_local(@command) if $self->is_local();
 
-    my $ssh = $self->ssh or confess "Error: Error connecting to ".$self->host;
+    my $ssh = $self->_ssh or confess "Error: Error connecting to ".$self->host;
 
     my ($out, $err) = $ssh->capture2({timeout => 10},join " ",@command);
     chomp $err if $err;
     $err = '' if !defined $err;
 
-    die "Error: Failed remote command on ".$self->host." @command : '$err'\n"
-    ."'".$ssh->error."'"
+    confess "Error: Failed remote command on ".$self->host." err='$err'\n"
+    ."ssh error: '".$ssh->error."'\n"
+    ."command: ". Dumper(\@command)
     if $ssh->error && $ssh->error !~ /^child exited with code/;
 
 
@@ -1328,9 +1337,9 @@ Writes a file to the node
 sub write_file( $self, $file, $contents ) {
     return $self->_write_file_local($file, $contents )  if $self->is_local;
 
-    my $ssh = $self->ssh or confess "Error: no ssh connection";
-    my ($rin, $pid) = $self->ssh->pipe_in("cat > $file")
-        or die "pipe_in method failed ".$self->ssh->error;
+    my $ssh = $self->_ssh or confess "Error: no ssh connection";
+    my ($rin, $pid) = $self->_ssh->pipe_in("cat > $file")
+        or die "pipe_in method failed ".$self->_ssh->error;
 
     print $rin $contents;
     close $rin;
@@ -1354,8 +1363,8 @@ Reads a file in memory from the storage of the virtual manager
 sub read_file( $self, $file ) {
     return $self->_read_file_local($file) if $self->is_local;
 
-    my ($rout, $pid) = $self->ssh->pipe_out("cat $file")
-        or die "pipe_out method failed ".$self->ssh->error;
+    my ($rout, $pid) = $self->_ssh->pipe_out("cat $file")
+        or die "pipe_out method failed ".$self->_ssh->error;
 
     return join ("",<$rout>);
 }
@@ -1375,7 +1384,7 @@ Returns true if the file exists in this virtual manager storage
 sub file_exists( $self, $file ) {
     return -e $file if $self->is_local;
 
-    my $ssh = $self->ssh;
+    my $ssh = $self->_ssh;
     confess "Error: no ssh connection to ".$self->name if ! $ssh;
 
     confess "Error: dangerous filename '$file'"
@@ -1404,16 +1413,26 @@ Creates a new chain in the system iptables
 =cut
 
 sub create_iptables_chain($self, $chain, $jchain='INPUT') {
-    my ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",$chain);
+    my ($out, $err) = $self->run_command("iptables","-n","-L",$chain);
 
-    $self->run_command("/sbin/iptables", '-N' => $chain)
+    $self->run_command('iptables', '-N' => $chain)
         if $out !~ /^Chain $chain/;
 
-    ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",$jchain);
+    ($out, $err) = $self->run_command("iptables","-n","-L",$jchain);
     return if grep(/^$chain /, split(/\n/,$out));
 
-    $self->run_command("/sbin/iptables", '-I', $jchain, '-j' => $chain);
+    $self->run_command("iptables", '-I', $jchain, '-j' => $chain);
 
+}
+
+sub _findbin($self, $name) {
+    my $exec = "_exec_$name";
+    return $self->{$exec} if $self->{$exec};
+    my ($out, $err) = $self->run_command('/usr/bin/which', $name);
+    chomp $out;
+    $self->{$exec} = $out;
+    confess "Error: Command '$name' not found" if !$out;
+    return $out;
 }
 
 =head2 iptables
@@ -1427,7 +1446,7 @@ Example:
 =cut
 
 sub iptables($self, @args) {
-    my @cmd = ('/sbin/iptables','-w');
+    my @cmd = ('iptables','-w');
     for ( ;; ) {
         my $key = shift @args or last;
         my $field = "-$key";
@@ -1491,7 +1510,7 @@ Returns the list of the system iptables
 sub iptables_list($self) {
 #   Extracted from Rex::Commands::Iptables
 #   (c) Jan Gehring <jan.gehring@gmail.com>
-    my ($out,$err) = $self->run_command("/sbin/iptables-save");
+    my ($out,$err) = $self->run_command("iptables-save");
     my ( %tables, $ret );
 
     my ($current_table);
@@ -1554,7 +1573,7 @@ sub balance_vm($self, $base=undef) {
         confess "Error: we need a base to balance ";
         @vms = $self->list_nodes();
     }
-    return $vms[0] if scalar(@vms)<1;
+    return $vms[0] if scalar(@vms)<=1;
     for my $vm (_random_list( @vms )) {
         next if !$vm->enabled();
         my $active = 0;
@@ -1852,6 +1871,90 @@ sub _new_free_port($self) {
         $free_port++ ;
     }
     return $free_port;
+}
+
+=head2 list_network_interfaces
+
+Returns a list of all the known interface
+
+Argument: type ( nat or bridge )
+
+=cut
+
+sub list_network_interfaces($self, $type) {
+    my $sub = {
+        nat => \&_list_nat_interfaces
+        ,bridge => \&_list_bridges
+    };
+
+    my $cmd = $sub->{$type} or confess "Error: Unknown interface type $type";
+    return $cmd->($self);
+}
+
+sub _list_nat_interfaces($self) {
+
+    my @cmd = ( '/usr/bin/virsh','net-list');
+    my ($out,$err) = $self->run_command(@cmd);
+
+    my @lines = split /\n/,$out;
+    shift @lines;
+    shift @lines;
+
+    my @networks;
+    for (@lines) {
+        /\s*(.*?)\s+.*/;
+        push @networks,($1) if $1;
+    }
+    return @networks;
+}
+
+sub _get_nat_bridge($self, $net) {
+    my @cmd = ( '/usr/bin/virsh','net-info', $net);
+    my ($out,$err) = $self->run_command(@cmd);
+
+    for my $line (split /\n/, $out) {
+        my ($bridge) = $line =~ /^Bridge:\s+(.*)/;
+        return $bridge if $bridge;
+    }
+}
+
+sub _list_qemu_bridges($self) {
+    my %bridge;
+    my @networks = $self->_list_nat_interfaces();
+    for my $net (@networks) {
+        my $nat_bridge = $self->_get_nat_bridge($net);
+        $bridge{$nat_bridge}++;
+    }
+    return keys %bridge;
+}
+
+sub _which($self, $command) {
+    return $self->{_which}->{$command} if exists $self->{_which} && exists $self->{_which}->{$command};
+    my @cmd = ( '/bin/which',$command);
+    my ($out,$err) = $self->run_command(@cmd);
+    chomp $out;
+    $self->{_which}->{$command} = $out;
+    return $out;
+}
+
+sub _list_bridges($self) {
+
+    my %qemu_bridge = map { $_ => 1 } $self->_list_qemu_bridges();
+
+    my @cmd = ( $self->_which('brctl'),'show');
+    my ($out,$err) = $self->run_command(@cmd);
+
+    die $err if $err;
+    my @lines = split /\n/,$out;
+    shift @lines;
+
+    my @networks;
+    for (@lines) {
+        my ($bridge, $interface) = /\s*(.*?)\s+.*\s(.*)/;
+        push @networks,($bridge) if $bridge && !$qemu_bridge{$bridge};
+    }
+    $self->{_bridges} = \@networks;
+    return @networks;
 }
 
 1;

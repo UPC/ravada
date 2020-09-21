@@ -9,6 +9,7 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("manage_nodes",manage_nodes)
         .controller("new_node", newNodeCtrl)
         .controller("settings_global", settings_global_ctrl)
+        .controller("admin_groups", admin_groups_ctrl)
     ;
 
     ravadaApp.filter('orderObjectBy', function() {
@@ -515,6 +516,50 @@ ravadaApp.directive("solShowMachine", swMach)
                 }
             });
         };
+    };
+
+    function admin_groups_ctrl($scope, $http) {
+        var group;
+        $http.get('/list_ldap_groups/')
+                    .then(function(response) {
+                        $scope.ldap_groups=response.data;
+                    });
+        $scope.list_group_members = function(group_name) {
+            group = group_name;
+            $http.get('/list_ldap_group_members/'+group_name)
+                .then(function(response) {
+                    $scope.group_members=response.data;
+                });
+        };
+        $scope.list_users = function() {
+            $http.get('/list_ldap_users')
+                .then(function(response) {
+                    $scope.users=response.data;
+                });
+        };
+        $scope.add_member = function(cn) {
+            $http.post("/ldap/group/add_member/"
+              ,JSON.stringify(
+                  { 'group': group
+                    ,'cn': cn
+                  })
+              ).then(function(response) {
+                  $scope.list_group_members(group);
+                  $scope.error = response.data.error;
+            });
+        };
+        $scope.remove_member = function(cn) {
+            $http.post("/ldap/group/remove_member/"
+              ,JSON.stringify(
+                  { 'group': group
+                    ,'cn': cn
+                  })
+              ).then(function(response) {
+                  $scope.list_group_members(group);
+                  $scope.error = response.data.error;
+            });
+        };
+
     };
 
     function settings_global_ctrl($scope, $http) {

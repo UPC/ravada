@@ -13,11 +13,12 @@ RUN apt-get update \
     libfile-rsync-perl libdate-calc-perl libparallel-forkmanager-perl libdatetime-perl libencode-locale-perl netcat-openbsd \
     libio-stringy-perl libvirt-clients liblwp-useragent-determined-perl supervisor net-tools apt-utils lsof mysql-client \
 	curl bash vim wget libnet-openssh-perl libdatetime-format-dateparse-perl \
- && apt-get clean
+ && apt-get clean \
 
 ENV TZ=Europe/Madrid
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata \
  && rm -rf /var/lib/apt/lists/*
+
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN mkdir -p /var/log/supervisor \
