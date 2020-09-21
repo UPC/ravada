@@ -697,7 +697,7 @@
                     });
             }
             list_ldap_groups = function() {
-                $http.get('/list_ldap_groups/')
+                $http.get('/list_ldap_groups')
                     .then(function(response) {
                         $scope.ldap_groups=response.data;
                     });

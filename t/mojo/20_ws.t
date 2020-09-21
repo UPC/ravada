@@ -101,8 +101,10 @@ sub test_bases($t, $bases) {
 
 sub _login_non_admin($t) {
     my $user_name = base_domain_name().".doe";
-    remove_old_user($user_name);
-    $USER = create_user($user_name, $$);
+    if (! $USER ) {
+        remove_old_user($user_name);
+        $USER = create_user($user_name, $$);
+    }
     mojo_login($t, $user_name,$$);
 }
 
@@ -196,34 +198,38 @@ sub test_bookings($t) {
 
     _wait_tomorrow();
 
-    my $monday = _monday();
-    my $dow1 = $monday->day_of_week;
-    my $tomorrow = _monday();
-    my $dow2 = $tomorrow->add(days=>1)->day_of_week;
+    my $today = _now();
+    my $dow_today = $today->day_of_week;
+    my $tomorrow= _now()->add(days => 1);
+    my $dow_tomorrow = $tomorrow->day_of_week;
     my $now = _now();
-    my $dow_today = $now->day_of_week;
 
     my $time_start = _now()->add(minutes => 1);
     my $time_end = _now()->add(minutes => 2);
 
     my $booking_title = new_domain_name();
+    my $new_day_of_week = "$dow_today$dow_tomorrow";
+
     my %args_booking  = (
-        date_start => $monday->ymd
-        ,date_end => $monday->add( days => 7 )->ymd
+        date_start => $today->ymd
+        ,date_end => $today->add( days => 7 )->ymd
         ,time_start => $time_start->hms
         ,time_end => $time_end->hms
-        ,day_of_week => "$dow1$dow2$dow_today"
+        ,day_of_week => $new_day_of_week
         ,title => $booking_title
         ,users => $USERNAME
     );
 
-    $t->post_ok('/v1/booking/save' => json => \%args_booking);
+    test_create_booking_non_admin($t, %args_booking);
+
+    $t->post_ok('/v1/bookings' => json => \%args_booking);
     like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body->to_string;
     my $response = $t->tx->res->json();
 
     my $booking = Ravada::Booking->search( title => $booking_title);
     ok($booking,"Expecting booking titled '$booking_title'");
-    is(scalar($booking->entries),3,"Expecting some entries") or exit;
+    is(scalar($booking->entries),3,"Expecting 3 entries $new_day_of_week "
+        .Dumper([map { $_->_data('date_booking') } $booking->entries])) or exit;
 
     $t->websocket_ok("/ws/subscribe")->send_ok("list_next_bookings_today")
     ->message_ok->finish_ok;
@@ -241,9 +247,33 @@ sub test_bookings($t) {
 
     is($found->{user_allowed},1);
 
-    $booking->remove() if $booking;
+    test_remove_booking_non_admin($t, $booking->id);
 
+    $t->delete_ok("/v1/booking_entry/".$booking->id."/all");
+    is($t->tx->res->code(), 200 );
 
+    my $booking_removed = Ravada::Booking->new(id => $booking->id);
+    is($booking_removed, undef) or exit;
+    $booking->remove() if $booking_removed;
+
+}
+
+sub test_create_booking_non_admin($t, %args_booking) {
+    _login_non_admin($t);
+
+    $t->post_ok('/v1/bookings' => json => \%args_booking);
+
+    is($t->tx->res->code(), 403) or exit;
+    like($t->tx->res->body, qr /Access denied/);
+    mojo_login($t, $USERNAME, $PASSWORD);
+}
+
+sub test_remove_booking_non_admin($t, $id) {
+    _login_non_admin($t);
+    $t->delete_ok("/v1/booking_entry/$id/all");
+    is($t->tx->res->code(), 403);
+    like($t->tx->res->body, qr /Access denied/);
+    mojo_login($t, $USERNAME, $PASSWORD);
 }
 
 ########################################################################################
@@ -259,13 +289,16 @@ if (!rvd_front->ping_backend()) {
 }
 
 $TZ = DateTime::TimeZone->new(name => rvd_front->settings_global()->{backend}->{time_zone}->{value});
+
+mojo_clean();
+
 my @bookings = Ravada::Booking::bookings_range(
         time_start => _now()->add(seconds => 1)->hms
 );
+
 die "Error: bookings scheduled for today will spoil tests ".Dumper(\@bookings)
 if @bookings;
 
-mojo_clean();
 
 $USERNAME = user_admin->name;
 my $t = mojo_init();

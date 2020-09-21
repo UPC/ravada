@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+    <div id="wrapper">
+        %= include 'bootstrap/navigation'
+        <div id="page-wrapper"
+             ng-controller="admin_groups"
+            >
+            <div class="page-header">
+              <div class="card" id="admin-content">
+                <div class="card-header">
+                    <h2 class="display-5"><%=l 'Groups' %></h2>
+                    <div class="card-title">
+                        <form method="post" action="/admin/groups">
+                            <input type="text" name="name" placeholder="<%=l 'Group' %>">
+                            <input type="submit" value="<%=l 'Search' %>">
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                <th><%=l 'Name' %></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="group in ldap_groups">
+                                    <td><a href="/admin/group/{{group}}.html">{{group}}</a></td>
+                                </tr>
+                            </tbody>
+                    </table>
+                </div>
+              </div>
+            </div>
+        </div>
+    </div>
+%= include $footer
+%= include 'bootstrap/scripts'
+</body>
+</html>

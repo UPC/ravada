@@ -156,6 +156,7 @@ hook before_routes => sub {
             ,guide => $CONFIG_FRONT->{guide}
             ,host => $host
             ,bookings => $RAVADA->setting('/backend/bookings')
+            ,FEATURE => {}
             );
 
     $USER = _logged_in($c);
@@ -191,6 +192,7 @@ hook before_routes => sub {
         $c->stash( monitoring => 1) if $c->session('monitoring');
     }
         $c->stash( fallback => 1) if $c->session('fallback');
+    $c->stash(FEATURE => $RAVADA->feature());
 };
 
 
@@ -274,6 +276,16 @@ post '/settings_global' => sub($c) {
     $RAVADA->update_settings_global($arg, $USER);
 
     return $c->render(json => { ok => 1 });
+};
+
+get '/admin/group/:name' => sub($c) {
+    return access_denied($c)    unless $USER->can_manage_groups
+        || $USER->can_view_groups;
+
+    push @{$c->stash->{css}}, '/css/admin.css';
+    push @{$c->stash->{js}}, '/js/admin.js';
+
+    return $c->render( template => "/main/admin_group");
 };
 
 any '/admin/#type' => sub {
@@ -831,18 +843,6 @@ get '/machine/display-tls/(:id)-tls.vv' => sub {
     return $c->render(data => $domain->display_file_tls($USER), format => 'vv');
 };
 
-get '/machine/bookings/week/(#id_domain)/(#date)' => sub {
-    my $c = shift;
-
-    my $id_domain = $c->stash('id_domain');
-    my $date = $c->stash('date');
-    #TODO fix date
-    warn $date;
-    return $c->render(
-        json => Ravada::Booking::bookings_week(id_base => $id_domain)
-    );
-};
-
 # Network ##########################################################3
 
 get '/network/interfaces/(:vm_type)/(:type)' => sub {
@@ -1329,8 +1329,16 @@ get '/list_users.json' => sub($c) {
 
 
 get '/list_ldap_groups' => sub($c) {
+    return access_denied($c) unless $USER->can_view_groups || $USER->can_manage_groups;
+
     return _list_ldap_groups($c,'*');
 };
+
+get '/list_ldap_users' => sub($c) {
+    return access_denied($c) unless $USER->can_manage_users || $USER->can_manage_groups;
+    return _list_ldap_users($c,'*');
+};
+
 
 get '/list_ldap_groups/:name' => sub($c) {
     my $name = $c->stash('name');
@@ -1339,47 +1347,63 @@ get '/list_ldap_groups/:name' => sub($c) {
     return _list_ldap_groups($c,$name);
 };
 
-get '/booking/new.html' => sub($c) {
-    push @{$c->stash('css')},('/css/booking.css');
-    return $c->render(template => '/ng-templates/booking/new' ,id => undef);
+get '/list_ldap_group_members/:name' => sub($c) {
+    return access_denied($c) if !$USER->can_view_groups;
+
+    my $name = $c->stash('name');
+
+    return _list_ldap_group_members($c,$name);
+};
+
+post '/ldap/group/add_member' => sub($c) {
+    return access_denied($c) if !$USER->can_manage_groups;
+
+    my $arg = decode_json($c->req->body);
+
+    my $login = delete $arg->{cn};
+    my $new_group = delete $arg->{group};
+
+    my @groups = Ravada::Auth::LDAP::search_group( name => $new_group);
+    my ($group_ldap) = grep {$_->get_value('cn') eq $new_group } @groups;
+    die "Error: group $new_group doesn't exist\n"
+    unless $group_ldap;
+
+    my $mesg  = $group_ldap->add(memberUid => $login)
+    ->update(Ravada::Auth::LDAP::_init_ldap_admin());
+
+    if ($mesg->code) {
+        return $c->render(json => { error => "Error: adding $login to $new_group ".$mesg->error });
+    }
+    return $c->render(json => { error => '' } );
+
+};
+post '/ldap/group/remove_member' => sub($c) {
+    return access_denied($c) if !$USER->can_manage_groups;
+
+    my $arg = decode_json($c->req->body);
+
+    my $login = delete $arg->{cn};
+    my $new_group = delete $arg->{group};
+
+    my @groups = Ravada::Auth::LDAP::search_group( name => $new_group);
+    my ($group_ldap) = grep {$_->get_value('cn') eq $new_group } @groups;
+    die "Error: group $new_group doesn't exist\n"
+    unless $group_ldap;
+
+    my $mesg  = $group_ldap->delete(memberUid => $login)
+    ->update(Ravada::Auth::LDAP::_init_ldap_admin());
+
+    if ($mesg->code) {
+        return $c->render(json => { error => "Error: adding $login to $new_group ".$mesg->error });
+    }
+    return $c->render(json => { error => '' } );
+
 };
 
 get '/booking' => sub($c) {
+    return $c->render(text => "LDAP not configured") if !$RAVADA->feature('ldap');
     return $c->render(template => '/ng-templates/booking/calendar');
 };
-
-=replaced by single page /booking
-get '/booking/:range/:date' => { range => 'week' , date => DateTime->now->ymd} => sub($c) {
-    my $range = $c->stash('range');
-
-    my %valid = map { $_ => 1 } qw (day week month');
-
-    return $c->render( text => "Invalid range $range ".$c->req->url->to_abs->path)
-    if !$valid{$range};
-
-    push @{$c->stash('css')},('/css/booking.css');
-    return $c->render(template => '/ng-templates/booking/'.$range);
-};
-=cut
-
-=replaced by /v1/bookings
-get '/v1/booking/:range/:date' => { range => 'week', date => undef } => sub($c) {
-    my $range = $c->stash('range');
-    my @args = (
-            date => $c->stash('date')
-    );
-    push @args , (user_name => $USER->name) unless $USER->is_operator;
-    if ( $range =~ /^\d+$/ ) {
-        my $booking= Ravada::Booking->new( id =>  $range );
-        return $c->render( json => $booking->{_data} );
-    } elsif ($range eq 'week') {
-        return $c->render( json => Ravada::Booking::bookings_week( @args) );
-    } else {
-        return $c->render( text => "Error: I don't know how to list $range bookings");
-    }
-
-};
-=cut
 
 get '/v1/bookings/'=> sub($c) {
     my $arg = $c->req->params->to_hash;
@@ -1392,7 +1416,7 @@ get '/v1/bookings/:id'=> sub($c) {
 };
 
 post '/v1/bookings/' => sub($c) {
-    return _access_denied($c) if !$USER->is_operator();
+    return access_denied_json($c) if !$USER->is_operator();
 
     my $arg = decode_json($c->req->body);
     delete $arg->{dow};
@@ -1411,10 +1435,6 @@ post '/v1/bookings/' => sub($c) {
     warn $error if $error;
     $error =~ s/ at .*// if $error;
     return $c->render(json => { ok => !$error, error => ($error  or '')} );
-};
-
-get '/booking_entry/view/:id' => sub($c) {
-    return $c->render(template => '/ng-templates/booking/view');
 };
 
 get '/v1/booking_entry/:id' => sub($c) {
@@ -1463,7 +1483,7 @@ del '/v1/booking_entry/:id/:mode' => sub($c) {
     my $entry = Ravada::Booking::Entry->new(id => $c->stash('id'));
     my $booking = Ravada::Booking->new( id => $entry->_data('id_booking'));
 
-    return _access_denied($c)
+    return access_denied_json($c)
     unless $booking->_data('id_owner') == $USER->id
         || $USER->is_operator;
 
@@ -1476,6 +1496,8 @@ del '/v1/booking_entry/:id/:mode' => sub($c) {
             $entry->remove_next();
         } elsif ($mode eq 'next_dow') {
             $entry->remove_next_dow();
+        } elsif ($mode eq 'all') {
+            $booking->remove();
         } else {
             die "Mode '$mode' unknown";
         }
@@ -1843,6 +1865,10 @@ sub admin {
     push @{$c->stash->{css}}, '/css/admin.css';
     push @{$c->stash->{js}}, '/js/admin.js';
 
+    if ($page =~ m/group/) {
+        return access_denied($c)    unless $USER->is_admin || $USER->can_manage_users
+            || $USER->can_view_groups || $USER->can_manage_groups;
+    }
     if ($page eq 'users') {
         return access_denied($c)    if !$USER->is_admin && !$USER->can_manage_users && !$USER->can_grant;
         $c->stash(list_users => []);
@@ -1866,9 +1892,11 @@ sub admin {
         }
     }
     if ($page eq 'nodes') {
+        return access_denied($c) unless $USER->is_admin;
         Ravada::Request->refresh_vms();
     }
     if ($page eq 'settings') {
+        return access_denied($c) unless $USER->is_admin;
         my $url = $c->req->url->to_abs->path;
         my $host = $c->req->url->to_abs->host;
         $c->stash(url_login => "/login");
@@ -1986,6 +2014,11 @@ sub _show_request {
 
 sub _search_req_base_error {
     my $name = shift;
+}
+
+sub access_denied_json($c, $msg=undef) {
+    $c->stash( type => 'json');
+    return access_denied($c, $msg);
 }
 
 sub access_denied {
@@ -2721,6 +2754,21 @@ sub _list_ldap_groups($c, $name='*') {
     @groups = Ravada::Auth::LDAP::search_group( name => $name ) if $RAVADA->feature('ldap');
     return $c->render(json => [ sort { $a cmp $b } map { $_->get_value('cn') } @groups ] );
 };
+
+sub _list_ldap_users($c, $filter='*' ) {
+    my @entries;
+    for my $entry (Ravada::Auth::LDAP::search_user(name => $filter, escape_username => 0)) {
+        push @entries,({name => $entry->get_value('cn') });
+    }
+    return $c->render(json => [sort { $a->{name} cmp $b->{name} } @entries]);
+}
+
+sub _list_ldap_group_members($c, $name) {
+    my $group = Ravada::Auth::LDAP::search_group( name => $name );
+    warn $group->get_value('cn');
+    return $c->render(json => [ sort $group->get_value('memberUid') ] );
+}
+
 
 #################################################################################
 my $routes = app->routes->children;

@@ -1047,6 +1047,8 @@ sub _add_grants($self) {
     $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
     $self->_add_grant('start_many',0,"Can have more than one machine started.");
     $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
+    $self->_add_grant('view_groups',0,'Can view groups.');
+    $self->_add_grant('manage_groups',0,'Can manage groups.');
 }
 
 sub _add_grant($self, $grant, $allowed, $description) {
@@ -1121,6 +1123,7 @@ sub _enable_grants($self) {
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
         ,'screenshot'
         ,'start_many'
+        ,'view_groups',     'manage_groups'
     );
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");

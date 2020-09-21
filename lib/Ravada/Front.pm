@@ -1279,7 +1279,14 @@ sub _settings_by_id($self) {
     return $orig_settings;
 }
 
-sub feature($self,$name) {
+sub feature($self,$name=undef) {
+    if (!defined $name) {
+        my $feature;
+        for my $cur_name ('ldap') {
+            $feature->{$cur_name} = $self->feature($cur_name);
+        }
+        return $feature;
+    }
     return 1 if exists $Ravada::CONFIG->{$name} && $Ravada::CONFIG->{$name};
 }
 
