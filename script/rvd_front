@@ -1446,6 +1446,8 @@ post '/v1/booking_entry/:id' => sub($c) {
         $entry->change_next(%$arg);
     } elsif ($mode eq 'next_dow') {
         $entry->change_next_dow(%$arg);
+    } elsif ($mode eq 'all') {
+        $entry->change_all(%$arg);
     } else {
         return $c->render( json => { error => "Mode '$mode' unknown" } );
     }

@@ -234,7 +234,12 @@ sub change($self, %fields) {
         next if !exists $self->{_data}->{$field};
         my $old_value = $self->_data($field);
         my $value = $fields{$field};
-        $value =~ s/(^\d{4}-\d\d-\d\d).*/$1/ if ($field eq 'date_booking');
+        if ($field eq 'date_booking') {
+            # not change date_booking for all entries
+            $value = $old_value unless $self->_data('id') == $fields{id};
+            $value =~ s/(^\d{4}-\d\d-\d\d).*/$1/;
+        }
+
 
         next if defined $old_value && defined $value && $value eq $old_value;
         $self->{_data}->{$field} = $value;
@@ -251,6 +256,18 @@ sub change_next($self, %fields) {
             ." AND date_booking>=? "
         );
     $sth->execute($self->_data('id_booking'), $self->_data('date_booking'));
+    while (my ($id) = $sth->fetchrow) {
+        Ravada::Booking::Entry->new(id => $id)->change(%fields);
+    }
+}
+
+
+sub change_all($self, %fields) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT id FROM booking_entries "
+            ." WHERE id_booking=? "
+    );
+    $sth->execute($self->_data('id_booking'));
     while (my ($id) = $sth->fetchrow) {
         Ravada::Booking::Entry->new(id => $id)->change(%fields);
     }

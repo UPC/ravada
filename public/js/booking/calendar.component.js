@@ -96,6 +96,8 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
         return $uibModal.open({
             component: 'rvdEntryModal',
             size: 'md',
+            backdrop: 'static',
+            keyboard: false,
             resolve: {
                 info: () => entry
             }

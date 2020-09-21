@@ -1,7 +1,7 @@
 'use strict';
 
 import calendarComponent from './calendar.component.js'
-import confirmButtons from './confirmButtons.component.js'
+import confirmActions from './confirmActions.component.js'
 import entryModalComponent from "./entryModal.component.js"
 import formEventComponent from "./formEvent.component.js"
 import ldapGroupsComponent from "./ldapGroups.component.js"
@@ -10,7 +10,7 @@ import { svcBookings, svcEntry, svcLDAP } from "./booking.services.js"
 
 angular.module("ravada.booking", ['ui.bootstrap','angularMoment','angularjsToast','ngMessages'])
     .component("rvdCalendar", calendarComponent)
-    .component("rvdConfirmButtons",confirmButtons)
+    .component("rvdConfirmActions",confirmActions)
     .component("rvdEntryModal",entryModalComponent)
     .component("rvdFormEvent",formEventComponent)
     .component("rvdTimePicker",timeComponent)
