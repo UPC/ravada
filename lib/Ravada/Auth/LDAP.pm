@@ -269,7 +269,7 @@ sub add_group {
           ]
     );
     if ($mesg->code) {
-        die "Error creating group $name ".$mesg->error;
+        die "Error creating group $name : ".$mesg->error."\n";
     }
 
 }

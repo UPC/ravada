@@ -15,7 +15,7 @@
                     <strong><%=l 'Oops!' %></strong>&nbsp;<%=l 'Group name can not exceed 80 characters' %>.
             </div>
         </div>
-        <button type="reset" class="btn btn-outline-secondary" onclick = "location='/admin/users'"><%=l 'Cancel' %></button>
+        <button type="reset" class="btn btn-outline-secondary" onclick = "location='/admin/groups'"><%=l 'Cancel' %></button>
         <button type="submit" ng-disabled="new_userForm.$invalid" id="submitbutton" class="btn btn-primary"><%=l 'Submit' %></button>
         % if (scalar @$error) {
         %   for my $i (@$error) {

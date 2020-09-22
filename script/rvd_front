@@ -1358,7 +1358,7 @@ get '/list_ldap_users' => sub($c) {
 
 get '/list_ldap_groups/:name' => sub($c) {
     my $name = $c->stash('name');
-    return access_denied($c) if !$USER->is_admin;
+    return access_denied($c) unless $USER->can_view_groups || $USER->can_manage_groups;
 
     return _list_ldap_groups($c,$name);
 };

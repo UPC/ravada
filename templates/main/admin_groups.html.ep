@@ -6,6 +6,7 @@
         %= include 'bootstrap/navigation'
         <div id="page-wrapper"
              ng-controller="admin_groups"
+             ng-init="list_ldap_groups()"
             >
             <div class="page-header">
               <div class="card" id="admin-content">
@@ -13,8 +14,10 @@
                     <h2 class="display-5"><%=l 'Groups' %></h2>
                     <div class="card-title">
                         <form method="post" action="/admin/groups">
-                            <input type="text" name="name" placeholder="<%=l 'Group' %>">
-                            <input type="submit" value="<%=l 'Search' %>">
+                            <input type="text" name="name" placeholder="<%=l 'Group' %>"
+                                                           ng-model="group_filter"
+                                                           ng-change="list_ldap_groups()"
+                            >
                             <button ng-show="<%= $_user->is_admin %>"
                                 type="button" style="float: right; margin: 0 10px;"
                                 class="btn btn-success" onclick = "location='/group/new'">
@@ -24,7 +27,7 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <table class="table table-striped">
+                    <table class="table table-striped" ng-show="ldap_groups.length">
                             <thead>
                                 <tr>
                                 <th><%=l 'Name' %></th>
@@ -36,6 +39,9 @@
                                 </tr>
                             </tbody>
                     </table>
+                    <div ng-show="ldap_groups.length == 0">
+                        No groups found
+                    </div>
                 </div>
               </div>
             </div>

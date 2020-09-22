@@ -520,10 +520,13 @@ ravadaApp.directive("solShowMachine", swMach)
 
     function admin_groups_ctrl($scope, $http) {
         var group;
-        $http.get('/list_ldap_groups/')
-                    .then(function(response) {
-                        $scope.ldap_groups=response.data;
-                    });
+        $scope.group_filter = '';
+        $scope.list_ldap_groups = function() {
+            $http.get('/list_ldap_groups/'+$scope.group_filter)
+                .then(function(response) {
+                    $scope.ldap_groups=response.data;
+                });
+        };
         $scope.list_group_members = function(group_name) {
             group = group_name;
             $http.get('/list_ldap_group_members/'+group_name)
