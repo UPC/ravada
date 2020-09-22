@@ -287,7 +287,7 @@ post '/settings_global' => sub($c) {
     return $c->render(json => { ok => 1 });
 };
 
-get '/admin/group/:name' => sub($c) {
+get '/admin/group/#name' => sub($c) {
     return access_denied($c)    unless $USER->can_manage_groups
         || $USER->can_view_groups;
 
@@ -879,6 +879,13 @@ any '/users/register' => sub {
        return register($c);
 };
 
+any '/group/new' => sub {
+
+       my $c = shift;
+       return access_denied($c) if !$USER->is_admin();
+       return new_group($c);
+};
+
 any '/admin/user/(:id).(:type)' => sub {
     my $c = shift;
     return access_denied($c) if !$USER->can_manage_users() && !$USER->can_grant();
@@ -1356,7 +1363,7 @@ get '/list_ldap_groups/:name' => sub($c) {
     return _list_ldap_groups($c,$name);
 };
 
-get '/list_ldap_group_members/:name' => sub($c) {
+get '/list_ldap_group_members/#name' => sub($c) {
     return access_denied($c) if !$USER->can_view_groups;
 
     my $name = $c->stash('name');
@@ -1374,16 +1381,18 @@ post '/ldap/group/add_member' => sub($c) {
 
     my @groups = Ravada::Auth::LDAP::search_group( name => $new_group);
     my ($group_ldap) = grep {$_->get_value('cn') eq $new_group } @groups;
-    die "Error: group $new_group doesn't exist\n"
-    unless $group_ldap;
+    my $error = '';
+    if (! $group_ldap) {
+        $error = "Error: group $new_group doesn't exist\n"
+    } else {
+        my $mesg  = $group_ldap->add(memberUid => $login)
+        ->update(Ravada::Auth::LDAP::_init_ldap_admin());
 
-    my $mesg  = $group_ldap->add(memberUid => $login)
-    ->update(Ravada::Auth::LDAP::_init_ldap_admin());
-
-    if ($mesg->code) {
-        return $c->render(json => { error => "Error: adding $login to $new_group ".$mesg->error });
+        if ($mesg->code) {
+            $error = "Error: adding $login to $new_group ".$mesg->error;
+        }
     }
-    return $c->render(json => { error => '' } );
+    return $c->render(json => { error => $error } );
 
 };
 post '/ldap/group/remove_member' => sub($c) {
@@ -2250,6 +2259,25 @@ sub _search_requested_machine {
     return $domain;
 }
 
+sub new_group($c) {
+    my @error = ();
+
+    my $groupname = ($c->param('groupname') or '');
+    if ($groupname) {
+        if ($groupname =~ /^[0-9a-zA-Z._-]+$/) {
+            eval {
+                Ravada::Auth::LDAP::add_group($groupname);
+            };
+            push @error,($@) if $@;
+        } else {
+            push @error,("Error: group name '$groupname' invalid."
+            ,"Group name can only contain words, numbers, dashes, dots and underscores" );
+        }
+    }
+    $c->render(template => 'bootstrap/new_group', error => \@error
+    ,groupname => $groupname);
+}
+
 sub register {
 
     my $c = shift;
@@ -2816,7 +2844,6 @@ sub _list_ldap_users($c, $filter='*' ) {
 
 sub _list_ldap_group_members($c, $name) {
     my $group = Ravada::Auth::LDAP::search_group( name => $name );
-    warn $group->get_value('cn');
     return $c->render(json => [ sort $group->get_value('memberUid') ] );
 }
 

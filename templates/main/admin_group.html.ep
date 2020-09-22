@@ -17,12 +17,13 @@
             </div>
             <div class="card-body">
                 <div ng-show="<%= $_user->can_manage_groups %>">
+                    <%=l 'New group member' %>
                     <select ng-model="new_member"
                         ng-options="user.name for user in users"
                     >
                     </select>
                     <button ng-show="new_member && new_member.name"
-                        ng-click="add_member(new_member.name)">Add member</button>
+                        ng-click="add_member(new_member.name)">Add</button>
                     <div ng-show="error">{{error}}</div>
                 </div>
                 <table class="table table-striped">

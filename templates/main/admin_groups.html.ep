@@ -15,6 +15,11 @@
                         <form method="post" action="/admin/groups">
                             <input type="text" name="name" placeholder="<%=l 'Group' %>">
                             <input type="submit" value="<%=l 'Search' %>">
+                            <button ng-show="<%= $_user->is_admin %>"
+                                type="button" style="float: right; margin: 0 10px;"
+                                class="btn btn-success" onclick = "location='/group/new'">
+                                <%=l 'New Group' %>
+                            </button>
                         </form>
                     </div>
                 </div>
@@ -27,7 +32,7 @@
                             </thead>
                             <tbody>
                                 <tr ng-repeat="group in ldap_groups">
-                                    <td><a href="/admin/group/{{group}}.html">{{group}}</a></td>
+                                    <td><a href="/admin/group/{{group}}">{{group}}</a></td>
                                 </tr>
                             </tbody>
                     </table>
