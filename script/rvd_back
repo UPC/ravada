@@ -208,6 +208,10 @@ sub clean_old_requests {
 
 sub autostart_machines {
     my $ravada = shift;
+    my $req = Ravada::Request->check_storage(
+        uid => Ravada::Utils::user_daemon->id
+        ,retry => 10
+    );
     for my $domain ( $ravada->list_domains_data ) {
         next unless $domain->{autostart} && ! $domain->{is_base}
               && $domain->{status} !~ /active/i;
@@ -217,6 +221,7 @@ sub autostart_machines {
         Ravada::Request->start_domain(
             id_domain => $domain->{id}
             ,uid => $domain->{id_owner}
+            ,after_request_ok => $req->id
         );
     }
 }

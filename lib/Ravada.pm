@@ -1473,6 +1473,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('requests','start_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','output','text DEFAULT NULL');
     $self->_upgrade_table('requests','after_request','int(11) DEFAULT NULL');
+    $self->_upgrade_table('requests','after_request_ok','int(11) DEFAULT NULL');
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
@@ -3524,6 +3525,56 @@ sub _cmd_refresh_storage($self, $request=undef) {
     $vm->refresh_storage();
 }
 
+sub _list_mnt($vm, $type) {
+    my ($out, $err) = $vm->run_command("findmnt","-$type");
+    my %tab;
+    for my $line ( split /\n/,$out ) {
+        my ($target) = $line =~ /^(.*?) /;
+        next if $target eq 'TARGET';
+        $tab{$target} = $line;
+    }
+    return %tab;
+}
+
+sub _search_partition($path, $tab) {
+    confess if ref($path);
+    my $curr_path = "";
+    my $found='';
+    for my $dir (split /\//,$path ) {
+        $dir = "" if !defined $dir;
+        $curr_path .= "/$dir";
+        $curr_path =~ s{\/\/+}{/}g;
+        next if !exists $tab->{$curr_path};
+        my $curr_found = $tab->{$curr_path};
+        $found = $curr_path if $curr_found && length($curr_found) > length($found);
+    }
+    return $found;
+}
+
+sub _check_mounted($path, $fstab, $mtab) {
+    my $partition = _search_partition($path, $fstab);
+    return 1 if exists $mtab->{$partition} && $mtab->{$partition};
+
+    die "Error: partition $partition not mounted. Retry.\n";
+}
+
+sub _cmd_check_storage($self, $request) {
+    my $contents = "a" x 160;
+    for my $vm ( $self->list_vms ) {
+        next if !$vm->is_local;
+        my %fstab = _list_mnt($vm,"s");
+        my %mtab = _list_mnt($vm,"m");
+
+        for my $storage ( $vm->list_storage_pools ) {
+            next if $storage !~ /tst/;
+            my $path = ''.$vm->_storage_path($storage);
+            _check_mounted($path,\%fstab,\%mtab);
+            my ($ok,$err) = $vm->write_file("$path/check_storage",$contents);
+            die "Error on starage pool $storage : $err. Retry.\n" if $err;
+        }
+    }
+}
+
 sub _cmd_refresh_machine($self, $request) {
 
     my $id_domain = $request->args('id_domain');
@@ -3939,6 +3990,7 @@ sub _req_method {
         ,rebase => \&_cmd_rebase
 
 ,refresh_storage => \&_cmd_refresh_storage
+,check_storage => \&_cmd_check_storage
 ,refresh_machine => \&_cmd_refresh_machine
 ,domain_autostart=> \&_cmd_domain_autostart
 ,change_owner => \&_cmd_change_owner
