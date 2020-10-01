@@ -190,6 +190,11 @@ sub dir_img {
 sub dir_base  { return dir_img }
 sub dir_clone { return dir_img }
 
+sub _storage_path($self, $storage) {
+    confess "Error: unknown storage '$storage'" if $storage ne 'default';
+    return dir_img;
+}
+
 sub _list_domains_local($self, %args) {
     my $active = delete $args{active};
 

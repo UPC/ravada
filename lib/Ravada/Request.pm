@@ -78,6 +78,7 @@ our %VALID_ARG = (
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2 }
+    ,check_storage => { uid => 1 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
     ,cleanup => { }
     ,clone => { uid => 1, id_domain => 1, name => 2, memory => 2, number => 2
@@ -425,7 +426,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request retry _no_duplicate)) {
+    for (qw(at after_request after_request_ok retry _no_duplicate)) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
@@ -576,12 +577,12 @@ sub _new_request {
             confess "ERROR: Different id_domain: ".Dumper(\%args)
                 if $args{id_domain} && $args{id_domain} ne $id_domain_args;
             $args{id_domain} = $id_domain_args;
-            $args{after_request} = delete $args{args}->{after_request}
-                if exists $args{args}->{after_request};
-            $args{retry} = delete $args{args}->{retry}
-                if exists $args{args}->{retry};
-
         }
+        for (qw(after_request after_request_ok retry)) {
+            $args{$_} = delete $args{args}->{$_}
+            if exists $args{args}->{$_};
+        }
+
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
@@ -1284,11 +1285,25 @@ sub priority($self) {
 
 sub requirements_done($self) {
     my $after_request = $self->after_request();
-    return 1 if !defined $after_request;
+    my $after_request_ok = $self->after_request_ok();
+    return 1 if !defined $after_request && !defined $after_request_ok;
 
-    my $req = Ravada::Request->open($self->after_request);
-    return 1 if $req->status eq 'done';
-    return 0;
+    my $ok = 0;
+    if ($after_request) {
+        $ok = 0;
+        my $req = Ravada::Request->open($self->after_request);
+        $ok = 1 if $req->status eq 'done';
+    }
+    if ($after_request_ok) {
+        $ok = 0;
+        my $req = Ravada::Request->open($self->after_request_ok);
+        if ($req->status eq 'done' && $req->error ) {
+            $self->status('done');
+            $self->error($req->error);
+        }
+        $ok = 1 if $req->status eq 'done' && $req->error eq '';
+    }
+    return $ok;
 }
 
 sub AUTOLOAD {
