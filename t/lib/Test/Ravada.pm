@@ -1829,8 +1829,8 @@ sub mangle_volume($vm,$name,@vol) {
     }
 }
 
-sub _mount_qcow($vm, $vol) {
-    my ($in,$out, $err);
+sub _load_nbd($vm) {
+    my ($in, $out, $err);
     if (!$MOD_NBD++) {
         my @cmd =("/sbin/modprobe","nbd", "max_part=63");
         run3(\@cmd, \$in, \$out, \$err);
@@ -1839,6 +1839,25 @@ sub _mount_qcow($vm, $vol) {
     my @cmd = ($QEMU_NBD,"-d", $DEV_NBD);
     ($out,$err) = $vm->run_command(@cmd);
     die "@cmd : $err" if $err;
+
+    ($out, $err) = $vm->run_command("lsof",$DEV_NBD);
+    my @line = split /\n/,$out;
+    return if scalar(@line) < 2;
+
+    my ($dev,$n) = $DEV_NBD =~ /(.*?)(\d+)$/;
+    $n++;
+
+    $DEV_NBD = "$dev$n";
+    diag("Trying new NBD device $DEV_NBD");
+    die "Error: I can't find more NBD devices ( $DEV_NBD) "
+    if ! -e $DEV_NBD;
+
+    return _load_nbd($vm);
+}
+
+sub _mount_qcow($vm, $vol) {
+    _load_nbd($vm);
+    my ($in,$out, $err);
     for ( 1 .. 10 ) {
         ($out, $err) = $vm->run_command($QEMU_NBD,"-c",$DEV_NBD, $vol);
         last if !$err;
