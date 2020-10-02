@@ -829,6 +829,7 @@ sub wait_request {
                 diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
                     ." ".($req->error or '')) if $debug && (time%5 == 0);
                 $done_all = 0;
+                sleep 1;
             } elsif (!$done{$req->id}) {
                 $t0 = time;
                 $done{$req->{id}}++;
@@ -851,7 +852,8 @@ sub wait_request {
                 next if $skip{$req->command};
                 if ($req->status ne 'done') {
                     $done_all = 0;
-                    diag("Waiting for request ".$req->id." ".$req->command);
+                    diag("Waiting for request ".$req->id." ".$req->command)
+                    if $debug && (time%5 == 0);
                     last;
                 }
             }

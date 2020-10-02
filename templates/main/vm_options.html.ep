@@ -9,6 +9,62 @@
                     {{showmachine.ip}}
                 </div>
             </div>
+
+            <div class="row" ng-show="!nodes">
+                <div class="col-lg-3 mt-2">
+                    Loading ..
+                </div>
+            </div>
+
+            <div class="row" ng-show="!showmachine.is_base && nodes.length>1">
+                <div class="col-lg-3 mt-2">
+                    Node
+                </div>
+                <div class="col-lg-3 mt-2">
+                    <select ng-model="new_node"
+                        ng-disabled="pending_request && pending_request.status != 'done'"
+                        ng-options="node.name for node in nodes | orderBy : 'name'">
+                        >
+                    </select>
+                </div>
+            </div>
+            <div class="row"
+                ng-show="new_node && new_node.id != showmachine.id_vm
+                && (!pending_request || pending_request.status == 'done')"
+            >
+                <div class="col-lg-3 mt-2">
+                </div>
+                <div class="col-lg-9 mt-2 alert alert-warning">
+                    <div>
+                        <input type="checkbox" ng-model="new_node_start"/>
+                        <label for="start"><%=l 'Start after migration' %></label>
+                    </div>
+                    <div ng-show="showmachine.is_active">
+                        This virtual machine is running. It must be shut down before
+                        migrate.
+                    </div>
+                    <div>
+                        Are you sure you want to migrate {{showmachine.name}}
+                        to {{new_node.name}} ?
+                    </div>
+                    <div>
+                    <button type="button" class="btn btn-primary"
+                        ng-click="request('migrate', {
+                            'id_domain': showmachine.id
+                            ,'id_node': new_node.id
+                            ,'shutdown': 1
+                            ,'shutdown_timeout': 20
+                            ,'start': new_node_start
+                            ,'retry': 10
+                        }); showmachine.id_vm=new_node.id;"
+                        ><%=l 'Yes' %> </button>
+                     <button type="button" class="btn btn-danger"
+                        ng-click="new_node=undefined"
+                     ><%=l 'No' %></button>
+                     </div>
+                </div>
+            </div>
+
             <div class="row">
                 <div class="col-lg-3 mt-2">
                     <label class="control-label" for="ram"><%=l 'Max memory (MB)' %></label>

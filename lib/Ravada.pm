@@ -3658,6 +3658,60 @@ sub _cmd_set_time($self, $request) {
     die "$@ , retry.\n" if $@;
 }
 
+sub _migrate_base($self, $domain, $node, $uid, $request) {
+    my $base = Ravada::Domain->open($domain->id_base);
+    return if $base->base_in_vm($node->id);
+
+    my $req_base = Ravada::Request->set_base_vm(
+        id_domain => $base->id
+        , id_vm => $node->id
+        , uid => $uid
+    );
+    $request->after_request($req_base);
+    die "Base ".$base->name." still not prepared in node ".$node->name.". Retry\n";
+}
+
+sub _cmd_migrate($self, $request) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
+
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    my $domain = $self->search_domain_by_id($id_domain);
+
+    die "Error: user ".$user->name." not allowed to migrate domain ".$domain->name
+    unless $user->is_operator;
+
+    my $node = Ravada::VM->open($request->args('id_node'));
+    $self->_migrate_base($domain, $node, $uid, $request) if $domain->id_base;
+
+    if ($domain->is_active) {
+        if ($request->defined_arg('shutdown')) {
+            my @timeout;
+            @timeout = ( timeout => $request->defined_arg('shutdown_timeout') )
+            if $request->defined_arg('shutdown_timeout');
+
+            my $req_shutdown = Ravada::Request->shutdown_domain(
+                uid => $uid
+                ,id_domain => $id_domain
+                ,@timeout
+            );
+            $request->after_request($req_shutdown->id);
+            $request->retry(10) if !defined $request->retry();
+            die "Virtual Machine ".$domain->name." ".$request->retry." is active. Shutting down. Retry.\n";
+        }
+    }
+
+    $domain->migrate($node, $request);
+
+    my @remote_ip;
+    @remote_ip = ( remote_ip => $request->defined_arg('remote_ip'))
+    if $request->defined_arg('remote_ip');
+
+    $domain->start(user => $user, @remote_ip)
+    if $request->defined_arg('start');
+
+}
+
 sub _clean_requests($self, $command, $request=undef, $status='requested') {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
@@ -3955,6 +4009,7 @@ sub _req_method {
     ,shutdown_node  => \&_cmd_shutdown_node
     ,start_node  => \&_cmd_start_node
     ,connect_node  => \&_cmd_connect_node
+    ,migrate => \&_cmd_migrate
 
     #users
     ,post_login => \&_cmd_post_login

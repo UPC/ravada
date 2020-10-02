@@ -3,6 +3,9 @@
 use warnings;
 use strict;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use Data::Dumper;
 use Getopt::Long;
 use POSIX ":sys_wait_h";
@@ -39,6 +42,7 @@ my $URL_ISOS;
 my $ALL;
 my $HIBERNATED;
 my $DISCONNECTED;
+my $ACTIVE;
 
 my $LIST;
 
@@ -48,6 +52,7 @@ my $SHUTDOWN_DOMAIN;
 my $REMOVE_DOMAIN;
 my $REBASE;
 my $RUN_REQUEST;
+my $MIGRATE;
 
 my $IMPORT_DOMAIN_OWNER;
 
@@ -80,12 +85,14 @@ my $USAGE = "$0 "
         ." --hibernate machine\n"
         ." --shutdown machine\n"
         ." --remove machine\n"
+        ." --migrate node machine1 machine2 ... machineN\n"
         ."\n"
         ."Operations modifiers:\n"
         ." --all : execute on all virtual machines\n"
         ."          For hibernate, it is executed on all the actives\n"
         ." --hibernated: execute on hibernated machines\n"
         ." --disconnected: execute on disconnected machines\n"
+        ." --active: execute on active running machines\n"
         ."\n"
     ;
 
@@ -98,6 +105,7 @@ GetOptions (       help => \$help
                 ,verbose => \$VERBOSE
                 ,rebase => \$REBASE
               ,'no-fork'=> \$NOFORK
+               ,'active'=> \$ACTIVE
              ,'start=s' => \$START_DOMAIN
              ,'config=s'=> \$FILE_CONFIG
            ,'hibernated'=> \$HIBERNATED
@@ -119,6 +127,8 @@ GetOptions (       help => \$help
 
     ,'add-locale-repository=s' => \$ADD_LOCALE_REPOSITORY
     ,'run-request=s' => \$RUN_REQUEST
+
+        ,'migrate=s'    => \$MIGRATE
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
@@ -153,6 +163,8 @@ my %CONFIG;
 $Ravada::DEBUG=1    if $DEBUG;
 $Ravada::VERBOSE=1      if $VERBOSE;
 $Ravada::CAN_FORK=0    if $NOFORK;
+
+my $RVD_BACK;
 
 ###################################################################
 
@@ -626,6 +638,65 @@ sub run_request {
     ."\n";
 }
 
+sub rvd_back {
+    return $RVD_BACK if $RVD_BACK;
+
+    $RVD_BACK = Ravada->new(%CONFIG);
+    return $RVD_BACK;
+}
+
+sub list_active_machines {
+    my @domains = rvd_back->list_domains(active => 1);
+    if (!@domains) {
+        die "No active domains\n";
+    }
+    return @domains;
+}
+
+sub migrate($node_name) {
+    my $vms = rvd_back->vm();
+    my ($node ) = grep{ $_->name eq $node_name } @$vms
+        or die "Error: Node $node_name not found\n"
+    .Dumper([ map {$_->name} @$vms]);
+
+    $node->start() if !$node->is_active;
+
+    my @machines;
+    if ( $ACTIVE ) {
+        @machines = list_active_machines();
+    } else {
+        @machines = @ARGV;
+    }
+    if (!scalar(@machines)) {
+        die "Error: supply machines to migrate:\n"
+        ."    rvd_back --migrate=node --active\n"
+        ."    rvd_back --migrate=node machine1 machine2 machine3\n";
+    }
+    for my $machine (@machines) {
+        my ($domain, $name, $id_domain);
+        if (!ref($machine)) {
+            $domain = rvd_back->search_domain($machine) or do {
+                warn "Error: machine $machine not found\n";
+                next;
+            };
+        } else {
+            $domain = $machine;
+        }
+        $name = $domain->name;
+        $id_domain = $domain->id;
+        if ($domain->_data('id_vm') == $node->id) {
+            warn "Warning: machine $name already in node $node_name\n";
+            next;
+        }
+        warn "migrate $node_name $name\n";
+        Ravada::Request->migrate(id_node => $node->id, uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $id_domain
+            ,start => $domain->is_active
+            ,shutdown => 1
+        );
+    }
+}
+
 sub DESTROY {
 }
 
@@ -658,6 +729,8 @@ shutdown_domain($SHUTDOWN_DOMAIN, $ALL, $HIBERNATED)
 add_locale_repository($ADD_LOCALE_REPOSITORY) if $ADD_LOCALE_REPOSITORY;
 
 run_request($RUN_REQUEST)           if $RUN_REQUEST;
+
+migrate($MIGRATE)                   if $MIGRATE;
 }
 
 
