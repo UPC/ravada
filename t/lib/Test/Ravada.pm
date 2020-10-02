@@ -828,6 +828,7 @@ sub wait_request {
             if ( $req->status ne 'done' ) {
                 diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
                     ." ".($req->error or '')) if $debug && (time%5 == 0);
+                sleep 1;
                 $done_all = 0;
                 sleep 1;
             } elsif (!$done{$req->id}) {
@@ -967,6 +968,10 @@ sub _delete_qemu_pool($pool) {
     my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
     my ($path) = $xml->findnodes('/pool/target/path');
     my $dir = $path->textContent();
+    for my $file ( qw(check_storage) ) {
+        my $path ="$dir/$file";
+        unlink $path or die "$! $path" if -e $path;
+    }
     rmdir($dir) or die "$! $dir";
 
 }
@@ -1767,7 +1772,7 @@ sub shutdown_nodes {
     }
 }
 
-sub create_storage_pool($vm) {
+sub create_storage_pool($vm, $dir=undef) {
     if (!ref($vm)) {
         $vm = rvd_back->search_vm($vm);
     }
@@ -1777,7 +1782,9 @@ sub create_storage_pool($vm) {
     my $capacity = 1 * 1024 * 1024;
 
     my $pool_name = new_pool_name();
-    my $dir = "/var/tmp/$pool_name";
+    if (!$dir) {
+        $dir = "/var/tmp/$pool_name";
+    }
 
     mkdir $dir if ! -e $dir;
 
