@@ -1193,8 +1193,24 @@ sub _unlock_all {
     }
 }
 
+sub _clean_iptables_ravada($node) {
+    my ($out, $err) = $node->run_command("iptables-save","-t","filter");
+    is($err,'');
+    for my $line (split /\n/,$out) {
+        my ($rule) = $line =~ /-A (.*RAVADA.*)/i;
+        next if !$rule;
+        if (!$node->is_local) {
+            my ($out2, $err2) = $node->run_command("iptables","-t","filter","-D",$rule);
+            warn $node->name.": '-D $rule' $err2" if $err2;
+        } else {
+            `iptables -D $rule`;
+        }
+    }
+}
+
 sub flush_rules_node($node) {
     _lock_fw();
+    _clean_iptables_ravada($node);
     $node->create_iptables_chain($CHAIN);
     my ($out, $err) = $node->run_command("iptables","-F", $CHAIN);
     is($err,'');
