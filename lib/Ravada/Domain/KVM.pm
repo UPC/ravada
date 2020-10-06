@@ -510,15 +510,24 @@ sub _set_volumes_backing_store($self) {
         for my $source( $disk->findnodes('source')) {
             my $file = $source->getAttribute('file');
             my $backing_file = $vol{$file}->backing_file();
-            my $backing_file_format = $vol{$file}->_qemu_info('backing file format');
+
 
             my ($backing_store) = $disk->findnodes('backingStore');
             if ($backing_file) {
+                my $vol_backing_file = Ravada::Volume->new(
+                    file => $backing_file
+                    ,vm => $self->_vm
+                );
+                my $backing_file_format = (
+                    $vol_backing_file->_qemu_info('file format')
+                        or 'qcow2'
+                );
+
                 $backing_store = $disk->addNewChild(undef,'backingStore') if !$backing_store;
                 $backing_store->setAttribute('type' => 'file');
 
-                my $format = $backing_store->findnodes('format');
-                $format = $backing_store->addNewChild(undef,'format');
+                my ($format) = $backing_store->findnodes('format');
+                $format = $backing_store->addNewChild(undef,'format') if !$format;
                 $format->setAttribute('type' => $backing_file_format);
 
                 my ($source_bf) = $backing_store->findnodes('source');

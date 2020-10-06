@@ -91,9 +91,10 @@ sub test_clone_raw($domain ) {
         is($format->getAttribute('type'),'qcow2',"Expecting format ".$format->toString)
             or exit;
     }
-    is($found,2) or exit;
+    is($found,2);
 
-    $clone->start(user_admin);
+    eval { $clone->start(user_admin) };
+    is(''.$@,'',"starting ".$clone->name) or exit;
     is($clone->is_active,1);
     $clone->remove(user_admin);
 }
