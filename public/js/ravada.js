@@ -226,7 +226,7 @@
                     });
                 }
             };
-
+            $scope.new_node_start = true;
             subscribe_nodes = function(url, type) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_nodes/'+type) };
@@ -234,6 +234,19 @@
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
                         $scope.nodes = data;
+                        for (var i = 0; i < $scope.nodes.length; i++) {
+                            if ($scope.new_node) {
+                                if ($scope.new_node.id == $scope.nodes[i].id) {
+                                    $scope.new_node = $scope.nodes[i];
+                                    return
+                                }
+                            } else {
+                                if ($scope.nodes[i].id == $scope.showmachine.id_vm) {
+                                    $scope.new_node = $scope.nodes[i];
+                                    return;
+                                }
+                            }
+                        }
                     });
                 }
             };

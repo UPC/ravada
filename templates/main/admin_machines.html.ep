@@ -280,7 +280,9 @@
                       <div ng-show="{{machine.is_base}} && !{{machine.is_locked}}"
                           ng-cloak><span class="badge badge-pill badge-light"><%=l 'This Machine is a base' %></span></div>
                     </td>
-                    <td class="lgMachNode"></td>
+                    <td class="lgMachToggle"><span
+                            ng-hide="machine.is_base"
+                            class="badge badge-info" title="<%=l 'Node'%>">{{machine.node}}</span></td>
                 </tr>
                     <tr ng-show="show_clones[machine.id] && machine.childs_loading ">
                         <td> <%=l 'Loading ...' %> </td>

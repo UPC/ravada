@@ -438,8 +438,6 @@ sub _start_checks($self, @args) {
             $self->_balance_vm();
         }
         $self->rsync(request => $request)  if !$self->is_volatile && !$self->_vm->is_local();
-    } elsif (!$self->is_local) {
-        $self->_set_vm($vm_local, 1);
     }
     $self->_check_free_vm_memory();
     #TODO: remove them and make it more general now we have nodes
@@ -476,6 +474,7 @@ sub _search_already_started($self, $fast = 0) {
             next;
         }
         next if !$domain;
+        $vm->_add_instance_db($domain->id);
         if ( $domain->is_active || $domain->is_hibernated ) {
             $self->_set_vm($vm,'force');
             $started{$vm->id}++;
@@ -1556,6 +1555,7 @@ sub info($self, $user) {
         ,run_timeout => $self->run_timeout
         ,autostart => $self->autostart
         ,volatile_clones => $self->volatile_clones
+        ,id_vm => $self->_data('id_vm')
     };
     for (qw(comment screenshot id_owner shutdown_disconnected)) {
         $info->{$_} = $self->_data($_);
@@ -3906,7 +3906,7 @@ sub rsync($self, @args) {
         if ($self->is_base) {
             push @files_base,($self->list_files_base);
         }
-        $files = [ $self->list_volumes( device => 'disk'), @files_base ];
+        $files = [ $self->list_volumes(), @files_base ];
     }
 
     $request->status("working") if $request;
@@ -3970,28 +3970,29 @@ sub _pre_migrate($self, $node, $request = undef) {
     $self->_check_equal_storage_pools($node) if $self->_vm->is_active;
 
     $self->_internal_autostart(0);
-    return if !$self->id_base;
 
     $self->check_status();
     confess "ERROR: Active domains can't be migrated"   if $self->is_active;
 
-    my $base = Ravada::Domain->open($self->id_base);
-    confess "ERROR: base ".$base->name." not prepared in node ".$node->name
+    if ( $self->id_base ) {
+        my $base = Ravada::Domain->open($self->id_base);
+        confess "ERROR: base ".$base->name." not prepared in node ".$node->name
         if !$base->base_in_vm($node->id);
-    confess "ERROR: base id ".$self->id_base." not found."  if !$base;
+        confess "ERROR: base id ".$self->id_base." not found."  if !$base;
 
-    for my $file ( $base->list_files_base ) {
-        next if $node->file_exists($file);
-        warn "Warning: file not found $file in ".$node->name;
-        Ravada::Request->set_base_vm(
-            uid => Ravada::Utils::user_daemon->id
-            ,id_domain => $base->id
-            ,id_vm => $node->id
-        );
-        return;
+        for my $file ( $base->list_files_base ) {
+            next if $node->file_exists($file);
+            warn "Warning: file not found $file in ".$node->name;
+            Ravada::Request->set_base_vm(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $base->id
+                ,id_vm => $node->id
+            );
+            return;
+        }
+
+        $self->_set_base_vm_db($node->id,0) unless $node->is_local;
     }
-
-    $self->_set_base_vm_db($node->id,0) unless $node->is_local;
     $node->_add_instance_db($self->id);
 }
 
