@@ -81,7 +81,7 @@ Add a new user for the ravada web. Use ``rvd_back`` to create it.
 .. prompt:: bash $
 
     cd ravada
-    sudo PERL5LIB=./lib ./script/rvd_back --add-user user.name
+    sudo PERL5LIB=./lib ./script/rvd_back --add-user admin
 
 
 Firewall(Optional)

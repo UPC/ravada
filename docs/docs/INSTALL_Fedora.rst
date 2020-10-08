@@ -119,7 +119,7 @@ When asked if this user is admin answer *yes*.
 
 .. prompt:: bash $
 
-    sudo /usr/sbin/rvd_back --add-user user.name
+    sudo /usr/sbin/rvd_back --add-user admin
 
 Firewall (Optional)
 -------------------
