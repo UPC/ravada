@@ -410,11 +410,48 @@ sub remote_config_nodes {
     return $conf;
 }
 
+sub _add_leftover($machines, $domain) {
+    return if !defined $domain;
+    if ($domain->{id}) {
+        my $domain2 = Ravada::Front::Domain->open($domain->{id});
+        if ($domain2 && $domain2->id) {
+            push @$machines,($domain);
+            return;
+        }
+    }
+
+    my $req = Ravada::Request->remove_domain(
+            name => $domain->name
+            ,uid => user_admin->id
+    );
+    diag("removing ".$domain->name);
+}
+
+sub _leftovers {
+    my @machines;
+    for my $name ( base_domain_name() ) {
+        for my $n ( 0 .. 10 ) {
+            my $domain = rvd_front->search_domain("${name}_$n");
+            _add_leftover(\@machines,$domain);
+            $n = "0$n" if length $n < 2;
+            $domain = rvd_front->search_domain("${name}_$n");
+            _add_leftover(\@machines,$domain);
+            for my $vm_name ('Void', 'KVM') {
+                $domain = rvd_front->search_domain(
+                    "${name}_$n-$vm_name-$name");
+            }
+            _add_leftover(\@machines,$domain);
+        }
+    }
+    return @machines;
+}
+
 sub remove_old_domains_req() {
     my $base_name = base_domain_name();
     my $machines = rvd_front->list_machines(user_admin);
+    my @machines2 = _leftovers();
     my @reqs;
-    for my $machine ( @$machines) {
+    for my $machine ( @$machines, @machines2) {
         my $domain;
         eval { $domain = Ravada::Front::Domain->open($machine->{id}) };
         next if $@ && $@ =~ /nknown domain/i;
@@ -839,7 +876,9 @@ sub wait_request {
                     } elsif($req->command eq 'set_time') {
                         like($req->error,qr(^$|libvirt error code));
                     } else {
-                        is($req->error,'') or confess $req->command;
+                        if ($req->error !~ /waiting for processes/i) {
+                            is($req->error,'') or confess $req->command;
+                        }
                     }
                 }
             }

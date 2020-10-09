@@ -6,7 +6,7 @@
         <%=l 'This base can\'t be removed because the domain has clones.' %>
     </div>
 
-    <div ng-hide="showmachine">
+    <div ng-hide="showmachine || (pending_request && pending_request.status != 'done')">
     ... Loading ...
     </div>
 

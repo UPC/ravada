@@ -707,6 +707,7 @@ sub test_base_clone($vm, $remove_base_first=0) {
         name => new_domain_name()
         ,user => user_admin()
     );
+    $clone->spinoff();
     $clone->prepare_base(user_admin);
     my $clone2 = $clone->clone(
         name => new_domain_name()

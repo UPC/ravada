@@ -189,6 +189,7 @@
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
+            var subscribed_extra = false;
             subscribe_machine_info= function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('machine_info/'+$scope.showmachineId) };
@@ -196,8 +197,11 @@
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
                         $scope.showmachine = data;
-                        $scope.list_bases();
-                        subscribe_nodes(url,data.type);
+                        if (!subscribed_extra) {
+                            subscribed_extra = true;
+                            subscribe_nodes(url,data.type);
+                            subscribe_bases(url);
+                        }
                     });
                 }
             };
@@ -237,10 +241,37 @@
                     });
                 }
             };
+
+            subscribe_bases = function(url, type) {
+                var ws = new WebSocket(url);
+                ws.onopen = function(event) { ws.send('list_bases') };
+                ws.onmessage = function(event) {
+                    var data = JSON.parse(event.data);
+                    $scope.$apply(function () {
+                        $scope.bases = data;
+                        if(typeof($scope.new_base) == 'undefined') {
+                            for (var i = 0; i < $scope.bases.length; i++) {
+                                if ($scope.bases[i].id == $scope.showmachine.id_base) {
+                                    $scope.new_base = $scope.bases[i];
+                                    console.log(" clone  "+i);
+                                } else if ($scope.showmachine.is_base
+                                    && $scope.bases[i].id == $scope.showmachine.id) {
+                                    $scope.new_base = $scope.bases[i];
+                                    console.log("is_base "+i);
+                                }
+                            }
+                            $scope.current_base = $scope.new_base;
+                        }
+
+                    });
+                }
+            };
+
             subscribe_ws = function(url, is_admin) {
                 subscribe_machine_info(url);
                 subscribe_requests(url);
                 subscribe_isos(url);
+                // other data will be subscribed on loading machine info
             };
 
           var url_ws;
@@ -653,20 +684,6 @@
                 ).then(function(response) {
                 });
             };
-            $scope.list_bases = function() {
-                $http.get('/list_bases.json')
-                    .then(function(response) {
-                            $scope.bases=response.data;
-                                for (var i = 0; i < $scope.bases.length; i++) {
-                                    if ($scope.bases[i].id == $scope.showmachine.id_base) {
-                                        $scope.new_base = $scope.bases[i];
-                                    } else if ($scope.showmachine.is_base
-                                        && $scope.bases[i].id == $scope.showmachine.id) {
-                                        $scope.new_base = $scope.bases[i];
-                                    }
-                                }
-                    });
-            };
             list_users= function() {
                 $http.get('/list_users.json')
                     .then(function(response) {
@@ -691,9 +708,6 @@
                     subscribe_request(id_request, function(data) {
                         $scope.$apply(function () {
                             $scope.rebase_request=data;
-                            if ($scope.rebase_request.status == 'done') {
-                                $scope.list_bases();
-                            }
                         });
                     });
                 });
@@ -723,9 +737,6 @@
                     subscribe_request(id_request, function(data) {
                         $scope.$apply(function () {
                             $scope.pending_request=data;
-                            if ($scope.pending_request.status == 'done') {
-                                $scope.list_bases();
-                            }
                         });
                     });
                 });
@@ -740,6 +751,7 @@
             $scope.access_value = [ ];
             $scope.access_allowed = [ ];
             $scope.access_last = [ ];
+            $scope.new_base = undefined;
           $scope.list_ldap_attributes();
         };
 

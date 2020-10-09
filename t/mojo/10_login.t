@@ -226,6 +226,7 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
     _wait_request(debug => 0, background => 1, check_error => 1);
     my $clone = rvd_front->search_domain($name."-".user_admin->name);
     ok($clone,"Expecting clone created") or next;
+    ok($clone->name);
     if ($clone) {
         is($clone->is_volatile,0) or exit;
         is(scalar($clone->list_ports),0);

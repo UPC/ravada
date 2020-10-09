@@ -828,9 +828,6 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
         my $vm_local = Ravada::VM->open( type => $self->vm );
         $self->migrate($vm_local);
     }
-    if ($self->id_base ) {
-        $self->spinoff();
-    }
     $self->_check_free_space_prepare_base();
 }
 
@@ -855,7 +852,6 @@ sub _post_prepare_base {
         $self->description($base->description)  if $base->description();
     }
 
-    $self->_remove_id_base();
     $self->_set_base_vm_db($self->_vm->id,1);
     $self->autostart(0,$user);
 };
@@ -2021,7 +2017,7 @@ sub clones($self, %filter) {
     my $query =
         "SELECT id, id_vm, name, id_owner, status, client_status, is_pool"
             ." FROM domains "
-            ." WHERE id_base = ? AND (is_base=NULL OR is_base=0)";
+            ." WHERE id_base = ? ";
     my @values = ($self->id);
     if (keys %filter) {
         $query .= "AND ( ".join(" AND ",map { "$_ = ?" } sort keys %filter)." )";
@@ -2288,7 +2284,7 @@ sub clone {
 
     my %args2 = @_;
     delete $args2{from_pool};
-    return $self->_copy_clone(%args2)   if $self->id_base();
+    return $self->_copy_clone(%args2)   if !$self->is_base && $self->id_base();
 
     my $uid = $user->id;
 
@@ -5062,7 +5058,6 @@ sub rebase($self, $user, $new_base) {
 }
 
 sub _create_base_as_old($self, $user, $new_base) {
-    $new_base->dettach($user);
     $new_base->prepare_base($user);
 
     my $old_base = $self;
