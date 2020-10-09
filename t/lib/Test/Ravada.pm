@@ -867,6 +867,7 @@ sub wait_request {
                     ." ".($req->error or '')) if $debug && (time%5 == 0);
                 sleep 1;
                 $done_all = 0;
+                sleep 1;
             } elsif (!$done{$req->id}) {
                 $t0 = time;
                 $done{$req->{id}}++;
@@ -891,7 +892,8 @@ sub wait_request {
                 next if $skip{$req->command};
                 if ($req->status ne 'done') {
                     $done_all = 0;
-                    diag("Waiting for request ".$req->id." ".$req->command);
+                    diag("Waiting for request ".$req->id." ".$req->command)
+                    if $debug && (time%5 == 0);
                     last;
                 }
             }
@@ -1232,8 +1234,24 @@ sub _unlock_all {
     }
 }
 
+sub _clean_iptables_ravada($node) {
+    my ($out, $err) = $node->run_command("iptables-save","-t","filter");
+    is($err,'');
+    for my $line (split /\n/,$out) {
+        my ($rule) = $line =~ /-A (.*RAVADA.*)/i;
+        next if !$rule;
+        if (!$node->is_local) {
+            my ($out2, $err2) = $node->run_command("iptables","-t","filter","-D",$rule);
+            warn $node->name.": '-D $rule' $err2" if $err2;
+        } else {
+            `iptables -D $rule`;
+        }
+    }
+}
+
 sub flush_rules_node($node) {
     _lock_fw();
+    _clean_iptables_ravada($node);
     $node->create_iptables_chain($CHAIN);
     my ($out, $err) = $node->run_command("iptables","-F", $CHAIN);
     is($err,'');
@@ -1875,8 +1893,8 @@ sub mangle_volume($vm,$name,@vol) {
     }
 }
 
-sub _mount_qcow($vm, $vol) {
-    my ($in,$out, $err);
+sub _load_nbd($vm) {
+    my ($in, $out, $err);
     if (!$MOD_NBD++) {
         my @cmd =("/sbin/modprobe","nbd", "max_part=63");
         run3(\@cmd, \$in, \$out, \$err);
@@ -1885,6 +1903,25 @@ sub _mount_qcow($vm, $vol) {
     my @cmd = ($QEMU_NBD,"-d", $DEV_NBD);
     ($out,$err) = $vm->run_command(@cmd);
     die "@cmd : $err" if $err;
+
+    ($out, $err) = $vm->run_command("lsof",$DEV_NBD);
+    my @line = split /\n/,$out;
+    return if scalar(@line) < 2;
+
+    my ($dev,$n) = $DEV_NBD =~ /(.*?)(\d+)$/;
+    $n++;
+
+    $DEV_NBD = "$dev$n";
+    diag("Trying new NBD device $DEV_NBD");
+    die "Error: I can't find more NBD devices ( $DEV_NBD) "
+    if ! -e $DEV_NBD;
+
+    return _load_nbd($vm);
+}
+
+sub _mount_qcow($vm, $vol) {
+    _load_nbd($vm);
+    my ($in,$out, $err);
     for ( 1 .. 10 ) {
         ($out, $err) = $vm->run_command($QEMU_NBD,"-c",$DEV_NBD, $vol);
         last if !$err;

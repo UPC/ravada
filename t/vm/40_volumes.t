@@ -636,18 +636,33 @@ sub _check_backing_store($xml, $name=undef) {
     return 1;
 }
 
-
+sub _convert_file_to_raw($vm, @files) {
+    for my $file ( @files ) {
+        my $file_dst = "$file.raw";
+        my @cmd = ('qemu-img','convert',"-O","raw",$file,$file_dst);
+        my ($out, $err) = $vm->run_command(@cmd);
+        die $err if $err;
+        copy($file_dst,$file) or die "$! $file_dst -> $file";
+        unlink $file_dst or die "$! $file_dst";
+    }
+}
 
 sub _create_domain_no_backing_store($vm) {
     #standalone has no backingStore entries
     my $standalone = create_domain($vm);
+    $standalone->add_volume(type => 'TMP' , format => 'raw' ,size => 1024 * 10);
     my $doc = _remove_backing_store($standalone->domain->get_xml_description);
     $standalone->_post_change_hardware($doc);
     _check_no_backing_store($standalone->domain->get_xml_description, $standalone->name);
 
     # base XML has no backingStore entries
     my $base = create_domain($vm);
+    $base->add_volume(type => 'TMP' , format => 'raw', size => 1024 * 10);
     $base->prepare_base(user_admin);
+
+    my ($file) = grep { /TMP/ } $base->list_files_base;
+    _convert_file_to_raw($vm, $file);
+
     my $base_doc = _remove_backing_store($base->get_xml_base);
     my $sth = connector->_dbh->prepare(
         "UPDATE base_xml set xml=? WHERE id_domain = ? "
@@ -679,14 +694,17 @@ sub test_upgrade($vm) {
     $standalone->shutdown_now(user_admin);
     ok(_check_empty_backing_store($standalone));
 
-    $clone->start(user_admin);
+    eval { $clone->start(user_admin) };
+    is(''.$@,'', "Expecting no error starting ".$clone->name);
+
     is($clone->is_active,1);
     $clone->shutdown_now(user_admin);
     ok(_check_backing_store($clone));
     ok(_check_backing_store($base));
     ok(_check_backing_store($base->domain->get_xml_description,"base ".$base->name));
 
-    $clone->remove(user_admin);
+    eval { $clone->remove(user_admin) };
+    is(''.$@,'');
     $base->remove_base(user_admin);
     ok(_check_no_backing_store($base));
     $base->start(user_admin);

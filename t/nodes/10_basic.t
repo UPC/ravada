@@ -1072,6 +1072,98 @@ sub test_fill_memory($vm, $node, $migrate) {
     _remove_clones($base);
 }
 
+sub test_migrate($vm, $node) {
+    my $domain = create_domain($vm);
+
+    $domain->migrate($node);
+
+    is($domain->_data('id_vm'), $node->id);
+    is($domain->_vm->id, $node->id);
+
+    $domain->start(user_admin);
+    is($domain->_data('id_vm'), $node->id);
+    is($domain->_vm->id, $node->id);
+
+    is($domain->is_active,1);
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    is($domain2->is_active,1);
+    is($domain2->_data('id_vm'), $node->id);
+    is($domain2->_vm->id, $node->id);
+
+    $domain->shutdown_now(user_admin);
+    start_domain_internal($domain);
+
+    my $domain3 = Ravada::Domain->open($domain->id);
+    $domain3->start(user_admin);
+    is($domain3->is_active,1);
+    is($domain3->_data('id_vm'), $node->id);
+    is($domain3->_vm->id, $node->id);
+
+    $domain->remove(user_admin);
+}
+
+sub test_check_instances($vm, $node) {
+    my $domain = create_domain($vm);
+
+    $domain->migrate($node);
+    start_domain_internal($domain);
+    is($domain->_data('id_vm'), $node->id );
+    is($domain->_vm->id, $node->id);
+
+    my @instances = $domain->list_instances();
+    is(scalar(@instances),2);
+
+    my $sth = connector->dbh->prepare("DELETE FROM domain_instances WHERE id_domain=?");
+    $sth->execute($domain->id);
+
+    my @instances2 = $domain->list_instances();
+    is(scalar(@instances2),0);
+
+    $domain->_data( id_vm => $vm->id );
+    $domain->_vm($vm);
+    $domain->start(user_admin);
+
+    is($domain->_data('id_vm'), $node->id );
+    is($domain->_vm->id, $node->id);
+
+    my @instances3 = $domain->list_instances();
+    is(scalar(@instances3),2, "Expecting 2 instances of ".$domain->name);
+
+    $domain->remove(user_admin);
+}
+
+sub test_migrate_req($vm, $node) {
+    my $domain = create_domain($vm);
+    $domain->start(user_admin);
+    my $req = Ravada::Request->migrate(
+        id_domain => $domain->id
+        , id_node => $node->id
+        , uid => user_admin->id
+        , start => 1
+        , shutdown => 1
+        , shutdown_timeout => 10
+        , remote_ip => '1.2.2.34'
+        , retry => 10
+    );
+    for ( 1 .. 30 ) {
+        wait_request( debug => 1, check_error => 0);
+        is($req->status,'done');
+        last if !$req->error;
+        diag($req->status);
+        diag($req->error." try : ".$req->retry);
+        sleep 1;
+    }
+    is($req->error,'') or exit;
+
+    my $domain3 = Ravada::Domain->open($domain->id);
+    is($domain3->is_active,1);
+    is($domain3->_data('id_vm'), $node->id);
+    is($domain3->_vm->id, $node->id);
+
+    $domain->remove(user_admin);
+}
+
 ##################################################################################
 clean();
 
@@ -1111,6 +1203,10 @@ for my $vm_name ( vm_names() ) {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+
+        test_check_instances($vm, $node);
+        test_migrate($vm, $node);
+        test_migrate_req($vm, $node);
 
         test_set_vm_fail($vm, $node);
         test_volatile_req_clone($vm, $node);

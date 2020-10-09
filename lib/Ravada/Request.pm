@@ -110,6 +110,9 @@ our %VALID_ARG = (
     ,shutdown_node => { id_node => 1, at => 2 }
     ,start_node => { id_node => 1, at => 2 }
     ,connect_node => { backend => 2, hostname => 2, id_node =>2, timeout => 2 }
+    ,migrate => { uid => 1, id_node => 1, id_domain => 1, start => 2, remote_ip => 2
+        ,shutdown => 2, shutdown_timeout => 2
+    }
 
     #users
     ,post_login => { user => 1, locale => 2 }
@@ -161,6 +164,7 @@ our %COMMAND = (
         ,commands => ['prepare_base','remove_base','set_base_vm','rebase_volumes'
                     , 'remove_base_vm'
                     , 'screenshot'
+                    , 'migrate'
                 ]
         ,priority => 6
     }
