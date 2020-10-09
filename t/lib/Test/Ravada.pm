@@ -67,6 +67,7 @@ create_domain
     mojo_clean
     mojo_create_domain
     mojo_login
+    mojo_check_login
     mojo_request
 
     remove_old_user
@@ -122,6 +123,8 @@ chomp $QEMU_NBD;
 my $FH_FW;
 my $FH_NODE;
 my %LOCKED_FH;
+
+my ($MOJO_USER, $MOJO_PASSWORD);
 
 sub user_admin {
 
@@ -588,12 +591,21 @@ sub mojo_clean {
     return remove_old_domains_req();
 }
 
+sub mojo_check_login( $t, $user=$MOJO_USER , $pass=$MOJO_PASSWORD ) {
+    $t->ua->get("/user.json");
+    return if $t->tx->res->code =~ /^(200|302)$/;
+    warn $t->tx->res->code();
+    mojo_login($t, $user,$pass);
+}
+
 sub mojo_login( $t, $user, $pass ) {
     $t->ua->get($URL_LOGOUT);
 
     $t->post_ok('/login' => form => {login => $user, password => $pass});
     like($t->tx->res->code(),qr/^(200|302)$/);
     #    ->status_is(302);
+$MOJO_USER = $user;
+    $MOJO_PASSWORD = $pass;
 
     return $t->success;
 }
