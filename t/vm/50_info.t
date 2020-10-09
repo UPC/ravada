@@ -4,27 +4,19 @@ use strict;
 use Data::Dumper;
 use JSON::XS;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
+my @ARG_RVD = ( config => $FILE_CONFIG,  connector => connector() );
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
+rvd_back();
 
-rvd_back($test->connector, $FILE_CONFIG);
-
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 
 #######################################################################
 
@@ -37,16 +29,11 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , disk => 1024 * 1024
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -71,7 +58,7 @@ sub test_memory {
                 my $info2 = $domain->get_info();
                 $memory2 = $info2->{memory};
                 last if $memory2 == $exp_memory;
-                sleep 2;
+                sleep 1;
     }
     SKIP: {
         skip("possible virt bug",1) if $vm_name =~ /kvm/i;
@@ -81,6 +68,28 @@ sub test_memory {
         
 }
 
+sub test_memory_first_time {
+    my ($vm_name,$domain) = @_;
+    $domain->start($USER) if !$domain->is_active;
+
+    my $exp_memory =  333333;
+    $domain->_data('info','');
+    $domain->set_memory($exp_memory);
+    my $memory2;
+    for ( 0 .. 5 ) {
+                my $info2 = $domain->get_info();
+                $memory2 = $info2->{memory};
+                last if $memory2 == $exp_memory;
+                sleep 1;
+    }
+    SKIP: {
+        skip("possible virt bug",1) if $vm_name =~ /kvm/i;
+        ok($memory2 == $exp_memory,"[$vm_name] Expecting memory: '$exp_memory' "
+                                        ." , got $memory2 ") ;
+    }
+
+}
+
 
 #######################################################################
 
@@ -88,7 +97,7 @@ remove_old_domains();
 remove_old_disks();
 $Data::Dumper::Sortkeys = 1;
 
-for my $vm_name (qw( Void KVM )) {
+for my $vm_name ( vm_names()) {
 
     diag("Testing $vm_name VM");
 
@@ -121,6 +130,7 @@ for my $vm_name (qw( Void KVM )) {
         ok($max_mem,"[$vm_name] Expecting max_mem from info, got '$max_mem'");
 
         test_memory($vm_name, $domain);
+        test_memory_first_time($vm_name, $domain);
   
         {
             $domain->shutdown(user => $USER, timeout => 1);
@@ -139,8 +149,6 @@ for my $vm_name (qw( Void KVM )) {
     };
 }
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();
 

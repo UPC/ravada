@@ -3,28 +3,25 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
 use_ok('Ravada::Front');
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 my $CONFIG_FILE = 't/etc/ravada.conf';
 
-my $RVD_BACK = rvd_back($test->connector , $CONFIG_FILE);
+my $RVD_BACK = rvd_back($CONFIG_FILE);
 my $RVD_FRONT = Ravada::Front->new(
     config => $CONFIG_FILE
-    , connector => $test->connector
+    , connector => connector()
     , backend => $RVD_BACK
 );
 
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 
 my %CREATE_ARGS = (
-     KVM => { id_iso => 1,       id_owner => $USER->id }
+     KVM => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
     ,LXC => { id_template => 1, id_owner => $USER->id }
     ,Void => { id_owner => $USER->id }
 );
@@ -50,6 +47,7 @@ sub test_create_domain {
         name => $name
         ,active => 0
         ,create_args($vm_name)
+	,disk => 1024 * 1024
     );
     
     ok($domain_b);
@@ -57,6 +55,8 @@ sub test_create_domain {
     my $domain_f = $RVD_FRONT->search_domain($name);
     ok($domain_f);
 
+    my $domain_b2 = $RVD_BACK->search_domain($name);
+    ok($domain_b2,"[$vm_name] expecting domain $name in backend") or exit;
     return $name;
 }
 
@@ -71,6 +71,7 @@ sub test_start_domain {
 
     my $domain_f = $RVD_FRONT->search_domain($name);
     ok($domain_f,"Domain $name should be in frontend");
+    isa_ok($domain_f, 'Ravada::Front::Domain');
 
     if ($domain_b->is_active) {
         eval { $domain_b->shutdown(user => $USER)};
@@ -93,7 +94,9 @@ sub test_start_domain {
     eval { $domain_b->start($USER) };
     ok(!$@,$@);
 
-    ok($domain_f->is_active);# && !$domain_f->is_active);
+
+    $domain_f = $RVD_FRONT->search_domain($name);
+    is($domain_f->is_active,1);# && !$domain_f->is_active);
 
 }
 
@@ -106,6 +109,12 @@ sub test_shutdown_domain {
     ok($domain_b,"Domain $name should be in backend");
     ok(!$domain_b->readonly,"Domain $name should not be readonly");
 
+    my $vm2 = Ravada::VM->open( id => $vm->id);
+    ok($vm2,"[$vm_name] expecting a VM") or exit;
+
+    my $vm3 = Ravada::VM->open( id => $vm->id, readonly => 1);
+    ok($vm3,"[$vm_name] expecting a VM") or exit;
+
     my $domain_f = $RVD_FRONT->search_domain($name);
     ok($domain_f,"Domain $name should be in frontend");
     ok($domain_f->readonly,"Domain $name should be readonly");
@@ -115,7 +124,7 @@ sub test_shutdown_domain {
 
     ok($domain_f->is_active);
 
-    eval { $domain_f->shutdown( force => 1) };
+    eval { $domain_f->shutdown( force => 1, user => user_admin) };
     ok($@,"[$vm_name] Shutdown should be denied from front ");
     ok($domain_f->is_active,"[$vm_name] Domain should be active");
 
@@ -126,10 +135,11 @@ sub test_shutdown_domain {
         ok($@,"[$vm_name] Shutdown should be denied from front ");
     }
 
-    eval { $domain_b->shutdown(user => $USER,force => 1) };
-    ok(!$@,$@);
+    eval { $domain_b->force_shutdown($USER) };
+    is($@,'');
 
-    ok(!$domain_f->is_active);# && !$domain_f->is_active);
+    $domain_f = $RVD_FRONT->search_domain($name);
+    is($domain_f->is_active,0);# && !$domain_f->is_active);
 
 }
 
@@ -156,9 +166,9 @@ sub test_vm_ro {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (qw(Void KVM)) {
+for my $vm_name ( vm_names() ) {
     my $vm = $RVD_BACK->search_vm($vm_name);
-    if ( !$vm ) {
+    if ( !$vm || ($vm_name eq 'KVM' && $<) ) {
         diag("Skipping VM $vm_name in this system");
         next;
     }
@@ -168,7 +178,5 @@ for my $vm_name (qw(Void KVM)) {
     test_shutdown_domain($vm_name, $dom_name);
 }
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();

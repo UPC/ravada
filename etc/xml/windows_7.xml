@@ -89,9 +89,13 @@
     </input>
     <input type='mouse' bus='ps2'/>
     <input type='keyboard' bus='ps2'/>
-    <graphics type='spice' autoport='yes'>
-      <listen type='address'/>
-      <image compression='off'/>
+    <graphics type='spice' autoport='yes' listen='127.0.0.1'>
+      <listen type='address' address='127.0.0.1'/>
+	  <image compression='auto_glz'/>
+      <jpeg compression='auto'/>
+      <zlib compression='auto'/>
+      <playback compression='on'/>
+      <streaming mode='filter'/>
     </graphics>
     <sound model='ich6'>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>

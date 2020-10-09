@@ -15,7 +15,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "Ravada broker"
-msgstr ""
+msgstr "Ravada broker"
 
 msgid "Machine Name"
 msgstr "Nome da máquina"
@@ -33,10 +33,10 @@ msgid "Choose a Machine to Start"
 msgstr "Escolle unha máquina para iniciar"
 
 msgid "Start"
-msgstr "Inicia"
+msgstr "Iniciar"
 
 msgid "Stop"
-msgstr "Para"
+msgstr "Parar"
 
 msgid "View"
 msgstr "Ver"
@@ -51,10 +51,7 @@ msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
 msgstr "Non se pode preparar ou eliminar a base. A máquina ten"
 
 msgid "Clone/s"
-msgstr "clon/s"
-
-msgid "NEW"
-msgstr "NOVOS"
+msgstr "Clon/s"
 
 msgid "Users List"
 msgstr "Lista de usuarios"
@@ -81,7 +78,7 @@ msgid "Messages"
 msgstr "Mensaxes"
 
 msgid "Mark all as Read"
-msgstr "Marca como lido"
+msgstr "Marcar como lido"
 
 msgid "Settings"
 msgstr "Preferencias"
@@ -90,43 +87,58 @@ msgid "New Machine"
 msgstr "Nova máquina"
 
 msgid "I want to change my password"
-msgstr ""
+msgstr "Quero cambiar o meu contrasinal"
 
 msgid "I want to change my language"
-msgstr ""
+msgstr "Quero cambiar a miña lingua"
 
 msgid "Language:"
-msgstr ""
+msgstr "Linguaxe"
 
 msgid "English"
-msgstr ""
+msgstr "Inglés"
 
 msgid "Spanish"
-msgstr ""
+msgstr "Español"
 
 msgid "Catalan"
-msgstr ""
+msgstr "Catalán"
 
 msgid "New Password:"
-msgstr ""
+msgstr "Novo Contrasinal"
 
 msgid "Confirm Password:"
-msgstr ""
+msgstr "Confirmar Contrasinal"
 
 msgid "Submit"
-msgstr ""
+msgstr "Enviar"
 
 msgid "Your language has been changed successfully"
-msgstr ""
+msgstr "A vosa lingua foi cambiada con éxito"
 
 msgid "Your password has been changed successfully"
-msgstr ""
+msgstr "O voso contrasinal foi cambiado con éxito"
 
 msgid "Password too small"
-msgstr ""
+msgstr "O Contrasinal é demasiado pequeno"
 
 msgid "Password fields aren't equal"
-msgstr ""
+msgstr "Os campos do contrasinal non son iguais"
 
 msgid "Some of the password's fields are empty"
-msgstr ""
+msgstr "Algúns dos campos do contrasinal están baleiros"
+
+msgid "Galician"
+msgstr "Galego"
+
+msgid "French"
+msgstr "Francés"
+
+msgid "Indonesian"
+msgstr "Indonesio"
+
+msgid "Persian"
+msgstr "Persa"
+
+msgid "Japanese"
+msgstr "Xaponés"

@@ -102,8 +102,7 @@
       <alias name='serial0'/>
     </console>
     <channel type='spicevmc'>
-      <target type='virtio' name='com.redhat.spice.0' state='disconnected'/>
-      <alias name='channel0'/>
+      <target type='virtio' name='com.redhat.spice.0'/>
       <address type='virtio-serial' controller='0' bus='0' port='1'/>
     </channel>
     <input type='tablet' bus='usb'>
@@ -116,9 +115,13 @@
     <input type='keyboard' bus='ps2'>
       <alias name='input2'/>
     </input>
-    <graphics type='spice' port='5900' autoport='yes' listen='127.0.0.1'>
+    <graphics type='spice' autoport='yes' listen='127.0.0.1'>
       <listen type='address' address='127.0.0.1'/>
-      <image compression='off'/>
+	  <image compression='auto_glz'/>
+      <jpeg compression='auto'/>
+      <zlib compression='auto'/>
+      <playback compression='on'/>
+      <streaming mode='filter'/>
     </graphics>
     <sound model='ich6'>
       <alias name='sound0'/>
@@ -142,12 +145,4 @@
       <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
     </memballoon>
   </devices>
-  <seclabel type='dynamic' model='apparmor' relabel='yes'>
-    <label>libvirt-7358e9e4-7472-416e-a2d2-c831491814e9</label>
-    <imagelabel>libvirt-7358e9e4-7472-416e-a2d2-c831491814e9</imagelabel>
-  </seclabel>
-  <seclabel type='dynamic' model='dac' relabel='yes'>
-    <label>+123:+131</label>
-    <imagelabel>+123:+131</imagelabel>
-  </seclabel>
 </domain>

@@ -5,7 +5,6 @@ use Data::Dumper;
 use IPC::Run3;
 use POSIX ":sys_wait_h";
 use Test::More;
-use Test::SQL::Data;
 use XML::LibXML;
 
 use lib 't/lib';
@@ -15,15 +14,12 @@ my $BACKEND = 'KVM';
 
 use_ok('Ravada');
 
+my $RAVADA = rvd_back('t/etc/ravada_kvm.conf');
 
-my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-my $RAVADA = rvd_back( $test->connector , 't/etc/ravada_kvm.conf');
+my ($DOMAIN_NAME) = new_domain_name();
+my $DOMAIN_NAME_SON= new_domain_name();
 
-my ($DOMAIN_NAME) = $0 =~ m{.*/(.*)\.};
-my $DOMAIN_NAME_SON=$DOMAIN_NAME."_son";
-$DOMAIN_NAME_SON =~ s/base_//;
-
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 
 sub test_vm_kvm {
     my $vm = $RAVADA->search_vm('KVM');
@@ -41,7 +37,7 @@ sub test_remove_domain {
     $domain = $RAVADA->search_domain($name,1);
 
     if ($domain) {
-        diag("Removing domain $name");
+#        diag("Removing domain $name");
         my @files_base = $domain->list_files_base;
         eval { $domain->remove(user_admin()) };
         ok(!$@ , "Error removing domain $name : $@") ;
@@ -62,14 +58,16 @@ sub test_new_domain_from_iso {
 
     test_remove_domain($name);
 
-    diag("Creating domain $name from iso");
+#    diag("Creating domain $name from iso");
     my $domain;
     eval { $domain = $RAVADA->create_domain(name => $name
-                                        , id_iso => 1
+                                        , id_iso => search_id_iso('alpine')
                                         ,vm => $BACKEND
                                         ,id_owner => $USER->id
+                                        ,disk => 1024 * 1024
             ) 
     };
+    is(''.$@,'') or return;
     ok(!$@,"Domain $name not created: $@");
 
     ok($domain,"Domain not created") or return;
@@ -82,7 +80,7 @@ sub test_new_domain_from_iso {
     run3(\@cmd,\$in,\$out,\$err);
     ok(!$?,"@cmd \$?=$? , it should be 0 $err $out");
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
+    my $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($domain->name);
     my $row =  $sth->fetchrow_hashref;
     ok($row->{name} && $row->{name} eq $domain->name,"I can't find the domain at the db");
@@ -101,8 +99,8 @@ sub test_usb {
     my ($devices)= $xml->findnodes('/domain/devices');
 
     my @redir = $devices->findnodes('redirdev');
-    ok(scalar @redir == 1,"Expecting 1 redirdev, got ".scalar(@redir)
-        ." in ".$devices->toString);
+    my $expect = 3;
+    ok(scalar @redir == $expect,"Expecting $expect redirdev, got ".scalar(@redir));
 
     for my $model ( 'nec-xhci') {
         my @usb = $devices->findnodes('controller');
@@ -127,12 +125,12 @@ sub test_prepare_base {
     my @list = $RAVADA->list_bases();
     my $name = $domain->name;
 
-    ok(!grep(/^$name$/,map { $_->name } @list),"$name shouldn't be a base ".Dumper(\@list));
+    ok(!grep(/^$name$/,map { $_->name } @list),"$name shouldn't be a base ");
 
-    eval { $domain->prepare_base($USER) };
+    eval { $domain->prepare_base(user_admin) };
     is($@,'') or exit;
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
+    my $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($domain->name);
     my $row =  $sth->fetchrow_hashref;
     ok($row->{is_base});
@@ -147,7 +145,7 @@ sub test_prepare_base {
     ok(scalar @list2 == scalar @list + 1 ,"Expecting ".(scalar(@list)+1)." bases"
             ." , got ".scalar(@list2));
 
-    ok(grep(/^$name$/, map { $_->name } @list2),"$name should be a base ".Dumper(\@list2));
+    ok(grep(/^$name$/, map { $_->name } @list2),"$name should be a base ");
 
 }
 
@@ -160,7 +158,7 @@ sub test_new_domain_from_base {
     my $name = $DOMAIN_NAME_SON;
     test_remove_domain($name);
 
-    diag("Creating domain $name from ".$base->name);
+#    diag("Creating domain $name from ".$base->name);
     my $domain;
     eval { $domain = $RAVADA->create_domain(
                 name => $name
@@ -169,7 +167,7 @@ sub test_new_domain_from_base {
             ,vm => $BACKEND
     );
     };
-    is($@,'');
+    is(''.$@,'',"Expecting no error creating $name");
     ok($domain,"Domain not created") or return;
     my $exp_ref= 'Ravada::Domain::KVM';
     ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
@@ -180,7 +178,7 @@ sub test_new_domain_from_base {
     run3(\@cmd,\$in,\$out,\$err);
     ok(!$?,"@cmd \$?=$? , it should be 0 $err $out");
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
+    my $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($domain->name);
     my $row =  $sth->fetchrow_hashref;
     ok($row->{name} && $row->{name} eq $domain->name,"I can't find the domain at the db");
@@ -257,7 +255,7 @@ sub remove_volume {
     my $file = shift;
 
     return if !-e $file;
-    diag("removing old $file");
+#    diag("removing old $file");
     $RAVADA->remove_volume($file);
     ok(! -e $file,"file $file not removed" );
 }
@@ -275,6 +273,7 @@ sub test_dont_allow_remove_base_before_sons {
 ################################################################
 my $vm;
 
+clean();
 eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
 
 SKIP: {
@@ -289,6 +288,7 @@ SKIP: {
 
     use_ok("Ravada::Domain::$BACKEND");
 
+    clean();
 test_vm_kvm();
 test_remove_domain($DOMAIN_NAME);
 test_remove_domain($DOMAIN_NAME_SON);
@@ -307,5 +307,5 @@ if (ok($domain,"test domain not created")) {
 }
 
 };
-
+end();
 done_testing();

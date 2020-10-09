@@ -15,13 +15,14 @@ use Data::Dumper;
 use Digest::MD5;
 use Encode;
 use Encode::Locale;
-use File::Temp qw(tempfile);
+use File::Path qw(make_path);
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use IO::Interface::Simple;
 use JSON::XS;
-use LWP::UserAgent;
+use Mojo::DOM;
+use Mojo::UserAgent;
 use Moose;
 use Sys::Virt;
 use URI;
@@ -33,6 +34,7 @@ no warnings "experimental::signatures";
 use Ravada::Domain::KVM;
 use Ravada::NetInterface::KVM;
 use Ravada::NetInterface::MacVTap;
+use Ravada::Utils;
 
 with 'Ravada::VM';
 
@@ -49,7 +51,7 @@ has vm => (
 has type => (
     isa => 'Str'
     ,is => 'ro'
-    ,default => 'qemu'
+    ,default => 'KVM'
 );
 
 #########################################################################3
@@ -59,7 +61,10 @@ has type => (
 our $DIR_XML = "etc/xml";
 $DIR_XML = "/var/lib/ravada/xml/" if $0 =~ m{^/usr/sbin};
 
+our $FILE_CONFIG_QEMU = "/etc/libvirt/qemu.conf";
+
 our $XML = XML::LibXML->new();
+our %USED_MAC;
 
 #-----------
 #
@@ -73,6 +78,11 @@ our $WGET = `which wget`;
 chomp $WGET;
 
 our $CACHE_DOWNLOAD = 1;
+our $VERIFY_ISO = 1;
+
+our %_CREATED_DEFAULT_STORAGE = ();
+
+our $MIN_CAPACITY = 1024 * 10;
 ##########################################################################
 
 
@@ -82,20 +92,51 @@ sub _connect {
     my $vm;
     confess "undefined host" if !defined $self->host;
 
+    my $con_type = $self->type;
+    $con_type = 'qemu' if $self->type eq 'KVM';
+
     if ($self->host eq 'localhost') {
-        $vm = Sys::Virt->new( address => $self->type.":///system" , readonly => $self->readonly);
+        my $address = "system";
+        $address = "session" if $<;
+        $vm = Sys::Virt->new( address => $con_type.":///$address" , readonly => $self->readonly);
     } else {
-        $vm = Sys::Virt->new( address => $self->type."+ssh"."://".$self->host."/system"
-                              ,readonly => $self->mode
+        confess "Error: You can't connect to remote VMs in readonly mode"
+            if $self->readonly;
+        my $transport = 'ssh';
+        my $address = $con_type."+".$transport
+                                            ."://".'root@'.$self->host
+                                            ."/system";
+        eval {
+            $vm = Sys::Virt->new(
+                                address => $address
+                              ,auth => 1
+                              ,credlist => [
+                                  Sys::Virt::CRED_AUTHNAME,
+                                  Sys::Virt::CRED_PASSPHRASE,
+                              ]
                           );
+         };
+         confess $@ if $@;
     }
-    if ( ! $vm->list_storage_pools ) {
-	warn "WARNING: No storage pools creating default\n";
+    if ( ! _list_storage_pools($vm) && !$_CREATED_DEFAULT_STORAGE{$self->host}) {
+	    warn "WARNING: No storage pools creating default\n";
     	$self->_create_default_pool($vm);
+        $_CREATED_DEFAULT_STORAGE{$self->host}++;
     }
     $self->_check_networks($vm);
     return $vm;
 }
+
+sub _list_storage_pools($vm) {
+   for ( ;; ) {
+       my @pools;
+       eval { @pools = $vm->list_storage_pools };
+       return @pools if !$@;
+       die $@ if $@ && $@ !~ /libvirt error code: 1,/;
+       sleep 1;
+   }
+}
+
 
 sub _check_networks {
     my $self = shift;
@@ -130,24 +171,45 @@ Connect to the Virtual Machine Manager
 
 sub connect {
     my $self = shift;
-    return if $self->vm;
+    return 1 if $self->vm;
+    return 1 if $self->is_alive;
 
-    $self->vm($self->_connect);
+    return $self->vm($self->_connect);
 #    $self->storage_pool($self->_load_storage_pool);
+}
+
+sub _reconnect($self) {
+    $self->vm(undef);
+    return $self->connect();
+}
+
+sub _get_pool_info($pool) {
+   my $info;
+   for (;;) {
+       eval { $info = $pool->get_info() };
+       return $info if $info;
+       die $@ if $@ && $@ !~ /libvirt error code: 1,/;
+       sleep 1;
+   }
 }
 
 sub _load_storage_pool {
     my $self = shift;
 
+    confess "no hi ha vm" if !$self->vm;
+
     my $vm_pool;
     my $available;
 
-    for my $pool ($self->vm->list_storage_pools) {
-        my $info = $pool->get_info();
+    if ($self->default_storage_pool_name) {
+        return( $self->vm->get_storage_pool_by_name($self->default_storage_pool_name)
+            or confess "ERROR: Unknown storage pool: ".$self->default_storage_pool_name);
+    }
+
+    for my $pool (_list_storage_pools($self->vm)) {
+        my $info = _get_pool_info($pool);
         next if defined $available
-                && $info->{available} <= $available
-                && !( defined $self->default_storage_pool_name
-                        && $pool->get_name eq $self->default_storage_pool_name);
+                && $info->{available} <= $available;
 
         my $doc = $XML->load_xml(string => $pool->get_xml_description);
 
@@ -158,7 +220,7 @@ sub _load_storage_pool {
         $available = $info->{available};
 
     }
-    die "I can't find /pool/target/path in the storage pools xml\n"
+    confess "I can't find /pool/target/path in the storage pools xml\n"
         if !$vm_pool;
 
     return $vm_pool;
@@ -193,7 +255,26 @@ list of all the volumes.
 
 sub search_volume($self,$file,$refresh=0) {
     confess "ERROR: undefined file" if !defined $file;
-    return $self->search_volume_re(qr(^$file$),$refresh);
+
+    my ($name) = $file =~ m{.*/(.*)};
+    $name = $file if !defined $name;
+
+    my $vol;
+    for my $pool (_list_storage_pools($self->vm)) {
+        if ($refresh) {
+            for ( 1 .. 10 ) {
+               eval { $pool->refresh() };
+               last if !$@;
+               warn "WARNING: on search volume $@";
+               sleep 1;
+            }
+            sleep 1;
+        }
+        eval { $vol = $pool->get_volume_by_name($name) };
+        die $@ if $@ && $@ !~ /^libvirt error code: 50,/;
+    }
+
+    return $self->search_volume_re(qr(^$name$),$refresh);
 }
 
 =head2 search_volume_path
@@ -241,17 +322,28 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     confess "'$pattern' doesn't look like a regexp to me ".ref($pattern)
         if !ref($pattern) || ref($pattern) ne 'Regexp';
 
+    $self->_connect();
     $self->_refresh_storage_pools()    if $refresh;
 
     my @volume;
-    for my $pool ($self->vm->list_storage_pools) {
-        for my $vol ( $pool->list_all_volumes()) {
-            my ($file) = $vol->get_path =~ m{.*/(.*)};
-            next if $file !~ $pattern;
+    for my $pool (_list_storage_pools($self->vm)) {
+       my @vols;
+       for ( 1 .. 10) {
+           eval { @vols = $pool->list_all_volumes() };
+           last if !$@ || $@ =~ / no storage pool with matching uuid/;
+           warn "WARNING: on search volume_re: $@";
+           sleep 1;
+       }
+       for my $vol ( @vols ) {
+           my $file;
+           eval { ($file) = $vol->get_path =~ m{.*/(.*)} };
+           confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
+           next if !$file || $file !~ $pattern;
 
-            return $vol if !wantarray;
-            push @volume,($vol);
-        }
+
+           return $vol if !wantarray;
+           push @volume,($vol);
+       }
     }
     if (!scalar @volume && !$refresh && !$self->readonly
             && time - ($self->{_time_refreshed} or 0) > 60) {
@@ -263,13 +355,71 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     return @volume;
 }
 
+sub refresh_storage_pools($self) {
+    $self->_refresh_storage_pools();
+}
+
 sub _refresh_storage_pools($self) {
-    for my $pool ($self->vm->list_storage_pools) {
-        eval { $pool->refresh() };
-        last if !$@;
-        warn $@ if $@ !~ /pool .* has asynchronous jobs running/;
-        sleep 1;
+    for my $pool (_list_storage_pools($self->vm)) {
+        for ( 1 .. 10 ) {
+            eval { $pool->refresh() };
+            last if !$@;
+            warn $@ if $@ !~ /pool .* has asynchronous jobs running/;
+            sleep 1;
+        }
     }
+}
+
+=head2 refresh_storage
+
+Refreshes all the storage pools
+
+=cut
+
+sub refresh_storage($self) {
+    $self->_refresh_storage_pools();
+    $self->_refresh_isos();
+}
+
+sub _refresh_isos($self) {
+    $self->_init_connector();
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM iso_images ORDER BY name"
+    );
+    my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE iso_images set device=? WHERE id=?");
+
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+
+        if ( $row->{device} && !-e $row->{device} ) {
+            delete $row->{device};
+            $sth_update->execute($row->{device}, $row->{id});
+            next;
+        }
+        next if $row->{device};
+        next if !$row->{url};
+
+        my $file_re = $row->{file_re};
+        my ($file);
+        ($file) = $row->{url} =~ m{.*/(.*)}   if $row->{url};
+        $file = $row->{rename_file} if $row->{rename_file};
+
+        $file_re = "^$file\$" if $file;
+
+        if (!$file_re) {
+            warn "Error: ISO mismatch ".Dumper($row);
+            next;
+        }
+        $file_re = "$file_re\$" unless $file_re =~ /\$$/;
+        $file_re = "^$file_re"  unless $file_re =~ /^\$/;
+
+        my $iso_file = $self->search_volume_path_re(qr($file_re));
+        if ($iso_file) {
+            $row->{device} = $iso_file;
+        }
+        $sth_update->execute($row->{device}, $row->{id}) if $row->{device};
+    }
+    $sth->finish;
 }
 
 =head2 search_volume_path_re
@@ -317,6 +467,53 @@ sub dir_img {
     return $dir;
 }
 
+=head2 dir_base
+
+Returns the directory where base images are stored in this Virtual Manager
+
+=cut
+
+
+sub dir_base($self, $volume_size) {
+    my $pool_base = $self->default_storage_pool_name;
+    $pool_base = $self->base_storage_pool()    if $self->base_storage_pool();
+    $pool_base = $self->storage_pool()         if !$pool_base;
+
+    $self->_check_free_disk($volume_size * 2, $pool_base);
+    return $self->_storage_path($pool_base);
+
+}
+
+=head2 dir_clone
+
+Returns the directory where clone images are stored in this Virtual Manager
+
+=cut
+
+
+sub dir_clone($self) {
+
+    my $dir_img  = $self->dir_img;
+    my $clone_pool = $self->clone_storage_pool();
+    $dir_img = $self->_storage_path($clone_pool) if $clone_pool;
+
+    return $dir_img;
+}
+
+sub _storage_path($self, $storage) {
+    if (!ref($storage)) {
+        $storage = $self->vm->get_storage_pool_by_name($storage);
+    }
+    my $xml = XML::LibXML->load_xml(string => $storage->get_xml_description());
+
+    my $dir = $xml->findnodes('/pool/target/path/text()');
+    die "I can't find /pool/target/path in ".$xml->toString
+        if !$dir;
+
+    return $dir;
+
+}
+
 sub _create_default_pool {
     my $self = shift;
     my $vm = shift;
@@ -346,9 +543,13 @@ sub _create_default_pool {
   </target>
 </pool>"
 ;
-    my $pool = $vm->define_storage_pool($xml);
-    $pool->create();
-    $pool->set_autostart(1);
+    my $pool;
+    eval {
+        $pool = $vm->define_storage_pool($xml);
+        $pool->create();
+        $pool->set_autostart(1);
+    };
+    warn $@ if $@;
 
 }
 
@@ -374,7 +575,7 @@ sub create_domain {
 
     croak "argument name required"       if !$args{name};
     croak "argument id_owner required"   if !$args{id_owner};
-    croak "argument id_iso or id_base required ".Dumper(\%args)
+    confess "argument id_iso or id_base required ".Dumper(\%args)
         if !$args{id_iso} && !$args{id_base};
 
     my $domain;
@@ -397,35 +598,64 @@ Returns true or false if domain exists.
 
 =cut
 
-sub search_domain {
-    my $self = shift;
-    my $name = shift or confess "Missing name";
+sub search_domain($self, $name, $force=undef) {
 
-    $self->connect();
-    my @all_domains;
-    eval { @all_domains = $self->vm->list_all_domains() };
-    confess $@ if $@;
+    eval {
+        $self->connect();
+    };
+    if ($@ && $@ =~ /libvirt error code: 38,/) {
+        warn $@;
+        if (!$self->is_local) {
+            warn "DISABLING NODE ".$self->name;
+            $self->enabled(0);
+        }
+        return;
+    }
 
-    for my $dom (@all_domains) {
-        next if $dom->get_name ne $name;
+    my $dom;
+    eval { $dom = $self->vm->get_domain_by_name($name); };
+    my $error = $@;
+    return if $error =~  /error code: 42,/ && !$force;
 
-        my $domain;
+    if ($error && $error =~ /libvirt error code: 38,/ ) {
+        eval {
+            $self->disconnect;
+            $self->connect;
+        };
+        confess "Error connecting to ".$self->name." $@" if $@;
+        eval { $dom = $self->vm->get_domain_by_name($name); };
+        confess $@ if $@ && $@ !~  /error code: 42,/;
+    } elsif ($error && $error !~ /error code: 42,/) {
+        confess $error;
+    }
 
+    if (!$dom) {
+        return if !$force;
+        return if !$self->_domain_in_db($name);
+    }
+
+    my $domain;
+
+        my @domain = ( );
+        push @domain, ( domain => $dom ) if $dom;
+        push @domain, ( id_owner => $Ravada::USER_DAEMON->id)
+            if $force && !$self->_domain_in_db($name);
         eval {
             $domain = Ravada::Domain::KVM->new(
-                domain => $dom
+                @domain
+                ,name => $name
                 ,readonly => $self->readonly
                 ,_vm => $self
             );
         };
         warn $@ if $@;
         if ($domain) {
+            $domain->xml_description()  if $dom && $domain->is_known();
             return $domain;
         }
-    }
+
     return;
 }
-
 
 =head2 list_domains
 
@@ -437,21 +667,30 @@ Returns a list of the created domains
 
 sub list_domains {
     my $self = shift;
+    my %args = @_;
 
-    confess "Missing vm" if !$self->vm;
+    return if !$self->vm;
+
+    my $active = (delete $args{active} or 0);
+    my $read_only = delete $args{read_only};
+
+    confess "Arguments unknown ".Dumper(\%args)  if keys %args;
+
+    my $query = "SELECT id, name FROM domains WHERE id_vm = ? ";
+    $query .= " AND status = 'active' " if $active;
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+
+    $sth->execute( $self->id );
     my @list;
-    my @domains = $self->vm->list_all_domains();
-    for my $name (@domains) {
-        my $domain ;
-        my $id;
-        $domain = Ravada::Domain::KVM->new(
-                          domain => $name
-                        ,_vm => $self
-        );
-        next if !$domain->is_known();
-        $id = $domain->id();
-        warn $@ if $@ && $@ !~ /No DB info/i;
-        push @list,($domain) if $domain && $id;
+    while ( my ($id) = $sth->fetchrow) {
+        my $domain;
+        if ($read_only) {
+            $domain = Ravada::Front::Domain->open( $id );
+        } else {
+            $domain = Ravada::Domain->open( id => $id, vm => $self);
+        }
+        push @list,($domain) if $domain;
     }
     return @list;
 }
@@ -470,12 +709,26 @@ sub create_volume {
     confess "Wrong arrs " if scalar @_ % 2;
     my %args = @_;
 
-    my ($name, $file_xml, $size, $capacity, $allocation, $swap, $path)
-        = @args{qw(name xml size capacity allocation swap path)};
+    my $name = delete $args{name}       or confess "ERROR: Missing volume name";
+    my $file_xml = delete $args{xml}   or confess "ERROR: Missing XML template";
 
-    confess "Missing volume name"   if !$name;
-    confess "Missing xml template"  if !$file_xml;
-    confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+$/);
+    my $size        = delete $args{size};
+    $size = int($size) if defined $size;
+    my $type        =(delete $args{type} or 'sys');
+    my $format      =(delete $args{format} or 'qcow2');
+    my $swap        =(delete $args{swap} or 0);
+    my $target      = delete $args{target};
+    my $capacity    = delete $args{capacity};
+    my $allocation  = delete $args{allocation};
+
+    confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
+    confess "Error: type $type can't have swap flag" if $args{swap} && $type ne 'swap';
+
+    confess "Invalid size"          if defined $size && ( $size == 0 || $size !~ /^\d+(\.\d+)?$/);
+
+    confess "Invalid capacity"
+        if defined $capacity && ( $capacity == 0 || $capacity !~ /^\d+$/);
+
     confess "Capacity and size are the same, give only one of them"
         if defined $capacity && defined $size;
 
@@ -489,22 +742,37 @@ sub create_volume {
     eval { $doc = $XML->load_xml(IO => $fh) };
     die "ERROR reading $file_xml $@"    if $@;
 
-    my $img_file = ($path or $self->_volume_path(@_));
+    my $storage_pool = $self->storage_pool();
+
+    confess $name if $name =~ /-\w{4}-vd[a-z]-\w{4}\./
+        || $name =~ /\d-vd[a-z]\./;
+
+    my $img_file = $self->_volume_path(
+        target => $target
+        , type => $type
+        , name => $name
+        , format => $format
+        , storage => $storage_pool
+    );
+
+    confess if $img_file =~ /\d-vd[a-z]\./;
     my ($volume_name) = $img_file =~m{.*/(.*)};
     $doc->findnodes('/volume/name/text()')->[0]->setData($volume_name);
     $doc->findnodes('/volume/key/text()')->[0]->setData($img_file);
+    my ($format_doc) = $doc->findnodes('/volume/target/format');
+    $format_doc->setAttribute(type => $format);
     $doc->findnodes('/volume/target/path/text()')->[0]->setData(
                         $img_file);
 
     if ($capacity) {
-        confess "Size '$capacity' too small" if $capacity< 1024*512;
-        $doc->findnodes('/volume/allocation/text()')->[0]->setData($allocation);
+        confess "Size '$capacity' too small, min : $MIN_CAPACITY"
+        if $capacity< $MIN_CAPACITY;
+        $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($allocation));
         $doc->findnodes('/volume/capacity/text()')->[0]->setData($capacity);
     }
-    my $vol = $self->storage_pool->create_volume($doc->toString);
-    die "volume $img_file does not exists after creating volume "
-            .$doc->toString()
-            if ! -e $img_file;
+    my $vol = $self->storage_pool->create_volume($doc->toString)
+        or die "volume $img_file does not exists after creating volume on ".$self->name." "
+            .$doc->toString();
 
     return $img_file;
 
@@ -514,18 +782,18 @@ sub _volume_path {
     my $self = shift;
 
     my %args = @_;
-    my $target = $args{target};
-    my $dir_img = $self->dir_img();
-    my $suffix = ".img";
-    $suffix = ".SWAP.img"   if $args{swap};
-    my $filename = $args{name};
-    $filename .= "-$target" if $target;
-    my (undef, $img_file) = tempfile($filename."-XXXX"
-        ,DIR => $dir_img
-        ,OPEN => 0
-        ,SUFFIX => $suffix
-    );
-    return $img_file;
+    my $type = (delete $args{type} or 'sys');
+    my $storage  = delete $args{storage} or confess "ERROR: Missing storage";
+    my $filename = $args{name}  or confess "ERROR: Missing name";
+    my $target = delete $args{target};
+    my $format = delete $args{format};
+
+    my $dir_img = $self->_storage_path($storage);
+    my $suffix = "qcow2";
+    $suffix = 'img' if $format && $format eq 'raw';
+    $type = ''  if $type eq 'sys';
+    $type = uc($type)."."   if $type;
+    return "$dir_img/$filename.$type$suffix";
 }
 
 sub _domain_create_from_iso {
@@ -538,7 +806,8 @@ sub _domain_create_from_iso {
             if !$args{$_};
     }
     my $remove_cpu = delete $args2{remove_cpu};
-    for (qw(disk swap active request vm memory iso_file id_template)) {
+    for (qw(disk swap active request vm memory iso_file id_template volatile spice_password
+            listen_ip)) {
         delete $args2{$_};
     }
 
@@ -550,7 +819,6 @@ sub _domain_create_from_iso {
         if $self->search_domain($args{name});
 
     my $vm = $self->vm;
-    my $storage = $self->storage_pool;
     my $iso = $self->_search_iso($args{id_iso} , $iso_file);
 
     die "ERROR: Empty field 'xml_volume' in iso_image ".Dumper($iso)
@@ -559,7 +827,7 @@ sub _domain_create_from_iso {
     my $device_cdrom;
 
     confess "Template ".$iso->{name}." has no URL, iso_file argument required."
-        if !$iso->{url} && !$iso_file;
+        if !$iso->{url} && !$iso_file && !$iso->{device};
 
     if ($iso_file) {
         if ( $iso_file ne "<NONE>") {
@@ -583,7 +851,7 @@ sub _domain_create_from_iso {
     my $file_xml =  $DIR_XML."/".$iso->{xml_volume};
 
     my $device_disk = $self->create_volume(
-          name => $args{name}
+          name => "$args{name}-vda-".Ravada::Utils::random_name(4)
          , xml => $file_xml
         , size => $disk_size
         ,target => 'vda'
@@ -601,8 +869,15 @@ sub _domain_create_from_iso {
     $self->_xml_modify_usb($xml);
     _xml_modify_video($xml);
 
-    my $domain = $self->_domain_create_common($xml,%args);
-    $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner});
+    my ($domain, $spice_password)
+        = $self->_domain_create_common($xml,%args);
+    $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner}
+        , id_vm => $self->id
+    );
+
+    $domain->_set_spice_password($spice_password)
+        if $spice_password;
+    $domain->xml_description();
 
     return $domain;
 }
@@ -612,22 +887,47 @@ sub _domain_create_common {
     my $xml = shift;
     my %args = @_;
 
+    my $id_owner = delete $args{id_owner} or confess "ERROR: The id_owner is mandatory";
+    my $is_volatile = delete $args{is_volatile};
+    my $listen_ip = delete $args{listen_ip};
+    my $spice_password = delete $args{spice_password};
+    my $user = Ravada::Auth::SQL->search_by_id($id_owner)
+        or confess "ERROR: User id $id_owner doesn't exist";
+
     $self->_xml_modify_memory($xml,$args{memory})   if $args{memory};
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
     $self->_xml_modify_mac($xml);
-    $self->_xml_modify_uuid($xml);
-    $self->_xml_modify_spice_port($xml);
+    my $uuid = $self->_xml_modify_uuid($xml);
+    $self->_xml_modify_spice_port($xml, $spice_password, $listen_ip);
     $self->_fix_pci_slots($xml);
+    $self->_xml_add_guest_agent($xml);
+    $self->_xml_clean_machine_type($xml) if !$self->is_local;
+    $self->_xml_add_sysinfo_entry($xml, hostname => $args{name});
 
     my $dom;
 
-    eval {
-        $dom = $self->vm->define_domain($xml->toString());
-        $dom->create if $args{active};
-    };
+    for ( 1 .. 10 ) {
+        eval {
+            if ($user->is_temporary || $is_volatile ) {
+                $dom = $self->vm->create_domain($xml->toString());
+            } else {
+                $dom = $self->vm->define_domain($xml->toString());
+                $dom->create if $args{active};
+            }
+        };
+
+        last if !$@;
+        if ($@ =~ /libvirt error code: 9, .*already defined with uuid/) {
+            $self->_xml_modify_uuid($xml);
+        } elsif ($@ =~ /libvirt error code: 1, .* pool .* asynchronous/) {
+            sleep 1;
+        } else {
+            last ;
+        }
+    }
     if ($@) {
         my $out;
-		warn $@;
+		warn $self->name."\n".$@;
         my $name_out = "/var/tmp/$args{name}.xml";
         warn "Dumping $name_out";
         open $out,">",$name_out and do {
@@ -635,24 +935,20 @@ sub _domain_create_common {
         };
         close $out;
         warn "$! $name_out" if !$out;
-        die $@ if !$dom;
+        confess $@;# if !$dom;
     }
 
     my $domain = Ravada::Domain::KVM->new(
               _vm => $self
          , domain => $dom
         , storage => $self->storage_pool
+       , id_owner => $id_owner
     );
-
-    return $domain;
+    return ($domain, $spice_password);
 }
 
 sub _create_disk {
     return _create_disk_qcow2(@_);
-}
-
-sub _create_swap_disk {
-    return _create_disk_raw(@_);
 }
 
 sub _create_disk_qcow2 {
@@ -662,63 +958,17 @@ sub _create_disk_qcow2 {
     confess "Missing base" if !$base;
     confess "Missing name" if !$name;
 
-    my $dir_img  = $self->dir_img;
-
     my @files_out;
 
     for my $file_data ( $base->list_files_base_target ) {
         my ($file_base,$target) = @$file_data;
-        my $ext = ".qcow2";
-        $ext = ".SWAP.qcow2" if $file_base =~ /\.SWAP\.ro\.\w+$/;
-        my $file_out = "$dir_img/$name-".($target or _random_name(2))
-            ."-"._random_name(2).$ext;
-
-        $self->_clone_disk($file_base, $file_out);
-        push @files_out,($file_out);
-    }
-    return @files_out;
-
-}
-
-# this may become official API eventually
-
-sub _clone_disk($self, $file_base, $file_out) {
-
-        my @cmd = ('qemu-img','create'
-                ,'-f','qcow2'
-                ,"-b", $file_base
-                ,$file_out
+        my $vol_base = Ravada::Volume->new(
+            file => $file_base
+            ,is_base => 1
+            ,vm => $self
         );
-
-        my ($in, $out, $err);
-        run3(\@cmd,\$in,\$out,\$err);
-
-        if (! -e $file_out) {
-            warn "ERROR: Output file $file_out not created at ".join(" ",@cmd)."\n$err\n$out\n";
-            exit;
-        }
-
-}
-
-sub _create_disk_raw {
-    my $self = shift;
-    my ($base, $name) = @_;
-
-    confess "Missing base" if !$base;
-    confess "Missing name" if !$name;
-
-    my $dir_img  = $self->dir_img;
-
-    my @files_out;
-
-    for my $file_base ( $base->list_files_base ) {
-        next unless $file_base =~ /SWAP\.img$/;
-        my $file_out = $file_base;
-        $file_out =~ s/\.ro\.\w+$//;
-        $file_out =~ s/-.*(img|qcow\d?)//;
-        $file_out .= ".$name-".Ravada::Utils::random_name(4).".SWAP.img";
-
-        push @files_out,($file_out);
+        my $clone = $vol_base->clone(name => "$name-$target");
+        push @files_out,($clone->file);
     }
     return @files_out;
 
@@ -745,12 +995,15 @@ sub _domain_create_from_base {
     confess "argument id_base or base required ".Dumper(\%args)
         if !$args{id_base} && !$args{base};
 
-    die "Domain $args{name} already exists"
+    confess "Domain $args{name} already exists"
         if $self->search_domain($args{name});
 
     my $base = $args{base};
+    my $with_cd = delete $args{with_cd};
 
-    $base = $self->_search_domain_by_id($args{id_base}) if $args{id_base};
+    my $vm_local = $self;
+    $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
+    $base = $vm_local->_search_domain_by_id($args{id_base}) if $args{id_base};
     confess "Unknown base id: $args{id_base}" if !$base;
 
     my $vm = $self->vm;
@@ -761,14 +1014,22 @@ sub _domain_create_from_base {
 
     my @device_disk = $self->_create_disk($base, $args{name});
 #    _xml_modify_cdrom($xml);
-    _xml_remove_cdrom($xml);
+    if ( !defined $with_cd ) {
+        $with_cd = grep (/\.iso$/ ,@device_disk);
+    }
+    _xml_remove_cdrom($xml) if !$with_cd;
     my ($node_name) = $xml->findnodes('/domain/name/text()');
     $node_name->setData($args{name});
 
     _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
 
-    my $domain = $self->_domain_create_common($xml,%args);
-    $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner});
+    my ($domain, $spice_password)
+        = $self->_domain_create_common($xml,%args, is_volatile => $base->volatile_clones);
+    $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner}
+        , id_vm => $self->id
+    );
+    $domain->_set_spice_password($spice_password);
+    $domain->xml_description();
     return $domain;
 }
 
@@ -817,10 +1078,7 @@ sub _fix_pci_slots {
 
 }
 
-sub _iso_name {
-    my $self = shift;
-    my $iso = shift;
-    my $req = shift;
+sub _iso_name($self, $iso, $req, $verbose=1) {
 
     my $iso_name;
     if ($iso->{rename_file}) {
@@ -835,7 +1093,7 @@ sub _iso_name {
     my $device = ($iso->{device} or $self->dir_img."/$iso_name");
 
     confess "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
-        if !$iso->{md5} && !$iso->{sha256};
+        if $VERIFY_ISO && $iso->{url} && !$iso->{md5} && !$iso->{sha256};
 
     my $downloaded = 0;
     if (! -e $device || ! -s $device) {
@@ -843,13 +1101,26 @@ sub _iso_name {
                 ,"Downloading ISO file for $iso_name "
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
-        _download_file_external($iso->{url}, $device);
+        _fill_url($iso);
+        return if $req && $req->defined_arg('test');
+        my $url = $self->_download_file_external($iso->{url}, $device, $verbose);
         $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
             if ! -e $device;
 
         my $verified = 0;
         for my $check ( qw(md5 sha256)) {
+            if (!$iso->{$check} && $iso->{"${check}_url"}) {
+                my ($url_path,$url_file);
+                if ( $url =~ m{/$} ) {
+                    $url_path = $url;
+                    $url_file = $iso->{filename};
+                } else {
+                    ($url_path,$url_file) = $url =~ m{(.*)/(.+)};
+                }
+                $iso->{"${check}_url"} =~ s/(.*)\$url(.*)/$1$url_path$2/;
+                $self->_fetch_this($iso,$check,$url_file);
+            }
             next if !$iso->{$check};
 
             die "Download failed, $check id=$iso->{id} missmatched for $device."
@@ -858,7 +1129,7 @@ sub _iso_name {
             if (! _check_signature($device, $check, $iso->{$check}));
             $verified++;
         }
-        warn "WARNING: $device signature not verified"    if !$verified;
+        die "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
 
         $req->status("done","File $iso->{filename} downloaded") if $req;
         $downloaded = 1;
@@ -869,7 +1140,19 @@ sub _iso_name {
         );
         $sth->execute($device,$iso->{id});
     }
+    $self->_refresh_storage_pools();
     return $device;
+}
+
+sub _fill_url($iso) {
+    return if $iso->{url} =~ m{.*/[^/]+\.[^/]+$};
+    if ($iso->{file_re}) {
+        $iso->{url} .= "/" if $iso->{url} !~ m{/$};
+        $iso->{url} .= $iso->{file_re};
+        $iso->{filename} = '';
+        return;
+    }
+    confess "Error: Missing field file_re for ".$iso->{name};
 }
 
 sub _check_md5 {
@@ -920,96 +1203,60 @@ sub _check_signature($file, $type, $expected) {
     die "Unknown signature type $type";
 }
 
-sub _download_file_lwp_progress {
-    my( $data, $response, $proto ) = @_;
-    print $DOWNLOAD_FH $data; # write data to file
-    $DOWNLOAD_TOTAL += length($data);
-    my $size = $response->header('Content-Length');
-    warn floor(($DOWNLOAD_TOTAL/$size)*100),"% downloaded\n"; # print percent downloaded
-}
-
-sub _download_file_lwp {
-    my ($url_req, $device) = @_;
-
-    unlink $device or die "$! $device" if -e $device;
-
-    $DOWNLOAD_FH = undef;
-    $DOWNLOAD_TOTAL = 0;
-    sysopen($DOWNLOAD_FH, $device, O_WRONLY|O_EXCL|O_CREAT) ||
-		      die "Can't open $device $!";
-
-    my $ua = LWP::UserAgent->new(keep_alive => 1);
-
-
-    my $url = URI->new(decode(locale => $url_req)) or die "Error decoding $url_req";
-    warn $url;
-
-    my $res = $ua->request(HTTP::Request->new(GET => $url)
-        ,sub {
-            my ($data, $response) = @_;
-
-            unless (fileno $DOWNLOAD_FH) {
-                open $DOWNLOAD_FH,">",$device || die "Can't open $device $!\n";
-            }
-            binmode($DOWNLOAD_FH);
-            print $DOWNLOAD_FH $data or die "Can't write to $device: $!\n";
-            $DOWNLOAD_TOTAL += length($data);
-            my $size = $response->header('Content-Length');
-            warn floor(($DOWNLOAD_TOTAL/$size)*100),"% downloaded\n"; # print percent downloaded
-        }
-    );
-    close $DOWNLOAD_FH or die "$! $device";
-
-    close $DOWNLOAD_FH if fileno($DOWNLOAD_FH);
-    $DOWNLOAD_FH = undef;
-
-    warn $res->status_line;
-}
-
-sub _download_file_external {
-    my ($url,$device) = @_;
+sub _download_file_external($self, $url, $device, $verbose=1) {
+    $url .= "/" if $url !~ m{/$} && $url !~ m{.*/([^/]+\.[^/]+)$};
+    if ($url =~ m{[^*]}) {
+        my @found = $self->_search_url_file($url);
+        confess "No match for $url" if !scalar @found;
+        $url = $found[-1];
+    }
+    if ( $url =~ m{/$} ) {
+        my ($filename) = $device =~ m{.*/(.*)};
+        $url = "$url$filename";
+    }
     confess "ERROR: wget missing"   if !$WGET;
     my @cmd = ($WGET,'-nv',$url,'-O',$device);
     my ($in,$out,$err) = @_;
-    warn join(" ",@cmd)."\n";
+    warn join(" ",@cmd)."\n"    if $verbose;
     run3(\@cmd,\$in,\$out,\$err);
-    warn "out=$out" if $out;
-    warn "err=$err" if $err;
+    warn "out=$out" if $out && $verbose;
+    warn "err=$err" if $err && $verbose;
     print $out if $out;
     chmod 0755,$device or die "$! chmod 0755 $device"
         if -e $device;
 
-    return if !$err;
+    return $url if !$err;
 
     if ($err && $err =~ m{\[(\d+)/(\d+)\]}) {
         if ( $1 != $2 ) {
             unlink $device or die "$! $device" if -e $device;
             die "ERROR: Expecting $1 , got $2.\n$err"
         }
-        return;
+        return $url;
     }
     unlink $device or die "$! $device" if -e $device;
     die $err;
 }
 
-sub _search_iso {
-    my $self = shift;
-    my $id_iso = shift or croak "Missing id_iso";
-    my $file_iso = shift;
-
+sub _search_iso($self, $id_iso, $file_iso=undef) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE id = ?");
     $sth->execute($id_iso);
     my $row = $sth->fetchrow_hashref;
     die "Missing iso_image id=$id_iso" if !keys %$row;
 
-    return $row if $file_iso;
+    return $row if $file_iso && -e $file_iso;
 
+    if ( $row->{device} && -e $row->{device} ) {
+        ($row->{filename}) = $row->{device} =~ m{.*/(.*)};
+    }
     $self->_fetch_filename($row);#    if $row->{file_re};
-    $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
-    $self->_fetch_sha256($row)         if !$row->{sha256} && $row->{sha256_url};
+    if ($VERIFY_ISO) {
+        $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
+        $self->_fetch_sha256($row)         if !$row->{sha256} && $row->{sha256_url};
+    }
 
     if ( !$row->{device} && $row->{filename}) {
-        if (my $volume = $self->search_volume($row->{filename})) {
+        if (my $volume = $self->search_volume_re(qr("^".$row->{filename}))) {
             $row->{device} = $volume->get_path;
             my $sth = $$CONNECTOR->dbh->prepare(
                 "UPDATE iso_images SET device=? WHERE id=?"
@@ -1017,23 +1264,58 @@ sub _search_iso {
             $sth->execute($volume->get_path, $row->{id});
         }
     }
+    my $rename_file = $row->{rename_file};
+
     return $row;
 }
 
 sub _download($self, $url) {
-    confess "Wrong url '$url'" if $url =~ m{\*};
+    $url =~ s{(http://.*)//(.*)}{$1/$2};
+    if ($url =~ m{[^*]}) {
+        my @found = $self->_search_url_file($url);
+        confess "No match for $url" if !scalar @found;
+        $url = $found[-1];
+    }
+
     my $cache;
-    $cache = $self->_cache_get($url) if $CACHE_DOWNLOAD && $url !~ m{^http.?://localhost};
+    $cache = $self->_cache_get($url) if $CACHE_DOWNLOAD;# && $url !~ m{^http.?://localhost};
     return $cache if $cache;
 
-    my $ua = new LWP::UserAgent;
-    $ua->env_proxy;
-    my $req = HTTP::Request->new( GET => $url);
-    my $res = $ua->request($req);
+    my $ua = $self->_web_user_agent();
+    my $res;
+    for ( 1 .. 10 ) {
+        eval { $res = $ua->get($url)->res};
+        last if $res;
+    }
+    die $@ if $@;
+    confess "ERROR ".$res->code." ".$res->message." : $url"
+        unless $res->code == 200 || $res->code == 301;
 
-    confess $res->status_line." $url" if !$res->is_success;
+    return $self->_cache_store($url,$res->body);
+}
 
-    return $self->_cache_store($url,$res->content);
+sub _match_url($self,$url) {
+    return $url if $url !~ m{\*|\+};
+
+    my ($url1, $match,$url2) = $url =~ m{(.*/)([^/]*[*+][^/]*)/?(.*)};
+    $url2 = '' if !$url2;
+
+    confess "No url1 from $url" if !defined $url1;
+    my $ua = Mojo::UserAgent->new;
+    my $res = $ua->get(($url1 or '/'))->res;
+    confess "ERROR ".$res->code." ".$res->message." : $url1"
+        unless $res->code == 200 || $res->code == 301;
+
+    my @found;
+    my $links = $res->dom->find('a')->map( attr => 'href');
+    for my $link (@$links) {
+        next if !defined $link;
+        $link =~ s{/$}{};
+        next if $link !~ qr($match);
+        my $new_url = "$url1$link/$url2";
+        push @found,($self->_match_url($new_url));
+    }
+    return @found;
 }
 
 sub _cache_get($self, $url) {
@@ -1067,13 +1349,21 @@ sub _cache_filename($url) {
     $file =~ tr{a-zA-Z0-9_-}{_}c;
     $file =~ s/__+/_/g;
 
-    return "/var/tmp/$file";
+    my ($user) = getpwuid($>);
+    my $dir = "/var/tmp/$user/ravada_cache/";
+    make_path($dir)    if ! -e $dir;
+    return "$dir/$file";
 }
 
 sub _fetch_filename {
     my $self = shift;
     my $row = shift;
 
+    if (!$row->{file_re} && !$row->{url} && $row->{device}) {
+         my ($file) = $row->{device} =~ m{.*/(.*)};
+         $row->{filename} = $file;
+         return;
+    }
     return if !$row->{file_re} && !$row->{url} && !$row->{device};
     if (!$row->{file_re}) {
         my ($new_url, $file);
@@ -1083,71 +1373,127 @@ sub _fetch_filename {
         confess "No filename in $row->{name} $row->{url}" if !$file;
 
         $row->{url} = $new_url;
-        $row->{file_re} = $file;
+        $row->{file_re} = "^$file";
     }
     confess "No file_re" if !$row->{file_re};
+    $row->{file_re} .= '$'  if $row->{file_re} !~ m{\$$};
 
-    my $file;
-
-    my $content = $self->_download($row->{url});
-    my $lines = '';
-    for my $line (split/\n/,$content) {
-        next if $line !~ /iso"/;
-        $lines .= "$line\n";
-        my ($found) = $line =~ qr/"($row->{file_re})"/;
-        next if !$found;
-        $file=$found if $found;
+    my @found;
+    if ($row->{rename_file}) {
+        @found = $self->search_volume_re(qr("^".$row->{rename_file}));
+    } else {
+        @found = $self->search_volume_re(qr($row->{file_re}));
     }
-    die "No ".qr($row->{file_re})." found on $row->{url}<br><pre>$content</pre>"   if !$file;
+    if (@found) {
+        $row->{device} = $found[0]->get_path;
+        ($row->{filename}) = $found[0]->get_path =~ m{.*/(.*)};
+        return;
+    } else {
+        @found = $self->_search_url_file($row->{url}, $row->{file_re}) if !@found;
+        die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
+    }
 
+    my $url = $found[-1];
+    my ($file) = $url =~ m{.*/(.*)};
+
+    $row->{url} = $url;
     $row->{filename} = ($row->{rename_file} or $file);
-    $row->{url} .= "/" if $row->{url} !~ m{/$};
-    $row->{url} .= $file;
+
+#    $row->{url} .= "/" if $row->{url} !~ m{/$};
+#    $row->{url} .= $file;
 }
 
-sub _expand_url($self, $url, $file) {
-    my $ua = new LWP::UserAgent;
-    my $res = $ua->request(HTTP::Request->new(GET => $url));
-    return if !$res->is_success;
+sub _search_url_file($self, $url_re, $file_re=undef) {
 
-    for my $line (split /\n/,$res->content ) {
-        my ($found) = $line =~ qr/<a href="($file)"/;
-        return "$url/$found" if $found;
+    if (!$file_re) {
+        my $old_url_re = $url_re;
+        ($url_re, $file_re) = $old_url_re =~ m{(.*)/(.*)};
+        confess "ERROR: Missing file part in $old_url_re"
+            if !$file_re;
     }
-    die "$file not found in $url";
-    return;
 
+    $file_re .= '$' if $file_re !~ m{\$$};
+    my @found;
+    for my $url ($self->_match_url($url_re)) {
+        push @found,
+        $self->_match_file($url, $file_re);
+    }
+    return (sort @found);
+}
+sub _web_user_agent($self) {
+
+    my $ua = Mojo::UserAgent->new();
+
+    $ua->max_redirects(3);
+    $ua->proxy->detect;
+
+    return $ua;
 }
 
-sub _fetch_this($self,$row,$type){
+sub _match_file($self, $url, $file_re) {
 
-    my ($file) = $row->{url} =~ m{.*/(.*)};
-    confess "No file for $row->{url}"   if !$file;
+    $url .= '/' if $url !~ m{/$};
 
+    my $res;
+    for ( 1 .. 10 ) {
+        eval { $res = $self->_web_user_agent->get($url)->res(); };
+        last if !$@ && $res && defined $res->code;
+        next if $@ && $@ =~ /timeout/i;
+        confess $@ if $@;
+    }
+
+    return unless defined $res->code &&  $res->code == 200 || $res->code == 301;
+
+    my $dom= $res->dom;
+
+    my @found;
+
+    my $links = $dom->find('a')->map( attr => 'href');
+    for my $link (@$links) {
+        next if !defined $link || $link !~ qr($file_re);
+        push @found, ($url.$link);
+    }
+    return @found;
+}
+
+sub _fetch_this($self, $row, $type, $file = $row->{filename}){
+
+    confess "Error: missing file or filename ".Dumper($row) if !$file;
+
+    $file=~ s{.*/(.+)}{$1} if $file =~ m{/} && $file !~ m{/$};
+
+    my ($url, $file2) = $row->{url} =~ m{(.*)/(.+)};
+    $url = $row->{url} if $row->{url} =~ m{/$};
     my $url_orig = $row->{"${type}_url"};
+    $file = $file2 if $file2 && $file2 !~ /\*|\^/ && $file2 !~ m{/$};
 
-    if ($url_orig =~ m{\*}) {
-        my ($url,$file) = $url_orig =~ m{(\w+://.*)/(.*)};
-        my $url_expanded = $self->_expand_url($url, $file);
-        $row->{"${type}_url"} = $url_expanded;
-        my $sth = $$CONNECTOR->dbh->prepare(
-                "UPDATE iso_images SET ${type}_url =? WHERE id=?"
-        );
-        $sth->execute($url_expanded,$row->{id});
+    $url_orig =~ s{(.*)\$url(.*)}{$1$url$2}  if $url_orig =~ /\$url/;
 
-    }
-    my $content = $self->_download($row->{"${type}_url"});
+    confess "error: file missing '$file' ".Dumper($row) if $file =~ m{/$};
+    confess "error " if $url_orig =~ /\$/;
+
+    my $content = $self->_download($url_orig);
 
     for my $line (split/\n/,$content) {
-        my ($value) = $line =~ m{^\s*([a-f0-9]+)\s+.*?$file};
-        ($value) = $line =~ m{$file.* ([a-f0-9]+)}i if !$value;
+        next if $line =~ /^#/;
+        my $value;
+        ($value) = $line =~ m{$file.* ([a-f0-9]+)}i       if !$value;
+        ($value) = $line =~ m{\s*([a-f0-9]+).*$file}i     if !$value;
+        ($value) = $line =~ m{$file.* ([a-f0-9]+)}i       if !$value;
+        ($value) = $line =~ m{$file.* ([a-f0-9]+)}i       if !$value;
+        ($value) = $line =~ m{^\s*([a-f0-9]+)\s+.*?$file} if !$value;
         if ($value) {
             $row->{$type} = $value;
+            my $sth = $$CONNECTOR->dbh->prepare("UPDATE iso_images set $type = ? "
+                                                ." WHERE id = ? ");
+                                            $sth->execute($value, $row->{id});
             return $value;
         }
     }
 
-    confess "No $type for $file in ".$row->{"${type}_url"}."\n".$content;
+    confess "No $type for $file in ".$row->{"${type}_url"}."\n"
+        .$url_orig."\n"
+        .$content;
 }
 
 sub _fetch_md5($self,$row) {
@@ -1160,7 +1506,7 @@ sub _fetch_md5($self,$row) {
 
 sub _fetch_sha256($self,$row) {
     my $signature = $self->_fetch_this($row,'sha256');
-    die "ERROR: Wrong signature '$signature'"
+    confess "ERROR: Wrong signature '$signature'"
          if $signature !~ /^[0-9a-f]{9}/;
     return $signature;
 }
@@ -1217,15 +1563,15 @@ sub _xml_modify_video {
 
 }
 
-sub _xml_modify_spice_port {
-    my $self = shift;
-    my $doc = shift or confess "Missing XML doc";
+sub _xml_modify_spice_port($self, $doc, $password=undef, $listen_ip=$self->listen_ip) {
 
+    $listen_ip = $self->listen_ip if !defined $listen_ip;
     my ($graph) = $doc->findnodes('/domain/devices/graphics')
         or die "ERROR: I can't find graphic";
     $graph->setAttribute(type => 'spice');
     $graph->setAttribute(autoport => 'yes');
-    $graph->setAttribute(listen=> $self->ip() );
+    $graph->setAttribute(listen=> $listen_ip );
+    $graph->setAttribute(passwd => $password)    if $password;
 
     my ($listen) = $doc->findnodes('/domain/devices/graphics/listen');
 
@@ -1234,8 +1580,7 @@ sub _xml_modify_spice_port {
     }
 
     $listen->setAttribute(type => 'address');
-    $listen->setAttribute(address => $self->ip());
-
+    $listen->setAttribute(address => $listen_ip);
 }
 
 sub _xml_modify_uuid {
@@ -1243,24 +1588,42 @@ sub _xml_modify_uuid {
     my $doc = shift;
     my ($uuid) = $doc->findnodes('/domain/uuid/text()');
 
-    random:while (1) {
-        my $new_uuid = _new_uuid($uuid);
-        next if $new_uuid eq $uuid;
-        for my $dom ($self->vm->list_all_domains) {
-            next random if $dom->get_uuid_string eq $new_uuid;
-        }
-        $uuid->setData($new_uuid);
-        last;
-    }
+    my $new_uuid = $self->_unique_uuid($uuid);
+    $uuid->setData($new_uuid);
+
+    return $new_uuid;
 }
 
-sub _unique_uuid {
-    my ($self, $uuid, @uuids) = @_;
-    my ($first,$last) = $uuid =~ m{(.*)([0-9a-f]{6})};
+sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
+    my @uuids = @_;
+    if (!scalar @uuids) {
+        for my $dom ($self->vm->list_all_domains) {
+            eval { push @uuids,($dom->get_uuid_string) };
+            confess $@ if $@ && $@ !~ /^libvirt error code: 42,/;
+        }
+    }
+    my ($pre,$first,$last) = $uuid =~ m{^([0-9a0-f]{6})(.*)([0-9a-f]{6})$};
+    confess "I can't split model uuid '$uuid'" if !$first;
+
+    for my $domain ($self->vm->list_all_domains) {
+        eval { push @uuids,($domain->get_uuid_string) };
+        confess $@ if $@ && $@ !~ /^libvirt error code: 42,/;
+    }
 
     for (1..100) {
-        my $new_last = int(rand(0x100000));
-        my $new_uuid = sprintf("%s%06d",$first,$new_last);
+        my $new_pre = '';
+        $new_pre = sprintf("%x",int(rand(0x10))).$new_pre while length($new_pre)<6;
+
+        my $new_last = '';
+        $new_last = sprintf("%x",int(rand(0x10))).$new_last while length($new_last)<6;
+
+        my $new_uuid = "$new_pre$first$new_last";
+        die "Wrong length ".length($new_uuid)." should be ".length($uuid)
+            ."\n"
+            .$new_uuid
+            ."\n"
+            .$uuid
+        if length($new_uuid) != length($uuid);
 
         return $new_uuid if !grep /^$new_uuid$/,@uuids;
     }
@@ -1342,13 +1705,15 @@ sub _xml_modify_usb {
 #    $self->_xml_add_usb_uhci2($devices);
 #    $self->_xml_add_usb_uhci3($devices);
 
-    $self->_xml_add_usb_redirect($devices);
+    my $num_usb = 3;
+    $self->_xml_add_usb_redirect($devices, $num_usb);
 
 }
 
 sub _xml_add_usb_redirect {
     my $self = shift;
     my $devices = shift;
+    my $items = shift;
 
     my $dev=_search_xml(
           xml => $devices
@@ -1356,11 +1721,13 @@ sub _xml_add_usb_redirect {
         , bus => 'usb'
         ,type => 'spicevmc'
     );
-    return if $dev;
-
-    $dev = $devices->addNewChild(undef,'redirdev');
-    $dev->setAttribute( bus => 'usb');
-    $dev->setAttribute(type => 'spicevmc');
+    $items = $items - 1 if $dev;
+    
+    for (my $var = 0; $var < $items; $var++) {
+        $dev = $devices->addNewChild(undef,'redirdev');
+        $dev->setAttribute( bus => 'usb');
+        $dev->setAttribute(type => 'spicevmc');
+    }
 
 }
 
@@ -1542,7 +1909,65 @@ sub _xml_add_usb_uhci3 {
 
 }
 
+sub _xml_add_guest_agent {
+    my $self = shift;
+    my $doc = shift;
+    
+    my ($devices) = $doc->findnodes('/domain/devices');
+    
+    return if _search_xml(
+                            xml => $devices
+                            ,name => 'channel'
+                            ,type => 'unix'
+    );
+    
+    my $channel = $devices->addNewChild(undef,"channel");
+    $channel->setAttribute(type => 'unix');
+    
+    my $source = $channel->addNewChild(undef,'source');
+    $source->setAttribute(mode => 'bind');
+    
+    my $target = $channel->addNewChild(undef,'target');
+    $target->setAttribute(type => 'virtio');
+    $target->setAttribute(name => 'org.qemu.guest_agent.0');
+    
+}
 
+sub _xml_clean_machine_type($self, $doc) {
+    my ($os_type) = $doc->findnodes('/domain/os/type');
+    $os_type->setAttribute( machine => 'pc');
+}
+
+sub _xml_add_sysinfo($self,$doc) {
+    my ($smbios) = $doc->findnodes('/domain/os/smbios');
+    if (!$smbios) {
+        my ($os) = $doc->findnodes('/domain/os');
+        $smbios = $os->addNewChild(undef,'smbios');
+    }
+    $smbios->setAttribute(mode => 'sysinfo');
+
+}
+
+sub _xml_add_sysinfo_entry($self, $doc, $field, $value) {
+    $self->_xml_add_sysinfo($doc);
+    my ($oemstrings) = $doc->findnodes('/domain/sysinfo/oemStrings');
+    if (!$oemstrings) {
+        my ($domain) = $doc->findnodes('/domain');
+        my $sysinfo = $domain->addNewChild(undef,'sysinfo');
+        $sysinfo->setAttribute( type => 'smbios' );
+        $oemstrings = $sysinfo->addNewChild(undef,'oemStrings');
+    }
+    my @entries = $oemstrings->findnodes('entry');
+    my $hostname;
+    for (@entries) {
+        $hostname = $_ if $_->textContent =~ /^$field/;
+    }
+    if ($hostname) {
+        $oemstrings->removeChild($hostname);
+    }
+    ($hostname) = $oemstrings->addNewChild(undef,'entry');
+    $hostname->appendText("$field: $value");
+}
 
 sub _xml_remove_cdrom {
     my $doc = shift;
@@ -1576,9 +2001,9 @@ sub _xml_modify_disk {
   my $cont = 0;
   my $cont_swap = 0;
   for my $disk ($doc->findnodes('/domain/devices/disk')) {
-    next if $disk->getAttribute('device') ne 'disk';
 
     for my $child ($disk->childNodes) {
+        next if $disk->getAttribute('device') ne 'disk';
         if ($child->nodeName eq 'driver') {
             $child->setAttribute(type => 'qcow2');
         } elsif ($child->nodeName eq 'source') {
@@ -1601,11 +2026,15 @@ sub _unique_mac {
     $mac = lc($mac);
 
     for my $dom ($self->vm->list_all_domains) {
-        my $doc = $XML->load_xml(string => $dom->get_xml_description()) or die "ERROR: $!\n";
+        my $doc;
+        eval { $doc = $XML->load_xml(string => $dom->get_xml_description()) } ;
+        next if !$doc;
 
         for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
             my $nic_mac = $nic->getAttribute('address');
-            return 0 if $mac eq lc($nic_mac);
+            if ( $mac eq lc($nic_mac) ) {
+                return 0;
+            }
         }
     }
     return 1;
@@ -1620,43 +2049,57 @@ sub _new_uuid {
 
 }
 
+sub _read_used_macs($self) {
+    return if keys %USED_MAC;
+    for my $dom ($self->vm->list_all_domains) {
+        my $doc;
+        eval { $doc = $XML->load_xml(string => $dom->get_xml_description()) } ;
+        next if !$doc;
+
+        for my $nic ( $doc->findnodes('/domain/devices/interface/mac')) {
+            my $nic_mac = lc($nic->getAttribute('address'));
+            $USED_MAC{$nic_mac}++;
+        }
+    }
+}
+
+sub _new_mac($self,$mac='52:54:00:a7:49:71') {
+
+    $self->_read_used_macs();
+    my @macparts = split/:/,$mac;
+    $macparts[5] = sprintf"%02X",($$ % 254);
+
+    my @tried;
+    my $foundit;
+    for ( 1 .. 1000 ) {
+            my $pos = int(rand(scalar(@macparts)-3))+3;
+            for ( 0 .. 2 ) {
+                my $num =sprintf "%02X", rand(0xff);
+                die "Missing num " if !defined $num;
+                $macparts[$pos] = $num;
+                $pos++;
+                $pos = 3 if $pos>5;
+            }
+            my $new_mac = lc(join(":",@macparts));
+            push @tried,($new_mac);
+
+            return $new_mac if !$USED_MAC{$new_mac}++ && $self->_unique_mac($new_mac);
+    }
+    die "I can't find a new unique mac\n".Dumper(\@tried) if !$foundit;
+
+}
+
 sub _xml_modify_mac {
     my $self = shift;
     my $doc = shift or confess "Missing XML doc";
 
-    my ($if_mac) = $doc->findnodes('/domain/devices/interface/mac')
-        or exit;
-    my $mac = $if_mac->getAttribute('address');
+    for my $if_mac ($doc->findnodes('/domain/devices/interface/mac') ) {
+        my $mac = $if_mac->getAttribute('address');
 
-    my @macparts = split/:/,$mac;
-
-    my $new_mac;
-
-    my $n_part = scalar(@macparts) -2;
-
-    for (;;) {
-        for my $last ( 0 .. 254 ) {
-            $last = sprintf("%X", $last);
-            $last = "0$last" if length($last)<2;
-            $macparts[-1] = $last;
-            $new_mac = join(":",@macparts);
-            if ( $self->_unique_mac($new_mac) ) {
-                $if_mac->setAttribute(address => $new_mac);
-                return;
-            }
-            $new_mac = undef;
-        }
-        my $new_part = hex($macparts[$n_part])+1;
-        if ($new_part > 255) {
-            $n_part--;
-            $new_part = 0;
-            die "I can't find a new unique mac" if !$n_part<0;
-        }
-        $macparts[$n_part] = sprintf("%X", $new_part);
+        my $new_mac = $self->_new_mac($mac);;
+        $if_mac->setAttribute(address => $new_mac);
     }
-    die "I can't find a new unique mac" if !$new_mac;
 }
-
 
 =pod
 
@@ -1776,11 +2219,12 @@ Imports a KVM domain in Ravada
 
 =cut
 
-sub import_domain {
-    my $self = shift;
-    my ($name, $user) = @_;
+sub import_domain($self, $name, $user, $spinoff=1) {
 
-    my $domain_kvm = $self->vm->get_domain_by_name($name);
+    my $domain_kvm;
+    eval { $domain_kvm = $self->vm->get_domain_by_name($name) };
+    confess $@ if $@;
+
     confess "ERROR: unknown domain $name in KVM" if !$domain_kvm;
 
     my $domain = Ravada::Domain::KVM->new(
@@ -1790,6 +2234,103 @@ sub import_domain {
     );
 
     return $domain;
+}
+
+=head2 is_alive
+
+Returns true if the virtual manager connection is active, false otherwise.
+
+=cut
+
+sub is_alive($self) {
+    return 0 if !$self->vm;
+    my $is_alive = $self->vm->is_alive;
+    return 0 if !$is_alive;
+    eval {
+        $self->vm->get_hostname();
+    };
+    warn $@ if $@;
+    return 1 if !$@;
+    return 0;
+}
+
+sub list_storage_pools($self) {
+    confess "No VM " if !$self->vm;
+    return
+        map { $_->get_name }
+        grep { $_-> is_active }
+        _list_storage_pools($self->vm);
+}
+
+sub free_memory($self) {
+    confess "ERROR: VM ".$self->name." inactive"
+        if !$self->is_alive;
+
+    return $self->_free_memory_overcommit();
+
+    my $free_available = $self->_free_memory_available();
+    my $free_stats = $self->_free_memory_overcommit();
+
+    $free_available = $free_stats if $free_stats < $free_available;
+
+    return $free_available;
+}
+
+# TODO: enable this check from free memory with a config flag
+#   though I don't think it would be suitable to use
+#   Insights welcome
+sub _free_memory_overcommit($self) {
+    my $info = $self->vm->get_node_memory_stats();
+    return ($info->{free} + $info->{buffers} + $info->{cached});
+}
+
+sub _free_memory_available($self) {
+    my $info = $self->vm->get_node_memory_stats();
+    my $used = 0;
+    for my $domain ( $self->list_domains(active => 1, read_only => 1) ) {
+        my $info = $domain->get_info();
+        my $memory = ($info->{memory} or $info->{max_mem} or 0);
+        $used += $memory;
+    }
+    my $free_mem = $info->{total} - $used;
+    $free_mem = 0 if $free_mem < 0;
+    my $free_real = $self->_free_memory_overcommit;
+
+    $free_mem = $free_real if $free_real < $free_mem;
+
+    return $free_mem;
+}
+
+sub _fetch_dir_cert($self) {
+    open my $in,'<',$FILE_CONFIG_QEMU or do {
+        warn "$! $FILE_CONFIG_QEMU";
+        return '';
+    };
+    while(my $line = <$in>) {
+        chomp $line;
+        $line =~ s/#.*//;
+        next if !length($line);
+        next if $line !~ /^\s*spice_tls_x509_cert_dir\s*=\s*"(.*)"\s*/;
+        return $1 if $1;
+    }
+    close $in;
+}
+
+sub free_disk($self, $pool_name = undef ) {
+    my $pool;
+    if ($pool_name) {
+        $pool = $self->vm->get_storage_pool_by_name($pool_name);
+    } else {
+        $pool = $self->storage_pool();
+    }
+    my $info;
+    for ( ;; ) {
+        eval { $info = $pool->get_info() };
+        last if !$@;
+        warn "WARNING: free disk $@" if $@;
+        sleep 1;
+    }
+    return $info->{available};
 }
 
 1;

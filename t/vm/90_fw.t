@@ -4,27 +4,18 @@ use strict;
 use Data::Dumper;
 use JSON::XS;
 use Test::More;
-use Test::SQL::Data;
-use IPTables::ChainMgr;
+
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-use_ok('Ravada');
-
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
-
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
-my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
-my $USER = create_user("foo","bar");
+my $RVD_BACK = rvd_back();
+my @ARG_RVD = ( config => $FILE_CONFIG,  connector => connector());
+my $USER = create_user("foo","bar", 1);
 
 my $CHAIN = 'RAVADA';
 
@@ -39,16 +30,11 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}}) 
+                    , disk => 1024 * 1024
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -81,6 +67,15 @@ sub test_fw_domain {
 
     $domain->shutdown_now( $USER );
     test_chain($vm_name, $local_ip,$local_port, $remote_ip, 0);
+
+    test_iptables_table_clean($vm_name, $domain);
+}
+
+sub test_iptables_table_clean($vm_name, $domain) {
+    my $sth = connector->dbh->prepare("SELECT count(*) FROM iptables WHERE id_domain=? ");
+    $sth->execute($domain->id);
+    my ($n) = $sth->fetchrow;
+    is($n,0) or exit;
 }
 
 sub test_fw_domain_stored {
@@ -114,18 +109,22 @@ sub test_fw_domain_stored {
 sub test_chain {
     my $vm_name = shift;
 
-    my ($local_ip, $local_port, $remote_ip, $enabled) = @_;
-    my $ipt = open_ipt();
+    my ($local_ip, $local_port, $remote_ip, $expected_count) = @_;
 
-    my ($rule_num , $chain_rules) 
-        = $ipt->find_ip_rule($remote_ip, $local_ip,'filter', $CHAIN, 'ACCEPT'
-                              , {normalize => 1 , d_port => $local_port });
+    my @rule = find_ip_rule(
+           remote_ip => $remote_ip
+        , local_port => $local_port
+          , local_ip =>  $local_ip,
+              , jump => 'ACCEPT'
+    );
 
-    ok($rule_num,"[$vm_name] Expecting rule for $remote_ip -> $local_ip: $local_port") 
-        if $enabled;
-    ok(!$rule_num,"[$vm_name] Expecting no rule for $remote_ip -> $local_ip: $local_port"
-                        .", got $rule_num ")
-        if !$enabled;
+    is(scalar(@rule),$expected_count);
+    ok($rule[0],"[$vm_name] Expecting rule for $remote_ip -> $local_ip: $local_port") 
+        if $expected_count;
+
+    ok(!$rule[0],"[$vm_name] Expecting no rule for $remote_ip -> $local_ip: $local_port"
+                        .", got ".Dumper(\@rule))
+        if !$expected_count;
 
 }
 
@@ -189,6 +188,221 @@ sub test_fw_ssh {
     test_chain_prerouting($vm_name, $local_ip, $port, $domain_ip, 0);
 
 }
+
+sub test_jump {
+    my ($vm_name, $domain_name) = @_;
+    my $out = `iptables-save`;
+    for my $line ( split /\n/,$out ) {
+        next if $line !~ /^-A (.*RAVADA.*)/;
+        my $rule = $1;
+        `iptables -D $rule`;
+    }
+    $out = `iptables -L INPUT -n`;
+    ok(! grep(/^RAVADA /, split(/\n/,$out)),"Expecting no RAVADA jump in $out") or exit;
+
+    my $vm =$RVD_BACK->search_vm($vm_name);
+    my $domain = $vm->search_domain($domain_name);
+
+    $domain->start(user_admin)  if !$domain->is_active;
+
+    $domain->open_iptables(remote_ip => '1.1.1.1', uid => user_admin->id);
+
+    $out = `iptables -L INPUT -n`;
+    ok(grep(/^RAVADA /, split(/\n/,$out)),"Expecting RAVADA jump in $out");
+}
+
+sub test_new_ip {
+    my $vm = shift;
+
+    my $domain = create_domain($vm->type);
+
+    my $remote_ip = '1.1.1.1';
+
+    $domain->start( user => user_admin, remote_ip => $remote_ip);
+
+    my ($local_port) = $domain->display(user_admin) =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
+#    test_chain($vm->type, $vm->ip, $local_port, $remote_ip,1);
+    my %test_args= (
+           remote_ip => $remote_ip
+        , local_port => $local_port
+          , local_ip =>  $vm->ip,
+              , jump => 'ACCEPT'
+    );
+    my %test_args_drop = (%test_args
+        ,remote_ip => '0.0.0.0/0'
+        ,jump => 'DROP'
+    );
+    my @rule = find_ip_rule(%test_args);
+    is(scalar @rule,1);
+
+    my @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,1) or return;
+    ok($rule_drop[0] > $rule[0],Dumper(\@rule,\@rule_drop))
+        if scalar @rule_drop == 1 && scalar @rule == 1;
+
+    $domain->open_iptables( user => user_admin);
+    @rule = find_ip_rule(%test_args);
+    is(scalar @rule,0);
+
+    @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,0);
+
+    $domain->open_iptables( user => user_admin, remote_ip => $remote_ip);
+    @rule = find_ip_rule(%test_args);
+    is(scalar @rule,1);
+
+    my $remote_ip2 = '2.2.2.2';
+    $domain->open_iptables( user => user_admin, remote_ip => $remote_ip2);
+
+    @rule = find_ip_rule(%test_args);
+    is(scalar @rule,0);
+
+    $test_args{remote_ip} = $remote_ip2;
+    @rule = find_ip_rule(%test_args);
+    is(scalar @rule,1);
+
+    @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,1);
+
+    ok($rule_drop[0] > $rule[0],Dumper(\@rule,\@rule_drop))
+        if scalar @rule_drop == 1 && scalar @rule == 1;
+
+    $domain->remove(user_admin);
+
+    @rule = find_ip_rule(%test_args);
+    is(scalar @rule,0);
+
+    @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,0);
+}
+
+sub test_localhost {
+    my $vm = shift;
+
+    my $domain = create_domain($vm->type);
+
+    my $remote_ip = '127.0.0.1';
+
+    $domain->start( user => user_admin, remote_ip => $remote_ip);
+
+    my ($local_ip, $local_port) = $domain->display(user_admin) =~ m{(\d+\.\d+\.\d+\.\d+)\:(\d+)};
+    is($local_ip, $remote_ip);
+#    test_chain($vm->type, $vm->ip, $local_port, $remote_ip,1);
+    my %test_args= (
+           remote_ip => $remote_ip
+        , local_port => $local_port
+          , local_ip =>  $local_ip,
+              , jump => 'ACCEPT'
+    );
+    my %test_args_drop = (%test_args
+        ,remote_ip => '0.0.0.0/0'
+        ,jump => 'DROP'
+    );
+    my @rule_localhost = find_ip_rule(%test_args);
+    is(scalar @rule_localhost,1);
+
+    my @rule_ip = find_ip_rule(%test_args, remote_ip => $local_ip);
+    is(scalar @rule_ip,1);
+
+    my @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,1) or return;
+    ok($rule_drop[0] > $rule_localhost[0],Dumper(\@rule_localhost,\@rule_drop))
+        if scalar @rule_drop == 1 && scalar @rule_localhost == 1;
+
+    ok($rule_drop[0] > $rule_ip[0],Dumper(\@rule_ip,\@rule_drop))
+        if scalar @rule_drop == 1 && scalar @rule_ip== 1;
+
+    $domain->remove(user_admin);
+
+    @rule_localhost = find_ip_rule(%test_args);
+    is(scalar @rule_localhost,0);
+
+    @rule_ip = find_ip_rule(%test_args);
+    is(scalar @rule_ip,0);
+
+    @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,0);
+
+    @rule_drop = find_ip_rule(remote_ip => $vm->ip, jump => 'ACCEPT');
+    is(scalar @rule_drop,0) or exit;
+}
+
+sub test_shutdown_internal {
+    my $vm = shift;
+
+    my $domain = create_domain($vm->type);
+
+    my $remote_ip = '1.1.1.1';
+
+    $domain->start( user => user_admin, remote_ip => $remote_ip);
+
+    my ( $local_port ) = $domain->display(user_admin) =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
+    shutdown_domain_internal($domain);
+#    test_chain($vm->type, $vm->ip, $local_port, $remote_ip,1);
+    my %test_args= (
+        local_port => $local_port
+          , local_ip =>  $vm->ip,
+              , jump => 'ACCEPT'
+    );
+    my %test_args_drop = (%test_args
+        ,remote_ip => '0.0.0.0/0'
+        ,jump => 'DROP'
+    );
+
+    my $remote_ip2 = '2.2.2.2';
+    $domain->start( user => user_admin, remote_ip => $remote_ip2);
+
+    my @rule = find_ip_rule(%test_args);
+    is(scalar(@rule) , 1);
+
+    my @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar(@rule_drop) , 1);
+
+    $domain->remove(user_admin);
+}
+
+sub test_hibernate {
+    my $vm = shift;
+
+    my $domain = create_domain($vm->type);
+
+    my $remote_ip = '3.3.3.3';
+
+    $domain->start( user => user_admin, remote_ip => $remote_ip);
+
+    my ($local_port) = $domain->display(user_admin) =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
+#    test_chain($vm->type, $vm->ip, $local_port, $remote_ip,1);
+    my %test_args= (
+           remote_ip => $remote_ip
+        , local_port => $local_port
+          , local_ip =>  $vm->ip,
+              , jump => 'ACCEPT'
+    );
+    my %test_args_drop = (%test_args
+        ,remote_ip => '0.0.0.0/0'
+        ,jump => 'DROP'
+    );
+    my @rule = find_ip_rule(%test_args);
+    is(scalar @rule,1);
+
+    my @active_iptables = $domain->_active_iptables( id_domain => $domain->id);
+    is(scalar @active_iptables,2) or exit;
+
+    my @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,1) or return;
+    ok($rule_drop[0] > $rule[0],Dumper(\@rule,\@rule_drop))
+        if scalar @rule_drop == 1 && scalar @rule == 1;
+
+    $domain->hibernate( user_admin );
+    @rule = find_ip_rule(%test_args);
+    is(scalar @rule,0);
+
+    @rule_drop = find_ip_rule(%test_args_drop);
+    is(scalar @rule_drop,0);
+
+    $domain->remove(user_admin);
+}
+
 #######################################################
 
 remove_old_domains();
@@ -218,17 +432,24 @@ for my $vm_name (qw( Void KVM )) {
 
         use_ok("Ravada::VM::$vm_name");
 
-        flush_rules();
+        flush_rules_node($vm);
 
         my $domain = test_create_domain($vm_name);
         test_fw_domain($vm_name, $domain);
 
         my $domain2 = test_create_domain($vm_name);
         test_fw_domain_stored($vm_name, $domain2->name);
+
+        test_new_ip($vm);
+        test_localhost($vm);
+
+        test_shutdown_internal($vm);
+
+        test_hibernate($vm);
+
+        test_jump($vm_name, $domain2->name);
     };
 }
-flush_rules() if !$>;
-remove_old_domains();
-remove_old_disks();
 
+end();
 done_testing();

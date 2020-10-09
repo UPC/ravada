@@ -5,23 +5,17 @@ use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
-my $RVD_BACK = rvd_back($test->connector);
-my $RVD_FRONT= rvd_front($test->connector);
+my $RVD_BACK = rvd_back();
+my $RVD_FRONT= rvd_front();
 
-my %ARG_CREATE_DOM = (
-      kvm => [ id_iso => 1 ]
-);
-my @VMS = reverse keys %ARG_CREATE_DOM;
-my $USER = create_user("foo","bar");
+my @VMS = vm_names();
+my $USER = create_user("foo","bar", 1);
 
 sub test_create_domain {
     my $vm_name = shift;
@@ -31,16 +25,11 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    ok($ARG_CREATE_DOM{lc($vm_name)}) or do {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    };
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , disk => 1024 * 1024
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -59,7 +48,7 @@ sub test_create_domain {
 
 clean();
 
-my $vm_name = 'kvm';
+my $vm_name = 'KVM';
 my $vm = rvd_back->search_vm($vm_name);
 
 SKIP: {
@@ -74,16 +63,16 @@ SKIP: {
 
     my $domain = test_create_domain($vm_name);
     $domain->is_public(1);
-    my $clone = $domain->clone(user => $USER, name => new_domain_name());
+    my $clone = $domain->clone(user => user_admin , name => new_domain_name());
 
     ok($clone);
     my @volumes = $clone->list_volumes();
     is(scalar @volumes,1);
 
-    $domain->add_volume( name => 'vdb' , size => 1000 *1024);
+    $domain->add_volume( name => $domain->name.'.vdb' , size => 1000 *1024);
 
     my @volumes_domain = $domain->list_volumes();
-    is(scalar @volumes_domain, 2);
+    is(scalar @volumes_domain, 3);
 
     my $clone2;
     eval  { $clone2 = $domain->clone(user => $USER, name => new_domain_name()) };
@@ -95,12 +84,12 @@ SKIP: {
         is(scalar @volumes_clone2, 1);
     }
 
-    $clone->remove($USER);
-    $clone2->remove($USER);
-    $domain->remove_base($USER);
+    $clone->remove( user_admin );
+    $clone2->remove( user_admin );
+    $domain->remove_base( user_admin );
 
     my $clone3;
-    eval  { $clone3 = $domain->clone(user => $USER, name => new_domain_name()) };
+    eval  { $clone3 = $domain->clone(user => user_admin , name => new_domain_name()) };
     is($@,'');
     ok($clone3,"Expecting a clone , got ".($clone3 or 'UNDEF'));
 
@@ -112,7 +101,7 @@ SKIP: {
 
 }
 
-clean();
+end();
 
 done_testing();
 

@@ -1,31 +1,26 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use JSON::XS;
 use Test::More;
-use Test::SQL::Data;
-use IPTables::ChainMgr;
+
+use feature qw(signatures);
+no warnings "experimental::signatures";
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-use_ok('Ravada');
 use_ok('Ravada::Request');
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
+init();
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
+my @ARG_RVD = ( config => $FILE_CONFIG,  connector => connector);
 
-init($test->connector, $FILE_CONFIG);
-my $USER = create_user("foo","bar");
+my $USER = create_user("foo","bar", 1);
 
 my $CHAIN = 'RAVADA';
 
@@ -40,16 +35,11 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}}) 
+                    , disk => 1024 * 1024
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -63,30 +53,26 @@ sub test_create_domain {
     return $domain->name;
 }
 
-sub test_fw_domain{
-    my ($vm_name, $domain_name) = @_;
-    my $remote_ip = '99.88.77.66';
+sub test_fw_domain($vm_name, $domain_name, $remote_ip='99.88.77.66') {
 
     my $local_ip;
     my $local_port;
     my $domain_id;
 
+    my $vm = rvd_back->search_vm($vm_name);
     {
-        my $vm = rvd_back->search_vm($vm_name);
         my $domain = $vm->search_domain($domain_name);
         ok($domain,"Searching for domain $domain_name") or return;
+        $domain->shutdown_now($USER) if $domain->is_active;
         $domain->start( user => $USER, remote_ip => $remote_ip);
 
         my $display = $domain->display($USER);
-        ($local_port) = $display =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
-        $local_ip = $vm->ip;
+        ($local_ip, $local_port) = $display =~ m{(\d+\.\d+\.\d+\.\d+)\:(\d+)};
 
         ok(defined $local_port, "Expecting a port in display '$display'") or return;
     
         ok($domain->is_active);
-        my $ipt = open_ipt();
-        $ipt->flush_chain('filter', $CHAIN);
-
+        flush_rules_node($vm);
         test_chain($vm_name, $local_ip,$local_port, $remote_ip, 0);
         $domain_id = $domain->id;
     }
@@ -100,15 +86,27 @@ sub test_fw_domain{
         );
         ok($req);
         ok($req->status);
-        rvd_back->process_requests();
-        wait_request($req);
+        wait_request(background=> 0);
 
         is($req->status,'done');
         is($req->error,'');
         test_chain($vm_name, $local_ip,$local_port, $remote_ip, 1);
+        if ($remote_ip eq '127.0.0.1') {
+            my $if_ip = $vm->ip;
+            isnt($if_ip,'127.0.0.1');
+            test_chain($vm_name, $local_ip,$local_port, $if_ip, 1);
+        }
     }
 
 
+}
+
+sub test_fw_domain_public_ip($vm_name, $domain_name, $remote_ip='1.2.3.4') {
+    my $vm = rvd_back->search_vm($vm_name);
+    $vm->public_ip('127.0.0.2');
+
+    test_fw_domain($vm_name, $domain_name, $remote_ip);
+    $vm->public_ip('');
 }
 
 sub test_fw_domain_pause {
@@ -148,43 +146,71 @@ sub test_fw_domain_pause {
         ok($req->status);
 
         my @messages = $USER->messages();
-        rvd_back->process_requests();
-        wait_request($req);
+        wait_request(background => 0);
 
         is($req->status,'done');
         is($req->error,'');
-        ok(search_rule($local_ip,$local_port, $remote_ip ),"Expecting rule for $local_ip:$local_port <- $remote_ip") or return;
+        ok(search_rule($local_ip,$local_port, $remote_ip ),"Expecting rule for $local_ip:$local_port <- $remote_ip") or confess;
         my @messages2 = $USER->messages();
         is(scalar @messages2, scalar @messages
             ,"Expecting no new messages ");
     }
 }
 
-sub search_rule {
+sub search_rule($local_ip, $local_port, $remote_ip) {
 
-    my ($local_ip, $local_port, $remote_ip, $enabled) = @_;
-    my $ipt = open_ipt();
-
-    my ($rule_num , $chain_rules) 
-        = $ipt->find_ip_rule($remote_ip, $local_ip,'filter', $CHAIN, 'ACCEPT'
-                              , {normalize => 1 , d_port => $local_port });
-    return if ! $rule_num;
-    return $rule_num;
+    my @rules = find_ip_rule(remote_ip => $remote_ip
+            , local_ip => $local_ip
+            , local_port => $local_port
+        );
+    return if ! scalar@rules;
+    return scalar @rules;
 }
 
 sub test_chain {
     my $vm_name = shift;
-    my ($local_ip, $local_port, $remote_ip, $enabled) = @_;
+    my $enabled = pop;
+
+    my ($local_ip, $local_port, $remote_ip) = @_;
 
     my $rule_num = search_rule(@_);
 
-    ok($rule_num,"[$vm_name] Expecting rule for $remote_ip -> $local_ip: $local_port") 
+    ok($rule_num,"[$vm_name] Expecting rule for $remote_ip -> $local_ip: $local_port")
+            or confess
         if $enabled;
     ok(!$rule_num,"[$vm_name] Expecting no rule for $remote_ip "
                         ."-> $local_ip: $local_port"
                         .", got ".($rule_num or "<UNDEF>"))
         if !$enabled;
 
+}
+
+sub test_fw_domain_down {
+    my $vm_name = shift;
+
+    my $domain = create_domain($vm_name);
+    $domain->start(user => user_admin, remote_ip => '1.1.1.1');
+
+    my $req = Ravada::Request->shutdown_domain(
+               uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->error , '');
+
+    $domain->start(user => user_admin, remote_ip => '1.1.1.1')  if !$domain->is_active;
+
+    $req = Ravada::Request->force_shutdown_domain(
+               uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->error , '');
+
+
+    $domain->remove(user_admin);
 }
 
 #######################################################
@@ -222,13 +248,14 @@ for my $vm_name (qw( Void KVM )) {
         flush_rules();
 
         my $domain_name = test_create_domain($vm_name);
+        test_fw_domain($vm_name, $domain_name, '127.0.0.1');
         test_fw_domain($vm_name, $domain_name);
         test_fw_domain_pause($vm_name, $domain_name);
+        test_fw_domain_public_ip($vm_name, $domain_name);
 
+        test_fw_domain_down($vm_name);
     };
 }
 flush_rules() if !$>;
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();

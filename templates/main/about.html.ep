@@ -3,37 +3,33 @@
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
     <div id="wrapper">
-    <div ng-controller="about">
-    %= include 'bootstrap/navigation'
-    <div id="page-wrapper" class ="row">
-      <div class="page-header col-md-8 col-md-offset-2">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <h2 class="text-center">About</h2>
-                        <img class="img-responsive center-block" src="img/logo.png">
-                        <h3>Version</h3>
+%= include 'bootstrap/navigation'
+        <div id="page-wrapper">
+            <div>
+                <div class="page-title">
+                    <div class="card col-lg-8 offset-md-2 bg-light">
+                        <h2 class="text-center"><%=l 'About' %></h2>
+                        <img class="img-responsive mx-auto" src="img/logo.png">
+                        <h3><%=l 'Version' %></h3>
                         <%= $version %>
-                        <h3>Authors</h3>
+                        <h3><%=l 'Authors' %></h3>
                         %= include 'bootstrap/authors'
-                        <h3>Development</h3>
-                        <p> Below are listed the technologies used in this project:</p>
+                        <h3><%=l 'Development' %></h3>
+                        <%=l 'Below are listed the technologies used in this project:' %>
                         <ul>
-                        <li>It's programmed in <a href="https://www.perl.org/">Perl</a>,</li>
-                        <li>with perl framework <a href="http://www.mojolicious.org/">Mojolicious</a>,</li>
-                        <li>and HTML, CSS, and JS framework <a href="http://getbootstrap.com/">Bootstrap</a></li>
+                            <li><%=l 'It is programmed in' %>&nbsp;<a href="https://www.perl.org/">Perl</a>,</li>
+                            <li><%=l 'with perl framework' %>&nbsp;<a href="http://www.mojolicious.org/">Mojolicious</a>,</li>
+                            <li><%=l 'and' %> HTML, CSS, <%=l 'and' %> JS framework <a href="http://getbootstrap.com/">Bootstrap</a></li>
                         </ul>
-
-
-                        <p> The code is available on <a href="http://bit.ly/get_ravada">Github</a>.</p>
-                        <h3>License</h3>
-                        <p> The code is <a href="https://www.gnu.org/licenses/gpl-3.0-standalone.html">GPL</a> licensed.</p>
+                        <span><%=l 'The code is available on ' %><a href="http://bit.ly/get_ravada">Github</a>.</span>
+                        <h3><%=l 'License' %></h3>
+                        <span><%=l 'The code is ' %>&nbsp;<a href="https://www.gnu.org/licenses/gpl-3.0-standalone.html">GPL</a>&nbsp;<%=l 'licensed.' %></span>
                     </div>
                 </div>
             </div>
+        </div>
     </div>
-    </div>
-    </div>
-    %= include 'bootstrap/scripts'
-    %= include 'bootstrap/footer'
+%= include 'bootstrap/scripts'
+%= include $footer
 </body>
 </html>

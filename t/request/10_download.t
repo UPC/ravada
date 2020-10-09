@@ -5,15 +5,12 @@ use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
-init($test->connector);
+init();
 
 $Ravada::DEBUG=0;
 $Ravada::SECONDS_WAIT_CHILDREN = 1;
@@ -52,6 +49,7 @@ for my $vm_name ('KVM') {
         is($req1->status, 'requested');
 
         $rvd_back->process_all_requests();
+        sleep 1;
         is($req1->status, 'working');
 
         ################################################
@@ -90,4 +88,5 @@ for my $vm_name ('KVM') {
         diag($req2->error)  if $req2->error;
     }
 }
+end();
 done_testing();

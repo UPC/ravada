@@ -4,16 +4,11 @@ use strict;
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $FILE_CONFIG = 't/etc/ravada.conf';
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-init($test->connector, $FILE_CONFIG);
+init();
 
 my $USER = create_user('foo','bar');
 my $TIMEOUT_SHUTDOWN = 10;
@@ -32,6 +27,7 @@ sub test_create_domain_xml {
 
     my $device_disk = $vm->create_volume(
         name => $name
+        ,size => 1024 * 1024
         ,xml => "etc/xml/dsl-volume.xml");
     ok($device_disk,"Expecting a device disk") or return;
     ok(-e $device_disk);
@@ -54,6 +50,7 @@ sub test_create_domain_xml {
 
     my $domain = Ravada::Domain::KVM->new(domain => $dom, _vm => $vm);
     $domain->_insert_db(name=> $name, id_owner => $USER->id);
+    $domain->xml_description;
 
     return $domain;
 }
@@ -72,6 +69,8 @@ sub test_drivers_type {
     isa_ok(\@drivers,'ARRAY');
 
     my $driver_type = $domain->drivers($type);
+    ok($driver_type,"[$vm_name] Expecting a driver type $type") or return;
+    isa_ok($driver_type, "Ravada::Domain::Driver") or return;
 
     my $value = $driver_type->get_value();
     is($value,undef,"Expecting no value for $type");
@@ -86,7 +85,7 @@ sub test_drivers_type {
     for my $option (@options) {
         _domain_shutdown($domain);
 
-        diag("Setting $type $option->{value}");
+#        diag("Setting $type $option->{value}");
 
         die "No value for driver ".Dumper($option)  if !$option->{value};
         eval { $domain->set_driver($type => $option->{value}) };
@@ -137,7 +136,7 @@ remove_old_disks();
 
 my $vm_name = 'KVM';
 my $vm;
-eval { $vm =rvd_back->search_vm($vm_name) };
+eval { $vm =rvd_back->search_vm($vm_name) } if !$<;
 SKIP: {
     my $msg = "SKIPPED test: No $vm_name backend found"
                 ." error: (".($@ or '').")";
@@ -152,7 +151,7 @@ SKIP: {
     use_ok('Ravada::Domain::KVM');
     test_settings($vm_name, "t/kvm/etc/winxp.xml" );
 };
-remove_old_domains();
-remove_old_disks();
+
+end();
 done_testing();
 

@@ -5,27 +5,19 @@ use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 use_ok('Ravada');
-init($test->connector);
+init();
 
 $Ravada::DEBUG=0;
-$Ravada::SECONDS_WAIT_CHILDREN = 1;
 
-if (!$ENV{TEST_DOWNLOAD}) {
-    diag("Set environment variable TEST_DOWNLOAD to run this test.");
-    done_testing();
-    exit;
-}
-
-sub test_download {
-    my ($vm, $id_iso) = @_;
+sub test_download($vm, $id_iso, $test=0) {
     my $iso = $vm->_search_iso($id_iso);
     unlink($iso->{device}) or die "$! $iso->{device}"
         if $iso->{device} && -e $iso->{device};
@@ -33,13 +25,32 @@ sub test_download {
              id_iso => $id_iso
             , id_vm => $vm->id
             , delay => 4
+            , test => $test
     );
     is($req1->status, 'requested');
 
     rvd_back->_process_all_requests_dont_fork();
     is($req1->status, 'done');
+    is($req1->error,'');
 
 }
+
+sub search_id_isos {
+    my $vm = shift;
+    my $sth=connector->dbh->prepare(
+        "SELECT * FROM iso_images"
+        #        ." where name like 'Xubuntu %'"
+        ." ORDER BY name,arch"
+    );
+    $sth->execute;
+    my @id_iso;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        next if !$row->{url};
+        push @id_iso,($row->{id});
+    }
+    return @id_iso;
+}
+
 ##################################################################
 
 for my $vm_name ('KVM') {
@@ -57,8 +68,11 @@ for my $vm_name ('KVM') {
         ################################################
         #
         # Request for Debian Streth ISO
-        my $id_iso = search_id_iso('Debian Stretch') or die "I can't find id_iso for Stretch";
-        test_download($vm, $id_iso);
+        for my $id_iso (search_id_isos) {
+            test_download($vm, $id_iso,1);
+        }
+    #test_download($vm, $id_iso,0);
     }
 }
+end();
 done_testing();

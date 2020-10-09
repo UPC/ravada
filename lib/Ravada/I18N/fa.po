@@ -61,9 +61,6 @@ msgstr "عدم توانایی در آماده سازی پایگاه"
 msgid "Clone/s"
 msgstr "همسان ها"
 
-msgid "NEW"
-msgstr "جدید"
-
 msgid "Users List"
 msgstr "لیست کاربرها"
 
@@ -102,7 +99,7 @@ msgstr "متوقف"
 
 #, fuzzy
 msgid "Machine locked by"
-msgstr ""
+msgstr "ماشین قفل شده است توسط"
 "#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
 "طبق درخواست ماشین قفل شده است\n"
 "#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
@@ -128,7 +125,7 @@ msgstr "تاریخ"
 
 #, fuzzy
 msgid "Actions"
-msgstr ""
+msgstr "عملیات ها"
 "#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
 "عملیات\n"
 "#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
@@ -144,7 +141,7 @@ msgstr "نمایش به عنوان خوانده نشده"
 
 #, fuzzy
 msgid "No message to show!"
-msgstr ""
+msgstr "پیغامی برای نمایش وجود ندارد"
 "#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
 "پیغامی برای نمایش وجود ندارد\n"
 "#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
@@ -155,7 +152,7 @@ msgstr "ادمین"
 
 #, fuzzy
 msgid "Show/Hide clones"
-msgstr ""
+msgstr "نمایش دادن/پنهان کردن همسان ها"
 "#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
 "نمایش/پنهان همسان ها\n"
 "#-#-#-#-#  0catalog.po (0.1.0-alpha)  #-#-#-#-#\n"
@@ -287,8 +284,8 @@ msgstr ""
 msgid "You'll need to install"
 msgstr "نیاز به نضب کردن برنامه دارید"
 
-msgid "e.g. VirtViewer v5.0-256 in your computer."
-msgstr "VirtViewer v5.0-25به عنوان مثال "
+msgid "e.g. VirtViewer in your computer."
+msgstr "VirtViewer عنوان مثال "
 
 msgid "To make this possible, download"
 msgstr "به این منظور دانلود یا کپی کنید"
@@ -390,3 +387,20 @@ msgstr "کاربر می تواند ماشین های مجازی همسان شد�
 msgid "Submit Query"
 msgstr "ثبت"
 
+msgid "Galician"
+msgstr "گالیکسی"
+
+msgid "French"
+msgstr "فرانسوی"
+
+msgid "Indonesian"
+msgstr "اندونزیایی"
+
+msgid "Persian"
+msgstr "فارسی"
+
+msgid "Japanese"
+msgstr "ژاپنی"
+
+msgid "Hindi"
+msgstr "هندی"

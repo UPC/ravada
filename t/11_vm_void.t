@@ -3,16 +3,13 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada::VM');
 
-init($test->connector, 't/etc/ravada_vm_void.conf');
+init('t/etc/ravada_vm_void.conf');
 
 ok(rvd_back);
 
@@ -28,4 +25,5 @@ ok(scalar @$vm_front,"Expecting some VMs in front, got none");
 ok(grep({$_ eq 'Void' } @{$vm_front}),
         "Expecting a VM type Void in front, got ".Dumper($vm_front));
 
+end();
 done_testing();

@@ -1,63 +1,74 @@
 <!DOCTYPE html>
 <html ng-app="ravada.app">
 %= include 'bootstrap/header'
-<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+<body id="page-top" data-spy="scroll" data-target="fixed-top" role="document">
     <div id="wrapper">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper">
 
         <!--BASES AND DOMAINS LIST-->
-        <div ng-controller="user_settings">
+        <div>
             <div class="page-header">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
+                <div class="card card-dark">
+                    <div class="card-header">
                         <h2 class="text-center"><%=l 'User Settings' %></h2>
                     </div>
                     <div>
+                      <div class="card-body">
+						<h3 class="mb-3"><%=l 'Setting your default language' %></h3>
+                        <form method='post' enctype="multipart/form-data">
+
+                            <%=l 'Language:' %> <select onchange="this.form.submit();" id="language" name="language" >
+                                %                           for my $code (sort { $i18n->localize($lang_name->{$a}) cmp $i18n->localize($lang_name->{$b}) } keys %$lang_name) {
+                                <option <%= $language eq $code ? "selected" : "" %>
+                                    value="<%= $code %>">
+                                    <%=l $lang_name->{$code} %>
+                                </option>
+% }
+                            </select>
+%                            if ($changed_lang) {
+                                 <font color="green">   <%=l 'Your language has been changed successfully' %></font>
+%                            }
+</form>
+			</div>
+%   if (!$_user->is_external) {
+                        <div class="card-body">
+						<h3><%=l 'Change password' %></h3>
+                        <form method='post' enctype="multipart/form-data">
+                            <div class="from-group row">
+                                <label for="password" class="col-xl-3 col-form-label"><%=l 'Current Password:' %></label><input type='password' name='current_password' id='current_password'>
+                            </div>
+                            <div class="from-group row">
+                                <label for="password" class="col-xl-3 col-form-label"><%=l 'New Password:' %></label><input type= 'password' name= 'password' id='password'>
+                            </div>
+                            <div class="from-group row">
+                                <label for="password" class="col-xl-3 col-form-label"><%=l 'Confirm Password:' %></label><input type='password' name='conf_password' id='conf_password'>
+                            </div>
 %                           if (scalar @$errors) {
-                                <div class="panel panel-danger">
-                                    <div class="panel-heading">
+                                    <div class="alert alert-danger mt-2">
 %                                       for (@$errors) {
                                             <%= $_ %>
 %                                       }
                                     </div>
-                                </div>
 %                         }
-                        
-                        <p><form method='post' enctype="multipart/form-data">
-                            <%=l 'Language:' %> <select onchange="this.form.submit();" id="tongue" name="tongue" >
-                                <option <%= $c->param("tongue") eq 'en' ? "selected" : "" %> value="en" ><%=l 'English' %></option>
-                                <option <%= $c->param("tongue") eq 'ca' ? "selected" : "" %> value="ca" ><%=l 'Catalan' %></option>
-                                <option <%= $c->param("tongue") eq 'es' ? "selected" : "" %> value="es" ><%=l 'Spanish' %></option>
-                                <option <%= $c->param("tongue") eq 'gl' ? "selected" : "" %> value="gl" ><%=l 'Galician' %></option>
-                                <option <%= $c->param("tongue") eq 'fr' ? "selected" : "" %> value="fr" ><%=l 'French' %></option>
-                                <option <%= $c->param("tongue") eq 'id' ? "selected" : "" %> value="id" ><%=l 'Indonesian' %></option>
-                                <option <%= $c->param("tongue") eq 'fa' ? "selected" : "" %> value="fa" ><%=l 'Persian' %></option>
-                             </select>
-%                            if ($changed_lang) {
-                                 <font color="green">   <%=l 'Your language has been changed successfully' %></font> 
-%                            }     
-                        </form>                
-                        </p>
-%   if (!$_user->is_external) {
-                        <hr>
-                        <form method='post' enctype="multipart/form-data">
-                            <p><%=l 'New Password:' %><input type= 'password' name= 'password' id='password'></p>
-                            <p><%=l 'Confirm Password:' %><input type='password' name='conf_password' id='conf_password'></p>
-                            <p><input type='submit' onclick='this.form.submit();' id='button_click' name='button_click' value='<%=l 'Submit' %>'></input>
-%                               if ($changed_pass) {
-                                    <font color="green">   <%=l 'Your password has been changed successfully' %></font> 
-%                               }     
-                            </p>
+                            <div class="form-group row mt-3 ml-2">
+                                <button type="reset" class="btn btn-outline-secondary mr-2" onclick = "location='/'"><%=l 'Cancel' %></button>
+				<input type="hidden" name="password-form" value="1">
+				<input class="btn btn-primary" type='submit' onclick='this.form.submit();' id='button_click' name='button_click' value='<%=l 'Update password' %>'>
+    %                               if ($changed_pass) {
+                                        <font color="green">   <%=l 'Your password has been changed successfully' %></font>
+    %                               }
+                            </div>
                         </form>
 %   }
-                  </div>
+                        </div>
+                    </div>
                   </div>
             </div>
         </div>
     </div>
     </div>
     %= include 'bootstrap/scripts'
-    %= include 'bootstrap/footer'
+    %= include $footer
 </body>
 </html>

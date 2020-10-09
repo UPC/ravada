@@ -3,7 +3,6 @@ use warnings;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -12,8 +11,6 @@ use_ok('Ravada');
 use_ok('Ravada::Request');
 
 my $BACKEND = 'KVM';
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 my $RAVADA;
 my $VMM;
@@ -26,7 +23,7 @@ sub test_req_prepare_base {
     my $domain0 =  $RAVADA->search_domain($name);
     ok(!$domain0->is_base,"Domain $name should not be base");
 
-    my $req = Ravada::Request->prepare_base(id_domain => $domain0->id, uid => $USER->id);
+    my $req = Ravada::Request->prepare_base(id_domain => $domain0->id, uid => user_admin->id);
     $RAVADA->_process_all_requests_dont_fork();
 
     ok($req->status('done'),"Request should be done, it is".$req->status);
@@ -48,7 +45,7 @@ sub test_remove_domain {
 
     if ($domain) {
         diag("Removing domain $name");
-        eval { $domain->remove($USER) };
+        eval { $domain->remove( user_admin ) };
         ok(!$@ , "Error removing domain $name : $@") or exit;
 
         for my $file ( $domain->list_files_base ) {
@@ -92,7 +89,7 @@ sub test_req_clone {
     my $req = Ravada::Request->create_domain(
         name => $name
         ,id_base => $domain_father->id
-       ,id_owner => $USER->id
+       ,id_owner => user_admin->id
         ,vm => $BACKEND
     );
     ok($req);
@@ -129,9 +126,11 @@ sub test_req_create_domain_iso {
     diag("requesting create domain $name");
     my $req = Ravada::Request->create_domain( 
             name => $name
-         ,id_iso => 1
+         ,id_iso => search_id_iso('alpine')
        ,id_owner => $USER->id
+          , disk => 1024 * 1024
              ,vm => $BACKEND
+            ,disk => 1024 * 1024
     );
     ok($req);
     ok($req->status);
@@ -159,9 +158,10 @@ sub test_force_kvm {
     my $name = new_domain_name();
     my $req = Ravada::Request->create_domain(
         name => $name
-        ,id_iso => 1
+        ,id_iso => search_id_iso('alpine')
       ,id_owner => $USER->id
         ,vm => 'kvm'
+        ,disk => 1024 * 1024
     );
     ok($req);
     ok($req->status);
@@ -191,8 +191,8 @@ sub test_force_kvm {
 }
 
 #########################################################################
-eval { $RAVADA = rvd_back( $test->connector , 't/etc/ravada.conf') };
-$USER = create_user('foo','bar')    if $RAVADA;
+eval { $RAVADA = rvd_back() };
+$USER = create_user('foo','bar', 1)    if $RAVADA;
 
 ok($RAVADA,"I can't launch a new Ravada");# or exit;
 
@@ -233,7 +233,5 @@ SKIP: {
     }
 }
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();

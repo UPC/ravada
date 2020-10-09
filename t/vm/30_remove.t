@@ -3,28 +3,19 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
-my $FILE_CONFIG = 't/etc/ravada.conf';
+my $RVD_BACK = rvd_back();
 
-my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
+my $FILE_CONFIG = "t/etc/ravada.conf";
+my @ARG_RVD = ( config => $FILE_CONFIG,  connector => connector());
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
-
-my @VMS = keys %ARG_CREATE_DOM;
-my $USER = create_user("foo","bar");
+my @VMS = vm_names();
+my $USER = create_user("foo","bar", 1);
 
 #######################################################################33
 
@@ -37,16 +28,11 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , disk => 1024 * 1024
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -63,17 +49,54 @@ sub test_remove_domain {
     my $vm_name = shift;
 
     my $domain = test_create_domain($vm_name);
+    my $id_domain = $domain->id;
+    $domain->expose(22);
+    is(scalar($domain->list_ports), 1);
+
+    my @volumes = $domain->list_volumes();
     $domain->remove($USER);
 
     my $domain_missing = rvd_back()->search_domain($domain->name);
     ok(!$domain_missing,"Domain ".$domain->name." should be missing");
+
+    for my $vol (@volumes) {
+        if ($vol =~ /\.iso$/) {
+            ok(-e $vol,"[$vm_name] volume $vol should not be removed");
+        } else {
+            ok(!-e $vol,"[$vm_name] volume $vol should be removed");
+        }
+    }
+
+    test_ports_remove($id_domain);
+    test_instances_remove($id_domain);
 }
+
+sub test_ports_remove {
+    my $id_domain = shift;
+    my $sth = connector->dbh->prepare(
+        "SELECT count(*) FROM domain_ports "
+        ." WHERE id_domain = ? "
+    );
+    my ($count) = $sth->fetchrow;
+    is($count,undef);
+}
+
+sub test_instances_remove {
+    my $id_domain = shift;
+    my $sth = connector->dbh->prepare(
+        "SELECT count(*) FROM domain_instances"
+        ." WHERE id_domain = ? "
+    );
+    my ($count) = $sth->fetchrow;
+    is($count,undef);
+}
+
 
 sub test_remove_domain_base {
     my $vm_name = shift;
 
     my $domain = test_create_domain($vm_name);
-    $domain->prepare_base($USER);
+    $domain->prepare_base( user_admin );
     eval { $domain->remove($USER) };
     ok(!$@,$@);
 
@@ -87,17 +110,17 @@ sub test_dont_remove_father {
     my $vm_name = shift;
 
     my $domain = test_create_domain($vm_name);
-    $domain->prepare_base($USER);
+    $domain->prepare_base( user_admin );
     $domain->is_public(1);
 
     my $name_clone = new_domain_name();
 
     my $clone = rvd_back()->create_domain( name => $name_clone
-            ,id_owner => $USER->id
+            ,id_owner => user_admin->id
             ,id_base => $domain->id
             ,vm => $vm_name
     );
-    eval { $domain->remove($USER) };
+    eval { $domain->remove( user_admin ) };
     ok($@ && $@ =~ /has.*clone/i , "Domain with clones should not be removed ".($@ or ''));
 
     my $domain_found = rvd_back()->search_domain($domain->name);
@@ -109,11 +132,11 @@ sub test_prepare_base {
     my $vm_name = shift;
     my $domain = shift;
 
-    eval { $domain->prepare_base( $USER) };
+    eval { $domain->prepare_base( user_admin ) };
     ok(!$@, $@);
     ok($domain->is_base);
 
-    eval { $domain->prepare_base( $USER) };
+    eval { $domain->prepare_base( user_admin ) };
     ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already prepared and file haven't changed "
         .". Error: ".($@ or '<UNDEF>'));
     ok($domain->is_base);
@@ -123,7 +146,7 @@ sub test_prepare_base {
 
     touch_mtime($disk);
 
-    eval { $domain->prepare_base( $USER) };
+    eval { $domain->prepare_base( user_admin ) };
     ok(!$@,"Trying to prepare base again failed, it should have worked. ");
     ok($domain->is_base);
 
@@ -131,20 +154,20 @@ sub test_prepare_base {
 
     my $domain_clone = $RVD_BACK->create_domain(
         name => $name_clone
-        ,id_owner => $USER->id
+        ,id_owner => user_admin->id
         ,id_base => $domain->id
         ,vm => $vm_name
     );
     ok($domain_clone);
     touch_mtime($disk);
-    eval { $domain->prepare_base($USER) };
+    eval { $domain->prepare_base( user_admin ) };
     ok($@ && $@ =~ /has \d+ clones/i
         ,"[$vm_name] Don't prepare if there are clones ".($@ or '<UNDEF>'));
     ok($domain->is_base);
 
-    $domain_clone->remove($USER);
+    $domain_clone->remove( user_admin );
 
-    eval { $domain->prepare_base($USER) };
+    eval { $domain->prepare_base( user_admin ) };
     ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
     ok($domain->is_base);
 }
@@ -200,7 +223,5 @@ for my $vm_name (@VMS) {
     }
 }
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();

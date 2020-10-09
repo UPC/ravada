@@ -4,18 +4,13 @@ use strict;
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $FILE_CONFIG = 't/etc/ravada_kvm.conf';
+init();
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-init($test->connector, $FILE_CONFIG);
-
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 
 #########################################################################
 #
@@ -27,7 +22,7 @@ sub test_custom_iso {
     my $swap = shift;
 
     my %args_create = ();
-    $args_create{swap} = 1000000  if $swap;
+    $args_create{swap} = 1024 * 1024 if $swap;
 
     my $vm = rvd_back->search_vm($vm_name);
     ok($vm,"Expecting a vm of type $vm_name") or return;
@@ -60,10 +55,11 @@ sub test_custom_iso {
                     , active => 0
                     , iso_file => $iso_file
                     , %args_create
+		    , disk => 1 * 1024 * 1024
 		    , remove_cpu => 1
            );
     };
-    is($@,'');
+    is($@,'',Dumper(\%args_create));
     ok($domain,"Expecting domain created, got ".($domain or '<UNDEF>'));
 
     eval {   $domain->start($USER) if !$domain->is_active; };
@@ -83,7 +79,7 @@ clean();
 my $vm;
 my $vm_name = 'KVM';
 
-eval { $vm = rvd_back->search_vm('KVM') };
+eval { $vm = rvd_back->search_vm('KVM') } if !$<;
 diag($@) if $@;
 SKIP: {
     my $msg = "SKIPPED test: No KVM backend found";
@@ -101,6 +97,5 @@ SKIP: {
 
 };
 
-clean();
-
+end();
 done_testing();

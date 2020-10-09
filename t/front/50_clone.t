@@ -3,23 +3,20 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
 use_ok('Ravada::Front');
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 my $CONFIG_FILE = 't/etc/ravada.conf';
 
 my @rvd_args = (
        config => $CONFIG_FILE
-   ,connector => $test->connector
+   ,connector => connector()
 );
 
-my $RVD_BACK  = rvd_back( $test->connector, $CONFIG_FILE);
+my $RVD_BACK  = rvd_back( $CONFIG_FILE);
 my $RVD_FRONT = Ravada::Front->new( @rvd_args
     , backend => $RVD_BACK
 );
@@ -27,8 +24,8 @@ my $RVD_FRONT = Ravada::Front->new( @rvd_args
 my $USER = create_user('foo','bar',1);
 
 my %CREATE_ARGS = (
-    Void => { id_iso => 1,       id_owner => $USER->id }
-    ,KVM => { id_iso => 1,       id_owner => $USER->id }
+    Void => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
+    ,KVM => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
     ,LXC => { id_template => 1, id_owner => $USER->id }
 );
 
@@ -47,7 +44,7 @@ sub create_args {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (keys %CREATE_ARGS) {
+for my $vm_name ( vm_names() ) {
 
     diag("Testing $vm_name");
     my $vm = $RVD_BACK->search_vm($vm_name);
@@ -88,7 +85,5 @@ for my $vm_name (keys %CREATE_ARGS) {
     } # of SKIP
 }
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();

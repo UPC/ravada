@@ -3,29 +3,21 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
-my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
+my $RVD_BACK = rvd_back();
+my $RVD_FRONT= rvd_front();
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
+my @ARG_RVD = ( config => $FILE_CONFIG,  connector => connector() );
 
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
-
-my @VMS = reverse keys %ARG_CREATE_DOM;
-my $USER = create_user("foo","bar");
+my @VMS = vm_names();
+my $USER = create_user("foo","bar", 1);
 
 ###############################################################################
 
@@ -38,16 +30,11 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , disk => 1024 * 1024
+                    , arg_create_dom($vm_name));
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
@@ -70,19 +57,20 @@ sub test_clone {
                 my $name_clone = new_domain_name();
 #                diag("[$vm_name] Cloning from base ".$base->name." to $name_clone");
                 $base->is_public(1);
-                eval { $clone1 = $base->clone(name => $name_clone, user => $USER) };
-                ok(!$@,"Expecting error='', got='".($@ or '')."'");
+                eval { $clone1 = $base->clone(name => $name_clone, user => user_admin ) };
+                ok(!$@,"Expecting error='', got='".($@ or '')."'")
+                        or die Dumper($base->list_requests);
                 ok($clone1,"Expecting new cloned domain from ".$base->name) or return;
 
     is($clone1->description,undef);
-                $clone1->shutdown_now($USER) if $clone1->is_active();
-                eval { $clone1->start($USER) };
+                $clone1->shutdown_now( user_admin ) if $clone1->is_active();
+                eval { $clone1->start( user_admin ) };
                 is($@,'');
                 ok($clone1->is_active);
 
                 my $clone1b = $RVD_FRONT->search_domain($name_clone);
                 ok($clone1b,"Expecting new cloned domain ".$name_clone);
-                $clone1->shutdown_now($USER) if $clone1->is_active;
+                $clone1->shutdown_now( user_admin ) if $clone1->is_active;
                 ok(!$clone1->is_active);
     is($clone1b->description,undef,"[$vm_name] description for "
             .$clone1b->name);
@@ -92,10 +80,10 @@ sub test_clone {
 sub test_mess_with_bases {
     my ($vm_name, $base, $clones) = @_;
     for my $clone (@$clones) {
-        $clone->shutdown(user => $USER, timeout => 1)   if $clone->is_active;
+        $clone->force_shutdown( user_admin )   if $clone->is_active;
         ok($clone->id_base,"Expecting clone has id_base , got "
                 .($clone->id_base or '<UNDEF>'));
-        $clone->prepare_base($USER);
+        $clone->prepare_base( user_admin );
     }
 
     for my $clone (@$clones) {
@@ -104,14 +92,13 @@ sub test_mess_with_bases {
         ok(!$@,"Expecting error: '' , got: ".($@ or '')) or exit;
 
         ok($clone->is_active);
-        $clone->shutdown(user => $USER, timeout => 1)   if $clone->is_active;
+        $clone->force_shutdown($USER)   if $clone->is_active;
 
         $clone->remove_base($USER);
         eval { $clone->start($USER); };
         ok(!$@,"[$vm_name] Expecting error: '' , got '".($@ or '')."'");
         ok($clone->is_active);
-        $clone->shutdown(user => $USER, timeout => 1);
-
+        $clone->force_shutdown($USER);
     }
 }
 
@@ -121,7 +108,7 @@ sub test_description {
     my $vm = rvd_back->search_vm($vm_name) or return;
 
     my $domain = test_create_domain($vm_name);
-    $domain->prepare_base($USER);
+    $domain->prepare_base(user_admin);
     $domain->is_public(1);
     my $clone = $vm->create_domain(
              name => new_domain_name()
@@ -129,7 +116,7 @@ sub test_description {
         ,id_owner => $USER->id
     );
     is($clone->description, undef);
-    $clone->prepare_base($USER);
+    $clone->prepare_base( user_admin );
     is($clone->description, $domain->description);
     $clone->remove($USER);
 }
@@ -147,7 +134,7 @@ for my $vm_name (reverse sort @VMS) {
 
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
-        if ($vm && $>) {
+        if ($vm && $vm_name eq 'KVM' && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vm = undef;
         }
@@ -187,7 +174,5 @@ for my $vm_name (reverse sort @VMS) {
     }
 }
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();

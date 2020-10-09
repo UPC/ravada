@@ -1,0 +1,32 @@
+<div class="card-body">
+        <div class="row">
+            <label><%=l 'These actions affect all the clones on the machine' %></label>
+        </div>
+        <div class="row">
+            <button class="btn btn-primary mr-2" id="start-clones" name="start-clones"
+                ng-click="request('start_clones',{ 'id_domain': showmachine.id })"
+            >
+                <%=l 'Start all clones' %>
+            </button>
+            <button class="btn btn-danger" id="shutdown-clones" name="shutdown-clones"
+                ng-click="shutdown_clones=1"
+            >
+                <%=l 'Close all clones' %>
+            </button>
+        </div>
+        <div ng-show="shutdown_clones">
+                        <b><%=l 'Danger'%></b>!<br/>
+                        <b><%=l 'Keep in mind that there may be users using a clone' %>.</b>
+                        <%=l 'Are you sure ?'%><br/>
+                        <a type="button" class="btn btn-primary text-white"
+                            ng-click="shutdown_clones=0"
+                        ><%=l 'No' %></a>
+                        <a type="button" class="btn btn-danger text-white" ng-click="request('shutdown_clones',{ 'id_domain': showmachine.id });"
+                        ><%=l 'Yes, shutwdown all the clones' %></a>
+           </div>
+
+        <div class="row" ng-show="pending_request">
+            %= include "/main/pending_request"
+        </div>
+
+</div>

@@ -5,7 +5,6 @@ use Carp qw(confess);
 use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
-use Test::SQL::Data;
 
 use_ok('Ravada');
 use_ok('Ravada::Network');
@@ -13,13 +12,11 @@ use_ok('Ravada::Network');
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-my $rvd_back = rvd_back( $test->connector , 't/etc/ravada.conf');
-my $RVD_FRONT = rvd_front( $test->connector , 't/etc/ravada.conf');
+my $rvd_back = rvd_back('t/etc/ravada.conf');
+my $RVD_FRONT = rvd_front();
 
 my $vm = $rvd_back->search_vm('Void');
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 
 ########################################################################3
 
@@ -30,7 +27,7 @@ sub test_allow_all {
     my $net = Ravada::Network->new(address => $ip);
     ok(!$net->allowed($domain->id),"Expecting not allowed from unknown network");
 
-    my $sth = $test->dbh->prepare("INSERT INTO networks (name,address,all_domains) "
+    my $sth = connector->dbh->prepare("INSERT INTO networks (name,address,all_domains) "
         ." VALUES (?,?,?) ");
 
     $sth->execute('foo', '192.168.1.0/24', 1);
@@ -64,7 +61,7 @@ sub test_allow_domain {
     }
 
 
-    my $sth = $test->dbh->prepare("INSERT INTO networks "
+    my $sth = connector->dbh->prepare("INSERT INTO networks "
         ." (id, name,address,all_domains, no_domains) "
         ." VALUES (?,?,?,?,?) ");
 
@@ -72,7 +69,7 @@ sub test_allow_domain {
     $sth->execute($id_network,'foo', '10.1.1.0/24', 0,0);
     $sth->finish;
 
-    $sth = $test->dbh->prepare("INSERT INTO domains_network "
+    $sth = connector->dbh->prepare("INSERT INTO domains_network "
         ." (id_domain, id_network, allowed)"
         ." VALUES (?,?,?) ");
 
@@ -89,7 +86,7 @@ sub test_allow_domain {
         ok(!$n_found, "Expecting 0 anon bases, got '$n_found'");
     }
 
-    $sth = $test->dbh->prepare("UPDATE domains_network "
+    $sth = connector->dbh->prepare("UPDATE domains_network "
         ." SET allowed=0 "
         ." WHERE id_domain=? AND id_network=?");
 
@@ -105,7 +102,7 @@ sub test_allow_domain {
         ok(!$n_found, "Expecting 0 anon bases, got '$n_found'");
     }
 
-    $sth = $test->dbh->prepare("UPDATE domains_network "
+    $sth = connector->dbh->prepare("UPDATE domains_network "
         ." SET allowed=0, anonymous=1 "
         ." WHERE id_domain=? AND id_network=?");
     $sth->execute($domain->id, $id_network);
@@ -121,7 +118,7 @@ sub test_allow_domain {
         ok(!$n_found, "Expecting 0 anon bases, got '$n_found'");
     }
 
-    $sth = $test->dbh->prepare("UPDATE domains_network "
+    $sth = connector->dbh->prepare("UPDATE domains_network "
         ." SET allowed=1, anonymous=1 "
         ." WHERE id_domain=? AND id_network=?");
     $sth->execute($domain->id, $id_network);
@@ -154,7 +151,7 @@ sub test_deny_all {
         ok(!$n_found, "Expecting 0 anon bases, got '$n_found'");
     }
 
-    my $sth = $test->dbh->prepare("INSERT INTO networks (name,address,no_domains) "
+    my $sth = connector->dbh->prepare("INSERT INTO networks (name,address,no_domains) "
         ." VALUES (?,?,?) ");
 
     $sth->execute('bar', '10.0.0.0/16', 1);
@@ -172,7 +169,7 @@ sub test_deny_all {
 }
 
 sub deny_everything_any {
-    my $sth = $test->dbh->prepare(
+    my $sth = connector->dbh->prepare(
         "UPDATE networks set all_domains=0 where address='0.0.0.0/0'"
     );
     $sth->execute;
@@ -186,9 +183,9 @@ remove_old_disks();
 
 my $domain_name = new_domain_name();
 my $domain = $vm->create_domain( name => $domain_name
-            , id_iso => 1 , id_owner => $USER->id);
+            , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
-$domain->prepare_base($USER);
+$domain->prepare_base(user_admin);
 $domain->is_public(1);
 
 my $net = Ravada::Network->new(address => '127.0.0.1/32');
@@ -203,7 +200,5 @@ test_deny_all($domain);
 
 test_allow_domain($domain);
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();

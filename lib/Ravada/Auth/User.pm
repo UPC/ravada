@@ -13,6 +13,9 @@ use Carp qw(confess croak);
 use Data::Dumper;
 use Moose::Role;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 requires 'add_user';
 requires 'is_admin';
 requires 'is_external';
@@ -48,7 +51,10 @@ Internal OO builder
 =cut
 
 sub BUILD {
+    my $self = shift;
     _init_connector();
+    $self->_load_allowed();
+
 }
 
 #####################################################
@@ -154,6 +160,24 @@ sub unshown_messages {
 
     return @rows;
 
+}
+
+=head2 send_message
+
+Send a message to this user
+
+    $user->send_message($subject, $message)
+
+=cut
+
+sub send_message($self, $subject, $message='') {
+    _init_connector() if !$$CONNECTOR;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO messages (id_user, subject, message) "
+        ." VALUES(?, ? , ? )");
+
+    $sth->execute($self->id, $subject, $message);
 }
 
 
@@ -289,6 +313,97 @@ sub _now {
     }
 
     return "$now[5]-$now[4]-$now[3] $now[2]:$now[1]:$now[0].0";
+}
+
+=head2 allowed_access
+
+Return true if the user has access to clone a virtual machine
+
+=cut
+
+sub allowed_access($self,$id_domain) {
+    return 1 if $self->is_admin;
+
+    $self->_load_allowed();
+
+    # this domain has not access checks defined
+    return 1 if ! exists $self->{_allowed}->{$id_domain};
+
+    # return true if this user is allowed
+    return 1 if $self->{_allowed}->{$id_domain};
+
+    return 0;
+}
+
+sub _list_domains_access($self) {
+
+    my @domains;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT distinct(id_domain) FROM access_ldap_attribute"
+    );
+    $sth->execute();
+    while (my ($id_domain) = $sth->fetchrow) {
+        push @domains, ($id_domain);
+    }
+    $sth->finish;
+
+    return @domains;
+}
+
+sub _load_allowed {
+    my $self = shift;
+    my $refresh = shift;
+
+    return if !$refresh && $self->{_load_allowed}++;
+
+    if (ref($self) !~ /SQL$/) {
+        $self = Ravada::Auth::SQL->new(name => $self->name);
+    }
+
+    my $ldap_entry;
+    $ldap_entry = $self->ldap_entry if $self->external_auth && $self->external_auth eq 'ldap';
+
+    my @domains = $self->_list_domains_access();
+
+    for my $id_domain ( @domains ) {
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "SELECT attribute, value, allowed, last "
+            ." FROM access_ldap_attribute"
+            ." WHERE id_domain=?"
+            ." ORDER BY n_order "
+        );
+        $sth->execute($id_domain);
+
+        my ($n_allowed, $n_denied) = ( 0,0 );
+        while ( my ($attribute, $value, $allowed, $last) = $sth->fetchrow) {
+
+            $n_allowed++ if $allowed;
+            $n_denied++ if !$allowed;
+
+            if ( $value eq '*' ) {
+                $self->{_allowed}->{$id_domain} = $allowed
+                    if !exists $self->{_allowed}->{$id_domain};
+                last;
+            } elsif ( $ldap_entry && defined $ldap_entry->get_value($attribute)
+                    && $ldap_entry->get_value($attribute) eq $value ) {
+
+                $self->{_allowed}->{$id_domain} = $allowed;
+
+                last if !$allowed || $last;
+            }
+        }
+        $sth->finish;
+        next if defined $self->{_allowed}->{$id_domain};
+        if ($n_allowed && $n_denied) {
+            warn "WARNING: No default access attribute for domain $id_domain";
+            next;
+        }
+        if ($n_allowed && !$n_denied) {
+            $self->{_allowed}->{$id_domain} = 0;
+        } else {
+            $self->{_allowed}->{$id_domain} = 1;
+        }
+    }
 }
 
 1;

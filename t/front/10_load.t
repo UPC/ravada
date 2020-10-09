@@ -3,7 +3,6 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -11,18 +10,11 @@ use Test::Ravada;
 use_ok('Ravada');
 use_ok('Ravada::Front');
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
+init();
 
-init($test->connector , 't/etc/ravada.conf');
-
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 my $RVD_BACK  = rvd_back( );
 my $RVD_FRONT = rvd_front();
-
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
 
 # twice so it won't warn it is only used once
 ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");
@@ -54,8 +46,15 @@ sub test_add_domain_db {
     my $domain = $vm->create_domain( 
         name => $domain_name 
         , id_owner => $USER->id
-        , @{$ARG_CREATE_DOM{$vm_name}}
+        , arg_create_dom($vm_name)
     );
+
+    my $domain2 = $vm->search_domain($domain_name);
+    ok($domain2,"[$vm_name] Expecting domain $domain_name") or exit;
+
+    my $domain_f = $RVD_FRONT->search_domain($domain_name);
+    ok($domain_f,"[$vm_name] Expecting domain $domain_name") or exit;
+
     my $domains = $RVD_FRONT->list_domains();
     ok($domains,"No domains list returned");
     ok(scalar @$domains == 1, "There should be one domain ".Dumper($domains));
@@ -64,14 +63,16 @@ sub test_add_domain_db {
     ok($bases,"No bases list returned");
     ok(scalar @$bases == 0, "There should be no bases");
     
-    $test->dbh->do("UPDATE DOMAINS set is_base=1,is_public=1 WHERE name='$domain_name'");
+    connector->dbh->do("UPDATE DOMAINS set is_base=1,is_public=1 WHERE name='$domain_name'");
     
     $bases = $RVD_FRONT->list_bases();
     ok($bases,"No bases list returned");
     ok(scalar @$bases == 1, "There should 1 base, got ".scalar(@$bases)) or exit;
+
+    is($bases->[0]->{name}, $domain_name);
     
     for my $base ( @$bases ) {
-        ok($base->{is_base} );
+        ok($base->{is_base},"[$vm_name] Expecting base for ".Dumper($base) );
     }
 }
 
@@ -85,6 +86,7 @@ sub test_vm_types {
 
 my $ping = $RVD_FRONT->ping_backend();
 
+clean();
 SKIP: {
     diag("SKIPPING: No backend found at ping")    if !$ping;
     skip("No backend found at ping",10) if !$ping;
@@ -94,5 +96,7 @@ SKIP: {
         test_vm_types();
     }
 }
+clean();
  
+end();
 done_testing();

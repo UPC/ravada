@@ -4,7 +4,6 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use_ok('Ravada');
 use_ok('Ravada::Request');
@@ -12,13 +11,10 @@ use lib 't/lib';
 
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-init($test->connector, 't/etc/ravada.conf');
 my $RAVADA = rvd_back();
 my $USER = create_user('foo','bar', 1);
 
-my @ARG_CREATE_DOM = ( id_owner => $USER->id , id_iso => 1 );
+my @ARG_CREATE_DOM = ( id_owner => $USER->id , id_iso => search_id_iso('Alpine') );
 
 sub test_remove_domain {
     my $vm_name = shift;
@@ -60,7 +56,7 @@ sub test_new_domain {
 
     diag("[$vm_name] Creating domain $name");
     $vm->connect();
-    my $domain = $vm->create_domain(name => $name, @ARG_CREATE_DOM, active => 0);
+    my $domain = $vm->create_domain(name => $name, @ARG_CREATE_DOM, active => 0, disk => 1024 * 1024);
 
     ok($domain,"Domain not created");
 
@@ -70,6 +66,7 @@ sub test_new_domain {
 
 sub test_start {
     my $vm_name = shift;
+    my $fork = shift;
 
     my $name = new_domain_name();
 #    test_remove_domain($vm_name, $name);
@@ -82,14 +79,18 @@ sub test_start {
         ,uid => $USER->id
         ,remote_ip => $remote_ip
     );
-    $RAVADA->process_requests();
+    if ($fork) {
+        $RAVADA->process_requests(0);
+    } else {
+        $RAVADA->_process_all_requests_dont_fork(0);
+    }
 
-    wait_request($req);
+    wait_request( background => $fork, check_error => 0 );
 
     ok($req->status eq 'done', "[$vm_name] Req ".$req->{id}." expecting status done, got ".$req->status);
-    ok($req->error && $req->error =~ /unknown/i
+    like($req->error , qr/unknown/i
             ,"[$vm_name] Req ".$req->{id}." expecting unknown domain error , got "
-                .($req->error or '<NULL>')) or return;
+                .($req->error or '<NULL>')) or exit;
     $req = undef;
 
     #####################################################################3
@@ -110,15 +111,19 @@ sub test_start {
     wait_request($req2);
     ok($req2->status eq 'done',"Expecting request status 'done' , got "
                                 .$req2->status);
-
+    is($req2->error,'');
+    my $id_domain;
     {
         my $domain = $RAVADA->search_domain($name);
+        $id_domain = $domain->id;
         $domain->start($USER)    if !$domain->is_active();
         ok($domain->is_active);
+        is($domain->is_volatile,0);
 
         my $vm = $RAVADA->search_vm($vm_name);
         my $domain2 = $vm->search_domain($name);
         ok($domain2->is_active);
+        is($domain2->is_volatile,0);
     }
 
     $req2 = undef;
@@ -127,8 +132,8 @@ sub test_start {
     #
     # stop
 
-    my $req3 = Ravada::Request->force_shutdown_domain(name => $name, uid => $USER->id);
-    $RAVADA->process_requests();
+    my $req3 = Ravada::Request->force_shutdown_domain(id_domain => $id_domain, uid => $USER->id);
+    $RAVADA->_process_all_requests_dont_fork(0);
     wait_request($req3);
     ok($req3->status eq 'done',"[$vm_name] expecting request done , got "
                             .$req3->status);
@@ -137,14 +142,33 @@ sub test_start {
 
     my $vm = $RAVADA->search_vm($vm_name);
     my $domain3 = $vm->search_domain($name);
+    ok($domain3,"[$vm_name] Searching for domain $name") or exit;
     for ( 1 .. 60 ) {
-        last if !$domain3->is_active;
+        last if !$domain3 || !$domain3->is_active;
         sleep 1;
     }
     ok(!$domain3->is_active,"Domain $name should not be active");
 
     return $domain3;
 
+}
+
+sub test_screenshot_db {
+    my $vm_name = shift;
+    my $domain_name = shift;
+
+    my $domain = $RAVADA->search_domain($domain_name);
+    $domain->start($USER) if !$domain->is_active();
+    return if !$domain->can_screenshot();
+    sleep 2;
+
+    $domain->screenshot();
+    $domain->shutdown(user => $USER, timeout => 1);
+    my $sth = connector->dbh->prepare("SELECT screenshot FROM domains WHERE id=?");
+    $sth->execute($domain->id);
+    my @fields = $sth->fetchrow;
+
+    ok($fields[0]);
 }
 
 sub test_screenshot {
@@ -170,7 +194,7 @@ sub test_screenshot {
 
     my $dont_fork = 1;
     rvd_back->process_all_requests(0,$dont_fork);
-    wait_request($req);
+    wait_request( background=> !$dont_fork );
     ok($req->status('done'),"Request should be done, it is ".$req->status);
     ok(!$req->error(''),"Error should be '' , it is ".$req->error);
 
@@ -203,7 +227,7 @@ sub test_screenshot_file {
 
     my $dont_fork = 1;
     rvd_back->process_all_requests(0,$dont_fork);
-    wait_request($req);
+    wait_request( background => !$dont_fork );
 
     ok($req->status('done'),"Request should be done, it is ".$req->status);
     ok(!$req->error(),"Error should be '' , it is ".($req->error or ''));
@@ -216,15 +240,15 @@ sub test_screenshot_file {
 ###############################################################
 #
 
-remove_old_domains();
-remove_old_disks();
+init();
+clean();
 
-for my $vm_name (qw(KVM Void)) {
+for my $vm_name ( vm_names() ) {
     my $vmm = $RAVADA->search_vm($vm_name);
 
     SKIP: {
         my $msg = "SKIPPED: Virtual manager $vm_name not found";
-        if ($vmm && $>) {
+        if ($vmm && $vm_name eq 'KVM' && $>) {
             $msg = "SKIPPED: Test must run as root";
             $vmm = undef;
         }
@@ -234,17 +258,17 @@ for my $vm_name (qw(KVM Void)) {
 
 #        $vmm->disconnect() if $vmm;
         diag("Testing VM $vm_name");
-        my $domain = test_start($vm_name);
+        my $domain = test_start($vm_name,0);
+        $domain = test_start($vm_name,1);
 #        $domain->_vm->disconnect;
+        next if !$domain;
         my $domain_name = $domain->name;
         $domain = undef;
 
-        test_screenshot($vm_name, $domain_name);
-        test_screenshot_file($vm_name, $domain_name);
+        test_screenshot_db($vm_name, $domain_name);
     };
 }
-remove_old_domains();
-remove_old_disks();
+end();
 
 done_testing();
 

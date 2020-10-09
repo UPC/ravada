@@ -5,21 +5,17 @@ use Data::Dumper;
 use IPC::Run3;
 use POSIX ":sys_wait_h";
 use Test::More;
-use Test::SQL::Data;
 use XML::LibXML;
 
 use lib 't/lib';
 use Test::Ravada;
 use Sys::Statistics::Linux;
 
-my $BACKEND = 'KVM';
-
 use_ok('Ravada');
 
-my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-my $RVD_BACK = rvd_back( $test->connector , 't/etc/ravada.conf');
+my $RVD_BACK = rvd_back( );
 
-my $USER = create_user('foo','bar');
+my $USER = create_user('foo','bar', 1);
 
 sub test_new_domain {
     my $vm = shift;
@@ -29,10 +25,11 @@ sub test_new_domain {
     my $freemem = _check_free_memory();
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
-                                        , id_iso => 1
+                                        , id_iso => search_id_iso('Alpine')
                                         ,vm => $vm->type
                                         ,id_owner => $USER->id
-                                        ,memory => 1.5*1024*1024
+                                        ,memory => 4*1024*1024
+                                        ,disk => 1 * 1024*1024
             ) 
     };
     if ($freemem < 1 ) {
@@ -59,6 +56,52 @@ sub test_new_domain {
     return $domain;
 }
 
+sub test_new_domain_req {
+    my $vm = shift;
+
+    my $base;
+    eval { $base= $vm->create_domain(name => new_domain_name()
+                                        , id_iso => search_id_iso('Alpine')
+                                        ,vm => $vm->type
+                                        ,id_owner => $USER->id
+                                        ,memory => (_check_free_memory() * 2) * 1024 * 1024
+                                        ,disk => 1 * 1024*1024
+            )
+    };
+    is(''.$@,'') or return;
+    $base->prepare_base(user_admin);
+    my $name = new_domain_name();
+    my $req = Ravada::Request->create_domain(
+        name => $name
+        ,id_base => $base->id
+        ,id_owner => user_admin->id
+        ,remote_ip => '127.0.0.1'
+        ,start => 1
+    );
+    ok($req) or return;
+    rvd_back->_process_requests_dont_fork();
+
+    ok($req->status eq 'done');
+    like($req->error,qr(.));
+
+    my $domain = rvd_back->search_domain($name);
+    ok($domain) or return;
+
+    my $req_start = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,remote_ip => '127.0.0.1'
+    );
+    rvd_back->_process_requests_dont_fork();
+    ok($req_start->status, 'done');
+    is($domain->is_active, 0 );
+    like($req_start->error,qr(.));
+
+    $domain->remove(user_admin);
+    $base->remove(user_admin);
+
+}
+
 sub _check_free_memory{
     my $lxs  = Sys::Statistics::Linux->new( memstats => 1 );
     my $stat = $lxs->get;
@@ -78,18 +121,26 @@ my $vm;
 remove_old_domains();
 remove_old_disks();
 
+for my $vm_name (vm_names()) {
 SKIP: {
-    my $msg = "SKIPPED test: No KVM backend found";
-    my $vm = $RVD_BACK->search_vm('KVM');
+    my $msg = "SKIPPED test: No $vm_name backend found";
+    my $vm = $RVD_BACK->search_vm($vm_name);
+    #    $msg = "SKIPPED: todo review overcommitting issue #1164";
+    #$vm = undef;
+
+    if ($vm_name eq 'KVM' && $>) {
+        $msg = "SKIPPED test: $vm_name must be run from root";
+        $vm = undef;
+    }
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
-    use_ok("Ravada::Domain::$BACKEND");
+    use_ok("Ravada::Domain::$vm_name");
 
     my $freemem = _check_free_memory();
-    my $n_domains = int($freemem)+2;
+    my $n_domains = int($freemem)*2+2;
 
-    if ($n_domains > 5 ) {
+    if ($n_domains > 50 ) {
         my $msg = "Skipped freemem check, too many memory in this host";
         diag($msg);
         skip($msg,10);
@@ -102,11 +153,12 @@ SKIP: {
 
     my @domains;
     for ( 0 .. $n_domains ) {
-        diag("Creating domain $_");
+#        diag("Creating domain $_");
         my $domain = test_new_domain($vm) or last;
         push @domains,($domain) if $domain;
     }
 
+    test_new_domain_req($vm) if $vm_name ne 'Void';
     for (@domains) {
         $_->shutdown_now($USER);
     }
@@ -114,6 +166,7 @@ SKIP: {
         $_->remove($USER);
     }
 };
+}
 
 remove_old_domains();
 remove_old_disks();

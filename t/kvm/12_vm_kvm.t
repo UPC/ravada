@@ -3,15 +3,17 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
+use lib 't/lib';
+use Test::Ravada;
 
 my $BACKEND = 'KVM';
 my $CLASS= "Ravada::VM::$BACKEND";
 
+init();
+
 my %CONFIG = (
-        connector => $test->connector
+        connector => connector
         ,config => 't/etc/ravada.conf'
 );
 
@@ -20,9 +22,9 @@ use_ok('Ravada');
 ##########################################################
 
 sub test_vm_connect {
-    my $vm = Ravada::VM::KVM->new(backend => $BACKEND );
+    my $vm = Ravada::VM::KVM->new();
     ok($vm);
-    ok($vm->type eq 'qemu');
+    ok($vm->type eq 'KVM');
     ok($vm->host eq 'localhost');
     ok($vm->vm);
 }
@@ -40,12 +42,13 @@ sub test_search_vm {
 my $RAVADA;
 eval {
     $RAVADA = Ravada->new(%CONFIG);
+    $RAVADA->_install();
 };
 
 my $err = ($@ or '');
 my $vm;
 
-eval { $vm = $RAVADA->search_vm($BACKEND) } if $RAVADA;
+eval { $vm = $RAVADA->search_vm($BACKEND) } if $RAVADA && !$<;
 $err .= ($@ or '');
 
 SKIP: {
@@ -60,4 +63,5 @@ test_vm_connect();
 test_search_vm();
 
 };
+end();
 done_testing();

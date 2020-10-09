@@ -4,22 +4,16 @@ use strict;
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $FILE_CONFIG = 't/etc/ravada.conf';
+init();
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-init($test->connector, $FILE_CONFIG);
-
-my $USER = create_user('foo','bar');
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-);
+my $USER = create_user('foo','bar', 1);
 our $TIMEOUT_SHUTDOWN = 10;
+
+our %SKIP_DEFAULT_VALUE = map { $_ => 1 } qw(image jpeg playback streaming zlib);
 
 ################################################################
 sub test_create_domain {
@@ -30,16 +24,13 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
 
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , disk => 1024 * 1024
+                    , arg_create_dom($vm_name)
+                     );
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or return;
@@ -66,8 +57,10 @@ sub test_drivers_id {
 
     my $driver_type = $domain->drivers($type);
 
-    my $value = $driver_type->get_value();
-    ok($value);
+    if (!$SKIP_DEFAULT_VALUE{$type}) {
+        my $value = $driver_type->get_value();
+        ok($value,"[$vm_name] Expecting a value for driver $type");
+    }
 
     my @options = $driver_type->get_options();
     isa_ok(\@options,'ARRAY');
@@ -88,6 +81,8 @@ sub test_drivers_id {
         ok(!$@,"Expecting no error, got : ".($@ or ''));
         my $value = $domain->get_driver($type);
         is($value , $option->{value});
+
+        is($domain->needs_restart,0);
 
         {
             my $domain2 = $vm->search_domain($domain->name);
@@ -121,10 +116,60 @@ sub test_settings {
     my $vm_name = shift;
 
     for my $driver ( Ravada::Domain::drivers(undef,undef,$vm_name) ) {
-        next if $driver->name ne 'video';
-        diag("Testing drivers for $vm_name ".$driver->name);
+#        next if $driver->name ne 'video';
+#        diag("Testing drivers for $vm_name ".$driver->name);
         test_drivers_id($vm_name, $driver->name);
     }
+}
+
+sub test_needs_shutdown {
+    my $vm_name = shift;
+
+    my $domain = test_create_domain($vm_name);
+
+    my ($type)  = Ravada::Domain::drivers(undef,undef,$vm_name);
+    my $driver_type = $domain->drivers($type->name);
+
+    ok($driver_type,"Expecting driver of type $type") or exit;
+
+    my @options = $driver_type->get_options();
+    my ($option) = @options;
+
+    $domain->start(user_admin);
+
+    is($domain->is_active,1);
+
+    my $req = Ravada::Request->set_driver( 
+            id_domain => $domain->id
+            , uid => $USER->id
+            , id_option => $option->{id}
+    );
+    rvd_back->_process_requests_dont_fork();
+    is($req->status,'done') or return;
+    is($req->error,'') or return;
+
+    ok(!$@,"Expecting no error, got : ".($@ or ''));
+
+    {
+        my $domain_f = Ravada::Front::Domain->open($domain->id);
+        my $value = $domain_f->get_driver($type->name);
+        is($value , $option->{value});
+        ;
+
+        is($domain_f->needs_restart, 1);
+    }
+
+    $domain->shutdown_now(user_admin);
+    is($domain->needs_restart, 0);
+
+    {
+        my $domain_f = Ravada::Front::Domain->open($domain->id);
+        my $value = $domain_f->get_driver($type->name);
+        is($value , $option->{value});
+
+        is($domain_f->needs_restart, 0);
+    }
+    $domain->remove(user_admin);
 }
 
 ################################################################
@@ -134,16 +179,23 @@ remove_old_disks();
 
 my $vm_name = 'KVM';
 my $vm;
-eval { $vm =rvd_back->search_vm($vm_name) };
+eval { $vm =rvd_back->search_vm($vm_name) } if !$<;
 SKIP: {
     my $msg = "SKIPPED test: No $vm_name backend found"
                 ." error: (".($@ or '').")";
+    if ($vm && $vm_name eq 'KVM' && $>) {
+        $vm = undef;
+        $msg = "SKIPPED: Test must run as root";
+    }
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
+    test_needs_shutdown($vm_name);
+
     test_settings($vm_name);
+
 };
-remove_old_domains();
-remove_old_disks();
+
+end();
 done_testing();
 

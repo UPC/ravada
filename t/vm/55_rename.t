@@ -1,31 +1,22 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use JSON::XS;
 use Test::More;
-use Test::SQL::Data;
 
 use Ravada;
+
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
+init();
 
-my $FILE_CONFIG = 't/etc/ravada.conf';
-
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
-
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
-init($test->connector, $FILE_CONFIG);
-
-my $USER = create_user("foo","bar");
-
+my $USER = create_user("foo","bar", 1);
 
 #######################################################################
 
@@ -37,20 +28,16 @@ sub test_create_domain {
     my $vm = $ravada->search_vm($vm_name);
     ok($vm,"Expecting VM $vm_name") or return;
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     #diag("[$vm_name] creating domain $name");
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , disk => 1024 * 1024
+                    , arg_create_dom($vm_name))
     };
+    is(''.$@,'') or confess;
 
-    ok($domain,"[$vm_name] Expecting VM $name created with ".ref($vm)." ".($@ or '')) or return;
+    ok($domain,"[$vm_name] Expecting VM $name created with ".ref($vm)." ".($@ or '')) or confess;
     ok($domain->name
         && $domain->name eq $name,"Expecting domain name '$name' , got "
         .($domain->name or '<UNDEF>')
@@ -147,7 +134,7 @@ sub test_clone_domain {
 
     $domain->shutdown_now($USER);
     $domain->is_public(1);
-    my $clone = $domain->clone(name => $clone_name, user=>$USER);
+    my $clone = $domain->clone(name => $clone_name, user=>user_admin );
     ok($clone) or return;
     return $clone_name;
 }
@@ -194,17 +181,30 @@ sub test_rename_twice {
 
 }
 
+sub test_rename_and_base($vm) {
+    my $base = create_domain($vm,undef, undef, 1);
+
+    my $new_domain_name = new_domain_name();
+    $base->rename(name => $new_domain_name, user => user_admin);
+    is($base->name , $new_domain_name);
+
+    $base->prepare_base(user_admin);
+    for my $vol ($base->list_files_base) {
+        next if $vol =~ /iso$/;
+        like($vol,qr{/$new_domain_name});
+    }
+
+}
+
 #######################################################################
 
-remove_old_domains();
-remove_old_disks();
+clean();
 
-for my $vm_name (qw( Void KVM )) {
+for my $vm_name ( vm_names()) {
 
     my $vm_ok;
     eval {
-        my $vm = rvd_back()->search_vm($vm_name);
-        $vm_ok = 1 if $vm;
+        $vm_ok = rvd_back()->search_vm($vm_name);
     };
     diag($@) if $@;
     
@@ -220,6 +220,7 @@ for my $vm_name (qw( Void KVM )) {
 
         diag("Testing rename domains with $vm_name");
     
+        test_rename_and_base($vm_ok);
         test_rename_twice($vm_name);
 
         my $domain_name = test_create_domain($vm_name);
@@ -236,7 +237,6 @@ for my $vm_name (qw( Void KVM )) {
     };
 }
     
-remove_old_domains();
-remove_old_disks();
 
+end();
 done_testing();

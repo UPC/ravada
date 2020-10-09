@@ -8,6 +8,9 @@ use_ok('Ravada::Auth::LDAP');
 use_ok('Ravada::Auth::SQL');
 use_ok('Ravada::VM');
 use_ok('Ravada::Domain');
+use_ok('Ravada::Front::Domain');
+
+use_ok('Ravada::Repository::ISO');
 
 my @vms = 'Void';
 
@@ -26,7 +29,7 @@ for my $vm_name (@vms) {
 open my $find,'-|',"find lib -type f -iname '*.pm'" or die $!;
 while (<$find>) {
     chomp;
-    next if /KVM|LXC/;
+    next if /LXC/;
     s{^lib/}{};
     s{\.pm$}{};
     s{/}{::}g;

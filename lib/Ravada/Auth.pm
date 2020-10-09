@@ -3,7 +3,7 @@ package Ravada::Auth;
 use warnings;
 use strict;
 
-our $LDAP;
+our $LDAP_OK;
 our $AD;
 
 use feature qw(signatures);
@@ -17,15 +17,6 @@ use Ravada::Auth::SQL;
 Ravada::Auth - Authentication library for Ravada users
 
 =cut
-
-eval { 
-    require Ravada::Auth::LDAP; 
-};
-if ($@) {
-    warn $@;
-    $LDAP = 0;
-}
-warn "LDAP loaded=".($LDAP or '<UNDEF>')    if $Ravada::DEBUG;
 
 eval {
     require Ravada::Auth::ActiveDirectory;
@@ -44,12 +35,14 @@ Initializes the submodules
 
 sub init($config) {
     if ($config->{ldap}) {
-        eval { 
+        eval {
+            require Ravada::Auth::LDAP;
             Ravada::Auth::LDAP::init($config); 
-            $LDAP = 1;
+            $LDAP_OK = 1;
         };
+        warn $@ if $@;
     } else {
-        $LDAP = 0;
+        $LDAP_OK = 0;
     }
     if ($config->{ActiveDirectory}) {
         Ravada::Auth::ActiveDirectory::init($config);
@@ -72,16 +65,14 @@ sub login {
     my ($name, $pass, $quiet) = @_;
 
     my $login_ok;
-    if (!defined $LDAP || $LDAP) {
+    if (!defined $LDAP_OK || $LDAP_OK) {
         eval {
             $login_ok = Ravada::Auth::LDAP->new(name => $name, password => $pass);
         };
-        warn $@ if $@ && $LDAP && !$quiet;
-        return $login_ok if $login_ok;
-    }
-
-    if ($@ =~ /I can't connect/i) {
-        $LDAP = 0 if !defined $LDAP;
+        warn $@ if $@ && $LDAP_OK && !$quiet;
+        if ( $login_ok ) {
+            return $login_ok;
+        }
     }
 
     $login_ok = _login_ad($name, $pass) if !defined $AD || $AD;
@@ -90,6 +81,7 @@ sub login {
     return Ravada::Auth::SQL->new(name => $name, password => $pass);
 }
 
+<<<<<<< HEAD
 sub _login_ad {
     my ($name, $pass) = @_;
     my $login_ok;
@@ -104,20 +96,23 @@ sub _login_ad {
 }
 
 =head2 LDAP
+=======
+=head2 enable_LDAP
+>>>>>>> develop
 
 Sets or get LDAP support.
 
-    Ravada::Auth::LDAP(0);
+    Ravada::Auth::enable_LDAP(0);
 
-    print "LDAP is supported" if Ravada::Auth::LDAP();
+    print "LDAP is supported" if Ravada::Auth::enable_LDAP();
 
 =cut
 
-sub LDAP {
+sub enable_LDAP {
     my $value = shift;
-    return $LDAP if !defined $value;
+    return $LDAP_OK if !defined $value;
 
-    $LDAP = $value;
+    $LDAP_OK = $value;
     return $value;
 }
 1;

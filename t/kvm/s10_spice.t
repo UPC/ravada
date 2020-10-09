@@ -5,21 +5,15 @@ use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-);
 
-my @VMS = reverse keys %ARG_CREATE_DOM;
-init($test->connector);
-my $USER = create_user("foo","bar");
+init();
+my @VMS = vm_names();
+my $USER = create_user("foo","bar", 1);
 
 #######################################################
 sub test_spice {
@@ -28,7 +22,8 @@ sub test_spice {
 
     my $domain_name = new_domain_name();
     my $domain = $vm->create_domain( name => $domain_name
-                , id_iso => 1 , id_owner => $USER->id);
+                , disk => 1024 * 1024
+                , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     $domain->start($USER);
 
@@ -64,5 +59,5 @@ SKIP: {
     test_spice($vm_name);
 }
 
-clean();
+end();
 done_testing();

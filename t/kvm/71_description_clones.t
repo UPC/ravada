@@ -3,23 +3,15 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
-my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-);
-
-my @VMS = reverse keys %ARG_CREATE_DOM;
-init($test->connector);
-my $USER = create_user("foo","bar");
+init();
+my @VMS = vm_names();
+my $USER = create_user("foo","bar", 1);
 my $DISPLAY_IP = '99.1.99.1';
 
 our $TIMEOUT_SHUTDOWN = 10;
@@ -32,18 +24,13 @@ sub test_create_domain {
     ok($vm,"I can't find VM $vm_name") or return;
 
     my $name = new_domain_name();
-    diag("Test create domain $name");
-
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
+#    diag("Test create domain $name");
 
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , disk => 1024 * 1024
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or return;
@@ -67,23 +54,9 @@ sub test_files_base {
     return;
 }
 
-sub touch_mtime {
-    for my $disk (@_) {
-
-        my @stat0 = stat($disk);
-
-        sleep 2;
-        utime(undef, undef, $disk) or die "$! $disk";
-        my @stat1 = stat($disk);
-
-        die "$stat0[9] not before $stat1[9] for $disk" if $stat0[0] && $stat0[9] >= $stat1[9];
-    }
-
-}
-
 sub test_prepare_base_active {
     my $vm_name = shift;
-    diag("Test prepare base active $vm_name");
+#    diag("Test prepare base active $vm_name");
 
     my $domain = test_create_domain($vm_name);
 
@@ -96,8 +69,8 @@ sub test_prepare_base_active {
     ok($domain->is_active,"[$vm_name] Domain ".$domain->name." should be active") or return;
     ok(!$domain->is_paused,"[$vm_name] Domain ".$domain->name." should not be paused") or return;
 
-    eval{ $domain->prepare_base($USER) };
-    ok(!$@,"[$vm_name] Prepare base, expecting error='', got '$@'") or exit;
+    eval{ $domain->prepare_base( user_admin ) };
+    ok(!$@,"[$vm_name] Prepare base ".$domain->name.", expecting error='', got '$@'") or exit;
 
     ok(!$domain->is_active,"[$vm_name] Domain ".$domain->name." should not be active")
         or return;
@@ -106,7 +79,7 @@ sub test_prepare_base_active {
 sub test_prepare_base {
     my $vm_name = shift;
     my $domain = shift;
-    diag("Test prepare base $vm_name");
+#    diag("Test prepare base $vm_name");
 
     my $vm = rvd_back->search_vm($vm_name);
     ok($vm,"I can't find VM $vm_name") or return;
@@ -114,18 +87,17 @@ sub test_prepare_base {
     test_files_base($domain,0);
     $domain->shutdown_now($USER)    if $domain->is_active();
 
-    eval { $domain->prepare_base( $USER) };
-    ok(!$@, $@);
+    eval { $domain->prepare_base( user_admin ) };
+    is(''.$@, '', "[$vm_name] expecting no error preparing ".$domain->name);
     ok($domain->is_base);
     is($domain->is_active(),0);
 
-    eval { $domain->prepare_base( $USER) };
     my $description = "This is a description test";
     add_description($domain, $description);
 
-    ok($@ && $@ =~ /already/i,"[$vm_name] Don't prepare if already "
-        ."prepared and file haven't changed "
-        .". Error: ".($@ or '<UNDEF>'));
+    eval { $domain->prepare_base( user_admin ) };
+    $@ = '' if !defined $@;
+    like($@, qr/already/i,"[$vm_name] Don't prepare if already base");
     ok($domain->is_base);
 
     test_files_base($domain,1);
@@ -133,9 +105,11 @@ sub test_prepare_base {
     my @disk = $domain->disk_device();
     $domain->shutdown(user => $USER)    if $domain->is_active;
 
-    touch_mtime(@disk);
 
-    eval { $domain->prepare_base( $USER) };
+    eval {
+        $domain->remove_base( user_admin);
+        $domain->prepare_base( user_admin );
+    };
     is($@,'');
     ok($domain->is_base);
 
@@ -176,16 +150,17 @@ sub test_prepare_base {
         );
     }
 
-    touch_mtime(@disk);
-    eval { $domain->prepare_base($USER) };
-    ok($@ && $@ =~ /has \d+ clones/i
+    eval { $domain->prepare_base( user_admin ) };
+    ok($@ && $@ =~ /has \d+ clones|already a base/i
         ,"[$vm_name] Don't prepare if there are clones ".($@ or '<UNDEF>'));
     ok($domain->is_base);
 
     $domain_clone->remove($USER);
 
-    touch_mtime(@disk);
-    eval { $domain->prepare_base($USER) };
+    eval {
+        $domain->remove_base( user_admin );
+        $domain->prepare_base( user_admin )
+    };
 
     ok(!$@,"[$vm_name] Error preparing base after clone removed :'".($@ or '')."'");
     ok($domain->is_base,"[$vm_name] Expecting domain is_base=1 , got :".$domain->is_base);
@@ -202,7 +177,7 @@ sub add_description {
     my $domain = shift;
     my $description = shift;
     my $name = $domain->name;
-    diag("Add description $name");
+#    diag("Add description $name");
 
     $domain->description($description);
 }
@@ -210,7 +185,7 @@ sub add_description {
 sub test_description {
     my $vm_name = shift;
 
-    diag("Testing description $vm_name");
+#    diag("Testing description $vm_name");
     my $vm =rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name);
 
@@ -231,13 +206,13 @@ sub test_remove_base {
     my @files0 = $domain->list_files_base();
     ok(!scalar @files0,"Expecting no files base, got ".Dumper(\@files0)) or return;
 
-    $domain->prepare_base($USER);
+    $domain->prepare_base( user_admin );
     ok($domain->is_base,"Domain ".$domain->name." should be base") or return;
 
     my @files = $domain->list_files_base();
     ok(scalar @files,"Expecting files base, got ".Dumper(\@files)) or return;
 
-    $domain->remove_base($USER);
+    $domain->remove_base( user_admin );
     ok(!$domain->is_base,"Domain ".$domain->name." should be base") or return;
 
     for my $file (@files) {
@@ -247,7 +222,7 @@ sub test_remove_base {
     my @files_deleted = $domain->list_files_base();
     is(scalar @files_deleted,0);
 
-    my $sth = $test->dbh->prepare(
+    my $sth = connector->dbh->prepare(
         "SELECT count(*) FROM file_base_images"
         ." WHERE id_domain = ?"
     );
@@ -263,9 +238,10 @@ sub test_remove_base {
 
 #######################################################
 
+init();
 clean();
 
-my $vm_name = 'KVM';
+for my $vm_name (vm_names()) {
 my $vm = rvd_back->search_vm($vm_name);
 my $description = 'This is a description test';
 
@@ -282,6 +258,7 @@ SKIP: {
     test_remove_base($vm_name);
 }
 
-clean();
+}
 
+end();
 done_testing();

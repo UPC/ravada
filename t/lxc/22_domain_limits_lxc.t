@@ -4,7 +4,9 @@ use strict;
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
+
+use lib 't/lib';
+use Test::Ravada;
 
 my $CAN_LXC = 0;
 use_ok('Ravada');
@@ -15,8 +17,8 @@ SKIP: {
     $CAN_LXC = 1;
 }
 
-my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-my $RAVADA= Ravada->new( connector => $test->connector);
+my $RAVADA= Ravada->new( connector => connector() );
+$RAVADA->_install();
 my $vm_lxc;
 
 my $CONT= 0;
@@ -147,7 +149,8 @@ SKIP: {
 
     my $msg = ($@ or "No LXC vitual manager found");
 
-    my $vm = $RAVADA->search_vm('lxc');
+    my $vm;
+    $vm = $RAVADA->search_vm('lxc') if $CAN_LXC;
 
     if (!$vm_lxc) {
         ok(!$vm,"There should be no LXC backends");
@@ -178,4 +181,5 @@ test_with_limits_base($newdomain);
 
 }
 
+end();
 done_testing();

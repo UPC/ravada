@@ -1,7 +1,12 @@
-<form method="post">
-%   my $checked = '';
-%   $checked = 'checked' if $user->is_admin;
-    <input type="checkbox" name="is_admin" value="1" <%= $checked %>>
-    <label for="is_admin">is admin</label><br/>
-    <input type="submit" name="make_admin">
-</form>
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+        %   my $checked = '';
+        %   $checked = 'checked' if $user->is_admin;
+            <input type="checkbox" name="is_admin" value="1" <%= $checked %>>
+            <label for="is_admin"><%=l 'is admin' %></label><br/>
+            <button type="reset" class="btn btn-outline-secondary" onclick = "location='/admin/users'"><%=l 'Cancel' %></button>
+            <input type="submit" class="btn btn-primary" name="make_admin" value="<%=l 'Submit' %>">
+        </form>
+    </div>
+</div>

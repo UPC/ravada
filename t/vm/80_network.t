@@ -3,13 +3,10 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 use XML::LibXML;
 
 use lib 't/lib';
 use Test::Ravada;
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 
@@ -18,17 +15,10 @@ $Ravada::CAN_FORK = 1;
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my $RVD_BACK = rvd_back($test->connector, $FILE_CONFIG);
-my $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
+my $RVD_BACK = rvd_back();
+my $RVD_FRONT= rvd_front();
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
-
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
-
-my @VMS = reverse keys %ARG_CREATE_DOM;
+my @VMS = vm_names();
 my $USER = create_user("foo","bar");
 
 my %SUB_CHECK_NET =(
@@ -63,7 +53,7 @@ sub test_vm {
     $RVD_FRONT = undef;
     test_vm_rvd($vm_name, $RVD_BACK);
 
-    $RVD_FRONT= rvd_front($test->connector, $FILE_CONFIG);
+    $RVD_FRONT= rvd_front( $FILE_CONFIG);
     test_vm_rvd($vm_name, $RVD_FRONT);
 
     $RVD_FRONT = undef;
@@ -78,7 +68,7 @@ sub test_create_domain {
     my @args_create = (
             vm => $vm_name
          ,name => $domain_name
-       ,id_iso => 1
+       ,id_iso => search_id_iso('Alpine')
       ,network => $net
      ,id_owner => $USER->id
     );
@@ -184,7 +174,6 @@ for my $vm_name (@VMS) {
         test_vm($vm_name);
     }
 }
-remove_old_domains();
-remove_old_disks();
 
+end();
 done_testing();

@@ -4,7 +4,9 @@ use strict;
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
+
+use lib 't/lib';
+use Test::Ravada;
 
 use_ok('Ravada');
 
@@ -16,8 +18,8 @@ SKIP: {
     $CAN_LXC = 1;
 };
 
-my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
-my $RAVADA= Ravada->new( connector => $test->connector);
+my $RAVADA= Ravada->new( connector => connector() );
+$RAVADA->_install();
 
 my $vm_lxc;
 
@@ -55,7 +57,7 @@ sub test_remove_domain_by_name {
 
 sub search_domain_db {
     my $name = shift;
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? ");
+    my $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=? ");
     $sth->execute($name);
     my $row =  $sth->fetchrow_array;
     return $row;
@@ -125,7 +127,7 @@ sub test_prepare_base {
     my $domain = shift;
     $domain->prepare_base();
 
-    my $sth = $test->dbh->prepare("SELECT * FROM domains WHERE name=? AND is_base=1");
+    my $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=? AND is_base=1");
     $sth->execute($domain->name);
     my $row =  $sth->fetchrow_hashref;
     ok($row->{name} && $row->{name} eq $domain->name,"I can't find ".$domain->name." in bases");
@@ -173,7 +175,7 @@ sub test_domain{
     }
 }
 
-sub remove_old_domains {
+sub remove_old_domains_lxc_local {
     for ( 0 .. 10 ) {
         my $dom_name = $DOMAIN_NAME."_$_";
 
@@ -189,7 +191,7 @@ eval { $vm_lxc = Ravada::VM::LXC->new() } if $CAN_LXC;
 SKIP: {
     my $msg = ($@ or "No LXC vitual manager found");
 
-    my $vm = $RAVADA->search_vm('lxc') if $RAVADA;
+    my $vm = $RAVADA->search_vm('LXC') if $RAVADA;
 
     if (!$vm_lxc) {
         ok(!$vm,"There should be no LXC backends");
@@ -201,11 +203,11 @@ SKIP: {
         diag("Testing missing LXC");
 
         my $ravada2;
-        eval { $ravada2 = Ravada->new( connector => $test->connector); };
+        eval { $ravada2 = Ravada->new( connector => connector() ); };
         my $vm2 = $ravada2->search_vm('lxc')    if $ravada2;
         ok(!$vm2,"No LXC virtual manager should be found withoud LXC_LS defined");
         $Ravada::VM::LXC::CMD_LXC_LS = $lxc_ls;
-        remove_old_domains();
+        remove_old_domains_lxc_local();
         my $domain = test_domain();
         my $domain2 = test_domain_from_base($domain);
         test_remove_domain($domain);
@@ -215,4 +217,5 @@ SKIP: {
 
 }
 
+end();
 done_testing();

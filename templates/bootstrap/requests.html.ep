@@ -1,15 +1,22 @@
-<div id="requests" class="panel panel-primary"
+<div
+    ng-cloak="true"
     ng-show="requests[0]"
     ng-controler="requestsCtrl">
-    <div class="panel-heading"><b>Running processes</b></div>
-
-    <div class="panel-body">
+    <button type="button" class="btn btn-primary btn-sm"
+        ng-click="show_requests = !show_requests"
+    >Requests
+        <span class="badge badge-warning" ng-hide="show_requests">{{requests.length}}</span>
+        <span class="badge badge-warning" ng-show="show_requests">hide</span>
+    </button>
+    <div ng-show="show_requests"
+        class="alert alert-light border-primary text-primary" role="alert" id="requests"
+    >
     <div ng-repeat="request in requests">
-        <font color="darkgray">{{request.date}} |</font>
+        <span class="badge badge-pill badge-light">{{request.date}} |</span>
         {{request.command}}
             <b>{{request.domain}}</b>
             <i>{{request.status}}</i>
-            <font color="darkblue">{{request.message}}</font>
+            <span class="badge badge-pill badge-light">{{request.error}}</span>
     </div>
     </div>
 </div>

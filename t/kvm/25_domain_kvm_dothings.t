@@ -4,23 +4,17 @@ use strict;
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
 use_ok('Ravada');
 
-my $test = Test::SQL::Data->new( config => 't/etc/sql.conf');
 my $VMM;
 
-my $RAVADA = rvd_back( $test->connector , 't/etc/ravada.conf');
+my $RAVADA = rvd_back();
 
-my $REMOTE_VIEWER = `which remote-viewer`;
-chomp $REMOTE_VIEWER;
-
-my $USER = create_user('foo','bar');
-
+my $USER = create_user('foo','bar', 1);
 
 ##############################################################
 #
@@ -33,7 +27,7 @@ sub test_remove_domain {
     $domain = $RAVADA->search_domain($name,1);
 
     if ($domain) {
-        diag("Removing domain $name");
+#        diag("Removing domain $name");
         $domain->remove($user);
     }
     $domain = $RAVADA->search_domain($name,1);
@@ -50,6 +44,10 @@ remove_old_disks();
 eval { $VMM = $RAVADA->search_vm('kvm') } if $RAVADA;
 SKIP: {
     my $msg = "SKIPPED test: No KVM backend found";
+    if ( $< ) {
+        $msg = "SKIPPED: Test must run as root";
+        $VMM = undef;
+    }
     diag($msg)      if !$VMM;
     skip $msg,10    if !$VMM;
 
@@ -61,7 +59,8 @@ test_remove_domain($name, user_admin());
 
 my $domain = $VMM->create_domain(
           name => $name
-      , id_iso => 1 
+        , disk => 1024 * 1024
+      , id_iso => search_id_iso('alpine')
       , active => 0
     , id_owner => $USER->id
 );
@@ -94,6 +93,5 @@ ok($domain,"Expected a domain class, got :".ref($domain)) and do {
 };
 }
 
+end();
 done_testing();
-
-

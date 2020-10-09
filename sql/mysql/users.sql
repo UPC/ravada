@@ -7,7 +7,9 @@ CREATE TABLE `users` (
   `is_temporary` integer DEFAULT 0,
   `is_external` integer DEFAULT 0,
   `language` char(3) DEFAULT NULL,
+  `date_created` timestamp DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-);
+)
+  CHARACTER SET 'utf8';
 

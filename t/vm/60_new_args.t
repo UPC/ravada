@@ -5,23 +5,15 @@ use Data::Dumper;
 use JSON::XS;
 use YAML qw(LoadFile);
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
 
 use_ok('Ravada');
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => $test->connector);
-
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-    ,Void => [ ]
-);
+my @ARG_RVD = ( config => $FILE_CONFIG,  connector => connector());
 
 my %TEST_DISK = (
     Void => \&test_disk_void
@@ -30,7 +22,7 @@ my %TEST_DISK = (
 
 my $USER;
 
-init($test->connector, $FILE_CONFIG);
+init();
 
 #######################################################################
 
@@ -45,19 +37,18 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
-    eval { $domain = $vm->create_domain(name => $name
+    eval {
+        my %args = arg_create_dom($vm_name);
+        $args{disk} = $disk;
+        $domain = $vm->create_domain(
+                    %args
+                    , name => $name
                     , id_owner => $USER->id
                     , memory => $mem
-                    , disk => $disk
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                );
     };
+    is($@,'');
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or exit;
     ok($domain->name
@@ -81,25 +72,19 @@ sub test_create_fail {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
                     , memory => $mem
+                    , arg_create_dom($vm_name)
                     , disk => $disk
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                );
     };
     ok($@,"Expecting error , got ''");
 
     ok(!$domain,"Expecting doesn't exists domain '$name'");
 
-    my $domain2 = rvd_front()->search_domain($name);
-    ok(!$domain,"Expecting doesn't exists domain '$name'");
+    is(rvd_front->domain_exists,0,"Expecting doesn't exists domain '$name'");
 
 }
 
@@ -113,11 +98,11 @@ sub test_req_create_domain{
     {
         my $rvd_front = rvd_front();
         $req = $rvd_front->create_domain( name => $name
+                    , arg_create_dom($vm_name)
                     , id_owner => $USER->id
                     , memory => $mem
                     , disk => $disk
                     , vm => $vm_name
-                    , @{$ARG_CREATE_DOM{$vm_name}}
         );
    
     }
@@ -125,7 +110,7 @@ sub test_req_create_domain{
 
     rvd_back()->process_requests();
 
-    wait_request($req);
+    wait_request(background => 1);
     ok($req->status('done'),"Expecting status='done' , got ".$req->status);
     ok(!$req->error,"Expecting error '' , got '".($req->error or '')."'");
 
@@ -137,7 +122,7 @@ sub test_req_create_domain{
 
 sub test_req_create_fail {
     my $vm_name = shift;
-    my ($mem, $disk) = @_;
+    my ($mem, $disk, $fork) = @_;
 
     my $name = new_domain_name();
 
@@ -145,20 +130,25 @@ sub test_req_create_fail {
     {
         my $rvd_front = rvd_front();
         $req = $rvd_front->create_domain( name => $name
+                    , arg_create_dom($vm_name)
                     , id_owner => $USER->id
                     , memory => $mem
                     , disk => $disk
                     , vm => $vm_name
-                    , @{$ARG_CREATE_DOM{$vm_name}}
         );
    
         ok($req,"Expecting request to create_domain");
     }
-    rvd_back->process_requests();
+    if ($fork) {
+        rvd_back->process_requests(0);
+    } else {
+        rvd_back->_process_all_requests_dont_fork();
+    }
 
-    wait_request($req);
+    wait_request( background => $fork, check_error => 0 );
     ok($req->status('done'),"Expecting status='done' , got ".$req->status);
-    ok($req->error,"Expecting error , got '".($req->error or '')."'");
+    ok($req->error,"Expecting error creating $name , got '".($req->error or '')."'"
+        ." with memory: $mem ,  disk: $disk , fork: ".($fork or 0)) or exit;
 
     my $domain = rvd_back->search_domain($name);
     ok(!$domain,"Expecting domain doesn't exist domain '$name'");
@@ -214,7 +204,7 @@ sub test_disk_kvm {
     my $doc = XML::LibXML->load_xml(string => $xml);
     
     my ($size) = $doc->findnodes('/volume/capacity/text()')->[0]->getData();
-    ok($size == $size_exp, "Expecting size '$size_exp' , got '$size'");
+    ok($size == $size_exp, "Expecting size $disk '$size_exp' , got '$size'");
 
 
 }
@@ -232,7 +222,9 @@ sub test_args {
     {
         my $domain = test_req_create_domain($vm_name, $memory, $disk, "Request");
         test_memory($vm_name, $domain, $memory, "Request") if $domain;
-        test_disk($vm_name, $domain, $disk)     if $domain;
+
+        my $domain_backend = rvd_back->search_domain($domain->name);
+        test_disk($vm_name, $domain_backend, $disk)     if $domain_backend;
     }
 }
 
@@ -248,17 +240,18 @@ sub test_small {
     test_create_fail($vm_name, 512 * 1024, 1,"Direct");
 
     # fail memory req
-    test_req_create_fail($vm_name, 1 , 2*1024*1024 ,"Direct");
+    test_req_create_fail($vm_name, 1 , 2*1024*1024 );
+    test_req_create_fail($vm_name, 1 , 2*1024*1024 ,"fork");
 
     # fails disk req
-    test_req_create_fail($vm_name, 512 * 1024, 1,"Direct");
+    test_req_create_fail($vm_name, 512 * 1024, 1);
+    test_req_create_fail($vm_name, 512 * 1024, 1,"fork");
 
 }
 
 #######################################################################
 
-remove_old_domains();
-remove_old_disks();
+clean();
 $Data::Dumper::Sortkeys = 1;
 
 for my $vm_name (qw( Void KVM )) {
@@ -268,7 +261,7 @@ for my $vm_name (qw( Void KVM )) {
     my $vm_ok;
     eval {
         my $ravada = Ravada->new(@ARG_RVD);
-        $USER = create_user("foo","bar")    if !$USER;
+        $USER = create_user("foo","bar", 1)    if !$USER;
 
         my $vm = $ravada->search_vm($vm_name)  if $ravada;
 
@@ -290,8 +283,5 @@ for my $vm_name (qw( Void KVM )) {
     };
 }
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();
-

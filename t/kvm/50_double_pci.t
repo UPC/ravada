@@ -4,16 +4,11 @@ use strict;
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $FILE_CONFIG = 't/etc/ravada.conf';
-
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-init($test->connector, $FILE_CONFIG);
+init();
 
 my $USER = create_user('foo','bar');
 
@@ -28,10 +23,11 @@ sub test_create_domain_xml {
     my $file_xml = (shift or "t/kvm/etc/$name.xml");
 
     die "Missing '$file_xml'" if !-e $file_xml;
-    my $vm = rvd_back->search_vm('kvm');
+    my $vm = rvd_back->search_vm('KVM');
 
     my $device_disk = $vm->create_volume(
         name => $name
+        ,size => 1024 * 1024
         ,xml => "etc/xml/dsl-volume.xml");
     ok($device_disk,"Expecting a device disk") or return;
     ok(-e $device_disk);
@@ -65,14 +61,14 @@ sub test_create_domain_xml {
 sub test_clone_domain {
     my $name = shift;
 
-    my $vm = rvd_back->search_vm('kvm');
+    my $vm = rvd_back->search_vm('KVM');
     my $domain = $vm->search_domain($name);
 
     my $clone_name = new_domain_name();
     my $domain_clone;
     $domain->shutdown_now($USER)    if $domain->is_active;
     $domain->is_public(1);
-    eval {$domain_clone = $domain->clone(name => $clone_name, user => $USER) };
+    eval {$domain_clone = $domain->clone(name => $clone_name, user => user_admin ) };
 
     ok(!$@,"Expecting error:'' , got '".($@ or '')."'") or exit;
 
@@ -85,7 +81,7 @@ remove_old_domains();
 remove_old_disks();
 
 my $vm;
-eval { $vm = rvd_back->search_vm('KVM') };
+eval { $vm = rvd_back->search_vm('KVM') } if !$<;
 SKIP: {
     my $msg = "SKIPPED test: No KVM backend found";
     if ($vm && $>) {
@@ -106,6 +102,5 @@ SKIP: {
 
 
 };
-remove_old_domains();
-remove_old_disks();
+end();
 done_testing();

@@ -5,8 +5,10 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
   VERSION   => '0.01',
+  NAME => 'Ravada',
   PREREQ_PM => {
-          'Mojolicious' => '7.14'
+          'Mojolicious' => '7.01'
+            ,'DateTime' => 0
      ,'DBIx::Connector' => 0
   ,'Authen::Passphrase' => 0
 	      ,'IPC::Run3'  => 0
@@ -17,6 +19,7 @@ WriteMakefile(
       ,'XML::LibXML'=> 0
              ,'YAML' => 0
     ,'Image::Magick' => 0
+        ,'IO::Scalar' => 0
       ,'MooseX::Types::NetAddr::IP' => 0
 	,'IO::Interface' => 0
 	,'Sys::Statistics::Linux' => 0
@@ -26,13 +29,16 @@ WriteMakefile(
     ,'DBD::SQLite'      => 0
     ,'IPTables::ChainMgr' => 0
     ,'Net::DNS' => 0
+    ,'Net::OpenSSH' => 0
+    ,'File::Rsync' => 0
+    ,'DateTime::Format::DateParse'=> 0
+    ,'PBKDF2::Tiny' => 0
   },
   BUILD_REQUIRES => {
-    'Test::SQL::Data' => 0
-    ,'Test::Perl::Critic' => 0
+    'Test::Perl::Critic' => 0
   },
 
   test      => {TESTS => 't/*.t t/*/*.t'},
-  clean     => {FILES => 't/.db' }
+  clean     => {FILES => ['t/.db', '/var/tmp/rvd_void'] }
 
 );

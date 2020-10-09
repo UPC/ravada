@@ -5,21 +5,14 @@ use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
-my $RVD_BACK = rvd_back($test->connector);
-my %ARG_CREATE_DOM = (
-      kvm => [ id_iso => 1 ]
-);
-
-my @VMS = reverse keys %ARG_CREATE_DOM;
+my $RVD_BACK = rvd_back();
+my @VMS = vm_names();
 my $USER = create_user("foo","bar",1);
 
 sub test_hybernate {
@@ -50,6 +43,7 @@ sub test_hybernate_clone {
     my $clone = $domain->clone(name => new_domain_name(), user => $USER);
 
     eval {$clone->start($USER)  if !$clone->is_active };
+    is($@,'');
     is($clone->is_active,1) or return;
 
     eval { $clone->hybernate($USER) };
@@ -121,7 +115,5 @@ for my $vm_name ( @{rvd_front->list_vm_types}) {
     }
 }
 
-clean();
-
+end();
 done_testing();
-

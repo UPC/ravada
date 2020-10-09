@@ -5,7 +5,6 @@ use Carp qw(carp confess cluck);
 use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
-use Test::SQL::Data;
 
 use_ok('Ravada');
 use_ok('Ravada::Request');
@@ -13,13 +12,12 @@ use_ok('Ravada::Request');
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
+init();
 
-init($test->connector, 't/etc/ravada.conf');
+my $USER = create_user("foo","bar", 1);
 
-my $USER = create_user("foo","bar");
-
-my $ID_ISO = 1;
+rvd_back();
+my $ID_ISO = search_id_iso('Alpine');
 my @ARG_CREATE_DOM = (
         id_iso => $ID_ISO
         ,id_owner => $USER->id
@@ -42,10 +40,11 @@ sub test_swap {
         name => $name
         ,vm => $vm_name
         ,@ARG_CREATE_DOM
-        ,swap => 128*1024*1024
+        ,swap => 1024*1024
+        ,disk => 1024*1024
     );
     ok($req);
-    rvd_back()->process_requests();
+    rvd_back()->_process_all_requests_dont_fork();
     wait_request($req);
 
     ok($req->status eq 'done'
@@ -75,6 +74,7 @@ sub test_req_create_domain_iso {
 
     my $req = Ravada::Request->create_domain(
         name => $name
+        ,disk => 1024 * 1024
         ,@ARG_CREATE_DOM
     );
     ok($req);
@@ -92,7 +92,7 @@ sub test_req_create_domain_iso {
     my $rvd_back = rvd_back();
 #    $rvd_back->process_requests(1);
     $rvd_back->process_requests();
-    wait_request($req);
+    wait_request(background => 1);
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
@@ -141,6 +141,7 @@ sub test_req_create_domain {
 
     my $req = Ravada::Request->create_domain(
         name => $name
+        ,disk => 1024 * 1024
         ,@ARG_CREATE_DOM
     );
     ok($req);
@@ -155,7 +156,7 @@ sub test_req_create_domain {
 
     my $rvd_back = rvd_back();
     $rvd_back->process_requests();
-    wait_request($req);
+    wait_request(background => 1);
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
@@ -189,7 +190,7 @@ sub test_req_prepare_base {
         ok(!$domain->is_base, "Expecting domain base=0 , got: '".$domain->is_base."'");
         $req = Ravada::Request->prepare_base(
             id_domain => $domain->id
-            ,uid => $USER->id
+            ,uid => user_admin->id
         );
         ok($req);
         ok($req->status);
@@ -197,9 +198,9 @@ sub test_req_prepare_base {
         ok($domain->is_locked,"Domain $name should be locked when preparing base");
     }
 
-    rvd_back->process_requests();
+    rvd_back->_process_all_requests_dont_fork();
     rvd_back->process_long_requests(0,1);
-    wait_request($req);
+    wait_request(background => 1);
     ok(!$req->error,"Expecting error='', got '".($req->error or '')."'");
 
     my $vm = rvd_front()->search_vm($vm_name);
@@ -244,7 +245,7 @@ sub test_req_create_from_base {
 
 
         rvd_back->process_requests();
-        wait_request($req);
+        wait_request(background => 1);
 
         ok($req->status eq 'done'
             ,"Status of request is ".$req->status." it should be done");
@@ -263,6 +264,50 @@ sub test_req_create_from_base {
     return $clone_name;
 
 }
+sub test_req_create_from_base_novm {
+    my $vm_name = shift;
+    my $base_name = shift;
+
+    my $clone_name = new_domain_name();
+    my $id_base;
+    {
+    my $rvd_back = rvd_back();
+    my $vm = $rvd_back->search_vm($vm_name);
+    my $domain_base = $vm->search_domain($base_name);
+    $id_base = $domain_base->id
+    }
+
+    {
+        my $req = Ravada::Request->create_domain(
+            name => $clone_name
+            , id_base => $id_base
+            , id_owner => $USER->id
+        );
+        ok($req->status eq 'requested'
+            ,"Status of request is ".$req->status." it should be requested");
+
+
+        rvd_back->process_requests();
+        wait_request(background => 1);
+
+        ok($req->status eq 'done'
+            ,"Status of request is ".$req->status." it should be done");
+        ok(!$req->error,"Expecting error '' , got '"
+                        .($req->error or '')."' creating domain ".$clone_name);
+
+    }
+    my $domain =  rvd_front()->search_domain($clone_name);
+
+    ok($domain,"Searching for domain $clone_name") or return;
+    ok($domain->name eq $clone_name
+        ,"Expecting domain name '$clone_name', got ".$domain->name);
+    ok(!$domain->is_base,"Expecting clone not base , got: "
+        .$domain->is_base()." ".$domain->name);
+
+    $domain = Ravada::Domain->open($domain->id);
+    $domain->remove(user_admin);
+
+}
 
 sub test_volumes {
     my ($vm_name, $domain1_name , $domain2_name) = @_;
@@ -276,7 +321,7 @@ sub test_volumes {
     my @volumes1 = $domain1->list_volumes();
     my @volumes2 = $domain2->list_volumes();
 
-    my %volumes1 = map { $_ => 1 } @volumes1;
+    my %volumes1 = map { $_ => 1 } grep { !/iso$/} @volumes1;
     my %volumes2 = map { $_ => 1 } @volumes2;
 
     ok(scalar keys %volumes1 == scalar keys %volumes2
@@ -333,9 +378,7 @@ sub test_req_remove_base_fail {
     }
 
     ok($req->status eq 'requested' || $req->status eq 'done');
-    rvd_back->process_requests();
-    rvd_back->process_long_requests(0,1);
-    wait_request($req);
+    rvd_back->_process_all_requests_dont_fork();
 
     ok($req->status eq 'done', "Expected req->status 'done', got "
                                 ."'".$req->status."'");
@@ -377,7 +420,7 @@ sub test_req_remove_base {
         my $rvd_back = rvd_back();
         rvd_back->process_requests();
         rvd_back->process_long_requests(0,1);
-        wait_request($req);
+        wait_request(background => 1);
     }
     ok($req->status eq 'done', "[$vm_name] Expected req->status 'done', got "
                                 ."'".$req->status."'");
@@ -393,6 +436,23 @@ sub test_req_remove_base {
         ok(!$domain_base->is_base());
     }
     check_files_removed(@files_base);
+}
+
+sub test_req_remove {
+    my ($vm_name, $name_domain ) = @_;
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $req = Ravada::Request->remove_domain(
+        uid => $USER->id
+        , name => $name_domain
+    );
+
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->status,'done');
+    is($req->error,'');
+
+    my $clone_gone = $vm->search_domain($name_domain);
+    ok(!$clone_gone);
 }
 
 sub test_shutdown_by_name {
@@ -474,18 +534,14 @@ ok($Ravada::CONNECTOR,"Expecting conector, got ".($Ravada::CONNECTOR or '<unde>'
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( qw(KVM Void)) {
+for my $vm_name ( vm_names ) {
     my $vm_connected;
     eval {
         my $rvd_back = rvd_back();
         my $vm= $rvd_back->search_vm($vm_name)  if rvd_back();
-        $vm_connected = 1 if $vm;
-        @ARG_CREATE_DOM = ( id_iso => 1, vm => $vm_name, id_owner => $USER->id );
+        $vm_connected = $vm if $vm;
+        @ARG_CREATE_DOM = ( id_iso => search_id_iso('Alpine'), vm => $vm_name, id_owner => $USER->id, disk => 1024 * 1024 );
 
-        if ($vm_name eq 'KVM') {
-            my $iso = $vm->_search_iso($ID_ISO);
-            $vm->_iso_name($iso);
-        }
     };
 
     SKIP: {
@@ -498,6 +554,10 @@ for my $vm_name ( qw(KVM Void)) {
         skip($msg,10)   if !$vm_connected;
 
         diag("Testing requests with $vm_name");
+        if ($vm_name eq 'KVM') {
+            my $iso = $vm_connected->_search_iso($ID_ISO);
+            $vm_connected->_iso_name($iso, undef);
+        }
         test_swap($vm_name);
 
         my $domain_name = test_req_create_domain_iso($vm_name);
@@ -507,6 +567,7 @@ for my $vm_name ( qw(KVM Void)) {
         my $base_name = test_req_create_domain($vm_name) or next;
 
         test_req_prepare_base($vm_name, $base_name);
+        test_req_create_from_base_novm($vm_name, $base_name);
         my $clone_name = test_req_create_from_base($vm_name, $base_name);
 
         ok($clone_name) or next;
@@ -515,11 +576,11 @@ for my $vm_name ( qw(KVM Void)) {
 
         test_req_remove_base_fail($vm_name, $base_name, $clone_name);
         test_req_remove_base($vm_name, $base_name, $clone_name);
+        test_req_remove($vm_name, $base_name);
 
     };
 }
 
-remove_old_domains();
-remove_old_disks();
+end();
 
 done_testing();

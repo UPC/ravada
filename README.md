@@ -1,10 +1,28 @@
-# ravada [![GitHub version](https://img.shields.io/badge/version-0.2.8-brightgreen.svg)](https://github.com/frankiejol/ravada/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/frankiejol/ravada/blob/master/LICENSE) [![Documentation Status](https://readthedocs.org/projects/ravada/badge/?version=latest)](http://ravada.readthedocs.io/en/latest/?badge=latest) [![GitHub Stats](https://img.shields.io/badge/github-stats-ff5500.svg)](http://githubstats.com/upc/ravada)
+# ravada 
 
+[![GitHub version](https://img.shields.io/badge/version-0.7.0-brightgreen.svg)](https://github.com/UPC/ravada/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/UPC/ravada/blob/master/LICENSE)
+[![Documentation Status](https://readthedocs.org/projects/ravada/badge/?version=latest)](http://ravada.readthedocs.io/en/latest/?badge=latest)
+[![Follow twitter](https://img.shields.io/twitter/follow/ravada_vdi.svg?style=social&label=Twitter&style=flat-square)](https://twitter.com/ravada_vdi)
+[![Telegram Group](https://img.shields.io/badge/Telegram-Group-blue.svg)](https://t.me/ravadavdi)
+[![Project Status: Active - The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
+
+<sup>**Frontend:**</sup><!-- [![Docker Stars](https://img.shields.io/docker/stars/ravada/front.svg?style=flat)](https://hub.docker.com/r/ravada/front/) -->
+[![Docker Pulls](https://img.shields.io/docker/pulls/ravada/front.svg?style=flat)](https://hub.docker.com/r/ravada/front/)
+[![](https://images.microbadger.com/badges/image/ravada/front.svg)](https://microbadger.com/images/ravada/front "Get your own image badge on microbadger.com")
+<sup>**Backend:**</sup><!-- [![Docker Stars](https://img.shields.io/docker/stars/ravada/back.svg?style=flat)](https://hub.docker.com/r/ravada/back/)-->
+[![Docker Pulls](https://img.shields.io/docker/pulls/ravada/back.svg?style=flat)](https://hub.docker.com/r/ravada/back/)
+[![](https://images.microbadger.com/badges/image/ravada/back.svg)](https://microbadger.com/images/ravada/back "Get your own image badge on microbadger.com")
 
 ## Remote Virtual Desktops Manager
 
 Ravada is a software that allows the user to connect to a
 remote virtual desktop.
+Ravada is meant for sysadmins who have some background in GNU/Linux, and want to deploy a VDI project.
+
+Its back-end has been designed and implemented in order to allow future hypervisors to be added to the framework. Currently, it supports KVM and LXC is in the works.
+
+The client only requirements are: a web-browser and a remote viewer supporting the spice protocol.
 
 In the current release we use the
 KVM Hypervisors: [KVM](http://www.linux-kvm.org/) as the backend for the Virtual Machines.

@@ -5,13 +5,11 @@ use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-my $RVD_BACK = rvd_back($test->connector);
+my $RVD_BACK = rvd_back();
 my $USER;
 
 $USER = create_user('foo','bar');
@@ -44,18 +42,17 @@ sub test_run_timeout {
     is($clone->run_timeout(),$timeout);
 
     $clone->start(user => $USER);
+    is(scalar($clone->list_requests(1)),2) or exit;
 
     is($clone->is_active,1);
-    rvd_back->_process_requests_dont_fork();
+    rvd_back->_process_all_requests_dont_fork();
     is($clone->is_active,1);
-    sleep($timeout);
-    rvd_back->_process_requests_dont_fork();
-    for ( 1 .. 60 ) {
-        last if !$clone->is_active;
+    for ( 1 .. $timeout + 60 ) {
+        last if !$clone->is_active || ! scalar($clone->list_requests(1));
         sleep 1;
-        rvd_back->_process_requests_dont_fork();
+        rvd_back->_process_all_requests_dont_fork();
     }
-    is($clone->is_active,0);
+    is($clone->is_active,0, "Expecting ".$clone->name." timed out shutdown") or exit;
 
     $clone->remove(user_admin);
     $domain->remove(user_admin);
@@ -90,7 +87,7 @@ sub test_run_timeout_propagate {
 ######################################################
 clean();
 
-for my $vm_name ( @{rvd_front->list_vm_types},'Void') {
+for my $vm_name ( vm_names() ) {
 
     my $vm = rvd_back->search_vm($vm_name);
 
@@ -110,5 +107,5 @@ for my $vm_name ( @{rvd_front->list_vm_types},'Void') {
     }
 }
 
-clean();
+end();
 done_testing();

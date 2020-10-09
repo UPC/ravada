@@ -3,7 +3,6 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -12,9 +11,7 @@ use_ok('Ravada');
 use_ok('Ravada::VM::Void');
 use_ok('Ravada::Auth::SQL');
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
-my $ravada = rvd_back($test->connector , 't/etc/ravada.conf');
+my $ravada = rvd_back();
 
 #
 # Create a new user
@@ -41,6 +38,8 @@ sub test_create_domain {
 
     my $vm = Ravada::VM::Void->new();
     ok($vm,"I can't connect void VM");
+
+    user_admin->grant($user, 'create_machine' );
 
     my $domain_name = new_domain_name();
     my $domain = $vm->create_domain(name => $domain_name, id_owner => $user->id);
@@ -94,8 +93,6 @@ test_display($domain,$user_foo , $user_bar );
 my $user_admin = create_admin_user('mcnulty');
 test_display($domain,$user_admin , $user_bar );
 
-remove_old_domains();
-remove_old_disks();
-
+end();
 done_testing();
 

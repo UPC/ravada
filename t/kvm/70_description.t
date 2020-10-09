@@ -3,22 +3,15 @@ use strict;
 
 use Data::Dumper;
 use Test::More;
-use Test::SQL::Data;
 
 use lib 't/lib';
 use Test::Ravada;
 
-my $test = Test::SQL::Data->new(config => 't/etc/sql.conf');
-
 use_ok('Ravada');
 
-my %ARG_CREATE_DOM = (
-      KVM => [ id_iso => 1 ]
-);
-
-my @VMS = reverse keys %ARG_CREATE_DOM;
-init($test->connector);
-my $USER = create_user("foo","bar");
+init();
+my @VMS = vm_names();
+my $USER = create_user("foo","bar", 1);
 
 our $TIMEOUT_SHUTDOWN = 10;
 
@@ -31,16 +24,11 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
-    if (!$ARG_CREATE_DOM{$vm_name}) {
-        diag("VM $vm_name should be defined at \%ARG_CREATE_DOM");
-        return;
-    }
-    my @arg_create = @{$ARG_CREATE_DOM{$vm_name}};
-
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
-                    , @{$ARG_CREATE_DOM{$vm_name}})
+                    , disk => 1024 * 1024
+                    , arg_create_dom($vm_name))
     };
 
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or return;
@@ -64,7 +52,7 @@ sub add_description {
 sub test_description {
     my $vm_name = shift;
 
-    diag("Testing add description $vm_name");
+#    diag("Testing add description $vm_name");
     my $vm =rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name);
 
@@ -80,8 +68,9 @@ sub test_description {
 
 clean();
 
-my $vm_name = 'KVM';
-my $vm = rvd_back->search_vm($vm_name);
+for my $vm_name ( vm_names() ) {
+my $vm;
+$vm = rvd_back->search_vm($vm_name) if !$<;
 my $description = 'This is a description test';
 
 SKIP: {
@@ -96,6 +85,7 @@ SKIP: {
     test_description($vm_name);
 }
 
-clean();
+}
 
+end();
 done_testing();
