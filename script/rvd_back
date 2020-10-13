@@ -168,7 +168,6 @@ sub do_start {
     my $t_refresh = 0;
 
     my $ravada = Ravada->new( %CONFIG );
-    autostart_machines($ravada);
     #    Ravada::Request->enforce_limits();
     #Ravada::Request->refresh_vms();
     for (;;) {
@@ -235,6 +234,7 @@ sub start {
             $vm->id;
         }
         $ravada->_wait_pids();
+        autostart_machines($ravada);
     }
     clean_old_requests();
     for (;;) {
