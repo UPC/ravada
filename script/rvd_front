@@ -185,7 +185,7 @@ hook before_routes => sub {
     return access_denied($c)
         if $url =~ /(screenshot|\.json)/
         && !_logged_in($c);
-    return login($c) if !_logged_in($c);
+    return login($c,401) if !_logged_in($c);
 
     if ($USER && $USER->is_admin && $CONFIG_FRONT->{monitoring}) {
         if (!defined $c->session('monitoring')) {
@@ -1548,8 +1548,7 @@ sub _detect_languages($c) {
 
 }
 
-sub login {
-    my $c = shift;
+sub login($c, $status=200) {
     $c->session(login => undef);
 
     my $login = $c->param('login');
@@ -1601,7 +1600,7 @@ sub login {
                     ." no-repeat bottom center scroll;\n\t}"];
 
     sleep 5 if scalar(@error);
-    my @error_status;
+    my @error_status = ( status => $status );
     @error_status = ( status => 403) if @error;
 
     $c->render(
