@@ -28,6 +28,10 @@ our $CONFIG = \$Ravada::CONFIG;
 
 sub BUILD {
     my $self = shift;
+    my ($params) = @_;
+    die "ERROR: Ticket not found"
+        if !$params->{ticket};
+    $self->{ticket} = $params->{ticket};
     die "ERROR: Login failed '".$self->name."'"
         if !$self->login;
     return $self;
@@ -39,16 +43,29 @@ sub remove_user { }
 
 sub search_user { }
 
-sub login($self) {
-    return $self->name;
-}
-
 sub _generate_session_ticket
 {
     my ($name) = @_;
     my $cookie;
     eval { $cookie = Ravada::ModAuthPubTkt::pubtkt_generate(privatekey => $$CONFIG->{cas}->{cookie}->{priv_key}, keytype => $$CONFIG->{cas}->{cookie}->{type}, userid => $name, validuntil => time() + $$CONFIG->{cas}->{cookie}->{timeout}); };
     return $cookie;
+}
+
+sub _get_session_userid_by_ticket
+{
+    my ($cookie) = @_;
+    my $result;
+    eval { $result = Ravada::ModAuthPubTkt::pubtkt_verify(publickey => $$CONFIG->{cas}->{cookie}->{pub_key}, keytype => $$CONFIG->{cas}->{cookie}->{type}, ticket => $cookie); };
+    die $@ ? $@ : 'Cannot validate ticket' if ((! $result) || ($@));
+    my %data = Ravada::ModAuthPubTkt::pubtkt_parse($cookie);
+    die 'Ticket is expired' if ($data{validuntil} < time());
+    return $data{uid};
+}
+
+sub login($self) {
+    my $userid = _get_session_userid_by_ticket($self->{ticket});
+    die 'Ticket user id do not coincides with received user id' if ($self->name ne $userid);
+    return $self->name;
 }
 
 sub login_external($ticket, $cookie) {
@@ -58,8 +75,7 @@ sub login_external($ticket, $cookie) {
         if ($result->is_success) {
             my $name = $1 if ($result->response =~ m/<cas:user>(.+)<\/cas:user>/);
             return undef if (! $name);
-            my $self = Ravada::Auth::CAS->new(name => $name);
-            $self->{'ticket'} = _generate_session_ticket($name);
+            my $self = Ravada::Auth::CAS->new(name => $name, ticket => _generate_session_ticket($name));
             return $self;
         }
         else {
@@ -69,12 +85,8 @@ sub login_external($ticket, $cookie) {
             die sprintf("ERROR: %s", $error || "Login failed");
         }
     } elsif ($cookie) {
-        my $result;
-        eval { $result = Ravada::ModAuthPubTkt::pubtkt_verify(publickey => $$CONFIG->{cas}->{cookie}->{pub_key}, keytype => $$CONFIG->{cas}->{cookie}->{type}, ticket => $cookie); };
-        die $@ ? $@ : 'Cannot validate cookie' if ((! $result) || ($@));
-        my %data = Ravada::ModAuthPubTkt::pubtkt_parse($cookie);
-        die 'Cookie is expired' if ($data{validuntil} < time());
-        my $self = Ravada::Auth::CAS->new(name => $data{'uid'});
+        my $userid = _get_session_userid_by_ticket($cookie);
+        my $self = Ravada::Auth::CAS->new(name => $userid, ticket => $cookie);
         return $self;
     } else {
         return { redirectTo => $cas_client->login_url(service => $$CONFIG->{cas}->{service}) };
