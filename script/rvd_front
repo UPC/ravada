@@ -607,7 +607,7 @@ get '/machine/screenshot/(:id).(:type)' => sub {
 };
 
 get '/machine/copy_screenshot/(:id).(:type)' => sub {
-        my $c = shift; 
+        my $c = shift;
         my $domain = _search_requested_machine($c);
         return access_denied($c) if (!$USER->is_admin() || $domain->id_base() == NULL );
         return copy_screenshot($c);
@@ -1276,15 +1276,15 @@ get '/machine/hardware/remove/(#id_domain)/(#hardware)/(#index)' => sub {
 
     return access_denied($c)
         unless $USER->id == $domain->id_owner || $USER->is_admin;
-    
+
     my $req = Ravada::Request->remove_hardware(uid => $USER->id
         , id_domain => $domain_id
         , name => $hardware
         , index => $index
     );
-    
-    $RAVADA->wait_request($req,60);  
-    
+
+    $RAVADA->wait_request($req,60);
+
     return $c->render( json => { ok => "Hardware Modified" });
 };
 
@@ -1650,6 +1650,7 @@ sub quick_start {
 
     my $login = $c->param('login');
     my $password = $c->param('password');
+    my $ticket = $c->param('ticket');
     my $id_base = $c->param('id_base');
 
     my @error =();
@@ -1657,16 +1658,26 @@ sub quick_start {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
     }
+    if (defined $ticket) {
+        push @error, ("Empty ticket value") if !length $ticket;
+    }
 
-    if ( $login && $password ) {
+    if (!@error) {
         my $log_ok;
-        eval { $log_ok = Ravada::Auth::login($login, $password) };
-        if ($log_ok) {
-            $c->session('login' => $login);
+        if ( $login && $password) {
+            eval { $log_ok = Ravada::Auth::login($login, $password) };
         } else {
-            push @error,("Access denied");
+            eval { $log_ok = Ravada::Auth::login_external($c->param('ticket'), $c->session('ticket')) };
+            $login = $log_ok->name if ($log_ok && !$@);
+        }
+        if ($log_ok && !$@) {
+            $c->session('login' => $login);
+        }
+        else {
+            push @error,($@ ? $@ : "Access denied");
         }
     }
+    
     if ( $c->param('submit') && _logged_in($c) && defined $id_base ) {
 
         return quick_start_domain($c, $id_base, ($login or $c->session('login')));
