@@ -593,7 +593,7 @@ sub mojo_clean {
 
 sub mojo_check_login( $t, $user=$MOJO_USER , $pass=$MOJO_PASSWORD ) {
     $t->ua->get("/user.json");
-    return if $t->tx->res->code =~ /^(200|302)$/;
+    return if $t->tx->res->code =~ /^(101|200|302)$/;
     warn $t->tx->res->code();
     mojo_login($t, $user,$pass);
 }
@@ -852,7 +852,8 @@ sub wait_request {
                     } elsif($req->command eq 'set_time') {
                         like($req->error,qr(^$|libvirt error code));
                     } else {
-                        is($req->error,'') or confess $req->command;
+                        my $error = ($req->error or '');
+                        is($error,'') or confess $req->command;
                     }
                 }
             }
