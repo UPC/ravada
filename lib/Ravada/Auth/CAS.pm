@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Data::Dumper;
-use Ravada::ModAuthPubTkt;
+use Authen::ModAuthPubTkt;
 use HTML::Entities;
 use LWP::UserAgent;
 
@@ -46,7 +46,7 @@ sub _generate_session_ticket
 {
     my ($name) = @_;
     my $cookie;
-    eval { $cookie = Ravada::ModAuthPubTkt::pubtkt_generate(privatekey => $$CONFIG->{cas}->{cookie}->{priv_key}, keytype => $$CONFIG->{cas}->{cookie}->{type}, userid => $name, validuntil => time() + $$CONFIG->{cas}->{cookie}->{timeout}); };
+    eval { $cookie = Authen::ModAuthPubTkt::pubtkt_generate(privatekey => $$CONFIG->{cas}->{cookie}->{priv_key}, keytype => $$CONFIG->{cas}->{cookie}->{type}, userid => $name, validuntil => time() + $$CONFIG->{cas}->{cookie}->{timeout}); };
     return $cookie;
 }
 
@@ -54,9 +54,9 @@ sub _get_session_userid_by_ticket
 {
     my ($cookie) = @_;
     my $result;
-    eval { $result = Ravada::ModAuthPubTkt::pubtkt_verify(publickey => $$CONFIG->{cas}->{cookie}->{pub_key}, keytype => $$CONFIG->{cas}->{cookie}->{type}, ticket => $cookie); };
+    eval { $result = Authen::ModAuthPubTkt::pubtkt_verify(publickey => $$CONFIG->{cas}->{cookie}->{pub_key}, keytype => $$CONFIG->{cas}->{cookie}->{type}, ticket => $cookie); };
     die $@ ? $@ : 'Cannot validate ticket' if ((! $result) || ($@));
-    my %data = Ravada::ModAuthPubTkt::pubtkt_parse($cookie);
+    my %data = Authen::ModAuthPubTkt::pubtkt_parse($cookie);
     die 'Ticket is expired' if ($data{validuntil} < time());
     return $data{uid};
 }
