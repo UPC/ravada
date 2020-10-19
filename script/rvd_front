@@ -237,8 +237,8 @@ any '/test' => sub {
 
 any '/logout' => sub {
     my $c = shift;
-    logout($c);
-    $c->redirect_to('/');
+    my $redirect_to = logout($c);
+    $c->redirect_to($redirect_to ? $redirect_to : '/');
 };
 
 get '/anonymous' => sub {
@@ -1577,6 +1577,7 @@ sub login {
             if ($auth_ok && !$@) {
                 return $c->redirect_to($auth_ok->{'redirectTo'}) if ($auth_ok->{'redirectTo'});
                 $c->session('ticket' => $auth_ok->{'ticket'}) if ($auth_ok->{'ticket'});
+                $c->session('logoutURL' => $auth_ok->{'logoutURL'}) if ($auth_ok->{'logoutURL'});
                 $login = $auth_ok->name;
             }
         }
@@ -1641,6 +1642,9 @@ sub logout {
     $c->session(expires => 1);
     $c->session(login => undef);
     $c->session(ticket => undef);
+    my $logout_url = $c->session('logoutURL');
+    $c->session(logoutURL => undef);
+    return $logout_url;
 }
 
 sub quick_start {

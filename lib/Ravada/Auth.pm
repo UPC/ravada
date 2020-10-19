@@ -99,6 +99,7 @@ sub login_external {
         };
         warn $@ if $@ && $LDAP_OK && !$quiet;
         if ( $login_ok ) {
+            $login_ok->{'mode'} = 'external';
             return $login_ok;
         }
     }
@@ -108,6 +109,7 @@ sub login_external {
         };
         warn $@ if $@ && $CAS_OK && !$quiet;
         if ( $login_ok ) {
+            $login_ok->{'mode'} = 'external';
             return $login_ok;
         }
     }

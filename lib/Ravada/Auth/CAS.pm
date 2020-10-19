@@ -5,7 +5,7 @@ use warnings;
 
 use Data::Dumper;
 use Authen::ModAuthPubTkt;
-use HTML::Entities;
+use URI::Escape;
 use LWP::UserAgent;
 
 =head1 NAME
@@ -31,6 +31,7 @@ sub BUILD {
     die 'ERROR: Ticket not found'
         if !$params->{ticket};
     $self->{ticket} = $params->{ticket};
+    $self->{logoutURL} = sprintf('%s/logout?service=%s', $$CONFIG->{cas}->{url}, uri_escape($$CONFIG->{cas}->{service})) if ($$CONFIG->{cas}->{logout});
     die sprintf('ERROR: Login failed %s', $self->name)
         if !$self->login;
     return $self;
@@ -64,7 +65,7 @@ sub _get_session_userid_by_ticket
 sub _validate_ticket
 {
     my ($ticket) = @_;
-    my $response = LWP::UserAgent->new->get(sprintf('%s/serviceValidate?service=%s&ticket=%s', $$CONFIG->{cas}->{url}, encode_entities($$CONFIG->{cas}->{service}), encode_entities($ticket)));
+    my $response = LWP::UserAgent->new->get(sprintf('%s/serviceValidate?service=%s&ticket=%s', $$CONFIG->{cas}->{url}, uri_escape($$CONFIG->{cas}->{service}), uri_escape($ticket)));
     return $1 if ($response->content =~ /<cas:user>(.+)<\/cas:user>/);
     die sprintf('Ticket validation error: %s', $response->content);
 }
@@ -85,7 +86,7 @@ sub login_external($ticket, $cookie) {
         my $self = Ravada::Auth::CAS->new(name => $name, ticket => $cookie);
         return $self;
     } else {
-        return { redirectTo => sprintf('%s/login?service=%s', $$CONFIG->{cas}->{url}, encode_entities($$CONFIG->{cas}->{service})) };
+        return { redirectTo => sprintf('%s/login?service=%s', $$CONFIG->{cas}->{url}, uri_escape($$CONFIG->{cas}->{service})) };
     }
 }
 
