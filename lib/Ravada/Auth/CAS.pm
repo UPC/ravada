@@ -4,16 +4,15 @@ use strict;
 use warnings;
 
 use Data::Dumper;
-use LibCAS::Client;
 use Ravada::ModAuthPubTkt;
+use HTML::Entities;
+use LWP::UserAgent;
 
 =head1 NAME
 
 Ravada::Auth::CAS - CAS library for Ravada
 
 =cut
-
-use LibCAS::Client;
 
 use Moose;
 
@@ -29,10 +28,10 @@ our $CONFIG = \$Ravada::CONFIG;
 sub BUILD {
     my $self = shift;
     my ($params) = @_;
-    die "ERROR: Ticket not found"
+    die 'ERROR: Ticket not found'
         if !$params->{ticket};
     $self->{ticket} = $params->{ticket};
-    die "ERROR: Login failed '".$self->name."'"
+    die sprintf('ERROR: Login failed %s', $self->name)
         if !$self->login;
     return $self;
 }
@@ -62,6 +61,14 @@ sub _get_session_userid_by_ticket
     return $data{uid};
 }
 
+sub _validate_ticket
+{
+    my ($ticket) = @_;
+    my $response = LWP::UserAgent->new->get(sprintf('%s/serviceValidate?service=%s&ticket=%s', $$CONFIG->{cas}->{url}, encode_entities($$CONFIG->{cas}->{service}), encode_entities($ticket)));
+    return $1 if ($response->content =~ /<cas:user>(.+)<\/cas:user>/);
+    die sprintf('Ticket validation error: %s', $response->content);
+}
+
 sub login($self) {
     my $userid = _get_session_userid_by_ticket($self->{ticket});
     die 'Ticket user id do not coincides with received user id' if ($self->name ne $userid);
@@ -69,27 +76,16 @@ sub login($self) {
 }
 
 sub login_external($ticket, $cookie) {
-    my $cas_client = LibCAS::Client->new(cas_url => $$CONFIG->{cas}->{url});
     if ($ticket) {
-        my $result = $cas_client->service_validate(service => $$CONFIG->{cas}->{service}, ticket => $ticket);
-        if ($result->is_success) {
-            my $name = $1 if ($result->response =~ m/<cas:user>(.+)<\/cas:user>/);
-            return undef if (! $name);
-            my $self = Ravada::Auth::CAS->new(name => $name, ticket => _generate_session_ticket($name));
-            return $self;
-        }
-        else {
-            my $error;
-            $error = $result->message if ($result->is_failure());
-            $error = $result->error if ($result->is_error());
-            die sprintf("ERROR: %s", $error || "Login failed");
-        }
+        my $name = _validate_ticket($ticket);
+        my $self = Ravada::Auth::CAS->new(name => $name, ticket => _generate_session_ticket($name));
+        return $self;
     } elsif ($cookie) {
-        my $userid = _get_session_userid_by_ticket($cookie);
-        my $self = Ravada::Auth::CAS->new(name => $userid, ticket => $cookie);
+        my $name = _get_session_userid_by_ticket($cookie);
+        my $self = Ravada::Auth::CAS->new(name => $name, ticket => $cookie);
         return $self;
     } else {
-        return { redirectTo => $cas_client->login_url(service => $$CONFIG->{cas}->{service}) };
+        return { redirectTo => sprintf('%s/login?service=%s', $$CONFIG->{cas}->{url}, encode_entities($$CONFIG->{cas}->{service})) };
     }
 }
 
