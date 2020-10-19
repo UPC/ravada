@@ -89,6 +89,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/Cluster_Hardware
    docs/CLI
    docs/intel_gvt
+   docs/cas_login
 
 .. _feature-docs:
 
