@@ -1,7 +1,7 @@
 Use a CAS login service to login into Ravada
 ============================================
 
-In order to authenticate users into Ravada using a external CAS service you need to 
+In order to authenticate users into Ravada using an external CAS service you need to 
 configure the URL of the external CAS service into ravada.conf YML file.
 
 Configuration
@@ -12,7 +12,7 @@ The config file usually is /etc/ravada.conf. Add this configuration:
 ::
 
     cas:
-        url: https://cas.upc.edu			        # External CAS Service location
+        url: https://cas.example.com		        # External CAS Service location
         service: http://localhost:3000/login		# Ravada Service URL 
         cookie:
             priv_key: /etc/ravada/cas/priv_key.pem	# Pathname of the private key of the certificate that we will use to generate / validate session cookies
