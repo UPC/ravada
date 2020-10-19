@@ -1640,7 +1640,7 @@ sub logout {
     $USER = undef;
     $c->session(expires => 1);
     $c->session(login => undef);
-
+    $c->session(ticket => undef);
 }
 
 sub quick_start {
@@ -1677,7 +1677,7 @@ sub quick_start {
             push @error,($@ ? $@ : "Access denied");
         }
     }
-    
+
     if ( $c->param('submit') && _logged_in($c) && defined $id_base ) {
 
         return quick_start_domain($c, $id_base, ($login or $c->session('login')));
