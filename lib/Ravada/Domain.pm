@@ -1063,8 +1063,8 @@ sub _around_display_info($orig,$self,$user ) {
 sub _set_display_ip($self, $display) {
 
     my $new_ip = ( $self->_vm->nat_ip
+            or $self->_vm->display_ip
             or $self->_vm->public_ip
-            or Ravada::display_ip()
     );
     unlock_hash(%$display);
     $display->{listen_ip} = $display->{ip};
