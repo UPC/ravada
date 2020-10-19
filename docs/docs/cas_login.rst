@@ -14,6 +14,7 @@ The config file usually is /etc/ravada.conf. Add this configuration:
     cas:
         url: https://cas.example.com		        # External CAS Service location
         service: http://localhost:3000/login		# Ravada Service URL 
+        logout: true                                    # Set to also logout from CAS Service when logout from Ravada
         cookie:
             priv_key: /etc/ravada/cas/priv_key.pem	# Pathname of the private key of the certificate that we will use to generate / validate session cookies
             pub_key: /etc/ravada/cas/pub_key.pem	# Pathname of the public key of the certificate that we will use to generate / validate session cookies
