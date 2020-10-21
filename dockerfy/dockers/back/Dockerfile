@@ -14,7 +14,10 @@ RUN apt-get update \
     liblwp-useragent-determined-perl libvirt-clients supervisor net-tools openssh-client apt-utils curl libpbkdf2-tiny-perl \
     libio-stringy-perl libvirt-daemon-system libvirt-clients netcat-openbsd qemu-kvm qemu-utils iproute2 wget bridge-utils firewalld dnsmasq iptables ebtables \
     libnet-openssh-perl libdatetime-format-dateparse-perl \
- && apt-get clean \
+ && apt-get clean
+
+ENV TZ=Europe/Madrid
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata \
  && rm -rf /var/lib/apt/lists/*
 
 RUN echo "listen_tls = 0" >> /etc/libvirt/libvirtd.conf \
