@@ -63,6 +63,14 @@ It is possible to have nodes with heterogeneous operative systems: different Ubu
 Debians, even RedHats or Fedoras can be added, though it should be easier if all of
 them are similar or identical if possible.
 
+In some operative systems like Debian, you must create a link to the kvm file
+to get the node correctly working. It is not necessary for Ubuntu or Fedora/RedHat.
+
+.. prompt:: bash $
+
+    ln -s /usr/bin/kvm /usr/bin/kvm-spice
+
+
 Configuration
 -------------
 
