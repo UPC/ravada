@@ -190,7 +190,7 @@ ravadaApp.directive("solShowMachine", swMach)
                   }
                   for (var i=0, iLength = data.length; i<iLength; i++){
                       mach = data[i];
-                      if (mach.is_base
+                      if (mach.is_base || (!mach.id_base && !mach.has_clones)
                           && (typeof $scope.list_machines[mach.id] == 'undefined'
                              || $scope.list_machines[mach.id].date_changed != mach.date_changed)
                       ){
