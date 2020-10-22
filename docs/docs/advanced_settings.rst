@@ -4,30 +4,65 @@ Ravada advanced settings
 Display IP
 -----------
 
-On a server with 2 IPs, the configuration file allows the administrator define
-which one is used for the display. Add the entry *display_ip* to /etc/ravada.conf
-with the public address of the server.
+On a server with many IP address, the configuration file allows the
+administrator define which one is used for the display. Change the
+field *display_ip* in the Virtual Managers (VMs) table. Set there
+the public address of the server.
 
-::
 
-    display_ip: public.display.ip
+.. Tip:: With recent releases of ravada this shouldn't be necessary. Ravada uses the routing table from the server and sets the display IP from there.
+
+If you want to force the display IP do it this way:
+
+.. prompt:: bash $,(env)...$ auto
+
+    mysql -u rvd_user -p ravada
+    mysql> select id,name,display_ip from vms;
+    +----+---------------+-----------------+
+    | id | name          | display_ip      |
+    +----+---------------+-----------------+
+    |  1 | KVM_localhost |                 |
+    |  2 | barrufet      |                 |
+    +----+---------------+-----------------+
+    mysql> UPDATE vms set display_ip='1.1.1.44' where id=1;
+    mysql> UPDATE vms set display_ip='1.1.1.55' where id=2;
 
 NAT
 ---
 
-The Ravada server can be behind a NAT environment.
+The Ravada server can be behind a NAT environment. So the public address
+the client gets may not be the one configured in the Ravada server interface.
+You need to tell Ravada this IP. Then it will be shown to the end users for
+their client connection.
+
+Example:
 
 ::
 
-  ____RVD    _______________ NAT ________________ client
-      Server 1.1.1.1             2.2.2.2
+      _______
+  ___|_RVD   |_______________ NAT ________________ client
+     | Server|10.0.0.44             2.2.2.55
+     |_______|
 
-Configure this option in /etc/ravada.conf
 
-::
 
-    display_ip: 1.1.1.1
-    nat_ip: 2.2.2.2
+By default, the IP that is shown to the users will be 10.0.0.44 , but it is not
+accessible from outside. You must configure the NAT IP in the Virtual Managers (VMs) table.
+
+.. prompt:: bash $,(env)...$ auto
+
+    mysql -u rvd_user -p ravada
+    mysql> select id,name,nat_ip from vms;
+    +----+---------------+-----------------+
+    | id | name          | nat_ip          |
+    +----+---------------+-----------------+
+    |  1 | KVM_localhost |                 |
+    +----+---------------+-----------------+
+    mysql> UPDATE vms set display_ip='2.2.2.55' where id=1;
+
+
+If you have more nodes, each one probably will have its own public NAT IP. Set each
+one of them in the same way you set for the main node or Virtual Manager.
 
 Auto Start
 ----------

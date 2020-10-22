@@ -93,12 +93,42 @@ Ravada uses ``iptables`` to restrict the access to the virtual machines.
 These iptables rules grants acess to the admin workstation to all the
 domains and disables the access to everyone else. When the users access
 through the web broker they are allowed to the port of their virtual
-machines. Ravada uses its own iptables chain called 'ravada' to do so:
+machines.
+
+In this example we restrict the access to the virtual machines
+display. The first line is optional but handy if we want to allow access
+to an administrator workstation for debugging purposes.
 
 ::
 
     -A INPUT -p tcp -m tcp -s ip.of.admin.workstation --dport 5900:7000 -j ACCEPT
     -A INPUT -p tcp -m tcp --dport 5900:7000 -j DROP
+
+
+Virtual machines display ports start on 5900. If you want to override
+this configuration, because some other firewall is filtering this port,
+you can do it this way:
+
+Edit /etc/libvirt/qemu.conf, uncomment and change remote_display_port_min.
+
+::
+
+    # Override the port for creating both VNC and SPICE sessions (min).
+    # This defaults to 5900 and increases for consecutive sessions
+    # or when ports are occupied, until it hits the maximum.
+    #
+    remote_display_port_min = 5910
+    #remote_display_port_max = 65535
+
+Then restart libvirtd:
+
+.. prompt:: bash $
+
+    sudo systemctl restart libvirtd
+
+The next virtual machine that starts will be shown from this port (5910).
+This won't change machines already started unless you shut them down and
+start them again.
 
 Help
 ----

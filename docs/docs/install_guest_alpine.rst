@@ -204,7 +204,7 @@ Add it to the system
 
 .. prompt:: bash #
 
-    echo "/dev/vdb1       swap    swap    defaults 0 0" >> /dev/fstab
+    echo "/dev/vdb1       swap    swap    defaults 0 0" >> /etc/fstab
 
 
 Now the swap space is configured, after rebooting the system it should show typing

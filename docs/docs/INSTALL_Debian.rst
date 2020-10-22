@@ -19,14 +19,14 @@ repository <http://infoteleco.upc.edu/img/debian/>`__.
 
 Install the ravada package. Choose the one that matches your OS release:
 
-- ravada_0.8.3_debian-10_all.deb
+- ravada_0.9.0_debian-10_all.deb
 
 When you run dpkg now it may show some errors, it is ok, keep reading.
 
 .. prompt:: bash $
 
-     wget http://infoteleco.upc.edu/img/debian/ravada_0.8.3_debian-10_all.deb
-     sudo dpkg -i ravada_0.8.3_debian-10_all.deb
+     wget http://infoteleco.upc.edu/img/debian/ravada_0.9.0_debian-10_all.deb
+     sudo dpkg -i ravada_0.9.0_debian-10_all.deb
 
 The last command will show a warning about missing dependencies. Install
 them running:
@@ -107,7 +107,7 @@ When asked if this user is admin answer *yes*.
 
 .. prompt:: bash $
 
-     sudo /usr/sbin/rvd_back --add-user user.name
+     sudo /usr/sbin/rvd_back --add-user admin
 
 Client
 ------
