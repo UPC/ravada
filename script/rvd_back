@@ -242,6 +242,7 @@ sub start {
         my $ravada = Ravada->new( %CONFIG );
         $Ravada::CONNECTOR->dbh;
         $ravada->_install();
+		$Ravada::DEBUG = $ravada->setting('backend/debug'); 
         for my $vm (@{$ravada->vm}) {
             $vm->id;
         }

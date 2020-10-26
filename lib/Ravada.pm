@@ -1340,6 +1340,7 @@ sub _sql_insert_defaults($self){
         fallback => 0
         ,session_timeout => 10*60
         ,admin_session_timeout => 30*60
+		,debug => 0
         ,auto_view => 1
     };
     if ( -e "/etc/rvd_front.conf" ){
@@ -1399,6 +1400,11 @@ sub _sql_insert_defaults($self){
                 id_parent => $id_backend
                 ,name => 'start_limit'
                 ,value => 1
+            }
+            ,{
+                id_parent => $id_backend
+                ,name => 'debug'
+                ,value => 0
             }
         ]
     );

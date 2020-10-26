@@ -107,6 +107,7 @@ plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
 
 my %config;
 %config = (config => $CONFIG_FRONT->{config}) if $CONFIG_FRONT->{config};
+
 our $RAVADA = Ravada::Front->new(%config);
 
 our $USER;
