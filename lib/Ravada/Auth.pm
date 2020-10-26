@@ -69,15 +69,6 @@ sub login {
             return $login_ok;
         }
     }
-    if (!defined $CAS_OK || $CAS_OK) {
-        eval {
-            $login_ok = Ravada::Auth::CAS->new(name => $name, password => $pass);
-        };
-        warn $@ if $@ && $CAS_OK && !$quiet;
-        if ( $login_ok ) {
-            return $login_ok;
-        }
-    }
     return Ravada::Auth::SQL->new(name => $name, password => $pass);
 }
 
@@ -93,16 +84,6 @@ sub login_external {
     my ($ticket, $cookie, $quiet) = @_;
 
     my $login_ok;
-    if (!defined $LDAP_OK || $LDAP_OK) {
-        eval {
-            $login_ok = Ravada::Auth::LDAP::login_external($ticket, $cookie);
-        };
-        warn $@ if $@ && $LDAP_OK && !$quiet;
-        if ( $login_ok ) {
-            $login_ok->{'mode'} = 'external';
-            return $login_ok;
-        }
-    }
     if (!defined $CAS_OK || $CAS_OK) {
         eval {
             $login_ok = Ravada::Auth::CAS::login_external($ticket, $cookie);
