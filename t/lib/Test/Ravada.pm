@@ -30,7 +30,7 @@ require Exporter;
 
 @ISA = qw(Exporter);
 
-@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front init init_vm clean new_pool_name new_volume_name
+@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin rvd_front init init_vm clean new_pool_name new_volume_name
 create_domain
     import_domain
     test_chain_prerouting
@@ -60,7 +60,9 @@ create_domain
     create_storage_pool
     local_ips
 
+    wait_request
     delete_request
+    fast_forward_requests
 
     remove_old_domains_req
     mojo_init
@@ -876,6 +878,19 @@ sub wait_request {
         return if defined $timeout && time - $t0 >= $timeout;
         sleep 1 if $background;
     }
+}
+
+=head2 fast_forward_requests
+
+Sets scheduled requests time to now
+
+=cut
+
+sub fast_forward_requests() {
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE requests "
+        ." SET at_time=0 WHERE status = 'requested' AND at_time>0 "
+    );
+    $sth->execute();
 }
 
 sub init_vm {

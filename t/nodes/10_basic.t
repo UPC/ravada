@@ -1100,6 +1100,8 @@ sub test_migrate($vm, $node) {
     is($domain3->_data('id_vm'), $node->id);
     is($domain3->_vm->id, $node->id);
 
+    is($domain3->has_non_shared_storage($vm),1) or exit;
+
     $domain->remove(user_admin);
 }
 

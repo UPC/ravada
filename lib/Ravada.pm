@@ -1400,6 +1400,11 @@ sub _sql_insert_defaults($self){
                 ,name => 'start_limit'
                 ,value => 1
             }
+            ,{
+                id_parent => $id_backend
+                ,name => 'delay_migrate_back'
+                ,value => 600
+            }
         ]
     );
     my %field = ( settings => 'name' );
@@ -1534,6 +1539,7 @@ sub _upgrade_tables {
     $self->_upgrade_screenshots();
 
     }
+    $self->_upgrade_table('domains','shared_storage','varchar(254)');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -3124,7 +3130,7 @@ sub _cmd_start {
 
     $self->_remove_unnecessary_downs($domain);
 
-    my @args = ( user => $user );
+    my @args = ( user => $user, request => $request );
     push @args, ( remote_ip => $request->defined_arg('remote_ip') )
         if $request->defined_arg('remote_ip');
 
@@ -3718,7 +3724,7 @@ sub _migrate_base($self, $domain, $node, $uid, $request) {
         , id_vm => $node->id
         , uid => $uid
     );
-    $request->after_request($req_base);
+    $request->after_request($req_base->id) if $req_base;
     die "Base ".$base->name." still not prepared in node ".$node->name.". Retry\n";
 }
 
@@ -3762,6 +3768,23 @@ sub _cmd_migrate($self, $request) {
     if $request->defined_arg('start');
 
 }
+
+sub _cmd_rsync_back($self, $request) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
+
+    my $domain = Ravada::Domain->open($id_domain);
+    return if $domain->is_active;
+
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    die "Error: user ".$user->name." not allowed to migrate domain ".$domain->name
+    unless $user->is_operator;
+
+    my $node = Ravada::VM->open($request->args('id_node'));
+    $domain->_rsync_volumes_back($node, $request);
+
+}
+
 
 sub _clean_requests($self, $command, $request=undef, $status='requested') {
     my $query = "DELETE FROM requests "
@@ -4062,6 +4085,7 @@ sub _req_method {
     ,start_node  => \&_cmd_start_node
     ,connect_node  => \&_cmd_connect_node
     ,migrate => \&_cmd_migrate
+    ,rsync_back => \&_cmd_rsync_back
 
     #users
     ,post_login => \&_cmd_post_login
