@@ -18,7 +18,7 @@
                 <%=l 'A viewer is required to run the virtual machines.' %>
                 <a href="/requirements"><%=l 'Read more.' %></a>
             </div>
-        <div ng-hide="request.status == 'done'">Waiting for machine to start {{dots}}</div>
+        <div ng-hide="request.status == 'done'">Waiting for machine to start <i class="fas fa-sync-alt fa-spin"></i></div>
         <div ng-show="domain">
             <div ng-show="domain.description ||(domain.is_active && domain.msg_timeout)">
                 <span ng-bind-html="domain.description"

@@ -830,7 +830,6 @@
 
         };
         $scope.wait_request = function() {
-            $scope.dots += '.';
             if ($scope.id_request) {
                 $http.get('/request/'+$scope.id_request+'.json').then(function(response) {
                     $scope.request=response.data;
@@ -877,7 +876,6 @@
             }
         }
 
-        $scope.dots = '...';
         $scope.redirect_done = false;
         $scope.wait_request();
         $scope.view_clicked=false;
