@@ -4344,6 +4344,11 @@ sub _cmd_open_exposed_ports($self, $request) {
     $domain->open_exposed_ports();
 }
 
+sub set_debug_value($self) {
+	$DEBUG = $self->setting('backend/debug'); 
+}
+
+
 =head2 setting
 
 Returns the value of a configuration setting
