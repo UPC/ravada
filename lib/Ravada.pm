@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.9.0';
+our $VERSION = '0.9.2';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -2390,6 +2390,7 @@ sub process_requests {
 
     $self->_wait_pids();
     $self->_kill_stale_process();
+    $self->_kill_dead_process();
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
         ." WHERE "
@@ -2563,7 +2564,7 @@ sub _kill_stale_process($self) {
         "SELECT id,pid,command,start_time "
         ." FROM requests "
         ." WHERE start_time<? "
-        ." AND command = 'refresh_vms'"
+        ." AND ( command = 'refresh_vms' or command = 'screenshot') "
         ." AND status <> 'done' "
         ." AND pid IS NOT NULL "
         ." AND start_time IS NOT NULL "
@@ -2580,6 +2581,31 @@ sub _kill_stale_process($self) {
      }
     $sth->finish;
 }
+
+sub _kill_dead_process($self) {
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,pid,command,start_time "
+        ." FROM requests "
+        ." WHERE start_time<? "
+        ." AND status = 'working' "
+        ." AND pid IS NOT NULL "
+    );
+    $sth->execute(time - 2);
+    while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
+        next if -e "/proc/$pid";
+        if ($pid == $$ ) {
+            warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
+                ." seconds, but I won't because it is myself";
+            next;
+        }
+        my $request = Ravada::Request->open($id);
+        $request->stop();
+        warn "stopping ".$request->id." ".$request->command;
+     }
+    $sth->finish;
+}
+
 
 sub _domain_working {
     my $self = shift;
