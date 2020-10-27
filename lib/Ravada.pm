@@ -4394,6 +4394,12 @@ sub _cmd_open_exposed_ports($self, $request) {
     $domain->open_exposed_ports();
 }
 
+=head2 set_debug_value
+
+Sets debug global variable from setting
+
+=cut
+
 sub set_debug_value($self) {
 	$DEBUG = $self->setting('backend/debug'); 
 }

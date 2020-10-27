@@ -38,7 +38,7 @@ our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout shutdown_disconnected);
 our $TIME_CACHE_NETSTAT = 60; # seconds to cache netstat data output
 our $RETRY_SET_TIME=10;
 
-our $DEBUG_RSYNC = 1;
+our $DEBUG_RSYNC = 0;
 
 _init_connector();
 
@@ -2815,6 +2815,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
 
 sub _open_iptables_state($self) {
     my $local_net = $self->ip;
+    return if !$local_net;
     $local_net =~ s{(.*)\.\d+}{$1.0/24};
 
     $self->_vm->iptables_unique(
@@ -3960,7 +3961,7 @@ sub rsync($self, @args) {
         }
         my $msg = $self->_msg_log_rsync($file, $node, "rsync", $request);
 
-        $request->status("syncinc",$msg) if $request;
+        $request->status("syncing",$msg) if $request;
         warn "$msg\n" if $DEBUG_RSYNC;
 
         my $t0 = time;
@@ -3992,7 +3993,7 @@ sub _rsync_volumes_back($self, $node, $request=undef) {
 
         my $msg = $self->_msg_log_rsync($file, $node, "rsync_back", $request);
 
-        $request->status("syncinc",$msg) if $request;
+        $request->status("syncing",$msg) if $request;
         warn "$msg\n" if $DEBUG_RSYNC;
         my $t0 = time;
         $rsync->exec(src => 'root@'.$node->host.":".$file ,dest => $file );
@@ -5225,7 +5226,7 @@ sub list_instances($self) {
     return @instances;
 }
 
-=head2 has_shared_storage
+=head2 has_non_shared_storage
 
 Return wether this virtual machine has non shared storage volumes
 
