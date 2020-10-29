@@ -237,6 +237,7 @@ sub _check_clean_shutdown($self) {
     return if !$self->is_known || $self->readonly || $self->is_volatile;
 
     if (( $self->_data('status') eq 'active' && !$self->is_active )
+        || ($self->_data('status') eq 'shutdown' && !$self->_data('post_shutdown'))
         || $self->_active_iptables(id_domain => $self->id)) {
             $self->_post_shutdown();
     }
@@ -298,6 +299,7 @@ sub _vm_disconnect {
 
 sub _around_start($orig, $self, @arg) {
 
+    $self->_data( 'post_shutdown' => 0);
     $self->_start_preconditions(@arg);
 
     my %arg;
@@ -1174,7 +1176,11 @@ sub _data($self, $field, $value=undef, $table='domains') {
         $field_id = 'id_domain';
     }
 
-    if (defined $value) {
+    if (defined $value &&
+        ( !exists $self->{$data}->{$field}
+            || !defined $self->{$data}->{$field}
+            || $self->{$data}->{$field} ne $value )
+        ) {
         confess "Domain ".$self->name." is not in the DB"
             if !$self->is_known();
 
@@ -1989,6 +1995,8 @@ sub is_locked {
         ."   AND command <> 'open_iptables' "
         ."   AND command <> 'set_time'"
         ."   AND command <> 'rsync_back'"
+        ."   AND command <> 'refresh_machine'"
+        ."   AND command <> 'screenshot'"
     );
     $sth->execute($self->id);
     my ($id, $at_time) = $sth->fetchrow;
@@ -2453,8 +2461,10 @@ sub _post_shutdown {
 
     my $is_active = $self->is_active;
 
-    $self->_data(status => 'shutdown')
-        if $self->is_known && !$self->is_volatile && !$is_active;
+    if ( $self->is_known && !$self->is_volatile && !$is_active ) {
+        $self->_data(status => 'shutdown');
+        $self->_data(post_shutdown => 1);
+    }
 
     if ($self->is_known && $self->id_base) {
         my @disks = $self->list_disks();
@@ -3945,7 +3955,7 @@ sub rsync($self, @args) {
             or confess "No Connection to ".$self->_vm->host;
     }
     my $vm_local = $self->_vm->new( host => 'localhost' );
-    my $rsync = File::Rsync->new(update => 1, sparse => 1);
+    my $rsync = File::Rsync->new(update => 1, sparse => 1, times => 1);
     for my $file ( @$files ) {
         my ($path) = $file =~ m{(.*)/};
         my ($out, $err) = $node->run_command("/bin/mkdir","-p",$path);
@@ -3959,6 +3969,7 @@ sub rsync($self, @args) {
         } else {
             next if $vm_local->shared_storage($node, $path);
         }
+        next if _check_stat($file, $vm_local, $node);
         my $msg = $self->_msg_log_rsync($file, $node, "rsync", $request);
 
         $request->status("syncing",$msg) if $request;
@@ -3966,7 +3977,7 @@ sub rsync($self, @args) {
 
         my $t0 = time;
         $rsync->exec(src => $src, dest => $dst);
-        warn "Domain::rsync ".(time - $t0)." seconds $file";
+        warn "Domain::rsync ".(time - $t0)." seconds $file" if $DEBUG_RSYNC;
     }
     if ($rsync->err) {
         $request->status("done",join(" ",@{$rsync->err}))   if $request;
@@ -3977,6 +3988,19 @@ sub rsync($self, @args) {
     $node->refresh_storage_pools();
 }
 
+sub _check_stat($file, $vm1, $vm2) {
+    return if !$vm2->file_exists($file);
+    my @cmd = ("stat","-c",'"%A %s %y"',$file);
+
+    my ($out1, $err1) = $vm1->run_command(@cmd);
+    my ($out2, $err2) = $vm2->run_command(@cmd);
+    $out1 =~ s/^"(.*)"$/$1/;
+    $out2 =~ s/^"(.*)"$/$1/;
+    warn "$file\n$out1\n$out2\n" if $DEBUG_RSYNC;
+
+    return $out1 eq $out2;
+}
+
 sub _msg_log_rsync($self, $file, $node, $sub, $request) {
     my $msg = '';
     $msg .= " [req=".$request->id.",".$request->command."] " if $request;
@@ -3985,7 +4009,7 @@ sub _msg_log_rsync($self, $file, $node, $sub, $request) {
 }
 
 sub _rsync_volumes_back($self, $node, $request=undef) {
-    my $rsync = File::Rsync->new(update => 1);
+    my $rsync = File::Rsync->new(update => 1, sparse => 1, times => 1);
     my $vm_local = $self->_vm->new( host => 'localhost' );
     for my $file ( $self->list_volumes() ) {
         my ($dir) = $file =~ m{(.*)/.*};
@@ -3997,7 +4021,7 @@ sub _rsync_volumes_back($self, $node, $request=undef) {
         warn "$msg\n" if $DEBUG_RSYNC;
         my $t0 = time;
         $rsync->exec(src => 'root@'.$node->host.":".$file ,dest => $file );
-        warn "Domain::rsync_volumes_back ".(time - $t0)." seconds $file";
+        warn "Domain::rsync_volumes_back ".(time - $t0)." seconds $file" if $DEBUG_RSYNC;
         if ( $rsync->err ) {
             $request->status("done",join(" ",@{$rsync->err}))   if $request;
             last;

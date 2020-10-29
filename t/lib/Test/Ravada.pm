@@ -128,6 +128,8 @@ my %LOCKED_FH;
 
 my ($MOJO_USER, $MOJO_PASSWORD);
 
+my $BASE_NAME= "zz-test-base";
+
 sub user_admin {
 
     return $USER_ADMIN if $USER_ADMIN;
@@ -184,7 +186,7 @@ sub vm_names {
    confess;
 }
 
-sub import_domain($vm, $name, $import_base=0) {
+sub import_domain($vm, $name=$BASE_NAME, $import_base=1) {
     my $t0 = time;
     my $domain = $RVD_BACK->import_domain(
         vm => $vm
@@ -815,7 +817,7 @@ sub wait_request {
 
     $timeout = 60 if !defined $timeout && $background;
     my $debug = ( delete $args{debug} or 0 );
-    my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms','set_time'] );
+    my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms','set_time','rsync_back'] );
     $skip = [ $skip ] if !ref($skip);
     my %skip = map { $_ => 1 } @$skip;
     %skip = ( enforce_limits => 1 ) if !keys %skip;
@@ -827,6 +829,7 @@ sub wait_request {
     my $t0 = time;
     my %done;
     for ( ;; ) {
+        fast_forward_requests();
         my $done_all = 1;
         my $prev = join(".",_list_requests);
         my $done_count = scalar keys %done;
@@ -840,11 +843,19 @@ sub wait_request {
             die $@ if $@;
             next if $skip{$req->command};
             if ( $req->status ne 'done' ) {
+                my $run_at = '';
+                if ($req->status eq 'requested') {
+                    $run_at = ($req->at_time or 0);
+                    $run_at = $run_at-time if $run_at;
+                    $run_at = 'now' if !$run_at;
+                    $run_at = " $run_at";
+                }
+
                 diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
-                    ." ".($req->error or '')) if $debug && (time%5 == 0);
-                sleep 1;
+                    .$run_at
+                    ." ".($req->error or ''))
+                    if $debug && (time%5 == 0);
                 $done_all = 0;
-                sleep 1;
             } elsif (!$done{$req->id}) {
                 $t0 = time;
                 $done{$req->{id}}++;

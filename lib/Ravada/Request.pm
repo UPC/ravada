@@ -160,7 +160,7 @@ our %COMMAND = (
 
     # list from low to high priority
     ,disk_low_priority => {
-        limit => 1
+        limit => 2
         ,commands => ['rsync_back','check_storage', 'refresh_vms']
         ,priority => 30
     }
@@ -1392,8 +1392,6 @@ sub AUTOLOAD {
 
     confess "ERROR: field $name is read only"
         if $FIELD_RO{$name};
-
-    confess "Error: wrong value $value" if ref($value);
 
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
             ." WHERE id=?");
