@@ -4047,7 +4047,7 @@ sub _pre_migrate($self, $node, $request = undef) {
         if !$base->base_in_vm($node->id);
         confess "ERROR: base id ".$self->id_base." not found."  if !$base;
 
-       for my $file ( $base->list_files_base ) {
+        for my $file ( $base->list_files_base ) {
             next if $node->file_exists($file);
             warn "Warning: file not found $file in ".$node->name;
             Ravada::Request->set_base_vm(
