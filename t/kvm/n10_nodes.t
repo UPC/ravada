@@ -725,11 +725,12 @@ sub test_clone_not_in_node {
     $domain->prepare_base(user_admin);
     is($domain->base_in_vm($vm->id), 1);
     $domain->set_base_vm(vm => $node, user => user_admin);
+    wait_request(debug => 1);
 
     is($domain->base_in_vm($node->id), 1);
 
     my @clones;
-    for ( 1 .. 4 ) {
+    for ( 1 .. 10 ) {
         my $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
         push @clones,($clone1);
         is($clone1->_vm->host, 'localhost');
@@ -941,6 +942,8 @@ sub test_sync_back($node) {
     }
 
     _shutdown_nicely($clone);
+    fast_forward_requests();
+    wait_request();
     is ( $clone->is_active, 0 );
     for my $file ($clone->list_volumes) {
         my $md5 = _md5($file, $vm);
@@ -1153,6 +1156,10 @@ SKIP: {
         remove_node($node);
         next;
     };
+
+    # remove
+    test_clone_not_in_node($vm_name, $node);
+
     is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
     test_already_started_hibernated($vm_name, $node);
 
@@ -1167,7 +1174,6 @@ SKIP: {
     test_remove_base_main($node);
     test_status($node);
     test_bases_node($vm_name, $node);
-    test_clone_not_in_node($vm_name, $node);
     test_clone_make_base($vm_name, $node);
 
     test_migrate_back($node);

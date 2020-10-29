@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.9.0';
+our $VERSION = '0.10.0';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -1406,6 +1406,11 @@ sub _sql_insert_defaults($self){
                 ,name => 'debug'
                 ,value => 0
             }
+            ,{
+                id_parent => $id_backend
+                ,name => 'delay_migrate_back'
+                ,value => 600
+            }
         ]
     );
     my %field = ( settings => 'name' );
@@ -1540,6 +1545,8 @@ sub _upgrade_tables {
     $self->_upgrade_screenshots();
 
     }
+    $self->_upgrade_table('domains','shared_storage','varchar(254)');
+    $self->_upgrade_table('domains','post_shutdown','int not null default 0');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -2384,6 +2391,7 @@ sub process_requests {
 
     $self->_wait_pids();
     $self->_kill_stale_process();
+    $self->_kill_dead_process();
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
         ." WHERE "
@@ -2414,8 +2422,9 @@ sub process_requests {
 
     for my $req (sort { $a->priority <=> $b->priority } @reqs) {
         next if $req eq 'refresh_vms' && scalar@reqs > 2;
+        next if !$req->id;
 
-        warn "[$request_type] $$ executing request ".$req->id." ".$req->status()." retry=".($req->retry or '<UNDEF>')." "
+        warn "[$request_type] $$ executing request id=".$req->id." ".$req->status()." retry=".($req->retry or '<UNDEF>')." "
             .$req->command
             ." ".Dumper($req->args) if $DEBUG || $debug;
 
@@ -2557,7 +2566,9 @@ sub _kill_stale_process($self) {
         "SELECT id,pid,command,start_time "
         ." FROM requests "
         ." WHERE start_time<? "
-        ." AND command = 'refresh_vms'"
+        ." AND ( command = 'refresh_vms' or command = 'screenshot' or command = 'set_time' "
+        ."      OR command = 'open_exposed_ports' "
+        .") "
         ." AND status <> 'done' "
         ." AND pid IS NOT NULL "
         ." AND start_time IS NOT NULL "
@@ -2567,6 +2578,8 @@ sub _kill_stale_process($self) {
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
                 ." seconds, but I won't because it is myself";
+            my $request = Ravada::Request->open($id);
+            $request->status('done',"Stale process pid=$pid");
             next;
         }
         my $request = Ravada::Request->open($id);
@@ -2574,6 +2587,31 @@ sub _kill_stale_process($self) {
      }
     $sth->finish;
 }
+
+sub _kill_dead_process($self) {
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,pid,command,start_time "
+        ." FROM requests "
+        ." WHERE start_time<? "
+        ." AND status = 'working' "
+        ." AND pid IS NOT NULL "
+    );
+    $sth->execute(time - 2);
+    while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
+        next if -e "/proc/$pid";
+        if ($pid == $$ ) {
+            warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
+                ." seconds, but I won't because it is myself";
+            next;
+        }
+        my $request = Ravada::Request->open($id);
+        $request->stop();
+        warn "stopping ".$request->id." ".$request->command;
+     }
+    $sth->finish;
+}
+
 
 sub _domain_working {
     my $self = shift;
@@ -2653,7 +2691,6 @@ sub _execute {
     }
 
     $request->status('working','') unless $request->status() eq 'waiting';
-    $request->pid($$);
     $request->start_time(time);
     $request->error('');
     if ($dont_fork || !$CAN_FORK) {
@@ -3130,7 +3167,7 @@ sub _cmd_start {
 
     $self->_remove_unnecessary_downs($domain);
 
-    my @args = ( user => $user );
+    my @args = ( user => $user, request => $request );
     push @args, ( remote_ip => $request->defined_arg('remote_ip') )
         if $request->defined_arg('remote_ip');
 
@@ -3460,6 +3497,7 @@ sub _cmd_force_shutdown {
     die "Unknown domain '$id_domain'\n" if !$domain;
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
+    die "Error: unknown user id=$uid in request= ".$request->id if !$user;
 
     $domain->force_shutdown($user,$request);
 
@@ -3724,7 +3762,7 @@ sub _migrate_base($self, $domain, $node, $uid, $request) {
         , id_vm => $node->id
         , uid => $uid
     );
-    $request->after_request($req_base);
+    $request->after_request($req_base->id) if $req_base;
     die "Base ".$base->name." still not prepared in node ".$node->name.". Retry\n";
 }
 
@@ -3768,6 +3806,23 @@ sub _cmd_migrate($self, $request) {
     if $request->defined_arg('start');
 
 }
+
+sub _cmd_rsync_back($self, $request) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
+
+    my $domain = Ravada::Domain->open($id_domain);
+    return if $domain->is_active;
+
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    die "Error: user ".$user->name." not allowed to migrate domain ".$domain->name
+    unless $user->is_operator;
+
+    my $node = Ravada::VM->open($request->args('id_node'));
+    $domain->_rsync_volumes_back($node, $request);
+
+}
+
 
 sub _clean_requests($self, $command, $request=undef, $status='requested') {
     my $query = "DELETE FROM requests "
@@ -3876,6 +3931,8 @@ sub _refresh_active_domain($self, $domain, $active_domain) {
     $domain->info(Ravada::Utils::user_daemon)             if $is_active;
     $active_domain->{$domain->id} = $is_active;
 
+    $domain->_post_shutdown()
+    if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown');
 }
 
 sub _refresh_down_domains($self, $active_domain, $active_vm) {
@@ -3901,6 +3958,8 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
                 $req->status('done');
             }
         }
+        $domain->_post_shutdown()
+        if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown');
     }
 }
 
@@ -4068,6 +4127,7 @@ sub _req_method {
     ,start_node  => \&_cmd_start_node
     ,connect_node  => \&_cmd_connect_node
     ,migrate => \&_cmd_migrate
+    ,rsync_back => \&_cmd_rsync_back
 
     #users
     ,post_login => \&_cmd_post_login
@@ -4343,6 +4403,12 @@ sub _cmd_open_exposed_ports($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain);
     $domain->open_exposed_ports();
 }
+
+=head2 set_debug_value
+
+Sets debug global variable from setting
+
+=cut
 
 sub set_debug_value($self) {
 	$DEBUG = $self->setting('backend/debug'); 

@@ -208,8 +208,12 @@ ravadaApp.directive("solShowMachine", swMach)
                       mach = data[i];
                       var childs = {};
                       if (mach.id_base) {
-                          childs = $scope.list_machines[mach.id_base].childs;
-                          $scope.list_machines[mach.id_base].childs_loading = false;
+                          if (typeof($scope.list_machines[mach.id_base]) == undefined) {
+                              console.log("Error: base "+mach.id_base+" not found");
+                          } else {
+                              childs = $scope.list_machines[mach.id_base].childs;
+                              $scope.list_machines[mach.id_base].childs_loading = false;
+                          }
                       }
                       if (mach.id_base
                           && ( typeof childs[mach.id] == 'undefined'
