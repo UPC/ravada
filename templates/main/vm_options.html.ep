@@ -112,7 +112,7 @@
                 </div>
            </div>
 
-%   if ($USER->is_admin){
+%   if ($USER->can_change_settings){
             <div class="row">
                 <div class="col-lg-3 mt-2">
                     <label class="control-label" for="timeout">Timeout</label>
@@ -126,7 +126,7 @@
                 <div class="col-lg-6"><small class="text-secondary"><%=l 'The machine will shutdown after these minutes' %></small></div>
             </div>
 %   }
-%   if ($USER->is_admin){
+%   if ($USER->can_change_settings){
             <div class="row" ng-show="showmachine.is_base">
                 <div class="col-lg-3 mt-2">
                     <label class="control-label" for="volatile_clones"><%=l 'Volatile Clones' %></label>
