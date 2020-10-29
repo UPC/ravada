@@ -1467,6 +1467,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','public_ip',"varchar(128) DEFAULT NULL");
     $self->_upgrade_table('vms','is_active',"int DEFAULT 0");
     $self->_upgrade_table('vms','enabled',"int DEFAULT 1");
+    $self->_upgrade_table('vms','display_ip',"varchar(128) DEFAULT NULL");
+    $self->_upgrade_table('vms','nat_ip',"varchar(128) DEFAULT NULL");
 
     $self->_upgrade_table('vms','min_free_memory',"int DEFAULT 600000");
     $self->_upgrade_table('vms', 'max_load', 'int not null default 10');
@@ -1631,7 +1633,15 @@ Returns the IP for NATed environments
 
 =cut
 
-sub nat_ip {
+sub nat_ip($self=undef, $new_ip=undef) {
+    if (defined $new_ip) {
+        if (!length $new_ip) {
+            delete $CONFIG->{nat_ip};
+        } else {
+            $CONFIG->{nat_ip} = $new_ip;
+        }
+    }
+
     return $CONFIG->{nat_ip} if exists $CONFIG->{nat_ip};
 }
 
