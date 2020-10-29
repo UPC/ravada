@@ -11,7 +11,7 @@
             <button class="btn btn-danger" id="shutdown-clones" name="shutdown-clones"
                 ng-click="shutdown_clones=1"
             >
-                <%=l 'Close all clones' %>
+                <%=l 'Shutdown all clones' %>
             </button>
         </div>
         <div ng-show="shutdown_clones">

@@ -866,3 +866,15 @@ msgstr ""
 
 msgid "Add description"
 msgstr ""
+
+msgid "These actions affect all the clones on the machine"
+msgstr ""
+
+msgid "Shutdown all clones"
+msgstr ""
+
+msgid "Keep in mind that there may be users using a clone"
+msgstr ""
+
+msgid "Yes, shutwdown all the clones"
+msgstr ""
