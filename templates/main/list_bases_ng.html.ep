@@ -48,12 +48,16 @@
                         </button>
                         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                             <a ng-show="machine.can_remove" class="dropdown-item"
-                                ng-click="host_restore=machine.id_clone"><%=l 'Restore' %></a>
+                                ng-click="host_restore=machine.id_clone">
+                                <i class="fa fa-angle-double-left" aria-hidden="true"></i>&nbsp;<%=l 'Restore' %></a>
                             <a ng-show="machine.is_active" class="dropdown-item"
-                                ng-click="machine.action=false;action(machine,'shutdown')"><%=l 'Shutdown'%></a>
+                                ng-click="machine.action=false;action(machine,'shutdown')">
+                                <i class="fa fa-angle-double-down" aria-hidden="true"></i>&nbsp;<%=l 'Shutdown'%></a>
                             <a ng-show="machine.is_active && machine.can_hibernate" class="dropdown-item"
-                                ng-click="machine.action=false;action(machine,'hibernate')"><%=l 'Hibernate' %></a>
-                            <a class="dropdown-item" href="#"><%=l 'Poweroff' %></a>
+                                ng-click="machine.action=false;action(machine,'hibernate')">
+                                <i class="fa fa-snowflake" aria-hidden="true"></i>&nbsp;<%=l 'Hibernate' %></a>
+                            <a class="dropdown-item" href="#">
+                                <i class="fa fa-times" aria-hidden="true"></i>&nbsp;<%=l 'Poweroff' %></a>
                         </div>
                     </div>
                 <a type="button" class="btn btn-danger text-white"
