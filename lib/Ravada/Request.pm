@@ -129,7 +129,7 @@ our %VALID_ARG = (
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
-    qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download
+    qw( create start shutdown force_shutdown prepare_base remove remove_base rename_domain screenshot download
             clone
             set_base_vm remove_base_vm
             domain_autostart hibernate hybernate

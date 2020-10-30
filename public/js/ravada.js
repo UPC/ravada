@@ -101,7 +101,8 @@
                 if ( action == 'restore' ) {
                     $scope.host_restore = machine.id_clone;
                     $scope.host_shutdown = 0;
-                } else if (action == 'shutdown' || action == 'hibernate') {
+                    $scope.host_force_shutdown = 0;
+                } else if (action == 'shutdown' || action == 'hibernate' || action == 'force_shutdown') {
                     $scope.host_restore = 0;
                     $http.get( '/machine/'+action+'/'+machine.id_clone+'.json');
                 } else {
