@@ -4,7 +4,6 @@ services:
     container_name: ravada-mysql
     volumes:
       - "/opt/ravada/mysql:/var/lib/mysql"
-      #- "/etc/localtime:/etc/localtime:ro"
       - "/opt/ravada/log:/var/log/mysql"
     networks:
       - ravada_network
@@ -16,8 +15,6 @@ services:
   ravada-front:
     container_name: ravada-front
     volumes:
-      #- "/etc/timezone:/etc/timezone:ro"
-      #- "/etc/localtime:/etc/localtime:ro"
       - "~/src/ravada:/ravada"
       - "/opt/ravada/screenshots:/var/www/img/screenshots"
     ports:
@@ -27,9 +24,9 @@ services:
     networks:
       - ravada_network
     #By default download from dockerhub
-    #image: ravada/front
+    image: ravada/front
     #If you want to local build
-    build: dockers/front/.
+    #build: dockers/front/.
     restart: unless-stopped
 
     depends_on:
@@ -43,8 +40,6 @@ services:
       - "/opt/ravada/images:/var/lib/libvirt/images"
       - "/opt/ravada/screenshots:/var/www/img/screenshots"
       - "/opt/ravada/etc:/etc/libvirt/qemu"
-      #- "/etc/timezone:/etc/timezone:ro"
-      #- "/etc/localtime:/etc/localtime:ro"
       - "~/src/ravada:/ravada"
     ports:
       #- "5900-5938:5900-5938"
@@ -54,9 +49,9 @@ services:
     networks:
       - ravada_network
     #By default download from dockerhub
-    #image: ravada/back
+    image: ravada/back
     #If you want to local build
-    build: dockers/back/.
+    #build: dockers/back/.
     privileged: true
     restart: unless-stopped
 
