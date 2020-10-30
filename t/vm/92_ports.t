@@ -245,6 +245,7 @@ sub test_one_port($vm) {
     );
 
     ok(!$n_rule,"Expecting no rule for -> $local_ip:$public_port") or exit;
+    wait_request();
 
     #################################################################
     # start
