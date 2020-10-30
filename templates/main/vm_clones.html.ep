@@ -11,7 +11,7 @@
             <button class="btn btn-danger" id="shutdown-clones" name="shutdown-clones"
                 ng-click="shutdown_clones=1"
             >
-                <%=l 'Close all clones' %>
+                <%=l 'Shutdown all clones' %>
             </button>
         </div>
         <div ng-show="shutdown_clones">
@@ -21,7 +21,7 @@
                         <a type="button" class="btn btn-primary text-white"
                             ng-click="shutdown_clones=0"
                         ><%=l 'No' %></a>
-                        <a type="button" class="btn btn-danger text-white" ng-click="request('shutdown_clones',{ 'id_domain': showmachine.id });"
+                        <a type="button" class="btn btn-danger text-white" ng-click="request('shutdown_clones',{ 'id_domain': showmachine.id });shutdown_clones=0"
                         ><%=l 'Yes, shutwdown all the clones' %></a>
            </div>
 
