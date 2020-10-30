@@ -557,6 +557,12 @@ get '/machine/shutdown/(:id).(:type)' => sub {
         return shutdown_machine($c);
 };
 
+get '/machine/force_shutdown/(:id).(:type)' => sub {
+        my $c = shift;
+    return access_denied($c)        if !$USER ->can_shutdown($c->stash('id'));
+
+        return force_shutdown_machine($c);
+};
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
     return access_denied($c)       if !$USER->can_remove_machine($c->stash('id'));
@@ -2205,6 +2211,17 @@ sub shutdown_machine {
 
     my ($domain, $type) = _search_requested_machine($c);
     my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id);
+
+    return $c->redirect_to('/machines') if $type eq 'html';
+    return $c->render(json => { req => $req->id });
+}
+
+sub force_shutdown_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my ($domain, $type) = _search_requested_machine($c);
+    my $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id);
 
     return $c->redirect_to('/machines') if $type eq 'html';
     return $c->render(json => { req => $req->id });

@@ -56,7 +56,8 @@
                             <a ng-show="machine.is_active && machine.can_hibernate" class="dropdown-item"
                                 ng-click="machine.action=false;action(machine,'hibernate')">
                                 <i class="fa fa-snowflake" aria-hidden="true"></i>&nbsp;<%=l 'Hibernate' %></a>
-                            <a class="dropdown-item" href="#">
+                            <a ng-show="machine.is_active" class="dropdown-item"
+                                ng-click="machine.action=false;action(machine,'force_shutdown')">
                                 <i class="fa fa-times" aria-hidden="true"></i>&nbsp;<%=l 'Poweroff' %></a>
                         </div>
                     </div>
