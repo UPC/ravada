@@ -1893,6 +1893,19 @@ sub mangle_volume($vm,$name,@vol) {
     }
 }
 
+sub _lsof_nbd($vm, $dev_nbd) {
+    my ($out, $err) = $vm->run_command("ls","/dev");
+    die $err if $err;
+    my ($nbd) = $dev_nbd =~ m{^/dev/(.*)};
+    for my $dev (split /\n/,$out) {
+        next if $dev !~ /^$nbd/;
+        my ($out2, $err2) = $vm->run_command("lsof","/dev/$dev");
+        my @line = split /\n/,$out2;
+        return 1 if scalar(@line) >= 2;
+    }
+    return 0;
+}
+
 sub _load_nbd($vm) {
     my ($in, $out, $err);
     if (!$MOD_NBD++) {
@@ -1904,9 +1917,7 @@ sub _load_nbd($vm) {
     ($out,$err) = $vm->run_command(@cmd);
     die "@cmd : $err" if $err;
 
-    ($out, $err) = $vm->run_command("lsof",$DEV_NBD);
-    my @line = split /\n/,$out;
-    return if scalar(@line) < 2;
+    return if !_lsof_nbd($vm, $DEV_NBD);
 
     my ($dev,$n) = $DEV_NBD =~ /(.*?)(\d+)$/;
     $n++;
