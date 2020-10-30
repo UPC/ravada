@@ -15,7 +15,6 @@ RUN apt-get update \
 	curl bash vim wget libnet-openssh-perl libdatetime-format-dateparse-perl \
  && apt-get clean
 
-ENV TZ=Europe/Madrid
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata \
  && rm -rf /var/lib/apt/lists/*
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone

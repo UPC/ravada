@@ -13,12 +13,12 @@ RUN apt-get update \
     libfile-rsync-perl libdate-calc-perl libparallel-forkmanager-perl libdatetime-perl libencode-locale-perl netcat-openbsd \
     liblwp-useragent-determined-perl libvirt-clients supervisor net-tools openssh-client apt-utils curl libpbkdf2-tiny-perl \
     libio-stringy-perl libvirt-daemon-system libvirt-clients netcat-openbsd qemu-kvm qemu-utils iproute2 wget bridge-utils firewalld dnsmasq iptables ebtables \
-    libnet-openssh-perl libdatetime-format-dateparse-perl \
+    libnet-openssh-perl libdatetime-format-dateparse-perl file\
  && apt-get clean
 
-ENV TZ=Europe/Madrid
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata \
  && rm -rf /var/lib/apt/lists/*
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN echo "listen_tls = 0" >> /etc/libvirt/libvirtd.conf \
  && echo 'listen_tcp = 1' >> /etc/libvirt/libvirtd.conf \
