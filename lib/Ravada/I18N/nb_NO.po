@@ -2,127 +2,141 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
+"PO-Revision-Date: 2020-10-31 14:58+0000\n"
+"Last-Translator: Allan Nordhøy <epost@anotheragency.no>\n"
+"Language-Team: Norwegian Bokmål <https://hosted.weblate.org/projects/ravada/"
+"translation/nb_NO/>\n"
 "Language: nb_NO\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 4.3.2-dev\n"
 
+#, fuzzy
 msgid "Ravada broker"
-msgstr ""
+msgstr "Ravada-megler"
 
 msgid "Machine Name"
-msgstr ""
+msgstr "Maskinnavn"
 
 msgid "Tools"
-msgstr ""
+msgstr "Verktøy"
 
 msgid "Choose a Machine to Start"
-msgstr ""
+msgstr "Velg en maskin å starte"
 
 msgid "Start"
-msgstr ""
+msgstr "Start"
 
 msgid "Stop"
-msgstr ""
+msgstr "Stopp"
 
 msgid "View"
-msgstr ""
+msgstr "Vis"
 
+#, fuzzy
 msgid "Prepare base"
-msgstr ""
+msgstr "Forbered base"
 
 msgid "Clone"
-msgstr ""
+msgstr "Lukk"
 
 msgid "Clone/s"
-msgstr ""
+msgstr "Klone/r"
 
+#, fuzzy
 msgid "Users List"
-msgstr ""
+msgstr "Brukerliste"
 
 msgid "Name"
-msgstr ""
+msgstr "Navn"
 
+#, fuzzy
 msgid "Log Out"
-msgstr ""
+msgstr " Logg ut"
 
+#, fuzzy
 msgid "Available Machines"
-msgstr ""
+msgstr " Tilgjengelige maskiner"
 
 msgid "Help"
-msgstr ""
+msgstr "Hjelp"
 
 msgid "Requirements"
-msgstr ""
+msgstr "Krav"
 
 msgid "About"
-msgstr ""
+msgstr "Om"
 
 msgid "Mark all as read"
-msgstr ""
+msgstr " Marker alle som lest"
 
 msgid "Settings"
-msgstr ""
+msgstr "Innstillinger"
 
 msgid "New Machine"
-msgstr ""
+msgstr "Ny maskin"
 
 msgid "I want to change my password"
-msgstr ""
+msgstr "Jeg vil endre passordet mitt"
 
 msgid "I want to change my language"
-msgstr ""
+msgstr "Jeg ønsker å endre språk"
 
 msgid "Language:"
-msgstr ""
+msgstr "Språk:"
 
 msgid "English"
-msgstr ""
+msgstr "Engelsk"
 
 msgid "Spanish"
-msgstr ""
+msgstr "Spansk"
 
 msgid "Catalan"
-msgstr ""
+msgstr "Katalansk"
 
 msgid "Galician"
-msgstr ""
+msgstr "Galisisk"
 
 msgid "French"
-msgstr ""
+msgstr "Fransk"
 
 msgid "Hindi"
-msgstr ""
+msgstr "Hindi"
 
 msgid "Indonesian"
-msgstr ""
+msgstr "Indonesisk"
 
 msgid "Persian"
-msgstr ""
+msgstr "Persisk"
 
 msgid "Japanese"
-msgstr ""
+msgstr "Japansk"
 
 msgid "German"
-msgstr ""
+msgstr "Tysk"
 
 msgid "New Password:"
-msgstr ""
+msgstr "Nytt passord:"
 
 msgid "Confirm Password:"
-msgstr ""
+msgstr " Bekreft passord:"
 
 msgid "Submit"
-msgstr ""
+msgstr "Send inn"
 
+#, fuzzy
 msgid "Your language has been changed successfully"
-msgstr ""
+msgstr "Språk endret"
 
+#, fuzzy
 msgid "Your password has been changed successfully"
-msgstr ""
+msgstr "Passord endret"
 
+#, fuzzy
 msgid "Password is too short"
-msgstr ""
+msgstr "Passordet er for kort"
 
 msgid "Password fields do not match"
 msgstr ""
