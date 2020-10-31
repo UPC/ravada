@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-10-31 14:58+0000\n"
+"PO-Revision-Date: 2020-11-01 06:43+0000\n"
 "Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
 "Language-Team: English <https://hosted.weblate.org/projects/ravada/"
 "translation/en/>\n"
@@ -394,7 +394,7 @@ msgstr ""
 "hours until the file is "
 
 msgid "Download now"
-msgstr ""
+msgstr "Download now"
 
 msgid "Select ISO"
 msgstr "Select ISO"
@@ -403,22 +403,22 @@ msgid "Template"
 msgstr "Template"
 
 msgid "Disk Size: (GB)"
-msgstr ""
+msgstr "Disk Size: (GB)"
 
 msgid "Swap Size: (GB)"
 msgstr "Swap Size: (GB)"
 
 msgid "Ram: (GB)"
-msgstr ""
+msgstr "Ram: (GB)"
 
 msgid "Machine name is required."
 msgstr "Machine name is required."
 
 msgid "Machine name can't exceed 20 characters."
-msgstr ""
+msgstr "Machine name can't exceed 20 characters."
 
 msgid "Backend selection is required."
-msgstr ""
+msgstr "Backend selection is required."
 
 msgid "ISO image selection is required."
 msgstr ""
