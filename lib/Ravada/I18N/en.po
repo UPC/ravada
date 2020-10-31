@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-10-31 12:03+0000\n"
+"PO-Revision-Date: 2020-10-31 14:58+0000\n"
 "Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
 "Language-Team: English <https://hosted.weblate.org/projects/ravada/"
 "translation/en/>\n"
@@ -54,10 +54,10 @@ msgid "Name"
 msgstr "Name"
 
 msgid "Log Out"
-msgstr " Log Out"
+msgstr "Log Out"
 
 msgid "Available Machines"
-msgstr " Available Machines"
+msgstr "Available Machines"
 
 msgid "Help"
 msgstr "Help"
@@ -69,7 +69,7 @@ msgid "About"
 msgstr "About"
 
 msgid "Mark all as read"
-msgstr " Mark all as read"
+msgstr "Mark all as read"
 
 msgid "Settings"
 msgstr "Settings"
@@ -120,7 +120,7 @@ msgid "New Password:"
 msgstr "New Password:"
 
 msgid "Confirm Password:"
-msgstr " Confirm Password:"
+msgstr "Confirm Password:"
 
 msgid "Submit"
 msgstr "Submit"
@@ -129,284 +129,290 @@ msgid "Your language has been changed successfully"
 msgstr "Your language has been changed successfully"
 
 msgid "Your password has been changed successfully"
-msgstr ""
+msgstr "Your password has been changed successfully"
 
 msgid "Password is too short"
-msgstr ""
+msgstr "Password is too short"
 
 msgid "Password fields do not match"
-msgstr ""
+msgstr "Password fields do not match"
 
 msgid "Some of the password fields are empty"
-msgstr ""
+msgstr "Some of the password fields are empty"
 
 msgid "Status"
-msgstr ""
+msgstr "Status"
 
 msgid "Actions"
-msgstr ""
+msgstr "Actions"
 
 msgid "Down"
-msgstr ""
+msgstr "Down"
 
 msgid "Running"
-msgstr ""
+msgstr "Running"
 
 msgid "Shutdown"
-msgstr ""
+msgstr "Shutdown"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "Screenshot"
 
 msgid "Paused"
-msgstr ""
+msgstr "Paused"
 
 msgid "Machine locked by request"
-msgstr ""
+msgstr "Machine locked by request"
 
 msgid "Process"
-msgstr ""
+msgstr "Process"
 
 msgid "Copy"
-msgstr ""
+msgstr "Copy"
 
 msgid "Error!"
-msgstr ""
+msgstr "Error!"
 
 msgid "Error"
-msgstr ""
+msgstr "Error"
 
 msgid "Backend not available!"
-msgstr ""
+msgstr "Backend not available!"
 
 msgid "Subject"
-msgstr ""
+msgstr "Subject"
 
 msgid "Date"
-msgstr ""
+msgstr "Date"
 
 msgid "Mark as read"
-msgstr ""
+msgstr " Mark as read"
 
 msgid "Mark as unread"
-msgstr ""
+msgstr " Mark as unread"
 
 msgid "No messages to show"
-msgstr ""
+msgstr "No messages to show"
 
 msgid "Admin"
-msgstr ""
+msgstr "Admin"
 
 msgid "Machines"
-msgstr ""
+msgstr "Machines"
 
 msgid "machines"
-msgstr ""
+msgstr "machines"
 
 msgid "Users"
-msgstr ""
+msgstr "Users"
 
 msgid "users"
-msgstr ""
+msgstr "users"
 
 msgid "Messages"
-msgstr ""
+msgstr "Messages"
 
 msgid "messages"
-msgstr ""
+msgstr "messages"
 
 msgid "Admin tools"
-msgstr ""
+msgstr "Admin tools"
 
 msgid "Remove base"
-msgstr ""
+msgstr "Remove base"
 
 msgid "Restore"
-msgstr ""
+msgstr "Restore"
 
 msgid "Hibernate"
-msgstr ""
+msgstr "Hibernate"
 
 msgid "Are you sure?"
-msgstr ""
+msgstr "Are you sure?"
 
 msgid "Yes"
-msgstr ""
+msgstr "Yes"
 
 msgid "No"
-msgstr ""
+msgstr "No"
 
 msgid "Make public"
-msgstr ""
+msgstr "Make public"
 
 msgid "Machine settings"
-msgstr ""
+msgstr "Machine settings"
 
 msgid "Cannot remove base, machine has clones"
-msgstr ""
+msgstr "Cannot remove base, machine has clones"
 
 msgid "show clones"
-msgstr ""
+msgstr "show clones"
 
 msgid "hide clones"
-msgstr ""
+msgstr "hide clones"
 
 msgid "For Spice redirection you will need to install"
-msgstr ""
+msgstr "For Spice redirection you will need to install"
 
 msgid "in your computer."
-msgstr ""
+msgstr "in your computer."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr ""
+msgstr "Search in your distro, e.g. in Debian/Ubuntu with"
 
 msgid "You will need to install"
-msgstr ""
+msgstr "You will need to install"
 
 msgid "and USB drivers ("
-msgstr ""
+msgstr "and USB drivers ("
 
 msgid ""
 "Be aware that in Windows, Spice redirection is not automatic. It is "
 "necessary to associate protocol with the app."
 msgstr ""
+"Be aware that in Windows, Spice redirection is not automatic. It is "
+"necessary to associate protocol"
 
 msgid "To make this possible, download"
-msgstr ""
+msgstr "To make this possible, download"
 
 msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
 msgstr ""
+"or copy the following lines in an ASCII file and save with extension .reg, "
+"then execute the file."
 
 msgid "Login"
-msgstr ""
+msgstr "Login"
 
 msgid "Welcome"
-msgstr ""
+msgstr "Welcome"
 
 msgid "A viewer is required to run the virtual machines."
-msgstr ""
+msgstr "A viewer is required to run the virtual machines."
 
 msgid "It is required a viewer to run the virtual machines."
-msgstr ""
+msgstr "It is required a viewer to run the virtual machines."
 
 msgid "Virtual Machines"
-msgstr ""
+msgstr "Virtual Machines"
 
 msgid "User"
-msgstr ""
+msgstr "User"
 
 msgid "Password"
-msgstr ""
+msgstr "Password"
 
 msgid "Start session"
-msgstr ""
+msgstr "Start session\n"
 
 msgid "bits) in your computer."
-msgstr ""
+msgstr "bits) in your computer."
 
 msgid "Permissions"
-msgstr ""
+msgstr "Permissions"
 
 msgid "can change the settings of owned virtual machines."
-msgstr ""
+msgstr "can change the settings of owned virtual machines."
 
 msgid "can change the settings of any virtual machines."
-msgstr ""
+msgstr "can change the settings of any virtual machines."
 
 msgid "can change the settings of any virtual machines "
-msgstr ""
+msgstr "can change the settings of any virtual machines"
 
 msgid "cloned from one base owned by the user."
-msgstr ""
+msgstr "cloned from one base owned by the user."
 
 msgid "can clone public virtual machines."
-msgstr ""
+msgstr "can clone public virtual machines."
 
 msgid "can clone any virtual machine."
-msgstr ""
+msgstr "can clone any virtual machine."
 
 msgid "can create bases."
-msgstr ""
+msgstr "can create bases."
 
 msgid "can create virtual machines."
-msgstr ""
+msgstr "can create virtual machines."
 
 msgid "can grant permissions to other users"
-msgstr ""
+msgstr "can grant permissions to other users"
 
 msgid "can hibernate any virtual machine."
-msgstr ""
+msgstr "can hibernate any virtual machine."
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr ""
+msgstr "can hibernate clones from virtual machines owned by the user."
 
 msgid "can hibernate any clone."
-msgstr ""
+msgstr "can hibernate any clone."
 
 msgid "can remove any virtual machines owned by the user."
-msgstr ""
+msgstr "can remove any virtual machines owned by the user."
 
 msgid "can remove any virtual machine."
-msgstr ""
+msgstr "can remove any virtual machine."
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr ""
+msgstr "can remove clones from virtual machines owned by the user."
 
 msgid "can remove any clone."
-msgstr ""
+msgstr "can remove any clone."
 
 msgid "can take a screenshot of any virtual machine owned by the user."
-msgstr ""
+msgstr "can take a screenshot of any virtual machine owned by the user."
 
 msgid "can take a screenshot of any virtual machine."
-msgstr ""
+msgstr "can take a screenshot of any virtual machine."
 
 msgid "can shutdown any virtual machine."
-msgstr ""
+msgstr "can shutdown any virtual machine."
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr ""
+msgstr "can shutdown clones from virtual machines owned by the user."
 
 msgid "Submit Query"
-msgstr ""
+msgstr "Submit Query"
 
 msgid "From Template"
-msgstr ""
+msgstr "From Template"
 
 msgid "From Machine"
-msgstr ""
+msgstr "From Machine"
 
 msgid "Backend"
-msgstr ""
+msgstr "Backend"
 
 msgid "Select Template"
-msgstr ""
+msgstr "Select Template"
 
 msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
 msgstr ""
+" This ISO image has not been downloaded yet. It may take some minutes, even "
+"hours until the file is "
 
 msgid "Download now"
 msgstr ""
 
 msgid "Select ISO"
-msgstr ""
+msgstr "Select ISO"
 
 msgid "Template"
-msgstr ""
+msgstr "Template"
 
 msgid "Disk Size: (GB)"
 msgstr ""
 
 msgid "Swap Size: (GB)"
-msgstr ""
+msgstr "Swap Size: (GB)"
 
 msgid "Ram: (GB)"
 msgstr ""
 
 msgid "Machine name is required."
-msgstr ""
+msgstr "Machine name is required."
 
 msgid "Machine name can't exceed 20 characters."
 msgstr ""
@@ -435,7 +441,7 @@ msgid ""
 msgstr ""
 
 msgid "monitoring"
-msgstr ""
+msgstr "monitoring"
 
 msgid "Are you sure you want to remove the Base of"
 msgstr ""
