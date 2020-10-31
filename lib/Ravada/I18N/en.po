@@ -6,125 +6,127 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-05-02 16:20+0200\n"
-"Last-Translator: Fernando Verdugo fernando@etsetb.upc.edu\n"
-"Language-Team: \n"
-"Language: ca\n"
+"PO-Revision-Date: 2020-10-31 12:03+0000\n"
+"Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
+"Language-Team: English <https://hosted.weblate.org/projects/ravada/"
+"translation/en/>\n"
+"Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 1.8.7.1\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 4.3.2-dev\n"
 
 msgid "Ravada broker"
-msgstr ""
+msgstr "Ravada broker"
 
 msgid "Machine Name"
-msgstr ""
+msgstr "Machine Name"
 
 msgid "Tools"
-msgstr ""
+msgstr "Tools"
 
 msgid "Choose a Machine to Start"
-msgstr ""
+msgstr "Choose a Machine to Start"
 
 msgid "Start"
-msgstr ""
+msgstr "Start"
 
 msgid "Stop"
-msgstr ""
+msgstr "Stop"
 
 msgid "View"
-msgstr ""
+msgstr "View"
 
 msgid "Prepare base"
-msgstr ""
+msgstr "Prepare base"
 
 msgid "Clone"
-msgstr ""
+msgstr "Clone"
 
 msgid "Clone/s"
-msgstr ""
+msgstr "Clone/s"
 
 msgid "Users List"
-msgstr ""
+msgstr "Users List"
 
 msgid "Name"
-msgstr ""
+msgstr "Name"
 
 msgid "Log Out"
-msgstr ""
+msgstr " Log Out"
 
 msgid "Available Machines"
-msgstr ""
+msgstr " Available Machines"
 
 msgid "Help"
-msgstr ""
+msgstr "Help"
 
 msgid "Requirements"
-msgstr ""
+msgstr "Requirements"
 
 msgid "About"
-msgstr ""
+msgstr "About"
 
 msgid "Mark all as read"
-msgstr ""
+msgstr " Mark all as read"
 
 msgid "Settings"
-msgstr ""
+msgstr "Settings"
 
 msgid "New Machine"
-msgstr ""
+msgstr "New Machine"
 
 msgid "I want to change my password"
-msgstr ""
+msgstr "I want to change my password"
 
 msgid "I want to change my language"
-msgstr ""
+msgstr "I want to change my language"
 
 msgid "Language:"
-msgstr ""
+msgstr "Language:"
 
 msgid "English"
-msgstr ""
+msgstr "English"
 
 msgid "Spanish"
-msgstr ""
+msgstr "Spanish"
 
 msgid "Catalan"
-msgstr ""
+msgstr "Catalan"
 
 msgid "Galician"
-msgstr ""
+msgstr "Galician"
 
 msgid "French"
-msgstr ""
+msgstr "French"
 
 msgid "Hindi"
-msgstr ""
+msgstr "Hindi"
 
 msgid "Indonesian"
-msgstr ""
+msgstr "Indonesian"
 
 msgid "Persian"
-msgstr ""
+msgstr "Persian"
 
 msgid "Japanese"
-msgstr ""
+msgstr "Japanese"
 
 msgid "German"
-msgstr ""
+msgstr "German"
 
 msgid "New Password:"
-msgstr ""
+msgstr "New Password:"
 
 msgid "Confirm Password:"
-msgstr ""
+msgstr " Confirm Password:"
 
 msgid "Submit"
-msgstr ""
+msgstr "Submit"
 
 msgid "Your language has been changed successfully"
-msgstr ""
+msgstr "Your language has been changed successfully"
 
 msgid "Your password has been changed successfully"
 msgstr ""
