@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-10-31 14:15+0000\n"
+"PO-Revision-Date: 2020-10-31 14:58+0000\n"
 "Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
 "Language-Team: Catalan <https://hosted.weblate.org/projects/ravada/"
 "translation/ca/>\n"
@@ -58,9 +58,8 @@ msgstr "Nom"
 msgid "Log Out"
 msgstr "Sortir"
 
-#, fuzzy
 msgid "Available Machines"
-msgstr " Màquines disponibles"
+msgstr "Màquines disponibles"
 
 msgid "Help"
 msgstr "Ajuda"
@@ -72,7 +71,7 @@ msgid "About"
 msgstr "Info"
 
 msgid "Mark all as read"
-msgstr " Marca tot com a llegit"
+msgstr "Marca tot com a llegit"
 
 msgid "Settings"
 msgstr "Preferències"
@@ -123,7 +122,7 @@ msgid "New Password:"
 msgstr "Nova Contrasenya:"
 
 msgid "Confirm Password:"
-msgstr " Confirma Contrasenya:"
+msgstr "Confirma Contrasenya:"
 
 msgid "Submit"
 msgstr "Envia"
@@ -180,7 +179,7 @@ msgid "Error"
 msgstr "Error"
 
 msgid "Backend not available!"
-msgstr "El backend no està disponible."
+msgstr "El backend no està disponible!"
 
 msgid "Subject"
 msgstr "Assumpte"
@@ -231,7 +230,7 @@ msgid "Hibernate"
 msgstr "Hiverna"
 
 msgid "Are you sure?"
-msgstr "Estas segur/a?"
+msgstr "Estàs segur/a?"
 
 msgid "Yes"
 msgstr "Si"
@@ -261,7 +260,7 @@ msgid "in your computer."
 msgstr "al teu ordinador."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr "Cerca a la teva distribució, p.e. en Debia/Ubuntu amb"
+msgstr "Cerca a la teva distribució, p.e. en Debian/Ubuntu amb"
 
 msgid "You will need to install"
 msgstr "Haureu d'instal·lar"
@@ -274,7 +273,7 @@ msgid ""
 "necessary to associate protocol with the app."
 msgstr ""
 "Tingueu en compte que a Windows, la redirecció Spice no és automàtica. Cal "
-"associar el protocol amb l'aplicació."
+"associar el protocol amb l'aplicació"
 
 msgid "To make this possible, download"
 msgstr "Per fer-ho possible, descarrega"
@@ -308,22 +307,22 @@ msgid "Password"
 msgstr "Contrasenya"
 
 msgid "Start session"
-msgstr "Inicieu la Sessió"
+msgstr "Inicieu la Sessió\n"
 
 msgid "bits) in your computer."
 msgstr "bits) al teu ordinador."
 
 msgid "Permissions"
-msgstr "Permissos"
+msgstr "Permisos"
 
 msgid "can change the settings of owned virtual machines."
-msgstr "pot canviar les preferències de les seves màquines virtuals"
+msgstr "pot canviar les preferències de les seves màquines virtuals."
 
 msgid "can change the settings of any virtual machines."
 msgstr "pot canviar les preferències de qualsevol màquina virtual."
 
 msgid "can change the settings of any virtual machines "
-msgstr "pot canviar les preferències de qualsevol màquina virtual "
+msgstr "pot canviar les preferències de qualsevol màquina virtual"
 
 msgid "cloned from one base owned by the user."
 msgstr "clonat des d'una base de l'usuari."
