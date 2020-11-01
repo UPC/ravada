@@ -8,15 +8,16 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-01-03 11:17+0000\n"
-"Last-Translator: Amparo _rvd <amparorvd@gmail.com>, 2019\n"
-"Language-Team: Catalan (https://www.transifex.com/ravada/teams/70385/ca/)\n"
+"PO-Revision-Date: 2020-11-01 08:11+0000\n"
+"Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
+"Language-Team: Catalan <https://hosted.weblate.org/projects/ravada/"
+"translation/ca/>\n"
+"Language: ca\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: ca\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Poedit 1.8.7.1\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 4.3.2-dev\n"
 
 msgid "Ravada broker"
 msgstr "Broker Ravada"
@@ -178,7 +179,7 @@ msgid "Error"
 msgstr "Error"
 
 msgid "Backend not available!"
-msgstr "El backend no està disponible."
+msgstr "El backend no està disponible!"
 
 msgid "Subject"
 msgstr "Assumpte"
@@ -229,7 +230,7 @@ msgid "Hibernate"
 msgstr "Hiverna"
 
 msgid "Are you sure?"
-msgstr "Estas segur/a?"
+msgstr "Estàs segur/a?"
 
 msgid "Yes"
 msgstr "Si"
@@ -259,7 +260,7 @@ msgid "in your computer."
 msgstr "al teu ordinador."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr "Cerca a la teva distribució, p.e. en Debia/Ubuntu amb"
+msgstr "Cerca a la teva distribució, p.e. en Debian/Ubuntu amb"
 
 msgid "You will need to install"
 msgstr "Haureu d'instal·lar"
@@ -272,7 +273,7 @@ msgid ""
 "necessary to associate protocol with the app."
 msgstr ""
 "Tingueu en compte que a Windows, la redirecció Spice no és automàtica. Cal "
-"associar el protocol amb l'aplicació."
+"associar el protocol amb l'aplicació"
 
 msgid "To make this possible, download"
 msgstr "Per fer-ho possible, descarrega"
@@ -306,22 +307,22 @@ msgid "Password"
 msgstr "Contrasenya"
 
 msgid "Start session"
-msgstr "Inicieu la Sessió"
+msgstr "Inicieu la Sessió\n"
 
 msgid "bits) in your computer."
 msgstr "bits) al teu ordinador."
 
 msgid "Permissions"
-msgstr "Permissos"
+msgstr "Permisos"
 
 msgid "can change the settings of owned virtual machines."
-msgstr "pot canviar les preferències de les seves màquines virtuals"
+msgstr "pot canviar les preferències de les seves màquines virtuals."
 
 msgid "can change the settings of any virtual machines."
 msgstr "pot canviar les preferències de qualsevol màquina virtual."
 
 msgid "can change the settings of any virtual machines "
-msgstr "pot canviar les preferències de qualsevol màquina virtual "
+msgstr "pot canviar les preferències de qualsevol màquina virtual"
 
 msgid "cloned from one base owned by the user."
 msgstr "clonat des d'una base de l'usuari."
@@ -495,13 +496,13 @@ msgid "Show All"
 msgstr "Mostra tot"
 
 msgid "Shutting down ..."
-msgstr "Apagant ..."
+msgstr "Apagant …"
 
 msgid "It may take a couple of minutes."
 msgstr "Pot trigar un parell de minuts."
 
 msgid "Hybernating ..."
-msgstr "Hivernant ..."
+msgstr "Hivernant …"
 
 msgid "Description"
 msgstr "Descripció"
@@ -611,10 +612,10 @@ msgstr ""
 "A continuació hi ha la llista de tecnologies usades en aquest projecte:"
 
 msgid "The code is available on "
-msgstr "El codi està disponible a "
+msgstr "El codi està disponible a"
 
 msgid "The code is "
-msgstr "El codi està "
+msgstr "El codi està"
 
 msgid "License"
 msgstr "Llicència"
@@ -677,7 +678,7 @@ msgid "Enter Password"
 msgstr "Introduir la contrasenya"
 
 msgid "Confirm Password"
-msgstr "Confirma Contrasenya:"
+msgstr "Confirma Contrasenya"
 
 msgid "Username is required"
 msgstr "El nom d'usuari és obligatori"
@@ -777,14 +778,14 @@ msgid "Set base picture"
 msgstr "Establir imatge a la base"
 
 msgid "Saving the screenshot, please wait a moment..."
-msgstr "Desant la captura de pantalla, espereu un moment si us plau...."
+msgstr "Desant la captura de pantalla, espereu un moment si us plau …"
 
 msgid "You need to run the machine in order to take a screenshot."
 msgstr ""
 "Necessites la màquina en marxa per a poder fer la captura de pantalla."
 
 msgid "Copying the screenshot, please wait a moment..."
-msgstr "Copiant la captura de pantalla, espereu un moment si us plau..."
+msgstr "Copiant la captura de pantalla, espereu un moment si us plau …"
 
 msgid "You need a screenshot in order to copy it to the base machine."
 msgstr ""
@@ -794,7 +795,7 @@ msgid "Add"
 msgstr "Afegeix"
 
 msgid "The changes will apply on next restart"
-msgstr "Els canvis seran efectius en la pròxima posada en marxa."
+msgstr "Els canvis seran efectius en la pròxima posada en marxa"
 
 msgid "This VM is running and can't be renamed."
 msgstr "Aquesta VM està en marxa i no es pot canviar el nom."
@@ -812,7 +813,7 @@ msgid "Address"
 msgstr "Adreça"
 
 msgid "A node with that name already exists."
-msgstr "Ja existeix un node amb aquest nom. "
+msgstr "Ja existeix un node amb aquest nom."
 
 msgid "Setting your default language"
 msgstr "Configuració del vostre idioma predeterminat"
@@ -837,3 +838,12 @@ msgstr "Contrasenya buida"
 
 msgid "Session timeout"
 msgstr "Temps d’espera de la sessió"
+
+msgid "User name"
+msgstr "Nom d'usuari"
+
+msgid "Italian"
+msgstr "Italià"
+
+msgid "Vietnamese"
+msgstr "Vietnamita"
