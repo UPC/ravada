@@ -8,8 +8,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-11-01 08:11+0000\n"
-"Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
+"PO-Revision-Date: 2020-11-02 08:20+0000\n"
+"Last-Translator: Fernando Verdugo <fv3rdugo@gmail.com>\n"
 "Language-Team: Catalan <https://hosted.weblate.org/projects/ravada/"
 "translation/ca/>\n"
 "Language: ca\n"
@@ -847,3 +847,68 @@ msgstr "Italià"
 
 msgid "Vietnamese"
 msgstr "Vietnamita"
+
+msgid "Yes, shutwdown all the clones"
+msgstr "Sí, apagueu tots els clons"
+
+msgid "Keep in mind that there may be users using a clone"
+msgstr ""
+"Tingueu en compte que és possible que hi hagi usuaris que facin servir un "
+"clon"
+
+msgid "Shutdown all clones"
+msgstr "Apaga tots els clons"
+
+msgid "These actions affect all the clones on the machine"
+msgstr "Aquestes accions afecten tots els clons de la màquina"
+
+msgid "Add description"
+msgstr "Afegeix una descripció"
+
+msgid "Enable last for not allowed restrictions."
+msgstr "Activa l'última restricció no permesa."
+
+msgid "entries."
+msgstr "entrades."
+
+msgid "has at least"
+msgstr "té almenys"
+
+msgid "No entries found"
+msgstr "No s'ha trobat cap entrada"
+
+msgid "Verifying"
+msgstr "S'està verificant"
+
+msgid "save"
+msgstr "desar"
+
+msgid "verify"
+msgstr "verificar"
+
+msgid "If none of the previous match, access is denied."
+msgstr "Si no hi ha cap coincidència anterior, l'accés es denega."
+
+msgid "If none of the previous match, access is allowed."
+msgstr "Si no hi ha cap coincidència anterior, es permet l'accés."
+
+msgid "Default"
+msgstr "Per defecte"
+
+msgid "Last"
+msgstr "Últim"
+
+msgid "Allowed"
+msgstr "Es permet"
+
+msgid "Value"
+msgstr "Valor"
+
+msgid "Attribute"
+msgstr "Atribut"
+
+msgid "not found in LDAP server"
+msgstr "no es troba al servidor LDAP"
+
+msgid "Type a typical LDAP user name to fetch the attribute list"
+msgstr "Escriviu un nom d'usuari LDAP típic per obtenir la llista d'atributs"
