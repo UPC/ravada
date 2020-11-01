@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-11-01 08:11+0000\n"
+"PO-Revision-Date: 2020-11-01 10:03+0000\n"
 "Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/ravada/"
 "translation/es/>\n"
@@ -189,7 +189,6 @@ msgstr "Asunto"
 msgid "Date"
 msgstr "Fecha"
 
-#, fuzzy
 msgid "Mark as read"
 msgstr " Marca como leído"
 
@@ -310,7 +309,7 @@ msgid "Password"
 msgstr "Contraseña"
 
 msgid "Start session"
-msgstr "Iniciar sesión"
+msgstr "Iniciar sesión\n"
 
 msgid "bits) in your computer."
 msgstr "bits) en tu ordenador."
@@ -498,13 +497,13 @@ msgid "Show All"
 msgstr "Mostrar Todo"
 
 msgid "Shutting down ..."
-msgstr "Apagando ..."
+msgstr "Apagando …"
 
 msgid "It may take a couple of minutes."
 msgstr "Puede tardar un par de minutos."
 
 msgid "Hybernating ..."
-msgstr "Hibernando ..."
+msgstr "Hibernando …"
 
 msgid "Description"
 msgstr "Descripción"
@@ -779,14 +778,14 @@ msgid "Set base picture"
 msgstr "Establer imagen para la base"
 
 msgid "Saving the screenshot, please wait a moment..."
-msgstr "Grabando la captura de pantalla, espere un momento por favor..."
+msgstr "Grabando la captura de pantalla, espere un momento por favor…"
 
 msgid "You need to run the machine in order to take a screenshot."
 msgstr ""
 "Necesitas la máquina en marcha para poder hacer una captura de pantalla."
 
 msgid "Copying the screenshot, please wait a moment..."
-msgstr "Copiando la captura de pantalla, espere un momento por favor..."
+msgstr "Copiando la captura de pantalla, espere un momento por favor…"
 
 msgid "You need a screenshot in order to copy it to the base machine."
 msgstr "Necesitas una captura de pantalla para copiar a la máquina base."
