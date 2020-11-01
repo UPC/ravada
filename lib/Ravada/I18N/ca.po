@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-10-31 14:58+0000\n"
+"PO-Revision-Date: 2020-11-01 08:11+0000\n"
 "Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
 "Language-Team: Catalan <https://hosted.weblate.org/projects/ravada/"
 "translation/ca/>\n"
@@ -496,13 +496,13 @@ msgid "Show All"
 msgstr "Mostra tot"
 
 msgid "Shutting down ..."
-msgstr "Apagant ..."
+msgstr "Apagant …"
 
 msgid "It may take a couple of minutes."
 msgstr "Pot trigar un parell de minuts."
 
 msgid "Hybernating ..."
-msgstr "Hivernant ..."
+msgstr "Hivernant …"
 
 msgid "Description"
 msgstr "Descripció"
@@ -612,10 +612,10 @@ msgstr ""
 "A continuació hi ha la llista de tecnologies usades en aquest projecte:"
 
 msgid "The code is available on "
-msgstr "El codi està disponible a "
+msgstr "El codi està disponible a"
 
 msgid "The code is "
-msgstr "El codi està "
+msgstr "El codi està"
 
 msgid "License"
 msgstr "Llicència"
@@ -678,7 +678,7 @@ msgid "Enter Password"
 msgstr "Introduir la contrasenya"
 
 msgid "Confirm Password"
-msgstr "Confirma Contrasenya:"
+msgstr "Confirma Contrasenya"
 
 msgid "Username is required"
 msgstr "El nom d'usuari és obligatori"
@@ -778,14 +778,14 @@ msgid "Set base picture"
 msgstr "Establir imatge a la base"
 
 msgid "Saving the screenshot, please wait a moment..."
-msgstr "Desant la captura de pantalla, espereu un moment si us plau...."
+msgstr "Desant la captura de pantalla, espereu un moment si us plau …"
 
 msgid "You need to run the machine in order to take a screenshot."
 msgstr ""
 "Necessites la màquina en marxa per a poder fer la captura de pantalla."
 
 msgid "Copying the screenshot, please wait a moment..."
-msgstr "Copiant la captura de pantalla, espereu un moment si us plau..."
+msgstr "Copiant la captura de pantalla, espereu un moment si us plau …"
 
 msgid "You need a screenshot in order to copy it to the base machine."
 msgstr ""
@@ -795,7 +795,7 @@ msgid "Add"
 msgstr "Afegeix"
 
 msgid "The changes will apply on next restart"
-msgstr "Els canvis seran efectius en la pròxima posada en marxa."
+msgstr "Els canvis seran efectius en la pròxima posada en marxa"
 
 msgid "This VM is running and can't be renamed."
 msgstr "Aquesta VM està en marxa i no es pot canviar el nom."
@@ -813,7 +813,7 @@ msgid "Address"
 msgstr "Adreça"
 
 msgid "A node with that name already exists."
-msgstr "Ja existeix un node amb aquest nom. "
+msgstr "Ja existeix un node amb aquest nom."
 
 msgid "Setting your default language"
 msgstr "Configuració del vostre idioma predeterminat"
@@ -838,3 +838,12 @@ msgstr "Contrasenya buida"
 
 msgid "Session timeout"
 msgstr "Temps d’espera de la sessió"
+
+msgid "User name"
+msgstr "Nom d'usuari"
+
+msgid "Italian"
+msgstr "Italià"
+
+msgid "Vietnamese"
+msgstr "Vietnamita"
