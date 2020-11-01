@@ -11,8 +11,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-11-01 10:03+0000\n"
-"Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
+"PO-Revision-Date: 2020-11-01 10:04+0000\n"
+"Last-Translator: J. Lavoie <j.lavoie@net-c.ca>\n"
 "Language-Team: French <https://hosted.weblate.org/projects/ravada/"
 "translation/fr/>\n"
 "Language: fr\n"
@@ -289,7 +289,7 @@ msgstr ""
 "l'extension .reg, puis exécutez le fichier"
 
 msgid "Login"
-msgstr "Connexion"
+msgstr "Se connecter"
 
 msgid "Welcome"
 msgstr "Bienvenue"
@@ -298,22 +298,22 @@ msgid "A viewer is required to run the virtual machines."
 msgstr "Une visionneuse est nécessaire pour exécuter les machines virtuelles."
 
 msgid "It is required a viewer to run the virtual machines."
-msgstr "Un visualiseur est nécessaire pour exécuter les machines virtuelles."
+msgstr "Une visionneuse est nécessaire pour exécuter les machines virtuelles."
 
 msgid "Virtual Machines"
-msgstr "Machines Virtuelles"
+msgstr "Machines virtuelles"
 
 msgid "User"
-msgstr "Utilisateurs"
+msgstr "Utilisateur"
 
 msgid "Password"
 msgstr "Mot de passe"
 
 msgid "Start session"
-msgstr "Commencer la session"
+msgstr "Commencer la session\n"
 
 msgid "bits) in your computer."
-msgstr "bits) dans votre ordinateur "
+msgstr "bits) dans votre ordinateur"
 
 msgid "Permissions"
 msgstr "Permissions"
