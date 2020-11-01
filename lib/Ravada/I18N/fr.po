@@ -11,15 +11,16 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-01-03 11:17+0000\n"
-"Last-Translator: Amparo _rvd <amparorvd@gmail.com>, 2019\n"
-"Language-Team: French (https://www.transifex.com/ravada/teams/70385/fr/)\n"
+"PO-Revision-Date: 2020-11-01 10:03+0000\n"
+"Last-Translator: J. Lavoie <j.lavoie@net-c.ca>\n"
+"Language-Team: French <https://hosted.weblate.org/projects/ravada/"
+"translation/fr/>\n"
+"Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: fr\n"
-"Plural-Forms: nplurals=2; plural=(n > 1);\n"
-"X-Generator: Poedit 1.8.7.1\n"
+"Plural-Forms: nplurals=2; plural=n > 1;\n"
+"X-Generator: Weblate 4.3.2-dev\n"
 
 msgid "Ravada broker"
 msgstr "Courtier Ravada"
@@ -58,7 +59,7 @@ msgid "Name"
 msgstr "Nom"
 
 msgid "Log Out"
-msgstr "Déconnexion"
+msgstr "Se déconnecter"
 
 msgid "Available Machines"
 msgstr "Machines disponibles"
@@ -73,7 +74,7 @@ msgid "About"
 msgstr "À propos"
 
 msgid "Mark all as read"
-msgstr "Marquer tout comme lu"
+msgstr "Tout marquer comme lu"
 
 msgid "Settings"
 msgstr "Paramètres"
@@ -82,46 +83,46 @@ msgid "New Machine"
 msgstr "Nouvelle machine"
 
 msgid "I want to change my password"
-msgstr "Je veut changer mon mot de passe"
+msgstr "Je veux changer mon mot de passe"
 
 msgid "I want to change my language"
-msgstr "Je veut modifier ma langue"
+msgstr "Je veux modifier ma langue"
 
 msgid "Language:"
-msgstr "Langue :"
+msgstr "Langue :"
 
 msgid "English"
-msgstr "Anglais"
+msgstr "anglais"
 
 msgid "Spanish"
-msgstr "Espagnol"
+msgstr "espagnol"
 
 msgid "Catalan"
-msgstr "Catalan"
+msgstr "catalan"
 
 msgid "Galician"
-msgstr "Galicien"
+msgstr "galicien"
 
 msgid "French"
-msgstr "Français"
+msgstr "français"
 
 msgid "Hindi"
-msgstr "Indien"
+msgstr "hindi"
 
 msgid "Indonesian"
-msgstr "Indonésien"
+msgstr "indonésien"
 
 msgid "Persian"
-msgstr "Persan"
+msgstr "persan"
 
 msgid "Japanese"
-msgstr "Japonais"
+msgstr "japonais"
 
 msgid "German"
-msgstr "Allemand"
+msgstr "allemand"
 
 msgid "New Password:"
-msgstr "Nouveau mot de passe :"
+msgstr "Nouveau mot de passe :"
 
 msgid "Confirm Password:"
 msgstr "Confirmer le mot de passe :"
@@ -148,7 +149,7 @@ msgid "Status"
 msgstr "État"
 
 msgid "Actions"
-msgstr "Action"
+msgstr "Actions"
 
 msgid "Down"
 msgstr "Arrêté"
@@ -175,16 +176,16 @@ msgid "Copy"
 msgstr "Copie"
 
 msgid "Error!"
-msgstr "Erreur !"
+msgstr "Erreur !"
 
 msgid "Error"
 msgstr "Erreur"
 
 msgid "Backend not available!"
-msgstr "Back-end non disponible !"
+msgstr "Back-end non disponible !"
 
 msgid "Subject"
-msgstr "Sujet"
+msgstr "Objet"
 
 msgid "Date"
 msgstr "Date"
@@ -232,7 +233,7 @@ msgid "Hibernate"
 msgstr "Hibernation"
 
 msgid "Are you sure?"
-msgstr "Êtes-vous certain ?"
+msgstr "Êtes-vous sûr·e ?"
 
 msgid "Yes"
 msgstr "Oui"
@@ -250,10 +251,10 @@ msgid "Cannot remove base, machine has clones"
 msgstr "La base ne peut pas être supprimée car elle a des clones"
 
 msgid "show clones"
-msgstr "Afficher les clones"
+msgstr "afficher les clones"
 
 msgid "hide clones"
-msgstr "Masquer les clones"
+msgstr "masquer les clones"
 
 msgid "For Spice redirection you will need to install"
 msgstr "Pour la redirection Spice vous aurez besoin d'installer"
@@ -268,7 +269,7 @@ msgid "You will need to install"
 msgstr "Vous devrez installer"
 
 msgid "and USB drivers ("
-msgstr "et les Drivers USB ("
+msgstr "et les pilotes USB ("
 
 msgid ""
 "Be aware that in Windows, Spice redirection is not automatic. It is "
