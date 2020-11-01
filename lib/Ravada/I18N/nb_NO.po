@@ -2,8 +2,8 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2020-10-31 14:58+0000\n"
-"Last-Translator: Allan Nordhøy <epost@anotheragency.no>\n"
+"PO-Revision-Date: 2020-11-01 12:55+0000\n"
+"Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
 "Language-Team: Norwegian Bokmål <https://hosted.weblate.org/projects/ravada/"
 "translation/nb_NO/>\n"
 "Language: nb_NO\n"
@@ -13,7 +13,6 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 "X-Generator: Weblate 4.3.2-dev\n"
 
-#, fuzzy
 msgid "Ravada broker"
 msgstr "Ravada-megler"
 
@@ -35,7 +34,6 @@ msgstr "Stopp"
 msgid "View"
 msgstr "Vis"
 
-#, fuzzy
 msgid "Prepare base"
 msgstr "Forbered base"
 
@@ -45,18 +43,15 @@ msgstr "Lukk"
 msgid "Clone/s"
 msgstr "Klone/r"
 
-#, fuzzy
 msgid "Users List"
 msgstr "Brukerliste"
 
 msgid "Name"
 msgstr "Navn"
 
-#, fuzzy
 msgid "Log Out"
 msgstr " Logg ut"
 
-#, fuzzy
 msgid "Available Machines"
 msgstr " Tilgjengelige maskiner"
 
@@ -126,15 +121,12 @@ msgstr " Bekreft passord:"
 msgid "Submit"
 msgstr "Send inn"
 
-#, fuzzy
 msgid "Your language has been changed successfully"
 msgstr "Språk endret"
 
-#, fuzzy
 msgid "Your password has been changed successfully"
 msgstr "Passord endret"
 
-#, fuzzy
 msgid "Password is too short"
 msgstr "Passordet er for kort"
 
