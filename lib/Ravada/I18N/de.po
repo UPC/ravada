@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-10-26 16:40+0200\n"
-"PO-Revision-Date: 2020-11-01 12:55+0000\n"
+"PO-Revision-Date: 2020-11-02 08:20+0000\n"
 "Last-Translator: J. Lavoie <j.lavoie@net-c.ca>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/ravada/"
 "translation/de/>\n"
@@ -35,7 +35,7 @@ msgid "Start"
 msgstr "Start"
 
 msgid "Stop"
-msgstr "Stop"
+msgstr "Stopp"
 
 msgid "View"
 msgstr "Anzeigen"
@@ -420,3 +420,57 @@ msgid ""
 msgstr ""
 "kann die Einstellungen aller virtuellen Maschinen ändern "
 "geklont von einer Basis, die dem Benutzer gehört."
+
+msgid "You will need to install"
+msgstr "Sie müssen Folgendes installieren"
+
+msgid "in your computer."
+msgstr "in Ihrem Computer."
+
+msgid "hide clones"
+msgstr "Klonen ausblenden"
+
+msgid "show clones"
+msgstr "Klonen anzeigen"
+
+msgid "messages"
+msgstr "Nachrichten"
+
+msgid "users"
+msgstr "Benutzer"
+
+msgid "machines"
+msgstr "Maschinen"
+
+msgid "Password fields do not match"
+msgstr "Passwortfelder stimmen nicht überein"
+
+msgid "Your password has been changed successfully"
+msgstr "Ihr Passwort wurde erfolgreich geändert"
+
+msgid "Your language has been changed successfully"
+msgstr "Die Sprache wurde erfolgreich geändert"
+
+msgid "German"
+msgstr "Deutsch"
+
+msgid "Japanese"
+msgstr "Japanisch"
+
+msgid "Persian"
+msgstr "Persisch"
+
+msgid "Indonesian"
+msgstr "Indonesisch"
+
+msgid "Hindi"
+msgstr "Hindi"
+
+msgid "French"
+msgstr "Französisch"
+
+msgid "Galician"
+msgstr "Galicisch"
+
+msgid "I want to change my language"
+msgstr "Ich möchte die Sprache ändern"
