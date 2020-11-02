@@ -15,9 +15,13 @@ Available chat in login
 -----------------------
 Copy your widget before </body> tag at the end of ``/usr/share/ravada/templates/bootstrap/scripts.html.ep``
 
+.. image:: images/chat_login.png
+
 Available inside Ravada
 -----------------------
 Copy your widget before </body> tag at the end of ``/usr/share/ravada/templates/main/start.html.ep``
+
+.. image:: images/chat_inside.png
 
 If you have a custom login, then here: ``/usr/share/ravada/templates/main/custom/login_acme.html.ep``
 
