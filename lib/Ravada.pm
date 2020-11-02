@@ -2206,6 +2206,7 @@ sub list_domains_data($self, %args ) {
     my $sth = $CONNECTOR->dbh->prepare($query);
     $sth->execute(@values);
     while (my $row = $sth->fetchrow_hashref) {
+        $row->{date_changed} = 0 if !defined $row->{date_changed};
         lock_hash(%$row);
         push @domains,($row);
     }
@@ -3881,14 +3882,18 @@ sub _refresh_active_domains($self, $request=undef) {
             $self->_refresh_active_domain($domain, \%active_domain) if $domain;
          } else {
             my @domains;
-            eval { @domains = $self->list_domains };
+            eval { @domains = $self->list_domains_data };
             warn $@ if $@;
-            for my $domain (@domains) {
-                next if $active_domain{$domain->id};
-                next if $domain->is_hibernated;
+            for my $domain_data (sort { $b->{date_changed} cmp $a->{date_changed} }
+                                @domains) {
+                $request->error("checking $domain_data->{name}") if $request;
+                next if $active_domain{$domain_data->{id}};
+                my $domain = Ravada::Domain->open($domain_data->{id});
+                next if !$domain || $domain->is_hibernated;
                 $self->_refresh_active_domain($domain, \%active_domain);
                 $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
             }
+            $request->error("checked ".scalar(@domains)) if $request;
         }
     return \%active_domain;
 }
