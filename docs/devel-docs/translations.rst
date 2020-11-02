@@ -1,21 +1,21 @@
-Translations 
-============
+Localization and translation
+============================
 
-We use `Transifex <https://www.transifex.com/ravada/ravada/>`__ to
-provide a cleaner and easy to use interface for translators.
+You can translate Ravada at `Weblate <https://hosted.weblate.org/engage/ravada/>`__. As a feature rich computer aided translation tool, Weblate saves both developers and translators time.
 
-New entries must be added in the ``en.po`` file.
-Because it is the basis of the other language files.
+- Automated localization workflow
+- Quality checks
+- Attribution, all translator are properly credited
 
-.. Warning:: Please don't add new entries in other .po files directly. Use `Transifex <https://www.transifex.com/ravada/ravada/>`__ instead. If you want to collaborate, create an `Issue <https://github.com/UPC/ravada/issues/new>`_ and give you access as a translator of the language you want.
+You can read weblate feaures `here <https://hosted.weblate.org/projects/ravada/#languages>`_.
 
-.. image:: ../../img/translate.png
+Ravada weblate repository is updated from Github, and the contributions goes automatic to develop branch in Github.
+
+New entries
+-----------
+
+New english entries must be added in the ``en.po`` file. It's the origin of the other language files. This new strings will be incorporated automatically in weblate.
+
+.. Warning:: Please don't add new entries in other .po files directly. Use `Weblate <https://hosted.weblate.org/projects/ravada/translation/>`__ instead.
 
 The language files are stored `here <https://github.com/UPC/ravada/tree/master/lib/Ravada/I18N/>`_ in lib/Ravada/I18N.
-
-Before uploading the changes check if there are repeated msgid.
-The ``msguniq`` command should not display any output lines.
-::
-
-    $ msguniq --repeated en.po
-
