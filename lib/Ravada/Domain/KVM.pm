@@ -600,11 +600,12 @@ sub _detect_disks_driver($self) {
 
         my $file = $source->getAttribute('file');
         next if $file =~ /iso$/;
+        next unless $self->_vm->file_exists($file);
 
         my ($vol) = grep { defined $_->file && $_->file eq $file } @vols;
         my $format = $vol->_qemu_info('file format');
         confess "Error: wrong format ".Dumper($format)." for file $file"
-        unless $format =~ /^\w+$/;
+        unless !$format || $format =~ /^\w+$/;
 
         confess "Error: no file format for $file" if !$format;
         $driver->setAttribute(type => $format);
