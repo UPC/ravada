@@ -160,7 +160,7 @@ die "ERROR: Missing the machine name or id\n$USAGE"
 my %CONFIG;
 %CONFIG = ( config => $FILE_CONFIG )    if $FILE_CONFIG;
 
-$Ravada::DEBUG=1    if $DEBUG;
+$Ravada::FORCE_DEBUG=1    if $DEBUG;
 $Ravada::VERBOSE=1      if $VERBOSE;
 $Ravada::CAN_FORK=0    if $NOFORK;
 
@@ -180,7 +180,6 @@ sub do_start {
     my $t_refresh = 0;
 
     my $ravada = Ravada->new( %CONFIG );
-    autostart_machines($ravada);
     #    Ravada::Request->enforce_limits();
     #Ravada::Request->refresh_vms();
     for (;;) {
@@ -188,7 +187,7 @@ sub do_start {
         $ravada->process_priority_requests();
         $ravada->process_long_requests();
         $ravada->process_requests();
-
+		$ravada->set_debug_value();
         exit if done_request();
 
         if ( time - $t_refresh > 60 ) {
@@ -243,10 +242,12 @@ sub start {
         my $ravada = Ravada->new( %CONFIG );
         $Ravada::CONNECTOR->dbh;
         $ravada->_install();
+		$ravada->set_debug_value();
         for my $vm (@{$ravada->vm}) {
             $vm->id;
         }
         $ravada->_wait_pids();
+        autostart_machines($ravada);
     }
     clean_old_requests();
     for (;;) {

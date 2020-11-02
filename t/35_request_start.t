@@ -9,6 +9,9 @@ use_ok('Ravada');
 use_ok('Ravada::Request');
 use lib 't/lib';
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use Test::Ravada;
 
 my $RAVADA = rvd_back();
@@ -46,11 +49,7 @@ sub test_remove_domain {
     ok(!$disks_not_removed,"$disks_not_removed disks not removed from domain $name");
 }
 
-sub test_new_domain {
-    my $vm_name = shift;
-    my $name = shift;
-
-    my $vm = $RAVADA->search_vm($vm_name);
+sub test_new_domain($vm_name, $name, $vm) {
 
 #    test_remove_domain($vm_name, $name);
 
@@ -67,6 +66,7 @@ sub test_new_domain {
 sub test_start {
     my $vm_name = shift;
     my $fork = shift;
+    my $vm = shift;
 
     my $name = new_domain_name();
 #    test_remove_domain($vm_name, $name);
@@ -96,10 +96,9 @@ sub test_start {
     #####################################################################3
     #
     # start
-    test_new_domain($vm_name, $name);
+    test_new_domain($vm_name, $name, $vm);
 
     {
-        my $vm = $RAVADA->search_vm($vm_name);
         my $domain = $vm->search_domain($name);
         ok(!$domain->is_active,"Domain $name should be inactive") or return;
     }
@@ -140,7 +139,6 @@ sub test_start {
     ok(!$req3->error,"Error shutting down domain $name , expecting ''
                         . Got '".($req3->error or ''));
 
-    my $vm = $RAVADA->search_vm($vm_name);
     my $domain3 = $vm->search_domain($name);
     ok($domain3,"[$vm_name] Searching for domain $name") or exit;
     for ( 1 .. 60 ) {
@@ -244,7 +242,7 @@ init();
 clean();
 
 for my $vm_name ( vm_names() ) {
-    my $vmm = $RAVADA->search_vm($vm_name);
+    my $vmm = rvd_back->search_vm($vm_name);
 
     SKIP: {
         my $msg = "SKIPPED: Virtual manager $vm_name not found";
@@ -258,14 +256,15 @@ for my $vm_name ( vm_names() ) {
 
 #        $vmm->disconnect() if $vmm;
         diag("Testing VM $vm_name");
-        my $domain = test_start($vm_name,0);
-        $domain = test_start($vm_name,1);
+        my $domain = test_start($vm_name,0, $vmm);
+        $domain = test_start($vm_name,1, $vmm);
 #        $domain->_vm->disconnect;
         next if !$domain;
         my $domain_name = $domain->name;
         $domain = undef;
 
         test_screenshot_db($vm_name, $domain_name);
+        wait_request();
     };
 }
 end();

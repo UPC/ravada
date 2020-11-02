@@ -624,7 +624,7 @@ sub ip {
 
     return $ip if $ip && $ip !~ /^127\./;
 
-    $name = Ravada::display_ip();
+    $name = $self->display_ip();
 
     if ($name) {
         if ($name =~ /^\d+\.\d+\.\d+\.\d+$/) {
@@ -650,8 +650,59 @@ Returns the IP of the VM when it is in a NAT environment
 
 =cut
 
-sub nat_ip($self) {
-    return Ravada::nat_ip();
+sub nat_ip($self, $value=undef) {
+    $self->_data( nat_ip => $value ) if defined $value;
+    if ($self->is_local) {
+        return $self->_data('nat_ip') if $self->_data('nat_ip');
+        return Ravada::nat_ip(); #deprecated
+    }
+    return $self->_data('nat_ip');
+}
+
+=head2 display_ip
+
+Returns the display IP of the Virtual Manager
+
+=cut
+
+sub display_ip($self, $value=undef) {
+    return $self->_set_display_ip($value) if defined $value;
+
+    if ($self->is_local) {
+        return $self->_data('display_ip') if $self->_data('display_ip');
+        return Ravada::display_ip(); #deprecated
+    }
+    return $self->_data('display_ip');
+}
+
+sub _set_display_ip($self, $value) {
+    my %ip_address = $self->_list_ip_address();
+
+    confess "Error: $value is not in any interface in node ".$self->name
+    .". Found ".Dumper(\%ip_address)
+    if !exists $ip_address{$value};
+
+    $self->_data( display_ip => $value );
+}
+
+sub _list_ip_address($self) {
+    my @cmd = ("ip","address","show");
+    my ($out, $err) = $self->run_command(@cmd);
+    my $dev;
+    my %address;
+    for my $line (split /\n/,$out) {
+        my ($dev_found) = $line =~ /^\d+: (.*?):/;
+        if ($dev_found) {
+            $dev = $dev_found;
+            next;
+        }
+        my ($inet) = $line =~ m{inet (\d+\.\d+\.\d+\.\d+)/};
+        if ($inet) {
+            die "Error: no device found for $inet in node ".$self->name."\n$out" if !$dev;
+            $address{$inet} = $dev;
+        }
+    }
+    return %address;
 }
 
 sub _interface_ip($self, $remote_ip=undef) {
@@ -752,7 +803,7 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown);
     my @requests;
     for my $req ( $base->list_requests ) {
         push @requests,($req) if !$ignore_requests{$req->command};

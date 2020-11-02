@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.9.0';
+our $VERSION = '0.10.0';
 
 use Carp qw(carp croak);
 use Data::Dumper;
@@ -83,6 +83,7 @@ $FILE_CONFIG = undef if ! -e $FILE_CONFIG;
 
 our $CONNECTOR;
 our $CONFIG = {};
+our $FORCE_DEBUG = 0;
 our $DEBUG;
 our $VERBOSE;
 our $CAN_FORK = 1;
@@ -254,7 +255,7 @@ sub _update_isos {
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/20.04/'
                 ,file_re => '^ubuntu-20.04.*desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
+                ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
         }
 
@@ -885,6 +886,8 @@ sub _remove_old_isos {
             ."  WHERE name like 'Debian Buster 32%'"
             ."  AND file_re like '%xfce-CD-1.iso'"
 
+        ,"DELETE FROM iso_images "
+            ."  WHERE name like 'Ubuntu Focal%'"
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute();
@@ -1340,6 +1343,7 @@ sub _sql_insert_defaults($self){
         fallback => 0
         ,session_timeout => 10*60
         ,admin_session_timeout => 30*60
+		,debug => 0
         ,auto_view => 1
     };
     if ( -e "/etc/rvd_front.conf" ){
@@ -1399,6 +1403,16 @@ sub _sql_insert_defaults($self){
                 id_parent => $id_backend
                 ,name => 'start_limit'
                 ,value => 1
+            }
+            ,{
+                id_parent => $id_backend
+                ,name => 'debug'
+                ,value => 0
+            }
+            ,{
+                id_parent => $id_backend
+                ,name => 'delay_migrate_back'
+                ,value => 600
             }
         ]
     );
@@ -1461,6 +1475,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','public_ip',"varchar(128) DEFAULT NULL");
     $self->_upgrade_table('vms','is_active',"int DEFAULT 0");
     $self->_upgrade_table('vms','enabled',"int DEFAULT 1");
+    $self->_upgrade_table('vms','display_ip',"varchar(128) DEFAULT NULL");
+    $self->_upgrade_table('vms','nat_ip',"varchar(128) DEFAULT NULL");
 
     $self->_upgrade_table('vms','min_free_memory',"int DEFAULT 600000");
     $self->_upgrade_table('vms', 'max_load', 'int not null default 10');
@@ -1534,6 +1550,8 @@ sub _upgrade_tables {
     $self->_upgrade_screenshots();
 
     }
+    $self->_upgrade_table('domains','shared_storage','varchar(254)');
+    $self->_upgrade_table('domains','post_shutdown','int not null default 0');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -1625,7 +1643,15 @@ Returns the IP for NATed environments
 
 =cut
 
-sub nat_ip {
+sub nat_ip($self=undef, $new_ip=undef) {
+    if (defined $new_ip) {
+        if (!length $new_ip) {
+            delete $CONFIG->{nat_ip};
+        } else {
+            $CONFIG->{nat_ip} = $new_ip;
+        }
+    }
+
     return $CONFIG->{nat_ip} if exists $CONFIG->{nat_ip};
 }
 
@@ -2175,6 +2201,7 @@ sub list_domains_data($self, %args ) {
     my $sth = $CONNECTOR->dbh->prepare($query);
     $sth->execute(@values);
     while (my $row = $sth->fetchrow_hashref) {
+        $row->{date_changed} = 0 if !defined $row->{date_changed};
         lock_hash(%$row);
         push @domains,($row);
     }
@@ -2370,6 +2397,7 @@ sub process_requests {
 
     $self->_wait_pids();
     $self->_kill_stale_process();
+    $self->_kill_dead_process();
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
         ." WHERE "
@@ -2400,8 +2428,9 @@ sub process_requests {
 
     for my $req (sort { $a->priority <=> $b->priority } @reqs) {
         next if $req eq 'refresh_vms' && scalar@reqs > 2;
+        next if !$req->id;
 
-        warn "[$request_type] $$ executing request ".$req->id." ".$req->status()." retry=".($req->retry or '<UNDEF>')." "
+        warn "[$request_type] $$ executing request id=".$req->id." ".$req->status()." retry=".($req->retry or '<UNDEF>')." "
             .$req->command
             ." ".Dumper($req->args) if $DEBUG || $debug;
 
@@ -2543,7 +2572,9 @@ sub _kill_stale_process($self) {
         "SELECT id,pid,command,start_time "
         ." FROM requests "
         ." WHERE start_time<? "
-        ." AND command = 'refresh_vms'"
+        ." AND ( command = 'refresh_vms' or command = 'screenshot' or command = 'set_time' "
+        ."      OR command = 'open_exposed_ports' "
+        .") "
         ." AND status <> 'done' "
         ." AND pid IS NOT NULL "
         ." AND start_time IS NOT NULL "
@@ -2553,6 +2584,8 @@ sub _kill_stale_process($self) {
         if ($pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
                 ." seconds, but I won't because it is myself";
+            my $request = Ravada::Request->open($id);
+            $request->status('done',"Stale process pid=$pid");
             next;
         }
         my $request = Ravada::Request->open($id);
@@ -2560,6 +2593,31 @@ sub _kill_stale_process($self) {
      }
     $sth->finish;
 }
+
+sub _kill_dead_process($self) {
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,pid,command,start_time "
+        ." FROM requests "
+        ." WHERE start_time<? "
+        ." AND status = 'working' "
+        ." AND pid IS NOT NULL "
+    );
+    $sth->execute(time - 2);
+    while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
+        next if -e "/proc/$pid";
+        if ($pid == $$ ) {
+            warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
+                ." seconds, but I won't because it is myself";
+            next;
+        }
+        my $request = Ravada::Request->open($id);
+        $request->stop();
+        warn "stopping ".$request->id." ".$request->command;
+     }
+    $sth->finish;
+}
+
 
 sub _domain_working {
     my $self = shift;
@@ -2639,7 +2697,6 @@ sub _execute {
     }
 
     $request->status('working','') unless $request->status() eq 'waiting';
-    $request->pid($$);
     $request->start_time(time);
     $request->error('');
     if ($dont_fork || !$CAN_FORK) {
@@ -3116,7 +3173,7 @@ sub _cmd_start {
 
     $self->_remove_unnecessary_downs($domain);
 
-    my @args = ( user => $user );
+    my @args = ( user => $user, request => $request );
     push @args, ( remote_ip => $request->defined_arg('remote_ip') )
         if $request->defined_arg('remote_ip');
 
@@ -3446,6 +3503,7 @@ sub _cmd_force_shutdown {
     die "Unknown domain '$id_domain'\n" if !$domain;
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
+    die "Error: unknown user id=$uid in request= ".$request->id if !$user;
 
     $domain->force_shutdown($user,$request);
 
@@ -3680,7 +3738,7 @@ sub _cmd_list_network_interfaces($self, $request) {
 
 sub _cmd_list_isos($self, $request){
     my $vm_type = $request->args('vm_type');
-   
+
     my $vm = Ravada::VM->open( type => $vm_type );
     $vm->refresh_storage();
     my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
@@ -3763,6 +3821,23 @@ sub _cmd_migrate($self, $request) {
 
 }
 
+sub _cmd_rsync_back($self, $request) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
+
+    my $domain = Ravada::Domain->open($id_domain);
+    return if $domain->is_active;
+
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    die "Error: user ".$user->name." not allowed to migrate domain ".$domain->name
+    unless $user->is_operator;
+
+    my $node = Ravada::VM->open($request->args('id_node'));
+    $domain->_rsync_volumes_back($node, $request);
+
+}
+
+
 sub _clean_requests($self, $command, $request=undef, $status='requested') {
     my $query = "DELETE FROM requests "
         ." WHERE command=? "
@@ -3810,14 +3885,18 @@ sub _refresh_active_domains($self, $request=undef) {
             $self->_refresh_active_domain($domain, \%active_domain) if $domain;
          } else {
             my @domains;
-            eval { @domains = $self->list_domains };
+            eval { @domains = $self->list_domains_data };
             warn $@ if $@;
-            for my $domain (@domains) {
-                next if $active_domain{$domain->id};
-                next if $domain->is_hibernated;
+            for my $domain_data (sort { $b->{date_changed} cmp $a->{date_changed} }
+                                @domains) {
+                $request->error("checking $domain_data->{name}") if $request;
+                next if $active_domain{$domain_data->{id}};
+                my $domain = Ravada::Domain->open($domain_data->{id});
+                next if !$domain || $domain->is_hibernated;
                 $self->_refresh_active_domain($domain, \%active_domain);
                 $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
             }
+            $request->error("checked ".scalar(@domains)) if $request;
         }
     return \%active_domain;
 }
@@ -3870,6 +3949,8 @@ sub _refresh_active_domain($self, $domain, $active_domain) {
     $domain->info(Ravada::Utils::user_daemon)             if $is_active;
     $active_domain->{$domain->id} = $is_active;
 
+    $domain->_post_shutdown()
+    if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown');
 }
 
 sub _refresh_down_domains($self, $active_domain, $active_vm) {
@@ -3895,6 +3976,8 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
                 $req->status('done');
             }
         }
+        $domain->_post_shutdown()
+        if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown');
     }
 }
 
@@ -4065,6 +4148,7 @@ sub _req_method {
     ,start_node  => \&_cmd_start_node
     ,connect_node  => \&_cmd_connect_node
     ,migrate => \&_cmd_migrate
+    ,rsync_back => \&_cmd_rsync_back
 
     #users
     ,post_login => \&_cmd_post_login
@@ -4339,6 +4423,16 @@ sub _cmd_remove_expose($self, $request) {
 sub _cmd_open_exposed_ports($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain);
     $domain->open_exposed_ports();
+}
+
+=head2 set_debug_value
+
+Sets debug global variable from setting
+
+=cut
+
+sub set_debug_value($self) {
+	$DEBUG = $FORCE_DEBUG || $self->setting('backend/debug');
 }
 
 =head2 setting

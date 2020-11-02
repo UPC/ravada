@@ -1,134 +1,134 @@
-# 
+# Translation for Ravada project
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
-"Project-Id-Version: 0.1.0-alpha\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-05-02 16:20+0200\n"
-"Language-Team: Chinese (Taiwan) (https://www.transifex.com/ravada/teams/70385/zh_TW/)\n"
+"PO-Revision-Date: 2020-11-01 12:55+0000\n"
+"Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
+"Language-Team: Norwegian Bokmål <https://hosted.weblate.org/projects/ravada/"
+"translation/nb_NO/>\n"
+"Language: nb_NO\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: zh_TW\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Poedit 1.8.7.1\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 4.3.2-dev\n"
 
 msgid "Ravada broker"
-msgstr ""
+msgstr "Ravada-megler"
 
 msgid "Machine Name"
-msgstr ""
+msgstr "Maskinnavn"
 
 msgid "Tools"
-msgstr ""
+msgstr "Verktøy"
 
 msgid "Choose a Machine to Start"
-msgstr ""
+msgstr "Velg en maskin å starte"
 
 msgid "Start"
-msgstr ""
+msgstr "Start"
 
 msgid "Stop"
-msgstr ""
+msgstr "Stopp"
 
 msgid "View"
-msgstr ""
+msgstr "Vis"
 
 msgid "Prepare base"
-msgstr ""
+msgstr "Forbered base"
 
 msgid "Clone"
-msgstr ""
+msgstr "Lukk"
 
 msgid "Clone/s"
-msgstr ""
+msgstr "Klone/r"
 
 msgid "Users List"
-msgstr ""
+msgstr "Brukerliste"
 
 msgid "Name"
-msgstr ""
+msgstr "Navn"
 
 msgid "Log Out"
-msgstr ""
+msgstr " Logg ut"
 
 msgid "Available Machines"
-msgstr ""
+msgstr " Tilgjengelige maskiner"
 
 msgid "Help"
-msgstr ""
+msgstr "Hjelp"
 
 msgid "Requirements"
-msgstr ""
+msgstr "Krav"
 
 msgid "About"
-msgstr ""
+msgstr "Om"
 
 msgid "Mark all as read"
-msgstr ""
+msgstr " Marker alle som lest"
 
 msgid "Settings"
-msgstr ""
+msgstr "Innstillinger"
 
 msgid "New Machine"
-msgstr ""
+msgstr "Ny maskin"
 
 msgid "I want to change my password"
-msgstr ""
+msgstr "Jeg vil endre passordet mitt"
 
 msgid "I want to change my language"
-msgstr ""
+msgstr "Jeg ønsker å endre språk"
 
 msgid "Language:"
-msgstr ""
+msgstr "Språk:"
 
 msgid "English"
-msgstr ""
+msgstr "Engelsk"
 
 msgid "Spanish"
-msgstr ""
+msgstr "Spansk"
 
 msgid "Catalan"
-msgstr ""
+msgstr "Katalansk"
 
 msgid "Galician"
-msgstr ""
+msgstr "Galisisk"
 
 msgid "French"
-msgstr ""
+msgstr "Fransk"
 
 msgid "Hindi"
-msgstr ""
+msgstr "Hindi"
 
 msgid "Indonesian"
-msgstr ""
+msgstr "Indonesisk"
 
 msgid "Persian"
-msgstr ""
+msgstr "Persisk"
 
 msgid "Japanese"
-msgstr ""
+msgstr "Japansk"
 
 msgid "German"
-msgstr ""
+msgstr "Tysk"
 
 msgid "New Password:"
-msgstr ""
+msgstr "Nytt passord:"
 
 msgid "Confirm Password:"
-msgstr ""
+msgstr " Bekreft passord:"
 
 msgid "Submit"
-msgstr ""
+msgstr "Send inn"
 
 msgid "Your language has been changed successfully"
-msgstr ""
+msgstr "Språk endret"
 
 msgid "Your password has been changed successfully"
-msgstr ""
+msgstr "Passord endret"
 
 msgid "Password is too short"
-msgstr ""
+msgstr "Passordet er for kort"
 
 msgid "Password fields do not match"
 msgstr ""
@@ -284,6 +284,9 @@ msgstr ""
 msgid "A viewer is required to run the virtual machines."
 msgstr ""
 
+msgid "It is required a viewer to run the virtual machines."
+msgstr ""
+
 msgid "Virtual Machines"
 msgstr ""
 
@@ -377,9 +380,7 @@ msgstr ""
 msgid "Select Template"
 msgstr ""
 
-msgid ""
-"This ISO image has not been downloaded yet. It may take some minutes, even "
-"hours until the file is fetched from the Internet."
+msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
 msgstr ""
 
 msgid "Download now"
@@ -418,17 +419,15 @@ msgstr ""
 msgid "A machine with that name already exists."
 msgstr ""
 
-msgid ""
-"The machine name is only allowed to consist of alphabetic characters, "
-"numbers, dashes and points."
+msgid "The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points."
 msgstr ""
 
 msgid "Create"
 msgstr ""
 
 msgid ""
-"can change the settings of all virtual machines cloned from one base owned "
-"by the user."
+"can change the settings of all virtual machines "
+"cloned from one base owned by the user."
 msgstr ""
 
 msgid "monitoring"
@@ -506,8 +505,7 @@ msgstr ""
 msgid "Danger Zone"
 msgstr ""
 
-msgid ""
-"Once you delete the machine, there is no going back. Please be certain."
+msgid "Once you delete the machine, there is no going back. Please be certain."
 msgstr ""
 
 msgid "Danger"
@@ -544,6 +542,9 @@ msgid "This virtual machine can't be removed because it has"
 msgstr ""
 
 msgid "clones"
+msgstr ""
+
+msgid "Clones"
 msgstr ""
 
 msgid "This machine has not Graphics parameters!"
@@ -705,9 +706,7 @@ msgstr ""
 msgid "Press SHIFT + F12 to exit"
 msgstr ""
 
-msgid ""
-"If you can not see the machine screen in a few seconds check for a file "
-"called"
+msgid "If you can not see the machine screen in a few seconds check for a file called"
 msgstr ""
 
 msgid "in your downloads folder."
@@ -771,4 +770,109 @@ msgid "Thanks to:"
 msgstr ""
 
 msgid "licensed."
+msgstr ""
+
+msgid "New Node"
+msgstr ""
+
+msgid "Address"
+msgstr ""
+
+msgid "A node with that name already exists."
+msgstr ""
+
+msgid "Setting your default language"
+msgstr ""
+
+msgid "Change password"
+msgstr ""
+
+msgid "Update password"
+msgstr ""
+
+msgid "Start all clones"
+msgstr ""
+
+msgid "Access denied"
+msgstr ""
+
+msgid "Empty login name"
+msgstr ""
+
+msgid "Empty password"
+msgstr ""
+
+msgid "Session timeout"
+msgstr ""
+
+msgid "Vietnamese"
+msgstr ""
+
+msgid "Italian"
+msgstr ""
+
+msgid "Type a typical LDAP user name to fetch the attribute list"
+msgstr ""
+
+msgid "User name"
+msgstr ""
+
+msgid "not found in LDAP server"
+msgstr ""
+
+msgid "Attribute"
+msgstr ""
+
+msgid "Value"
+msgstr ""
+
+msgid "Allowed"
+msgstr ""
+
+msgid "Last"
+msgstr ""
+
+msgid "Default"
+msgstr ""
+
+msgid "If none of the previous match, access is allowed."
+msgstr ""
+
+msgid "If none of the previous match, access is denied."
+msgstr ""
+
+msgid "verify"
+msgstr ""
+
+msgid "save"
+msgstr ""
+
+msgid "Verifying"
+msgstr ""
+
+msgid "No entries found"
+msgstr ""
+
+msgid "has at least"
+msgstr ""
+
+msgid "entries."
+msgstr ""
+
+msgid "Enable last for not allowed restrictions."
+msgstr ""
+
+msgid "Add description"
+msgstr ""
+
+msgid "These actions affect all the clones on the machine"
+msgstr ""
+
+msgid "Shutdown all clones"
+msgstr ""
+
+msgid "Keep in mind that there may be users using a clone"
+msgstr ""
+
+msgid "Yes, shutwdown all the clones"
 msgstr ""

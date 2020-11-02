@@ -41,7 +41,7 @@ sub _init_mojo_client {
 =cut
 
 sub list_machines_user($t, $headers={}){
-    $Ravada::WebSocket::DEBUG = 1;
+    mojo_check_login($t);
     $t->websocket_ok("/ws/subscribe" => $headers)->send_ok("list_machines_user")->message_ok->finish_ok;
 
     confess if !$t->message || !$t->message->[1];

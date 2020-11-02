@@ -24,7 +24,7 @@ sub init {
     if ($config->{ldap}) {
         eval {
             require Ravada::Auth::LDAP;
-            Ravada::Auth::LDAP::init($config); 
+            Ravada::Auth::LDAP::init($config);
             $LDAP_OK = 1;
         };
         warn $@ if $@;
@@ -45,17 +45,22 @@ Tries login in all the submodules
 sub login {
     my ($name, $pass, $quiet) = @_;
 
-    my $login_ok;
+    my ($login_ok, $ldap_err);
     if (!defined $LDAP_OK || $LDAP_OK) {
         eval {
             $login_ok = Ravada::Auth::LDAP->new(name => $name, password => $pass);
         };
-        warn $@ if $@ && $LDAP_OK && !$quiet;
+        $ldap_err = $@ if $@ && $LDAP_OK && !$quiet;
         if ( $login_ok ) {
+            warn $ldap_err if $ldap_err && $LDAP_OK && !$quiet;
             return $login_ok;
         }
     }
-    return Ravada::Auth::SQL->new(name => $name, password => $pass);
+    my $sql_login = Ravada::Auth::SQL->new(name => $name, password => $pass);
+    unless ($sql_login) {
+        warn $ldap_err if $ldap_err && $LDAP_OK && !$quiet;
+    }
+    return $sql_login;
 }
 
 =head2 enable_LDAP
