@@ -977,8 +977,6 @@ sub refresh_vms {
           return if done_recently(undef,60,'refresh_vms') || _requested('refresh_vms');
     }
 
-    $args->{timeout} = 120 if ! $args->{timeout};
-
     my $self = {};
     bless($self,$class);
 
