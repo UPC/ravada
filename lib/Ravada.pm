@@ -2087,16 +2087,8 @@ sub _search_domain {
 
 =cut
 
-sub search_domain_by_id {
-    my $self = shift;
-    my $id = shift  or confess "ERROR: missing argument id";
-
-    my $sth = $CONNECTOR->dbh->prepare("SELECT name FROM domains WHERE id=?");
-    $sth->execute($id);
-    my ($name) = $sth->fetchrow;
-    confess "Unknown domain id=$id" if !$name;
-
-    return $self->search_domain($name);
+sub search_domain_by_id($self, $id) {
+    return Ravada::Domain->open($id);
 }
 
 =head2 list_vms
@@ -2692,7 +2684,7 @@ sub _do_execute_command {
     my $err = ( $@ or '');
     my $elapsed = tv_interval($t0,[gettimeofday]);
     $request->run_time($elapsed);
-    $request->error($err)   if $err;
+    $request->error(''.$err)   if $err;
     if ($err) {
         my $user = $request->defined_arg('user');
         if ($user) {
@@ -3115,7 +3107,7 @@ sub _cmd_start {
 
     my $domain;
     $domain = $self->search_domain($name)               if $name;
-    $domain = $self->search_domain_by_id($id_domain)    if $id_domain;
+    $domain = Ravada::Domain->open($id_domain)          if $id_domain;
     die "Unknown domain '".($name or $id_domain)."'" if !$domain;
     $domain->status('starting');
 
@@ -3709,17 +3701,24 @@ sub _cmd_set_time($self, $request) {
     die "$@ , retry.\n" if $@;
 }
 
-sub _migrate_base($self, $domain, $node, $uid, $request) {
+sub _migrate_base($self, $domain, $id_node, $uid, $request) {
+    if (ref($id_node)) {
+        $id_node = $id_node->id;
+    }
     my $base = Ravada::Domain->open($domain->id_base);
-    return if $base->base_in_vm($node->id);
+    return if $base->base_in_vm($id_node);
 
     my $req_base = Ravada::Request->set_base_vm(
         id_domain => $base->id
-        , id_vm => $node->id
+        , id_vm => $id_node
         , uid => $uid
+        , retry => 10
     );
-    $request->after_request($req_base);
-    die "Base ".$base->name." still not prepared in node ".$node->name.". Retry\n";
+    confess "Error: no request for set_base_vm" if !$req_base;
+    confess "Error: same request" if $req_base->id == $request->id;
+    $request->retry(10) if !defined $request->retry();
+    $request->after_request_ok($req_base->id);
+    die "Base ".$base->name." still not prepared in node $id_node. Retry\n";
 }
 
 sub _cmd_migrate($self, $request) {
@@ -3727,7 +3726,8 @@ sub _cmd_migrate($self, $request) {
     my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
-    my $domain = $self->search_domain_by_id($id_domain);
+    my $domain = Ravada::Domain->open($id_domain)
+        or confess "Error: domain $id_domain not found";
 
     die "Error: user ".$user->name." not allowed to migrate domain ".$domain->name
     unless $user->is_operator;
@@ -3746,7 +3746,7 @@ sub _cmd_migrate($self, $request) {
                 ,id_domain => $id_domain
                 ,@timeout
             );
-            $request->after_request($req_shutdown->id);
+            $request->after_request_ok($req_shutdown->id);
             $request->retry(10) if !defined $request->retry();
             die "Virtual Machine ".$domain->name." ".$request->retry." is active. Shutting down. Retry.\n";
         }
@@ -3959,16 +3959,19 @@ sub _cmd_set_base_vm {
     #    my $domain = $self->search_domain_by_id($id_domain) or confess "Error: Unknown domain id: $id_domain";
 
     die "USER $uid not authorized to set base vm"
-        if !$user->is_admin;
+    if !$user->is_admin;
 
-    $domain->prepare_base($user) if $value && !$domain->is_base;
+    $self->_migrate_base($domain, $id_vm, $uid, $request) if $domain->id_base;
+    if ( $value && !$domain->is_base ) {
+        $domain->prepare_base($user);
+    }
 
     $domain->set_base_vm(
-            id_vm => $id_vm
-            ,user => $user
-           ,value => $value
-         ,request => $request
-     );
+        id_vm => $id_vm
+        ,user => $user
+        ,value => $value
+        ,request => $request
+    );
 }
 
 sub _cmd_cleanup($self, $request) {

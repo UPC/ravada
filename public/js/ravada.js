@@ -200,9 +200,10 @@
                         if (!subscribed_extra) {
                             subscribed_extra = true;
                             subscribe_nodes(url,data.type);
-                            subscribe_bases(url);
+                            //subscribe_bases(url);
                         }
                     });
+                    _select_new_base();
                 }
             };
 
@@ -254,6 +255,25 @@
                     });
                 }
             };
+            _select_new_base = function() {
+                if(typeof($scope.new_base) != 'undefined'
+                    || typeof($scope.showmachine) == 'undefined'
+                    || typeof($scope.bases) == 'undefined'
+                ) {
+                    return;
+                }
+                for (var i = 0; i < $scope.bases.length; i++) {
+                    if ($scope.bases[i].id == $scope.showmachine.id_base) {
+                        $scope.new_base = $scope.bases[i];
+                        console.log(" clone  "+i);
+                    } else if ($scope.showmachine.is_base
+                        && $scope.bases[i].id == $scope.showmachine.id) {
+                        $scope.new_base = $scope.bases[i];
+                        console.log("is_base "+i);
+                    }
+                }
+                $scope.current_base = $scope.new_base;
+            };
 
             subscribe_bases = function(url, type) {
                 var ws = new WebSocket(url);
@@ -262,26 +282,14 @@
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
                         $scope.bases = data;
-                        if(typeof($scope.new_base) == 'undefined') {
-                            for (var i = 0; i < $scope.bases.length; i++) {
-                                if ($scope.bases[i].id == $scope.showmachine.id_base) {
-                                    $scope.new_base = $scope.bases[i];
-                                    console.log(" clone  "+i);
-                                } else if ($scope.showmachine.is_base
-                                    && $scope.bases[i].id == $scope.showmachine.id) {
-                                    $scope.new_base = $scope.bases[i];
-                                    console.log("is_base "+i);
-                                }
-                            }
-                            $scope.current_base = $scope.new_base;
-                        }
-
+                        _select_new_base();
                     });
                 }
             };
 
             subscribe_ws = function(url, is_admin) {
                 subscribe_machine_info(url);
+                subscribe_bases(url);
                 subscribe_requests(url);
                 subscribe_isos(url);
                 // other data will be subscribed on loading machine info

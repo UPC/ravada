@@ -161,6 +161,7 @@
                               ng-class="{base: machine.is_base
                               ,disabled: !machine.can_manage}"
                         title ="<%=l 'Manage machine' %>">{{machine.name}}</a> {{machine.comment}}
+                   <span class="comment" ng-show="machine.is_volatile"><%=l 'Volatile' %></span>
                         <button ng-show="machine.has_clones" type="button"
                         class="badge badge-light text-blue"
                         ng-click="toggle_show_clones(machine.id)"

@@ -822,7 +822,7 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
             sleep 1;
         }
     }
-    $self->_post_remove_base();
+    #    $self->_post_remove_base();
     if (!$self->is_local) {
         my $vm_local = Ravada::VM->open( type => $self->vm );
         $self->migrate($vm_local);
@@ -4110,7 +4110,7 @@ sub set_base_vm($self, %args) {
 
 sub _set_clones_autostart($self, $value) {
     for my $clone_data ($self->clones) {
-        my $clone = Ravada::Domain->open($clone_data->{id});
+        my $clone = Ravada::Domain->open($clone_data->{id}) or next;
         $clone->_internal_autostart(0);
     }
 }

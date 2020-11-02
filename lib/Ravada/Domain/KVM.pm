@@ -498,6 +498,38 @@ sub post_prepare_base {
     $self->_store_xml();
 }
 
+sub _set_backing_store($self, $disk, $backing_file) {
+    my ($backing_store) = $disk->findnodes('backingStore');
+    if ($backing_file) {
+        my $vol_backing_file = Ravada::Volume->new(
+            file => $backing_file
+            ,vm => $self->_vm
+        );
+        my $backing_file_format = (
+            $vol_backing_file->_qemu_info('file format')
+                or 'qcow2'
+        );
+
+        $backing_store = $disk->addNewChild(undef,'backingStore') if !$backing_store;
+        $backing_store->setAttribute('type' => 'file');
+
+        my ($format) = $backing_store->findnodes('format');
+        $format = $backing_store->addNewChild(undef,'format') if !$format;
+        $format->setAttribute('type' => $backing_file_format);
+
+        my ($source_bf) = $backing_store->findnodes('source');
+        $source_bf = $backing_store->addNewChild(undef,'source') if !$source_bf;
+        $source_bf->setAttribute('file' => $backing_file);
+
+        my $next_backing_file = $vol_backing_file->backing_file();
+        $self->_set_backing_store($backing_store, $next_backing_file);
+    } else {
+        $disk->removeChild($backing_store) if $backing_store;
+        $backing_store = $disk->addNewChild(undef,'backingStore') if !$backing_store;
+    }
+
+}
+
 sub _set_volumes_backing_store($self) {
     my $doc = XML::LibXML->load_xml(string
             => $self->xml_description(Sys::Virt::Domain::XML_INACTIVE))
@@ -511,32 +543,7 @@ sub _set_volumes_backing_store($self) {
             my $file = $source->getAttribute('file');
             my $backing_file = $vol{$file}->backing_file();
 
-
-            my ($backing_store) = $disk->findnodes('backingStore');
-            if ($backing_file) {
-                my $vol_backing_file = Ravada::Volume->new(
-                    file => $backing_file
-                    ,vm => $self->_vm
-                );
-                my $backing_file_format = (
-                    $vol_backing_file->_qemu_info('file format')
-                        or 'qcow2'
-                );
-
-                $backing_store = $disk->addNewChild(undef,'backingStore') if !$backing_store;
-                $backing_store->setAttribute('type' => 'file');
-
-                my ($format) = $backing_store->findnodes('format');
-                $format = $backing_store->addNewChild(undef,'format') if !$format;
-                $format->setAttribute('type' => $backing_file_format);
-
-                my ($source_bf) = $backing_store->findnodes('source');
-                $source_bf = $backing_store->addNewChild(undef,'source') if !$source_bf;
-                $source_bf->setAttribute('file' => $backing_file);
-            } else {
-                $disk->removeChild($backing_store) if $backing_store;
-                $backing_store = $disk->addNewChild(undef,'backingStore') if !$backing_store;
-            }
+            $self->_set_backing_store($disk, $backing_file);
 
         }
     }
@@ -603,11 +610,10 @@ sub _detect_disks_driver($self) {
 
         my ($vol) = grep { defined $_->file && $_->file eq $file } @vols;
         my $format = $vol->_qemu_info('file format');
-        confess "Error: wrong format ".Dumper($format)." for file $file"
-        unless $format =~ /^\w+$/;
+        warn "Error: wrong format ".Dumper($format)." for file $file"
+        unless defined $format && $format =~ /^\w+$/;
 
-        confess "Error: no file format for $file" if !$format;
-        $driver->setAttribute(type => $format);
+        $driver->setAttribute(type => $format) if defined $format;
     }
 
     $self->_post_change_hardware($doc);

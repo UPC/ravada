@@ -10,9 +10,9 @@
                 </div>
             </div>
 
-            <div class="row" ng-show="!nodes">
+            <div class="row" ng-show="!nodes && (showmachine && !showmachine.is_base)">
                 <div class="col-lg-3 mt-2">
-                    Loading ..
+                    Loading nodes <i class="fas fa-sync-alt fa-spin"></i></div>
                 </div>
             </div>
 
