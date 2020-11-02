@@ -3955,7 +3955,8 @@ sub rsync($self, @args) {
             or confess "No Connection to ".$self->_vm->host;
     }
     my $vm_local = $self->_vm->new( host => 'localhost' );
-    my $rsync = File::Rsync->new(update => 1, sparse => 1, times => 1);
+    my $rsync = File::Rsync->new(update => 1, sparse => 1, archive => 1);
+    my $time_rsync = time;
     for my $file ( @$files ) {
         my ($path) = $file =~ m{(.*)/};
         my ($out, $err) = $node->run_command("/bin/mkdir","-p",$path);
@@ -3972,19 +3973,24 @@ sub rsync($self, @args) {
         next if _check_stat($file, $vm_local, $node);
         my $msg = $self->_msg_log_rsync($file, $node, "rsync", $request);
 
-        $request->status("syncing",$msg) if $request;
+        $request->status("syncing") if $request;
+        $request->error($msg)       if $request;
         warn "$msg\n" if $DEBUG_RSYNC;
 
         my $t0 = time;
         $rsync->exec(src => $src, dest => $dst);
-        warn "Domain::rsync ".(time - $t0)." seconds $file" if $DEBUG_RSYNC;
+        $msg = "Domain::rsync ".(time - $t0)." seconds $file";
+        warn $msg if $DEBUG_RSYNC;
+        $request->error($msg) if $request;
     }
     if ($rsync->err) {
-        $request->status("done",join(" ",@{$rsync->err}))   if $request;
+        $request->status("done")                    if $request;
+        $request->error(join(" ",@{$rsync->err}))   if $request;
         confess "error syncing to ".$node->host."\n"
             .Dumper($files)."\n"
             .join(' ',@{$rsync->err});
     }
+    $request->error("rsync done ".(time - $time_rsync)." seconds");
     $node->refresh_storage_pools();
 }
 
@@ -4009,7 +4015,7 @@ sub _msg_log_rsync($self, $file, $node, $sub, $request) {
 }
 
 sub _rsync_volumes_back($self, $node, $request=undef) {
-    my $rsync = File::Rsync->new(update => 1, sparse => 1, times => 1);
+    my $rsync = File::Rsync->new(update => 1, sparse => 1, archive => 1);
     my $vm_local = $self->_vm->new( host => 'localhost' );
     for my $file ( $self->list_volumes() ) {
         my ($dir) = $file =~ m{(.*)/.*};
@@ -4017,7 +4023,8 @@ sub _rsync_volumes_back($self, $node, $request=undef) {
 
         my $msg = $self->_msg_log_rsync($file, $node, "rsync_back", $request);
 
-        $request->status("syncing",$msg) if $request;
+        $request->status("syncing") if $request;
+        $request->error($msg)       if $request;
         warn "$msg\n" if $DEBUG_RSYNC;
         my $t0 = time;
         $rsync->exec(src => 'root@'.$node->host.":".$file ,dest => $file );
