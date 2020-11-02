@@ -254,7 +254,7 @@ sub _update_isos {
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/20.04/'
                 ,file_re => '^ubuntu-20.04.*desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
+                ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
         }
 
@@ -885,6 +885,8 @@ sub _remove_old_isos {
             ."  WHERE name like 'Debian Buster 32%'"
             ."  AND file_re like '%xfce-CD-1.iso'"
 
+        ,"DELETE FROM iso_images "
+            ."  WHERE name like 'Ubuntu Focal%'"
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute();
