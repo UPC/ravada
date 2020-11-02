@@ -1,5 +1,5 @@
-Chatwoot service
-================
+Live web Chatwoot
+=================
 
 If you want to offer a communication channel for users. We propose this simple and powerful solution.
 
