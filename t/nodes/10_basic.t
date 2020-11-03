@@ -1158,7 +1158,7 @@ sub test_migrate_req($vm, $node) {
         , retry => 10
     );
     for ( 1 .. 30 ) {
-        wait_request( debug => 1, check_error => 0);
+        wait_request( debug => 0, check_error => 0);
         is($req->status,'done');
         last if !$req->error;
         sleep 1;

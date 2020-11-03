@@ -1356,7 +1356,7 @@ sub requirements_done($self) {
             $self->status('done');
             $self->error($req->error);
         }
-        $ok = 1 if $req->status eq 'done' && $req->error eq '';
+        $ok = 1 if $req->status eq 'done' && ( $req->error eq '' || !defined $req->error);
     }
     return $ok;
 }
