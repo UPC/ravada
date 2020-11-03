@@ -887,6 +887,7 @@ sub _remove_old_isos {
 
         ,"DELETE FROM iso_images "
             ."  WHERE name like 'Ubuntu Focal%'"
+            ."  AND ( md5 IS NOT NULL OR md5_url IS NOT NULL) "
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute();
