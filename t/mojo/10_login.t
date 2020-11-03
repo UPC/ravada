@@ -2,6 +2,7 @@ use warnings;
 use strict;
 
 use Data::Dumper;
+use HTML::Lint;
 use Test::More;
 use Test::Mojo;
 use Mojo::File 'path';
@@ -183,11 +184,65 @@ sub test_copy_without_prepare($clone) {
     remove_machines($clone);
 }
 
+sub test_validate_html($url) {
+    $t->get_ok($url)->status_is(200);
+    my $content = $t->tx->res->body();
+    _check_html_lint($url,$content);
+}
+
+sub test_validate_html_local($dir) {
+    opendir my $ls,$dir or die "$! $dir";
+    while (my $file = readdir $ls) {
+        next unless $file =~ /html/;
+        my $path = "$dir/$file";
+        open my $in,"<", $path or die "$path";
+        my $content = join ("",<$in>);
+        close $in;
+        _check_html_lint($path,$content, {internal => 1});
+    }
+}
+
+sub _check_html_lint($url, $content, $option = {}) {
+    my $lint = HTML::Lint->new;
+    $lint->only_types( HTML::Lint::Error::STRUCTURE );
+    $lint->parse( $content );
+    $lint->eof();
+
+    my @errors;
+    my @warnings;
+
+    for my $error ( $lint->errors() ) {
+        next if $error->errtext =~ /Entity .*is unknown/;
+        next if $option->{internal} && $error->errtext =~ /(body|head|html|title).*required/;
+        push @warnings, ($error) if $error->errtext =~ /attribute.*is repeated/;
+        push @errors, ($error)
+        unless $error->errtext =~ /Unknown element <(footer|header|nav)/
+             || $error->errtext =~ /Entity && is unknown/
+             || $error->errtext =~ /should be written as/
+             || $error->errtext =~ /attribute.*is repeated/
+             ;
+    }
+    ok(!@errors, $url) or do {
+        my $file_out = $url;
+        $file_out =~ s{/}{_}g;
+        $file_out = "/var/tmp/$file_out";
+        open my $out, ">", $file_out or die "$! $file_out";
+        print $out $content;
+        close $out;
+        die "Stored in $file_out\n".Dumper([ map { [$_->where,$_->errtext] } @errors ]);
+    };
+    ok(!@warnings,$url) or warn Dumper([ map { [$_->where,$_->errtext] } @warnings]);
+
+
+}
+
 ########################################################################################
 
 init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
 like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
+
+test_validate_html_local("templates/main");
 
 if (!rvd_front->ping_backend) {
     diag("SKIPPED: no backend");
@@ -204,6 +259,8 @@ my @bases;
 my @clones;
 
 test_login_fail();
+
+test_validate_html("/login");
 
 for my $vm_name (@{rvd_front->list_vm_types} ) {
 
@@ -232,6 +289,8 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
 
     mojo_request($t, "add_hardware", { id_domain => $base->id, name => 'network' });
     wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+
+    test_validate_html("/machine/manage/".$base->id.".html");
 
     $t->get_ok("/machine/prepare/".$base->id.".json")->status_is(200);
     _wait_request(debug => 0, background => 1, check_error => 1);
