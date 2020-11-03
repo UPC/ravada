@@ -1250,6 +1250,7 @@ sub test_nested_base($vm, $node, $levels=1) {
         );
         is($clone->id_base,$base1->id);
         push @bases,($base1);
+        wait_request();
         test_volumes_levels($clone, $n);
         test_domain_volumes_levels($clone, $n+1);
         $base1 = $clone;
