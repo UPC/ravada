@@ -18,7 +18,6 @@
         <li class="list-group-item list-group-item-primary">
             <span ng-show="item.type == 'NAT'">nat</span>
             <span ng-show="item.type == 'bridge'">bridge</span>
-            </p>
         </li>
         <li class="list-group-item">
             <select ng-model="item.network"

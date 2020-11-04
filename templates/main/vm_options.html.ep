@@ -1,4 +1,4 @@
-<div class="card-body">
+<div class="card-body"><!-- options -->
     <form class="form" action="<%= $action %>" method="post">
         <div class="form-group">
             <div class="row" ng-show="showmachine.ip">
@@ -12,7 +12,7 @@
 
             <div class="row" ng-show="!nodes && (showmachine && !showmachine.is_base)">
                 <div class="col-lg-3 mt-2">
-                    Loading nodes <i class="fas fa-sync-alt fa-spin"></i></div>
+                    Loading nodes <i class="fas fa-sync-alt fa-spin"></i>
                 </div>
             </div>
 
@@ -201,5 +201,4 @@
                 {{pending_request.error}}
             </div>
 
-</div><!-- of panel-body -->
-
+</div><!-- of card-body options -->
