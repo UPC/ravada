@@ -1095,10 +1095,6 @@ sub _enable_grants($self) {
 
     return if $self->_null_grants();
 
-    my $sth = $CONNECTOR->dbh->prepare(
-        "UPDATE grant_types set enabled=0"
-    );
-    $sth->execute;
     my @grants = (
         'change_settings',  'change_settings_all',  'change_settings_clones'
         ,'clone',           'clone_all',            'create_base', 'create_machine'
@@ -1113,7 +1109,7 @@ sub _enable_grants($self) {
         ,'start_many'
     );
 
-    $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
     $sth->execute;
     my %grant_exists;
     while (my ($id, $name) = $sth->fetchrow ) {
@@ -1133,7 +1129,14 @@ sub _enable_grants($self) {
         $sth->execute($name);
 
     }
+    $self->_disable_other_grants(@grants);
+}
 
+sub _disable_other_grants($self, @grants) {
+    my $query = "UPDATE grant_types set enabled=0 WHERE  enabled=1 AND "
+    .join(" AND ",map { "name <> ? " } @grants );
+    my $sth = $CONNECTOR->dbh->prepare($query);
+    $sth->execute(@grants);
 }
 
 sub _update_old_qemus($self) {
