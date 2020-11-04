@@ -21,7 +21,6 @@ my $URL_LOGOUT = '/logout';
 my ($USERNAME, $PASSWORD);
 my $SCRIPT = path(__FILE__)->dirname->sibling('../script/rvd_front');
 
-
 ########################################################################################
 
 sub remove_machines {
@@ -193,7 +192,7 @@ sub test_validate_html($url) {
 sub test_validate_html_local($dir) {
     opendir my $ls,$dir or die "$! $dir";
     while (my $file = readdir $ls) {
-        next unless $file =~ /html/;
+        next unless $file =~ /html$/ || $file =~ /.html.ep$/;
         my $path = "$dir/$file";
         open my $in,"<", $path or die "$path";
         my $content = join ("",<$in>);
@@ -202,9 +201,28 @@ sub test_validate_html_local($dir) {
     }
 }
 
+sub _check_count_divs($url, $content) {
+    my $n = 0;
+    my $open = 0;
+    for my $line (split /\n/,$content) {
+        $n++;
+        die "Error: too many divs" if $line =~ m{<div.*<div.*<div};
+
+        next if $line =~ m{<div.*<div.*/div>.*/div>};
+
+        $open++ if $line =~ /<div/;
+        $open-- if $line =~ m{</div};
+
+        last if $open<0;
+    }
+    ok(!$open,"$open open divs in $url line $n") ;
+}
+
 sub _check_html_lint($url, $content, $option = {}) {
+    _check_count_divs($url, $content);
+
     my $lint = HTML::Lint->new;
-    $lint->only_types( HTML::Lint::Error::STRUCTURE );
+    #    $lint->only_types( HTML::Lint::Error::STRUCTURE );
     $lint->parse( $content );
     $lint->eof();
 
@@ -214,16 +232,33 @@ sub _check_html_lint($url, $content, $option = {}) {
     for my $error ( $lint->errors() ) {
         next if $error->errtext =~ /Entity .*is unknown/;
         next if $option->{internal} && $error->errtext =~ /(body|head|html|title).*required/;
-        push @warnings, ($error) if $error->errtext =~ /attribute.*is repeated/;
+        if ( $error->errtext =~ /Unknown element <(footer|header|nav)/
+            || $error->errtext =~ /Entity && is unknown/
+            || $error->errtext =~ /should be written as/
+            || $error->errtext =~ /Unknown attribute.*%/
+            || $error->errtext =~ /Unknown attribute "ng-/
+            || $error->errtext =~ /Unknown attribute "(aria|align|autofocus|data-|href|novalidate|placeholder|required|tabindex|role|uib-alert)/
+            || $error->errtext =~ /img.*(has no.*attributes|does not have ALT)/
+            || $error->errtext =~ /Unknown attribute "(min|max).*input/ # Check this one
+            || $error->errtext =~ /Unknown attribute "(charset|crossorigin|integrity)/
+            || $error->errtext =~ /Unknown attribute "image.* for tag <div/
+         ) {
+             next;
+         }
+        if ($error->errtext =~ /attribute.*is repeated/
+            || $error->errtext =~ /Unknown attribute/
+            # TODO next one
+            #|| $error->errtext =~ /img.*(has no.*attributes|does not have ALT)/
+            || $error->errtext =~ /attribute.*is repeated/
+        ) {
+            push @warnings, ($error);
+            next;
+        }
         push @errors, ($error)
-        unless $error->errtext =~ /Unknown element <(footer|header|nav)/
-             || $error->errtext =~ /Entity && is unknown/
-             || $error->errtext =~ /should be written as/
-             || $error->errtext =~ /attribute.*is repeated/
-             ;
     }
     ok(!@errors, $url) or do {
         my $file_out = $url;
+        $url =~ s{^/}{};
         $file_out =~ s{/}{_}g;
         $file_out = "/var/tmp/$file_out";
         open my $out, ">", $file_out or die "$! $file_out";
@@ -238,6 +273,7 @@ sub _check_html_lint($url, $content, $option = {}) {
 
 ########################################################################################
 
+$ENV{MOJO_MODE} = 'devel';
 init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
 like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
@@ -315,6 +351,6 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
 ok(@bases,"Expecting some machines created");
 remove_machines(@bases);
 _wait_request(background => 1);
-remove_old_domains_req();
+remove_old_domains_req(0); # 0=do not wait for them
 
 done_testing();
