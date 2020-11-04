@@ -725,7 +725,7 @@ sub test_clone_not_in_node {
     $domain->prepare_base(user_admin);
     is($domain->base_in_vm($vm->id), 1);
     $domain->set_base_vm(vm => $node, user => user_admin);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     is($domain->base_in_vm($node->id), 1);
 
@@ -978,6 +978,7 @@ sub test_migrate_back($node) {
 
     eval { $clone->migrate($vm) };
     is(''.$@, '');
+    wait_request(debug => 0);
 
     for my $file ($clone->list_volumes) {
         my $md5 = _md5($file, $vm);

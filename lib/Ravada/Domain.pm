@@ -3987,8 +3987,9 @@ sub rsync($self, @args) {
             .Dumper($files)."\n"
             .join(' ',@{$rsync->err});
     }
-    $request->error("rsync done ".(time - $time_rsync)." seconds") if $request;
+    $request->error("rsync done ".(time - $time_rsync)." seconds")  if $request;
     $node->refresh_storage_pools();
+    $request->error("")                                             if $request;
 }
 
 sub _check_stat($file, $vm1, $vm2) {

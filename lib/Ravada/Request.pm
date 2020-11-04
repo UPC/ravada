@@ -182,7 +182,7 @@ our %COMMAND = (
     ,secondary => {
         limit => 50
         ,priority => 4
-        ,commands => ['shutdown','shutdown_now', 'manage_pools','enforce_limits', 'set_time']
+        ,commands => ['shutdown','shutdown_now', 'manage_pools','enforce_limits', 'set_time', 'remove_domain']
     }
 
     ,important=> {
@@ -1356,7 +1356,7 @@ sub requirements_done($self) {
             $self->status('done');
             $self->error($req->error);
         }
-        $ok = 1 if $req->status eq 'done' && $req->error eq '';
+        $ok = 1 if $req->status eq 'done' && ( !defined $req->error || $req->error eq '' );
     }
     return $ok;
 }

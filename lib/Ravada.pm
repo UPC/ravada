@@ -3672,6 +3672,7 @@ sub _cmd_refresh_vms($self, $request=undef) {
 
     $self->_clean_requests('refresh_vms', $request);
     $self->_refresh_volatile_domains();
+    $request->error('')                             if $request;
 }
 
 sub _cmd_shutdown_node($self, $request) {
