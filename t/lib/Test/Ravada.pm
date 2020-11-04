@@ -65,6 +65,7 @@ create_domain
     fast_forward_requests
 
     remove_old_domains_req
+    remove_domain_and_clones_req
     mojo_init
     mojo_clean
     mojo_create_domain
@@ -460,17 +461,21 @@ sub remove_old_domains_req($wait=1) {
     my @reqs;
     for my $machine ( @$machines, @machines2) {
         next if $machine->{name} !~ /^$base_name/;
-        _remove_old_domains_clones_req($machine,$wait);
+        remove_domain_and_clones_req($machine,$wait);
     }
 }
 
-sub _remove_old_domains_clones_req($domain_data, $wait) {
+sub remove_domain_and_clones_req($domain_data, $wait) {
     my $domain;
-    eval { $domain = Ravada::Front::Domain->open($domain_data->{id}) };
-    return if $@ && $@ =~ /Unknown domain/;
-    die $@ if $@;
+    if (ref($domain_data) =~ /Ravada.*Domain/) {
+        $domain = $domain_data;
+    } else {
+        eval { $domain = Ravada::Front::Domain->open($domain_data->{id}) };
+        return if $@ && $@ =~ /Unknown domain/;
+        die $@ if $@;
+    }
     for my $clone ($domain->clones) {
-        _remove_old_domains_clones_req($clone, $wait);
+        remove_domain_and_clones_req($clone, $wait);
     }
     if ( $wait && $domain->clones ) {
         my $n_clones = scalar($domain->clones);

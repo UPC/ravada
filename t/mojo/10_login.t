@@ -23,31 +23,13 @@ my $SCRIPT = path(__FILE__)->dirname->sibling('../script/rvd_front');
 
 ########################################################################################
 
-sub remove_machines {
+sub remove_machines(@machines) {
     my $t0 = time;
-    for my $name ( @_ ) {
+    for my $name ( @machines ) {
         my $domain = rvd_front->search_domain($name) or next;
-        my $n_clones = scalar($domain->clones);
-        my $req_clone;
-        for my $clone ($domain->clones) {
-            $req_clone = Ravada::Request->remove_domain(
-                name => $clone->{name}
-                ,uid => user_admin->id
-            );
-        }
-        _wait_request(debug => 1, background => 1, check_error => 0, timeout => 60+2*$n_clones);
-
-        my @after_req = ();
-        @after_req = ( after_request => $req_clone->id ) if $req_clone;
-        my $req = Ravada::Request->remove_domain(
-            name => $name
-            ,uid => user_admin->id
-        );
+        remove_domain_and_clones_req($domain,1); #remove and wait
     }
     _wait_request(debug => 1, background => 1, timeout => 120);
-    if ( time - $t0 > $SECONDS_TIMEOUT ) {
-        login();
-    }
 }
 
 sub _wait_request(@args) {
@@ -218,7 +200,21 @@ sub _check_count_divs($url, $content) {
     ok(!$open,"$open open divs in $url line $n") ;
 }
 
+sub _remove_embedded_perl($content) {
+    my $return = '';
+    my $changed = 0;
+    for my $line (split /\n/,$$content) {
+        if ($line =~ /<%=/) {
+            $line =~ s/(.*)<%=.*?%>(.*)/$1$2/;
+            $changed++;
+        }
+        $return .= "$line\n";
+    }
+    $$content = $return if $changed;
+}
+
 sub _check_html_lint($url, $content, $option = {}) {
+    _remove_embedded_perl(\$content);
     _check_count_divs($url, $content);
 
     my $lint = HTML::Lint->new;
@@ -278,7 +274,9 @@ init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
 like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
 
+test_validate_html_local("templates/bootstrap");
 test_validate_html_local("templates/main");
+test_validate_html_local("templates/ng-templates");
 
 if (!rvd_front->ping_backend) {
     diag("SKIPPED: no backend");
@@ -318,8 +316,11 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
         }
     )->status_is(302);
 
-    _wait_request(debug => 1, background => 1, check_error => 1);
-    my $base = rvd_front->search_domain($name);
+    my $base;
+    for ( 1 .. 3 ) {
+        _wait_request(debug => 1, background => 1, check_error => 1);
+        $base = rvd_front->search_domain($name);
+    }
     ok($base, "Expecting domain $name create") or next;
     push @bases,($base->name);
 
@@ -329,7 +330,7 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
     test_validate_html("/machine/manage/".$base->id.".html");
 
     $t->get_ok("/machine/prepare/".$base->id.".json")->status_is(200);
-    _wait_request(debug => 0, background => 1, check_error => 1);
+    _wait_request(debug => 1, background => 1, check_error => 1);
     $base = rvd_front->search_domain($name);
     is($base->is_base,1);
 
@@ -345,7 +346,9 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
     }
 
     push @bases, ( $clone );
+    mojo_check_login($t);
     test_copy_without_prepare($clone);
+    mojo_check_login($t);
     test_many_clones($base);
 }
 ok(@bases,"Expecting some machines created");

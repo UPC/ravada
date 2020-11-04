@@ -1414,8 +1414,10 @@ for my $vm_name ( vm_names() ) {
         start_node($node);
 
         test_duplicated_set_base_vm($vm, $node);
-        test_nested_base($vm, $node, 3);
-        test_nested_base($vm, $node);
+        if ($vm_name eq 'KVM') {
+            test_nested_base($vm, $node, 3);
+            test_nested_base($vm, $node);
+        }
 
         test_check_instances($vm, $node);
         test_migrate($vm, $node);
