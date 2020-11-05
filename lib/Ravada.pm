@@ -266,7 +266,7 @@ sub _update_isos {
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/18.04/'
                 ,file_re => '^ubuntu-18.04.*desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
+                ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
         }
 
@@ -886,7 +886,7 @@ sub _remove_old_isos {
             ."  AND file_re like '%xfce-CD-1.iso'"
 
         ,"DELETE FROM iso_images "
-            ."  WHERE name like 'Ubuntu Focal%'"
+            ."  WHERE (name LIKE 'Ubuntu Focal%' OR name LIKE 'Ubuntu Bionic%' ) "
             ."  AND ( md5 IS NOT NULL OR md5_url IS NOT NULL) "
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
