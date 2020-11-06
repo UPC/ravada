@@ -901,7 +901,10 @@ sub fast_forward_requests() {
     my $sth = $CONNECTOR->dbh->prepare("UPDATE requests "
         ." SET at_time=0 WHERE status = 'requested' AND at_time>0 "
     );
+    eval {
     $sth->execute();
+    };
+    die $@ if $@ && $@ !~ /Deadlock found when/;
 }
 
 sub init_vm {
