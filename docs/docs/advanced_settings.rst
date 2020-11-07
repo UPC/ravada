@@ -14,6 +14,14 @@ the public address of the server.
 
 If you want to force the display IP do it this way:
 
+For Ravada 0.9 and older set it ad /etc/ravada.conf:
+
+::
+
+    display_ip: public.display.ip
+
+Since Ravada 0.10 you have to change it in the database:
+
 .. prompt:: bash $,(env)...$ auto
 
     mysql -u rvd_user -p ravada
@@ -47,7 +55,19 @@ Example:
 
 
 By default, the IP that is shown to the users will be 10.0.0.44 , but it is not
-accessible from outside. You must configure the NAT IP in the Virtual Managers (VMs) table.
+accessible from outside.
+
+For Ravada 0.9 and older set it ad /etc/ravada.conf:
+
+::
+
+    nat_ip: the.ip.address.ip
+
+Since Ravada 0.10 you have to change it in the database:
+
+
+
+You must configure the NAT IP in the Virtual Managers (VMs) table.
 
 .. prompt:: bash $,(env)...$ auto
 
