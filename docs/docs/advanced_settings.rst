@@ -14,7 +14,7 @@ the public address of the server.
 
 If you want to force the display IP do it this way:
 
-For Ravada 0.9 and older set it ad /etc/ravada.conf:
+For Ravada 0.9 and older set it at /etc/ravada.conf:
 
 ::
 
@@ -57,11 +57,11 @@ Example:
 By default, the IP that is shown to the users will be 10.0.0.44 , but it is not
 accessible from outside.
 
-For Ravada 0.9 and older set it ad /etc/ravada.conf:
+For Ravada 0.9 and older set it at /etc/ravada.conf:
 
 ::
 
-    nat_ip: the.ip.address.ip
+    nat_ip: the.external.ip.address
 
 Since Ravada 0.10 you have to change it in the database:
 
