@@ -10,8 +10,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-11-01 10:03+0000\n"
-"Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
+"PO-Revision-Date: 2020-11-05 13:22+0000\n"
+"Last-Translator: Dani Sanchez <dani@fib.upc.edu>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/ravada/"
 "translation/es/>\n"
 "Language: es\n"
@@ -190,7 +190,7 @@ msgid "Date"
 msgstr "Fecha"
 
 msgid "Mark as read"
-msgstr " Marca como leído"
+msgstr "Marca como leído"
 
 msgid "Mark as unread"
 msgstr "Marca como no leído"
@@ -837,3 +837,77 @@ msgstr "Contraseña vacía"
 
 msgid "Session timeout"
 msgstr "El tiempo de espera de la sesión finalizo"
+
+msgid "Keep in mind that there may be users using a clone"
+msgstr "Ten en cuenta que puede que haya usuarios usando los clones"
+
+msgid "Yes, shutwdown all the clones"
+msgstr "Sí, apagar todos los clones"
+
+msgid "Shutdown all clones"
+msgstr "Apagar todos los clones"
+
+msgid "These actions affect all the clones on the machine"
+msgstr "Estas acciones afectan a todos los clones de la máquina"
+
+msgid "Add description"
+msgstr "Añadir descripción"
+
+msgid "Enable last for not allowed restrictions."
+msgstr "Activar el último para las restricciones de no permitidas."
+
+msgid "Verifying"
+msgstr "Verificando"
+
+msgid "save"
+msgstr "guardar"
+
+msgid "verify"
+msgstr "verifica"
+
+msgid "If none of the previous match, access is denied."
+msgstr "Si ninguno de los anteriores coincide, el acceso se deniega."
+
+msgid "If none of the previous match, access is allowed."
+msgstr "Si ninguno de los anteriores coincide, el acceso se permite."
+
+msgid "Default"
+msgstr "Por defecto"
+
+msgid "Last"
+msgstr "Último"
+
+msgid "Allowed"
+msgstr "Permitido"
+
+msgid "Value"
+msgstr "Valor"
+
+msgid "Attribute"
+msgstr "Atributo"
+
+msgid "not found in LDAP server"
+msgstr "no encontrado en el servidor LDAP"
+
+msgid "Type a typical LDAP user name to fetch the attribute list"
+msgstr ""
+"Escribe un nombre de usuario típico del LDAP para cargar la lista de "
+"atributos"
+
+msgid "Italian"
+msgstr "Italiano"
+
+msgid "Vietnamese"
+msgstr "Vietnamita"
+
+msgid "entries."
+msgstr "entradas."
+
+msgid "has at least"
+msgstr "tiene, como mínimo"
+
+msgid "No entries found"
+msgstr "No se ha encontrado ninguna entrada"
+
+msgid "User name"
+msgstr "Nombre de usuario"
