@@ -2,8 +2,8 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2020-11-01 12:55+0000\n"
-"Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
+"PO-Revision-Date: 2020-11-08 07:22+0000\n"
+"Last-Translator: Allan Nordhøy <epost@anotheragency.no>\n"
 "Language-Team: Norwegian Bokmål <https://hosted.weblate.org/projects/ravada/"
 "translation/nb_NO/>\n"
 "Language: nb_NO\n"
@@ -11,7 +11,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.3.2-dev\n"
+"X-Generator: Weblate 4.3.2\n"
 
 msgid "Ravada broker"
 msgstr "Ravada-megler"
@@ -131,127 +131,130 @@ msgid "Password is too short"
 msgstr "Passordet er for kort"
 
 msgid "Password fields do not match"
-msgstr ""
+msgstr "Passordfeltene samsvarer ikke"
 
 msgid "Some of the password fields are empty"
-msgstr ""
+msgstr "Noen av passordfeltene er tomme"
 
 msgid "Status"
-msgstr ""
+msgstr "Status"
 
 msgid "Actions"
-msgstr ""
+msgstr "Handlinger"
 
 msgid "Down"
-msgstr ""
+msgstr "Nede"
 
 msgid "Running"
-msgstr ""
+msgstr "Kjører"
 
+#, fuzzy
 msgid "Shutdown"
-msgstr ""
+msgstr "Steng av"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "Skjermavbildning"
 
 msgid "Paused"
-msgstr ""
+msgstr "Pauset"
 
+#, fuzzy
 msgid "Machine locked by request"
-msgstr ""
+msgstr "Maskin låst etter forespørsel"
 
 msgid "Process"
-msgstr ""
+msgstr "Prosess"
 
 msgid "Copy"
-msgstr ""
+msgstr "Kopier"
 
 msgid "Error!"
-msgstr ""
+msgstr "Feil!"
 
 msgid "Error"
-msgstr ""
+msgstr "Feil"
 
+#, fuzzy
 msgid "Backend not available!"
-msgstr ""
+msgstr "Bakenden er ikke tilgjengelig."
 
 msgid "Subject"
-msgstr ""
+msgstr "Emne"
 
 msgid "Date"
-msgstr ""
+msgstr "Dato"
 
 msgid "Mark as read"
-msgstr ""
+msgstr " Marker som lest"
 
 msgid "Mark as unread"
-msgstr ""
+msgstr " Marker som ulest"
 
 msgid "No messages to show"
-msgstr ""
+msgstr "Ingen melinger å vise"
 
 msgid "Admin"
-msgstr ""
+msgstr "Administrator"
 
 msgid "Machines"
-msgstr ""
+msgstr "Maskiner"
 
 msgid "machines"
-msgstr ""
+msgstr "maskiner"
 
 msgid "Users"
-msgstr ""
+msgstr "Brukere"
 
 msgid "users"
-msgstr ""
+msgstr "brukere"
 
 msgid "Messages"
-msgstr ""
+msgstr "Meldinger"
 
 msgid "messages"
-msgstr ""
+msgstr "meldinger"
 
 msgid "Admin tools"
-msgstr ""
+msgstr "Administratorverktøy"
 
 msgid "Remove base"
-msgstr ""
+msgstr "Fjern base"
 
 msgid "Restore"
-msgstr ""
+msgstr "Gjenopprett"
 
 msgid "Hibernate"
 msgstr ""
 
 msgid "Are you sure?"
-msgstr ""
+msgstr "Er du sikker?"
 
 msgid "Yes"
-msgstr ""
+msgstr "Ja"
 
 msgid "No"
-msgstr ""
+msgstr "Nei"
 
 msgid "Make public"
-msgstr ""
+msgstr "Gjør offentlig"
 
 msgid "Machine settings"
-msgstr ""
+msgstr "Maskininnstillinger"
 
 msgid "Cannot remove base, machine has clones"
-msgstr ""
+msgstr "Kan ikke fjerne base, maskinen har kloner"
 
 msgid "show clones"
-msgstr ""
+msgstr "vis kloner"
 
 msgid "hide clones"
-msgstr ""
+msgstr "skjul kloner"
 
 msgid "For Spice redirection you will need to install"
 msgstr ""
 
 msgid "in your computer."
-msgstr ""
+msgstr "på din datamaskin."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr ""
@@ -279,7 +282,7 @@ msgid "Login"
 msgstr ""
 
 msgid "Welcome"
-msgstr ""
+msgstr "Velkommen"
 
 msgid "A viewer is required to run the virtual machines."
 msgstr ""
@@ -291,46 +294,46 @@ msgid "Virtual Machines"
 msgstr ""
 
 msgid "User"
-msgstr ""
+msgstr "Bruker"
 
 msgid "Password"
-msgstr ""
+msgstr "Passord"
 
 msgid "Start session"
-msgstr ""
+msgstr "Start økt\n"
 
 msgid "bits) in your computer."
 msgstr ""
 
 msgid "Permissions"
-msgstr ""
+msgstr "Tilganger"
 
 msgid "can change the settings of owned virtual machines."
-msgstr ""
+msgstr "kan endre innstillingene for eide virtuelle maskiner."
 
 msgid "can change the settings of any virtual machines."
-msgstr ""
+msgstr "kan endre innstillinger på alle virtuelle maskiner."
 
 msgid "can change the settings of any virtual machines "
-msgstr ""
+msgstr "kan endre innstillinger på alle virtuelle maskiner"
 
 msgid "cloned from one base owned by the user."
-msgstr ""
+msgstr "klonet fra én base eid av brukeren."
 
 msgid "can clone public virtual machines."
-msgstr ""
+msgstr "kan klone offentlige virtuelle maskiner."
 
 msgid "can clone any virtual machine."
-msgstr ""
+msgstr "kan klone alle virtuelle maskiner."
 
 msgid "can create bases."
-msgstr ""
+msgstr "kan opprette baser."
 
 msgid "can create virtual machines."
-msgstr ""
+msgstr "kan opprette virtuelle maskiner."
 
 msgid "can grant permissions to other users"
-msgstr ""
+msgstr "kan innvilge tilganger for andre brukere"
 
 msgid "can hibernate any virtual machine."
 msgstr ""
