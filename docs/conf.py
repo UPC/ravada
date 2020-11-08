@@ -32,3 +32,17 @@ html_theme_options = {
 html_static_path = []
 
 html_logo = 'docs/../../img/logo_ravada.png'
+
+# Couldn't find a way to retrieve variables nor do advanced string
+# concat from reST, so had to hardcode this in the "epilog" added to
+# all pages. This is used in index.rst to display the Weblate badge.
+# On English pages, the badge points to the language-neutral engage page.
+rst_epilog = """
+.. |weblate_widget| image:: https://hosted.weblate.org/widgets/ravada/{image_locale}/287x66-white.png
+    :alt: Translation status
+    :target: https://hosted.weblate.org/engage/ravada/
+    :width: 287
+    :height: 66
+""".format(
+    image_locale="-" if language == "en" else language,
+)
