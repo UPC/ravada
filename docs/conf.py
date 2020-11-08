@@ -22,6 +22,7 @@ author = u'Ravada Team'
 # Sphinx supports the following languages:
 #   'da', 'de', 'en', 'es', 'fi', 'fr', 'hu', 'it', 'ja'
 #   'nl', 'no', 'pt', 'ro', 'ru', 'sv', 'tr'
+language = os.getenv("READTHEDOCS_LANGUAGE", "en")
 html_search_language = 'en'
 
 # Theme options
