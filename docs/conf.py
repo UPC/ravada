@@ -39,11 +39,9 @@ html_logo = 'docs/../../img/logo_ravada.png'
 # all pages. This is used in index.rst to display the Weblate badge.
 # On English pages, the badge points to the language-neutral engage page.
 rst_epilog = """
-.. |weblate_widget| image:: https://hosted.weblate.org/widgets/ravada/{image_locale}/287x66-white.png
+.. |weblate_widget| image:: https://hosted.weblate.org/widgets/ravada/-/287x66-white.png
     :alt: Translation status
     :target: https://hosted.weblate.org/engage/ravada/
     :width: 287
     :height: 66
-""".format(
-    image_locale="-" if language == "en" else language,
-)
+""".format()
