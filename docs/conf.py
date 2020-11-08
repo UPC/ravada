@@ -43,4 +43,9 @@ rst_epilog = """
     :target: https://hosted.weblate.org/engage/ravada/
     :width: 287
     :height: 66
+.. |weblate2_widget| image:: https://hosted.weblate.org/widgets/ravada/-/multi-auto.svg
+    :alt: Translation status
+    :target: https://hosted.weblate.org/engage/ravada/
+    :width: 400
+    :height: 285
 """.format()

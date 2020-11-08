@@ -1,6 +1,8 @@
 Localization and translation
 ============================
 
+.. centered:: |weblate2_widget|
+
 You can translate Ravada at `Weblate <https://hosted.weblate.org/engage/ravada/>`__. As a feature rich computer aided translation tool, Weblate saves both developers and translators time.
 
 .. centered:: |weblate_widget|
