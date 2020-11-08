@@ -13,17 +13,17 @@ Once you have the widget you have to paste it in two files.
 
 Available chat in login
 -----------------------
-Copy your widget before </body> tag at the end of ``/usr/share/ravada/templates/bootstrap/scripts.html.ep``
+Copy your widget before ``</body>`` tag at the end of ``/usr/share/ravada/templates/main/start.html.ep``
 
 .. image:: images/chat_login.png
 
+If you have a custom login, then here: ``/usr/share/ravada/templates/main/custom/login_acme.html.ep``
+
 Available inside Ravada
 -----------------------
-Copy your widget before </body> tag at the end of ``/usr/share/ravada/templates/main/start.html.ep``
+Copy your widget before ``</body>`` tag at the end of ``/usr/share/ravada/templates/bootstrap/scripts.html.ep``
 
 .. image:: images/chat_inside.png
-
-If you have a custom login, then here: ``/usr/share/ravada/templates/main/custom/login_acme.html.ep``
 
 And restart rvd_front service:
 
