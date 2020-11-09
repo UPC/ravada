@@ -66,6 +66,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,monitoring => 0
                                               ,fallback => 0
                                               ,guide_custom => ''
+                                              ,widget_footer => ''
                                               ,admin => {
                                                     hide_clones => 15
                                                     ,autostart => 0
@@ -155,6 +156,7 @@ hook before_routes => sub {
             ,check_netdata => 0
             ,guide => $CONFIG_FRONT->{guide}
             ,host => $host
+            ,widget_footer => $CONFIG_FRONT->{widget_footer}
             );
 
     $USER = _logged_in($c);
