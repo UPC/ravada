@@ -243,7 +243,7 @@ sub _check_clean_shutdown($self) {
     }
 
     if ($self->_data('status') eq 'hibernated' && !$self->_data('post_hibernated')) {
-        $self->_post_hibernated();
+        $self->_post_hibernate();
     }
 }
 
@@ -2415,7 +2415,7 @@ sub _post_pause {
     $self->_remove_iptables();
 }
 
-sub _post_hibernate($self, $user) {
+sub _post_hibernate($self, $user=undef) {
     $self->_data(status => 'hibernated');
     $self->_data(post_hibernated => 1);
     $self->_remove_iptables();
