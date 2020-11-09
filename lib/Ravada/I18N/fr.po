@@ -11,15 +11,16 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-01-03 11:17+0000\n"
-"Last-Translator: Amparo _rvd <amparorvd@gmail.com>, 2019\n"
-"Language-Team: French (https://www.transifex.com/ravada/teams/70385/fr/)\n"
+"PO-Revision-Date: 2020-11-02 08:20+0000\n"
+"Last-Translator: J. Lavoie <j.lavoie@net-c.ca>\n"
+"Language-Team: French <https://hosted.weblate.org/projects/ravada/"
+"translation/fr/>\n"
+"Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: fr\n"
-"Plural-Forms: nplurals=2; plural=(n > 1);\n"
-"X-Generator: Poedit 1.8.7.1\n"
+"Plural-Forms: nplurals=2; plural=n > 1;\n"
+"X-Generator: Weblate 4.3.2-dev\n"
 
 msgid "Ravada broker"
 msgstr "Courtier Ravada"
@@ -58,7 +59,7 @@ msgid "Name"
 msgstr "Nom"
 
 msgid "Log Out"
-msgstr "Déconnexion"
+msgstr "Se déconnecter"
 
 msgid "Available Machines"
 msgstr "Machines disponibles"
@@ -73,7 +74,7 @@ msgid "About"
 msgstr "À propos"
 
 msgid "Mark all as read"
-msgstr "Marquer tout comme lu"
+msgstr "Tout marquer comme lu"
 
 msgid "Settings"
 msgstr "Paramètres"
@@ -82,46 +83,46 @@ msgid "New Machine"
 msgstr "Nouvelle machine"
 
 msgid "I want to change my password"
-msgstr "Je veut changer mon mot de passe"
+msgstr "Je veux changer mon mot de passe"
 
 msgid "I want to change my language"
-msgstr "Je veut modifier ma langue"
+msgstr "Je veux modifier ma langue"
 
 msgid "Language:"
-msgstr "Langue :"
+msgstr "Langue :"
 
 msgid "English"
-msgstr "Anglais"
+msgstr "anglais"
 
 msgid "Spanish"
-msgstr "Espagnol"
+msgstr "espagnol"
 
 msgid "Catalan"
-msgstr "Catalan"
+msgstr "catalan"
 
 msgid "Galician"
-msgstr "Galicien"
+msgstr "galicien"
 
 msgid "French"
-msgstr "Français"
+msgstr "français"
 
 msgid "Hindi"
-msgstr "Indien"
+msgstr "hindi"
 
 msgid "Indonesian"
-msgstr "Indonésien"
+msgstr "indonésien"
 
 msgid "Persian"
-msgstr "Persan"
+msgstr "persan"
 
 msgid "Japanese"
-msgstr "Japonais"
+msgstr "japonais"
 
 msgid "German"
-msgstr "Allemand"
+msgstr "allemand"
 
 msgid "New Password:"
-msgstr "Nouveau mot de passe :"
+msgstr "Nouveau mot de passe :"
 
 msgid "Confirm Password:"
 msgstr "Confirmer le mot de passe :"
@@ -142,13 +143,13 @@ msgid "Password fields do not match"
 msgstr "Les champs du mot de passe ne correspondent pas"
 
 msgid "Some of the password fields are empty"
-msgstr "Certains champs de mot de passe sont vides."
+msgstr "Certains champs de mot de passe sont vides"
 
 msgid "Status"
 msgstr "État"
 
 msgid "Actions"
-msgstr "Action"
+msgstr "Actions"
 
 msgid "Down"
 msgstr "Arrêté"
@@ -172,19 +173,19 @@ msgid "Process"
 msgstr "Processus"
 
 msgid "Copy"
-msgstr "Copie"
+msgstr "Copier"
 
 msgid "Error!"
-msgstr "Erreur !"
+msgstr "Erreur !"
 
 msgid "Error"
 msgstr "Erreur"
 
 msgid "Backend not available!"
-msgstr "Back-end non disponible !"
+msgstr "Arrière-plan non disponible !"
 
 msgid "Subject"
-msgstr "Sujet"
+msgstr "Objet"
 
 msgid "Date"
 msgstr "Date"
@@ -232,7 +233,7 @@ msgid "Hibernate"
 msgstr "Hibernation"
 
 msgid "Are you sure?"
-msgstr "Êtes-vous certain ?"
+msgstr "Êtes-vous sûr·e ?"
 
 msgid "Yes"
 msgstr "Oui"
@@ -250,10 +251,10 @@ msgid "Cannot remove base, machine has clones"
 msgstr "La base ne peut pas être supprimée car elle a des clones"
 
 msgid "show clones"
-msgstr "Afficher les clones"
+msgstr "afficher les clones"
 
 msgid "hide clones"
-msgstr "Masquer les clones"
+msgstr "masquer les clones"
 
 msgid "For Spice redirection you will need to install"
 msgstr "Pour la redirection Spice vous aurez besoin d'installer"
@@ -268,7 +269,7 @@ msgid "You will need to install"
 msgstr "Vous devrez installer"
 
 msgid "and USB drivers ("
-msgstr "et les Drivers USB ("
+msgstr "et les pilotes USB ("
 
 msgid ""
 "Be aware that in Windows, Spice redirection is not automatic. It is "
@@ -285,10 +286,10 @@ msgid ""
 "then execute the file."
 msgstr ""
 "ou copiez les lignes suivantes dans un fichier ASCII et enregistrez le avec "
-"l'extension .reg, puis exécutez le fichier"
+"l'extension .reg, puis exécutez le fichier."
 
 msgid "Login"
-msgstr "Connexion"
+msgstr "Se connecter"
 
 msgid "Welcome"
 msgstr "Bienvenue"
@@ -297,22 +298,22 @@ msgid "A viewer is required to run the virtual machines."
 msgstr "Une visionneuse est nécessaire pour exécuter les machines virtuelles."
 
 msgid "It is required a viewer to run the virtual machines."
-msgstr "Un visualiseur est nécessaire pour exécuter les machines virtuelles."
+msgstr "Une visionneuse est nécessaire pour exécuter les machines virtuelles."
 
 msgid "Virtual Machines"
-msgstr "Machines Virtuelles"
+msgstr "Machines virtuelles"
 
 msgid "User"
-msgstr "Utilisateurs"
+msgstr "Utilisateur"
 
 msgid "Password"
 msgstr "Mot de passe"
 
 msgid "Start session"
-msgstr "Commencer la session"
+msgstr "Commencer la session\n"
 
 msgid "bits) in your computer."
-msgstr "bits) dans votre ordinateur "
+msgstr "bits) dans votre ordinateur."
 
 msgid "Permissions"
 msgstr "Permissions"
@@ -387,7 +388,7 @@ msgstr "peut éteindre n'importe quelle machine virtuelle."
 
 msgid "can shutdown clones from virtual machines owned by the user."
 msgstr ""
-"peut éteindre les clones des machines virtuelles appartenant à l'utilisateur"
+"peut éteindre les clones des machines virtuelles appartenant à l'utilisateur."
 
 msgid "Submit Query"
 msgstr "Soumettre la requête"
@@ -402,7 +403,7 @@ msgid "Backend"
 msgstr "Back-end"
 
 msgid "Select Template"
-msgstr "Sélectionner un modèle "
+msgstr "Sélectionner un modèle"
 
 msgid ""
 "This ISO image has not been downloaded yet. It may take some minutes, even "
@@ -425,13 +426,13 @@ msgid "Disk Size: (GB)"
 msgstr "Taille du disque: (GB)"
 
 msgid "Swap Size: (GB)"
-msgstr "Taille du fichier Swap: (GB)"
+msgstr "Taille du fichier Swap : (Go)"
 
 msgid "Ram: (GB)"
-msgstr "Taille de la mémoire RAM: (GB)"
+msgstr "Mémoire vive : (Go)"
 
 msgid "Machine name is required."
-msgstr "Le nom de la machine est requis"
+msgstr "Le nom de la machine est nécessaire."
 
 msgid "Machine name can't exceed 20 characters."
 msgstr "Le nom de la machine ne peut pas dépasser 20 caractères."
@@ -469,7 +470,7 @@ msgid "monitoring"
 msgstr "Supervision"
 
 msgid "Are you sure you want to remove the Base of"
-msgstr "Etes-vous sûr de vouloir détruire  la Base de"
+msgstr "Êtes-vous sûr·e de vouloir détruire la Base de"
 
 msgid "Are you sure you want to prepare the Base of"
 msgstr "Etes-vous sûr de vouloir élaborer la Base de"
@@ -487,7 +488,7 @@ msgid "There are no machines available in this system."
 msgstr "Il n'y a pas de machines disponibles dans ce système."
 
 msgid "Create one."
-msgstr "Créez-en une"
+msgstr "En créer une."
 
 msgid "not public"
 msgstr "pas publique"
@@ -553,7 +554,7 @@ msgid "This will remove all the contents of the machine"
 msgstr "Ceci supprimera tout le contenu de la machine"
 
 msgid "This action can't be undone"
-msgstr "Cette action ne peut pas être annulée."
+msgstr "Cette action ne peut pas être annulée"
 
 msgid "Are you sure ?"
 msgstr "Etes-vous sûr ?"
@@ -574,7 +575,7 @@ msgid "clones of the machine"
 msgstr "clones de la machine"
 
 msgid "Yes, remove all the clones"
-msgstr "Oui, enlever tous les clones."
+msgstr "Oui, enlever tous les clones"
 
 msgid "This virtual machine can't be removed because it has"
 msgstr "Cette machine virtuelle ne peut pas être supprimée parce qu'elle a"
@@ -632,7 +633,7 @@ msgid "The code is "
 msgstr "Le code est"
 
 msgid "License"
-msgstr "Licence "
+msgstr "Licence"
 
 msgid "Machine locked by"
 msgstr "Machine verrouillée par"
@@ -695,10 +696,10 @@ msgid "Confirm Password"
 msgstr "Confirmer votre mot de passe"
 
 msgid "Username is required"
-msgstr "Le nom d'utilisateur est requis "
+msgstr "Le nom d'utilisateur est requis"
 
 msgid "Username can not exceed 20 characters"
-msgstr "Le nom d'utilisateur ne peut pas dépasser 20 caractères."
+msgstr "Le nom d'utilisateur ne peut pas dépasser 20 caractères"
 
 msgid "Username must be at least 5 characters"
 msgstr "Le nom d'utilisateur doit comporter au moins 5 caractères"
@@ -706,16 +707,16 @@ msgstr "Le nom d'utilisateur doit comporter au moins 5 caractères"
 msgid "Username can only contain words, numbers, dashes, dots and underscores"
 msgstr ""
 "Le nom d'utilisateur ne peut contenir que des mots, des chiffres, des "
-"tirets, des points et des underscores."
+"tirets, des points et des tirets bas"
 
 msgid "Password is required"
 msgstr "Le mot de passe est requis"
 
 msgid "Password can not exceed 20 characters"
-msgstr "Le mot de passe ne peut pas dépasser 20 caractères "
+msgstr "Le mot de passe ne peut pas dépasser 20 caractères"
 
 msgid "Password must be at least 5 characters"
-msgstr "Le mot de passe doit comporter au moins 5 caractères "
+msgstr "Le mot de passe doit comporter au moins 5 caractères"
 
 msgid "Password can only contain words and numbers"
 msgstr "Le mot de passe peut uniquement contenir des chiffres et des lettres"
@@ -724,29 +725,29 @@ msgid "Confirm Password is required"
 msgstr "Confirmer que le mot de passe est requis"
 
 msgid "Confirm Password can not exceed 20 characters"
-msgstr "Confirmer que le mot de passe ne peut pas excéder 20 caractères."
+msgstr "Confirmer que le mot de passe ne peut pas excéder 20 caractères"
 
 msgid "Confirm Password must be at least 5 characters"
-msgstr "Confirmer que le mot de passe doit comporter au moins 5 caractères."
+msgstr "Confirmer que le mot de passe doit comporter au moins 5 caractères"
 
 msgid "Confirm Password can only contain words and numbers"
 msgstr ""
-"Confirmer que le mot de passe ne peut contenir que des mots et des chiffres."
+"Confirmer que le mot de passe ne peut contenir que des mots et des chiffres"
 
 msgid "This information will be available to the users"
-msgstr "Ces informations seront mises à la disposition des utilisateurs."
+msgstr "Ces informations seront mises à la disposition des utilisateurs"
 
 msgid "Volatile Clones"
 msgstr "Clones volatils"
 
 msgid "Owner"
-msgstr "Propriétaire "
+msgstr "Propriétaire"
 
 msgid "Change the owner of the machine"
 msgstr "Change le propriétaire de la machine"
 
 msgid "Press SHIFT + F12 to exit"
-msgstr "Appuyez sur SHIFT + F12 pour quitter."
+msgstr "Appuyez sur Maj. + F12 pour quitter"
 
 msgid ""
 "If you can not see the machine screen in a few seconds check for a file "
@@ -768,7 +769,7 @@ msgid "Read more."
 msgstr "Lire la suite."
 
 msgid "The password for this virtual machine connection is :"
-msgstr "Le mot de passe pour cette connexion de machine virtuelle est:"
+msgstr "Le mot de passe pour cette connexion de machine virtuelle est :"
 
 msgid "view"
 msgstr "vue"
@@ -817,7 +818,7 @@ msgstr ""
 "renommée."
 
 msgid "Thanks to:"
-msgstr "Grâce à:"
+msgstr "Grâce à :"
 
 msgid "licensed."
 msgstr "autorisé."
@@ -854,3 +855,78 @@ msgstr "Mot de passe vide"
 
 msgid "Session timeout"
 msgstr "Expiration de la session"
+
+msgid "Enable last for not allowed restrictions."
+msgstr "Activer le dernier pour les restrictions non autorisées."
+
+msgid "Last"
+msgstr "Dernier"
+
+msgid "Type a typical LDAP user name to fetch the attribute list"
+msgstr ""
+"Saisissez un nom d'utilisateur LDAP typique pour récupérer la liste "
+"d'attributs"
+
+msgid "Yes, shutwdown all the clones"
+msgstr "Oui, éteindre tous les clones"
+
+msgid "Keep in mind that there may be users using a clone"
+msgstr ""
+"Gardez à l'esprit qu'il y a peut-être des utilisateurs qui utilisent un clone"
+
+msgid "Shutdown all clones"
+msgstr "Éteindre tous les clones"
+
+msgid "These actions affect all the clones on the machine"
+msgstr "Ces actions affectent tous les clones de la machine"
+
+msgid "Add description"
+msgstr "Ajouter une description"
+
+msgid "entries."
+msgstr "entrées."
+
+msgid "has at least"
+msgstr "a au moins"
+
+msgid "No entries found"
+msgstr "Aucune entrée trouvée"
+
+msgid "Verifying"
+msgstr "Vérification"
+
+msgid "save"
+msgstr "enregistrer"
+
+msgid "verify"
+msgstr "vérifier"
+
+msgid "If none of the previous match, access is denied."
+msgstr "Si aucune des correspondances précédentes, l'accès est refusé."
+
+msgid "If none of the previous match, access is allowed."
+msgstr "Si aucune des correspondances précédentes, l'accès est autorisé."
+
+msgid "Default"
+msgstr "Par défaut"
+
+msgid "Allowed"
+msgstr "Autorisé"
+
+msgid "Value"
+msgstr "Valeur"
+
+msgid "Attribute"
+msgstr "Attribut"
+
+msgid "not found in LDAP server"
+msgstr "introuvable sur le serveur LDAP"
+
+msgid "User name"
+msgstr "Nom d'utilisateur"
+
+msgid "Italian"
+msgstr "italien"
+
+msgid "Vietnamese"
+msgstr "vietnamien"

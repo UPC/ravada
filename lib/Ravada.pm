@@ -83,6 +83,7 @@ $FILE_CONFIG = undef if ! -e $FILE_CONFIG;
 
 our $CONNECTOR;
 our $CONFIG = {};
+our $FORCE_DEBUG = 0;
 our $DEBUG;
 our $VERBOSE;
 our $CAN_FORK = 1;
@@ -254,7 +255,7 @@ sub _update_isos {
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/20.04/'
                 ,file_re => '^ubuntu-20.04.*desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
+                ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
         }
 
@@ -885,6 +886,8 @@ sub _remove_old_isos {
             ."  WHERE name like 'Debian Buster 32%'"
             ."  AND file_re like '%xfce-CD-1.iso'"
 
+        ,"DELETE FROM iso_images "
+            ."  WHERE name like 'Ubuntu Focal%'"
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute();
@@ -3743,7 +3746,7 @@ sub _cmd_list_network_interfaces($self, $request) {
 
 sub _cmd_list_isos($self, $request){
     my $vm_type = $request->args('vm_type');
-   
+
     my $vm = Ravada::VM->open( type => $vm_type );
     $vm->refresh_storage();
     my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
@@ -4426,9 +4429,8 @@ Sets debug global variable from setting
 =cut
 
 sub set_debug_value($self) {
-	$DEBUG = $self->setting('backend/debug'); 
+	$DEBUG = $FORCE_DEBUG || $self->setting('backend/debug');
 }
-
 
 =head2 setting
 

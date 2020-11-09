@@ -160,7 +160,7 @@ die "ERROR: Missing the machine name or id\n$USAGE"
 my %CONFIG;
 %CONFIG = ( config => $FILE_CONFIG )    if $FILE_CONFIG;
 
-$Ravada::DEBUG=1    if $DEBUG;
+$Ravada::FORCE_DEBUG=1    if $DEBUG;
 $Ravada::VERBOSE=1      if $VERBOSE;
 $Ravada::CAN_FORK=0    if $NOFORK;
 
