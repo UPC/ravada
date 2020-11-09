@@ -23,3 +23,17 @@ New english entries must be added in the ``en.po`` file. It's the origin of the 
 .. Warning:: Please don't add new entries in other .po files directly. Use `Weblate <https://hosted.weblate.org/projects/ravada/translation/>`__ instead.
 
 The language files are stored `here <https://github.com/UPC/ravada/tree/master/lib/Ravada/I18N/>`_ in lib/Ravada/I18N.
+
+When creating a new translation language, also add it in the frontend so it gets
+listed for the end users. At around line 1337 in the ``sub _translation`` add
+a line like this:
+
+.. prompt::
+
+    sub _translations($c) {
+        my %lang_name=(
+            ar => 'Arab'
+            ,en => 'English'
+            ....
+            ,XX => 'New language'
+
