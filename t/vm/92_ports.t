@@ -511,6 +511,37 @@ sub test_clone_exports($vm) {
     $base->remove(user_admin);
 }
 
+sub test_routing_already_used($vm) {
+    my $base = create_domain($vm, user_admin,'debian stretch');
+    $base->expose(port => 22, name => "ssh");
+    my @base_ports0 = $base->list_ports();
+
+    my $public_port0 = $base_ports0[0]->{public_port};
+
+    $vm->iptables_unique(
+            t => 'nat'
+            ,A => 'PREROUTING'
+            ,p => 'tcp'
+            ,dport => $public_port0
+            ,j => 'DNAT'
+            ,'to-destination' => "1.2.3.4:1111"
+    );
+    $base->shutdown_now(user_admin);
+
+    $base->start(remote_ip => '3.3.3.3', user => user_admin);
+
+    _wait_ip($vm, $base);
+    wait_request( debug => 1 );
+
+    my @base_ports = $base->list_ports();
+
+    my $public_port = $base_ports[0]->{public_port};
+
+    isnt($public_port, $public_port0) or exit;
+
+    $base->remove(user_admin);
+}
+
 sub test_clone_exports_add_ports($vm) {
 
     my $base = create_domain($vm, user_admin,'debian stretch');
@@ -966,6 +997,7 @@ for my $vm_name ( 'KVM', 'Void' ) {
     skip $msg,10    if !$vm;
 
     diag("Testing $vm_name");
+    test_routing_already_used($vm);
     test_clone_exports_add_ports($vm);
 
     test_no_dupe($vm);

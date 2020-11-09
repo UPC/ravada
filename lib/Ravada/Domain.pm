@@ -2793,12 +2793,21 @@ sub _set_public_port($self, $id_port, $internal_port, $name, $restricted) {
     }
 }
 
+sub _used_ports_iptables($self, $port) {
+    my $used_port = {};
+    $self->_vm->_list_used_ports_iptables($used_port);
+    return 0 if !$used_port->{$port};
+    return 1;
+}
+
 sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,public_port FROM domain_ports"
         ." WHERE id_domain=? AND internal_port=?"
     );
     $sth->execute($self->id, $internal_port);
     my ($id_port, $public_port) = $sth->fetchrow();
+
+    $public_port = undef if $public_port && $self->_used_ports_iptables($public_port);
 
     $public_port = $self->_set_public_port($id_port, $internal_port, $name, $restricted)
     if !$public_port;
