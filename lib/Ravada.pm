@@ -572,7 +572,9 @@ sub _update_isos {
 }
 
 sub _scheduled_fedora_releases($self,$data) {
-    my $vm = $self->search_vm('KVM');
+
+    return if !exists $VALID_VM{KVM} ||!$VALID_VM{KVM};
+    my $vm = $self->search_vm('KVM') or return; # TODO move ISO downloads off KVM
 
     my @now = localtime(time);
     my $year = $now[5]+1900;
