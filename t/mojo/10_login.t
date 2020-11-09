@@ -226,8 +226,13 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
     )->status_is(302);
 
     _wait_request(debug => 1, background => 1, check_error => 1);
-    my $base = rvd_front->search_domain($name);
-    ok($base, "Expecting domain $name create") or next;
+    my $base;
+    for ( 1 .. 10 ) {
+        $base = rvd_front->search_domain($name);
+        last if $base;
+        sleep 1;
+    }
+    ok($base, "Expecting domain $name create") or exit;
     push @bases,($base->name);
 
     mojo_request($t, "add_hardware", { id_domain => $base->id, name => 'network' });
