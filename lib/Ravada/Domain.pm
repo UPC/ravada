@@ -3974,7 +3974,8 @@ sub rsync($self, @args) {
         my $msg = $self->_msg_log_rsync($file, $node, "rsync", $request);
 
         $request->status("syncing") if $request;
-        $request->error($msg)       if $request;
+        $request->error("Syncing $file");
+        $request->error($msg)       if $request && $DEBUG_RSYNC;
         warn "$msg\n" if $DEBUG_RSYNC;
 
         my $t0 = time;

@@ -573,6 +573,8 @@ sub _update_isos {
 }
 
 sub _scheduled_fedora_releases($self,$data) {
+    my $vm = $self->search_vm('KVM');
+
     my @now = localtime(time);
     my $year = $now[5]+1900;
     my $month = $now[4]+1;
@@ -584,6 +586,7 @@ sub _scheduled_fedora_releases($self,$data) {
     = 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/';
 
     my $release = 27;
+
     for my $y ( 2018 .. $year ) {
         for my $m ( 5, 11 ) {
             return if $y == $year && $m>$month;
@@ -594,13 +597,25 @@ sub _scheduled_fedora_releases($self,$data) {
             my $url = $url_archive;
             $url = $url_current if $y>=$year-1;
 
+            my $url_file = $url.$release
+                    .'/Workstation/x86_64/iso/Fedora-Workstation-.*-x86_64-'.$release
+                    .'-.*\.iso';
+            my @found = $vm->_search_url_file($url_file);
+            if(!@found) {
+                next if $url =~ m{//archives};
+
+                $url_file = $url_archive.$release
+                    .'/Workstation/x86_64/iso/Fedora-Workstation-.*-x86_64-'.$release
+                    .'-.*\.iso';
+                @found = $vm->_search_url_file($url_file);
+                next if !scalar(@found);
+            }
+
             $data->{$name} = {
             name => 'Fedora '.$release
             ,description => "RedHat Fedora $release Workstation 64 bits"
-            ,url => $url.$release
-                    .'/Workstation/x86_64/iso/Fedora-Workstation-.*-x86_64-'.$release
-                    .'-.*\.iso'
             ,arch => 'amd64'
+            ,url => $url_file
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => '$url/Fedora-Workstation-'.$release.'-.*-x86_64-CHECKSUM'
@@ -885,9 +900,9 @@ sub _remove_old_isos {
         ,"DELETE FROM iso_images "
             ."  WHERE name like 'Debian Buster 32%'"
             ."  AND file_re like '%xfce-CD-1.iso'"
-
         ,"DELETE FROM iso_images "
             ."  WHERE name like 'Ubuntu Focal%'"
+            ."  AND ( md5 IS NOT NULL OR md5_url IS NOT NULL) "
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute();
