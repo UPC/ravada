@@ -241,6 +241,10 @@ sub _check_clean_shutdown($self) {
         || $self->_active_iptables(id_domain => $self->id)) {
             $self->_post_shutdown();
     }
+
+    if ($self->_data('status') eq 'hibernated' && !$self->_data('post_hibernated')) {
+        $self->_post_hibernate();
+    }
 }
 
 sub _set_last_vm($self,$force=0) {
@@ -300,6 +304,7 @@ sub _vm_disconnect {
 sub _around_start($orig, $self, @arg) {
 
     $self->_data( 'post_shutdown' => 0);
+    $self->_data( 'post_hibernated' => 0);
     $self->_start_preconditions(@arg);
 
     my %arg;
@@ -2410,8 +2415,9 @@ sub _post_pause {
     $self->_remove_iptables();
 }
 
-sub _post_hibernate($self, $user) {
+sub _post_hibernate($self, $user=undef) {
     $self->_data(status => 'hibernated');
+    $self->_data(post_hibernated => 1);
     $self->_remove_iptables();
     $self->_close_exposed_port();
 }

@@ -1569,6 +1569,7 @@ sub _upgrade_tables {
     }
     $self->_upgrade_table('domains','shared_storage','varchar(254)');
     $self->_upgrade_table('domains','post_shutdown','int not null default 0');
+    $self->_upgrade_table('domains','post_hibernated','int not null default 0');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -3909,7 +3910,7 @@ sub _refresh_active_domains($self, $request=undef) {
                 $request->error("checking $domain_data->{name}") if $request;
                 next if $active_domain{$domain_data->{id}};
                 my $domain = Ravada::Domain->open($domain_data->{id});
-                next if !$domain || $domain->is_hibernated;
+                next if !$domain;
                 $self->_refresh_active_domain($domain, \%active_domain);
                 $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
             }
@@ -3954,7 +3955,8 @@ sub _refresh_disabled_nodes($self, $request = undef ) {
 
 sub _refresh_active_domain($self, $domain, $active_domain) {
     $domain->check_status();
-    return if $domain->is_hibernated();
+
+    return $self->_refresh_hibernated($domain) if $domain->is_hibernated();
 
     my $is_active = $domain->is_active();
 
@@ -3968,6 +3970,12 @@ sub _refresh_active_domain($self, $domain, $active_domain) {
 
     $domain->_post_shutdown()
     if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown');
+}
+
+sub _refresh_hibernated($self, $domain) {
+    return unless $domain->is_hibernated();
+
+    $domain->_post_hibernated() if !$domain->_data('post_hibernated');
 }
 
 sub _refresh_down_domains($self, $active_domain, $active_vm) {
