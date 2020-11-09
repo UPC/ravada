@@ -28,7 +28,7 @@ When creating a new translation language, also add it in the frontend so it gets
 listed for the end users. At around line 1337 in the ``sub _translation`` add
 a line like this:
 
-.. prompt:: bash
+.. prompt:: text 
 
     sub _translations($c) {
         my %lang_name=(
