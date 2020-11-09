@@ -62,4 +62,7 @@
         document.getElementById("spinn"+iD).style.display="none";
     }
 </script>
-<script src="<%= $widget_footer %>"></script>
+
+% if ( $widget ) {
+<script src="<%= $widget %>"></script>
+% }
