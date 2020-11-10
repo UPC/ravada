@@ -526,20 +526,60 @@ sub test_routing_already_used($vm) {
             ,j => 'DNAT'
             ,'to-destination' => "1.2.3.4:1111"
     );
-    $base->shutdown_now(user_admin);
 
-    $base->start(remote_ip => '3.3.3.3', user => user_admin);
+    my @iptables0 = _iptables_save($vm,'nat','PREROUTING');
+    my $remote_ip = '3.3.3.3';
+    $base->start(remote_ip => $remote_ip,  user => user_admin);
 
     _wait_ip($vm, $base);
-    wait_request( debug => 1 );
+    wait_request( debug => 0 );
 
-    my @base_ports = $base->list_ports();
+    my @base_ports1 = $base->list_ports();
 
-    my $public_port = $base_ports[0]->{public_port};
+    my $public_port1 = $base_ports1[0]->{public_port};
 
-    isnt($public_port, $public_port0) or exit;
+    isnt($public_port1, $public_port0) or exit;
+    my @iptables1 = _iptables_save($vm,'nat' ,'PREROUTING');
+    is(scalar(@iptables1),scalar(@iptables0)+1,"Expecting 1 chain more "
+    .Dumper(\@iptables0,\@iptables1)) or exit;
+
+    # open again the ports, nothing should change
+    for ( 1 .. 3 ) {
+        my $req = Ravada::Request->open_iptables(
+            uid => user_admin->id
+            ,id_domain => $base->id
+            ,remote_ip => $remote_ip
+        );
+        wait_request(debug => 0);
+        is($req->status,'done');
+        is($req->error, '');
+
+        my @base_ports2 = $base->list_ports();
+
+        my $public_port2 = $base_ports2[0]->{public_port};
+
+        isnt($public_port2, $public_port0) or exit;
+        is($public_port2, $public_port1) or exit;
+
+        my @iptables2 = _iptables_save($vm,'nat' ,'PREROUTING');
+        is(scalar(@iptables1),scalar(@iptables2)) or die Dumper(\@iptables1,\@iptables2);
+    }
 
     $base->remove(user_admin);
+}
+
+sub _iptables_save($vm,$table=undef,$chain=undef) {
+    my @cmd = ("iptables-save");
+    push @cmd,("-t",$table) if $table;
+
+    my ($out,$err) = $vm->run_command(@cmd);
+
+    my @out;
+    for my $line (split /\n/,$out) {
+        next if $chain && $line !~ /^-A $chain/;
+        push @out,($line);
+    }
+    return @out;
 }
 
 sub test_clone_exports_add_ports($vm) {
