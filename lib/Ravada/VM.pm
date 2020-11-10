@@ -1905,8 +1905,8 @@ sub _list_used_ports_iptables($self, $used_port) {
     my $iptables = $self->iptables_list();
     for my $rule ( @{$iptables->{nat}} ) {
         my %rule = @{$rule};
-        next if !exists $rule{A} || $rule{A} ne 'PREROUTING';
-        $used_port->{dport}++;
+        next if !exists $rule{A} || $rule{A} ne 'PREROUTING' || !$rule{dport};
+        $used_port->{$rule{dport}}++;
     }
 }
 
