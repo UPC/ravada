@@ -720,7 +720,9 @@ sub start {
 
     $self->_set_spice_ip($set_password, $listen_ip);
 
-    my $is_active = $self->is_active();
+    my $is_active = 0;
+    eval { $is_active = $self->domain->is_active };
+    warn $@ if $@;
     if (!$is_active) {
         $self->_check_qcow_format($request);
         $self->_set_volumes_backing_store();

@@ -948,7 +948,7 @@ sub fast_forward_requests() {
     eval {
     $sth->execute();
     };
-    die if $@ && $@ !~ /Deadlock found/;
+    die $@ if $@ && $@ !~ /Deadlock found when/;
 }
 
 sub init_vm {

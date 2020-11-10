@@ -267,7 +267,7 @@ sub _update_isos {
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/18.04/'
                 ,file_re => '^ubuntu-18.04.*desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
+                ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
         }
 
@@ -573,6 +573,10 @@ sub _update_isos {
 }
 
 sub _scheduled_fedora_releases($self,$data) {
+
+    return if !exists $VALID_VM{KVM} ||!$VALID_VM{KVM};
+    my $vm = $self->search_vm('KVM') or return; # TODO move ISO downloads off KVM
+
     my @now = localtime(time);
     my $year = $now[5]+1900;
     my $month = $now[4]+1;
@@ -584,6 +588,7 @@ sub _scheduled_fedora_releases($self,$data) {
     = 'http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/';
 
     my $release = 27;
+
     for my $y ( 2018 .. $year ) {
         for my $m ( 5, 11 ) {
             return if $y == $year && $m>$month;
@@ -594,13 +599,25 @@ sub _scheduled_fedora_releases($self,$data) {
             my $url = $url_archive;
             $url = $url_current if $y>=$year-1;
 
+            my $url_file = $url.$release
+                    .'/Workstation/x86_64/iso/Fedora-Workstation-.*-x86_64-'.$release
+                    .'-.*\.iso';
+            my @found = $vm->_search_url_file($url_file);
+            if(!@found) {
+                next if $url =~ m{//archives};
+
+                $url_file = $url_archive.$release
+                    .'/Workstation/x86_64/iso/Fedora-Workstation-.*-x86_64-'.$release
+                    .'-.*\.iso';
+                @found = $vm->_search_url_file($url_file);
+                next if !scalar(@found);
+            }
+
             $data->{$name} = {
             name => 'Fedora '.$release
             ,description => "RedHat Fedora $release Workstation 64 bits"
-            ,url => $url.$release
-                    .'/Workstation/x86_64/iso/Fedora-Workstation-.*-x86_64-'.$release
-                    .'-.*\.iso'
             ,arch => 'amd64'
+            ,url => $url_file
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => '$url/Fedora-Workstation-'.$release.'-.*-x86_64-CHECKSUM'
@@ -887,7 +904,7 @@ sub _remove_old_isos {
             ."  AND file_re like '%xfce-CD-1.iso'"
 
         ,"DELETE FROM iso_images "
-            ."  WHERE name like 'Ubuntu Focal%'"
+            ."  WHERE (name LIKE 'Ubuntu Focal%' OR name LIKE 'Ubuntu Bionic%' ) "
             ."  AND ( md5 IS NOT NULL OR md5_url IS NOT NULL) "
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
@@ -1556,6 +1573,7 @@ sub _upgrade_tables {
     }
     $self->_upgrade_table('domains','shared_storage','varchar(254)');
     $self->_upgrade_table('domains','post_shutdown','int not null default 0');
+    $self->_upgrade_table('domains','post_hibernated','int not null default 0');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -3897,7 +3915,7 @@ sub _refresh_active_domains($self, $request=undef) {
                 $request->error("checking $domain_data->{name}") if $request;
                 next if $active_domain{$domain_data->{id}};
                 my $domain = Ravada::Domain->open($domain_data->{id});
-                next if !$domain || $domain->is_hibernated;
+                next if !$domain;
                 $self->_refresh_active_domain($domain, \%active_domain);
                 $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
             }
@@ -3942,7 +3960,8 @@ sub _refresh_disabled_nodes($self, $request = undef ) {
 
 sub _refresh_active_domain($self, $domain, $active_domain) {
     $domain->check_status();
-    return if $domain->is_hibernated();
+
+    return $self->_refresh_hibernated($domain) if $domain->is_hibernated();
 
     my $is_active = $domain->is_active();
 
@@ -3956,6 +3975,12 @@ sub _refresh_active_domain($self, $domain, $active_domain) {
 
     $domain->_post_shutdown()
     if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown');
+}
+
+sub _refresh_hibernated($self, $domain) {
+    return unless $domain->is_hibernated();
+
+    $domain->_post_hibernate() if !$domain->_data('post_hibernated');
 }
 
 sub _refresh_down_domains($self, $active_domain, $active_vm) {
