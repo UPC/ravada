@@ -303,6 +303,8 @@ sub _vm_disconnect {
 
 sub _around_start($orig, $self, @arg) {
 
+    $self->_post_hibernate() if $self->is_hibernated && !$self->_data('post_hibernated');
+
     $self->_data( 'post_shutdown' => 0);
     $self->_data( 'post_hibernated' => 0);
     $self->_start_preconditions(@arg);

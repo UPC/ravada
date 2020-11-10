@@ -511,6 +511,42 @@ sub test_clone_exports($vm) {
     $base->remove(user_admin);
 }
 
+sub test_routing_hibernated($vm) {
+    my $base = create_domain($vm, user_admin,'debian stretch');
+    $base->expose(port => 22, name => "ssh");
+
+    my @base_ports0 = $base->list_ports();
+    my $public_port0 = $base_ports0[0]->{public_port};
+
+    my $remote_ip = '4.4.4.4';
+    $base->start(remote_ip => $remote_ip,  user => user_admin);
+
+    _wait_ip($vm, $base);
+    wait_request( debug => 0 );
+
+    my @base_ports1 = $base->list_ports();
+
+    my $public_port1 = $base_ports1[0]->{public_port};
+
+    is($public_port1, $public_port0) or exit;
+
+    hibernate_domain_internal($base);
+
+    $base->start(remote_ip => $remote_ip,  user => user_admin);
+
+    _wait_ip($vm, $base);
+    wait_request( debug => 0 );
+
+    my @base_ports2 = $base->list_ports();
+
+    my $public_port2 = $base_ports2[0]->{public_port};
+
+    is($public_port2, $public_port0) or exit;
+    is($public_port2, $public_port1) or exit;
+
+    $base->remove(user_admin);
+}
+
 sub test_routing_already_used($vm) {
     my $base = create_domain($vm, user_admin,'debian stretch');
     $base->expose(port => 22, name => "ssh");
@@ -1037,7 +1073,9 @@ for my $vm_name ( 'KVM', 'Void' ) {
     skip $msg,10    if !$vm;
 
     diag("Testing $vm_name");
+    test_routing_hibernated($vm);
     test_routing_already_used($vm);
+
     test_clone_exports_add_ports($vm);
 
     test_no_dupe($vm);
