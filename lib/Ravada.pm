@@ -3975,7 +3975,7 @@ sub _refresh_active_domain($self, $domain, $active_domain) {
 sub _refresh_hibernated($self, $domain) {
     return unless $domain->is_hibernated();
 
-    $domain->_post_hibernated() if !$domain->_data('post_hibernated');
+    $domain->_post_hibernate() if !$domain->_data('post_hibernated');
 }
 
 sub _refresh_down_domains($self, $active_domain, $active_vm) {
