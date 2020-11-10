@@ -902,7 +902,6 @@ sub _remove_old_isos {
         ,"DELETE FROM iso_images "
             ."  WHERE name like 'Debian Buster 32%'"
             ."  AND file_re like '%xfce-CD-1.iso'"
-
         ,"DELETE FROM iso_images "
             ."  WHERE (name LIKE 'Ubuntu Focal%' OR name LIKE 'Ubuntu Bionic%' ) "
             ."  AND ( md5 IS NOT NULL OR md5_url IS NOT NULL) "
