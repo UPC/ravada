@@ -3909,6 +3909,7 @@ sub _refresh_active_domains($self, $request=undef) {
             my @domains;
             eval { @domains = $self->list_domains_data };
             warn $@ if $@;
+            my $t0 = time;
             for my $domain_data (sort { $b->{date_changed} cmp $a->{date_changed} }
                                 @domains) {
                 $request->error("checking $domain_data->{name}") if $request;
@@ -3917,6 +3918,7 @@ sub _refresh_active_domains($self, $request=undef) {
                 next if !$domain;
                 $self->_refresh_active_domain($domain, \%active_domain);
                 $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
+                last if !$CAN_FORK && time - $t0 > 10;
             }
             $request->error("checked ".scalar(@domains)) if $request;
         }
