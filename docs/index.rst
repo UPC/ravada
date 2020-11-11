@@ -115,6 +115,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/expose_machine
    docs/expose_ports
    docs/Rebase
+   docs/chatwoot
 
 .. _guest-docs:
 
