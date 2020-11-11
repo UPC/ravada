@@ -878,3 +878,157 @@ msgstr ""
 
 msgid "Yes, shutwdown all the clones"
 msgstr ""
+
+msgid "Admin users can still log in from /login"
+msgstr ""
+
+msgid "-- choose hardware --"
+msgstr ""
+
+msgid "Clones created from this machine will be removed on shutdown."
+msgstr ""
+
+msgid "Close all clones"
+msgstr ""
+
+msgid "Confirm disable node"
+msgstr ""
+
+msgid "Connection"
+msgstr ""
+
+msgid "CPUs"
+msgstr ""
+
+msgid "Current memory"
+msgstr ""
+
+msgid "Disable"
+msgstr ""
+
+msgid "Disabled"
+msgstr ""
+
+msgid "Display Port"
+msgstr ""
+
+msgid "Internal IP"
+msgstr ""
+
+msgid "Machine Information"
+msgstr ""
+
+msgid "Maintenance"
+msgstr ""
+
+msgid "Max memory"
+msgstr ""
+
+msgid "New name"
+msgstr ""
+
+msgid "New Node"
+msgstr ""
+
+msgid "New user"
+msgstr ""
+
+msgid "Open ports"
+msgstr ""
+
+msgid "Pool"
+msgstr ""
+
+msgid "Public Port"
+msgstr ""
+
+msgid "Rebase all the clones to a new base"
+msgstr ""
+
+msgid "Refresh"
+msgstr ""
+
+msgid "Remove Base"
+msgstr ""
+
+msgid "Remove Clones"
+msgstr ""
+
+msgid "Remove the base prepared from this machine"
+msgstr ""
+
+msgid "Restricted"
+msgstr ""
+
+msgid "Shutdown disconnected"
+msgstr ""
+
+msgid "This base has clones"
+msgstr ""
+
+msgid "This machine is base and it can't be modified."
+msgstr ""
+
+msgid "This machine will shut down"
+msgstr ""
+
+msgid "This node is local"
+msgstr ""
+
+msgid "Timeout"
+msgstr ""
+
+msgid "Type"
+msgstr ""
+
+msgid "Type the name of the volume disk to confirm"
+msgstr ""
+
+msgid "Virtual machines in the pool."
+msgstr ""
+
+msgid "Virtual machines pre-started"
+msgstr ""
+
+msgid "Virtual Machine will be shut down when user disconnects."
+msgstr ""
+
+msgid "Waiting for machine to start"
+msgstr ""
+
+msgid "waiting for network to come up"
+msgstr ""
+
+msgid "This machine is running and can't be modified."
+msgstr ""
+
+msgid "Yes, rebase"
+msgstr ""
+
+msgid "No, cancel"
+msgstr ""
+
+msgid "Are you sure ?"
+msgstr ""
+
+msgid "Only remote client can access this port if restricted"
+msgstr ""
+
+msgid "Only remote client can access this port"
+msgstr ""
+
+msgid "Any remote client can access this port"
+msgstr ""
+
+msgid "Danger: This will destroy all the disk data permantently."
+msgstr ""
+
+msgid "Type the name of the volume disk to confirm:"
+msgstr ""
+
+msgid ""
+"Changing the base of a virtual machine is potentially dangerous" 
+"  and can't be undone."
+msgstr ""
+
+

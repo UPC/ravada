@@ -18,7 +18,7 @@
                 <%=l 'A viewer is required to run the virtual machines.' %>
                 <a href="/requirements"><%=l 'Read more.' %></a>
             </div>
-        <div ng-hide="request.status == 'done'">Waiting for machine to start <i class="fas fa-sync-alt fa-spin"></i></div>
+        <div ng-hide="request.status == 'done'"><%=l 'Waiting for machine to start' %> {{dots}}</div>
         <div ng-show="domain">
             <div ng-show="domain.description ||(domain.is_active && domain.msg_timeout)">
                 <span ng-bind-html="domain.description"
@@ -31,7 +31,7 @@
                 </span>
             </div>
             <div "panel-body" ng-show="domain.is_active">
-            <h3>Connection</h3>
+            <h3><%=l 'Connection' %></h3>
             <ul ng-show="domain.is_active">
                 <li ng-show="domain.spice_password">
                     <%=l 'The password for this virtual machine connection is :'%>
@@ -44,23 +44,23 @@
                     <i ng-show="password_clipboard"><%=l 'copied to clipboard' %></i>
                 </li>
 
-                <li><b>Display URL :</b>
+                <li><b><%=l 'Display URL' %> :</b>
                     <a ng-click="copy_password(); redirect()"
                         href="{{domain.display_url}}">{{domain.display_url}}</a></li>
                 </li>
-                <li><b>Display IP :</b> {{domain.display.ip}} </li>
-                <li><b>Display Port :</b> {{domain.display.port}} </li>
+                <li><b><%=l 'Display IP' %> :</b> {{domain.display.ip}} </li>
+                <li><b><%=l 'Display Port' %> :</b> {{domain.display.port}} </li>
             </ul>
-            <h3>Machine Information</h3>
+	    <h3><%=l 'Machine Information' %></h3>
             <ul>
-                <li><b>Internal IP:</b><span ng-show="domain.ip"> {{domain.ip}}</span>
-                    <span ng-hide="domain.ip"><i>waiting for network to come up</i></span>
+                <li><b><%=l 'Internal IP' %>:</b><span ng-show="domain.ip"> {{domain.ip}}</span>
+                    <span ng-hide="domain.ip"><i><%=l 'waiting for network to come up' %></i></span>
                 </li>
-                <li><b>Max Memory:</b> {{domain.max_mem}}</li>
-                <li><b>Memory:</b> {{domain.memory}}</li>
-                <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
+                <li><b><%=l 'Max Memory' %>:</b> {{domain.max_mem}}</li>
+                <li><b><%=l 'Memory' %>:</b> {{domain.memory}}</li>
+                <li><b><%=l 'CPUs' %>:</b> {{domain.nrVirtCpu}}</li>
             </ul>
-            <h3 ng-show="domain.ports.length">Open ports</h3>
+            <h3 ng-show="domain.ports.length">><%=l 'Open ports' %></h3>
             <ul ng-show="domain.ports.length">
                 <li ng-repeat="port in domain.ports">
                     <b>{{port.name}}</b>
@@ -90,7 +90,7 @@
                 <span ng-show="view_clicked_tls"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}-tls.vv</b> <%=l 'in your downloads folder.' %>
                 </span>
                 <br/>
-                <i><%=l 'Press SHIFT + F12 to exit the virtual machine' %></i>
+                <i><%=l 'Press SHIFT + F12 to exit' %></i>
                 </div>
             </div>
         </div>
@@ -109,4 +109,5 @@
 </div>
     %= include 'bootstrap/scripts'
 </body>
+
 </html>

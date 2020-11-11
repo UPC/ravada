@@ -1,17 +1,17 @@
 <div class="card-body">
      <div class="row">
-        <div class="col-lg-2 mt-2">Action</div>
+        <div class="col-lg-2 mt-2"><%=l 'Action' %></div>
         <div class="col-lg-2 mt-2">
-             Port
+             <%=l 'Port' %>
         </div>
         <div class="col-lg-2 mt-2">
-             Restricted
+             <%=l 'Restricted' %>
         </div>
         <div class="col-lg-4 mt-2">
-            Name
+            <%=l 'Name' %>
         </div>
         <div class="col-lg-2 mt-2">
-             Public Port
+             <%=l 'Public Port' %>
         </div>
      </div>
 

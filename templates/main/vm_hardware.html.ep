@@ -1,9 +1,9 @@
 <div class="panel-body" ng-show="showmachine.is_active || showmachine.is_base">
     <div ng-show="showmachine.is_active" class="alert alert-danger" role="alert">
-        This machine is running and can't be modified.
+        <%=l 'This machine is running and can\'t be modified.' %>
     </div>
     <div ng-show="showmachine.is_base" class="alert alert-danger" role="alert">
-        This machine is base and can't be modified.
+        <%=l This machine is base and can\'t be modified.' %>
     </div>
 </div>
 <div class="panel-body">
