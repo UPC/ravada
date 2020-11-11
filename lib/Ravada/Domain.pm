@@ -364,13 +364,13 @@ sub _around_start($orig, $self, @arg) {
 
 }
 
-sub _request_set_base($self) {
+sub _request_set_base($self, $id_vm=$self->_vm->id) {
     my $base = Ravada::Domain->open($self->id_base);
     $base->_set_base_vm_db($self->_vm->id,0);
     Ravada::Request->set_base_vm(
         uid => Ravada::Utils::user_daemon->id
         ,id_domain => $base->id
-        ,id_vm => $self->_vm->id
+        ,id_vm => $id_vm
     );
     my $vm_local = $self->_vm->new( host => 'localhost' );
     $self->_set_vm($vm_local, 1);
@@ -4069,16 +4069,7 @@ sub _pre_migrate($self, $node, $request = undef) {
         if !$base->base_in_vm($node->id);
         confess "ERROR: base id ".$self->id_base." not found."  if !$base;
 
-        for my $file ( $base->list_files_base ) {
-            next if $node->file_exists($file);
-            warn "Warning: file not found $file in ".$node->name;
-            Ravada::Request->set_base_vm(
-                uid => Ravada::Utils::user_daemon->id
-                ,id_domain => $base->id
-                ,id_vm => $node->id
-            );
-            return;
-        }
+        return unless $self->_check_all_parents_in_node($node);
 
         $self->_set_base_vm_db($node->id,0) unless $node->is_local;
     }
@@ -4177,6 +4168,7 @@ sub set_base_vm($self, %args) {
             $request->status("working","Preparing base")    if $request;
         }
     } elsif ($value) {
+        $self->_check_all_parents_in_node($vm);
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
         eval {
@@ -4199,6 +4191,31 @@ sub set_base_vm($self, %args) {
     }
     $vm->_add_instance_db($self->id);
     return $self->_set_base_vm_db($vm->id, $value);
+}
+
+sub _check_all_parents_in_node($self, $vm) {
+    my @bases;
+    my $base = $self;
+    for ( ;; ) {
+        last if !$base->id_base;
+        $base = Ravada::Domain->open($base->id_base);
+        push @bases,($base) if !$base->base_in_vm($vm->id)
+        || !$base->base_files_in_vm($vm);
+    }
+    return 1 if !@bases;
+    my $req;
+    for my $base ( reverse @bases) {
+        $base->_set_base_vm_db($vm->id,0);
+        my @after_req;
+        @after_req = ( after_request_ok => $req->id) if $req;
+        $req = Ravada::Request->set_base_vm(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $base->id
+            ,id_vm => $vm->id
+            ,@after_req
+        );
+    }
+    return 0;
 }
 
 sub _set_clones_autostart($self, $value) {
@@ -4323,6 +4340,15 @@ sub base_in_vm($self,$id_vm) {
 #    return 1 if !defined $enabled
 #        && $id_vm == $self->_vm->id && $self->_vm->host eq 'localhost';
     return $enabled;
+
+}
+
+sub base_files_in_vm($self,$vm) {
+    $vm = Ravada::VM->open($vm) if !ref($vm);
+    for my $file ($self->list_files_base) {
+        return 0 if !$vm->file_exists($file);
+    }
+    return 1;
 }
 
 sub _bases_vm($self) {

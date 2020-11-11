@@ -1256,10 +1256,23 @@ sub test_nested_base($vm, $node, $levels=1) {
         $base1 = $clone;
     }
 
+    _test_migrate_nested($vm, $node, \@bases, $clone, $levels);
+    $base0->remove_base_vm(vm => $node, user => user_admin);
+    _test_migrate_nested($vm, $node, \@bases, $clone, $levels);
+    my ($file) = $base0->list_files_base;
+    $node->remove_file($file);
+
+    for my $domain ($clone, reverse @bases ) {
+        $domain->remove(user_admin);
+    }
+}
+
+sub _test_migrate_nested($vm, $node, $bases, $clone, $levels) {
     my $req = Ravada::Request->migrate(
         id_node => $node->id
         ,id_domain => $clone->id
         ,uid => user_admin->id
+        ,shutdown => 1
     );
     for ( 1 .. $levels+3 ) {
         last if $req->status eq 'done';
@@ -1267,7 +1280,7 @@ sub test_nested_base($vm, $node, $levels=1) {
     }
     is($req->error,'');
     is($req->status,'done');
-    for my $base ( @bases ) {
+    for my $base ( @$bases ) {
         is($base->is_base,1,"Expecting ".$base->name." is base") or exit;
         is($base->base_in_vm($node->id),1);
     }
@@ -1275,10 +1288,6 @@ sub test_nested_base($vm, $node, $levels=1) {
     is($clone2->_vm->id,$node->id) or exit;
     eval { $clone2->start(user_admin) };
     is(''.$@, '', $clone2->name) or exit;
-
-    for my $domain ($clone, reverse @bases ) {
-        $domain->remove(user_admin);
-    }
 }
 
 sub test_display_ip($vm, $node, $set_localhost_dp=0) {
