@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-11-12 14:28+0000\n"
+"PO-Revision-Date: 2020-11-14 14:28+0000\n"
 "Last-Translator: Gloria Rodriguez <gloria.rodriguez@upc.edu>\n"
 "Language-Team: Galician <https://hosted.weblate.org/projects/ravada/"
 "translation/gl/>\n"
@@ -196,7 +196,7 @@ msgid "No"
 msgstr "Non"
 
 msgid "Yes"
-msgstr "Sí"
+msgstr "Si"
 
 msgid "Are you sure?"
 msgstr "Estás seguro/a?"
@@ -299,3 +299,275 @@ msgstr "Hindi"
 
 msgid "Mark all as read"
 msgstr "Marcar todo como lido"
+
+msgid "Yes, remove"
+msgstr "Si, elimina"
+
+msgid "Yes, remove all the clones"
+msgstr "Si, elimina todos os clons"
+
+msgid "clones of the machine"
+msgstr "clons da máquina"
+
+msgid "This will remove all the"
+msgstr "Isto eliminará todos os"
+
+msgid "removed"
+msgstr "eliminado"
+
+msgid "Virtual Machine"
+msgstr "Máquina Virtual"
+
+msgid "Are you sure ?"
+msgstr "Estás seguro?"
+
+msgid "This action can't be undone"
+msgstr "Esta acción non se pode desfacer"
+
+msgid "This will remove all the contents of the machine"
+msgstr "Isto eliminará todo o contido da máquina"
+
+msgid "Danger"
+msgstr "Perigo"
+
+msgid "Once you delete the machine, there is no going back. Please be certain."
+msgstr ""
+"Unha vez eliminada a máquina, non hai volta atrás. Por favor, estea seguro."
+
+msgid "Danger Zone"
+msgstr "Zona de Perigo"
+
+msgid "System overview"
+msgstr "Resumo do sistema"
+
+msgid "Remove Machine"
+msgstr "Eliminar Máquina"
+
+msgid "Graphics"
+msgstr "Gráficos"
+
+msgid "Drivers"
+msgstr "Controladores"
+
+msgid "Options"
+msgstr "Opcións"
+
+msgid "Rename"
+msgstr "Renomear"
+
+msgid "Description"
+msgstr "Descrición"
+
+msgid "Hybernating ..."
+msgstr "Hibernando …"
+
+msgid "It may take a couple of minutes."
+msgstr "Pode levar un par de minutos."
+
+msgid "Shutting down ..."
+msgstr "Apagando …"
+
+msgid "Show All"
+msgstr "Mostrar Todo"
+
+msgid "Hide Private"
+msgstr "Oculta as Privadas"
+
+msgid "Username"
+msgstr "Nome de usuario"
+
+msgid "Create a new account"
+msgstr "Crear unha nova conta"
+
+msgid "User Settings"
+msgstr "Configuración do Usuario"
+
+msgid "not public"
+msgstr "non pública"
+
+msgid "Create one."
+msgstr "Crea unha."
+
+msgid "There are no machines available in this system."
+msgstr "Non hai máquinas dispoñibles neste sistema."
+
+msgid "There are no public bases available in this system."
+msgstr "Non hai bases públicas dispoñibles neste sistema."
+
+msgid "Search"
+msgstr "Buscar"
+
+msgid "Are you sure you want to change the Public state of"
+msgstr "Está seguro de que quere cambiar o estado Público de"
+
+msgid "Are you sure you want to prepare the Base of"
+msgstr "Está seguro de que quiere prepara a Base de"
+
+msgid "Are you sure you want to remove the Base of"
+msgstr "Está seguro de que quere eliminar a Base de"
+
+msgid "monitoring"
+msgstr "vixilancia"
+
+msgid ""
+"can change the settings of all virtual machines "
+"cloned from one base owned by the user."
+msgstr ""
+"pode cambiar a configuración de todas as máquinas virtuais clonadas dedes "
+"unha base propiedade do usuario."
+
+msgid "Create"
+msgstr "Crear"
+
+msgid "The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points."
+msgstr ""
+"O nome da máquina só pode ter caracteres alfabéticos, números, guións e "
+"puntos."
+
+msgid "A machine with that name already exists."
+msgstr "Xa existe unha máquina con ese nome."
+
+msgid "Template selection is required."
+msgstr "Ten que seleccionar un modelo."
+
+msgid "ISO image selection is required."
+msgstr "Ten que seleccionar unha imaxe ISO."
+
+msgid "Backend selection is required."
+msgstr "Ten que seleccionar o backend."
+
+msgid "Machine name can't exceed 20 characters."
+msgstr "O nome da máquina non pode superar os 20 caracteres."
+
+msgid "Machine name is required."
+msgstr "O nome da máquina é obrigatoio."
+
+msgid "Ram: (GB)"
+msgstr "Ram: (GB)"
+
+msgid "Swap Size: (GB)"
+msgstr "Tamaño de Swap: (GB)"
+
+msgid "Disk Size: (GB)"
+msgstr "Tamaño do Disco: (GB)"
+
+msgid "Template"
+msgstr "Modelo"
+
+msgid "Select ISO"
+msgstr "Seleccionar ISO"
+
+msgid "Download now"
+msgstr "Descargar agora"
+
+msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
+msgstr ""
+"Esta imaxe ISO aínda non se descargou. Pode levar uns minutos, incluso "
+"horas, ata que o ficheiro se obteña de Internet."
+
+msgid "Select Template"
+msgstr "Seleccione Modelo"
+
+msgid "Backend"
+msgstr "Backend"
+
+msgid "From Machine"
+msgstr "Da máquina"
+
+msgid "From Template"
+msgstr "Do Modelo"
+
+msgid "Submit Query"
+msgstr "Enviar Consulta"
+
+msgid "can shutdown clones from virtual machines owned by the user."
+msgstr "pode apagar clons de máquinas virtuais propiedade do usuario."
+
+msgid "can shutdown any virtual machine."
+msgstr "pode apagar calquera máquina virtual."
+
+msgid "can take a screenshot of any virtual machine."
+msgstr "pode facer unha captura de pantalla de calquera máquina virtual."
+
+msgid "can take a screenshot of any virtual machine owned by the user."
+msgstr ""
+"pode facer unha captura de pantalla de calquera máquina virtual propiedade "
+"do usuario."
+
+msgid "can remove any clone."
+msgstr "pode eliminar calquera clon."
+
+msgid "can remove clones from virtual machines owned by the user."
+msgstr "pode eliminar clons de máquinas virtuais propiedade do usuario."
+
+msgid "can remove any virtual machine."
+msgstr "pode eliminar calquera máquina virtual."
+
+msgid "can remove any virtual machines owned by the user."
+msgstr "pode borrar calquera máquina virtual propiedade do usuario."
+
+msgid "can hibernate any clone."
+msgstr "pode hibernar calquera clon."
+
+msgid "can hibernate clones from virtual machines owned by the user."
+msgstr "pode hibernar clons de máquinas virtuais propiedade do usuario."
+
+msgid "can hibernate any virtual machine."
+msgstr "pode hibernar calquera máquina virtual."
+
+msgid "can grant permissions to other users"
+msgstr "pode conceder permisos a outros usuarios"
+
+msgid "can create virtual machines."
+msgstr "pode crear máquinas virtuais."
+
+msgid "can create bases."
+msgstr "pode crear bases."
+
+msgid "can clone any virtual machine."
+msgstr "pode clonar calquera máquina virtual."
+
+msgid "can clone public virtual machines."
+msgstr "pode clonar máquinas virtuais públicas."
+
+msgid "cloned from one base owned by the user."
+msgstr "clonado desde unha base propiedade do usuario."
+
+msgid "can change the settings of any virtual machines "
+msgstr "pode cambiar a configuración de calquera máquina virtual"
+
+msgid "can change the settings of any virtual machines."
+msgstr "pode cambiar a configuración de calquera máquina virtual."
+
+msgid "can change the settings of owned virtual machines."
+msgstr "pode cambiar a configuración das suas máquinas virtuais."
+
+msgid "Permissions"
+msgstr "Permisos"
+
+msgid "bits) in your computer."
+msgstr "bits) no seu computador."
+
+msgid "Start session"
+msgstr "Comenzar a sesión\n"
+
+msgid "Password"
+msgstr "Contrasinal"
+
+msgid "User"
+msgstr "Usuario"
+
+msgid "Virtual Machines"
+msgstr "Máquinas Virtuais"
+
+msgid "It is required a viewer to run the virtual machines."
+msgstr "É necesario un visor para executar as máquinas virtuais."
+
+msgid "A viewer is required to run the virtual machines."
+msgstr "É necesario un visor para executar as máquinas virtuais."
+
+msgid "Welcome"
+msgstr "Benvido"
+
+msgid "Login"
+msgstr "Acceder"
