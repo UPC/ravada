@@ -16,11 +16,14 @@ use feature qw(signatures);
 
 use_ok('Ravada');
 
+my $BASE_NAME = "zz-test-base-alpine";
+my $BASE;
+
 sub test_no_dupe($vm) {
 
     flush_rules($vm);
 
-    my $domain = create_domain($vm->type, user_admin ,'debian stretch');
+    my $domain= $BASE->clone(name => new_domain_name, user => user_admin);
 
     my $remote_ip = '10.0.0.1';
     my $local_ip = $vm->ip;
@@ -49,7 +52,7 @@ sub test_no_dupe($vm) {
     my $client_ip = $domain->remote_ip();
     is($client_ip, $remote_ip);
     my $public_port;
-    my $internal_ip = _wait_ip($vm->type, $domain) or die "Error: no ip for ".$domain->name;
+    my $internal_ip = _wait_ip2($vm->type, $domain) or die "Error: no ip for ".$domain->name;
     my $internal_net = $internal_ip;
     $internal_net =~ s{(.*)\.\d+$}{$1.0/24};
 
@@ -167,7 +170,7 @@ sub test_one_port($vm) {
 
     flush_rules();
 
-    my $domain = create_domain($vm->type, user_admin ,'debian stretch');
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
 
     my $remote_ip = '10.0.0.1';
     my $local_ip = $vm->ip;
@@ -292,7 +295,7 @@ sub test_remove_expose {
 
     my $vm = rvd_back->search_vm($vm_name);
 
-    my $domain = create_domain($vm_name, user_admin,'debian stretch');
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
 
     my $remote_ip = '10.0.0.1';
     my $local_ip = $vm->ip;
@@ -386,8 +389,7 @@ sub test_crash_domain($vm_name) {
 
     my $vm = rvd_back->search_vm($vm_name);
 
-
-    my $domain = create_domain($vm_name, user_admin,'debian stretch');
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
 
     my $remote_ip = '10.0.0.1';
     my $local_ip = $vm->ip;
@@ -424,7 +426,7 @@ sub test_crash_domain($vm_name) {
     # shutdown forced
     shutdown_domain_internal($domain);
 
-    my $domain2 = create_domain($vm_name, user_admin,'debian stretch');
+    my $domain2 = $BASE->clone(name => new_domain_name, user => user_admin);
     $domain2->start(user => user_admin) if !$domain2->is_active;
 
     $domain2->remove(user_admin);
@@ -434,7 +436,7 @@ sub test_two_ports($vm) {
 
     flush_rules();
 
-    my $domain = create_domain($vm, user_admin,'debian stretch');
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
 
     my $remote_ip = '10.0.0.1';
     my $local_ip = $vm->ip;
@@ -490,18 +492,23 @@ sub test_two_ports($vm) {
     }
 }
 
-sub test_clone_exports($vm) {
+sub test_clone_exports_spinoff($vm) {
+    test_clone_exports($vm,1);
+}
 
-    my $base = create_domain($vm, user_admin,'debian stretch');
+sub test_clone_exports($vm, $spinoff=0) {
+
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
+    $base->spinoff() if $spinoff;
     $base->expose(port => 22, name => "ssh");
 
     my @base_ports = $base->list_ports();
-    is(scalar @base_ports,1 );
+    is(scalar @base_ports,1);
 
     my $clone = $base->clone(name => new_domain_name, user => user_admin);
 
     my @clone_ports = $clone->list_ports();
-    is(scalar @clone_ports,1 );
+    is(scalar @clone_ports,1, "Expecting ports listed spinoff=$spinoff" );
 
     is($base_ports[0]->{internal_port}, $clone_ports[0]->{internal_port});
     isnt($base_ports[0]->{public_port}, $clone_ports[0]->{public_port});
@@ -513,7 +520,7 @@ sub test_clone_exports($vm) {
 
 sub test_clone_exports_add_ports($vm) {
 
-    my $base = create_domain($vm, user_admin,'debian stretch');
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
     $base->expose(port => 22, name => "ssh");
     my @base_ports0 = $base->list_ports();
 
@@ -540,7 +547,7 @@ sub test_clone_exports_add_ports($vm) {
         isnt($base_ports[$n]->{public_port}, $clone_ports[$n]->{public_port},"Same public port in clone and base for ".$base_ports[$n]->{internal_port});
         is($base_ports[$n]->{name}, $clone_ports[$n]->{name});
     }
-    _wait_ip($vm, $clone);
+    _wait_ip2($vm, $clone);
     wait_request( debug => 0, request => \@req );
     for (@req) {
         next if $_->command eq 'set_time';
@@ -555,11 +562,22 @@ sub test_clone_exports_add_ports($vm) {
     $base->remove(user_admin);
 }
 
+sub _wait_ip2($vm_name, $domain) {
+    for ( 1 .. 22 ) {
+        return $domain->ip if $domain->ip;
+        diag("Waiting for ".$domain->name. " ip") if !(time % 10);
+        sleep 1;
+    }
+    confess;
+}
+
 sub _wait_ip {
+    return _wait_ip2(@_);
     my $vm_name = shift;
     my $domain = shift  or confess "Missing domain arg";
 
     return $domain->ip  if $domain->ip;
+
 
     sleep 1;
     eval ' $domain->domain->send_key(Sys::Virt::Domain::KEYCODE_SET_LINUX,200, [28]) ';
@@ -605,7 +623,7 @@ sub test_host_down {
 
     my $vm = rvd_back->search_vm($vm_name);
 
-    my $domain = create_domain($vm_name, user_admin,'debian stretch');
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
 
     my $remote_ip = '10.0.0.1';
     my $local_ip = $vm->ip;
@@ -657,7 +675,7 @@ sub test_host_down {
 sub test_req_expose($vm_name) {
     flush_rules();
 
-    my $domain = create_domain($vm_name, user_admin,'debian stretch');
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
 
     my $remote_ip = '10.0.0.6';
 
@@ -729,7 +747,7 @@ sub test_restricted($vm, $restricted) {
     flush_rules();
     flush_rules_node($vm);
 
-    my $domain = create_domain($vm->type, user_admin,'debian Stretch');
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
 
     my $local_ip = $vm->ip;
     my $remote_ip = '10.0.0.6';
@@ -812,7 +830,7 @@ sub test_restricted($vm, $restricted) {
 }
 
 sub test_change_expose($vm, $restricted) {
-    my $domain = create_domain($vm->type, user_admin,'debian');
+    my $domain= $BASE->clone(name => new_domain_name, user => user_admin);
 
     my $internal_port = 22;
     my $name = "foo";
@@ -842,7 +860,7 @@ sub test_change_expose($vm, $restricted) {
 }
 
 sub test_change_expose_3($vm) {
-    my $domain = create_domain($vm->type, user_admin,'debian stretch');
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
 
     my $internal_port = 100;
     my $name = "foo";
@@ -941,6 +959,17 @@ sub _wait_requests($domain) {
     wait_request( background => 0 );
 }
 
+sub import_base($vm) {
+    if ($vm->type eq 'KVM') {
+        $BASE = import_domain($vm->type, $BASE_NAME, 1);
+        confess "Error: domain $BASE_NAME is not base" unless $BASE->is_base;
+
+        confess "Error: domain $BASE_NAME has exported ports that conflict with the tests"
+        if $BASE->list_ports;
+    } else {
+        $BASE = create_domain($vm);
+    }
+}
 ##############################################################
 
 clean();
@@ -966,6 +995,8 @@ for my $vm_name ( 'KVM', 'Void' ) {
     skip $msg,10    if !$vm;
 
     diag("Testing $vm_name");
+    import_base($vm);
+
     test_clone_exports_add_ports($vm);
 
     test_no_dupe($vm);
@@ -988,6 +1019,7 @@ for my $vm_name ( 'KVM', 'Void' ) {
     test_two_ports($vm);
 
     test_clone_exports($vm);
+    test_clone_exports_spinoff($vm);
 
     }; # of SKIP
 }

@@ -2394,6 +2394,14 @@ sub _copy_clone($self, %args) {
         ,from_pool => 0
         ,@copy_arg
     );
+
+    _copy_volumes($self, $copy);
+    _copy_ports($self, $copy);
+    $copy->is_pool(1) if $add_to_pool;
+    return $copy;
+}
+
+sub _copy_volumes($self, $copy) {
     my @volumes = $self->list_volumes_info(device => 'disk');
     my @copy_volumes = $copy->list_volumes_info(device => 'disk');
 
@@ -2403,8 +2411,21 @@ sub _copy_clone($self, %args) {
         copy($volumes{$target}, $copy_volumes{$target})
             or die "$! $volumes{$target}, $copy_volumes{$target}"
     }
-    $copy->is_pool(1) if $add_to_pool;
-    return $copy;
+}
+
+sub _copy_ports($base, $copy) {
+    my %port_already;
+    for my $port ( $copy->list_ports ) {
+        $port_already{$port->{internal_port}}++;
+    }
+
+    for my $port ( $base->list_ports ) {
+        my %port = %$port;
+        next if $port_already{$port->{internal_port}};
+        delete @port{'id','id_domain','public_port'};
+        $copy->expose(%port);
+    }
+
 }
 
 sub _post_pause {
