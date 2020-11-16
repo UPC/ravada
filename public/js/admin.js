@@ -114,6 +114,7 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.get_machine_info = function(id) {
           $http.get('/machine/info/'+id+'.json')
                 .then( function(response) {
+console.log(response);                  
                     $scope.machine = response.data;
                     $scope.ramsize = ($scope.machine.max_mem / 1024 / 1024);
                     if ( $scope.ramsize <1 ) {

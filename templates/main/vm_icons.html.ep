@@ -1,0 +1,22 @@
+<div class="card-body">
+  <button type="button" class="btn btn-success btn-sm" title="Iniciar">
+   <i class="fa fa-play"></i>
+  </button>
+  <input type="checkbox" name="checkbox_start" ng-model="buttons.start" ng-checked="buttons.start" /> <label for="checkbox_start">Iniciar la máquina</label>
+  <br><br>
+  <button type="button" class="btn btn-warning btn-sm" title="Hibernar">
+    <i class="fa fa-pause"></i>
+  </button>
+  <input type="checkbox" name="checkbox_hibernate" ng-model="buttons.hibernate" ng-checked="buttons.hibernate" /> <label for="checkbox_hibernate">Hibernar la máquina</label>
+  <br><br>
+  <button type="button" class="btn btn-danger btn-sm" title="ShutDown">
+    <i class="fa fa-power-off"></i>
+  </button>
+  <input type="checkbox" name="checkbox_shutdown" ng-model="buttons.shutdown" ng-checked="buttons.shutdown" /> <label for="checkbox_shutdown">Apagar la máquina</label>
+  <br><br>
+  <button type="button" class="btn btn-primary btn-sm" title="Ver">
+    <i class="fa fa-desktop"></i>
+  </button>
+  <input type="checkbox" name="checkbox_view" ng-model="buttons.view" ng-checked="buttons.view" /> <label for="checkbox_view">Ver la máquina</label>
+  <br><br>
+</div>
