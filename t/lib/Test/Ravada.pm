@@ -1776,7 +1776,22 @@ sub DESTROY {
     _unlock_all();
 }
 
+sub _check_leftovers {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM grants_user WHERE id_user NOT IN "
+        ." ( SELECT id FROM users )"
+    );
+    $sth->execute();
+    my @error;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @error, ("Leftover from grant_user not in user ".Dumper($row));
+    }
+    $sth->finish;
+    ok(!@error) or die Dumper(\@error);
+}
+
+
 sub end {
+    _check_leftovers
     clean();
     _unlock_all();
     _file_db();
