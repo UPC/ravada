@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-11-14 14:28+0000\n"
+"PO-Revision-Date: 2020-11-18 12:28+0000\n"
 "Last-Translator: Gloria Rodriguez <gloria.rodriguez@upc.edu>\n"
 "Language-Team: Galician <https://hosted.weblate.org/projects/ravada/"
 "translation/gl/>\n"
@@ -571,3 +571,30 @@ msgstr "Benvido"
 
 msgid "Login"
 msgstr "Acceder"
+
+msgid "action"
+msgstr "acción"
+
+msgid "Changing Base State"
+msgstr "Cambio de Estado Base"
+
+msgid "Changing Public State"
+msgstr "Cambiar o Estado Público"
+
+msgid "to"
+msgstr "para"
+
+msgid "recommended"
+msgstr "recomendado"
+
+msgid "This machine has not Graphics parameters!"
+msgstr "Esta máquina non ten parámetros Gráficos!"
+
+msgid "Clones"
+msgstr "Clons"
+
+msgid "clones"
+msgstr "clons"
+
+msgid "This virtual machine can't be removed because it has"
+msgstr "Esta máquina virtual non se pode eliminar porque ten"
