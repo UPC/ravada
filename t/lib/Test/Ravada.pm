@@ -1829,7 +1829,7 @@ sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
     $config->{vm}=['KVM','Void'];
     delete $config->{ldap}->{ravada_posix_group}   if !$with_posix_group;
 
-    my $fly_config = "/var/tmp/ravada_".base_domain_name().".conf";
+    my $fly_config = "/var/tmp/ravada_".base_domain_name().".$$.conf";
     DumpFile($fly_config, $config);
 
     $RVD_BACK = undef;
