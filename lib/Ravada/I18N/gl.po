@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-11-18 13:33+0000\n"
+"PO-Revision-Date: 2020-11-18 15:08+0000\n"
 "Last-Translator: Gloria Rodriguez <gloria.rodriguez@upc.edu>\n"
 "Language-Team: Galician <https://hosted.weblate.org/projects/ravada/"
 "translation/gl/>\n"
@@ -708,3 +708,12 @@ msgstr "público"
 
 msgid "Grants"
 msgstr "Permisos"
+
+msgid "Confirm Password is required"
+msgstr "É obrigatorio confirmar o contrasinal"
+
+msgid "Password can only contain words and numbers"
+msgstr "O contrasinal só poder conter palabras e números"
+
+msgid "Password must be at least 5 characters"
+msgstr "O contrasinal debe ter polo menos 5 caracteres"
