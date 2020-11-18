@@ -478,6 +478,7 @@ for my $vm_name ( vm_names() ) {
         }
         my $ldap;
 
+        $Ravada::Auth::LDAP_OK = undef;
         eval { $ldap = Ravada::Auth::LDAP::_init_ldap_admin() } if $vm;
 
         if ($@ =~ /Bad credentials/) {
