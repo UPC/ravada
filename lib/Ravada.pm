@@ -5,7 +5,7 @@ use strict;
 
 our $VERSION = '0.11.0';
 
-use Carp qw(carp croak);
+use Carp qw(carp croak cluck);
 use Data::Dumper;
 use DBIx::Connector;
 use File::Copy;
@@ -4028,12 +4028,11 @@ sub _refresh_volatile_domains($self) {
                 $domain->_post_shutdown(user => $USER_DAEMON);
                 $domain->remove($USER_DAEMON);
             } else {
-                confess;
-                my $sth= $CONNECTOR->dbh->prepare(
-                "DELETE FROM users where id=? "
-                ." AND is_temporary=1");
-                $sth->execute($id_owner);
-                $sth->finish;
+                cluck "Warning: temporary user id=$id_owner should already be removed";
+                my $user;
+                eval { $user = Ravada::Auth::SQL->search_by_id($id_owner) };
+                warn $@ if $@;
+                $user->remove() if $user;
             }
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
             $sth_del->execute($id_domain);
@@ -4366,15 +4365,14 @@ sub _clean_temporary_users($self) {
         ." WHERE u.is_temporary = 1 AND u.date_created < ?"
     );
 
-    my $sth_del = $CONNECTOR->dbh->prepare(
-        "DELETE FROM users "
-        ." WHERE is_temporary = 1 AND id=?"
-    );
     my $one_day = _date_now(-24 * 60 * 60);
     $sth_users->execute( $one_day );
     while ( my ( $id_user, $id_domain, $date_created ) = $sth_users->fetchrow ) {
         next if $id_domain;
-        $sth_del->execute($id_user);
+        my $user;
+        eval { $user = Ravada::Auth::SQL->search_by_id($id_user) };
+        warn $@ if $@;
+        $user->remove() if $user;
     }
 }
 
@@ -4397,10 +4395,10 @@ sub _clean_volatile_machines($self, %args) {
             eval { $domain_real->remove($USER_DAEMON) };
             warn $@ if $@;
         } elsif ($domain->{id_owner}) {
-            my $sth = $CONNECTOR->dbh->prepare(
-                "DELETE FROM users where id=? "
-                ."AND is_temporary=1");
-            $sth->execute($domain->{id_owner});
+            my $user;
+            eval { $user = Ravada::Auth::SQL->search_by_id($domain->{id_owner})};
+            warn $@ if $@;
+            $user->remove() if $user;
         }
 
         $sth_remove->execute($domain->{id});

@@ -13,7 +13,7 @@ use feature qw(signatures);
 init();
 clean();
 
-my $base = "zz-test-base";
+my $base = "zz-test-base-alpine";
 
 sub _set_no_password() {
     my $sth = connector->dbh->prepare("UPDATE networks set requires_password=0");
@@ -21,6 +21,7 @@ sub _set_no_password() {
 
 for my $vm_name ( 'KVM' ) {
 
+    next if $vm_name eq 'KVM' && $>;
     _set_no_password();
 
     my $domain = import_domain($vm_name);
