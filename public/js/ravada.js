@@ -492,6 +492,7 @@
               $scope.ldap_entries = 0;
               $scope.ldap_verified = 0;
               $http.get('/list_ldap_attributes/'+$scope.cn).then(function(response) {
+                  $scope.ldap_error = response.data.error;
                   $scope.ldap_attributes = response.data.attributes;
               });
           };
