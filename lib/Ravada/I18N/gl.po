@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-11-14 14:28+0000\n"
+"PO-Revision-Date: 2020-11-18 15:08+0000\n"
 "Last-Translator: Gloria Rodriguez <gloria.rodriguez@upc.edu>\n"
 "Language-Team: Galician <https://hosted.weblate.org/projects/ravada/"
 "translation/gl/>\n"
@@ -571,3 +571,149 @@ msgstr "Benvido"
 
 msgid "Login"
 msgstr "Acceder"
+
+msgid "action"
+msgstr "acción"
+
+msgid "Changing Base State"
+msgstr "Cambio de Estado Base"
+
+msgid "Changing Public State"
+msgstr "Cambiar o Estado Público"
+
+msgid "to"
+msgstr "para"
+
+msgid "recommended"
+msgstr "recomendado"
+
+msgid "This machine has not Graphics parameters!"
+msgstr "Esta máquina non ten parámetros Gráficos!"
+
+msgid "Clones"
+msgstr "Clons"
+
+msgid "clones"
+msgstr "clons"
+
+msgid "This virtual machine can't be removed because it has"
+msgstr "Esta máquina virtual non se pode eliminar porque ten"
+
+msgid "Password can not exceed 20 characters"
+msgstr "O contrasinal non pode exceder os 20 caracteres"
+
+msgid "Password is required"
+msgstr "É necesario un contrasinal"
+
+msgid "Username can only contain words, numbers, dashes, dots and underscores"
+msgstr ""
+"O nome de usuario só pode conter palabras, números, guións, puntos e guións "
+"baixos"
+
+msgid "Username must be at least 5 characters"
+msgstr "O nome de usuario debe ter polo menos 5 caracteres"
+
+msgid "Username can not exceed 20 characters"
+msgstr "O nome de usuario non pode exceder os 20 caracteres"
+
+msgid "Username is required"
+msgstr "O nome de usuario é obrigatorio"
+
+msgid "Confirm Password"
+msgstr "Confirmar Contrasinal"
+
+msgid "Enter Password"
+msgstr "Introduce o contrasinal"
+
+msgid "Enter Username"
+msgstr "Introduce o nome de Usuario"
+
+msgid "Please enter the following information to create the account"
+msgstr "Por favor introducir a seguinte información para crear a conta"
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "The machine will shutdown after these minutes"
+msgstr "A máquina apagarase despois destes minutos"
+
+msgid "MB available"
+msgstr "MB dispoñible"
+
+msgid "Memory"
+msgstr "Memoria"
+
+msgid "and"
+msgstr "e"
+
+msgid "with perl framework"
+msgstr "con framework perl"
+
+msgid "It is programmed in"
+msgstr "Está programado en"
+
+msgid "the Windows Clients documentation"
+msgstr "a documentación dos Clientes de Windows"
+
+msgid "For more information, check"
+msgstr "Para mais información, revisa"
+
+msgid "Current Password:"
+msgstr "Contrasinal Actual:"
+
+msgid "Register"
+msgstr "Rexistrar"
+
+msgid "Add new user"
+msgstr "Engadir novo usuario"
+
+msgid "is admin"
+msgstr "é administrador"
+
+msgid "Cloned"
+msgstr "Clonada"
+
+msgid "This Machine is a base"
+msgstr "Esta máquina é unha base"
+
+msgid "Machine locked by"
+msgstr "Máquina bloqueada por"
+
+msgid "License"
+msgstr "Licenza"
+
+msgid "The code is "
+msgstr "O código é"
+
+msgid "The code is available on "
+msgstr "O código está dispoñible en"
+
+msgid "Below are listed the technologies used in this project:"
+msgstr "A continuación hai unha lista de tecnoloxías utilizadas neste proxecto:"
+
+msgid "Development"
+msgstr "Desenvolvemento"
+
+msgid "Authors"
+msgstr "Autores"
+
+msgid "Version"
+msgstr "Versión"
+
+msgid "New Base"
+msgstr "Nova Base"
+
+msgid "public"
+msgstr "público"
+
+msgid "Grants"
+msgstr "Permisos"
+
+msgid "Confirm Password is required"
+msgstr "É obrigatorio confirmar o contrasinal"
+
+msgid "Password can only contain words and numbers"
+msgstr "O contrasinal só poder conter palabras e números"
+
+msgid "Password must be at least 5 characters"
+msgstr "O contrasinal debe ter polo menos 5 caracteres"
