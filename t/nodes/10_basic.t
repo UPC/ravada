@@ -259,6 +259,19 @@ sub _create_2_clones_same_port($vm, $node, $base, $ip_local, $ip_remote) {
     }
 }
 
+sub _start_clone_in_node($vm, $node, $base) {
+    my $found_clone;
+    for my $try ( 1 .. 20 ) {
+        my $clone1 = $base->clone(name => new_domain_name, user => user_admin);
+        _remove_tmp($clone1,$vm);
+        $clone1->start(user_admin);
+        $found_clone = $clone1;
+        last if $clone1->_vm->id == $node->id;
+        ok(scalar($base->list_vms) >1) or die Dumper([map { $_->name } $base->list_vms]);
+    }
+    return $found_clone;
+}
+
 sub test_removed_local_swap($vm, $node) {
     diag("Testing removed local swap in ".$vm->type);
     my $base = create_domain($vm);
@@ -269,15 +282,8 @@ sub test_removed_local_swap($vm, $node) {
     $base->set_base_vm(node => $node, user => user_admin);
     ok(scalar($base->list_vms) >1) or die Dumper([map { $_->name } $base->list_vms]);
 
-    my $found_clone;
-    for my $try ( 1 .. 20 ) {
-        my $clone1 = $base->clone(name => new_domain_name, user => user_admin);
-        _remove_tmp($clone1,$vm);
-        $clone1->start(user_admin);
-        $found_clone = $clone1;
-        last if $clone1->_vm->id == $node->id;
-        ok(scalar($base->list_vms) >1) or die Dumper([map { $_->name } $base->list_vms]);
-    }
+    my $found_clone = _start_clone_in_node($vm, $node, $base);
+
     is($found_clone->_vm->id, $node->id) or exit;
     for my $clone_data ($base->clones) {
         my $clone = Ravada::Domain->open($clone_data->{id});
@@ -643,7 +649,7 @@ sub test_volatile_req_clone($vm, $node) {
         is($req->status, 'done');
         is($req->error,'');
 
-        is(scalar($base->clones),3);
+        is(scalar($base->clones),3) or exit;
         ($clone) = grep { $_->{id_vm} == $node->id } $base->clones;
         last if $clone;
     }
@@ -1072,6 +1078,192 @@ sub test_fill_memory($vm, $node, $migrate) {
     _remove_clones($base);
 }
 
+sub test_migrate($vm, $node) {
+    my $domain = create_domain($vm);
+
+    $domain->migrate($node);
+
+    is($domain->_data('id_vm'), $node->id);
+    is($domain->_vm->id, $node->id);
+
+    $domain->start(user_admin);
+    is($domain->_data('id_vm'), $node->id);
+    is($domain->_vm->id, $node->id);
+
+    is($domain->is_active,1);
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    is($domain2->is_active,1);
+    is($domain2->_data('id_vm'), $node->id);
+    is($domain2->_vm->id, $node->id);
+
+    $domain->shutdown_now(user_admin);
+    start_domain_internal($domain);
+
+    my $domain3 = Ravada::Domain->open($domain->id);
+    $domain3->start(user_admin);
+    is($domain3->is_active,1);
+    is($domain3->_data('id_vm'), $node->id);
+    is($domain3->_vm->id, $node->id);
+
+    is($domain3->has_non_shared_storage($vm),1) or exit;
+
+    $domain->remove(user_admin);
+}
+
+sub test_check_instances($vm, $node) {
+    my $domain = create_domain($vm);
+
+    $domain->migrate($node);
+    start_domain_internal($domain);
+    is($domain->_data('id_vm'), $node->id );
+    is($domain->_vm->id, $node->id);
+
+    my @instances = $domain->list_instances();
+    is(scalar(@instances),2);
+
+    my $sth = connector->dbh->prepare("DELETE FROM domain_instances WHERE id_domain=?");
+    $sth->execute($domain->id);
+
+    my @instances2 = $domain->list_instances();
+    is(scalar(@instances2),0);
+
+    $domain->_data( id_vm => $vm->id );
+    $domain->_vm($vm);
+    $domain->start(user_admin);
+
+    is($domain->_data('id_vm'), $node->id );
+    is($domain->_vm->id, $node->id);
+
+    my @instances3 = $domain->list_instances();
+    is(scalar(@instances3),2, "Expecting 2 instances of ".$domain->name);
+
+    $domain->remove(user_admin);
+}
+
+sub test_migrate_req($vm, $node) {
+    my $domain = create_domain($vm);
+    $domain->start(user_admin);
+    my $req = Ravada::Request->migrate(
+        id_domain => $domain->id
+        , id_node => $node->id
+        , uid => user_admin->id
+        , start => 1
+        , shutdown => 1
+        , shutdown_timeout => 10
+        , remote_ip => '1.2.2.34'
+        , retry => 10
+    );
+    for ( 1 .. 30 ) {
+        wait_request( debug => 1, check_error => 0);
+        is($req->status,'done');
+        last if !$req->error;
+        diag($req->status);
+        diag($req->error." try : ".$req->retry);
+        sleep 1;
+    }
+    is($req->error,'') or exit;
+
+    my $domain3 = Ravada::Domain->open($domain->id);
+    is($domain3->is_active,1);
+    is($domain3->_data('id_vm'), $node->id);
+    is($domain3->_vm->id, $node->id);
+
+    $domain->remove(user_admin);
+}
+
+sub test_display_ip($vm, $node, $set_localhost_dp=0) {
+    my $vm_ip = $vm->ip;
+    if ($set_localhost_dp == 1) {
+        $vm_ip = "192.168.122.1";
+        rvd_back->display_ip($vm_ip);
+    } elsif ($set_localhost_dp == 2) {
+        $vm_ip = "192.168.130.1";
+        $vm->display_ip($vm_ip);
+    }
+
+    eval {
+        $node->display_ip("1.2.3.4");
+    };
+    like($@,qr(is not in any interface in node)i);
+
+    my $display_ip_1 = "127.0.0.1";
+    $node->display_ip($display_ip_1);
+    is($node->display_ip,$display_ip_1);
+
+    my $domain = create_domain($vm);
+    $domain->add_volume(size => 10*1024 , type => 'tmp');
+    $domain->add_volume(size => 10*1024 , type => 'swap');
+
+    my $req = Ravada::Request->start_domain(
+        remote_ip => '3.4.5.7'
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+    );
+    wait_request();
+    like($domain->display(user_admin), qr/$vm_ip/);
+
+    $domain->shutdown_now(user_admin);
+    $domain->prepare_base(user_admin);
+    $domain->set_base_vm(node => $node, user => user_admin);
+
+    my $domain2 = _start_clone_in_node($vm, $node, $domain);
+
+    is($domain2->_vm->id,$node->id) or exit;
+    like($domain2->display(user_admin),qr/$display_ip_1/) or exit;
+
+    _remove_domain($domain);
+
+    $node->_data(display_ip => '');
+    rvd_back->display_ip('') if $set_localhost_dp;
+}
+
+sub test_nat($vm, $node, $set_localhost_natip=0) {
+    my $nat_ip_1 = "5.6.7.8";
+    $node->nat_ip($nat_ip_1);
+
+    my $vm_ip = $vm->ip;
+    if ($set_localhost_natip == 1) {
+        $vm_ip = "22.22.22.22";
+        rvd_back->nat_ip($vm_ip);
+    } elsif ($set_localhost_natip == 2) {
+        $vm_ip = "33.33.33.33";
+        $vm->nat_ip($vm_ip);
+    }
+
+    $node->nat_ip($nat_ip_1);
+    is($node->nat_ip,$nat_ip_1);
+
+    my $domain = create_domain($vm);
+    $domain->add_volume(size => 10*1024 , type => 'tmp');
+    $domain->add_volume(size => 10*1024 , type => 'swap');
+
+    my $req = Ravada::Request->start_domain(
+        remote_ip => '3.4.5.7'
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+    );
+    wait_request();
+    like($domain->display(user_admin), qr/$vm_ip/);
+
+    $domain->shutdown_now(user_admin);
+    $domain->prepare_base(user_admin);
+    $domain->set_base_vm(node => $node, user => user_admin);
+
+    my $domain2 = _start_clone_in_node($vm, $node, $domain);
+
+    is($domain2->_vm->id,$node->id) or exit;
+    like($domain2->display(user_admin),qr/$nat_ip_1/) or exit;
+
+    _remove_domain($domain);
+
+    $node->_data(nat_ip => '');
+    rvd_back->nat_ip('')    if $set_localhost_natip;
+    $vm->nat_ip('')         if $set_localhost_natip;
+
+    $node->_data(nat_ip => '');
+}
+
 ##################################################################################
 clean();
 
@@ -1111,6 +1303,17 @@ for my $vm_name ( vm_names() ) {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+
+        test_check_instances($vm, $node);
+        test_migrate($vm, $node);
+        test_migrate_req($vm, $node);
+
+        test_nat($vm, $node);
+        test_nat($vm, $node, 1); # also set deprecated localhost ip
+        test_nat($vm, $node, 2); # also set localhost ip
+        test_display_ip($vm, $node);
+        test_display_ip($vm, $node, 1); # also set deprecated localhost ip
+        test_display_ip($vm, $node, 2); # also set localhost ip
 
         test_set_vm_fail($vm, $node);
         test_volatile_req_clone($vm, $node);

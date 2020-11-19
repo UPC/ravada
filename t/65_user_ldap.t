@@ -537,6 +537,7 @@ sub test_pass_storage($with_posix_group) {
             my @args = ( $name, $with_posix_group, $$, $storage);
             push @args, ($algorithm) if $algorithm;
 
+            $Ravada::Auth::LDAP_OK=undef;
             Ravada::Auth::LDAP::init();
 
             my $user = test_user(@args);

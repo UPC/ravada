@@ -155,6 +155,21 @@ sub _init_mojo_client {
     $t->get_ok('/')->status_is(200)->content_like(qr/choose a machine/i);
 }
 
+sub test_login_fail {
+    $t->post_ok('/login' => form => {login => "fail", password => 'bigtime'});
+    is($t->tx->res->code(),403);
+    $t->get_ok("/admin/machines")->status_is(401);
+    is($t->tx->res->dom->at("button#submit")->text,'Login') or exit;
+
+    login();
+
+    $t->post_ok('/login' => form => {login => "fail", password => 'bigtime'});
+    is($t->tx->res->code(),403);
+
+    $t->get_ok("/admin/machines")->status_is(401);
+    is($t->tx->res->dom->at("button#submit")->text,'Login') or exit;
+}
+
 sub test_copy_without_prepare($clone) {
     is ($clone->is_base,0) or die "Clone ".$clone->name." is supposed to be non-base";
 
@@ -188,6 +203,8 @@ $t->ua->connect_timeout(60);
 my @bases;
 my @clones;
 
+test_login_fail();
+
 for my $vm_name (@{rvd_front->list_vm_types} ) {
 
     diag("Testing new machine in $vm_name");
@@ -209,8 +226,13 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
     )->status_is(302);
 
     _wait_request(debug => 1, background => 1, check_error => 1);
-    my $base = rvd_front->search_domain($name);
-    ok($base, "Expecting domain $name create") or next;
+    my $base;
+    for ( 1 .. 10 ) {
+        $base = rvd_front->search_domain($name);
+        last if $base;
+        sleep 1;
+    }
+    ok($base, "Expecting domain $name create") or exit;
     push @bases,($base->name);
 
     mojo_request($t, "add_hardware", { id_domain => $base->id, name => 'network' });

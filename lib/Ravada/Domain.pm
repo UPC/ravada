@@ -39,6 +39,8 @@ our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout shutdown_disconnected);
 our $TIME_CACHE_NETSTAT = 60; # seconds to cache netstat data output
 our $RETRY_SET_TIME=10;
 
+our $DEBUG_RSYNC = 0;
+
 _init_connector();
 
 requires 'name';
@@ -236,8 +238,13 @@ sub _check_clean_shutdown($self) {
     return if !$self->is_known || $self->readonly || $self->is_volatile;
 
     if (( $self->_data('status') eq 'active' && !$self->is_active )
+        || ($self->_data('status') eq 'shutdown' && !$self->_data('post_shutdown'))
         || $self->_active_iptables(id_domain => $self->id)) {
             $self->_post_shutdown();
+    }
+
+    if ($self->_data('status') eq 'hibernated' && !$self->_data('post_hibernated')) {
+        $self->_post_hibernate();
     }
 }
 
@@ -297,6 +304,10 @@ sub _vm_disconnect {
 
 sub _around_start($orig, $self, @arg) {
 
+    $self->_post_hibernate() if $self->is_hibernated && !$self->_data('post_hibernated');
+
+    $self->_data( 'post_shutdown' => 0);
+    $self->_data( 'post_hibernated' => 0);
     $self->_start_preconditions(@arg);
 
     my %arg;
@@ -306,6 +317,7 @@ sub _around_start($orig, $self, @arg) {
         $arg{user} = $arg[0];
     }
 
+    my $request = delete $arg{request};
     my $listen_ip = delete $arg{listen_ip};
     my $remote_ip = $arg{remote_ip};
 
@@ -320,7 +332,7 @@ sub _around_start($orig, $self, @arg) {
                 warn $error;
                 die $error if $self->is_local;
                 my $vm_local = $self->_vm->new( host => 'localhost' );
-                $self->migrate($vm_local);
+                $self->migrate($vm_local, $request);
                 next;
             }
         }
@@ -422,7 +434,7 @@ sub _start_checks($self, @args) {
     my $vm = $vm_local;
 
     my ($id_vm, $request);
-    if (!scalar(@args) % 2) {
+    if (!(scalar(@args) % 2)) {
         my %args = @args;
 
         # We may be asked to start the machine in a specific id_vmanager
@@ -460,11 +472,22 @@ sub _start_checks($self, @args) {
         if ($id_vm) {
             $self->_set_vm($vm);
         } else {
-            $self->_balance_vm();
+            $self->_balance_vm($request);
         }
-        $self->rsync(request => $request)  if !$self->is_volatile && !$self->_vm->is_local();
-    } elsif (!$self->is_local) {
-        $self->_set_vm($vm_local, 1);
+        if ( !$self->is_volatile && !$self->_vm->is_local() ) {
+            my $args = {
+                uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $self->id_base
+                ,id_vm => $self->_vm->id
+            };
+
+            my $req;
+            $req = Ravada::Request->set_base_vm(%$args)
+            unless Ravada::Request::_duplicated_request(undef
+                ,'set_base_vm', encode_json($args));
+
+            $self->rsync(request => $request);
+        }
     }
     $self->_check_free_vm_memory();
     #TODO: remove them and make it more general now we have nodes
@@ -501,6 +524,7 @@ sub _search_already_started($self, $fast = 0) {
             next;
         }
         next if !$domain;
+        $vm->_add_instance_db($domain->id);
         if ( $domain->is_active || $domain->is_hibernated ) {
             $self->_set_vm($vm,'force');
             $started{$vm->id}++;
@@ -523,7 +547,7 @@ sub _search_already_started($self, $fast = 0) {
     return keys %started;
 }
 
-sub _balance_vm($self) {
+sub _balance_vm($self, $request=undef) {
     return if $self->{_migrated};
 
     my $base;
@@ -535,7 +559,7 @@ sub _balance_vm($self) {
         return if !$vm_free;
 
         last if $vm_free->id == $self->_vm->id;
-        eval { $self->migrate($vm_free) };
+        eval { $self->migrate($vm_free, $request) };
         last if !$@;
         if ($@ && $@ =~ /file not found/i) {
             $base->_set_base_vm_db($vm_free->id,0) unless $vm_free->is_local;
@@ -851,7 +875,7 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
     $self->_post_remove_base();
     if (!$self->is_local) {
         my $vm_local = Ravada::VM->open( type => $self->vm );
-        $self->migrate($vm_local);
+        $self->migrate($vm_local, $request);
     }
     if ($self->id_base ) {
         $self->spinoff();
@@ -1088,8 +1112,8 @@ sub _around_display_info($orig,$self,$user ) {
 sub _set_display_ip($self, $display) {
 
     my $new_ip = ( $self->_vm->nat_ip
+            or $self->_vm->display_ip
             or $self->_vm->public_ip
-            or Ravada::display_ip()
     );
     unlock_hash(%$display);
     $display->{listen_ip} = $display->{ip};
@@ -1184,7 +1208,11 @@ sub _data($self, $field, $value=undef, $table='domains') {
         $field_id = 'id_domain';
     }
 
-    if (defined $value) {
+    if (defined $value &&
+        ( !exists $self->{$data}->{$field}
+            || !defined $self->{$data}->{$field}
+            || $self->{$data}->{$field} ne $value )
+        ) {
         confess "Domain ".$self->name." is not in the DB"
             if !$self->is_known();
 
@@ -1581,6 +1609,7 @@ sub info($self, $user) {
         ,run_timeout => $self->run_timeout
         ,autostart => $self->autostart
         ,volatile_clones => $self->volatile_clones
+        ,id_vm => $self->_data('id_vm')
     };
     for (qw(comment screenshot id_owner shutdown_disconnected)) {
         $info->{$_} = $self->_data($_);
@@ -1997,6 +2026,9 @@ sub is_locked {
         ." WHERE id_domain=? AND status <> 'done'"
         ."   AND command <> 'open_iptables' "
         ."   AND command <> 'set_time'"
+        ."   AND command <> 'rsync_back'"
+        ."   AND command <> 'refresh_machine'"
+        ."   AND command <> 'screenshot'"
     );
     $sth->execute($self->id);
     my ($id, $at_time) = $sth->fetchrow;
@@ -2389,6 +2421,14 @@ sub _copy_clone($self, %args) {
         ,from_pool => 0
         ,@copy_arg
     );
+
+    _copy_volumes($self, $copy);
+    _copy_ports($self, $copy);
+    $copy->is_pool(1) if $add_to_pool;
+    return $copy;
+}
+
+sub _copy_volumes($self, $copy) {
     my @volumes = $self->list_volumes_info(device => 'disk');
     my @copy_volumes = $copy->list_volumes_info(device => 'disk');
 
@@ -2398,8 +2438,21 @@ sub _copy_clone($self, %args) {
         copy($volumes{$target}, $copy_volumes{$target})
             or die "$! $volumes{$target}, $copy_volumes{$target}"
     }
-    $copy->is_pool(1) if $add_to_pool;
-    return $copy;
+}
+
+sub _copy_ports($base, $copy) {
+    my %port_already;
+    for my $port ( $copy->list_ports ) {
+        $port_already{$port->{internal_port}}++;
+    }
+
+    for my $port ( $base->list_ports ) {
+        my %port = %$port;
+        next if $port_already{$port->{internal_port}};
+        delete @port{'id','id_domain','public_port'};
+        $copy->expose(%port);
+    }
+
 }
 
 sub _post_pause {
@@ -2410,8 +2463,9 @@ sub _post_pause {
     $self->_remove_iptables();
 }
 
-sub _post_hibernate($self, $user) {
+sub _post_hibernate($self, $user=undef) {
     $self->_data(status => 'hibernated');
+    $self->_data(post_hibernated => 1);
     $self->_remove_iptables();
     $self->_close_exposed_port();
 }
@@ -2461,8 +2515,10 @@ sub _post_shutdown {
 
     my $is_active = $self->is_active;
 
-    $self->_data(status => 'shutdown')
-        if $self->is_known && !$self->is_volatile && !$is_active;
+    if ( $self->is_known && !$self->is_volatile && !$is_active ) {
+        $self->_data(status => 'shutdown');
+        $self->_data(post_shutdown => 1);
+    }
 
     if ($self->is_known && $self->id_base) {
         my @disks = $self->list_disks();
@@ -2509,8 +2565,14 @@ sub _post_shutdown {
     # only if not volatile
     my $request;
     $request = $arg{request} if exists $arg{request};
-    $self->_rsync_volumes_back( $request )
-        if !$self->is_local && !$is_active && !$self->is_volatile;
+    if ( !$self->is_local && !$self->is_volatile && $self->has_non_shared_storage()) {
+        my $req = Ravada::Request->rsync_back(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $self->id
+            ,id_node => $self->_vm->id
+            ,at => time + Ravada::setting(undef,"/backend/delay_migrate_back")
+        );
+    }
 
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
@@ -2779,12 +2841,21 @@ sub _set_public_port($self, $id_port, $internal_port, $name, $restricted) {
     }
 }
 
+sub _used_ports_iptables($self, $port) {
+    my $used_port = {};
+    $self->_vm->_list_used_ports_iptables($used_port);
+    return 0 if !$used_port->{$port};
+    return 1;
+}
+
 sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,public_port FROM domain_ports"
         ." WHERE id_domain=? AND internal_port=?"
     );
     $sth->execute($self->id, $internal_port);
     my ($id_port, $public_port) = $sth->fetchrow();
+
+    $public_port = undef if $public_port && $self->_used_ports_iptables($public_port);
 
     $public_port = $self->_set_public_port($id_port, $internal_port, $name, $restricted)
     if !$public_port;
@@ -2817,6 +2888,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
 
 sub _open_iptables_state($self) {
     my $local_net = $self->ip;
+    return if !$local_net;
     $local_net =~ s{(.*)\.\d+}{$1.0/24};
 
     $self->_vm->iptables_unique(
@@ -3931,7 +4003,7 @@ sub rsync($self, @args) {
         if ($self->is_base) {
             push @files_base,($self->list_files_base);
         }
-        $files = [ $self->list_volumes( device => 'disk'), @files_base ];
+        $files = [ $self->list_volumes(), @files_base ];
     }
 
     $request->status("working") if $request;
@@ -3946,7 +4018,8 @@ sub rsync($self, @args) {
             or confess "No Connection to ".$self->_vm->host;
     }
     my $vm_local = $self->_vm->new( host => 'localhost' );
-    my $rsync = File::Rsync->new(update => 1, sparse => 1);
+    my $rsync = File::Rsync->new(update => 1, sparse => 1, archive => 1);
+    my $time_rsync = time;
     for my $file ( @$files ) {
         my ($path) = $file =~ m{(.*)/};
         my ($out, $err) = $node->run_command("/bin/mkdir","-p",$path);
@@ -3960,26 +4033,66 @@ sub rsync($self, @args) {
         } else {
             next if $vm_local->shared_storage($node, $path);
         }
-        $request->status("syncing","Tranferring $file to ".$node->host)
-            if $request;
+        next if _check_stat($file, $vm_local, $node);
+        my $msg = $self->_msg_log_rsync($file, $node, "rsync", $request);
+
+        $request->status("syncing") if $request;
+        $request->error("Syncing $file");
+        $request->error($msg)       if $request && $DEBUG_RSYNC;
+        warn "$msg\n" if $DEBUG_RSYNC;
+
+        my $t0 = time;
         $rsync->exec(src => $src, dest => $dst);
+        $msg = "Domain::rsync ".(time - $t0)." seconds $file";
+        warn $msg if $DEBUG_RSYNC;
+        $request->error($msg) if $request;
     }
     if ($rsync->err) {
-        $request->status("done",join(" ",@{$rsync->err}))   if $request;
+        $request->status("done")                    if $request;
+        $request->error(join(" ",@{$rsync->err}))   if $request;
         confess "error syncing to ".$node->host."\n"
             .Dumper($files)."\n"
             .join(' ',@{$rsync->err});
     }
+    $request->error("rsync done ".(time - $time_rsync)." seconds");
     $node->refresh_storage_pools();
 }
 
-sub _rsync_volumes_back($self, $request=undef) {
-    my $rsync = File::Rsync->new(update => 1);
+sub _check_stat($file, $vm1, $vm2) {
+    return if !$vm2->file_exists($file);
+    my @cmd = ("stat","-c",'"%A %s %y"',$file);
+
+    my ($out1, $err1) = $vm1->run_command(@cmd);
+    my ($out2, $err2) = $vm2->run_command(@cmd);
+    $out1 =~ s/^"(.*)"$/$1/;
+    $out2 =~ s/^"(.*)"$/$1/;
+    warn "$file\n$out1\n$out2\n" if $DEBUG_RSYNC;
+
+    return $out1 eq $out2;
+}
+
+sub _msg_log_rsync($self, $file, $node, $sub, $request) {
+    my $msg = '';
+    $msg .= " [req=".$request->id.",".$request->command."] " if $request;
+    $msg .="Domain::$sub ".$self->name.". Tranferring $file to ".$node->host;
+    return $msg;
+}
+
+sub _rsync_volumes_back($self, $node, $request=undef) {
+    my $rsync = File::Rsync->new(update => 1, sparse => 1, archive => 1);
     my $vm_local = $self->_vm->new( host => 'localhost' );
     for my $file ( $self->list_volumes() ) {
         my ($dir) = $file =~ m{(.*)/.*};
-        next if $vm_local->shared_storage($self->_vm,$dir);
-        $rsync->exec(src => 'root@'.$self->_vm->host.":".$file ,dest => $file );
+        next if $vm_local->shared_storage($node, $dir);
+
+        my $msg = $self->_msg_log_rsync($file, $node, "rsync_back", $request);
+
+        $request->status("syncing") if $request;
+        $request->error($msg)       if $request;
+        warn "$msg\n" if $DEBUG_RSYNC;
+        my $t0 = time;
+        $rsync->exec(src => 'root@'.$node->host.":".$file ,dest => $file );
+        warn "Domain::rsync_volumes_back ".(time - $t0)." seconds $file" if $DEBUG_RSYNC;
         if ( $rsync->err ) {
             $request->status("done",join(" ",@{$rsync->err}))   if $request;
             last;
@@ -3995,28 +4108,29 @@ sub _pre_migrate($self, $node, $request = undef) {
     $self->_check_equal_storage_pools($node) if $self->_vm->is_active;
 
     $self->_internal_autostart(0);
-    return if !$self->id_base;
 
     $self->check_status();
     confess "ERROR: Active domains can't be migrated"   if $self->is_active;
 
-    my $base = Ravada::Domain->open($self->id_base);
-    confess "ERROR: base ".$base->name." not prepared in node ".$node->name
+    if ( $self->id_base ) {
+        my $base = Ravada::Domain->open($self->id_base);
+        confess "ERROR: base ".$base->name." not prepared in node ".$node->name
         if !$base->base_in_vm($node->id);
-    confess "ERROR: base id ".$self->id_base." not found."  if !$base;
+        confess "ERROR: base id ".$self->id_base." not found."  if !$base;
 
-    for my $file ( $base->list_files_base ) {
-        next if $node->file_exists($file);
-        warn "Warning: file not found $file in ".$node->name;
-        Ravada::Request->set_base_vm(
-            uid => Ravada::Utils::user_daemon->id
-            ,id_domain => $base->id
-            ,id_vm => $node->id
-        );
-        return;
+        for my $file ( $base->list_files_base ) {
+            next if $node->file_exists($file);
+            warn "Warning: file not found $file in ".$node->name;
+            Ravada::Request->set_base_vm(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $base->id
+                ,id_vm => $node->id
+            );
+            return;
+        }
+
+        $self->_set_base_vm_db($node->id,0) unless $node->is_local;
     }
-
-    $self->_set_base_vm_db($node->id,0) unless $node->is_local;
     $node->_add_instance_db($self->id);
 }
 
@@ -5205,6 +5319,43 @@ sub list_instances($self) {
         push @instances, ( $row );
     }
     return @instances;
+}
+
+=head2 has_non_shared_storage
+
+Return wether this virtual machine has non shared storage volumes
+
+=cut
+
+sub has_non_shared_storage($self, $node=$self->_vm->new(host => 'localhost')) {
+    my $id1 = $self->_vm->id;
+    my $id2 = $node->id;
+
+    confess "Error: both nodes are the same ".$self->_vm->name
+    ." and ".$node->name
+    if $id1 == $id2;
+
+    my $nodes_id = join(",",sort ($id1,$id2));
+
+    my $shared_storage_cache = $self->_data('shared_storage');
+
+    my $shared_storage = {};
+    $shared_storage = decode_json($shared_storage_cache)
+    if $shared_storage_cache;
+
+    my $has_non_shared;
+    if ($shared_storage && exists $shared_storage->{$nodes_id}) {
+        $has_non_shared = $shared_storage->{$nodes_id};
+        return $has_non_shared if defined $has_non_shared;
+    }
+    for my $file ( $self->list_volumes ) {
+        my ($dir) = $file =~ m{(.*)/};
+        $has_non_shared = !$self->_vm->shared_storage($node, $dir);
+        last if $has_non_shared
+    }
+    $shared_storage->{$nodes_id}= $has_non_shared;
+    $self->_data('shared_storage' => encode_json($shared_storage));
+    return $has_non_shared;
 }
 
 sub _base_in_nodes($self) {

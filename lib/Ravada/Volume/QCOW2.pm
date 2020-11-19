@@ -59,24 +59,6 @@ sub prepare_base($self) {
 
 }
 
-sub _convert_to_qcow($self) {
-    my ($out, $err) = $self->vm->run_command("file",$self->file);
-    return if $out =~ /QEMU QCOW/;
-    warn "converting to qcow $out";
-
-    my $tmp = $self->file.".tmp";
-    ($out, $err) = $self->vm->run_command(_cmd_convert($self->file, $tmp));
-    confess $err if $err;
-
-    my @cmd = ("cp",$self->file,$self->file.".".time().".backup");
-    ($out, $err) = $self->vm->run_command(@cmd);
-    confess "@cmd $err" if $err;
-
-    @cmd = ("cp",$tmp,$self->file);
-    ($out, $err) = $self->vm->run_command(@cmd);
-    confess "@cmd $err" if $err;
-}
-
 sub clone($self, $file_clone) {
     my $n = 10;
     for (;;) {
@@ -88,9 +70,9 @@ sub clone($self, $file_clone) {
     confess if $self->file =~ /ISO/i;
     confess if $file_clone =~ /ISO/i;
 
-    $self->_convert_to_qcow();
+    my $base_format = lc(Ravada::Volume::_type_from_file($self->file, $self->vm));
     my @cmd = ($QEMU_IMG,'create'
-        ,'-F','qcow2'
+        ,'-F',$base_format
         ,'-f','qcow2'
         ,"-b", $self->file
         ,$file_clone
@@ -129,9 +111,11 @@ sub backing_file($self) {
 }
 
 sub rebase($self, $new_base) {
+
+    my $base_format = lc(Ravada::Volume::_type_from_file($new_base, $self->vm));
     my @cmd = ($QEMU_IMG,'rebase'
         ,'-f','qcow2'
-        ,'-F','qcow2'
+        ,'-F',$base_format
         ,'-b',$new_base,$self->file);
     my ($out, $err) = $self->vm->run_command(@cmd);
     confess $err if $err;
@@ -179,7 +163,10 @@ sub _qemu_info($self, $field=undef) {
         return $self->{_qemu_info}->{$field};
     }
 
-    return {} if ! $self->vm->file_exists($self->file);
+    if  ( ! $self->vm->file_exists($self->file) ) {
+        return if defined $field;
+        return {};
+    }
     my @cmd = ( $QEMU_IMG,'info',$self->file,'-U');
 
     my ($out, $err) = $self->vm->run_command(@cmd);

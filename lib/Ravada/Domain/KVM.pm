@@ -510,15 +510,24 @@ sub _set_volumes_backing_store($self) {
         for my $source( $disk->findnodes('source')) {
             my $file = $source->getAttribute('file');
             my $backing_file = $vol{$file}->backing_file();
-            my $backing_file_format = $vol{$file}->_qemu_info('backing file format');
+
 
             my ($backing_store) = $disk->findnodes('backingStore');
             if ($backing_file) {
+                my $vol_backing_file = Ravada::Volume->new(
+                    file => $backing_file
+                    ,vm => $self->_vm
+                );
+                my $backing_file_format = (
+                    $vol_backing_file->_qemu_info('file format')
+                        or 'qcow2'
+                );
+
                 $backing_store = $disk->addNewChild(undef,'backingStore') if !$backing_store;
                 $backing_store->setAttribute('type' => 'file');
 
-                my $format = $backing_store->findnodes('format');
-                $format = $backing_store->addNewChild(undef,'format');
+                my ($format) = $backing_store->findnodes('format');
+                $format = $backing_store->addNewChild(undef,'format') if !$format;
                 $format->setAttribute('type' => $backing_file_format);
 
                 my ($source_bf) = $backing_store->findnodes('source');
@@ -591,11 +600,12 @@ sub _detect_disks_driver($self) {
 
         my $file = $source->getAttribute('file');
         next if $file =~ /iso$/;
+        next unless $self->_vm->file_exists($file);
 
         my ($vol) = grep { defined $_->file && $_->file eq $file } @vols;
         my $format = $vol->_qemu_info('file format');
         confess "Error: wrong format ".Dumper($format)." for file $file"
-        unless $format =~ /^\w+$/;
+        unless !$format || $format =~ /^\w+$/;
 
         confess "Error: no file format for $file" if !$format;
         $driver->setAttribute(type => $format);
@@ -704,7 +714,9 @@ sub start {
 
     $self->_set_spice_ip($set_password, $listen_ip);
 
-    my $is_active = $self->is_active();
+    my $is_active = 0;
+    eval { $is_active = $self->domain->is_active };
+    warn $@ if $@;
     if (!$is_active) {
         $self->_check_qcow_format($request);
         $self->_set_volumes_backing_store();

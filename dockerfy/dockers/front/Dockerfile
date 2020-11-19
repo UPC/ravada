@@ -17,7 +17,9 @@ RUN apt-get update \
 
 ENV TZ=Europe/Madrid
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata \
+ && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 

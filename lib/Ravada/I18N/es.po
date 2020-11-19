@@ -10,15 +10,16 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-01-03 11:17+0000\n"
-"Last-Translator: Amparo _rvd <amparorvd@gmail.com>, 2019\n"
-"Language-Team: Spanish (https://www.transifex.com/ravada/teams/70385/es/)\n"
+"PO-Revision-Date: 2020-11-05 13:22+0000\n"
+"Last-Translator: Dani Sanchez <dani@fib.upc.edu>\n"
+"Language-Team: Spanish <https://hosted.weblate.org/projects/ravada/"
+"translation/es/>\n"
+"Language: es\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: es\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Poedit 1.8.7.1\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 4.3.2-dev\n"
 
 msgid "Ravada broker"
 msgstr "Broker Ravada"
@@ -274,7 +275,7 @@ msgid ""
 "necessary to associate protocol with the app."
 msgstr ""
 "Ten en cuenta que en Windows, la redirección de Spice no es automática. Es "
-"necesario asociar el protocolo con la aplicación."
+"necesario asociar el protocolo con la aplicación"
 
 msgid "To make this possible, download"
 msgstr "Para hacer esto posible, descarga"
@@ -308,7 +309,7 @@ msgid "Password"
 msgstr "Contraseña"
 
 msgid "Start session"
-msgstr "Iniciar sesión"
+msgstr "Iniciar sesión\n"
 
 msgid "bits) in your computer."
 msgstr "bits) en tu ordenador."
@@ -323,7 +324,7 @@ msgid "can change the settings of any virtual machines."
 msgstr "puede cambiar los ajustes de cualquier máquina virtual."
 
 msgid "can change the settings of any virtual machines "
-msgstr "puede cambiar los ajustes de cualquier máquina virtual "
+msgstr "puede cambiar los ajustes de cualquier máquina virtual"
 
 msgid "cloned from one base owned by the user."
 msgstr "clonado desde una base en posesión del usuario."
@@ -366,8 +367,8 @@ msgstr "puede quitar cualquier clon."
 
 msgid "can take a screenshot of any virtual machine owned by the user."
 msgstr ""
-"puede tomar una captura de pantalla de cualquier máquina virtual en posesión"
-" del usuario"
+"puede tomar una captura de pantalla de cualquier máquina virtual en posesión "
+"del usuario."
 
 msgid "can take a screenshot of any virtual machine."
 msgstr "puede tomar una captura de pantalla de cualquier máquina virtual."
@@ -496,13 +497,13 @@ msgid "Show All"
 msgstr "Mostrar Todo"
 
 msgid "Shutting down ..."
-msgstr "Apagando ..."
+msgstr "Apagando …"
 
 msgid "It may take a couple of minutes."
 msgstr "Puede tardar un par de minutos."
 
 msgid "Hybernating ..."
-msgstr "Hibernando ..."
+msgstr "Hibernando …"
 
 msgid "Description"
 msgstr "Descripción"
@@ -675,7 +676,7 @@ msgid "Enter Username"
 msgstr "Introduce el nombre de usuario"
 
 msgid "Enter Password"
-msgstr "Introduce la  contraseña"
+msgstr "Introduce la contraseña"
 
 msgid "Confirm Password"
 msgstr "Confirmar Contraseña"
@@ -777,14 +778,14 @@ msgid "Set base picture"
 msgstr "Establer imagen para la base"
 
 msgid "Saving the screenshot, please wait a moment..."
-msgstr "Grabando la captura de pantalla, espere un momento por favor..."
+msgstr "Grabando la captura de pantalla, espere un momento por favor…"
 
 msgid "You need to run the machine in order to take a screenshot."
 msgstr ""
 "Necesitas la máquina en marcha para poder hacer una captura de pantalla."
 
 msgid "Copying the screenshot, please wait a moment..."
-msgstr "Copiando la captura de pantalla, espere un momento por favor..."
+msgstr "Copiando la captura de pantalla, espere un momento por favor…"
 
 msgid "You need a screenshot in order to copy it to the base machine."
 msgstr "Necesitas una captura de pantalla para copiar a la máquina base."
@@ -835,4 +836,78 @@ msgid "Empty password"
 msgstr "Contraseña vacía"
 
 msgid "Session timeout"
-msgstr "El tiempo de espera de la sesión finalizo."
+msgstr "El tiempo de espera de la sesión finalizo"
+
+msgid "Keep in mind that there may be users using a clone"
+msgstr "Ten en cuenta que puede que haya usuarios usando los clones"
+
+msgid "Yes, shutwdown all the clones"
+msgstr "Sí, apagar todos los clones"
+
+msgid "Shutdown all clones"
+msgstr "Apagar todos los clones"
+
+msgid "These actions affect all the clones on the machine"
+msgstr "Estas acciones afectan a todos los clones de la máquina"
+
+msgid "Add description"
+msgstr "Añadir descripción"
+
+msgid "Enable last for not allowed restrictions."
+msgstr "Activar el último para las restricciones de no permitidas."
+
+msgid "Verifying"
+msgstr "Verificando"
+
+msgid "save"
+msgstr "guardar"
+
+msgid "verify"
+msgstr "verifica"
+
+msgid "If none of the previous match, access is denied."
+msgstr "Si ninguno de los anteriores coincide, el acceso se deniega."
+
+msgid "If none of the previous match, access is allowed."
+msgstr "Si ninguno de los anteriores coincide, el acceso se permite."
+
+msgid "Default"
+msgstr "Por defecto"
+
+msgid "Last"
+msgstr "Último"
+
+msgid "Allowed"
+msgstr "Permitido"
+
+msgid "Value"
+msgstr "Valor"
+
+msgid "Attribute"
+msgstr "Atributo"
+
+msgid "not found in LDAP server"
+msgstr "no encontrado en el servidor LDAP"
+
+msgid "Type a typical LDAP user name to fetch the attribute list"
+msgstr ""
+"Escribe un nombre de usuario típico del LDAP para cargar la lista de "
+"atributos"
+
+msgid "Italian"
+msgstr "Italiano"
+
+msgid "Vietnamese"
+msgstr "Vietnamita"
+
+msgid "entries."
+msgstr "entradas."
+
+msgid "has at least"
+msgstr "tiene, como mínimo"
+
+msgid "No entries found"
+msgstr "No se ha encontrado ninguna entrada"
+
+msgid "User name"
+msgstr "Nombre de usuario"

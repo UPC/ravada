@@ -67,6 +67,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               ,monitoring => 0
                                               ,fallback => 0
                                               ,guide_custom => ''
+                                              ,widget => ''
                                               ,admin => {
                                                     hide_clones => 15
                                                     ,autostart => 0
@@ -109,6 +110,7 @@ plugin I18N => {namespace => 'Ravada::I18N', default => 'en'};
 
 my %config;
 %config = (config => $CONFIG_FRONT->{config}) if $CONFIG_FRONT->{config};
+
 our $RAVADA = Ravada::Front->new(%config);
 
 our $USER;
@@ -161,6 +163,7 @@ hook before_routes => sub {
             ,host => $host
             ,bookings => $RAVADA->setting('/backend/bookings')
             ,FEATURE => {}
+            ,widget => $CONFIG_FRONT->{widget}
             );
 
     $USER = _logged_in($c);
@@ -192,7 +195,7 @@ hook before_routes => sub {
     return access_denied($c)
         if $url =~ /(screenshot|\.json)/
         && !_logged_in($c);
-    return login($c) if !_logged_in($c);
+    return login($c,401) if !_logged_in($c);
 
     if ($USER && $USER->is_admin && $CONFIG_FRONT->{monitoring}) {
         if (!defined $c->session('monitoring')) {
@@ -574,6 +577,12 @@ get '/machine/shutdown/(:id).(:type)' => sub {
         return shutdown_machine($c);
 };
 
+get '/machine/force_shutdown/(:id).(:type)' => sub {
+        my $c = shift;
+    return access_denied($c)        if !$USER ->can_shutdown($c->stash('id'));
+
+        return force_shutdown_machine($c);
+};
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
     return access_denied($c)       if !$USER->can_remove_machine($c->stash('id'));
@@ -1755,8 +1764,7 @@ sub _detect_languages($c) {
 
 }
 
-sub login {
-    my $c = shift;
+sub login($c, $status=200) {
     $c->session(login => undef);
 
     my $login = $c->param('login');
@@ -1808,7 +1816,7 @@ sub login {
                     ." no-repeat bottom center scroll;\n\t}"];
 
     sleep 5 if scalar(@error);
-    my @error_status;
+    my @error_status = ( status => $status );
     @error_status = ( status => 403) if @error;
 
     $c->render(
@@ -2442,6 +2450,17 @@ sub shutdown_machine {
 
     my ($domain, $type) = _search_requested_machine($c);
     my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id);
+
+    return $c->redirect_to('/machines') if $type eq 'html';
+    return $c->render(json => { req => $req->id });
+}
+
+sub force_shutdown_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my ($domain, $type) = _search_requested_machine($c);
+    my $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id);
 
     return $c->redirect_to('/machines') if $type eq 'html';
     return $c->render(json => { req => $req->id });

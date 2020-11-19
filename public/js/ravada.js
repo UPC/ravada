@@ -101,7 +101,8 @@
                 if ( action == 'restore' ) {
                     $scope.host_restore = machine.id_clone;
                     $scope.host_shutdown = 0;
-                } else if (action == 'shutdown' || action == 'hibernate') {
+                    $scope.host_force_shutdown = 0;
+                } else if (action == 'shutdown' || action == 'hibernate' || action == 'force_shutdown') {
                     $scope.host_restore = 0;
                     $http.get( '/machine/'+action+'/'+machine.id_clone+'.json');
                 } else {
@@ -240,7 +241,7 @@
                     });
                 }
             };
-
+            $scope.new_node_start = true;
             subscribe_nodes = function(url, type) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_nodes/'+type) };
@@ -248,6 +249,19 @@
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
                         $scope.nodes = data;
+                        for (var i = 0; i < $scope.nodes.length; i++) {
+                            if ($scope.new_node) {
+                                if ($scope.new_node.id == $scope.nodes[i].id) {
+                                    $scope.new_node = $scope.nodes[i];
+                                    return
+                                }
+                            } else {
+                                if ($scope.nodes[i].id == $scope.showmachine.id_vm) {
+                                    $scope.new_node = $scope.nodes[i];
+                                    return;
+                                }
+                            }
+                        }
                     });
                 }
             };
@@ -840,7 +854,6 @@
 
         };
         $scope.wait_request = function() {
-            $scope.dots += '.';
             if ($scope.id_request) {
                 $http.get('/request/'+$scope.id_request+'.json').then(function(response) {
                     $scope.request=response.data;
@@ -887,7 +900,6 @@
             }
         }
 
-        $scope.dots = '...';
         $scope.redirect_done = false;
         $scope.wait_request();
         $scope.view_clicked=false;

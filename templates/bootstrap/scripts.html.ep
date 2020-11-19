@@ -76,3 +76,7 @@
         document.getElementById("spinn"+iD).style.display="none";
     }
 </script>
+
+% if ( $widget ) {
+<script src="<%= $widget %>"></script>
+% }
