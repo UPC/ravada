@@ -11,17 +11,15 @@ Here you will not find a `chatwoot manual <https://www.chatwoot.com/docs/channel
 
 Once you have the widget you have to paste it in two files.
 
-Available chat in login
------------------------
-Copy your widget before ``</body>`` tag at the end of ``/usr/share/ravada/templates/main/start.html.ep``
+Define widget in rvd_front.conf
+-------------------------------
+In ``/etc/rvd_front.conf`` configure the path to widget code. For example, ```chatwoot_widget.js```
+
+    ,widget => '/js/custom/chatwoot_widget.js'
+
+Copy your code in the file: ``/usr/share/ravada/public/js/custom/chatwoot_widget.js``.
 
 .. image:: images/chat_login.png
-
-If you have a custom login, then here: ``/usr/share/ravada/templates/main/custom/login_acme.html.ep``
-
-Available inside Ravada
------------------------
-Copy your widget before ``</body>`` tag at the end of ``/usr/share/ravada/templates/bootstrap/scripts.html.ep``
 
 .. image:: images/chat_inside.png
 
