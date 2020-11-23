@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html ng-app="ravada.app">
+<link href="/css/fontawesome.min.css" rel="stylesheet">
 <script>
     $_anonymous=<%= ($_anonymous or 0) %>;
 </script>
