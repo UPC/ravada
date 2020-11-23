@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-11-18 15:08+0000\n"
+"PO-Revision-Date: 2020-11-21 13:28+0000\n"
 "Last-Translator: Gloria Rodriguez <gloria.rodriguez@upc.edu>\n"
 "Language-Team: Galician <https://hosted.weblate.org/projects/ravada/"
 "translation/gl/>\n"
@@ -717,3 +717,12 @@ msgstr "O contrasinal só poder conter palabras e números"
 
 msgid "Password must be at least 5 characters"
 msgstr "O contrasinal debe ter polo menos 5 caracteres"
+
+msgid "Confirm Password can only contain words and numbers"
+msgstr "A confirmación do contrasinal só poder conter palabras e números"
+
+msgid "Confirm Password must be at least 5 characters"
+msgstr "A confirmación do contrasinal debe ter polo menos 5 caracteres"
+
+msgid "Confirm Password can not exceed 20 characters"
+msgstr "A confirmación do contrasinal non pode superar os 20 caracteres"
