@@ -52,6 +52,11 @@
         %= include 'main/vm_hardware'
     </div>
 % }
+% if ($USER->can_change_settings($domain->id) && !$domain->is_base) {
+    <div class="tab-pane fade" id="v-pills-actions" role="tabpanel" aria-labelledby="v-pills-actions-tab" >
+        %= include 'main/vm_actions'
+    </div>
+% }
     <div class="tab-pane fade" id="v-pills-copy" role="tabpanel" aria-labelledby="v-pills-copy-tab">
         %= include 'main/vm_copy'
     </div>
