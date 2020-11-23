@@ -607,7 +607,7 @@ get '/machine/screenshot/(:id).(:type)' => sub {
 };
 
 get '/machine/copy_screenshot/(:id).(:type)' => sub {
-        my $c = shift; 
+        my $c = shift;
         my $domain = _search_requested_machine($c);
         return access_denied($c) if (!$USER->is_admin() || $domain->id_base() == NULL );
         return copy_screenshot($c);
@@ -1276,15 +1276,15 @@ get '/machine/hardware/remove/(#id_domain)/(#hardware)/(#index)' => sub {
 
     return access_denied($c)
         unless $USER->id == $domain->id_owner || $USER->is_admin;
-    
+
     my $req = Ravada::Request->remove_hardware(uid => $USER->id
         , id_domain => $domain_id
         , name => $hardware
         , index => $index
     );
-    
-    $RAVADA->wait_request($req,60);  
-    
+
+    $RAVADA->wait_request($req,60);
+
     return $c->render( json => { ok => "Hardware Modified" });
 };
 
@@ -1681,7 +1681,7 @@ sub render_machines_user {
 sub quick_start_domain {
     my ($c, $id_base, $name) = @_;
     my $anonymous = (shift or 0);
-    
+
     return $c->redirect_to('/login') if !$USER;
 
     confess "Missing id_base" if !defined $id_base;
@@ -2099,7 +2099,7 @@ sub manage_machine {
             $msg .= " Changes will apply on next start."    if $domain->is_active;
             push @messages,($msg);
             push @reqs,($req2);
-        
+
     }
     $c->stash(cur_driver => \%cur_driver);
 
@@ -2203,7 +2203,10 @@ sub shutdown_machine {
     return login($c) if !_logged_in($c);
 
     my ($domain, $type) = _search_requested_machine($c);
-    my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id);
+
+    my $req;
+    $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id) if ($c->param('force'));
+    $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id) unless ($c->param('force'));
 
     return $c->redirect_to('/machines') if $type eq 'html';
     return $c->render(json => { req => $req->id });

@@ -32,6 +32,17 @@
     <br><br>
   </div>
 
+  <div ng-show="showmachine.can_shutdown">
+    <button type="button" class="btn btn-danger btn-sm"
+     ng-click="action('machine','shutdown',showmachine.id, { force: true })"
+     ng-disabled="!showmachine.is_active"
+     title="<%=l 'Force ShutDown' %>">
+      <i class="fa fa-power-off"></i>
+    </button>
+    <span><%=l 'Force ShutDown' %></span>
+    <br><br>
+  </div>
+
   <div ng-show="showmachine.can_view">
     <a type="button" class="btn btn-primary btn-sm"
      ng-href="/machine/view/{{showmachine.id}}.html"
