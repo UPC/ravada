@@ -98,7 +98,6 @@
               );
             };
             $scope.action = function(machine, action) {
-              console.log(1);
                 machine.action = false;
                 if ( action == 'restore' ) {
                     $scope.host_restore = machine.id_clone;
