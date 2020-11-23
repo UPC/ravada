@@ -14,8 +14,8 @@
     %	if ($USER->can_change_settings($domain->id)){
         <a class="nav-link" id="v-pills-hardware-tab" ng-click="refresh_machine()" href="#v-pills-hardware" data-toggle="pill" role="tab" aria-controls="v-pills-hardware" aria-selected="false"><%=l 'Hardware' %></a>
     %	}
-    %   if ($USER->can_change_settings($domain->id)) {
-        <a class="nav-link" id="v-pills-icons-tab" ng-click="refresh_machine()" href="#v-pills-icons" data-toggle="pill" role="tab" aria-controls="v-pills-icons" aria-selected="true"><%=l 'Icons' %></a>
+    %   if (($USER->can_change_settings($domain->id)) && !$domain->is_base) {
+        <a class="nav-link" id="v-pills-actions-tab" ng-click="refresh_machine()" href="#v-pills-actions" data-toggle="pill" role="tab" aria-controls="v-pills-icons" aria-selected="true"><%=l 'Actions' %></a>
     %   }
     %   if ($USER->can_change_settings($domain->id) && !$domain->is_base) {
         <a class="nav-link" id="v-pills-screenshot-tab" ng-click="refresh_machine()" href="#v-pills-screenshot" data-toggle="pill" role="tab" aria-controls="v-pills-screenshot" aria-selected="false"><%=l 'Screenshot' %></a>
