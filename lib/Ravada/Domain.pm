@@ -3129,12 +3129,14 @@ sub _post_start {
     my $set_time = delete $arg{set_time};
     $set_time = 1 if !defined $set_time;
 
-    $self->_data('status','active') if $self->is_active();
+    if ( $self->is_active() ) {
+        $self->_data('status','active');
+    }
     my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE domains set start_time=? "
+        "UPDATE domains set start_time=?,is_compacted=? "
         ." WHERE id=?"
     );
-    $sth->execute(time, $self->id);
+    $sth->execute(time, 0, $self->id);
     $sth->finish;
 
     $self->_data('internal_id',$self->internal_id);
@@ -5304,6 +5306,17 @@ sub _base_in_nodes($self) {
 sub _domain_in_nodes($self) {
     return $self->_base_in_nodes() if $self->id_base;
     return $self->list_instances > 1;
+}
+
+sub compact($self, $request=undef) {
+    die "Error: ".$self->name." can't be compacted because it is active"
+    if $self->is_active;
+
+    for my $vol ( $self->list_volumes_info ) {
+        next if $vol->file && $vol->file =~ /iso$/;
+        $request->error("compacting ".$vol->file) if $request;
+        $vol->compact();
+    }
 }
 
 1;

@@ -102,4 +102,6 @@ sub block_commit($self) {
 
 }
 
+sub compact($self) {
+}
 1;

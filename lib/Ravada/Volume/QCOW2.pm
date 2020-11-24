@@ -187,4 +187,29 @@ sub _qemu_info($self, $field=undef) {
     return $info{$field};
 }
 
+sub compact($self) {
+    my $vol_out = $self->file.".sparsify";
+
+    my @cmd = ( "virt-sparsify", "--check-tmpdir","fail", $self->file, $vol_out );
+    my ($out, $err) = $self->vm->run_command(@cmd);
+    die "Error: I can't sparsify ".$self->file." : $err" if $err;
+
+    @cmd = ("qemu-img", "check", $vol_out);
+    ($out, $err) = $self->vm->run_command(@cmd);
+    die "Error: problem checking $vol_out after svirt-sparsify $err" if $err;
+
+    my @stat_in = stat($self->file);
+    my @stat_out = stat($vol_out);
+
+    if ($stat_in[9] >= $stat_out[9] ) {
+        unlink $vol_out;
+        die "Error: ".$self->file." changed while sparsifying. Aborting.";
+    }
+    ($out, $err) = $self->vm->run_command("cp","--preserve=all",$vol_out, $self->file);
+
+    die "Error: @cmd $err" if $err;
+
+    unlink $vol_out;
+}
+
 1;
