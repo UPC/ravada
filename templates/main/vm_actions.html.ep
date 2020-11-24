@@ -8,7 +8,7 @@
     </button>
     <span><%=l 'Start' %></span>
     <br><br>
-  <div>
+  </div>
 
   <div ng-show="showmachine.can_hibernate">
     <button type="button" class="btn btn-warning btn-sm"
