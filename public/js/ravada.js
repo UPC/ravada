@@ -63,7 +63,7 @@
     };
 
     function swSupForm() {
-	
+
         return {
             restrict: "E",
             templateUrl: '/ng-templates/support_form.html',
@@ -73,8 +73,8 @@
 
 
     function addUserFormCrtl($scope, $http, request){
-               
-       
+
+
     };
 
     function swNewMach() {
@@ -85,6 +85,7 @@
         };
 
     };
+
     // list machines
         function mainpageCrtl($scope, $http, $timeout, request, listMach) {
             $scope.set_restore=function(machineId) {
@@ -201,6 +202,15 @@
                         subscribe_nodes(url,data.type);
                     });
                 }
+            };
+
+            $scope.action = function(target,action,machineId){
+              $http.get('/'+target+'/'+action+'/'+machineId+'.json')
+                .then(function() {
+                }, function(data,status) {
+                      console.error('Repos error', status, data);
+                      window.location.reload();
+                });
             };
 
             subscribe_requests = function(url) {
@@ -333,7 +343,7 @@
                   }, 2000);
                   $http.get('/machine/screenshot/'+machineId+'.json');
           };
-          
+
           $scope.reload_page_copy_msg = false;
           $scope.fail_page_copy_msg = false;
           $scope.copy_done = false;
@@ -492,6 +502,7 @@
               $scope.ldap_entries = 0;
               $scope.ldap_verified = 0;
               $http.get('/list_ldap_attributes/'+$scope.cn).then(function(response) {
+                  $scope.ldap_error = response.data.error;
                   $scope.ldap_attributes = response.data.attributes;
               });
           };
@@ -582,7 +593,7 @@
                         $scope.init_domain_access();
                     });
           };
- 
+
           $scope.set_access = function(id_access, allowed, last) {
               $http.get('/machine/set_access/'+$scope.showmachine.id+'/'+id_access+'/'+allowed
                         +'/'+last)
@@ -867,7 +878,7 @@
             if (!$scope.redirect_done) {
                 $timeout(function() {
                     if(typeof $_anonymous != "undefined" && $_anonymous){
-                        window.location.href="/anonymous";                        
+                        window.location.href="/anonymous";
                     }
                     else {
                         window.location.href="/logout";
@@ -924,13 +935,13 @@
 
 	$scope.add_user = function() {
             $http.get('/users/register')
-            
+
         };
 
         $scope.checkbox = [];
 
         //if it is checked make the user admin, otherwise remove admin
-        $scope.stateChanged = function(id,userid) { 
+        $scope.stateChanged = function(id,userid) {
            if($scope.checkbox[id]) { //if it is checked
                 $http.get('/users/make_admin/' + userid + '.json')
                 location.reload();
@@ -944,7 +955,7 @@
     };
 
     function swListUsers() {
-	
+
         return {
             restrict: "E",
             templateUrl: '/ng-templates/list_users.html',
@@ -1014,7 +1025,7 @@
 
         //here you should access the backend, to check if username exists
         //and return a promise
-        //here we're using $q and $timeout to mimic a backend call 
+        //here we're using $q and $timeout to mimic a backend call
         //that will resolve after 1 sec
 
             var defer = $q.defer();

@@ -241,6 +241,10 @@ sub _check_clean_shutdown($self) {
         || $self->_active_iptables(id_domain => $self->id)) {
             $self->_post_shutdown();
     }
+
+    if ($self->_data('status') eq 'hibernated' && !$self->_data('post_hibernated')) {
+        $self->_post_hibernate();
+    }
 }
 
 sub _set_last_vm($self,$force=0) {
@@ -299,7 +303,10 @@ sub _vm_disconnect {
 
 sub _around_start($orig, $self, @arg) {
 
+    $self->_post_hibernate() if $self->is_hibernated && !$self->_data('post_hibernated');
+
     $self->_data( 'post_shutdown' => 0);
+    $self->_data( 'post_hibernated' => 0);
     $self->_start_preconditions(@arg);
 
     my %arg;
@@ -820,7 +827,7 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
 
 
     # TODO: if disk is not base and disks have not been modified, do not generate them
-    # again, just re-attach them 
+    # again, just re-attach them
 #    $self->_check_disk_modified(
     confess "ERROR: domain ".$self->name." is already a base" if $self->is_base();
     $self->_check_has_clones();
@@ -987,7 +994,7 @@ sub _check_cpu_usage($self, $request=undef){
         chomp(my $cpu_count = `grep -c -P '^processor\\s+:' /proc/cpuinfo`);
         die "Error: Too many active domains." if (scalar $self->_vm->vm->list_domains() >= $self->_vm->active_limit);
     }
-    
+
     my @cpu;
     my $msg;
     for ( 1 .. 10 ) {
@@ -1213,7 +1220,7 @@ sub _data($self, $field, $value=undef, $table='domains') {
 
     $self->{$data} = $self->_select_domain_db( _table => $table, @field_select );
 
-    confess "No DB info for domain @field_select in $table ".$self->name 
+    confess "No DB info for domain @field_select in $table ".$self->name
         if ! exists $self->{$data};
     confess "No field $field in $data ".Dumper(\@field_select)."\n".Dumper($self->{$data})
         if !exists $self->{$data}->{$field};
@@ -1622,6 +1629,8 @@ sub info($self, $user) {
     }
     $info->{cdrom} = \@cdrom;
     $info->{requests} = $self->list_requests();
+
+    Ravada::Front::init_available_actions($user, $info);
 
     return $info;
 }
@@ -2221,7 +2230,7 @@ sub _pre_remove_base {
     my ($domain) = @_;
     _allow_manage(@_);
     _check_has_clones(@_);
-    
+
     if (!$domain->is_local) {
         my $vm_local = $domain->_vm->new( host => 'localhost' );
         confess "Error: I can't find local virtual manager ".$domain->type
@@ -2389,6 +2398,14 @@ sub _copy_clone($self, %args) {
         ,from_pool => 0
         ,@copy_arg
     );
+
+    _copy_volumes($self, $copy);
+    _copy_ports($self, $copy);
+    $copy->is_pool(1) if $add_to_pool;
+    return $copy;
+}
+
+sub _copy_volumes($self, $copy) {
     my @volumes = $self->list_volumes_info(device => 'disk');
     my @copy_volumes = $copy->list_volumes_info(device => 'disk');
 
@@ -2398,8 +2415,21 @@ sub _copy_clone($self, %args) {
         copy($volumes{$target}, $copy_volumes{$target})
             or die "$! $volumes{$target}, $copy_volumes{$target}"
     }
-    $copy->is_pool(1) if $add_to_pool;
-    return $copy;
+}
+
+sub _copy_ports($base, $copy) {
+    my %port_already;
+    for my $port ( $copy->list_ports ) {
+        $port_already{$port->{internal_port}}++;
+    }
+
+    for my $port ( $base->list_ports ) {
+        my %port = %$port;
+        next if $port_already{$port->{internal_port}};
+        delete @port{'id','id_domain','public_port'};
+        $copy->expose(%port);
+    }
+
 }
 
 sub _post_pause {
@@ -2410,8 +2440,9 @@ sub _post_pause {
     $self->_remove_iptables();
 }
 
-sub _post_hibernate($self, $user) {
+sub _post_hibernate($self, $user=undef) {
     $self->_data(status => 'hibernated');
+    $self->_data(post_hibernated => 1);
     $self->_remove_iptables();
     $self->_close_exposed_port();
 }
@@ -2495,7 +2526,7 @@ sub _post_shutdown {
             id_domain => $self->id
                ,id_vm => $self->_vm->id
                 , uid => $arg{user}->id
-                 , at => time+$timeout 
+                 , at => time+$timeout
         );
     }
     if ($self->is_volatile) {
@@ -2787,12 +2818,21 @@ sub _set_public_port($self, $id_port, $internal_port, $name, $restricted) {
     }
 }
 
+sub _used_ports_iptables($self, $port) {
+    my $used_port = {};
+    $self->_vm->_list_used_ports_iptables($used_port);
+    return 0 if !$used_port->{$port};
+    return 1;
+}
+
 sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,public_port FROM domain_ports"
         ." WHERE id_domain=? AND internal_port=?"
     );
     $sth->execute($self->id, $internal_port);
     my ($id_port, $public_port) = $sth->fetchrow();
+
+    $public_port = undef if $public_port && $self->_used_ports_iptables($public_port);
 
     $public_port = $self->_set_public_port($id_port, $internal_port, $name, $restricted)
     if !$public_port;
@@ -3629,7 +3669,7 @@ sub get_controller {
 
     my $sub = $self->get_controller_by_name($name);
 #    my $sub = $GET_CONTROLLER_SUB{$name};
-    
+
     die "I can't get controller $name for domain ".$self->name
         if !$sub;
 
@@ -3976,7 +4016,8 @@ sub rsync($self, @args) {
         my $msg = $self->_msg_log_rsync($file, $node, "rsync", $request);
 
         $request->status("syncing") if $request;
-        $request->error($msg)       if $request;
+        $request->error("Syncing $file");
+        $request->error($msg)       if $request && $DEBUG_RSYNC;
         warn "$msg\n" if $DEBUG_RSYNC;
 
         my $t0 = time;

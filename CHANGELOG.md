@@ -1,16 +1,17 @@
 # Change Log
 
-
 **Implemented enhancements:**
 
-- Improve set date #1279
-- Slow response on admin machines page #1276
-- Launch virtual machine in same node if possible #1274
-- Slow start when nodes down #1265
-- Cope with base file missing on node #1264
+- Polished action buttons in main screen [\#1408]
+- Polished shutdown clones buttons [\#1406]
+- Add debug option [\#1402]
+- Loading icon [\#1401]
+- Feature migrate machine [\#1393]
 
 **Bugfixes**
 
-- LDAP access settings broken #1277
-- Wrong display ip on nodes #1262
-- Do not use forced display ip on nodes #1261
+- Ubuntu 20.04 MD5SUM file gone [\#1420]
+- Fix docker files config and dependencies [\#1411]
+- Fix docker files for tzdata package compatibility [\#1376]
+- Fix sync clones back [\#1403]
+- Fix nodes nat [\#1400]

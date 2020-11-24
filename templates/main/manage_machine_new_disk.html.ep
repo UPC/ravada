@@ -68,7 +68,7 @@
     </div>
     <div class="row">
         <div class="col-lg-2">
-            <label for "boot"><%=l 'boot order' %></label>
+            <label for="boot"><%=l 'boot order' %></label>
         </div>
         <div class="col-lg-2">
             <input type="text" size="2" name="boot" ng-model="add_disk.boot">

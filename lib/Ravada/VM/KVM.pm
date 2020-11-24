@@ -1102,11 +1102,12 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _fill_url($iso);
-        return if $req && $req->defined_arg('test');
-        my $url = $self->_download_file_external($iso->{url}, $device, $verbose);
+        my $test = 0;
+        $test = 1 if $req && $req->defined_arg('test');
+        my $url = $self->_download_file_external($iso->{url}, $device, $verbose, $test);
         $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
-            if ! -e $device;
+            if !$test && ! -e $device;
 
         my $verified = 0;
         for my $check ( qw(md5 sha256)) {
@@ -1122,6 +1123,7 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
                 $self->_fetch_this($iso,$check,$url_file);
             }
             next if !$iso->{$check};
+            next if $test;
 
             die "Download failed, $check id=$iso->{id} missmatched for $device."
             ." Please read ISO "
@@ -1129,6 +1131,7 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
             if (! _check_signature($device, $check, $iso->{$check}));
             $verified++;
         }
+        return if $test;
         die "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
 
         $req->status("done","File $iso->{filename} downloaded") if $req;
@@ -1203,7 +1206,20 @@ sub _check_signature($file, $type, $expected) {
     die "Unknown signature type $type";
 }
 
-sub _download_file_external($self, $url, $device, $verbose=1) {
+sub _download_file_external_headers($self,$url) {
+    my @cmd = ($WGET,"-S","--spider",$url);
+
+    my ($in,$out,$err) = @_;
+    run3(\@cmd,\$in,\$out,\$err);
+    my ($status) = $err =~ /^\s*(HTTP.*\d+.*)/m;
+
+    return $url if $status =~ /(200|301|302) ([\w\s]+)$/;
+    # 200: OK
+    # 302: redirect
+    die "Error: $url not found $status";
+}
+
+sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
     $url .= "/" if $url !~ m{/$} && $url !~ m{.*/([^/]+\.[^/]+)$};
     if ($url =~ m{[^*]}) {
         my @found = $self->_search_url_file($url);
@@ -1215,6 +1231,9 @@ sub _download_file_external($self, $url, $device, $verbose=1) {
         $url = "$url$filename";
     }
     confess "ERROR: wget missing"   if !$WGET;
+
+    return $self->_download_file_external_headers($url)    if $test;
+
     my @cmd = ($WGET,'-nv',$url,'-O',$device);
     my ($in,$out,$err) = @_;
     warn join(" ",@cmd)."\n"    if $verbose;
@@ -1289,7 +1308,7 @@ sub _download($self, $url) {
     }
     die $@ if $@;
     confess "ERROR ".$res->code." ".$res->message." : $url"
-        unless $res->code == 200 || $res->code == 301;
+        unless $res->code == 200 || $res->code == 301 || $res->code == 302;
 
     return $self->_cache_store($url,$res->body);
 }
