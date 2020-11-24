@@ -11,10 +11,9 @@
         </div>
 %   }
 
-<div class="card_body" ng-cloak="">
 <div class="tab-content" id="v-pills-tabContent">
 % if ($USER->can_change_settings($domain->id)) {
-    <div class="tab-pane fade show active" id="v-pills-description" role="tabpanel" aria-labelledby="v-pills-description-tab">
+    <div class="tab-pane fade" id="v-pills-description" role="tabpanel" aria-labelledby="v-pills-description-tab">
         %= include 'main/vm_description'
     </div>
     <div class="tab-pane fade" id="v-pills-rename" role="tabpanel" aria-labelledby="v-pills-rename-tab">
@@ -50,6 +49,11 @@
 % if ($USER->can_change_settings($domain->id)) {
     <div class="tab-pane fade" id="v-pills-hardware" role="tabpanel" aria-labelledby="v-pills-hardware-tab" >
         %= include 'main/vm_hardware'
+    </div>
+% }
+% if ($USER->can_change_settings($domain->id) && !$domain->is_base) {
+    <div class="tab-pane fade show active" id="v-pills-actions" role="tabpanel" aria-labelledby="v-pills-actions-tab" >
+        %= include 'main/vm_actions'
     </div>
 % }
     <div class="tab-pane fade" id="v-pills-copy" role="tabpanel" aria-labelledby="v-pills-copy-tab">
@@ -97,4 +101,3 @@
 % }
 
 </div><!-- from tab content -->
-</div><!-- from card body -->

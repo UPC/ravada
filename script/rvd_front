@@ -124,6 +124,7 @@ our $SESSION_TIMEOUT_ADMIN2 = ($CONFIG_FRONT->{session_timeout_admin2} or 60 * 6
 
 my $WS = Ravada::WebSocket->new(ravada => $RAVADA);
 my %ALLOWED_ANONYMOUS_WS = map { $_ => 1 } qw(list_bases_anonymous list_alerts);
+my %LDAP_ATTRIBUTES;
 
 init();
 ############################################################################3
@@ -912,15 +913,27 @@ get '/list_ldap_attributes/(#cn)' => sub {
     return _access_denied($c) if !$USER->is_admin;
 
     my $cn = $c->stash('cn');
+    return $c->render(json => $LDAP_ATTRIBUTES{$cn}) if exists $LDAP_ATTRIBUTES{$cn};
+
     my $user;
     eval {
         ($user) = Ravada::Auth::LDAP::search_user($cn);
     };
-    return $c->render(json => { error => $@ }) if $@;
-    return $c->render(json => []) if !$user;
+    my $return;
+    if ( $@ ) {
+        my $error = $@;
+        $error =~ s/(.*) at lib\/Ravada.*/$1/;
+        $return = { error => $error };
+    } elsif (!$user) {
+        $return = { error => "User not found" };
+    } else {
+        $return = {attributes => [sort $user->attributes]};
+    }
 
     $c->session(ldap_attributes_cn => $cn) if $user;
-    return $c->render(json => {attributes => [sort $user->attributes]});
+    $LDAP_ATTRIBUTES{$cn} = $return;
+
+    return $c->render( json => $return );
 };
 
 get '/count_ldap_entries/(#attribute)/(#value)' => sub {
