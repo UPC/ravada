@@ -332,11 +332,15 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
     test_validate_html("/machine/manage/".$base->id.".html");
 
     $t->get_ok("/machine/prepare/".$base->id.".json")->status_is(200);
-    _wait_request(debug => 1, background => 1, check_error => 1);
-    $base = rvd_front->search_domain($name);
-    is($base->is_base,1);
+    for ( 1 .. 10 ) {
+        $base = rvd_front->search_domain($name);
+        last if $base->is_base || !$base->list_requests;
+        _wait_request(debug => 1, background => 1, check_error => 1);
+    }
+    is($base->is_base,1) or next;
 
     is(scalar($base->list_ports),0);
+    mojo_check_login($t);
     $t->get_ok("/machine/clone/".$base->id.".json")->status_is(200);
     _wait_request(debug => 0, background => 1, check_error => 1);
     my $clone = rvd_front->search_domain($name."-".user_admin->name);

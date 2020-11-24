@@ -1,5 +1,8 @@
 <div class="card-body"><!-- options -->
-    <form class="form" action="<%= $action %>" method="post">
+    <div ng-hide="showmachine">
+        <%=l 'Loading machine status' %> <i class="fas fa-sync-alt fa-spin"></i>
+    </div>
+    <form ng-show="showmachine" class="form" action="<%= $action %>" method="post">
         <div class="form-group">
             <div class="row" ng-show="showmachine.ip">
                 <div class="col-lg-3 mt-2">

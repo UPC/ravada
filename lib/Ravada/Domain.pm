@@ -2047,7 +2047,7 @@ sub clones($self, %filter) {
     _init_connector();
 
     my $query =
-        "SELECT id, id_vm, name, id_owner, status, client_status, is_pool"
+        "SELECT id, id_vm, name, id_owner, status, client_status, is_pool, is_base"
             ." FROM domains "
             ." WHERE id_base = ? ";
     my @values = ($self->id);
