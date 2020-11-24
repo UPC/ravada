@@ -682,7 +682,7 @@ sub _remove_old_disks_kvm {
             sleep 1;
         }
         for my $volume  ( @volumes ) {
-            next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2|void)$/;
+            next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2|void|backup)$/;
 
             eval { $volume->delete() };
             warn $@ if $@;

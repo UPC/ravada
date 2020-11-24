@@ -1553,6 +1553,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','shared_storage','varchar(254)');
     $self->_upgrade_table('domains','post_shutdown','int not null default 0');
     $self->_upgrade_table('domains','is_compacted','int not null default 0');
+    $self->_upgrade_table('domains','has_backups','int not null default 0');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 

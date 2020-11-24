@@ -102,6 +102,9 @@ sub block_commit($self) {
 
 }
 
-sub compact($self) {
+sub compact($self, $keep_backup) {
+    $self->backup() if $keep_backup;
+
+    return $self->info->{target}." 100% compacted. ";
 }
 1;

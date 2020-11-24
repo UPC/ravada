@@ -171,6 +171,7 @@ our %COMMAND = (
                     , 'remove_base_vm'
                     , 'screenshot'
                     , 'cleanup'
+                    , 'compact'
                 ]
         ,priority => 20
     }
