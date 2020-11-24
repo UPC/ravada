@@ -27,7 +27,7 @@ if [ ! -e $SERVER_KEY ]; then
 fi
 # create a certificate signing request (csr)
 if [ ! -e server-key.csr ]; then
-    openssl req -new -key $SERVER_KEY -out server-key.csr -subj "$SUBJECT/CN=$SERVER_IP>"
+    openssl req -new -key $SERVER_KEY -out server-key.csr -subj "$SUBJECT/CN=$SERVER_IP"
 fi
 # signing our server certificate with this ca
 if [ ! -e server-cert.pem ]; then
