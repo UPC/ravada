@@ -10,6 +10,8 @@
 
 **Bugfixes**
 
+- Some Linux ISO downloads fail [\#1442]
+- Clone not created, base_name-daemon already exists [\#1443]
 - Ubuntu 20.04 MD5SUM file gone [\#1420]
 - Fix docker files config and dependencies [\#1411]
 - Fix docker files for tzdata package compatibility [\#1376]
