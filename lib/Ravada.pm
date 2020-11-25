@@ -216,8 +216,8 @@ sub _update_isos {
                    ,arch => 'amd64'
                     ,xml => 'focal_fossa-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
-                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04/release/ubuntu-mate-20.04-desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04.*/release/ubuntu-mate-20.04.*-desktop-amd64.iso'
+                ,sha256_url => '$url/SHA256SUMS'
         },
         mate_bionic => {
                     name => 'Ubuntu Mate Bionic 64 bits'
@@ -226,7 +226,7 @@ sub _update_isos {
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
+                ,sha256_url => '$url/SHA256SUMS'
         },
         mate_bionic_i386 => {
                     name => 'Ubuntu Mate Bionic 32 bits'
@@ -235,7 +235,7 @@ sub _update_isos {
                     ,xml => 'bionic-i386.xml'
              ,xml_volume => 'bionic32-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
-                ,md5_url => '$url/MD5SUMS'
+                ,sha256_url => '$url/SHA256SUMS'
         },
         mate_xenial => {
                     name => 'Ubuntu Mate Xenial'
@@ -244,7 +244,7 @@ sub _update_isos {
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/16.04.*/release/ubuntu-mate-16.04.*-desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
+                ,sha256_url => '$url/SHA256SUMS'
                 ,min_disk_size => '10'
         },
 	,focal_fossa=> {
@@ -253,8 +253,8 @@ sub _update_isos {
                    ,arch => 'amd64'
                     ,xml => 'focal_fossa-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
-                    ,url => 'http://releases.ubuntu.com/20.04/'
-                ,file_re => '^ubuntu-20.04.*desktop-amd64.iso'
+                    ,url => 'http://releases.ubuntu.com/20.04'
+                ,file_re => '^ubuntu-20.04.1-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
         }
@@ -333,9 +333,9 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'focal_fossa-amd64.xml'
             ,xml_volume => 'focal_fossa64-volume.xml'
-            ,md5_url => '$url/MD5SUMS'
-            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/20.04/release/'
-            ,file_re => 'kubuntu-20.04-desktop-amd64.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/20.04.*/release/'
+            ,file_re => 'kubuntu-20.04.*-desktop-amd64.iso'
             ,rename_file => 'kubuntu_focal_fossa_64.iso'
         }
         ,kubuntu_64 => {
@@ -344,9 +344,9 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
-            ,md5_url => '$url/MD5SUMS'
+            ,sha256_url => '$url/SHA256SUMS'
             ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/18.04/release/'
-            ,file_re => 'kubuntu-18.04-desktop-amd64.iso'
+            ,file_re => 'kubuntu-18.04.\d+-desktop-amd64.iso'
             ,rename_file => 'kubuntu_bionic_64.iso'
         }
         ,kubuntu_32 => {
@@ -355,9 +355,9 @@ sub _update_isos {
             ,arch => 'i386'
             ,xml => 'bionic-i386.xml'
             ,xml_volume => 'bionic32-volume.xml'
-            ,md5_url => '$url/MD5SUMS'
+            ,sha256_url => '$url/SHA256SUMS'
             ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/18.04/release/'
-            ,file_re => 'kubuntu-18.04-desktop-i386.iso'
+            ,file_re => 'kubuntu-18.04.\d+-desktop-i386.iso'
             ,rename_file => 'kubuntu_bionic_32.iso'
         }
         ,suse_15 => {
@@ -377,7 +377,7 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
-            ,md5_url => '$url/../MD5SUMS'
+            ,sha256_url => '$url/../SHA256SUMS'
             ,url => 'http://archive.ubuntu.com/ubuntu/dists/bionic/main/installer-amd64/current/images/netboot/'
             ,file_re => 'mini.iso'
             ,rename_file => 'xubuntu_bionic_64.iso'
@@ -407,7 +407,7 @@ sub _update_isos {
              name => 'Lubuntu Bionic Beaver 64 bits'
              ,description => 'Lubuntu 18.04 Bionic Beaver 64 bits'
              ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-amd64.iso'
-             ,md5_url => '$url/MD5SUMS'
+             ,sha256_url => '$url/SHA256SUMS'
              ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
          }
@@ -416,7 +416,7 @@ sub _update_isos {
              ,description => 'Lubuntu 18.04 Bionic Beaver 32 bits'
              ,arch => 'i386'
              ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-i386.iso'
-             ,md5_url => '$url/MD5SUMS'
+             ,sha256_url => '$url/SHA256SUMS'
              ,xml => 'bionic-i386.xml'
              ,xml_volume => 'bionic32-volume.xml'
         }
@@ -1487,6 +1487,7 @@ sub _upgrade_tables {
     my $self = shift;
 #    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
 
+    $self->_upgrade_table("base_xml",'xml','TEXT');
     $self->_upgrade_table('file_base_images','target','varchar(64) DEFAULT NULL');
 
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
@@ -1573,9 +1574,12 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','shared_storage','varchar(254)');
     $self->_upgrade_table('domains','post_shutdown','int not null default 0');
     $self->_upgrade_table('domains','post_hibernated','int not null default 0');
+    $self->_upgrade_table('domains','is_compacted','int not null default 0');
+    $self->_upgrade_table('domains','has_backups','int not null default 0');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
+    $self->_upgrade_table('domains_kvm','xml','TEXT');
     $self->_upgrade_table('iptables','id_vm','int DEFAULT NULL');
     $self->_upgrade_table('vms','security','varchar(255) default NULL');
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
@@ -3117,8 +3121,9 @@ sub _cmd_open_iptables {
 
 sub _cmd_clone($self, $request) {
 
-    return _req_clone_many($self, $request) if $request->defined_arg('number')
-    && $request->defined_arg('number') > 1;
+    return _req_clone_many($self, $request)
+        if ( $request->defined_arg('number') && $request->defined_arg('number') > 1)
+            || (! $request->defined_arg('name') && $request->defined_arg('add_to_pool'));
 
     my $domain = Ravada::Domain->open($request->args('id_domain'))
         or confess "Error: Domain ".$request->args('id_domain')." not found";
@@ -3781,6 +3786,42 @@ sub _cmd_set_time($self, $request) {
     die "$@ , retry.\n" if $@;
 }
 
+sub _cmd_compact($self, $request) {
+    my $id_domain = $request->args('id_domain');
+    my $domain = Ravada::Domain->open($id_domain)
+        or do {
+            $request->retry(0);
+            Ravada::Request->refresh_vms();
+            die "Error: domain $id_domain not found\n";
+        };
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    die "Error: user ".$user->name." not allowed to compact ".$domain->name
+    unless $user->is_operator || $uid == $domain->_data('id_owner');
+
+    $domain->compact($request);
+}
+
+sub _cmd_purge($self, $request) {
+    my $id_domain = $request->args('id_domain');
+    my $domain = Ravada::Domain->open($id_domain)
+        or do {
+            $request->retry(0);
+            Ravada::Request->refresh_vms();
+            die "Error: domain $id_domain not found\n";
+        };
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    die "Error: user ".$user->name." not allowed to compact ".$domain->name
+    unless $user->is_operator || $uid == $domain->_data('id_owner');
+
+    $domain->purge($request);
+}
+
 sub _migrate_base($self, $domain, $id_node, $uid, $request) {
     if (ref($id_node)) {
         $id_node = $id_node->id;
@@ -4168,6 +4209,8 @@ sub _req_method {
 ,remove_hardware => \&_cmd_remove_hardware
 ,change_hardware => \&_cmd_change_hardware
 ,set_time => \&_cmd_set_time
+,compact => \&_cmd_compact
+,purge => \&_cmd_purge
 
 # Domain ports
 ,expose => \&_cmd_expose
@@ -4515,3 +4558,4 @@ Sys::Virt
 =cut
 
 1;
+

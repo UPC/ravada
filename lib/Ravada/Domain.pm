@@ -1582,7 +1582,7 @@ sub info($self, $user) {
         ,volatile_clones => $self->volatile_clones
         ,id_vm => $self->_data('id_vm')
     };
-    for (qw(comment screenshot id_owner shutdown_disconnected)) {
+    for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups)) {
         $info->{$_} = $self->_data($_);
     }
     if ($is_active) {
@@ -3165,12 +3165,14 @@ sub _post_start {
     my $set_time = delete $arg{set_time};
     $set_time = 1 if !defined $set_time;
 
-    $self->_data('status','active') if $self->is_active();
+    if ( $self->is_active() ) {
+        $self->_data('status','active');
+    }
     my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE domains set start_time=? "
+        "UPDATE domains set start_time=?,is_compacted=? "
         ." WHERE id=?"
     );
-    $sth->execute(time, $self->id);
+    $sth->execute(time, 0, $self->id);
     $sth->finish;
 
     $self->_data('internal_id',$self->internal_id);
@@ -5367,6 +5369,54 @@ sub _base_in_nodes($self) {
 sub _domain_in_nodes($self) {
     return $self->_base_in_nodes() if $self->id_base;
     return $self->list_instances > 1;
+}
+
+sub compact($self, $request=undef) {
+    #first check if active, that will trigger status refresh
+    die "Error: ".$self->name." can't be compacted because it is active\n"
+    if $self->is_active;
+
+    # now check the status, it may be hibernated or in some other
+    my $status = $self->_data('status');
+    die "Error: ".$self->name." can't be compacted because it is $status\n"
+    unless $status eq 'shutdown';
+
+    my $keep_backup = 1;
+    $keep_backup = $request->defined_arg('keep_backup') if $request;
+    $keep_backup = 1 if !defined $keep_backup;
+
+    my $backed_up = '';
+    $backed_up = " [backed up]" if $keep_backup;
+
+    my $out = '';
+    for my $vol ( $self->list_volumes_info ) {
+        next if !$vol->file || $vol->file =~ /iso$/;
+        if ( !$self->is_active ) {
+            my $vm = $self->_vm->new ( host => 'localhost' );
+            $vol->vm($vm);
+        }
+        $request->error("compacting ".$vol->file."$backed_up") if $request;
+        $out .= $vol->info->{target}." ".($vol->compact($keep_backup) or '');
+    }
+    $request->error($out) if $request;
+    $self->_data('is_compacted' => 1);
+
+    $self->_data('has_backups' => $self->_data('has_backups') +1 ) if $keep_backup;
+}
+
+sub purge($self, $request=undef) {
+    my $vm = $self->_vm->new ( host => 'localhost' );
+    for my $vol ( $self->list_volumes_info ) {
+        next if !$vol->file || $vol->file =~ /iso$/;
+        my ($dir, $file) = $vol->file =~ m{(.*)/(.*)};
+        my ($out, $err) = $vm->run_command("ls",$dir);
+        die $err if $err;
+        my @found = grep { /^$file/ } $out =~ m{^(.*backup)}mg;
+        for my $file_backup ( @found ) {
+            $vm->remove_file("$dir/$file_backup");
+        }
+    }
+    $self->_data( 'has_backups' => 0 );
 }
 
 1;
