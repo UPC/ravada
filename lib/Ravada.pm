@@ -3805,6 +3805,24 @@ sub _cmd_compact($self, $request) {
     $domain->compact($request);
 }
 
+sub _cmd_purge($self, $request) {
+    my $id_domain = $request->args('id_domain');
+    my $domain = Ravada::Domain->open($id_domain)
+        or do {
+            $request->retry(0);
+            Ravada::Request->refresh_vms();
+            die "Error: domain $id_domain not found\n";
+        };
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    die "Error: user ".$user->name." not allowed to compact ".$domain->name
+    unless $user->is_operator || $uid == $domain->_data('id_owner');
+
+    $domain->purge($request);
+}
+
 sub _migrate_base($self, $domain, $node, $uid, $request) {
     my $base = Ravada::Domain->open($domain->id_base);
     return if $base->base_in_vm($node->id);
@@ -4180,6 +4198,7 @@ sub _req_method {
 ,change_hardware => \&_cmd_change_hardware
 ,set_time => \&_cmd_set_time
 ,compact => \&_cmd_compact
+,purge => \&_cmd_purge
 
 # Domain ports
 ,expose => \&_cmd_expose

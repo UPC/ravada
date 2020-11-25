@@ -114,7 +114,8 @@ our %VALID_ARG = (
     ,migrate => { uid => 1, id_node => 1, id_domain => 1, start => 2, remote_ip => 2
         ,shutdown => 2, shutdown_timeout => 2
     }
-    ,compact => { uid => 1, id_domain => 1 }
+    ,compact => { uid => 1, id_domain => 1 , keep_backup => 2 }
+      ,purge => { uid => 1, id_domain => 1 }
 
     #users
     ,post_login => { user => 1, locale => 2 }

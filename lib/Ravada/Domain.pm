@@ -1586,7 +1586,7 @@ sub info($self, $user) {
         ,volatile_clones => $self->volatile_clones
         ,id_vm => $self->_data('id_vm')
     };
-    for (qw(comment screenshot id_owner shutdown_disconnected)) {
+    for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups)) {
         $info->{$_} = $self->_data($_);
     }
     if ($is_active) {
@@ -5363,12 +5363,17 @@ sub compact($self, $request=undef) {
     $keep_backup = $request->defined_arg('keep_backup') if $request;
     $keep_backup = 1 if !defined $keep_backup;
 
+    my $backed_up = '';
+    $backed_up = " [backed up]" if $keep_backup;
+
     my $out = '';
     for my $vol ( $self->list_volumes_info ) {
         next if !$vol->file || $vol->file =~ /iso$/;
-        my $vm = $self->_vm->new ( host => 'localhost' );
-        $vol->vm($vm);
-        $request->error("compacting ".$vol->file) if $request;
+        if ( !$self->is_active ) {
+            my $vm = $self->_vm->new ( host => 'localhost' );
+            $vol->vm($vm);
+        }
+        $request->error("compacting ".$vol->file."$backed_up") if $request;
         $out .= $vol->info->{target}." ".($vol->compact($keep_backup) or '');
     }
     $request->error($out) if $request;
@@ -5377,7 +5382,7 @@ sub compact($self, $request=undef) {
     $self->_data('has_backups' => $self->_data('has_backups') +1 ) if $keep_backup;
 }
 
-sub purge($self) {
+sub purge($self, $request=undef) {
     my $vm = $self->_vm->new ( host => 'localhost' );
     for my $vol ( $self->list_volumes_info ) {
         next if !$vol->file || $vol->file =~ /iso$/;
