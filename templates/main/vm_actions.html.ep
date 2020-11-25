@@ -42,4 +42,44 @@
     <br><br>
   </div>
 
+  <hr>
+
+<div class="container">
+
+  <div class="row mt-2">
+    <div class="col-lg-2" align="right">
+      <button class="btn btn-outline-dark"
+        ng-disabled="showmachine.is_compacted"
+        ng-click="request('compact',{'id_domain': showmachine.id , 'keep_backup': true })"
+        ><%=l 'Compact' %></button>
+    </div>
+    <div class="col-md-7">
+        <div><%=l 'Compact disk volumes' %></div>
+        <div ng-show="showmachine.is_compacted">
+            This virtual machine has already been compacted
+        </div>
+    </div>
+  </div>
+
+  <div class="row mt-2">
+    <div class="col-lg-2" align="right">
+      <button class="btn btn-outline-dark"
+        ng-disabled="!showmachine.has_backups"
+        ng-click="request('purge',{'id_domain': showmachine.id })"
+        ><%=l 'Purge' %></button>
+    </div>
+    <div class="col-md-7">
+        <span><%=l 'Purge disk volumes' %></span>
+        <div ng-hide="showmachine.has_backups">
+            This virtual machine has no backups to purge
+        </div>
+    </div>
+  </div>
+
+</div>
+
+  <div ng-show="pending_request">
+    %= include "/main/pending_request"
+  </div>
+
 </div>

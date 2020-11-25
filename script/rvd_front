@@ -750,6 +750,14 @@ get '/machine/move_access/(#id_domain)/(#id_access)/(#position)' => sub {
 
 };
 
+get '/machine/compact/(#id_domain)' => sub($c) {
+    my $req = Ravada::Request->compact(
+        id_domain => $c->stash('id_domain')
+        ,uid => $USER->id
+    );
+    return $c->render(json => { request => $req->id });
+};
+
 get '/node/exists/#name' => sub {
     my $c = shift;
     my $name = $c->stash('name');
