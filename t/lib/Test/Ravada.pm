@@ -682,7 +682,7 @@ sub _remove_old_disks_kvm {
             sleep 1;
         }
         for my $volume  ( @volumes ) {
-            next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2|void)$/;
+            next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2|void|backup)$/;
 
             eval { $volume->delete() };
             warn $@ if $@;
@@ -901,7 +901,10 @@ sub fast_forward_requests() {
     my $sth = $CONNECTOR->dbh->prepare("UPDATE requests "
         ." SET at_time=0 WHERE status = 'requested' AND at_time>0 "
     );
+    eval {
     $sth->execute();
+    };
+    die $@ if $@ && $@ !~ /Deadlock found when/;
 }
 
 sub init_vm {
@@ -1773,7 +1776,22 @@ sub DESTROY {
     _unlock_all();
 }
 
+sub _check_leftovers {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM grants_user WHERE id_user NOT IN "
+        ." ( SELECT id FROM users )"
+    );
+    $sth->execute();
+    my @error;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @error, ("Leftover from grant_user not in user ".Dumper($row));
+    }
+    $sth->finish;
+    ok(!@error) or die Dumper(\@error);
+}
+
+
 sub end {
+    _check_leftovers
     clean();
     _unlock_all();
     _file_db();
@@ -1811,7 +1829,7 @@ sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
     $config->{vm}=['KVM','Void'];
     delete $config->{ldap}->{ravada_posix_group}   if !$with_posix_group;
 
-    my $fly_config = "/var/tmp/ravada_".base_domain_name().".conf";
+    my $fly_config = "/var/tmp/ravada_".base_domain_name().".$$.conf";
     DumpFile($fly_config, $config);
 
     $RVD_BACK = undef;
@@ -1893,6 +1911,19 @@ sub mangle_volume($vm,$name,@vol) {
     }
 }
 
+sub _lsof_nbd($vm, $dev_nbd) {
+    my ($out, $err) = $vm->run_command("ls","/dev");
+    die $err if $err;
+    my ($nbd) = $dev_nbd =~ m{^/dev/(.*)};
+    for my $dev (split /\n/,$out) {
+        next if $dev !~ /^$nbd/;
+        my ($out2, $err2) = $vm->run_command("lsof","/dev/$dev");
+        my @line = split /\n/,$out2;
+        return 1 if scalar(@line) >= 2;
+    }
+    return 0;
+}
+
 sub _load_nbd($vm) {
     my ($in, $out, $err);
     if (!$MOD_NBD++) {
@@ -1904,9 +1935,7 @@ sub _load_nbd($vm) {
     ($out,$err) = $vm->run_command(@cmd);
     die "@cmd : $err" if $err;
 
-    ($out, $err) = $vm->run_command("lsof",$DEV_NBD);
-    my @line = split /\n/,$out;
-    return if scalar(@line) < 2;
+    return if !_lsof_nbd($vm, $DEV_NBD);
 
     my ($dev,$n) = $DEV_NBD =~ /(.*?)(\d+)$/;
     $n++;

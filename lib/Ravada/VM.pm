@@ -441,6 +441,7 @@ sub _around_create_domain {
     my $domain = $self->$orig(%args_create, volatile => $volatile);
     $self->_add_instance_db($domain->id);
     $domain->add_volume_swap( size => $swap )   if $swap;
+    $domain->_data('is_compacted' => 1);
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
@@ -1905,8 +1906,8 @@ sub _list_used_ports_iptables($self, $used_port) {
     my $iptables = $self->iptables_list();
     for my $rule ( @{$iptables->{nat}} ) {
         my %rule = @{$rule};
-        next if !exists $rule{A} || $rule{A} ne 'PREROUTING';
-        $used_port->{dport}++;
+        next if !exists $rule{A} || $rule{A} ne 'PREROUTING' || !$rule{dport};
+        $used_port->{$rule{dport}}++;
     }
 }
 

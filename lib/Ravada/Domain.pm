@@ -241,6 +241,10 @@ sub _check_clean_shutdown($self) {
         || $self->_active_iptables(id_domain => $self->id)) {
             $self->_post_shutdown();
     }
+
+    if ($self->_data('status') eq 'hibernated' && !$self->_data('post_hibernated')) {
+        $self->_post_hibernate();
+    }
 }
 
 sub _set_last_vm($self,$force=0) {
@@ -299,7 +303,10 @@ sub _vm_disconnect {
 
 sub _around_start($orig, $self, @arg) {
 
+    $self->_post_hibernate() if $self->is_hibernated && !$self->_data('post_hibernated');
+
     $self->_data( 'post_shutdown' => 0);
+    $self->_data( 'post_hibernated' => 0);
     $self->_start_preconditions(@arg);
 
     my %arg;
@@ -820,7 +827,7 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
 
 
     # TODO: if disk is not base and disks have not been modified, do not generate them
-    # again, just re-attach them 
+    # again, just re-attach them
 #    $self->_check_disk_modified(
     confess "ERROR: domain ".$self->name." is already a base" if $self->is_base();
     $self->_check_has_clones();
@@ -987,7 +994,7 @@ sub _check_cpu_usage($self, $request=undef){
         chomp(my $cpu_count = `grep -c -P '^processor\\s+:' /proc/cpuinfo`);
         die "Error: Too many active domains." if (scalar $self->_vm->vm->list_domains() >= $self->_vm->active_limit);
     }
-    
+
     my @cpu;
     my $msg;
     for ( 1 .. 10 ) {
@@ -1213,7 +1220,7 @@ sub _data($self, $field, $value=undef, $table='domains') {
 
     $self->{$data} = $self->_select_domain_db( _table => $table, @field_select );
 
-    confess "No DB info for domain @field_select in $table ".$self->name 
+    confess "No DB info for domain @field_select in $table ".$self->name
         if ! exists $self->{$data};
     confess "No field $field in $data ".Dumper(\@field_select)."\n".Dumper($self->{$data})
         if !exists $self->{$data}->{$field};
@@ -1579,7 +1586,7 @@ sub info($self, $user) {
         ,volatile_clones => $self->volatile_clones
         ,id_vm => $self->_data('id_vm')
     };
-    for (qw(comment screenshot id_owner shutdown_disconnected)) {
+    for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups)) {
         $info->{$_} = $self->_data($_);
     }
     if ($is_active) {
@@ -1622,6 +1629,8 @@ sub info($self, $user) {
     }
     $info->{cdrom} = \@cdrom;
     $info->{requests} = $self->list_requests();
+
+    Ravada::Front::init_available_actions($user, $info);
 
     return $info;
 }
@@ -2221,7 +2230,7 @@ sub _pre_remove_base {
     my ($domain) = @_;
     _allow_manage(@_);
     _check_has_clones(@_);
-    
+
     if (!$domain->is_local) {
         my $vm_local = $domain->_vm->new( host => 'localhost' );
         confess "Error: I can't find local virtual manager ".$domain->type
@@ -2389,6 +2398,14 @@ sub _copy_clone($self, %args) {
         ,from_pool => 0
         ,@copy_arg
     );
+
+    _copy_volumes($self, $copy);
+    _copy_ports($self, $copy);
+    $copy->is_pool(1) if $add_to_pool;
+    return $copy;
+}
+
+sub _copy_volumes($self, $copy) {
     my @volumes = $self->list_volumes_info(device => 'disk');
     my @copy_volumes = $copy->list_volumes_info(device => 'disk');
 
@@ -2398,8 +2415,21 @@ sub _copy_clone($self, %args) {
         copy($volumes{$target}, $copy_volumes{$target})
             or die "$! $volumes{$target}, $copy_volumes{$target}"
     }
-    $copy->is_pool(1) if $add_to_pool;
-    return $copy;
+}
+
+sub _copy_ports($base, $copy) {
+    my %port_already;
+    for my $port ( $copy->list_ports ) {
+        $port_already{$port->{internal_port}}++;
+    }
+
+    for my $port ( $base->list_ports ) {
+        my %port = %$port;
+        next if $port_already{$port->{internal_port}};
+        delete @port{'id','id_domain','public_port'};
+        $copy->expose(%port);
+    }
+
 }
 
 sub _post_pause {
@@ -2410,8 +2440,9 @@ sub _post_pause {
     $self->_remove_iptables();
 }
 
-sub _post_hibernate($self, $user) {
+sub _post_hibernate($self, $user=undef) {
     $self->_data(status => 'hibernated');
+    $self->_data(post_hibernated => 1);
     $self->_remove_iptables();
     $self->_close_exposed_port();
 }
@@ -2495,7 +2526,7 @@ sub _post_shutdown {
             id_domain => $self->id
                ,id_vm => $self->_vm->id
                 , uid => $arg{user}->id
-                 , at => time+$timeout 
+                 , at => time+$timeout
         );
     }
     if ($self->is_volatile) {
@@ -2787,12 +2818,21 @@ sub _set_public_port($self, $id_port, $internal_port, $name, $restricted) {
     }
 }
 
+sub _used_ports_iptables($self, $port) {
+    my $used_port = {};
+    $self->_vm->_list_used_ports_iptables($used_port);
+    return 0 if !$used_port->{$port};
+    return 1;
+}
+
 sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,public_port FROM domain_ports"
         ." WHERE id_domain=? AND internal_port=?"
     );
     $sth->execute($self->id, $internal_port);
     my ($id_port, $public_port) = $sth->fetchrow();
+
+    $public_port = undef if $public_port && $self->_used_ports_iptables($public_port);
 
     $public_port = $self->_set_public_port($id_port, $internal_port, $name, $restricted)
     if !$public_port;
@@ -3129,12 +3169,14 @@ sub _post_start {
     my $set_time = delete $arg{set_time};
     $set_time = 1 if !defined $set_time;
 
-    $self->_data('status','active') if $self->is_active();
+    if ( $self->is_active() ) {
+        $self->_data('status','active');
+    }
     my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE domains set start_time=? "
+        "UPDATE domains set start_time=?,is_compacted=? "
         ." WHERE id=?"
     );
-    $sth->execute(time, $self->id);
+    $sth->execute(time, 0, $self->id);
     $sth->finish;
 
     $self->_data('internal_id',$self->internal_id);
@@ -3627,7 +3669,7 @@ sub get_controller {
 
     my $sub = $self->get_controller_by_name($name);
 #    my $sub = $GET_CONTROLLER_SUB{$name};
-    
+
     die "I can't get controller $name for domain ".$self->name
         if !$sub;
 
@@ -3955,7 +3997,8 @@ sub rsync($self, @args) {
             or confess "No Connection to ".$self->_vm->host;
     }
     my $vm_local = $self->_vm->new( host => 'localhost' );
-    my $rsync = File::Rsync->new(update => 1, sparse => 1, times => 1);
+    my $rsync = File::Rsync->new(update => 1, sparse => 1, archive => 1);
+    my $time_rsync = time;
     for my $file ( @$files ) {
         my ($path) = $file =~ m{(.*)/};
         my ($out, $err) = $node->run_command("/bin/mkdir","-p",$path);
@@ -3972,19 +4015,25 @@ sub rsync($self, @args) {
         next if _check_stat($file, $vm_local, $node);
         my $msg = $self->_msg_log_rsync($file, $node, "rsync", $request);
 
-        $request->status("syncing",$msg) if $request;
+        $request->status("syncing") if $request;
+        $request->error("Syncing $file");
+        $request->error($msg)       if $request && $DEBUG_RSYNC;
         warn "$msg\n" if $DEBUG_RSYNC;
 
         my $t0 = time;
         $rsync->exec(src => $src, dest => $dst);
-        warn "Domain::rsync ".(time - $t0)." seconds $file" if $DEBUG_RSYNC;
+        $msg = "Domain::rsync ".(time - $t0)." seconds $file";
+        warn $msg if $DEBUG_RSYNC;
+        $request->error($msg) if $request;
     }
     if ($rsync->err) {
-        $request->status("done",join(" ",@{$rsync->err}))   if $request;
+        $request->status("done")                    if $request;
+        $request->error(join(" ",@{$rsync->err}))   if $request;
         confess "error syncing to ".$node->host."\n"
             .Dumper($files)."\n"
             .join(' ',@{$rsync->err});
     }
+    $request->error("rsync done ".(time - $time_rsync)." seconds");
     $node->refresh_storage_pools();
 }
 
@@ -4009,7 +4058,7 @@ sub _msg_log_rsync($self, $file, $node, $sub, $request) {
 }
 
 sub _rsync_volumes_back($self, $node, $request=undef) {
-    my $rsync = File::Rsync->new(update => 1, sparse => 1, times => 1);
+    my $rsync = File::Rsync->new(update => 1, sparse => 1, archive => 1);
     my $vm_local = $self->_vm->new( host => 'localhost' );
     for my $file ( $self->list_volumes() ) {
         my ($dir) = $file =~ m{(.*)/.*};
@@ -4017,7 +4066,8 @@ sub _rsync_volumes_back($self, $node, $request=undef) {
 
         my $msg = $self->_msg_log_rsync($file, $node, "rsync_back", $request);
 
-        $request->status("syncing",$msg) if $request;
+        $request->status("syncing") if $request;
+        $request->error($msg)       if $request;
         warn "$msg\n" if $DEBUG_RSYNC;
         my $t0 = time;
         $rsync->exec(src => 'root@'.$node->host.":".$file ,dest => $file );
@@ -5297,6 +5347,54 @@ sub _base_in_nodes($self) {
 sub _domain_in_nodes($self) {
     return $self->_base_in_nodes() if $self->id_base;
     return $self->list_instances > 1;
+}
+
+sub compact($self, $request=undef) {
+    #first check if active, that will trigger status refresh
+    die "Error: ".$self->name." can't be compacted because it is active\n"
+    if $self->is_active;
+
+    # now check the status, it may be hibernated or in some other
+    my $status = $self->_data('status');
+    die "Error: ".$self->name." can't be compacted because it is $status\n"
+    unless $status eq 'shutdown';
+
+    my $keep_backup = 1;
+    $keep_backup = $request->defined_arg('keep_backup') if $request;
+    $keep_backup = 1 if !defined $keep_backup;
+
+    my $backed_up = '';
+    $backed_up = " [backed up]" if $keep_backup;
+
+    my $out = '';
+    for my $vol ( $self->list_volumes_info ) {
+        next if !$vol->file || $vol->file =~ /iso$/;
+        if ( !$self->is_active ) {
+            my $vm = $self->_vm->new ( host => 'localhost' );
+            $vol->vm($vm);
+        }
+        $request->error("compacting ".$vol->file."$backed_up") if $request;
+        $out .= $vol->info->{target}." ".($vol->compact($keep_backup) or '');
+    }
+    $request->error($out) if $request;
+    $self->_data('is_compacted' => 1);
+
+    $self->_data('has_backups' => $self->_data('has_backups') +1 ) if $keep_backup;
+}
+
+sub purge($self, $request=undef) {
+    my $vm = $self->_vm->new ( host => 'localhost' );
+    for my $vol ( $self->list_volumes_info ) {
+        next if !$vol->file || $vol->file =~ /iso$/;
+        my ($dir, $file) = $vol->file =~ m{(.*)/(.*)};
+        my ($out, $err) = $vm->run_command("ls",$dir);
+        die $err if $err;
+        my @found = grep { /^$file/ } $out =~ m{^(.*backup)}mg;
+        for my $file_backup ( @found ) {
+            $vm->remove_file("$dir/$file_backup");
+        }
+    }
+    $self->_data( 'has_backups' => 0 );
 }
 
 1;

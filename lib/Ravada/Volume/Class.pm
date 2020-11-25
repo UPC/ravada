@@ -96,4 +96,14 @@ sub copy_file($self, $src, $dst) {
     die $err if $err;
 }
 
+sub backup($self) {
+    my $vol_backup = $self->file.".".time.".backup";
+    my ($out, $err) = $self->vm->run_command("cp","--preserve=all",$self->file,$vol_backup);
+        if ($err) {
+        $self->vm->remove_file($vol_backup);
+        die "Error: I can't backup $vol_backup $err";
+    }
+    return $vol_backup;
+}
+
 1;

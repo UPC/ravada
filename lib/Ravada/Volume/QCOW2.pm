@@ -187,4 +187,32 @@ sub _qemu_info($self, $field=undef) {
     return $info{$field};
 }
 
+sub compact($self, $keep_backup=1) {
+    my $vol_backup = $self->backup();
+
+    my @cmd = ( "virt-sparsify"
+        , "--in-place"
+        , $self->file
+    );
+    my ($out, $err) = $self->vm->run_command(@cmd);
+    die "Error: I can't sparsify ".$self->file." , backup file stored on $vol_backup : $err"
+    if $err;
+
+    @cmd = ("qemu-img", "check", $self->file);
+    ($out, $err) = $self->vm->run_command(@cmd);
+    die "Error: problem checking ".$self->file." after virt-sparsify $err" if $err;
+
+    my ($du_backup, $du_backup_err) = $self->vm->run_command("du","-m",$vol_backup);
+    my ($du, $du_err) = $self->vm->run_command("du","-m",$self->file);
+    chomp $du_backup;
+    $du_backup =~ s/(^\d+).*/$1/;
+    chomp $du;
+    $du =~ s/(^\d+).*/$1/;
+
+    unlink $vol_backup or die "$! $vol_backup"
+    if !$keep_backup;
+
+    return int(100*($du_backup-$du)/$du_backup)." % compacted. ";
+}
+
 1;
