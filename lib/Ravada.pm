@@ -215,8 +215,8 @@ sub _update_isos {
                    ,arch => 'amd64'
                     ,xml => 'focal_fossa-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
-                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04/release/ubuntu-mate-20.04-desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04.*/release/ubuntu-mate-20.04.*-desktop-amd64.iso'
+                ,sha256_url => '$url/SHA256SUMS'
         },
         mate_bionic => {
                     name => 'Ubuntu Mate Bionic 64 bits'
@@ -234,7 +234,7 @@ sub _update_isos {
                     ,xml => 'bionic-i386.xml'
              ,xml_volume => 'bionic32-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
-                ,md5_url => '$url/MD5SUMS'
+                ,sha256_url => '$url/SHA256SUMS'
         },
         mate_xenial => {
                     name => 'Ubuntu Mate Xenial'
@@ -243,7 +243,7 @@ sub _update_isos {
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/16.04.*/release/ubuntu-mate-16.04.*-desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
+                ,sha256_url => '$url/SHA256SUMS'
                 ,min_disk_size => '10'
         },
 	,focal_fossa=> {
@@ -332,9 +332,9 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'focal_fossa-amd64.xml'
             ,xml_volume => 'focal_fossa64-volume.xml'
-            ,md5_url => '$url/MD5SUMS'
-            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/20.04/release/'
-            ,file_re => 'kubuntu-20.04-desktop-amd64.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/20.04.*/release/'
+            ,file_re => 'kubuntu-20.04.*-desktop-amd64.iso'
             ,rename_file => 'kubuntu_focal_fossa_64.iso'
         }
         ,kubuntu_64 => {
@@ -345,7 +345,7 @@ sub _update_isos {
             ,xml_volume => 'bionic64-volume.xml'
             ,sha256_url => '$url/SHA256SUMS'
             ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/18.04/release/'
-            ,file_re => 'kubuntu-18.04.5-desktop-amd64.iso'
+            ,file_re => 'kubuntu-18.04.\d+-desktop-amd64.iso'
             ,rename_file => 'kubuntu_bionic_64.iso'
         }
         ,kubuntu_32 => {
@@ -356,7 +356,7 @@ sub _update_isos {
             ,xml_volume => 'bionic32-volume.xml'
             ,sha256_url => '$url/SHA256SUMS'
             ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/18.04/release/'
-            ,file_re => 'kubuntu-18.04.5-desktop-i386.iso'
+            ,file_re => 'kubuntu-18.04.\d+-desktop-i386.iso'
             ,rename_file => 'kubuntu_bionic_32.iso'
         }
         ,suse_15 => {
@@ -376,7 +376,7 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
-            ,md5_url => '$url/../MD5SUMS'
+            ,sha256_url => '$url/../SHA256SUMS'
             ,url => 'http://archive.ubuntu.com/ubuntu/dists/bionic/main/installer-amd64/current/images/netboot/'
             ,file_re => 'mini.iso'
             ,rename_file => 'xubuntu_bionic_64.iso'
@@ -406,7 +406,7 @@ sub _update_isos {
              name => 'Lubuntu Bionic Beaver 64 bits'
              ,description => 'Lubuntu 18.04 Bionic Beaver 64 bits'
              ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-amd64.iso'
-             ,md5_url => '$url/MD5SUMS'
+             ,sha256_url => '$url/SHA256SUMS'
              ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
          }
@@ -415,7 +415,7 @@ sub _update_isos {
              ,description => 'Lubuntu 18.04 Bionic Beaver 32 bits'
              ,arch => 'i386'
              ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-i386.iso'
-             ,md5_url => '$url/MD5SUMS'
+             ,sha256_url => '$url/SHA256SUMS'
              ,xml => 'bionic-i386.xml'
              ,xml_volume => 'bionic32-volume.xml'
         }
