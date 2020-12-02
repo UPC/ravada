@@ -1541,6 +1541,7 @@ sub _search_iptables($self, %rule) {
     for my $line (@{$iptables->{$table}}) {
 
         my %args = @$line;
+        $args{s} = "0.0.0.0/0" if !exists $args{s};
         my $match = 1;
         for my $key (keys %rule) {
             $match = 0 if !exists $args{$key} || $args{$key} ne $rule{$key};
@@ -1907,7 +1908,7 @@ sub _list_used_ports_iptables($self, $used_port) {
     for my $rule ( @{$iptables->{nat}} ) {
         my %rule = @{$rule};
         next if !exists $rule{A} || $rule{A} ne 'PREROUTING' || !$rule{dport};
-        $used_port->{$rule{dport}}++;
+        $used_port->{$rule{dport}} = $rule{'to-destination'};
     }
 }
 

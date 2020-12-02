@@ -520,6 +520,8 @@ sub test_clone_exports($vm, $spinoff=0) {
 
 sub test_routing_hibernated($vm) {
     my $base = $BASE->clone(name => new_domain_name, user => user_admin);
+    my $internal_port = 22;
+
     $base->expose(port => 22, name => "ssh");
 
     my @base_ports0 = $base->list_ports();
@@ -529,6 +531,7 @@ sub test_routing_hibernated($vm) {
     $base->start(remote_ip => $remote_ip,  user => user_admin);
 
     _wait_ip($vm, $base);
+    my $internal_ip = $base->ip;
     wait_request( debug => 0 );
 
     my @base_ports1 = $base->list_ports();
@@ -536,6 +539,16 @@ sub test_routing_hibernated($vm) {
     my $public_port1 = $base_ports1[0]->{public_port};
 
     is($public_port1, $public_port0) or exit;
+
+    my ($out, $err) = $vm->run_command("iptables-save");
+    my @lines = grep(/$internal_ip:$internal_port/, split /\n/,$out);
+    is (scalar @lines,1) or die Dumper(\@lines);
+
+    my @lines0 = grep(/-A FORWARD .*ACCEPT$/, split/\n/,$out);
+    @lines = grep(m{d $internal_ip/32 .*dport $internal_port}, @lines0);
+    is (scalar @lines,1,"Expecting 1 line $internal_ip .*dport $internal_port")
+        or die Dumper($internal_ip,\@lines0);
+
 
     hibernate_domain_internal($base);
 
@@ -551,16 +564,28 @@ sub test_routing_hibernated($vm) {
     is($public_port2, $public_port0) or exit;
     is($public_port2, $public_port1) or exit;
 
+    ($out, $err) = $vm->run_command("iptables-save");
+    @lines = grep(/$internal_ip:$internal_port/, split /\n/,$out);
+    is (scalar @lines,1) or die Dumper(\@lines);
+
+    @lines0 = grep(/-A FORWARD .*ACCEPT$/, split/\n/,$out);
+    @lines = grep(m{d $internal_ip/32 .*dport $internal_port}, @lines0);
+    is (scalar @lines,1,"Expecting 1 line $internal_ip .*dport $internal_port")
+        or die Dumper($internal_ip,\@lines0);
+
     $base->remove(user_admin);
 }
 
-sub test_routing_already_used($vm) {
+sub test_routing_already_used($vm, $source=0, $restricted=0) {
     my $base = $BASE->clone(name => new_domain_name, user => user_admin);
-    $base->expose(port => 22, name => "ssh");
+    my $internal_port = 22;
+    $base->expose(port => $internal_port, name => "ssh", restricted => $restricted);
     my @base_ports0 = $base->list_ports();
 
     my $public_port0 = $base_ports0[0]->{public_port};
 
+    my @source;
+    @source = ( 's' => '0.0.0.0/0');
     $vm->iptables_unique(
             t => 'nat'
             ,A => 'PREROUTING'
@@ -568,6 +593,7 @@ sub test_routing_already_used($vm) {
             ,dport => $public_port0
             ,j => 'DNAT'
             ,'to-destination' => "1.2.3.4:1111"
+            ,@source
     );
 
     my @iptables0 = _iptables_save($vm,'nat','PREROUTING');
@@ -575,6 +601,7 @@ sub test_routing_already_used($vm) {
     $base->start(remote_ip => $remote_ip,  user => user_admin);
 
     _wait_ip($vm, $base);
+    my $internal_ip = $base->ip;
     wait_request( debug => 0 );
 
     my @base_ports1 = $base->list_ports();
@@ -585,6 +612,49 @@ sub test_routing_already_used($vm) {
     my @iptables1 = _iptables_save($vm,'nat' ,'PREROUTING');
     is(scalar(@iptables1),scalar(@iptables0)+1,"Expecting 1 chain more "
     .Dumper(\@iptables0,\@iptables1)) or exit;
+
+    my @lines0 = grep(/-A FORWARD .*ACCEPT$/, _iptables_save($vm));
+    my @lines = grep(m{d $internal_ip/32 .*dport $internal_port}, @lines0);
+    is (scalar @lines,1,"Expecting 1 line $internal_ip .*dport $internal_port")
+        or die Dumper($internal_ip,\@lines0);
+
+    # start again the machine, nothing should change
+    for ( 1 .. 3 ) {
+        my $req = Ravada::Request->start_domain(
+            uid => user_admin->id
+            ,id_domain => $base->id
+            ,remote_ip => $remote_ip
+        );
+        wait_request(debug => 0);
+        is($req->status,'done');
+        is($req->error, '');
+
+        my @base_ports2 = $base->list_ports();
+
+        my $public_port2 = $base_ports2[0]->{public_port};
+
+        isnt($public_port2, $public_port0) or exit;
+        is($public_port2, $public_port1) or exit;
+
+        my @iptables2 = _iptables_save($vm,'nat' ,'PREROUTING');
+        is(scalar(@iptables1),scalar(@iptables2)) or die Dumper(\@iptables1,\@iptables2);
+
+        my ($out, $err) = $vm->run_command("iptables-save");
+        my @lines = grep(/$internal_ip:$internal_port/, split /\n/,$out);
+        is (scalar @lines,1) or die Dumper(\@lines);
+
+        my @lines0 = grep(/-A FORWARD /, split/\n/,$out);
+        @lines = grep(m{d $internal_ip/32 .*dport $internal_port -j ACCEPT}, @lines0);
+        is (scalar @lines,1,"Expecting 1 line $internal_ip .*dport $internal_port")
+        or die Dumper($internal_ip,\@lines0);
+
+        if ($restricted) {
+            @lines = grep(m{d $internal_ip/32 .*dport 22 -j DROP}, @lines0);
+            is (scalar @lines,1,"Expecting 1 $internal_ip .*dport $internal_port -j DROP")
+            or die Dumper($internal_ip,\@lines0);
+        }
+
+    }
 
     # open again the ports, nothing should change
     for ( 1 .. 3 ) {
@@ -606,6 +676,15 @@ sub test_routing_already_used($vm) {
 
         my @iptables2 = _iptables_save($vm,'nat' ,'PREROUTING');
         is(scalar(@iptables1),scalar(@iptables2)) or die Dumper(\@iptables1,\@iptables2);
+
+        my ($out, $err) = $vm->run_command("iptables-save");
+        my @lines = grep(/$internal_ip:$internal_port/, split /\n/,$out);
+        is (scalar @lines,1) or die Dumper(\@lines);
+
+        my @lines0 = grep(/-A FORWARD .*ACCEPT$/, split/\n/,$out);
+        @lines = grep(m{d $internal_ip/32 .*dport $internal_port}, @lines0);
+        is (scalar @lines,1,"Expecting 1 line $internal_ip .*dport $internal_port")
+        or die Dumper($internal_ip,\@lines0);
     }
 
     $base->remove(user_admin);
@@ -1102,10 +1181,14 @@ for my $vm_name ( 'KVM', 'Void' ) {
     skip $msg,10    if !$vm;
 
     diag("Testing $vm_name");
+    flush_rules() if !$<;
     import_base($vm);
 
     test_routing_hibernated($vm);
+    test_routing_already_used($vm,undef,'restricted');
     test_routing_already_used($vm);
+    test_routing_already_used($vm,'addsource');
+    test_routing_already_used($vm,'addsource','restricted');
 
     test_clone_exports_add_ports($vm);
 
@@ -1134,6 +1217,6 @@ for my $vm_name ( 'KVM', 'Void' ) {
     }; # of SKIP
 }
 
-flush_rules() if $<;
+flush_rules() if !$<;
 end();
 done_testing();
