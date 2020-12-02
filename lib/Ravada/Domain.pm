@@ -3992,7 +3992,7 @@ sub rsync($self, @args) {
         my $msg = $self->_msg_log_rsync($file, $node, "rsync", $request);
 
         $request->status("syncing") if $request;
-        $request->error("Syncing $file");
+        $request->error("Syncing $file")    if $request;
         $request->error($msg)       if $request && $DEBUG_RSYNC;
         warn "$msg\n" if $DEBUG_RSYNC;
 
@@ -4009,7 +4009,7 @@ sub rsync($self, @args) {
             .Dumper($files)."\n"
             .join(' ',@{$rsync->err});
     }
-    $request->error("rsync done ".(time - $time_rsync)." seconds");
+    $request->error("rsync done ".(time - $time_rsync)." seconds")  if $request;
     $node->refresh_storage_pools();
 }
 
