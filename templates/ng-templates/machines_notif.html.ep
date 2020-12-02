@@ -1,7 +1,7 @@
 <div class="panel panel-default">
 <div class="panel-heading">
   <h4 class="panel-title">Machines Notifications<a style="float: right;" data-toggle="collapse" href="#collapse1"><i class="fa fa-angle-double-up" aria-hidden="true"></i></a> </h4>
-</div>
+</div><!-- from panel-heading -->
 <div id="collapse1" class="panel-collapse collapse in">
 
   	<ul class="list-group">
@@ -15,5 +15,5 @@
 	    </li>
 	</ul>
 
-</div>
-</div>
+</div><!-- from collapse1 -->
+</div><!-- from panel-default -->

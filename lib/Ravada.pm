@@ -1112,10 +1112,6 @@ sub _enable_grants($self) {
 
     return if $self->_null_grants();
 
-    my $sth = $CONNECTOR->dbh->prepare(
-        "UPDATE grant_types set enabled=0"
-    );
-    $sth->execute;
     my @grants = (
         'change_settings',  'change_settings_all',  'change_settings_clones'
         ,'clone',           'clone_all',            'create_base', 'create_machine'
@@ -1130,7 +1126,7 @@ sub _enable_grants($self) {
         ,'start_many'
     );
 
-    $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
     $sth->execute;
     my %grant_exists;
     while (my ($id, $name) = $sth->fetchrow ) {
@@ -1150,7 +1146,14 @@ sub _enable_grants($self) {
         $sth->execute($name);
 
     }
+    $self->_disable_other_grants(@grants);
+}
 
+sub _disable_other_grants($self, @grants) {
+    my $query = "UPDATE grant_types set enabled=0 WHERE  enabled=1 AND "
+    .join(" AND ",map { "name <> ? " } @grants );
+    my $sth = $CONNECTOR->dbh->prepare($query);
+    $sth->execute(@grants);
 }
 
 sub _update_old_qemus($self) {
@@ -2135,16 +2138,8 @@ sub _search_domain {
 
 =cut
 
-sub search_domain_by_id {
-    my $self = shift;
-    my $id = shift  or confess "ERROR: missing argument id";
-
-    my $sth = $CONNECTOR->dbh->prepare("SELECT name FROM domains WHERE id=?");
-    $sth->execute($id);
-    my ($name) = $sth->fetchrow;
-    confess "Unknown domain id=$id" if !$name;
-
-    return $self->search_domain($name);
+sub search_domain_by_id($self, $id) {
+    return Ravada::Domain->open($id);
 }
 
 =head2 list_vms
@@ -2771,7 +2766,7 @@ sub _do_execute_command {
     my $err = ( $@ or '');
     my $elapsed = tv_interval($t0,[gettimeofday]);
     $request->run_time($elapsed);
-    $request->error($err)   if $err;
+    $request->error(''.$err)   if $err;
     if ($err) {
         my $user = $request->defined_arg('user');
         if ($user) {
@@ -3195,7 +3190,7 @@ sub _cmd_start {
 
     my $domain;
     $domain = $self->search_domain($name)               if $name;
-    $domain = $self->search_domain_by_id($id_domain)    if $id_domain;
+    $domain = Ravada::Domain->open($id_domain)          if $id_domain;
     die "Unknown domain '".($name or $id_domain)."'" if !$domain;
     $domain->status('starting');
 
@@ -3703,6 +3698,7 @@ sub _cmd_refresh_vms($self, $request=undef) {
 
     $self->_clean_requests('refresh_vms', $request);
     $self->_refresh_volatile_domains();
+    $request->error('')                             if $request;
 }
 
 sub _cmd_shutdown_node($self, $request) {
@@ -3826,17 +3822,24 @@ sub _cmd_purge($self, $request) {
     $domain->purge($request);
 }
 
-sub _migrate_base($self, $domain, $node, $uid, $request) {
+sub _migrate_base($self, $domain, $id_node, $uid, $request) {
+    if (ref($id_node)) {
+        $id_node = $id_node->id;
+    }
     my $base = Ravada::Domain->open($domain->id_base);
-    return if $base->base_in_vm($node->id);
+    return if $base->base_in_vm($id_node);
 
     my $req_base = Ravada::Request->set_base_vm(
         id_domain => $base->id
-        , id_vm => $node->id
+        , id_vm => $id_node
         , uid => $uid
+        , retry => 10
     );
-    $request->after_request($req_base->id) if $req_base;
-    die "Base ".$base->name." still not prepared in node ".$node->name.". Retry\n";
+    confess "Error: no request for set_base_vm" if !$req_base;
+    confess "Error: same request" if $req_base->id == $request->id;
+    $request->retry(10) if !defined $request->retry();
+    $request->after_request_ok($req_base->id);
+    die "Base ".$base->name." still not prepared in node $id_node. Retry\n";
 }
 
 sub _cmd_migrate($self, $request) {
@@ -3844,7 +3847,8 @@ sub _cmd_migrate($self, $request) {
     my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
-    my $domain = $self->search_domain_by_id($id_domain);
+    my $domain = Ravada::Domain->open($id_domain)
+        or confess "Error: domain $id_domain not found";
 
     die "Error: user ".$user->name." not allowed to migrate domain ".$domain->name
     unless $user->is_operator;
@@ -3863,7 +3867,7 @@ sub _cmd_migrate($self, $request) {
                 ,id_domain => $id_domain
                 ,@timeout
             );
-            $request->after_request($req_shutdown->id);
+            $request->after_request_ok($req_shutdown->id);
             $request->retry(10) if !defined $request->retry();
             die "Virtual Machine ".$domain->name." ".$request->retry." is active. Shutting down. Retry.\n";
         }
@@ -3946,6 +3950,7 @@ sub _refresh_active_domains($self, $request=undef) {
             my @domains;
             eval { @domains = $self->list_domains_data };
             warn $@ if $@;
+            my $t0 = time;
             for my $domain_data (sort { $b->{date_changed} cmp $a->{date_changed} }
                                 @domains) {
                 $request->error("checking $domain_data->{name}") if $request;
@@ -3954,6 +3959,7 @@ sub _refresh_active_domains($self, $request=undef) {
                 next if !$domain;
                 $self->_refresh_active_domain($domain, \%active_domain);
                 $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
+                last if !$CAN_FORK && time - $t0 > 10;
             }
             $request->error("checked ".scalar(@domains)) if $request;
         }
@@ -4107,16 +4113,19 @@ sub _cmd_set_base_vm {
     #    my $domain = $self->search_domain_by_id($id_domain) or confess "Error: Unknown domain id: $id_domain";
 
     die "USER $uid not authorized to set base vm"
-        if !$user->is_admin;
+    if !$user->is_admin;
 
-    $domain->prepare_base($user) if $value && !$domain->is_base;
+    $self->_migrate_base($domain, $id_vm, $uid, $request) if $domain->id_base;
+    if ( $value && !$domain->is_base ) {
+        $domain->prepare_base($user);
+    }
 
     $domain->set_base_vm(
-            id_vm => $id_vm
-            ,user => $user
-           ,value => $value
-         ,request => $request
-     );
+        id_vm => $id_vm
+        ,user => $user
+        ,value => $value
+        ,request => $request
+    );
 }
 
 sub _cmd_cleanup($self, $request) {

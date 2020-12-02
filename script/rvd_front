@@ -2166,7 +2166,8 @@ sub manage_machine {
     $c->stash(errors => \@errors);
     return $c->render(template => 'main/settings_machine'
         , nodes => [$RAVADA->list_vms($domain->type)]
-        , list_clones => [map { $_->{name} } $domain->clones]
+        , list_clones => [map { $_->{name} } grep { !$_->{is_base} } $domain->clones]
+        , list_clones_base => [ map { $_->{name } } grep { $_->{is_base} } $domain->clones]
         , action => $c->req->url->to_abs->path
         , headers => $c->req->headers
     );
@@ -2277,6 +2278,7 @@ sub remove_clones {
     my $domain = _search_requested_machine($c);
     my @req;
     for my $clone ( $domain->clones) {
+        next if $clone->{is_base};
         my $req = Ravada::Request->remove_domain(
             name => $clone->{name}
             ,uid => $USER->id
