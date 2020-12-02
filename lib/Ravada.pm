@@ -3,9 +3,9 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.10.0';
+our $VERSION = '0.11.0';
 
-use Carp qw(carp croak);
+use Carp qw(carp croak cluck);
 use Data::Dumper;
 use DBIx::Connector;
 use File::Copy;
@@ -83,6 +83,7 @@ $FILE_CONFIG = undef if ! -e $FILE_CONFIG;
 
 our $CONNECTOR;
 our $CONFIG = {};
+our $FORCE_DEBUG = 0;
 our $DEBUG;
 our $VERBOSE;
 our $CAN_FORK = 1;
@@ -901,7 +902,6 @@ sub _remove_old_isos {
         ,"DELETE FROM iso_images "
             ."  WHERE name like 'Debian Buster 32%'"
             ."  AND file_re like '%xfce-CD-1.iso'"
-
         ,"DELETE FROM iso_images "
             ."  WHERE (name LIKE 'Ubuntu Focal%' OR name LIKE 'Ubuntu Bionic%' ) "
             ."  AND ( md5 IS NOT NULL OR md5_url IS NOT NULL) "
@@ -1112,10 +1112,6 @@ sub _enable_grants($self) {
 
     return if $self->_null_grants();
 
-    my $sth = $CONNECTOR->dbh->prepare(
-        "UPDATE grant_types set enabled=0"
-    );
-    $sth->execute;
     my @grants = (
         'change_settings',  'change_settings_all',  'change_settings_clones'
         ,'clone',           'clone_all',            'create_base', 'create_machine'
@@ -1130,7 +1126,7 @@ sub _enable_grants($self) {
         ,'start_many'
     );
 
-    $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
     $sth->execute;
     my %grant_exists;
     while (my ($id, $name) = $sth->fetchrow ) {
@@ -1150,7 +1146,14 @@ sub _enable_grants($self) {
         $sth->execute($name);
 
     }
+    $self->_disable_other_grants(@grants);
+}
 
+sub _disable_other_grants($self, @grants) {
+    my $query = "UPDATE grant_types set enabled=0 WHERE  enabled=1 AND "
+    .join(" AND ",map { "name <> ? " } @grants );
+    my $sth = $CONNECTOR->dbh->prepare($query);
+    $sth->execute(@grants);
 }
 
 sub _update_old_qemus($self) {
@@ -1484,6 +1487,7 @@ sub _upgrade_tables {
     my $self = shift;
 #    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
 
+    $self->_upgrade_table("base_xml",'xml','TEXT');
     $self->_upgrade_table('file_base_images','target','varchar(64) DEFAULT NULL');
 
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
@@ -1570,9 +1574,12 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','shared_storage','varchar(254)');
     $self->_upgrade_table('domains','post_shutdown','int not null default 0');
     $self->_upgrade_table('domains','post_hibernated','int not null default 0');
+    $self->_upgrade_table('domains','is_compacted','int not null default 0');
+    $self->_upgrade_table('domains','has_backups','int not null default 0');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
+    $self->_upgrade_table('domains_kvm','xml','TEXT');
     $self->_upgrade_table('iptables','id_vm','int DEFAULT NULL');
     $self->_upgrade_table('vms','security','varchar(255) default NULL');
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
@@ -2131,16 +2138,8 @@ sub _search_domain {
 
 =cut
 
-sub search_domain_by_id {
-    my $self = shift;
-    my $id = shift  or confess "ERROR: missing argument id";
-
-    my $sth = $CONNECTOR->dbh->prepare("SELECT name FROM domains WHERE id=?");
-    $sth->execute($id);
-    my ($name) = $sth->fetchrow;
-    confess "Unknown domain id=$id" if !$name;
-
-    return $self->search_domain($name);
+sub search_domain_by_id($self, $id) {
+    return Ravada::Domain->open($id);
 }
 
 =head2 list_vms
@@ -2767,7 +2766,7 @@ sub _do_execute_command {
     my $err = ( $@ or '');
     my $elapsed = tv_interval($t0,[gettimeofday]);
     $request->run_time($elapsed);
-    $request->error($err)   if $err;
+    $request->error(''.$err)   if $err;
     if ($err) {
         my $user = $request->defined_arg('user');
         if ($user) {
@@ -3191,7 +3190,7 @@ sub _cmd_start {
 
     my $domain;
     $domain = $self->search_domain($name)               if $name;
-    $domain = $self->search_domain_by_id($id_domain)    if $id_domain;
+    $domain = Ravada::Domain->open($id_domain)          if $id_domain;
     die "Unknown domain '".($name or $id_domain)."'" if !$domain;
     $domain->status('starting');
 
@@ -3699,6 +3698,7 @@ sub _cmd_refresh_vms($self, $request=undef) {
 
     $self->_clean_requests('refresh_vms', $request);
     $self->_refresh_volatile_domains();
+    $request->error('')                             if $request;
 }
 
 sub _cmd_shutdown_node($self, $request) {
@@ -3765,7 +3765,7 @@ sub _cmd_list_network_interfaces($self, $request) {
 
 sub _cmd_list_isos($self, $request){
     my $vm_type = $request->args('vm_type');
-   
+
     my $vm = Ravada::VM->open( type => $vm_type );
     $vm->refresh_storage();
     my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
@@ -3786,17 +3786,60 @@ sub _cmd_set_time($self, $request) {
     die "$@ , retry.\n" if $@;
 }
 
-sub _migrate_base($self, $domain, $node, $uid, $request) {
+sub _cmd_compact($self, $request) {
+    my $id_domain = $request->args('id_domain');
+    my $domain = Ravada::Domain->open($id_domain)
+        or do {
+            $request->retry(0);
+            Ravada::Request->refresh_vms();
+            die "Error: domain $id_domain not found\n";
+        };
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    die "Error: user ".$user->name." not allowed to compact ".$domain->name
+    unless $user->is_operator || $uid == $domain->_data('id_owner');
+
+    $domain->compact($request);
+}
+
+sub _cmd_purge($self, $request) {
+    my $id_domain = $request->args('id_domain');
+    my $domain = Ravada::Domain->open($id_domain)
+        or do {
+            $request->retry(0);
+            Ravada::Request->refresh_vms();
+            die "Error: domain $id_domain not found\n";
+        };
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    die "Error: user ".$user->name." not allowed to compact ".$domain->name
+    unless $user->is_operator || $uid == $domain->_data('id_owner');
+
+    $domain->purge($request);
+}
+
+sub _migrate_base($self, $domain, $id_node, $uid, $request) {
+    if (ref($id_node)) {
+        $id_node = $id_node->id;
+    }
     my $base = Ravada::Domain->open($domain->id_base);
-    return if $base->base_in_vm($node->id);
+    return if $base->base_in_vm($id_node);
 
     my $req_base = Ravada::Request->set_base_vm(
         id_domain => $base->id
-        , id_vm => $node->id
+        , id_vm => $id_node
         , uid => $uid
+        , retry => 10
     );
-    $request->after_request($req_base->id) if $req_base;
-    die "Base ".$base->name." still not prepared in node ".$node->name.". Retry\n";
+    confess "Error: no request for set_base_vm" if !$req_base;
+    confess "Error: same request" if $req_base->id == $request->id;
+    $request->retry(10) if !defined $request->retry();
+    $request->after_request_ok($req_base->id);
+    die "Base ".$base->name." still not prepared in node $id_node. Retry\n";
 }
 
 sub _cmd_migrate($self, $request) {
@@ -3804,7 +3847,8 @@ sub _cmd_migrate($self, $request) {
     my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
-    my $domain = $self->search_domain_by_id($id_domain);
+    my $domain = Ravada::Domain->open($id_domain)
+        or confess "Error: domain $id_domain not found";
 
     die "Error: user ".$user->name." not allowed to migrate domain ".$domain->name
     unless $user->is_operator;
@@ -3823,7 +3867,7 @@ sub _cmd_migrate($self, $request) {
                 ,id_domain => $id_domain
                 ,@timeout
             );
-            $request->after_request($req_shutdown->id);
+            $request->after_request_ok($req_shutdown->id);
             $request->retry(10) if !defined $request->retry();
             die "Virtual Machine ".$domain->name." ".$request->retry." is active. Shutting down. Retry.\n";
         }
@@ -3906,6 +3950,7 @@ sub _refresh_active_domains($self, $request=undef) {
             my @domains;
             eval { @domains = $self->list_domains_data };
             warn $@ if $@;
+            my $t0 = time;
             for my $domain_data (sort { $b->{date_changed} cmp $a->{date_changed} }
                                 @domains) {
                 $request->error("checking $domain_data->{name}") if $request;
@@ -3914,6 +3959,7 @@ sub _refresh_active_domains($self, $request=undef) {
                 next if !$domain;
                 $self->_refresh_active_domain($domain, \%active_domain);
                 $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
+                last if !$CAN_FORK && time - $t0 > 10;
             }
             $request->error("checked ".scalar(@domains)) if $request;
         }
@@ -4029,12 +4075,11 @@ sub _refresh_volatile_domains($self) {
                 $domain->_post_shutdown(user => $USER_DAEMON);
                 $domain->remove($USER_DAEMON);
             } else {
-                confess;
-                my $sth= $CONNECTOR->dbh->prepare(
-                "DELETE FROM users where id=? "
-                ." AND is_temporary=1");
-                $sth->execute($id_owner);
-                $sth->finish;
+                cluck "Warning: temporary user id=$id_owner should already be removed";
+                my $user;
+                eval { $user = Ravada::Auth::SQL->search_by_id($id_owner) };
+                warn $@ if $@;
+                $user->remove() if $user;
             }
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
             $sth_del->execute($id_domain);
@@ -4068,16 +4113,19 @@ sub _cmd_set_base_vm {
     #    my $domain = $self->search_domain_by_id($id_domain) or confess "Error: Unknown domain id: $id_domain";
 
     die "USER $uid not authorized to set base vm"
-        if !$user->is_admin;
+    if !$user->is_admin;
 
-    $domain->prepare_base($user) if $value && !$domain->is_base;
+    $self->_migrate_base($domain, $id_vm, $uid, $request) if $domain->id_base;
+    if ( $value && !$domain->is_base ) {
+        $domain->prepare_base($user);
+    }
 
     $domain->set_base_vm(
-            id_vm => $id_vm
-            ,user => $user
-           ,value => $value
-         ,request => $request
-     );
+        id_vm => $id_vm
+        ,user => $user
+        ,value => $value
+        ,request => $request
+    );
 }
 
 sub _cmd_cleanup($self, $request) {
@@ -4161,6 +4209,8 @@ sub _req_method {
 ,remove_hardware => \&_cmd_remove_hardware
 ,change_hardware => \&_cmd_change_hardware
 ,set_time => \&_cmd_set_time
+,compact => \&_cmd_compact
+,purge => \&_cmd_purge
 
 # Domain ports
 ,expose => \&_cmd_expose
@@ -4367,15 +4417,14 @@ sub _clean_temporary_users($self) {
         ." WHERE u.is_temporary = 1 AND u.date_created < ?"
     );
 
-    my $sth_del = $CONNECTOR->dbh->prepare(
-        "DELETE FROM users "
-        ." WHERE is_temporary = 1 AND id=?"
-    );
     my $one_day = _date_now(-24 * 60 * 60);
     $sth_users->execute( $one_day );
     while ( my ( $id_user, $id_domain, $date_created ) = $sth_users->fetchrow ) {
         next if $id_domain;
-        $sth_del->execute($id_user);
+        my $user;
+        eval { $user = Ravada::Auth::SQL->search_by_id($id_user) };
+        warn $@ if $@;
+        $user->remove() if $user;
     }
 }
 
@@ -4398,10 +4447,10 @@ sub _clean_volatile_machines($self, %args) {
             eval { $domain_real->remove($USER_DAEMON) };
             warn $@ if $@;
         } elsif ($domain->{id_owner}) {
-            my $sth = $CONNECTOR->dbh->prepare(
-                "DELETE FROM users where id=? "
-                ."AND is_temporary=1");
-            $sth->execute($domain->{id_owner});
+            my $user;
+            eval { $user = Ravada::Auth::SQL->search_by_id($domain->{id_owner})};
+            warn $@ if $@;
+            $user->remove() if $user;
         }
 
         $sth_remove->execute($domain->{id});
@@ -4455,9 +4504,8 @@ Sets debug global variable from setting
 =cut
 
 sub set_debug_value($self) {
-	$DEBUG = $self->setting('backend/debug'); 
+	$DEBUG = $FORCE_DEBUG || $self->setting('backend/debug');
 }
-
 
 =head2 setting
 

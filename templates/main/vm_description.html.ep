@@ -1,4 +1,4 @@
-<div class="card-body">
+<div class="card-body"><!-- description -->
     <form class="form" action="<%= $action %>" accept-charset="ISO-8859-1" method="post">
         <div class="form-group">
             <div class="row">
@@ -19,4 +19,4 @@
             </div>
         </div>
     </form>
-</div>
+</div> <!-- from card-body description -->

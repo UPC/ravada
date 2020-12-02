@@ -60,7 +60,6 @@
                 </div>
              </div>
          </div>
-               </form>
     </div>
     <div class="panel-body" ng-show="!showmachine.is_base && showmachine.id_base">
         <div class="row">

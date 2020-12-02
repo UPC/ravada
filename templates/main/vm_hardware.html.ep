@@ -34,7 +34,7 @@
                         <p class="h4" ng-show="item.device == 'disk'">
                             Danger: This will destroy all the disk data permantently.
                         </p>
-                    <label for "confirm_remove">
+                    <label for="confirm_remove">
                         Type the name of the volume disk to confirm:
                     </label>
                     <input name="confirm_remove" ng-model="confirm_remove" type="text"
@@ -118,7 +118,6 @@
             <button class="btn btn-primary"
                 ng-disabled="showmachine.requests > 0 || showmachine.is_base || showmachine.is_active"
                 ng-click="add_hardware(new_hardware)"
-                class="btn btn-primary"
                 type="button">
             <%=l 'Add'%></button>
         </div>

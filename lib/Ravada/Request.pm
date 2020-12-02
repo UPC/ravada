@@ -114,6 +114,8 @@ our %VALID_ARG = (
     ,migrate => { uid => 1, id_node => 1, id_domain => 1, start => 2, remote_ip => 2
         ,shutdown => 2, shutdown_timeout => 2
     }
+    ,compact => { uid => 1, id_domain => 1 , keep_backup => 2 }
+      ,purge => { uid => 1, id_domain => 1 }
 
     #users
     ,post_login => { user => 1, locale => 2 }
@@ -170,6 +172,7 @@ our %COMMAND = (
                     , 'remove_base_vm'
                     , 'screenshot'
                     , 'cleanup'
+                    , 'compact'
                 ]
         ,priority => 20
     }
@@ -586,7 +589,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
         my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
         next if $args_d_s ne $args_found_s;
 
-        return $id;
+        return Ravada::Request->open($id);
     }
     return 0;
 }
@@ -633,11 +636,14 @@ sub _new_request {
     if ($args{command} =~ /^(clone|manage_pools)$/
         || $CMD_NO_DUPLICATE{$args{command}}
         || ($no_duplicate && $args{command} =~ /^(screenshot)$/)) {
-        if ( _duplicated_request(undef, $args{command}, $args{args})
-            || ( $args{command} ne 'clone' && done_recently(undef, 60, $args{command}))) {
-            #            warn "Warning: duplicated request for $args{command} $args{args}";
-            return;
-        }
+        my $dupe = _duplicated_request(undef, $args{command}, $args{args});
+        return $dupe if $dupe;
+
+        my $recent;
+        $recent = done_recently(undef, 60, $args{command})
+        if $args{command} !~ /^(clone|migrate|set_base_vm)$/;
+        return if $recent;
+
     }
 
     my $sth = $$CONNECTOR->dbh->prepare(
@@ -1257,18 +1263,19 @@ sub done_recently($self, $seconds=60,$command=undef) {
         $id_req = $self->id;
         $command = $self->command;
     }
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id FROM requests"
+    my $query = "SELECT id FROM requests"
         ." WHERE date_changed > ? "
         ."        AND command = ? "
         ."         AND ( status = 'done' OR status ='working') "
         ."         AND  error = '' "
-        ."         AND id <> ? "
-    );
+        ."         AND id <> ? ";
+
+    my $sth = $$CONNECTOR->dbh->prepare( $query );
     my $date= Time::Piece->localtime(time - $seconds);
     $sth->execute($date->ymd." ".$date->hms, $command, $id_req);
     my ($id) = $sth->fetchrow;
-    return $id;
+    return if !defined $id;
+    return Ravada::Request->open($id);
 }
 
 sub _requested($command, %fields) {
@@ -1354,7 +1361,7 @@ sub requirements_done($self) {
             $self->status('done');
             $self->error($req->error);
         }
-        $ok = 1 if $req->status eq 'done' && $req->error eq '';
+        $ok = 1 if $req->status eq 'done' && ( !defined $req->error || $req->error eq '' );
     }
     return $ok;
 }
@@ -1393,6 +1400,7 @@ sub AUTOLOAD {
     confess "ERROR: field $name is read only"
         if $FIELD_RO{$name};
 
+    confess "Error: $name can't be a ref ".Dumper($value) if ref($value);
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
             ." WHERE id=?");
     eval {

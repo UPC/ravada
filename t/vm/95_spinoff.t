@@ -159,6 +159,7 @@ for my $vm_name (reverse sort @VMS) {
         my $domain = test_create_domain($vm_name);
         test_prepare_base($vm_name, $domain);
         my $domain_clone = test_clone($vm_name, $domain);
+        $domain_clone->spinoff();
         test_prepare_base($vm_name, $domain_clone);
         test_remove_base($vm_name, $domain, $domain_clone);
         test_remove_domain($vm_name, $domain, $domain_clone);
