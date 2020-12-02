@@ -182,7 +182,9 @@ our %COMMAND = (
     ,secondary => {
         limit => 50
         ,priority => 4
-        ,commands => ['shutdown','shutdown_now', 'manage_pools','enforce_limits', 'set_time']
+        ,commands => ['shutdown','shutdown_now', 'manage_pools','enforce_limits', 'set_time'
+            ,'remove_domain'
+        ]
     }
 
     ,important=> {
