@@ -36,6 +36,7 @@ sub test_list_nats($vm) {
            user => user_admin
           ,type => 'nat'
        ,vm_type => $vm->type
+       ,timeout => 1
     );
     ok($nats);
 
@@ -74,6 +75,7 @@ sub test_list_bridges($vm) {
            user => user_admin
           ,type => 'bridge'
        ,vm_type => $vm->type
+       ,timeout => 1
       );
     ok($bridges);
 
@@ -97,7 +99,7 @@ sub _expected_bridges($vm) {
 
 ############################################################
 
-for my $vm_name (qw(KVM)) {
+for my $vm_name (vm_names()) {
     my $vm;
     my $msg = "SKIPPED: virtual manager $vm_name not found";
     eval {

@@ -70,7 +70,7 @@ sub test_prepare_base_active {
     ok(!$domain->is_paused,"[$vm_name] Domain ".$domain->name." should not be paused") or return;
 
     eval{ $domain->prepare_base( user_admin ) };
-    ok(!$@,"[$vm_name] Prepare base, expecting error='', got '$@'") or exit;
+    ok(!$@,"[$vm_name] Prepare base ".$domain->name.", expecting error='', got '$@'") or exit;
 
     ok(!$domain->is_active,"[$vm_name] Domain ".$domain->name." should not be active")
         or return;
@@ -238,9 +238,10 @@ sub test_remove_base {
 
 #######################################################
 
+init();
 clean();
 
-my $vm_name = 'KVM';
+for my $vm_name (vm_names()) {
 my $vm = rvd_back->search_vm($vm_name);
 my $description = 'This is a description test';
 
@@ -255,6 +256,8 @@ SKIP: {
 
     test_description($vm_name);
     test_remove_base($vm_name);
+}
+
 }
 
 end();

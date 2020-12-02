@@ -6,11 +6,14 @@
         <%=l 'This base can\'t be removed because the domain has clones.' %>
     </div>
 
-    <div ng-hide="showmachine && nodes">
-    ... Loading ...
+    <div ng-hide="showmachine || (pending_request && pending_request.status != 'done')">
+        Loading machine <i class="fas fa-sync-alt fa-spin"></i>
+        <div ng-show="pending_request && pending_request.status !='done'">
+            waiting for requests {{pending_request}}
+        </div>
     </div>
 
-<div ng-hide="!showmachine || !nodes || (pending_request && pending_request.status != 'done')">
+<div ng-hide="!showmachine || (pending_request && pending_request.status != 'done')">
 
     %= include "/main/vm_rebase"
 
@@ -24,6 +27,10 @@
 
 <div ng-show="pending_request">
     %= include "/main/pending_request"
+</div>
+
+<div ng-show="showmachine.is_base && !nodes">
+Loading nodes <i class="fas fa-sync-alt fa-spin"></i>
 </div>
 
 <div ng-show="showmachine.is_base && nodes && nodes.length>1">

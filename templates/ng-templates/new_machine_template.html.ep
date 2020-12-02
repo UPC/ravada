@@ -110,7 +110,6 @@
                   <a ng-show="swap.enabled"
                       ng-click="swap.enabled=false"
                       align="right"><span class="badge badge-primary ml-2">Disable</span></a>
-                 </label>
                </div>
                <div>
                     <span>Content will be cleaned on restore and shutdown</span>
@@ -133,7 +132,6 @@
                   <a ng-show="data.enabled"
                       ng-click="data.enabled=false"
                       align="right"><span class="badge badge-primary ml-2">Disable</span></a>
-                 </label>
                </div>
                <div>
                     <span>Content will be kept on restore</span>

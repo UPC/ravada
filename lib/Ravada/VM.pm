@@ -19,8 +19,7 @@ use Socket qw( inet_aton inet_ntoa );
 use Moose::Role;
 use Net::DNS;
 use Net::Ping;
-use Net::SSH2 qw(LIBSSH2_FLAG_SIGPIPE);
-use IO::Scalar;
+use Net::OpenSSH;
 use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
@@ -39,7 +38,6 @@ our $CONFIG = \$Ravada::CONFIG;
 
 our $MIN_MEMORY_MB = 128 * 1024;
 
-our $SSH_TIMEOUT = 20 * 1000;
 our $CACHE_TIMEOUT = 60;
 our $FIELD_TIMEOUT = '_data_timeout';
 
@@ -115,6 +113,14 @@ has 'store' => (
     , is => 'rw'
     , default => 1
 );
+
+has 'netssh' => (
+    isa => 'Any'
+    ,is => 'ro'
+    , builder => '_connect_ssh'
+    , lazy => 1
+    , clearer => 'clear_netssh'
+);
 ############################################################
 #
 # Method Modifiers definition
@@ -131,6 +137,7 @@ around 'import_domain' => \&_around_import_domain;
 
 around 'ping' => \&_around_ping;
 around 'connect' => \&_around_connect;
+after 'disconnect' => \&_post_disconnect;
 
 #############################################################
 #
@@ -287,6 +294,16 @@ sub _around_connect($orig, $self) {
     return $result;
 }
 
+sub _post_disconnect($self) {
+    if (!$self->is_local) {
+        if ($self->netssh) {
+            $self->netssh->disconnect();
+	    }
+        $self->clear_netssh();
+        delete $SSH{$self->host};
+    }
+}
+
 sub _pre_create_domain {
     _check_create_domain(@_);
     _connect(@_);
@@ -302,7 +319,7 @@ sub _pre_list_domains($self,@) {
     die "ERROR: VM ".$self->name." unavailable" if !$self->ping();
 }
 
-sub _connect_ssh($self, $disconnect=0) {
+sub _connect_ssh($self) {
     confess "Don't connect to local ssh"
         if $self->is_local;
 
@@ -311,55 +328,41 @@ sub _connect_ssh($self, $disconnect=0) {
         return;
     }
 
-    my @pwd = getpwuid($>);
-    my $home = $pwd[7];
-
-    my $ssh= $self->{_ssh};
+    my $ssh;
     $ssh = $SSH{$self->host}    if exists $SSH{$self->host};
 
-    if (! $ssh || $disconnect ) {
-        return if !$self->ping();
-        $ssh->disconnect if $ssh && $disconnect;
-        $ssh = Net::SSH2->new( timeout => $SSH_TIMEOUT );
-        my $connect;
+    if (!$ssh || !$ssh->check_master) {
+        delete $SSH{$self->host};
         for ( 1 .. 3 ) {
-            eval { $connect = $ssh->connect($self->host) };
-            last if $connect;
+            $ssh = Net::OpenSSH->new($self->host
+                    ,timeout => 2
+                 ,batch_mode => 1
+                ,forward_X11 => 0
+              ,forward_agent => 0
+        ,kill_ssh_on_timeout => 1
+            );
+            last if !$ssh->error;
             warn "RETRYING ssh ".$self->host." ".join(" ",$ssh->error);
             sleep 1;
         }
-        if ( !$connect) {
-            eval { $connect = $ssh->connect($self->host) };
-            if (!$connect) {
-                $self->_cached_active(0);
-                confess $ssh->error();
-            }
+        if ( $ssh->error ) {
+            $self->_cached_active(0);
+            warn "Error connecting to ".$self->host." : ".$ssh->error();
+            return;
         }
-        $ssh->auth_publickey( 'root'
-            , "$home/.ssh/id_rsa.pub"
-            , "$home/.ssh/id_rsa"
-        ) or $ssh->die_with_error();
-        $self->{_ssh} = $ssh;
-        $SSH{$self->host} = $ssh;
     }
+    $SSH{$self->host} = $ssh;
     return $ssh;
 }
 
-sub _ssh_channel($self) {
-    my $ssh = $self->_connect_ssh() or confess "ERROR: I can't connect to SSH in ".$self->host;
-    my $ssh_channel;
-    for ( 1 .. 5 ) {
-        $ssh_channel = $ssh->channel();
-        last if $ssh_channel;
-        sleep 1;
-    }
-    if (!$ssh_channel) {
-        $ssh = $self->_connect_ssh(1) or die "Error: I can't connect to ".$self->name;
-        $ssh_channel = $ssh->channel();
-    }
-    die $ssh->die_with_error    if !$ssh_channel;
-    $ssh->blocking(1);
-    return $ssh_channel;
+sub _ssh($self) {
+    my $ssh = $self->netssh;
+    return if !$ssh;
+    return $ssh if $ssh->check_master;
+    warn "WARNING: ssh error '".$ssh->error."'" if $ssh->error;
+    $self->netssh->disconnect;
+    $self->clear_netssh();
+    return $self->netssh;
 }
 
 sub _around_create_domain {
@@ -385,7 +388,7 @@ sub _around_create_domain {
      # args get deleted but kept on %args_create so when we call $self->$orig below are passed
      delete $args{disk};
      delete $args{memory};
-     delete $args{request};
+     my $request = delete $args{request};
      delete $args{iso_file};
      delete $args{id_template};
      delete @args{'description','remove_cpu','vm','start'};
@@ -394,7 +397,9 @@ sub _around_create_domain {
 
     $self->_check_duplicate_name($name);
     if ($id_base) {
-        $base = $self->search_domain_by_id($id_base)
+        my $vm_local = $self;
+        $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
+        $base = $vm_local->search_domain_by_id($id_base)
             or confess "Error: I can't find domain $id_base on ".$self->name;
         $volatile = 1 if $base->volatile_clones;
         if ($add_to_pool) {
@@ -418,15 +423,25 @@ sub _around_create_domain {
         confess("Error: Requested to add a clone for the pool but this base has no pools")
             if !$base->pools;
     }
-    $args_create{listen_ip} = $self->listen_ip($remote_ip);
     $args_create{spice_password} = $self->_define_spice_password($remote_ip);
     $self->_pre_create_domain(%args_create);
+    $args_create{listen_ip} = $self->listen_ip($remote_ip);
 
     return $base->_search_pool_clone($owner) if $from_pool;
+
+    if ($self->is_local && $base && $base->is_base
+            && ( $base->volatile_clones || $owner->is_temporary )) {
+        $request->status("balancing")                       if $request;
+        my $vm = $self->balance_vm($base) or die "Error: No free nodes available.";
+        $request->status("creating machine on ".$vm->name)  if $request;
+        $self = $vm;
+        $args_create{listen_ip} = $self->listen_ip($remote_ip);
+    }
 
     my $domain = $self->$orig(%args_create, volatile => $volatile);
     $self->_add_instance_db($domain->id);
     $domain->add_volume_swap( size => $swap )   if $swap;
+    $domain->_data('is_compacted' => 1);
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
@@ -610,7 +625,7 @@ sub ip {
 
     return $ip if $ip && $ip !~ /^127\./;
 
-    $name = Ravada::display_ip();
+    $name = $self->display_ip();
 
     if ($name) {
         if ($name =~ /^\d+\.\d+\.\d+\.\d+$/) {
@@ -636,8 +651,59 @@ Returns the IP of the VM when it is in a NAT environment
 
 =cut
 
-sub nat_ip($self) {
-    return Ravada::nat_ip();
+sub nat_ip($self, $value=undef) {
+    $self->_data( nat_ip => $value ) if defined $value;
+    if ($self->is_local) {
+        return $self->_data('nat_ip') if $self->_data('nat_ip');
+        return Ravada::nat_ip(); #deprecated
+    }
+    return $self->_data('nat_ip');
+}
+
+=head2 display_ip
+
+Returns the display IP of the Virtual Manager
+
+=cut
+
+sub display_ip($self, $value=undef) {
+    return $self->_set_display_ip($value) if defined $value;
+
+    if ($self->is_local) {
+        return $self->_data('display_ip') if $self->_data('display_ip');
+        return Ravada::display_ip(); #deprecated
+    }
+    return $self->_data('display_ip');
+}
+
+sub _set_display_ip($self, $value) {
+    my %ip_address = $self->_list_ip_address();
+
+    confess "Error: $value is not in any interface in node ".$self->name
+    .". Found ".Dumper(\%ip_address)
+    if !exists $ip_address{$value};
+
+    $self->_data( display_ip => $value );
+}
+
+sub _list_ip_address($self) {
+    my @cmd = ("ip","address","show");
+    my ($out, $err) = $self->run_command(@cmd);
+    my $dev;
+    my %address;
+    for my $line (split /\n/,$out) {
+        my ($dev_found) = $line =~ /^\d+: (.*?):/;
+        if ($dev_found) {
+            $dev = $dev_found;
+            next;
+        }
+        my ($inet) = $line =~ m{inet (\d+\.\d+\.\d+\.\d+)/};
+        if ($inet) {
+            die "Error: no device found for $inet in node ".$self->name."\n$out" if !$dev;
+            $address{$inet} = $dev;
+        }
+    }
+    return %address;
 }
 
 sub _interface_ip($self, $remote_ip=undef) {
@@ -738,7 +804,7 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown);
     my @requests;
     for my $req ( $base->list_requests ) {
         push @requests,($req) if !$ignore_requests{$req->command};
@@ -1112,6 +1178,10 @@ sub ping($self, $option=undef, $cache=1) {
     return $ping;
 }
 
+sub _ping_nocache($self,$option=undef) {
+    return $self->ping($option,0);
+}
+
 sub _delete_cache($self, $key) {
     $key = "_cache_$key";
     delete $self->{$key};
@@ -1184,18 +1254,20 @@ Arguments: optional force mode
 =cut
 
 sub is_active($self, $force=0) {
-    return $self->_do_is_active() if $self->is_local || $force;
+    return $self->_do_is_active($force) if $self->is_local || $force;
 
     return $self->_cached_active if time - $self->_cached_active_time < 60;
     return $self->_do_is_active();
 }
 
-sub _do_is_active($self) {
+sub _do_is_active($self, $force=undef) {
     my $ret = 0;
     if ( $self->is_local ) {
         $ret = 1 if $self->vm;
     } else {
-        if ( !$self->ping() ) {
+        my @ping_args = ();
+        @ping_args = (undef,0) if $force; # no cache
+        if ( !$self->ping(@ping_args) ) {
             $ret = 0;
         } else {
             if ( $self->is_alive ) {
@@ -1205,6 +1277,9 @@ sub _do_is_active($self) {
     }
     $self->_cached_active($ret);
     $self->_cached_active_time(time);
+
+    my $cache_key = "ping_".$self->host;
+    $self->_delete_cache($cache_key);
     return $ret;
 }
 
@@ -1263,22 +1338,28 @@ Run a command on the node
 
 sub run_command($self, @command) {
 
+    my ($exec) = $command[0];
+    if ($exec !~ m{^/}) {
+        my ($exec_command,$args) = $exec =~ /(.*?) (.*)/;
+        $exec_command = $exec if !defined $exec_command;
+        $exec = $self->_findbin($exec_command);
+        $command[0] = $exec;
+        $command[0] .= " $args" if $args;
+    }
     return $self->_run_command_local(@command) if $self->is_local();
 
-    my $chan = $self->_ssh_channel() or die "ERROR: No SSH channel to host ".$self->host;
+    my $ssh = $self->_ssh or confess "Error: Error connecting to ".$self->host;
 
-    my $command = join(" ",@command);
-    $chan->exec($command);# or $self->{_ssh}->die_with_error;
+    my ($out, $err) = $ssh->capture2({timeout => 10},join " ",@command);
+    chomp $err if $err;
+    $err = '' if !defined $err;
 
-    $chan->send_eof();
+    confess "Error: Failed remote command on ".$self->host." err='$err'\n"
+    ."ssh error: '".$ssh->error."'\n"
+    ."command: ". Dumper(\@command)
+    if $ssh->error && $ssh->error !~ /^child exited with code/;
 
-    my ($out, $err) = ('', '');
-    while (!$chan->eof) {
-        if (my ($o, $e) = $chan->read2) {
-            $out .= $o;
-            $err .= $e;
-        }
-    }
+
     return ($out, $err);
 }
 
@@ -1294,6 +1375,10 @@ sub run_command_nowait($self, @command) {
 
     return $self->_run_command_local(@command) if $self->is_local();
 
+    return $self->run_command(@command);
+
+=pod
+
     my $chan = $self->_ssh_channel() or die "ERROR: No SSH channel to host ".$self->host;
 
     my $command = join(" ",@command);
@@ -1302,6 +1387,9 @@ sub run_command_nowait($self, @command) {
     $chan->send_eof();
 
     return;
+
+=cut
+
 }
 
 
@@ -1324,10 +1412,12 @@ Writes a file to the node
 sub write_file( $self, $file, $contents ) {
     return $self->_write_file_local($file, $contents )  if $self->is_local;
 
-    my $chan = $self->_ssh_channel();
-    $chan->exec("cat > $file");
-    my $bytes = $chan->write($contents);
-    $chan->send_eof();
+    my $ssh = $self->_ssh or confess "Error: no ssh connection";
+    my ($rin, $pid) = $self->_ssh->pipe_in("cat > $file")
+        or die "pipe_in method failed ".$self->_ssh->error;
+
+    print $rin $contents;
+    close $rin;
 }
 
 sub _write_file_local( $self, $file, $contents ) {
@@ -1348,14 +1438,10 @@ Reads a file in memory from the storage of the virtual manager
 sub read_file( $self, $file ) {
     return $self->_read_file_local($file) if $self->is_local;
 
-    my $ssh = ($self->{_ssh} or $self->_connect_ssh());
-    die "Error: no ssh connection to ".$self->name if ! $ssh;
+    my ($rout, $pid) = $self->_ssh->pipe_out("cat $file")
+        or die "pipe_out method failed ".$self->_ssh->error;
 
-    my $data = '';
-    my $io = IO::Scalar->new(\$data);
-    my $ok = $ssh->scp_get($file, $io);
-
-    return $data;
+    return join ("",<$rout>);
 }
 
 sub _read_file_local( $self, $file ) {
@@ -1373,8 +1459,8 @@ Returns true if the file exists in this virtual manager storage
 sub file_exists( $self, $file ) {
     return -e $file if $self->is_local;
 
-    my $ssh = ($self->{_ssh} or $self->_connect_ssh());
-    die "Error: no ssh connection to ".$self->name if ! $ssh;
+    my $ssh = $self->_ssh;
+    confess "Error: no ssh connection to ".$self->name if ! $ssh;
 
     confess "Error: dangerous filename '$file'"
         if $file =~ /[`|"(\\\[]/;
@@ -1402,16 +1488,26 @@ Creates a new chain in the system iptables
 =cut
 
 sub create_iptables_chain($self, $chain, $jchain='INPUT') {
-    my ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",$chain);
+    my ($out, $err) = $self->run_command("iptables","-n","-L",$chain);
 
-    $self->run_command("/sbin/iptables", '-N' => $chain)
+    $self->run_command('iptables', '-N' => $chain)
         if $out !~ /^Chain $chain/;
 
-    ($out, $err) = $self->run_command("/sbin/iptables","-n","-L",$jchain);
+    ($out, $err) = $self->run_command("iptables","-n","-L",$jchain);
     return if grep(/^$chain /, split(/\n/,$out));
 
-    $self->run_command("/sbin/iptables", '-I', $jchain, '-j' => $chain);
+    $self->run_command("iptables", '-I', $jchain, '-j' => $chain);
 
+}
+
+sub _findbin($self, $name) {
+    my $exec = "_exec_$name";
+    return $self->{$exec} if $self->{$exec};
+    my ($out, $err) = $self->run_command('/usr/bin/which', $name);
+    chomp $out;
+    $self->{$exec} = $out;
+    confess "Error: Command '$name' not found" if !$out;
+    return $out;
 }
 
 =head2 iptables
@@ -1425,7 +1521,7 @@ Example:
 =cut
 
 sub iptables($self, @args) {
-    my @cmd = ('/sbin/iptables','-w');
+    my @cmd = ('iptables','-w');
     for ( ;; ) {
         my $key = shift @args or last;
         my $field = "-$key";
@@ -1468,6 +1564,7 @@ sub _search_iptables($self, %rule) {
     for my $line (@{$iptables->{$table}}) {
 
         my %args = @$line;
+        $args{s} = "0.0.0.0/0" if !exists $args{s};
         my $match = 1;
         for my $key (keys %rule) {
             $match = 0 if !exists $args{$key} || $args{$key} ne $rule{$key};
@@ -1489,7 +1586,7 @@ Returns the list of the system iptables
 sub iptables_list($self) {
 #   Extracted from Rex::Commands::Iptables
 #   (c) Jan Gehring <jan.gehring@gmail.com>
-    my ($out,$err) = $self->run_command("/sbin/iptables-save");
+    my ($out,$err) = $self->run_command("iptables-save");
     my ( %tables, $ret );
 
     my ($current_table);
@@ -1549,9 +1646,10 @@ sub balance_vm($self, $base=undef) {
     if ($base) {
         @vms = $base->list_vms();
     } else {
+        confess "Error: we need a base to balance ";
         @vms = $self->list_nodes();
     }
-    return $vms[0] if scalar(@vms)<1;
+    return $vms[0] if scalar(@vms)<=1;
     for my $vm (_random_list( @vms )) {
         next if !$vm->enabled();
         my $active = 0;
@@ -1832,8 +1930,8 @@ sub _list_used_ports_iptables($self, $used_port) {
     my $iptables = $self->iptables_list();
     for my $rule ( @{$iptables->{nat}} ) {
         my %rule = @{$rule};
-        next if !exists $rule{A} || $rule{A} ne 'PREROUTING';
-        $used_port->{dport}++;
+        next if !exists $rule{A} || $rule{A} ne 'PREROUTING' || !$rule{dport};
+        $used_port->{$rule{dport}} = $rule{'to-destination'};
     }
 }
 
@@ -1849,6 +1947,90 @@ sub _new_free_port($self) {
         $free_port++ ;
     }
     return $free_port;
+}
+
+=head2 list_network_interfaces
+
+Returns a list of all the known interface
+
+Argument: type ( nat or bridge )
+
+=cut
+
+sub list_network_interfaces($self, $type) {
+    my $sub = {
+        nat => \&_list_nat_interfaces
+        ,bridge => \&_list_bridges
+    };
+
+    my $cmd = $sub->{$type} or confess "Error: Unknown interface type $type";
+    return $cmd->($self);
+}
+
+sub _list_nat_interfaces($self) {
+
+    my @cmd = ( '/usr/bin/virsh','net-list');
+    my ($out,$err) = $self->run_command(@cmd);
+
+    my @lines = split /\n/,$out;
+    shift @lines;
+    shift @lines;
+
+    my @networks;
+    for (@lines) {
+        /\s*(.*?)\s+.*/;
+        push @networks,($1) if $1;
+    }
+    return @networks;
+}
+
+sub _get_nat_bridge($self, $net) {
+    my @cmd = ( '/usr/bin/virsh','net-info', $net);
+    my ($out,$err) = $self->run_command(@cmd);
+
+    for my $line (split /\n/, $out) {
+        my ($bridge) = $line =~ /^Bridge:\s+(.*)/;
+        return $bridge if $bridge;
+    }
+}
+
+sub _list_qemu_bridges($self) {
+    my %bridge;
+    my @networks = $self->_list_nat_interfaces();
+    for my $net (@networks) {
+        my $nat_bridge = $self->_get_nat_bridge($net);
+        $bridge{$nat_bridge}++;
+    }
+    return keys %bridge;
+}
+
+sub _which($self, $command) {
+    return $self->{_which}->{$command} if exists $self->{_which} && exists $self->{_which}->{$command};
+    my @cmd = ( '/bin/which',$command);
+    my ($out,$err) = $self->run_command(@cmd);
+    chomp $out;
+    $self->{_which}->{$command} = $out;
+    return $out;
+}
+
+sub _list_bridges($self) {
+
+    my %qemu_bridge = map { $_ => 1 } $self->_list_qemu_bridges();
+
+    my @cmd = ( $self->_which('brctl'),'show');
+    my ($out,$err) = $self->run_command(@cmd);
+
+    die $err if $err;
+    my @lines = split /\n/,$out;
+    shift @lines;
+
+    my @networks;
+    for (@lines) {
+        my ($bridge, $interface) = /\s*(.*?)\s+.*\s(.*)/;
+        push @networks,($bridge) if $bridge && !$qemu_bridge{$bridge};
+    }
+    $self->{_bridges} = \@networks;
+    return @networks;
 }
 
 1;

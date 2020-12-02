@@ -420,7 +420,8 @@ sub test_default_pool_base {
 clean();
 
 my $vm_name = 'KVM';
-my $vm = rvd_back->search_vm($vm_name);
+my $vm;
+eval { $vm = rvd_back->search_vm($vm_name) } if !$<;
 
 SKIP: {
 

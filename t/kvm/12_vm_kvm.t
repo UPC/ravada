@@ -48,7 +48,7 @@ eval {
 my $err = ($@ or '');
 my $vm;
 
-eval { $vm = $RAVADA->search_vm($BACKEND) } if $RAVADA;
+eval { $vm = $RAVADA->search_vm($BACKEND) } if $RAVADA && !$<;
 $err .= ($@ or '');
 
 SKIP: {

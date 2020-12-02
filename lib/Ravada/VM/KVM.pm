@@ -77,9 +77,6 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 our $WGET = `which wget`;
 chomp $WGET;
 
-our $BRCTL = `which brctl`;
-chomp $BRCTL;
-
 our $CACHE_DOWNLOAD = 1;
 our $VERIFY_ISO = 1;
 
@@ -413,6 +410,8 @@ sub _refresh_isos($self) {
             warn "Error: ISO mismatch ".Dumper($row);
             next;
         }
+        $file_re = "$file_re\$" unless $file_re =~ /\$$/;
+        $file_re = "^$file_re"  unless $file_re =~ /^\$/;
 
         my $iso_file = $self->search_volume_path_re(qr($file_re));
         if ($iso_file) {
@@ -716,6 +715,7 @@ sub create_volume {
     my $size        = delete $args{size};
     $size = int($size) if defined $size;
     my $type        =(delete $args{type} or 'sys');
+    my $format      =(delete $args{format} or 'qcow2');
     my $swap        =(delete $args{swap} or 0);
     my $target      = delete $args{target};
     my $capacity    = delete $args{capacity};
@@ -751,6 +751,7 @@ sub create_volume {
         target => $target
         , type => $type
         , name => $name
+        , format => $format
         , storage => $storage_pool
     );
 
@@ -758,6 +759,8 @@ sub create_volume {
     my ($volume_name) = $img_file =~m{.*/(.*)};
     $doc->findnodes('/volume/name/text()')->[0]->setData($volume_name);
     $doc->findnodes('/volume/key/text()')->[0]->setData($img_file);
+    my ($format_doc) = $doc->findnodes('/volume/target/format');
+    $format_doc->setAttribute(type => $format);
     $doc->findnodes('/volume/target/path/text()')->[0]->setData(
                         $img_file);
 
@@ -783,9 +786,11 @@ sub _volume_path {
     my $storage  = delete $args{storage} or confess "ERROR: Missing storage";
     my $filename = $args{name}  or confess "ERROR: Missing name";
     my $target = delete $args{target};
+    my $format = delete $args{format};
 
     my $dir_img = $self->_storage_path($storage);
     my $suffix = "qcow2";
+    $suffix = 'img' if $format && $format eq 'raw';
     $type = ''  if $type eq 'sys';
     $type = uc($type)."."   if $type;
     return "$dir_img/$filename.$type$suffix";
@@ -930,7 +935,7 @@ sub _domain_create_common {
         };
         close $out;
         warn "$! $name_out" if !$out;
-        confess $@ if !$dom;
+        confess $@;# if !$dom;
     }
 
     my $domain = Ravada::Domain::KVM->new(
@@ -996,7 +1001,9 @@ sub _domain_create_from_base {
     my $base = $args{base};
     my $with_cd = delete $args{with_cd};
 
-    $base = $self->_search_domain_by_id($args{id_base}) if $args{id_base};
+    my $vm_local = $self;
+    $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
+    $base = $vm_local->_search_domain_by_id($args{id_base}) if $args{id_base};
     confess "Unknown base id: $args{id_base}" if !$base;
 
     my $vm = $self->vm;
@@ -1095,11 +1102,12 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _fill_url($iso);
-        return if $req && $req->defined_arg('test');
-        my $url = $self->_download_file_external($iso->{url}, $device, $verbose);
+        my $test = 0;
+        $test = 1 if $req && $req->defined_arg('test');
+        my $url = $self->_download_file_external($iso->{url}, $device, $verbose, $test);
         $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
-            if ! -e $device;
+            if !$test && ! -e $device;
 
         my $verified = 0;
         for my $check ( qw(md5 sha256)) {
@@ -1115,6 +1123,7 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
                 $self->_fetch_this($iso,$check,$url_file);
             }
             next if !$iso->{$check};
+            next if $test;
 
             die "Download failed, $check id=$iso->{id} missmatched for $device."
             ." Please read ISO "
@@ -1122,6 +1131,7 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
             if (! _check_signature($device, $check, $iso->{$check}));
             $verified++;
         }
+        return if $test;
         die "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
 
         $req->status("done","File $iso->{filename} downloaded") if $req;
@@ -1196,7 +1206,20 @@ sub _check_signature($file, $type, $expected) {
     die "Unknown signature type $type";
 }
 
-sub _download_file_external($self, $url, $device, $verbose=1) {
+sub _download_file_external_headers($self,$url) {
+    my @cmd = ($WGET,"-S","--spider",$url);
+
+    my ($in,$out,$err) = @_;
+    run3(\@cmd,\$in,\$out,\$err);
+    my ($status) = $err =~ /^\s*(HTTP.*\d+.*)/m;
+
+    return $url if $status =~ /(200|301|302) ([\w\s]+)$/;
+    # 200: OK
+    # 302: redirect
+    die "Error: $url not found $status";
+}
+
+sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
     $url .= "/" if $url !~ m{/$} && $url !~ m{.*/([^/]+\.[^/]+)$};
     if ($url =~ m{[^*]}) {
         my @found = $self->_search_url_file($url);
@@ -1208,6 +1231,9 @@ sub _download_file_external($self, $url, $device, $verbose=1) {
         $url = "$url$filename";
     }
     confess "ERROR: wget missing"   if !$WGET;
+
+    return $self->_download_file_external_headers($url)    if $test;
+
     my @cmd = ($WGET,'-nv',$url,'-O',$device);
     my ($in,$out,$err) = @_;
     warn join(" ",@cmd)."\n"    if $verbose;
@@ -1282,7 +1308,7 @@ sub _download($self, $url) {
     }
     die $@ if $@;
     confess "ERROR ".$res->code." ".$res->message." : $url"
-        unless $res->code == 200 || $res->code == 301;
+        unless $res->code == 200 || $res->code == 301 || $res->code == 302;
 
     return $self->_cache_store($url,$res->body);
 }
@@ -2307,76 +2333,6 @@ sub _fetch_dir_cert($self) {
         return $1 if $1;
     }
     close $in;
-}
-
-sub list_network_interfaces($self, $type) {
-    my $sub = {
-        nat => \&_list_nat_interfaces
-        ,bridge => \&_list_bridges
-    };
-
-    my $cmd = $sub->{$type} or confess "Error: Unknown interface type $type";
-    return $cmd->($self);
-}
-
-sub _list_nat_interfaces($self) {
-
-    my ($in, $out, $err);
-    my @cmd = ( '/usr/bin/virsh','net-list');
-    run3(\@cmd, \$in, \$out, \$err);
-
-    my @lines = split /\n/,$out;
-    shift @lines;
-    shift @lines;
-
-    my @networks;
-    for (@lines) {
-        /\s*(.*?)\s+.*/;
-        push @networks,($1) if $1;
-    }
-    return @networks;
-}
-
-sub _get_nat_bridge($net) {
-    my ($in, $out, $err);
-    my @cmd = ( '/usr/bin/virsh','net-info', $net);
-    run3(\@cmd, \$in, \$out, \$err);
-
-    for my $line (split /\n/, $out) {
-        my ($bridge) = $line =~ /^Bridge:\s+(.*)/;
-        return $bridge if $bridge;
-    }
-}
-
-sub _list_qemu_bridges($self) {
-    my %bridge;
-    my @networks = $self->_list_nat_interfaces();
-    for my $net (@networks) {
-        my $nat_bridge = _get_nat_bridge($net);
-        $bridge{$nat_bridge}++;
-    }
-    return keys %bridge;
-}
-
-sub _list_bridges($self) {
-
-    return () if !-e $BRCTL;
-    my %qemu_bridge = map { $_ => 1 } $self->_list_qemu_bridges();
-
-    my @cmd = ( $BRCTL,'show');
-    my ($out,$err) = $self->run_command(@cmd);
-
-    die $err if $err;
-    my @lines = split /\n/,$out;
-    shift @lines;
-
-    my @networks;
-    for (@lines) {
-        my ($bridge, $interface) = /\s*(.*?)\s+.*\s(.*)/;
-        push @networks,($bridge) if $bridge && !$qemu_bridge{$bridge};
-    }
-    $self->{_bridges} = \@networks;
-    return @networks;
 }
 
 sub free_disk($self, $pool_name = undef ) {

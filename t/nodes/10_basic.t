@@ -4,6 +4,7 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use Digest::MD5;
+use IPC::Run3 qw(run3);
 use Test::More;
 
 use lib 't/lib';
@@ -259,6 +260,19 @@ sub _create_2_clones_same_port($vm, $node, $base, $ip_local, $ip_remote) {
     }
 }
 
+sub _start_clone_in_node($vm, $node, $base) {
+    my $found_clone;
+    for my $try ( 1 .. 20 ) {
+        my $clone1 = $base->clone(name => new_domain_name, user => user_admin);
+        _remove_tmp($clone1,$vm);
+        $clone1->start(user_admin);
+        $found_clone = $clone1;
+        last if $clone1->_vm->id == $node->id;
+        ok(scalar($base->list_vms) >1) or die Dumper([map { $_->name } $base->list_vms]);
+    }
+    return $found_clone;
+}
+
 sub test_removed_local_swap($vm, $node) {
     diag("Testing removed local swap in ".$vm->type);
     my $base = create_domain($vm);
@@ -269,15 +283,8 @@ sub test_removed_local_swap($vm, $node) {
     $base->set_base_vm(node => $node, user => user_admin);
     ok(scalar($base->list_vms) >1) or die Dumper([map { $_->name } $base->list_vms]);
 
-    my $found_clone;
-    for my $try ( 1 .. 20 ) {
-        my $clone1 = $base->clone(name => new_domain_name, user => user_admin);
-        _remove_tmp($clone1,$vm);
-        $clone1->start(user_admin);
-        $found_clone = $clone1;
-        last if $clone1->_vm->id == $node->id;
-        ok(scalar($base->list_vms) >1) or die Dumper([map { $_->name } $base->list_vms]);
-    }
+    my $found_clone = _start_clone_in_node($vm, $node, $base);
+
     is($found_clone->_vm->id, $node->id) or exit;
     for my $clone_data ($base->clones) {
         my $clone = Ravada::Domain->open($clone_data->{id});
@@ -429,6 +436,51 @@ sub test_removed_base_file_and_swap_remote($vm, $node) {
     $base->remove(user_admin);
 }
 
+sub test_set_vm_fail($vm, $node) {
+    return if $vm->type ne 'KVM';
+    diag("Test set vm fail");
+    my $base = create_domain($vm);
+    $base->volatile_clones(1);
+    my $pool2 = create_storage_pool($vm);
+    $vm->default_storage_pool_name($pool2);
+    $base->add_volume( size => 11000 );
+    $base->prepare_base(user_admin);
+
+    $base->_set_base_vm_db($node->id, 1);
+
+    my $req = Ravada::Request->set_base_vm(
+        id_domain => $base->id
+        , id_vm => $node->id
+        , value => 1
+        , uid => user_admin->id
+    );
+    rvd_back->_process_requests_dont_fork();
+    is($req->status, 'done');
+    like($req->error, qr/storage pool/i);
+
+    is($base->base_in_vm($node->id),0) or exit;
+    $req = Ravada::Request->clone(
+        id_domain => $base->id
+        ,number => 3
+        ,uid => user_admin->id
+    );
+    rvd_back->_process_all_requests_dont_fork();
+    rvd_back->_process_all_requests_dont_fork();
+    is($req->status, 'done');
+    is($req->error,'');
+
+    ok(scalar($base->clones));
+
+    _remove_domain($base);
+    my $pool = $vm->vm->get_storage_pool_by_name($pool2);
+    eval {
+        $pool->destroy();
+        $pool->undefine();
+    };
+    warn $@ if$@ && $@ !~ /libvirt error code: 49,/;
+
+    $vm->default_storage_pool_name('default');
+}
 
 sub test_set_vm($vm, $node) {
     my $base = create_domain($vm);
@@ -545,11 +597,10 @@ sub test_volatile($vm, $node) {
 
 sub test_volatile_req($vm, $node) {
     my $base = create_domain($vm);
+    $base->volatile_clones(1);
     $base->prepare_base(user_admin);
     $base->set_base_vm(user => user_admin, node => $node);
-    $base->volatile_clones(1);
     ok($base->base_in_vm($node->id));
-
     my @clones;
     my $clone;
     for ( 1 .. 20 ) {
@@ -571,11 +622,69 @@ sub test_volatile_req($vm, $node) {
     }
     is($clone->_vm->id, $node->id) or exit;
 
-    for (@clones) {
-        $_->remove(user_admin);
+    shutdown_domain_internal($clone);
+    rvd_back->_cmd_refresh_vms();
+    for my $vol ( $clone->list_volumes ) {
+        ok(!$vm->file_exists($vol),$vol) or exit;
+        ok(!$node->file_exists($vol),$vol) or exit;
+    }
+    _remove_domain($base);
+}
+
+sub test_volatile_req_clone($vm, $node) {
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+    $base->set_base_vm(user => user_admin, node => $node);
+    $base->volatile_clones(1);
+    ok($base->base_in_vm($node->id));
+
+    my $clone;
+    for ( 1 .. 20 ) {
+        my $req = Ravada::Request->clone(
+           id_domain => $base->id
+            ,number => 3
+            ,uid => user_admin->id
+        );
+        rvd_back->_process_all_requests_dont_fork();
+        rvd_back->_process_all_requests_dont_fork();
+        is($req->status, 'done');
+        is($req->error,'');
+
+        is(scalar($base->clones),3) or exit;
+        ($clone) = grep { $_->{id_vm} == $node->id } $base->clones;
+        last if $clone;
+    }
+    is($clone->{id_vm}, $node->id) or exit;
+
+    my @vols;
+    my @clones;
+    for my $clone_data ($base->clones) {
+        my $clone2 = Ravada::Domain->open($clone_data->{id});
+        push @clones,($clone2);
+        push @vols,($clone2->list_volumes);
+        shutdown_domain_internal($clone2);
+    }
+    rvd_back->_cmd_refresh_vms();
+    for my $vol ( @vols ) {
+        ok(!$vm->file_exists($vol),$vol) or exit;
+        ok(!$node->file_exists($vol),$vol) or exit;
+    }
+    my @req;
+    for my $clone2 (@clones) {
+        my $req = Ravada::Request->remove_domain(
+            name => $clone2->name
+            ,uid => user_admin->id
+        );
+        push @req,($req);
+    }
+    wait_request();
+    for my $req (@req) {
+        is($req->status,'done');
+        like($req->error,qr/(^$|Unknown)/);
     }
     $base->remove(user_admin);
 }
+
 
 sub test_volatile_tmp_owner($vm, $node) {
     my $base = create_domain($vm);
@@ -707,7 +816,6 @@ sub test_remove_base($vm, $node, $volatile) {
     }
 
     $base->remove(user_admin);
-
 }
 
 sub _check_internal_autostart($domain, $expected) {
@@ -750,7 +858,8 @@ sub test_duplicated_set_base_vm($vm, $node) {
         , id_domain => 1
         , at => time + 4
     );
-    ok(!$req2) or exit;
+    ok($req2) or exit;
+    is($req2->id, $req->id) or exit;
     my $req3 = Ravada::Request->remove_base_vm(id_vm => $node->id
         , uid => 1
         , id_domain => 1
@@ -761,7 +870,8 @@ sub test_duplicated_set_base_vm($vm, $node) {
         , id_domain => 1
         , at => time + 4
     );
-    ok(!$req4);
+    ok($req4) or exit;
+    is($req4->id, $req3->id) or exit;
     my $req5 = Ravada::Request->set_base_vm(id_vm => 999
         , uid => 2
         , id_domain => 1
@@ -855,6 +965,62 @@ sub test_base_unset($vm, $node) {
     _remove_domain($base);
 }
 
+sub test_change_base($vm, $node) {
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+    $base->set_base_vm(vm => $node, user => user_admin);
+    my @volumes = ($base->list_files_base(), $base->list_volumes);
+    my $req = Ravada::Request->change_hardware(
+        uid => 1
+        ,id_domain => $base->id
+        ,hardware => 'memory'
+        ,data => { memory => 100 }
+
+    );
+    wait_request();
+    is($req->status,'done');
+    is($req->error,'');
+    for my $vol (@volumes) {
+        ok(-e $vol,$vol);
+        ok($node->file_exists($vol), $vol)  if $vol !~ /iso$/;
+    }
+    $base->remove(user_admin);
+}
+
+sub test_change_clone($vm, $node) {
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+    $base->set_base_vm(vm => $node, user => user_admin);
+    my @volumes_base = ($base->list_files_base() ,$base->list_volumes);
+
+    my $clone = $base->clone( user => user_admin,name => new_domain_name());
+    my @volumes_clone = ($clone->list_files_base(), $clone->list_volumes);
+
+    my @args = (
+        uid => 1
+        ,hardware => 'memory'
+        ,data => { memory => 100 }
+    );
+
+    my $reqb = Ravada::Request->change_hardware(@args ,id_domain => $base->id);
+    my $reqc = Ravada::Request->change_hardware(@args ,id_domain => $clone->id);
+    wait_request();
+    is($reqb->status,'done');
+    is($reqb->error,'');
+    is($reqc->status,'done');
+    is($reqc->error,'');
+    for my $vol (@volumes_base) {
+        ok(-e $vol);
+        ok($node->file_exists($vol), $vol)  if $vol !~ /iso$/;
+    }
+    for my $vol (@volumes_clone) {
+        ok(-e $vol, $vol);
+        ok(!$node->file_exists($vol), $vol) if $vol !~ /iso$/;
+    }
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+}
+
 sub test_fill_memory($vm, $node, $migrate) {
     #TODO: Void VMs
     return if $vm->type eq 'Void';
@@ -876,6 +1042,11 @@ sub test_fill_memory($vm, $node, $migrate) {
     my $master_free_memory = $vm->free_memory;
     my $node_free_memory = $node->free_memory;
 
+    my $memory = $master_free_memory/3;
+    if ( $node_free_memory < $master_free_memory ) {
+        $memory = $node_free_memory/3;
+    }
+
     my $error;
     my %nodes;
     my @clones;
@@ -885,6 +1056,7 @@ sub test_fill_memory($vm, $node, $migrate) {
             name => $clone_name
             ,id_owner => user_admin->id
             ,id_base => $base->id
+            ,memory => int($memory)
         );
         wait_request(debug => 0);
         is($req->error, '');
@@ -898,10 +1070,316 @@ sub test_fill_memory($vm, $node, $migrate) {
         like($error, qr/(^$|No free memory)/);
         last if $error;
         $nodes{$clone->_vm->name}++;
+
+        last if $migrate && exists $nodes{$vm->name} && $nodes{$vm->name} > 2;
+        if (keys(%nodes) > 1) {
+            $memory = int($memory*1.5);
+        }
     }
     ok(exists $nodes{$vm->name},"Expecting some clones to node ".$vm->name." ".$vm->id);
     ok(exists $nodes{$node->name},"Expecting some clones to node ".$node->name." ".$node->id);
     _remove_clones($base);
+}
+
+sub test_migrate($vm, $node) {
+    my $domain = create_domain($vm);
+
+    $domain->migrate($node);
+
+    is($domain->_data('id_vm'), $node->id);
+    is($domain->_vm->id, $node->id);
+
+    $domain->start(user_admin);
+    is($domain->_data('id_vm'), $node->id);
+    is($domain->_vm->id, $node->id);
+
+    is($domain->is_active,1);
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    is($domain2->is_active,1);
+    is($domain2->_data('id_vm'), $node->id);
+    is($domain2->_vm->id, $node->id);
+
+    $domain->shutdown_now(user_admin);
+    start_domain_internal($domain);
+
+    my $domain3 = Ravada::Domain->open($domain->id);
+    $domain3->start(user_admin);
+    is($domain3->is_active,1);
+    is($domain3->_data('id_vm'), $node->id);
+    is($domain3->_vm->id, $node->id);
+
+    is($domain3->has_non_shared_storage($vm),1) or exit;
+
+    $domain->remove(user_admin);
+}
+
+sub test_check_instances($vm, $node) {
+    my $domain = create_domain($vm);
+
+    $domain->migrate($node);
+    start_domain_internal($domain);
+    is($domain->_data('id_vm'), $node->id );
+    is($domain->_vm->id, $node->id);
+
+    my @instances = $domain->list_instances();
+    is(scalar(@instances),2);
+
+    my $sth = connector->dbh->prepare("DELETE FROM domain_instances WHERE id_domain=?");
+    $sth->execute($domain->id);
+
+    my @instances2 = $domain->list_instances();
+    is(scalar(@instances2),0);
+
+    $domain->_data( id_vm => $vm->id );
+    $domain->_vm($vm);
+    $domain->start(user_admin);
+
+    is($domain->_data('id_vm'), $node->id );
+    is($domain->_vm->id, $node->id);
+
+    my @instances3 = $domain->list_instances();
+    is(scalar(@instances3),2, "Expecting 2 instances of ".$domain->name);
+
+    $domain->remove(user_admin);
+}
+
+sub test_migrate_req($vm, $node) {
+    my $domain = create_domain($vm);
+    $domain->start(user_admin);
+    my $req = Ravada::Request->migrate(
+        id_domain => $domain->id
+        , id_node => $node->id
+        , uid => user_admin->id
+        , start => 1
+        , shutdown => 1
+        , shutdown_timeout => 10
+        , remote_ip => '1.2.2.34'
+        , retry => 10
+    );
+    for ( 1 .. 30 ) {
+        wait_request( debug => 0, check_error => 0);
+        is($req->status,'done');
+        last if !$req->error;
+        sleep 1;
+    }
+    is($req->error,'') or exit;
+
+    my $domain3 = Ravada::Domain->open($domain->id);
+    is($domain3->is_active,1);
+    is($domain3->_data('id_vm'), $node->id);
+    is($domain3->_vm->id, $node->id);
+
+    $domain->remove(user_admin);
+}
+
+sub _get_backing_files($volume0) {
+    my @bf;
+    my $volume = $volume0;
+    for (;;) {
+        my @cmd = ("qemu-img","info",$volume);
+        my ($in, $out, $err);
+        run3(\@cmd, \$in, \$out, \$err);
+        my ($bf) = $out =~ m{backing file: (.*)}m;
+        return @bf if !$bf;
+        push @bf,($bf);
+        $volume = $bf;
+    }
+}
+
+sub test_volumes_levels($domain, $level) {
+
+    for my $vol ($domain->list_volumes_info) {
+        next if !$vol->file;
+        my @backings = _get_backing_files($vol->file);
+        for my $file (@backings) {
+            like($file ,qr{-vd[a-z][\.-]},$domain->name) or exit;
+            unlike($file,qr{--+},$domain->name) or exit;
+        }
+        is(scalar(@backings), $level, "Expecting ".$domain->name
+            ." : ".$vol->file." level $level\n".Dumper(\@backings)) or exit;
+    }
+}
+
+sub _get_backing_xml($disk) {
+    my ($source) = $disk->findnodes("source");
+    return if !$source;
+
+    my @bf = ($source->getAttribute('file'));
+
+    my ($backingstore2) = $disk->findnodes("backingStore");
+    push @bf,(_get_backing_xml($backingstore2)) if $backingstore2;
+
+    return @bf;
+}
+
+sub test_domain_volumes_levels($domain, $level) {
+    my $doc =XML::LibXML->load_xml(string => $domain->xml_description());
+
+    my $found = 0;
+    for my $disk ($doc->findnodes("/domain/devices/disk")) {
+
+        my ($source) = $disk->findnodes("source")
+        or next;
+
+        my $file = $source->getAttribute('file');
+        my @backings = _get_backing_xml($disk);
+        is(scalar(@backings), $level, "Expecting ".$domain->name
+            ." : ".$file." level $level\n".Dumper(\@backings)) or confess;
+        $found++;
+    }
+    confess "Error: no disk devices found" if !$found;
+}
+
+sub test_nested_base($vm, $node, $levels=1) {
+
+    my $base0 = create_domain($vm);
+    $base0->add_volume(swap => 1, size => 10 * 1024);
+    $base0->add_volume(type => 'tmp', size => 10 * 1024);
+    $base0->add_volume(type => 'data', size => 10 * 1024);
+
+    my $base1 = $base0;
+    my $clone;
+    my @bases = ( );
+    for my $n ( 1 .. $levels ) {
+        diag("Cloning from ".$base1->name." level $n");
+        $base1->prepare_base(user_admin) if !$base1->is_base;
+        $clone = $base1->clone(
+            name => new_domain_name
+            ,user => user_admin
+        );
+        is($clone->id_base,$base1->id);
+        push @bases,($base1);
+        wait_request();
+        test_volumes_levels($clone, $n);
+        test_domain_volumes_levels($clone, $n+1);
+        $base1 = $clone;
+    }
+
+    _test_migrate_nested($vm, $node, \@bases, $clone, $levels);
+    $base0->remove_base_vm(vm => $node, user => user_admin);
+    _test_migrate_nested($vm, $node, \@bases, $clone, $levels);
+    my ($file) = $base0->list_files_base;
+    $node->remove_file($file);
+
+    for my $domain ($clone, reverse @bases ) {
+        $domain->remove(user_admin);
+    }
+}
+
+sub _test_migrate_nested($vm, $node, $bases, $clone, $levels) {
+    my $req = Ravada::Request->migrate(
+        id_node => $node->id
+        ,id_domain => $clone->id
+        ,uid => user_admin->id
+        ,shutdown => 1
+    );
+    for ( 1 .. $levels+3 ) {
+        last if $req->status eq 'done';
+        wait_request(debug => 0, check_error => 0);
+    }
+    is($req->error,'');
+    is($req->status,'done');
+    for my $base ( @$bases ) {
+        is($base->is_base,1,"Expecting ".$base->name." is base") or exit;
+        is($base->base_in_vm($node->id),1);
+    }
+    my $clone2 = Ravada::Domain->open($clone->id);
+    is($clone2->_vm->id,$node->id) or exit;
+    eval { $clone2->start(user_admin) };
+    is(''.$@, '', $clone2->name) or exit;
+}
+
+sub test_display_ip($vm, $node, $set_localhost_dp=0) {
+    my $vm_ip = $vm->ip;
+    if ($set_localhost_dp == 1) {
+        $vm_ip = "192.168.122.1";
+        rvd_back->display_ip($vm_ip);
+    } elsif ($set_localhost_dp == 2) {
+        $vm_ip = "192.168.130.1";
+        $vm->display_ip($vm_ip);
+    }
+
+    eval {
+        $node->display_ip("1.2.3.4");
+    };
+    like($@,qr(is not in any interface in node)i);
+
+    my $display_ip_1 = "127.0.0.1";
+    $node->display_ip($display_ip_1);
+    is($node->display_ip,$display_ip_1);
+
+    my $domain = create_domain($vm);
+    $domain->add_volume(size => 10*1024 , type => 'tmp');
+    $domain->add_volume(size => 10*1024 , type => 'swap');
+
+    my $req = Ravada::Request->start_domain(
+        remote_ip => '3.4.5.7'
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+    );
+    wait_request();
+    like($domain->display(user_admin), qr/$vm_ip/);
+
+    $domain->shutdown_now(user_admin);
+    $domain->prepare_base(user_admin);
+    $domain->set_base_vm(node => $node, user => user_admin);
+
+    my $domain2 = _start_clone_in_node($vm, $node, $domain);
+
+    is($domain2->_vm->id,$node->id) or exit;
+    like($domain2->display(user_admin),qr/$display_ip_1/) or exit;
+
+    _remove_domain($domain);
+
+    $node->_data(display_ip => '');
+    rvd_back->display_ip('') if $set_localhost_dp;
+}
+
+sub test_nat($vm, $node, $set_localhost_natip=0) {
+    my $nat_ip_1 = "5.6.7.8";
+    $node->nat_ip($nat_ip_1);
+
+    my $vm_ip = $vm->ip;
+    if ($set_localhost_natip == 1) {
+        $vm_ip = "22.22.22.22";
+        rvd_back->nat_ip($vm_ip);
+    } elsif ($set_localhost_natip == 2) {
+        $vm_ip = "33.33.33.33";
+        $vm->nat_ip($vm_ip);
+    }
+
+    $node->nat_ip($nat_ip_1);
+    is($node->nat_ip,$nat_ip_1);
+
+    my $domain = create_domain($vm);
+    $domain->add_volume(size => 10*1024 , type => 'tmp');
+    $domain->add_volume(size => 10*1024 , type => 'swap');
+
+    my $req = Ravada::Request->start_domain(
+        remote_ip => '3.4.5.7'
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+    );
+    wait_request();
+    like($domain->display(user_admin), qr/$vm_ip/);
+
+    $domain->shutdown_now(user_admin);
+    $domain->prepare_base(user_admin);
+    $domain->set_base_vm(node => $node, user => user_admin);
+
+    my $domain2 = _start_clone_in_node($vm, $node, $domain);
+
+    is($domain2->_vm->id,$node->id) or exit;
+    like($domain2->display(user_admin),qr/$nat_ip_1/) or exit;
+
+    _remove_domain($domain);
+
+    $node->_data(nat_ip => '');
+    rvd_back->nat_ip('')    if $set_localhost_natip;
+    $vm->nat_ip('')         if $set_localhost_natip;
+
+    $node->_data(nat_ip => '');
 }
 
 ##################################################################################
@@ -909,7 +1387,7 @@ clean();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
-for my $vm_name ( 'Void', 'KVM') {
+for my $vm_name ( vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -943,6 +1421,30 @@ for my $vm_name ( 'Void', 'KVM') {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+
+        test_duplicated_set_base_vm($vm, $node);
+        if ($vm_name eq 'KVM') {
+            test_nested_base($vm, $node, 3);
+            test_nested_base($vm, $node);
+        }
+
+        test_check_instances($vm, $node);
+        test_migrate($vm, $node);
+        test_migrate_req($vm, $node);
+
+        test_nat($vm, $node);
+        test_nat($vm, $node, 1); # also set deprecated localhost ip
+        test_nat($vm, $node, 2); # also set localhost ip
+        test_display_ip($vm, $node);
+        test_display_ip($vm, $node, 1); # also set deprecated localhost ip
+        test_display_ip($vm, $node, 2); # also set localhost ip
+
+        test_set_vm_fail($vm, $node);
+        test_volatile_req_clone($vm, $node);
+
+        test_change_base($vm, $node);
+        test_change_clone($vm, $node);
+
         test_fill_memory($vm, $node, 0); # balance
         test_fill_memory($vm, $node, 1); # migrate
         test_create_active($vm, $node);

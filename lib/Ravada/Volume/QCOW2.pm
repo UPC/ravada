@@ -1,6 +1,7 @@
 package Ravada::Volume::QCOW2;
 
 use Data::Dumper;
+use Hash::Util qw(lock_hash);
 use Moose;
 
 extends 'Ravada::Volume';
@@ -25,8 +26,17 @@ sub prepare_base($self) {
     confess $base_img if $base_img !~ /\.ro/;
 
     confess "Error: '$base_img' already exists" if -e $base_img;
+    confess if $file_img =~ /\.iso/i;
 
     my @cmd = _cmd_convert($file_img,$base_img);
+
+    my $format;
+    eval {
+        $format = $self->_qemu_info('file format')
+    };
+    confess $@ if $@;
+    @cmd = _cmd_copy($file_img, $base_img)
+    if $format && $format eq 'qcow2';# && !$self->backing_file;
 
     my ($out, $err) = $self->vm->run_command( @cmd );
     warn $out  if $out;
@@ -57,26 +67,26 @@ sub clone($self, $file_clone) {
         sleep 1;
         die "Error: ".$self->file." looks active" if $n-- <0;
     }
+    confess if $self->file =~ /ISO/i;
+    confess if $file_clone =~ /ISO/i;
+
+    my $base_format = lc(Ravada::Volume::_type_from_file($self->file, $self->vm));
     my @cmd = ($QEMU_IMG,'create'
+        ,'-F',$base_format
         ,'-f','qcow2'
         ,"-b", $self->file
         ,$file_clone
     );
     my ($out, $err) = $self->vm->run_command(@cmd);
-    confess $err if $err;
+    confess $self->vm->name." ".$err if $err;
 
     return $file_clone;
 }
 
 sub _get_capacity($self) {
-    my @cmd = ($QEMU_IMG,"info", $self->file);
-    my ($out, $err) = $self->vm->run_command(@cmd);
-
-    confess $err if $err;
-    my ($size) = $out =~ /virtual size: .*\((\d+) /ms;
-    confess "I can't find size from $out" if !defined $size;
-
-    return $size;
+    my $size = $self->_qemu_info('virtual size');
+    my ($capacity) = $size =~ /\((\d+) /;
+    return $capacity;
 }
 
 sub _cmd_convert($base_img, $qcow_img) {
@@ -97,20 +107,18 @@ sub _cmd_copy {
 }
 
 sub backing_file($self) {
-    my @cmd = ( $QEMU_IMG,'info',$self->file);
-
-    my ($out, $err) = $self->vm->run_command(@cmd);
-    die $err if $err;
-
-    my ($base) = $out =~ m{^backing file: (.*)}mi;
-
-    return $base;
+    return $self->_qemu_info('backing file');
 }
 
 sub rebase($self, $new_base) {
-    my @cmd = ($QEMU_IMG,'rebase','-b',$new_base,$self->file);
+
+    my $base_format = lc(Ravada::Volume::_type_from_file($new_base, $self->vm));
+    my @cmd = ($QEMU_IMG,'rebase'
+        ,'-f','qcow2'
+        ,'-F',$base_format
+        ,'-b',$new_base,$self->file);
     my ($out, $err) = $self->vm->run_command(@cmd);
-    die $err if $err;
+    confess $err if $err;
 
 }
 
@@ -145,4 +153,66 @@ sub block_commit($self) {
     my ($out, $err) = $self->vm->run_command(@cmd, $self->file);
     warn $err   if $err;
 }
+
+sub _qemu_info($self, $field=undef) {
+    if ( exists $self->{_qemu_info} ) {
+        return $self->{_qemu_info} if !defined $field;
+        confess "Unknown field $field ".Dumper($self->{_qemu_info})
+            if !exists $self->{_qemu_info}->{$field};
+
+        return $self->{_qemu_info}->{$field};
+    }
+
+    if  ( ! $self->vm->file_exists($self->file) ) {
+        return if defined $field;
+        return {};
+    }
+    my @cmd = ( $QEMU_IMG,'info',$self->file,'-U');
+
+    my ($out, $err) = $self->vm->run_command(@cmd);
+    confess $err if $err;
+
+    my %info = (
+        'backing file'=> undef
+        ,'backing file format' => ''
+    );
+    for my $line (split /\n/, $out) {
+        last if $line =~ /^Format/;
+        my ($field, $value) = $line =~ /(.*?):\s*(.*)/;
+        $info{$field} = $value;
+    }
+    lock_hash(%info);
+    $self->{_qemu_info} = \%info;
+
+    return $info{$field};
+}
+
+sub compact($self, $keep_backup=1) {
+    my $vol_backup = $self->backup();
+
+    my @cmd = ( "virt-sparsify"
+        , "--in-place"
+        , $self->file
+    );
+    my ($out, $err) = $self->vm->run_command(@cmd);
+    die "Error: I can't sparsify ".$self->file." , backup file stored on $vol_backup : $err"
+    if $err;
+
+    @cmd = ("qemu-img", "check", $self->file);
+    ($out, $err) = $self->vm->run_command(@cmd);
+    die "Error: problem checking ".$self->file." after virt-sparsify $err" if $err;
+
+    my ($du_backup, $du_backup_err) = $self->vm->run_command("du","-m",$vol_backup);
+    my ($du, $du_err) = $self->vm->run_command("du","-m",$self->file);
+    chomp $du_backup;
+    $du_backup =~ s/(^\d+).*/$1/;
+    chomp $du;
+    $du =~ s/(^\d+).*/$1/;
+
+    unlink $vol_backup or die "$! $vol_backup"
+    if !$keep_backup;
+
+    return int(100*($du_backup-$du)/$du_backup)." % compacted. ";
+}
+
 1;

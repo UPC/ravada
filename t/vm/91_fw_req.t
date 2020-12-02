@@ -75,6 +75,7 @@ sub test_fw_domain($vm_name, $domain_name, $remote_ip='99.88.77.66') {
         flush_rules_node($vm);
         test_chain($vm_name, $local_ip,$local_port, $remote_ip, 0);
         $domain_id = $domain->id;
+        wait_request();
     }
 
     {
@@ -167,13 +168,9 @@ sub search_rule($local_ip, $local_port, $remote_ip) {
     return scalar @rules;
 }
 
-sub test_chain {
-    my $vm_name = shift;
-    my $enabled = pop;
+sub test_chain($vm_name,$local_ip, $local_port, $remote_ip, $enabled) {
 
-    my ($local_ip, $local_port, $remote_ip) = @_;
-
-    my $rule_num = search_rule(@_);
+    my $rule_num = search_rule($local_ip, $local_port, $remote_ip);
 
     ok($rule_num,"[$vm_name] Expecting rule for $remote_ip -> $local_ip: $local_port")
             or confess

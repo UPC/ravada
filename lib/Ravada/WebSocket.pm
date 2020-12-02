@@ -26,9 +26,11 @@ has ravada => (
 
 my %SUB = (
                   list_alerts => \&_list_alerts
+                  ,list_bases => \&_list_bases
                   ,list_isos  => \&_list_isos
                   ,list_nodes => \&_list_nodes
                ,list_machines => \&_list_machines
+          ,list_machines_tree => \&_list_machines_tree
           ,list_machines_user => \&_list_machines_user
         ,list_bases_anonymous => \&_list_bases_anonymous
                ,list_requests => \&_list_requests
@@ -41,6 +43,7 @@ my %SUB = (
 our %TABLE_CHANNEL = (
     list_alerts => 'messages'
     ,list_machines => 'domains'
+    ,list_machines_tree => 'domains'
     ,list_requests => 'requests'
 );
 
@@ -73,6 +76,20 @@ sub _list_alerts($rvd, $args) {
     }
 
     return [@ret2,@ret];
+}
+
+sub _list_bases($rvd, $args) {
+    my $domains = $rvd->list_bases();
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
+    my @domains_show = @$domains;
+    if (!$user->is_admin) {
+        @domains_show = ();
+        for (@$domains) {
+            push @domains_show,($_) if $_->{is_public};
+        }
+    }
+    return \@domains_show;
 }
 
 sub _list_isos($rvd, $args) {
@@ -117,6 +134,33 @@ sub _list_machines($rvd, $args) {
     }
 
     return $rvd->list_machines($user);
+}
+sub _list_children($list_orig, $list, $level=0) {
+    my @list2;
+    for my $item (sort {$a->{name} cmp $b->{name} } @$list) {
+        unlock_hash(%$item);
+        $item->{_level} = $level;
+        push @list2,($item);
+        my @children = grep { defined($_->{id_base}) && $_->{id_base} == $item->{id} }
+                        @$list_orig;
+        if ( scalar(@children) ) {
+            my @children2 = _list_children($list_orig,\@children, $level+1);
+            push @list2,(@children2);
+            $item->{has_clones} = scalar @children2;
+        } else {
+            $item->{has_clones} = 0;
+        }
+        lock_hash(%$item);
+    }
+    return @list2;
+}
+
+sub _list_machines_tree($rvd, $args) {
+    my $list_orig = _list_machines($rvd, $args);
+    my @list = sort { lc($a->{name}) cmp lc($b->{name}) }
+                grep {!exists($_->{id_base}) || !$_->{id_base} }
+                @$list_orig;
+    return [_list_children($list_orig, \@list)];
 }
 
 sub _list_machines_user($rvd, $args) {
@@ -339,7 +383,7 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
     && $old_count eq $new_count && $old_changed eq $new_changed;
 
     $self->_old_info($key, $new_count, $new_changed)
-    unless $channel eq 'list_machines' && $LIST_MACHINES_FIRST_TIME;
+    unless $channel =~ /list_machines/ && $LIST_MACHINES_FIRST_TIME;
 
     my $ret = $exec->($self->ravada, $self->clients->{$key});
 
@@ -362,7 +406,7 @@ sub subscribe($self, %args) {
         , %args
         , ret => undef
     };
-    if ($args{channel} eq 'list_machines') {
+    if ($args{channel} =~ /list_machines/) {
         $LIST_MACHINES_FIRST_TIME = 1 ;
     }
     $self->_send_answer($ws,$args{channel});

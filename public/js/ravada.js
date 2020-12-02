@@ -27,6 +27,7 @@
             .controller("users", usersCrtl)
             .controller("bases", mainpageCrtl)
             .controller("singleMachinePage", singleMachinePageC)
+            .controller("maintenance",maintenanceCtrl)
             .controller("notifCrtl", notifCrtl)
             .controller("run_domain",run_domain_ctrl)
             .controller("run_domain_req",run_domain_req_ctrl)
@@ -62,7 +63,7 @@
     };
 
     function swSupForm() {
-	
+
         return {
             restrict: "E",
             templateUrl: '/ng-templates/support_form.html',
@@ -72,8 +73,8 @@
 
 
     function addUserFormCrtl($scope, $http, request){
-               
-       
+
+
     };
 
     function swNewMach() {
@@ -84,6 +85,7 @@
         };
 
     };
+
     // list machines
         function mainpageCrtl($scope, $http, $timeout, request, listMach) {
             $scope.set_restore=function(machineId) {
@@ -100,7 +102,8 @@
                 if ( action == 'restore' ) {
                     $scope.host_restore = machine.id_clone;
                     $scope.host_shutdown = 0;
-                } else if (action == 'shutdown' || action == 'hibernate') {
+                    $scope.host_force_shutdown = 0;
+                } else if (action == 'shutdown' || action == 'hibernate' || action == 'force_shutdown') {
                     $scope.host_restore = 0;
                     $http.get( '/machine/'+action+'/'+machine.id_clone+'.json');
                 } else {
@@ -142,6 +145,7 @@
                         for (var i = 0; i < data.length; i++) {
                             if ( !$scope.machines[i] || $scope.machines[i].id != data[i].id ) {
                                 $scope.machines[i] = data[i];
+                                $scope.machines[i].description = data[i].description;
                             } else {
                                 $scope.machines[i].can_hibernate = data[i].can_hibernate;
                                 $scope.machines[i].id= data[i].id;
@@ -152,6 +156,7 @@
                                 $scope.machines[i].name = data[i].name;
                                 $scope.machines[i].name_clone = data[i].name_clone;
                                 $scope.machines[i].screenshot = data[i].screenshot;
+                                $scope.machines[i].description = data[i].description;
                             }
                             if ( data[i].is_public == 1) {
                                 $scope.public_bases++;
@@ -186,6 +191,7 @@
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
+            var subscribed_extra = false;
             subscribe_machine_info= function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('machine_info/'+$scope.showmachineId) };
@@ -193,10 +199,23 @@
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
                         $scope.showmachine = data;
-                        $scope.list_bases();
-                        subscribe_nodes(url,data.type);
+                        if (!subscribed_extra) {
+                            subscribed_extra = true;
+                            subscribe_nodes(url,data.type);
+                            //subscribe_bases(url);
+                        }
                     });
+                    _select_new_base();
                 }
+            };
+
+            $scope.action = function(target,action,machineId){
+              $http.get('/'+target+'/'+action+'/'+machineId+'.json')
+                .then(function() {
+                }, function(data,status) {
+                      console.error('Repos error', status, data);
+                      window.location.reload();
+                });
             };
 
             subscribe_requests = function(url) {
@@ -223,7 +242,7 @@
                     });
                 }
             };
-
+            $scope.new_node_start = true;
             subscribe_nodes = function(url, type) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_nodes/'+type) };
@@ -231,13 +250,60 @@
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
                         $scope.nodes = data;
+                        for (var i = 0; i < $scope.nodes.length; i++) {
+                            if ($scope.new_node) {
+                                if ($scope.new_node.id == $scope.nodes[i].id) {
+                                    $scope.new_node = $scope.nodes[i];
+                                    return
+                                }
+                            } else {
+                                if ($scope.nodes[i].id == $scope.showmachine.id_vm) {
+                                    $scope.new_node = $scope.nodes[i];
+                                    return;
+                                }
+                            }
+                        }
                     });
                 }
             };
+            _select_new_base = function() {
+                if(typeof($scope.new_base) != 'undefined'
+                    || typeof($scope.showmachine) == 'undefined'
+                    || typeof($scope.bases) == 'undefined'
+                ) {
+                    return;
+                }
+                for (var i = 0; i < $scope.bases.length; i++) {
+                    if ($scope.bases[i].id == $scope.showmachine.id_base) {
+                        $scope.new_base = $scope.bases[i];
+                        console.log(" clone  "+i);
+                    } else if ($scope.showmachine.is_base
+                        && $scope.bases[i].id == $scope.showmachine.id) {
+                        $scope.new_base = $scope.bases[i];
+                        console.log("is_base "+i);
+                    }
+                }
+                $scope.current_base = $scope.new_base;
+            };
+
+            subscribe_bases = function(url, type) {
+                var ws = new WebSocket(url);
+                ws.onopen = function(event) { ws.send('list_bases') };
+                ws.onmessage = function(event) {
+                    var data = JSON.parse(event.data);
+                    $scope.$apply(function () {
+                        $scope.bases = data;
+                        _select_new_base();
+                    });
+                }
+            };
+
             subscribe_ws = function(url, is_admin) {
                 subscribe_machine_info(url);
+                subscribe_bases(url);
                 subscribe_requests(url);
                 subscribe_isos(url);
+                // other data will be subscribed on loading machine info
             };
 
           var url_ws;
@@ -265,6 +331,8 @@
 
                                 $scope.new_volatile_clones = $scope.showmachine.volatile_clones;
                                 $scope.new_autostart = $scope.showmachine.autostart;
+                                $scope.new_shutdown_disconnected
+                                    = $scope.showmachine.shutdown_disconnected;
                             }
                             $scope.init_domain_access();
                             $scope.init_ldap_access();
@@ -314,7 +382,7 @@
                   }, 2000);
                   $http.get('/machine/screenshot/'+machineId+'.json');
           };
-          
+
           $scope.reload_page_copy_msg = false;
           $scope.fail_page_copy_msg = false;
           $scope.copy_done = false;
@@ -473,6 +541,7 @@
               $scope.ldap_entries = 0;
               $scope.ldap_verified = 0;
               $http.get('/list_ldap_attributes/'+$scope.cn).then(function(response) {
+                  $scope.ldap_error = response.data.error;
                   $scope.ldap_attributes = response.data.attributes;
               });
           };
@@ -563,7 +632,7 @@
                         $scope.init_domain_access();
                     });
           };
- 
+
           $scope.set_access = function(id_access, allowed, last) {
               $http.get('/machine/set_access/'+$scope.showmachine.id+'/'+id_access+'/'+allowed
                         +'/'+last)
@@ -648,22 +717,6 @@
                 ).then(function(response) {
                 });
             };
-            $scope.list_bases = function() {
-                $http.get('/list_bases.json')
-                    .then(function(response) {
-                            $scope.bases=response.data;
-                            if(typeof($scope.new_base) == 'undefined') {
-                                for (var i = 0; i < $scope.bases.length; i++) {
-                                    if ($scope.bases[i].id == $scope.showmachine.id_base) {
-                                        $scope.new_base = $scope.bases[i];
-                                    } else if ($scope.showmachine.is_base
-                                        && $scope.bases[i].id == $scope.showmachine.id) {
-                                        $scope.new_base = $scope.bases[i];
-                                    }
-                                }
-                            }
-                    });
-            };
             list_users= function() {
                 $http.get('/list_users.json')
                     .then(function(response) {
@@ -688,9 +741,6 @@
                     subscribe_request(id_request, function(data) {
                         $scope.$apply(function () {
                             $scope.rebase_request=data;
-                            if ($scope.rebase_request.status == 'done') {
-                                $scope.list_bases();
-                            }
                         });
                     });
                 });
@@ -720,9 +770,6 @@
                     subscribe_request(id_request, function(data) {
                         $scope.$apply(function () {
                             $scope.pending_request=data;
-                            if ($scope.pending_request.status == 'done') {
-                                $scope.list_bases();
-                            }
                         });
                     });
                 });
@@ -737,6 +784,7 @@
             $scope.access_value = [ ];
             $scope.access_allowed = [ ];
             $scope.access_last = [ ];
+            $scope.new_base = undefined;
           $scope.list_ldap_attributes();
         };
 
@@ -814,7 +862,6 @@
 
         };
         $scope.wait_request = function() {
-            $scope.dots += '.';
             if ($scope.id_request) {
                 $http.get('/request/'+$scope.id_request+'.json').then(function(response) {
                     $scope.request=response.data;
@@ -851,7 +898,7 @@
             if (!$scope.redirect_done) {
                 $timeout(function() {
                     if(typeof $_anonymous != "undefined" && $_anonymous){
-                        window.location.href="/anonymous";                        
+                        window.location.href="/anonymous";
                     }
                     else {
                         window.location.href="/logout";
@@ -861,7 +908,6 @@
             }
         }
 
-        $scope.dots = '...';
         $scope.redirect_done = false;
         $scope.wait_request();
         $scope.view_clicked=false;
@@ -909,13 +955,13 @@
 
 	$scope.add_user = function() {
             $http.get('/users/register')
-            
+
         };
 
         $scope.checkbox = [];
 
         //if it is checked make the user admin, otherwise remove admin
-        $scope.stateChanged = function(id,userid) { 
+        $scope.stateChanged = function(id,userid) {
            if($scope.checkbox[id]) { //if it is checked
                 $http.get('/users/make_admin/' + userid + '.json')
                 location.reload();
@@ -929,7 +975,7 @@
     };
 
     function swListUsers() {
-	
+
         return {
             restrict: "E",
             templateUrl: '/ng-templates/list_users.html',
@@ -972,6 +1018,12 @@
 
   };
 
+    function maintenanceCtrl($scope, $interval, $http, request){
+        $scope.init = function(end) {
+            $scope.maintenance_end = new Date(end);
+        };
+    };
+
 /*
   function requestsCrtlSingle($scope, $interval, $http, request){
     $scope.getReqs= function() {
@@ -993,7 +1045,7 @@
 
         //here you should access the backend, to check if username exists
         //and return a promise
-        //here we're using $q and $timeout to mimic a backend call 
+        //here we're using $q and $timeout to mimic a backend call
         //that will resolve after 1 sec
 
             var defer = $q.defer();

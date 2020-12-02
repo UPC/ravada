@@ -79,6 +79,7 @@ our %VALID_ARG = (
     ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2 }
     ,list_storage_pools => { id_vm => 1 , uid => 1 }
+    ,check_storage => { uid => 1 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
     ,cleanup => { }
     ,clone => { uid => 1, id_domain => 1, name => 2, memory => 2, number => 2
@@ -100,6 +101,7 @@ our %VALID_ARG = (
     ,refresh_machine => { id_domain => 1, uid => 1 }
     ,rebase => { uid => 1, id_base => 1, id_domain => 1 }
     ,set_time => { uid => 1, id_domain => 1 }
+    ,rsync_back => { uid => 1, id_domain => 1, id_node => 1 }
     # ports
     ,expose => { uid => 1, id_domain => 1, port => 1, name => 2, restricted => 2, id_port => 2}
     ,remove_expose => { uid => 1, id_domain => 1, port => 1}
@@ -110,6 +112,11 @@ our %VALID_ARG = (
     ,shutdown_node => { id_node => 1, at => 2 }
     ,start_node => { id_node => 1, at => 2 }
     ,connect_node => { backend => 2, hostname => 2, id_node =>2, timeout => 2 }
+    ,migrate => { uid => 1, id_node => 1, id_domain => 1, start => 2, remote_ip => 2
+        ,shutdown => 2, shutdown_timeout => 2
+    }
+    ,compact => { uid => 1, id_domain => 1 , keep_backup => 2 }
+      ,purge => { uid => 1, id_domain => 1 }
 
     #users
     ,post_login => { user => 1, locale => 2 }
@@ -125,7 +132,7 @@ our %VALID_ARG = (
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
-    qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download
+    qw( create start shutdown force_shutdown prepare_base remove remove_base rename_domain screenshot download
             clone
             set_base_vm remove_base_vm
             domain_autostart hibernate hybernate
@@ -140,6 +147,8 @@ our %CMD_NO_DUPLICATE = map { $_ => 1 }
 qw(
     set_base_vm
     remove_base_vm
+    rsync_back
+    cleanup
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -149,30 +158,43 @@ our $CONNECTOR;
 our %COMMAND = (
     long => {
         limit => 4
-        ,priority => 4
+        ,priority => 10
     } #default
-    ,huge => {
-        limit => 1
-        ,commands => ['download']
-        ,priority => 5
+
+    # list from low to high priority
+    ,disk_low_priority => {
+        limit => 2
+        ,commands => ['rsync_back','check_storage', 'refresh_vms']
+        ,priority => 30
     }
     ,disk => {
         limit => 1
         ,commands => ['prepare_base','remove_base','set_base_vm','rebase_volumes'
                     , 'remove_base_vm'
                     , 'screenshot'
+                    , 'cleanup'
+                    , 'compact'
                 ]
-        ,priority => 6
+        ,priority => 20
     }
+    ,huge => {
+        limit => 1
+        ,commands => ['download']
+        ,priority => 15
+    }
+
+    ,secondary => {
+        limit => 50
+        ,priority => 4
+        ,commands => ['shutdown','shutdown_now', 'manage_pools','enforce_limits', 'set_time'
+            ,'remove_domain'
+        ]
+    }
+
     ,important=> {
         limit => 20
         ,priority => 1
-        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos']
-    }
-    ,secondary => {
-        limit => 50
-        ,priority => 2
-        ,commands => ['shutdown','shutdown_now', 'manage_pools']
+        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine']
     }
 );
 lock_hash %COMMAND;
@@ -352,11 +374,36 @@ sub start_domain {
     confess "ERROR: choose either id_domain or name "
         if $args->{id_domain} && $args->{name};
 
+    _remove_low_priority_requests($args->{id_domain} or $args->{name});
+
     my $self = {};
     bless($self,$class);
 
     return $self->_new_request(command => 'start' , args => $args);
 }
+
+sub _remove_low_priority_requests($id_domain) {
+
+    _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
+
+    if ($id_domain !~ /^\d+$/) {
+        $id_domain = _search_domain_id(undef,$id_domain);
+    }
+    for my $command (sort @{$COMMAND{disk_low_priority}->{commands}}) {
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM requests "
+            ." WHERE command=? AND id_domain=? "
+            ."    AND status <> 'done' "
+        );
+        $sth->execute($command, $id_domain);
+        while ( my ($id_request) = $sth->fetchrow ) {
+            my $req = Ravada::Request->open($id_request);
+            $req->stop();
+            warn "Stopping request $id_request";
+        }
+    }
+
+}
+
 
 =head2 start_clones
 
@@ -426,7 +473,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request retry _no_duplicate)) {
+    for (qw(at after_request after_request_ok retry _no_duplicate)) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
@@ -513,6 +560,7 @@ sub new_request($self, $command, @args) {
 }
 
 sub _duplicated_request($self=undef, $command=undef, $args=undef) {
+    _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
 
     my $args_d;
     if ($self) {
@@ -526,7 +574,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
     delete $args_d->{uid};
     delete $args_d->{at};
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id,args FROM requests WHERE status='requested'"
+        "SELECT id,args FROM requests WHERE (status <> 'done')"
         ." AND command=?"
     );
     $sth->execute($command);
@@ -542,7 +590,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
         my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
         next if $args_d_s ne $args_found_s;
 
-        return $id;
+        return Ravada::Request->open($id);
     }
     return 0;
 }
@@ -577,23 +625,26 @@ sub _new_request {
             confess "ERROR: Different id_domain: ".Dumper(\%args)
                 if $args{id_domain} && $args{id_domain} ne $id_domain_args;
             $args{id_domain} = $id_domain_args;
-            $args{after_request} = delete $args{args}->{after_request}
-                if exists $args{args}->{after_request};
-            $args{retry} = delete $args{args}->{retry}
-                if exists $args{args}->{retry};
-
         }
+        for (qw(after_request after_request_ok retry)) {
+            $args{$_} = delete $args{args}->{$_}
+            if exists $args{args}->{$_};
+        }
+
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
-    if ($args{command} =~ /^(clone|manage_pools|list_isos)$/
+    if ($args{command} =~ /^(clone|manage_pools)$/
         || $CMD_NO_DUPLICATE{$args{command}}
         || ($no_duplicate && $args{command} =~ /^(screenshot)$/)) {
-        if ( _duplicated_request(undef, $args{command}, $args{args})
-            || ( $args{command} ne 'clone' && done_recently(undef, 60, $args{command}))) {
-            #            warn "Warning: duplicated request for $args{command} $args{args}";
-            return;
-        }
+        my $dupe = _duplicated_request(undef, $args{command}, $args{args});
+        return $dupe if $dupe;
+
+        my $recent;
+        $recent = done_recently(undef, 60, $args{command})
+        if $args{command} !~ /^(clone|migrate|set_base_vm)$/;
+        return if $recent;
+
     }
 
     my $sth = $$CONNECTOR->dbh->prepare(
@@ -708,6 +759,14 @@ sub _search_domain_name {
     $sth->execute($domain_id);
     return $sth->fetchrow;
 }
+
+sub _search_domain_id($self,$domain_name) {
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM domains where name=?");
+    $sth->execute($domain_name);
+    return $sth->fetchrow;
+}
+
 
 sub _send_message {
     my $self = shift;
@@ -927,8 +986,6 @@ sub refresh_vms {
           return if done_recently(undef,60,'refresh_vms') || _requested('refresh_vms');
     }
 
-    $args->{timeout} = 120 if ! $args->{timeout};
-
     my $self = {};
     bless($self,$class);
 
@@ -1043,7 +1100,10 @@ sub count_requests($self) {
 
 sub requests_limit($self, $type = $self->type) {
     confess "Error: no requests of type $type" if !exists $COMMAND{$type};
-    return $COMMAND{$type}->{limit};
+
+    my $limit = $COMMAND{$type}->{limit};
+
+    return $limit;
 }
 
 =head2 domain_autostart
@@ -1204,18 +1264,19 @@ sub done_recently($self, $seconds=60,$command=undef) {
         $id_req = $self->id;
         $command = $self->command;
     }
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id FROM requests"
+    my $query = "SELECT id FROM requests"
         ." WHERE date_changed > ? "
         ."        AND command = ? "
         ."         AND ( status = 'done' OR status ='working') "
         ."         AND  error = '' "
-        ."         AND id <> ? "
-    );
+        ."         AND id <> ? ";
+
+    my $sth = $$CONNECTOR->dbh->prepare( $query );
     my $date= Time::Piece->localtime(time - $seconds);
     $sth->execute($date->ymd." ".$date->hms, $command, $id_req);
     my ($id) = $sth->fetchrow;
-    return $id;
+    return if !defined $id;
+    return Ravada::Request->open($id);
 }
 
 sub _requested($command, %fields) {
@@ -1285,11 +1346,25 @@ sub priority($self) {
 
 sub requirements_done($self) {
     my $after_request = $self->after_request();
-    return 1 if !defined $after_request;
+    my $after_request_ok = $self->after_request_ok();
+    return 1 if !defined $after_request && !defined $after_request_ok;
 
-    my $req = Ravada::Request->open($self->after_request);
-    return 1 if $req->status eq 'done';
-    return 0;
+    my $ok = 0;
+    if ($after_request) {
+        $ok = 0;
+        my $req = Ravada::Request->open($self->after_request);
+        $ok = 1 if $req->status eq 'done';
+    }
+    if ($after_request_ok) {
+        $ok = 0;
+        my $req = Ravada::Request->open($self->after_request_ok);
+        if ($req->status eq 'done' && $req->error ) {
+            $self->status('done');
+            $self->error($req->error);
+        }
+        $ok = 1 if $req->status eq 'done' && ( !defined $req->error || $req->error eq '' );
+    }
+    return $ok;
 }
 
 sub AUTOLOAD {
@@ -1326,6 +1401,7 @@ sub AUTOLOAD {
     confess "ERROR: field $name is read only"
         if $FIELD_RO{$name};
 
+    confess "Error: $name can't be a ref ".Dumper($value) if ref($value);
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
             ." WHERE id=?");
     eval {

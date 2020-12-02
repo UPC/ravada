@@ -12,14 +12,14 @@ RUN apt-get update \
     libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl debconf adduser libdigest-sha-perl libnet-ssh2-perl libpbkdf2-tiny-perl \
     libfile-rsync-perl libdate-calc-perl libparallel-forkmanager-perl libdatetime-perl libencode-locale-perl netcat-openbsd \
     libio-stringy-perl libvirt-clients liblwp-useragent-determined-perl supervisor net-tools apt-utils lsof mysql-client \
-	curl bash vim wget \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+	curl bash vim wget libnet-openssh-perl libdatetime-format-dateparse-perl \
+ && apt-get clean
 
-ADD http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb /tmp/
-RUN dpkg -i /tmp/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb \
- && rm /tmp/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb \
- && mkdir -p /var/log/supervisor \
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata \
+ && rm -rf /var/lib/apt/lists/*
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN mkdir -p /var/log/supervisor \
  && mkdir -p /run/sshd
 
 EXPOSE 3000

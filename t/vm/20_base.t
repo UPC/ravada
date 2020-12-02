@@ -545,6 +545,7 @@ sub test_spinned_off_base {
     like($@,qr'.');
     is($base->is_active,0);
 
+    $clone->spinoff();
     $clone->prepare_base(user_admin);
 
     $base->remove_base(user_admin());
@@ -837,13 +838,46 @@ sub test_prepare_fail($vm) {
     $domain->remove(user_admin);
 }
 
+sub test_prepare_chained($vm) {
+    my $domain = create_domain($vm);
+    my $clone = $domain->clone(name => new_domain_name()
+        , user => user_admin
+    );
+    $clone->prepare_base(user_admin);
+    is($clone->id_base, $domain->id);
+    is($clone->is_base, 1);
+
+    my $clone2 = $clone->clone(name => new_domain_name()
+        , user => user_admin
+    );
+    is($clone->id_base, $domain->id);
+    is($clone->is_base, 1);
+    is($clone2->id_base, $clone->id);
+
+    my %files_base = map { $_ => 1 } $domain->list_files_base();
+    for my $file ( $clone->list_files_base() ) {
+        ok(!exists $files_base{$file},"Expecting $file not in base ".$domain->name) or exit;
+        unlike($file,qr/--+/);
+    }
+
+    $clone2->spinoff();
+    for my $vol ($clone2->list_volumes_info) {
+        ok(!$vol->backing_file
+            ,"Expecting no backing file for ".( $vol->file or "<UNDEF>")." in ".$clone2->name);
+    }
+    $clone2->remove(user_admin);
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
+
+}
+
 #######################################################################33
 
 
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ('KVM', 'Void') {
+for my $vm_name ( vm_names() ) {
 
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";
@@ -868,6 +902,7 @@ for my $vm_name ('KVM', 'Void') {
 
         use_ok($CLASS);
 
+        test_prepare_chained($vm);
         test_prepare_fail($vm);
 
         test_domain_limit_already_requested($vm_name);

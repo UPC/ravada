@@ -135,8 +135,13 @@ sub test_base($volume) {
     my $base = $volume->prepare_base();
 
     if ($ext ne 'iso') {
-        like($base,qr{(vd.|\d+)\.ro\.$ext$}, $volume->file) or exit       if $volume->file !~ /\.SWAP\./;
-        like($base,qr{(vd.|\d)\.ro\.SWAP\.$ext$}, $volume->file) or exit if $volume->file =~ /\.SWAP\./;
+        if ( $volume->file =~ /\.SWAP\./) {
+            like($base,qr{(vd.|\d)\.ro\.SWAP\.$ext$}, $volume->file) or exit
+        } elsif ( $volume->file =~ /\.DATA\./) {
+            like($base,qr{(vd.|\d)\.ro\.DATA\.$ext$}, $volume->file) or exit
+        } else {
+            like($base,qr{(vd.|\d+)\.ro\.$ext$}, $volume->file) or exit;
+        }
     }
     $test->($volume, $base);
 
@@ -297,13 +302,28 @@ sub test_raw_swap($vm) {
     test_raw($vm,1);
 }
 
-sub test_defaults($vm) {
+sub test_rebase($volume) {
+    my $file_base;
+    eval { $file_base = test_base($volume) };
+    is($@,'');
+    return $file_base;
+}
+
+sub test_defaults($vm, $volume_type=undef) {
     diag("Testing defaults for ".$vm->name);
     my $domain = create_domain($vm);
-    $domain->add_volume(swap => 1, size => 1024*1024);
+    my @format;
+    @format = ( format => $volume_type ) if $vm->type eq 'void' && $volume_type;
+    $domain->add_volume( type => 'swap', size => 1024*1024, @format );
+    $domain->add_volume( type => 'data', size => 1024*1024, @format);
     for my $volume ( $domain->list_volumes_info ) {
         ok(-e $volume->file,$volume->file) or exit;
-        test_base($volume);
+        my $file_base = test_base($volume);
+        delete $volume->{_qemu_info};
+        my $file_rebase = test_rebase($volume);
+        next if !$file_rebase;
+        isnt($file_base, $file_rebase) if $file_base !~ /iso$/;
+        unlink $file_base or die "$! $file_base" if $file_base !~ /iso$/;
     }
     my $info = $domain->info(user_admin);
     my $disk = $info->{hardware}->{disk};
@@ -329,6 +349,61 @@ sub test_defaults($vm) {
 
     $domain->remove(user_admin);
 }
+
+sub test_qcow_format($vm) {
+    return if $vm->type ne 'KVM';
+    my $base = create_domain($vm);
+    $base->add_volume(type => 'swap', size => 1024*1024);
+    $base->add_volume(type => 'data', size => 1024*1024);
+
+    my $clone = $base->clone(
+         name => new_domain_name
+        ,user => user_admin
+    );
+    my $QEMU_IMG = `which qemu-img`;
+    chomp $QEMU_IMG;
+    for my $vol ( $clone->list_volumes_info ) {
+        next if $vol->file && $vol->file =~ /iso$/;
+        my @cmd = ($QEMU_IMG,'create'
+            ,'-f','qcow2'
+            ,"-b", $vol->backing_file
+            ,$vol->file
+        );
+        $clone->_vm->run_command(@cmd);
+        my @cmd_info = ($QEMU_IMG , 'info', $vol->file);
+        my ($out, $err) = $clone->_vm->run_command(@cmd_info);
+        my ($bff) = $out =~ /^backing file format: (.*)/m;
+        is($bff, undef);
+    }
+    eval { $clone->start(user_admin) };
+    is(''.$@,'');
+    $clone->shutdown_now(user_admin);
+
+    for my $vol ( $clone->list_volumes_info ) {
+        next if !$vol->file || $vol->file =~ /iso$/;
+
+        my @cmd_info = ($QEMU_IMG , 'info', $vol->file);
+        my ($out, $err) = $clone->_vm->run_command(@cmd_info);
+        my ($bff) = $out =~ /^backing file format: (.*)/m;
+        is($bff, 'qcow2');
+    }
+
+    eval { $clone->start(user_admin) };
+    is(''.$@,'');
+
+    _remove_domains($base);
+}
+
+sub _remove_domains(@bases) {
+    for my $base (@bases) {
+        for my $clone ($base->clones) {
+            my $d_clone = Ravada::Domain->open($clone->{id});
+            $d_clone->remove(user_admin);
+        }
+        $base->remove(user_admin);
+    }
+}
+
 #########################################################
 
 init();
@@ -350,6 +425,9 @@ for my $vm_name (reverse vm_names() ) {
 
         diag("Testing volumes in $vm_name");
         init_vm($vm);
+
+        test_qcow_format($vm);
+
         test_raw($vm);
         test_raw_swap($vm);
 
@@ -360,7 +438,8 @@ for my $vm_name (reverse vm_names() ) {
         test_void_swap($vm);
         test_qcow2_swap($vm);
 
-        test_defaults($vm) if !$>;
+        test_defaults($vm,'qcow2');
+        test_defaults($vm);
     }
 }
 

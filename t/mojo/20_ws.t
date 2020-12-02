@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use Mojo::JSON 'decode_json';
 use Test::More;
@@ -40,9 +41,10 @@ sub _init_mojo_client {
 =cut
 
 sub list_machines_user($t, $headers={}){
+    mojo_check_login($t);
     $t->websocket_ok("/ws/subscribe" => $headers)->send_ok("list_machines_user")->message_ok->finish_ok;
 
-    return if !$t->message || !$t->message->[1];
+    confess if !$t->message || !$t->message->[1];
 
     my $name = base_domain_name();
     my @machines = grep { $_->{name} =~ /^$name/ } @{decode_json($t->message->[1])};

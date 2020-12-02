@@ -68,8 +68,9 @@ sub test_description {
 
 clean();
 
-my $vm_name = 'KVM';
-my $vm = rvd_back->search_vm($vm_name);
+for my $vm_name ( vm_names() ) {
+my $vm;
+$vm = rvd_back->search_vm($vm_name) if !$<;
 my $description = 'This is a description test';
 
 SKIP: {
@@ -82,6 +83,8 @@ SKIP: {
     skip($msg,10)   if !$vm;
 
     test_description($vm_name);
+}
+
 }
 
 end();

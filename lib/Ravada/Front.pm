@@ -11,6 +11,7 @@ Ravada::Front - Web Frontend library for Ravada
 
 use Carp qw(carp);
 use DateTime;
+use DateTime::Format::DateParse;
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use JSON::XS;
@@ -130,14 +131,14 @@ Returns: listref of machines
 sub list_machines_user($self, $user, $access_data={}) {
 
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,is_public, screenshot"
+        "SELECT id,name,is_public, description, screenshot"
         ." FROM domains "
         ." WHERE is_base=1"
         ." ORDER BY name "
     );
-    my ($id, $name, $is_public, $screenshot);
+    my ($id, $name, $is_public, $description, $screenshot);
     $sth->execute;
-    $sth->bind_columns(\($id, $name, $is_public, $screenshot ));
+    $sth->bind_columns(\($id, $name, $is_public, $description, $screenshot));
 
     my @list;
     while ( $sth->fetch ) {
@@ -151,6 +152,7 @@ sub list_machines_user($self, $user, $access_data={}) {
         my %base = ( id => $id, name => $name
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
+            , description => ($description or '')
             , is_active => 0
             , id_clone => undef
             , name_clone => undef
@@ -171,6 +173,8 @@ sub list_machines_user($self, $user, $access_data={}) {
             $base{name_clone} = $clone->name;
             $base{screenshot} = ( $clone->_data('screenshot')
                                 or $base{screenshot});
+            $base{description} = ( $clone->_data('description')
+                                or $base{description});
             $base{is_active} = $clone->is_active;
             $base{id_clone} = $clone->id;
             $base{can_remove} = 0;
@@ -207,36 +211,36 @@ sub list_machines($self, $user, @filter) {
     push @list,(@{filter_base_without_clones($self->list_domains(@filter))}) if $user->can_list_clones();
     push @list,(@{$self->_list_own_clones($user)}) if $user->can_list_clones_from_own_base();
     push @list,(@{$self->_list_own_machines($user)}) if $user->can_list_own_machines();
-    
+
     return [@list] if scalar @list < 2;
 
     my %uniq = map { $_->{name} => $_ } @list;
     return [sort { $a->{name} cmp $b->{name} } values %uniq];
 }
 
+sub init_available_actions($user, $m) {
+  eval { $m->{can_shutdown} = $user->can_shutdown($m->{id}) };
+
+  $m->{can_start} = 0;
+  $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+
+  $m->{can_view} = 0;
+  $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+
+  $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
+  eval {
+  $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
+  };
+  die $@ if $@ && $@ !~ /Unknown domain/;
+
+  $m->{can_hibernate} = 0;
+  $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id}) && !$m->{is_volatile};
+}
+
 sub _around_list_machines($orig, $self, $user, @filter) {
     my $machines = $self->$orig($user, @filter);
     for my $m (@$machines) {
-        eval { $m->{can_shutdown} = $user->can_shutdown($m->{id}) };
-
-        $m->{can_start} = 0;
-        $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
-
-        $m->{can_view} = 0;
-        $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
-
-        $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
-        eval {
-        $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
-        };
-        #may have been deleted just now
-        next if $@ && $@ =~ /Unknown domain/;
-        die $@ if $@;
-
-        $m->{can_hibernate} = 0;
-        $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
-        && !$m->{is_volatile};
-
+        init_available_actions($user, $m);
         $m->{id_base} = undef if !exists $m->{id_base};
         lock_hash(%$m);
     }
@@ -255,7 +259,7 @@ sub search_clone_data {
     $sth->execute( map { $args{$_} } sort keys %args );
     my $row = $sth->fetchrow_hashref;
     return ( $row or {});
-        
+
 }
 
 =cut
@@ -273,6 +277,7 @@ sub list_domains($self, %args) {
     my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status, is_public "
         ."      ,vms.name as node , is_volatile, client_status, id_owner "
         ."      ,comment, is_pool"
+        ."      ,d.date_changed"
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
 
@@ -290,7 +295,7 @@ sub list_domains($self, %args) {
 
     my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY d.id");
     $sth->execute(map { $args{$_} } sort keys %args);
-    
+
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
         for (qw(is_locked is_hibernated is_paused
@@ -344,7 +349,7 @@ sub list_domains($self, %args) {
 
 =head2 filter_base_without_clones
 
-filters the list of domains and drops all machines that are unacessible and 
+filters the list of domains and drops all machines that are unacessible and
 bases with 0 machines accessible
 
 =cut
@@ -408,7 +413,7 @@ sub _where(%args) {
 sub list_clones {
   my $self = shift;
   my %args = @_;
-  
+
   my $domains = $self->list_domains();
   my @clones;
   for (@$domains ) {
@@ -693,7 +698,7 @@ Returns a reference to a list of the users
 sub list_users($self,$name=undef) {
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, name FROM users ");
     $sth->execute();
-    
+
     my @users = ();
     while ( my $row = $sth->fetchrow_hashref) {
         next if defined $name && $row->{name} !~ /$name/;
@@ -759,7 +764,7 @@ Waits for a request for some seconds.
 
 =head3 Arguments
 
-=over 
+=over
 
 =item * request
 
@@ -980,7 +985,6 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
             }
         }
         next if $command eq 'enforce_limits'
-                || $command eq 'refresh_vms'
                 || $command eq 'refresh_storage'
                 || $command eq 'refresh_machine'
                 || $command eq 'ping_backend'
@@ -1144,7 +1148,7 @@ sub list_bases_anonymous {
 
 }
 
-=head2 disconnect_vm 
+=head2 disconnect_vm
 
 Disconnects all the conneted VMs
 
@@ -1266,6 +1270,111 @@ sub list_network_interfaces($self, %args) {
 
 sub _dbh {
     return $CONNECTOR->dbh;
+}
+
+sub _get_settings($self, $id_parent=0) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,name,value"
+        ." FROM settings "
+        ." WHERE id_parent= ? "
+    );
+    $sth->execute($id_parent);
+    my $ret;
+    while ( my ( $id, $name, $value) = $sth->fetchrow) {
+        $value = 0+$value if defined $value && $value =~ /^\d+$/;
+        my $setting_sons = $self->_get_settings($id);
+        if ($setting_sons) {
+            $ret->{$name} = $setting_sons;
+        } else {
+            $ret->{$name} = { id => $id, value => $value};
+        }
+    }
+    return $ret;
+}
+
+=head2 settings_global
+
+Returns the list of global settings as a hash
+
+=cut
+
+sub settings_global($self) {
+    return $self->_get_settings();
+}
+
+sub _settings_by_id($self) {
+    my $orig_settings;
+    my $sth = $self->_dbh->prepare("SELECT id,value FROM settings");
+    $sth->execute();
+    while (my ($id, $value) = $sth->fetchrow) {
+        $orig_settings->{$id} = $value;
+    }
+    return $orig_settings;
+}
+
+=head2 update_settings_global
+
+Updates the global settings
+
+=cut
+
+sub update_settings_global($self, $arg, $user, $orig_settings = $self->_settings_by_id) {
+    confess if !ref($arg);
+    if (exists $arg->{frontend}
+        && exists $arg->{frontend}->{maintenance}
+        && !$arg->{frontend}->{maintenance}->{value}) {
+        delete $arg->{frontend}->{maintenance_end};
+        delete $arg->{frontend}->{maintenance_start};
+    }
+    for my $field (sort keys %$arg) {
+        if ( !exists $arg->{$field}->{id} ) {
+            confess if !keys %{$arg->{$field}};
+            $self->update_settings_global($arg->{$field}, $user, $orig_settings);
+            next;
+        }
+        confess "Error: invalid field $field" if $field !~ /^\w+$/;
+        my ( $value, $id )
+                   = ($arg->{$field}->{value}
+                    , $arg->{$field}->{id}
+        );
+        next if $orig_settings->{$id} eq $value;
+        my $sth = $self->_dbh->prepare(
+            "UPDATE settings set value=?"
+            ." WHERE id=? "
+        );
+        $sth->execute($value, $id);
+
+        $user->send_message("Setting $field to $value");
+    }
+
+}
+
+=head2 is_in_maintenance
+
+Returns wether the service is in maintenance mode
+
+=cut
+
+sub is_in_maintenance($self) {
+    my $settings = $self->settings_global();
+    return 0 if ! $settings->{frontend}->{maintenance}->{value};
+
+    my $start = DateTime::Format::DateParse->parse_datetime(
+        $settings->{frontend}->{maintenance_start}->{value});
+    my $end= DateTime::Format::DateParse->parse_datetime(
+        $settings->{frontend}->{maintenance_end}->{value});
+    my $now = DateTime->now();
+
+    if ( $now >= $start && $now <= $end ) {
+        return 1;
+    }
+    return 0 if $now <= $start;
+    my $sth = $self->_dbh->prepare("UPDATE settings set value = 0 "
+        ." WHERE id=? "
+    );
+    $sth->execute($settings->{frontend}->{maintenance}->{id});
+
+    return 0;
 }
 
 =head2 version

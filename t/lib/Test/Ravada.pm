@@ -5,12 +5,13 @@ use warnings;
 use  Carp qw(carp confess);
 use Data::Dumper;
 use Fcntl qw(:flock SEEK_END);
-use File::Path qw(make_path);
+use File::Path qw(make_path remove_tree);
 use YAML qw(DumpFile);
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use Mojo::File 'path';
 use  Test::More;
+use XML::LibXML;
 use YAML qw(Load LoadFile Dump DumpFile);
 
 use feature qw(signatures);
@@ -29,7 +30,7 @@ require Exporter;
 
 @ISA = qw(Exporter);
 
-@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin wait_request rvd_front init init_vm clean new_pool_name new_volume_name
+@EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin rvd_front init init_vm clean new_pool_name new_volume_name
 create_domain
     import_domain
     test_chain_prerouting
@@ -39,11 +40,11 @@ create_domain
     flush_rules
     arg_create_dom
     vm_names
+
     remote_config
     remote_config_nodes
     clean_remote_node
     arg_create_dom
-    vm_names
     search_iptable_remote
     clean_remote
     start_node shutdown_node remove_node hibernate_node
@@ -59,19 +60,24 @@ create_domain
     create_storage_pool
     local_ips
 
+    wait_request
     delete_request
+    fast_forward_requests
 
     remove_old_domains_req
+    remove_domain_and_clones_req
     mojo_init
     mojo_clean
     mojo_create_domain
     mojo_login
+    mojo_check_login
     mojo_request
 
     remove_old_user
 
     mangle_volume
     test_volume_contents
+    test_volume_format
 
     end
 );
@@ -120,6 +126,10 @@ chomp $QEMU_NBD;
 my $FH_FW;
 my $FH_NODE;
 my %LOCKED_FH;
+
+my ($MOJO_USER, $MOJO_PASSWORD);
+
+my $BASE_NAME= "zz-test-base";
 
 sub user_admin {
 
@@ -171,11 +181,13 @@ sub add_ubuntu_minimal_iso {
 }
 
 sub vm_names {
+
+   delete $ARG_CREATE_DOM{KVM} if $<;
    return (sort keys %ARG_CREATE_DOM) if wantarray;
    confess;
 }
 
-sub import_domain($vm, $name, $import_base=0) {
+sub import_domain($vm, $name=$BASE_NAME, $import_base=1) {
     my $t0 = time;
     my $domain = $RVD_BACK->import_domain(
         vm => $vm
@@ -296,6 +308,8 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
     $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') , disk => 1024 * 1024 ];
     $ARG_CREATE_DOM{Void} = [ id_iso => search_id_iso('Alpine') ];
 
+    delete $ARG_CREATE_DOM{KVM} if $<;
+
     Ravada::Utils::user_daemon->_reload_grants();
     return $rvd;
 }
@@ -404,38 +418,79 @@ sub remote_config_nodes {
     return $conf;
 }
 
-sub remove_old_domains_req() {
+sub _add_leftover($machines, $domain) {
+    return if !defined $domain;
+    if ($domain->{id}) {
+        my $domain2 = Ravada::Front::Domain->open($domain->{id});
+        if ($domain2 && $domain2->id) {
+            push @$machines,($domain);
+            return;
+        }
+    }
+
+    my $req = Ravada::Request->remove_domain(
+            name => $domain->name
+            ,uid => user_admin->id
+    );
+    diag("removing ".$domain->name);
+}
+
+sub _leftovers {
+    my @machines;
+    for my $name ( base_domain_name() ) {
+        for my $n ( 0 .. 10 ) {
+            my $domain = rvd_front->search_domain("${name}_$n");
+            _add_leftover(\@machines,$domain);
+            $n = "0$n" if length $n < 2;
+            $domain = rvd_front->search_domain("${name}_$n");
+            _add_leftover(\@machines,$domain);
+            for my $vm_name ('Void', 'KVM') {
+                $domain = rvd_front->search_domain(
+                    "${name}_$n-$vm_name-$name");
+            }
+            _add_leftover(\@machines,$domain);
+        }
+    }
+    return @machines;
+}
+
+sub remove_old_domains_req($wait=1) {
     my $base_name = base_domain_name();
     my $machines = rvd_front->list_machines(user_admin);
+    my @machines2 = _leftovers();
     my @reqs;
-    for my $machine ( @$machines) {
-        my $domain;
-        eval { $domain = Ravada::Front::Domain->open($machine->{id}) };
-        next if $@ && $@ =~ /nknown domain/i;
-        die if $@;
-        next if $domain->name !~ /^$base_name/;
+    for my $machine ( @$machines, @machines2) {
+        next if $machine->{name} !~ /^$base_name/;
+        remove_domain_and_clones_req($machine,$wait);
+    }
+}
+
+sub remove_domain_and_clones_req($domain_data, $wait) {
+    my $domain;
+    if (ref($domain_data) =~ /Ravada.*Domain/) {
+        $domain = $domain_data;
+    } else {
+        eval { $domain = Ravada::Front::Domain->open($domain_data->{id}) };
+        return if $@ && $@ =~ /Unknown domain/;
+        die $@ if $@;
+    }
+    for my $clone ($domain->clones) {
+        remove_domain_and_clones_req($clone, $wait);
+    }
+    if ( $wait && $domain->clones ) {
         my $n_clones = scalar($domain->clones);
-        my $req_clone;
-        for my $clone ($domain->clones) {
-            $req_clone = Ravada::Request->remove_domain(
-                name => $clone->{name}
-                ,uid => user_admin->id
-            );
+        for ( 1 .. 60 + 2*$n_clones ) {
+            last if !$domain->clones;
+            diag("Waiting for clones of domain ".$domain->name." removed "
+                .scalar($domain->clones)) if !(time % 10);
+            sleep 1;
+
         }
-        wait_request(debug => 1, background => 1, check_error => 0, timeout => 60+2*$n_clones);
-
-        my $req = Ravada::Request->remove_domain(
-            name => $machine->{name}
-            ,uid => user_admin->id
-        );
-        push @reqs,($req);
     }
-    if (!@reqs) {
-        push @reqs,(Ravada::Request->ping_backend);
-    }
-    wait_request(debug => 1, background => 1, timeout => 120, check_error => 0);
-    return $reqs[-1]->status eq 'done';
-
+    my $req= Ravada::Request->remove_domain(
+        name => $domain->name
+        ,uid => user_admin->id
+    );
 }
 
 sub _remove_old_domains_vm($vm_name) {
@@ -578,8 +633,15 @@ sub mojo_init() {
     return $t;
 }
 
-sub mojo_clean {
-    return remove_old_domains_req();
+sub mojo_clean($wait=1) {
+    return remove_old_domains_req($wait);
+}
+
+sub mojo_check_login( $t, $user=$MOJO_USER , $pass=$MOJO_PASSWORD ) {
+    $t->ua->get("/user.json");
+    return if $t->tx->res->code =~ /^(101|200|302)$/;
+    warn $t->tx->res->code();
+    mojo_login($t, $user,$pass);
 }
 
 sub mojo_login( $t, $user, $pass ) {
@@ -588,6 +650,8 @@ sub mojo_login( $t, $user, $pass ) {
     $t->post_ok('/login' => form => {login => $user, password => $pass});
     like($t->tx->res->code(),qr/^(200|302)$/);
     #    ->status_is(302);
+$MOJO_USER = $user;
+    $MOJO_PASSWORD = $pass;
 
     return $t->success;
 }
@@ -660,7 +724,7 @@ sub _remove_old_disks_kvm {
             sleep 1;
         }
         for my $volume  ( @volumes ) {
-            next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2|void)$/;
+            next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2|void|backup)$/;
 
             eval { $volume->delete() };
             warn $@ if $@;
@@ -707,7 +771,7 @@ sub _remove_old_disks_void_local {
 
 sub remove_old_disks {
     _remove_old_disks_void();
-    _remove_old_disks_kvm();
+    _remove_old_disks_kvm() if !$>;
 }
 
 sub create_user {
@@ -795,7 +859,7 @@ sub wait_request {
 
     $timeout = 60 if !defined $timeout && $background;
     my $debug = ( delete $args{debug} or 0 );
-    my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms','set_time'] );
+    my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms','set_time','rsync_back', 'cleanup', 'screenshot'] );
     $skip = [ $skip ] if !ref($skip);
     my %skip = map { $_ => 1 } @$skip;
     %skip = ( enforce_limits => 1 ) if !keys %skip;
@@ -807,6 +871,7 @@ sub wait_request {
     my $t0 = time;
     my %done;
     for ( ;; ) {
+        fast_forward_requests();
         my $done_all = 1;
         my $prev = join(".",_list_requests);
         my $done_count = scalar keys %done;
@@ -820,8 +885,18 @@ sub wait_request {
             die $@ if $@;
             next if $skip{$req->command};
             if ( $req->status ne 'done' ) {
+                my $run_at = '';
+                if ($req->status eq 'requested') {
+                    $run_at = ($req->at_time or 0);
+                    $run_at = $run_at-time if $run_at;
+                    $run_at = 'now' if !$run_at;
+                    $run_at = " $run_at";
+                }
+
                 diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
-                    ." ".($req->error or '')) if $debug && (time%5 == 0);
+                    .$run_at
+                    ." ".($req->error or ''))
+                    if $debug && (time%5 == 0);
                 $done_all = 0;
             } elsif (!$done{$req->id}) {
                 $t0 = time;
@@ -832,7 +907,10 @@ sub wait_request {
                     } elsif($req->command eq 'set_time') {
                         like($req->error,qr(^$|libvirt error code));
                     } else {
-                        is($req->error,'') or confess $req->command;
+                        my $error = ($req->error or '');
+                        if ($error !~ /waiting for processes/i) {
+                            is($req->error,'') or confess $req->command;
+                        }
                     }
                 }
             }
@@ -845,7 +923,8 @@ sub wait_request {
                 next if $skip{$req->command};
                 if ($req->status ne 'done') {
                     $done_all = 0;
-                    diag("Waiting for request ".$req->id." ".$req->command);
+                    diag("Waiting for request ".$req->id." ".$req->command)
+                    if $debug && (time%5 == 0);
                     last;
                 }
             }
@@ -854,6 +933,22 @@ sub wait_request {
         return if defined $timeout && time - $t0 >= $timeout;
         sleep 1 if $background;
     }
+}
+
+=head2 fast_forward_requests
+
+Sets scheduled requests time to now
+
+=cut
+
+sub fast_forward_requests() {
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE requests "
+        ." SET at_time=0 WHERE status = 'requested' AND at_time>0 "
+    );
+    eval {
+    $sth->execute();
+    };
+    die $@ if $@ && $@ !~ /Deadlock found when/;
 }
 
 sub init_vm {
@@ -921,7 +1016,7 @@ sub _qemu_storage_pool {
 sub remove_qemu_pools {
     return if !$VM_VALID{'KVM'} || $>;
     my $vm;
-    eval { $vm = rvd_back->search_vm('kvm') };
+    eval { $vm = rvd_back->search_vm('KVM') };
     if ($@ && $@ !~ /Missing qemu-img/) {
         warn $@;
     }
@@ -935,6 +1030,7 @@ sub remove_qemu_pools {
         my $name = $pool->get_name;
         next if $name !~ qr/^$base/;
         diag("Removing ".$pool->get_name." storage_pool");
+        _delete_qemu_pool($pool);
         for my $vol ( $pool->list_volumes ) {
             diag("Removing ".$pool->get_name." vol ".$vol->get_name);
             $vol->delete();
@@ -944,6 +1040,25 @@ sub remove_qemu_pools {
         warn $@ if$@ && $@ !~ /libvirt error code: 49,/;
         ok(!$@ or $@ =~ /Storage pool not found/i);
     }
+
+    opendir my $ls ,"/var/tmp" or die $!;
+    while (my $file = readdir($ls)) {
+        next if $file !~ qr/^$base/;
+
+        my $dir = "/var/tmp/$file";
+        remove_tree($dir,{ safe => 1, verbose => 1}) or die "$! $dir";
+    }
+}
+
+sub _delete_qemu_pool($pool) {
+    my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
+    my ($path) = $xml->findnodes('/pool/target/path');
+    my $dir = $path->textContent();
+    for my $file ( qw(check_storage) ) {
+        my $path ="$dir/$file";
+        unlink $path or die "$! $path" if -e $path;
+    }
+    rmdir($dir) or die "$! $dir";
 
 }
 
@@ -1136,7 +1251,8 @@ sub search_iptable_remote {
 sub _lock_fh($fh) {
     flock($fh, LOCK_EX);
     seek($fh, 0, SEEK_END) or die "Cannot seek - $!\n";
-    print $fh,''.localtime(time)." $0\n";
+    print $fh,$$." ".localtime(time)." $0\n";
+    $fh->flush();
     $LOCKED_FH{$fh} = $fh;
 }
 
@@ -1165,15 +1281,35 @@ sub _unlock_all {
     }
 }
 
+sub _clean_iptables_ravada($node) {
+    my ($out, $err) = $node->run_command("iptables-save","-t","filter");
+    is($err,'');
+    for my $line (split /\n/,$out) {
+        my ($rule) = $line =~ /-A (.*RAVADA.*)/i;
+        next if !$rule;
+        if (!$node->is_local) {
+            my ($out2, $err2) = $node->run_command("iptables","-t","filter","-D",$rule);
+            warn $node->name.": '-D $rule' $err2" if $err2;
+        } else {
+            `iptables -D $rule`;
+        }
+    }
+}
+
 sub flush_rules_node($node) {
     _lock_fw();
+    _clean_iptables_ravada($node);
     $node->create_iptables_chain($CHAIN);
-    $node->run_command("/sbin/iptables","-F", $CHAIN);
-    $node->run_command("/sbin/iptables","-X", $CHAIN);
+    my ($out, $err) = $node->run_command("iptables","-F", $CHAIN);
+    is($err,'');
+    ($out, $err) = $node->run_command("iptables","-D","INPUT","-j",$CHAIN);
+    is($err,'');
+    ($out, $err) = $node->run_command("iptables","-X", $CHAIN);
+    is($err,'') or die `iptables-save`;
 
     # flush forward too. this is only supposed to run on test servers
-    $node->run_command("/sbin/iptables","-F", 'FORWARD');
-
+    ($out, $err) = $node->run_command("iptables","-F", 'FORWARD');
+    is($err,'');
 }
 
 sub flush_rules {
@@ -1187,6 +1323,7 @@ sub flush_rules {
 
     @cmd = ('iptables','-L','INPUT');
     run3(\@cmd, \$in, \$out, \$err);
+    is($err,'');
 
     my $count = -2;
     my @found;
@@ -1200,11 +1337,16 @@ sub flush_rules {
         run3([@cmd, $n], \$in, \$out, \$err);
         warn $err if $err;
     }
-    run3(["/sbin/iptables","-F", $CHAIN], \$in, \$out, \$err);
-    run3(["/sbin/iptables","-X", $CHAIN], \$in, \$out, \$err);
+    run3(["iptables","-F", $CHAIN], \$in, \$out, \$err);
+    like($err,qr(^$|chain/target/match by that name));
+    ($out, $err) = run3(["iptables","-D","INPUT","-j",$CHAIN],\$in, \$out, \$err);
+    like($err,qr(^$|chain/target/match by that name));
+    run3(["iptables","-X", $CHAIN], \$in, \$out, \$err);
+    like($err,qr(^$|chain/target/match by that name));
 
     # flush forward too. this is only supposed to run on test servers
-    run3(["/sbin/iptables","-F","FORWARD" ], \$in, \$out, \$err);
+    run3(["iptables","-F","FORWARD" ], \$in, \$out, \$err);
+    is($err,'');
 
 }
 
@@ -1229,10 +1371,15 @@ sub hibernate_node($node) {
             $domain->shutdown_now(user_admin);
         }
     }
-    $node->disconnect;
 
-    my $domain_node = _domain_node($node);
-    $domain_node->hibernate( user_admin );
+    for (;;) {
+        $node->disconnect;
+        my $domain_node = _domain_node($node);
+        eval { $domain_node->hibernate( user_admin ) };
+        my $error = $@;
+        warn $error if $error;
+        last if !$error || $error =~ /is not active/;
+    }
 
     my $max_wait = 30;
     my $ping;
@@ -1247,29 +1394,36 @@ sub hibernate_node($node) {
 
 sub shutdown_node($node) {
 
-    if ($node->is_active) {
-        $node->run_command("service lightdm stop");
+    if ($node->_do_is_active(1)) {
+        eval {
+		$node->run_command("service lightdm stop");
         $node->run_command("service gdm stop");
+	};
+	confess $@ if $@ && $@ !~ /ssh error|error connecting|control command failed/i;
         for my $domain ($node->list_domains()) {
             diag("Shutting down ".$domain->name." on node ".$node->name);
             $domain->shutdown_now(user_admin);
         }
     }
     $node->disconnect;
-
     my $domain_node = _domain_node($node);
     eval {
         $domain_node->shutdown(user => user_admin);# if !$domain_node->is_active;
     };
     sleep 2 if !$node->ping(undef, 0);
 
-    my $max_wait = 120;
-    for ( 1 .. $max_wait / 2 ) {
-        diag("Waiting for node ".$node->name." to be inactive ...")  if !($_ % 10);
+    my $max_wait = 180;
+    for ( reverse 1 .. $max_wait ) {
         last if !$node->ping(undef, 0);
+        if ( !($_ % 10) ) {
+            eval { $domain_node->shutdown(user => user_admin) };
+            warn $@ if $@;
+            diag("Waiting for node ".$node->name." to be inactive ... $_");
+        }
         sleep 1;
     }
-    is($node->ping,0);
+    $domain_node->shutdown_now(user_admin) if $domain_node->is_active;
+    is($node->ping(undef,0),0);
 }
 
 sub start_node($node) {
@@ -1278,7 +1432,8 @@ sub start_node($node) {
     confess "Undefined node " if!$node;
 
     $node->disconnect;
-    if ( $node->_do_is_active ) {
+    $node->clear_netssh();
+    if ( $node->_do_is_active(1) ) {
         my $connect;
         eval { $connect = $node->connect };
         return if $connect;
@@ -1299,16 +1454,29 @@ sub start_node($node) {
 
     is($node->ping('debug',0),1,"[".$node->type."] Expecting ping node ".$node->name) or exit;
 
-    for ( 1 .. 60 ) {
+    for my $try ( 1 .. 3) {
         my $is_active;
-        eval {
-            $node->connect();
-            $is_active = $node->is_active(1)
-        };
-        warn $@ if $@;
+        for ( 1 .. 60 ) {
+            eval {
+                $node->disconnect;
+                $node->clear_netssh();
+                $node->connect();
+                $is_active = $node->is_active(1)
+            };
+            warn $@ if $@;
+            last if $is_active;
+            sleep 1;
+            diag("Waiting for active node ".$node->name." $_") if !($_ % 10);
+        }
         last if $is_active;
-        sleep 1;
-        diag("Waiting for active node ".$node->name." $_") if !($_ % 10);
+        if ($try == 1 ) {
+            $domain->shutdown(user => user_admin);
+            sleep 2;
+        } elsif ( $try == 2 ) {
+            $domain->shutdown_now(user_admin);
+            sleep 2;
+        }
+        $domain->start(user => user_admin, remote_ip => '127.0.0.1');
     }
     is($node->_do_is_active,1,"Expecting active node ".$node->name) or exit;
 
@@ -1335,10 +1503,14 @@ sub start_node($node) {
 
     $node->is_active(1);
     $node->enabled(1);
-    for ( 1 .. 60 ) {
+    for ( reverse 1 .. 120 ) {
         my $node2 = Ravada::VM->open(id => $node->id);
-        last if $node2->is_active(1);
-        diag("Waiting for node ".$node->name." active ...")  if !($_ % 10);
+        last if $node2->is_active(1) && $node->_ssh;
+        diag("Waiting for node ".$node2->name." active ... $_")  if !($_ % 10);
+        $node2->disconnect();
+        $node2->connect();
+        $node2->clear_netssh();
+        sleep 1;
     }
     eval { $node->run_command("hwclock","--hctosys") };
     is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
@@ -1367,7 +1539,7 @@ sub hibernate_domain_internal($domain) {
 
 sub _iptables_list {
     my ($in, $out, $err);
-    run3(['/sbin/iptables-save'], \$in, \$out, \$err);
+    run3(['iptables-save'], \$in, \$out, \$err);
     my ( %tables, $ret );
 
     my ($current_table);
@@ -1534,9 +1706,11 @@ sub _do_remote_node($vm_name, $remote_config) {
     if ( $node->ping(undef,0) && !$node->_connect_ssh() ) {
         my $ssh;
         for ( 1 .. 60 ) {
-            $ssh = $node->_connect_ssh();
+            eval { $ssh = $node->_connect_ssh() };
             last if $ssh;
             sleep 1;
+            warn $@ if $@;
+            next if !$ssh;
             diag("I can ping node ".$node->name." but I can't connect to ssh");
         }
         if (! $ssh ) {
@@ -1558,9 +1732,17 @@ sub _do_remote_node($vm_name, $remote_config) {
 }
 
 sub _dir_db {
-    my $dir_db = "t/.db";
+    my $dir_db = "/run/ravada/$>/db";
     if (! -e $dir_db ) {
-            make_path $dir_db or die "$! $dir_db";
+        eval {
+            make_path $dir_db
+        };
+        die $@ if $@ && $@ !~ /Permission denied/;
+        if ($@) {
+                warn "$! on mkdir $dir_db";
+                $dir_db = "t/.db";
+                make_path $dir_db or die "$! $dir_db";
+        }
     }
     return $dir_db;
 }
@@ -1638,7 +1820,22 @@ sub DESTROY {
     _unlock_all();
 }
 
+sub _check_leftovers {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM grants_user WHERE id_user NOT IN "
+        ." ( SELECT id FROM users )"
+    );
+    $sth->execute();
+    my @error;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @error, ("Leftover from grant_user not in user ".Dumper($row));
+    }
+    $sth->finish;
+    ok(!@error) or die Dumper(\@error);
+}
+
+
 sub end {
+    _check_leftovers
     clean();
     _unlock_all();
     _file_db();
@@ -1676,7 +1873,7 @@ sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
     $config->{vm}=['KVM','Void'];
     delete $config->{ldap}->{ravada_posix_group}   if !$with_posix_group;
 
-    my $fly_config = "/var/tmp/ravada_".base_domain_name().".conf";
+    my $fly_config = "/var/tmp/ravada_".base_domain_name().".$$.conf";
     DumpFile($fly_config, $config);
 
     $RVD_BACK = undef;
@@ -1692,7 +1889,7 @@ sub shutdown_nodes {
     }
 }
 
-sub create_storage_pool($vm) {
+sub create_storage_pool($vm, $dir=undef) {
     if (!ref($vm)) {
         $vm = rvd_back->search_vm($vm);
     }
@@ -1702,7 +1899,9 @@ sub create_storage_pool($vm) {
     my $capacity = 1 * 1024 * 1024;
 
     my $pool_name = new_pool_name();
-    my $dir = "/var/tmp/$pool_name";
+    if (!$dir) {
+        $dir = "/var/tmp/$pool_name";
+    }
 
     mkdir $dir if ! -e $dir;
 
@@ -1756,8 +1955,21 @@ sub mangle_volume($vm,$name,@vol) {
     }
 }
 
-sub _mount_qcow($vm, $vol) {
-    my ($in,$out, $err);
+sub _lsof_nbd($vm, $dev_nbd) {
+    my ($out, $err) = $vm->run_command("ls","/dev");
+    die $err if $err;
+    my ($nbd) = $dev_nbd =~ m{^/dev/(.*)};
+    for my $dev (split /\n/,$out) {
+        next if $dev !~ /^$nbd/;
+        my ($out2, $err2) = $vm->run_command("lsof","/dev/$dev");
+        my @line = split /\n/,$out2;
+        return 1 if scalar(@line) >= 2;
+    }
+    return 0;
+}
+
+sub _load_nbd($vm) {
+    my ($in, $out, $err);
     if (!$MOD_NBD++) {
         my @cmd =("/sbin/modprobe","nbd", "max_part=63");
         run3(\@cmd, \$in, \$out, \$err);
@@ -1766,6 +1978,23 @@ sub _mount_qcow($vm, $vol) {
     my @cmd = ($QEMU_NBD,"-d", $DEV_NBD);
     ($out,$err) = $vm->run_command(@cmd);
     die "@cmd : $err" if $err;
+
+    return if !_lsof_nbd($vm, $DEV_NBD);
+
+    my ($dev,$n) = $DEV_NBD =~ /(.*?)(\d+)$/;
+    $n++;
+
+    $DEV_NBD = "$dev$n";
+    diag("Trying new NBD device $DEV_NBD");
+    die "Error: I can't find more NBD devices ( $DEV_NBD) "
+    if ! -e $DEV_NBD;
+
+    return _load_nbd($vm);
+}
+
+sub _mount_qcow($vm, $vol) {
+    _load_nbd($vm);
+    my ($in,$out, $err);
     for ( 1 .. 10 ) {
         ($out, $err) = $vm->run_command($QEMU_NBD,"-c",$DEV_NBD, $vol);
         last if !$err;
@@ -1874,5 +2103,49 @@ sub test_volume_contents($vm, $name, $file, $expected=1) {
         confess "I don't know how to check vol contents of '$file'";
     }
 }
+
+sub _check_file($volume,$expected) {
+    my ($in, $out, $err);
+    run3(['file',$volume->file],\$in, \$out, \$err);
+    like($out,$expected) or confess;
+}
+
+sub _check_yaml($filename) {
+    _check_file($filename,qr(: ASCII text));
+}
+
+sub _check_qcow2($filename) {
+    _check_file($filename,qr(: QEMU QCOW2));
+}
+
+sub test_volume_format(@volume) {
+    for my $volume (@volume) {
+        next if !$volume->file;
+        my ($extension) = $volume->file =~ /\.(\w+)$/;
+        return if $extension eq 'iso';
+        my %sub = (
+            qcow2 => \&_check_qcow2
+            ,void => \&_check_yaml
+        );
+        is($volume->info->{driver_type}, $extension) or confess Dumper($volume->file, $volume->info);
+        my $exec = $sub{$extension} or confess "Error: I don't know how to check "
+            .$volume->file." [$extension]";
+        $exec->($volume);
+        next if $extension eq 'void';
+        if ($volume->backing_file) {
+            like($volume->info->{backing},qr(backingStore.*type.*file),"Expecting Backing for ".$volume->file." in ".$volume->domain->name)
+                or confess Dumper($volume->info);
+        } else {
+            # backing store info missing or only with <backingStore/>
+            if (!exists $volume->info->{backing} ) {
+                ok(1);
+            } else {
+                is($volume->info->{backing},'<backingStore/>',"Expecting empty backing for "
+                    .Dumper($volume->domain->name,$volume->info)) or exit;
+            }
+        }
+    }
+}
+
 
 1;

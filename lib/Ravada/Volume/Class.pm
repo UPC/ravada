@@ -22,6 +22,7 @@ sub _around_prepare_base($orig, $self) {
 
     my $storage_pool = ($self->vm->base_storage_pool or $self->vm->default_storage_pool_name);
     $self->vm->_check_free_disk($self->capacity, $storage_pool);
+
     my $base_file = $orig->($self);
     confess if !$base_file;
 
@@ -79,7 +80,7 @@ sub _around_clone($orig, $self, %args) {
         if !$self->domain || $self->domain->id != $id_domain_file;
     }
 
-    return Ravada::Volume->new(
+    return $self->new(
         file => $orig->($self, $file_clone)
         ,vm => $self->vm
     );
@@ -93,6 +94,16 @@ sub copy_file($self, $src, $dst) {
     my @cmd = ('/bin/cp' ,$src, $dst );
     my ($out, $err) = $self->vm->run_command(@cmd);
     die $err if $err;
+}
+
+sub backup($self) {
+    my $vol_backup = $self->file.".".time.".backup";
+    my ($out, $err) = $self->vm->run_command("cp","--preserve=all",$self->file,$vol_backup);
+        if ($err) {
+        $self->vm->remove_file($vol_backup);
+        die "Error: I can't backup $vol_backup $err";
+    }
+    return $vol_backup;
 }
 
 1;

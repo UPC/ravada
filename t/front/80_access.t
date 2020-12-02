@@ -283,6 +283,46 @@ sub test_move($vm) {
     _remove_bases($base);
 }
 
+sub test_maintenance() {
+    is(rvd_front->is_in_maintenance(),0);
+    my $settings = rvd_front->settings_global();
+    is($settings->{frontend}->{maintenance}->{value},0);
+    is($settings->{frontend}->{maintenance_start}->{value},'');
+    is($settings->{frontend}->{maintenance_end}->{value}, '');
+
+    my $arg = {
+        frontend => { maintenance => {
+                id => $settings->{frontend}->{maintenance}->{id}
+                ,value => 1
+            }
+            ,maintenance_start => {
+                id => $settings->{frontend}->{maintenance_start}->{id}
+                ,value => '2020-02-13 13:30'
+            }
+            ,maintenance_end => {
+                id => $settings->{frontend}->{maintenance_end}->{id}
+                ,value => '2099-02-13 13:30'
+            }
+        }
+    };
+    rvd_front->update_settings_global($arg,user_admin);
+    is(rvd_front->is_in_maintenance(),1);
+    $settings = rvd_front->settings_global();
+    is($settings->{frontend}->{maintenance}->{value},1);
+
+    #start tomorrow
+    $arg->{frontend}->{maintenance_start}->{value} = '2090-02-14 13:30';
+    rvd_front->update_settings_global($arg,user_admin);
+    is(rvd_front->is_in_maintenance(),0);
+
+    $settings = rvd_front->settings_global();
+    is($settings->{frontend}->{maintenance}->{value},1);
+
+}
+
+###########################################################################
+
+test_maintenance();
 for my $vm_name (vm_names()) {
     my $vm = rvd_back->search_vm($vm_name);
 

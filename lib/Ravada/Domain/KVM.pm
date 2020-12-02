@@ -182,11 +182,14 @@ sub remove_disks {
 
     $self->_vm->connect();
     for my $file ($self->list_disks( device => 'disk')) {
-        if (! -e $file ) {
+        if (! $self->_vm->file_exists($file) ) {
             next;
         }
+        eval {
         $self->_vol_remove($file);
         $self->_vol_remove($file);
+        };
+        warn "Error: removing $file $@" if $@;
 #        if ( -e $file ) {
 #            unlink $file or die "$! $file";
 #        }
@@ -301,7 +304,8 @@ sub remove {
 #    warn "WARNING: Problem removing ".$self->file_base_img." for ".$self->name
 #            ." , I will try again later : $@" if $@;
 
-    $self->_post_remove_base_domain() if $self->is_base();
+    # do a post remove but pass the remove flag = 1 ( it is 0 by default )
+    $self->_post_remove_base_domain(1) if $self->is_base();
 
 }
 
@@ -346,6 +350,8 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
         $file = $source_node->getAttribute('file')  if $source_node;
 
         my ($target_node) = $disk->findnodes('target');
+        my ($driver_node) = $disk->findnodes('driver');
+        my ($backing_node) = $disk->findnodes('backingStore');
         my $device = $disk->getAttribute('device');
         my $target = $target_node->getAttribute('dev');
         my $bus = $target_node->getAttribute('bus');
@@ -363,10 +369,20 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
             }
         }
         $info->{target} = $target;
+        # we use driver to make it compatible with other hardware but it is more accurate
+        # to say bus
         $info->{driver} = $bus;
+        $info->{bus} = $bus;
         $info->{n_order} = $n_order++;
         $info->{boot} = $boot_node->getAttribute('order') if $boot_node;
         $info->{file} = $file if defined $file;
+        if ($driver_node) {
+            for my $attr  ($driver_node->attributes()) {
+                $info->{"driver_".$attr->name} = $attr->getValue();
+            }
+        }
+        $info->{backing} = $backing_node->toString()
+        if $backing_node && $backing_node->attributes();
 
         next if defined $attribute
            && (!exists $info->{$attribute}
@@ -455,83 +471,18 @@ sub disk_device {
 }
 
 
-sub _create_qcow_base {
-    confess "Deprecated";
-    my $self = shift;
+=head2 pre_prepare_base
 
-    my @base_img;
+Run this before preparing the base. It is necessary to correctly
+detect disks drivers for newer libvirts.
 
-    for  my $vol_data ( $self->list_volumes_info( device => 'disk')) {
-        my $base_img = $vol_data->prepare_base();
-        push @base_img,([$base_img,$vol_data->info->{target}]);
-
-    }
-    return @base_img;
-
-}
-
-sub _cmd_convert {
-    my ($base_img, $qcow_img) = @_;
-
-
-    return    ('qemu-img','convert',
-                '-O','qcow2', $base_img
-                ,$qcow_img
-        );
-
-}
-
-sub _cmd_copy {
-    my ($base_img, $qcow_img) = @_;
-
-    return ('cp'
-            ,$base_img, $qcow_img
-    );
-}
-
-=pod
-
-sub _create_swap_base {
-    my $self = shift;
-
-    my @swap_img;
-
-    my $base_name = $self->name;
-    for  my $base_img ( $self->list_volumes()) {
-
-      next unless $base_img =~ 'SWAP';
-
-        confess "ERROR: missing $base_img"
-            if !-e $base_img;
-        my $swap_img = $base_img;
-
-        $swap_img =~ s{\.\w+$}{\.ro.img};
-
-        push @swap_img,($swap_img);
-
-        my @cmd = ('qemu-img','convert',
-                '-O','raw', $base_img
-                ,$swap_img
-        );
-
-        my ($in, $out, $err);
-        run3(\@cmd,\$in,\$out,\$err);
-        warn $out if $out;
-        warn $err if $err;
-
-        if (! -e $swap_img) {
-            warn "ERROR: Output file $swap_img not created at ".join(" ",@cmd)."\n";
-            exit;
-        }
-
-        chmod 0555,$swap_img;
-        $self->_prepare_base_db($swap_img);
-    }
-    return @swap_img;
-
-}
+This is executed automatically so it shouldn't been called.
 
 =cut
+
+sub pre_prepare_base($self) {
+    $self->_detect_disks_driver();
+}
 
 =head2 post_prepare_base
 
@@ -543,11 +494,64 @@ Task to run after preparing a base virtual machine
 sub post_prepare_base {
     my $self = shift;
 
+    $self->_set_volumes_backing_store();
     $self->_store_xml();
 }
 
-sub _store_xml {
-    my $self = shift;
+sub _set_backing_store($self, $disk, $backing_file) {
+    my ($backing_store) = $disk->findnodes('backingStore');
+    if ($backing_file) {
+        my $vol_backing_file = Ravada::Volume->new(
+            file => $backing_file
+            ,vm => $self->_vm
+        );
+        my $backing_file_format = (
+            $vol_backing_file->_qemu_info('file format')
+                or 'qcow2'
+        );
+
+        $backing_store = $disk->addNewChild(undef,'backingStore') if !$backing_store;
+        $backing_store->setAttribute('type' => 'file');
+
+        my ($format) = $backing_store->findnodes('format');
+        $format = $backing_store->addNewChild(undef,'format') if !$format;
+        $format->setAttribute('type' => $backing_file_format);
+
+        my ($source_bf) = $backing_store->findnodes('source');
+        $source_bf = $backing_store->addNewChild(undef,'source') if !$source_bf;
+        $source_bf->setAttribute('file' => $backing_file);
+
+        my $next_backing_file = $vol_backing_file->backing_file();
+        $self->_set_backing_store($backing_store, $next_backing_file);
+    } else {
+        $disk->removeChild($backing_store) if $backing_store;
+        $backing_store = $disk->addNewChild(undef,'backingStore') if !$backing_store;
+    }
+
+}
+
+sub _set_volumes_backing_store($self) {
+    my $doc = XML::LibXML->load_xml(string
+            => $self->xml_description(Sys::Virt::Domain::XML_INACTIVE))
+        or die "ERROR: $!\n";
+
+    my @volumes_info = grep { defined($_) && $_->file } $self->list_volumes_info;
+    my %vol = map { $_->file => $_ } @volumes_info;
+    for my $disk ($doc->findnodes('/domain/devices/disk')) {
+        next if $disk->getAttribute('device') ne 'disk';
+        for my $source( $disk->findnodes('source')) {
+            my $file = $source->getAttribute('file');
+            my $backing_file = $vol{$file}->backing_file();
+
+            $self->_set_backing_store($disk, $backing_file);
+
+        }
+    }
+    $self->_post_change_hardware($doc);
+}
+
+
+sub _store_xml($self) {
     my $xml = $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE);
     my $sth = $self->_dbh->prepare(
         "INSERT INTO base_xml (id_domain, xml) "
@@ -574,18 +578,53 @@ sub get_xml_base{
     return ($xml or $self->domain->get_xml_description);
 }
 
-sub _post_remove_base_domain {
-    my $self = shift;
+sub _post_remove_base_domain($self, $remove=0) {
     my $sth = $self->_dbh->prepare(
         "DELETE FROM base_xml WHERE id_domain=?"
     );
     $sth->execute($self->id);
+
+    if (!$remove) {
+        $self->_set_volumes_backing_store();
+        $self->_detect_disks_driver();
+    }
 }
 
+sub _detect_disks_driver($self) {
+    my $doc = XML::LibXML->load_xml(string
+        => $self->xml_description(Sys::Virt::Domain::XML_INACTIVE))
+        or die "ERROR: $!\n";
 
-sub post_resume_aux($self) {
+    my @img;
+
+    my @vols = $self->list_volumes_info();
+
+    my $n_order = 0;
+    for my $disk ($doc->findnodes('/domain/devices/disk')) {
+        next if $disk->getAttribute('device') ne 'disk';
+        my ( $driver ) = $disk->findnodes('driver');
+        my ( $source ) = $disk->findnodes('source');
+
+        my $file = $source->getAttribute('file');
+        next if $file =~ /iso$/;
+        next unless $self->_vm->file_exists($file);
+
+        my ($vol) = grep { defined $_->file && $_->file eq $file } @vols;
+        my $format = $vol->_qemu_info('file format');
+        confess "Error: wrong format ".Dumper($format)." for file $file"
+        unless !$format || $format =~ /^\w+$/;
+
+        $driver->setAttribute(type => $format) if defined $format;
+    }
+
+    $self->_post_change_hardware($doc);
+}
+
+sub post_resume_aux($self, %args) {
+    my $set_time = delete $args{set_time};
+    $set_time = 1 if !defined $set_time;
     eval {
-        $self->set_time();
+        $self->set_time() if $set_time;
     };
     # 55: domain is not running
     # 74: not configured
@@ -643,6 +682,9 @@ sub is_active {
     return 0 if $self->is_removed;
     my $is_active = 0;
     eval { $is_active = $self->domain->is_active };
+    return 0 if $@ && (    $@->code == 1    # client socket is closed
+                        || $@->code == 38   # broken pipe
+                    );
     die $@ if $@ && $@ !~ /code: 42,/;
     return $is_active;
 }
@@ -677,6 +719,16 @@ sub start {
     my $set_password = delete $arg{set_password};
 
     $self->_set_spice_ip($set_password, $listen_ip);
+
+    my $is_active = 0;
+    eval { $is_active = $self->domain->is_active };
+    warn $@ if $@;
+    if (!$is_active) {
+        $self->_check_qcow_format($request);
+        $self->_set_volumes_backing_store();
+        $self->_detect_disks_driver();
+    }
+
     $self->status('starting');
 
     my $error;
@@ -701,6 +753,20 @@ sub start {
         $self->domain->create();
     } else {
         die $error;
+    }
+}
+
+sub _check_qcow_format($self, $request) {
+    return if $self->is_active;
+    for my $vol ( $self->list_volumes_info ) {
+        next if !$vol->file || $vol->file =~ /iso$/;
+        next if !$vol->backing_file;
+
+        next if $vol->_qemu_info('backing file format') eq 'qcow2';
+
+        $request->status("rebasing","rebasing to release 0.8 "
+            .$vol->file."\n".$vol->backing_file) if $request;
+        $vol->rebase($vol->backing_file);
     }
 }
 
@@ -926,6 +992,7 @@ sub add_volume {
     my $boot = (delete $args{boot} or undef);
     my $device = (delete $args{device} or 'disk');
     my $type = delete $args{type};
+    my $format = delete $args{format};
     my %valid_arg = map { $_ => 1 } ( qw( driver name size vm xml swap target file allocation));
 
     for my $arg_name (keys %args) {
@@ -955,6 +1022,7 @@ sub add_volume {
         ,swap => ($args{swap} or 0)
         ,size => ($args{size} or undef)
         ,type => $type
+        ,format => $format
         ,allocation => ($args{allocation} or undef)
         ,target => $target_dev
     )   if !$path;
@@ -963,12 +1031,12 @@ sub add_volume {
 # TODO check if <target dev="/dev/vda" bus='virtio'/> widhout dev works it out
 # change dev=vd*  , slot=*
 #
-    my $driver_type = 'qcow2';
+    my $driver_type = ( $format or 'qcow2');
     my $cache = 'default';
 
     if ( $args{swap} || $device eq 'cdrom' ) {
         $cache = 'none';
-        $driver_type = 'raw';
+        $driver_type = 'raw'    if !defined $format;
     }
 
     if ( !defined $bus ) {
@@ -1079,7 +1147,6 @@ sub _xml_new_device($self , %arg) {
     <disk type='file' device='$device'>
       <driver name='qemu' type='$arg{type}' cache='$arg{cache}'/>
       <source file='$file'/>
-      <backingStore/>
       <target bus='$bus' dev='$arg{target}'/>
       <address type=''/>
       <boot/>
@@ -1553,65 +1620,6 @@ sub rename_volumes {
         $self->domain->attach_device($disk);
     }
 }
-
-=cut
-
-=head2 spinoff_volumes
-
-Makes volumes indpendent from base
-
-=cut
-
-sub spinoff_volumes {
-    my $self = shift;
-
-    $self->_do_force_shutdown() if $self->is_active;
-
-    for my $volume ($self->list_volumes_info ) {
-        #        $volume->spinoff;
-    }
-}
-
-
-sub _old_spinoff_volumes {
-    my $self = shift;
-
-    $self->_do_force_shutdown() if $self->is_active;
-
-    for my $volume ($self->list_disks) {
-
-        confess "ERROR: Domain ".$self->name
-                ." volume '$volume' does not exists"
-            if ! -e $volume;
-
-        #TODO check mktemp or something
-        my $volume_tmp  = "$volume.$$.tmp";
-
-        unlink($volume_tmp) or die "ERROR $! removing $volume.tmp"
-            if -e $volume_tmp;
-
-        my @cmd = ('qemu-img'
-              ,'convert'
-              ,'-O','qcow2'
-              ,$volume
-              ,$volume_tmp
-        );
-        my ($in, $out, $err);
-        run3(\@cmd,\$in,\$out,\$err);
-        warn $out  if $out;
-        warn $err   if $err;
-        die "ERROR: Temporary output file $volume_tmp not created at "
-                .join(" ",@cmd)
-                .($out or '')
-                .($err or '')
-                ."\n"
-            if (! -e $volume_tmp );
-
-        copy($volume_tmp,$volume) or die "$! $volume_tmp -> $volume";
-        unlink($volume_tmp) or die "ERROR $! removing $volume_tmp";
-    }
-}
-
 
 sub _set_spice_ip($self, $set_password, $ip=undef) {
 
@@ -2121,6 +2129,9 @@ sub is_removed($self) {
         $@ = '';
         $is_removed = 1;
     }
+    return if $@ && ($@->code == 38  # cannot recv data
+                    || $@->code == 1 # client socket is closed
+    );
     die $@ if $@;
     return $is_removed;
 }
@@ -2414,6 +2425,25 @@ sub dettach($self, $user) {
     for my $vol ($self->list_disks ) {
         $self->domain->block_pull($vol,0);
     }
+}
+
+sub _remove_backingstore($self, $file) {
+
+    my $doc = XML::LibXML->load_xml(string
+            => $self->xml_description(Sys::Virt::Domain::XML_INACTIVE))
+        or die "ERROR: $!\n";
+
+    my $n_order = 0;
+    for my $disk ($doc->findnodes('/domain/devices/disk')) {
+        my ($source_node) = $disk->findnodes('source');
+        next if !$source_node;
+        my $file_found = $source_node->getAttribute('file');
+        next if !$file_found || $file_found ne $file;
+
+        my ($backingstore) = $disk->findnodes('backingStore');
+        $disk->removeChild($backingstore) if $backingstore;
+    }
+    $self->_post_change_hardware($doc);
 }
 
 1;
