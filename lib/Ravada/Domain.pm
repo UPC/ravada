@@ -2795,10 +2795,10 @@ sub _set_public_port($self, $id_port, $internal_port, $name, $restricted) {
     }
 }
 
-sub _used_ports_iptables($self, $port) {
+sub _used_ports_iptables($self, $port, $skip_port) {
     my $used_port = {};
     $self->_vm->_list_used_ports_iptables($used_port);
-    return 0 if !$used_port->{$port};
+    return 0 if !$used_port->{$port} || $used_port->{$port} eq $skip_port;
     return 1;
 }
 
@@ -2809,16 +2809,17 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     $sth->execute($self->id, $internal_port);
     my ($id_port, $public_port) = $sth->fetchrow();
 
-    $public_port = undef if $public_port && $self->_used_ports_iptables($public_port);
+    my $internal_ip = $self->ip;
+    confess "Error: I can't get the internal IP of ".$self->name
+        if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
+
+    $public_port = undef if $public_port
+        && $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port");
 
     $public_port = $self->_set_public_port($id_port, $internal_port, $name, $restricted)
     if !$public_port;
 
     my $local_ip = $self->_vm->ip;
-    my $internal_ip = $self->ip;
-    confess "Error: I can't get the internal IP of ".$self->name
-        if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
-
     $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set internal_ip=?"
             ." WHERE id_domain=? AND internal_port=?"
     );
