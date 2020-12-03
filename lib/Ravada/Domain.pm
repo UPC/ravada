@@ -339,11 +339,14 @@ sub _around_start($orig, $self, @arg) {
         if (!defined $listen_ip) {
             my $display_ip;
             if ($remote_ip) {
-                my $set_password = 0;
-                my $network = Ravada::Network->new(address => $remote_ip);
-                $set_password = 1 if $network->requires_password();
-                $display_ip = $self->_listen_ip($remote_ip);
-                $arg{set_password} = $set_password;
+                if ( Ravada::setting(undef,"/backend/display_password") ) {
+                    # We'll see if we set it from the network, defaults to 0 meanwhile
+                    my $set_password = 0;
+                    my $network = Ravada::Network->new(address => $remote_ip);
+                    $set_password = 1 if $network->requires_password();
+                    $display_ip = $self->_listen_ip($remote_ip);
+                    $arg{set_password} = $set_password;
+                }
             } else {
                 $display_ip = $self->_listen_ip();
             }

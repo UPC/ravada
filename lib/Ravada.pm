@@ -1431,6 +1431,11 @@ sub _sql_insert_defaults($self){
                 ,name => 'delay_migrate_back'
                 ,value => 600
             }
+            ,{
+                id_parent => $id_backend
+                ,name => 'display_password'
+                ,value => 1
+            }
         ]
     );
     my %field = ( settings => 'name' );
@@ -4465,7 +4470,7 @@ Returns the value of a configuration setting
 
 =cut
 
-sub setting($self, $name) {
+sub setting($self, $name, $new_value=undef) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,value "
         ." FROM settings "
@@ -4481,6 +4486,13 @@ sub setting($self, $name) {
         if !$id;
 
         $id_parent = $id;
+    }
+    if (defined $new_value && $new_value ne $value ) {
+        $sth = $CONNECTOR->dbh->prepare(
+            "UPDATE settings set value=? WHERE id=?"
+        );
+        $sth->execute($new_value , $id);
+        return $new_value;
     }
     return $value;
 }
