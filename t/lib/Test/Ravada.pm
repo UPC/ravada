@@ -866,7 +866,11 @@ sub wait_request {
                         like($req->error,qr(^$|libvirt error code));
                     } else {
                         my $error = ($req->error or '');
-                        is($error,'') or confess $req->command;
+                        if ($req->command =~ m{rsync_back|set_base_vm|start}) {
+                            like($error,qr{^($|rsync done)});
+                        } else {
+                            is($error,'') or confess $req->command;
+                        }
                     }
                 }
             }
