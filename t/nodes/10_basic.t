@@ -1216,6 +1216,7 @@ sub test_display_ip($vm, $node, $set_localhost_dp=0) {
 
     $node->_data(display_ip => '');
     rvd_back->display_ip('') if $set_localhost_dp;
+    $vm->display_ip('')      if $set_localhost_dp;
 }
 
 sub test_nat($vm, $node, $set_localhost_natip=0) {
