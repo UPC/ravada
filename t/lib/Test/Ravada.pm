@@ -65,6 +65,7 @@ create_domain
     fast_forward_requests
 
     remove_old_domains_req
+    remove_domain_and_clones_req
     mojo_init
     mojo_clean
     mojo_create_domain
@@ -417,38 +418,79 @@ sub remote_config_nodes {
     return $conf;
 }
 
-sub remove_old_domains_req() {
+sub _add_leftover($machines, $domain) {
+    return if !defined $domain;
+    if ($domain->{id}) {
+        my $domain2 = Ravada::Front::Domain->open($domain->{id});
+        if ($domain2 && $domain2->id) {
+            push @$machines,($domain);
+            return;
+        }
+    }
+
+    my $req = Ravada::Request->remove_domain(
+            name => $domain->name
+            ,uid => user_admin->id
+    );
+    diag("removing ".$domain->name);
+}
+
+sub _leftovers {
+    my @machines;
+    for my $name ( base_domain_name() ) {
+        for my $n ( 0 .. 10 ) {
+            my $domain = rvd_front->search_domain("${name}_$n");
+            _add_leftover(\@machines,$domain);
+            $n = "0$n" if length $n < 2;
+            $domain = rvd_front->search_domain("${name}_$n");
+            _add_leftover(\@machines,$domain);
+            for my $vm_name ('Void', 'KVM') {
+                $domain = rvd_front->search_domain(
+                    "${name}_$n-$vm_name-$name");
+            }
+            _add_leftover(\@machines,$domain);
+        }
+    }
+    return @machines;
+}
+
+sub remove_old_domains_req($wait=1) {
     my $base_name = base_domain_name();
     my $machines = rvd_front->list_machines(user_admin);
+    my @machines2 = _leftovers();
     my @reqs;
-    for my $machine ( @$machines) {
-        my $domain;
-        eval { $domain = Ravada::Front::Domain->open($machine->{id}) };
-        next if $@ && $@ =~ /nknown domain/i;
-        die if $@;
-        next if $domain->name !~ /^$base_name/;
+    for my $machine ( @$machines, @machines2) {
+        next if $machine->{name} !~ /^$base_name/;
+        remove_domain_and_clones_req($machine,$wait);
+    }
+}
+
+sub remove_domain_and_clones_req($domain_data, $wait) {
+    my $domain;
+    if (ref($domain_data) =~ /Ravada.*Domain/) {
+        $domain = $domain_data;
+    } else {
+        eval { $domain = Ravada::Front::Domain->open($domain_data->{id}) };
+        return if $@ && $@ =~ /Unknown domain/;
+        die $@ if $@;
+    }
+    for my $clone ($domain->clones) {
+        remove_domain_and_clones_req($clone, $wait);
+    }
+    if ( $wait && $domain->clones ) {
         my $n_clones = scalar($domain->clones);
-        my $req_clone;
-        for my $clone ($domain->clones) {
-            $req_clone = Ravada::Request->remove_domain(
-                name => $clone->{name}
-                ,uid => user_admin->id
-            );
+        for ( 1 .. 60 + 2*$n_clones ) {
+            last if !$domain->clones;
+            diag("Waiting for clones of domain ".$domain->name." removed "
+                .scalar($domain->clones)) if !(time % 10);
+            sleep 1;
+
         }
-        wait_request(debug => 1, background => 1, check_error => 0, timeout => 60+2*$n_clones);
-
-        my $req = Ravada::Request->remove_domain(
-            name => $machine->{name}
-            ,uid => user_admin->id
-        );
-        push @reqs,($req);
     }
-    if (!@reqs) {
-        push @reqs,(Ravada::Request->ping_backend);
-    }
-    wait_request(debug => 1, background => 1, timeout => 120, check_error => 0);
-    return $reqs[-1]->status eq 'done';
-
+    my $req= Ravada::Request->remove_domain(
+        name => $domain->name
+        ,uid => user_admin->id
+    );
 }
 
 sub _remove_old_domains_vm($vm_name) {
@@ -591,8 +633,8 @@ sub mojo_init() {
     return $t;
 }
 
-sub mojo_clean {
-    return remove_old_domains_req();
+sub mojo_clean($wait=1) {
+    return remove_old_domains_req($wait);
 }
 
 sub mojo_check_login( $t, $user=$MOJO_USER , $pass=$MOJO_PASSWORD ) {
@@ -682,7 +724,7 @@ sub _remove_old_disks_kvm {
             sleep 1;
         }
         for my $volume  ( @volumes ) {
-            next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2|void)$/;
+            next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2|void|backup)$/;
 
             eval { $volume->delete() };
             warn $@ if $@;
@@ -866,6 +908,7 @@ sub wait_request {
                         like($req->error,qr(^$|libvirt error code));
                     } else {
                         my $error = ($req->error or '');
+                        next if $error =~ /waiting for processes/i;
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
                             like($error,qr{^($|rsync done)});
                         } else {
@@ -1780,7 +1823,22 @@ sub DESTROY {
     _unlock_all();
 }
 
+sub _check_leftovers {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM grants_user WHERE id_user NOT IN "
+        ." ( SELECT id FROM users )"
+    );
+    $sth->execute();
+    my @error;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @error, ("Leftover from grant_user not in user ".Dumper($row));
+    }
+    $sth->finish;
+    ok(!@error) or die Dumper(\@error);
+}
+
+
 sub end {
+    _check_leftovers
     clean();
     _unlock_all();
     _file_db();
@@ -1818,7 +1876,7 @@ sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
     $config->{vm}=['KVM','Void'];
     delete $config->{ldap}->{ravada_posix_group}   if !$with_posix_group;
 
-    my $fly_config = "/var/tmp/ravada_".base_domain_name().".conf";
+    my $fly_config = "/var/tmp/ravada_".base_domain_name().".$$.conf";
     DumpFile($fly_config, $config);
 
     $RVD_BACK = undef;

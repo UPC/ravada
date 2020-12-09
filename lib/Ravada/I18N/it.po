@@ -8,15 +8,16 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-01-03 11:17+0000\n"
-"Last-Translator: Amparo _rvd <amparorvd@gmail.com>, 2019\n"
-"Language-Team: Italian (https://www.transifex.com/ravada/teams/70385/it/)\n"
+"PO-Revision-Date: 2020-11-29 22:29+0000\n"
+"Last-Translator: J. Lavoie <j.lavoie@net-c.ca>\n"
+"Language-Team: Italian <https://hosted.weblate.org/projects/ravada/"
+"translation/it/>\n"
+"Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: it\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Poedit 1.8.7.1\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 4.4-dev\n"
 
 msgid "Ravada broker"
 msgstr "Broker Ravada"
@@ -34,7 +35,7 @@ msgid "Start"
 msgstr "Inizio"
 
 msgid "Stop"
-msgstr "Fermare"
+msgstr "Ferma"
 
 msgid "View"
 msgstr "vista"
@@ -46,7 +47,7 @@ msgid "Clone"
 msgstr "Clone"
 
 msgid "Clone/s"
-msgstr "Clone/s"
+msgstr "Clone/i"
 
 msgid "Users List"
 msgstr "Elenco degli utenti"
@@ -55,7 +56,7 @@ msgid "Name"
 msgstr "Nome"
 
 msgid "Log Out"
-msgstr "Disconnettersi"
+msgstr "Esci"
 
 msgid "Available Machines"
 msgstr "Macchine disponibili"
@@ -67,13 +68,13 @@ msgid "Requirements"
 msgstr "Requisiti"
 
 msgid "About"
-msgstr "Di"
+msgstr "Informazioni"
 
 msgid "Mark all as read"
 msgstr "Segna tutti come letti"
 
 msgid "Settings"
-msgstr "impostazioni"
+msgstr "Impostazioni"
 
 msgid "New Machine"
 msgstr "Nuova macchina"
@@ -85,37 +86,37 @@ msgid "I want to change my language"
 msgstr "Voglio cambiare la mia lingua"
 
 msgid "Language:"
-msgstr "Linguaggio:"
+msgstr "Lingua:"
 
 msgid "English"
-msgstr "Inglese"
+msgstr "inglese"
 
 msgid "Spanish"
-msgstr "Spagnolo"
+msgstr "spagnolo"
 
 msgid "Catalan"
-msgstr "Catalano"
+msgstr "catalano"
 
 msgid "Galician"
-msgstr "Galiziano"
+msgstr "galiziano"
 
 msgid "French"
-msgstr "Francese"
+msgstr "francese"
 
 msgid "Hindi"
-msgstr "Hindi"
+msgstr "hindi"
 
 msgid "Indonesian"
-msgstr "Indonesiano"
+msgstr "indonesiano"
 
 msgid "Persian"
-msgstr "Persiano"
+msgstr "persiano"
 
 msgid "Japanese"
-msgstr "Giapponese"
+msgstr "giapponese"
 
 msgid "German"
-msgstr "Tedesco"
+msgstr "tedesco"
 
 msgid "New Password:"
 msgstr "Nuova password:"
@@ -124,7 +125,7 @@ msgid "Confirm Password:"
 msgstr "Conferma password:"
 
 msgid "Submit"
-msgstr "Sottoscrivi"
+msgstr "Invia"
 
 msgid "Your language has been changed successfully"
 msgstr "La tua lingua è stata cambiata con successo"
@@ -220,16 +221,16 @@ msgid "Admin tools"
 msgstr "Strumenti di amministrazione"
 
 msgid "Remove base"
-msgstr "Rimuovere la base"
+msgstr "Rimuovi la base"
 
 msgid "Restore"
 msgstr "Ristabilire"
 
 msgid "Hibernate"
-msgstr "ibernare"
+msgstr "Iberna"
 
 msgid "Are you sure?"
-msgstr "Sei sicuro?"
+msgstr "Sei sicuro/a?"
 
 msgid "Yes"
 msgstr "Sì"
@@ -285,10 +286,10 @@ msgstr ""
 " quindi esegui il file."
 
 msgid "Login"
-msgstr "Accesso"
+msgstr "Accedi"
 
 msgid "Welcome"
-msgstr "Benvenuto"
+msgstr "Benvenuto/a"
 
 msgid "A viewer is required to run the virtual machines."
 msgstr "È richiesto un visualizzatore per eseguire le macchine virtuali."
@@ -414,7 +415,7 @@ msgid "Disk Size: (GB)"
 msgstr "Dimensione del disco: (GB)"
 
 msgid "Swap Size: (GB)"
-msgstr "Swap Size: (GB)"
+msgstr "Dimensione file swap: (GB)"
 
 msgid "Ram: (GB)"
 msgstr "Ram: (GB)"
@@ -533,7 +534,7 @@ msgid ""
 "Once you delete the machine, there is no going back. Please be certain."
 msgstr ""
 "Una volta eliminata la macchina, non si può tornare indietro. Per favore, "
-"sii sicuro"
+"sii sicuro/a."
 
 msgid "Danger"
 msgstr "Pericolo"
@@ -683,7 +684,7 @@ msgid "Confirm Password"
 msgstr "conferma password"
 
 msgid "Username is required"
-msgstr "è richiesto uno username"
+msgstr "È richiesto un nome utente"
 
 msgid "Username can not exceed 20 characters"
 msgstr "Il nome utente non può superare i 20 caratteri"
@@ -697,7 +698,7 @@ msgstr ""
 "caratteri di sottolineatura"
 
 msgid "Password is required"
-msgstr "E 'richiesta la password"
+msgstr "È richiesta la password"
 
 msgid "Password can not exceed 20 characters"
 msgstr "La password non può superare i 20 caratteri"
@@ -724,7 +725,7 @@ msgid "This information will be available to the users"
 msgstr "Queste informazioni saranno disponibili per gli utenti"
 
 msgid "Volatile Clones"
-msgstr "Volatile Clones"
+msgstr "Cloni volatili"
 
 msgid "Owner"
 msgstr "Proprietario"
@@ -837,3 +838,76 @@ msgstr "Password vuota"
 
 msgid "Session timeout"
 msgstr "Timeout della sessione"
+
+msgid "Enable last for not allowed restrictions."
+msgstr "Abilita l'ultimo per restrizioni non consentite."
+
+msgid "Keep in mind that there may be users using a clone"
+msgstr "Tieni presente che potrebbero esserci utenti che utilizzano un clone"
+
+msgid "Shutdown all clones"
+msgstr "Spegni tutti i cloni"
+
+msgid "These actions affect all the clones on the machine"
+msgstr "Queste azioni influenzano tutti i cloni sulla macchina"
+
+msgid "Add description"
+msgstr "Aggiungi una descrizione"
+
+msgid "If none of the previous match, access is denied."
+msgstr "Se nessuna delle precedenti corrispondenze, l'accesso viene negato."
+
+msgid "If none of the previous match, access is allowed."
+msgstr "Se nessuna delle precedenti corrisponde, l'accesso è consentito."
+
+msgid "Type a typical LDAP user name to fetch the attribute list"
+msgstr ""
+"Digitare un tipico nome utente LDAP per recuperare l'elenco degli attributi"
+
+msgid "Yes, shutwdown all the clones"
+msgstr "Sì, spegni tutti i cloni"
+
+msgid "entries."
+msgstr "voci."
+
+msgid "has at least"
+msgstr "ha almeno"
+
+msgid "No entries found"
+msgstr "Nessuna voce trovata"
+
+msgid "Verifying"
+msgstr "Verifica in corso"
+
+msgid "save"
+msgstr "salva"
+
+msgid "verify"
+msgstr "verifica"
+
+msgid "Default"
+msgstr "Predefinito"
+
+msgid "Last"
+msgstr "Ultimo"
+
+msgid "Allowed"
+msgstr "Consentito"
+
+msgid "Value"
+msgstr "Valore"
+
+msgid "Attribute"
+msgstr "Attributo"
+
+msgid "not found in LDAP server"
+msgstr "non trovato nel server LDAP"
+
+msgid "User name"
+msgstr "Nome utente"
+
+msgid "Italian"
+msgstr "italiano"
+
+msgid "Vietnamese"
+msgstr "vietnamita"

@@ -17,8 +17,10 @@ use feature qw(signatures);
 
 sub test_duplicate_req {
         my $req = Ravada::Request->manage_pools(uid => user_admin->id);
-        ok(! Ravada::Request->manage_pools(uid => user_admin->id));
-        ok(! Ravada::Request->manage_pools(uid => Ravada::Utils::user_daemon->id));
+        my $req_dupe = Ravada::Request->manage_pools(uid => user_admin->id);
+        is($req_dupe->id, $req->id);
+        my $req_dupe_user =Ravada::Request->manage_pools(uid => Ravada::Utils::user_daemon->id);
+        is($req_dupe_user->id, $req->id);
 }
 
 sub test_pool($domain) {
@@ -140,7 +142,7 @@ sub test_user($base, $n_start) {
          ,remote_ip => '1.2.3.4'
     );
     ok($req);
-    wait_request(debug => 1,skip => ['enforce_limits','set_time']);
+    wait_request(debug => 0,skip => ['enforce_limits','set_time']);
     _remove_enforce_limits();
     is($req->status,'done');
     is($req->error,'');

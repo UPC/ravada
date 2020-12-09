@@ -1,3 +1,4 @@
+<html>
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".fixed-top" role="document">
 <div id="wrapper">
@@ -34,8 +35,8 @@
             </div>
 % }
         </div>
-    </div>
-<div>
+    </div><! --page-header -->
+</div>
 
 </div>
 

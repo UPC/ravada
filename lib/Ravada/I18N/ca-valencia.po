@@ -10,15 +10,16 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-01-03 11:17+0000\n"
-"Last-Translator: Amparo _rvd <amparorvd@gmail.com>, 2019\n"
-"Language-Team: Spanish (https://www.transifex.com/ravada/teams/70385/es/)\n"
+"PO-Revision-Date: 2020-11-05 13:22+0000\n"
+"Last-Translator: Dani Sanchez <dani@fib.upc.edu>\n"
+"Language-Team: Catalan <https://hosted.weblate.org/projects/ravada/"
+"translation/ca_VALENCIA/>\n"
+"Language: ca-valencia\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: es\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Poedit 1.8.7.1\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 4.3.2-dev\n"
 
 msgid "Ravada broker"
 msgstr "Broker Ravada"
@@ -286,8 +287,8 @@ msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
 msgstr ""
-"o còpia les següents línies en un arxiu ASCII i guarda amb l'extensió  "
-".reg, després executa l'arxiu."
+"o còpia les següents línies en un arxiu ASCII i guarda amb l'extensió .reg, "
+"després executa l'arxiu."
 
 msgid "Login"
 msgstr "Connecta't"
@@ -326,7 +327,7 @@ msgid "can change the settings of any virtual machines."
 msgstr "pot canviar els ajustos de qualsevol màquina virtual."
 
 msgid "can change the settings of any virtual machines "
-msgstr "pot canviar els ajustos de qualsevol màquina virtual "
+msgstr "pot canviar els ajustos de qualsevol màquina virtual"
 
 msgid "cloned from one base owned by the user."
 msgstr "clonat des d'una base en possessió de l'usuari."
@@ -360,7 +361,6 @@ msgstr "pot llevar qualsevol màquina virtual en possessió de l'usuari."
 
 msgid "can remove any virtual machine."
 msgstr "pot llevar qualsevol màquina virtual."
-
 
 msgid "can remove clones from virtual machines owned by the user."
 msgstr "pot llevar clons de màquines virtuals en possessió de l'usuari."
@@ -840,3 +840,72 @@ msgstr "Contrasenya buida"
 
 msgid "Session timeout"
 msgstr "El temps d'espera de la sessió va finalitzar."
+
+msgid "Yes, shutwdown all the clones"
+msgstr "Sí, apagueu tots els clons"
+
+msgid "Shutdown all clones"
+msgstr "Apagar tots els clons"
+
+msgid "Type a typical LDAP user name to fetch the attribute list"
+msgstr "Escriviu un nom d'usuari LDAP típic per obtenir la llista d'atributs"
+
+msgid "These actions affect all the clones on the machine"
+msgstr "Aquestes accions afecten tots els clons de la màquina"
+
+msgid "Add description"
+msgstr "Afegeix una descripció"
+
+msgid "Enable last for not allowed restrictions."
+msgstr "Activa l'última per les restriccions de no permesa."
+
+msgid "entries."
+msgstr "entrades."
+
+msgid "has at least"
+msgstr "té almenys"
+
+msgid "No entries found"
+msgstr "S'està verificant"
+
+msgid "Verifying"
+msgstr "S'està verificant"
+
+msgid "save"
+msgstr "desar"
+
+msgid "verify"
+msgstr "verificar"
+
+msgid "If none of the previous match, access is denied."
+msgstr "Si no hi ha cap coincidència anterior, l'accés es denega."
+
+msgid "If none of the previous match, access is allowed."
+msgstr "Si no hi ha cap coincidència anterior, es permet l'accés."
+
+msgid "Default"
+msgstr "Per defecte"
+
+msgid "Last"
+msgstr "Últim"
+
+msgid "Allowed"
+msgstr "Es permet"
+
+msgid "Value"
+msgstr "Valor"
+
+msgid "Attribute"
+msgstr "Atribut"
+
+msgid "not found in LDAP server"
+msgstr "no es troba al servidor LDAP"
+
+msgid "User name"
+msgstr "Nom d'usuari"
+
+msgid "Italian"
+msgstr "Italià"
+
+msgid "Vietnamese"
+msgstr "Vietnamita"

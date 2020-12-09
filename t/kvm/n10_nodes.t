@@ -978,6 +978,7 @@ sub test_migrate_back($node) {
 
     eval { $clone->migrate($vm) };
     is(''.$@, '');
+    wait_request(debug => 0);
 
     wait_request(debug => 0);
     for my $file ($clone->list_volumes) {
