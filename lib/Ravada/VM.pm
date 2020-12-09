@@ -677,11 +677,13 @@ sub display_ip($self, $value=undef) {
 }
 
 sub _set_display_ip($self, $value) {
-    my %ip_address = $self->_list_ip_address();
+    if (defined $value && length $value ) {
+        my %ip_address = $self->_list_ip_address();
 
-    confess "Error: $value is not in any interface in node ".$self->name
-    .". Found ".Dumper(\%ip_address)
-    if !exists $ip_address{$value};
+        confess "Error: $value is not in any interface in node ".$self->name
+        .". Found ".Dumper(\%ip_address)
+        if !exists $ip_address{$value};
+    }
 
     $self->_data( display_ip => $value );
 }
