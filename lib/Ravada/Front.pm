@@ -577,6 +577,7 @@ sub _list_bases_vm_all($self, $id_node) {
         ." WHERE is_base=? AND vm=v.vm_type"
         ."   AND d.vm =v.vm_type"
         ."   AND v.id=?"
+        ." ORDER BY d.name "
     );
     $sth->execute(1, $id_node);
     my $sth_bv = $CONNECTOR->dbh->prepare(
@@ -586,13 +587,24 @@ sub _list_bases_vm_all($self, $id_node) {
     );
     my ($id_domain, $name_domain);
     $sth->bind_columns(\($id_domain, $name_domain));
+
+    my $sth_clones = $CONNECTOR->dbh->prepare(
+        "SELECT count(*) FROM domain_instances "
+        ." WHERE id_vm=? AND id_domain IN (SELECT id FROM domains WHERE id_base=?) "
+    );
+
     my @bases;
     while ( $sth->fetch ) {
         $sth_bv->execute($id_domain, $id_node);
         my ($enabled) = $sth_bv->fetchrow;
+
+        $sth_clones->execute($id_node,$id_domain);
+        my ($n_clones) = $sth_clones->fetchrow();
+
         push @bases,{
                   id => $id_domain
                ,name => $name_domain
+             ,clones => $n_clones
             ,enabled => ( $enabled or 0)
         };
     }

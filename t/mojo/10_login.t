@@ -238,6 +238,7 @@ sub _check_html_lint($url, $content, $option = {}) {
             || $error->errtext =~ /Unknown attribute "(min|max).*input/ # Check this one
             || $error->errtext =~ /Unknown attribute "(charset|crossorigin|integrity)/
             || $error->errtext =~ /Unknown attribute "image.* for tag <div/
+            || $error->errtext =~ /Unknown attribute "ipaddress"/
          ) {
              next;
          }

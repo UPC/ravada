@@ -11,7 +11,6 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("settings_node",settings_node)
         .controller("settings_network",settings_network)
         .controller("new_node", newNodeCtrl)
-        .controller("settings_global", settings_global_ctrl)
     ;
 
     ravadaApp.directive('ipaddress', function() {
@@ -389,7 +388,6 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.show_rename = false;
     $scope.new_name_duplicated=false;
     $scope.show_clones = { '0': false };
-    $scope.filter_name = '';
     $scope.show_machine = { '0': false };
   };
 
@@ -451,7 +449,7 @@ ravadaApp.directive("solShowMachine", swMach)
             });
         };
         $scope.node_remove=function(id) {
-            $http.get('/node/remove/'+id+'.json');
+            $http.get('/v1/node/remove/'+id);
             $scope.list_nodes();
         };
         $scope.confirm_disable_node = function(id , n_machines) {
@@ -514,7 +512,10 @@ ravadaApp.directive("solShowMachine", swMach)
         }
         $scope.update_network= function(id, field) {
             var value = $scope.networks[id][field];
-            $http.get('/network/set/'+id+'/'+field+'/'+value)
+            var args = { 'id': id };
+            args[field] = value;
+            $http.post('/v1/network/set'
+                , JSON.stringify( args ))
             .then(function(response) {
             });
         };
@@ -544,6 +545,25 @@ ravadaApp.directive("solShowMachine", swMach)
                 $scope.name_duplicated=false;
             }
         };
+        $scope.check_duplicated_hostname = function() {
+            if (typeof($scope.hostname) == 'undefined'
+                || typeof($scope.vm_type) == 'undefined'
+                || $scope.hostname.length == 0
+                || $scope.vm_type.length == 0
+            ) {
+                $scope.hostname_duplicated = false;
+                return;
+            }
+            $scope.hostname_duplicated = false;
+            var args = { hostname: $scope.hostname , vm_type: $scope.vm_type };
+
+            $http.post("/v1/exists/vms",JSON.stringify(args))
+                .then(function(response) {
+                    console.log(response.data);
+                    $scope.hostname_duplicated = response.data.id;
+            });
+        };
+
         $scope.connect_node = function(backend, address) {
             $scope.id_req = undefined;
             $scope.request = undefined;
@@ -572,6 +592,7 @@ ravadaApp.directive("solShowMachine", swMach)
             if (typeof id_network == 'undefined') {
                 $scope.network = {
                     'name': ''
+                    ,'all_domains': 1
                 };
             } else {
                 $scope.load_network(id_network);
@@ -596,7 +617,7 @@ ravadaApp.directive("solShowMachine", swMach)
             }
             $scope.saved = false;
             $scope.error = '';
-            $http.post('/network/set/'
+            $http.post('/v1/network/set/'
                 , JSON.stringify(data))
             //                    , JSON.stringify({ value: $scope.network[field]}))
                 .then(function(response) {
@@ -612,9 +633,12 @@ ravadaApp.directive("solShowMachine", swMach)
         };
 
         $scope.load_network = function(id_network) {
+                $scope.error = '';
+                $scope.saved = false;
                 $http.get('/network/info/'+id_network+'.json').then(function(response) {
                     $scope.network = response.data;
                     $scope.formNetwork.$setPristine();
+                    $scope.network._old_name = $scope.network.name;
                 });
         };
         $scope.list_domains_network = function(id_network) {
@@ -639,9 +663,21 @@ ravadaApp.directive("solShowMachine", swMach)
                 $scope.error = $scope.network.name + " network can't be removed";
                 return;
             }
-            $http.get('/network/remove/'+id_network).then(function(response) {
+            $http.get('/v1/network/remove/'+id_network).then(function(response) {
                 $scope.message = "Network "+$scope.network.name+" removed";
                 $scope.network ={};
+            });
+        };
+        $scope.check_duplicate = function(field) {
+            var args = {};
+            if (typeof ($scope.network['id']) != 'undefined') {
+                args['id'] = $scope.network['id'];
+            }
+            args[field] = $scope.network[field];
+
+            $http.post("/v1/exists/networks",JSON.stringify(args))
+                .then(function(response) {
+                    $scope.network["_duplicated_"+field]=response.data.id;
             });
         };
         $scope.new_saved = false;
@@ -662,12 +698,32 @@ ravadaApp.directive("solShowMachine", swMach)
                 var data = JSON.parse(event.data);
                 $scope.$apply(function () {
                     $scope.node = data;
+                    $scope.node._old_name = data.name;
+                    $scope.old_node =$.extend({}, data);
                 });
             }
         };
-        $scope.update_node = function(field) {
-            $http.get('/node/set/'+$scope.node.id+'/'+field+'/'+$scope.node[field]).then(function(response) {
-            });
+
+        $scope.load_node = function() {
+            $scope.node = $.extend({},$scope.old_node);
+            $scope.error = '';
+        };
+
+        $scope.update_node = function() {
+            var data = $scope.node;
+            $scope.saved = false;
+            $scope.error = '';
+            $http.post('/v1/node/set/'
+                , JSON.stringify(data))
+            //                    , JSON.stringify({ value: $scope.network[field]}))
+                .then(function(response) {
+                    if (response.data.ok == 1){
+                        $scope.saved = true;
+                    }
+                    $scope.error = response.data.error;
+                    console.log($scope.error);
+                });
+            $scope.formNode.$setPristine();
         };
 
         subscribe_request = function(id_request, action) {
@@ -689,7 +745,6 @@ ravadaApp.directive("solShowMachine", swMach)
                         $scope.$apply(function () {
                             if (data['output'] && data.output.length) {
                                 $scope.storage_pools=JSON.parse(data.output);
-                                $scope.storage_pools.splice(0,0,'');
                             }
                         });
                     });
@@ -716,7 +771,7 @@ ravadaApp.directive("solShowMachine", swMach)
         };
 
         $scope.remove_node = function(id_node) {
-            $http.get('/node/remove/'+id_node+'.json').then(function(response) {
+            $http.get('/v1/node/remove/'+id_node).then(function(response) {
                 $scope.message = "Node "+$scope.node.name+" removed";
                 $scope.node={};
             });

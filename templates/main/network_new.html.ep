@@ -20,10 +20,9 @@
         <div class="col-md-8 alert alert-info" ng-show="error && formNetwork.$pristine">
             {{error}}
         </div>
-    </div>
+        </div><!-- card -->
+    </div> <!-- page-header -->
 
-        </div>
-    </div><!-- page-header-->
 </div><!-- page-wrapper -->
 </div><!-- wrapper -->
 %= include $footer

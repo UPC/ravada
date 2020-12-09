@@ -100,9 +100,6 @@
       </div>
         <div class="row">
             <div class="col-md-5"><h2><%=l 'Virtual Machines' %></h2></div>
-            <div class="col-md-3" align="right">
-                <input type="text" ng-model="filter_name">
-            </div>
             <div class="col-md-4" align="left">
 % 		if ($_user->can_create_machine){
                 <h2>

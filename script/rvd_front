@@ -337,7 +337,7 @@ get '/network/info/#id' => sub($c) {
     return $c->render(json => $row);
 };
 
-get '/network/remove/#id' => sub($c) {
+get '/v1/network/remove/#id' => sub($c) {
     my $sth = $RAVADA->_dbh->prepare("DELETE from networks WHERE id=?");
     $sth->execute($c->stash('id'));
     return $c->render(json => { ok => 1 });
@@ -347,13 +347,15 @@ get '/network/list_domains/#id' => sub($c) {
     return $c->render( json => $RAVADA->list_bases_network($c->stash('id')));
 };
 
-get '/network/new.html' => sub($c) {
+any '/network/new' => sub($c) {
     push @{$c->stash->{css}}, '/css/admin.css';
     push @{$c->stash->{js}}, '/js/admin.js';
     return $c->render(template => "/main/network_new");
 };
 
-post '/network/set' => sub($c) {
+post '/v1/network/set' => sub($c) {
+    return access_denied($c) if !$USER->is_admin;
+
     my $arg = decode_json($c->req->body);
     return _update_fields($c, "networks", $arg);
 };
@@ -400,6 +402,40 @@ get '/network/set/#id/#field/#id_domain/#value' => sub ($c) {
 
 };
 
+post '/v1/exists/:item' => sub($c) {
+    return unless $USER->is_operator();
+
+    my $table = $c->stash("item");
+    die "Error: invalid item '$table'" unless $table =~ m{^\w[\w\d_]+$};
+
+    my $arg = decode_json($c->req->body);
+
+    my $id = delete $arg->{id};
+    die "Error: invalid id '$id'" if defined $id && $id !~ m{^\d+$};
+
+    my $query = '';
+    my @fields;
+    for my $field ( sort keys %$arg ) {
+        next if $field =~ /^_/;
+        die "Error: invalid field '$field'" unless $field =~ m{^\w[\w\d_]+$};
+        $query .= " AND " if $query;
+        $query .= "$field=?";
+        push @fields, ($field);
+    }
+    return if !@fields;
+
+    $query .= " AND id <> $id " if defined $id;
+
+    my $sth = $RAVADA->_dbh->prepare("SELECT id FROM $table WHERE $query ");
+    $sth->execute(map { $arg->{$_} } @fields );
+
+    my $row = $sth->fetchrow_hashref;
+    $row->{id} = undef if !exists $row->{id};
+
+    return $c->render(json => $row );
+
+};
+
 get '/node/enable/(:id).json' => sub {
     my $c = shift;
     return access_denied($c) if !$USER->is_admin;
@@ -416,7 +452,8 @@ get '/node/disable/(:id).json' => sub {
     }
     return $c->render(json => {enabled => $RAVADA->enable_node($c->stash('id'),0)});
 };
-get '/node/remove/(:id).json' => sub {
+
+get '/v1/node/remove/(:id)' => sub {
     my $c = shift;
     return access_denied($c) if !$USER->is_admin;
     return $c->render(json => {remove => $RAVADA->remove_node($c->stash('id'),1)});
@@ -465,7 +502,7 @@ get '/node/start/(:id).json' => sub {
 
 };
 
-any '/new_node' => sub {
+any '/v1/node/new' => sub {
     my $c = shift;
     return access_denied($c)    if !$USER->is_admin;
     return new_node($c);
@@ -905,6 +942,15 @@ get '/node/set/#id/#field/#value' => {value => ''} => sub($c) {
         if $node->_data($field) ne $value;
     return $c->render(json => { $field => $node->_data($field, $value)});
 
+};
+
+post '/v1/node/set' => sub($c) {
+    return access_denied($c) if !$USER->is_admin;
+
+    my $arg = decode_json($c->req->body);
+    delete $arg->{is_local};
+    delete $arg->{has_bases};
+    return _update_fields($c, "vms", $arg);
 };
 
 
@@ -2725,11 +2771,12 @@ sub _new_anonymous_user {
 
 sub _insert_fields($c, $table, $arg) {
     my $sql = "INSERT INTO $table " ;
-    my $fields = join("," , sort keys %$arg);
-    my $values = join("," , map { '?' } keys %$arg);
+    my @names = sort grep { !/^_/ } keys %$arg;
+    my $fields = join("," , @names);
+    my $values = join("," , map { '?' } @names );
 
     my $sth = $RAVADA->_dbh->prepare("$sql ($fields) VALUES ($values)" );
-    eval { $sth->execute(map {$arg->{$_} } sort keys %$arg) };
+    eval { $sth->execute(map {$arg->{$_} } @names) };
     my $error = $@;
     warn $error if $error;
     $error =~ s{ at /.*}{};
@@ -2744,12 +2791,16 @@ sub _update_fields($c, $table, $arg) {
     my $sth = $RAVADA->_dbh->prepare("SELECT * FROM $table WHERE id=?");
     $sth->execute($id);
     my $old = $sth->fetchrow_hashref;
+    return $c->render(json => { ok => 0, error => "Error: id=$id not found in $table" })
+    if !keys %$old;
+
     my $error = '';
     for my $field ( keys %$arg ) {
+        next if $field =~ /^_/;
         next if
-        !defined $old->{$field} && !defined $arg->{field}
-        || !defined $old->{$field} && defined $arg->{$field}
-        || $old->{$field} eq $arg->{$field};
+        !defined $old->{$field} && !defined $arg->{$field}
+        || ( defined $old->{$field} && defined $arg->{$field}
+            && $old->{$field} eq $arg->{$field});
         $sth = $RAVADA->_dbh->prepare("UPDATE $table set $field=? WHERE id=?");
         eval { $sth->execute($arg->{$field},$id) };
         $error = $@;

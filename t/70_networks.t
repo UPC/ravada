@@ -188,7 +188,7 @@ sub test_allowed_domain_network($domain, $id_network, $exp_allowed, $exp_anonymo
     ok($base,"Expecting ".$domain->name." in list bases network ".Dumper($list_bases))
         or confess;
 
-    is($base->{allowed},$exp_allowed) or confess;
+    is($base->{allowed},$exp_allowed, "Expecting base: $base->{id} in network $id_network allowed=$exp_allowed") or confess;
     is($base->{anonymous},$exp_anonymous) or confess;
 }
 

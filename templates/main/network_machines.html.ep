@@ -31,9 +31,6 @@
     <div class="col-md-2">
         Public
     </div>
-    <div class="col-md-2">
-        Allowed
-    </div>
 
     <div class="col-md-2">
         Anonymous
@@ -47,14 +44,6 @@
         <input type="checkbox" ng-model="machine.is_public"
         ng-true-value="1" ng-false-value="0"
         ng-change="set_domain_public(machine.id, machine.is_public)"
-        >
-    </div>
-
-    <div class="col-md-2">
-        <input type="checkbox" ng-model="machine.allowed"
-        ng-true-value="1" ng-false-value="0"
-        ng-disabled="network.all_domains"
-        ng-change="set_network_domain(machine.id, 'allowed', machine.allowed)"
         >
     </div>
 
