@@ -42,6 +42,7 @@ sub test_route($vm) {
     my %route = ( '127.0.0.0/24', '127.0.0.1');
     my $routes = `ip route`;
     for my $line ( split /\n/, $routes ) {
+        next if $line =~ / dev tun\d+ /;
         my ($network,$ip) = $line =~ /(^[\d+\.\/]+).*src ([\d+\.]+)/;
         next if !$network || !$ip;
         $route{$network} = $ip;

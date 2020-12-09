@@ -339,11 +339,14 @@ sub _around_start($orig, $self, @arg) {
         if (!defined $listen_ip) {
             my $display_ip;
             if ($remote_ip) {
-                my $set_password = 0;
-                my $network = Ravada::Network->new(address => $remote_ip);
-                $set_password = 1 if $network->requires_password();
-                $display_ip = $self->_listen_ip($remote_ip);
-                $arg{set_password} = $set_password;
+                if ( Ravada::setting(undef,"/backend/display_password") ) {
+                    # We'll see if we set it from the network, defaults to 0 meanwhile
+                    my $set_password = 0;
+                    my $network = Ravada::Network->new(address => $remote_ip);
+                    $set_password = 1 if $network->requires_password();
+                    $display_ip = $self->_listen_ip($remote_ip);
+                    $arg{set_password} = $set_password;
+                }
             } else {
                 $display_ip = $self->_listen_ip();
             }
@@ -3992,7 +3995,7 @@ sub rsync($self, @args) {
         my $msg = $self->_msg_log_rsync($file, $node, "rsync", $request);
 
         $request->status("syncing") if $request;
-        $request->error("Syncing $file");
+        $request->error("Syncing $file")    if $request;
         $request->error($msg)       if $request && $DEBUG_RSYNC;
         warn "$msg\n" if $DEBUG_RSYNC;
 
@@ -4009,7 +4012,7 @@ sub rsync($self, @args) {
             .Dumper($files)."\n"
             .join(' ',@{$rsync->err});
     }
-    $request->error("rsync done ".(time - $time_rsync)." seconds");
+    $request->error("rsync done ".(time - $time_rsync)." seconds")  if $request;
     $node->refresh_storage_pools();
 }
 
