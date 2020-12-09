@@ -718,15 +718,15 @@ sub start {
     my $listen_ip = ( delete $arg{listen_ip} or $self->_listen_ip);
     my $set_password = delete $arg{set_password};
 
-    $self->_set_spice_ip($set_password, $listen_ip);
 
     my $is_active = 0;
     eval { $is_active = $self->domain->is_active };
     warn $@ if $@;
-    if (!$is_active) {
+    if (!$is_active && !$self->is_hibernated) {
         $self->_check_qcow_format($request);
         $self->_set_volumes_backing_store();
         $self->_detect_disks_driver();
+        $self->_set_spice_ip($set_password, $listen_ip);
     }
 
     $self->status('starting');
@@ -1623,6 +1623,8 @@ sub rename_volumes {
 
 sub _set_spice_ip($self, $set_password, $ip=undef) {
 
+    return if $self->is_hibernated() || $self->domain->is_active;
+
     my $doc = XML::LibXML->load_xml(string
                             => $self->domain->get_xml_description);
     my @graphics = $doc->findnodes('/domain/devices/graphics');
@@ -1648,7 +1650,11 @@ sub _set_spice_ip($self, $set_password, $ip=undef) {
         # we should consider in the future add a new listen if it ain't one
         next if !$listen;
         $listen->setAttribute('address' => ($ip or $self->_vm->listen_ip));
-        $self->domain->update_device($graphics);
+        $self->domain->update_device($graphics, Sys::Virt::Domain::DEVICE_MODIFY_CONFIG);
+
+        $self->domain->update_device($graphics, Sys::Virt::Domain::DEVICE_MODIFY_LIVE)
+        if $self->domain->is_active;
+
     }
 }
 
