@@ -127,7 +127,7 @@ sub _open($self, $id) {
     my $sth = $self->_dbh->prepare("SELECT * FROM bookings WHERE id=?");
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
-    return if !keys %$row;
+    die "Error: booking $id not found " if !$row || !keys %$row || !exists $row->{id};
     $self->{_data} = $row;
 
     return $self;

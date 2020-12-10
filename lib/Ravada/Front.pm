@@ -1248,6 +1248,8 @@ sub setting($self, $name, $new_value=undef) {
     confess "Error: wrong new value '$new_value' for $name"
     if ref($new_value);
 
+    Ravada::Front->_check_features($name, $new_value);
+
     my $sth = _dbh->prepare(
         "SELECT id,value "
         ." FROM settings "
@@ -1274,6 +1276,12 @@ sub setting($self, $name, $new_value=undef) {
     return $value;
 }
 
+sub _check_features($self, $name, $new_value) {
+    confess "Error: LDAP required for bookings."
+    if $name eq '/backend/bookings' && $new_value && !$self->feature('ldap');
+
+}
+
 sub _settings_by_id($self) {
     my $orig_settings;
     my $sth = $self->_dbh->prepare("SELECT id,value FROM settings");
@@ -1293,6 +1301,7 @@ sub feature($self,$name=undef) {
         return $feature;
     }
     return 1 if exists $Ravada::CONFIG->{$name} && $Ravada::CONFIG->{$name};
+    return 0;
 }
 
 =head2 update_settings_global

@@ -142,7 +142,7 @@ sub user_admin {
     };
     if ($@ && $@ =~ /Login failed/ ) {
         $login = Ravada::Auth::SQL->new(name => $admin_name);
-        $login->remove();
+        $login->remove() if $login->id;
         $login = undef;
     } elsif ($@) {
         die $@;
@@ -300,7 +300,6 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
                 , warn_error => 1
     );
     $rvd->_install();
-    $rvd->setting('/backend/bookings' => 1);
     $CONNECTOR = $rvd->connector if !$sqlite;
 
     user_admin();
@@ -325,7 +324,7 @@ sub rvd_front($config=undef) {
     return $RVD_FRONT;
 }
 
-sub init($config=undef, $sqlite = 1) {
+sub init($config=undef, $sqlite = 1 , $flush=0) {
 
     if ($config && ! ref($config) && $config =~ /[A-Z][a-z]+$/) {
         $config = { vm => [ $config ] };
@@ -342,11 +341,14 @@ sub init($config=undef, $sqlite = 1) {
     if ( $RVD_BACK && ref($RVD_BACK) ) {
         clean();
         # clean removes the temporary config file, so we dump it again
-        DumpFile($FILE_CONFIG_TMP, $config) if $config && ref($config);
+        if ( $config && ref($config) ) {
+            DumpFile($FILE_CONFIG_TMP, $config);
+            $config = $FILE_CONFIG_TMP;
+        }
     }
 
 
-    rvd_back($config, 0,$sqlite)  if !$RVD_BACK;
+    rvd_back($config, 0,$sqlite)  if !$RVD_BACK || $flush;
     if (!$sqlite) {
         $CONNECTOR = $RVD_BACK->connector;
     } else {
@@ -626,6 +628,7 @@ $MOJO_USER = $user;
 }
 
 sub mojo_create_domain($t, $vm_name) {
+    mojo_check_login($t);
     my $name = new_domain_name()."-".$vm_name;
     $t->post_ok('/new_machine.html' => form => {
             backend => $vm_name
@@ -1053,6 +1056,8 @@ sub clean {
     _clean_db();
     _clean_file_config();
     shutdown_nodes();
+
+    _check_leftovers();
 }
 
 sub _clean_db {

@@ -5,6 +5,7 @@ use Carp qw(confess);
 use Data::Dumper;
 use DateTime;
 use Test::More;
+use YAML qw(DumpFile);
 
 use 5.010;
 
@@ -64,6 +65,7 @@ sub _add_to_posix_group($group, $user_name) {
 
 sub _add_posix_group {
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    ok($ldap) or confess;
 
     my $base = "ou=groups,".Ravada::Auth::LDAP::_dc_base();
 
@@ -256,8 +258,7 @@ sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as, $base0) {
     my $today = DateTime->from_epoch( epoch => time() , time_zone => $TZ );
     my $tomorrow = DateTime->from_epoch( epoch => time() , time_zone => $TZ )->add(days => 1);
 
-    my $sth = connector->dbh->prepare("DELETE FROM users WHERE id=? ");
-    $sth->execute($USER_2->id);
+    $USER_2->remove();
 
     my $booking = Ravada::Booking->new(
         bases => $base->id
@@ -1221,9 +1222,26 @@ sub _check_no_bookings() {
     }
 }
 
+sub test_config {
+    init();
+    my $config = {};
+    init($config,1,1);
+
+    is(rvd_front->feature('ldap'), 0);
+
+    eval {
+        rvd_back->setting("/backend/bookings",1);
+    };
+    like($@, qr/LDAP required/i);
+
+    is(rvd_back->setting('/backend/bookings'),0);
+}
+
 ###################################################################
 
-init('t/etc/ravada_ldap.conf');
+test_config();
+
+init('t/etc/ravada_ldap.conf', 1 , 1); # flush rvd_back
 clean();
 $TZ = DateTime::TimeZone->new(name => rvd_front->setting('/backend/time_zone'));
 

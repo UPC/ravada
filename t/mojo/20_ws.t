@@ -249,13 +249,28 @@ sub test_bookings($t) {
 
     is($found->{user_allowed},1);
 
-    test_remove_booking_non_admin($t, $booking->id);
+    my ($booking_entry) = $booking->entries();
+    test_remove_booking_entry_non_admin($t, $booking_entry->id);
+    test_remove_booking_non_admin($t, $booking_entry->id);
 
-    $t->delete_ok("/v1/booking_entry/".$booking->id."/all");
-    is($t->tx->res->code(), 200 );
+    my $url = "/v1/booking_entry/".$booking_entry->id."/current";
+    $t->delete_ok($url);
+    is($t->tx->res->code(), 200 ) or die $url;
 
-    my $booking_removed = Ravada::Booking->new(id => $booking->id);
-    is($booking_removed, undef) or exit;
+    my ($booking_entry_removed) = grep { $_->id == $booking_entry->id } $booking->entries();
+    ok(!$booking_entry_removed,"Expecting entry removed ".$booking_entry->id);
+
+    ($booking_entry) = $booking->entries();
+    $url = "/v1/booking_entry/".$booking_entry->id."/all";
+    $t->delete_ok($url);
+    is($t->tx->res->code(), 200 ) or die $url;
+
+    my $booking_removed;
+    eval { $booking_removed = Ravada::Booking->new(id => $booking->id)};
+    like($@,qr/not found/);
+    ok(!$booking_removed, "Expecting booking removed ".$booking->id)
+        or die Dumper($booking_removed);
+
     $booking->remove() if $booking_removed;
 
 }
@@ -272,10 +287,21 @@ sub test_create_booking_non_admin($t, %args_booking) {
 
 sub test_remove_booking_non_admin($t, $id) {
     _login_non_admin($t);
-    $t->delete_ok("/v1/booking_entry/$id/all");
-    is($t->tx->res->code(), 403);
+
+    $t->delete_ok("/v1/booking_entry/$id/current");
+    is($t->tx->res->code(), 403) or confess;
     like($t->tx->res->body, qr /Access denied/);
     mojo_login($t, $USERNAME, $PASSWORD);
+}
+
+sub test_remove_booking_entry_non_admin($t, $id) {
+    _login_non_admin($t);
+
+    $t->delete_ok("/v1/booking_entry/$id/current");
+    is($t->tx->res->code(), 403) or exit;
+    like($t->tx->res->body, qr /Access denied/);
+    mojo_login($t, $USERNAME, $PASSWORD);
+
 }
 
 ########################################################################################

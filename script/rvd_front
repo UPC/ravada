@@ -1509,10 +1509,17 @@ sub _push_new_values($arg) {
 }
 
 del '/v1/booking_entry/:id/:mode' => sub($c) {
-    my $entry = Ravada::Booking::Entry->new(id => $c->stash('id'));
+    my $entry;
+    eval { $entry = Ravada::Booking::Entry->new(id => $c->stash('id')) };
+
+    if ($@ && $@ =~ /not found/i) {
+        return $c->reply->not_found;
+    }
+    die $@ if $@;
+
     my $booking = Ravada::Booking->new( id => $entry->_data('id_booking'));
 
-    return access_denied_json($c)
+    return error_access_denied_json($c)
     unless $booking->_data('id_owner') == $USER->id
         || $USER->is_operator;
 
@@ -2084,7 +2091,11 @@ sub _search_req_base_error {
     my $name = shift;
 }
 
-sub access_denied_json($c, $msg=undef) {
+sub error_access_denied_json(@args) {
+    return access_denied_json(@args);
+}
+
+sub access_denied_json($c, $msg='Access denied') {
     $c->stash( type => 'json');
     return access_denied($c, $msg);
 }

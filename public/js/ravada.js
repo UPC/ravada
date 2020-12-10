@@ -204,7 +204,7 @@
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
-            subscribe_machine_info= function(url) {
+            var subscribe_machine_info= function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('machine_info/'+$scope.showmachineId) };
                 ws.onmessage = function(event) {
@@ -217,7 +217,7 @@
                 }
             };
 
-            subscribe_requests = function(url) {
+            var subscribe_requests = function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_requests') };
                 ws.onclose = function() {
@@ -231,7 +231,7 @@
                 }
             };
 
-            subscribe_isos = function(url) {
+            var subscribe_isos = function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_isos') };
                 ws.onmessage = function(event) {
@@ -242,7 +242,7 @@
                 }
             };
             $scope.new_node_start = true;
-            subscribe_nodes = function(url, type) {
+            var subscribe_nodes = function(url, type) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_nodes/'+type) };
                 ws.onmessage = function(event) {
@@ -265,7 +265,7 @@
                     });
                 }
             };
-            subscribe_ws = function(url, is_admin) {
+            var subscribe_ws = function(url, is_admin) {
                 subscribe_machine_info(url);
                 subscribe_requests(url);
                 subscribe_isos(url);
@@ -310,7 +310,7 @@
                 });
           };
 
-          list_interfaces = function() {
+          var list_interfaces = function() {
             if (! $scope.network_nats) {
                 $http.get('/network/interfaces/'+$scope.showmachine.type+'/nat')
                     .then(function(response) {
@@ -361,7 +361,7 @@
                 $http.get('/machine/copy_screenshot/'+machineId+'.json');
           };
 
-          subscribe_request = function(id_request, action) {
+          var subscribe_request = function(id_request, action) {
                 var ws = new WebSocket(url_ws);
                 ws.onopen = function(event) { ws.send('request/'+id_request) };
                 ws.onmessage = function(event) {
@@ -696,7 +696,7 @@
                                 }
                     });
             };
-            list_users= function() {
+            var list_users= function() {
                 $http.get('/list_users.json')
                     .then(function(response) {
                         $scope.list_users=response.data;
@@ -707,7 +707,7 @@
                         }
                     });
             }
-            list_ldap_groups = function() {
+            var list_ldap_groups = function() {
                 $http.get('/list_ldap_groups')
                     .then(function(response) {
                         $scope.ldap_groups=response.data;
