@@ -522,7 +522,7 @@ sub test_routing_hibernated($vm) {
     my $base = $BASE->clone(name => new_domain_name, user => user_admin);
     my $internal_port = 22;
 
-    $base->expose(port => 22, name => "ssh");
+    $base->expose(port => $internal_port , name => "ssh");
 
     my @base_ports0 = $base->list_ports();
     my $public_port0 = $base_ports0[0]->{public_port};
@@ -1166,7 +1166,7 @@ Test::Ravada::_clean_db();
 add_network_10(0);
 
 test_can_expose_ports();
-for my $vm_name ( 'KVM', 'Void' ) {
+for my $vm_name ( vm_names() ) {
 
     SKIP: {
     my $vm = rvd_back->search_vm($vm_name);

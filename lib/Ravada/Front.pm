@@ -570,6 +570,48 @@ sub _list_bases_vm($self, $id_node) {
     return \@bases;
 }
 
+sub _list_bases_vm_all($self, $id_node) {
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT d.id, d.name FROM domains d, vms v "
+        ." WHERE is_base=? AND vm=v.vm_type"
+        ."   AND d.vm =v.vm_type"
+        ."   AND v.id=?"
+        ." ORDER BY d.name "
+    );
+    $sth->execute(1, $id_node);
+    my $sth_bv = $CONNECTOR->dbh->prepare(
+        "SELECT bv.enabled FROM bases_vm bv, domains d "
+        ." WHERE bv.id_domain=? AND bv.id_vm=?"
+        ."   AND d.id = bv.id_domain "
+    );
+    my ($id_domain, $name_domain);
+    $sth->bind_columns(\($id_domain, $name_domain));
+
+    my $sth_clones = $CONNECTOR->dbh->prepare(
+        "SELECT count(*) FROM domain_instances "
+        ." WHERE id_vm=? AND id_domain IN (SELECT id FROM domains WHERE id_base=?) "
+    );
+
+    my @bases;
+    while ( $sth->fetch ) {
+        $sth_bv->execute($id_domain, $id_node);
+        my ($enabled) = $sth_bv->fetchrow;
+
+        $sth_clones->execute($id_node,$id_domain);
+        my ($n_clones) = $sth_clones->fetchrow();
+
+        push @bases,{
+                  id => $id_domain
+               ,name => $name_domain
+             ,clones => $n_clones
+            ,enabled => ( $enabled or 0)
+        };
+    }
+
+    return \@bases;
+}
+
 sub _list_machines_vm($self, $id_node) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT d.id, name FROM domains d"
@@ -584,6 +626,7 @@ sub _list_machines_vm($self, $id_node) {
     $sth->finish;
     return \@bases;
 }
+
 
 =head2 list_iso_images
 
@@ -627,7 +670,8 @@ sub iso_file ($self, $vm_type) {
     $self->wait_request($req);
     return [] if $req->status ne 'done';
 
-    my $isos = decode_json($req->output());
+    my $isos = [];
+    $isos = decode_json($req->output()) if $req->output;
 
     $self->_cache_store("list_isos",$isos);
 
@@ -675,6 +719,41 @@ sub list_users($self,$name=undef) {
     $sth->finish;
 
     return \@users;
+}
+
+
+sub list_bases_network($self, $id_network) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM networks where name = 'default'");
+    $sth->execute;
+    my $default = $sth->fetchrow_hashref();
+    $sth->finish;
+
+
+    my $sth_nd = $CONNECTOR->dbh->prepare("SELECT id,allowed,anonymous FROM domains_network"
+            ." WHERE id_domain=? AND id_network=? "
+    );
+
+    $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1 " 
+        ." ORDER BY name");
+    $sth->execute();
+    my @bases;
+    while (my $row = $sth->fetchrow_hashref) {
+        $row->{anonymous} = ( $default->{anonymous} or 0);
+
+        $sth_nd->execute($row->{id}, $id_network);
+        my ($id,$allowed, $anonymous) = $sth_nd->fetchrow;
+        $row->{anonymous} = $anonymous  if defined $anonymous;
+        if (defined $allowed) {
+            $row->{allowed} = $allowed;
+        } else {
+            $row->{allowed} = 1;
+        }
+
+        lock_hash(%$row);
+        push @bases,($row);
+    }
+
+    return \@bases;
 }
 
 =head2 create_domain

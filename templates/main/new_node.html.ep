@@ -12,7 +12,7 @@
         </div>
         <div class="card-body">
             <form name="new_nodeForm" role="form" method="post" novalidate
-                    action="/new_node.html">
+                    action="/v1/node/new">
                 <div class="form-group row">
                 <label for="vm_type" class="col-lg-2 control-label"><%=l 'Backend' %> <a
                   title="Choose the virtualization type of the Node."><i class="fa fa-info-circle"></i></a></label>
@@ -21,6 +21,7 @@
                         name="vm_type"
                         ng-model="vm_type"
                         ng-options="item for item in backends track by item "
+                        ng-change="check_duplicated_hostname()"
                         required=""
                         ></select>
                     </div>
@@ -38,18 +39,32 @@
                     <label for="hostname" class="col-lg-2 control-label"><%=l 'Address' %></label>
                     <input class="col-lg-13" name="hostname" type="text"
                     ng-model="hostname"
+                    ng-change="check_duplicated_hostname()"
                     required>
+
+                    <a type="button" class="btn btn-warning" ng-show="vm_type && hostname"
+                                                     ng-click="connect_node(vm_type,hostname)">
+                        Check connection to {{hostname}}
+                    </a>
                     <!--<small class="form-text text-muted">Format: 192.168.0.1/32</small> -->
                 </div>
-                <div ng-show="name_duplicated"
+                <div ng-show="name_duplicated || hostname_duplicated"
                     class="alert alert-warning" role="alert">
-                    <%=l 'A node with that name already exists.' %>
+                    <span ng-show="name_duplicated">
+                        <%=l 'A node with that name already exists.' %>
+                    </span>
+                    <span ng-show="hostname_duplicated">
+                        <%=l 'A node with that address already exists.' %>
+                    </span>
+
                 </div>
                <div class="form-group row">
 
                     <button type="reset" class="btn btn-outline-secondary" onclick = "location='/admin/nodes'"><%=l 'Cancel' %></button>
                     <input type="submit" name="_submit" class="btn btn-primary"
-                        ng-disabled="new_nodeForm.$invalid || name_duplicated" value="<%=l 'Submit' %>"
+                        ng-disabled
+                            ="new_nodeForm.$invalid || name_duplicated || hostname_duplicated"
+                        value="<%=l 'Save' %>"
                     >
                     </div>
             </form>
@@ -57,10 +72,6 @@
             <div class="form-group row"
                 ng-hide="id_req &&( !request || request.status != 'done')">
                 <div>
-                    <a type="button" class="btn btn-warning" ng-show="vm_type && hostname"
-                                                     ng-click="connect_node(vm_type,hostname)">
-                        Check connection to {{hostname}}
-                    </a>
                 </div>
             </div>
             <div ng-show="request || id_req" class=" form-group row border border-primary">

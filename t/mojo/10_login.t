@@ -238,6 +238,7 @@ sub _check_html_lint($url, $content, $option = {}) {
             || $error->errtext =~ /Unknown attribute "(min|max).*input/ # Check this one
             || $error->errtext =~ /Unknown attribute "(charset|crossorigin|integrity)/
             || $error->errtext =~ /Unknown attribute "image.* for tag <div/
+            || $error->errtext =~ /Unknown attribute "ipaddress"/
          ) {
              next;
          }
@@ -267,6 +268,22 @@ sub _check_html_lint($url, $content, $option = {}) {
 
 }
 
+sub test_logout_ldap {
+    my ($username, $password) = ( new_domain_name(),$$);
+    my $user = create_ldap_user( $username, $password);
+
+    $t->post_ok('/login' => form => {login => $username, password => $password});
+    is($t->tx->res->code(),302);
+
+    $t->ua->get($URL_LOGOUT);
+
+    $t->post_ok('/login' => form => {login => $username, password => 'bigtime'});
+    is($t->tx->res->code(),403);
+
+    $t->post_ok('/login' => form => {login => $username, password => $password});
+    is($t->tx->res->code(),302);
+}
+
 ########################################################################################
 
 $ENV{MOJO_MODE} = 'devel';
@@ -284,17 +301,19 @@ if (!rvd_front->ping_backend) {
     exit;
 }
 
-remove_old_domains_req();
-
 $t = Test::Mojo->new($SCRIPT);
 $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
 my @bases;
 my @clones;
 
+test_logout_ldap();
+
 test_login_fail();
 
 test_validate_html("/login");
+
+remove_old_domains_req();
 
 for my $vm_name (@{rvd_front->list_vm_types} ) {
 

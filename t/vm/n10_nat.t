@@ -209,7 +209,7 @@ sub test_chain($vm_name, %args) {
 clean();
 flush_rules();
 
-for my $vm_name ( 'Void', 'KVM' ) {
+for my $vm_name ( vm_names() ) {
 
     my $vm;
 

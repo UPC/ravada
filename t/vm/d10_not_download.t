@@ -59,7 +59,7 @@ sub test_dont_download {
 clean();
 
 
-for my $vm_name ('Void', 'KVM') {
+for my $vm_name ( vm_names() ) {
     my $vm = rvd_back->search_vm($vm_name);
 
     SKIP: {

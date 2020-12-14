@@ -1384,6 +1384,13 @@ sub test_nat($vm, $node, $set_localhost_natip=0) {
 }
 
 ##################################################################################
+
+if ($>)  {
+    diag("SKIPPED: Test must run as root");
+    done_testing();
+    exit;
+}
+
 clean();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;

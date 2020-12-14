@@ -99,8 +99,8 @@
                 role="application"></div>
       </div>
         <div class="row">
-            <div class="col-md-8"><h2><%=l 'Virtual Machines' %></h2></div>
-            <div class="col-md-4" align="right">
+            <div class="col-md-5"><h2><%=l 'Virtual Machines' %></h2></div>
+            <div class="col-md-4" align="left">
 % 		if ($_user->can_create_machine){
                 <h2>
                     <button class="btn btn-warning" ng-click="list_machines={};subscribe_all('<%= url_for('ws_subscribe')->to_abs %>');"><i class="fa fa-sync-alt" aria-hidden="true"></i></button>

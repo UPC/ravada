@@ -28,6 +28,11 @@ sub test_get_cpu_usage {
 }
 
 ####################################################################################
+if ($>)  {
+    diag("SKIPPED: Test must run as root");
+    done_testing();
+    exit;
+}
 
 clean();
 

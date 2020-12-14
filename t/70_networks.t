@@ -6,6 +6,9 @@ use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use_ok('Ravada');
 use_ok('Ravada::Network');
 
@@ -17,6 +20,7 @@ my $RVD_FRONT = rvd_front();
 
 my $vm = $rvd_back->search_vm('Void');
 my $USER = create_user('foo','bar', 1);
+my $ID_NETWORK_DEFAULT = _id_network('default');
 
 ########################################################################3
 
@@ -27,11 +31,24 @@ sub test_allow_all {
     my $net = Ravada::Network->new(address => $ip);
     ok(!$net->allowed($domain->id),"Expecting not allowed from unknown network");
 
-    my $sth = connector->dbh->prepare("INSERT INTO networks (name,address,all_domains) "
-        ." VALUES (?,?,?) ");
+    #check list bases, default allowed
+    my $id_network = 90;
+    allow_everything_any();
+    test_allowed_domain_network($domain, $id_network,1, 0);
+    deny_everything_any();
+    test_allowed_domain_network($domain, $id_network,0, 0);
 
-    $sth->execute('foo', '192.168.1.0/24', 1);
+    my $sth = connector->dbh->prepare("INSERT INTO networks (id, name,address,all_domains) "
+        ." VALUES ( ?,?,?,?) ");
+
+    $sth->execute($id_network, 'foo', '192.168.1.0/24', 1);
     $sth->finish;
+
+    # check default again, now there is a network
+    allow_everything_any();
+    test_allowed_domain_network($domain, $id_network,1, 0);
+    deny_everything_any();
+    test_allowed_domain_network($domain, $id_network,0, 0);
 
     ok(!$net->allowed_anonymous($domain->id),"Expecting denied anonymous from known network");
     ok($net->allowed($domain->id),"Expecting allowed from known network");
@@ -69,6 +86,10 @@ sub test_allow_domain {
     $sth->execute($id_network,'foo', '10.1.1.0/24', 0,0);
     $sth->finish;
 
+    allow_everything_any();
+    test_allowed_domain_network($domain, $id_network, 1, 0);
+    deny_everything_any();
+
     $sth = connector->dbh->prepare("INSERT INTO domains_network "
         ." (id_domain, id_network, allowed)"
         ." VALUES (?,?,?) ");
@@ -86,6 +107,15 @@ sub test_allow_domain {
         ok(!$n_found, "Expecting 0 anon bases, got '$n_found'");
     }
 
+
+    allow_everything_any();
+    test_allowed_domain_network($domain, $id_network, 1, 0);
+    test_allowed_domain_network($domain, $ID_NETWORK_DEFAULT, 1, 0);
+
+    deny_everything_any();
+    test_allowed_domain_network($domain, $id_network, 1, 0);
+    test_allowed_domain_network($domain, $ID_NETWORK_DEFAULT, 0, 0);
+
     $sth = connector->dbh->prepare("UPDATE domains_network "
         ." SET allowed=0 "
         ." WHERE id_domain=? AND id_network=?");
@@ -95,6 +125,7 @@ sub test_allow_domain {
     ok(!$net->allowed($domain->id),"Expecting not allowed from known network");
     ok(!$net->allowed_anonymous($domain->id)
         ,"Expecting not allowed anonymous from known network");
+    test_allowed_domain_network($domain, $id_network, 0, 0);
 
     { # test list bases anonymous
         my $list_bases = $RVD_FRONT->list_bases_anonymous($ip);
@@ -126,6 +157,7 @@ sub test_allow_domain {
     ok($net->allowed($domain->id),"Expecting allowed from known network");
     ok($net->allowed_anonymous($domain->id)
         ,"Expecting allowed anonymous from known network");
+    test_allowed_domain_network($domain, $id_network, 1, 1);
 
     { # test list bases anonymous
         my $list_bases = $RVD_FRONT->list_bases_anonymous($ip);
@@ -133,9 +165,32 @@ sub test_allow_domain {
         ok($n_found == 1, "Expecting 1 anon bases, got '$n_found'");
     }
 
+    $sth = connector->dbh->prepare("UPDATE domains_network "
+        ." SET allowed=1, anonymous=0 "
+        ." WHERE id_domain=? AND id_network=?");
+    $sth->execute($domain->id, $id_network);
+
+    is($net->allowed($domain->id),1,"Expecting allowed from known network");
+    is($net->allowed_anonymous($domain->id),0
+        ,"Expecting not allowed anonymous from known network");
+    test_allowed_domain_network($domain, $id_network, 1, 0);
+
+    { # test list bases anonymous
+        my $list_bases = $RVD_FRONT->list_bases_anonymous($ip);
+        is(scalar (@$list_bases) , 0);
+    }
 
 }
 
+sub test_allowed_domain_network($domain, $id_network, $exp_allowed, $exp_anonymous) {
+    my $list_bases = rvd_front->list_bases_network($id_network);
+    my ($base) = grep({ $_->{name} eq $domain->name } @$list_bases);
+    ok($base,"Expecting ".$domain->name." in list bases network ".Dumper($list_bases))
+        or confess;
+
+    is($base->{allowed},$exp_allowed, "Expecting base: $base->{id} in network $id_network allowed=$exp_allowed") or confess;
+    is($base->{anonymous},$exp_anonymous) or confess;
+}
 
 sub test_deny_all {
     my $domain = shift;
@@ -167,12 +222,29 @@ sub test_deny_all {
     }
 
 }
+sub allow_everything_any {
+    my $sth = connector->dbh->prepare(
+        "UPDATE networks set all_domains=1 where address='0.0.0.0/0'"
+    );
+    $sth->execute;
+}
+
 
 sub deny_everything_any {
     my $sth = connector->dbh->prepare(
         "UPDATE networks set all_domains=0 where address='0.0.0.0/0'"
     );
     $sth->execute;
+}
+
+sub _id_network {
+    my $name = shift;
+    my $sth = connector->dbh->prepare(
+        "SELECT id FROM networks WHERE name=? "
+    );
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    return $id;
 }
 
 ########################################################################3

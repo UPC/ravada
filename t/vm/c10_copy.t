@@ -229,7 +229,7 @@ sub test_copy_req_many {
 ##########################################################################3
 
 
-for my $vm_name ('Void', 'KVM') {
+for my $vm_name ( vm_names() ) {
     diag($vm_name);
     my $vm = rvd_back->search_vm($vm_name);
 

@@ -254,7 +254,7 @@ sub test_small {
 clean();
 $Data::Dumper::Sortkeys = 1;
 
-for my $vm_name (qw( Void KVM )) {
+for my $vm_name ( vm_names() ) {
 
     diag("Testing $vm_name VM");
 

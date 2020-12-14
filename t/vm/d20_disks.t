@@ -134,7 +134,7 @@ sub test_add_disk_boot_order {
 clean();
 
 
-for my $vm_name ('Void', 'KVM') {
+for my $vm_name ( vm_names() ) {
     my $vm = rvd_back->search_vm($vm_name);
 
     SKIP: {

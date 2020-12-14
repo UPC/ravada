@@ -122,6 +122,11 @@ sub _set_raw_volume {
 }
 
 #####################################################################
+if ($>)  {
+    diag("SKIPPED: Test must run as root");
+    done_testing();
+    exit;
+}
 
 clean();
 
@@ -131,10 +136,6 @@ for my $vm_name ('KVM') {
         my $vm = rvd_back->search_vm($vm_name);
 
         my $msg = "SKIPPED: No virtual managers found";
-        if ($vm && $vm_name =~ /kvm/i && $>) {
-            $msg = "SKIPPED: Test must run as root";
-            $vm = undef;
-        }
 
         skip($msg,10)   if !$vm;
 

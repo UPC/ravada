@@ -86,7 +86,7 @@ sub test_remove_hybernated {
 
 clean();
 
-for my $vm_name ( @{rvd_front->list_vm_types}) {
+for my $vm_name ( vm_names() ) {
 
     my $vm = rvd_back->search_vm($vm_name);
 
