@@ -220,8 +220,8 @@ sub _update_isos {
                    ,arch => 'amd64'
                     ,xml => 'focal_fossa-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
-                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04/release/ubuntu-mate-20.04-desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04.*/release/ubuntu-mate-20.04.*-desktop-amd64.iso'
+                ,sha256_url => '$url/SHA256SUMS'
         },
         mate_bionic => {
                     name => 'Ubuntu Mate Bionic 64 bits'
@@ -230,7 +230,7 @@ sub _update_isos {
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
+                ,sha256_url => '$url/SHA256SUMS'
         },
         mate_bionic_i386 => {
                     name => 'Ubuntu Mate Bionic 32 bits'
@@ -239,7 +239,7 @@ sub _update_isos {
                     ,xml => 'bionic-i386.xml'
              ,xml_volume => 'bionic32-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
-                ,md5_url => '$url/MD5SUMS'
+                ,sha256_url => '$url/SHA256SUMS'
         },
         mate_xenial => {
                     name => 'Ubuntu Mate Xenial'
@@ -248,7 +248,7 @@ sub _update_isos {
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/16.04.*/release/ubuntu-mate-16.04.*-desktop-amd64.iso'
-                ,md5_url => '$url/MD5SUMS'
+                ,sha256_url => '$url/SHA256SUMS'
                 ,min_disk_size => '10'
         },
 	,focal_fossa=> {
@@ -257,8 +257,8 @@ sub _update_isos {
                    ,arch => 'amd64'
                     ,xml => 'focal_fossa-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
-                    ,url => 'http://releases.ubuntu.com/20.04/'
-                ,file_re => '^ubuntu-20.04.*desktop-amd64.iso'
+                    ,url => 'http://releases.ubuntu.com/20.04'
+                ,file_re => '^ubuntu-20.04.1-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
         }
@@ -337,9 +337,9 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'focal_fossa-amd64.xml'
             ,xml_volume => 'focal_fossa64-volume.xml'
-            ,md5_url => '$url/MD5SUMS'
-            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/20.04/release/'
-            ,file_re => 'kubuntu-20.04-desktop-amd64.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/20.04.*/release/'
+            ,file_re => 'kubuntu-20.04.*-desktop-amd64.iso'
             ,rename_file => 'kubuntu_focal_fossa_64.iso'
         }
         ,kubuntu_64 => {
@@ -348,9 +348,9 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
-            ,md5_url => '$url/MD5SUMS'
+            ,sha256_url => '$url/SHA256SUMS'
             ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/18.04/release/'
-            ,file_re => 'kubuntu-18.04-desktop-amd64.iso'
+            ,file_re => 'kubuntu-18.04.\d+-desktop-amd64.iso'
             ,rename_file => 'kubuntu_bionic_64.iso'
         }
         ,kubuntu_32 => {
@@ -359,9 +359,9 @@ sub _update_isos {
             ,arch => 'i386'
             ,xml => 'bionic-i386.xml'
             ,xml_volume => 'bionic32-volume.xml'
-            ,md5_url => '$url/MD5SUMS'
+            ,sha256_url => '$url/SHA256SUMS'
             ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/18.04/release/'
-            ,file_re => 'kubuntu-18.04-desktop-i386.iso'
+            ,file_re => 'kubuntu-18.04.\d+-desktop-i386.iso'
             ,rename_file => 'kubuntu_bionic_32.iso'
         }
         ,suse_15 => {
@@ -381,7 +381,7 @@ sub _update_isos {
             ,arch => 'amd64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
-            ,md5_url => '$url/../MD5SUMS'
+            ,sha256_url => '$url/../SHA256SUMS'
             ,url => 'http://archive.ubuntu.com/ubuntu/dists/bionic/main/installer-amd64/current/images/netboot/'
             ,file_re => 'mini.iso'
             ,rename_file => 'xubuntu_bionic_64.iso'
@@ -411,7 +411,7 @@ sub _update_isos {
              name => 'Lubuntu Bionic Beaver 64 bits'
              ,description => 'Lubuntu 18.04 Bionic Beaver 64 bits'
              ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-amd64.iso'
-             ,md5_url => '$url/MD5SUMS'
+             ,sha256_url => '$url/SHA256SUMS'
              ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
          }
@@ -420,7 +420,7 @@ sub _update_isos {
              ,description => 'Lubuntu 18.04 Bionic Beaver 32 bits'
              ,arch => 'i386'
              ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-i386.iso'
-             ,md5_url => '$url/MD5SUMS'
+             ,sha256_url => '$url/SHA256SUMS'
              ,xml => 'bionic-i386.xml'
              ,xml_volume => 'bionic32-volume.xml'
         }
@@ -1120,10 +1120,6 @@ sub _enable_grants($self) {
 
     return if $self->_null_grants();
 
-    my $sth = $CONNECTOR->dbh->prepare(
-        "UPDATE grant_types set enabled=0"
-    );
-    $sth->execute;
     my @grants = (
         'change_settings',  'change_settings_all',  'change_settings_clones'
         ,'clone',           'clone_all',            'create_base', 'create_machine'
@@ -1138,7 +1134,7 @@ sub _enable_grants($self) {
         ,'start_many'
     );
 
-    $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
     $sth->execute;
     my %grant_exists;
     while (my ($id, $name) = $sth->fetchrow ) {
@@ -1158,7 +1154,14 @@ sub _enable_grants($self) {
         $sth->execute($name);
 
     }
+    $self->_disable_other_grants(@grants);
+}
 
+sub _disable_other_grants($self, @grants) {
+    my $query = "UPDATE grant_types set enabled=0 WHERE  enabled=1 AND "
+    .join(" AND ",map { "name <> ? " } @grants );
+    my $sth = $CONNECTOR->dbh->prepare($query);
+    $sth->execute(@grants);
 }
 
 sub _update_old_qemus($self) {
@@ -1457,6 +1460,11 @@ sub _sql_insert_defaults($self){
                 ,name => 'delay_migrate_back'
                 ,value => 600
             }
+            ,{
+                id_parent => $id_backend
+                ,name => 'display_password'
+                ,value => 1
+            }
         ]
     );
     my %field = ( settings => 'name' );
@@ -1513,6 +1521,7 @@ sub _upgrade_tables {
     my $self = shift;
 #    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
 
+    $self->_upgrade_table("base_xml",'xml','TEXT');
     $self->_upgrade_table('file_base_images','target','varchar(64) DEFAULT NULL');
 
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
@@ -1599,9 +1608,12 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','shared_storage','varchar(254)');
     $self->_upgrade_table('domains','post_shutdown','int not null default 0');
     $self->_upgrade_table('domains','post_hibernated','int not null default 0');
+    $self->_upgrade_table('domains','is_compacted','int not null default 0');
+    $self->_upgrade_table('domains','has_backups','int not null default 0');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
+    $self->_upgrade_table('domains_kvm','xml','TEXT');
     $self->_upgrade_table('iptables','id_vm','int DEFAULT NULL');
     $self->_upgrade_table('vms','security','varchar(255) default NULL');
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
@@ -2160,16 +2172,8 @@ sub _search_domain {
 
 =cut
 
-sub search_domain_by_id {
-    my $self = shift;
-    my $id = shift  or confess "ERROR: missing argument id";
-
-    my $sth = $CONNECTOR->dbh->prepare("SELECT name FROM domains WHERE id=?");
-    $sth->execute($id);
-    my ($name) = $sth->fetchrow;
-    confess "Unknown domain id=$id" if !$name;
-
-    return $self->search_domain($name);
+sub search_domain_by_id($self, $id) {
+    return Ravada::Domain->open($id);
 }
 
 =head2 list_vms
@@ -2796,7 +2800,7 @@ sub _do_execute_command {
     my $err = ( $@ or '');
     my $elapsed = tv_interval($t0,[gettimeofday]);
     $request->run_time($elapsed);
-    $request->error($err)   if $err;
+    $request->error(''.$err)   if $err;
     if ($err) {
         my $user = $request->defined_arg('user');
         if ($user) {
@@ -3151,8 +3155,9 @@ sub _cmd_open_iptables {
 
 sub _cmd_clone($self, $request) {
 
-    return _req_clone_many($self, $request) if $request->defined_arg('number')
-    && $request->defined_arg('number') > 1;
+    return _req_clone_many($self, $request)
+        if ( $request->defined_arg('number') && $request->defined_arg('number') > 1)
+            || (! $request->defined_arg('name') && $request->defined_arg('add_to_pool'));
 
     my $domain = Ravada::Domain->open($request->args('id_domain'))
         or confess "Error: Domain ".$request->args('id_domain')." not found";
@@ -3219,7 +3224,7 @@ sub _cmd_start {
 
     my $domain;
     $domain = $self->search_domain($name)               if $name;
-    $domain = $self->search_domain_by_id($id_domain)    if $id_domain;
+    $domain = Ravada::Domain->open($id_domain)          if $id_domain;
     die "Unknown domain '".($name or $id_domain)."'" if !$domain;
     $domain->status('starting');
 
@@ -3727,6 +3732,7 @@ sub _cmd_refresh_vms($self, $request=undef) {
 
     $self->_clean_requests('refresh_vms', $request);
     $self->_refresh_volatile_domains();
+    $request->error('')                             if $request;
 }
 
 sub _cmd_shutdown_node($self, $request) {
@@ -3791,6 +3797,12 @@ sub _cmd_list_network_interfaces($self, $request) {
     $request->output(encode_json(\@ifs));
 }
 
+sub _cmd_list_storage_pools($self, $request) {
+    my $id_vm = $request->args('id_vm');
+    my $vm = Ravada::VM->open( $id_vm );
+    $request->output(encode_json([ $vm->list_storage_pools ]));
+}
+
 sub _cmd_list_isos($self, $request){
     my $vm_type = $request->args('vm_type');
 
@@ -3814,17 +3826,60 @@ sub _cmd_set_time($self, $request) {
     die "$@ , retry.\n" if $@;
 }
 
-sub _migrate_base($self, $domain, $node, $uid, $request) {
+sub _cmd_compact($self, $request) {
+    my $id_domain = $request->args('id_domain');
+    my $domain = Ravada::Domain->open($id_domain)
+        or do {
+            $request->retry(0);
+            Ravada::Request->refresh_vms();
+            die "Error: domain $id_domain not found\n";
+        };
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    die "Error: user ".$user->name." not allowed to compact ".$domain->name
+    unless $user->is_operator || $uid == $domain->_data('id_owner');
+
+    $domain->compact($request);
+}
+
+sub _cmd_purge($self, $request) {
+    my $id_domain = $request->args('id_domain');
+    my $domain = Ravada::Domain->open($id_domain)
+        or do {
+            $request->retry(0);
+            Ravada::Request->refresh_vms();
+            die "Error: domain $id_domain not found\n";
+        };
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    die "Error: user ".$user->name." not allowed to compact ".$domain->name
+    unless $user->is_operator || $uid == $domain->_data('id_owner');
+
+    $domain->purge($request);
+}
+
+sub _migrate_base($self, $domain, $id_node, $uid, $request) {
+    if (ref($id_node)) {
+        $id_node = $id_node->id;
+    }
     my $base = Ravada::Domain->open($domain->id_base);
-    return if $base->base_in_vm($node->id);
+    return if $base->base_in_vm($id_node);
 
     my $req_base = Ravada::Request->set_base_vm(
         id_domain => $base->id
-        , id_vm => $node->id
+        , id_vm => $id_node
         , uid => $uid
+        , retry => 10
     );
-    $request->after_request($req_base->id) if $req_base;
-    die "Base ".$base->name." still not prepared in node ".$node->name.". Retry\n";
+    confess "Error: no request for set_base_vm" if !$req_base;
+    confess "Error: same request" if $req_base->id == $request->id;
+    $request->retry(10) if !defined $request->retry();
+    $request->after_request_ok($req_base->id);
+    die "Base ".$base->name." still not prepared in node $id_node. Retry\n";
 }
 
 sub _cmd_migrate($self, $request) {
@@ -3832,7 +3887,8 @@ sub _cmd_migrate($self, $request) {
     my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
-    my $domain = $self->search_domain_by_id($id_domain);
+    my $domain = Ravada::Domain->open($id_domain)
+        or confess "Error: domain $id_domain not found";
 
     die "Error: user ".$user->name." not allowed to migrate domain ".$domain->name
     unless $user->is_operator;
@@ -3851,7 +3907,7 @@ sub _cmd_migrate($self, $request) {
                 ,id_domain => $id_domain
                 ,@timeout
             );
-            $request->after_request($req_shutdown->id);
+            $request->after_request_ok($req_shutdown->id);
             $request->retry(10) if !defined $request->retry();
             die "Virtual Machine ".$domain->name." ".$request->retry." is active. Shutting down. Retry.\n";
         }
@@ -3934,6 +3990,7 @@ sub _refresh_active_domains($self, $request=undef) {
             my @domains;
             eval { @domains = $self->list_domains_data };
             warn $@ if $@;
+            my $t0 = time;
             for my $domain_data (sort { $b->{date_changed} cmp $a->{date_changed} }
                                 @domains) {
                 $request->error("checking $domain_data->{name}") if $request;
@@ -3942,6 +3999,7 @@ sub _refresh_active_domains($self, $request=undef) {
                 next if !$domain;
                 $self->_refresh_active_domain($domain, \%active_domain);
                 $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
+                last if !$CAN_FORK && time - $t0 > 10;
             }
             $request->error("checked ".scalar(@domains)) if $request;
         }
@@ -4095,16 +4153,19 @@ sub _cmd_set_base_vm {
     #    my $domain = $self->search_domain_by_id($id_domain) or confess "Error: Unknown domain id: $id_domain";
 
     die "USER $uid not authorized to set base vm"
-        if !$user->is_admin;
+    if !$user->is_admin;
 
-    $domain->prepare_base($user) if $value && !$domain->is_base;
+    $self->_migrate_base($domain, $id_vm, $uid, $request) if $domain->id_base;
+    if ( $value && !$domain->is_base ) {
+        $domain->prepare_base($user);
+    }
 
     $domain->set_base_vm(
-            id_vm => $id_vm
-            ,user => $user
-           ,value => $value
-         ,request => $request
-     );
+        id_vm => $id_vm
+        ,user => $user
+        ,value => $value
+        ,request => $request
+    );
 }
 
 sub _cmd_cleanup($self, $request) {
@@ -4188,6 +4249,10 @@ sub _req_method {
 ,remove_hardware => \&_cmd_remove_hardware
 ,change_hardware => \&_cmd_change_hardware
 ,set_time => \&_cmd_set_time
+,compact => \&_cmd_compact
+,purge => \&_cmd_purge
+
+,list_storage_pools => \&_cmd_list_storage_pools
 
 # Domain ports
 ,expose => \&_cmd_expose
@@ -4490,7 +4555,7 @@ Returns the value of a configuration setting
 
 =cut
 
-sub setting($self, $name) {
+sub setting($self, $name, $new_value=undef) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,value "
         ." FROM settings "
@@ -4506,6 +4571,13 @@ sub setting($self, $name) {
         if !$id;
 
         $id_parent = $id;
+    }
+    if (defined $new_value && $new_value ne $value ) {
+        $sth = $CONNECTOR->dbh->prepare(
+            "UPDATE settings set value=? WHERE id=?"
+        );
+        $sth->execute($new_value , $id);
+        return $new_value;
     }
     return $value;
 }
@@ -4535,3 +4607,4 @@ Sys::Virt
 =cut
 
 1;
+

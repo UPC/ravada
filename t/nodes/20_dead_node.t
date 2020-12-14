@@ -38,7 +38,7 @@ sub test_down_node($vm, $node) {
     my $req = Ravada::Request->refresh_vms();
     rvd_back->_process_requests_dont_fork();
     is($req->status, 'done');
-    is($req->error, '',"Expecting no error after refresh vms");
+    like($req->error, qr{^($|checked)},"Expecting no error after refresh vms");
 
     is($clone[0]->is_active, 0, "Expecting clone not active after node shutdown");
 
@@ -90,7 +90,7 @@ sub test_disabled_node($vm, $node) {
     my $req = Ravada::Request->refresh_vms( timeout_shutdown => $timeout );
     rvd_back->_process_requests_dont_fork();
     is($req->status, 'done');
-    is($req->error, '',"Expecting no error after refresh vms");
+    like($req->error, qr{^($|checked)},"Expecting no error after refresh vms");
 
     my @reqs = $clone->list_requests();
     delete $clone->{_data};

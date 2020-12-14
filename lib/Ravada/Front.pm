@@ -211,36 +211,36 @@ sub list_machines($self, $user, @filter) {
     push @list,(@{filter_base_without_clones($self->list_domains(@filter))}) if $user->can_list_clones();
     push @list,(@{$self->_list_own_clones($user)}) if $user->can_list_clones_from_own_base();
     push @list,(@{$self->_list_own_machines($user)}) if $user->can_list_own_machines();
-    
+
     return [@list] if scalar @list < 2;
 
     my %uniq = map { $_->{name} => $_ } @list;
     return [sort { $a->{name} cmp $b->{name} } values %uniq];
 }
 
+sub init_available_actions($user, $m) {
+  eval { $m->{can_shutdown} = $user->can_shutdown($m->{id}) };
+
+  $m->{can_start} = 0;
+  $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+
+  $m->{can_view} = 0;
+  $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+
+  $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
+  eval {
+  $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
+  };
+  die $@ if $@ && $@ !~ /Unknown domain/;
+
+  $m->{can_hibernate} = 0;
+  $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id}) && !$m->{is_volatile};
+}
+
 sub _around_list_machines($orig, $self, $user, @filter) {
     my $machines = $self->$orig($user, @filter);
     for my $m (@$machines) {
-        eval { $m->{can_shutdown} = $user->can_shutdown($m->{id}) };
-
-        $m->{can_start} = 0;
-        $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
-
-        $m->{can_view} = 0;
-        $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
-
-        $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
-        eval {
-        $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
-        };
-        #may have been deleted just now
-        next if $@ && $@ =~ /Unknown domain/;
-        die $@ if $@;
-
-        $m->{can_hibernate} = 0;
-        $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
-        && !$m->{is_volatile};
-
+        init_available_actions($user, $m);
         $m->{id_base} = undef if !exists $m->{id_base};
         lock_hash(%$m);
     }
@@ -259,7 +259,7 @@ sub search_clone_data {
     $sth->execute( map { $args{$_} } sort keys %args );
     my $row = $sth->fetchrow_hashref;
     return ( $row or {});
-        
+
 }
 
 =cut
@@ -277,6 +277,7 @@ sub list_domains($self, %args) {
     my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status, is_public "
         ."      ,vms.name as node , is_volatile, client_status, id_owner "
         ."      ,comment, is_pool"
+        ."      ,d.date_changed"
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
 
@@ -294,7 +295,7 @@ sub list_domains($self, %args) {
 
     my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY d.id");
     $sth->execute(map { $args{$_} } sort keys %args);
-    
+
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
         for (qw(is_locked is_hibernated is_paused
@@ -348,7 +349,7 @@ sub list_domains($self, %args) {
 
 =head2 filter_base_without_clones
 
-filters the list of domains and drops all machines that are unacessible and 
+filters the list of domains and drops all machines that are unacessible and
 bases with 0 machines accessible
 
 =cut
@@ -412,7 +413,7 @@ sub _where(%args) {
 sub list_clones {
   my $self = shift;
   my %args = @_;
-  
+
   my $domains = $self->list_domains();
   my @clones;
   for (@$domains ) {
@@ -569,6 +570,48 @@ sub _list_bases_vm($self, $id_node) {
     return \@bases;
 }
 
+sub _list_bases_vm_all($self, $id_node) {
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT d.id, d.name FROM domains d, vms v "
+        ." WHERE is_base=? AND vm=v.vm_type"
+        ."   AND d.vm =v.vm_type"
+        ."   AND v.id=?"
+        ." ORDER BY d.name "
+    );
+    $sth->execute(1, $id_node);
+    my $sth_bv = $CONNECTOR->dbh->prepare(
+        "SELECT bv.enabled FROM bases_vm bv, domains d "
+        ." WHERE bv.id_domain=? AND bv.id_vm=?"
+        ."   AND d.id = bv.id_domain "
+    );
+    my ($id_domain, $name_domain);
+    $sth->bind_columns(\($id_domain, $name_domain));
+
+    my $sth_clones = $CONNECTOR->dbh->prepare(
+        "SELECT count(*) FROM domain_instances "
+        ." WHERE id_vm=? AND id_domain IN (SELECT id FROM domains WHERE id_base=?) "
+    );
+
+    my @bases;
+    while ( $sth->fetch ) {
+        $sth_bv->execute($id_domain, $id_node);
+        my ($enabled) = $sth_bv->fetchrow;
+
+        $sth_clones->execute($id_node,$id_domain);
+        my ($n_clones) = $sth_clones->fetchrow();
+
+        push @bases,{
+                  id => $id_domain
+               ,name => $name_domain
+             ,clones => $n_clones
+            ,enabled => ( $enabled or 0)
+        };
+    }
+
+    return \@bases;
+}
+
 sub _list_machines_vm($self, $id_node) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT d.id, name FROM domains d"
@@ -583,6 +626,7 @@ sub _list_machines_vm($self, $id_node) {
     $sth->finish;
     return \@bases;
 }
+
 
 =head2 list_iso_images
 
@@ -626,7 +670,8 @@ sub iso_file ($self, $vm_type) {
     $self->wait_request($req);
     return [] if $req->status ne 'done';
 
-    my $isos = decode_json($req->output());
+    my $isos = [];
+    $isos = decode_json($req->output()) if $req->output;
 
     $self->_cache_store("list_isos",$isos);
 
@@ -665,7 +710,7 @@ Returns a reference to a list of the users
 sub list_users($self,$name=undef) {
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, name FROM users ");
     $sth->execute();
-    
+
     my @users = ();
     while ( my $row = $sth->fetchrow_hashref) {
         next if defined $name && $row->{name} !~ /$name/;
@@ -674,6 +719,41 @@ sub list_users($self,$name=undef) {
     $sth->finish;
 
     return \@users;
+}
+
+
+sub list_bases_network($self, $id_network) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM networks where name = 'default'");
+    $sth->execute;
+    my $default = $sth->fetchrow_hashref();
+    $sth->finish;
+
+
+    my $sth_nd = $CONNECTOR->dbh->prepare("SELECT id,allowed,anonymous FROM domains_network"
+            ." WHERE id_domain=? AND id_network=? "
+    );
+
+    $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains where is_base=1 " 
+        ." ORDER BY name");
+    $sth->execute();
+    my @bases;
+    while (my $row = $sth->fetchrow_hashref) {
+        $row->{anonymous} = ( $default->{anonymous} or 0);
+
+        $sth_nd->execute($row->{id}, $id_network);
+        my ($id,$allowed, $anonymous) = $sth_nd->fetchrow;
+        $row->{anonymous} = $anonymous  if defined $anonymous;
+        if (defined $allowed) {
+            $row->{allowed} = $allowed;
+        } else {
+            $row->{allowed} = 1;
+        }
+
+        lock_hash(%$row);
+        push @bases,($row);
+    }
+
+    return \@bases;
 }
 
 =head2 create_domain
@@ -696,7 +776,7 @@ Waits for a request for some seconds.
 
 =head3 Arguments
 
-=over 
+=over
 
 =item * request
 
@@ -1080,7 +1160,7 @@ sub list_bases_anonymous {
 
 }
 
-=head2 disconnect_vm 
+=head2 disconnect_vm
 
 Disconnects all the conneted VMs
 

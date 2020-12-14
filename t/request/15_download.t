@@ -29,7 +29,7 @@ sub test_download($vm, $id_iso, $test=0) {
 
     rvd_back->_process_all_requests_dont_fork();
     is($req1->status, 'done');
-    is($req1->error,'');
+    is($req1->error,'',$iso->{name});
 
 }
 

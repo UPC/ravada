@@ -22,7 +22,7 @@
         <div class="from-group">
              <label for="password"><%=l 'Password' %></label>
             <div class="input-group mb-3">
-                <input class="form-control" input ng-attr-type="{{ showPassword ? 'text' : 'password' }}" ng-model="password" ng-model-onblur placeholder="<%=l 'Enter Password' %>" ng-maxlength="20" ng-minlength="5" name="password" ng-pattern="/^[a-zA-Z0-9]*$/" id="password" required=""><br/>
+                <input class="form-control" ng-attr-type="{{ showPassword ? 'text' : 'password' }}" ng-model="password" ng-model-onblur placeholder="<%=l 'Enter Password' %>" ng-maxlength="20" ng-minlength="5" name="password" ng-pattern="/^[a-zA-Z0-9]*$/" id="password" required=""><br/>
                 <div class="input-group-append">
                     <span class="input-group-addon"><button type="button" tabindex="-1" class="btn btn-secondary" ng-model="showPassword" ng-click="showPassword=!showPassword"><i class="{{ showPassword ? 'fa fa-eye' : 'fa fa-eye-slash' }}" aria-hidden="true"></i></button></span>
                 </div>
@@ -45,7 +45,7 @@
         <div class="from-group">
                 <label for="password"><%=l 'Confirm Password' %></label>
                 <div class="input-group mb-3">
-                    <input class="form-control" ng-model="cpassword" input ng-attr-type="{{ showPassword ? 'text' : 'password' }}" placeholder="<%=l 'Confirm Password' %>" ng-maxlength="20" ng-minlength="5" name="cpassword" ng-pattern="/^[a-zA-Z0-9]*$/" id="confirm_password" required><span id="confirmMessage" class="confirmMessage"></span><br/>
+                    <input class="form-control" ng-model="cpassword" ng-attr-type="{{ showPassword ? 'text' : 'password' }}" placeholder="<%=l 'Confirm Password' %>" ng-maxlength="20" ng-minlength="5" name="cpassword" ng-pattern="/^[a-zA-Z0-9]*$/" id="confirm_password" required><span id="confirmMessage" class="confirmMessage"></span><br/>
                     <div class="input-group-append">
                         <span class="input-group-addon"><button type="button" tabindex="-1" class="btn btn-secondary" ng-model="showPassword" ng-click="showPassword=!showPassword"><i class="{{ showPassword ? 'fa fa-eye' : 'fa fa-eye-slash' }}" aria-hidden="true"></i></button></span>
                     </div>

@@ -1,9 +1,12 @@
     <div class="nav flex-column nav-pills bg-light" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-    %   if ($USER->can_change_settings($domain->id)) {
-        <a class="nav-link active" id="v-pills-description-tab" ng-click="refresh_machine()" href="#v-pills-description" data-toggle="pill" role="tab" aria-controls="v-pills-description" aria-selected="true"><%=l 'Description' %></a>
+    %   if (($USER->can_change_settings($domain->id)) && !$domain->is_base) {
+        <a class="nav-link active" id="v-pills-actions-tab" href="#v-pills-actions" data-toggle="pill" role="tab" aria-controls="v-pills-actions" aria-selected="true"><%=l 'Actions' %></a>
     %   }
     %   if ($USER->can_change_settings($domain->id)) {
-        <a class="nav-link" id="v-pills-rename-tab" ng-click="refresh_machine()" href="#v-pills-rename" data-toggle="pill" role="tab" aria-controls="v-pills-rename" aria-selected="true"><%=l 'Rename' %></a>
+        <a class="nav-link" id="v-pills-description-tab" ng-click="refresh_machine()" href="#v-pills-description" data-toggle="pill" role="tab" aria-controls="v-pills-description" aria-selected="false"><%=l 'Description' %></a>
+    %   }
+    %   if ($USER->can_change_settings($domain->id)) {
+        <a class="nav-link" id="v-pills-rename-tab" ng-click="refresh_machine()" href="#v-pills-rename" data-toggle="pill" role="tab" aria-controls="v-pills-rename" aria-selected="false"><%=l 'Rename' %></a>
     %   }
     %   if ($USER->can_change_settings($domain->id) ) {
         <a class="nav-link" id="v-pills-options-tab" ng-click="refresh_machine()" href="#v-pills-options" data-toggle="pill" role="tab" aria-controls="v-pills-options" aria-selected="false"><%=l 'Options' %></a>

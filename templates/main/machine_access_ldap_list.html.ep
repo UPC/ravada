@@ -20,7 +20,9 @@
         <button ng-show="ldap_attributes_domain.length>1" class="btn btn-outline-dark btn-sm" ng-hide="$index == ldap_attributes_domain.length-1" title="<%=l 'Down' %>"
             ng-click="move_ldap_access(attribute.id, +1);"
             ><i class="fa fa-arrow-down"></i></button>
-        <button ng-show="ldap_attributes_domain.length>1" class="btn btn-outline-dark btn-sm" ng-show="$index" ng-click="move_ldap_access(attribute.id,-1)" title="<%=l 'Up' %>"
+        <button ng-show="ldap_attributes_domain.length>1 && $index"
+            class="btn btn-outline-dark btn-sm"
+            ng-click="move_ldap_access(attribute.id,-1)" title="<%=l 'Up' %>"
             ><i class="fa fa-arrow-up" ></i></button>
         <button class="btn btn-outline-danger btn-sm"
             ng-click="delete_ldap_access(attribute.id)" title="<%=l 'Remove' %>"><i class="fas fa-times"></i></button>
