@@ -1,0 +1,78 @@
+<div class="container-fluid">
+<form name="formNode">
+<div class="row">
+    <div class="col-md-3" align="right">name</div>
+    <div class="col-md-8">
+        <input type="text" ng-model="node.name">
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3" align="right">host</div>
+    <div class="col-md-8" align="left">
+        <input type="text" ng-model="node.hostname">
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3" align="right">base storage</div>
+    <div class="col-md-8">
+        <input type="text" ng-model="node.base_storage" ng-hide="storage_pools"
+        />
+        <select ng-model="node.base_storage" ng-show="storage_pools"
+            ng-options="x for x in storage_pools | orderBy:x"
+        >
+        </select>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3" align="right">clone storage</div>
+    <div class="col-md-8">
+        <input type="text" ng-model="node.clone_storage" ng-hide="storage_pools"
+        />
+        <select ng-model="node.clone_storage" ng-show="storage_pools"
+            ng-options="x for x in storage_pools | orderBy:x"
+        >
+        </select>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3" align="right">default storage</div>
+    <div class="col-md-8">
+        <input type="text" ng-model="node.default_storage" ng-hide="storage_pools"
+        />
+        <select ng-model="node.default_storage" ng-show="storage_pools"
+            ng-options="x for x in storage_pools | orderBy:x"
+        >
+        </select>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-3" align="right"></div>
+    <div class="col-md-4" align="left">
+        <button ng-show="node.id" class="btn btn-outline-secondary"
+            ng-click="load_node()">cancel</button>
+        <button class="btn btn-primary"
+            ng-click="update_node()"
+            ng-disabled="!formNode.$valid || formNode.$pristine
+            || node._duplicated_name
+            || node._duplicated_address
+            ">save</button>
+    </div>
+</div>
+
+</form>
+
+<div class="row">
+    <div class="col-md-8 alert alert-info" ng-show="saved && formNode.$pristine">
+        Node {{node.name}} saved.
+    </div>
+    <div class="col-md-8 alert alert-danger" ng-show="error">
+        {{error}}
+    </div>
+
+</div>
+
+</div>

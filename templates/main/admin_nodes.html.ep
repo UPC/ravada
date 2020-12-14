@@ -5,12 +5,12 @@
 <div id="wrapper">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper" ng-controller="manage_nodes">
-      <div id="admin-content">
+      <div id="admin-content" ng-cloak="1">
           <div class="row">
               <div class="col-md-8"><h2>Nodes</h2></div>
               <div class="col-md-4" align="right">
                   <h2><a type="button"
-                          class="btn btn-success" href="/new_node.html"><b>New Node</b></a>
+                          class="btn btn-success" href="/v1/node/new"><b>New Node</b></a>
                   </h2>
               </div>
           </div>
@@ -30,7 +30,9 @@
         </div>
         <div class="row" ng-repeat="node in nodes | orderBy:'is_local':true">
                 <div class="col-md-1">{{node.type}}</div>
-                <div class="col-md-2">{{node.name}}</div>
+                <div class="col-md-2">
+                    <a href="/node/settings/{{node.id}}.html">{{node.name}}</a>
+                </div>
                 <div class="col-md-2">{{node.hostname}}</div>
                 <div class="col-md-1">{{node.bases.length}}</div>
                 <div class="col-md-1">{{node.machines.length}}</div>

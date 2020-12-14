@@ -634,6 +634,8 @@ sub mojo_init() {
 }
 
 sub mojo_clean($wait=1) {
+    _remove_old_entries('vms');
+    _remove_old_entries('networks');
     return remove_old_domains_req($wait);
 }
 
@@ -1069,12 +1071,21 @@ sub remove_old_pools {
     remove_qemu_pools();
 }
 
+sub _remove_old_entries($table) {
+    my $sth = connector()->dbh->prepare("DELETE FROM $table"
+    ." WHERE name like ? "
+    );
+    $sth->execute(base_domain_name.'%');
+
+}
+
 sub clean {
     my $file_remote_config = shift;
     remove_old_domains();
     remove_old_disks();
     remove_old_pools();
-
+    _remove_old_entries('vms');
+    _remove_old_entries('networks');
 
     if ($file_remote_config) {
         my $config;
