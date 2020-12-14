@@ -5,4 +5,4 @@
 
 **Bugfixes**
 
-- Fix spice password [\#1460]
+- Fix LDAP logout [\#1465]
