@@ -76,7 +76,10 @@ sub test_download {
 test_insert_locale();
 test_insert_request();
 
-test_download('linkat');
+SKIP: {
+    skip("SKIPPED: Test must run as root",8) if $<;
+    test_download('linkat');
+};
 
 end();
 done_testing();

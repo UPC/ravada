@@ -132,7 +132,7 @@ sub test_autostart_front($vm_name) {
 
 clean();
 
-for my $vm_name ( 'Void', 'KVM' ) {
+for my $vm_name ( vm_names() ) {
 
     my $vm;
 

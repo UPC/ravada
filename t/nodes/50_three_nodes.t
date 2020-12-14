@@ -76,6 +76,15 @@ sub test_remove($vm, $node1, $node2) {
 }
 
 ##################################################################################
+if ($>)  {
+    my $msg = "SKIPPED: Test must run as root";
+    diag($msg);
+    SKIP:{
+        skip($msg,10);
+    }
+    done_testing();
+    exit;
+}
 
 clean();
 

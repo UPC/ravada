@@ -356,6 +356,13 @@ sub test_reopen {
 
 #######################################################
 
+if ($>)  {
+    diag("SKIPPED: Test must run as root");
+    done_testing();
+    exit;
+}
+
+
 clean();
 
 my $vm_name = 'KVM';

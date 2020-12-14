@@ -12,8 +12,6 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-use_ok('Ravada');
-
 init();
 
 #######################################################################
@@ -89,7 +87,7 @@ sub _hibernate_domain($domain) {
 clean();
 clean_remote() if !$>;
 
-for my $vm_name ('Void' , 'KVM' ) {
+for my $vm_name ( vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 

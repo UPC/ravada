@@ -1155,14 +1155,14 @@ sub test_migrate_req($vm, $node) {
         , retry => 10
     );
     for ( 1 .. 30 ) {
-        wait_request( debug => 1, check_error => 0);
+        wait_request( debug => 0, check_error => 0);
         is($req->status,'done');
         last if !$req->error;
         diag($req->status);
         diag($req->error." try : ".$req->retry);
         sleep 1;
     }
-    is($req->error,'') or exit;
+    like($req->error,qr(^$|seconds)) or exit;
 
     my $domain3 = Ravada::Domain->open($domain->id);
     is($domain3->is_active,1);
@@ -1265,6 +1265,13 @@ sub test_nat($vm, $node, $set_localhost_natip=0) {
 }
 
 ##################################################################################
+
+if ($>)  {
+    diag("SKIPPED: Test must run as root");
+    done_testing();
+    exit;
+}
+
 clean();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;

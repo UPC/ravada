@@ -98,6 +98,9 @@ $DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
 our $USER_DAEMON;
 our $USER_DAEMON_NAME = 'daemon';
 
+our $FIRST_TIME_RUN = 1;
+$FIRST_TIME_RUN = 0 if $0 =~ /\.t$/;
+
 has 'connector' => (
         is => 'rw'
 );
@@ -146,6 +149,7 @@ sub _install($self) {
     $self->_update_data();
     $self->_init_user_daemon();
     $self->_sql_insert_defaults();
+    print "\n" if $FIRST_TIME_RUN;
 }
 
 sub _init_user_daemon {
@@ -574,7 +578,7 @@ sub _update_isos {
 
 sub _scheduled_fedora_releases($self,$data) {
 
-    return if !exists $VALID_VM{KVM} ||!$VALID_VM{KVM};
+    return if !exists $VALID_VM{KVM} ||!$VALID_VM{KVM} || $>;
     my $vm = $self->search_vm('KVM') or return; # TODO move ISO downloads off KVM
 
     my @now = localtime(time);
@@ -869,7 +873,8 @@ sub _update_table($self, $table, $field, $data, $verbose=0) {
             warn("INFO: $table : $row->{$field} already added.\n") if $verbose;
             next;
         }
-        warn("INFO: updating $table : $row->{$field}\n")    if $0 !~ /\.t$/;
+        warn("INFO: updating $table : $row->{$field}\n")
+        if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
         my $sql =
             "INSERT INTO $table "
@@ -983,7 +988,10 @@ sub _add_indexes_generic($self) {
             $type .=" INDEX " if $type=~ /^unique/i;
             my $sql = "CREATE $type $if_not_exists $name on $table ($fields)";
 
-            warn "INFO: Adding index to $table: $name" if $0 !~ /\.t$/;
+            warn "INFO: Adding index to $table: $name"
+            if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+
+            print "+" if $FIRST_TIME_RUN;
             my $sth = $CONNECTOR->dbh->prepare($sql);
             $sth->execute();
         }
@@ -1204,7 +1212,8 @@ sub _upgrade_table {
         warn "INFO: changing $field\n"
             ." $row->{COLUMN_SIZE} to ".($new_size or '')."\n"
             ." $row->{TYPE_NAME} -> $new_type \n"
-            ." in $table\n$definition\n"  if $0 !~ /\.t$/;
+            ." in $table\n$definition\n"  if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+        print "-" if $FIRST_TIME_RUN;
         $dbh->do("alter table $table change $field $field $definition");
         return;
     }
@@ -1216,11 +1225,14 @@ sub _upgrade_table {
         $definition =~ s/DEFAULT.*ON UPDATE(.*)//i;
         $sqlite_trigger = $1;
     }
-    warn "INFO: adding $field $definition to $table\n"  if $0 !~ /\.t$/;
+    warn "INFO: adding $field $definition to $table\n"
+    if!$FIRST_TIME_RUN && $0 !~ /\.t$/;
+
     $dbh->do("alter table $table add $field $definition");
     if ( $sqlite_trigger && !$self->_exists_trigger($dbh, "Update$field") ) {
         $self->_sqlite_trigger($dbh,$table, $field, $sqlite_trigger);
     }
+    print "-" if $FIRST_TIME_RUN;
     return 1;
 }
 
@@ -1259,7 +1271,9 @@ sub _remove_field {
     $sth->finish;
     return if !$row;
 
-    warn "INFO: removing $field to $table\n"  if $0 !~ /\.t$/;
+    warn "INFO: removing $field to $table\n"
+    if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+
     $dbh->do("alter table $table drop column $field");
     return 1;
 
@@ -1274,7 +1288,10 @@ sub _create_table {
     $sth->finish;
     return if keys %$info;
 
-    warn "INFO: creating table $table\n"    if $0 !~ /\.t$/;
+    warn "INFO: creating table $table\n"
+    if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+
+    print "." if $FIRST_TIME_RUN;
 
     my $file_sql = "$DIR_SQL/$table.sql";
     open my $in,'<',$file_sql or die "$! $file_sql";
@@ -1292,7 +1309,9 @@ sub _insert_data {
     my $file_sql =  "$DIR_SQL/../data/insert_$table.sql";
     return if ! -e $file_sql;
 
-    warn "INFO: inserting data for $table\n";
+    warn "INFO: inserting data for $table\n"
+    if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+
     open my $in,'<',$file_sql or die "$! $file_sql";
     my $sql = '';
     while (my $line = <$in>) {
@@ -1323,6 +1342,7 @@ sub _create_tables {
 }
 
 sub _sql_create_tables($self) {
+    my $created = 0;
     my $driver = lc($CONNECTOR->dbh->{Driver}{Name});
     my %tables = (
         settings => {
@@ -1336,9 +1356,14 @@ sub _sql_create_tables($self) {
         my $sth = $CONNECTOR->dbh->table_info('%',undef,$table,'TABLE');
         my $info = $sth->fetchrow_hashref();
         $sth->finish;
-        next if keys %$info;
+        if  ( keys %$info ) {
+            $FIRST_TIME_RUN = 0;
+            next;
+        }
 
-        warn "INFO: creating table $table\n"    if $0 !~ /\.t$/;
+        print "Installing " if !$created && $FIRST_TIME_RUN;
+        warn "INFO: creating table $table\n"
+        if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
         my $sql_fields;
         for my $field (sort keys %{$tables{$table}} ) {
@@ -1349,8 +1374,9 @@ sub _sql_create_tables($self) {
 
         my $sql = "CREATE TABLE $table ( $sql_fields )";
         $CONNECTOR->dbh->do($sql);
-
+        $created++;
     }
+    return $created;
 }
 
 sub _sql_insert_defaults($self){
@@ -1442,7 +1468,10 @@ sub _sql_insert_defaults($self){
             $sth->execute($entry->{$field{$table}});
             my ($found) = $sth->fetchrow;
             next if $found;
-            warn "INFO adding default $table ".Dumper($entry) if $0 !~ /t$/;
+
+            warn "INFO: adding default $table ".Dumper($entry)
+            if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+
             $self->_sql_insert_values($table, $entry);
         }
     }

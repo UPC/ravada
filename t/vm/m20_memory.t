@@ -85,10 +85,7 @@ sub test_change_memory_base {
     
     eval { $domain->set_max_mem(1024*1024*3) };
     ok(!$@,$@);
-     
-    my $doc = XML::LibXML->load_xml(string => $domain->xml_description);
-    ok($doc,$doc);
-    
+
     $domain->remove(user_admin);
 }
 
@@ -132,7 +129,7 @@ sub test_req_change_mem($vm) {
 }
 ####################################################################
 
-for my $vm_name ( q(KVM) ) {
+for my $vm_name ( vm_names() ) {
 
     init('t/etc/ravada_freemem.conf');
     my $vm;

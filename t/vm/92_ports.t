@@ -519,7 +519,7 @@ sub test_clone_exports($vm, $spinoff=0) {
 }
 
 sub test_routing_hibernated($vm) {
-    my $base = create_domain($vm, user_admin,'debian stretch');
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
     $base->expose(port => 22, name => "ssh");
 
     my @base_ports0 = $base->list_ports();
@@ -555,7 +555,7 @@ sub test_routing_hibernated($vm) {
 }
 
 sub test_routing_already_used($vm) {
-    my $base = create_domain($vm, user_admin,'debian stretch');
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
     $base->expose(port => 22, name => "ssh");
     my @base_ports0 = $base->list_ports();
 
@@ -1087,7 +1087,7 @@ Test::Ravada::_clean_db();
 add_network_10(0);
 
 test_can_expose_ports();
-for my $vm_name ( 'KVM', 'Void' ) {
+for my $vm_name ( vm_names() ) {
 
     SKIP: {
     my $vm = rvd_back->search_vm($vm_name);
@@ -1102,10 +1102,11 @@ for my $vm_name ( 'KVM', 'Void' ) {
     skip $msg,10    if !$vm;
 
     diag("Testing $vm_name");
+    import_base($vm);
+
     test_routing_hibernated($vm);
     test_routing_already_used($vm);
 
-    import_base($vm);
 
     test_clone_exports_add_ports($vm);
 

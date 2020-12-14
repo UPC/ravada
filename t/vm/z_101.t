@@ -12,15 +12,13 @@ use_ok('Ravada');
 my $RVD_BACK = rvd_back();
 my $RVD_FRONT= rvd_front();
 
-my @VMS = ('KVM','Void');
-
 my $TEST_LONG = ($ENV{TEST_LONG} or 0);
 
 #############################################################
 
 clean();
 
-for my $vm_name (reverse sort @VMS) {
+for my $vm_name ( vm_names() ) {
 
     diag("Testing $vm_name VM");
 

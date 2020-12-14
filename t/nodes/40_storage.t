@@ -66,6 +66,16 @@ sub test_fail_different_storage_pools($node) {
 }
 
 ##################################################################################
+if ($>)  {
+    my $msg = "SKIPPED: Test must run as root";
+    diag($msg);
+    SKIP: {
+        skip($msg,10);
+    }
+
+    done_testing();
+    exit;
+}
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 

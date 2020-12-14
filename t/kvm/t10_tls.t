@@ -77,7 +77,8 @@ sub test_tls {
 clean();
 
 my $vm_name = 'KVM';
-my $vm = rvd_back->search_vm($vm_name);
+my $vm;
+$vm = rvd_back->search_vm($vm_name) if !$>;
 
 
 SKIP: {

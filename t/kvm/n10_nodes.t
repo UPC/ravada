@@ -1129,7 +1129,7 @@ clean_remote() if !$>;
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
-for my $vm_name ('KVM', 'Void') {
+for my $vm_name ( vm_names() ) {
 my $vm;
 eval { $vm = rvd_back->search_vm($vm_name) };
 
