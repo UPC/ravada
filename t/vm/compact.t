@@ -75,6 +75,15 @@ sub test_compact($vm) {
 }
 
 #######################################################
+if ($>)  {
+    my $msg = "SKIPPED: Test must run as root";
+    diag($msg);
+    SKIP:{
+        skip($msg,113);
+    }
+    done_testing();
+    exit;
+}
 
 clean();
 
