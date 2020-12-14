@@ -495,7 +495,7 @@ sub test_set_vm($vm, $node) {
     );
     rvd_back->_process_requests_dont_fork();
     is($req->status, 'done');
-    is($req->error, '');
+    like($req->error, qr{^($|rsync done)});
 
     is($base->_vm->id, $vm->id);
 
@@ -542,7 +542,7 @@ sub test_bind_ip($node, $base, $remote_ip=undef, $config=undef) {
             ,@remote_ip
         );
         wait_request();
-        is($req->error, '');
+        like($req->error, qr{^($|rsync done)});
         my $clone_v = Ravada::Domain->open($clone->id);
         if ($clone_v->is_local) {
             if (!$config) {
@@ -556,7 +556,7 @@ sub test_bind_ip($node, $base, $remote_ip=undef, $config=undef) {
             like($clone_v->display(user_admin), qr($node_ip));
         }
         is($req->status,'done');
-        is($req->error, '');
+        like($req->error, qr{^($|rsync done)});
         push @clone,($clone);
         $clone_2 = Ravada::Domain->open($clone->id);
         last if $clone_2->_vm->id == $node->id;
@@ -1160,10 +1160,10 @@ sub test_migrate_req($vm, $node) {
     for ( 1 .. 30 ) {
         wait_request( debug => 0, check_error => 0);
         is($req->status,'done');
-        last if !$req->error;
+        last if !$req->error || $req->error =~ /rsync done/;
         sleep 1;
     }
-    is($req->error,'') or exit;
+    like($req->error,qr{^($|rsync done)}) or exit;
 
     my $domain3 = Ravada::Domain->open($domain->id);
     is($domain3->is_active,1);
@@ -1334,6 +1334,7 @@ sub test_display_ip($vm, $node, $set_localhost_dp=0) {
 
     $node->_data(display_ip => '');
     rvd_back->display_ip('') if $set_localhost_dp;
+    $vm->display_ip('')      if $set_localhost_dp;
 }
 
 sub test_nat($vm, $node, $set_localhost_natip=0) {
