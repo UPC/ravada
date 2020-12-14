@@ -440,14 +440,14 @@ sub _login_bind {
     for my $user (@user) {
         my $dn = $user->dn;
         $found++;
-        my $mesg = $LDAP_ADMIN->bind($dn, password => $password);
-        if ( !$mesg->code() ) {
+        my $ldap = _connect_ldap($dn, $password);
+        if ( $ldap ) {
             $self->{_auth} = 'bind';
             $self->{_ldap_entry} = $user;
             return 1;
         }
-        warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $dn"
-            if $Ravada::DEBUG && $mesg->code;
+        warn "ERROR: Bad credentials for $dn"
+            if $Ravada::DEBUG && $@;
     }
     return 0;
 }

@@ -183,6 +183,22 @@ sub test_copy_without_prepare($clone) {
     remove_machines($clone);
 }
 
+sub test_logout_ldap {
+    my ($username, $password) = ( new_domain_name(),$$);
+    my $user = create_ldap_user( $username, $password);
+
+    $t->post_ok('/login' => form => {login => $username, password => $password});
+    is($t->tx->res->code(),302);
+
+    $t->ua->get($URL_LOGOUT);
+
+    $t->post_ok('/login' => form => {login => $username, password => 'bigtime'});
+    is($t->tx->res->code(),403);
+
+    $t->post_ok('/login' => form => {login => $username, password => $password});
+    is($t->tx->res->code(),302);
+}
+
 ########################################################################################
 
 init('/etc/ravada.conf',0);
@@ -195,15 +211,18 @@ if (!rvd_front->ping_backend) {
     exit;
 }
 
-remove_old_domains_req();
-
 $t = Test::Mojo->new($SCRIPT);
 $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
 my @bases;
 my @clones;
 
+test_logout_ldap();
+
 test_login_fail();
+
+
+remove_old_domains_req();
 
 for my $vm_name (@{rvd_front->list_vm_types} ) {
 
