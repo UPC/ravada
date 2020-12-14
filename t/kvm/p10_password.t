@@ -382,13 +382,15 @@ sub test_reopen {
 }
 
 #######################################################
-
 if ($>)  {
-    diag("SKIPPED: Test must run as root");
+    my $msg = "SKIPPED: Test must run as root";
+    diag($msg);
+    SKIP:{
+        skip($msg,10);
+    }
     done_testing();
     exit;
 }
-
 
 clean();
 
