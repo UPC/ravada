@@ -247,6 +247,25 @@ sub _id_network {
     return $id;
 }
 
+sub test_conflict_allowed {
+    my $sth = connector->dbh->prepare(
+        "INSERT INTO networks (name, address, all_domains, no_domains) "
+        ." VALUES ( ? , ?, ?, ?  )"
+    );
+    my $name = 'all';
+    $sth->execute($name, '91.2.3.4/24', 1 , 1);
+
+    $sth = connector->dbh->prepare(
+        "SELECT all_domains, no_domains FROM networks WHERE name=?"
+    );
+    $sth->execute($name);
+    my ($all,$no) = $sth->fetchrow;
+    TODO: {
+        local $TODO = "Requires trigger to avoid all_domains=1 and no_domains=1";
+        isnt($all,$no);
+    };
+}
+
 ########################################################################3
 #
 #
@@ -259,6 +278,8 @@ my $domain = $vm->create_domain( name => $domain_name
 
 $domain->prepare_base(user_admin);
 $domain->is_public(1);
+
+test_conflict_allowed();
 
 my $net = Ravada::Network->new(address => '127.0.0.1/32');
 ok($net->allowed($domain->id));
