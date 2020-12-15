@@ -32,9 +32,9 @@
         <input type="text" ng-model="booking.time_start" min="00:00" max="23:59"
             required
         />
-        <input type="text" ng-model="booking.time_end" min="00:00" max="23:59"/
+        <input type="text" ng-model="booking.time_end" min="00:00" max="23:59"
             required
-        >
+        />
     </div>
 </div>
 
