@@ -22,7 +22,7 @@
             <div class="col-md-7">
                 <input type="reset"  class="btn btn-outline-secondary mt-3" value="<%=l 'Cancel' %>" onclick = "location='/admin/machines'"/>
                 <button type="button" class="btn btn-primary mt-3" ng-disabled="showmachine.is_active || showmachine.is_hibernated || new_name_duplicated || new_name_invalid || message_rename
-                    || (rename_request && rename_request.status !== 'done')""
+                    || (rename_request && rename_request.status !== 'done')"
                     ng-click="rename(showmachine.id, showmachine.name)">
                     <%=l 'Rename' %>
                 </button>
@@ -36,11 +36,11 @@
             </div>
         </div>
         <div class="form-group has-error" ng-show="new_name_duplicated || new_name_invalid">
-            <div class="alert alert-danger col-form-label" role="alert" for="new_name">
+            <div class="alert alert-danger col-form-label" role="alert">
                 <div ng-show="new_name_duplicated">
                     This name is duplicated
                 </div>
-                <div ng-show="new_name_invalid" for="new_name">
+                <div ng-show="new_name_invalid">
                        This name is invalid. It can only contain alphabetic, numbers, undercores and dashes
                        and must start by a letter.
                 </div>

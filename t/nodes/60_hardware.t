@@ -201,6 +201,15 @@ sub test_change_hardware($vm, @nodes) {
 }
 
 ##################################################################################
+if ($>)  {
+    my $msg = "SKIPPED: Test must run as root";
+    diag($msg);
+    SKIP:{
+        skip($msg,10);
+    }
+    done_testing();
+    exit;
+}
 
 clean();
 
@@ -208,7 +217,7 @@ $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
 my @nodes;
 
-for my $vm_name ( 'Void', 'KVM') {
+for my $vm_name ( vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 

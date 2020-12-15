@@ -42,6 +42,7 @@ sub test_route($vm) {
     my %route = ( '127.0.0.0/24', '127.0.0.1');
     my $routes = `ip route`;
     for my $line ( split /\n/, $routes ) {
+        next if $line =~ / dev tun\d+ /;
         my ($network,$ip) = $line =~ /(^[\d+\.\/]+).*src ([\d+\.]+)/;
         next if !$network || !$ip;
         $route{$network} = $ip;
@@ -208,7 +209,7 @@ sub test_chain($vm_name, %args) {
 clean();
 flush_rules();
 
-for my $vm_name ( 'Void', 'KVM' ) {
+for my $vm_name ( vm_names() ) {
 
     my $vm;
 

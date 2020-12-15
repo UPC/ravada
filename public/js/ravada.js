@@ -85,6 +85,7 @@
         };
 
     };
+
     // list machines
         function mainpageCrtl($scope, $http, $timeout, request, listMach) {
             $scope.set_restore=function(machineId) {
@@ -204,20 +205,34 @@
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
-            var subscribe_machine_info= function(url) {
+            var subscribed_extra = false;
+            subscribe_machine_info= function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('machine_info/'+$scope.showmachineId) };
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
                         $scope.showmachine = data;
-                        $scope.list_bases();
-                        subscribe_nodes(url,data.type);
+                        if (!subscribed_extra) {
+                            subscribed_extra = true;
+                            subscribe_nodes(url,data.type);
+                            //subscribe_bases(url);
+                        }
                     });
+                    _select_new_base();
                 }
             };
 
-            var subscribe_requests = function(url) {
+            $scope.action = function(target,action,machineId){
+              $http.get('/'+target+'/'+action+'/'+machineId+'.json')
+                .then(function() {
+                }, function(data,status) {
+                      console.error('Repos error', status, data);
+                      window.location.reload();
+                });
+            };
+
+            subscribe_requests = function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_requests') };
                 ws.onclose = function() {
@@ -265,10 +280,44 @@
                     });
                 }
             };
+            _select_new_base = function() {
+                if(typeof($scope.new_base) != 'undefined'
+                    || typeof($scope.showmachine) == 'undefined'
+                    || typeof($scope.bases) == 'undefined'
+                ) {
+                    return;
+                }
+                for (var i = 0; i < $scope.bases.length; i++) {
+                    if ($scope.bases[i].id == $scope.showmachine.id_base) {
+                        $scope.new_base = $scope.bases[i];
+                        console.log(" clone  "+i);
+                    } else if ($scope.showmachine.is_base
+                        && $scope.bases[i].id == $scope.showmachine.id) {
+                        $scope.new_base = $scope.bases[i];
+                        console.log("is_base "+i);
+                    }
+                }
+                $scope.current_base = $scope.new_base;
+            };
+
+            subscribe_bases = function(url, type) {
+                var ws = new WebSocket(url);
+                ws.onopen = function(event) { ws.send('list_bases') };
+                ws.onmessage = function(event) {
+                    var data = JSON.parse(event.data);
+                    $scope.$apply(function () {
+                        $scope.bases = data;
+                        _select_new_base();
+                    });
+                }
+            };
+
             var subscribe_ws = function(url, is_admin) {
                 subscribe_machine_info(url);
+                subscribe_bases(url);
                 subscribe_requests(url);
                 subscribe_isos(url);
+                // other data will be subscribed on loading machine info
             };
 
           var url_ws;
@@ -507,6 +556,7 @@
               $scope.ldap_entries = 0;
               $scope.ldap_verified = 0;
               $http.get('/list_ldap_attributes/'+$scope.cn).then(function(response) {
+                  $scope.ldap_error = response.data.error;
                   $scope.ldap_attributes = response.data.attributes;
               });
           };
@@ -726,9 +776,6 @@
                     subscribe_request(id_request, function(data) {
                         $scope.$apply(function () {
                             $scope.rebase_request=data;
-                            if ($scope.rebase_request.status == 'done') {
-                                $scope.list_bases();
-                            }
                         });
                     });
                 });
@@ -758,9 +805,6 @@
                     subscribe_request(id_request, function(data) {
                         $scope.$apply(function () {
                             $scope.pending_request=data;
-                            if ($scope.pending_request.status == 'done') {
-                                $scope.list_bases();
-                            }
                         });
                     });
                 });
@@ -778,6 +822,8 @@
             $scope.list_ldap_attributes();
             list_ldap_groups();
 
+            $scope.new_base = undefined;
+            $scope.list_ldap_attributes();
         };
 
     function swListMach() {

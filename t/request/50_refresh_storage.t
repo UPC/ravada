@@ -69,7 +69,7 @@ sub test_request {
 
 clean();
 
-for my $vm_name (qw(KVM)) {
+for my $vm_name ( vm_names() ) {
    my $vm;
    my $msg = "SKIPPED: virtual manager $vm_name not found";
     eval {
@@ -77,6 +77,10 @@ for my $vm_name (qw(KVM)) {
 
         if ($vm && $vm_name =~ /kvm/i && $>) {
             $msg = "SKIPPED: Test must run as root";
+            $vm= undef;
+        }
+        if ($vm_name eq 'Void') {
+            $msg = "SKIPPED: Refresh storage missing in Void";
             $vm= undef;
         }
 

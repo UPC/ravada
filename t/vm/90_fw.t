@@ -412,7 +412,7 @@ remove_old_disks();
 #      maybe ($rv, $out_ar, $errs_ar) = $ipt_obj->run_ipt_cmd('/sbin/iptables
 #           -t filter -v -n -L RAVADA');
 
-for my $vm_name (qw( Void KVM )) {
+for my $vm_name ( vm_names() ) {
 
     diag("Testing $vm_name VM");
 

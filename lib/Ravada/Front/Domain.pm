@@ -54,6 +54,7 @@ sub BUILD($self, $arg) {
 }
 
 sub open($self, $id) {
+    confess "Error: undefined id" if !defined $id;
     my $domain = Ravada::Front::Domain->new( id => $id );
     if ($domain->type eq 'KVM') {
         $domain = Ravada::Front::Domain::KVM->new( id => $id );

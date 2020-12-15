@@ -12,9 +12,19 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-init();
 
 ##################################################################
+if ($>)  {
+    my $msg = "SKIPPED: Test must run as root";
+    diag($msg);
+    SKIP: {
+        skip($msg,10);
+    }
+    done_testing();
+    exit;
+}
+
+init();
 
 for my $vm_name ( 'KVM') {
     my $vm;

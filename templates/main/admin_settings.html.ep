@@ -114,6 +114,19 @@
                 <%= l 'Debug' %>
             </div>
         </div>
+		<div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-2">
+            <label for="debug">Display Password</label>
+            </div>
+            <div class="col-md-6">
+            <input name="debug" ng-model="settings.backend.display_password.value"
+                ng-true-value="1" ng-false-value="0"
+                type="checkbox">
+                <%= l 'Enables display password when available' %>
+            </div>
+        </div>
+
 
         <div class="row">
             <div class="col-md-1"></div>

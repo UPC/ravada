@@ -60,6 +60,10 @@
     cursor: not-allowed;
 }
 
+.base {
+    font-weight: bold;
+}
+
 .comment {
     color: gray
 }

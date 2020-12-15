@@ -176,8 +176,8 @@ sub test_remove_clone {
 
     $clone->remove($usera);
     $domain->remove($usera);
-    for $clone ( $domain->clones ) {
-        $clone->remove($usera);
+    for my $clone3 ( $domain->clones ) {
+        $clone3->remove($usera);
     }
 
     $user->remove();
@@ -186,10 +186,10 @@ sub test_remove_clone {
 
 sub test_view_clones {
     my $vm_name = shift;
-    my $user = create_user("oper_rm$$","bar");
+    my $user = create_user("oper_rm$$.".time,"bar");
     ok(!$user->is_operator);
     ok(!$user->is_admin);
-    my $usera = create_user("admin_rm$$","bar",'is admin');
+    my $usera = create_user("admin_rm$$.".time,"bar",'is admin');
     ok($usera->is_operator);
     ok($usera->is_admin);
     
@@ -208,7 +208,7 @@ sub test_view_clones {
     
     $clone->prepare_base($usera);
     eval{ $clones = rvd_front->list_clones() };
-    is(scalar @$clones, 0) or return;
+    is(scalar @$clones, 1) or return;
 
     $clone->remove(user_admin);
     $domain->remove(user_admin);

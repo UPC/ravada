@@ -12,8 +12,6 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-use_ok('Ravada');
-init();
 
 $Ravada::DEBUG=0;
 
@@ -31,7 +29,7 @@ sub test_download($vm, $id_iso, $test=0) {
 
     rvd_back->_process_all_requests_dont_fork();
     is($req1->status, 'done');
-    is($req1->error,'');
+    is($req1->error,'',$iso->{name});
 
 }
 
@@ -53,10 +51,18 @@ sub search_id_isos {
 
 ##################################################################
 
+SKIP: {
+if ($>)  {
+    my $msg = "SKIPPED: Test must run as root";
+    diag($msg);
+    skip($msg,30);
+}
+
+init();
+
 for my $vm_name ('KVM') {
     my $rvd_back = rvd_back();
     my $vm = $rvd_back->search_vm($vm_name);
-    SKIP: {
         my $msg = "SKIPPED: No virtual managers found";
         if ($vm && $vm_name =~ /kvm/i && $>) {
             $msg = "SKIPPED: Test must run as root";
@@ -72,7 +78,7 @@ for my $vm_name ('KVM') {
             test_download($vm, $id_iso,1);
         }
     #test_download($vm, $id_iso,0);
-    }
 }
 end();
+}
 done_testing();

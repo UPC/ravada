@@ -4,6 +4,7 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use Digest::MD5;
+use IPC::Run3 qw(run3);
 use Test::More;
 
 use lib 't/lib';
@@ -494,7 +495,7 @@ sub test_set_vm($vm, $node) {
     );
     rvd_back->_process_requests_dont_fork();
     is($req->status, 'done');
-    is($req->error, '');
+    like($req->error, qr{^($|rsync done)});
 
     is($base->_vm->id, $vm->id);
 
@@ -541,7 +542,7 @@ sub test_bind_ip($node, $base, $remote_ip=undef, $config=undef) {
             ,@remote_ip
         );
         wait_request();
-        is($req->error, '');
+        like($req->error, qr{^($|rsync done)});
         my $clone_v = Ravada::Domain->open($clone->id);
         if ($clone_v->is_local) {
             if (!$config) {
@@ -555,7 +556,7 @@ sub test_bind_ip($node, $base, $remote_ip=undef, $config=undef) {
             like($clone_v->display(user_admin), qr($node_ip));
         }
         is($req->status,'done');
-        is($req->error, '');
+        like($req->error, qr{^($|rsync done)});
         push @clone,($clone);
         $clone_2 = Ravada::Domain->open($clone->id);
         last if $clone_2->_vm->id == $node->id;
@@ -857,7 +858,8 @@ sub test_duplicated_set_base_vm($vm, $node) {
         , id_domain => 1
         , at => time + 4
     );
-    ok(!$req2) or exit;
+    ok($req2) or exit;
+    is($req2->id, $req->id) or exit;
     my $req3 = Ravada::Request->remove_base_vm(id_vm => $node->id
         , uid => 1
         , id_domain => 1
@@ -868,7 +870,8 @@ sub test_duplicated_set_base_vm($vm, $node) {
         , id_domain => 1
         , at => time + 4
     );
-    ok(!$req4);
+    ok($req4) or exit;
+    is($req4->id, $req3->id) or exit;
     my $req5 = Ravada::Request->set_base_vm(id_vm => 999
         , uid => 2
         , id_domain => 1
@@ -1155,14 +1158,12 @@ sub test_migrate_req($vm, $node) {
         , retry => 10
     );
     for ( 1 .. 30 ) {
-        wait_request( debug => 1, check_error => 0);
+        wait_request( debug => 0, check_error => 0);
         is($req->status,'done');
-        last if !$req->error;
-        diag($req->status);
-        diag($req->error." try : ".$req->retry);
+        last if !$req->error || $req->error =~ /rsync done/;
         sleep 1;
     }
-    is($req->error,'') or exit;
+    like($req->error,qr{^($|rsync done)}) or exit;
 
     my $domain3 = Ravada::Domain->open($domain->id);
     is($domain3->is_active,1);
@@ -1170,6 +1171,123 @@ sub test_migrate_req($vm, $node) {
     is($domain3->_vm->id, $node->id);
 
     $domain->remove(user_admin);
+}
+
+sub _get_backing_files($volume0) {
+    my @bf;
+    my $volume = $volume0;
+    for (;;) {
+        my @cmd = ("qemu-img","info",$volume);
+        my ($in, $out, $err);
+        run3(\@cmd, \$in, \$out, \$err);
+        my ($bf) = $out =~ m{backing file: (.*)}m;
+        return @bf if !$bf;
+        push @bf,($bf);
+        $volume = $bf;
+    }
+}
+
+sub test_volumes_levels($domain, $level) {
+
+    for my $vol ($domain->list_volumes_info) {
+        next if !$vol->file;
+        my @backings = _get_backing_files($vol->file);
+        for my $file (@backings) {
+            like($file ,qr{-vd[a-z][\.-]},$domain->name) or exit;
+            unlike($file,qr{--+},$domain->name) or exit;
+        }
+        is(scalar(@backings), $level, "Expecting ".$domain->name
+            ." : ".$vol->file." level $level\n".Dumper(\@backings)) or exit;
+    }
+}
+
+sub _get_backing_xml($disk) {
+    my ($source) = $disk->findnodes("source");
+    return if !$source;
+
+    my @bf = ($source->getAttribute('file'));
+
+    my ($backingstore2) = $disk->findnodes("backingStore");
+    push @bf,(_get_backing_xml($backingstore2)) if $backingstore2;
+
+    return @bf;
+}
+
+sub test_domain_volumes_levels($domain, $level) {
+    my $doc =XML::LibXML->load_xml(string => $domain->xml_description());
+
+    my $found = 0;
+    for my $disk ($doc->findnodes("/domain/devices/disk")) {
+
+        my ($source) = $disk->findnodes("source")
+        or next;
+
+        my $file = $source->getAttribute('file');
+        my @backings = _get_backing_xml($disk);
+        is(scalar(@backings), $level, "Expecting ".$domain->name
+            ." : ".$file." level $level\n".Dumper(\@backings)) or confess;
+        $found++;
+    }
+    confess "Error: no disk devices found" if !$found;
+}
+
+sub test_nested_base($vm, $node, $levels=1) {
+
+    my $base0 = create_domain($vm);
+    $base0->add_volume(swap => 1, size => 10 * 1024);
+    $base0->add_volume(type => 'tmp', size => 10 * 1024);
+    $base0->add_volume(type => 'data', size => 10 * 1024);
+
+    my $base1 = $base0;
+    my $clone;
+    my @bases = ( );
+    for my $n ( 1 .. $levels ) {
+        diag("Cloning from ".$base1->name." level $n");
+        $base1->prepare_base(user_admin) if !$base1->is_base;
+        $clone = $base1->clone(
+            name => new_domain_name
+            ,user => user_admin
+        );
+        is($clone->id_base,$base1->id);
+        push @bases,($base1);
+        wait_request();
+        test_volumes_levels($clone, $n);
+        test_domain_volumes_levels($clone, $n+1);
+        $base1 = $clone;
+    }
+
+    _test_migrate_nested($vm, $node, \@bases, $clone, $levels);
+    $base0->remove_base_vm(vm => $node, user => user_admin);
+    _test_migrate_nested($vm, $node, \@bases, $clone, $levels);
+    my ($file) = $base0->list_files_base;
+    $node->remove_file($file);
+
+    for my $domain ($clone, reverse @bases ) {
+        $domain->remove(user_admin);
+    }
+}
+
+sub _test_migrate_nested($vm, $node, $bases, $clone, $levels) {
+    my $req = Ravada::Request->migrate(
+        id_node => $node->id
+        ,id_domain => $clone->id
+        ,uid => user_admin->id
+        ,shutdown => 1
+    );
+    for ( 1 .. $levels+3 ) {
+        last if $req->status eq 'done';
+        wait_request(debug => 0, check_error => 0);
+    }
+    is($req->error,'');
+    is($req->status,'done');
+    for my $base ( @$bases ) {
+        is($base->is_base,1,"Expecting ".$base->name." is base") or exit;
+        is($base->base_in_vm($node->id),1);
+    }
+    my $clone2 = Ravada::Domain->open($clone->id);
+    is($clone2->_vm->id,$node->id) or exit;
+    eval { $clone2->start(user_admin) };
+    is(''.$@, '', $clone2->name) or exit;
 }
 
 sub test_display_ip($vm, $node, $set_localhost_dp=0) {
@@ -1216,6 +1334,7 @@ sub test_display_ip($vm, $node, $set_localhost_dp=0) {
 
     $node->_data(display_ip => '');
     rvd_back->display_ip('') if $set_localhost_dp;
+    $vm->display_ip('')      if $set_localhost_dp;
 }
 
 sub test_nat($vm, $node, $set_localhost_natip=0) {
@@ -1265,6 +1384,13 @@ sub test_nat($vm, $node, $set_localhost_natip=0) {
 }
 
 ##################################################################################
+
+if ($>)  {
+    diag("SKIPPED: Test must run as root");
+    done_testing();
+    exit;
+}
+
 clean();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
@@ -1303,6 +1429,12 @@ for my $vm_name ( vm_names() ) {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+
+        test_duplicated_set_base_vm($vm, $node);
+        if ($vm_name eq 'KVM') {
+            test_nested_base($vm, $node, 3);
+            test_nested_base($vm, $node);
+        }
 
         test_check_instances($vm, $node);
         test_migrate($vm, $node);
