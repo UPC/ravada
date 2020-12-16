@@ -17,8 +17,10 @@ use feature qw(signatures);
 
 sub test_duplicate_req {
         my $req = Ravada::Request->manage_pools(uid => user_admin->id);
-        ok(! Ravada::Request->manage_pools(uid => user_admin->id));
-        ok(! Ravada::Request->manage_pools(uid => Ravada::Utils::user_daemon->id));
+        my $req_dupe = Ravada::Request->manage_pools(uid => user_admin->id);
+        is($req_dupe->id, $req->id);
+        my $req_dupe_user =Ravada::Request->manage_pools(uid => Ravada::Utils::user_daemon->id);
+        is($req_dupe_user->id, $req->id);
 }
 
 sub test_pool($domain) {
@@ -140,7 +142,7 @@ sub test_user($base, $n_start) {
          ,remote_ip => '1.2.3.4'
     );
     ok($req);
-    wait_request(debug => 1,skip => ['enforce_limits','set_time']);
+    wait_request(debug => 0,skip => ['enforce_limits','set_time']);
     _remove_enforce_limits();
     is($req->status,'done');
     is($req->error,'');
@@ -281,6 +283,48 @@ sub test_no_pool($vm) {
     wait_request( debug => 0);
 }
 
+sub test_remove_clone($vm) {
+    my $base;
+    if ($vm->type eq 'KVM') {
+        my $base0 = import_domain( $vm->type , 'zz-test-base-alpine');
+        $base = $base0->clone(name => new_domain_name , user => user_admin);
+    }
+    $base = create_domain($vm) if !$base;
+
+    $base->pools(1);
+    $base->volatile_clones(1);
+
+    my $n = 5;
+    $base->pool_clones($n);
+    $base->pool_start($n);
+    my $req = Ravada::Request->manage_pools(uid => user_admin->id , _no_duplicate => 1);
+    wait_request( debug => 0);
+    is($req->status, 'done');
+
+    my $req_refresh = Ravada::Request->refresh_vms( _no_duplicate => 1);
+    wait_request( debug => 0);
+    is($req_refresh->status, 'done');
+
+    my @clones = $base->clones();
+    is(scalar @clones, $n);
+    Ravada::Domain->open($clones[0]->{id})->remove(user_admin);
+    is(scalar($base->clones()),$n-1);
+
+    warn Dumper([map { $_->{name}." ".$_->{status} } $base->clones]);
+    $req = Ravada::Request->manage_pools(uid => user_admin->id, _no_duplicate => 1);
+    wait_request();
+    is($req->status, 'done');
+    ok(Dumper([map { $_->{name} } $base->clones]));
+    for my $clone ( $base->clones ) {
+        like($clone->{name},qr/-\d+$/);
+        Ravada::Domain->open($clone->{id})->remove(user_admin);
+    }
+    $base->remove(user_admin);
+
+}
+
+###############################################################
+
 init();
 clean();
 
@@ -301,6 +345,7 @@ for my $vm_name (reverse vm_names() ) {
 
         diag("*** Testing pools in $vm_name ***");
 
+        test_remove_clone($vm);
         test_duplicate_req();
 
         test_no_pool($vm);

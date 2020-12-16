@@ -46,6 +46,7 @@ sub test_rebase_3times($vm, $swap, $data, $with_cd) {
     for my $file ( $clone->list_volumes ) {
         test_volume_contents($vm, "base1", $file);
     }
+    $base2->spinoff();
     $base2->prepare_base(user => user_admin, with_cd => $with_cd);
 
     $clone->rebase(user_admin, $base2);
@@ -96,8 +97,8 @@ sub test_rebase_3times($vm, $swap, $data, $with_cd) {
 
     $clone->remove(user_admin);
     $base1->remove(user_admin);
-    $base2->remove(user_admin);
     $base3->remove(user_admin);
+    $base2->remove(user_admin);
 }
 
 sub test_rebase_with_vols($vm, $swap0, $data0, $with_cd0, $swap1, $data1, $with_cd1) {
@@ -282,6 +283,7 @@ sub test_rebase($vm, $swap, $data, $with_cd) {
     is(scalar($base->clones),2);
 
     $clone1->prepare_base(user => user_admin, with_cd => $with_cd) if $with_cd;
+    is($clone1->id_base, $base->id) or exit;
 
     my @reqs = $base->rebase(user_admin, $clone1);
     for my $req (@reqs) {
@@ -291,13 +293,13 @@ sub test_rebase($vm, $swap, $data, $with_cd) {
     }
 
     $clone1 = Ravada::Domain->open($clone1->id);
-    is($clone1->id_base, undef ) or exit;
+    is($clone1->id_base, $base->id) or exit;
     is($clone1->is_base, 1);
 
     $clone2 = Ravada::Domain->open($clone2->id);
     is($clone2->id_base, $clone1->id );
 
-    is(scalar($base->clones),0);
+    is(scalar($base->clones),1);
     is(scalar($clone1->clones),1);
 
     $clone2->remove(user_admin);

@@ -1,5 +1,8 @@
-<div class="card-body">
-    <form class="form" action="<%= $action %>" method="post">
+<div class="card-body"><!-- options -->
+    <div ng-hide="showmachine">
+        <%=l 'Loading machine status' %> <i class="fas fa-sync-alt fa-spin"></i>
+    </div>
+    <form ng-show="showmachine" class="form" action="<%= $action %>" method="post">
         <div class="form-group">
             <div class="row" ng-show="showmachine.ip">
                 <div class="col-lg-3 mt-2">
@@ -10,9 +13,9 @@
                 </div>
             </div>
 
-            <div class="row" ng-show="!nodes">
+            <div class="row" ng-show="!nodes && (showmachine && !showmachine.is_base)">
                 <div class="col-lg-3 mt-2">
-                    Loading ..
+                    Loading nodes <i class="fas fa-sync-alt fa-spin"></i>
                 </div>
             </div>
 
@@ -201,5 +204,4 @@
                 {{pending_request.error}}
             </div>
 
-</div><!-- of panel-body -->
-
+</div><!-- of card-body options -->

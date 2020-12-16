@@ -265,10 +265,9 @@ sub test_settings {
 
 ################################################################
 
-remove_old_domains();
-remove_old_disks();
+clean();
 
-for my $vm_name ('Void','KVM') {
+for my $vm_name ( vm_names() ) {
 my $vm;
 eval { $vm =rvd_back->search_vm($vm_name) };
 SKIP: {

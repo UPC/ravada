@@ -9,7 +9,8 @@ use Test::More;
 use lib 't/lib';
 use Test::Ravada;
 
-use_ok('Ravada');
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 init();
 my @VMS = vm_names();
@@ -113,14 +114,17 @@ sub test_domain_password2 {
     return $domain;
 }
 
-sub test_domain_password1 {
-    my $vm_name = shift;
+sub test_domain_password1($vm_name, $requires_password=1) {
     my $vm = rvd_back->search_vm($vm_name);
 
     my $net2 = Ravada::Network->new(address => '10.0.0.1/32');
 
     ok($net2->requires_password,"Expecting net requires password ")
         or return;
+
+    if (!$requires_password) {
+        rvd_back->setting("/backend/display_password" => 0);
+    }
     my $domain = $vm->create_domain( name => new_domain_name
                 , disk => 1024 * 1024
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
@@ -130,10 +134,15 @@ sub test_domain_password1 {
     my $vm2 = rvd_back->search_vm($vm_name);
     my $domain2 = $vm2->search_domain($domain->name);
     my $password = $domain2->spice_password();
-    like($password,qr/./,"Expecting a password, got '".($password or '')."'") or die $domain2->name;
+    if ($requires_password) {
+        like($password,qr/./,"Expecting a password, got '".($password or '')."'") or die $domain2->name;
 
-    $password = $domain->spice_password();
-    like($password,qr/./,"Expecting a password, got '".($password or '')."'");
+        $password = $domain->spice_password();
+        like($password,qr/./,"Expecting a password, got '".($password or '')."'");
+    } else {
+        is($password, undef);
+    }
+
 
     my $domain_f = rvd_front()->search_domain($domain->name);
     my $password_f;
@@ -142,9 +151,27 @@ sub test_domain_password1 {
     is($password_f , $password,"Expecting password : '".($password or '')."'"
                                 ." got : '".($password_f or '')."'");
 
+    my $domain3 = Ravada::Domain->open($domain->id);
+    test_password_xml($domain3,$password);
+
     $domain->shutdown_now($USER);
+
+    # default is display password = 1
+    rvd_back->setting("/backend/display_password" => 1);
     return $domain;
 }
+
+sub test_password_xml($domain, $exp_password) {
+    my $xml = XML::LibXML->load_xml(string => $domain->domain->get_xml_description(Sys::Virt::Domain::XML_SECURE));
+    my $found = 0;
+    for my $graphics ( $xml->findnodes("/domain/devices/graphics") ) {
+        next if $graphics->getAttribute('type') ne 'spice';
+        $found++;
+        is($graphics->getAttribute('passwd'),$exp_password,$domain->name) or exit;
+    }
+    ok($found,"Expecting a graphics type='spice' found in ".$domain->name);
+}
+
 
 sub test_any_network_password {
     my $vm_name = shift;
@@ -355,6 +382,15 @@ sub test_reopen {
 }
 
 #######################################################
+if ($>)  {
+    my $msg = "SKIPPED: Test must run as root";
+    diag($msg);
+    SKIP:{
+        skip($msg,10);
+    }
+    done_testing();
+    exit;
+}
 
 clean();
 
@@ -373,7 +409,7 @@ SKIP: {
     skip($msg,10)   if !$vm;
 
     add_network_10();
-    my $domain1 = test_domain_password1($vm_name);
+    my $domain1 = test_domain_password1($vm_name, 0);
     my $domain2 = test_domain_password2($vm_name);
     remove_network_10();
 

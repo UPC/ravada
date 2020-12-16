@@ -2,6 +2,7 @@ use warnings;
 use strict;
 
 use Data::Dumper;
+use HTML::Lint;
 use Test::More;
 use Test::Mojo;
 use Mojo::File 'path';
@@ -20,34 +21,15 @@ my $URL_LOGOUT = '/logout';
 my ($USERNAME, $PASSWORD);
 my $SCRIPT = path(__FILE__)->dirname->sibling('../script/rvd_front');
 
-
 ########################################################################################
 
-sub remove_machines {
+sub remove_machines(@machines) {
     my $t0 = time;
-    for my $name ( @_ ) {
+    for my $name ( @machines ) {
         my $domain = rvd_front->search_domain($name) or next;
-        my $n_clones = scalar($domain->clones);
-        my $req_clone;
-        for my $clone ($domain->clones) {
-            $req_clone = Ravada::Request->remove_domain(
-                name => $clone->{name}
-                ,uid => user_admin->id
-            );
-        }
-        _wait_request(debug => 1, background => 1, check_error => 0, timeout => 60+2*$n_clones);
-
-        my @after_req = ();
-        @after_req = ( after_request => $req_clone->id ) if $req_clone;
-        my $req = Ravada::Request->remove_domain(
-            name => $name
-            ,uid => user_admin->id
-        );
+        remove_domain_and_clones_req($domain,1); #remove and wait
     }
     _wait_request(debug => 1, background => 1, timeout => 120);
-    if ( time - $t0 > $SECONDS_TIMEOUT ) {
-        login();
-    }
 }
 
 sub _wait_request(@args) {
@@ -183,11 +165,135 @@ sub test_copy_without_prepare($clone) {
     remove_machines($clone);
 }
 
+sub test_validate_html($url) {
+    $t->get_ok($url)->status_is(200);
+    my $content = $t->tx->res->body();
+    _check_html_lint($url,$content);
+}
+
+sub test_validate_html_local($dir) {
+    opendir my $ls,$dir or die "$! $dir";
+    while (my $file = readdir $ls) {
+        next unless $file =~ /html$/ || $file =~ /.html.ep$/;
+        my $path = "$dir/$file";
+        open my $in,"<", $path or die "$path";
+        my $content = join ("",<$in>);
+        close $in;
+        _check_html_lint($path,$content, {internal => 1});
+    }
+}
+
+sub _check_count_divs($url, $content) {
+    my $n = 0;
+    my $open = 0;
+    for my $line (split /\n/,$content) {
+        $n++;
+        die "Error: too many divs" if $line =~ m{<div.*<div.*<div};
+
+        next if $line =~ m{<div.*<div.*/div>.*/div>};
+
+        $open++ if $line =~ /<div/;
+        $open-- if $line =~ m{</div};
+
+        last if $open<0;
+    }
+    ok(!$open,"$open open divs in $url line $n") ;
+}
+
+sub _remove_embedded_perl($content) {
+    my $return = '';
+    my $changed = 0;
+    for my $line (split /\n/,$$content) {
+        if ($line =~ /<%=/) {
+            $line =~ s/(.*)<%=.*?%>(.*)/$1$2/;
+            $changed++;
+        }
+        $return .= "$line\n";
+    }
+    $$content = $return if $changed;
+}
+
+sub _check_html_lint($url, $content, $option = {}) {
+    _remove_embedded_perl(\$content);
+    _check_count_divs($url, $content);
+
+    my $lint = HTML::Lint->new;
+    #    $lint->only_types( HTML::Lint::Error::STRUCTURE );
+    $lint->parse( $content );
+    $lint->eof();
+
+    my @errors;
+    my @warnings;
+
+    for my $error ( $lint->errors() ) {
+        next if $error->errtext =~ /Entity .*is unknown/;
+        next if $option->{internal} && $error->errtext =~ /(body|head|html|title).*required/;
+        if ( $error->errtext =~ /Unknown element <(footer|header|nav)/
+            || $error->errtext =~ /Entity && is unknown/
+            || $error->errtext =~ /should be written as/
+            || $error->errtext =~ /Unknown attribute.*%/
+            || $error->errtext =~ /Unknown attribute "ng-/
+            || $error->errtext =~ /Unknown attribute "(aria|align|autofocus|data-|href|novalidate|placeholder|required|tabindex|role|uib-alert)/
+            || $error->errtext =~ /img.*(has no.*attributes|does not have ALT)/
+            || $error->errtext =~ /Unknown attribute "(min|max).*input/ # Check this one
+            || $error->errtext =~ /Unknown attribute "(charset|crossorigin|integrity)/
+            || $error->errtext =~ /Unknown attribute "image.* for tag <div/
+            || $error->errtext =~ /Unknown attribute "ipaddress"/
+         ) {
+             next;
+         }
+        if ($error->errtext =~ /attribute.*is repeated/
+            || $error->errtext =~ /Unknown attribute/
+            # TODO next one
+            #|| $error->errtext =~ /img.*(has no.*attributes|does not have ALT)/
+            || $error->errtext =~ /attribute.*is repeated/
+        ) {
+            push @warnings, ($error);
+            next;
+        }
+        push @errors, ($error)
+    }
+    ok(!@errors, $url) or do {
+        my $file_out = $url;
+        $url =~ s{^/}{};
+        $file_out =~ s{/}{_}g;
+        $file_out = "/var/tmp/$file_out";
+        open my $out, ">", $file_out or die "$! $file_out";
+        print $out $content;
+        close $out;
+        die "Stored in $file_out\n".Dumper([ map { [$_->where,$_->errtext] } @errors ]);
+    };
+    ok(!@warnings,$url) or warn Dumper([ map { [$_->where,$_->errtext] } @warnings]);
+
+
+}
+
+sub test_logout_ldap {
+    my ($username, $password) = ( new_domain_name(),$$);
+    my $user = create_ldap_user( $username, $password);
+
+    $t->post_ok('/login' => form => {login => $username, password => $password});
+    is($t->tx->res->code(),302);
+
+    $t->ua->get($URL_LOGOUT);
+
+    $t->post_ok('/login' => form => {login => $username, password => 'bigtime'});
+    is($t->tx->res->code(),403);
+
+    $t->post_ok('/login' => form => {login => $username, password => $password});
+    is($t->tx->res->code(),302);
+}
+
 ########################################################################################
 
+$ENV{MOJO_MODE} = 'devel';
 init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
 like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
+
+test_validate_html_local("templates/bootstrap");
+test_validate_html_local("templates/main");
+test_validate_html_local("templates/ng-templates");
 
 if (!rvd_front->ping_backend) {
     diag("SKIPPED: no backend");
@@ -195,15 +301,19 @@ if (!rvd_front->ping_backend) {
     exit;
 }
 
-remove_old_domains_req();
-
 $t = Test::Mojo->new($SCRIPT);
 $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
 my @bases;
 my @clones;
 
+test_logout_ldap();
+
 test_login_fail();
+
+test_validate_html("/login");
+
+remove_old_domains_req();
 
 for my $vm_name (@{rvd_front->list_vm_types} ) {
 
@@ -238,28 +348,37 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
     mojo_request($t, "add_hardware", { id_domain => $base->id, name => 'network' });
     wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
 
+    test_validate_html("/machine/manage/".$base->id.".html");
+
     $t->get_ok("/machine/prepare/".$base->id.".json")->status_is(200);
-    _wait_request(debug => 0, background => 1, check_error => 1);
-    $base = rvd_front->search_domain($name);
-    is($base->is_base,1);
+    for ( 1 .. 10 ) {
+        $base = rvd_front->search_domain($name);
+        last if $base->is_base || !$base->list_requests;
+        _wait_request(debug => 1, background => 1, check_error => 1);
+    }
+    is($base->is_base,1) or next;
 
     is(scalar($base->list_ports),0);
+    mojo_check_login($t);
     $t->get_ok("/machine/clone/".$base->id.".json")->status_is(200);
     _wait_request(debug => 0, background => 1, check_error => 1);
     my $clone = rvd_front->search_domain($name."-".user_admin->name);
     ok($clone,"Expecting clone created") or next;
+    ok($clone->name);
     if ($clone) {
         is($clone->is_volatile,0) or exit;
         is(scalar($clone->list_ports),0);
     }
 
     push @bases, ( $clone );
+    mojo_check_login($t);
     test_copy_without_prepare($clone);
+    mojo_check_login($t);
     test_many_clones($base);
 }
 ok(@bases,"Expecting some machines created");
 remove_machines(@bases);
 _wait_request(background => 1);
-remove_old_domains_req();
+remove_old_domains_req(0); # 0=do not wait for them
 
 done_testing();

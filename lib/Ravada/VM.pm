@@ -441,6 +441,7 @@ sub _around_create_domain {
     my $domain = $self->$orig(%args_create, volatile => $volatile);
     $self->_add_instance_db($domain->id);
     $domain->add_volume_swap( size => $swap )   if $swap;
+    $domain->_data('is_compacted' => 1);
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
@@ -676,11 +677,13 @@ sub display_ip($self, $value=undef) {
 }
 
 sub _set_display_ip($self, $value) {
-    my %ip_address = $self->_list_ip_address();
+    if (defined $value && length $value ) {
+        my %ip_address = $self->_list_ip_address();
 
-    confess "Error: $value is not in any interface in node ".$self->name
-    .". Found ".Dumper(\%ip_address)
-    if !exists $ip_address{$value};
+        confess "Error: $value is not in any interface in node ".$self->name
+        .". Found ".Dumper(\%ip_address)
+        if !exists $ip_address{$value};
+    }
 
     $self->_data( display_ip => $value );
 }
@@ -1127,6 +1130,29 @@ sub list_nodes($self) {
     return @nodes;
 }
 
+=head2 list_bases
+
+Returns a list of domains that are base in this node
+
+=cut
+
+sub list_bases($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT d.id FROM domains d,bases_vm bv"
+        ." WHERE d.is_base=1"
+        ."  AND d.id = bv.id_domain "
+        ."  AND bv.id_vm=?"
+        ."  AND bv.enabled=1"
+    );
+    my @bases;
+    $sth->execute($self->id);
+    while ( my ($id_domain) = $sth->fetchrow ) {
+        push @bases,($id_domain);
+    }
+    $sth->finish;
+    return @bases;
+}
+
 =head2 ping
 
 Returns if the virtual manager connection is available
@@ -1540,6 +1566,7 @@ sub _search_iptables($self, %rule) {
     for my $line (@{$iptables->{$table}}) {
 
         my %args = @$line;
+        $args{s} = "0.0.0.0/0" if !exists $args{s};
         my $match = 1;
         for my $key (keys %rule) {
             $match = 0 if !exists $args{$key} || $args{$key} ne $rule{$key};
@@ -1906,7 +1933,7 @@ sub _list_used_ports_iptables($self, $used_port) {
     for my $rule ( @{$iptables->{nat}} ) {
         my %rule = @{$rule};
         next if !exists $rule{A} || $rule{A} ne 'PREROUTING' || !$rule{dport};
-        $used_port->{$rule{dport}}++;
+        $used_port->{$rule{dport}} = $rule{'to-destination'};
     }
 }
 

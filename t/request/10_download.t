@@ -9,18 +9,23 @@ use Test::More;
 use lib 't/lib';
 use Test::Ravada;
 
-use_ok('Ravada');
-init();
 
 $Ravada::DEBUG=0;
 $Ravada::SECONDS_WAIT_CHILDREN = 1;
 
 ##################################################################
 
+SKIP: {
+if ($>)  {
+    my $msg = "SKIPPED: Test must run as root";
+    skip($msg,10) if $<;
+}
+
+init();
+
 for my $vm_name ('KVM') {
     my $rvd_back = rvd_back();
     my $vm = $rvd_back->search_vm($vm_name);
-    SKIP: {
         my $msg = "SKIPPED: No virtual managers found";
         if ($vm && $vm_name =~ /kvm/i && $>) {
             $msg = "SKIPPED: Test must run as root";
@@ -32,7 +37,7 @@ for my $vm_name ('KVM') {
         ################################################
         #
         # Request for the 1st ISO
-        my $id_iso = 1;
+        my $id_iso = search_id_iso('Alpine');
         my $iso = $vm->_search_iso($id_iso);
 
         if (!$iso->{device}) {
@@ -55,7 +60,7 @@ for my $vm_name ('KVM') {
         ################################################
         #
         # Request for the 2nd ISO
-        $id_iso = 2;
+        $id_iso = search_id_iso('Debian');
         my $iso2 = $vm->_search_iso($id_iso);
         if (!$iso2->{device} || ! -e $iso2->{device}) {
             $msg = "ISO for $iso2->{filename} not downloaded, I won't do it in the tests";
@@ -86,7 +91,8 @@ for my $vm_name ('KVM') {
         is($req2->status, 'done');
         diag($req1->error)  if $req1->error;
         diag($req2->error)  if $req2->error;
-    }
 }
 end();
+
+} # of skip
 done_testing();

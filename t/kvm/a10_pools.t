@@ -4,6 +4,7 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
+use Mojo::JSON qw(decode_json);
 use Test::More;
 
 use lib 't/lib';
@@ -63,7 +64,21 @@ sub create_pool {
     ok(!$@,"Expecting \$@='', got '".($@ or '')."'") or return;
     ok($pool,"Expecting a pool , got ".($pool or ''));
 
+    test_req_list_sp($vm);
     return $pool_name;
+}
+
+sub test_req_list_sp($vm) {
+    my $req = Ravada::Request->list_storage_pools(id_vm => $vm->id , uid => user_admin->id);
+    wait_request();
+    is($req->status,'done');
+    is($req->error,'');
+    my $json_out = $req->output;
+    my $pools = decode_json($json_out);
+    for my $pool ( @$pools ) {
+        like($pool,qr{^[a-z][a-z0-9]+});
+    }
+    ok(scalar @$pools);
 }
 
 sub test_create_domain {

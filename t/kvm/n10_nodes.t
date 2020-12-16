@@ -725,7 +725,7 @@ sub test_clone_not_in_node {
     $domain->prepare_base(user_admin);
     is($domain->base_in_vm($vm->id), 1);
     $domain->set_base_vm(vm => $node, user => user_admin);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     is($domain->base_in_vm($node->id), 1);
 
@@ -978,7 +978,9 @@ sub test_migrate_back($node) {
 
     eval { $clone->migrate($vm) };
     is(''.$@, '');
+    wait_request(debug => 0);
 
+    wait_request(debug => 0);
     for my $file ($clone->list_volumes) {
         my $md5 = _md5($file, $vm);
         my $md5_remote = _md5($file, $node);
@@ -1023,7 +1025,7 @@ sub test_shutdown($node) {
     my $req = Ravada::Request->refresh_vms();
     wait_request(debug => 0);
     is($req->status,'done');
-    is($req->error,'');
+    like($req->error,qr{^($|checked \d+)});
 
     my $clone2 = Ravada::Domain->open($clone->id); #open will clean internal shutdown
     is($clone2->is_active,0) or exit;
@@ -1129,7 +1131,7 @@ clean_remote() if !$>;
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
-for my $vm_name ('KVM', 'Void') {
+for my $vm_name ( vm_names() ) {
 my $vm;
 eval { $vm = rvd_back->search_vm($vm_name) };
 

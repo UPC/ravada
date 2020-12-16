@@ -160,7 +160,10 @@ sub base_filename($self) {
     $dir = $self->vm->dir_base($self->capacity) if $self->vm;
     $name =~ s{\.(SWAP|DATA|TMP)}{};
     $name = $self->domain->name if $self->domain;
-    $extra .= "-".$self->info->{target} if $self->info->{target};
+    if ( $self->info->{target} ) {
+        $name .="-" unless $name =~ /-$/ || $extra =~ /^-/;
+        $extra .= $self->info->{target};
+    }
 
     my $base_img = "$dir/$name$extra.".$self->base_extension;
 

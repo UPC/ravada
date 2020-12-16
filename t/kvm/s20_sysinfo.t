@@ -52,6 +52,12 @@ sub test_sysinfo($domain, $domain_name=$domain->name) {
 
 ###################################################################################3
 
+if ($>)  {
+    diag("SKIPPED: Test must run as root");
+    done_testing();
+    exit;
+}
+
 init();
 clean();
 

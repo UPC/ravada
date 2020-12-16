@@ -63,11 +63,17 @@ sub test_disable_node($vm, $node) {
 }
 
 ##################################################################################
+if ($>)  {
+    diag("SKIPPED: Test must run as root");
+    done_testing();
+    exit;
+}
+
 clean();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
-for my $vm_name ( 'KVM', 'Void') {
+for my $vm_name ( vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
