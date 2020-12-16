@@ -239,10 +239,13 @@ any '/test' => sub {
     my $name_mojo = $c->signed_cookie('mojolicious');
 
     my $dump_log = ''.(Dumper($logged) or '');
-    return $c->render(text => "$count ".($name_mojo or '')."<br> ".$dump_log
+    return $c->render(text => "$count ".($name_mojo or '')."<br> "
+        ."<pre>$dump_log</pre>"
         ."<br>"
-        ."<script>alert(window.screen.availWidth"
-        ."+\" \"+window.screen.availHeight)</script>"
+        ."<h2>session</h2>"
+        ."<pre>".Dumper($c->session)."</pre>"
+        #        ."<script>alert(window.screen.availWidth"
+        #        ."+\" \"+window.screen.availHeight)</script>"
     );
 };
 
@@ -1428,7 +1431,32 @@ post '/ldap/group/remove_member' => sub($c) {
 };
 
 get '/booking' => sub($c) {
-    return $c->render(text => "LDAP not configured") if !$RAVADA->feature('ldap');
+    return $c->render(template => '/ng-templates/error'
+            ,message => "LDAP is required to set up bookings. "
+            ."<a href='https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html'>"
+            ."See how to configure LDAP authentication.</a>"
+    )
+    if !$RAVADA->feature('ldap');
+
+    my @groups = Ravada::Auth::LDAP::search_group( name => '*' );
+    return $c->render(template => '/ng-templates/error'
+        ,message => "LDAP groups are required to set up bookings. No groups found. <a href='/group/new'>Add new entries here.</a>"
+    ) if !@groups;
+
+    my @members_found;
+
+    for my $group (@groups) {
+        @members_found = $group->get_value('memberUid');
+        last if @members_found;
+    }
+
+    if (!@members_found) {
+        return $c->render(template => '/ng-templates/error'
+            ,message => "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+        )
+
+    }
+
     return $c->render(template => '/ng-templates/booking/calendar');
 };
 
