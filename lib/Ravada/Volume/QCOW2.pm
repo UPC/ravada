@@ -118,7 +118,8 @@ sub rebase($self, $new_base) {
         ,'-F',$base_format
         ,'-b',$new_base,$self->file);
     my ($out, $err) = $self->vm->run_command(@cmd);
-    confess $err if $err;
+    confess $err if $err && $err !~ /Failed to get write lock/;
+    warn "Warning: $err" if $err;
 
 }
 
