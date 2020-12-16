@@ -241,6 +241,17 @@ sub _update_isos {
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
                 ,sha256_url => '$url/SHA256SUMS'
         },
+        ubuntu_xenial => {
+                    name => 'Ubuntu Xenial Xerus 64 bits'
+            ,description => 'Ubuntu 16.04 LTS Xenial Xerus 64 bits'
+                   ,arch => 'amd64'
+                    ,xml => 'xenial64-amd64.xml'
+             ,xml_volume => 'xenial64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/16.04/ubuntu-16.04.*-desktop-amd64.iso'
+                ,sha256_url => '$url/SHA256SUMS'
+                ,min_disk_size => '10'
+        },
+
         mate_xenial => {
                     name => 'Ubuntu Mate Xenial'
             ,description => 'Ubuntu Mate 16.04.3 (Xenial) 64 bits'
@@ -429,7 +440,7 @@ sub _update_isos {
             ,description => 'Xubuntu 16.04 Xenial Xerus 64 bits (LTS)'
             ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.*/release/'
             ,file_re => 'lubuntu-16.04.*-desktop-amd64.iso'
-            ,md5_url => '$url/MD5SUMS'
+            ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
             ,min_disk_size => '10'
