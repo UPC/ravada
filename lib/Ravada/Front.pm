@@ -733,7 +733,9 @@ sub list_bases_network($self, $id_network) {
     $sth->execute;
     my $default = $sth->fetchrow_hashref();
     $sth->finish;
-
+    lock_hash(%$default);
+    warn "Warning: all_domains and no_domains both true for default network ".Dumper($default)
+    if $default->{all_domains} && $default->{no_domains};
 
     my $sth_nd = $CONNECTOR->dbh->prepare("SELECT id,allowed,anonymous FROM domains_network"
             ." WHERE id_domain=? AND id_network=? "
@@ -744,15 +746,17 @@ sub list_bases_network($self, $id_network) {
     $sth->execute();
     my @bases;
     while (my $row = $sth->fetchrow_hashref) {
-        $row->{anonymous} = ( $default->{anonymous} or 0);
 
         $sth_nd->execute($row->{id}, $id_network);
         my ($id,$allowed, $anonymous) = $sth_nd->fetchrow;
-        $row->{anonymous} = $anonymous  if defined $anonymous;
+
+        $row->{anonymous} = ( $anonymous or 0);
+
         if (defined $allowed) {
             $row->{allowed} = $allowed;
         } else {
-            $row->{allowed} = 1;
+            $row->{allowed} = $default->{all_domains};
+            $row->{allowed} = 0 if $default->{no_domains};
         }
 
         lock_hash(%$row);
@@ -1351,6 +1355,7 @@ sub setting($self, $name, $new_value=undef) {
             "UPDATE settings set value=? WHERE id=? "
         );
         $sth_update->execute($new_value,$id);
+        return $new_value;
     }
     return $value;
 }

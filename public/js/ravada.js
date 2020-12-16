@@ -206,7 +206,7 @@
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
             var subscribed_extra = false;
-            subscribe_machine_info= function(url) {
+            var subscribe_machine_info= function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('machine_info/'+$scope.showmachineId) };
                 ws.onmessage = function(event) {
@@ -232,7 +232,7 @@
                 });
             };
 
-            subscribe_requests = function(url) {
+            var subscribe_requests = function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_requests') };
                 ws.onclose = function() {
@@ -280,7 +280,7 @@
                     });
                 }
             };
-            _select_new_base = function() {
+            var _select_new_base = function() {
                 if(typeof($scope.new_base) != 'undefined'
                     || typeof($scope.showmachine) == 'undefined'
                     || typeof($scope.bases) == 'undefined'
@@ -300,7 +300,7 @@
                 $scope.current_base = $scope.new_base;
             };
 
-            subscribe_bases = function(url, type) {
+            var subscribe_bases = function(url, type) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_bases') };
                 ws.onmessage = function(event) {
