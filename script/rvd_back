@@ -32,6 +32,7 @@ my $FILE_CONFIG;
 
 my $ADD_USER_LDAP;
 my $ADD_GROUP_LDAP;
+my $RM_GROUP_LDAP;
 my $ADD_USER_GROUP;
 my $REMOVE_USER;
 my $IMPORT_DOMAIN;
@@ -75,6 +76,7 @@ my $USAGE = "$0 "
         ." --add-user-ldap : adds a new LDAP user\n"
         ." --remove-user : removes a db user\n"
         ." --add-group-ldap : creates a new LDAP group\n"
+        ." --remove-group-ldap : removes a LDAP group\n"
         ." --add-user-group : adds user to a LDAP group\n"
         ." --change-password : changes the password of an user\n"
         ." --import-domain : import a domain\n"
@@ -129,6 +131,7 @@ GetOptions (       help => \$help
       ,'change-password'=> \$CHANGE_PASSWORD
       ,'add-user-ldap=s'=> \$ADD_USER_LDAP
      ,'add-group-ldap=s'=> \$ADD_GROUP_LDAP
+  ,'remove-group-ldap=s'=> \$RM_GROUP_LDAP
      ,'add-user-group=s'=> \$ADD_USER_GROUP
 
       ,'import-domain=s' => \$IMPORT_DOMAIN
@@ -308,6 +311,21 @@ sub add_group_ldap {
     Ravada::Auth::LDAP::_init_ldap_admin();
     Ravada::Auth::LDAP::add_group($login);
 }
+
+sub remove_group_ldap {
+    my $login = shift;
+
+    my $ravada = Ravada->new( %CONFIG);
+    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    my $group = Ravada::Auth::LDAP::search_group( name => $login )
+        or die "Error: LDAP group '$login' not found\n";
+
+    $group->delete()->update($ldap);
+
+    print "LDAP group ".$group->dn." removed.\n";
+    exit 0;
+}
+
 
 sub add_user_group {
     my $ravada = shift;
@@ -785,6 +803,7 @@ my $rvd_back = Ravada->new(%CONFIG);
 add_user($ADD_USER)                 if $ADD_USER;
 add_user_ldap($ADD_USER_LDAP)       if $ADD_USER_LDAP;
 add_group_ldap($ADD_GROUP_LDAP)     if $ADD_GROUP_LDAP;
+remove_group_ldap($RM_GROUP_LDAP)   if $RM_GROUP_LDAP;
 add_user_group($rvd_back, $ADD_USER_GROUP)     if $ADD_USER_GROUP;
 remove_user($REMOVE_USER)           if $REMOVE_USER;
 change_password()                   if $CHANGE_PASSWORD;
