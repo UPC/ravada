@@ -1514,6 +1514,7 @@ sub _sql_insert_defaults($self){
             ,{
                 id_parent => $id_backend
                 ,name => 'time_zone'
+                ,value => _default_time_zone()
             }
             ,{
                 id_parent => $id_backend

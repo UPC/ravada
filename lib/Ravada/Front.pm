@@ -1355,6 +1355,7 @@ sub setting($self, $name, $new_value=undef) {
             "UPDATE settings set value=? WHERE id=? "
         );
         $sth_update->execute($new_value,$id);
+        return $new_value;
     }
     return $value;
 }
