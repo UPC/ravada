@@ -64,6 +64,7 @@ sub _clean_machines_info($machines) {
 }
 
 sub list_machines($t) {
+    mojo_check_login($t);
     $t->websocket_ok("/ws/subscribe")->send_ok("list_machines")->message_ok->finish_ok;
 
     return if !$t->message || !$t->message->[1];
@@ -318,13 +319,14 @@ if (!rvd_front->ping_backend()) {
 
 $TZ = DateTime::TimeZone->new(name => rvd_front->settings_global()->{backend}->{time_zone}->{value});
 
+remove_old_domains_req(0); # 0=do not wait for them
 mojo_clean();
 
 my @bookings = Ravada::Booking::bookings_range(
         time_start => _now()->add(seconds => 1)->hms
 );
 
-die "Error: bookings scheduled for today will spoil tests ".Dumper(\@bookings)
+warn "Warning: bookings scheduled for today may spoil tests ".Dumper(\@bookings)
 if @bookings;
 
 
@@ -358,5 +360,6 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     }
 }
 mojo_clean($t);
+remove_old_domains_req(0); # 0=do not wait for them
 
 done_testing();
