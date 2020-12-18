@@ -5,4 +5,4 @@
 
 **Bugfixes**
 
-- Fix LDAP logout [\#1465]
+- Failed to get write lock [\#1466]
