@@ -87,6 +87,7 @@ sub test_bases($t, $bases) {
     for my $base ( @$bases ) {
         $t->get_ok("/machine/prepare/".$base->id.".json")->status_is(200);
         wait_request(debug => 0, background => 1);
+        mojo_check_login($t);
         $n_bases++;
         my @machines_user = list_machines_user($t);
         is(@machines_user, $n_bases, Dumper(\@machines_user)) or exit;
@@ -180,6 +181,7 @@ if (!rvd_front->ping_backend()) {
     done_testing();
     exit;
 }
+remove_old_domains_req(0);
 mojo_clean();
 
 $USERNAME = user_admin->name;

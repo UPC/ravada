@@ -659,6 +659,7 @@ $MOJO_USER = $user;
 }
 
 sub mojo_create_domain($t, $vm_name) {
+    mojo_check_login($t);
     my $name = new_domain_name()."-".$vm_name;
     $t->post_ok('/new_machine.html' => form => {
             backend => $vm_name
