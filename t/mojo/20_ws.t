@@ -81,6 +81,7 @@ sub _create_bases($t, $vm_name) {
 }
 
 sub test_bases($t, $bases) {
+    mojo_check_login($t);
     my $n_bases = 0;
     my $n_machines = scalar(@$bases);
     for my $base ( @$bases ) {

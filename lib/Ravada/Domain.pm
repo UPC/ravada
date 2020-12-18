@@ -1282,6 +1282,7 @@ sub open($class, @args) {
     die "ERROR: Domain not found id=$id\n"
         if !keys %$row;
 
+    my $vm_changed;
     if (!$vm && ( $id_vm || defined $row->{id_vm} ) ) {
         eval {
             $vm = Ravada::VM->open(id => ( $id_vm or $row->{id_vm} )
@@ -1290,6 +1291,7 @@ sub open($class, @args) {
         warn $@ if $@;
         if ($@ && $@ =~ /I can't find VM id=/) {
             $vm = Ravada::VM->open( type => $self->type );
+            $vm_changed = $vm;
         }
     }
     my $vm_local;
@@ -1299,6 +1301,7 @@ sub open($class, @args) {
         bless $vm_local, $vm_class;
 
         $vm = $vm_local->new( );
+        $vm_changed = $vm;
     }
     my $domain;
     eval { $domain = $vm->search_domain($row->{name}, $force) };
@@ -1311,9 +1314,10 @@ sub open($class, @args) {
 
         $vm = $vm_local->new();
         $domain = $vm->search_domain($row->{name}, $force) or return;
-        $domain->_data(id_vm => $vm->id);
+        $vm_changed = $vm;
     }
     $domain->_insert_db_extra() if $domain && !$domain->is_known_extra();
+    $domain->_data('id_vm' => $vm_changed->id) if $vm_changed;
     return $domain;
 }
 
@@ -3106,7 +3110,10 @@ sub _remove_iptables {
         push @{$rule{$id_vm}},[ $id, $iptables ];
     }
     for my $id_vm (keys %rule) {
-        my $vm = Ravada::VM->open($id_vm);
+        my $vm;
+        eval { $vm = Ravada::VM->open($id_vm) };
+        next if !$vm || $@ =~ /can't find VM/i;
+        die $@ if $@;
         for my $entry (@ {$rule{$id_vm}}) {
             my ($id, $iptables) = @$entry;
             $self->_delete_ip_rule($iptables, $vm) if !$>;
