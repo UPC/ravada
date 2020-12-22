@@ -559,7 +559,7 @@ sub _set_driver_raw($domain) {
         my ($driver) = $disk->findnodes('driver');
         $driver->setAttribute(type => 'raw');
     }
-    $domain->_post_change_hardware($doc);
+    $domain->reload_config($doc);
 }
 
 sub test_driver_qcow($domain) {
@@ -652,7 +652,7 @@ sub _create_domain_no_backing_store($vm) {
     my $standalone = create_domain($vm);
     $standalone->add_volume(type => 'TMP' , format => 'raw' ,size => 1024 * 10);
     my $doc = _remove_backing_store($standalone->domain->get_xml_description);
-    $standalone->_post_change_hardware($doc);
+    $standalone->reload_config($doc);
     _check_no_backing_store($standalone->domain->get_xml_description, $standalone->name);
 
     # base XML has no backingStore entries
@@ -674,7 +674,7 @@ sub _create_domain_no_backing_store($vm) {
     # clone has a <backingStore/>
     my $clone = $base->clone(name => new_domain_name, user => user_admin);
     my $clone_doc = _empty_backing_store($clone->domain->get_xml_description);
-    $clone->_post_change_hardware($clone_doc);
+    $clone->reload_config($clone_doc);
     _check_empty_backing_store($clone_doc->toString, $clone->name );
 
     my $removed_base = create_domain($vm);

@@ -206,13 +206,9 @@ around 'is_hibernated' => \&_around_is_hibernated;
 
 around 'autostart' => \&_around_autostart;
 
-before 'set_controller' => \&_pre_change_hardware;
-before 'remove_controller' => \&_pre_change_hardware;
-before 'change_hardware' => \&_pre_change_hardware;
-
-after 'set_controller' => \&_post_change_hardware;
-after 'remove_controller' => \&_post_change_hardware;
-after 'change_hardware' => \&_post_change_hardware;
+around 'set_controller' => \&_around_change_hardware;
+around 'remove_controller' => \&_around_change_hardware;
+around 'change_hardware' => \&_around_change_hardware;
 
 around 'name' => \&_around_name;
 
@@ -4673,10 +4669,28 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     }
     $self->info(Ravada::Utils::user_daemon) if $self->is_known();
 
-    $self->_remove_domain_cascade(Ravada::Utils::user_daemon,1)
-    if $self->is_known() && !$self->is_base;
-
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
+}
+
+sub _around_change_hardware($orig, $self, @args) {
+
+    my $vm_orig = $self->_vm;
+
+    $self->$orig(@args);
+    my %changed = ( $self->_vm->id => 1 );
+    for my $instance ( $self->list_instances ) {
+        next if $changed{$instance->{id_vm}}++;
+
+        if ($self->_vm->id != $instance->{id_vm}) {
+            my $vm = Ravada::VM->open($instance->{id_vm});
+            $self->_set_vm($vm, 1);
+        }
+
+        $self->$orig(@args);
+    }
+    $self->_set_vm($vm_orig, 1) if $vm_orig->id != $self->_vm->id;
+    $self->_post_change_hardware(@args);
+
 }
 
 =head2 Access restrictions

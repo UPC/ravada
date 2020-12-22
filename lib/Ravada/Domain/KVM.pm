@@ -547,7 +547,7 @@ sub _set_volumes_backing_store($self) {
 
         }
     }
-    $self->_post_change_hardware($doc);
+    $self->reload_config($doc);
 }
 
 
@@ -617,7 +617,7 @@ sub _detect_disks_driver($self) {
         $driver->setAttribute(type => $format) if defined $format;
     }
 
-    $self->_post_change_hardware($doc);
+    $self->reload_config($doc);
 }
 
 sub post_resume_aux($self, %args) {
@@ -2010,8 +2010,7 @@ sub _remove_device($self, $index, $device, $attribute_name=undef, $attribute_val
         if( $ind++==$index ){
             $devices->removeChild($controller);
             $self->_vm->connect if !$self->_vm->vm;
-            my $new_domain = $self->_vm->vm->define_domain($doc->toString);
-            $self->domain($new_domain);
+            $self->reload_config($doc);
             return;
         }
     }
@@ -2218,7 +2217,7 @@ sub _change_hardware_disk_file($self, $index, $file) {
         $disk->removeChild($source);
     }
 
-    $self->_post_change_hardware($doc);
+    $self->reload_config($doc);
 }
 
 sub _search_device_xml($self, $doc, $device, $index) {
@@ -2249,7 +2248,7 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
     }
     confess "Error: disk $index not found in ".$self->name if !$changed;
 
-    $self->_post_change_hardware($doc);
+    $self->reload_config($doc);
 }
 
 
@@ -2266,7 +2265,7 @@ sub _change_hardware_vcpus($self, $index, $data) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
     my ($vcpus) = ($doc->findnodes('/domain/vcpu/text()'));
     $vcpus->setData($n_virt_cpu);
-    $self->_post_change_hardware($doc);
+    $self->reload_config($doc);
 
 }
 
@@ -2331,12 +2330,12 @@ sub _change_hardware_network($self, $index, $data) {
 
     die "Error: interface $index not found in ".$self->name if !$changed;
 
-    $self->_post_change_hardware($doc);
+    $self->reload_config($doc);
 }
 
 
 
-sub _post_change_hardware($self, $doc) {
+sub reload_config($self, $doc) {
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
     $self->info(Ravada::Utils::user_daemon);
@@ -2449,7 +2448,7 @@ sub _remove_backingstore($self, $file) {
         my ($backingstore) = $disk->findnodes('backingStore');
         $disk->removeChild($backingstore) if $backingstore;
     }
-    $self->_post_change_hardware($doc);
+    $self->reload_config($doc);
 }
 
 1;
