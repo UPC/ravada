@@ -7,7 +7,8 @@ use Test::More;
 use lib 't/lib';
 use Test::Ravada;
 
-use_ok('Ravada');
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 my $RVD_BACK = rvd_back();
 
@@ -187,6 +188,17 @@ sub touch_mtime {
 
 }
 
+sub test_vm_removed($vm) {
+    my $domain = create_domain($vm);
+    $domain->_data(id_vm => -1 );
+
+    my $domain2 = rvd_back->search_domain_by_id($domain->id);
+
+    $domain2->check_status();
+
+    isnt($domain2->_data('id_vm'), -1);
+}
+
 #######################################################################33
 
 
@@ -220,6 +232,8 @@ for my $vm_name (@VMS) {
         test_remove_domain($vm_name);
         test_remove_domain_base($vm_name);
         test_dont_remove_father($vm_name);
+
+        test_vm_removed($vm);
     }
 }
 

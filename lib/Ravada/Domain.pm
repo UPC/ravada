@@ -206,13 +206,9 @@ around 'is_hibernated' => \&_around_is_hibernated;
 
 around 'autostart' => \&_around_autostart;
 
-before 'set_controller' => \&_pre_change_hardware;
-before 'remove_controller' => \&_pre_change_hardware;
-before 'change_hardware' => \&_pre_change_hardware;
-
-after 'set_controller' => \&_post_change_hardware;
-after 'remove_controller' => \&_post_change_hardware;
-after 'change_hardware' => \&_post_change_hardware;
+around 'set_controller' => \&_around_change_hardware;
+around 'remove_controller' => \&_around_change_hardware;
+around 'change_hardware' => \&_around_change_hardware;
 
 around 'name' => \&_around_name;
 
@@ -1282,6 +1278,7 @@ sub open($class, @args) {
     die "ERROR: Domain not found id=$id\n"
         if !keys %$row;
 
+    my $vm_changed;
     if (!$vm && ( $id_vm || defined $row->{id_vm} ) ) {
         eval {
             $vm = Ravada::VM->open(id => ( $id_vm or $row->{id_vm} )
@@ -1290,6 +1287,7 @@ sub open($class, @args) {
         warn $@ if $@;
         if ($@ && $@ =~ /I can't find VM id=/) {
             $vm = Ravada::VM->open( type => $self->type );
+            $vm_changed = $vm;
         }
     }
     my $vm_local;
@@ -1299,6 +1297,7 @@ sub open($class, @args) {
         bless $vm_local, $vm_class;
 
         $vm = $vm_local->new( );
+        $vm_changed = $vm;
     }
     my $domain;
     eval { $domain = $vm->search_domain($row->{name}, $force) };
@@ -1311,9 +1310,10 @@ sub open($class, @args) {
 
         $vm = $vm_local->new();
         $domain = $vm->search_domain($row->{name}, $force) or return;
-        $domain->_data(id_vm => $vm->id);
+        $vm_changed = $vm;
     }
     $domain->_insert_db_extra() if $domain && !$domain->is_known_extra();
+    $domain->_data('id_vm' => $vm_changed->id) if $vm_changed;
     return $domain;
 }
 
@@ -3106,7 +3106,10 @@ sub _remove_iptables {
         push @{$rule{$id_vm}},[ $id, $iptables ];
     }
     for my $id_vm (keys %rule) {
-        my $vm = Ravada::VM->open($id_vm);
+        my $vm;
+        eval { $vm = Ravada::VM->open($id_vm) };
+        next if !$vm || $@ =~ /can't find VM/i;
+        die $@ if $@;
         for my $entry (@ {$rule{$id_vm}}) {
             my ($id, $iptables) = @$entry;
             $self->_delete_ip_rule($iptables, $vm) if !$>;
@@ -4666,10 +4669,28 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     }
     $self->info(Ravada::Utils::user_daemon) if $self->is_known();
 
-    $self->_remove_domain_cascade(Ravada::Utils::user_daemon,1)
-    if $self->is_known() && !$self->is_base;
-
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
+}
+
+sub _around_change_hardware($orig, $self, @args) {
+
+    my $vm_orig = $self->_vm;
+
+    $self->$orig(@args);
+    my %changed = ( $self->_vm->id => 1 );
+    for my $instance ( $self->list_instances ) {
+        next if $changed{$instance->{id_vm}}++;
+
+        if ($self->_vm->id != $instance->{id_vm}) {
+            my $vm = Ravada::VM->open($instance->{id_vm});
+            $self->_set_vm($vm, 1);
+        }
+
+        $self->$orig(@args);
+    }
+    $self->_set_vm($vm_orig, 1) if $vm_orig->id != $self->_vm->id;
+    $self->_post_change_hardware(@args);
+
 }
 
 =head2 Access restrictions

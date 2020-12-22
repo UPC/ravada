@@ -1170,7 +1170,61 @@ sub test_migrate_req($vm, $node) {
     is($domain3->_data('id_vm'), $node->id);
     is($domain3->_vm->id, $node->id);
 
+    test_change_hardware($vm, $node, $domain);
+
     $domain->remove(user_admin);
+}
+
+sub _migrate($domain, $node,$active) {
+    return if $domain->_data('id_vm') == $node->id
+    && $domain->is_active() == $active;
+
+    my $req = Ravada::Request->migrate(
+        id_domain => $domain->id
+        , id_node => $node->id
+        , uid => user_admin->id
+        , start => $active
+        , shutdown => 1
+        , shutdown_timeout => 10
+        , remote_ip => '1.2.2.34'
+        , retry => 10
+    );
+    for ( 1 .. 30 ) {
+        wait_request( debug => 0, check_error => 0);
+        last if $req->status eq 'done';
+        sleep 1;
+    }
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    die "Error: domain ".$domain2->name." should be in node ".$node->name
+    .". It is in ".$domain2->_vm->name
+    if $node->id != $domain2->_vm->id;
+
+    die "Error: domain ".$domain2->name." should be active=$active, got ".$domain2->is_active
+    if $domain2->is_active != $active;
+}
+
+sub test_change_hardware($vm, $node, $domain, $active = 0) {
+    _migrate($domain, $node, $active);
+
+    my $mem = $domain->info(user_admin)->{memory};
+
+    my $new_mem = int($mem*0.9)-1;
+
+    my $req1 = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware => 'memory'
+        ,data => { memory => $new_mem }
+    );
+
+    wait_request(debug => 1);
+    is($req1->status, 'done');
+    is($req1->error, '');
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    is($domain2->_data('id_vm'), $domain->_data('id_vm')) or exit;
+
 }
 
 sub _get_backing_files($volume0) {

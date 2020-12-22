@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use HTML::Lint;
 use Test::More;
@@ -45,6 +46,8 @@ sub _wait_request(@args) {
 
 sub login( $user=$USERNAME, $pass=$PASSWORD ) {
     $t->ua->get($URL_LOGOUT);
+
+    confess "Error: missing user" if !defined $user;
 
     $t->post_ok('/login' => form => {login => $user, password => $pass});
     like($t->tx->res->code(),qr/^(200|302)$/);
@@ -143,7 +146,7 @@ sub test_login_fail {
     $t->get_ok("/admin/machines")->status_is(401);
     is($t->tx->res->dom->at("button#submit")->text,'Login') or exit;
 
-    login();
+    login( user_admin->name, "$$ $$");
 
     $t->post_ok('/login' => form => {login => "fail", password => 'bigtime'});
     is($t->tx->res->code(),403);
@@ -321,6 +324,8 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
 
     my $name = new_domain_name()."-".$vm_name;
     remove_machines($name,"$name-".user_admin->name);
+
+    $name .= "-".$$;
 
     _init_mojo_client();
 
