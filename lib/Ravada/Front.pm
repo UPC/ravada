@@ -218,7 +218,7 @@ sub list_machines($self, $user, @filter) {
     return [sort { $a->{name} cmp $b->{name} } values %uniq];
 }
 
-sub init_available_actions($user, $m) {
+sub _init_available_actions($user, $m) {
   eval { $m->{can_shutdown} = $user->can_shutdown($m->{id}) };
 
   $m->{can_start} = 0;
@@ -240,7 +240,7 @@ sub init_available_actions($user, $m) {
 sub _around_list_machines($orig, $self, $user, @filter) {
     my $machines = $self->$orig($user, @filter);
     for my $m (@$machines) {
-        init_available_actions($user, $m);
+        _init_available_actions($user, $m);
         $m->{id_base} = undef if !exists $m->{id_base};
         lock_hash(%$m);
     }
@@ -721,6 +721,14 @@ sub list_users($self,$name=undef) {
     return \@users;
 }
 
+
+=head2 list_bases_network
+
+Returns a reference to a list to all the bases in a network
+
+    my $list = $rvd_front->list_bases_network($id_network);
+
+=cut
 
 sub list_bases_network($self, $id_network) {
     my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM networks where name = 'default'");

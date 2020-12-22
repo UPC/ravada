@@ -1633,7 +1633,7 @@ sub info($self, $user) {
     $info->{cdrom} = \@cdrom;
     $info->{requests} = $self->list_requests();
 
-    Ravada::Front::init_available_actions($user, $info);
+    Ravada::Front::_init_available_actions($user, $info);
 
     return $info;
 }
@@ -4236,7 +4236,7 @@ sub _check_all_parents_in_node($self, $vm) {
         last if !$base->id_base;
         $base = Ravada::Domain->open($base->id_base);
         push @bases,($base) if !$base->base_in_vm($vm->id)
-        || !$base->base_files_in_vm($vm);
+        || !$base->_base_files_in_vm($vm);
     }
     return 1 if !@bases;
     my $req;
@@ -4379,7 +4379,7 @@ sub base_in_vm($self,$id_vm) {
 
 }
 
-sub base_files_in_vm($self,$vm) {
+sub _base_files_in_vm($self,$vm) {
     $vm = Ravada::VM->open($vm) if !ref($vm);
     for my $file ($self->list_files_base) {
         return 0 if !$vm->file_exists($file);
@@ -5382,6 +5382,19 @@ sub _domain_in_nodes($self) {
     return $self->list_instances > 1;
 }
 
+=head2 compact
+
+Compact volumes of a virtual machine. It creates a backup copy unless
+specified in the request.
+
+    $domain->compact();
+
+    $comain->compact($request);
+
+Usually called through Ravada::Request->compact();
+
+=cut
+
 sub compact($self, $request=undef) {
     #first check if active, that will trigger status refresh
     die "Error: ".$self->name." can't be compacted because it is active\n"
@@ -5414,6 +5427,13 @@ sub compact($self, $request=undef) {
 
     $self->_data('has_backups' => $self->_data('has_backups') +1 ) if $keep_backup;
 }
+
+=head2 purge
+
+Purges old backup volumes of a virtual machine
+
+=cut
+
 
 sub purge($self, $request=undef) {
     my $vm = $self->_vm->new ( host => 'localhost' );

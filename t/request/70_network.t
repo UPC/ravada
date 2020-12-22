@@ -17,7 +17,7 @@ init();
 
 ############################################################
 sub test_list_nats($vm) {
-
+    return if $<;
     my @exp_nat =   grep { defined $_ && !/^Name$/ }
                     map { /^\s+(\w+)\s*/; $1 }
                     split /\n/,`virsh net-list`;
