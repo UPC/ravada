@@ -440,7 +440,8 @@ sub _login_bind {
     for my $user (@user) {
         my $dn = $user->dn;
         $found++;
-        my $ldap = _connect_ldap($dn, $password);
+        my $ldap;
+        eval { $ldap = _connect_ldap($dn, $password) };
         if ( $ldap ) {
             $self->{_auth} = 'bind';
             $self->{_ldap_entry} = $user;
