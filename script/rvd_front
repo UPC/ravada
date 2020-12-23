@@ -1680,6 +1680,8 @@ sub quick_start {
             $c->session('login' => $login);
         } else {
             push @error,("Access denied");
+            logout($c);
+            return login($c);
         }
     }
     if ( $c->param('submit') && _logged_in($c) && defined $id_base ) {
