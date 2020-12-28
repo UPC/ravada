@@ -958,6 +958,11 @@ sub _add_indexes_generic($self) {
             "index(date_changed)"
             ,"index(id_base):id_base_index"
         ]
+        ,domain_displays => [
+            "unique(id_domain,n_order)"
+            ,"unique(id_domain,type)"
+            ,"unique(id_domain,port)"
+        ]
         ,requests => [
             "index(status,at_time)"
             ,"index(id,date_changed,status,at_time)"
@@ -1359,6 +1364,20 @@ sub _sql_create_tables($self) {
     my $created = 0;
     my $driver = lc($CONNECTOR->dbh->{Driver}{Name});
     my %tables = (
+        domain_displays => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain => 'integer NOT NULL references domain(id)'
+            ,port => 'char(5) not null'
+            ,ip => 'varchar(254)'
+            ,display => 'varchar(200)'
+            ,listen_ip => 'varchar(254)'
+            ,type => 'char(20) not null'
+            ,is_active => 'integer NOT NULL default 0'
+            ,n_order => 'integer NOT NULL'
+            ,password => 'char(32)'
+            ,extra => 'TEXT'
+        }
+        ,
         settings => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             , id_parent => 'INT NOT NULL'
