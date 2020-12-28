@@ -59,7 +59,9 @@ sub _set_display($self, $listen_ip=$self->_vm->listen_ip) {
     $listen_ip=$self->_vm->listen_ip if !$listen_ip;
     #    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
     my $display="void://$listen_ip:5990/";
-    my $display_data = { display => $display , type => 'void', ip => $listen_ip, port => 5990 };
+    my $display_data = { display => $display , type => 'void', ip => $listen_ip, port => 5990
+        , xistorra => 1
+    };
     $self->_store( display => $display_data );
     return $display_data;
 }
