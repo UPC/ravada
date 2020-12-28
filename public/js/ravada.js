@@ -512,17 +512,21 @@
                   $scope.show_new_disk = true;
                   return;
               }
+
               if ( hardware == 'disk' && extra.device == 'cdrom') {
                   extra.driver = 'ide';
               }
-              $http.post('/machine/hardware/add/'
-                      , JSON.stringify({ 'id_domain': $scope.showmachine.id
-                            ,'hardware': hardware
+
+              if (hardware == 'display' && ! extra) {
+                  $scope.show_new_display = true;
+                  return;
+              }
+              $scope.request('add_hardware'
+                      , { 'id_domain': $scope.showmachine.id
+                            ,'name': hardware
                             ,'number': number
                             ,'data': extra
                       })
-              ).then(function(response) {
-                      });
           };
           $scope.remove_hardware = function(hardware, index, item, confirmation) {
             if (hardware == 'disk') {
