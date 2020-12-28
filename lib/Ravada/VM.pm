@@ -452,6 +452,14 @@ sub _around_create_domain {
             delete @port{'id','id_domain','public_port'};
             $domain->expose(%port);
         }
+        my $displays = $base->_get_controller_display();
+        for my $display (@$displays) {
+            delete $display->{id};
+            delete $display->{id_domain};
+            $display->{is_active} = 0;
+            $domain->_store_display($display);
+        }
+
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
     $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones());
@@ -1913,6 +1921,13 @@ sub _list_used_ports_sql($self, $used_port) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT public_port FROM domain_ports ");
     $sth->execute();
     my $port;
+    $sth->bind_columns(\$port);
+
+    while ($sth->fetch ) { $used_port->{$port}++ if defined $port };
+
+    # do not use ports in displays
+    $sth = $$CONNECTOR->dbh->prepare("SELECT port FROM domain_displays ");
+    $sth->execute();
     $sth->bind_columns(\$port);
 
     while ($sth->fetch ) { $used_port->{$port}++ if defined $port };
