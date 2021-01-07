@@ -3924,6 +3924,7 @@ sub _cmd_migrate($self, $request) {
         }
     }
 
+    $self->_remove_unnecessary_downs($domain);
     $domain->migrate($node, $request);
 
     my @remote_ip;
