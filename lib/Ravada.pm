@@ -642,6 +642,47 @@ sub _scheduled_fedora_releases($self,$data) {
     }
 }
 
+sub _add_domain_drivers_display($self) {
+    my %data = (
+        'KVM' => [
+            'spice'
+            ,'vnc'
+            ,'x2go'
+            ,{name => 'Windows RDP', value => 'rdp'}
+        ]
+        ,'Void' => [
+            'void'
+            ,'spice'
+        ]
+    );
+
+    my $id_type = Ravada::Utils::max_id($CONNECTOR->dbh, 'domain_drivers_types')+1;
+    my $id_option = Ravada::Utils::max_id($CONNECTOR->dbh, 'domain_drivers_options');
+    for my $vm ( keys %data) {
+        my $type = {
+            id => $id_type
+            ,name => 'display'
+            ,description => 'Display'
+            ,vm => $vm
+        };
+
+        $self->_update_table('domain_drivers_types','name,vm',$type)
+            and do {
+            for my $option ( @{$data{$vm}} ) {
+                if (!ref($option)) {
+                    $option = { name => $option
+                        ,value => $option
+                    };
+                    $option->{id_driver_type} = $id_type;
+                    $option->{id} = ++$id_option;
+                    $self->_update_table('domain_drivers_options','id_driver_type,name',$option)
+                }
+            }
+            $id_type++;
+        };
+    }
+}
+
 sub _update_domain_drivers_types($self) {
 
     my $data = {
@@ -685,6 +726,32 @@ sub _update_domain_drivers_types($self) {
 
     };
     $self->_update_table('domain_drivers_types','id',$data);
+    my $id = Ravada::Utils::max_id($CONNECTOR->dbh, 'domain_drivers_types');
+    my $id_option = Ravada::Utils::max_id($CONNECTOR->dbh, 'domain_drivers_options');
+    my $data_options;
+    for my $item (keys %$data) {
+        unlock_hash(%{$data->{$item}});
+        $data->{$item}->{id} = ++$id;
+        $data->{$item}->{vm} = 'Void';
+
+        $id_option++;
+        $data_options->{"$item.on"} = {
+            id => $id_option
+            ,id_driver_type => $id
+            ,name => "$item.on"
+            ,value => "compression=on"
+        };
+        $id_option++;
+        $data_options->{"$item.off"} = {
+            id => $id_option
+            ,id_driver_type => $id
+            ,name => "$item.off"
+            ,value => "compression=off"
+        };
+
+    }
+    $self->_update_table('domain_drivers_types','name,vm',$data)
+        and $self->_update_table('domain_drivers_options','id_driver_type,name',$data_options);
 
     my $sth = $CONNECTOR->dbh->prepare(
         "UPDATE domain_drivers_types SET vm='KVM' WHERE vm='qemu'"
@@ -873,18 +940,41 @@ sub _update_domain_drivers_options_disk($self) {
     $self->_update_table('domain_drivers_options','id',\%data);
 }
 
-sub _update_table($self, $table, $field, $data, $verbose=0) {
+sub _sth_search($table, $field) {
+    my $sth_search;
+    if ($field =~ /,/) {
+        my $where = join( ' AND ', map { "$_=?" } split /,/,$field);
+        $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $where");
+    } else {
+        $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $field = ?");
+    }
+    return $sth_search;
+}
 
-    my $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $field = ?");
+sub _sth_values($row, $field) {
+    lock_hash(%$row);
+    my @ret;
+    for my $item (split /,/,$field) {
+        push @ret,($row->{$item})
+    }
+    return @ret;
+}
+
+sub _update_table($self, $table, $field, $data, $verbose=0) {
+    my ($first) = %$data;
+    $data = { entry => $data } if !ref($data->{$first});
+
+    my $changed = 0;
+    my $sth_search = _sth_search($table,$field);
     for my $name (sort keys %$data) {
         my $row = $data->{$name};
-        $sth_search->execute($row->{$field});
+        $sth_search->execute(_sth_values($row,$field));
         my ($id) = $sth_search->fetchrow;
         if ( $id ) {
             warn("INFO: $table : $row->{$field} already added.\n") if $verbose;
             next;
         }
-        warn("INFO: updating $table : $row->{$field}\n")
+        warn("INFO: updating $table : ".Dumper($data->{$name})."\n")
         if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
         my $sql =
@@ -899,7 +989,9 @@ sub _update_table($self, $table, $field, $data, $verbose=0) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute(map { $data->{$name}->{$_} } sort keys %{$data->{$name}});
         $sth->finish;
+        $changed++;
     }
+    return $changed;
 }
 
 sub _remove_old_isos {
@@ -945,6 +1037,8 @@ sub _update_data {
     $self->_update_domain_drivers_options_disk();
     $self->_update_old_qemus();
 
+    $self->_add_domain_drivers_display();
+
     $self->_add_indexes();
 }
 
@@ -960,7 +1054,7 @@ sub _add_indexes_generic($self) {
         ]
         ,domain_displays => [
             "unique(id_domain,n_order)"
-            ,"unique(id_domain,type)"
+            ,"unique(id_domain,driver)"
             ,"unique(id_domain,port)"
         ]
         ,requests => [
@@ -1371,8 +1465,9 @@ sub _sql_create_tables($self) {
             ,ip => 'varchar(254)'
             ,display => 'varchar(200)'
             ,listen_ip => 'varchar(254)'
-            ,type => 'char(20) not null'
+            ,driver => 'char(20) not null'
             ,is_active => 'integer NOT NULL default 0'
+            ,is_builtin => 'integer NOT NULL default 0'
             ,n_order => 'integer NOT NULL'
             ,password => 'char(32)'
             ,extra => 'TEXT'
