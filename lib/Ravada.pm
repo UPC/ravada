@@ -647,12 +647,14 @@ sub _add_domain_drivers_display($self) {
         'KVM' => [
             'spice'
             ,'vnc'
-            ,'x2go'
-            ,{name => 'Windows RDP', value => 'rdp'}
+            ,{name => 'x2go', data => 22 }
+            ,{name => 'Windows RDP', value => 'rdp', data => 356}
         ]
         ,'Void' => [
             'void'
             ,'spice'
+            ,{name => 'x2go', data => 22 }
+            ,{name => 'Windows RDP', value => 'rdp' , data => 356 }
         ]
     );
 
@@ -673,10 +675,11 @@ sub _add_domain_drivers_display($self) {
                     $option = { name => $option
                         ,value => $option
                     };
-                    $option->{id_driver_type} = $id_type;
-                    $option->{id} = ++$id_option;
-                    $self->_update_table('domain_drivers_options','id_driver_type,name',$option)
                 }
+                $option->{value} = $option->{name} if !exists $option->{value};
+                $option->{id_driver_type} = $id_type;
+                $option->{id} = ++$id_option;
+                $self->_update_table('domain_drivers_options','id_driver_type,name',$option)
             }
             $id_type++;
         };
@@ -733,6 +736,8 @@ sub _update_domain_drivers_types($self) {
         unlock_hash(%{$data->{$item}});
         $data->{$item}->{id} = ++$id;
         $data->{$item}->{vm} = 'Void';
+
+        next if $item eq 'disk';
 
         $id_option++;
         $data_options->{"$item.on"} = {
@@ -1055,7 +1060,6 @@ sub _add_indexes_generic($self) {
         ,domain_displays => [
             "unique(id_domain,n_order)"
             ,"unique(id_domain,driver)"
-            ,"unique(id_domain,port)"
         ]
         ,requests => [
             "index(status,at_time)"
@@ -1465,7 +1469,7 @@ sub _sql_create_tables($self) {
             ,ip => 'varchar(254)'
             ,display => 'varchar(200)'
             ,listen_ip => 'varchar(254)'
-            ,driver => 'char(20) not null'
+            ,driver => 'char(40) not null'
             ,is_active => 'integer NOT NULL default 0'
             ,is_builtin => 'integer NOT NULL default 0'
             ,n_order => 'integer NOT NULL'
@@ -1747,6 +1751,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('volumes','name','char(200)');
 
+    $self->_upgrade_table('domain_drivers_options','data', 'char(200) ');
     $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
     $self->_upgrade_table('domain_ports', 'restricted','int(1) DEFAULT 0');
 
