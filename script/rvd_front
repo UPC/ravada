@@ -2314,6 +2314,9 @@ sub manage_machine {
 
     $c->stash(messages => \@messages);
     $c->stash(errors => \@errors);
+    my $displays = $domain->info($USER)->{hardware}->{display};
+    my $has_graphics_spice = grep { $_->{driver} eq 'spice' } @$displays;
+    $c->stash(has_graphics_spice => $has_graphics_spice);
     return $c->render(template => 'main/settings_machine'
         , nodes => [$RAVADA->list_vms($domain->type)]
         , list_clones => [map { $_->{name} } grep { !$_->{is_base} } $domain->clones]
