@@ -48,26 +48,82 @@ sub name {
 sub display_info {
     my $self = shift;
 
-    my $display_data = $self->_value('display');
-    if (!keys %$display_data) {
-        $display_data = $self->_set_display();
+    my $hardware = $self->_value('hardware');
+    return if !exists $hardware->{display} || !exists $hardware->{display}->[0];
+    my $ret = $hardware->{display}->[0];
+    if (!$ret->{display} && $ret->{listen_ip} && $ret->{port}) {
+        my $display=$ret->{driver}."//".$ret->{listen_ip}.":".$ret->{port}."/";
+        $ret->{display} = $display;
+        #        $ret->{ip} = $ret->{listen_ip} if !exists $ret->{ip};
     }
-    return $display_data;
+    $ret->{extra} = decode_json($ret->{extra})
+    if exists $ret->{extra} && $ret->{extra};
+
+    $ret->{is_builtin} = 1;
+
+    return $ret;
+}
+
+sub _has_builtin_display($self) {
+    my $hardware = $self->_value('hardware');
+
+    return 1 if exists $hardware->{display} && exists $hardware->{display}->[0]
+    && defined $hardware->{display}->[0];
+
+    return 0;
+}
+
+sub _is_display_builtin($self, $index=undef, $data=undef) {
+    confess if defined $index && $index =~ /\./;
+    if (defined $index && $index !~ /^\d+$/i) {
+        return 1 if $index =~ /spice|void/;
+        return 0;
+    }
+    my $hardware = $self->_value('hardware');
+
+    return 1 if defined $data && exists $data->{driver} && $data->{driver} =~ /void|spice/;
+    return 1 if defined $index
+    && ( exists $hardware->{display} && exists $hardware->{display}->[$index]);
+
+    return 0;
 }
 
 sub _set_display($self, $listen_ip=$self->_vm->listen_ip) {
     $listen_ip=$self->_vm->listen_ip if !$listen_ip;
     #    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
     my $display="void://$listen_ip:5990/";
-    my $display_data = { display => $display , type => 'void', ip => $listen_ip, port => 5990
+    my $display_data = { display => $display , driver => 'void', ip => $listen_ip, port => 5990
+        , is_builtin => 1
         , xistorra => 1
     };
-    $self->_store( display => $display_data );
+    my $hardware = $self->_value('hardware');
+    $hardware->{display}->[0] = $display_data;
+    $self->_store( hardware => $hardware);
     return $display_data;
 }
 
-sub _set_spice_ip($self, $password=undef, $listen_ip=$self->_vm->listen_ip) {
-    return $self->_set_display($listen_ip);
+sub _set_displays_ip($self, $password=undef, $listen_ip=$self->_vm->listen_ip) {
+    my $hardware = $self->_value('hardware');
+    my $is_active = $self->is_active();
+    my %used_ports;
+    for my $display (@{$hardware->{'display'}}) {
+        next unless exists $display->{port} && $display->{port} && $display->{port} ne 'auto';
+        my $port = $display->{port};
+        $used_ports{$port}++;
+    }
+    for my $display (@{$hardware->{'display'}}) {
+        $display->{ip} = $listen_ip;
+
+        $display->{port} = $self->_vm->_new_free_port(\%used_ports)
+        if $is_active
+        && (!exists $display->{port} || !$display->{port} || $display->{port} eq 'auto');
+
+        $display->{display} = $display->{driver}."://$listen_ip:".$display->{port}."/"
+        if $display->{port};
+
+        $display->{password} = $password if defined $password;
+    }
+    $self->_store( hardware => $hardware );
 }
 
 sub is_active {
@@ -131,6 +187,9 @@ sub _check_value_disk($self, $value)  {
     confess "Not hash ".ref($value)."\n".Dumper($value) if ref($value) ne 'HASH';
 
     for my $device (@{$value->{device}}) {
+        confess "Error: device without target ".$self->name." ".Dumper($device)
+        if !exists $device->{target};
+
         confess "Duplicated target ".Dumper($value)
             if $target{$device->{target}}++;
 
@@ -249,7 +308,7 @@ sub start($self, @args) {
     $listen_ip = $self->_vm->listen_ip($remote_ip) if !$listen_ip;
 
     $self->_store(is_active => 1);
-    $self->_set_display( $listen_ip );
+    $self->_set_displays_ip( $set_password, $listen_ip );
 }
 
 sub list_disks {
@@ -538,10 +597,11 @@ sub _set_default_info($self, $listen_ip=undef) {
     };
     $self->_store(info => $info);
     $self->_set_display($listen_ip);
+    my $hardware = $self->_value('hardware');
     my %controllers = $self->list_controllers;
     for my $name ( sort keys %controllers) {
-        next if $name eq 'disk';
-        $self->set_controller($name,2);
+        next if $name eq 'disk' || $name eq 'display';
+        $self->set_controller($name, 1) unless exists $hardware->{$name}->[0];
     }
     return $info;
 }
@@ -646,7 +706,7 @@ sub hibernate($self, $user) {
 sub type { 'Void' }
 
 sub migrate($self, $node, $request=undef) {
-    $self->_set_display($node->ip);
+    $self->_set_spice_ip(undef, $node->ip);
     my $config_remote;
     $config_remote = $self->_load();
     my $device = $config_remote->{hardware}->{device}
@@ -692,19 +752,37 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
 
     return $self->_set_controller_disk($data) if $name eq 'disk';
 
+    $data->{listen_ip} = $self->_vm->listen_ip if $name eq 'display'&& !$data->{listen_ip};
+
     my $list = ( $hardware->{$name} or [] );
 
-    $number = $#$list if !defined $number;
+    confess "Error: hardware $number already added ".Dumper($list)
+    if defined $number && $number < scalar(@$list);
 
-    if ($number > $#$list) {
-        for ( $#$list+1 .. $number-1 ) {
-            push @$list,("foo ".($_+1));
-        }
+    $#$list = $number if defined $number && scalar @$list <= $number;
+
+    my @list2;
+    if (!defined $number) {
+        @list2 = @$list;
+        push @list2,($data or " $name z 1");
     } else {
-        $#$list = $number-1;
-    }
+        $number = $#$list if !defined $number;
+        my $count = 0;
+        for my $item ( @$list ) {
+            if ($number == $count) {
+                my $data2 = ( $data or " $name a ".($count+1));
+                $data2 = " $name b ".($count+1) if defined $data2 && ref($data2) && !keys %$data2;
 
-    $hardware->{$name} = $list;
+                push @list2,($data2);
+                next if !defined $item;
+            }
+            $item = { driver => 'spice' , port => 'auto' , listen_ip => $self->_vm->listen_ip }
+            if $name eq 'display' && !defined $item;
+            push @list2,($item or " $name b ".($count+1));
+            $count++;
+        }
+    }
+    $hardware->{$name} = \@list2;
     $self->_store(hardware => $hardware );
 }
 
@@ -727,10 +805,13 @@ sub remove_controller {
 
     my $hardware = $self->_value('hardware');
     my $list = ( $hardware->{$name} or [] );
+    die "Error: $name $index not removed, only ".$#$list." found" if $index>$#$list;
 
     my @list2 ;
+    my $found;
     for my $count ( 0 .. $#$list ) {
         if ( $count == $index ) {
+            $found = $count;
             next;
         }
         push @list2, ( $list->[$count]);
