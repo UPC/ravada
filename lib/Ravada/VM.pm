@@ -452,8 +452,8 @@ sub _around_create_domain {
             delete @port{'id','id_domain','public_port'};
             $domain->expose(%port);
         }
-        my $displays = $base->_get_controller_display();
-        for my $display (@$displays) {
+        my @displays = $base->_get_controller_display();
+        for my $display (@displays) {
             delete $display->{id};
             delete $display->{id_domain};
             $display->{is_active} = 0;
@@ -1952,8 +1952,7 @@ sub _list_used_ports_iptables($self, $used_port) {
     }
 }
 
-sub _new_free_port($self) {
-    my $used_port = {};
+sub _new_free_port($self, $used_port={}) {
     $self->_list_used_ports_sql($used_port);
     $self->_list_used_ports_ss($used_port);
     $self->_list_used_ports_iptables($used_port);
