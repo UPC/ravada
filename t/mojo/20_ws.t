@@ -61,6 +61,7 @@ sub _clean_machines_info($machines) {
 }
 
 sub list_machines($t) {
+    mojo_check_login($t);
     $t->websocket_ok("/ws/subscribe")->send_ok("list_machines")->message_ok->finish_ok;
 
     return if !$t->message || !$t->message->[1];
