@@ -188,6 +188,7 @@ sub vm_names {
 }
 
 sub import_domain($vm, $name=$BASE_NAME, $import_base=1) {
+    $vm = $vm->type if ref($vm);
     my $t0 = time;
     my $domain = $RVD_BACK->import_domain(
         vm => $vm
@@ -950,6 +951,7 @@ Sets scheduled requests time to now
 sub fast_forward_requests() {
     my $sth = $CONNECTOR->dbh->prepare("UPDATE requests "
         ." SET at_time=0 WHERE status = 'requested' AND at_time>0 "
+        ."    AND command <> 'open_exposed_ports'"
     );
     eval {
     $sth->execute();
