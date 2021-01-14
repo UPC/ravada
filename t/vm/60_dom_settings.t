@@ -257,6 +257,8 @@ sub test_settings {
 #    @drivers = $vm->list_drivers('image');
     for my $driver ( @drivers ) {
 #        diag("Testing drivers for $vm_name ".$driver->name);
+        next if $driver->name eq 'display';
+
         test_drivers_type($vm_name, $driver->name);
         test_drivers_clone($vm_name, $driver->name);
         test_drivers_type_id($vm_name, $driver->name);

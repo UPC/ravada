@@ -37,7 +37,7 @@ sub _wait_request(@args) {
     my $t0 = time;
     wait_request(@args);
 
-    if ( time - $t0 > $SECONDS_TIMEOUT ) {
+    if ( $USERNAME && time - $t0 > $SECONDS_TIMEOUT ) {
         login();
     }
 
