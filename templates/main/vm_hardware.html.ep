@@ -26,7 +26,7 @@
                     ng-click="confirm_remove='';remove_hardware(name,$index,item)"><i class="fa fa-times"></i>
                 </button>
                 <span ng-class='{"h5": item.edit }'>
-                    {{item.name || item}}
+                    {{item.name || item.driver || item}}
                 </span>
                 <div ng-show="name == 'disk' && item.remove"
                     ng-class='{"border border-danger p-4 m-4": item.device == "disk"}'

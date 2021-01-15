@@ -5,18 +5,9 @@
             <label for="type">type</label>
         </div>
         <div class="col-lg-2">
-            <select name="type" ng-model="add_display.type">
-                <option>Windows RDP</option>
-                <option>SSH</option>
+            <select name="type" ng-model="add_display.driver"
+            ng-options="driver for driver in showmachine.drivers['display']">
             </select>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-lg-2">
-            <label for="port">port</label>
-        </div>
-        <div class="col-lg-2">
-            <input type="text" name="port" ng-model="add_display.port"/>
         </div>
     </div>
 
@@ -24,7 +15,7 @@
         <div class="col-mb-12 mt-3">
             <button class="btn btn-primary"
             ng-click=
-            "add_hardware('display', value.length+1, add_display);show_new_display=false"><%=l 'Submit' %></button>
+            "add_hardware('display', undefined, add_display);show_new_display=false"><%=l 'Submit' %></button>
             <button ng-click="show_new_display=false"
                 class="btn btn-outline-secondary"
             ><%=l 'Cancel' %></button>

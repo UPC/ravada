@@ -1,0 +1,77 @@
+<div ng-show="domain.hardware.display.length<1">
+This Virtual Machine has no display hardware attached
+</div>
+
+<ul ng-show="domain.hardware.display.length>0" class="nav nav-tabs"
+    id="screen_tab"
+    role="tablist"
+    >
+    <li ng-repeat="display in domain.hardware.display"
+            class="nav-item">
+        <a class="nav-link" href="#{{display.driver}}"
+            ng-class="{'active': $first}"
+            id="{{display.driver}}-tab"
+            data-toggle="tab" role="tab"
+            aria-controls="{{display.driver}}"
+        >
+        {{display.driver}}
+        </a>
+    </li>
+</ul>
+
+<div ng-show="domain.hardware.display.length>0"
+    class="tab-content"
+    id="screen_tab_content"
+>
+    <div class="tab-pane fade"
+        style="background-color: white;"
+        ng-repeat="display in domain.hardware.display"
+        ng-class="{'active show': $first}"
+        id="{{display.driver}}"
+        role="tabpanel"
+        aria-labelledby="{{display.driver}}-tab">
+        {{display}}
+        <ul>
+            <li ng-show="display.password">
+                <%=l 'The password for this virtual machine connection is :'%>
+                <input
+                            ng-click="copy_password(display.driver)"
+                            type="text" class="js-copytextarea-{{display.driver}}"
+                                        value="{{display.password}}"
+                />
+                <i ng-show="password_clipboard"><%=l 'copied to clipboard' %></i>
+            </li>
+            <li><b>Display URL :</b>
+                    <a ng-click="copy_password(display.driver); redirect()"
+                        href="{{display.display}}">{{display.display}}</a>
+            </li>
+            <li><b>Display IP :</b> {{display.ip}} </li>
+            <li><b>Display Port :</b> {{display.port}} </li>
+            <li ng-show="display.tls_port"><b>Display Port secure:</b> {{display.tls_port}} </li>
+        </ul>
+        <div ng-show="domain.is_active">
+            <div>
+                <a type="button" class="btn btn-success"
+                    ng-show="!display.tls_port"
+                    ng-click="view_clicked=true; copy_password(display.driver); redirect();"
+                    href="/machine/display/{{display.driver}}/{{domain.id}}.{{display.file_extension}}">
+                        <b><%=l 'view'%></b></a>
+
+                <a type="button" class="btn btn-success" ng-view="display.tls_port"
+                    ng-show="display.tls_port"
+                    ng-click="view_clicked_tls=true; copy_password(display.driver); redirect();"
+                    href="/machine/display/{{display.driver}}-tls/{{domain.id}}-tls.{{display.file_extension}}">
+                        <b><%=l 'view'%></b></a>
+            </div>
+            <div>
+                <span ng-show="view_clicked">
+                    <%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}.{{display.file_extension}}</b> <%=l 'in your downloads folder.' %>
+                </span>
+                <span ng-show="view_clicked_tls"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}-tls.{{display.file_extension}}</b> <%=l 'in your downloads folder.' %>
+                </span>
+                <br/>
+                <i ng-show="display.driver == 'spice'"><%=l 'Press SHIFT + F12 to exit the virtual machine' %></i>
+            </div>
+        </div>
+    </div>
+</div>
