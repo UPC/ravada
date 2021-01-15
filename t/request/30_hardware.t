@@ -44,40 +44,56 @@ sub test_add_hardware_request_drivers {
 	my $domain = shift;
 	my $hardware = shift;
 
-    test_remove_almost_all_hardware($vm, $domain, $hardware);
-
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my $info0 = $domain->info(user_admin);
 
     my $options = $info0->{drivers}->{$hardware};
 
-    for my $driver (@$options) {
-        diag("Testing new $hardware $driver");
+    for my $remove ( 1,0 ) {
+        test_remove_almost_all_hardware($vm, $domain, $hardware);
+        for my $driver (@$options) {
+            diag("Testing new $hardware $driver remove=$remove");
 
-        my $info0 = $domain->info(user_admin);
-        my @dev0 = sort map { $_->{driver} } @{$info0->{hardware}->{$hardware}};
-        test_add_hardware_request($vm, $domain, $hardware, { driver => $driver} );
+            my $info0 = $domain->info(user_admin);
+            my @dev0 = sort map { $_->{driver} } @{$info0->{hardware}->{$hardware}};
+            test_add_hardware_request($vm, $domain, $hardware, { driver => $driver} );
 
-        my $info1 = $domain->info(user_admin);
-        my @dev1 = sort map { $_->{driver} } @{$info1->{hardware}->{$hardware}};
+            my $info1 = $domain->info(user_admin);
+            my @dev1 = sort map { $_->{driver} } @{$info1->{hardware}->{$hardware}};
 
-        if ( scalar @dev1 == scalar(@dev0)) {
-            my $different = 0;
-            for ( 0 .. scalar(@dev1)-1) {
-                $different++ if $dev1[$_] ne $dev0[$_];
+            if ( scalar @dev1 == scalar(@dev0)) {
+                my $different = 0;
+                for ( 0 .. scalar(@dev1)-1) {
+                    $different++ if $dev1[$_] ne $dev0[$_];
+                }
+                ok($different, "Expecting different $hardware ") or die Dumper(\@dev0, \@dev1);
+            } else {
+                ok(scalar(@dev1) > scalar(@dev0)) # it is ok because number of devs increased
             }
-            ok($different, "Expecting different $hardware ") or die Dumper(\@dev0, \@dev1);
-        } else {
-            ok(scalar(@dev1) > scalar(@dev0)) # it is ok because number of devs increased
+            my $driver_short = _get_driver_short_name($domain, $hardware,$driver);
+
+            is($info1->{hardware}->{$hardware}->[-1]->{driver}, $driver_short) or confess( $domain->name
+                , Dumper($info1->{hardware}->{$hardware}));
+
+            test_remove_hardware($vm, $domain, $hardware
+                , scalar(@{$info1->{hardware}->{$hardware}})-1)
+            if $remove || $hardware eq 'disk' && $driver eq 'usb';
         }
-
-        is($info1->{hardware}->{$hardware}->[-1]->{driver}, $driver) or confess( $domain->name
-            , Dumper($info1->{hardware}->{$hardware}));
-
-        test_remove_hardware($vm, $domain, $hardware
-            , scalar(@{$info1->{hardware}->{$hardware}})-1)
-        if $hardware eq 'disk' && $driver eq 'usb';
     }
+
+    #    test_add_hardware_request($vm, $domain, $hardware) if $hardware =~ 'display';
+}
+
+sub _get_driver_short_name($domain,$hardware, $option) {
+
+    return $option unless $hardware eq 'display';
+
+    my $driver = $domain->drivers($hardware);
+    my ($selected)
+    = grep { $_->{name} eq $option|| $_->{value} eq $option}
+    $driver->get_options;
+
+    return $selected->{value};
 }
 
 sub test_display_db($domain, $n_expected) {
@@ -97,6 +113,11 @@ sub test_display_db($domain, $n_expected) {
 
     my @displays = $domain->_get_controller_display();
     is(scalar @displays, @row);
+
+    my $n_expected_non_builtin = scalar(grep { $_->{is_builtin} == 0 } @displays);
+
+    my @ports = $domain->list_ports();
+    is(scalar(@ports),$n_expected_non_builtin) or die Dumper(\@displays,\@ports);
 }
 
 sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
@@ -293,11 +314,20 @@ sub test_remove_hardware {
             .Dumper(\@list_hardware2, \@list_hardware1)) or exit;
     }
     test_volume_removed($list_hardware1[$index]) if $hardware eq 'disk';
+    test_display_removed($domain, $list_hardware1[$index])   if $hardware eq 'display';
 }
 
 sub test_volume_removed($disk) {
     my $file = $disk->{file};
     ok(! -e $file,"Expecting $file removed") unless $file =~ /\.iso$/;
+}
+
+sub test_display_removed($domain, $display) {
+    my $hardware = $domain->info(user_admin)->{hardware}->{display};
+    ok(! grep({ $_->{driver} eq $display->{driver} } @$hardware),
+        "Expecting no $display->{driver} in hardware ") or die Dumper($hardware);
+    if ($display->{driver} eq 'spice' || $display->{is_builtin}) {
+    }
 }
 
 sub test_remove_almost_all_hardware {
@@ -309,7 +339,7 @@ sub test_remove_almost_all_hardware {
 
     #TODO test remove hardware out of bounds
     my $total_hardware = scalar($domain->get_controller($hardware));
-    return if $total_hardware <= $n_keep;
+    return if !defined $total_hardware || $total_hardware <= $n_keep;
     for my $index ( reverse 0 .. $total_hardware-1) {
         diag("removing $hardware $index");
         test_remove_hardware($vm, $domain, $hardware, $index);
@@ -326,7 +356,7 @@ sub test_front_hardware {
         my @controllers = $domain_f->get_controller($hardware);
         ok(scalar @controllers,"[".$vm->type."] Expecting $hardware controllers ".$domain->name
             .Dumper(\@controllers))
-                or exit;
+                or confess;
 
         my $info = $domain_f->info(user_admin);
         ok(exists $info->{hardware},"Expecting \$info->{hardware}") or next;
@@ -663,7 +693,6 @@ for my $vm_name ( vm_names()) {
 
     for my $hardware ('display', reverse sort keys %controllers ) {
         diag("Testing $hardware controllers for VM $vm_name");
-        test_add_hardware_request_drivers($vm, $domain_b, $hardware);
         test_front_hardware($vm, $domain_b, $hardware);
 
         test_add_hardware_custom($domain_b, $hardware);
@@ -671,9 +700,10 @@ for my $vm_name ( vm_names()) {
         test_change_hardware($vm, $domain_b, $hardware);
         test_remove_hardware($vm, $domain_b, $hardware, 0);
 
-        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(diplay|usb|mock)$/;
+        # change driver is not possible for displays
+        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock)$/;
         test_add_hardware_request_drivers($vm, $domain_b, $hardware);
-        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(usb|mock)$/;
+        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock)$/;
 
         # try to add with the machine started
         $domain_b->start(user_admin) if !$domain_b->is_active;
