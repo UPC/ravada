@@ -25,6 +25,7 @@ services:
       - ravada_network
     #By default download from dockerhub
     image: ravada/front
+    env_file: .env
     #If you want to local build
     #build: dockers/front/.
     restart: unless-stopped
@@ -50,6 +51,7 @@ services:
       - ravada_network
     #By default download from dockerhub
     image: ravada/back
+    env_file: .env
     #If you want to local build
     #build: dockers/back/.
     privileged: true
