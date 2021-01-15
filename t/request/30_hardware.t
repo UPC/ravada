@@ -661,8 +661,9 @@ for my $vm_name ( vm_names()) {
     );
     my %controllers = $domain_b->list_controllers;
 
-    for my $hardware ( reverse sort keys %controllers ) {
+    for my $hardware ('display', reverse sort keys %controllers ) {
         diag("Testing $hardware controllers for VM $vm_name");
+        test_add_hardware_request_drivers($vm, $domain_b, $hardware);
         test_front_hardware($vm, $domain_b, $hardware);
 
         test_add_hardware_custom($domain_b, $hardware);

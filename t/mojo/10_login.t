@@ -169,6 +169,7 @@ sub test_copy_without_prepare($clone) {
 }
 
 sub test_validate_html($url) {
+    mojo_check_login($t);
     $t->get_ok($url)->status_is(200);
     my $content = $t->tx->res->body();
     _check_html_lint($url,$content);

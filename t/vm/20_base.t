@@ -207,7 +207,7 @@ sub test_add_display_builtin($vm) {
         uid => user_admin->id
         ,id_domain => $domain->id
         ,name => 'display'
-        ,data => { driver => 'spice', port => 'auto'  }
+        ,data => { driver => 'spice' }
     );
     wait_request(debug => 0);
     is($req->status,'done');
