@@ -233,7 +233,9 @@ sub init_available_actions($user, $m) {
         eval {
         $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
         };
-        die $@ if $@ && $@ !~ /Unknown domain/;
+        #may have been deleted just now
+        next if $@ && $@ =~ /Unknown domain/;
+        die $@ if $@;
 
         $m->{can_hibernate} = 0;
         $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
