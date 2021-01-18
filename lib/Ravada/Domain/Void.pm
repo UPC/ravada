@@ -579,7 +579,7 @@ sub set_max_memory {
 sub set_memory {
     my $self = shift;
     my $value = shift;
-
+    
     $self->_set_info(memory => $value );
 }
 

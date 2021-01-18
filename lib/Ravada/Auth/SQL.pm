@@ -429,7 +429,7 @@ sub can_list_clones {
     return 1 if $self->can_remove_clone_all()
             || $self->can_list_machines();
     return 0;
-
+  
 }
 
 =head2 can_list_machines
@@ -534,9 +534,9 @@ Arguments: password
 sub compare_password {
     my $self = shift;
     my $password = shift or die "ERROR: password required\n";
-
+    
     _init_connector();
-
+    
     my $sth= $$CON->dbh->prepare("SELECT password FROM users WHERE name=?");
     $sth->execute($self->name);
     my $hex_pass = $sth->fetchrow();
@@ -594,7 +594,7 @@ sub remove($self) {
 
 Returns if the user is allowed to perform a privileged action
 
-    if ($user->can_do("remove")) {
+    if ($user->can_do("remove")) { 
         ...
 
 =cut
@@ -798,7 +798,7 @@ sub revoke_all_permissions($self,$user) {
 
 Grant an user a specific permission, or revoke it
 
-    $admin_user->grant($user2,"clone");    # both are
+    $admin_user->grant($user2,"clone");    # both are 
     $admin_user->grant($user3,"clone",1);  # the same
 
     $admin_user->grant($user4,"clone",0);  # revoke a grant
@@ -940,7 +940,7 @@ sub can_manage_machine($self, $domain) {
                 || ($self->can_remove_clone_all && $domain->id_base)
                 || ($self->can_remove && $domain->id_owner == $self->id);
 
-    if ( ($self->can_remove_clones || $self->can_change_settings_clones || $self->can_rename_clones)
+    if ( ($self->can_remove_clones || $self->can_change_settings_clones || $self->can_rename_clones) 
          && $domain->id_base ) {
         my $base = Ravada::Front::Domain->open($domain->id_base);
         return 1 if $base->id_owner == $self->id;

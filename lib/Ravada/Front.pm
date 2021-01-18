@@ -211,7 +211,7 @@ sub list_machines($self, $user, @filter) {
     push @list,(@{filter_base_without_clones($self->list_domains(@filter))}) if $user->can_list_clones();
     push @list,(@{$self->_list_own_clones($user)}) if $user->can_list_clones_from_own_base();
     push @list,(@{$self->_list_own_machines($user)}) if $user->can_list_own_machines();
-
+    
     return [@list] if scalar @list < 2;
 
     my %uniq = map { $_->{name} => $_ } @list;
@@ -221,13 +221,13 @@ sub list_machines($self, $user, @filter) {
 sub init_available_actions($user, $m) {
   eval { $m->{can_shutdown} = $user->can_shutdown($m->{id}) };
 
-  $m->{can_start} = 0;
-  $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+      $m->{can_start} = 0;
+      $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
 
   $m->{can_reboot} = $m->{can_shutdown} && $m->{can_start};
 
-  $m->{can_view} = 0;
-  $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+      $m->{can_view} = 0;
+      $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
 
   $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
   eval {
@@ -235,8 +235,9 @@ sub init_available_actions($user, $m) {
   };
   die $@ if $@ && $@ !~ /Unknown domain/;
 
-  $m->{can_hibernate} = 0;
-  $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id}) && !$m->{is_volatile};
+      $m->{can_hibernate} = 0;
+      $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id}) 
+        && !$m->{is_volatile};
 }
 
 sub _around_list_machines($orig, $self, $user, @filter) {
@@ -261,7 +262,7 @@ sub search_clone_data {
     $sth->execute( map { $args{$_} } sort keys %args );
     my $row = $sth->fetchrow_hashref;
     return ( $row or {});
-
+        
 }
 
 =cut
@@ -414,7 +415,7 @@ sub _where(%args) {
 sub list_clones {
   my $self = shift;
   my %args = @_;
-
+  
   my $domains = $self->list_domains();
   my @clones;
   for (@$domains ) {
@@ -667,7 +668,7 @@ Returns a reference to a list of the users
 sub list_users($self,$name=undef) {
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, name FROM users ");
     $sth->execute();
-
+    
     my @users = ();
     while ( my $row = $sth->fetchrow_hashref) {
         next if defined $name && $row->{name} !~ /$name/;
@@ -698,7 +699,7 @@ Waits for a request for some seconds.
 
 =head3 Arguments
 
-=over
+=over 
 
 =item * request
 
@@ -1085,7 +1086,7 @@ sub list_bases_anonymous {
 
 }
 
-=head2 disconnect_vm
+=head2 disconnect_vm 
 
 Disconnects all the conneted VMs
 

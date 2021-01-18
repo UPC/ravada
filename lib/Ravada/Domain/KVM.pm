@@ -1989,12 +1989,12 @@ sub _set_controller_usb($self,$numero, $data={}) {
     $numero = $count+1 if !defined $numero;
     if ( $numero > $count ) {
         my $missing = $numero-$count-1;
-
+        
         for my $i (0..$missing) {
             my $controller = $devices->addNewChild(undef,"redirdev");
             $controller->setAttribute(bus => 'usb');
             $controller->setAttribute(type => $tipo );
-        }
+        } 
     }
     $self->_vm->connect if !$self->_vm->vm;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
@@ -2025,7 +2025,7 @@ sub _set_controller_network($self, $number, $data) {
 
 sub remove_controller($self, $name, $index=0) {
     my $sub = $REMOVE_CONTROLLER_SUB{$name};
-
+    
     die "I can't get controller $name for domain ".$self->name
         ." ".$self->type
         ."\n".Dumper(\%REMOVE_CONTROLLER_SUB)
