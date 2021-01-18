@@ -66,6 +66,8 @@ our %VALID_ARG = (
     ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
                        , id_vm => 2 }
     ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
+    ,reboot_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
+                       , id_vm => 2 }
     ,screenshot => { id_domain => 1 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1 }
@@ -128,7 +130,7 @@ our %VALID_ARG = (
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
-    qw( create start shutdown prepare_base remove remove_base rename_domain screenshot download
+    qw( create start shutdown reboot prepare_base remove remove_base rename_domain screenshot download
             clone
             set_base_vm remove_base_vm
             domain_autostart hibernate hybernate
@@ -136,7 +138,7 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             add_hardware remove_hardware set_driver change_hardware
             expose remove_expose
             rebase rebase_volumes
-            shutdown_node start_node
+            shutdown_node reboot_node start_node
     );
 
 our %CMD_NO_DUPLICATE = map { $_ => 1 }
@@ -146,6 +148,7 @@ qw(
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
+our $TIMEOUT_REBOOT = 20;
 
 our $CONNECTOR;
 
@@ -452,7 +455,7 @@ sub _check_args {
 
 Requests to stop a domain now !
 
-  my $req = Ravada::Request->shutdown_domain( name => 'name' , uid => $user->id );
+  my $req = Ravada::Request->force_shutdown_domain( name => 'name' , uid => $user->id );
 
 =cut
 
@@ -493,6 +496,33 @@ sub shutdown_domain {
     bless($self,$class);
 
     return $self->_new_request(command => 'shutdown' , args => $args);
+}
+
+=head2 reboot_domain
+
+Requests to reboot a domain
+
+  my $req = Ravada::Request->reboot_domain( name => 'name' , uid => $user->id );
+  my $req = Ravada::Request->reboot_domain( name => 'name' , uid => $user->id
+                                            ,timeout => $timeout );
+
+=cut
+
+sub reboot_domain {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('reboot_domain', @_ );
+
+    $args->{timeout} = $TIMEOUT_REBOOT if !exists $args->{timeout};
+
+    confess "ERROR: You must supply either id_domain or name ".Dumper($args)
+        if !$args->{id_domain} && !$args->{name};
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(command => 'reboot' , args => $args);
 }
 
 =head2 new_request

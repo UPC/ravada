@@ -1010,6 +1010,7 @@ sub _alias_grants($self) {
     my %alias= (
         remove_clone => 'remove_clones'
         ,shutdown_clone => 'shutdown_clones'
+        ,reboot_clone => 'reboot_clones'
     );
 
     my $sth_old = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types_alias"
@@ -1031,6 +1032,7 @@ sub _add_grants($self) {
     $self->_add_grant('rename_all', 0,"Can rename any virtual machine.");
     $self->_add_grant('rename_clones', 0,"Can rename clones from virtual machines owned by the user.");
     $self->_add_grant('shutdown', 1,"Can shutdown own virtual machines.");
+    $self->_add_grant('reboot', 1,"Can reboot own virtual machines.");
     $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
     $self->_add_grant('start_many',0,"Can have more than one machine started.");
     $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
@@ -1106,6 +1108,7 @@ sub _enable_grants($self) {
         ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
         ,'screenshot'
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
+        ,'reboot',          'reboot_all',      'reboot_clone'
         ,'screenshot'
         ,'start_many'
     );
@@ -3459,6 +3462,48 @@ sub _cmd_force_shutdown {
 
 }
 
+sub _cmd_reboot {
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid');
+    my $name = $request->defined_arg('name');
+    my $id_domain = $request->defined_arg('id_domain');
+    my $timeout = ($request->args('timeout') or 60);
+    my $id_vm = $request->defined_arg('id_vm');
+
+    confess "ERROR: Missing id_domain or name" if !$id_domain && !$name;
+
+    my $domain;
+    if ($name) {
+        if ($id_vm) {
+            my $vm = Ravada::VM->open($id_vm);
+            $domain = $vm->search_domain($name);
+        } else {
+            $domain = $self->search_domain($name);
+        }
+        die "Unknown domain '$name'\n" if !$domain;
+    }
+    if ($id_domain) {
+        my $domain2 = Ravada::Domain->open(id => $id_domain, id_vm => $id_vm);
+        die "ERROR: Domain $id_domain is ".$domain2->name." not $name."
+            if $domain && $domain->name ne $domain2->name;
+        $domain = $domain2;
+        die "Unknown domain '$id_domain'\n" if !$domain
+    }
+
+    Ravada::Request->refresh_machine(
+                   uid => $uid
+            ,id_domain => $id_domain
+        ,after_request => $request->id
+    );
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    $domain->reboot(timeout => $timeout, user => $user
+                    , request => $request);
+
+}
+
 sub _cmd_list_vm_types {
     my $self = shift;
     my $request = shift;
@@ -3688,7 +3733,7 @@ sub _cmd_list_network_interfaces($self, $request) {
 
 sub _cmd_list_isos($self, $request){
     my $vm_type = $request->args('vm_type');
-   
+
     my $vm = Ravada::VM->open( type => $vm_type );
     $vm->refresh_storage();
     my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
@@ -4021,6 +4066,7 @@ sub _req_method {
        ,cleanup => \&_cmd_cleanup
       ,download => \&_cmd_download
       ,shutdown => \&_cmd_shutdown
+      ,reboot => \&_cmd_reboot
      ,hybernate => \&_cmd_hybernate
     ,set_driver => \&_cmd_set_driver
     ,screenshot => \&_cmd_screenshot

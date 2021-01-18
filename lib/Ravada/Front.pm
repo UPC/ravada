@@ -224,6 +224,8 @@ sub init_available_actions($user, $m) {
   $m->{can_start} = 0;
   $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
 
+  $m->{can_reboot} = $m->{can_shutdown} && $m->{can_start};
+
   $m->{can_view} = 0;
   $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
 
@@ -932,6 +934,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
         next if ( $command eq 'force_shutdown'
                 || $command eq 'start'
                 || $command eq 'shutdown'
+                || $command eq 'reboot'
                 || $command eq 'hibernate'
                 )
                 && time - $epoch_date_changed > 5

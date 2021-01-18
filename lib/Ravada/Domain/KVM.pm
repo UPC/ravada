@@ -49,6 +49,7 @@ has readonly => (
 ##################################################
 #
 our $TIMEOUT_SHUTDOWN = 60;
+our $TIMEOUT_REBOOT = 60;
 our $OUT;
 
 our %SET_DRIVER_SUB = (
@@ -777,8 +778,8 @@ sub _pre_shutdown_domain {
 
     my ($state, $reason) = $self->domain->get_state();
 
-    if ($state == Sys::Virt::Domain::STATE_PMSUSPENDED_UNKNOWN 
-         || $state == Sys::Virt::Domain::STATE_PMSUSPENDED_DISK_UNKNOWN 
+    if ($state == Sys::Virt::Domain::STATE_PMSUSPENDED_UNKNOWN
+         || $state == Sys::Virt::Domain::STATE_PMSUSPENDED_DISK_UNKNOWN
          || $state == Sys::Virt::Domain::STATE_PMSUSPENDED) {
         $self->domain->pm_wakeup();
         for ( 1 .. 10 ) {
@@ -853,6 +854,48 @@ sub _do_force_shutdown {
     warn $@ if $@;
 }
 
+=head2 reboot
+
+Stops the domain
+
+=cut
+
+sub reboot {
+    my $self = shift;
+    my %args = @_;
+    my $req = $args{req};
+
+    if (!$self->is_active) {
+        $req->status("done")           if $req;
+        $req->error("Domain is down")  if $req;
+        return;
+    }
+
+    return $self->_do_reboot();
+
+}
+
+sub _do_reboot {
+    my $self = shift;
+warn "_do_reboot";
+warn "RET" and
+    return if !$self->domain->is_active;
+    eval { $self->domain->reboot() };
+warn ">>> $@";
+    die $@ if $@;
+
+}
+
+=head2 reboot_now
+
+Reboots uncleanly the domain
+
+=cut
+
+sub reboot_now {
+    my $self = shift;
+    return $self->_do_reboot()  if $self->is_active;
+}
 
 =head2 pause
 
@@ -1937,12 +1980,12 @@ sub _set_controller_usb($self,$numero, $data={}) {
     $numero = $count+1 if !defined $numero;
     if ( $numero > $count ) {
         my $missing = $numero-$count-1;
-        
+
         for my $i (0..$missing) {
             my $controller = $devices->addNewChild(undef,"redirdev");
             $controller->setAttribute(bus => 'usb');
             $controller->setAttribute(type => $tipo );
-        } 
+        }
     }
     $self->_vm->connect if !$self->_vm->vm;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
@@ -1973,7 +2016,7 @@ sub _set_controller_network($self, $number, $data) {
 
 sub remove_controller($self, $name, $index=0) {
     my $sub = $REMOVE_CONTROLLER_SUB{$name};
-    
+
     die "I can't get controller $name for domain ".$self->name
         ." ".$self->type
         ."\n".Dumper(\%REMOVE_CONTROLLER_SUB)

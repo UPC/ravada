@@ -234,6 +234,17 @@ sub shutdown_now {
     return $self->shutdown(user => $user);
 }
 
+sub reboot {
+    my $self = shift;
+    $self->_store(is_active => 0);
+}
+
+sub reboot_now {
+    my $self = shift;
+    my $user = shift;
+    return $self->reboot(user => $user);
+}
+
 sub start($self, @args) {
     my %args;
     %args = @args if scalar(@args) % 2 == 0;
@@ -559,7 +570,7 @@ sub set_max_memory {
 sub set_memory {
     my $self = shift;
     my $value = shift;
-    
+
     $self->_set_info(memory => $value );
 }
 

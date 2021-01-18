@@ -13,6 +13,7 @@ INSERT INTO grant_types(name,description) VALUES('create_base',"can create bases
 INSERT INTO grant_types(name,description) VALUES('change_settings_clones',"can change the settings of any virtual machine cloned from one base owned by the user.");
 INSERT INTO grant_types(name,description) VALUES('remove_clone',"can remove clones from virtual machines owned by the user.");
 INSERT INTO grant_types(name,description) VALUES('shutdown_clone',"can shutdown clones from virtual machines owned by the user.");
+INSERT INTO grant_types(name,description) VALUES('reboot_clone',"can reboot clones from virtual machines owned by the user.");
 INSERT INTO grant_types(name,description) VALUES('hibernate_clone',"can hibernate clones from virtual machines owned by the user.");
 
 /* operators should be allowed these */
@@ -24,6 +25,7 @@ INSERT INTO grant_types(name,description) VALUES('hibernate_clone_all',"can hibe
 INSERT INTO grant_types(name,description) VALUES('clone_all',"can clone any virtual machine.");
 INSERT INTO grant_types(name,description) VALUES('remove_all',"can remove any virtual machine.");
 INSERT INTO grant_types(name,description) VALUES('shutdown_all',"can shutdown any virtual machine.");
+INSERT INTO grant_types(name,description) VALUES('reboot_all',"can reboot any virtual machine.");
 INSERT INTO grant_types(name,description) VALUES('hibernate_all',"can hibernate any virtual machine.");
 INSERT INTO grant_types(name,description) VALUES('screenshot_all',"can take a screenshot of any virtual machine.");
 

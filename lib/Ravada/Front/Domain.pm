@@ -152,7 +152,7 @@ sub migrate             { confess "TODO" }
 
 sub name($self) {
     return $self->{_data}->{name}   if exists $self->{_data} && $self->{_data}->{name};
-    return $self->_data('name') 
+    return $self->_data('name')
 }
 
 sub pause               { confess "TODO" }
@@ -176,6 +176,8 @@ sub set_max_mem         { confess "TODO" }
 sub set_memory          { confess "TODO" }
 sub shutdown            { confess "TODO" }
 sub shutdown_now        { confess "TODO" }
+sub reboot              { confess "TODO" }
+sub reboot_now          { confess "TODO" }
 sub spinoff             { confess "TODO" }
 sub start               { confess "TODO" }
 
