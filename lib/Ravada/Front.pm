@@ -224,19 +224,19 @@ sub init_available_actions($user, $m) {
         $m->{can_start} = 0;
         $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
 
-  $m->{can_reboot} = $m->{can_shutdown} && $m->{can_start};
+        $m->{can_reboot} = $m->{can_shutdown} && $m->{can_start};
 
         $m->{can_view} = 0;
         $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
 
-  $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
-  eval {
-  $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
-  };
-  die $@ if $@ && $@ !~ /Unknown domain/;
+        $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
+        eval {
+        $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
+        };
+        die $@ if $@ && $@ !~ /Unknown domain/;
 
         $m->{can_hibernate} = 0;
-        $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id}) 
+        $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
         && !$m->{is_volatile};
 }
 

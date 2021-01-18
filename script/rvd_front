@@ -1290,7 +1290,7 @@ get '/machine/hardware/remove/(#id_domain)/(#hardware)/(#index)' => sub {
         , index => $index
     );
     
-    $RAVADA->wait_request($req,60);
+    $RAVADA->wait_request($req,60);  
     
     return $c->render( json => { ok => "Hardware Modified" });
 };
