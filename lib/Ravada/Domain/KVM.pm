@@ -871,19 +871,28 @@ sub reboot {
         return;
     }
 
+    return $self->_do_force_shutdown() if $args{force};
     return $self->_do_reboot();
 
 }
 
+sub force_reboot {
+    my $self = shift;
+    return $self->_do_force_reboot()  if $self->is_active;
+}
+
+sub _do_force_reboot {
+    my $self = shift;
+    return if !$self->domain->is_active;
+    eval { $self->domain->reset() };
+    warn $@ if $@;
+}
+
 sub _do_reboot {
     my $self = shift;
-warn "_do_reboot";
-warn "RET" and
     return if !$self->domain->is_active;
     eval { $self->domain->reboot() };
-warn ">>> $@";
     die $@ if $@;
-
 }
 
 =head2 reboot_now

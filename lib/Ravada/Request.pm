@@ -68,6 +68,7 @@ our %VALID_ARG = (
     ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
     ,reboot_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
                        , id_vm => 2 }
+    ,force_reboot_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
     ,screenshot => { id_domain => 1 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1 }
@@ -496,6 +497,26 @@ sub shutdown_domain {
     bless($self,$class);
 
     return $self->_new_request(command => 'shutdown' , args => $args);
+}
+
+=head2 force_reboot_domain
+
+Requests to stop a domain now !
+
+  my $req = Ravada::Request->force_reboot_domain( name => 'name' , uid => $user->id );
+
+=cut
+
+sub force_reboot_domain {
+    my $proto = shift;
+    my $class=ref($proto) || $proto;
+
+    my $args = _check_args('force_reboot_domain', @_ );
+
+    my $self = {};
+    bless($self,$class);
+
+    return $self->_new_request(command => 'force_reboot' , args => $args);
 }
 
 =head2 reboot_domain

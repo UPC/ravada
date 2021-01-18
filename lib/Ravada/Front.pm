@@ -932,6 +932,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'manage_pools'
                 ;
         next if ( $command eq 'force_shutdown'
+                || $command eq 'force_reboot'
                 || $command eq 'start'
                 || $command eq 'shutdown'
                 || $command eq 'reboot'

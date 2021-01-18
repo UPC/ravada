@@ -67,6 +67,7 @@ sub open($self, $id) {
 
 sub autostart($self )    { return $self->_data('autostart') }
 sub _do_force_shutdown  { confess "TODO" }
+sub _do_force_reboot    { confess "TODO" }
 sub add_volume          { confess "TODO" }
 sub remove_volume       { confess "TODO" }
 sub clean_swap_volumes  { confess "TODO" }
@@ -90,6 +91,8 @@ sub display_file_tls($self, $user) {
 }
 
 sub force_shutdown      { confess "TODO" }
+
+sub force_reboot        { confess "TODO" }
 
 sub get_info($self) {
      my $info = $self->_data('info');

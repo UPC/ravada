@@ -57,6 +57,8 @@ requires 'force_shutdown';
 requires '_do_force_shutdown';
 requires 'reboot';
 requires 'reboot_now';
+requires 'force_reboot';
+requires '_do_force_reboot';
 
 requires 'pause';
 requires 'resume';
@@ -185,10 +187,11 @@ after 'shutdown' => \&_post_shutdown;
 around 'shutdown_now' => \&_around_shutdown_now;
 around 'force_shutdown' => \&_around_shutdown_now;
 
-before 'reboot' => \&_pre_shutdown;
-after 'reboot' => \&_post_shutdown;
+before 'reboot' => \&_allow_shutdown;
+after 'reboot' => \&_post_reboot;
 
 around 'reboot_now' => \&_around_reboot_now;
+around 'force_reboot' => \&_around_reboot_now;
 
 before 'remove_base' => \&_pre_remove_base;
 after 'remove_base' => \&_post_remove_base;
@@ -2510,6 +2513,13 @@ sub _post_shutdown {
                                 && !$is_active;
 }
 
+sub _post_reboot {
+    my $self = shift;
+    $self->_data(status => 'rebooted');
+    $self->_remove_iptables();
+    $self->_close_exposed_port();
+}
+
 sub _around_is_active($orig, $self) {
 
     if (!$self->_vm) {
@@ -2565,7 +2575,19 @@ sub _around_shutdown_now {
     $self->_post_shutdown(user => $user)    if $self->is_known();
 }
 
-sub _around_reboot_now { _around_shutdown_now(@_); }
+sub _around_reboot_now {
+    my $orig = shift;
+    my $self = shift;
+    my $user = shift;
+
+    $self->_vm->connect;
+    $self->list_disks;
+    $self->_pre_shutdown(user => $user);
+    if ($self->is_active) {
+        $self->$orig($user);
+    }
+    $self->_post_shutdown(user => $user)    if $self->is_known();
+}
 
 sub _around_name($orig,$self) {
     return $self->{_name} if $self->{_name};
@@ -3100,6 +3122,11 @@ sub _post_resume {
 sub _timeout_shutdown($self, $value) {
     $TIMEOUT_SHUTDOWN = $value if defined $value;
     return $TIMEOUT_SHUTDOWN;
+}
+
+sub _timeout_reboot($self, $value) {
+    $TIMEOUT_REBOOT = $value if defined $value;
+    return $TIMEOUT_REBOOT;
 }
 
 sub _post_start {

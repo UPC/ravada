@@ -3504,6 +3504,30 @@ sub _cmd_reboot {
 
 }
 
+sub _cmd_force_reboot {
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain');
+    my $id_vm = $request->defined_arg('id_vm');
+
+    my $domain;
+    if ($id_vm) {
+        my $vm = Ravada::VM->open($id_vm);
+        $domain = $vm->search_domain_by_id($id_domain);
+    } else {
+        $domain = $self->search_domain_by_id($id_domain);
+    }
+    die "Unknown domain '$id_domain'\n" if !$domain;
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    $domain->force_reboot($user,$request);
+
+}
+
+
 sub _cmd_list_vm_types {
     my $self = shift;
     my $request = shift;
@@ -4087,6 +4111,7 @@ sub _req_method {
  ,list_vm_types => \&_cmd_list_vm_types
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
+,force_reboot   => \&_cmd_force_reboot
         ,rebase => \&_cmd_rebase
 
 ,refresh_storage => \&_cmd_refresh_storage

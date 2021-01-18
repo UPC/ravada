@@ -239,6 +239,15 @@ sub reboot {
     $self->_store(is_active => 0);
 }
 
+sub force_reboot {
+    return reboot_now(@_);
+}
+
+sub _do_force_reboot {
+    my $self = shift;
+    return $self->_store(is_active => 0);
+}
+
 sub reboot_now {
     my $self = shift;
     my $user = shift;

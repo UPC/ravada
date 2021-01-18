@@ -2226,7 +2226,8 @@ sub reboot_machine {
     my ($domain, $type) = _search_requested_machine($c);
 
     my $req;
-    $req = Ravada::Request->reboot_domain(id_domain => $domain->id, uid => $USER->id);
+    $req = Ravada::Request->force_reboot_domain(id_domain => $domain->id, uid => $USER->id) if ($c->param('force'));;
+    $req = Ravada::Request->reboot_domain(id_domain => $domain->id, uid => $USER->id) unless ($c->param('force'));;
 
     return $c->redirect_to('/machines') if $type eq 'html';
     return $c->render(json => { req => $req->id });
