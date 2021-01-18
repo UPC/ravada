@@ -11,6 +11,7 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("settings_node",settings_node)
         .controller("settings_network",settings_network)
         .controller("new_node", newNodeCtrl)
+        .controller("settings_global", settings_global_ctrl)
     ;
 
     ravadaApp.directive('ipaddress', function() {
@@ -774,6 +775,42 @@ ravadaApp.directive("solShowMachine", swMach)
             $http.get('/v1/node/remove/'+id_node).then(function(response) {
                 $scope.message = "Node "+$scope.node.name+" removed";
                 $scope.node={};
+            });
+        };
+    };
+
+    function settings_global_ctrl($scope, $http) {
+        $scope.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        $scope.init = function() {
+            $http.get('/settings_global.json').then(function(response) {
+                $scope.settings = response.data;
+                var now = new Date();
+                if ($scope.settings.frontend.maintenance.value == 0 ) {
+                    $scope.settings.frontend.maintenance_start.value
+                        = new Date(now.getFullYear(), now.getMonth(), now.getDate()
+                            , now.getHours(), now.getMinutes());
+
+                    $scope.settings.frontend.maintenance_end.value
+                        = new Date(now.getFullYear(), now.getMonth(), now.getDate()
+                            , now.getHours(), now.getMinutes() + 15);
+                } else {
+                    $scope.settings.frontend.maintenance_start.value
+                    =new Date($scope.settings.frontend.maintenance_start.value);
+
+                    $scope.settings.frontend.maintenance_end.value
+                    =new Date($scope.settings.frontend.maintenance_end.value);
+                }
+            });
+        };
+        $scope.load_settings = function() {
+            $scope.init();
+            $scope.formSettings.$setPristine();
+        };
+        $scope.update_settings = function() {
+            $scope.formSettings.$setPristine();
+            $http.post('/settings_global'
+                ,JSON.stringify($scope.settings)
+            ).then(function(response) {
             });
         };
     };
