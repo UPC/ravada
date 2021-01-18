@@ -1208,7 +1208,7 @@ sub _data($self, $field, $value=undef, $table='domains') {
 
     $self->{$data} = $self->_select_domain_db( _table => $table, @field_select );
 
-    confess "No DB info for domain @field_select in $table ".$self->name
+    confess "No DB info for domain @field_select in $table ".$self->name 
         if ! exists $self->{$data};
     confess "No field $field in $data ".Dumper(\@field_select)."\n".Dumper($self->{$data})
         if !exists $self->{$data}->{$field};

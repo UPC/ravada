@@ -221,13 +221,13 @@ sub list_machines($self, $user, @filter) {
 sub init_available_actions($user, $m) {
   eval { $m->{can_shutdown} = $user->can_shutdown($m->{id}) };
 
-      $m->{can_start} = 0;
-      $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+        $m->{can_start} = 0;
+        $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
 
   $m->{can_reboot} = $m->{can_shutdown} && $m->{can_start};
 
-      $m->{can_view} = 0;
-      $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+        $m->{can_view} = 0;
+        $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
 
   $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
   eval {
@@ -235,8 +235,8 @@ sub init_available_actions($user, $m) {
   };
   die $@ if $@ && $@ !~ /Unknown domain/;
 
-      $m->{can_hibernate} = 0;
-      $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id}) 
+        $m->{can_hibernate} = 0;
+        $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id}) 
         && !$m->{is_volatile};
 }
 
@@ -297,7 +297,7 @@ sub list_domains($self, %args) {
 
     my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY d.id");
     $sth->execute(map { $args{$_} } sort keys %args);
-
+    
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
         for (qw(is_locked is_hibernated is_paused
@@ -351,7 +351,7 @@ sub list_domains($self, %args) {
 
 =head2 filter_base_without_clones
 
-filters the list of domains and drops all machines that are unacessible and
+filters the list of domains and drops all machines that are unacessible and 
 bases with 0 machines accessible
 
 =cut

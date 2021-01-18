@@ -778,8 +778,8 @@ sub _pre_shutdown_domain {
 
     my ($state, $reason) = $self->domain->get_state();
 
-    if ($state == Sys::Virt::Domain::STATE_PMSUSPENDED_UNKNOWN
-         || $state == Sys::Virt::Domain::STATE_PMSUSPENDED_DISK_UNKNOWN
+    if ($state == Sys::Virt::Domain::STATE_PMSUSPENDED_UNKNOWN 
+         || $state == Sys::Virt::Domain::STATE_PMSUSPENDED_DISK_UNKNOWN 
          || $state == Sys::Virt::Domain::STATE_PMSUSPENDED) {
         $self->domain->pm_wakeup();
         for ( 1 .. 10 ) {

@@ -155,7 +155,7 @@ sub migrate             { confess "TODO" }
 
 sub name($self) {
     return $self->{_data}->{name}   if exists $self->{_data} && $self->{_data}->{name};
-    return $self->_data('name')
+    return $self->_data('name') 
 }
 
 sub pause               { confess "TODO" }
