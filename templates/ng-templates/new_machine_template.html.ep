@@ -55,7 +55,7 @@
                 </div>
             </div>
 
-            <div class="form-group row">
+            <div ng-if="backend == 'KVM' || backend == 'Void'" class="form-group row">
                 <label for="name" class="col-xl-3 col-form-label"><%=l 'Name' %></label>
                 <div class="col-lg-9">
                     <input class="form-control" ng-model="name" type="text"
@@ -75,9 +75,6 @@
                         required="">
                     </select>
                 </div>
-            </div>
-
-            <div ng-if="backend == 'Proxmox'" class="from-group row">
             </div>
 
             <div class="form-group row" ng-show="backend == 'KVM' || backend == 'LXC'">
@@ -171,6 +168,22 @@
                 </div>
                 <div ng-show="new_machineForm.name.$error.pattern" class="alert alert-warning" role="alert">
                         <strong><%=l 'Error' %></strong> <%=l 'The machine name must contain only alphabetic, numbers, undercores and dashes.' %>
+                </div>
+            </div>
+
+            <div ng-if="backend == 'Proxmox'" class="from-group">
+                <div class="from-group row">
+                    <label for="id_iso" class="col-xl-3 col-form-label"><%=l 'Select virtualization' %> <a
+                      title="Choose Virtual Machine or LXC container you want to install."><i class="fa fa-info-circle"></i></a></label>
+                    <div class="col-lg-9">
+                      <button id="VM" ng-click="showVM=(showVM ? false : true)" class="btn btn-primary">
+                        <i class="fas fa-desktop"></i>&nbsp;Create VM
+                      </button>
+                      <button id="CT" ng-click="" class="btn btn-primary" type="button">
+                        <i class="fas fa-cube"></i>&nbsp;Create CT
+                      </button>
+                    </div>
+                    <div ng-if="showVM">stub!</div>
                 </div>
             </div>
 
