@@ -26,8 +26,9 @@ use Ravada::Auth;
 use Ravada::Request;
 use Ravada::Repository::ISO;
 use Ravada::VM::Void;
+use Ravada::VM::Proxmox;
 
-our %VALID_VM;
+our %VALID_VM = map { $_ => 1 } qw(Void Proxmox);;
 our %ERROR_VM;
 our $TIMEOUT_STALE_PROCESS;
 

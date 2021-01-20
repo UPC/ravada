@@ -1997,6 +1997,10 @@ sub req_new_domain {
     $args{id_template} = $c->param('id_template')   if $vm =~ /^LX/;
     $args{id_iso} = $c->param('id_iso')             if $vm eq 'KVM';
 
+    if ( $vm eq 'Proxmox' ) {
+    #stub!
+    }
+
     return $RAVADA->create_domain(%args);
 }
 

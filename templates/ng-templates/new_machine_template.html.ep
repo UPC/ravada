@@ -77,6 +77,9 @@
                 </div>
             </div>
 
+            <div ng-if="backend == 'Proxmox'" class="from-group row">
+            </div>
+
             <div class="form-group row" ng-show="backend == 'KVM' || backend == 'LXC'">
                     <label for="memory" class="col-xl-3 col-form-label"><%=l 'Ram: (GB)' %></label>
                     <div class="col-lg-2">

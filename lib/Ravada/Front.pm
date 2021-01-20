@@ -48,7 +48,7 @@ has 'fork' => (
 
 our $CONNECTOR;# = \$Ravada::CONNECTOR;
 our $TIMEOUT = 20;
-our @VM_TYPES = ('KVM');
+our @VM_TYPES = ('KVM','Proxmox');
 our $DIR_SCREENSHOTS = "/var/www/img/screenshots";
 
 our %VM;
