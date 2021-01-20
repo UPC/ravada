@@ -173,17 +173,46 @@
 
             <div ng-if="backend == 'Proxmox'" class="from-group">
                 <div class="from-group row">
-                    <label for="id_iso" class="col-xl-3 col-form-label"><%=l 'Select virtualization' %> <a
+                    <label class="col-xl-3 col-form-label"><%=l 'Virtualization technology' %> <a
                       title="Choose Virtual Machine or LXC container you want to install."><i class="fa fa-info-circle"></i></a></label>
                     <div class="col-lg-9">
-                      <button id="VM" ng-click="showVM=(showVM ? false : true)" class="btn btn-primary">
-                        <i class="fas fa-desktop"></i>&nbsp;Create VM
-                      </button>
-                      <button id="CT" ng-click="" class="btn btn-primary" type="button">
-                        <i class="fas fa-cube"></i>&nbsp;Create CT
-                      </button>
+                        <select ng-model="tech">
+                            <option value="VM">KVM (Kernel-based Virtual Machine) for virtual machines
+                            <option value="CT">LXC for containers
+                        </select>
                     </div>
-                    <div ng-if="showVM">stub!</div>
+                    <div ng-switch="tech" class="from-group row">
+                        <div ng-switch-when="VM">
+                            <label class="col-xl-3 col-form-label"><%=l 'Node' %> <a title="Select the physical server on which the VM will run">
+                                <i class="fa fa-info-circle"></i></a></label>
+                            <div class="col-lg-9">
+                                <select ng-model="tech">
+                                    <option value="VM">
+                                    <option value="CT">
+                                </select>
+                            </div>
+<!--                        VM ID:
+                            Name:
+                            Resource Pool:
+                            Disc Image file (iso) Storage: local
+                            ISO image: ....
+                            Guest OS:
+                                Type
+                                Version
+                            Graphic card: ...
+                            SCSI Controller:
+                            Qemu Agent: x
+                            BIOS:
+                            Machine:
+                            Memory:
+                                Minimum memory:
+                            Network: options
+-->
+                        </div>
+                        <div ng-switch-when="CT">
+                            stub!
+                        </div>
+                    </div>
                 </div>
             </div>
 
