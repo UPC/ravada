@@ -47,5 +47,5 @@ Ports redirection requires the internal IP of the virtual machine
 to be active. So it retries for a while trying to redirect until
 an IP is detected or it fails.
 
-.. note:: If your exposing ports not work. Check if the port is up and if you have the qemu-guest-agent installed on the guest machine. `View Qemu Guest Agent <https://ravada.readthedocs.io/en/latest/docs/qemu_ga.html>`__.
+.. note:: If your exposing ports don't work. Check if the port is up and if you have the qemu-guest-agent installed on the guest machine. `See Qemu Guest Agent <https://ravada.readthedocs.io/en/latest/docs/qemu_ga.html>`__.
 
