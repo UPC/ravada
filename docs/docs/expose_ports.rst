@@ -11,7 +11,7 @@ Ports exposing works with Linux Kernel *iptables* so it requires the
 host to have it installed in properly configured.
 
 The virtual machine must have a way to tell the host what is the
-internal IP to the host, so the `qemu guest agent <qemu_ga.html>`  must be installed.
+internal IP to the host, so the `qemu guest agent <qemu_ga.html>`_ must be installed.
 
 Configure Expose
 ----------------
