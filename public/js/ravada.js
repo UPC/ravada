@@ -209,8 +209,20 @@
                 }
             };
 
-            $scope.action = function(target,action,machineId){
-              $http.get('/'+target+'/'+action+'/'+machineId+'.json')
+            $scope.getQueryStringFromObject = function(object) {
+              var string = '';
+              if (object) {
+                var separator = '';
+                for (var key in object) {
+                  string += separator + key + '=' + escape(object[key]);
+                  separator = '&';
+                }
+              }
+              return string;
+            };
+
+            $scope.action = function(target,action,machineId,params){
+              $http.get('/'+target+'/'+action+'/'+machineId+'.json'+'?'+$scope.getQueryStringFromObject(params))
                 .then(function() {
                 }, function(data,status) {
                       console.error('Repos error', status, data);

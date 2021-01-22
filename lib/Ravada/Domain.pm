@@ -28,6 +28,7 @@ use Ravada::Domain::Driver;
 use Ravada::Utils;
 
 our $TIMEOUT_SHUTDOWN = 20;
+our $TIMEOUT_REBOOT = 20;
 our $CONNECTOR;
 
 our $MIN_FREE_MEMORY = 1024*1024;
@@ -56,6 +57,10 @@ requires 'shutdown';
 requires 'shutdown_now';
 requires 'force_shutdown';
 requires '_do_force_shutdown';
+requires 'reboot';
+requires 'reboot_now';
+requires 'force_reboot';
+requires '_do_force_reboot';
 
 requires 'pause';
 requires 'resume';
@@ -105,6 +110,12 @@ has 'timeout_shutdown' => (
     isa => 'Int'
     ,is => 'ro'
     ,default => $TIMEOUT_SHUTDOWN
+);
+
+has 'timeout_reboot' => (
+    isa => 'Int'
+    ,is => 'ro'
+    ,default => $TIMEOUT_REBOOT
 );
 
 has 'readonly' => (
@@ -177,6 +188,12 @@ after 'shutdown' => \&_post_shutdown;
 
 around 'shutdown_now' => \&_around_shutdown_now;
 around 'force_shutdown' => \&_around_shutdown_now;
+
+before 'reboot' => \&_allow_shutdown;
+after 'reboot' => \&_post_reboot;
+
+around 'reboot_now' => \&_around_reboot_now;
+around 'force_reboot' => \&_around_reboot_now;
 
 before 'remove_base' => \&_pre_remove_base;
 after 'remove_base' => \&_post_remove_base;
@@ -2254,6 +2271,8 @@ sub _post_spinoff($self) {
 
 sub _pre_shutdown_domain {}
 
+sub _pre_reboot_domain {}
+
 sub _post_remove_base_domain {}
 
 sub _remove_base_db {
@@ -2555,6 +2574,13 @@ sub _post_shutdown {
                                 && !$is_active;
 }
 
+sub _post_reboot {
+    my $self = shift;
+    $self->_data(status => 'rebooted');
+    $self->_remove_iptables();
+    $self->_close_exposed_port();
+}
+
 sub _around_is_active($orig, $self) {
 
     if (!$self->_vm) {
@@ -2597,6 +2623,20 @@ sub _around_is_hibernated($orig, $self) {
 }
 
 sub _around_shutdown_now {
+    my $orig = shift;
+    my $self = shift;
+    my $user = shift;
+
+    $self->_vm->connect;
+    $self->list_disks;
+    $self->_pre_shutdown(user => $user);
+    if ($self->is_active) {
+        $self->$orig($user);
+    }
+    $self->_post_shutdown(user => $user)    if $self->is_known();
+}
+
+sub _around_reboot_now {
     my $orig = shift;
     my $self = shift;
     my $user = shift;
@@ -3157,6 +3197,11 @@ sub _post_resume {
 sub _timeout_shutdown($self, $value) {
     $TIMEOUT_SHUTDOWN = $value if defined $value;
     return $TIMEOUT_SHUTDOWN;
+}
+
+sub _timeout_reboot($self, $value) {
+    $TIMEOUT_REBOOT = $value if defined $value;
+    return $TIMEOUT_REBOOT;
 }
 
 sub _post_start {

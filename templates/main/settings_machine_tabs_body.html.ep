@@ -13,7 +13,7 @@
 
 <div class="tab-content" id="v-pills-tabContent">
 % if ($USER->can_change_settings($domain->id)) {
-    <div class="tab-pane fade" id="v-pills-description" role="tabpanel" aria-labelledby="v-pills-description-tab">
+    <div class="tab-pane fade <%= $show_description %>" id="v-pills-description" role="tabpanel" aria-labelledby="v-pills-description-tab">
         %= include 'main/vm_description'
     </div>
     <div class="tab-pane fade" id="v-pills-rename" role="tabpanel" aria-labelledby="v-pills-rename-tab">
@@ -52,7 +52,7 @@
     </div>
 % }
 % if ($USER->can_change_settings($domain->id) && !$domain->is_base) {
-    <div class="tab-pane fade show active" id="v-pills-actions" role="tabpanel" aria-labelledby="v-pills-actions-tab" >
+    <div class="tab-pane fade <%= $show_actions %>" id="v-pills-actions" role="tabpanel" aria-labelledby="v-pills-actions-tab" >
         %= include 'main/vm_actions'
     </div>
 % }

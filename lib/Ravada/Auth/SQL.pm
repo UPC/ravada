@@ -632,7 +632,7 @@ Returns if the user is allowed to perform a privileged action in a virtual machi
 =cut
 
 sub can_do_domain($self, $grant, $domain) {
-    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown rename);
+    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown reboot rename);
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
     return 0 if !$self->can_do($grant) && !$self->_domain_id_base($domain);
@@ -735,6 +735,7 @@ sub grant_user_permissions($self,$user) {
     $self->grant($user, 'remove');
     $self->grant($user, 'shutdown');
     $self->grant($user, 'screenshot');
+    $self->grant($user, 'reboot');
 }
 
 =head2 grant_operator_permissions
