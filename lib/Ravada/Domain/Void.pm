@@ -234,6 +234,26 @@ sub shutdown_now {
     return $self->shutdown(user => $user);
 }
 
+sub reboot {
+    my $self = shift;
+    $self->_store(is_active => 0);
+}
+
+sub force_reboot {
+    return reboot_now(@_);
+}
+
+sub _do_force_reboot {
+    my $self = shift;
+    return $self->_store(is_active => 0);
+}
+
+sub reboot_now {
+    my $self = shift;
+    my $user = shift;
+    return $self->reboot(user => $user);
+}
+
 sub start($self, @args) {
     my %args;
     %args = @args if scalar(@args) % 2 == 0;

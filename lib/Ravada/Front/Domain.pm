@@ -68,6 +68,7 @@ sub open($self, $id) {
 
 sub autostart($self )    { return $self->_data('autostart') }
 sub _do_force_shutdown  { confess "TODO" }
+sub _do_force_reboot    { confess "TODO" }
 sub add_volume          { confess "TODO" }
 sub remove_volume       { confess "TODO" }
 sub clean_swap_volumes  { confess "TODO" }
@@ -91,6 +92,8 @@ sub display_file_tls($self, $user) {
 }
 
 sub force_shutdown      { confess "TODO" }
+
+sub force_reboot        { confess "TODO" }
 
 sub get_info($self) {
      my $info = $self->_data('info');
@@ -177,6 +180,8 @@ sub set_max_mem         { confess "TODO" }
 sub set_memory          { confess "TODO" }
 sub shutdown            { confess "TODO" }
 sub shutdown_now        { confess "TODO" }
+sub reboot              { confess "TODO" }
+sub reboot_now          { confess "TODO" }
 sub spinoff             { confess "TODO" }
 sub start               { confess "TODO" }
 
