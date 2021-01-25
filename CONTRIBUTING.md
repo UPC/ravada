@@ -210,7 +210,13 @@ A PR can only be merged into master by a maintainer if:
 Any maintainer is allowed to merge a PR if all of these conditions are
 met.
 
-### 11 Reset my fork to upstream
+## 11 Reset my fork to upstream
+
+You may want to ditch everything in your fork
+
+### 11.1 Reset develop branch
+
+ If you want to get even with main develop branch.
 
 ```sh
 git remote add upstream https://github.com/UPC/ravada
@@ -220,3 +226,28 @@ git reset --hard upstream/develop
 git push origin develop --force
 ```
 
+### 11.2 Work in a new fresh branch
+
+We create a new branch called *feature/cool_thing* and make it exactly like UPC/develop branch:
+
+First we add the upstream remote source and fetch it. If you added this remote before you will get an error *fatal: remote upstream already exists.*. Don't worry and run the `git fetch upstream` anyway so it downloads the UPC source.
+
+```sh
+git remote add upstream https://github.com/UPC/ravada
+git fetch upstream
+```
+
+Now we create a new branch:
+
+```sh
+git checkout -b feature/cool_thing
+```
+
+Reset this branch, now it will be an exact replica of upstream UPC/develop:
+
+```sh
+git reset --hard upstream/develop
+git push --set-upstream origin feature/cool_thing
+```
+
+Now work on your code, test it so it is great. Then commit, push and create a *pull request*.
