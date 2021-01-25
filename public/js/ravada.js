@@ -222,7 +222,7 @@
             };
 
             $scope.action = function(target,action,machineId,params){
-              $http.get('/'+target+'/'+action+'/'+machineId+'.json'+'?'+$scope.getQueryStringFromObject(params))
+              $http.get('/'+target+'/'+action+'/'+machineId+'.json'+'?'+this.getQueryStringFromObject(params))
                 .then(function() {
                 }, function(data,status) {
                       console.error('Repos error', status, data);
