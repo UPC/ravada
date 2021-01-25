@@ -34,7 +34,7 @@
         </div>
      </div>
 
-    <div class="row" ng-repeat="port in showmachine.ports">
+    <div class="row" ng-repeat="port in showmachine.ports" style="margin-top: 10px">
          <div class="col-lg-2 mt-2">
             {{port.internal_port}}
          </div>
