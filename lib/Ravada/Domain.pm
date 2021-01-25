@@ -2506,6 +2506,7 @@ sub _post_shutdown {
     if ( $self->_vm->is_active ) {
         $self->_remove_iptables();
         $self->_close_exposed_port();
+        $self->_set_ports_down();
     }
 
     my $is_active = $self->is_active;
@@ -2719,7 +2720,7 @@ sub expose($self, @args) {
         $internal_port = delete $args{internal_port} if exists $args{internal_port};
         delete $args{internal_ip};
         # remove old fields
-        for (qw(public_ip active description)) {
+        for (qw(public_ip active description is_active)) {
             delete $args{$_};
         }
 
@@ -5507,6 +5508,51 @@ sub purge($self, $request=undef) {
         }
     }
     $self->_data( 'has_backups' => 0 );
+}
+
+sub _check_port($self, $port, $ip=$self->ip, $request=undef) {
+    my ($out, $err) = $self->_vm->run_command("nc","-z","-v",$ip,$port);
+    $request->error($err) if $err;
+    return 1 if $err =~ /succeeded!/;
+    return 0 if $err =~ /failed/;
+    warn $err;
+    return 0;
+}
+
+sub _set_ports_down($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domain_ports set is_active=0 "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+}
+
+sub refresh_ports($self, $request=undef) {
+    my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_ports "
+        ." SET is_active=? "
+        ." WHERE id_domain=? AND id=?"
+    );
+    my $is_active = $self->is_active();
+    my $ip;
+    $ip = $self->ip if $is_active;
+
+    my $port_down = 0;
+    my $msg = '';
+    for my $port ($self->list_ports) {
+        my $is_port_active;
+        if ($is_active && $ip) {
+            $is_port_active = $self->_check_port($port->{internal_port}, $ip, $request);
+        } else {
+            $is_port_active = 0;
+        }
+        $port_down++;
+        $sth_update->execute($is_port_active, $self->id, $port->{id});
+        $msg .= " , " if $msg;
+        $msg .= " $port->{internal_port} $is_port_active";
+    }
+    die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
+    die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"
+    if $port_down;
 }
 
 1;

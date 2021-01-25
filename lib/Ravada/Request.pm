@@ -102,6 +102,7 @@ our %VALID_ARG = (
     ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 2, data => 1 }
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
+    ,refresh_machine_ports => { id_domain => 1, uid => 1 }
     ,rebase => { uid => 1, id_base => 1, id_domain => 1 }
     ,set_time => { uid => 1, id_domain => 1 }
     ,rsync_back => { uid => 1, id_domain => 1, id_node => 1 }
