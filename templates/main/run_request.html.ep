@@ -8,7 +8,7 @@
     %= include 'bootstrap/navigation'
     <div class="container theme-showcase" role="main"
         ng-controller="run_domain_req"
-        ng-init="id_request=<%= $request->id %>;auto_view=<%= $auto_view %>;timeout=<%= $timeout %>"
+        ng-init="subscribe_request('<%= url_for('ws_subscribe')->to_abs %>',<%= $request->id %>);auto_view=<%= $auto_view %>;timeout=<%= $timeout %>"
     >
     <div class="jumbotron" ng-cloak="">
 
@@ -61,16 +61,25 @@
                 <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
             </ul>
             <h3 ng-show="domain.ports.length">Open ports</h3>
-            <ul ng-show="domain.ports.length">
-                <li ng-repeat="port in domain.ports">
+            <div class="container pl-5">
+            <table border="0">
+                <tr ng-repeat="port in domain.ports">
+                    <td align="right">
+                    <span ng-show="!port.is_active" class="badge badge-danger">down</span>
+                    <span ng-show="port.is_active" class="badge badge-info">up</span>
+                    </td>
+                    <td align="left">
                     <b>{{port.name}}</b>
+                    </td>
+                    <td>
                     {{domain.display.ip}}:{{port.public_port}}
                     <i class="fa fa-arrow-right"></i>
                     {{port.internal_port}}
-                </li>
-            </ul>
+                    </td>
+                </tr>
+            </table>
             </div>
-            <div ng-show="domain.is_active">
+            <div ng-show="domain.is_active" class="pt-3">
                 <div>
                 <a type="button" class="btn btn-success"
                     ng-show="!domain.display.tls_port"
