@@ -1,6 +1,5 @@
 <div class="card-body">
      <div class="row">
-        <div class="col-lg-2 mt-2">Action</div>
         <div class="col-lg-2 mt-2">
              Port
         </div>
@@ -13,12 +12,10 @@
         <div class="col-lg-2 mt-2">
              Public Port
         </div>
+        <div class="col-lg-2 mt-2">Action</div>
      </div>
 
      <div class="row">
-        <div class="col-lg-2 mt-2">
-            <button ng-show="new_port" ng-click="expose(new_port, new_port_name, new_port_restricted)"><%=l 'Add' %></button>
-        </div>
         <div class="col-lg-2 mt-2">
             <input type="text" size="3" maxlength="5" ng-model="new_port">
         </div>
@@ -30,15 +27,14 @@
         <div class="col-lg-4 mt-2">
             <input type="text" ng-model="new_port_name">
         </div>
-        <div class="col-lg-3 mt-2">
+        <div class="col-lg-2 mt-2">
+        </div>
+        <div class="col-lg-2 mt-2">
+            <button class="btn btn-primary" ng-show="new_port" ng-click="expose(new_port, new_port_name, new_port_restricted)"><%=l 'Add' %></button>
         </div>
      </div>
 
     <div class="row" ng-repeat="port in showmachine.ports">
-        <div class="col-md-2">
-            <button class="btn"
-            ng-click="remove_expose(port.internal_port)"><i class="fas fa-times"></i></button>
-        </div>
          <div class="col-lg-2 mt-2">
             {{port.internal_port}}
          </div>
@@ -58,6 +54,9 @@
          <div class="col-lg-2 mt-2">
             {{port.public_port}}
          </div>
+        <div class="col-md-2">
+            <button class="btn btn-danger" ng-click="remove_expose(port.internal_port)"><%=l 'Remove' %></button>
+        </div>
     </div>
 
     <br/>
