@@ -847,4 +847,10 @@ sub change_hardware($self, $hardware, $index, $data) {
 sub dettach($self,$user) {
     # no need to do anything to dettach mock volumes
 }
+
+sub _check_port($self,@args) {
+    return 1 if $self->is_active;
+    return 0;
+}
+
 1;

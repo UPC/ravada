@@ -106,13 +106,18 @@ sub _list_nodes($rvd, $args) {
 }
 
 sub _request($rvd, $args) {
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login);
+
     my ($id_request) = $args->{channel} =~ m{/(.*)};
     my $req = Ravada::Request->open($id_request);
     my $command_text = $req->command;
     $command_text =~ s/_/ /g;
-    return {command => $req->command, command_text => $command_text
-            ,output => $req->output
-            ,status => $req->status, error => $req->error};
+    my $info = $req->info($user);
+    $info->{command_text} = $command_text;
+
+    return $info;
+
 }
 
 sub _list_machines($rvd, $args) {

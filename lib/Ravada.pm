@@ -1640,6 +1640,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
     $self->_upgrade_table('domain_ports', 'restricted','int(1) DEFAULT 0');
+    $self->_upgrade_table('domain_ports', 'is_active','int(1) DEFAULT 0');
 
     $self->_upgrade_table('messages','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 }
@@ -3774,10 +3775,26 @@ sub _cmd_refresh_machine($self, $request) {
     my $domain = Ravada::Domain->open($id_domain) or confess "Error: domain $id_domain not found";
     $domain->check_status();
     $domain->list_volumes_info();
-    $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
+    my $is_active = $domain->is_active;
+    $self->_remove_unnecessary_downs($domain) if !$is_active;
     $domain->info($user);
 
+    Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id)
+    if $is_active && $domain->ip;
 }
+
+sub _cmd_refresh_machine_ports($self, $request) {
+    my $id_domain = $request->args('id_domain');
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    my $domain = Ravada::Domain->open($id_domain) or confess "Error: domain $id_domain not found";
+
+    die "USER $uid not authorized to refresh machine ports for domain ".$domain->name
+    unless $domain->_data('id_owner') ==  $user->id || $user->is_operator;
+
+    $domain->refresh_ports($request);
+}
+
 
 sub _cmd_change_owner($self, $request) {
     my $uid = $request->args('uid');
@@ -4327,6 +4344,7 @@ sub _req_method {
 ,refresh_storage => \&_cmd_refresh_storage
 ,check_storage => \&_cmd_check_storage
 ,refresh_machine => \&_cmd_refresh_machine
+,refresh_machine_ports => \&_cmd_refresh_machine_ports
 ,domain_autostart=> \&_cmd_domain_autostart
 ,change_owner => \&_cmd_change_owner
 ,add_hardware => \&_cmd_add_hardware
@@ -4621,6 +4639,13 @@ sub _cmd_remove_expose($self, $request) {
 sub _cmd_open_exposed_ports($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain);
     $domain->open_exposed_ports();
+
+    Ravada::Request->refresh_machine_ports(
+        uid => $request->args('uid'),
+        ,id_domain => $domain->id
+        ,retry => 10
+    );
+
 }
 
 =head2 set_debug_value
