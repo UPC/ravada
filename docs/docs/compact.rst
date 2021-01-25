@@ -35,11 +35,11 @@ over the volumes.
 
 ::
 
-root@hamilton:/var/lib/libvirt/images# ls alpine-alice-*backup
-alpine-alice-vda.alpinevda.qcow2.1611569608.backup
-alpine-alice-vdb.alpinevdb.SWAP.qcow2.1611569611.backup
-alpine-alice-vdc.alpinevdc.DATA.qcow2.1611569613.backup
-root@hamilton:/var/lib/libvirt/images# cp alpine-alice-vda.alpinevda.qcow2.1611569608.backup alpine-alice-vda.alpinevda.qcow2
+    root@hamilton:/var/lib/libvirt/images# ls alpine-alice-*backup
+    alpine-alice-vda.alpinevda.qcow2.1611569608.backup
+    alpine-alice-vdb.alpinevdb.SWAP.qcow2.1611569611.backup
+    alpine-alice-vdc.alpinevdc.DATA.qcow2.1611569613.backup
+    root@hamilton:/var/lib/libvirt/images# cp alpine-alice-vda.alpinevda.qcow2.1611569608.backup alpine-alice-vda.alpinevda.qcow2
 
 Why compact
 -----------
