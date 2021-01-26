@@ -1706,8 +1706,8 @@ Returns a file with the display information. Defaults to spice.
 
 =cut
 
-sub display_file($self,$user) {
-    return $self->_display_file_spice($user);
+sub display_file($self, $display) {
+    return $self->_display_file_spice($display);
 }
 
 sub _around_display_file_tls($orig, $self, $user) {
@@ -3556,7 +3556,6 @@ sub _post_start {
         $self->_data('client_status_time_checked', time );
         if ($self->_has_builtin_display()) {
             $self->display($arg{user});
-            $self->display_file($arg{user});
         }
         $self->info($arg{user});
     }
