@@ -849,51 +849,10 @@
 
     function run_domain_req_ctrl($scope, $http, $timeout, request ) {
         var redirected_display = false;
-        $scope.get_domain_info = function() {
-            if ($scope.id_domain) {
-                var seconds = 1000;
-                $http.get('/machine/info/'+$scope.id_domain+'.json').then(function(response) {
-                    $scope.domain = response.data;
-                    if ($scope.domain.spice_password) {
-                        var copyTextarea = document.querySelector('.js-copytextarea');
-                        copyTextarea.value = $scope.domain.spice_password;
-                        copyTextarea.length = 5;
-                    }
-                    if ($scope.domain.is_active) {
-                        seconds = 5000;
-                        $scope.redirect();
-                        if ($scope.auto_view && !redirected_display && !$scope.domain.spice_password) {
-                            location.href='/machine/display/'+$scope.domain.id+".vv";
-                            redirected_display=true;
-                        }
-                    }
-                    $timeout(function() {
-                        $scope.get_domain_info();
-                    },seconds);
-                });
-            }
-
-        };
-        $scope.wait_request = function() {
-            if ($scope.id_request) {
-                $http.get('/request/'+$scope.id_request+'.json').then(function(response) {
-                    $scope.request=response.data;
-                    if (response.data.status == 'done' ) {
-                        $scope.id_domain=response.data.id_domain;
-                        $scope.get_domain_info();
-                    }
-                });
-            }
-
-            if ( !$scope.id_domain ) {
-                $timeout(function() {
-                    $scope.wait_request();
-                },1000);
-            }
-        }
-        $scope.copy_password= function() {
+        $scope.copy_password= function(driver) {
             $scope.view_password=1;
-            var copyTextarea = document.querySelector('.js-copytextarea');
+            console.log("copy-password "+driver);
+            var copyTextarea = document.querySelector('.js-copytextarea-'+driver);
             if (copyTextarea) {
                     copyTextarea.select();
                     try {
@@ -943,8 +902,7 @@
         $scope.subscribe_domain_info= function(url, id_domain) {
             already_subscribed_to_domain = true;
             var ws = new WebSocket(url);
-            ws.onopen = function(event) { ws.send('machine_info/'+id_domain) 
-            };
+            ws.onopen = function(event) { ws.send('machine_info/'+id_domain) };
             ws.onclose = function() {
                 $scope.subscribe_domain_info(url, id_domain);
             };
@@ -953,25 +911,36 @@
                 var data = JSON.parse(event.data);
                 $scope.$apply(function () {
                     $scope.domain = data;
+                    for ( var i=0;i<$scope.domain.hardware.display.length; i++ ) {
+                        if (typeof($scope.domain_display[i]) == 'undefined') {
+                            $scope.domain_display[i]= {};
+                        }
+                        var display = $scope.domain.hardware.display[i];
+                        var keys = Object.keys(display);
+                        for ( var n_key=0 ; n_key<keys.length ; n_key++) {
+                            var field=keys[n_key];
+                            if (typeof($scope.domain_display[i][field]) == 'undefined'
+                                || $scope.domain_display[i][field] != display[field]) {
+                                $scope.domain_display[i][field] = display[field];
+                            }
+                        }
+                    }
                 });
-                if ($scope.domain.spice_password) {
-                        var copyTextarea = document.querySelector('.js-copytextarea');
-                        copyTextarea.value = $scope.domain.spice_password;
-                        copyTextarea.length = 5;
-                }
                 if ($scope.domain.is_active && $scope.request.status == 'done') {
                     $scope.redirect();
-                    if ($scope.auto_view && !redirected_display && !$scope.domain.spice_password) {
-                        location.href='/machine/display/'+$scope.domain.id+".vv";
+                    if ($scope.auto_view && !redirected_display && $scope.domain_display[0]
+                        && !$scope.domain_display[0].password) {
+                        location.href='/machine/display/'+$scope.domain_display[0].driver+"/"
+                            +$scope.domain.id+".vv";
                         redirected_display=true;
                     }
                 }
 
             }
         }
-
+        $scope.domain_display = [];
         $scope.redirect_done = false;
-        $scope.wait_request();
+        //$scope.wait_request();
         $scope.view_clicked=false;
     };
 // list users
