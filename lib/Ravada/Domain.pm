@@ -28,6 +28,7 @@ use Ravada::Domain::Driver;
 use Ravada::Utils;
 
 our $TIMEOUT_SHUTDOWN = 20;
+our $TIMEOUT_REBOOT = 20;
 our $CONNECTOR;
 
 our $MIN_FREE_MEMORY = 1024*1024;
@@ -56,6 +57,10 @@ requires 'shutdown';
 requires 'shutdown_now';
 requires 'force_shutdown';
 requires '_do_force_shutdown';
+requires 'reboot';
+requires 'reboot_now';
+requires 'force_reboot';
+requires '_do_force_reboot';
 
 requires 'pause';
 requires 'resume';
@@ -105,6 +110,12 @@ has 'timeout_shutdown' => (
     isa => 'Int'
     ,is => 'ro'
     ,default => $TIMEOUT_SHUTDOWN
+);
+
+has 'timeout_reboot' => (
+    isa => 'Int'
+    ,is => 'ro'
+    ,default => $TIMEOUT_REBOOT
 );
 
 has 'readonly' => (
@@ -177,6 +188,12 @@ after 'shutdown' => \&_post_shutdown;
 
 around 'shutdown_now' => \&_around_shutdown_now;
 around 'force_shutdown' => \&_around_shutdown_now;
+
+before 'reboot' => \&_allow_shutdown;
+after 'reboot' => \&_post_reboot;
+
+around 'reboot_now' => \&_around_reboot_now;
+around 'force_reboot' => \&_around_reboot_now;
 
 before 'remove_base' => \&_pre_remove_base;
 after 'remove_base' => \&_post_remove_base;
@@ -2254,6 +2271,8 @@ sub _post_spinoff($self) {
 
 sub _pre_shutdown_domain {}
 
+sub _pre_reboot_domain {}
+
 sub _post_remove_base_domain {}
 
 sub _remove_base_db {
@@ -2487,6 +2506,7 @@ sub _post_shutdown {
     if ( $self->_vm->is_active ) {
         $self->_remove_iptables();
         $self->_close_exposed_port();
+        $self->_set_ports_down();
     }
 
     my $is_active = $self->is_active;
@@ -2555,6 +2575,13 @@ sub _post_shutdown {
                                 && !$is_active;
 }
 
+sub _post_reboot {
+    my $self = shift;
+    $self->_data(status => 'rebooted');
+    $self->_remove_iptables();
+    $self->_close_exposed_port();
+}
+
 sub _around_is_active($orig, $self) {
 
     if (!$self->_vm) {
@@ -2597,6 +2624,20 @@ sub _around_is_hibernated($orig, $self) {
 }
 
 sub _around_shutdown_now {
+    my $orig = shift;
+    my $self = shift;
+    my $user = shift;
+
+    $self->_vm->connect;
+    $self->list_disks;
+    $self->_pre_shutdown(user => $user);
+    if ($self->is_active) {
+        $self->$orig($user);
+    }
+    $self->_post_shutdown(user => $user)    if $self->is_known();
+}
+
+sub _around_reboot_now {
     my $orig = shift;
     my $self = shift;
     my $user = shift;
@@ -2679,7 +2720,7 @@ sub expose($self, @args) {
         $internal_port = delete $args{internal_port} if exists $args{internal_port};
         delete $args{internal_ip};
         # remove old fields
-        for (qw(public_ip active description)) {
+        for (qw(public_ip active description is_active)) {
             delete $args{$_};
         }
 
@@ -3157,6 +3198,11 @@ sub _post_resume {
 sub _timeout_shutdown($self, $value) {
     $TIMEOUT_SHUTDOWN = $value if defined $value;
     return $TIMEOUT_SHUTDOWN;
+}
+
+sub _timeout_reboot($self, $value) {
+    $TIMEOUT_REBOOT = $value if defined $value;
+    return $TIMEOUT_REBOOT;
 }
 
 sub _post_start {
@@ -5462,6 +5508,51 @@ sub purge($self, $request=undef) {
         }
     }
     $self->_data( 'has_backups' => 0 );
+}
+
+sub _check_port($self, $port, $ip=$self->ip, $request=undef) {
+    my ($out, $err) = $self->_vm->run_command("nc","-z","-v",$ip,$port);
+    $request->error($err) if $err;
+    return 1 if $err =~ /succeeded!/;
+    return 0 if $err =~ /failed/;
+    warn $err;
+    return 0;
+}
+
+sub _set_ports_down($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domain_ports set is_active=0 "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+}
+
+sub refresh_ports($self, $request=undef) {
+    my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_ports "
+        ." SET is_active=? "
+        ." WHERE id_domain=? AND id=?"
+    );
+    my $is_active = $self->is_active();
+    my $ip;
+    $ip = $self->ip if $is_active;
+
+    my $port_down = 0;
+    my $msg = '';
+    for my $port ($self->list_ports) {
+        my $is_port_active;
+        if ($is_active && $ip) {
+            $is_port_active = $self->_check_port($port->{internal_port}, $ip, $request);
+        } else {
+            $is_port_active = 0;
+        }
+        $port_down++;
+        $sth_update->execute($is_port_active, $self->id, $port->{id});
+        $msg .= " , " if $msg;
+        $msg .= " $port->{internal_port} $is_port_active";
+    }
+    die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
+    die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"
+    if $port_down;
 }
 
 1;
