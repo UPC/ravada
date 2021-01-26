@@ -1060,6 +1060,7 @@ sub _add_indexes_generic($self) {
         ,domain_displays => [
             "unique(id_domain,n_order)"
             ,"unique(id_domain,driver)"
+            ,"unique(port)"
         ]
         ,requests => [
             "index(status,at_time)"
@@ -1472,6 +1473,7 @@ sub _sql_create_tables($self) {
             ,driver => 'char(40) not null'
             ,is_active => 'integer NOT NULL default 0'
             ,is_builtin => 'integer NOT NULL default 0'
+            ,id_domain_port => 'integer DEFAULT NULL'
             ,n_order => 'integer NOT NULL'
             ,password => 'char(32)'
             ,extra => 'TEXT'
@@ -1711,7 +1713,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains','status','varchar(32) DEFAULT "shutdown"');
     $self->_upgrade_table('domains','display','text');
-    $self->_upgrade_table('domains','display_file','text DEFAULT NULL');
+    #$self->_upgrade_table('domains','display_file','text DEFAULT NULL');
     $self->_upgrade_table('domains','info','varchar(255) DEFAULT NULL');
     $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('domains','id_vm','int default null');
@@ -1748,12 +1750,14 @@ sub _upgrade_tables {
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
 
     $self->_upgrade_table('vms','mac','char(18)');
+    $self->_upgrade_table('vms','tls','text');
 
     $self->_upgrade_table('volumes','name','char(200)');
 
     $self->_upgrade_table('domain_drivers_options','data', 'char(200) ');
     $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
     $self->_upgrade_table('domain_ports', 'restricted','int(1) DEFAULT 0');
+    $self->_upgrade_table('domain_ports', 'is_active','int(1) DEFAULT 0');
 
     $self->_upgrade_table('messages','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 }
@@ -2762,7 +2766,7 @@ sub _kill_stale_process($self) {
         ." FROM requests "
         ." WHERE start_time<? "
         ." AND ( command = 'refresh_vms' or command = 'screenshot' or command = 'set_time' "
-        ."      OR command = 'open_exposed_ports' "
+        ."      OR command = 'open_exposed_ports' OR command='remove' "
         .") "
         ." AND status <> 'done' "
         ." AND pid IS NOT NULL "

@@ -86,6 +86,18 @@ sub display_info($self, $user) {
 
 }
 
+
+sub _has_builtin_display($self) {
+    _init_connector();
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,driver,is_builtin FROM domain_displays "
+    ." WHERE id_domain=?");
+    $sth->execute($self->id);
+    while (my ($id, $driver, $is_builtin) = $sth->fetchrow ) {
+        return 1 if $is_builtin;
+    }
+    return 0;
+}
+
 sub display_file_tls($self, $user) {
     return $self->_data('display_file');
 }
@@ -189,6 +201,32 @@ sub list_controllers {}
 sub set_controller {}
 sub remove_controller {}
 sub change_hardware { die "TODO" }
+
+sub _get_controller_display($self) {
+    _init_connector();
+
+    my %file_extension = (
+        'spice' => 'vv'
+    );
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM domain_displays "
+        ." WHERE id_domain=? "
+        ." ORDER BY n_order "
+    );
+    $sth->execute($self->id);
+    my @display;
+    while (my $row = $sth->fetchrow_hashref) {
+        $row->{extra} = decode_json($row->{extra})
+        if exists $row->{extra} && defined $row->{extra};
+
+        $row->{file_extension} = ($file_extension{$row->{driver}} or '');
+
+        push @display, ($row);
+    }
+    return @display;
+}
+
 
 sub _get_controller_disk($self) {
     return map { $_->info } $self->list_volumes_info();

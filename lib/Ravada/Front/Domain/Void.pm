@@ -11,6 +11,7 @@ my $DIR_TMP = "/var/tmp/rvd_void/".getpwuid($>);
 our %GET_CONTROLLER_SUB = (
     'mock' => \&_get_controller_mock
     ,'disk' => \&_get_controller_disk
+    ,'display' => \&_get_controller_display
 
 );
 
@@ -69,6 +70,10 @@ sub _get_controller_mock {
 
 sub _get_controller_disk {
     return Ravada::Front::Domain::_get_controller_disk(@_);
+}
+
+sub _get_controller_display {
+    return Ravada::Front::Domain::_get_controller_display(@_);
 }
 
 1;

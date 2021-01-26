@@ -288,6 +288,8 @@ sub _around_connect($orig, $self) {
     my $result = $self->$orig();
     if ($result) {
         $self->is_active(1);
+        $self->_fetch_tls()
+        if !$self->readonly && !$self->_data('tls');
     } else {
         $self->is_active(0);
     }
@@ -1816,26 +1818,64 @@ sub shared_storage($self, $node, $dir) {
 sub _fetch_tls_host_subject($self) {
     return '' if !$self->dir_cert();
 
+    return $self->_fetch_tls_cached('host_subject')
+    if $self->readonly;
+
     my @cmd= qw(/usr/bin/openssl x509 -noout -text -in );
     push @cmd, ( $self->dir_cert."/server-cert.pem" );
 
     my ($out, $err) = $self->run_command(@cmd);
     die $err if $err;
 
+    my $subject;
     for my $line (split /\n/,$out) {
         chomp $line;
         next if $line !~ /^\s+Subject:\s+(.*)/;
-        my $subject = $1;
+        $subject = $1;
         $subject =~ s/ = /=/g;
         $subject =~ s/, /,/g;
-        return $subject;
+        last;
     }
+    $self->_store_tls( subject => $subject );
+    return $subject;
+}
+
+sub _fetch_tls_cached($self, $field) {
+    my $tls_json = $self->_data('tls');
+    my $tls = {};
+    eval {
+        $tls = decode_json($tls_json) if length($tls);
+    };
+    warn $@ if $@;
+    return ( $tls->{$field} or '');
+}
+
+sub _store_tls($self, $field, $value ) {
+    my $tls_json = $self->_data('tls');
+    my $tls = {};
+    eval {
+        $tls = decode_json($tls_json) if length($tls_json);
+    };
+    warn $@ if $@;
+    $tls = {} if $@;
+    $tls->{$field} = $value;
+    $self->_data( 'tls' => encode_json($tls) );
+    return ( $tls->{$field} or '');
 }
 
 sub _fetch_tls_ca($self) {
+    return $self->_fetch_tls_cached('ca') if $self->readonly;
     my ($out, $err) = $self->run_command("/bin/cat", $self->dir_cert."/ca-cert.pem");
 
-    return join('\n', (split /\n/,$out) );
+    my $ca = join('\n', (split /\n/,$out) );
+    $self->_store_tls( ca => $ca );
+
+    return $ca;
+}
+
+sub _fetch_tls($self) {
+    $self->_fetch_tls_host_subject();
+    $self->_fetch_tls_ca();
 }
 
 sub _store_mac_address($self, $force=0 ) {

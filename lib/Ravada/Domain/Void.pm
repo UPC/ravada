@@ -91,8 +91,9 @@ sub _is_display_builtin($self, $index=undef, $data=undef) {
 sub _set_display($self, $listen_ip=$self->_vm->listen_ip) {
     $listen_ip=$self->_vm->listen_ip if !$listen_ip;
     #    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
-    my $display="void://$listen_ip:5990/";
-    my $display_data = { display => $display , driver => 'void', ip => $listen_ip, port => 5990
+    my $port = $self->_vm->_new_free_port();
+    my $display="void://$listen_ip:$port/";
+    my $display_data = { display => $display , driver => 'void', ip => $listen_ip, port =>$port
         , is_builtin => 1
         , xistorra => 1
     };
@@ -308,7 +309,9 @@ sub start($self, @args) {
     $listen_ip = $self->_vm->listen_ip($remote_ip) if !$listen_ip;
 
     $self->_store(is_active => 1);
-    $self->_set_displays_ip( $set_password, $listen_ip );
+    my $password;
+    $password = Ravada::Utils::random_name() if $set_password;
+    $self->_set_displays_ip( $password, $listen_ip );
 }
 
 sub list_disks {
@@ -579,6 +582,7 @@ sub get_info {
     my $self = shift;
     my $info = $self->_value('info');
     if (!$info->{memory}) {
+        warn Dumper($info);
         $info = $self->_set_default_info();
     }
     lock_keys(%$info);
@@ -706,7 +710,7 @@ sub hibernate($self, $user) {
 sub type { 'Void' }
 
 sub migrate($self, $node, $request=undef) {
-    $self->_set_spice_ip(undef, $node->ip);
+    $self->_set_displays_ip(undef, $node->ip);
     my $config_remote;
     $config_remote = $self->_load();
     my $device = $config_remote->{hardware}->{device}
@@ -910,4 +914,5 @@ sub change_hardware($self, $hardware, $index, $data) {
 sub dettach($self,$user) {
     # no need to do anything to dettach mock volumes
 }
+
 1;

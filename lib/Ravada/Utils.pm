@@ -5,6 +5,9 @@ use strict;
 
 use Carp qw(confess);
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 =head1 NAME
 
 Ravada::Utils - Misc util libraries for Ravada
@@ -101,6 +104,13 @@ sub number_to_size {
         $previous_unit = $unit;
         $previous_ret = $ret;
     }
+}
+
+sub max_id($dbh, $table) {
+    my $sth = $dbh->prepare("SELECT max(id) FROM $table");
+    $sth->execute();
+    my ($max) = $sth->fetchrow;
+    return ($max or 0);
 }
 
 1;

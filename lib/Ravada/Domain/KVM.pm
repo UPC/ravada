@@ -663,9 +663,9 @@ sub display_info($self, $user) {
               driver => $type
                ,port => $port
                  ,ip => $address
-          ,tls_port => $tls_port
          ,is_builtin => 1
     );
+    $display{tls_port} = $tls_port if defined $tls_port;
     $display{password} = $password;
     $port = '' if !defined $port;
     my $display = $type."://$address:$port";
@@ -1658,7 +1658,7 @@ sub rename_volumes {
 }
 
 sub _set_displays_ip($self, $set_password, $ip=undef) {
-    return $self->_set_displays_ip($set_password, $ip);
+    return $self->_set_spice_ip($set_password, $ip);
 }
 
 sub _set_spice_ip($self, $set_password, $ip=undef) {
