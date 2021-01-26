@@ -14,7 +14,7 @@ SERVER_KEY=server-key.pem
 
 # creating a key for our ca
 if [ ! -e ca-key.pem ]; then
-    openssl genrsa -aes256 -out ca-key.pem
+    openssl genrsa -aes256 -out ca-key.pem 2048
 fi
 # creating a ca
 if [ ! -e ca-cert.pem ]; then
