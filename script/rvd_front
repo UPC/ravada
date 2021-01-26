@@ -609,7 +609,7 @@ get '/machine/info/(:id).(:type)' => sub {
     return access_denied($c,"Access denied to user ".$USER->name) unless $USER->can_manage_machine($domain->id);
 
     my $info = $domain->info($USER);
-    if ($domain->is_active && !$info->{ip}) {
+    if ($domain->is_active && ( !exists $info->{ip} || !$info->{ip})) {
         Ravada::Request->refresh_machine(id_domain => $domain->id, uid => $USER->id);
     }
     return $c->render(json => $info);
@@ -964,13 +964,19 @@ get '/machine/autostart/#id/#value' => sub {
     return $c->render(json => { request => $req->id});
 };
 
-get '/machine/display/(:id).vv' => sub {
+get '/machine/display/(:driver)/(:id).vv' => sub {
     my $c = shift;
 
     my $id = $c->stash('id');
 
+    warn $c->stash('driver');
+
     my $domain = $RAVADA->search_domain_by_id($id);
-    return $c->render(text => "unknown machine id=$id") if !$id;
+    return $c->render(text => "unknown machine id=$id") if !$domain;
+
+    my $display = $domain->_get_display($c->stash('driver'));
+    return $c->render(text => "unknown display ".$c->stash('driver')." for machine id=$id")
+    if !$display;
 
     return access_denied($c)
         if $USER->id ne $domain->id_owner
@@ -980,16 +986,21 @@ get '/machine/display/(:id).vv' => sub {
         $c->res->headers->content_disposition(
         "inline;filename=".$domain->id.".vv");
 
-    return $c->render(data => $domain->display_file($USER), format => 'vv');
+    return $c->render(data => $domain->_display_file_spice($display), format => 'vv');
 };
 
-get '/machine/display-tls/(:id)-tls.vv' => sub {
+get '/machine/display/(:driver)/tls/(:id).vv' => sub {
     my $c = shift;
 
     my $id = $c->stash('id');
 
+    warn $c->stash('driver')."-tls";
     my $domain = $RAVADA->search_domain_by_id($id);
-    return $c->render(text => "unknown machine id=$id") if !$id;
+    return $c->render(text => "unknown machine id=$id") if !$domain;
+
+    my $display = $domain->_get_display($c->stash('driver'));
+    return $c->render(text => "unknown display ".$c->stash('driver')." for machine id=$id")
+    if !$display;
 
     return access_denied($c)
         if $USER->id ne $domain->id_owner
@@ -999,7 +1010,7 @@ get '/machine/display-tls/(:id)-tls.vv' => sub {
         $c->res->headers->content_disposition(
         "inline;filename=".$domain->id."-tls.vv");
 
-    return $c->render(data => $domain->display_file_tls($USER), format => 'vv');
+    return $c->render(data => $domain->_display_file_spice($display,1), format => 'vv');
 };
 
 # Network ##########################################################3
