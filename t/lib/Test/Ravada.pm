@@ -10,6 +10,7 @@ use YAML qw(DumpFile);
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use Mojo::File 'path';
+use Mojo::JSON qw(decode_json);
 use  Test::More;
 use XML::LibXML;
 use YAML qw(Load LoadFile Dump DumpFile);
@@ -72,12 +73,15 @@ create_domain
     mojo_login
     mojo_check_login
     mojo_request
+    mojo_request_url
 
     remove_old_user
 
     mangle_volume
     test_volume_contents
     test_volume_format
+
+    check_libvirt_tls
 
     end
 );
@@ -130,6 +134,7 @@ my %LOCKED_FH;
 my ($MOJO_USER, $MOJO_PASSWORD);
 
 my $BASE_NAME= "zz-test-base";
+my $FILE_CONFIG_QEMU = "/etc/libvirt/qemu.conf";
 
 sub user_admin {
 
@@ -687,6 +692,32 @@ sub mojo_request($t, $req_name, $args) {
     wait_request(background => 1);
 }
 
+sub mojo_request_url($t, $url) {
+    $t->get_ok($url)->status_is(200);
+    return if $t->tx->res->code != 200;
+
+    my $body = $t->tx->res->body;
+    my $body_json;
+    eval { $body_json = decode_json($body)};
+    if ($@) {
+        warn "Error fetching $url $@";
+        return ;
+    }
+    if (!exists $body_json->{request} || !defined $body_json->{request}) {
+        warn "Error: missing request field after $url ".dumper($body_json);
+        return;
+    }
+    my $req = Ravada::Request->open($body_json->{request});
+    for ( 1 .. 120 ) {
+        last if $req->status eq 'done';
+        sleep 1;
+        diag("Waiting for request "
+            .$req->id." ".$req->command." ".$req->status." ".$req->error) if !($_ % 10);
+    }
+    is($req->status,'done');
+    is($req->error, '');
+}
+
 sub _activate_storage_pools($vm) {
     my @sp = $vm->vm->list_all_storage_pools();
     for my $sp (@sp) {
@@ -901,6 +932,7 @@ sub wait_request {
                     .$run_at
                     ." ".($req->error or ''))
                     if $debug && (time%5 == 0);
+                sleep 1 if $req->command eq 'open_exposed_ports';
                 $done_all = 0;
             } elsif (!$done{$req->id}) {
                 $t0 = time;
@@ -915,6 +947,8 @@ sub wait_request {
                         next if $error =~ /waiting for processes/i;
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
                             like($error,qr{^($|rsync done)});
+                        } elsif($req->command eq 'refresh_machine_ports') {
+                            like($error,qr{^($|.*is not up|.*has ports down)});
                         } else {
                             is($error,'') or confess $req->command;
                         }
@@ -2164,5 +2198,25 @@ sub test_volume_format(@volume) {
     }
 }
 
+sub check_libvirt_tls {
+    my %search = map { $_ => 0 }
+    ('spice_tls = 1',
+    'spice_tls_x509_cert_dir = '
+    );
+    open my $in,'<',$FILE_CONFIG_QEMU or die "$! $FILE_CONFIG_QEMU";
+    while(my $line = <$in>) {
+        chomp $line;
+        $line =~ s/#.*//;
+        next if !length($line);
+        for my $pattern (keys %search) {
+            delete $search{$pattern} if $line =~ /^$pattern/
+        }
+        last if !keys %search;
+    }
+    return if !keys %search;
+    return "Missing in $FILE_CONFIG_QEMU: ".join(" , ",keys %search)
+        ."\n".'https://ravada.readthedocs.io/en/latest/docs/spice_tls.html';
+
+}
 
 1;

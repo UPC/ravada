@@ -23,21 +23,11 @@ my $USER = create_user("foo","bar", 1);
 
 rvd_back();
 $Ravada::CAN_FORK = 1;
-my %CREATE_ARGS = (
-     KVM => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
-    ,LXC => { id_template => 1, id_owner => $USER->id }
-    ,Void => { id_owner => $USER->id }
-);
+my $BASE;
 
 my $TEST_TIMESTAMP = 0;
 
 ########################################################################
-sub create_args {
-    my $backend = shift;
-
-    die "Unknown backend $backend" if !$CREATE_ARGS{$backend};
-    return %{$CREATE_ARGS{$backend}};
-}
 
 sub test_add_hardware_request_drivers {
 	my $vm = shift;
@@ -75,6 +65,8 @@ sub test_add_hardware_request_drivers {
             is($info1->{hardware}->{$hardware}->[-1]->{driver}, $driver_short) or confess( $domain->name
                 , Dumper($info1->{hardware}->{$hardware}));
 
+            test_display_data($domain , $driver) if $hardware eq 'display';
+
             test_remove_hardware($vm, $domain, $hardware
                 , scalar(@{$info1->{hardware}->{$hardware}})-1)
             if $remove || $hardware eq 'disk' && $driver eq 'usb';
@@ -94,6 +86,49 @@ sub _get_driver_short_name($domain,$hardware, $option) {
     $driver->get_options;
 
     return $selected->{value};
+}
+
+sub test_display_data($domain, $driver) {
+
+    $domain->start(user => user_admin);
+    wait_request(debug => 0);
+    my $hardware = $domain->info(user_admin)->{hardware};
+    $driver = _get_driver_short_name($domain, 'display', $driver);
+    my @displays = @{$hardware->{display}};
+
+    my ($display) = grep { $_->{driver} eq $driver } @displays;
+    ok($display) or die "Display $driver not found ".Dumper(\@displays);
+    ok($display->{display}) or die Dumper($display);
+
+    test_display_builtin_ports($domain, $display) if $display->{is_builtin};
+
+    $domain->shutdown(user => user_admin, timeout => 20);
+    wait_request(debug => 0);
+}
+
+sub test_display_builtin_ports_kvm($domain, $display) {
+    my $driver = $display->{driver};
+    my $xml = XML::LibXML->load_xml( string => $domain->xml_description);
+    my $path = "/domain/devices/graphics\[\@type='$driver']";
+    my ($graphic) = $xml->findnodes($path);
+    die "Error: $path not found in ".$domain->name if !$graphic;
+
+    my $port = $graphic->getAttribute('port');
+    is($port, $display->{port});
+}
+
+sub test_display_builtin_ports_void($domain, $display) {
+    my $hardware = $domain->_value('hardware');
+    my ($graphic) = grep { $_->{driver} eq $display->{driver} } @{$hardware->{display}};
+    die "Error: display not found in ".Dumper($hardware) if !$graphic;
+
+    is($display->{port}, $graphic->{port});
+}
+
+sub test_display_builtin_ports($domain, $display){
+    return test_display_builtin_ports_kvm($domain,$display) if $domain->type eq 'KVM';
+    return test_display_builtin_ports_void($domain,$display) if $domain->type eq 'Void';
+    confess "TODO";
 }
 
 sub test_display_db($domain, $n_expected) {
@@ -175,11 +210,9 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     my $info = $domain->info(user_admin);
     is(scalar(@{$info->{hardware}->{$hardware}}), $numero+1) or exit;
     my $new_hardware = $info->{hardware}->{$hardware}->[$numero-1];
-    if ( $hardware eq 'disk' && $new_hardware->{name} !~ /\.iso$/ ) {
+    if ( $hardware eq 'disk' && $new_hardware->{name} !~ /\.iso$/) {
         my $name = $domain->name;
-        like($new_hardware->{name}, qr/$name-vd[a-z]-\w{4}\.\w+$/) or die Dumper($data);
-    } elsif($hardware eq 'disk') {
-        like($new_hardware->{file},qr(\.iso$)) or die Dumper($info->{hardware}->{$hardware});
+        like($new_hardware->{name}, qr/$name-.*vd[a-z].*\.\w+$/) or die Dumper($new_hardware);
     }
     if (!$TEST_TIMESTAMP++) {
         isnt($domain->_data('date_changed'), $date_changed);
@@ -661,6 +694,10 @@ sub test_all_drivers($domain, $hardware) {
     }
 }
 
+sub _create_base($vm) {
+    return import_domain($vm, "zz-test-base-alpine") if $vm->type eq 'KVM';
+    return create_domain($vm);
+}
 ########################################################################
 
 
@@ -681,13 +718,11 @@ for my $vm_name ( vm_names()) {
 	    diag("Skipping VM $vm_name in this system");
 	    next;
 	}
+    my $BASE = _create_base($vm);
 	my $name = new_domain_name();
-	
-	my $domain_b = $vm->create_domain(
+	my $domain_b = $BASE->clone(
         name => $name
-        ,active => 0
-        ,disk => 1024 * 1024
-        ,create_args($vm_name)
+        ,user => $USER
     );
     my %controllers = $domain_b->list_controllers;
 

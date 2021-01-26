@@ -10,28 +10,10 @@ use Test::Ravada;
 
 init();
 
-my $FILE_CONFIG_QEMU = "/etc/libvirt/qemu.conf";
-
 #################################################################
 
 sub _check_libvirt_tls {
-    my %search = map { $_ => 0 }
-    ('spice_tls = 1',
-    'spice_tls_x509_cert_dir = '
-    );
-    open my $in,'<',$FILE_CONFIG_QEMU or die "$! $FILE_CONFIG_QEMU";
-    while(my $line = <$in>) {
-        chomp $line;
-        $line =~ s/#.*//;
-        next if !length($line);
-        for my $pattern (keys %search) {
-            delete $search{$pattern} if $line =~ /^$pattern/
-        }
-        last if !keys %search;
-    }
-    return if !keys %search;
-    return "Missing in $FILE_CONFIG_QEMU: ".join(" , ",keys %search)
-        ."\n".'https://ravada.readthedocs.io/en/latest/docs/spice_tls.html';
+    return check_libvirt_tls();
 }
 
 sub test_tls {
