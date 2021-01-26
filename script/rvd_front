@@ -691,6 +691,14 @@ get '/machine/force_shutdown/(:id).(:type)' => sub {
 
         return force_shutdown_machine($c);
 };
+
+get '/machine/reboot/(:id).(:type)' => sub {
+        my $c = shift;
+    return access_denied($c)        if !$USER ->can_reboot($c->stash('id'));
+
+        return reboot_machine($c);
+};
+
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
     return access_denied($c)       if !$USER->can_remove_machine($c->stash('id'));
@@ -1841,6 +1849,8 @@ sub quick_start {
             $c->session('login' => $login);
         } else {
             push @error,("Access denied");
+            logout($c);
+            return login($c);
         }
     }
     if ( $c->param('submit') && _logged_in($c) && defined $id_base ) {
@@ -2267,6 +2277,17 @@ sub manage_machine {
     $c->stash(domain => $domain);
     $c->stash(USER => $USER);
     $c->stash(ldap_attributes_cn => ( $c->session('ldap_attributes_cn') or $USER->name or ''));
+    my ($active_actions, $active_description, $show_actions, $show_description)
+    =('','','','');
+    if (!$domain->is_base) {
+        $active_actions = "active";
+        $show_actions = "active show";
+    } else {
+        $active_description = "active";
+        $show_description = "active show";
+    }
+    $c->stash(active_actions => $active_actions , show_actions => $show_actions);
+    $c->stash(active_description => $active_description , show_description => $show_description);
 
     my @messages;
     my @errors;
@@ -2398,7 +2419,24 @@ sub shutdown_machine {
     return login($c) if !_logged_in($c);
 
     my ($domain, $type) = _search_requested_machine($c);
-    my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id);
+
+    my $req;
+    $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id) if ($c->param('force'));
+    $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id) unless ($c->param('force'));
+
+    return $c->redirect_to('/machines') if $type eq 'html';
+    return $c->render(json => { req => $req->id });
+}
+
+sub reboot_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my ($domain, $type) = _search_requested_machine($c);
+
+    my $req;
+    $req = Ravada::Request->force_reboot_domain(id_domain => $domain->id, uid => $USER->id) if ($c->param('force'));;
+    $req = Ravada::Request->reboot_domain(id_domain => $domain->id, uid => $USER->id) unless ($c->param('force'));;
 
     return $c->redirect_to('/machines') if $type eq 'html';
     return $c->render(json => { req => $req->id });

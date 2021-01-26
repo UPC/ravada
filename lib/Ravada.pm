@@ -1153,6 +1153,7 @@ sub _alias_grants($self) {
     my %alias= (
         remove_clone => 'remove_clones'
         ,shutdown_clone => 'shutdown_clones'
+        ,reboot_clone => 'reboot_clones'
     );
 
     my $sth_old = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types_alias"
@@ -1174,6 +1175,9 @@ sub _add_grants($self) {
     $self->_add_grant('rename_all', 0,"Can rename any virtual machine.");
     $self->_add_grant('rename_clones', 0,"Can rename clones from virtual machines owned by the user.");
     $self->_add_grant('shutdown', 1,"Can shutdown own virtual machines.");
+    $self->_add_grant('reboot', 1,"Can reboot own virtual machines.");
+    $self->_add_grant('reboot_all', 0,"Can reboot all virtual machines.");
+    $self->_add_grant('reboot_clones', 0,"Can reboot clones own virtual machines.");
     $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
     $self->_add_grant('start_many',0,"Can have more than one machine started.");
     $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
@@ -1245,6 +1249,7 @@ sub _enable_grants($self) {
         ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
         ,'screenshot'
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
+        ,'reboot',          'reboot_all',      'reboot_clones'
         ,'screenshot'
         ,'start_many'
     );
@@ -3314,6 +3319,18 @@ sub _cmd_clone($self, $request) {
     );
 }
 
+sub _get_last_used_clone_id
+{
+    my ($base_name, $domains) = @_;
+    my $last_used_id = 0;
+    foreach my $domain (@$domains)
+    {
+        next if ($domain->{is_base});
+        $last_used_id = $1 if (($domain->{name} =~ m/^$base_name\-(\d+)$/) && ($1 > $last_used_id));
+    }
+    return $last_used_id;
+}
+
 sub _req_clone_many($self, $request) {
     my $args = $request->args();
     my $id_domain = $args->{id_domain};
@@ -3332,8 +3349,9 @@ sub _req_clone_many($self, $request) {
         $args->{after_request} = $req_prepare->id;
     }
     my @reqs;
+    my $last_used_id = _get_last_used_clone_id($base->name, $domains);
     for ( 1 .. $number ) {
-        my $n = $_;
+        my $n = $last_used_id + $_;
         my $name;
         for ( ;; ) {
             while (length($n) < length($number)) { $n = "0".$n };
@@ -3703,6 +3721,72 @@ sub _cmd_force_shutdown {
 
 }
 
+sub _cmd_reboot {
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid');
+    my $name = $request->defined_arg('name');
+    my $id_domain = $request->defined_arg('id_domain');
+    my $timeout = ($request->args('timeout') or 60);
+    my $id_vm = $request->defined_arg('id_vm');
+
+    confess "ERROR: Missing id_domain or name" if !$id_domain && !$name;
+
+    my $domain;
+    if ($name) {
+        if ($id_vm) {
+            my $vm = Ravada::VM->open($id_vm);
+            $domain = $vm->search_domain($name);
+        } else {
+            $domain = $self->search_domain($name);
+        }
+        die "Unknown domain '$name'\n" if !$domain;
+    }
+    if ($id_domain) {
+        my $domain2 = Ravada::Domain->open(id => $id_domain, id_vm => $id_vm);
+        die "ERROR: Domain $id_domain is ".$domain2->name." not $name."
+            if $domain && $domain->name ne $domain2->name;
+        $domain = $domain2;
+        die "Unknown domain '$id_domain'\n" if !$domain
+    }
+
+    Ravada::Request->refresh_machine(
+                   uid => $uid
+            ,id_domain => $id_domain
+        ,after_request => $request->id
+    );
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    $domain->reboot(timeout => $timeout, user => $user
+                    , request => $request);
+
+}
+
+sub _cmd_force_reboot {
+    my $self = shift;
+    my $request = shift;
+
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain');
+    my $id_vm = $request->defined_arg('id_vm');
+
+    my $domain;
+    if ($id_vm) {
+        my $vm = Ravada::VM->open($id_vm);
+        $domain = $vm->search_domain_by_id($id_domain);
+    } else {
+        $domain = $self->search_domain_by_id($id_domain);
+    }
+    die "Unknown domain '$id_domain'\n" if !$domain;
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    $domain->force_reboot($user,$request);
+
+}
+
+
 sub _cmd_list_vm_types {
     my $self = shift;
     my $request = shift;
@@ -3826,10 +3910,26 @@ sub _cmd_refresh_machine($self, $request) {
     my $domain = Ravada::Domain->open($id_domain) or confess "Error: domain $id_domain not found";
     $domain->check_status();
     $domain->list_volumes_info();
-    $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
+    my $is_active = $domain->is_active;
+    $self->_remove_unnecessary_downs($domain) if !$is_active;
     $domain->info($user);
 
+    Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id)
+    if $is_active && $domain->ip;
 }
+
+sub _cmd_refresh_machine_ports($self, $request) {
+    my $id_domain = $request->args('id_domain');
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    my $domain = Ravada::Domain->open($id_domain) or confess "Error: domain $id_domain not found";
+
+    die "USER $uid not authorized to refresh machine ports for domain ".$domain->name
+    unless $domain->_data('id_owner') ==  $user->id || $user->is_operator;
+
+    $domain->refresh_ports($request);
+}
+
 
 sub _cmd_change_owner($self, $request) {
     my $uid = $request->args('uid');
@@ -4352,6 +4452,7 @@ sub _req_method {
        ,cleanup => \&_cmd_cleanup
       ,download => \&_cmd_download
       ,shutdown => \&_cmd_shutdown
+      ,reboot => \&_cmd_reboot
      ,hybernate => \&_cmd_hybernate
     ,set_driver => \&_cmd_set_driver
     ,screenshot => \&_cmd_screenshot
@@ -4372,11 +4473,13 @@ sub _req_method {
  ,list_vm_types => \&_cmd_list_vm_types
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
+,force_reboot   => \&_cmd_force_reboot
         ,rebase => \&_cmd_rebase
 
 ,refresh_storage => \&_cmd_refresh_storage
 ,check_storage => \&_cmd_check_storage
 ,refresh_machine => \&_cmd_refresh_machine
+,refresh_machine_ports => \&_cmd_refresh_machine_ports
 ,domain_autostart=> \&_cmd_domain_autostart
 ,change_owner => \&_cmd_change_owner
 ,add_hardware => \&_cmd_add_hardware
@@ -4671,6 +4774,13 @@ sub _cmd_remove_expose($self, $request) {
 sub _cmd_open_exposed_ports($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain);
     $domain->open_exposed_ports();
+
+    Ravada::Request->refresh_machine_ports(
+        uid => $request->args('uid'),
+        ,id_domain => $domain->id
+        ,retry => 10
+    );
+
 }
 
 =head2 set_debug_value

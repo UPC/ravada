@@ -123,6 +123,8 @@ sub _test_clone_qcow2($vol_base, $clone) {
     my ($out, $err) = $vol_base->vm->run_command(@cmd);
     is($err,'');
     like($out,qr/backing file:.*\.ro$ext$/m) or exit;
+    my ($format) = $ext =~ /.*\.(.*)/;
+    like($out,qr/backing file format: $format$/m) or exit;
 }
 
 
@@ -230,17 +232,27 @@ sub _do_test_file($type, $vm, $file) {
     }
 }
 
-sub test_qcow2($vm, $swap = 0) {
+sub test_qcow2($vm, $swap = 0, $link=undef) {
     use_ok('Ravada::Volume::QCOW2') or return;
 
     my $file = $vm->dir_img."/".new_domain_name();
     $file .= ".SWAP" if $swap;
     $file .= ".qcow2";
 
+
     my @cmd = ("qemu-img","create","-f","qcow2",$file,"1M");
     my ($in, $out, $err);
     run3(\@cmd,\$in, \$out, \$err);
     is($err,'') or return;
+
+    if ($link) {
+        my $linked = "$file.link.qcow2";
+        copy($file, $linked);
+        unlink($file);
+        # link($linked,$file) or die "$! linking $linked -> $file";
+        my ($out, $err) = $vm->run_command("ln","-s",$linked, $file);
+        die $err if $err;
+    }
 
     _do_test_file("QCOW2", $vm, $file);
     $vm->remove_file($file);
@@ -296,6 +308,7 @@ sub test_void_swap($vm) {
 
 sub test_qcow2_swap($vm) {
     test_qcow2($vm,1);
+    test_qcow2($vm,1,1);
 }
 
 sub test_raw_swap($vm) {
@@ -433,6 +446,7 @@ for my $vm_name (reverse vm_names() ) {
 
         test_void($vm);
         test_qcow2($vm);
+        test_qcow2($vm,0,1); # no swap, link
         test_iso($vm);
 
         test_void_swap($vm);

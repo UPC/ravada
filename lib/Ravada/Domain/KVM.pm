@@ -49,6 +49,7 @@ has readonly => (
 ##################################################
 #
 our $TIMEOUT_SHUTDOWN = 60;
+our $TIMEOUT_REBOOT = 60;
 our $OUT;
 
 our %SET_DRIVER_SUB = (
@@ -898,6 +899,57 @@ sub _do_force_shutdown {
     warn $@ if $@;
 }
 
+=head2 reboot
+
+Stops the domain
+
+=cut
+
+sub reboot {
+    my $self = shift;
+    my %args = @_;
+    my $req = $args{req};
+
+    if (!$self->is_active) {
+        $req->status("done")           if $req;
+        $req->error("Domain is down")  if $req;
+        return;
+    }
+
+    return $self->_do_force_shutdown() if $args{force};
+    return $self->_do_reboot();
+
+}
+
+sub force_reboot {
+    my $self = shift;
+    return $self->_do_force_reboot()  if $self->is_active;
+}
+
+sub _do_force_reboot {
+    my $self = shift;
+    return if !$self->domain->is_active;
+    eval { $self->domain->reset() };
+    warn $@ if $@;
+}
+
+sub _do_reboot {
+    my $self = shift;
+    return if !$self->domain->is_active;
+    eval { $self->domain->reboot() };
+    die $@ if $@;
+}
+
+=head2 reboot_now
+
+Reboots uncleanly the domain
+
+=cut
+
+sub reboot_now {
+    my $self = shift;
+    return $self->_do_reboot()  if $self->is_active;
+}
 
 =head2 pause
 

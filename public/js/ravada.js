@@ -29,7 +29,6 @@
             .controller("singleMachinePage", singleMachinePageC)
             .controller("maintenance",maintenanceCtrl)
             .controller("notifCrtl", notifCrtl)
-            .controller("run_domain",run_domain_ctrl)
             .controller("run_domain_req",run_domain_req_ctrl)
 
 
@@ -209,8 +208,20 @@
                 }
             };
 
-            $scope.action = function(target,action,machineId){
-              $http.get('/'+target+'/'+action+'/'+machineId+'.json')
+            $scope.getQueryStringFromObject = function(object) {
+              var string = '';
+              if (object) {
+                var separator = '';
+                for (var key in object) {
+                  string += separator + key + '=' + escape(object[key]);
+                  separator = '&';
+                }
+              }
+              return string;
+            };
+
+            $scope.action = function(target,action,machineId,params){
+              $http.get('/'+target+'/'+action+'/'+machineId+'.json'+'?'+this.getQueryStringFromObject(params))
                 .then(function() {
                 }, function(data,status) {
                       console.error('Repos error', status, data);
@@ -276,11 +287,9 @@
                 for (var i = 0; i < $scope.bases.length; i++) {
                     if ($scope.bases[i].id == $scope.showmachine.id_base) {
                         $scope.new_base = $scope.bases[i];
-                        console.log(" clone  "+i);
                     } else if ($scope.showmachine.is_base
                         && $scope.bases[i].id == $scope.showmachine.id) {
                         $scope.new_base = $scope.bases[i];
-                        console.log("is_base "+i);
                     }
                 }
                 $scope.current_base = $scope.new_base;
@@ -911,38 +920,59 @@
                 $scope.redirect_done = true;
             }
         }
+        $scope.subscribe_request= function(url, id_request) {
+            var already_subscribed_to_domain = false;
+            var ws = new WebSocket(url);
+            ws.onopen = function(event) { ws.send('request/'+id_request) };
+            ws.onclose = function() {
+                ws = new WebSocket(url);
+            };
+
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                $scope.$apply(function () {
+                    $scope.request = data;
+                });
+                if ( data.id_domain && ! already_subscribed_to_domain ) {
+                    already_subscribed_to_domain = true;
+                    $scope.id_domain=data.id_domain;
+                    $scope.subscribe_domain_info(url, data.id_domain);
+                }
+            }
+        }
+        $scope.subscribe_domain_info= function(url, id_domain) {
+            already_subscribed_to_domain = true;
+            var ws = new WebSocket(url);
+            ws.onopen = function(event) { ws.send('machine_info/'+id_domain) 
+            };
+            ws.onclose = function() {
+                $scope.subscribe_domain_info(url, id_domain);
+            };
+
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                $scope.$apply(function () {
+                    $scope.domain = data;
+                });
+                if ($scope.domain.spice_password) {
+                        var copyTextarea = document.querySelector('.js-copytextarea');
+                        copyTextarea.value = $scope.domain.spice_password;
+                        copyTextarea.length = 5;
+                }
+                if ($scope.domain.is_active && $scope.request.status == 'done') {
+                    $scope.redirect();
+                    if ($scope.auto_view && !redirected_display && !$scope.domain.spice_password) {
+                        location.href='/machine/display/'+$scope.domain.id+".vv";
+                        redirected_display=true;
+                    }
+                }
+
+            }
+        }
 
         $scope.redirect_done = false;
         $scope.wait_request();
         $scope.view_clicked=false;
-    };
-    function run_domain_ctrl($scope, $http, request ) {
-        $http.get('/auto_view').then(function(response) {
-            $scope.auto_view = response.auto_view;
-        });
-        $scope.toggle_auto_view = function() {
-            $http.get('/auto_view/toggle').then(function(response) {
-                $scope.auto_view = response.auto_view;
-            });
-        };
-        $scope.copy_password= function() {
-                    $scope.view_password=1;
-                    var copyTextarea = document.querySelector('.js-copytextarea');
-              if (copyTextarea) {
-
-                    copyTextarea.select();
-                    try {
-                        var successful = document.execCommand('copy');
-                        var msg = successful ? 'successful' : 'unsuccessful';
-                        console.log('Copying text command was ' + msg);
-                        $scope.password_clipboard=successful;
-                    } catch (err) {
-                        console.log('Oops, unable to copy');
-                    }
-
-              }
-        };
-
     };
 // list users
     function usersCrtl($scope, $http, request, listUsers) {

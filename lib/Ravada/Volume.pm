@@ -74,7 +74,7 @@ sub _type_from_file($file, $vm) {
     return 'ISO'    if $file =~ /\.iso$/i;
     return 'Void'   if $file =~ /void$/i;
 
-    my ($out, $err) = $vm->run_command("file",$file);
+    my ($out, $err) = $vm->run_command("file","-L",$file);
     return 'QCOW2'  if $out =~ /QEMU QCOW/;
     return 'RAW';
 }

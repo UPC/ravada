@@ -289,7 +289,7 @@ sub _around_connect($orig, $self) {
     if ($result) {
         $self->is_active(1);
         $self->_fetch_tls()
-        if !$self->readonly && !$self->_data('tls');
+        if !$self->readonly && $self->type eq 'KVM' && !$self->_data('tls');
     } else {
         $self->is_active(0);
     }
