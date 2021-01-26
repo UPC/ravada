@@ -8,7 +8,7 @@
     %= include 'bootstrap/navigation'
     <div class="container theme-showcase" role="main"
         ng-controller="run_domain_req"
-        ng-init="id_request=<%= $request->id %>;auto_view=<%= $auto_view %>;timeout=<%= $timeout %>"
+        ng-init="subscribe_request('<%= url_for('ws_subscribe')->to_abs %>',<%= $request->id %>);auto_view=<%= $auto_view %>;timeout=<%= $timeout %>"
     >
     <div class="jumbotron" ng-cloak="">
 
@@ -31,26 +31,8 @@
                 </span>
             </div>
             <div class="panel-body" ng-show="domain.is_active">
-            <h3>Connection</h3>
-            <ul ng-show="domain.is_active">
-                <li ng-show="domain.spice_password">
-                    <%=l 'The password for this virtual machine connection is :'%>
-                    <input
-                            ng-model="password"
-                            ng-click="copy_password()"
-                            type="text" class="js-copytextarea"
-                                        value="{{domain.spice_password}}"
-                    />
-                    <i ng-show="password_clipboard"><%=l 'copied to clipboard' %></i>
-                </li>
-
-                <li><b>Display URL :</b>
-                    <a ng-click="copy_password(); redirect()"
-                        href="{{domain.display_url}}">{{domain.display_url}}</a>
-                </li>
-                <li><b>Display IP :</b> {{domain.display.ip}} </li>
-                <li><b>Display Port :</b> {{domain.display.port}} </li>
-            </ul>
+            <h3>Display</h3>
+            %= include "/main/machine_displays"
             <h3>Machine Information</h3>
             <ul>
                 <li><b>Internal IP:</b><span ng-show="domain.ip"> {{domain.ip}}</span>
@@ -61,37 +43,17 @@
                 <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
             </ul>
             <h3 ng-show="domain.ports.length">Open ports</h3>
+            {{domain.ports}}
             <ul ng-show="domain.ports.length">
                 <li ng-repeat="port in domain.ports">
+                    <span ng-show="!port.is_active" class="badge badge-danger">down</span>
+                    <span ng-show="port.is_active" class="badge badge-info">up</span>
                     <b>{{port.name}}</b>
                     {{domain.display.ip}}:{{port.public_port}}
                     <i class="fa fa-arrow-right"></i>
                     {{port.internal_port}}
                 </li>
             </ul>
-            </div>
-            <div ng-show="domain.is_active">
-                <div>
-                <a type="button" class="btn btn-success"
-                    ng-show="!domain.display.tls_port"
-                    ng-click="view_clicked=true; copy_password(); redirect();"
-                    href="/machine/display/{{domain.id}}.vv">
-                        <b><%=l 'view'%></b></a>
-
-                <a type="button" class="btn btn-success" ng-view="domain,display.tls_port"
-                    ng-show="domain.display.tls_port"
-                    ng-click="view_clicked_tls=true; copy_password(); redirect();"
-                    href="/machine/display-tls/{{domain.id}}-tls.vv">
-                        <b><%=l 'view'%></b></a>
-                </div>
-                <div>
-                <span ng-show="view_clicked"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}.vv</b> <%=l 'in your downloads folder.' %>
-                </span>
-                <span ng-show="view_clicked_tls"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}-tls.vv</b> <%=l 'in your downloads folder.' %>
-                </span>
-                <br/>
-                <i><%=l 'Press SHIFT + F12 to exit the virtual machine' %></i>
-                </div>
             </div>
         </div>
         <div>

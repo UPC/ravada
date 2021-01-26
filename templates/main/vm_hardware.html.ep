@@ -115,6 +115,7 @@
 
     <div ng-hide="show_new_disk||show_new_display" class="input-group mt-3" style="max-width: 18rem;">
         <div class="input-group-prepend">
+            <i ng-show="showmachine.requests>0" class="fas fa-sync-alt fa-spin"></i>
             <button class="btn btn-primary"
                 ng-disabled="showmachine.requests > 0 || showmachine.is_base || showmachine.is_active"
                 ng-click="add_hardware(new_hardware)"
