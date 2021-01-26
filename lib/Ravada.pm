@@ -3199,13 +3199,13 @@ sub _cmd_clone($self, $request) {
 sub _get_last_used_clone_id
 {
     my ($base_name, $domains) = @_;
-	my $last_used_id = 0;
-	foreach my $domain (@$domains)
-	{
-		next if ($domain->{is_base});
-		$last_used_id = $1 if (($domain->{name} =~ m/^$base_name\-(\d+)$/) && ($1 > $last_used_id));
-	}
-	return $last_used_id;
+    my $last_used_id = 0;
+    foreach my $domain (@$domains)
+    {
+        next if ($domain->{is_base});
+        $last_used_id = $1 if (($domain->{name} =~ m/^$base_name\-(\d+)$/) && ($1 > $last_used_id));
+    }
+    return $last_used_id;
 }
 
 sub _req_clone_many($self, $request) {
@@ -3226,7 +3226,7 @@ sub _req_clone_many($self, $request) {
         $args->{after_request} = $req_prepare->id;
     }
     my @reqs;
-	my $last_used_id = _get_last_used_clone_id($base->name, $domains);
+    my $last_used_id = _get_last_used_clone_id($base->name, $domains);
     for ( 1 .. $number ) {
         my $n = $last_used_id + $_;
         my $name;
