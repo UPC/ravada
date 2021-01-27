@@ -1060,7 +1060,6 @@ sub _add_indexes_generic($self) {
         ,domain_displays => [
             "unique(id_domain,n_order)"
             ,"unique(id_domain,driver)"
-            ,"unique(port)"
         ]
         ,requests => [
             "index(status,at_time)"
@@ -1470,7 +1469,7 @@ sub _sql_create_tables($self) {
     my %tables = (
         domain_displays => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
-            ,id_domain => 'integer NOT NULL references domain(id)'
+            ,id_domain => 'integer NOT NULL references domains(id)'
             ,port => 'char(5) not null'
             ,ip => 'varchar(254)'
             ,display => 'varchar(200)'

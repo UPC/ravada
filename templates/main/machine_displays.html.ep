@@ -48,7 +48,7 @@ This Virtual Machine has no display hardware attached
             </li>
             <li><b>Display IP :</b> {{display.ip}} </li>
             <li><b>Display Port :</b> {{display.port}} </li>
-            <li ng-show="display.tls_port"><b>Display Port secure:</b> {{display.tls_port}} </li>
+            <li ng-show="display.extra.tls_port"><b>Display Port secure :</b> {{display.extra.tls_port}} </li>
         </ul>
         <div ng-show="domain.is_active && display.is_active && display.file_extension && display.file_extension.length>0">
             <div>
@@ -59,7 +59,7 @@ This Virtual Machine has no display hardware attached
                         <b><%=l 'view'%></b></a>
 
                 <a type="button" class="btn btn-success"
-                    ng-show="1||display.tls_port"
+                    ng-show="display.extra.tls_port"
                     ng-click="view_clicked_tls=true; copy_password(display.driver); redirect();"
                     href="/machine/display/{{display.driver}}/tls/{{domain.id}}.{{display.file_extension}}">
                         <b><%=l 'view secure'%></b></a>

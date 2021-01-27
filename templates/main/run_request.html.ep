@@ -60,31 +60,9 @@
                     </td>
                 </tr>
             </table>
-            </div>
-            <div ng-show="domain.is_active">
-                <div>
-                <a type="button" class="btn btn-success"
-                    ng-show="!domain.display.tls_port"
-                    ng-click="view_clicked=true; copy_password(); redirect();"
-                    href="/machine/display/{{domain.id}}.vv">
-                        <b><%=l 'view'%></b></a>
-
-                <a type="button" class="btn btn-success" ng-view="domain,display.tls_port"
-                    ng-show="domain.display.tls_port"
-                    ng-click="view_clicked_tls=true; copy_password(); redirect();"
-                    href="/machine/display-tls/{{domain.id}}-tls.vv">
-                        <b><%=l 'view'%></b></a>
-                </div>
-                <div>
-                <span ng-show="view_clicked"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}.vv</b> <%=l 'in your downloads folder.' %>
-                </span>
-                <span ng-show="view_clicked_tls"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}-tls.vv</b> <%=l 'in your downloads folder.' %>
-                </span>
-                <br/>
-                <i><%=l 'Press SHIFT + F12 to exit the virtual machine' %></i>
-                </div>
-            </div>
-        </div>
+            </div><!--ports -->
+            </div><!-- domain is active -->
+        </div><!-- show=domain -->
         <div>
             <div class="panel-body">
                 <div ng-show="request.error && !domain.is_active">{{request.error}}</div>
@@ -92,12 +70,9 @@
                  <button type="submit" class="btn btn-primary" onclick="location.reload('forceGet')"><%=l 'Start again'%></button>
                 </div>
             </div>
-
         </div>
-
-
-    </div>
-</div>
+    </div><!-- jumbotron -->
+    </div> <!-- container -->
     %= include 'bootstrap/scripts'
 </body>
 </html>

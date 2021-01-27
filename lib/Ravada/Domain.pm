@@ -1105,7 +1105,6 @@ sub _around_display_info($orig,$self,$user ) {
             }
             lock_hash(%$display);
         }
-
         $self->_store_display($display);
 
     }
@@ -1234,7 +1233,10 @@ sub _insert_display( $self, $display ) {
     ." VALUES ( ".join(",",map { '?' } keys %$display)." ) ";
 
     my $sth = $$CONNECTOR->dbh->prepare($sql);
-    $sth->execute(map { $display->{$_} } sort keys %$display);
+    eval {
+        $sth->execute(map { $display->{$_} } sort keys %$display);
+    };
+    confess $@ if $@;
 }
 
 sub _update_display( $self, $new_display_orig, $old_display ) {
@@ -1253,8 +1255,6 @@ sub _update_display( $self, $new_display_orig, $old_display ) {
         && $new_display{$key} eq $old_display->{$key};
     }
     delete $new_display{port} if exists $new_display{port} && $new_display{port} eq 'auto';
-
-    $self->_fix_duplicated_display_port(\%new_display, $old_display);
 
     return if !keys %new_display;
 
@@ -1771,8 +1771,8 @@ sub _display_file_spice($self,$display, $tls = 0) {
 
     if ( $tls ) {
         $ret .= "tls-ciphers=DEFAULT\n"
-        ."host-subject=".$self->_vm->tls_host_subject."\n"
-        .="ca=".$self->_vm->tls_ca."\n"
+        ."host-subject=".$self->_tls('subject')."\n"
+        .="ca=".$self->_tls('ca')."\n"
     }
 
     $ret .="release-cursor=shift+f11\n"
@@ -1782,6 +1782,18 @@ sub _display_file_spice($self,$display, $tls = 0) {
     $ret .="secure-channels=main;inputs;cursor;playback;record;display;usbredir;smartcard\n";
 
     return $ret;
+}
+
+sub _tls($self, $field) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT tls FROM vms WHERE id=?");
+    $sth->execute($self->_data('id_vm'));
+    my ($tls_json) = $sth->fetchrow();
+    my $tls = {};
+    eval {
+        $tls = decode_json($tls_json) if length($tls);
+    };
+    warn $@ if $@;
+    return ( $tls->{$field} or '');
 }
 
 =head2 info
