@@ -1136,8 +1136,6 @@ sub _store_display($self, $display, $display_old=undef) {
     my $port = ( $display_new{port} or $display_old->{port} );
     my $driver = ( $display_new{driver} or $display_old->{driver} );
 
-    $display_new{display} = "$driver://$ip:$port" if $ip && $port;
-
    #warn "updating ".Dumper($display_old,\%display_new);
     if ($display_old) {
         $self->_update_display(\%display_new, $display_old);
@@ -1245,7 +1243,9 @@ sub _update_display( $self, $new_display_orig, $old_display ) {
     my %new_display = %$new_display_orig;
     $self->_normalize_display(\%new_display);
     $self->_normalize_display($old_display);
+
     unlock_hash(%new_display);
+
     for my $key ( keys %$old_display ) {
         delete $new_display{$key}
         if exists $new_display{$key}
@@ -1269,43 +1269,6 @@ sub _update_display( $self, $new_display_orig, $old_display ) {
 
 }
 
-sub _fix_duplicated_display_port($self, $display, $old_display={}) {
-    return if exists $display->{port} && $display->{port} eq 'auto';
-
-    my $id = ($display->{id} or $old_display->{id});
-    confess "Error: no id " if !defined $id;
-
-    my $is_builtin = ($display->{is_builtin} || $old_display->{is_builtin});
-
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_displays "
-        ." WHERE port=?"
-        ."   AND id <> ?"
-    );
-    $sth->execute($display->{port}, $id);
-    my $duplicated = $sth->fetchrow_hashref();
-    return if !$duplicated;
-
-    my $new_port = $self->_vm->_new_free_port();
-
-    if ($duplicated->{is_builtin} || !$is_builtin) {
-        $display->{port} = $new_port;
-        $display->{display} =~ s/(.*\:)\d+$/$1$new_port/;
-        return;
-    }
-    $duplicated->{display} =~ s/(.*\:)\d+$/$1$new_port/;
-    $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_displays SET port=?,display=? "
-        ." WHERE id=? "
-    );
-    $sth->execute($new_port, $duplicated->{display}, $duplicated->{id});
-    $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports SET public_port=? "
-        ." WHERE id=? "
-    );
-    $sth->execute($new_port, $duplicated->{id_domain_port});
-
-
-
-}
-
 sub _set_display_ip($self, $display) {
 
     my $new_ip = ( $self->_vm->nat_ip
@@ -1317,7 +1280,6 @@ sub _set_display_ip($self, $display) {
 
     if ( $new_ip ) {
         $display->{ip} = $new_ip;
-        $display->{display} =~ s{(\w+)://(.*?):(.*)}{$1://$new_ip:$3};
     }
 
     lock_hash(%$display);
@@ -1737,9 +1699,10 @@ sub display($self, $user) {
     my $display_info = $self->display_info($user);
 
     confess "Error: I can't find builtin display info for ".$self->name." ".ref($self)
-    if !exists $display_info->{display};
+    if !exists $display_info->{port};
 
-    return $display_info->{display};
+    my $display = $display_info->{driver}."://$display_info->{ip}:$display_info->{port}";
+    return $display;
 }
 
 # taken from isard-vdi thanks to @tuxinthejungle Alberto Larraz
@@ -2267,6 +2230,7 @@ sub is_locked {
         ."   AND command <> 'set_time'"
         ."   AND command <> 'rsync_back'"
         ."   AND command <> 'refresh_machine'"
+        ."   AND command <> 'refresh_machine_port'"
         ."   AND command <> 'screenshot'"
     );
     $sth->execute($self->id);
@@ -2710,6 +2674,7 @@ sub _post_hibernate($self, $user=undef) {
     $self->_remove_iptables();
     $self->_close_exposed_port();
     $self->_set_ports_down();
+    $self->_set_displays_down();
 }
 
 sub _pre_shutdown {
@@ -2753,8 +2718,9 @@ sub _post_shutdown {
     if ( $self->_vm->is_active ) {
         $self->_remove_iptables();
         $self->_close_exposed_port();
-        $self->_set_ports_down();
     }
+    $self->_set_ports_down();
+    $self->_set_displays_down();
 
     my $is_active = $self->is_active;
 
@@ -3028,8 +2994,11 @@ sub exposed_port($self, $search, $value=undef) {
         if !defined $search || !length($search);
 
     for my $port ($self->list_ports) {
-        return $port if defined $value && exists $port->{$search} && defined $port->{$search}
-            && $port->{search} eq $value;
+        if ( defined $value ) {
+            return $port if exists $port->{$search} && defined $port->{$search}
+            && $port->{$search} eq $value;
+            next;
+        }
         if ( $search =~ /^\d+$/ ) {
             return $port if $port->{internal_port} eq $search;
         } else {
@@ -5109,8 +5078,6 @@ sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
             my $port = $self->exposed_port($data->{port});
             $data->{port} = $public_port;
             $data->{id_domain_port} = $port->{id};
-            my $ip = $self->ip;
-            $data->{display} = $data->{driver}."://$ip:$public_port" if $ip;
         }
         $self->_store_display($data);
     }
@@ -5960,10 +5927,22 @@ sub _set_ports_down($self) {
     $sth->execute($self->id);
 }
 
+sub _set_displays_down($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domain_displays set is_active=0,port=0 "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+}
+
 sub refresh_ports($self, $request=undef) {
     my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_ports "
         ." SET is_active=? "
         ." WHERE id_domain=? AND id=?"
+    );
+    my $sth_update_display = $$CONNECTOR->dbh->prepare("UPDATE domain_displays "
+        ." SET is_active=? "
+        ."  WHERE id_domain_port=?"
     );
     my $is_active = $self->is_active();
     my $ip;
@@ -5980,6 +5959,9 @@ sub refresh_ports($self, $request=undef) {
         }
         $port_down++;
         $sth_update->execute($is_port_active, $self->id, $port->{id});
+        $sth_update_display->execute($is_port_active, $port->{id})
+        if $port->{name};
+
         $msg .= " , " if $msg;
         $msg .= " $port->{internal_port} $is_port_active";
     }

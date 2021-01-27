@@ -378,7 +378,6 @@ sub test_display_info($vm) {
 
     is($display_h->[0]->{driver}, 'spice') if $domain->type eq 'KVM';
     like($display_h->[0]->{password},qr{..+}) if $domain->type eq 'KVM';
-    like($display_h->[0]->{display},qr/^\w+:/);
     is($display_h->[0]->{id_exposed_port},undef); # spice doesn't need exposed port
 
     # rdp won't be active because that port isn't up yet
@@ -389,7 +388,6 @@ sub test_display_info($vm) {
     is($display_h->[1]->{ip}, $display_h->[0]->{ip}) or exit;
     is($display_h->[1]->{listen_ip}, $display_h->[0]->{listen_ip});
     is($display_h->[1]->{id_domain_port},$exposed_port->{id}); # rdp needs exposed port
-    like($display_h->[1]->{display},qr/^rdp:/);
     $domain->shutdown_now(user_admin());
 
     $domain_f = Ravada::Front::Domain->open($domain->id);
@@ -413,11 +411,13 @@ sub test_display_info($vm) {
     isnt($display_c->[0]->{password}, $display_h->[0]->{password})
     if $display_h->[0]->{password};
 
+    like($display_c->[1]->{id_domain_port},qr/^\d+$/);
+    isnt($display_c->[1]->{id_domain_port},$display_h->[1]->{id_domain_port});
+
     delete $display_c->[0]->{password};
     delete $display_h->[0]->{password};
 
     isnt($display_c->[1]->{port}, $display_h->[1]->{port});
-    isnt($display_c->[1]->{display}, $display_h->[1]->{display});
     for my $field (qw(display port is_active)) {
         for ( 0 .. 1 ) {
             delete $display_c->[$_]->{$field};
@@ -1490,8 +1490,6 @@ sub test_display_conflict($vm) {
         ." WHERE id=?");
     $sth->execute($display_builtin->{port},$port->{id});
 
-    $sth = connector->dbh->prepare("DELETE FROM domain_displays WHERE id=?");
-    $sth->execute($display_builtin->{id});
     $sth = connector->dbh->prepare("UPDATE domain_displays SET port=? "
         ." WHERE id_domain=?");
     $sth->execute($display_builtin->{port},$domain->id);
@@ -1499,16 +1497,76 @@ sub test_display_conflict($vm) {
     my $port2 = $domain->exposed_port(22);
     is($port2->{public_port},$display_builtin->{port});
 
+    $domain->shutdown(user => user_admin, timeout => 30);
+    wait_request(debug => 0);
+
     $domain->start( remote_ip => '1.1.1.1' , user => user_admin);
+    wait_request(debug => 0);
 
     my $display = $domain->info(user_admin)->{hardware}->{display};
     isnt($display->[0]->{port}, $display->[1]->{port});
+    is($display->[0]->{is_active},1);
+    is($display->[1]->{is_active},1);
 
     my $port3 = $domain->exposed_port(22);
     isnt($port3->{public_port},$display_builtin->{port});
 
     $domain->remove(user_admin);
 }
+
+sub test_display_conflict_non_builtin($vm) {
+    my $base= $BASE->clone(name => new_domain_name, user => user_admin);
+    my $req = Ravada::Request->add_hardware(
+          uid => user_admin->id
+        ,name => 'display'
+        ,data => { driver => 'x2go' }
+        ,id_domain =>$base->id
+    );
+    wait_request(check_error => 0);
+    is($req->status,'done');
+    $base->prepare_base(user_admin);
+
+    my $clone0 = $base->clone(name => new_domain_name, user => user_admin);
+    $clone0->start(user => user_admin , remote_ip => 1);
+
+    my ($display0a, $display0b) = @{$clone0->info(user_admin)->{hardware}->{display}};
+
+    my $port = $clone0->exposed_port(22);
+
+    my $clone1 = $base->clone(name => new_domain_name, user => user_admin);
+    $clone1->start(user => user_admin , remote_ip => 1);
+
+    my ($display1a, $display1b) = @{$clone1->info(user_admin)->{hardware}->{display}};
+
+    #    my $sth = connector->dbh->prepare("UPDATE domain_ports SET public_port=? "
+    #    ." WHERE id=?");
+    # $sth->execute($display1b->{port},$port->{id});
+
+    my $sth = connector->dbh->prepare("UPDATE domain_displays SET port=? "
+        ." WHERE id_domain=?");
+    $sth->execute($display1b->{port},$clone1->id);
+
+    $clone0->shutdown(user => user_admin, timeout => 30);
+    $clone1->shutdown(user => user_admin, timeout => 30);
+    wait_request(debug => 0);
+
+    $clone0->start( remote_ip => '1.1.1.1' , user => user_admin);
+    $clone1->start( remote_ip => '1.1.1.1' , user => user_admin);
+    wait_request(debug => 0);
+
+    my $display0 = $clone0->info(user_admin)->{hardware}->{display};
+    my $display1 = $clone1->info(user_admin)->{hardware}->{display};
+    for my $d0 (@$display0 ) {
+        for my $d1 (@$display1) {
+            isnt($d0->{port},$d1->{port});
+        }
+    }
+
+    $clone0->remove(user_admin);
+    $clone1->remove(user_admin);
+    $base->remove(user_admin);
+}
+
 
 #######################################################################33
 
@@ -1549,6 +1607,8 @@ for my $vm_name ( vm_names() ) {
         }
 
         test_display_info($vm);
+
+        test_display_conflict_non_builtin($vm);
         test_display_conflict($vm);
 
         test_display_port_already_used($vm);

@@ -51,11 +51,6 @@ sub display_info {
     my $hardware = $self->_value('hardware');
     return if !exists $hardware->{display} || !exists $hardware->{display}->[0];
     my $ret = $hardware->{display}->[0];
-    if (!$ret->{display} && $ret->{listen_ip} && $ret->{port}) {
-        my $display=$ret->{driver}."//".$ret->{listen_ip}.":".$ret->{port}."/";
-        $ret->{display} = $display;
-        #        $ret->{ip} = $ret->{listen_ip} if !exists $ret->{ip};
-    }
     $ret->{extra} = decode_json($ret->{extra})
     if exists $ret->{extra} && $ret->{extra};
 
@@ -92,8 +87,7 @@ sub _set_display($self, $listen_ip=$self->_vm->listen_ip) {
     $listen_ip=$self->_vm->listen_ip if !$listen_ip;
     #    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
     my $port = $self->_vm->_new_free_port();
-    my $display="void://$listen_ip:$port/";
-    my $display_data = { display => $display , driver => 'void', ip => $listen_ip, port =>$port
+    my $display_data = { driver => 'void', ip => $listen_ip, port =>$port
         , is_builtin => 1
         , xistorra => 1
     };
@@ -118,9 +112,6 @@ sub _set_displays_ip($self, $password=undef, $listen_ip=$self->_vm->listen_ip) {
         $display->{port} = $self->_vm->_new_free_port(\%used_ports)
         if $is_active
         && (!exists $display->{port} || !$display->{port} || $display->{port} eq 'auto');
-
-        $display->{display} = $display->{driver}."://$listen_ip:".$display->{port}."/"
-        if $display->{port};
 
         $display->{password} = $password if defined $password;
     }

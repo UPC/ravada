@@ -1472,7 +1472,6 @@ sub _sql_create_tables($self) {
             ,id_domain => 'integer NOT NULL references domains(id)'
             ,port => 'char(5) not null'
             ,ip => 'varchar(254)'
-            ,display => 'varchar(200)'
             ,listen_ip => 'varchar(254)'
             ,driver => 'char(40) not null'
             ,is_active => 'integer NOT NULL default 0'

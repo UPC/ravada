@@ -459,9 +459,10 @@ sub _around_create_domain {
             delete $display->{id};
             delete $display->{id_domain};
             $display->{is_active} = 0;
+            my $port = $domain->exposed_port($display->{driver});
+            $display->{id_domain_port} = $port->{id};
             $domain->_store_display($display);
         }
-
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
     $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones());

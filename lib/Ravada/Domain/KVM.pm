@@ -669,8 +669,6 @@ sub display_info($self, $user) {
     $display{tls_port} = $tls_port if defined $tls_port;
     $display{password} = $password;
     $port = '' if !defined $port;
-    my $display = $type."://$address:$port";
-    $display{display} = $display;
 
     for my $item ( $graph->findnodes("*")) {
         next if $item->getName eq 'listen';

@@ -72,7 +72,7 @@ sub _get_controller_disk {
     return Ravada::Front::Domain::_get_controller_disk(@_);
 }
 
-sub _get_controller_display {
+sub _get_controller_display() {
     return Ravada::Front::Domain::_get_controller_display(@_);
 }
 

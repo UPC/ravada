@@ -210,6 +210,8 @@ sub change_hardware { die "TODO" }
 sub _get_controller_display($self) {
     _init_connector();
 
+    my $is_active = $self->is_active;
+
     my %file_extension = (
         'spice' => 'vv'
     );
@@ -220,18 +222,48 @@ sub _get_controller_display($self) {
         ." ORDER BY n_order "
     );
     $sth->execute($self->id);
-    my @display;
+    my @displays;
     while (my $row = $sth->fetchrow_hashref) {
         $row->{extra} = decode_json($row->{extra})
         if exists $row->{extra} && defined $row->{extra};
 
         $row->{file_extension} = ($file_extension{$row->{driver}} or '');
 
-        push @display, ($row);
+        if ( $is_active && $row->{id_domain_port} ) {
+            my $exp_port = $self->exposed_port(id => $row->{id_domain_port});
+
+            if ( $exp_port && $exp_port->{public_port} ) {
+                $row->{port} = $exp_port->{public_port};
+            }
+        }
+
+        if ($row->{is_active} && !$row->{display}
+            && $row->{ip} && $row->{port} && $row->{port} ne 'auto') {
+
+        }
+
+        push @displays, ($row);
     }
-    return @display;
+    #    $self->_fix_ports_duplicated(\@displays) if $self->is_active();
+
+    return @displays;
 }
 
+sub _fix_ports_duplicated($self, $displays) {
+    for my $display (@$displays) {
+        next if $display->{is_builtin};
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_displays "
+            ." WHERE port=?"
+            ."   AND id <> ?"
+            ."   AND is_active=1"
+        );
+        $sth->execute($display->{port}, $display->{id});
+        while ( my $duplicated = $sth->fetchrow_hashref()) {
+            next if $duplicated->{is_builtin} && $display->{is_builtin};
+            warn Dumper($duplicated);
+        }
+    }
+}
 
 sub _get_controller_disk($self) {
     return map { $_->info } $self->list_volumes_info();
