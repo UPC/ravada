@@ -12,14 +12,15 @@ There is a button to **Compact** the virtual machine.
 
 .. image:: ../../img/compact.jpg
 
-The virtual machine must be down to compact. Active and hibernated machines
-volumes will be corrupted if modified by and external processs.
+The virtual machine must be down to compact. This button is disabled for active
+and hibernated machines because volume contents would be corrupted if modified by
+an external processs.
 
 Bases
 -----
 
 It is advisable to compact a virtual machine just before it is prepared
-as a base.  Base volumes can be compacted but then cloned volumes would
+as a base.  Base volumes can not be compacted because cloned volumes would
 be inconsistent so we disabled this button for bases.
 
 Backup
