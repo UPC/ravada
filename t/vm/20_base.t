@@ -446,17 +446,20 @@ sub _test_display_tls($display, $vm) {
     return if $display->{driver} ne 'spice';
     SKIP: {
         skip("Missing TLS configuration see https://ravada.readthedocs.io/en/latest/docs/spice_tls.html",1) if !check_libvirt_tls();;
-        like($display->{tls_port},qr/^\d+$/);
+        my $tls_port = $display->{extra}->{tls_port};
+        like($tls_port,qr/^\d+$/);
 
         my $tls_json = $vm->_data('tls');
         my $tls;
         eval { $tls = decode_json($tls_json) };
         is($@, '');
-        isa($tls, 'HASH');
-        ok($tls->{host_subject});
-        ok($tls->{ca});
-        is($tls->{host_subject}, $vm->_fetch_host_subject());
-        is($tls->{ca}, $vm->_fetch_ca());
+        isa_ok($tls, 'HASH');
+        ok($tls->{subject},Dumper($tls));
+        ok($tls->{ca}, Dumper($tls));
+        is($tls->{subject}, $vm->tls_host_subject());
+        is($tls->{ca}, $vm->tls_ca());
+
+        ok(search_iptable_remote(local_ip => $display->{ip}, local_port => $tls_port, node => $vm),"Expecting iptables rule for -> $display->{ip} : $tls_port");
     };
 }
 
@@ -1605,6 +1608,7 @@ for my $vm_name ( vm_names() ) {
             diag("creating base for $vm_name");
             $BASE = create_domain($vm);
         }
+        flush_rules() if !$<;
 
         test_display_info($vm);
 

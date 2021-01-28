@@ -2213,10 +2213,10 @@ sub check_libvirt_tls {
         }
         last if !keys %search;
     }
-    return if !keys %search;
-    return "Missing in $FILE_CONFIG_QEMU: ".join(" , ",keys %search)
+    return 1 if !keys %search;
+    warn "Missing in $FILE_CONFIG_QEMU: ".Dumper([keys %search])
         ."\n".'https://ravada.readthedocs.io/en/latest/docs/spice_tls.html';
-
+    return 0;
 }
 
 1;
