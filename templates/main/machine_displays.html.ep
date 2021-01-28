@@ -53,22 +53,21 @@ This Virtual Machine has no display hardware attached
         <div ng-show="domain.is_active && display.is_active && display.file_extension && display.file_extension.length>0">
             <div>
                 <a type="button" class="btn btn-success"
-                    ng-show="!display.tls_port"
-                    ng-click="view_clicked=true; copy_password(display.driver); redirect();"
+                    ng-click="view=display.driver; copy_password(display.driver); redirect();"
                     href="/machine/display/{{display.driver}}/{{domain.id}}.{{display.file_extension}}">
                         <b><%=l 'view'%></b></a>
 
                 <a type="button" class="btn btn-success"
                     ng-show="display.extra.tls_port"
-                    ng-click="view_clicked_tls=true; copy_password(display.driver); redirect();"
-                    href="/machine/display/{{display.driver}}/tls/{{domain.id}}.{{display.file_extension}}">
+                    ng-click="view=display.driver+'_tls'; copy_password(display.driver); redirect();"
+                    href="/machine/display/{{display.driver}}/tls/{{domain.id}}-tls.{{display.file_extension}}">
                         <b><%=l 'view secure'%></b></a>
             </div>
             <div>
-                <span ng-show="view_clicked">
+                <span ng-show="view=='spice'">
                     <%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}.{{display.file_extension}}</b> <%=l 'in your downloads folder.' %>
                 </span>
-                <span ng-show="view_clicked_tls"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}-tls.{{display.file_extension}}</b> <%=l 'in your downloads folder.' %>
+                <span ng-show="view=='spice_tls'"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}-tls.{{display.file_extension}}</b> <%=l 'in your downloads folder.' %>
                 </span>
                 <br/>
                 <i ng-show="display.driver == 'spice'"><%=l 'Press SHIFT + F12 to exit the virtual machine' %></i>

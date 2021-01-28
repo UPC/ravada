@@ -997,7 +997,7 @@ get '/machine/display/(:driver)/(:id).vv' => sub {
     return $c->render(data => $domain->_display_file_spice($display), format => 'vv');
 };
 
-get '/machine/display/(:driver)/tls/(:id).vv' => sub {
+get '/machine/display/(:driver)/tls/(:id)-tls.vv' => sub {
     my $c = shift;
 
     my $id = $c->stash('id');
