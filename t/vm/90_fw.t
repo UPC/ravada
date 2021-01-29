@@ -18,6 +18,7 @@ my @ARG_RVD = ( config => $FILE_CONFIG,  connector => connector());
 my $USER = create_user("foo","bar", 1);
 
 my $CHAIN = 'RAVADA';
+my $TLS;
 
 ##########################################################
 
@@ -386,7 +387,7 @@ sub test_hibernate {
     is(scalar @rule,1);
 
     my @active_iptables = $domain->_active_iptables( id_domain => $domain->id);
-    is(scalar @active_iptables,2) or exit;
+    is(scalar @active_iptables,2*$TLS) or die Dumper($domain->name, \@active_iptables);
 
     my @rule_drop = find_ip_rule(%test_args_drop);
     is(scalar @rule_drop,1) or return;
@@ -433,6 +434,9 @@ for my $vm_name ( vm_names() ) {
         use_ok("Ravada::VM::$vm_name");
 
         flush_rules_node($vm);
+
+        $TLS=1;
+        $TLS=2 if $vm_name eq 'KVM' && check_libvirt_tls();
 
         my $domain = test_create_domain($vm_name);
         test_fw_domain($vm_name, $domain);

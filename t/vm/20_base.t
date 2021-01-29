@@ -308,6 +308,81 @@ sub test_displays_added_on_refresh($domain, $n_expected, $req_refresh=1) {
 
 }
 
+sub test_display_iptables($vm) {
+    return if $<;
+
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+    _add_all_displays($domain);
+
+    flush_rules();
+    $domain->start(
+        user => user_admin
+        ,remote_ip => '1.2.3.4'
+    );
+    wait_request(debug => 1, skip => [ 'set_time', 'refresh_machine_ports']);
+    my $info = $domain->info(user_admin);
+
+    my ($out_iptables_all, $err0) = $vm->run_command("iptables-save");
+    my @iptables_all = split (/\n/,$out_iptables_all);
+    my ($out_iptables, $err) = $vm->run_command("iptables-save","-t","nat");
+    my @iptables = split (/\n/,$out_iptables);
+
+    my %dupe_port;
+    my @displays = @{$domain->info(user_admin)->{hardware}->{display}};
+    for my $display ( @displays ) {
+        for my $port ( $display->{port}, $display->{extra}->{tls_port} ) {
+            next if !defined $port;
+            ok(!$dupe_port{$port}," port $port duplicated $display->{driver} and "
+                .($dupe_port{$port} or ''));
+            $dupe_port{$port} = $display->{driver};
+            my $display_ip = $display->{ip};
+            ok(grep /--dport $port/,@iptables_all);
+            if ($display->{is_builtin}) {
+                ok(search_iptable_remote(local_ip => $display_ip, local_port => $port
+                        , node => $vm),"Expecting iptables rule for"
+                    ." $display->{driver} ->  $display->{ip} : $port");
+            } else {
+                ok(grep /^-A PREROUTING -d $display_ip\/.* --dport $port -j DNAT/,@iptables)
+                    or die Dumper(\@iptables);
+            }
+        }
+    }
+    $domain->remove(user_admin);
+    ($out_iptables, $err) = $vm->run_command("iptables-save");
+    @iptables = split (/\n/,$out_iptables);
+    for my $display ( @displays ) {
+        for my $port ( $display->{port}, $display->{extra}->{tls_port} ) {
+            next if !defined $port;
+            ok(!grep /--dport $port/,@iptables);
+            my $display_ip = $display->{ip};
+            if ($display->{is_builtin}) {
+                ok(!search_iptable_remote(local_ip => $display_ip, local_port => $port
+                        , node => $vm),"Expecting iptables rule for"
+                    ." $display->{driver} ->  $display->{ip} : $port");
+            } else {
+                ok(!grep /^-A PREROUTING -d $display_ip\/.* --dport $port -j DNAT/,@iptables)
+                    or die Dumper(\@iptables);
+            }
+        }
+    }
+}
+
+sub _add_all_displays($domain) {
+    my $info = $domain->info(user_admin);
+    my $options = $info->{drivers}->{display};
+    for my $driver (@$options) {
+        next if grep { $_->{driver} eq $driver } @{$info->{hardware}->{display}};
+
+        my $req = Ravada::Request->add_hardware(
+            uid => user_admin->id
+            , id_domain => $domain->id
+            , name => 'display'
+            , data => { driver => $driver }
+        );
+    }
+    wait_request();
+
+}
 
 sub test_display_info($vm) {
     my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
@@ -497,8 +572,8 @@ sub test_iptables($domain) {
     my @iptables_builtin = grep { /^-A.*--dport $port_builtin -j ACCEPT/ } @iptables;
     is(scalar(@iptables_builtin),1,"Expecting one entry with $port_builtin, got "
     .scalar(@iptables_builtin)) or do {
-        die Dumper(\@iptables) if !scalar(@iptables_builtin);
-        die Dumper(\@iptables_builtin);
+        confess Dumper(\@iptables) if !scalar(@iptables_builtin);
+        confess Dumper(\@iptables_builtin);
     };
 
     my $port_rdp = $display_exp->{port};
@@ -1406,7 +1481,6 @@ sub test_display_drivers($vm, $remove) {
     wait_request(debug => 0);
     my $n_displays=0;
     for my $driver ( @{$domain->info(user_admin)->{drivers}->{display}} ) {
-        #    diag("add display $driver ".$domain->name);
         my $req = Ravada::Request->add_hardware(
             uid => user_admin->id
             ,id_domain => $domain->id
@@ -1530,7 +1604,7 @@ sub test_display_conflict_non_builtin($vm) {
     $base->prepare_base(user_admin);
 
     my $clone0 = $base->clone(name => new_domain_name, user => user_admin);
-    $clone0->start(user => user_admin , remote_ip => 1);
+    $clone0->start(user => user_admin , remote_ip => '2.3.4.5');
 
     my ($display0a, $display0b) = @{$clone0->info(user_admin)->{hardware}->{display}};
 
@@ -1602,18 +1676,18 @@ for my $vm_name ( vm_names() ) {
 
         use_ok($CLASS);
         if ($vm_name eq 'KVM') {
-            diag("importing base for $vm_name");
             $BASE = import_domain($vm,'zz-test-base-alpine');
         } else {
-            diag("creating base for $vm_name");
             $BASE = create_domain($vm);
         }
         flush_rules() if !$<;
 
-        test_display_info($vm);
+        test_display_iptables($vm);
 
         test_display_conflict_non_builtin($vm);
         test_display_conflict($vm);
+
+        test_display_info($vm);
 
         test_display_port_already_used($vm);
         test_change_display_settings($vm);
