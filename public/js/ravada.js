@@ -884,7 +884,7 @@
             var ws = new WebSocket(url);
             ws.onopen = function(event) { ws.send('request/'+id_request) };
             ws.onclose = function() {
-                ws = new WebSocket(url);
+                $scope.subscribe_request(url, id_request);
             };
 
             ws.onmessage = function(event) {
