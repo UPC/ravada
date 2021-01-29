@@ -1347,6 +1347,30 @@ sub _clean_iptables_ravada($node) {
     }
 }
 
+sub _run_command($node=undef, @command) {
+    if ($node) {
+        return $node->run_command(@command);
+    }
+    my ($in, $out, $err);
+    run3( \@command, \$in, \$out, \$err);
+    return ($out, $err);
+}
+
+sub _flush_forward($node=undef) {
+    my $node_name = 'localhost';
+    $node_name = $node->name if $node;
+    my ($out, $err ) = _run_command($node, "iptables-save");
+    for my $line (split /\n/,$out ) {
+        next if $line !~ /^-A FORWARD/;
+        next if $line =~ /-j LIBVIRT/;
+        warn $line;
+        $line =~ s/^-A (FORWARD.*)/-D $1/;
+        my ($out2, $err2) = _run_command($node, "/usr/sbin/iptables",split(/\s+/,$line));
+        die "$node_name $line $err2" if $err2;
+        warn $out2 if $out2;
+    }
+}
+
 sub flush_rules_node($node) {
     _lock_fw();
     _clean_iptables_ravada($node);
@@ -1358,9 +1382,7 @@ sub flush_rules_node($node) {
     ($out, $err) = $node->run_command("iptables","-X", $CHAIN);
     is($err,'') or die `iptables-save`;
 
-    # flush forward too. this is only supposed to run on test servers
-    ($out, $err) = $node->run_command("iptables","-F", 'FORWARD');
-    is($err,'');
+    _flush_forward($node);
 }
 
 sub flush_rules {
@@ -1395,10 +1417,7 @@ sub flush_rules {
     run3(["iptables","-X", $CHAIN], \$in, \$out, \$err);
     like($err,qr(^$|chain/target/match by that name));
 
-    # flush forward too. this is only supposed to run on test servers
-    run3(["iptables","-F","FORWARD" ], \$in, \$out, \$err);
-    is($err,'');
-
+    _flush_forward();
 }
 
 sub _domain_node($node) {
