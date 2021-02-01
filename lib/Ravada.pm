@@ -1672,6 +1672,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms', 'active_limit','int DEFAULT NULL');
     $self->_upgrade_table('vms', 'base_storage','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('vms', 'clone_storage','varchar(64) DEFAULT NULL');
+    $self->_upgrade_table('vms', 'is_locked','int DEFAULT NULL');
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','pid','int(11) DEFAULT NULL');
@@ -2702,6 +2703,7 @@ sub _kill_requests($self, @requests) {
 }
 
 sub _process_sons($self, $pid) {
+    return if !defined $pid;
     my @process;
 
     my $cmd = "ps -eo 'ppid pid cmd'";
@@ -2772,12 +2774,11 @@ sub _kill_stale_process($self) {
         ."      OR command = 'open_exposed_ports' OR command='remove' "
         .") "
         ." AND status <> 'done' "
-        ." AND pid IS NOT NULL "
         ." AND start_time IS NOT NULL "
     );
     $sth->execute(time - $TIMEOUT_STALE_PROCESS);
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
-        if ($pid == $$ ) {
+        if (defined $pid && $pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
                 ." seconds, but I won't because it is myself";
             my $request = Ravada::Request->open($id);
@@ -4493,6 +4494,7 @@ sub _req_method {
 ,expose => \&_cmd_expose
 ,remove_expose => \&_cmd_remove_expose
 ,open_exposed_ports => \&_cmd_open_exposed_ports
+,close_exposed_ports => \&_cmd_close_exposed_ports
 # Virtual Managers or Nodes
     ,shutdown_node  => \&_cmd_shutdown_node
     ,start_node  => \&_cmd_start_node
@@ -4779,6 +4781,33 @@ sub _cmd_open_exposed_ports($self, $request) {
         ,retry => 10
     );
 
+}
+
+sub _cmd_close_exposed_ports($self, $request) {
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id( $uid ) or die "Error: user $uid not found";
+
+    my $domain = Ravada::Domain->open($request->id_domain);
+    die "Error: user ".$user->name." not authorized to delete iptables rule"
+    unless $user->is_admin || $domain->_data('id_owner') == $uid;
+
+    my $port = $request->defined_arg('port');
+
+    $domain->_close_exposed_port($port);
+
+    if ($request->defined_arg('clean')) {
+        my $query = "UPDATE domain_ports SET public_port=NULL"
+                    ." WHERE id_domain=? ";
+        $query .=" AND internal_port=?" if $port;
+
+        my $sth_update = $CONNECTOR->dbh->prepare($query);
+
+        if ($port) {
+            $sth_update->execute($domain->id, $port);
+        } else {
+            $sth_update->execute($domain->id);
+        }
+    }
 }
 
 =head2 set_debug_value
