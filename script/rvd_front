@@ -2354,6 +2354,9 @@ sub _enable_buttons {
     $c->stash(_shutdown_disabled => '');
     $c->stash(_shutdown_disabled => 'disabled') if !$domain->is_active;
 
+    $c->stash(_reboot_disabled => '');
+    $c->stash(_reboot_disabled => 'disabled') if !$domain->is_active;
+
     $c->stash(_start_disabled => '');
     $c->stash(_start_disabled => 'disabled')    if $domain->is_active;
 
