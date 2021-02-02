@@ -2,16 +2,18 @@
 
 **Implemented enhancements:**
 
-- Polished action buttons in main screen [\#1408]
-- Polished shutdown clones buttons [\#1406]
-- Add debug option [\#1402]
-- Loading icon [\#1401]
-- Feature migrate machine [\#1393]
+- Feature compact virtual machine [\#1453]
+- Feature nested bases [\#1456]
+- Action buttons in frontend \[#1445]
 
 **Bugfixes**
 
-- Ubuntu 20.04 MD5SUM file gone [\#1420]
-- Fix docker files config and dependencies [\#1411]
-- Fix docker files for tzdata package compatibility [\#1376]
-- Fix sync clones back [\#1403]
-- Fix nodes nat [\#1400]
+- File format detected as RAW for linked base files [\#1478]
+- Fix(auth): continue with match if bind failed [\#1468]
+- Failed to get write lock [\#1466]
+- LDAP session reuse with match auth [\#1465]
+- Fix spice password [\#1460]
+- Fix stick exposed ports [\#1457]
+- Fix auto-number even with only one clone \[#1451]
+- Iso files \[#1447]
+- Port exposing fails \[#1429]
