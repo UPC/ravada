@@ -2608,18 +2608,23 @@ sub copy_machine {
 
     my $arg = decode_json($c->req->body);
 
-    my $number = $arg->{copy_number};
-    my $id_base= $arg->{id_base} or confess "Missing param id_base";
-    my $ram = $arg->{copy_ram};
+    my $number = delete $arg->{copy_number};
+    my $id_base= delete $arg->{id_base} or confess "Missing param id_base";
+    my $ram = delete $arg->{copy_ram};
+    $ram =~ s/,/./ if $ram;
     $ram = 0 if !$ram || $ram !~ /^\d+(\.\d+)?$/;
     $ram = int($ram*1024*1024);
 
+    my $new_name = delete $arg->{new_name};
+
+    warn "Error: unknown args ".Dumper($arg) if keys %$arg;
+
     my $base = $RAVADA->search_domain_by_id($id_base) or confess "I can't find domain $id_base";
-    my $name = ( $arg->{new_name} or $base->name."-".$USER->name );
+    my $name = ( $new_name or $base->name."-".$USER->name );
 
     my @create_args = ( from_pool => 0 );
     push @create_args,( memory => $ram ) if $ram;
-    push @create_args, ( name => $name ) if $number == 1;
+    push @create_args, ( name => $name ) if !defined $number || $number == 1;
     my $req2 = Ravada::Request->clone(
             uid => $USER->id
             , id_domain => $base->id
