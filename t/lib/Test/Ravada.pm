@@ -74,6 +74,7 @@ create_domain
     mojo_check_login
     mojo_request
     mojo_request_url
+    mojo_request_url_post
 
     remove_old_user
 
@@ -82,6 +83,8 @@ create_domain
     test_volume_format
 
     check_libvirt_tls
+
+    ping_backend
 
     end
 );
@@ -141,7 +144,7 @@ sub user_admin {
     return $USER_ADMIN if $USER_ADMIN;
 
     my $login;
-    my $admin_name = base_domain_name();
+    my $admin_name = base_domain_name()."-$$";
     my $admin_pass = "$$ $$";
     eval {
         $login = Ravada::Auth::SQL->new(name => $admin_name, password => $admin_pass );
@@ -364,6 +367,11 @@ sub init($config=undef, $sqlite = 1) {
 
     rvd_front($config)  if !$RVD_FRONT;
     $Ravada::VM::KVM::VERIFY_ISO = 0;
+
+    my $file_fp = Ravada::Domain::Void::_file_free_port();
+    open my $fh,">",$file_fp or die "$! $file_fp";
+    print $fh "5900";
+    close $fh;
 }
 
 sub _load_remote_config() {
@@ -648,7 +656,6 @@ sub mojo_clean($wait=1) {
 sub mojo_check_login( $t, $user=$MOJO_USER , $pass=$MOJO_PASSWORD ) {
     $t->ua->get("/user.json");
     return if $t->tx->res->code =~ /^(101|200|302)$/;
-    warn $t->tx->res->code();
     mojo_login($t, $user,$pass);
 }
 
@@ -692,9 +699,21 @@ sub mojo_request($t, $req_name, $args) {
     wait_request(background => 1);
 }
 
+sub mojo_request_url_post($t,$url, $json) {
+    $t->post_ok($url, json => $json);
+    like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body."\n".Dumper($url,$json);
+
+    _wait_mojo_request($t, $url);
+}
+
 sub mojo_request_url($t, $url) {
     $t->get_ok($url)->status_is(200);
     return if $t->tx->res->code != 200;
+
+    _wait_mojo_request($t, $url);
+}
+
+sub _wait_mojo_request($t, $url) {
 
     my $body = $t->tx->res->body;
     my $body_json;
@@ -948,7 +967,9 @@ sub wait_request {
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
                             like($error,qr{^($|rsync done)});
                         } elsif($req->command eq 'refresh_machine_ports') {
-                            like($error,qr{^($|.*is not up|.*has ports down)});
+                            like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
+                        } elsif($req->command eq 'open_exposed_ports') {
+                            like($error,qr{^|$|No ip in domain});
                         } else {
                             is($error,'') or confess $req->command;
                         }
@@ -1363,7 +1384,6 @@ sub _flush_forward($node=undef) {
     for my $line (split /\n/,$out ) {
         next if $line !~ /^-A FORWARD/;
         next if $line =~ /-j LIBVIRT/;
-        warn $line;
         $line =~ s/^-A (FORWARD.*)/-D $1/;
         my ($out2, $err2) = _run_command($node, "/usr/sbin/iptables",split(/\s+/,$line));
         die "$node_name $line $err2" if $err2;
@@ -1803,6 +1823,7 @@ sub _do_remote_node($vm_name, $remote_config) {
 
 sub _dir_db {
     my $dir_db = "/run/user/$>/ravada_db";
+    $dir_db = "/run/user/root/ravada_db" if !$<;
     if (! -e $dir_db ) {
         eval {
             make_path $dir_db
@@ -2234,8 +2255,30 @@ sub check_libvirt_tls {
     }
     return 1 if !keys %search;
     warn "Missing in $FILE_CONFIG_QEMU: ".Dumper([keys %search])
-        ."\n".'https://ravada.readthedocs.io/en/latest/docs/spice_tls.html';
+        ."See also 'https://ravada.readthedocs.io/en/latest/docs/spice_tls.html'";
     return 0;
+}
+
+sub ping_backend() {
+    my @now = localtime(time);
+    for ( 1 .. 4 ){
+        $now[$_] = "0".$now[$_] if length ($now[$_])<2
+    }
+    my $now = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
+    $now[1]--;
+    my $now2 = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
+    my $sth = rvd_back->connector->dbh->prepare(
+        "SELECT date_changed,status FROM requests ORDER BY date_changed DESC"
+    );
+    $sth->execute();
+    my $n = 100;
+    while (my ($date_changed, $status) = $sth->fetchrow ) {
+        next if $status !~ /working|done/;
+        return 1 if $date_changed =~ /^($now|$now2)/;
+        last if $n--<0;
+    }
+
+    return rvd_front->ping_backend();
 }
 
 1;
