@@ -153,7 +153,7 @@ for my $vm_name (@VMS) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
-        diag("Tesing import in $vm_name");
+        diag("Testing import in $vm_name");
         test_wrong_args($vm_name, $vm);
 
         my $domain = test_already_there($vm_name, $vm);

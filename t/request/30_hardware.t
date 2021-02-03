@@ -98,7 +98,6 @@ sub test_display_data($domain, $driver) {
 
     my ($display) = grep { $_->{driver} eq $driver } @displays;
     ok($display) or die "Display $driver not found ".Dumper(\@displays);
-    ok($display->{display}) or die Dumper($display);
 
     test_display_builtin_ports($domain, $display) if $display->{is_builtin};
 

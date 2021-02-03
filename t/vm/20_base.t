@@ -157,7 +157,7 @@ sub test_display_removed($domain) {
     my @ports = $domain->list_ports();
     is(scalar(@ports),0) or die Dumper(\@ports);
 
-    my $sth = connector->dbh->prepare("SELECT * FROM domain_displays WHERE id_domain=?");
+    my $sth = $domain->_dbh->prepare("SELECT * FROM domain_displays WHERE id_domain=?");
     $sth->execute($domain->id);
     my @displays;
     while ( my $row = $sth->fetchrow_hashref) {
@@ -282,14 +282,14 @@ sub test_add_display($vm) {
 
 sub test_displays_added_on_refresh($domain, $n_expected, $req_refresh=1) {
 
-    my $sth_count = connector->dbh->prepare(
+    my $sth_count = $domain->_dbh->prepare(
         "SELECT count(*) FROM domain_displays WHERE id_domain=?");
     $sth_count->execute($domain->id);
     my ($count0) = $sth_count->fetchrow;
     #    is($count0, $n_expected,"Expecting displays on table domain_displays");
 
     if ($req_refresh) {
-        my $sth = connector->dbh->prepare("DELETE FROM domain_displays WHERE id_domain=?");
+        my $sth = $domain->_dbh->prepare("DELETE FROM domain_displays WHERE id_domain=?");
         $sth->execute($domain->id);
         my $req = Ravada::Request->refresh_machine(
             uid => user_admin->id
@@ -319,7 +319,7 @@ sub test_display_iptables($vm) {
         user => user_admin
         ,remote_ip => '1.2.3.4'
     );
-    wait_request(debug => 1, skip => [ 'set_time', 'refresh_machine_ports']);
+    wait_request(debug => 0, skip => [ 'set_time', 'refresh_machine_ports']);
     my $info = $domain->info(user_admin);
 
     my ($out_iptables_all, $err0) = $vm->run_command("iptables-save");
@@ -1591,6 +1591,114 @@ sub test_display_conflict($vm) {
     $domain->remove(user_admin);
 }
 
+sub _next_port_builtin($domain0) {
+    $domain0->start(user => user_admin, remote_ip => '1.2.3.4');
+    my $displays = $domain0->info(user_admin)->{hardware}->{display};
+    my $next_port_builtin = $displays->[0]->{port};
+
+    $next_port_builtin = $displays->[0]->{extra}->{tls_port}
+    if $displays->[0]->{extra}->{tls_port};
+
+    $next_port_builtin++;
+    diag("Next port builtin will  be $next_port_builtin");
+
+    return $next_port_builtin;
+}
+
+sub _set_public_exposed($domain, $port) {
+    my $sth = $domain->_dbh->prepare("UPDATE domain_ports "
+        ." SET public_port=? "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($port, $domain->id);
+
+    $sth = $domain->_dbh->prepare("UPDATE domain_displays "
+        ." SET port=? "
+        ." WHERE id_domain=? AND is_builtin=0 "
+    );
+    $sth->execute($port, $domain->id);
+}
+
+sub _add_hardware($domain, $name, $data) {
+    my $req = Ravada::Request->add_hardware(
+          uid => user_admin->id
+        ,name => $name
+        ,data => $data
+        ,id_domain =>$domain->id
+    );
+    wait_request(check_error => 0);
+}
+
+sub _conflict_port($domain1, $port_conflict) {
+    my @domains;
+    for my $n ( 1 .. 100) {
+        my $domain = $BASE->clone(name => new_domain_name, user => user_admin, memory => 128*1024);
+        push @domains,($domain);
+        $domain->start(user => user_admin, remote_ip => '2.3.4.'.$n);
+        delete_request('set_time');
+        wait_request( debug => 0 );
+        my $displays = $domain->info(user_admin)->{hardware}->{display};
+        my $current_port = $displays->[0]->{port};
+        diag("forcing port conflict $port_conflict $current_port");
+        last if $current_port >= $port_conflict;
+    }
+    Ravada::Request->refresh_machine_ports(uid => user_admin->id
+        ,id_domain => $domain1->id
+    );
+    wait_request( debug => 0 );
+
+    return @domains;
+}
+
+sub _check_iptables_fixed_conflict($vm, $port) {
+    #the $port should be in chain RAVADA accept because it is builtin
+    # and not on the pre-routing
+    my ($out,$err) = $vm->run_command("iptables-save");
+    die $err if $err;
+    my @iptables_ravada = grep { /^-A RAVADA/ } split /\n/,$out;
+    my @accept = grep /^-A RAVADA -s.*--dport $port .*-j ACCEPT/, @iptables_ravada;
+    is(scalar(@accept),1) or die Dumper(\@iptables_ravada,\@accept);
+
+    my @drop = grep /^-A RAVADA -d.*--dport $port .*-j DROP/, @iptables_ravada;
+    is(scalar(@drop),1) or die Dumper(\@iptables_ravada,\@drop);
+
+    my @iptables_prerouting = grep(/^-A PREROUTING .*--dport $port/, split(/\n/,$out));
+    is(scalar(@iptables_prerouting),0) or die Dumper(\@iptables_prerouting);
+}
+
+sub test_display_conflict_next($vm) {
+    my $domain0 = $BASE->clone(name => new_domain_name, user => user_admin, memory =>128*1024);
+    my $next_port_builtin = _next_port_builtin($domain0);
+    $Ravada::VM::FREE_PORT= $next_port_builtin+3;
+
+    my $domain1 = $BASE->clone(name => new_domain_name, user => user_admin, memory => 128*1024);
+    _add_hardware($domain1, 'display', { driver => 'x2go'} );
+    # conflict x2go with previous builtin display
+    _set_public_exposed($domain1, $next_port_builtin);
+
+    $domain1->start(user => user_admin, remote_ip => '2.3.4.5');
+    wait_request(debug => 0);
+    my $displays1 = $domain1->info(user_admin)->{hardware}->{display};
+    isnt($displays1->[1]->{port}, $next_port_builtin);
+
+    # Now conflict x2go with next builtin display
+    my $port_conflict = $displays1->[1]->{port};
+    my @domains = _conflict_port($domain1, $port_conflict);
+
+    my $displays1b
+    = $domain1->info(user_admin)->{hardware}->{display};
+    isnt($displays1b->[1]->{port}, $port_conflict) or die;
+    like($displays1b->[1]->{port},qr/^\d+$/);
+
+    _check_iptables_fixed_conflict($vm, $port_conflict) if !$<;
+
+    for (@domains) {
+        $_->remove(user_admin);
+    }
+    $domain1->remove(user_admin);
+    $domain0->remove(user_admin);
+}
+
 sub test_display_conflict_non_builtin($vm) {
     my $base= $BASE->clone(name => new_domain_name, user => user_admin);
     my $req = Ravada::Request->add_hardware(
@@ -1619,7 +1727,7 @@ sub test_display_conflict_non_builtin($vm) {
     #    ." WHERE id=?");
     # $sth->execute($display1b->{port},$port->{id});
 
-    my $sth = connector->dbh->prepare("UPDATE domain_displays SET port=? "
+    my $sth = $clone1->_dbh->prepare("UPDATE domain_displays SET port=? "
         ." WHERE id_domain=?");
     $sth->execute($display1b->{port},$clone1->id);
 
@@ -1628,6 +1736,7 @@ sub test_display_conflict_non_builtin($vm) {
     wait_request(debug => 0);
 
     $clone0->start( remote_ip => '1.1.1.1' , user => user_admin);
+    $clone0->info(user_admin);
     $clone1->start( remote_ip => '1.1.1.1' , user => user_admin);
     wait_request(debug => 0);
 
@@ -1635,7 +1744,8 @@ sub test_display_conflict_non_builtin($vm) {
     my $display1 = $clone1->info(user_admin)->{hardware}->{display};
     for my $d0 (@$display0 ) {
         for my $d1 (@$display1) {
-            isnt($d0->{port},$d1->{port});
+            isnt($d0->{port},$d1->{port},$clone0->name." $d0->{driver}"
+                ." - ".$clone1->name." $d1->{driver}");
         }
     }
 
@@ -1644,6 +1754,46 @@ sub test_display_conflict_non_builtin($vm) {
     $base->remove(user_admin);
 }
 
+sub test_display_in_clone_kvm($clone, $driver) {
+    my $doc = XML::LibXML->new(string => $clone->domain->get_xml_description);
+    my ($display) = $doc->findnodes("/domain/devices/graphics/\[\@type='$driver']");
+    ok($display,"Expecting $driver display in ".$clone->name);
+}
+sub test_display_in_clone_void($clone, $driver) {
+    my $hardware = $clone->_value('hardware');
+    my $found;
+    for my $display ( @{$hardware->{display}} ) {
+        if ($display->{driver} eq $driver) {
+            $found = $display;
+            last;
+        }
+    }
+    ok($found, "Expecting $driver in hardware->display ".Dumper($hardware)) or die;
+}
+
+sub test_display_in_clone($clone, $driver) {
+    if ($clone->type eq 'KVM') {
+        test_display_in_clone_kvm($clone,$driver);
+    }elsif ($clone->type eq 'Void') {
+        test_display_in_clone_void($clone,$driver);
+    } else {
+        warn "TODO: check displays in clone ".$clone->type;
+    }
+}
+
+sub test_displays_cloned($vm) {
+    my $base= $BASE->clone(name => new_domain_name, user => user_admin);
+    _add_all_displays($base);
+
+    $base->prepare_base(user_admin);
+    my $clone = $base->clone(name => new_domain_name, user => user_admin);
+
+    for my $display ( @{$base->info(user_admin)->{hardware}->{display}} ) {
+        if ($display->{is_builtin}) {
+            test_display_in_clone($clone, $display->{driver});
+        }
+    }
+}
 
 #######################################################################33
 
@@ -1651,7 +1801,7 @@ sub test_display_conflict_non_builtin($vm) {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( vm_names() ) {
+for my $vm_name ( 'Void', vm_names() ) {
 
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";
@@ -1682,10 +1832,13 @@ for my $vm_name ( vm_names() ) {
         }
         flush_rules() if !$<;
 
-        test_display_iptables($vm);
+        test_displays_cloned($vm);
 
+        test_display_conflict_next($vm);# if $vm_name ne 'Void';
         test_display_conflict_non_builtin($vm);
         test_display_conflict($vm);
+
+        test_display_iptables($vm);
 
         test_display_info($vm);
 

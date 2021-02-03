@@ -89,8 +89,10 @@ sub test_volatile_clone {
 
     is($clone->is_active, 1);
     is($clone->is_volatile, 1);
+    is($clone->_has_builtin_display,1);
 
     $clone->start(user_admin)   if !$clone->is_active;
+    wait_request();
 
     is($clone->is_active, 1) && do {
 
@@ -99,7 +101,7 @@ sub test_volatile_clone {
         isa_ok($clonef, 'Ravada::Front::Domain');
         is($clonef->is_active, 1);
         like($clonef->display(user_admin),qr'.');
-        like($clone->remote_ip,qr(.)) or exit;
+        like($clone->remote_ip,qr(.),$clone->name) or exit;
         like($clone->client_status,qr(.));
 
         my $domains = rvd_front->list_machines(user_admin);
@@ -405,6 +407,7 @@ sub test_ips {
         for my $ip2 (@ips) {
             is($vm->listen_ip($ip2), $ip2) or exit;
             my $clone2 = $domain->clone(name => new_domain_name , user => user_admin
+                ,start => 1
                 ,remote_ip => $ip2
             );
             if ($vm->type ne 'Void') {
@@ -416,8 +419,8 @@ sub test_ips {
             }
             my $display_info = $clone2->display_info(user_admin);
 
-            like($display_info->{display}, qr(^\w+://$ip2),$clone2->name) or exit;
-            like($clone2->display(user_admin), qr(^\w+://$ip2),$clone2->name) or exit;
+            #            like($display_info->{display}, qr(^\w+://$ip2),$clone2->name) or exit;
+            is($display_info->{ip},$ip2,$clone2->name) or exit;
 
             $clone2->remove(user_admin);
         }

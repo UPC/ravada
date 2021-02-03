@@ -969,7 +969,9 @@ sub wait_request {
                         } elsif($req->command eq 'refresh_machine_ports') {
                             like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
                         } elsif($req->command eq 'open_exposed_ports') {
-                            like($error,qr{^|$|No ip in domain});
+                            like($error,qr{^($|No ip in domain)});
+                        } elsif($req->command eq 'compact') {
+                            like($error,qr{^($|.*compacted)});
                         } else {
                             is($error,'') or confess $req->command;
                         }
