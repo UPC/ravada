@@ -33,19 +33,15 @@ sub test_tls {
 
     my $display_file = $domain->display_file_tls(user_admin);
     my @lines = split /\n/,$display_file;
-    ok(grep(/^ca=-+BEGIN/, @lines),"Expecting ca on ".Dumper(\@lines));
-    ok(grep(/^tls-port=.+/, @lines),"Expecting tls-port on ".Dumper(\@lines));
-    ok(grep(/^tls-ciphers=.+/, @lines),"Expecting tls-ciphers on ".Dumper(\@lines));
-    ok(grep(/^host-subject=.+/, @lines),"Expecting host-subject on ".Dumper(\@lines));
-
-=pod
-
-    open my $out,'>',"/var/tmp/".$domain->name.".xml" or die $!;
-    print $out join("\n", @lines)."\n";
-    close $out;
-    exit;
-
-=cut
+    my %field;
+    for (@lines) {
+        my ($key, $value) = split /=/;
+        next if !$key || !$value;
+        $field{$key} = $value;
+    }
+    for my $key ( 'ca', 'tls-port','tls-ciphers','host-subject') {
+        ok($field{$key},"Expecting $key ") or die Dumper(\%field);
+    }
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my $file_f = $domain_f->display_file_tls(user_admin);
@@ -71,8 +67,10 @@ SKIP: {
         $vm = undef;
     }
     if ($vm) {
-        $msg = _check_libvirt_tls();
-        $vm = undef if $msg;
+        if (! _check_libvirt_tls() ) {
+            $msg = "No TLS found";
+            $vm = undef;
+        }
     }
 
     diag($msg)      if !$vm;
