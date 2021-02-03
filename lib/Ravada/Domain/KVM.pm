@@ -650,9 +650,55 @@ Returns the display information as a hashref. The display URI is in the display 
 sub display_info($self, $user) {
 
     my $xml = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_SECURE));
-    my ($graph) = $xml->findnodes('/domain/devices/graphics')
+    my @graph = $xml->findnodes('/domain/devices/graphics')
         or return;
 
+    my @display;
+    for my $graph ( @graph ) {
+        my ($type) = $graph->getAttribute('type');
+        if ($type eq 'spice') {
+            push @display,(_display_info_spice($graph));
+        } elsif ($type eq 'vnc' ) {
+            push @display,(_display_info_vnc($graph));
+        }
+    }
+    return $display[0] if !wantarray;
+    return @display;
+}
+
+sub _display_info_vnc($graph) {
+    my ($type) = $graph->getAttribute('type');
+    my ($port) = $graph->getAttribute('port');
+    my ($tls_port) = $graph->getAttribute('tlsPort');
+    my ($address) = $graph->getAttribute('listen');
+
+    my ($password) = $graph->getAttribute('passwd');
+
+    my %display = (
+              driver => $type
+               ,port => $port
+                 ,ip => $address
+         ,is_builtin => 1
+    );
+    $display{tls_port} = $tls_port if defined $tls_port;
+    $display{password} = $password;
+    $port = '' if !defined $port;
+
+    for my $item ( $graph->findnodes("*")) {
+        next if $item->getName eq 'listen';
+        for my $attr ( $item->getAttributes()) {
+            my $value = $attr->toString();
+            $value =~ s/^\s+//;
+            $display{$item->getName()} = $value;
+        }
+    }
+
+    lock_hash(%display);
+    return \%display;
+}
+
+
+sub _display_info_spice($graph) {
     my ($type) = $graph->getAttribute('type');
     my ($port) = $graph->getAttribute('port');
     my ($tls_port) = $graph->getAttribute('tlsPort');
@@ -1878,6 +1924,18 @@ sub _set_driver_generic {
 
 }
 
+sub _update_device_graphics($self, $driver, $data) {
+    my $doc = XML::LibXML->load_xml(string
+        => $self->domain->get_xml_description());
+    my $path = "/domain/devices/graphics\[\@type='$driver']";
+    my ($device ) = $doc->findnodes($path);
+    die "$path not found ".$self->name if !$device;
+
+    my $port = delete $data->{port};
+    $device->setAttribute(port => $port);
+    $device->removeAttribute('autoport');
+    $self->domain->update_device($device,Sys::Virt::Domain::DEVICE_MODIFY_LIVE);
+}
 
 sub _set_driver_generic_simple($self, $xml_path, $value_str) {
     my %value = _text_to_hash($value_str);

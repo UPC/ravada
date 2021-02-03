@@ -1470,7 +1470,7 @@ sub _sql_create_tables($self) {
         domain_displays => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references domains(id)'
-            ,port => 'char(5) not null'
+            ,port => 'char(5)'
             ,ip => 'varchar(254)'
             ,listen_ip => 'varchar(254)'
             ,driver => 'char(40) not null'

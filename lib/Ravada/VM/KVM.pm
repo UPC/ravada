@@ -2333,6 +2333,7 @@ sub _fetch_dir_cert($self) {
         return $1 if $1;
     }
     close $in;
+    return '';
 }
 
 sub free_disk($self, $pool_name = undef ) {

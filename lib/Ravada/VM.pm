@@ -47,6 +47,8 @@ our %SSH;
 our $ARP = `which arp`;
 chomp $ARP;
 
+our $FREE_PORT = 5950;
+
 # domain
 requires 'create_domain';
 requires 'search_domain';
@@ -288,8 +290,20 @@ sub _around_connect($orig, $self) {
     my $result = $self->$orig();
     if ($result) {
         $self->is_active(1);
-        $self->_fetch_tls()
-        if !$self->readonly && $self->type eq 'KVM' && !$self->_data('tls');
+        if ( !$self->readonly && $self->type eq 'KVM' ) {
+            my $tls = $self->_data('tls');
+            my $tls_hash = {};
+            eval {
+                $tls_hash = decode_json($tls) if length($tls);
+            };
+            for (keys %$tls_hash) {
+                delete $tls_hash->{$_} if !$tls_hash;
+            }
+            if (!defined $tls || length($tls)<10
+                || !$tls_hash || !ref($tls_hash) || !keys(%$tls_hash)) {
+                $self->_fetch_tls()
+            }
+        }
     } else {
         $self->is_active(0);
     }
@@ -461,6 +475,7 @@ sub _around_create_domain {
             $display->{is_active} = 0;
             my $port = $domain->exposed_port($display->{driver});
             $display->{id_domain_port} = $port->{id};
+            delete $display->{port};
             $domain->_store_display($display);
         }
     }
@@ -1998,7 +2013,7 @@ sub _new_free_port($self, $used_port={}) {
     $self->_list_used_ports_ss($used_port);
     $self->_list_used_ports_iptables($used_port);
 
-    my $free_port = 5950;
+    my $free_port = $FREE_PORT;
     for (;;) {
         last if !$used_port->{$free_port};
         $free_port++ ;

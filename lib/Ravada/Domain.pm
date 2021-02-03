@@ -153,7 +153,6 @@ has 'description' => (
 #
 
 around 'display_info' => \&_around_display_info;
-around 'display_file_tls' => \&_around_display_file_tls;
 
 around 'add_volume' => \&_around_add_volume;
 around 'remove_volume' => \&_around_remove_volume;
@@ -1087,28 +1086,30 @@ sub _allowed {
 
 sub _around_display_info($orig,$self,$user ) {
     $self->_allowed($user);
-    my $display = $self->$orig($user);
+    my @display = $self->$orig($user);
+    for my $display (@display) {
 
-    if (!$self->readonly && keys %$display) {
-        $self->_set_display_ip($display);
+        if (!$self->readonly && keys %$display) {
+            $self->_set_display_ip($display);
 
-        my $is_active = $self->is_active;
-        if ($is_active) {
-            $self->_data(display => encode_json($display));
+            my $is_active = $self->is_active;
+            if ($is_active) {
+                $self->_data(display => encode_json($display));
 
-            unlock_hash(%$display);
-            $display->{is_active} = 0;
-            $display->{is_active} = 1 if $display->{is_builtin} && $is_active;
-            if ($is_active && !$self->_is_display_builtin($display->{driver})) {
-                my $port = $self->exposed_port(id => $display->{id_domain_port});
-                $display->{is_active} = ( $port->{is_active} or 0);
+                unlock_hash(%$display);
+                $display->{is_active} = 0;
+                $display->{is_active} = 1 if $display->{is_builtin} && $is_active;
+                if ($is_active && !$self->_is_display_builtin($display->{driver})) {
+                    my $port = $self->exposed_port(id => $display->{id_domain_port});
+                    $display->{is_active} = ( $port->{is_active} or 0);
+                }
+                lock_hash(%$display);
             }
-            lock_hash(%$display);
+            $self->_store_display($display);
         }
-        $self->_store_display($display);
-
     }
-    return $display;
+    return @display if wantarray;
+    return $display[0];
 }
 
 sub _store_display($self, $display, $display_old=undef) {
@@ -1129,11 +1130,15 @@ sub _store_display($self, $display, $display_old=undef) {
         $display_old = $self->_get_display($display->{driver})
     }
 
+=pod
     $display_new{port} = $self->_vm->_new_free_port()
-    if !$display_old|| (exists $display_new{port} && !defined $display_new{port});
+    if $self->_is_display_builtin($display) && ( !$display_old || (exists $display_new{port} && !defined $display_new{port}));
+
+=cut
 
     my $ip = ( $display_new{ip} or $display_old->{ip} );
-    my $port = ( $display_new{port} or $display_old->{port} );
+    my $port = $display_new{port};
+    $port = $display_old->{port} if !defined $port && $display_old;
     my $driver = ( $display_new{driver} or $display_old->{driver} );
 
    #warn "updating ".Dumper($display_old,\%display_new);
@@ -1254,7 +1259,8 @@ sub _update_display( $self, $new_display_orig, $old_display ) {
         && defined $old_display->{$key}
         && $new_display{$key} eq $old_display->{$key};
     }
-    delete $new_display{port} if exists $new_display{port} && $new_display{port} eq 'auto';
+    delete $new_display{port} if exists $new_display{port} && defined $new_display{port}
+    && $new_display{port} eq 'auto';
 
     return if !keys %new_display;
 
@@ -1672,11 +1678,6 @@ sub display_file($self, $display) {
     return $self->_display_file_spice($display);
 }
 
-sub _around_display_file_tls($orig, $self, $user) {
-    my $display_file = $self->$orig($user);
-    return $display_file;
-}
-
 =head2 display_file_tls
 
 Returns a file with the display information in TLS connections. Defaults to spice.
@@ -1708,6 +1709,10 @@ sub display($self, $user) {
 # taken from isard-vdi thanks to @tuxinthejungle Alberto Larraz
 sub _display_file_spice($self,$display, $tls = 0) {
 
+    if (ref($display) =~ /^Ravada::Auth/) {
+        ($display) = grep { $_->{driver} eq 'spice'} $self->_get_controller_display();
+    }
+
     confess "I can't find ip port in ".Dumper($display)
         if !$display->{ip} || !$display->{port};
 
@@ -1716,9 +1721,15 @@ sub _display_file_spice($self,$display, $tls = 0) {
         ."type=spice\n"
         ."host=".$display->{ip}."\n";
     if ($tls) {
-        confess "Error: No TLS port found"
-            if !exists $display->{tls_port} || !$display->{tls_port};
-        $ret .= "tls-port=".$display->{tls_port}."\n";
+        my $tls_port;
+        $tls_port = $display->{tls_port} if exists $display->{tls_port};
+        $tls_port = $display->{extra}->{tls_port}
+        if exists $display->{extra} && exists $display->{extra}->{tls_port}
+        && $display->{extra}->{tls_port};
+
+        confess "Error: No TLS port found ".Dumper($display)
+            if !$tls_port;
+        $ret .= "tls-port=$tls_port\n";
     } else {
         $ret .= "port=".$display->{port}."\n";
     }
@@ -2226,11 +2237,12 @@ sub is_locked {
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,at_time FROM requests "
         ." WHERE id_domain=? AND status <> 'done'"
+        ."   AND command <> 'open_exposed_ports'"
         ."   AND command <> 'open_iptables' "
         ."   AND command <> 'set_time'"
         ."   AND command <> 'rsync_back'"
         ."   AND command <> 'refresh_machine'"
-        ."   AND command <> 'refresh_machine_port'"
+        ."   AND command <> 'refresh_machine_ports'"
         ."   AND command <> 'screenshot'"
     );
     $sth->execute($self->id);
@@ -3071,12 +3083,11 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
             );
             $sth->finish;
         };
-        confess "$name internal_port=$internal_port $@" if $@ && $@ =~ /(Duplicate entry|UNIQUE constraint).*(domain_port|internal_port)/;
         last if !$@;
-        confess unless ( $@ =~ /Duplicate entry .*for key / # mysql
-            || $@ =~ /UNIQUE constraint failed/   # sqlite
-        )
-        ;
+        next if ( $@ =~ /Duplicate entry .*for key.*public/ # mysql
+            || $@ =~ /UNIQUE constraint failed.*public/   # sqlite
+        );
+        confess $@;
     }
 
     $self->_open_exposed_port($internal_port, $name, $restricted)
@@ -3125,11 +3136,12 @@ sub _used_ports_iptables($self, $port, $skip_port) {
 sub _used_port_displays($self, $port, $skip_id_port) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_displays"
         ." WHERE port=? "
+        ." AND is_active=1 "
     );
     $sth->execute($port);
     my $row = $sth->fetchrow_hashref;
-    return if !$row->{id} || $row->{id} == $skip_id_port;
-    return $row;
+    return $row if !$row->{id_domain_port} || $row->{id_domain_port} != $skip_id_port;
+    return 0;
 }
 
 sub _open_exposed_port($self, $internal_port, $name, $restricted) {
@@ -3417,8 +3429,12 @@ sub _remove_iptables {
         "DELETE FROM iptables "
         ." WHERE id=?"
     );
+
     my @iptables;
-    push @iptables, ( $self->_active_iptables(id_domain => $self->id))  if $self->is_known();
+
+    push @iptables, ( $self->_active_iptables(id_domain => $self->id))
+    if !$port && $self->is_known();
+
     push @iptables, ( $self->_active_iptables(port => $port, id_vm => $id_vm) ) if $port;
 
     my %rule;
@@ -3532,14 +3548,15 @@ sub _post_start {
     $self->get_info();
 
     # get the display so it is stored for front access
-    if ($self->is_active && $arg{remote_ip}) {
+    my $is_active = $self->is_active;
+    if ($is_active && $arg{remote_ip}) {
         $self->_data('client_status', $arg{remote_ip});
         $self->_data('client_status_time_checked', time );
         if ($self->_has_builtin_display()) {
             $self->display($arg{user});
         }
-        $self->info($arg{user});
     }
+    $self->info($arg{user}) if $is_active;
     Ravada::Request->set_time(uid => Ravada::Utils::user_daemon->id
         , id_domain => $self->id
         , retry => $RETRY_SET_TIME
@@ -3549,8 +3566,38 @@ sub _post_start {
             uid => Ravada::Utils::user_daemon->id
     )   if $self->is_pool;
 
+    $self->_check_port_conflicts();
 
     $self->post_resume_aux(set_time => $set_time);
+}
+
+sub _check_port_conflicts($self) {
+    my @displays = $self->_get_controller_display();
+    my $sth = $self->_dbh->prepare("SELECT id,id_domain,internal_port FROM domain_ports"
+        ." WHERE public_port=? AND is_active=1 AND id_domain <> ?"
+    );
+    for my $display ( @displays ) {
+        for my $port ($display->{port}, $display->{extra}->{tls_port}) {
+            $sth->execute($port, $self->id);
+            while ( my ($id, $id_domain, $internal_port) = $sth->fetchrow ) {
+                # Updating the graphics port is not possible rightnow libvirt 5.0
+                # my $new_port = $self->_vm->new_free_port();
+                # $self->_update_device_graphics($display->{driver},{port => $new_port});
+
+                my $req_close= Ravada::Request->close_exposed_ports(
+                           uid => Ravada::Utils::user_daemon->id
+                         ,port => $internal_port
+                    ,id_domain => $id_domain
+                        ,clean => 1
+                );
+                my $req = Ravada::Request->open_exposed_ports(
+                           uid => Ravada::Utils::user_daemon->id
+                    ,id_domain => $id_domain
+                ,after_request => $req_close->id
+                );
+            }
+        }
+    }
 }
 
 sub _update_id_vm($self) {
@@ -3577,23 +3624,40 @@ sub _add_iptable {
     my %args = @_;
 
     my $remote_ip = $args{remote_ip} or return;
+    my $local_ip = delete $args{local_ip};
 
     my $user = $args{user} or confess "ERROR: Missing user";
     my $uid = $user->id;
 
     return if !$self->is_active;
-    my $display_info = $self->display_info($user);
+    my %port_dupe;
+    for my $display_info ( $self->display_info($user)) {
+        next if !$display_info->{is_builtin};
 
-    my $local_ip = (delete $args{local_ip} or $display_info->{listen_ip});
-    my $local_port = $display_info->{port};
+        my $local_ip = ($local_ip or $display_info->{listen_ip} or $display_info->{info}->{ip});
+        my @port = ( $display_info->{port});
+        push @port, ( $display_info->{extra}->{tls_port} ) if exists $display_info->{extra}
+        && exists $display_info->{extra}->{tls_port};
 
-    $self->_remove_iptables( port => $local_port );
+        for my $local_port ( @port ) {
+            #confess Dumper($display_info) if $self->name eq 'tst_vm_v20_volatile_clones_12' &&( !defined $local_port || !$local_port || $local_port <1) ;
+            next if !defined $local_port || !$local_port || $local_port <1 ;
 
-    $self->_open_port($user, $remote_ip, $local_ip, $local_port);
-    if ($remote_ip eq '127.0.0.1' ) {
-        $self->_open_port($user, $self->_vm->ip, $local_ip, $local_port);
+            die $self->name." port $local_port duplicated in displays $display_info->{driver} "
+            ." and $port_dupe{$local_port} "
+            if $port_dupe{$local_port};
+
+            $port_dupe{$local_port} = $display_info->{driver};
+
+            $self->_remove_iptables( port => $local_port );
+
+            $self->_open_port($user, $remote_ip, $local_ip, $local_port);
+            if ($remote_ip eq '127.0.0.1' ) {
+                $self->_open_port($user, $self->_vm->ip, $local_ip, $local_port);
+            }
+            $self->_close_port($user, '0.0.0.0/0', $local_ip, $local_port);
+        }
     }
-    $self->_close_port($user, '0.0.0.0/0', $local_ip, $local_port);
 
 }
 
@@ -5956,8 +6020,8 @@ sub refresh_ports($self, $request=undef) {
             $is_port_active = $self->_check_port($port->{internal_port}, $ip, $request);
         } else {
             $is_port_active = 0;
+            $port_down++;
         }
-        $port_down++;
         $sth_update->execute($is_port_active, $self->id, $port->{id});
         $sth_update_display->execute($is_port_active, $port->{id})
         if $port->{name};

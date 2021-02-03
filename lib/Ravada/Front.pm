@@ -240,6 +240,7 @@ sub _init_available_actions($user, $m) {
         $m->{can_hibernate} = 0;
         $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
         && !$m->{is_volatile};
+        warn $@ if $@;
 }
 
 sub _around_list_machines($orig, $self, $user, @filter) {
