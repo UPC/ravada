@@ -8,6 +8,6 @@ CREATE TABLE `domain_ports` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `domain_port` (`id_domain`,`internal_port`),
   UNIQUE KEY `name` (`id_domain`,`name`),
-  UNIQUE KEY `public` (`public_port`)
+  UNIQUE KEY `public_port` (`public_port`)
 
 );
