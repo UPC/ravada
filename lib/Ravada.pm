@@ -3448,26 +3448,25 @@ sub _cmd_start_clones {
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
+    my $sequential = $request->defined_arg('sequential');
+
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, is_base FROM domains WHERE id_base = ?"
+        "SELECT id, name, is_base FROM domains WHERE id_base = ? AND is_base = 0 AND status <> 'active'"
     );
     $sth->execute($id_domain);
+    my $id_req;
     while ( my ($id, $name, $is_base) = $sth->fetchrow) {
-        if ($is_base == 0) {
-            my $domain2;
-            my $is_active;
-            eval {
-                $domain2 = $self->search_domain_by_id($id);
-                $is_active = $domain2->is_active;
-            };
-            warn $@ if $@;
-            if (!$is_active) {
+                my @after_request;
+                @after_request = ( after_request => $id_req )
+                if $sequential && $id_req;
+
                 my $req = Ravada::Request->start_domain(
                     uid => $uid
-                   ,name => $name
-                   ,remote_ip => $remote_ip);
-            }
-        }
+                   ,id_domain => $id
+                   ,remote_ip => $remote_ip
+                   ,@after_request
+               );
+               $id_req = $req->id;
     }
 }
 

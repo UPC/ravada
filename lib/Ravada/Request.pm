@@ -73,7 +73,7 @@ our %VALID_ARG = (
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1 }
     ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2 }
-    ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1 }
+    ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1, sequential => 2 }
     ,shutdown_clones => { id_domain => 1, uid => 1, timeout => 2 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,dettach => { uid => 1, id_domain => 1 }
