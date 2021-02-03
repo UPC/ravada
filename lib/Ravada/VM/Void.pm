@@ -85,6 +85,7 @@ sub create_domain {
     my $listen_ip = delete $args{listen_ip};
     my $description = delete $args{description};
     confess if $args{name} eq 'tst_vm_v20_volatile_clones_02' && !$listen_ip;
+    my $remote_ip = delete $args{remote_ip};
     my $domain = Ravada::Domain::Void->new(
                                            %args
                                            , domain => $args{name}
@@ -125,6 +126,19 @@ sub create_domain {
                                  ,type => 'file'
                              );
         }
+        my $base_hw = $domain_base->_value('hardware');
+        my $clone_hw = $domain->_value('hardware');
+        for my $hardware( keys %{$base_hw} ) {
+            next if $hardware eq 'device';
+            $clone_hw->{$hardware} = $base_hw->{$hardware};
+            next if $hardware ne 'display';
+            for my $entry ( @{$clone_hw->{$hardware}} ) {
+                $entry->{port} = 'auto' if $entry->{port};
+                $entry->{port} = $domain->_new_free_port() if $active || $volatile;
+                $entry->{ip} = $listen_ip;
+            }
+        }
+        $domain->_store(hardware => $clone_hw);
         my $drivers = {};
         $drivers = $domain_base->_value('drivers');
         $domain->_store( drivers => $drivers );
@@ -142,12 +156,13 @@ sub create_domain {
         $self->_add_cdrom($domain, %args);
         $domain->_set_default_drivers();
         $domain->_set_default_info($listen_ip);
-        $domain->_store( is_active => 0 );
-
-        $domain->_store( is_active => 1 ) if $volatile || $user->is_temporary;
+        $domain->_store( is_active => $active );
 
     }
     $domain->set_memory($args{memory}) if $args{memory};
+    if ( $volatile || $user->is_temporary ) {
+        $domain->_store( is_active => 1 );
+    }
 #    $domain->start();
     return $domain;
 }

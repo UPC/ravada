@@ -11,6 +11,7 @@ use File::Path qw(make_path);
 use File::Rsync;
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
+use Mojo::JSON qw(decode_json);
 use Moose;
 use YAML qw(Load Dump  LoadFile DumpFile);
 use Image::Magick;
@@ -38,6 +39,8 @@ our %CHANGE_HARDWARE_SUB = (
 
 our $CONVERT = `which convert`;
 chomp $CONVERT;
+
+our $FREE_PORT = 5900;
 #######################################3
 
 sub name {
@@ -50,13 +53,21 @@ sub display_info {
 
     my $hardware = $self->_value('hardware');
     return if !exists $hardware->{display} || !exists $hardware->{display}->[0];
-    my $ret = $hardware->{display}->[0];
-    $ret->{extra} = decode_json($ret->{extra})
-    if exists $ret->{extra} && $ret->{extra};
 
-    $ret->{is_builtin} = 1;
+    my @display;
+    for my $graph ( @{$hardware->{display}} ) {
+        $graph->{extra} = {};
+        eval {
+        $graph->{extra} = decode_json($graph->{extra})
+        if exists $graph->{extra} && $graph->{extra};
+        };
 
-    return $ret;
+        $graph->{is_builtin} = 1;
+        push @display,($graph);
+    }
+
+    return $display[0] if wantarray;
+    return @display;
 }
 
 sub _has_builtin_display($self) {
@@ -83,10 +94,64 @@ sub _is_display_builtin($self, $index=undef, $data=undef) {
     return 0;
 }
 
+sub _file_free_port() {
+    my $user = $<;
+    $user = "root" if !$<;
+
+    my $dir_fp  = "/run/user/$user";
+    mkdir $dir_fp if ! -e $dir_fp;
+    return "/$dir_fp/void_free_port.txt";
+
+}
+
+sub _new_free_port($self, $used={} ) {
+    my $file_fp  = _file_free_port();
+
+    my $n = $FREE_PORT;
+    my $fh;
+    open $fh,"<",$file_fp and do {
+        $n = <$fh>;
+        $n = $FREE_PORT if !$n;
+    };
+    close $fh;
+    open $fh,">",$file_fp or die "$! $file_fp";
+    _lock($fh);
+
+    for ( 0 .. 1000 ) {
+        for my $domain ( $self->_vm->list_domains()) {
+            my $hardware = $domain->_value('hardware');
+            for my $display (@{$hardware->{display}}) {
+                my $port = $display->{port};
+                $used->{$port}=$domain->name.".$display->{driver}" if $port;
+                my $port_tls = $display->{extra}->{tls_port};
+                $used->{$port_tls}=$domain->name if $port_tls;
+            }
+        }
+        my $sth = $self->_dbh->prepare("SELECT d.name,dd.port,extra,driver FROM domain_displays dd,domains d WHERE d.id=dd.id_domain AND is_builtin=1  ");
+        $sth->execute;
+        while ( my ($name,$port, $extra, $driver) = $sth->fetchrow ) {
+            next if !$port;
+            my $extra_json = {};
+            eval { $extra_json = decode_json($extra) } if $extra;
+            $used->{$port}=$name.".dd.$driver";
+            my $tls_port = $extra_json->{tls_port};
+            $used->{$tls_port}=$name if defined $tls_port;
+        }
+
+        last if !$used->{$n};
+        $n++;
+    }
+    print $fh $n;
+    _unlock($fh);
+    close $fh;
+    return $n;
+}
+
 sub _set_display($self, $listen_ip=$self->_vm->listen_ip) {
     $listen_ip=$self->_vm->listen_ip if !$listen_ip;
     #    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
-    my $port = $self->_vm->_new_free_port();
+    my $port = 'auto';
+    $port = $self->_new_free_port() if $self->is_active();
     my $display_data = { driver => 'void', ip => $listen_ip, port =>$port
         , is_builtin => 1
         , xistorra => 1
@@ -109,11 +174,11 @@ sub _set_displays_ip($self, $password=undef, $listen_ip=$self->_vm->listen_ip) {
     for my $display (@{$hardware->{'display'}}) {
         $display->{ip} = $listen_ip;
 
-        $display->{port} = $self->_vm->_new_free_port(\%used_ports)
-        if $is_active
-        && (!exists $display->{port} || !$display->{port} || $display->{port} eq 'auto');
+        $display->{port} = $self->_new_free_port(\%used_ports)
+        if $is_active && ( !$display->{port} || $display->{port} eq 'auto' );
 
         $display->{password} = $password if defined $password;
+        $used_ports{$display->{port}}++;
     }
     $self->_store( hardware => $hardware );
 }
@@ -270,6 +335,11 @@ sub _unlock($fh) {
 sub shutdown {
     my $self = shift;
     $self->_store(is_active => 0);
+    my $hardware = $self->_value('hardware');
+    for my $display (@{$hardware->{'display'}}) {
+        $display->{port} = 'auto';
+    }
+    $self->_store(hardware => $hardware);
 }
 
 sub force_shutdown {
@@ -323,6 +393,7 @@ sub start($self, @args) {
     my $password;
     $password = Ravada::Utils::random_name() if $set_password;
     $self->_set_displays_ip( $password, $listen_ip );
+
 }
 
 sub list_disks {
