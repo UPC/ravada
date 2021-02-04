@@ -1386,8 +1386,9 @@ sub _flush_forward($node=undef) {
     for my $line (split /\n/,$out ) {
         next if $line !~ /^-A FORWARD/;
         next if $line =~ /-j LIBVIRT/;
+        next if $line =~ /lxdbr/;
         $line =~ s/^-A (FORWARD.*)/-D $1/;
-        my ($out2, $err2) = _run_command($node, "/usr/sbin/iptables",split(/\s+/,$line));
+        my ($out2, $err2) = _run_command($node, "iptables",split(/\s+/,$line));
         die "$node_name $line $err2" if $err2;
         warn $out2 if $out2;
     }
