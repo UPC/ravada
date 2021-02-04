@@ -1470,7 +1470,7 @@ sub _sql_create_tables($self) {
         domain_displays => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references domains(id)'
-            ,port => 'char(5)'
+            ,port => 'char(5) DEFAULT NULL'
             ,ip => 'varchar(254)'
             ,listen_ip => 'varchar(254)'
             ,driver => 'char(40) not null'
@@ -1672,7 +1672,6 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms', 'active_limit','int DEFAULT NULL');
     $self->_upgrade_table('vms', 'base_storage','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('vms', 'clone_storage','varchar(64) DEFAULT NULL');
-    $self->_upgrade_table('vms', 'is_locked','int DEFAULT NULL');
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','pid','int(11) DEFAULT NULL');
