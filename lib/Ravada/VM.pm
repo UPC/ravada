@@ -290,20 +290,7 @@ sub _around_connect($orig, $self) {
     my $result = $self->$orig();
     if ($result) {
         $self->is_active(1);
-        if ( !$self->readonly && $self->type eq 'KVM' ) {
-            my $tls = $self->_data('tls');
-            my $tls_hash = {};
-            eval {
-                $tls_hash = decode_json($tls) if length($tls);
-            };
-            for (keys %$tls_hash) {
-                delete $tls_hash->{$_} if !$tls_hash;
-            }
-            if (!defined $tls || length($tls)<10
-                || !$tls_hash || !ref($tls_hash) || !keys(%$tls_hash)) {
-                $self->_fetch_tls()
-            }
-        }
+        $self->_fetch_tls();
     } else {
         $self->is_active(0);
     }
@@ -1890,6 +1877,24 @@ sub _fetch_tls_ca($self) {
 }
 
 sub _fetch_tls($self) {
+    return if !$self->readonly || $self->type eq 'KVM' || !$self->{_tls_fetched}++;
+
+    my $tls = $self->_data('tls');
+    my $tls_hash = {};
+    eval {
+        $tls_hash = decode_json($tls) if length($tls);
+    };
+    for (keys %$tls_hash) {
+        delete $tls_hash->{$_} if !$tls_hash;
+    }
+    if (!defined $tls || length($tls)<10
+        || !$tls_hash || !ref($tls_hash) || !keys(%$tls_hash)) {
+        $self->_do_fetch_tls()
+    }
+
+}
+
+sub _do_fetch_tls($self) {
     $self->_fetch_tls_host_subject();
     $self->_fetch_tls_ca();
 }

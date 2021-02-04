@@ -2321,11 +2321,8 @@ sub _free_memory_available($self) {
 }
 
 sub _fetch_dir_cert($self) {
-    open my $in,'<',$FILE_CONFIG_QEMU or do {
-        warn "$! $FILE_CONFIG_QEMU";
-        return '';
-    };
-    while(my $line = <$in>) {
+    my $in = $self->read_file($FILE_CONFIG_QEMU) or return;
+    for (my $line = split /\n/,$in) {
         chomp $line;
         $line =~ s/#.*//;
         next if !length($line);
