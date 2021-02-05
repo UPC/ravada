@@ -1877,7 +1877,8 @@ sub _fetch_tls_ca($self) {
 }
 
 sub _fetch_tls($self) {
-    return if !$self->readonly || $self->type eq 'KVM' || !$self->{_tls_fetched}++;
+
+    return if $self->readonly || $self->type ne 'KVM' || $self->{_tls_fetched}++;
 
     my $tls = $self->_data('tls');
     my $tls_hash = {};
@@ -1885,11 +1886,11 @@ sub _fetch_tls($self) {
         $tls_hash = decode_json($tls) if length($tls);
     };
     for (keys %$tls_hash) {
-        delete $tls_hash->{$_} if !$tls_hash;
+        delete $tls_hash->{$_} if !$tls_hash->{$_};
     }
-    if (!defined $tls || length($tls)<10
+    if (!defined $tls || !$tls
         || !$tls_hash || !ref($tls_hash) || !keys(%$tls_hash)) {
-        $self->_do_fetch_tls()
+        $self->_do_fetch_tls();
     }
 
 }

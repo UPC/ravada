@@ -356,9 +356,9 @@ sub _around_start($orig, $self, @arg) {
                     my $set_password = 0;
                     my $network = Ravada::Network->new(address => $remote_ip);
                     $set_password = 1 if $network->requires_password();
-                    $display_ip = $self->_listen_ip($remote_ip);
                     $arg{set_password} = $set_password;
                 }
+                $display_ip = $self->_listen_ip($remote_ip);
             } else {
                 $display_ip = $self->_listen_ip();
             }
@@ -810,7 +810,7 @@ sub prepare_base($self, $with_cd) {
 
     for my $volume ($self->list_volumes_info()) {
         next if !$volume->info->{target} && $volume->info->{device} eq 'cdrom';
-        next if $volume->info->{device} eq 'cdrom' && !$with_cd;
+        next if $volume->info->{device} eq 'cdrom' && (!$with_cd || !$volume->file);
         confess "Undefined info->target ".Dumper($volume)
             if !$volume->info->{target};
 
@@ -3140,8 +3140,11 @@ sub _used_port_displays($self, $port, $skip_id_port) {
     );
     $sth->execute($port);
     my $row = $sth->fetchrow_hashref;
-    return $row if !$row->{id_domain_port} || $row->{id_domain_port} != $skip_id_port;
-    return 0;
+   # no conflict
+    return 0 if !$row || !keys %$row;
+    return 0 if $row->{id_domain_port} && $row->{id_domain_port} == $skip_id_port;
+    # conflict
+    return 1;
 }
 
 sub _open_exposed_port($self, $internal_port, $name, $restricted) {
@@ -3636,6 +3639,7 @@ sub _add_iptable {
 
         my $local_ip = ($local_ip or $display_info->{listen_ip} or $display_info->{info}->{ip});
         my @port = ( $display_info->{port});
+        push @port, ( $display_info->{tls_port} )          if exists $display_info->{tls_port};
         push @port, ( $display_info->{extra}->{tls_port} ) if exists $display_info->{extra}
         && exists $display_info->{extra}->{tls_port};
 
