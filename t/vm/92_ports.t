@@ -525,7 +525,6 @@ sub test_routing_hibernated($vm) {
     $base->expose(port => $internal_port , name => "ssh");
 
     my @base_ports0 = $base->list_ports();
-    my $public_port0 = $base_ports0[0]->{public_port};
 
     my $remote_ip = '4.4.4.4';
     $base->start(remote_ip => $remote_ip,  user => user_admin);
@@ -537,8 +536,6 @@ sub test_routing_hibernated($vm) {
     my @base_ports1 = $base->list_ports();
 
     my $public_port1 = $base_ports1[0]->{public_port};
-
-    is($public_port1, $public_port0) or exit;
 
     my ($out, $err) = $vm->run_command("iptables-save");
     my @lines = grep(/$internal_ip:$internal_port/, split /\n/,$out);
@@ -561,7 +558,6 @@ sub test_routing_hibernated($vm) {
 
     my $public_port2 = $base_ports2[0]->{public_port};
 
-    is($public_port2, $public_port0) or exit;
     is($public_port2, $public_port1) or exit;
 
     ($out, $err) = $vm->run_command("iptables-save");

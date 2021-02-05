@@ -336,7 +336,7 @@ sub test_display_iptables($vm) {
                 .($dupe_port{$port} or ''));
             $dupe_port{$port} = $display->{driver};
             my $display_ip = $display->{ip};
-            ok(grep /--dport $port/,@iptables_all);
+            ok(grep /--dport $port/,@iptables_all, "Expecting --dport $port ".Dumper(\@iptables_all)) or die $domain->name;
             if ($display->{is_builtin}) {
                 ok(search_iptable_remote(local_ip => $display_ip, local_port => $port
                         , node => $vm),"Expecting iptables rule for"
@@ -365,6 +365,7 @@ sub test_display_iptables($vm) {
             }
         }
     }
+    $domain->remove(user_admin);
 }
 
 sub _add_all_displays($domain) {
@@ -526,10 +527,10 @@ sub _test_display_tls($display, $vm) {
 
         my $tls_json = $vm->_data('tls');
         my $tls;
-        eval { $tls = decode_json($tls_json) };
-        is($@, '');
+        eval { $tls = decode_json($tls_json) if $tls_json };
+        is($@, '', $tls_json." in ".$vm->name);
         isa_ok($tls, 'HASH');
-        ok($tls->{subject},Dumper($tls));
+        ok($tls->{subject},Dumper($tls)) or die;
         ok($tls->{ca}, Dumper($tls));
         is($tls->{subject}, $vm->tls_host_subject());
         is($tls->{ca}, $vm->tls_ca());
@@ -904,6 +905,7 @@ sub test_clone_with_cd {
     my ($cd_clone ) = grep { defined $_->file && $_->file =~ /\.iso$/ } @volumes_clone;
     ok($cd_clone,"Expecting a CD in clone ".Dumper([ map { delete $_->{domain}; delete $_->{vm}; $_ } @volumes_clone])) or exit;
 
+    $domain->remove(user_admin);
 }
 
 sub test_clone_with_cd_req {
@@ -934,6 +936,8 @@ sub test_clone_with_cd_req {
     my ($cd_clone ) = grep { $_->file =~ /\.iso$/ } @volumes_clone;
     ok($cd_clone,"Expecting a CD in clone ".Dumper(\@volumes_clone));
 
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
 }
 
 sub test_prepare_base_active {
@@ -955,6 +959,7 @@ sub test_prepare_base_active {
 
     ok(!$domain->is_active,"[$vm_name] Domain ".$domain->name." should not be active")
             or return;
+    $domain->remove(user_admin);
 }
 
 sub test_devices_clone {
@@ -1639,7 +1644,6 @@ sub _conflict_port($domain1, $port_conflict) {
         wait_request( debug => 0 );
         my $displays = $domain->info(user_admin)->{hardware}->{display};
         my $current_port = $displays->[0]->{port};
-        diag("forcing port conflict $port_conflict $current_port");
         last if $current_port >= $port_conflict;
     }
     Ravada::Request->refresh_machine_ports(uid => user_admin->id
@@ -1657,7 +1661,7 @@ sub _check_iptables_fixed_conflict($vm, $port) {
     die $err if $err;
     my @iptables_ravada = grep { /^-A RAVADA/ } split /\n/,$out;
     my @accept = grep /^-A RAVADA -s.*--dport $port .*-j ACCEPT/, @iptables_ravada;
-    is(scalar(@accept),1) or die Dumper(\@iptables_ravada,\@accept);
+    is(scalar(@accept),1,"Expecting --dport $port ") or die Dumper(\@iptables_ravada,\@accept);
 
     my @drop = grep /^-A RAVADA -d.*--dport $port .*-j DROP/, @iptables_ravada;
     is(scalar(@drop),1) or die Dumper(\@iptables_ravada,\@drop);
@@ -1755,8 +1759,8 @@ sub test_display_conflict_non_builtin($vm) {
 }
 
 sub test_display_in_clone_kvm($clone, $driver) {
-    my $doc = XML::LibXML->new(string => $clone->domain->get_xml_description);
-    my ($display) = $doc->findnodes("/domain/devices/graphics/\[\@type='$driver']");
+    my $doc = XML::LibXML->load_xml(string => $clone->domain->get_xml_description);
+    my ($display) = $doc->findnodes("/domain/devices/graphics\[\@type='$driver']");
     ok($display,"Expecting $driver display in ".$clone->name);
 }
 sub test_display_in_clone_void($clone, $driver) {
@@ -1793,6 +1797,8 @@ sub test_displays_cloned($vm) {
             test_display_in_clone($clone, $display->{driver});
         }
     }
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
 }
 
 #######################################################################33
@@ -1801,7 +1807,7 @@ sub test_displays_cloned($vm) {
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( 'Void', vm_names() ) {
+for my $vm_name ( vm_names() ) {
 
     diag("Testing $vm_name VM");
     my $CLASS= "Ravada::VM::$vm_name";
@@ -1832,6 +1838,7 @@ for my $vm_name ( 'Void', vm_names() ) {
         }
         flush_rules() if !$<;
 
+        test_display_conflict($vm);
         test_displays_cloned($vm);
 
         test_display_conflict_next($vm);# if $vm_name ne 'Void';
