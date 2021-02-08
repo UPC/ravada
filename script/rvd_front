@@ -891,6 +891,12 @@ get '/machine/compact/(#id_domain)' => sub($c) {
     return $c->render(json => { request => $req->id });
 };
 
+get '/execution_machines_limit' => sub {
+    my $c = shift;
+    
+    return get_execution_machines_limit_per_current_user($c);
+};
+
 get '/node/exists/#name' => sub {
     my $c = shift;
     my $name = $c->stash('name');
@@ -2703,7 +2709,22 @@ sub resume_machine {
     return $c->render(json => { req => $req->id });
 }
 
+sub get_execution_machines_limit_per_current_user {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
 
+    my $settings = $RAVADA->settings_global();
+    my $start_limit = $settings->{'backend'}->{'start_limit'}->{'value'};
+    my $can_start_many = $USER->can_start_many;
+    my @running_domains;
+
+    foreach my $domain (@{$RAVADA->list_domains( id_owner => $USER->id )})
+    {
+        push(@running_domains, $domain->{'id'}) if ($domain->{'is_active'});
+    }
+
+    return $c->render(json => { can_start_many => $can_start_many, start_limit => $start_limit, running_domains => \@running_domains });
+}
 
 sub list_requests {
     my $c = shift;

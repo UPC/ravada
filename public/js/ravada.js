@@ -96,6 +96,7 @@
                       })
               );
             };
+
             $scope.action = function(machine, action) {
                 machine.action = false;
                 if ( action == 'restore' ) {
@@ -220,13 +221,47 @@
               return string;
             };
 
-            $scope.action = function(target,action,machineId,params){
-              $http.get('/'+target+'/'+action+'/'+machineId+'.json'+'?'+this.getQueryStringFromObject(params))
-                .then(function() {
+            $scope.confirmingMachineStopOnNewMachineStartData = null;
+
+            $scope.confirmingMachineStopOnNewMachineStartDataCancelled = function() { 
+                $scope.confirmingMachineStopOnNewMachineStartData = null;
+            };
+
+            $scope.confirmingMachineStopOnNewMachineStartDataDone = function() { 
+                $scope.action($scope.confirmingMachineStopOnNewMachineStartData.target, $scope.confirmingMachineStopOnNewMachineStartData.action, $scope.confirmingMachineStopOnNewMachineStartData.machine, $scope.confirmingMachineStopOnNewMachineStartData.params, true);
+                $scope.confirmingMachineStopOnNewMachineStartData = null;
+            };
+
+            $scope.checkExecutionMachineLimits = function(target,action,machineId,params) {
+              $http.get('/execution_machines_limit')
+                .then(function(data) {
+                    if ((data.data.cant_start_many) || (data.data.running_domains.indexOf(machineId) >= 0) || (data.data.start_limit > data.data.running_domains.length)) {
+                        $scope.action(target, action, machineId, params, true);
+                    }
+                    else {
+                        $scope.confirmingMachineStopOnNewMachineStartData = { target: target, action: action, machine: machineId, params: params };
+                    }
                 }, function(data,status) {
                       console.error('Repos error', status, data);
                       window.location.reload();
                 });
+            };
+
+            $scope.action = function(target,action,machineId,params,confirmed){
+              if (((action === 'start') || (action === 'view')) && (! confirmed)) {
+                  $scope.checkExecutionMachineLimits(target, action, machineId, params);
+              }
+              else if (action === 'view') {
+                  window.location.assign('/machine/view/' + machineId + '.html');
+              }
+              else {
+                  $http.get('/'+target+'/'+action+'/'+machineId+'.json'+'?'+this.getQueryStringFromObject(params))
+                    .then(function() {
+                    }, function(data,status) {
+                          console.error('Repos error', status, data);
+                          window.location.reload();
+                    });
+              }
             };
 
             subscribe_requests = function(url) {
