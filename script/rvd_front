@@ -2714,7 +2714,9 @@ sub get_execution_machines_limit_per_current_user {
     return login($c) if !_logged_in($c);
 
     my $settings = $RAVADA->settings_global();
-    my $start_limit = $settings->{'backend'}->{'start_limit'}->{'value'};
+    my %grants = $USER->grants();
+    my $start_limit = ((exists($grants{'start_limit'})) && ($grants{'start_limit'} > 0)) ? $grants{'start_limit'} : $settings->{'backend'}->{'start_limit'}->{'value'};
+
     my $can_start_many = $USER->can_start_many;
     my @running_domains;
 

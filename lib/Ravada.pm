@@ -1077,6 +1077,7 @@ sub _add_grants($self) {
     $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
     $self->_add_grant('start_many',0,"Can have more than one machine started.");
     $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
+    $self->_add_grant('start_limit',0,"can have their own limit on started machines.");
 }
 
 sub _add_grant($self, $grant, $allowed, $description) {
@@ -1147,7 +1148,7 @@ sub _enable_grants($self) {
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
         ,'reboot',          'reboot_all',      'reboot_clones'
         ,'screenshot'
-        ,'start_many'
+        ,'start_limit',     'start_many'
     );
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
@@ -4517,13 +4518,12 @@ sub _cmd_enforce_limits($self, $request=undef) {
 }
 
 sub _enforce_limits_active($self, $request) {
-
     confess if !$request;
     if (my $id_recent = $request->done_recently(30)) {
         die "Command ".$request->command." run recently by $id_recent.\n";
     }
     my $timeout = ($request->defined_arg('timeout') or 10);
-    my $start_limit = $self->setting('/backend/start_limit');
+    my $start_limit_default = $self->setting('/backend/start_limit');
 
     my %domains;
     for my $domain ($self->list_domains( active => 1 )) {
@@ -4531,8 +4531,11 @@ sub _enforce_limits_active($self, $request) {
         $domain->client_status();
     }
     for my $id_user(keys %domains) {
-        next if scalar @{$domains{$id_user}} <= $start_limit;
         my $user = Ravada::Auth::SQL->search_by_id($id_user);
+        my %grants = $user->grants();
+        my $start_limit = ((exists($grants{'start_limit'})) && ($grants{'start_limit'} > 0)) ? $grants{'start_limit'} : $start_limit_default;
+
+        next if scalar @{$domains{$id_user}} <= $start_limit;
         next if $user->is_admin;
         next if $user->can_start_many;
 
