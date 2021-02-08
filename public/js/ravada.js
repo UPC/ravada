@@ -235,7 +235,7 @@
             $scope.checkExecutionMachineLimits = function(target,action,machineId,params) {
               $http.get('/execution_machines_limit')
                 .then(function(data) {
-                    if ((data.data.cant_start_many) || (data.data.running_domains.indexOf(machineId) >= 0) || (data.data.start_limit > data.data.running_domains.length)) {
+                    if ((data.data.can_start_many) || (data.data.running_domains.indexOf(machineId) >= 0) || (data.data.start_limit > data.data.running_domains.length)) {
                         $scope.action(target, action, machineId, params, true);
                     }
                     else {
