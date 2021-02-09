@@ -51,7 +51,8 @@ Follow this steps:
 
    cd ~
    mkdir src
-   git clone https://github.com/UPC/ravada.git src/
+   cd src/
+   git clone https://github.com/UPC/ravada.git 
    cd ravada/dockerfy
    
 .. prompt:: bash $
