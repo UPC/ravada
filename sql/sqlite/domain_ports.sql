@@ -1,6 +1,6 @@
 CREATE TABLE `domain_ports` (
   `id` integer NOT NULL PRIMARY KEY AUTOINCREMENT
-,  `id_domain` integer DEFAULT NULL
+,  `id_domain` integer NOT NULL references domains(id)
 ,  `public_port` integer DEFAULT NULL
 ,  `internal_port` integer DEFAULT NULL
 ,  `name` varchar(32) DEFAULT NULL
