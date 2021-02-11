@@ -208,13 +208,12 @@ sub import_domain($vm, $name=$BASE_NAME, $import_base=1) {
     return $domain;
 }
 
-sub create_domain {
-    my $vm_name = shift;
-    my $user = (shift or $USER_ADMIN);
-    my $id_iso = (shift or 'Alpine');
-    my $swap = (shift or undef);
-
+sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine', $swap=undef) {
+    confess if !defined $vm_name;
     $vm_name = 'KVM' if $vm_name eq 'qemu';
+
+    $id_iso = 'Alpine' if !defined $id_iso;
+    $user = $USER_ADMIN if !defined $user;
 
     if ( $id_iso && $id_iso !~ /^\d+$/) {
         my $iso_name = $id_iso;
@@ -232,7 +231,6 @@ sub create_domain {
 
     confess "ERROR: Domains can only be created at localhost"
         if $vm->host ne 'localhost';
-    confess "Missing id_iso" if !defined $id_iso;
 
     my $name = new_domain_name();
 
@@ -250,7 +248,7 @@ sub create_domain {
                     , %arg_create
                     , active => 0
                     , memory => 512*1024
-                    , disk => 1024 * 1024 * 1024
+                    , disk => 1024 * 1024
            );
     };
     is('',''.$@);
@@ -367,6 +365,7 @@ sub init($config=undef, $sqlite = 1) {
 
     rvd_front($config)  if !$RVD_FRONT;
     $Ravada::VM::KVM::VERIFY_ISO = 0;
+    $Ravada::VM::MIN_DISK_MB = 1;
 
     my $file_fp = Ravada::Domain::Void::_file_free_port();
     open my $fh,">",$file_fp or die "$! $file_fp";
@@ -965,7 +964,7 @@ sub wait_request {
                         my $error = ($req->error or '');
                         next if $error =~ /waiting for processes/i;
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
-                            like($error,qr{^($|rsync done)});
+                            like($error,qr{^($|rsync done)}) or confess $req->command;
                         } elsif($req->command eq 'refresh_machine_ports') {
                             like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
                         } elsif($req->command eq 'open_exposed_ports') {
@@ -1165,13 +1164,20 @@ sub _clean_db {
     return if $connector->{driver} =~ /mysql/i;
 
     my $sth = $connector->dbh->prepare(
-        "DELETE FROM vms "
+        "SELECT id FROM domains WHERE name like ?"
     );
-    $sth->execute;
+    $sth->execute(base_domain_name().'%');
+    while (my ($id) = $sth->fetchrow() ) {
+        eval {
+            my $domain = Ravada::Domain->open($id);
+            $domain->remove(user_admin) if $domain;
+        };
+        warn $@ if $@;
+    }
     $sth->finish;
 
     $sth = $connector->dbh->prepare(
-        "DELETE FROM domains"
+        "DELETE FROM vms "
     );
     $sth->execute;
     $sth->finish;
@@ -1889,6 +1895,12 @@ sub _create_db_tables($connector, $file_config = $DEFAULT_DB_CONFIG ) {
     }
 }
 
+my $_CONNECTED_CALLBACK = {
+    'connect_cached.connected'=> sub {
+        $_[0]->do("PRAGMA foreign_keys = ON");
+    }
+};
+
 sub connector {
     return $CONNECTOR if $CONNECTOR;
 
@@ -1899,6 +1911,7 @@ sub connector {
                         , AutoCommit => 1
                         , RaiseError => 1
                         , PrintError => 1
+                        , Callbacks  => $_CONNECTED_CALLBACK,
                 });
 
     _create_db_tables($connector);
@@ -1915,6 +1928,35 @@ sub DESTROY {
 }
 
 sub _check_leftovers {
+    _check_leftovers_users();
+    _check_leftovers_domains();
+}
+
+sub _check_leftovers_domains {
+    for my $table (
+        'access_ldap_attribute','domain_access'
+        ,'domain_displays' , 'domain_ports', 'volumes', 'domains_void', 'domains_kvm', 'domain_instances', 'bases_vm', 'domain_access', 'base_xml', 'file_base_images', 'iptables', 'domains_network') {
+        my $sth;
+        eval {
+            $sth = $CONNECTOR->dbh->prepare("SELECT * FROM $table WHERE id_domain NOT IN "
+                ." ( SELECT id FROM domains )"
+            );
+        };
+        warn $@ if $@ && $@ !~ /no such table/;
+        next if !$sth;
+        $sth->execute();
+        my @error;
+        while ( my $row = $sth->fetchrow_hashref ) {
+            push @error, ("Leftover from $table not in domains ".Dumper($row));
+            last;
+        }
+        $sth->finish;
+        ok(!@error,Dumper(\@error)) or confess;
+    }
+
+}
+
+sub _check_leftovers_users {
     my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM grants_user WHERE id_user NOT IN "
         ." ( SELECT id FROM users )"
     );
@@ -1924,7 +1966,7 @@ sub _check_leftovers {
         push @error, ("Leftover from grant_user not in user ".Dumper($row));
     }
     $sth->finish;
-    ok(!@error) or die Dumper(\@error);
+    ok(!@error , Dumper(\@error));
 }
 
 

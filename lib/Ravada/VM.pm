@@ -37,6 +37,7 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 our $CONFIG = \$Ravada::CONFIG;
 
 our $MIN_MEMORY_MB = 128 * 1024;
+our $MIN_DISK_MB = 1024 * 1024;
 
 our $CACHE_TIMEOUT = 60;
 our $FIELD_TIMEOUT = '_data_timeout';
@@ -783,7 +784,8 @@ sub _check_disk {
     my %args = @_;
     return if !exists $args{disk};
 
-    die "ERROR: Low Disk '$args{disk}' required 1 Gb " if $args{disk} < 1024*1024;
+    die "ERROR: Low Disk '$args{disk}' required ".($MIN_DISK_MB/1024/1024)." Gb "
+    if $args{disk} < $MIN_DISK_MB;
 }
 
 
@@ -1982,17 +1984,26 @@ sub _list_used_ports_sql($self, $used_port) {
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT public_port FROM domain_ports ");
     $sth->execute();
-    my $port;
+    my ($port, $json_extra);
     $sth->bind_columns(\$port);
 
-    while ($sth->fetch ) { $used_port->{$port}++ if defined $port };
+    while ($sth->fetch ) {
+        $used_port->{$port}++ if defined $port;
+    };
 
     # do not use ports in displays
-    $sth = $$CONNECTOR->dbh->prepare("SELECT port FROM domain_displays ");
+    $sth = $$CONNECTOR->dbh->prepare("SELECT port,extra FROM domain_displays ");
     $sth->execute();
-    $sth->bind_columns(\$port);
+    $sth->bind_columns(\$port,\$json_extra);
 
-    while ($sth->fetch ) { $used_port->{$port}++ if defined $port };
+    while ($sth->fetch ) {
+        $used_port->{$port}++ if defined $port;
+        my $extra = {};
+        eval { $extra = decode_json($json_extra) if $extra };
+        my $tls_port;
+        $tls_port = $extra->{tls_port} if $extra && $extra->{tls_port};
+        $used_port->{$tls_port}++ if $tls_port;
+    };
 
 }
 

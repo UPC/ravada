@@ -2203,8 +2203,7 @@ sub remove_domain {
     warn $@ if $@;
     if (!$domain) {
             warn "Warning: I can't find domain '$id', maybe already removed.";
-            $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains where id=?");
-            $sth->execute($id);
+            Ravada::Domain::_remove_domain_data_db($id);
             return;
     };
 

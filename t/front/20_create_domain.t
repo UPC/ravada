@@ -90,14 +90,10 @@ sub test_list_bases {
 sub test_domain_name {
     my $vm_name = shift;
 
-    my $domain = create_domain($vm_name);
-    my $sth = connector->dbh->prepare("DELETE FROM domains WHERE id=?");
-    $sth->execute($domain->id);
-
-    my $id = $domain->id;
+    my $id = 9999;
 
     eval {
-        $domain = Ravada::Front::Domain->open($id);
+        my $domain = Ravada::Front::Domain->open($id);
         $domain->name();
     };
     like($@,qr'Unknown domain');
@@ -220,5 +216,6 @@ for my $vm_name ( vm_names() ) {
 }
 }
 
+Test::Ravada::_check_leftovers();
 end();
 done_testing();

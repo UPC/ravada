@@ -218,7 +218,7 @@ Cleanup operations executed before removing this domain
 sub pre_remove_domain {
     my $self = shift;
     return if $self->is_removed;
-    $self->xml_description();
+    $self->xml_description() if $self->is_known();
     $self->domain->managed_save_remove()    if $self->domain->has_managed_save_image;
 }
 

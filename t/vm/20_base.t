@@ -348,12 +348,15 @@ sub test_display_iptables($vm) {
         }
     }
     $domain->remove(user_admin);
+    wait_request(debug => 1);
     ($out_iptables, $err) = $vm->run_command("iptables-save");
     @iptables = split (/\n/,$out_iptables);
     for my $display ( @displays ) {
         for my $port ( $display->{port}, $display->{extra}->{tls_port} ) {
             next if !defined $port;
-            ok(!grep /--dport $port/,@iptables);
+            my @found = grep /--dport $port/, @iptables;
+            is(scalar(@found),0,"expecting no --dport $port after removing ".$domain->name)
+                or die Dumper(\@found,\@iptables);
             my $display_ip = $display->{ip};
             if ($display->{is_builtin}) {
                 ok(!search_iptable_remote(local_ip => $display_ip, local_port => $port
@@ -365,7 +368,6 @@ sub test_display_iptables($vm) {
             }
         }
     }
-    $domain->remove(user_admin);
 }
 
 sub _add_all_displays($domain) {
@@ -617,12 +619,14 @@ sub test_refresh_old_machine($clone) {
 
 sub test_display_clean(@id) {
     for my $id ( @id ) {
-        my $sth = connector->dbh->prepare("SELECT * FROM domain_displays "
-            ." WHERE id_domain=?"
-        );
-        $sth->execute($id);
-        my $row = $sth->fetchrow_hashref;
-        ok(!$row,Dumper($row));
+        for my $table ('domain_displays', 'domain_ports') {
+            my $sth = connector->dbh->prepare("SELECT * FROM $table"
+                ." WHERE id_domain=?"
+            );
+            $sth->execute($id);
+            my $row = $sth->fetchrow_hashref;
+            ok(!$row,Dumper($table, $row));
+        }
     }
 }
 
@@ -905,6 +909,7 @@ sub test_clone_with_cd {
     my ($cd_clone ) = grep { defined $_->file && $_->file =~ /\.iso$/ } @volumes_clone;
     ok($cd_clone,"Expecting a CD in clone ".Dumper([ map { delete $_->{domain}; delete $_->{vm}; $_ } @volumes_clone])) or exit;
 
+    $clone->remove(user_admin);
     $domain->remove(user_admin);
 }
 
@@ -1015,6 +1020,7 @@ sub test_remove_base {
 
     is($count,0,"[$vm_name] Count files base after remove base domain");
 
+    $domain->remove(user_admin);
 }
 
 sub test_dont_remove_base_cloned {
@@ -1192,6 +1198,9 @@ sub test_domain_limit_admin {
     rvd_back->_process_all_requests_dont_fork();
     my @list = rvd_back->list_domains(user => user_admin, active => 1);
     is(scalar @list,2) or die Dumper([map { $_->name } @list]);
+
+    $domain2->remove(user_admin);
+    $domain->remove(user_admin);
 }
 
 
@@ -1341,7 +1350,7 @@ sub test_domain_limit_already_requested {
 }
 
 sub test_prepare_fail($vm) {
-    my $domain = create_domain($vm,undef,undef,1);
+    my $domain = create_domain($vm,user_admin,'Alpine',1);
     my @volumes = $domain->list_volumes_info();
     is(scalar @volumes,3);
     for (@volumes) {
@@ -1423,7 +1432,7 @@ sub test_change_display_settings($vm) {
     } elsif ($vm->type eq 'KVM') {
         test_change_display_settings_kvm($domain);
     }
-
+    $domain->remove(user_admin);
 }
 
 sub test_change_display_settings_kvm($domain) {
@@ -1535,6 +1544,8 @@ sub test_display_drivers($vm, $remove) {
 
     my $displays1 = $domain->info(user_admin)->{hardware}->{display};
     is(scalar(@$displays1),scalar(@$displays0)) or exit;
+
+    $domain->remove(user_admin);
 }
 
 sub test_display_port_already_used($vm) {
@@ -1553,6 +1564,7 @@ sub test_display_port_already_used($vm) {
 }
 
 sub test_display_conflict($vm) {
+    diag("Test display conflict");
     my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     $domain->start( remote_ip => '1.1.1.1' , user => user_admin);
     my ($display_builtin) = @{$domain->info(user_admin)->{hardware}->{display}};
@@ -1591,9 +1603,10 @@ sub test_display_conflict($vm) {
     is($display->[1]->{is_active},1);
 
     my $port3 = $domain->exposed_port(22);
-    isnt($port3->{public_port},$display_builtin->{port});
+    isnt($port3->{public_port},$display_builtin->{port}) or die;
 
     $domain->remove(user_admin);
+
 }
 
 sub _next_port_builtin($domain0) {
@@ -1801,6 +1814,25 @@ sub test_displays_cloned($vm) {
     $base->remove(user_admin);
 }
 
+sub test_removed_leftover($vm) {
+    my $domain = create_domain($vm);
+    $domain->expose(23);
+    my $req = Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => 'display'
+        ,data => { driver => 'x2go' }
+    );
+    wait_request(debug => 0);
+    is($req->status,'done');
+    is($req->error,'');
+
+    $domain->remove(user_admin);
+    Test::Ravada::_check_leftovers();
+    $domain->remove(user_admin);
+    Test::Ravada::_check_leftovers();
+}
+
 #######################################################################33
 
 
@@ -1838,14 +1870,15 @@ for my $vm_name ( vm_names() ) {
         }
         flush_rules() if !$<;
 
+        test_display_iptables($vm);
+
         test_display_conflict($vm);
         test_displays_cloned($vm);
 
+        test_removed_leftover($vm);
+
         test_display_conflict_next($vm);# if $vm_name ne 'Void';
         test_display_conflict_non_builtin($vm);
-        test_display_conflict($vm);
-
-        test_display_iptables($vm);
 
         test_display_info($vm);
 
@@ -1898,6 +1931,7 @@ for my $vm_name ( vm_names() ) {
         test_prepare_base($vm_name, $domain2 , 2);
         $domain2->remove( user_admin );
 
+        $BASE->remove(user_admin) if $vm_name eq 'Void';
     }
 }
 

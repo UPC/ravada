@@ -393,7 +393,7 @@ sub test_already_started_twice($vm_name, $node) {
     is($clone_local->_vm->is_local, 1);
     my $ip_local = $vm->ip;
     $clone_local->_set_displays_ip(1,$vm->ip);# if $clone_local->type eq 'KVM';
-    like($clone_local->display(user_admin),qr($ip_local)) or exit;
+    like($clone_local->display_info(user_admin)->{ip},qr($ip_local)) or exit;
 
     start_domain_internal($clone);
     start_domain_internal($clone_local);

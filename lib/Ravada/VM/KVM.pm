@@ -1461,7 +1461,7 @@ sub _match_file($self, $url, $file_re) {
         confess $@ if $@;
     }
 
-    return unless defined $res->code &&  $res->code == 200 || $res->code == 301;
+    return unless defined $res->code && ( $res->code == 200 || $res->code == 301);
 
     my $dom= $res->dom;
 

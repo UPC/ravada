@@ -14,14 +14,36 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 my $BASE_NAME = "zz-test-base";
+my $BASE_NAME_SMALL = "zz-test-base-alpine";
+my $BASE;
 
 use_ok('Ravada');
 init();
 
+
 ##################################################################################
 
+sub _create_domain($vm,@nodes) {
+    if (!ref($vm)) {
+        $vm = rvd_back->search_vm($vm);
+    }
+    return create_domain($vm) if $vm->type eq 'Void';
+    confess "Error: unknown type '".$vm->type."'" if $vm->type ne 'KVM';
+    if (!$BASE) {
+        $BASE = rvd_back->search_domain($BASE_NAME_SMALL);
+        $BASE = import_domain('KVM', $BASE_NAME_SMALL, 1) if !$BASE;
+        die "Error: $BASE_NAME_SMALL should be base " if !$BASE->is_base;
+    }
+    for my $node ($vm, @nodes) {
+        $BASE->set_base_vm(node => $node, user => user_admin)
+        if !$BASE->base_in_vm($node->id);
+    }
+
+    my $clone = $BASE->clone(name => new_domain_name, user => user_admin);
+}
+
 sub test_reuse_vm($node) {
-    my $domain = create_domain($node->type);
+    my $domain = _create_domain($node);
     $domain->add_volume(swap => 1, size => 512 * 1024);
     $domain->prepare_base(user_admin);
     $domain->set_base_vm(vm => $node, user => user_admin);
@@ -57,7 +79,7 @@ sub test_reuse_vm($node) {
 }
 
 sub test_remove_req($vm, $node) {
-    my $domain = create_domain($node->type);
+    my $domain = _create_domain($node->type);
     $domain->prepare_base(user_admin);
     $domain->set_base_vm(vm => $node, user => user_admin);
 
@@ -100,7 +122,7 @@ sub test_remove($clone, $node) {
 }
 
 sub test_iptables($node, $node2) {
-    my $domain = create_domain($node->type);
+    my $domain = _create_domain($node->type);
     $domain->prepare_base(user_admin);
     $domain->set_base_vm(vm => $node, user => user_admin) if !$domain->base_in_vm($node->id);
 
@@ -166,7 +188,7 @@ sub test_iptables_close($vm, $node) {
     flush_rules_node($vm);
     flush_rules_node($node);
 
-    my $domain = create_domain($node->type);
+    my $domain = _create_domain($node->type);
 
     $domain->prepare_base(user_admin);
     $domain->set_base_vm(vm => $node, user => user_admin) if !$domain->base_in_vm($node->id);
@@ -275,7 +297,7 @@ sub _start_clone_in_node($vm, $node, $base) {
 
 sub test_removed_local_swap($vm, $node) {
     diag("Testing removed local swap in ".$vm->type);
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     $base->add_volume(size => 128*1024 , type => 'tmp');
     $base->add_volume(size => 128*1024 , type => 'swap');
     $base->add_volume(size => 128*1024 , type => 'data');
@@ -290,15 +312,13 @@ sub test_removed_local_swap($vm, $node) {
         my $clone = Ravada::Domain->open($clone_data->{id});
         $clone->remove(user_admin);
     }
-    for my $req ( $base->list_requests ) {
-        $req->stop;
-    }
+    wait_request();
     $base->remove(user_admin);
 }
 
 sub test_removed_remote_swap($vm, $node) {
     diag("Testing removed remote swap in ".$vm->type);
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     $base->add_volume(size => 128*1024 , type => 'tmp');
     $base->add_volume(size => 128*1024 , type => 'swap');
     $base->add_volume(size => 128*1024 , type => 'data');
@@ -331,7 +351,7 @@ sub test_removed_remote_swap($vm, $node) {
 
 sub test_removed_base_file($vm, $node) {
     diag("Testing removed base in ".$vm->type);
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm,$node);
     $base->prepare_base(user_admin);
     $base->set_base_vm(node => $node, user => user_admin);
     is($base->base_in_vm($node->id),1);
@@ -399,7 +419,7 @@ sub _remove_tmp($domain, $vm = $domain->_vm) {
 
 sub test_removed_base_file_and_swap_remote($vm, $node) {
     diag("Testing removed remote base and swap in ".$vm->type);
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     $base->add_volume(size => 128*1024 , type => 'tmp');
     $base->add_volume(size => 128*1024 , type => 'swap');
     $base->add_volume(size => 128*1024 , type => 'data');
@@ -439,7 +459,7 @@ sub test_removed_base_file_and_swap_remote($vm, $node) {
 sub test_set_vm_fail($vm, $node) {
     return if $vm->type ne 'KVM';
     diag("Test set vm fail");
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     $base->volatile_clones(1);
     my $pool2 = create_storage_pool($vm);
     $vm->default_storage_pool_name($pool2);
@@ -483,7 +503,7 @@ sub test_set_vm_fail($vm, $node) {
 }
 
 sub test_set_vm($vm, $node) {
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     my $info = $base->info(user_admin);
     is($info->{bases}->{$vm->id},0);
 
@@ -571,7 +591,7 @@ sub test_bind_ip($node, $base, $remote_ip=undef, $config=undef) {
 }
 
 sub test_volatile($vm, $node) {
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     $base->prepare_base(user_admin);
     $base->set_base_vm(user => user_admin, node => $node);
     $base->volatile_clones(1);
@@ -596,7 +616,7 @@ sub test_volatile($vm, $node) {
 }
 
 sub test_volatile_req($vm, $node) {
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     $base->volatile_clones(1);
     $base->prepare_base(user_admin);
     $base->set_base_vm(user => user_admin, node => $node);
@@ -632,7 +652,7 @@ sub test_volatile_req($vm, $node) {
 }
 
 sub test_volatile_req_clone($vm, $node) {
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     $base->prepare_base(user_admin);
     $base->set_base_vm(user => user_admin, node => $node);
     $base->volatile_clones(1);
@@ -687,7 +707,7 @@ sub test_volatile_req_clone($vm, $node) {
 
 
 sub test_volatile_tmp_owner($vm, $node) {
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     $base->prepare_base(user_admin);
     $base->is_public(1);
     $base->set_base_vm(user => user_admin, node => $node);
@@ -725,7 +745,7 @@ sub test_volatile_tmp_owner($vm, $node) {
 }
 
 sub test_clone_remote($vm, $node) {
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     is($base->list_instances,1);
     $base->prepare_base(user_admin);
 
@@ -778,7 +798,7 @@ sub _test_clones($base, $vm) {
 }
 
 sub test_remove_base($vm, $node, $volatile) {
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     $base->volatile_clones($volatile);
     my @volumes0 = $base->list_volumes( device => 'disk');
     ok(!grep(/iso$/,@volumes0),"Expecting no iso files on device list ".Dumper(\@volumes0))
@@ -832,7 +852,7 @@ sub _check_internal_autostart($domain, $expected) {
 
 # check autostart is managed by Ravada when nodes
 sub test_autostart($vm, $node) {
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     $base->prepare_base(user_admin);
     my $domain = $base->clone(name => new_domain_name , user => user_admin);
     $domain->autostart(1,user_admin);
@@ -886,7 +906,7 @@ sub test_duplicated_set_base_vm($vm, $node) {
 
 sub test_create_active($vm, $node) {
     diag("Test create active machine");
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     $base->prepare_base(user_admin);
     $base->set_base_vm(vm => $node, user => user_admin);
     my $remote_ip = $node->ip or confess "No node ip";
@@ -910,7 +930,7 @@ sub test_create_active($vm, $node) {
 
     my $clone2 = rvd_front->search_domain($clone->name);
     my $info = $clone2->info(user_admin);
-    like($info->{display}->{display}, qr($remote_ip)) or die Dumper($info->{display});
+    is($info->{display}->{ip}, $remote_ip) or die Dumper($info->{display});
 
     test_keep_node($node, $clone);
 
@@ -948,7 +968,7 @@ sub test_keep_node($node, $clone) {
 }
 
 sub test_base_unset($vm, $node) {
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     $base->prepare_base(user_admin);
     $base->set_base_vm(vm => $node, user => user_admin);
 
@@ -966,7 +986,7 @@ sub test_base_unset($vm, $node) {
 }
 
 sub test_change_base($vm, $node) {
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     $base->prepare_base(user_admin);
     $base->set_base_vm(vm => $node, user => user_admin);
     my @volumes = ($base->list_files_base(), $base->list_volumes);
@@ -988,7 +1008,7 @@ sub test_change_base($vm, $node) {
 }
 
 sub test_change_clone($vm, $node) {
-    my $base = create_domain($vm);
+    my $base = _create_domain($vm);
     $base->prepare_base(user_admin);
     $base->set_base_vm(vm => $node, user => user_admin);
     my @volumes_base = ($base->list_files_base() ,$base->list_volumes);
@@ -1082,7 +1102,7 @@ sub test_fill_memory($vm, $node, $migrate) {
 }
 
 sub test_migrate($vm, $node) {
-    my $domain = create_domain($vm);
+    my $domain = _create_domain($vm);
 
     $domain->migrate($node);
 
@@ -1115,7 +1135,7 @@ sub test_migrate($vm, $node) {
 }
 
 sub test_check_instances($vm, $node) {
-    my $domain = create_domain($vm);
+    my $domain = _create_domain($vm);
 
     $domain->migrate($node);
     start_domain_internal($domain);
@@ -1145,7 +1165,7 @@ sub test_check_instances($vm, $node) {
 }
 
 sub test_migrate_req($vm, $node) {
-    my $domain = create_domain($vm);
+    my $domain = _create_domain($vm);
     $domain->start(user_admin);
     my $req = Ravada::Request->migrate(
         id_domain => $domain->id
@@ -1296,7 +1316,7 @@ sub test_nested_base($vm, $node, $levels=1) {
     my $clone;
     my @bases = ( );
     for my $n ( 1 .. $levels ) {
-        diag("Cloning from ".$base1->name." level $n");
+        diag("Cloning from ".$base1->name." level $n / $levels");
         $base1->prepare_base(user_admin) if !$base1->is_base;
         $clone = $base1->clone(
             name => new_domain_name
@@ -1363,7 +1383,7 @@ sub test_display_ip($vm, $node, $set_localhost_dp=0) {
     $node->display_ip($display_ip_1);
     is($node->display_ip,$display_ip_1);
 
-    my $domain = create_domain($vm);
+    my $domain = _create_domain($vm);
     $domain->add_volume(size => 10*1024 , type => 'tmp');
     $domain->add_volume(size => 10*1024 , type => 'swap');
 
@@ -1407,9 +1427,10 @@ sub test_nat($vm, $node, $set_localhost_natip=0) {
     $node->nat_ip($nat_ip_1);
     is($node->nat_ip,$nat_ip_1);
 
-    my $domain = create_domain($vm);
+    my $domain = _create_domain($vm);
     $domain->add_volume(size => 10*1024 , type => 'tmp');
     $domain->add_volume(size => 10*1024 , type => 'swap');
+    $BASE->remove_base_vm(node => $node, user => user_admin);
 
     my $req = Ravada::Request->start_domain(
         remote_ip => '3.4.5.7'
@@ -1417,16 +1438,17 @@ sub test_nat($vm, $node, $set_localhost_natip=0) {
         ,uid => user_admin->id
     );
     wait_request();
-    like($domain->display(user_admin), qr/$vm_ip/);
+    is($domain->display_info(user_admin)->{ip}, $vm_ip) or confess;
 
     $domain->shutdown_now(user_admin);
     $domain->prepare_base(user_admin);
+    $BASE->set_base_vm(node => $node, user => user_admin);
     $domain->set_base_vm(node => $node, user => user_admin);
 
     my $domain2 = _start_clone_in_node($vm, $node, $domain);
 
     is($domain2->_vm->id,$node->id) or exit;
-    like($domain2->display(user_admin),qr/$nat_ip_1/) or exit;
+    is($domain2->display_info(user_admin)->{ip},$nat_ip_1);
 
     _remove_domain($domain);
 
@@ -1490,6 +1512,8 @@ for my $vm_name ( vm_names() ) {
             test_nested_base($vm, $node);
         }
 
+        test_removed_base_file($vm, $node);
+
         test_check_instances($vm, $node);
         test_migrate($vm, $node);
         test_migrate_req($vm, $node);
@@ -1516,7 +1540,6 @@ for my $vm_name ( vm_names() ) {
         test_removed_remote_swap($vm, $node);
         test_removed_local_swap($vm, $node);
         test_duplicated_set_base_vm($vm, $node);
-        test_removed_base_file($vm, $node);
 
         test_set_vm($vm, $node);
 

@@ -1702,6 +1702,9 @@ sub display($self, $user) {
     confess "Error: I can't find builtin display info for ".$self->name." ".ref($self)
     if !exists $display_info->{port};
 
+    confess Dumper($self->name,$self->_vm->name,$display_info) if !$display_info->{driver} || !$display_info->{ip}
+    || !$display_info->{port};
+
     my $display = $display_info->{driver}."://$display_info->{ip}:$display_info->{port}";
     return $display;
 }
@@ -1918,6 +1921,8 @@ sub _insert_db {
 sub _insert_db_extra($self) {
     return if $self->is_known_extra();
 
+    return if $self->{_is_removed} || !$self->is_known();
+
     my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO domains_".lc($self->type)
         ." ( id_domain ) VALUES (?) ");
     $sth->execute($self->id);
@@ -1946,8 +1951,9 @@ sub _pre_remove_domain($self, $user, @) {
     $self->_check_active_node();
 
     $self->is_volatile()        if $self->is_known || $self->domain;
-    if (($self->is_known && $self->is_known_extra)
-        || $self->domain ) {
+    if (!$self->{is_removed}
+        &&( ($self->is_known && $self->is_known_extra)
+        || $self->domain ) ) {
         eval { $self->{_volumes} = [$self->list_disks()] };
         warn "Warning: $@" if $@;
     }
@@ -2036,17 +2042,14 @@ sub _after_remove_domain {
     $self->_remove_all_volumes();
     return if !$self->{_data};
     return if $cascade;
-    $self->_finish_requests_db();
-    $self->_remove_base_db();
-    $self->_remove_access_attributes_db();
-    $self->_remove_access_grants_db();
-    $self->_remove_ports_db();
-    $self->_remove_instance_db();
-    $self->_remove_volumes_db();
-    $self->_remove_bases_vm_db();
-    $self->_remove_displays_db();
-    $self->_remove_domain_db();
+    return if !$self->{_data}->{id};
+    my $id = $self->{_data}->{id};
 
+    my $type = $self->type;
+
+    _remove_domain_data_db($id, $type);
+
+    $self->{_is_removed}=time;
 }
 
 sub _remove_all_volumes($self) {
@@ -2081,62 +2084,32 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
     }
 }
 
-sub _remove_ports_db($self) {
-    return if !$self->{_data}->{id};
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domain_ports"
-        ." WHERE id_domain=?");
-    $sth->execute($self->id);
-    $sth->finish;
+sub _remove_domain_data_db($id, $type=undef) {
+    _finish_requests_db($id);
+    for my $table (
+        'access_ldap_attribute','domain_access'
+        ,'domain_displays' , 'domain_ports', 'volumes', 'domains_void', 'domains_kvm', 'domain_instances', 'bases_vm', 'domain_access', 'base_xml', 'file_base_images', 'iptables', 'domains_network') {
+        my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM $table WHERE id_domain=?");
+        $sth->execute($id);
+    }
+    _remove_domain_custom_db($id, $type);
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
+    $sth->execute($id);
+
 }
 
-sub _remove_access_attributes_db($self) {
+sub _remove_domain_custom_db($id, $type=undef) {
+    if (!defined $type) {
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT vm FROM domains WHERE id=?");
+        $sth->execute($id);
+        my ($type) = $sth->fetchrow;
+    }
+    return if !defined $type;
 
-    return if !$self->{_data}->{id};
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM access_ldap_attribute"
-        ." WHERE id_domain=?");
-    $sth->execute($self->id);
-    $sth->finish;
-}
-
-sub _remove_access_grants_db($self) {
-
-    return if !$self->{_data}->{id};
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domain_access"
-        ." WHERE id_domain=?");
-    $sth->execute($self->id);
-    $sth->finish;
-}
-
-
-sub _remove_volumes_db($self) {
-    return if !$self->{_data}->{id};
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes"
-        ." WHERE id_domain=?");
-    $sth->execute($self->id);
-    $sth->finish;
-}
-
-sub _remove_displays_db($self) {
-    return if !$self->{_data}->{id};
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domain_displays "
-        ." WHERE id_domain=?")
-    ;
-    $sth->execute($self->id);
-}
-
-sub _remove_bases_vm_db($self) {
-    return if !$self->{_data}->{id};
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM bases_vm"
-        ." WHERE id_domain=?");
-    $sth->execute($self->id);
-    $sth->finish;
-}
-
-sub _remove_instance_db($self) {
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domain_instances "
-        ." WHERE id_domain=? AND id_vm=?"
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains_".lc($type)
+        ." WHERE id_domain=?"
     );
-    $sth->execute($self->id, $self->_vm->id);
+    $sth->execute($id);
 }
 
 sub _remove_domain_db {
@@ -2158,14 +2131,7 @@ sub _remove_domain_db {
 
 }
 
-sub _finish_requests_db {
-    my $self = shift;
-
-    return if !$self->{_data}->{id};
-    $self->_select_domain_db or return;
-
-    my $id = $self->id;
-    my $type = $self->type;
+sub _finish_requests_db($id) {
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests "
         ." SET status='done' "
         ." WHERE id_domain=? AND status = 'requested' ");
@@ -4204,19 +4170,21 @@ sub remote_ip($self) {
         ." ORDER BY time_req DESC "
     );
     $sth->execute($self->id);
-    my @ip;
+    my %ip;
+    my $first_ip;
     while ( my ($remote_ip, $iptables_json ) = $sth->fetchrow() ) {
         my $iptables = decode_json($iptables_json);
         next if $iptables->[4] ne 'ACCEPT';
-        push @ip,($remote_ip);
+        $ip{$remote_ip}++;
+        $first_ip = $remote_ip if !defined $first_ip;
     }
     $sth->finish;
-    return @ip if wantarray;
+    return keys %ip if wantarray;
 
-    for my $ip (@ip) {
+    for my $ip (keys %ip) {
         return $ip if $ip eq '127.0.0.1';
     }
-    return $ip[0];
+    return $first_ip;
 
 }
 

@@ -7,6 +7,9 @@ use Test::More;
 use lib 't/lib';
 use Test::Ravada;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use_ok('Ravada');
 
 my $RVD_BACK = rvd_back();
@@ -62,11 +65,20 @@ sub test_already_there {
     return $domain;
 }
 
+sub _delete_domain_db($id_domain) {
+    for my $table ('domain_displays' , 'domain_ports', 'volumes', 'domains_void', 'domains_kvm', 'domain_instances', 'bases_vm', 'domain_access', 'base_xml', 'file_base_images', 'iptables', 'domains_network') {
+        my $sth = connector->dbh->prepare("DELETE FROM $table WHERE id_domain=?");
+        $sth->execute($id_domain);
+    }
+
+}
+
 sub test_import {
     my ($vm_name, $vm, $domain) = @_;
 
     my $dom_name = $domain->name;
 
+    _delete_domain_db($domain->id);
     my $sth = connector->dbh->prepare("DELETE FROM domains WHERE id=?");
     $sth->execute($domain->id);
     $domain = undef;
@@ -109,6 +121,7 @@ sub test_import_spinoff {
 
     my $dom_name = $domain->name;
 
+    _delete_domain_db($domain->id);
     my $sth = connector->dbh->prepare("DELETE FROM domains WHERE id=?");
     $sth->execute($domain->id);
     $domain = undef;
