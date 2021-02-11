@@ -240,7 +240,7 @@ git fetch upstream
 Now we create a new branch:
 
 ```sh
-git checkout -b feature/cool_thing
+git checkout -b feature/cool_thing upstream/develop
 ```
 
 Reset this branch, now it will be an exact replica of upstream UPC/develop:

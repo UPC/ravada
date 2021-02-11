@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '0.11.0';
+our $VERSION = '1.0.0';
 
 use Carp qw(carp croak cluck);
 use Data::Dumper;
@@ -268,8 +268,8 @@ sub _update_isos {
                    ,arch => 'amd64'
                     ,xml => 'focal_fossa-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
-                    ,url => 'http://releases.ubuntu.com/20.04'
-                ,file_re => '^ubuntu-20.04.1-desktop-amd64.iso'
+                    ,url => 'http://releases.ubuntu.com/20.04/'
+                ,file_re => '^ubuntu-20.04.\d+-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
         }
@@ -1018,6 +1018,9 @@ sub _remove_old_isos {
         ,"DELETE FROM iso_images "
             ."  WHERE (name LIKE 'Ubuntu Focal%' OR name LIKE 'Ubuntu Bionic%' ) "
             ."  AND ( md5 IS NOT NULL OR md5_url IS NOT NULL) "
+        ,"DELETE FROM iso_images "
+            ."WHERE name like 'Ubuntu Focal%' "
+            ."  AND file_re like '%20.04.1%'"
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute();
