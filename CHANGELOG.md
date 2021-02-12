@@ -8,6 +8,7 @@
 
 **Bugfixes**
 
+- Ubuntu 20.04 download fails [\#1494]
 - File format detected as RAW for linked base files [\#1478]
 - Fix(auth): continue with match if bind failed [\#1468]
 - Failed to get write lock [\#1466]
