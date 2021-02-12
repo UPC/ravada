@@ -1588,7 +1588,7 @@ sub start_node($node) {
         diag("Waiting for connection to node ".$node->type." "
             .$node->name." $_") if !($_ % 5);
     }
-    is($connect,1
+    ok($connect
             ,"[".$node->type."] "
                 .$node->name." Expecting connection") or exit;
     for ( 1 .. 60 ) {
@@ -1910,7 +1910,7 @@ sub connector {
                 ,{sqlite_allow_multiple_statements=> 1 
                         , AutoCommit => 1
                         , RaiseError => 1
-                        , PrintError => 1
+                        , PrintError => 0
                         , Callbacks  => $_CONNECTED_CALLBACK,
                 });
 

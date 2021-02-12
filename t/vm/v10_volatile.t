@@ -328,7 +328,7 @@ sub test_volatile_auto_kvm {
     my $clone3= $vm->search_domain($name);
     ok($clone3,"[$vm_name] Expecting clone $name");
 
-    { $clone2->remove(user_admin) if $clone2 };
+    eval { $clone2->remove(user_admin) if $clone2 };
     is(''.$@,'');
 
     $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=?");
