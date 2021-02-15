@@ -1077,10 +1077,10 @@ sub _add_grants($self) {
     $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
     $self->_add_grant('start_many',0,"Can have more than one machine started.");
     $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
-    $self->_add_grant('start_limit',0,"can have their own limit on started machines.");
+    $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1);
 }
 
-sub _add_grant($self, $grant, $allowed, $description) {
+sub _add_grant($self, $grant, $allowed, $description, $is_int = 0) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id, description FROM grant_types WHERE name=?"
     );
@@ -1097,9 +1097,9 @@ sub _add_grant($self, $grant, $allowed, $description) {
     }
     return if $id;
 
-    $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description)"
-        ." VALUES (?,?)");
-    $sth->execute($grant, $description);
+    $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description, is_int)"
+        ." VALUES (?,?,?)");
+    $sth->execute($grant, $description, $is_int);
     $sth->finish;
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types WHERE name=?");
@@ -1644,6 +1644,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('domain_ports', 'is_active','int(1) DEFAULT 0');
 
     $self->_upgrade_table('messages','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
+
+    $self->_upgrade_table('grant_types', 'is_int', 'int DEFAULT 0');
 }
 
 sub _upgrade_timestamps($self) {
