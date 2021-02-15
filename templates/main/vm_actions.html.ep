@@ -11,10 +11,12 @@
   </div>
 
   <div ng-show="(confirmingMachineStopOnNewMachineStartData) && (confirmingMachineStopOnNewMachineStartData.action === 'start')" class="alert alert-warning" role="alert">
-    <span><%=l 'One of the machines that are currently running will be shutdown.' %></span>
-    <br>
-    <span><%=l 'Continue?' %></span>
-    <br>
+    <div>
+        <span><%=l 'One of the machines that are currently running will be shutdown.' %></span>
+        <br>
+        <span><%=l 'Continue?' %></span>
+        <br>
+    </div>
     <div class="pull-right">
       <input type="button" class="btn btn-danger btn-xs" value="<%=l 'Yes' %>" ng-click="confirmingMachineStopOnNewMachineStartDataDone()">
       <input type="button" class="btn btn-primary btn-xs" value="<%=l 'No' %>" ng-click="confirmingMachineStopOnNewMachineStartDataCancelled()">
@@ -33,10 +35,12 @@
   </div>
 
   <div type="warning" ng-show="(confirmingMachineStopOnNewMachineStartData) && (confirmingMachineStopOnNewMachineStartData.action === 'view')" class="alert alert-warning" role="alert">
-    <span><%=l 'One of the machines that are currently running will be shutdown.' %></span>
-    <br>
-    <span><%=l 'Continue?' %></span>
-    <br>
+    <div>
+        <span><%=l 'One of the machines that are currently running will be shutdown.' %></span>
+        <br>
+        <span><%=l 'Continue?' %></span>
+        <br>
+    </div>
     <div class="pull-right">
       <input type="button" class="btn btn-primary btn-xs" value="<%=l 'Yes' %>" ng-click="confirmingMachineStopOnNewMachineStartDataDone()">
       <input type="button" class="btn btn-primary btn-xs" value="<%=l 'No' %>" ng-click="confirmingMachineStopOnNewMachineStartDataCancelled()">

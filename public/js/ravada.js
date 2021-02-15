@@ -97,9 +97,41 @@
               );
             };
 
-            $scope.action = function(machine, action) {
+            $scope.confirmingMachineStopOnNewMachineStartData = null;
+
+            $scope.confirmingMachineStopOnNewMachineStartDataCancelled = function() { 
+                $scope.confirmingMachineStopOnNewMachineStartData = null;
+            };
+
+            $scope.confirmingMachineStopOnNewMachineStartDataDone = function() { 
+                $scope.action($scope.confirmingMachineStopOnNewMachineStartData.machine, $scope.confirmingMachineStopOnNewMachineStartData.action, true);
+                $scope.confirmingMachineStopOnNewMachineStartData = null;
+            };
+
+            $scope.checkExecutionMachineLimits = function(action,machine) {
+              $http.get('/execution_machines_limit')
+                .then(function(data) {
+                    if ((data.data.can_start_many) || (data.data.running_domains.indexOf(machine.id) >= 0) || (data.data.start_limit > data.data.running_domains.length)) {
+                        $scope.action(machine, action, true);
+                    }
+                    else {
+                        $scope.confirmingMachineStopOnNewMachineStartData = { action: action, machine: machine };
+                    }
+                }, function(data,status) {
+                      console.error('Repos error', status, data);
+                      window.location.reload();
+                });
+            };
+
+            $scope.action = function(machine, action, confirmed) {
                 machine.action = false;
-                if ( action == 'restore' ) {
+                if (action == 'start') {
+                    if (! confirmed) {
+                        $scope.checkExecutionMachineLimits(action, machine); 
+                    } else {
+                        window.location.assign('/machine/clone/' + machine.id + '.html');
+                    }                    
+                } else if ( action == 'restore' ) {
                     $scope.host_restore = machine.id_clone;
                     $scope.host_shutdown = 0;
                     $scope.host_force_shutdown = 0;
