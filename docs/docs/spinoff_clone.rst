@@ -9,7 +9,7 @@ Clones
 
 In this example we have bases with nested bases and clones.
 
-:.. image:: ../../img/spinoff_before.jpg
+.. image:: ../../img/spinoff_before.jpg
 
 Proceed to Spinoff
 ------------------
@@ -17,12 +17,12 @@ Proceed to Spinoff
 We want to spinoff the virtual machine *alpine-2-1*, so we click in its name
 and then in the *Base" tab with press *Spinoff clone*.
 
-:.. image:: ../../img/spinoff_button.jpg
+.. image:: ../../img/spinoff_button.jpg
 
 After confirm this is what we want Ravada will proceed to spinoff the clone
 from all its bases.
 
-:.. image:: ../../img/spinoff_after.jpg
+.. image:: ../../img/spinoff_after.jpg
 
 What happened behind the scenes ?
 ---------------------------------
