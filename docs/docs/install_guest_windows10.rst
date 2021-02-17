@@ -39,8 +39,8 @@ When the installations it's finished, you need to install:
 * Windows guest tools - `spice-guest-tools <https://www.spice-space.org/download/windows/spice-guest-tools/spice-guest-tools-latest.exe>`_ .
 * make sure that acpi service it's activated.
 
-                                                     
-
+If you experience slow response from the mouse or other glitches you may try installing
+`VirtIO Drivers <https://pve.proxmox.com/wiki/Windows_VirtIO_Drivers>`_ .
 
 
 Use a swap partition for pagefiles
