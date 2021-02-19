@@ -113,9 +113,9 @@
 
         </div>
 
-
-    </div>
-</div>
+        </div> <! -- show=domain -->
+    </div><!-- jumbotron -->
+</div><!-- container -->
     %= include 'bootstrap/scripts'
 </body>
 </html>
