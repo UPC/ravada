@@ -254,6 +254,15 @@ sub test_missing_routes() {
     mojo_login($t, $USERNAME, $PASSWORD);
 }
 
+sub clean_clones() {
+    wait_request( check_error => 0);
+    for my $domain (@{rvd_front->list_domains}) {
+        my $base_name = base_domain_name();
+        next if $domain->{name} !~ /$base_name/;
+        remove_domain_and_clones_req($domain,0);
+    }
+}
+
 ########################################################################################
 
 $ENV{MOJO_MODE} = 'devel';
@@ -267,7 +276,6 @@ if (!rvd_front->ping_backend) {
     exit;
 }
 
-mojo_clean(0); # do not wait for end of clean
 ($USERNAME, $PASSWORD) = ( user_admin->name, "$$ $$");
 
 $t = Test::Mojo->new($SCRIPT);
@@ -275,6 +283,9 @@ $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
 
 mojo_login($t, $USERNAME, $PASSWORD);
+
+remove_old_domains_req(0); # 0=do not wait for them
+clean_clones();
 
 test_missing_routes();
 
@@ -286,5 +297,6 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
     test_networks( $vm_name );
 }
 
-mojo_clean(0); # do not wait for end of clean
+clean_clones();
+
 done_testing();

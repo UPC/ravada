@@ -136,7 +136,7 @@ my %LOCKED_FH;
 
 my ($MOJO_USER, $MOJO_PASSWORD);
 
-my $BASE_NAME= "zz-test-base";
+my $BASE_NAME= "zz-test-base-alpine";
 my $FILE_CONFIG_QEMU = "/etc/libvirt/qemu.conf";
 
 sub user_admin {
@@ -478,7 +478,7 @@ sub remove_old_domains_req($wait=1) {
     }
 }
 
-sub remove_domain_and_clones_req($domain_data, $wait) {
+sub remove_domain_and_clones_req($domain_data, $wait=1) {
     my $domain;
     if (ref($domain_data) =~ /Ravada.*Domain/) {
         $domain = $domain_data;

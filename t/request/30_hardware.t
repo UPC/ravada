@@ -351,6 +351,7 @@ sub test_remove_hardware {
 
 sub test_volume_removed($disk) {
     my $file = $disk->{file};
+    return if !$file;
     ok(! -e $file,"Expecting $file removed") unless $file =~ /\.iso$/;
 }
 
@@ -725,7 +726,7 @@ for my $vm_name ( vm_names()) {
     );
     my %controllers = $domain_b->list_controllers;
 
-    for my $hardware ('display', reverse sort keys %controllers ) {
+    for my $hardware ( reverse sort keys %controllers ) {
         diag("Testing $hardware controllers for VM $vm_name");
         test_front_hardware($vm, $domain_b, $hardware);
 
