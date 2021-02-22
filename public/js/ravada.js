@@ -97,25 +97,25 @@
               );
             };
 
-            $scope.confirmingMachineStopOnNewMachineStartData = null;
+            $scope.confirming_stop_data = null;
 
-            $scope.confirmingMachineStopOnNewMachineStartDataCancelled = function() { 
-                $scope.confirmingMachineStopOnNewMachineStartData = null;
+            $scope.confirmingStopCancelled = function() { 
+                $scope.confirming_stop_data = null;
             };
 
-            $scope.confirmingMachineStopOnNewMachineStartDataDone = function() { 
-                $scope.action($scope.confirmingMachineStopOnNewMachineStartData.machine, $scope.confirmingMachineStopOnNewMachineStartData.action, true);
-                $scope.confirmingMachineStopOnNewMachineStartData = null;
+            $scope.confirmingStopDone = function() { 
+                $scope.action($scope.confirming_stop_data.machine, $scope.confirming_stop_data.action, true);
+                $scope.confirming_stop_data = null;
             };
 
-            $scope.checkExecutionMachineLimits = function(action,machine) {
+            $scope.checkMaxMachines = function(action,machine) {
               $http.get('/execution_machines_limit')
                 .then(function(data) {
                     if ((data.data.can_start_many) || (data.data.running_domains.indexOf(machine.id) >= 0) || (data.data.start_limit > data.data.running_domains.length)) {
                         $scope.action(machine, action, true);
                     }
                     else {
-                        $scope.confirmingMachineStopOnNewMachineStartData = { action: action, machine: machine };
+                        $scope.confirming_stop_data = { action: action, machine: machine };
                     }
                 }, function(data,status) {
                       console.error('Repos error', status, data);
@@ -127,7 +127,7 @@
                 machine.action = false;
                 if (action == 'start') {
                     if (! confirmed) {
-                        $scope.checkExecutionMachineLimits(action, machine); 
+                        $scope.checkMaxMachines(action, machine); 
                     } else {
                         window.location.assign('/machine/clone/' + machine.id + '.html');
                     }                    
@@ -253,37 +253,8 @@
               return string;
             };
 
-            $scope.confirmingMachineStopOnNewMachineStartData = null;
-
-            $scope.confirmingMachineStopOnNewMachineStartDataCancelled = function() { 
-                $scope.confirmingMachineStopOnNewMachineStartData = null;
-            };
-
-            $scope.confirmingMachineStopOnNewMachineStartDataDone = function() { 
-                $scope.action($scope.confirmingMachineStopOnNewMachineStartData.target, $scope.confirmingMachineStopOnNewMachineStartData.action, $scope.confirmingMachineStopOnNewMachineStartData.machine, $scope.confirmingMachineStopOnNewMachineStartData.params, true);
-                $scope.confirmingMachineStopOnNewMachineStartData = null;
-            };
-
-            $scope.checkExecutionMachineLimits = function(target,action,machineId,params) {
-              $http.get('/execution_machines_limit')
-                .then(function(data) {
-                    if ((data.data.can_start_many) || (data.data.running_domains.indexOf(machineId) >= 0) || (data.data.start_limit > data.data.running_domains.length)) {
-                        $scope.action(target, action, machineId, params, true);
-                    }
-                    else {
-                        $scope.confirmingMachineStopOnNewMachineStartData = { target: target, action: action, machine: machineId, params: params };
-                    }
-                }, function(data,status) {
-                      console.error('Repos error', status, data);
-                      window.location.reload();
-                });
-            };
-
-            $scope.action = function(target,action,machineId,params,confirmed){
-              if (((action === 'start') || (action === 'view')) && (! confirmed)) {
-                  $scope.checkExecutionMachineLimits(target, action, machineId, params);
-              }
-              else if (action === 'view') {
+            $scope.action = function(target,action,machineId,params){
+              if (action === 'view') {
                   window.location.assign('/machine/view/' + machineId + '.html');
               }
               else {
