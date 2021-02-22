@@ -311,37 +311,8 @@ ravadaApp.directive("solShowMachine", swMach)
         });
     };
 
-    $scope.confirmingMachineStopOnNewMachineStartData = null;
-
-    $scope.confirmingMachineStopOnNewMachineStartDataCancelled = function() { 
-        $scope.confirmingMachineStopOnNewMachineStartData = null;
-    }; 
-
-    $scope.confirmingMachineStopOnNewMachineStartDataDone = function() { 
-        $scope.action($scope.confirmingMachineStopOnNewMachineStartData.target, $scope.confirmingMachineStopOnNewMachineStartData.action, $scope.confirmingMachineStopOnNewMachineStartData.machine, true);
-        $scope.confirmingMachineStopOnNewMachineStartData = null;
-    };
-
-    $scope.checkExecutionMachineLimits = function(target,action,machineId) {
-        $http.get('/execution_machines_limit')
-          .then(function(data) {
-            if ((data.data.can_start_many) || (data.data.running_domains.indexOf(machineId) >= 0) || (data.data.start_limit > data.data.running_domains.length)) {
-                $scope.action(target, action, machineId, true);
-            }
-            else {
-                $scope.confirmingMachineStopOnNewMachineStartData = { target: target, action: action, machine: machineId };
-            }
-          }, function(data,status) {
-            console.error('Repos error', status, data);
-            window.location.reload();
-          });
-    };
-
-    $scope.action = function(target,action,machineId,confirmed){
-        if (((action === 'start') || (action === 'view')) && (! confirmed)) {
-            $scope.checkExecutionMachineLimits(target, action, machineId);
-        }
-        else if (action === 'view') {
+    $scope.action = function(target,action,machineId){
+        if (action === 'view') {
             window.location.assign('/machine/view/' + machineId + '.html');
         }
         else {
