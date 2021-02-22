@@ -2716,7 +2716,7 @@ sub get_execution_machines_limit_per_current_user {
 
     my %grants = $USER->grants();
     my $start_limit = ((exists($grants{'start_limit'})) && ($grants{'start_limit'} > 0)) ? $grants{'start_limit'} : $RAVADA->settings_global()->{'backend'}->{'start_limit'}->{'value'};
-    my $can_start_many = $USER->can_start_many;
+    my $can_start_many = $USER->can_start_many ? 1 : 0;
     my @running_domains;
 
     foreach my $domain (@{$RAVADA->list_domains( id_owner => $USER->id )})
