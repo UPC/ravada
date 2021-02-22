@@ -38,9 +38,22 @@
                 </div>
             </div>
             <div class="card-body" id="step2">
+              <div ng-show="(confirmingMachineStopOnNewMachineStartData) && (confirmingMachineStopOnNewMachineStartData.action === 'start')" class="row alert alert-warning" role="alert">
+                <div>
+                    <span><%=l 'One of the machines that are currently running will be shutdown.' %></span>
+                    <br>
+                    <span><%=l 'Continue?' %></span>
+                    <br>
+                </div>
+                <div class="pull-right">
+                  <input type="button" class="btn btn-danger btn-xs" value="<%=l 'Yes' %>" ng-click="confirmingMachineStopOnNewMachineStartDataDone()">
+                  <input type="button" class="btn btn-primary btn-xs" value="<%=l 'No' %>" ng-click="confirmingMachineStopOnNewMachineStartDataCancelled()">
+                </div>
+                <br>
+              </div>
                 <div class="row">
                 <a type="button" class="btn btn-success mr-2" ng-hide="machine.action"
-                   href="/machine/clone/{{machine.id}}.html"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
+                   ng-click="action(machine,'start')"><strong><i class="fa fa-play" aria-hidden="true"></i>&nbsp;<%=l 'Start' %></strong></a>
                     <div class="dropdown">
                         <button ng-show="machine.is_active && !machine.action" class="btn btn-secondary dropdown-toggle"
                             ng-click="$parent.refresh=20" type="button" id="dropdownMenuButton"

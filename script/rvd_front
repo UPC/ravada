@@ -891,6 +891,12 @@ get '/machine/compact/(#id_domain)' => sub($c) {
     return $c->render(json => { request => $req->id });
 };
 
+get '/execution_machines_limit' => sub {
+    my $c = shift;
+    
+    return get_execution_machines_limit_per_current_user($c);
+};
+
 get '/node/exists/#name' => sub {
     my $c = shift;
     my $name = $c->stash('name');
@@ -1056,14 +1062,15 @@ any '/admin/user/(:id).(:type)' => sub {
         my %grant;
         for my $param_name (@{$c->req->params->names}) {
             if ( $param_name =~ /^perm_(.*)/ ) {
-                $grant{$1} = 1;
+                my $max = defined($c->req->params->param('max_perm_' . $1)) ? $c->req->params->param('max_perm_' . $1) : 1;
+                $grant{$1} = $max > 1 ? $max : 1;
             } elsif ($param_name =~ /^off_perm_(.*)/) {
                 $grant{$1} = 0 if !exists $grant{$1};
             }
         }
         for my $perm (keys %grant) {
             if ( $grant{$perm} ) {
-                $USER->grant($user, $perm);
+                $USER->grant($user, $perm, $grant{$perm});
             } else {
                 $USER->revoke($user, $perm);
             }
@@ -2703,7 +2710,24 @@ sub resume_machine {
     return $c->render(json => { req => $req->id });
 }
 
+sub get_execution_machines_limit_per_current_user {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
 
+    my $settings = $RAVADA->settings_global();
+    my %grants = $USER->grants();
+    my $start_limit = ((exists($grants{'start_limit'})) && ($grants{'start_limit'} > 0)) ? $grants{'start_limit'} : $settings->{'backend'}->{'start_limit'}->{'value'};
+
+    my $can_start_many = $USER->can_start_many;
+    my @running_domains;
+
+    foreach my $domain (@{$RAVADA->list_domains( id_owner => $USER->id )})
+    {
+        push(@running_domains, $domain->{'id'}) if ($domain->{'is_active'});
+    }
+
+    return $c->render(json => { can_start_many => $can_start_many, start_limit => $start_limit, running_domains => \@running_domains });
+}
 
 sub list_requests {
     my $c = shift;

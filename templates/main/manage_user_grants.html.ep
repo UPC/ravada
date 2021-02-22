@@ -2,12 +2,15 @@
     <div class="card-body">
         <form method="post">
         % for my $perm ($_user->list_all_permissions) {
-        %     my $checked = '';
-        %     $checked = 'checked' if $user->can_do($perm->{name});
+        %     my $can_do = $user->can_do($perm->{name});
+        %     my $checked = $can_do ? 'checked' : '';
               <input type="checkbox" <%= $checked %> 
                             name="perm_<%= $perm->{name} %>">
               <input type="hidden" name="off_perm_<%= $perm->{name} %>" value="off">
               <label for="perm_<%= $perm->{name} %>"><%= $perm->{name} %>: <%=l($perm->{description}) %></label><br/>
+        %     if ($perm->{is_int} != 0) {
+                  <input type="number" name="max_perm_<%= $perm->{name} %>" min="1" value="<%= $can_do %>" max="999" style="margin-left: 15px; margin-bottom: 10px"><br>
+        %     }
         % }
             <button type="reset" class="btn btn-outline-secondary" onclick = "location='/admin/users'"><%=l 'Cancel' %></button>
             <input type="submit" class="btn btn-primary" name="grant" value="<%=l 'Submit' %>">

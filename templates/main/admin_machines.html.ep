@@ -275,12 +275,11 @@
                          title="<%=l 'ShutDown' %>">
                           <i class="fa fa-power-off"></i>
                        </button>
-                        <a type="button" class="btn btn-primary btn-sm"
-                         ng-show="machine.can_view"
-                         ng-href="/machine/view/{{machine.id}}.html"
+                       <button type="button" class="btn btn-primary btn-sm"
+                         ng-click="action('machine','view',machine.id)"
                          title="<%=l 'View' %>">
                           <i class="fa fa-desktop"></i>
-                        </a>
+                       </button>
                       </div>
                       <div ng-show="machine.is_locked" ng-cloak>Machine <a href="/request/{{machine.is_locked}}.html"><%=l 'locked' %></a></div>
                       <div ng-show="machine.is_base && !machine.is_locked"
