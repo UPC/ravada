@@ -2,133 +2,139 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
+"PO-Revision-Date: 2021-02-24 11:50+0000\n"
+"Last-Translator: Eneko Romo <eneko.romo@txorierri.com>\n"
+"Language-Team: Basque <https://hosted.weblate.org/projects/ravada/"
+"translation/eu/>\n"
 "Language: eu\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 4.5\n"
 
 msgid "Ravada broker"
 msgstr ""
 
 msgid "Machine Name"
-msgstr ""
+msgstr "Makinaren izena"
 
 msgid "Tools"
-msgstr ""
+msgstr "Tresnak"
 
 msgid "Choose a Machine to Start"
-msgstr ""
+msgstr "Makina bat Aukeratu Hasteko"
 
 msgid "Start"
-msgstr ""
+msgstr "Hasi"
 
 msgid "Stop"
-msgstr ""
+msgstr "Gelditu"
 
 msgid "View"
-msgstr ""
+msgstr "Ikusmen"
 
 msgid "Prepare base"
-msgstr ""
+msgstr "Oinarria prestatu"
 
 msgid "Clone"
-msgstr ""
+msgstr "Klonatu"
 
 msgid "Clone/s"
-msgstr ""
+msgstr "Klonak"
 
 msgid "Users List"
 msgstr ""
 
 msgid "Name"
-msgstr ""
+msgstr "Izena"
 
 msgid "Log Out"
-msgstr ""
+msgstr "Saioa itxi"
 
 msgid "Available Machines"
-msgstr ""
+msgstr "Erabilgarri Makinak"
 
 msgid "Help"
-msgstr ""
+msgstr "Laguntza"
 
 msgid "Requirements"
-msgstr ""
+msgstr "Baldintzak"
 
 msgid "About"
-msgstr ""
+msgstr "Buruz"
 
 msgid "Mark all as read"
-msgstr ""
+msgstr "Guztia irakurri gisa markatu"
 
 msgid "Settings"
-msgstr ""
+msgstr "Konfigurazioa"
 
 msgid "New Machine"
-msgstr ""
+msgstr "Makina Berria"
 
 msgid "I want to change my password"
-msgstr ""
+msgstr "Nire pasahitza aldatu nahi dut"
 
 msgid "I want to change my language"
-msgstr ""
+msgstr "Nire hizkuntza aldatu nahi dut"
 
 msgid "Language:"
-msgstr ""
+msgstr "Hizkuntza:"
 
 msgid "English"
-msgstr ""
+msgstr "Ingelesa"
 
 msgid "Spanish"
-msgstr ""
+msgstr "Gaztelania"
 
 msgid "Catalan"
-msgstr ""
+msgstr "Katalana"
 
 msgid "Galician"
-msgstr ""
+msgstr "Galiziera"
 
 msgid "French"
-msgstr ""
+msgstr "Frantseza"
 
 msgid "Hindi"
-msgstr ""
+msgstr "Hindi"
 
 msgid "Indonesian"
-msgstr ""
+msgstr "Indonesiera"
 
 msgid "Persian"
-msgstr ""
+msgstr "Persiera"
 
 msgid "Japanese"
-msgstr ""
+msgstr "Japaniera"
 
 msgid "German"
-msgstr ""
+msgstr "Alemaniera"
 
 msgid "New Password:"
-msgstr ""
+msgstr "Pasahitza berria:"
 
 msgid "Confirm Password:"
-msgstr ""
+msgstr "Pasahitza Baieztatu:"
 
 msgid "Submit"
-msgstr ""
+msgstr "Bidali"
 
 msgid "Your language has been changed successfully"
-msgstr ""
+msgstr "Zure hizkuntza zuzenki aldatu da"
 
 msgid "Your password has been changed successfully"
-msgstr ""
+msgstr "Zure pasahitza zuzenki aldatu da"
 
 msgid "Password is too short"
-msgstr ""
+msgstr "Pasahitza laburra da"
 
 msgid "Password fields do not match"
-msgstr ""
+msgstr "Pasahitz-eremuak ez datoz bat"
 
 msgid "Some of the password fields are empty"
-msgstr ""
+msgstr "Pasahitz-eremu batzuk hutsik daude"
 
 msgid "Status"
 msgstr ""
