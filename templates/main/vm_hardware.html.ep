@@ -8,7 +8,7 @@
 </div>
 <div class="panel-body">
 %=   include "main/needs_restart"
-    <div ng-repeat="(name,value) in showmachine.hardware" ng-hide="show_new_disk">
+    <div ng-repeat="(name,value) in showmachine.hardware" ng-hide="show_new_disk||show_new_display">
         <h2>{{name}}</h2>
         <div ng-show="value">
             <div ng-repeat="item in value track by $index"
@@ -26,7 +26,7 @@
                     ng-click="confirm_remove='';remove_hardware(name,$index,item)"><i class="fa fa-times"></i>
                 </button>
                 <span ng-class='{"h5": item.edit }'>
-                    {{item.name || item}}
+                    {{item.name || item.driver || item}}
                 </span>
                 <div ng-show="name == 'disk' && item.remove"
                     ng-class='{"border border-danger p-4 m-4": item.device == "disk"}'
@@ -113,8 +113,9 @@
         </div>
     </div>
 
-    <div ng-hide="show_new_disk" class="input-group mt-3" style="max-width: 18rem;">
+    <div ng-hide="show_new_disk||show_new_display" class="input-group mt-3" style="max-width: 18rem;">
         <div class="input-group-prepend">
+            <i ng-show="showmachine.requests>0" class="fas fa-sync-alt fa-spin"></i>
             <button class="btn btn-primary"
                 ng-disabled="showmachine.requests > 0 || showmachine.is_base || showmachine.is_active"
                 ng-click="add_hardware(new_hardware)"
@@ -129,5 +130,8 @@
             </select>
         </div>
     </div>
+
 %= include 'main/manage_machine_new_disk'
+%= include 'main/manage_machine_new_display'
+%= include "/main/pending_request"
 </div>

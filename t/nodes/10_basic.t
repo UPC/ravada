@@ -13,10 +13,11 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my $BASE_NAME = "zz-test-base";
+my $BASE_NAME = "zz-test-base-alpine";
 
 use_ok('Ravada');
 init();
+
 
 ##################################################################################
 
@@ -57,7 +58,7 @@ sub test_reuse_vm($node) {
 }
 
 sub test_remove_req($vm, $node) {
-    my $domain = create_domain($node->type);
+    my $domain = create_domain($vm);
     $domain->prepare_base(user_admin);
     $domain->set_base_vm(vm => $node, user => user_admin);
 
@@ -163,10 +164,11 @@ sub test_iptables($node, $node2) {
     $domain->remove(user_admin);
 }
 sub test_iptables_close($vm, $node) {
+
     flush_rules_node($vm);
     flush_rules_node($node);
 
-    my $domain = create_domain($node->type);
+    my $domain = create_domain($vm);
 
     $domain->prepare_base(user_admin);
     $domain->set_base_vm(vm => $node, user => user_admin) if !$domain->base_in_vm($node->id);
@@ -181,16 +183,16 @@ sub test_iptables_close($vm, $node) {
     my @found = search_iptable_remote(
        node => $vm
         ,remote_ip => $remote_ip1
-        ,local_port => $local_port2
+        ,local_port => $local_port1
     );
-    is(scalar @found,1,$vm->name." $remote_ip2:$local_port2".Dumper(\@found)) or exit;
+    is(scalar @found,1,$vm->name." $remote_ip1:$local_port1 ".Dumper(\@found)) or exit;
 
     @found = search_iptable_remote(
        node => $node
         ,remote_ip => $remote_ip2
         ,local_port => $local_port2
     );
-    is(scalar @found,1,$vm->name." $remote_ip2:$local_port2".Dumper(\@found)) or exit;
+    is(scalar @found,1,$node->name." $remote_ip2:$local_port2".Dumper(\@found)) or exit;
 
     $clone_local->shutdown_now(user_admin);
 
@@ -199,14 +201,23 @@ sub test_iptables_close($vm, $node) {
         ,remote_ip => $remote_ip1
         ,local_port => $local_port1
     );
-    is(scalar @found,0,$node->name." $remote_ip1:$local_port1".Dumper(\@found));
+    is(scalar @found,0,$vm->name." $remote_ip1:$local_port1".Dumper(\@found));
 
     @found = search_iptable_remote(
        node => $node
         ,remote_ip => $remote_ip2
         ,local_port => $local_port2
     );
-    is(scalar @found,1,$vm->name." $remote_ip2:$local_port2".Dumper(\@found));
+    is(scalar @found,1,$node->name." $remote_ip2:$local_port2".Dumper(\@found));
+
+    $clone_remote->shutdown_now(user_admin);
+
+    @found = search_iptable_remote(
+       node => $node
+        ,remote_ip => $remote_ip2
+        ,local_port => $local_port2
+    );
+    is(scalar @found,0,$node->name." $remote_ip2:$local_port2".Dumper(\@found));
 
     _remove_domain($domain);
 }
@@ -241,21 +252,28 @@ sub _create_2_clones_same_port($vm, $node, $base, $ip_local, $ip_remote) {
     $clone_local->start(user => user_admin, remote_ip => $ip_local);
     $clone_remote->start(user => user_admin, remote_ip => $ip_remote);
 
+    my ($port_less, $port_more) = ( 0,0 );
+
     for (1 .. 100 ) {
         my ($port_local) = $clone_local->display(user_admin) =~ m{://.*:(\d+)};
         my ($port_remote) = $clone_remote->display(user_admin) =~ m{://.*:(\d+)};
 
-        return($clone_local, $clone_remote) if $port_local == $port_remote;
+        return($clone_local, $clone_remote) if $port_local == $port_remote
+        || ( $port_less && $port_more && $clone_local->is_local && !$clone_remote->is_local);
+
+        diag("Trying to create 2 clones same port $_ [ port_local=$port_local , port_remote=$port_remote ] ");
 
         my $clone3 = $base->clone(name => new_domain_name, user => user_admin);
         if ($port_local < $port_remote) {
             $clone3->migrate($vm) if $clone3->_vm->id != $vm->id;
             $clone_local = $clone3;
             $clone_local->start(user => user_admin, remote_ip => $ip_local);
+            $port_less++;
         } else {
             $clone3->migrate($node) if $clone3->_vm->id != $node->id;
             $clone_remote = $clone3;
             $clone_remote->start(user => user_admin, remote_ip => $ip_remote);
+            $port_more++;
         }
     }
 }
@@ -265,10 +283,12 @@ sub _start_clone_in_node($vm, $node, $base) {
     for my $try ( 1 .. 20 ) {
         my $clone1 = $base->clone(name => new_domain_name, user => user_admin);
         _remove_tmp($clone1,$vm);
-        $clone1->start(user_admin);
+        ok(scalar($base->list_vms) >1) or confess Dumper([map { $_->name } $base->list_vms]);
+        eval { $clone1->start(user_admin) };
+        is($@,'') or die "Error $@ starting ".$clone1->name;
         $found_clone = $clone1;
         last if $clone1->_vm->id == $node->id;
-        ok(scalar($base->list_vms) >1) or die Dumper([map { $_->name } $base->list_vms]);
+        ok(scalar($base->list_vms) >1) or confess Dumper([map { $_->name } $base->list_vms]);
     }
     return $found_clone;
 }
@@ -290,9 +310,7 @@ sub test_removed_local_swap($vm, $node) {
         my $clone = Ravada::Domain->open($clone_data->{id});
         $clone->remove(user_admin);
     }
-    for my $req ( $base->list_requests ) {
-        $req->stop;
-    }
+    wait_request();
     $base->remove(user_admin);
 }
 
@@ -848,33 +866,35 @@ sub test_autostart($vm, $node) {
 }
 
 sub test_duplicated_set_base_vm($vm, $node) {
+    diag("Test duplicated set base vm");
+    my $domain = create_domain($vm);
     my $req = Ravada::Request->set_base_vm(id_vm => $node->id
         , uid => 1
-        , id_domain => 1
+        , id_domain => $domain->id
         , at => time + 3
     );
     my $req2 = Ravada::Request->set_base_vm(id_vm => $node->id
         , uid => 2
-        , id_domain => 1
+        , id_domain => $domain->id
         , at => time + 4
     );
     ok($req2) or exit;
     is($req2->id, $req->id) or exit;
     my $req3 = Ravada::Request->remove_base_vm(id_vm => $node->id
         , uid => 1
-        , id_domain => 1
+        , id_domain => $domain->id
         , at => time + 3
     );
     my $req4 = Ravada::Request->remove_base_vm(id_vm => $node->id
         , uid => 2
-        , id_domain => 1
+        , id_domain => $domain->id
         , at => time + 4
     );
     ok($req4) or exit;
     is($req4->id, $req3->id) or exit;
     my $req5 = Ravada::Request->set_base_vm(id_vm => 999
         , uid => 2
-        , id_domain => 1
+        , id_domain => $domain->id
         , at => time + 4
     );
     ok($req5) or exit;
@@ -882,6 +902,7 @@ sub test_duplicated_set_base_vm($vm, $node) {
     is($node->is_locked,1);
     my $sth = connector->dbh->prepare("DELETE FROM requests");
     $sth->execute;
+    $domain->remove(user_admin);
 }
 
 sub test_create_active($vm, $node) {
@@ -910,7 +931,7 @@ sub test_create_active($vm, $node) {
 
     my $clone2 = rvd_front->search_domain($clone->name);
     my $info = $clone2->info(user_admin);
-    like($info->{display}->{display}, qr($remote_ip)) or die Dumper($info->{display});
+    is($info->{display}->{ip}, $remote_ip) or die Dumper($info->{display});
 
     test_keep_node($node, $clone);
 
@@ -1068,6 +1089,7 @@ sub test_fill_memory($vm, $node, $migrate) {
         eval { $clone->start(user_admin) };
         $error = $@;
         like($error, qr/(^$|No free memory)/);
+        exit if $error && $error !~ /No free memory/;
         last if $error;
         $nodes{$clone->_vm->name}++;
 
@@ -1082,6 +1104,7 @@ sub test_fill_memory($vm, $node, $migrate) {
 }
 
 sub test_migrate($vm, $node) {
+    diag("Test migrate");
     my $domain = create_domain($vm);
 
     $domain->migrate($node);
@@ -1296,7 +1319,7 @@ sub test_nested_base($vm, $node, $levels=1) {
     my $clone;
     my @bases = ( );
     for my $n ( 1 .. $levels ) {
-        diag("Cloning from ".$base1->name." level $n");
+        diag("Cloning from ".$base1->name." level $n / $levels");
         $base1->prepare_base(user_admin) if !$base1->is_base;
         $clone = $base1->clone(
             name => new_domain_name
@@ -1373,7 +1396,7 @@ sub test_display_ip($vm, $node, $set_localhost_dp=0) {
         ,uid => user_admin->id
     );
     wait_request();
-    like($domain->display(user_admin), qr/$vm_ip/);
+    is($domain->display_info(user_admin)->{ip}, $vm_ip);
 
     $domain->shutdown_now(user_admin);
     $domain->prepare_base(user_admin);
@@ -1382,7 +1405,7 @@ sub test_display_ip($vm, $node, $set_localhost_dp=0) {
     my $domain2 = _start_clone_in_node($vm, $node, $domain);
 
     is($domain2->_vm->id,$node->id) or exit;
-    like($domain2->display(user_admin),qr/$display_ip_1/) or exit;
+    is($domain2->display_info(user_admin)->{ip},$display_ip_1) or exit;
 
     _remove_domain($domain);
 
@@ -1417,16 +1440,17 @@ sub test_nat($vm, $node, $set_localhost_natip=0) {
         ,uid => user_admin->id
     );
     wait_request();
-    like($domain->display(user_admin), qr/$vm_ip/);
+    is($domain->display_info(user_admin)->{ip}, $vm_ip) or confess;
 
     $domain->shutdown_now(user_admin);
     $domain->prepare_base(user_admin);
+
     $domain->set_base_vm(node => $node, user => user_admin);
 
     my $domain2 = _start_clone_in_node($vm, $node, $domain);
 
     is($domain2->_vm->id,$node->id) or exit;
-    like($domain2->display(user_admin),qr/$nat_ip_1/) or exit;
+    is($domain2->display_info(user_admin)->{ip},$nat_ip_1);
 
     _remove_domain($domain);
 
@@ -1449,7 +1473,7 @@ clean();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
-for my $vm_name ( vm_names() ) {
+for my $vm_name (reverse vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -1484,11 +1508,17 @@ for my $vm_name ( vm_names() ) {
 
         start_node($node);
 
+        test_iptables_close($vm, $node);
+
+        test_nat($vm, $node, 1); # also set deprecated localhost ip
+
         test_duplicated_set_base_vm($vm, $node);
         if ($vm_name eq 'KVM') {
             test_nested_base($vm, $node, 3);
             test_nested_base($vm, $node);
         }
+
+        test_removed_base_file($vm, $node);
 
         test_check_instances($vm, $node);
         test_migrate($vm, $node);
@@ -1516,7 +1546,6 @@ for my $vm_name ( vm_names() ) {
         test_removed_remote_swap($vm, $node);
         test_removed_local_swap($vm, $node);
         test_duplicated_set_base_vm($vm, $node);
-        test_removed_base_file($vm, $node);
 
         test_set_vm($vm, $node);
 
@@ -1532,8 +1561,6 @@ for my $vm_name ( vm_names() ) {
         test_clone_remote($vm, $node);
         test_volatile_req($vm, $node);
         test_volatile_tmp_owner($vm, $node);
-
-        test_iptables_close($vm, $node);
 
         test_reuse_vm($node);
         test_iptables($vm, $node);

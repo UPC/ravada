@@ -642,6 +642,50 @@ sub _scheduled_fedora_releases($self,$data) {
     }
 }
 
+sub _add_domain_drivers_display($self) {
+    my %data = (
+        'KVM' => [
+            'spice'
+            ,'vnc'
+            ,{name => 'x2go', data => 22 }
+            ,{name => 'Windows RDP', value => 'rdp', data => 356}
+        ]
+        ,'Void' => [
+            'void'
+            ,'spice'
+            ,{name => 'x2go', data => 22 }
+            ,{name => 'Windows RDP', value => 'rdp' , data => 356 }
+        ]
+    );
+
+    my $id_type = Ravada::Utils::max_id($CONNECTOR->dbh, 'domain_drivers_types')+1;
+    my $id_option = Ravada::Utils::max_id($CONNECTOR->dbh, 'domain_drivers_options');
+    for my $vm ( keys %data) {
+        my $type = {
+            id => $id_type
+            ,name => 'display'
+            ,description => 'Display'
+            ,vm => $vm
+        };
+
+        $self->_update_table('domain_drivers_types','name,vm',$type)
+            and do {
+            for my $option ( @{$data{$vm}} ) {
+                if (!ref($option)) {
+                    $option = { name => $option
+                        ,value => $option
+                    };
+                }
+                $option->{value} = $option->{name} if !exists $option->{value};
+                $option->{id_driver_type} = $id_type;
+                $option->{id} = ++$id_option;
+                $self->_update_table('domain_drivers_options','id_driver_type,name',$option)
+            }
+            $id_type++;
+        };
+    }
+}
+
 sub _update_domain_drivers_types($self) {
 
     my $data = {
@@ -685,6 +729,34 @@ sub _update_domain_drivers_types($self) {
 
     };
     $self->_update_table('domain_drivers_types','id',$data);
+    my $id = Ravada::Utils::max_id($CONNECTOR->dbh, 'domain_drivers_types');
+    my $id_option = Ravada::Utils::max_id($CONNECTOR->dbh, 'domain_drivers_options');
+    my $data_options;
+    for my $item (keys %$data) {
+        unlock_hash(%{$data->{$item}});
+        $data->{$item}->{id} = ++$id;
+        $data->{$item}->{vm} = 'Void';
+
+        next if $item eq 'disk';
+
+        $id_option++;
+        $data_options->{"$item.on"} = {
+            id => $id_option
+            ,id_driver_type => $id
+            ,name => "$item.on"
+            ,value => "compression=on"
+        };
+        $id_option++;
+        $data_options->{"$item.off"} = {
+            id => $id_option
+            ,id_driver_type => $id
+            ,name => "$item.off"
+            ,value => "compression=off"
+        };
+
+    }
+    $self->_update_table('domain_drivers_types','name,vm',$data)
+        and $self->_update_table('domain_drivers_options','id_driver_type,name',$data_options);
 
     my $sth = $CONNECTOR->dbh->prepare(
         "UPDATE domain_drivers_types SET vm='KVM' WHERE vm='qemu'"
@@ -873,18 +945,41 @@ sub _update_domain_drivers_options_disk($self) {
     $self->_update_table('domain_drivers_options','id',\%data);
 }
 
-sub _update_table($self, $table, $field, $data, $verbose=0) {
+sub _sth_search($table, $field) {
+    my $sth_search;
+    if ($field =~ /,/) {
+        my $where = join( ' AND ', map { "$_=?" } split /,/,$field);
+        $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $where");
+    } else {
+        $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $field = ?");
+    }
+    return $sth_search;
+}
 
-    my $sth_search = $CONNECTOR->dbh->prepare("SELECT id FROM $table WHERE $field = ?");
+sub _sth_values($row, $field) {
+    lock_hash(%$row);
+    my @ret;
+    for my $item (split /,/,$field) {
+        push @ret,($row->{$item})
+    }
+    return @ret;
+}
+
+sub _update_table($self, $table, $field, $data, $verbose=0) {
+    my ($first) = %$data;
+    $data = { entry => $data } if !ref($data->{$first});
+
+    my $changed = 0;
+    my $sth_search = _sth_search($table,$field);
     for my $name (sort keys %$data) {
         my $row = $data->{$name};
-        $sth_search->execute($row->{$field});
+        $sth_search->execute(_sth_values($row,$field));
         my ($id) = $sth_search->fetchrow;
         if ( $id ) {
             warn("INFO: $table : $row->{$field} already added.\n") if $verbose;
             next;
         }
-        warn("INFO: updating $table : $row->{$field}\n")
+        warn("INFO: updating $table : ".Dumper($data->{$name})."\n")
         if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
         my $sql =
@@ -899,7 +994,9 @@ sub _update_table($self, $table, $field, $data, $verbose=0) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute(map { $data->{$name}->{$_} } sort keys %{$data->{$name}});
         $sth->finish;
+        $changed++;
     }
+    return $changed;
 }
 
 sub _remove_old_isos {
@@ -948,6 +1045,8 @@ sub _update_data {
     $self->_update_domain_drivers_options_disk();
     $self->_update_old_qemus();
 
+    $self->_add_domain_drivers_display();
+
     $self->_add_indexes();
 }
 
@@ -960,6 +1059,10 @@ sub _add_indexes_generic($self) {
         domains => [
             "index(date_changed)"
             ,"index(id_base):id_base_index"
+        ]
+        ,domain_displays => [
+            "unique(id_domain,n_order)"
+            ,"unique(id_domain,driver)"
         ]
         ,requests => [
             "index(status,at_time)"
@@ -1367,6 +1470,21 @@ sub _sql_create_tables($self) {
     my $created = 0;
     my $driver = lc($CONNECTOR->dbh->{Driver}{Name});
     my %tables = (
+        domain_displays => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain => 'integer NOT NULL references domains(id)'
+            ,port => 'char(5) DEFAULT NULL'
+            ,ip => 'varchar(254)'
+            ,listen_ip => 'varchar(254)'
+            ,driver => 'char(40) not null'
+            ,is_active => 'integer NOT NULL default 0'
+            ,is_builtin => 'integer NOT NULL default 0'
+            ,id_domain_port => 'integer DEFAULT NULL'
+            ,n_order => 'integer NOT NULL'
+            ,password => 'char(32)'
+            ,extra => 'TEXT'
+        }
+        ,
         settings => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             , id_parent => 'INT NOT NULL'
@@ -1601,7 +1719,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains','status','varchar(32) DEFAULT "shutdown"');
     $self->_upgrade_table('domains','display','text');
-    $self->_upgrade_table('domains','display_file','text DEFAULT NULL');
+    #$self->_upgrade_table('domains','display_file','text DEFAULT NULL');
     $self->_upgrade_table('domains','info','varchar(255) DEFAULT NULL');
     $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('domains','id_vm','int default null');
@@ -1638,9 +1756,11 @@ sub _upgrade_tables {
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
 
     $self->_upgrade_table('vms','mac','char(18)');
+    $self->_upgrade_table('vms','tls','text');
 
     $self->_upgrade_table('volumes','name','char(200)');
 
+    $self->_upgrade_table('domain_drivers_options','data', 'char(200) ');
     $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
     $self->_upgrade_table('domain_ports', 'restricted','int(1) DEFAULT 0');
     $self->_upgrade_table('domain_ports', 'is_active','int(1) DEFAULT 0');
@@ -2086,8 +2206,7 @@ sub remove_domain {
     warn $@ if $@;
     if (!$domain) {
             warn "Warning: I can't find domain '$id', maybe already removed.";
-            $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains where id=?");
-            $sth->execute($id);
+            Ravada::Domain::_remove_domain_data_db($id);
             return;
     };
 
@@ -2585,6 +2704,7 @@ sub _kill_requests($self, @requests) {
 }
 
 sub _process_sons($self, $pid) {
+    return if !defined $pid;
     my @process;
 
     my $cmd = "ps -eo 'ppid pid cmd'";
@@ -2652,15 +2772,14 @@ sub _kill_stale_process($self) {
         ." FROM requests "
         ." WHERE start_time<? "
         ." AND ( command = 'refresh_vms' or command = 'screenshot' or command = 'set_time' "
-        ."      OR command = 'open_exposed_ports' "
+        ."      OR command = 'open_exposed_ports' OR command='remove' "
         .") "
         ." AND status <> 'done' "
-        ." AND pid IS NOT NULL "
         ." AND start_time IS NOT NULL "
     );
     $sth->execute(time - $TIMEOUT_STALE_PROCESS);
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
-        if ($pid == $$ ) {
+        if (defined $pid && $pid == $$ ) {
             warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
                 ." seconds, but I won't because it is myself";
             my $request = Ravada::Request->open($id);
@@ -3330,26 +3449,25 @@ sub _cmd_start_clones {
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
+    my $sequential = $request->defined_arg('sequential');
+
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, is_base FROM domains WHERE id_base = ?"
+        "SELECT id, name, is_base FROM domains WHERE id_base = ? AND is_base = 0 AND status <> 'active'"
     );
     $sth->execute($id_domain);
+    my $id_req;
     while ( my ($id, $name, $is_base) = $sth->fetchrow) {
-        if ($is_base == 0) {
-            my $domain2;
-            my $is_active;
-            eval {
-                $domain2 = $self->search_domain_by_id($id);
-                $is_active = $domain2->is_active;
-            };
-            warn $@ if $@;
-            if (!$is_active) {
+                my @after_request;
+                @after_request = ( after_request => $id_req )
+                if $sequential && $id_req;
+
                 my $req = Ravada::Request->start_domain(
                     uid => $uid
-                   ,name => $name
-                   ,remote_ip => $remote_ip);
-            }
-        }
+                   ,id_domain => $id
+                   ,remote_ip => $remote_ip
+                   ,@after_request
+               );
+               $id_req = $req->id;
     }
 }
 
@@ -4377,6 +4495,7 @@ sub _req_method {
 ,expose => \&_cmd_expose
 ,remove_expose => \&_cmd_remove_expose
 ,open_exposed_ports => \&_cmd_open_exposed_ports
+,close_exposed_ports => \&_cmd_close_exposed_ports
 # Virtual Managers or Nodes
     ,shutdown_node  => \&_cmd_shutdown_node
     ,start_node  => \&_cmd_start_node
@@ -4663,6 +4782,33 @@ sub _cmd_open_exposed_ports($self, $request) {
         ,retry => 10
     );
 
+}
+
+sub _cmd_close_exposed_ports($self, $request) {
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id( $uid ) or die "Error: user $uid not found";
+
+    my $domain = Ravada::Domain->open($request->id_domain);
+    die "Error: user ".$user->name." not authorized to delete iptables rule"
+    unless $user->is_admin || $domain->_data('id_owner') == $uid;
+
+    my $port = $request->defined_arg('port');
+
+    $domain->_close_exposed_port($port);
+
+    if ($request->defined_arg('clean')) {
+        my $query = "UPDATE domain_ports SET public_port=NULL"
+                    ." WHERE id_domain=? ";
+        $query .=" AND internal_port=?" if $port;
+
+        my $sth_update = $CONNECTOR->dbh->prepare($query);
+
+        if ($port) {
+            $sth_update->execute($domain->id, $port);
+        } else {
+            $sth_update->execute($domain->id);
+        }
+    }
 }
 
 =head2 set_debug_value

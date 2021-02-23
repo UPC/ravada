@@ -32,11 +32,16 @@
         <div class="col-lg-2 mt-2">
             <button class="btn btn-primary" ng-show="new_port" ng-click="expose(new_port, new_port_name, new_port_restricted)"><%=l 'Add' %></button>
         </div>
+        <div class="col-lg-1 mt-1"></div>
      </div>
 
     <div class="row" ng-repeat="port in showmachine.ports" style="margin-top: 10px">
          <div class="col-lg-2 mt-2">
             {{port.internal_port}}
+            <span ng-show="showmachine.is_active && !port.is_up"
+                class="badge badge-danger">down</span>
+            <span ng-show="showmachine.is_active && port.is_up"
+                class="badge badge-info">up</span>
          </div>
         <div class="col-lg-2 mt-2">
             <input type="checkbox" ng-show="port.restricted == 1" checked
@@ -59,5 +64,10 @@
         </div>
     </div>
 
+    <button ng-show="showmachine.is_active"
+        ng-click="request('refresh_machine_ports',{ id_domain: showmachine.id , retry: 10 } )"
+        >Refresh ports</button>
     <br/>
+    %= include "/main/pending_request"
+
 </div>

@@ -25,7 +25,7 @@ for my $vm_name ( 'KVM' ) {
     _set_no_password();
 
     my $domain = import_domain($vm_name);
-    is($domain->is_base,1);
+    is($domain->is_base,1,$domain." should be a base") or next;
     my $clone = $domain->clone(
         user => user_admin
         ,name => new_domain_name

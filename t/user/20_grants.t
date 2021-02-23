@@ -578,7 +578,7 @@ sub test_create_domain {
     eval { $domain3->remove($usera)  if $domain3 };
     is($@,'');
 
-    eval { $domain->remove($usera)   if $domain };
+    eval { $domain->remove($usera)   if $domain->is_known() };
     is($@,'');
 
     eval { $base->remove($usera)   if $domain };
