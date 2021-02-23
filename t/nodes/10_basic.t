@@ -1089,6 +1089,7 @@ sub test_fill_memory($vm, $node, $migrate) {
         eval { $clone->start(user_admin) };
         $error = $@;
         like($error, qr/(^$|No free memory)/);
+        exit if $error && $error !~ /No free memory/;
         last if $error;
         $nodes{$clone->_vm->name}++;
 
