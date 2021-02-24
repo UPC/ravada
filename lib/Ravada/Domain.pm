@@ -802,6 +802,7 @@ sub prepare_base($self, $with_cd) {
         confess "Undefined info->target ".Dumper($volume)
             if !$volume->info->{target};
 
+        next if !defined $volume->file || !length($volume->file);
         my $base = $volume->prepare_base();
         push @base_img,([$base, $volume->info->{target}]);
     }
