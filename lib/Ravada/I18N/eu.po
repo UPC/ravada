@@ -85,6 +85,9 @@ msgstr "Hizkuntza:"
 msgid "English"
 msgstr "Ingelesa"
 
+msgid "Basque"
+msgstr "Euskara"
+
 msgid "Spanish"
 msgstr "Gaztelania"
 

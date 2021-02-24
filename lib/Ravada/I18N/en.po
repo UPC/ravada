@@ -89,6 +89,9 @@ msgstr "Language:"
 msgid "English"
 msgstr "English"
 
+msgid "Basque"
+msgstr "Basque"
+
 msgid "Spanish"
 msgstr "Spanish"
 
