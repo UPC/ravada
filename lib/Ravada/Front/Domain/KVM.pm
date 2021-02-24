@@ -14,6 +14,7 @@ use feature qw(signatures);
 our %GET_CONTROLLER_SUB = (
     usb => \&_get_controller_usb
     ,disk => \&_get_controller_disk
+    ,display => \&_get_controller_display
     ,network => \&_get_controller_network
     );
 
@@ -27,6 +28,7 @@ our %GET_DRIVER_SUB = (
      ,playback => \&_get_driver_playback
      ,streaming => \&_get_driver_streaming
      ,disk => \&_get_driver_disk
+     ,display => \&_get_driver_display
 );
 
 
@@ -92,6 +94,10 @@ sub _get_controller_network($self) {
 
 sub _get_controller_disk($self) {
     return Ravada::Front::Domain::_get_controller_disk($self);
+}
+
+sub _get_controller_display {
+    return Ravada::Front::Domain::_get_controller_display(@_);
 }
 
 =head2 get_driver
@@ -218,6 +224,16 @@ sub _get_driver_sound {
 sub _get_driver_disk($self) {
     my @volumes = $self->list_volumes_info();
     return $volumes[0]->info()->{driver};
+}
+
+sub _get_driver_display($self) {
+    my $sth = $self->_dbh->prepare("SELECT driver FROM domain_displays "
+        ." WHERE id_domain=? "
+        ." ORDER BY n_order "
+    );
+    $sth->execute($self->id);
+    my ($driver) = $sth->fetchrow;
+    return $driver;
 }
 
 1;

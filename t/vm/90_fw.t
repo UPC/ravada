@@ -18,6 +18,7 @@ my @ARG_RVD = ( config => $FILE_CONFIG,  connector => connector());
 my $USER = create_user("foo","bar", 1);
 
 my $CHAIN = 'RAVADA';
+my $TLS;
 
 ##########################################################
 
@@ -50,7 +51,7 @@ sub test_create_domain {
 
 sub test_fw_domain {
     my ($vm_name, $domain) = @_;
-    my $remote_ip = '99.88.77.66';
+    my $remote_ip = '192.0.2.2';
 
     my $vm = $RVD_BACK->search_vm($vm_name);
 
@@ -80,7 +81,7 @@ sub test_iptables_table_clean($vm_name, $domain) {
 
 sub test_fw_domain_stored {
     my ($vm_name, $domain_name) = @_;
-    my $remote_ip = '99.88.77.66';
+    my $remote_ip = '192.0.2.3';
 
     my $vm = $RVD_BACK->search_vm($vm_name);
     my $local_ip = $vm->ip;
@@ -133,7 +134,7 @@ sub test_fw_ssh {
     my $domain = shift;
 
     my $port = 22;
-    my $remote_ip = '11.22.33.44';
+    my $remote_ip = '192.0.2.4';
 
     $domain->add_nat($port);
 
@@ -205,7 +206,7 @@ sub test_jump {
 
     $domain->start(user_admin)  if !$domain->is_active;
 
-    $domain->open_iptables(remote_ip => '1.1.1.1', uid => user_admin->id);
+    $domain->open_iptables(remote_ip => '192.0.2.5', uid => user_admin->id);
 
     $out = `iptables -L INPUT -n`;
     ok(grep(/^RAVADA /, split(/\n/,$out)),"Expecting RAVADA jump in $out");
@@ -216,9 +217,10 @@ sub test_new_ip {
 
     my $domain = create_domain($vm->type);
 
-    my $remote_ip = '1.1.1.1';
+    my $remote_ip = '192.0.2.6';
 
     $domain->start( user => user_admin, remote_ip => $remote_ip);
+    wait_request(debug => 1);
 
     my ($local_port) = $domain->display(user_admin) =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
 #    test_chain($vm->type, $vm->ip, $local_port, $remote_ip,1);
@@ -233,7 +235,7 @@ sub test_new_ip {
         ,jump => 'DROP'
     );
     my @rule = find_ip_rule(%test_args);
-    is(scalar @rule,1);
+    is(scalar @rule,1) or die Dumper(\%test_args);
 
     my @rule_drop = find_ip_rule(%test_args_drop);
     is(scalar @rule_drop,1) or return;
@@ -251,7 +253,7 @@ sub test_new_ip {
     @rule = find_ip_rule(%test_args);
     is(scalar @rule,1);
 
-    my $remote_ip2 = '2.2.2.2';
+    my $remote_ip2 = "192.0.2.7";
     $domain->open_iptables( user => user_admin, remote_ip => $remote_ip2);
 
     @rule = find_ip_rule(%test_args);
@@ -332,7 +334,7 @@ sub test_shutdown_internal {
 
     my $domain = create_domain($vm->type);
 
-    my $remote_ip = '1.1.1.1';
+    my $remote_ip = '192.0.2.8';
 
     $domain->start( user => user_admin, remote_ip => $remote_ip);
 
@@ -349,7 +351,7 @@ sub test_shutdown_internal {
         ,jump => 'DROP'
     );
 
-    my $remote_ip2 = '2.2.2.2';
+    my $remote_ip2 = '192.0.2.100';
     $domain->start( user => user_admin, remote_ip => $remote_ip2);
 
     my @rule = find_ip_rule(%test_args);
@@ -366,7 +368,7 @@ sub test_hibernate {
 
     my $domain = create_domain($vm->type);
 
-    my $remote_ip = '3.3.3.3';
+    my $remote_ip = '192.0.2.9';
 
     $domain->start( user => user_admin, remote_ip => $remote_ip);
 
@@ -386,7 +388,7 @@ sub test_hibernate {
     is(scalar @rule,1);
 
     my @active_iptables = $domain->_active_iptables( id_domain => $domain->id);
-    is(scalar @active_iptables,2) or exit;
+    is(scalar @active_iptables,2*$TLS) or die Dumper($domain->name, \@active_iptables);
 
     my @rule_drop = find_ip_rule(%test_args_drop);
     is(scalar @rule_drop,1) or return;
@@ -433,6 +435,9 @@ for my $vm_name ( vm_names() ) {
         use_ok("Ravada::VM::$vm_name");
 
         flush_rules_node($vm);
+
+        $TLS=1;
+        $TLS=2 if $vm_name eq 'KVM' && check_libvirt_tls();
 
         my $domain = test_create_domain($vm_name);
         test_fw_domain($vm_name, $domain);

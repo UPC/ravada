@@ -73,7 +73,7 @@ our %VALID_ARG = (
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1 }
     ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2 }
-    ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1 }
+    ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1, sequential => 2 }
     ,shutdown_clones => { id_domain => 1, uid => 1, timeout => 2 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,dettach => { uid => 1, id_domain => 1 }
@@ -110,6 +110,7 @@ our %VALID_ARG = (
     ,expose => { uid => 1, id_domain => 1, port => 1, name => 2, restricted => 2, id_port => 2}
     ,remove_expose => { uid => 1, id_domain => 1, port => 1}
     ,open_exposed_ports => {uid => 1, id_domain => 1 }
+    ,close_exposed_ports => { uid => 1, id_domain => 1, port => 2, clean => 2 }
     # Virtual Managers or Nodes
     ,refresh_vms => { _force => 2, timeout_shutdown => 2 }
 
@@ -378,6 +379,9 @@ sub start_domain {
 
     confess "ERROR: choose either id_domain or name "
         if $args->{id_domain} && $args->{name};
+
+    confess "Error: remote ip invalid '$args->{remote_ip}'"
+    if $args->{remote_ip} && $args->{remote_ip} !~ /^(localhost|\d+\.\d+\.\d+\.\d+)$/;
 
     _remove_low_priority_requests($args->{id_domain} or $args->{name});
 
@@ -657,7 +661,7 @@ sub _new_request {
     }
     my %args = @_;
 
-    $args{status} = 'initializing';
+    $args{status} = 'requested';
 
     if ($args{name}) {
         $args{domain_name} = $args{name};
@@ -779,12 +783,20 @@ sub status {
         return ($row->{status} or 'unknown');
     }
 
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
-            ." WHERE id=?");
+    for ( 1 .. 10 ) {
+        eval {
+            my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
+                ." WHERE id=?");
 
-    $status = substr($status,0,64);
-    $sth->execute($status, $self->{id});
-    $sth->finish;
+            $status = substr($status,0,64);
+
+            $sth->execute($status, $self->{id});
+            $sth->finish;
+        };
+        last if !$@;
+        die $@ if $@ !~ /Deadlock found/;
+        warn "Warning: retrying '$@'";
+    }
 
     $self->_send_message($status, $message)
         if $CMD_SEND_MESSAGE{$self->command} || $self->error ;

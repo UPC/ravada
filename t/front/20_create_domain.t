@@ -90,14 +90,10 @@ sub test_list_bases {
 sub test_domain_name {
     my $vm_name = shift;
 
-    my $domain = create_domain($vm_name);
-    my $sth = connector->dbh->prepare("DELETE FROM domains WHERE id=?");
-    $sth->execute($domain->id);
-
-    my $id = $domain->id;
+    my $id = 9999;
 
     eval {
-        $domain = Ravada::Front::Domain->open($id);
+        my $domain = Ravada::Front::Domain->open($id);
         $domain->name();
     };
     like($@,qr'Unknown domain');
@@ -127,7 +123,7 @@ sub test_domain_info {
 
     $domain_b->shutdown_now(user_admin);
 
-    is($domain->info(user_admin)->{ip}, undef,"Expecting no IP after shutdown");
+    ok(!exists $domain->info(user_admin)->{ip},"Expecting no IP after shutdown");
 }
 
 ####################################################################
@@ -220,5 +216,6 @@ for my $vm_name ( vm_names() ) {
 }
 }
 
+Test::Ravada::_check_leftovers();
 end();
 done_testing();

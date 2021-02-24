@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use JSON::XS;
 use YAML qw(LoadFile);
@@ -80,7 +81,7 @@ sub test_create_fail {
                     , disk => $disk
                 );
     };
-    ok($@,"Expecting error , got ''");
+    ok($@,"Expecting error mem=$mem, disk=$disk , got ''") or confess;
 
     ok(!$domain,"Expecting doesn't exists domain '$name'");
 
@@ -233,19 +234,21 @@ sub test_small {
 
     my ($memory, $disk) = ( 2 , 1*1024*1024+1 );
 
+    $Ravada::VM::MIN_DISK_MB = 1024 * 1024;
+
     # fail memory
-    test_create_fail($vm_name, 1 , 2*1024*1024 ,"Direct");
+    test_create_fail($vm_name, 1 , 24 ,"Direct");
 
     # fails disk
     test_create_fail($vm_name, 512 * 1024, 1,"Direct");
 
     # fail memory req
-    test_req_create_fail($vm_name, 1 , 2*1024*1024 );
-    test_req_create_fail($vm_name, 1 , 2*1024*1024 ,"fork");
+    test_req_create_fail($vm_name, 1 , 1024 );
+    test_req_create_fail($vm_name, 1 , 1024 ,"fork");
 
     # fails disk req
-    test_req_create_fail($vm_name, 512 * 1024, 1);
-    test_req_create_fail($vm_name, 512 * 1024, 1,"fork");
+    test_req_create_fail($vm_name, 1024, 1);
+    test_req_create_fail($vm_name, 1024, 1,"fork");
 
 }
 

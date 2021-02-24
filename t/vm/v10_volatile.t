@@ -103,6 +103,7 @@ sub test_volatile_cleanup ($base) {
     ($name, $date_created) = _cleanup_info($user_id);
     ok($name, "date $date_created");
 
+    my $clone_id = $clone->id;
     my $sth_deldom = connector->dbh->prepare("DELETE FROM domains WHERE id=?");
     $sth_deldom->execute($clone->id);
 
@@ -110,6 +111,12 @@ sub test_volatile_cleanup ($base) {
     ok(!$name);
 
     shutdown_domain_internal($clone);
+
+    for my $table ( 'domain_displays' , 'domain_ports', 'volumes', 'domains_void', 'domains_kvm', 'domain_instances', 'bases_vm', 'domain_access', 'base_xml', 'file_base_images', 'iptables', 'domains_network') {
+        my $sth = connector->dbh->prepare("DELETE FROM $table WHERE id_domain=?");
+        $sth->execute($clone_id);
+    }
+
 }
 
 sub _date($time = time) {
@@ -321,7 +328,7 @@ sub test_volatile_auto_kvm {
     my $clone3= $vm->search_domain($name);
     ok($clone3,"[$vm_name] Expecting clone $name");
 
-    { $clone2->remove(user_admin) if $clone2 };
+    eval { $clone2->remove(user_admin) if $clone2 };
     is(''.$@,'');
 
     $sth = connector->dbh->prepare("SELECT * FROM domains WHERE name=?");
@@ -383,6 +390,7 @@ for my $vm_name ( vm_names() ) {
         test_volatile_auto_kvm($vm_name, $base) if $vm_name eq'KVM';
 
         delete_network();
+        $base->remove(user_admin);
     }
 
 }

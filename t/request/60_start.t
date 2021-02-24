@@ -42,7 +42,11 @@ sub test_request_start($vm_name) {
     is($req->status, 'done');
     is($req->error,'');
 
-    is($domain->remote_ip,'127.0.0.2');
+    my @remote_ip = $domain->remote_ip;
+
+    is(scalar @remote_ip,1) or die Dumper($vm_name,\@remote_ip);
+
+    is($domain->remote_ip,'127.0.0.2', $vm_name);
 
     $domain->remove(user_admin);
 }

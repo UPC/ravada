@@ -307,19 +307,22 @@ sub _bump_order($self, $n_order) {
 sub _swap_order($self, $id, $new_order, $old_order) {
     return if $new_order == $old_order;
 
-    my $sth = $self->domain->_dbh->prepare(
+    my $dbh = $self->domain->_dbh;
+    my $sth = $dbh->prepare(
         "SELECT id FROM volumes where n_order=? AND id<>? AND id_domain=?"
     );
     $sth->execute($new_order, $id, $self->domain->id);
     my ($id_conflict) = $sth->fetchrow();
 
-    my $sth_sw = $self->domain->_dbh->prepare(
+    my $sth_sw = $dbh->prepare(
         "UPDATE volumes set n_order = ? WHERE id = ?"
     );
     # tmp bogus
+    my $rc = $dbh->begin_work or die $dbh->errstr;
     $sth_sw->execute(-$new_order, $id_conflict);
     $sth_sw->execute($new_order, $id);
     $sth_sw->execute($old_order, $id_conflict);
+    $dbh->commit or die $dbh->errstr;
 }
 
 1;

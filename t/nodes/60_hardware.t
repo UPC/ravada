@@ -151,6 +151,7 @@ sub test_drivers_type($type, $vm, $node) {
 sub test_drivers($vm, $node) {
     my @drivers = $vm->list_drivers();
      for my $driver ( @drivers ) {
+         next if $driver->name eq 'display';
          test_drivers_type($driver->name, $vm, $node);
      }
 

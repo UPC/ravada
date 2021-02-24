@@ -113,11 +113,11 @@ sub _request($rvd, $args) {
     my $req = Ravada::Request->open($id_request);
     my $command_text = $req->command;
     $command_text =~ s/_/ /g;
+
     my $info = $req->info($user);
     $info->{command_text} = $command_text;
 
     return $info;
-
 }
 
 sub _list_machines($rvd, $args) {
@@ -203,7 +203,7 @@ sub _get_machine_info($rvd, $args) {
     my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
 
     my $info = $domain->info($user);
-    if ($info->{is_active} && !$info->{ip}) {
+    if ($info->{is_active} && ( !exists $info->{ip} || !$info->{ip})) {
        Ravada::Request->refresh_machine(id_domain => $info->{id}, uid => $user->id);
     }
 
@@ -304,7 +304,9 @@ sub _different_list($list1, $list2) {
 
 sub _different_hash($h1,$h2) {
     for my $key (keys %$h1) {
-        next if !defined $h1->{$key} && !defined $h2->{$key};
+        next if exists $h1->{$key} && exists $h2->{$key}
+        && !defined $h1->{$key} && !defined $h2->{$key};
+
         if (!exists $h2->{$key}
             || !defined $h1->{$key} && defined $h2->{$key}
             || defined $h1->{$key} && !defined $h2->{$key}

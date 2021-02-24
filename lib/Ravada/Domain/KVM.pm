@@ -72,16 +72,19 @@ our %GET_CONTROLLER_SUB = (
 our %SET_CONTROLLER_SUB = (
     usb => \&_set_controller_usb
     ,disk => \&_set_controller_disk
+    ,display => \&_set_controller_display
     ,network => \&_set_controller_network
     );
 our %REMOVE_CONTROLLER_SUB = (
     usb => \&_remove_controller_usb
     ,disk => \&_remove_controller_disk
+    ,display => \&_remove_controller_display
     ,network => \&_remove_controller_network
     );
 
 our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
+    ,display => \&_change_hardware_display
     ,vcpus => \&_change_hardware_vcpus
     ,memory => \&_change_hardware_memory
     ,network => \&_change_hardware_network
@@ -215,7 +218,7 @@ Cleanup operations executed before removing this domain
 sub pre_remove_domain {
     my $self = shift;
     return if $self->is_removed;
-    $self->xml_description();
+    $self->xml_description() if $self->is_known();
     $self->domain->managed_save_remove()    if $self->domain->has_managed_save_image;
 }
 
@@ -646,31 +649,108 @@ Returns the display information as a hashref. The display URI is in the display 
 
 sub display_info($self, $user) {
 
-    my $xml = XML::LibXML->load_xml(string => $self->xml_description);
-    my ($graph) = $xml->findnodes('/domain/devices/graphics')
-        or die "ERROR: I can't find graphic";
+    my $xml = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_SECURE));
+    my @graph = $xml->findnodes('/domain/devices/graphics')
+        or return;
 
+    my @display;
+    for my $graph ( @graph ) {
+        my ($type) = $graph->getAttribute('type');
+        if ($type eq 'spice') {
+            push @display,(_display_info_spice($graph));
+        } elsif ($type eq 'vnc' ) {
+            push @display,(_display_info_vnc($graph));
+        }
+    }
+    return $display[0] if !wantarray;
+    return @display;
+}
+
+sub _display_info_vnc($graph) {
     my ($type) = $graph->getAttribute('type');
     my ($port) = $graph->getAttribute('port');
     my ($tls_port) = $graph->getAttribute('tlsPort');
     my ($address) = $graph->getAttribute('listen');
 
-    warn "ERROR: Machine ".$self->name." is not active in node ".$self->_vm->name."\n"
-        if !$port && !$self->is_active;
-
+    my ($password) = $graph->getAttribute('passwd');
 
     my %display = (
-                type => $type
+              driver => $type
                ,port => $port
                  ,ip => $address
-          ,tls_port => $tls_port
+         ,is_builtin => 1
     );
+    $display{tls_port} = $tls_port if defined $tls_port;
+    $display{password} = $password;
     $port = '' if !defined $port;
-    my $display = $type."://$address:$port";
-    $display{display} = $display;
+
+    for my $item ( $graph->findnodes("*")) {
+        next if $item->getName eq 'listen';
+        for my $attr ( $item->getAttributes()) {
+            my $value = $attr->toString();
+            $value =~ s/^\s+//;
+            $display{$item->getName()} = $value;
+        }
+    }
+
     lock_hash(%display);
     return \%display;
 }
+
+
+sub _display_info_spice($graph) {
+    my ($type) = $graph->getAttribute('type');
+    my ($port) = $graph->getAttribute('port');
+    my ($tls_port) = $graph->getAttribute('tlsPort');
+    my ($address) = $graph->getAttribute('listen');
+
+    my ($password) = $graph->getAttribute('passwd');
+
+    my %display = (
+              driver => $type
+               ,port => $port
+                 ,ip => $address
+         ,is_builtin => 1
+    );
+    $display{tls_port} = $tls_port if defined $tls_port;
+    $display{password} = $password;
+    $port = '' if !defined $port;
+
+    for my $item ( $graph->findnodes("*")) {
+        next if $item->getName eq 'listen';
+        for my $attr ( $item->getAttributes()) {
+            my $value = $attr->toString();
+            $value =~ s/^\s+//;
+            $display{$item->getName()} = $value;
+        }
+    }
+
+    lock_hash(%display);
+    return \%display;
+}
+
+sub _has_builtin_display($self) {
+    my $xml = XML::LibXML->load_xml(string => $self->xml_description());
+    my ($graph) = $xml->findnodes('/domain/devices/graphics');
+    return 1 if $graph;
+    return 0;
+}
+
+sub _is_display_builtin($self, $index=undef, $data=undef) {
+    if ( defined $index && $index !~ /^\d+$/ ) {
+        return 1 if $index =~ /spice|vnc/i;
+        return 0;
+    }
+    return 1 if defined $data && $data->{driver} =~ /spice|vnc/i;
+
+    my $xml = XML::LibXML->load_xml(string => $self->xml_description());
+    my @graph = $xml->findnodes('/domain/devices/graphics');
+
+    return 1 if defined $index && exists $graph[$index];
+
+    return 0;
+}
+
 
 =head2 is_active
 
@@ -727,7 +807,7 @@ sub start {
         $self->_check_qcow_format($request);
         $self->_set_volumes_backing_store();
         $self->_detect_disks_driver();
-        $self->_set_spice_ip($set_password, $listen_ip);
+        $self->_set_displays_ip($set_password, $listen_ip);
     }
 
     $self->status('starting');
@@ -1673,6 +1753,10 @@ sub rename_volumes {
     }
 }
 
+sub _set_displays_ip($self, $set_password, $ip=undef) {
+    return $self->_set_spice_ip($set_password, $ip);
+}
+
 sub _set_spice_ip($self, $set_password, $ip=undef) {
 
     return if $self->is_hibernated() || $self->domain->is_active;
@@ -1840,6 +1924,18 @@ sub _set_driver_generic {
 
 }
 
+sub _update_device_graphics($self, $driver, $data) {
+    my $doc = XML::LibXML->load_xml(string
+        => $self->domain->get_xml_description());
+    my $path = "/domain/devices/graphics\[\@type='$driver']";
+    my ($device ) = $doc->findnodes($path);
+    die "$path not found ".$self->name if !$device;
+
+    my $port = delete $data->{port};
+    $device->setAttribute(port => $port);
+    $device->removeAttribute('autoport');
+    $self->domain->update_device($device,Sys::Virt::Domain::DEVICE_MODIFY_LIVE);
+}
 
 sub _set_driver_generic_simple($self, $xml_path, $value_str) {
     my %value = _text_to_hash($value_str);
@@ -1868,10 +1964,7 @@ sub _set_driver_generic_simple($self, $xml_path, $value_str) {
     }
     $self->_add_driver($xml_path, \%value)       if !$found;
 
-    return if !$changed;
-    $self->_vm->connect if !$self->_vm->vm;
-    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
-    $self->domain($new_domain);
+    $self->reload_config($doc) if $changed;
 
 }
 
@@ -1888,7 +1981,7 @@ sub _add_driver($self, $xml_path, $attributes=undef) {
     confess "Expecting one parent, I don't know what to do with ".scalar @parent
         if scalar@parent > 1;
 
-    @parent = add_driver($self, $xml_parent)  if !@parent;
+    @parent = _add_driver($self, $xml_parent)  if !@parent;
 
     my $node = $parent[0]->addNewChild(undef,$new_node);
 
@@ -2002,8 +2095,8 @@ sub _set_controller_usb($self,$numero, $data={}) {
         }
     }
     $numero = $count+1 if !defined $numero;
-    if ( $numero > $count ) {
-        my $missing = $numero-$count-1;
+    if ( $numero >= $count ) {
+        my $missing = $numero-$count;
         
         for my $i (0..$missing) {
             my $controller = $devices->addNewChild(undef,"redirdev");
@@ -2037,6 +2130,94 @@ sub _set_controller_network($self, $number, $data) {
 
       $self->domain->attach_device($device, Sys::Virt::Domain::DEVICE_MODIFY_CONFIG);
 }
+
+sub _set_controller_display_spice($self, $number, $data) {
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
+    for my $graphic ( $doc->findnodes("/domain/devices/graphics")) {
+        next if $graphic->getAttribute('type') ne 'spice';
+        die "Changing ".$graphic->toString()." ".Dumper($data);
+    }
+    my ($devices) = $doc->findnodes("/domain/devices");
+    my $graphic = $devices->addNewChild(undef,'graphics');
+    $graphic->setAttribute(type => 'spice');
+
+    my $port = ( delete $data->{port} or 'auto');
+    $graphic->setAttribute( port => $port )     if $port ne 'auto';
+    $graphic->setAttribute( autoport => 'yes')  if $port eq 'auto';
+
+    my $ip = (delete $data->{ip} or $self->_vm->listen_ip);
+
+    $graphic->setAttribute(listen => $ip);
+    my $listen = $graphic->addNewChild(undef,'listen');
+    $listen->setAttribute(type => 'address');
+    $listen->setAttribute(address => $ip);
+
+    my %defaults = (
+        image => "compression=auto_glz"
+        ,jpeg => "compression=auto"
+        ,zlib => "compression=auto"
+        ,playback => "compression=on"
+        ,streaming => "mode=filter"
+    );
+    for my $name (keys %defaults ) {
+        my ($attrib,$value) = $defaults{$name} =~ m{(.*)=(.*)};
+        die "Error in $defaults{$name} " if !defined $attrib || !defined $value;
+
+        my $item = $graphic->addNewChild(undef, $name);
+        $item->setAttribute($attrib => $value);
+    }
+    $self->reload_config($doc);
+}
+
+sub _set_controller_display_vnc($self, $number, $data) {
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
+    for my $graphic ( $doc->findnodes("/domain/devices/graphics")) {
+        next if $graphic->getAttribute('type') ne 'vnc';
+        die "Changing ".$graphic->toString()." ".Dumper($data);
+    }
+    my ($devices) = $doc->findnodes("/domain/devices");
+    my $graphic = $devices->addNewChild(undef,'graphics');
+    $graphic->setAttribute(type => 'vnc');
+
+    my $port = ( delete $data->{port} or 'auto');
+    $graphic->setAttribute( port => $port )     if $port ne 'auto';
+    $graphic->setAttribute( autoport => 'yes')  if $port eq 'auto';
+
+    my $ip = (delete $data->{ip} or $self->_vm->listen_ip);
+
+    my $listen = $graphic->addNewChild(undef,'listen');
+    $listen->setAttribute(type => 'address');
+    $listen->setAttribute(address => $ip);
+
+    my %defaults = (
+    );
+    for my $name (keys %defaults ) {
+        my ($attrib,$value) = $defaults{$name} =~ m{(.*)=(.*)};
+        die "Error in $defaults{$name} " if !defined $attrib || !defined $value;
+
+        my $item = $graphic->addNewChild(undef, $name);
+        $item->setAttribute($attrib => $value);
+    }
+    $self->reload_config($doc);
+}
+
+
+sub _set_controller_display($self, $number, $data) {
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
+
+    return $self->_set_controller_display_spice($number, $data)
+    if defined $data && $data->{driver} eq 'spice';
+
+    return $self->_set_controller_display_vnc($number, $data)
+    if defined $data && $data->{driver} eq 'vnc';
+
+    my @graphics = $doc->findnodes("/domain/devices/graphics");
+    return $self->_set_controller_display_spice($number, $data)
+    if exists $graphics[$number] && $graphics[$number]->getAttribute('type') eq 'spice';
+
+    confess "I don't know how to set controller_display ".Dumper($number, $data);
+}
+
 
 sub remove_controller($self, $name, $index=0) {
     my $sub = $REMOVE_CONTROLLER_SUB{$name};
@@ -2072,6 +2253,11 @@ sub _remove_device($self, $index, $device, $attribute_name=undef, $attribute_val
     confess "ERROR: $device $msg $index"
         ." not removed, only ".($ind)." found in ".$self->name."\n";
 }
+
+sub _remove_controller_display($self, $index) {
+    $self->_remove_device($index,'graphics' );
+}
+
 
 sub _remove_controller_usb($self, $index) {
     $self->_remove_device($index,'redirdev', bus => 'usb');
@@ -2147,7 +2333,7 @@ sub migrate($self, $node, $request=undef) {
         #dom already in remote node
         $self->domain($dom);
     } else {
-        $self->_set_spice_ip(1, $node->ip);
+        $self->_set_displays_ip(1, $node->ip);
         my $xml = $self->domain->get_xml_description();
 
         my $doc = XML::LibXML->load_xml(string => $xml);
@@ -2164,7 +2350,7 @@ sub migrate($self, $node, $request=undef) {
         }
         $self->domain($dom);
     }
-    $self->_set_spice_ip(1, $node->ip);
+    $self->_set_displays_ip(1, $node->ip);
 
     $self->rsync(node => $node, request => $request);
 
@@ -2208,6 +2394,7 @@ sub _internal_autostart($self, $value=undef, $user=undef) {
 sub change_hardware($self, $hardware, @args) {
     my $sub =$CHANGE_HARDWARE_SUB{$hardware}
         or confess "Error: I don't know how to change hardware '$hardware'";
+
     return $sub->($self, @args);
 }
 
@@ -2301,6 +2488,15 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
     confess "Error: disk $index not found in ".$self->name if !$changed;
 
     $self->reload_config($doc);
+}
+
+sub _change_hardware_display($self, $index, $data) {
+    my $type = delete $data->{driver};
+    my $port = delete $data->{port};
+    confess if $port;
+    for my $item (keys %$data) {
+        $self->_set_driver_generic_simple("/domain/devices/graphics\[\@type='$type']/$item",$data->{$item});
+    }
 }
 
 

@@ -640,7 +640,13 @@ sub can_do_domain($self, $grant, $domain) {
     return 1 if $self->_domain_id_owner($domain) == $self->id && $self->can_do($grant);
 
     if ($self->can_do("${grant}_clones") && $self->_domain_id_base($domain)) {
-        my $base = Ravada::Front::Domain->open($self->_domain_id_base($domain));
+        my $base;
+        my $id_base = $self->_domain_id_base($domain);
+        eval { $base = Ravada::Front::Domain->open($id_base) };
+        if (!defined $base) {
+            warn "Error: base $id_base from $domain not found";
+            return 0;
+        }
         return 1 if $base->id_owner == $self->id;
     }
     return 0;

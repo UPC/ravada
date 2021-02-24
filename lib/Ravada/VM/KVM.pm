@@ -171,8 +171,8 @@ Connect to the Virtual Machine Manager
 
 sub connect {
     my $self = shift;
-    return 1 if $self->vm;
-    return 1 if $self->is_alive;
+    return $self->vm if $self->vm;
+    return $self->vm if $self->is_alive;
 
     return $self->vm($self->_connect);
 #    $self->storage_pool($self->_load_storage_pool);
@@ -1461,7 +1461,7 @@ sub _match_file($self, $url, $file_re) {
         confess $@ if $@;
     }
 
-    return unless defined $res->code &&  $res->code == 200 || $res->code == 301;
+    return unless defined $res->code && ( $res->code == 200 || $res->code == 301);
 
     my $dom= $res->dom;
 
@@ -2321,11 +2321,8 @@ sub _free_memory_available($self) {
 }
 
 sub _fetch_dir_cert($self) {
-    open my $in,'<',$FILE_CONFIG_QEMU or do {
-        warn "$! $FILE_CONFIG_QEMU";
-        return '';
-    };
-    while(my $line = <$in>) {
+    my $in = $self->read_file($FILE_CONFIG_QEMU);
+    for my $line (split /\n/,$in) {
         chomp $line;
         $line =~ s/#.*//;
         next if !length($line);
@@ -2333,6 +2330,7 @@ sub _fetch_dir_cert($self) {
         return $1 if $1;
     }
     close $in;
+    return '';
 }
 
 sub free_disk($self, $pool_name = undef ) {

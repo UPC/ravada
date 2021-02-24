@@ -40,6 +40,8 @@ sub test_remove_domain {
     my $list = rvd_front->list_domains();
     is(scalar @$list , 0);
 
+    Ravada::Domain::_remove_domain_data_db($domain->id, $domain->type);
+    Test::Ravada::_check_leftovers_domains();
 }
 
 sub test_remove_domain_volumes_already_gone {
@@ -57,7 +59,10 @@ sub test_remove_domain_volumes_already_gone {
     }
     eval { $domain->remove(user_admin) };
     is(''.$@,'',$vm->type);
+    Ravada::Domain::_remove_domain_data_db($domain->id, $domain->type);
+    Test::Ravada::_check_leftovers_domains();
 }
+
 sub _clone($base, $name=new_domain_name) {
     return $base->clone(
         name => $name
@@ -66,6 +71,7 @@ sub _clone($base, $name=new_domain_name) {
 }
 
 sub test_remove_rename($vm) {
+    Test::Ravada::_check_leftovers_domains();
     my $base= create_domain($vm->type);
     my $name = new_domain_name();
     my $base2 = _clone($base, $name);
@@ -91,6 +97,7 @@ sub test_remove_rename($vm) {
     $clone3->start(user_admin);
 
     _remove_domain($base, $base2);
+    Test::Ravada::_check_leftovers_domains();
 }
 
 sub _remove_domain(@domain) {
@@ -99,7 +106,12 @@ sub _remove_domain(@domain) {
             my $clone = Ravada::Domain->open($clone_data->{id});
             $clone->remove(user_admin);
         }
-        $domain->remove(user_admin);
+        my $domain2;
+        eval {
+            $domain2 = Ravada::Domain->open($domain->id);
+            $domain2->remove(user_admin);
+        };
+        die $@ if $@ && $@!~ /Domain not found/;
     }
 }
 
