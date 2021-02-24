@@ -20,6 +20,9 @@ INSERT INTO grant_types(name,description) VALUES('change_settings_all',"can chan
 INSERT INTO grant_types(name,description) VALUES('remove_clone_all',"can remove any clone.");
 INSERT INTO grant_types(name,description) VALUES('hibernate_clone_all',"can hibernate any clone.");
 
+/* Special users should be allowed these */
+INSERT INTO grant_types(name,description, is_int) VALUES('start_limit',"can have their own limit on started machines.", 1); /* the value in grants_user will be the maximum number of concurrent machines instead of a boolean */
+
 /* admins should be allowed these */
 INSERT INTO grant_types(name,description) VALUES('clone_all',"can clone any virtual machine.");
 INSERT INTO grant_types(name,description) VALUES('remove_all',"can remove any virtual machine.");

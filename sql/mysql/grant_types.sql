@@ -3,6 +3,7 @@ CREATE TABLE `grant_types` (
   `name` char(32) NOT NULL,
   `description` varchar(255) NOT NULL,
   `enabled` int default NULL,
+  `is_int` int default 0,
     UNIQUE(`name`),
     UNIQUE(`description`),
   PRIMARY KEY (`id`)
