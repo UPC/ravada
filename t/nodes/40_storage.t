@@ -65,6 +65,23 @@ sub test_fail_different_storage_pools($node) {
     $base->remove(user_admin);
 }
 
+sub test_shared_conflict($vm, $node) {
+    $vm->_shared_storage_cache($node,"/var/tmp/",1);
+    is($vm->_shared_storage_cache($node,"/var/tmp/"),1);
+    is($node->_shared_storage_cache($vm,"/var/tmp/"),1);
+    is($vm->shared_storage($node,"/var/tmp"),1);
+    is($node->shared_storage($vm,"/var/tmp"),1);
+
+    eval { $vm->_shared_storage_cache($node,"/var/tmp/",0) };
+    like($@,qr"conflict");
+
+    is($vm->_shared_storage_cache($node,"/var/tmp/"),1);
+    is($node->_shared_storage_cache($vm,"/var/tmp/"),1);
+
+    is($vm->shared_storage($node,"/var/tmp"),1);
+    is($node->shared_storage($vm,"/var/tmp"),1);
+}
+
 ##################################################################################
 if ($>)  {
     my $msg = "SKIPPED: Test must run as root";
@@ -107,6 +124,8 @@ for my $vm_name ( 'KVM' ) {
         clean_remote_node($node);
 
         test_fail_different_storage_pools($node);
+
+        test_shared_conflict($vm, $node);
 
         clean_remote_node($node);
         remove_node($node);

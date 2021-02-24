@@ -306,7 +306,6 @@ sub _different_hash($h1,$h2) {
     for my $key (keys %$h1) {
         next if exists $h1->{$key} && exists $h2->{$key}
         && !defined $h1->{$key} && !defined $h2->{$key};
-
         if (!exists $h2->{$key}
             || !defined $h1->{$key} && defined $h2->{$key}
             || defined $h1->{$key} && !defined $h2->{$key}
