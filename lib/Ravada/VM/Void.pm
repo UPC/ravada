@@ -401,6 +401,27 @@ sub free_disk($self, $storage_pool = undef) {
     }
     die "Not found";
 }
+
+=head2 file_exists
+
+Returns true if the file exists in this virtual manager storage
+
+=cut
+
+sub file_exists( $self, $file ) {
+    return -e $file if $self->is_local;
+
+    my $ssh = $self->_ssh;
+    confess "Error: no ssh connection to ".$self->name if ! $ssh;
+
+    confess "Error: dangerous filename '$file'"
+        if $file =~ /[`|"(\\\[]/;
+    my ($out, $err) = $self->run_command("/bin/ls -1 $file");
+
+    return 1 if !$err;
+    return 0;
+}
+
 #########################################################################3
 
 1;
