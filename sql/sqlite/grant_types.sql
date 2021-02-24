@@ -3,5 +3,6 @@ CREATE TABLE `grant_types` (
 ,  `name` char(32) NOT NULL
 ,  `description` varchar(255) NOT NULL
 ,  `enabled` integer default NULL
+,  `is_int` integer default 0
 ,    UNIQUE(`name`)
 );

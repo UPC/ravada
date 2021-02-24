@@ -4539,7 +4539,7 @@ sub _enforce_limits_active($self, $request) {
     for my $id_user(keys %domains) {
         my $user = Ravada::Auth::SQL->search_by_id($id_user);
         my %grants = $user->grants();
-        my $start_limit = ((exists($grants{'start_limit'})) && ($grants{'start_limit'} > 0)) ? $grants{'start_limit'} : $start_limit_default;
+        my $start_limit = (defined($grants{'start_limit'}) && $grants{'start_limit'} > 0) ? $grants{'start_limit'} : $start_limit_default;
 
         next if scalar @{$domains{$id_user}} <= $start_limit;
         next if $user->is_admin;
