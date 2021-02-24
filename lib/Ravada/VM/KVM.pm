@@ -447,6 +447,22 @@ sub search_volume_path_re($self, $pattern) {
 
 }
 
+=head2 file_exists
+
+Returns true if the file exists in this virtual manager storage
+
+=cut
+
+sub file_exists($self, $file) {
+    for my $pool ($self->vm->list_all_storage_pools ) {
+        $pool->refresh();
+        for my $vol ( $pool->list_all_volumes ) {
+            return 1 if $vol->get_path eq $file;
+        }
+    }
+    return 0;
+}
+
 =head2 dir_img
 
 Returns the directory where disk images are stored in this Virtual Manager
