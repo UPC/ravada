@@ -1020,7 +1020,7 @@ sub _remove_old_isos {
             ."  AND ( md5 IS NOT NULL OR md5_url IS NOT NULL) "
         ,"DELETE FROM iso_images "
             ."WHERE name like 'Ubuntu Focal%' "
-            ."  AND file_re like '%20.04.1%'"
+            ."  AND ( file_re like '%20.04.1%' OR file_re like '%20.04.%d+%')"
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute();
