@@ -11,15 +11,14 @@
   </div>
 
   <div ng-show="showmachine.can_view">
-    <a type="button" class="btn btn-primary btn-sm"
-     ng-href="/machine/view/{{showmachine.id}}.html"
+    <button type="button" class="btn btn-primary btn-sm"
+     ng-click="action('machine','view',showmachine.id)"
      title="<%=l 'View' %>">
-      <i class="fa fa-desktop"></i>
-    </a>
+     <i class="fa fa-desktop"></i>
+    </button>
     <span><%=l 'View' %></span>
     <br><br>
   </div>
-
 
   <div ng-show="showmachine.can_hibernate">
     <button type="button" class="btn btn-warning btn-sm"

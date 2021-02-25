@@ -96,9 +96,42 @@
                       })
               );
             };
-            $scope.action = function(machine, action) {
+
+            $scope.confirming_stop_data = null;
+
+            $scope.confirmingStopCancelled = function() { 
+                $scope.confirming_stop_data = null;
+            };
+
+            $scope.confirmingStopDone = function() { 
+                $scope.action($scope.confirming_stop_data.machine, $scope.confirming_stop_data.action, true);
+                $scope.confirming_stop_data = null;
+            };
+
+            $scope.checkMaxMachines = function(action,machine) {
+              $http.get('/execution_machines_limit')
+                .then(function(data) {
+                    if ((data.data.can_start_many) || (data.data.running_domains.indexOf(machine.id) >= 0) || (data.data.start_limit > data.data.running_domains.length)) {
+                        $scope.action(machine, action, true);
+                    }
+                    else {
+                        $scope.confirming_stop_data = { action: action, machine: machine };
+                    }
+                }, function(data,status) {
+                      console.error('Repos error', status, data);
+                      window.location.reload();
+                });
+            };
+
+            $scope.action = function(machine, action, confirmed) {
                 machine.action = false;
-                if ( action == 'restore' ) {
+                if (action == 'start') {
+                    if ((! confirmed) && (! machine.is_active)) {
+                        $scope.checkMaxMachines(action, machine); 
+                    } else {
+                        window.location.assign('/machine/clone/' + machine.id + '.html');
+                    }                    
+                } else if ( action == 'restore' ) {
                     $scope.host_restore = machine.id_clone;
                     $scope.host_shutdown = 0;
                     $scope.host_force_shutdown = 0;
@@ -221,12 +254,17 @@
             };
 
             $scope.action = function(target,action,machineId,params){
-              $http.get('/'+target+'/'+action+'/'+machineId+'.json'+'?'+this.getQueryStringFromObject(params))
-                .then(function() {
-                }, function(data,status) {
-                      console.error('Repos error', status, data);
-                      window.location.reload();
-                });
+              if (action === 'view') {
+                  window.location.assign('/machine/view/' + machineId + '.html');
+              }
+              else {
+                  $http.get('/'+target+'/'+action+'/'+machineId+'.json'+'?'+this.getQueryStringFromObject(params))
+                    .then(function() {
+                    }, function(data,status) {
+                          console.error('Repos error', status, data);
+                          window.location.reload();
+                    });
+              }
             };
 
             subscribe_requests = function(url) {

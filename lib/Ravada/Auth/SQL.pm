@@ -613,7 +613,6 @@ sub can_do($self, $grant) {
         if $grant !~ /^[a-z_]+$/;
 
     return $self->{_grant}->{$grant} if defined $self->{_grant}->{$grant};
-
     confess "Unknown permission '$grant'. Maybe you are using an old release.\n"
             ."Try removing the table grant_types and start rvd_back again:\n"
             ."mysql> drop table grant_types;\n"
@@ -678,7 +677,7 @@ sub _load_grants($self) {
 
     my $sth;
     eval { $sth= $$CON->dbh->prepare(
-        "SELECT gt.name, gu.allowed, gt.enabled"
+        "SELECT gt.name, gu.allowed, gt.enabled, gt.is_int"
         ." FROM grant_types gt LEFT JOIN grants_user gu "
         ."      ON gt.id = gu.id_grant "
         ."      AND gu.id_user=?"
@@ -686,8 +685,8 @@ sub _load_grants($self) {
     $sth->execute($self->id);
     };
     confess $@ if $@;
-    my ($name, $allowed, $enabled);
-    $sth->bind_columns(\($name, $allowed, $enabled));
+    my ($name, $allowed, $enabled, $is_int);
+    $sth->bind_columns(\($name, $allowed, $enabled, $is_int));
 
     while ($sth->fetch) {
         my $grant_alias = $self->_grant_alias($name);
