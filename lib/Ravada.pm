@@ -265,7 +265,7 @@ sub _update_isos {
                     ,xml => 'focal_fossa-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/20.04/'
-                ,file_re => '^ubuntu-20.04.\d+-desktop-amd64.iso'
+                ,file_re => '^ubuntu-20.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
         }
@@ -918,7 +918,7 @@ sub _remove_old_isos {
             ."  AND ( md5 IS NOT NULL OR md5_url IS NOT NULL) "
         ,"DELETE FROM iso_images "
             ."WHERE name like 'Ubuntu Focal%' "
-            ."  AND file_re like '%20.04.1%'"
+            ."  AND ( file_re like '%20.04.1%' OR file_re like '%20.04.%d+%')"
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute();
