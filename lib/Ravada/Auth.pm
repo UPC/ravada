@@ -26,7 +26,6 @@ sub init {
             $LDAP_OK = 0;
             require Ravada::Auth::LDAP;
             Ravada::Auth::LDAP::init($config);
-            Ravada::Auth::LDAP::_connect_ldap();
             $LDAP_OK = 1;
         };
         warn $@ if $@;
