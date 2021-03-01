@@ -22,6 +22,11 @@
                 <a class="nav-link" href="#grants" role="tab" data-toggle="tab" aria-controls="grants" aria-selected="true">Grants</a>
             </li>
 % }
+% if (( $_user->is_admin ) && (! $_user->is_external)) {
+            <li class="nav-item">
+                <a class="nav-link" href="#password" role="tab" data-toggle="tab" aria-controls="password" aria-selected="true">Password</a>
+            </li>
+% }
         </ul>
         <div class="tab-content" id="myTabContent">
 % if ( $_user->is_admin ) {
@@ -32,6 +37,11 @@
 % if ( $_user->can_grant) {
             <div class="tab-pane fade" id="grants" role="tabpanel" aria-labelledby="grants-tab">
                 %= include '/main/manage_user_grants'
+            </div>
+% }
+% if (( $_user->is_admin ) && (! $_user->is_external)) {
+            <div class="tab-pane fade" id="password" role="tabpanel" aria-labelledby="password-tab">
+                %= include '/main/manage_user_password'
             </div>
 % }
         </div>

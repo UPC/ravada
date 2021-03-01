@@ -1087,6 +1087,9 @@ any '/admin/user/(:id).(:type)' => sub {
             }
         }
     }
+    if ($c->param('set_password')) {
+        $user->change_password($c->param('password'), $c->param('force_change_password'));
+    }
     $c->stash(user => $user);
     return $c->render(template => 'main/manage_user');
 };

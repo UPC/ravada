@@ -511,14 +511,22 @@ Arguments: password
 sub change_password {
     my $self = shift;
     my $password = shift or die "ERROR: password required\n";
+    my ($force_change_password) = @_;
 
     _init_connector();
 
     die "Password too small" if length($password)<6;
 
-    my $sth= $$CON->dbh->prepare("UPDATE users set password=?"
-        ." WHERE name=?");
-    $sth->execute(sha1_hex($password), $self->name);
+    my $sth;
+    if (defined($force_change_password)) {
+        $sth= $$CON->dbh->prepare("UPDATE users set password=?, change_password=?"
+            ." WHERE name=?");
+        $sth->execute(sha1_hex($password), $force_change_password ? 1 : 0, $self->name);
+    } else {
+        my $sth= $$CON->dbh->prepare("UPDATE users set password=?"
+            ." WHERE name=?");
+        $sth->execute(sha1_hex($password), $self->name);
+    }
 }
 
 =head2 compare_password
