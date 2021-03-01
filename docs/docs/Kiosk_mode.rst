@@ -37,7 +37,7 @@ be selected.
 
 In this example we configure anonymous access to the base called *focal*.
 
-.. image:: images/new_network.jpg
+.. image:: images/network_machines.jpg
 
 Setting a base as *public* allows any known user with access to run it. Anonymous gives
 access to everyone in your network without an username.
