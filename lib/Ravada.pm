@@ -2609,6 +2609,7 @@ sub process_requests {
     $sth->execute(time);
 
     my @reqs;
+    my %duplicated;
     while (my ($id_request,$id_domain)= $sth->fetchrow) {
         my $req;
         eval { $req = Ravada::Request->open($id_request) };
@@ -2624,6 +2625,10 @@ sub process_requests {
         next if $req->command !~ /shutdown/i
             && $self->_domain_working($id_domain, $id_request);
 
+        my $domain = '';
+        $domain = $id_domain if $id_domain;
+        $domain .= ($req->defined_arg('name') or '');
+        next if $duplicated{$req->command.":$domain"}++;
         push @reqs,($req);
     }
 
@@ -3968,6 +3973,8 @@ sub _cmd_refresh_vms($self, $request=undef) {
 
     $self->_clean_requests('refresh_vms', $request);
     $self->_refresh_volatile_domains();
+
+    $self->_check_duplicated_prerouting();
     $request->error('')                             if $request;
 }
 
@@ -4253,6 +4260,61 @@ sub _refresh_down_nodes($self, $request = undef ) {
         eval { $vm = Ravada::VM->open($id) };
         warn $@ if $@;
     }
+}
+
+sub _check_duplicated_prerouting($self, $request = undef ) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms WHERE is_active=1 "
+    );
+    $sth->execute();
+    while ( my ($id) = $sth->fetchrow()) {
+        my $vm;
+        eval { $vm = Ravada::VM->open($id) };
+        warn $@ if $@;
+        if ($vm) {
+            my $iptables = $vm->iptables_list();
+            my %prerouting;
+            for my $line (@{$iptables->{'nat'}}) {
+                my %args = @$line;
+                next if $args{A} ne 'PREROUTING' || !$args{dport};
+                my $port = $args{dport};
+                if ($prerouting{$port}) {
+                    $self->_reopen_ports($port);
+                    $self->_delete_iptables_rule($vm,'nat', \%args);
+                    $self->_delete_iptables_rule($vm,'nat', $prerouting{$port});
+                }
+                $prerouting{$port} = \%args;
+            }
+        }
+    }
+}
+
+sub _reopen_ports($self, $port) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id_domain FROM domain_ports "
+        ." WHERE public_port=?");
+    $sth->execute($port);
+    my ($id_domain) = $sth->fetchrow;
+    return if !$id_domain;
+
+    Ravada::Request->open_exposed_ports(
+               uid => Ravada::Utils::user_daemon->id
+        ,id_domain => $id_domain
+    );
+}
+
+sub _delete_iptables_rule($self, $vm, $table, $rule) {
+    my %delete = %$rule;
+    my $chain = delete $delete{A};
+    my $to_destination = delete $delete{'to-destination'};
+    my $dport = delete $delete{dport};
+    my $m = delete $delete{m};
+    my $p = delete $delete{p};
+    my @delete = ( t => $table, 'D' => $chain
+        , m => $m, p => $p, dport => $dport
+        , %delete
+        , 'to-destination' => $to_destination);
+    $vm->iptables(@delete);
+
 }
 
 sub _refresh_disabled_nodes($self, $request = undef ) {
