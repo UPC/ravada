@@ -15,7 +15,7 @@ Define widget in rvd_front.conf
 -------------------------------
 In ``/etc/rvd_front.conf`` configure the path to widget code. For example, ```chatwoot_widget.js```
 
-.. code-block::
+.. code-block:: perl
 
     ,widget => '/js/custom/chatwoot_widget.js'
 
