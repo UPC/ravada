@@ -361,7 +361,7 @@ sub _around_start($orig, $self, @arg) {
             $self->_request_set_base();
             next;
         }
-        die $@;
+        die $error;
     }
     $self->_post_start(%arg);
 
@@ -2994,10 +2994,9 @@ sub _close_exposed_port_nat($self, $iptables, %port) {
          if (exists $args{j} && $args{j} eq 'DNAT'
              && exists $args{d} && $args{d} eq $ip
              && exists $args{dport}
+             && exists $port{$args{dport}}
              && exists $args{'to-destination'}
          ) {
-            my $internal_port = $port{$args{dport}}->{internal_port} or next;
-            if ( $args{'to-destination'}=~/\:$internal_port$/ ) {
                 my %delete = %args;
                 delete $delete{A};
                 delete $delete{dport};
@@ -3016,7 +3015,6 @@ sub _close_exposed_port_nat($self, $iptables, %port) {
                     'to-destination',$to_destination
                 );
                 $self->_vm->iptables(@delete);
-            }
          }
      }
 }
