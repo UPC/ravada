@@ -171,7 +171,7 @@ hook before_routes => sub {
     return if $url =~ m{^/(css|font|img|js)}
 	   || $url =~ m{^/fallback/.*\.(css|js|map)$};
 
-    return if $url =~ m{^/(login|logout|requirements|robots.txt)};
+    return if $url =~ m{^/(login|logout|requirements|robots.txt|favicon.ico)};
 
     if ( $RAVADA->is_in_maintenance ) {
         return login($c) if !$USER && $url =~ m{^/$};
@@ -1734,7 +1734,6 @@ sub _logged_in {
         $c->stash(_logged_in => $login );
         $c->stash(_user => $USER);
         $c->stash(_anonymous => !$USER);
-
     }
     $c->stash(url => undef);
 
@@ -1829,7 +1828,10 @@ sub logout {
     my $c = shift;
 
     $USER = undef;
-    $c->session(expires => 1);
+    $c->session(expires => -1);
+    $c->session(login => undef);
+    sleep 1;
+    $c->session(expires => -1);
     $c->session(login => undef);
 
 }
