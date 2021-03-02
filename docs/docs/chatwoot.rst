@@ -15,9 +15,31 @@ Define widget in rvd_front.conf
 -------------------------------
 In ``/etc/rvd_front.conf`` configure the path to widget code. For example, ```chatwoot_widget.js```
 
+.. code-block:: perl
+
     ,widget => '/js/custom/chatwoot_widget.js'
 
 Copy your code in the file: ``/usr/share/ravada/public/js/custom/chatwoot_widget.js``.
+
+.. code-block::
+	1 (function(d,t) {
+	2   var BASE_URL = "https://chatwoot_server";
+	3         var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+	4         g.src= BASE_URL + "/packs/js/sdk.js";
+	5         s.parentNode.insertBefore(g,s);
+	6         g.onload=function(){
+	7           window.chatwootSettings = {
+	8             locale: 'ca',
+	9             type: 'expanded_bubble',
+	10             launcherTitle: 'Some message',
+	11             showPopoutButton: true
+	12           }
+	13           window.chatwootSDK.run({
+	14             websiteToken: 'xxxxxxxxx4Yh7RkXPtt1',
+	15             baseUrl: BASE_URL
+	16           })
+	17         }
+	18 })(document,"script");
 
 .. image:: images/chat_login.png
 

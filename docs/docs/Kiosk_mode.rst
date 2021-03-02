@@ -10,72 +10,54 @@ Setting
 This *kiosk* mode must be defined for some bases in some networks.
 
 
-.. note ::
-    Unfortunately kiosk mode configuration has not been added to the frontend.
-    Anyway it can be set only from within the database. 
-    
-Follow these steps carefully.
-
-Backup the Database
--------------------
-
-As we are going to change the database, any mistake can be fatal. Backup before.
-If you want to have the data handy do it right now:
-
-.. prompt:: bash #
-
-    mysqldump -u root -p ravada domains > domains.sql
-    mysqldump -u root -p ravada networks > networks.sql
-
 Define a Network
 ----------------
 
 You can allow kiosk mode from any network, but you can define a new network where
 this mode is allowed.
 
-.. prompt:: bash #,(env)... auto
+Go to Admin Tools, Networks and click *New Network*.
 
-    # mysql -u root -p ravada
-    mysql> insert into networks (name, address) values ('classroom','10.0.68.0/24');
-
-
-Find the ids
-------------
-
-You must find what is the id of the network and the virtual machine where kiosk mode is enabled.
-This domain must be a base and allowed public access.
-
-::
-
-    mysql> select id,name from domains where name='blablabla' and is_base=1 and is_public=1;
-    +----+-------------------+
-    | id | name              |
-    +----+-------------------+
-    | 22 | blablabla         |
-    +----+-------------------+
-    mysql> select id,name from networks;
-    +----+-----------+
-    | id | name      |
-    +----+-----------+
-    |  1 | localnet  |
-    |  4 | all       |
-    |  6 | classroom |
-    +----+-----------+
-
+.. image:: images/new_network.jpg
 
 
 Allow anonymous mode
 --------------------
 
-::
+You can allow anonymous access to some bases from the networks management form.
 
-    mysql> insert into domains_network(id_domain, id_network,anonymous) VALUES(33, 6, 1);
+Go to Admin Tools, Networks and click in the name of the network. If you want to
+grant anonymous users to everyone use the *default* network. This is not a good
+practice unless the server is behind a firewall. Otherwise create a new network
+and grant anonymous access only to the users that come from there.
 
+Click on the button *Machines*. A list of all the bases will be shown. For a base
+to be used anonymously it must be defined as public and the *anonymous* option must
+be selected.
+
+In this example we configure anonymous access to the base called *focal*.
+
+.. image:: images/network_machines.jpg
+
+Setting a base as *public* allows any known user with access to run it. Anonymous gives
+access to everyone in your network without an username.
+
+Auto remove anonymous machines
+------------------------------
+
+Virtual machines created for anonymous users can be easily and automatically removed.
+Go to Admin Tools, Machines, and click in the name of the base. In the *Options* tab
+enter a *timeout* and optionally *shutdown disconnected*.
+
+In this example the virtual machine will be destroyed when the user closes the viewer
+or after running for 60 minutes.
+
+.. image:: images/machine_options.jpg
 
 Access
 ------
 
-Access now to the anonymous section in your ravada web server. http://your.ip:8081/anonymous
+Access now to the anonymous section in your ravada web server. http://your.server.com/anonymous
 
 You should see there the base of the virtual machine you allowed before.
 
