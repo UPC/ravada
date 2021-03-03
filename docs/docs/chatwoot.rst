@@ -20,6 +20,7 @@ In ``/etc/rvd_front.conf`` configure the path to widget code. For example, ```ch
     ,widget => '/js/custom/chatwoot_widget.js'
 
 Copy your code in the file: ``/usr/share/ravada/public/js/custom/chatwoot_widget.js``.
+Do not copy the *\<script\>* tags, only the javascript code.
 
 .. code-block:: javascript
   :linenos:
