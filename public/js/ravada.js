@@ -925,6 +925,7 @@
 
     function run_domain_req_ctrl($scope, $http, $timeout, request ) {
         var redirected_display = false;
+        var already_subscribed_to_domain = false;
         $scope.copy_password= function(driver) {
             $scope.view_password=1;
             console.log("copy-password "+driver);
@@ -956,7 +957,7 @@
             }
         }
         $scope.subscribe_request= function(url, id_request) {
-            var already_subscribed_to_domain = false;
+            already_subscribed_to_domain = false;
             var ws = new WebSocket(url);
             ws.onopen = function(event) { ws.send('request/'+id_request) };
             ws.onclose = function() {

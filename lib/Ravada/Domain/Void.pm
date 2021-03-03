@@ -37,6 +37,7 @@ our %CHANGE_HARDWARE_SUB = (
     ,memory => \&_change_hardware_memory
 );
 
+our $FREE_PORT = 5900;
 #######################################3
 
 sub name {
