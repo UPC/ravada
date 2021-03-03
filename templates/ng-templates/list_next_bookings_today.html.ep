@@ -10,8 +10,9 @@
         {{booking.title}}
         :
         {{booking.time_start}} - {{booking.time_end}}
-        <span ng-show="booking.user_allowed">allowed</span>
-        <span ng-show="booking.user_allowed==0">not allowed</span>
+        <%= $_user->name %>
+        <span ng-show="booking.user_allowed"><%=l 'allowed' %></span>
+        <span ng-show="booking.user_allowed==0"><%=l 'not allowed' %></span>
     </div>
 
 </div>

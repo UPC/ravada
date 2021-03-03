@@ -2345,6 +2345,8 @@ sub access_denied {
     return $c->render(text => $msg, status => 403);
 }
 
+sub _access_denied { return access_denied(@_) }
+
 sub base_id {
     my $name = shift;
     my $base = $RAVADA->search_domain($name);

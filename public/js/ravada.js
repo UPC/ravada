@@ -396,14 +396,20 @@
                                 $scope.new_shutdown_disconnected
                                     = $scope.showmachine.shutdown_disconnected;
                             }
-                            $scope.init_domain_access();
-                            $scope.init_ldap_access();
-                            $scope.list_ldap_attributes();
-                            list_interfaces();
+                            if (is_admin) {
+                                $scope.init_domain_access();
+                                $scope.init_ldap_access();
+                                $scope.list_ldap_attributes();
+                                list_interfaces();
+                                list_users();
+                            }
                             $scope.hardware_types = Object.keys(response.data.hardware);
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
-                            if (is_admin) list_users();
                 });
+                if (is_admin ) {
+                    $scope.list_ldap_attributes();
+                    list_ldap_groups();
+                }
           };
 
           var list_interfaces = function() {
@@ -606,10 +612,12 @@
           $scope.list_ldap_attributes= function() {
               $scope.ldap_entries = 0;
               $scope.ldap_verified = 0;
-              $http.get('/list_ldap_attributes/'+$scope.cn).then(function(response) {
-                  $scope.ldap_error = response.data.error;
-                  $scope.ldap_attributes = response.data.attributes;
-              });
+              if ($scope.cn) {
+                  $http.get('/list_ldap_attributes/'+$scope.cn).then(function(response) {
+                      $scope.ldap_error = response.data.error;
+                      $scope.ldap_attributes = response.data.attributes;
+                  });
+              }
           };
           $scope.count_ldap_entries = function() {
               $scope.ldap_verifying = true;
@@ -852,7 +860,7 @@
                         };
                         return;
                     }
-                    id_request = response.data.request;
+                    var id_request = response.data.request;
                     subscribe_request(id_request, function(data) {
                         $scope.$apply(function () {
                             $scope.pending_request=data;
@@ -870,8 +878,6 @@
             $scope.access_value = [ ];
             $scope.access_allowed = [ ];
             $scope.access_last = [ ];
-            $scope.list_ldap_attributes();
-            list_ldap_groups();
 
             $scope.new_base = undefined;
             $scope.list_ldap_attributes();
