@@ -16,6 +16,13 @@ my @VMS = vm_names();
 my $USER = create_user("foo","bar", 1);
 
 #######################################################
+
+sub test_displays {
+    my $domain = shift;
+    my @displays = $domain->_get_controller_display();
+    is(scalar @displays,1);
+}
+
 sub test_spice {
     my $vm_name = shift;
     my $vm = rvd_back->search_vm($vm_name);
@@ -26,6 +33,9 @@ sub test_spice {
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     $domain->start($USER);
+    wait_request(debug => 1);
+
+    test_displays($domain);
 
     my $display_file = $domain->display_file($USER);
 

@@ -62,7 +62,7 @@ sub test_route($vm) {
         $domain->start(user => user_admin, remote_ip => $client_ip );
         my $display = $domain->display(user_admin);
         my ($ip) = $display =~ m{//([\d+\.]+)};
-        is($ip, $route{$network},$vm->type);
+        is($ip, $route{$network},$vm->type) or die $domain->name;
     }
 }
 

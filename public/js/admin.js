@@ -301,25 +301,30 @@ ravadaApp.directive("solShowMachine", swMach)
         }
      }
 
-      $scope.request = function(request, args) {
-          $http.post('/request/'+request+'/'
-              ,JSON.stringify(args)
-          ).then(function(response) {
+     $scope.request = function(request, args) {
+        $http.post('/request/'+request+'/'
+            ,JSON.stringify(args)
+        ).then(function(response) {
             if(response.status == 300 ) {
                 console.error('Response error', response.status);
                 window.location.reload();
             }
-          });
-      };
+        });
+    };
 
     $scope.action = function(target,action,machineId){
-      $http.get('/'+target+'/'+action+'/'+machineId+'.json')
-        .then(function(response) {
-            if(response.status == 300 ) {
-              console.error('Reponse error', response.status);
-              window.location.reload();
-            }
-        });
+        if (action === 'view') {
+            window.location.assign('/machine/view/' + machineId + '.html');
+        }
+        else {
+            $http.get('/'+target+'/'+action+'/'+machineId+'.json')
+               .then(function(response) {
+                   if(response.status == 300 ) {
+                   console.error('Reponse error', response.status);
+                   window.location.reload();
+               }
+            });
+        }
     };
     $scope.set_autostart= function(machineId, value) {
       $http.get("/machine/autostart/"+machineId+"/"+value);
@@ -856,12 +861,10 @@ ravadaApp.directive("solShowMachine", swMach)
         };
         $scope.update_settings = function() {
             $scope.formSettings.$setPristine();
-            console.log($scope.settings);
             $http.post('/settings_global'
                 ,JSON.stringify($scope.settings)
             ).then(function(response) {
             });
         };
-
     };
 }());

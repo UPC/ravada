@@ -18,13 +18,14 @@ around 'clone' => \&_around_clone;
 sub _around_prepare_base($orig, $self) {
     confess "Error: unknown VM " if !defined $self->vm;
 
+    confess "Error: missing file ".$self->domain->name if !$self->file;
     confess if !$self->capacity;
 
     my $storage_pool = ($self->vm->base_storage_pool or $self->vm->default_storage_pool_name);
     $self->vm->_check_free_disk($self->capacity, $storage_pool);
 
     my $base_file = $orig->($self);
-    confess if !$base_file;
+    confess "No base file returned by ".ref($self)."->prepare_base" if !$base_file;
 
     return $base_file if ! $self->clone_base_after_prepare;
 

@@ -135,4 +135,11 @@ sub _last_insert_id_sqlite($dbh) {
     return $id;
 }
 
+sub max_id($dbh, $table) {
+    my $sth = $dbh->prepare("SELECT max(id) FROM $table");
+    $sth->execute();
+    my ($max) = $sth->fetchrow;
+    return ($max or 0);
+}
+
 1;

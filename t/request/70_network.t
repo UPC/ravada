@@ -17,7 +17,7 @@ init();
 
 ############################################################
 sub test_list_nats($vm) {
-
+    return if $<;
     my @exp_nat =   grep { defined $_ && !/^Name$/ }
                     map { /^\s+(\w+)\s*/; $1 }
                     split /\n/,`virsh net-list`;
@@ -28,6 +28,7 @@ sub test_list_nats($vm) {
         ,vm_type => $vm->type
     );
     rvd_back->_process_requests_dont_fork();
+    wait_request();
     is($req->status,'done');
     is($req->error,'');
     like($req->output,qr{\"$exp_nat[0]\"});
@@ -65,6 +66,7 @@ sub test_list_bridges($vm) {
         ,vm_type => $vm->type
     );
     rvd_back->_process_requests_dont_fork();
+    wait_request();
     is($req->status,'done');
     is($req->error,'');
 

@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use HTML::Lint;
 use Test::More;
@@ -21,6 +22,7 @@ my $URL_LOGOUT = '/logout';
 my ($USERNAME, $PASSWORD);
 my $SCRIPT = path(__FILE__)->dirname->sibling('../script/rvd_front');
 
+my $BASE_NAME = "zz-test-base-alpine";
 ########################################################################################
 
 sub remove_machines(@machines) {
@@ -36,7 +38,7 @@ sub _wait_request(@args) {
     my $t0 = time;
     wait_request(@args);
 
-    if ( time - $t0 > $SECONDS_TIMEOUT ) {
+    if ( $USERNAME && time - $t0 > $SECONDS_TIMEOUT ) {
         login();
     }
 
@@ -45,6 +47,8 @@ sub _wait_request(@args) {
 
 sub login( $user=$USERNAME, $pass=$PASSWORD ) {
     $t->ua->get($URL_LOGOUT);
+
+    confess "Error: missing user" if !defined $user;
 
     $t->post_ok('/login' => form => {login => $user, password => $pass});
     like($t->tx->res->code(),qr/^(200|302)$/);
@@ -61,7 +65,7 @@ sub test_many_clones($base) {
 
     $n_clones = 10 if !$ENV{TEST_STRESS} && ! $ENV{TEST_LONG};
 
-    $t->post_ok('/machine/copy' => json => {id_base => $base->id, copy_number => $n_clones});
+    $t->post_ok('/machine/copy' => json => {id_base => $base->id, copy_number => $n_clones, copy_ram => 0.128 });
     like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body->to_string;
 
     my $response = $t->tx->res->json();
@@ -69,16 +73,24 @@ sub test_many_clones($base) {
     wait_request(request => $response->{request}, background => 1);
 
     login();
+    my $sequential = 0;
+    $sequential = 1 if $base->type eq 'Void';
     $t->post_ok('/request/start_clones' => json =>
-        {   id_domain => $base->id
+        {   id_domain => $base->id, sequential => $sequential
         }
     );
     like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body->to_string;
     $response = $t->tx->res->json();
-    ok(exists $response->{request}) and do {
+    if (exists $response->{request}) {
         wait_request(request => $response->{request}, background => 1);
+    } else {
+        warn Dumper($response);
     };
 
+    wait_request(debug => 1, background => 1);
+    ok(scalar($base->clones)>=$n_clones);
+
+    test_iptables_clones($base);
     test_re_expose($base) if $base->type eq 'Void';
     test_different_mac($base, $base->clones) if $base->type ne 'Void';
     for my $clone ( $base->clones ) {
@@ -105,19 +117,44 @@ sub test_different_mac(@domain) {
     }
 }
 
+sub test_iptables_clones($base) {
+    delete_request('set_time','screenshot','refresh_machine_ports');
+    wait_request(background => 1, debug => 1);
+    my %port_display;
+    for my $clone_data ( $base->clones ) {
+        next if $clone_data->{is_base};
+        if ($clone_data->{status} ne 'active') {
+            diag("$clone_data->{name} $clone_data->{status}");
+            next;
+        }
+        my $clone = Ravada::Front::Domain->open($clone_data->{id});
+        my $displays = $clone->info(user_admin)->{hardware}->{display};
+        for my $display (@$displays) {
+            for my $port ($display->{port}, $display->{extra}->{tls_port}) {
+                next if !defined $port;
+                my $found = $port_display{$port};
+                my $value = "$clone_data->{id} $display->{driver}:$port";
+                ok(!$found,"Duplicated display $port on $clone_data->{name} $value and ".($found or "")) or exit;
+                $port_display{$port} = $value;
+            }
+        }
+    }
+}
+
 sub test_re_expose($base) {
     diag("Test re-expose");
     for my $clone ( $base->clones ) {
-        my $req = Ravada::Request->force_shutdown_domain(
+        my $req = Ravada::Request->shutdown_domain(
             id_domain => $clone->{id}
             , uid => user_admin->id
         )
     }
     wait_request(background => 1);
-    Ravada::Request->expose(uid => user_admin->id, id_domain => $base->id, port => 22);
+    Ravada::Request->expose(uid => user_admin->id, id_domain => $base->id, port => 23);
     wait_request(background => 1);
 
     for my $clone ( $base->clones ) {
+        next if $clone->{is_base};
         my $req = Ravada::Request->start_domain(
             id_domain => $clone->{id}
             , uid => user_admin->id
@@ -143,7 +180,7 @@ sub test_login_fail {
     $t->get_ok("/admin/machines")->status_is(401);
     is($t->tx->res->dom->at("button#submit")->text,'Login') or exit;
 
-    login();
+    login( user_admin->name, "$$ $$");
 
     $t->post_ok('/login' => form => {login => "fail", password => 'bigtime'});
     is($t->tx->res->code(),403);
@@ -152,36 +189,13 @@ sub test_login_fail {
     is($t->tx->res->dom->at("button#submit")->text,'Login') or exit;
 }
 
-sub test_copy_without_prepare($clone) {
-    is ($clone->is_base,0) or die "Clone ".$clone->name." is supposed to be non-base";
-
-    my $n_clones = 3;
-    mojo_request($t, "clone", { id_domain => $clone->id, number => $n_clones });
-    wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
-
-    my @clones = $clone->clones();
-    is(scalar @clones, $n_clones) or exit;
-
-    remove_machines($clone);
-}
-
 sub test_validate_html($url) {
+    mojo_check_login($t);
     $t->get_ok($url)->status_is(200);
     my $content = $t->tx->res->body();
     _check_html_lint($url,$content);
 }
 
-sub test_validate_html_local($dir) {
-    opendir my $ls,$dir or die "$! $dir";
-    while (my $file = readdir $ls) {
-        next unless $file =~ /html$/ || $file =~ /.html.ep$/;
-        my $path = "$dir/$file";
-        open my $in,"<", $path or die "$path";
-        my $content = join ("",<$in>);
-        close $in;
-        _check_html_lint($path,$content, {internal => 1});
-    }
-}
 
 sub _check_count_divs($url, $content) {
     my $n = 0;
@@ -284,6 +298,88 @@ sub test_logout_ldap {
     is($t->tx->res->code(),302);
 }
 
+sub _add_displays($t, $domain) {
+    #    mojo_request($t, "add_hardware", { id_domain => $base->id, name => 'network' });
+    my $info = $domain->info(user_admin);
+    my $options = $info->{drivers}->{display};
+    for my $driver (@$options) {
+        next if grep { $_->{driver} eq $driver } @{$info->{hardware}->{display}};
+
+        my $req = Ravada::Request->add_hardware(
+            uid => user_admin->id
+            , id_domain => $domain->id
+            , name => 'display'
+            , data => { driver => $driver }
+        );
+    }
+    wait_request(background => 1);
+
+}
+
+sub _clone_and_base($vm_name, $t, $base0) {
+    mojo_check_login($t);
+    my $base1 = $base0;
+    if ($vm_name eq 'KVM') {
+        my $base = rvd_front->search_domain($BASE_NAME);
+        my $name = new_domain_name()."-".$vm_name."-$$";
+        mojo_request_url_post($t,"/machine/copy",{id_base => $base->id, new_name => $name, copy_ram => 0.128, copy_number => 1});
+        $base1 = rvd_front->search_domain($name);
+        ok($base1, "Expecting domain $name create") or exit;
+    }
+
+    mojo_check_login($t);
+    _add_displays($t, $base1);
+    mojo_request_url($t , "/machine/prepare/".$base1->id.".json");
+    return $base1;
+}
+
+sub test_clone($base1) {
+    $t->get_ok("/machine/clone/".$base1->id.".html")->status_is(200);
+    my $body = $t->tx->res->body;
+    my ($id_req) = $body =~ m{subscribe',(\d+)};
+
+    my $req = Ravada::Request->open($id_req);
+    ok($req, "Expecting request on /machine/clone") or return;
+    for ( ;; ) {
+        last if $req->status eq 'done';
+        sleep 1;
+    }
+    ok($req->status,'done');
+    is($req->error, '') or return;
+
+    my $id_domain = $req->id_domain;
+    my $clone = Ravada::Front::Domain->open($id_domain);
+
+    my $clone_name  = $base1->name."-".user_admin->name;
+    is($clone->name, $clone_name);
+    ok($clone->name);
+    is($clone->is_volatile,0) or exit;
+    is(scalar($clone->list_ports),2);
+    return $clone;
+}
+
+sub test_admin_can_do_anything($t, $base) {
+
+    my $pass = "$$ $$";
+    my $user = create_user(new_domain_name()."-$$", $pass, 1);
+
+    login( $user->name, $pass );
+
+    $t->get_ok("/machine/info/".$base->id.".json");
+    is($t->tx->res->code(),200);
+
+    my $response = $t->tx->res->json();
+    for my $field( keys %$response) {
+        next if $field !~ /^can_/;
+        is($response->{$field},1,"Admin user ".$user->name
+            ." should be able to $field ".$base->name)
+    }
+
+    login($USERNAME, $PASSWORD);
+
+    $user->remove();
+}
+
 ########################################################################################
 
 $ENV{MOJO_MODE} = 'devel';
@@ -291,11 +387,7 @@ init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
 like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
 
-test_validate_html_local("templates/bootstrap");
-test_validate_html_local("templates/main");
-test_validate_html_local("templates/ng-templates");
-
-if (!rvd_front->ping_backend) {
+if (!ping_backend()) {
     diag("SKIPPED: no backend");
     done_testing();
     exit;
@@ -315,12 +407,16 @@ test_validate_html("/login");
 
 remove_old_domains_req();
 
-for my $vm_name (@{rvd_front->list_vm_types} ) {
+my $t0 = time;
+diag("starting tests at ".localtime($t0));
+for my $vm_name ( @{rvd_front->list_vm_types} ) {
 
     diag("Testing new machine in $vm_name");
 
     my $name = new_domain_name()."-".$vm_name;
     remove_machines($name,"$name-".user_admin->name);
+
+    $name .= "-".$$;
 
     _init_mojo_client();
 
@@ -336,49 +432,46 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
     )->status_is(302);
 
     _wait_request(debug => 1, background => 1, check_error => 1);
-    my $base;
+    my $base0;
     for ( 1 .. 10 ) {
-        $base = rvd_front->search_domain($name);
-        last if $base;
+        $base0 = rvd_front->search_domain($name);
+        last if $base0;
         sleep 1;
     }
-    ok($base, "Expecting domain $name create") or exit;
-    push @bases,($base->name);
+    ok($base0, "Expecting domain $name create") or exit;
+    push @bases,($base0->name);
 
-    mojo_request($t, "add_hardware", { id_domain => $base->id, name => 'network' });
+    test_admin_can_do_anything($t, $base0);
+
+    mojo_request($t, "add_hardware", { id_domain => $base0->id, name => 'network' });
     wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
 
-    test_validate_html("/machine/manage/".$base->id.".html");
+    test_validate_html("/machine/manage/".$base0->id.".html");
 
-    $t->get_ok("/machine/prepare/".$base->id.".json")->status_is(200);
-    for ( 1 .. 10 ) {
-        $base = rvd_front->search_domain($name);
-        last if $base->is_base || !$base->list_requests;
-        _wait_request(debug => 1, background => 1, check_error => 1);
-    }
-    is($base->is_base,1) or next;
+    my $base1 = _clone_and_base($vm_name, $t, $base0);
 
-    is(scalar($base->list_ports),0);
-    mojo_check_login($t);
-    $t->get_ok("/machine/clone/".$base->id.".json")->status_is(200);
-    _wait_request(debug => 0, background => 1, check_error => 1);
-    my $clone = rvd_front->search_domain($name."-".user_admin->name);
-    ok($clone,"Expecting clone created") or next;
-    ok($clone->name);
-    if ($clone) {
-        is($clone->is_volatile,0) or exit;
-        is(scalar($clone->list_ports),0);
-    }
+    push @bases,($base1->name);
+    is($base1->is_base,1) or next;
 
-    push @bases, ( $clone );
+    is(scalar($base1->list_ports),2);
     mojo_check_login($t);
-    test_copy_without_prepare($clone);
+
+    my $clone = test_clone($base1);
+    push @bases, ( $clone->name );
     mojo_check_login($t);
-    test_many_clones($base);
+    test_many_clones($base1);
+    remove_machines(reverse @bases);
 }
 ok(@bases,"Expecting some machines created");
-remove_machines(@bases);
+remove_machines(reverse @bases);
 _wait_request(background => 1);
 remove_old_domains_req(0); # 0=do not wait for them
 
+my $t1 = time;
+diag("ending tests at ".localtime($t1));
+my $run_time = $t1-$t0;
+diag("$run_time seconds");
+my $m = int($run_time/60);
+my $s = ($run_time % 60);
+diag("$m:$s run time");
 done_testing();

@@ -37,6 +37,7 @@ our $CONNECTOR = \$Ravada::CONNECTOR;
 our $CONFIG = \$Ravada::CONFIG;
 
 our $MIN_MEMORY_MB = 128 * 1024;
+our $MIN_DISK_MB = 1024 * 1024;
 
 our $CACHE_TIMEOUT = 60;
 our $FIELD_TIMEOUT = '_data_timeout';
@@ -46,6 +47,8 @@ our %SSH;
 
 our $ARP = `which arp`;
 chomp $ARP;
+
+our $FREE_PORT = 5950;
 
 # domain
 requires 'create_domain';
@@ -288,6 +291,7 @@ sub _around_connect($orig, $self) {
     my $result = $self->$orig();
     if ($result) {
         $self->is_active(1);
+        $self->_fetch_tls();
     } else {
         $self->is_active(0);
     }
@@ -451,6 +455,16 @@ sub _around_create_domain {
             my %port = %$port;
             delete @port{'id','id_domain','public_port'};
             $domain->expose(%port);
+        }
+        my @displays = $base->_get_controller_display();
+        for my $display (@displays) {
+            delete $display->{id};
+            delete $display->{id_domain};
+            $display->{is_active} = 0;
+            my $port = $domain->exposed_port($display->{driver});
+            $display->{id_domain_port} = $port->{id};
+            delete $display->{port};
+            $domain->_store_display($display);
         }
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
@@ -770,7 +784,8 @@ sub _check_disk {
     my %args = @_;
     return if !exists $args{disk};
 
-    die "ERROR: Low Disk '$args{disk}' required 1 Gb " if $args{disk} < 1024*1024;
+    die "ERROR: Low Disk '$args{disk}' required ".($MIN_DISK_MB/1024/1024)." Gb "
+    if $args{disk} < $MIN_DISK_MB;
 }
 
 
@@ -1452,26 +1467,6 @@ sub _read_file_local( $self, $file ) {
     return join('',<$in>);
 }
 
-=head2 file_exists
-
-Returns true if the file exists in this virtual manager storage
-
-=cut
-
-sub file_exists( $self, $file ) {
-    return -e $file if $self->is_local;
-
-    my $ssh = $self->_ssh;
-    confess "Error: no ssh connection to ".$self->name if ! $ssh;
-
-    confess "Error: dangerous filename '$file'"
-        if $file =~ /[`|"(\\\[]/;
-    my ($out, $err) = $self->run_command("/bin/ls -1 $file");
-
-    return 1 if !$err;
-    return 0;
-}
-
 =head2 remove_file
 
 Removes a file from the storage of the virtual manager
@@ -1737,24 +1732,49 @@ sub shutdown_domains($self) {
 }
 
 sub _shared_storage_cache($self, $node, $dir, $value=undef) {
-    if (!defined $value) {
-        my $sth = $$CONNECTOR->dbh->prepare(
-            "SELECT is_shared FROM storage_nodes "
-            ." WHERE dir= ? "
-            ." AND ((id_node1 = ? AND id_node2 = ? ) "
-            ."      OR (id_node2 = ? AND id_node1 = ? )) "
-        );
-        $sth->execute($dir, $self->id, $node->id, $node->id, $self->id);
-        my ($is_shared) = $sth->fetchrow;
-        return $is_shared;
-    }
+    my ($id_node1, $id_node2) = ($self->id, $node->id);
+    ($id_node1, $id_node2) = reverse ($self->id, $node->id) if $self->id < $node->id;
+    my $cached_storage = $self->_get_shared_storage_cache($id_node1, $id_node2, $dir);
+    return $cached_storage if !defined $value;
+
+    return $value if defined $cached_storage && $cached_storage == $value;
+
+    confess "Error: conflicting storage, cached=$cached_storage , new=$value"
+    if defined $cached_storage && $cached_storage != $value;
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO storage_nodes (id_node1, id_node2, dir, is_shared) "
         ." VALUES (?,?,?,?)"
     );
-    eval { $sth->execute($self->id, $node->id, $dir, $value) };
+    eval { $sth->execute($id_node1, $id_node2, $dir, $value) };
     confess $@ if $@ && $@ !~ /Duplicate entry/i;
     return $value;
+}
+
+sub _get_shared_storage_cache($self, $id_node1, $id_node2, $dir) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM storage_nodes "
+        ." WHERE dir= ? "
+        ." AND ((id_node1 = ? AND id_node2 = ? ) "
+        ."      OR (id_node2 = ? AND id_node1 = ? )) "
+    );
+    $sth->execute($dir, $id_node1, $id_node2, $id_node2, $id_node1);
+    my @is_shared;
+    my $is_shared;
+    my $conflict_is_shared;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        if (defined $is_shared && defined $row->{shared} && $is_shared != $row->{is_shared}) {
+            $conflict_is_shared=1;
+        }
+        push @is_shared,($row);
+        $is_shared = $row->{is_shared}
+        unless $is_shared && !$row->{is_shared};
+    }
+    if (scalar(@is_shared)>1 && $conflict_is_shared) {
+        warn "Warning: error in storage_nodes , conflicting duplicated entries "
+        .Dumper(\@is_shared)
+    }
+    return $is_shared;
 }
 
 =head2 shared_storage
@@ -1792,9 +1812,8 @@ sub shared_storage($self, $node, $dir) {
         last;
     }
     $self->write_file($file,''.localtime(time));
-    confess if !$self->file_exists($file);
     my $shared;
-    for (1 .. 5 ) {
+    for (1 .. 10 ) {
         $shared = $node->file_exists($file);
         last if $shared;
         sleep 1;
@@ -1808,26 +1827,83 @@ sub shared_storage($self, $node, $dir) {
 sub _fetch_tls_host_subject($self) {
     return '' if !$self->dir_cert();
 
+    return $self->_fetch_tls_cached('host_subject')
+    if $self->readonly;
+
     my @cmd= qw(/usr/bin/openssl x509 -noout -text -in );
     push @cmd, ( $self->dir_cert."/server-cert.pem" );
 
     my ($out, $err) = $self->run_command(@cmd);
     die $err if $err;
 
+    my $subject;
     for my $line (split /\n/,$out) {
         chomp $line;
         next if $line !~ /^\s+Subject:\s+(.*)/;
-        my $subject = $1;
+        $subject = $1;
         $subject =~ s/ = /=/g;
         $subject =~ s/, /,/g;
-        return $subject;
+        last;
     }
+    $self->_store_tls( subject => $subject );
+    return $subject;
+}
+
+sub _fetch_tls_cached($self, $field) {
+    my $tls_json = $self->_data('tls');
+    my $tls = {};
+    eval {
+        $tls = decode_json($tls_json) if length($tls);
+    };
+    warn $@ if $@;
+    return ( $tls->{$field} or '');
+}
+
+sub _store_tls($self, $field, $value ) {
+    my $tls_json = $self->_data('tls');
+    my $tls = {};
+    eval {
+        $tls = decode_json($tls_json) if length($tls_json);
+    };
+    warn $@ if $@;
+    $tls = {} if $@;
+    $tls->{$field} = $value;
+    $self->_data( 'tls' => encode_json($tls) );
+    return ( $tls->{$field} or '');
 }
 
 sub _fetch_tls_ca($self) {
+    return $self->_fetch_tls_cached('ca') if $self->readonly;
     my ($out, $err) = $self->run_command("/bin/cat", $self->dir_cert."/ca-cert.pem");
 
-    return join('\n', (split /\n/,$out) );
+    my $ca = join('\n', (split /\n/,$out) );
+    $self->_store_tls( ca => $ca );
+
+    return $ca;
+}
+
+sub _fetch_tls($self) {
+
+    return if $self->readonly || $self->type ne 'KVM' || $self->{_tls_fetched}++;
+
+    my $tls = $self->_data('tls');
+    my $tls_hash = {};
+    eval {
+        $tls_hash = decode_json($tls) if length($tls);
+    };
+    for (keys %$tls_hash) {
+        delete $tls_hash->{$_} if !$tls_hash->{$_};
+    }
+    if (!defined $tls || !$tls
+        || !$tls_hash || !ref($tls_hash) || !keys(%$tls_hash)) {
+        $self->_do_fetch_tls();
+    }
+
+}
+
+sub _do_fetch_tls($self) {
+    $self->_fetch_tls_host_subject();
+    $self->_fetch_tls_ca();
 }
 
 sub _store_mac_address($self, $force=0 ) {
@@ -1912,10 +1988,26 @@ sub _list_used_ports_sql($self, $used_port) {
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT public_port FROM domain_ports ");
     $sth->execute();
-    my $port;
+    my ($port, $json_extra);
     $sth->bind_columns(\$port);
 
-    while ($sth->fetch ) { $used_port->{$port}++ if defined $port };
+    while ($sth->fetch ) {
+        $used_port->{$port}++ if defined $port;
+    };
+
+    # do not use ports in displays
+    $sth = $$CONNECTOR->dbh->prepare("SELECT port,extra FROM domain_displays ");
+    $sth->execute();
+    $sth->bind_columns(\$port,\$json_extra);
+
+    while ($sth->fetch ) {
+        $used_port->{$port}++ if defined $port;
+        my $extra = {};
+        eval { $extra = decode_json($json_extra) if $extra };
+        my $tls_port;
+        $tls_port = $extra->{tls_port} if $extra && $extra->{tls_port};
+        $used_port->{$tls_port}++ if $tls_port;
+    };
 
 }
 
@@ -1937,13 +2029,12 @@ sub _list_used_ports_iptables($self, $used_port) {
     }
 }
 
-sub _new_free_port($self) {
-    my $used_port = {};
+sub _new_free_port($self, $used_port={}) {
     $self->_list_used_ports_sql($used_port);
     $self->_list_used_ports_ss($used_port);
     $self->_list_used_ports_iptables($used_port);
 
-    my $free_port = 5950;
+    my $free_port = $FREE_PORT;
     for (;;) {
         last if !$used_port->{$free_port};
         $free_port++ ;

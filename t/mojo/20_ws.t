@@ -85,11 +85,13 @@ sub _create_bases($t, $vm_name) {
 }
 
 sub test_bases($t, $bases) {
+    mojo_check_login($t);
     my $n_bases = 0;
     my $n_machines = scalar(@$bases);
     for my $base ( @$bases ) {
         $t->get_ok("/machine/prepare/".$base->id.".json")->status_is(200);
         wait_request(debug => 0, background => 1);
+        mojo_check_login($t);
         $n_bases++;
         my @machines_user = list_machines_user($t);
         is(@machines_user, $n_bases, Dumper(\@machines_user)) or exit;

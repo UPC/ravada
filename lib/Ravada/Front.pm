@@ -224,29 +224,35 @@ sub list_machines($self, $user, @filter) {
     return [sort { $a->{name} cmp $b->{name} } values %uniq];
 }
 
-sub init_available_actions($user, $m) {
+sub _init_available_actions($user, $m) {
   eval { $m->{can_shutdown} = $user->can_shutdown($m->{id}) };
 
-  $m->{can_start} = 0;
-  $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+        $m->{can_start} = 0;
+        $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
 
-  $m->{can_view} = 0;
-  $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+        $m->{can_reboot} = $m->{can_shutdown} && $m->{can_start};
 
-  $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
-  eval {
-  $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
-  };
-  die $@ if $@ && $@ !~ /Unknown domain/;
+        $m->{can_view} = 0;
+        $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
 
-  $m->{can_hibernate} = 0;
-  $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id}) && !$m->{is_volatile};
+        $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
+        eval {
+        $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
+        };
+        #may have been deleted just now
+        next if $@ && $@ =~ /Unknown domain/;
+        die $@ if $@;
+
+        $m->{can_hibernate} = 0;
+        $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
+        && !$m->{is_volatile};
+        warn $@ if $@;
 }
 
 sub _around_list_machines($orig, $self, $user, @filter) {
     my $machines = $self->$orig($user, @filter);
     for my $m (@$machines) {
-        init_available_actions($user, $m);
+        _init_available_actions($user, $m);
         $m->{id_base} = undef if !exists $m->{id_base};
         lock_hash(%$m);
     }
@@ -728,6 +734,14 @@ sub list_users($self,$name=undef) {
 }
 
 
+=head2 list_bases_network
+
+Returns a reference to a list to all the bases in a network
+
+    my $list = $rvd_front->list_bases_network($id_network);
+
+=cut
+
 sub list_bases_network($self, $id_network) {
     my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM networks where name = 'default'");
     $sth->execute;
@@ -1019,8 +1033,10 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'manage_pools'
                 ;
         next if ( $command eq 'force_shutdown'
+                || $command eq 'force_reboot'
                 || $command eq 'start'
                 || $command eq 'shutdown'
+                || $command eq 'reboot'
                 || $command eq 'hibernate'
                 )
                 && time - $epoch_date_changed > 5
