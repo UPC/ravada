@@ -143,6 +143,7 @@ sub test_list_machines_non_admin($t, $bases) {
 
     @list_machines = list_machines($t);
     is(scalar(@list_machines),1) or exit;
+    user_admin->revoke($USER,'shutdown_clones');
 }
 
 sub test_bases_access($t,$bases) {
