@@ -310,7 +310,6 @@ sub test_remove_clone($vm) {
     Ravada::Domain->open($clones[0]->{id})->remove(user_admin);
     is(scalar($base->clones()),$n-1);
 
-    warn Dumper([map { $_->{name}." ".$_->{status} } $base->clones]);
     $req = Ravada::Request->manage_pools(uid => user_admin->id, _no_duplicate => 1);
     wait_request();
     is($req->status, 'done');
