@@ -584,6 +584,26 @@ sub test_all_drivers($domain, $hardware) {
     }
 }
 
+sub test_change_cpus($domain) {
+
+    my $info = $domain->info(user_admin);
+    my $n_virt_cpu = $info->{n_virt_cpu};
+    for my $n ( 1 .. 10 ) {
+        my $req = Ravada::Request->change_hardware(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            , hardware => 'vcpus'
+            ,data => { n_virt_cpu => $n_virt_cpu+$n }
+        );
+        wait_request();
+        is($req->status, 'done');
+        is($req->error, '');
+        my $info2 = $domain->info(user_admin);
+        my $n_virt_cpu2 = $info2->{n_virt_cpu};
+        is($n_virt_cpu2, $n_virt_cpu+$n);
+    }
+}
+
 ########################################################################
 
 
@@ -612,6 +632,9 @@ for my $vm_name ( vm_names()) {
         ,disk => 1024 * 1024
         ,create_args($vm_name)
     );
+
+    test_change_cpus( $domain_b );
+
     my %controllers = $domain_b->list_controllers;
 
     for my $hardware (reverse sort keys %controllers ) {
