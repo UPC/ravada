@@ -19,7 +19,9 @@ this mode is allowed.
 Go to Admin Tools, Networks and click *New Network*.
 
 .. figure:: images/new_network.jpg
-    :alt New network form
+    :alt: New network form
+
+    New network form
 
     Set a name for this network definition, you may want to allow access without
     client password. Enable *all machines* so users from this network can access the
