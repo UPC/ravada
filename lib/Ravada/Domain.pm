@@ -4371,6 +4371,23 @@ sub base_in_vm($self,$id_vm) {
 
 }
 
+=head2 base_files_in_vm
+
+=head3 arguments
+
+=over
+
+=item vm : The virtual manager to check
+
+=back
+
+Returns true if all te base files exist in the virtual manager o node
+
+  $domain->base_files_in_vm($node);
+
+=cut
+
+
 sub base_files_in_vm($self,$vm) {
     $vm = Ravada::VM->open($vm) if !ref($vm);
     for my $file ($self->list_files_base) {
@@ -5374,6 +5391,12 @@ sub _domain_in_nodes($self) {
     return $self->list_instances > 1;
 }
 
+=head2 compact
+
+Compacts virtual machine volumes
+
+=cut
+
 sub compact($self, $request=undef) {
     #first check if active, that will trigger status refresh
     die "Error: ".$self->name." can't be compacted because it is active\n"
@@ -5406,6 +5429,12 @@ sub compact($self, $request=undef) {
 
     $self->_data('has_backups' => $self->_data('has_backups') +1 ) if $keep_backup;
 }
+
+=head2 purge
+
+Removes backups from virtual machine volumes
+
+=cut
 
 sub purge($self, $request=undef) {
     my $vm = $self->_vm->new ( host => 'localhost' );
