@@ -1410,7 +1410,7 @@ Updates the global settings
 
 =cut
 
-sub update_settings_global($self, $arg, $user, $orig_settings = $self->_settings_by_id) {
+sub update_settings_global($self, $arg, $user, $reload, $orig_settings = $self->_settings_by_id) {
     confess if !ref($arg);
     if (exists $arg->{frontend}
         && exists $arg->{frontend}->{maintenance}
@@ -1421,7 +1421,7 @@ sub update_settings_global($self, $arg, $user, $orig_settings = $self->_settings
     for my $field (sort keys %$arg) {
         if ( !exists $arg->{$field}->{id} ) {
             confess if !keys %{$arg->{$field}};
-            $self->update_settings_global($arg->{$field}, $user, $orig_settings);
+            $self->update_settings_global($arg->{$field}, $user, $reload, $orig_settings);
             next;
         }
         confess "Error: invalid field $field" if $field !~ /^\w+$/;
@@ -1430,6 +1430,7 @@ sub update_settings_global($self, $arg, $user, $orig_settings = $self->_settings
                     , $arg->{$field}->{id}
         );
         next if $orig_settings->{$id} eq $value;
+        $$reload++ if $field eq 'bookings';
         my $sth = $self->_dbh->prepare(
             "UPDATE settings set value=?"
             ." WHERE id=? "
@@ -1438,7 +1439,6 @@ sub update_settings_global($self, $arg, $user, $orig_settings = $self->_settings
 
         $user->send_message("Setting $field to $value");
     }
-
 }
 
 =head2 is_in_maintenance

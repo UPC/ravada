@@ -51,12 +51,7 @@ services:
     networks:
       - ravada_network
     #By default download from dockerhub
-<<<<<<< HEAD
-    #image: ravada/back
-=======
-    image: ravada/back
     env_file: .env
->>>>>>> develop
     #If you want to local build
     build: dockers/back/.
     privileged: true

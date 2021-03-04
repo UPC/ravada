@@ -290,9 +290,10 @@ get '/settings_global.json' => sub($c) {
 post '/settings_global' => sub($c) {
     my $arg = decode_json($c->req->body);
 
-    $RAVADA->update_settings_global($arg, $USER);
+    my $reload=0;
+    $RAVADA->update_settings_global($arg, $USER, \$reload);
 
-    return $c->render(json => { ok => 1 });
+    return $c->render(json => { ok => 1, reload => $reload });
 };
 
 get '/admin/group/#name' => sub($c) {
@@ -2070,10 +2071,10 @@ sub logout {
     my $c = shift;
 
     $USER = undef;
-    $c->session(expires => -1);
+    $c->session(expires => 0);
     $c->session(login => undef);
     sleep 1;
-    $c->session(expires => -1);
+    $c->session(expires => 0);
     $c->session(login => undef);
 
 }

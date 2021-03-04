@@ -864,6 +864,9 @@ ravadaApp.directive("solShowMachine", swMach)
             $http.post('/settings_global'
                 ,JSON.stringify($scope.settings)
             ).then(function(response) {
+                if (response.data.reload) {
+                    window.location.reload();
+                }
             });
         };
     };
