@@ -13,6 +13,7 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
             <div class="collapse navbar-collapse justify-content-end" id="navbarNavDropdown">
             <!-- Top Menu Items -->
                 <ul class="navbar-nav">
+% if (! $forcing_change_password) {
 % if ($_logged_in) {
 % if ( !$_anonymous ) {
                     <li class="nav-item active">
@@ -59,6 +60,7 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
                             <a class="dropdown-item" href="/logout"><i class="fa fa-fw fa-power-off"></i><%=l 'Log Out' %></a>
                         </div>
                     </li>
+% }
 % }
 % }
                 </ul>

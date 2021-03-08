@@ -498,6 +498,24 @@ sub id {
     return $id;
 }
 
+=head2 password_will_be_changed
+
+Returns true if user password will be changed
+
+    $user->password_will_be_changed();
+
+=cut
+
+sub password_will_be_changed {
+    my $self = shift;
+
+    _init_connector();
+
+    my $sth = $$CON->dbh->prepare("SELECT change_password FROM users WHERE name=?");
+    $sth->execute($self->name);
+    return $sth->fetchrow();
+}
+
 =head2 change_password
 
 Changes the password of an User

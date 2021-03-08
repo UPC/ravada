@@ -151,6 +151,7 @@ hook before_routes => sub {
             ,url => undef
             ,_logged_in => undef
             ,_anonymous => undef
+            ,forcing_change_password => undef
             ,_user => undef
             ,footer=> $CONFIG_FRONT->{footer}
             ,monitoring => 0
@@ -179,6 +180,10 @@ hook before_routes => sub {
     }
 
     return if $url =~ m{^/anonymous};
+
+    if ((defined $USER) && (_logged_in($c)) && ($USER->password_will_be_changed())) {
+        return change_password($c, 1);        
+    }
 
     if (($url =~ m{^/machine/(clone|display|info|view)/}
         || $url =~ m{^/(list_bases_anonymous|request/)}i
@@ -1092,6 +1097,11 @@ any '/admin/user/(:id).(:type)' => sub {
     }
     $c->stash(user => $user);
     return $c->render(template => 'main/manage_user');
+};
+
+any '/user/change_password' => sub {
+    my $c = shift;
+    return change_password($c);
 };
 
 get '/list_ldap_attributes/(#cn)' => sub {
@@ -2274,6 +2284,36 @@ sub register {
        }
    }
    $c->render(template => 'bootstrap/new_user');
+}
+
+sub change_password {
+    my $c = shift;
+
+    my ($forcing_change_password) = @_;
+
+    return $c->render(text => "User is anonymous")
+        if (! _logged_in($c));
+
+    return $c->render(text => "User is temporary")
+        if $USER->is_temporary;
+
+    my $old_password = $c->param('old_password');
+
+    if ($old_password) {
+        return $c->render(template => 'bootstrap/change_password', error => [ "Old password do not match!" ]) if (! $USER->compare_password($old_password));
+
+        my $new_password = $c->param('new_password');
+        return $c->render(template => 'bootstrap/change_password', error => [ "New password length is less than 6!" ]) if (length($new_password) < 6);
+
+        my $repeated_new_password = $c->param('repeated_new_password');
+        return $c->render(template => 'bootstrap/change_password', error => [ "New password and their repeat do not match!" ]) if ($new_password ne $repeated_new_password);
+
+        $USER->change_password($c->param('new_password'), 0);
+
+        $c->redirect_to('/');
+    }
+
+    $c->render(template => 'bootstrap/change_password', forcing_change_password => $forcing_change_password);
 }
 
 sub manage_machine {
