@@ -181,7 +181,7 @@ hook before_routes => sub {
 
     return if $url =~ m{^/anonymous};
 
-    if ((defined $USER) && (_logged_in($c)) && ($USER->password_will_be_changed())) {
+    if ((defined $USER) && (_logged_in($c)) && (! $USER->is_temporary) && (! $USER->is_external) && ($USER->password_will_be_changed())) {
         return change_password($c, 1);        
     }
 
@@ -2296,6 +2296,9 @@ sub change_password {
 
     return $c->render(text => "User is temporary")
         if $USER->is_temporary;
+
+    return $c->render(text => "User is external")
+        if $USER->is_external;
 
     my $old_password = $c->param('old_password');
 

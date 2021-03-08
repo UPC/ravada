@@ -1312,6 +1312,18 @@ sub _set_url_isos($self, $new_url='http://localhost/iso/') {
     $sth->finish;
 
 }
+
+sub _get_column_info
+{
+    my $self = shift;
+    my ($table, $field) = @_;
+    my $dbh = $CONNECTOR->dbh;
+    my $sth = $dbh->column_info(undef,undef,$table,$field);
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+    return $row;
+}
+
 sub _upgrade_table {
     my $self = shift;
     my ($table, $field, $definition) = @_;
@@ -1655,6 +1667,18 @@ sub _clean_iso_mini {
     $sth->finish;
 }
 
+sub _upgrade_users_table {
+    my $self = shift;
+
+    my $data = $self->_get_column_info('users', 'change_password');
+    if ($data->{'COLUMN_DEF'} == 1) {
+        my $sth = $CONNECTOR->dbh->prepare("UPDATE users set change_password=0");
+        $sth->execute;
+        $sth = $CONNECTOR->dbh->prepare("ALTER TABLE users ALTER change_password SET DEFAULT 0");
+        $sth->execute;
+    }
+}
+
 sub _upgrade_tables {
     my $self = shift;
 #    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
@@ -1769,6 +1793,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('messages','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 
     $self->_upgrade_table('grant_types', 'is_int', 'int DEFAULT 0');
+
+    $self->_upgrade_users_table();
 }
 
 sub _upgrade_timestamps($self) {
