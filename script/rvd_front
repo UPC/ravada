@@ -242,8 +242,8 @@ any '/test' => sub {
 
 any '/logout' => sub {
     my $c = shift;
-    logout($c);
-    $c->redirect_to('/');
+    my $redirect_to = logout($c);
+    $c->redirect_to($redirect_to ? $redirect_to : '/');
 };
 
 get '/anonymous' => sub {
@@ -1759,6 +1759,7 @@ sub login($c, $status=200) {
 
     my $login = $c->param('login');
     my $password = $c->param('password');
+    my $ticket = $c->param('ticket');
     my $url = ($c->param('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
 
@@ -1768,10 +1769,25 @@ sub login($c, $status=200) {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
     }
+    if (defined $ticket) {
+        push @error, ("Empty ticket value") if !length $ticket;
+    }
 
-    if ( !@error && defined $login && defined $password) {
-        my $auth_ok;
-        eval { $auth_ok = Ravada::Auth::login($login, $password)};
+    my $auth_ok;
+    if (!@error) {
+        if (defined $login && defined $password) {
+            eval { $auth_ok = Ravada::Auth::login($login, $password)};
+        } else {
+            eval { $auth_ok = Ravada::Auth::login_external($c->param('ticket'), $c->session('ticket')) };
+warn Dumper $auth_ok, $@;
+            if ($auth_ok && !$@) {
+                return $c->redirect_to($auth_ok->{'redirectTo'}) if ($auth_ok->{'redirectTo'});
+                $c->session('ticket' => $auth_ok->{'ticket'}) if ($auth_ok->{'ticket'});
+                $c->session('logoutURL' => $auth_ok->{'logoutURL'}) if ($auth_ok->{'logoutURL'});
+                $login = $auth_ok->name;
+            }
+        }
+
         if ( $auth_ok && !$@) {
             $c->session('login' => $login);
             my $expiration = $SESSION_TIMEOUT;
@@ -1831,7 +1847,12 @@ sub logout {
     $USER = undef;
     $c->session(expires => 1);
     $c->session(login => undef);
+    $c->session(ticket => undef);
 
+    my $logout_url = $c->session('logoutURL');
+    $c->session(logoutURL => undef);
+
+    return $logout_url;
 }
 
 sub quick_start {
@@ -1841,6 +1862,7 @@ sub quick_start {
 
     my $login = $c->param('login');
     my $password = $c->param('password');
+    my $ticket = $c->param('ticket');
     my $id_base = $c->param('id_base');
 
     my @error =();
@@ -1848,18 +1870,27 @@ sub quick_start {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
     }
+    if (defined $ticket) {
+        push @error, ("Empty ticket value") if !length $ticket;
+    }
 
-    if ( $login && $password ) {
+    if (!@error) {
         my $log_ok;
-        eval { $log_ok = Ravada::Auth::login($login, $password) };
-        if ($log_ok) {
-            $c->session('login' => $login);
+        if ( $login && $password) {
+            eval { $log_ok = Ravada::Auth::login($login, $password) };
         } else {
             push @error,("Access denied");
-            logout($c);
-            return login($c);
+            eval { $log_ok = Ravada::Auth::login_external($c->param('ticket'), $c->session('ticket')) };
+            $login = $log_ok->name if ($log_ok && !$@);
+        }
+        if ($log_ok && !$@) {
+            $c->session('login' => $login);
+        }
+        else {
+            push @error,($@ ? $@ : "Access denied");
         }
     }
+
     if ( $c->param('submit') && _logged_in($c) && defined $id_base ) {
 
         return quick_start_domain($c, $id_base, ($login or $c->session('login')));
