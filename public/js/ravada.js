@@ -563,7 +563,7 @@
                       })
               ).then(function(response) {
                   // if there are many , we pick the last one
-                  id_request = response.data.request;
+                  var id_request = response.data.request;
                   subscribe_request(id_request, function(data) {
                     $scope.$apply(function () {
                         $scope.copy_request=data;

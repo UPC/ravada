@@ -3006,7 +3006,7 @@ sub exposed_port($self, $search, $value=undef) {
         if ( $search =~ /^\d+$/ ) {
             return $port if $port->{internal_port} eq $search;
         } else {
-            return $port if $port->{name} eq $search;
+            return $port if defined $port->{name} && $port->{name} eq $search;
         }
     }
     return;
