@@ -11,8 +11,6 @@ services:
     env_file: .env
     command: --default-authentication-plugin=mysql_native_password
     restart: unless-stopped
-    ports:
-      - "33306:33306"
 
   ravada-front:
     container_name: ravada-front
@@ -26,9 +24,10 @@ services:
     networks:
       - ravada_network
     #By default download from dockerhub
+    image: ravada/front
     env_file: .env
     #If you want to local build
-    build: dockers/front/.
+    #build: dockers/front/.
     restart: unless-stopped
 
     depends_on:
@@ -51,9 +50,10 @@ services:
     networks:
       - ravada_network
     #By default download from dockerhub
+    image: ravada/back
     env_file: .env
     #If you want to local build
-    build: dockers/back/.
+    #build: dockers/back/.
     privileged: true
     restart: unless-stopped
 
