@@ -27,7 +27,7 @@
                         for="driver_<%= $driver_name %>"><%= $driver_name %></label>
                     </div>
                     <div class="col-md-4 mt-2">
-                    <select class="selectpicker form-control"
+                    <select class="custom-select form-control"
                         id="driver_<%= $driver_name %>" name="driver_<%= $driver_name %>">
 %                       if ( !$domain->get_driver($driver_name)) {
                             <option value="" selected ><%=l 'none' %></option>
