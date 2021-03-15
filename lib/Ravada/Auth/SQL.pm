@@ -379,7 +379,10 @@ sub is_operator {
             || $self->can_list_clones()
             || $self->can_list_clones_from_own_base()
             || $self->can_list_machines()
-            || $self->is_user_manager();
+            || $self->is_user_manager()
+            || $self->can_view_groups()
+            || $self->can_manage_groups()
+    ;
     return 0;
 }
 

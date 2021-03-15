@@ -14,11 +14,12 @@ RUN apt-get update \
     liblwp-useragent-determined-perl libvirt-clients supervisor net-tools openssh-client apt-utils curl libpbkdf2-tiny-perl \
     libio-stringy-perl libvirt-daemon-system libvirt-clients netcat-openbsd qemu-kvm qemu-utils iproute2 wget bridge-utils firewalld dnsmasq iptables ebtables \
     libnet-openssh-perl libdatetime-format-dateparse-perl file\
- && apt-get clean
-
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata \
+ && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+ENV TZ=Europe/Madrid
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata \
 
 RUN echo "listen_tls = 0" >> /etc/libvirt/libvirtd.conf \
  && echo 'listen_tcp = 1' >> /etc/libvirt/libvirtd.conf \
@@ -40,5 +41,5 @@ COPY supervisord.conf /etc/supervisord.conf
 #ADD src/ravada /ravada
 COPY ravada.conf /etc/ravada.conf
 WORKDIR /ravada
-
+ENV PERL5LIB /ravada/lib
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

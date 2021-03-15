@@ -9,7 +9,8 @@ use Carp qw(carp croak cluck);
 use Data::Dumper;
 use DBIx::Connector;
 use File::Copy;
-use Hash::Util qw(unlock_hash lock_hash);
+use Hash::Util qw(lock_hash unlock_hash);
+use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
 use POSIX qw(WNOHANG);
@@ -23,6 +24,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 use Ravada::Auth;
+use Ravada::Booking;
 use Ravada::Request;
 use Ravada::Repository::ISO;
 use Ravada::VM::Void;
@@ -1085,21 +1087,34 @@ sub _add_indexes_generic($self) {
         ,settings => [
             "index(id_parent,name)"
         ]
+        ,booking_entries => [
+            "index(id_booking)"
+        ]
+        ,booking_entry_ldap_groups => [
+            "index(id_booking_entry,ldap_group)"
+        ]
+        ,booking_entry_users => [
+            "index(id_booking_entry,id_user)"
+        ]
+        ,booking_entry_bases => [
+            "index(id_booking_entry,id_base)"
+        ]
+
         ,vms=> [
             "unique(hostname, vm_type)"
         ]
     );
     my $if_not_exists = '';
     $if_not_exists = ' IF NOT EXISTS ' if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite|mariadb/i;
-
     for my $table ( keys %index ) {
-        my $known = $self->_get_indexes($table);
+        my $known;
         for my $change (@{$index{$table}} ) {
             my ($type,$fields ) =$change =~ /(\w+)\((.*)\)/;
             my ($name) = $change =~ /:(.*)/;
             $name = $fields if !$name;
             $name =~ s/,/_/g;
             $name =~ s/ //g;
+            $known = $self->_get_indexes($table) if !defined $known;
             next if $known->{$name};
 
             $type .=" INDEX " if $type=~ /^unique/i;
@@ -1183,6 +1198,8 @@ sub _add_grants($self) {
     $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
     $self->_add_grant('start_many',0,"Can have more than one machine started.");
     $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
+    $self->_add_grant('view_groups',0,'Can view groups.');
+    $self->_add_grant('manage_groups',0,'Can manage groups.');
     $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1);
 }
 
@@ -1254,6 +1271,8 @@ sub _enable_grants($self) {
         ,'shutdown',        'shutdown_all',    'shutdown_clone'
         ,'reboot',          'reboot_all',      'reboot_clones'
         ,'screenshot'
+        ,'start_many'
+        ,'view_groups',     'manage_groups'
         ,'start_limit',     'start_many'
     );
 
@@ -1312,6 +1331,7 @@ sub _set_url_isos($self, $new_url='http://localhost/iso/') {
     $sth->finish;
 
 }
+
 sub _upgrade_table {
     my $self = shift;
     my ($table, $field, $definition) = @_;
@@ -1455,6 +1475,8 @@ sub _create_tables {
 #    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
 
     my $driver = lc($CONNECTOR->dbh->{Driver}{Name});
+    $driver = 'mysql' if $driver =~ /mariadb/i;
+
     $DIR_SQL =~ s{(.*)/.*}{$1/$driver};
 
     opendir my $ls,$DIR_SQL or die "$! $DIR_SQL";
@@ -1473,7 +1495,7 @@ sub _sql_create_tables($self) {
     my %tables = (
         domain_displays => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
-            ,id_domain => 'integer NOT NULL references domains(id)'
+            ,id_domain => 'integer NOT NULL references domains(id) on delete cascade'
             ,port => 'char(5) DEFAULT NULL'
             ,ip => 'varchar(254)'
             ,listen_ip => 'varchar(254)'
@@ -1492,6 +1514,46 @@ sub _sql_create_tables($self) {
             , name => 'varchar(64) NOT NULL'
             , value => 'varchar(128) DEFAULT NULL'
         }
+        ,bookings => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,title => 'varchar(80)'
+            ,description => 'varchar(255)'
+            ,date_start => 'date not null'
+            ,date_end => 'date not null'
+            ,id_owner => 'int not null'
+            ,background_color => 'varchar(20)'
+            ,date_created => 'datetime DEFAULT CURRENT_TIMESTAMP'
+        }
+        ,booking_entries => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,title => 'varchar(80)'
+            ,description => 'varchar(255)'
+            ,id_booking => 'int not null references bookings(id) ON DELETE CASCADE'
+            ,time_start => 'time not null'
+            ,time_end => 'time not null'
+            ,date_booking => 'date'
+            ,visibility => "enum ('private','public') default 'public'"
+        }
+        ,booking_entry_ldap_groups => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_booking_entry
+                => 'int not null references booking_entries(id) ON DELETE CASCADE'
+            ,ldap_group => 'varchar(255) not null'
+        }
+        ,booking_entry_users => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_booking_entry
+                => 'int not null references booking_entries(id) ON DELETE CASCADE'
+            ,id_user => 'int not null references users(id) ON DELETE CASCADE'
+        }
+        ,booking_entry_bases=> {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_booking_entry
+                => 'int not null references booking_entries(id) ON DELETE CASCADE'
+            ,id_base => 'int not null references domains(id) ON DELETE CASCADE'
+        }
+
+
     );
     for my $table ( keys %tables ) {
         my $sth = $CONNECTOR->dbh->table_info('%',undef,$table,'TABLE');
@@ -1590,6 +1652,16 @@ sub _sql_insert_defaults($self){
             }
             ,{
                 id_parent => $id_backend
+                ,name => 'time_zone'
+                ,value => _default_time_zone()
+            }
+            ,{
+                id_parent => $id_backend
+                ,name => 'bookings'
+                ,value => 0
+            }
+            ,{
+                id_parent => $id_backend
                 ,name => 'debug'
                 ,value => 0
             }
@@ -1623,6 +1695,26 @@ sub _sql_insert_defaults($self){
     }
 }
 
+sub _default_time_zone() {
+    return $ENV{TZ} if exists $ENV{TZ};
+    my $timedatectl = `which timedatectl`;
+    chomp $timedatectl;
+    if (!$timedatectl) {
+        warn "Warning: No time zone found, checked TZ, missing timedatectl";
+        return 'UTC';
+    }
+    my @cmd = ( $timedatectl, '-p', 'Timezone','show');
+    my ($in, $out, $err);
+    run3(\@cmd,\$in,\$out,\$err);
+    my ($tz) = $out =~ /=(.*)/;
+    chomp $out;
+    if (!$tz) {
+        warn "Warning: No timezone found in @cmd\n$out";
+        return 'UTC'
+    }
+    return $tz;
+}
+
 sub _sql_insert_values($self, $table, $entry) {
     my $sql = "INSERT INTO $table "
     ."( "
@@ -1638,11 +1730,21 @@ sub _sql_insert_values($self, $table, $entry) {
 }
 
 sub _port_definition($driver, $definition0){
-    return $definition0 if $driver eq 'mysql';
+    return $definition0 if $driver =~ /mysql|mariadb/i;
     if ($driver eq 'sqlite') {
         $definition0 =~ s/(.*) AUTO_INCREMENT$/$1 AUTOINCREMENT/i;
         return $definition0 if $definition0 =~ /^(int|integer|char|varchar) /i;
+
+        if ($definition0 =~ /^enum /) {
+            my ($default) = $definition0 =~ / (default.*)/i;
+            $default = '' if !defined $default;
+
+            my @found = $definition0 =~ /'(.*?)'/g;
+            my ($size) = sort map { length($_) } @found;
+            return " varchar($size) $default";
+        }
     }
+    return $definition0;
 }
 
 sub _clean_iso_mini {
@@ -1723,7 +1825,6 @@ sub _upgrade_tables {
     #$self->_upgrade_table('domains','display_file','text DEFAULT NULL');
     $self->_upgrade_table('domains','info','varchar(255) DEFAULT NULL');
     $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
-    $self->_upgrade_table('domains','id_vm','int default null');
     $self->_upgrade_table('domains','volatile_clones','int NOT NULL default 0');
     $self->_upgrade_table('domains','comment',"varchar(80) DEFAULT ''");
 
@@ -1814,6 +1915,8 @@ sub _connect_dbh {
                         , PrintError=> 0 });
             $con->dbh();
         };
+        $con->dbh->do("PRAGMA foreign_keys = ON") if $driver =~ /sqlite/i;
+
         return $con if $con && !$@;
         sleep 1;
         warn "Try $try $@\n";
@@ -1993,7 +2096,7 @@ sub _connect_vm {
 sub _create_vm_lxc {
     my $self = shift;
 
-    return;
+    return ;
 }
 
 sub _create_vm_void {
@@ -2631,6 +2734,7 @@ sub process_requests {
         next if $duplicated{$req->command.":$domain"}++;
         push @reqs,($req);
     }
+    $sth->finish;
 
     for my $req (sort { $a->priority <=> $b->priority } @reqs) {
         next if $req eq 'refresh_vms' && scalar@reqs > 2;
@@ -2652,7 +2756,6 @@ sub process_requests {
             #        sleep 1 if $DEBUG;
 
     }
-    $sth->finish;
 
     $self->_timeout_requests();
 }
@@ -4702,6 +4805,38 @@ sub import_domain {
 sub _cmd_enforce_limits($self, $request=undef) {
     _enforce_limits_active($self, $request);
     $self->_shutdown_disconnected();
+    $self->_shutdown_bookings() if $self->setting('/backend/bookings');
+}
+
+sub _shutdown_bookings($self) {
+    my @bookings = Ravada::Booking::bookings();
+    return if !scalar(@bookings);
+
+
+    my @domains = $self->list_domains_data(status => 'active');
+    for my $dom ( @domains ) {
+        next if $dom->{autostart};
+        next if $self->_user_is_admin($dom->{id_owner});
+
+        if ( Ravada::Booking::user_allowed($dom->{id_owner}, $dom->{id_base}) ) {
+            # warn "\tuser $dom->{id_owner} allowed to start clones from $dom->{id_base}";
+            next;
+        }
+
+        my $user = Ravada::Auth::SQL->search_by_id($dom->{id_owner});
+        $user->send_message("The server is booked. Shutting down ".$dom->{name});
+        Ravada::Request->shutdown_domain(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $dom->{id}
+        );
+    }
+}
+
+sub _user_is_admin($self, $id_user) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT is_admin FROM users where id=? ");
+    $sth->execute($id_user);
+    my ($is_admin) = $sth->fetchrow;
+    return $is_admin;
 }
 
 sub _enforce_limits_active($self, $request) {
@@ -4894,31 +5029,8 @@ Returns the value of a configuration setting
 
 =cut
 
-sub setting($self, $name, $new_value=undef) {
-    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,value "
-        ." FROM settings "
-        ." WHERE id_parent=? AND name=?"
-    );
-    my ($id, $value);
-    my $id_parent = 0;
-    for my $item (split m{/},$name) {
-        next if !$item;
-        $sth->execute($id_parent, $item);
-        ($id, $value) = $sth->fetchrow;
-        die "Error: I can-t find setting $item inside id_parent: $id_parent"
-        if !$id;
-
-        $id_parent = $id;
-    }
-    if (defined $new_value && $new_value ne $value ) {
-        $sth = $CONNECTOR->dbh->prepare(
-            "UPDATE settings set value=? WHERE id=?"
-        );
-        $sth->execute($new_value , $id);
-        return $new_value;
-    }
-    return $value;
+sub setting {
+    return Ravada::Front::setting(@_);
 }
 
 sub DESTROY($self) {

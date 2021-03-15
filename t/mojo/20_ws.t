@@ -3,6 +3,7 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use DateTime;
 use Mojo::JSON 'decode_json';
 use Test::More;
 use Test::Mojo;
@@ -19,6 +20,8 @@ my $USERNAME;
 my $PASSWORD = "$$ $$";
 
 my $USER;
+
+my $TZ;
 
 ########################################################################################
 
@@ -103,8 +106,10 @@ sub test_bases($t, $bases) {
 
 sub _login_non_admin($t) {
     my $user_name = base_domain_name().".doe";
-    remove_old_user($user_name);
-    $USER = create_user($user_name, $$);
+    if (! $USER ) {
+        remove_old_user($user_name);
+        $USER = create_user($user_name, $$);
+    }
     mojo_login($t, $user_name,$$);
 }
 
@@ -138,6 +143,7 @@ sub test_list_machines_non_admin($t, $bases) {
 
     @list_machines = list_machines($t);
     is(scalar(@list_machines),1) or exit;
+    user_admin->revoke($USER,'shutdown_clones');
 }
 
 sub test_bases_access($t,$bases) {
@@ -171,19 +177,161 @@ sub test_bases_access($t,$bases) {
     for (@$bases) { $_->is_public(0) };
 }
 
+sub _monday() {
+    my $now = DateTime->from_epoch( epoch => time() , time_zone => $TZ );
+
+    return $now->add( days => 1-$now->day_of_week);
+
+}
+
+sub _now() {
+    return DateTime->from_epoch( epoch => time() , time_zone => $TZ )
+}
+
+sub _wait_tomorrow() {
+    for (;;) {
+        my $now = _now();
+        if ( $now->hour == 23 && $now->minute > 57 ) {
+            diag("Waiting for 00:00 ".$now);
+            sleep 1;
+        } else {
+            return;
+        }
+    }
+}
+
+sub test_bookings($t) {
+
+    _wait_tomorrow();
+
+    my $today = _now();
+    my $dow_today = $today->day_of_week;
+    my $tomorrow= _now()->add(days => 1);
+    my $dow_tomorrow = $tomorrow->day_of_week;
+    my $now = _now();
+
+    my $time_start = _now()->add(minutes => 1);
+    my $time_end = _now()->add(minutes => 2);
+
+    my $booking_title = new_domain_name();
+    my $new_day_of_week = "$dow_today$dow_tomorrow";
+
+    my %args_booking  = (
+        date_start => $today->ymd
+        ,date_end => $today->add( days => 7 )->ymd
+        ,time_start => $time_start->hms
+        ,time_end => $time_end->hms
+        ,day_of_week => $new_day_of_week
+        ,title => $booking_title
+        ,users => $USERNAME
+    );
+
+    test_create_booking_non_admin($t, %args_booking);
+
+    $t->post_ok('/v1/bookings' => json => \%args_booking);
+    like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body->to_string;
+    my $response = $t->tx->res->json();
+
+    my $booking = Ravada::Booking->search( title => $booking_title);
+    ok($booking,"Expecting booking titled '$booking_title'");
+    is(scalar($booking->entries),3,"Expecting 3 entries $new_day_of_week "
+        .Dumper([map { $_->_data('date_booking') } $booking->entries])) or exit;
+
+    $t->websocket_ok("/ws/subscribe")->send_ok("list_next_bookings_today")
+    ->message_ok->finish_ok;
+
+    if ( !$t->message || !$t->message->[1] ) {
+        ok(0,"Wrong webservice message for list next bookings today");
+        $booking->remove() if $booking;
+        return;
+    }
+
+    my @bookings = @{decode_json($t->message->[1])};
+
+    my ($found) = grep { $_->{title} eq $booking_title } @bookings;
+    ok($found, "Expecting $booking_title in ".Dumper(''._now()->hms,\@bookings)) or exit;
+
+    is($found->{user_allowed},1);
+
+    my ($booking_entry) = $booking->entries();
+    test_remove_booking_entry_non_admin($t, $booking_entry->id);
+    test_remove_booking_non_admin($t, $booking_entry->id);
+
+    my $url = "/v1/booking_entry/".$booking_entry->id."/current";
+    $t->delete_ok($url);
+    is($t->tx->res->code(), 200 ) or die $url;
+
+    my ($booking_entry_removed) = grep { $_->id == $booking_entry->id } $booking->entries();
+    ok(!$booking_entry_removed,"Expecting entry removed ".$booking_entry->id);
+
+    ($booking_entry) = $booking->entries();
+    $url = "/v1/booking_entry/".$booking_entry->id."/all";
+    $t->delete_ok($url);
+    is($t->tx->res->code(), 200 ) or die $url;
+
+    my $booking_removed;
+    eval { $booking_removed = Ravada::Booking->new(id => $booking->id)};
+    like($@,qr/not found/);
+    ok(!$booking_removed, "Expecting booking removed ".$booking->id)
+        or die Dumper($booking_removed);
+
+    $booking->remove() if $booking_removed;
+
+}
+
+sub test_create_booking_non_admin($t, %args_booking) {
+    _login_non_admin($t);
+
+    $t->post_ok('/v1/bookings' => json => \%args_booking);
+
+    is($t->tx->res->code(), 403) or exit;
+    like($t->tx->res->body, qr /Access denied/);
+    mojo_login($t, $USERNAME, $PASSWORD);
+}
+
+sub test_remove_booking_non_admin($t, $id) {
+    _login_non_admin($t);
+
+    $t->delete_ok("/v1/booking_entry/$id/current");
+    is($t->tx->res->code(), 403) or confess;
+    like($t->tx->res->body, qr /Access denied/);
+    mojo_login($t, $USERNAME, $PASSWORD);
+}
+
+sub test_remove_booking_entry_non_admin($t, $id) {
+    _login_non_admin($t);
+
+    $t->delete_ok("/v1/booking_entry/$id/current");
+    is($t->tx->res->code(), 403) or exit;
+    like($t->tx->res->body, qr /Access denied/);
+    mojo_login($t, $USERNAME, $PASSWORD);
+
+}
+
 ########################################################################################
 
 init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
-like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
+unlike($connector->{driver} , qr/sqlite/i) or BAIL_OUT;
 
 if (!rvd_front->ping_backend()) {
     diag("SKIPPING: Backend not available");
     done_testing();
     exit;
 }
-remove_old_domains_req(0);
+
+$TZ = DateTime::TimeZone->new(name => rvd_front->settings_global()->{backend}->{time_zone}->{value});
+
+remove_old_domains_req(0); # 0=do not wait for them
 mojo_clean();
+
+my @bookings = Ravada::Booking::bookings_range(
+        time_start => _now()->add(seconds => 1)->hms
+);
+
+warn "Warning: bookings scheduled for today may spoil tests ".Dumper(\@bookings)
+if @bookings;
+
 
 $USERNAME = user_admin->name;
 my $t = mojo_init();
@@ -193,7 +341,10 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     diag("Testing Web Services in $vm_name");
 
     mojo_login($t, $USERNAME, $PASSWORD);
+    test_bookings($t);
     my @bases = _create_bases($t, $vm_name);
+
+
     is(list_machines_user($t), 0);
     is(list_machines($t), scalar(@bases)) or exit;
 
@@ -212,5 +363,6 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     }
 }
 mojo_clean($t);
+remove_old_domains_req(0); # 0=do not wait for them
 
 done_testing();

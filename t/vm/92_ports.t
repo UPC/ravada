@@ -832,12 +832,12 @@ sub test_clone_exports_add_ports($vm) {
 }
 
 sub _wait_ip2($vm_name, $domain) {
-    for ( 1 .. 22 ) {
+    for ( 1 .. 30 ) {
         return $domain->ip if $domain->ip;
         diag("Waiting for ".$domain->name. " ip") if !(time % 10);
         sleep 1;
     }
-    confess;
+    confess "Error : no ip for ".$domain->name;
 }
 
 sub _wait_ip {

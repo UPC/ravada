@@ -62,7 +62,6 @@
             </table>
             </div><!--ports -->
             </div><!-- domain is active -->
-        </div><!-- show=domain -->
         <div>
             <div class="panel-body">
                 <div ng-show="request.error && !domain.is_active">{{request.error}}</div>
@@ -71,8 +70,8 @@
                 </div>
             </div>
         </div>
-
         </div> <! -- show=domain -->
+
     </div><!-- jumbotron -->
 </div><!-- container -->
     %= include 'bootstrap/scripts'

@@ -37,9 +37,6 @@ our %CHANGE_HARDWARE_SUB = (
     ,memory => \&_change_hardware_memory
 );
 
-our $CONVERT = `which convert`;
-chomp $CONVERT;
-
 our $FREE_PORT = 5900;
 #######################################3
 
@@ -658,7 +655,7 @@ sub _file_screenshot {
     return $self->_config_dir."/".$self->name.".png";
 }
 
-sub can_screenshot { return $CONVERT; }
+sub can_screenshot { return 1 }
 
 sub get_info {
     my $self = shift;

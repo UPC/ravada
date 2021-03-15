@@ -193,11 +193,13 @@ sub search_user {
     my $ldap = (delete $args{ldap} or _init_ldap_admin());
     my $base = (delete $args{base} or _dc_base());
     my $typesonly= (delete $args{typesonly} or 0);
+    my $escape_username = 1;
+    $escape_username = delete $args{escape_username} if exists $args{escape_username};
 
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
     confess "ERROR: I can't connect to LDAP " if!$ldap;
 
-    $username = escape_filter_value($username);
+    $username = escape_filter_value($username) if $escape_username;
     $username =~ s/ /\\ /g;
 
     my $filter = "($field=$username)";
@@ -250,6 +252,9 @@ Add a group to the LDAP
 sub add_group {
     my $name = shift;
     my $base = (shift or _dc_base());
+    my $class = ( shift or [
+            'groupOfUniqueNames','nsMemberOf','posixGroup','top'
+        ]);
 
     $name = escape_filter_value($name);
 
@@ -257,15 +262,30 @@ sub add_group {
         cn => $name
         ,dn => "cn=$name,ou=groups,$base"
         , attrs => [ cn=>$name
-                    ,objectClass => ['groupOfUniqueNames','top']
+                    ,objectClass => $class
                     ,ou => 'Groups'
                     ,description => "Group for $name"
+                    ,gidNumber => _search_new_gid()
           ]
     );
     if ($mesg->code) {
-        die "Error afegint $name ".$mesg->error;
+        die "Error creating group $name : ".$mesg->error."\n";
     }
 
+}
+
+sub _search_new_gid() {
+    my %gid;
+    for my $group (  search_group( name => '*' ) ) {
+        my $gid_number = $group->get_value('gidNumber');
+        next if !$gid_number;
+        $gid{$gid_number}++;
+    }
+    my $new_gid = 100;
+    for (;;) {
+        return $new_gid if !$gid{$new_gid};
+        $new_gid++;
+    }
 }
 
 =head2 remove_group
@@ -301,16 +321,13 @@ sub remove_group {
 sub search_group {
     my %args = @_;
 
-    my $name = delete $args{name} or confess "Missing group name";
+    my $name = delete $args{name};
     my $base = ( delete $args{base} or "ou=groups,"._dc_base() );
     my $ldap = ( delete $args{ldap} or _init_ldap_admin());
     my $retry =( delete $args{retry} or 0);
 
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
     confess "ERROR: I can't connect to LDAP " if!$ldap;
-
-    $name = escape_filter_value($name);
-
 
     my $mesg = $ldap ->search (
         filter => "cn=$name"
@@ -332,7 +349,8 @@ sub search_group {
     }
     my @entries = $mesg->entries;
 
-    return $entries[0]
+    return @entries if wantarray;
+    return $entries[0];
 }
 
 =head2 add_to_group

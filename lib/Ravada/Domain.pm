@@ -24,6 +24,7 @@ use Time::Piece;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
+use Ravada::Booking;
 use Ravada::Domain::Driver;
 use Ravada::Utils;
 
@@ -399,23 +400,47 @@ sub _start_preconditions{
 
     my $request;
     my $id_vm;
+    my $user;
     if (scalar @_ %2 ) {
         my @args = @_;
         shift @args;
         my %args = @args;
-        my $user = delete $args{user};
+        $user = delete $args{user};
         my $remote_ip = delete $args{remote_ip};
         $request = delete $args{request} if exists $args{request};
         $id_vm = delete $args{id_vm};
 
         confess "ERROR: Unknown argument ".join("," , sort keys %args)
             ."\n\tknown: remote_ip, user"   if keys %args;
-        _allow_manage_args(@_);
     } else {
-        _allow_manage(@_);
+        ($user) = $_[1];
+    }
+    $self->_allow_manage($user);
+    if ( Ravada->setting('/backend/bookings') && !$self->allowed_booking( $user ) ) {
+        my @bookings = Ravada::Booking::bookings(date => DateTime->now()->ymd
+            ,time => DateTime->now()->hms);
+        confess "Error: resource booked ".Dumper(\@bookings);
     }
     #_check_used_memory(@_);
     $self->status('starting');
+}
+
+=head2 allowed_booking
+
+Returns true if an user is allowed in a booking for this virtual machine
+or its base. Returns false otherwise.
+
+   $machine->allowed_booking($user);
+
+=cut
+
+
+sub allowed_booking($self, $user) {
+    my $id_base = $self->id;
+    if (!$self->is_base) {
+        $id_base = $self->_data('id_base') or return 1;
+    }
+    return Ravada::Booking::user_allowed($user, $id_base);
 }
 
 sub _start_checks($self, @args) {

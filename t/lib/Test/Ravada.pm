@@ -151,7 +151,7 @@ sub user_admin {
     };
     if ($@ && $@ =~ /Login failed/ ) {
         $login = Ravada::Auth::SQL->new(name => $admin_name);
-        $login->remove();
+        $login->remove() if $login->id;
         $login = undef;
     } elsif ($@) {
         die $@;
@@ -332,7 +332,7 @@ sub rvd_front($config=undef) {
     return $RVD_FRONT;
 }
 
-sub init($config=undef, $sqlite = 1) {
+sub init($config=undef, $sqlite = 1 , $flush=0) {
 
     if ($config && ! ref($config) && $config =~ /[A-Z][a-z]+$/) {
         $config = { vm => [ $config ] };
@@ -349,11 +349,14 @@ sub init($config=undef, $sqlite = 1) {
     if ( $RVD_BACK && ref($RVD_BACK) ) {
         clean();
         # clean removes the temporary config file, so we dump it again
-        DumpFile($FILE_CONFIG_TMP, $config) if $config && ref($config);
+        if ( $config && ref($config) ) {
+            DumpFile($FILE_CONFIG_TMP, $config);
+            $config = $FILE_CONFIG_TMP;
+        }
     }
 
 
-    rvd_back($config, 0,$sqlite)  if !$RVD_BACK;
+    rvd_back($config, 0,$sqlite)  if !$RVD_BACK || $flush;
     if (!$sqlite) {
         $CONNECTOR = $RVD_BACK->connector;
     } else {
@@ -367,10 +370,6 @@ sub init($config=undef, $sqlite = 1) {
     $Ravada::VM::KVM::VERIFY_ISO = 0;
     $Ravada::VM::MIN_DISK_MB = 1;
 
-    my $file_fp = Ravada::Domain::Void::_file_free_port();
-    open my $fh,">",$file_fp or die "$! $file_fp";
-    print $fh "5900";
-    close $fh;
 }
 
 sub _load_remote_config() {
@@ -646,7 +645,16 @@ sub mojo_init() {
     return $t;
 }
 
+sub remove_old_bookings() {
+    my $sth = connector()->dbh->prepare("SELECT id FROM bookings WHERE title like ? ");
+    $sth->execute(base_domain_name().'%');
+    while (my ($id) = $sth->fetchrow) {
+        Ravada::Booking->new(id => $id)->remove();
+    }
+}
+
 sub mojo_clean($wait=1) {
+    remove_old_bookings();
     _remove_old_entries('vms');
     _remove_old_entries('networks');
     return remove_old_domains_req($wait);
@@ -840,10 +848,11 @@ sub create_user {
     return $user;
 }
 
-sub create_ldap_user($name, $password) {
+sub create_ldap_user($name, $password, $keep=0) {
 
     if ( Ravada::Auth::LDAP::search_user($name) ) {
-        diag("Removing $name");
+        return if $keep;
+        #        diag("Removing $name");
         Ravada::Auth::LDAP::remove_user($name)  
     }
 
@@ -866,6 +875,7 @@ sub create_ldap_user($name, $password) {
     push @USERS_LDAP,($name);
 
     my @user = Ravada::Auth::LDAP::search_user($name);
+    #    diag("Adding $name to ldap");
     return $user[0];
 }
 
@@ -915,7 +925,7 @@ sub wait_request {
     my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms','set_time','rsync_back', 'cleanup', 'screenshot'] );
     $skip = [ $skip ] if !ref($skip);
     my %skip = map { $_ => 1 } @$skip;
-    %skip = ( enforce_limits => 1 ) if !keys %skip;
+    %skip = ( enforce_limits => 1, cleanup => 1 ) if !keys %skip;
 
     my $check_error = delete $args{check_error};
     $check_error = 1 if !defined $check_error;
@@ -1157,6 +1167,8 @@ sub clean {
     _clean_db();
     _clean_file_config();
     shutdown_nodes();
+
+    _check_leftovers();
 }
 
 sub _clean_db {
@@ -1913,7 +1925,7 @@ sub connector {
                         , PrintError => 0
                         , Callbacks  => $_CONNECTED_CALLBACK,
                 });
-
+    $connector->dbh->do("PRAGMA foreign_keys = ON");
     _create_db_tables($connector);
 
     $CONNECTOR = $connector;

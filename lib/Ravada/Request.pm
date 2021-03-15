@@ -17,6 +17,7 @@ use Hash::Util;
 use Time::Piece;
 use Ravada;
 use Ravada::Front;
+use Ravada::Utils;
 
 use vars qw($AUTOLOAD);
 
@@ -727,35 +728,7 @@ sub _new_request {
 }
 
 sub _last_insert_id {
-    my $driver = $$CONNECTOR->dbh->{Driver}->{Name};
-
-    if ( $driver =~ /sqlite/i ) {
-        return _last_insert_id_sqlite(@_);
-    } elsif ( $driver =~ /mysql/i ) {
-        return _last_insert_id_mysql(@_);
-    } else {
-        confess "I don't know how to get last_insert_id for $driver";
-    }
-}
-
-sub _last_insert_id_mysql {
-    my $self = shift;
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT last_insert_id()");
-    $sth->execute;
-    my ($id) = $sth->fetchrow;
-    $sth->finish;
-    return $id;
-
-}
-
-sub _last_insert_id_sqlite {
-    my $self = shift;
-
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT last_insert_rowid()");
-    $sth->execute;
-    my ($id) = $sth->fetchrow;
-    $sth->finish;
-    return $id;
+    return Ravada::Utils::last_insert_id($$CONNECTOR->dbh);
 }
 
 =head2 status
