@@ -545,10 +545,9 @@
             $http.get("/machine/public/"+machineId+"/"+value);
           };
           $scope.set_base= function(vmId,machineId, value) {
+            var url = 'set_base_vm';
             if (value == 0 || !value) {
                 url = 'remove_base_vm';
-            } else {
-                url = 'set_base_vm';
             }
             $http.get("/machine/"+url+"/" +vmId+ "/" +machineId+".json")
               .then(function(response) {
