@@ -9,7 +9,7 @@
     </p>
 
     <table border="1" bordercolor="darkgray" cellpadding="5">
-    <tr ng-repeat="booking in bookings_today" border="1">
+    <tr ng-repeat="booking in bookings_today">
         <th align="right">
         {{booking.title}}
         </th>
