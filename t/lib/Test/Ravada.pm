@@ -139,6 +139,11 @@ my ($MOJO_USER, $MOJO_PASSWORD);
 my $BASE_NAME= "zz-test-base-alpine";
 my $FILE_CONFIG_QEMU = "/etc/libvirt/qemu.conf";
 
+my @FLUSH_RULES=(
+    ["-t","nat","-F","DOCKER"]
+    ,["-t","nat","-F","POSTROUTING"]
+);
+
 sub user_admin {
 
     return $USER_ADMIN if $USER_ADMIN;
@@ -1422,6 +1427,10 @@ sub flush_rules_node($node) {
     is($err,'');
     ($out, $err) = $node->run_command("iptables","-X", $CHAIN);
     is($err,'') or die `iptables-save`;
+    for my $rule (@FLUSH_RULES) {
+        ($out, $err) = $node->run_command("iptables",@$rule);
+        like($err,qr(^$|chain/target/match by that name));
+    }
 
     _flush_forward($node);
 }
@@ -1458,6 +1467,10 @@ sub flush_rules {
     run3(["iptables","-X", $CHAIN], \$in, \$out, \$err);
     like($err,qr(^$|chain/target/match by that name));
 
+    for my $rule (@FLUSH_RULES) {
+        run3(["iptables",@$rule], \$in, \$out, \$err);
+        like($err,qr(^$|chain/target/match by that name));
+    }
     _flush_forward();
 }
 
