@@ -17,6 +17,9 @@ my $DIR_SHARED = "/home2/pool_shared";
 
 init();
 
+my $BASE_NAME = "zz-test-base-alpine";
+my $BASE;
+
 #################################################################################
 
 sub test_shared($vm, $node) {
@@ -97,6 +100,115 @@ sub test_is_shared($vm, $node) {
     is($row->{is_shared},1) or die Dumper($row);
 }
 
+sub _add_disk($domain) {
+    my $req = Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name=> 'disk'
+        ,data => { size => 512 * 1024 }
+    );
+    wait_request(debug => 1);
+    is($req->error,'');
+}
+
+sub _change_ram($domain) {
+
+    my $mem = $domain->info(user_admin)->{memory};
+    my $new_mem = int($mem * 0.9 ) - 1;
+
+    my $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware => 'memory'
+        ,data => {memory => $new_mem }
+    );
+    wait_request(debug => 1);
+    is($req->error,'');
+    return $new_mem;
+}
+
+sub test_change_ram($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
+    $base->spinoff();
+
+    my $domain = $base;
+    if ($prepare_base) {
+        $base->prepare_base(user_admin);
+        $base->set_base_vm(vm => $node, user => user_admin);
+        $domain = $base->clone(name => new_domain_name, user => user_admin);
+    }
+    req_migrate($node, $domain, $start) if $migrate;
+
+    my $new_mem = _change_ram($domain);
+
+    my $domain_local = $vm->search_domain($domain->name);
+    is($domain_local->_vm->id,$vm->id);
+    my $mem2 = $domain_local->info(user_admin)->{memory};
+    is($mem2, $new_mem);
+
+    req_migrate($node, $domain, 1);
+    $domain = Ravada::Domain->open($domain->id);
+    $mem2 = $domain->info(user_admin)->{memory};
+    is($mem2, $new_mem);
+
+    $domain->remove(user_admin);
+
+}
+
+sub test_add_disk($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
+    $base->spinoff();
+
+    my $domain = $base;
+    if ($prepare_base) {
+        $base->prepare_base(user_admin);
+        $base->set_base_vm(vm => $node, user => user_admin);
+        $domain = $base->clone(name => new_domain_name, user => user_admin);
+    }
+    my $n = scalar($domain->list_volumes);
+    req_migrate($node, $domain, $start) if $migrate;
+
+    _add_disk($domain);
+
+    my $domain_local = $vm->search_domain($domain->name);
+    is($domain_local->_vm->id,$vm->id);
+    is(scalar($domain_local->list_volume),$n+1);
+
+    req_migrate($node, $domain, 1);
+    $domain = Ravada::Domain->open($domain->id);
+    is(scalar($domain->list_volume),$n+1);
+
+    $domain->remove(user_admin);
+
+}
+
+
+sub req_migrate($node, $domain, $start=0) {
+   my $req = Ravada::Request->migrate(
+        id_domain => $domain->id
+        ,uid => user_admin->id
+        ,shutdown => 1
+        ,shutdown_timeout => 30
+        ,start => 1
+        ,id_node => $node->id
+    );
+    wait_request();
+    is($req->status,'done');
+    is($req->error,'');
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    is($domain2->_vm->id,$node->id);
+}
+
+sub import_base($vm) {
+    if ($vm->type eq 'KVM') {
+        $BASE = import_domain($vm->type, $BASE_NAME, 1);
+        confess "Error: domain $BASE_NAME is not base" unless $BASE->is_base;
+    } else {
+        $BASE = create_domain($vm);
+    }
+}
+
 #################################################################################
 
 clean();
@@ -147,9 +259,19 @@ the file "
             diag($msg);
             skip($msg,10);
         }
+        import_base($vm);
 
+        for my $start ( 0,1 ) {
+            for my $prepare_base ( 0,1 ) {
+                for my $migrate( 0,1 ) {
+                    test_change_ram($vm,$node, $start, $prepare_base, $migrate);
+                    test_add_disk($vm,$node, $start, $prepare_base, $migrate);
+                }
+            }
+        }
         test_is_shared($vm, $node);
         test_shared($vm, $node);
+
         NEXT:
         clean_remote_node($node);
         remove_node($node);
