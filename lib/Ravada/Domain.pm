@@ -2192,18 +2192,18 @@ sub _do_remove_base($self, $user) {
     my $vm_local = $self->_vm->new( host => 'localhost' );
     for my $vol ($self->list_volumes_info) {
         next if !$vol->file || $vol->file =~ /\.iso$/;
+        my ($dir) = $vol->file =~ m{(.*)/};
+        next if !$self->is_local && !$self->_vm->shared_storage($vm_local, $dir);
         my $backing_file = $vol->backing_file;
         next if !$backing_file;
         #        confess "Error: no backing file for ".$vol->file if !$backing_file;
         if (!$self->is_local) {
             my ($dir) = $backing_file =~ m{(.*/)};
-            if ( $self->_vm->shared_storage($vm_local, $dir) ) {
-                next;
-            }
+            next if $self->_vm->shared_storage($vm_local, $dir);
             $self->_vm->remove_file($vol->file);
             $self->_vm->remove_file($backing_file);
             $self->_vm->refresh_storage_pools();
-            return ;
+            next;
         }
         $vol->block_commit();
         unlink $vol->file or die "$! ".$vol->file;
@@ -2220,6 +2220,8 @@ sub _do_remove_base($self, $user) {
     for my $file ($self->list_files_base) {
         next if $file =~ /\.iso$/i;
         next if ! -e $file;
+        my ($dir) = $file =~ m{(.*/)};
+        next if $self->_vm->shared_storage($vm_local, $dir);
         unlink $file or die "$! unlinking $file";
     }
 
