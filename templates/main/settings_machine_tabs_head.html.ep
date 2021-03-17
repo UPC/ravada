@@ -1,9 +1,9 @@
     <div class="nav flex-column nav-pills bg-light" id="v-pills-tab" role="tablist" aria-orientation="vertical">
     %   if (($USER->can_change_settings($domain->id)) && !$domain->is_base) {
-        <a class="nav-link active" id="v-pills-actions-tab" href="#v-pills-actions" data-toggle="pill" role="tab" aria-controls="v-pills-actions" aria-selected="true"><%=l 'Actions' %></a>
+        <a class="nav-link <%= $active_actions %>" id="v-pills-actions-tab" href="#v-pills-actions" data-toggle="pill" role="tab" aria-controls="v-pills-actions" aria-selected="true"><%=l 'Actions' %></a>
     %   }
     %   if ($USER->can_change_settings($domain->id)) {
-        <a class="nav-link" id="v-pills-description-tab" ng-click="refresh_machine()" href="#v-pills-description" data-toggle="pill" role="tab" aria-controls="v-pills-description" aria-selected="false"><%=l 'Description' %></a>
+        <a class="nav-link <%= $active_description %>" id="v-pills-description-tab" ng-click="refresh_machine()" href="#v-pills-description" data-toggle="pill" role="tab" aria-controls="v-pills-description" aria-selected="false"><%=l 'Description' %></a>
     %   }
     %   if ($USER->can_change_settings($domain->id)) {
         <a class="nav-link" id="v-pills-rename-tab" ng-click="refresh_machine()" href="#v-pills-rename" data-toggle="pill" role="tab" aria-controls="v-pills-rename" aria-selected="false"><%=l 'Rename' %></a>
@@ -20,7 +20,7 @@
     %   if ($USER->can_change_settings($domain->id) && !$domain->is_base) {
         <a class="nav-link" id="v-pills-screenshot-tab" ng-click="refresh_machine()" href="#v-pills-screenshot" data-toggle="pill" role="tab" aria-controls="v-pills-screenshot" aria-selected="false"><%=l 'Screenshot' %></a>
     %   }
-    %   if ($domain->drivers && $USER->can_change_settings($domain->id)) {
+    %   if ($domain->drivers && $USER->can_change_settings($domain->id) && $has_graphics_spice) {
         <a class="nav-link" id="v-pills-graphics-tab" ng-click="refresh_machine()" href="#v-pills-graphics" data-toggle="pill" role="tab" aria-controls="v-pills-graphics" aria-selected="false"><%=l 'Graphics' %></a>
     %   }
     %   if ($USER->is_admin) {
@@ -45,6 +45,7 @@
         <a class="nav-link" id="v-pills-pool-tab" ng-click="refresh_machine()" href="#v-pills-pool" data-toggle="pill" role="tab" aria-controls="v-pills-pool" aria-selected="false"
         ng-show="showmachine.is_base || showmachine.id_base"
         ><%=l 'Pool' %></a>
+
 %   }
     % if ( $monitoring && $USER->is_admin && $domain->is_active ) {
         <a class="nav-link" id="v-pills-monitoring-tab" ng-click="refresh_machine()" href="#v-pills-monitoring" data-toggle="pill" role="tab" aria-controls="v-pills-monitoring" aria-selected="false"><%=l 'System overview' %></a>

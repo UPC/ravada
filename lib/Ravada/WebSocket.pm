@@ -38,6 +38,9 @@ my %SUB = (
                    ,node_info => \&_get_node_info
                 ,ping_backend => \&_ping_backend
                      ,request => \&_request
+
+# bookings
+                 ,list_next_bookings_today => \&_list_next_bookings_today
 );
 
 our %TABLE_CHANNEL = (
@@ -49,6 +52,7 @@ our %TABLE_CHANNEL = (
 
 my $A_WHILE;
 my $LIST_MACHINES_FIRST_TIME = 1;
+my $TZ;
 ######################################################################
 
 
@@ -106,13 +110,18 @@ sub _list_nodes($rvd, $args) {
 }
 
 sub _request($rvd, $args) {
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login);
+
     my ($id_request) = $args->{channel} =~ m{/(.*)};
     my $req = Ravada::Request->open($id_request);
     my $command_text = $req->command;
     $command_text =~ s/_/ /g;
-    return {command => $req->command, command_text => $command_text
-            ,output => $req->output
-            ,status => $req->status, error => $req->error};
+
+    my $info = $req->info($user);
+    $info->{command_text} = $command_text;
+
+    return $info;
 }
 
 sub _list_machines($rvd, $args) {
@@ -198,7 +207,7 @@ sub _get_machine_info($rvd, $args) {
     my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
 
     my $info = $domain->info($user);
-    if ($info->{is_active} && !$info->{ip}) {
+    if ($info->{is_active} && ( !exists $info->{ip} || !$info->{ip})) {
        Ravada::Request->refresh_machine(id_domain => $info->{id}, uid => $user->id);
     }
 
@@ -276,6 +285,20 @@ sub _ping_backend($rvd, $args) {
     return 1;
 }
 
+sub _now {
+     return DateTime->from_epoch( epoch => time() , time_zone => $TZ )
+}
+
+sub _list_next_bookings_today($rvd, $args) {
+
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my @ret = Ravada::Booking::bookings_range(
+        time_start => _now()->add(seconds => 1)->hms
+        , show_user_allowed => $login
+    );
+    return \@ret;
+}
+
 sub _its_been_a_while($reset=0) {
     if ($reset) {
         $A_WHILE = 0;
@@ -299,7 +322,8 @@ sub _different_list($list1, $list2) {
 
 sub _different_hash($h1,$h2) {
     for my $key (keys %$h1) {
-        next if !defined $h1->{$key} && !defined $h2->{$key};
+        next if exists $h1->{$key} && exists $h2->{$key}
+        && !defined $h1->{$key} && !defined $h2->{$key};
         if (!exists $h2->{$key}
             || !defined $h1->{$key} && defined $h2->{$key}
             || defined $h1->{$key} && !defined $h2->{$key}
@@ -322,6 +346,11 @@ sub _different($var1, $var2) {
 
 sub BUILD {
     my $self = shift;
+
+    $TZ = DateTime::TimeZone->new(name => $self->ravada->settings_global()
+        ->{backend}->{time_zone}->{value})
+    if !defined $TZ;
+
     Mojo::IOLoop->recurring(1 => sub {
             for my $key ( keys %{$self->clients} ) {
                 my $ws_client = $self->clients->{$key}->{ws};

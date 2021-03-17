@@ -140,10 +140,16 @@ sub list_machines_user($self, $user, $access_data={}) {
     $sth->execute;
     $sth->bind_columns(\($id, $name, $is_public, $description, $screenshot));
 
+    my $bookings_enabled = $self->setting('/backend/bookings');
     my @list;
+
     while ( $sth->fetch ) {
         next if !$is_public && !$user->is_admin;
         next if !$user->allowed_access($id);
+
+        # check if enabled settings and this user not allowed
+        next if $bookings_enabled && !Ravada::Front::Domain->open($id)->allowed_booking($user);
+
         my $is_active = 0;
         my $clone = $self->search_clone(
             id_owner =>$user->id
@@ -218,29 +224,35 @@ sub list_machines($self, $user, @filter) {
     return [sort { $a->{name} cmp $b->{name} } values %uniq];
 }
 
-sub init_available_actions($user, $m) {
+sub _init_available_actions($user, $m) {
   eval { $m->{can_shutdown} = $user->can_shutdown($m->{id}) };
 
-  $m->{can_start} = 0;
-  $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+        $m->{can_start} = 0;
+        $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
 
-  $m->{can_view} = 0;
-  $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+        $m->{can_reboot} = $m->{can_shutdown} && $m->{can_start};
 
-  $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
-  eval {
-  $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
-  };
-  die $@ if $@ && $@ !~ /Unknown domain/;
+        $m->{can_view} = 0;
+        $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
 
-  $m->{can_hibernate} = 0;
-  $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id}) && !$m->{is_volatile};
+        $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
+        eval {
+        $m->{can_change_settings} = ( $user->can_change_settings($m->{id}) or 0);
+        };
+        #may have been deleted just now
+        next if $@ && $@ =~ /Unknown domain/;
+        die $@ if $@;
+
+        $m->{can_hibernate} = 0;
+        $m->{can_hibernate} = 1 if $user->can_shutdown($m->{id})
+        && !$m->{is_volatile};
+        warn $@ if $@;
 }
 
 sub _around_list_machines($orig, $self, $user, @filter) {
     my $machines = $self->$orig($user, @filter);
     for my $m (@$machines) {
-        init_available_actions($user, $m);
+        _init_available_actions($user, $m);
         $m->{id_base} = undef if !exists $m->{id_base};
         lock_hash(%$m);
     }
@@ -722,6 +734,14 @@ sub list_users($self,$name=undef) {
 }
 
 
+=head2 list_bases_network
+
+Returns a reference to a list to all the bases in a network
+
+    my $list = $rvd_front->list_bases_network($id_network);
+
+=cut
+
 sub list_bases_network($self, $id_network) {
     my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM networks where name = 'default'");
     $sth->execute;
@@ -1013,8 +1033,10 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'manage_pools'
                 ;
         next if ( $command eq 'force_shutdown'
+                || $command eq 'force_reboot'
                 || $command eq 'start'
                 || $command eq 'shutdown'
+                || $command eq 'reboot'
                 || $command eq 'hibernate'
                 )
                 && time - $epoch_date_changed > 5
@@ -1276,7 +1298,7 @@ sub list_network_interfaces($self, %args) {
     if  ( defined $timeout ) {
         $self->wait_request($req, $timeout);
     }
-    return [] if $req->status ne 'done';
+    return [] if $req->status ne 'done' || !length($req->output);
 
     my $interfaces = decode_json($req->output());
     $self->{$cache_key} = $interfaces;
@@ -1285,6 +1307,8 @@ sub list_network_interfaces($self, %args) {
 }
 
 sub _dbh {
+    $CONNECTOR = $Ravada::CONNECTOR if !defined $CONNECTOR;
+    confess if !defined $CONNECTOR;
     return $CONNECTOR->dbh;
 }
 
@@ -1318,6 +1342,46 @@ sub settings_global($self) {
     return $self->_get_settings();
 }
 
+sub setting($self, $name, $new_value=undef) {
+
+    confess "Error: wrong new value '$new_value' for $name"
+    if ref($new_value);
+
+    Ravada::Front->_check_features($name, $new_value);
+
+    my $sth = _dbh->prepare(
+        "SELECT id,value "
+        ." FROM settings "
+        ." WHERE id_parent=? AND name=?"
+    );
+    my ($id, $value);
+    my $id_parent = 0;
+    for my $item (split m{/},$name) {
+        next if !$item;
+        $sth->execute($id_parent, $item);
+        ($id, $value) = $sth->fetchrow;
+        confess "Error: I can't find setting $item inside id_parent: $id_parent"
+        if !$id;
+
+        $id_parent = $id;
+    }
+
+    if (defined $new_value && $new_value ne $value) {
+        my $sth_update = _dbh->prepare(
+            "UPDATE settings set value=? WHERE id=? "
+        );
+        $sth_update->execute($new_value,$id);
+        return $new_value;
+    }
+    return $value;
+}
+
+sub _check_features($self, $name, $new_value) {
+    confess "Error: LDAP required for bookings."
+    if $name eq '/backend/bookings' && $new_value && !$self->feature('ldap');
+
+}
+
 sub _settings_by_id($self) {
     my $orig_settings;
     my $sth = $self->_dbh->prepare("SELECT id,value FROM settings");
@@ -1328,13 +1392,25 @@ sub _settings_by_id($self) {
     return $orig_settings;
 }
 
+sub feature($self,$name=undef) {
+    if (!defined $name) {
+        my $feature;
+        for my $cur_name ('ldap') {
+            $feature->{$cur_name} = $self->feature($cur_name);
+        }
+        return $feature;
+    }
+    return 1 if exists $Ravada::CONFIG->{$name} && $Ravada::CONFIG->{$name};
+    return 0;
+}
+
 =head2 update_settings_global
 
 Updates the global settings
 
 =cut
 
-sub update_settings_global($self, $arg, $user, $orig_settings = $self->_settings_by_id) {
+sub update_settings_global($self, $arg, $user, $reload, $orig_settings = $self->_settings_by_id) {
     confess if !ref($arg);
     if (exists $arg->{frontend}
         && exists $arg->{frontend}->{maintenance}
@@ -1345,7 +1421,7 @@ sub update_settings_global($self, $arg, $user, $orig_settings = $self->_settings
     for my $field (sort keys %$arg) {
         if ( !exists $arg->{$field}->{id} ) {
             confess if !keys %{$arg->{$field}};
-            $self->update_settings_global($arg->{$field}, $user, $orig_settings);
+            $self->update_settings_global($arg->{$field}, $user, $reload, $orig_settings);
             next;
         }
         confess "Error: invalid field $field" if $field !~ /^\w+$/;
@@ -1354,6 +1430,7 @@ sub update_settings_global($self, $arg, $user, $orig_settings = $self->_settings
                     , $arg->{$field}->{id}
         );
         next if $orig_settings->{$id} eq $value;
+        $$reload++ if $field eq 'bookings';
         my $sth = $self->_dbh->prepare(
             "UPDATE settings set value=?"
             ." WHERE id=? "
@@ -1362,7 +1439,6 @@ sub update_settings_global($self, $arg, $user, $orig_settings = $self->_settings
 
         $user->send_message("Setting $field to $value");
     }
-
 }
 
 =head2 is_in_maintenance

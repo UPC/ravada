@@ -10,6 +10,7 @@ use YAML qw(DumpFile);
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use Mojo::File 'path';
+use Mojo::JSON qw(decode_json);
 use  Test::More;
 use XML::LibXML;
 use YAML qw(Load LoadFile Dump DumpFile);
@@ -72,12 +73,18 @@ create_domain
     mojo_login
     mojo_check_login
     mojo_request
+    mojo_request_url
+    mojo_request_url_post
 
     remove_old_user
 
     mangle_volume
     test_volume_contents
     test_volume_format
+
+    check_libvirt_tls
+
+    ping_backend
 
     end
 );
@@ -129,21 +136,27 @@ my %LOCKED_FH;
 
 my ($MOJO_USER, $MOJO_PASSWORD);
 
-my $BASE_NAME= "zz-test-base";
+my $BASE_NAME= "zz-test-base-alpine";
+my $FILE_CONFIG_QEMU = "/etc/libvirt/qemu.conf";
+
+my @FLUSH_RULES=(
+    ["-t","nat","-F","DOCKER"]
+    ,["-t","nat","-F","POSTROUTING"]
+);
 
 sub user_admin {
 
     return $USER_ADMIN if $USER_ADMIN;
 
     my $login;
-    my $admin_name = base_domain_name();
+    my $admin_name = base_domain_name()."-$$";
     my $admin_pass = "$$ $$";
     eval {
         $login = Ravada::Auth::SQL->new(name => $admin_name, password => $admin_pass );
     };
     if ($@ && $@ =~ /Login failed/ ) {
         $login = Ravada::Auth::SQL->new(name => $admin_name);
-        $login->remove();
+        $login->remove() if $login->id;
         $login = undef;
     } elsif ($@) {
         die $@;
@@ -188,6 +201,7 @@ sub vm_names {
 }
 
 sub import_domain($vm, $name=$BASE_NAME, $import_base=1) {
+    $vm = $vm->type if ref($vm);
     my $t0 = time;
     my $domain = $RVD_BACK->import_domain(
         vm => $vm
@@ -199,13 +213,12 @@ sub import_domain($vm, $name=$BASE_NAME, $import_base=1) {
     return $domain;
 }
 
-sub create_domain {
-    my $vm_name = shift;
-    my $user = (shift or $USER_ADMIN);
-    my $id_iso = (shift or 'Alpine');
-    my $swap = (shift or undef);
-
+sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine', $swap=undef) {
+    confess if !defined $vm_name;
     $vm_name = 'KVM' if $vm_name eq 'qemu';
+
+    $id_iso = 'Alpine' if !defined $id_iso;
+    $user = $USER_ADMIN if !defined $user;
 
     if ( $id_iso && $id_iso !~ /^\d+$/) {
         my $iso_name = $id_iso;
@@ -223,7 +236,6 @@ sub create_domain {
 
     confess "ERROR: Domains can only be created at localhost"
         if $vm->host ne 'localhost';
-    confess "Missing id_iso" if !defined $id_iso;
 
     my $name = new_domain_name();
 
@@ -241,7 +253,7 @@ sub create_domain {
                     , %arg_create
                     , active => 0
                     , memory => 512*1024
-                    , disk => 1024 * 1024 * 1024
+                    , disk => 1024 * 1024
            );
     };
     is('',''.$@);
@@ -325,7 +337,7 @@ sub rvd_front($config=undef) {
     return $RVD_FRONT;
 }
 
-sub init($config=undef, $sqlite = 1) {
+sub init($config=undef, $sqlite = 1 , $flush=0) {
 
     if ($config && ! ref($config) && $config =~ /[A-Z][a-z]+$/) {
         $config = { vm => [ $config ] };
@@ -342,11 +354,14 @@ sub init($config=undef, $sqlite = 1) {
     if ( $RVD_BACK && ref($RVD_BACK) ) {
         clean();
         # clean removes the temporary config file, so we dump it again
-        DumpFile($FILE_CONFIG_TMP, $config) if $config && ref($config);
+        if ( $config && ref($config) ) {
+            DumpFile($FILE_CONFIG_TMP, $config);
+            $config = $FILE_CONFIG_TMP;
+        }
     }
 
 
-    rvd_back($config, 0,$sqlite)  if !$RVD_BACK;
+    rvd_back($config, 0,$sqlite)  if !$RVD_BACK || $flush;
     if (!$sqlite) {
         $CONNECTOR = $RVD_BACK->connector;
     } else {
@@ -358,6 +373,8 @@ sub init($config=undef, $sqlite = 1) {
 
     rvd_front($config)  if !$RVD_FRONT;
     $Ravada::VM::KVM::VERIFY_ISO = 0;
+    $Ravada::VM::MIN_DISK_MB = 1;
+
 }
 
 sub _load_remote_config() {
@@ -465,7 +482,7 @@ sub remove_old_domains_req($wait=1) {
     }
 }
 
-sub remove_domain_and_clones_req($domain_data, $wait) {
+sub remove_domain_and_clones_req($domain_data, $wait=1) {
     my $domain;
     if (ref($domain_data) =~ /Ravada.*Domain/) {
         $domain = $domain_data;
@@ -633,7 +650,16 @@ sub mojo_init() {
     return $t;
 }
 
+sub remove_old_bookings() {
+    my $sth = connector()->dbh->prepare("SELECT id FROM bookings WHERE title like ? ");
+    $sth->execute(base_domain_name().'%');
+    while (my ($id) = $sth->fetchrow) {
+        Ravada::Booking->new(id => $id)->remove();
+    }
+}
+
 sub mojo_clean($wait=1) {
+    remove_old_bookings();
     _remove_old_entries('vms');
     _remove_old_entries('networks');
     return remove_old_domains_req($wait);
@@ -642,7 +668,6 @@ sub mojo_clean($wait=1) {
 sub mojo_check_login( $t, $user=$MOJO_USER , $pass=$MOJO_PASSWORD ) {
     $t->ua->get("/user.json");
     return if $t->tx->res->code =~ /^(101|200|302)$/;
-    warn $t->tx->res->code();
     mojo_login($t, $user,$pass);
 }
 
@@ -684,6 +709,44 @@ sub mojo_request($t, $req_name, $args) {
     my $response = $t->tx->res->json();
     ok(exists $response->{request}) or return;
     wait_request(background => 1);
+}
+
+sub mojo_request_url_post($t,$url, $json) {
+    $t->post_ok($url, json => $json);
+    like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body."\n".Dumper($url,$json);
+
+    _wait_mojo_request($t, $url);
+}
+
+sub mojo_request_url($t, $url) {
+    $t->get_ok($url)->status_is(200);
+    return if $t->tx->res->code != 200;
+
+    _wait_mojo_request($t, $url);
+}
+
+sub _wait_mojo_request($t, $url) {
+
+    my $body = $t->tx->res->body;
+    my $body_json;
+    eval { $body_json = decode_json($body)};
+    if ($@) {
+        warn "Error fetching $url $@";
+        return ;
+    }
+    if (!exists $body_json->{request} || !defined $body_json->{request}) {
+        warn "Error: missing request field after $url ".dumper($body_json);
+        return;
+    }
+    my $req = Ravada::Request->open($body_json->{request});
+    for ( 1 .. 120 ) {
+        last if $req->status eq 'done';
+        sleep 1;
+        diag("Waiting for request "
+            .$req->id." ".$req->command." ".$req->status." ".$req->error) if !($_ % 10);
+    }
+    is($req->status,'done');
+    is($req->error, '');
 }
 
 sub _activate_storage_pools($vm) {
@@ -790,10 +853,11 @@ sub create_user {
     return $user;
 }
 
-sub create_ldap_user($name, $password) {
+sub create_ldap_user($name, $password, $keep=0) {
 
     if ( Ravada::Auth::LDAP::search_user($name) ) {
-        diag("Removing $name");
+        return if $keep;
+        #        diag("Removing $name");
         Ravada::Auth::LDAP::remove_user($name)  
     }
 
@@ -816,6 +880,7 @@ sub create_ldap_user($name, $password) {
     push @USERS_LDAP,($name);
 
     my @user = Ravada::Auth::LDAP::search_user($name);
+    #    diag("Adding $name to ldap");
     return $user[0];
 }
 
@@ -865,7 +930,7 @@ sub wait_request {
     my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms','set_time','rsync_back', 'cleanup', 'screenshot'] );
     $skip = [ $skip ] if !ref($skip);
     my %skip = map { $_ => 1 } @$skip;
-    %skip = ( enforce_limits => 1 ) if !keys %skip;
+    %skip = ( enforce_limits => 1, cleanup => 1 ) if !keys %skip;
 
     my $check_error = delete $args{check_error};
     $check_error = 1 if !defined $check_error;
@@ -900,6 +965,7 @@ sub wait_request {
                     .$run_at
                     ." ".($req->error or ''))
                     if $debug && (time%5 == 0);
+                sleep 1 if $req->command eq 'open_exposed_ports';
                 $done_all = 0;
             } elsif (!$done{$req->id}) {
                 $t0 = time;
@@ -913,7 +979,13 @@ sub wait_request {
                         my $error = ($req->error or '');
                         next if $error =~ /waiting for processes/i;
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
-                            like($error,qr{^($|rsync done)});
+                            like($error,qr{^($|rsync done)}) or confess $req->command;
+                        } elsif($req->command eq 'refresh_machine_ports') {
+                            like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
+                        } elsif($req->command eq 'open_exposed_ports') {
+                            like($error,qr{^($|No ip in domain)});
+                        } elsif($req->command eq 'compact') {
+                            like($error,qr{^($|.*compacted)});
                         } else {
                             is($error,'') or confess $req->command;
                         }
@@ -950,6 +1022,7 @@ Sets scheduled requests time to now
 sub fast_forward_requests() {
     my $sth = $CONNECTOR->dbh->prepare("UPDATE requests "
         ." SET at_time=0 WHERE status = 'requested' AND at_time>0 "
+        ."    AND command <> 'open_exposed_ports'"
     );
     eval {
     $sth->execute();
@@ -1099,6 +1172,8 @@ sub clean {
     _clean_db();
     _clean_file_config();
     shutdown_nodes();
+
+    _check_leftovers();
 }
 
 sub _clean_db {
@@ -1106,13 +1181,20 @@ sub _clean_db {
     return if $connector->{driver} =~ /mysql/i;
 
     my $sth = $connector->dbh->prepare(
-        "DELETE FROM vms "
+        "SELECT id FROM domains WHERE name like ?"
     );
-    $sth->execute;
+    $sth->execute(base_domain_name().'%');
+    while (my ($id) = $sth->fetchrow() ) {
+        eval {
+            my $domain = Ravada::Domain->open($id);
+            $domain->remove(user_admin) if $domain;
+        };
+        warn $@ if $@;
+    }
     $sth->finish;
 
     $sth = $connector->dbh->prepare(
-        "DELETE FROM domains"
+        "DELETE FROM vms "
     );
     $sth->execute;
     $sth->finish;
@@ -1311,6 +1393,30 @@ sub _clean_iptables_ravada($node) {
     }
 }
 
+sub _run_command($node=undef, @command) {
+    if ($node) {
+        return $node->run_command(@command);
+    }
+    my ($in, $out, $err);
+    run3( \@command, \$in, \$out, \$err);
+    return ($out, $err);
+}
+
+sub _flush_forward($node=undef) {
+    my $node_name = 'localhost';
+    $node_name = $node->name if $node;
+    my ($out, $err ) = _run_command($node, "iptables-save");
+    for my $line (split /\n/,$out ) {
+        next if $line !~ /^-A FORWARD/;
+        next if $line =~ /-j LIBVIRT/;
+        next if $line =~ /lxdbr/;
+        $line =~ s/^-A (FORWARD.*)/-D $1/;
+        my ($out2, $err2) = _run_command($node, "iptables",split(/\s+/,$line));
+        die "$node_name $line $err2" if $err2;
+        warn $out2 if $out2;
+    }
+}
+
 sub flush_rules_node($node) {
     _lock_fw();
     _clean_iptables_ravada($node);
@@ -1321,10 +1427,12 @@ sub flush_rules_node($node) {
     is($err,'');
     ($out, $err) = $node->run_command("iptables","-X", $CHAIN);
     is($err,'') or die `iptables-save`;
+    for my $rule (@FLUSH_RULES) {
+        ($out, $err) = $node->run_command("iptables",@$rule);
+        like($err,qr(^$|chain/target/match by that name));
+    }
 
-    # flush forward too. this is only supposed to run on test servers
-    ($out, $err) = $node->run_command("iptables","-F", 'FORWARD');
-    is($err,'');
+    _flush_forward($node);
 }
 
 sub flush_rules {
@@ -1359,10 +1467,11 @@ sub flush_rules {
     run3(["iptables","-X", $CHAIN], \$in, \$out, \$err);
     like($err,qr(^$|chain/target/match by that name));
 
-    # flush forward too. this is only supposed to run on test servers
-    run3(["iptables","-F","FORWARD" ], \$in, \$out, \$err);
-    is($err,'');
-
+    for my $rule (@FLUSH_RULES) {
+        run3(["iptables",@$rule], \$in, \$out, \$err);
+        like($err,qr(^$|chain/target/match by that name));
+    }
+    _flush_forward();
 }
 
 sub _domain_node($node) {
@@ -1504,7 +1613,7 @@ sub start_node($node) {
         diag("Waiting for connection to node ".$node->type." "
             .$node->name." $_") if !($_ % 5);
     }
-    is($connect,1
+    ok($connect
             ,"[".$node->type."] "
                 .$node->name." Expecting connection") or exit;
     for ( 1 .. 60 ) {
@@ -1747,7 +1856,8 @@ sub _do_remote_node($vm_name, $remote_config) {
 }
 
 sub _dir_db {
-    my $dir_db = "/run/ravada/$>/db";
+    my $dir_db = "/run/user/$>/ravada_db";
+    $dir_db = "/run/user/root/ravada_db" if !$<;
     if (! -e $dir_db ) {
         eval {
             make_path $dir_db
@@ -1810,6 +1920,12 @@ sub _create_db_tables($connector, $file_config = $DEFAULT_DB_CONFIG ) {
     }
 }
 
+my $_CONNECTED_CALLBACK = {
+    'connect_cached.connected'=> sub {
+        $_[0]->do("PRAGMA foreign_keys = ON");
+    }
+};
+
 sub connector {
     return $CONNECTOR if $CONNECTOR;
 
@@ -1819,9 +1935,10 @@ sub connector {
                 ,{sqlite_allow_multiple_statements=> 1 
                         , AutoCommit => 1
                         , RaiseError => 1
-                        , PrintError => 1
+                        , PrintError => 0
+                        , Callbacks  => $_CONNECTED_CALLBACK,
                 });
-
+    $connector->dbh->do("PRAGMA foreign_keys = ON");
     _create_db_tables($connector);
 
     $CONNECTOR = $connector;
@@ -1836,6 +1953,35 @@ sub DESTROY {
 }
 
 sub _check_leftovers {
+    _check_leftovers_users();
+    _check_leftovers_domains();
+}
+
+sub _check_leftovers_domains {
+    for my $table (
+        'access_ldap_attribute','domain_access'
+        ,'domain_displays' , 'domain_ports', 'volumes', 'domains_void', 'domains_kvm', 'domain_instances', 'bases_vm', 'domain_access', 'base_xml', 'file_base_images', 'iptables', 'domains_network') {
+        my $sth;
+        eval {
+            $sth = $CONNECTOR->dbh->prepare("SELECT * FROM $table WHERE id_domain NOT IN "
+                ." ( SELECT id FROM domains )"
+            );
+        };
+        warn $@ if $@ && $@ !~ /no such table/;
+        next if !$sth;
+        $sth->execute();
+        my @error;
+        while ( my $row = $sth->fetchrow_hashref ) {
+            push @error, ("Leftover from $table not in domains ".Dumper($row));
+            last;
+        }
+        $sth->finish;
+        ok(!@error,Dumper(\@error)) or confess;
+    }
+
+}
+
+sub _check_leftovers_users {
     my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM grants_user WHERE id_user NOT IN "
         ." ( SELECT id FROM users )"
     );
@@ -1845,7 +1991,7 @@ sub _check_leftovers {
         push @error, ("Leftover from grant_user not in user ".Dumper($row));
     }
     $sth->finish;
-    ok(!@error) or die Dumper(\@error);
+    ok(!@error , Dumper(\@error));
 }
 
 
@@ -2162,5 +2308,47 @@ sub test_volume_format(@volume) {
     }
 }
 
+sub check_libvirt_tls {
+    my %search = map { $_ => 0 }
+    ('spice_tls = 1',
+    'spice_tls_x509_cert_dir = '
+    );
+    open my $in,'<',$FILE_CONFIG_QEMU or die "$! $FILE_CONFIG_QEMU";
+    while(my $line = <$in>) {
+        chomp $line;
+        $line =~ s/#.*//;
+        next if !length($line);
+        for my $pattern (keys %search) {
+            delete $search{$pattern} if $line =~ /^$pattern/
+        }
+        last if !keys %search;
+    }
+    return 1 if !keys %search;
+    warn "Missing in $FILE_CONFIG_QEMU: ".Dumper([keys %search])
+        ."See also 'https://ravada.readthedocs.io/en/latest/docs/spice_tls.html'";
+    return 0;
+}
+
+sub ping_backend() {
+    my @now = localtime(time);
+    for ( 1 .. 4 ){
+        $now[$_] = "0".$now[$_] if length ($now[$_])<2
+    }
+    my $now = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
+    $now[1]--;
+    my $now2 = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
+    my $sth = rvd_back->connector->dbh->prepare(
+        "SELECT date_changed,status FROM requests ORDER BY date_changed DESC"
+    );
+    $sth->execute();
+    my $n = 100;
+    while (my ($date_changed, $status) = $sth->fetchrow ) {
+        next if $status !~ /working|done/;
+        return 1 if $date_changed =~ /^($now|$now2)/;
+        last if $n--<0;
+    }
+
+    return rvd_front->ping_backend();
+}
 
 1;

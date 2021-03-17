@@ -11,6 +11,7 @@ use File::Path qw(make_path);
 use File::Rsync;
 use Hash::Util qw(lock_keys);
 use IPC::Run3 qw(run3);
+use Mojo::JSON qw(decode_json);
 use Moose;
 use YAML qw(Load Dump  LoadFile DumpFile);
 use Image::Magick;
@@ -36,8 +37,7 @@ our %CHANGE_HARDWARE_SUB = (
     ,memory => \&_change_hardware_memory
 );
 
-our $CONVERT = `which convert`;
-chomp $CONVERT;
+our $FREE_PORT = 5900;
 #######################################3
 
 sub name {
@@ -48,24 +48,136 @@ sub name {
 sub display_info {
     my $self = shift;
 
-    my $display_data = $self->_value('display');
-    if (!keys %$display_data) {
-        $display_data = $self->_set_display();
+    my $hardware = $self->_value('hardware');
+    return if !exists $hardware->{display} || !exists $hardware->{display}->[0];
+
+    my @display;
+    for my $graph ( @{$hardware->{display}} ) {
+        $graph->{extra} = {};
+        eval {
+        $graph->{extra} = decode_json($graph->{extra})
+        if exists $graph->{extra} && $graph->{extra};
+        };
+
+        $graph->{is_builtin} = 1;
+        push @display,($graph);
     }
-    return $display_data;
+
+    return $display[0] if wantarray;
+    return @display;
+}
+
+sub _has_builtin_display($self) {
+    my $hardware = $self->_value('hardware');
+
+    return 1 if exists $hardware->{display} && exists $hardware->{display}->[0]
+    && defined $hardware->{display}->[0];
+
+    return 0;
+}
+
+sub _is_display_builtin($self, $index=undef, $data=undef) {
+    confess if defined $index && $index =~ /\./;
+    if (defined $index && $index !~ /^\d+$/i) {
+        return 1 if $index =~ /spice|void/;
+        return 0;
+    }
+    my $hardware = $self->_value('hardware');
+
+    return 1 if defined $data && exists $data->{driver} && $data->{driver} =~ /void|spice/;
+    return 1 if defined $index
+    && ( exists $hardware->{display} && exists $hardware->{display}->[$index]);
+
+    return 0;
+}
+
+sub _file_free_port() {
+    my $user = $<;
+    $user = "root" if !$<;
+
+    my $dir_fp  = "/run/user/$user";
+    mkdir $dir_fp if ! -e $dir_fp;
+    return "/$dir_fp/void_free_port.txt";
+
+}
+
+sub _new_free_port($self, $used={} ) {
+    my $file_fp  = _file_free_port();
+
+    my $n = $FREE_PORT;
+    my $fh;
+    open $fh,"<",$file_fp and do {
+        $n = <$fh>;
+        $n = $FREE_PORT if !$n;
+    };
+    close $fh;
+    open $fh,">",$file_fp or die "$! $file_fp";
+    _lock($fh);
+
+    for ( 0 .. 1000 ) {
+        for my $domain ( $self->_vm->list_domains()) {
+            my $hardware = $domain->_value('hardware');
+            for my $display (@{$hardware->{display}}) {
+                my $port = $display->{port};
+                $used->{$port}=$domain->name.".$display->{driver}" if $port;
+                my $port_tls = $display->{extra}->{tls_port};
+                $used->{$port_tls}=$domain->name if $port_tls;
+            }
+        }
+        my $sth = $self->_dbh->prepare("SELECT d.name,dd.port,extra,driver FROM domain_displays dd,domains d WHERE d.id=dd.id_domain AND is_builtin=1  ");
+        $sth->execute;
+        while ( my ($name,$port, $extra, $driver) = $sth->fetchrow ) {
+            next if !$port;
+            my $extra_json = {};
+            eval { $extra_json = decode_json($extra) } if $extra;
+            $used->{$port}=$name.".dd.$driver";
+            my $tls_port = $extra_json->{tls_port};
+            $used->{$tls_port}=$name if defined $tls_port;
+        }
+
+        last if !$used->{$n};
+        $n++;
+    }
+    print $fh $n;
+    _unlock($fh);
+    close $fh;
+    return $n;
 }
 
 sub _set_display($self, $listen_ip=$self->_vm->listen_ip) {
     $listen_ip=$self->_vm->listen_ip if !$listen_ip;
     #    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
-    my $display="void://$listen_ip:5990/";
-    my $display_data = { display => $display , type => 'void', ip => $listen_ip, port => 5990 };
-    $self->_store( display => $display_data );
+    my $port = 'auto';
+    $port = $self->_new_free_port() if $self->is_active();
+    my $display_data = { driver => 'void', ip => $listen_ip, port =>$port
+        , is_builtin => 1
+        , xistorra => 1
+    };
+    my $hardware = $self->_value('hardware');
+    $hardware->{display}->[0] = $display_data;
+    $self->_store( hardware => $hardware);
     return $display_data;
 }
 
-sub _set_spice_ip($self, $password=undef, $listen_ip=$self->_vm->listen_ip) {
-    return $self->_set_display($listen_ip);
+sub _set_displays_ip($self, $password=undef, $listen_ip=$self->_vm->listen_ip) {
+    my $hardware = $self->_value('hardware');
+    my $is_active = $self->is_active();
+    my %used_ports;
+    for my $display (@{$hardware->{'display'}}) {
+        next unless exists $display->{port} && $display->{port} && $display->{port} ne 'auto';
+        my $port = $display->{port};
+        $used_ports{$port}++;
+    }
+    for my $display (@{$hardware->{'display'}}) {
+        $display->{ip} = $listen_ip;
+
+        $display->{port} = $self->_new_free_port(\%used_ports)
+        if $is_active && ( !$display->{port} || $display->{port} eq 'auto' );
+
+        $display->{password} = $password if defined $password;
+        $used_ports{$display->{port}}++;
+    }
+    $self->_store( hardware => $hardware );
 }
 
 sub is_active {
@@ -129,6 +241,9 @@ sub _check_value_disk($self, $value)  {
     confess "Not hash ".ref($value)."\n".Dumper($value) if ref($value) ne 'HASH';
 
     for my $device (@{$value->{device}}) {
+        confess "Error: device without target ".$self->name." ".Dumper($device)
+        if !exists $device->{target};
+
         confess "Duplicated target ".Dumper($value)
             if $target{$device->{target}}++;
 
@@ -217,6 +332,11 @@ sub _unlock($fh) {
 sub shutdown {
     my $self = shift;
     $self->_store(is_active => 0);
+    my $hardware = $self->_value('hardware');
+    for my $display (@{$hardware->{'display'}}) {
+        $display->{port} = 'auto';
+    }
+    $self->_store(hardware => $hardware);
 }
 
 sub force_shutdown {
@@ -234,6 +354,26 @@ sub shutdown_now {
     return $self->shutdown(user => $user);
 }
 
+sub reboot {
+    my $self = shift;
+    $self->_store(is_active => 0);
+}
+
+sub force_reboot {
+    return reboot_now(@_);
+}
+
+sub _do_force_reboot {
+    my $self = shift;
+    return $self->_store(is_active => 0);
+}
+
+sub reboot_now {
+    my $self = shift;
+    my $user = shift;
+    return $self->reboot(user => $user);
+}
+
 sub start($self, @args) {
     my %args;
     %args = @args if scalar(@args) % 2 == 0;
@@ -247,7 +387,10 @@ sub start($self, @args) {
     $listen_ip = $self->_vm->listen_ip($remote_ip) if !$listen_ip;
 
     $self->_store(is_active => 1);
-    $self->_set_display( $listen_ip );
+    my $password;
+    $password = Ravada::Utils::random_name() if $set_password;
+    $self->_set_displays_ip( $password, $listen_ip );
+
 }
 
 sub list_disks {
@@ -512,12 +655,13 @@ sub _file_screenshot {
     return $self->_config_dir."/".$self->name.".png";
 }
 
-sub can_screenshot { return $CONVERT; }
+sub can_screenshot { return 1 }
 
 sub get_info {
     my $self = shift;
     my $info = $self->_value('info');
     if (!$info->{memory}) {
+        warn Dumper($info);
         $info = $self->_set_default_info();
     }
     lock_keys(%$info);
@@ -536,10 +680,11 @@ sub _set_default_info($self, $listen_ip=undef) {
     };
     $self->_store(info => $info);
     $self->_set_display($listen_ip);
+    my $hardware = $self->_value('hardware');
     my %controllers = $self->list_controllers;
     for my $name ( sort keys %controllers) {
-        next if $name eq 'disk';
-        $self->set_controller($name,2);
+        next if $name eq 'disk' || $name eq 'display';
+        $self->set_controller($name, 1) unless exists $hardware->{$name}->[0];
     }
     return $info;
 }
@@ -644,7 +789,7 @@ sub hibernate($self, $user) {
 sub type { 'Void' }
 
 sub migrate($self, $node, $request=undef) {
-    $self->_set_display($node->ip);
+    $self->_set_displays_ip(undef, $node->ip);
     my $config_remote;
     $config_remote = $self->_load();
     my $device = $config_remote->{hardware}->{device}
@@ -690,19 +835,37 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
 
     return $self->_set_controller_disk($data) if $name eq 'disk';
 
+    $data->{listen_ip} = $self->_vm->listen_ip if $name eq 'display'&& !$data->{listen_ip};
+
     my $list = ( $hardware->{$name} or [] );
 
-    $number = $#$list if !defined $number;
+    confess "Error: hardware $number already added ".Dumper($list)
+    if defined $number && $number < scalar(@$list);
 
-    if ($number > $#$list) {
-        for ( $#$list+1 .. $number-1 ) {
-            push @$list,("foo ".($_+1));
-        }
+    $#$list = $number if defined $number && scalar @$list <= $number;
+
+    my @list2;
+    if (!defined $number) {
+        @list2 = @$list;
+        push @list2,($data or " $name z 1");
     } else {
-        $#$list = $number-1;
-    }
+        $number = $#$list if !defined $number;
+        my $count = 0;
+        for my $item ( @$list ) {
+            if ($number == $count) {
+                my $data2 = ( $data or " $name a ".($count+1));
+                $data2 = " $name b ".($count+1) if defined $data2 && ref($data2) && !keys %$data2;
 
-    $hardware->{$name} = $list;
+                push @list2,($data2);
+                next if !defined $item;
+            }
+            $item = { driver => 'spice' , port => 'auto' , listen_ip => $self->_vm->listen_ip }
+            if $name eq 'display' && !defined $item;
+            push @list2,($item or " $name b ".($count+1));
+            $count++;
+        }
+    }
+    $hardware->{$name} = \@list2;
     $self->_store(hardware => $hardware );
 }
 
@@ -725,10 +888,13 @@ sub remove_controller {
 
     my $hardware = $self->_value('hardware');
     my $list = ( $hardware->{$name} or [] );
+    die "Error: $name $index not removed, only ".$#$list." found" if $index>$#$list;
 
     my @list2 ;
+    my $found;
     for my $count ( 0 .. $#$list ) {
         if ( $count == $index ) {
+            $found = $count;
             next;
         }
         push @list2, ( $list->[$count]);
@@ -827,4 +993,10 @@ sub change_hardware($self, $hardware, $index, $data) {
 sub dettach($self,$user) {
     # no need to do anything to dettach mock volumes
 }
+
+sub _check_port($self,@args) {
+    return 1 if $self->is_active;
+    return 0;
+}
+
 1;

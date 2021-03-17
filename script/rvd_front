@@ -25,6 +25,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 
+use Ravada::Booking;
 use Ravada::Front;
 use Ravada::Front::Domain;
 use Ravada::Auth;
@@ -74,6 +75,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                               }
                                               ,config => $FILE_CONFIG_RAVADA
                                               ,auto_view => 0
+                                              ,bookings => 1
                                               ,log => {
                                                 log => 0
                                                 ,file => '/var/log/ravada/rvd_front.log'
@@ -143,6 +145,9 @@ hook before_routes => sub {
   my $url = $c->req->url->to_abs->path;
   my $host = $c->req->url->to_abs->host;
   $c->stash(css=>['/css/sb-admin.css']
+            ,js_mod=>[ ## angular modules
+                  '/js/booking/booking.module.js'
+                ]
             ,js=>[
                 '/js/ravada.js'
                 ]
@@ -158,6 +163,8 @@ hook before_routes => sub {
             ,check_netdata => 0
             ,guide => $CONFIG_FRONT->{guide}
             ,host => $host
+            ,bookings => $RAVADA->setting('/backend/bookings')
+            ,FEATURE => {}
             ,widget => $CONFIG_FRONT->{widget}
             );
 
@@ -171,7 +178,7 @@ hook before_routes => sub {
     return if $url =~ m{^/(css|font|img|js)}
 	   || $url =~ m{^/fallback/.*\.(css|js|map)$};
 
-    return if $url =~ m{^/(login|logout|requirements|robots.txt)};
+    return if $url =~ m{^/(login|logout|requirements|robots.txt|favicon.ico)};
 
     if ( $RAVADA->is_in_maintenance ) {
         return login($c) if !$USER && $url =~ m{^/$};
@@ -199,6 +206,7 @@ hook before_routes => sub {
         $c->stash( monitoring => 1) if $c->session('monitoring');
     }
         $c->stash( fallback => 1) if $c->session('fallback');
+    $c->stash(FEATURE => $RAVADA->feature());
 };
 
 
@@ -233,10 +241,13 @@ any '/test' => sub {
     my $name_mojo = $c->signed_cookie('mojolicious');
 
     my $dump_log = ''.(Dumper($logged) or '');
-    return $c->render(text => "$count ".($name_mojo or '')."<br> ".$dump_log
+    return $c->render(text => "$count ".($name_mojo or '')."<br> "
+        ."<pre>$dump_log</pre>"
         ."<br>"
-        ."<script>alert(window.screen.availWidth"
-        ."+\" \"+window.screen.availHeight)</script>"
+        ."<h2>session</h2>"
+        ."<pre>".Dumper($c->session)."</pre>"
+        #        ."<script>alert(window.screen.availWidth"
+        #        ."+\" \"+window.screen.availHeight)</script>"
     );
 };
 
@@ -279,9 +290,20 @@ get '/settings_global.json' => sub($c) {
 post '/settings_global' => sub($c) {
     my $arg = decode_json($c->req->body);
 
-    $RAVADA->update_settings_global($arg, $USER);
+    my $reload=0;
+    $RAVADA->update_settings_global($arg, $USER, \$reload);
 
-    return $c->render(json => { ok => 1 });
+    return $c->render(json => { ok => 1, reload => $reload });
+};
+
+get '/admin/group/#name' => sub($c) {
+    return access_denied($c)    unless $USER->can_manage_groups
+        || $USER->can_view_groups;
+
+    push @{$c->stash->{css}}, '/css/admin.css';
+    push @{$c->stash->{js}}, '/js/admin.js';
+
+    return $c->render( template => "/main/admin_group");
 };
 
 any '/admin/#type' => sub {
@@ -609,7 +631,7 @@ get '/machine/info/(:id).(:type)' => sub {
     return access_denied($c,"Access denied to user ".$USER->name) unless $USER->can_manage_machine($domain->id);
 
     my $info = $domain->info($USER);
-    if ($domain->is_active && !$info->{ip}) {
+    if ($domain->is_active && ( !exists $info->{ip} || !$info->{ip})) {
         Ravada::Request->refresh_machine(id_domain => $domain->id, uid => $USER->id);
     }
     return $c->render(json => $info);
@@ -691,6 +713,14 @@ get '/machine/force_shutdown/(:id).(:type)' => sub {
 
         return force_shutdown_machine($c);
 };
+
+get '/machine/reboot/(:id).(:type)' => sub {
+        my $c = shift;
+    return access_denied($c)        if !$USER ->can_reboot($c->stash('id'));
+
+        return reboot_machine($c);
+};
+
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
     return access_denied($c)       if !$USER->can_remove_machine($c->stash('id'));
@@ -742,7 +772,7 @@ get '/machine/screenshot/(:id).(:type)' => sub {
 };
 
 get '/machine/copy_screenshot/(:id).(:type)' => sub {
-        my $c = shift; 
+        my $c = shift;
         my $domain = _search_requested_machine($c);
         return access_denied($c) if (!$USER->is_admin() || $domain->id_base() == NULL );
         return copy_screenshot($c);
@@ -883,6 +913,12 @@ get '/machine/compact/(#id_domain)' => sub($c) {
     return $c->render(json => { request => $req->id });
 };
 
+get '/execution_machines_limit' => sub {
+    my $c = shift;
+    
+    return get_execution_machines_limit_per_current_user($c);
+};
+
 get '/node/exists/#name' => sub {
     my $c = shift;
     my $name = $c->stash('name');
@@ -964,13 +1000,19 @@ get '/machine/autostart/#id/#value' => sub {
     return $c->render(json => { request => $req->id});
 };
 
-get '/machine/display/(:id).vv' => sub {
+get '/machine/display/(:driver)/(:id).vv' => sub {
     my $c = shift;
 
     my $id = $c->stash('id');
 
+    warn $c->stash('driver');
+
     my $domain = $RAVADA->search_domain_by_id($id);
-    return $c->render(text => "unknown machine id=$id") if !$id;
+    return $c->render(text => "unknown machine id=$id") if !$domain;
+
+    my $display = $domain->_get_display($c->stash('driver'));
+    return $c->render(text => "unknown display ".$c->stash('driver')." for machine id=$id")
+    if !$display;
 
     return access_denied($c)
         if $USER->id ne $domain->id_owner
@@ -980,16 +1022,21 @@ get '/machine/display/(:id).vv' => sub {
         $c->res->headers->content_disposition(
         "inline;filename=".$domain->id.".vv");
 
-    return $c->render(data => $domain->display_file($USER), format => 'vv');
+    return $c->render(data => $domain->_display_file_spice($display), format => 'vv');
 };
 
-get '/machine/display-tls/(:id)-tls.vv' => sub {
+get '/machine/display/(:driver)/tls/(:id)-tls.vv' => sub {
     my $c = shift;
 
     my $id = $c->stash('id');
 
+    warn $c->stash('driver')."-tls";
     my $domain = $RAVADA->search_domain_by_id($id);
-    return $c->render(text => "unknown machine id=$id") if !$id;
+    return $c->render(text => "unknown machine id=$id") if !$domain;
+
+    my $display = $domain->_get_display($c->stash('driver'));
+    return $c->render(text => "unknown display ".$c->stash('driver')." for machine id=$id")
+    if !$display;
 
     return access_denied($c)
         if $USER->id ne $domain->id_owner
@@ -999,7 +1046,7 @@ get '/machine/display-tls/(:id)-tls.vv' => sub {
         $c->res->headers->content_disposition(
         "inline;filename=".$domain->id."-tls.vv");
 
-    return $c->render(data => $domain->display_file_tls($USER), format => 'vv');
+    return $c->render(data => $domain->_display_file_spice($display,1), format => 'vv');
 };
 
 # Network ##########################################################3
@@ -1029,6 +1076,13 @@ any '/users/register' => sub {
        return register($c);
 };
 
+any '/group/new' => sub {
+
+       my $c = shift;
+       return access_denied($c) if !$USER->is_admin();
+       return new_group($c);
+};
+
 any '/admin/user/(:id).(:type)' => sub {
     my $c = shift;
     return access_denied($c) if !$USER->can_manage_users() && !$USER->can_grant();
@@ -1048,14 +1102,15 @@ any '/admin/user/(:id).(:type)' => sub {
         my %grant;
         for my $param_name (@{$c->req->params->names}) {
             if ( $param_name =~ /^perm_(.*)/ ) {
-                $grant{$1} = 1;
+                my $max = defined($c->req->params->param('max_perm_' . $1)) ? $c->req->params->param('max_perm_' . $1) : 1;
+                $grant{$1} = $max > 1 ? $max : 1;
             } elsif ($param_name =~ /^off_perm_(.*)/) {
                 $grant{$1} = 0 if !exists $grant{$1};
             }
         }
         for my $perm (keys %grant) {
             if ( $grant{$perm} ) {
-                $USER->grant($user, $perm);
+                $USER->grant($user, $perm, $grant{$perm});
             } else {
                 $USER->revoke($user, $perm);
             }
@@ -1456,15 +1511,15 @@ get '/machine/hardware/remove/(#id_domain)/(#hardware)/(#index)' => sub {
 
     return access_denied($c)
         unless $USER->id == $domain->id_owner || $USER->is_admin;
-    
+
     my $req = Ravada::Request->remove_hardware(uid => $USER->id
         , id_domain => $domain_id
         , name => $hardware
         , index => $index
     );
-    
-    $RAVADA->wait_request($req,60);  
-    
+
+    $RAVADA->wait_request($req,60);
+
     return $c->render( json => { ok => "Hardware Modified" });
 };
 
@@ -1498,6 +1553,220 @@ get '/list_users.json' => sub($c) {
     return $c->render(json => $RAVADA->list_users );
 };
 
+
+get '/list_ldap_groups' => sub($c) {
+    return access_denied($c) unless $USER->can_view_groups || $USER->can_manage_groups;
+
+    return _list_ldap_groups($c,'*');
+};
+
+get '/list_ldap_users' => sub($c) {
+    return access_denied($c) unless $USER->can_manage_users || $USER->can_manage_groups;
+    return _list_ldap_users($c,'*');
+};
+
+
+get '/list_ldap_groups/:name' => sub($c) {
+    my $name = $c->stash('name');
+    return access_denied($c) unless $USER->can_view_groups || $USER->can_manage_groups;
+
+    return _list_ldap_groups($c,$name);
+};
+
+get '/list_ldap_group_members/#name' => sub($c) {
+    return access_denied($c) if !$USER->can_view_groups;
+
+    my $name = $c->stash('name');
+
+    return _list_ldap_group_members($c,$name);
+};
+
+post '/ldap/group/add_member' => sub($c) {
+    return access_denied($c) if !$USER->can_manage_groups;
+
+    my $arg = decode_json($c->req->body);
+
+    my $login = delete $arg->{cn};
+    my $new_group = delete $arg->{group};
+
+    my @groups = Ravada::Auth::LDAP::search_group( name => $new_group);
+    my ($group_ldap) = grep {$_->get_value('cn') eq $new_group } @groups;
+    my $error = '';
+    if (! $group_ldap) {
+        $error = "Error: group $new_group doesn't exist\n"
+    } else {
+        my $mesg  = $group_ldap->add(memberUid => $login)
+        ->update(Ravada::Auth::LDAP::_init_ldap_admin());
+
+        if ($mesg->code) {
+            $error = "Error: adding $login to $new_group ".$mesg->error;
+        }
+    }
+    return $c->render(json => { error => $error } );
+
+};
+post '/ldap/group/remove_member' => sub($c) {
+    return access_denied($c) if !$USER->can_manage_groups;
+
+    my $arg = decode_json($c->req->body);
+
+    my $login = delete $arg->{cn};
+    my $new_group = delete $arg->{group};
+
+    my @groups = Ravada::Auth::LDAP::search_group( name => $new_group);
+    my ($group_ldap) = grep {$_->get_value('cn') eq $new_group } @groups;
+    die "Error: group $new_group doesn't exist\n"
+    unless $group_ldap;
+
+    my $mesg  = $group_ldap->delete(memberUid => $login)
+    ->update(Ravada::Auth::LDAP::_init_ldap_admin());
+
+    if ($mesg->code) {
+        return $c->render(json => { error => "Error: adding $login to $new_group ".$mesg->error });
+    }
+    return $c->render(json => { error => '' } );
+
+};
+
+get '/booking' => sub($c) {
+    return $c->render(template => '/ng-templates/error'
+            ,message => "LDAP is required to set up bookings. "
+            ."<a href='https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html'>"
+            ."See how to configure LDAP authentication.</a>"
+    )
+    if !$RAVADA->feature('ldap');
+
+    my @groups = Ravada::Auth::LDAP::search_group( name => '*' );
+    return $c->render(template => '/ng-templates/error'
+        ,message => "LDAP groups are required to set up bookings. No groups found. <a href='/group/new'>Add new entries here.</a>"
+    ) if !@groups;
+
+    my @members_found;
+
+    for my $group (@groups) {
+        @members_found = $group->get_value('memberUid');
+        last if @members_found;
+    }
+
+    if (!@members_found) {
+        return $c->render(template => '/ng-templates/error'
+            ,message => "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+        )
+
+    }
+
+    return $c->render(template => '/ng-templates/booking/calendar');
+};
+
+get '/v1/bookings/'=> sub($c) {
+    my $arg = $c->req->params->to_hash;
+    return $c->render(json => { data => [Ravada::Booking::bookings_range(%$arg)] } );
+};
+
+get '/v1/bookings/:id'=> sub($c) {
+    my $booking= Ravada::Booking->new( id =>  $c->stash('id') );
+    return $c->render( json => $booking->{_data} );
+};
+
+post '/v1/bookings/' => sub($c) {
+    return access_denied_json($c) if !$USER->is_operator();
+
+    my $arg = decode_json($c->req->body);
+    delete $arg->{dow};
+    delete $arg->{repeat};
+    $arg->{id_owner} = $USER->id;
+    my $dow = '';
+    for my $curr ( split//,$arg->{day_of_week} ) {
+        $dow .= $curr if $curr;
+    }
+    _push_new_values($arg);
+    $arg->{day_of_week} = $dow;
+    eval {
+        my $booking = Ravada::Booking->new(%$arg);
+    };
+    my ($error) = split /\n/,$@;
+    warn $error if $error;
+    $error =~ s/ at .*// if $error;
+    return $c->render(json => { ok => !$error, error => ($error  or '')} );
+};
+
+get '/v1/booking_entry/:id' => sub($c) {
+    my $booking_entry = Ravada::Booking::Entry->new( id => $c->stash('id'));
+    $booking_entry->{_data}->{ldap_groups} = [ $booking_entry->ldap_groups ];
+    $booking_entry->{_data}->{users} = [ $booking_entry->users ];
+    return $c->render( json => $booking_entry->{_data} );
+};
+
+post '/v1/booking_entry/:id' => sub($c) {
+    my $arg = decode_json($c->req->body);
+    my $mode = delete $arg->{mode};
+    my $entry = Ravada::Booking::Entry->new( id => $c->stash('id') );
+    my $booking = Ravada::Booking->new( id => $entry->_data('id_booking'));
+
+    return _access_denied($c)
+    unless $booking->_data('id_owner') == $USER->id
+        || $USER->is_operator;
+
+    # we are changing only this entry, so date_end doesn't make sense
+    # anyway in the future we may use it to create other entries
+    # so it is only removed if null
+    delete $arg->{date_end} if !defined $arg->{date_end};
+    _push_new_values($arg);
+
+    if (!$mode || $mode eq 'current') {
+        $entry->change(%$arg);
+    } elsif ( $mode eq 'next' ) {
+        $entry->change_next(%$arg);
+    } elsif ($mode eq 'next_dow') {
+        $entry->change_next_dow(%$arg);
+    } elsif ($mode eq 'all') {
+        $entry->change_all(%$arg);
+    } else {
+        return $c->render( json => { error => "Mode '$mode' unknown" } );
+    }
+    return $c->render( json => { error => '' } );
+};
+
+sub _push_new_values($arg) {
+    if ($arg->{ldap_group_new}) {
+        push @{$arg->{ldap_groups}},($arg->{ldap_group_new});
+    }
+    delete $arg->{ldap_group_new};
+}
+
+del '/v1/booking_entry/:id/:mode' => sub($c) {
+    my $entry;
+    eval { $entry = Ravada::Booking::Entry->new(id => $c->stash('id')) };
+
+    if ($@ && $@ =~ /not found/i) {
+        return $c->reply->not_found;
+    }
+    die $@ if $@;
+
+    my $booking = Ravada::Booking->new( id => $entry->_data('id_booking'));
+
+    return error_access_denied_json($c)
+    unless $booking->_data('id_owner') == $USER->id
+        || $USER->is_operator;
+
+
+    my $mode = $c->stash('mode');
+    eval {
+        if ($mode eq 'current') {
+            $entry->remove();
+        } elsif ($mode eq 'next') {
+            $entry->remove_next();
+        } elsif ($mode eq 'next_dow') {
+            $entry->remove_next_dow();
+        } elsif ($mode eq 'all') {
+            $booking->remove();
+        } else {
+            die "Mode '$mode' unknown";
+        }
+    };
+    my $error = ($@ or '');
+    return $c->render(json => { error => $error } );
+};
 ###################################################
 
 ## user_settings
@@ -1708,7 +1977,6 @@ sub _logged_in {
         $c->stash(_logged_in => $login );
         $c->stash(_user => $USER);
         $c->stash(_anonymous => !$USER);
-
     }
     $c->stash(url => undef);
 
@@ -1803,7 +2071,10 @@ sub logout {
     my $c = shift;
 
     $USER = undef;
-    $c->session(expires => 1);
+    $c->session(expires => 0);
+    $c->session(login => undef);
+    sleep 1;
+    $c->session(expires => 0);
     $c->session(login => undef);
 
 }
@@ -1830,6 +2101,8 @@ sub quick_start {
             $c->session('login' => $login);
         } else {
             push @error,("Access denied");
+            logout($c);
+            return login($c);
         }
     }
     if ( $c->param('submit') && _logged_in($c) && defined $id_base ) {
@@ -1861,7 +2134,7 @@ sub render_machines_user {
 sub quick_start_domain {
     my ($c, $id_base, $name) = @_;
     my $anonymous = (shift or 0);
-    
+
     return $c->redirect_to('/login') if !$USER;
 
     confess "Missing id_base" if !defined $id_base;
@@ -1896,6 +2169,10 @@ sub admin {
     push @{$c->stash->{css}}, '/css/admin.css';
     push @{$c->stash->{js}}, '/js/admin.js';
 
+    if ($page =~ m/group/) {
+        return access_denied($c)    unless $USER->is_admin || $USER->can_manage_users
+            || $USER->can_view_groups || $USER->can_manage_groups;
+    }
     if ($page eq 'users') {
         return access_denied($c)    if !$USER->is_admin && !$USER->can_manage_users && !$USER->can_grant;
         $c->stash(list_users => []);
@@ -1919,10 +2196,12 @@ sub admin {
         }
     }
     if ($page eq 'nodes') {
+        return access_denied($c) unless $USER->is_admin;
         Ravada::Request->refresh_vms();
     }
     $c->session(expiration => $SESSION_TIMEOUT_ADMIN2);
     if ($page eq 'settings') {
+        return access_denied($c) unless $USER->is_admin;
         my $url = $c->req->url->to_abs->path;
         my $host = $c->req->url->to_abs->host;
         $c->stash(url_login => "/login");
@@ -2042,6 +2321,15 @@ sub _search_req_base_error {
     my $name = shift;
 }
 
+sub error_access_denied_json(@args) {
+    return access_denied_json(@args);
+}
+
+sub access_denied_json($c, $msg='Access denied') {
+    $c->stash( type => 'json');
+    return access_denied($c, $msg);
+}
+
 sub access_denied {
 
     my $c = shift;
@@ -2057,6 +2345,8 @@ sub access_denied {
     }
     return $c->render(text => $msg, status => 403);
 }
+
+sub _access_denied { return access_denied(@_) }
 
 sub base_id {
     my $name = shift;
@@ -2220,6 +2510,25 @@ sub _search_requested_machine {
     return $domain;
 }
 
+sub new_group($c) {
+    my @error = ();
+
+    my $groupname = ($c->param('groupname') or '');
+    if ($groupname) {
+        if ($groupname =~ /^[0-9a-zA-Z._-]+$/) {
+            eval {
+                Ravada::Auth::LDAP::add_group($groupname);
+            };
+            push @error,($@) if $@;
+        } else {
+            push @error,("Error: group name '$groupname' invalid."
+            ,"Group name can only contain words, numbers, dashes, dots and underscores" );
+        }
+    }
+    $c->render(template => 'bootstrap/new_group', error => \@error
+    ,groupname => $groupname);
+}
+
 sub register {
 
     my $c = shift;
@@ -2256,6 +2565,17 @@ sub manage_machine {
     $c->stash(domain => $domain);
     $c->stash(USER => $USER);
     $c->stash(ldap_attributes_cn => ( $c->session('ldap_attributes_cn') or $USER->name or ''));
+    my ($active_actions, $active_description, $show_actions, $show_description)
+    =('','','','');
+    if (!$domain->is_base) {
+        $active_actions = "active";
+        $show_actions = "active show";
+    } else {
+        $active_description = "active";
+        $show_description = "active show";
+    }
+    $c->stash(active_actions => $active_actions , show_actions => $show_actions);
+    $c->stash(active_description => $active_description , show_description => $show_description);
 
     my @messages;
     my @errors;
@@ -2279,7 +2599,7 @@ sub manage_machine {
             $msg .= " Changes will apply on next start."    if $domain->is_active;
             push @messages,($msg);
             push @reqs,($req2);
-        
+
     }
     $c->stash(cur_driver => \%cur_driver);
 
@@ -2314,6 +2634,9 @@ sub manage_machine {
 
     $c->stash(messages => \@messages);
     $c->stash(errors => \@errors);
+    my $displays = $domain->info($USER)->{hardware}->{display};
+    my $has_graphics_spice = grep { $_->{driver} eq 'spice' } @$displays;
+    $c->stash(has_graphics_spice => $has_graphics_spice);
     return $c->render(template => 'main/settings_machine'
         , nodes => [$RAVADA->list_vms($domain->type)]
         , list_clones => [map { $_->{name} } grep { !$_->{is_base} } $domain->clones]
@@ -2332,6 +2655,9 @@ sub _enable_buttons {
     }
     $c->stash(_shutdown_disabled => '');
     $c->stash(_shutdown_disabled => 'disabled') if !$domain->is_active;
+
+    $c->stash(_reboot_disabled => '');
+    $c->stash(_reboot_disabled => 'disabled') if !$domain->is_active;
 
     $c->stash(_start_disabled => '');
     $c->stash(_start_disabled => 'disabled')    if $domain->is_active;
@@ -2384,7 +2710,24 @@ sub shutdown_machine {
     return login($c) if !_logged_in($c);
 
     my ($domain, $type) = _search_requested_machine($c);
-    my $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id);
+
+    my $req;
+    $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id) if ($c->param('force'));
+    $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id) unless ($c->param('force'));
+
+    return $c->redirect_to('/machines') if $type eq 'html';
+    return $c->render(json => { req => $req->id });
+}
+
+sub reboot_machine {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
+
+    my ($domain, $type) = _search_requested_machine($c);
+
+    my $req;
+    $req = Ravada::Request->force_reboot_domain(id_domain => $domain->id, uid => $USER->id) if ($c->param('force'));;
+    $req = Ravada::Request->reboot_domain(id_domain => $domain->id, uid => $USER->id) unless ($c->param('force'));;
 
     return $c->redirect_to('/machines') if $type eq 'html';
     return $c->render(json => { req => $req->id });
@@ -2556,18 +2899,23 @@ sub copy_machine {
 
     my $arg = decode_json($c->req->body);
 
-    my $number = $arg->{copy_number};
-    my $id_base= $arg->{id_base} or confess "Missing param id_base";
-    my $ram = $arg->{copy_ram};
+    my $number = delete $arg->{copy_number};
+    my $id_base= delete $arg->{id_base} or confess "Missing param id_base";
+    my $ram = delete $arg->{copy_ram};
+    $ram =~ s/,/./ if $ram;
     $ram = 0 if !$ram || $ram !~ /^\d+(\.\d+)?$/;
     $ram = int($ram*1024*1024);
 
+    my $new_name = delete $arg->{new_name};
+
+    warn "Error: unknown args ".Dumper($arg) if keys %$arg;
+
     my $base = $RAVADA->search_domain_by_id($id_base) or confess "I can't find domain $id_base";
-    my $name = ( $arg->{new_name} or $base->name."-".$USER->name );
+    my $name = ( $new_name or $base->name."-".$USER->name );
 
     my @create_args = ( from_pool => 0 );
     push @create_args,( memory => $ram ) if $ram;
-    push @create_args, ( name => $name ) if $number == 1;
+    push @create_args, ( name => $name ) if !defined $number || $number == 1;
     my $req2 = Ravada::Request->clone(
             uid => $USER->id
             , id_domain => $base->id
@@ -2665,7 +3013,22 @@ sub resume_machine {
     return $c->render(json => { req => $req->id });
 }
 
+sub get_execution_machines_limit_per_current_user {
+    my $c = shift;
+    return login($c) if !_logged_in($c);
 
+    my %grants = $USER->grants();
+    my $start_limit = ((exists($grants{'start_limit'})) && ($grants{'start_limit'} > 0)) ? $grants{'start_limit'} : $RAVADA->settings_global()->{'backend'}->{'start_limit'}->{'value'};
+    my $can_start_many = $USER->can_start_many ? 1 : 0;
+    my @running_domains;
+
+    foreach my $domain (@{$RAVADA->list_domains( id_owner => $USER->id )})
+    {
+        push(@running_domains, $domain->{'id'}) if ($domain->{'is_active'});
+    }
+
+    return $c->render(json => { can_start_many => $can_start_many, start_limit => $start_limit, running_domains => \@running_domains });
+}
 
 sub list_requests {
     my $c = shift;
@@ -2831,6 +3194,28 @@ sub maintenance($c) {
     );
 }
 
+sub _list_ldap_groups($c, $name='*') {
+    $name = '*'.$name.'*' if $name !~ /\*/;
+    my @groups;
+    @groups = Ravada::Auth::LDAP::search_group( name => $name ) if $RAVADA->feature('ldap');
+    return $c->render(json => [ sort { $a cmp $b } map { $_->get_value('cn') } @groups ] );
+};
+
+sub _list_ldap_users($c, $filter='*' ) {
+    my @entries;
+    for my $entry (Ravada::Auth::LDAP::search_user(name => $filter, escape_username => 0)) {
+        push @entries,({name => $entry->get_value('cn') });
+    }
+    return $c->render(json => [sort { $a->{name} cmp $b->{name} } @entries]);
+}
+
+sub _list_ldap_group_members($c, $name) {
+    my $group = Ravada::Auth::LDAP::search_group( name => $name );
+    return $c->render(json => [ sort $group->get_value('memberUid') ] );
+}
+
+
+#################################################################################
 my $routes = app->routes->children;
 for my $route (@$routes){
     $route->pattern->quote_start('(');

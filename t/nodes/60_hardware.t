@@ -29,7 +29,7 @@ sub test_graphics($vm, $node) {
             next if $domain->get_driver($driver_name)
                 && $domain->get_driver($driver_name) eq $option->{value};
 
-            diag("Testing $driver_name $option->{value} in ".$vm->type);
+                #diag("Testing $driver_name $option->{value} in ".$vm->type);
 
             test_driver_clone($vm, $node, $domain, $driver_name, $option);
 
@@ -79,7 +79,7 @@ sub test_driver_migrate($vm, $node, $domain, $driver_name) {
         next if defined $domain->get_driver($driver_name)
         && $domain->get_driver($driver_name) eq $option->{value};
 
-        diag("Testing $driver_name $option->{value} then migrate");
+        # diag("Testing $driver_name $option->{value} then migrate");
         my $clone = $domain->clone(name => new_domain_name, user => user_admin);
         my $req = Ravada::Request->set_driver(uid => user_admin->id
             , id_domain => $clone->id
@@ -120,7 +120,7 @@ sub test_drivers_type($type, $vm, $node) {
     for my $option (@options) {
         die "No value for driver ".Dumper($option)  if !$option->{value};
 
-        diag("Testing $type $option->{value}");
+        # diag("Testing $type $option->{value}");
 
         eval { $domain->set_driver($type => $option->{value}) };
         ok(!$@,"Expecting no error, got : ".($@ or ''));
@@ -151,6 +151,7 @@ sub test_drivers_type($type, $vm, $node) {
 sub test_drivers($vm, $node) {
     my @drivers = $vm->list_drivers();
      for my $driver ( @drivers ) {
+         next if $driver->name eq 'display';
          test_drivers_type($driver->name, $vm, $node);
      }
 
@@ -160,7 +161,6 @@ sub test_change_hardware($vm, @nodes) {
     diag("[".$vm->type."] testing remove with ".scalar(@nodes)." node ".join(",",map { $_->name } @nodes));
     my $domain = create_domain($vm);
     my $clone = $domain->clone(name => new_domain_name, user => user_admin);
-    my @volumes = $clone->list_volumes();
 
     for my $node (@nodes) {
         for ( 1 .. 10 ) {
@@ -177,24 +177,46 @@ sub test_change_hardware($vm, @nodes) {
         ok($clone2);
     }
 
-    my $info = $domain->info(user_admin);
-    my ($hardware) = grep { !/disk|volume/ } keys %{$info->{hardware}};
-    $clone->remove_controller($hardware,0);
-
-    my $sth = connector->dbh->prepare("SELECT count(*) FROM domain_instances "
-        ."WHERE id_domain = ".$clone->id );
-    $sth->execute();
-    my ($count) = $sth->fetchrow;
-    is($count,1,"Expecting other instances removed when hardware changed") or exit;
-
-    for my $node (@nodes) {
-        my $clone2 = $node->search_domain($clone->name);
-        ok(!$clone2,"Expecting no clone ".$clone->name." in remote node ".$node->name) or exit;
+    my $n_instances = $domain->list_instances();
+    my $info = $clone->info(user_admin);
+    my %devices;
+    for my $hardware ( sort keys %{$info->{hardware}} ) {
+        $devices{$hardware} = scalar(@{$info->{hardware}->{$hardware}});
     }
+    for my $hardware ( sort keys %{$info->{hardware}} ) {
 
-    is($clone->_vm->is_local,1) or exit;
-    for (@volumes) {
-        ok(-e $_,$_) or exit;
+        #TODO disk volumes in Void
+        next if $vm->type eq 'Void' && $hardware =~ /disk|volume/;
+
+        # diag("Testing remove $hardware");
+
+        my $current_vm = $clone->_vm;
+        $clone->remove_controller($hardware,0);
+        is (scalar($clone->list_instances()), $n_instances);
+
+        my $n_expected = scalar(@{$info->{hardware}->{$hardware}})-1;
+        die "Warning: no $hardware devices in ".$clone->name if $n_expected<0;
+
+        $n_expected = 0 if $n_expected<0;
+
+        for my $node ($vm, @nodes) {
+            my $clone2 = $node->search_domain($clone->name);
+            my $info2 = $clone2->info(user_admin);
+            my $devices2 = $info2->{hardware}->{$hardware};
+            is( scalar(@$devices2),$n_expected
+                , $clone2->name.": Expecting 1 $hardware device less in instance in node ".$node->name)
+                or exit;
+        }
+
+        is($clone->_vm->id, $current_vm->id) or exit;
+
+        my $clone3 = Ravada::Domain->open($clone->id);
+        my $info3 = $clone3->info(user_admin);
+        $devices{$hardware}--;
+        for my $item (keys %devices) {
+            is(scalar(@{$info3->{hardware}->{$item}}), $devices{$item},$item)
+                    or exit;
+        }
     }
     $clone->remove(user_admin);
     $domain->remove(user_admin);

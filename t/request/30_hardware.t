@@ -23,48 +23,135 @@ my $USER = create_user("foo","bar", 1);
 
 rvd_back();
 $Ravada::CAN_FORK = 1;
-my %CREATE_ARGS = (
-     KVM => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
-    ,LXC => { id_template => 1, id_owner => $USER->id }
-    ,Void => { id_owner => $USER->id }
-);
+my $BASE;
 
 my $TEST_TIMESTAMP = 0;
 
 ########################################################################
-sub create_args {
-    my $backend = shift;
-
-    die "Unknown backend $backend" if !$CREATE_ARGS{$backend};
-    return %{$CREATE_ARGS{$backend}};
-}
 
 sub test_add_hardware_request_drivers {
 	my $vm = shift;
 	my $domain = shift;
 	my $hardware = shift;
 
-    test_remove_almost_all_hardware($vm, $domain, $hardware);
-
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my $info0 = $domain->info(user_admin);
 
     my $options = $info0->{drivers}->{$hardware};
 
-    for my $driver (@$options) {
-        diag("Testing new $hardware $driver");
+    for my $remove ( 1,0 ) {
+        test_remove_almost_all_hardware($vm, $domain, $hardware);
+        for my $driver (@$options) {
+            diag("Testing new $hardware $driver remove=$remove");
 
-        my $info = $domain->info(user_admin);
-        my @targets = map { $_->{n_order} } @{$info->{hardware}->{$hardware}};
-        test_add_hardware_request($vm, $domain, $hardware, { driver => $driver} );
+            my $info0 = $domain->info(user_admin);
+            my @dev0 = sort map { $_->{driver} } @{$info0->{hardware}->{$hardware}};
+            test_add_hardware_request($vm, $domain, $hardware, { driver => $driver} );
 
-        $info = $domain->info(user_admin);
+            my $info1 = $domain->info(user_admin);
+            my @dev1 = sort map { $_->{driver} } @{$info1->{hardware}->{$hardware}};
 
-        is($info->{hardware}->{$hardware}->[-1]->{driver}, $driver) or confess( $domain->name
-            , Dumper($info->{hardware}->{$hardware}));
-        test_remove_hardware($vm, $domain, $hardware
-            , scalar(@{$info->{hardware}->{$hardware}})-1);
+            if ( scalar @dev1 == scalar(@dev0)) {
+                my $different = 0;
+                for ( 0 .. scalar(@dev1)-1) {
+                    $different++ if $dev1[$_] ne $dev0[$_];
+                }
+                ok($different, "Expecting different $hardware ") or die Dumper(\@dev0, \@dev1);
+            } else {
+                ok(scalar(@dev1) > scalar(@dev0)) # it is ok because number of devs increased
+            }
+            my $driver_short = _get_driver_short_name($domain, $hardware,$driver);
+
+            is($info1->{hardware}->{$hardware}->[-1]->{driver}, $driver_short) or confess( $domain->name
+                , Dumper($info1->{hardware}->{$hardware}));
+
+            test_display_data($domain , $driver) if $hardware eq 'display';
+
+            test_remove_hardware($vm, $domain, $hardware
+                , scalar(@{$info1->{hardware}->{$hardware}})-1)
+            if $remove || $hardware eq 'disk' && $driver eq 'usb';
+        }
     }
+
+    #    test_add_hardware_request($vm, $domain, $hardware) if $hardware =~ 'display';
+}
+
+sub _get_driver_short_name($domain,$hardware, $option) {
+
+    return $option unless $hardware eq 'display';
+
+    my $driver = $domain->drivers($hardware);
+    my ($selected)
+    = grep { $_->{name} eq $option|| $_->{value} eq $option}
+    $driver->get_options;
+
+    return $selected->{value};
+}
+
+sub test_display_data($domain, $driver) {
+
+    $domain->start(user => user_admin);
+    wait_request(debug => 0);
+    my $hardware = $domain->info(user_admin)->{hardware};
+    $driver = _get_driver_short_name($domain, 'display', $driver);
+    my @displays = @{$hardware->{display}};
+
+    my ($display) = grep { $_->{driver} eq $driver } @displays;
+    ok($display) or die "Display $driver not found ".Dumper(\@displays);
+
+    test_display_builtin_ports($domain, $display) if $display->{is_builtin};
+
+    $domain->shutdown(user => user_admin, timeout => 20);
+    wait_request(debug => 0);
+}
+
+sub test_display_builtin_ports_kvm($domain, $display) {
+    my $driver = $display->{driver};
+    my $xml = XML::LibXML->load_xml( string => $domain->xml_description);
+    my $path = "/domain/devices/graphics\[\@type='$driver']";
+    my ($graphic) = $xml->findnodes($path);
+    die "Error: $path not found in ".$domain->name if !$graphic;
+
+    my $port = $graphic->getAttribute('port');
+    is($port, $display->{port});
+}
+
+sub test_display_builtin_ports_void($domain, $display) {
+    my $hardware = $domain->_value('hardware');
+    my ($graphic) = grep { $_->{driver} eq $display->{driver} } @{$hardware->{display}};
+    die "Error: display not found in ".Dumper($hardware) if !$graphic;
+
+    is($display->{port}, $graphic->{port});
+}
+
+sub test_display_builtin_ports($domain, $display){
+    return test_display_builtin_ports_kvm($domain,$display) if $domain->type eq 'KVM';
+    return test_display_builtin_ports_void($domain,$display) if $domain->type eq 'Void';
+    confess "TODO";
+}
+
+sub test_display_db($domain, $n_expected) {
+    my $sth = connector->dbh->prepare("SELECT * FROM domain_displays "
+        ." WHERE id_domain = ?"
+    );
+    $sth->execute($domain->id);
+
+    my @row;
+    while ( my $row = $sth->fetchrow_hashref) {
+        push @row,($row);
+        is($domain->_is_display_builtin(undef,$row), $row->{is_builtin}) or
+        die Dumper($domain->name, $row);
+    }
+
+    is(scalar(@row),$n_expected) or die Dumper($domain->name, \@row);
+
+    my @displays = $domain->_get_controller_display();
+    is(scalar @displays, @row);
+
+    my $n_expected_non_builtin = scalar(grep { $_->{is_builtin} == 0 } @displays);
+
+    my @ports = $domain->list_ports();
+    is(scalar(@ports),$n_expected_non_builtin) or die Dumper(\@displays,\@ports);
 }
 
 sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
@@ -74,12 +161,16 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     my $date_changed = $domain->_data('date_changed');
 
     my @list_hardware1 = $domain->get_controller($hardware);
-	my $numero = scalar(@list_hardware1)+1;
-    while ($hardware eq 'usb' && $numero > 4) {
+	my $numero = scalar(@list_hardware1);
+    while (($hardware eq 'display' && $numero > 0 ) || ($hardware eq 'usb' && $numero > 3)) {
         test_remove_hardware($vm, $domain, $hardware, 0);
         @list_hardware1 = $domain->get_controller($hardware);
-	    $numero = scalar(@list_hardware1)+1;
+	    $numero = scalar(@list_hardware1);
     }
+    test_display_db($domain,0) if $hardware eq 'display';
+
+    $data = { driver => 'spice' } if !keys %$data && $hardware eq 'display';
+
 	my $req;
 	eval {
 		$req = Ravada::Request->add_hardware(uid => $USER->id
@@ -93,16 +184,17 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     $USER->unread_messages();
 	ok($req, 'Request');
     sleep 1 if !$TEST_TIMESTAMP;
-	rvd_back->_process_all_requests_dont_fork();
+    wait_request(debug => 0);
     is($req->status(),'done');
     is($req->error(),'') or exit;
+    test_display_db($domain,1) if $hardware eq 'display';
 
     {
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my @list_hardware2 = $domain_f->get_controller($hardware);
     is(scalar @list_hardware2 , scalar(@list_hardware1) + 1
-        ,"Adding hardware $numero\n"
-            .Dumper(\@list_hardware2, \@list_hardware1))
+        ,"Adding hardware $hardware $numero\n"
+            .Dumper($domain->name,\@list_hardware2, \@list_hardware1))
             or exit;
     }
 
@@ -115,13 +207,11 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     }
     $domain = Ravada::Domain->open($domain->id);
     my $info = $domain->info(user_admin);
-    is(scalar(@{$info->{hardware}->{$hardware}}), $numero) or exit;
+    is(scalar(@{$info->{hardware}->{$hardware}}), $numero+1) or exit;
     my $new_hardware = $info->{hardware}->{$hardware}->[$numero-1];
-    if ( $hardware eq 'disk' && $new_hardware->{name} !~ /\.iso$/ ) {
+    if ( $hardware eq 'disk' && $new_hardware->{name} !~ /\.iso$/) {
         my $name = $domain->name;
-        like($new_hardware->{name}, qr/$name-vd[a-z]-\w{4}\.\w+$/) or die Dumper($data);
-    } elsif($hardware eq 'disk') {
-        like($new_hardware->{file},qr(\.iso$)) or die Dumper($info->{hardware}->{$hardware});
+        like($new_hardware->{name}, qr/$name-.*vd[a-z].*\.\w+$/) or die Dumper($new_hardware);
     }
     if (!$TEST_TIMESTAMP++) {
         isnt($domain->_data('date_changed'), $date_changed);
@@ -202,6 +292,7 @@ sub test_add_disk($domain) {
 sub test_add_hardware_custom($domain, $hardware) {
     my %sub = (
         disk => \&test_add_disk
+        ,display => sub {}
         ,usb => sub {}
         ,mock => sub {}
         ,network => sub {}
@@ -255,24 +346,37 @@ sub test_remove_hardware {
             .Dumper(\@list_hardware2, \@list_hardware1)) or exit;
     }
     test_volume_removed($list_hardware1[$index]) if $hardware eq 'disk';
+    test_display_removed($domain, $list_hardware1[$index])   if $hardware eq 'display';
 }
 
 sub test_volume_removed($disk) {
     my $file = $disk->{file};
+    return if !$file;
     ok(! -e $file,"Expecting $file removed") unless $file =~ /\.iso$/;
+}
+
+sub test_display_removed($domain, $display) {
+    my $hardware = $domain->info(user_admin)->{hardware}->{display};
+    ok(! grep({ $_->{driver} eq $display->{driver} } @$hardware),
+        "Expecting no $display->{driver} in hardware ") or die Dumper($hardware);
+    if ($display->{driver} eq 'spice' || $display->{is_builtin}) {
+    }
 }
 
 sub test_remove_almost_all_hardware {
 	my $vm = shift;
 	my $domain = shift;
 	my $hardware = shift;
+    my $n_keep = 2;
+    $n_keep = 0 if $hardware eq 'display' || $hardware eq 'disk';
 
     #TODO test remove hardware out of bounds
     my $total_hardware = scalar($domain->get_controller($hardware));
-    return if $total_hardware < 2;
-    for my $index ( reverse 1 .. $total_hardware-1) {
+    return if !defined $total_hardware || $total_hardware <= $n_keep;
+    for my $index ( reverse 0 .. $total_hardware-1) {
+        diag("removing $hardware $index");
         test_remove_hardware($vm, $domain, $hardware, $index);
-        $domain->list_volumes();
+        $domain->list_volumes() if $hardware eq 'disk';
     }
 }
 
@@ -285,7 +389,7 @@ sub test_front_hardware {
         my @controllers = $domain_f->get_controller($hardware);
         ok(scalar @controllers,"[".$vm->type."] Expecting $hardware controllers ".$domain->name
             .Dumper(\@controllers))
-                or exit;
+                or confess;
 
         my $info = $domain_f->info(user_admin);
         ok(exists $info->{hardware},"Expecting \$info->{hardware}") or next;
@@ -409,9 +513,10 @@ sub _search_cdrom($domain) {
 sub _search_disk($domain) {
     my $count=0;
     for my $device ( $domain->list_volumes_info ) {
-        return ($count,$device) if ($device->info->{device} eq 'disk');
+        return $count if ($device->info->{device} eq 'disk');
         $count++;
     }
+    return 0;
 }
 
 
@@ -497,6 +602,7 @@ sub test_change_hardware($vm, $domain, $hardware) {
         ,disk => \&test_change_disk
         ,mock => sub {}
          ,usb => sub {}
+         ,display => sub {}
     );
     my $exec = $sub{$hardware} or die "I don't know how to test $hardware";
     $exec->($vm, $domain);
@@ -507,9 +613,13 @@ sub test_change_drivers($domain, $hardware) {
     my $info = $domain->info(user_admin);
     my $options = $info->{drivers}->{$hardware};
     ok(scalar @$options,"No driver options for $hardware") or exit;
+    for my $option ( @$options ) {
+        is(ref($option),'',"Invalid option for driver $hardware") or exit;
+    }
 
     for my $option (@$options) {
-        my ($index) = _search_disk($domain);
+        my $index = 0;
+        $index = _search_disk($domain) if $hardware eq 'disk';
         diag("Testing $hardware type $option in $hardware $index");
         $option = lc($option);
         my $req = Ravada::Request->change_hardware(
@@ -520,7 +630,7 @@ sub test_change_drivers($domain, $hardware) {
             ,uid => user_admin->id
         );
 
-        rvd_back->_process_requests_dont_fork();
+        wait_request(debug => 0);
 
         is($req->status,'done');
         is($req->error, '') or exit;
@@ -584,6 +694,10 @@ sub test_all_drivers($domain, $hardware) {
     }
 }
 
+sub _create_base($vm) {
+    return import_domain($vm, "zz-test-base-alpine") if $vm->type eq 'KVM';
+    return create_domain($vm);
+}
 ########################################################################
 
 
@@ -604,17 +718,15 @@ for my $vm_name ( vm_names()) {
 	    diag("Skipping VM $vm_name in this system");
 	    next;
 	}
+    my $BASE = _create_base($vm);
 	my $name = new_domain_name();
-	
-	my $domain_b = $vm->create_domain(
+	my $domain_b = $BASE->clone(
         name => $name
-        ,active => 0
-        ,disk => 1024 * 1024
-        ,create_args($vm_name)
+        ,user => $USER
     );
     my %controllers = $domain_b->list_controllers;
 
-    for my $hardware (reverse sort keys %controllers ) {
+    for my $hardware ( reverse sort keys %controllers ) {
         diag("Testing $hardware controllers for VM $vm_name");
         test_front_hardware($vm, $domain_b, $hardware);
 
@@ -623,9 +735,10 @@ for my $vm_name ( vm_names()) {
         test_change_hardware($vm, $domain_b, $hardware);
         test_remove_hardware($vm, $domain_b, $hardware, 0);
 
-        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(usb|mock)$/;
+        # change driver is not possible for displays
+        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock)$/;
         test_add_hardware_request_drivers($vm, $domain_b, $hardware);
-        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(usb|mock)$/;
+        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock)$/;
 
         # try to add with the machine started
         $domain_b->start(user_admin) if !$domain_b->is_active;

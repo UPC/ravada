@@ -44,10 +44,12 @@ sub download($url, $dst = $DIR_FALLBACK) {
         print "$url downloaded to $dst\n";
         $res->content->asset->move_to($dst);
     }
-    elsif ($res->is_error)    { print $res->message."\n" }
+    elsif ($res->is_error)    { print $res->message."\n"; exit }
     elsif ($res->code == 301) { print $res->headers->location."\n" }
     else                      { print "Error ".$res->code." ".$res->message
-                                    ." downloading $url\n"}
+                                    ." downloading $url\n";
+                                    exit;
+                                }
     return $dst;
 }
 

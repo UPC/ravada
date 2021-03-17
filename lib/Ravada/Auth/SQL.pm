@@ -379,7 +379,10 @@ sub is_operator {
             || $self->can_list_clones()
             || $self->can_list_clones_from_own_base()
             || $self->can_list_machines()
-            || $self->is_user_manager();
+            || $self->is_user_manager()
+            || $self->can_view_groups()
+            || $self->can_manage_groups()
+    ;
     return 0;
 }
 
@@ -613,7 +616,6 @@ sub can_do($self, $grant) {
         if $grant !~ /^[a-z_]+$/;
 
     return $self->{_grant}->{$grant} if defined $self->{_grant}->{$grant};
-
     confess "Unknown permission '$grant'. Maybe you are using an old release.\n"
             ."Try removing the table grant_types and start rvd_back again:\n"
             ."mysql> drop table grant_types;\n"
@@ -632,7 +634,7 @@ Returns if the user is allowed to perform a privileged action in a virtual machi
 =cut
 
 sub can_do_domain($self, $grant, $domain) {
-    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown rename);
+    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown reboot rename);
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
     return 0 if !$self->can_do($grant) && !$self->_domain_id_base($domain);
@@ -641,7 +643,13 @@ sub can_do_domain($self, $grant, $domain) {
     return 1 if $self->_domain_id_owner($domain) == $self->id && $self->can_do($grant);
 
     if ($self->can_do("${grant}_clones") && $self->_domain_id_base($domain)) {
-        my $base = Ravada::Front::Domain->open($self->_domain_id_base($domain));
+        my $base;
+        my $id_base = $self->_domain_id_base($domain);
+        eval { $base = Ravada::Front::Domain->open($id_base) };
+        if (!defined $base) {
+            warn "Error: base $id_base from $domain not found";
+            return 0;
+        }
         return 1 if $base->id_owner == $self->id;
     }
     return 0;
@@ -672,7 +680,7 @@ sub _load_grants($self) {
 
     my $sth;
     eval { $sth= $$CON->dbh->prepare(
-        "SELECT gt.name, gu.allowed, gt.enabled"
+        "SELECT gt.name, gu.allowed, gt.enabled, gt.is_int"
         ." FROM grant_types gt LEFT JOIN grants_user gu "
         ."      ON gt.id = gu.id_grant "
         ."      AND gu.id_user=?"
@@ -680,8 +688,8 @@ sub _load_grants($self) {
     $sth->execute($self->id);
     };
     confess $@ if $@;
-    my ($name, $allowed, $enabled);
-    $sth->bind_columns(\($name, $allowed, $enabled));
+    my ($name, $allowed, $enabled, $is_int);
+    $sth->bind_columns(\($name, $allowed, $enabled, $is_int));
 
     while ($sth->fetch) {
         my $grant_alias = $self->_grant_alias($name);
@@ -735,6 +743,7 @@ sub grant_user_permissions($self,$user) {
     $self->grant($user, 'remove');
     $self->grant($user, 'shutdown');
     $self->grant($user, 'screenshot');
+    $self->grant($user, 'reboot');
 }
 
 =head2 grant_operator_permissions

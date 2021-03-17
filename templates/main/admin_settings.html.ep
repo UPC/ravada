@@ -128,6 +128,22 @@
         </div>
 
 
+        <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-2">
+            <label for="bookings">Bookings</label>
+            </div>
+            <div class="col-md-4">
+                <input name="bookings" ng-model="settings.backend.bookings.value"
+                                          type="checkbox"
+                    ng-true-value="1" ng-false-value="0"
+                >
+            </div>
+            <div class="col-md-4">
+                Bookings require LDAP authentication. <a href="https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html">?</a>
+            </div>
+        </div>
+
         <hr>
 
         <div class="row">

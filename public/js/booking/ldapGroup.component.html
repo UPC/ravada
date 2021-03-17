@@ -1,0 +1,28 @@
+<div>
+    <select class="form-control"
+            ng-if="$ctrl.editable"
+            ng-options="name for name in $ctrl.available_groups"
+            ng-model="$ctrl.group_selected"
+            ng-required="!$ctrl.ngModel.$valid"
+            ng-change="$ctrl.add_ldap_group()">
+        <option selected value="">Select groups</option>
+    </select>
+    <div class="text-danger" role="alert" ng-show="$ctrl.err">
+        {{ $ctrl.err }}
+    </div>
+    <div class="container-fluid">
+        <div class="d-inline-flex mr-2 mt-2"
+             ng-repeat="group in $ctrl.selected_groups">
+            <div>
+                <span class="badge badge-pill badge-primary p-2">
+                    {{group}}
+                    <span ng-click="$ctrl.remove_ldap_group(group)" ng-if="$ctrl.editable">
+                        <i class="fas fa-times"></i>
+                    </span>
+                </span>
+            </div>
+
+        </div>
+    </div>
+
+</div>

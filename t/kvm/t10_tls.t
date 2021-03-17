@@ -10,28 +10,10 @@ use Test::Ravada;
 
 init();
 
-my $FILE_CONFIG_QEMU = "/etc/libvirt/qemu.conf";
-
 #################################################################
 
 sub _check_libvirt_tls {
-    my %search = map { $_ => 0 }
-    ('spice_tls = 1',
-    'spice_tls_x509_cert_dir = '
-    );
-    open my $in,'<',$FILE_CONFIG_QEMU or die "$! $FILE_CONFIG_QEMU";
-    while(my $line = <$in>) {
-        chomp $line;
-        $line =~ s/#.*//;
-        next if !length($line);
-        for my $pattern (keys %search) {
-            delete $search{$pattern} if $line =~ /^$pattern/
-        }
-        last if !keys %search;
-    }
-    return if !keys %search;
-    return "Missing in $FILE_CONFIG_QEMU: ".join(" , ",keys %search)
-        ."\n".'https://ravada.readthedocs.io/en/latest/docs/spice_tls.html';
+    return check_libvirt_tls();
 }
 
 sub test_tls {
@@ -51,19 +33,15 @@ sub test_tls {
 
     my $display_file = $domain->display_file_tls(user_admin);
     my @lines = split /\n/,$display_file;
-    ok(grep(/^ca=-+BEGIN/, @lines),"Expecting ca on ".Dumper(\@lines));
-    ok(grep(/^tls-port=.+/, @lines),"Expecting tls-port on ".Dumper(\@lines));
-    ok(grep(/^tls-ciphers=.+/, @lines),"Expecting tls-ciphers on ".Dumper(\@lines));
-    ok(grep(/^host-subject=.+/, @lines),"Expecting host-subject on ".Dumper(\@lines));
-
-=pod
-
-    open my $out,'>',"/var/tmp/".$domain->name.".xml" or die $!;
-    print $out join("\n", @lines)."\n";
-    close $out;
-    exit;
-
-=cut
+    my %field;
+    for (@lines) {
+        my ($key, $value) = split /=/;
+        next if !$key || !$value;
+        $field{$key} = $value;
+    }
+    for my $key ( 'ca', 'tls-port','tls-ciphers','host-subject') {
+        ok($field{$key},"Expecting $key ") or die Dumper(\%field);
+    }
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my $file_f = $domain_f->display_file_tls(user_admin);
@@ -89,8 +67,10 @@ SKIP: {
         $vm = undef;
     }
     if ($vm) {
-        $msg = _check_libvirt_tls();
-        $vm = undef if $msg;
+        if (! _check_libvirt_tls() ) {
+            $msg = "No TLS found";
+            $vm = undef;
+        }
     }
 
     diag($msg)      if !$vm;
