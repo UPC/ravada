@@ -14,6 +14,7 @@ use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
 use POSIX qw(WNOHANG);
+use Proc::PID::File;
 use Time::HiRes qw(gettimeofday tv_interval);
 use YAML;
 use MIME::Base64;
@@ -144,6 +145,16 @@ sub BUILD {
 }
 
 sub _install($self) {
+    my $pid = Proc::PID::File->new(name => "ravada_install");
+    if ( $pid->alive ) {
+        print "Waiting for install process to finish" if $ENV{TERM};
+        while ( $pid->alive ) {
+            sleep 1;
+            print "." if $ENV{TERM};
+        }
+        print "\n" if $ENV{TERM};
+    }
+    $pid->touch;
     $self->_sql_create_tables();
     $self->_create_tables();
     $self->_upgrade_tables();
@@ -152,6 +163,7 @@ sub _install($self) {
     $self->_init_user_daemon();
     $self->_sql_insert_defaults();
     print "\n" if $FIRST_TIME_RUN;
+    $pid->release();
 }
 
 sub _init_user_daemon {
