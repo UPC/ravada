@@ -1325,6 +1325,7 @@ sub _insert_data {
     open my $in,'<',$file_sql or die "$! $file_sql";
     my $sql = '';
     while (my $line = <$in>) {
+        $line =~ s{/\*.*?\*/}{};
         $sql .= $line;
         next if $sql !~ /\w/ || $sql !~ /;\s*$/;
         $CONNECTOR->dbh->do($sql);

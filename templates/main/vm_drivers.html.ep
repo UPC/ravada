@@ -24,7 +24,7 @@
                     for="driver_<%= $driver_name %>"><%= $driver_name %></label>
             </div>
             <div class="col-md-4 mt-2">
-                <select data-live-search="true" class="selectpicker form-control show-tick"
+                <select data-live-search="true" class="custom-select form-control show-tick"
                         name="driver_<%= $driver_name %>">
 %              for my $option( $driver->get_options ) {
 %                  my $selected;
