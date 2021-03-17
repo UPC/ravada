@@ -12,7 +12,8 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my $SHARED_SP = "pool_tst";
+my $SHARED_SP = "pool_shared";
+my $DIR_SHARED = "/home2/pool_shared";
 
 init();
 
@@ -43,6 +44,17 @@ sub test_shared($vm, $node) {
     is($domain->base_in_vm($vm->id),1);
 
     my @files_base = $domain->list_files_base();
+    for my $vol (@files_base) {
+        my $ok;
+        for ( 1 .. 5 ) {
+            $ok = -e $vol;
+            last if $ok;
+            sleep 1;
+        }
+        ok($ok,"Volume $vol should exist") or exit;
+        ok($node->file_exists($vol), "Volume $vol should exist in ".$node->name);
+    }
+
 
     $req = Ravada::Request->set_base_vm(
         uid => user_admin->id
@@ -65,10 +77,24 @@ sub test_shared($vm, $node) {
             last if $ok;
             sleep 1;
         }
-        ok($ok,"Volume $vol should exists");
+        ok($ok,"Volume $vol should exist") or exit;
+        ok($node->file_exists($vol), "Volume $vol should exist in ".$node->name);
     }
     $domain->remove(user_admin);
 
+}
+
+sub test_is_shared($vm, $node) {
+    is($vm->shared_storage($node,$DIR_SHARED),1) or exit;
+    is($node->shared_storage($vm,$DIR_SHARED),1) or exit;
+    my $sth = connector->dbh->prepare("SELECT * FROM storage_nodes "
+        ." WHERE dir=?"
+    );
+    my $dir_shared = $DIR_SHARED;
+    $dir_shared.="/" unless $dir_shared =~ m{/$};
+    $sth->execute($dir_shared);
+    my $row = $sth->fetchrow_hashref;
+    is($row->{is_shared},1) or die Dumper($row);
 }
 
 #################################################################################
@@ -107,7 +133,7 @@ the file "
         skip($msg,10)   if !$vm;
 
         diag("Testing remote node in $vm_name");
-        my $node = remote_node($vm_name)  or next;
+        my $node = remote_node_shared($vm_name)  or next;
         clean_remote_node($node);
 
         ok($node->vm,"[$vm_name] expecting a VM inside the node") or do {
@@ -122,6 +148,7 @@ the file "
             skip($msg,10);
         }
 
+        test_is_shared($vm, $node);
         test_shared($vm, $node);
         NEXT:
         clean_remote_node($node);
