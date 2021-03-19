@@ -141,6 +141,7 @@ sub BUILD {
 
 sub _install($self) {
     my $pid = Proc::PID::File->new(name => "ravada_install");
+    $pid->file({dir => "/run/user/$>"}) if $>;
     if ( $pid->alive ) {
         print "Waiting for install process to finish" if $ENV{TERM};
         while ( $pid->alive ) {
