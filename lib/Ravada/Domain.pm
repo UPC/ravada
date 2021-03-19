@@ -1822,8 +1822,14 @@ sub _after_remove_domain {
 }
 
 sub _remove_all_volumes($self) {
+    my $vm_local = $self->_vm;
+    $vm_local = $self->_vm->new( host => 'localhost' ) if !$self->is_local;
     for my $vol (@{$self->{_volumes}}) {
         next if $vol =~ /iso$/;
+        if (!$self->is_local) {
+            my ($dir) = $vol =~ m{(.*)/};
+            next if $vm_local->shared_storage($self->_vm, $dir);
+        }
         $self->remove_volume($vol);
     }
 }
@@ -1850,6 +1856,23 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         warn $@ if $@;
         $domain->remove($user, $cascade) if $domain;
         $sth_delete->execute($instance->{id});
+    }
+}
+
+sub _redefine_instances($self) {
+    my $domain_name = $self->name or confess "Unknown my self name $self ".Dumper($self->{_data});
+    my @instances = $self->list_instances();
+    for my $instance ( @instances ) {
+        next if $instance->{id_vm} == $self->_vm->id;
+        my $vm;
+        eval { $vm = Ravada::VM->open($instance->{id_vm}) };
+        die $@ if $@ && $@ !~ /I can't find VM/i;
+        next if !$vm || !$vm->is_active;
+        my $domain;
+        $@ = '';
+        eval { $domain = $vm->search_domain($domain_name) } if $vm;
+        warn $@ if $@;
+        $domain->copy_config($self);
     }
 }
 
@@ -4684,8 +4707,9 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     }
     $self->info(Ravada::Utils::user_daemon) if $self->is_known();
 
-    $self->_remove_domain_cascade(Ravada::Utils::user_daemon,1)
-    if $self->is_known() && !$self->is_base;
+    if ( $self->is_known() && !$self->is_base ) {
+        $self->_redefine_instances();
+    }
 
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
 }

@@ -23,13 +23,9 @@ my $BASE;
 #################################################################################
 
 sub test_shared($vm, $node) {
-    $vm->default_storage_pool_name($SHARED_SP);
-
     my $domain = create_domain($vm);
 
     my $storage_path = $vm->_storage_path($SHARED_SP);
-
-    is($vm->shared_storage($node, $storage_path),1,"Expecting $SHARED_SP shared") or exit;
     for my $vol ($domain->list_disks) {
         like($vol,qr(^$storage_path), $vol);
     }
@@ -107,7 +103,7 @@ sub _add_disk($domain) {
         ,name=> 'disk'
         ,data => { size => 512 * 1024 }
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     is($req->error,'');
 }
 
@@ -122,12 +118,13 @@ sub _change_ram($domain) {
         ,hardware => 'memory'
         ,data => {memory => $new_mem }
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     is($req->error,'');
     return $new_mem;
 }
 
 sub test_change_ram($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
+    diag("start=$start , prepare_base=$prepare_base , migrate=$migrate");
     my $base = $BASE->clone(name => new_domain_name, user => user_admin);
     $base->spinoff();
 
@@ -140,19 +137,35 @@ sub test_change_ram($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
     req_migrate($node, $domain, $start) if $migrate;
 
     my $new_mem = _change_ram($domain);
+    _test_volumes_exist($domain);
 
     my $domain_local = $vm->search_domain($domain->name);
     is($domain_local->_vm->id,$vm->id);
     my $mem2 = $domain_local->info(user_admin)->{memory};
     is($mem2, $new_mem);
 
+    req_start($domain);
     req_migrate($node, $domain, 1);
     $domain = Ravada::Domain->open($domain->id);
     $mem2 = $domain->info(user_admin)->{memory};
     is($mem2, $new_mem);
+    _test_volumes_exist($domain);
 
     $domain->remove(user_admin);
 
+}
+
+sub _test_volumes_exist($domain) {
+    my $domain_local = Ravada::Domain->open($domain->id);
+    for my $disk ( $domain_local->list_volumes ) {
+        ok(-e $disk,"Expecting $disk exist ".$domain_local->name) or exit;
+    }
+    if ($domain->id_base) {
+        my $base = Ravada::Domain->open($domain->id_base);
+        for my $disk ($base->list_files_base) {
+            ok(-e $disk,"Expecting $disk exist");
+        }
+    }
 }
 
 sub test_add_disk($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
@@ -169,22 +182,33 @@ sub test_add_disk($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
     req_migrate($node, $domain, $start) if $migrate;
 
     _add_disk($domain);
+    _test_volumes_exist($domain);
 
     my $domain_local = $vm->search_domain($domain->name);
     is($domain_local->_vm->id,$vm->id);
-    is(scalar($domain_local->list_volume),$n+1);
+    is(scalar($domain_local->list_volumes),$n+1);
 
+    req_start($domain);
     req_migrate($node, $domain, 1);
     $domain = Ravada::Domain->open($domain->id);
-    is(scalar($domain->list_volume),$n+1);
+    is(scalar($domain->list_volumes),$n+1);
+    _test_volumes_exist($domain);
 
     $domain->remove(user_admin);
-
 }
 
+sub req_start($domain) {
+    my $req = Ravada::Request->start_domain(
+        id_domain => $domain->id
+        ,uid => user_admin->id
+    );
+    wait_request();
+    is($req->status,'done');
+    is($req->error,'');
+}
 
 sub req_migrate($node, $domain, $start=0) {
-   my $req = Ravada::Request->migrate(
+    my $req = Ravada::Request->migrate(
         id_domain => $domain->id
         ,uid => user_admin->id
         ,shutdown => 1
@@ -259,11 +283,17 @@ the file "
             diag($msg);
             skip($msg,10);
         }
+
+        # set storage in shared dir
+        $vm->default_storage_pool_name($SHARED_SP);
+        my $storage_path = $vm->_storage_path($SHARED_SP);
+        is($vm->shared_storage($node, $storage_path),1,"Expecting $SHARED_SP shared") or exit;
+
         import_base($vm);
 
         for my $start ( 0,1 ) {
             for my $prepare_base ( 0,1 ) {
-                for my $migrate( 0,1 ) {
+                for my $migrate( 1, 0 ) {
                     test_change_ram($vm,$node, $start, $prepare_base, $migrate);
                     test_add_disk($vm,$node, $start, $prepare_base, $migrate);
                 }
