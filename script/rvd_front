@@ -1765,19 +1765,15 @@ sub login($c, $status=200) {
 
     my @error =();
 
-    if (defined $login || defined $password || $c->param('submit')) {
+    if (((defined $login) || (defined $password) || ($c->param('submit') ne 'sso')) && (! $ticket)) {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
     }
-    if (defined $ticket) {
-        push @error, ("Empty ticket value") if !length $ticket;
-    }
-
     my $auth_ok;
     if (!@error) {
         if (defined $login && defined $password) {
             eval { $auth_ok = Ravada::Auth::login($login, $password)};
-        } else {
+        } elsif (($c->param('ticket')) || ($c->param('submit') eq 'sso')) {
             eval { $auth_ok = Ravada::Auth::login_external($c->param('ticket'), $c->session('ticket')) };
             if ($auth_ok && !$@) {
                 return $c->redirect_to($auth_ok->{'redirectTo'}) if ($auth_ok->{'redirectTo'});
@@ -1865,7 +1861,7 @@ sub quick_start {
     my $id_base = $c->param('id_base');
 
     my @error =();
-    if ($c->param('submit')) {
+    if (($c->param('submit') ne 'sso') && (! $ticket)) {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
     }
@@ -1877,10 +1873,15 @@ sub quick_start {
         my $log_ok;
         if ( $login && $password) {
             eval { $log_ok = Ravada::Auth::login($login, $password) };
-        } else {
+        } elsif (($c->param('ticket')) || ($c->param('submit') eq 'sso')) {
             push @error,("Access denied");
             eval { $log_ok = Ravada::Auth::login_external($c->param('ticket'), $c->session('ticket')) };
-            $login = $log_ok->name if ($log_ok && !$@);
+            if ($log_ok && !$@) {
+                return $c->redirect_to($log_ok->{'redirectTo'}) if ($log_ok->{'redirectTo'});
+                $c->session('ticket' => $log_ok->{'ticket'}) if ($log_ok->{'ticket'});
+                $c->session('logoutURL' => $log_ok->{'logoutURL'}) if ($log_ok->{'logoutURL'});
+                $login = $log_ok->name;
+            }
         }
         if ($log_ok && !$@) {
             $c->session('login' => $login);
