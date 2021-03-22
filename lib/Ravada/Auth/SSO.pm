@@ -77,13 +77,14 @@ sub login($self) {
 }
 
 sub login_external($ticket, $cookie) {
-    if ($ticket) {
-        my $name = _validate_ticket($ticket);
-        my $self = Ravada::Auth::SSO->new(name => $name, ticket => _generate_session_ticket($name));
-        return $self;
-    } elsif ($cookie) {
+warn "$ticket - $cookie";
+    if ($cookie) {
         my $name = _get_session_userid_by_ticket($cookie);
         my $self = Ravada::Auth::SSO->new(name => $name, ticket => $cookie);
+        return $self;
+    } elsif ($ticket) {
+        my $name = _validate_ticket($ticket);
+        my $self = Ravada::Auth::SSO->new(name => $name, ticket => _generate_session_ticket($name));
         return $self;
     } else {
         return { redirectTo => sprintf('%s/login?service=%s', $$CONFIG->{sso}->{url}, uri_escape($$CONFIG->{sso}->{service})) };

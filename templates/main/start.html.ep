@@ -26,7 +26,9 @@
                 </form>
                 <form class="form-singin" method="post">
                 <input type="hidden" name="url" value="<%= $url %>">
+                % if ($sso_available) {
                 <button id="submit" class="btn btn-success btn-lg btn-block" href="/" type="submit" name="submit" value="sso"><%=l 'SSO/CAS Login' %></button>
+                % }
                 </form>
                 <div class="alert alert-warning">
                     <%=l 'A viewer is required to run the virtual machines.' %>
