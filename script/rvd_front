@@ -1779,7 +1779,6 @@ sub login($c, $status=200) {
             eval { $auth_ok = Ravada::Auth::login($login, $password)};
         } else {
             eval { $auth_ok = Ravada::Auth::login_external($c->param('ticket'), $c->session('ticket')) };
-warn Dumper $auth_ok, $@;
             if ($auth_ok && !$@) {
                 return $c->redirect_to($auth_ok->{'redirectTo'}) if ($auth_ok->{'redirectTo'});
                 $c->session('ticket' => $auth_ok->{'ticket'}) if ($auth_ok->{'ticket'});
