@@ -1765,7 +1765,7 @@ sub login($c, $status=200) {
 
     my @error =();
 
-    if (((defined $login) || (defined $password) || ($c->param('submit') ne 'sso')) && (! $ticket)) {
+    if (((defined $login) || (defined $password) || ((defined $c->param('submit')) && ($c->param('submit') ne 'sso'))) && (! $ticket)) {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
     }
@@ -1806,7 +1806,7 @@ sub login($c, $status=200) {
             $c->session(auto_view => $auto_view, expiration => $expiration);
             app->log->info("Access granted to $login from "._remote_ip($c)) if $CONFIG_FRONT->{log}->{log};
             return $c->redirect_to($url);
-        } else {
+        } elsif (defined $c->param('submit')) {
             app->log->error("Access denied to $login from "._remote_ip($c)) if $CONFIG_FRONT->{log}->{log};
             push @error,("Access denied");
         }
