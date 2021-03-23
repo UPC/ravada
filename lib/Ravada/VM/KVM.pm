@@ -458,7 +458,11 @@ sub file_exists($self, $file) {
         $self->_wait_storage( sub { $pool->refresh() } );
         my @volumes = $self->_wait_storage( sub { $pool->list_all_volumes });
         for my $vol ( @volumes ) {
-            return 1 if $vol->get_path eq $file;
+            my $found;
+            eval { $found = 1 if $vol->get_path eq $file };
+            # volume was removed in the nick of time
+            die $@ if $@ && ( !ref($@) || $@->code != 50);
+            return 1 if $found;
         }
     }
     return 0;
