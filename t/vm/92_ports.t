@@ -700,6 +700,75 @@ sub _iptables_save($vm,$table=undef,$chain=undef) {
     return @out;
 }
 
+sub test_redirect_ip_duplicated($vm) {
+    diag("Test redirect ip duplicated ".$vm->type);
+    my $internal_port = 22;
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+    $domain->expose(port => $internal_port, name => "ssh");
+    $domain->start( remote_ip => '10.1.1.2', user => user_admin);
+    my $ip = _wait_ip2($vm, $domain);
+    wait_request(debug => 1);
+
+    my @ports0 = $domain->list_ports();
+    my ($public_port) = $ports0[0]->{public_port};
+    $vm->iptables(t => 'nat'
+        , A => 'PREROUTING'
+        , p => 'tcp'
+        , d => $vm->ip
+        , dport => $public_port+10
+        , j => 'DNAT'
+        , 'to-destination' => "$ip:$internal_port"
+    );
+    my @out = split /\n/, `iptables-save -t nat`;
+    my @open = (grep /--to-destination $ip/, @out);
+    is(scalar(@open),2) or die Dumper(\@open);
+
+    $domain->start( remote_ip => '10.1.1.2', user => user_admin);
+    wait_request(debug => 1);
+
+    @out = split /\n/, `iptables-save -t nat`;
+    @open = (grep /--to-destination $ip/, @out);
+    is(scalar(@open),1) or die Dumper(\@open);
+
+    $domain->remove(user_admin);
+}
+
+sub test_redirect_ip_duplicated_refresh($vm) {
+    diag("Test redirect ip duplicated refresh".$vm->type);
+    my $internal_port = 22;
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+    $domain->expose(port => $internal_port, name => "ssh");
+    $domain->start( remote_ip => '10.1.1.2', user => user_admin);
+    my $ip = _wait_ip2($vm, $domain);
+    wait_request(debug => 1);
+
+    my @ports0 = $domain->list_ports();
+    my ($public_port) = $ports0[0]->{public_port};
+    $vm->iptables(t => 'nat'
+        , A => 'PREROUTING'
+        , p => 'tcp'
+        , d => $vm->ip
+        , dport => $public_port+10
+        , j => 'DNAT'
+        , 'to-destination' => "$ip:$internal_port"
+    );
+    my @out = split /\n/, `iptables-save -t nat`;
+    my @open = (grep /--to-destination $ip/, @out);
+    is(scalar(@open),2) or die Dumper(\@open);
+
+    my $req = Ravada::Request->refresh_vms();
+    wait_request();
+    is($req->status,'done');
+    is($req->error, '');
+
+    @out = split /\n/, `iptables-save -t nat`;
+    @open = (grep /--to-destination $ip/, @out);
+    is(scalar(@open),1) or die Dumper(\@open);
+
+    $domain->remove(user_admin);
+}
+
+
 sub test_open_port_duplicated($vm) {
     diag("Test open port duplicated ".$vm->type);
     my $base = $BASE->clone(name => new_domain_name, user => user_admin);
@@ -1243,6 +1312,7 @@ for my $vm_name ( vm_names() ) {
     flush_rules() if !$<;
     import_base($vm);
 
+    test_redirect_ip_duplicated($vm);
     test_open_port_duplicated($vm);
     test_close_port($vm);
 

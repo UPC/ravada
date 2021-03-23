@@ -1688,6 +1688,11 @@ sub _sql_insert_defaults($self){
                 ,name => 'display_password'
                 ,value => 1
             }
+            ,{
+                id_parent => $id_backend
+                ,name => "debug_ports"
+                ,value => 0
+            }
         ]
     );
     my %field = ( settings => 'name' );
@@ -4379,6 +4384,7 @@ sub _refresh_down_nodes($self, $request = undef ) {
 }
 
 sub _check_duplicated_prerouting($self, $request = undef ) {
+    my $debug_ports = $self->setting('/backend/debug_ports');
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id FROM vms WHERE is_active=1 "
     );
@@ -4390,16 +4396,23 @@ sub _check_duplicated_prerouting($self, $request = undef ) {
         if ($vm) {
             my $iptables = $vm->iptables_list();
             my %prerouting;
+            my %already_open;
             for my $line (@{$iptables->{'nat'}}) {
                 my %args = @$line;
                 next if $args{A} ne 'PREROUTING' || !$args{dport};
                 my $port = $args{dport};
-                if ($prerouting{$port}) {
-                    $self->_reopen_ports($port);
-                    $self->_delete_iptables_rule($vm,'nat', \%args);
-                    $self->_delete_iptables_rule($vm,'nat', $prerouting{$port});
+                for my $item ( 'dport' , 'to-destination') {
+                    my $value = $args{$item} or next;
+                    if ($prerouting{$value}) {
+                        warn "clean duplicated prerouting "
+                        .Dumper($prerouting{$value}, \%args) if $debug_ports;
+
+                        $self->_reopen_ports($port) unless $already_open{$port}++;
+                        $self->_delete_iptables_rule($vm,'nat', \%args);
+                        $self->_delete_iptables_rule($vm,'nat', $prerouting{$port});
+                    }
+                    $prerouting{$value} = \%args;
                 }
-                $prerouting{$port} = \%args;
             }
         }
     }
