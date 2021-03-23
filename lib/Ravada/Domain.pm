@@ -2838,9 +2838,9 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
     if ($public_port && $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port") ) {
-        $public_port = undef;
-        warn "".localtime(time)." ".$self->name." cleared duplicate $public_port\n"
+        warn $self->name." cleared duplicate $public_port\n"
         if $debug_ports;
+        $public_port = undef;
     }
 
     $public_port = $self->_set_public_port($id_port, $internal_port, $name, $restricted)
@@ -2859,14 +2859,14 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
         my %removed;
         for my $line ( @open1, @open2 ) {
             next if $removed{$line}++;
-            warn "".localtime(time)." ".$self->name." clean $line\n" if $debug_ports;
+            warn $self->name." clean $line\n" if $debug_ports;
             $line =~ s/^-A/-t nat -D/;
             my ($out,$err) = $self->_vm->run_command("iptables",split / /,$line);
             warn $out if$out;
             warn $err if $err;
         }
 
-        warn "".localtime(time)." ".$self->name." open $public_port ->"
+        warn $self->name." open $public_port ->"
         ." $internal_ip:$internal_port\n"
         if $debug_ports;
 

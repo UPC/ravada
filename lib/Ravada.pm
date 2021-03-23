@@ -4044,7 +4044,7 @@ sub _check_duplicated_prerouting($self, $request = undef ) {
                 for my $item ( 'dport' , 'to-destination') {
                     my $value = $args{$item} or next;
                     if ($prerouting{$value}) {
-                        warn "".localtime(time)." clean duplicated prerouting "
+                        warn "clean duplicated prerouting "
                         .Dumper($prerouting{$value}, \%args) if $debug_ports;
 
                         $self->_reopen_ports($port) unless $already_open{$port}++;
