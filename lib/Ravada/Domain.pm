@@ -3140,6 +3140,7 @@ sub _used_port_displays($self, $port, $skip_id_port) {
 }
 
 sub _open_exposed_port($self, $internal_port, $name, $restricted) {
+    my $debug_ports = Ravada::setting(undef,'/backend/debug_ports');
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,public_port FROM domain_ports"
         ." WHERE id_domain=? AND internal_port=?"
     );
@@ -3150,9 +3151,14 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     confess "Error: I can't get the internal IP of ".$self->name
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
-    $public_port = undef if $public_port
-        &&( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port")
-            || $self->_used_port_displays($public_port,$id_port));
+    if ($public_port
+        && ( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port") 
+            || $self->_used_port_displays($public_port,$id_port))
+        ) {
+        warn $self->name." cleared duplicate $public_port\n"
+        if $debug_ports;
+        $public_port = undef;
+    }
 
     $public_port = $self->_set_public_port($id_port, $internal_port, $name, $restricted)
     if !$public_port;
@@ -3164,6 +3170,23 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     $sth->execute($internal_ip, $self->id, $internal_port);
 
     if ( !$> ) {
+        my ($out, $err) = $self->_vm->run_command("iptables-save","-t","nat");
+        my @open1 = (grep /--dport $public_port/, split/\n/,$out );
+        my @open2 = (grep /--to-destination $internal_ip:$internal_port/, split/\n/,$out );
+        my %removed;
+        for my $line ( @open1, @open2 ) {
+            next if $removed{$line}++;
+            warn $self->name." clean $line\n" if $debug_ports;
+            $line =~ s/^-A/-t nat -D/;
+            my ($out,$err) = $self->_vm->run_command("iptables",split / /,$line);
+            warn $out if$out;
+            warn $err if $err;
+        }
+
+        warn $self->name." open $public_port ->"
+        ." $internal_ip:$internal_port\n"
+        if $debug_ports;
+
         $self->_vm->iptables_unique(
             t => 'nat'
             ,A => 'PREROUTING'

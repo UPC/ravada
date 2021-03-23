@@ -117,6 +117,19 @@
 		<div class="row">
             <div class="col-md-1"></div>
             <div class="col-md-2">
+            <label for="debug">Debug Ports</label>
+            </div>
+            <div class="col-md-6">
+            <input name="debug" ng-model="settings.backend.debug_ports.value"
+                ng-true-value="1" ng-false-value="0"
+                type="checkbox">
+                <%= l 'Debug Ports Exposed' %>
+            </div>
+        </div>
+
+		<div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-2">
             <label for="debug">Display Password</label>
             </div>
             <div class="col-md-6">
