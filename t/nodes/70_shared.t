@@ -110,7 +110,7 @@ sub _add_disk($domain) {
 sub _change_ram($domain) {
 
     my $mem = $domain->info(user_admin)->{memory};
-    my $new_mem = int($mem * 0.9 ) - 1;
+    my $new_mem = int($mem * 0.8 ) - 1;
 
     my $req = Ravada::Request->change_hardware(
         uid => user_admin->id
@@ -137,6 +137,10 @@ sub test_change_ram($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
     req_migrate($node, $domain, $start) if $migrate;
 
     my $new_mem = _change_ram($domain);
+    if ( $migrate ) {
+        my $domain2 = Ravada::Domain->open($domain->id);
+        is($domain2->_vm->id, $node->id);
+    }
     _test_volumes_exist($domain);
 
     my $domain_local = $vm->search_domain($domain->name);
@@ -152,13 +156,14 @@ sub test_change_ram($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
     _test_volumes_exist($domain);
 
     $domain->remove(user_admin);
-
+    $base->remove(user_admin) if $base->id != $domain->id;
 }
 
 sub _test_volumes_exist($domain) {
     my $domain_local = Ravada::Domain->open($domain->id);
     for my $disk ( $domain_local->list_volumes ) {
-        ok(-e $disk,"Expecting $disk exist ".$domain_local->name) or exit;
+        ok(-e $disk,"Expecting ".$domain_local->name." $disk exist in "
+            .$domain_local->_vm->name) or confess;
     }
     if ($domain->id_base) {
         my $base = Ravada::Domain->open($domain->id_base);
@@ -182,6 +187,10 @@ sub test_add_disk($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
     req_migrate($node, $domain, $start) if $migrate;
 
     _add_disk($domain);
+    if ( $migrate ) {
+        my $domain2 = Ravada::Domain->open($domain->id);
+        is($domain2->_vm->id, $node->id);
+    }
     _test_volumes_exist($domain);
 
     my $domain_local = $vm->search_domain($domain->name);
@@ -195,6 +204,7 @@ sub test_add_disk($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
     _test_volumes_exist($domain);
 
     $domain->remove(user_admin);
+    #    $base->remove(user_admin) if $base->id != $domain->id;
 }
 
 sub req_start($domain) {
@@ -291,16 +301,21 @@ the file "
 
         import_base($vm);
 
-        for my $start ( 0,1 ) {
-            for my $prepare_base ( 0,1 ) {
-                for my $migrate( 1, 0 ) {
-                    test_change_ram($vm,$node, $start, $prepare_base, $migrate);
-                    test_add_disk($vm,$node, $start, $prepare_base, $migrate);
+        test_is_shared($vm, $node);
+        test_shared($vm, $node);
+
+        for my $default_sp ( 0,1 ) {
+            $node->default_storage_pool_name('default')     if !$default_sp;
+            $node->default_storage_pool_name($SHARED_SP)    if $default_sp;
+            for my $start ( 0,1 ) {
+                for my $prepare_base ( 0,1 ) {
+                    for my $migrate( 1, 0 ) {
+                        test_change_ram($vm,$node, $start, $prepare_base, $migrate);
+                        test_add_disk($vm,$node, $start, $prepare_base, $migrate);
+                    }
                 }
             }
         }
-        test_is_shared($vm, $node);
-        test_shared($vm, $node);
 
         NEXT:
         clean_remote_node($node);

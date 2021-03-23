@@ -596,6 +596,7 @@ sub test_bases_node {
     is($domain->base_in_vm($node->id), undef);
 
     $domain->migrate($node);
+    is($domain->_vm->id, $node->id) or exit;
     is($domain->base_in_vm($node->id), 1);
 
     for my $file ( $domain->list_files_base ) {
@@ -606,6 +607,9 @@ sub test_bases_node {
 
     $domain->set_base_vm(vm => $node, value => 0, user => user_admin);
     is($domain->base_in_vm($node->id), 0);
+    for my $file ( $domain->list_files_base ) {
+        ok($vm->file_exists($file)) or die "File $file doesn't exist in ".$vm->name;
+    }
 
     $domain->set_base_vm(vm => $vm, value => 0, user => user_admin);
     is($domain->is_base(),0);

@@ -185,14 +185,16 @@ sub test_change_hardware($vm, @nodes) {
         ."WHERE id_domain = ".$clone->id );
     $sth->execute();
     my ($count) = $sth->fetchrow;
-    is($count,1,"Expecting other instances removed when hardware changed") or exit;
+    is($count,1+scalar(@nodes),"Expecting other instances not removed when hardware $hardware removed");
 
     for my $node (@nodes) {
         my $clone2 = $node->search_domain($clone->name);
-        ok(!$clone2,"Expecting no clone ".$clone->name." in remote node ".$node->name) or exit;
+        ok($clone2,"Expecting clone ".$clone->name." in remote node ".$node->name
+        ." when removing $hardware");
     }
 
-    is($clone->_vm->is_local,1) or exit;
+    my $clone_fresh = Ravada::Domain->open($clone->id);
+    is($clone_fresh->_vm->is_local, 1) or exit;
     for (@volumes) {
         ok(-e $_,$_) or exit;
     }

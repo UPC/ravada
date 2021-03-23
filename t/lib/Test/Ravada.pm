@@ -728,7 +728,13 @@ sub _remove_old_disks_kvm {
             next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2|void|backup)$/;
 
             eval { $volume->delete() };
-            warn $@ if $@;
+            if ($@) {
+                if ($@->code == 38 ) {
+                    $vm->remove_file($volume->get_path);
+                } else {
+                    warn "Error $@ removing ".$volume->get_name." in ".$vm->name if $@;
+                }
+            }
         }
     }
     eval {
