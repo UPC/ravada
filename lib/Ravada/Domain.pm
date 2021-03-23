@@ -206,13 +206,11 @@ around 'is_hibernated' => \&_around_is_hibernated;
 
 around 'autostart' => \&_around_autostart;
 
-before 'set_controller' => \&_pre_change_hardware;
-before 'remove_controller' => \&_pre_change_hardware;
-before 'change_hardware' => \&_pre_change_hardware;
+around 'set_controller' => \&_around_change_hardware;
+around 'change_hardware' => \&_around_change_hardware;
 
-after 'set_controller' => \&_post_change_hardware;
-after 'remove_controller' => \&_post_change_hardware;
-after 'change_hardware' => \&_post_change_hardware;
+before 'remove_controller' => \&_pre_remove_hardware;
+after 'remove_controller' => \&_post_remove_hardware;
 
 around 'name' => \&_around_name;
 
@@ -357,6 +355,9 @@ sub _around_start($orig, $self, @arg) {
         $error = $@;
         last if !$error;
         warn "WARNING: $error ".$self->_vm->name." ".$self->_vm->enabled if $error;
+
+        next if $error && ref($error) && $error->code == 1;# pool has asynchronous jobs running.
+
         if ($error && $self->id_base && !$self->is_local && $self->_vm->enabled) {
             $self->_request_set_base();
             next;
@@ -2216,7 +2217,8 @@ sub _do_remove_base($self, $user) {
     for my $vol ($self->list_volumes_info) {
         next if !$vol->file || $vol->file =~ /\.iso$/;
         my ($dir) = $vol->file =~ m{(.*)/};
-        next if !$self->is_local && !$self->_vm->shared_storage($vm_local, $dir);
+
+        next if !$self->is_local && $self->_vm->shared_storage($vm_local, $dir);
         my $backing_file = $vol->backing_file;
         next if !$backing_file;
         #        confess "Error: no backing file for ".$vol->file if !$backing_file;
@@ -2230,7 +2232,7 @@ sub _do_remove_base($self, $user) {
         }
         $vol->block_commit();
         unlink $vol->file or die "$! ".$vol->file;
-        my @stat = stat($backing_file);
+        my @stat = stat($backing_file) or confess "Error: missing $backing_file";
         move($backing_file, $vol->file) or die "$! $backing_file -> ".$vol->file;
         my $mask = oct(7777);
         my $mode = $stat[2] & $mask;
@@ -2242,10 +2244,11 @@ sub _do_remove_base($self, $user) {
 
     for my $file ($self->list_files_base) {
         next if $file =~ /\.iso$/i;
-        next if ! -e $file;
+        next if ! $self->_vm->file_exists($file);
         my ($dir) = $file =~ m{(.*/)};
-        next if $self->_vm->shared_storage($vm_local, $dir);
-        unlink $file or die "$! unlinking $file";
+        next if !$self->_vm->is_local && $self->_vm->shared_storage($vm_local, $dir);
+
+        $self->_vm->remove_file($file);
     }
 
     $self->storage_refresh()    if $self->storage();
@@ -4692,14 +4695,32 @@ sub needs_restart($self, $value=undef) {
     return $self->_data('needs_restart',$value);
 }
 
-sub _pre_change_hardware($self, @) {
+sub _pre_remove_hardware($self, @) {
     if (!$self->_vm->is_local) {
         my $vm_local = $self->_vm->new( host => 'localhost' );
         $self->_set_vm($vm_local, 1);
     }
 }
+sub _post_remove_hardware($self, $hardware, $index, $data=undef) {
 
-sub _post_change_hardware($self, $hardware, $index, $data=undef) {
+     if ($hardware eq 'disk' && ( defined $index || $data ) && $self->is_known() ) {
+         my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
+         $sth->execute($self->id);
+     }
+
+     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
+ }
+
+sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) {
+    my $real_id_vm;
+    if ($hardware eq 'disk' && !$self->_vm->is_local) {
+        $real_id_vm = $self->_vm->id;
+        my $vm_local = $self->_vm->new( host => 'localhost' );
+        $self->_set_vm($vm_local, 1);
+    }
+
+    $orig->($self, $hardware, $index, $data);
+
     if ($hardware eq 'disk' && ( defined $index || $data ) && $self->is_known() ) {
         my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
         $sth->execute($self->id);
@@ -4712,6 +4733,11 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     }
 
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
+    if ( $real_id_vm ) {
+        my $id_vm = $real_id_vm;
+        my $vm = Ravada::VM->open($id_vm);
+        $self->_set_vm($vm, 1);
+    }
 }
 
 =head2 Access restrictions

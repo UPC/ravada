@@ -455,12 +455,25 @@ Returns true if the file exists in this virtual manager storage
 
 sub file_exists($self, $file) {
     for my $pool ($self->vm->list_all_storage_pools ) {
-        $pool->refresh();
-        for my $vol ( $pool->list_all_volumes ) {
+        $self->_wait_storage( sub { $pool->refresh() } );
+        my @volumes = $self->_wait_storage( sub { $pool->list_all_volumes });
+        for my $vol ( @volumes ) {
             return 1 if $vol->get_path eq $file;
         }
     }
     return 0;
+}
+
+sub _wait_storage($self, $sub) {
+    my @ret;
+    for ( 1 .. 10  ) {
+        eval { @ret=$sub->() };
+        last if !$@;
+        die $@ if !ref($@) || $@->code != 1;
+        warn "Warning: $@ [retrying $_]";
+        sleep 1;
+    };
+    return @ret;
 }
 
 =head2 dir_img

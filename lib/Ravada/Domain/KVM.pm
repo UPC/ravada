@@ -2343,7 +2343,7 @@ sub _post_change_hardware($self, $doc) {
 }
 
 sub copy_config($self, $domain) {
-    my $doc = XML::LibXML->load_xml(string => $domain->xml_description);
+    my $doc = XML::LibXML->load_xml(string => $domain->xml_description(Sys::Virt::Domain::XML_INACTIVE));
     my ($uuid) = $doc->findnodes("/domain/uuid/text()");
     confess "I cant'find /domain/uuid in ".$self->name if !$uuid;
 
