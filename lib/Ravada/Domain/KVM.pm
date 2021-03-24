@@ -2342,6 +2342,16 @@ sub _post_change_hardware($self, $doc) {
     $self->info(Ravada::Utils::user_daemon);
 }
 
+sub copy_config($self, $domain) {
+    my $doc = XML::LibXML->load_xml(string => $domain->xml_description(Sys::Virt::Domain::XML_INACTIVE));
+    my ($uuid) = $doc->findnodes("/domain/uuid/text()");
+    confess "I cant'find /domain/uuid in ".$self->name if !$uuid;
+
+    $uuid->setData($self->domain->get_uuid_string);
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
+}
+
 sub _change_xml_address($self, $doc, $address, $bus) {
     my $type_def = $address->getAttribute('type');
     return $self->_change_xml_address_ide($doc, $address, 1, 1)   if $bus eq 'ide';

@@ -52,6 +52,7 @@ create_domain
     hibernate_domain_internal
     remote_node
     remote_node_2
+    remote_node_shared
     add_ubuntu_minimal_iso
     create_ldap_user
     connector
@@ -727,7 +728,13 @@ sub _remove_old_disks_kvm {
             next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2|void|backup)$/;
 
             eval { $volume->delete() };
-            warn $@ if $@;
+            if ($@) {
+                if ($@->code == 38 ) {
+                    $vm->remove_file($volume->get_path);
+                } else {
+                    warn "Error $@ removing ".$volume->get_name." in ".$vm->name if $@;
+                }
+            }
         }
     }
     eval {
@@ -1678,6 +1685,15 @@ sub remote_node_2($vm_name) {
         push @nodes,(_do_remote_node($vm_name, \%config));
     }
     return @nodes;
+}
+
+sub remote_node_shared($vm_name) {
+    my $remote_config = {
+        'name' => 'ztest-shared'
+        ,'host' => '192.168.122.153'
+        ,public_ip => '192.168.130.153'
+    };
+    return _do_remote_node($vm_name, $remote_config);
 }
 
 sub _do_remote_node($vm_name, $remote_config) {
