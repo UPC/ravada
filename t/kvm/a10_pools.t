@@ -136,7 +136,7 @@ sub test_remove_domain {
 sub test_base {
     my $domain = shift;
     eval { $domain->prepare_base( user_admin ) };
-    is($@,'',"Prepare base") or exit;
+    is(''.$@,'',"Prepare base") or exit;
 
     my @files_base = $domain->list_files_base();
     is(scalar @files_base, 2);

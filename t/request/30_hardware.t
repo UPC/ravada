@@ -161,6 +161,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     my $date_changed = $domain->_data('date_changed');
 
     my @list_hardware1 = $domain->get_controller($hardware);
+    @list_hardware1 = map { $_->{file} } @list_hardware1 if $hardware eq 'disk';
 	my $numero = scalar(@list_hardware1);
     while (($hardware eq 'display' && $numero > 0 ) || ($hardware eq 'usb' && $numero > 3)) {
         test_remove_hardware($vm, $domain, $hardware, 0);
@@ -194,7 +195,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     my @list_hardware2 = $domain_f->get_controller($hardware);
     is(scalar @list_hardware2 , scalar(@list_hardware1) + 1
         ,"Adding hardware $hardware $numero\n"
-            .Dumper($domain->name,\@list_hardware2, \@list_hardware1))
+            .Dumper($domain->name,$data,\@list_hardware2, \@list_hardware1))
             or exit;
     }
 
@@ -302,11 +303,7 @@ sub test_add_hardware_custom($domain, $hardware) {
     return $exec->($domain);
 }
 
-sub test_remove_hardware {
-	my $vm = shift;
-	my $domain = shift;
-	my $hardware = shift;
-	my $index = shift;
+sub test_remove_hardware($vm, $domain, $hardware, $index) {
 
     $domain->shutdown_now(user_admin)   if $domain->is_active;
     $domain = Ravada::Domain->open($domain->id);
@@ -346,7 +343,7 @@ sub test_remove_hardware {
             .Dumper(\@list_hardware2, \@list_hardware1)) or exit;
     }
     test_volume_removed($list_hardware1[$index]) if $hardware eq 'disk';
-    test_display_removed($domain, $list_hardware1[$index])   if $hardware eq 'display';
+    test_display_removed($domain, $list_hardware1[$index], $index)   if $hardware eq 'display';
 }
 
 sub test_volume_removed($disk) {
@@ -355,12 +352,18 @@ sub test_volume_removed($disk) {
     ok(! -e $file,"Expecting $file removed") unless $file =~ /\.iso$/;
 }
 
-sub test_display_removed($domain, $display) {
+sub test_display_removed($domain, $display, $index) {
     my $hardware = $domain->info(user_admin)->{hardware}->{display};
     ok(! grep({ $_->{driver} eq $display->{driver} } @$hardware),
         "Expecting no $display->{driver} in hardware ") or die Dumper($hardware);
     if ($display->{driver} eq 'spice' || $display->{is_builtin}) {
+        # TODO check display removed from XML
     }
+    my $display2;
+    eval { $display2 = $domain->_get_display_by_index($index) };
+    like($@,qr/not found/);
+    ok(!$display2,"Expecting display $index removed from DB ".$domain->name) or exit;
+
 }
 
 sub test_remove_almost_all_hardware {

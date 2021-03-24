@@ -812,8 +812,7 @@ sub test_remove_base($vm, $node, $volatile) {
 
     $base->remove_base_vm(node => $node, user => user_admin);
     for my $file ( @volumes , @volumes0 ) {
-        my ($out, $err) = $node->run_command("ls $file");
-        ok(!$out, "Expecting no file '$file' in ".$node->name) or exit;
+        ok(!$node->file_exists($file));
         ok(-e $file, "Expecting file '$file' in local") or exit;
     }
     isnt($base->_data('id_vm'), $node->id);
