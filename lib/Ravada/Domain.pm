@@ -370,6 +370,9 @@ sub _around_start($orig, $self, @arg) {
         $error = $@;
         last if !$error;
         warn "WARNING: $error ".$self->_vm->name." ".$self->_vm->enabled if $error;
+
+        next if $error && ref($error) && $error->code == 1;# pool has asynchronous jobs running.
+
         if ($error && $self->id_base && !$self->is_local && $self->_vm->enabled) {
             $self->_request_set_base();
             next;
@@ -1250,8 +1253,6 @@ sub _insert_display( $self, $display ) {
     $display->{n_order} = $self->_max_n_order_display()+1
     if !exists $display->{n_order};
 
-    confess if $display->{driver} eq 'rdp' && exists $display->{builtin} && !$display->{is_builtin};
-
     $display->{is_builtin} = $self->_is_display_builtin($display->{driver})
     if !defined $display->{is_builtin};
 
@@ -2079,8 +2080,14 @@ sub _after_remove_domain {
 }
 
 sub _remove_all_volumes($self) {
+    my $vm_local = $self->_vm;
+    $vm_local = $self->_vm->new( host => 'localhost' ) if !$self->is_local;
     for my $vol (@{$self->{_volumes}}) {
         next if $vol =~ /iso$/;
+        if (!$self->is_local) {
+            my ($dir) = $vol =~ m{(.*)/};
+            next if $vm_local->shared_storage($self->_vm, $dir);
+        }
         $self->remove_volume($vol);
     }
 }
@@ -2121,7 +2128,23 @@ sub _remove_domain_data_db($id, $type=undef) {
     _remove_domain_custom_db($id, $type);
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
     $sth->execute($id);
+}
 
+sub _redefine_instances($self) {
+    my $domain_name = $self->name or confess "Unknown my self name $self ".Dumper($self->{_data});
+    my @instances = $self->list_instances();
+    for my $instance ( @instances ) {
+        next if $instance->{id_vm} == $self->_vm->id;
+        my $vm;
+        eval { $vm = Ravada::VM->open($instance->{id_vm}) };
+        die $@ if $@ && $@ !~ /I can't find VM/i;
+        next if !$vm || !$vm->is_active;
+        my $domain;
+        $@ = '';
+        eval { $domain = $vm->search_domain($domain_name) } if $vm;
+        warn $@ if $@;
+        $domain->copy_config($self);
+    }
 }
 
 sub _remove_domain_custom_db($id, $type=undef) {
@@ -2422,22 +2445,23 @@ sub _do_remove_base($self, $user) {
     my $vm_local = $self->_vm->new( host => 'localhost' );
     for my $vol ($self->list_volumes_info) {
         next if !$vol->file || $vol->file =~ /\.iso$/;
+        my ($dir) = $vol->file =~ m{(.*)/};
+
+        next if !$self->is_local && $self->_vm->shared_storage($vm_local, $dir);
         my $backing_file = $vol->backing_file;
         next if !$backing_file;
         #        confess "Error: no backing file for ".$vol->file if !$backing_file;
         if (!$self->is_local) {
             my ($dir) = $backing_file =~ m{(.*/)};
-            if ( $self->_vm->shared_storage($vm_local, $dir) ) {
-                next;
-            }
+            next if $self->_vm->shared_storage($vm_local, $dir);
             $self->_vm->remove_file($vol->file);
             $self->_vm->remove_file($backing_file);
             $self->_vm->refresh_storage_pools();
-            return ;
+            next;
         }
         $vol->block_commit();
         unlink $vol->file or die "$! ".$vol->file;
-        my @stat = stat($backing_file);
+        my @stat = stat($backing_file) or confess "Error: missing $backing_file";
         move($backing_file, $vol->file) or die "$! $backing_file -> ".$vol->file;
         my $mask = oct(7777);
         my $mode = $stat[2] & $mask;
@@ -2449,8 +2473,11 @@ sub _do_remove_base($self, $user) {
 
     for my $file ($self->list_files_base) {
         next if $file =~ /\.iso$/i;
-        next if ! -e $file;
-        unlink $file or die "$! unlinking $file";
+        next if ! $self->_vm->file_exists($file);
+        my ($dir) = $file =~ m{(.*/)};
+        next if !$self->_vm->is_local && $self->_vm->shared_storage($vm_local, $dir);
+
+        $self->_vm->remove_file($file);
     }
 
     $self->storage_refresh()    if $self->storage();
@@ -5080,27 +5107,30 @@ sub needs_restart($self, $value=undef) {
     return $self->_data('needs_restart',$value);
 }
 
-sub _pre_change_hardware($self, @) {
+sub _pre_remove_hardware($self, @) {
     if (!$self->_vm->is_local) {
         my $vm_local = $self->_vm->new( host => 'localhost' );
         $self->_set_vm($vm_local, 1);
     }
 }
-
 sub _post_change_hardware($self, $hardware, $index, $data=undef) {
+
     if ($hardware eq 'disk' && ( defined $index || $data ) && $self->is_known() ) {
         my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
         $sth->execute($self->id);
-        my @volumes = $self->list_volumes_info();
+        $self->list_volumes_info();
     }
-    $self->info(Ravada::Utils::user_daemon) if $self->is_known();
 
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
 }
 
-sub _around_change_hardware($orig, $self, @args) {
-
-    my ($hardware, $index, $data) = @args;
+sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) {
+    my $real_id_vm;
+    if ($hardware eq 'disk' && !$self->_vm->is_local) {
+        $real_id_vm = $self->_vm->id;
+        my $vm_local = $self->_vm->new( host => 'localhost' );
+        $self->_set_vm($vm_local, 1);
+    }
 
     if ($hardware eq 'display') {
 
@@ -5113,9 +5143,19 @@ sub _around_change_hardware($orig, $self, @args) {
         }
 
         $self->_store_display($data, $current_data);
+
     }
-    _change_instances_hardware($orig, $self,@args);
-    $self->_post_change_hardware(@args);
+    unless ( $hardware eq 'display' && !$self->_is_display_builtin($index, $data)) {
+        $orig->($self, $hardware, $index,$data);
+        $self->_redefine_instances() if $self->is_known();
+    }
+
+    if ( $real_id_vm ) {
+        my $id_vm = $real_id_vm;
+        my $vm = Ravada::VM->open($id_vm);
+        $self->_set_vm($vm, 1);
+    }
+    $self->_post_change_hardware($hardware, $index, $data);
 }
 
 sub _get_display_port($self, $display) {
@@ -5134,59 +5174,77 @@ sub _get_display_port($self, $display) {
     $display->{driver} = $selected->{value};
 }
 
+sub _add_hardware_display($orig, $self, $index, $data) {
+    confess "Error: missing driver ".Dumper($data) if !exists $data->{driver};
+
+    die "Error: display ".$data->{driver}." duplicated.\n"
+    if $self->_get_display($data->{driver});
+
+    my $is_builtin = $self->_is_display_builtin($data->{driver});
+
+    $self->_get_display_port($data)
+    if exists $data->{driver}
+    && !$is_builtin
+    && (!exists $data->{port} || !defined $data->{port});
+
+    if ( !$is_builtin && exists $data->{port}
+        && defined $data->{port} && $data->{port} ne 'auto') {
+        die "Error: display $data->{driver} can not be used because port $data->{port} "
+        ." is already exported. Remove it from hardware / ports\n"
+        if $self->exposed_port($data->{port});
+
+        my $public_port = $self->expose( port => $data->{port}
+            , name => $data->{driver}
+            , restricted => 1
+        );
+        my $port = $self->exposed_port($data->{port});
+        $data->{port} = $public_port;
+        $data->{id_domain_port} = $port->{id};
+    }
+    $self->_store_display($data);
+
+    $orig->($self, 'display', $index, $data) if $is_builtin;
+}
+
+sub _add_hardware_disk($orig, $self, $index, $data) {
+    my $real_id_vm;
+    if (!$self->_vm->is_local) {
+        $real_id_vm = $self->_vm->id;
+        my $vm_local = $self->_vm->new( host => 'localhost' );
+        $self->_set_vm($vm_local, 1);
+    }
+
+    $orig->($self, 'disk', $index, $data);
+
+    if (( defined $index || $data ) && $self->is_known() ) {
+        my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
+        $sth->execute($self->id);
+        my @volumes = $self->list_volumes_info();
+    }
+
+    if ( $real_id_vm ) {
+        my $id_vm = $real_id_vm;
+        my $vm = Ravada::VM->open($id_vm);
+        $self->_set_vm($vm, 1);
+    }
+}
+
 sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
     confess "Error: minimal add hardware index>=0 , got '$index'" if defined $index && $index <0;
 
     if ($hardware eq 'display' ) {
-        confess "Error: missing driver ".Dumper($data) if !exists $data->{driver};
-
-        die "Error: display ".$data->{driver}." duplicated.\n"
-        if $self->_get_display($data->{driver});
-
-        $self->_get_display_port($data)
-        if exists $data->{driver}
-        && !$self->_is_display_builtin( $data->{driver})
-        && (!exists $data->{port} || !defined $data->{port});
-
-        if ( !$self->_is_display_builtin($data->{driver}) && exists $data->{port}
-        && defined $data->{port} && $data->{port} ne 'auto') {
-            die "Error: display $data->{driver} can not be used because port $data->{port} "
-            ." is already exported. Remove it from hardware / ports\n"
-            if $self->exposed_port($data->{port});
-
-            my $public_port = $self->expose( port => $data->{port}
-                , name => $data->{driver}
-                , restricted => 1
-            );
-            my $port = $self->exposed_port($data->{port});
-            $data->{port} = $public_port;
-            $data->{id_domain_port} = $port->{id};
-        }
-        $self->_store_display($data);
+        _add_hardware_display($orig, $self, $index, $data);
+    } elsif ($hardware eq 'disk') {
+        _add_hardware_disk($orig, $self, $index, $data);
+    } else {
+        $orig->($self, $hardware, $index, $data);
     }
-    _change_instances_hardware($orig, $self, $hardware, $index, $data);
+    if ( $self->is_known() && !$self->is_base ) {
+        $self->_redefine_instances();
+    }
+
+    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
     $self->_post_change_hardware( $hardware, $index, $data);
-}
-
-sub _change_instances_hardware($orig, $self, @args) {
-    my ($hardware, $index, $data) = @args;
-
-    return if $hardware eq 'display' && !$self->_is_display_builtin($index, $data);
-
-    my $vm_orig = $self->_vm;
-    $self->$orig(@args);
-    my %changed = ( $self->_vm->id => 1 );
-    for my $instance ( $self->list_instances ) {
-        next if $changed{$instance->{id_vm}}++;
-
-        if ($self->_vm->id != $instance->{id_vm}) {
-            my $vm = Ravada::VM->open($instance->{id_vm});
-            $self->_set_vm($vm, 1);
-        }
-
-        $self->$orig(@args);
-    }
-    $self->_set_vm($vm_orig, 1) if $vm_orig->id != $self->_vm->id;
 }
 
 sub _delete_db_display($self, $index) {
@@ -5209,15 +5267,22 @@ sub _delete_db_display($self, $index) {
 }
 
 sub _around_remove_hardware($orig, $self, $hardware, $index) {
+    my $display;
     if ( $hardware eq 'display' ) {
-        my $display = $self->_get_display_by_index($index);
+        $display = $self->_get_display_by_index($index);
         if ( !$display->{is_builtin} ) {
             my $port = $self->exposed_port($display->{driver});
             $self->remove_expose($port->{internal_port}) if $port;
         }
         $self->_delete_db_display($index);
     }
-    _change_instances_hardware($orig, $self, $hardware, $index);
+
+    $orig->($self, $hardware, $index)
+    unless $hardware eq 'display' && !$display->{is_builtin};
+
+    if ( $self->is_known() && !$self->is_base ) {
+        $self->_redefine_instances();
+    }
     $self->_post_change_hardware( $hardware, $index);
 
 }
