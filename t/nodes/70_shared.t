@@ -105,6 +105,7 @@ sub _add_disk($domain) {
     );
     wait_request(debug => 0);
     is($req->error,'');
+    is($req->status, 'done');
 }
 
 sub _change_ram($domain) {
@@ -184,6 +185,7 @@ sub test_add_disk($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
         $domain = $base->clone(name => new_domain_name, user => user_admin);
     }
     my $n = scalar($domain->list_volumes);
+    my @volumes0 = map { $_->{file} } $domain->list_volumes_info;
     req_migrate($node, $domain, $start) if $migrate;
 
     _add_disk($domain);
@@ -195,7 +197,8 @@ sub test_add_disk($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
 
     my $domain_local = $vm->search_domain($domain->name);
     is($domain_local->_vm->id,$vm->id);
-    is(scalar($domain_local->list_volumes),$n+1);
+    my @volumes1 = map { $_->{file} } $domain->list_volumes_info;
+    is(scalar($domain_local->list_volumes),$n+1,Dumper(\@volumes0,\@volumes1)) or exit;
 
     req_start($domain);
     req_migrate($node, $domain, 1);
