@@ -332,8 +332,9 @@ sub test_display_iptables($vm) {
     for my $display ( @displays ) {
         for my $port ( $display->{port}, $display->{extra}->{tls_port} ) {
             next if !defined $port;
-            ok(!$dupe_port{$port}," port $port duplicated $display->{driver} and "
-                .($dupe_port{$port} or ''));
+            ok(!$dupe_port{$port},$domain->name
+                ." port $port duplicated $display->{driver} and "
+                .($dupe_port{$port} or '')) or exit;
             $dupe_port{$port} = $display->{driver};
             my $display_ip = $display->{ip};
             ok(grep /--dport $port/,@iptables_all, "Expecting --dport $port ".Dumper(\@iptables_all)) or die $domain->name;

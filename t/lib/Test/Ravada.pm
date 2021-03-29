@@ -1467,15 +1467,15 @@ sub flush_rules {
         run3([@cmd, $n], \$in, \$out, \$err);
         warn $err if $err;
     }
-    run3(["iptables","-F", $CHAIN], \$in, \$out, \$err);
+    run3(["iptables","-F", $CHAIN,"-w"], \$in, \$out, \$err);
     like($err,qr(^$|chain/target/match by that name));
     ($out, $err) = run3(["iptables","-D","INPUT","-j",$CHAIN],\$in, \$out, \$err);
     like($err,qr(^$|chain/target/match by that name));
-    run3(["iptables","-X", $CHAIN], \$in, \$out, \$err);
+    run3(["iptables","-X", $CHAIN,"-w"], \$in, \$out, \$err);
     like($err,qr(^$|chain/target/match by that name));
 
     for my $rule (@FLUSH_RULES) {
-        run3(["iptables",@$rule], \$in, \$out, \$err);
+        run3(["iptables",@$rule,"-w"], \$in, \$out, \$err);
         like($err,qr(^$|chain/target/match by that name));
     }
     _flush_forward();

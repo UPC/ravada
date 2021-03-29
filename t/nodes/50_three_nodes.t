@@ -14,6 +14,45 @@ use feature qw(signatures);
 
 ##################################################################################
 
+sub test_remove_n($vm, @nodes ) {
+    my $domain = create_domain($vm);
+
+    $domain->prepare_base(user_admin);
+
+    my $n=1;
+    for my $node ( @nodes ) {
+        $domain->set_base_vm(vm => $node, user => user_admin);
+        is($domain->list_instances, ++$n);
+    }
+
+    for my $node1 ( @nodes ) {
+        my $clone = $domain->clone(user => user_admin, name => new_domain_name);
+        $clone->migrate($node1);
+        $clone->start(user_admin);
+        for my $node2 ( @nodes ) {
+            diag("Migrating ".$clone->name." from ".$node1->name." to ".$node2->name);
+            my $req = Ravada::Request->migrate(
+                uid => user_admin->id
+                ,id_domain => $clone->id
+                ,id_node => $node2->id
+                ,shutdown => 1
+                ,start => 1
+            );
+            wait_request( debug => 0);
+            is($req->status,'done');
+            is($req->error,'');
+            my $clone2 = Ravada::Domain->open($clone->id);
+            is($clone2->_vm->id, $node2->id);
+            is($clone2->is_active,1,"Expecting ".$clone2->name." [ ".$clone2->id." ] active")
+                or exit;
+            delete_request('enforce_limits','set_time', 'refresh_machine');
+        }
+        $clone->remove(user_admin);
+    }
+    $domain->remove(user_admin);
+
+}
+
 sub test_remove($vm, $node1, $node2) {
     my $domain = create_domain($vm);
 
@@ -114,6 +153,10 @@ for my $vm_name ( 'Void', 'KVM') {
             goto NEXT;
         }
 
+        my $node_shared = remote_node_shared($vm_name)  or next;
+
+        test_remove_n($vm, $node1, $node2, $node_shared);
+
         test_remove($vm, $node1, $node2);
 
         NEXT:
@@ -121,6 +164,7 @@ for my $vm_name ( 'Void', 'KVM') {
         clean_remote_node($node2)   if $node2;
         remove_node($node1)         if $node1;
         remove_node($node2)         if $node2;
+        remove_node($node_shared)   if $node_shared;
     }
 
 }

@@ -3153,17 +3153,25 @@ sub _used_ports_iptables($self, $port, $skip_port) {
 }
 
 sub _used_port_displays($self, $port, $skip_id_port) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_displays"
-        ." WHERE port=? "
-        ." AND is_active=1 "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_displays dd,domains d"
+        ." WHERE dd.id_domain=d.id "
+        ."   AND ( d.status='active' OR dd.is_active=1 ) "
+        ."   AND dd.id_domain_port <> ?"
     );
-    $sth->execute($port);
-    my $row = $sth->fetchrow_hashref;
-   # no conflict
-    return 0 if !$row || !keys %$row;
-    return 0 if $row->{id_domain_port} && $row->{id_domain_port} == $skip_id_port;
-    # conflict
-    return 1;
+    $sth->execute($skip_id_port);
+    while ( my $row = $sth->fetchrow_hashref ) {
+        return 1 if defined $row->{port} &&  $row->{port} == $port;
+        my $extra = decode_json($row->{extra});
+        return 1 if $extra->{tls_port} && $extra->{tls_port} == $port;
+    }
+    for my $display ( $self->display_info(Ravada::Utils::user_daemon()) ) {
+        next if !$display->{is_builtin};
+        return 1 if exists $display->{port}
+                && $display->{port} && $display->{port} == $port;
+        return 1 if exists $display->{tls_port}
+                && $display->{tls_port} && $display->{tls_port} == $port;
+    }
+    return 0;
 }
 
 sub _open_exposed_port($self, $internal_port, $name, $restricted) {
@@ -3300,6 +3308,7 @@ sub open_exposed_ports($self) {
         die "Error: No ip in domain ".$self->name.". Retry.\n";
     }
 
+    $self->display_info(Ravada::Utils::user_daemon);
     for my $expose ( @ports ) {
         $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
             ,$expose->{restricted});
@@ -5145,7 +5154,7 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
         $self->_store_display($data, $current_data);
 
     }
-    unless ( $hardware eq 'display' && !$self->_is_display_builtin($index, $data)) {
+    if ( $hardware ne 'display' || $self->_is_display_builtin($index, $data)) {
         $orig->($self, $hardware, $index,$data);
         $self->_redefine_instances() if $self->is_known();
     }
@@ -5219,8 +5228,9 @@ sub _add_hardware_disk($orig, $self, $index, $data) {
     if (( defined $index || $data ) && $self->is_known() ) {
         my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
         $sth->execute($self->id);
-        my @volumes = $self->list_volumes_info();
     }
+    $self->list_volumes_info();
+    $self->_redefine_instances();
 
     if ( $real_id_vm ) {
         my $id_vm = $real_id_vm;
@@ -5239,7 +5249,8 @@ sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
     } else {
         $orig->($self, $hardware, $index, $data);
     }
-    if ( $self->is_known() && !$self->is_base ) {
+    if (!$hardware eq 'disk' && $self->is_known() && !$self->is_base ) {
+        # disk is changed in main node, then redefined already
         $self->_redefine_instances();
     }
 
