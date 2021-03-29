@@ -47,6 +47,7 @@ sub _generate_session_ticket
 {
     my ($name) = @_;
     my $cookie;
+    die 'Can\'t read privkey file (sso->cookie->priv_key value at ravada.conf file)' if (! -r $$CONFIG->{sso}->{cookie}->{priv_key});
     eval { $cookie = Authen::ModAuthPubTkt::pubtkt_generate(privatekey => $$CONFIG->{sso}->{cookie}->{priv_key}, keytype => $$CONFIG->{sso}->{cookie}->{type}, userid => $name, validuntil => time() + $$CONFIG->{sso}->{cookie}->{timeout}); };
     return $cookie;
 }
@@ -55,6 +56,7 @@ sub _get_session_userid_by_ticket
 {
     my ($cookie) = @_;
     my $result;
+    die 'Can\'t read pubkey file (sso->cookie->pub_key value at ravada.conf file)' if (! -r $$CONFIG->{sso}->{cookie}->{pub_key});
     eval { $result = Authen::ModAuthPubTkt::pubtkt_verify(publickey => $$CONFIG->{sso}->{cookie}->{pub_key}, keytype => $$CONFIG->{sso}->{cookie}->{type}, ticket => $cookie); };
     die $@ ? $@ : 'Cannot validate ticket' if ((! $result) || ($@));
     my %data = Authen::ModAuthPubTkt::pubtkt_parse($cookie);
@@ -77,7 +79,6 @@ sub login($self) {
 }
 
 sub login_external($ticket, $cookie) {
-warn "$ticket - $cookie";
     if ($cookie) {
         my $name = _get_session_userid_by_ticket($cookie);
         my $self = Ravada::Auth::SSO->new(name => $name, ticket => $cookie);

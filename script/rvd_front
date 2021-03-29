@@ -1774,7 +1774,7 @@ sub login($c, $status=200) {
         if (defined $login && defined $password) {
             eval { $auth_ok = Ravada::Auth::login($login, $password)};
         } elsif (($c->param('ticket')) || ($c->param('submit') eq 'sso')) {
-            eval { $auth_ok = Ravada::Auth::login_external($c->param('ticket'), $c->session('ticket')) };
+            eval { $auth_ok = Ravada::Auth::login_external($ticket, $c->session('ticket')) };
             if ($auth_ok && !$@) {
                 return $c->redirect_to($auth_ok->{'redirectTo'}) if ($auth_ok->{'redirectTo'});
                 $c->session('ticket' => $auth_ok->{'ticket'}) if ($auth_ok->{'ticket'});
@@ -1875,8 +1875,7 @@ sub quick_start {
         if ( $login && $password) {
             eval { $log_ok = Ravada::Auth::login($login, $password) };
         } elsif (($c->param('ticket')) || ($c->param('submit') eq 'sso')) {
-            push @error,("Access denied");
-            eval { $log_ok = Ravada::Auth::login_external($c->param('ticket'), $c->session('ticket')) };
+            eval { $log_ok = Ravada::Auth::login_external($ticket, $c->session('ticket')) };
             if ($log_ok && !$@) {
                 return $c->redirect_to($log_ok->{'redirectTo'}) if ($log_ok->{'redirectTo'});
                 $c->session('ticket' => $log_ok->{'ticket'}) if ($log_ok->{'ticket'});
