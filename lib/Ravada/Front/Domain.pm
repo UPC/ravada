@@ -82,9 +82,10 @@ sub display($self, $user) {
 }
 
 sub display_info($self, $user) {
-    my $display = $self->_data('display');
-    return {} if !$display;
-    return decode_json($display);
+    my @displays = $self->_get_controller_display();
+    return {} if !scalar(@displays);
+    return $displays[0] if !wantarray;
+    return @displays;
 
 }
 

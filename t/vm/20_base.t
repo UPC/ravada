@@ -3,6 +3,7 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use Hash::Util qw(lock_hash unlock_hash);
 use Mojo::JSON qw(decode_json);
 use XML::LibXML;
 use Test::More;
@@ -25,6 +26,7 @@ my $USER = create_user("foo","bar");
 
 my $DISPLAY_IP = '99.1.99.1';
 my $BASE;
+my $TLS;
 
 #######################################################################33
 
@@ -129,7 +131,7 @@ sub test_display_inactive($domain) {
 
     $display_h = $info->{hardware}->{display};
     isa_ok($display_h,'ARRAY') or die Dumper($info);
-    is(scalar(@$display_h),1) or die Dumper($display_h);
+    is(scalar(@$display_h),1+ $TLS) or die Dumper($display_h);
 
     return $display_up;
 }
@@ -401,7 +403,9 @@ sub test_display_info($vm) {
 
     my $display_h = $info->{hardware}->{display};
     isa_ok($display_h,'ARRAY') or die Dumper($info);
-    is(scalar(@$display_h),1) or die Dumper($display_h);
+    my $n_displays = 1;
+    $n_displays++ if $TLS;
+    is(scalar(@$display_h),$n_displays) or die Dumper($display_h);
     is($display_h->[0]->{is_active},1) or die $domain->name;
 
     is($display_h->[0]->{file_extension},'vv') or die $domain->name
@@ -446,27 +450,28 @@ sub test_display_info($vm) {
     isa_ok($display,'HASH') or die Dumper($info);
     $display_h = $info->{hardware}->{display};
     isa_ok($display_h,'ARRAY') or die Dumper($info->{hardware});
-    is(scalar(@$display_h),2);
+    is(scalar(@$display_h),2+ $TLS);
     $domain->_normalize_display($display,0);
     is($display_h->[0]->{id_domain_port},undef); # spice needs no exposed port
-    delete $display_h->[0]->{id_domain_port};
     is($display_h->[0]->{is_active}, 1);
-    delete $display_h->[0]->{is_active};
     delete $display_h->[0]->{file_extension};
-    _test_compare($display_h->[0], $display) or exit;
+    delete $display_h->[0]->{extra};
+    unlock_hash(%$display);
+    delete $display->{extra};
+    _test_compare($display_h->[0], $display);
 
     is($display_h->[0]->{driver}, 'spice') if $domain->type eq 'KVM';
     like($display_h->[0]->{password},qr{..+}) if $domain->type eq 'KVM';
     is($display_h->[0]->{id_exposed_port},undef); # spice doesn't need exposed port
 
     # rdp won't be active because that port isn't up yet
-    is($display_h->[1]->{is_active}, 0) or die Dumper($display_h);
-    is($display_h->[1]->{driver}, 'rdp');
-    like($display_h->[1]->{port}, qr/^\d+/);
-    isnt($display_h->[1]->{port}, $port) or die Dumper($display_h);
-    is($display_h->[1]->{ip}, $display_h->[0]->{ip}) or exit;
-    is($display_h->[1]->{listen_ip}, $display_h->[0]->{listen_ip});
-    is($display_h->[1]->{id_domain_port},$exposed_port->{id}); # rdp needs exposed port
+    is($display_h->[1+$TLS]->{is_active}, 0) or die Dumper($display_h);
+    is($display_h->[1+$TLS]->{driver}, 'rdp');
+    like($display_h->[1+$TLS]->{port}, qr/^\d+/);
+    isnt($display_h->[1+$TLS]->{port}, $port) or die Dumper($display_h);
+    is($display_h->[1+$TLS]->{ip}, $display_h->[0]->{ip}) or exit;
+    is($display_h->[1+$TLS]->{listen_ip}, $display_h->[0]->{listen_ip});
+    is($display_h->[1+$TLS]->{id_domain_port},$exposed_port->{id}); # rdp needs exposed port
     $domain->shutdown_now(user_admin());
 
     $domain_f = Ravada::Front::Domain->open($domain->id);
@@ -475,6 +480,7 @@ sub test_display_info($vm) {
     $display_h = $info->{hardware}->{display};
     is($display_h->[0]->{is_active}, 0);
     is($display_h->[1]->{is_active}, 0) or exit;
+    is($display_h->[2]->{is_active}, 0) or exit;
 
     $domain->prepare_base(user_admin);
 
@@ -490,15 +496,15 @@ sub test_display_info($vm) {
     isnt($display_c->[0]->{password}, $display_h->[0]->{password})
     if $display_h->[0]->{password};
 
-    like($display_c->[1]->{id_domain_port},qr/^\d+$/);
-    isnt($display_c->[1]->{id_domain_port},$display_h->[1]->{id_domain_port});
+    like($display_c->[1+$TLS]->{id_domain_port},qr/^\d+$/);
+    isnt($display_c->[1+$TLS]->{id_domain_port},$display_h->[1]->{id_domain_port});
 
     delete $display_c->[0]->{password};
     delete $display_h->[0]->{password};
 
-    isnt($display_c->[1]->{port}, $display_h->[1]->{port});
+    isnt($display_c->[1+$TLS]->{port}, $display_h->[1]->{port});
     for my $field (qw(display port is_active)) {
-        for ( 0 .. 1 ) {
+        for ( 0 .. 1+$TLS ) {
             delete $display_c->[$_]->{$field};
             delete $display_h->[$_]->{$field};
         }
@@ -522,10 +528,10 @@ sub test_display_info($vm) {
 }
 
 sub _test_display_tls($display, $vm) {
-    return if $display->{driver} ne 'spice';
+    return if $display->{driver} !~ /-tls$/;
     SKIP: {
         skip("Missing TLS configuration see https://ravada.readthedocs.io/en/latest/docs/spice_tls.html",1) if !check_libvirt_tls();;
-        my $tls_port = $display->{extra}->{tls_port};
+        my $tls_port = $display->{port};
         like($tls_port,qr/^\d+$/);
 
         my $tls_json = $vm->_data('tls');
@@ -566,9 +572,11 @@ sub _get_internal_port_display($domain) {
 
 sub test_iptables($domain) {
     return if $>;
-    my ($iptables, $err) = $domain->_vm->run_command("/usr/sbin/iptables-save");
+    my ($iptables, $err) = $domain->_vm->run_command("iptables-save");
     my @iptables = split /\n/,$iptables;
-    my ($display_builtin, $display_exp) = @{$domain->info(user_admin)->{hardware}->{display}};
+    my @displays = @{$domain->info(user_admin)->{hardware}->{display}};
+    my ($display_builtin) = @displays;
+    my ($display_exp) = grep { !$_->{is_builtin} } @displays;
     my $internal_port = _get_internal_port_display($domain);
     my $port_builtin = $display_builtin->{port};
 
@@ -634,15 +642,17 @@ sub test_display_clean(@id) {
 sub _test_compare($display1, $display2) {
     my %display1b = %$display1;
     my %display2b = %$display2;
-    delete $display1b{id};
 
     delete $display1b{id_domain}
     if !exists $display2b{id_domain};
 
-    delete %display1b{'n_order','display'};
-    delete %display2b{'n_order','display'};
+    delete $display1b{'n_order'};
+    delete $display1b{'display'};
 
-    is_deeply(\%display1b, \%display2b) or confess;
+    delete $display2b{'n_order'};
+    delete $display2b{'display'};
+
+    is_deeply(\%display1b, \%display2b) or confess Dumper($display1, $display2);
 }
 
 sub _test_compare_list($display1, $display2, $domain=undef) {
@@ -1613,10 +1623,11 @@ sub test_display_conflict($vm) {
 sub _next_port_builtin($domain0) {
     $domain0->start(user => user_admin, remote_ip => '1.2.3.4');
     my $displays = $domain0->info(user_admin)->{hardware}->{display};
-    my $next_port_builtin = $displays->[0]->{port};
-
-    $next_port_builtin = $displays->[0]->{extra}->{tls_port}
-    if $displays->[0]->{extra}->{tls_port};
+    my $next_port_builtin = 0;
+    for my $display (@$displays) {
+        $next_port_builtin = $display->{port}
+        if $display->{port} > $next_port_builtin;
+    }
 
     $next_port_builtin++;
     diag("Next port builtin will  be $next_port_builtin");
@@ -1650,15 +1661,17 @@ sub _add_hardware($domain, $name, $data) {
 
 sub _conflict_port($domain1, $port_conflict) {
     my @domains;
+    COUNT:
     for my $n ( 1 .. 100) {
         my $domain = $BASE->clone(name => new_domain_name, user => user_admin, memory => 128*1024);
         push @domains,($domain);
         $domain->start(user => user_admin, remote_ip => '2.3.4.'.$n);
         delete_request('set_time');
         wait_request( debug => 0 );
-        my $displays = $domain->info(user_admin)->{hardware}->{display};
-        my $current_port = $displays->[0]->{port};
-        last if $current_port >= $port_conflict;
+        for my $d (@{$domain->info(user_admin)->{hardware}->{display}}) {
+            last COUNT if $d->{port} >= $port_conflict;
+            warn Dumper($domain->name,$d);
+        }
     }
     Ravada::Request->refresh_machine_ports(uid => user_admin->id
         ,id_domain => $domain1->id
@@ -1697,16 +1710,17 @@ sub test_display_conflict_next($vm) {
     $domain1->start(user => user_admin, remote_ip => '2.3.4.5');
     wait_request(debug => 0);
     my $displays1 = $domain1->info(user_admin)->{hardware}->{display};
-    isnt($displays1->[1]->{port}, $next_port_builtin);
+    isnt($displays1->[1+$TLS]->{port}, $next_port_builtin);
 
     # Now conflict x2go with next builtin display
-    my $port_conflict = $displays1->[1]->{port};
+    my $port_conflict = $displays1->[1+$TLS]->{port};
     my @domains = _conflict_port($domain1, $port_conflict);
 
     my $displays1b
     = $domain1->info(user_admin)->{hardware}->{display};
-    isnt($displays1b->[1]->{port}, $port_conflict) or die;
-    like($displays1b->[1]->{port},qr/^\d+$/);
+    isnt($displays1b->[1+$TLS]->{port}, $port_conflict,
+        $domain1->id." ".$domain1->name) or die;
+    like($displays1b->[1+$TLS]->{port},qr/^\d+$/);
 
     _check_iptables_fixed_conflict($vm, $port_conflict) if !$<;
 
@@ -1851,7 +1865,9 @@ for my $vm_name ( vm_names() ) {
 
     my $vm;
 
+    $TLS = 0;
     eval { $vm = $RAVADA->search_vm($vm_name) } if $RAVADA;
+    $TLS = 1 if check_libvirt_tls();
 
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
@@ -1870,6 +1886,7 @@ for my $vm_name ( vm_names() ) {
             $BASE = create_domain($vm);
         }
         flush_rules() if !$<;
+        test_display_info($vm);
 
         test_display_iptables($vm);
 

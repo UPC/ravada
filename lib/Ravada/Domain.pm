@@ -1123,7 +1123,6 @@ sub _around_display_info($orig,$self,$user ) {
 
             my $is_active = $self->is_active;
             if ($is_active) {
-                $self->_data(display => encode_json($display));
 
                 unlock_hash(%$display);
                 $display->{is_active} = 0;

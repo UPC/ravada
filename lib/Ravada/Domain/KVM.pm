@@ -656,13 +656,28 @@ sub display_info($self, $user) {
     my @display;
     for my $graph ( @graph ) {
         my ($type) = $graph->getAttribute('type');
+        my $display;
         if ($type eq 'spice') {
-            push @display,(_display_info_spice($graph));
+            $display = _display_info_spice($graph);
         } elsif ($type eq 'vnc' ) {
-            push @display,(_display_info_vnc($graph));
+            $display= _display_info_vnc($graph);
+        } else {
+            confess "I don't know how to check info for $type display";
         }
+        return $display if !wantarray;
+        my $display_tls;
+        if (exists $display->{tls_port} && $display->{tls_port}) {
+            my %display_tls = %$display;
+            $display_tls{port} = delete $display_tls{tls_port};
+            $display_tls{driver} .= "-tls";
+            lock_hash(%display_tls);
+            $display_tls = \%display_tls;
+        }
+        delete $display->{tls_port} if exists $display->{tls_port};
+        lock_hash(%$display);
+        push @display,($display);
+        push @display,($display_tls) if $display_tls;
     }
-    return $display[0] if !wantarray;
     return @display;
 }
 
@@ -725,7 +740,6 @@ sub _display_info_spice($graph) {
         }
     }
 
-    lock_hash(%display);
     return \%display;
 }
 
