@@ -6,8 +6,7 @@ From Debian / Ubuntu guest
 
 .. prompt:: bash
 
-    sudo systemctl enable serial-getty@ttyS0.service
-    sudo systemctl start serial-getty@ttyS0.service
+    sudo systemctl enable --now serial-getty@ttyS0.service
 
 From KVM server
 ---------------
