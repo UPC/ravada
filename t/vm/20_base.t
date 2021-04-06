@@ -174,7 +174,7 @@ sub test_remove_display($vm) {
     );
     wait_request(debug => 0);
     is($req->status,'done');
-    is($req->error,'') or exit;
+    is($req->error,'') or die $req->id;
 
     is($domain->_has_builtin_display,0 ) or die $domain->name;
 
@@ -1540,6 +1540,7 @@ sub test_display_drivers($vm, $remove) {
     my $n_displays=0;
     for my $driver ( @{$domain->info(user_admin)->{drivers}->{display}} ) {
         diag("adding display $driver");
+        $domain->display_info(user_admin);
         next if $domain->_get_display($driver);
         my $req = Ravada::Request->add_hardware(
             uid => user_admin->id
