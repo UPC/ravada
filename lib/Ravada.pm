@@ -2785,6 +2785,8 @@ sub process_requests {
     }
 
     $self->_timeout_requests();
+
+    return scalar(@reqs);
 }
 
 sub _date_now($seconds = 0) {
@@ -2883,7 +2885,7 @@ sub process_all_requests {
     my $self = shift;
     my ($debug,$dont_fork) = @_;
 
-    $self->process_requests($debug, $dont_fork,'all');
+    return $self->process_requests($debug, $dont_fork,'all');
 
 }
 
@@ -2895,7 +2897,7 @@ Process all the priority requests, long and short
 
 sub process_priority_requests($self, $debug=0, $dont_fork=0) {
 
-    $self->process_requests($debug, $dont_fork,'priority');
+    return $self->process_requests($debug, $dont_fork,'priority');
 
 }
 
@@ -3336,12 +3338,12 @@ sub _wait_pids {
         next if !$id_req;
         my $request;
         eval { $request = Ravada::Request->open($id_req) };
-        die $@ if $@ && $@ !~ /I can't find id/;
+        warn $@ if $@ && $@ !~ /I can't find id/;
         if ($request) {
             $request->status('done') if $request->status =~ /working/i;
         };
-        warn("request id=$id_req ".$request->command." ".$request->status()
-            .", error=".($request->error or '')."\n");
+        warn("$$ request id=$id_req ".$request->command." ".$request->status()
+            .", error='".($request->error or '')."'\n") if $DEBUG && $request;
     }
 }
 
