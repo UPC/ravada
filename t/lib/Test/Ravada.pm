@@ -64,6 +64,7 @@ create_domain
 
     wait_request
     delete_request
+    delete_request_not_done
     fast_forward_requests
 
     remove_old_domains_req
@@ -94,6 +95,8 @@ our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 our $FILE_CONFIG_REMOTE = "t/etc/remote_vm.conf";
 
 $Ravada::Front::Domain::Void = "/var/tmp/test/rvd_void/".getpwuid($>);
+
+our $BACKGROUND = 0;
 
 our ($CONNECTOR, $CONFIG , $FILE_CONFIG_TMP);
 our $DEFAULT_DB_CONFIG = "t/etc/sql.conf";
@@ -281,11 +284,18 @@ sub base_pool_name {
 }
 
 sub new_domain_name {
+    my @domains_data;
+    @domains_data= $RVD_BACK->list_domains_data() if $RVD_BACK;
     my $post = (shift or '');
     $post = $post."_" if $post;
-    my $cont = $CONT++;
-    $cont = "0$cont"    if length($cont)<2;
-    return base_domain_name()."_$post".$cont;
+    for ( ;; ) {
+        my $cont = $CONT++;
+        $cont = "0$cont"    if length($cont)<2;
+        my $name = base_domain_name()."_$post".$cont;
+
+        return $name
+        if !grep { $_->{name} eq $name } @domains_data;
+    }
 }
 
 sub new_pool_name {
@@ -360,9 +370,17 @@ sub init($config=undef, $sqlite = 1 , $flush=0) {
             $config = $FILE_CONFIG_TMP;
         }
     }
+    if ($flush) {
+        $CONNECTOR = undef;
+        $Ravada::Auth::SQL::CON = undef;
+        $Ravada::CONNECTOR = undef;
+        $Ravada::Utils::USER_DAEMON=undef;
+        $RVD_BACK=undef;
+        $RVD_FRONT=undef;
+        $USER_ADMIN = undef;
+    }
 
-
-    rvd_back($config, 0,$sqlite)  if !$RVD_BACK || $flush;
+    rvd_back($config, 0 ,$sqlite)  if !$RVD_BACK || $flush;
     if (!$sqlite) {
         $CONNECTOR = $RVD_BACK->connector;
     } else {
@@ -445,12 +463,6 @@ sub _add_leftover($machines, $domain) {
             return;
         }
     }
-
-    my $req = Ravada::Request->remove_domain(
-            name => $domain->name
-            ,uid => user_admin->id
-    );
-    diag("removing ".$domain->name);
 }
 
 sub _leftovers {
@@ -472,18 +484,19 @@ sub _leftovers {
     return @machines;
 }
 
-sub remove_old_domains_req($wait=1) {
+sub remove_old_domains_req($wait=1, $run_request=0) {
     my $base_name = base_domain_name();
     my $machines = rvd_front->list_machines(user_admin);
     my @machines2 = _leftovers();
     my @reqs;
     for my $machine ( @$machines, @machines2) {
         next if $machine->{name} !~ /^$base_name/;
-        remove_domain_and_clones_req($machine,$wait);
+        next if $machine->{has_clones};
+        remove_domain_and_clones_req($machine,$wait, $run_request);
     }
 }
 
-sub remove_domain_and_clones_req($domain_data, $wait=1) {
+sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
     my $domain;
     if (ref($domain_data) =~ /Ravada.*Domain/) {
         $domain = $domain_data;
@@ -493,7 +506,7 @@ sub remove_domain_and_clones_req($domain_data, $wait=1) {
         die $@ if $@;
     }
     for my $clone ($domain->clones) {
-        remove_domain_and_clones_req($clone, $wait);
+        remove_domain_and_clones_req($clone, $wait, $run_request);
     }
     if ( $wait && $domain->clones ) {
         my $n_clones = scalar($domain->clones);
@@ -501,8 +514,11 @@ sub remove_domain_and_clones_req($domain_data, $wait=1) {
             last if !$domain->clones;
             diag("Waiting for clones of domain ".$domain->name." removed "
                 .scalar($domain->clones)) if !(time % 10);
-            sleep 1;
-
+            if ($run_request) {
+                wait_request();
+            } else {
+                sleep 1;
+            }
         }
     }
     my $req= Ravada::Request->remove_domain(
@@ -850,6 +866,10 @@ sub remove_old_disks {
 sub create_user {
     my ($name, $pass, $is_admin) = @_;
 
+    my $login;
+    eval { $login = Ravada::Auth::SQL->new(name => $name, password => $pass ) };
+    return $login if $login;
+
     Ravada::Auth::SQL::add_user(name => $name, password => $pass, is_admin => $is_admin);
 
     my $user;
@@ -911,11 +931,22 @@ sub delete_request {
     }
 }
 
+sub delete_request_not_done {
+    confess "Error: missing request command to delete" if !@_;
+
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM requests WHERE command=?"
+    ." AND status <> 'done'");
+    for my $command (@_) {
+        $sth->execute($command);
+    }
+}
+
+
 sub wait_request {
     my %args;
     if (scalar @_ % 2 == 0 ) {
         %args = @_;
-        $args{background} = 0 if !exists $args{background};
+        $args{background} = $BACKGROUND if !exists $args{background};
     } else {
         $args{request} = [ $_[0] ];
     }
@@ -930,14 +961,12 @@ sub wait_request {
     }
 
     my $background = delete $args{background};
-    $background = 1 if !defined $background;
 
     $timeout = 60 if !defined $timeout && $background;
     my $debug = ( delete $args{debug} or 0 );
     my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms','set_time','rsync_back', 'cleanup', 'screenshot'] );
     $skip = [ $skip ] if !ref($skip);
     my %skip = map { $_ => 1 } @$skip;
-    %skip = ( enforce_limits => 1, cleanup => 1 ) if !keys %skip;
 
     my $check_error = delete $args{check_error};
     $check_error = 1 if !defined $check_error;
@@ -952,7 +981,9 @@ sub wait_request {
         my $done_count = scalar keys %done;
         $prev = '' if !defined $prev;
         my @req = _list_requests();
-        rvd_back->_process_requests_dont_fork($debug) if !$background;
+        if (!$background) {
+            rvd_back->_process_requests_dont_fork($debug);
+        }
         for my $req_id ( @req ) {
             my $req;
             eval { $req = Ravada::Request->open($req_id) };
@@ -967,12 +998,12 @@ sub wait_request {
                     $run_at = 'now' if !$run_at;
                     $run_at = " $run_at";
                 }
-
-                diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
-                    .$run_at
-                    ." ".($req->error or ''))
-                    if $debug && (time%5 == 0);
-                sleep 1 if $req->command eq 'open_exposed_ports';
+                if ($debug && (time%5 == 0)) {
+                    diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
+                        .$run_at." bg=$background"
+                        ." ".($req->error or ''))
+                }
+                sleep 1 if $background;
                 $done_all = 0;
             } elsif (!$done{$req->id}) {
                 $t0 = time;
@@ -990,7 +1021,7 @@ sub wait_request {
                         } elsif($req->command eq 'refresh_machine_ports') {
                             like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
                         } elsif($req->command eq 'open_exposed_ports') {
-                            like($error,qr{^($|No ip in domain)});
+                            like($error,qr{^($|.*No ip in domain|.*duplicated port)});
                         } elsif($req->command eq 'compact') {
                             like($error,qr{^($|.*compacted)});
                         } else {
@@ -1008,8 +1039,10 @@ sub wait_request {
                 next if $skip{$req->command};
                 if ($req->status ne 'done') {
                     $done_all = 0;
-                    diag("Waiting for request ".$req->id." ".$req->command)
-                    if $debug && (time%5 == 0);
+                    if ( $debug && (time%5 == 0) ) {
+                        diag("Waiting for request ".$req->id." ".$req->command);
+                        sleep 1 if $background;
+                    }
                     last;
                 }
             }

@@ -40,7 +40,7 @@ This Virtual Machine has no display hardware attached
                 />
                 <i ng-show="password_clipboard"><%=l 'copied to clipboard' %></i>
             </li>
-            <li><b>Display URL :</b>
+            <li ng-show="display.display"><b>Display URL :</b>
                     <a ng-click="copy_password(display.driver); redirect()"
                         ng-show="display.is_active"
                         href="{{display.display}}">{{display.display}}</a>

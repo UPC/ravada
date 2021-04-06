@@ -678,6 +678,8 @@ sub _load_grants($self) {
     $self->_load_aliases();
     return if exists $self->{_grant};
 
+    _init_connector();
+
     my $sth;
     eval { $sth= $$CON->dbh->prepare(
         "SELECT gt.name, gu.allowed, gt.enabled, gt.is_int"
@@ -778,12 +780,16 @@ sub grant_admin_permissions($self,$user) {
     my $sth = $$CON->dbh->prepare(
             "SELECT name FROM grant_types "
             ." WHERE enabled=1"
+            ." ORDER BY name"
     );
     $sth->execute();
+    my $grant_found=0;
     while ( my ($name) = $sth->fetchrow) {
         $self->grant($user,$name);
+        $grant_found++ if $name eq'grant';
     }
     $sth->finish;
+    confess if !$grant_found;
 }
 
 =head2 revoke_all_permissions

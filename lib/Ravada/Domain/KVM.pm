@@ -653,6 +653,7 @@ sub display_info($self, $user) {
     my @graph = $xml->findnodes('/domain/devices/graphics')
         or return;
 
+    my $n_order = 0;
     my @display;
     for my $graph ( @graph ) {
         my ($type) = $graph->getAttribute('type');
@@ -664,20 +665,22 @@ sub display_info($self, $user) {
         } else {
             confess "I don't know how to check info for $type display";
         }
-        return $display if !wantarray;
         my $display_tls;
-        if (exists $display->{tls_port} && $display->{tls_port}) {
+        if (exists $display->{tls_port} && $display->{tls_port} || $self->_vm->tls_ca) {
             my %display_tls = %$display;
             $display_tls{port} = delete $display_tls{tls_port};
             $display_tls{driver} .= "-tls";
+            $display_tls{n_order} = ++$n_order;
             lock_hash(%display_tls);
             $display_tls = \%display_tls;
         }
         delete $display->{tls_port} if exists $display->{tls_port};
+        $display->{n_order} = ++$n_order;
         lock_hash(%$display);
-        push @display,($display);
         push @display,($display_tls) if $display_tls;
+        push @display,($display);
     }
+    return $display[0] if !wantarray;
     return @display;
 }
 
@@ -708,7 +711,6 @@ sub _display_info_vnc($graph) {
         }
     }
 
-    lock_hash(%display);
     return \%display;
 }
 
@@ -1941,6 +1943,7 @@ sub _set_driver_generic {
 sub _update_device_graphics($self, $driver, $data) {
     my $doc = XML::LibXML->load_xml(string
         => $self->domain->get_xml_description());
+    $driver =~ s/-tls$//;
     my $path = "/domain/devices/graphics\[\@type='$driver']";
     my ($device ) = $doc->findnodes($path);
     die "$path not found ".$self->name if !$device;
@@ -2506,6 +2509,7 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
 
 sub _change_hardware_display($self, $index, $data) {
     my $type = delete $data->{driver};
+    $type =~ s/-tls$//;
     my $port = delete $data->{port};
     confess if $port;
     for my $item (keys %$data) {
@@ -2600,7 +2604,6 @@ sub _change_hardware_network($self, $index, $data) {
 sub reload_config($self, $doc) {
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
-    $self->info(Ravada::Utils::user_daemon);
 }
 
 sub copy_config($self, $domain) {
