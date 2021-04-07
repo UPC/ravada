@@ -1269,7 +1269,7 @@ sub _insert_display( $self, $display ) {
         eval {
             $sth->execute(map { $display->{$_} } sort keys %$display);
         };
-        last if !$@ || ( $@ !~ /(Duplicate entry for key|UNIQUE constraint)(.*)/);
+        last if !$@ || ( $@ !~ /(Duplicate entry .* for key|UNIQUE constraint)(.*)/);
         my $field = $2;
         warn "Warning: duplicated $field";
         if ($field =~ /n_order/ && $display->{n_order}) {
@@ -3315,7 +3315,7 @@ sub _update_display_port_exposed($self, $name, $local_ip, $public_port, $interna
             $sth->execute($local_ip, $local_ip, $public_port,1, $name, $self->id);
         };
         warn "Warning: $@".Dumper([$name, $public_port]) if $@;
-        last if !$@ || ( $@ !~ /(Duplicate entry for key|UNIQUE constraint).*port/);
+        last if !$@ || ( $@ !~ /(Duplicate entry .* for key|UNIQUE constraint).*port/);
         next if $self->_check_duplicate_display_port_down($public_port);
         $is_builtin = $self->_is_display_builtin($name) if !defined $is_builtin;
         if ($is_builtin) {
