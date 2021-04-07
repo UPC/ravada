@@ -1358,6 +1358,7 @@ sub _fix_duplicate_display_port($self, $port) {
     );
     $sth_update->execute($id_domain_display);
 
+    warn "Warning: set ".$self->name." public_port $port =NULL WHERE id_domain=$id_domain";
     $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set public_port=NULL "
         ." WHERE id_domain=? AND public_port=?"
     );

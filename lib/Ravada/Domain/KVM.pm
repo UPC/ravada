@@ -665,10 +665,13 @@ sub display_info($self, $user) {
         } else {
             confess "I don't know how to check info for $type display";
         }
+
+        $display->{port} = undef if $display->{port} && $display->{port}==-1;
         my $display_tls;
         if (exists $display->{tls_port} && $display->{tls_port} || $self->_vm->tls_ca) {
             my %display_tls = %$display;
             $display_tls{port} = delete $display_tls{tls_port};
+            $display_tls{port} = undef if $display_tls{port} && $display_tls{port}==-1;
             $display_tls{driver} .= "-tls";
             $display_tls{n_order} = ++$n_order;
             lock_hash(%display_tls);

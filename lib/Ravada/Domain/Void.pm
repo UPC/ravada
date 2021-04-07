@@ -60,6 +60,7 @@ sub display_info {
         };
 
         $graph->{is_builtin} = 1;
+        $graph->{port} = undef if $graph->{port} && $graph->{port} eq 'auto';
         push @display,($graph);
     }
 
