@@ -2770,7 +2770,8 @@ sub process_requests {
         my $txt_retry = '';
         $txt_retry = " retry=".$req->retry if $req->retry;
 
-        warn ''.localtime." [$request_type] $$ executing request id=".$req->id." ".$req->status()
+        warn ''.localtime." [$request_type] $$ executing request id=".$req->id." ".
+        "pid=".($req->pid or '')." ".$req->status()
             ."$txt_retry "
             .$req->command
             ." ".Dumper($req->args) if $DEBUG || $debug;
@@ -2789,7 +2790,7 @@ sub process_requests {
     }
 
     $self->_timeout_requests();
-    warn Dumper([map { $_->id." ".$_->command." ".$_->status } @reqs ])
+    warn Dumper([map { $_->id." ".$_->pid." ".$_->command." ".$_->status } @reqs ])
         if ($DEBUG || $debug ) && @reqs;
 
     return scalar(@reqs);
@@ -3059,6 +3060,7 @@ sub _execute {
         $self->_do_execute_command($sub, $request);
         exit;
     }
+    warn "forked $pid\n" if $DEBUG;
     $self->_add_pid($pid, $request);
     $request->pid($pid);
 }

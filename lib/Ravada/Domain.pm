@@ -1269,7 +1269,7 @@ sub _insert_display( $self, $display ) {
         eval {
             $sth->execute(map { $display->{$_} } sort keys %$display);
         };
-        last if !$@ || ( $@ !~ /(Duplicate entry .* for key|UNIQUE constraint)(.*)/);
+        last if !$@ || ( $@ !~ /(Duplicate entry .* for key|UNIQUE constraint)(port|n_order)/);
         my $field = $2;
         warn "Warning: duplicated $field";
         if ($field =~ /n_order/ && $display->{n_order}) {
