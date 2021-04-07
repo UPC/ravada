@@ -1025,7 +1025,8 @@ sub wait_request {
                         } elsif($req->command eq 'compact') {
                             like($error,qr{^($|.*compacted)});
                         } else {
-                            like($error,qr/^$|run recently/) or confess $req->command;
+                            like($error,qr/^$|run recently/)
+                                or confess $req->id." ".$req->command;
                         }
                     }
                 }
