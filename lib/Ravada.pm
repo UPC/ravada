@@ -2765,9 +2765,13 @@ sub process_requests {
     for my $req (sort { $a->priority <=> $b->priority } @reqs) {
         next if $req eq 'refresh_vms' && scalar@reqs > 2;
         next if !$req->id;
-        next if $req->status() eq 'working';
+        next if $req->status() =~ /^(done|working)$/;
 
-        warn "[$request_type] $$ executing request id=".$req->id." ".$req->status()." retry=".($req->retry or '<UNDEF>')." "
+        my $txt_retry = '';
+        $txt_retry = " retry=".$req->retry if $req->retry;
+
+        warn ''.localtime." [$request_type] $$ executing request id=".$req->id." ".$req->status()
+            ."$txt_retry "
             .$req->command
             ." ".Dumper($req->args) if $DEBUG || $debug;
 
@@ -2778,13 +2782,15 @@ sub process_requests {
 #        $req->status("done") if $req->status() !~ /retry/;
         next if !$DEBUG && !$debug;
 
-        warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
-            ." , error: '".($req->error or 'NONE')."'\n"  if $DEBUG || $VERBOSE;
+        warn ''.localtime." req ".$req->id." , cmd: ".$req->command." ".$req->status()
+            ." , err: '".($req->error or '')."'\n"  if $DEBUG || $VERBOSE;
             #        sleep 1 if $DEBUG;
 
     }
 
     $self->_timeout_requests();
+    warn Dumper([map { $_->id." ".$_->command." ".$_->status } @reqs ])
+        if ($DEBUG || $debug ) && @reqs;
 
     return scalar(@reqs);
 }
