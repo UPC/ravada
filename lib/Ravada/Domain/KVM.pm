@@ -123,6 +123,7 @@ sub list_disks {
     my $self = shift;
     my @disks = ();
 
+    return @disks if !$self->xml_description;
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
 
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
