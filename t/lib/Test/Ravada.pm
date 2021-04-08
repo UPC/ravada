@@ -1001,7 +1001,8 @@ sub wait_request {
                 if ($debug && (time%5 == 0)) {
                     diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
                         .$run_at." bg=$background"
-                        ." ".($req->error or ''))
+                        ." ".($req->error or ''));
+                    sleep 1;
                 }
                 sleep 1 if $background;
                 $done_all = 0;
