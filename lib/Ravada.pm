@@ -1078,7 +1078,7 @@ sub _add_indexes_generic($self) {
         ,domain_displays => [
             "unique(id_domain,n_order)"
             ,"unique(id_domain,driver)"
-            ,"unique(port)"
+            ,"unique(id_vm,port)"
         ]
         ,requests => [
             "index(status,at_time)"
@@ -1517,6 +1517,7 @@ sub _sql_create_tables($self) {
         domain_displays => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references domains(id) on delete cascade'
+            ,id_vm => 'int defaul null'
             ,port => 'char(5) DEFAULT NULL'
             ,ip => 'varchar(254)'
             ,listen_ip => 'varchar(254)'
@@ -1887,10 +1888,13 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('volumes','name','char(200)');
 
+    $self->_upgrade_table('domain_displays', 'id_vm','int(1) DEFAULT NULL');
+
     $self->_upgrade_table('domain_drivers_options','data', 'char(200) ');
     $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
     $self->_upgrade_table('domain_ports', 'restricted','int(1) DEFAULT 0');
     $self->_upgrade_table('domain_ports', 'is_active','int(1) DEFAULT 0');
+    $self->_upgrade_table('domain_ports', 'id_vm','int(1) DEFAULT NULL');
 
     $self->_upgrade_table('messages','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 

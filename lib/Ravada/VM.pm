@@ -453,7 +453,7 @@ sub _around_create_domain {
         $domain->_data(shutdown_disconnected => $base->_data('shutdown_disconnected'));
         for my $port ( $base->list_ports ) {
             my %port = %$port;
-            delete @port{'id','id_domain','public_port'};
+            delete @port{'id','id_domain','public_port','id_vm'};
             $domain->expose(%port);
         }
         my @displays = $base->_get_controller_display();

@@ -1131,6 +1131,7 @@ sub _around_display_info($orig,$self,$user ) {
                     my $port = $self->exposed_port(id => $display->{id_domain_port});
                     $display->{is_active} = ( $port->{is_active} or 0);
                 }
+                $display->{id_vm} = $self->_vm->id if $display->{port};
                 lock_hash(%$display);
             }
             $self->_store_display($display);
@@ -1157,12 +1158,6 @@ sub _store_display($self, $display, $display_old=undef) {
 
         $display_old = $self->_get_display($display->{driver})
     }
-
-=pod
-    $display_new{port} = $self->_vm->_new_free_port()
-    if $self->_is_display_builtin($display) && ( !$display_old || (exists $display_new{port} && !defined $display_new{port}));
-
-=cut
 
     my $ip = ( $display_new{ip} or $display_old->{ip} );
     my $port = $display_new{port};
