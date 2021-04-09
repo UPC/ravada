@@ -102,6 +102,11 @@ sub _file_free_port() {
 
 }
 
+sub  _reset_free_port(@) {
+    my $file_fp = _file_free_port();
+    unlink $file_fp or die $! if -e $file_fp;
+}
+
 sub _new_free_port($self, $used={} ) {
     my $file_fp  = _file_free_port();
 
