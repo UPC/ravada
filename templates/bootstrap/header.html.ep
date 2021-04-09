@@ -4,11 +4,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="">
     <meta name="author" content="">
+<link href="/favicon.ico" rel="icon" type="public/favicon.ico">
 % if ($url) {
     <meta HTTP-EQUIV="REFRESH" content="0; url=<%= $url %>">
 % }
     <title>Ravada VDI</title>
-<link href="/favicon.ico" rel="icon" type="public/favicon16x16.ico" /> 
 
 % if ( !$fallback ) {
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/morris.js/0.5.1/morris.css">
