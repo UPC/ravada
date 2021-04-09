@@ -998,7 +998,9 @@
                             $scope.domain_display[i]= {};
                         }
                         var display = $scope.domain.hardware.display[i];
-                        display.display=display.driver+"://"+display.ip+":"+display.port;
+                        if (display.driver.substr(-4,4) != '-tls') {
+                            display.display=display.driver+"://"+display.ip+":"+display.port;
+                        }
                         var keys = Object.keys(display);
                         for ( var n_key=0 ; n_key<keys.length ; n_key++) {
                             var field=keys[n_key];
