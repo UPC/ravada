@@ -1347,17 +1347,21 @@ sub test_enforce_limits($domain, $n_expected, $user=user_admin) {
             diag("$n.$m create request enforce_limits");
             my @list = rvd_back->list_domains(user => $user, active => 1);
             warn Dumper([ map { $_->name } @list]);
-            return if scalar(@list)<=$n_expected ;
+            return if scalar(@list) && scalar(@list)<=$n_expected ;
             $req = Ravada::Request->enforce_limits(timeout => 1, _force => 1);
             last if $req;
             sleep 1;
         }
-        return if scalar(rvd_back->list_domains(user => $user, active => 1)) <= $n_expected ;
+        my @list = rvd_back->list_domains(user => $user, active => 1);
+        warn Dumper([ map { $_->name } @list]);
+        return if scalar(@list) && scalar(@list)<=$n_expected ;
         wait_request();
         next if $req->status ne 'done';
         is($req->status,'done');
         is($req->error,'');
-        return if scalar(rvd_back->list_domains(user => $user, active => 1)) <= $n_expected ;
+        @list = rvd_back->list_domains(user => $user, active => 1);
+        warn Dumper([ map { $_->name } @list]);
+        return if scalar(@list) && scalar(@list)<=$n_expected ;
     }
 }
 
