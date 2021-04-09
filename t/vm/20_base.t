@@ -548,6 +548,7 @@ sub _test_display_tls($domain) {
 
         for my $display ( @{$domain->info(user_admin)->{hardware}->{display}} ) {
             next if $display->{driver} !~ /-tls$/;
+            is($display->{display},undef);
             my $tls_port = $display->{port} or die Dumper($display);
             like($tls_port,qr/^\d+$/);
 
@@ -1273,13 +1274,9 @@ sub test_domain_limit_noadmin {
     is(rvd_back->list_domains(user => $user, active => 1),1);
 
     $domain2->start( $user );
-    my $req;
-    for ( 1 .. 100 ) {
-        $req = Ravada::Request->enforce_limits(timeout => 1, _force => 1);
-        last if $req;
-        sleep 1;
-    }
-    wait_request();
+
+    test_enforce_limits($domain2,1);
+
     my @list = rvd_back->list_domains(user => $user, active => 1);
     is(scalar @list,1) or die Dumper([ map { $_->id." ".$_->name } @list]);
     is($list[0]->name, $domain2->name) if $list[0];
@@ -1337,6 +1334,33 @@ sub test_domain_limit_allowed {
     $domain2->remove(user_admin);
 }
 
+sub test_enforce_limits($domain, $n_expected, $user=user_admin) {
+    # let's try for a while to check if one machine is shutdown because
+    # it is over limit
+    delete_request('enforce_limits');
+    wait_request();
+    for my $n ( 1 .. 100 ) {
+        diag("$n enforce limits");
+        $domain->start(user_admin) unless $domain->is_active();
+        my $req;
+        for my $m ( 1 .. 100 ) {
+            diag("$n.$m create request enforce_limits");
+            my @list = rvd_back->list_domains(user => $user, active => 1);
+            warn Dumper([ map { $_->name } @list]);
+            return if scalar(@list)<=$n_expected ;
+            $req = Ravada::Request->enforce_limits(timeout => 1, _force => 1);
+            last if $req;
+            sleep 1;
+        }
+        return if scalar(rvd_back->list_domains(user => $user, active => 1)) <= $n_expected ;
+        wait_request();
+        next if $req->status ne 'done';
+        is($req->status,'done');
+        is($req->error,'');
+        return if scalar(rvd_back->list_domains(user => $user, active => 1)) <= $n_expected ;
+    }
+}
+
 
 sub test_domain_limit_already_requested {
     my $vm_name = shift;
@@ -1370,30 +1394,9 @@ sub test_domain_limit_already_requested {
     my @list_requests = grep { $_->command ne 'set_time'} $domain->list_requests;
     is(scalar @list_requests,0,"Expecting 0 requests ".Dumper(\@list_requests));
 
-    is(rvd_back->list_domains(user => $user, active => 1),2);
-    delete_request('enforce_limits');
-    my $req = Ravada::Request->enforce_limits(timeout => 1, _force => 1);
-    for ( 1 .. 100 ) {
-        wait_request( skip => []);
-        if ($req->status eq 'done' && $req->error =~ /run recently/i) {
-            delete_request('enforce_limits');
-            $req = Ravada::Request->enforce_limits(timeout => 1, _force => 1);
-        }
-        last if $req->status eq 'done';
-        sleep 1;
-    }
-
-    is($req->status,'done');
-    like($req->error, qr/^$|libvirt error code: 1,/);
-
-    my @list;
-    for ( 1 .. 30 ) {
-        @list = rvd_back->list_domains(user => $user, active => 1);
-        last if scalar(@list) == 1;
-        Ravada::Request->enforce_limits(timeout => 1, _force => 1);
-        wait_request( skip => []);
-        sleep 1;
-    }
+    test_enforce_limits($domain2,1, $user);
+    my @list=rvd_back->list_domains(user => $user, active => 1);
+    is(scalar(@list),1);
     ok(!$domain->is_active || !$domain2->is_active ) or die Dumper([ map { $_->name } @list]);
     is($list[0]->name, $domain2->name) if $list[0];
 
