@@ -1160,9 +1160,14 @@ sub _store_display($self, $display, $display_old=undef) {
     }
 
     my $ip = ( $display_new{ip} or $display_old->{ip} );
-    my $port = $display_new{port};
-    $port = $display_old->{port} if !defined $port && $display_old;
     my $driver = ( $display_new{driver} or $display_old->{driver} );
+    if (exists $display_new{port} && $display_new{port}
+        && (!exists $display_new{id_vm} || !$display_new{id_vm}) ) {
+
+        unlock_hash(%display_new);
+        $display_new{id_vm} = $self->_vm->id;
+        lock_hash(%display_new);
+    }
 
    #warn "updating ".Dumper($display_old,\%display_new);
     if ($display_old) {
@@ -1217,9 +1222,10 @@ sub _max_n_order_display($self) {
 }
 
 sub _normalize_display($self, $display, $json=1) {
+    confess Dumper($display) if exists $display->{port} && $display->{port} && !$display->{id_vm};
     my %valid_field = map { $_ => 1 }
     qw(id id_domain port ip display listen_ip driver password is_builtin
-    is_active n_order extra id_domain_port );
+    is_active n_order extra id_domain_port id_vm );
 
     my $extra = {};
     unlock_hash(%$display);
@@ -1266,7 +1272,6 @@ sub _insert_display( $self, $display ) {
         };
         last if !$@ || ( $@ !~ /(Duplicate entry .* for key|UNIQUE constraint)(port|n_order)/);
         my $field = $2;
-        warn "Warning: duplicated $field";
         if ($field =~ /n_order/ && $display->{n_order}) {
             $self->_clean_display_order($display->{n_order});
         } elsif ($field =~ /port/) {
@@ -1328,7 +1333,6 @@ sub _update_display( $self, $new_display_orig, $old_display ) {
         my @values = map { $new_display{$_} } sort keys %new_display ;
         eval { $sth->execute(@values, $id) };
         last if !$@;
-        warn $@.Dumper([$id,\%new_display, $$CONNECTOR->dbh->state]);
         if ($old_display->{is_builtin} || $new_display{is_builtin} ) {
             $self->_fix_duplicate_display_port($new_display{port});
         } else {
@@ -1347,13 +1351,11 @@ sub _fix_duplicate_display_port($self, $port) {
     my ($id_domain_display, $id_domain, $is_active) = $sth->fetchrow;
     return if !$id_domain_display;
 
-    warn "Warning: set ".$self->name." port $port =NULL WHERE id=$id_domain_display";
     my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_displays set port=NULL "
         ." WHERE id=?"
     );
     $sth_update->execute($id_domain_display);
 
-    warn "Warning: set ".$self->name." public_port $port =NULL WHERE id_domain=$id_domain";
     $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set public_port=NULL "
         ." WHERE id_domain=? AND public_port=?"
     );
