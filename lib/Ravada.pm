@@ -1517,7 +1517,7 @@ sub _sql_create_tables($self) {
         domain_displays => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references domains(id) on delete cascade'
-            ,id_vm => 'int defaul null'
+            ,id_vm => 'int default null'
             ,port => 'char(5) DEFAULT NULL'
             ,ip => 'varchar(254)'
             ,listen_ip => 'varchar(254)'
@@ -2794,7 +2794,7 @@ sub process_requests {
     }
 
     $self->_timeout_requests();
-    warn Dumper([map { $_->id." ".$_->pid." ".$_->command." ".$_->status } @reqs ])
+    warn Dumper([map { $_->id." ".($_->pid or '')." ".$_->command." ".$_->status } @reqs ])
         if ($DEBUG || $debug ) && @reqs;
 
     return scalar(@reqs);
@@ -3056,6 +3056,7 @@ sub _execute {
     $self->_wait_pids;
     return if !$self->_can_fork($request);
 
+    $self->disconnect_vm();
     my $pid = fork();
     die "I can't fork" if !defined $pid;
 
@@ -3969,7 +3970,7 @@ sub _cmd_rename_domain {
     my $user = Ravada::Auth::SQL->search_by_id($uid);
     my $domain = $self->search_domain_by_id($id_domain);
 
-    confess "Unkown domain ".Dumper($request)   if !$domain;
+    confess "Unkown domain id=$id_domain ".Dumper($request)   if !$domain;
 
     $domain->rename(user => $user, name => $name);
 
@@ -4483,10 +4484,11 @@ sub _reopen_ports($self, $port) {
     my ($id_domain) = $sth->fetchrow;
     return if !$id_domain;
 
+    my $domain = Ravada::Domain->open($id_domain);
     Ravada::Request->open_exposed_ports(
                uid => Ravada::Utils::user_daemon->id
         ,id_domain => $id_domain
-    );
+    ) if $domain->is_active;
 }
 
 sub _delete_iptables_rule($self, $vm, $table, $rule) {
