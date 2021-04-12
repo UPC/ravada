@@ -13,15 +13,21 @@
                 <input class="form-control" id="user" name="login" value ="<%= $login %>" type="text" placeholder="<%=l 'User' %>" required autofocus>
                 <input class="form-control" id="pssw" type="password" name="password" value="" placeholder="<%=l 'Password' %>" required>
 
-                <input type="hidden" name="url" value="<%= $url %>">
+               <input type="hidden" name="url" value="<%= $url %>">
                <!-- <input type="submit" name="submit" value="launch"> -->
-               <button id="submit" class="btn btn-success btn-lg btn-block" href="/" type="submit" name="submit" value="launch"><%=l 'Login' %></button>
+               <button id="submit" class="btn btn-success btn-lg btn-block" href="/" type="submit" name="submit" value="launch"><%=l 'Login with user/password' %></button>
                 % if (scalar @$error) {
                 %       for my $i (@$error) {
                             <div class="alert alert-danger">
                                 <strong><%=l 'Error' %>: </strong><%=l $i %>
                             </div>
                 %       }
+                % }
+                </form>
+                <form class="form-singin" method="post">
+                <input type="hidden" name="url" value="<%= $url %>">
+                % if ($sso_available) {
+                <button id="submit" class="btn btn-success btn-lg btn-block" href="/" type="submit" name="submit" value="sso"><%=l 'SSO/CAS Login' %></button>
                 % }
                 </form>
                 <div class="alert alert-warning">

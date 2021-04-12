@@ -258,8 +258,8 @@ any '/test' => sub {
 
 any '/logout' => sub {
     my $c = shift;
-    logout($c);
-    $c->redirect_to('/');
+    my $redirect_to = logout($c);
+    $c->redirect_to($redirect_to ? $redirect_to : '/');
 };
 
 get '/anonymous' => sub {
@@ -2014,19 +2014,30 @@ sub login($c, $status=200) {
 
     my $login = $c->param('login');
     my $password = $c->param('password');
+    my $ticket = $c->param('ticket');
     my $url = ($c->param('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
 
     my @error =();
 
-    if (defined $login || defined $password || $c->param('submit')) {
+    if (((defined $login) || (defined $password) || ((defined $c->param('submit')) && ($c->param('submit') ne 'sso'))) && (! $ticket)) {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
     }
+    my $auth_ok;
+    if (!@error) {
+        if (defined $login && defined $password) {
+            eval { $auth_ok = Ravada::Auth::login($login, $password)};
+        } elsif (($c->param('ticket')) || ($c->param('submit') eq 'sso')) {
+            eval { $auth_ok = Ravada::Auth::login_external($ticket, $c->session('ticket')) };
+            if ($auth_ok && !$@) {
+                return $c->redirect_to($auth_ok->{'redirectTo'}) if ($auth_ok->{'redirectTo'});
+                $c->session('ticket' => $auth_ok->{'ticket'}) if ($auth_ok->{'ticket'});
+                $c->session('logoutURL' => $auth_ok->{'logoutURL'}) if ($auth_ok->{'logoutURL'});
+                $login = $auth_ok->name;
+            }
+        }
 
-    if ( !@error && defined $login && defined $password) {
-        my $auth_ok;
-        eval { $auth_ok = Ravada::Auth::login($login, $password)};
         if ( $auth_ok && !$@) {
             $c->session('login' => $login);
             my $expiration = $SESSION_TIMEOUT;
@@ -2050,7 +2061,7 @@ sub login($c, $status=200) {
             $c->session(auto_view => $auto_view, expiration => $expiration);
             app->log->info("Access granted to $login from "._remote_ip($c)) if $CONFIG_FRONT->{log}->{log};
             return $c->redirect_to($url);
-        } else {
+        } elsif (defined $c->param('submit')) {
             app->log->error("Access denied to $login from "._remote_ip($c)) if $CONFIG_FRONT->{log}->{log};
             push @error,("Access denied");
         }
@@ -2072,6 +2083,7 @@ sub login($c, $status=200) {
                         ,navbar_custom => 1
                       ,login => $login
                       ,error => \@error
+                      ,sso_available => $Ravada::Auth::SSO_OK,
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
                       ,guide => $CONFIG_FRONT->{guide}
@@ -2089,7 +2101,12 @@ sub logout {
     sleep 1;
     $c->session(expires => 0);
     $c->session(login => undef);
+    $c->session(ticket => undef);
 
+    my $logout_url = $c->session('logoutURL');
+    $c->session(logoutURL => undef);
+
+    return $logout_url;
 }
 
 sub quick_start {
@@ -2099,25 +2116,39 @@ sub quick_start {
 
     my $login = $c->param('login');
     my $password = $c->param('password');
+    my $ticket = $c->param('ticket');
     my $id_base = $c->param('id_base');
 
     my @error =();
-    if ($c->param('submit')) {
+    if (($c->param('submit') ne 'sso') && (! $ticket)) {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
     }
+    if (defined $ticket) {
+        push @error, ("Empty ticket value") if !length $ticket;
+    }
 
-    if ( $login && $password ) {
+    if (!@error) {
         my $log_ok;
-        eval { $log_ok = Ravada::Auth::login($login, $password) };
-        if ($log_ok) {
+        if ( $login && $password) {
+            eval { $log_ok = Ravada::Auth::login($login, $password) };
+        } elsif (($c->param('ticket')) || ($c->param('submit') eq 'sso')) {
+            eval { $log_ok = Ravada::Auth::login_external($ticket, $c->session('ticket')) };
+            if ($log_ok && !$@) {
+                return $c->redirect_to($log_ok->{'redirectTo'}) if ($log_ok->{'redirectTo'});
+                $c->session('ticket' => $log_ok->{'ticket'}) if ($log_ok->{'ticket'});
+                $c->session('logoutURL' => $log_ok->{'logoutURL'}) if ($log_ok->{'logoutURL'});
+                $login = $log_ok->name;
+            }
+        }
+        if ($log_ok && !$@) {
             $c->session('login' => $login);
-        } else {
-            push @error,("Access denied");
-            logout($c);
-            return login($c);
+        }
+        else {
+            push @error,($@ ? $@ : "Access denied");
         }
     }
+
     if ( $c->param('submit') && _logged_in($c) && defined $id_base ) {
 
         return quick_start_domain($c, $id_base, ($login or $c->session('login')));
