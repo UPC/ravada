@@ -43,6 +43,20 @@ sub remove_user { }
 
 sub search_user { }
 
+sub _check_user_profile {
+    my $self = shift;
+    my $user_sql = Ravada::Auth::SQL->new(name => $self->name);
+    if ( $user_sql->id ) {
+        if ($user_sql->external_auth ne 'sso') {
+            $user_sql->external_auth('sso');
+        }
+        return;
+    }
+
+    Ravada::Auth::SQL::add_user(name => $self->name, is_external => 1, is_temporary => 0
+        , external_auth => 'sso');
+}
+
 sub _generate_session_ticket
 {
     my ($name) = @_;
@@ -82,10 +96,12 @@ sub login_external($ticket, $cookie) {
     if ($cookie) {
         my $name = _get_session_userid_by_ticket($cookie);
         my $self = Ravada::Auth::SSO->new(name => $name, ticket => $cookie);
+        $self->_check_user_profile();
         return $self;
     } elsif ($ticket) {
         my $name = _validate_ticket($ticket);
         my $self = Ravada::Auth::SSO->new(name => $name, ticket => _generate_session_ticket($name));
+        $self->_check_user_profile();
         return $self;
     } else {
         return { redirectTo => sprintf('%s/login?service=%s', $$CONFIG->{sso}->{url}, uri_escape($$CONFIG->{sso}->{service})) };
