@@ -1275,7 +1275,7 @@ sub test_domain_limit_noadmin {
 
     $domain2->start( $user );
 
-    test_enforce_limits($domain2,1);
+    test_enforce_limits($domain2,1, $user);
 
     my @list = rvd_back->list_domains(user => $user, active => 1);
     is(scalar @list,1) or die Dumper([ map { $_->id." ".$_->name } @list]);
@@ -1324,8 +1324,7 @@ sub test_domain_limit_allowed {
     user_admin->revoke($user,'start_many');
     is($user->can_start_many,0) or exit;
 
-    $req = Ravada::Request->enforce_limits(timeout => 1,_force => 1);
-    wait_request();
+    test_enforce_limits($domain2, 1, $user);
     @list = rvd_back->list_domains(user => $user, active => 1);
     is(scalar @list,1,"[$vm_name] expecting 1 active domain")
         or die Dumper([ map { $_->name } @list]);
@@ -1341,27 +1340,34 @@ sub test_enforce_limits($domain, $n_expected, $user=user_admin) {
     wait_request();
     for my $n ( 1 .. 100 ) {
         diag("$n enforce limits");
-        $domain->start(user_admin) unless $domain->is_active();
+        if (!$domain->is_active()) {
+            $domain->start(user =>$user, remote_ip => '1.2.3.4');
+            wait_request();
+        }
         my $req;
         for my $m ( 1 .. 100 ) {
             diag("$n.$m create request enforce_limits");
             my @list = rvd_back->list_domains(user => $user, active => 1);
             warn Dumper([ map { $_->name } @list]);
-            return if scalar(@list) && scalar(@list)<=$n_expected ;
+            return if scalar(@list)<=$n_expected ;
             $req = Ravada::Request->enforce_limits(timeout => 1, _force => 1);
             last if $req;
             sleep 1;
         }
         my @list = rvd_back->list_domains(user => $user, active => 1);
         warn Dumper([ map { $_->name } @list]);
-        return if scalar(@list) && scalar(@list)<=$n_expected ;
+        return if scalar(@list)<=$n_expected ;
         wait_request();
         next if $req->status ne 'done';
         is($req->status,'done');
-        is($req->error,'');
+        if ($req->error && $req->error =~ /run recently/) {
+            delete_request('enforce_limits');
+            next;
+        }
+        ok(!$req->error,"Expecting no error on ".$req->command." got ".($req->error or ''));
         @list = rvd_back->list_domains(user => $user, active => 1);
         warn Dumper([ map { $_->name } @list]);
-        return if scalar(@list) && scalar(@list)<=$n_expected ;
+        return if scalar(@list)<=$n_expected ;
     }
 }
 
@@ -1592,18 +1598,17 @@ sub test_display_drivers($vm, $remove) {
         wait_request();
         $domain->shutdown(user => user_admin, timeout => 10);
         if ($remove) {
+            delete_request_not_done('add_hardware', 'remove_hardware');
             my $req_r = Ravada::Request->remove_hardware(
                 uid => user_admin->id
                 ,id_domain => $domain->id
                 ,name => 'display'
                 ,index => 0
             );
-            $n_displays--;
-            $n_displays-- if $driver =~ /spice|vnc/ && $TLS;
             wait_request(debug => 0);
             is($req_r->status,'done');
             like($req_r->error,qr/^$|display.*not found/);
-            delete_request_not_done('add_hardware', 'remove_hardware');
+            $n_displays = scalar(@{$domain->info(user_admin)->{hardware}->{display}});
         }
     }
     my $displays0 = $domain->info(user_admin)->{hardware}->{display};
@@ -1814,9 +1819,16 @@ sub test_display_conflict_next($vm) {
 
     my @domains = _conflict_port($domain1, $port_conflict);
 
+    my $display_x2go_b;
     my $displays1b
     = $domain1->info(user_admin)->{hardware}->{display};
-    my ($display_x2go_b) = grep { $_->{driver} eq 'x2go' } @$displays1b;
+    for ( 1 .. 10 ) {
+        ($display_x2go_b) = grep { $_->{driver} eq 'x2go' } @$displays1b;
+        last if $display_x2go_b->{port};
+        Ravada::Request->refresh_machine(id_domain => $domain1->id, uid => user_admin->id);
+        sleep 1;
+        wait_request();
+    }
     isnt($display_x2go_b->{port}, $port_conflict,
         $domain1->id." ".$domain1->name)
         or die Dumper(

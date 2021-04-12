@@ -341,7 +341,8 @@ sub test_clone($base1) {
     my $req = Ravada::Request->open($id_req);
     ok($req, "Expecting request on /machine/clone") or return;
     for ( ;; ) {
-        last if $req->status eq 'done';
+        last if $req->status eq 'done' && $req->error !~ /Retry.?$/;
+        warn $req->error if $req->status eq 'done';
         sleep 1;
     }
     ok($req->status,'done');

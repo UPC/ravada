@@ -477,8 +477,8 @@ sub _leftovers {
             for my $vm_name ('Void', 'KVM') {
                 $domain = rvd_front->search_domain(
                     "${name}_$n-$vm_name-$name");
+                _add_leftover(\@machines,$domain);
             }
-            _add_leftover(\@machines,$domain);
         }
     }
     return @machines;
@@ -491,7 +491,6 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
     my @reqs;
     for my $machine ( @$machines, @machines2) {
         next if $machine->{name} !~ /^$base_name/;
-        next if $machine->{has_clones};
         remove_domain_and_clones_req($machine,$wait, $run_request);
     }
 }
@@ -508,7 +507,7 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
     for my $clone ($domain->clones) {
         remove_domain_and_clones_req($clone, $wait, $run_request);
     }
-    if ( $wait && $domain->clones ) {
+    if ( $wait || $domain->clones ) {
         my $n_clones = scalar($domain->clones);
         for ( 1 .. 60 + 2*$n_clones ) {
             last if !$domain->clones;
@@ -521,6 +520,8 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
             }
         }
     }
+    Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id)
+    if $domain->is_base;
     my $req= Ravada::Request->remove_domain(
         name => $domain->name
         ,uid => user_admin->id
@@ -1018,7 +1019,7 @@ sub wait_request {
                         my $error = ($req->error or '');
                         next if $error =~ /waiting for processes/i;
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
-                            like($error,qr{^($|rsync done)}) or confess $req->command;
+                            like($error,qr{^($|.*port \d+ already used|rsync done)}) or confess $req->command;
                         } elsif($req->command eq 'refresh_machine_ports') {
                             like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
                         } elsif($req->command eq 'open_exposed_ports') {
@@ -1147,6 +1148,7 @@ sub remove_qemu_pools {
     }
 
     my $base = base_pool_name();
+    $vm->connect();
     for my $pool  ( Ravada::VM::KVM::_list_storage_pools($vm->vm)) {
         my $name = $pool->get_name;
         next if $name !~ qr/^$base/;
@@ -1229,7 +1231,7 @@ sub _clean_db {
     while (my ($id) = $sth->fetchrow() ) {
         eval {
             my $domain = Ravada::Domain->open($id);
-            $domain->remove(user_admin) if $domain;
+            remove_domain_and_clones_req($domain,1,1) if $domain;
         };
         warn $@ if $@;
     }
@@ -1427,10 +1429,10 @@ sub _clean_iptables_ravada($node) {
         my ($rule) = $line =~ /-A (.*RAVADA.*)/i;
         next if !$rule;
         if (!$node->is_local) {
-            my ($out2, $err2) = $node->run_command("iptables","-t","filter","-D",$rule);
+            my ($out2, $err2) = $node->run_command("iptables","-t","filter","-D",$rule,"-w");
             warn $node->name.": '-D $rule' $err2" if $err2;
         } else {
-            `iptables -D $rule`;
+            `iptables -D $rule -w`;
         }
     }
 }
@@ -1453,7 +1455,7 @@ sub _flush_forward($node=undef) {
         next if $line =~ /-j LIBVIRT/;
         next if $line =~ /lxdbr/;
         $line =~ s/^-A (FORWARD.*)/-D $1/;
-        my ($out2, $err2) = _run_command($node, "iptables",split(/\s+/,$line));
+        my ($out2, $err2) = _run_command($node, "iptables",split(/\s+/,$line),"-w");
         die "$node_name $line $err2" if $err2;
         warn $out2 if $out2;
     }
@@ -1470,7 +1472,7 @@ sub flush_rules_node($node) {
     ($out, $err) = $node->run_command("iptables","-X", $CHAIN);
     is($err,'') or die `iptables-save`;
     for my $rule (@FLUSH_RULES) {
-        ($out, $err) = $node->run_command("iptables",@$rule);
+        ($out, $err) = $node->run_command("iptables",@$rule,"-w");
         like($err,qr(^$|chain/target/match by that name));
     }
 
@@ -1504,7 +1506,7 @@ sub flush_rules {
     }
     run3(["iptables","-F", $CHAIN,"-w"], \$in, \$out, \$err);
     like($err,qr(^$|chain/target/match by that name));
-    ($out, $err) = run3(["iptables","-D","INPUT","-j",$CHAIN],\$in, \$out, \$err);
+    ($out, $err) = run3(["iptables","-D","INPUT","-j",$CHAIN,"-w"],\$in, \$out, \$err);
     like($err,qr(^$|chain/target/match by that name));
     run3(["iptables","-X", $CHAIN,"-w"], \$in, \$out, \$err);
     like($err,qr(^$|chain/target/match by that name));

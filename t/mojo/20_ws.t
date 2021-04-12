@@ -344,7 +344,6 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     test_bookings($t);
     my @bases = _create_bases($t, $vm_name);
 
-
     is(list_machines_user($t), 0);
     is(list_machines($t), scalar(@bases)) or exit;
 
