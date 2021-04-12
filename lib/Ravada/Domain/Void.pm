@@ -667,7 +667,6 @@ sub get_info {
     my $self = shift;
     my $info = $self->_value('info');
     if (!$info->{memory}) {
-        warn Dumper($info);
         $info = $self->_set_default_info();
     }
     lock_keys(%$info);

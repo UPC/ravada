@@ -1332,6 +1332,7 @@ sub _update_display( $self, $new_display_orig, $old_display ) {
     for ( ;; ) {
         my @values = map { $new_display{$_} } sort keys %new_display ;
         eval { $sth->execute(@values, $id) };
+        warn $@.Dumper(\%new_display) if $@;
         last if !$@;
         if ($old_display->{is_builtin} || $new_display{is_builtin} ) {
             $self->_fix_duplicate_display_port($new_display{port});
@@ -1346,20 +1347,39 @@ sub _update_display( $self, $new_display_orig, $old_display ) {
 
 sub _fix_duplicate_display_port($self, $port) {
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id, id_domain, is_active FROM domain_displays where port=?");
-    $sth->execute($port);
-    my ($id_domain_display, $id_domain, $is_active) = $sth->fetchrow;
+        "SELECT id, id_domain, is_active, is_builtin FROM domain_displays where port=? "
+        ." AND id_vm = ?");
+    $sth->execute($port, $self->_vm->id);
+    my ($id_domain_display, $id_domain, $is_active, $is_builtin) = $sth->fetchrow;
     return if !$id_domain_display;
 
+    if($is_builtin ) {
+        my $domain_conflict = Ravada::Domain->open($id_domain);
+        if ($domain_conflict->is_active) {
+            my $req = Ravada::Request->shutdown_domain(
+                id_domain => $self->id
+                ,uid => Ravada::Utils::user_daemon->id
+            );
+            Ravada::Request->start_domain(
+                id_domain => $self->id,
+                ,uid => Ravada::Utils::user_daemon->id
+                ,after_request => $req->id
+            );
+            die "Error: ".$self->name." [ ".$self->id
+            ." ]  port $port already used in domain $id_domain. Retry.\n";
+        }
+    }
+
+    warn "clear ".$self->name." $port";
     my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_displays set port=NULL "
         ." WHERE id=?"
     );
     $sth_update->execute($id_domain_display);
 
     $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set public_port=NULL "
-        ." WHERE id_domain=? AND public_port=?"
+        ." WHERE id_domain=? AND public_port=? AND id_vm=?"
     );
-    $sth_update->execute($id_domain, $port);
+    $sth_update->execute($id_domain, $port, $self->_vm->id);
 
     Ravada::Request->open_exposed_ports(
         uid => Ravada::Utils::user_daemon->id
@@ -3276,7 +3296,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
             next if $removed{$line}++;
             warn $self->name." clean $line\n" if $debug_ports;
             $line =~ s/^-A/-t nat -D/;
-            my ($out,$err) = $self->_vm->run_command("iptables",split / /,$line);
+            my ($out,$err) = $self->_vm->run_command("iptables",split(/ /,$line),"-w");
             warn $out if$out;
             warn $err if $err;
         }
@@ -3316,7 +3336,7 @@ sub _update_display_port_exposed($self, $name, $local_ip, $public_port, $interna
         next if $self->_check_duplicate_display_port_down($public_port);
         $is_builtin = $self->_is_display_builtin($name) if !defined $is_builtin;
         if ($is_builtin) {
-            warn "DUplicated port $public_port in domain_displays";
+            warn "Duplicated port $public_port in domain_displays";
             $self->_fix_duplicate_display_port($public_port);
         } else {
             $sth->execute($local_ip, $local_ip, undef,1, $name, $self->id);
@@ -3337,9 +3357,9 @@ sub _update_display_port_exposed($self, $name, $local_ip, $public_port, $interna
 
 sub _check_duplicate_display_port_down($self, $port) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,id_domain,driver FROM domain_displays "
-        ." WHERE port=?"
+        ." WHERE port=? AND id_vm=?"
     );
-    $sth->execute($port);
+    $sth->execute($port, $self->_vm->id);
     my ( $id, $id_domain, $driver ) = $sth->fetchrow;
     return if !$id;
 
@@ -3406,6 +3426,7 @@ Performs an iptables open of all the exposed ports of the domain
 sub open_exposed_ports($self) {
     my @ports = $self->list_ports();
     return if !@ports;
+    return if !$self->is_active;
 
     if ( ! $self->ip ) {
         die "Error: No ip in domain ".$self->name.". Retry.\n";
@@ -3670,7 +3691,8 @@ sub _post_start {
     my $set_time = delete $arg{set_time};
     $set_time = 1 if !defined $set_time;
 
-    if ( $self->is_active() ) {
+    my $is_active = $self->is_active;
+    if ( $is_active ) {
         $self->_data('status','active');
         $self->_set_displays_builtin_active();
     }
@@ -3689,7 +3711,7 @@ sub _post_start {
             uid => Ravada::Utils::user_daemon->id
             ,id_domain => $self->id
             ,retry => 20
-    ) if $remote_ip && $self->list_ports();
+    ) if $is_active && $remote_ip && $self->list_ports();
 
     if ($self->run_timeout) {
         my $req = Ravada::Request->shutdown_domain(
@@ -3703,7 +3725,6 @@ sub _post_start {
     $self->get_info();
 
     # get the display so it is stored for front access
-    my $is_active = $self->is_active;
     if ($is_active && $arg{remote_ip}) {
         $self->_data('client_status', $arg{remote_ip});
         $self->_data('client_status_time_checked', time );
@@ -3839,7 +3860,7 @@ sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
            && ( $args{dport} eq $extra->{d_port}))
         {
 
-           $vm->run_command("iptables", "-t", $filter, "-D", $chain, $count)
+           $vm->run_command("iptables", "-t", $filter, "-D", $chain, $count,"-w")
                 if $vm->is_active;
            $removed++;
            $count--;

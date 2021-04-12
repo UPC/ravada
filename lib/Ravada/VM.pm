@@ -188,8 +188,13 @@ sub open {
     confess "ERROR: I can't find VM id=$args{id}" if !$row || !keys %$row;
 
     if ( $VM{$args{id}} && $VM{$args{id}}->name eq $row->{name} ) {
-        my $vm = $VM{$args{id}};
-        return _clean($vm);
+        my $internal_vm;
+        eval { $internal_vm = $VM{$args{id}}->vm };
+        warn $@ if $@;
+        if ($internal_vm) {
+            my $vm = $VM{$args{id}};
+            return _clean($vm);
+        }
     }
 
     my $type = $row->{vm_type};
