@@ -22,6 +22,7 @@
             .service("listMess", gtListMess)
             .controller("SupportForm", suppFormCtrl)
 	        .controller("AddUserForm",addUserFormCrtl)
+	        .controller("ChangePasswordForm",changePasswordFormCrtl)
 //            .controller("machines", machinesCrtl)
 //            .controller("messages", messagesCrtl)
             .controller("users", usersCrtl)
@@ -72,6 +73,11 @@
 
 
     function addUserFormCrtl($scope, $http, request){
+
+
+    };
+
+    function changePasswordFormCrtl($scope, $http, request){
 
 
     };
