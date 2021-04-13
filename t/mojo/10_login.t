@@ -178,7 +178,7 @@ sub test_login_fail {
     $t->post_ok('/login' => form => {login => "fail", password => 'bigtime'});
     is($t->tx->res->code(),403);
     $t->get_ok("/admin/machines")->status_is(401);
-    is($t->tx->res->dom->at("button#submit")->text,'Login') or exit;
+    like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
 
     login( user_admin->name, "$$ $$");
 
@@ -186,7 +186,7 @@ sub test_login_fail {
     is($t->tx->res->code(),403);
 
     $t->get_ok("/admin/machines")->status_is(401);
-    is($t->tx->res->dom->at("button#submit")->text,'Login') or exit;
+    like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
 }
 
 sub test_validate_html($url) {
