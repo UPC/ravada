@@ -2061,7 +2061,7 @@ sub login($c, $status=200) {
             $c->session(auto_view => $auto_view, expiration => $expiration);
             app->log->info("Access granted to $login from "._remote_ip($c)) if $CONFIG_FRONT->{log}->{log};
             return $c->redirect_to($url);
-        } elsif (defined $c->param('submit')) {
+        } elsif (defined $c->param('submit') || $login || $password) {
             app->log->error("Access denied to $login from "._remote_ip($c)) if $CONFIG_FRONT->{log}->{log};
             push @error,("Access denied");
         }
