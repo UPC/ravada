@@ -1144,7 +1144,11 @@ sub _delete_qemu_pool($pool) {
         my $path ="$dir/$file";
         unlink $path or die "$! $path" if -e $path;
     }
-    rmdir($dir) or die "$! $dir";
+    if (-l $dir) {
+        unlink $dir or die "$! $dir";
+    } else {
+        rmdir($dir) or die "$! $dir";
+    }
 
 }
 
