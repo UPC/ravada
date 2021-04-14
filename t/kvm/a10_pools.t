@@ -429,7 +429,191 @@ sub test_default_pool_base {
     }
 }
 
-#
+sub _create_pool_linked($vm) {
+    my $capacity = 1 * 1024 * 1024;
+
+    my $pool_name = new_pool_name();
+    my $dir = "/var/tmp/$pool_name";
+    my $dir_link = "$dir.link";
+
+    mkdir $dir if ! -e $dir;
+    unlink $dir_link or die "$! $dir_link" if -e $dir_link;
+
+    symlink($dir, $dir_link) or die "$! linking $dir -> $dir_link";
+
+    my $pool;
+    for ( ;; ) {
+        my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+        my $xml =
+                    "<pool type='dir'>
+                    <name>$pool_name</name>
+                    <uuid>$uuid</uuid>
+                    <capacity unit='bytes'>$capacity</capacity>
+                    <allocation unit='bytes'></allocation>
+                    <available unit='bytes'>$capacity</available>
+                    <source>
+                    </source>
+                    <target>
+                    <path>$dir_link</path>
+                    <permissions>
+                    <mode>0711</mode>
+                    <owner>0</owner>
+                    <group>0</group>
+                    </permissions>
+                    </target>
+                    </pool>"
+                    ;
+        eval { $pool = $vm->vm->create_storage_pool($xml) };
+        last if !$@ || $@ !~ /libvirt error code: 9,/;
+    };
+    ok(!$@,"Expecting \$@='', got '".($@ or '')."'") or return;
+    ok($pool,"Expecting a pool , got ".($pool or ''));
+
+    return ($pool_name, $dir, $dir_link);
+}
+
+sub _create_pool_linked_reverse($vm) {
+    my $capacity = 1 * 1024 * 1024;
+
+    my $pool_name = new_pool_name();
+    my $dir = "/var/tmp/$pool_name";
+    my $dir_link = "$dir.link";
+
+    mkdir $dir if ! -e $dir;
+    unlink $dir_link or die "$! $dir_link" if -e $dir_link;
+
+    symlink($dir, $dir_link) or die "$! linking $dir -> $dir_link";
+
+    my $pool;
+    for ( ;; ) {
+        my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+        my $xml =
+                    "<pool type='dir'>
+                    <name>$pool_name</name>
+                    <uuid>$uuid</uuid>
+                    <capacity unit='bytes'>$capacity</capacity>
+                    <allocation unit='bytes'></allocation>
+                    <available unit='bytes'>$capacity</available>
+                    <source>
+                    </source>
+                    <target>
+                    <path>$dir</path>
+                    <permissions>
+                    <mode>0711</mode>
+                    <owner>0</owner>
+                    <group>0</group>
+                    </permissions>
+                    </target>
+                    </pool>"
+                    ;
+        eval { $pool = $vm->vm->create_storage_pool($xml) };
+        last if !$@ || $@ !~ /libvirt error code: 9,/;
+    };
+    ok(!$@,"Expecting \$@='', got '".($@ or '')."'") or return;
+    ok($pool,"Expecting a pool , got ".($pool or ''));
+
+    return ($pool_name, $dir, $dir_link);
+}
+
+
+sub test_pool_linked($vm) {
+    my ($pool_name, $dir, $dir_link) = _create_pool_linked($vm);
+
+    $vm->default_storage_pool_name($pool_name);
+
+    my $domain1 = create_domain($vm);
+    $domain1->prepare_base(user_admin);
+    my $clone1 = $domain1->clone(
+        name => new_domain_name
+        ,user => user_admin
+    );
+
+    $clone1->remove(user_admin);
+    $domain1->remove(user_admin);
+}
+
+sub test_pool_linked_reverse($vm) {
+    my ($pool_name, $dir, $dir_link) = _create_pool_linked_reverse($vm);
+
+    $vm->default_storage_pool_name($pool_name);
+
+    my $domain1 = create_domain($vm);
+    $domain1->prepare_base(user_admin);
+    my $clone1 = $domain1->clone(
+        name => new_domain_name
+        ,user => user_admin
+    );
+
+    $clone1->remove(user_admin);
+    $domain1->remove(user_admin);
+}
+
+
+sub test_pool_linked2($vm) {
+    my ($pool_name, $dir, $dir_link) = _create_pool_linked($vm);
+
+    $vm->default_storage_pool_name($pool_name);
+
+    my $domain1 = create_domain($vm);
+    my $new_vol = "$dir/new_volume.qcow2";
+    my $new_vol_linked = "$dir_link/new_volume.link.qcow2";
+    $vm->run_command('qemu-img','create','-f','qcow2',$new_vol,'128M');
+    ok( -e $new_vol);
+    $vm->run_command('qemu-img','create','-f','qcow2',$new_vol_linked,'128M');
+    ok( -e $new_vol_linked);
+    $domain1->add_volume(file => $new_vol);
+    $domain1->add_volume(file => $new_vol_linked);
+
+    for my $vol ( $domain1->list_volumes_info ) {
+        my $capacity;
+        eval { $capacity = $vol->capacity };
+        is($@, '', $vol->file);
+        ok($capacity, $vol->file);
+    }
+
+    $domain1->prepare_base(user_admin);
+    my $clone1 = $domain1->clone(
+        name => new_domain_name
+        ,user => user_admin
+    );
+
+    $clone1->remove(user_admin);
+    $domain1->remove(user_admin);
+}
+
+sub test_pool_linked2_reverse($vm) {
+    my ($pool_name, $dir, $dir_link) = _create_pool_linked_reverse($vm);
+
+    $vm->default_storage_pool_name($pool_name);
+
+    my $domain1 = create_domain($vm);
+    my $new_vol = "$dir/new_volume.qcow2";
+    my $new_vol_linked = "$dir_link/new_volume.link.qcow2";
+    $vm->run_command('qemu-img','create','-f','qcow2',$new_vol,'128M');
+    ok( -e $new_vol);
+    $vm->run_command('qemu-img','create','-f','qcow2',$new_vol_linked,'128M');
+    ok( -e $new_vol_linked);
+    $domain1->add_volume(file => $new_vol);
+    $domain1->add_volume(file => $new_vol_linked);
+
+    for my $vol ( $domain1->list_volumes_info ) {
+        my $capacity;
+        eval { $capacity = $vol->capacity };
+        is($@, '', $vol->file);
+        ok($capacity, $vol->file);
+    }
+
+    $domain1->prepare_base(user_admin);
+    my $clone1 = $domain1->clone(
+        name => new_domain_name
+        ,user => user_admin
+    );
+
+    $clone1->remove(user_admin);
+    $domain1->remove(user_admin);
+}
+
+
 #########################################################################
 
 clean();
@@ -448,6 +632,11 @@ SKIP: {
 
     skip($msg,10)   if !$vm;
 
+    test_pool_linked($vm);
+    test_pool_linked2($vm);
+    test_pool_linked_reverse($vm);
+    test_pool_linked2_reverse($vm);
+
     my $pool_name = create_pool($vm_name);
 
     my $domain = test_create_domain($vm_name, $pool_name);
@@ -464,6 +653,8 @@ SKIP: {
     my $pool_name2 = create_pool($vm_name);
     test_base_clone_pool($vm, $pool_name, $pool_name2);
     $domain->remove(user_admin);
+
+    test_pool_linked($vm);
 
 }
 
