@@ -4,7 +4,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="">
     <meta name="author" content="">
-<link href="/favicon.ico" rel="icon" type="public/favicon.ico">
+<link rel="ico" href="/favicon.ico" sizes="16x16 32x32" type="public/favion.ico">
+
 % if ($url) {
     <meta HTTP-EQUIV="REFRESH" content="0; url=<%= $url %>">
 % }
