@@ -1074,6 +1074,10 @@ sub _add_indexes_generic($self) {
         domains => [
             "index(date_changed)"
             ,"index(id_base):id_base_index"
+            ,"unique(id_base,name):id_base"
+            ,"unique(name)"
+            ,"key(is_base)"
+            ,"key(is_volatile)"
         ]
         ,domain_displays => [
             "unique(id_domain,n_order)"
@@ -1092,6 +1096,7 @@ sub _add_indexes_generic($self) {
         ]
         ,grants_user => [
             "index(id_user,id_grant)"
+            ,'unique(id_grant,id_user)'
             ,"index(id_user)"
         ]
         ,iptables => [
@@ -1099,7 +1104,10 @@ sub _add_indexes_generic($self) {
         ]
         ,messages => [
              "index(id_request,date_send)"
+             ,"index(id_user)"
              ,"index(date_changed)"
+             ,"KEY(id_request,date_send)"
+
         ]
         ,settings => [
             "index(id_parent,name)"
@@ -1119,26 +1127,35 @@ sub _add_indexes_generic($self) {
 
         ,vms=> [
             "unique(hostname, vm_type)"
+            ,"UNIQUE (name)"
+
         ]
     );
     my $if_not_exists = '';
     $if_not_exists = ' IF NOT EXISTS ' if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite|mariadb/i;
-    for my $table ( keys %index ) {
+    for my $table (sort keys %index ) {
         my $known;
+        $known = $self->_get_indexes($table) if !defined $known;
+        my $checked_index={};
         for my $change (@{$index{$table}} ) {
-            my ($type,$fields ) =$change =~ /(\w+)\((.*)\)/;
+            my ($type,$fields ) =$change =~ /(\w+)\s*\((.*)\)/;
             my ($name) = $change =~ /:(.*)/;
             $name = $fields if !$name;
             $name =~ s/,/_/g;
             $name =~ s/ //g;
+            $checked_index->{$name}++;
             $known = $self->_get_indexes($table) if !defined $known;
-            next if $known->{$name};
+            next if $self->_index_already_created($fields, $known->{$name});
 
             $type .=" INDEX " if $type=~ /^unique/i;
+            $type = "INDEX" if $type =~ /^KEY$/i;
+
             my $sql = "CREATE $type $if_not_exists $name on $table ($fields)";
 
             warn "INFO: Adding index to $table: $name"
             if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+
+            $self->_clean_index_conflicts($table, $name);
 
             print "+" if $FIRST_TIME_RUN;
             if ($table eq 'domain_displays' && $name eq 'port') {
@@ -1150,8 +1167,33 @@ sub _add_indexes_generic($self) {
             my $sth = $CONNECTOR->dbh->prepare($sql);
             $sth->execute();
         }
+        for my $name ( sort keys %$known) {
+            next if $name eq 'PRIMARY' || $checked_index->{$name};
+            warn "INFO: Removing index from $table $name\n";
+            my $sql = "alter table $table drop index $name";
+            $CONNECTOR->dbh->do($sql);
+        }
     }
 }
+
+sub _index_already_created($self, $fields, $new) {
+    return if !$new;
+    $fields =~ s/ //g;
+    my $fields_new = join(",",@$new);
+    return 1 if $fields eq $fields_new;
+    return 0;
+}
+
+sub _clean_index_conflicts($self, $table, $name) {
+    my $sth_clean;
+    if ($table eq 'domain_displays' && $name eq 'port') {
+        $sth_clean=$CONNECTOR->dbh->prepare(
+            "UPDATE domain_displays set port=NULL"
+        );
+    }
+    $sth_clean->execute if $sth_clean;
+}
+
 
 sub _get_indexes($self,$table) {
 
@@ -1160,8 +1202,11 @@ sub _get_indexes($self,$table) {
     my $sth = $CONNECTOR->dbh->prepare("show index from $table");
     $sth->execute;
     my %index;
-    while (my $row = $sth->fetchrow_hashref) {
-        $index{$row->{Key_name}}->{$row->{Column_name}}++;
+    while (my @row = $sth->fetchrow) {
+        my $name = $row[2];
+        my $seq = $row[3];
+        my $column = $row[4];
+        $index{$name}->[$seq-1] = $column;
     }
     return \%index;
 }
