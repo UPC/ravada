@@ -1005,7 +1005,7 @@ sub _check_port($self,@args) {
 }
 
 sub copy_config($self, $domain) {
-    my $config_new = $self->_load();
+    my $config_new = $domain->_load();
     for my $field ( keys %$config_new ) {
         my $value = $config_new->{$field};
         $value = 0 if $field eq 'is_active';

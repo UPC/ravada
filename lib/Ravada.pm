@@ -1080,6 +1080,9 @@ sub _add_indexes_generic($self) {
             ,"unique(id_domain,driver)"
             ,"unique(id_vm,port)"
         ]
+        ,domain_ports => [
+            "unique(id_vm,public_port)"
+        ]
         ,requests => [
             "index(status,at_time)"
             ,"index(id,date_changed,status,at_time)"
@@ -1535,6 +1538,7 @@ sub _sql_create_tables($self) {
             ,driver => 'char(40) not null'
             ,is_active => 'integer NOT NULL default 0'
             ,is_builtin => 'integer NOT NULL default 0'
+            ,is_secondary => 'integer NOT NULL default 0'
             ,id_domain_port => 'integer DEFAULT NULL'
             ,n_order => 'integer NOT NULL'
             ,password => 'char(32)'
@@ -2140,7 +2144,7 @@ sub _connect_vm {
         my $vm = $self->vm->[$n];
 
         if (!$connect) {
-            $vm->disconnect();
+            $vm->disconnect() if $vm;
         } else {
             $vm->connect();
         }
@@ -4451,6 +4455,7 @@ sub _check_duplicated_prerouting($self, $request = undef ) {
             my $iptables = $vm->iptables_list();
             my %prerouting;
             my %already_open;
+            my %already_clean;
             for my $line (@{$iptables->{'nat'}}) {
                 my %args = @$line;
                 next if $args{A} ne 'PREROUTING' || !$args{dport};
@@ -4459,7 +4464,7 @@ sub _check_duplicated_prerouting($self, $request = undef ) {
                     my $value = $args{$item} or next;
                     if ($prerouting{$value}) {
                         warn "clean duplicated prerouting "
-                        .Dumper($prerouting{$value}, \%args) if $debug_ports;
+                        .Dumper($prerouting{$value}, \%args)."\n" if $debug_ports;
 
                         $self->_reopen_ports($port) unless $already_open{$port}++;
                         $self->_delete_iptables_rule($vm,'nat', \%args);
@@ -4523,8 +4528,10 @@ sub _delete_iptables_rule($self, $vm, $table, $rule) {
     my $dport = delete $delete{dport};
     my $m = delete $delete{m};
     my $p = delete $delete{p};
+    my $j = delete $delete{j};
     my @delete = ( t => $table, 'D' => $chain
         , m => $m, p => $p, dport => $dport);
+    push @delete,("j" => $j) if $j;
     push @delete,( 'to-destination' => $to_destination) if $to_destination;
     push @delete, %delete;
     $vm->iptables(@delete);

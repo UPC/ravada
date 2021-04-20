@@ -675,6 +675,7 @@ sub display_info($self, $user) {
             $display_tls{port} = undef if $display_tls{port} && $display_tls{port}==-1;
             $display_tls{driver} .= "-tls";
             $display_tls{n_order} = ++$n_order;
+            $display_tls{is_secondary} = 1;
             lock_hash(%display_tls);
             $display_tls = \%display_tls;
         }
@@ -2240,7 +2241,7 @@ sub _set_controller_display($self, $number, $data) {
 }
 
 
-sub remove_controller($self, $name, $index=0) {
+sub remove_controller($self, $name, $index=0,$attribute_name=undef, $attribute_value=undef) {
     my $sub = $REMOVE_CONTROLLER_SUB{$name};
     
     die "I can't get controller $name for domain ".$self->name
@@ -2248,7 +2249,14 @@ sub remove_controller($self, $name, $index=0) {
         ."\n".Dumper(\%REMOVE_CONTROLLER_SUB)
         if !$sub;
 
-    my $ret = $sub->($self, $index);
+    my $ret;
+
+    #some hardware can be removed searching by attribute
+    if($name eq 'display') {
+        $ret = $sub->($self, 0, $attribute_name, $attribute_value);
+    } else {
+        $ret = $sub->($self, $index);
+    }
     $self->xml_description_inactive();
     return $ret;
 }
@@ -2275,8 +2283,8 @@ sub _remove_device($self, $index, $device, $attribute_name=undef, $attribute_val
         ." not removed, only ".($ind)." found in ".$self->name."\n";
 }
 
-sub _remove_controller_display($self, $index) {
-    $self->_remove_device($index,'graphics' );
+sub _remove_controller_display($self, $index, $attribute_name=undef, $attribute_value=undef) {
+    $self->_remove_device($index,'graphics', $attribute_name,$attribute_value );
 }
 
 

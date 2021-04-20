@@ -1137,6 +1137,7 @@ sub _around_display_info($orig,$self,$user ) {
             $self->_store_display($display);
         }
     }
+    @display = sort { $a->{n_order} <=> $b->{n_order} } @display;
     return @display if wantarray;
     return $display[0];
 }
@@ -1225,7 +1226,7 @@ sub _normalize_display($self, $display, $json=1) {
     confess Dumper($display) if exists $display->{port} && $display->{port} && !$display->{id_vm};
     my %valid_field = map { $_ => 1 }
     qw(id id_domain port ip display listen_ip driver password is_builtin
-    is_active n_order extra id_domain_port id_vm );
+    is_active n_order extra id_domain_port id_vm is_secondary);
 
     my $extra = {};
     unlock_hash(%$display);
@@ -3137,6 +3138,7 @@ sub _update_expose($self, %args) {
         my ($internal_port) = $sth->fetchrow;
         $self->_close_exposed_port($internal_port) if $self->is_active;
     }
+    $args{id_vm} = $self->_vm->id if $args{public_port} && !$args{id_vm};
 
     my $sql = "UPDATE domain_ports SET ".join(",", map { "$_=?" } sort keys %args)
         ." WHERE id=?"
@@ -3173,8 +3175,9 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
         "INSERT INTO domain_ports (id_domain"
         ."  ,public_port, internal_port"
         ."  ,name, restricted"
+        ."  ,id_vm "
         .")"
-        ." VALUES (?,?,?,?,?)"
+        ." VALUES (?,?,?,?,?,?)"
     );
 
 
@@ -3186,6 +3189,7 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
                 , $public_port, $internal_port
                 , ($name or undef)
                 , $restricted
+                , $self->_vm->id
             );
             $sth->finish;
         };
@@ -3206,23 +3210,25 @@ sub _set_public_port($self, $id_port, $internal_port, $name, $restricted) {
     for (;;) {
         if ($id_port) {
             my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set public_port=?"
+                ." , id_vm=?"
                 ." WHERE id_domain=? AND internal_port=?"
             );
             eval {
-                $sth->execute($public_port, $self->id, $internal_port);
+                $sth->execute($public_port, $self->_vm->id, $self->id, $internal_port);
             };
             die $@ if $@ && $@ !~ /uplicate entry/;
             return $public_port if !$@;
         } else {
             my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO domain_ports "
-                ."(id_domain, public_port, internal_port, name, restricted)"
-                ." VALUES(?,?,?,?,?) "
+                ."(id_domain, public_port, internal_port, name, restricted, id_vm)"
+                ." VALUES(?,?,?,?,?,?) "
             );
             eval {
                 $sth->execute( $self->id
                     ,$public_port, $internal_port
                     ,( $name or undef )
                     ,$restricted
+                    ,$self->_vm->id
                 );
             };
             die $@ if $@ && $@ !~ /uplicate entry/;
@@ -3323,13 +3329,14 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
 sub _update_display_port_exposed($self, $name, $local_ip, $public_port, $internal_port) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domain_displays "
-        ." SET ip=?,listen_ip=?,port=?,is_active=? "
+        ." SET ip=?,listen_ip=?,port=?,is_active=?,id_vm=? "
         ." WHERE driver=? AND id_domain=?"
     );
     my $is_builtin;
     for (;;) {
         eval {
-            $sth->execute($local_ip, $local_ip, $public_port,1, $name, $self->id);
+            $sth->execute($local_ip, $local_ip, $public_port,1, $self->_vm->id
+                ,$name, $self->id);
         };
         warn "Warning: $@".Dumper([$name, $public_port]) if $@;
         last if !$@ || ( $@ !~ /(Duplicate entry .* for key|UNIQUE constraint).*port/);
@@ -3339,7 +3346,7 @@ sub _update_display_port_exposed($self, $name, $local_ip, $public_port, $interna
             warn "Duplicated port $public_port in domain_displays";
             $self->_fix_duplicate_display_port($public_port);
         } else {
-            $sth->execute($local_ip, $local_ip, undef,1, $name, $self->id);
+            $sth->execute($local_ip, $local_ip, undef,1,$self->_vm->id, $name, $self->id);
             if ($internal_port) {
                 my $sth2 = $$CONNECTOR->dbh->prepare(
                     "UPDATE domain_ports set public_port=NULL "
@@ -5244,6 +5251,7 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
         $sth->execute($self->id);
         $self->list_volumes_info();
     }
+    $self->info(Ravada::Utils->user_daemon) if $self->is_known();
 
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
 }
@@ -5256,6 +5264,7 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
         $self->_set_vm($vm_local, 1);
     }
 
+    my $is_display_builtin;
     if ($hardware eq 'display') {
 
         my $display = Ravada::Front::Domain::_get_controller_display($self);
@@ -5265,11 +5274,11 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
         } else {
             $current_data = $self->_get_display($data->{driver});
         }
-
+        $is_display_builtin = $self->_is_display_builtin($current_data->{driver});
         $self->_store_display($data, $current_data);
 
     }
-    if ( $hardware ne 'display' || $self->_is_display_builtin($index, $data)) {
+    if ( $hardware ne 'display' || $is_display_builtin) {
         $orig->($self, $hardware, $index,$data);
         $self->_redefine_instances() if $self->is_known();
     }
@@ -5385,18 +5394,33 @@ sub _around_remove_hardware($orig, $self, $hardware, $index) {
     my $display;
     if ( $hardware eq 'display' ) {
         $display = $self->_get_display_by_index($index);
+        confess "Error: display index $index not found in ".$self->name
+        if !$display || !$display->{driver};
+
+        if ($display->{is_secondary}) {
+            my ($driver) = $display->{driver} =~ /(.*)-\w+/;
+            confess "I can't guess primary driver for $display->{driver}"
+            if !$driver;
+
+            $display=$self->_get_display($driver);
+            confess "Error: display $driver not found in ".$self->name
+            if !$display || !$display->{driver};
+            $index = $display->{n_order};
+        }
         if ( !$display->{is_builtin} ) {
             my $port = $self->exposed_port($display->{driver});
             $self->remove_expose($port->{internal_port}) if $port;
         }
         my $driver = $display->{driver};
         $self->_delete_db_display_by_driver($driver);
-        $driver =~ s/-tls$//;
-        $self->_delete_db_display_by_driver($driver);
+        if ($display->{is_builtin}) {
+            $orig->($self, $hardware, $index, type => $driver);
+            $driver .= "-tls";
+            $self->_delete_db_display_by_driver($driver);
+        }
+    } else {
+        $orig->($self, $hardware, $index)
     }
-
-    $orig->($self, $hardware, $index)
-    unless $hardware eq 'display' && !$display->{is_builtin};
 
     if ( $self->is_known() && !$self->is_base ) {
         $self->_redefine_instances();

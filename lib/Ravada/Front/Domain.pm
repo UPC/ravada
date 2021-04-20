@@ -83,7 +83,7 @@ sub display($self, $user) {
 
 sub display_info($self, $user) {
     my @displays = $self->_get_controller_display();
-    return {} if !scalar(@displays);
+    return {} if !wantarray && !scalar(@displays);
     return $displays[0] if !wantarray;
     return @displays;
 
@@ -212,7 +212,7 @@ sub _get_controller_display($self) {
 
     my %file_extension = (
         'spice' => 'vv'
-        ,'spice-tls' => 'vv'
+        ,'spice-tls' => 'tls.vv'
     );
 
     my $sth = $$CONNECTOR->dbh->prepare(

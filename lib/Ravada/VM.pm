@@ -1533,6 +1533,7 @@ sub iptables($self, @args) {
 
     }
     my ($out, $err) = $self->run_command(@cmd);
+    confess "@cmd $err" if $err && $err =~/unknown option/;
     warn $err if $err;
 }
 

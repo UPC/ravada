@@ -128,6 +128,7 @@ sub _connect {
 }
 
 sub _list_storage_pools($vm) {
+    confess if !defined $vm;
    for ( ;; ) {
        my @pools;
        eval { @pools = $vm->list_storage_pools };
@@ -322,7 +323,6 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     confess "'$pattern' doesn't look like a regexp to me ".ref($pattern)
         if !ref($pattern) || ref($pattern) ne 'Regexp';
 
-    $self->_connect();
     $self->_refresh_storage_pools()    if $refresh;
 
     my @volume;
