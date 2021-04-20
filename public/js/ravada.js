@@ -1022,7 +1022,7 @@
                     if ($scope.auto_view && !redirected_display && $scope.domain_display[0]
                         && !$scope.domain_display[0].password) {
                         location.href='/machine/display/'+$scope.domain_display[0].driver+"/"
-                            +$scope.domain.id+".vv";
+                            +$scope.domain.id+"."+$scope.domain_display[0].file_extension;
                         redirected_display=true;
                     }
                 }

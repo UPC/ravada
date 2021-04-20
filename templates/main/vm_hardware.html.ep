@@ -22,7 +22,7 @@
                 </button>
                 <button title="remove {{name}} {{$index+1}}"
                     ng-hide="item.edit"
-                    ng-disabled="pending_requests > 0"
+                    ng-disabled="pending_requests > 0 || item.is_secondary"
                     ng-click="confirm_remove='';remove_hardware(name,$index,item)"><i class="fa fa-times"></i>
                 </button>
                 <span ng-class='{"h5": item.edit }'>

@@ -57,11 +57,6 @@ This Virtual Machine has no display hardware attached
                     href="/machine/display/{{display.driver}}/{{domain.id}}.{{display.file_extension}}">
                         <b><%=l 'view'%></b></a>
 
-                <a type="button" class="btn btn-success"
-                    ng-show="display.extra.tls_port"
-                    ng-click="view=display.driver+'_tls'; copy_password(display.driver); redirect();"
-                    href="/machine/display/{{display.driver}}/tls/{{domain.id}}-tls.{{display.file_extension}}">
-                        <b><%=l 'view secure'%></b></a>
             </div>
             <div>
                 <span ng-show="view=='spice'">
