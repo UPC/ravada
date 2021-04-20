@@ -1361,10 +1361,13 @@ sub _fix_duplicate_display_port($self, $port) {
                 id_domain => $self->id
                 ,uid => Ravada::Utils::user_daemon->id
             );
+            my $req2 = Ravada::Request->refresh_machine(id_domain=> $self->id
+                    ,after_request => $req->id
+            );
             Ravada::Request->start_domain(
                 id_domain => $self->id,
                 ,uid => Ravada::Utils::user_daemon->id
-                ,after_request => $req->id
+                ,after_request => $req2->id
             );
             die "Error: ".$self->name." [ ".$self->id
             ." ]  port $port already used in domain $id_domain. Retry.\n";
