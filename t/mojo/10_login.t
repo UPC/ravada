@@ -128,7 +128,9 @@ sub test_iptables_clones($base) {
             next;
         }
         my $clone = Ravada::Front::Domain->open($clone_data->{id});
+        wait_request();
         my $displays = $clone->info(user_admin)->{hardware}->{display};
+        wait_request();
         for my $display (@$displays) {
             for my $port ($display->{port}, $display->{extra}->{tls_port}) {
                 next if !defined $port;

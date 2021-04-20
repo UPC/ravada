@@ -703,7 +703,7 @@ $MOJO_USER = $user;
 
 sub mojo_create_domain($t, $vm_name) {
     mojo_check_login($t);
-    my $name = new_domain_name()."-".$vm_name;
+    my $name = new_domain_name()."-".$vm_name."-$$";
     $t->post_ok('/new_machine.html' => form => {
             backend => $vm_name
             ,id_iso => search_id_iso('Alpine%')
@@ -2370,7 +2370,10 @@ sub check_libvirt_tls {
     ('spice_tls = 1',
     'spice_tls_x509_cert_dir = '
     );
-    open my $in,'<',$FILE_CONFIG_QEMU or die "$! $FILE_CONFIG_QEMU";
+    open my $in,'<',$FILE_CONFIG_QEMU or do {
+        warn "$! $FILE_CONFIG_QEMU";
+        return 0;
+    };
     while(my $line = <$in>) {
         chomp $line;
         $line =~ s/#.*//;

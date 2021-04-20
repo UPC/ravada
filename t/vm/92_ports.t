@@ -707,7 +707,7 @@ sub test_redirect_ip_duplicated($vm) {
     $domain->expose(port => $internal_port, name => "ssh");
     $domain->start( remote_ip => '10.1.1.2', user => user_admin);
     my $ip = _wait_ip2($vm, $domain);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my @ports0 = $domain->list_ports();
     my ($public_port) = $ports0[0]->{public_port};
@@ -724,7 +724,7 @@ sub test_redirect_ip_duplicated($vm) {
     is(scalar(@open),2) or die Dumper(\@open);
 
     $domain->start( remote_ip => '10.1.1.2', user => user_admin);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     @out = split /\n/, `iptables-save -t nat`;
     @open = (grep /--to-destination $ip/, @out);
@@ -740,7 +740,7 @@ sub test_redirect_ip_duplicated_refresh($vm) {
     $domain->expose(port => $internal_port, name => "ssh");
     $domain->start( remote_ip => '10.1.1.2', user => user_admin);
     my $ip = _wait_ip2($vm, $domain);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my @ports0 = $domain->list_ports();
     my ($public_port) = $ports0[0]->{public_port};
@@ -804,7 +804,7 @@ sub test_open_port_duplicated($vm) {
     my $req = Ravada::Request->refresh_vms();
     wait_request();
     is($req->status,'done');
-    is($req->error, '');
+    is($req->error, '') or exit;
 
     my @out3 = split /\n/, `iptables-save -t nat`;
     my @open3 = (grep /--dport $public_port/, @out3);

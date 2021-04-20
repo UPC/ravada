@@ -406,7 +406,7 @@ sub test_display_info($vm) {
 
     for my $d (@$display_h) {
         next if $d->{driver} !~ /spice/;
-        is($d->{file_extension},'vv') or die Dumper($domain->name, $d);
+        like($d->{file_extension},qr /vv$/ ) or die Dumper($domain->name, $d);
     }
 
     delete $display_h->[0]->{id};
@@ -548,6 +548,7 @@ sub _test_display_tls($domain) {
 
         for my $display ( @{$domain->info(user_admin)->{hardware}->{display}} ) {
             next if $display->{driver} !~ /-tls$/;
+            is($display->{is_secondary},1) if$display->{driver} =~ /^(spice|vnc)-tls$/;
             is($display->{display},undef);
             my $tls_port = $display->{port} or die Dumper($display);
             like($tls_port,qr/^\d+$/);
@@ -678,7 +679,7 @@ sub _test_compare($display1, $display2) {
     delete $display1b{id_domain}
     if !exists $display2b{id_domain};
 
-    for (qw(n_order display id_vm)) {
+    for (qw(n_order display id_vm is_secondary)) {
         delete $display1b{$_};
         delete $display2b{$_};
     }
@@ -1551,6 +1552,10 @@ sub test_exposed_port($domain, $driver) {
 sub test_display_drivers($vm, $remove) {
     diag("test display drivers, remove after=$remove");
     my $domain = $BASE->clone(name => new_domain_name(), user => user_admin);
+    my $domain2 = rvd_back->search_domain($domain->name);
+    ok($domain2) or exit;
+    my $domain3 = Ravada::Domain->open($domain->id);
+    ok($domain3) or exit;
 
     for my $index ( 0 .. scalar($domain->_get_controller_display())-1) {
         my $display = $domain->_get_display_by_index($index);
@@ -1607,7 +1612,7 @@ sub test_display_drivers($vm, $remove) {
             );
             wait_request(debug => 0);
             is($req_r->status,'done');
-            like($req_r->error,qr/^$|display.*not found/);
+            like($req_r->error,qr/^$|display.*not found|only \d+ found/);
             $n_displays = scalar(@{$domain->info(user_admin)->{hardware}->{display}});
         }
     }
@@ -1972,6 +1977,7 @@ sub test_removed_leftover($vm) {
 #######################################################################33
 
 for my $db ( 'mysql', 'sqlite' ) {
+    next if $> && $db eq 'mysql';
     if ($db eq 'mysql') {
         init('/etc/ravada.conf',0, 1);
         if ( !ping_backend() ) {
