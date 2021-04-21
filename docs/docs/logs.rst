@@ -44,21 +44,18 @@ Now restart the Ravada front process and check the log file is created.
 Security Logs
 =============
 
-Security access will appear in the log file similar as an Apache log entry:
+Security access will appear in the log file similar as an Apache log entry.
 
-.. code-block::
+..
 
     127.0.0.1 - [2020/09/01:12:20:32 +0200] GET /
 
 Login failures show with an *access denied* message:
+Set the log level to *error* if you only want these:
 
-.. code-block::
+..
 
      Access denied to fff from 127.0.0.1
 
 A fail2ban catch can be created from these. Contributions welcome.
-
-
-    127.0.0.1 - [2020/09/01:12:20:32 +0200] GET /
-
 
