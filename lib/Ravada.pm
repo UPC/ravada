@@ -2165,6 +2165,7 @@ Disconnect all the Virtual Managers connections.
 sub disconnect_vm {
     my $self = shift;
     $self->_disconnect_vm();
+    Ravada::VM::_clean_cache();
 }
 
 sub _disconnect_vm{
