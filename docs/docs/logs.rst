@@ -19,13 +19,14 @@ You can set a custom log file for the frontend process in the configuration.
 
 Edit the configuration file: */etc/rvd_front.conf* and add or change next section:
 
-.. code-block::
+.. code-block:: perl
 
   ,log => {
        log => 1
        ,file => '/var/log/ravada/rvd_front.log'
        ,level => 'debug'
   }
+
 
 Create the log directory and grant the Ravada user permissions to write to it:
 
