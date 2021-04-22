@@ -2151,6 +2151,7 @@ Disconnect all the Virtual Managers connections.
 sub disconnect_vm {
     my $self = shift;
     $self->_disconnect_vm();
+    Ravada::VM::_clean_cache();
 }
 
 sub _disconnect_vm{
@@ -3108,6 +3109,7 @@ sub _execute {
     my $pid = fork();
     die "I can't fork" if !defined $pid;
 
+    $self->disconnect_vm();
     if ( $pid == 0 ) {
         srand();
         $self->_do_execute_command($sub, $request);
