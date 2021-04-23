@@ -755,7 +755,8 @@ sub _activate_storage_pools($vm) {
     for my $sp (@sp) {
         next if $sp->is_active;
         diag("Activating sp ".$sp->get_name." on ".$vm->name);
-        $sp->create();
+        $sp->build() unless $sp->is_active;
+        $sp->create() unless $sp->is_active;
     }
 }
 sub _remove_old_disks_kvm {
@@ -1099,23 +1100,27 @@ sub _qemu_storage_pool {
     return $pool_name;
 }
 
-sub remove_qemu_pools {
+sub remove_qemu_pools($vm=undef) {
     return if !$VM_VALID{'KVM'} || $>;
-    my $vm;
-    eval { $vm = rvd_back->search_vm('KVM') };
-    if ($@ && $@ !~ /Missing qemu-img/) {
-        warn $@;
-    }
-    if  ( !$vm ) {
-        $VM_VALID{'KVM'} = 0;
-        return;
+    return if defined $vm && $vm->type eq 'Void';
+    if (!defined $vm) {
+        eval { $vm = rvd_back->search_vm('KVM') };
+        if ($@ && $@ !~ /Missing qemu-img/) {
+            warn $@;
+        }
+        if  ( !$vm ) {
+            $VM_VALID{'KVM'} = 0;
+            return;
+        }
     }
 
     my $base = base_pool_name();
     for my $pool  ( Ravada::VM::KVM::_list_storage_pools($vm->vm)) {
         my $name = $pool->get_name;
+        eval {$pool->build(Sys::Virt::StoragePool::BUILD_NEW); $pool->create() };
+        warn $@ if $@ && $@ !~ /already active/;
         next if $name !~ qr/^$base/;
-        diag("Removing ".$pool->get_name." storage_pool");
+        diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
         _delete_qemu_pool($pool);
         for my $vol ( $pool->list_volumes ) {
             diag("Removing ".$pool->get_name." vol ".$vol->get_name);
@@ -1146,7 +1151,7 @@ sub _delete_qemu_pool($pool) {
     }
     if (-l $dir) {
         unlink $dir or die "$! $dir";
-    } else {
+    } elsif (-e $dir) {
         rmdir($dir) or die "$! $dir";
     }
 
@@ -1246,6 +1251,7 @@ sub clean_remote_node {
     wait_request(debug => 0);
     _remove_old_disks($node);
     flush_rules_node($node)  if !$node->is_local() && $node->is_active;
+    remove_qemu_pools($node);
 }
 
 sub _remove_old_disks {
@@ -2070,7 +2076,7 @@ sub shutdown_nodes {
     }
 }
 
-sub create_storage_pool($vm, $dir=undef) {
+sub create_storage_pool($vm, $dir=undef, $pool_name=new_pool_name()) {
     if (!ref($vm)) {
         $vm = rvd_back->search_vm($vm);
     }
@@ -2079,7 +2085,6 @@ sub create_storage_pool($vm, $dir=undef) {
 
     my $capacity = 1 * 1024 * 1024;
 
-    my $pool_name = new_pool_name();
     if (!$dir) {
         $dir = "/var/tmp/$pool_name";
     }
@@ -2106,9 +2111,11 @@ sub create_storage_pool($vm, $dir=undef) {
 </pool>"
 ;
     my $pool;
-    eval { $pool = $vm->vm->create_storage_pool($xml) };
+    eval { $pool = $vm->vm->define_storage_pool($xml) };
     ok(!$@,"Expecting \$@='', got '".($@ or '')."'") or return;
     ok($pool,"Expecting a pool , got ".($pool or ''));
+    $pool->build( Sys::Virt::StoragePool::BUILD_NEW );
+    $pool->create();
 
     return $pool_name;
 
