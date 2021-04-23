@@ -2390,22 +2390,25 @@ sub check_libvirt_tls {
 }
 
 sub ping_backend() {
-    my @now = localtime(time);
-    for ( 1 .. 4 ){
-        $now[$_] = "0".$now[$_] if length ($now[$_])<2
-    }
-    my $now = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
-    $now[1]--;
-    my $now2 = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
-    my $sth = rvd_back->connector->dbh->prepare(
-        "SELECT date_changed,status FROM requests ORDER BY date_changed DESC"
-    );
-    $sth->execute();
-    my $n = 100;
-    while (my ($date_changed, $status) = $sth->fetchrow ) {
-        next if $status !~ /working|done/;
-        return 1 if $date_changed =~ /^($now|$now2)/;
-        last if $n--<0;
+    for ( 1 .. 3 ) {
+        my @now = localtime(time);
+        for ( 1 .. 4 ){
+            $now[$_] = "0".$now[$_] if length ($now[$_])<2
+        }
+        my $now = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
+        $now[1]--;
+        my $now2 = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
+        my $sth = rvd_back->connector->dbh->prepare(
+            "SELECT date_changed,status FROM requests ORDER BY date_changed DESC LIMIT 10"
+        );
+        $sth->execute();
+        my $n = 100;
+        while (my ($date_changed, $status) = $sth->fetchrow ) {
+            next if $status !~ /working|done/;
+            return 1 if $date_changed =~ /^($now|$now2)/;
+            last if $n--<0;
+        }
+        rvd_front->ping_backend();
     }
 
     return rvd_front->ping_backend();

@@ -314,7 +314,7 @@ init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
 unlike($connector->{driver} , qr/sqlite/i) or BAIL_OUT;
 
-if (!rvd_front->ping_backend()) {
+if (!ping_backend()) {
     diag("SKIPPING: Backend not available");
     done_testing();
     exit;
