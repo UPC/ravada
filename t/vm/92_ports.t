@@ -959,14 +959,18 @@ sub test_host_down {
 
     is(scalar $domain->list_ports,1);
 
-    my ($n_rule)
-        = search_iptable_remote(local_ip => "$local_ip/32"
+    my ($n_rule);
+    for ( 1 .. 3 ) {
+        $n_rule = search_iptable_remote(local_ip => "$local_ip/32"
             , local_port => $public_port
             , table => 'nat'
             , chain => 'PREROUTING'
             , node => $vm
             , jump => 'DNAT'
-    );
+        );
+        last if $n_rule;
+        wait_request();
+    }
 
     ok($n_rule,"Expecting rule for -> $local_ip:$public_port") or confess;
 
