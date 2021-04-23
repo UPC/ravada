@@ -255,6 +255,7 @@ sub _check_html_lint($url, $content, $option = {}) {
             || $error->errtext =~ /Unknown attribute "(charset|crossorigin|integrity)/
             || $error->errtext =~ /Unknown attribute "image.* for tag <div/
             || $error->errtext =~ /Unknown attribute "ipaddress"/
+            || $error->errtext =~ /Unknown attribute "sizes" for tag .link/
          ) {
              next;
          }
@@ -331,6 +332,7 @@ sub _clone_and_base($vm_name, $t, $base0) {
 
     mojo_check_login($t);
     _add_displays($t, $base1);
+    mojo_check_login($t);
     mojo_request_url($t , "/machine/prepare/".$base1->id.".json");
     return $base1;
 }
