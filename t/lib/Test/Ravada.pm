@@ -1981,6 +1981,16 @@ sub DESTROY {
 sub _check_leftovers {
     _check_leftovers_users();
     _check_leftovers_domains();
+    _check_removed_nbd();
+
+}
+
+sub _check_removed_nbd {
+    return if $<;
+    my ($in, $out, $err);
+    my @cmd = ('rmmod',"nbd");
+    run3(\@cmd,\$in,\$out,\$err);
+    BAIL_OUT($err) if $err && $err !~ /not currently loaded/;
 }
 
 sub _check_leftovers_domains {
