@@ -575,6 +575,7 @@ sub test_routing_hibernated($vm) {
 sub test_routing_already_used($vm, $source=0, $restricted=0) {
     my $base = $BASE->clone(name => new_domain_name, user => user_admin);
     my $internal_port = 22;
+    $restricted = 1 if $restricted;
     $base->expose(port => $internal_port, name => "ssh", restricted => $restricted);
     my @base_ports0 = $base->list_ports();
 
@@ -801,7 +802,7 @@ sub test_open_port_duplicated($vm) {
     my @open2 = (grep /--dport $public_port/, @out2);
     is(scalar(@open2),2) or die Dumper(\@open2);
 
-    my $req = Ravada::Request->refresh_vms();
+    my $req = Ravada::Request->refresh_vms(_force => 1);
     wait_request();
     is($req->status,'done');
     is($req->error, '') or exit;
@@ -1157,6 +1158,7 @@ sub test_change_expose($vm, $restricted) {
     is($list_ports[0]->{name}, $name);
 
     $restricted = !$restricted;
+    $restricted = 0 if !$restricted;
     $name = "$name bar";
     $domain->expose(
              id_port => $list_ports[0]->{id}
@@ -1195,6 +1197,7 @@ sub test_change_expose_3($vm) {
     is($domain->list_ports, 3);
     for my $port ($domain->list_ports) {
         my $restricted = ! $port->{restricted};
+        $restricted = 0 if !$restricted;
         $domain->expose(id_port => $port->{id}, restricted => $restricted);
         wait_request(background => 0, debug => 0);
         my ($in, $out, $err);
@@ -1275,7 +1278,8 @@ sub _wait_requests($domain) {
 
 sub import_base($vm) {
     if ($vm->type eq 'KVM') {
-        $BASE = import_domain($vm->type, $BASE_NAME, 1);
+        $BASE = rvd_back->search_domain('zz-test-base-alpine');
+        $BASE = import_domain($vm->type, $BASE_NAME, 1) if !$BASE;
         confess "Error: domain $BASE_NAME is not base" unless $BASE->is_base;
 
         confess "Error: domain $BASE_NAME has exported ports that conflict with the tests"
@@ -1286,15 +1290,24 @@ sub import_base($vm) {
 }
 ##############################################################
 
-clean();
+for my $db ( 'mysql', 'sqlite' ) {
 
-init();
-Test::Ravada::_clean_db();
+clean();
 
 add_network_10(0);
 
 test_can_expose_ports();
 for my $vm_name ( vm_names() ) {
+
+    if ($db eq 'mysql') {
+        init('/etc/ravada.conf',0, 1);
+        remove_old_domains_req();
+        wait_request();
+    } elsif ( $db eq 'sqlite') {
+        init(undef, 1,1); # flush
+    }
+    clean();
+
 
     SKIP: {
     my $vm = rvd_back->search_vm($vm_name);
@@ -1347,6 +1360,7 @@ for my $vm_name ( vm_names() ) {
     test_clone_exports_spinoff($vm);
 
     }; # of SKIP
+}
 }
 
 flush_rules() if !$<;

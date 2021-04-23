@@ -1115,7 +1115,15 @@ sub _allowed {
 
 sub _around_display_info($orig,$self,$user ) {
     $self->_allowed($user);
+    my @display_current_all = Ravada::Front::Domain::_get_controller_display($self);
+    my @display_current = grep {$_->{is_builtin}} @display_current_all;
     my @display = $self->$orig($user);
+    if (!$self->readonly && scalar (@display) != scalar(@display_current)) {
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "DELETE FROM domain_displays WHERE id_domain=? AND is_builtin=1");
+        $sth->execute($self->id);
+    }
+
     for my $display (@display) {
 
         if (!$self->readonly && keys %$display) {
