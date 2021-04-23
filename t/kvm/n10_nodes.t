@@ -85,7 +85,7 @@ sub test_node($vm_name,$node) {
 
     clean_remote_node($node);
 
-    { $node->vm };
+    eval{ $node->vm };
     is($@,'')   or return;
 
     ok($node->id) or return;
