@@ -1240,7 +1240,7 @@ sub test_change_hardware($vm, $node, $domain, $active = 0) {
         ,data => { memory => $new_mem }
     );
 
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     is($req1->status, 'done');
     is($req1->error, '');
 
@@ -1460,12 +1460,31 @@ sub test_nat($vm, $node, $set_localhost_natip=0) {
     $node->_data(nat_ip => '');
 }
 
+sub _download_alpine64 {
+    my $id_iso = search_id_iso('Alpine%64');
+
+    my $req = Ravada::Request->download(
+             id_iso => $id_iso
+    );
+    wait_request();
+    is($req->error, '');
+    is($req->status,'done') or exit;
+}
+
 sub test_displays($vm, $node, $no_builtin=0) {
-    my $base = rvd_back->search_domain($BASE_NAME);
-    $base = import_domain('KVM', $BASE_NAME, 1) if !$base;
+    my $base;
+    if ( $vm->type eq 'KVM') {
+        $base = rvd_back->search_domain($BASE_NAME);
+        $base = import_domain('KVM', $BASE_NAME, 1) if !$base;
+    } else {
+        return;
+        #        $base = create_domain($vm);
+    }
+    _download_alpine64();
 
     my $domain = $base->clone(name => new_domain_name, user => user_admin);
-    my $n_displays = 2;
+    my $n_displays = 1;
+    $n_displays++ if $vm->tls_ca();
     if ($no_builtin) {
         my $req_addh = Ravada::Request->add_hardware(
             uid => user_admin->id
@@ -1473,20 +1492,19 @@ sub test_displays($vm, $node, $no_builtin=0) {
             ,name => 'display'
             ,data => { driver => 'x2go' }
         );
-        wait_request(debug => 1);
+        wait_request(debug => 0);
         is($req_addh->status,'done');
         is($req_addh->error,'');
         $n_displays++;
     }
-    Ravada::Request->start_domain(
-        uid => user_admin->id
+    $domain->start( user => user_admin
         ,remote_ip => '1.1.1.1'
-        ,id_domain => $domain->id
+        ,id_vm => $vm->id
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     my $domain_f0 = Ravada::Front::Domain->open($domain->id);
     my @displays_f0 = $domain_f0->display_info(user_admin);
-    is(scalar(@displays_f0),$n_displays) or die Dumper(\@displays_f0);
+    is(scalar(@displays_f0),$n_displays) or die Dumper($domain->name,\@displays_f0);
 
     my @displays0 = $domain->display_info(user_admin);
     is(scalar(@displays0),2) or die Dumper(\@displays0);
