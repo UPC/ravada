@@ -4,6 +4,11 @@
         </div>
         <div class="row">
             <button class="btn btn-primary mr-2" id="start-clones" name="start-clones"
+                ng-click="request('start_clones_sequentially',{ 'id_domain': showmachine.id })"
+            >
+                <%=l 'Start all clones sequentially' %>
+            </button>
+            <button class="btn btn-primary mr-2" id="start-clones" name="start-clones"
                 ng-click="request('start_clones',{ 'id_domain': showmachine.id })"
             >
                 <%=l 'Start all clones' %>
