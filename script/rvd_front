@@ -1162,19 +1162,36 @@ post '/request/(:name)/' => sub {
         confess "Error: $_ should not be provided".Dumper($args)
         if exists $args->{$_};
     }
-    if ($name eq 'start_clones') {
+    if (($name eq 'start_clones') || ($name eq 'start_clones_sequentially')) {
         $args->{remote_ip} = _remote_ip($c);
     }
-
     app->log->info($USER->name." requesting $name ".encode_json($args)) if $CONFIG_FRONT->{log}->{log};
     my $req;
-    eval {
-        $req = Ravada::Request->new_request(
-            $name
-            ,uid => $USER->id
-            ,%$args
-        );
-    };
+
+    if ($name eq 'start_clones_sequentially') {
+
+        my $domain = $RAVADA->search_domain_by_id($args->{'id_domain'}) or do {
+            $c->stash( error => "This machine doesn't exist. Probably it has been deleted recently.");
+            return;
+        };       
+        delete($args->{'id_domain'});
+
+        foreach my $clone ($domain->clones()) { 
+            $req = Ravada::Request->start_domain(uid => $USER->id
+                                           ,name => $clone->{'name'}
+                                           ,%$args
+            );      
+            $args->{'after_request'} = $req->id; 
+        }
+    } else {
+        eval {
+            $req = Ravada::Request->new_request(
+                $name
+                ,uid => $USER->id
+                ,%$args
+            );
+        };
+    }
     return $c->render(json => { ok => 0, error => $@ }) if !$req;
     return $c->render(json => { ok => 1, request => $req->id });
 };
