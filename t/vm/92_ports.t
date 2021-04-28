@@ -803,7 +803,7 @@ sub test_open_port_duplicated($vm) {
     is(scalar(@open2),2) or die Dumper(\@open2);
 
     my $req = Ravada::Request->refresh_vms(_force => 1);
-    wait_request();
+    wait_request(request => $req, debug => 0);
     is($req->status,'done');
     is($req->error, '') or exit;
 
@@ -1302,6 +1302,7 @@ add_network_10(0);
 
 test_can_expose_ports();
 for my $vm_name ( vm_names() ) {
+    diag("Testing $vm_name on $db");
 
     if ($db eq 'mysql') {
         init('/etc/ravada.conf',0, 1);

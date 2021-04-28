@@ -952,22 +952,26 @@ sub wait_request {
         $args{request} = [ $_[0] ];
     }
     my $timeout = delete $args{timeout};
+    my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms','set_time','rsync_back', 'cleanup', 'screenshot'] );
+    $skip = [ $skip ] if !ref($skip);
+    my %skip = map { $_ => 1 } @$skip;
+
     my $request = delete $args{request};
     if (!$request) {
         my @list_requests = map { Ravada::Request->open($_) }
             _list_requests();
         $request = \@list_requests;
-    } elsif (!ref($request)) {
-        $request = [$request];
+    } else {
+        $request = [$request] if (!ref($request) || ref($request) ne 'ARRAY');
+        for (@$request) {
+            delete $skip{$_->command};
+        }
     }
 
     my $background = delete $args{background};
 
     $timeout = 60 if !defined $timeout && $background;
     my $debug = ( delete $args{debug} or 0 );
-    my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms','set_time','rsync_back', 'cleanup', 'screenshot'] );
-    $skip = [ $skip ] if !ref($skip);
-    my %skip = map { $_ => 1 } @$skip;
 
     my $check_error = delete $args{check_error};
     $check_error = 1 if !defined $check_error;
@@ -1011,7 +1015,7 @@ sub wait_request {
                 $t0 = time;
                 $done{$req->{id}}++;
                 if ($check_error) {
-                    if ($req->command eq 'remove') {
+                    if ($req->command =~ /remove/) {
                         like($req->error,qr(^$|Unknown domain));
                     } elsif($req->command eq 'set_time') {
                         like($req->error,qr(^$|libvirt error code));

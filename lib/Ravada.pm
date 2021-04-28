@@ -4184,7 +4184,7 @@ sub _cmd_domain_autostart($self, $request ) {
 
 sub _cmd_refresh_vms($self, $request=undef) {
 
-    if ($request && (my $id_recent = $request->done_recently(30))) {
+    if ($request && !$request->defined_arg('_force') && (my $id_recent = $request->done_recently(30))) {
         die "Command ".$request->command." run recently by $id_recent.\n";
     }
 
