@@ -64,7 +64,7 @@ sub display_info {
         push @display,($graph);
     }
 
-    return $display[0] if wantarray;
+    return $display[0] if !wantarray;
     return @display;
 }
 
