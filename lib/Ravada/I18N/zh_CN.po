@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2021-04-26 14:32+0000\n"
+"PO-Revision-Date: 2021-04-29 04:32+0000\n"
 "Last-Translator: Bigtree zhang <xiaohua1021@gmail.com>\n"
 "Language-Team: Chinese (Simplified) <https://hosted.weblate.org/projects/"
 "ravada/translation/zh_Hans/>\n"
@@ -20,7 +20,7 @@ msgid "Ravada broker"
 msgstr "Ravada 连接器"
 
 msgid "Machine Name"
-msgstr "机器名"
+msgstr "主机名"
 
 msgid "Tools"
 msgstr "工具"
@@ -56,13 +56,13 @@ msgid "Log Out"
 msgstr "登出"
 
 msgid "Available Machines"
-msgstr "可用的主机"
+msgstr "可用主机"
 
 msgid "Help"
 msgstr "帮助"
 
 msgid "Requirements"
-msgstr "需求"
+msgstr "要求"
 
 msgid "About"
 msgstr "关于"
@@ -80,10 +80,10 @@ msgid "I want to change my password"
 msgstr "我要修改我的密码"
 
 msgid "I want to change my language"
-msgstr "我要变更我的语言"
+msgstr "我要修改我的语言"
 
 msgid "Language:"
-msgstr "语言"
+msgstr "语言："
 
 msgid "English"
 msgstr "英文"
@@ -125,19 +125,19 @@ msgid "Submit"
 msgstr "提交"
 
 msgid "Your language has been changed successfully"
-msgstr "语言修改成功"
+msgstr "您的语言修改成功"
 
 msgid "Your password has been changed successfully"
 msgstr "您的密码修改成功"
 
 msgid "Password is too short"
-msgstr "您的密码太短"
+msgstr "设置的密码太短"
 
 msgid "Password fields do not match"
-msgstr "密码不匹配"
+msgstr "密码字段不匹配"
 
 msgid "Some of the password fields are empty"
-msgstr "密码字段为空"
+msgstr "有一些密码字段为空"
 
 msgid "Status"
 msgstr "状态"
@@ -146,7 +146,7 @@ msgid "Actions"
 msgstr "动作"
 
 msgid "Down"
-msgstr "下"
+msgstr "关闭"
 
 msgid "Running"
 msgstr "运行中"
@@ -155,7 +155,7 @@ msgid "Shutdown"
 msgstr "关机"
 
 msgid "Screenshot"
-msgstr "屏幕快照"
+msgstr "快照"
 
 msgid "Paused"
 msgstr "暂停"
@@ -233,16 +233,16 @@ msgid "Yes"
 msgstr "是"
 
 msgid "No"
-msgstr "不"
+msgstr "否"
 
 msgid "Make public"
-msgstr "标记为公用"
+msgstr "公开"
 
 msgid "Machine settings"
 msgstr "主机设置"
 
 msgid "Cannot remove base, machine has clones"
-msgstr "不能移除基础镜像，主机已经被克隆"
+msgstr "不能移除基础镜像，该基础镜像存在克隆"
 
 msgid "show clones"
 msgstr "显示克隆"
@@ -251,7 +251,7 @@ msgid "hide clones"
 msgstr "隐藏克隆"
 
 msgid "For Spice redirection you will need to install"
-msgstr "您需要针对 SPICE重定向进行安装"
+msgstr "SPICE重定向需要安装"
 
 msgid "in your computer."
 msgstr "在您的电脑上。"
@@ -271,7 +271,7 @@ msgid ""
 msgstr "请注意在Windows中，SPICE重定向不是自动的，需要相关的协议"
 
 msgid "To make this possible, download"
-msgstr "使变得可能 ，下载"
+msgstr "要成为可能，请下载"
 
 msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
@@ -300,13 +300,13 @@ msgid "Start session"
 msgstr "开始会话\n"
 
 msgid "bits) in your computer."
-msgstr "bits) 在您的电脑上。"
+msgstr "字节) 在您的电脑上。"
 
 msgid "Permissions"
 msgstr "权限"
 
 msgid "can change the settings of owned virtual machines."
-msgstr "可以修改所拥有的虚拟机"
+msgstr "可以修改所拥有的虚拟机的设置。"
 
 msgid "can change the settings of any virtual machines."
 msgstr "可以修改任何虚拟机的设置。"
@@ -315,10 +315,10 @@ msgid "can change the settings of any virtual machines "
 msgstr ""
 
 msgid "cloned from one base owned by the user."
-msgstr "从用户所拥有的基础镜像克隆"
+msgstr "从用户所拥有的基础镜像进行克隆"
 
 msgid "can clone public virtual machines."
-msgstr "可以克隆公开的虚拟机。"
+msgstr "可以克隆公共的虚拟机。"
 
 msgid "can clone any virtual machine."
 msgstr "可以克隆任何虚拟机。"
@@ -330,7 +330,7 @@ msgid "can create virtual machines."
 msgstr "能创建虚拟机。"
 
 msgid "can grant permissions to other users"
-msgstr "能给其它用户授权"
+msgstr "可以授权给其他用户"
 
 msgid "can hibernate any virtual machine."
 msgstr "能休眠任何虚拟机。"
@@ -348,13 +348,13 @@ msgid "can remove any virtual machine."
 msgstr "能删除任何虚拟机。"
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr "能删除用户拥有的虚拟机的克隆。"
+msgstr "能删除用户所拥有的虚拟机的克隆。"
 
 msgid "can remove any clone."
 msgstr "能删除任何有克隆。"
 
 msgid "can take a screenshot of any virtual machine owned by the user."
-msgstr "能在所拥有的虚拟机上执行快照。"
+msgstr "能对用户所拥有的虚拟机执行快照。"
 
 msgid "can take a screenshot of any virtual machine."
 msgstr "能在所有虚拟机上执行快照 。"
@@ -363,16 +363,16 @@ msgid "can shutdown any virtual machine."
 msgstr "能关闭所有虚拟机。"
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr "能关闭所有拥有虚拟机的克隆。"
+msgstr "能关闭用户所有拥有虚拟机的克隆。"
 
 msgid "Submit Query"
 msgstr "提交查询"
 
 msgid "From Template"
-msgstr "来自模板"
+msgstr "从模板"
 
 msgid "From Machine"
-msgstr "来自主机"
+msgstr "从主机"
 
 msgid "Backend"
 msgstr "后台"
@@ -404,7 +404,7 @@ msgid "Ram: (GB)"
 msgstr "内存: (GB)"
 
 msgid "Machine name is required."
-msgstr "需要填写主机名。"
+msgstr "必须填写主机名。"
 
 msgid "Machine name can't exceed 20 characters."
 msgstr "主机名不能够超过20个字符。"
@@ -435,7 +435,7 @@ msgid ""
 msgstr "能修改用户所拥有的基础镜像所创建的虚拟机的设置。"
 
 msgid "monitoring"
-msgstr "监控"
+msgstr "监控中"
 
 msgid "Are you sure you want to remove the Base of"
 msgstr "您确认要移除基础镜像"
@@ -504,7 +504,7 @@ msgid "Remove Machine"
 msgstr "删除主机"
 
 msgid "System overview"
-msgstr "系统视图"
+msgstr "系统概述"
 
 msgid "Danger Zone"
 msgstr "危险区域"
@@ -520,7 +520,7 @@ msgid "This will remove all the contents of the machine"
 msgstr "这将删除虚拟机的所有内容"
 
 msgid "This action can't be undone"
-msgstr "这个动作将不能取消"
+msgstr "这个动作将不能被回退"
 
 msgid "Are you sure ?"
 msgstr "您确认吗？"
@@ -556,10 +556,10 @@ msgid "recommended"
 msgstr "建议的"
 
 msgid "to"
-msgstr "至"
+msgstr "到"
 
 msgid "Changing Public State"
-msgstr "改变发布状态"
+msgstr "改变公共状态"
 
 msgid "Changing Base State"
 msgstr "变更基础镜像状态"
@@ -619,7 +619,7 @@ msgid "Current Password:"
 msgstr "当前密码："
 
 msgid "For more information, check"
-msgstr "获取更多信息，检查"
+msgstr "获取更多信息，请检查"
 
 msgid "the Windows Clients documentation"
 msgstr "Windows客户端文档"
@@ -640,7 +640,7 @@ msgid "MB available"
 msgstr "MB 可用"
 
 msgid "The machine will shutdown after these minutes"
-msgstr "将关闭主机于n分钟后"
+msgstr "该主机在一定时间后将会关闭"
 
 msgid "Cancel"
 msgstr "取消"
@@ -694,16 +694,16 @@ msgid "Confirm Password can only contain words and numbers"
 msgstr "确认密码仅能使用字符和数字"
 
 msgid "This information will be available to the users"
-msgstr "此信息将可用于用户"
+msgstr "此信息对用户可用"
 
 msgid "Volatile Clones"
 msgstr "易失克隆"
 
 msgid "Owner"
-msgstr "拥有者"
+msgstr "所有者"
 
 msgid "Change the owner of the machine"
-msgstr "变更主机的拥有者"
+msgstr "变更主机的所有者"
 
 msgid "Press SHIFT + F12 to exit"
 msgstr "按SHIFT + F12 退出"
@@ -711,7 +711,7 @@ msgstr "按SHIFT + F12 退出"
 msgid ""
 "If you can not see the machine screen in a few seconds check for a file "
 "called"
-msgstr "如果您不能在几秒内看到主机的屏幕请检查文件调用"
+msgstr "如果您不能在几秒内看到主机的屏幕请检查文件名为"
 
 msgid "in your downloads folder."
 msgstr "在您的下载文件夹中。"
@@ -732,7 +732,7 @@ msgid "view"
 msgstr "查看"
 
 msgid "Start again"
-msgstr "再次重启"
+msgstr "再次启动"
 
 msgid "The machine is down."
 msgstr "主机已关机。"
@@ -765,10 +765,10 @@ msgid "Add"
 msgstr "添加"
 
 msgid "The changes will apply on next restart"
-msgstr "变更将于下次重启时应用"
+msgstr "变更将于下次重启时生效"
 
 msgid "This VM is running and can't be renamed."
-msgstr "虚拟机运行中且不能重命名。"
+msgstr "运行中虚拟机的不能重命名。"
 
 msgid "Thanks to:"
 msgstr "感谢："
@@ -783,7 +783,7 @@ msgid "Yes, shutwdown all the clones"
 msgstr "是的，关闭所有克隆"
 
 msgid "Keep in mind that there may be users using a clone"
-msgstr "请注意有用户正在使用克隆"
+msgstr "请注意用户正在使用克隆"
 
 msgid "Shutdown all clones"
 msgstr "关闭所有克隆"
@@ -795,7 +795,7 @@ msgid "Add description"
 msgstr "添加描述"
 
 msgid "Enable last for not allowed restrictions."
-msgstr "不被允许的限制最后一条启用。"
+msgstr "为不允许的限制启用最后一条。"
 
 msgid "entries."
 msgstr "记录。"
@@ -837,13 +837,13 @@ msgid "Attribute"
 msgstr "属性"
 
 msgid "not found in LDAP server"
-msgstr "未发现LDAP服务器"
+msgstr "在LDAP服务器中未发现"
 
 msgid "User name"
 msgstr "用户名"
 
 msgid "Type a typical LDAP user name to fetch the attribute list"
-msgstr "输入传统的LDAP名称获取属性列表"
+msgstr "输入传统的LDAP用户名并获取属性列表"
 
 msgid "Italian"
 msgstr "意大利"
@@ -855,10 +855,10 @@ msgid "Session timeout"
 msgstr "会话超时"
 
 msgid "Empty password"
-msgstr "密码为空"
+msgstr "清空密码"
 
 msgid "Empty login name"
-msgstr "登录名为空"
+msgstr "清空用户名"
 
 msgid "Access denied"
 msgstr "访问被拒绝"
