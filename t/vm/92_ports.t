@@ -348,7 +348,7 @@ sub test_remove_expose {
                  ,port => $internal_port
             ,id_domain => $domain->id
         );
-        rvd_back->_process_all_requests_dont_fork();
+        wait_request();
 
         is($req->status(),'done');
         is($req->error(),'');
