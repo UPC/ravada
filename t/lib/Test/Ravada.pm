@@ -130,6 +130,7 @@ my $DEV_NBD = "/dev/nbd10";
 my $MNT_RVD= "/mnt/test_rvd";
 my $QEMU_NBD = `which qemu-nbd`;
 chomp $QEMU_NBD;
+my $NBD_LOADED;
 
 my $FH_FW;
 my $FH_NODE;
@@ -1188,6 +1189,7 @@ sub clean {
     _clean_db();
     _clean_file_config();
     shutdown_nodes();
+    _unload_nbd();
 
     _check_leftovers();
 }
@@ -1981,6 +1983,16 @@ sub DESTROY {
 sub _check_leftovers {
     _check_leftovers_users();
     _check_leftovers_domains();
+    _check_removed_nbd();
+
+}
+
+sub _check_removed_nbd {
+    return if $<;
+    my ($in, $out, $err);
+    my @cmd = ('rmmod',"nbd");
+    run3(\@cmd,\$in,\$out,\$err);
+    BAIL_OUT($err) if $err && $err !~ /not currently loaded/;
 }
 
 sub _check_leftovers_domains {
@@ -2156,17 +2168,20 @@ sub _lsof_nbd($vm, $dev_nbd) {
     return 0;
 }
 
-sub _load_nbd($vm) {
+sub _unload_nbd() {
+    my @cmd = ($QEMU_NBD,"-d", $DEV_NBD);
+    my ($in, $out, $err);
+    run3(\@cmd,\$in,\$out,\$err);
+    die "@cmd : $err" if $err && $err !~ /o such file or directory/;
+}
+
+sub _do_load_nbd($vm) {
     my ($in, $out, $err);
     if (!$MOD_NBD++) {
         my @cmd =("/sbin/modprobe","nbd", "max_part=63");
         run3(\@cmd, \$in, \$out, \$err);
         die join(" ",@cmd)." : $? $err" if $?;
     }
-    my @cmd = ($QEMU_NBD,"-d", $DEV_NBD);
-    ($out,$err) = $vm->run_command(@cmd);
-    die "@cmd : $err" if $err;
-
     return if !_lsof_nbd($vm, $DEV_NBD);
 
     my ($dev,$n) = $DEV_NBD =~ /(.*?)(\d+)$/;
@@ -2177,12 +2192,19 @@ sub _load_nbd($vm) {
     die "Error: I can't find more NBD devices ( $DEV_NBD) "
     if ! -e $DEV_NBD;
 
-    return _load_nbd($vm);
+    return _do_load_nbd($vm);
 }
 
-sub _mount_qcow($vm, $vol) {
-    _load_nbd($vm);
+sub _load_nbd($vm) {
+    return if $NBD_LOADED;
+    _do_load_nbd($vm);
+    $NBD_LOADED = 1;
+}
+
+sub _connect_nbd($vm,$vol) {
     my ($in,$out, $err);
+    ($out,$err) = $vm->run_command("lsof",$DEV_NBD);
+    return if $out =~ /COMMAND/;
     for ( 1 .. 10 ) {
         ($out, $err) = $vm->run_command($QEMU_NBD,"-c",$DEV_NBD, $vol);
         last if !$err;
@@ -2190,8 +2212,13 @@ sub _mount_qcow($vm, $vol) {
         sleep 1;
     }
     confess "qemu-nbd -c $DEV_NBD $vol\n?:$?\n$out\n$err" if $? || $err;
+}
+
+sub _mount_qcow($vm, $vol) {
+    _load_nbd($vm);
+    _connect_nbd($vm,$vol);
     _create_part($DEV_NBD);
-    ($out, $err) = $vm->run_command("/sbin/mkfs.ext4","${DEV_NBD}p1");
+    my ($out, $err) = $vm->run_command("/sbin/mkfs.ext4","${DEV_NBD}p1");
     die "Error on mkfs $err" if $?;
     mkdir "$MNT_RVD" if ! -e $MNT_RVD;
     $vm->run_command("/bin/mount","${DEV_NBD}p1",$MNT_RVD);
@@ -2212,8 +2239,8 @@ sub _create_part($dev) {
     return if $out =~ m{/dev/\w+\d+p\d+}mi;
 
     for (1 .. 10) {
-        @cmd = ("/sbin/fdisk",$dev);
-        $in = "n\np\n1\n\n\n\nw\np\n";
+        @cmd = ("/sbin/sfdisk",$dev);
+        $in = "type=83";
 
         run3(\@cmd, \$in, \$out, \$err);
         chomp $err;
@@ -2233,7 +2260,7 @@ sub _umount_qcow() {
         sleep 1;
     }
     die $err if $err && $err !~ /busy/ && $err !~ /not mounted/;
-    `qemu-nbd -d $DEV_NBD`;
+    #    `qemu-nbd -d $DEV_NBD`;
 }
 
 sub _mangle_vol2($vm,$name,@vol) {
