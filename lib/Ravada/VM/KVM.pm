@@ -128,7 +128,7 @@ sub _connect {
 }
 
 sub _list_storage_pools($vm) {
-    confess if !defined $vm;
+    confess if !defined $vm || !ref($vm);
    for ( ;; ) {
        my @pools;
        eval { @pools = $vm->list_storage_pools };

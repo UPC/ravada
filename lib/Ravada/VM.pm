@@ -311,6 +311,7 @@ sub _post_disconnect($self) {
         $self->clear_netssh();
         delete $SSH{$self->host};
     }
+    delete $VM{$self->id};
 }
 
 sub _pre_create_domain {
@@ -2131,6 +2132,32 @@ sub _list_bridges($self) {
     $self->{_bridges} = \@networks;
     return @networks;
 }
+
+sub _check_equal_storage_pools($vm1, $vm2) {
+    my @sp;
+    push @sp,($vm1->default_storage_pool_name)  if $vm1->default_storage_pool_name;
+    push @sp,($vm1->base_storage_pool)  if $vm1->base_storage_pool;
+    push @sp,($vm1->clone_storage_pool) if $vm1->clone_storage_pool;
+
+    my %sp1 = map { $_ => 1 } @sp;
+
+    my @sp1 = grep /./,keys %sp1;
+
+    my %sp2 = map { $_ => 1 } $vm2->list_storage_pools();
+
+    for my $pool ( @sp1 ) {
+        die "Error: Storage pool '$pool' not found on node ".$vm2->name."\n"
+            .Dumper([keys %sp2])
+        if !$sp2{ $pool };
+
+        my ($path1, $path2) = ($vm1->_storage_path($pool), $vm2->_storage_path($pool));
+
+        die "Error: Storage pool '$pool' different. In ".$vm1->name." $path1 , "
+            ." in ".$vm2->name." $path2" if $path1 ne $path2;
+    }
+    return 1;
+}
+
 
 1;
 

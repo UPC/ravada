@@ -133,6 +133,7 @@ my $DEV_NBD = "/dev/nbd10";
 my $MNT_RVD= "/mnt/test_rvd";
 my $QEMU_NBD = `which qemu-nbd`;
 chomp $QEMU_NBD;
+my $NBD_LOADED;
 
 my $FH_FW;
 my $FH_NODE;
@@ -772,7 +773,8 @@ sub _activate_storage_pools($vm) {
     for my $sp (@sp) {
         next if $sp->is_active;
         diag("Activating sp ".$sp->get_name." on ".$vm->name);
-        $sp->create();
+        $sp->build() unless $sp->is_active;
+        $sp->create() unless $sp->is_active;
     }
 }
 sub _remove_old_disks_kvm {
@@ -1139,24 +1141,28 @@ sub _qemu_storage_pool {
     return $pool_name;
 }
 
-sub remove_qemu_pools {
+sub remove_qemu_pools($vm=undef) {
     return if !$VM_VALID{'KVM'} || $>;
-    my $vm;
-    eval { $vm = rvd_back->search_vm('KVM') };
-    if ($@ && $@ !~ /Missing qemu-img/) {
-        warn $@;
-    }
-    if  ( !$vm ) {
-        $VM_VALID{'KVM'} = 0;
-        return;
+    return if defined $vm && $vm->type eq 'Void';
+    if (!defined $vm) {
+        eval { $vm = rvd_back->search_vm('KVM') };
+        if ($@ && $@ !~ /Missing qemu-img/) {
+            warn $@;
+        }
+        if  ( !$vm ) {
+            $VM_VALID{'KVM'} = 0;
+            return;
+        }
     }
 
     my $base = base_pool_name();
     $vm->connect();
     for my $pool  ( Ravada::VM::KVM::_list_storage_pools($vm->vm)) {
         my $name = $pool->get_name;
+        eval {$pool->build(Sys::Virt::StoragePool::BUILD_NEW); $pool->create() };
+        warn $@ if $@ && $@ !~ /already active/;
         next if $name !~ qr/^$base/;
-        diag("Removing ".$pool->get_name." storage_pool");
+        diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
         _delete_qemu_pool($pool);
         for my $vol ( $pool->list_volumes ) {
             diag("Removing ".$pool->get_name." vol ".$vol->get_name);
@@ -1187,7 +1193,7 @@ sub _delete_qemu_pool($pool) {
     }
     if (-l $dir) {
         unlink $dir or die "$! $dir";
-    } else {
+    } elsif (-e $dir) {
         rmdir($dir) or die "$! $dir";
     }
 
@@ -1224,6 +1230,7 @@ sub clean {
     _clean_db();
     _clean_file_config();
     shutdown_nodes();
+    _unload_nbd();
 
     _check_leftovers();
 }
@@ -1287,6 +1294,7 @@ sub clean_remote_node {
     wait_request(debug => 0);
     _remove_old_disks($node);
     flush_rules_node($node)  if !$node->is_local() && $node->is_active;
+    remove_qemu_pools($node);
 }
 
 sub _remove_old_disks {
@@ -2016,6 +2024,16 @@ sub DESTROY {
 sub _check_leftovers {
     _check_leftovers_users();
     _check_leftovers_domains();
+    _check_removed_nbd();
+
+}
+
+sub _check_removed_nbd {
+    return if $<;
+    my ($in, $out, $err);
+    my @cmd = ('rmmod',"nbd");
+    run3(\@cmd,\$in,\$out,\$err);
+    BAIL_OUT($err) if $err && $err !~ /not currently loaded/;
 }
 
 sub _check_leftovers_domains {
@@ -2111,7 +2129,7 @@ sub shutdown_nodes {
     }
 }
 
-sub create_storage_pool($vm, $dir=undef) {
+sub create_storage_pool($vm, $dir=undef, $pool_name=new_pool_name()) {
     if (!ref($vm)) {
         $vm = rvd_back->search_vm($vm);
     }
@@ -2120,7 +2138,6 @@ sub create_storage_pool($vm, $dir=undef) {
 
     my $capacity = 1 * 1024 * 1024;
 
-    my $pool_name = new_pool_name();
     if (!$dir) {
         $dir = "/var/tmp/$pool_name";
     }
@@ -2147,9 +2164,11 @@ sub create_storage_pool($vm, $dir=undef) {
 </pool>"
 ;
     my $pool;
-    eval { $pool = $vm->vm->create_storage_pool($xml) };
+    eval { $pool = $vm->vm->define_storage_pool($xml) };
     ok(!$@,"Expecting \$@='', got '".($@ or '')."'") or return;
     ok($pool,"Expecting a pool , got ".($pool or ''));
+    $pool->build( Sys::Virt::StoragePool::BUILD_NEW );
+    $pool->create();
 
     return $pool_name;
 
@@ -2190,17 +2209,20 @@ sub _lsof_nbd($vm, $dev_nbd) {
     return 0;
 }
 
-sub _load_nbd($vm) {
+sub _unload_nbd() {
+    my @cmd = ($QEMU_NBD,"-d", $DEV_NBD);
+    my ($in, $out, $err);
+    run3(\@cmd,\$in,\$out,\$err);
+    die "@cmd : $err" if $err && $err !~ /o such file or directory/;
+}
+
+sub _do_load_nbd($vm) {
     my ($in, $out, $err);
     if (!$MOD_NBD++) {
         my @cmd =("/sbin/modprobe","nbd", "max_part=63");
         run3(\@cmd, \$in, \$out, \$err);
         die join(" ",@cmd)." : $? $err" if $?;
     }
-    my @cmd = ($QEMU_NBD,"-d", $DEV_NBD);
-    ($out,$err) = $vm->run_command(@cmd);
-    die "@cmd : $err" if $err;
-
     return if !_lsof_nbd($vm, $DEV_NBD);
 
     my ($dev,$n) = $DEV_NBD =~ /(.*?)(\d+)$/;
@@ -2211,12 +2233,19 @@ sub _load_nbd($vm) {
     die "Error: I can't find more NBD devices ( $DEV_NBD) "
     if ! -e $DEV_NBD;
 
-    return _load_nbd($vm);
+    return _do_load_nbd($vm);
 }
 
-sub _mount_qcow($vm, $vol) {
-    _load_nbd($vm);
+sub _load_nbd($vm) {
+    return if $NBD_LOADED;
+    _do_load_nbd($vm);
+    $NBD_LOADED = 1;
+}
+
+sub _connect_nbd($vm,$vol) {
     my ($in,$out, $err);
+    ($out,$err) = $vm->run_command("lsof",$DEV_NBD);
+    return if $out =~ /COMMAND/;
     for ( 1 .. 10 ) {
         ($out, $err) = $vm->run_command($QEMU_NBD,"-c",$DEV_NBD, $vol);
         last if !$err;
@@ -2224,8 +2253,13 @@ sub _mount_qcow($vm, $vol) {
         sleep 1;
     }
     confess "qemu-nbd -c $DEV_NBD $vol\n?:$?\n$out\n$err" if $? || $err;
+}
+
+sub _mount_qcow($vm, $vol) {
+    _load_nbd($vm);
+    _connect_nbd($vm,$vol);
     _create_part($DEV_NBD);
-    ($out, $err) = $vm->run_command("/sbin/mkfs.ext4","${DEV_NBD}p1");
+    my ($out, $err) = $vm->run_command("/sbin/mkfs.ext4","${DEV_NBD}p1");
     die "Error on mkfs $err" if $?;
     mkdir "$MNT_RVD" if ! -e $MNT_RVD;
     $vm->run_command("/bin/mount","${DEV_NBD}p1",$MNT_RVD);
@@ -2246,8 +2280,8 @@ sub _create_part($dev) {
     return if $out =~ m{/dev/\w+\d+p\d+}mi;
 
     for (1 .. 10) {
-        @cmd = ("/sbin/fdisk",$dev);
-        $in = "n\np\n1\n\n\n\nw\np\n";
+        @cmd = ("/sbin/sfdisk",$dev);
+        $in = "type=83";
 
         run3(\@cmd, \$in, \$out, \$err);
         chomp $err;
@@ -2267,7 +2301,7 @@ sub _umount_qcow() {
         sleep 1;
     }
     die $err if $err && $err !~ /busy/ && $err !~ /not mounted/;
-    `qemu-nbd -d $DEV_NBD`;
+    #    `qemu-nbd -d $DEV_NBD`;
 }
 
 sub _mangle_vol2($vm,$name,@vol) {
