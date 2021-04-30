@@ -1163,23 +1163,26 @@ sub remove_qemu_pools($vm=undef) {
         warn $@ if $@ && $@ !~ /already active/;
         next if $name !~ qr/^$base/;
         diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
-        _delete_qemu_pool($pool);
         for my $vol ( $pool->list_volumes ) {
             diag("Removing ".$pool->get_name." vol ".$vol->get_name);
             $vol->delete();
         }
+        _delete_qemu_pool($pool);
         $pool->destroy();
         eval { $pool->undefine() };
+        warn $@ if $@;
         warn $@ if$@ && $@ !~ /libvirt error code: 49,/;
         ok(!$@ or $@ =~ /Storage pool not found/i);
     }
 
-    opendir my $ls ,"/var/tmp" or die $!;
-    while (my $file = readdir($ls)) {
-        next if $file !~ qr/^$base/;
+    if ($vm->is_local) {
+        opendir my $ls ,"/var/tmp" or die $!;
+        while (my $file = readdir($ls)) {
+            next if $file !~ qr/^$base/;
 
-        my $dir = "/var/tmp/$file";
-        remove_tree($dir,{ safe => 1, verbose => 1}) or die "$! $dir";
+            my $dir = "/var/tmp/$file";
+            remove_tree($dir,{ safe => 1, verbose => 1}) or die "$! $dir";
+        }
     }
 }
 
@@ -2143,6 +2146,7 @@ sub create_storage_pool($vm, $dir=undef, $pool_name=new_pool_name()) {
     }
 
     mkdir $dir if ! -e $dir;
+    $vm->run_command("mkdir",$dir);
 
     my $xml =
 "<pool type='dir'>
@@ -2169,6 +2173,7 @@ sub create_storage_pool($vm, $dir=undef, $pool_name=new_pool_name()) {
     ok($pool,"Expecting a pool , got ".($pool or ''));
     $pool->build( Sys::Virt::StoragePool::BUILD_NEW );
     $pool->create();
+    $pool->set_autostart(1);
 
     return $pool_name;
 
