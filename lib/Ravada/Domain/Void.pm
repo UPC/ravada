@@ -524,6 +524,13 @@ sub get_info {
     return $info;
 }
 
+sub _new_mac($mac='ff:54:00:a7:49:71') {
+    my $num =sprintf "%02X", rand(0xff);
+    my @macparts = split/:/,$mac;
+    $macparts[5] = $num;
+    return join(":",@macparts);
+}
+
 sub _set_default_info($self, $listen_ip=undef) {
     my $info = {
             max_mem => 512*1024
@@ -532,6 +539,7 @@ sub _set_default_info($self, $listen_ip=undef) {
             ,n_virt_cpu => 1
             ,state => 'UNKNOWN'
             ,ip =>'1.1.1.'.int(rand(254)+1)
+            ,mac => _new_mac()
             ,time => time
     };
     $self->_store(info => $info);
@@ -541,6 +549,10 @@ sub _set_default_info($self, $listen_ip=undef) {
         next if $name eq 'disk';
         $self->set_controller($name,2);
     }
+    $info->{interfaces}->[0] = {
+        hwaddress => $info->{mac}
+        ,address => $info->{ip}
+    };
     return $info;
 }
 
