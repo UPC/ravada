@@ -223,6 +223,18 @@
         };
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
+            $scope.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            $scope.exec_time = new Date();
+
+            $scope.getUnixTimeFromDate = function(date) {
+                date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
+                return date.getTime() / 1000;
+            };
+
+            $scope.isPastTime = function(date) {
+                return $scope.getUnixTimeFromDate(date) < $scope.getUnixTimeFromDate();
+            };
+
             var subscribed_extra = false;
             subscribe_machine_info= function(url) {
                 var ws = new WebSocket(url);
