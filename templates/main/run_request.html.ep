@@ -56,6 +56,7 @@
                 <li><b>Internal IP:</b><span ng-show="domain.ip"> {{domain.ip}}</span>
                     <span ng-hide="domain.ip"><i>waiting for network to come up</i></span>
                 </li>
+                <li ng-show="domain.interfaces"><b>Hardware address</b> {{domain.interfaces[0].hwaddr}} </li>
                 <li><b>Max Memory:</b> {{domain.max_mem}}</li>
                 <li><b>Memory:</b> {{domain.memory}}</li>
                 <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>

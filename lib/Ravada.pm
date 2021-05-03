@@ -1587,7 +1587,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','status','varchar(32) DEFAULT "shutdown"');
     $self->_upgrade_table('domains','display','text');
     $self->_upgrade_table('domains','display_file','text DEFAULT NULL');
-    $self->_upgrade_table('domains','info','varchar(255) DEFAULT NULL');
+    $self->_upgrade_table('domains','info','TEXT DEFAULT NULL');
     $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('domains','id_vm','int default null');
     $self->_upgrade_table('domains','volatile_clones','int NOT NULL default 0');
