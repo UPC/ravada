@@ -95,6 +95,7 @@ sub test_rebase_3times($vm, $swap, $data, $with_cd) {
         }
     }
 
+    unload_nbd();
     $clone->remove(user_admin);
     $base1->remove(user_admin);
     $base3->remove(user_admin);
@@ -163,6 +164,7 @@ sub test_rebase_with_vols($vm, $swap0, $data0, $with_cd0, $swap1, $data1, $with_
 }
 
 sub _remove_domains(@bases) {
+    unload_nbd();
     for my $base (@bases) {
         for my $clone ($base->clones) {
             my $d_clone = Ravada::Domain->open($clone->{id});
@@ -221,6 +223,7 @@ sub test_rebase($vm, $swap, $data, $with_cd) {
     is(scalar($base->clones),1);
     is(scalar($clone1->clones),1);
 
+    unload_nbd();
     $clone2->remove(user_admin);
     $clone1->remove(user_admin);
     $base->remove(user_admin);
@@ -240,6 +243,7 @@ sub test_prepare_remove($vm) {
         next if $file =~ /\.iso$/;
         test_volume_contents($vm, "zipizape", $file);
     }
+    unload_nbd();
     $domain->remove(user_admin);
 
 }
