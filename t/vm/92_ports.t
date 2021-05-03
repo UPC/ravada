@@ -700,6 +700,32 @@ sub _iptables_save($vm,$table=undef,$chain=undef) {
     return @out;
 }
 
+sub test_interfaces($vm) {
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+    $domain->start( remote_ip => '10.1.1.2', user => user_admin);
+
+    _wait_ip2($vm, $domain);
+    my $info = $domain->info(user_admin);
+
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $info_f = $domain_f->info(user_admin);
+    ok(exists $info_f->{ip},"Expecting ip in front domain info");
+    is($info_f->{ip}, $domain->ip);
+
+    ok($info_f->{interfaces},"Expecting interfaces on ".$domain->_vm->type)
+        and isa_ok($info_f->{interfaces},"ARRAY","Expecting mac address is a list")
+        and do {
+            my $found = 0;
+            for my $if (@{$info_f->{interfaces}}) {
+                $found++;
+                like($if->{hwaddr}, qr/^[0-9a-f][0-9a-f]:[0-9a-f][0-9a-f]:[0-9a-f][0-9a-f]/);
+            }
+            ok($found,"Expecting some interfaces, found=$found") or exit;
+        };
+
+    $domain->remove(user_admin);
+}
+
 sub test_redirect_ip_duplicated($vm) {
     diag("Test redirect ip duplicated ".$vm->type);
     my $internal_port = 22;
@@ -901,6 +927,7 @@ sub test_clone_exports_add_ports($vm) {
 }
 
 sub _wait_ip2($vm_name, $domain) {
+    $domain->start(user => user_admin, remote_ip => '1.2.3.5') unless $domain->is_active();
     for ( 1 .. 30 ) {
         return $domain->ip if $domain->ip;
         diag("Waiting for ".$domain->name. " ip") if !(time % 10);
@@ -1311,6 +1338,8 @@ for my $vm_name ( vm_names() ) {
     diag("Testing $vm_name");
     flush_rules() if !$<;
     import_base($vm);
+
+    test_interfaces($vm);
 
     test_redirect_ip_duplicated($vm);
     test_open_port_duplicated($vm);
