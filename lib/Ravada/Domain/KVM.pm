@@ -1545,7 +1545,16 @@ sub get_info {
     $info->{cpu_time} = $info->{cpuTime};
     $info->{n_virt_cpu} = $info->{nrVirtCpu};
     confess Dumper($info) if !$info->{n_virt_cpu};
-    $info->{ip} = $self->ip()   if $self->is_active();
+
+    if ( $self->is_active() ) {
+        $info->{ip} = $self->ip();
+        my @interfaces;
+        eval { @interfaces = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
+        my @interfaces2;
+        eval { @interfaces2 = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_AGENT) };
+        @interfaces = @interfaces2 if !scalar(@interfaces);
+        $info->{interfaces} = \@interfaces;
+    }
 
     lock_keys(%$info);
     return $info;
