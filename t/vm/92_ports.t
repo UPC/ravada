@@ -927,12 +927,8 @@ sub test_clone_exports_add_ports($vm) {
 }
 
 sub _wait_ip2($vm_name, $domain) {
-<<<<<<< HEAD
-    for ( 1 .. 30 ) {
-=======
     $domain->start(user => user_admin, remote_ip => '1.2.3.5') unless $domain->is_active();
-    for ( 1 .. 22 ) {
->>>>>>> bfcb8f0a... feat(frontend): show network interfaces hw address (#1539)
+    for ( 1 .. 30 ) {
         return $domain->ip if $domain->ip;
         diag("Waiting for ".$domain->name. " ip") if !(time % 10);
         sleep 1;
