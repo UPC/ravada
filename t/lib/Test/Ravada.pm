@@ -82,6 +82,7 @@ create_domain
     mangle_volume
     test_volume_contents
     test_volume_format
+    unload_nbd
 
     check_libvirt_tls
 
@@ -2037,6 +2038,7 @@ sub _check_leftovers_users {
 
 
 sub end {
+    _unload_nbd();
     _check_leftovers
     clean();
     _unlock_all();
@@ -2171,6 +2173,10 @@ sub _lsof_nbd($vm, $dev_nbd) {
         return 1 if scalar(@line) >= 2;
     }
     return 0;
+}
+
+sub unload_nbd() {
+    _unload_nbd();
 }
 
 sub _unload_nbd() {
