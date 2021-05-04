@@ -2240,6 +2240,9 @@ sub admin {
         $c->stash(name => $c->param('name' or ''));
         if ( $c->param('name') ) {
             $c->stash(list_users => $RAVADA->list_users($c->param('name') ))
+        } else {
+            my $users = $RAVADA->list_users();
+            $c->stash(list_users => $users) if (($users) && (scalar(@$users) < 40));
         }
     }
     if ($page eq 'machines') {
