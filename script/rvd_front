@@ -129,6 +129,9 @@ my $WS = Ravada::WebSocket->new(ravada => $RAVADA);
 my %ALLOWED_ANONYMOUS_WS = map { $_ => 1 } qw(list_bases_anonymous list_alerts);
 my %LDAP_ATTRIBUTES;
 
+# TOODO: config this variable
+my $LIMIT_SHOW_USERS = 25;
+
 init();
 ############################################################################3
 
@@ -2238,11 +2241,16 @@ sub admin {
         return access_denied($c)    if !$USER->is_admin && !$USER->can_manage_users && !$USER->can_grant;
         $c->stash(list_users => []);
         $c->stash(name => $c->param('name' or ''));
+        $c->stash(message => '');
         if ( $c->param('name') ) {
             $c->stash(list_users => $RAVADA->list_users($c->param('name') ))
         } else {
             my $users = $RAVADA->list_users();
-            $c->stash(list_users => $users) if (($users) && (scalar(@$users) < 40));
+            if  (($users) && (scalar(@$users) < $LIMIT_SHOW_USERS)) {
+                $c->stash(list_users => $users);
+            } else {
+                $c->stash(message => "There are ".scalar(@$users)." users. Type a search pattern to list them");
+            }
         }
     }
     if ($page eq 'machines') {
