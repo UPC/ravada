@@ -1268,7 +1268,7 @@ sub _insert_display( $self, $display ) {
         eval {
             $sth->execute(map { $display->{$_} } sort keys %$display);
         };
-        last if !$@ || ( $@ !~ /(Duplicate entry .* for key|UNIQUE constraint)(port|n_order)/);
+        last if !$@ || ( $@ !~ /(Duplicate entry .* for key|UNIQUE constraint).*'(.*)'/);
         my $field = $2;
         if ($field =~ /n_order/ && $display->{n_order}) {
             $self->_clean_display_order($display->{n_order});
@@ -1279,6 +1279,8 @@ sub _insert_display( $self, $display ) {
                 $used_port->{$display->{port}}++;
                 $display->{port} = $self->_vm->_new_free_port($used_port);
             }
+        } else {
+            confess "Error: I don't know how to deal with duplicated $field";
         }
     }
     confess $@ if $@;
@@ -1358,8 +1360,11 @@ sub _fix_duplicate_display_port($self, $port) {
                 id_domain => $self->id
                 ,uid => Ravada::Utils::user_daemon->id
             );
-            my $req2 = Ravada::Request->refresh_machine(id_domain=> $self->id
-                    ,after_request => $req->id
+            my $req2 = Ravada::Request->refresh_machine(
+                id_domain=> $self->id
+                ,after_request => $req->id
+                ,uid => Ravada::Utils::user_daemon->id
+
             );
             Ravada::Request->start_domain(
                 id_domain => $self->id,

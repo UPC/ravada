@@ -669,7 +669,7 @@ sub display_info($self, $user) {
 
         $display->{port} = undef if $display->{port} && $display->{port}==-1;
         my $display_tls;
-        if (exists $display->{tls_port} && $display->{tls_port} || $self->_vm->tls_ca) {
+        if (exists $display->{tls_port} && $display->{tls_port} && $self->_vm->tls_ca) {
             my %display_tls = %$display;
             $display_tls{port} = delete $display_tls{tls_port};
             $display_tls{port} = undef if $display_tls{port} && $display_tls{port}==-1;
@@ -703,7 +703,7 @@ sub _display_info_vnc($graph) {
                  ,ip => $address
          ,is_builtin => 1
     );
-    $display{tls_port} = $tls_port if defined $tls_port;
+    $display{tls_port} = $tls_port if defined $tls_port && $tls_port;
     $display{password} = $password;
     $port = '' if !defined $port;
 
@@ -715,7 +715,6 @@ sub _display_info_vnc($graph) {
             $display{$item->getName()} = $value;
         }
     }
-
     return \%display;
 }
 
