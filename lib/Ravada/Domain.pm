@@ -28,8 +28,8 @@ use Ravada::Booking;
 use Ravada::Domain::Driver;
 use Ravada::Utils;
 
-our $TIMEOUT_SHUTDOWN = 20;
-our $TIMEOUT_REBOOT = 20;
+our $TIMEOUT_SHUTDOWN = 120;
+our $TIMEOUT_REBOOT = 120;
 our $CONNECTOR;
 
 our $MIN_FREE_MEMORY = 1024*1024;
@@ -2728,6 +2728,9 @@ sub _post_shutdown {
 
     my %arg = @_;
     my $timeout = delete $arg{timeout};
+    if (!defined $timeout) {
+        $timeout = ( $self->_data('shutdown_timeout') or $TIMEOUT_SHUTDOWN);
+    }
 
     if ( $self->_vm->is_active ) {
         $self->_remove_iptables();
@@ -2755,7 +2758,7 @@ sub _post_shutdown {
         }
     }
 
-    if (defined $timeout && !$self->is_removed && $is_active) {
+    if (defined $timeout && $timeout && !$self->is_removed && $is_active) {
         if ($timeout<2) {
             sleep $timeout;
             $is_active = $self->is_active;
