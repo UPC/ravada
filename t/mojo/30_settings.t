@@ -275,6 +275,7 @@ if (!rvd_front->ping_backend) {
     done_testing();
     exit;
 }
+$Test::Ravada::BACKGROUND=1;
 
 ($USERNAME, $PASSWORD) = ( user_admin->name, "$$ $$");
 

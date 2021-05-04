@@ -966,8 +966,9 @@ sub wait_request {
         $request = \@list_requests;
     } else {
         $request = [$request] if (!ref($request) || ref($request) ne 'ARRAY');
-        for (@$request) {
-            delete $skip{$_->command};
+        for my $req (@$request) {
+            $req = Ravada::Request->open($req) if !ref($req);
+            delete $skip{$req->command};
         }
     }
 
@@ -2441,6 +2442,7 @@ sub check_libvirt_tls {
 sub ping_backend() {
     for ( 1 .. 3 ) {
         my @now = localtime(time);
+        $now[4]++;
         for ( 1 .. 4 ){
             $now[$_] = "0".$now[$_] if length ($now[$_])<2
         }

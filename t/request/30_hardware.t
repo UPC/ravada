@@ -193,7 +193,8 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     is($req->status(),'done');
     is($req->error(),'') or exit;
     my $n = 1;
-    $n++ if $TLS && $hardware eq 'display' && $data->{driver} =~ /spice|vnc/;
+    $n++ if $TLS && $hardware eq 'display' && $data->{driver} =~ /spice|vnc/
+    && $domain->is_active();
     test_display_db($domain,$n) if $hardware eq 'display';
 
     {

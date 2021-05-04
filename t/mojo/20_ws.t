@@ -319,6 +319,7 @@ if (!ping_backend()) {
     done_testing();
     exit;
 }
+$Test::Ravada::BACKGROUND=1;
 
 $TZ = DateTime::TimeZone->new(name => rvd_front->settings_global()->{backend}->{time_zone}->{value});
 

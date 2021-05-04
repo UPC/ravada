@@ -397,6 +397,7 @@ if (!ping_backend()) {
     done_testing();
     exit;
 }
+$Test::Ravada::BACKGROUND=1;
 
 $t = Test::Mojo->new($SCRIPT);
 $t->ua->inactivity_timeout(900);
