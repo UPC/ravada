@@ -1921,7 +1921,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains','status','varchar(32) DEFAULT "shutdown"');
     #$self->_upgrade_table('domains','display_file','text DEFAULT NULL');
-    $self->_upgrade_table('domains','info','varchar(255) DEFAULT NULL');
+    $self->_upgrade_table('domains','info','TEXT DEFAULT NULL');
     $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('domains','volatile_clones','int NOT NULL default 0');
     $self->_upgrade_table('domains','comment',"varchar(80) DEFAULT ''");
@@ -1935,6 +1935,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
     $self->_upgrade_table('domains','shutdown_disconnected','int not null default 0');
+    $self->_upgrade_table('domains','shutdown_timeout','int default null');
     $self->_upgrade_table('domains','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 
     if ($self->_upgrade_table('domains','screenshot','MEDIUMBLOB')) {
@@ -3894,7 +3895,7 @@ sub _cmd_shutdown {
     my $uid = $request->args('uid');
     my $name = $request->defined_arg('name');
     my $id_domain = $request->defined_arg('id_domain');
-    my $timeout = ($request->args('timeout') or 60);
+    my $timeout = $request->defined_arg('timeout');
     my $id_vm = $request->defined_arg('id_vm');
 
     confess "ERROR: Missing id_domain or name" if !$id_domain && !$name;

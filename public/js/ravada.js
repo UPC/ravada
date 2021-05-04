@@ -523,10 +523,6 @@
             if (value ) value=1;
                 else value=0;
             $scope.showmachine[field]=value;
-            value_show = true;
-            if (! value) {
-                value_show = false;
-            }
             if ($scope.pending_request && $scope.pending_request.status == 'done' ) {
                 $scope.pending_request = undefined;
             }
