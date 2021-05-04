@@ -1128,6 +1128,12 @@ sub _around_display_info($orig,$self,$user ) {
             $self->_store_display($display);
         }
     }
+    my $n_order = 0;
+    for (@display) {
+        unlock_hash(%$_);
+        $_->{n_order} = $n_order++ if !exists $_->{n_order};
+        $n_order = $_->{n_order};
+    }
     @display = sort { $a->{n_order} <=> $b->{n_order} } @display;
     return @display if wantarray;
     return $display[0];
