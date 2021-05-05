@@ -450,6 +450,7 @@ sub _around_create_domain {
         for my $port ( $base->list_ports ) {
             my %port = %$port;
             delete @port{'id','id_domain','public_port'};
+            delete @port{'id_vm', 'is_active'};
             $domain->expose(%port);
         }
     }
