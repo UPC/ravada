@@ -1000,7 +1000,8 @@
                             $scope.domain_display[i]= {};
                         }
                         var display = $scope.domain.hardware.display[i];
-                        if (display.driver.substr(-4,4) != '-tls') {
+                        if (display.driver.substr(-4,4) != '-tls'
+                        && typeof(display.port) != 'undefined' && display.port) {
                             display.display=display.driver+"://"+display.ip+":"+display.port;
                         }
                         var keys = Object.keys(display);
