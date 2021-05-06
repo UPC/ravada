@@ -29,6 +29,17 @@ my $TEST_TIMESTAMP = 0;
 my $TLS;
 
 ########################################################################
+#
+sub _download_alpine64 {
+    my $id_iso = search_id_iso('Alpine%64');
+
+    my $req = Ravada::Request->download(
+             id_iso => $id_iso
+    );
+    wait_request();
+    is($req->error, '');
+    is($req->status,'done') or exit;
+}
 
 sub test_add_hardware_request_drivers {
 	my $vm = shift;
@@ -776,6 +787,7 @@ for my $vm_name ( vm_names()) {
 	    diag("Skipping VM $vm_name in this system");
 	    next;
 	}
+    _download_alpine64();
     $TLS = 0;
     $TLS = 1 if check_libvirt_tls() && $vm_name eq 'KVM';
     $BASE = _create_base($vm);

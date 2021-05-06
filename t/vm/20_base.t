@@ -114,7 +114,9 @@ sub test_display_inactive($domain) {
 
     my $display_h = $info->{hardware}->{display};
     isa_ok($display_h,'ARRAY') or die Dumper($info);
-    is(scalar(@$display_h), 1 + $TLS) or die Dumper($display_h);
+    my $n_expected = 1;
+    $n_expected++ if $TLS && $domain->is_active;
+    is(scalar(@$display_h), $n_expected) or die Dumper($display_h);
 
     # the very first time it starts default display is fetched
     $domain->start(user_admin);
@@ -125,7 +127,7 @@ sub test_display_inactive($domain) {
 
     $display_h = $info->{hardware}->{display};
     isa_ok($display_h,'ARRAY') or die Dumper($info);
-    is(scalar(@$display_h),1+ $TLS) or die Dumper($display_h);
+    is(scalar(@$display_h), $n_expected) or die Dumper($display_h);
 
     return $display_up;
 }
@@ -482,7 +484,7 @@ sub test_display_info($vm) {
     is($display_h->[0]->{is_active}, 0);
     is($display_h->[1]->{is_active}, 0) or exit;
     if ($TLS) {
-        is($display_h->[2]->{is_active}, 0) or exit;
+        ok(!$display_h->[2]->{is_active}) or exit;
     }
 
     $domain->prepare_base(user_admin);
@@ -1526,7 +1528,11 @@ sub test_change_display_settings_kvm($domain) {
                 ,data => { $driver_name => $option->{value} , driver => $display->{driver} }
                 ,index => 0
             );
-            wait_request(debug => 0);
+            for ( 1 .. 10 ) {
+                wait_request(debug => 0);
+                last if $req->status eq 'done';
+                sleep 1;
+            }
             is($req->status, 'done');
             is($req->error,'') or exit;
             my @display = $domain->_get_controller_display();
@@ -1587,7 +1593,7 @@ sub test_display_drivers($vm, $remove) {
         is($req->status, 'done');
         is($req->error, '') or die $domain->name;
         $n_displays++;
-        $n_displays++ if $driver =~ /spice|vnc/ && $TLS;
+        $n_displays++ if $driver =~ /spice/ && $TLS;
         test_displays_added_on_refresh($domain, $n_displays, 0);
 
         test_exposed_port($domain, $driver);
