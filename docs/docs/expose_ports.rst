@@ -49,3 +49,9 @@ an IP is detected or it fails.
 
 .. note:: If your exposing ports don't work. Check if the port is up and if you have the `Qemu Guest Agent <https://ravada.readthedocs.io/en/latest/docs/qemu_ga.html>`__ installed on the guest machine.
 
+
+Settings
+--------
+
+Internal ports are shown in the host at a different port. It can be
+changed from the global settings page.
