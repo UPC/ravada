@@ -523,10 +523,6 @@
             if (value ) value=1;
                 else value=0;
             $scope.showmachine[field]=value;
-            value_show = true;
-            if (! value) {
-                value_show = false;
-            }
             if ($scope.pending_request && $scope.pending_request.status == 'done' ) {
                 $scope.pending_request = undefined;
             }
@@ -1004,7 +1000,8 @@
                             $scope.domain_display[i]= {};
                         }
                         var display = $scope.domain.hardware.display[i];
-                        if (display.driver.substr(-4,4) != '-tls') {
+                        if (display.driver.substr(-4,4) != '-tls'
+                        && typeof(display.port) != 'undefined' && display.port) {
                             display.display=display.driver+"://"+display.ip+":"+display.port;
                         }
                         var keys = Object.keys(display);

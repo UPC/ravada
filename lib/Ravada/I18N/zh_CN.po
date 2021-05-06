@@ -5,84 +5,85 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-05-02 16:20+0200\n"
-"Last-Translator: peuportier aurelien <aurelien.peuportier@protonmail.com>, 2018\n"
-"Language-Team: Chinese (China) (https://www.transifex.com/ravada/teams/70385/zh_CN/)\n"
+"PO-Revision-Date: 2021-04-29 04:32+0000\n"
+"Last-Translator: Bigtree zhang <xiaohua1021@gmail.com>\n"
+"Language-Team: Chinese (Simplified) <https://hosted.weblate.org/projects/"
+"ravada/translation/zh_Hans/>\n"
+"Language: zh_CN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: zh_CN\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Poedit 1.8.7.1\n"
+"X-Generator: Weblate 4.7-dev\n"
 
 msgid "Ravada broker"
-msgstr ""
+msgstr "Ravada 连接器"
 
 msgid "Machine Name"
-msgstr ""
+msgstr "主机名"
 
 msgid "Tools"
-msgstr ""
+msgstr "工具"
 
 msgid "Choose a Machine to Start"
-msgstr ""
+msgstr "选择主机并启动"
 
 msgid "Start"
-msgstr ""
+msgstr "启动"
 
 msgid "Stop"
-msgstr ""
+msgstr "停止"
 
 msgid "View"
-msgstr ""
+msgstr "查看"
 
 msgid "Prepare base"
-msgstr ""
+msgstr "准备基础镜像"
 
 msgid "Clone"
-msgstr ""
+msgstr "克隆"
 
 msgid "Clone/s"
-msgstr ""
+msgstr "克隆"
 
 msgid "Users List"
-msgstr ""
+msgstr "用户列表"
 
 msgid "Name"
 msgstr "名字"
 
 msgid "Log Out"
-msgstr ""
+msgstr "登出"
 
 msgid "Available Machines"
-msgstr ""
+msgstr "可用主机"
 
 msgid "Help"
-msgstr ""
+msgstr "帮助"
 
 msgid "Requirements"
-msgstr ""
+msgstr "要求"
 
 msgid "About"
-msgstr ""
+msgstr "关于"
 
 msgid "Mark all as read"
-msgstr ""
+msgstr "标记为已读"
 
 msgid "Settings"
-msgstr ""
+msgstr "设置"
 
 msgid "New Machine"
-msgstr ""
+msgstr "新主机"
 
 msgid "I want to change my password"
-msgstr ""
+msgstr "我要修改我的密码"
 
 msgid "I want to change my language"
-msgstr ""
+msgstr "我要修改我的语言"
 
 msgid "Language:"
-msgstr "语音"
+msgstr "语言："
 
 msgid "English"
 msgstr "英文"
@@ -115,58 +116,58 @@ msgid "German"
 msgstr "德语"
 
 msgid "New Password:"
-msgstr ""
+msgstr "新密码："
 
 msgid "Confirm Password:"
-msgstr ""
+msgstr "确认密码："
 
 msgid "Submit"
-msgstr ""
+msgstr "提交"
 
 msgid "Your language has been changed successfully"
-msgstr ""
+msgstr "您的语言修改成功"
 
 msgid "Your password has been changed successfully"
-msgstr ""
+msgstr "您的密码修改成功"
 
 msgid "Password is too short"
-msgstr ""
+msgstr "设置的密码太短"
 
 msgid "Password fields do not match"
-msgstr ""
+msgstr "密码字段不匹配"
 
 msgid "Some of the password fields are empty"
-msgstr ""
+msgstr "有一些密码字段为空"
 
 msgid "Status"
-msgstr ""
+msgstr "状态"
 
 msgid "Actions"
-msgstr ""
+msgstr "动作"
 
 msgid "Down"
-msgstr ""
+msgstr "关闭"
 
 msgid "Running"
-msgstr ""
+msgstr "运行中"
 
 msgid "Shutdown"
-msgstr ""
+msgstr "关机"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "快照"
 
 msgid "Paused"
-msgstr ""
+msgstr "暂停"
 
 msgid "Machine locked by request"
-msgstr ""
+msgstr "主机已根据请求锁定"
 
 msgid "Process"
-msgstr ""
+msgstr "处理"
 
 msgid "Copy"
-msgstr ""
+msgstr "复制"
 
 msgid "Error!"
 msgstr "错误！"
@@ -175,417 +176,417 @@ msgid "Error"
 msgstr "错误"
 
 msgid "Backend not available!"
-msgstr ""
+msgstr "后台不可用"
 
 msgid "Subject"
-msgstr ""
+msgstr "主题"
 
 msgid "Date"
-msgstr ""
+msgstr "日期"
 
 msgid "Mark as read"
-msgstr ""
+msgstr "标记为已读"
 
 msgid "Mark as unread"
-msgstr ""
+msgstr "标记为未读"
 
 msgid "No messages to show"
-msgstr ""
+msgstr "无消息"
 
 msgid "Admin"
-msgstr ""
+msgstr "管理员"
 
 msgid "Machines"
-msgstr ""
+msgstr "主机"
 
 msgid "machines"
-msgstr ""
+msgstr "主机"
 
 msgid "Users"
-msgstr ""
+msgstr "用户"
 
 msgid "users"
-msgstr ""
+msgstr "用户"
 
 msgid "Messages"
-msgstr ""
+msgstr "信息"
 
 msgid "messages"
-msgstr ""
+msgstr "信息"
 
 msgid "Admin tools"
-msgstr ""
+msgstr "管理工具"
 
 msgid "Remove base"
-msgstr ""
+msgstr "移除基础镜像"
 
 msgid "Restore"
-msgstr ""
+msgstr "恢复"
 
 msgid "Hibernate"
-msgstr ""
+msgstr "休眠"
 
 msgid "Are you sure?"
-msgstr ""
+msgstr "您确认吗？"
 
 msgid "Yes"
 msgstr "是"
 
 msgid "No"
-msgstr "不"
+msgstr "否"
 
 msgid "Make public"
-msgstr ""
+msgstr "公开"
 
 msgid "Machine settings"
-msgstr ""
+msgstr "主机设置"
 
 msgid "Cannot remove base, machine has clones"
-msgstr ""
+msgstr "不能移除基础镜像，该基础镜像存在克隆"
 
 msgid "show clones"
-msgstr ""
+msgstr "显示克隆"
 
 msgid "hide clones"
-msgstr ""
+msgstr "隐藏克隆"
 
 msgid "For Spice redirection you will need to install"
-msgstr ""
+msgstr "SPICE重定向需要安装"
 
 msgid "in your computer."
-msgstr ""
+msgstr "在您的电脑上。"
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr ""
+msgstr "在您的光盘中搜索，例如，在Debian/Ubuntu中"
 
 msgid "You will need to install"
-msgstr ""
+msgstr "您需要安装"
 
 msgid "and USB drivers ("
-msgstr ""
+msgstr "和USB驱动 ("
 
 msgid ""
 "Be aware that in Windows, Spice redirection is not automatic. It is "
 "necessary to associate protocol with the app."
-msgstr ""
+msgstr "请注意在Windows中，SPICE重定向不是自动的，需要相关的协议"
 
 msgid "To make this possible, download"
-msgstr ""
+msgstr "要成为可能，请下载"
 
 msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
-msgstr ""
+msgstr "或复制以下ASCII文件中的行，保存为.reg扩展名并执行。"
 
 msgid "Login"
-msgstr ""
+msgstr "登录"
 
 msgid "Welcome"
-msgstr ""
+msgstr "欢迎"
 
 msgid "A viewer is required to run the virtual machines."
-msgstr ""
+msgstr "运行虚拟机需要一个视图。"
 
 msgid "Virtual Machines"
-msgstr ""
+msgstr "虚拟机"
 
 msgid "User"
-msgstr ""
+msgstr "用户"
 
 msgid "Password"
-msgstr ""
+msgstr "密码"
 
 msgid "Start session"
-msgstr ""
+msgstr "开始会话\n"
 
 msgid "bits) in your computer."
-msgstr ""
+msgstr "字节) 在您的电脑上。"
 
 msgid "Permissions"
-msgstr ""
+msgstr "权限"
 
 msgid "can change the settings of owned virtual machines."
-msgstr ""
+msgstr "可以修改所拥有的虚拟机的设置。"
 
 msgid "can change the settings of any virtual machines."
-msgstr ""
+msgstr "可以修改任何虚拟机的设置。"
 
 msgid "can change the settings of any virtual machines "
 msgstr ""
 
 msgid "cloned from one base owned by the user."
-msgstr ""
+msgstr "从用户所拥有的基础镜像进行克隆"
 
 msgid "can clone public virtual machines."
-msgstr ""
+msgstr "可以克隆公共的虚拟机。"
 
 msgid "can clone any virtual machine."
-msgstr ""
+msgstr "可以克隆任何虚拟机。"
 
 msgid "can create bases."
-msgstr ""
+msgstr "能创建基础镜像。"
 
 msgid "can create virtual machines."
-msgstr ""
+msgstr "能创建虚拟机。"
 
 msgid "can grant permissions to other users"
-msgstr ""
+msgstr "可以授权给其他用户"
 
 msgid "can hibernate any virtual machine."
-msgstr ""
+msgstr "能休眠任何虚拟机。"
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr ""
+msgstr "能休眠该用户所拥有的虚拟机克隆。"
 
 msgid "can hibernate any clone."
-msgstr ""
+msgstr "能休眠任何克隆。"
 
 msgid "can remove any virtual machines owned by the user."
-msgstr ""
+msgstr "能删除该用户拥有的任何虚拟机。"
 
 msgid "can remove any virtual machine."
-msgstr ""
+msgstr "能删除任何虚拟机。"
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr ""
+msgstr "能删除用户所拥有的虚拟机的克隆。"
 
 msgid "can remove any clone."
-msgstr ""
+msgstr "能删除任何有克隆。"
 
 msgid "can take a screenshot of any virtual machine owned by the user."
-msgstr ""
+msgstr "能对用户所拥有的虚拟机执行快照。"
 
 msgid "can take a screenshot of any virtual machine."
-msgstr ""
+msgstr "能在所有虚拟机上执行快照 。"
 
 msgid "can shutdown any virtual machine."
-msgstr ""
+msgstr "能关闭所有虚拟机。"
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr ""
+msgstr "能关闭用户所有拥有虚拟机的克隆。"
 
 msgid "Submit Query"
-msgstr ""
+msgstr "提交查询"
 
 msgid "From Template"
-msgstr ""
+msgstr "从模板"
 
 msgid "From Machine"
-msgstr ""
+msgstr "从主机"
 
 msgid "Backend"
-msgstr ""
+msgstr "后台"
 
 msgid "Select Template"
-msgstr ""
+msgstr "选择模板"
 
 msgid ""
 "This ISO image has not been downloaded yet. It may take some minutes, even "
 "hours until the file is fetched from the Internet."
-msgstr ""
+msgstr "该ISO还未下载。这将会花费一些几分钟或几小时，直至文件从Internet上下载完成。"
 
 msgid "Download now"
-msgstr ""
+msgstr "现在下载"
 
 msgid "Select ISO"
-msgstr ""
+msgstr "选择ISO"
 
 msgid "Template"
-msgstr ""
+msgstr "模板"
 
 msgid "Disk Size: (GB)"
-msgstr ""
+msgstr "磁盘大小：(GB)"
 
 msgid "Swap Size: (GB)"
-msgstr ""
+msgstr "交换分区Swap大小：(GB)"
 
 msgid "Ram: (GB)"
-msgstr ""
+msgstr "内存: (GB)"
 
 msgid "Machine name is required."
-msgstr ""
+msgstr "必须填写主机名。"
 
 msgid "Machine name can't exceed 20 characters."
-msgstr ""
+msgstr "主机名不能够超过20个字符。"
 
 msgid "Backend selection is required."
-msgstr ""
+msgstr "需要选择后台。"
 
 msgid "ISO image selection is required."
-msgstr ""
+msgstr "需要选择ISO镜像文件。"
 
 msgid "Template selection is required."
-msgstr ""
+msgstr "需要选择模板。"
 
 msgid "A machine with that name already exists."
-msgstr ""
+msgstr "主机名已经存在。"
 
 msgid ""
 "The machine name is only allowed to consist of alphabetic characters, "
 "numbers, dashes and points."
-msgstr ""
+msgstr "主机名仅允许包含字符 、数字、“-”和“.\"。"
 
 msgid "Create"
-msgstr ""
+msgstr "创建"
 
 msgid ""
 "can change the settings of all virtual machines cloned from one base owned "
 "by the user."
-msgstr ""
+msgstr "能修改用户所拥有的基础镜像所创建的虚拟机的设置。"
 
 msgid "monitoring"
-msgstr ""
+msgstr "监控中"
 
 msgid "Are you sure you want to remove the Base of"
-msgstr ""
+msgstr "您确认要移除基础镜像"
 
 msgid "Are you sure you want to prepare the Base of"
-msgstr ""
+msgstr "你确认要开始准备基础镜像"
 
 msgid "Are you sure you want to change the Public state of"
-msgstr ""
+msgstr "您确认需要变更公共状态为"
 
 msgid "Search"
-msgstr ""
+msgstr "搜索"
 
 msgid "There are no public bases available in this system."
-msgstr ""
+msgstr "该系统中不存在公共的基础镜像。"
 
 msgid "There are no machines available in this system."
-msgstr ""
+msgstr "该系统 中无可用的主机。"
 
 msgid "Create one."
-msgstr ""
+msgstr "创建一个。"
 
 msgid "not public"
-msgstr ""
+msgstr "未发布"
 
 msgid "User Settings"
-msgstr ""
+msgstr "用户设置"
 
 msgid "Create a new account"
-msgstr ""
+msgstr "创建一个新的账号"
 
 msgid "Username"
-msgstr ""
+msgstr "用户名"
 
 msgid "Hide Private"
-msgstr ""
+msgstr "隐藏私有"
 
 msgid "Show All"
-msgstr ""
+msgstr "显示全部"
 
 msgid "Shutting down ..."
-msgstr ""
+msgstr "关机中…"
 
 msgid "It may take a couple of minutes."
-msgstr ""
+msgstr "这将会花费几分钟。"
 
 msgid "Hybernating ..."
-msgstr ""
+msgstr "休眠中…"
 
 msgid "Description"
-msgstr ""
+msgstr "描述"
 
 msgid "Rename"
-msgstr ""
+msgstr "重命名"
 
 msgid "Options"
-msgstr ""
+msgstr "选项"
 
 msgid "Drivers"
-msgstr ""
+msgstr "驱动器"
 
 msgid "Graphics"
-msgstr ""
+msgstr "图形"
 
 msgid "Remove Machine"
-msgstr ""
+msgstr "删除主机"
 
 msgid "System overview"
-msgstr ""
+msgstr "系统概述"
 
 msgid "Danger Zone"
-msgstr ""
+msgstr "危险区域"
 
 msgid ""
 "Once you delete the machine, there is no going back. Please be certain."
-msgstr ""
+msgstr "一旦您删除了该主机，将无法再恢复，请确认要执行该操作。"
 
 msgid "Danger"
-msgstr ""
+msgstr "危险"
 
 msgid "This will remove all the contents of the machine"
-msgstr ""
+msgstr "这将删除虚拟机的所有内容"
 
 msgid "This action can't be undone"
-msgstr ""
+msgstr "这个动作将不能被回退"
 
 msgid "Are you sure ?"
-msgstr ""
+msgstr "您确认吗？"
 
 msgid "Yes, remove"
-msgstr ""
+msgstr "是的，删除"
 
 msgid "Virtual Machine"
-msgstr ""
+msgstr "虚拟机"
 
 msgid "removed"
-msgstr ""
+msgstr "已删除"
 
 msgid "This will remove all the"
-msgstr ""
+msgstr "这将删除所有的"
 
 msgid "clones of the machine"
-msgstr ""
+msgstr "虚拟机的克隆"
 
 msgid "Yes, remove all the clones"
-msgstr ""
+msgstr "是的，删除所有的克隆"
 
 msgid "This virtual machine can't be removed because it has"
-msgstr ""
+msgstr "这个虚拟机不能被删除，因为它还有"
 
 msgid "clones"
-msgstr ""
+msgstr "克隆"
 
 msgid "This machine has not Graphics parameters!"
-msgstr ""
+msgstr "这个虚拟机无图形参数！"
 
 msgid "recommended"
-msgstr ""
+msgstr "建议的"
 
 msgid "to"
-msgstr ""
+msgstr "到"
 
 msgid "Changing Public State"
-msgstr ""
+msgstr "改变公共状态"
 
 msgid "Changing Base State"
-msgstr ""
+msgstr "变更基础镜像状态"
 
 msgid "action"
-msgstr ""
+msgstr "动作"
 
 msgid "Grants"
-msgstr ""
+msgstr "授权"
 
 msgid "public"
-msgstr ""
+msgstr "公共的"
 
 msgid "New Base"
-msgstr ""
+msgstr "新的基础镜像"
 
 msgid "Version"
-msgstr ""
+msgstr "版本"
 
 msgid "Authors"
-msgstr ""
+msgstr "作者"
 
 msgid "Development"
-msgstr ""
+msgstr "开发"
 
 msgid "Below are listed the technologies used in this project:"
-msgstr ""
+msgstr "以下为该项目所使用到的技术："
 
 msgid "The code is available on "
 msgstr ""
@@ -594,183 +595,294 @@ msgid "The code is "
 msgstr ""
 
 msgid "License"
-msgstr ""
+msgstr "授权"
 
 msgid "Machine locked by"
-msgstr ""
+msgstr "主机被锁定"
 
 msgid "This Machine is a base"
-msgstr ""
+msgstr "这个主机为基础镜像"
 
 msgid "Cloned"
-msgstr ""
+msgstr "克隆的"
 
 msgid "is admin"
-msgstr ""
+msgstr "是管理员"
 
 msgid "Add new user"
-msgstr ""
+msgstr "添加新用户"
 
 msgid "Register"
-msgstr ""
+msgstr "注册"
 
 msgid "Current Password:"
-msgstr ""
+msgstr "当前密码："
 
 msgid "For more information, check"
-msgstr ""
+msgstr "获取更多信息，请检查"
 
 msgid "the Windows Clients documentation"
-msgstr ""
+msgstr "Windows客户端文档"
 
 msgid "It is programmed in"
-msgstr ""
+msgstr "开发于"
 
 msgid "with perl framework"
-msgstr ""
+msgstr "基于Perl框架"
 
 msgid "and"
-msgstr ""
+msgstr "和"
 
 msgid "Memory"
-msgstr ""
+msgstr "内存"
 
 msgid "MB available"
-msgstr ""
+msgstr "MB 可用"
 
 msgid "The machine will shutdown after these minutes"
-msgstr ""
+msgstr "该主机在一定时间后将会关闭"
 
 msgid "Cancel"
 msgstr "取消"
 
 msgid "Please enter the following information to create the account"
-msgstr ""
+msgstr "请输入以下创建账号所需的信息"
 
 msgid "Enter Username"
-msgstr ""
+msgstr "输入用户名"
 
 msgid "Enter Password"
-msgstr ""
+msgstr "输入密码"
 
 msgid "Confirm Password"
-msgstr ""
+msgstr "确认密码"
 
 msgid "Username is required"
-msgstr ""
+msgstr "用户名是必须的"
 
 msgid "Username can not exceed 20 characters"
-msgstr ""
+msgstr "用户名不能超过20个字符"
 
 msgid "Username must be at least 5 characters"
-msgstr ""
+msgstr "用户名必须最少5个字符"
 
 msgid "Username can only contain words, numbers, dashes, dots and underscores"
-msgstr ""
+msgstr "用户名仅能包含字母、数字、“-”和“_\"符号"
 
 msgid "Password is required"
-msgstr ""
+msgstr "密码是必须的"
 
 msgid "Password can not exceed 20 characters"
-msgstr ""
+msgstr "密码不能超过20个字符"
 
 msgid "Password must be at least 5 characters"
-msgstr ""
+msgstr "密码不能少于5个字符"
 
 msgid "Password can only contain words and numbers"
-msgstr ""
+msgstr "密码仅能包含字母和数字"
 
 msgid "Confirm Password is required"
-msgstr ""
+msgstr "确认密码是必须的"
 
 msgid "Confirm Password can not exceed 20 characters"
-msgstr ""
+msgstr "确认密码不能超过20字符"
 
 msgid "Confirm Password must be at least 5 characters"
-msgstr ""
+msgstr "确认密码不能少于5个字符"
 
 msgid "Confirm Password can only contain words and numbers"
-msgstr ""
+msgstr "确认密码仅能使用字符和数字"
 
 msgid "This information will be available to the users"
-msgstr ""
+msgstr "此信息对用户可用"
 
 msgid "Volatile Clones"
-msgstr ""
+msgstr "易失克隆"
 
 msgid "Owner"
-msgstr ""
+msgstr "所有者"
 
 msgid "Change the owner of the machine"
-msgstr ""
+msgstr "变更主机的所有者"
 
 msgid "Press SHIFT + F12 to exit"
-msgstr ""
+msgstr "按SHIFT + F12 退出"
 
 msgid ""
 "If you can not see the machine screen in a few seconds check for a file "
 "called"
-msgstr ""
+msgstr "如果您不能在几秒内看到主机的屏幕请检查文件名为"
 
 msgid "in your downloads folder."
-msgstr ""
+msgstr "在您的下载文件夹中。"
 
 msgid "copied to clipboard"
-msgstr ""
+msgstr "复制至粘贴板"
 
 msgid "Portuguese"
-msgstr ""
+msgstr "葡萄牙"
 
 msgid "Read more."
-msgstr ""
+msgstr "阅读更多。"
 
 msgid "The password for this virtual machine connection is :"
-msgstr ""
+msgstr "连接虚拟机的密码是："
 
 msgid "view"
-msgstr ""
+msgstr "查看"
 
 msgid "Start again"
-msgstr ""
+msgstr "再次启动"
 
 msgid "The machine is down."
-msgstr ""
+msgstr "主机已关机。"
 
 msgid "Remove"
-msgstr ""
+msgstr "删除"
 
 msgid "The machine must be started to take the screenshot."
-msgstr ""
+msgstr "主机必须为启动执行快照。"
 
 msgid "Take screenshot"
-msgstr ""
+msgstr "执行快照"
 
 msgid "Set base picture"
-msgstr ""
+msgstr "设置基础镜像图片"
 
 msgid "Saving the screenshot, please wait a moment..."
-msgstr ""
+msgstr "保存快照，请等待几分钟…"
 
 msgid "You need to run the machine in order to take a screenshot."
-msgstr ""
+msgstr "你需要运行主机以便于执行快照。"
 
 msgid "Copying the screenshot, please wait a moment..."
-msgstr ""
+msgstr "复制快照中，请稍候…"
 
 msgid "You need a screenshot in order to copy it to the base machine."
-msgstr ""
+msgstr "您需要一个快照复制为基础镜像。"
 
 msgid "Add"
-msgstr ""
+msgstr "添加"
 
 msgid "The changes will apply on next restart"
-msgstr ""
+msgstr "变更将于下次重启时生效"
 
 msgid "This VM is running and can't be renamed."
-msgstr ""
+msgstr "运行中虚拟机的不能重命名。"
 
 msgid "Thanks to:"
-msgstr ""
+msgstr "感谢："
 
 msgid "licensed."
-msgstr ""
+msgstr "已授权。"
+
+msgid "It is required a viewer to run the virtual machines."
+msgstr "需要一个视图去运行虚拟机。"
+
+msgid "Yes, shutwdown all the clones"
+msgstr "是的，关闭所有克隆"
+
+msgid "Keep in mind that there may be users using a clone"
+msgstr "请注意用户正在使用克隆"
+
+msgid "Shutdown all clones"
+msgstr "关闭所有克隆"
+
+msgid "These actions affect all the clones on the machine"
+msgstr "这个动作影响虚拟机的所有克隆"
+
+msgid "Add description"
+msgstr "添加描述"
+
+msgid "Enable last for not allowed restrictions."
+msgstr "为不允许的限制启用最后一条。"
+
+msgid "entries."
+msgstr "记录。"
+
+msgid "has at least"
+msgstr "最少有"
+
+msgid "No entries found"
+msgstr "未找到记录"
+
+msgid "Verifying"
+msgstr "验证中"
+
+msgid "save"
+msgstr "保存"
+
+msgid "verify"
+msgstr "验证"
+
+msgid "If none of the previous match, access is denied."
+msgstr "如果前面没有匹配，访问则被拒绝。"
+
+msgid "If none of the previous match, access is allowed."
+msgstr "如果前面无匹配，访问则被允许。"
+
+msgid "Default"
+msgstr "默认"
+
+msgid "Last"
+msgstr "最后"
+
+msgid "Allowed"
+msgstr "允许的"
+
+msgid "Value"
+msgstr "值"
+
+msgid "Attribute"
+msgstr "属性"
+
+msgid "not found in LDAP server"
+msgstr "在LDAP服务器中未发现"
+
+msgid "User name"
+msgstr "用户名"
+
+msgid "Type a typical LDAP user name to fetch the attribute list"
+msgstr "输入传统的LDAP用户名并获取属性列表"
+
+msgid "Italian"
+msgstr "意大利"
+
+msgid "Vietnamese"
+msgstr "越南"
+
+msgid "Session timeout"
+msgstr "会话超时"
+
+msgid "Empty password"
+msgstr "清空密码"
+
+msgid "Empty login name"
+msgstr "清空用户名"
+
+msgid "Access denied"
+msgstr "访问被拒绝"
+
+msgid "Start all clones"
+msgstr "启动所有克隆"
+
+msgid "Update password"
+msgstr "更新密码"
+
+msgid "Change password"
+msgstr "变更密码"
+
+msgid "Setting your default language"
+msgstr "设置您的默认语言"
+
+msgid "A node with that name already exists."
+msgstr "该名称的节点已经存在"
+
+msgid "Address"
+msgstr "地址"
+
+msgid "New Node"
+msgstr "新节点"
+
+msgid "Clones"
+msgstr "克隆"
