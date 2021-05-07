@@ -1268,8 +1268,12 @@ sub _insert_display( $self, $display ) {
         eval {
             $sth->execute(map { $display->{$_} } sort keys %$display);
         };
-        last if !$@ || ( $@ !~ /(Duplicate entry .* for key|UNIQUE constraint).*'(.*)'/);
-        my $field = $2;
+        last unless $@
+            && ( $@ =~ /Duplicate entry .* for key.*'(.*)'/
+                || $@ =~ /UNIQUE constraint failed:\s+(.*)/
+            );
+        ;
+        my $field = $1;
         if ($field =~ /n_order/ && $display->{n_order}) {
             $self->_clean_display_order($display->{n_order});
         } elsif ($field =~ /port/) {
@@ -1329,7 +1333,7 @@ sub _update_display( $self, $new_display_orig, $old_display ) {
 
     my $sth = $$CONNECTOR->dbh->prepare($sql);
     my $used_port = {};
-    for ( ;; ) {
+    for ( 1 .. 10 ) {
         my @values = map { $new_display{$_} } sort keys %new_display ;
         eval { $sth->execute(@values, $id) };
         warn $@.Dumper(\%new_display) if $@;
@@ -1364,12 +1368,14 @@ sub _fix_duplicate_display_port($self, $port) {
                 id_domain=> $self->id
                 ,after_request => $req->id
                 ,uid => Ravada::Utils::user_daemon->id
-
+                ,_force => 1
             );
+            my @after = ( after_request => $req->id );
+            @after = ( after_request => $req2->id ) if $req2;
             Ravada::Request->start_domain(
                 id_domain => $self->id,
                 ,uid => Ravada::Utils::user_daemon->id
-                ,after_request => $req2->id
+                ,@after
             );
             die "Error: ".$self->name." [ ".$self->id
             ." ]  port $port already used in domain $id_domain. Retry.\n";

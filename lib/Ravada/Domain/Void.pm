@@ -691,6 +691,12 @@ sub _set_default_info($self, $listen_ip=undef) {
             ,mac => _new_mac()
             ,time => time
     };
+
+    $info->{interfaces}->[0] = {
+        hwaddr => $info->{mac}
+        ,address => $info->{ip}
+    };
+
     $self->_store(info => $info);
     $self->_set_display($listen_ip);
     my $hardware = $self->_value('hardware');
@@ -699,10 +705,6 @@ sub _set_default_info($self, $listen_ip=undef) {
         next if $name eq 'disk' || $name eq 'display';
         $self->set_controller($name, 1) unless exists $hardware->{$name}->[0];
     }
-    $info->{interfaces}->[0] = {
-        hwaddress => $info->{mac}
-        ,address => $info->{ip}
-    };
     return $info;
 }
 

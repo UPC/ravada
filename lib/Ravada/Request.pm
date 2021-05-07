@@ -483,7 +483,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request after_request_ok retry _no_duplicate)) {
+    for (qw(at after_request after_request_ok retry _no_duplicate _force)) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
