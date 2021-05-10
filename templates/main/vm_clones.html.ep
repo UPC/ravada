@@ -17,11 +17,13 @@
         </div>
         <div class="row">
             <button class="btn btn-primary mr-2" id="start-clones" name="start-clones"
+                ng-disabled="isPastTime(exec_time, exec_time_start)"
                 ng-click="request('start_clones',{ 'id_domain': showmachine.id, 'at': isPastTime(exec_time) ? '' : getUnixTimeFromDate(exec_time), 'exec_sequentially': exec_sequentially })"
             >
                 <%=l 'Start all clones' %>
             </button>
             <button class="btn btn-danger" id="shutdown-clones" name="shutdown-clones"
+                ng-disabled="isPastTime(exec_time, exec_time_start)"
                 ng-click="shutdown_clones=1"
             >
                 <%=l 'Shutdown all clones' %>
