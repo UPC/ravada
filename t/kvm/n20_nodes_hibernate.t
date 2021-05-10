@@ -53,6 +53,8 @@ sub test_node_down($node, $action, $action_name) {
     is($clone->is_local, 1,"Expecting clone ".$clone->name." local");
     is($domain->base_in_vm($node->id),1);
 
+    delete_request('set_base_vm');
+    wait_request(debug => 0);
     $node->_clean_cache();
     start_node($node);
     is($node->is_active,1);
@@ -62,13 +64,18 @@ sub test_node_down($node, $action, $action_name) {
 
     eval { $clone->shutdown_now(user_admin) };
     is($@,'');
-    eval { $clone->migrate($node) };
-    is($@,'');
+    my $req = Ravada::Request->migrate(id_domain => $clone->id
+        ,uid => user_admin->id
+        ,id_node =>$node->id
+    );
+    wait_request($req);
+    is($req->error,'') or exit;
 
-    is($clone->is_local, 0);
-    is($clone->_vm->id, $node->id);
+    my $clone2 = Ravada::Domain->open($clone->id);
+    is($clone2->is_local, 0);
+    is($clone2->_vm->id, $node->id);
 
-    $clone->remove(user_admin);
+    $clone2->remove(user_admin);
 
     $domain = Ravada::Domain->open($domain->id);
     eval { $domain->remove(user_admin) };

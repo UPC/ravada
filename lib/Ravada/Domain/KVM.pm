@@ -668,6 +668,7 @@ sub display_info($self, $user) {
         }
 
         $display->{port} = undef if $display->{port} && $display->{port}==-1;
+        $display->{is_secondary} = 0;
         my $display_tls;
         if (exists $display->{tls_port} && $display->{tls_port} && $self->_vm->tls_ca) {
             my %display_tls = %$display;

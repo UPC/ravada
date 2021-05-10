@@ -168,7 +168,9 @@ sub test_remove_display($vm) {
     my $domain = create_domain($vm);
     ok($domain->_has_builtin_display) or die $domain->name;
     my $display0 = $domain->info(user_admin)->{hardware}->{display};
-    is(scalar(@$display0),1+$TLS) or die $domain->name." ".Dumper($display0);
+    my $n= 1;
+    $n++ if $TLS && $domain->is_active;
+    is(scalar(@$display0),$n) or die $domain->name." ".Dumper($display0);
     my $req = Ravada::Request->remove_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -240,14 +242,13 @@ sub test_add_display($vm) {
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     is($domain_f->_has_builtin_display,1 ) or die $domain->name;
+    $domain->start(user_admin);
 
     my $display = $domain->info(user_admin)->{hardware}->{display};
     is(scalar(@$display),2+$TLS);
     is($display->[0]->{is_builtin},1);
     is($display->[1]->{is_builtin},1) if $TLS;
     is($display->[1+$TLS]->{is_builtin},0);
-
-    $domain->start(user_admin);
 
     my $display_info = $domain->info(user_admin)->{display};
 
@@ -277,25 +278,25 @@ sub test_add_display($vm) {
 
 }
 
-sub test_displays_added_on_refresh($domain, $n_expected, $req_refresh=1) {
+sub test_displays_added_on_refresh($domain, $n_expected, $delete=1) {
 
     delete_request_not_done('shutdown','shutdown_domain', 'force_shutdown');
     Ravada::Request->start_domain(uid => user_admin->id, id_domain => $domain->id
         ,remote_ip => '1.2.3.4');
 
-    if ($req_refresh) {
+    if ($delete) {
         my $sth = connector->dbh->prepare("DELETE FROM domain_displays WHERE id_domain=?");
         $sth->execute($domain->id);
-        my $req = Ravada::Request->refresh_machine(
+    }
+    my $req = Ravada::Request->refresh_machine(
             uid => user_admin->id
             ,id_domain => $domain->id
-        );
+            ,_force => 1
+    );
 
-        wait_request(debug => 0);
-    }
+    wait_request(debug => 0);
     my $sth_count = connector->dbh->prepare(
         "SELECT count(*) FROM domain_displays WHERE id_domain=?");
-    $sth_count->execute($domain->id);
     $sth_count->execute($domain->id);
     my ($count) = $sth_count->fetchrow;
     is($count, $n_expected,"Expecting $n_expected displays on table domain_displays for ".$domain->name) or confess;
@@ -1237,7 +1238,7 @@ sub test_domain_limit_admin {
     is(rvd_back->list_domains(user => user_admin , active => 1),1);
 
     $domain2->start( user_admin );
-    my $req = Ravada::Request->enforce_limits(timeout => 1);
+    my $req = Ravada::Request->enforce_limits(timeout => 60);
     wait_request();
     my @list = rvd_back->list_domains(user => user_admin, active => 1);
     is(scalar @list,2) or die Dumper([map { $_->name } @list]);
@@ -1319,7 +1320,7 @@ sub test_domain_limit_allowed {
     is(rvd_back->list_domains(user => $user, active => 1),1);
 
     $domain2->start( $user );
-    my $req = Ravada::Request->enforce_limits(timeout => 1);
+    my $req = Ravada::Request->enforce_limits(timeout => 60);
     wait_request();
     my @list = rvd_back->list_domains(user => $user, active => 1);
     is(scalar @list,2) or die Dumper([ map { $_->name } @list]);
@@ -1341,26 +1342,26 @@ sub test_enforce_limits($domain, $n_expected, $user=user_admin) {
     # it is over limit
     delete_request('enforce_limits');
     wait_request();
-    for my $n ( 1 .. 100 ) {
+    for my $n ( 1 .. 10 ) {
         diag("$n enforce limits");
         if (!$domain->is_active()) {
             $domain->start(user =>$user, remote_ip => '1.2.3.4');
-            wait_request();
+            wait_request(skip => [], debug => 0 );
         }
         my $req;
-        for my $m ( 1 .. 100 ) {
+        for my $m ( 1 .. 10 ) {
             diag("$n.$m create request enforce_limits");
             my @list = rvd_back->list_domains(user => $user, active => 1);
             warn Dumper([ map { $_->name } @list]);
             return if scalar(@list)<=$n_expected ;
-            $req = Ravada::Request->enforce_limits(timeout => 1, _force => 1);
+            $req = Ravada::Request->enforce_limits(_force => 1);
             last if $req;
             sleep 1;
         }
         my @list = rvd_back->list_domains(user => $user, active => 1);
         warn Dumper([ map { $_->name } @list]);
         return if scalar(@list)<=$n_expected ;
-        wait_request();
+        wait_request( request => $req, debug => 0);
         next if $req->status ne 'done';
         is($req->status,'done');
         if ($req->error && $req->error =~ /run recently/) {
@@ -1622,6 +1623,7 @@ sub test_display_drivers($vm, $remove) {
             $n_displays = scalar(@{$domain->info(user_admin)->{hardware}->{display}});
         }
     }
+    delete_request('add_hardware','refresh_machine','remove_hardware');
     my $displays0 = $domain->info(user_admin)->{hardware}->{display};
     my $req = Ravada::Request->add_hardware(
         uid => user_admin->id
@@ -1634,7 +1636,8 @@ sub test_display_drivers($vm, $remove) {
     like($req->error, qr/unknown/i);
 
     my $displays1 = $domain->info(user_admin)->{hardware}->{display};
-    is(scalar(@$displays1),scalar(@$displays0)) or exit;
+    ok(!grep({$_->{driver} eq 'fail' } @$displays1),Dumper( $domain->name, $displays1))
+        or exit;
 
     $domain->remove(user_admin);
 }
@@ -2033,6 +2036,11 @@ for my $vm_name ( vm_names() ) {
             $BASE = create_domain($vm);
         }
         flush_rules() if !$<;
+
+        test_domain_limit_noadmin($vm_name);
+        test_domain_limit_already_requested($vm_name);
+
+        test_change_display_settings($vm);
         test_display_drivers($vm,0);
         test_display_drivers($vm,1); #remove after testing display type
         test_display_info($vm);
@@ -2062,8 +2070,6 @@ for my $vm_name ( vm_names() ) {
 
         test_prepare_chained($vm);
         test_prepare_fail($vm);
-
-        test_domain_limit_already_requested($vm_name);
 
         test_prepare_base_with_cd($vm);
         test_clone_with_cd($vm);

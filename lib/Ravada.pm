@@ -1967,6 +1967,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
     $self->_upgrade_table('domain_ports', 'restricted','int(1) DEFAULT 0');
     $self->_upgrade_table('domain_ports', 'is_active','int(1) DEFAULT 0');
+    $self->_upgrade_table('domain_ports', 'is_secondary','int(1) DEFAULT 0');
     $self->_upgrade_table('domain_ports', 'id_vm','int(1) DEFAULT NULL');
 
     $self->_upgrade_table('messages','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
@@ -2870,7 +2871,8 @@ sub process_requests {
     }
 
     $self->_timeout_requests();
-    warn Dumper([map { $_->id." ".($_->pid or '')." ".$_->command." ".$_->status } @reqs ])
+    warn Dumper([map { $_->id." ".($_->pid or '')." ".$_->command." ".$_->status }
+            grep { $_->id } @reqs ])
         if ($DEBUG || $debug ) && @reqs;
 
     return scalar(@reqs);
@@ -2905,7 +2907,7 @@ sub _timeout_requests($self) {
         my $req = Ravada::Request->open($id);
         my $timeout = $req->defined_arg('timeout') or next;
         next if time - $start_time <= $timeout;
-        warn "request ".$req->pid." ".$req->command." timeout";
+        warn "request ".$req->pid." ".$req->command." timeout [".(time - $start_time)." <= $timeout";
         push @requests,($req);
     }
     $sth->finish;

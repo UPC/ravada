@@ -459,7 +459,7 @@ sub _around_create_domain {
         $domain->_data(shutdown_disconnected => $base->_data('shutdown_disconnected'));
         for my $port ( $base->list_ports ) {
             my %port = %$port;
-            delete @port{'id','id_domain','public_port','id_vm'};
+            delete @port{'id','id_domain','public_port','id_vm', 'is_secondary'};
             $domain->expose(%port);
         }
         my @displays = $base->_get_controller_display();
@@ -827,7 +827,7 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown);
     my @requests;
     for my $req ( $base->list_requests ) {
         push @requests,($req) if !$ignore_requests{$req->command};
@@ -835,7 +835,7 @@ sub _check_require_base {
     if (@requests) {
         confess "ERROR: Domain ".$base->name." has ".$base->list_requests
                             ." requests.\n"
-                            .Dumper([$base->list_requests])
+                            .Dumper(\@requests)
             unless scalar @requests == 1 && $request
                 && $requests[0]->id eq $request->id;
     }

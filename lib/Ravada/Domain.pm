@@ -1167,6 +1167,8 @@ sub _store_display($self, $display, $display_old=undef) {
         lock_hash(%display_new);
     }
 
+    confess "Error: tls displays should be secondary"
+    if $driver =~ /-tls/ && exists $display_new{is_secondary} && !$display_new{is_secondary};
    #warn "updating ".Dumper($display_old,\%display_new);
     if ($display_old) {
         $self->_update_display(\%display_new, $display_old);
@@ -1222,8 +1224,8 @@ sub _max_n_order_display($self) {
 sub _normalize_display($self, $display, $json=1) {
     confess Dumper($display) if exists $display->{port} && $display->{port} && !$display->{id_vm};
     my %valid_field = map { $_ => 1 }
-    qw(id id_domain port ip display listen_ip driver password is_builtin
-    is_active n_order extra id_domain_port id_vm is_secondary);
+    qw(id id_domain port ip display listen_ip driver password is_builtin is_secondary
+    is_active n_order extra id_domain_port id_vm );
 
     my $extra = {};
     unlock_hash(%$display);
@@ -1253,6 +1255,8 @@ sub _insert_display( $self, $display ) {
 
     $display->{is_builtin} = $self->_is_display_builtin($display->{driver})
     if !defined $display->{is_builtin};
+
+    confess Dumper($display) if $display->{driver} =~ /-tls/ && !$display->{is_secondary};
 
     lock_hash(%$display);
     $self->_clean_display_order($display->{n_order}) if $display->{n_order};
@@ -1324,6 +1328,10 @@ sub _update_display( $self, $new_display_orig, $old_display ) {
     && $new_display{port} eq 'auto';
 
     return if !keys %new_display;
+
+    confess if $old_display->{driver} =~ /-tls/
+    && exists $new_display{is_secondary}
+    && !$new_display{is_secondary};
 
     my $sql = "UPDATE domain_displays SET "
     .join(" , ", map { "$_ = ? " } sort keys %new_display)
@@ -2784,7 +2792,7 @@ sub _copy_ports($base, $copy) {
     for my $port ( $base->list_ports ) {
         my %port = %$port;
         next if $port_already{$port->{internal_port}};
-        delete @port{'id','id_domain','public_port'};
+        delete @port{'id','id_domain','public_port','is_secondary'};
         $copy->expose(%port);
     }
 
@@ -4690,7 +4698,7 @@ sub _rsync_volumes_back($self, $node, $request=undef) {
 
 sub _pre_migrate($self, $node, $request = undef) {
 
-    confess "Error: node not active" if !$node->is_active(1);
+    confess "Error: node ".$node->name." not active" if !$node->is_active(1);
 
     $self->_check_equal_storage_pools($node) if $self->_vm->is_active;
 
@@ -5281,10 +5289,15 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
     my $is_display_builtin;
     if ($hardware eq 'display') {
 
-        my $display = Ravada::Front::Domain::_get_controller_display($self);
+        my @display = Ravada::Front::Domain::_get_controller_display($self);
         my $current_data;
-        if (defined $index) {
-            $current_data = $self->_get_display_by_index($index);
+        $current_data = $self->_get_display($data->{driver}) if $data->{driver};
+        if (!$current_data && defined $index) {
+            $current_data = $display[$index];
+            if ($current_data->{is_secondary}) {
+                my ($driver) = $current_data->{driver} =~ /(.*)-\w+/;
+                $current_data = $self->_get_display($driver);
+            }
         } else {
             $current_data = $self->_get_display($data->{driver});
         }
