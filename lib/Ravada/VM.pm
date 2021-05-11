@@ -187,7 +187,7 @@ sub open {
     lock_hash(%$row);
     confess "ERROR: I can't find VM id=$args{id}" if !$row || !keys %$row;
 
-    if ( $VM{$args{id}} && $VM{$args{id}}->name eq $row->{name} ) {
+    if (!$args{readonly} && $VM{$args{id}} && $VM{$args{id}}->name eq $row->{name} ) {
         my $internal_vm;
         eval { $internal_vm = $VM{$args{id}}->vm };
         warn $@ if $@;

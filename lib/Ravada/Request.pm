@@ -285,6 +285,7 @@ sub info {
         ,status => $self->status
         ,error => $self->error
         ,id_domain => $self->id_domain
+        ,output => $self->output
     }
 }
 
