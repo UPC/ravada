@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+    <div id="wrapper">
+        %= include 'bootstrap/navigation'
+        <div id="page-wrapper"
+             ng-controller="admin_groups"
+             ng-init="list_group_members('<%= $name %>');list_users();"
+            >
+            <div class="page-header">
+              <div class="card" id="admin-content">
+                <div class="card-header">
+                    <h2 class="display-5"><%=l 'Group' %> <%= $name %></h2>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+                <div ng-show="<%= $_user->can_manage_groups %>">
+                    <%=l 'New group member' %>
+                    <select ng-model="new_member"
+                        ng-options="user.name for user in users"
+                    >
+                    </select>
+                    <button ng-show="new_member && new_member.name"
+                        ng-click="add_member(new_member.name)">Add</button>
+                    <div ng-show="error">{{error}}</div>
+                </div>
+                <table class="table table-striped" ng-show="group_members.length>0">
+                    <thead>
+                        <tr>
+                            <th><%=l 'Name' %></th>
+                        </tr>
+                    </thead>
+                        <tbody>
+                                <tr ng-repeat="user in group_members">
+                                    <td>
+                                        <button ng-click="remove_member(user)"
+                                            ng-show="<%= $_user->can_manage_groups %>"
+                                            class="badge badge-light text-blue">x</button>
+                                        {{user}}
+                                    </td>
+                                </tr>
+                    </tbody>
+                </table>
+                <div ng-show="group_members.length==0">No members found</div>
+            </div>
+        </div>
+    </div>
+%= include $footer
+%= include 'bootstrap/scripts'
+</body>
+</html>

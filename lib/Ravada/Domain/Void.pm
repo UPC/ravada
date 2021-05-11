@@ -37,9 +37,6 @@ our %CHANGE_HARDWARE_SUB = (
     ,memory => \&_change_hardware_memory
 );
 
-our $CONVERT = `which convert`;
-chomp $CONVERT;
-
 our $FREE_PORT = 5900;
 #######################################3
 
@@ -658,7 +655,7 @@ sub _file_screenshot {
     return $self->_config_dir."/".$self->name.".png";
 }
 
-sub can_screenshot { return $CONVERT; }
+sub can_screenshot { return 1 }
 
 sub get_info {
     my $self = shift;
@@ -671,6 +668,13 @@ sub get_info {
     return $info;
 }
 
+sub _new_mac($mac='ff:54:00:a7:49:71') {
+    my $num =sprintf "%02X", rand(0xff);
+    my @macparts = split/:/,$mac;
+    $macparts[5] = $num;
+    return join(":",@macparts);
+}
+
 sub _set_default_info($self, $listen_ip=undef) {
     my $info = {
             max_mem => 512*1024
@@ -679,6 +683,7 @@ sub _set_default_info($self, $listen_ip=undef) {
             ,n_virt_cpu => 1
             ,state => 'UNKNOWN'
             ,ip =>'1.1.1.'.int(rand(254)+1)
+            ,mac => _new_mac()
             ,time => time
     };
     $self->_store(info => $info);
@@ -689,6 +694,10 @@ sub _set_default_info($self, $listen_ip=undef) {
         next if $name eq 'disk' || $name eq 'display';
         $self->set_controller($name, 1) unless exists $hardware->{$name}->[0];
     }
+    $info->{interfaces}->[0] = {
+        hwaddress => $info->{mac}
+        ,address => $info->{ip}
+    };
     return $info;
 }
 
@@ -1000,6 +1009,15 @@ sub dettach($self,$user) {
 sub _check_port($self,@args) {
     return 1 if $self->is_active;
     return 0;
+}
+
+sub copy_config($self, $domain) {
+    my $config_new = $self->_load();
+    for my $field ( keys %$config_new ) {
+        my $value = $config_new->{$field};
+        $value = 0 if $field eq 'is_active';
+        $self->_store($field, $value);
+    }
 }
 
 1;

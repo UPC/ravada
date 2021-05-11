@@ -30,7 +30,7 @@ my %DIR = (
     ,'etc/systemd/' => 'lib/systemd/system/'
 );
 
-for ( qw(css fallback fonts img js )) {
+for ( qw(css fallback fonts img js favicon.ico )) {
     $DIR{"public/$_"} = "usr/share/ravada/public";
 }
 

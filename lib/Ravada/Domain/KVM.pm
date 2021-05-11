@@ -1545,7 +1545,16 @@ sub get_info {
     $info->{cpu_time} = $info->{cpuTime};
     $info->{n_virt_cpu} = $info->{nrVirtCpu};
     confess Dumper($info) if !$info->{n_virt_cpu};
-    $info->{ip} = $self->ip()   if $self->is_active();
+
+    if ( $self->is_active() ) {
+        $info->{ip} = $self->ip();
+        my @interfaces;
+        eval { @interfaces = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
+        my @interfaces2;
+        eval { @interfaces2 = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_AGENT) };
+        @interfaces = @interfaces2 if !scalar(@interfaces);
+        $info->{interfaces} = \@interfaces;
+    }
 
     lock_keys(%$info);
     return $info;
@@ -2587,6 +2596,16 @@ sub reload_config($self, $doc) {
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
     $self->info(Ravada::Utils::user_daemon);
+}
+
+sub copy_config($self, $domain) {
+    my $doc = XML::LibXML->load_xml(string => $domain->xml_description(Sys::Virt::Domain::XML_INACTIVE));
+    my ($uuid) = $doc->findnodes("/domain/uuid/text()");
+    confess "I cant'find /domain/uuid in ".$self->name if !$uuid;
+
+    $uuid->setData($self->domain->get_uuid_string);
+    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    $self->domain($new_domain);
 }
 
 sub _change_xml_address($self, $doc, $address, $bus) {

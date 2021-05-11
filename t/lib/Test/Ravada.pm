@@ -53,6 +53,7 @@ create_domain
     hibernate_domain_internal
     remote_node
     remote_node_2
+    remote_node_shared
     add_ubuntu_minimal_iso
     create_ldap_user
     connector
@@ -81,6 +82,7 @@ create_domain
     mangle_volume
     test_volume_contents
     test_volume_format
+    unload_nbd
 
     check_libvirt_tls
 
@@ -129,6 +131,7 @@ my $DEV_NBD = "/dev/nbd10";
 my $MNT_RVD= "/mnt/test_rvd";
 my $QEMU_NBD = `which qemu-nbd`;
 chomp $QEMU_NBD;
+my $NBD_LOADED;
 
 my $FH_FW;
 my $FH_NODE;
@@ -138,6 +141,11 @@ my ($MOJO_USER, $MOJO_PASSWORD);
 
 my $BASE_NAME= "zz-test-base-alpine";
 my $FILE_CONFIG_QEMU = "/etc/libvirt/qemu.conf";
+
+my @FLUSH_RULES=(
+    ["-t","nat","-F","DOCKER"]
+    ,["-t","nat","-F","POSTROUTING"]
+);
 
 sub user_admin {
 
@@ -151,7 +159,7 @@ sub user_admin {
     };
     if ($@ && $@ =~ /Login failed/ ) {
         $login = Ravada::Auth::SQL->new(name => $admin_name);
-        $login->remove();
+        $login->remove() if $login->id;
         $login = undef;
     } elsif ($@) {
         die $@;
@@ -332,7 +340,7 @@ sub rvd_front($config=undef) {
     return $RVD_FRONT;
 }
 
-sub init($config=undef, $sqlite = 1) {
+sub init($config=undef, $sqlite = 1 , $flush=0) {
 
     if ($config && ! ref($config) && $config =~ /[A-Z][a-z]+$/) {
         $config = { vm => [ $config ] };
@@ -349,11 +357,14 @@ sub init($config=undef, $sqlite = 1) {
     if ( $RVD_BACK && ref($RVD_BACK) ) {
         clean();
         # clean removes the temporary config file, so we dump it again
-        DumpFile($FILE_CONFIG_TMP, $config) if $config && ref($config);
+        if ( $config && ref($config) ) {
+            DumpFile($FILE_CONFIG_TMP, $config);
+            $config = $FILE_CONFIG_TMP;
+        }
     }
 
 
-    rvd_back($config, 0,$sqlite)  if !$RVD_BACK;
+    rvd_back($config, 0,$sqlite)  if !$RVD_BACK || $flush;
     if (!$sqlite) {
         $CONNECTOR = $RVD_BACK->connector;
     } else {
@@ -367,10 +378,6 @@ sub init($config=undef, $sqlite = 1) {
     $Ravada::VM::KVM::VERIFY_ISO = 0;
     $Ravada::VM::MIN_DISK_MB = 1;
 
-    my $file_fp = Ravada::Domain::Void::_file_free_port();
-    open my $fh,">",$file_fp or die "$! $file_fp";
-    print $fh "5900";
-    close $fh;
 }
 
 sub _load_remote_config() {
@@ -646,7 +653,16 @@ sub mojo_init() {
     return $t;
 }
 
+sub remove_old_bookings() {
+    my $sth = connector()->dbh->prepare("SELECT id FROM bookings WHERE title like ? ");
+    $sth->execute(base_domain_name().'%');
+    while (my ($id) = $sth->fetchrow) {
+        Ravada::Booking->new(id => $id)->remove();
+    }
+}
+
 sub mojo_clean($wait=1) {
+    remove_old_bookings();
     _remove_old_entries('vms');
     _remove_old_entries('networks');
     return remove_old_domains_req($wait);
@@ -741,7 +757,8 @@ sub _activate_storage_pools($vm) {
     for my $sp (@sp) {
         next if $sp->is_active;
         diag("Activating sp ".$sp->get_name." on ".$vm->name);
-        $sp->create();
+        $sp->build() unless $sp->is_active;
+        $sp->create() unless $sp->is_active;
     }
 }
 sub _remove_old_disks_kvm {
@@ -780,7 +797,13 @@ sub _remove_old_disks_kvm {
             next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2|void|backup)$/;
 
             eval { $volume->delete() };
-            warn $@ if $@;
+            if ($@) {
+                if ($@->code == 38 ) {
+                    $vm->remove_file($volume->get_path);
+                } else {
+                    warn "Error $@ removing ".$volume->get_name." in ".$vm->name if $@;
+                }
+            }
         }
     }
     eval {
@@ -840,10 +863,11 @@ sub create_user {
     return $user;
 }
 
-sub create_ldap_user($name, $password) {
+sub create_ldap_user($name, $password, $keep=0) {
 
     if ( Ravada::Auth::LDAP::search_user($name) ) {
-        diag("Removing $name");
+        return if $keep;
+        #        diag("Removing $name");
         Ravada::Auth::LDAP::remove_user($name)  
     }
 
@@ -866,6 +890,7 @@ sub create_ldap_user($name, $password) {
     push @USERS_LDAP,($name);
 
     my @user = Ravada::Auth::LDAP::search_user($name);
+    #    diag("Adding $name to ldap");
     return $user[0];
 }
 
@@ -915,7 +940,7 @@ sub wait_request {
     my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms','set_time','rsync_back', 'cleanup', 'screenshot'] );
     $skip = [ $skip ] if !ref($skip);
     my %skip = map { $_ => 1 } @$skip;
-    %skip = ( enforce_limits => 1 ) if !keys %skip;
+    %skip = ( enforce_limits => 1, cleanup => 1 ) if !keys %skip;
 
     my $check_error = delete $args{check_error};
     $check_error = 1 if !defined $check_error;
@@ -1077,40 +1102,47 @@ sub _qemu_storage_pool {
     return $pool_name;
 }
 
-sub remove_qemu_pools {
+sub remove_qemu_pools($vm=undef) {
     return if !$VM_VALID{'KVM'} || $>;
-    my $vm;
-    eval { $vm = rvd_back->search_vm('KVM') };
-    if ($@ && $@ !~ /Missing qemu-img/) {
-        warn $@;
-    }
-    if  ( !$vm ) {
-        $VM_VALID{'KVM'} = 0;
-        return;
+    return if defined $vm && $vm->type eq 'Void';
+    if (!defined $vm) {
+        eval { $vm = rvd_back->search_vm('KVM') };
+        if ($@ && $@ !~ /Missing qemu-img/) {
+            warn $@;
+        }
+        if  ( !$vm ) {
+            $VM_VALID{'KVM'} = 0;
+            return;
+        }
     }
 
     my $base = base_pool_name();
     for my $pool  ( Ravada::VM::KVM::_list_storage_pools($vm->vm)) {
         my $name = $pool->get_name;
+        eval {$pool->build(Sys::Virt::StoragePool::BUILD_NEW); $pool->create() };
+        warn $@ if $@ && $@ !~ /already active/;
         next if $name !~ qr/^$base/;
-        diag("Removing ".$pool->get_name." storage_pool");
-        _delete_qemu_pool($pool);
+        diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
         for my $vol ( $pool->list_volumes ) {
             diag("Removing ".$pool->get_name." vol ".$vol->get_name);
             $vol->delete();
         }
+        _delete_qemu_pool($pool);
         $pool->destroy();
         eval { $pool->undefine() };
+        warn $@ if $@;
         warn $@ if$@ && $@ !~ /libvirt error code: 49,/;
         ok(!$@ or $@ =~ /Storage pool not found/i);
     }
 
-    opendir my $ls ,"/var/tmp" or die $!;
-    while (my $file = readdir($ls)) {
-        next if $file !~ qr/^$base/;
+    if ($vm->is_local) {
+        opendir my $ls ,"/var/tmp" or die $!;
+        while (my $file = readdir($ls)) {
+            next if $file !~ qr/^$base/;
 
-        my $dir = "/var/tmp/$file";
-        remove_tree($dir,{ safe => 1, verbose => 1}) or die "$! $dir";
+            my $dir = "/var/tmp/$file";
+            remove_tree($dir,{ safe => 1, verbose => 1}) or die "$! $dir";
+        }
     }
 }
 
@@ -1122,7 +1154,11 @@ sub _delete_qemu_pool($pool) {
         my $path ="$dir/$file";
         unlink $path or die "$! $path" if -e $path;
     }
-    rmdir($dir) or die "$! $dir";
+    if (-l $dir) {
+        unlink $dir or die "$! $dir";
+    } elsif (-e $dir) {
+        rmdir($dir) or die "$! $dir";
+    }
 
 }
 
@@ -1157,6 +1193,9 @@ sub clean {
     _clean_db();
     _clean_file_config();
     shutdown_nodes();
+    _unload_nbd();
+
+    _check_leftovers();
 }
 
 sub _clean_db {
@@ -1218,6 +1257,7 @@ sub clean_remote_node {
     wait_request(debug => 0);
     _remove_old_disks($node);
     flush_rules_node($node)  if !$node->is_local() && $node->is_active;
+    remove_qemu_pools($node);
 }
 
 sub _remove_old_disks {
@@ -1410,6 +1450,10 @@ sub flush_rules_node($node) {
     is($err,'');
     ($out, $err) = $node->run_command("iptables","-X", $CHAIN);
     is($err,'') or die `iptables-save`;
+    for my $rule (@FLUSH_RULES) {
+        ($out, $err) = $node->run_command("iptables",@$rule);
+        like($err,qr(^$|chain/target/match by that name));
+    }
 
     _flush_forward($node);
 }
@@ -1439,13 +1483,17 @@ sub flush_rules {
         run3([@cmd, $n], \$in, \$out, \$err);
         warn $err if $err;
     }
-    run3(["iptables","-F", $CHAIN], \$in, \$out, \$err);
+    run3(["iptables","-F", $CHAIN,"-w"], \$in, \$out, \$err);
     like($err,qr(^$|chain/target/match by that name));
     ($out, $err) = run3(["iptables","-D","INPUT","-j",$CHAIN],\$in, \$out, \$err);
     like($err,qr(^$|chain/target/match by that name));
-    run3(["iptables","-X", $CHAIN], \$in, \$out, \$err);
+    run3(["iptables","-X", $CHAIN,"-w"], \$in, \$out, \$err);
     like($err,qr(^$|chain/target/match by that name));
 
+    for my $rule (@FLUSH_RULES) {
+        run3(["iptables",@$rule,"-w"], \$in, \$out, \$err);
+        like($err,qr(^$|chain/target/match by that name));
+    }
     _flush_forward();
 }
 
@@ -1776,6 +1824,15 @@ sub remote_node_2($vm_name) {
     return @nodes;
 }
 
+sub remote_node_shared($vm_name) {
+    my $remote_config = {
+        'name' => 'ztest-shared'
+        ,'host' => '192.168.122.153'
+        ,public_ip => '192.168.130.153'
+    };
+    return _do_remote_node($vm_name, $remote_config);
+}
+
 sub _do_remote_node($vm_name, $remote_config) {
     my $vm = rvd_back->search_vm($vm_name);
 
@@ -1913,7 +1970,7 @@ sub connector {
                         , PrintError => 0
                         , Callbacks  => $_CONNECTED_CALLBACK,
                 });
-
+    $connector->dbh->do("PRAGMA foreign_keys = ON");
     _create_db_tables($connector);
 
     $CONNECTOR = $connector;
@@ -1930,6 +1987,16 @@ sub DESTROY {
 sub _check_leftovers {
     _check_leftovers_users();
     _check_leftovers_domains();
+    _check_removed_nbd();
+
+}
+
+sub _check_removed_nbd {
+    return if $<;
+    my ($in, $out, $err);
+    my @cmd = ('rmmod',"nbd");
+    run3(\@cmd,\$in,\$out,\$err);
+    BAIL_OUT($err) if $err && $err !~ /not currently loaded/;
 }
 
 sub _check_leftovers_domains {
@@ -1971,6 +2038,7 @@ sub _check_leftovers_users {
 
 
 sub end {
+    _unload_nbd();
     _check_leftovers
     clean();
     _unlock_all();
@@ -2025,7 +2093,7 @@ sub shutdown_nodes {
     }
 }
 
-sub create_storage_pool($vm, $dir=undef) {
+sub create_storage_pool($vm, $dir=undef, $pool_name=new_pool_name()) {
     if (!ref($vm)) {
         $vm = rvd_back->search_vm($vm);
     }
@@ -2034,12 +2102,12 @@ sub create_storage_pool($vm, $dir=undef) {
 
     my $capacity = 1 * 1024 * 1024;
 
-    my $pool_name = new_pool_name();
     if (!$dir) {
         $dir = "/var/tmp/$pool_name";
     }
 
     mkdir $dir if ! -e $dir;
+    $vm->run_command("mkdir",$dir);
 
     my $xml =
 "<pool type='dir'>
@@ -2061,9 +2129,12 @@ sub create_storage_pool($vm, $dir=undef) {
 </pool>"
 ;
     my $pool;
-    eval { $pool = $vm->vm->create_storage_pool($xml) };
+    eval { $pool = $vm->vm->define_storage_pool($xml) };
     ok(!$@,"Expecting \$@='', got '".($@ or '')."'") or return;
     ok($pool,"Expecting a pool , got ".($pool or ''));
+    $pool->build( Sys::Virt::StoragePool::BUILD_NEW );
+    $pool->create();
+    $pool->set_autostart(1);
 
     return $pool_name;
 
@@ -2104,17 +2175,24 @@ sub _lsof_nbd($vm, $dev_nbd) {
     return 0;
 }
 
-sub _load_nbd($vm) {
+sub unload_nbd() {
+    _unload_nbd();
+}
+
+sub _unload_nbd() {
+    my @cmd = ($QEMU_NBD,"-d", $DEV_NBD);
+    my ($in, $out, $err);
+    run3(\@cmd,\$in,\$out,\$err);
+    die "@cmd : $err" if $err && $err !~ /o such file or directory/;
+}
+
+sub _do_load_nbd($vm) {
     my ($in, $out, $err);
     if (!$MOD_NBD++) {
         my @cmd =("/sbin/modprobe","nbd", "max_part=63");
         run3(\@cmd, \$in, \$out, \$err);
         die join(" ",@cmd)." : $? $err" if $?;
     }
-    my @cmd = ($QEMU_NBD,"-d", $DEV_NBD);
-    ($out,$err) = $vm->run_command(@cmd);
-    die "@cmd : $err" if $err;
-
     return if !_lsof_nbd($vm, $DEV_NBD);
 
     my ($dev,$n) = $DEV_NBD =~ /(.*?)(\d+)$/;
@@ -2125,12 +2203,19 @@ sub _load_nbd($vm) {
     die "Error: I can't find more NBD devices ( $DEV_NBD) "
     if ! -e $DEV_NBD;
 
-    return _load_nbd($vm);
+    return _do_load_nbd($vm);
 }
 
-sub _mount_qcow($vm, $vol) {
-    _load_nbd($vm);
+sub _load_nbd($vm) {
+    return if $NBD_LOADED;
+    _do_load_nbd($vm);
+    $NBD_LOADED = 1;
+}
+
+sub _connect_nbd($vm,$vol) {
     my ($in,$out, $err);
+    ($out,$err) = $vm->run_command("lsof",$DEV_NBD);
+    return if $out =~ /COMMAND/;
     for ( 1 .. 10 ) {
         ($out, $err) = $vm->run_command($QEMU_NBD,"-c",$DEV_NBD, $vol);
         last if !$err;
@@ -2138,8 +2223,13 @@ sub _mount_qcow($vm, $vol) {
         sleep 1;
     }
     confess "qemu-nbd -c $DEV_NBD $vol\n?:$?\n$out\n$err" if $? || $err;
+}
+
+sub _mount_qcow($vm, $vol) {
+    _load_nbd($vm);
+    _connect_nbd($vm,$vol);
     _create_part($DEV_NBD);
-    ($out, $err) = $vm->run_command("/sbin/mkfs.ext4","${DEV_NBD}p1");
+    my ($out, $err) = $vm->run_command("/sbin/mkfs.ext4","${DEV_NBD}p1");
     die "Error on mkfs $err" if $?;
     mkdir "$MNT_RVD" if ! -e $MNT_RVD;
     $vm->run_command("/bin/mount","${DEV_NBD}p1",$MNT_RVD);
@@ -2160,8 +2250,8 @@ sub _create_part($dev) {
     return if $out =~ m{/dev/\w+\d+p\d+}mi;
 
     for (1 .. 10) {
-        @cmd = ("/sbin/fdisk",$dev);
-        $in = "n\np\n1\n\n\n\nw\np\n";
+        @cmd = ("/sbin/sfdisk",$dev);
+        $in = "type=83";
 
         run3(\@cmd, \$in, \$out, \$err);
         chomp $err;
@@ -2181,7 +2271,7 @@ sub _umount_qcow() {
         sleep 1;
     }
     die $err if $err && $err !~ /busy/ && $err !~ /not mounted/;
-    `qemu-nbd -d $DEV_NBD`;
+    #    `qemu-nbd -d $DEV_NBD`;
 }
 
 sub _mangle_vol2($vm,$name,@vol) {

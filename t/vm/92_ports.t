@@ -700,6 +700,188 @@ sub _iptables_save($vm,$table=undef,$chain=undef) {
     return @out;
 }
 
+sub test_interfaces($vm) {
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+    $domain->start( remote_ip => '10.1.1.2', user => user_admin);
+
+    _wait_ip2($vm, $domain);
+    my $info = $domain->info(user_admin);
+
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $info_f = $domain_f->info(user_admin);
+    ok(exists $info_f->{ip},"Expecting ip in front domain info");
+    is($info_f->{ip}, $domain->ip);
+
+    ok($info_f->{interfaces},"Expecting interfaces on ".$domain->_vm->type)
+        and isa_ok($info_f->{interfaces},"ARRAY","Expecting mac address is a list")
+        and do {
+            my $found = 0;
+            for my $if (@{$info_f->{interfaces}}) {
+                $found++;
+                like($if->{hwaddr}, qr/^[0-9a-f][0-9a-f]:[0-9a-f][0-9a-f]:[0-9a-f][0-9a-f]/);
+            }
+            ok($found,"Expecting some interfaces, found=$found") or exit;
+        };
+
+    $domain->remove(user_admin);
+}
+
+sub test_redirect_ip_duplicated($vm) {
+    diag("Test redirect ip duplicated ".$vm->type);
+    my $internal_port = 22;
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+    $domain->expose(port => $internal_port, name => "ssh");
+    $domain->start( remote_ip => '10.1.1.2', user => user_admin);
+    my $ip = _wait_ip2($vm, $domain);
+    wait_request(debug => 1);
+
+    my @ports0 = $domain->list_ports();
+    my ($public_port) = $ports0[0]->{public_port};
+    $vm->iptables(t => 'nat'
+        , A => 'PREROUTING'
+        , p => 'tcp'
+        , d => $vm->ip
+        , dport => $public_port+10
+        , j => 'DNAT'
+        , 'to-destination' => "$ip:$internal_port"
+    );
+    my @out = split /\n/, `iptables-save -t nat`;
+    my @open = (grep /--to-destination $ip/, @out);
+    is(scalar(@open),2) or die Dumper(\@open);
+
+    $domain->start( remote_ip => '10.1.1.2', user => user_admin);
+    wait_request(debug => 1);
+
+    @out = split /\n/, `iptables-save -t nat`;
+    @open = (grep /--to-destination $ip/, @out);
+    is(scalar(@open),1) or die Dumper(\@open);
+
+    $domain->remove(user_admin);
+}
+
+sub test_redirect_ip_duplicated_refresh($vm) {
+    diag("Test redirect ip duplicated refresh".$vm->type);
+    my $internal_port = 22;
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+    $domain->expose(port => $internal_port, name => "ssh");
+    $domain->start( remote_ip => '10.1.1.2', user => user_admin);
+    my $ip = _wait_ip2($vm, $domain);
+    wait_request(debug => 1);
+
+    my @ports0 = $domain->list_ports();
+    my ($public_port) = $ports0[0]->{public_port};
+    $vm->iptables(t => 'nat'
+        , A => 'PREROUTING'
+        , p => 'tcp'
+        , d => $vm->ip
+        , dport => $public_port+10
+        , j => 'DNAT'
+        , 'to-destination' => "$ip:$internal_port"
+    );
+    my @out = split /\n/, `iptables-save -t nat`;
+    my @open = (grep /--to-destination $ip/, @out);
+    is(scalar(@open),2) or die Dumper(\@open);
+
+    my $req = Ravada::Request->refresh_vms();
+    wait_request();
+    is($req->status,'done');
+    is($req->error, '');
+
+    @out = split /\n/, `iptables-save -t nat`;
+    @open = (grep /--to-destination $ip/, @out);
+    is(scalar(@open),1) or die Dumper(\@open);
+
+    $domain->remove(user_admin);
+}
+
+
+sub test_open_port_duplicated($vm) {
+    diag("Test open port duplicated ".$vm->type);
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
+    $base->expose(port => 22, name => "ssh");
+    my @base_ports0 = $base->list_ports();
+
+    $base->prepare_base(user => user_admin);
+
+    my $clone = $base->clone(name => new_domain_name, user => user_admin);
+
+    $clone->start(remote_ip => '10.1.1.1', user => user_admin);
+    _wait_ip2($vm, $clone);
+
+    wait_request();
+
+    my @out = split /\n/, `iptables-save -t nat`;
+    my @open = (grep /--to-destination [\d\.]+:22/, @out);
+    is(scalar(@open),1);
+    my ($public_port) = $open[0] =~ /--dport (\d+)/;
+    die "Error: no public port in $open[0]" if !$public_port;
+    $vm->iptables( t => 'nat'
+        , A => 'PREROUTING'
+        , p => 'tcp'
+        , d => '192.0.2.3'
+        , dport => $public_port
+        , j => 'DNAT'
+        , 'to-destination' => '127.0.0.1:23'
+    );
+    my @out2 = split /\n/, `iptables-save -t nat`;
+    my @open2 = (grep /--dport $public_port/, @out2);
+    is(scalar(@open2),2) or die Dumper(\@open2);
+
+    my $req = Ravada::Request->refresh_vms();
+    wait_request();
+    is($req->status,'done');
+    is($req->error, '');
+
+    my @out3 = split /\n/, `iptables-save -t nat`;
+    my @open3 = (grep /--dport $public_port/, @out3);
+    is(scalar(@open3),1) or die Dumper(\@open3);
+
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+}
+
+sub test_close_port($vm) {
+    diag("Test close port ".$vm->type);
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
+    $base->expose(port => 22, name => "ssh");
+    my @base_ports0 = $base->list_ports();
+
+    $base->prepare_base(user => user_admin);
+
+    my $clone = $base->clone(name => new_domain_name, user => user_admin);
+
+    $clone->start(remote_ip => '10.1.1.1', user => user_admin);
+    _wait_ip2($vm, $clone);
+
+    wait_request();
+
+    my @out = split /\n/, `iptables-save -t nat`;
+    my @open = (grep /--to-destination [\d\.]+:22/, @out);
+    is(scalar(@open),1);
+    my ($public_port) = $open[0] =~ /--dport (\d+)/;
+    die "Error: no public port in $open[0]" if !$public_port;
+    $vm->iptables( t => 'nat'
+        , A => 'PREROUTING'
+        , p => 'tcp'
+        , d => '192.0.2.3'
+        , dport => $public_port
+        , j => 'DNAT'
+        , 'to-destination' => '127.0.0.1:23'
+    );
+    my @out2 = split /\n/, `iptables-save -t nat`;
+    my @open2 = (grep /--dport $public_port/, @out2);
+    is(scalar(@open2),2) or die Dumper(\@open);
+    $clone->shutdown_now(user_admin);
+    wait_request();
+
+    my @out3 = split /\n/, `iptables-save -t nat`;
+    my @open3 = (grep /--to-destination [\d\.]+:22/, @out3);
+    is(scalar(@open3),0, Dumper(\@open3));
+
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+}
+
 sub test_clone_exports_add_ports($vm) {
 
     my $base = $BASE->clone(name => new_domain_name, user => user_admin);
@@ -745,40 +927,17 @@ sub test_clone_exports_add_ports($vm) {
 }
 
 sub _wait_ip2($vm_name, $domain) {
-    for ( 1 .. 22 ) {
+    $domain->start(user => user_admin, remote_ip => '1.2.3.5') unless $domain->is_active();
+    for ( 1 .. 30 ) {
         return $domain->ip if $domain->ip;
         diag("Waiting for ".$domain->name. " ip") if !(time % 10);
         sleep 1;
     }
-    confess;
+    confess "Error : no ip for ".$domain->name;
 }
 
 sub _wait_ip {
     return _wait_ip2(@_);
-    my $vm_name = shift;
-    my $domain = shift  or confess "Missing domain arg";
-
-    return $domain->ip  if $domain->ip;
-
-
-    sleep 1;
-    eval ' $domain->domain->send_key(Sys::Virt::Domain::KEYCODE_SET_LINUX,200, [28]) ';
-    die $@ if $@;
-
-    return if $@;
-    sleep 2;
-    for ( 1 .. 12 ) {
-        rvd_back->_process_requests_dont_fork();
-        eval ' $domain->domain->send_key(Sys::Virt::Domain::KEYCODE_SET_LINUX,200, [28]) ';
-        die $@ if $@;
-        sleep 2;
-    }
-    for (1 .. 30) {
-        last if $domain->ip;
-        sleep 1;
-        diag("waiting for ".$domain->name." ip") if $_ ==10;
-    }
-    return $domain->ip;
 }
 
 sub add_network_10 {
@@ -1179,6 +1338,12 @@ for my $vm_name ( vm_names() ) {
     diag("Testing $vm_name");
     flush_rules() if !$<;
     import_base($vm);
+
+    test_interfaces($vm);
+
+    test_redirect_ip_duplicated($vm);
+    test_open_port_duplicated($vm);
+    test_close_port($vm);
 
     test_routing_hibernated($vm);
     test_routing_already_used($vm,undef,'restricted');

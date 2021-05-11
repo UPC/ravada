@@ -128,6 +128,7 @@ sub _connect {
 }
 
 sub _list_storage_pools($vm) {
+    confess if !ref($vm);
    for ( ;; ) {
        my @pools;
        eval { @pools = $vm->list_storage_pools };
@@ -454,13 +455,53 @@ Returns true if the file exists in this virtual manager storage
 =cut
 
 sub file_exists($self, $file) {
+    return -e $file if $self->is_local;
+    return $self->_file_exists_remote($file);
+}
+
+sub _file_exists_remote($self, $file) {
+    $file = $self->_follow_link($file);
     for my $pool ($self->vm->list_all_storage_pools ) {
-        $pool->refresh();
-        for my $vol ( $pool->list_all_volumes ) {
-            return 1 if $vol->get_path eq $file;
+        $self->_wait_storage( sub { $pool->refresh() } );
+        my @volumes = $self->_wait_storage( sub { $pool->list_all_volumes });
+        for my $vol ( @volumes ) {
+            my $found;
+            eval {
+                my $path = $self->_follow_link($vol->get_path);
+                $found = 1 if $path eq $file;
+            };
+            # volume was removed in the nick of time
+            die $@ if $@ && ( !ref($@) || $@->code != 50);
+            return 1 if $found;
         }
     }
     return 0;
+}
+
+sub _follow_link($self, $file) {
+    my ($dir, $name) = $file =~ m{(.*)/(.*)};
+    if (!defined $self->{_is_link}->{$dir} ) {
+        my ($out,$err) = $self->run_command("stat", $dir );
+        chomp $out;
+        $out =~ m{ -> (/.*)};
+        $self->{_is_link}->{$dir} = $1;
+    }
+    my $path = $self->{_is_link}->{$dir};
+    return $file if !$path;
+    return "$path/$name";
+
+}
+
+sub _wait_storage($self, $sub) {
+    my @ret;
+    for ( 1 .. 10  ) {
+        eval { @ret=$sub->() };
+        last if !$@;
+        die $@ if !ref($@) || $@->code != 1;
+        warn "Warning: $@ [retrying $_]";
+        sleep 1;
+    };
+    return @ret;
 }
 
 =head2 dir_img

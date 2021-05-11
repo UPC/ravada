@@ -106,6 +106,35 @@ sub number_to_size {
     }
 }
 
+sub last_insert_id($dbh) {
+    my $driver = $dbh->{Driver}->{Name};
+
+    if ( $driver =~ /sqlite/i ) {
+        return _last_insert_id_sqlite($dbh);
+    } elsif ( $driver =~ /mysql|mariadb/i ) {
+        return _last_insert_id_mysql($dbh);
+    } else {
+        confess "I don't know how to get last_insert_id for $driver";
+    }
+}
+
+sub _last_insert_id_mysql($dbh) {
+    my $sth = $dbh->prepare("SELECT last_insert_id()");
+    $sth->execute;
+    my ($id) = $sth->fetchrow;
+    $sth->finish;
+    return $id;
+
+}
+
+sub _last_insert_id_sqlite($dbh) {
+    my $sth = $dbh->prepare("SELECT last_insert_rowid()");
+    $sth->execute;
+    my ($id) = $sth->fetchrow;
+    $sth->finish;
+    return $id;
+}
+
 sub max_id($dbh, $table) {
     my $sth = $dbh->prepare("SELECT max(id) FROM $table");
     $sth->execute();

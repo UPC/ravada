@@ -42,17 +42,13 @@ sub test_run_timeout {
     is($clone->run_timeout(),$timeout);
 
     $clone->start(user => $USER);
-    is(scalar($clone->list_requests(1)),2) or exit;
-
-    is($clone->is_active,1);
-    rvd_back->_process_all_requests_dont_fork();
-    is($clone->is_active,1);
-    for ( 1 .. $timeout + 60 ) {
-        last if !$clone->is_active || ! scalar($clone->list_requests(1));
-        sleep 1;
-        rvd_back->_process_all_requests_dont_fork();
-    }
-    is($clone->is_active,0, "Expecting ".$clone->name." timed out shutdown") or exit;
+    my @requests = $clone->list_requests(1);
+    my ($req) = grep { $_->command eq 'shutdown' } @requests;
+    ok($req, "Expecting shutdown requested ".Dumper($req,[map { [$_->command, $_->at_time] } @requests])) and do {
+        is($req->args('id_domain'), $clone->id);
+        my $at = $req->at_time();
+        ok($at > time(),"Expecting at in the future ".($at - time));
+    };
 
     $clone->remove(user_admin);
     $domain->remove(user_admin);

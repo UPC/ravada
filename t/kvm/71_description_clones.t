@@ -109,8 +109,9 @@ sub test_prepare_base {
     eval {
         $domain->remove_base( user_admin);
         $domain->prepare_base( user_admin );
+        $@ = '';
     };
-    is($@,'');
+    is(''.$@,'');
     ok($domain->is_base);
 
     my $name_clone = new_domain_name();
