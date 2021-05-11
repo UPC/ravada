@@ -59,13 +59,13 @@ This Virtual Machine has no display hardware attached
 
             </div>
             <div>
-                <span ng-show="view=='spice'">
+                <span ng-show="view=='spice' || view == 'spice-tls'">
                     <%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}.{{display.file_extension}}</b> <%=l 'in your downloads folder.' %>
                 </span>
                 <span ng-show="view=='spice_tls'"><%=l 'If you can not see the machine screen in a few seconds check for a file called' %> <b>{{domain.id}}-tls.{{display.file_extension}}</b> <%=l 'in your downloads folder.' %>
                 </span>
                 <br/>
-                <i ng-show="display.driver == 'spice'"><%=l 'Press SHIFT + F12 to exit the virtual machine' %></i>
+                <i ng-show="display.driver == 'spice' || display.driver == 'spice-tls'"><%=l 'Press SHIFT + F12 to exit the virtual machine' %></i>
             </div>
         </div>
     </div>

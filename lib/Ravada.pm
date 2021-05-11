@@ -1484,9 +1484,7 @@ sub _sqlite_trigger($self, $dbh, $table,$field, $trigger) {
     $dbh->do($sql);
 }
 
-sub _remove_field {
-    my $self = shift;
-    my ($table, $field ) = @_;
+sub _remove_field($self, $table, $field) {
 
     my $dbh = $CONNECTOR->dbh;
     return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
@@ -1496,7 +1494,7 @@ sub _remove_field {
     $sth->finish;
     return if !$row;
 
-    warn "INFO: removing $field to $table\n"
+    warn "INFO: removing $field from $table\n"
     if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
     $dbh->do("alter table $table drop column $field");
@@ -1921,6 +1919,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains','status','varchar(32) DEFAULT "shutdown"');
     #$self->_upgrade_table('domains','display_file','text DEFAULT NULL');
+    $self->_remove_field('domains','display_file');
     $self->_upgrade_table('domains','info','TEXT DEFAULT NULL');
     $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('domains','volatile_clones','int NOT NULL default 0');

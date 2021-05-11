@@ -1881,7 +1881,7 @@ sub _display_file_spice($self,$display, $tls = 0) {
         ."enable-smartcard=0\n"
         ."enable-usbredir=1\n"
         ."enable-usb-autoshare=1\n"
-        ."delete-this-file=0\n";
+        ."delete-this-file=1\n";
 
     if ( $tls ) {
         $ret .= "tls-ciphers=DEFAULT\n"
