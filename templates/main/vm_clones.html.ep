@@ -3,17 +3,27 @@
             <label><%=l 'These actions affect all the clones on the machine' %></label>
         </div>
         <div class="row">
+            <div class="col-md-2"><label><%=l 'Exec. time' %></label></div>
+            <div class="col-md-10">
+                <input type="datetime-local" ng-model="exec_time" /> [ {{timezone}} ]
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12" align="left">
+                <input type="checkbox" name="exec_sequentially" ng-model="exec_sequentially"
+                    ng-true-value="1" ng-false-value="0"
+                > <label><%=l 'Exec clones sequentially' %></label>
+            </div>
+        </div>
+        <div class="row">
             <button class="btn btn-primary mr-2" id="start-clones" name="start-clones"
-                ng-click="request('start_clones_sequentially',{ 'id_domain': showmachine.id })"
-            >
-                <%=l 'Start all clones sequentially' %>
-            </button>
-            <button class="btn btn-primary mr-2" id="start-clones" name="start-clones"
-                ng-click="request('start_clones',{ 'id_domain': showmachine.id })"
+                ng-disabled="isPastTime(exec_time, exec_time_start)"
+                ng-click="request('start_clones',{ 'id_domain': showmachine.id, 'at': isPastTime(exec_time) ? '' : getUnixTimeFromDate(exec_time), 'exec_sequentially': exec_sequentially })"
             >
                 <%=l 'Start all clones' %>
             </button>
             <button class="btn btn-danger" id="shutdown-clones" name="shutdown-clones"
+                ng-disabled="isPastTime(exec_time, exec_time_start)"
                 ng-click="shutdown_clones=1"
             >
                 <%=l 'Shutdown all clones' %>
@@ -26,7 +36,7 @@
                         <a type="button" class="btn btn-primary text-white"
                             ng-click="shutdown_clones=0"
                         ><%=l 'No' %></a>
-                        <a type="button" class="btn btn-danger text-white" ng-click="request('shutdown_clones',{ 'id_domain': showmachine.id });shutdown_clones=0"
+                        <a type="button" class="btn btn-danger text-white" ng-click="request('shutdown_clones',{ 'id_domain': showmachine.id, 'at': isPastTime(exec_time) ? '' : getUnixTimeFromDate(exec_time) });shutdown_clones=0"
                         ><%=l 'Yes, shutwdown all the clones' %></a>
            </div>
 
