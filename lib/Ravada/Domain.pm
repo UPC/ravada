@@ -25,6 +25,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 use Ravada::Domain::Driver;
+use Ravada::Auth::SQL;
 use Ravada::Utils;
 
 our $TIMEOUT_SHUTDOWN = 20;
@@ -2816,7 +2817,12 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
 }
 
 sub _set_public_port($self, $id_port, $internal_port, $name, $restricted) {
-    my $public_port = $self->_vm->_new_free_port();
+    my $public_port;
+    eval {
+        $public_port = undef;
+        $public_port = $self->_vm->_new_free_port();
+    };
+    my $error = $@;
     for (;;) {
         if ($id_port) {
             my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set public_port=?"
@@ -2843,6 +2849,12 @@ sub _set_public_port($self, $id_port, $internal_port, $name, $restricted) {
             return $public_port if !$@;
         }
         $public_port += int(rand(10))+1;
+    }
+    if ($error) {
+        my $user = Ravada::Auth::SQL->search_by_id($self->_data('id_owner'));
+        $user->send_message($error);
+        warn $error;
+        die $error;
     }
 }
 
@@ -2880,7 +2892,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     );
     $sth->execute($internal_ip, $self->id, $internal_port);
 
-    if ( !$> ) {
+    if ( !$> && $public_port ) {
         my ($out, $err) = $self->_vm->run_command("iptables-save","-t","nat");
         my @open1 = (grep /--dport $public_port/, split/\n/,$out );
         my @open2 = (grep /--to-destination $internal_ip:$internal_port/, split/\n/,$out );
@@ -3112,9 +3124,19 @@ sub list_ports($self) {
         my @ports_base = $base->list_ports();
         for my $data (@ports_base) {
             next if exists $clone_port{$data->{internal_port}};
-            unlock_hash(%$data);
-            $data->{public_port} = $self->_vm->_new_free_port() if $self->_vm;
-            lock_hash(%$data);
+            if ($self->_vm) {
+                unlock_hash(%$data);
+                eval {
+                    $data->{public_port} = '';
+                    $data->{public_port} = $self->_vm->_new_free_port();
+                };
+                my $error = $@;
+                if ($error) {
+                    my $user = Ravada::Auth::SQL->search_by_id($self->_data('id_owner'));
+                    $user->send_message(substr($error,0,80));
+                }
+                lock_hash(%$data);
+            }
             push @list,($data);
         }
     }

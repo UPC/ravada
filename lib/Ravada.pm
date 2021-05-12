@@ -1472,6 +1472,11 @@ sub _sql_insert_defaults($self){
                 ,name => "debug_ports"
                 ,value => 0
             }
+            ,{
+                id_parent => $id_backend
+                ,name => 'expose_port_min'
+                ,value => '60000'
+            }
         ]
     );
     my %field = ( settings => 'name' );
