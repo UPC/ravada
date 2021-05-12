@@ -138,7 +138,7 @@
                     ng-model="new_shutdown_timeout"
                     >
                 </div>
-                <div class="col-lg-6"><small class="text-secondary"><%=l 'The machine will turn off after these time' %></small></div>
+                <div class="col-lg-6"><small class="text-secondary"><%=l 'The machine will turn off after this time' %></small></div>
             </div>
 %   }
 %   if ($USER->can_change_settings){
