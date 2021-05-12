@@ -206,7 +206,7 @@ sub open {
     $args{security} = decode_json($row->{security}) if $row->{security};
 
     my $vm = $self->new(%args);
-    $VM{$args{id}} = $vm;
+    $VM{$args{id}} = $vm unless $args{readonly};
     return $vm;
 
 }
