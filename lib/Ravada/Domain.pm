@@ -2799,7 +2799,10 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
     my $public_port;
     for (;;) {
         eval {
-            $public_port = $self->_vm->_new_free_port();
+            $public_port = $self->_vm->_new_free_port() if !$self->is_base;
+        };
+        die $@ if $@ && $@ !~ /no free ports/i;
+        eval {
             $sth->execute($self->id
                 , $public_port, $internal_port
                 , ($name or undef)
