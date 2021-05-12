@@ -1368,6 +1368,10 @@ post '/request/(:name)/' => sub {
     app->log->info($USER->name." requesting $name ".encode_json($args)) if $CONFIG_FRONT->{log}->{log};
     my $req;
 
+    $name = 'start_clones_sequentially' if (($name eq 'start_clones') && ($args->{'exec_sequentially'}));
+    delete($args->{exec_sequentially});
+    delete($args->{at}) if ((! $args->{at}) || ($args->{at} < time()));
+
     if ($name eq 'start_clones_sequentially') {
 
         my $domain = $RAVADA->search_domain_by_id($args->{'id_domain'}) or do {
