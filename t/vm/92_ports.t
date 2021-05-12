@@ -1315,6 +1315,23 @@ sub import_base($vm) {
         $BASE = create_domain($vm);
     }
 }
+
+sub test_expose_nested_base($vm) {
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
+    $base->expose(22);
+    $base->prepare_base(user_admin);
+
+    my $base2 = $base->clone(name => new_domain_name , user => user_admin);
+    $base2->prepare_base(user_admin);
+
+    ok($base2->exposed_port(22));
+
+    $base2->remove_expose(22);
+    ok(!$base2->exposed_port(22));
+    $base2->remove(user_admin);
+    $base->remove(user_admin);
+}
+
 ##############################################################
 
 clean();
@@ -1342,6 +1359,8 @@ for my $vm_name ( 'KVM', 'Void' ) {
     diag("Testing $vm_name");
     flush_rules() if !$<;
     import_base($vm);
+
+    test_expose_nested_base($vm);
 
     test_interfaces($vm);
 
