@@ -2,11 +2,12 @@
 
 **Implemented enhancements:**
 
-- New background and favicon [\#1523]
+- Schedule start clones at a given date time [\#1533]
+- Sequentially start clones [\#1527]
+- Show virtual machine ethernet on machine options [\#1534]
+- Updates for Portuguese translation [\#1544]
+- Reviewed Chinese translation [\#1518]
 
 **Bugfixes**
 
-- bootstrap-select incompatibility [\#1515]
-- Duplicated iptables entries when port exposing [\#1505]
-- Error changing CPUs: maximum vcpus count must be an integer [\#1499]
-- Create base fail when volumes are in linked directory bug [\#1524]
+- do not re-expose in nested bases [\#1541]
