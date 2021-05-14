@@ -15,6 +15,9 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
+my $BASE_NAME = "zz-test-base-alpine";
+my $BASE;
+
 sub test_duplicate_req {
         my $req = Ravada::Request->manage_pools(uid => user_admin->id);
         my $req_dupe = Ravada::Request->manage_pools(uid => user_admin->id);
@@ -283,13 +286,47 @@ sub test_no_pool($vm) {
     wait_request( debug => 0);
 }
 
-sub test_remove_clone($vm) {
-    my $base;
+sub import_base($vm) {
     if ($vm->type eq 'KVM') {
-        my $base0 = import_domain( $vm->type , 'zz-test-base-alpine');
-        $base = $base0->clone(name => new_domain_name , user => user_admin);
+        $BASE = import_domain($vm->type, $BASE_NAME, 1);
+        confess "Error: domain $BASE_NAME is not base" unless $BASE->is_base;
+
+        confess "Error: domain $BASE_NAME has exported ports that conflict with the tests"
+        if $BASE->list_ports;
+    } else {
+        $BASE = create_domain($vm);
     }
-    $base = create_domain($vm) if !$base;
+}
+
+sub test_exposed_port($vm) {
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
+
+    $base->pools(1);
+    $base->volatile_clones(1);
+    my $n = 3;
+    $base->pool_clones($n);
+    $base->expose(22);
+
+    my $req = Ravada::Request->manage_pools(uid => user_admin->id , _no_duplicate => 1);
+    wait_request( debug => 1, skip => 'set_time' );
+    is($req->status, 'done');
+
+    my $req_refresh = Ravada::Request->refresh_vms( _no_duplicate => 1);
+    wait_request( debug => 1 ,skip => 'set_time' );
+    is($req_refresh->status, 'done');
+    is(scalar($base->clones), $n);
+
+    my $clone = $base->clone(name => new_domain_name(), user => user_admin);
+
+    for my $clone ( $base->clones ) {
+        Ravada::Domain->open($clone->{id})->remove(user_admin);
+    }
+    $base->remove(user_admin);
+
+}
+
+sub test_remove_clone($vm) {
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
 
     $base->pools(1);
     $base->volatile_clones(1);
@@ -343,6 +380,9 @@ for my $vm_name (reverse vm_names() ) {
         skip($msg,10)   if !$vm;
 
         diag("*** Testing pools in $vm_name ***");
+        import_base($vm);
+
+        test_exposed_port($vm);
 
         test_remove_clone($vm);
         test_duplicate_req();

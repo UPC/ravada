@@ -2898,7 +2898,7 @@ sub _post_shutdown {
         my $req = Ravada::Request->force_shutdown_domain(
             id_domain => $self->id
                ,id_vm => $self->_vm->id
-                , uid => $arg{user}->id
+                , uid => Ravada::Utils::user_daemon->id
                  , at => time+$timeout
         );
     }
@@ -3598,7 +3598,7 @@ sub list_ports($self) {
         $clone_port{$data->{internal_port}}++;
     }
 
-    if ($self->id_base) {
+    if (!$self->is_base && $self->id_base) {
         my $base = Ravada::Front::Domain->open($self->id_base);
         my @ports_base = $base->list_ports();
         for my $data (@ports_base) {
