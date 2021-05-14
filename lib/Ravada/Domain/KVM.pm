@@ -243,11 +243,12 @@ sub _vol_remove {
                 if $@ !~ /libvirt error code: 50,/i;
             next;
         }
-        for ( ;; ) {
+        for ( 1 .. 3 ) {
             eval { $vol->delete() };
             last if !$@;
             sleep 1;
         }
+        die $@ if $@;
         eval { $pool->refresh };
         warn $@ if $@;
     }
