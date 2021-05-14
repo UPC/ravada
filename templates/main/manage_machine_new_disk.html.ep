@@ -2,7 +2,7 @@
     <h2><%=l 'Add new disk' %></h2>
     <div class="row">
         <div class="col-lg-2">
-            <label for="device">device</label>
+            <label for="device"><%=l 'device' %></label>
         </div>
         <div class="col-lg-2">
             <select name="device" ng-model="add_disk.device">
@@ -13,7 +13,7 @@
     </div>
     <div class="row" ng-show="add_disk.device == 'disk'">
         <div class="col-lg-2">
-            <label for="type">type</label>
+            <label for="type"><%=l 'type' %></label>
         </div>
         <div class="col-lg-2">
            <select name="type" ng-model="add_disk.type">
@@ -30,7 +30,7 @@
     </div>
     <div class="row" ng-show="add_disk.device == 'disk'">
         <div class="col-lg-2">
-            <label for="capacity">size</label>
+            <label for="capacity"><%=l 'size' %></label>
         </div>
         <div class="col-lg-2">
             <input type="text" name="capacity" ng-model="add_disk.capacity">
@@ -38,7 +38,7 @@
     </div>
     <div class="row" ng-show="add_disk.device == 'disk'">
         <div class="col-lg-2">
-            <label for="allocation">allocation</label>
+            <label for="allocation"><%=l 'allocation' %></label>
         </div>
         <div class="col-lg-2">
             <input type="text" name="allocation" ng-model="add_disk.allocation">
