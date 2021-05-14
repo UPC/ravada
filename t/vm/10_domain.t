@@ -283,6 +283,9 @@ sub test_shutdown {
 
     my @reqs = $domain->list_requests(1);
     ok(scalar @reqs,$domain->name);
+    my @req_shutdown = grep { $_->command eq 'force_shutdown' } @reqs;
+    is(scalar(@req_shutdown),1)
+    and is($req_shutdown[0]->defined_arg('uid'), Ravada::Utils::user_daemon->id);
 
     $domain->shutdown_now(user_admin);
 
@@ -296,7 +299,7 @@ sub test_shutdown {
     my @req_other = grep { $_->command ne 'refresh_machine' } @reqs;
     is(scalar(@req_other),0);
 
-    is(scalar @reqs,1,$domain->name) or die Dumper([ map { [$_->id,$_->command,$_->status,$_->error] } @reqs]);
+    is(scalar @reqs,1,$domain->name) or die Dumper([ map { [$_->id,$_->command,$_->defined_arg('uid'),$_->status,$_->error] } @reqs]);
 
     $domain->remove(user_admin);
 }
