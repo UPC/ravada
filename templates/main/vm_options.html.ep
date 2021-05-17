@@ -118,7 +118,7 @@
 %   if ($USER->can_change_settings){
             <div class="row">
                 <div class="col-lg-3 mt-2">
-                    <label class="control-label" for="timeout">Timeout</label>
+                    <label class="control-label" for="timeout"><%=l 'Run Timeout' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input type="text" size="5" name="timeout"
@@ -127,6 +127,18 @@
                     >
                 </div>
                 <div class="col-lg-6"><small class="text-secondary"><%=l 'The machine will shutdown after these minutes' %></small></div>
+            </div>
+            <div class="row">
+                <div class="col-lg-3 mt-2">
+                    <label class="control-label" for="shutdown_timeout"><%=l 'Shutdown Timeout' %></label>
+                </div>
+                <div class="col-lg-2">
+                    <input type="text" size="5" name="shutdown_timeout"
+                    ng-change="set_value('shutdown_timeout',new_shutdown_timeout*60)"
+                    ng-model="new_shutdown_timeout"
+                    >
+                </div>
+                <div class="col-lg-6"><small class="text-secondary"><%=l 'The machine will turn off after this time' %></small></div>
             </div>
 %   }
 %   if ($USER->can_change_settings){

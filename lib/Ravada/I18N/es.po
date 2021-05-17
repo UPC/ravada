@@ -666,6 +666,9 @@ msgstr "MB disponible"
 msgid "The machine will shutdown after these minutes"
 msgstr "La máquina se apagará después de estos minutos"
 
+msgid "The machine will turn off after this time"
+msgstr "La máquina se apagará después de este tiempo"
+
 msgid "Cancel"
 msgstr "Cancelar"
 
