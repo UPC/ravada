@@ -16,10 +16,10 @@ else
     export PERL5LIB="./lib"
 	if [ "$SHOW_MESSAGES" == "1" ]
 	then
-	   morbo -v ./script/rvd_front > /dev/null 2>&1 &
+	   morbo -m development -v ./script/rvd_front > /dev/null 2>&1 &
 	   sudo PERL5LIB=./lib ./script/rvd_back --debug > /dev/null 2>&1 &
 	else
-	   morbo -v ./script/rvd_front &
+	   morbo -m development -v ./script/rvd_front &
        sudo PERL5LIB=./lib ./script/rvd_back --debug &
 	fi
 	echo "Server initialized succesfully."
