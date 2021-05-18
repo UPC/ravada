@@ -3598,7 +3598,7 @@ sub list_ports($self) {
         $clone_port{$data->{internal_port}}++;
     }
 
-    if (!$self->is_base && $self->id_base) {
+    if ($self->is_known() && !$self->is_base && $self->id_base) {
         my $base = Ravada::Front::Domain->open($self->id_base);
         my @ports_base = $base->list_ports();
         for my $data (@ports_base) {
