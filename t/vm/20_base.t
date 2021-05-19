@@ -1343,23 +1343,19 @@ sub test_enforce_limits($domain, $n_expected, $user=user_admin) {
     delete_request('enforce_limits');
     wait_request();
     for my $n ( 1 .. 10 ) {
-        diag("$n enforce limits");
         if (!$domain->is_active()) {
             $domain->start(user =>$user, remote_ip => '1.2.3.4');
             wait_request(skip => [], debug => 0 );
         }
         my $req;
         for my $m ( 1 .. 10 ) {
-            diag("$n.$m create request enforce_limits");
             my @list = rvd_back->list_domains(user => $user, active => 1);
-            warn Dumper([ map { $_->name } @list]);
             return if scalar(@list)<=$n_expected ;
             $req = Ravada::Request->enforce_limits(_force => 1);
             last if $req;
             sleep 1;
         }
         my @list = rvd_back->list_domains(user => $user, active => 1);
-        warn Dumper([ map { $_->name } @list]);
         return if scalar(@list)<=$n_expected ;
         wait_request( request => $req, debug => 0);
         next if $req->status ne 'done';
@@ -1370,7 +1366,6 @@ sub test_enforce_limits($domain, $n_expected, $user=user_admin) {
         }
         ok(!$req->error,"Expecting no error on ".$req->command." got ".($req->error or ''));
         @list = rvd_back->list_domains(user => $user, active => 1);
-        warn Dumper([ map { $_->name } @list]);
         return if scalar(@list)<=$n_expected ;
     }
 }
@@ -1586,7 +1581,6 @@ sub test_display_drivers($vm, $remove) {
             ,name => 'display'
             ,data => { driver => $driver }
         );
-        warn $req->id;
         Ravada::Request->start_domain(uid => user_admin->id
             ,id_domain => $domain->id
         );

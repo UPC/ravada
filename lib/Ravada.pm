@@ -5022,12 +5022,13 @@ sub _enforce_limits_active($self, $request) {
     }
     for my $id_user(keys %domains) {
         my $user = Ravada::Auth::SQL->search_by_id($id_user);
-        my %grants = $user->grants();
+        my %grants;
+        %grants = $user->grants() if $user;
         my $start_limit = (defined($grants{'start_limit'}) && $grants{'start_limit'} > 0) ? $grants{'start_limit'} : $start_limit_default;
 
         next if scalar @{$domains{$id_user}} <= $start_limit;
-        next if $user->is_admin;
-        next if $user->can_start_many;
+        next if $user && $user->is_admin;
+        next if $user && $user->can_start_many;
 
         my @domains_user = sort { $a->start_time <=> $b->start_time
                                     || $a->id <=> $b->id }
@@ -5048,7 +5049,7 @@ sub _enforce_limits_active($self, $request) {
                 );
                 return;
             }
-            $user->send_message("Too many machines started. $active out of $start_limit. Stopping ".$domain->name);
+            $user->send_message("Too many machines started. $active out of $start_limit. Stopping ".$domain->name) if $user;
             $active--;
             if ($domain->can_hybernate && !$domain->is_volatile) {
                 $domain->hybernate($USER_DAEMON);

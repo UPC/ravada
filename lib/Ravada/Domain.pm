@@ -1222,7 +1222,9 @@ sub _max_n_order_display($self) {
 }
 
 sub _normalize_display($self, $display, $json=1) {
-    confess Dumper($display) if exists $display->{port} && $display->{port} && !$display->{id_vm};
+    $display->{id_vm}=$self->_vm->id
+    if exists $display->{port} && $display->{port} && !$display->{id_vm};
+
     my %valid_field = map { $_ => 1 }
     qw(id id_domain port ip display listen_ip driver password is_builtin is_secondary
     is_active n_order extra id_domain_port id_vm );
