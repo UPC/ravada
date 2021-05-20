@@ -43,6 +43,7 @@ my $MAKE_ADMIN_USER;
 my $REMOVE_ADMIN_USER;
 my $START = 1;
 my $TEST_LDAP;
+my $CLEAN_DB_LEFTOVERS;
 
 my $URL_ISOS;
 my $ALL;
@@ -71,6 +72,7 @@ my $USAGE = "$0 "
         ." [-X] [start|stop|status]"
         ." [--rebase MACHINE]"
         ." [--remove-user=name]"
+        ." [--clean-db-leftovers]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
@@ -102,6 +104,8 @@ my $USAGE = "$0 "
         ." --hibernated: execute on hibernated machines\n"
         ." --disconnected: execute on disconnected machines\n"
         ." --active: execute on active running machines\n"
+        ."Maintenance operations:\n"
+        ." --clean-db-leftovers: properly clean database unreferenced entries\n"
         ."\n"
     ;
 
@@ -142,6 +146,8 @@ GetOptions (       help => \$help
     ,'run-request=s' => \$RUN_REQUEST
 
         ,'migrate=s'    => \$MIGRATE
+
+        ,"clean-db-leftovers" => \$CLEAN_DB_LEFTOVERS
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
@@ -197,9 +203,9 @@ sub do_start {
     #Ravada::Request->refresh_vms();
     for (;;) {
         my $t0 = time;
-        $ravada->process_priority_requests();
-        $ravada->process_long_requests();
-        $ravada->process_requests();
+        $ravada->process_priority_requests()
+            or $ravada->process_long_requests()
+            or $ravada->process_requests();
 		$ravada->set_debug_value();
         exit if done_request();
 
@@ -791,6 +797,25 @@ sub migrate($node_name) {
     }
 }
 
+sub clean_db_leftovers {
+    my $dbh = rvd_back->_connect_dbh->dbh;
+    for my $table (
+        'access_ldap_attribute','domain_access'
+        ,'domain_displays' , 'domain_ports', 'volumes', 'domains_void', 'domains_kvm', 'domain_instances', 'bases_vm', 'domain_access', 'base_xml', 'file_base_images', 'iptables', 'domains_network') {
+
+        my $sth = $dbh->prepare("DELETE FROM $table WHERE id_domain NOT IN "
+            ." ( SELECT id FROM domains ) "
+        );
+        $sth->execute();
+    }
+    for my $table ('grants_user') {
+        my $sth = $dbh->prepare("DELETE FROM $table WHERE id_user NOT IN "
+            ." ( SELECT id FROM users) "
+        );
+        $sth->execute();
+    }
+}
+
 sub DESTROY {
 }
 
@@ -828,6 +853,8 @@ add_locale_repository($ADD_LOCALE_REPOSITORY) if $ADD_LOCALE_REPOSITORY;
 run_request($RUN_REQUEST)           if $RUN_REQUEST;
 
 migrate($MIGRATE)                   if $MIGRATE;
+
+clean_db_leftovers()                if $CLEAN_DB_LEFTOVERS;
 }
 
 

@@ -255,7 +255,7 @@ sub test_missing_routes() {
 }
 
 sub clean_clones() {
-    wait_request( check_error => 0);
+    wait_request( check_error => 0, background => 1);
     for my $domain (@{rvd_front->list_domains}) {
         my $base_name = base_domain_name();
         next if $domain->{name} !~ /$base_name/;
@@ -275,6 +275,7 @@ if (!rvd_front->ping_backend) {
     done_testing();
     exit;
 }
+$Test::Ravada::BACKGROUND=1;
 
 ($USERNAME, $PASSWORD) = ( user_admin->name, "$$ $$");
 

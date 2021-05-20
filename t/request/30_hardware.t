@@ -26,8 +26,20 @@ $Ravada::CAN_FORK = 1;
 my $BASE;
 
 my $TEST_TIMESTAMP = 0;
+my $TLS;
 
 ########################################################################
+#
+sub _download_alpine64 {
+    my $id_iso = search_id_iso('Alpine%64');
+
+    my $req = Ravada::Request->download(
+             id_iso => $id_iso
+    );
+    wait_request();
+    is($req->error, '');
+    is($req->status,'done') or exit;
+}
 
 sub test_add_hardware_request_drivers {
 	my $vm = shift;
@@ -45,7 +57,9 @@ sub test_add_hardware_request_drivers {
             diag("Testing new $hardware $driver remove=$remove");
 
             my $info0 = $domain->info(user_admin);
-            my @dev0 = sort map { $_->{driver} } @{$info0->{hardware}->{$hardware}};
+            my @dev0 = sort map { $_->{driver} }
+                        grep { !$_->{is_secondary} }
+                        @{$info0->{hardware}->{$hardware}};
             test_add_hardware_request($vm, $domain, $hardware, { driver => $driver} );
 
             my $info1 = $domain->info(user_admin);
@@ -58,7 +72,8 @@ sub test_add_hardware_request_drivers {
                 }
                 ok($different, "Expecting different $hardware ") or die Dumper(\@dev0, \@dev1);
             } else {
-                ok(scalar(@dev1) > scalar(@dev0)) # it is ok because number of devs increased
+                ok(scalar(@dev1) > scalar(@dev0)) or die Dumper(\@dev1,\@dev0);
+                # it is ok because number of devs increased
             }
             my $driver_short = _get_driver_short_name($domain, $hardware,$driver);
 
@@ -143,7 +158,7 @@ sub test_display_db($domain, $n_expected) {
         die Dumper($domain->name, $row);
     }
 
-    is(scalar(@row),$n_expected) or die Dumper($domain->name, \@row);
+    is(scalar(@row),$n_expected) or confess Dumper($domain->name, \@row);
 
     my @displays = $domain->_get_controller_display();
     is(scalar @displays, @row);
@@ -188,12 +203,15 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     wait_request(debug => 0);
     is($req->status(),'done');
     is($req->error(),'') or exit;
-    test_display_db($domain,1) if $hardware eq 'display';
+    my $n = 1;
+    $n++ if $TLS && $hardware eq 'display' && $data->{driver} =~ /spice|vnc/
+    && $domain->is_active();
+    test_display_db($domain,$n) if $hardware eq 'display';
 
     {
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my @list_hardware2 = $domain_f->get_controller($hardware);
-    is(scalar @list_hardware2 , scalar(@list_hardware1) + 1
+    is(scalar @list_hardware2 , scalar(@list_hardware1) + $n
         ,"Adding hardware $hardware $numero\n"
             .Dumper($domain->name,$data,\@list_hardware2, \@list_hardware1))
             or exit;
@@ -202,13 +220,13 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     {
         my $domain_2 = Ravada::Front::Domain->open($domain->id);
         my @list_hardware2 = $domain_2->get_controller($hardware);
-        is(scalar @list_hardware2 , scalar(@list_hardware1) + 1
+        is(scalar @list_hardware2 , scalar(@list_hardware1) + $n
             ,"Adding hardware $numero\n"
                 .Dumper(\@list_hardware2, \@list_hardware1)) or exit;
     }
     $domain = Ravada::Domain->open($domain->id);
     my $info = $domain->info(user_admin);
-    is(scalar(@{$info->{hardware}->{$hardware}}), $numero+1) or exit;
+    is(scalar(@{$info->{hardware}->{$hardware}}), $numero+$n) or exit;
     my $new_hardware = $info->{hardware}->{$hardware}->[$numero-1];
     if ( $hardware eq 'disk' && $new_hardware->{name} !~ /\.iso$/) {
         my $name = $domain->name;
@@ -328,17 +346,19 @@ sub test_remove_hardware($vm, $domain, $hardware, $index) {
 	is($req->status(), 'done');
 	is($req->error(), '') or exit;
 
+    my $n = 1;
+    $n++ if $hardware eq 'display' && grep({ $_->{driver} =~ /-tls/ } @list_hardware1);
     {
         my $domain2 = Ravada::Domain->open($domain->id);
         my @list_hardware2 = $domain2->get_controller($hardware);
-        is(scalar @list_hardware2 , scalar(@list_hardware1) - 1
+        is(scalar @list_hardware2 , scalar(@list_hardware1) - $n
         ,"Removing hardware $hardware\[$index] ".$domain->name."\n"
             .Dumper(\@list_hardware2, \@list_hardware1)) or exit;
     }
     {
         my $domain_f = Ravada::Front::Domain->open($domain->id);
         my @list_hardware2 = $domain_f->get_controller($hardware);
-        is(scalar @list_hardware2 , scalar(@list_hardware1) - 1
+        is(scalar @list_hardware2 , scalar(@list_hardware1) - $n
         ,"Removing hardware $index ".$domain->name."\n"
             .Dumper(\@list_hardware2, \@list_hardware1)) or exit;
     }
@@ -554,7 +574,8 @@ sub test_change_network_bridge($vm, $domain, $index) {
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     $info = $domain_f->info(user_admin);
-    is ($info->{hardware}->{network}->[$index]->{type}, 'bridge', $domain->name) or exit;
+    is ($info->{hardware}->{network}->[$index]->{type}, 'bridge', $domain->name)
+        or die Dumper($info->{hardware}->{network});
     is ($info->{hardware}->{network}->[$index]->{bridge}, $bridges[0] );
 
     }
@@ -701,6 +722,51 @@ sub _create_base($vm) {
     return import_domain($vm, "zz-test-base-alpine") if $vm->type eq 'KVM';
     return create_domain($vm);
 }
+
+sub test_remove_display($vm) {
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+    if ($vm->type eq 'KVM') {
+        my $req = Ravada::Request->add_hardware(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            , name => 'display'
+            , data => { driver => 'vnc' }
+        );
+        wait_request();
+        is($req->status,'done');
+        is($req->error, '');
+    }
+    my @displays = $domain->display_info(user_admin);
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    for my $n ( reverse 0 .. $#displays ) {
+        next if exists $displays[$n]->{is_secondary} && $displays[$n]->{is_secondary};
+        my $driver = $displays[$n]->{driver};
+        diag("Removing display $n $driver");
+        my $req_remove = Ravada::Request->remove_hardware(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            , name => 'display'
+            , index => $n
+        );
+        wait_request();
+        is($req_remove->status,'done');
+        is($req_remove->error,'');
+        my $display_2 = $domain->_get_display($driver);
+        ok(!$display_2->{driver});
+        $display_2 = $domain->_get_display("$driver-tls");
+        ok(!$display_2->{driver},"Expecting no $driver-tls ".Dumper($display_2));
+        $display_2 = $domain_f->_get_display($driver);
+        ok(!$display_2->{driver});
+        $display_2 = $domain_f->_get_display("$driver-tls");
+        ok(!$display_2->{driver});
+    }
+    my @displays2 = $domain->display_info(user_admin);
+    is(scalar(@displays2),0) or exit;
+    @displays2 = $domain_f->display_info(user_admin);
+    is(scalar(@displays2),0) or die Dumper(\@displays2);
+    $domain->remove(user_admin);
+}
+
 ########################################################################
 
 
@@ -721,12 +787,16 @@ for my $vm_name ( vm_names()) {
 	    diag("Skipping VM $vm_name in this system");
 	    next;
 	}
-    my $BASE = _create_base($vm);
+    _download_alpine64();
+    $TLS = 0;
+    $TLS = 1 if check_libvirt_tls() && $vm_name eq 'KVM';
+    $BASE = _create_base($vm);
 	my $name = new_domain_name();
 	my $domain_b = $BASE->clone(
         name => $name
         ,user => $USER
     );
+    test_remove_display($vm);
     my %controllers = $domain_b->list_controllers;
 
     for my $hardware ( reverse sort keys %controllers ) {

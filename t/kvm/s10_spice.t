@@ -15,12 +15,14 @@ init();
 my @VMS = vm_names();
 my $USER = create_user("foo","bar", 1);
 
+my $TLS;
+
 #######################################################
 
 sub test_displays {
     my $domain = shift;
     my @displays = $domain->_get_controller_display();
-    is(scalar @displays,1);
+    is(scalar @displays,1 + $TLS);
 }
 
 sub test_spice {
@@ -33,7 +35,7 @@ sub test_spice {
                 , id_iso => search_id_iso('Alpine') , id_owner => $USER->id);
 
     $domain->start($USER);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     test_displays($domain);
 
@@ -71,6 +73,8 @@ SKIP: {
     }
 
     skip($msg,10)   if !$vm;
+
+    $TLS = 1 if check_libvirt_tls() && $vm_name eq 'KVM';
 
     test_spice($vm_name);
 }

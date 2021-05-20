@@ -161,6 +161,7 @@ sub test_change_hardware($vm, @nodes) {
     diag("[".$vm->type."] testing remove with ".scalar(@nodes)." node ".join(",",map { $_->name } @nodes));
     my $domain = create_domain($vm);
     my $clone = $domain->clone(name => new_domain_name, user => user_admin);
+    $clone->add_volume(size => 128*1024 , type => 'data');
     my @volumes = $clone->list_volumes();
 
     for my $node (@nodes) {
@@ -184,7 +185,13 @@ sub test_change_hardware($vm, @nodes) {
     for my $hardware ( sort keys %{$info->{hardware}} ) {
         $devices{$hardware} = scalar(@{$info->{hardware}->{$hardware}});
     }
-    for my $hardware ( sort keys %{$info->{hardware}} ) {
+    my @hardware = grep (!/^disk$/, sort keys %{$info->{hardware}});
+    push @hardware,("disk");
+    for my $hardware ( @hardware) {
+        my $tls = 0;
+        $tls = grep {$_->{driver} =~ /-tls/} @{$info->{hardware}->{$hardware}}
+        if $hardware eq 'display';
+
         #TODO disk volumes in Void
         #next if $vm->type eq 'Void' && $hardware =~ /disk|volume/;
 
@@ -196,6 +203,7 @@ sub test_change_hardware($vm, @nodes) {
 
         my $n_expected = scalar(@{$info->{hardware}->{$hardware}})-1;
         die "Warning: no $hardware devices in ".$clone->name if $n_expected<0;
+        $n_expected-- if $hardware eq 'display' && $tls;
 
         $n_expected = 0 if $n_expected<0;
 
@@ -211,11 +219,11 @@ sub test_change_hardware($vm, @nodes) {
             my $devices2 = $info2->{hardware}->{$hardware};
             is( scalar(@$devices2),$n_expected
                 , $clone2->name.": Expecting 1 $hardware device less in instance in node ".$node->name)
-                or exit;
+                or die Dumper($devices2);
         }
 
         my $clone_fresh = Ravada::Domain->open($clone->id);
-        is($clone_fresh->_vm->is_local, 1) or exit;
+        shift @volumes if $hardware eq 'disk';
         for (@volumes) {
             ok(-e $_,$_) or exit;
         }

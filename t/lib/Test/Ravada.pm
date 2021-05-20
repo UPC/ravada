@@ -64,6 +64,7 @@ create_domain
 
     wait_request
     delete_request
+    delete_request_not_done
     fast_forward_requests
 
     remove_old_domains_req
@@ -95,6 +96,8 @@ our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 our $FILE_CONFIG_REMOTE = "t/etc/remote_vm.conf";
 
 $Ravada::Front::Domain::Void = "/var/tmp/test/rvd_void/".getpwuid($>);
+
+our $BACKGROUND = 0;
 
 our ($CONNECTOR, $CONFIG , $FILE_CONFIG_TMP);
 our $DEFAULT_DB_CONFIG = "t/etc/sql.conf";
@@ -283,11 +286,18 @@ sub base_pool_name {
 }
 
 sub new_domain_name {
+    my @domains_data;
+    @domains_data= $RVD_BACK->list_domains_data() if $RVD_BACK;
     my $post = (shift or '');
     $post = $post."_" if $post;
-    my $cont = $CONT++;
-    $cont = "0$cont"    if length($cont)<2;
-    return base_domain_name()."_$post".$cont;
+    for ( ;; ) {
+        my $cont = $CONT++;
+        $cont = "0$cont"    if length($cont)<2;
+        my $name = base_domain_name()."_$post".$cont;
+
+        return $name
+        if !grep { $_->{name} eq $name } @domains_data;
+    }
 }
 
 sub new_pool_name {
@@ -362,9 +372,17 @@ sub init($config=undef, $sqlite = 1 , $flush=0) {
             $config = $FILE_CONFIG_TMP;
         }
     }
+    if ($flush) {
+        $CONNECTOR = undef;
+        $Ravada::Auth::SQL::CON = undef;
+        $Ravada::CONNECTOR = undef;
+        $Ravada::Utils::USER_DAEMON=undef;
+        $RVD_BACK=undef;
+        $RVD_FRONT=undef;
+        $USER_ADMIN = undef;
+    }
 
-
-    rvd_back($config, 0,$sqlite)  if !$RVD_BACK || $flush;
+    rvd_back($config, 0 ,$sqlite)  if !$RVD_BACK || $flush;
     if (!$sqlite) {
         $CONNECTOR = $RVD_BACK->connector;
     } else {
@@ -447,12 +465,6 @@ sub _add_leftover($machines, $domain) {
             return;
         }
     }
-
-    my $req = Ravada::Request->remove_domain(
-            name => $domain->name
-            ,uid => user_admin->id
-    );
-    diag("removing ".$domain->name);
 }
 
 sub _leftovers {
@@ -467,25 +479,25 @@ sub _leftovers {
             for my $vm_name ('Void', 'KVM') {
                 $domain = rvd_front->search_domain(
                     "${name}_$n-$vm_name-$name");
+                _add_leftover(\@machines,$domain);
             }
-            _add_leftover(\@machines,$domain);
         }
     }
     return @machines;
 }
 
-sub remove_old_domains_req($wait=1) {
+sub remove_old_domains_req($wait=1, $run_request=0) {
     my $base_name = base_domain_name();
     my $machines = rvd_front->list_machines(user_admin);
     my @machines2 = _leftovers();
     my @reqs;
     for my $machine ( @$machines, @machines2) {
         next if $machine->{name} !~ /^$base_name/;
-        remove_domain_and_clones_req($machine,$wait);
+        remove_domain_and_clones_req($machine,$wait, $run_request);
     }
 }
 
-sub remove_domain_and_clones_req($domain_data, $wait=1) {
+sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
     my $domain;
     if (ref($domain_data) =~ /Ravada.*Domain/) {
         $domain = $domain_data;
@@ -495,18 +507,23 @@ sub remove_domain_and_clones_req($domain_data, $wait=1) {
         die $@ if $@;
     }
     for my $clone ($domain->clones) {
-        remove_domain_and_clones_req($clone, $wait);
+        remove_domain_and_clones_req($clone, $wait, $run_request);
     }
-    if ( $wait && $domain->clones ) {
+    if ( $wait || $domain->clones ) {
         my $n_clones = scalar($domain->clones);
         for ( 1 .. 60 + 2*$n_clones ) {
             last if !$domain->clones;
             diag("Waiting for clones of domain ".$domain->name." removed "
                 .scalar($domain->clones)) if !(time % 10);
-            sleep 1;
-
+            if ($run_request) {
+                wait_request();
+            } else {
+                sleep 1;
+            }
         }
     }
+    Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id)
+    if $domain->is_base;
     my $req= Ravada::Request->remove_domain(
         name => $domain->name
         ,uid => user_admin->id
@@ -688,7 +705,7 @@ $MOJO_USER = $user;
 
 sub mojo_create_domain($t, $vm_name) {
     mojo_check_login($t);
-    my $name = new_domain_name()."-".$vm_name;
+    my $name = new_domain_name()."-".$vm_name."-$$";
     $t->post_ok('/new_machine.html' => form => {
             backend => $vm_name
             ,id_iso => search_id_iso('Alpine%')
@@ -853,6 +870,10 @@ sub remove_old_disks {
 sub create_user {
     my ($name, $pass, $is_admin) = @_;
 
+    my $login;
+    eval { $login = Ravada::Auth::SQL->new(name => $name, password => $pass ) };
+    return $login if $login;
+
     Ravada::Auth::SQL::add_user(name => $name, password => $pass, is_admin => $is_admin);
 
     my $user;
@@ -914,33 +935,47 @@ sub delete_request {
     }
 }
 
+sub delete_request_not_done {
+    confess "Error: missing request command to delete" if !@_;
+
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM requests WHERE command=?"
+    ." AND status <> 'done'");
+    for my $command (@_) {
+        $sth->execute($command);
+    }
+}
+
+
 sub wait_request {
     my %args;
     if (scalar @_ % 2 == 0 ) {
         %args = @_;
-        $args{background} = 0 if !exists $args{background};
+        $args{background} = $BACKGROUND if !exists $args{background};
     } else {
         $args{request} = [ $_[0] ];
     }
     my $timeout = delete $args{timeout};
+    my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms','set_time','rsync_back', 'cleanup', 'screenshot'] );
+    $skip = [ $skip ] if !ref($skip);
+    my %skip = map { $_ => 1 } @$skip;
+
     my $request = delete $args{request};
     if (!$request) {
         my @list_requests = map { Ravada::Request->open($_) }
             _list_requests();
         $request = \@list_requests;
-    } elsif (!ref($request)) {
-        $request = [$request];
+    } else {
+        $request = [$request] if (!ref($request) || ref($request) ne 'ARRAY');
+        for my $req (@$request) {
+            $req = Ravada::Request->open($req) if !ref($req);
+            delete $skip{$req->command};
+        }
     }
 
     my $background = delete $args{background};
-    $background = 1 if !defined $background;
 
     $timeout = 60 if !defined $timeout && $background;
     my $debug = ( delete $args{debug} or 0 );
-    my $skip = ( delete $args{skip} or ['enforce_limits','manage_pools','refresh_vms','set_time','rsync_back', 'cleanup', 'screenshot'] );
-    $skip = [ $skip ] if !ref($skip);
-    my %skip = map { $_ => 1 } @$skip;
-    %skip = ( enforce_limits => 1, cleanup => 1 ) if !keys %skip;
 
     my $check_error = delete $args{check_error};
     $check_error = 1 if !defined $check_error;
@@ -955,7 +990,9 @@ sub wait_request {
         my $done_count = scalar keys %done;
         $prev = '' if !defined $prev;
         my @req = _list_requests();
-        rvd_back->_process_requests_dont_fork($debug) if !$background;
+        if (!$background) {
+            rvd_back->_process_requests_dont_fork($debug);
+        }
         for my $req_id ( @req ) {
             my $req;
             eval { $req = Ravada::Request->open($req_id) };
@@ -970,18 +1007,19 @@ sub wait_request {
                     $run_at = 'now' if !$run_at;
                     $run_at = " $run_at";
                 }
-
-                diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
-                    .$run_at
-                    ." ".($req->error or ''))
-                    if $debug && (time%5 == 0);
-                sleep 1 if $req->command eq 'open_exposed_ports';
+                if ($debug && (time%5 == 0)) {
+                    diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
+                        .$run_at." bg=$background"
+                        ." ".($req->error or ''));
+                    sleep 1;
+                }
+                sleep 1 if $background;
                 $done_all = 0;
             } elsif (!$done{$req->id}) {
                 $t0 = time;
                 $done{$req->{id}}++;
                 if ($check_error) {
-                    if ($req->command eq 'remove') {
+                    if ($req->command =~ /remove/) {
                         like($req->error,qr(^$|Unknown domain));
                     } elsif($req->command eq 'set_time') {
                         like($req->error,qr(^$|libvirt error code));
@@ -989,15 +1027,16 @@ sub wait_request {
                         my $error = ($req->error or '');
                         next if $error =~ /waiting for processes/i;
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
-                            like($error,qr{^($|rsync done)}) or confess $req->command;
+                            like($error,qr{^($|.*port \d+ already used|rsync done)}) or confess $req->command;
                         } elsif($req->command eq 'refresh_machine_ports') {
                             like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
                         } elsif($req->command eq 'open_exposed_ports') {
-                            like($error,qr{^($|No ip in domain)});
+                            like($error,qr{^($|.*No ip in domain|.*duplicated port)});
                         } elsif($req->command eq 'compact') {
                             like($error,qr{^($|.*compacted)});
                         } else {
-                            is($error,'') or confess $req->command;
+                            like($error,qr/^$|run recently/)
+                                or confess $req->id." ".$req->command;
                         }
                     }
                 }
@@ -1011,8 +1050,10 @@ sub wait_request {
                 next if $skip{$req->command};
                 if ($req->status ne 'done') {
                     $done_all = 0;
-                    diag("Waiting for request ".$req->id." ".$req->command)
-                    if $debug && (time%5 == 0);
+                    if ( $debug && (time%5 == 0) ) {
+                        diag("Waiting for request ".$req->id." ".$req->command);
+                        sleep 1 if $background;
+                    }
                     last;
                 }
             }
@@ -1117,6 +1158,7 @@ sub remove_qemu_pools($vm=undef) {
     }
 
     my $base = base_pool_name();
+    $vm->connect();
     for my $pool  ( Ravada::VM::KVM::_list_storage_pools($vm->vm)) {
         my $name = $pool->get_name;
         eval {$pool->build(Sys::Virt::StoragePool::BUILD_NEW); $pool->create() };
@@ -1209,7 +1251,7 @@ sub _clean_db {
     while (my ($id) = $sth->fetchrow() ) {
         eval {
             my $domain = Ravada::Domain->open($id);
-            $domain->remove(user_admin) if $domain;
+            remove_domain_and_clones_req($domain,1,1) if $domain;
         };
         warn $@ if $@;
     }
@@ -1408,10 +1450,10 @@ sub _clean_iptables_ravada($node) {
         my ($rule) = $line =~ /-A (.*RAVADA.*)/i;
         next if !$rule;
         if (!$node->is_local) {
-            my ($out2, $err2) = $node->run_command("iptables","-t","filter","-D",$rule);
+            my ($out2, $err2) = $node->run_command("iptables","-t","filter","-D",$rule,"-w");
             warn $node->name.": '-D $rule' $err2" if $err2;
         } else {
-            `iptables -D $rule`;
+            `iptables -D $rule -w`;
         }
     }
 }
@@ -1434,7 +1476,7 @@ sub _flush_forward($node=undef) {
         next if $line =~ /-j LIBVIRT/;
         next if $line =~ /lxdbr/;
         $line =~ s/^-A (FORWARD.*)/-D $1/;
-        my ($out2, $err2) = _run_command($node, "iptables",split(/\s+/,$line));
+        my ($out2, $err2) = _run_command($node, "iptables",split(/\s+/,$line),"-w");
         die "$node_name $line $err2" if $err2;
         warn $out2 if $out2;
     }
@@ -1451,7 +1493,7 @@ sub flush_rules_node($node) {
     ($out, $err) = $node->run_command("iptables","-X", $CHAIN);
     is($err,'') or die `iptables-save`;
     for my $rule (@FLUSH_RULES) {
-        ($out, $err) = $node->run_command("iptables",@$rule);
+        ($out, $err) = $node->run_command("iptables",@$rule,"-w");
         like($err,qr(^$|chain/target/match by that name));
     }
 
@@ -1485,7 +1527,7 @@ sub flush_rules {
     }
     run3(["iptables","-F", $CHAIN,"-w"], \$in, \$out, \$err);
     like($err,qr(^$|chain/target/match by that name));
-    ($out, $err) = run3(["iptables","-D","INPUT","-j",$CHAIN],\$in, \$out, \$err);
+    ($out, $err) = run3(["iptables","-D","INPUT","-j",$CHAIN,"-w"],\$in, \$out, \$err);
     like($err,qr(^$|chain/target/match by that name));
     run3(["iptables","-X", $CHAIN,"-w"], \$in, \$out, \$err);
     like($err,qr(^$|chain/target/match by that name));
@@ -2378,7 +2420,10 @@ sub check_libvirt_tls {
     ('spice_tls = 1',
     'spice_tls_x509_cert_dir = '
     );
-    open my $in,'<',$FILE_CONFIG_QEMU or die "$! $FILE_CONFIG_QEMU";
+    open my $in,'<',$FILE_CONFIG_QEMU or do {
+        warn "$! $FILE_CONFIG_QEMU";
+        return 0;
+    };
     while(my $line = <$in>) {
         chomp $line;
         $line =~ s/#.*//;
@@ -2395,22 +2440,26 @@ sub check_libvirt_tls {
 }
 
 sub ping_backend() {
-    my @now = localtime(time);
-    for ( 1 .. 4 ){
-        $now[$_] = "0".$now[$_] if length ($now[$_])<2
-    }
-    my $now = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
-    $now[1]--;
-    my $now2 = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
-    my $sth = rvd_back->connector->dbh->prepare(
-        "SELECT date_changed,status FROM requests ORDER BY date_changed DESC"
-    );
-    $sth->execute();
-    my $n = 100;
-    while (my ($date_changed, $status) = $sth->fetchrow ) {
-        next if $status !~ /working|done/;
-        return 1 if $date_changed =~ /^($now|$now2)/;
-        last if $n--<0;
+    for ( 1 .. 3 ) {
+        my @now = localtime(time);
+        $now[4]++;
+        for ( 1 .. 4 ){
+            $now[$_] = "0".$now[$_] if length ($now[$_])<2
+        }
+        my $now = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
+        $now[1]--;
+        my $now2 = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
+        my $sth = rvd_back->connector->dbh->prepare(
+            "SELECT date_changed,status FROM requests ORDER BY date_changed DESC LIMIT 10"
+        );
+        $sth->execute();
+        my $n = 100;
+        while (my ($date_changed, $status) = $sth->fetchrow ) {
+            next if $status !~ /working|done/;
+            return 1 if $date_changed =~ /^($now|$now2)/;
+            last if $n--<0;
+        }
+        rvd_front->ping_backend();
     }
 
     return rvd_front->ping_backend();

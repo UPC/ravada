@@ -189,7 +189,7 @@ sub _update_user_grants {
     $sth->execute;
     $sth->bind_columns(\$id);
     while ($sth->fetch) {
-        my $user = Ravada::Auth::SQL->search_by_id($id);
+        my $user = Ravada::Auth::SQL->search_by_id($id) or confess "Unknown user id = $id";
         next if $user->name() eq $USER_DAEMON_NAME;
 
         my %grants = $user->grants();
@@ -1082,6 +1082,10 @@ sub _add_indexes_generic($self) {
         ,domain_displays => [
             "unique(id_domain,n_order)"
             ,"unique(id_domain,driver)"
+            ,"unique(id_vm,port)"
+        ]
+        ,domain_ports => [
+            "unique(id_vm,public_port)"
         ]
         ,requests => [
             "index(status,at_time)"
@@ -1154,6 +1158,12 @@ sub _add_indexes_generic($self) {
             $self->_clean_index_conflicts($table, $name);
 
             print "+" if $FIRST_TIME_RUN;
+            if ($table eq 'domain_displays' && $name eq 'id_vm_port') {
+                my $sth_clean=$CONNECTOR->dbh->prepare(
+                    "UPDATE domain_displays set port=NULL"
+                );
+                $sth_clean->execute;
+            }
             my $sth = $CONNECTOR->dbh->prepare($sql);
             $sth->execute();
         }
@@ -1474,9 +1484,7 @@ sub _sqlite_trigger($self, $dbh, $table,$field, $trigger) {
     $dbh->do($sql);
 }
 
-sub _remove_field {
-    my $self = shift;
-    my ($table, $field ) = @_;
+sub _remove_field($self, $table, $field) {
 
     my $dbh = $CONNECTOR->dbh;
     return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
@@ -1486,7 +1494,7 @@ sub _remove_field {
     $sth->finish;
     return if !$row;
 
-    warn "INFO: removing $field to $table\n"
+    warn "INFO: removing $field from $table\n"
     if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
     $dbh->do("alter table $table drop column $field");
@@ -1566,12 +1574,14 @@ sub _sql_create_tables($self) {
         domain_displays => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references domains(id) on delete cascade'
+            ,id_vm => 'int default null'
             ,port => 'char(5) DEFAULT NULL'
             ,ip => 'varchar(254)'
             ,listen_ip => 'varchar(254)'
             ,driver => 'char(40) not null'
             ,is_active => 'integer NOT NULL default 0'
             ,is_builtin => 'integer NOT NULL default 0'
+            ,is_secondary => 'integer NOT NULL default 0'
             ,id_domain_port => 'integer DEFAULT NULL'
             ,n_order => 'integer NOT NULL'
             ,password => 'char(32)'
@@ -1908,8 +1918,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','autostart','int NOT NULL DEFAULT 0');
 
     $self->_upgrade_table('domains','status','varchar(32) DEFAULT "shutdown"');
-    $self->_upgrade_table('domains','display','text');
     #$self->_upgrade_table('domains','display_file','text DEFAULT NULL');
+    $self->_remove_field('domains','display_file');
     $self->_upgrade_table('domains','info','TEXT DEFAULT NULL');
     $self->_upgrade_table('domains','internal_id','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('domains','volatile_clones','int NOT NULL default 0');
@@ -1950,10 +1960,14 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('volumes','name','char(200)');
 
+    $self->_upgrade_table('domain_displays', 'id_vm','int(1) DEFAULT NULL');
+
     $self->_upgrade_table('domain_drivers_options','data', 'char(200) ');
     $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
     $self->_upgrade_table('domain_ports', 'restricted','int(1) DEFAULT 0');
     $self->_upgrade_table('domain_ports', 'is_active','int(1) DEFAULT 0');
+    $self->_upgrade_table('domain_ports', 'is_secondary','int(1) DEFAULT 0');
+    $self->_upgrade_table('domain_ports', 'id_vm','int(1) DEFAULT NULL');
 
     $self->_upgrade_table('messages','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 
@@ -2177,7 +2191,7 @@ sub _connect_vm {
         my $vm = $self->vm->[$n];
 
         if (!$connect) {
-            $vm->disconnect();
+            $vm->disconnect() if $vm;
         } else {
             $vm->connect();
         }
@@ -2816,6 +2830,7 @@ sub process_requests {
 
         next if $request_type ne 'all' && $req->type ne $request_type;
 
+        next if $duplicated{$id_request}++;
         next if $req->command !~ /shutdown/i
             && $self->_domain_working($id_domain, $id_request);
 
@@ -2830,8 +2845,14 @@ sub process_requests {
     for my $req (sort { $a->priority <=> $b->priority } @reqs) {
         next if $req eq 'refresh_vms' && scalar@reqs > 2;
         next if !$req->id;
+        next if $req->status() =~ /^(done|working)$/;
 
-        warn "[$request_type] $$ executing request id=".$req->id." ".$req->status()." retry=".($req->retry or '<UNDEF>')." "
+        my $txt_retry = '';
+        $txt_retry = " retry=".$req->retry if $req->retry;
+
+        warn ''.localtime." [$request_type] $$ executing request id=".$req->id." ".
+        "pid=".($req->pid or '')." ".$req->status()
+            ."$txt_retry "
             .$req->command
             ." ".Dumper($req->args) if $DEBUG || $debug;
 
@@ -2842,13 +2863,18 @@ sub process_requests {
 #        $req->status("done") if $req->status() !~ /retry/;
         next if !$DEBUG && !$debug;
 
-        warn "req ".$req->id." , command: ".$req->command." , status: ".$req->status()
-            ." , error: '".($req->error or 'NONE')."'\n"  if $DEBUG || $VERBOSE;
+        warn ''.localtime." req ".$req->id." , cmd: ".$req->command." ".$req->status()
+            ." , err: '".($req->error or '')."'\n"  if $DEBUG || $VERBOSE;
             #        sleep 1 if $DEBUG;
 
     }
 
     $self->_timeout_requests();
+    warn Dumper([map { $_->id." ".($_->pid or '')." ".$_->command." ".$_->status }
+            grep { $_->id } @reqs ])
+        if ($DEBUG || $debug ) && @reqs;
+
+    return scalar(@reqs);
 }
 
 sub _date_now($seconds = 0) {
@@ -2880,7 +2906,7 @@ sub _timeout_requests($self) {
         my $req = Ravada::Request->open($id);
         my $timeout = $req->defined_arg('timeout') or next;
         next if time - $start_time <= $timeout;
-        warn "request ".$req->pid." ".$req->command." timeout";
+        warn "request ".$req->pid." ".$req->command." timeout [".(time - $start_time)." <= $timeout";
         push @requests,($req);
     }
     $sth->finish;
@@ -2947,7 +2973,7 @@ sub process_all_requests {
     my $self = shift;
     my ($debug,$dont_fork) = @_;
 
-    $self->process_requests($debug, $dont_fork,'all');
+    return $self->process_requests($debug, $dont_fork,'all');
 
 }
 
@@ -2959,7 +2985,7 @@ Process all the priority requests, long and short
 
 sub process_priority_requests($self, $debug=0, $dont_fork=0) {
 
-    $self->process_requests($debug, $dont_fork,'priority');
+    return $self->process_requests($debug, $dont_fork,'priority');
 
 }
 
@@ -3107,6 +3133,7 @@ sub _execute {
     $self->_wait_pids;
     return if !$self->_can_fork($request);
 
+    $self->disconnect_vm();
     my $pid = fork();
     die "I can't fork" if !defined $pid;
 
@@ -3116,6 +3143,7 @@ sub _execute {
         $self->_do_execute_command($sub, $request);
         exit;
     }
+    warn "forked $pid\n" if $DEBUG;
     $self->_add_pid($pid, $request);
     $request->pid($pid);
 }
@@ -3399,10 +3427,14 @@ sub _wait_pids {
             last;
         }
         next if !$id_req;
-        my $request = Ravada::Request->open($id_req);
+        my $request;
+        eval { $request = Ravada::Request->open($id_req) };
+        warn $@ if $@ && $@ !~ /I can't find id/;
         if ($request) {
             $request->status('done') if $request->status =~ /working/i;
         };
+        warn("$$ request id=$id_req ".$request->command." ".$request->status()
+            .", error='".($request->error or '')."'\n") if $DEBUG && $request;
     }
 }
 
@@ -4016,7 +4048,7 @@ sub _cmd_rename_domain {
     my $user = Ravada::Auth::SQL->search_by_id($uid);
     my $domain = $self->search_domain_by_id($id_domain);
 
-    confess "Unkown domain ".Dumper($request)   if !$domain;
+    confess "Unkown domain id=$id_domain ".Dumper($request)   if !$domain;
 
     $domain->rename(user => $user, name => $name);
 
@@ -4155,7 +4187,7 @@ sub _cmd_domain_autostart($self, $request ) {
 
 sub _cmd_refresh_vms($self, $request=undef) {
 
-    if ($request && (my $id_recent = $request->done_recently(30))) {
+    if ($request && !$request->defined_arg('_force') && (my $id_recent = $request->done_recently(30))) {
         die "Command ".$request->command." run recently by $id_recent.\n";
     }
 
@@ -4170,6 +4202,7 @@ sub _cmd_refresh_vms($self, $request=undef) {
     $self->_refresh_volatile_domains();
 
     $self->_check_duplicated_prerouting();
+    $self->_check_duplicated_iptable();
     $request->error('')                             if $request;
 }
 
@@ -4471,6 +4504,7 @@ sub _check_duplicated_prerouting($self, $request = undef ) {
             my $iptables = $vm->iptables_list();
             my %prerouting;
             my %already_open;
+            my %already_clean;
             for my $line (@{$iptables->{'nat'}}) {
                 my %args = @$line;
                 next if $args{A} ne 'PREROUTING' || !$args{dport};
@@ -4479,7 +4513,7 @@ sub _check_duplicated_prerouting($self, $request = undef ) {
                     my $value = $args{$item} or next;
                     if ($prerouting{$value}) {
                         warn "clean duplicated prerouting "
-                        .Dumper($prerouting{$value}, \%args) if $debug_ports;
+                        .Dumper($prerouting{$value}, \%args)."\n" if $debug_ports;
 
                         $self->_reopen_ports($port) unless $already_open{$port}++;
                         $self->_delete_iptables_rule($vm,'nat', \%args);
@@ -4492,6 +4526,36 @@ sub _check_duplicated_prerouting($self, $request = undef ) {
     }
 }
 
+sub _check_duplicated_iptable($self, $request = undef ) {
+    my $debug_ports = $self->setting('/backend/debug_ports');
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms WHERE is_active=1 "
+    );
+    $sth->execute();
+    while ( my ($id) = $sth->fetchrow()) {
+        my $vm;
+        eval { $vm = Ravada::VM->open($id) };
+        warn $@ if $@;
+        if ($vm) {
+            my $iptables = $vm->iptables_list();
+            my %dupe;
+            my %already_open;
+            for my $line (@{$iptables->{'filter'}}) {
+                my %args = @$line;
+                next if $args{A} ne 'RAVADA';
+                my $rule = join(" ", map { $_." ".$args{$_} }  sort keys %args);
+
+                if ($dupe{$rule}) {
+                    warn "clean duplicated iptables rule ".Dumper($line);
+                    $self->_delete_iptables_rule($vm,'filter', \%args);
+                }
+                $dupe{$rule}++;
+
+            }
+        }
+    }
+}
+
 sub _reopen_ports($self, $port) {
     my $sth = $CONNECTOR->dbh->prepare("SELECT id_domain FROM domain_ports "
         ." WHERE public_port=?");
@@ -4499,10 +4563,11 @@ sub _reopen_ports($self, $port) {
     my ($id_domain) = $sth->fetchrow;
     return if !$id_domain;
 
+    my $domain = Ravada::Domain->open($id_domain);
     Ravada::Request->open_exposed_ports(
                uid => Ravada::Utils::user_daemon->id
         ,id_domain => $id_domain
-    );
+    ) if $domain->is_active;
 }
 
 sub _delete_iptables_rule($self, $vm, $table, $rule) {
@@ -4512,10 +4577,12 @@ sub _delete_iptables_rule($self, $vm, $table, $rule) {
     my $dport = delete $delete{dport};
     my $m = delete $delete{m};
     my $p = delete $delete{p};
+    my $j = delete $delete{j};
     my @delete = ( t => $table, 'D' => $chain
-        , m => $m, p => $p, dport => $dport
-        , %delete
-        , 'to-destination' => $to_destination);
+        , m => $m, p => $p, dport => $dport);
+    push @delete,("j" => $j) if $j;
+    push @delete,( 'to-destination' => $to_destination) if $to_destination;
+    push @delete, %delete;
     $vm->iptables(@delete);
 
 }
@@ -4675,7 +4742,6 @@ sub _cmd_set_base_vm {
 sub _cmd_cleanup($self, $request) {
     $self->_clean_volatile_machines( request => $request);
     $self->_clean_temporary_users( );
-    $self->_clean_requests('cleanup', $request);
     for my $cmd ( qw(cleanup enforce_limits refresh_vms
         manage_pools refresh_machine screenshot
         open_iptables ping_backend
@@ -4956,12 +5022,13 @@ sub _enforce_limits_active($self, $request) {
     }
     for my $id_user(keys %domains) {
         my $user = Ravada::Auth::SQL->search_by_id($id_user);
-        my %grants = $user->grants();
+        my %grants;
+        %grants = $user->grants() if $user;
         my $start_limit = (defined($grants{'start_limit'}) && $grants{'start_limit'} > 0) ? $grants{'start_limit'} : $start_limit_default;
 
         next if scalar @{$domains{$id_user}} <= $start_limit;
-        next if $user->is_admin;
-        next if $user->can_start_many;
+        next if $user && $user->is_admin;
+        next if $user && $user->can_start_many;
 
         my @domains_user = sort { $a->start_time <=> $b->start_time
                                     || $a->id <=> $b->id }
@@ -4982,7 +5049,7 @@ sub _enforce_limits_active($self, $request) {
                 );
                 return;
             }
-            $user->send_message("Too many machines started. $active out of $start_limit. Stopping ".$domain->name);
+            $user->send_message("Too many machines started. $active out of $start_limit. Stopping ".$domain->name) if $user;
             $active--;
             if ($domain->can_hybernate && !$domain->is_volatile) {
                 $domain->hybernate($USER_DAEMON);
@@ -5077,7 +5144,7 @@ sub _cmd_remove_expose($self, $request) {
 }
 
 sub _cmd_open_exposed_ports($self, $request) {
-    my $domain = Ravada::Domain->open($request->id_domain);
+    my $domain = Ravada::Domain->open($request->id_domain) or return;
     $domain->open_exposed_ports();
 
     Ravada::Request->refresh_machine_ports(

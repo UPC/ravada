@@ -99,7 +99,7 @@ sub _set_clones_client_status($base) {
 
 sub test_user_create($base, $n_start) {
     $base->is_public(1);
-    my $user = create_user('kevin','carter');
+    my $user = create_user('kevin'.$base->type,'carter');
     my @clones = $base->clones();
     wait_request();
     _remove_enforce_limits();

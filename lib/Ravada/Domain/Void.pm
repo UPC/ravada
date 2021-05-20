@@ -60,10 +60,11 @@ sub display_info {
         };
 
         $graph->{is_builtin} = 1;
+        $graph->{port} = undef if $graph->{port} && $graph->{port} eq 'auto';
         push @display,($graph);
     }
 
-    return $display[0] if wantarray;
+    return $display[0] if !wantarray;
     return @display;
 }
 
@@ -99,6 +100,11 @@ sub _file_free_port() {
     mkdir $dir_fp if ! -e $dir_fp;
     return "/$dir_fp/void_free_port.txt";
 
+}
+
+sub  _reset_free_port(@) {
+    my $file_fp = _file_free_port();
+    unlink $file_fp or die $! if -e $file_fp;
 }
 
 sub _new_free_port($self, $used={} ) {
@@ -661,7 +667,6 @@ sub get_info {
     my $self = shift;
     my $info = $self->_value('info');
     if (!$info->{memory}) {
-        warn Dumper($info);
         $info = $self->_set_default_info();
     }
     lock_keys(%$info);
@@ -686,6 +691,12 @@ sub _set_default_info($self, $listen_ip=undef) {
             ,mac => _new_mac()
             ,time => time
     };
+
+    $info->{interfaces}->[0] = {
+        hwaddr => $info->{mac}
+        ,address => $info->{ip}
+    };
+
     $self->_store(info => $info);
     $self->_set_display($listen_ip);
     my $hardware = $self->_value('hardware');
@@ -694,10 +705,6 @@ sub _set_default_info($self, $listen_ip=undef) {
         next if $name eq 'disk' || $name eq 'display';
         $self->set_controller($name, 1) unless exists $hardware->{$name}->[0];
     }
-    $info->{interfaces}->[0] = {
-        hwaddress => $info->{mac}
-        ,address => $info->{ip}
-    };
     return $info;
 }
 
@@ -1012,7 +1019,7 @@ sub _check_port($self,@args) {
 }
 
 sub copy_config($self, $domain) {
-    my $config_new = $self->_load();
+    my $config_new = $domain->_load();
     for my $field ( keys %$config_new ) {
         my $value = $config_new->{$field};
         $value = 0 if $field eq 'is_active';

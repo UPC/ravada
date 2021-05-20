@@ -314,11 +314,12 @@ init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
 unlike($connector->{driver} , qr/sqlite/i) or BAIL_OUT;
 
-if (!rvd_front->ping_backend()) {
+if (!ping_backend()) {
     diag("SKIPPING: Backend not available");
     done_testing();
     exit;
 }
+$Test::Ravada::BACKGROUND=1;
 
 $TZ = DateTime::TimeZone->new(name => rvd_front->settings_global()->{backend}->{time_zone}->{value});
 
@@ -343,7 +344,6 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     mojo_login($t, $USERNAME, $PASSWORD);
     test_bookings($t);
     my @bases = _create_bases($t, $vm_name);
-
 
     is(list_machines_user($t), 0);
     is(list_machines($t), scalar(@bases)) or exit;

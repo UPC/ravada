@@ -1008,12 +1008,11 @@ get '/machine/autostart/#id/#value' => sub {
     return $c->render(json => { request => $req->id});
 };
 
-get '/machine/display/(:driver)/(:id).vv' => sub {
+get '/machine/display/(:driver)/(:id).(#extension)' => sub {
     my $c = shift;
 
     my $id = $c->stash('id');
-
-    warn $c->stash('driver');
+    my $extension = $c->stash('extension');
 
     my $domain = $RAVADA->search_domain_by_id($id);
     return $c->render(text => "unknown machine id=$id") if !$domain;
@@ -1028,33 +1027,13 @@ get '/machine/display/(:driver)/(:id).vv' => sub {
 
     $c->res->headers->content_type('application/x-virt-viewer');
         $c->res->headers->content_disposition(
-        "inline;filename=".$domain->id.".vv");
+        "inline;filename=".$domain->id.".$extension");
 
-    return $c->render(data => $domain->_display_file_spice($display), format => 'vv');
-};
-
-get '/machine/display/(:driver)/tls/(:id)-tls.vv' => sub {
-    my $c = shift;
-
-    my $id = $c->stash('id');
-
-    warn $c->stash('driver')."-tls";
-    my $domain = $RAVADA->search_domain_by_id($id);
-    return $c->render(text => "unknown machine id=$id") if !$domain;
-
-    my $display = $domain->_get_display($c->stash('driver'));
-    return $c->render(text => "unknown display ".$c->stash('driver')." for machine id=$id")
-    if !$display;
-
-    return access_denied($c)
-        if $USER->id ne $domain->id_owner
-        && !$USER->is_admin;
-
-    $c->res->headers->content_type('application/x-virt-viewer');
-        $c->res->headers->content_disposition(
-        "inline;filename=".$domain->id."-tls.vv");
-
-    return $c->render(data => $domain->_display_file_spice($display,1), format => 'vv');
+    my $format = $extension;
+    $format =~ s/^(\w+)\.(\w+)/$2/;
+    my $tls = 0;
+    $tls = 1 if $1 && $1 eq 'tls';
+    return $c->render(data => $domain->_display_file_spice($display, $tls), format => $format);
 };
 
 # Network ##########################################################3
@@ -2052,7 +2031,7 @@ sub login($c, $status=200) {
     if (!@error) {
         if (defined $login && defined $password) {
             eval { $auth_ok = Ravada::Auth::login($login, $password)};
-        } elsif (($c->param('ticket')) || ($c->param('submit') eq 'sso')) {
+        } elsif (($c->param('ticket')) || ($c->param('submit') && $c->param('submit') eq 'sso')) {
             eval { $auth_ok = Ravada::Auth::login_external($ticket, $c->session('ticket')) };
             if ($auth_ok && !$@) {
                 return $c->redirect_to($auth_ok->{'redirectTo'}) if ($auth_ok->{'redirectTo'});
@@ -2144,7 +2123,7 @@ sub quick_start {
     my $id_base = $c->param('id_base');
 
     my @error =();
-    if (($c->param('submit') ne 'sso') && (! $ticket)) {
+    if ($c->param('submit') && $c->param('submit') ne 'sso' && !$ticket) {
         push @error,("Empty login name")  if !length $login;
         push @error,("Empty password")  if !length $password;
     }
@@ -2156,7 +2135,7 @@ sub quick_start {
         my $log_ok;
         if ( $login && $password) {
             eval { $log_ok = Ravada::Auth::login($login, $password) };
-        } elsif (($c->param('ticket')) || ($c->param('submit') eq 'sso')) {
+        } elsif (($c->param('ticket')) || ($c->param('submit') && $c->param('submit') eq 'sso')) {
             eval { $log_ok = Ravada::Auth::login_external($ticket, $c->session('ticket')) };
             if ($log_ok && !$@) {
                 return $c->redirect_to($log_ok->{'redirectTo'}) if ($log_ok->{'redirectTo'});

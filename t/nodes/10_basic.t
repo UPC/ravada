@@ -1240,7 +1240,7 @@ sub test_change_hardware($vm, $node, $domain, $active = 0) {
         ,data => { memory => $new_mem }
     );
 
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     is($req1->status, 'done');
     is($req1->error, '');
 
@@ -1460,6 +1460,85 @@ sub test_nat($vm, $node, $set_localhost_natip=0) {
     $node->_data(nat_ip => '');
 }
 
+sub _download_alpine64 {
+    my $id_iso = search_id_iso('Alpine%64');
+
+    my $req = Ravada::Request->download(
+             id_iso => $id_iso
+    );
+    wait_request();
+    is($req->error, '');
+    is($req->status,'done') or exit;
+}
+
+sub test_displays($vm, $node, $no_builtin=0) {
+    my $base;
+    if ( $vm->type eq 'KVM') {
+        $base = rvd_back->search_domain($BASE_NAME);
+        $base = import_domain('KVM', $BASE_NAME, 1) if !$base;
+    } else {
+        return;
+        #        $base = create_domain($vm);
+    }
+    _download_alpine64();
+
+    my $domain = $base->clone(name => new_domain_name, user => user_admin);
+    my $n_displays = 1;
+    $n_displays++ if $vm->tls_ca();
+    if ($no_builtin) {
+        my $req_addh = Ravada::Request->add_hardware(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,name => 'display'
+            ,data => { driver => 'x2go' }
+        );
+        wait_request(debug => 0);
+        is($req_addh->status,'done');
+        is($req_addh->error,'');
+        $n_displays++;
+    }
+    $domain->start( user => user_admin
+        ,remote_ip => '1.1.1.1'
+        ,id_vm => $vm->id
+    );
+    wait_request(debug => 0);
+    my $domain_f0 = Ravada::Front::Domain->open($domain->id);
+    my @displays_f0 = $domain_f0->display_info(user_admin);
+    is(scalar(@displays_f0),$n_displays) or die Dumper($domain->name,\@displays_f0);
+
+    my @displays0 = $domain->display_info(user_admin);
+    is(scalar(@displays0),2) or die Dumper(\@displays0);
+
+    $domain->shutdown_now(user_admin);
+    my $req = Ravada::Request->migrate(
+        id_domain => $domain->id
+        , id_node => $node->id
+        , uid => user_admin->id
+        , start => 1
+        , shutdown => 1
+        , shutdown_timeout => 10
+        , remote_ip => '1.2.2.34'
+        , retry => 10
+    );
+    for ( 1 .. 30 ) {
+        wait_request( debug => 0, check_error => 0);
+        is($req->status,'done');
+        last if !$req->error || $req->error =~ /rsync done/;
+        sleep 1;
+    }
+    like($req->error,qr{^($|rsync done)}) or exit;
+
+    $domain = Ravada::Domain->open($domain->id);
+    my @displays1 = $domain->display_info(user_admin);
+    is(scalar(@displays1),1,Dumper(\@displays1));
+
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my @displays_f = $domain_f->display_info(user_admin);
+    is(scalar(@displays_f),$n_displays-1,Dumper(\@displays_f));
+
+    $domain->remove(user_admin);
+}
+
 ##################################################################################
 
 if ($>)  {
@@ -1471,8 +1550,9 @@ if ($>)  {
 clean();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
+my $tls;
 
-for my $vm_name (reverse vm_names() ) {
+for my $vm_name (vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -1496,6 +1576,7 @@ for my $vm_name (reverse vm_names() ) {
         skip($msg,10)   if !$vm;
 
         diag("Testing remote node in $vm_name");
+        $tls = 1 if check_libvirt_tls() && $vm_name eq 'KVM';
         my $node = remote_node($vm_name)  or next;
         clean_remote_node($node);
 
@@ -1506,6 +1587,11 @@ for my $vm_name (reverse vm_names() ) {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+
+        # test displays with no builtin added
+        test_displays($vm, $node,1) if $tls;
+        # test displays with only builtin
+        test_displays($vm, $node) if $tls;
 
         test_iptables_close($vm, $node);
 

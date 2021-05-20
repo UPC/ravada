@@ -348,7 +348,7 @@ sub test_remove_expose {
                  ,port => $internal_port
             ,id_domain => $domain->id
         );
-        rvd_back->_process_all_requests_dont_fork();
+        wait_request();
 
         is($req->status(),'done');
         is($req->error(),'');
@@ -573,16 +573,19 @@ sub test_routing_hibernated($vm) {
 }
 
 sub test_routing_already_used($vm, $source=0, $restricted=0) {
+    diag("test routing already used source=$source, restricted=$restricted");
     my $base = $BASE->clone(name => new_domain_name, user => user_admin);
     my $internal_port = 22;
+    $restricted = 1 if $restricted;
     $base->expose(port => $internal_port, name => "ssh", restricted => $restricted);
     my @base_ports0 = $base->list_ports();
 
     my $public_port0 = $base_ports0[0]->{public_port};
 
     my @source;
-    @source = ( 's' => '0.0.0.0/0');
-    $vm->iptables_unique(
+    @source = ( 's' => '0.0.0.0/0') if $source;
+    my @iptables_before = _iptables_save($vm,'nat' ,'PREROUTING');
+    my @rule = (
             t => 'nat'
             ,A => 'PREROUTING'
             ,p => 'tcp'
@@ -590,9 +593,11 @@ sub test_routing_already_used($vm, $source=0, $restricted=0) {
             ,j => 'DNAT'
             ,'to-destination' => "1.2.3.4:1111"
             ,@source
-    );
+        );
+    $vm->iptables( @rule );
 
     my @iptables0 = _iptables_save($vm,'nat','PREROUTING');
+
     my $remote_ip = '3.3.3.3';
     $base->start(remote_ip => $remote_ip,  user => user_admin);
 
@@ -604,10 +609,10 @@ sub test_routing_already_used($vm, $source=0, $restricted=0) {
 
     my $public_port1 = $base_ports1[0]->{public_port};
 
-    isnt($public_port1, $public_port0) or exit;
+    isnt($public_port1, $public_port0,$base->name." ".Dumper(\@base_ports1)) or exit;
     my @iptables1 = _iptables_save($vm,'nat' ,'PREROUTING');
-    is(scalar(@iptables1),scalar(@iptables0)+1,"Expecting 1 chain more "
-    .Dumper(\@iptables0,\@iptables1)) or exit;
+    #is(scalar(@iptables1),scalar(@iptables0)+1,"Expecting 1 chain more "
+    #.Dumper(\@iptables0,\@iptables1)) or exit;
 
     my @lines0 = grep(/-A FORWARD .*ACCEPT$/, _iptables_save($vm));
     my @lines = grep(m{d $internal_ip/32 .*dport $internal_port}, @lines0);
@@ -684,6 +689,8 @@ sub test_routing_already_used($vm, $source=0, $restricted=0) {
     }
 
     $base->remove(user_admin);
+
+    _clean_iptables($vm, @rule );
 }
 
 sub _iptables_save($vm,$table=undef,$chain=undef) {
@@ -712,7 +719,8 @@ sub test_interfaces($vm) {
     ok(exists $info_f->{ip},"Expecting ip in front domain info");
     is($info_f->{ip}, $domain->ip);
 
-    ok($info_f->{interfaces},"Expecting interfaces on ".$domain->_vm->type)
+    die $domain->name if !exists $info_f->{interfaces};
+    ok(exists $info_f->{interfaces},"Expecting interfaces on ".$domain->_vm->type)
         and isa_ok($info_f->{interfaces},"ARRAY","Expecting mac address is a list")
         and do {
             my $found = 0;
@@ -733,11 +741,12 @@ sub test_redirect_ip_duplicated($vm) {
     $domain->expose(port => $internal_port, name => "ssh");
     $domain->start( remote_ip => '10.1.1.2', user => user_admin);
     my $ip = _wait_ip2($vm, $domain);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my @ports0 = $domain->list_ports();
     my ($public_port) = $ports0[0]->{public_port};
-    $vm->iptables(t => 'nat'
+    my @rule = (
+        t => 'nat'
         , A => 'PREROUTING'
         , p => 'tcp'
         , d => $vm->ip
@@ -745,18 +754,20 @@ sub test_redirect_ip_duplicated($vm) {
         , j => 'DNAT'
         , 'to-destination' => "$ip:$internal_port"
     );
+    $vm->iptables(@rule);
     my @out = split /\n/, `iptables-save -t nat`;
     my @open = (grep /--to-destination $ip/, @out);
     is(scalar(@open),2) or die Dumper(\@open);
 
     $domain->start( remote_ip => '10.1.1.2', user => user_admin);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     @out = split /\n/, `iptables-save -t nat`;
     @open = (grep /--to-destination $ip/, @out);
     is(scalar(@open),1) or die Dumper(\@open);
 
     $domain->remove(user_admin);
+    _clean_iptables($vm, @rule);
 }
 
 sub test_redirect_ip_duplicated_refresh($vm) {
@@ -766,11 +777,12 @@ sub test_redirect_ip_duplicated_refresh($vm) {
     $domain->expose(port => $internal_port, name => "ssh");
     $domain->start( remote_ip => '10.1.1.2', user => user_admin);
     my $ip = _wait_ip2($vm, $domain);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my @ports0 = $domain->list_ports();
     my ($public_port) = $ports0[0]->{public_port};
-    $vm->iptables(t => 'nat'
+    my @rule = (
+        t => 'nat'
         , A => 'PREROUTING'
         , p => 'tcp'
         , d => $vm->ip
@@ -778,6 +790,7 @@ sub test_redirect_ip_duplicated_refresh($vm) {
         , j => 'DNAT'
         , 'to-destination' => "$ip:$internal_port"
     );
+    $vm->iptables(@rule);
     my @out = split /\n/, `iptables-save -t nat`;
     my @open = (grep /--to-destination $ip/, @out);
     is(scalar(@open),2) or die Dumper(\@open);
@@ -792,6 +805,7 @@ sub test_redirect_ip_duplicated_refresh($vm) {
     is(scalar(@open),1) or die Dumper(\@open);
 
     $domain->remove(user_admin);
+    _clean_iptables($vm, @rule);
 }
 
 
@@ -815,7 +829,8 @@ sub test_open_port_duplicated($vm) {
     is(scalar(@open),1);
     my ($public_port) = $open[0] =~ /--dport (\d+)/;
     die "Error: no public port in $open[0]" if !$public_port;
-    $vm->iptables( t => 'nat'
+    my @rule = (
+        t => 'nat'
         , A => 'PREROUTING'
         , p => 'tcp'
         , d => '192.0.2.3'
@@ -823,14 +838,15 @@ sub test_open_port_duplicated($vm) {
         , j => 'DNAT'
         , 'to-destination' => '127.0.0.1:23'
     );
+    $vm->iptables(@rule);
     my @out2 = split /\n/, `iptables-save -t nat`;
     my @open2 = (grep /--dport $public_port/, @out2);
     is(scalar(@open2),2) or die Dumper(\@open2);
 
-    my $req = Ravada::Request->refresh_vms();
-    wait_request();
+    my $req = Ravada::Request->refresh_vms(_force => 1);
+    wait_request(request => $req, debug => 0);
     is($req->status,'done');
-    is($req->error, '');
+    is($req->error, '') or exit;
 
     my @out3 = split /\n/, `iptables-save -t nat`;
     my @open3 = (grep /--dport $public_port/, @out3);
@@ -838,6 +854,7 @@ sub test_open_port_duplicated($vm) {
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
+    _clean_iptables($vm, @rule);
 }
 
 sub test_close_port($vm) {
@@ -860,7 +877,8 @@ sub test_close_port($vm) {
     is(scalar(@open),1);
     my ($public_port) = $open[0] =~ /--dport (\d+)/;
     die "Error: no public port in $open[0]" if !$public_port;
-    $vm->iptables( t => 'nat'
+    my @rule = (
+        t => 'nat'
         , A => 'PREROUTING'
         , p => 'tcp'
         , d => '192.0.2.3'
@@ -868,6 +886,7 @@ sub test_close_port($vm) {
         , j => 'DNAT'
         , 'to-destination' => '127.0.0.1:23'
     );
+    $vm->iptables( @rule);
     my @out2 = split /\n/, `iptables-save -t nat`;
     my @open2 = (grep /--dport $public_port/, @out2);
     is(scalar(@open2),2) or die Dumper(\@open);
@@ -880,6 +899,12 @@ sub test_close_port($vm) {
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
+    _clean_iptables($vm,@rule);
+}
+
+sub _clean_iptables($vm, @rule) {
+    for (@rule) { $_ = "D" if $_ eq 'A' };
+    $vm->iptables(@rule);
 }
 
 sub test_clone_exports_add_ports($vm) {
@@ -986,14 +1011,18 @@ sub test_host_down {
 
     is(scalar $domain->list_ports,1);
 
-    my ($n_rule)
-        = search_iptable_remote(local_ip => "$local_ip/32"
+    my ($n_rule);
+    for ( 1 .. 3 ) {
+        $n_rule = search_iptable_remote(local_ip => "$local_ip/32"
             , local_port => $public_port
             , table => 'nat'
             , chain => 'PREROUTING'
             , node => $vm
             , jump => 'DNAT'
-    );
+        );
+        last if $n_rule;
+        wait_request();
+    }
 
     ok($n_rule,"Expecting rule for -> $local_ip:$public_port") or confess;
 
@@ -1184,6 +1213,7 @@ sub test_change_expose($vm, $restricted) {
     is($list_ports[0]->{name}, $name);
 
     $restricted = !$restricted;
+    $restricted = 0 if !$restricted;
     $name = "$name bar";
     $domain->expose(
              id_port => $list_ports[0]->{id}
@@ -1222,6 +1252,7 @@ sub test_change_expose_3($vm) {
     is($domain->list_ports, 3);
     for my $port ($domain->list_ports) {
         my $restricted = ! $port->{restricted};
+        $restricted = 0 if !$restricted;
         $domain->expose(id_port => $port->{id}, restricted => $restricted);
         wait_request(background => 0, debug => 0);
         my ($in, $out, $err);
@@ -1302,7 +1333,8 @@ sub _wait_requests($domain) {
 
 sub import_base($vm) {
     if ($vm->type eq 'KVM') {
-        $BASE = import_domain($vm->type, $BASE_NAME, 1);
+        $BASE = rvd_back->search_domain('zz-test-base-alpine');
+        $BASE = import_domain($vm->type, $BASE_NAME, 1) if !$BASE;
         confess "Error: domain $BASE_NAME is not base" unless $BASE->is_base;
 
         confess "Error: domain $BASE_NAME has exported ports that conflict with the tests"
@@ -1330,15 +1362,26 @@ sub test_expose_nested_base($vm) {
 
 ##############################################################
 
-clean();
+for my $db ( 'mysql', 'sqlite' ) {
 
-init();
-Test::Ravada::_clean_db();
+clean();
 
 add_network_10(0);
 
 test_can_expose_ports();
-for my $vm_name ( vm_names() ) {
+for my $vm_name ( reverse vm_names() ) {
+
+    if ($db eq 'mysql') {
+        init('/etc/ravada.conf',0, 1);
+        next if !ping_backend();
+        remove_old_domains_req();
+        wait_request();
+    } elsif ( $db eq 'sqlite') {
+        init(undef, 1,1); # flush
+    }
+    diag("Testing $vm_name on $db");
+    clean();
+
 
     SKIP: {
     my $vm = rvd_back->search_vm($vm_name);
@@ -1352,7 +1395,6 @@ for my $vm_name ( vm_names() ) {
     diag($msg)      if !$vm;
     skip $msg,10    if !$vm;
 
-    diag("Testing $vm_name");
     flush_rules() if !$<;
     import_base($vm);
 
@@ -1365,7 +1407,7 @@ for my $vm_name ( vm_names() ) {
     test_close_port($vm);
 
     test_routing_hibernated($vm);
-    test_routing_already_used($vm,undef,'restricted');
+    test_routing_already_used($vm,0,'restricted');
     test_routing_already_used($vm);
     test_routing_already_used($vm,'addsource');
     test_routing_already_used($vm,'addsource','restricted');
@@ -1394,7 +1436,9 @@ for my $vm_name ( vm_names() ) {
     test_clone_exports($vm);
     test_clone_exports_spinoff($vm);
 
+    NEXT:
     }; # of SKIP
+}
 }
 
 flush_rules() if !$<;

@@ -123,6 +123,7 @@ sub list_disks {
     my $self = shift;
     my @disks = ();
 
+    return @disks if !$self->xml_description;
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
 
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
@@ -654,14 +655,37 @@ sub display_info($self, $user) {
     my @graph = $xml->findnodes('/domain/devices/graphics')
         or return;
 
+    my $n_order = 0;
     my @display;
     for my $graph ( @graph ) {
         my ($type) = $graph->getAttribute('type');
+        my $display;
         if ($type eq 'spice') {
-            push @display,(_display_info_spice($graph));
+            $display = _display_info_spice($graph);
         } elsif ($type eq 'vnc' ) {
-            push @display,(_display_info_vnc($graph));
+            $display= _display_info_vnc($graph);
+        } else {
+            confess "I don't know how to check info for $type display";
         }
+
+        $display->{port} = undef if $display->{port} && $display->{port}==-1;
+        $display->{is_secondary} = 0;
+        my $display_tls;
+        if (exists $display->{tls_port} && $display->{tls_port} && $self->_vm->tls_ca) {
+            my %display_tls = %$display;
+            $display_tls{port} = delete $display_tls{tls_port};
+            $display_tls{port} = undef if $display_tls{port} && $display_tls{port}==-1;
+            $display_tls{driver} .= "-tls";
+            $display_tls{n_order} = ++$n_order;
+            $display_tls{is_secondary} = 1;
+            lock_hash(%display_tls);
+            $display_tls = \%display_tls;
+        }
+        delete $display->{tls_port} if exists $display->{tls_port};
+        $display->{n_order} = ++$n_order;
+        lock_hash(%$display);
+        push @display,($display_tls) if $display_tls;
+        push @display,($display);
     }
     return $display[0] if !wantarray;
     return @display;
@@ -681,7 +705,7 @@ sub _display_info_vnc($graph) {
                  ,ip => $address
          ,is_builtin => 1
     );
-    $display{tls_port} = $tls_port if defined $tls_port;
+    $display{tls_port} = $tls_port if defined $tls_port && $tls_port;
     $display{password} = $password;
     $port = '' if !defined $port;
 
@@ -693,8 +717,6 @@ sub _display_info_vnc($graph) {
             $display{$item->getName()} = $value;
         }
     }
-
-    lock_hash(%display);
     return \%display;
 }
 
@@ -726,7 +748,6 @@ sub _display_info_spice($graph) {
         }
     }
 
-    lock_hash(%display);
     return \%display;
 }
 
@@ -1937,6 +1958,7 @@ sub _set_driver_generic {
 sub _update_device_graphics($self, $driver, $data) {
     my $doc = XML::LibXML->load_xml(string
         => $self->domain->get_xml_description());
+    $driver =~ s/-tls$//;
     my $path = "/domain/devices/graphics\[\@type='$driver']";
     my ($device ) = $doc->findnodes($path);
     die "$path not found ".$self->name if !$device;
@@ -2229,7 +2251,7 @@ sub _set_controller_display($self, $number, $data) {
 }
 
 
-sub remove_controller($self, $name, $index=0) {
+sub remove_controller($self, $name, $index=0,$attribute_name=undef, $attribute_value=undef) {
     my $sub = $REMOVE_CONTROLLER_SUB{$name};
     
     die "I can't get controller $name for domain ".$self->name
@@ -2237,7 +2259,14 @@ sub remove_controller($self, $name, $index=0) {
         ."\n".Dumper(\%REMOVE_CONTROLLER_SUB)
         if !$sub;
 
-    my $ret = $sub->($self, $index);
+    my $ret;
+
+    #some hardware can be removed searching by attribute
+    if($name eq 'display') {
+        $ret = $sub->($self, 0, $attribute_name, $attribute_value);
+    } else {
+        $ret = $sub->($self, $index);
+    }
     $self->xml_description_inactive();
     return $ret;
 }
@@ -2264,8 +2293,8 @@ sub _remove_device($self, $index, $device, $attribute_name=undef, $attribute_val
         ." not removed, only ".($ind)." found in ".$self->name."\n";
 }
 
-sub _remove_controller_display($self, $index) {
-    $self->_remove_device($index,'graphics' );
+sub _remove_controller_display($self, $index, $attribute_name=undef, $attribute_value=undef) {
+    $self->_remove_device($index,'graphics', $attribute_name,$attribute_value );
 }
 
 
@@ -2502,6 +2531,7 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
 
 sub _change_hardware_display($self, $index, $data) {
     my $type = delete $data->{driver};
+    $type =~ s/-tls$//;
     my $port = delete $data->{port};
     confess if $port;
     for my $item (keys %$data) {
@@ -2596,7 +2626,6 @@ sub _change_hardware_network($self, $index, $data) {
 sub reload_config($self, $doc) {
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
-    $self->info(Ravada::Utils::user_daemon);
 }
 
 sub copy_config($self, $domain) {

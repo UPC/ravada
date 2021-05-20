@@ -39,6 +39,6 @@ WriteMakefile(
   },
 
   test      => {TESTS => 't/*.t t/*/*.t'},
-  clean     => {FILES => ['t/.db', '/var/tmp/rvd_void'] }
+  clean     => {FILES => ['t/.db', '/var/tmp/rvd_void','/var/tmp/node.lock','/var/tmp/fw.lock'] }
 
 );
