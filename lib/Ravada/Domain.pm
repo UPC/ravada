@@ -1222,15 +1222,15 @@ sub _max_n_order_display($self) {
 }
 
 sub _normalize_display($self, $display, $json=1) {
-    $display->{id_vm}=$self->_vm->id
-    if exists $display->{port} && $display->{port} && !$display->{id_vm};
-
     my %valid_field = map { $_ => 1 }
     qw(id id_domain port ip display listen_ip driver password is_builtin is_secondary
     is_active n_order extra id_domain_port id_vm );
 
     my $extra = {};
     unlock_hash(%$display);
+
+    $display->{id_vm}=$self->_vm->id
+    if exists $display->{port} && $display->{port} && !$display->{id_vm};
 
     $extra = decode_json($display->{extra}) if $display->{extra} && !ref($display->{extra});
     $display->{id_domain} = $self->id;
@@ -1270,7 +1270,7 @@ sub _insert_display( $self, $display ) {
     my $sth = $$CONNECTOR->dbh->prepare($sql);
     unlock_hash %$display;
     my $used_port = {};
-    for ( ;; ) {
+    for ( 1 .. 10 ) {
         eval {
             $sth->execute(map { $display->{$_} } sort keys %$display);
         };
@@ -3357,7 +3357,7 @@ sub _update_display_port_exposed($self, $name, $local_ip, $public_port, $interna
         ." WHERE driver=? AND id_domain=?"
     );
     my $is_builtin;
-    for (;;) {
+    for (1 .. 10) {
         eval {
             $sth->execute($local_ip, $local_ip, $public_port,1, $self->_vm->id
                 ,$name, $self->id);
