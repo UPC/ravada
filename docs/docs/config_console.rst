@@ -7,6 +7,9 @@ Requirements
 The virtual machine must have the pty configured. From the KVM server
 edit the domain and make sure there is this section:
 
+From KVM Server
+~~~~~~~~~~~~~~~
+
 .. prompt:: bash
 
     sudo virsh edit virtual-machine
@@ -30,9 +33,23 @@ edit the domain and make sure there is this section:
 From Debian / Ubuntu guest
 --------------------------
 
+You eithar have to enable the serial service or add it to grub.
+
+Option 1: Enable Serial Service
+~~~~~~~~~~~~~~~~~~~~~
+
 .. prompt:: bash
 
     sudo systemctl enable --now serial-getty@ttyS0.service
+
+Option 2: Add console to grub
+~~~~~~~~~~~~~~~~~~~
+
+Search for the grub.cfg configuration file and add this to *GRUB_CMDLINE_LINUX_DEFAULT*:
+
+.. :
+
+    GRUB_CMDLINE_LINUX_DEFAULT="console=tty0 console=ttyS0,115200n8"
 
 From KVM server
 ---------------
