@@ -14,7 +14,7 @@ From KVM Server
 
     sudo virsh edit virtual-machine
 
-.. :
+.. ::
 
     <serial type='pty'>
       <source path='/dev/pts/0'/>
@@ -47,7 +47,7 @@ Option 2: Add console to grub
 
 Search for the grub.cfg configuration file and add this to *GRUB_CMDLINE_LINUX_DEFAULT*:
 
-.. :
+.. ::
 
     GRUB_CMDLINE_LINUX_DEFAULT="console=tty0 console=ttyS0,115200n8"
 
