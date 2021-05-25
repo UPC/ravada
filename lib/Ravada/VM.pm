@@ -1925,10 +1925,13 @@ sub _new_free_port($self) {
     $self->_list_used_ports_ss($used_port);
     $self->_list_used_ports_iptables($used_port);
 
-    my $free_port = 5950;
+    my $min_free_port = Ravada::setting(undef,'/backend/expose_port_min');
+    my $free_port = $min_free_port;
     for (;;) {
         last if !$used_port->{$free_port};
         $free_port++ ;
+        die "Error: no free ports available from $min_free_port.\n"
+        if $free_port > 65535;
     }
     return $free_port;
 }

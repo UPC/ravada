@@ -65,9 +65,12 @@
             <ul ng-show="domain.ports.length">
                 <li ng-repeat="port in domain.ports">
                     <b>{{port.name}}</b>
+                    <span ng-show="port.public_port">
                     {{domain.display.ip}}:{{port.public_port}}
                     <i class="fa fa-arrow-right"></i>
                     {{port.internal_port}}
+                    </span>
+                    <span ng-hide="port.public_port">Error: no free ports to expose</span>
                 </li>
             </ul>
             </div>
