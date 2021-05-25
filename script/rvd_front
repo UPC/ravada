@@ -1398,6 +1398,7 @@ sub _translations($c) {
         ,ja => 'Japanese'
         ,'cat@valencia' => 'Valencian'
         ,vi => 'Vietnamese'
+        ,'zh_CN' => 'Chinese'
     );
     $c->stash(lang_name => \%lang_name);
     my $language = $USER->language;

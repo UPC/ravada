@@ -118,6 +118,9 @@ msgstr "Japonès"
 msgid "German"
 msgstr "Alemany"
 
+msgid "Chinese"
+msgstr "Xinès"
+
 msgid "New Password:"
 msgstr "Nova Contrasenya:"
 
