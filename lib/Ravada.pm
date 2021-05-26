@@ -1102,6 +1102,15 @@ sub _add_indexes_generic($self) {
         ,iptables => [
             "index(id_domain,time_deleted,time_req)"
         ]
+        ,host_devices => [
+            "unique(name, id_vm)"
+        ]
+        ,host_device_templates => [
+            "unique(id_host_device,path)"
+        ]
+        ,host_devices_domain => [
+            "unique(id_host_device, id_domain)"
+        ]
         ,messages => [
              "index(id_request,date_send)"
              ,"index(id_user)"
@@ -1586,6 +1595,32 @@ sub _sql_create_tables($self) {
             ,n_order => 'integer NOT NULL'
             ,password => 'char(32)'
             ,extra => 'TEXT'
+        }
+        ,
+        host_devices => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,name => 'char(80) not null'
+            ,id_vm => 'integer NOT NULL'
+            ,list_command => 'varchar(128) not null'
+            ,list_filter => 'varchar(128) not null'
+            ,template_args => 'varchar(255) not null'
+            ,enabled => "integer NOT NULL default 1"
+        }
+        ,
+        host_device_templates=> {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_host_device => 'integer NOT NULL'
+            ,path => 'varchar(255)'
+            ,type => 'char(40)'
+            ,template=> 'TEXT'
+        }
+        ,
+        host_devices_domain => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_host_device => 'integer NOT NULL references host_devices(id)'
+            ,id_domain => 'integer NOT NULL references domain(id)'
+            ,name => 'varchar(255)'
+            ,is_locked => 'integer not null default 0'
         }
         ,
         settings => {
