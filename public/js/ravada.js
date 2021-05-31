@@ -506,6 +506,9 @@
                             ,'copy_number': $scope.copy_number
                           ,'copy_ram': $scope.copy_ram
                           ,'new_name': $scope.new_name
+                          ,'new_owner': $scope.copy_owner
+                          ,'copy_is_volatile': $scope.copy_is_volatile
+                          ,'copy_is_pool': $scope.copy_is_pool
                       })
               ).then(function(response) {
                   // if there are many , we pick the last one

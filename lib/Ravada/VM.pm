@@ -455,7 +455,7 @@ sub _around_create_domain {
         }
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
-    $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones());
+    $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones()) || $volatile;
 
     my @start_args = ( user => $owner );
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
@@ -801,7 +801,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
