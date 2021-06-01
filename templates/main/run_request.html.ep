@@ -54,7 +54,7 @@
             <h3>Machine Information</h3>
             <ul>
                 <li><b>Internal IP:</b><span ng-show="domain.ip"> {{domain.ip}}</span>
-                    <span ng-hide="domain.ip"><i>waiting for network to come up</i></span>
+                    <span ng-hide="domain.ip"><i>waiting for network to come up</i> <i class="fas fa-sync-alt fa-spin"></i></span>
                 </li>
                 <li ng-show="domain.interfaces"><b>Hardware address</b> {{domain.interfaces[0].hwaddr}} </li>
                 <li><b>Max Memory:</b> {{domain.max_mem}}</li>
@@ -62,7 +62,8 @@
                 <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
             </ul>
             <h3 ng-show="domain.ports.length">Open ports</h3>
-            <ul ng-show="domain.ports.length">
+            <ul ng-show="domain.ports.length && !domain.ip"><i class="fas fa-sync-alt fa-spin"></i></ul>
+            <ul ng-show="domain.ip && domain.ports.length">
                 <li ng-repeat="port in domain.ports">
                     <b>{{port.name}}</b>
                     <span ng-show="port.public_port">
@@ -70,7 +71,7 @@
                     <i class="fa fa-arrow-right"></i>
                     {{port.internal_port}}
                     </span>
-                    <span ng-hide="port.public_port">Error: no free ports to expose</span>
+                    <span ng-hide="port.public_port || !domain.ip">Error: no free ports to expose</span>
                 </li>
             </ul>
             </div>
