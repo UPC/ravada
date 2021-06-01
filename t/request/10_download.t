@@ -22,6 +22,7 @@ if ($>)  {
 }
 
 init();
+$Ravada::CAN_FORK = 1;
 
 for my $vm_name ('KVM') {
     my $rvd_back = rvd_back();

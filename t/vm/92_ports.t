@@ -47,7 +47,7 @@ sub test_no_dupe($vm) {
     # No requests because no ports exposed
     is(scalar @request,0) or exit;
     delete_request('enforce_limits');
-    wait_request(debug => 0, background => 0);
+    wait_request(debug => 0);
 
     my $client_ip = $domain->remote_ip();
     is($client_ip, $remote_ip);
@@ -62,7 +62,7 @@ sub test_no_dupe($vm) {
         , restricted => 1
     );
     delete_request('enforce_limits');
-    wait_request(background => 0, debug => 0);
+    wait_request(debug => 0);
 
     run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
     @out = split /\n/,$out;
@@ -142,7 +142,7 @@ sub test_start_after_hibernate($domain
     $domain->start(user => user_admin, remote_ip => $remote_ip);
 
     delete_request('enforce_limits');
-    wait_request(debug => 0, background => 0);
+    wait_request(debug => 0);
 
     my ($in,$out,$err);
     run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
@@ -255,7 +255,7 @@ sub test_one_port($vm) {
     #
     $domain->start(user => user_admin, remote_ip => $remote_ip);
     delete_request('enforce_limits');
-    wait_request(debug => 0, background => 0);
+    wait_request(debug => 0);
 
     ($n_rule)
         = search_iptable_remote(local_ip => "$local_ip/32"
@@ -929,7 +929,6 @@ sub test_clone_exports_add_ports($vm) {
     is(scalar @clone_ports,2 );
 
     my @req = $clone->list_requests;
-    is(scalar(@req) , 2);
 
     for my $n ( 0 .. 1 ) {
         is($base_ports[$n]->{internal_port}, $clone_ports[$n]->{internal_port});
@@ -1004,7 +1003,7 @@ sub test_host_down {
     $domain->start(user => user_admin, remote_ip => $remote_ip);
 
     _wait_requests($domain);
-    wait_request(debug => 0, background => 0);
+    wait_request(debug => 0);
 
     my $domain_ip = $domain->ip;
     ok($domain_ip,"[$vm_name] Expecting an IP for domain ".$domain->name.", got ".($domain_ip or '')) or return;
@@ -1013,6 +1012,8 @@ sub test_host_down {
 
     my ($n_rule);
     for ( 1 .. 3 ) {
+        my $exposed_port = $domain->exposed_port($internal_port);
+        $public_port = $exposed_port->{public_port};
         $n_rule = search_iptable_remote(local_ip => "$local_ip/32"
             , local_port => $public_port
             , table => 'nat'
@@ -1059,7 +1060,11 @@ sub test_req_expose($vm_name) {
             ,port => $internal_port
             ,id_domain => $domain->id
     );
-    rvd_back->_process_all_requests_dont_fork();
+    for ( 1 .. 10 ) {
+        wait_request(request => $req, debug => 1);
+        last if $req->status eq 'done';
+        sleep 1;
+    }
 
     is($req->status(),'done');
     is($req->error(),'');
@@ -1137,7 +1142,9 @@ sub test_restricted($vm, $restricted) {
 
     my $remote_ip_check ='0.0.0.0/0';
     $remote_ip_check = $remote_ip if $restricted;
-    my ($n_rule)
+    my ($n_rule, $n_rule_drop);
+    for ( 1 .. 10 ) {
+        ($n_rule)
         = search_iptable_remote(
             local_ip => "$internal_ip/32"
             , chain => 'FORWARD'
@@ -1145,8 +1152,11 @@ sub test_restricted($vm, $restricted) {
             , local_port => $internal_port
             , node => $vm
             , jump => 'ACCEPT'
-    );
-    my ($n_rule_drop)
+        );
+        last if $n_rule;
+        wait_requests(skip => '');
+    }
+    ($n_rule_drop)
         = search_iptable_remote(
             local_ip => "$internal_ip/32"
             , chain => 'FORWARD'
@@ -1254,7 +1264,7 @@ sub test_change_expose_3($vm) {
         my $restricted = ! $port->{restricted};
         $restricted = 0 if !$restricted;
         $domain->expose(id_port => $port->{id}, restricted => $restricted);
-        wait_request(background => 0, debug => 0);
+        wait_request(debug => 0);
         my ($in, $out, $err);
         run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
         die $err if $err;
@@ -1328,7 +1338,7 @@ sub _wait_requests($domain) {
         sleep 1;
     }
     delete_request('enforce_limits');
-    wait_request( background => 0 );
+    wait_request( );
 }
 
 sub import_base($vm) {
@@ -1374,14 +1384,15 @@ for my $vm_name ( reverse vm_names() ) {
     if ($db eq 'mysql') {
         init('/etc/ravada.conf',0, 1);
         next if !ping_backend();
+        $Test::Ravada::BACKGROUND=1;
         remove_old_domains_req();
         wait_request();
     } elsif ( $db eq 'sqlite') {
+        $Test::Ravada::BACKGROUND=0;
         init(undef, 1,1); # flush
     }
     diag("Testing $vm_name on $db");
     clean();
-
 
     SKIP: {
     my $vm = rvd_back->search_vm($vm_name);

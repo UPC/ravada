@@ -798,22 +798,8 @@ sub migrate($node_name) {
 }
 
 sub clean_db_leftovers {
-    my $dbh = rvd_back->_connect_dbh->dbh;
-    for my $table (
-        'access_ldap_attribute','domain_access'
-        ,'domain_displays' , 'domain_ports', 'volumes', 'domains_void', 'domains_kvm', 'domain_instances', 'bases_vm', 'domain_access', 'base_xml', 'file_base_images', 'iptables', 'domains_network') {
-
-        my $sth = $dbh->prepare("DELETE FROM $table WHERE id_domain NOT IN "
-            ." ( SELECT id FROM domains ) "
-        );
-        $sth->execute();
-    }
-    for my $table ('grants_user') {
-        my $sth = $dbh->prepare("DELETE FROM $table WHERE id_user NOT IN "
-            ." ( SELECT id FROM users) "
-        );
-        $sth->execute();
-    }
+    my $rvd_back = shift;
+    $rvd_back->_clean_db_leftovers();
 }
 
 sub DESTROY {
@@ -854,7 +840,7 @@ run_request($RUN_REQUEST)           if $RUN_REQUEST;
 
 migrate($MIGRATE)                   if $MIGRATE;
 
-clean_db_leftovers()                if $CLEAN_DB_LEFTOVERS;
+clean_db_leftovers($rvd_back)       if $CLEAN_DB_LEFTOVERS;
 }
 
 
