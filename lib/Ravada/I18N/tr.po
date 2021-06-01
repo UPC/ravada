@@ -7,15 +7,16 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-01-03 11:17+0000\n"
-"Last-Translator: ergün elvan bilsel <bilselergun@gmail.com>, 2020\n"
-"Language-Team: Turkish (Turkey) (https://www.transifex.com/ravada/teams/70385/tr_TR/)\n"
+"PO-Revision-Date: 2021-05-26 10:57+0000\n"
+"Last-Translator: Barış Güvenkaya <bguvenkaya@tutanota.de>\n"
+"Language-Team: Turkish <https://hosted.weblate.org/projects/ravada/"
+"translation/tr/>\n"
+"Language: tr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: tr_TR\n"
-"Plural-Forms: nplurals=2; plural=(n > 1);\n"
-"X-Generator: Poedit 1.8.7.1\n"
+"Plural-Forms: nplurals=2; plural=n > 1;\n"
+"X-Generator: Weblate 4.7-dev\n"
 
 msgid "Ravada broker"
 msgstr "Ravada Aracı"
@@ -45,10 +46,10 @@ msgid "Clone"
 msgstr "Klon"
 
 msgid "Clone/s"
-msgstr "Klon/s"
+msgstr "Klon(lar)"
 
 msgid "Users List"
-msgstr "Kullanıcılar Listesi"
+msgstr "Kullanıcı Listesi"
 
 msgid "Name"
 msgstr "İsim"
@@ -123,7 +124,7 @@ msgid "Confirm Password:"
 msgstr "Şifreyi Onayla"
 
 msgid "Submit"
-msgstr "Sunmak"
+msgstr "Gönder"
 
 msgid "Your language has been changed successfully"
 msgstr "Diliniz başarılı bir şekilde değiştirildi"
@@ -138,7 +139,7 @@ msgid "Password fields do not match"
 msgstr "Şifre alanları eşleşmiyor"
 
 msgid "Some of the password fields are empty"
-msgstr "şifre alanlarından bazıları boş"
+msgstr "Şifre alanlarından bazıları boş"
 
 msgid "Status"
 msgstr "Durum"
@@ -147,13 +148,13 @@ msgid "Actions"
 msgstr "Eylemler"
 
 msgid "Down"
-msgstr "Düştü"
+msgstr "Kapalı"
 
 msgid "Running"
 msgstr "Çalışıyor"
 
 msgid "Shutdown"
-msgstr "kapat"
+msgstr "Kapat"
 
 msgid "Screenshot"
 msgstr "Ekran Görüntüsü"
@@ -162,7 +163,7 @@ msgid "Paused"
 msgstr "Durdur"
 
 msgid "Machine locked by request"
-msgstr "Makine istek tarafından kilitlendi"
+msgstr "Makine istek üzerine kilitlendi"
 
 msgid "Process"
 msgstr "Süreç"
@@ -177,7 +178,7 @@ msgid "Error"
 msgstr "Hata"
 
 msgid "Backend not available!"
-msgstr "Arka uç etkin değil"
+msgstr "Arka uç etkin değil!"
 
 msgid "Subject"
 msgstr "Konu"
@@ -189,7 +190,7 @@ msgid "Mark as read"
 msgstr "Okundu olarak işaretle"
 
 msgid "Mark as unread"
-msgstr "Okumamış olarak işaretle"
+msgstr "Okunmamış olarak işaretle"
 
 msgid "No messages to show"
 msgstr "Gösterilecek mesaj yok"
@@ -210,10 +211,10 @@ msgid "users"
 msgstr "kullanıcılar"
 
 msgid "Messages"
-msgstr "Mesaj"
+msgstr "Mesajlar"
 
 msgid "messages"
-msgstr "mesaj"
+msgstr "mesajlar"
 
 msgid "Admin tools"
 msgstr "Yönetici araçları"
@@ -237,10 +238,10 @@ msgid "No"
 msgstr "Hayır"
 
 msgid "Make public"
-msgstr "Görünür Yap"
+msgstr "Görünür yap"
 
 msgid "Machine settings"
-msgstr "Makine Ayarları"
+msgstr "Makine ayarları"
 
 msgid "Cannot remove base, machine has clones"
 msgstr "Taban kaldırılamıyor, makinede klonlar mevcut"
@@ -252,13 +253,13 @@ msgid "hide clones"
 msgstr "klonları gizle"
 
 msgid "For Spice redirection you will need to install"
-msgstr "Ajanı yeniden yönledirmeniz için yüklemeniz gerekecek"
+msgstr "Spice yönlendirmesi için yüklemeniz gerekecek"
 
 msgid "in your computer."
 msgstr "bilgisayarınızda"
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr "Sürümünüzde arama yapın, örneğin Debian / Ubuntu"
+msgstr "Dağıtımınızda arayın, örneğin Debian/Ubuntu"
 
 msgid "You will need to install"
 msgstr "Yüklemeniz gerekecek"
@@ -323,7 +324,7 @@ msgid "can change the settings of any virtual machines "
 msgstr "Herhangi bir sanal makinenin ayarlarını değiştirebilir"
 
 msgid "cloned from one base owned by the user."
-msgstr " sahip olunan bir tabandan klonlanmış"
+msgstr "sahip olunan bir tabandan klonlanmış."
 
 msgid "can clone public virtual machines."
 msgstr "genel sanal makineleri klonlayabilir."
@@ -351,13 +352,13 @@ msgid "can hibernate any clone."
 msgstr "herhangi bir klonu hazırda bekletebilir."
 
 msgid "can remove any virtual machines owned by the user."
-msgstr "herhangi bir klonu hazırda bekletebilir."
+msgstr "Kullanıcının sahip olduğu herhangi bir sanal makineyi silebilir."
 
 msgid "can remove any virtual machine."
-msgstr "herhangi bir sanal makineyi kaldırabilir."
+msgstr "herhangi bir sanal makineyi silebilir."
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr "Kullanıcının sahip olduğu sanal makinelerden Klonları kaldırabilir."
+msgstr "Kullanıcının sahip olduğu sanal makinelerden klonları silebilir."
 
 msgid "can remove any clone."
 msgstr "Herhangi bir klonu kaldırabilir."
@@ -386,20 +387,20 @@ msgid "From Machine"
 msgstr "makinesinden"
 
 msgid "Backend"
-msgstr "arka uç"
+msgstr "Arka uç"
 
 msgid "Select Template"
-msgstr "şablon seç"
+msgstr "Şablon Seç"
 
 msgid ""
 "This ISO image has not been downloaded yet. It may take some minutes, even "
 "hours until the file is fetched from the Internet."
 msgstr ""
-"Bu ISO imajı henüz indirilmedi. Dosya Internet'ten alınana kadar birkaç "
-"dakika, hatta saatler sürebilir."
+"Bu ISO imajı henüz indirilmedi. Dosyanın indirilmesi birkaç dakika, hatta "
+"saatler sürebilir."
 
 msgid "Download now"
-msgstr "Şimdi karşıdan yükle"
+msgstr "Şimdi indir"
 
 msgid "Select ISO"
 msgstr "ISO seç"
@@ -408,25 +409,25 @@ msgid "Template"
 msgstr "Şablon"
 
 msgid "Disk Size: (GB)"
-msgstr "Disk Boyutu:(GB)"
+msgstr "Disk Boyutu: (GB)"
 
 msgid "Swap Size: (GB)"
-msgstr "Takas Boyutu:(GB)"
+msgstr "Takas Boyutu: (GB)"
 
 msgid "Ram: (GB)"
-msgstr "Ram:(GB)"
+msgstr "Ram: (GB)"
 
 msgid "Machine name is required."
-msgstr "Makine adı gerekli"
+msgstr "Makine adı gerekli."
 
 msgid "Machine name can't exceed 20 characters."
-msgstr "Makine adı 20 karakteri aşamaz"
+msgstr "Makine adı 20 karakteri aşamaz."
 
 msgid "Backend selection is required."
-msgstr "Arka uç seçimi gerekli"
+msgstr "Arka uç seçimi gerekli."
 
 msgid "ISO image selection is required."
-msgstr "ISO imajı seçimi gerekli"
+msgstr "ISO imajı seçimi gerekli."
 
 msgid "Template selection is required."
 msgstr "Şablon seçimi gereklidir."
@@ -455,7 +456,7 @@ msgid "monitoring"
 msgstr "İzleme"
 
 msgid "Are you sure you want to remove the Base of"
-msgstr "Tabanı  çıkarmak istediğinize emin misiniz?"
+msgstr "Tabanı çıkarmak istediğinize emin misiniz?"
 
 msgid "Are you sure you want to prepare the Base of"
 msgstr "Tabanı hazırlamak istediğinden emin misin?"
@@ -494,19 +495,19 @@ msgid "Show All"
 msgstr "Hepsini Göster"
 
 msgid "Shutting down ..."
-msgstr "kapatma..."
+msgstr "Kapanıyor…"
 
 msgid "It may take a couple of minutes."
 msgstr "Birkaç dakika sürebilir."
 
 msgid "Hybernating ..."
-msgstr "uykuya alınıyor."
+msgstr "Hazırda bekletme moduna geçiliyor…"
 
 msgid "Description"
-msgstr "Tanım"
+msgstr "Açıklama"
 
 msgid "Rename"
-msgstr "Yeni isim vermek"
+msgstr "Yeniden Adlandır"
 
 msgid "Options"
 msgstr "Seçenekler"
@@ -534,7 +535,7 @@ msgid "Danger"
 msgstr "Tehlike"
 
 msgid "This will remove all the contents of the machine"
-msgstr "Bu, makinenin tüm içeriğini kaldıracak"
+msgstr "Bu işlem makinenin tüm içeriğini kaldıracak"
 
 msgid "This action can't be undone"
 msgstr "Bu işlem geri alınamaz"
@@ -564,10 +565,10 @@ msgid "This virtual machine can't be removed because it has"
 msgstr "Bu sanal makine kaldırılamıyor. çünkü makine ..."
 
 msgid "clones"
-msgstr "klon"
+msgstr "klonlar"
 
 msgid "Clones"
-msgstr "Klon"
+msgstr "Klonlar"
 
 msgid "This machine has not Graphics parameters!"
 msgstr "Bu makine Grafik parametrelerine sahip değil!"
@@ -609,7 +610,7 @@ msgid "Below are listed the technologies used in this project:"
 msgstr "Aşağıda bu projede kullanılan teknolojiler listelenmiştir:"
 
 msgid "The code is available on "
-msgstr "Kod şurda bulunabilir ..."
+msgstr "Kodun bulunabileceği yer:"
 
 msgid "The code is "
 msgstr "Kod"
@@ -630,10 +631,10 @@ msgid "is admin"
 msgstr "admin"
 
 msgid "Add new user"
-msgstr "Yeni kullanıcı Ekle"
+msgstr "Yeni kullanıcı ekle "
 
 msgid "Register"
-msgstr "Kaydetmek"
+msgstr "Kaydet"
 
 msgid "Current Password:"
 msgstr "Mevcut Şifre:"
@@ -701,7 +702,7 @@ msgid "Password must be at least 5 characters"
 msgstr "Şifre en az 5 karakter olmalı"
 
 msgid "Password can only contain words and numbers"
-msgstr "Şifre sadece kelimeler ve rakamlar içerebilir"
+msgstr "Şifre sadece harf ve rakam içerebilir"
 
 msgid "Confirm Password is required"
 msgstr "Parolayı Doğrula gerekli"
@@ -728,13 +729,13 @@ msgid "Change the owner of the machine"
 msgstr "Makinenin sahibini değiştirin"
 
 msgid "Press SHIFT + F12 to exit"
-msgstr "SHIFT +F12 ye Basarak çıkınız"
+msgstr "Shift + F12 tuş kombinasyonuyla çıkınız"
 
 msgid ""
 "If you can not see the machine screen in a few seconds check for a file "
 "called"
 msgstr ""
-"Birkaç saniye içinde makine ekranını göremiyorsanız,  dosyayı kontrol edin."
+"Birkaç saniye içinde makine ekranını göremiyorsanız, dosyayı kontrol edin."
 
 msgid "in your downloads folder."
 msgstr "indirilenler klasörünüzde."
@@ -830,15 +831,13 @@ msgid "Empty password"
 msgstr "Şifre boş"
 
 msgid "Session timeout"
-msgstr "Oturum zaman aşımına uğradı"
+msgstr "Oturum zaman aşımı"
 
 msgid "Vietnamese"
-msgstr "Vietnam"
+msgstr "Vietnam dili"
 
 msgid "Italian"
-msgstr ""
-"İtalyanca\n"
-" "
+msgstr "İtalyanca"
 
 msgid "Type a typical LDAP user name to fetch the attribute list"
 msgstr "Özellik listesini getirmek için tipik bir LDAP kullanıcı adı yazın"
@@ -871,7 +870,7 @@ msgid "If none of the previous match, access is denied."
 msgstr "Önceki eşleşmelerden hiçbiri değilse erişim reddedilir."
 
 msgid "verify"
-msgstr "Doğrulayın"
+msgstr "doğrula"
 
 msgid "save"
 msgstr "kaydet"
@@ -890,3 +889,21 @@ msgstr "kayıt"
 
 msgid "Enable last for not allowed restrictions."
 msgstr "İzin verilmeyen kısıtlamalar için sonuncuyu etkinleştir."
+
+msgid "Yes, shutwdown all the clones"
+msgstr "Evet, bütün klonları kapat"
+
+msgid "Keep in mind that there may be users using a clone"
+msgstr "Klonları kullanmakta olan kullanıcılar olabileceğini unutma"
+
+msgid "Shutdown all clones"
+msgstr "Bütün klonları kapat"
+
+msgid "These actions affect all the clones on the machine"
+msgstr "Bu seçenekler makinedeki bütün klonları etkiler"
+
+msgid "Add description"
+msgstr "Açıklama ekle"
+
+msgid "The machine will turn off after this time"
+msgstr "Makine bu seferden sonra kapanacak"
