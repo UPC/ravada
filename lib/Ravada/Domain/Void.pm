@@ -268,6 +268,11 @@ sub _store {
     $self->_check_value_disk($value) if $var eq 'hardware';
 
     my $file_lock = $self->_config_file().".lock";
+
+    my ($path) = $file_lock =~ m{(.*)/};
+    make_path($path) or die "Error creating $path"
+    if ! -e $path;
+
     open my $lock,">>",$file_lock or die "Can't open $file_lock";
     _lock($lock);
 

@@ -150,6 +150,8 @@ my @FLUSH_RULES=(
     ,["-t","nat","-F","POSTROUTING"]
 );
 
+$Ravada::CAN_FORK = 0;
+
 sub user_admin {
 
     return $USER_ADMIN if $USER_ADMIN;
