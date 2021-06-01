@@ -118,7 +118,7 @@ msgid "Japanese"
 msgstr "Japonés"
 
 msgid "German"
-msgstr "Aleman"
+msgstr "Alemán"
 
 msgid "New Password:"
 msgstr "Nueva Contraseña:"
@@ -914,3 +914,22 @@ msgstr "No se ha encontrado ninguna entrada"
 
 msgid "User name"
 msgstr "Nombre de usuario"
+
+msgid "Turkish"
+msgstr "Turco"
+
+msgid "Valencian"
+msgstr "Valenciano"
+
+msgid "ShutDown"
+msgstr "Apagar"
+
+msgid "Force ShutDown"
+msgstr "Forzar apagado"
+
+msgid "Reboot"
+msgstr "Reiniciar"
+
+msgid "Force Reboot"
+msgstr "Forzar reiniciado"
+

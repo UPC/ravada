@@ -92,34 +92,34 @@ msgid "Language:"
 msgstr "Langue :"
 
 msgid "English"
-msgstr "anglais"
+msgstr "Anglais"
 
 msgid "Spanish"
-msgstr "espagnol"
+msgstr "Espagnol"
 
 msgid "Catalan"
-msgstr "catalan"
+msgstr "Catalan"
 
 msgid "Galician"
-msgstr "galicien"
+msgstr "Galicien"
 
 msgid "French"
-msgstr "français"
+msgstr "Français"
 
 msgid "Hindi"
-msgstr "hindi"
+msgstr "Hindi"
 
 msgid "Indonesian"
-msgstr "indonésien"
+msgstr "Indonésien"
 
 msgid "Persian"
-msgstr "persan"
+msgstr "Persan"
 
 msgid "Japanese"
-msgstr "japonais"
+msgstr "Japonais"
 
 msgid "German"
-msgstr "allemand"
+msgstr "Allemand"
 
 msgid "New Password:"
 msgstr "Nouveau mot de passe :"
@@ -926,7 +926,21 @@ msgid "User name"
 msgstr "Nom d'utilisateur"
 
 msgid "Italian"
-msgstr "italien"
+msgstr "Italien"
 
 msgid "Vietnamese"
-msgstr "vietnamien"
+msgstr "Vietnamien"
+
+msgid "ShutDown"
+msgstr "Éteindre"
+
+msgid "Force ShutDown"
+msgstr "Forcer l'arrêt"
+
+msgid "Reboot"
+msgstr "Redémarrer"
+
+msgid "Force Reboot"
+msgstr "Redémarrage forcé"
+
+
