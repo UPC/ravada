@@ -24,6 +24,10 @@ In this case, the Port field must be set with the RDP number:
 .. image:: images/rdp-redirection.png
 
 
+Yo do not need to configure the port in each Virtual Machine clone. Setting the
+exposed port in the base replicates this configuration to all the clones. This works
+even after the clones have been created.
+
 Open the Virtual Machine with a RDP client
 ------------------------------------------
 
