@@ -2709,7 +2709,7 @@ sub expose($self, @args) {
         $internal_port = delete $args{internal_port} if exists $args{internal_port};
         delete $args{internal_ip};
         # remove old fields
-        for (qw(public_ip active description)) {
+        for (qw(public_ip active description is_secondary)) {
             delete $args{$_};
         }
 
