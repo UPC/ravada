@@ -35,13 +35,13 @@ msgid "Choose a Machine to Start"
 msgstr "Escolle unha máquina para iniciar"
 
 msgid "Start"
-msgstr "Iniciar"
+msgstr "Comezar"
 
 msgid "Stop"
 msgstr "Parar"
 
 msgid "View"
-msgstr "Ver"
+msgstr "Vixía"
 
 msgid "Prepare base"
 msgstr "Preparar base"
@@ -101,7 +101,7 @@ msgid "English"
 msgstr "Inglés"
 
 msgid "Spanish"
-msgstr "Español"
+msgstr "Castelán"
 
 msgid "Catalan"
 msgstr "Catalán"
@@ -292,7 +292,7 @@ msgid "Password is too short"
 msgstr "Contrasinal moi curto"
 
 msgid "German"
-msgstr "Aleman"
+msgstr "Alemán"
 
 msgid "Hindi"
 msgstr "Hindi"
@@ -726,3 +726,35 @@ msgstr "A confirmación do contrasinal debe ter polo menos 5 caracteres"
 
 msgid "Confirm Password can not exceed 20 characters"
 msgstr "A confirmación do contrasinal non pode superar os 20 caracteres"
+
+msgid "ShutDown"
+msgstr "Apagar"
+
+msgid "Force ShutDown"
+msgstr "Forzar o Apagado"
+
+msgid "Reboot"
+msgstr "Reiniciar"
+
+msgid "Force Reboot"
+msgstr "Forza Reinicio"
+
+msgid "Arab"
+msgstr "Árabe"
+
+msgid "Italian"
+msgstr "Italiano"
+
+msgid "Portuguese"
+msgstr "Portugués"
+
+msgid "Turkish"
+msgstr "Turco"
+
+msgid "Valencian"
+msgstr "Valenciano"
+
+msgid "Vietnamese"
+msgstr "Vietnamita"
+
+

@@ -915,3 +915,24 @@ msgstr "no es troba al servidor LDAP"
 
 msgid "Type a typical LDAP user name to fetch the attribute list"
 msgstr "Escriviu un nom d'usuari LDAP típic per obtenir la llista d'atributs"
+
+msgid "Arab"
+msgstr "Àrab"
+
+msgid "Turkish"
+msgstr "Turc"
+
+msgid "Valencian"
+msgstr "Valencià"
+
+msgid "ShutDown"
+msgstr "Tancar"
+
+msgid "Force ShutDown"
+msgstr "Apagar a la força"
+
+msgid "Reboot"
+msgstr "Reiniciar"
+
+msgid "Force Reboot"
+msgstr "Reiniciar a la força"

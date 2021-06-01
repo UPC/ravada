@@ -909,3 +909,24 @@ msgstr "Italià"
 
 msgid "Vietnamese"
 msgstr "Vietnamita"
+
+msgid "Keep in mind that there may be users using a clone"
+msgstr "Tinga en ment que pot haver usuaris usant un clon"
+
+msgid "ShutDown"
+msgstr "Apagar"
+
+msgid "Force ShutDown"
+msgstr "Forçar Apagat"
+
+msgid "Reboot"
+msgstr "Reiniciar"
+
+msgid "Force Reboot"
+msgstr "Forçar reiniciar"
+
+msgid "Arab"
+msgstr "Àrab"
+
+msgid "Turkish"
+msgstr "Turc"
