@@ -1369,7 +1369,7 @@ sub _fix_duplicate_display_port($self, $port) {
 
     if($is_builtin ) {
         my $domain_conflict = Ravada::Domain->open($id_domain);
-        if ($domain_conflict->is_active) {
+        if ($domain_conflict && $domain_conflict->is_active) {
             my $req = Ravada::Request->shutdown_domain(
                 id_domain => $self->id
                 ,uid => Ravada::Utils::user_daemon->id
@@ -3218,6 +3218,10 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
             $sth->finish;
         };
         last if !$@;
+
+        warn "Warning: public_port = $public_port , internal_port=$internal_port\n$@"
+        if $@;
+
         next if ( $@ =~ /Duplicate entry .*for key.*public/ # mysql
             || $@ =~ /UNIQUE constraint failed.*public/   # sqlite
         );

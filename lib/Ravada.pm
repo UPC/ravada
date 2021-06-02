@@ -144,6 +144,17 @@ sub BUILD {
 
 }
 
+sub _set_first_time_run($self) {
+    my $sth = $CONNECTOR->dbh->table_info('%',undef,'domains','TABLE');
+    my $info = $sth->fetchrow_hashref();
+    $sth->finish;
+    if  ( keys %$info ) {
+        $FIRST_TIME_RUN = 0;
+    } else {
+        print "Installing ";
+    }
+}
+
 sub _install($self) {
     my $pid = Proc::PID::File->new(name => "ravada_install");
     $pid->file({dir => "/run/user/$>"}) if $>;
@@ -154,17 +165,62 @@ sub _install($self) {
             print "." if $ENV{TERM};
         }
         print "\n" if $ENV{TERM};
+        return;
     }
     $pid->touch;
-    $self->_sql_create_tables();
+    $self->_set_first_time_run();
+
     $self->_create_tables();
+    $self->_sql_create_tables();
     $self->_upgrade_tables();
     $self->_upgrade_timestamps();
     $self->_update_data();
     $self->_init_user_daemon();
     $self->_sql_insert_defaults();
-    print "\n" if $FIRST_TIME_RUN;
+
+    $self->_do_create_constraints();
+
     $pid->release();
+
+    print "\n" if $FIRST_TIME_RUN;
+
+}
+
+sub _do_create_constraints($self) {
+    return if !$self->{_constraints};
+
+    if ($CAN_FORK) {
+
+        my $pid = fork();
+        die "Error: I cannot fork" if !defined $pid;
+        if ($pid) {
+            $self->_add_pid($pid);
+            return;
+        }
+    }
+
+    my $pid_file = Proc::PID::File->new(name => "ravada_constraint");
+    $pid_file->file({dir => "/run/user/$>"}) if $>;
+    if ( $pid_file->alive ) {
+        exit if $CAN_FORK;
+        return;
+    }
+    $pid_file->touch;
+
+    my $dbh = $CONNECTOR->dbh;
+    for my $constraint (@{$self->{_constraints}}) {
+        my ($name) = $constraint =~ /CONSTRAINT (\w+)\s/;
+
+        warn "INFO: creating constraint $name \n"
+        if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+        print "+" if $FIRST_TIME_RUN && !$CAN_FORK;
+
+        $self->_clean_db_leftovers();
+
+        my $sth = $dbh->do($constraint);
+    }
+    $pid_file->release;
+    exit if $CAN_FORK;
 }
 
 sub _init_user_daemon {
@@ -1049,12 +1105,8 @@ sub _update_data {
     $self->_remove_old_isos();
     $self->_update_isos();
 
-    $self->_rename_grants();
-    $self->_alias_grants();
-    $self->_add_grants();
-    $self->_enable_grants();
-    $self->_update_user_grants();
-
+    $self->_install_grants();
+    $self->_remove_old_indexes();
     $self->_update_domain_drivers_types();
     $self->_update_domain_drivers_options();
     $self->_update_domain_drivers_options_disk();
@@ -1065,8 +1117,39 @@ sub _update_data {
     $self->_add_indexes();
 }
 
+sub _install_grants($self) {
+    if ($CAN_FORK) {
+        my $pid = fork();
+        die "Error: I cannot fork" if !defined $pid;
+        if ($pid) {
+            $self->_add_pid($pid);
+            return;
+        }
+    }
+    $self->_rename_grants();
+    $self->_alias_grants();
+    $self->_add_grants();
+    $self->_enable_grants();
+    $self->_update_user_grants();
+    exit if $CAN_FORK;
+}
+
 sub _add_indexes($self) {
     $self->_add_indexes_generic();
+}
+
+sub _remove_old_indexes($self) {
+
+    my $table = 'domain_drivers_types';
+    my $index = 'name';
+    my $n_fields = 1;
+    my $known = $self->_get_indexes($table);
+    my $name = $known->{$index};
+    if ($name && scalar (@$name) == $n_fields ) {
+        my $sql = "alter table $table drop index $index";
+        my $sth = $CONNECTOR->dbh->prepare($sql);
+        $sth->execute;
+    }
 }
 
 sub _add_indexes_generic($self) {
@@ -1085,7 +1168,9 @@ sub _add_indexes_generic($self) {
             ,"unique(id_vm,port)"
         ]
         ,domain_ports => [
-            "unique(id_vm,public_port)"
+            "unique (id_domain,internal_port):domain_port"
+            ,"unique (id_domain,name):name"
+            ,"unique(id_vm,public_port)"
         ]
         ,requests => [
             "index(status,at_time)"
@@ -1096,7 +1181,7 @@ sub _add_indexes_generic($self) {
         ]
         ,grants_user => [
             "index(id_user,id_grant)"
-            ,'unique(id_grant,id_user)'
+            ,'unique(id_grant,id_user):id_grant'
             ,"index(id_user)"
         ]
         ,iptables => [
@@ -1112,8 +1197,7 @@ sub _add_indexes_generic($self) {
             "unique(id_host_device, id_domain)"
         ]
         ,messages => [
-             "index(id_request,date_send)"
-             ,"index(id_user)"
+             "index(id_user)"
              ,"index(date_changed)"
              ,"KEY(id_request,date_send)"
 
@@ -1134,8 +1218,13 @@ sub _add_indexes_generic($self) {
             "index(id_booking_entry,id_base)"
         ]
 
+        ,volumes => [
+            'UNIQUE (id_domain,name):id_domain',
+            'UNIQUE (id_domain,n_order):id_domain2'
+        ]
+
         ,vms=> [
-            "unique(hostname, vm_type)"
+            "unique(hostname, vm_type): hostname_type"
             ,"UNIQUE (name)"
 
         ]
@@ -1154,14 +1243,14 @@ sub _add_indexes_generic($self) {
             $name =~ s/ //g;
             $checked_index->{$name}++;
             $known = $self->_get_indexes($table) if !defined $known;
-            next if $self->_index_already_created($fields, $known->{$name});
+            next if $self->_index_already_created($table, $name, $fields, $known->{$name});
 
             $type .=" INDEX " if $type=~ /^unique/i;
             $type = "INDEX" if $type =~ /^KEY$/i;
 
             my $sql = "CREATE $type $if_not_exists $name on $table ($fields)";
 
-            warn "INFO: Adding index to $table: $name"
+            warn "INFO: Adding index to $table: $name\n"
             if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
             $self->_clean_index_conflicts($table, $name);
@@ -1177,19 +1266,26 @@ sub _add_indexes_generic($self) {
             $sth->execute();
         }
         for my $name ( sort keys %$known) {
-            next if $name eq 'PRIMARY' || $checked_index->{$name};
-            warn "INFO: Removing index from $table $name\n";
+            next if $name eq 'PRIMARY' || $name =~ /^constraint_/i || $checked_index->{$name};
+            warn "INFO: Removing index from $table $name\n"
+            if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+            confess "$table -> $name" if $FIRST_TIME_RUN;
             my $sql = "alter table $table drop index $name";
             $CONNECTOR->dbh->do($sql);
         }
     }
 }
 
-sub _index_already_created($self, $fields, $new) {
+sub _index_already_created($self, $table, $index, $fields, $new) {
     return if !$new;
     $fields =~ s/ //g;
     my $fields_new = join(",",@$new);
     return 1 if $fields eq $fields_new;
+
+    if (length($fields)) {
+            warn "INFO: removing old index $index";
+        $CONNECTOR->dbh->do("alter table $table drop index $index");
+    }
     return 0;
 }
 
@@ -1218,6 +1314,23 @@ sub _get_indexes($self,$table) {
         $index{$name}->[$seq-1] = $column;
     }
     return \%index;
+}
+
+sub _get_constraints($self, $table) {
+    return {} if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/;
+
+    my $sth = $CONNECTOR->dbh->prepare("show create table $table");
+    $sth->execute;
+    my %index;
+    my ($table2,$create) = $sth->fetchrow;
+    for my $row (split /\n/,$create) {
+        my ($name, $definition) = $row =~ /^\s+CONSTRAINT `(.*?)` (.*)/;
+        next if !$name;
+        $definition =~ s/,$//;
+        $index{$name} = $definition;
+    }
+    return \%index;
+
 }
 
 sub _rename_grants($self) {
@@ -1366,7 +1479,7 @@ sub _enable_grants($self) {
     my %done;
     for my $name ( sort @grants ) {
         die "Duplicate grant $name "    if $done{$name};
-        die "Permission $name doesn't exist at table grant_types"
+        confess "Permission $name doesn't exist at table grant_types"
                 ."\n".Dumper(\%grant_exists)
             if !$grant_exists{$name};
 
@@ -1420,6 +1533,14 @@ sub _get_column_info
     return $row;
 }
 
+sub _upgrade_table_fields($self, $table, $fields ) {
+    for my $field ( keys %$fields ) {
+        my $definition = $fields->{$field};
+        $definition =~ s/^integer /INT /;
+        $self->_upgrade_table($table, $field, $definition);
+    }
+}
+
 sub _upgrade_table {
     my $self = shift;
     my ($table, $field, $definition) = @_;
@@ -1427,17 +1548,21 @@ sub _upgrade_table {
 
     my ($new_size) = $definition =~ m{\((\d+)};
     my ($new_type) = $definition =~ m{(\w+)};
+    $new_type = 'INT' if $new_type eq 'INTEGER';
+
+    my ($constraint) = $definition =~ /references\s+(.*)/;
 
     my $sth = $dbh->column_info(undef,undef,$table,$field);
     my $row = $sth->fetchrow_hashref;
+    $row->{TYPE_NAME} = 'INT' if exists $row->{TYPE_NAME} && $row->{TYPE_NAME} eq 'INTEGER';
     $sth->finish;
     if ( $dbh->{Driver}{Name} =~ /mysql/
-        && $row
+        && keys %$row
         && (
-            ($row->{COLUMN_SIZE}
+            (defined $row->{COLUMN_SIZE}
             && defined $new_size
             && $new_size != $row->{COLUMN_SIZE}
-            ) || (
+            ) || ( exists $row->{TYPE_NAME} &&
                 lc($row->{TYPE_NAME}) ne lc($new_type)
             )
         )
@@ -1449,10 +1574,16 @@ sub _upgrade_table {
             ." in $table\n$definition\n"  if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         print "-" if $FIRST_TIME_RUN;
         $dbh->do("alter table $table change $field $field $definition");
+
+        $self->_create_constraints($table, [$field, $constraint]) if $constraint;
+
         return;
     }
 
-    return if $row;
+    if (keys %$row ) {
+        $self->_create_constraints($table, [$field, $constraint]) if $constraint;
+        return;
+    }
 
     my $sqlite_trigger;
     if ($dbh->{Driver}{Name} =~ /sqlite/i) {
@@ -1579,10 +1710,11 @@ sub _create_tables {
 sub _sql_create_tables($self) {
     my $created = 0;
     my $driver = lc($CONNECTOR->dbh->{Driver}{Name});
-    my %tables = (
+    my @tables = (
+        [
         domain_displays => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
-            ,id_domain => 'integer NOT NULL references domains(id) on delete cascade'
+            ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
             ,id_vm => 'int default null'
             ,port => 'char(5) DEFAULT NULL'
             ,ip => 'varchar(254)'
@@ -1593,44 +1725,55 @@ sub _sql_create_tables($self) {
             ,is_secondary => 'integer NOT NULL default 0'
             ,id_domain_port => 'integer DEFAULT NULL'
             ,n_order => 'integer NOT NULL'
-            ,password => 'char(32)'
+            ,password => 'char(40)'
             ,extra => 'TEXT'
         }
+        ]
         ,
-        host_devices => {
-            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
-            ,name => 'char(80) not null'
-            ,id_vm => 'integer NOT NULL'
-            ,list_command => 'varchar(128) not null'
-            ,list_filter => 'varchar(128) not null'
-            ,template_args => 'varchar(255) not null'
-            ,enabled => "integer NOT NULL default 1"
-        }
+        [
+            host_devices => {
+                id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+                ,name => 'char(80) not null'
+                ,id_vm => 'integer NOT NULL references `vms`(`id`) ON DELETE CASCADE'
+                ,list_command => 'varchar(128) not null'
+                ,list_filter => 'varchar(128) not null'
+                ,template_args => 'varchar(255) not null'
+                ,enabled => "integer NOT NULL default 1"
+            }
+        ]
         ,
-        host_device_templates=> {
-            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
-            ,id_host_device => 'integer NOT NULL'
-            ,path => 'varchar(255)'
-            ,type => 'char(40)'
-            ,template=> 'TEXT'
-        }
+        [
+            host_device_templates=> {
+                id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+                ,id_host_device => 'integer NOT NULL references `host_devices`(`id`) ON DELETE CASCADE'
+                ,path => 'varchar(255)'
+                ,type => 'char(40)'
+                ,template=> 'TEXT'
+            }
+        ]
         ,
-        host_devices_domain => {
-            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
-            ,id_host_device => 'integer NOT NULL references host_devices(id)'
-            ,id_domain => 'integer NOT NULL references domain(id)'
-            ,name => 'varchar(255)'
-            ,is_locked => 'integer not null default 0'
-        }
+        [
+            host_devices_domain => {
+                id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+                ,id_host_device => 'integer NOT NULL references `host_devices`(`id`) ON DELETE CASCADE'
+                ,id_domain => 'integer NOT NULL references domains(id) ON DELETE CASCADE'
+                ,name => 'varchar(255)'
+                ,is_locked => 'integer not null default 0'
+            }
+        ]
         ,
+        [
         settings => {
-            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
             , id_parent => 'INT NOT NULL'
             , name => 'varchar(64) NOT NULL'
             , value => 'varchar(128) DEFAULT NULL'
         }
-        ,bookings => {
-            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+        ]
+        ,
+        [
+        bookings => {
+            id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
             ,title => 'varchar(80)'
             ,description => 'varchar(255)'
             ,date_start => 'date not null'
@@ -1639,62 +1782,168 @@ sub _sql_create_tables($self) {
             ,background_color => 'varchar(20)'
             ,date_created => 'datetime DEFAULT CURRENT_TIMESTAMP'
         }
-        ,booking_entries => {
-            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+        ]
+        ,
+        [
+        booking_entries => {
+            id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
             ,title => 'varchar(80)'
             ,description => 'varchar(255)'
-            ,id_booking => 'int not null references bookings(id) ON DELETE CASCADE'
+            ,id_booking => 'int not null references `bookings` (`id`) ON DELETE CASCADE'
             ,time_start => 'time not null'
             ,time_end => 'time not null'
             ,date_booking => 'date'
             ,visibility => "enum ('private','public') default 'public'"
         }
-        ,booking_entry_ldap_groups => {
-            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+        ]
+        ,
+        [
+        booking_entry_ldap_groups => {
+            id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
             ,id_booking_entry
-                => 'int not null references booking_entries(id) ON DELETE CASCADE'
+                => 'int not null references `booking_entries` (`id`) ON DELETE CASCADE'
             ,ldap_group => 'varchar(255) not null'
         }
-        ,booking_entry_users => {
-            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+        ]
+        ,
+        [
+        booking_entry_users => {
+            id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
             ,id_booking_entry
-                => 'int not null references booking_entries(id) ON DELETE CASCADE'
-            ,id_user => 'int not null references users(id) ON DELETE CASCADE'
+                => 'int not null references `booking_entries` (`id`) ON DELETE CASCADE'
+            ,id_user => 'int not null references `users` (`id`) ON DELETE CASCADE'
         }
-        ,booking_entry_bases=> {
-            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+        ]
+        ,
+        [
+        booking_entry_bases=> {
+            id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
             ,id_booking_entry
-                => 'int not null references booking_entries(id) ON DELETE CASCADE'
-            ,id_base => 'int not null references domains(id) ON DELETE CASCADE'
+                => 'int not null references `booking_entries` (`id`) ON DELETE CASCADE'
+            ,id_base => 'int not null references `domains` (`id`) ON DELETE CASCADE'
         }
+        ]
+        ,
+        [
+            volumes => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE',
+                name => 'char(200) NOT NULL',
+                file => 'varchar(255) NOT NULL',
+                n_order => 'integer NOT NULL',
+                info => 'TEXT',
 
+            }
+        ]
 
     );
-    for my $table ( keys %tables ) {
+    for my $new_table (@tables ) {
+        my ($table, $contents) = @$new_table;
         my $sth = $CONNECTOR->dbh->table_info('%',undef,$table,'TABLE');
         my $info = $sth->fetchrow_hashref();
         $sth->finish;
         if  ( keys %$info ) {
-            $FIRST_TIME_RUN = 0;
+            $self->_upgrade_table_fields($table, $contents);
             next;
         }
 
-        print "Installing " if !$created && $FIRST_TIME_RUN;
         warn "INFO: creating table $table\n"
         if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
+        my @constraints;
         my $sql_fields;
-        for my $field (sort keys %{$tables{$table}} ) {
-            my $definition = _port_definition($driver, $tables{$table}->{$field});
+        for my $field (sort keys %$contents ) {
+            my $definition = _port_definition($driver, $contents->{$field});
             $sql_fields .= ", " if $sql_fields;
             $sql_fields .= " $field $definition";
+
+            my ($constraint) = $definition =~ /references\s+(.*)/;
+            push @constraints , [$field,$constraint] if $constraint;
         }
 
         my $sql = "CREATE TABLE $table ( $sql_fields )";
         $CONNECTOR->dbh->do($sql);
+        $self->_create_constraints($table, @constraints);
         $created++;
     }
     return $created;
+}
+
+sub _clean_db_leftovers($self) {
+    return if $self->{_cleaned_db_leftovers}++;
+    my $dbh = $CONNECTOR->dbh;
+    for my $table (
+        'access_ldap_attribute','domain_access'
+        ,'domain_displays' , 'domain_ports', 'volumes', 'domains_void', 'domains_kvm', 'domain_instances', 'bases_vm', 'domain_access', 'base_xml', 'file_base_images', 'iptables', 'domains_network') {
+        my $sth2 = $CONNECTOR->dbh->table_info('%',undef, $table,'TABLE');
+        my $info = $sth2->fetchrow_hashref();
+        $sth2->finish;
+        next if !keys %$info;
+
+        $self->_delete_limit("FROM $table WHERE id_domain NOT IN "
+            ." ( SELECT id FROM domains ) ");
+        ;
+    }
+    for my $table ('grants_user') {
+        my $sth_select = $dbh->prepare("SELECT count(*) FROM $table WHERE id_user NOT IN "
+            ." ( SELECT id FROM users ) ");
+
+        $self->_delete_limit("FROM $table WHERE id_user NOT IN "
+            ." ( SELECT id FROM users ORDER BY id) "
+        );
+    }
+}
+
+sub _delete_limit($self, $query) {
+    my $dbh = $CONNECTOR->dbh;
+    my $sth_select = $dbh->prepare("SELECT count(*) $query");
+    $query .= " LIMIT 1000";
+    my $sth_delete = $dbh->prepare("DELETE $query");
+    for ( ;; ) {
+        $sth_select->execute();
+        my ($n) = $sth_select->fetchrow();
+        last if !$n;
+        $sth_delete->execute();
+        sleep 1;
+    }
+
+}
+
+sub _fix_constraint($self, $definition) {
+    my ($table,$post) = $$definition =~ /^\s*`(\w+)`\s*(\(.*)/;
+    if ( !$table ) {
+        my $field;
+        ($table,$field,$post) = $$definition =~ /^\s*(\w+)\s*\((.*)\)\s+(.*)/;
+        confess "Error: constraint $$definition without ON DELETE" if !$post;
+        $$definition = "`$table` (`$field`) $post";
+        return;
+    }
+
+    $$definition = "`$table` $post";
+}
+
+sub _create_constraints($self, $table, @constraints) {
+    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
+
+
+    my $known = $self->_get_constraints($table);
+    for my $constraint ( @constraints ) {
+        my ($field, $definition) = @$constraint;
+        #my $sql = "alter table $table add CONSTRAINT constraint_${table}_$field FOREIGN KEY ($field) references $definition";
+        $self->_fix_constraint(\$definition);
+        my $sql = "FOREIGN KEY (`$field`) REFERENCES $definition";
+        my $name = "constraint_${table}_$field";
+        next if $known->{$name} && $known->{$name} eq $sql;
+
+        if ($known->{$name}) {
+            warn "Warning: Constraint duplicated $name\n$known->{$name}\n$sql\n";
+            next;
+        }
+
+        $sql = "alter table $table add CONSTRAINT $name $sql";
+        #        $CONNECTOR->dbh->do($sql);
+        push @{$self->{_constraints}},($sql);
+    }
 }
 
 sub _sql_insert_defaults($self){
@@ -1993,20 +2242,22 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','mac','char(18)');
     $self->_upgrade_table('vms','tls','text');
 
-    $self->_upgrade_table('volumes','name','char(200)');
-
-    $self->_upgrade_table('domain_displays', 'id_vm','int(1) DEFAULT NULL');
+    $self->_upgrade_table('domain_displays', 'id_vm','int DEFAULT NULL');
 
     $self->_upgrade_table('domain_drivers_options','data', 'char(200) ');
+
+    $self->_upgrade_table('domain_ports', 'id_domain','int NOT NULL references `domains` (`id`) ON DELETE CASCADE');
     $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
     $self->_upgrade_table('domain_ports', 'restricted','int(1) DEFAULT 0');
     $self->_upgrade_table('domain_ports', 'is_active','int(1) DEFAULT 0');
     $self->_upgrade_table('domain_ports', 'is_secondary','int(1) DEFAULT 0');
-    $self->_upgrade_table('domain_ports', 'id_vm','int(1) DEFAULT NULL');
+    $self->_upgrade_table('domain_ports', 'id_vm','int DEFAULT NULL');
 
     $self->_upgrade_table('messages','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 
     $self->_upgrade_table('grant_types', 'is_int', 'int DEFAULT 0');
+
+    $self->_upgrade_table('grants_user', 'id_user', 'int not null references `users` (`id`) ON DELETE CASCADE');
 
     $self->_upgrade_users_table();
 }
@@ -2913,8 +3164,6 @@ sub process_requests {
 }
 
 sub _date_now($seconds = 0) {
-    confess "Error, can't search what changed in the future "
-        if $seconds > 0;
     my @now = localtime(time + $seconds);
     $now[4]++;
     for (0 .. 4) {
@@ -2940,8 +3189,9 @@ sub _timeout_requests($self) {
     while (my ($id, $pid, $start_time) = $sth->fetchrow()) {
         my $req = Ravada::Request->open($id);
         my $timeout = $req->defined_arg('timeout') or next;
+        $start_time = 0 if !defined $start_time;
         next if time - $start_time <= $timeout;
-        warn "request ".$req->pid." ".$req->command." timeout [".(time - $start_time)." <= $timeout";
+        warn "request pid=".($req->pid or '<NULL>')." ".$req->command." timeout [".(time - $start_time)." <= $timeout";
         push @requests,($req);
     }
     $sth->finish;
@@ -3276,7 +3526,7 @@ sub _cmd_manage_pools($self, $request) {
         my $count_active = 0;
         for my $clone_data (@clone_pool) {
             last if $count_active >= $domain->pool_start;
-            my $clone = Ravada::Domain->open($clone_data->{id});
+            my $clone = Ravada::Domain->open($clone_data->{id}) or next;
 #            warn $clone->name."".($clone->client_status or '')." $count_active >= "
 #    .$domain->pool_start."\n";
             if ( ! $clone->is_active ) {
@@ -3473,10 +3723,14 @@ sub _wait_pids {
     }
 }
 
-sub _add_pid($self, $pid, $request) {
+sub _add_pid($self, $pid, $request=undef) {
 
-    my $type = $request->type;
-    $self->{pids}->{$type}->{$pid} = $request->id;
+    my ($type, $id) = ('default',1);
+    if ($request) {
+        $type = $request->type;
+        $id = $request->id;
+    }
+    $self->{pids}->{$type}->{$pid} = $id;
 
 }
 
@@ -4788,7 +5042,7 @@ sub _cmd_cleanup($self, $request) {
 sub _shutdown_disconnected($self) {
     for my $dom ( $self->list_domains_data(status => 'active') ) {
         next if !$dom->{shutdown_disconnected};
-        my $domain = Ravada::Domain->open($dom->{id});
+        my $domain = Ravada::Domain->open($dom->{id}) or next;
         my $is_active = $domain->is_active;
         my ($req_shutdown) = grep { $_->command eq 'shutdown' } $domain->list_requests(1);
         if ($is_active && $domain->client_status eq 'disconnected') {

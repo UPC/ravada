@@ -2158,6 +2158,17 @@ sub _check_equal_storage_pools($vm1, $vm2) {
     return 1;
 }
 
+sub list_host_devices($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM host_devices WHERE id_vm=?");
+    $sth->execute($self->id);
+
+    my @found;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @found,(Ravada::HostDevice->new(%$row));
+    }
+
+    return @found;
+}
 
 1;
 
