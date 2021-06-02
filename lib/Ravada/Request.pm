@@ -727,6 +727,7 @@ sub _new_request {
 }
 
 sub _last_insert_id {
+    _init_connector();
     return Ravada::Utils::last_insert_id($$CONNECTOR->dbh);
 }
 

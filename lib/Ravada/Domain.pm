@@ -348,6 +348,7 @@ sub _around_start($orig, $self, @arg) {
             }
             $arg{listen_ip} = $display_ip;
         }
+        $self->_add_host_devices(@arg);
         $$CONNECTOR->disconnect;
         eval { $self->$orig(%arg) };
         $error = $@;
@@ -2230,6 +2231,7 @@ sub _remove_domain_data_db($id, $type=undef) {
     _finish_requests_db($id);
     for my $table (
         'access_ldap_attribute','domain_access'
+        ,'host_devices_domain'
         ,'domain_displays' , 'domain_ports', 'volumes', 'domains_void', 'domains_kvm', 'domain_instances', 'bases_vm', 'domain_access', 'base_xml', 'file_base_images', 'iptables', 'domains_network') {
         my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM $table WHERE id_domain=?");
         $sth->execute($id);
@@ -2769,6 +2771,7 @@ sub _copy_clone($self, %args) {
 
     _copy_volumes($self, $copy);
     _copy_ports($self, $copy);
+    _copy_host_devices($self, $copy);
     $copy->is_pool(1) if $add_to_pool;
     return $copy;
 }
@@ -2799,6 +2802,15 @@ sub _copy_ports($base, $copy) {
     }
 
 }
+
+sub _copy_host_devices($base, $copy) {
+    warn "Copy host_devices from ".$base->name." to ".$copy->name;
+    for my $host_device ( $base->list_host_devices() ) {
+        warn Dumper($base->name,$copy->name,$host_device);
+        $copy->add_host_device($host_device);
+    }
+}
+
 
 sub _post_pause {
     my $self = shift;
@@ -2868,6 +2880,11 @@ sub _post_shutdown {
     my $is_active = $self->is_active;
 
     if ( $self->is_known && !$self->is_volatile && !$is_active ) {
+        if ( $self->can_host_devices() ) {
+            $self->remove_host_devices();
+            # we don't do moose after method because not all domain types have this
+            $self->_post_remove_host_devices();
+        }
         $self->_data(status => 'shutdown');
         $self->_data(post_shutdown => 1);
     }
@@ -6291,6 +6308,126 @@ sub refresh_ports($self, $request=undef) {
     die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
     die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"
     if $port_down;
+}
+
+sub can_host_devices { return 0 }
+
+sub add_host_device($self, $host_device) {
+    my $id_hd = $host_device;
+    $id_hd = $host_device->id if ref($host_device);
+
+    my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO host_devices_domain "
+        ."(id_host_device, id_domain) "
+        ." VALUES ( ?, ? ) "
+    );
+    $sth->execute($id_hd, $self->id);
+}
+
+sub list_host_devices($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM host_devices WHERE id = (SELECT id_host_device FROM  host_devices hd, host_devices_domain hdd "
+        ." WHERE hdd.id_domain=?"
+        ."    AND hdd.id_host_device = hd.id )"
+        ."    AND enabled=1"
+    );
+    $sth->execute($self->id);
+
+    my @found;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @found,(Ravada::HostDevice->new(%$row));
+    }
+
+    return @found;
+}
+
+sub list_host_devices_attached($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT hdd.*, hd.name as host_device_name "
+        ." FROM host_devices_domain hdd , host_devices hd "
+        ." WHERE hdd.id_domain=? "
+        ."   AND hdd.id_host_device = hd.id "
+        ."   AND hd.enabled=1"
+    );
+    $sth->execute($self->id);
+
+    my @found;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @found,($row);
+    }
+
+    return @found;
+}
+
+# adds host devices to domain instance
+# usuarlly run right before startup
+sub _add_host_devices($self, @args) {
+    my @host_devices = $self->list_host_devices();
+    return if !@host_devices;
+    return if $self->is_active();
+
+    my $vm_local = $self->_vm->new( host => 'localhost' );
+    my $vm = $vm_local;
+
+    my ($id_vm, $request);
+    if (!(scalar(@args) % 2)) {
+        my %args = @args;
+        $request = delete $args{request} if exists $args{request};
+    }
+
+    my $doc = $self->get_config();
+    for my $host_device ( @host_devices ) {
+        next if $self->_device_already_configured($host_device)
+                || !$host_device->enabled();
+
+        my ($device) = $host_device->list_available_devices();
+        die "Error: No available devices ".$host_device->name if !$device;
+
+        $self->_lock_host_device($host_device, $device);
+
+
+        for my $entry( $host_device->render_template($device) ) {
+            if ($entry->{type} eq 'node') {
+                $self->add_config($entry->{path}, $entry->{content}, $doc);
+            } elsif($entry->{type} eq 'attribute') {
+                $self->change_config_attribute($entry->{path}, $entry->{content}, $doc);
+            } elsif($entry->{type} eq 'namespace') {
+                $self->change_namespace($entry->{path}, $entry->{content}, $doc);
+            } else {
+                die "Error in host_device ".$host_device->name
+                ." template: ".$entry->{path}
+                ." Unknown type ".($entry->{type} or '<UNDEF>');
+            }
+        }
+
+    }
+
+    $self->reload_config($doc);
+}
+
+# marks a host device as being used by a domain
+sub _lock_host_device($self, $host_device, $device) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE host_devices_domain set is_locked=?,name=?"
+        ." WHERE id_host_device=? AND id_domain=? "
+    );
+    $sth->execute(1,$device, $host_device->id, $self->id);
+}
+
+sub _device_already_configured($self, $host_device) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM host_devices_domain WHERE id_domain=? AND id_host_device=? AND is_locked=?"
+    );
+    $sth->execute($self->id,$host_device->id,1);
+
+    my ($already) = $sth->fetchrow;
+    return $already;
+}
+
+sub _post_remove_host_devices($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE host_devices_domain set is_locked=0 WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
 }
 
 1;
