@@ -933,3 +933,32 @@ msgstr "Reiniciar"
 msgid "Force Reboot"
 msgstr "Forzar reiniciado"
 
+msgid "Waiting for machine to start"
+msgstr "Esperando a la máquina para poner en marcha"
+
+msgid "This machine will shut down"
+msgstr "La máquina se apagará"
+
+msgid "Waiting for network to come up"
+msgstr "Esperando a la red para surgir"
+
+msgid "Hardware address"
+msgstr "Dirección del Hardware"
+
+msgid "Open ports"
+msgstr "Puertos abiertos"
+
+msgid "up"
+msgstr "encendida"
+
+msgid "Machine Information"
+msgstr "Información de la máquina"
+
+msgid "Internal IP"
+msgstr "IP Interna"
+
+msgid "Display"
+msgstr "Visualización"
+
+msgid "Max Memory"
+msgstr "Memoria Max"

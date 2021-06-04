@@ -936,3 +936,33 @@ msgstr "Reiniciar"
 
 msgid "Force Reboot"
 msgstr "Reiniciar a la força"
+
+msgid "Waiting for machine to start"
+msgstr "Esperant a la màquina per possar en marxa"
+
+msgid "This machine will shut down"
+msgstr "La màquina s'apagarà"
+
+msgid "waiting for network to come up"
+msgstr "Esperant a la xarxa per surgir"
+
+msgid "Hardware address"
+msgstr "Direcció del Hardware"
+
+msgid "Open ports"
+msgstr "Ports oberts"
+
+msgid "up"
+msgstr "Encesa"
+
+msgid "Machine Information"
+msgstr "Informació de la màquina"
+
+msgid "Internal IP"
+msgstr "IP Interna"
+
+msgid "Display"
+msgstr "Visualització"
+
+msgid "Max Memory"
+msgstr "Memòria Màx"
