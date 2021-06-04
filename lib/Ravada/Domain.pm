@@ -3597,7 +3597,7 @@ sub is_volatile($self, $value=undef) {
     if ($self->is_known) {
         $is_volatile = $self->_data('is_volatile', $value);
     } elsif ($self->domain) {
-        $is_volatile = $self->is_persistent();
+        $is_volatile = ! $self->is_persistent();
     }
     $self->{_is_volatile} = $is_volatile;
     return $is_volatile;
