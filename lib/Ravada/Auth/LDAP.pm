@@ -481,8 +481,9 @@ sub _login_match {
 #       return 1 if $mesg && !$mesg->code;
 
 #       warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $username";
-        $user_ok = $self->_match_password($entry, $password);
-        warn $entry->dn." : $user_ok" if $Ravada::DEBUG;
+        eval { $user_ok = $self->_match_password($entry, $password) };
+        warn $@ if $@;
+
         if ( $user_ok ) {
             $self->{_ldap_entry} = $entry;
             last;
