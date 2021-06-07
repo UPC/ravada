@@ -602,6 +602,9 @@ sub test_ldap {
     my $ok= Ravada::Auth::login( $name, $password);
     if ($ok) {
         print "LOGIN OK $ok->{_auth}\n";
+        for my $attrib ( $ok->{_ldap_entry}->attributes ) {
+            print "$attrib: ".$ok->{_ldap_entry}->get_value($attrib)."\n";
+        }
     } else {
         print "LOGIN FAILED\n";
     }
