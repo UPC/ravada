@@ -787,3 +787,5 @@ msgstr "Mostrar"
 msgid "Max Memory"
 msgstr "Memoria Máx"
 
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Prema MAIÚS + F12 para saír da máquina virtual"

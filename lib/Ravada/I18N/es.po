@@ -734,8 +734,8 @@ msgstr "Propietario"
 msgid "Change the owner of the machine"
 msgstr "Cambiar el propietario de la máquina"
 
-msgid "Press SHIFT + F12 to exit"
-msgstr "Presione SHIFT + F12 para salir"
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Presione SHIFT + F12 para salir de la máquina virtual"
 
 msgid ""
 "If you can not see the machine screen in a few seconds check for a file "

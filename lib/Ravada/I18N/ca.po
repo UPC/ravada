@@ -1,4 +1,4 @@
-# Translators:
+s# Translators:
 # Fernando Verdugo, 2019
 # Amparo _rvd <amparorvd@gmail.com>, 2019
 # Joel Alarcón <joelalju100@gmail.com>, 2017
@@ -734,8 +734,8 @@ msgstr "Propietari"
 msgid "Change the owner of the machine"
 msgstr "Canvieu el propietari de la màquina"
 
-msgid "Press SHIFT + F12 to exit"
-msgstr "Premeu SHIFT + F12 per sortir"
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Premeu SHIFT + F12 per sortir de la màquina virtual"
 
 msgid ""
 "If you can not see the machine screen in a few seconds check for a file "
@@ -938,7 +938,7 @@ msgid "Force Reboot"
 msgstr "Reiniciar a la força"
 
 msgid "Waiting for machine to start"
-msgstr "Esperant a la màquina per possar en marxa"
+msgstr "Esperant que la màquina es posi en marxa"
 
 msgid "This machine will shut down"
 msgstr "La màquina s'apagarà"
