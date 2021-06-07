@@ -203,7 +203,6 @@ sub search_user {
     my $filter = "($field=$username)";
     if ( exists $$CONFIG->{ldap}->{filter} ) {
         my $filter_config = $$CONFIG->{ldap}->{filter};
-        $filter_config = escape_filter_value($filter_config);
         $filter = "(&($field=$username) ($filter_config))";
     }
 
