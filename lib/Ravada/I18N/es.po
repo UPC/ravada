@@ -934,13 +934,13 @@ msgid "Force Reboot"
 msgstr "Forzar reiniciado"
 
 msgid "Waiting for machine to start"
-msgstr "Esperando a la máquina para poner en marcha"
+msgstr "Esperando a la máquina para ponerse en marcha"
 
 msgid "This machine will shut down"
 msgstr "La máquina se apagará"
 
 msgid "Waiting for network to come up"
-msgstr "Esperando a la red para surgir"
+msgstr "Esperando a la red"
 
 msgid "Hardware address"
 msgstr "Dirección del Hardware"
