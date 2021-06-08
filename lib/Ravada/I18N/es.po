@@ -934,7 +934,7 @@ msgid "Force Reboot"
 msgstr "Forzar reiniciado"
 
 msgid "Waiting for machine to start"
-msgstr "Esperando a la máquina para ponerse en marcha"
+msgstr "Esperando a que la máquina se ponga en marcha"
 
 msgid "This machine will shut down"
 msgstr "La máquina se apagará"

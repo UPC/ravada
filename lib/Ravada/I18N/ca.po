@@ -1,4 +1,4 @@
-s# Translators:
+# Translators:
 # Fernando Verdugo, 2019
 # Amparo _rvd <amparorvd@gmail.com>, 2019
 # Joel Alarcón <joelalju100@gmail.com>, 2017
