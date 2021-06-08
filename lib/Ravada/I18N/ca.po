@@ -944,7 +944,7 @@ msgid "This machine will shut down"
 msgstr "La màquina s'apagarà"
 
 msgid "waiting for network to come up"
-msgstr "Esperant a la xarxa per surgir"
+msgstr "Esperant a la xarxa"
 
 msgid "Hardware address"
 msgstr "Direcció del Hardware"
