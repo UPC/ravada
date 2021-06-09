@@ -638,7 +638,8 @@ sub _match_password {
     return Authen::Passphrase->from_rfc2307($password_ldap)->match($password)
         if $storage =~ /rfc2307|md5/i;
 
-    return _match_pbkdf2($password_ldap,$password) if $storage =~ /pbkdf2|SSHA/i;
+    return _match_pbkdf2($password_ldap,$password) if $storage eq 'pbkdf2';
+    return _match_ssha($password_ldap,$password) if $storage eq 'SSHA';
 
     confess "Error: storage $storage can't do match. Use bind.";
 }
@@ -648,6 +649,10 @@ sub _ntohl {
     confess "Wrong number of arguments ($#_) to " . __PACKAGE__ . "::ntohl, called"
     if @_ != 1 and !wantarray;
     unpack('L*', pack('N*', @_));
+}
+
+sub _match_ssha($password_ldap, $password) {
+    return Authen::Passphrase->from_rfc2307($password_ldap)->match($password);
 }
 
 sub _match_pbkdf2($password_db_64, $password) {
