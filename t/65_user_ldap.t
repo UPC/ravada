@@ -394,6 +394,106 @@ sub _add_to_posix_group($user_name, $with_posix_group) {
     ok( !$found ) if !$with_posix_group;
 }
 
+sub _create_groups {
+    my @groups;
+    my %dupe_gid;
+    for my $g_name0 (qw(npc wizards fighters)) {
+        my $g_name=new_domain_name().".$g_name0";
+        my $group = Ravada::Auth::LDAP::search_group(name => $g_name);
+        my $gid;
+        $gid = $group->get_value('gidNumber') if $group;
+        if ($group && ( !$gid || $dupe_gid{$gid}++)) {
+            Ravada::Auth::LDAP::_init_ldap_admin->delete($group);
+            $group = undef;
+        }
+        if (!$group) {
+            Ravada::Auth::LDAP::add_group($g_name);
+            $group = Ravada::Auth::LDAP::search_group(name => $g_name) or die "I can create group $g_name";
+        }
+        push @groups,($group);
+    }
+    return @groups;
+
+}
+
+sub _create_users(@groups) {
+    my @users;
+    my %gid_dupe;
+    for my $group (@groups) {
+        my $name = new_domain_name();
+        my ($user) = Ravada::Auth::LDAP::search_user(name => $name, filter => '');
+        if (defined $user
+            && defined($user->get_value('gidNumber'))
+            && $user->get_value('gidNumber') != $group->get_value('gidNumber')) {
+                Ravada::Auth::LDAP::_init_ldap_admin()->delete($user);
+                $user = undef;
+        }
+        if (!$user) {
+            my $gid = $group->get_value('gidNumber');
+            die "Error: gid $gid duplicated ".Dumper(\%gid_dupe)
+            if $gid_dupe{$gid};
+            $gid_dupe{$gid} = $group->get_value('cn');
+            Ravada::Auth::LDAP::add_user_posix(
+                name => $name
+                ,password => "p.$name"
+                ,gid => $gid
+            );
+            ($user) = Ravada::Auth::LDAP::search_user(name => $name, filter => '');
+            is($user->get_value('gidNumber'),$gid,"gid wrong for user $name") or exit;
+        }
+        push @users, ($user);
+    }
+    return @users;
+}
+
+sub _init_ravada($fly_config) {
+    my $ravada;
+    $ravada = Ravada->new(config => $fly_config
+        , connector => connector);
+    $ravada->_install();
+    Ravada::Auth::LDAP::init();
+    Ravada::Auth::LDAP::_init_ldap_admin();
+    return $ravada;
+}
+
+sub test_filter_gid {
+    my $file_config = "t/etc/ravada_ldap.conf";
+    my $ravada = _init_ravada(_init_config(file_config => $file_config));
+    my @groups = _create_groups();
+    my @users = _create_users(@groups);
+    my $user_no = shift @users;
+
+    my $name = $user_no->get_value('cn');
+    my $user_login;
+    eval { $user_login = Ravada::Auth::LDAP->new(name => $name, password => "p.".$name) };
+    is($@, '');
+    ok($user_login);
+
+    my $filter = '|';
+    my %gid_duplicated;
+    for my $user ( @users ) {
+        my $gid = $user->get_value('gidNumber');
+        $filter .= "(gidNumber=$gid)";
+        die "Error: gid $gid duplicated ".$user->get_value('cn')."\n".Dumper(\%gid_duplicated) if $gid_duplicated{$gid};
+        $gid_duplicated{$gid}=$user->get_value('cn');
+    }
+    $ravada = _init_ravada(_init_config(file_config => $file_config, with_filter =>  $filter));
+
+    $user_login = undef;
+    eval { $user_login = Ravada::Auth::LDAP->new(name => $name, password => "p.".$name) };
+    like($@, qr(Login failed));
+    ok(!$user_login);
+
+    for my $user (@users) {
+        $name = $user->get_value('cn');
+        $user_login = undef;
+        eval { $user_login = Ravada::Auth::LDAP->new(name => $name, password => "p.".$name) };
+        is($@, '');
+        ok($user_login) or exit;
+    }
+
+}
+
 sub test_filter {
     my $file_config = "t/etc/ravada_ldap.conf";
     for my $filter (@FILTER) {
@@ -560,6 +660,7 @@ sub test_pass_storage($with_posix_group) {
 
 SKIP: {
     test_filter();
+    test_filter_gid();
     my $file_config = "t/etc/ravada_ldap.conf";
     for my $with_posix_group (0,1) {
     for my $with_admin (0,1) {
