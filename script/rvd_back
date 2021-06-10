@@ -307,7 +307,7 @@ sub add_user_ldap {
     my $password = <STDIN>;
     chomp $password;
 
-    Ravada::Auth::LDAP::add_user($login, $password);
+    Ravada::Auth::LDAP::add_user_posix(name => $login, password => $password);
 }
 
 sub add_group_ldap {
@@ -695,7 +695,19 @@ sub test_ldap {
     chomp $password;
     my $ok= Ravada::Auth::login( $name, $password);
     if ($ok) {
-        print "LOGIN OK $ok->{_auth}\n";
+        if (!$ok->{_ldap_entry}) {
+            warn "No LDAP data found ".Dumper($ok->{_data});
+        } else {
+            print "LOGIN OK $ok->{_auth}\n";
+            print $ok->{_ldap_entry}->dn."\n";
+            for my $attrib (sort $ok->{_ldap_entry}->attributes ) {
+                my @value = $ok->{_ldap_entry}->get_value($attrib);
+                print "$attrib: ";
+                print join(",",@value);
+                print "\n";
+            }
+
+        }
     } else {
         print "LOGIN FAILED\n";
     }
