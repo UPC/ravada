@@ -638,7 +638,7 @@ sub _match_password {
     return Authen::Passphrase->from_rfc2307($password_ldap)->match($password)
         if $storage =~ /rfc2307|md5/i;
 
-    return _match_pbkdf2($password_ldap,$password) if $storage eq 'pbkdf2';
+    return _match_pbkdf2($password_ldap,$password) if $storage eq 'PBKDF2';
     return _match_ssha($password_ldap,$password) if $storage eq 'SSHA';
 
     confess "Error: storage $storage can't do match. Use bind.";
