@@ -11,7 +11,7 @@ Ravada::Auth::LDAP - LDAP library for Ravada
 
 use Authen::Passphrase;
 use Authen::Passphrase::SaltedDigest;
-use Carp qw(carp);
+use Carp qw(carp croak);
 use Data::Dumper;
 use Digest::SHA qw(sha1_hex sha256_hex);
 use Encode;
@@ -41,6 +41,8 @@ our @OBJECT_CLASS = ('top'
                     ,'person'
                     ,'inetOrgPerson'
                    );
+
+our @OBJECT_CLASS_POSIX = (@OBJECT_CLASS,'posixAccount');
 
 our $STATUS_EOF = 1;
 our $STATUS_DISCONNECTED = 81;
@@ -100,6 +102,106 @@ sub add_user($name, $password, $storage='rfc2307', $algorithm=undef ) {
     if ($mesg->code) {
         die "Error afegint $name to $dn ".$mesg->error;
     }
+}
+
+=head2 add_user_posix
+
+Adds a new user in the LDAP directory
+
+    Ravada::Auth::LDAP::add_user_posix($name, $password);
+
+=cut
+
+sub add_user_posix(%args) {
+    my $name = delete $args{name} or croak "Error: missing name";
+    my $password = delete $args{password} or croak "Error: missing password";
+    my $gid = (delete $args{gid} or _get_gid());
+    my $storage = ( delete $args{storage} or 'rfc2307');
+    my $algorithm = delete $args{algorithm};
+    confess "Error : unknown args ".dumper(\%args) if keys %args;
+
+    _init_ldap_admin();
+
+    $name = escape_filter_value($name);
+    $password = escape_filter_value($password);
+
+    confess "No dc base in config ".Dumper($$CONFIG->{ldap})
+        if !_dc_base();
+    my ($givenName, $sn) = $name =~ m{(\w+)\.(.*)};
+
+    my %entry = (
+        cn => $name
+        , uid => $name
+        , uidNumber => _new_uid()
+        , gidNumber => $gid
+        , objectClass => \@OBJECT_CLASS_POSIX
+        , givenName => ($givenName or $name)
+        , sn => ($sn or $name)
+        ,homeDirectory => "/home/$name"
+        ,userPassword => _password_store($password, $storage, $algorithm)
+    );
+    my $dn = "cn=$name,"._dc_base();
+
+    my $mesg = $LDAP_ADMIN->add($dn, attr => [%entry]);
+    if ($mesg->code) {
+        die "Error afegint $name to $dn ".$mesg->error;
+    }
+}
+
+sub _get_gid() {
+    my @group = search_group(name => "*");
+    my ($group_users) = grep { $_->get_value('cn') eq 'users' } @group;
+    $group_users = $group[0] if !$group_users;
+    if (!$group_users) {
+        add_group(name => 'users');
+        ($group_users) = search_group(name => 'users');
+        confess "Error: I can create nor find LDAP group 'users'" if !$group_users;
+    }
+    return $group_users->get_value('gidNumber');
+}
+
+sub _new_uid($ldap=_init_ldap_admin(), $base=_dc_base()) {
+
+    my $id = 1000;
+    for (;;) {
+        my $mesg = $ldap->search(      # Search for the user
+            base   => $base,
+            scope  => 'sub',
+            filter => "uidNumber=$id",
+            typesonly => 0,
+            attrs  => ['*']
+        );
+
+        confess "LDAP error ".$mesg->code." ".$mesg->error if $mesg->code;
+
+        my @entries = $mesg->entries;
+        return $id if !scalar @entries;
+        $id++;
+        $id+= int(rand(10))+1;
+    }
+}
+
+sub _new_gid($ldap=_init_ldap_admin(), $base="ou=groups,"._dc_base() ) {
+
+    my $id = 1000;
+    for (;;) {
+        my $mesg = $ldap->search(      # Search for the user
+            base   => $base,
+            filter => "gidNumber=$id",
+        );
+
+        confess "LDAP error ".$mesg->code." ".$mesg->error if $mesg->code;
+
+        my @entries = $mesg->entries;
+        return $id if !scalar @entries;
+        $id++;
+        $id+= int(rand(10))+1;
+    }
+}
+
+
+sub default_object_class() {
+    return @OBJECT_CLASS;
 }
 
 sub _password_store($password, $storage, $algorithm) {
@@ -193,6 +295,7 @@ sub search_user {
     my $ldap = (delete $args{ldap} or _init_ldap_admin());
     my $base = (delete $args{base} or _dc_base());
     my $typesonly= (delete $args{typesonly} or 0);
+    my $filter_orig = delete $args{filter};
 
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
     confess "ERROR: I can't connect to LDAP " if!$ldap;
@@ -201,10 +304,11 @@ sub search_user {
     $username =~ s/ /\\ /g;
 
     my $filter = "($field=$username)";
-    if ( exists $$CONFIG->{ldap}->{filter} ) {
+    if (!defined $filter_orig && exists $$CONFIG->{ldap}->{filter} ) {
         my $filter_config = $$CONFIG->{ldap}->{filter};
-        $filter_config = escape_filter_value($filter_config);
         $filter = "(&($field=$username) ($filter_config))";
+    } else {
+        $filter = "(&($field=$username) ($filter_orig))" if $filter_orig;
     }
 
     my $mesg = $ldap->search(      # Search for the user
@@ -215,7 +319,6 @@ sub search_user {
     attrs  => ['*']
 
     );
-
     warn "LDAP retry ".$mesg->code." ".$mesg->error if $retry > 1;
 
     if ( $retry <= 3 && $mesg->code && $mesg->code != 4 ) {
@@ -230,6 +333,7 @@ sub search_user {
               ,field => $field
               ,retry => ++$retry
               ,typesonly => $typesonly
+              ,filter => $filter_orig
          );
     }
 
@@ -238,7 +342,9 @@ sub search_user {
 
     return if !$mesg->count();
 
-    return $mesg->entries;
+    my @entries = $mesg->entries;
+    return $entries[0] if !wantarray;
+    return @entries;
 }
 
 =head2 add_group
@@ -257,9 +363,10 @@ sub add_group {
         cn => $name
         ,dn => "cn=$name,ou=groups,$base"
         , attrs => [ cn=>$name
-                    ,objectClass => ['groupOfUniqueNames','top']
+                    ,objectClass => ['groupOfUniqueNames','top','posixGroup']
                     ,ou => 'Groups'
                     ,description => "Group for $name"
+                    ,gidNumber => _new_gid($LDAP_ADMIN)
           ]
     );
     if ($mesg->code) {
@@ -309,9 +416,6 @@ sub search_group {
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
     confess "ERROR: I can't connect to LDAP " if!$ldap;
 
-    $name = escape_filter_value($name);
-
-
     my $mesg = $ldap ->search (
         filter => "cn=$name"
          ,base => $base
@@ -331,6 +435,7 @@ sub search_group {
          );
     }
     my @entries = $mesg->entries;
+    return @entries if wantarray;
 
     return $entries[0]
 }
@@ -482,8 +587,9 @@ sub _login_match {
 #       return 1 if $mesg && !$mesg->code;
 
 #       warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $username";
-        $user_ok = $self->_match_password($entry, $password);
-        warn $entry->dn." : $user_ok" if $Ravada::DEBUG;
+        eval { $user_ok = $self->_match_password($entry, $password) };
+        warn $@ if $@;
+
         if ( $user_ok ) {
             $self->{_ldap_entry} = $entry;
             last;
@@ -532,7 +638,8 @@ sub _match_password {
     return Authen::Passphrase->from_rfc2307($password_ldap)->match($password)
         if $storage =~ /rfc2307|md5/i;
 
-    return _match_pbkdf2($password_ldap,$password) if $storage =~ /pbkdf2|SSHA/i;
+    return _match_pbkdf2($password_ldap,$password) if $storage eq 'pbkdf2';
+    return _match_ssha($password_ldap,$password) if $storage eq 'SSHA';
 
     confess "Error: storage $storage can't do match. Use bind.";
 }
@@ -542,6 +649,10 @@ sub _ntohl {
     confess "Wrong number of arguments ($#_) to " . __PACKAGE__ . "::ntohl, called"
     if @_ != 1 and !wantarray;
     unpack('L*', pack('N*', @_));
+}
+
+sub _match_ssha($password_ldap, $password) {
+    return Authen::Passphrase->from_rfc2307($password_ldap)->match($password);
 }
 
 sub _match_pbkdf2($password_db_64, $password) {
