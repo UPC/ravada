@@ -420,10 +420,18 @@ sub search_group {
         filter => "cn=$name"
          ,base => $base
     );
+    if ($mesg->code == 4 ) {
+        return search_group(
+            name => 'a*'
+            ,base => $base
+            ,ldap => $ldap
+        ) if $name eq '*';
+        return [];
+    }
     warn "LDAP retry ".$mesg->code." ".$mesg->error if $retry > 1;
 
     if ( $retry <= 3 && $mesg->code){
-        warn "LDAP error ".$mesg->code." ".$mesg->error."."
+        warn "LDAP error ".$mesg->code." ".$mesg->error.". [cn=$name] "
             ."Retrying ! [$retry]"  if $retry;
          $LDAP_ADMIN = undef;
          sleep ($retry + 1);

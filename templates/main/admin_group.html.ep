@@ -18,7 +18,11 @@
             <div class="card-body">
                 <div ng-show="<%= $_user->can_manage_groups %>">
                     <%=l 'New group member' %>
-                    <select ng-model="new_member"
+                    <input type="text" ng-model="username_filter"
+                                       ng-change="list_users()"
+                    />
+                    <select ng-show = "users && users.length"
+                        ng-model="new_member"
                         ng-options="user.name for user in users"
                     >
                     </select>

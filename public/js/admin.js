@@ -788,6 +788,7 @@ ravadaApp.directive("solShowMachine", swMach)
     function admin_groups_ctrl($scope, $http) {
         var group;
         $scope.group_filter = '';
+        $scope.username_filter = '';
         $scope.list_ldap_groups = function() {
             $http.get('/list_ldap_groups/'+$scope.group_filter)
                 .then(function(response) {
@@ -802,9 +803,10 @@ ravadaApp.directive("solShowMachine", swMach)
                 });
         };
         $scope.list_users = function() {
-            $http.get('/list_ldap_users')
+            $http.get('/list_ldap_users/'+$scope.username_filter)
                 .then(function(response) {
-                    $scope.users=response.data;
+                    $scope.error = response.data.error;
+                    $scope.users = response.data.entries;
                 });
         };
         $scope.add_member = function(cn) {

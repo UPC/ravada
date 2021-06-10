@@ -1581,6 +1581,14 @@ get '/list_ldap_users' => sub($c) {
     return _list_ldap_users($c,'*');
 };
 
+get '/list_ldap_users/#name' => sub($c) {
+    return access_denied($c) unless $USER->can_manage_users || $USER->can_manage_groups;
+    my $name = $c->stash('name');
+    $name .= '*' unless $name =~ m{\*$};
+    return _list_ldap_users($c,$name);
+};
+
+
 
 get '/list_ldap_groups/:name' => sub($c) {
     my $name = $c->stash('name');
@@ -3290,11 +3298,16 @@ sub _list_ldap_groups($c, $name='*') {
 };
 
 sub _list_ldap_users($c, $filter='*' ) {
+    $filter = '*' if $filter eq 'undefined';
+    my @users;
+    eval { @users = Ravada::Auth::LDAP::search_user(name => $filter, escape_username => 0) };
+    my $error = ($@ or '');
     my @entries;
-    for my $entry (Ravada::Auth::LDAP::search_user(name => $filter, escape_username => 0)) {
-        push @entries,({name => $entry->get_value('cn') });
+    for my $entry (@users) {
+        my $cn = $entry->get_value('cn');
+        push @entries,({name => $cn});
     }
-    return $c->render(json => [sort { $a->{name} cmp $b->{name} } @entries]);
+    return $c->render(json => {error => $error, entries => \@entries });
 }
 
 sub _list_ldap_group_members($c, $name) {
