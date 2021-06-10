@@ -16,7 +16,7 @@ source code:
 
 .. prompt:: bash ~/src/ravada$
 
-     PERL5LIB=./lib morbo ./script/rvd_front
+     PERL5LIB=./lib morbo -m development -v ./script/rvd_front
 
 The backend runs as root because it has to deal with the VM processes.
 It won't reload automatically when there is a change, so it has to be
@@ -44,7 +44,7 @@ If you use the fish shell you must run the scripts with these commands:
 
 .. prompt:: bash ~/src/ravada$
 
-    set -x PERL5LIB ./lib ; morbo -v script/rvd_front
+    set -x PERL5LIB ./lib ; morbo -m development -v script/rvd_front
 
 .. prompt:: bash ~/src/ravada$
 

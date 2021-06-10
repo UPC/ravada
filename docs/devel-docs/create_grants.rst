@@ -7,7 +7,7 @@ If you want to add a new grant, you have to do two things:
     -  Add the condition
     
 You can see all the grants in the table 'grants_type', to add it automatically on start up the
-backend you have to modify the functions ``_add_grants`` and `` _enable_grants`` in the file "lib/Ravada.pm"
+backend you have to modify the functions ``_add_grants`` and ``_enable_grants`` in the file *lib/Ravada.pm*.
 
 Now the test file is like this:
 
@@ -42,15 +42,34 @@ Now the test file is like this:
         ,'start_many'
     );
     ...
-    
-Next for adding the conditions it depends of the situations but you may want to lock in to thins functions:
+
+Next for adding the conditions it depends of the situations but you may want to look into these files:
 
     -  "templates/main/settings_machine_tabs_head.html.ep" & "templates/main/settings_machine_tabs_head.html.ep" for Virtual Machine edit settings web page.
     -  "lib/Ravada/Auth/SQL.pm" all the grants conditions created (i.e. ``is_admin``, ``can_list_clones``, etc...).
-    
-**Note**:If the function is named ``can_'grant_name'`` this function is automatically generated with the BD data.
+
+**Note**: The functions like ``can_'grant_name'`` are not individually implemented. This function is automatically generated with the BD data. Its code is at *lib/Ravada/Auth/SQL.pm* ``sub AUTOLOAD``.
+
+Grant user permissions by default
+---------------------------------
+
+At *lib/Ravada/Auth/SQL*, the sub *grant_user_permissions* sets the default for new
+users. If the new permission should be for everybody, add it there too.
+
+
+Defaults and upgrading
+----------------------
+
+*This sections requires some review, please contribute if you can*
+
+Some permissions are granted by default to all the users. So when creating
+a new grant you should check:
+
+    - Old users are granted the new permissions
+    - Newly created users get the permission too
+    - Admin users get the permision, both old and new
 
 Testing
 -------
 
-Some examples for testing can be found in "/t/user/50_admin.t" and "/t/user/40_grant_shutdown.t" also you may want to read the section **How to create tests**. 
+Some examples for testing can be found in */t/user/50_admin.t* and */t/user/40_grant_shutdown.t* also you may want to read the section **How to create tests**.

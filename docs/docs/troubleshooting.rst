@@ -169,3 +169,47 @@ You can modify XML file from the command:
 .. prompt:: bash #
 
     virsh edit <machine_name>
+
+Content is empty after upgrade
+------------------------------
+
+If after upgrade you get an almost blank screen it is probably a matter of cached javascript
+or CSS. Type SHIFT+F5 or SHIFT+Reload button in your browser. You could also clean browser
+history so it gets refreshed the next time you access the Ravada frontend.
+
+Error: Web Service connection failed
+------------------------------------
+
+If you get this error on the frontend, carefully review this documentation :
+
+https://ravada.readthedocs.io/en/latest/docs/apache.html
+
+It is very common to miss some step, so please take your time and restart all
+the services afterwards.
+
+Virtual machines won't complete the shutdown
+--------------------------------------------
+
+This may happen in some upgrades to Ubuntu 20.04. Virtual machines appear in the state *in shutdown* and won't complete the shutdown process.
+
+You may notice if you type `virsh list`:
+
+::
+
+    # virsh list
+     Id   Name       State
+    ------------------------------
+    2    tst20-04   in shutdown
+
+The solution is to change the apparmor settings. Edit the file */etc/apparmor.d/usr.sbin.libvirtd* below:
+
+::
+
+    # For communication/control from libvirtd
+    signal (receive) peer=libvirtd,
+    signal (receive) peer=/usr/sbin/libvirtd
+
+Reboot the server and the virtual machines shutdown will work again.
+
+*Thanks to Jim Fehlig from Suse.com*
+

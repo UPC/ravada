@@ -15,7 +15,7 @@ You can also install Ravada using Docker.
 Hardware
 --------
 
-It depends on the number and type of virtual machines. For common scenarios are server memory, storage and network bandwidth the most critical requirements.
+It depends on the number and type of virtual machines. For common scenarios server memory, storage and network bandwidth are the most critical requirements.
 
 Memory
 ~~~~~~
@@ -30,6 +30,10 @@ Disks
 
 The faster the disks, the better. Ravada uses incremental files for the
 disks images, so clones won't require many space.
+
+Read these
+`recommendations <http://ravada.readthedocs.io/en/latest/docs/Server_Hardware.html>`_
+if you want to buy a new dedicated server.
 
 Install Ravada
 --------------

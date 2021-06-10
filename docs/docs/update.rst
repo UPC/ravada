@@ -1,5 +1,9 @@
-Upgrade Ravada 
+Upgrade Ravada
 ==============
+
+We try to make the upgrading procedure easy. Also if you are running
+a very ancient or legacy release, fear not ! We did our best so
+everything is set up with minimal user intervention.
 
 In order to upgrade Ravada, you have to do a few steps:
 
@@ -64,3 +68,11 @@ Check the apache configuration
 
 If you upgrade from older releases you may have to add some lines to the apache
 proxy configuration. Check the `Apache proxy guide <http://ravada.readthedocs.io/en/latest/docs/apache.html>`__.
+
+Problems upgrading
+~~~~~~~~~~~~~~~~~~
+
+Problems may arise please take a look at our `troubleshooting
+<http://ravada.readthedocs.io/en/latest/docs/troubleshooting.html>`_ guide. If everything
+fails you may `contact us <https://ravada.upc.edu/#help>`_
+for assistance.

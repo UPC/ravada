@@ -61,9 +61,9 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/INSTALL_ubuntu_xenial.rst
    docs/INSTALLfromDockers.rst
    docs/production
+   docs/logs
    docs/recomendations
    docs/INSTALL_devel
-   docs/Ubuntu_Installation
    docs/add_kvm_storage_pool
    docs/apache
    docs/convert_from_virtualbox
@@ -85,7 +85,12 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/volatile
    docs/nodes
    docs/How_to_make_virtual_machine_sparse
+   docs/Server_Hardware
+   docs/Cluster_Hardware
+   docs/CLI
    docs/intel_gvt
+   docs/cas_login
+   docs/apparmor
 
 .. _feature-docs:
 
@@ -110,6 +115,9 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/local_resources
    docs/expose_machine
    docs/expose_ports
+   docs/Rebase
+   docs/spinoff_clone
+   docs/chatwoot
 
 .. _guest-docs:
 
@@ -117,6 +125,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    :maxdepth: 2
    :caption: Guest VM section
 
+   docs/install_guest_linux
    docs/install_guest_alpine
    docs/install_guest_windows10
    docs/resize_hard_drive

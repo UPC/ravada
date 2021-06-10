@@ -81,7 +81,7 @@ Add a new user for the ravada web. Use ``rvd_back`` to create it.
 .. prompt:: bash $
 
     cd ravada
-    sudo PERL5LIB=./lib ./script/rvd_back --add-user user.name
+    sudo PERL5LIB=./lib ./script/rvd_back --add-user admin
 
 
 Firewall(Optional)
@@ -135,7 +135,7 @@ Run the frontend in another terminal:
 
 .. prompt:: bash $
 
-    PERL5LIB=./lib morbo ./script/rvd_front
+    PERL5LIB=./lib morbo -m development -v ./script/rvd_front
     Server available at http://127.0.0.1:3000
 
 Now you must be able to reach ravada at the location http://your.ip:3000/

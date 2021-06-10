@@ -1,4 +1,9 @@
-Run Hypnotoad service and Apache as a proxy for it.
+Apache
+======
+
+You can set up any Web server on top of Ravada. In this doc we
+show how to run Apache as a proxy. Settings another tool like
+Nginx should be similar.
 
 Upgrading
 ---------
@@ -10,6 +15,7 @@ and make sure it is exactly like this.
 Configure Hypnotoad proxy
 -------------------------
 
+Hypnotoad is the engine that runs the web Ravada frontend.
 First of all you need to tell *hypnotoad* we are behind a proxy.
 This allows Mojolicious to automatically pick up the X-Forwarded-For
 and X-Forwarded-Proto headers.
@@ -50,6 +56,9 @@ Enable these modules.
 .. prompt:: bash #
 
     a2enmod ssl proxy proxy_http proxy_connect proxy_wstunnel headers
+
+In this example we are using self signed certificate that comes with Apache SSL.
+You can request a real certificate from any vendor like *LetsEncrpt*.
 
 Apache Proxy Configuration
 --------------------------
@@ -92,6 +101,9 @@ Edit /etc/apache2/sites-enabled/000-default.conf
     </virtualhost>
     
 .. Tip:: Remember restart Apache2 service, with ``systemctl restart apache2`` or ``services apache2 restart``.
+
+
+
 
 .. prompt:: bash $
 

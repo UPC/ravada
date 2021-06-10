@@ -92,7 +92,12 @@ Changelog file:
     $ gvim Changelog.md
     $ git commit -a
 
+Push changes
+------------
 
+::
+
+    $ git push
 
 Close the release
 -----------------

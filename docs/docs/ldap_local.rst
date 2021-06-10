@@ -32,12 +32,15 @@ Release 1.4 [new]
 ~~~~~~~~~~~~~~~~~
 
 From release 1.4 we provide an example configuration file for
-creating the new directory instance. Review it at *t/etc/ds389.conf*
-and use it with *dscreate*:
+creating the new directory instance.
+
+.. listeralinclude:: ds389.conf
+
+After you set a password and correct suffix create a LDAP instance with *dscreate*:
 
 .. prompt:: bash
 
-    sudo dscreate from-file t/etc/ds389.conf
+    sudo dscreate from-file ds389.conf
 
 Enable and Start the service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -68,4 +71,9 @@ The ravada backend script allows creating users in the LDAP
 
 .. prompt:: bash
 
-    sudo ./bin/rvd_back.pl --add-user-ldap jimmy.mcnulty
+    sudo rvd_back --add-user-ldap jimmy.mcnulty
+
+There are more commands to easily manage LDAP entries. Check the
+`LDAP section from the CLI  <http://ravada.readthedocs.io/en/latest/docs/CLI.html>`_
+documentation.
+

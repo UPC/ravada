@@ -11,7 +11,7 @@ Ports exposing works with Linux Kernel *iptables* so it requires the
 host to have it installed in properly configured.
 
 The virtual machine must have a way to tell the host what is the
-internal IP to the host, so the `qemu guest agent <qemu_ga.html>`  must be installed.
+internal IP to the host, so the `qemu guest agent <qemu_ga.html>`_ must be installed.
 
 Configure Expose
 ----------------
@@ -47,3 +47,11 @@ Ports redirection requires the internal IP of the virtual machine
 to be active. So it retries for a while trying to redirect until
 an IP is detected or it fails.
 
+.. note:: If your exposing ports don't work. Check if the port is up and if you have the `Qemu Guest Agent <https://ravada.readthedocs.io/en/latest/docs/qemu_ga.html>`__ installed on the guest machine.
+
+
+Settings
+--------
+
+Internal ports are shown in the host at a different port. It can be
+changed from the global settings page.
