@@ -60,7 +60,7 @@ sub uncompress($file) {
 
 sub get_version_badge {
     return if $VERSION =~/alpha/;
-    $VERSION =~ s/-/--/;
+    #    $VERSION =~ s/-/--/;
     download("https://img.shields.io/badge/version-$VERSION-brightgreen.svg"
         ,"../img/version-$VERSION-brightgreen.svg");
 }
