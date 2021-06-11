@@ -895,3 +895,22 @@ msgstr "Keep in mind that there may be users using a clone"
 
 msgid "Yes, shutwdown all the clones"
 msgstr "Yes, shutdown all the clones"
+
+msgid "Waiting for machine to start"
+msgstr "Waiting for machine to start"
+
+msgid "This machine will shut down"
+msgstr "This machine will shut down"
+
+msgid "Waiting for network to come up"
+msgstr "Waiting for network to come up"
+
+msgid "Hardware address"
+msgstr "Hardware address"
+
+msgid "Open ports"
+msgstr "Open ports"
+
+msgid "up"
+msgstr "up"
+

@@ -1798,6 +1798,7 @@ sub _translations($c) {
         ,en => 'English'
         ,ca => 'Catalan'
         ,es => 'Spanish'
+        ,zh_CN => 'Chinese'
         ,gl => 'Galician'
         ,fr => 'French'
         ,de => 'German'
