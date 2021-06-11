@@ -757,4 +757,35 @@ msgstr "Valenciano"
 msgid "Vietnamese"
 msgstr "Vietnamita"
 
+msgid "Waiting for machine to start"
+msgstr "Agardando a que arranque a máquina"
 
+msgid "This machine will shut down"
+msgstr "A máquina apagarase"
+
+msgid "Waiting for network to come up"
+msgstr "Á espera de que xurda a rede"
+
+msgid "Hardware address"
+msgstr "Enderezo de Hardware"
+
+msgid "Open ports"
+msgstr "Portos abertos"
+
+msgid "up"
+msgstr "Aceso"
+
+msgid "Machine Information"
+msgstr "Información da máquina"
+
+msgid "Internal IP"
+msgstr "IP Interna"
+
+msgid "Display"
+msgstr "Mostrar"
+
+msgid "Max Memory"
+msgstr "Memoria Máx"
+
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Prema MAIÚS + F12 para saír da máquina virtual"
