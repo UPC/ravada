@@ -279,6 +279,8 @@ sub search_user {
     my $escape_username = 1;
     $escape_username = delete $args{escape_username} if exists $args{escape_username};
     my $filter_orig = delete $args{filter};
+    my $sizelimit = (delete $args{sizelimit} or 100);
+    my $timelimit = (delete $args{timelimit} or 60);
 
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
     confess "ERROR: I can't connect to LDAP " if!$ldap;
@@ -299,7 +301,9 @@ sub search_user {
     scope  => 'sub',
     filter => $filter,
     typesonly => $typesonly,
-    attrs  => ['*']
+    attrs  => ['*'],
+    sizelimit => $sizelimit,
+    timelimit => $timelimit
 
     );
     warn "LDAP retry ".$mesg->code." ".$mesg->error if $retry > 1;
@@ -317,6 +321,7 @@ sub search_user {
               ,retry => ++$retry
               ,typesonly => $typesonly
               ,filter => $filter_orig
+              ,sizelimit => $sizelimit
          );
     }
 
@@ -345,18 +350,19 @@ sub add_group {
 
     $name = escape_filter_value($name);
 
-    my $mesg = $LDAP_ADMIN->add(
-        cn => $name
-        ,dn => "cn=$name,ou=groups,$base"
+    my @data = (
+        dn => "cn=$name,ou=groups,$base"
+        , cn => $name
         , attrs => [ cn=>$name
                     ,objectClass => $class
                     ,ou => 'Groups'
                     ,description => "Group for $name"
                     ,gidNumber => _search_new_gid()
           ]
-    );
+      );
+    my $mesg = $LDAP_ADMIN->add(@data);
     if ($mesg->code) {
-        die "Error creating group $name : ".$mesg->error."\n";
+        die "Error creating group $name : ".$mesg->error."\n".Dumper(\@data);
     }
 
 }
@@ -415,20 +421,28 @@ sub search_group {
 
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
     confess "ERROR: I can't connect to LDAP " if!$ldap;
-
+    my $filter = "(&(cn=$name)(objectClass=posixGroup))";
     my $mesg = $ldap ->search (
-        filter => "cn=$name"
+        filter => $filter
          ,base => $base
+         ,sizelimit => 100
     );
+    warn "LDAP retry ".$mesg->code." ".$mesg->error." [filter: $filter , base: $base]" if $retry > 1;
     if ($mesg->code == 4 ) {
+        if ( $name eq '*' ) {
+            $name = 'a*';
+        } elsif ($name eq 'a*' ) {
+            $name = 'a*a*';
+        } else {
+            die "LDAP error: ".$mesg->code." ".$mesg->error;
+        }
         return search_group(
-            name => 'a*'
+            name => $name
             ,base => $base
             ,ldap => $ldap
-        ) if $name eq '*';
-        return [];
+            ,retry => $retry+1
+        );
     }
-    warn "LDAP retry ".$mesg->code." ".$mesg->error if $retry > 1;
 
     if ( $retry <= 3 && $mesg->code){
         warn "LDAP error ".$mesg->code." ".$mesg->error.". [cn=$name] "
@@ -445,7 +459,6 @@ sub search_group {
     my @entries = $mesg->entries;
     return @entries if wantarray;
 
-    return @entries if wantarray;
     return $entries[0];
 }
 
@@ -551,14 +564,16 @@ sub _login_bind {
         @user = (search_user(name => $self->name, field => 'uid')
                 ,search_user(name => $self->name, field => 'cn'));
     }
-    for my $user (@user) {
-        my $dn = $user->dn;
+    my %user = map { $_->dn => $_ } @user;
+    my $dn = "cn=$username,"._dc_base();
+    $user{$dn}=0;
+    for my $dn ( sort keys %user ) {
         $found++;
         my $ldap;
         eval { $ldap = _connect_ldap($dn, $password) };
         if ( $ldap ) {
             $self->{_auth} = 'bind';
-            $self->{_ldap_entry} = $user;
+            $self->{_ldap_entry} = $user{$dn} if $user{$dn};
             return 1;
         }
         warn "ERROR: Bad credentials for $dn"

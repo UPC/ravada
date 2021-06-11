@@ -20,15 +20,17 @@
                     <%=l 'New group member' %>
                     <input type="text" ng-model="username_filter"
                                        ng-change="list_users()"
+                                       placeholder="search"
                     />
-                    <select ng-show = "users && users.length"
+                    <span ng-show="!users"><i class="fas fa-sync-alt fa-spin"></i></span>
+                    <select
+                        ng-show="users && users.length"
                         ng-model="new_member"
                         ng-options="user.name for user in users"
                     >
                     </select>
                     <button ng-show="new_member && new_member.name"
                         ng-click="add_member(new_member.name)">Add</button>
-                    <div ng-show="error">{{error}}</div>
                 </div>
                 <table class="table table-striped" ng-show="group_members.length>0">
                     <thead>

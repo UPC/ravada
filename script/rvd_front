@@ -128,6 +128,8 @@ our $SESSION_TIMEOUT_ADMIN2 = ($CONFIG_FRONT->{session_timeout_admin2} or 60 * 6
 my $WS = Ravada::WebSocket->new(ravada => $RAVADA);
 my %ALLOWED_ANONYMOUS_WS = map { $_ => 1 } qw(list_bases_anonymous list_alerts);
 my %LDAP_ATTRIBUTES;
+my %LDAP_USERS;
+
 
 # TOODO: config this variable
 my $LIMIT_SHOW_USERS = 25;
@@ -3299,15 +3301,30 @@ sub _list_ldap_groups($c, $name='*') {
 
 sub _list_ldap_users($c, $filter='*' ) {
     $filter = '*' if $filter eq 'undefined';
+    $filter = '*'.$filter if length($filter) && $filter !~ /^\*/;
+
+    if ( exists $LDAP_USERS{$filter} ) {
+        my $data_json = $LDAP_USERS{$filter};
+        my $data;
+        eval { $data = decode_json($data_json) };
+        return $c->render(json => $data) if $data;
+    }
+    $LDAP_USERS{$filter} = encode_json({ error => '', entries => [] });
     my @users;
     eval { @users = Ravada::Auth::LDAP::search_user(name => $filter, escape_username => 0) };
     my $error = ($@ or '');
+    if (scalar @users>100) {
+        $error = "Too many results";
+        $#users= 100;
+    }
     my @entries;
     for my $entry (@users) {
         my $cn = $entry->get_value('cn');
         push @entries,({name => $cn});
     }
-    return $c->render(json => {error => $error, entries => \@entries });
+    my $ret = {error => $error, entries => \@entries };
+    $LDAP_USERS{$filter} = encode_json($ret);
+    return $c->render(json => $ret );
 }
 
 sub _list_ldap_group_members($c, $name) {
