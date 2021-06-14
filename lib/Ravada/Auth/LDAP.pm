@@ -605,6 +605,8 @@ sub _login_bind {
         $found++;
         my $ldap;
         eval { $ldap = _connect_ldap($dn, $password) };
+        warn "ERROR: Bad credentials for $dn"
+            if $Ravada::DEBUG && $@;
         if ( $ldap ) {
             $self->{_auth} = 'bind';
             $self->{_ldap_entry} = $user{$dn} if $user{$dn};
@@ -785,6 +787,8 @@ sub _connect_ldap {
         die "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $dn\n"
             if $mesg->code;
 
+    } else {
+        return;
     }
 
     return $ldap;
