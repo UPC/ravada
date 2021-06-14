@@ -325,7 +325,7 @@ any '/admin/#type' => sub {
   return admin($c);
 };
 
-any '/new_machine' => sub {
+any '/new_machine.html' => sub {
     my $c = shift;
     return access_denied($c)    if !$USER->can_create_machine;
     return new_machine($c);

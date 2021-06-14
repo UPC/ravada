@@ -720,7 +720,9 @@ sub mojo_create_domain($t, $vm_name) {
     )->status_is(302);
 
     wait_request(debug => 0, background => 1);
-    return rvd_front->search_domain($name);
+    my $domain = rvd_front->search_domain($name);
+    ok($domain,"Expecting domain $name created") or exit;
+    return $domain;
 
 }
 
