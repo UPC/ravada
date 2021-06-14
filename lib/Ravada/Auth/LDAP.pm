@@ -153,7 +153,7 @@ sub _get_gid() {
     my ($group_users) = grep { $_->get_value('cn') eq 'users' } @group;
     $group_users = $group[0] if !$group_users;
     if (!$group_users) {
-        add_group(name => 'users');
+        add_group('users');
         ($group_users) = search_group(name => 'users');
         confess "Error: I can create nor find LDAP group 'users'" if !$group_users;
     }
@@ -341,24 +341,23 @@ Add a group to the LDAP
 
 =cut
 
-sub add_group {
-    my $name = shift;
-    my $base = (shift or _dc_base());
-    my $class = ( shift or [
-            'groupOfUniqueNames','nsMemberOf','posixGroup','top'
-        ]);
-
+sub add_group($name, $base=_dc_base(), $class=['groupOfUniqueNames','nsMemberOf','posixGroup','top' ]) {
+    $base = _dc_base() if !defined $base;
     $name = escape_filter_value($name);
+    my $oc_posix_group;
+    $oc_posix_group = grep { /^posixGroup$/ } @$class;
+
+    my @attrs =( cn=>$name
+                    ,objectClass => $class
+                    ,ou => 'Groups'
+                    ,description => "Group for $name"
+    );
+    push @attrs, (gidNumber => _search_new_gid()) if $oc_posix_group;
 
     my @data = (
         dn => "cn=$name,ou=groups,$base"
         , cn => $name
-        , attrs => [ cn=>$name
-                    ,objectClass => $class
-                    ,ou => 'Groups'
-                    ,description => "Group for $name"
-                    ,gidNumber => _search_new_gid()
-          ]
+        , attrs => \@attrs
       );
     my $mesg = $LDAP_ADMIN->add(@data);
     if ($mesg->code) {
@@ -421,7 +420,7 @@ sub search_group {
 
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
     confess "ERROR: I can't connect to LDAP " if!$ldap;
-    my $filter = "(&(cn=$name)(objectClass=posixGroup))";
+    my $filter = "cn=$name";
     my $mesg = $ldap ->search (
         filter => $filter
          ,base => $base
@@ -482,9 +481,15 @@ sub add_to_group {
     my $group = search_group(name => $group_name, ldap => $LDAP_ADMIN)   
         or die "No such group $group_name";
 
-    $group->add(uniqueMember=> $user->dn);
+    if ( grep {/^posixGroup$/} $group->get_value('objectClass') ) {
+        $group->add(uniqueMember => $user->dn)
+    } elsif ( grep {/^groupOfNames$/} $group->get_value('objectClass') ) {
+        $group->add(member => $user->dn)
+    } else {
+        die "Error: group $group_name class unknown ".Dumper($group->get_value('objectClass'));
+    }
     my $mesg = $group->update($LDAP_ADMIN);
-    die $mesg->error if $mesg->code;
+    die "Error: adding member ".$user->dn." ".$mesg->error if $mesg->code;
 
 }
 
@@ -516,10 +521,26 @@ sub _search_posix_group($self, $name) {
     return $posix_group[0];
 }
 
-sub login($self) {
-    my $user_ok;
-    my $allowed;
+sub _group_members($self) {
+    my $group_name = $$CONFIG->{ldap}->{group};
+    return if !$group_name;
+
+    my $group = search_group(name => $group_name);
+    if (!$group) {
+        warn "Warning: group $group_name not found";
+        return;
+    }
+    my @oc = $group->get_value('objectClass');
+
+    die "Error: group $group_name is not type bla ".Dumper(\@oc)
+    unless grep /^groupOfNames$/,@oc;
+
+    return $group->get_value('member');
+}
+
+sub _check_posix_group($self) {
     my $posix_group_name = $$CONFIG->{ldap}->{ravada_posix_group};
+    return 1 if !$posix_group_name;
 
     if ($posix_group_name) {
         my $posix_group = $self->_search_posix_group($posix_group_name);
@@ -537,6 +558,13 @@ sub login($self) {
         }
         $self->{_ldap_entry} = $posix_group;
     }
+}
+
+sub login($self) {
+    my $user_ok;
+    my $allowed;
+
+    return if !$self->_check_posix_group();
 
         $user_ok = $self->_login_bind()
         if !exists $$CONFIG->{ldap}->{auth} || $$CONFIG->{ldap}->{auth} =~ /bind|all/i;
@@ -565,9 +593,15 @@ sub _login_bind {
                 ,search_user(name => $self->name, field => 'cn'));
     }
     my %user = map { $_->dn => $_ } @user;
-    my $dn = "cn=$username,"._dc_base();
-    $user{$dn}=0;
+    my @group_members;
+    @group_members =$self->_group_members();
+
+    my @error;
     for my $dn ( sort keys %user ) {
+        if ($$CONFIG->{ldap}->{group} && !grep /^$dn$/,@group_members) {
+            push @error, ("Warning: $dn does not belong to group $$CONFIG->{ldap}->{group}");
+            next;
+        }
         $found++;
         my $ldap;
         eval { $ldap = _connect_ldap($dn, $password) };
@@ -576,9 +610,10 @@ sub _login_bind {
             $self->{_ldap_entry} = $user{$dn} if $user{$dn};
             return 1;
         }
-        warn "ERROR: Bad credentials for $dn"
-            if $Ravada::DEBUG && $@;
+        push @error,("ERROR: Bad credentials for $dn");
     }
+    warn Dumper(\@error)
+            if $Ravada::DEBUG && scalar (@error);
     return 0;
 }
 
