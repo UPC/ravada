@@ -414,8 +414,9 @@ sub _around_create_domain {
             || $owner->can_create_machine()
             || ($base && $owner->can_clone);
 
-    confess "ERROR: Base ".$base->name." is private"
-        if !$owner->is_admin && $base && !$base->is_public();
+#   Do not check if base is public to allow not public machines to be copied
+#    confess "ERROR: Base ".$base->name." is private"
+#        if !$owner->is_admin && $base && !$base->is_public();
 
     if ($add_to_pool) {
         confess "Error: This machine can only be added to a pool if it is a clone"
@@ -824,10 +825,12 @@ sub _check_require_base {
     die "ERROR: Domain ".$self->name." is not base"
             if !$base->is_base();
 
-    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+#   Do not check if base is public to allow not public machines to be copied
 
-    die "ERROR: Base ".$base->name." is not public\n"
-        unless $user->is_admin || $base->is_public;
+#    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+
+#    die "ERROR: Base ".$base->name." is not public\n"
+#        unless $user->is_admin || $base->is_public;
 }
 
 =head2 id
