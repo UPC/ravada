@@ -746,8 +746,8 @@ msgstr "Propriétaire"
 msgid "Change the owner of the machine"
 msgstr "Change le propriétaire de la machine"
 
-msgid "Press SHIFT + F12 to exit"
-msgstr "Appuyez sur Maj. + F12 pour quitter"
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Appuyez sur SHIFT + F12 pour quitter la machine virtuelle"
 
 msgid ""
 "If you can not see the machine screen in a few seconds check for a file "
@@ -943,4 +943,32 @@ msgstr "Redémarrer"
 msgid "Force Reboot"
 msgstr "Redémarrage forcé"
 
+msgid "Waiting for machine to start"
+msgstr "En attente du démarrage de la machine"
 
+msgid "This machine will shut down"
+msgstr "Cette machine va s'arrêter"
+
+msgid "Waiting for network to come up"
+msgstr "En attente de l'activation du réseau"
+
+msgid "Hardware address"
+msgstr "Addresse matérielle"
+
+msgid "Open ports"
+msgstr "Ouvrir les ports"
+
+msgid "up"
+msgstr "Activé"
+
+msgid "Machine Information"
+msgstr "Informations sur la machine"
+
+msgid "Internal IP"
+msgstr "IP Interne"
+
+msgid "Display"
+msgstr "Affichage"
+
+msgid "Max Memory"
+msgstr "Mémoire Max"
