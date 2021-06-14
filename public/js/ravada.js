@@ -212,6 +212,7 @@
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
                         $scope.showmachine = data;
+                        $scope.copy_is_volatile = $scope.showmachine.is_volatile;
                         if (!subscribed_extra) {
                             subscribed_extra = true;
                             subscribe_nodes(url,data.type);
@@ -739,6 +740,7 @@
                         $scope.list_users=response.data;
                         for (var i = 0; i < response.data.length; i++) {
                             if (response.data[i].id == $scope.showmachine.id_owner) {
+                                $scope.copy_owner = response.data[i].id;
                                 $scope.new_owner = response.data[i];
                             }
                         }
