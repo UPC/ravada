@@ -121,7 +121,7 @@
 
             $scope.subscribe_list_machines_user = function(url) {
                 $scope.machines = [];
-                var channel = 'list_machines_user';
+                var channel = 'list_machines_user_including_privates';
                 if ($scope.anonymous) {
                     channel = 'list_bases_anonymous';
                 }

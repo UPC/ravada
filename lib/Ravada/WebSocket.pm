@@ -25,18 +25,19 @@ has ravada => (
 );
 
 my %SUB = (
-                  list_alerts => \&_list_alerts
-                  ,list_bases => \&_list_bases
-                  ,list_isos  => \&_list_isos
-                  ,list_nodes => \&_list_nodes
-               ,list_machines => \&_list_machines
-          ,list_machines_tree => \&_list_machines_tree
-          ,list_machines_user => \&_list_machines_user
-        ,list_bases_anonymous => \&_list_bases_anonymous
-               ,list_requests => \&_list_requests
-                ,machine_info => \&_get_machine_info
-                ,ping_backend => \&_ping_backend
-                     ,request => \&_request
+                  list_alerts                    => \&_list_alerts
+                  ,list_bases                    => \&_list_bases
+                  ,list_isos                     => \&_list_isos
+                  ,list_nodes                    => \&_list_nodes
+               ,list_machines                    => \&_list_machines
+          ,list_machines_tree                    => \&_list_machines_tree
+          ,list_machines_user                    => \&_list_machines_user
+          ,list_machines_user_including_privates => \&_list_machines_user_including_privates
+        ,list_bases_anonymous                    => \&_list_bases_anonymous
+               ,list_requests                    => \&_list_requests
+                ,machine_info                    => \&_get_machine_info
+                ,ping_backend                    => \&_ping_backend
+                     ,request                    => \&_request
 );
 
 our %TABLE_CHANNEL = (
@@ -168,6 +169,20 @@ sub _list_machines_user($rvd, $args) {
 
     my $client = $args->{client};
     my $ret = $rvd->list_machines_user($user, {client => $client});
+    return $ret;
+}
+
+sub _list_machines_user_including_privates($rvd, $args) {
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login)
+        or die "Error: uknown user $login";
+
+    my $client = $args->{client};
+    my $ret = $rvd->list_machines_user($user, {client => $client});
+
+    my $priv_machines = $rvd->list_private_machines_user($user, {client => $client});
+    push(@$ret, $_) foreach (@$priv_machines);
+
     return $ret;
 }
 
