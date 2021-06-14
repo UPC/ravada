@@ -565,19 +565,17 @@ sub _login_bind {
                 ,search_user(name => $self->name, field => 'cn'));
     }
     my %user = map { $_->dn => $_ } @user;
-    my $dn = "cn=$username,"._dc_base();
-    $user{$dn}=0;
     for my $dn ( sort keys %user ) {
         $found++;
         my $ldap;
         eval { $ldap = _connect_ldap($dn, $password) };
+        warn "ERROR: Bad credentials for $dn"
+            if $Ravada::DEBUG && $@;
         if ( $ldap ) {
             $self->{_auth} = 'bind';
             $self->{_ldap_entry} = $user{$dn} if $user{$dn};
             return 1;
         }
-        warn "ERROR: Bad credentials for $dn"
-            if $Ravada::DEBUG && $@;
     }
     return 0;
 }
@@ -750,6 +748,8 @@ sub _connect_ldap {
         die "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $dn\n"
             if $mesg->code;
 
+    } else {
+        return;
     }
 
     return $ldap;
