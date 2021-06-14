@@ -38,3 +38,13 @@ For Debian, Ubuntu and similar systems:
     sudo dpkg-reconfigure unattended-upgrades
 
 Other Linux flavours may have similar tools. Contributions welcome.
+
+Limit systemd log size
+----------------------
+
+*Thanks to Jordi Lino for this tip* .
+
+You can change the systemd configuration to limit the journal log disk usage (100 MB for example).
+Edit the /etc/systemd/journald.conf file and un-comment (remove # at the beginning) the line #SystemMaxUse= and change it to SystemMaxUse=100M.
+
+Read `this <https://ubuntuhandbook.org/index.php/2020/12/clear-systemd-journal-logs-ubuntu/>`__ for more information.
