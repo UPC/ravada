@@ -1178,18 +1178,11 @@ sub test_private_base {
     my $clone_name = new_domain_name();
 
     my $clone;
-    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
-    like($@,qr(private)) or exit;
-
-    my $clone2 = $vm->search_domain($clone_name);
-    ok(!$clone2,"Expecting no clone");
-    $clone2->remove(user_admin) if $clone2;
-
     # admin can clone
     eval { $clone = $domain->clone(user => user_admin, name => $clone_name); };
     is($@,'');
 
-    $clone2 = $vm->search_domain($clone_name);
+    my $clone2 = $vm->search_domain($clone_name);
     ok($clone2,"Expecting a clone");
     $clone->remove(user_admin)  if $clone;
 
@@ -1202,13 +1195,6 @@ sub test_private_base {
     ok($clone2,"Expecting a clone");
     $clone->remove(user_admin)  if $clone;
 
-    # hide it again
-    $domain->is_public(0);
-    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
-    like($@,qr(.));
-
-    $clone2 = $vm->search_domain($clone_name);
-    ok(!$clone2,"Expecting no clone");
 }
 sub test_domain_limit_admin {
     my $vm_name = shift;

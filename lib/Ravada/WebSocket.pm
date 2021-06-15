@@ -191,9 +191,6 @@ sub _list_machines_user_including_privates($rvd, $args) {
     my $client = $args->{client};
     my $ret = $rvd->list_machines_user($user, {client => $client});
 
-    my $priv_machines = $rvd->list_private_machines_user($user, {client => $client});
-    push(@$ret, $_) foreach (@$priv_machines);
-
     return $ret;
 }
 

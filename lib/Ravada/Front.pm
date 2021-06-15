@@ -128,12 +128,11 @@ Returns: listref of machines
 
 =cut
 
-sub _list_machines_user($self, $user, $access_data, $typeof) {
-    my $base = $typeof ? 1 : 0;
+sub list_machines_user($self, $user, $access_data={}) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,name,is_public, description, screenshot, id_owner"
         ." FROM domains "
-        ." WHERE is_base=$base"
+        ." WHERE is_base=1"
         ." ORDER BY name "
     );
     my ($id, $name, $is_public, $description, $screenshot, $id_owner);
@@ -155,6 +154,7 @@ sub _list_machines_user($self, $user, $access_data, $typeof) {
             id_owner =>$user->id
             ,id_base => $id
         );
+        next unless $clone || $user->is_admin || ($is_public && $user->allowed_access($id));
         my %base = ( id => $id, name => $name
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
@@ -194,14 +194,6 @@ sub _list_machines_user($self, $user, $access_data, $typeof) {
     }
     $sth->finish;
     return \@list;
-}
-
-sub list_machines_user($self, $user, $access_data={}) {
-    return _list_machines_user($self, $user, $access_data, 1);
-}
-
-sub list_private_machines_user($self, $user, $access_data={}) {
-    return _list_machines_user($self, $user, $access_data, 0);
 }
 
 sub _access_allowed($self, $id_base, $id_clone, $access_data) {
