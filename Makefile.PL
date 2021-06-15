@@ -19,7 +19,6 @@ WriteMakefile(
       ,'XML::LibXML'=> 0
              ,'YAML' => 0
     ,'Image::Magick' => 0
-        ,'IO::Scalar' => 0
       ,'MooseX::Types::NetAddr::IP' => 0
 	,'IO::Interface' => 0
 	,'Sys::Statistics::Linux' => 0
@@ -27,7 +26,6 @@ WriteMakefile(
     ,'Locale::Maketext::Lexicon' => 0
     ,'Mojolicious::Plugin::I18N' => 0
     ,'DBD::SQLite'      => 0
-    ,'IPTables::ChainMgr' => 0
     ,'Net::DNS' => 0
     ,'Net::OpenSSH' => 0
     ,'File::Rsync' => 0
