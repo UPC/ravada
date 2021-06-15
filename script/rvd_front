@@ -3007,6 +3007,11 @@ sub copy_machine {
     $owner = undef if (! $USER) || (! $USER->is_admin);
     confess "owner do not exists" if ($owner) && (! Ravada::Auth::SQL->new(name => $owner));
 
+    $USER = _logged_in($c);
+    my $owner = $arg->{new_owner};
+    $owner = undef if (! $USER) || (! $USER->is_admin);
+    confess "owner do not exists" if ($owner) && (! Ravada::Auth::SQL->new(name => $owner));
+
     my @create_args = ( from_pool => 0 );
     push @create_args,( memory => $ram ) if $ram;
     push @create_args, ( name => $name ) if !defined $number || $number == 1;

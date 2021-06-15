@@ -143,8 +143,6 @@ sub list_machines_user($self, $user, $access_data={}) {
     my @list;
 
     while ( $sth->fetch ) {
-        next if !$is_public && !$user->is_admin && (($typeof) || ($user->id != $id_owner));
-        next if !$user->allowed_access($id);
 
         # check if enabled settings and this user not allowed
         next if $bookings_enabled && !Ravada::Front::Domain->open($id)->allowed_booking($user);
