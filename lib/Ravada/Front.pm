@@ -128,23 +128,23 @@ Returns: listref of machines
 
 =cut
 
-sub list_machines_user($self, $user, $access_data={}) {
-
+sub _list_machines_user($self, $user, $access_data, $typeof) {
+    my $base = $typeof ? 1 : 0;
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,is_public, description, screenshot"
+        "SELECT id,name,is_public, description, screenshot, id_owner"
         ." FROM domains "
-        ." WHERE is_base=1"
+        ." WHERE is_base=$base"
         ." ORDER BY name "
     );
-    my ($id, $name, $is_public, $description, $screenshot);
+    my ($id, $name, $is_public, $description, $screenshot, $id_owner);
     $sth->execute;
-    $sth->bind_columns(\($id, $name, $is_public, $description, $screenshot));
+    $sth->bind_columns(\($id, $name, $is_public, $description, $screenshot, $id_owner));
 
     my $bookings_enabled = $self->setting('/backend/bookings');
     my @list;
 
     while ( $sth->fetch ) {
-        next if !$is_public && !$user->is_admin;
+        next if !$is_public && !$user->is_admin && (($typeof) || ($user->id != $id_owner));
         next if !$user->allowed_access($id);
 
         # check if enabled settings and this user not allowed
@@ -194,6 +194,14 @@ sub list_machines_user($self, $user, $access_data={}) {
     }
     $sth->finish;
     return \@list;
+}
+
+sub list_machines_user($self, $user, $access_data={}) {
+    return _list_machines_user($self, $user, $access_data, 1);
+}
+
+sub list_private_machines_user($self, $user, $access_data={}) {
+    return _list_machines_user($self, $user, $access_data, 0);
 }
 
 sub _access_allowed($self, $id_base, $id_clone, $access_data) {
