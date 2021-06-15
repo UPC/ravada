@@ -2332,9 +2332,10 @@ sub clone {
     my $request = delete $args{request};
     my $memory = delete $args{memory};
     my $start = delete $args{start};
-    my $is_pool = delete $args{is_pool};
     my $no_pool = delete $args{no_pool};
     my $with_cd = delete $args{with_cd};
+    my $volatile = delete $args{volatile};
+    my $id_owner = delete $args{id_owner};
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
@@ -2353,7 +2354,7 @@ sub clone {
     delete $args2{from_pool};
     return $self->_copy_clone(%args2)   if !$self->is_base && $self->id_base();
 
-    my $uid = $user->id;
+    my $uid = $id_owner || $user->id;
 
     if ( !$self->is_base() ) {
         $request->status("working","Preparing base")    if $request;
@@ -2367,6 +2368,7 @@ sub clone {
     push @args_copy, ( remote_ip => $remote_ip) if $remote_ip;
     push @args_copy, ( from_pool => $from_pool) if defined $from_pool;
     push @args_copy, ( add_to_pool => $add_to_pool) if defined $add_to_pool;
+    push @args_copy, ( volatile => $volatile )  if defined $volatile;
 
     my $vm = $self->_vm;
     if ($self->volatile_clones ) {
@@ -2408,6 +2410,9 @@ sub _copy_clone($self, %args) {
     my $memory = delete $args{memory};
     my $request = delete $args{request};
     my $add_to_pool = delete $args{add_to_pool};
+    my $volatile = delete $args{volatile};
+    my $id_owner = delete $args{id_owner};
+    $id_owner = $user->id if (! $id_owner);
 
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)
         if keys %args;
@@ -2416,6 +2421,7 @@ sub _copy_clone($self, %args) {
 
     my @copy_arg;
     push @copy_arg, ( memory => $memory ) if $memory;
+    push @copy_arg, ( volatile => $volatile ) if $volatile;
 
     $request->status("working","Copying domain ".$self->name
         ." to $name")   if $request;
@@ -2423,7 +2429,7 @@ sub _copy_clone($self, %args) {
     my $copy = $self->_vm->create_domain(
         name => $name
         ,id_base => $base->id
-        ,id_owner => $user->id
+        ,id_owner => $id_owner
         ,from_pool => 0
         ,@copy_arg
     );
@@ -2455,7 +2461,7 @@ sub _copy_ports($base, $copy) {
     for my $port ( $base->list_ports ) {
         my %port = %$port;
         next if $port_already{$port->{internal_port}};
-        delete @port{'id','id_domain','public_port'};
+        delete @port{'id','id_domain','public_port','is_active'};
         $copy->expose(%port);
     }
 
@@ -4379,7 +4385,7 @@ sub _pre_clone($self,%args) {
 
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
-    for (qw(is_pool start add_to_pool from_pool with_cd)) {
+    for (qw(is_pool start add_to_pool from_pool with_cd volatile id_owner)) {
         delete $args{$_};
     }
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;
