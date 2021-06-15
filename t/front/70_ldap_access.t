@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use Test::More;
@@ -103,7 +104,7 @@ sub test_access_by_attribute_deny($vm, $do_clones=0) {
     is($data->{teacher}->{user}->allowed_access( $base->id ), 1);
     is($data->{other}->{user}->allowed_access( $base->id ), 1);
 
-    _do_clones($data, $base, $do_clones);
+    my ($clone_student, $clone_teacher) = _do_clones($data, $base, $do_clones);
 
     $base->deny_ldap_access( givenName => $data->{student}->{user}->{name});
     _refresh_users($data);
@@ -111,6 +112,7 @@ sub test_access_by_attribute_deny($vm, $do_clones=0) {
     is($data->{teacher}->{user}->allowed_access( $base->id ), 1);
     is($data->{other}->{user}->allowed_access( $base->id ), 1);
 
+    $clone_student->remove(user_admin) if $clone_student;
     my $list_bases = rvd_front->list_machines_user($data->{student}->{user});
     is(scalar (@$list_bases), 0);
 
@@ -310,7 +312,7 @@ sub test_access_by_attribute($vm, $do_clones=0) {
     $base->prepare_base(user_admin);
     $base->is_public(1);
 
-    _do_clones($data, $base, $do_clones);
+    my ($clone_student, $clone_teacher) = _do_clones($data, $base, $do_clones);
 
     my $list_bases = rvd_front->list_machines_user($data->{student}->{user});
     is(scalar (@$list_bases), 1);
@@ -338,8 +340,10 @@ sub test_access_by_attribute($vm, $do_clones=0) {
     $list_bases = rvd_front->list_machines_user($data->{student}->{user});
     is(scalar (@$list_bases), 1);
 
+    $clone_teacher->remove(user_admin) if $clone_teacher;
+
     $list_bases = rvd_front->list_machines_user($data->{teacher}->{user});
-    is(scalar (@$list_bases), 0);
+    is(scalar (@$list_bases), 0) or confess Dumper($list_bases,$base->id);
 
     # other has no external_auth, access denied
     $list_bases = rvd_front->list_machines_user($data->{other}->{user});
@@ -409,7 +413,7 @@ sub test_access_by_attribute_2bases($vm, $do_clones=0) {
 
     my @bases  = _create_bases($vm,2);
 
-    _do_clones($data, $bases[0], $do_clones);
+    my($clone_student, $clone_teacher) = _do_clones($data, $bases[0], $do_clones);
     _do_clones($data, $bases[1], $do_clones);
 
     my $list_bases = rvd_front->list_machines_user($data->{student}->{user});
@@ -444,8 +448,14 @@ sub test_access_by_attribute_2bases($vm, $do_clones=0) {
     $list_bases = rvd_front->list_machines_user($data->{student}->{user});
     is(scalar (@$list_bases), 2);
 
+    if ($do_clones) {
+        $list_bases = rvd_front->list_machines_user($data->{teacher}->{user});
+        is(scalar (@$list_bases), 2) or die Dumper($do_clones,$list_bases);
+
+        $clone_teacher->remove(user_admin) if $clone_teacher;
+    }
     $list_bases = rvd_front->list_machines_user($data->{teacher}->{user});
-    is(scalar (@$list_bases), 1);
+    is(scalar (@$list_bases), 1) or die Dumper($list_bases, $bases[0]->id);
 
     $list_bases = rvd_front->list_machines_user($data->{other}->{user});
     is(scalar (@$list_bases), 1);

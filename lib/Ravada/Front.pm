@@ -129,26 +129,24 @@ Returns: listref of machines
 =cut
 
 sub list_machines_user($self, $user, $access_data={}) {
-
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,is_public, description, screenshot"
+        "SELECT id,name,is_public, description, screenshot, id_owner"
         ." FROM domains "
         ." WHERE is_base=1"
         ." ORDER BY name "
     );
-    my ($id, $name, $is_public, $description, $screenshot);
+    my ($id, $name, $is_public, $description, $screenshot, $id_owner);
     $sth->execute;
-    $sth->bind_columns(\($id, $name, $is_public, $description, $screenshot));
+    $sth->bind_columns(\($id, $name, $is_public, $description, $screenshot, $id_owner));
 
     my @list;
     while ( $sth->fetch ) {
-        next if !$is_public && !$user->is_admin;
-        next if !$user->allowed_access($id);
         my $is_active = 0;
         my $clone = $self->search_clone(
             id_owner =>$user->id
             ,id_base => $id
         );
+        next unless $clone || $user->is_admin || ($is_public && $user->allowed_access($id));
         my %base = ( id => $id, name => $name
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
