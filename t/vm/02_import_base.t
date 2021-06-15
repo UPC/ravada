@@ -24,7 +24,7 @@ for my $vm_name ( 'KVM' ) {
     next if $vm_name eq 'KVM' && $>;
     _set_no_password();
 
-    my $domain = import_domain($vm_name);
+    my $domain = import_domain($vm_name, $base);
     is($domain->is_base,1);
     my $clone = $domain->clone(
         user => user_admin
