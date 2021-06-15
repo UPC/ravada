@@ -2996,6 +2996,7 @@ sub copy_machine {
     $ram = int($ram*1024*1024);
 
     my $new_name = delete $arg->{new_name};
+    my $owner = delete $arg->{new_owner};
 
     warn "Error: unknown args ".Dumper($arg) if keys %$arg;
 
@@ -3003,12 +3004,6 @@ sub copy_machine {
     my $name = ( $new_name or $base->name."-".$USER->name );
 
     $USER = _logged_in($c);
-    my $owner = $arg->{new_owner};
-    $owner = undef if (! $USER) || (! $USER->is_admin);
-    confess "owner do not exists" if ($owner) && (! Ravada::Auth::SQL->new(name => $owner));
-
-    $USER = _logged_in($c);
-    my $owner = $arg->{new_owner};
     $owner = undef if (! $USER) || (! $USER->is_admin);
     confess "owner do not exists" if ($owner) && (! Ravada::Auth::SQL->new(name => $owner));
 
