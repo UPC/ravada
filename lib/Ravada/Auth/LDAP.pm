@@ -691,9 +691,13 @@ sub _login_match {
 
     my @entries = search_user($username);
 
+    my @error;
     for my $entry (@entries) {
 
-
+        if ($$CONFIG->{ldap}->{group} && !is_member($entry->dn,$$CONFIG->{ldap}->{group})) {
+            push @error, ("Warning: ".$entry->dn.." does not belong to group $$CONFIG->{ldap}->{group}");
+            next;
+        }
 #       my $mesg;
 #       eval { $mesg = $LDAP->bind( $user_dn, password => $password )};
 #       return 1 if $mesg && !$mesg->code;
@@ -712,6 +716,8 @@ sub _login_match {
         $self->{_auth} = 'match';
     }
 
+    warn Dumper(\@error)
+            if $Ravada::DEBUG && scalar (@error);
     return $user_ok;
 }
 
