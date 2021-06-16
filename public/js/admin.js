@@ -803,8 +803,11 @@ ravadaApp.directive("solShowMachine", swMach)
                 });
         };
         $scope.list_users = function() {
+            $scope.loading_users = true;
+            $scope.error = '';
             $http.get('/list_ldap_users/'+$scope.username_filter)
                 .then(function(response) {
+                    $scope.loading_users = false;
                     $scope.error = response.data.error;
                     $scope.users = response.data.entries;
                     console.log(response.data.error);

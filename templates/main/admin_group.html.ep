@@ -23,7 +23,7 @@
                                        ng-change="list_users()"
                                        placeholder="search"
                     />
-                    <span ng-show="!users"><i class="fas fa-sync-alt fa-spin"></i></span>
+                    <span ng-show="loading_users"><i class="fas fa-sync-alt fa-spin"></i></span>
                     <select
                         ng-show="users && users.length"
                         ng-model="new_member"
