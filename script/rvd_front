@@ -1613,21 +1613,12 @@ post '/ldap/group/add_member' => sub($c) {
     my $arg = decode_json($c->req->body);
 
     my $login = delete $arg->{cn};
-    my $new_group = delete $arg->{group};
+    my $group = delete $arg->{group};
 
-    my @groups = Ravada::Auth::LDAP::search_group( name => $new_group);
-    my ($group_ldap) = grep {$_->get_value('cn') eq $new_group } @groups;
-    my $error = '';
-    if (! $group_ldap) {
-        $error = "Error: group $new_group doesn't exist\n"
-    } else {
-        my $mesg  = $group_ldap->add(memberUid => $login)
-        ->update(Ravada::Auth::LDAP::_init_ldap_admin());
-
-        if ($mesg->code) {
-            $error = "Error: adding $login to $new_group ".$mesg->error;
-        }
-    }
+    eval {
+        Ravada::Auth::LDAP::add_to_group($login, $group);
+    };
+    my $error = $@;
     return $c->render(json => { error => $error } );
 
 };
@@ -3329,8 +3320,7 @@ sub _list_ldap_users($c, $filter='*' ) {
 }
 
 sub _list_ldap_group_members($c, $name) {
-    my $group = Ravada::Auth::LDAP::search_group( name => $name );
-    return $c->render(json => [ sort $group->get_value('memberUid') ] );
+    return $c->render(json => [ Ravada::Auth::LDAP::_group_members($name) ] );
 }
 
 

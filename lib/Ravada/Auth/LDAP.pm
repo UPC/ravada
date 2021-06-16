@@ -521,21 +521,24 @@ sub _search_posix_group($self, $name) {
     return $posix_group[0];
 }
 
-sub _group_members($self) {
-    my $group_name = $$CONFIG->{ldap}->{group};
-    return if !$group_name;
-
-    my $group = search_group(name => $group_name);
-    if (!$group) {
-        warn "Warning: group $group_name not found";
-        return;
+sub _group_members($group_name = $$CONFIG->{ldap}->{group}) {
+    my $group = $group_name;
+    if (!ref($group)) {
+        $group = search_group(name => $group_name);
+        if (!$group) {
+            warn "Warning: group $group_name not found";
+            return;
+        }
     }
     my @oc = $group->get_value('objectClass');
 
-    die "Error: group $group_name is not type bla ".Dumper(\@oc)
-    unless grep /^groupOfNames$/,@oc;
-
-    return $group->get_value('member');
+    if ( grep /^groupOfNames$/,@oc) {
+        return $group->get_value('member');
+    } elsif ( grep /^posixGroup$/,@oc) {
+        return $group->get_value('memberUid');
+    } else {
+        die "Error: unkonwon group type ".Dumper(\@oc);
+    }
 }
 
 sub _check_posix_group($self) {
