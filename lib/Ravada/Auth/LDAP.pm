@@ -413,7 +413,7 @@ sub remove_group {
 sub search_group {
     my %args = @_;
 
-    my $name = delete $args{name};
+    my $name = delete $args{name} or confess "Error: missing name";
     my $base = ( delete $args{base} or "ou=groups,"._dc_base() );
     my $ldap = ( delete $args{ldap} or _init_ldap_admin());
     my $retry =( delete $args{retry} or 0);
@@ -465,33 +465,77 @@ sub search_group {
 
 Adds user to group
 
-    add_to_group($uid, $group_name);
+    add_to_group($dn, $group_name);
 
 =cut
 
 sub add_to_group {
-    my ($uid, $group_name) = @_;
-
-    my @user = search_user(name => $uid)                        or die "No such user $uid";
-    warn "Found ".scalar(@user)." users $uid , getting the first one ".Dumper(\@user)
-        if scalar(@user)>1;
-
-    my $user = $user[0];
+    my ($dn, $group_name) = @_;
+    if ( $dn !~ /=.*,/ ) {
+        my $user = search_user(name => $dn) or confess "Error: user '$dn' not found";
+        $dn = $user->dn;
+    }
 
     my $group = search_group(name => $group_name, ldap => $LDAP_ADMIN)   
         or die "No such group $group_name";
 
-    if ( grep {/^posixGroup$/} $group->get_value('objectClass') ) {
-        $group->add(uniqueMember => $user->dn)
-    } elsif ( grep {/^groupOfNames$/} $group->get_value('objectClass') ) {
-        $group->add(member => $user->dn)
+    if ( grep {/^groupOfNames$/} $group->get_value('objectClass') ) {
+        $group->add(member => $dn)
+    } elsif ( grep {/^posixGroup$/} $group->get_value('objectClass') ) {
+        my ($cn) = $dn =~ /^cn=(.*?),/;
+        ($cn) = $dn =~ /^uid=(.*?),/ if !$cn;
+        die "Error: I can't find cn in $dn" if !$cn;
+        my @attributes = $group->attributes;
+        my $attribute;
+        for (qw(uniqueMember memberUid)) {
+            $attribute = $_ if grep /^$_$/,@attributes;
+        }
+        ($attribute) = grep /member/i,@attributes if !$attribute;
+        if ($attribute eq 'memberUid') {
+            $group->add($attribute => $cn);
+        } else {
+            $group->add($attribute => $dn);
+        }
     } else {
         die "Error: group $group_name class unknown ".Dumper($group->get_value('objectClass'));
     }
     my $mesg = $group->update($LDAP_ADMIN);
-    die "Error: adding member ".$user->dn." ".$mesg->error if $mesg->code;
+    die "Error: adding member ".$dn." ".$mesg->error if $mesg->code;
 
 }
+
+=head2 remove_from_group
+
+Removes user from group
+
+    add_to_group($dn, $group_name);
+
+=cut
+
+sub remove_from_group {
+    my ($dn, $group_name) = @_;
+
+    my $group = search_group(name => $group_name, ldap => $LDAP_ADMIN)
+        or die "No such group $group_name";
+
+    my $found = 0;
+    for my $attribute ( $group->attributes() ) {
+        next if $attribute !~ /member/i;
+        my $uid = $dn;
+        $uid =~s/.*?=(.*?),.*/$1/ if $attribute eq 'memberUid';
+        my $mesg  = $group->delete($attribute => $uid )->update(_init_ldap_admin());
+
+        die "Error: [".$mesg->code."] removing $uid from $group_name - $attribute ".$mesg->error
+        if $mesg->code;
+
+        $found++;
+
+    }
+    die "Error: group $group_name class unknown ".Dumper($group->get_value('objectClass'))
+    if !$found;
+
+}
+
 
 =head2 login
 
@@ -521,24 +565,30 @@ sub _search_posix_group($self, $name) {
     return $posix_group[0];
 }
 
+sub group_members {
+    return _group_members(@_);
+}
+
 sub _group_members($group_name = $$CONFIG->{ldap}->{group}) {
     my $group = $group_name;
     if (!ref($group)) {
         $group = search_group(name => $group_name);
         if (!$group) {
-            warn "Warning: group $group_name not found";
+            confess "Warning: group $group_name not found";
             return;
         }
     }
+    confess "Error: invalid object ".ref($group) if ref($group)!~ /^Net::LDAP/;
     my @oc = $group->get_value('objectClass');
 
-    if ( grep /^groupOfNames$/,@oc) {
-        return $group->get_value('member');
-    } elsif ( grep /^posixGroup$/,@oc) {
-        return $group->get_value('memberUid');
-    } else {
-        die "Error: unkonwon group type ".Dumper(\@oc);
+    my @members;
+    for my $attribute ($group->attributes) {
+        next if $attribute !~ /member/i;
+        push @members, $group->get_value($attribute);
     }
+    my %members = map { $_ => 1 } @members;
+    @members = sort keys %members;
+    return @members;
 }
 
 sub _check_posix_group($self) {
@@ -596,12 +646,10 @@ sub _login_bind {
                 ,search_user(name => $self->name, field => 'cn'));
     }
     my %user = map { $_->dn => $_ } @user;
-    my @group_members;
-    @group_members =$self->_group_members();
 
     my @error;
     for my $dn ( sort keys %user ) {
-        if ($$CONFIG->{ldap}->{group} && !grep /^$dn$/,@group_members) {
+        if ($$CONFIG->{ldap}->{group} && !is_member($dn,$$CONFIG->{ldap}->{group})) {
             push @error, ("Warning: $dn does not belong to group $$CONFIG->{ldap}->{group}");
             next;
         }
@@ -849,10 +897,44 @@ sub is_admin {
         };
 
 
-    my ($user) = search_user($self->name);
-    my $dn = $user->dn;
-    return grep /^$dn$/,$group->get_value('uniqueMember');
+    return is_member($self->name, $admin_group);
 
+}
+
+=head2 is_member
+
+Returns if an user is member of a group
+
+    if (is_member($group, $cn)) {
+    }
+
+=cut
+
+sub is_member($cn, $group) {
+    my $user;
+    my $dn;
+    if (ref($cn) && ref($cn) =~ /Net::LDAP::Entry/) {
+        $user = $cn;
+        $cn = $user->get_value('cn');
+        $dn = $user->dn;
+    } elsif($cn=~/=.*,/) {
+        $dn = $cn;
+        $cn =~ s/.*?=(.*?),.*/$1/;
+    }
+
+    my @members = _group_members($group);
+    return 1 if grep /^$cn$/, @members;
+
+    $user = search_user($cn) or confess "Error: unknown user '$cn'"
+    if !$user;
+    $dn = $user->dn if !$dn;
+
+    return 1 if grep /^$dn$/, @members;
+
+    my $group_name = $group;
+    $group_name = $group->dn if ref($group);
+
+    return 0;
 }
 
 =head2 is_external

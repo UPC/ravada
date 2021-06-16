@@ -821,11 +821,11 @@ ravadaApp.directive("solShowMachine", swMach)
                   $scope.error = response.data.error;
             });
         };
-        $scope.remove_member = function(cn) {
+        $scope.remove_member = function(dn) {
             $http.post("/ldap/group/remove_member/"
               ,JSON.stringify(
                   { 'group': group
-                    ,'cn': cn
+                    ,'dn': dn
                   })
               ).then(function(response) {
                   $scope.list_group_members(group);

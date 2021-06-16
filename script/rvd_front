@@ -313,6 +313,8 @@ get '/admin/group/#name' => sub($c) {
     push @{$c->stash->{css}}, '/css/admin.css';
     push @{$c->stash->{js}}, '/js/admin.js';
 
+    my $group = Ravada::Auth::LDAP::search_group(name => $c->stash('name'));
+    $c->stash(object_class => [$group->get_value('objectClass')]);
     return $c->render( template => "/main/admin_group");
 };
 
@@ -1615,6 +1617,8 @@ post '/ldap/group/add_member' => sub($c) {
     my $login = delete $arg->{cn};
     my $group = delete $arg->{group};
 
+    return $c->render(json => { error => "Error: unknown args ".Dumper($arg)}) if keys %$arg;
+
     eval {
         Ravada::Auth::LDAP::add_to_group($login, $group);
     };
@@ -1627,21 +1631,15 @@ post '/ldap/group/remove_member' => sub($c) {
 
     my $arg = decode_json($c->req->body);
 
-    my $login = delete $arg->{cn};
-    my $new_group = delete $arg->{group};
+    my $dn = delete $arg->{dn};
+    my $group = delete $arg->{group};
 
-    my @groups = Ravada::Auth::LDAP::search_group( name => $new_group);
-    my ($group_ldap) = grep {$_->get_value('cn') eq $new_group } @groups;
-    die "Error: group $new_group doesn't exist\n"
-    unless $group_ldap;
+    return $c->render(json => { error => "Error: unknown args ".Dumper($arg)}) if keys %$arg;
 
-    my $mesg  = $group_ldap->delete(memberUid => $login)
-    ->update(Ravada::Auth::LDAP::_init_ldap_admin());
-
-    if ($mesg->code) {
-        return $c->render(json => { error => "Error: adding $login to $new_group ".$mesg->error });
-    }
-    return $c->render(json => { error => '' } );
+    eval {
+        Ravada::Auth::LDAP::remove_from_group($dn, $group);
+    };
+    return $c->render(json => { error => ($@ or '') } );
 
 };
 
@@ -3311,8 +3309,7 @@ sub _list_ldap_users($c, $filter='*' ) {
     }
     my @entries;
     for my $entry (@users) {
-        my $cn = $entry->get_value('cn');
-        push @entries,({name => $cn});
+        push @entries,({name => $entry->dn});
     }
     my $ret = {error => $error, entries => \@entries };
     $LDAP_USERS{$filter} = encode_json($ret);

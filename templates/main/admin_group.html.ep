@@ -12,6 +12,7 @@
               <div class="card" id="admin-content">
                 <div class="card-header">
                     <h2 class="display-5"><%=l 'Group' %> <%= $name %></h2>
+                    <%= join(" - ",sort @$object_class) %>
                 </div>
               </div>
             </div>
