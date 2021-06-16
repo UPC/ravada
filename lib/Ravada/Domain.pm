@@ -3015,7 +3015,7 @@ sub _close_exposed_port($self,$internal_port_req=undef) {
     my %port;
     while ( my $row = $sth->fetchrow_hashref() ) {
         lock_hash(%$row);
-        $port{$row->{public_port}} = $row;
+        $port{$row->{public_port}} = $row if $row->{public_port};
     }
     lock_hash(%port);
 
@@ -3128,7 +3128,7 @@ sub list_ports($self) {
         $clone_port{$data->{internal_port}}++;
     }
 
-    if (!$self->is_base && $self->id_base) {
+    if ($self->is_known && !$self->is_base && $self->id_base) {
         my $base = Ravada::Front::Domain->open($self->id_base);
         my @ports_base = $base->list_ports();
         for my $data (@ports_base) {
