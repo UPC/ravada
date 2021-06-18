@@ -1,5 +1,5 @@
-How to Install a local LDAP
-===========================
+How to Install a LDAP Server
+============================
 
 Install 389-ds
 ----------------------------
@@ -34,7 +34,7 @@ Release 1.4 [new]
 From release 1.4 we provide an example configuration file for
 creating the new directory instance.
 
-.. listeralinclude:: ds389.conf
+.. literalinclude:: ds389.conf
 
 After you set a password and correct suffix create a LDAP instance with *dscreate*:
 
