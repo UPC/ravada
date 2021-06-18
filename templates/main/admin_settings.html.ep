@@ -140,6 +140,18 @@
             </div>
         </div>
 
+        <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-2">
+            <label for="debug">Port expose</label>
+            </div>
+            <div class="col-md-8">
+            <input name="debug" ng-model="settings.backend.expose_port_min.value"
+                type="number" min="1" max="65530">
+                <%= l 'Minimum port number to expose virtual machine services.' %>
+                <a href="https://ravada.readthedocs.io/en/latest/docs/expose_ports.html"><i class="fa fa-info"></i></a>
+            </div>
+        </div>
 
         <div class="row">
             <div class="col-md-1"></div>
