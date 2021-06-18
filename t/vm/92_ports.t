@@ -6,7 +6,6 @@ use Data::Dumper;
 use IPC::Run3;
 use JSON::XS;
 use Test::More;
-use IPTables::ChainMgr;
 
 use lib 't/lib';
 use Test::Ravada;

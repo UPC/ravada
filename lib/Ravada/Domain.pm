@@ -26,6 +26,7 @@ use feature qw(signatures);
 
 use Ravada::Booking;
 use Ravada::Domain::Driver;
+use Ravada::Auth::SQL;
 use Ravada::Utils;
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -2671,9 +2672,10 @@ sub clone {
     my $request = delete $args{request};
     my $memory = delete $args{memory};
     my $start = delete $args{start};
-    my $is_pool = delete $args{is_pool};
     my $no_pool = delete $args{no_pool};
     my $with_cd = delete $args{with_cd};
+    my $volatile = delete $args{volatile};
+    my $id_owner = delete $args{id_owner};
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
@@ -2692,7 +2694,7 @@ sub clone {
     delete $args2{from_pool};
     return $self->_copy_clone(%args2)   if !$self->is_base && $self->id_base();
 
-    my $uid = $user->id;
+    my $uid = $id_owner || $user->id;
 
     if ( !$self->is_base() ) {
         $request->status("working","Preparing base")    if $request;
@@ -2706,6 +2708,7 @@ sub clone {
     push @args_copy, ( remote_ip => $remote_ip) if $remote_ip;
     push @args_copy, ( from_pool => $from_pool) if defined $from_pool;
     push @args_copy, ( add_to_pool => $add_to_pool) if defined $add_to_pool;
+    push @args_copy, ( volatile => $volatile )  if defined $volatile;
 
     my $vm = $self->_vm;
     if ($self->volatile_clones ) {
@@ -2747,6 +2750,9 @@ sub _copy_clone($self, %args) {
     my $memory = delete $args{memory};
     my $request = delete $args{request};
     my $add_to_pool = delete $args{add_to_pool};
+    my $volatile = delete $args{volatile};
+    my $id_owner = delete $args{id_owner};
+    $id_owner = $user->id if (! $id_owner);
 
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)
         if keys %args;
@@ -2755,6 +2761,7 @@ sub _copy_clone($self, %args) {
 
     my @copy_arg;
     push @copy_arg, ( memory => $memory ) if $memory;
+    push @copy_arg, ( volatile => $volatile ) if $volatile;
 
     $request->status("working","Copying domain ".$self->name
         ." to $name")   if $request;
@@ -2762,7 +2769,7 @@ sub _copy_clone($self, %args) {
     my $copy = $self->_vm->create_domain(
         name => $name
         ,id_base => $base->id
-        ,id_owner => $user->id
+        ,id_owner => $id_owner
         ,from_pool => 0
         ,@copy_arg
     );
@@ -2794,7 +2801,7 @@ sub _copy_ports($base, $copy) {
     for my $port ( $base->list_ports ) {
         my %port = %$port;
         next if $port_already{$port->{internal_port}};
-        delete @port{'id','id_domain','public_port','is_secondary'};
+        delete @port{'id','id_domain','public_port','is_secondary','is_active'};
         $copy->expose(%port);
     }
 
@@ -3208,7 +3215,10 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
     my $public_port;
     for ( 1 .. 100 ) {
         eval {
-            $public_port = $self->_vm->_new_free_port();
+            $public_port = $self->_vm->_new_free_port() if !$self->is_base;
+        };
+        die $@ if $@ && $@ !~ /no free ports/i;
+        eval {
             $sth->execute($self->id
                 , $public_port, $internal_port
                 , ($name or undef)
@@ -3234,7 +3244,12 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
 }
 
 sub _set_public_port($self, $id_port, $internal_port, $name, $restricted) {
-    my $public_port = $self->_vm->_new_free_port();
+    my $public_port;
+    eval {
+        $public_port = undef;
+        $public_port = $self->_vm->_new_free_port();
+    };
+    my $error = $@;
     for (;;) {
         if ($id_port) {
             my $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set public_port=?"
@@ -3263,6 +3278,12 @@ sub _set_public_port($self, $id_port, $internal_port, $name, $restricted) {
             return $public_port if !$@;
         }
         $public_port += int(rand(10))+1;
+    }
+    if ($error) {
+        my $user = Ravada::Auth::SQL->search_by_id($self->_data('id_owner'));
+        $user->send_message($error);
+        warn $error;
+        die $error;
     }
 }
 
@@ -3321,7 +3342,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     $sth->execute($internal_ip, $self->id, $internal_port);
     $self->_update_display_port_exposed($name, $local_ip, $public_port, $internal_port);
 
-    if ( !$> ) {
+    if ( !$> && $public_port ) {
         my ($out, $err) = $self->_vm->run_command("iptables-save","-t","nat");
         my @open1 = (grep /--dport $public_port/, split/\n/,$out );
         my @open2 = (grep /--to-destination $internal_ip:$internal_port/, split/\n/,$out );
@@ -3609,9 +3630,19 @@ sub list_ports($self) {
         my @ports_base = $base->list_ports();
         for my $data (@ports_base) {
             next if exists $clone_port{$data->{internal_port}};
-            unlock_hash(%$data);
-            $data->{public_port} = $self->_vm->_new_free_port() if $self->_vm;
-            lock_hash(%$data);
+            if ($self->_vm) {
+                unlock_hash(%$data);
+                eval {
+                    $data->{public_port} = '';
+                    $data->{public_port} = $self->_vm->_new_free_port();
+                };
+                my $error = $@;
+                if ($error) {
+                    my $user = Ravada::Auth::SQL->search_by_id($self->_data('id_owner'));
+                    $user->send_message(substr($error,0,80));
+                }
+                lock_hash(%$data);
+            }
             push @list,($data);
         }
     }
@@ -4927,7 +4958,7 @@ sub _pre_clone($self,%args) {
 
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
-    for (qw(is_pool start add_to_pool from_pool with_cd)) {
+    for (qw(is_pool start add_to_pool from_pool with_cd volatile id_owner)) {
         delete $args{$_};
     }
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;

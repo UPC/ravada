@@ -2995,15 +2995,25 @@ sub copy_machine {
     $ram = int($ram*1024*1024);
 
     my $new_name = delete $arg->{new_name};
+    my $owner = delete $arg->{new_owner};
 
     warn "Error: unknown args ".Dumper($arg) if keys %$arg;
 
     my $base = $RAVADA->search_domain_by_id($id_base) or confess "I can't find domain $id_base";
     my $name = ( $new_name or $base->name."-".$USER->name );
 
+    $USER = _logged_in($c);
+    $owner = undef if (! $USER) || (! $USER->is_admin);
+    confess "owner do not exists" if ($owner) && (! Ravada::Auth::SQL->new(name => $owner));
+
     my @create_args = ( from_pool => 0 );
     push @create_args,( memory => $ram ) if $ram;
     push @create_args, ( name => $name ) if !defined $number || $number == 1;
+    push @create_args, ( name => $name ) if $number == 1;
+    push @create_args, ( id_owner => $owner ) if ($owner);
+    push @create_args, ( volatile => $arg->{copy_is_volatile} ? 1 : 0 );
+    push @create_args, ( add_to_pool => $arg->{copy_is_pool} && $base->is_pool() ? 1 : 0 );
+
     my $req2 = Ravada::Request->clone(
             uid => $USER->id
             , id_domain => $base->id
