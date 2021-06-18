@@ -10,7 +10,19 @@
             >
             <div class="page-header">
               <div class="card" id="admin-content">
-                <div class="card-header">
+                  <div class="card-header" ng-show="!<%= $FEATURE->{ldap} %>">
+                    <h2 class="display-5"><%=l 'Groups' %></h2>
+                    <p>
+                      Groups require a LDAP server configured.
+                      See documentation about:
+                    </p>
+                    <ul>
+                        <li><a href="https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html">Configure LDAP Authentication</a></li>
+                        <li><a href="https://ravada.readthedocs.io/en/latest/docs/ldap_local.html">Setup a LDAP Server</a></li>
+                    </ul>
+                  </div>
+
+                  <div class="card-header" ng-show="<%= $FEATURE->{ldap} %>" ng-cloak="1">
                     <h2 class="display-5"><%=l 'Groups' %></h2>
                     <div class="card-title">
                         <form method="post" action="/admin/groups">
@@ -26,7 +38,7 @@
                         </form>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body" ng-show="<%= $FEATURE->{ldap} %>" ng-cloak="1">
                     <table class="table table-striped" ng-show="ldap_groups.length">
                             <thead>
                                 <tr>
