@@ -1381,10 +1381,10 @@ sub _add_grants($self) {
     $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
     $self->_add_grant('view_groups',0,'Can view groups.');
     $self->_add_grant('manage_groups',0,'Can manage groups.');
-    $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1);
+    $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1, 0);
 }
 
-sub _add_grant($self, $grant, $allowed, $description, $is_int = 0) {
+sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id, description FROM grant_types WHERE name=?"
     );
@@ -1401,9 +1401,9 @@ sub _add_grant($self, $grant, $allowed, $description, $is_int = 0) {
     }
     return if $id;
 
-    $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description, is_int)"
-        ." VALUES (?,?,?)");
-    $sth->execute($grant, $description, $is_int);
+    $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description, is_int, default_admin)"
+        ." VALUES (?,?,?,?)");
+    $sth->execute($grant, $description, $is_int, $default_admin);
     $sth->finish;
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types WHERE name=?");
@@ -1420,6 +1420,7 @@ sub _add_grant($self, $grant, $allowed, $description, $is_int = 0) {
     while (my ($id_user, $name, $is_admin) = $sth->fetchrow ) {
         my $allowed_current = $allowed;
         $allowed_current = 1 if $is_admin;
+        $allowed_current = $default_admin if $is_admin && defined $default_admin;
         eval { $sth_insert->execute($id_user, $id_grant, $allowed_current ) };
         die $@ if $@ && $@ !~/Duplicate entry /;
     }
@@ -2183,6 +2184,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iptables','id_vm','int DEFAULT NULL');
     $self->_upgrade_table('vms','security','varchar(255) default NULL');
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
+    $self->_upgrade_table('grant_types','default_admin','int not null default 1');
 
     $self->_upgrade_table('vms','mac','char(18)');
     $self->_upgrade_table('vms','tls','text');
