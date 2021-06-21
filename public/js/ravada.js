@@ -288,7 +288,10 @@
             };
 
             $scope.action = function(target,action,machineId,params){
-              if (action === 'view') {
+              if (action === 'view-new-tab') {
+                  window.open('/machine/view/' + machineId + '.html');
+              }
+              else if (action === 'view') {
                   window.location.assign('/machine/view/' + machineId + '.html');
               }
               else {
