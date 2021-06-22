@@ -198,7 +198,6 @@ sub _do_create_constraints($self) {
             return;
         }
     }
-
     my $pid_file = Proc::PID::File->new(name => "ravada_constraint");
     $pid_file->file({dir => "/run/user/$>"}) if $>;
     if ( $pid_file->alive ) {
@@ -229,6 +228,14 @@ sub _init_user_daemon {
 
     $USER_DAEMON = Ravada::Auth::SQL->new(name => $USER_DAEMON_NAME);
     if (!$USER_DAEMON->id) {
+        for (;;) {
+            my @list = $self->_list_pids();
+            last if !@list;
+            sleep 1 if @list;
+            $self->_wait_pids();
+        }
+        $USER_DAEMON = Ravada::Auth::SQL->new(name => $USER_DAEMON_NAME);
+        return if $USER_DAEMON->id;
         $USER_DAEMON = Ravada::Auth::SQL::add_user(
             name => $USER_DAEMON_NAME,
             is_admin => 1
@@ -3639,8 +3646,8 @@ sub _can_fork {
     $req->at_time(time+10);
     return 0;
 }
-sub _wait_pids {
-    my $self = shift;
+
+sub _wait_pids($self) {
 
     my @done;
     for my $type ( keys %{$self->{pids}} ) {
@@ -3681,6 +3688,15 @@ sub _add_pid($self, $pid, $request=undef) {
 
 }
 
+sub _list_pids($self) {
+    my @alive;
+    for my $type ( keys %{$self->{pids}} ) {
+        for my $pid ( keys %{$self->{pids}->{$type}}) {
+            push @alive, ($pid);
+        }
+    }
+    return @alive;
+}
 
 sub _delete_pid {
     my $self = shift;
