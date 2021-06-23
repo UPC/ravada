@@ -804,14 +804,15 @@ Grant an user all the permissions
 
 sub grant_admin_permissions($self,$user) {
     my $sth = $$CON->dbh->prepare(
-            "SELECT name FROM grant_types "
+            "SELECT name,default_admin FROM grant_types"
             ." WHERE enabled=1"
             ." ORDER BY name"
     );
     $sth->execute();
     my $grant_found=0;
-    while ( my ($name) = $sth->fetchrow) {
-        $self->grant($user,$name);
+    while ( my ($name, $default_admin) = $sth->fetchrow) {
+        $default_admin=1 if !defined $default_admin;
+        $self->grant($user,$name,$default_admin);
         $grant_found++ if $name eq'grant';
     }
     $sth->finish;

@@ -313,7 +313,10 @@ ravadaApp.directive("solShowMachine", swMach)
     };
 
     $scope.action = function(target,action,machineId){
-        if (action === 'view') {
+        if (action === 'view-new-tab') {
+            window.open('/machine/view/' + machineId + '.html');
+        }
+        else if (action === 'view') {
             window.location.assign('/machine/view/' + machineId + '.html');
         }
         else {
