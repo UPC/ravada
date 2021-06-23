@@ -198,6 +198,7 @@ sub _do_create_constraints($self) {
             return;
         }
     }
+
     my $pid_file = Proc::PID::File->new(name => "ravada_constraint");
     $pid_file->file({dir => "/run/user/$>"}) if $>;
     if ( $pid_file->alive ) {
@@ -228,7 +229,7 @@ sub _init_user_daemon {
 
     $USER_DAEMON = Ravada::Auth::SQL->new(name => $USER_DAEMON_NAME);
     if (!$USER_DAEMON->id) {
-        for (;;) {
+        for (1 .. 120 ) {
             my @list = $self->_list_pids();
             last if !@list;
             sleep 1 if @list;
