@@ -1779,10 +1779,11 @@ sub _check_iptables_fixed_conflict($vm, $port) {
 }
 
 sub test_display_conflict_next($vm) {
+    rvd_back->setting("/backend/expose_port_min" => 5900 );
     my $domain0 = $BASE->clone(name => new_domain_name, user => user_admin, memory =>128*1024);
     $domain0->_reset_free_port() if $vm->type eq 'Void';
     my $next_port_builtin = _next_port_builtin($domain0);
-    $Ravada::VM::FREE_PORT= $next_port_builtin+3;
+    rvd_back->setting('/backend/expose_port_min' => $next_port_builtin+3);
 
     my $domain1 = $BASE->clone(name => new_domain_name, user => user_admin, memory => 128*1024);
     _add_hardware($domain1, 'display', { driver => 'x2go'} );
