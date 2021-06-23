@@ -71,6 +71,10 @@ sub test_admin {
     my $user = create_user("foo$$","bar",1);
     ok($user->is_admin);
     for my $perm ($user->list_all_permissions) {
+        if ($perm->{name} eq 'start_limit') {
+            is($user->can_do($perm->{name}),undef,$perm->{name});
+            next;
+        }
         is($user->can_do($perm->{name}),1,$perm->{name});
     }
     $user->remove();
@@ -739,7 +743,46 @@ sub test_clone_all {
     diag("TODO test clone all");
 }
 
+sub test_start_many{
+    my $user = create_user("oper_start","bar");
+    my $usera = create_user("admin_start","bar",'is admin');
+    is($user->can_start_many,undef);
+    is($usera->can_start_many,1);
+
+    is($user->can_start_limit,undef);
+    is($usera->can_start_limit,undef);
+
+    $user->remove();
+    $usera->remove();
+}
+
+sub test_start_limit_upgrade{
+    my $sth = connector->dbh->prepare("SELECT id FROM grant_types WHERE name='start_limit'");
+    $sth->execute();
+    my ($id) = $sth->fetchrow;
+
+    $sth = connector->dbh->prepare("DELETE FROM grants_user WHERE id_grant=?");
+    $sth->execute($id);
+
+    $sth = connector->dbh->prepare("DELETE FROM grant_types WHERE id=?");
+    $sth->execute($id);
+
+    my $user = create_user("oper_start","bar");
+    my $usera = create_user("admin_start","bar",'is admin');
+    rvd_back->{_null_grants}=0;
+    rvd_back->_install();
+    is($user->can_start_limit,0);
+    is($usera->can_start_limit,0);
+
+    $user->remove();
+    $usera->remove();
+}
+
+
 ##########################################################
+
+test_start_many();
+test_start_limit_upgrade();
 
 test_defaults();
 test_admin();
