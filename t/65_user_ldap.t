@@ -216,7 +216,8 @@ sub test_manage_group {
                 skip("No admin group defined",1);
             }
             ok($user->is_admin,"User $uid (".(ref $user).") "
-                            ."should be admin, he was added to $name  group") or exit;
+                            ."should be admin, he was added to $name  group")
+                            or die Dumper([Ravada::Auth::LDAP::_group_members($name)]);
         };
     }
 
