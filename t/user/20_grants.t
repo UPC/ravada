@@ -68,14 +68,14 @@ sub test_defaults {
 }
 
 sub test_admin {
-    my $user = create_user("foo$$","bar",1);
+    my $user = create_user(new_domain_name()." foo$$","bar",1);
     ok($user->is_admin);
     for my $perm ($user->list_all_permissions) {
         if ($perm->{name} eq 'start_limit') {
             is($user->can_do($perm->{name}),undef,$perm->{name});
             next;
         }
-        is($user->can_do($perm->{name}),1,$perm->{name});
+        is($user->can_do($perm->{name}),1,$user->name." ".$perm->{name}) or exit;
     }
     $user->remove();
 }
@@ -778,11 +778,38 @@ sub test_start_limit_upgrade{
     $usera->remove();
 }
 
+sub test_start_many_upgrade{
+    my $user = create_user("oper_startm","bar");
+    my $usera = create_user("admin_startm","bar",1);
+    my $sth = connector->dbh->prepare("SELECT id FROM grant_types WHERE name='start_many'");
+    $sth->execute();
+    my ($id) = $sth->fetchrow;
+
+    $sth = connector->dbh->prepare("DELETE FROM grants_user WHERE id_grant=?");
+    $sth->execute($id);
+
+    $sth = connector->dbh->prepare("DELETE FROM grant_types WHERE id=?");
+    $sth->execute($id);
+
+    rvd_back->{_null_grants}=0;
+    rvd_back->_install();
+
+    $user->_reload_grants();
+    $usera->_reload_grants();
+    is($user->can_start_many,0);
+    is($usera->can_start_many,1);
+
+    $user->remove();
+    $usera->remove();
+}
+
+
 
 ##########################################################
 
 test_start_many();
 test_start_limit_upgrade();
+test_start_many_upgrade();
 
 test_defaults();
 test_admin();
