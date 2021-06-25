@@ -873,6 +873,7 @@ sub remove_old_disks {
 
 sub create_user {
     my ($name, $pass, $is_admin) = @_;
+    $is_admin = 1 if $is_admin;
 
     my $login;
     eval { $login = Ravada::Auth::SQL->new(name => $name, password => $pass ) };
