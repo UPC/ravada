@@ -1623,6 +1623,7 @@ post '/ldap/group/add_member' => sub($c) {
         Ravada::Auth::LDAP::add_to_group($login, $group);
     };
     my $error = $@;
+    $error =~ s/(.*) at lib.*/$1/ if $error;
     return $c->render(json => { error => $error } );
 
 };
@@ -3313,8 +3314,11 @@ sub _list_ldap_users($c, $filter='*' ) {
     my @users;
     eval { @users = Ravada::Auth::LDAP::search_user(name => $filter, escape_username => 0) };
     my $error = ($@ or '');
+    if ($@ =~ /Sizelimit exceeded/) {
+        $error = "Warning: Too many results, type in the search box to filter.";
+    }
     if (scalar @users>100) {
-        $error = "Too many results";
+        $error = "Warning: Too many results, type in the search box to filter.";
         $#users= 100;
     }
     my @entries;
