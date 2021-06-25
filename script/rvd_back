@@ -693,7 +693,7 @@ sub test_ldap {
     print "password: ";
     my $password = <STDIN>;
     chomp $password;
-    my $ok= Ravada::Auth::login( $name, $password);
+    my $ok= Ravada::Auth::LDAP->new(name => $name, password => $password);
     if ($ok) {
         if (!$ok->{_ldap_entry}) {
             warn "No LDAP data found ".Dumper($ok->{_data});
