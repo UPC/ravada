@@ -1,8 +1,9 @@
 <div class="card-body">
-  <div ng-show="showmachine.can_start">
+  <span ng-show="!showmachine"><i class="fas fa-sync-alt fa-spin"></i></span>
+  <div ng-show="!showmachine || showmachine.can_start">
     <button type="button" class="btn btn-success btn-sm"
      ng-click="action('machine','start',showmachine.id)"
-     ng-disabled="showmachine.is_active"
+     ng-disabled="!showmachine || showmachine.is_active"
      title="<%=l 'Start' %>">
      <i class="fa fa-play"></i>
     </button>
@@ -10,9 +11,10 @@
     <br><br>
   </div>
 
-  <div ng-show="showmachine.can_view">
+  <div ng-show="!showmachine || showmachine.can_view">
     <button type="button" class="btn btn-primary btn-sm"
      ng-click="action('machine','view',showmachine.id)"
+     ng-disabled="!showmachine"
      title="<%=l 'View' %>">
      <i class="fa fa-desktop"></i>
     </button>
@@ -20,10 +22,10 @@
     <br><br>
   </div>
 
-  <div ng-show="showmachine.can_hibernate">
+  <div ng-show="!showmachine || showmachine.can_hibernate">
     <button type="button" class="btn btn-warning btn-sm"
      ng-click="action('machine','hibernate',showmachine.id)"
-     ng-disabled="!showmachine.is_active"
+     ng-disabled="showmachine || !showmachine.is_active"
      title="<%=l 'Hibernate' %>">
       <i class="fa fa-pause"></i>
    </button>
@@ -34,7 +36,7 @@
   <div ng-show="showmachine.can_shutdown">
     <button type="button" class="btn btn-danger btn-sm"
      ng-click="action('machine','shutdown',showmachine.id)"
-     ng-disabled="!showmachine.is_active"
+     ng-disabled="!showmachine || !showmachine.is_active"
      title="<%=l 'ShutDown' %>">
       <i class="fa fa-power-off"></i>
     </button>
@@ -53,10 +55,10 @@
     <br><br>
   </div>
 
-  <div ng-show="showmachine.can_reboot">
+  <div ng-show="!showmachine || showmachine.can_reboot">
     <button type="button" class="btn btn-danger btn-sm"
      ng-click="action('machine','reboot',showmachine.id)"
-     ng-disabled="!showmachine.is_active"
+     ng-disabled="!showmachine || !showmachine.is_active"
      title="<%=l 'Reboot' %>">
       <i class="fa fa-redo"></i>
     </button>
@@ -84,7 +86,7 @@
   <div class="row mt-2">
     <div class="col-lg-2" align="right">
       <button class="btn btn-outline-dark"
-        ng-disabled="showmachine.is_compacted"
+        ng-disabled="!showmachine || showmachine.is_compacted"
         ng-click="request('compact',{'id_domain': showmachine.id , 'keep_backup': true })"
         ><%=l 'Compact' %></button>
     </div>
@@ -99,7 +101,7 @@
   <div class="row mt-2">
     <div class="col-lg-2" align="right">
       <button class="btn btn-outline-dark"
-        ng-disabled="!showmachine.has_backups"
+        ng-disabled="!showmachine || !showmachine.has_backups"
         ng-click="request('purge',{'id_domain': showmachine.id })"
         ><%=l 'Purge' %></button>
     </div>
