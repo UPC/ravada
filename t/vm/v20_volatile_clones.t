@@ -6,6 +6,9 @@ use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use_ok('Ravada');
 
 use lib 't/lib';
@@ -430,6 +433,31 @@ sub test_ips {
     $vm->public_ip($public_ip);
 }
 
+sub test_req_volatile($vm) {
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+    for my $set_volatile ( 1,0 ) {
+        $base->volatile_clones($set_volatile);
+        for my $volatile ( 0,1 ) {
+            my $req = Ravada::Request->clone(
+                id_domain => $base->id
+                ,number => 3
+                ,volatile => $volatile
+                ,uid => user_admin->id
+            );
+            wait_request();
+            for my $clone ( $base->clones ) {
+                is($clone->{is_volatile}, $volatile
+                    , "Expecting ".$clone->{name}." base_volatile=$set_volatile volatile=$volatile") or exit;
+                Ravada::Request->remove_domain(name => $clone->{name}
+                    ,uid => user_admin->id
+                );
+            }
+        }
+    }
+    remove_domain_and_clones_req($base,1,1);
+}
+
 ######################################################################3
 clean();
 
@@ -445,6 +473,8 @@ for my $vm_name ( vm_names() ) {
 
         skip($msg,10)   if !$vm;
         diag("Testing volatile clones for $vm_name");
+
+        test_req_volatile($vm);
 
         test_ips($vm);
 
