@@ -82,9 +82,10 @@ sub display($self, $user) {
 }
 
 sub display_info($self, $user) {
-    my $display = $self->_data('display');
-    return {} if !$display;
-    return decode_json($display);
+    my @displays = $self->_get_controller_display();
+    return {} if !wantarray && !scalar(@displays);
+    return $displays[0] if !wantarray;
+    return @displays;
 
 }
 
@@ -211,6 +212,7 @@ sub _get_controller_display($self) {
 
     my %file_extension = (
         'spice' => 'vv'
+        ,'spice-tls' => 'tls.vv'
     );
 
     my $sth = $$CONNECTOR->dbh->prepare(
@@ -244,22 +246,6 @@ sub _get_controller_display($self) {
     #    $self->_fix_ports_duplicated(\@displays) if $self->is_active();
 
     return @displays;
-}
-
-sub _fix_ports_duplicated($self, $displays) {
-    for my $display (@$displays) {
-        next if $display->{is_builtin};
-        my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_displays "
-            ." WHERE port=?"
-            ."   AND id <> ?"
-            ."   AND is_active=1"
-        );
-        $sth->execute($display->{port}, $display->{id});
-        while ( my $duplicated = $sth->fetchrow_hashref()) {
-            next if $duplicated->{is_builtin} && $display->{is_builtin};
-            warn Dumper($duplicated);
-        }
-    }
 }
 
 sub _get_controller_disk($self) {

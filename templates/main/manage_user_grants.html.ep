@@ -1,6 +1,6 @@
 <div class="card">
     <div class="card-body">
-        <form method="post">
+        <form method="post" action="/admin/user/<%= $user->id %>.html">
         % for my $perm ($_user->list_all_permissions) {
         %     my $can_do = $user->can_do($perm->{name});
         %     my $checked = $can_do ? 'checked' : '';

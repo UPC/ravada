@@ -7,7 +7,6 @@ CREATE TABLE `domain_ports` (
   `restricted` int(1) DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `domain_port` (`id_domain`,`internal_port`),
-  UNIQUE KEY `name` (`id_domain`,`name`),
-  UNIQUE KEY `public_port` (`public_port`)
+  UNIQUE KEY `name` (`id_domain`,`name`)
 
 );

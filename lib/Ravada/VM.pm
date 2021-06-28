@@ -187,9 +187,14 @@ sub open {
     lock_hash(%$row);
     confess "ERROR: I can't find VM id=$args{id}" if !$row || !keys %$row;
 
-    if ( $VM{$args{id}} && $VM{$args{id}}->name eq $row->{name} ) {
-        my $vm = $VM{$args{id}};
-        return _clean($vm);
+    if (!$args{readonly} && $VM{$args{id}} && $VM{$args{id}}->name eq $row->{name} ) {
+        my $internal_vm;
+        eval { $internal_vm = $VM{$args{id}}->vm };
+        warn $@ if $@;
+        if ($internal_vm) {
+            my $vm = $VM{$args{id}};
+            return _clean($vm);
+        }
     }
 
     my $type = $row->{vm_type};
@@ -201,7 +206,7 @@ sub open {
     $args{security} = decode_json($row->{security}) if $row->{security};
 
     my $vm = $self->new(%args);
-    $VM{$args{id}} = $vm;
+    $VM{$args{id}} = $vm unless $args{readonly};
     return $vm;
 
 }
@@ -306,6 +311,7 @@ sub _post_disconnect($self) {
         $self->clear_netssh();
         delete $SSH{$self->host};
     }
+    delete $VM{$self->id};
 }
 
 sub _pre_create_domain {
@@ -418,8 +424,9 @@ sub _around_create_domain {
             || $owner->can_create_machine()
             || ($base && $owner->can_clone);
 
-    confess "ERROR: Base ".$base->name." is private"
-        if !$owner->is_admin && $base && !$base->is_public();
+#   Do not check if base is public to allow not public machines to be copied
+#    confess "ERROR: Base ".$base->name." is private"
+#        if !$owner->is_admin && $base && !$base->is_public();
 
     if ($add_to_pool) {
         confess "Error: This machine can only be added to a pool if it is a clone"
@@ -453,7 +460,7 @@ sub _around_create_domain {
         $domain->_data(shutdown_disconnected => $base->_data('shutdown_disconnected'));
         for my $port ( $base->list_ports ) {
             my %port = %$port;
-            delete @port{'id','id_domain','public_port'};
+            delete @port{'id','id_domain','public_port','id_vm', 'is_secondary'};
             $domain->expose(%port);
         }
         my @displays = $base->_get_controller_display();
@@ -468,7 +475,7 @@ sub _around_create_domain {
         }
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
-    $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones());
+    $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones()) || $volatile;
 
     my @start_args = ( user => $owner );
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
@@ -815,13 +822,13 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown);
     my @requests;
     for my $req ( $base->list_requests ) {
         push @requests,($req) if !$ignore_requests{$req->command};
@@ -829,7 +836,7 @@ sub _check_require_base {
     if (@requests) {
         confess "ERROR: Domain ".$base->name." has ".$base->list_requests
                             ." requests.\n"
-                            .Dumper([$base->list_requests])
+                            .Dumper(\@requests)
             unless scalar @requests == 1 && $request
                 && $requests[0]->id eq $request->id;
     }
@@ -838,10 +845,12 @@ sub _check_require_base {
     die "ERROR: Domain ".$self->name." is not base"
             if !$base->is_base();
 
-    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+#   Do not check if base is public to allow not public machines to be copied
 
-    die "ERROR: Base ".$base->name." is not public\n"
-        unless $user->is_admin || $base->is_public;
+#    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+
+#    die "ERROR: Base ".$base->name." is not public\n"
+#        unless $user->is_admin || $base->is_public;
 }
 
 =head2 id
@@ -1528,6 +1537,7 @@ sub iptables($self, @args) {
 
     }
     my ($out, $err) = $self->run_command(@cmd);
+    confess "@cmd $err" if $err && $err =~/unknown option/;
     warn $err if $err;
 }
 
@@ -2034,10 +2044,13 @@ sub _new_free_port($self, $used_port={}) {
     $self->_list_used_ports_ss($used_port);
     $self->_list_used_ports_iptables($used_port);
 
-    my $free_port = $FREE_PORT;
+    my $min_free_port = Ravada::setting(undef,'/backend/expose_port_min');
+    my $free_port = $min_free_port;
     for (;;) {
         last if !$used_port->{$free_port};
         $free_port++ ;
+        die "Error: no free ports available from $min_free_port.\n"
+        if $free_port > 65535;
     }
     return $free_port;
 }
@@ -2125,6 +2138,32 @@ sub _list_bridges($self) {
     $self->{_bridges} = \@networks;
     return @networks;
 }
+
+sub _check_equal_storage_pools($vm1, $vm2) {
+    my @sp;
+    push @sp,($vm1->default_storage_pool_name)  if $vm1->default_storage_pool_name;
+    push @sp,($vm1->base_storage_pool)  if $vm1->base_storage_pool;
+    push @sp,($vm1->clone_storage_pool) if $vm1->clone_storage_pool;
+
+    my %sp1 = map { $_ => 1 } @sp;
+
+    my @sp1 = grep /./,keys %sp1;
+
+    my %sp2 = map { $_ => 1 } $vm2->list_storage_pools();
+
+    for my $pool ( @sp1 ) {
+        die "Error: Storage pool '$pool' not found on node ".$vm2->name."\n"
+            .Dumper([keys %sp2])
+        if !$sp2{ $pool };
+
+        my ($path1, $path2) = ($vm1->_storage_path($pool), $vm2->_storage_path($pool));
+
+        die "Error: Storage pool '$pool' different. In ".$vm1->name." $path1 , "
+            ." in ".$vm2->name." $path2" if $path1 ne $path2;
+    }
+    return 1;
+}
+
 
 1;
 

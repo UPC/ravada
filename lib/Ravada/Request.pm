@@ -17,6 +17,7 @@ use Hash::Util;
 use Time::Piece;
 use Ravada;
 use Ravada::Front;
+use Ravada::Utils;
 
 use vars qw($AUTOLOAD);
 
@@ -84,8 +85,8 @@ our %VALID_ARG = (
     ,list_storage_pools => { id_vm => 1 , uid => 1 }
     ,check_storage => { uid => 1 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
-    ,cleanup => { }
-    ,clone => { uid => 1, id_domain => 1, name => 2, memory => 2, number => 2
+    ,cleanup => { timeout => 2 }
+    ,clone => { uid => 1, id_domain => 1, name => 2, memory => 2, number => 2, volatile => 2, id_owner => 2
                 # If base has pools, from_pool = 1 if undefined
                 # when from_pool is true the clone is picked from the pool
                 # when from_pool is false the clone is created
@@ -284,6 +285,7 @@ sub info {
         ,status => $self->status
         ,error => $self->error
         ,id_domain => $self->id_domain
+        ,output => $self->output
     }
 }
 
@@ -482,7 +484,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request after_request_ok retry _no_duplicate)) {
+    for (qw(at after_request after_request_ok retry _no_duplicate _force)) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
@@ -535,8 +537,6 @@ sub shutdown_domain {
     my $class=ref($proto) || $proto;
 
     my $args = _check_args('shutdown_domain', @_ );
-
-    $args->{timeout} = $TIMEOUT_SHUTDOWN if !exists $args->{timeout};
 
     confess "ERROR: You must supply either id_domain or name ".Dumper($args)
         if !$args->{id_domain} && !$args->{name};
@@ -727,35 +727,7 @@ sub _new_request {
 }
 
 sub _last_insert_id {
-    my $driver = $$CONNECTOR->dbh->{Driver}->{Name};
-
-    if ( $driver =~ /sqlite/i ) {
-        return _last_insert_id_sqlite(@_);
-    } elsif ( $driver =~ /mysql/i ) {
-        return _last_insert_id_mysql(@_);
-    } else {
-        confess "I don't know how to get last_insert_id for $driver";
-    }
-}
-
-sub _last_insert_id_mysql {
-    my $self = shift;
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT last_insert_id()");
-    $sth->execute;
-    my ($id) = $sth->fetchrow;
-    $sth->finish;
-    return $id;
-
-}
-
-sub _last_insert_id_sqlite {
-    my $self = shift;
-
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT last_insert_rowid()");
-    $sth->execute;
-    my ($id) = $sth->fetchrow;
-    $sth->finish;
-    return $id;
+    return Ravada::Utils::last_insert_id($$CONNECTOR->dbh);
 }
 
 =head2 status

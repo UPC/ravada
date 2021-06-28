@@ -20,7 +20,7 @@ $ua->max_redirects(4);
 my $FILE_CONFIG = 'etc/fallback.conf';
 my $DIR_FALLBACK = getcwd.'/public/fallback';
 
-die "Error: missing fallback dir $DIR_FALLBACK"
+mkdir $DIR_FALLBACK or die "Error: $! $DIR_FALLBACK"
     if ! -e $DIR_FALLBACK;
 
 sub download($url, $dst = $DIR_FALLBACK) {
@@ -44,10 +44,12 @@ sub download($url, $dst = $DIR_FALLBACK) {
         print "$url downloaded to $dst\n";
         $res->content->asset->move_to($dst);
     }
-    elsif ($res->is_error)    { print $res->message."\n" }
+    elsif ($res->is_error)    { print $res->message."\n"; exit }
     elsif ($res->code == 301) { print $res->headers->location."\n" }
     else                      { print "Error ".$res->code." ".$res->message
-                                    ." downloading $url\n"}
+                                    ." downloading $url\n";
+                                    exit;
+                                }
     return $dst;
 }
 
@@ -58,13 +60,28 @@ sub uncompress($file) {
 
 sub get_version_badge {
     return if $VERSION =~/alpha/;
-    $VERSION =~ s/-/--/;
+    #    $VERSION =~ s/-/--/;
     download("https://img.shields.io/badge/version-$VERSION-brightgreen.svg"
         ,"../img/version-$VERSION-brightgreen.svg");
 }
 
+sub remove_old_version_badge {
+    $VERSION =~ s/-/--/;
+    my $current = "version-$VERSION-brightgreen.svg";
+    opendir my $dir,"public/img" or die "$! public/img";
+    while (my $file = readdir $dir) {
+        next if $file !~ /^version-.*\.svg/;
+        next if $file eq $current;
+        $file = "public/img/$file";
+        unlink $file or die "$! $file";
+    }
+    closedir $dir;
+
+}
+
 #############################################################################
 
+remove_old_version_badge();
 get_version_badge();
 
 open my $in,'<',$FILE_CONFIG or die "$! $FILE_CONFIG";

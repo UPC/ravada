@@ -1,6 +1,6 @@
 <div class="card">
     <div class="card-body">
-        <form method="post">
+        <form method="post" action="/admin/user/<%= $user->id %>.html">
         %   my $checked = '';
         %   $checked = 'checked' if $user->is_admin;
             <input type="checkbox" name="is_admin" value="1" <%= $checked %>>

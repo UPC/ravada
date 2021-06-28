@@ -37,9 +37,6 @@ our %CHANGE_HARDWARE_SUB = (
     ,memory => \&_change_hardware_memory
 );
 
-our $CONVERT = `which convert`;
-chomp $CONVERT;
-
 our $FREE_PORT = 5900;
 #######################################3
 
@@ -63,10 +60,11 @@ sub display_info {
         };
 
         $graph->{is_builtin} = 1;
+        $graph->{port} = undef if $graph->{port} && $graph->{port} eq 'auto';
         push @display,($graph);
     }
 
-    return $display[0] if wantarray;
+    return $display[0] if !wantarray;
     return @display;
 }
 
@@ -102,6 +100,11 @@ sub _file_free_port() {
     mkdir $dir_fp if ! -e $dir_fp;
     return "/$dir_fp/void_free_port.txt";
 
+}
+
+sub  _reset_free_port(@) {
+    my $file_fp = _file_free_port();
+    unlink $file_fp or die $! if -e $file_fp;
 }
 
 sub _new_free_port($self, $used={} ) {
@@ -265,6 +268,11 @@ sub _store {
     $self->_check_value_disk($value) if $var eq 'hardware';
 
     my $file_lock = $self->_config_file().".lock";
+
+    my ($path) = $file_lock =~ m{(.*)/};
+    make_path($path) or die "Error creating $path"
+    if ! -e $path;
+
     open my $lock,">>",$file_lock or die "Can't open $file_lock";
     _lock($lock);
 
@@ -658,17 +666,23 @@ sub _file_screenshot {
     return $self->_config_dir."/".$self->name.".png";
 }
 
-sub can_screenshot { return $CONVERT; }
+sub can_screenshot { return 1 }
 
 sub get_info {
     my $self = shift;
     my $info = $self->_value('info');
     if (!$info->{memory}) {
-        warn Dumper($info);
         $info = $self->_set_default_info();
     }
     lock_keys(%$info);
     return $info;
+}
+
+sub _new_mac($mac='ff:54:00:a7:49:71') {
+    my $num =sprintf "%02X", rand(0xff);
+    my @macparts = split/:/,$mac;
+    $macparts[5] = $num;
+    return join(":",@macparts);
 }
 
 sub _set_default_info($self, $listen_ip=undef) {
@@ -679,8 +693,15 @@ sub _set_default_info($self, $listen_ip=undef) {
             ,n_virt_cpu => 1
             ,state => 'UNKNOWN'
             ,ip =>'1.1.1.'.int(rand(254)+1)
+            ,mac => _new_mac()
             ,time => time
     };
+
+    $info->{interfaces}->[0] = {
+        hwaddr => $info->{mac}
+        ,address => $info->{ip}
+    };
+
     $self->_store(info => $info);
     $self->_set_display($listen_ip);
     my $hardware = $self->_value('hardware');
@@ -1000,6 +1021,15 @@ sub dettach($self,$user) {
 sub _check_port($self,@args) {
     return 1 if $self->is_active;
     return 0;
+}
+
+sub copy_config($self, $domain) {
+    my $config_new = $domain->_load();
+    for my $field ( keys %$config_new ) {
+        my $value = $config_new->{$field};
+        $value = 0 if $field eq 'is_active';
+        $self->_store($field, $value);
+    }
 }
 
 1;

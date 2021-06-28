@@ -10,16 +10,16 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-11-05 13:22+0000\n"
-"Last-Translator: Dani Sanchez <dani@fib.upc.edu>\n"
-"Language-Team: Catalan <https://hosted.weblate.org/projects/ravada/"
-"translation/ca_VALENCIA/>\n"
+"PO-Revision-Date: 2021-03-16 19:02+0000\n"
+"Last-Translator: Mtech <dudexuhuh@zetmail.com>\n"
+"Language-Team: Valencian <https://hosted.weblate.org/projects/ravada/"
+"translation/ca@valencia/>\n"
 "Language: ca-valencia\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.3.2-dev\n"
+"X-Generator: Weblate 4.5.2-dev\n"
 
 msgid "Ravada broker"
 msgstr "Broker Ravada"
@@ -734,8 +734,8 @@ msgstr "Propietari"
 msgid "Change the owner of the machine"
 msgstr "Canviar el propietari de la màquina"
 
-msgid "Press SHIFT + F12 to exit"
-msgstr "Pressione SHIFT + F12 per a eixir"
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Pressione SHIFT + F12 per a eixir de la màquina virtual"
 
 msgid ""
 "If you can not see the machine screen in a few seconds check for a file "
@@ -909,3 +909,55 @@ msgstr "Italià"
 
 msgid "Vietnamese"
 msgstr "Vietnamita"
+
+msgid "Keep in mind that there may be users using a clone"
+msgstr "Tinga en ment que pot haver usuaris usant un clon"
+
+msgid "ShutDown"
+msgstr "Apagar"
+
+msgid "Force ShutDown"
+msgstr "Forçar Apagat"
+
+msgid "Reboot"
+msgstr "Reiniciar"
+
+msgid "Force Reboot"
+msgstr "Forçar reiniciar"
+
+msgid "Arab"
+msgstr "Àrab"
+
+msgid "Turkish"
+msgstr "Turc"
+
+msgid "Waiting for machine to start"
+msgstr "Esperant a la màquina per a posar en marxa"
+
+msgid "This machine will shut down"
+msgstr "La màquina s'apagarà"
+
+msgid "Waiting for network to come up"
+msgstr "Esperant a la xarxa per a sorgir"
+
+msgid "Hardware address"
+msgstr "Direcció del Hardware"
+
+msgid "Open ports"
+msgstr "Ports oberts"
+
+msgid "up"
+msgstr "Encesa"
+
+msgid "Machine Information"
+msgstr "Informació de la màquina"
+
+msgid "Internal IP"
+msgstr "IP Interna"
+
+msgid "Display"
+msgstr "Visualització"
+
+msgid "Max Memory"
+msgstr "Memòria Màx"
+

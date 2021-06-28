@@ -37,6 +37,7 @@ sub test_spinoff($base) {
         test_volume_contents($base->_vm,"spinoff", $vol->file);
     }
 
+    unload_nbd();
     $clone->remove(user_admin);
     for my $file ($base->list_files_base) {
         ok(-e $file,$file) or exit;
@@ -87,6 +88,7 @@ for my $vm_name ( vm_names() ) {
 
         test_remove_base($base);
         test_spinoff($base);
+        unload_nbd();
         $base->remove(user_admin);
     }
 }

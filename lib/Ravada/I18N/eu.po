@@ -2,7 +2,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2021-02-24 11:50+0000\n"
+"PO-Revision-Date: 2021-02-26 08:50+0000\n"
 "Last-Translator: Eneko Romo <eneko.romo@txorierri.com>\n"
 "Language-Team: Basque <https://hosted.weblate.org/projects/ravada/"
 "translation/eu/>\n"
@@ -14,7 +14,7 @@ msgstr ""
 "X-Generator: Weblate 4.5\n"
 
 msgid "Ravada broker"
-msgstr ""
+msgstr "Ravada Brokerra"
 
 msgid "Machine Name"
 msgstr "Makinaren izena"
@@ -44,7 +44,7 @@ msgid "Clone/s"
 msgstr "Klonak"
 
 msgid "Users List"
-msgstr ""
+msgstr "Erabiltzaile-zerrenda"
 
 msgid "Name"
 msgstr "Izena"
@@ -137,130 +137,130 @@ msgid "Some of the password fields are empty"
 msgstr "Pasahitz-eremu batzuk hutsik daude"
 
 msgid "Status"
-msgstr ""
+msgstr "Egoera"
 
 msgid "Actions"
-msgstr ""
+msgstr "Ekintzak"
 
 msgid "Down"
-msgstr ""
+msgstr "Behera"
 
 msgid "Running"
-msgstr ""
+msgstr "Korrikan"
 
 msgid "Shutdown"
-msgstr ""
+msgstr "Amatatu"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "Pantaila-argazkia"
 
 msgid "Paused"
-msgstr ""
+msgstr "Geldituta"
 
 msgid "Machine locked by request"
-msgstr ""
+msgstr "Eskaera bidez blokeatutako makina"
 
 msgid "Process"
-msgstr ""
+msgstr "Prozesua"
 
 msgid "Copy"
-msgstr ""
+msgstr "Kopiatu"
 
 msgid "Error!"
-msgstr ""
+msgstr "Errorea!"
 
 msgid "Error"
-msgstr ""
+msgstr "Errorea"
 
 msgid "Backend not available!"
-msgstr ""
+msgstr "Euskarria ez dago erabilgarri!"
 
 msgid "Subject"
-msgstr ""
+msgstr "Gaia"
 
 msgid "Date"
-msgstr ""
+msgstr "Data"
 
 msgid "Mark as read"
-msgstr ""
+msgstr "Irakurri gisa markatua"
 
 msgid "Mark as unread"
-msgstr ""
+msgstr "Irakurri gabeko gisa markatua"
 
 msgid "No messages to show"
-msgstr ""
+msgstr "Ez dago erakusteko mezurik"
 
 msgid "Admin"
-msgstr ""
+msgstr "Administratzailea"
 
 msgid "Machines"
-msgstr ""
+msgstr "Makinak"
 
 msgid "machines"
-msgstr ""
+msgstr "makinak"
 
 msgid "Users"
-msgstr ""
+msgstr "Erabiltzaileak"
 
 msgid "users"
-msgstr ""
+msgstr "erabiltzaileak"
 
 msgid "Messages"
-msgstr ""
+msgstr "Mezuak"
 
 msgid "messages"
-msgstr ""
+msgstr "mezuak"
 
 msgid "Admin tools"
-msgstr ""
+msgstr "Administratzaile tresnak"
 
 msgid "Remove base"
-msgstr ""
+msgstr "Oinarria ezabatu"
 
 msgid "Restore"
-msgstr ""
+msgstr "Berrezarri"
 
 msgid "Hibernate"
-msgstr ""
+msgstr "Hibernatu"
 
 msgid "Are you sure?"
-msgstr ""
+msgstr "Ziur zaude?"
 
 msgid "Yes"
-msgstr ""
+msgstr "Bai"
 
 msgid "No"
-msgstr ""
+msgstr "Ez"
 
 msgid "Make public"
-msgstr ""
+msgstr "Publikoa egin"
 
 msgid "Machine settings"
-msgstr ""
+msgstr "Makinaren configurazioak"
 
 msgid "Cannot remove base, machine has clones"
-msgstr ""
+msgstr "Ezin da ezabatu oinarria, makinak klonak ditu"
 
 msgid "show clones"
-msgstr ""
+msgstr "Erakutsi klonak"
 
 msgid "hide clones"
-msgstr ""
+msgstr "Klonak ezkutatu"
 
 msgid "For Spice redirection you will need to install"
 msgstr ""
 
 msgid "in your computer."
-msgstr ""
+msgstr "Zure ordenagailuan."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr ""
 
 msgid "You will need to install"
-msgstr ""
+msgstr "Instalatu behar duzu"
 
 msgid "and USB drivers ("
-msgstr ""
+msgstr "eta USB driverra ("
 
 msgid ""
 "Be aware that in Windows, Spice redirection is not automatic. It is "
@@ -268,7 +268,7 @@ msgid ""
 msgstr ""
 
 msgid "To make this possible, download"
-msgstr ""
+msgstr "Hau posiblea egiteko, deskargatu"
 
 msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
@@ -276,10 +276,10 @@ msgid ""
 msgstr ""
 
 msgid "Login"
-msgstr ""
+msgstr "Saioa hasi"
 
 msgid "Welcome"
-msgstr ""
+msgstr "Ongi etorria"
 
 msgid "A viewer is required to run the virtual machines."
 msgstr ""
@@ -288,22 +288,22 @@ msgid "It is required a viewer to run the virtual machines."
 msgstr ""
 
 msgid "Virtual Machines"
-msgstr ""
+msgstr "Makina Birtualak"
 
 msgid "User"
-msgstr ""
+msgstr "Erabiltzailea"
 
 msgid "Password"
-msgstr ""
+msgstr "Pasahitza"
 
 msgid "Start session"
-msgstr ""
+msgstr "Saioa hasi\n"
 
 msgid "bits) in your computer."
-msgstr ""
+msgstr "bits) zure ordenagailuan."
 
 msgid "Permissions"
-msgstr ""
+msgstr "Baimenak"
 
 msgid "can change the settings of owned virtual machines."
 msgstr ""
@@ -318,34 +318,34 @@ msgid "cloned from one base owned by the user."
 msgstr ""
 
 msgid "can clone public virtual machines."
-msgstr ""
+msgstr "makina birtual publikoak klonatu al dezakezu."
 
 msgid "can clone any virtual machine."
 msgstr ""
 
 msgid "can create bases."
-msgstr ""
+msgstr "oinarriak sortu al ditzakezu."
 
 msgid "can create virtual machines."
-msgstr ""
+msgstr "makina birtualak sortu al ditzakezu"
 
 msgid "can grant permissions to other users"
 msgstr ""
 
 msgid "can hibernate any virtual machine."
-msgstr ""
+msgstr "edozein makina birtualek hibernatu al ditzakezu."
 
 msgid "can hibernate clones from virtual machines owned by the user."
 msgstr ""
 
 msgid "can hibernate any clone."
-msgstr ""
+msgstr "edozein klonak hibernatu al ditzakezu."
 
 msgid "can remove any virtual machines owned by the user."
 msgstr ""
 
 msgid "can remove any virtual machine."
-msgstr ""
+msgstr "edozein makina birtualak ezabatu al ditzakezu."
 
 msgid "can remove clones from virtual machines owned by the user."
 msgstr ""
@@ -399,10 +399,10 @@ msgid "Swap Size: (GB)"
 msgstr ""
 
 msgid "Ram: (GB)"
-msgstr ""
+msgstr "Ram: (GB)"
 
 msgid "Machine name is required."
-msgstr ""
+msgstr "Makinaren izena behar da."
 
 msgid "Machine name can't exceed 20 characters."
 msgstr ""
@@ -443,7 +443,7 @@ msgid "Are you sure you want to change the Public state of"
 msgstr ""
 
 msgid "Search"
-msgstr ""
+msgstr "Bilatu"
 
 msgid "There are no public bases available in this system."
 msgstr ""

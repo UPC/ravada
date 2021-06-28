@@ -199,7 +199,7 @@
                                        <li ng-repeat="cdrom in machine.info.cdrom">{{cdrom}}</li>
                                    </ul>
                                    <input type="checkbox" ng-model="with_cd" name="with_cd"/>
-                                    <label for="with_cd">Keep the CD for the clones</label>
+                                    <label for="with_cd"><%=l 'Keep the CD for the clones' %></label>
                                    </div>
                                  <p><%=l 'Are you sure you want to prepare the base of' %> {{machine.name}}?</p>
                                </div>
@@ -276,7 +276,7 @@
                           <i class="fa fa-power-off"></i>
                        </button>
                        <button type="button" class="btn btn-primary btn-sm"
-                         ng-click="action('machine','view',machine.id)"
+                         ng-click="action('machine','view-new-tab',machine.id)"
                          title="<%=l 'View' %>">
                           <i class="fa fa-desktop"></i>
                        </button>

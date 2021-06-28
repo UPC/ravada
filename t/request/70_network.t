@@ -28,6 +28,7 @@ sub test_list_nats($vm) {
         ,vm_type => $vm->type
     );
     rvd_back->_process_requests_dont_fork();
+    wait_request();
     is($req->status,'done');
     is($req->error,'');
     like($req->output,qr{\"$exp_nat[0]\"});
@@ -65,6 +66,7 @@ sub test_list_bridges($vm) {
         ,vm_type => $vm->type
     );
     rvd_back->_process_requests_dont_fork();
+    wait_request();
     is($req->status,'done');
     is($req->error,'');
 

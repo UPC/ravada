@@ -248,6 +248,7 @@ sub test_requests_by_domain {
     is($domain->list_requests,3,Dumper([map { $_->{command} } $domain->list_requests]));
 
     rvd_back->_process_all_requests_dont_fork();
+    wait_request();
 
     is($req1->status , 'done');
     is($req2->status , 'done');

@@ -3,6 +3,7 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use Hash::Util qw(lock_hash unlock_hash);
 use Mojo::JSON qw(decode_json);
 use XML::LibXML;
 use Test::More;
@@ -15,24 +16,18 @@ use feature qw(signatures);
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
-my $RVD_BACK = rvd_back();
-my $RVD_FRONT= rvd_front();
-
-my @ARG_RVD = ( config => $FILE_CONFIG,  connector => connector);
-
-my @VMS = vm_names();
-my $USER = create_user("foo","bar");
+my $USER;
 
 my $DISPLAY_IP = '99.1.99.1';
 my $BASE;
+my $TLS;
 
 #######################################################################33
 
 sub test_create_domain {
     my $vm_name = shift;
 
-    my $ravada = Ravada->new(@ARG_RVD);
-    my $vm = $ravada->search_vm($vm_name);
+    my $vm = rvd_back->search_vm($vm_name);
     ok($vm,"I can't find VM $vm_name") or return;
 
     my $name = new_domain_name();
@@ -91,7 +86,7 @@ sub test_display {
     my $ip;
     ($ip) = $display =~ m{^\w+://(.*):\d+} if defined $display;
 
-    ok($ip,"Expecting an IP , got ''") or return;
+    ok($ip,"Expecting an IP , got '$display'") or return;
 
     ok($ip ne '127.0.0.1', "[$vm_name] Expecting IP no '127.0.0.1', got '$ip'") or exit;
 
@@ -109,16 +104,19 @@ sub test_display {
         .Dumper($Ravada::CONFIG)) or exit;
 
     ok($ip eq $expected_ip,"Expecting display IP '$expected_ip', got '$ip'");
+    delete $Ravada::CONFIG->{display_ip};
 
 }
 
 sub test_display_inactive($domain) {
     my $info = $domain->info(user_admin);
-    ok(!exists $info->{display});
+    ok($info->{display});
 
     my $display_h = $info->{hardware}->{display};
     isa_ok($display_h,'ARRAY') or die Dumper($info);
-    is(scalar(@$display_h),1) or die Dumper($display_h);
+    my $n_expected = 1;
+    $n_expected++ if $TLS && $domain->is_active;
+    is(scalar(@$display_h), $n_expected) or die Dumper($display_h);
 
     # the very first time it starts default display is fetched
     $domain->start(user_admin);
@@ -129,7 +127,7 @@ sub test_display_inactive($domain) {
 
     $display_h = $info->{hardware}->{display};
     isa_ok($display_h,'ARRAY') or die Dumper($info);
-    is(scalar(@$display_h),1) or die Dumper($display_h);
+    is(scalar(@$display_h), $n_expected) or die Dumper($display_h);
 
     return $display_up;
 }
@@ -170,7 +168,9 @@ sub test_remove_display($vm) {
     my $domain = create_domain($vm);
     ok($domain->_has_builtin_display) or die $domain->name;
     my $display0 = $domain->info(user_admin)->{hardware}->{display};
-    is(scalar(@$display0),1) or die $domain->name." ".Dumper($display0);
+    my $n= 1;
+    $n++ if $TLS && $domain->is_active;
+    is(scalar(@$display0),$n) or die $domain->name." ".Dumper($display0);
     my $req = Ravada::Request->remove_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -179,7 +179,7 @@ sub test_remove_display($vm) {
     );
     wait_request(debug => 0);
     is($req->status,'done');
-    is($req->error,'') or exit;
+    is($req->error,'') or die $req->id;
 
     is($domain->_has_builtin_display,0 ) or die $domain->name;
 
@@ -201,7 +201,7 @@ sub test_add_display_builtin($vm) {
 
     wait_request();
     my $info = $domain->info(user_admin);
-    ok(!exists $info->{display});
+    ok(exists $info->{display});
     is($domain->_has_builtin_display(),0) or die $domain->name;
 
     my $req = Ravada::Request->add_hardware(
@@ -221,7 +221,7 @@ sub test_add_display_builtin($vm) {
     $info = $domain->info(user_admin);
     ok($info->{display}) or die $domain->name;
 
-    test_displays_added_on_refresh($domain,1);
+    test_displays_added_on_refresh($domain,1+$TLS);
 
     $domain->remove(user_admin);
 }
@@ -242,13 +242,13 @@ sub test_add_display($vm) {
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     is($domain_f->_has_builtin_display,1 ) or die $domain->name;
+    $domain->start(user_admin);
 
     my $display = $domain->info(user_admin)->{hardware}->{display};
-    is(scalar(@$display),2);
+    is(scalar(@$display),2+$TLS);
     is($display->[0]->{is_builtin},1);
-    is($display->[1]->{is_builtin},0);
-
-    $domain->start(user_admin);
+    is($display->[1]->{is_builtin},1) if $TLS;
+    is($display->[1+$TLS]->{is_builtin},0);
 
     my $display_info = $domain->info(user_admin)->{display};
 
@@ -271,8 +271,6 @@ sub test_add_display($vm) {
     is($domain_f->_has_builtin_display,0 ) or die $domain->name;
 
     $domain->start(user_admin);
-    my $info2 = $domain->info(user_admin);
-    ok(!exists $info2->{display});
 
     test_displays_added_on_refresh($domain, 0);
 
@@ -280,27 +278,28 @@ sub test_add_display($vm) {
 
 }
 
-sub test_displays_added_on_refresh($domain, $n_expected, $req_refresh=1) {
+sub test_displays_added_on_refresh($domain, $n_expected, $delete=1) {
 
-    my $sth_count = $domain->_dbh->prepare(
-        "SELECT count(*) FROM domain_displays WHERE id_domain=?");
-    $sth_count->execute($domain->id);
-    my ($count0) = $sth_count->fetchrow;
-    #    is($count0, $n_expected,"Expecting displays on table domain_displays");
+    delete_request_not_done('shutdown','shutdown_domain', 'force_shutdown');
+    Ravada::Request->start_domain(uid => user_admin->id, id_domain => $domain->id
+        ,remote_ip => '1.2.3.4');
 
-    if ($req_refresh) {
-        my $sth = $domain->_dbh->prepare("DELETE FROM domain_displays WHERE id_domain=?");
+    if ($delete) {
+        my $sth = connector->dbh->prepare("DELETE FROM domain_displays WHERE id_domain=?");
         $sth->execute($domain->id);
-        my $req = Ravada::Request->refresh_machine(
+    }
+    my $req = Ravada::Request->refresh_machine(
             uid => user_admin->id
             ,id_domain => $domain->id
-        );
+            ,_force => 1
+    );
 
-        wait_request(debug => 0);
-    }
+    wait_request(debug => 0);
+    my $sth_count = connector->dbh->prepare(
+        "SELECT count(*) FROM domain_displays WHERE id_domain=?");
     $sth_count->execute($domain->id);
     my ($count) = $sth_count->fetchrow;
-    is($count, $n_expected,"Expecting displays on table domain_displays for ".$domain->name);
+    is($count, $n_expected,"Expecting $n_expected displays on table domain_displays for ".$domain->name) or confess;
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my $display = $domain_f->info(user_admin)->{hardware}->{display};
@@ -309,6 +308,7 @@ sub test_displays_added_on_refresh($domain, $n_expected, $req_refresh=1) {
 }
 
 sub test_display_iptables($vm) {
+    diag("Test display iptables");
     return if $<;
 
     my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
@@ -317,8 +317,9 @@ sub test_display_iptables($vm) {
     flush_rules();
     $domain->start(
         user => user_admin
-        ,remote_ip => '1.2.3.4'
+        ,remote_ip => '3.2.3.4'
     );
+    delete_request_not_done('set_time','refresh_machine_ports');
     wait_request(debug => 0, skip => [ 'set_time', 'refresh_machine_ports']);
     my $info = $domain->info(user_admin);
 
@@ -332,8 +333,9 @@ sub test_display_iptables($vm) {
     for my $display ( @displays ) {
         for my $port ( $display->{port}, $display->{extra}->{tls_port} ) {
             next if !defined $port;
-            ok(!$dupe_port{$port}," port $port duplicated $display->{driver} and "
-                .($dupe_port{$port} or ''));
+            ok(!$dupe_port{$port},$domain->name
+                ." port $port duplicated $display->{driver} and "
+                .($dupe_port{$port} or '')) or exit;
             $dupe_port{$port} = $display->{driver};
             my $display_ip = $display->{ip};
             ok(grep /--dport $port/,@iptables_all, "Expecting --dport $port ".Dumper(\@iptables_all)) or die $domain->name;
@@ -348,7 +350,7 @@ sub test_display_iptables($vm) {
         }
     }
     $domain->remove(user_admin);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     ($out_iptables, $err) = $vm->run_command("iptables-save");
     @iptables = split (/\n/,$out_iptables);
     for my $display ( @displays ) {
@@ -400,11 +402,15 @@ sub test_display_info($vm) {
 
     my $display_h = $info->{hardware}->{display};
     isa_ok($display_h,'ARRAY') or die Dumper($info);
-    is(scalar(@$display_h),1) or die Dumper($display_h);
+    my $n_displays = 1;
+    $n_displays++ if $TLS;
+    is(scalar(@$display_h),$n_displays) or die Dumper($display_h);
     is($display_h->[0]->{is_active},1) or die $domain->name;
 
-    is($display_h->[0]->{file_extension},'vv') or die $domain->name
-    if $vm->type eq 'KVM';
+    for my $d (@$display_h) {
+        next if $d->{driver} !~ /spice/;
+        like($d->{file_extension},qr /vv$/ ) or die Dumper($domain->name, $d);
+    }
 
     delete $display_h->[0]->{id};
     delete $display_h->[0]->{id_domain_port};
@@ -432,6 +438,9 @@ sub test_display_info($vm) {
     wait_request(check_error => 0);
     is($req2->status,'done');
     like($req2->error,qr'.');
+    Ravada::Request->start_domain(uid => user_admin->id, id_domain => $domain_f->id
+        ,remote_ip => '1.2.3.4');
+    wait_request();
 
     my $exposed_port = $domain->exposed_port($port);
     ok($exposed_port,"Expecting exposed port $port") or exit;
@@ -445,27 +454,28 @@ sub test_display_info($vm) {
     isa_ok($display,'HASH') or die Dumper($info);
     $display_h = $info->{hardware}->{display};
     isa_ok($display_h,'ARRAY') or die Dumper($info->{hardware});
-    is(scalar(@$display_h),2);
+    is(scalar(@$display_h),2+ $TLS);
     $domain->_normalize_display($display,0);
     is($display_h->[0]->{id_domain_port},undef); # spice needs no exposed port
-    delete $display_h->[0]->{id_domain_port};
     is($display_h->[0]->{is_active}, 1);
-    delete $display_h->[0]->{is_active};
     delete $display_h->[0]->{file_extension};
-    _test_compare($display_h->[0], $display) or exit;
+    delete $display_h->[0]->{extra};
+    unlock_hash(%$display);
+    delete $display->{extra};
+    _test_compare($display_h->[0], $display);
 
-    is($display_h->[0]->{driver}, 'spice') if $domain->type eq 'KVM';
-    like($display_h->[0]->{password},qr{..+}) if $domain->type eq 'KVM';
+    my $exp_driver = 'spice';
+    $exp_driver .= "-tls" if $TLS;
+    is($display_h->[0]->{driver}, $exp_driver) if $domain->type eq 'KVM';
+    like($display_h->[0]->{password},qr{..+}, $domain_f->name) or exit if $domain->type eq 'KVM';
     is($display_h->[0]->{id_exposed_port},undef); # spice doesn't need exposed port
 
-    # rdp won't be active because that port isn't up yet
-    is($display_h->[1]->{is_active}, 0) or die Dumper($display_h);
-    is($display_h->[1]->{driver}, 'rdp');
-    like($display_h->[1]->{port}, qr/^\d+/);
-    isnt($display_h->[1]->{port}, $port) or die Dumper($display_h);
-    is($display_h->[1]->{ip}, $display_h->[0]->{ip}) or exit;
-    is($display_h->[1]->{listen_ip}, $display_h->[0]->{listen_ip});
-    is($display_h->[1]->{id_domain_port},$exposed_port->{id}); # rdp needs exposed port
+    is($display_h->[1+$TLS]->{driver}, 'rdp');
+    like($display_h->[1+$TLS]->{port}, qr/^\d+/);
+    isnt($display_h->[1+$TLS]->{port}, $port) or die Dumper($display_h);
+    is($display_h->[1+$TLS]->{ip}, $display_h->[0]->{ip}) or exit;
+    is($display_h->[1+$TLS]->{listen_ip}, $display_h->[0]->{listen_ip});
+    is($display_h->[1+$TLS]->{id_domain_port},$exposed_port->{id}); # rdp needs exposed port
     $domain->shutdown_now(user_admin());
 
     $domain_f = Ravada::Front::Domain->open($domain->id);
@@ -474,6 +484,9 @@ sub test_display_info($vm) {
     $display_h = $info->{hardware}->{display};
     is($display_h->[0]->{is_active}, 0);
     is($display_h->[1]->{is_active}, 0) or exit;
+    if ($TLS) {
+        ok(!$display_h->[2]->{is_active}) or exit;
+    }
 
     $domain->prepare_base(user_admin);
 
@@ -483,31 +496,35 @@ sub test_display_info($vm) {
     Ravada::Request->start_domain(uid => user_admin->id, id_domain => $clone->id
     ,remote_ip => '1.2.3.4');
     wait_request(debug => 0);
+    for ( 1 .. 20 ) {
+        last if $clone->ip;
+        wait_request();
+    }
     my $info_c = $clone->info(user_admin);
     my $clone_h = Ravada::Front::Domain->open($clone->id);
     my $display_c = $clone_h->info(user_admin)->{hardware}->{display};
     isnt($display_c->[0]->{password}, $display_h->[0]->{password})
     if $display_h->[0]->{password};
 
-    like($display_c->[1]->{id_domain_port},qr/^\d+$/);
-    isnt($display_c->[1]->{id_domain_port},$display_h->[1]->{id_domain_port});
+    like($display_c->[1+$TLS]->{id_domain_port},qr/^\d+$/);
+    isnt($display_c->[1+$TLS]->{id_domain_port},$display_h->[1]->{id_domain_port});
 
     delete $display_c->[0]->{password};
     delete $display_h->[0]->{password};
 
-    isnt($display_c->[1]->{port}, $display_h->[1]->{port});
-    for my $field (qw(display port is_active)) {
-        for ( 0 .. 1 ) {
-            delete $display_c->[$_]->{$field};
-            delete $display_h->[$_]->{$field};
+    isnt($display_c->[1+$TLS]->{port}, $display_h->[1+$TLS]->{port});
+
+    _test_display_tls($clone);
+    wait_request();
+    if (!$clone->is_active) {
+        Ravada::Request->start_domain(uid => user_admin->id, id_domain => $clone->id
+            ,remote_ip => '1.2.3.4');
+        wait_request(debug => 0);
+        for ( 1 .. 20 ) {
+            last if $clone->ip;
+            wait_request();
         }
     }
-
-    _test_display_tls($display_c->[0], $vm);
-    delete $display_c->[0]->{tls_port};
-    delete $display_c->[0]->{extra}->{tls_port};
-    delete $display_c->[0]->{file_extension};
-    #    _test_compare_list($display_c, $display_h, $clone);
 
     test_iptables($clone);
 
@@ -520,24 +537,37 @@ sub test_display_info($vm) {
     test_display_clean($domain->id, $clone->id);
 }
 
-sub _test_display_tls($display, $vm) {
-    return if $display->{driver} ne 'spice';
+sub _test_display_tls($domain) {
+    my $vm = $domain->_vm;
+
+    if (!$domain->is_active) {
+        Ravada::Request->start_domain(uid => user_admin->id
+            ,id_domain => $domain->id);
+        wait_request();
+    }
+    $domain->info(user_admin);
     SKIP: {
         skip("Missing TLS configuration see https://ravada.readthedocs.io/en/latest/docs/spice_tls.html",1) if !check_libvirt_tls();;
-        my $tls_port = $display->{extra}->{tls_port};
-        like($tls_port,qr/^\d+$/);
 
-        my $tls_json = $vm->_data('tls');
-        my $tls;
-        eval { $tls = decode_json($tls_json) if $tls_json };
-        is($@, '', $tls_json." in ".$vm->name);
-        isa_ok($tls, 'HASH');
-        ok($tls->{subject},Dumper($tls)) or die;
-        ok($tls->{ca}, Dumper($tls));
-        is($tls->{subject}, $vm->tls_host_subject());
-        is($tls->{ca}, $vm->tls_ca());
+        for my $display ( @{$domain->info(user_admin)->{hardware}->{display}} ) {
+            next if $display->{driver} !~ /-tls$/;
+            is($display->{is_secondary},1) if$display->{driver} =~ /^(spice|vnc)-tls$/;
+            is($display->{display},undef);
+            my $tls_port = $display->{port} or die Dumper($display);
+            like($tls_port,qr/^\d+$/);
 
-        ok(search_iptable_remote(local_ip => $display->{ip}, local_port => $tls_port, node => $vm),"Expecting iptables rule for -> $display->{ip} : $tls_port");
+            my $tls_json = $vm->_data('tls');
+            my $tls;
+            eval { $tls = decode_json($tls_json) if $tls_json };
+            is($@, '', $tls_json." in ".$vm->name);
+            isa_ok($tls, 'HASH');
+            ok($tls->{subject},Dumper($tls)) or die $domain->name;
+            ok($tls->{ca}, Dumper($tls));
+            is($tls->{subject}, $vm->tls_host_subject());
+            is($tls->{ca}, $vm->tls_ca());
+
+            ok(search_iptable_remote(local_ip => $display->{ip}, local_port => $tls_port, node => $vm),"Expecting iptables rule for -> $display->{ip} : $tls_port");
+        }
     };
 }
 
@@ -546,7 +576,10 @@ sub _get_internal_port_display_kvm($domain) {
     my $path = "/domain/devices/graphics";
     my ($graphics) = $doc->findnodes($path);
     die "Error: no $path in ".$domain->name if !$graphics;
-    return $graphics->getAttribute('port');
+    my @port = $graphics->getAttribute('port');
+    my $tls_port = ( $graphics->getAttribute('tlsPort') or -1);
+    push @port,($tls_port) if $tls_port;
+    return @port;
 }
 
 sub _get_internal_port_display_void($domain) {
@@ -565,28 +598,35 @@ sub _get_internal_port_display($domain) {
 
 sub test_iptables($domain) {
     return if $>;
-    my ($iptables, $err) = $domain->_vm->run_command("/usr/sbin/iptables-save");
+    my ($iptables, $err) = $domain->_vm->run_command("iptables-save");
     my @iptables = split /\n/,$iptables;
-    my ($display_builtin, $display_exp) = @{$domain->info(user_admin)->{hardware}->{display}};
-    my $internal_port = _get_internal_port_display($domain);
-    my $port_builtin = $display_builtin->{port};
+    my @displays = @{$domain->info(user_admin)->{hardware}->{display}};
+    my ($display_exp) = grep { !$_->{is_builtin} } @displays;
 
-    is($internal_port, $port_builtin) or confess;
-    my @iptables_builtin = grep { /^-A.*--dport $port_builtin -j ACCEPT/ } @iptables;
-    is(scalar(@iptables_builtin),1,"Expecting one entry with $port_builtin, got "
-    .scalar(@iptables_builtin)) or do {
-        confess Dumper(\@iptables) if !scalar(@iptables_builtin);
-        confess Dumper(\@iptables_builtin);
-    };
+    for my $display_builtin (grep { $_->{is_builtin} }  @displays ) {
+        diag("Testing iptables for ".$display_builtin->{driver}." ".$display_builtin->{port});
+        my ($internal_port1, $internal_port2) = _get_internal_port_display($domain);
+        my $port_builtin = $display_builtin->{port};
 
-    my $port_rdp = $display_exp->{port};
-    my @iptables_rdp = grep { /^-A PREROUTING.*--dport $port_rdp -j DNAT .*356/ } @iptables;
-    is(scalar(@iptables_rdp),1,"Expecting one entry with $port_rdp, got "
-    .scalar(@iptables_rdp)) or do {
-        die Dumper(\@iptables) if !scalar(@iptables_rdp);
-        die Dumper(\@iptables_rdp);
-    };
+        ok($port_builtin == $internal_port1 ||(
+                defined $internal_port2 && $port_builtin== $internal_port2 )
+        ,"Expecting port_builtin=$internal_port1  or ".($internal_port2 or '')) or confess;
+        my @iptables_builtin = grep { /^-A.*--dport $port_builtin -j ACCEPT/ } @iptables;
+        is(scalar(@iptables_builtin),1,"Expecting one entry with $port_builtin, got "
+            .scalar(@iptables_builtin)) or do {
+            confess Dumper(\@iptables) if !scalar(@iptables_builtin);
+            confess Dumper(\@iptables_builtin);
+        };
 
+        my $port_rdp = $display_exp->{port};
+        my @iptables_rdp = grep { /^-A PREROUTING.*--dport $port_rdp -j DNAT .*356/ } @iptables;
+        is(scalar(@iptables_rdp),1,"Expecting one entry with PRERORUTING --dport $port_rdp, got "
+            .scalar(@iptables_rdp)) or do {
+            my @iptables_prer= grep { /^-A PREROUTING.*--dport / } @iptables;
+            confess Dumper(\@iptables_prer) if !scalar(@iptables_rdp);
+            die Dumper(\@iptables_rdp);
+        };
+    }
 
 }
 
@@ -599,8 +639,13 @@ sub test_refresh_old_machine($clone) {
     $clone->shutdown_now(user_admin);
     my $sth = connector->dbh->prepare("DELETE FROM domain_displays WHERE id_domain=?");
     $sth->execute($clone->id);
-    my $req = Ravada::Request->refresh_machine(uid => user_admin->id
+    my $req;
+    for ( 1 .. 100 ) {
+        $req = Ravada::Request->refresh_machine(uid => user_admin->id
         ,id_domain => $clone->id);
+        last if $req;
+        sleep 1;
+    }
     wait_request(debug => 0);
 
     is($req->status,'done');
@@ -609,7 +654,7 @@ sub test_refresh_old_machine($clone) {
     $sth = connector->dbh->prepare("SELECT * FROM domain_displays WHERE id_domain=?");
     $sth->execute($clone->id);
     my $row = $sth->fetchrow_hashref;
-    ok($row);
+    ok($row, "Expecting domain displays for id_domain=".$clone->id) or exit;
 
     my $clone_f = Ravada::Front::Domain->open($clone->id);
     my $info = $clone_f->info(user_admin);
@@ -625,7 +670,7 @@ sub test_display_clean(@id) {
             );
             $sth->execute($id);
             my $row = $sth->fetchrow_hashref;
-            ok(!$row,Dumper($table, $row));
+            ok(!$row,Dumper({$table, $row}));
         }
     }
 }
@@ -633,15 +678,16 @@ sub test_display_clean(@id) {
 sub _test_compare($display1, $display2) {
     my %display1b = %$display1;
     my %display2b = %$display2;
-    delete $display1b{id};
 
     delete $display1b{id_domain}
     if !exists $display2b{id_domain};
 
-    delete %display1b{'n_order','display'};
-    delete %display2b{'n_order','display'};
+    for (qw(n_order display id_vm is_secondary)) {
+        delete $display1b{$_};
+        delete $display2b{$_};
+    }
 
-    is_deeply(\%display1b, \%display2b) or confess;
+    is_deeply(\%display1b, \%display2b) or confess Dumper($display1, $display2);
 }
 
 sub _test_compare_list($display1, $display2, $domain=undef) {
@@ -710,7 +756,7 @@ sub test_prepare_base {
     my $name_clone = new_domain_name();
 
     my $domain_clone;
-    eval { $domain_clone = $RVD_BACK->create_domain(
+    eval { $domain_clone = rvd_back->create_domain(
         name => $name_clone
         ,id_owner => user_admin->id
         ,id_base => $domain->id
@@ -725,7 +771,7 @@ sub test_prepare_base {
     ok($domain_clone->id_base && $domain_clone->id_base == $domain->id
         ,"[$vm_name] Expecting id_base=".$domain->id." got ".($domain_clone->id_base or '<UNDEF>')) or exit;
 
-    my $domain_clone2 = $RVD_FRONT->search_clone(
+    my $domain_clone2 = rvd_front->search_clone(
          id_base => $domain->id,
         id_owner => user_admin->id
     );
@@ -1132,18 +1178,11 @@ sub test_private_base {
     my $clone_name = new_domain_name();
 
     my $clone;
-    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
-    like($@,qr(private)) or exit;
-
-    my $clone2 = $vm->search_domain($clone_name);
-    ok(!$clone2,"Expecting no clone");
-    $clone2->remove(user_admin) if $clone2;
-
     # admin can clone
     eval { $clone = $domain->clone(user => user_admin, name => $clone_name); };
     is($@,'');
 
-    $clone2 = $vm->search_domain($clone_name);
+    my $clone2 = $vm->search_domain($clone_name);
     ok($clone2,"Expecting a clone");
     $clone->remove(user_admin)  if $clone;
 
@@ -1156,13 +1195,39 @@ sub test_private_base {
     ok($clone2,"Expecting a clone");
     $clone->remove(user_admin)  if $clone;
 
-    # hide it again
-    $domain->is_public(0);
-    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
-    like($@,qr(.));
+}
 
-    $clone2 = $vm->search_domain($clone_name);
-    ok(!$clone2,"Expecting no clone");
+sub test_enforce_limits($domain, $n_expected, $user=user_admin) {
+    # let's try for a while to check if one machine is shutdown because
+    # it is over limit
+    delete_request('enforce_limits');
+    wait_request();
+    for my $n ( 1 .. 10 ) {
+        if (!$domain->is_active()) {
+            $domain->start(user =>$user, remote_ip => '1.2.3.4');
+            wait_request(skip => [], debug => 0 );
+        }
+        my $req;
+        for my $m ( 1 .. 10 ) {
+            my @list = rvd_back->list_domains(user => $user, active => 1);
+            return if scalar(@list)<=$n_expected ;
+            $req = Ravada::Request->enforce_limits(_force => 1);
+            last if $req;
+            sleep 1;
+        }
+        my @list = rvd_back->list_domains(user => $user, active => 1);
+        return if scalar(@list)<=$n_expected ;
+        wait_request( request => $req, debug => 0);
+        next if $req->status ne 'done';
+        is($req->status,'done');
+        if ($req->error && $req->error =~ /run recently/) {
+            delete_request('enforce_limits');
+            next;
+        }
+        ok(!$req->error,"Expecting no error on ".$req->command." got ".($req->error or ''));
+        @list = rvd_back->list_domains(user => $user, active => 1);
+        return if scalar(@list)<=$n_expected ;
+    }
 }
 
 sub test_prepare_fail($vm) {
@@ -1274,7 +1339,11 @@ sub test_change_display_settings_kvm($domain) {
                 ,data => { $driver_name => $option->{value} , driver => $display->{driver} }
                 ,index => 0
             );
-            wait_request(debug => 0);
+            for ( 1 .. 10 ) {
+                wait_request(debug => 0);
+                last if $req->status eq 'done';
+                sleep 1;
+            }
             is($req->status, 'done');
             is($req->error,'') or exit;
             my @display = $domain->_get_controller_display();
@@ -1298,9 +1367,16 @@ sub test_exposed_port($domain, $driver) {
 }
 
 sub test_display_drivers($vm, $remove) {
+    diag("test display drivers, remove after=$remove");
     my $domain = $BASE->clone(name => new_domain_name(), user => user_admin);
+    my $domain2 = rvd_back->search_domain($domain->name);
+    ok($domain2) or exit;
+    my $domain3 = Ravada::Domain->open($domain->id);
+    ok($domain3) or exit;
 
-    for ( 0 .. scalar($domain->_get_controller_display())-1) {
+    for my $index ( 0 .. scalar($domain->_get_controller_display())-1) {
+        my $display = $domain->_get_display_by_index($index);
+        next if $display->{driver} =~ /-tls$/;
         Ravada::Request->remove_hardware(
             uid => user_admin->id
             ,id_domain => $domain->id
@@ -1311,16 +1387,23 @@ sub test_display_drivers($vm, $remove) {
     wait_request(debug => 0);
     my $n_displays=0;
     for my $driver ( @{$domain->info(user_admin)->{drivers}->{display}} ) {
+        diag("adding display $driver");
+        $domain->display_info(user_admin);
+        next if $domain->_get_display($driver);
         my $req = Ravada::Request->add_hardware(
             uid => user_admin->id
             ,id_domain => $domain->id
             ,name => 'display'
             ,data => { driver => $driver }
         );
+        Ravada::Request->start_domain(uid => user_admin->id
+            ,id_domain => $domain->id
+        );
         wait_request(debug => 0);
         is($req->status, 'done');
-        is($req->error, '');
+        is($req->error, '') or die $domain->name;
         $n_displays++;
+        $n_displays++ if $driver =~ /spice/ && $TLS;
         test_displays_added_on_refresh($domain, $n_displays, 0);
 
         test_exposed_port($domain, $driver);
@@ -1333,20 +1416,23 @@ sub test_display_drivers($vm, $remove) {
 
         test_displays_added_on_refresh($domain, $n_displays, 0);
 
-        $domain->start(user => user_admin, remote_ip => '1.2.3.5');
-        wait_request(debug => 0);
+        wait_request();
         $domain->shutdown(user => user_admin, timeout => 10);
         if ($remove) {
-            Ravada::Request->remove_hardware(
+            delete_request_not_done('add_hardware', 'remove_hardware');
+            my $req_r = Ravada::Request->remove_hardware(
                 uid => user_admin->id
                 ,id_domain => $domain->id
                 ,name => 'display'
                 ,index => 0
             );
-            $n_displays--;
             wait_request(debug => 0);
+            is($req_r->status,'done');
+            like($req_r->error,qr/^$|display.*not found|only \d+ found/);
+            $n_displays = scalar(@{$domain->info(user_admin)->{hardware}->{display}});
         }
     }
+    delete_request('add_hardware','refresh_machine','remove_hardware');
     my $displays0 = $domain->info(user_admin)->{hardware}->{display};
     my $req = Ravada::Request->add_hardware(
         uid => user_admin->id
@@ -1359,7 +1445,8 @@ sub test_display_drivers($vm, $remove) {
     like($req->error, qr/unknown/i);
 
     my $displays1 = $domain->info(user_admin)->{hardware}->{display};
-    is(scalar(@$displays1),scalar(@$displays0)) or exit;
+    ok(!grep({$_->{driver} eq 'fail' } @$displays1),Dumper( $domain->name, $displays1))
+        or exit;
 
     $domain->remove(user_admin);
 }
@@ -1396,13 +1483,17 @@ sub test_display_conflict($vm) {
     is($req->status,'done');
 
     my $port = $domain->exposed_port(22);
-    my $sth = connector->dbh->prepare("UPDATE domain_ports SET public_port=? "
+    my $sth = connector->dbh->prepare("UPDATE domain_ports SET public_port=NULL "
+        ." WHERE public_port=?");
+    $sth->execute($display_builtin->{port});
+
+    $sth = connector->dbh->prepare("UPDATE domain_ports SET public_port=? "
         ." WHERE id=?");
     $sth->execute($display_builtin->{port},$port->{id});
 
     $sth = connector->dbh->prepare("UPDATE domain_displays SET port=? "
-        ." WHERE id_domain=?");
-    $sth->execute($display_builtin->{port},$domain->id);
+        ." WHERE id_domain=? AND driver=?");
+    $sth->execute($display_builtin->{port},$domain->id, 'x2go');
 
     my $port2 = $domain->exposed_port(22);
     is($port2->{public_port},$display_builtin->{port});
@@ -1418,7 +1509,13 @@ sub test_display_conflict($vm) {
     is($display->[0]->{is_active},1);
     is($display->[1]->{is_active},1);
 
-    my $port3 = $domain->exposed_port(22);
+    my $port3;
+    for ( 1 .. 10 ) {
+        $port3 = $domain->exposed_port(22);
+        last if $port3->{public_port} && $port3->{public_port} != $display_builtin->{port};
+        Ravada::Request->refresh_machine(uid => user_admin->id ,id_domain => $domain->id);
+        wait_request(debug => 0);
+    }
     isnt($port3->{public_port},$display_builtin->{port}) or die;
 
     $domain->remove(user_admin);
@@ -1428,10 +1525,11 @@ sub test_display_conflict($vm) {
 sub _next_port_builtin($domain0) {
     $domain0->start(user => user_admin, remote_ip => '1.2.3.4');
     my $displays = $domain0->info(user_admin)->{hardware}->{display};
-    my $next_port_builtin = $displays->[0]->{port};
-
-    $next_port_builtin = $displays->[0]->{extra}->{tls_port}
-    if $displays->[0]->{extra}->{tls_port};
+    my $next_port_builtin = 0;
+    for my $display (@$displays) {
+        $next_port_builtin = $display->{port}
+        if $display->{port} > $next_port_builtin;
+    }
 
     $next_port_builtin++;
     diag("Next port builtin will  be $next_port_builtin");
@@ -1440,7 +1538,11 @@ sub _next_port_builtin($domain0) {
 }
 
 sub _set_public_exposed($domain, $port) {
-    my $sth = $domain->_dbh->prepare("UPDATE domain_ports "
+    my $sth = $domain->_dbh->prepare("UPDATE domain_ports set public_port=NULL "
+        ." WHERE public_port=?");
+    $sth->execute($port);
+
+    $sth = $domain->_dbh->prepare("UPDATE domain_ports "
         ." SET public_port=? "
         ." WHERE id_domain=?"
     );
@@ -1465,19 +1567,25 @@ sub _add_hardware($domain, $name, $data) {
 
 sub _conflict_port($domain1, $port_conflict) {
     my @domains;
+    COUNT:
     for my $n ( 1 .. 100) {
         my $domain = $BASE->clone(name => new_domain_name, user => user_admin, memory => 128*1024);
         push @domains,($domain);
         $domain->start(user => user_admin, remote_ip => '2.3.4.'.$n);
         delete_request('set_time');
         wait_request( debug => 0 );
-        my $displays = $domain->info(user_admin)->{hardware}->{display};
-        my $current_port = $displays->[0]->{port};
-        last if $current_port >= $port_conflict;
+        for my $d (@{$domain->info(user_admin)->{hardware}->{display}}) {
+            last COUNT if $d->{port} >= $port_conflict;
+        }
     }
-    Ravada::Request->refresh_machine_ports(uid => user_admin->id
-        ,id_domain => $domain1->id
-    );
+    my $req;
+    for ( 1 .. 100 ) {
+        $req = Ravada::Request->refresh_machine_ports(uid => user_admin->id
+            ,id_domain => $domain1->id
+        );
+        last if $req;
+        sleep 1;
+    }
     wait_request( debug => 0 );
 
     return @domains;
@@ -1500,9 +1608,11 @@ sub _check_iptables_fixed_conflict($vm, $port) {
 }
 
 sub test_display_conflict_next($vm) {
+    rvd_back->setting("/backend/expose_port_min" => 5900 );
     my $domain0 = $BASE->clone(name => new_domain_name, user => user_admin, memory =>128*1024);
+    $domain0->_reset_free_port() if $vm->type eq 'Void';
     my $next_port_builtin = _next_port_builtin($domain0);
-    $Ravada::VM::FREE_PORT= $next_port_builtin+3;
+    rvd_back->setting('/backend/expose_port_min' => $next_port_builtin+3);
 
     my $domain1 = $BASE->clone(name => new_domain_name, user => user_admin, memory => 128*1024);
     _add_hardware($domain1, 'display', { driver => 'x2go'} );
@@ -1510,18 +1620,47 @@ sub test_display_conflict_next($vm) {
     _set_public_exposed($domain1, $next_port_builtin);
 
     $domain1->start(user => user_admin, remote_ip => '2.3.4.5');
+    delete_request('set_time');
+    for ( 1 .. 30 ) {
+        last if $domain1->ip;
+        sleep 1;
+    }
     wait_request(debug => 0);
-    my $displays1 = $domain1->info(user_admin)->{hardware}->{display};
-    isnt($displays1->[1]->{port}, $next_port_builtin);
+    my $displays1;
+    my $port_conflict;
 
-    # Now conflict x2go with next builtin display
-    my $port_conflict = $displays1->[1]->{port};
+    for ( 1 .. 10 ) {
+        $displays1 = $domain1->info(user_admin)->{hardware}->{display};
+        isnt($displays1->[1+$TLS]->{port}, $next_port_builtin);
+
+        # Now conflict x2go with next builtin display
+        my ($display_x2go) = grep { $_->{driver} eq 'x2go' } @$displays1;
+        $port_conflict = $display_x2go->{port};
+        last if $port_conflict;
+        wait_request();
+    }
+    confess if !defined $port_conflict;
+
     my @domains = _conflict_port($domain1, $port_conflict);
 
+    my $display_x2go_b;
     my $displays1b
     = $domain1->info(user_admin)->{hardware}->{display};
-    isnt($displays1b->[1]->{port}, $port_conflict) or die;
-    like($displays1b->[1]->{port},qr/^\d+$/);
+    for ( 1 .. 10 ) {
+        ($display_x2go_b) = grep { $_->{driver} eq 'x2go' } @$displays1b;
+        last if $display_x2go_b->{port};
+        Ravada::Request->refresh_machine(id_domain => $domain1->id, uid => user_admin->id);
+        sleep 1;
+        wait_request();
+    }
+    isnt($display_x2go_b->{port}, $port_conflict,
+        $domain1->id." ".$domain1->name)
+        or die Dumper(
+            $domain1->id
+            ,$domain1->name
+            ,[map { [$_->{id}, $_->{driver},$_->{port}]} @$displays1b ]
+        );
+    like($display_x2go_b->{port},qr/^\d+$/);
 
     _check_iptables_fixed_conflict($vm, $port_conflict) if !$<;
 
@@ -1559,10 +1698,13 @@ sub test_display_conflict_non_builtin($vm) {
     #    my $sth = connector->dbh->prepare("UPDATE domain_ports SET public_port=? "
     #    ." WHERE id=?");
     # $sth->execute($display1b->{port},$port->{id});
-
-    my $sth = $clone1->_dbh->prepare("UPDATE domain_displays SET port=? "
+    my $sth = $clone1->_dbh->prepare("UPDATE domain_displays SET port=NULL "
         ." WHERE id_domain=?");
-    $sth->execute($display1b->{port},$clone1->id);
+    $sth->execute($clone1->id);
+
+    $sth = $clone1->_dbh->prepare("UPDATE domain_displays SET port=? "
+        ." WHERE id=?");
+    $sth->execute($display1b->{port},$display1a->{id});
 
     $clone0->shutdown(user => user_admin, timeout => 30);
     $clone1->shutdown(user => user_admin, timeout => 30);
@@ -1575,10 +1717,11 @@ sub test_display_conflict_non_builtin($vm) {
 
     my $display0 = $clone0->info(user_admin)->{hardware}->{display};
     my $display1 = $clone1->info(user_admin)->{hardware}->{display};
+    wait_request(debug => 0);
     for my $d0 (@$display0 ) {
         for my $d1 (@$display1) {
             isnt($d0->{port},$d1->{port},$clone0->name." $d0->{driver}"
-                ." - ".$clone1->name." $d1->{driver}");
+                ." - ".$clone1->name." $d1->{driver}") or exit;
         }
     }
 
@@ -1588,6 +1731,7 @@ sub test_display_conflict_non_builtin($vm) {
 }
 
 sub test_display_in_clone_kvm($clone, $driver) {
+    $driver =~ s/-tls$//;
     my $doc = XML::LibXML->load_xml(string => $clone->domain->get_xml_description);
     my ($display) = $doc->findnodes("/domain/devices/graphics\[\@type='$driver']");
     ok($display,"Expecting $driver display in ".$clone->name);
@@ -1641,7 +1785,7 @@ sub test_removed_leftover($vm) {
     );
     wait_request(debug => 0);
     is($req->status,'done');
-    is($req->error,'');
+    is($req->error,'') or die $domain->name;
 
     $domain->remove(user_admin);
     Test::Ravada::_check_leftovers();
@@ -1651,22 +1795,38 @@ sub test_removed_leftover($vm) {
 
 #######################################################################33
 
+for my $db ( 'mysql', 'sqlite' ) {
+    next if $> && $db eq 'mysql';
+    if ($db eq 'mysql') {
+        init('/etc/ravada.conf',0, 1);
+        if ( !ping_backend() ) {
+            diag("no backend");
+            next;
+        }
+        $Test::Ravada::BACKGROUND=1;
+        remove_old_domains_req(1,1);
+        wait_request( debug => 0);
+    } elsif ( $db eq 'sqlite') {
+        init(undef, 1,1); # flush
+        $Test::Ravada::BACKGROUND=0;
+    }
+    is(user_admin->can_grant(),1) or die user_admin->name." ".user_admin->id;
+    clean();
+    is(user_admin->can_grant(),1) or die user_admin->name." ".user_admin->id;
 
-remove_old_domains();
-remove_old_disks();
+    $USER = create_user(new_domain_name(),"bar");
+    rvd_back->setting('/backend/debug_ports' => 0);
 
 for my $vm_name ( vm_names() ) {
 
-    diag("Testing $vm_name VM");
+    diag("Testing $vm_name VM $db");
     my $CLASS= "Ravada::VM::$vm_name";
-
-
-    my $RAVADA;
-    eval { $RAVADA = Ravada->new(@ARG_RVD) };
 
     my $vm;
 
-    eval { $vm = $RAVADA->search_vm($vm_name) } if $RAVADA;
+    $TLS = 0;
+    eval { $vm = rvd_back->search_vm($vm_name) };
+    $TLS = 1 if check_libvirt_tls() && $vm_name eq 'KVM';
 
     SKIP: {
         my $msg = "SKIPPED test: No $vm_name VM found ";
@@ -1679,12 +1839,19 @@ for my $vm_name ( vm_names() ) {
         skip $msg,10    if !$vm;
 
         use_ok($CLASS);
-        if ($vm_name eq 'KVM') {
-            $BASE = import_domain($vm,'zz-test-base-alpine');
+        if ($vm_name eq 'KVM' ) {
+            $BASE = rvd_back->search_domain('zz-test-base-alpine');
+            $BASE = import_domain($vm,'zz-test-base-alpine') if !$BASE;
         } else {
             $BASE = create_domain($vm);
         }
         flush_rules() if !$<;
+
+        test_change_display_settings($vm);
+        test_display_drivers($vm,0);
+        test_display_drivers($vm,1); #remove after testing display type
+        test_display_info($vm);
+        test_display_conflict_next($vm);
 
         test_display_iptables($vm);
 
@@ -1693,7 +1860,6 @@ for my $vm_name ( vm_names() ) {
 
         test_removed_leftover($vm);
 
-        test_display_conflict_next($vm);# if $vm_name ne 'Void';
         test_display_conflict_non_builtin($vm);
 
         test_display_info($vm);
@@ -1711,7 +1877,6 @@ for my $vm_name ( vm_names() ) {
 
         test_prepare_chained($vm);
         test_prepare_fail($vm);
-
 
         test_prepare_base_with_cd($vm);
         test_clone_with_cd($vm);
@@ -1743,8 +1908,10 @@ for my $vm_name ( vm_names() ) {
         test_prepare_base($vm_name, $domain2 , 2);
         $domain2->remove( user_admin );
 
+        NEXT:
         $BASE->remove(user_admin) if $vm_name eq 'Void';
     }
+}
 }
 
 end();

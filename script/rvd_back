@@ -16,6 +16,9 @@ use Ravada::Auth::SQL;
 use Ravada::Auth::LDAP;
 use Ravada::Utils;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 $|=1;
 
 my $help;
@@ -28,6 +31,9 @@ my $FILE_CONFIG_DEFAULT = "/etc/ravada.conf";
 my $FILE_CONFIG;
 
 my $ADD_USER_LDAP;
+my $ADD_GROUP_LDAP;
+my $RM_GROUP_LDAP;
+my $ADD_USER_GROUP;
 my $REMOVE_USER;
 my $IMPORT_DOMAIN;
 my $IMPORT_VBOX;
@@ -37,6 +43,7 @@ my $MAKE_ADMIN_USER;
 my $REMOVE_ADMIN_USER;
 my $START = 1;
 my $TEST_LDAP;
+my $CLEAN_DB_LEFTOVERS;
 
 my $URL_ISOS;
 my $ALL;
@@ -65,10 +72,14 @@ my $USAGE = "$0 "
         ." [-X] [start|stop|status]"
         ." [--rebase MACHINE]"
         ." [--remove-user=name]"
+        ." [--clean-db-leftovers]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
         ." --remove-user : removes a db user\n"
+        ." --add-group-ldap : creates a new LDAP group\n"
+        ." --remove-group-ldap : removes a LDAP group\n"
+        ." --add-user-group : adds user to a LDAP group\n"
         ." --change-password : changes the password of an user\n"
         ." --import-domain : import a domain\n"
         ." --import-domain-owner : owner of the domain to import\n"
@@ -93,6 +104,8 @@ my $USAGE = "$0 "
         ." --hibernated: execute on hibernated machines\n"
         ." --disconnected: execute on disconnected machines\n"
         ." --active: execute on active running machines\n"
+        ."Maintenance operations:\n"
+        ." --clean-db-leftovers: properly clean database unreferenced entries\n"
         ."\n"
     ;
 
@@ -121,6 +134,10 @@ GetOptions (       help => \$help
       ,'remove-admin=s' => \$REMOVE_ADMIN_USER
       ,'change-password'=> \$CHANGE_PASSWORD
       ,'add-user-ldap=s'=> \$ADD_USER_LDAP
+     ,'add-group-ldap=s'=> \$ADD_GROUP_LDAP
+  ,'remove-group-ldap=s'=> \$RM_GROUP_LDAP
+     ,'add-user-group=s'=> \$ADD_USER_GROUP
+
       ,'import-domain=s' => \$IMPORT_DOMAIN
       ,'import-vbox=s' => \$IMPORT_VBOX
 ,'import-domain-owner=s' => \$IMPORT_DOMAIN_OWNER
@@ -129,6 +146,8 @@ GetOptions (       help => \$help
     ,'run-request=s' => \$RUN_REQUEST
 
         ,'migrate=s'    => \$MIGRATE
+
+        ,"clean-db-leftovers" => \$CLEAN_DB_LEFTOVERS
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
@@ -184,9 +203,9 @@ sub do_start {
     #Ravada::Request->refresh_vms();
     for (;;) {
         my $t0 = time;
-        $ravada->process_priority_requests();
-        $ravada->process_long_requests();
-        $ravada->process_requests();
+        $ravada->process_priority_requests()
+            or $ravada->process_long_requests()
+            or $ravada->process_requests();
 		$ravada->set_debug_value();
         exit if done_request();
 
@@ -243,9 +262,6 @@ sub start {
         $Ravada::CONNECTOR->dbh;
         $ravada->_install();
 		$ravada->set_debug_value();
-        for my $vm (@{$ravada->vm}) {
-            $vm->id;
-        }
         $ravada->_wait_pids();
         autostart_machines($ravada);
     }
@@ -288,8 +304,83 @@ sub add_user_ldap {
     my $password = <STDIN>;
     chomp $password;
 
-    Ravada::Auth::LDAP::add_user($login, $password);
+    Ravada::Auth::LDAP::add_user_posix(name => $login, password => $password);
 }
+
+sub add_group_ldap {
+    my $login = shift;
+
+    my $ravada = Ravada->new( %CONFIG);
+    Ravada::Auth::LDAP::_init_ldap_admin();
+    Ravada::Auth::LDAP::add_group($login);
+}
+
+sub remove_group_ldap {
+    my $login = shift;
+
+    my $ravada = Ravada->new( %CONFIG);
+    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    my $group = Ravada::Auth::LDAP::search_group( name => $login )
+        or die "Error: LDAP group '$login' not found\n";
+
+    $group->delete()->update($ldap);
+
+    print "LDAP group ".$group->dn." removed.\n";
+    exit 0;
+}
+
+
+sub add_user_group {
+    my $ravada = shift;
+    my $login = shift;
+
+    my $user = Ravada::Auth::SQL->new(name => $login);
+    die "Error: Unknown user '$login'\n" if !$user->id;
+
+    die "Error: User authentication is not external\n"
+    if !$user->is_external;
+
+    die "Error: User authentication is not LDAP : ".($user->external_auth)
+        if $user->external_auth !~ /LDAP/i;
+
+    _show_ldap_group_membership($login);
+
+    print "Add user to LDAP group: ";
+    my $new_group = <stdin>;
+    chomp $new_group;
+
+    my @groups = Ravada::Auth::LDAP::search_group( name => '*' );
+    my ($group_ldap) = grep {$_->get_value('cn') eq $new_group } @groups;
+    die "Error: group $new_group doesn't exist\n"
+    unless $group_ldap;
+
+    my $mesg  = $group_ldap->add(memberUid => $login)
+    ->update(Ravada::Auth::LDAP::_init_ldap_admin());
+
+    if ($mesg->code) {
+        die "Error: adding $login to $new_group ".$mesg->error;
+    }
+
+    _show_ldap_group_membership($login);
+}
+
+sub _show_ldap_group_membership($user_name) {
+    my $member = 0;
+    my @groups = Ravada::Auth::LDAP::search_group( name => '*' );
+    print "Groups:\n";
+    for my $group ( sort { $a->get_value('cn') cmp $b->get_value('cn') } @groups ) {
+        print " - ".$group->get_value('cn'). " : ";
+        my @member = $group->get_value('memberUid');
+        if ( grep /^$user_name$/,@member ) {
+            $member++;
+            print "YES";
+        }
+        print "\n";
+    }
+    print "  $user_name is member of $member groups\n";
+
+}
+
 
 sub remove_user {
     my $login = shift;
@@ -599,9 +690,21 @@ sub test_ldap {
     print "password: ";
     my $password = <STDIN>;
     chomp $password;
-    my $ok= Ravada::Auth::login( $name, $password);
+    my $ok= Ravada::Auth::LDAP->new(name => $name, password => $password);
     if ($ok) {
-        print "LOGIN OK $ok->{_auth}\n";
+        if (!$ok->{_ldap_entry}) {
+            warn "No LDAP data found ".Dumper($ok->{_data});
+        } else {
+            print "LOGIN OK $ok->{_auth}\n";
+            print $ok->{_ldap_entry}->dn."\n";
+            for my $attrib (sort $ok->{_ldap_entry}->attributes ) {
+                my @value = $ok->{_ldap_entry}->get_value($attrib);
+                print "$attrib: ";
+                print join(",",@value);
+                print "\n";
+            }
+
+        }
     } else {
         print "LOGIN FAILED\n";
     }
@@ -703,6 +806,11 @@ sub migrate($node_name) {
     }
 }
 
+sub clean_db_leftovers {
+    my $rvd_back = shift;
+    $rvd_back->_clean_db_leftovers();
+}
+
 sub DESTROY {
 }
 
@@ -714,6 +822,9 @@ my $rvd_back = Ravada->new(%CONFIG);
 
 add_user($ADD_USER)                 if $ADD_USER;
 add_user_ldap($ADD_USER_LDAP)       if $ADD_USER_LDAP;
+add_group_ldap($ADD_GROUP_LDAP)     if $ADD_GROUP_LDAP;
+remove_group_ldap($RM_GROUP_LDAP)   if $RM_GROUP_LDAP;
+add_user_group($rvd_back, $ADD_USER_GROUP)     if $ADD_USER_GROUP;
 remove_user($REMOVE_USER)           if $REMOVE_USER;
 change_password()                   if $CHANGE_PASSWORD;
 import_domain($IMPORT_DOMAIN)       if $IMPORT_DOMAIN;
@@ -737,6 +848,8 @@ add_locale_repository($ADD_LOCALE_REPOSITORY) if $ADD_LOCALE_REPOSITORY;
 run_request($RUN_REQUEST)           if $RUN_REQUEST;
 
 migrate($MIGRATE)                   if $MIGRATE;
+
+clean_db_leftovers($rvd_back)       if $CLEAN_DB_LEFTOVERS;
 }
 
 

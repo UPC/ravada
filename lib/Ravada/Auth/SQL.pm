@@ -166,9 +166,6 @@ sub add_user {
 
 sub _search_id_grant($self, $type) {
 
-    return $self->{_grant_id}->{$type}
-        if exists $self->{_grant_id}->{$type};
-
     $self->_load_grants();
 
     my @names = $self->_grant_alternate_name($type);
@@ -180,8 +177,6 @@ sub _search_id_grant($self, $type) {
     $sth->finish;
 
     confess "Unknown grant $type\n".Dumper($self->{_grant_alias}, $self->{_grant})   if !$id;
-
-    $self->{_grant_id}->{$type} = $id;
 
     return $id;
 }
@@ -379,7 +374,10 @@ sub is_operator {
             || $self->can_list_clones()
             || $self->can_list_clones_from_own_base()
             || $self->can_list_machines()
-            || $self->is_user_manager();
+            || $self->is_user_manager()
+            || $self->can_view_groups()
+            || $self->can_manage_groups()
+    ;
     return 0;
 }
 
@@ -498,6 +496,24 @@ sub id {
     return $id;
 }
 
+=head2 password_will_be_changed
+
+Returns true if user password will be changed
+
+    $user->password_will_be_changed();
+
+=cut
+
+sub password_will_be_changed {
+    my $self = shift;
+
+    _init_connector();
+
+    my $sth = $$CON->dbh->prepare("SELECT change_password FROM users WHERE name=?");
+    $sth->execute($self->name);
+    return $sth->fetchrow();
+}
+
 =head2 change_password
 
 Changes the password of an User
@@ -511,14 +527,22 @@ Arguments: password
 sub change_password {
     my $self = shift;
     my $password = shift or die "ERROR: password required\n";
+    my ($force_change_password) = @_;
 
     _init_connector();
 
     die "Password too small" if length($password)<6;
 
-    my $sth= $$CON->dbh->prepare("UPDATE users set password=?"
-        ." WHERE name=?");
-    $sth->execute(sha1_hex($password), $self->name);
+    my $sth;
+    if (defined($force_change_password)) {
+        $sth= $$CON->dbh->prepare("UPDATE users set password=?, change_password=?"
+            ." WHERE name=?");
+        $sth->execute(sha1_hex($password), $force_change_password ? 1 : 0, $self->name);
+    } else {
+        my $sth= $$CON->dbh->prepare("UPDATE users set password=?"
+            ." WHERE name=?");
+        $sth->execute(sha1_hex($password), $self->name);
+    }
 }
 
 =head2 compare_password
@@ -675,6 +699,8 @@ sub _load_grants($self) {
     $self->_load_aliases();
     return if exists $self->{_grant};
 
+    _init_connector();
+
     my $sth;
     eval { $sth= $$CON->dbh->prepare(
         "SELECT gt.name, gu.allowed, gt.enabled, gt.is_int"
@@ -773,14 +799,19 @@ Grant an user all the permissions
 
 sub grant_admin_permissions($self,$user) {
     my $sth = $$CON->dbh->prepare(
-            "SELECT name FROM grant_types "
+            "SELECT name,default_admin FROM grant_types"
             ." WHERE enabled=1"
+            ." ORDER BY name"
     );
     $sth->execute();
-    while ( my ($name) = $sth->fetchrow) {
-        $self->grant($user,$name);
+    my $grant_found=0;
+    while ( my ($name, $default_admin) = $sth->fetchrow) {
+        $default_admin=1 if !defined $default_admin;
+        $self->grant($user,$name,$default_admin);
+        $grant_found++ if $name eq'grant';
     }
     $sth->finish;
+    confess if !$grant_found;
 }
 
 =head2 revoke_all_permissions
@@ -824,14 +855,13 @@ sub grant($self,$user,$permission,$value=1) {
             .Dumper(\@perms);
     }
 
-    return 0 if !$value && !$user->can_do($permission);
-
     my $value_sql = $user->can_do($permission);
+    return 0 if !$value && !$value_sql;
     return $value if defined $value_sql && $value_sql eq $value;
 
     $permission = $self->_grant_alias($permission);
     my $id_grant = $self->_search_id_grant($permission);
-    if (! defined $user->can_do($permission)) {
+    if (! defined $value_sql) {
         my $sth = $$CON->dbh->prepare(
             "INSERT INTO grants_user "
             ." (id_grant, id_user, allowed)"

@@ -17,7 +17,6 @@ CREATE TABLE `domains` (
 ,  `description` text
 ,  `start_time` integer not null default 0
 ,  `status` varchar(32) default 'shutdown'
-,  `display` varchar(128) default NULL
 ,  `info` varchar(255) default NULL
 ,  `internal_id` varchar(64) DEFAULT NULL
 ,  `needs_resetart`int not null default 0

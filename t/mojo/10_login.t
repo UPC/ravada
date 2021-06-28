@@ -128,7 +128,9 @@ sub test_iptables_clones($base) {
             next;
         }
         my $clone = Ravada::Front::Domain->open($clone_data->{id});
+        wait_request();
         my $displays = $clone->info(user_admin)->{hardware}->{display};
+        wait_request();
         for my $display (@$displays) {
             for my $port ($display->{port}, $display->{extra}->{tls_port}) {
                 next if !defined $port;
@@ -178,7 +180,7 @@ sub test_login_fail {
     $t->post_ok('/login' => form => {login => "fail", password => 'bigtime'});
     is($t->tx->res->code(),403);
     $t->get_ok("/admin/machines")->status_is(401);
-    is($t->tx->res->dom->at("button#submit")->text,'Login') or exit;
+    like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
 
     login( user_admin->name, "$$ $$");
 
@@ -186,7 +188,7 @@ sub test_login_fail {
     is($t->tx->res->code(),403);
 
     $t->get_ok("/admin/machines")->status_is(401);
-    is($t->tx->res->dom->at("button#submit")->text,'Login') or exit;
+    like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
 }
 
 sub test_validate_html($url) {
@@ -253,6 +255,7 @@ sub _check_html_lint($url, $content, $option = {}) {
             || $error->errtext =~ /Unknown attribute "(charset|crossorigin|integrity)/
             || $error->errtext =~ /Unknown attribute "image.* for tag <div/
             || $error->errtext =~ /Unknown attribute "ipaddress"/
+            || $error->errtext =~ /Unknown attribute "sizes" for tag .link/
          ) {
              next;
          }
@@ -329,6 +332,7 @@ sub _clone_and_base($vm_name, $t, $base0) {
 
     mojo_check_login($t);
     _add_displays($t, $base1);
+    mojo_check_login($t);
     mojo_request_url($t , "/machine/prepare/".$base1->id.".json");
     return $base1;
 }
@@ -341,7 +345,8 @@ sub test_clone($base1) {
     my $req = Ravada::Request->open($id_req);
     ok($req, "Expecting request on /machine/clone") or return;
     for ( ;; ) {
-        last if $req->status eq 'done';
+        last if $req->status eq 'done' && $req->error !~ /Retry.?$/;
+        warn $req->error if $req->status eq 'done';
         sleep 1;
     }
     ok($req->status,'done');
@@ -392,6 +397,7 @@ if (!ping_backend()) {
     done_testing();
     exit;
 }
+$Test::Ravada::BACKGROUND=1;
 
 $t = Test::Mojo->new($SCRIPT);
 $t->ua->inactivity_timeout(900);

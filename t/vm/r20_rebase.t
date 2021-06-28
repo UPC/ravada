@@ -95,6 +95,7 @@ sub test_rebase_3times($vm, $swap, $data, $with_cd) {
         }
     }
 
+    unload_nbd();
     $clone->remove(user_admin);
     $base1->remove(user_admin);
     $base3->remove(user_admin);
@@ -163,6 +164,7 @@ sub test_rebase_with_vols($vm, $swap0, $data0, $with_cd0, $swap1, $data1, $with_
 }
 
 sub _remove_domains(@bases) {
+    unload_nbd();
     for my $base (@bases) {
         for my $clone ($base->clones) {
             my $d_clone = Ravada::Domain->open($clone->{id});
@@ -185,87 +187,6 @@ sub test_match_vols($vols_before, $vols_after) {
     for my $key (keys %vols_before, keys %vols_after) {
         is($vols_before{$key}, $vols_after{$key}, $key) or die Dumper($vols_before, $vols_after);
     }
-}
-
-sub _mount_qcow($vm, $vol) {
-    my ($in,$out, $err);
-    if (!$MOD_NBD++) {
-        my @cmd =("/sbin/modprobe","nbd", "max_part=63");
-        run3(\@cmd, \$in, \$out, \$err);
-        die join(" ",@cmd)." : $? $err" if $?;
-    }
-    for ( 1 .. 10 ) {
-        ($out,$err) = $vm->run_command($QEMU_NBD,"-d", $DEV_NBD);
-        last if !$err;
-        sleep 1;
-        diag($err);
-    }
-    confess "qemu-nbd -d $DEV_NBD\n?:$?\n$out\n$err" if $? || $err;
-    for ( 1 .. 10 ) {
-        ($out, $err) = $vm->run_command($QEMU_NBD,"-c",$DEV_NBD, $vol);
-        last if !$err || $err !~ /(NBD socket|Unexpected end)/;
-        sleep 1;
-        diag("$_ $err");
-        ($out,$err) = $vm->run_command($QEMU_NBD,"-d", $DEV_NBD);
-    }
-    confess "qemu-nbd -c $DEV_NBD $vol\n?:$?\n$out\n$err" if $? || $err;
-    _create_part($DEV_NBD);
-    ($out, $err) = $vm->run_command("/sbin/mkfs.ext2","${DEV_NBD}p1");
-    die "Error on mkfs: $out\n $err" if $?;
-    mkdir "$MNT_RVD" if ! -e $MNT_RVD;
-    $vm->run_command("/bin/mount","${DEV_NBD}p1",$MNT_RVD);
-    exit if $?;
-}
-
-sub _create_part($dev) {
-    my @cmd = ("/sbin/fdisk","-l",$dev);
-    my ($in,$out, $err);
-    for my $retry ( 1 .. 10 ) {
-        run3(\@cmd, \$in, \$out, \$err);
-        last if !$err && $err =~ /(Input\/output error|Unexpected end-of-file)/i;
-        warn $err if $err && $retry>2;
-        sleep 1;
-    }
-    confess join(" ",@cmd)."\n$?\n$out\n$err\n" if $err || $?;
-
-    return if $out =~ m{/dev/\w+\d+p\d+}mi;
-
-    for (1 .. 10) {
-        @cmd = ("/sbin/fdisk",$dev);
-        $in = "n\np\n1\n\n\n\nw\np\n";
-
-        run3(\@cmd, \$in, \$out, \$err);
-        chomp $err;
-        last if !$err || $err !~ /evice.*busy/;
-        diag($err." retrying");
-        sleep 1;
-    }
-    ok(!$err) or die join(" ",@cmd)."\n$?\nIN: $in\nOUT:\n$out\nERR:\n$err";
-}
-sub _umount_qcow() {
-    mkdir $MNT_RVD if ! -e $MNT_RVD;
-    my @cmd = ("umount",$MNT_RVD);
-    my ($in, $out, $err);
-    for ( ;; ) {
-        run3(\@cmd, \$in, \$out, \$err);
-        last if $err !~ /busy/i || $err =~ /not mounted/;
-        sleep 1;
-    }
-    die $err if $err && $err !~ /busy/ && $err !~ /not mounted/;
-    `qemu-nbd -d $DEV_NBD`;
-}
-
-sub test_file_exists($vm, $vol, $expected=1) {
-    _mount_qcow($vm,$vol);
-    my $ok = -e $MNT_RVD."/".base_domain_name.".txt";
-    _umount_qcow();
-    return 1 if $ok && $expected;
-    return 1 if !$ok && !$expected;
-    return 0;
-}
-
-sub test_file_not_exists($vm, $vol) {
-    return test_file_exists($vm,$vol, 0);
 }
 
 sub test_rebase($vm, $swap, $data, $with_cd) {
@@ -302,6 +223,7 @@ sub test_rebase($vm, $swap, $data, $with_cd) {
     is(scalar($base->clones),1);
     is(scalar($clone1->clones),1);
 
+    unload_nbd();
     $clone2->remove(user_admin);
     $clone1->remove(user_admin);
     $base->remove(user_admin);
@@ -321,6 +243,7 @@ sub test_prepare_remove($vm) {
         next if $file =~ /\.iso$/;
         test_volume_contents($vm, "zipizape", $file);
     }
+    unload_nbd();
     $domain->remove(user_admin);
 
 }

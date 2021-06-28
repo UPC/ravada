@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html ng-app="ravada.app">
+<html ng-app="ravada.app" ng-cloak="">
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top">
 <div id="wrapper">
@@ -8,13 +8,14 @@
     $_anonymous=<%= ($_anonymous or 0) %>;
 </script>
 
-<div id="page-wrapper" ng-controller="bases" ng-init="is_admin=<%= $user->is_admin %>;anonymous=<%= $_anonymous or 0 %>;subscribe_list_machines_user('<%= url_for('ws_subscribe')->to_abs %>', $scope)">
+<div id="page-wrapper" ng-controller="bases" ng-init="is_admin=<%= $user->is_admin %>;anonymous=<%= $_anonymous or 0 %>;subscribe_ws('<%= url_for('ws_subscribe')->to_abs %>', <%= $bookings %> )">
 %= include 'main/list_bases_ng_head'
+    %= include '/ng-templates/list_next_bookings_today'
     <!--MACHINES SELECTION-->
     <div class="card-body">
     <div ng-repeat="machine in machines | orderBy: 'id_clone'"
          class="col-sm-4  d-inline-block mb-2"
-                ng-show="machine.is_public || (!machine.is_public && !only_public)">
+                ng-show="machine.is_public || (!only_public)">
         <div class="card card-success">
             <div class="card-header" id="step1" >
                 <h3 class="card-title">

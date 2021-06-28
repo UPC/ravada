@@ -63,6 +63,29 @@ sub test_fail_different_storage_pools($node) {
     like($@, qr'.');
 
     $base->remove(user_admin);
+    $vm->clone_storage_pool('');
+}
+
+sub test_fail_storage_pools_different_path($vm,$node2) {
+
+    my $sp_name = create_storage_pool($vm);
+    my $dir2="/var/tmp/".new_pool_name();
+    my $sp2 = create_storage_pool($node2,$dir2, $sp_name);
+
+    my $sp_default = $vm->default_storage_pool_name();
+    $vm->default_storage_pool_name($sp_name);
+    my $base = create_domain($vm->type);
+    $base->remove_controller('disk',1);
+
+    eval {
+        $base->migrate($node2);
+    };
+    like(''.$@, qr/Error: Storage pool.*different/,"migrating to ".$node2->name) or BAIL_OUT();
+    diag($@);
+
+    $vm->default_storage_pool_name($sp_default);
+
+    $base->remove(user_admin);
 }
 
 sub test_shared_conflict($vm, $node) {
@@ -123,6 +146,7 @@ for my $vm_name ( 'KVM' ) {
         my $node = remote_node($vm_name)  or next;
         clean_remote_node($node);
 
+        test_fail_storage_pools_different_path($vm, $node);
         test_fail_different_storage_pools($node);
 
         test_shared_conflict($vm, $node);

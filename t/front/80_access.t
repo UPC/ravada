@@ -305,14 +305,16 @@ sub test_maintenance() {
             }
         }
     };
-    rvd_front->update_settings_global($arg,user_admin);
+    my $reload = 0;
+    rvd_front->update_settings_global($arg,user_admin, \$reload);
     is(rvd_front->is_in_maintenance(),1);
     $settings = rvd_front->settings_global();
     is($settings->{frontend}->{maintenance}->{value},1);
+    is($reload, 0);
 
     #start tomorrow
     $arg->{frontend}->{maintenance_start}->{value} = '2090-02-14 13:30';
-    rvd_front->update_settings_global($arg,user_admin);
+    rvd_front->update_settings_global($arg,user_admin, \$reload);
     is(rvd_front->is_in_maintenance(),0);
 
     $settings = rvd_front->settings_global();

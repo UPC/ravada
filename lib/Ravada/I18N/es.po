@@ -118,7 +118,7 @@ msgid "Japanese"
 msgstr "Japonés"
 
 msgid "German"
-msgstr "Aleman"
+msgstr "Alemán"
 
 msgid "New Password:"
 msgstr "Nueva Contraseña:"
@@ -666,6 +666,9 @@ msgstr "MB disponible"
 msgid "The machine will shutdown after these minutes"
 msgstr "La máquina se apagará después de estos minutos"
 
+msgid "The machine will turn off after this time"
+msgstr "La máquina se apagará después de este tiempo"
+
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -731,8 +734,8 @@ msgstr "Propietario"
 msgid "Change the owner of the machine"
 msgstr "Cambiar el propietario de la máquina"
 
-msgid "Press SHIFT + F12 to exit"
-msgstr "Presione SHIFT + F12 para salir"
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Presione SHIFT + F12 para salir de la máquina virtual"
 
 msgid ""
 "If you can not see the machine screen in a few seconds check for a file "
@@ -911,3 +914,51 @@ msgstr "No se ha encontrado ninguna entrada"
 
 msgid "User name"
 msgstr "Nombre de usuario"
+
+msgid "Turkish"
+msgstr "Turco"
+
+msgid "Valencian"
+msgstr "Valenciano"
+
+msgid "ShutDown"
+msgstr "Apagar"
+
+msgid "Force ShutDown"
+msgstr "Forzar apagado"
+
+msgid "Reboot"
+msgstr "Reiniciar"
+
+msgid "Force Reboot"
+msgstr "Forzar reiniciado"
+
+msgid "Waiting for machine to start"
+msgstr "Esperando a que la máquina se ponga en marcha"
+
+msgid "This machine will shut down"
+msgstr "La máquina se apagará"
+
+msgid "Waiting for network to come up"
+msgstr "Esperando a la red"
+
+msgid "Hardware address"
+msgstr "Dirección del Hardware"
+
+msgid "Open ports"
+msgstr "Puertos abiertos"
+
+msgid "up"
+msgstr "encendida"
+
+msgid "Machine Information"
+msgstr "Información de la máquina"
+
+msgid "Internal IP"
+msgstr "IP Interna"
+
+msgid "Display"
+msgstr "Visualización"
+
+msgid "Max Memory"
+msgstr "Memoria Max"

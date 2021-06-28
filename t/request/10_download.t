@@ -22,6 +22,7 @@ if ($>)  {
 }
 
 init();
+$Ravada::CAN_FORK = 1;
 
 for my $vm_name ('KVM') {
     my $rvd_back = rvd_back();
@@ -61,6 +62,7 @@ for my $vm_name ('KVM') {
         #
         # Request for the 2nd ISO
         $id_iso = search_id_iso('Debian');
+        $vm = Ravada::VM->open($vm->id);
         my $iso2 = $vm->_search_iso($id_iso);
         if (!$iso2->{device} || ! -e $iso2->{device}) {
             $msg = "ISO for $iso2->{filename} not downloaded, I won't do it in the tests";

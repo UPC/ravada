@@ -161,6 +161,8 @@ sub test_change_hardware($vm, @nodes) {
     diag("[".$vm->type."] testing remove with ".scalar(@nodes)." node ".join(",",map { $_->name } @nodes));
     my $domain = create_domain($vm);
     my $clone = $domain->clone(name => new_domain_name, user => user_admin);
+    $clone->add_volume(size => 128*1024 , type => 'data');
+    my @volumes = $clone->list_volumes();
 
     for my $node (@nodes) {
         for ( 1 .. 10 ) {
@@ -183,12 +185,17 @@ sub test_change_hardware($vm, @nodes) {
     for my $hardware ( sort keys %{$info->{hardware}} ) {
         $devices{$hardware} = scalar(@{$info->{hardware}->{$hardware}});
     }
-    for my $hardware ( sort keys %{$info->{hardware}} ) {
+    my @hardware = grep (!/^disk$/, sort keys %{$info->{hardware}});
+    push @hardware,("disk");
+    for my $hardware ( @hardware) {
+        my $tls = 0;
+        $tls = grep {$_->{driver} =~ /-tls/} @{$info->{hardware}->{$hardware}}
+        if $hardware eq 'display';
 
         #TODO disk volumes in Void
-        next if $vm->type eq 'Void' && $hardware =~ /disk|volume/;
+        #next if $vm->type eq 'Void' && $hardware =~ /disk|volume/;
 
-        # diag("Testing remove $hardware");
+        diag("Testing remove $hardware");
 
         my $current_vm = $clone->_vm;
         $clone->remove_controller($hardware,0);
@@ -196,27 +203,31 @@ sub test_change_hardware($vm, @nodes) {
 
         my $n_expected = scalar(@{$info->{hardware}->{$hardware}})-1;
         die "Warning: no $hardware devices in ".$clone->name if $n_expected<0;
+        $n_expected-- if $hardware eq 'display' && $tls;
 
         $n_expected = 0 if $n_expected<0;
 
+        my $count_instances = $domain->list_instances();
+        is($count_instances,1+scalar(@nodes),"Expecting other instances not removed when hardware $hardware removed");
+
         for my $node ($vm, @nodes) {
             my $clone2 = $node->search_domain($clone->name);
+            ok($clone2,"Expecting clone ".$clone->name." in remote node ".$node->name
+            ." when removing $hardware") or next;
+
             my $info2 = $clone2->info(user_admin);
             my $devices2 = $info2->{hardware}->{$hardware};
             is( scalar(@$devices2),$n_expected
                 , $clone2->name.": Expecting 1 $hardware device less in instance in node ".$node->name)
-                or exit;
+                or die Dumper($devices2);
         }
 
-        is($clone->_vm->id, $current_vm->id) or exit;
-
-        my $clone3 = Ravada::Domain->open($clone->id);
-        my $info3 = $clone3->info(user_admin);
-        $devices{$hardware}--;
-        for my $item (keys %devices) {
-            is(scalar(@{$info3->{hardware}->{$item}}), $devices{$item},$item)
-                    or exit;
+        my $clone_fresh = Ravada::Domain->open($clone->id);
+        shift @volumes if $hardware eq 'disk';
+        for (@volumes) {
+            ok(-e $_,$_) or exit;
         }
+
     }
     $clone->remove(user_admin);
     $domain->remove(user_admin);

@@ -71,13 +71,18 @@ sub clone($self, $file_clone) {
     confess if $file_clone =~ /ISO/i;
 
     my $base_format = lc(Ravada::Volume::_type_from_file($self->file, $self->vm));
-    my @cmd = ($QEMU_IMG,'create'
-        ,'-F',$base_format
-        ,'-f','qcow2'
-        ,"-b", $self->file
-        ,$file_clone
-    );
-    my ($out, $err) = $self->vm->run_command(@cmd);
+    my ($out, $err);
+    for ( 1 .. 3 ) {
+        my @cmd = ($QEMU_IMG,'create'
+            ,'-F',$base_format
+            ,'-f','qcow2'
+            ,"-b", $self->file
+            ,$file_clone
+        );
+        ($out, $err) = $self->vm->run_command(@cmd);
+        last if !$err || $err !~ /Failed to get .*lock/;
+        sleep 1;
+    }
     confess $self->vm->name." ".$err if $err;
 
     return $file_clone;

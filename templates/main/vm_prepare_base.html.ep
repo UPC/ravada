@@ -17,7 +17,7 @@
                 <li ng-repeat="cdrom in machine.info.cdrom">{{cdrom}}</li>
             </ul>
             <input type="checkbox" ng-model="with_cd" name="with_cd"/>
-            <label for="with_cd">Keep the CD for the clones</label>
+            <label for="with_cd"><%=l 'Keep the CD for the clones' %></label>
         </div>
             <p><%=l 'Are you sure you want to prepare the base of' %> {{showmachine.name}}?</p>
             <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="confirm_prepare_base=false"><%=l 'No' %></button>

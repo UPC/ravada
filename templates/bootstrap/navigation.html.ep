@@ -13,12 +13,20 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
             <div class="collapse navbar-collapse justify-content-end" id="navbarNavDropdown">
             <!-- Top Menu Items -->
                 <ul class="navbar-nav">
+% if (! $forcing_change_password) {
 % if ($_logged_in) {
 % if ( !$_anonymous ) {
                     <li class="nav-item active">
                         <a class="nav-link" href="/"><i class="fa fa-fw fa-desktop"></i><%=l 'Available Machines' %></a>
                     </li>
 % }
+% if ($bookings && defined $_user && $FEATURE->{ldap} ) {
+    <li class="nav-item dropdown">
+        <a class="nav-link" href="/booking/">
+            <i class="fa fa-wrench"></i>&nbsp;<%=l 'Schedule' %></a>
+    </li>
+% }
+
 % if (defined $_user && $_user->is_operator ) {
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -27,9 +35,14 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
                             <a class="dropdown-item" href="/admin/machines"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp;<%=l 'machines' %></a>
 % if ($_user->is_admin || $_user->can_grant || $_user->can_manage_users) {
                             <a class="dropdown-item" href="/admin/users"><i class="fa fa-user" aria-hidden="true"></i>&nbsp;<%=l 'users' %></a>
+% }
+% if ($_user->is_admin || $_user->can_view_groups || $_user->can_manage_groups ) {
+                            <a class="dropdown-item" href="/admin/groups"><i class="fa fa-users" aria-hidden="true"></i>&nbsp;<%=l 'groups' %></a>
+% }
+% if ($_user->is_admin) {
                             <a class="dropdown-item" href="/admin/nodes"><i class="fa fa-server" aria-hidden="true"></i>&nbsp;<%=l 'nodes' %></a>
                             <a class="dropdown-item" href="/admin/networks"><i class="fa fa-sitemap" aria-hidden="true"></i>&nbsp;<%=l 'networks' %></a>
-%                   }
+% }
                             <a class="dropdown-item" href="/admin/messages"><i class="fa fa-envelope" aria-hidden="true"></i>&nbsp;<%=l 'messages' %></a>
 % if ($monitoring) {
                             <a class="dropdown-item" href="/admin/monitoring"><i class="fas fa-tachometer-alt" aria-hidden="true"></i>&nbsp;<%=l 'monitoring' %></a>
@@ -59,6 +72,7 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
                             <a class="dropdown-item" href="/logout"><i class="fa fa-fw fa-power-off"></i><%=l 'Log Out' %></a>
                         </div>
                     </li>
+% }
 % }
 % }
                 </ul>

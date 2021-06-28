@@ -12,6 +12,7 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("settings_network",settings_network)
         .controller("new_node", newNodeCtrl)
         .controller("settings_global", settings_global_ctrl)
+        .controller("admin_groups", admin_groups_ctrl)
     ;
 
     ravadaApp.directive('ipaddress', function() {
@@ -312,7 +313,10 @@ ravadaApp.directive("solShowMachine", swMach)
     };
 
     $scope.action = function(target,action,machineId){
-        if (action === 'view') {
+        if (action === 'view-new-tab') {
+            window.open('/machine/view/' + machineId + '.html');
+        }
+        else if (action === 'view') {
             window.location.assign('/machine/view/' + machineId + '.html');
         }
         else {
@@ -592,7 +596,7 @@ ravadaApp.directive("solShowMachine", swMach)
         };
     };
 
-    function settings_network($scope, $http, $timeout) {
+   function settings_network($scope, $http, $timeout) {
         var url_ws;
         $scope.init = function(id_network) {
             if (typeof id_network == 'undefined') {
@@ -784,6 +788,59 @@ ravadaApp.directive("solShowMachine", swMach)
         };
     };
 
+    function admin_groups_ctrl($scope, $http) {
+        var group;
+        $scope.group_filter = '';
+        $scope.username_filter = 'a';
+        $scope.list_ldap_groups = function() {
+            $http.get('/list_ldap_groups/'+$scope.group_filter)
+                .then(function(response) {
+                    $scope.ldap_groups=response.data;
+                });
+        };
+        $scope.list_group_members = function(group_name) {
+            group = group_name;
+            $http.get('/list_ldap_group_members/'+group_name)
+                .then(function(response) {
+                    $scope.group_members=response.data;
+                });
+        };
+        $scope.list_users = function() {
+            $scope.loading_users = true;
+            $scope.error = '';
+            $http.get('/list_ldap_users/'+$scope.username_filter)
+                .then(function(response) {
+                    $scope.loading_users = false;
+                    $scope.error = response.data.error;
+                    $scope.users = response.data.entries;
+                    console.log(response.data.error);
+                });
+        };
+        $scope.add_member = function(cn) {
+            $http.post("/ldap/group/add_member/"
+              ,JSON.stringify(
+                  { 'group': group
+                    ,'cn': cn
+                  })
+              ).then(function(response) {
+                  $scope.list_group_members(group);
+                  $scope.error = response.data.error;
+            });
+        };
+        $scope.remove_member = function(dn) {
+            $http.post("/ldap/group/remove_member/"
+              ,JSON.stringify(
+                  { 'group': group
+                    ,'dn': dn
+                  })
+              ).then(function(response) {
+                  $scope.list_group_members(group);
+                  $scope.error = response.data.error;
+            });
+        };
+
+    };
+
     function settings_global_ctrl($scope, $http) {
         $scope.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         $scope.init = function() {
@@ -816,6 +873,9 @@ ravadaApp.directive("solShowMachine", swMach)
             $http.post('/settings_global'
                 ,JSON.stringify($scope.settings)
             ).then(function(response) {
+                if (response.data.reload) {
+                    window.location.reload();
+                }
             });
         };
     };

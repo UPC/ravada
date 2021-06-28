@@ -32,12 +32,16 @@ my %SUB = (
                ,list_machines => \&_list_machines
           ,list_machines_tree => \&_list_machines_tree
           ,list_machines_user => \&_list_machines_user
+          ,list_machines_user_including_privates => \&_list_machines_user_including_privates
         ,list_bases_anonymous => \&_list_bases_anonymous
                ,list_requests => \&_list_requests
                 ,machine_info => \&_get_machine_info
                    ,node_info => \&_get_node_info
                 ,ping_backend => \&_ping_backend
                      ,request => \&_request
+
+# bookings
+                 ,list_next_bookings_today => \&_list_next_bookings_today
 );
 
 our %TABLE_CHANNEL = (
@@ -49,6 +53,7 @@ our %TABLE_CHANNEL = (
 
 my $A_WHILE;
 my $LIST_MACHINES_FIRST_TIME = 1;
+my $TZ;
 ######################################################################
 
 
@@ -178,6 +183,17 @@ sub _list_machines_user($rvd, $args) {
     return $ret;
 }
 
+sub _list_machines_user_including_privates($rvd, $args) {
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login)
+        or die "Error: uknown user $login";
+
+    my $client = $args->{client};
+    my $ret = $rvd->list_machines_user($user, {client => $client});
+
+    return $ret;
+}
+
 sub _list_bases_anonymous($rvd, $args) {
     my $remote_ip = $args->{remote_ip} or die "Error: no remote_ip arg ".Dumper($args);
     return $rvd->list_bases_anonymous($remote_ip);
@@ -281,6 +297,20 @@ sub _ping_backend($rvd, $args) {
     return 1;
 }
 
+sub _now {
+     return DateTime->from_epoch( epoch => time() , time_zone => $TZ )
+}
+
+sub _list_next_bookings_today($rvd, $args) {
+
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my @ret = Ravada::Booking::bookings_range(
+        time_start => _now()->add(seconds => 1)->hms
+        , show_user_allowed => $login
+    );
+    return \@ret;
+}
+
 sub _its_been_a_while($reset=0) {
     if ($reset) {
         $A_WHILE = 0;
@@ -328,6 +358,11 @@ sub _different($var1, $var2) {
 
 sub BUILD {
     my $self = shift;
+
+    $TZ = DateTime::TimeZone->new(name => $self->ravada->settings_global()
+        ->{backend}->{time_zone}->{value})
+    if !defined $TZ;
+
     Mojo::IOLoop->recurring(1 => sub {
             for my $key ( keys %{$self->clients} ) {
                 my $ws_client = $self->clients->{$key}->{ws};
