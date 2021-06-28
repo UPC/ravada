@@ -151,7 +151,7 @@ sub _set_first_time_run($self) {
     if  ( keys %$info ) {
         $FIRST_TIME_RUN = 0;
     } else {
-        print "Installing ";
+        print "Installing " if $0 !~ /\.t$/;
     }
 }
 
