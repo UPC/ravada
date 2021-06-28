@@ -3373,11 +3373,9 @@ sub _execute {
     $self->_wait_pids;
     return if !$self->_can_fork($request);
 
-    $self->disconnect_vm();
     my $pid = fork();
     die "I can't fork" if !defined $pid;
 
-    $self->disconnect_vm();
     if ( $pid == 0 ) {
         srand();
         $self->_do_execute_command($sub, $request);
@@ -5166,7 +5164,7 @@ Returns the list of Virtual Managers
 
 sub vm($self) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id FROM vms "
+        "SELECT id FROM vms WHERE is_active=1"
     );
     $sth->execute();
     my @vms;
