@@ -1558,6 +1558,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
     $self->_upgrade_table('requests','retry','int(11) DEFAULT NULL');
+    $self->_upgrade_table('requests','args','char(255)');
 
     $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
     $self->_clean_iso_mini();
