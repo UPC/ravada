@@ -222,7 +222,7 @@ sub test_limit_change($vm, $limit) {
     is(scalar @list,2) or die Dumper([map { $_->name } @list]);
 
     my $req = Ravada::Request->enforce_limits(timeout => 1, _force => 1);
-    wait_request( debug => 1);
+    wait_request( debug => 0);
     is($req->status,'done');
     is($req->error,'');
 
@@ -249,7 +249,7 @@ sub test_limit_change($vm, $limit) {
     @list = rvd_back->list_domains(user => $user, active => 1);
     is(scalar @list,1) or warn Dumper([map { $_->name } @list]);
 
-#    user_admin->grant($user, 'start_limit', 2);
+    user_admin->grant($user, 'start_limit', 2);
     $clone1->start(user_admin);
     $clone2->start(user_admin);
     $clone3->start(user_admin);
@@ -263,7 +263,7 @@ sub test_limit_change($vm, $limit) {
     is($req->error,'');
 
     @list = rvd_back->list_domains(user => $user, active => 1);
-    is(scalar @list,2) or warn Dumper([map { $_->name } @list]);
+    is(scalar @list,2) or die Dumper([map { $_->name } @list]);
 
     remove_domain($base1, $base2, $base3);
 }
