@@ -151,7 +151,7 @@ sub _set_first_time_run($self) {
     if  ( keys %$info ) {
         $FIRST_TIME_RUN = 0;
     } else {
-        print "Installing ";
+        print "Installing " if $0 !~ /\.t$/;
     }
 }
 
@@ -1793,6 +1793,15 @@ sub _sql_create_tables($self) {
         ]
         ,
         [
+            file_base_images => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT'
+                ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
+                ,file_base_img => ' varchar(255) DEFAULT NULL'
+                ,target =>  'varchar(64) DEFAULT NULL'
+            }
+        ]
+        ,
+        [
             volumes => {
                 id => 'integer PRIMARY KEY AUTO_INCREMENT',
                 id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE',
@@ -1850,6 +1859,11 @@ sub _clean_db_leftovers($self) {
 
         $self->_delete_limit("FROM $table WHERE id_domain NOT IN "
             ." ( SELECT id FROM domains ) ");
+        ;
+    }
+    for my $table ('bases_vm' ,'domain_instances') {
+        $self->_delete_limit("FROM $table WHERE id_vm NOT IN "
+            ." ( SELECT id FROM vms) ");
         ;
     }
     for my $table ('grants_user') {
@@ -2097,7 +2111,6 @@ sub _upgrade_tables {
 #    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
 
     $self->_upgrade_table("base_xml",'xml','TEXT');
-    $self->_upgrade_table('file_base_images','target','varchar(64) DEFAULT NULL');
 
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
     $self->_upgrade_table('vms','connection_args',"text DEFAULT NULL");
@@ -2124,6 +2137,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
     $self->_upgrade_table('requests','retry','int(11) DEFAULT NULL');
+    $self->_upgrade_table('requests','args','char(255)');
 
     $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
     $self->_clean_iso_mini();
@@ -2213,6 +2227,11 @@ sub _upgrade_tables {
     $self->_upgrade_table('grant_types', 'is_int', 'int DEFAULT 0');
 
     $self->_upgrade_table('grants_user', 'id_user', 'int not null references `users` (`id`) ON DELETE CASCADE');
+
+    $self->_upgrade_table('bases_vm','id_vm','int not null references `vms` (`id`) ON DELETE CASCADE');
+    $self->_upgrade_table('bases_vm','id_domain','int not null references `domains` (`id`) ON DELETE CASCADE');
+
+    $self->_upgrade_table('domain_instances','id_vm','int not null references `vms` (`id`) ON DELETE CASCADE');
 
     $self->_upgrade_users_table();
 }
@@ -3373,11 +3392,9 @@ sub _execute {
     $self->_wait_pids;
     return if !$self->_can_fork($request);
 
-    $self->disconnect_vm();
     my $pid = fork();
     die "I can't fork" if !defined $pid;
 
-    $self->disconnect_vm();
     if ( $pid == 0 ) {
         srand();
         $self->_do_execute_command($sub, $request);
@@ -5169,7 +5186,7 @@ Returns the list of Virtual Managers
 
 sub vm($self) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id FROM vms "
+        "SELECT id FROM vms WHERE is_active=1"
     );
     $sth->execute();
     my @vms;

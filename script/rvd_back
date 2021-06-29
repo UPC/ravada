@@ -262,9 +262,6 @@ sub start {
         $Ravada::CONNECTOR->dbh;
         $ravada->_install();
 		$ravada->set_debug_value();
-        for my $vm (@{$ravada->vm}) {
-            $vm->id;
-        }
         $ravada->_wait_pids();
         autostart_machines($ravada);
     }
