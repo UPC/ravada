@@ -4,7 +4,7 @@ Architecture: all
 Section: utils
 Priority: optional
 Maintainer: Francesc Guasch <frankie@telecos.upc.edu>
-Depends: perl (>=5.18),libmojolicious-perl,mysql-common,libauthen-passphrase-perl, libdatetime-perl, libdbd-mysql-perl,libdbi-perl,libdbix-connector-perl,libipc-run3-perl,libio-stringy-perl,libnet-ldap-perl,libproc-pid-file-perl,libvirt-daemon-system,libsys-virt-perl,libxml-libxml-perl,libconfig-yaml-perl,libmoose-perl,libjson-xs-perl,qemu-utils,perlmagick,libmoosex-types-netaddr-ip-perl,libio-interface-perl,libnet-dns-perl,wget,liblocale-maketext-lexicon-perl,libmojolicious-plugin-i18n-perl,libdbd-sqlite3-perl, debconf (>= 0.2.26), adduser, libdigest-sha-perl, qemu-kvm, net-tools, libfile-rsync-perl, libnet-openssh-perl, bridge-utils, libpbkdf2-tiny-perl, libdatetime-format-dateparse-perl, libguestfs-tools
+Depends: perl (>=5.18),libmojolicious-perl,mysql-common,libauthen-passphrase-perl, libdatetime-perl, libdbd-mysql-perl,libdbi-perl,libdbix-connector-perl,libipc-run3-perl,libio-stringy-perl,libnet-ldap-perl,libproc-pid-file-perl,libvirt-daemon-system,libsys-virt-perl,libxml-libxml-perl,libconfig-yaml-perl,libmoose-perl,libjson-xs-perl,qemu-utils,perlmagick,libmoosex-types-netaddr-ip-perl,libio-interface-perl,libnet-dns-perl,wget,liblocale-maketext-lexicon-perl,libmojolicious-plugin-i18n-perl,libdbd-sqlite3-perl, debconf (>= 0.2.26), adduser, libdigest-sha-perl, qemu-kvm, net-tools, libfile-rsync-perl, libnet-openssh-perl, bridge-utils, libpbkdf2-tiny-perl, libdatetime-format-dateparse-perl, libguestfs-tools, iptstate
 Description: Remote Virtual Desktops Manager
  Ravada is a software that allows the user to connect to a
  remote virtual desktop.
