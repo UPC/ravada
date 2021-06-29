@@ -931,6 +931,7 @@ sub spinoff {
         next if !$bf;
         $volume->spinoff;
     }
+    $self->_set_volumes_backing_store() if $self->type eq 'KVM';
 }
 
 
