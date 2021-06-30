@@ -722,18 +722,19 @@ sub _scheduled_fedora_releases($self,$data) {
 }
 
 sub _add_domain_drivers_display($self) {
+    my $port_rdp = 3389;
     my %data = (
         'KVM' => [
             'spice'
             ,'vnc'
             ,{name => 'x2go', data => 22 }
-            ,{name => 'Windows RDP', value => 'rdp', data => 356}
+            ,{name => 'Windows RDP', value => 'rdp', data => $port_rdp}
         ]
         ,'Void' => [
             'void'
             ,'spice'
             ,{name => 'x2go', data => 22 }
-            ,{name => 'Windows RDP', value => 'rdp' , data => 356 }
+            ,{name => 'Windows RDP', value => 'rdp' , data => $port_rdp }
         ]
     );
 
