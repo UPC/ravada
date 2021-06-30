@@ -337,7 +337,10 @@ sub list_domains($self, %args) {
             $row->{remote_ip} = $domain->remote_ip if $row->{is_active};
             $row->{node} = $domain->_vm->name if $domain->_vm;
             $row->{remote_ip} = $domain->client_status
-                if $domain->client_status && $domain->client_status ne 'connected';
+                if $domain->client_status && $domain->client_status !~ /^connected/;
+            if  ( $domain->client_status && $domain->client_status =~ /^connected \((.*?)\)/ ) {
+                $row->{remote_ip} = $domain->remote_ip.".$1";
+            }
             $row->{autostart} = $domain->_data('autostart');
             if (!$row->{status} ) {
                 if ($row->{is_active}) {

@@ -4417,6 +4417,7 @@ sub _cmd_refresh_machine($self, $request) {
     my $is_active = $domain->is_active;
     $self->_remove_unnecessary_downs($domain) if !$is_active;
     $domain->info($user);
+    $domain->client_status(1) if $is_active;
 
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id)
     if $is_active && $domain->ip;
@@ -4432,6 +4433,7 @@ sub _cmd_refresh_machine_ports($self, $request) {
     unless $domain->_data('id_owner') ==  $user->id || $user->is_operator;
 
     $domain->refresh_ports($request);
+    $domain->client_status(1) if $domain->is_active;
 }
 
 
@@ -4893,6 +4895,7 @@ sub _refresh_active_domain($self, $domain, $active_domain) {
     $domain->_set_data(status => $status);
     $domain->info(Ravada::Utils::user_daemon)             if $is_active;
     $active_domain->{$domain->id} = $is_active;
+    $domain->client_status(1);
 
     $domain->_post_shutdown()
     if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown');
