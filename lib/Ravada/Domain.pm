@@ -931,6 +931,7 @@ sub spinoff {
         next if !$bf;
         $volume->spinoff;
     }
+    $self->_set_volumes_backing_store() if $self->type eq 'KVM';
 }
 
 
@@ -2417,6 +2418,7 @@ sub clones($self, %filter) {
 
     my $query =
         "SELECT id, id_vm, name, id_owner, status, client_status, is_pool, is_base"
+            ." ,is_volatile "
             ." FROM domains "
             ." WHERE id_base = ? ";
     my @values = ($self->id);
