@@ -10,6 +10,7 @@
 
 **Bugfixes**
 
+- Data too long for column 'args' at row [\#1569]
 - Correct calculation of is_volatile value [\#1560]
 
 **Refactor**
