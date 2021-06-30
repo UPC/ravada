@@ -1292,7 +1292,8 @@ sub _insert_display( $self, $display ) {
                 $display->{port} = $self->_vm->_new_free_port($used_port);
             }
         } else {
-            confess "Error: I don't know how to deal with duplicated $field";
+            confess "Error: I don't know how to deal with duplicated $field on ".$self->name
+            .Dumper($display);
         }
     }
     confess $@ if $@;
@@ -5247,6 +5248,8 @@ you find suitable.
 
 sub client_status($self, $force=0) {
 
+    confess "Error: can't do force on read only" if $force && $self->readonly;
+
     return $self->_data('client_status')    if $self->readonly;
 
     my $time_checked = time - $self->_data('client_status_time_checked');
@@ -5278,17 +5281,57 @@ sub _run_netstat($self, $force=undef) {
     return $out;
 }
 
-sub _client_connection_status($self, $force=undef) {
-    my $display = $self->display(Ravada::Utils::user_daemon());
-    my ($ip, $port) = $display =~ m{\w+://(.*):(\d+)};
-    die "No ip in $display" if !$ip;
+sub _run_iptstate($self, $force=undef) {
+    if (!$force && $self->_vm->{_iptstate}
+        && ( time - $self->_vm->{_iptstate_time} < $TIME_CACHE_NETSTAT+1 ) ) {
+        return $self->_vm->{_iptstate};
+    }
+    my @cmd = ("iptstate", "-1");
+    my ( $out, $err) = $self->_vm->run_command(@cmd);
+    $self->_vm->{_iptstate} = $out;
+    $self->_vm->{_iptstate_time} = time;
 
+    return $out;
+}
+
+
+sub _client_connection_status($self, $force=undef) {
+
+    my $status = $self->_client_connection_status_display($force);
+    return $status if $status =~ /^connected/;
+
+    $status = $self->_client_connection_status_port($force);
+    return $status;
+}
+
+sub _client_connection_status_display($self, $force) {
     my $netstat_out = $self->_run_netstat($force);
-    my @out = split(/\n/,$netstat_out);
-    for my $line (@out) {
-        my @netstat_info = split(/\s+/,$line);
-        if ( $netstat_info[2] eq $ip.":".$port ) {
-            return 'connected';
+    for my $display  ( $self->display_info(Ravada::Utils::user_daemon )) {
+        my $port = $display->{port} or next;
+        my $ip = $display->{ip} or next;
+
+        my @out = split(/\n/,$netstat_out);
+        for my $line (@out) {
+            my @netstat_info = split(/\s+/,$line);
+            if ( $netstat_info[2] =~ /:$port$/ ) {
+                return 'connected ('.$display->{driver}.")";
+            }
+        }
+    }
+    return 'disconnected';
+}
+
+
+sub _client_connection_status_port($self, $force) {
+    my $iptstate_out = $self->_run_iptstate($force);
+
+    for my $port ( $self->list_ports ) {
+        my $public_port = $port->{public_port} or next;
+        for my $line (split /\n/,$iptstate_out) {
+            my ($ip_port,$status) = $line =~/^[0-9.:]+\s+\d+\.\d+\.\d+\.\d+:(\d+)\s+\w+\s+(\w+)/;
+            next if !defined $ip_port || $public_port != $ip_port;
+            last if $status ne 'ESTABLISHED';
+            return 'connected ('.($port->{name} or $port->{internal_port}).")";
         }
     }
     return 'disconnected';
