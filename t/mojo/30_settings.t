@@ -70,12 +70,18 @@ sub test_nodes($vm_name) {
     is($found->{hostname}, $new_hostname) or die Dumper(\@list_nodes);
 
     test_exists_node( $id_node, $name2 );
+    test_settings_item( $id_node, 'node' );
 
     $t->get_ok("/v1/node/remove/".$found->{id});
     is($t->tx->res->code(),200) or die $t->tx->res->body;
 
     ok(! grep { $_->{id} == $found->{id} } rvd_front->list_vms($vm_name));
 
+}
+
+sub test_settings_item($id, $item) {
+    $t->get_ok('/'.$item.'/settings/'.$id.'.html');
+    is($t->tx->res->code(),200) or die $t->tx->res->body;
 }
 
 sub test_exists_node($id_node, $name) {
@@ -164,6 +170,8 @@ sub test_networks($vm_name) {
 
     test_exists_network($id_network, 'name', $new_name);
     test_exists_network($id_network, 'address', $address);
+
+    test_settings_item( $id_network, 'network' );
 
     $t->get_ok("/v1/network/remove/".$found->{id});
     is($t->tx->res->code(),200) or die $t->tx->res->body;

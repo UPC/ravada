@@ -663,7 +663,7 @@ any '/machine/manage/(:id).(:type)' => sub {
      return manage_machine($c);
 };
 
-any '/(:item)/settings/(:id)' => sub($c) {
+any '/(:item)/settings/(:id).html' => sub($c) {
 
     push @{$c->stash->{css}}, '/css/admin.css';
     push @{$c->stash->{js}}, '/js/admin.js';
