@@ -1292,7 +1292,8 @@ sub _insert_display( $self, $display ) {
                 $display->{port} = $self->_vm->_new_free_port($used_port);
             }
         } else {
-            confess "Error: I don't know how to deal with duplicated $field";
+            confess "Error: I don't know how to deal with duplicated $field on ".$self->name
+            .Dumper($display);
         }
     }
     confess $@ if $@;
