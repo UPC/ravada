@@ -69,6 +69,7 @@ create_domain
 
     remove_old_domains_req
     remove_domain_and_clones_req
+    remove_domain
     mojo_init
     mojo_clean
     mojo_create_domain
@@ -497,6 +498,18 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
         next if $machine->{name} !~ /^$base_name/;
         remove_domain_and_clones_req($machine,$wait, $run_request);
     }
+}
+
+sub remove_domain(@bases) {
+
+    for my $base (@bases) {
+        for my $clone ($base->clones) {
+            my $d_clone = Ravada::Domain->open($clone->{id});
+            remove_domain($d_clone);
+        }
+        $base->remove(user_admin);
+    }
+
 }
 
 sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
@@ -1976,7 +1989,7 @@ sub _load_sql_file {
     my $connector = shift;
     my $file_sql = shift;
 
-    open my $h_sql,'<',$file_sql or die "$! $file_sql";
+    open my $h_sql,'<',$file_sql or confess "$! $file_sql";
     my $sql = '';
     while (my $line = <$h_sql>) {
         $sql .= $line;
