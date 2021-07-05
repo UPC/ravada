@@ -4,6 +4,8 @@ PCI Device Passthrough
 In this document we show how to add a NVIDIA GPU to a KVM virtual Machine
 in Ravada VDI. Any PCI device could be added in a similar way.
 
+.. note:: We will not use the GPU as a display device in this guide. We will only try to run GPU calculations with CUDA.
+
 Status
 ------
 
@@ -165,7 +167,9 @@ to search for the PCI device numbers we found in the very first step.
 Virtual Machine Setup
 ---------------------
 
-We must hide KVM in the virtual machine and pass the PCI device.
+Now we want to use the GPU, by now we will only try to execute CUDA so it
+will not be a device used for display. This can also be achieved but it will
+be addressed in future releases.
 
 Edit the virtual machine configuration with `sudo virsh edit virtual-machine`.
 
@@ -173,9 +177,10 @@ Hide KVM
 ~~~~~~~~
 
 Some vendor drivers refuse to load when they detect KVM.
-Add inside features this to hide KVM to the virtual machine.
+We must hide KVM in the virtual machine and pass the PCI device.
+Add this in the features section to hide KVM to the virtual machine.
 There are more unlisted features that may be different from yours. Keep them
-in your virtual machine. The important part is the **KVM** entry.
+in your virtual machine. The important part is the **KVM hidden state** entry.
 
 .. code-block:: xml
 
