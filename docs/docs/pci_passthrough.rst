@@ -249,25 +249,18 @@ package and check if it works:
 
 .. prompt:: bash $
 
-  $ sudo apt install nvidia-cuda-toolkit
-  $ nvidia-smi
+  sudo apt install nvidia-cuda-toolkit
+  nvidia-smi
 
 If it works nvidia smi will show the detected hardware:
 
 .. ::
 
-  +-----------------------------------------------------------------------------+
-  | NVIDIA-SMI 460.73.01    Driver Version: 460.73.01    CUDA Version: 11.2     |
-  |-------------------------------+----------------------+----------------------+
-  | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
-  | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
-  |                               |                      |               MIG M. |
-  |===============================+======================+======================|
-  |   0  GeForce RTX 3090    Off  | 00000000:01:01.0 Off |                  N/A |
-  | 30%   38C    P0    61W / 350W |      0MiB / 24268MiB |      0%      Default |
-  |                               |                      |                  N/A |
-  +-------------------------------+----------------------+----------------------+
-
+  NVIDIA-SMI 460.73.01    Driver Version: 460.73.01    CUDA Version: 11.2     |
+  GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+  Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+     0  GeForce RTX 3090    Off  | 00000000:01:01.0 Off |                  N/A |
+   30%   38C    P0    61W / 350W |      0MiB / 24268MiB |      0%      Default |
 
 References
 ----------
