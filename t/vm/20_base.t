@@ -4,6 +4,7 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use Hash::Util qw(lock_hash unlock_hash);
+use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json);
 use XML::LibXML;
 use Test::More;
@@ -419,7 +420,7 @@ sub test_display_info($vm) {
     $domain->_normalize_display($display,0);
     _test_compare($display_h->[0], $display) or exit;
 
-    my $port = 356;
+    my $port = 3389;
     my @display_args = (
         id_domain => $domain->id
         ,uid => user_admin->id
@@ -619,7 +620,7 @@ sub test_iptables($domain) {
         };
 
         my $port_rdp = $display_exp->{port};
-        my @iptables_rdp = grep { /^-A PREROUTING.*--dport $port_rdp -j DNAT .*356/ } @iptables;
+        my @iptables_rdp = grep { /^-A PREROUTING.*--dport $port_rdp -j DNAT .*3389/ } @iptables;
         is(scalar(@iptables_rdp),1,"Expecting one entry with PRERORUTING --dport $port_rdp, got "
             .scalar(@iptables_rdp)) or do {
             my @iptables_prer= grep { /^-A PREROUTING.*--dport / } @iptables;
@@ -1522,6 +1523,20 @@ sub test_display_conflict($vm) {
 
 }
 
+sub _listening_ports {
+    my ($in, $out, $err);
+    my @cmd = ("ss","-tlnp");
+    run3(\@cmd,\$in,\$out,\$err);
+    my %port;
+    for my $line ( split /\n/,$out ) {
+        my @local= split(/\s+/, $line);
+        my ($listen_port) = $local[3] or die Dumper($line,\@local);
+        $listen_port =~ s/.*:(\d+).*/$1/;
+        $port{$listen_port}++;
+    }
+    return \%port;
+}
+
 sub _next_port_builtin($domain0) {
     $domain0->start(user => user_admin, remote_ip => '1.2.3.4');
     my $displays = $domain0->info(user_admin)->{hardware}->{display};
@@ -1531,7 +1546,11 @@ sub _next_port_builtin($domain0) {
         if $display->{port} > $next_port_builtin;
     }
 
-    $next_port_builtin++;
+    my $listening_ports = _listening_ports();
+    for (;;) {
+        $next_port_builtin++;
+        last if !$listening_ports->{$next_port_builtin};
+    }
     diag("Next port builtin will  be $next_port_builtin");
 
     return $next_port_builtin;
