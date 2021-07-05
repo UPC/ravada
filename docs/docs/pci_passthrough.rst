@@ -236,7 +236,26 @@ Packages
 ~~~~~~~~
 
 Configure from the graphical interface to load propietary drivers
-for NVIDIA server. This is the list of packages for our setup:
+for NVIDIA server.
+
+.. figure:: images/ubuntu_additional_drivers_app.png
+    :alt: additional drivers
+
+    Search for the additional drivers application
+
+    Press the Windows key and type additional , click in the application
+    called *Additional Drivers*
+
+.. figure:: images/ubuntu_additional_drivers_select.png
+    :alt: select the NVIDIA drivers
+
+    Choose the NVIDIA driver for servers
+
+    In our scenario we only want to run CUDA on the GPU so we just select
+    the server drivers.
+
+
+This is the list of packages for our setup:
 
 * nvidia-compute-utils-460-server
 * nvidia-dkms-460-server
@@ -249,8 +268,8 @@ for NVIDIA server. This is the list of packages for our setup:
 Choose the Display VGA
 ~~~~~~~~~~~~~~~~~~~~~~
 
-After installing the NVidia drivers the Windows Manager may try to run on
-top of the GPU and fail. Choose the other vido card:
+After installing the NVidia drivers the Window Manager may try to run on
+top of the GPU and fail. Choose the other video card:
 
 First let's what cards do you have:
 
