@@ -468,7 +468,7 @@ sub _around_create_domain {
         }
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
-    $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones());
+    $domain->is_volatile(1)     if $user->is_temporary();
 
     my @start_args = ( user => $owner );
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
