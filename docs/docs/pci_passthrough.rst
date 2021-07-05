@@ -177,7 +177,7 @@ Add inside features this to hide KVM to the virtual machine.
 There are more unlisted features that may be different from yours. Keep them
 in your virtual machine. The important part is the **KVM** entry.
 
-.. ::
+.. code-block:: xml
 
  <features>
     <kvm>
@@ -211,7 +211,7 @@ Finally we create a PCI device in the virtual machine, so we find a free PCI
 spot and add it. If it is duplicated it will warn on startup, you can change it
 as you like.
 
-.. ::
+.. code-block:: xml
 
     <hostdev mode='subsystem' type='pci' managed='yes'>
       <source>
@@ -254,7 +254,7 @@ package and check if it works:
 
 If it works nvidia smi will show the detected hardware:
 
-.. ::
+::
 
     Driver Version                            : 460.73.01
     CUDA Version                              : 11.2
