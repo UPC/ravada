@@ -46,13 +46,13 @@ computers. Notice we added the devices identified in the previous step to *pci-s
 Here we are preventing the GPU to be used by the main host so it can be passed
 to the virtual machine.
 
-.. code-block::
+::
 
     GRUB_CMDLINE_LINUX_DEFAULT="snd_hda_intel.blacklist=1 nouveau.blacklist=1 intel_iommu=on rd.driver.pre=vfio-pci pci-stub.ids=10de:2204,10de:1aef"
 
 AMD require a similar setup adding
 
-.. code-block::
+::
 
     GRUB_CMDLINE_LINUX_DEFAULT="snd_hda_intel.blacklist=1 nouveau.blacklist=1 amd_iommu=on iommu=pt kvm_amd.npt=1 kvm_amd.avic=1 rd.driver.pre=vfio-pci pci-stub.ids=10de:2204,10de:1aef"
 
@@ -61,7 +61,7 @@ Modules
 
 Blacklist modules creating the file /etc/modprobe.d/blacklist-gpu.conf
 
-.. :
+::
 
   blacklist nouveau
   blacklist radeon
@@ -71,7 +71,7 @@ Blacklist modules creating the file /etc/modprobe.d/blacklist-gpu.conf
 
 Also prevent the nvidia drivers to load and raise vfio-pci instead in /etc/modprobe.d/nvidia.conf
 
-.. :
+::
 
   softdep nouveau pre: vfio-pci
   softdep nvidia pre: vfio-pci
@@ -79,7 +79,7 @@ Also prevent the nvidia drivers to load and raise vfio-pci instead in /etc/modpr
 
 Add the modules so they are loaded on boot in /etc/modules
 
-.. :
+::
 
     vfio vfio_iommu_type1 vfio_pci ids=10de:2204,10de:1aef
 
@@ -87,14 +87,14 @@ Pass the device identifiers to vfio-pci in /etc/modprobe.d/vfio.conf. This is du
 from the previous step, it may be removed eventually from this doc if we find it
 unnecessary. Anyway it doesn't harm.
 
-.. :
+::
 
   options vfio-pci ids=10de:2204,10de:1aef disable_vga=1
 
 When loading KVM make it ignore MSRS in /etc/modprobe.d/kvm.conf
 options kvm ignore_msrs=1
 
-.. :
+::
 
   options kvm ignore_msrs=1
 
@@ -124,7 +124,7 @@ The device should use vfio driver:
 
     lspci -k | egrep -A 5 -i nvidia
 
-.. ::
+::
 
   1b:00.0 VGA compatible controller: NVIDIA Corporation Device 2204 (rev a1)
 	Subsystem: Gigabyte Technology Co., Ltd Device 403b
@@ -146,7 +146,7 @@ Check it is enabled
 
     dmesg | grep -i iommu | grep -i enabled
 
-.. ::
+::
 
     [    0.873154] DMAR: IOMMU enabled
 
@@ -157,7 +157,7 @@ to search for the PCI device numbers we found in the very first step.
 
   dmesg | grep iommu | grep 1b:00
 
-.. ::
+::
 
   [    2.474726] pci 0000:1b:00.0: Adding to iommu group 38
   [    2.474807] pci 0000:1b:00.1: Adding to iommu group 38

@@ -179,7 +179,7 @@ Master
 
 Master must be able to send packets on udp port 9 and tcp and udp port 7
 
-.. code-block::
+::
 
    # wake on lan
    -A OUTPUT -p udp -m udp --dport 7 -j ACCEPT
@@ -191,7 +191,7 @@ Nodes
 
 Nodes must accept packets on udp port 9 and tcp and udp port 7
 
-.. code-block::
+::
 
    # wake on lan
    -A INPUT -p udp -m udp --dport 7 -j ACCEPT
