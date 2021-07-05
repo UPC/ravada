@@ -241,6 +241,26 @@ for NVIDIA server. This is the list of packages for our setup:
 * nvidia-settings
 * nvidia-utils-460-server
 
+Choose the Display VGA
+~~~~~~~~~~~~~~~~~~~~~~
+
+After installing the NVidia drivers the Windows Manager may try to run on
+top of the GPU and fail. Choose the other vido card:
+
+First let's what cards do you have:
+
+..
+
+    $ sudo prime-select
+    Usage: /usr/bin/prime-select nvidia|intel|on-demand|query
+
+Choose not nvidia:
+
+.. prompt:: bash
+
+    sudo prime-select intel
+    reboot
+
 CUDA
 ----
 
