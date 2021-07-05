@@ -134,7 +134,7 @@ The device should use vfio driver:
 	Subsystem: Gigabyte Technology Co., Ltd Device 403b
 	Kernel modules: snd_hda_intel
 
-See that thouch in the NVIDIA VGA the preferred kernel modules are nvidiafb and nouveau,
+See that though in the NVIDIA VGA the preferred kernel modules are nvidiafb and nouveau,
 it actually loads vfio-pci which is great.
 
 IOMMU
@@ -249,17 +249,17 @@ top of the GPU and fail. Choose the other vido card:
 
 First let's what cards do you have:
 
-..
+::
 
     $ sudo prime-select
     Usage: /usr/bin/prime-select nvidia|intel|on-demand|query
 
-Choose not nvidia:
+Choose not nvidia, in our case it is intel:
 
 .. prompt:: bash
 
     sudo prime-select intel
-    reboot
+    sudo reboot
 
 CUDA
 ----
