@@ -1,0 +1,276 @@
+PCI Device Passthrough
+======================
+
+In this document we show how to add a NVIDIA GPU to a KVM virtual Machine
+in Ravada VDI. Any PCI device could be added in a similar way.
+
+Status
+------
+
+Please note that this is a very active topic and the instructions outlined here
+might not work in your environment
+
+Requirements
+------------
+
+* A NVidia GPU
+* A properly configured kernel along with a recent version of qemu. We were successful with Ubuntu 20.04.
+
+Hardware Identification
+-----------------------
+
+.. prompt:: bash $
+
+    sudo lspci -Dnn | grep NVIDIA
+    0000:1b:00.0 VGA compatible controller [0300]: NVIDIA Corporation Device [10de:2204] (rev a1)
+    0000:1b:00.1 Audio device [0403]: NVIDIA Corporation Device [10de:1aef] (rev a1)
+
+As you can see there are two devices attached to this PCI, that is because the video
+card has also an audio device. From here we gather:
+
+* PCI data: 0000:1b:00.0 and 0000:1b:00.1
+* Devices: 10de:2204 and 10de:1aef
+
+OS Configuration
+----------------
+
+This is the configuration for the host server. We must setup the kernel so the
+PCI device is not used in any way so it can be passed to the virtual machine.
+
+Grub
+~~~~
+
+Add this to GRUB_CMDLINE_LINUX line in */etc/default/grub*. This is suited for Intel
+computers. Notice we added the devices identified in the previous step to *pci-stub*.
+
+Here we are preventing the GPU to be used by the main host so it can be passed
+to the virtual machine.
+
+.. :
+
+    GRUB_CMDLINE_LINUX_DEFAULT="snd_hda_intel.blacklist=1 nouveau.blacklist=1 intel_iommu=on rd.driver.pre=vfio-pci pci-stub.ids=10de:2204,10de:1aef"
+
+AMD require a similar setup adding
+
+.. :
+
+    GRUB_CMDLINE_LINUX_DEFAULT="snd_hda_intel.blacklist=1 nouveau.blacklist=1 amd_iommu=on iommu=pt kvm_amd.npt=1 kvm_amd.avic=1 rd.driver.pre=vfio-pci pci-stub.ids=10de:2204,10de:1aef"
+
+Modules
+~~~~~~~
+
+Blacklist modules creating the file /etc/modprobe.d/blacklist-gpu.conf
+
+.. :
+
+  blacklist nouveau
+  blacklist radeon
+  blacklist amdgpu
+  blacklist snd_hda_intel
+  blacklist nvidiafb
+
+Also prevent the nvidia drivers to load and raise vfio-pci instead in /etc/modprobe.d/nvidia.conf
+
+.. :
+
+  softdep nouveau pre: vfio-pci
+  softdep nvidia pre: vfio-pci
+  softdep nvidia* pre: vfio-pci
+
+Add the modules so they are loaded on boot in /etc/modules
+
+.. :
+
+    vfio vfio_iommu_type1 vfio_pci ids=10de:2204,10de:1aef
+
+Pass the device identifiers to vfio-pci in /etc/modprobe.d/vfio.conf. This is duplicated
+from the previous step, it may be removed eventually from this doc if we find it
+unnecessary. Anyway it doesn't harm.
+
+.. :
+
+  options vfio-pci ids=10de:2204,10de:1aef disable_vga=1
+
+When loading KVM make it ignore MSRS in /etc/modprobe.d/kvm.conf
+options kvm ignore_msrs=1
+
+.. :
+
+  options kvm ignore_msrs=1
+
+Update the grub and initram configuration and reboot.
+
+.. prompt:: bash $
+
+  sudo update-grub
+  sudo update-initramfs -u
+  sudo reboot
+
+Checks
+------
+
+Modules
+~~~~~~~
+
+No nvidia nor nouveau should be loaded:
+
+.. prompt:: bash $
+
+    sudo lsmod | egrep -i "(nouveau|nvidia)"
+
+The device should use vfio driver:
+
+.. prompt:: bash $
+
+    lspci -k | egrep -A 5 -i nvidia
+
+.. ::
+
+  1b:00.0 VGA compatible controller: NVIDIA Corporation Device 2204 (rev a1)
+	Subsystem: Gigabyte Technology Co., Ltd Device 403b
+	Kernel driver in use: vfio-pci
+	Kernel modules: nvidiafb, nouveau
+  1b:00.1 Audio device: NVIDIA Corporation Device 1aef (rev a1)
+	Subsystem: Gigabyte Technology Co., Ltd Device 403b
+	Kernel modules: snd_hda_intel
+
+See that thouch in the NVIDIA VGA the preferred kernel modules are nvidiafb and nouveau,
+it actually loads vfio-pci which is great.
+
+IOMMU
+~~~~~
+
+Check it is enabled
+
+.. prompt:: bash $
+
+    dmesg | grep -i iommu | grep -i enabled
+
+.. ::
+
+    [    0.873154] DMAR: IOMMU enabled
+
+Verify the iommu groups. Both devices should be in the same group. We use *grep*
+to search for the PCI device numbers we found in the very first step.
+
+.. prompt:: bash $
+
+  dmesg | grep iommu | grep 1b:00
+
+.. ::
+
+  [    2.474726] pci 0000:1b:00.0: Adding to iommu group 38
+  [    2.474807] pci 0000:1b:00.1: Adding to iommu group 38
+
+Virtual Machine Setup
+---------------------
+
+We must hide KVM in the virtual machine and pass the PCI device.
+
+Edit the virtual machine configuration with `sudo virsh edit virtual-machine`.
+
+Hide KVM
+~~~~~~~~
+
+Some vendor drivers refuse to load when they detect KVM.
+Add inside features this to hide KVM to the virtual machine.
+There are more unlisted features that may be different from yours. Keep them
+in your virtual machine. The important part is the **KVM** entry.
+
+.. ::
+
+ <features>
+    <kvm>
+      <hidden state='on'/>
+    </kvm>
+    <acpi/>
+    <apic/>
+    <vmport state='off'/>
+  </features>
+
+Pass the Device
+~~~~~~~~~~~~~~~
+
+This is the part where we pass the real device to the Virtual Machine. Only one
+started virtual machine can have it.
+
+Add it anywhere inside the *devices* section.
+
+The source address must be created with the PCI information we found in the first step.
+So the device 0000:1b:00.0 will have:
+
+* domain: 0x0000
+* bus: 0x1b
+* slot: 0x00
+* function: 0x0
+
+We set the *rombar* to *on* just in case, please report to us if you have more insight
+about this issue.
+
+Finally we create a PCI device in the virtual machine, so we find a free PCI
+spot and add it. If it is duplicated it will warn on startup, you can change it
+as you like.
+
+.. ::
+
+    <hostdev mode='subsystem' type='pci' managed='yes'>
+      <source>
+        <address domain='0x0000' bus='0x1b' slot='0x00' function='0x0'/>
+      </source>
+      <rom bar='on'/>
+      <address type='pci' domain='0x0000' bus='0x01' slot='0x01' function='0x0'/>
+    </hostdev>
+
+
+Virtual Machine GPU Ubuntu setup
+--------------------------------
+
+As an example we load the GPU in Ubuntu and verify it is being used.
+
+Packages
+~~~~~~~~
+
+Configure from the graphical interface to load propietary drivers
+for NVIDIA server. This is the list of packages for our setup:
+
+* nvidia-compute-utils-460-server
+* nvidia-dkms-460-server
+* nvidia-driver-460-server
+* nvidia-kernel-common-460-server
+* nvidia-kernel-source-460-server
+* nvidia-settings
+* nvidia-utils-460-server
+
+CUDA
+----
+
+In this particular installation we wanted to try CUDA. We install the
+package and check if it works:
+
+.. prompt:: bash $
+
+  $ sudo apt install nvidia-cuda-toolkit
+  $ nvidia-smi
+
+If it works nvidia smi will show the detected hardware:
+
+.. ::
+
+  +-----------------------------------------------------------------------------+
+  | NVIDIA-SMI 460.73.01    Driver Version: 460.73.01    CUDA Version: 11.2     |
+  |-------------------------------+----------------------+----------------------+
+  | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+  | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+  |                               |                      |               MIG M. |
+  |===============================+======================+======================|
+  |   0  GeForce RTX 3090    Off  | 00000000:01:01.0 Off |                  N/A |
+  | 30%   38C    P0    61W / 350W |      0MiB / 24268MiB |      0%      Default |
+  |                               |                      |                  N/A |
+  +-------------------------------+----------------------+----------------------+
+
+
+References
+----------
+
+* https://mathiashueber.com/windows-virtual-machine-gpu-passthrough-ubuntu/
+
