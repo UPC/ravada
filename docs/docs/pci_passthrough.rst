@@ -46,13 +46,13 @@ computers. Notice we added the devices identified in the previous step to *pci-s
 Here we are preventing the GPU to be used by the main host so it can be passed
 to the virtual machine.
 
-.. :
+.. code-block::
 
     GRUB_CMDLINE_LINUX_DEFAULT="snd_hda_intel.blacklist=1 nouveau.blacklist=1 intel_iommu=on rd.driver.pre=vfio-pci pci-stub.ids=10de:2204,10de:1aef"
 
 AMD require a similar setup adding
 
-.. :
+.. code-block::
 
     GRUB_CMDLINE_LINUX_DEFAULT="snd_hda_intel.blacklist=1 nouveau.blacklist=1 amd_iommu=on iommu=pt kvm_amd.npt=1 kvm_amd.avic=1 rd.driver.pre=vfio-pci pci-stub.ids=10de:2204,10de:1aef"
 
@@ -256,11 +256,12 @@ If it works nvidia smi will show the detected hardware:
 
 .. ::
 
-  NVIDIA-SMI 460.73.01    Driver Version: 460.73.01    CUDA Version: 11.2     |
-  GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
-  Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
-     0  GeForce RTX 3090    Off  | 00000000:01:01.0 Off |                  N/A |
-   30%   38C    P0    61W / 350W |      0MiB / 24268MiB |      0%      Default |
+    Driver Version                            : 460.73.01
+    CUDA Version                              : 11.2
+    Attached GPUs                             : 1
+    GPU 00000000:01:01.0
+    Product Name                          : GeForce RTX 3090
+    Product Brand                         : GeForce
 
 References
 ----------
