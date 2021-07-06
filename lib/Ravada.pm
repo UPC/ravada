@@ -1738,8 +1738,10 @@ sub _sql_create_tables($self) {
                 ,list_command => 'varchar(128) not null'
                 ,list_filter => 'varchar(128) not null'
                 ,template_args => 'varchar(255) not null'
-                ,devices => 'TEXT default ""'
+                ,devices => 'TEXT'
                 ,enabled => "integer NOT NULL default 1"
+                ,'date_changed'
+                    => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
             }
         ]
         ,
@@ -1757,7 +1759,7 @@ sub _sql_create_tables($self) {
             host_devices_domain => {
                 id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
                 ,id_host_device => 'integer NOT NULL references `host_devices`(`id`) ON DELETE CASCADE'
-                ,id_domain => 'integer NOT NULL references domains(id) ON DELETE CASCADE'
+                ,id_domain => 'integer NOT NULL references `domains`(`id`) ON DELETE CASCADE'
                 ,name => 'varchar(255)'
                 ,is_locked => 'integer not null default 0'
             }
@@ -2112,6 +2114,9 @@ sub _port_definition($driver, $definition0){
             my @found = $definition0 =~ /'(.*?)'/g;
             my ($size) = sort map { length($_) } @found;
             return " varchar($size) $default";
+        }
+        if ($definition0 =~ /^timestamp /) {
+            $definition0 =~ s/(timestamp).*/$1/;
         }
     }
     return $definition0;
@@ -3660,6 +3665,17 @@ sub _cmd_create{
 
 }
 
+sub _cmd_list_host_devices($self, $request) {
+    my $id_host_device = $request->args('id_host_device');
+
+    my $hd = Ravada::HostDevice->search_by_id(
+        $id_host_device
+    );
+
+    $hd->list_devices;
+
+}
+
 sub _can_fork {
     my $self = shift;
     my $req = shift or confess "Missing request";
@@ -5139,6 +5155,7 @@ sub _req_method {
     ,list_isos => \&_cmd_list_isos
 
     ,manage_pools => \&_cmd_manage_pools
+    ,list_host_devices => \&_cmd_list_host_devices
     );
     return $methods{$cmd};
 }
