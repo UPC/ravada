@@ -353,6 +353,10 @@ sub _around_start($orig, $self, @arg) {
         eval { $self->$orig(%arg) };
         $error = $@;
         last if !$error;
+
+        die "Error: starting ".$self->name." on ".$self->_vm->name." $error"
+        if $error =~ /there is no device|Did not find .*device/;
+
         warn "WARNING: $error ".$self->_vm->name." ".$self->_vm->enabled if $error;
 
         next if $error && ref($error) && $error->code == 1;# pool has asynchronous jobs running.
@@ -2804,9 +2808,7 @@ sub _copy_ports($base, $copy) {
 }
 
 sub _copy_host_devices($base, $copy) {
-    warn "Copy host_devices from ".$base->name." to ".$copy->name;
     for my $host_device ( $base->list_host_devices() ) {
-        warn Dumper($base->name,$copy->name,$host_device);
         $copy->add_host_device($host_device);
     }
 }
@@ -2881,7 +2883,7 @@ sub _post_shutdown {
 
     if ( $self->is_known && !$self->is_volatile && !$is_active ) {
         if ( $self->can_host_devices() ) {
-            $self->remove_host_devices();
+        #    $self->remove_host_devices();
             # we don't do moose after method because not all domain types have this
             $self->_post_remove_host_devices();
         }
@@ -6334,6 +6336,7 @@ sub list_host_devices($self) {
 
     my @found;
     while (my $row = $sth->fetchrow_hashref) {
+        $row->{devices} = '' if !defined $row->{devices};
         push @found,(Ravada::HostDevice->new(%$row));
     }
 
