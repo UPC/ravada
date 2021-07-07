@@ -1469,6 +1469,22 @@ sub is_in_maintenance($self) {
     return 0;
 }
 
+sub update_host_device($self, $args) {
+    my $id = delete $args->{id} or die "Error: missing id ".Dumper($args);
+    $args->{devices} = undef;
+    my $query = "UPDATE host_devices SET ".join(" , ", map { "$_=?" } sort keys %$args);
+    $query .= " WHERE id=?";
+    my $sth = $self->_dbh->prepare($query);
+    my @values = map { $args->{$_} } sort keys %$args;
+    $sth->execute(@values, $id);
+    Ravada::Request->list_host_devices(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_host_device => $id
+        ,_force => 1
+    );
+    return 1;
+}
+
 =head2 version
 
 Returns the version of the main module
