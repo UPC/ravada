@@ -69,6 +69,7 @@ create_domain
 
     remove_old_domains_req
     remove_domain_and_clones_req
+    remove_domain
     mojo_init
     mojo_clean
     mojo_create_domain
@@ -499,6 +500,10 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
     }
 }
 
+sub remove_domain($domain_data) {
+    return remove_domain_and_clones_req($domain_data,1,1);
+}
+
 sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
     my $domain;
     if (ref($domain_data) =~ /Ravada.*Domain/) {
@@ -530,6 +535,7 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
         name => $domain->name
         ,uid => user_admin->id
     );
+    wait_request(debug => 0) if $wait;
 }
 
 sub _remove_old_domains_vm($vm_name) {
