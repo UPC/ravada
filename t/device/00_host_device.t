@@ -227,15 +227,14 @@ sub _check_hostdev_kvm($domain, $expected=0) {
 sub _check_hostdev_void($domain, $expected=0) {
     my $doc = $domain->_load();
     my @hostdev;
-    for my $dev ( @{ $doc->{hardware}->{device} } ) {
-        next if $dev->{device} ne 'hostdev';
+    for my $dev ( @{ $doc->{hardware}->{host_devices} } ) {
         push @hostdev,($dev);
         for my $item ( keys %$dev ) {
             like($item,qr/^\w+$/);
             like($dev->{$item}, qr(^[0-9a-z]+$)) or die Dumper($dev);
         }
     }
-    is(scalar @hostdev, $expected) or die Dumper($domain->name, $doc);
+    is(scalar @hostdev, $expected) or confess Dumper($domain->name, $doc->{hardware});
 
 }
 
@@ -370,6 +369,7 @@ sub test_host_device_usb_mock($vm) {
 
         _check_hostdev($clone, 0 );
         eval { $clone->start(user_admin) };
+        diag($clone->name." ".($@ or ''));
         # the last one should fail
         if ($n > $n_devices) {
             like( ''.$@,qr(No available devices));
@@ -412,7 +412,7 @@ sub test_db_host_devices_removed(@domains) {
     for my $domain ( @domains ) {
         $sth->execute($domain->id);
         my ($count) = $sth->fetchrow;
-        is($count,0,"Expecting host_device_domain removed from db ".$domain->name);
+        is($count,0,"Expecting host_device_domain removed from db ".$domain->name) or confess;
     }
 
     $sth = connector->dbh->prepare("SELECT count(*) FROM host_devices ");
@@ -502,7 +502,7 @@ sub test_host_device_gpu($vm) {
     test_hostdev_gpu($base);
 
     $list_hostdev[0]->remove();
-    remove_domain_and_clones_req($base,1,1);
+    remove_domain($base);
 }
 
 sub test_xmlns($vm) {
