@@ -1,0 +1,41 @@
+
+<div>
+
+<select ng-model="new_template"
+    ng-options="template.name for template in templates | orderBy:'name'">
+</select>
+
+<button ng-disabled="!new_template" class="btn btn-primary"
+    ng-click="add_host_device()"
+><%=l 'Add host device' %></button>
+
+</div>
+
+<hr>
+
+<div ng-repeat="hdev in host_devices">
+    <a ng-click="toggle_show_hdev(hdev.id)">
+        <span ng-show="show_hdev[hdev.id]"><i class="fa fa-caret-down"></i></span>
+        <span ng-show="!show_hdev[hdev.id]"><i class="fa fa-caret-right"></i></span>
+    </a>
+    <span ng-show="!hdev._edit">
+    <b>{{hdev.name}}</b> <i ng-show="show_hdev[hdev.id]" ng-click="hdev._edit=true; hdev._name=hdev.name" class="far fa-edit"></i>
+    </span>
+    <span ng-show="hdev._edit">
+        <input type="text" ng-model="hdev.name"/>
+        <button type="button" ng-click="update_host_device(hdev);hdev._edit=false"><%=l 'save' %></button>
+        <button type="button" ng-click="hdev._edit=false;hdev.name=hdev._name"><%=l 'cancel' %></button>
+    </span>
+    <div ng-show = "show_hdev[hdev.id]" class="border rounded border-primary mb-4 p-4">
+        list command: <input type="text" ng-model = "hdev.list_command" ng-change="update_host_device(hdev)">
+        filter: <input type="text" ng-model = "hdev.list_filter" ng-change="update_host_device(hdev)">
+        <div class="alert alert-danger" ng-show="hdev.devices.length==0">No devices found</div>
+        <div ng-show="!hdev.devices"><i class="fa fa-sync-alt fa-spin"></i></div>
+        <ul>
+            <li ng-repeat="device in hdev.devices">
+                {{device}}
+            </li>
+        </ul>
+        <button type="button" ng-click="remove_host_device(hdev.id)"><%=l 'Remove' %></button>
+    </div>
+</div>

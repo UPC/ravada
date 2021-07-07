@@ -692,11 +692,15 @@ ravadaApp.directive("solShowMachine", swMach)
 
     function settings_node($scope, $http, $timeout) {
         var url_ws;
-        $scope.init = function(id_node, url) {
+        var id_node;
+        $scope.init = function(id, url) {
+            id_node = id;
             url_ws = url;
             list_storage_pools(id_node);
             list_bases(id_node);
+            list_templates(id_node);
             subscribe_node_info(id_node, url);
+            subscribe_list_host_devices(id_node, url);
         };
         subscribe_node_info = function(id_node, url) {
             var ws = new WebSocket(url);
@@ -707,6 +711,40 @@ ravadaApp.directive("solShowMachine", swMach)
                     $scope.node = data;
                     $scope.node._old_name = data.name;
                     $scope.old_node =$.extend({}, data);
+                });
+            }
+        };
+
+        subscribe_list_host_devices= function(id, url) {
+            $scope.show_requests = false;
+            $scope.host_devices = [];
+            var ws = new WebSocket(url);
+            ws.onopen    = function (event) { ws.send('list_host_devices/'+id) };
+            ws.onclose = function() {
+                ws = new WebSocket(url);
+            };
+
+            ws.onmessage = function (event) {
+                var data = JSON.parse(event.data);
+                $scope.$apply(function () {
+                    if (Object.keys($scope.host_devices).length != data.length) {
+                        $scope.host_devices.length = data.length;
+                    }
+                    for (var i=0, iLength = data.length; i<iLength; i++){
+                        var hd = data[i];
+                        if (typeof($scope.host_devices[i]) == 'undefined') {
+                            $scope.host_devices[i] = hd;
+                        } else if ( $scope.host_devices[i].id != hd.id
+                            || $scope.host_devices[i].date_changed != hd.date_changed) {
+                            var keys = Object.keys(hd);
+                            for ( var n_key=0 ; n_key<keys.length ; n_key++) {
+                               var field=keys[n_key];
+                                if (field != 'filter' && $scope.host_devices[i][field] != hd[field]) {
+                                    $scope.host_devices[i][field] = hd[field];
+                                }
+                            }
+                        }
+                    }
                 });
             }
         };
@@ -767,6 +805,13 @@ ravadaApp.directive("solShowMachine", swMach)
             });
         };
 
+        list_templates = function(id) {
+            $http.get('/host_devices/templates/list/'+ id)
+            .then(function(response) {
+                   $scope.templates = response.data;
+               });
+        };
+
         $scope.set_base_vm = function(id_base, value) {
             var url = 'set_base_vm';
             if (value == 0 || !value) {
@@ -783,6 +828,33 @@ ravadaApp.directive("solShowMachine", swMach)
                 $scope.node={};
             });
         };
+
+        $scope.add_host_device = function() {
+            $http.post('/node/host_device/add'
+                ,JSON.stringify({ 'template': $scope.new_template.name , 'id_vm': id_node }))
+            .then(function(response) {
+            });
+        };
+
+        $scope.update_host_device = function(hdev) {
+            $http.post('/node/host_device/update'
+                ,JSON.stringify(hdev))
+            .then(function(response) {
+                $scope.error = response.data.error;
+            });
+            hdev.devices = undefined;
+        };
+        $scope.remove_host_device = function(id) {
+            $http.get('/node/host_device/remove/'+id).then(function(response) {
+                // TODO: add some reponse
+            });
+        };
+
+        $scope.toggle_show_hdev = function(id) {
+            $scope.show_hdev[id] = ! $scope.show_hdev[id];
+        };
+        $scope.show_hdev = { 1: true};
+
     };
 
     function admin_groups_ctrl($scope, $http) {
