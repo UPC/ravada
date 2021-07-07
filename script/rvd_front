@@ -355,6 +355,16 @@ get '/list_nodes.json' => sub {
     $c->render(json => [$RAVADA->list_vms]);
 };
 
+get '/list_host_devices/(:id_vm)' => sub($c) {
+    $c->render(json => Ravada::WebSocket::_list_host_devices($RAVADA
+            , {
+                channel => '/'.$c->stash('id_vm')
+                ,login => $USER->name
+            }
+        )
+    );
+};
+
 post '/node/host_device/add' => sub($c) {
     my $arg = decode_json($c->req->body);
     my $id_vm = $arg->{id_vm} or die "Error: missing id_vm ".Dumper($arg);

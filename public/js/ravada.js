@@ -421,6 +421,7 @@
                                 $scope.list_ldap_attributes();
                                 list_interfaces();
                                 list_users();
+                                list_host_devices();
                             }
                             $scope.hardware_types = Object.keys(response.data.hardware);
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
@@ -836,6 +837,12 @@
                         $scope.ldap_groups=response.data;
                     });
             };
+            var list_host_devices = function() {
+                $http.get('/list_host_devices/'+$scope.showmachine.id_vm)
+                    .then(function(response) {
+                        $scope.host_devices=response.data;
+                    });
+            }
             $scope.rebase= function() {
                 $scope.req_new_base = $scope.new_base;
                 $http.post('/request/rebase/'
