@@ -463,7 +463,7 @@ sub _around_create_domain {
             delete @port{'id','id_domain','public_port','id_vm', 'is_secondary'};
             $domain->expose(%port);
         }
-        $base->copy_host_devices($domain);
+        $base->_copy_host_devices($domain);
         my @displays = $base->_get_controller_display();
         for my $display (@displays) {
             delete $display->{id};
@@ -2207,6 +2207,8 @@ sub add_host_device($self, %args) {
         $sth2->execute(map { $template->{$_} } sort keys %$template);
 
     }
+
+    return $id;
 }
 
 sub list_host_devices($self) {
@@ -2215,6 +2217,7 @@ sub list_host_devices($self) {
 
     my @found;
     while (my $row = $sth->fetchrow_hashref) {
+	    $row->{devices} = '' if !defined $row->{devices};
         push @found,(Ravada::HostDevice->new(%$row));
     }
 

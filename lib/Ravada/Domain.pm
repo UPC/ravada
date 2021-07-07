@@ -357,6 +357,8 @@ sub _around_start($orig, $self, @arg) {
         die "Error: starting ".$self->name." on ".$self->_vm->name." $error"
         if $error =~ /there is no device|Did not find .*device/;
 
+        die $error if $error =~ /No DRM render nodes/;
+
         warn "WARNING: $error ".$self->_vm->name." ".$self->_vm->enabled if $error;
 
         next if $error && ref($error) && $error->code == 1;# pool has asynchronous jobs running.
@@ -6386,7 +6388,6 @@ sub _add_host_devices($self, @args) {
         die "Error: No available devices ".$host_device->name if !$device;
 
         $self->_lock_host_device($host_device, $device);
-
 
         for my $entry( $host_device->render_template($device) ) {
             if ($entry->{type} eq 'node') {

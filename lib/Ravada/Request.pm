@@ -135,6 +135,13 @@ our %VALID_ARG = (
 
     ,manage_pools => { uid => 2, id_domain => 2 }
     ,ping_backend => {}
+
+    ,list_host_devices => {
+        uid => 1
+        ,id_host_device => 1
+        ,_force => 2
+    }
+
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -155,6 +162,7 @@ qw(
     remove_base_vm
     rsync_back
     cleanup
+    list_host_devices
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -646,7 +654,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
         my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
         next if $args_d_s ne $args_found_s;
 
-        return Ravada::Request->open($id);
+        return $id;
     }
     return 0;
 }
@@ -668,6 +676,11 @@ sub _new_request {
         delete $args{name};
     }
     my $no_duplicate = delete $args{_no_duplicate};
+    my $force = delete $args{args}->{_force};
+
+    confess "Error: Pass either _force or _no_duplicate"
+    if $force && $no_duplicate;
+
     my $uid;
     if ( ref $args{args} ) {
         $args{args}->{uid} = $args{args}->{id_owner}
@@ -690,16 +703,18 @@ sub _new_request {
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
-    if ($args{command} =~ /^(clone|manage_pools)$/
+    if (!$force && ($args{command} =~ /^(clone|manage_pools)$/
         || $CMD_NO_DUPLICATE{$args{command}}
-        || ($no_duplicate && $args{command} =~ /^(screenshot)$/)) {
-        my $dupe = _duplicated_request(undef, $args{command}, $args{args});
-        return $dupe if $dupe;
+        || ($no_duplicate && $args{command} =~ /^(screenshot)$/))) {
 
-        my $recent;
-        $recent = done_recently(undef, 60, $args{command})
+        my $id_dupe = _duplicated_request(undef, $args{command}, $args{args});
+
+        my $id_recent;
+        $id_recent = done_recently(undef, 60, $args{command})
         if $args{command} !~ /^(clone|migrate|set_base_vm)$/;
-        return if $recent;
+
+        my $id = ( $id_dupe or $id_recent );
+        return Ravada::Request->open($id) if $id;
 
     }
 
@@ -1313,7 +1328,7 @@ sub done_recently($self, $seconds=60,$command=undef) {
     $sth->execute($date->ymd." ".$date->hms, $command, $id_req);
     my ($id) = $sth->fetchrow;
     return if !defined $id;
-    return Ravada::Request->open($id);
+    return $id;
 }
 
 sub _requested($command, %fields) {
