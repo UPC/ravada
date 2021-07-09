@@ -283,13 +283,16 @@ Choose not nvidia, in our case it is intel:
 .. prompt:: bash
 
     sudo prime-select intel
-    sudo reboot
 
 Add the nvidia module to load on startup. Check there is this line in /etc/modules
 
 ::
 
   nvidia_uvm
+
+
+Reboot the virtual machine now. The other VGA should be used for display and the NVIDIA GPU
+can be used to run other tasks.
 
 CUDA
 ----
