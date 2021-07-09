@@ -261,6 +261,12 @@ Choose not nvidia:
     sudo prime-select intel
     reboot
 
+Add the nvidia module to load on startup. Check there is this line in /etc/modules
+
+::
+
+  nvidia_uvm
+
 CUDA
 ----
 
