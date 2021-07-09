@@ -4,6 +4,8 @@ PCI Device Passthrough
 In this document we show how to add a NVIDIA GPU to a KVM virtual Machine
 in Ravada VDI. Any PCI device could be added in a similar way.
 
+.. note:: We will not use the GPU as a display device in this guide. We will only try to run GPU calculations with CUDA.
+
 Status
 ------
 
@@ -134,7 +136,7 @@ The device should use vfio driver:
 	Subsystem: Gigabyte Technology Co., Ltd Device 403b
 	Kernel modules: snd_hda_intel
 
-See that thouch in the NVIDIA VGA the preferred kernel modules are nvidiafb and nouveau,
+See that though in the NVIDIA VGA the preferred kernel modules are nvidiafb and nouveau,
 it actually loads vfio-pci which is great.
 
 IOMMU
@@ -165,7 +167,9 @@ to search for the PCI device numbers we found in the very first step.
 Virtual Machine Setup
 ---------------------
 
-We must hide KVM in the virtual machine and pass the PCI device.
+Now we want to use the GPU, by now we will only try to execute CUDA so it
+will not be a device used for display. This can also be achieved but it will
+be addressed in future releases.
 
 Edit the virtual machine configuration with `sudo virsh edit virtual-machine`.
 
@@ -173,9 +177,10 @@ Hide KVM
 ~~~~~~~~
 
 Some vendor drivers refuse to load when they detect KVM.
-Add inside features this to hide KVM to the virtual machine.
+We must hide KVM in the virtual machine and pass the PCI device.
+Add this in the features section to hide KVM to the virtual machine.
 There are more unlisted features that may be different from yours. Keep them
-in your virtual machine. The important part is the **KVM** entry.
+in your virtual machine. The important part is the **KVM hidden state** entry.
 
 .. code-block:: xml
 
@@ -231,7 +236,26 @@ Packages
 ~~~~~~~~
 
 Configure from the graphical interface to load propietary drivers
-for NVIDIA server. This is the list of packages for our setup:
+for NVIDIA server.
+
+.. figure:: images/ubuntu_additional_drivers_app.png
+    :alt: additional drivers
+
+    Search for the additional drivers application
+
+    Press the Windows key and type additional , click in the application
+    called *Additional Drivers*
+
+.. figure:: images/ubuntu_additional_drivers_select.png
+    :alt: select the NVIDIA drivers
+
+    Choose the NVIDIA driver for servers
+
+    In our scenario we only want to run CUDA on the GPU so we just select
+    the server drivers.
+
+
+This is the list of packages for our setup:
 
 * nvidia-compute-utils-460-server
 * nvidia-dkms-460-server
@@ -244,22 +268,22 @@ for NVIDIA server. This is the list of packages for our setup:
 Choose the Display VGA
 ~~~~~~~~~~~~~~~~~~~~~~
 
-After installing the NVidia drivers the Windows Manager may try to run on
-top of the GPU and fail. Choose the other vido card:
+After installing the NVidia drivers the Window Manager may try to run on
+top of the GPU and fail. Choose the other video card:
 
 First let's what cards do you have:
 
-..
+::
 
     $ sudo prime-select
     Usage: /usr/bin/prime-select nvidia|intel|on-demand|query
 
-Choose not nvidia:
+Choose not nvidia, in our case it is intel:
 
 .. prompt:: bash
 
     sudo prime-select intel
-    reboot
+    sudo reboot
 
 Add the nvidia module to load on startup. Check there is this line in /etc/modules
 
