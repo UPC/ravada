@@ -47,7 +47,6 @@
         ><%=l 'Pool' %></a>
 
         <a class="nav-link" id="v-pills-hostdev-tab" ng-click="refresh_machine()" href="#v-pills-hostdev" data-toggle="pill" role="tab" aria-controls="v-pills-hostdev" aria-selected="false"
-        ng-show="showmachine.is_base || showmachine.id_base"
         ><%=l 'Host Devices' %></a>
 %   }
     % if ( $monitoring && $USER->is_admin && $domain->is_active ) {

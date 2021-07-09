@@ -19,8 +19,34 @@ use_ok('Ravada::HostDevice::Templates');
 ####################################################################
 
 sub _set_hd_nvidia($hd) {
-    $hd->_data( list_command => ['lspci','-Dnn']);
+    $hd->_data( list_command => 'lspci -Dnn');
     $hd->_data( list_filter => 'VGA.*NVIDIA');
+}
+
+
+sub test_hostdev_not_in_domain_void($domain) {
+    my $config = $domain->_load();
+    if (exists $config->{hardware}->{host_devices}) {
+        is_deeply( $config->{hardware}->{host_devices}, []) or die Dumper($domain->name, $config->{hardware}->{host_devices});
+    } else {
+        ok(1); # ok if it doesn't exist
+    }
+}
+
+sub test_hostdev_not_in_domain_kvm($domain) {
+    my $xml = XML::LibXML->load_xml(string => $domain->domain->get_xml_description);
+    my ($hostdev) = $xml->findnodes("/domain/devices/hostdev");
+    ok(!$hostdev,"Expecting no <hostdev> in ".$domain->name) or exit;
+}
+
+sub test_hostdev_not_in_domain($domain) {
+    if ($domain->type eq 'Void') {
+        test_hostdev_not_in_domain_void($domain);
+    } elsif ($domain->type eq 'KVM') {
+        test_hostdev_not_in_domain_kvm($domain);
+    } else {
+        confess "TODO";
+    }
 }
 
 sub test_hd_in_domain($vm , $hd) {
@@ -40,22 +66,39 @@ sub test_hd_in_domain($vm , $hd) {
     }
     diag("Testing HD ".$hd->{name}." ".$hd->list_filter." in ".$vm->type);
     $domain->add_host_device($hd);
-    $domain->start(user_admin);
 
-    $domain->shutdown_now(user_admin);
+    if ($hd->list_devices) {
+        $domain->start(user_admin);
+        $domain->shutdown_now(user_admin);
+    }
+
     $domain->prepare_base(user_admin);
     my $n_locked = _count_locked();
     for my $count (reverse 0 .. $hd->list_devices ) {
         my $clone = $domain->clone(name => new_domain_name() ,user => user_admin);
+        test_hostdev_not_in_domain($clone);
         _compare_hds($domain, $clone);
-        diag($clone->name);
-        eval { $clone->start(user_admin) };
-        if (!$count) {
-            like($@,qr/No available devices/);
-            last;
+
+        test_device_unlocked($clone);
+        if ($hd->list_devices) {
+            diag($clone->name);
+            eval { $clone->start(user_admin) };
+            if (!$count) {
+                like($@,qr/No available devices/);
+                last;
+            }
+            is(_count_locked(),++$n_locked) or exit;
+            test_device_locked($clone);
         }
-        is(_count_locked(),++$n_locked) or exit;
-        test_device_locked($clone);
+
+        $clone->shutdown_now(user_admin);
+        test_device_unlocked($clone);
+        if ($hd->list_devices) {
+            eval { $clone->start(user_admin) };
+            is(''.$@,'') or exit;
+            is(_count_locked(),$n_locked) or exit;
+        }
+
     }
     remove_domain($domain);
 
@@ -68,9 +111,24 @@ sub test_device_locked($clone) {
         is($is_locked,1,"Expecting locked=1 $name") or exit;
         my $hd = Ravada::HostDevice->search_by_id($id_hd);
         my @available= $hd->list_available_devices();
-        ok(!grep /^$name$/, @available) or die Dumper($name,\@available);
+        my ($found) = grep { $_ eq $name } @available;
+        ok(!$found) or die Dumper($name,\@available);
     }
 }
+
+sub test_device_unlocked($clone) {
+    my $sth = connector->dbh->prepare("SELECT id_host_device,name,is_locked FROM host_devices_domain WHERE id_domain=?");
+    $sth->execute($clone->id);
+    while ( my ($id_hd, $name, $is_locked) = $sth->fetchrow ) {
+        is($is_locked,0,"Expecting locked=0 ".($name or '')) or exit;
+        next if !$name;
+        my $hd = Ravada::HostDevice->search_by_id($id_hd);
+        my @available= $hd->list_available_devices();
+        my ($found) = grep { $_ eq $name } @available;
+        ok($found) or die Dumper($name,\@available);
+    }
+}
+
 
 sub _compare_hds($base, $clone) {
     my @hds_base;
@@ -109,7 +167,9 @@ sub test_templates($vm) {
 
     for my $first  (@$templates) {
 
-        diag("Tsting $first->{name} Hostdev on ".$vm->type);
+        next if $first->{name } =~ /^GPU dri/ && $vm->type eq 'KVM';
+
+        diag("Testing $first->{name} Hostdev on ".$vm->type);
         $vm->add_host_device(template => $first->{name});
 
         my @list_hostdev = $vm->list_host_devices();

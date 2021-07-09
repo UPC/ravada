@@ -1990,6 +1990,7 @@ sub info($self, $user) {
     }
     $info->{cdrom} = \@cdrom;
     $info->{requests} = $self->list_requests();
+    $info->{host_devices} = [ $self->list_host_devices_attached() ];
 
     Ravada::Front::_init_available_actions($user, $info);
 
@@ -6326,10 +6327,25 @@ sub add_host_device($self, $host_device) {
     );
     $sth->execute($id_hd, $self->id);
 }
+sub remove_host_device($self, $host_device) {
+    my $id_hd = $host_device;
+    $id_hd = $host_device->id if ref($host_device);
+
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain "
+        ." WHERE id_domain=? AND id_host_device=?"
+    );
+    $sth->execute($self->id, $id_hd);
+    if ($self->is_base) {
+        for my $clone_data ( $self->clones ) {
+            my $clone = Ravada::Front::Domain->open($clone_data->{id});
+            $clone->remove_host_device($host_device);
+        }
+    }
+}
 
 sub list_host_devices($self) {
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT * FROM host_devices WHERE id = (SELECT id_host_device FROM  host_devices hd, host_devices_domain hdd "
+        "SELECT * FROM host_devices WHERE id IN (SELECT id_host_device FROM  host_devices hd, host_devices_domain hdd "
         ." WHERE hdd.id_domain=?"
         ."    AND hdd.id_host_device = hd.id )"
         ."    AND enabled=1"
@@ -6381,8 +6397,11 @@ sub _add_host_devices($self, @args) {
 
     my $doc = $self->get_config();
     for my $host_device ( @host_devices ) {
-        next if $self->_device_already_configured($host_device)
-                || !$host_device->enabled();
+        next if !$host_device->enabled();
+        if ( $self->_device_already_configured($host_device)) {
+            $self->_lock_host_device($host_device);
+            next;
+        }
 
         my ($device) = $host_device->list_available_devices();
         die "Error: No available devices ".$host_device->name if !$device;
@@ -6391,7 +6410,9 @@ sub _add_host_devices($self, @args) {
 
         for my $entry( $host_device->render_template($device) ) {
             if ($entry->{type} eq 'node') {
-                $self->add_config($entry->{path}, $entry->{content}, $doc);
+                $self->add_config_node($entry->{path}, $entry->{content}, $doc);
+            } elsif ($entry->{type} eq 'unique_node') {
+                $self->add_config_unique_node($entry->{path}, $entry->{content}, $doc);
             } elsif($entry->{type} eq 'attribute') {
                 $self->change_config_attribute($entry->{path}, $entry->{content}, $doc);
             } elsif($entry->{type} eq 'namespace') {
@@ -6404,27 +6425,37 @@ sub _add_host_devices($self, @args) {
         }
 
     }
-
     $self->reload_config($doc);
+
 }
 
 # marks a host device as being used by a domain
-sub _lock_host_device($self, $host_device, $device) {
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE host_devices_domain set is_locked=?,name=?"
-        ." WHERE id_host_device=? AND id_domain=? "
-    );
-    $sth->execute(1,$device, $host_device->id, $self->id);
+sub _lock_host_device($self, $host_device, $device=undef) {
+    my $query = "UPDATE host_devices_domain set is_locked=?";
+    my @args = ( 1 );
+
+    if (defined $device) {
+        $query .= ",name=?";
+        push @args, ($device);
+    }
+    $query .= " WHERE id_host_device=? AND id_domain=? ";
+    push @args , ( $host_device->id, $self->id );
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+    $sth->execute(@args);
 }
 
 sub _device_already_configured($self, $host_device) {
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id FROM host_devices_domain WHERE id_domain=? AND id_host_device=? AND is_locked=?"
-    );
-    $sth->execute($self->id,$host_device->id,1);
+    my $query = "SELECT name FROM host_devices_domain WHERE id_domain=? AND id_host_device=?";
 
-    my ($already) = $sth->fetchrow;
-    return $already;
+    my @args = ($self->id, $host_device->id);
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+    $sth->execute(@args);
+
+    my ($name) = $sth->fetchrow;
+    return 1 if length($name);
+    return 0;
 }
 
 sub _post_remove_host_devices($self) {

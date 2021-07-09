@@ -46,7 +46,7 @@ our @TEMPLATES_KVM  = (
     }
     ,{
         name => 'PCI'
-        ,list_command => 'lspci'
+        ,list_command => 'lspci -Dnn'
         ,list_filter => ''
         ,template_args => encode_json({
                 pci => '([0-9a-f:\.]+) '
@@ -59,6 +59,7 @@ our @TEMPLATES_KVM  = (
         ,templates => [
             {
             path => '/domain/features/kvm'
+            ,type => 'unique_node'
             ,template => "<kvm>
                 <hidden state='on'/>
                 </kvm>"
@@ -71,14 +72,14 @@ our @TEMPLATES_KVM  = (
                 <address domain='0x<%= \$domain %>' bus='0x<%= \$bus %>' slot='0x<%= \$slot %>' function='0x<%= \$function %>'/>
                 </source>
                 <rom bar='on'/>
-                <address type='pci' domain='00000' bus='0x01' slot='0x01' function='0x0'/>
+                <address type='pci' domain='00000' bus='0x01' slot='0x01' function='0x<%= \$function %>'/>
             </hostdev>"
             }
         ]
     }
     ,{
         name => "GPU dri"
-        ,list_command => encode_json(["find","/dev/dri/by-path/"])
+        ,list_command => "find /dev/dri/by-path/ -type f"
         ,list_filter => ""
         ,template_args => encode_json({
                 pci => "0000:([a-f0-9:\.]+)"

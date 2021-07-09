@@ -837,12 +837,45 @@
                         $scope.ldap_groups=response.data;
                     });
             };
+
+            /* Host Devices */
             var list_host_devices = function() {
                 $http.get('/list_host_devices/'+$scope.showmachine.id_vm)
                     .then(function(response) {
+                        for ( var i=0;i<response.data.length; i++ ) {
+                            response.data[i].is_attached
+                                = _host_device_in_machine(response.data[i].id);
+                        }
                         $scope.host_devices=response.data;
                     });
-            }
+            };
+
+            var _host_device_in_machine = function(id_hd) {
+                for ( var i=0;i<$scope.showmachine.host_devices.length; i++ ) {
+                    var hd = $scope.showmachine.host_devices[i];
+                    console.log(hd.id+ " "+id_hd);
+                    if (hd.id_host_device == id_hd) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+
+            $scope.toggle_host_device = function(id_hd) {
+                if (_host_device_in_machine(id_hd)) {
+                    $http.get('/machine/host_device/remove/'+$scope.showmachine.id
+                        +"/"+id_hd).then(function(response) {
+                            $scope.error = response.data.error;
+                        });
+                } else {
+                    $http.get('/machine/host_device/add/'+$scope.showmachine.id
+                        +"/"+id_hd).then(function(response) {
+                            $scope.error = response.data.error;
+                        });
+                }
+            };
+            /* End Host Devices */
+
             $scope.rebase= function() {
                 $scope.req_new_base = $scope.new_base;
                 $http.post('/request/rebase/'

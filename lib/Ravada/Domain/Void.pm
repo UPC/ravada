@@ -1032,7 +1032,7 @@ sub copy_config($self, $domain) {
     }
 }
 
-sub add_config($self, $path, $content, $data) {
+sub add_config_node($self, $path, $content, $data) {
     my $content_hash;
     eval { $content_hash = Load($content) };
     confess $@."\n$content" if $@;

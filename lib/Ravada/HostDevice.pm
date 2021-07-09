@@ -88,19 +88,7 @@ sub list_devices($self) {
     die "Error: No list_command in host_device ".$self->id_vm
     if !$self->list_command;
 
-    my @command;
-    eval {
-        my $command = decode_json($self->list_command);
-        @command = @$command;
-    };
-    my $error = $@;
-    if ($error) {
-        if ( $error =~ /malformed JSON/ ) {
-            @command = $self->list_command
-        } else {
-            die $error;
-        }
-    }
+    my @command = split /\s+/, $self->list_command;
 
     my ($out, $err) = $vm->run_command(@command);
     die $err if $err;
@@ -149,9 +137,9 @@ sub _fetch_template_args($self, $device) {
             $ret->{$name} = join("",<$in>);
             close $in;
         } else {
-            $device =~ qr($re);
-            confess "Error: $re not found in '$device'" if !defined $1;
-            $ret->{$name} = $1;
+            my ($value) = $device =~ qr($re);
+            confess "Error: $re not found in '$device'" if !defined $value;
+            $ret->{$name} = $value;
         }
     }
     return $ret;

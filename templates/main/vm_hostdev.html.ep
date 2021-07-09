@@ -1,7 +1,9 @@
 <span ng-show="!host_devices"><i class="fas fa-sync-alt fa-spin"></i></span>
 
 <div ng-repeat="hdev in host_devices">
-    <input type="checkbox"/> <b>{{hdev.name}}</b>
+    <input type="checkbox"
+    ng-model="hdev.is_attached"
+    ng-click="toggle_host_device(hdev.id)"/> <b>{{hdev.name}}</b>
        <ul>
             <li ng-repeat="device in hdev.devices">
                 {{device}}
@@ -9,5 +11,8 @@
         </ul>
 </div>
 
+
 <a ng-show="host_devices" type="button" class="btn btn-outline-secondary"
     href="/node/settings/{{showmachine.id_vm}}.html"><b>Manage Host Devices</b></a>
+
+{{showmachine.host_devices}}

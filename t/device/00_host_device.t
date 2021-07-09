@@ -337,30 +337,35 @@ sub _create_mock_devices($n_devices, $type, $value="fff:fff") {
         close $out;
     }
     $N_DEVICE ++;
-    return (encode_json(["find","$path/"]),$name);
+    return ("find $path/",$name);
 }
 
-sub test_host_device_usb_mock($vm) {
+sub test_host_device_usb_mock($vm, $n_hd=1) {
 
     my $n_devices = 3;
-    my ($list_command,$list_filter) = _create_mock_devices( $n_devices , "USB" );
+    my ($list_command,$list_filter) = _create_mock_devices( $n_devices*$n_hd , "USB" );
 
-    _insert_hostdev_data_usb($vm, "USB Mock", $list_command, $list_filter);
+    for ( 1 .. $n_hd ) {
+        _insert_hostdev_data_usb($vm, "USB Mock $_", $list_command, $list_filter);
+    }
 
     my @list_hostdev = $vm->list_host_devices();
-    is(scalar @list_hostdev, 1);
+    is(scalar @list_hostdev, $n_hd) or die Dumper(\@list_hostdev);
 
     isa_ok($list_hostdev[0],'Ravada::HostDevice');
 
     my $base = create_domain($vm);
     $base->_set_controller_usb(5) if $base->type eq 'KVM';
 
-    $base->add_host_device($list_hostdev[0]);
+    for my $hd ( @list_hostdev ) {
+        $base->add_host_device($hd);
+    }
     my @list_hostdev_b = $base->list_host_devices();
-    is(scalar @list_hostdev_b, 1);
+    is(scalar @list_hostdev_b, $n_hd) or die Dumper(\@list_hostdev_b);
 
     $base->prepare_base(user_admin);
 
+    diag("cloning from ".$base->name);
     my @clones;
     for my $n ( 1 .. $n_devices+1 ) {
         my $clone = $base->clone(name => new_domain_name
@@ -377,19 +382,21 @@ sub test_host_device_usb_mock($vm) {
         } else {
             like( ''.$@,qr(Did not find USB device)) if $vm->type eq 'KVM';
             is( ''.$@, '' ) if $vm->type eq 'Void';
-            _check_hostdev($clone, 1);
+            _check_hostdev($clone, $n_hd);
         }
-        is(scalar($clone->list_host_devices_attached()),1, $clone->name);
+        is(scalar($clone->list_host_devices_attached()), $n_hd, $clone->name);
         push @clones,($clone);
     }
     $clones[0]->shutdown_now(user_admin);
-    _check_hostdev($clones[0], 1);
+    _check_hostdev($clones[0], $n_hd);
     my @devs_attached = $clones[0]->list_host_devices_attached();
-    is(scalar(@devs_attached),1);
+    is(scalar(@devs_attached), $n_hd);
     is($devs_attached[0]->{is_locked},0);
 
-    $list_hostdev[0]->_data('enabled' => 0 );
-    is( scalar($vm->list_host_devices()) , 1 );
+    for (@list_hostdev) {
+        $_->_data('enabled' => 0 );
+    }
+    is( scalar($vm->list_host_devices()) , $n_hd );
     is( scalar($base->list_host_devices()), 0);
     is( scalar($clones[0]->list_host_devices()), 0);
     is( scalar($clones[0]->list_host_devices_attached()), 0);
@@ -401,7 +408,9 @@ sub test_host_device_usb_mock($vm) {
     is( scalar($clone_nhd->list_host_devices_attached()), 0);
 
     remove_domain($base);
-    $list_hostdev[0]->remove();
+    for ( @list_hostdev ) {
+        $_->remove();
+    }
     test_db_host_devices_removed($base, @clones);
 }
 
@@ -497,6 +506,13 @@ sub test_host_device_gpu($vm) {
     my $base = create_domain($vm);
     $base->add_host_device($list_hostdev[0]);
     eval { $base->start(user_admin) };
+    if ($@ =~ /No DRM render nodes available/) {
+        diag("skip: ".$vm->type." GPU : $@");
+
+        $list_hostdev[0]->remove();
+        remove_domain($base);
+        return
+    }
     like ($@,qr{^($|.*Unable to stat|.*device not found.*mediated)} , $base->name) or exit;
 
     test_hostdev_gpu($base);
@@ -535,7 +551,7 @@ sub test_xmlns($vm) {
 
 clean();
 
-for my $vm_name ( reverse vm_names()) {
+for my $vm_name ( vm_names()) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -554,6 +570,7 @@ for my $vm_name ( reverse vm_names()) {
         test_host_device_usb($vm);
 
         test_host_device_usb_mock($vm);
+        test_host_device_usb_mock($vm,2);
 
     }
 }

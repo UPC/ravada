@@ -2810,7 +2810,35 @@ sub _add_xml_parse($parent, $content) {
 
 }
 
-sub add_config($self, $path, $content, $doc) {
+sub add_config_node($self, $path, $content, $doc) {
+
+    my ($dir,$entry) = $path =~ m{(.*)/(.*)};
+    confess "Error: missing entry in '$path'" if !$entry;
+
+    my @parent = $doc->findnodes($dir);
+    if (scalar(@parent)==0) {
+        @parent = $self->_xml_create_path($doc, $dir);
+    }
+
+    die "Error: I found ".scalar(@parent)." nodes for $dir, expecting 1"
+    unless scalar(@parent)==1;
+
+    my $element;
+    eval {
+    ($element) = $parent[0]->findnodes($entry);
+    };
+    die $@ if $@ && $@ !~ /Undefined namespace prefix/;
+    return if $element && $element->toString eq $content;
+
+    if ($content =~ /<qemu:commandline/) {
+        _add_xml_parse($parent[0], $content);
+    } else {
+        $parent[0]->appendWellBalancedChunk($content);
+    }
+
+}
+
+sub add_config_unique_node($self, $path, $content, $doc) {
 
     my ($dir,$entry) = $path =~ m{(.*)/(.*)};
     confess "Error: missing entry in '$path'" if !$entry;
