@@ -4,6 +4,9 @@ use strict;
 use Data::Dumper;
 use Test::More;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -121,6 +124,57 @@ sub test_description {
     $clone->remove($USER);
 }
 
+sub test_clone_private($vm) {
+    my $base = create_domain($vm);
+    my $user = create_user(new_domain_name(),$$);
+    my $name = new_domain_name();
+    my $req = Ravada::Request->clone(
+        uid => $user->id
+        ,id_domain => $base->id
+        ,name => $name
+    );
+    wait_request( check_error => 0);
+    ok($req->status,'done');
+    like($req->error,qr(.));
+    my $clone = $vm->search_domain($name);
+    ok(!$clone);
+
+    $req = Ravada::Request->clone(
+        uid => $user->id
+        ,id_domain => $base->id
+        ,name => $name
+        ,id_owner => $user->id
+    );
+    wait_request( check_error => 0);
+    ok($req->status,'done');
+    like($req->error,qr(.));
+    $clone = $vm->search_domain($name);
+    ok(!$clone);
+
+    my $bases = rvd_front->list_machines_user($user);
+    ok(! grep { $_->{name} eq $base->name } @$bases);
+
+    $req = Ravada::Request->clone(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,name => $name
+        ,id_owner => $user->id
+    );
+    wait_request( check_error => 0);
+    ok($req->status,'done');
+    is($req->error, '');
+    $clone = $vm->search_domain($name);
+    ok($clone);
+
+    my $bases2 = rvd_front->list_machines_user($user);
+    my ($base_user) = grep { $_->{name} eq $base->name } @$bases2;
+    ok($base_user);
+    is($base_user->{name_clone},$name);
+
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+}
+
 ###############################################################################
 remove_old_domains();
 remove_old_disks();
@@ -143,6 +197,7 @@ for my $vm_name (reverse sort @VMS) {
 
         use_ok("Ravada::VM::$vm_name");
         test_description($vm_name);
+        test_clone_private($vm);
 
         my $domain = test_create_domain($vm_name);
 

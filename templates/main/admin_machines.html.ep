@@ -276,7 +276,7 @@
                           <i class="fa fa-power-off"></i>
                        </button>
                        <button type="button" class="btn btn-primary btn-sm"
-                         ng-click="action('machine','view',machine.id)"
+                         ng-click="action('machine','view-new-tab',machine.id)"
                          title="<%=l 'View' %>">
                           <i class="fa fa-desktop"></i>
                        </button>

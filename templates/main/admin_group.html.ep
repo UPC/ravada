@@ -12,20 +12,28 @@
               <div class="card" id="admin-content">
                 <div class="card-header">
                     <h2 class="display-5"><%=l 'Group' %> <%= $name %></h2>
+                    <%= join(" - ",sort @$object_class) %>
                 </div>
               </div>
             </div>
             <div class="card-body">
                 <div ng-show="<%= $_user->can_manage_groups %>">
                     <%=l 'New group member' %>
-                    <select ng-model="new_member"
+                    <input type="text" ng-model="username_filter"
+                                       ng-change="list_users()"
+                                       placeholder="search"
+                    />
+                    <span ng-show="loading_users"><i class="fas fa-sync-alt fa-spin"></i></span>
+                    <select
+                        ng-show="users && users.length"
+                        ng-model="new_member"
                         ng-options="user.name for user in users"
                     >
                     </select>
                     <button ng-show="new_member && new_member.name"
                         ng-click="add_member(new_member.name)">Add</button>
-                    <div ng-show="error">{{error}}</div>
                 </div>
+                {{error}}
                 <table class="table table-striped" ng-show="group_members.length>0">
                     <thead>
                         <tr>

@@ -500,8 +500,16 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
     }
 }
 
-sub remove_domain($domain_data) {
-    return remove_domain_and_clones_req($domain_data,1,1);
+sub remove_domain(@bases) {
+
+    for my $base (@bases) {
+        for my $clone ($base->clones) {
+            my $d_clone = Ravada::Domain->open($clone->{id});
+            remove_domain($d_clone);
+        }
+        $base->remove(user_admin);
+    }
+
 }
 
 sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
@@ -726,7 +734,9 @@ sub mojo_create_domain($t, $vm_name) {
     )->status_is(302);
 
     wait_request(debug => 0, background => 1);
-    return rvd_front->search_domain($name);
+    my $domain = rvd_front->search_domain($name);
+    ok($domain,"Expecting domain $name created") or exit;
+    return $domain;
 
 }
 
@@ -877,6 +887,7 @@ sub remove_old_disks {
 
 sub create_user {
     my ($name, $pass, $is_admin) = @_;
+    $is_admin = 1 if $is_admin;
 
     my $login;
     eval { $login = Ravada::Auth::SQL->new(name => $name, password => $pass ) };
@@ -1979,7 +1990,7 @@ sub _load_sql_file {
     my $connector = shift;
     my $file_sql = shift;
 
-    open my $h_sql,'<',$file_sql or die "$! $file_sql";
+    open my $h_sql,'<',$file_sql or confess "$! $file_sql";
     my $sql = '';
     while (my $line = <$h_sql>) {
         $sql .= $line;

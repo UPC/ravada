@@ -425,8 +425,9 @@ sub _around_create_domain {
             || $owner->can_create_machine()
             || ($base && $owner->can_clone);
 
-    confess "ERROR: Base ".$base->name." is private"
-        if !$owner->is_admin && $base && !$base->is_public();
+#   Do not check if base is public to allow not public machines to be copied
+#    confess "ERROR: Base ".$base->name." is private"
+#        if !$owner->is_admin && $base && !$base->is_public();
 
     if ($add_to_pool) {
         confess "Error: This machine can only be added to a pool if it is a clone"
@@ -476,7 +477,7 @@ sub _around_create_domain {
         }
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
-    $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones());
+    $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones()) || $volatile;
 
     my @start_args = ( user => $owner );
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
@@ -823,7 +824,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
@@ -846,10 +847,12 @@ sub _check_require_base {
     die "ERROR: Domain ".$self->name." is not base"
             if !$base->is_base();
 
-    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+#   Do not check if base is public to allow not public machines to be copied
 
-    die "ERROR: Base ".$base->name." is not public\n"
-        unless $user->is_admin || $base->is_public;
+#    my $user = Ravada::Auth::SQL->search_by_id($id_owner);
+
+#    die "ERROR: Base ".$base->name." is not public\n"
+#        unless $user->is_admin || $base->is_public;
 }
 
 =head2 id
@@ -2043,10 +2046,13 @@ sub _new_free_port($self, $used_port={}) {
     $self->_list_used_ports_ss($used_port);
     $self->_list_used_ports_iptables($used_port);
 
-    my $free_port = $FREE_PORT;
+    my $min_free_port = Ravada::setting(undef,'/backend/expose_port_min');
+    my $free_port = $min_free_port;
     for (;;) {
         last if !$used_port->{$free_port};
         $free_port++ ;
+        die "Error: no free ports available from $min_free_port.\n"
+        if $free_port > 65535;
     }
     return $free_port;
 }

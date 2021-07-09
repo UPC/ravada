@@ -91,17 +91,6 @@
             <h3>Backend</h3>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-1"></div>
-            <div class="col-md-2">
-            <label for="start_limit"><%=l 'Start Limit' %></label>
-            </div>
-            <div class="col-md-4">
-                <input name="start_limit" ng-model="settings.backend.start_limit.value"
-                                          type="number" min="0"
-                >
-            </div>
-        </div>
 		<div class="row">
             <div class="col-md-1"></div>
             <div class="col-md-2">
@@ -111,7 +100,6 @@
             <input name="debug" ng-model="settings.backend.debug.value"
                 ng-true-value="1" ng-false-value="0"
                 type="checkbox">
-                <%= l 'Debug' %>
             </div>
         </div>
 		<div class="row">
@@ -119,10 +107,12 @@
             <div class="col-md-2">
             <label for="debug"><%=l 'Debug Ports' %></label>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-2">
             <input name="debug" ng-model="settings.backend.debug_ports.value"
                 ng-true-value="1" ng-false-value="0"
                 type="checkbox">
+            </div>
+            <div class="col-md-6">
                 <%= l 'Debug Ports Exposed' %>
             </div>
         </div>
@@ -132,11 +122,29 @@
             <div class="col-md-2">
             <label for="debug"><%=l 'Display Password' %></label>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-2">
             <input name="debug" ng-model="settings.backend.display_password.value"
                 ng-true-value="1" ng-false-value="0"
                 type="checkbox">
+            </div>
+            <div class="col-md-6">
                 <%= l 'Enables display password when available' %>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-2">
+            <label for="bookings">Bookings</label>
+            </div>
+            <div class="col-md-2">
+                <input name="bookings" ng-model="settings.backend.bookings.value"
+                                          type="checkbox"
+                    ng-true-value="1" ng-false-value="0"
+                >
+            </div>
+            <div class="col-md-6">
+                Bookings require LDAP authentication. <a href="https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html"><i class="fa fa-info"></i></a>
             </div>
         </div>
 
@@ -144,16 +152,30 @@
         <div class="row">
             <div class="col-md-1"></div>
             <div class="col-md-2">
-            <label for="bookings">Bookings</label>
+            <label for="start_limit"><%=l 'Start Limit' %></label>
             </div>
-            <div class="col-md-4">
-                <input name="bookings" ng-model="settings.backend.bookings.value"
-                                          type="checkbox"
-                    ng-true-value="1" ng-false-value="0"
+            <div class="col-md-2">
+                <input name="start_limit" ng-model="settings.backend.start_limit.value"
+                                          type="number" min="0" size="3"
                 >
             </div>
-            <div class="col-md-4">
-                Bookings require LDAP authentication. <a href="https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html">?</a>
+            <div class="col-md-6">
+                <%= l 'Number of virtual machines that normal users can have running at the same time' %>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-2">
+            <label for="debug">Port expose</label>
+            </div>
+            <div class="col-md-2">
+            <input name="debug" ng-model="settings.backend.expose_port_min.value"
+                type="number" min="1" max="65530" size="6">
+            </div>
+            <div class="col-md-6">
+                <%= l 'Minimum port number to expose virtual machine services.' %>
+                <a href="https://ravada.readthedocs.io/en/latest/docs/expose_ports.html"><i class="fa fa-info"></i></a>
             </div>
         </div>
 

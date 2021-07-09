@@ -35,11 +35,13 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
                             <a class="dropdown-item" href="/admin/machines"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp;<%=l 'machines' %></a>
 % if ($_user->is_admin || $_user->can_grant || $_user->can_manage_users) {
                             <a class="dropdown-item" href="/admin/users"><i class="fa fa-user" aria-hidden="true"></i>&nbsp;<%=l 'users' %></a>
-                            <a class="dropdown-item" href="/admin/nodes"><i class="fa fa-server" aria-hidden="true"></i>&nbsp;<%=l 'nodes' %></a>
-                            <a class="dropdown-item" href="/admin/networks"><i class="fa fa-sitemap" aria-hidden="true"></i>&nbsp;<%=l 'networks' %></a>
-%                   }
+% }
 % if ($_user->is_admin || $_user->can_view_groups || $_user->can_manage_groups ) {
                             <a class="dropdown-item" href="/admin/groups"><i class="fa fa-users" aria-hidden="true"></i>&nbsp;<%=l 'groups' %></a>
+% }
+% if ($_user->is_admin) {
+                            <a class="dropdown-item" href="/admin/nodes"><i class="fa fa-server" aria-hidden="true"></i>&nbsp;<%=l 'nodes' %></a>
+                            <a class="dropdown-item" href="/admin/networks"><i class="fa fa-sitemap" aria-hidden="true"></i>&nbsp;<%=l 'networks' %></a>
 % }
                             <a class="dropdown-item" href="/admin/messages"><i class="fa fa-envelope" aria-hidden="true"></i>&nbsp;<%=l 'messages' %></a>
 % if ($monitoring) {

@@ -18,7 +18,7 @@
                 <%=l 'A viewer is required to run the virtual machines.' %>
                 <a href="/requirements"><%=l 'Read more.' %></a>
             </div>
-        <div ng-hide="request.status == 'done'">Waiting for machine to start <i class="fas fa-sync-alt fa-spin"></i></div>
+        <div ng-hide="request.status == 'done'"><%=l 'Waiting for machine to start' %> <i class="fas fa-sync-alt fa-spin"></i></div>
         <div ng-show="domain">
             <div ng-show="domain.description ||(domain.is_active && domain.msg_timeout)">
                 <span ng-bind-html="domain.description"
@@ -31,16 +31,16 @@
                 </span>
             </div>
             <div class="panel-body" ng-show="domain.is_active">
-            <h3>Display</h3>
+            <h3><%=l 'Display' %></h3>
             %= include "/main/machine_displays"
-            <h3>Machine Information</h3>
+            <h3><%=l 'Machine Information' %></h3>
             <ul>
-                <li><b>Internal IP:</b><span ng-show="domain.ip"> {{domain.ip}}</span>
-                    <span ng-hide="domain.ip"><i>waiting for network to come up</i></span>
+                <li><b><%=l 'Internal IP' %>:</b><span ng-show="domain.ip"> {{domain.ip}}</span>
+                    <span ng-hide="domain.ip"><i><%=l 'waiting for network to come up' %></i></span>
                 </li>
-                <li ng-show="domain.interfaces"><b>Hardware address</b> {{domain.interfaces[0].hwaddr}} </li>
-                <li><b>Max Memory:</b> {{domain.max_mem}}</li>
-                <li><b>Memory:</b> {{domain.memory}}</li>
+                <li ng-show="domain.interfaces"><b><%=l 'Hardware address' %></b> {{domain.interfaces[0].hwaddr}} </li>
+                <li><b><%=l 'Max Memory' %>:</b> {{domain.max_mem}}</li>
+                <li><b><%=l 'Memory' %>:</b> {{domain.memory}}</li>
                 <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
             </ul>
             <h3 ng-show="domain.ports.length">Open ports</h3>
@@ -66,8 +66,8 @@
         <div>
             <div class="panel-body">
                 <div ng-show="request.error && !domain.is_active">{{request.error}}</div>
-                <div ng-show="domain && request.status == 'done' && domain.is_active == 0"><%=l 'The machine is down.'%>
-                 <button type="submit" class="btn btn-primary" onclick="location.reload('forceGet')"><%=l 'Start again'%></button>
+                <div ng-show="domain && request.status == 'done' && domain.is_active == 0"><%=l 'The machine is down.' %>
+                 <button type="submit" class="btn btn-primary" onclick="location.reload('forceGet')"><%=l 'Start again' %></button>
                 </div>
             </div>
         </div>

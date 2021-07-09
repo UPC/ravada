@@ -734,8 +734,8 @@ msgstr "Propietari"
 msgid "Change the owner of the machine"
 msgstr "Canviar el propietari de la màquina"
 
-msgid "Press SHIFT + F12 to exit"
-msgstr "Pressione SHIFT + F12 per a eixir"
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Pressione SHIFT + F12 per a eixir de la màquina virtual"
 
 msgid ""
 "If you can not see the machine screen in a few seconds check for a file "
@@ -930,3 +930,34 @@ msgstr "Àrab"
 
 msgid "Turkish"
 msgstr "Turc"
+
+msgid "Waiting for machine to start"
+msgstr "Esperant a la màquina per a posar en marxa"
+
+msgid "This machine will shut down"
+msgstr "La màquina s'apagarà"
+
+msgid "Waiting for network to come up"
+msgstr "Esperant a la xarxa per a sorgir"
+
+msgid "Hardware address"
+msgstr "Direcció del Hardware"
+
+msgid "Open ports"
+msgstr "Ports oberts"
+
+msgid "up"
+msgstr "Encesa"
+
+msgid "Machine Information"
+msgstr "Informació de la màquina"
+
+msgid "Internal IP"
+msgstr "IP Interna"
+
+msgid "Display"
+msgstr "Visualització"
+
+msgid "Max Memory"
+msgstr "Memòria Màx"
+

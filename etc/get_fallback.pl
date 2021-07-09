@@ -20,7 +20,7 @@ $ua->max_redirects(4);
 my $FILE_CONFIG = 'etc/fallback.conf';
 my $DIR_FALLBACK = getcwd.'/public/fallback';
 
-die "Error: missing fallback dir $DIR_FALLBACK"
+mkdir $DIR_FALLBACK or die "Error: $! $DIR_FALLBACK"
     if ! -e $DIR_FALLBACK;
 
 sub download($url, $dst = $DIR_FALLBACK) {
@@ -60,7 +60,7 @@ sub uncompress($file) {
 
 sub get_version_badge {
     return if $VERSION =~/alpha/;
-    $VERSION =~ s/-/--/;
+    #    $VERSION =~ s/-/--/;
     download("https://img.shields.io/badge/version-$VERSION-brightgreen.svg"
         ,"../img/version-$VERSION-brightgreen.svg");
 }

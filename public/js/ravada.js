@@ -159,7 +159,7 @@
 
             var subscribe_list_machines_user = function(url) {
                 $scope.machines = [];
-                var channel = 'list_machines_user';
+                var channel = 'list_machines_user_including_privates';
                 if ($scope.anonymous) {
                     channel = 'list_bases_anonymous';
                 }
@@ -264,6 +264,7 @@
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
                         $scope.showmachine = data;
+                        $scope.copy_is_volatile = $scope.showmachine.is_volatile;
                         if (!subscribed_extra) {
                             subscribed_extra = true;
                             subscribe_nodes(url,data.type);
@@ -287,7 +288,10 @@
             };
 
             $scope.action = function(target,action,machineId,params){
-              if (action === 'view') {
+              if (action === 'view-new-tab') {
+                  window.open('/machine/view/' + machineId + '.html');
+              }
+              else if (action === 'view') {
                   window.location.assign('/machine/view/' + machineId + '.html');
               }
               else {
@@ -576,6 +580,9 @@
                             ,'copy_number': $scope.copy_number
                           ,'copy_ram': $scope.copy_ram
                           ,'new_name': $scope.new_name
+                          ,'new_owner': $scope.copy_owner
+                          ,'copy_is_volatile': $scope.copy_is_volatile
+                          ,'copy_is_pool': $scope.copy_is_pool
                       })
               ).then(function(response) {
                   // if there are many , we pick the last one
@@ -826,6 +833,7 @@
                         $scope.list_users=response.data;
                         for (var i = 0; i < response.data.length; i++) {
                             if (response.data[i].id == $scope.showmachine.id_owner) {
+                                $scope.copy_owner = response.data[i].id;
                                 $scope.new_owner = response.data[i];
                             }
                         }

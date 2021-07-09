@@ -151,7 +151,7 @@ sub _set_first_time_run($self) {
     if  ( keys %$info ) {
         $FIRST_TIME_RUN = 0;
     } else {
-        print "Installing ";
+        print "Installing " if $0 !~ /\.t$/;
     }
 }
 
@@ -229,6 +229,14 @@ sub _init_user_daemon {
 
     $USER_DAEMON = Ravada::Auth::SQL->new(name => $USER_DAEMON_NAME);
     if (!$USER_DAEMON->id) {
+        for (1 .. 120 ) {
+            my @list = $self->_list_pids();
+            last if !@list;
+            sleep 1 if @list;
+            $self->_wait_pids();
+        }
+        $USER_DAEMON = Ravada::Auth::SQL->new(name => $USER_DAEMON_NAME);
+        return if $USER_DAEMON->id;
         $USER_DAEMON = Ravada::Auth::SQL::add_user(
             name => $USER_DAEMON_NAME,
             is_admin => 1
@@ -714,18 +722,19 @@ sub _scheduled_fedora_releases($self,$data) {
 }
 
 sub _add_domain_drivers_display($self) {
+    my $port_rdp = 3389;
     my %data = (
         'KVM' => [
             'spice'
             ,'vnc'
             ,{name => 'x2go', data => 22 }
-            ,{name => 'Windows RDP', value => 'rdp', data => 356}
+            ,{name => 'Windows RDP', value => 'rdp', data => $port_rdp}
         ]
         ,'Void' => [
             'void'
             ,'spice'
             ,{name => 'x2go', data => 22 }
-            ,{name => 'Windows RDP', value => 'rdp' , data => 356 }
+            ,{name => 'Windows RDP', value => 'rdp' , data => $port_rdp }
         ]
     );
 
@@ -1390,10 +1399,10 @@ sub _add_grants($self) {
     $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
     $self->_add_grant('view_groups',0,'Can view groups.');
     $self->_add_grant('manage_groups',0,'Can manage groups.');
-    $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1);
+    $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1, 0);
 }
 
-sub _add_grant($self, $grant, $allowed, $description, $is_int = 0) {
+sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id, description FROM grant_types WHERE name=?"
     );
@@ -1410,9 +1419,9 @@ sub _add_grant($self, $grant, $allowed, $description, $is_int = 0) {
     }
     return if $id;
 
-    $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description, is_int)"
-        ." VALUES (?,?,?)");
-    $sth->execute($grant, $description, $is_int);
+    $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description, is_int, default_admin)"
+        ." VALUES (?,?,?,?)");
+    $sth->execute($grant, $description, $is_int, $default_admin);
     $sth->finish;
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types WHERE name=?");
@@ -1429,6 +1438,7 @@ sub _add_grant($self, $grant, $allowed, $description, $is_int = 0) {
     while (my ($id_user, $name, $is_admin) = $sth->fetchrow ) {
         my $allowed_current = $allowed;
         $allowed_current = 1 if $is_admin;
+        $allowed_current = $default_admin if $is_admin && defined $default_admin;
         eval { $sth_insert->execute($id_user, $id_grant, $allowed_current ) };
         die $@ if $@ && $@ !~/Duplicate entry /;
     }
@@ -1828,6 +1838,15 @@ sub _sql_create_tables($self) {
         ]
         ,
         [
+            file_base_images => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT'
+                ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
+                ,file_base_img => ' varchar(255) DEFAULT NULL'
+                ,target =>  'varchar(64) DEFAULT NULL'
+            }
+        ]
+        ,
+        [
             volumes => {
                 id => 'integer PRIMARY KEY AUTO_INCREMENT',
                 id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE',
@@ -1885,6 +1904,11 @@ sub _clean_db_leftovers($self) {
 
         $self->_delete_limit("FROM $table WHERE id_domain NOT IN "
             ." ( SELECT id FROM domains ) ");
+        ;
+    }
+    for my $table ('bases_vm' ,'domain_instances') {
+        $self->_delete_limit("FROM $table WHERE id_vm NOT IN "
+            ." ( SELECT id FROM vms) ");
         ;
     }
     for my $table ('grants_user') {
@@ -2047,6 +2071,11 @@ sub _sql_insert_defaults($self){
                 ,name => "debug_ports"
                 ,value => 0
             }
+            ,{
+                id_parent => $id_backend
+                ,name => 'expose_port_min'
+                ,value => '60000'
+            }
         ]
     );
     my %field = ( settings => 'name' );
@@ -2149,7 +2178,6 @@ sub _upgrade_tables {
 #    return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
 
     $self->_upgrade_table("base_xml",'xml','TEXT');
-    $self->_upgrade_table('file_base_images','target','varchar(64) DEFAULT NULL');
 
     $self->_upgrade_table('vms','vm_type',"char(20) NOT NULL DEFAULT 'KVM'");
     $self->_upgrade_table('vms','connection_args',"text DEFAULT NULL");
@@ -2176,6 +2204,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
     $self->_upgrade_table('requests','retry','int(11) DEFAULT NULL');
+    $self->_upgrade_table('requests','args','char(255)');
 
     $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
     $self->_clean_iso_mini();
@@ -2244,6 +2273,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iptables','id_vm','int DEFAULT NULL');
     $self->_upgrade_table('vms','security','varchar(255) default NULL');
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
+    $self->_upgrade_table('grant_types','default_admin','int not null default 1');
 
     $self->_upgrade_table('vms','mac','char(18)');
     $self->_upgrade_table('vms','tls','text');
@@ -2264,6 +2294,11 @@ sub _upgrade_tables {
     $self->_upgrade_table('grant_types', 'is_int', 'int DEFAULT 0');
 
     $self->_upgrade_table('grants_user', 'id_user', 'int not null references `users` (`id`) ON DELETE CASCADE');
+
+    $self->_upgrade_table('bases_vm','id_vm','int not null references `vms` (`id`) ON DELETE CASCADE');
+    $self->_upgrade_table('bases_vm','id_domain','int not null references `domains` (`id`) ON DELETE CASCADE');
+
+    $self->_upgrade_table('domain_instances','id_vm','int not null references `vms` (`id`) ON DELETE CASCADE');
 
     $self->_upgrade_users_table();
 }
@@ -3424,11 +3459,9 @@ sub _execute {
     $self->_wait_pids;
     return if !$self->_can_fork($request);
 
-    $self->disconnect_vm();
     my $pid = fork();
     die "I can't fork" if !defined $pid;
 
-    $self->disconnect_vm();
     if ( $pid == 0 ) {
         srand();
         $self->_do_execute_command($sub, $request);
@@ -3709,8 +3742,8 @@ sub _can_fork {
     $req->at_time(time+10);
     return 0;
 }
-sub _wait_pids {
-    my $self = shift;
+
+sub _wait_pids($self) {
 
     my @done;
     for my $type ( keys %{$self->{pids}} ) {
@@ -3751,6 +3784,15 @@ sub _add_pid($self, $pid, $request=undef) {
 
 }
 
+sub _list_pids($self) {
+    my @alive;
+    for my $type ( keys %{$self->{pids}} ) {
+        for my $pid ( keys %{$self->{pids}->{$type}}) {
+            push @alive, ($pid);
+        }
+    }
+    return @alive;
+}
 
 sub _delete_pid {
     my $self = shift;
@@ -4453,6 +4495,7 @@ sub _cmd_refresh_machine($self, $request) {
     my $is_active = $domain->is_active;
     $self->_remove_unnecessary_downs($domain) if !$is_active;
     $domain->info($user);
+    $domain->client_status(1) if $is_active;
 
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id)
     if $is_active && $domain->ip;
@@ -4468,6 +4511,7 @@ sub _cmd_refresh_machine_ports($self, $request) {
     unless $domain->_data('id_owner') ==  $user->id || $user->is_operator;
 
     $domain->refresh_ports($request);
+    $domain->client_status(1) if $domain->is_active;
 }
 
 
@@ -4929,6 +4973,7 @@ sub _refresh_active_domain($self, $domain, $active_domain) {
     $domain->_set_data(status => $status);
     $domain->info(Ravada::Utils::user_daemon)             if $is_active;
     $active_domain->{$domain->id} = $is_active;
+    $domain->client_status(1);
 
     $domain->_post_shutdown()
     if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown');
@@ -5220,7 +5265,7 @@ Returns the list of Virtual Managers
 
 sub vm($self) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id FROM vms "
+        "SELECT id FROM vms WHERE is_active=1"
     );
     $sth->execute();
     my @vms;

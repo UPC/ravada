@@ -15,6 +15,7 @@ $Ravada::CAN_FORK = 1;
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
 
+init();
 my $RVD_BACK = rvd_back();
 my $RVD_FRONT= rvd_front();
 
@@ -163,8 +164,7 @@ sub test_interface_macvtap {
 }
 
 ###############################################################################
-remove_old_domains();
-remove_old_disks();
+clean();
 
 for my $vm_name (@VMS) {
     my $vm;

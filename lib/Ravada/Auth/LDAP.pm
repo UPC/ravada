@@ -11,7 +11,7 @@ Ravada::Auth::LDAP - LDAP library for Ravada
 
 use Authen::Passphrase;
 use Authen::Passphrase::SaltedDigest;
-use Carp qw(carp);
+use Carp qw(carp croak);
 use Data::Dumper;
 use Digest::SHA qw(sha1_hex sha256_hex);
 use Encode;
@@ -41,6 +41,8 @@ our @OBJECT_CLASS = ('top'
                     ,'person'
                     ,'inetOrgPerson'
                    );
+
+our @OBJECT_CLASS_POSIX = (@OBJECT_CLASS,'posixAccount');
 
 our $STATUS_EOF = 1;
 our $STATUS_DISCONNECTED = 81;
@@ -100,6 +102,87 @@ sub add_user($name, $password, $storage='rfc2307', $algorithm=undef ) {
     if ($mesg->code) {
         die "Error afegint $name to $dn ".$mesg->error;
     }
+}
+
+=head2 add_user_posix
+
+Adds a new user in the LDAP directory
+
+    Ravada::Auth::LDAP::add_user_posix($name, $password);
+
+=cut
+
+sub add_user_posix(%args) {
+    my $name = delete $args{name} or croak "Error: missing name";
+    my $password = delete $args{password} or croak "Error: missing password";
+    my $gid = (delete $args{gid} or _get_gid());
+    my $storage = ( delete $args{storage} or 'rfc2307');
+    my $algorithm = delete $args{algorithm};
+    confess "Error : unknown args ".dumper(\%args) if keys %args;
+
+    _init_ldap_admin();
+
+    $name = escape_filter_value($name);
+    $password = escape_filter_value($password);
+
+    confess "No dc base in config ".Dumper($$CONFIG->{ldap})
+        if !_dc_base();
+    my ($givenName, $sn) = $name =~ m{(\w+)\.(.*)};
+
+    my %entry = (
+        cn => $name
+        , uid => $name
+        , uidNumber => _new_uid()
+        , gidNumber => $gid
+        , objectClass => \@OBJECT_CLASS_POSIX
+        , givenName => ($givenName or $name)
+        , sn => ($sn or $name)
+        ,homeDirectory => "/home/$name"
+        ,userPassword => _password_store($password, $storage, $algorithm)
+    );
+    my $dn = "cn=$name,"._dc_base();
+
+    my $mesg = $LDAP_ADMIN->add($dn, attr => [%entry]);
+    if ($mesg->code) {
+        die "Error afegint $name to $dn ".$mesg->error;
+    }
+}
+
+sub _get_gid() {
+    my @group = search_group(name => "*");
+    my ($group_users) = grep { $_->get_value('cn') eq 'users' } @group;
+    $group_users = $group[0] if !$group_users;
+    if (!$group_users) {
+        add_group('users');
+        ($group_users) = search_group(name => 'users');
+        confess "Error: I can create nor find LDAP group 'users'" if !$group_users;
+    }
+    return $group_users->get_value('gidNumber');
+}
+
+sub _new_uid($ldap=_init_ldap_admin(), $base=_dc_base()) {
+
+    my $id = 1000;
+    for (;;) {
+        my $mesg = $ldap->search(      # Search for the user
+            base   => $base,
+            scope  => 'sub',
+            filter => "uidNumber=$id",
+            typesonly => 0,
+            attrs  => ['*']
+        );
+
+        confess "LDAP error ".$mesg->code." ".$mesg->error if $mesg->code;
+
+        my @entries = $mesg->entries;
+        return $id if !scalar @entries;
+        $id++;
+        $id+= int(rand(10))+1;
+    }
+}
+
+sub default_object_class() {
+    return @OBJECT_CLASS;
 }
 
 sub _password_store($password, $storage, $algorithm) {
@@ -195,6 +278,9 @@ sub search_user {
     my $typesonly= (delete $args{typesonly} or 0);
     my $escape_username = 1;
     $escape_username = delete $args{escape_username} if exists $args{escape_username};
+    my $filter_orig = delete $args{filter};
+    my $sizelimit = (delete $args{sizelimit} or 100);
+    my $timelimit = (delete $args{timelimit} or 60);
 
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
     confess "ERROR: I can't connect to LDAP " if!$ldap;
@@ -203,10 +289,11 @@ sub search_user {
     $username =~ s/ /\\ /g;
 
     my $filter = "($field=$username)";
-    if ( exists $$CONFIG->{ldap}->{filter} ) {
+    if (!defined $filter_orig && exists $$CONFIG->{ldap}->{filter} ) {
         my $filter_config = $$CONFIG->{ldap}->{filter};
-        $filter_config = escape_filter_value($filter_config);
         $filter = "(&($field=$username) ($filter_config))";
+    } else {
+        $filter = "(&($field=$username) ($filter_orig))" if $filter_orig;
     }
 
     my $mesg = $ldap->search(      # Search for the user
@@ -214,10 +301,11 @@ sub search_user {
     scope  => 'sub',
     filter => $filter,
     typesonly => $typesonly,
-    attrs  => ['*']
+    attrs  => ['*'],
+    sizelimit => $sizelimit,
+    timelimit => $timelimit
 
     );
-
     warn "LDAP retry ".$mesg->code." ".$mesg->error if $retry > 1;
 
     if ( $retry <= 3 && $mesg->code && $mesg->code != 4 ) {
@@ -232,6 +320,8 @@ sub search_user {
               ,field => $field
               ,retry => ++$retry
               ,typesonly => $typesonly
+              ,filter => $filter_orig
+              ,sizelimit => $sizelimit
          );
     }
 
@@ -240,7 +330,9 @@ sub search_user {
 
     return if !$mesg->count();
 
-    return $mesg->entries;
+    my @entries = $mesg->entries;
+    return $entries[0] if !wantarray;
+    return @entries;
 }
 
 =head2 add_group
@@ -249,27 +341,27 @@ Add a group to the LDAP
 
 =cut
 
-sub add_group {
-    my $name = shift;
-    my $base = (shift or _dc_base());
-    my $class = ( shift or [
-            'groupOfUniqueNames','nsMemberOf','posixGroup','top'
-        ]);
-
+sub add_group($name, $base=_dc_base(), $class=['groupOfUniqueNames','nsMemberOf','posixGroup','top' ]) {
+    $base = _dc_base() if !defined $base;
     $name = escape_filter_value($name);
+    my $oc_posix_group;
+    $oc_posix_group = grep { /^posixGroup$/ } @$class;
 
-    my $mesg = $LDAP_ADMIN->add(
-        cn => $name
-        ,dn => "cn=$name,ou=groups,$base"
-        , attrs => [ cn=>$name
+    my @attrs =( cn=>$name
                     ,objectClass => $class
                     ,ou => 'Groups'
                     ,description => "Group for $name"
-                    ,gidNumber => _search_new_gid()
-          ]
     );
+    push @attrs, (gidNumber => _search_new_gid()) if $oc_posix_group;
+
+    my @data = (
+        dn => "cn=$name,ou=groups,$base"
+        , cn => $name
+        , attrs => \@attrs
+      );
+    my $mesg = $LDAP_ADMIN->add(@data);
     if ($mesg->code) {
-        die "Error creating group $name : ".$mesg->error."\n";
+        die "Error creating group $name : ".$mesg->error."\n".Dumper(\@data);
     }
 
 }
@@ -321,22 +413,38 @@ sub remove_group {
 sub search_group {
     my %args = @_;
 
-    my $name = delete $args{name};
+    my $name = delete $args{name} or confess "Error: missing name";
     my $base = ( delete $args{base} or "ou=groups,"._dc_base() );
     my $ldap = ( delete $args{ldap} or _init_ldap_admin());
     my $retry =( delete $args{retry} or 0);
 
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
     confess "ERROR: I can't connect to LDAP " if!$ldap;
-
+    my $filter = "cn=$name";
     my $mesg = $ldap ->search (
-        filter => "cn=$name"
+        filter => $filter
          ,base => $base
+         ,sizelimit => 100
     );
-    warn "LDAP retry ".$mesg->code." ".$mesg->error if $retry > 1;
+    warn "LDAP retry ".$mesg->code." ".$mesg->error." [filter: $filter , base: $base]" if $retry > 1;
+    if ($mesg->code == 4 ) {
+        if ( $name eq '*' ) {
+            $name = 'a*';
+        } elsif ($name eq 'a*' ) {
+            $name = 'a*a*';
+        } else {
+            die "LDAP error: ".$mesg->code." ".$mesg->error;
+        }
+        return search_group(
+            name => $name
+            ,base => $base
+            ,ldap => $ldap
+            ,retry => $retry+1
+        );
+    }
 
     if ( $retry <= 3 && $mesg->code){
-        warn "LDAP error ".$mesg->code." ".$mesg->error."."
+        warn "LDAP error ".$mesg->code." ".$mesg->error.". [cn=$name] "
             ."Retrying ! [$retry]"  if $retry;
          $LDAP_ADMIN = undef;
          sleep ($retry + 1);
@@ -348,8 +456,8 @@ sub search_group {
          );
     }
     my @entries = $mesg->entries;
-
     return @entries if wantarray;
+
     return $entries[0];
 }
 
@@ -357,27 +465,77 @@ sub search_group {
 
 Adds user to group
 
-    add_to_group($uid, $group_name);
+    add_to_group($dn, $group_name);
 
 =cut
 
 sub add_to_group {
-    my ($uid, $group_name) = @_;
-
-    my @user = search_user(name => $uid)                        or die "No such user $uid";
-    warn "Found ".scalar(@user)." users $uid , getting the first one ".Dumper(\@user)
-        if scalar(@user)>1;
-
-    my $user = $user[0];
+    my ($dn, $group_name) = @_;
+    if ( $dn !~ /=.*,/ ) {
+        my $user = search_user(name => $dn) or confess "Error: user '$dn' not found";
+        $dn = $user->dn;
+    }
 
     my $group = search_group(name => $group_name, ldap => $LDAP_ADMIN)   
         or die "No such group $group_name";
 
-    $group->add(uniqueMember=> $user->dn);
+    if ( grep {/^groupOfNames$/} $group->get_value('objectClass') ) {
+        $group->add(member => $dn)
+    } elsif ( grep {/^posixGroup$/} $group->get_value('objectClass') ) {
+        my ($cn) = $dn =~ /^cn=(.*?),/;
+        ($cn) = $dn =~ /^uid=(.*?),/ if !$cn;
+        die "Error: I can't find cn in $dn" if !$cn;
+        my @attributes = $group->attributes;
+        my $attribute;
+        for (qw(uniqueMember memberUid)) {
+            $attribute = $_ if grep /^$_$/,@attributes;
+        }
+        ($attribute) = grep /member/i,@attributes if !$attribute;
+        if ($attribute eq 'memberUid') {
+            $group->add($attribute => $cn);
+        } else {
+            $group->add($attribute => $dn);
+        }
+    } else {
+        die "Error: group $group_name class unknown ".Dumper($group->get_value('objectClass'));
+    }
     my $mesg = $group->update($LDAP_ADMIN);
-    die $mesg->error if $mesg->code;
+    die "Error: adding member ".$dn." ".$mesg->error if $mesg->code;
 
 }
+
+=head2 remove_from_group
+
+Removes user from group
+
+    add_to_group($dn, $group_name);
+
+=cut
+
+sub remove_from_group {
+    my ($dn, $group_name) = @_;
+
+    my $group = search_group(name => $group_name, ldap => $LDAP_ADMIN)
+        or die "No such group $group_name";
+
+    my $found = 0;
+    for my $attribute ( $group->attributes() ) {
+        next if $attribute !~ /member/i;
+        my $uid = $dn;
+        $uid =~s/.*?=(.*?),.*/$1/ if $attribute eq 'memberUid';
+        my $mesg  = $group->delete($attribute => $uid )->update(_init_ldap_admin());
+
+        die "Error: [".$mesg->code."] removing $uid from $group_name - $attribute ".$mesg->error
+        if $mesg->code;
+
+        $found++;
+
+    }
+    die "Error: group $group_name class unknown ".Dumper($group->get_value('objectClass'))
+    if !$found;
+
+}
+
 
 =head2 login
 
@@ -407,10 +565,35 @@ sub _search_posix_group($self, $name) {
     return $posix_group[0];
 }
 
-sub login($self) {
-    my $user_ok;
-    my $allowed;
+sub group_members {
+    return _group_members(@_);
+}
+
+sub _group_members($group_name = $$CONFIG->{ldap}->{group}) {
+    my $group = $group_name;
+    if (!ref($group)) {
+        $group = search_group(name => $group_name);
+        if (!$group) {
+            confess "Warning: group $group_name not found";
+            return;
+        }
+    }
+    confess "Error: invalid object ".ref($group) if ref($group)!~ /^Net::LDAP/;
+    my @oc = $group->get_value('objectClass');
+
+    my @members;
+    for my $attribute ($group->attributes) {
+        next if $attribute !~ /member/i;
+        push @members, $group->get_value($attribute);
+    }
+    my %members = map { $_ => 1 } @members;
+    @members = sort keys %members;
+    return @members;
+}
+
+sub _check_posix_group($self) {
     my $posix_group_name = $$CONFIG->{ldap}->{ravada_posix_group};
+    return 1 if !$posix_group_name;
 
     if ($posix_group_name) {
         my $posix_group = $self->_search_posix_group($posix_group_name);
@@ -428,6 +611,13 @@ sub login($self) {
         }
         $self->{_ldap_entry} = $posix_group;
     }
+}
+
+sub login($self) {
+    my $user_ok;
+    my $allowed;
+
+    return if !$self->_check_posix_group();
 
         $user_ok = $self->_login_bind()
         if !exists $$CONFIG->{ldap}->{auth} || $$CONFIG->{ldap}->{auth} =~ /bind|all/i;
@@ -455,19 +645,28 @@ sub _login_bind {
         @user = (search_user(name => $self->name, field => 'uid')
                 ,search_user(name => $self->name, field => 'cn'));
     }
-    for my $user (@user) {
-        my $dn = $user->dn;
+    my %user = map { $_->dn => $_ } @user;
+
+    my @error;
+    for my $dn ( sort keys %user ) {
+        if ($$CONFIG->{ldap}->{group} && !is_member($dn,$$CONFIG->{ldap}->{group})) {
+            push @error, ("Warning: $dn does not belong to group $$CONFIG->{ldap}->{group}");
+            next;
+        }
         $found++;
         my $ldap;
         eval { $ldap = _connect_ldap($dn, $password) };
-        if ( $ldap ) {
-            $self->{_auth} = 'bind';
-            $self->{_ldap_entry} = $user;
-            return 1;
-        }
         warn "ERROR: Bad credentials for $dn"
             if $Ravada::DEBUG && $@;
+        if ( $ldap ) {
+            $self->{_auth} = 'bind';
+            $self->{_ldap_entry} = $user{$dn} if $user{$dn};
+            return 1;
+        }
+        push @error,("ERROR: Bad credentials for $dn");
     }
+    warn Dumper(\@error)
+            if $Ravada::DEBUG && scalar (@error);
     return 0;
 }
 
@@ -492,16 +691,21 @@ sub _login_match {
 
     my @entries = search_user($username);
 
+    my @error;
     for my $entry (@entries) {
 
-
+        if ($$CONFIG->{ldap}->{group} && !is_member($entry->dn,$$CONFIG->{ldap}->{group})) {
+            push @error, ("Warning: ".$entry->dn.." does not belong to group $$CONFIG->{ldap}->{group}");
+            next;
+        }
 #       my $mesg;
 #       eval { $mesg = $LDAP->bind( $user_dn, password => $password )};
 #       return 1 if $mesg && !$mesg->code;
 
 #       warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $username";
-        $user_ok = $self->_match_password($entry, $password);
-        warn $entry->dn." : $user_ok" if $Ravada::DEBUG;
+        eval { $user_ok = $self->_match_password($entry, $password) };
+        warn $@ if $@;
+
         if ( $user_ok ) {
             $self->{_ldap_entry} = $entry;
             last;
@@ -512,6 +716,8 @@ sub _login_match {
         $self->{_auth} = 'match';
     }
 
+    warn Dumper(\@error)
+            if $Ravada::DEBUG && scalar (@error);
     return $user_ok;
 }
 
@@ -550,7 +756,8 @@ sub _match_password {
     return Authen::Passphrase->from_rfc2307($password_ldap)->match($password)
         if $storage =~ /rfc2307|md5/i;
 
-    return _match_pbkdf2($password_ldap,$password) if $storage =~ /pbkdf2|SSHA/i;
+    return _match_pbkdf2($password_ldap,$password) if $storage eq 'PBKDF2';
+    return _match_ssha($password_ldap,$password) if $storage eq 'SSHA';
 
     confess "Error: storage $storage can't do match. Use bind.";
 }
@@ -560,6 +767,10 @@ sub _ntohl {
     confess "Wrong number of arguments ($#_) to " . __PACKAGE__ . "::ntohl, called"
     if @_ != 1 and !wantarray;
     unpack('L*', pack('N*', @_));
+}
+
+sub _match_ssha($password_ldap, $password) {
+    return Authen::Passphrase->from_rfc2307($password_ldap)->match($password);
 }
 
 sub _match_pbkdf2($password_db_64, $password) {
@@ -633,6 +844,8 @@ sub _connect_ldap {
         die "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $dn\n"
             if $mesg->code;
 
+    } else {
+        return;
     }
 
     return $ldap;
@@ -690,10 +903,44 @@ sub is_admin {
         };
 
 
-    my ($user) = search_user($self->name);
-    my $dn = $user->dn;
-    return grep /^$dn$/,$group->get_value('uniqueMember');
+    return is_member($self->name, $admin_group);
 
+}
+
+=head2 is_member
+
+Returns if an user is member of a group
+
+    if (is_member($group, $cn)) {
+    }
+
+=cut
+
+sub is_member($cn, $group) {
+    my $user;
+    my $dn;
+    if (ref($cn) && ref($cn) =~ /Net::LDAP::Entry/) {
+        $user = $cn;
+        $cn = $user->get_value('cn');
+        $dn = $user->dn;
+    } elsif($cn=~/=.*,/) {
+        $dn = $cn;
+        $cn =~ s/.*?=(.*?),.*/$1/;
+    }
+
+    my @members = _group_members($group);
+    return 1 if grep /^$cn$/, @members;
+
+    $user = search_user($cn) or confess "Error: unknown user '$cn'"
+    if !$user;
+    $dn = $user->dn if !$dn;
+
+    return 1 if grep /^$dn$/, @members;
+
+    my $group_name = $group;
+    $group_name = $group->dn if ref($group);
+
+    return 0;
 }
 
 =head2 is_external

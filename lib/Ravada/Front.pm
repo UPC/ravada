@@ -129,23 +129,20 @@ Returns: listref of machines
 =cut
 
 sub list_machines_user($self, $user, $access_data={}) {
-
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,is_public, description, screenshot"
+        "SELECT id,name,is_public, description, screenshot, id_owner"
         ." FROM domains "
         ." WHERE is_base=1"
         ." ORDER BY name "
     );
-    my ($id, $name, $is_public, $description, $screenshot);
+    my ($id, $name, $is_public, $description, $screenshot, $id_owner);
     $sth->execute;
-    $sth->bind_columns(\($id, $name, $is_public, $description, $screenshot));
+    $sth->bind_columns(\($id, $name, $is_public, $description, $screenshot, $id_owner));
 
     my $bookings_enabled = $self->setting('/backend/bookings');
     my @list;
 
     while ( $sth->fetch ) {
-        next if !$is_public && !$user->is_admin;
-        next if !$user->allowed_access($id);
 
         # check if enabled settings and this user not allowed
         next if $bookings_enabled && !Ravada::Front::Domain->open($id)->allowed_booking($user);
@@ -155,6 +152,7 @@ sub list_machines_user($self, $user, $access_data={}) {
             id_owner =>$user->id
             ,id_base => $id
         );
+        next unless $clone || $user->is_admin || ($is_public && $user->allowed_access($id));
         my %base = ( id => $id, name => $name
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
@@ -339,7 +337,10 @@ sub list_domains($self, %args) {
             $row->{remote_ip} = $domain->remote_ip if $row->{is_active};
             $row->{node} = $domain->_vm->name if $domain->_vm;
             $row->{remote_ip} = $domain->client_status
-                if $domain->client_status && $domain->client_status ne 'connected';
+                if $domain->client_status && $domain->client_status !~ /^connected/;
+            if  ( $domain->client_status && $domain->client_status =~ /^connected \((.*?)\)/ ) {
+                $row->{remote_ip} = $domain->remote_ip.".$1";
+            }
             $row->{autostart} = $domain->_data('autostart');
             if (!$row->{status} ) {
                 if ($row->{is_active}) {

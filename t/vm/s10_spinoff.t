@@ -13,6 +13,24 @@ use Test::Ravada;
 
 ##############################################################
 
+sub test_xml($domain) {
+    my $doc = XML::LibXML->load_xml(string => $domain->domain->get_xml_description);
+    for my $disk ($doc->findnodes('/domain/devices/disk')) {
+        my $is_disk;
+        my $bs='';
+        for my $child ($disk->childNodes) {
+            $is_disk++ if $child->nodeName eq 'source';
+            if ( $child->nodeName eq 'backingStore' ) {
+                ($bs) = $child->findnodes("source");
+                $bs = $bs->toString;
+            }
+        }
+        next if !$is_disk;
+        is($bs,'');
+    }
+
+}
+
 sub test_spinoff($base) {
     my $clone = $base->clone(name => new_domain_name, user => user_admin);
     is($clone->id_base,$base->id);
@@ -25,6 +43,8 @@ sub test_spinoff($base) {
 
     $clone = Ravada::Domain->open($clone->id);
     is($clone->id_base,undef) or exit;
+
+    test_xml($clone) if $clone->type eq 'KVM';
 
     for my $vol ( $clone->list_volumes_info ) {
         next if ref($vol) =~ /ISO/;

@@ -4,6 +4,7 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use Hash::Util qw(lock_hash unlock_hash);
+use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json);
 use XML::LibXML;
 use Test::More;
@@ -419,7 +420,7 @@ sub test_display_info($vm) {
     $domain->_normalize_display($display,0);
     _test_compare($display_h->[0], $display) or exit;
 
-    my $port = 356;
+    my $port = 3389;
     my @display_args = (
         id_domain => $domain->id
         ,uid => user_admin->id
@@ -619,7 +620,7 @@ sub test_iptables($domain) {
         };
 
         my $port_rdp = $display_exp->{port};
-        my @iptables_rdp = grep { /^-A PREROUTING.*--dport $port_rdp -j DNAT .*356/ } @iptables;
+        my @iptables_rdp = grep { /^-A PREROUTING.*--dport $port_rdp -j DNAT .*3389/ } @iptables;
         is(scalar(@iptables_rdp),1,"Expecting one entry with PRERORUTING --dport $port_rdp, got "
             .scalar(@iptables_rdp)) or do {
             my @iptables_prer= grep { /^-A PREROUTING.*--dport / } @iptables;
@@ -1178,18 +1179,11 @@ sub test_private_base {
     my $clone_name = new_domain_name();
 
     my $clone;
-    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
-    like($@,qr(private)) or exit;
-
-    my $clone2 = $vm->search_domain($clone_name);
-    ok(!$clone2,"Expecting no clone");
-    $clone2->remove(user_admin) if $clone2;
-
     # admin can clone
     eval { $clone = $domain->clone(user => user_admin, name => $clone_name); };
     is($@,'');
 
-    $clone2 = $vm->search_domain($clone_name);
+    my $clone2 = $vm->search_domain($clone_name);
     ok($clone2,"Expecting a clone");
     $clone->remove(user_admin)  if $clone;
 
@@ -1202,139 +1196,6 @@ sub test_private_base {
     ok($clone2,"Expecting a clone");
     $clone->remove(user_admin)  if $clone;
 
-    # hide it again
-    $domain->is_public(0);
-    eval { $clone = $domain->clone(user => $USER, name => $clone_name); };
-    like($@,qr(.));
-
-    $clone2 = $vm->search_domain($clone_name);
-    ok(!$clone2,"Expecting no clone");
-}
-sub test_domain_limit_admin {
-    my $vm_name = shift;
-
-    for my $domain ( rvd_back->list_domains()) {
-        $domain->shutdown_now(user_admin);
-    }
-
-    my $domain = create_domain($vm_name, user_admin );
-    ok($domain,"Expecting a new domain created") or exit;
-    $domain->shutdown_now(user_admin)    if $domain->is_active;
-
-    is(rvd_back->list_domains(user => user_admin , active => 1),0
-        ,Dumper(rvd_back->list_domains())) or exit;
-
-    $domain->start( user_admin );
-    is($domain->is_active,1);
-
-    ok($domain->start_time <= time,"Expecting start time <= ".time
-                                    ." got ".time);
-
-    sleep 1;
-    is(rvd_back->list_domains(user => user_admin , active => 1),1);
-
-    my $domain2 = create_domain($vm_name, user_admin );
-    $domain2->shutdown_now( user_admin )   if $domain2->is_active;
-    is(rvd_back->list_domains(user => user_admin , active => 1),1);
-
-    $domain2->start( user_admin );
-    my $req = Ravada::Request->enforce_limits(timeout => 60);
-    wait_request();
-    my @list = rvd_back->list_domains(user => user_admin, active => 1);
-    is(scalar @list,2) or die Dumper([map { $_->name } @list]);
-
-    $domain2->remove(user_admin);
-    $domain->remove(user_admin);
-}
-
-
-sub test_domain_limit_noadmin {
-    my $vm_name = shift;
-    my $user = $USER;
-    user_admin->grant($user,'create_machine');
-    is($user->is_admin,0);
-
-    for my $domain ( rvd_back->list_domains()) {
-        $domain->shutdown_now(user_admin);
-    }
-    my $domain = create_domain($vm_name, $user);
-    ok($domain,"Expecting a new domain created") or exit;
-    $domain->shutdown_now($USER)    if $domain->is_active;
-
-    is(rvd_back->list_domains(user => $user, active => 1),0
-        ,Dumper(rvd_back->list_domains())) or exit;
-
-    $domain->start( $user);
-    is($domain->is_active,1);
-
-    ok($domain->start_time <= time,"Expecting start time <= ".time
-                                    ." got ".time);
-
-    sleep 1;
-    is(rvd_back->list_domains(user => $user, active => 1),1);
-
-    my $domain2 = create_domain($vm_name, $user);
-    $domain2->shutdown_now( $user )   if $domain2->is_active;
-    is(rvd_back->list_domains(user => $user, active => 1),1);
-
-    $domain2->start( $user );
-
-    test_enforce_limits($domain2,1, $user);
-
-    my @list = rvd_back->list_domains(user => $user, active => 1);
-    is(scalar @list,1) or die Dumper([ map { $_->id." ".$_->name } @list]);
-    is($list[0]->name, $domain2->name) if $list[0];
-
-    $domain->remove(user_admin);
-    $domain2->remove(user_admin);
-}
-
-sub test_domain_limit_allowed {
-    my $vm_name = shift;
-    my $user = $USER;
-    user_admin->grant($user,'create_machine');
-    user_admin->grant($user,'start_many');
-    is($user->is_admin,0);
-
-    for my $domain ( rvd_back->list_domains()) {
-        $domain->shutdown_now(user_admin);
-    }
-    my $domain = create_domain($vm_name, $user);
-    ok($domain,"Expecting a new domain created") or exit;
-    $domain->shutdown_now($USER)    if $domain->is_active;
-
-    is(rvd_back->list_domains(user => $user, active => 1),0
-        ,Dumper(rvd_back->list_domains())) or exit;
-
-    $domain->start( $user);
-    is($domain->is_active,1);
-
-    ok($domain->start_time <= time,"Expecting start time <= ".time
-                                    ." got ".time);
-
-    sleep 1;
-    is(rvd_back->list_domains(user => $user, active => 1),1);
-
-    my $domain2 = create_domain($vm_name, $user);
-    $domain2->shutdown_now( $user )   if $domain2->is_active;
-    is(rvd_back->list_domains(user => $user, active => 1),1);
-
-    $domain2->start( $user );
-    my $req = Ravada::Request->enforce_limits(timeout => 60);
-    wait_request();
-    my @list = rvd_back->list_domains(user => $user, active => 1);
-    is(scalar @list,2) or die Dumper([ map { $_->name } @list]);
-
-    user_admin->revoke($user,'start_many');
-    is($user->can_start_many,0) or exit;
-
-    test_enforce_limits($domain2, 1, $user);
-    @list = rvd_back->list_domains(user => $user, active => 1);
-    is(scalar @list,1,"[$vm_name] expecting 1 active domain")
-        or die Dumper([ map { $_->name } @list]);
- 
-    $domain->remove(user_admin);
-    $domain2->remove(user_admin);
 }
 
 sub test_enforce_limits($domain, $n_expected, $user=user_admin) {
@@ -1368,51 +1229,6 @@ sub test_enforce_limits($domain, $n_expected, $user=user_admin) {
         @list = rvd_back->list_domains(user => $user, active => 1);
         return if scalar(@list)<=$n_expected ;
     }
-}
-
-
-sub test_domain_limit_already_requested {
-    my $vm_name = shift;
-
-    for my $domain ( rvd_back->list_domains()) {
-        $domain->shutdown_now(user_admin);
-    }
-    my $user = create_user("limit$$","bar");
-    user_admin->grant($user, 'create_machine');
-    my $domain = create_domain($vm_name, $user);
-    ok($domain,"Expecting a new domain created") or return;
-    $domain->shutdown_now($user)    if $domain->is_active;
-
-    is(rvd_back->list_domains(user => $USER, active => 1),0
-        ,Dumper(rvd_back->list_domains())) or return;
-
-    $domain->start( $user );
-    is($domain->is_active,1);
-
-    ok($domain->start_time <= time,"Expecting start time <= ".time
-                                    ." got ".time);
-
-    sleep 1;
-    is(rvd_back->list_domains(user => $user, active => 1),1);
-
-    my $domain2 = create_domain($vm_name, $user);
-    $domain2->shutdown_now($USER)   if $domain2->is_active;
-    is(rvd_back->list_domains(user => $user, active => 1),1);
-
-    $domain2->start( $user );
-    my @list_requests = grep { $_->command ne 'set_time'} $domain->list_requests;
-    is(scalar @list_requests,0,"Expecting 0 requests ".Dumper(\@list_requests));
-
-    test_enforce_limits($domain2,1, $user);
-    my @list=rvd_back->list_domains(user => $user, active => 1);
-    is(scalar(@list),1);
-    ok(!$domain->is_active || !$domain2->is_active ) or die Dumper([ map { $_->name } @list]);
-    is($list[0]->name, $domain2->name) if $list[0];
-
-    $domain2->remove($user);
-    $domain->remove($user);
-
-    $user->remove();
 }
 
 sub test_prepare_fail($vm) {
@@ -1707,6 +1523,20 @@ sub test_display_conflict($vm) {
 
 }
 
+sub _listening_ports {
+    my ($in, $out, $err);
+    my @cmd = ("ss","-tlnp");
+    run3(\@cmd,\$in,\$out,\$err);
+    my %port;
+    for my $line ( split /\n/,$out ) {
+        my @local= split(/\s+/, $line);
+        my ($listen_port) = $local[3] or die Dumper($line,\@local);
+        $listen_port =~ s/.*:(\d+).*/$1/;
+        $port{$listen_port}++;
+    }
+    return \%port;
+}
+
 sub _next_port_builtin($domain0) {
     $domain0->start(user => user_admin, remote_ip => '1.2.3.4');
     my $displays = $domain0->info(user_admin)->{hardware}->{display};
@@ -1716,7 +1546,11 @@ sub _next_port_builtin($domain0) {
         if $display->{port} > $next_port_builtin;
     }
 
-    $next_port_builtin++;
+    my $listening_ports = _listening_ports();
+    for (;;) {
+        $next_port_builtin++;
+        last if !$listening_ports->{$next_port_builtin};
+    }
     diag("Next port builtin will  be $next_port_builtin");
 
     return $next_port_builtin;
@@ -1793,10 +1627,11 @@ sub _check_iptables_fixed_conflict($vm, $port) {
 }
 
 sub test_display_conflict_next($vm) {
+    rvd_back->setting("/backend/expose_port_min" => 5900 );
     my $domain0 = $BASE->clone(name => new_domain_name, user => user_admin, memory =>128*1024);
     $domain0->_reset_free_port() if $vm->type eq 'Void';
     my $next_port_builtin = _next_port_builtin($domain0);
-    $Ravada::VM::FREE_PORT= $next_port_builtin+3;
+    rvd_back->setting('/backend/expose_port_min' => $next_port_builtin+3);
 
     my $domain1 = $BASE->clone(name => new_domain_name, user => user_admin, memory => 128*1024);
     _add_hardware($domain1, 'display', { driver => 'x2go'} );
@@ -2031,9 +1866,6 @@ for my $vm_name ( vm_names() ) {
         }
         flush_rules() if !$<;
 
-        test_domain_limit_noadmin($vm_name);
-        test_domain_limit_already_requested($vm_name);
-
         test_change_display_settings($vm);
         test_display_drivers($vm,0);
         test_display_drivers($vm,1); #remove after testing display type
@@ -2080,9 +1912,6 @@ for my $vm_name ( vm_names() ) {
         test_private_base($vm_name);
 
         test_spinned_off_base($vm_name);
-        test_domain_limit_admin($vm_name);
-        test_domain_limit_noadmin($vm_name);
-        test_domain_limit_allowed($vm_name);
 
 
         $domain->remove( user_admin );

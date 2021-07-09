@@ -197,7 +197,7 @@
                      <label class="control-label" for="new_owner"><%=l 'Owner' %></label>
                 </div>
                 <div class="col-lg-4">
-                    <select ng-model="new_owner" name="id_owner"
+                    <select class="form-control" ng-model="new_owner" name="id_owner"
                         ng-options="user.name for user in list_users track by user.id"
                         ng-change="set_value('id_owner',new_owner.id)"
                     >

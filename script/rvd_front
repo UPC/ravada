@@ -128,6 +128,8 @@ our $SESSION_TIMEOUT_ADMIN2 = ($CONFIG_FRONT->{session_timeout_admin2} or 60 * 6
 my $WS = Ravada::WebSocket->new(ravada => $RAVADA);
 my %ALLOWED_ANONYMOUS_WS = map { $_ => 1 } qw(list_bases_anonymous list_alerts);
 my %LDAP_ATTRIBUTES;
+my %LDAP_USERS;
+
 
 # TOODO: config this variable
 my $LIMIT_SHOW_USERS = 25;
@@ -311,6 +313,8 @@ get '/admin/group/#name' => sub($c) {
     push @{$c->stash->{css}}, '/css/admin.css';
     push @{$c->stash->{js}}, '/js/admin.js';
 
+    my $group = Ravada::Auth::LDAP::search_group(name => $c->stash('name'));
+    $c->stash(object_class => [$group->get_value('objectClass')]);
     return $c->render( template => "/main/admin_group");
 };
 
@@ -325,7 +329,7 @@ any '/admin/#type' => sub {
   return admin($c);
 };
 
-any '/new_machine' => sub {
+any '/new_machine.html' => sub {
     my $c = shift;
     return access_denied($c)    if !$USER->can_create_machine;
     return new_machine($c);
@@ -734,7 +738,7 @@ any '/machine/manage/(:id).(:type)' => sub {
      return manage_machine($c);
 };
 
-any '/(:item)/settings/(:id)' => sub($c) {
+any '/(:item)/settings/(:id).html' => sub($c) {
 
     push @{$c->stash->{css}}, '/css/admin.css';
     push @{$c->stash->{js}}, '/js/admin.js';
@@ -1656,6 +1660,14 @@ get '/list_ldap_users' => sub($c) {
     return _list_ldap_users($c,'*');
 };
 
+get '/list_ldap_users/#name' => sub($c) {
+    return access_denied($c) unless $USER->can_manage_users || $USER->can_manage_groups;
+    my $name = $c->stash('name');
+    $name .= '*' unless $name =~ m{\*$};
+    return _list_ldap_users($c,$name);
+};
+
+
 
 get '/list_ldap_groups/:name' => sub($c) {
     my $name = $c->stash('name');
@@ -1678,21 +1690,15 @@ post '/ldap/group/add_member' => sub($c) {
     my $arg = decode_json($c->req->body);
 
     my $login = delete $arg->{cn};
-    my $new_group = delete $arg->{group};
+    my $group = delete $arg->{group};
 
-    my @groups = Ravada::Auth::LDAP::search_group( name => $new_group);
-    my ($group_ldap) = grep {$_->get_value('cn') eq $new_group } @groups;
-    my $error = '';
-    if (! $group_ldap) {
-        $error = "Error: group $new_group doesn't exist\n"
-    } else {
-        my $mesg  = $group_ldap->add(memberUid => $login)
-        ->update(Ravada::Auth::LDAP::_init_ldap_admin());
+    return $c->render(json => { error => "Error: unknown args ".Dumper($arg)}) if keys %$arg;
 
-        if ($mesg->code) {
-            $error = "Error: adding $login to $new_group ".$mesg->error;
-        }
-    }
+    eval {
+        Ravada::Auth::LDAP::add_to_group($login, $group);
+    };
+    my $error = $@;
+    $error =~ s/(.*) at lib.*/$1/ if $error;
     return $c->render(json => { error => $error } );
 
 };
@@ -1701,21 +1707,15 @@ post '/ldap/group/remove_member' => sub($c) {
 
     my $arg = decode_json($c->req->body);
 
-    my $login = delete $arg->{cn};
-    my $new_group = delete $arg->{group};
+    my $dn = delete $arg->{dn};
+    my $group = delete $arg->{group};
 
-    my @groups = Ravada::Auth::LDAP::search_group( name => $new_group);
-    my ($group_ldap) = grep {$_->get_value('cn') eq $new_group } @groups;
-    die "Error: group $new_group doesn't exist\n"
-    unless $group_ldap;
+    return $c->render(json => { error => "Error: unknown args ".Dumper($arg)}) if keys %$arg;
 
-    my $mesg  = $group_ldap->delete(memberUid => $login)
-    ->update(Ravada::Auth::LDAP::_init_ldap_admin());
-
-    if ($mesg->code) {
-        return $c->render(json => { error => "Error: adding $login to $new_group ".$mesg->error });
-    }
-    return $c->render(json => { error => '' } );
+    eval {
+        Ravada::Auth::LDAP::remove_from_group($dn, $group);
+    };
+    return $c->render(json => { error => ($@ or '') } );
 
 };
 
@@ -1873,6 +1873,7 @@ sub _translations($c) {
         ,en => 'English'
         ,ca => 'Catalan'
         ,es => 'Spanish'
+        ,zh_CN => 'Chinese'
         ,gl => 'Galician'
         ,fr => 'French'
         ,de => 'German'
@@ -3084,15 +3085,25 @@ sub copy_machine {
     $ram = int($ram*1024*1024);
 
     my $new_name = delete $arg->{new_name};
+    my $owner = delete $arg->{new_owner};
 
     warn "Error: unknown args ".Dumper($arg) if keys %$arg;
 
     my $base = $RAVADA->search_domain_by_id($id_base) or confess "I can't find domain $id_base";
     my $name = ( $new_name or $base->name."-".$USER->name );
 
+    $USER = _logged_in($c);
+    $owner = undef if (! $USER) || (! $USER->is_admin);
+    confess "owner do not exists" if ($owner) && (! Ravada::Auth::SQL->new(name => $owner));
+
     my @create_args = ( from_pool => 0 );
     push @create_args,( memory => $ram ) if $ram;
     push @create_args, ( name => $name ) if !defined $number || $number == 1;
+    push @create_args, ( name => $name ) if $number == 1;
+    push @create_args, ( id_owner => $owner ) if ($owner);
+    push @create_args, ( volatile => $arg->{copy_is_volatile} ? 1 : 0 );
+    push @create_args, ( add_to_pool => $arg->{copy_is_pool} && $base->is_pool() ? 1 : 0 );
+
     my $req2 = Ravada::Request->clone(
             uid => $USER->id
             , id_domain => $base->id
@@ -3379,16 +3390,37 @@ sub _list_ldap_groups($c, $name='*') {
 };
 
 sub _list_ldap_users($c, $filter='*' ) {
-    my @entries;
-    for my $entry (Ravada::Auth::LDAP::search_user(name => $filter, escape_username => 0)) {
-        push @entries,({name => $entry->get_value('cn') });
+    $filter = '*' if $filter eq 'undefined';
+    $filter = '*'.$filter if length($filter) && $filter !~ /^\*/;
+
+    if ( exists $LDAP_USERS{$filter} ) {
+        my $data_json = $LDAP_USERS{$filter};
+        my $data;
+        eval { $data = decode_json($data_json) };
+        return $c->render(json => $data) if $data;
     }
-    return $c->render(json => [sort { $a->{name} cmp $b->{name} } @entries]);
+    $LDAP_USERS{$filter} = encode_json({ error => '', entries => [] });
+    my @users;
+    eval { @users = Ravada::Auth::LDAP::search_user(name => $filter, escape_username => 0) };
+    my $error = ($@ or '');
+    if ($@ =~ /Sizelimit exceeded/) {
+        $error = "Warning: Too many results, type in the search box to filter.";
+    }
+    if (scalar @users>100) {
+        $error = "Warning: Too many results, type in the search box to filter.";
+        $#users= 100;
+    }
+    my @entries;
+    for my $entry (@users) {
+        push @entries,({name => $entry->dn});
+    }
+    my $ret = {error => $error, entries => \@entries };
+    $LDAP_USERS{$filter} = encode_json($ret);
+    return $c->render(json => $ret );
 }
 
 sub _list_ldap_group_members($c, $name) {
-    my $group = Ravada::Auth::LDAP::search_group( name => $name );
-    return $c->render(json => [ sort $group->get_value('memberUid') ] );
+    return $c->render(json => [ Ravada::Auth::LDAP::_group_members($name) ] );
 }
 
 

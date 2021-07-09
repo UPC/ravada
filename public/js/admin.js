@@ -313,7 +313,10 @@ ravadaApp.directive("solShowMachine", swMach)
     };
 
     $scope.action = function(target,action,machineId){
-        if (action === 'view') {
+        if (action === 'view-new-tab') {
+            window.open('/machine/view/' + machineId + '.html');
+        }
+        else if (action === 'view') {
             window.location.assign('/machine/view/' + machineId + '.html');
         }
         else {
@@ -860,6 +863,7 @@ ravadaApp.directive("solShowMachine", swMach)
     function admin_groups_ctrl($scope, $http) {
         var group;
         $scope.group_filter = '';
+        $scope.username_filter = 'a';
         $scope.list_ldap_groups = function() {
             $http.get('/list_ldap_groups/'+$scope.group_filter)
                 .then(function(response) {
@@ -874,9 +878,14 @@ ravadaApp.directive("solShowMachine", swMach)
                 });
         };
         $scope.list_users = function() {
-            $http.get('/list_ldap_users')
+            $scope.loading_users = true;
+            $scope.error = '';
+            $http.get('/list_ldap_users/'+$scope.username_filter)
                 .then(function(response) {
-                    $scope.users=response.data;
+                    $scope.loading_users = false;
+                    $scope.error = response.data.error;
+                    $scope.users = response.data.entries;
+                    console.log(response.data.error);
                 });
         };
         $scope.add_member = function(cn) {
@@ -890,11 +899,11 @@ ravadaApp.directive("solShowMachine", swMach)
                   $scope.error = response.data.error;
             });
         };
-        $scope.remove_member = function(cn) {
+        $scope.remove_member = function(dn) {
             $http.post("/ldap/group/remove_member/"
               ,JSON.stringify(
                   { 'group': group
-                    ,'cn': cn
+                    ,'dn': dn
                   })
               ).then(function(response) {
                   $scope.list_group_members(group);
