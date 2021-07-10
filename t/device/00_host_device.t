@@ -17,7 +17,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 use_ok('Ravada::HostDevice');
-
+use_ok('Ravada::HostDevice::Templates');
 
 my $N_DEVICE = 0;
 #########################################################
@@ -96,6 +96,7 @@ sub _template_gpu($vm) {
                 }
                 ,
                 {path => "/domain/devices/graphics[\@type='spice']"
+                 ,type => 'unique_node'
                  ,template =>  "<graphics type='spice' autoport='yes'>
                     <listen type='address'/>
                     <image compression='auto_glz'/>
@@ -108,11 +109,13 @@ sub _template_gpu($vm) {
                 }
                 ,
                 {path => "/domain/devices/graphics[\@type='egl-headless']"
+                 ,type => 'unique_node'
                  ,template =>  "<graphics type='egl-headless'/>"
                 }
                 ,
                 {
                     path => "/domain/devices/hostdev"
+                 ,type => 'unique_node'
                  ,template =>
 "<hostdev mode='subsystem' type='mdev' managed='no' model='vfio-pci' display='off'>
     <source>
@@ -123,6 +126,7 @@ sub _template_gpu($vm) {
                 }
                 ,
                 { path => "/domain/qemu:commandline"
+                 ,type => 'unique_node'
                 ,template => "
                 <qemu:commandline>
     <qemu:arg value='-set'/>
@@ -137,6 +141,7 @@ sub _template_gpu($vm) {
     } else {
         return (
                 {path => "/hardware/host_devices"
+                 ,type => 'unique_node'
                  ,template => Dump(
                      { 'device' => 'graphics'
                        ,"rendernode" => 'pci-<%= $pci %>'
@@ -296,7 +301,7 @@ sub test_host_device_usb($vm) {
 
     shutdown_domain_internal($clone);
     eval { $clone->start(user_admin) };
-    is(''.$@, '');
+    is(''.$@, '') or exit;
     _check_hostdev($clone, 1) or exit;
 
     #### it will fail in another clone
@@ -547,11 +552,37 @@ sub test_xmlns($vm) {
 
 }
 
+sub test_check_list_command($vm) {
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+    $vm->add_host_device(template => $templates->[0]->{name});
+
+    my ($hdev) = $vm->list_host_devices();
+    my $lc_orig = $hdev->list_command();
+    is($hdev->_data('list_command'), $lc_orig) or exit;
+
+    for my $before ('','before ') {
+        for my $char (qw(" ' ` $ ( ) [ ] ; )) {
+            eval { $hdev->_data('list_command' => $before.$char) };
+            like($@, qr'.');
+            is($hdev->list_command, $lc_orig);
+            is($hdev->_data('list_command'), $lc_orig);
+        }
+    }
+
+    for my $something ('lssomething' , 'findsomething') {
+        $hdev->_data('list_command' => $something);
+        is($hdev->list_command, $something);
+        is($hdev->_data('list_command'), $something);
+    }
+
+    $hdev->remove();
+}
+
 #########################################################
 
 clean();
 
-for my $vm_name ( vm_names()) {
+for my $vm_name (reverse vm_names()) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -563,6 +594,8 @@ for my $vm_name ( vm_names()) {
         skip($msg,10)   if !$vm;
 
         diag("Testing host devices in $vm_name");
+
+        test_check_list_command($vm);
 
         test_xmlns($vm);
         test_host_device_gpu($vm);

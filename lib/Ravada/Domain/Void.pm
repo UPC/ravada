@@ -1056,6 +1056,31 @@ sub add_config_node($self, $path, $content, $data) {
         $found->{$item} = $content_hash->{$item};
     }
 }
+sub add_config_unique_node($self, $path, $content, $data) {
+    my $content_hash;
+    eval { $content_hash = Load($content) };
+    confess $@."\n$content" if $@;
+
+    $data->{hardware}->{host_devices} = []
+    if $path eq "/hardware/host_devices" && !exists $data->{hardware}->{host_devices};
+
+    my $found = $data;
+    for my $item (split m{/}, $path ) {
+        next if !$item;
+
+        confess "Error, no $item in ".Dumper($found)
+        if !exists $found->{$item};
+
+        $found = $found->{$item};
+    }
+    if (ref($found) eq 'ARRAY') {
+        push @$found, ( $content_hash );
+    } else {
+        my ($item) = keys %$content_hash;
+        $found->{$item} = $content_hash->{$item};
+    }
+}
+
 
 sub can_host_devices { return 1 }
 

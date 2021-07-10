@@ -1205,6 +1205,9 @@ sub _add_indexes_generic($self) {
         ,host_devices_domain => [
             "unique(id_host_device, id_domain)"
         ]
+        ,host_devices_domain_locked => [
+            "unique(id_vm,name)"
+        ],
         ,messages => [
              "index(id_user)"
              ,"index(date_changed)"
@@ -1771,7 +1774,14 @@ sub _sql_create_tables($self) {
                 ,id_host_device => 'integer NOT NULL references `host_devices`(`id`) ON DELETE CASCADE'
                 ,id_domain => 'integer NOT NULL references `domains`(`id`) ON DELETE CASCADE'
                 ,name => 'varchar(255)'
-                ,is_locked => 'integer not null default 0'
+            }
+        ]
+        ,[
+            host_devices_domain_locked => {
+                id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+                ,id_vm => 'integer NOT NULL references `vms`(`id`) ON DELETE CASCADE'
+                ,id_domain => 'integer NOT NULL references `domains`(`id`) ON DELETE CASCADE'
+                ,name => 'varchar(255)'
             }
         ]
         ,

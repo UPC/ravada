@@ -103,14 +103,14 @@ sub list_devices($self) {
     return @device;
 }
 
-sub _device_locked($self, $dev_entry) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT is_locked FROM host_devices_domain "
-        ." WHERE name=? AND is_locked=1 "
+sub _device_locked($self, $name) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM host_devices_domain_locked "
+        ." WHERE id_vm=? AND name=? "
     );
-    $sth->execute($dev_entry);
+    $sth->execute($self->id_vm, $name);
     my ($is_locked) = $sth->fetchrow;
     $is_locked = 0 if !defined $is_locked;
-    return $is_locked;
+    return 1 if $is_locked;
 }
 
 sub list_available_devices($self) {
@@ -176,12 +176,27 @@ sub render_template($self, $device) {
 
 sub _data($self, $field, $value=undef) {
     if (defined $value ) {
+
+        die "Error: invalid value '$value' in $field"
+        if $field eq 'list_command' &&(
+            $value =~ m{["'`$()\[\];]}
+            || $value !~ /^(ls|find)/);
+
         $value = encode_json($value) if ref($value);
         my $sth = $$CONNECTOR->dbh->prepare("UPDATE host_devices SET $field=?"
             ." WHERE id=? "
         );
         $sth->execute($value, $self->id);
-        $self->meta->get_attribute($field)->set_value($self, $value)
+        $self->meta->get_attribute($field)->set_value($self, $value);
+        return $value;
+    } else {
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM host_devices"
+            ." WHERE id=? "
+        );
+        $sth->execute($self->id);
+        my $row = $sth->fetchrow_hashref();
+        die "Error: No field '$field' in host_devices" if !exists $row->{$field};
+        return $row->{$field};
     }
 }
 

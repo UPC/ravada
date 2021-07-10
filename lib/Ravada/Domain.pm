@@ -6447,8 +6447,19 @@ sub list_host_devices_attached($self) {
     );
     $sth->execute($self->id);
 
+    my $sth_locked = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM host_devices_domain_locked "
+        ." WHERE id_domain=? AND name=?"
+    );
+
     my @found;
     while (my $row = $sth->fetchrow_hashref) {
+        $row->{is_locked} = 0;
+        if ($row->{name}) {
+            $sth_locked->execute($self->id, $row->{name});
+            my ($is_locked) = $sth_locked->fetchrow();
+            $row->{is_locked} = 1 if $is_locked;
+        }
         push @found,($row);
     }
 
@@ -6507,18 +6518,33 @@ sub _add_host_devices($self, @args) {
 
 # marks a host device as being used by a domain
 sub _lock_host_device($self, $host_device, $device=undef) {
-    my $query = "UPDATE host_devices_domain set is_locked=?";
-    my @args = ( 1 );
-
-    if (defined $device) {
-        $query .= ",name=?";
-        push @args, ($device);
+    if (!defined $device) {
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM host_devices_domain "
+            ." WHERE id_domain=? AND id_host_device=?"
+        );
+        $sth->execute($self->id, $host_device->id);
+        ($device) = $sth->fetchrow;
+        confess "Error: no device name defined for id_domain=".$self->id
+        ." and id_host_device=".$host_device->id
+        if !defined $device || !length($device);
     }
-    $query .= " WHERE id_host_device=? AND id_domain=? ";
-    push @args , ( $host_device->id, $self->id );
-
+    my $query = "SELECT id FROM host_devices_domain_locked "
+    ." WHERE id_domain=? AND id_vm=? AND name=?"
+    ;
     my $sth = $$CONNECTOR->dbh->prepare($query);
-    $sth->execute(@args);
+    $sth->execute($self->id, $self->_vm->id, $device);
+    my ($found) = $sth->fetchrow;
+    return if $found;
+
+    $query = "INSERT INTO host_devices_domain_locked (id_domain,id_vm,name) VALUES(?,?,?)";
+
+    $sth = $$CONNECTOR->dbh->prepare($query);
+    $sth->execute($self->id,$self->_vm->id, $device);
+
+    $sth=$$CONNECTOR->dbh->prepare("UPDATE host_devices_domain SET name=?"
+        ." WHERE id_domain=? AND id_host_device=?"
+    );
+    $sth->execute($device, $self->id, $host_device->id);
 }
 
 sub _device_already_configured($self, $host_device) {
@@ -6536,7 +6562,7 @@ sub _device_already_configured($self, $host_device) {
 
 sub _post_remove_host_devices($self) {
     my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE host_devices_domain set is_locked=0 WHERE id_domain=?"
+        "DELETE FROM host_devices_domain_locked WHERE id_domain=?"
     );
     $sth->execute($self->id);
 }

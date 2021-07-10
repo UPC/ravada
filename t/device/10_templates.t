@@ -111,17 +111,49 @@ sub test_hd_in_domain($vm , $hd) {
 
 sub test_grab_free_device($base) {
     wait_request();
+    rvd_back->_cmd_refresh_vms();
     my @clones = $base->clones();
-    my ($active) = grep { $_->{status} eq 'active' } @clones;
+    my ($up) = grep { $_->{status} eq 'active' } @clones;
     my ($down) = grep { $_->{status} ne 'active' } @clones;
-    die Dumper($active,$down);
+    $up = Ravada::Domain->open($up->{id});
+    $down = Ravada::Domain->open($down->{id});
+    my ($up_dev) = $up->list_host_devices_attached();
+    my ($down_dev) = $down->list_host_devices_attached();
+    ok($up_dev->{name});
+    is($up_dev->{is_locked},1);
+    is($down_dev->{name},undef);
+
+    $up->shutdown_now(user_admin);
+    ($up_dev) = $up->list_host_devices_attached();
+    is($up_dev->{is_locked},0);
+
+    $down->start(user_admin);
+    ($down_dev) = $down->list_host_devices_attached();
+    ok($down_dev->{name});
+    ($up_dev) = $up->list_host_devices_attached();
+    is($up_dev->{is_locked},0);
+
+    eval { $up->start(user_admin) };
+    like($@,qr(.));
+    is($up->is_active,0);
+    ($up_dev) = $up->list_host_devices_attached();
+    is($up_dev->{is_locked},0);
 }
 
 sub test_device_locked($clone) {
-    my $sth = connector->dbh->prepare("SELECT id_host_device,name,is_locked FROM host_devices_domain WHERE id_domain=?");
+    my $sth = connector->dbh->prepare("SELECT id_host_device,name FROM host_devices_domain WHERE id_domain=?");
     $sth->execute($clone->id);
-    while ( my ($id_hd, $name, $is_locked) = $sth->fetchrow ) {
-        is($is_locked,1,"Expecting locked=1 $name") or exit;
+
+    my $sth_locked= connector->dbh->prepare("SELECT * FROM host_devices_domain_locked "
+        ." WHERE id_domain=? AND name=?");
+    while ( my ($id_hd, $name) = $sth->fetchrow ) {
+        ok($name,"Expecting host device name in host_devices_domain for id_domain=".$clone->id)
+            or next;
+
+        $sth_locked->execute($clone->id, $name);
+        my $row_locked = $sth_locked->fetchrow_hashref();
+
+        ok($row_locked->{id},"Expecting locked=1 $name") or exit;
         my $hd = Ravada::HostDevice->search_by_id($id_hd);
         my @available= $hd->list_available_devices();
         my ($found) = grep { $_ eq $name } @available;
@@ -130,11 +162,18 @@ sub test_device_locked($clone) {
 }
 
 sub test_device_unlocked($clone) {
-    my $sth = connector->dbh->prepare("SELECT id_host_device,name,is_locked FROM host_devices_domain WHERE id_domain=?");
+    my $sth = connector->dbh->prepare("SELECT id_host_device,id_domain,name FROM host_devices_domain WHERE id_domain=?");
     $sth->execute($clone->id);
-    while ( my ($id_hd, $name, $is_locked) = $sth->fetchrow ) {
-        is($is_locked,0,"Expecting locked=0 ".($name or '')) or exit;
+
+    my $sth_locked= connector->dbh->prepare("SELECT * FROM host_devices_domain_locked "
+        ." WHERE id_domain=? AND name=?");
+    while ( my ($id_hd, $id_domain, $name) = $sth->fetchrow ) {
         next if !$name;
+
+        $sth_locked->execute($id_domain, $name);
+        my $row = $sth_locked->fetchrow_hashref;
+        ok(!$row) or die Dumper($row);
+
         my $hd = Ravada::HostDevice->search_by_id($id_hd);
         my @available= $hd->list_available_devices();
         my ($found) = grep { $_ eq $name } @available;
@@ -162,8 +201,7 @@ sub _compare_hds($base, $clone) {
 }
 
 sub _count_locked() {
-    my $sth = connector->dbh->prepare("SELECT count(*) FROM host_devices_domain "
-        ." WHERE is_locked=1 ");
+    my $sth = connector->dbh->prepare("SELECT count(*) FROM host_devices_domain_locked ");
     $sth->execute();
     my ($n) = $sth->fetchrow;
     return $n;
@@ -208,7 +246,7 @@ sub test_templates($vm) {
         };
         my $devices = Ravada::WebSocket::_list_host_devices(rvd_front(), $ws_args);
         is(scalar(@$devices), 2+$n) or die Dumper($devices, $list_hostdev[-1]);
-        ok(scalar(@{$devices->[-1]->{devices}})>1);
+        next if !(scalar(@{$devices->[-1]->{devices}})>1);
         $n++;
 
         $list_hostdev[-1]->_data('list_filter' => '002');
