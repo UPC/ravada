@@ -19,8 +19,21 @@
         <span ng-show="!show_hdev[hdev.id]"><i class="fa fa-caret-right"></i></span>
     </a>
     <span ng-show="!hdev._edit">
-    <b>{{hdev.name}}</b> <i ng-show="show_hdev[hdev.id]" ng-click="hdev._edit=true; hdev._name=hdev.name" class="far fa-edit"></i>
+    <b>{{hdev.name}}</b>
+    <i ng-show="show_hdev[hdev.id]" ng-click="hdev._confirm_remove=true" class="far fa-trash-alt"></i>
+    <i ng-show="show_hdev[hdev.id]" ng-click="hdev._edit=true; hdev._name=hdev.name" class="far fa-edit"></i>
     </span>
+    <div ng-show="hdev._confirm_remove">
+        <div ng-show="hdev._domains.length">
+            This host device is configured in these virtual machines
+            <ul>
+            <li ng-repeat="name in hdev._domains">{{name}}</li>
+            </ul>
+        </div>
+        <%=l ' Are you sure you want to remove this host device ?' %>
+        <button type="button" ng-click="remove_host_device(hdev.id)"><%=l 'Yes' %></button>
+        <button type="button" ng-click="hdev._confirm_remove=false"><%=l 'No' %></button>
+    </div>
     <span ng-show="hdev._edit">
         <input type="text" ng-model="hdev.name"/>
         <button type="button" ng-click="update_host_device(hdev);hdev._edit=false"><%=l 'save' %></button>
@@ -36,6 +49,5 @@
                 {{device}}
             </li>
         </ul>
-        <button type="button" ng-click="remove_host_device(hdev.id)"><%=l 'Remove' %></button>
     </div>
 </div>

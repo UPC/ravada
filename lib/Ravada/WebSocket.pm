@@ -217,6 +217,7 @@ sub _list_host_devices($rvd, $args) {
     my @found;
     while (my $row = $sth->fetchrow_hashref) {
         $row->{devices} = decode_json($row->{devices}) if $row->{devices};
+        $row->{_domains} = _list_domains_with_device($rvd, $row->{id});
         push @found, $row;
         next unless _its_been_a_while_channel($args->{channel});
         my $req = Ravada::Request->list_host_devices(
@@ -225,6 +226,19 @@ sub _list_host_devices($rvd, $args) {
         );
     }
     return \@found;
+}
+
+sub _list_domains_with_device($rvd,$id_hd) {
+    my $sth=$rvd->_dbh->prepare("SELECT d.name FROM domains d,host_devices_domain hdd"
+        ." WHERE  d.id= hdd.id_domain "
+        ."  AND hdd.id_host_device=?"
+    );
+    $sth->execute($id_hd);
+    my @domains;
+    while ( my ($name) = $sth->fetchrow ) {
+        push @domains,($name);
+    }
+    return \@domains;
 }
 
 sub _list_requests($rvd, $args) {
