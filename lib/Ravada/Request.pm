@@ -676,13 +676,12 @@ sub _new_request {
         delete $args{name};
     }
     my $no_duplicate = delete $args{_no_duplicate};
-    my $force = delete $args{args}->{_force};
+    my $force;
 
-    confess "Error: Pass either _force or _no_duplicate"
-    if $force && $no_duplicate;
 
     my $uid;
     if ( ref $args{args} ) {
+        $force = delete $args{args}->{_force};
         $args{args}->{uid} = $args{args}->{id_owner}
             if !exists $args{args}->{uid};
         $uid = $args{args}->{uid} if exists $args{args}->{uid};
@@ -702,6 +701,10 @@ sub _new_request {
 
         $args{args} = encode_json($args{args});
     }
+
+    confess "Error: Pass either _force or _no_duplicate"
+    if $force && $no_duplicate;
+
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
     if (!$force && ($args{command} =~ /^(clone|manage_pools)$/
         || $CMD_NO_DUPLICATE{$args{command}}
