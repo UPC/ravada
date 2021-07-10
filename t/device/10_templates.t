@@ -98,10 +98,23 @@ sub test_hd_in_domain($vm , $hd) {
             is(''.$@,'') or exit;
             is(_count_locked(),$n_locked) or exit;
         }
+        wait_request();
+        $clone->check_status();
+        $clone->is_active();
 
     }
+    test_grab_free_device($domain) if $hd->list_devices();
+
     remove_domain($domain);
 
+}
+
+sub test_grab_free_device($base) {
+    wait_request();
+    my @clones = $base->clones();
+    my ($active) = grep { $_->{status} eq 'active' } @clones;
+    my ($down) = grep { $_->{status} ne 'active' } @clones;
+    die Dumper($active,$down);
 }
 
 sub test_device_locked($clone) {
