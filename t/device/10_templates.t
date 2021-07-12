@@ -85,6 +85,7 @@ sub test_hd_in_domain($vm , $hd) {
             eval { $clone->start(user_admin) };
             if (!$count) {
                 like($@,qr/No available devices/);
+                diag($@);
                 last;
             }
             is(_count_locked(),++$n_locked) or exit;
@@ -133,11 +134,30 @@ sub test_grab_free_device($base) {
     ($up_dev) = $up->list_host_devices_attached();
     is($up_dev->{is_locked},0);
 
+    diag("trying to start ".$up->id." ".$up->name);
     eval { $up->start(user_admin) };
-    like($@,qr(.));
+    my $err = $@;
     is($up->is_active,0);
     ($up_dev) = $up->list_host_devices_attached();
     is($up_dev->{is_locked},0);
+    like($err,qr(.)) or exit;
+
+    #pick a fre device from a third domain we shut it down now
+    my ($third) = grep { $_->{status} eq 'active' && $_->{name} ne $up->name } @clones;
+    $third = Ravada::Domain->open($third->{id});
+    my ($third_dev) = $third->list_host_devices_attached();
+    $third->shutdown_now(user_admin);
+
+    $up->start(user_admin);
+
+    is($up->is_active,1);
+    my ($up_dev2) = $up->list_host_devices_attached();
+    is($up_dev2->{is_locked},1);
+    is($up_dev2->{name}, $third_dev->{name});
+
+    my ($third_dev_down) = $third->list_host_devices_attached();
+    is($third_dev_down->{is_locked},0) or die Dumper($third_dev_down);
+
 }
 
 sub test_device_locked($clone) {

@@ -2810,6 +2810,30 @@ sub _add_xml_parse($parent, $content) {
 
 }
 
+sub remove_config_node($self, $path, $content, $doc) {
+    my ($dir,$entry) = $path =~ m{(.*)/(.*)};
+    confess "Error: missing entry in '$path'" if !$entry;
+
+    my @parent = $doc->findnodes($dir);
+    return if !scalar(@parent);
+
+    warn Dumper([$path, $dir, $entry]);
+
+    $content =~ s/^\s+//mg;
+    $content =~ s/\'/"/g;
+    chomp $content;
+
+    for my $parent (@parent) {
+        for my $element ($parent->findnodes($entry)) {
+            my $element_s = $element->toString();
+            $element_s =~ s/^\s+//mg;
+            if ( $content eq $element_s ) {
+                $parent->removeChild($element);
+            }
+        }
+    }
+}
+
 sub add_config_node($self, $path, $content, $doc) {
 
     my ($dir,$entry) = $path =~ m{(.*)/(.*)};

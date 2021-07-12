@@ -72,7 +72,7 @@ our @TEMPLATES_KVM  = (
                 <address domain='0x<%= \$domain %>' bus='0x<%= \$bus %>' slot='0x<%= \$slot %>' function='0x<%= \$function %>'/>
                 </source>
                 <rom bar='on'/>
-                <address type='pci' domain='00000' bus='0x01' slot='0x01' function='0x<%= \$function %>'/>
+                <address type='pci' domain='0x0000' bus='0x01' slot='0x01' function='0x<%= \$function %>'/>
             </hostdev>"
             }
         ]

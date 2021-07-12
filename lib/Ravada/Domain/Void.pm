@@ -1056,6 +1056,43 @@ sub add_config_node($self, $path, $content, $data) {
         $found->{$item} = $content_hash->{$item};
     }
 }
+
+sub remove_config_node($self, $path, $content, $data) {
+    my $content_hash;
+    eval { $content_hash = Load($content) };
+    confess $@."\n$content" if $@;
+
+    my $found = $data;
+    for my $item (split m{/}, $path ) {
+        next if !$item;
+
+        confess "Error, no $item in ".Dumper($found)
+        if !exists $found->{$item};
+
+        $found = $found->{$item};
+    }
+    return if !$found;
+    if (ref($found) eq 'ARRAY') {
+        my @new_list;
+        for my $item (@$found) {
+            push @new_list,($item) unless _equal_hash($content_hash, $item);
+        }
+        $found = [@new_list];
+    } else {
+        my ($item) = keys %$content_hash;
+        delete $found->{$item};
+    }
+
+}
+
+sub _equal_hash($a,$b) {
+    return 0 if scalar(keys(%$a)) != scalar(keys %$b);
+    for my $key ( keys %$a) {
+        return 0 if !exists $b->{$key} || $b->{$key} ne $a->{$key};
+    }
+    return 1;
+}
+
 sub add_config_unique_node($self, $path, $content, $data) {
     my $content_hash;
     eval { $content_hash = Load($content) };
