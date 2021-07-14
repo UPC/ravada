@@ -29,7 +29,7 @@ sub _search_unused_device {
     my ($in, $out, $err);
     run3(["lsusb"], \$in, \$out, \$err);
     for my $line ( split /\n/, $out ) {
-        next if $line !~ /Bluetooth/;
+        next if $line !~ /Bluetooth|flash/i;
         my ($filter) = $line =~ /(ID [a-f0-9]+):/;
         die "ID \\d+ not found in $line" if !$filter;
         return ("lsusb",$filter);
@@ -286,7 +286,7 @@ sub test_host_device_usb($vm) {
     my @list_hostdev_b = $base->list_host_devices();
     is(scalar @list_hostdev_b, 1);
 
-    test_devices($list_hostdev[0],1, "Bluetooth");
+    test_devices($list_hostdev[0],1, qr/Bluetooth|flash/i);
 
     $base->prepare_base(user_admin);
     my $clone = $base->clone(name => new_domain_name
@@ -346,8 +346,10 @@ sub _create_mock_devices($n_devices, $type, $value="fff:fff") {
 }
 
 sub test_host_device_usb_mock($vm, $n_hd=1) {
+    return if ($vm->type eq 'KVM');
 
     my $n_devices = 3;
+
     my ($list_command,$list_filter) = _create_mock_devices( $n_devices*$n_hd , "USB" );
 
     for ( 1 .. $n_hd ) {

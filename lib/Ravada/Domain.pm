@@ -6494,8 +6494,12 @@ sub _add_host_devices($self, @args) {
 
         my ($device) = $host_device->list_available_devices();
         if ( !$device ) {
-            $self->_data(status => 'down');
-            die "Error: No available devices ".$host_device->name."\n";
+            $device = _refresh_domains_with_locked_devices($host_device);
+            if (!$device) {
+                $self->_data(status => 'down');
+                $self->_unlock_host_devices();
+                die "Error: No available devices in ".$host_device->name."\n";
+            }
         }
 
         $self->_lock_host_device($host_device, $device);
@@ -6597,6 +6601,7 @@ sub _unlock_host_device($self, $name) {
 
 
 sub _check_host_device_already_used($self, $device) {
+
     my $query = "SELECT id_domain FROM host_devices_domain_locked "
     ." WHERE id_vm=? AND name=?"
     ;
@@ -6612,7 +6617,7 @@ sub _check_host_device_already_used($self, $device) {
 
     return $id_domain if $domain->is_active;
 
-    $sth->$$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
+    $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
         ." WHERE id_domain=?");
     $sth->execute($id_domain);
     return;
@@ -6628,6 +6633,31 @@ sub _device_already_configured($self, $host_device) {
 
     my ($name) = $sth->fetchrow;
     return $name;
+}
+
+sub _refresh_domains_with_locked_devices($host_device) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT hdd.id_domain,hdd_locked.name "
+        ." FROM host_devices_domain hdd, host_devices_domain_locked hdd_locked"
+        ." WHERE hdd.id_host_device=?"
+        ."   AND hdd.id_domain=hdd_locked.id_domain"
+    );
+    my $sth_delete = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
+        ." WHERE id_domain=?");
+    $sth->execute($host_device->id);
+
+    my $free_device;
+    while ( my ($id_domain, $device) = $sth->fetchrow ) {
+        my $domain = Ravada::Domain->open($id_domain);
+        next if $domain->is_active();
+        $sth_delete->execute($id_domain);
+        Ravada::Request->refresh_machine(
+            id_domain => $id_domain
+            ,uid => Ravada::Utils::user_daemon->id
+        );
+        $free_device = $device;
+    }
+    return $free_device;
 }
 
 1;

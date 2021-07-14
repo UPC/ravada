@@ -4509,6 +4509,8 @@ sub _cmd_refresh_machine($self, $request) {
 
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id)
     if $is_active && $domain->ip;
+
+    $domain->_unlock_host_devices() if !$is_active;
 }
 
 sub _cmd_refresh_machine_ports($self, $request) {
@@ -5009,6 +5011,7 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
 
         if (defined $id_vm && !$active_vm->{$id_vm} ) {
             $domain->_set_data(status => 'shutdown');
+            $domain->_post_shutdown()
         } else {
             my $status = 'shutdown';
             $status = 'active' if $domain->is_active;
