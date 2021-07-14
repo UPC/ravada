@@ -27,7 +27,7 @@ sub _set_hd_nvidia($hd) {
 sub test_hostdev_not_in_domain_void($domain) {
     my $config = $domain->_load();
     if (exists $config->{hardware}->{host_devices}) {
-        is_deeply( $config->{hardware}->{host_devices}, []) or die Dumper($domain->name, $config->{hardware}->{host_devices});
+        is_deeply( $config->{hardware}->{host_devices}, []) or confess Dumper($domain->name, $config->{hardware}->{host_devices});
     } else {
         ok(1); # ok if it doesn't exist
     }
@@ -35,11 +35,16 @@ sub test_hostdev_not_in_domain_void($domain) {
 
 sub test_hostdev_not_in_domain_kvm($domain) {
     my $xml = XML::LibXML->load_xml(string => $domain->domain->get_xml_description);
+
+    my ($feat_kvm) = $xml->findnodes("/demain/features/kvm");
+    ok(!$feat_kvm) or die $feat_kvm->toString();
+
     my ($hostdev) = $xml->findnodes("/domain/devices/hostdev");
-    ok(!$hostdev,"Expecting no <hostdev> in ".$domain->name) or exit;
+    ok(!$hostdev,"Expecting no <hostdev> in ".$domain->name) or confess;
+
 }
 
-sub test_hostdev_not_in_domain($domain) {
+sub test_hostdev_not_in_domain_config($domain) {
     if ($domain->type eq 'Void') {
         test_hostdev_not_in_domain_void($domain);
     } elsif ($domain->type eq 'KVM') {
@@ -48,6 +53,36 @@ sub test_hostdev_not_in_domain($domain) {
         confess "TODO";
     }
 }
+
+sub test_hostdev_in_domain_void($domain) {
+    my $config = $domain->_load();
+    ok(exists $config->{hardware}->{host_devices}) or return;
+    ok(scalar(@{ $config->{hardware}->{host_devices}})) or die "Expecting host_devices"
+        ." in ".Dumper($config->{hardware});
+}
+
+sub test_hostdev_in_domain_kvm($domain) {
+    my $xml = XML::LibXML->load_xml(string => $domain->domain->get_xml_description);
+
+    my ($feat) = $xml->findnodes("/domain/features");
+    my ($feat_kvm) = $xml->findnodes("/domain/features/kvm");
+    ok($feat_kvm) or die "Error, no /domain/features/kvm in ".$domain->name
+    .$feat->toString;
+
+    my ($hostdev) = $xml->findnodes("/domain/devices/hostdev");
+    ok($hostdev,"Expecting no <hostdev> in ".$domain->name) or confess;
+}
+
+sub test_hostdev_in_domain_config($domain) {
+    if ($domain->type eq 'Void') {
+        test_hostdev_in_domain_void($domain);
+    } elsif ($domain->type eq 'KVM') {
+        test_hostdev_in_domain_kvm($domain);
+    } else {
+        confess "TODO";
+    }
+}
+
 
 sub test_hd_in_domain($vm , $hd) {
 
@@ -76,7 +111,7 @@ sub test_hd_in_domain($vm , $hd) {
     my $n_locked = _count_locked();
     for my $count (reverse 0 .. $hd->list_devices ) {
         my $clone = $domain->clone(name => new_domain_name() ,user => user_admin);
-        test_hostdev_not_in_domain($clone);
+        test_hostdev_not_in_domain_config($clone);
         _compare_hds($domain, $clone);
 
         test_device_unlocked($clone);
@@ -90,6 +125,7 @@ sub test_hd_in_domain($vm , $hd) {
             }
             is(_count_locked(),++$n_locked) or exit;
             test_device_locked($clone);
+            test_hostdev_in_domain_config($clone);
         }
 
         $clone->shutdown_now(user_admin);
@@ -111,6 +147,7 @@ sub test_hd_in_domain($vm , $hd) {
 }
 
 sub test_grab_free_device($base) {
+    diag("grab free device in ".$base->type);
     wait_request();
     rvd_back->_cmd_refresh_vms();
     my @clones = $base->clones();
@@ -123,6 +160,8 @@ sub test_grab_free_device($base) {
     ok($up_dev->{name});
     is($up_dev->{is_locked},1);
     is($down_dev->{name},undef);
+    test_hostdev_in_domain_config($up);
+    test_hostdev_not_in_domain_config($down);
 
     $up->shutdown_now(user_admin);
     ($up_dev) = $up->list_host_devices_attached();
@@ -133,6 +172,8 @@ sub test_grab_free_device($base) {
     ok($down_dev->{name});
     ($up_dev) = $up->list_host_devices_attached();
     is($up_dev->{is_locked},0);
+    test_hostdev_in_domain_config($up);
+    test_hostdev_in_domain_config($down);
 
     diag("trying to start ".$up->id." ".$up->name);
     eval { $up->start(user_admin) };
@@ -147,8 +188,11 @@ sub test_grab_free_device($base) {
     $third = Ravada::Domain->open($third->{id});
     my ($third_dev) = $third->list_host_devices_attached();
     $third->shutdown_now(user_admin);
+    diag("just released [".$third->id."] ".$third->name);
+    diag($third_dev->{name});
 
-    $up->start(user_admin);
+    eval { $up->start(user_admin) };
+    is(''.$@,'') or die "Error starting ".$up->name;
 
     is($up->is_active,1);
     my ($up_dev2) = $up->list_host_devices_attached();
@@ -157,6 +201,9 @@ sub test_grab_free_device($base) {
 
     my ($third_dev_down) = $third->list_host_devices_attached();
     is($third_dev_down->{is_locked},0) or die Dumper($third_dev_down);
+
+    test_hostdev_in_domain_config($up);
+    test_hostdev_in_domain_config($third);
 
 }
 
@@ -252,6 +299,7 @@ sub test_templates($vm) {
         like ($list_hostdev[-1]->{name} , qr/[a-zA-Z] \d+$/) or exit;
 
         test_hd_in_domain($vm, $list_hostdev[-1]);
+        test_hd_dettach($vm, $list_hostdev[-1]);
 
         my $req = Ravada::Request->list_host_devices(
             uid => user_admin->id
@@ -285,11 +333,25 @@ sub test_templates($vm) {
 
 }
 
+sub test_hd_dettach($vm, $host_device) {
+    return if !$host_device->list_devices;
+
+    my $domain = create_domain($vm);
+    $domain->add_host_device($host_device);
+
+    $domain->start(user_admin);
+    $domain->shutdown_now(user_admin);
+    $domain->remove_host_device($host_device);
+
+    test_hostdev_not_in_domain_config($domain);
+    $domain->remove(user_admin);
+}
+
 ####################################################################
 
 clean();
 
-for my $vm_name ( reverse vm_names()) {
+for my $vm_name ( vm_names()) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 

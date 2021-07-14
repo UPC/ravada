@@ -129,6 +129,8 @@ sub remove($self) {
 }
 
 sub _fetch_template_args($self, $device) {
+    confess "Error: missing device " if !defined $device;
+
     my $tp_args = decode_json($self->template_args());
     my $ret = {};
     while (my ($name, $re) = each %$tp_args) {

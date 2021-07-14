@@ -6401,6 +6401,8 @@ sub add_host_device($self, $host_device) {
 }
 
 sub remove_host_device($self, $host_device) {
+    $self->_dettach_host_device($host_device);
+
     my $id_hd = $host_device;
     $id_hd = $host_device->id if ref($host_device);
 
@@ -6482,18 +6484,18 @@ sub _add_host_devices($self, @args) {
     my $doc = $self->get_config();
     for my $host_device ( @host_devices ) {
         next if !$host_device->enabled();
-        if ( $self->_device_already_configured($host_device)) {
+        if ( my $device_configured = $self->_device_already_configured($host_device)) {
             if ( $self->_lock_host_device($host_device) ) {
                 next;
             } else {
-                $self->_dettach_host_device($doc, $host_device);
+                $self->_dettach_host_device($host_device, $doc);
             }
         }
 
         my ($device) = $host_device->list_available_devices();
         if ( !$device ) {
             $self->_data(status => 'down');
-            die "Error: No available devices ".$host_device->name;
+            die "Error: No available devices ".$host_device->name."\n";
         }
 
         $self->_lock_host_device($host_device, $device);
@@ -6519,11 +6521,10 @@ sub _add_host_devices($self, @args) {
 
 }
 
-sub _dettach_host_device($self, $doc, $host_device) {
+sub _dettach_host_device($self, $host_device, $doc=$self->get_config) {
 
-    my $device = $self->_device_already_configured($host_device);
+    my $device = $self->_device_already_configured($host_device) or return;
 
-    warn "dettach hdev from ".$self->name;
     for my $entry( $host_device->render_template($device) ) {
         if ($entry->{type} eq 'node') {
             $self->remove_config_node($entry->{path}, $entry->{content}, $doc);

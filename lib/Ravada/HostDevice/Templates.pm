@@ -35,7 +35,7 @@ our @TEMPLATES_KVM  = (
             {
                 path => "/domain/devices/hostdev"
                 ,type => 'node'
-                ,template => "<hostdev mode='subsystem' type='usb'>
+                ,template => "<hostdev mode='subsystem' type='usb' managed='yes'>
                 <source>
                 <vendor id='0x<%= \$vendor_id %>'/>
                 <product id='0x<%= \$product_id %>'/>

@@ -2817,7 +2817,26 @@ sub remove_config_node($self, $path, $content, $doc) {
     my @parent = $doc->findnodes($dir);
     return if !scalar(@parent);
 
-    warn Dumper([$path, $dir, $entry]);
+    if ($entry eq 'hostdev') {
+        my $content_xml = XML::LibXML->load_xml(string => $content);
+        my ($hostdev) = $content_xml->findnodes('/hostdev');
+        if ($hostdev->getAttribute('type') eq 'pci') {
+            my ($address) = $content_xml->findnodes("/hostdev/source/address");
+            die $content_xml->toString if !$address;
+            for my $parent (@parent) {
+                for my $element ($parent->childNodes()) {
+                    next if $element->getName ne $entry;
+                    my ($source) = $element->findnodes("source");
+                    my ($address_e) = $source->findnodes("address") if $source;
+                    if ($address_e && $address->toString eq $address_e->toString) {
+                        $parent->removeChild($element);
+                        return;
+                    }
+                }
+            }
+            return;
+        }
+    }
 
     $content =~ s/^\s+//mg;
     $content =~ s/\'/"/g;
@@ -2825,10 +2844,23 @@ sub remove_config_node($self, $path, $content, $doc) {
 
     for my $parent (@parent) {
         for my $element ($parent->findnodes($entry)) {
+            if ($entry eq 'hostdev') {
+                for my $address ( $element->childNodes() ) {
+                    $element->removeChild($address) if $address->getName eq 'address';
+                }
+            }
             my $element_s = $element->toString();
             $element_s =~ s/^\s+//mg;
             if ( $content eq $element_s ) {
                 $parent->removeChild($element);
+            } else {
+                my @lines_c = split /\n/,$content;
+                my @lines_e = split /\n/,$element_s;
+                warn " ".(scalar(@lines_c)." ".scalar(@lines_e));
+                for ( 0 .. scalar(@lines_c) ) {
+                    warn Dumper([$_,$lines_c[$_],$lines_e[$_]])
+                    if $lines_c[$_] ne $lines_e[$_];
+                }
             }
         }
     }

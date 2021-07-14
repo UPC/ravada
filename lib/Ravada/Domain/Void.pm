@@ -1063,12 +1063,15 @@ sub remove_config_node($self, $path, $content, $data) {
     confess $@."\n$content" if $@;
 
     my $found = $data;
+    my $found_parent;
+    my $found_item;
     for my $item (split m{/}, $path ) {
         next if !$item;
 
-        confess "Error, no $item in ".Dumper($found)
-        if !exists $found->{$item};
+        return if !exists $found->{$item};
 
+        $found_parent = $found;
+        $found_item = $item;
         $found = $found->{$item};
     }
     return if !$found;
@@ -1077,7 +1080,8 @@ sub remove_config_node($self, $path, $content, $data) {
         for my $item (@$found) {
             push @new_list,($item) unless _equal_hash($content_hash, $item);
         }
-        $found = [@new_list];
+        $found_parent->{$found_item} = [@new_list];
+        delete $found_parent->{$found_item} if (scalar(@new_list) == 0 );
     } else {
         my ($item) = keys %$content_hash;
         delete $found->{$item};
