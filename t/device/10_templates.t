@@ -61,23 +61,25 @@ sub test_hostdev_in_domain_void($domain) {
         ." in ".Dumper($config->{hardware});
 }
 
-sub test_hostdev_in_domain_kvm($domain) {
+sub test_hostdev_in_domain_kvm($domain, $expect_feat_kvm=1) {
     my $xml = XML::LibXML->load_xml(string => $domain->domain->get_xml_description);
 
-    my ($feat) = $xml->findnodes("/domain/features");
-    my ($feat_kvm) = $xml->findnodes("/domain/features/kvm");
-    ok($feat_kvm) or die "Error, no /domain/features/kvm in ".$domain->name
-    .$feat->toString;
+    if ($expect_feat_kvm) {
+        my ($feat) = $xml->findnodes("/domain/features");
+        my ($feat_kvm) = $xml->findnodes("/domain/features/kvm");
+        ok($feat_kvm) or die "Error, no /domain/features/kvm in ".$domain->name
+        .$feat->toString;
+    }
 
     my ($hostdev) = $xml->findnodes("/domain/devices/hostdev");
     ok($hostdev,"Expecting no <hostdev> in ".$domain->name) or confess;
 }
 
-sub test_hostdev_in_domain_config($domain) {
+sub test_hostdev_in_domain_config($domain, $expect_feat_kvm) {
     if ($domain->type eq 'Void') {
         test_hostdev_in_domain_void($domain);
     } elsif ($domain->type eq 'KVM') {
-        test_hostdev_in_domain_kvm($domain);
+        test_hostdev_in_domain_kvm($domain, $expect_feat_kvm);
     } else {
         confess "TODO";
     }
@@ -86,10 +88,6 @@ sub test_hostdev_in_domain_config($domain) {
 
 sub test_hd_in_domain($vm , $hd) {
 
-    if ($vm->type eq 'KVM' && $hd->{name} =~ /USB/) {
-        diag("TODO test ".$vm->type." $hd->{name} ");
-        return;
-    }
     my $domain = create_domain($vm);
     if ($vm->type eq 'KVM' && $hd->{name} =~ /PCI/) {
         _set_hd_nvidia($hd);
@@ -125,7 +123,7 @@ sub test_hd_in_domain($vm , $hd) {
             }
             is(_count_locked(),++$n_locked) or exit;
             test_device_locked($clone);
-            test_hostdev_in_domain_config($clone);
+            test_hostdev_in_domain_config($clone, ($hd->name =~ /PCI/ && $vm->type eq 'KVM'));
         }
 
         $clone->shutdown_now(user_admin);
@@ -153,6 +151,7 @@ sub test_grab_free_device($base) {
     my @clones = $base->clones();
     my ($up) = grep { $_->{status} eq 'active' } @clones;
     my ($down) = grep { $_->{status} ne 'active' } @clones;
+    ok($down && exists $down->{id}) or die Dumper(\@clones);
     $up = Ravada::Domain->open($up->{id});
     $down = Ravada::Domain->open($down->{id});
     my ($up_dev) = $up->list_host_devices_attached();
@@ -160,7 +159,8 @@ sub test_grab_free_device($base) {
     ok($up_dev->{name});
     is($up_dev->{is_locked},1);
     is($down_dev->{name},undef);
-    test_hostdev_in_domain_config($up);
+    my $expect_feat_kvm = $up_dev->{host_device_name} =~ /PCI/ && $base->type eq /KVM/;
+    test_hostdev_in_domain_config($up, $expect_feat_kvm);
     test_hostdev_not_in_domain_config($down);
 
     $up->shutdown_now(user_admin);
@@ -172,8 +172,8 @@ sub test_grab_free_device($base) {
     ok($down_dev->{name});
     ($up_dev) = $up->list_host_devices_attached();
     is($up_dev->{is_locked},0);
-    test_hostdev_in_domain_config($up);
-    test_hostdev_in_domain_config($down);
+    test_hostdev_in_domain_config($up, $expect_feat_kvm);
+    test_hostdev_in_domain_config($down, $expect_feat_kvm);
 
     diag("trying to start ".$up->id." ".$up->name);
     eval { $up->start(user_admin) };
@@ -317,6 +317,7 @@ sub test_templates($vm) {
         next if !(scalar(@{$devices->[-1]->{devices}})>1);
         $n++;
 
+        my $list_filter = $list_hostdev[-1]->_data('list_filter');
         $list_hostdev[-1]->_data('list_filter' => '002');
         my $req2 = Ravada::Request->list_host_devices(
             uid => user_admin->id
@@ -329,22 +330,66 @@ sub test_templates($vm) {
         my $devices2 = Ravada::WebSocket::_list_host_devices(rvd_front(), $ws_args);
         isnt(scalar(@{$devices2->[-1]->{devices}}) , scalar(@{$devices->[-1]->{devices}}));
         $n++;
+        $list_hostdev[-1]->_data('list_filter' => $list_filter);
     }
 
+    for my $hd ( $vm->list_host_devices ) {
+        test_hd_remove($vm, $hd);
+    }
 }
 
 sub test_hd_dettach($vm, $host_device) {
-    return if !$host_device->list_devices;
+    my $start_fails = 0;
+    if (!$host_device->list_devices && $host_device->name =~ /^PCI/ && $vm->type eq 'KVM' ) {
+        $host_device->_data('list_filter' => 'VGA');
+        $start_fails = 1;
+    }
+    $start_fails = 1 if !$start_fails && !$host_device->list_devices;
 
     my $domain = create_domain($vm);
     $domain->add_host_device($host_device);
 
-    $domain->start(user_admin);
+    eval { $domain->start(user_admin) };
+    is(''.$@, '') unless $start_fails;
     $domain->shutdown_now(user_admin);
     $domain->remove_host_device($host_device);
 
     test_hostdev_not_in_domain_config($domain);
     $domain->remove(user_admin);
+}
+
+sub test_hd_remove($vm, $host_device) {
+    my $start_fails;
+    if ($host_device->name =~ /^PCI/ && $vm->type eq 'KVM' ) {
+        _set_hd_nvidia($host_device);
+        if (!$host_device->list_devices) {
+            $host_device->_data('list_filter' => 'VGA');
+            $start_fails = 1;
+        }
+    } else {
+        $start_fails = 1 if !$host_device->list_devices();
+    }
+    my $domain = create_domain($vm);
+    $domain->add_host_device($host_device);
+
+    eval { $domain->start(user_admin) };
+    is(''.$@, '') unless $start_fails;
+    $domain->shutdown_now(user_admin);
+
+    my $req = Ravada::Request->remove_host_device(
+        uid => user_admin->id
+        ,id_host_device => $host_device->id
+    );
+    wait_request();
+    is($req->status,'done');
+    is($req->error, '') or exit;
+
+    my $sth = connector->dbh->prepare(
+        "SELECT * FROM host_devices WHERE id=?"
+    );
+    $sth->execute($host_device->id);
+    my ($found) = $sth->fetchrow;
+    ok(!$found);
 }
 
 ####################################################################

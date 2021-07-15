@@ -141,6 +141,10 @@ our %VALID_ARG = (
         ,id_host_device => 1
         ,_force => 2
     }
+    ,remove_host_device => {
+        uid => 1
+        ,id_host_device => 1
+    }
 
 );
 

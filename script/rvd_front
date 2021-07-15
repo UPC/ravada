@@ -428,8 +428,10 @@ post '/node/host_device/update' => sub($c) {
 get '/node/host_device/remove/(:id)' => sub($c) {
     return access_denied($c) unless $USER->is_admin;
     my $id = $c->stash('id');
-    my $sth = $RAVADA->_dbh->prepare("DELETE FROM host_devices WHERE id=?");
-    $sth->execute($id);
+    my $req = Ravada::Request->remove_host_device(
+        uid => user_admin->id
+        ,id_host_device => $id
+    );
     return $c->render(json => { ok => 1 });
 };
 

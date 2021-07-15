@@ -3719,6 +3719,16 @@ sub _cmd_list_host_devices($self, $request) {
 
 }
 
+sub _cmd_remove_host_device($self, $request) {
+    my $id_host_device = $request->args('id_host_device');
+
+    my $hd = Ravada::HostDevice->search_by_id(
+        $id_host_device
+    );
+
+    $hd->remove;
+}
+
 sub _can_fork {
     my $self = shift;
     my $req = shift or confess "Missing request";
@@ -5214,6 +5224,7 @@ sub _req_method {
 
     ,manage_pools => \&_cmd_manage_pools
     ,list_host_devices => \&_cmd_list_host_devices
+    ,remove_host_device => \&_cmd_remove_host_device
     );
     return $methods{$cmd};
 }

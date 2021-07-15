@@ -124,7 +124,16 @@ sub list_available_devices($self) {
 
 sub remove($self) {
     _init_connector();
-    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices WHERE id=?");
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_domain FROM host_devices_domain "
+        ." WHERE id_host_device=?"
+    );
+    $sth->execute($self->id);
+    while ( my ( $id_domain ) = $sth->fetchrow) {
+        my $domain = Ravada::Domain->open($id_domain);
+        $domain->remove_host_device($self);
+    }
+    $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices WHERE id=?");
     $sth->execute($self->id);
 }
 
