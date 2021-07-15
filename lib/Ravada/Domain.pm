@@ -6530,6 +6530,7 @@ sub _dettach_host_device($self, $host_device, $doc=$self->get_config) {
     my $device = $self->_device_already_configured($host_device) or return;
 
     for my $entry( $host_device->render_template($device) ) {
+        warn $entry->{content};
         if ($entry->{type} eq 'node') {
             $self->remove_config_node($entry->{path}, $entry->{content}, $doc);
         } elsif ($entry->{type} eq 'unique_node') {
@@ -6537,6 +6538,7 @@ sub _dettach_host_device($self, $host_device, $doc=$self->get_config) {
         } elsif($entry->{type} eq 'attribute') {
             $self->remove_config_attribute($entry->{path}, $entry->{content}, $doc);
         } elsif($entry->{type} eq 'namespace') {
+            $self->remove_config_node($entry->{path}, $entry->{content}, $doc);
         } else {
             die "Error in host_device ".$host_device->name
             ." template: ".$entry->{path}

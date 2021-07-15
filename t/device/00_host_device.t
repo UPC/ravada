@@ -267,6 +267,8 @@ sub test_devices($host_device, $expected_available, $match = undef) {
 
 sub test_host_device_usb($vm) {
 
+    diag("Test host device USB in ".$vm->type);
+
     my ($list_command,$list_filter) = _search_unused_device();
     unless ( $list_command ) {
         diag("SKIPPED: install a USB device to test");
@@ -524,6 +526,7 @@ sub test_host_device_gpu($vm) {
 
     test_hostdev_gpu($base);
 
+    diag("Remove host device ".$list_hostdev[0]->name);
     $list_hostdev[0]->remove();
     remove_domain($base);
 }

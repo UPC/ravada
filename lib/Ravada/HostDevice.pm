@@ -131,6 +131,7 @@ sub remove($self) {
     $sth->execute($self->id);
     while ( my ( $id_domain ) = $sth->fetchrow) {
         my $domain = Ravada::Domain->open($id_domain);
+        warn("Remove host device ".$self->name);
         $domain->remove_host_device($self);
     }
     $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices WHERE id=?");

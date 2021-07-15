@@ -2818,16 +2818,18 @@ sub remove_config_node($self, $path, $content, $doc) {
     return if !scalar(@parent);
 
     if ($entry eq 'hostdev') {
+        warn $content;
         my $content_xml = XML::LibXML->load_xml(string => $content);
         my ($hostdev) = $content_xml->findnodes('/hostdev');
-        if ($hostdev->getAttribute('type') eq 'pci') {
+        if ($hostdev->getAttribute('type') =~ m/pci|mdev/) {
             my ($address) = $content_xml->findnodes("/hostdev/source/address");
             die $content_xml->toString if !$address;
             for my $parent (@parent) {
                 for my $element ($parent->childNodes()) {
                     next if $element->getName ne $entry;
                     my ($source) = $element->findnodes("source");
-                    my ($address_e) = $source->findnodes("address") if $source;
+                    my ($address_e);
+                    ($address_e) = $source->findnodes("address") if $source;
                     if ($address_e && $address->toString eq $address_e->toString) {
                         $parent->removeChild($element);
                         return;
@@ -2844,6 +2846,7 @@ sub remove_config_node($self, $path, $content, $doc) {
 
     for my $parent (@parent) {
         for my $element ($parent->findnodes($entry)) {
+            next if $element->getName ne $entry;
             if ($entry eq 'hostdev') {
                 for my $address ( $element->childNodes() ) {
                     $element->removeChild($address) if $address->getName eq 'address';
@@ -2856,11 +2859,13 @@ sub remove_config_node($self, $path, $content, $doc) {
             } else {
                 my @lines_c = split /\n/,$content;
                 my @lines_e = split /\n/,$element_s;
-                warn " ".(scalar(@lines_c)." ".scalar(@lines_e));
+                warn $element->getName." ".(scalar(@lines_c)." ".scalar(@lines_e));
                 for ( 0 .. scalar(@lines_c) ) {
                     warn Dumper([$_,$lines_c[$_],$lines_e[$_]])
                     if $lines_c[$_] ne $lines_e[$_];
                 }
+                warn $content;
+                die $self->name if $element->getName eq 'hostdev';
             }
         }
     }
