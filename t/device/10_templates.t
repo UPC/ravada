@@ -23,6 +23,9 @@ sub _set_hd_nvidia($hd) {
     $hd->_data( list_filter => 'VGA.*NVIDIA');
 }
 
+sub _set_hd_usb($hd) {
+    $hd->_data( list_filter => '(flash|cam|bluetoo)');
+}
 
 sub test_hostdev_not_in_domain_void($domain) {
     my $config = $domain->_load();
@@ -89,15 +92,20 @@ sub test_hostdev_in_domain_config($domain, $expect_feat_kvm) {
 sub test_hd_in_domain($vm , $hd) {
 
     my $domain = create_domain($vm);
-    if ($vm->type eq 'KVM' && $hd->{name} =~ /PCI/) {
-        _set_hd_nvidia($hd);
-        if (!$hd->list_devices) {
-            diag("SKIPPED: No devices found ".join(" ",$hd->list_command)." | ".$hd->list_filter);
-            remove_domain($domain);
-            return;
+    if ($vm->type eq 'KVM') {
+        if ($hd->{name} =~ /PCI/) {
+            _set_hd_nvidia($hd);
+            if (!$hd->list_devices) {
+                diag("SKIPPED: No devices found ".join(" ",$hd->list_command)." | ".$hd->list_filter);
+                remove_domain($domain);
+                return;
+            }
+        } elsif ($hd->{name} =~ /USB/ ) {
+            _set_hd_usb($hd);
         }
     }
     diag("Testing HD ".$hd->{name}." ".$hd->list_filter." in ".$vm->type);
+    die Dumper([$hd->list_devices]) if $hd->{name} =~ /PCI/;
     $domain->add_host_device($hd);
 
     if ($hd->list_devices) {
@@ -149,6 +157,10 @@ sub test_grab_free_device($base) {
     wait_request();
     rvd_back->_cmd_refresh_vms();
     my @clones = $base->clones();
+
+    die "Error: I need 3 clones . I can't try to grab only ".scalar(@clones)
+    if scalar(@clones)<3;
+
     my ($up) = grep { $_->{status} eq 'active' } @clones;
     my ($down) = grep { $_->{status} ne 'active' } @clones;
     ok($down && exists $down->{id}) or die Dumper(\@clones);
@@ -201,9 +213,8 @@ sub test_grab_free_device($base) {
 
     my ($third_dev_down) = $third->list_host_devices_attached();
     is($third_dev_down->{is_locked},0) or die Dumper($third_dev_down);
-
-    test_hostdev_in_domain_config($up);
-    test_hostdev_in_domain_config($third);
+    test_hostdev_in_domain_config($up, $expect_feat_kvm);
+    test_hostdev_in_domain_config($third, $expect_feat_kvm);
 
 }
 

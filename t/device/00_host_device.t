@@ -41,10 +41,11 @@ sub _template_usb($vm) {
     return (
         { path => "/domain/devices/hostdev"
         ,type => 'node'
-        ,template => "<hostdev mode='subsystem' type='usb'>
+        ,template => "<hostdev mode='subsystem' type='usb' managed='no'>
             <source>
                 <vendor id='0x<%= \$vendor_id %>'/>
                 <product id='0x<%= \$product_id %>'/>
+                <address bus='1' device='7'/>
             </source>
         </hostdev>"
         })

@@ -2818,11 +2818,12 @@ sub remove_config_node($self, $path, $content, $doc) {
     return if !scalar(@parent);
 
     if ($entry eq 'hostdev') {
-        warn $content;
         my $content_xml = XML::LibXML->load_xml(string => $content);
         my ($hostdev) = $content_xml->findnodes('/hostdev');
-        if ($hostdev->getAttribute('type') =~ m/pci|mdev/) {
+        if ($hostdev->getAttribute('type') =~ m/pci|mdev|usb/) {
             my ($address) = $content_xml->findnodes("/hostdev/source/address");
+            my $address_string = $address->toString();
+            $address_string =~ s/"00/"/g;
             die $content_xml->toString if !$address;
             for my $parent (@parent) {
                 for my $element ($parent->childNodes()) {
@@ -2830,26 +2831,32 @@ sub remove_config_node($self, $path, $content, $doc) {
                     my ($source) = $element->findnodes("source");
                     my ($address_e);
                     ($address_e) = $source->findnodes("address") if $source;
-                    if ($address_e && $address->toString eq $address_e->toString) {
-                        $parent->removeChild($element);
-                        return;
+                    if ($address_e) {
+                        my $address_e_string = $address_e->toString();
+                        $address_e_string =~ s/"00/"/g;
+                        if( $address_string eq $address_e_string) {
+                            $parent->removeChild($element);
+                            return;
+                        }
                     }
                 }
             }
-            return;
         }
     }
+    # unknown hostdev kind, we try to match the whole content
 
     $content =~ s/^\s+//mg;
     $content =~ s/\'/"/g;
     chomp $content;
 
     for my $parent (@parent) {
-        for my $element ($parent->findnodes($entry)) {
+        for my $element ($parent->childNodes()) {
             next if $element->getName ne $entry;
             if ($entry eq 'hostdev') {
                 for my $address ( $element->childNodes() ) {
-                    $element->removeChild($address) if $address->getName eq 'address';
+                    if ( $address->getName eq 'address' || $address->getName eq 'alias' ) {
+                        $element->removeChild($address);
+                    }
                 }
             }
             my $element_s = $element->toString();
@@ -2952,6 +2959,13 @@ sub change_namespace($self, $path, $content, $doc) {
     $uri =~ s/^'(.*)'/$1/;
 
     $node[0]->setNamespace($uri, $prefix, 0);
+}
+
+sub remove_namespace($self, $path, $content, $doc) {
+    my @node = $doc->findnodes($path);
+    my ($prefix,$uri) = $content =~ /(.*?)=(.*)/;
+    $uri =~ s/^'(.*)'/$1/;
+    # die Dumper([$node[0]->getNameSpaces()]);
 }
 
 sub remove_host_devices($self) {

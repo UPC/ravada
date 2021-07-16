@@ -6412,7 +6412,7 @@ sub remove_host_device($self, $host_device) {
     $sth->execute($self->id, $id_hd);
     if ($self->is_base) {
         for my $clone_data ( $self->clones ) {
-            my $clone = Ravada::Front::Domain->open($clone_data->{id});
+            my $clone = Ravada::Domain->open($clone_data->{id});
             $clone->remove_host_device($host_device);
         }
     }
@@ -6530,7 +6530,6 @@ sub _dettach_host_device($self, $host_device, $doc=$self->get_config) {
     my $device = $self->_device_already_configured($host_device) or return;
 
     for my $entry( $host_device->render_template($device) ) {
-        warn $entry->{content};
         if ($entry->{type} eq 'node') {
             $self->remove_config_node($entry->{path}, $entry->{content}, $doc);
         } elsif ($entry->{type} eq 'unique_node') {
@@ -6538,7 +6537,7 @@ sub _dettach_host_device($self, $host_device, $doc=$self->get_config) {
         } elsif($entry->{type} eq 'attribute') {
             $self->remove_config_attribute($entry->{path}, $entry->{content}, $doc);
         } elsif($entry->{type} eq 'namespace') {
-            $self->remove_config_node($entry->{path}, $entry->{content}, $doc);
+            $self->remove_namespace($entry->{path}, $entry->{content}, $doc);
         } else {
             die "Error in host_device ".$host_device->name
             ." template: ".$entry->{path}

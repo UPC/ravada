@@ -30,6 +30,8 @@ our @TEMPLATES_KVM  = (
         ,template_args =>  encode_json ({
                 vendor_id => 'ID ([a-f0-9]+)'
                 ,product_id => 'ID .*?:([a-f0-9]+)'
+                ,bus => 'Bus (\d+)'
+                ,device => 'Device (\d+)'
             })
         ,templates => [
             {
@@ -39,6 +41,7 @@ our @TEMPLATES_KVM  = (
                 <source>
                 <vendor id='0x<%= \$vendor_id %>'/>
                 <product id='0x<%= \$product_id %>'/>
+                <address bus='<%= \$bus %>' device='<%= \$device %>'/>
                 </source>
                 </hostdev>"
             }
@@ -77,55 +80,57 @@ our @TEMPLATES_KVM  = (
             }
         ]
     }
-    ,{
-        name => "GPU dri"
-        ,list_command => "find /dev/dri/by-path/ -type f"
-        ,list_filter => ""
-        ,template_args => encode_json({
-                pci => "0000:([a-f0-9:\.]+)"
-                ,uuid => "_DEVICE_CONTENT_"
-            })
-        ,templates => [
-            {path => "/domain"
-                ,type => "namespace"
-                ,template => "qemu='http://libvirt.org/schemas/domain/qemu/1.0'"
-            }
-            ,
-            {path => "/domain/metadata/libosinfo:libosinfo"
-                ,template => "<libosinfo:libosinfo xmlns:libosinfo='http://libosinfo.org/xmlns/libvirt/domain/1.0'>
-                <libosinfo:os id='http://microsoft.com/win/10'/>
-                </libosinfo:libosinfo>"
-            }
-            ,
-            {path => "/domain/devices/graphics[\@type='spice']"
-                ,template =>  "<graphics type='spice' autoport='yes'>
-                <listen type='address'/>
-                <image compression='auto_glz'/>
-                <jpeg compression='auto'/>
-                <zlib compression='auto'/>
-                <playback compression='on'/>
-                <streaming mode='filter'/>
-                <gl enable='no' rendernode='/dev/dri/by-path/pci-<%= \$pci %> render'/>
-                </graphics>"
-            }
-            ,
-            {path => "/domain/devices/graphics[\@type='egl-headless']"
-                ,template =>  "<graphics type='egl-headless'/>"
-            }
-            ,
-            {
-                path => "/domain/devices/hostdev"
-                ,template =>
-                "<hostdev mode='subsystem' type='mdev' managed='no' model='vfio-pci' display='off'>
-                <source>
-                <address uuid='<%= \$uuid %>'/>
-                </source>
-                <address type='pci' domain='0x0000' bus='0x00' slot='0x10' function='0x0'/>
-                </hostdev>"
-            }
 
-        ]
-    }
+#    ,{
+#        name => "GPU dri"
+#        ,list_command => "find /dev/dri/by-path/ -type f"
+#        ,list_filter => ""
+#        ,template_args => encode_json({
+#                pci => "0000:([a-f0-9:\.]+)"
+#                ,uuid => "_DEVICE_CONTENT_"
+#            })
+#        ,templates => [
+#            {path => "/domain"
+#                ,type => "namespace"
+#                ,template => "qemu='http://libvirt.org/schemas/domain/qemu/1.0'"
+#            }
+#            ,
+#            {path => "/domain/metadata/libosinfo:libosinfo"
+#                ,template => "<libosinfo:libosinfo xmlns:libosinfo='http://libosinfo.org/xmlns/libvirt/domain/1.0'>
+#                <libosinfo:os id='http://microsoft.com/win/10'/>
+#                </libosinfo:libosinfo>"
+#            }
+#            ,
+#            {path => "/domain/devices/graphics[\@type='spice']"
+#                ,template =>  "<graphics type='spice' autoport='yes'>
+#                <listen type='address'/>
+#                <image compression='auto_glz'/>
+#                <jpeg compression='auto'/>
+#                <zlib compression='auto'/>
+#                <playback compression='on'/>
+#                <streaming mode='filter'/>
+#                <gl enable='no' rendernode='/dev/dri/by-path/pci-<%= \$pci %> render'/>
+#                </graphics>"
+#            }
+#            ,
+#            {path => "/domain/devices/graphics[\@type='egl-headless']"
+#                ,template =>  "<graphics type='egl-headless'/>"
+#            }
+#            ,
+#            {
+#                path => "/domain/devices/hostdev"
+#                ,template =>
+#                "<hostdev mode='subsystem' type='mdev' managed='no' model='vfio-pci' display='off'>
+#                <source>
+#                <address uuid='<%= \$uuid %>'/>
+#                </source>
+#                <address type='pci' domain='0x0000' bus='0x00' slot='0x10' function='0x0'/>
+#                </hostdev>"
+#            }
+#
+#        ]
+#    }
+#
 );
 
 our @TEMPLATES_VOID = (
