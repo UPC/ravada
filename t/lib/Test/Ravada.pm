@@ -149,6 +149,7 @@ my $FILE_CONFIG_QEMU = "/etc/libvirt/qemu.conf";
 my @FLUSH_RULES=(
     ["-t","nat","-F","DOCKER"]
     ,["-t","nat","-F","POSTROUTING"]
+    ,["-t","nat","-A","POSTROUTING","-j","LIBVIRT_PRT"]
 );
 
 $Ravada::CAN_FORK = 0;
