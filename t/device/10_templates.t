@@ -24,7 +24,7 @@ sub _set_hd_nvidia($hd) {
 }
 
 sub _set_hd_usb($hd) {
-    $hd->_data( list_filter => '(flash|cam|bluetoo)');
+    $hd->_data( list_filter => '(flash|audio|cam|bluetoo)');
 }
 
 sub test_hostdev_not_in_domain_void($domain) {
@@ -339,7 +339,19 @@ sub test_templates($vm) {
         is($req2->status, 'done');
         is($req2->error, '');
         my $devices2 = Ravada::WebSocket::_list_host_devices(rvd_front(), $ws_args);
-        isnt(scalar(@{$devices2->[-1]->{devices}}) , scalar(@{$devices->[-1]->{devices}}));
+        my $equal;
+        my $dev0 = $devices->[-1]->{devices};
+        my $dev2 = $devices2->[-1]->{devices};
+        $equal = scalar(@$dev0) == scalar (@$dev2);
+        if ($equal ) {
+            for ( 0 .. scalar(@$dev0)) {
+                if ($dev0->[$_] ne $dev2->[$_]) {
+                    $equal = 0;
+                    last;
+                }
+            }
+        }
+        ok(!$equal) or die Dumper($dev0, $dev2);
         $n++;
         $list_hostdev[-1]->_data('list_filter' => $list_filter);
     }
