@@ -370,7 +370,7 @@ sub test_ips {
     my @ips;
     for my $line (split /\n/, $out) {
         my ($if, $ip) = $line =~ /\s(\w+)\s+inet\s+(\d+\.\d+\.\d+\.\d+)/;
-        push @ips ,($ip) if $if !~ /^virbr/;
+        push @ips ,($ip) if (($if) && ($if !~ /^virbr/));
     }
 
     for my $ip (@ips) {
