@@ -355,7 +355,9 @@ sub _around_start($orig, $self, @arg) {
         last if !$error;
         warn "WARNING: $error ".$self->_vm->name." ".$self->_vm->enabled if $error;
 
-        next if $error && ref($error) && $error->code == 1;# pool has asynchronous jobs running.
+        ;# pool has asynchronous jobs running.
+        next if $error && ref($error) && $error->code == 1
+        && $error !~ /internal error.*unexpected address/;
 
         if ($error && $self->id_base && !$self->is_local && $self->_vm->enabled) {
             $self->_request_set_base();

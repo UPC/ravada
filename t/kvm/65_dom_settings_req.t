@@ -76,7 +76,7 @@ sub test_drivers_id {
         );
         rvd_back->_process_requests_dont_fork();
         is($req->status,'done') or next;
-        is($req->error,'') or next;
+        is($req->error,'') or exit;
 
         ok(!$@,"Expecting no error, got : ".($@ or ''));
         my $value = $domain->get_driver($type);
