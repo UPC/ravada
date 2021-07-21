@@ -429,7 +429,7 @@ get '/node/host_device/remove/(:id)' => sub($c) {
     return access_denied($c) unless $USER->is_admin;
     my $id = $c->stash('id');
     my $req = Ravada::Request->remove_host_device(
-        uid => user_admin->id
+        uid => $USER->id
         ,id_host_device => $id
     );
     return $c->render(json => { ok => 1 });
@@ -1476,6 +1476,7 @@ post '/request/(:name)/' => sub {
                 ,%$args
             );
         };
+        warn $@ if $@;
     }
     return $c->render(json => { ok => 0, error => $@ }) if !$req;
     return $c->render(json => { ok => 1, request => $req->id });

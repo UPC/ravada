@@ -6401,10 +6401,12 @@ sub add_host_device($self, $host_device) {
 }
 
 sub remove_host_device($self, $host_device) {
-    $self->_dettach_host_device($host_device);
 
-    my $id_hd = $host_device;
-    $id_hd = $host_device->id if ref($host_device);
+    confess if !ref($host_device);
+
+    my $id_hd = $host_device->id;
+
+    $self->_dettach_host_device($host_device);
 
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain "
         ." WHERE id_domain=? AND id_host_device=?"
@@ -6627,6 +6629,7 @@ sub _check_host_device_already_used($self, $device) {
 sub _device_already_configured($self, $host_device) {
     my $query = "SELECT name FROM host_devices_domain WHERE id_domain=? AND id_host_device=?";
 
+    confess if !ref($host_device);
     my @args = ($self->id, $host_device->id);
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
