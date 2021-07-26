@@ -185,7 +185,7 @@ sub default_object_class() {
     return @OBJECT_CLASS;
 }
 
-sub _password_store($password, $storage, $algorithm) {
+sub _password_store($password, $storage, $algorithm=undef) {
     return _password_rfc2307($password, $algorithm) if lc($storage) eq 'rfc2307';
     return _password_pbkdf2($password, $algorithm)  if lc($storage) eq 'pbkdf2';
 
