@@ -3721,12 +3721,16 @@ sub _cmd_list_host_devices($self, $request) {
 
 sub _cmd_remove_host_device($self, $request) {
     my $id_host_device = $request->args('id_host_device');
+    my $host_device = Ravada::HostDevice->search_by_id($id_host_device);
 
-    my $hd = Ravada::HostDevice->search_by_id(
-        $id_host_device
-    );
+    my $id_domain = $request->defined_arg('id_domain');
 
-    $hd->remove;
+    if ($id_domain) {
+        my $domain = Ravada::Domain->open($id_domain);
+        $domain->remove_host_device($host_device);
+    } else {
+        $host_device->remove;
+    }
 }
 
 sub _can_fork {

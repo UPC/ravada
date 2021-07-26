@@ -24,7 +24,7 @@ sub _set_hd_nvidia($hd) {
 }
 
 sub _set_hd_usb($hd) {
-    $hd->_data( list_filter => '(flash|audio|cam|bluetoo)');
+    $hd->_data( list_filter => '(disk|flash|audio|cam|bluetoo)');
 }
 
 sub test_hostdev_not_in_domain_void($domain) {

@@ -871,15 +871,14 @@
 
             $scope.toggle_host_device = function(id_hd) {
                 if (_host_device_in_machine(id_hd)) {
-                    $http.get('/machine/host_device/remove/'+$scope.showmachine.id
-                        +"/"+id_hd).then(function(response) {
-                            $scope.error = response.data.error;
-                        });
+                    $scope.request('remove_host_device',
+                        {id_domain: $scope.showmachine.id
+                        ,id_host_device: id_hd});
                 } else {
                     $http.get('/machine/host_device/add/'+$scope.showmachine.id
                         +"/"+id_hd).then(function(response) {
                             $scope.error = response.data.error;
-                        });
+                    });
                 }
             };
             /* End Host Devices */
