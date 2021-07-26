@@ -533,6 +533,10 @@ sub change_password {
 
     die "Password too small" if length($password)<6;
 
+    if ($self->is_external) {
+        return $self->_change_password_external($password);
+    }
+
     my $sth;
     if (defined($force_change_password)) {
         $sth= $$CON->dbh->prepare("UPDATE users set password=?, change_password=?"
@@ -543,6 +547,23 @@ sub change_password {
             ." WHERE name=?");
         $sth->execute(sha1_hex($password), $self->name);
     }
+}
+
+sub _change_password_external($self,$password) {
+
+    if ($self->external_auth eq 'ldap') {
+        my $ldap_entry = $self->ldap_entry() or die "Error: no ldap entry";
+        $ldap_entry->replace(
+            userPassword => Ravada::Auth::LDAP::_password_store($password,'rfc2307'));
+        my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+        my $mesg = $ldap_entry->update($ldap);
+        die "ERROR: ".$mesg->code." : ".$mesg->error
+        if $mesg->code;
+    } else {
+        confess
+        "Error: I don't know how to change external password for ".$self->external_auth;
+    }
+
 }
 
 =head2 compare_password

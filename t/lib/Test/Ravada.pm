@@ -149,6 +149,7 @@ my $FILE_CONFIG_QEMU = "/etc/libvirt/qemu.conf";
 my @FLUSH_RULES=(
     ["-t","nat","-F","DOCKER"]
     ,["-t","nat","-F","POSTROUTING"]
+    ,["-t","nat","-A","POSTROUTING","-j","LIBVIRT_PRT"]
 );
 
 $Ravada::CAN_FORK = 0;
@@ -2097,10 +2098,65 @@ sub _check_leftovers_users {
     ok(!@error , Dumper(\@error));
 }
 
+sub _check_iptables() {
+    for my $table ( 'mangle', 'nat') {
+        my @cmd = ("iptables" ,"-t", $table,"-L","POSTROUTING");
+        my ($in, $out, $err);
+        run3(\@cmd,\$in, \$out, \$err);
+        my @found = grep /^LIBVIRT_PRT/, split(/\n/,$out);
+        die "@cmd\n$err\n$out\n" if !@found;
+    }
+    my @cmd = ("iptables-save","-t","filter");
+    my ($in, $out, $err);
+    run3(\@cmd,\$in, \$out, \$err);
+    for my $chain (qw(LIBVIRT_FWI
+        LIBVIRT_FWO LIBVIRT_FWX LIBVIRT_INP LIBVIRT_OUT)) {
+        my @found = grep /^:$chain / , split (/\n/, $out);
+        die "$chain not found\n$err\n$out\n" if !@found;
+    }
+    for my $rule ("-A INPUT -j LIBVIRT_INP",
+        "-A FORWARD -j LIBVIRT_FWX"
+        ,"-A FORWARD -j LIBVIRT_FWI"
+        ,"-A FORWARD -j LIBVIRT_FWO"
+        ,"-A OUTPUT -j LIBVIRT_OUT"
+    ) {
+        my @found = grep /^$rule$/ , split (/\n/, $out);
+        die "$rule not found in @cmd \n$err\n$out\n" if !@found;
+    }
+    @cmd = ("iptables-save","-t","nat");
+    run3(\@cmd,\$in, \$out, \$err);
+    for my $rule (":LIBVIRT_PRT.*"
+        ,"-A POSTROUTING -j LIBVIRT_PRT"
+        ,"-A LIBVIRT_PRT -s 192.168.122.0/24 -d 224.0.0.0/24 -j RETURN"
+        ,"-A LIBVIRT_PRT -s 192.168.122.0/24 -d 255.255.255.255/32 -j RETURN"
+        ,"-A LIBVIRT_PRT -s 192.168.122.0/24 ! -d 192.168.122.0/24 -p tcp -j MASQUERADE --to-ports 1024-65535"
+        ,"-A LIBVIRT_PRT -s 192.168.122.0/24 ! -d 192.168.122.0/24 -p udp -j MASQUERADE --to-ports 1024-65535"
+        ,"-A LIBVIRT_PRT -s 192.168.122.0/24 ! -d 192.168.122.0/24 -j MASQUERADE"
+        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 -d 224.0.0.0/24 -j RETURN"
+        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 -d 255.255.255.255/32 -j RETURN"
+        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 ! -d 192.168.130.0/24 -p tcp -j MASQUERADE --to-ports 1024-65535"
+        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 ! -d 192.168.130.0/24 -p udp -j MASQUERADE --to-ports 1024-65535"
+        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 ! -d 192.168.130.0/24 -j MASQUERADE"
+    ) {
+        my @found = grep /^$rule$/ , split (/\n/, $out);
+        die "$rule not found in @cmd \n$err\n" if !@found;
+    }
+    @cmd = ("iptables-save","-t","mangle");
+    run3(\@cmd,\$in, \$out, \$err);
+    for my $rule (":LIBVIRT_PRT.*"
+        ,"-A POSTROUTING -j LIBVIRT_PRT"
+        ,"-A LIBVIRT_PRT -o virbr0 -p udp -m udp --dport 68 -j CHECKSUM --checksum-fill"
+        ,"-A LIBVIRT_PRT -o virbr1 -p udp -m udp --dport 68 -j CHECKSUM --checksum-fill"
+    ) {
+        my @found = grep /^$rule$/ , split (/\n/, $out);
+        die "$rule not found in @cmd \n$err\n" if !@found;
+    }
+}
 
 sub end {
     _unload_nbd();
-    _check_leftovers
+    _check_leftovers();
+    _check_iptables();
     clean();
     _unlock_all();
     _file_db();

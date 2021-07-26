@@ -2533,7 +2533,6 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
         return if $target->getAttribute('bus') eq $bus;
         $target->setAttribute(bus => $bus);
         $self->_change_xml_address($doc, $address, $bus);
-
     }
     confess "Error: disk $index not found in ".$self->name if !$changed;
 
@@ -2638,11 +2637,21 @@ sub reload_config($self, $doc) {
     my $in = $doc->toString();
     my ($out, $err);
     run3(["virt-xml-validate","-"],\$in,\$out,\$err);
-    warn $out if $out;
-    die "\$?=$? $err\n$in" if $?;
+    if ($? ){
+        warn $out if $out;
+        my $file_out = "/var/tmp/".$self->name().".xml";
+        open my $out1,">",$file_out or die $!;
+        print $out1 $self->xml_description();
+        close $out1;
+        open my $out2,">","/var/tmp/".$self->name().".new.xml" or die $!;
+        my $doc_string = $doc->toString();
+        $doc_string =~ s/^<.xml.*//;
+        $doc_string =~ s/"/'/g;
+        print $out2 $doc_string;
+        close $out2;
 
-    #   my ($namespace) = $doc->toString() =~ /<domain(.*)/m;
-    #   $self->{_namespace} = $namespace if $namespace =~ /xmlns/;
+        confess "\$?=$? $err\ncheck $file_out" if $?;
+    }
 
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
@@ -2684,11 +2693,20 @@ sub _change_xml_address_usb($self, $address) {
     for (keys %attribute) {
         $address->setAttribute($_ => $attribute{$_});
     }
+
+    for (qw(controller unit target domain slot function)) {
+        $address->removeAttribute($_);
+    }
+
+=pod
+
     $address->setAttribute(unit => $self->_new_address_xml(
             match => 'usb'
        ,attribute => 'port'
         )
     );
+
+=cut
 
 }
 

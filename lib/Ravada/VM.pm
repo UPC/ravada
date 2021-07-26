@@ -386,7 +386,6 @@ sub _around_create_domain {
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
     my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Unknown user id: $id_owner";
-
     my $base;
     my $volatile = delete $args{volatile};
     my $id_base = delete $args{id_base};
@@ -412,7 +411,7 @@ sub _around_create_domain {
         $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
         $base = $vm_local->search_domain_by_id($id_base)
             or confess "Error: I can't find domain $id_base on ".$self->name;
-        $volatile = 1 if $base->volatile_clones;
+        $volatile = $base->volatile_clones if (! defined($volatile));
         if ($add_to_pool) {
             confess "Error: you can't add to pool and also pick from pool" if $from_pool;
             $from_pool = 0;
@@ -477,7 +476,7 @@ sub _around_create_domain {
         }
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
-    $domain->is_volatile(1)     if $user->is_temporary() ||($base && $base->volatile_clones()) || $volatile;
+    $domain->is_volatile(1)     if $user->is_temporary() || $volatile;
 
     my @start_args = ( user => $owner );
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
