@@ -114,7 +114,7 @@ Default Storage Pool
 ~~~~~~~~~~~~~~~~~~~~
 
 When creating virtual machines, Ravada chooses the storage pool with more free space
-available. If you want to force another, change the settings updating in the *Nodes setting*
+available. If you want to force another, change it in the *Nodes setting*
 form in the frontend.
 
 From *Admin Tools*, select *Nodes*. You will likely have only one : *KVM_localhost*.
