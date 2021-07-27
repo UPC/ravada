@@ -2,20 +2,29 @@ Disable Spice Password
 ======================
 
 When the users start a virtual machine, a password is defined for the spice connection.
-This can be disabled for a given network.
+This can be disabled for a given network or in the main settings.
 
-Unfortunately this settings must be configured directly through SQL commands. There is
-still no GUI section for this.
+If you want to disable Spice passwords for all the virtual machines in all the networks,
+disable it in *Admin Tools* , then *Settings*. The option is *Display Password*.
+
+Follow the next guide if you want to disable the display password only for clients
+that access from some networks.
 
 Define the network
 ------------------
 
-Define a network with no password setting the requires_password field to 0:
+Choose the *Admin Tools* option *Networks*. Create a new network and enable the settings
+that suit you best.
 
-.. prompt:: bash #,(env)... auto
+.. figure:: images/new_network.jpg
+    :alt: New network form
 
-    mysql -u root -p ravada
-    mysql> insert into networks (name, address, requires_password) values ('classroom','10.0.68.0/24', 0);
+    New network form
+
+    Set a name for this network definition, you may want to allow access without
+    client password. Enable *all machines* so users from this network can access the
+    virtual machines.
+
 
 Applying settings
 -----------------
@@ -35,4 +44,4 @@ Why is that ?
 Ravada opens SPICE connections and manages iptables to make sure no one can
 connect to another user's virtual machine. This is also enforced through the
 password setting. Please consider disabling it only in controlled, seat-unique ip
-environments.
+environments. Configuring SPICE-TLS is recommended.
