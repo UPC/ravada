@@ -6,7 +6,7 @@
 Welcome to Ravada VDI documentation
 ===================================
 
-The chances are you're here because you've been searching for free Virtual Desktop Infraestructure (VDI) documentation.
+The chances are you're here because you've been searching for free Virtual Desktop Infrastructure (VDI) documentation.
 Whether it is a large or a small project, you can start with VDI and see its benefits right away! We assume you
 do want to start your VDI project as quickly as possible. Therefore, RAVADA VDI is the perfect software for you!
 
