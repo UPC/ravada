@@ -114,24 +114,14 @@ Default Storage Pool
 ~~~~~~~~~~~~~~~~~~~~
 
 When creating virtual machines, Ravada chooses the storage pool with more free space
-available. If you want to force another, change the settings updating the table *vms*
-in the database like this.
+available. If you want to force another, change the settings updating in the *Nodes setting*
+form in the frontend.
 
-First check the id field of the Virtual Manager in the table *vms*, then
-set a *default_storage* pool this way:
+From *Admin Tools*, select *Nodes*. You will likely have only one : *KVM_localhost*.
 
-.. prompt:: bash $,(env)...$ auto
+.. figure:: images/storage_pool.jpg
 
-    mysql -u rvd_user -p ravada
-    mysql> select * from vms;
-    +----+---------------+-----------------+
-    | id | name          | default_storage |
-    +----+---------------+-----------------+
-    |  1 | KVM_localhost |                 |
-    +----+---------------+-----------------+
-    mysql> UPDATE vms set default_storage='pool2' where id=1;
-
-Then restart rvd_back running *systemctl restart rvd_back*.
+It may take a while to refresh this setting. Restart rvd_back running *systemctl restart rvd_back* if you want it applied right away.
 
 Specific Storage Pools
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -143,32 +133,9 @@ use small and fast disk drives for bases and big but slower disks for clones.
 
 Add and define the storage pools as described in the
 `add kvm storage pool <add_kvm_storage_pool.html>`__ manual. Then change the
-values in the database directly.
+values in the node options screen.
 
-First check the id field of the Virtual Manager in the table *vms*, then
-set a *base_storage* or *clone_storage* pools this way:
-
-.. prompt:: bash $,(env)...$ auto
-
-    root@ravada:~# virsh pool-list
-     Name                 State      Autostart
-    -------------------------------------------
-     pool_ssd              active     yes
-     pool_sata             active     yes
-
-.. prompt:: bash $,(env)...$ auto
-
-    mysql -u rvd_user -p ravada
-    mysql> select * from vms;
-    +----+---------------+-----------------+--------------+---------------+
-    | id | name          | default_storage | base_Storage | clone_storage |
-    +----+---------------+-----------------+--------------+---------------+
-    |  1 | KVM_localhost |                 |              |               |
-    +----+---------------+-----------------+--------------+---------------+
-    mysql> UPDATE vms set base_storage='pool_ssd' where id=1;
-    mysql> UPDATE vms set clone_storage='pool_sata' where id=1;
-
-.. Warning:: These change will apply to new virtual machines. Old virtual machines
+.. Warning:: These changes will apply to new virtual machines. Old virtual machines
     have already the disk volumes defined and can't be easily changed.
 
 Chek free memory ( from v0.3 )
