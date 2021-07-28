@@ -63,7 +63,7 @@ First let's check what are the partitions with *fdisk*:
   p
 
 
-.. ::
+::
 
   Disk /dev/nbd1: 110 GiB, 118111600640 bytes, 230686720 sectors
   Units: sectors of 1 * 512 = 512 bytes
@@ -79,7 +79,7 @@ First let's check what are the partitions with *fdisk*:
 
 The partition we want to change is the second one (nbd1p2). From fdisk:
 
-.. ::
+::
 
   # fdisk /dev/nbd1
   Command (m for help): d
@@ -89,7 +89,7 @@ The partition we want to change is the second one (nbd1p2). From fdisk:
 Now we create the partition again but using all the space we just added.
 *Warning*: when asked about remove the signature, answer N.
 
-.. ::
+::
 
   Command (m for help): n
   Partition type
@@ -105,7 +105,7 @@ Now we create the partition again but using all the space we just added.
 
 As it was a NTFS partition we change it to that
 
-.. ::
+::
 
   Command (m for help): t
   Partition number (1,2, default 2):
@@ -114,7 +114,7 @@ As it was a NTFS partition we change it to that
 
 Then save an exit fdisk:
 
-.. ::
+::
 
   Command (m for help): w
   The partition table has been altered.
@@ -153,7 +153,7 @@ will check the disk on the next reboot. Answer yes when asked and reboot the vir
 machine. It will probaly warn you that the disk will be checked unless a key is pressed.
 Do not press any key, let it continue itself. In a few seconds it will be verified.
 
-.. ::
+::
 
   C:> chkdsk c; /f
 
@@ -179,4 +179,4 @@ Check the new size
 Boot the virtual machine again, go to storage properties of the PC. The new size
 should be available:
 
-.. figure:: images/resize_volume.jpg
+.. figure:: images/new_size.jpg
