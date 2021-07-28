@@ -121,3 +121,62 @@ Then save an exit fdisk:
   Calling ioctl() to re-read partition table.
   Syncing disks.
 
+Fix the new partition
+---------------------
+
+The new partition must be checked and fixed before resize.
+
+ntfsfix
+~~~~~~~
+
+Fix it first in the host:
+
+.. prompt:: bash #
+
+  ntfsfix /dev/nbd1p2
+
+chkdsk
+~~~~~~~
+
+Now we need to let the Windows virtual machine to check the drive.
+
+First of all disconnect the device from the *nbd* to let it run in the virtual machine.
+It is a good idea to remove the *nbd* module to make sure it is properly disconnected.
+
+.. prompt:: bash #
+
+  qemu-nbd -d /dev/nbd
+  rmmod nbd
+
+Boot the virtual machine, enter the *cmd* as admin and check the disk. This command
+will check the disk on the next reboot. Answer yes when asked and reboot the virtual
+machine. It will probaly warn you that the disk will be checked unless a key is pressed.
+Do not press any key, let it continue itself. In a few seconds it will be verified.
+
+.. ::
+
+  C:> chkdsk c; /f
+
+Come back again to the host and tell the filesystem to resize itself to the new full size limit:
+
+.. prompt:: bash #
+
+  modprobe nbd
+  qemu-nbd -c /dev/nbd1 /var/lib/libvirt/images/WindowsE10-hda.qcow2
+  ntfsresize /dev/nbd1p2
+
+Disconnect again the nbd and start the virtual machine.
+
+.. prompt:: bash #
+
+  qemu-nbd -d /dev/nbd
+  rmmod nbd
+
+
+Check the new size
+------------------
+
+Boot the virtual machine again, go to storage properties of the PC. The new size
+should be available:
+
+.. figure:: images/resize_volume.jpg
