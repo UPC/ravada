@@ -15,7 +15,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'RavadaVDI'
-copyright = u'2018, RavadaVDI'
+copyright = u'2018-2021, RavadaVDI'
 author = u'Ravada Team'
 
 # Language to be used for generating the HTML full-text search index.
