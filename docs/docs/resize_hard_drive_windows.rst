@@ -155,7 +155,7 @@ Do not press any key, let it continue itself. In a few seconds it will be verifi
 
 ::
 
-  C:> chkdsk c; /f
+  C:> chkdsk c: /f
 
 Come back again to the host and tell the filesystem to resize itself to the new full size limit:
 
