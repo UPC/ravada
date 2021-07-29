@@ -2622,11 +2622,11 @@ sub _change_hardware_network($self, $index, $data) {
 
 
 
-sub reload_config($self, $doc) {
+sub _validate_xml($self, $doc) {
     my $in = $doc->toString();
     my ($out, $err);
     run3(["virt-xml-validate","-"],\$in,\$out,\$err);
-    if ($? ){
+    if ( $? ){
         warn $out if $out;
         my $file_out = "/var/tmp/".$self->name().".xml";
         open my $out1,">",$file_out or die $!;
@@ -2641,7 +2641,10 @@ sub reload_config($self, $doc) {
 
         confess "\$?=$? $err\ncheck $file_out" if $?;
     }
+}
 
+sub reload_config($self, $doc) {
+    $self->_validate_xml($doc) if $self->_vm->vm->get_major_version >= 4;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
 }
