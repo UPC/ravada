@@ -7,8 +7,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2021-05-26 10:57+0000\n"
-"Last-Translator: Barış Güvenkaya <bguvenkaya@tutanota.de>\n"
+"PO-Revision-Date: 2021-07-29 07:04+0000\n"
+"Last-Translator: Oğuz Ersen <oguzersen@protonmail.com>\n"
 "Language-Team: Turkish <https://hosted.weblate.org/projects/ravada/"
 "translation/tr/>\n"
 "Language: tr\n"
@@ -16,7 +16,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"X-Generator: Weblate 4.7-dev\n"
+"X-Generator: Weblate 4.7.2-dev\n"
 
 msgid "Ravada broker"
 msgstr "Ravada Aracı"
@@ -907,3 +907,18 @@ msgstr "Açıklama ekle"
 
 msgid "The machine will turn off after this time"
 msgstr "Makine bu seferden sonra kapanacak"
+
+msgid "Open ports"
+msgstr "Açık bağlantı noktaları"
+
+msgid "Hardware address"
+msgstr "Donanım adresi"
+
+msgid "Waiting for network to come up"
+msgstr "Ağın gelmesi bekleniyor"
+
+msgid "This machine will shut down"
+msgstr "Bu makine kapanacak"
+
+msgid "Waiting for machine to start"
+msgstr "Makinenin başlaması bekleniyor"
