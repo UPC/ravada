@@ -11,7 +11,7 @@ Shutdown
 --------
 
 The virtual machine must be down to resize the volumes. Press *Shutdown* button
-in the *Admin Tool*.
+in the *Admin Tools*.
 
 Backup
 ------
@@ -35,7 +35,7 @@ Remove and create the partition again
 This part of the process must be down in the command line. Connect to the
 server console and go to the images directory:
 
-.. prompt:: bash $
+.. prompt:: bash
 
   sudo bash
   cd /var/lib/libvirt/images
@@ -145,7 +145,7 @@ It is a good idea to remove the *nbd* module to make sure it is properly disconn
 
 .. prompt:: bash #
 
-  qemu-nbd -d /dev/nbd
+  qemu-nbd -d /dev/nbd1
   rmmod nbd
 
 Boot the virtual machine, enter the *cmd* as admin and check the disk. This command
@@ -169,7 +169,7 @@ Disconnect again the nbd and start the virtual machine.
 
 .. prompt:: bash #
 
-  qemu-nbd -d /dev/nbd
+  qemu-nbd -d /dev/nbd1
   rmmod nbd
 
 
