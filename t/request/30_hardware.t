@@ -787,7 +787,7 @@ for my $vm_name ( vm_names()) {
 	    diag("Skipping VM $vm_name in this system");
 	    next;
 	}
-    _download_alpine64();
+    _download_alpine64() if !$<;
     $TLS = 0;
     $TLS = 1 if check_libvirt_tls() && $vm_name eq 'KVM';
     $BASE = _create_base($vm);
