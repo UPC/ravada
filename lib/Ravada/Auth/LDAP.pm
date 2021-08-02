@@ -306,7 +306,6 @@ sub search_user {
     timelimit => $timelimit
 
     );
-    warn "LDAP retry ".$mesg->code." ".$mesg->error if $retry > 1;
 
     if ( $retry <= 3 && $mesg->code && $mesg->code != 4 ) {
          warn "LDAP error ".$mesg->code." ".$mesg->error."."
@@ -459,6 +458,28 @@ sub search_group {
     return @entries if wantarray;
 
     return $entries[0];
+}
+
+sub search_group_member($cn) {
+    my $base = "ou=groups,"._dc_base();
+    my $ldap = _init_ldap_admin();
+    my $mesg = $ldap ->search (
+        filter => "memberuid=$cn"
+         ,base => $base
+         ,sizelimit => 100
+    );
+    warn $mesg->code." ".$mesg->error." [base: $base]" if $mesg->code;
+
+    my @entries = map { $_->get_value('cn') } $mesg->entries();
+
+    $mesg = $ldap ->search (
+        filter => "member=cn=$cn,"._dc_base()
+         ,base => $base
+         ,sizelimit => 100
+    );
+    my @entries2 = map { $_->get_value('cn') } $mesg->entries();
+
+    return (sort (@entries,@entries2));
 }
 
 =head2 add_to_group

@@ -1126,6 +1126,13 @@ sub ldap_entry($self) {
     return $self->{_ldap_entry};
 }
 
+sub groups($self) {
+    return () if !$self->external_auth || $self->external_auth ne 'ldap';
+    my @groups = Ravada::Auth::LDAP::search_group_member($self->name);
+    return @groups;
+
+}
+
 sub AUTOLOAD($self, $domain=undef) {
 
     my $name = $AUTOLOAD;

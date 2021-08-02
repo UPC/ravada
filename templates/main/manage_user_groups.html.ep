@@ -1,0 +1,36 @@
+<div class="card-body">
+    <%=l 'Add to group' %>
+    <span ng-show="loading_users"><i class="fas fa-sync-alt fa-spin"></i></span>
+    <span ng-show="user_groups && !user_groups.length">
+        <%=l 'No LDAP groups created.' %>
+        <a href="/admin/groups"><%=l 'Add groups' %></a>
+    </span>
+    <select
+        ng-show="groups && groups.length"
+        ng-model="new_group"
+        ng-options="group for group in groups"
+        >
+    </select>
+    <button ng-show="new_group"
+        ng-click="add_group_member(<%= $user->id %>,'<%= $user->name %>',new_group)">Add</button>
+</div>
+                {{error}}
+
+<table class="table table-striped" ng-show="user_groups.length>0">
+    <thead>
+                        <tr>
+                            <th><%=l 'Name' %></th>
+                        </tr>
+    </thead>
+    <tbody>
+        <tr ng-repeat="group in user_groups">
+            <td>
+                <button ng-click="remove_group_member( <%= $user->id %>,'<%= $user->ldap_entry->dn %>',group)"
+                                            ng-show="<%= $_user->can_manage_users %>"
+                                            class="badge badge-light text-blue">x</button>
+                {{group}}
+            </td>
+        </tr>
+    </tbody>
+</table>
+<div ng-show="user_groups.length==0">No member of any group</div>
