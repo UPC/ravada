@@ -3,12 +3,16 @@
 <body id="page-top" data-spy="scroll" data-target=".fixed-top" role="document" ng-app="ravada.app">
 <div id="wrapper">
     %= include 'bootstrap/navigation'
-<div id="page-wrapper">
+<div id="page-wrapper" ng-controller="usersPage" ng-init="list_user_groups(<%= $user->id %>)">
 
     <div class="page-header">
         <div class="card">
              <div class="card-header">
-                 <h2><%=l 'User' %>&nbsp;<%= $user->name %></h2>
+                 <h2><%=l 'User' %>&nbsp;<%= $user->name %>
+%               if ( $user->external_auth ) {
+                    (<%= $user->external_auth %>)
+%               }
+                </h2>
              </div> <!-- del panel heading-->
         </div>
         <ul class="nav nav-tabs" id="myTab" role="tablist">
@@ -27,6 +31,12 @@
                 <a class="nav-link" href="#password" role="tab" data-toggle="tab" aria-controls="password" aria-selected="true">Password</a>
             </li>
 % }
+% if ( $_user->is_admin && $user->is_external && $user->external_auth eq 'ldap' ) {
+            <li class="nav-item">
+                <a class="nav-link" href="#groups" role="tab" data-toggle="tab" aria-controls="groups" aria-selected="true">Groups</a>
+            </li>
+% }
+
         </ul>
         <div class="tab-content" id="myTabContent">
 % if ( $_user->is_admin ) {
@@ -42,6 +52,11 @@
 % if (( $_user->is_admin ) && (! $user->is_external)) {
             <div class="tab-pane fade" id="password" role="tabpanel" aria-labelledby="password-tab">
                 %= include '/main/manage_user_password'
+            </div>
+% }
+% if ( $_user->is_admin && $user->is_external && $user->external_auth eq 'ldap' ) {
+            <div class="tab-pane fade" id="groups" role="tabpanel" aria-labelledby="group-tab">
+                %= include '/main/manage_user_groups'
             </div>
 % }
         </div>
