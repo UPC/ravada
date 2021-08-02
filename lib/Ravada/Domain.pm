@@ -6313,7 +6313,7 @@ sub purge($self, $request=undef) {
 
 sub _check_port($self, $port, $ip=$self->ip, $request=undef) {
     my ($out, $err) = $self->_vm->run_command("nc","-z","-v",$ip,$port);
-    $request->error($err) if $err;
+
     return 1 if $err =~ /succeeded!/;
     return 0 if $err =~ /failed/;
     warn $err;
@@ -6357,14 +6357,16 @@ sub refresh_ports($self, $request=undef) {
             $is_port_active = $self->_check_port($port->{internal_port}, $ip, $request);
         } else {
             $is_port_active = 0;
-            $port_down++;
         }
+        $port_down++ if !$is_port_active;
         $sth_update->execute($is_port_active, $self->id, $port->{id});
         $sth_update_display->execute($is_port_active, $port->{id})
         if $port->{name};
 
         $msg .= " , " if $msg;
-        $msg .= " $port->{internal_port} $is_port_active";
+        my $is_port_active_txt = "up";
+        $is_port_active_txt = "down" if !$is_port_active;
+        $msg .= " $port->{internal_port}:$is_port_active_txt";
     }
     die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
     die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"

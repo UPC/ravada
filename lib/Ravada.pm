@@ -4420,7 +4420,8 @@ sub _cmd_refresh_machine($self, $request) {
     $domain->info($user);
     $domain->client_status(1) if $is_active;
 
-    Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id)
+    Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id
+        ,retry => 20)
     if $is_active && $domain->ip;
 }
 
@@ -5424,7 +5425,7 @@ sub _cmd_open_exposed_ports($self, $request) {
     Ravada::Request->refresh_machine_ports(
         uid => $request->args('uid'),
         ,id_domain => $domain->id
-        ,retry => 10
+        ,retry => 100
     );
 
 }
