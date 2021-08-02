@@ -401,12 +401,47 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.show_machine = { '0': false };
   };
 
-  function usersPageC($scope, $http, $interval, request) {
-    $scope.action = function(target,action,machineId){
-      $http.get('/'+target+'/'+action+'/'+machineId+'.json');
+    function usersPageC($scope, $http, $interval, request) {
+        $scope.list_groups= function() {
+            $scope.loading_groups = true;
+            $scope.error = '';
+            $http.get('/list_ldap_groups')
+                .then(function(response) {
+                    $scope.loading_groups = false;
+                    $scope.groups = response.data;
+                });
+        };
+        $scope.list_user_groups = function(id_user) {
+            $http.get('/user/list_groups/'+id_user)
+                .then(function(response) {
+                    $scope.user_groups = response.data;
+                });
+        };
+        $scope.add_group_member = function(id_user, cn, group) {
+            $http.post("/ldap/group/add_member/"
+              ,JSON.stringify(
+                  { 'group': group
+                    ,'cn': cn
+                  })
+              ).then(function(response) {
+                  $scope.error = response.data.error;
+                  $scope.list_user_groups(id_user);
+                });
+        };
+        $scope.remove_group_member = function(id_user, dn, group) {
+            $http.post("/ldap/group/remove_member/"
+              ,JSON.stringify(
+                  { 'group': group
+                    ,'dn': dn
+                  })
+              ).then(function(response) {
+                  $scope.error = response.data.error;
+                  $scope.list_user_groups(id_user);
+            });
+        };
+
+        $scope.list_groups();
     };
-    //On load code
-  };
 
   function messagesPageC($scope, $http, $interval, request) {
     $scope.getMessages = function() {
