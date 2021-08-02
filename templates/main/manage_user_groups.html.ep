@@ -1,7 +1,6 @@
 <div class="card-body">
     <%=l 'Add to group' %>
-    <span ng-show="loading_users"><i class="fas fa-sync-alt fa-spin"></i></span>
-    <span ng-show="user_groups && !user_groups.length">
+    <span ng-show="groups && !groups.length">
         <%=l 'No LDAP groups created.' %>
         <a href="/admin/groups"><%=l 'Add groups' %></a>
     </span>
@@ -33,4 +32,4 @@
         </tr>
     </tbody>
 </table>
-<div ng-show="user_groups.length==0">No member of any group</div>
+<div ng-show="user_groups.length==0"><%=l 'User is not member of any group.' %></div>
