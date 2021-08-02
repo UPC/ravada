@@ -3809,9 +3809,12 @@ sub _post_start {
         , retry => $RETRY_SET_TIME
     ) if $set_time;
     Ravada::Request->enforce_limits(at => time + 60);
-    Ravada::Request->manage_pools(
+    if ( $self->is_pool ) {
+        $self->_data('comment' => $arg{user}->name);
+        Ravada::Request->manage_pools(
             uid => Ravada::Utils::user_daemon->id
-    )   if $self->is_pool;
+        )
+    }
 
     $self->_check_port_conflicts();
 
@@ -5133,7 +5136,7 @@ sub _search_pool_clone($self, $user) {
 
     my ($clone_down, $clone_free_up, $clone_free_down);
     my ($clones_in_pool, $clones_used) = (0,0);
-    for my $current ( $self->clones) {
+    for my $current ( sort { $a->{name} cmp $b->{name} } $self->clones) {
         if ( $current->{id_owner} == $user->id
                 && $current->{status} =~ /^(active|hibernated)$/) {
             my $clone = Ravada::Domain->open($current->{id});
