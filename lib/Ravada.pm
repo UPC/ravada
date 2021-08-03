@@ -661,7 +661,7 @@ sub _update_isos {
           ,min_disk_size => '0'
         }
     );
-    $self->_scheduled_fedora_releases(\%data);
+    $self->_scheduled_fedora_releases(\%data) if $0 !~ /\.t$/;
     $self->_update_table($table, $field, \%data);
 
 }
@@ -1729,6 +1729,13 @@ sub _sql_create_tables($self) {
             ,password => 'char(40)'
             ,extra => 'TEXT'
         }
+        ]
+        ,[
+            group_access => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
+            ,name => 'char(80)'
+            }
         ]
         ,
         [

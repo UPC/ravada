@@ -917,6 +917,18 @@ get '/machine/move_access/(#id_domain)/(#id_access)/(#position)' => sub {
 
 };
 
+get '/machine/add_access_group/(#id_domain)/(#group)' => sub($c) {
+    my $id_domain = $c->stash('id_domain');
+    my $group = $c->stash('group');
+    my $ok = 0;
+    eval {
+        my $domain = Ravada::Front::Domain->open($id_domain);
+        $domain->add_access_group($group);
+        $ok =1;
+    };
+    return $c->render( json => { ok => $ok, error => $@ });
+};
+
 get '/machine/compact/(#id_domain)' => sub($c) {
     my $req = Ravada::Request->compact(
         id_domain => $c->stash('id_domain')

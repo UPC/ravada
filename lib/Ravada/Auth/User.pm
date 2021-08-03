@@ -362,6 +362,7 @@ sub _load_allowed {
     my $ldap_entry;
     $ldap_entry = $self->ldap_entry if $self->external_auth && $self->external_auth eq 'ldap';
 
+
     my @domains = $self->_list_domains_access();
 
     for my $id_domain ( @domains ) {
@@ -402,6 +403,26 @@ sub _load_allowed {
         } else {
             $self->{_allowed}->{$id_domain} = 1;
         }
+    }
+
+    $self->_load_allowed_groups();
+}
+
+sub _load_allowed_groups($self) {
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_domain,name from group_access");
+    my ($id_domain, $name);
+    $sth->execute();
+    $sth->bind_columns(\($id_domain, $name));
+    while ( $sth->fetch ) {
+        next if $self->{_allowed}->{$id_domain};
+
+        $self->{_allowed}->{$id_domain} = 0;
+
+        next unless $self->is_external && $self->external_auth eq 'ldap';
+
+        $self->{_allowed}->{$id_domain} = 1
+        if Ravada::Auth::LDAP::is_member($self->name, $name);
     }
 }
 

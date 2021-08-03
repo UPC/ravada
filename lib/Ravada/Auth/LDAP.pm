@@ -460,7 +460,7 @@ sub search_group {
     return $entries[0];
 }
 
-sub search_group_member($cn) {
+sub search_group_member($cn, $retry = 0) {
     my $base = "ou=groups,"._dc_base();
     my $ldap = _init_ldap_admin();
     my $mesg = $ldap ->search (
@@ -468,6 +468,10 @@ sub search_group_member($cn) {
          ,base => $base
          ,sizelimit => 100
     );
+    if ( ($mesg->code == 1 || $mesg->code == 81) && $retry <3 ) {
+        $LDAP_ADMIN = undef;
+        return search_group_member($cn, $retry+1);
+    }
     warn $mesg->code." ".$mesg->error." [base: $base]" if $mesg->code;
 
     my @entries = map { $_->get_value('cn') } $mesg->entries();
