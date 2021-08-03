@@ -394,7 +394,7 @@
           $scope.init = function(id, url,is_admin) {
                 url_ws = url;
                 $scope.showmachineId=id;
-                $scope.tab_access=['client']
+                $scope.tab_access=['group']
                 $scope.client_attributes = [ 'User-Agent'
                    , 'Accept', 'Connection', 'Accept-Language', 'DNT', 'Host'
                    , 'Accept-Encoding', 'Cache-Control', 'X-Forwarded-For'
@@ -891,6 +891,18 @@
                 });
             };
 
+            $scope.list_access_groups = function() {
+/*                $http.get("/domain/access_groups/"+showmachine.id).then(function(response) {
+                    $scope.access_groups=response.data;
+                });*/
+            };
+            $scope.add_group_access = function(group) {
+                $http.get("/machine/add_access_group/"+$scope.showmachine.id+"/"+group)
+                    .then(function(response) {
+                        $scope.list_access_groups();
+                });
+            };
+
             $scope.message = [];
             $scope.disk_remove = [];
             $scope.pending_before = 10;
@@ -900,9 +912,11 @@
             $scope.access_value = [ ];
             $scope.access_allowed = [ ];
             $scope.access_last = [ ];
+            $scope.access_groups = [ ];
 
             $scope.new_base = undefined;
             $scope.list_ldap_attributes();
+            $scope.list_access_groups();
         };
 
     function swListMach() {

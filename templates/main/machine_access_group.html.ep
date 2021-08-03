@@ -1,0 +1,30 @@
+<i ng-show="!ldap_groups" class="fas fa-sync-alt fa-spin"></i>
+
+<select ng-model="allow_group"
+    ng-show="ldap_groups"
+    ng-options="group for group in ldap_groups | orderBy:group"
+    >
+    </select>
+   <button ng-show="allow_group"
+        ng-click="add_group_access(allow_group)">Add</button>
+
+<div class="alert alert-warning" ng-show="access_groups.length == 0">
+    <%=l 'This virtual machine has no group restrictions.' %>
+</div>
+
+<div ng-show="access_groups.length > 0">
+    <b><%=l 'Only users from these groups will be allowed to execute this machine' %></b>
+</div>
+<table>
+    </thead>
+    <tbody>
+        <tr ng-repeat="group in access_groups">
+            <td>
+                <button ng-click="remove_group_access(group)"
+                                            class="badge badge-light text-blue">x</button>
+                {{group}}
+            </td>
+        </tr>
+    </tbody>
+</table>
+

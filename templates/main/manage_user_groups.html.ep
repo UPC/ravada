@@ -4,7 +4,7 @@
         <%=l 'No LDAP groups created.' %>
         <a href="/admin/groups"><%=l 'Add groups' %></a>
     </span>
-    <select
+    <select class="selectpicker" data-live-search="true"
         ng-show="groups && groups.length"
         ng-model="new_group"
         ng-options="group for group in groups"

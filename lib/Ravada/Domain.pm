@@ -5623,9 +5623,12 @@ Arguments is a named list
 =cut
 
 sub grant_access($self, %args) {
+    my $type      = delete $args{type}      or confess "Error: Missing type";
+
+    return $self->_allow_group_access(%args)    if $type eq 'group';
+
     my $attribute = delete $args{attribute} or confess "Error: Missing attribute";
     my $value     = delete $args{value}     or confess "Error: Missing value";
-    my $type      = delete $args{type}      or confess "Error: Missing type";
     my $allowed   = delete $args{allowed};
     $allowed = 1 if !defined $allowed;
     my $last      = ( delete $args{last} or 0 );
@@ -5657,6 +5660,17 @@ sub grant_access($self, %args) {
     $sth->execute($self->id, $type, $attribute, $value, $allowed, $n_order+1, $last);
 
     $self->_fix_default_access($type) unless $value eq '*';
+}
+
+sub _allow_group_access($self, %args) {
+    my $group = delete $args{group} or confess "Error: group required";
+    confess "Error: unknown args ".Dumper(\%args) if keys %args;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO group_access "
+        ."( id_domain,name)"
+        ." VALUES(?,? )"
+    );
+    $sth->execute($self->id, $group);
 }
 
 sub _fix_default_access($self, $type) {
