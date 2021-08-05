@@ -1181,6 +1181,9 @@ sub _add_indexes_generic($self) {
             ,"unique (id_domain,name):name"
             ,"unique(id_vm,public_port)"
         ]
+        ,group_access => [
+            "unique (id_domain,name)"
+        ]
         ,requests => [
             "index(status,at_time)"
             ,"index(id,date_changed,status,at_time)"
@@ -1757,6 +1760,7 @@ sub _sql_create_tables($self) {
             ,id_owner => 'int not null'
             ,background_color => 'varchar(20)'
             ,date_created => 'datetime DEFAULT CURRENT_TIMESTAMP'
+            ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
         }
         ]
         ,
@@ -1770,6 +1774,7 @@ sub _sql_create_tables($self) {
             ,time_end => 'time not null'
             ,date_booking => 'date'
             ,visibility => "enum ('private','public') default 'public'"
+            ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
         }
         ]
         ,
@@ -1779,6 +1784,7 @@ sub _sql_create_tables($self) {
             ,id_booking_entry
                 => 'int not null references `booking_entries` (`id`) ON DELETE CASCADE'
             ,ldap_group => 'varchar(255) not null'
+            ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
         }
         ]
         ,
@@ -1788,6 +1794,7 @@ sub _sql_create_tables($self) {
             ,id_booking_entry
                 => 'int not null references `booking_entries` (`id`) ON DELETE CASCADE'
             ,id_user => 'int not null references `users` (`id`) ON DELETE CASCADE'
+            ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
         }
         ]
         ,
@@ -1797,6 +1804,7 @@ sub _sql_create_tables($self) {
             ,id_booking_entry
                 => 'int not null references `booking_entries` (`id`) ON DELETE CASCADE'
             ,id_base => 'int not null references `domains` (`id`) ON DELETE CASCADE'
+            ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
         }
         ]
         ,
@@ -2087,6 +2095,9 @@ sub _port_definition($driver, $definition0){
             my @found = $definition0 =~ /'(.*?)'/g;
             my ($size) = sort map { length($_) } @found;
             return " varchar($size) $default";
+        }
+        elsif ($definition0 =~ /^timestamp /) {
+            $definition0 = 'timestamp';
         }
     }
     return $definition0;
@@ -4141,6 +4152,9 @@ sub _cmd_remove_hardware {
     my $domain = $self->search_domain_by_id($id_domain);
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
+    die "Error: User ".$user->name." not allowed to remove hardware from machine "
+    .$domain->name
+        if !$user->is_admin;
 
     $domain->remove_controller($hardware, $index);
 }
@@ -4158,7 +4172,7 @@ sub _cmd_change_hardware {
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
     die "Error: User ".$user->name." not allowed\n"
-        if !$user->is_admin;
+        if $hardware ne 'memory' && !$user->is_admin;
 
     $domain->change_hardware(
          $request->args('hardware')

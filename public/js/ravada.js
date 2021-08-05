@@ -425,6 +425,7 @@
                                 $scope.list_ldap_attributes();
                                 list_interfaces();
                                 list_users();
+                                list_access_groups();
                             }
                             $scope.hardware_types = Object.keys(response.data.hardware);
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
@@ -891,18 +892,24 @@
                 });
             };
 
-            $scope.list_access_groups = function() {
-/*                $http.get("/domain/access_groups/"+showmachine.id).then(function(response) {
+            var list_access_groups = function() {
+                $http.get("/machine/list_access_groups/"+$scope.showmachine.id).then(function(response) {
                     $scope.access_groups=response.data;
-                });*/
+                });
             };
             $scope.add_group_access = function(group) {
                 $http.get("/machine/add_access_group/"+$scope.showmachine.id+"/"+group)
                     .then(function(response) {
-                        $scope.list_access_groups();
+                        list_access_groups();
                 });
             };
 
+            $scope.remove_group_access = function(group) {
+                $http.get("/machine/remove_access_group/"+$scope.showmachine.id+"/"+group)
+                    .then(function(response) {
+                        list_access_groups();
+                });
+            };
             $scope.message = [];
             $scope.disk_remove = [];
             $scope.pending_before = 10;
@@ -912,11 +919,9 @@
             $scope.access_value = [ ];
             $scope.access_allowed = [ ];
             $scope.access_last = [ ];
-            $scope.access_groups = [ ];
 
             $scope.new_base = undefined;
             $scope.list_ldap_attributes();
-            $scope.list_access_groups();
         };
 
     function swListMach() {

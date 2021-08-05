@@ -422,7 +422,7 @@ sub _load_allowed_groups($self) {
         next unless $self->is_external && $self->external_auth eq 'ldap';
 
         $self->{_allowed}->{$id_domain} = 1
-        if Ravada::Auth::LDAP::is_member($self->name, $name);
+        if Ravada::Auth::LDAP::is_member($self->ldap_entry, $name);
     }
 }
 

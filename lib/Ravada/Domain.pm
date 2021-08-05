@@ -5673,6 +5673,24 @@ sub _allow_group_access($self, %args) {
     $sth->execute($self->id, $group);
 }
 
+=head2 list_access_groups
+
+Returns the list of groups who can access this virtual machine
+
+=cut
+
+sub list_access_groups($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT name from group_access "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+    my @groups;
+    while ( my ($name) = $sth->fetchrow ) {
+        push @groups,($name);
+    }
+    return @groups;
+}
+
 sub _fix_default_access($self, $type) {
     my @list = $self->list_access($type);
     my $id_default;
@@ -6352,6 +6370,12 @@ sub _set_displays_down($self) {
     );
     $sth->execute($self->id);
 }
+
+=head2 refresh_ports
+
+Refresh the status of the exposed ports
+
+=cut
 
 sub refresh_ports($self, $request=undef) {
     my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_ports "

@@ -181,10 +181,6 @@ sub _new_uid($ldap=_init_ldap_admin(), $base=_dc_base()) {
     }
 }
 
-sub default_object_class() {
-    return @OBJECT_CLASS;
-}
-
 sub _password_store($password, $storage, $algorithm=undef) {
     return _password_rfc2307($password, $algorithm) if lc($storage) eq 'rfc2307';
     return _password_pbkdf2($password, $algorithm)  if lc($storage) eq 'pbkdf2';
@@ -460,7 +456,11 @@ sub search_group {
     return $entries[0];
 }
 
-sub search_group_member($cn, $retry = 0) {
+=head2 search_group_members
+
+=cut
+
+sub search_group_members($cn, $retry = 0) {
     my $base = "ou=groups,"._dc_base();
     my $ldap = _init_ldap_admin();
     my $mesg = $ldap ->search (
@@ -470,7 +470,7 @@ sub search_group_member($cn, $retry = 0) {
     );
     if ( ($mesg->code == 1 || $mesg->code == 81) && $retry <3 ) {
         $LDAP_ADMIN = undef;
-        return search_group_member($cn, $retry+1);
+        return search_group_members($cn, $retry+1);
     }
     warn $mesg->code." ".$mesg->error." [base: $base]" if $mesg->code;
 
@@ -497,7 +497,10 @@ Adds user to group
 sub add_to_group {
     my ($dn, $group_name) = @_;
     if ( $dn !~ /=.*,/ ) {
-        my $user = search_user(name => $dn) or confess "Error: user '$dn' not found";
+        my $user = search_user(name => $dn, field => 'uid');
+        $user = search_user(name => $dn, field => 'cn') if !$user;
+
+        confess "Error: user '$dn' not found" if !$user;
         $dn = $user->dn;
     }
 
@@ -589,6 +592,12 @@ sub _search_posix_group($self, $name) {
         if (scalar @posix_group > 1);
     return $posix_group[0];
 }
+
+=head2 group_members
+
+Returns a list of the group members
+
+=cut
 
 sub group_members {
     return _group_members(@_);
@@ -956,9 +965,16 @@ sub is_member($cn, $group) {
     my @members = _group_members($group);
     return 1 if grep /^$cn$/, @members;
 
-    $user = search_user($cn) or confess "Error: unknown user '$cn'"
-    if !$user;
-    $dn = $user->dn if !$dn;
+    if (!$dn) {
+        if (!$user) {
+            for my $field ( 'uid','cn') {
+                $user = search_user(name => $cn, field => $field);
+                last if $user;
+            }
+            confess "Error: unknown user '$cn'" if !$user;
+        }
+        $dn = $user->dn if !$dn;
+    }
 
     return 1 if grep /^$dn$/, @members;
 
