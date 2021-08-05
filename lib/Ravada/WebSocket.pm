@@ -48,6 +48,8 @@ our %TABLE_CHANNEL = (
     list_alerts => 'messages'
     ,list_machines => 'domains'
     ,list_machines_tree => 'domains'
+    ,list_machines_user_including_privates => ['domains','bookings','booking_entries'
+        ,'booking_entry_ldap_groups', 'booking_entry_users','booking_entry_bases']
     ,list_requests => 'requests'
 );
 
@@ -390,7 +392,7 @@ sub _date_changed_table($self, $table) {
     my $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM $table");
     $sth->execute;
     my ($date) = $sth->fetchrow;
-    return $date;
+    return ($date or '');
 }
 
 sub _count_table($self, $table) {
@@ -406,9 +408,22 @@ sub _new_info($self, $key) {
     my $channel = $self->clients->{$key}->{channel};
     $channel =~ s{/.*}{};
 
-    my $table = $TABLE_CHANNEL{$channel} or return;
+    my $table0 = $TABLE_CHANNEL{$channel} or return;
+    if (!ref($table0)) {
+        $table0 = [$table0];
+    }
 
-    return ($self->_count_table($table),$self->_date_changed_table($table));
+    my $count = '';
+    my $date = '';
+
+    for my $table (@$table0) {
+        $count .= ":" if $count;
+        $count .= $self->_count_table($table);
+
+        $date .= ":" if $date;
+        $date .= $self->_date_changed_table($table)
+    }
+    return ($count, $date);
 
 }
 

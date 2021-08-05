@@ -848,7 +848,6 @@ ravadaApp.directive("solShowMachine", swMach)
                     $scope.loading_users = false;
                     $scope.error = response.data.error;
                     $scope.users = response.data.entries;
-                    console.log(response.data.error);
                 });
         };
         $scope.add_member = function(cn) {
@@ -871,6 +870,12 @@ ravadaApp.directive("solShowMachine", swMach)
               ).then(function(response) {
                   $scope.list_group_members(group);
                   $scope.error = response.data.error;
+            });
+        };
+        $scope.remove_group = function() {
+            $scope.confirm_remove=false;
+            $http.post("/ldap/group/remove/"+group).then(function(response) {
+                $scope.error=response.data.error;
             });
         };
 

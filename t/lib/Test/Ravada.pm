@@ -369,9 +369,7 @@ sub init($config=undef, $sqlite = 1 , $flush=0) {
     }
 
     if ( $RVD_BACK && ref($RVD_BACK) ) {
-        warn ''.localtime();
         clean();
-        warn ''.localtime();
         # clean removes the temporary config file, so we dump it again
         if ( $config && ref($config) ) {
             DumpFile($FILE_CONFIG_TMP, $config);

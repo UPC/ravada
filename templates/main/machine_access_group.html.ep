@@ -1,30 +1,50 @@
-<i ng-show="!ldap_groups" class="fas fa-sync-alt fa-spin"></i>
+<div class="card">
+    <div class="card-body">
 
+
+<button ng-enabled="allow_group"
+        ng-click="add_group_access(allow_group)">Add</button>
 <select ng-model="allow_group"
     ng-show="ldap_groups"
     ng-options="group for group in ldap_groups | orderBy:group"
     >
     </select>
-   <button ng-show="allow_group"
-        ng-click="add_group_access(allow_group)">Add</button>
 
-<div class="alert alert-warning" ng-show="access_groups.length == 0">
+<div ng-show="ldap_groups && !access_groups">
+    <i class="fas fa-sync-alt fa-spin"></i>
+</div>
+
+
+<div class="card-body">
+
+<div class="alert alert-warning" ng-show="access_groups && access_groups.length == 0">
+    <div ng-show="ldap_groups && ldap_groups.length == 0 ">
+        <%=l 'There are no LDAP groups defined.' %>
+%       if ( $USER->is_admin ) {
+            <a href="/admin/groups">Create one.</a>
+%       }
+    </div>
     <%=l 'This virtual machine has no group restrictions.' %>
 </div>
 
-<div ng-show="access_groups.length > 0">
+
+<div ng-show="access_groups && access_groups.length > 0">
     <b><%=l 'Only users from these groups will be allowed to execute this machine' %></b>
 </div>
-<table>
-    </thead>
+
+<table ng-show="access_groups.length" class="card-table table-stripped">
     <tbody>
         <tr ng-repeat="group in access_groups">
             <td>
                 <button ng-click="remove_group_access(group)"
                                             class="badge badge-light text-blue">x</button>
-                {{group}}
+                <a ng-bind-html="group" href="/admin/group/{{group}}">{{group}}</a>
             </td>
         </tr>
     </tbody>
 </table>
 
+</div>
+
+</div>
+</div>

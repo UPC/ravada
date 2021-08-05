@@ -27,7 +27,7 @@
                 <button ng-click="remove_group_member( <%= $user->id %>,'<%= $user->ldap_entry->dn %>',group)"
                                             ng-show="<%= $_user->can_manage_users %>"
                                             class="badge badge-light text-blue">x</button>
-                {{group}}
+                <a ng-bind-html="group" href="/admin/group/{{group}}">{{group}}</a>
             </td>
         </tr>
     </tbody>

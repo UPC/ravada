@@ -1120,15 +1120,25 @@ sub ldap_entry($self) {
 
     return $self->{_ldap_entry} if $self->{_ldap_entry};
 
-    my @entries = Ravada::Auth::LDAP::search_user( name => $self->name );
-    $self->{_ldap_entry} = $entries[0];
+    for my $field ( qw(uid cn)) {
+        my ($entry) = Ravada::Auth::LDAP::search_user( name => $self->name,field => $field );
+        next if !$entry;
+        $self->{_ldap_entry} = $entry;
+        return $entry;
+    }
 
-    return $self->{_ldap_entry};
+    return;
 }
+
+=head2 groups
+
+Returns a list of the groups this user belogs to
+
+=cut
 
 sub groups($self) {
     return () if !$self->external_auth || $self->external_auth ne 'ldap';
-    my @groups = Ravada::Auth::LDAP::search_group_member($self->name);
+    my @groups = Ravada::Auth::LDAP::search_group_members($self->name);
     return @groups;
 
 }
