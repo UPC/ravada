@@ -17,7 +17,7 @@
               </div>
             </div>
             <div class="card-body">
-                <div ng-show="<%= $_user->can_manage_groups %>">
+                <div ng-show="<%= $_user->can_manage_groups %> && !removed">
                     <%=l 'New group member' %>
                     <input type="text" ng-model="username_filter"
                                        ng-change="list_users()"
@@ -33,7 +33,12 @@
                     <button ng-show="new_member && new_member.name"
                         ng-click="add_member(new_member.name)">Add</button>
                 </div>
-                {{error}}
+
+                <div ng-show="!removed">
+                <div class="alert alert-danger" ng-show="error">{{error}}</div>
+                <div class="alert alert-warning" ng-show="!error && group_members.length==0">No members found</div>
+                </div>
+
                 <table class="table table-striped" ng-show="group_members.length>0">
                     <thead>
                         <tr>
@@ -51,11 +56,11 @@
                                 </tr>
                     </tbody>
                 </table>
-                <div class="alert alert-warning" ng-show="group_members.length==0">No members found</div>
+               <div class="alert alert-warning" ng-show="removed"><%=l 'This group has been removed.'%></div>
 
                 <input type="button" class="btn btn-outline-secondary"
                                      ng-show="group_members && group_members.length==0
-                                               && !confirm_remove"
+                                               && !removed && !confirm_remove"
                                      ng-click="confirm_remove=true"
                                      value="Remove group"/>
                 <div ng-show="confirm_remove" class="card">
