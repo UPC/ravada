@@ -314,7 +314,10 @@ get '/admin/group/#name' => sub($c) {
     push @{$c->stash->{js}}, '/js/admin.js';
 
     my $group = Ravada::Auth::LDAP::search_group(name => $c->stash('name'));
-    $c->stash(object_class => [$group->get_value('objectClass')]);
+    return $c->render( text => "Error: group ".$c->stash('name')." not found."
+        ."<a href='/admin/groups/'>Groups</a>"
+        , status => 302) if !$group;
+    $c->stash(object_class => [ grep !/^top$/,$group->get_value('objectClass')]);
     return $c->render( template => "/main/admin_group");
 };
 
@@ -916,6 +919,36 @@ get '/machine/move_access/(#id_domain)/(#id_access)/(#position)' => sub {
     return $c->render(json => { ok => 1 });
 
 };
+get '/machine/list_access_groups/(#id_domain)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $domain_id = $c->stash('id_domain');
+    my $domain = Ravada::Front::Domain->open($domain_id);
+    return $c->render( json => [ $domain->list_access_groups ] );
+};
+
+get '/machine/add_access_group/(#id_domain)/(#group)' => sub($c) {
+    my $id_domain = $c->stash('id_domain');
+    my $group = $c->stash('group');
+    my $ok = 0;
+    eval {
+        my $domain = Ravada::Front::Domain->open($id_domain);
+        $domain->grant_access(type => 'group' , group => $group);
+        $ok =1;
+    };
+    return $c->render( json => { ok => $ok, error => $@ });
+};
+
+get '/machine/remove_access_group/(#id_domain)/(#group)' => sub($c) {
+
+    my $sth = $RAVADA->_dbh->prepare("DELETE FROM group_access WHERE id_domain=? "
+        ." AND name=?"
+    );
+    $sth->execute($c->stash('id_domain'), $c->stash('group'));
+    return $c->render(json => { ok => 1 } );
+};
 
 get '/machine/compact/(#id_domain)' => sub($c) {
     my $req = Ravada::Request->compact(
@@ -961,7 +994,7 @@ get '/machine/public/#id/#value' => sub {
 };
 
 get '/machine/set/#id/#field/#value' => sub {
-    my %privileged = map { $_ => 1 } qw(timeout id_owner);
+    my %privileged = map { $_ => 1 } qw(timeout id_owner shutdown_disconnected shutdown_timeout autostart);
 
     my $c = shift;
     my $id = $c->stash('id');
@@ -1074,14 +1107,36 @@ any '/group/new' => sub {
        return new_group($c);
 };
 
-any '/admin/user/(:id).(:type)' => sub {
+any '/admin/user/(#id).(:type)' => sub {
     my $c = shift;
     return access_denied($c) if !$USER->can_manage_users() && !$USER->can_grant();
 
-    my $user = Ravada::Auth::SQL->search_by_id($c->stash('id'));
+    push @{$c->stash->{js}}, '/js/admin.js';
+    my $id = $c->stash('id');
+    my $user;
+    if ($id =~ /cn=(.*?),/) {
+        $user = Ravada::Auth::SQL->new(name => $1);
+    } elsif ($id =~ /^\d+$/) {
+        $user = Ravada::Auth::SQL->search_by_id($id);
+    } else {
+        $user = Ravada::Auth::SQL->new(name => $id);
+    }
 
-    return $c->render(text => "Unknown user id: ".$c->stash('id'))
-        if !$user;
+    my $origin = $c->param('origin');
+    $c->stash(origin => $origin, warning => '');
+    return $c->render(text => "Unknown user ".$c->stash('id'))
+        if !$user || (!$user->id && !$c->stash('origin'));
+
+    if ($c->param('import') ) {
+        return $c->render( text => "Error: missing origin") if !$origin;
+        if ($user->id) {
+            $c->stash( warning => "Warning: user already imported");
+        } else {
+            Ravada::Auth::SQL::add_user(name => $user->name, is_external => 1, is_temporary => 0
+                , external_auth => $origin);
+            $user = Ravada::Auth::SQL->new(name => $user->name);
+        }
+    }
 
     if ($c->param('make_admin')) {
         $USER->make_admin($c->stash('id'))  if $c->param('is_admin');
@@ -1112,6 +1167,15 @@ any '/admin/user/(:id).(:type)' => sub {
     }
     $c->stash(user => $user);
     return $c->render(template => 'main/manage_user');
+};
+
+get '/user/list_groups/(#id_user)' => sub($c) {
+    my $id_user = $c->stash('id_user');
+    return _access_denied($c) unless $USER->is_admin || $id_user == $USER->id;
+
+    my $user = Ravada::Auth::SQL->search_by_id($id_user);
+    return $c->render(json => [] ) if !$user;
+    return $c->render(json => [$user->groups()]);
 };
 
 any '/user/change_password' => sub {
@@ -1642,6 +1706,12 @@ post '/ldap/group/remove_member' => sub($c) {
     };
     return $c->render(json => { error => ($@ or '') } );
 
+};
+
+get '/ldap/group/remove/(:group)' => sub($c) {
+    return access_denied($c) if !$USER->can_manage_groups;
+    eval {   Ravada::Auth::LDAP::remove_group($c->stash('group')) };
+    return $c->render( json => { error => ($@ or '') });
 };
 
 get '/booking' => sub($c) {

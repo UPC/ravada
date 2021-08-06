@@ -499,7 +499,7 @@ sub _start_checks($self, @args) {
 }
 
 sub _search_already_started($self, $fast = 0) {
-    my $sql = "SELECT id FROM vms where vm_type=?";
+    my $sql = "SELECT id FROM vms where vm_type=? AND enabled=1";
     $sql .= " AND is_active=1" if $fast;
     my $sth = $$CONNECTOR->dbh->prepare($sql);
     $sth->execute($self->_vm->type);
@@ -3809,9 +3809,12 @@ sub _post_start {
         , retry => $RETRY_SET_TIME
     ) if $set_time;
     Ravada::Request->enforce_limits(at => time + 60);
-    Ravada::Request->manage_pools(
+    if ( $self->is_pool ) {
+        $self->_data('comment' => $arg{user}->name);
+        Ravada::Request->manage_pools(
             uid => Ravada::Utils::user_daemon->id
-    )   if $self->is_pool;
+        )
+    }
 
     $self->_check_port_conflicts();
 
@@ -5133,7 +5136,7 @@ sub _search_pool_clone($self, $user) {
 
     my ($clone_down, $clone_free_up, $clone_free_down);
     my ($clones_in_pool, $clones_used) = (0,0);
-    for my $current ( $self->clones) {
+    for my $current ( sort { $a->{name} cmp $b->{name} } $self->clones) {
         if ( $current->{id_owner} == $user->id
                 && $current->{status} =~ /^(active|hibernated)$/) {
             my $clone = Ravada::Domain->open($current->{id});
@@ -5620,9 +5623,12 @@ Arguments is a named list
 =cut
 
 sub grant_access($self, %args) {
+    my $type      = delete $args{type}      or confess "Error: Missing type";
+
+    return $self->_allow_group_access(%args)    if $type eq 'group';
+
     my $attribute = delete $args{attribute} or confess "Error: Missing attribute";
     my $value     = delete $args{value}     or confess "Error: Missing value";
-    my $type      = delete $args{type}      or confess "Error: Missing type";
     my $allowed   = delete $args{allowed};
     $allowed = 1 if !defined $allowed;
     my $last      = ( delete $args{last} or 0 );
@@ -5654,6 +5660,35 @@ sub grant_access($self, %args) {
     $sth->execute($self->id, $type, $attribute, $value, $allowed, $n_order+1, $last);
 
     $self->_fix_default_access($type) unless $value eq '*';
+}
+
+sub _allow_group_access($self, %args) {
+    my $group = delete $args{group} or confess "Error: group required";
+    confess "Error: unknown args ".Dumper(\%args) if keys %args;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO group_access "
+        ."( id_domain,name)"
+        ." VALUES(?,? )"
+    );
+    $sth->execute($self->id, $group);
+}
+
+=head2 list_access_groups
+
+Returns the list of groups who can access this virtual machine
+
+=cut
+
+sub list_access_groups($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT name from group_access "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+    my @groups;
+    while ( my ($name) = $sth->fetchrow ) {
+        push @groups,($name);
+    }
+    return @groups;
 }
 
 sub _fix_default_access($self, $type) {
@@ -6313,7 +6348,7 @@ sub purge($self, $request=undef) {
 
 sub _check_port($self, $port, $ip=$self->ip, $request=undef) {
     my ($out, $err) = $self->_vm->run_command("nc","-z","-v",$ip,$port);
-    $request->error($err) if $err;
+
     return 1 if $err =~ /succeeded!/;
     return 0 if $err =~ /failed/;
     warn $err;
@@ -6336,6 +6371,12 @@ sub _set_displays_down($self) {
     $sth->execute($self->id);
 }
 
+=head2 refresh_ports
+
+Refresh the status of the exposed ports
+
+=cut
+
 sub refresh_ports($self, $request=undef) {
     my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_ports "
         ." SET is_active=? "
@@ -6357,14 +6398,16 @@ sub refresh_ports($self, $request=undef) {
             $is_port_active = $self->_check_port($port->{internal_port}, $ip, $request);
         } else {
             $is_port_active = 0;
-            $port_down++;
         }
+        $port_down++ if !$is_port_active;
         $sth_update->execute($is_port_active, $self->id, $port->{id});
         $sth_update_display->execute($is_port_active, $port->{id})
         if $port->{name};
 
         $msg .= " , " if $msg;
-        $msg .= " $port->{internal_port} $is_port_active";
+        my $is_port_active_txt = "up";
+        $is_port_active_txt = "down" if !$is_port_active;
+        $msg .= " $port->{internal_port}:$is_port_active_txt";
     }
     die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
     die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"

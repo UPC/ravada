@@ -907,7 +907,7 @@ sub create_ldap_user($name, $password, $keep=0) {
 
     if ( Ravada::Auth::LDAP::search_user($name) ) {
         return if $keep;
-        #        diag("Removing $name");
+                diag("Removing $name");
         Ravada::Auth::LDAP::remove_user($name)  
     }
 
@@ -929,9 +929,17 @@ sub create_ldap_user($name, $password, $keep=0) {
 
     push @USERS_LDAP,($name);
 
-    my @user = Ravada::Auth::LDAP::search_user($name);
+    my @user = Ravada::Auth::LDAP::search_user(name => $name, filter => '');
     #    diag("Adding $name to ldap");
-    return $user[0];
+    my $user_ldap = $user[0];
+    my $user_sql
+    = Ravada::Auth::SQL::add_user(name => $name, is_external => 1, external_auth => 'ldap');
+
+    for my $group ( $user_sql->groups ) {
+        Ravada::Auth::LDAP::remove_from_group($user_ldap->dn, $group);
+    }
+
+    return $user_ldap;
 }
 
 sub _list_requests {
@@ -2098,6 +2106,7 @@ sub _check_leftovers_users {
 }
 
 sub _check_iptables() {
+    return if $>;
     for my $table ( 'mangle', 'nat') {
         my @cmd = ("iptables" ,"-t", $table,"-L","POSTROUTING");
         my ($in, $out, $err);

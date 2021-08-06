@@ -11,7 +11,7 @@ use feature qw(signatures);
 use lib 't/lib';
 use Test::Ravada;
 
-init();
+init('t/etc/ravada_ldap_basic.conf');
 clean();
 
 sub _remove_bases(@bases) {
@@ -34,6 +34,44 @@ sub _remove_bases(@bases) {
         ." ".Dumper($row));
         $sth->finish;
     }
+}
+
+sub test_access_by_group($vm) {
+    my $base = create_domain($vm->type);
+    $base->prepare_base(user_admin);
+    $base->is_public(1);
+
+    my $g_name = new_domain_name();
+    my $group = Ravada::Auth::LDAP::search_group(name => $g_name);
+    if (!$group) {
+            Ravada::Auth::LDAP::add_group($g_name);
+    }
+
+    $base->grant_access(
+        type => 'group'
+        ,group => $g_name
+    );
+    my $user = create_user(new_domain_name(),$$);
+    is($user->is_admin, 0 );
+
+    my $list_bases = rvd_front->list_machines_user($user);
+    is(scalar(@$list_bases),0) or exit;
+
+    my $user_ldap0 = create_ldap_user(new_domain_name(), $$);
+    my $user_ldap = Ravada::Auth::SQL->new(name => $user_ldap0->get_value('cn'));
+    $list_bases = rvd_front->list_machines_user($user_ldap);
+    is(scalar(@$list_bases),0) or exit;
+
+    Ravada::Auth::LDAP::add_to_group($user_ldap->ldap_entry->dn, $g_name);
+
+    $user_ldap->_load_allowed(1);
+    $list_bases = rvd_front->list_machines_user($user_ldap);
+    is(scalar(@$list_bases),1) or exit;
+
+    $list_bases = rvd_front->list_machines_user(user_admin);
+    is(scalar(@$list_bases),1) or exit;
+
+    remove_domain($base);
 }
 
 sub test_access_by_agent($vm, $do_clones=0) {
@@ -324,8 +362,7 @@ sub test_maintenance() {
 
 ###########################################################################
 
-test_maintenance();
-for my $vm_name (vm_names()) {
+for my $vm_name (reverse vm_names()) {
     my $vm = rvd_back->search_vm($vm_name);
 
     SKIP: {
@@ -337,6 +374,8 @@ for my $vm_name (vm_names()) {
         }
         skip($msg,10)   if !$vm;
         diag("Testing access restrictions in domain for $vm_name");
+
+        test_access_by_group($vm);
 
         test_access_by_agent($vm);
 
@@ -355,6 +394,7 @@ for my $vm_name (vm_names()) {
 
     }
 }
+test_maintenance();
 
 end();
 done_testing();

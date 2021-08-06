@@ -324,6 +324,7 @@ sub _clone_and_base($vm_name, $t, $base0) {
     my $base1 = $base0;
     if ($vm_name eq 'KVM') {
         my $base = rvd_front->search_domain($BASE_NAME);
+        die "Error: test base $BASE_NAME not found" if !$base;
         my $name = new_domain_name()."-".$vm_name."-$$";
         mojo_request_url_post($t,"/machine/copy",{id_base => $base->id, new_name => $name, copy_ram => 0.128, copy_number => 1});
         $base1 = rvd_front->search_domain($name);
