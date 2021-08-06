@@ -874,8 +874,9 @@ ravadaApp.directive("solShowMachine", swMach)
         };
         $scope.remove_group = function() {
             $scope.confirm_remove=false;
-            $http.post("/ldap/group/remove/"+group).then(function(response) {
+            $http.get("/ldap/group/remove/"+group).then(function(response) {
                 $scope.error=response.data.error;
+                $scope.removed = true;
             });
         };
 
