@@ -86,4 +86,5 @@ for my $oc (
 
     delete $Ravada::CONFIG->{ldap}->{group};
 }
+end();
 done_testing();
