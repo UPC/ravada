@@ -2640,10 +2640,14 @@ sub new_group($c) {
     my @error = ();
 
     my $groupname = ($c->param('groupname') or '');
+    my $object_class = $c->every_param('object_class');
+
+    push @$object_class,('top' , 'groupOfUniqueNames');
+
     if ($groupname) {
         if ($groupname =~ /^[0-9a-zA-Z._-]+$/) {
             eval {
-                Ravada::Auth::LDAP::add_group($groupname);
+                Ravada::Auth::LDAP::add_group($groupname,undef, $object_class);
             };
             push @error,($@) if $@;
         } else {
