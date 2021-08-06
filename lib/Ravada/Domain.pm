@@ -499,7 +499,7 @@ sub _start_checks($self, @args) {
 }
 
 sub _search_already_started($self, $fast = 0) {
-    my $sql = "SELECT id FROM vms where vm_type=?";
+    my $sql = "SELECT id FROM vms where vm_type=? AND enabled=1";
     $sql .= " AND is_active=1" if $fast;
     my $sth = $$CONNECTOR->dbh->prepare($sql);
     $sth->execute($self->_vm->type);
