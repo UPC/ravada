@@ -4,9 +4,14 @@
     novalidate
     >
         <div class="from-group">
-            <label for="username"><%=l 'Group name' %></label><%= $groupname %>
+            <label for="groupname"><%=l 'Group name' %></label><%= $groupname %>
                 <input class="form-control" ng-model-onblur  placeholder="<%=l 'Enter group name' %>" type="text" ng-maxlength="80" ng-minlength="5" name="groupname" ng-pattern="/^[a-zA-Z0-9_.-]*$/" id="groupname" required="" value="<%= $groupname %>"><br/>
-            </div>
+        </div>
+        <div class="form-group">
+%       for (sort ('nsMemberOf','posixGroup') ) {
+            <input type="checkbox" checked="true" name="object_class" value="<%= $_ %>"> <%= $_ %><br/>
+%       }
+        </div>
         <div class="card-text" ng-show="new_userForm.$submitted || (new_userForm.groupname.$touched && new_userForm.groupname.$dirty)">
             <div ng-show="new_userForm.groupname.$error.required" class="alert alert-warning">
                     <strong><%=l 'Oops!' %></strong>&nbsp;<%=l 'Group name is required' %>.
