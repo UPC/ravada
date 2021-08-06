@@ -1708,7 +1708,7 @@ post '/ldap/group/remove_member' => sub($c) {
 
 };
 
-get '/ldap/group/remove/(:group)' => sub($c) {
+get '/ldap/group/remove/(#group)' => sub($c) {
     return access_denied($c) if !$USER->can_manage_groups;
     eval {   Ravada::Auth::LDAP::remove_group($c->stash('group')) };
     return $c->render( json => { error => ($@ or '') });
@@ -2642,7 +2642,13 @@ sub new_group($c) {
     my $groupname = ($c->param('groupname') or '');
     my $object_class = $c->every_param('object_class');
 
-    push @$object_class,('top' , 'groupOfUniqueNames');
+    my $object_class_checkbox;
+    for (@$object_class) {
+        $object_class_checkbox->{$_} = 'checked';
+    }
+    $c->stash(object_class => $object_class_checkbox);
+
+    $object_class = ['top',@$object_class];
 
     if ($groupname) {
         if ($groupname =~ /^[0-9a-zA-Z._-]+$/) {
@@ -2654,6 +2660,8 @@ sub new_group($c) {
             push @error,("Error: group name '$groupname' invalid."
             ,"Group name can only contain words, numbers, dashes, dots and underscores" );
         }
+    } else {
+        $c->stash(object_class => { posixGroup => 'checked' });
     }
     $c->render(template => 'bootstrap/new_group', error => \@error
     ,groupname => $groupname);
