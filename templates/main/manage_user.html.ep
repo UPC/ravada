@@ -1,9 +1,9 @@
 <html>
 %= include 'bootstrap/header'
-<body id="page-top" data-spy="scroll" data-target=".fixed-top" role="document">
+<body id="page-top" data-spy="scroll" data-target=".fixed-top" role="document" ng-app="ravada.app">
 <div id="wrapper">
     %= include 'bootstrap/navigation'
-<div id="page-wrapper">
+<div id="page-wrapper" ng-controller="usersPage" ng-init="load_grants(<%= $user->id %>)">
 
     <div class="page-header">
         <div class="card">

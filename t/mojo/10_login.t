@@ -150,6 +150,9 @@ sub test_login_fail {
 
     $t->get_ok("/admin/machines")->status_is(401);
     is($t->tx->res->dom->at("button#submit")->text,'Login') or exit;
+
+    $t->get_ok("/admin/users")->status_is(401);
+    is($t->tx->res->dom->at("button#submit")->text,'Login') or exit;
 }
 
 sub test_copy_without_prepare($clone) {

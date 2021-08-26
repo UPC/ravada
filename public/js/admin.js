@@ -366,10 +366,37 @@ ravadaApp.directive("solShowMachine", swMach)
   };
 
   function usersPageC($scope, $http, $interval, request) {
-    $scope.action = function(target,action,machineId){
-      $http.get('/'+target+'/'+action+'/'+machineId+'.json');
-    };
-    //On load code
+        var id_user;
+        $scope.load_grants = function(id) {
+            id_user=id;
+            $http.get("/user/grants/"+id_user).then(function(response) {
+                $scope.perm = response.data;
+            });
+            $http.get("/user/info/"+id_user).then(function(response) {
+                $scope.user= response.data;
+            });
+        };
+        $scope.toggle_grant = function(grant) {
+            $scope.perm[grant] = !$scope.perm[grant];
+            $http.get("/user/grant/"+id_user+"/"+grant+"/"+$scope.perm[grant]).then(function(response) {
+                $scope.error = response.data.error;
+                $scope.info = response.data.info;
+            });
+        };
+        $scope.update_grant = function(grant) {
+            $http.get("/user/grant/"+id_user+"/"+grant+"/"+$scope.perm[grant]).then(function(response) {
+                $scope.error = response.data.error;
+                $scope.info = response.data.info;
+            });
+        };
+        $scope.change_user = function(data) {
+            $http.post('/user/set/'+id_user
+                ,JSON.stringify(data)
+            ).then(function(response) {
+                $scope.load_grants(id_user);
+            });
+        };
+
   };
 
   function messagesPageC($scope, $http, $interval, request) {

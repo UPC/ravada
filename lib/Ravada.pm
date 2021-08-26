@@ -1079,7 +1079,7 @@ sub _add_grants($self) {
     $self->_add_grant('rename_clones', 0,"Can rename clones from virtual machines owned by the user.");
     $self->_add_grant('shutdown', 1,"Can shutdown own virtual machines.");
     $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
-    $self->_add_grant('start_many',0,"Can have more than one machine started.");
+    $self->_add_grant('start_many',0,"Can have an unlimited amount of machines started.");
     $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
 }
 

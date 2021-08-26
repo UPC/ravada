@@ -1,16 +1,13 @@
 <div class="card">
     <div class="card-body">
-        <form method="post">
+        <form method="post" action="/admin/user/<%= $user->id %>.html" ng-show="perm">
         % for my $perm ($_user->list_all_permissions) {
-        %     my $checked = '';
-        %     $checked = 'checked' if $user->can_do($perm->{name});
-              <input type="checkbox" <%= $checked %> 
-                            name="perm_<%= $perm->{name} %>">
-              <input type="hidden" name="off_perm_<%= $perm->{name} %>" value="off">
+        <input type="checkbox" ng-model="perm['<%= $perm->{name} %>']"
+                ng-click="toggle_grant('<%= $perm->{name} %>')"
+                name="perm_<%= $perm->{name} %>"
+                >
               <label for="perm_<%= $perm->{name} %>"><%= $perm->{name} %>: <%=l($perm->{description}) %></label><br/>
         % }
-            <button type="reset" class="btn btn-outline-secondary" onclick = "location='/admin/users'"><%=l 'Cancel' %></button>
-            <input type="submit" class="btn btn-primary" name="grant" value="<%=l 'Submit' %>">
         </form>
     </div>
 </div>

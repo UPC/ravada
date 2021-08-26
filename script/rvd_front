@@ -881,38 +881,128 @@ any '/users/register' => sub {
 
 any '/admin/user/(:id).(:type)' => sub {
     my $c = shift;
-    return access_denied($c) if !$USER->can_manage_users() && !$USER->can_grant();
+    return access_denied($c) unless $USER->can_manage_users() && $USER->can_grant();
 
     my $user = Ravada::Auth::SQL->search_by_id($c->stash('id'));
 
     return $c->render(text => "Unknown user id: ".$c->stash('id'))
         if !$user;
 
-    if ($c->param('make_admin')) {
-        $USER->make_admin($c->stash('id'))  if $c->param('is_admin');
-        $USER->remove_admin($c->stash('id'))if !$c->param('is_admin');
-        $user = Ravada::Auth::SQL->search_by_id($c->stash('id'));
-    }
-    if ($c->param('grant')) {
-        return access_denied($c)    if !$USER->can_grant();
-        my %grant;
-        for my $param_name (@{$c->req->params->names}) {
-            if ( $param_name =~ /^perm_(.*)/ ) {
-                $grant{$1} = 1;
-            } elsif ($param_name =~ /^off_perm_(.*)/) {
-                $grant{$1} = 0 if !exists $grant{$1};
-            }
-        }
-        for my $perm (keys %grant) {
-            if ( $grant{$perm} ) {
-                $USER->grant($user, $perm);
-            } else {
-                $USER->revoke($user, $perm);
-            }
-        }
-    }
+    push @{$c->stash->{js}}, '/js/admin.js';
     $c->stash(user => $user);
     return $c->render(template => 'main/manage_user');
+};
+
+get '/user/grants/(:id)' => sub($c) {
+    return access_denied($c) unless $USER->can_manage_users() && $USER->can_grant();
+
+    my $user = Ravada::Auth::SQL->search_by_id($c->stash('id'));
+    my %grants = $user->grants_info;
+    for my $key (keys %grants) {
+        my ($value, $type) = @{$grants{$key}};
+        if ( $type eq 'boolean' ) {
+            $grants{$key} = \1 if $value;
+            $grants{$key} = \0 if !$value;
+        } else {
+            $grants{$key} = $value;
+        }
+    }
+    return $c->render(json => \%grants);
+};
+
+get '/user/info/(:id)' => sub ($c) {
+    return access_denied($c) unless $USER->can_manage_users();
+    my $user = Ravada::Auth::SQL->search_by_id($c->stash('id'));
+    my %info = %{$user->{_data}};
+    for my $key (keys %info) {
+        next if $key !~ /^is_/;
+        if($info{$key}) {
+            $info{$key} = \1;
+        } else {
+            $info{$key} = \0;
+        }
+    }
+    return $c->render(json => \%info);
+};
+
+post '/user/set/(:id)' => sub ($c) {
+    return access_denied($c) unless $USER->can_manage_users() && $USER->can_grant();
+
+    my $user = Ravada::Auth::SQL->search_by_id($c->stash('id'));
+    my $args = decode_json($c->req->body);
+    lock_hash(%$args);
+
+    my $sql = "";
+    my @values;
+    my $error = '';
+    for my $key (sort keys %$args ) {
+        if ($key !~ /^[a-z][a-z_]+$/) {
+            my $error = "Permission '$key' invalid";
+            $USER->send_message($error);
+            return $c->render(json => { error => $error });
+        }
+        if ($key eq 'is_admin') {
+            eval {
+                if ( $args->{$key} eq 'true' || $args->{$key} eq '1' ) {
+                    $USER->send_message("Granting admin permissions to user ".$user->name);
+                    $USER->make_admin($user->id);
+                } elsif ( $args->{$key} eq 'false' || !$args->{$key}) {
+                    $USER->send_message("Revoking admin persmissions from user ".$user->name);
+                    $USER->remove_admin($user->id);
+                }
+            };
+            my $subj = $error;
+            $USER->send_message($subj, $error) if $error;
+            next;
+        }
+        $sql .= " , " if $sql;
+        $sql .= "$key= ?";
+        push @values,($args->{$key});
+    }
+    if ($sql) {
+        $sql = "UPDATE users set $sql WHERE id=?";
+        eval {
+            my $sth = $RAVADA->_dbh->prepare($sql);
+            $sth->execute(@values, $c->stash('id'));
+        };
+    }
+    $error = $@;
+
+    my $subj = $error;
+    $subj =~ s/ at.*//;
+    $USER->send_message($subj, $error) if $error;
+    return $c->render(json => { error => $error });
+};
+
+get '/user/grant/(:id_user)/(:grant)/(:value)' => sub($c) {
+    return access_denied($c) unless $USER->can_grant();
+
+    my $user = Ravada::Auth::SQL->search_by_id($c->stash('id_user'));
+    my $error = '';
+    my $value = $c->stash('value');
+    if ($value eq 'false' || !$value) {
+        $value = 0;
+    } else {
+        $value = 1;
+    }
+    eval { $USER->grant($user,$c->stash('grant'),$value) };
+    $error = $@;
+    my $info = '';
+    if ($error) {
+        $USER->send_message($error);
+    } else {
+        my $grant = $c->stash('grant');
+        $grant =~ s/_/ /g;
+        if ( $value ) {
+            $info = "Permission granted to user"
+        } else {
+            $info = "Permission revoked from user";
+        }
+        $info = $c->stash->{i18n}->localize($info);
+
+        $USER->send_message($info." ".$user->name." : $grant");
+    }
+    return $c->render(json => { error => $error, info => $info });
 };
 
 get '/list_ldap_attributes/(#cn)' => sub {
@@ -2737,5 +2827,17 @@ Hi <%= $name %>,
             <li>Windows: <a href="http://bfy.tw/5Nur">Spice plugin for Firefox</a></li>
             </ul>
         </h2>
+  </body>
+</html>
+
+@@ exception.development.html.ep
+<!DOCTYPE html>
+<html>
+  <head><title>Ravada Server error</title></head>
+  <body>
+    <h1>Exception</h1>
+    <p><%= $exception->message %></p>
+    <h1>Stash</h1>
+    <pre><%= dumper $snapshot %></pre>
   </body>
 </html>

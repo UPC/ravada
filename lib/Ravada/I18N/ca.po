@@ -310,7 +310,7 @@ msgid "Password"
 msgstr "Contrasenya"
 
 msgid "Start session"
-msgstr "Inicieu la Sessió\n"
+msgstr "Inicieu la Sessió"
 
 msgid "bits) in your computer."
 msgstr "bits) al teu ordinador."
@@ -936,3 +936,10 @@ msgstr "Reiniciar"
 
 msgid "Force Reboot"
 msgstr "Reiniciar a la força"
+
+msgid "Permission granted to user"
+msgstr "Permís concedit a l'usuari"
+
+msgid "Permission revoked from user"
+msgstr "Permís denegat a l'usuari"
+
