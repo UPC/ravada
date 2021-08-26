@@ -649,7 +649,7 @@ Returns if the user is allowed to perform a privileged action
 sub can_do($self, $grant) {
     $self->_load_grants();
 
-    confess "Wrong grant '$grant'\n".Dumper($self->{_grant_alias})
+    confess "Permission '$grant' invalid\n".Dumper($self->{_grant_alias})
         if $grant !~ /^[a-z_]+$/;
 
     $grant = $self->_grant_alias($grant);
@@ -739,6 +739,7 @@ sub _load_grants($self) {
         my $grant_alias = $self->_grant_alias($name);
         $self->{_grant}->{$grant_alias} = $allowed     if $enabled;
         $self->{_grant_disabled}->{$grant_alias} = !$enabled;
+        $self->{_grant_type}->{$grant_alias} = 'boolean';
     }
     $sth->finish;
 }
@@ -876,6 +877,14 @@ sub grant($self,$user,$permission,$value=1) {
             .Dumper(\@perms);
     }
 
+    if ( $value eq 'false' || !$value ) {
+        $value = 0;
+    } else {
+        $value = 1;
+    }
+
+    return 0 if !$value && !$user->can_do($permission);
+
     my $value_sql = $user->can_do($permission);
     return 0 if !$value && !$value_sql;
     return $value if defined $value_sql && $value_sql eq $value;
@@ -942,6 +951,10 @@ sub list_all_permissions($self) {
         push @list,($row);
     }
     return @list;
+}
+
+sub grant_type($self, $permission) {
+    return $self->{_grant_type}->{$permission};
 }
 
 =head2 list_permissions
@@ -1105,6 +1118,16 @@ sub grants($self) {
     $self->_load_grants();
     return () if !$self->{_grant};
     return %{$self->{_grant}};
+}
+
+sub grants_info($self) {
+    my %grants = $self->grants();
+    my %grants_info;
+    for my $key ( keys %grants ) {
+        $grants_info{$key}->[0] = $grants{$key};
+        $grants_info{$key}->[1] = $self->{_grant_type}->{$key};
+    }
+    return %grants_info;
 }
 
 =head2 ldap_entry

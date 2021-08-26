@@ -1389,7 +1389,7 @@ sub _add_grants($self) {
     $self->_add_grant('reboot_all', 0,"Can reboot all virtual machines.");
     $self->_add_grant('reboot_clones', 0,"Can reboot clones own virtual machines.");
     $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
-    $self->_add_grant('start_many',0,"Can have more than one machine started.");
+    $self->_add_grant('start_many',0,"Can have an unlimited amount of machines started.");
     $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
     $self->_add_grant('view_groups',0,'Can view groups.');
     $self->_add_grant('manage_groups',0,'Can manage groups.');
