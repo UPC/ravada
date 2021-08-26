@@ -740,6 +740,7 @@ sub _load_grants($self) {
         $self->{_grant}->{$grant_alias} = $allowed     if $enabled;
         $self->{_grant_disabled}->{$grant_alias} = !$enabled;
         $self->{_grant_type}->{$grant_alias} = 'boolean';
+        $self->{_grant_type}->{$grant_alias} = 'int' if $is_int;
     }
     $sth->finish;
 }
