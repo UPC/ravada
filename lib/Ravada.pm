@@ -497,7 +497,7 @@ sub _update_isos {
         ,debian_buster_64=> {
             name =>'Debian Buster 64 bits'
             ,description => 'Debian 10 Buster 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^10\..*\d$/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^10\..*\d$/amd64/iso-cd/'
             ,file_re => 'debian-10.[\d\.]+-amd64-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -507,13 +507,34 @@ sub _update_isos {
         ,debian_buster_32=> {
             name =>'Debian Buster 32 bits'
             ,description => 'Debian 10 Buster 32 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^10\..*\d$/i386/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^10\..*\d$/i386/iso-cd/'
             ,file_re => 'debian-10.[\d\.]+-i386-(netinst|xfce-CD-1).iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
+        ,debian_bullseye_64=> {
+            name =>'Debian Bullseye 64 bits'
+            ,description => 'Debian 11 Bullseye 64 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/amd64/iso-cd/'
+            ,file_re => 'debian-11.[\d\.]+-amd64-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,debian_bullseye_32=> {
+            name =>'Debian Bullseye 32 bits'
+            ,description => 'Debian 10 Bullseye 32 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/i386/iso-cd/'
+            ,file_re => 'debian-11.[\d\.]+-i386-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-i386.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+
         ,kali_64 => {
             name => 'Kali Linux 2020'
             ,description => 'Kali Linux 2020 64 Bits'
@@ -593,7 +614,27 @@ sub _update_isos {
     );
     $self->_scheduled_fedora_releases(\%data);
     $self->_update_table($table, $field, \%data);
+    $self->_update_table_isos_url(\%data);
 
+}
+
+sub _update_table_isos_url($self, $data) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE name=?");
+    for my $release (sort keys %$data) {
+        my $entry = $data->{$release};
+        $sth->execute($entry->{name});
+        my $row = $sth->fetchrow_hashref();
+        for my $field (keys %$entry) {
+            next if defined $row->{$field} && $row->{$field} eq $entry->{$field};
+            my $sth_update = $CONNECTOR->dbh->prepare(
+                "UPDATE iso_images SET $field=?"
+                ." WHERE id=?"
+            );
+            $sth_update->execute($entry->{$field}, $row->{id});
+            warn("INFO: updating $release $field '$row->{$field}' -> '$entry->{$field}'\n")
+            if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+        }
+    }
 }
 
 sub _scheduled_fedora_releases($self,$data) {
