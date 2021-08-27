@@ -701,7 +701,7 @@ sub _update_table_isos_url($self, $data) {
                 ." WHERE id=?"
             );
             $sth_update->execute($entry->{$field}, $row->{id});
-            warn("INFO: updating $release $field '$row->{$field}' -> '$entry->{$field}'\n")
+            warn("INFO: updating $release $field '".($row->{$field} or '')."' -> '$entry->{$field}'\n")
             if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         }
     }
