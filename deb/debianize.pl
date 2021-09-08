@@ -18,6 +18,7 @@ my $DEBIAN = "DEBIAN";
 
 my %COPY_RELEASES = (
     'ubuntu-19.04'=> ['ubuntu-18.10','ubuntu-19.10']
+    ,'debian-10' => ['debian-11']
 );
 my %DIR = (
     templates => '/usr/share/ravada'
