@@ -1216,6 +1216,7 @@ sub _add_indexes_generic($self) {
             "unique(id_domain,n_order)"
             ,"unique(id_domain,driver)"
             ,"unique(id_vm,port)"
+            ,"index(id_domain)"
         ]
         ,domain_ports => [
             "unique (id_domain,internal_port):domain_port"
@@ -1224,6 +1225,7 @@ sub _add_indexes_generic($self) {
         ]
         ,group_access => [
             "unique (id_domain,name)"
+            ,"index(id_domain)"
         ]
         ,requests => [
             "index(status,at_time)"
@@ -1254,17 +1256,23 @@ sub _add_indexes_generic($self) {
         ]
         ,booking_entry_ldap_groups => [
             "index(id_booking_entry,ldap_group)"
+            ,"index(id_booking_entry)"
         ]
         ,booking_entry_users => [
             "index(id_booking_entry,id_user)"
+            ,"index(id_booking_entry)"
+            ,"index(id_user)"
         ]
         ,booking_entry_bases => [
             "index(id_booking_entry,id_base)"
+            ,"index(id_base)"
+            ,"index(id_booking_entry)"
         ]
 
         ,volumes => [
-            'UNIQUE (id_domain,name):id_domain',
-            'UNIQUE (id_domain,n_order):id_domain2'
+            "index(id_domain)"
+            ,'UNIQUE (id_domain,name):id_domain_name'
+            ,'UNIQUE (id_domain,n_order):id_domain2'
         ]
 
         ,vms=> [
@@ -3157,7 +3165,7 @@ sub process_requests {
         my $domain = '';
         $domain = $id_domain if $id_domain;
         $domain .= ($req->defined_arg('name') or '');
-        next if $duplicated{$req->command.":$domain"}++;
+        next if $duplicated{$domain}++;
         push @reqs,($req);
     }
     $sth->finish;
@@ -4882,7 +4890,11 @@ sub _check_duplicated_iptable($self, $request = undef ) {
                 my $rule = join(" ", map { $_." ".$args{$_} }  sort keys %args);
 
                 if ($dupe{$rule}) {
-                    warn "clean duplicated iptables rule ".Dumper($line);
+                    my %args2;
+                    while (my ($key, $value) = each %args) {
+                        $args2{"-$key"} = $value;
+                    }
+                    warn "clean duplicated iptables rule ".join(" ",%args2)."\n";
                     $self->_delete_iptables_rule($vm,'filter', \%args);
                 }
                 $dupe{$rule}++;
