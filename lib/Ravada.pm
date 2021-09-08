@@ -3157,7 +3157,7 @@ sub process_requests {
         my $domain = '';
         $domain = $id_domain if $id_domain;
         $domain .= ($req->defined_arg('name') or '');
-        next if $duplicated{$req->command.":$domain"}++;
+        next if $duplicated{$domain}++;
         push @reqs,($req);
     }
     $sth->finish;
@@ -4882,7 +4882,11 @@ sub _check_duplicated_iptable($self, $request = undef ) {
                 my $rule = join(" ", map { $_." ".$args{$_} }  sort keys %args);
 
                 if ($dupe{$rule}) {
-                    warn "clean duplicated iptables rule ".Dumper($line);
+                    my %args2;
+                    while (my ($key, $value) = each %args) {
+                        $args2{"-$key"} = $value;
+                    }
+                    warn "clean duplicated iptables rule ".join(" ",%args2)."\n";
                     $self->_delete_iptables_rule($vm,'filter', \%args);
                 }
                 $dupe{$rule}++;
