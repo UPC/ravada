@@ -719,6 +719,7 @@ sub _around_remove_volume {
         ." WHERE id_domain=? AND file=?"
     );
     $sth->execute($self->id, $file);
+    $self->list_volumes();
     return $ok;
 }
 
@@ -4758,6 +4759,7 @@ sub _post_remove_hardware($self, $hardware, $index, $data=undef) {
      if ($hardware eq 'disk' && ( defined $index || $data ) && $self->is_known() ) {
          my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM volumes WHERE id_domain=?");
          $sth->execute($self->id);
+         $self->list_volumes_info();
      }
 
      $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';

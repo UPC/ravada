@@ -103,6 +103,23 @@ sub _remove_domain(@domain) {
     }
 }
 
+sub test_remove_volume($vm) {
+    my $domain = create_domain($vm);
+    my @volumes = $domain->list_volumes();
+    my $sth = connector->dbh->prepare("SELECT count(*) FROM volumes WHERE id_domain=?");
+    $sth->execute($domain->id);
+    my ($n_volumes) = $sth->fetchrow();
+    is($n_volumes,scalar(@volumes));
+
+    $domain->remove_controller('disk',1);
+
+    $sth->execute($domain->id);
+    ($n_volumes) = $sth->fetchrow();
+    is($n_volumes,1);
+
+    $domain->remove(user_admin);
+}
+
 ##############################################################################
 
 clean();
@@ -126,6 +143,7 @@ for my $vm_name ( vm_names() ) {
 
         diag("Testing remove on $vm_name");
 
+        test_remove_volume($vm);
         test_remove_rename($vm);
 		test_remove_domain($vm);        
         test_remove_domain_volumes_already_gone($vm);
