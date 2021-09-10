@@ -189,6 +189,22 @@ sub test_login_fail {
 
     $t->get_ok("/admin/machines")->status_is(401);
     like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
+
+    $t->get_ok("/admin/users")->status_is(401);
+    is($t->tx->res->dom->at("button#submit")->text,'Login') or exit;
+}
+
+sub test_copy_without_prepare($clone) {
+    is ($clone->is_base,0) or die "Clone ".$clone->name." is supposed to be non-base";
+
+    my $n_clones = 3;
+    mojo_request($t, "clone", { id_domain => $clone->id, number => $n_clones });
+    wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+
+    my @clones = $clone->clones();
+    is(scalar @clones, $n_clones) or exit;
+
+    remove_machines($clone);
 }
 
 sub test_validate_html($url) {
