@@ -337,6 +337,7 @@ Add a group to the LDAP
 =cut
 
 sub add_group($name, $base=_dc_base(), $class=['groupOfUniqueNames','nsMemberOf','posixGroup','top' ]) {
+    my $ldap = _init_ldap_admin();
     $base = _dc_base() if !defined $base;
     $name = escape_filter_value($name);
     my $oc_posix_group;
@@ -344,7 +345,6 @@ sub add_group($name, $base=_dc_base(), $class=['groupOfUniqueNames','nsMemberOf'
 
     my @attrs =( cn=>$name
                     ,objectClass => $class
-                    ,ou => 'Groups'
                     ,description => "Group for $name"
     );
     push @attrs, (gidNumber => _search_new_gid()) if $oc_posix_group;
@@ -354,7 +354,7 @@ sub add_group($name, $base=_dc_base(), $class=['groupOfUniqueNames','nsMemberOf'
         , cn => $name
         , attrs => \@attrs
       );
-    my $mesg = $LDAP_ADMIN->add(@data);
+    my $mesg = $ldap->add(@data);
     if ($mesg->code) {
         die "Error creating group $name : ".$mesg->error."\n".Dumper(\@data);
     }

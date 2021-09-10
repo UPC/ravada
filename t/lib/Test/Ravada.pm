@@ -613,7 +613,7 @@ sub _remove_old_domains_void_remote($vm) {
     return if !$vm->ping(undef,0);
     eval { $vm->connect };
     warn $@ if $@;
-    return if !$vm->_do_is_active;
+    return if !$vm->_do_is_active || !$vm->_ssh;
 
     my $base_name = base_domain_name();
     $vm->run_command("rm -f ".$vm->dir_img."/$base_name*yml "
@@ -1243,13 +1243,14 @@ sub _remove_old_entries($table) {
 
 }
 
-sub clean {
+sub clean($ldap=undef) {
     my $file_remote_config = shift;
     remove_old_domains();
     remove_old_disks();
     remove_old_pools();
     _remove_old_entries('vms');
     _remove_old_entries('networks');
+    _remove_old_groups_ldap();
 
     if ($file_remote_config) {
         my $config;
@@ -1362,6 +1363,34 @@ sub remove_old_user_ldap {
     for my $name (@USERS_LDAP ) {
         if ( Ravada::Auth::LDAP::search_user($name) ) {
             Ravada::Auth::LDAP::remove_user($name)  
+        }
+    }
+}
+
+sub _remove_old_groups_ldap() {
+    my $ldap;
+    eval { $ldap = Ravada::Auth::LDAP::_init_ldap_admin() if !$ldap };
+    return if $@ && $@ =~ /Missing ldap section/;
+    warn $@ if $@;
+    return if !$ldap;
+
+    my $name = base_domain_name();
+    for my $group ( Ravada::Auth::LDAP::search_group( name => "group_$name".'*')
+    ,Ravada::Auth::LDAP::search_group( name => $name.'*')
+) {
+        next if !$group;
+        for my $n ( 1 .. 3 ) {
+            my $mesg = $ldap->delete($group);
+            last if !$mesg->code;
+
+            warn "ERROR: ".$mesg->code." : ".$mesg->error if $n>2;
+
+            if ($mesg->code == 81 ) {
+                Ravada::Auth::LDAP::init();
+                $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+                redo();
+            }
+
         }
     }
 }
@@ -1717,18 +1746,19 @@ sub start_node($node) {
     }
     ok($domain->ip,"Make sure the virtual machine ".$domain->name." has installed the qemu-guest-agent") or exit;
 
-    $node->is_active(1);
-    $node->enabled(1);
+    my $node2;
     for ( reverse 1 .. 120 ) {
-        my $node2 = Ravada::VM->open(id => $node->id);
-        last if $node2->is_active(1) && $node->_ssh;
+        $node->is_active(1);
+        $node->enabled(1);
+        $node2 = Ravada::VM->open(id => $node->id);
+        last if $node2->is_active(1) && $node2->ip && $node2->_ssh;
         diag("Waiting for node ".$node2->name." active ... $_")  if !($_ % 10);
         $node2->disconnect();
         $node2->connect();
         $node2->clear_netssh();
         sleep 1;
     }
-    eval { $node->run_command("hwclock","--hctosys") };
+    eval { $node2->run_command("hwclock","--hctosys") };
     is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
 }
 
@@ -2161,11 +2191,11 @@ sub _check_iptables() {
     }
 }
 
-sub end {
+sub end($ldap=undef) {
     _unload_nbd();
     _check_leftovers();
     _check_iptables();
-    clean();
+    clean($ldap);
     _unlock_all();
     _file_db();
     rmdir _dir_db();
