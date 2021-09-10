@@ -701,6 +701,25 @@ sub _update_table_isos_url($self, $data) {
                 ." WHERE id=?"
             );
             $sth_update->execute($entry->{$field}, $row->{id});
+            warn("INFO: updating $release $field '$row->{$field}' -> '$entry->{$field}'\n")
+            if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+        }
+    }
+}
+
+sub _update_table_isos_url($self, $data) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE name=?");
+    for my $release (sort keys %$data) {
+        my $entry = $data->{$release};
+        $sth->execute($entry->{name});
+        my $row = $sth->fetchrow_hashref();
+        for my $field (keys %$entry) {
+            next if defined $row->{$field} && $row->{$field} eq $entry->{$field};
+            my $sth_update = $CONNECTOR->dbh->prepare(
+                "UPDATE iso_images SET $field=?"
+                ." WHERE id=?"
+            );
+            $sth_update->execute($entry->{$field}, $row->{id});
             warn("INFO: updating $release $field '".($row->{$field} or '')."' -> '$entry->{$field}'\n")
             if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         }
