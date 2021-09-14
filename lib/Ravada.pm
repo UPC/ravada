@@ -3331,6 +3331,7 @@ sub _kill_stale_process($self) {
         ." WHERE start_time<? "
         ." AND ( command = 'refresh_vms' or command = 'screenshot' or command = 'set_time' "
         ."      OR command = 'open_exposed_ports' OR command='remove' "
+        ."      OR command = 'refresh_machine_ports'"
         .") "
         ." AND status <> 'done' "
         ." AND start_time IS NOT NULL "
@@ -4494,7 +4495,7 @@ sub _cmd_refresh_machine($self, $request) {
     $domain->client_status(1) if $is_active;
 
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id
-        ,retry => 20)
+        ,timeout => 60, retry => 20)
     if $is_active && $domain->ip;
 }
 
