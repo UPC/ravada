@@ -33,6 +33,7 @@ host and the virtual machines: DHCP, DNS and ping.
    sudo iptables -A OUTPUT -i virbr0 -p udp -m udp --sport 53 -j ACCEPT
    sudo iptables -A OUTPUT -i virbr0 -p udp -m udp --sport 5353 -j ACCEPT
    sudo iptables -A OUTPUT -o virbr0 -p icmp -m icmp --icmp-type 8 -j ACCEPT
+   sudo iptables -A OUTPUT -o virbr0 -p tcp -m tcp -s 192.168.122.1/32 -j ACCEPT
 
 To confirm that the configuration was updated, check it with:
 
