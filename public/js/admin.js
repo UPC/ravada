@@ -401,11 +401,82 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.show_machine = { '0': false };
   };
 
-  function usersPageC($scope, $http, $interval, request) {
-    $scope.action = function(target,action,machineId){
-      $http.get('/'+target+'/'+action+'/'+machineId+'.json');
-    };
-    //On load code
+    function usersPageC($scope, $http, $interval, request) {
+        $scope.list_groups= function() {
+            $scope.loading_groups = true;
+            $scope.error = '';
+            $http.get('/list_ldap_groups')
+                .then(function(response) {
+                    $scope.loading_groups = false;
+                    $scope.groups = response.data;
+                });
+        };
+        $scope.list_user_groups = function(id_user) {
+            $http.get('/user/list_groups/'+id_user)
+                .then(function(response) {
+                    $scope.user_groups = response.data;
+                });
+        };
+        $scope.add_group_member = function(id_user, cn, group) {
+            $http.post("/ldap/group/add_member/"
+              ,JSON.stringify(
+                  { 'group': group
+                    ,'cn': cn
+                  })
+              ).then(function(response) {
+                  $scope.error = response.data.error;
+                  $scope.list_user_groups(id_user);
+                });
+        };
+        $scope.remove_group_member = function(id_user, dn, group) {
+            $http.post("/ldap/group/remove_member/"
+              ,JSON.stringify(
+                  { 'group': group
+                    ,'dn': dn
+                  })
+              ).then(function(response) {
+                  $scope.error = response.data.error;
+                  $scope.list_user_groups(id_user);
+            });
+        };
+
+        $scope.load_grants = function(id) {
+            id_user=id;
+            $http.get("/user/grants/"+id_user).then(function(response) {
+                $scope.perm = response.data;
+            });
+            $http.get("/user/info/"+id_user).then(function(response) {
+                $scope.user= response.data;
+            });
+        };
+        $scope.toggle_grant = function(grant) {
+            $scope.perm[grant] = !$scope.perm[grant];
+            $http.get("/user/grant/"+id_user+"/"+grant+"/"+$scope.perm[grant]).then(function(response) {
+                $scope.error = response.data.error;
+                $scope.info = response.data.info;
+            });
+        };
+        $scope.update_grant = function(grant) {
+            $http.get("/user/grant/"+id_user+"/"+grant+"/"+$scope.perm[grant]).then(function(response) {
+                $scope.error = response.data.error;
+                $scope.info = response.data.info;
+            });
+        };
+        $scope.change_user = function(data) {
+            $http.post('/user/set/'+id_user
+                ,JSON.stringify(data)
+            ).then(function(response) {
+                $scope.load_grants(id_user);
+            });
+        };
+        $scope.init = function(id) {
+            $scope.load_grants(id);
+            $scope.list_user_groups(id);
+        };
+
+        $scope.list_groups();
+        var id_user;
+
   };
 
   function messagesPageC($scope, $http, $interval, request) {
@@ -885,7 +956,6 @@ ravadaApp.directive("solShowMachine", swMach)
                     $scope.loading_users = false;
                     $scope.error = response.data.error;
                     $scope.users = response.data.entries;
-                    console.log(response.data.error);
                 });
         };
         $scope.add_member = function(cn) {
@@ -908,6 +978,13 @@ ravadaApp.directive("solShowMachine", swMach)
               ).then(function(response) {
                   $scope.list_group_members(group);
                   $scope.error = response.data.error;
+            });
+        };
+        $scope.remove_group = function() {
+            $scope.confirm_remove=false;
+            $http.get("/ldap/group/remove/"+group).then(function(response) {
+                $scope.error=response.data.error;
+                $scope.removed = true;
             });
         };
 

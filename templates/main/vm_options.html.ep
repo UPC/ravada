@@ -74,6 +74,7 @@
                 </div>
                 <div class="col-lg-2">
                     <input class="form-control" type="text" name="ram" size="5"
+                    ng-disabled="<%= !$USER->is_admin %>"
                     ng-blur="request('change_hardware',{
                         'id_domain': showmachine.id
                         ,'hardware': 'memory'
@@ -106,6 +107,7 @@
                 </div>
                 <div class="col-lg-2">
                     <input class="form-control" type="text" name="cpus" size="5"
+                    ng-disabled="<%= !$USER->is_admin %>"
                     ng-change="request('change_hardware',{
                         'id_domain': showmachine.id
                         ,'hardware': 'vcpus'
@@ -122,6 +124,7 @@
                 </div>
                 <div class="col-lg-2">
                     <input type="text" size="5" name="timeout"
+                    ng-disabled="<%= !$USER->is_admin %>"
                     ng-change="set_value('run_timeout',new_run_timeout*60)"
                     ng-model="new_run_timeout"
                     >
@@ -138,10 +141,10 @@
                     ng-model="new_shutdown_timeout"
                     >
                 </div>
-                <div class="col-lg-6"><small class="text-secondary"><%=l 'The machine will turn off after this time' %></small></div>
+                <div class="col-lg-6"><small class="text-secondary"><%=l 'The machine will power off after this minutes after shutdown.' %></small></div>
             </div>
 %   }
-%   if ($USER->can_change_settings){
+%   if ($USER->can_change_settings && $USER->is_admin){
             <div class="row" ng-show="showmachine.is_base">
                 <div class="col-lg-3 mt-2">
                     <label class="control-label" for="volatile_clones"><%=l 'Volatile Clones' %></label>
@@ -163,6 +166,7 @@
                 </div>
                 <div class="col-lg-2">
                     <input type="checkbox" ng-model="new_autostart" name="autostart"
+                    ng-disabled="<%= !$USER->is_admin %>"
                     ng-true-value="1" ng-false-value="0"
                     ng-change="request('domain_autostart',
                         { 'value': new_autostart
@@ -176,10 +180,11 @@
             </div>
             <div class="row">
                 <div class="col-lg-3 mt-2">
-                    <label class="control-label" for="autostart"><%=l 'Shutdown disconnected' %></label>
+                    <label class="control-label" for="shutdown_disconnected"><%=l 'Shutdown disconnected' %></label>
                 </div>
                 <div class="col-lg-2">
-                    <input type="checkbox" ng-model="new_shutdown_disconnected" name="autostart"
+                    <input type="checkbox" ng-model="new_shutdown_disconnected" name="shutdown_disconnected"
+                    ng-disabled="<%= !$USER->is_admin %>"
                     ng-true-value="1" ng-false-value="0"
                     ng-change="set_bool('shutdown_disconnected',new_shutdown_disconnected)"
                     >

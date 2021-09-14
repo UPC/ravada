@@ -1264,6 +1264,20 @@ sub _set_boot_order($self, $index, $order) {
     $self->domain($new_domain);
 }
 
+sub _get_boot_order($self, $index) {
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
+    my $count = 0;
+    for my $device ($doc->findnodes('/domain/devices/disk')) {
+        if ( $count++ == $index ) {
+            my ($boot) = $device->findnodes('boot');
+            if ($boot) {
+                return $boot->getAttribute('order');
+            }
+            return;
+        }
+    }
+}
+
 sub _cmd_boot_order($self, $set, $index=undef, $order=1) {
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
     my $count = 0;
@@ -1271,24 +1285,53 @@ sub _cmd_boot_order($self, $set, $index=undef, $order=1) {
     # if index is not numeric is the file, search the real index
     $index = $self->_search_volume_index($index) if defined $index && $index !~ /^\d+$/;
 
+    if ( $set ) {
+        my $current_order = $self->_get_boot_order($index);
+        return $doc if defined $current_order && $current_order == $order;
+    }
+
+    my %used_order;
+    my $changed = 0;
     for my $device ($doc->findnodes('/domain/devices/disk')) {
         my ($boot) = $device->findnodes('boot');
         if ( defined $index && $count++ != $index) {
             next if !$set || !$boot;
             my $this_order = $boot->getAttribute('order');
-            next if $this_order < $order;
+            next if !defined $this_order || $this_order < $order;
             $boot->setAttribute( order => $this_order+1);
+            $used_order{$this_order+1}++;
+            $changed++;
             next;
         }
         if (!$set) {
             next if !$boot;
             $device->removeChild($boot);
         } else {
+            my $old_order;
+            $old_order = $boot->getAttribute('order') if $boot;
+            return $doc if defined $old_order && $old_order == $order;
+
             $boot = $device->addNewChild(undef,'boot')  if !$boot;
             $boot->setAttribute( order => $order );
+            $used_order{$order}++;
+            $changed++;
         }
     }
+    $self->_bump_boot_order_interfaces($doc,\%used_order) if $changed;
     return $doc;
+}
+
+sub _bump_boot_order_interfaces($self, $doc, $used_order) {
+    for my $boot ($doc->findnodes('/domain/devices/interface/boot')) {
+        my $current_order = $boot->getAttribute('order');
+        next if !defined $current_order || !$used_order->{$current_order};
+        my $free_order = $current_order;
+        for (;;) {
+            last if !$used_order->{$free_order};
+            $free_order++;
+        }
+        $boot->setAttribute('order' => $free_order);
+    }
 }
 
 sub _search_volume_index($self, $file) {
@@ -2633,11 +2676,11 @@ sub _change_hardware_network($self, $index, $data) {
 
 
 
-sub reload_config($self, $doc) {
+sub _validate_xml($self, $doc) {
     my $in = $doc->toString();
     my ($out, $err);
     run3(["virt-xml-validate","-"],\$in,\$out,\$err);
-    if ($? ){
+    if ( $? ){
         warn $out if $out;
         my $file_out = "/var/tmp/".$self->name().".xml";
         open my $out1,">",$file_out or die $!;
@@ -2652,7 +2695,10 @@ sub reload_config($self, $doc) {
 
         confess "\$?=$? $err\ncheck $file_out" if $?;
     }
+}
 
+sub reload_config($self, $doc) {
+    $self->_validate_xml($doc) if $self->_vm->vm->get_major_version >= 4;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
 }

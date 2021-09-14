@@ -49,7 +49,6 @@ sub _remove_user_ldap($name) {
 
 sub test_user($name, $with_posix_group=0, $password='jameson', $storage=undef, $algorithm=undef) {
     if ( Ravada::Auth::LDAP::search_user($name) ) {
-        diag("Removing $name");
         Ravada::Auth::LDAP::remove_user($name)  
     }
     _remove_user_ldap($name);
@@ -93,6 +92,7 @@ sub test_user($name, $with_posix_group=0, $password='jameson', $storage=undef, $
     eval { $mcnulty->allowed_access(1) };
     is($@,'');
     # try to login
+     diag($name,$password);
     my $mcnulty_login = Ravada::Auth::login($name,$password);
     ok($mcnulty_login,"No login");
     ok(ref $mcnulty_login && ref($mcnulty_login) eq 'Ravada::Auth::LDAP',
@@ -663,6 +663,7 @@ SKIP: {
     test_filter();
     test_filter_gid();
     my $file_config = "t/etc/ravada_ldap.conf";
+    init($file_config);
     for my $with_posix_group (0,1) {
     for my $with_admin (0,1) {
     for my $with_dn_posix_group (0,1) {

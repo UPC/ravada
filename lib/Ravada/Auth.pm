@@ -121,11 +121,11 @@ sub enable_LDAP {
     return $value;
 }
 
-=head2 enable_CAS
+=head2 enable_SSO
 
-Sets or get CAS support.
+Sets or get SSO support.
 
-    Ravada::Auth::enable_CAS(0);
+    Ravada::Auth::enable_SSO(0);
 
     print "SSO is supported" if Ravada::Auth::enable_SSO();
 

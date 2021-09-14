@@ -567,7 +567,7 @@ sub _update_isos {
         ,debian_buster_64=> {
             name =>'Debian Buster 64 bits'
             ,description => 'Debian 10 Buster 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^10\..*\d$/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^10\..*\d$/amd64/iso-cd/'
             ,file_re => 'debian-10.[\d\.]+-amd64-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -577,13 +577,34 @@ sub _update_isos {
         ,debian_buster_32=> {
             name =>'Debian Buster 32 bits'
             ,description => 'Debian 10 Buster 32 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^10\..*\d$/i386/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^10\..*\d$/i386/iso-cd/'
             ,file_re => 'debian-10.[\d\.]+-i386-(netinst|xfce-CD-1).iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
+        ,debian_bullseye_64=> {
+            name =>'Debian Bullseye 64 bits'
+            ,description => 'Debian 11 Bullseye 64 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/amd64/iso-cd/'
+            ,file_re => 'debian-11.[\d\.]+-amd64-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,debian_bullseye_32=> {
+            name =>'Debian Bullseye 32 bits'
+            ,description => 'Debian 10 Bullseye 32 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/i386/iso-cd/'
+            ,file_re => 'debian-11.[\d\.]+-i386-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-i386.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+
         ,kali_64 => {
             name => 'Kali Linux 2020'
             ,description => 'Kali Linux 2020 64 Bits'
@@ -661,9 +682,29 @@ sub _update_isos {
           ,min_disk_size => '0'
         }
     );
-    $self->_scheduled_fedora_releases(\%data);
+    $self->_scheduled_fedora_releases(\%data) if $0 !~ /\.t$/;
     $self->_update_table($table, $field, \%data);
+    $self->_update_table_isos_url(\%data);
 
+}
+
+sub _update_table_isos_url($self, $data) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE name=?");
+    for my $release (sort keys %$data) {
+        my $entry = $data->{$release};
+        $sth->execute($entry->{name});
+        my $row = $sth->fetchrow_hashref();
+        for my $field (keys %$entry) {
+            next if defined $row->{$field} && $row->{$field} eq $entry->{$field};
+            my $sth_update = $CONNECTOR->dbh->prepare(
+                "UPDATE iso_images SET $field=?"
+                ." WHERE id=?"
+            );
+            $sth_update->execute($entry->{$field}, $row->{id});
+            warn("INFO: updating $release $field '".($row->{$field} or '')."' -> '$entry->{$field}'\n")
+            if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+        }
+    }
 }
 
 sub _scheduled_fedora_releases($self,$data) {
@@ -1175,11 +1216,16 @@ sub _add_indexes_generic($self) {
             "unique(id_domain,n_order)"
             ,"unique(id_domain,driver)"
             ,"unique(id_vm,port)"
+            ,"index(id_domain)"
         ]
         ,domain_ports => [
             "unique (id_domain,internal_port):domain_port"
             ,"unique (id_domain,name):name"
             ,"unique(id_vm,public_port)"
+        ]
+        ,group_access => [
+            "unique (id_domain,name)"
+            ,"index(id_domain)"
         ]
         ,requests => [
             "index(status,at_time)"
@@ -1222,17 +1268,23 @@ sub _add_indexes_generic($self) {
         ]
         ,booking_entry_ldap_groups => [
             "index(id_booking_entry,ldap_group)"
+            ,"index(id_booking_entry)"
         ]
         ,booking_entry_users => [
             "index(id_booking_entry,id_user)"
+            ,"index(id_booking_entry)"
+            ,"index(id_user)"
         ]
         ,booking_entry_bases => [
             "index(id_booking_entry,id_base)"
+            ,"index(id_base)"
+            ,"index(id_booking_entry)"
         ]
 
         ,volumes => [
-            'UNIQUE (id_domain,name):id_domain',
-            'UNIQUE (id_domain,n_order):id_domain2'
+            "index(id_domain)"
+            ,'UNIQUE (id_domain,name):id_domain_name'
+            ,'UNIQUE (id_domain,n_order):id_domain2'
         ]
 
         ,vms=> [
@@ -1398,7 +1450,7 @@ sub _add_grants($self) {
     $self->_add_grant('reboot_all', 0,"Can reboot all virtual machines.");
     $self->_add_grant('reboot_clones', 0,"Can reboot clones own virtual machines.");
     $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
-    $self->_add_grant('start_many',0,"Can have more than one machine started.");
+    $self->_add_grant('start_many',0,"Can have an unlimited amount of machines started.");
     $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
     $self->_add_grant('view_groups',0,'Can view groups.');
     $self->_add_grant('manage_groups',0,'Can manage groups.');
@@ -1742,6 +1794,13 @@ sub _sql_create_tables($self) {
             ,extra => 'TEXT'
         }
         ]
+        ,[
+            group_access => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
+            ,name => 'char(80)'
+            }
+        ]
         ,
         [
             host_devices => {
@@ -1804,6 +1863,7 @@ sub _sql_create_tables($self) {
             ,id_owner => 'int not null'
             ,background_color => 'varchar(20)'
             ,date_created => 'datetime DEFAULT CURRENT_TIMESTAMP'
+            ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
         }
         ]
         ,
@@ -1817,6 +1877,7 @@ sub _sql_create_tables($self) {
             ,time_end => 'time not null'
             ,date_booking => 'date'
             ,visibility => "enum ('private','public') default 'public'"
+            ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
         }
         ]
         ,
@@ -1826,6 +1887,7 @@ sub _sql_create_tables($self) {
             ,id_booking_entry
                 => 'int not null references `booking_entries` (`id`) ON DELETE CASCADE'
             ,ldap_group => 'varchar(255) not null'
+            ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
         }
         ]
         ,
@@ -1835,6 +1897,7 @@ sub _sql_create_tables($self) {
             ,id_booking_entry
                 => 'int not null references `booking_entries` (`id`) ON DELETE CASCADE'
             ,id_user => 'int not null references `users` (`id`) ON DELETE CASCADE'
+            ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
         }
         ]
         ,
@@ -1844,6 +1907,7 @@ sub _sql_create_tables($self) {
             ,id_booking_entry
                 => 'int not null references `booking_entries` (`id`) ON DELETE CASCADE'
             ,id_base => 'int not null references `domains` (`id`) ON DELETE CASCADE'
+            ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
         }
         ]
         ,
@@ -2154,8 +2218,8 @@ sub _port_definition($driver, $definition0){
             my ($size) = sort map { length($_) } @found;
             return " varchar($size) $default";
         }
-        if ($definition0 =~ /^timestamp /) {
-            $definition0 =~ s/(timestamp).*/$1/;
+        elsif ($definition0 =~ /^timestamp /) {
+            $definition0 = 'timestamp';
         }
     }
     return $definition0;
@@ -3167,14 +3231,17 @@ sub process_requests {
 
         next if $request_type ne 'all' && $req->type ne $request_type;
 
-        next if $duplicated{$id_request}++;
+        next if $duplicated{"id_req.$id_request"}++;
         next if $req->command !~ /shutdown/i
             && $self->_domain_working($id_domain, $id_request);
 
         my $domain = '';
         $domain = $id_domain if $id_domain;
         $domain .= ($req->defined_arg('name') or '');
-        next if $duplicated{$req->command.":$domain"}++;
+        next if $domain && $duplicated{$domain};
+        my $id_base = $req->defined_arg('id_base');
+        next if $id_base && $duplicated{$id_base};
+        $duplicated{"domain.$domain"}++;
         push @reqs,($req);
     }
     $sth->finish;
@@ -3337,6 +3404,7 @@ sub _kill_stale_process($self) {
         ." WHERE start_time<? "
         ." AND ( command = 'refresh_vms' or command = 'screenshot' or command = 'set_time' "
         ."      OR command = 'open_exposed_ports' OR command='remove' "
+        ."      OR command = 'refresh_machine_ports'"
         .") "
         ." AND status <> 'done' "
         ." AND start_time IS NOT NULL "
@@ -4235,6 +4303,9 @@ sub _cmd_remove_hardware {
     my $domain = $self->search_domain_by_id($id_domain);
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
+    die "Error: User ".$user->name." not allowed to remove hardware from machine "
+    .$domain->name
+        if !$user->is_admin;
 
     $domain->remove_controller($hardware, $index);
 }
@@ -4252,7 +4323,7 @@ sub _cmd_change_hardware {
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
     die "Error: User ".$user->name." not allowed\n"
-        if !$user->is_admin;
+        if $hardware ne 'memory' && !$user->is_admin;
 
     $domain->change_hardware(
          $request->args('hardware')
@@ -4521,7 +4592,8 @@ sub _cmd_refresh_machine($self, $request) {
     $domain->info($user);
     $domain->client_status(1) if $is_active;
 
-    Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id)
+    Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id
+        ,timeout => 60, retry => 20)
     if $is_active && $domain->ip;
 
     $domain->_unlock_host_devices() if !$is_active;
@@ -4922,7 +4994,11 @@ sub _check_duplicated_iptable($self, $request = undef ) {
                 my $rule = join(" ", map { $_." ".$args{$_} }  sort keys %args);
 
                 if ($dupe{$rule}) {
-                    warn "clean duplicated iptables rule ".Dumper($line);
+                    my %args2;
+                    while (my ($key, $value) = each %args) {
+                        $args2{"-$key"} = $value;
+                    }
+                    warn "clean duplicated iptables rule ".join(" ",%args2)."\n";
                     $self->_delete_iptables_rule($vm,'filter', \%args);
                 }
                 $dupe{$rule}++;
@@ -5530,7 +5606,7 @@ sub _cmd_open_exposed_ports($self, $request) {
     Ravada::Request->refresh_machine_ports(
         uid => $request->args('uid'),
         ,id_domain => $domain->id
-        ,retry => 10
+        ,retry => 100
     );
 
 }

@@ -189,6 +189,22 @@ sub test_login_fail {
 
     $t->get_ok("/admin/machines")->status_is(401);
     like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
+
+    $t->get_ok("/admin/users")->status_is(401);
+    like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
+}
+
+sub test_copy_without_prepare($clone) {
+    is ($clone->is_base,0) or die "Clone ".$clone->name." is supposed to be non-base";
+
+    my $n_clones = 3;
+    mojo_request($t, "clone", { id_domain => $clone->id, number => $n_clones });
+    wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+
+    my @clones = $clone->clones();
+    is(scalar @clones, $n_clones) or exit;
+
+    remove_machines($clone);
 }
 
 sub test_validate_html($url) {
@@ -324,6 +340,7 @@ sub _clone_and_base($vm_name, $t, $base0) {
     my $base1 = $base0;
     if ($vm_name eq 'KVM') {
         my $base = rvd_front->search_domain($BASE_NAME);
+        die "Error: test base $BASE_NAME not found" if !$base;
         my $name = new_domain_name()."-".$vm_name."-$$";
         mojo_request_url_post($t,"/machine/copy",{id_base => $base->id, new_name => $name, copy_ram => 0.128, copy_number => 1});
         $base1 = rvd_front->search_domain($name);

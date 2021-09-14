@@ -2,6 +2,16 @@
 <button
     class="btn"
     ng-class="{
+             'btn btn-primary': tab_access == 'group'
+             ,'btn': tab_access !== 'group'
+    }"
+    ng-model="tab_access_group"
+    ng-click="tab_access='group'">Group</button>
+
+
+<button
+    class="btn"
+    ng-class="{
              'btn btn-primary': tab_access == 'client'
              ,'btn': tab_access !== 'client'
     }"
@@ -16,6 +26,10 @@
     }"
     ng-model="tab_access_ldap"
     ng-click="tab_access='ldap'">LDAP</button>
+</div>
+
+<div ng-show="tab_access=='group'">
+    %= include "main/machine_access_group"
 </div>
 
 <div ng-show="tab_access=='ldap'">
