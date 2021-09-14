@@ -860,7 +860,8 @@ sub _remove_old_disks_void_remote($node) {
     return if !$node->ping(undef,0);
 
     my $cmd = "rm -rfv ".$node->dir_img."/".base_domain_name().'_*';
-    $node->run_command($cmd);
+    eval { $node->run_command($cmd); };
+    die $@ if $@ && $@ !~ /Error connecting/i;
 }
 
 sub _remove_old_disks_void_local {
@@ -1369,16 +1370,22 @@ sub remove_old_user_ldap {
 
 sub _remove_old_groups_ldap() {
     my $ldap;
-    eval { $ldap = Ravada::Auth::LDAP::_init_ldap_admin() if !$ldap };
+    eval { $ldap = Ravada::Auth::LDAP::_init_ldap_admin() };
     return if $@ && $@ =~ /Missing ldap section/;
     warn $@ if $@;
     return if !$ldap;
 
     my $name = base_domain_name();
-    for my $group ( Ravada::Auth::LDAP::search_group( name => "group_$name".'*')
-    ,Ravada::Auth::LDAP::search_group( name => $name.'*')
-) {
+    my @groups;
+    eval {
+    push @groups,(Ravada::Auth::LDAP::search_group( name => "group_$name".'*', ldap => $ldap));
+    push @groups,( Ravada::Auth::LDAP::search_group( name => $name.'*', ldap => $ldap) );
+    };
+    return if $@ && $@ =~ /Error.*can't connect/i;
+    die $@ if $@;
+    for my $group ( @groups ) {
         next if !$group;
+        warn $group->dn;
         for my $n ( 1 .. 3 ) {
             my $mesg = $ldap->delete($group);
             last if !$mesg->code;

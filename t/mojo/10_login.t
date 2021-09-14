@@ -191,7 +191,7 @@ sub test_login_fail {
     like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
 
     $t->get_ok("/admin/users")->status_is(401);
-    is($t->tx->res->dom->at("button#submit")->text,'Login') or exit;
+    like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
 }
 
 sub test_copy_without_prepare($clone) {

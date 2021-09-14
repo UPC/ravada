@@ -42,7 +42,8 @@ sub test_remove_domain {
     my $vm = shift;
     my $name = shift;
 
-    my $domain = $name if ref($name);
+    my $domain;
+    $domain = $name if ref($name);
     $domain = $vm->search_domain($name,1);
 
     if ($domain) {
