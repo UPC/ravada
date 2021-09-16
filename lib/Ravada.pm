@@ -3538,10 +3538,32 @@ sub _set_domain_changed($self, $request) {
     }
     return if !defined $id_domain;
 
+    my $sth_date = $CONNECTOR->dbh->prepare("SELECT date_changed FROM domains WHERE id=?");
+    $sth_date->execute($id_domain);
+    my ($date) = $sth_date->fetchrow();
+
     my $sth = $CONNECTOR->dbh->prepare("UPDATE domains set date_changed=CURRENT_TIMESTAMP"
         ." WHERE id=? ");
     $sth->execute($id_domain);
 
+    $sth_date->execute($id_domain);
+    my ($date2) = $sth_date->fetchrow();
+
+    if (defined $date && defined $date2 && $date2 eq $date) {
+        my ($n) = $date2 =~ /.*(\d\d)$/;
+        if (!defined $n) {
+            sleep 1;
+            $sth->execute($id_domain);
+        } else {
+            $n++;
+            $n=00 if $n>59;
+            $n = "0$n" if length($n)<2;
+            $date2 =~ s/(.*)(\d\d)$/$1$n/;
+            my $sth2 = $CONNECTOR->dbh->prepare("UPDATE domains set date_changed=?"
+                ." WHERE id=? ");
+            $sth2->execute($date2,$id_domain);
+        }
+    }
 }
 
 sub _cmd_manage_pools($self, $request) {

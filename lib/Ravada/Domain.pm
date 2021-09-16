@@ -2374,6 +2374,7 @@ sub is_locked {
         ."   AND command <> 'refresh_machine'"
         ."   AND command <> 'refresh_machine_ports'"
         ."   AND command <> 'screenshot'"
+        ."   AND command <> 'add_hardware'"
     );
     $sth->execute($self->id);
     my ($id, $at_time) = $sth->fetchrow;
