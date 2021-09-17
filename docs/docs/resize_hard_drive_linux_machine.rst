@@ -47,7 +47,7 @@ Connect the disk volume as a device
 .. prompt:: bash root@telecos:/var/lib/libvirt/images#
 
   modprobe nbd
-  qemu-nbd -c /dev/nbd1 /var/lib/libvirt/images/WindowsE10-hda.qcow2
+  qemu-nbd -c /dev/nbd1 /var/lib/libvirt/images/linux-user-vda.qcow2
 
 Now the volume appears as an nbd device in the host system. You can use fdisk and other
 tools to change the partitions.
@@ -73,8 +73,8 @@ First let's check what are the partitions with *fdisk*:
   Disk identifier: 0x88e082d8
   
   Device      Boot   Start      End  Sectors  Size Id Type
-  /dev/nbd1p1 *       2048  1126399  1124352  549M  7 HPFS/NTFS/exFAT
-  /dev/nbd1p2      1126400 62912511 61786112 29,5G  7 HPFS/NTFS/exFAT
+  /dev/nbd1p1 *       2048   1050623 1048576  512M  b W95 FAT32
+  /dev/nbd1p2         2048  1126399  1124352   10G 83 Linux
   
 
 The partition we want to change is the second one (nbd1p2). From fdisk:
