@@ -60,11 +60,11 @@ First let's check what are the partitions with *fdisk*:
 .. prompt:: bash root@telecos:/var/lib/libvirt/images#
 
   fdisk /dev/nbd1
-  p
 
 
 ::
 
+  p
   Disk /dev/nbd1: 110 GiB, 118111600640 bytes, 230686720 sectors
   Units: sectors of 1 * 512 = 512 bytes
   Sector size (logical/physical): 512 bytes / 512 bytes
@@ -121,8 +121,8 @@ Fix it first in the host:
 
 .. prompt:: bash #
 
-  resize2fs /dev/nbd1p2
   e2fsck /dev/nbd1p2
+  resize2fs /dev/nbd1p2
 
 
 Start
