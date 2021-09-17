@@ -4,7 +4,7 @@ How to extend a Ravada Linux guest's disk space
 Extending a Linux disk drive in a virtual machine is a straightforward
 process. Follow this guide carefully.
 
-The process requires execute a hardware change in the Ravada frontend and
+The process requires a change in the Ravada frontend and
 then use the command line in the host to resize the partition.
 
 Shutdown
@@ -38,13 +38,12 @@ server console and go to the images directory:
 .. prompt:: bash
 
   sudo bash
-  cd /var/lib/libvirt/images
 
 
 Connect the disk volume as a device
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. prompt:: bash root@telecos:/var/lib/libvirt/images#
+.. prompt:: bash root@telecos:~#
 
   modprobe nbd
   qemu-nbd -c /dev/nbd1 /var/lib/libvirt/images/linux-user-vda.qcow2
@@ -57,7 +56,7 @@ Remove and create the partition
 
 First let's check what are the partitions with *fdisk*:
 
-.. prompt:: bash root@telecos:/var/lib/libvirt/images#
+.. prompt:: bash root@telecos:~#
 
   fdisk /dev/nbd1
 
@@ -135,6 +134,7 @@ Disconnect the nbd and start the virtual machine.
   qemu-nbd -d /dev/nbd1
   rmmod nbd
 
+Start the virtual machine from the Ravada frontend as usual.
 
 Check the new size
 ------------------
