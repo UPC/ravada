@@ -701,25 +701,6 @@ sub _update_table_isos_url($self, $data) {
                 ." WHERE id=?"
             );
             $sth_update->execute($entry->{$field}, $row->{id});
-            warn("INFO: updating $release $field '$row->{$field}' -> '$entry->{$field}'\n")
-            if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
-        }
-    }
-}
-
-sub _update_table_isos_url($self, $data) {
-    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE name=?");
-    for my $release (sort keys %$data) {
-        my $entry = $data->{$release};
-        $sth->execute($entry->{name});
-        my $row = $sth->fetchrow_hashref();
-        for my $field (keys %$entry) {
-            next if defined $row->{$field} && $row->{$field} eq $entry->{$field};
-            my $sth_update = $CONNECTOR->dbh->prepare(
-                "UPDATE iso_images SET $field=?"
-                ." WHERE id=?"
-            );
-            $sth_update->execute($entry->{$field}, $row->{id});
             warn("INFO: updating $release $field '".($row->{$field} or '')."' -> '$entry->{$field}'\n")
             if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         }
@@ -3177,14 +3158,17 @@ sub process_requests {
 
         next if $request_type ne 'all' && $req->type ne $request_type;
 
-        next if $duplicated{$id_request}++;
+        next if $duplicated{"id_req.$id_request"}++;
         next if $req->command !~ /shutdown/i
             && $self->_domain_working($id_domain, $id_request);
 
         my $domain = '';
         $domain = $id_domain if $id_domain;
         $domain .= ($req->defined_arg('name') or '');
-        next if $duplicated{$domain}++;
+        next if $domain && $duplicated{$domain};
+        my $id_base = $req->defined_arg('id_base');
+        next if $id_base && $duplicated{$id_base};
+        $duplicated{"domain.$domain"}++;
         push @reqs,($req);
     }
     $sth->finish;
@@ -3347,6 +3331,7 @@ sub _kill_stale_process($self) {
         ." WHERE start_time<? "
         ." AND ( command = 'refresh_vms' or command = 'screenshot' or command = 'set_time' "
         ."      OR command = 'open_exposed_ports' OR command='remove' "
+        ."      OR command = 'refresh_machine_ports'"
         .") "
         ." AND status <> 'done' "
         ." AND start_time IS NOT NULL "
@@ -4510,7 +4495,7 @@ sub _cmd_refresh_machine($self, $request) {
     $domain->client_status(1) if $is_active;
 
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id
-        ,retry => 20)
+        ,timeout => 60, retry => 20)
     if $is_active && $domain->ip;
 }
 

@@ -878,10 +878,12 @@ sub grant($self,$user,$permission,$value=1) {
             .Dumper(\@perms);
     }
 
-    if ( $value eq 'false' || !$value ) {
-        $value = 0;
-    } else {
-        $value = 1;
+    if ( $self->grant_type($permission) eq 'boolean' ) {
+        if ($value eq 'false' || !$value ) {
+            $value = 0;
+        } else {
+            $value = 1;
+        }
     }
 
     return 0 if !$value && !$user->can_do($permission);
@@ -955,6 +957,7 @@ sub list_all_permissions($self) {
 }
 
 sub grant_type($self, $permission) {
+    return 'boolean' if !exists $self->{_grant_type}->{$permission};
     return $self->{_grant_type}->{$permission};
 }
 
