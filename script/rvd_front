@@ -151,10 +151,10 @@ hook before_routes => sub {
   my $host = $c->req->url->to_abs->host;
   $c->stash(css=>['/css/sb-admin.css']
             ,js_mod=>[ ## angular modules
-                  '/js/booking/booking.module.js'
+                  '/js/booking/booking.module.js?v='.$RAVADA->version
                 ]
             ,js=>[
-                '/js/ravada.js'
+                '/js/ravada.js?v='.$RAVADA->version
                 ]
             ,csssnippets => []
             ,navbar_custom => 0
@@ -310,8 +310,7 @@ get '/admin/group/#name' => sub($c) {
     return access_denied($c)    unless $USER->can_manage_groups
         || $USER->can_view_groups;
 
-    push @{$c->stash->{css}}, '/css/admin.css';
-    push @{$c->stash->{js}}, '/js/admin.js';
+    _add_admin_libs($c);
 
     my $group = Ravada::Auth::LDAP::search_group(name => $c->stash('name'));
     return $c->render( text => "Error: group ".$c->stash('name')." not found."
@@ -384,9 +383,13 @@ get '/network/list_domains/#id' => sub($c) {
     return $c->render( json => $RAVADA->list_bases_network($c->stash('id')));
 };
 
-any '/network/new' => sub($c) {
+sub _add_admin_libs($c) {
+    push @{$c->stash->{js}}, '/js/admin.js?v='.$RAVADA->version;
     push @{$c->stash->{css}}, '/css/admin.css';
-    push @{$c->stash->{js}}, '/js/admin.js';
+}
+
+any '/network/new' => sub($c) {
+    _add_admin_libs($c);
     return $c->render(template => "/main/network_new");
 };
 
@@ -668,8 +671,7 @@ any '/machine/manage/(:id).(:type)' => sub {
 
 any '/(:item)/settings/(:id).html' => sub($c) {
 
-    push @{$c->stash->{css}}, '/css/admin.css';
-    push @{$c->stash->{js}}, '/js/admin.js';
+    _add_admin_libs($c);
 
     return $c->render( template => '/main/settings_generic' );
 };
@@ -1111,7 +1113,7 @@ any '/admin/user/(#id).(:type)' => sub {
     my $c = shift;
     return access_denied($c) unless $USER->can_manage_users() && $USER->can_grant();
 
-    push @{$c->stash->{js}}, '/js/admin.js';
+    _add_admin_libs($c);
     my $id = $c->stash('id');
     my $user;
     if ($id =~ /cn=(.*?),/) {
@@ -1138,7 +1140,6 @@ any '/admin/user/(#id).(:type)' => sub {
         }
     }
 
-    push @{$c->stash->{js}}, '/js/admin.js';
     $c->stash(user => $user);
     return $c->render(template => 'main/manage_user');
 };
@@ -2239,7 +2240,7 @@ sub login($c, $status=200) {
                     template => ($CONFIG_FRONT->{login_custom} or 'main/start')
                         ,css => ['/css/main.css']
                         ,csssnippets => @css_snippets
-                        ,js => ['/js/main.js']
+                        ,js => ['/js/main.js?v='.$RAVADA->version]
                         ,navbar_custom => 1
                       ,login => $login
                       ,error => \@error
@@ -2370,8 +2371,7 @@ sub admin {
     my $page = $c->stash('type');
     my @error = ();
 
-    push @{$c->stash->{css}}, '/css/admin.css';
-    push @{$c->stash->{js}}, '/js/admin.js';
+    _add_admin_libs($c);
 
     if ($page =~ m/group/) {
         return access_denied($c)    unless $USER->is_admin || $USER->can_manage_users
@@ -2438,7 +2438,7 @@ sub new_machine {
         # TODO handle possible errors
     }
     $c->stash(errors => \@error);
-    push @{$c->stash->{js}}, '/js/admin.js';
+    _add_admin_libs($c);
     my %valid_vm = map { $_ => 1 } @{$RAVADA->list_vm_types};
     $c->render(template => 'main/new_machine'
         , name => $c->param('name')
@@ -2449,8 +2449,7 @@ sub new_machine {
 sub new_node {
     my $c = shift;
 
-    push @{$c->stash->{css}}, '/css/admin.css';
-    push @{$c->stash->{js}}, '/js/admin.js';
+    _add_admin_libs($c);
 
     if ($c->param('_submit')) {
         $c->req->params->remove('_submit');
