@@ -567,7 +567,7 @@ sub _update_isos {
         ,debian_buster_64=> {
             name =>'Debian Buster 64 bits'
             ,description => 'Debian 10 Buster 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^10\..*\d$/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^10\..*\d$/amd64/iso-cd/'
             ,file_re => 'debian-10.[\d\.]+-amd64-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -577,13 +577,34 @@ sub _update_isos {
         ,debian_buster_32=> {
             name =>'Debian Buster 32 bits'
             ,description => 'Debian 10 Buster 32 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^10\..*\d$/i386/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^10\..*\d$/i386/iso-cd/'
             ,file_re => 'debian-10.[\d\.]+-i386-(netinst|xfce-CD-1).iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
+        ,debian_bullseye_64=> {
+            name =>'Debian Bullseye 64 bits'
+            ,description => 'Debian 11 Bullseye 64 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/amd64/iso-cd/'
+            ,file_re => 'debian-11.[\d\.]+-amd64-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,debian_bullseye_32=> {
+            name =>'Debian Bullseye 32 bits'
+            ,description => 'Debian 10 Bullseye 32 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/i386/iso-cd/'
+            ,file_re => 'debian-11.[\d\.]+-i386-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-i386.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+
         ,kali_64 => {
             name => 'Kali Linux 2020'
             ,description => 'Kali Linux 2020 64 Bits'
@@ -663,7 +684,27 @@ sub _update_isos {
     );
     $self->_scheduled_fedora_releases(\%data) if $0 !~ /\.t$/;
     $self->_update_table($table, $field, \%data);
+    $self->_update_table_isos_url(\%data);
 
+}
+
+sub _update_table_isos_url($self, $data) {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE name=?");
+    for my $release (sort keys %$data) {
+        my $entry = $data->{$release};
+        $sth->execute($entry->{name});
+        my $row = $sth->fetchrow_hashref();
+        for my $field (keys %$entry) {
+            next if defined $row->{$field} && $row->{$field} eq $entry->{$field};
+            my $sth_update = $CONNECTOR->dbh->prepare(
+                "UPDATE iso_images SET $field=?"
+                ." WHERE id=?"
+            );
+            $sth_update->execute($entry->{$field}, $row->{id});
+            warn("INFO: updating $release $field '".($row->{$field} or '')."' -> '$entry->{$field}'\n")
+            if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+        }
+    }
 }
 
 sub _scheduled_fedora_releases($self,$data) {
@@ -1175,6 +1216,7 @@ sub _add_indexes_generic($self) {
             "unique(id_domain,n_order)"
             ,"unique(id_domain,driver)"
             ,"unique(id_vm,port)"
+            ,"index(id_domain)"
         ]
         ,domain_ports => [
             "unique (id_domain,internal_port):domain_port"
@@ -1183,6 +1225,7 @@ sub _add_indexes_generic($self) {
         ]
         ,group_access => [
             "unique (id_domain,name)"
+            ,"index(id_domain)"
         ]
         ,requests => [
             "index(status,at_time)"
@@ -1213,17 +1256,23 @@ sub _add_indexes_generic($self) {
         ]
         ,booking_entry_ldap_groups => [
             "index(id_booking_entry,ldap_group)"
+            ,"index(id_booking_entry)"
         ]
         ,booking_entry_users => [
             "index(id_booking_entry,id_user)"
+            ,"index(id_booking_entry)"
+            ,"index(id_user)"
         ]
         ,booking_entry_bases => [
             "index(id_booking_entry,id_base)"
+            ,"index(id_base)"
+            ,"index(id_booking_entry)"
         ]
 
         ,volumes => [
-            'UNIQUE (id_domain,name):id_domain',
-            'UNIQUE (id_domain,n_order):id_domain2'
+            "index(id_domain)"
+            ,'UNIQUE (id_domain,name):id_domain_name'
+            ,'UNIQUE (id_domain,n_order):id_domain2'
         ]
 
         ,vms=> [
@@ -3109,14 +3158,17 @@ sub process_requests {
 
         next if $request_type ne 'all' && $req->type ne $request_type;
 
-        next if $duplicated{$id_request}++;
+        next if $duplicated{"id_req.$id_request"}++;
         next if $req->command !~ /shutdown/i
             && $self->_domain_working($id_domain, $id_request);
 
         my $domain = '';
         $domain = $id_domain if $id_domain;
         $domain .= ($req->defined_arg('name') or '');
-        next if $duplicated{$req->command.":$domain"}++;
+        next if $domain && $duplicated{$domain};
+        my $id_base = $req->defined_arg('id_base');
+        next if $id_base && $duplicated{$id_base};
+        $duplicated{"domain.$domain"}++;
         push @reqs,($req);
     }
     $sth->finish;
@@ -3279,6 +3331,7 @@ sub _kill_stale_process($self) {
         ." WHERE start_time<? "
         ." AND ( command = 'refresh_vms' or command = 'screenshot' or command = 'set_time' "
         ."      OR command = 'open_exposed_ports' OR command='remove' "
+        ."      OR command = 'refresh_machine_ports'"
         .") "
         ." AND status <> 'done' "
         ." AND start_time IS NOT NULL "
@@ -4442,7 +4495,7 @@ sub _cmd_refresh_machine($self, $request) {
     $domain->client_status(1) if $is_active;
 
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id
-        ,retry => 20)
+        ,timeout => 60, retry => 20)
     if $is_active && $domain->ip;
 }
 
@@ -4841,7 +4894,11 @@ sub _check_duplicated_iptable($self, $request = undef ) {
                 my $rule = join(" ", map { $_." ".$args{$_} }  sort keys %args);
 
                 if ($dupe{$rule}) {
-                    warn "clean duplicated iptables rule ".Dumper($line);
+                    my %args2;
+                    while (my ($key, $value) = each %args) {
+                        $args2{"-$key"} = $value;
+                    }
+                    warn "clean duplicated iptables rule ".join(" ",%args2)."\n";
                     $self->_delete_iptables_rule($vm,'filter', \%args);
                 }
                 $dupe{$rule}++;

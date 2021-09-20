@@ -5,8 +5,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2021-04-29 04:32+0000\n"
-"Last-Translator: Bigtree zhang <xiaohua1021@gmail.com>\n"
+"PO-Revision-Date: 2021-07-28 01:36+0000\n"
+"Last-Translator: HadesLam <171643690@qq.com>\n"
 "Language-Team: Chinese (Simplified) <https://hosted.weblate.org/projects/"
 "ravada/translation/zh_Hans/>\n"
 "Language: zh_CN\n"
@@ -14,7 +14,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Weblate 4.7-dev\n"
+"X-Generator: Weblate 4.7.2-dev\n"
 
 msgid "Ravada broker"
 msgstr "Ravada 连接器"
@@ -886,3 +886,24 @@ msgstr "新节点"
 
 msgid "Clones"
 msgstr "克隆"
+
+msgid "The machine will turn off after this time"
+msgstr "虚拟机这次将自动关闭"
+
+msgid "up"
+msgstr "运行"
+
+msgid "Open ports"
+msgstr "开放端口"
+
+msgid "Hardware address"
+msgstr "硬件地址"
+
+msgid "Waiting for network to come up"
+msgstr "正在等待网络启动"
+
+msgid "This machine will shut down"
+msgstr "虚拟机正在关闭"
+
+msgid "Waiting for machine to start"
+msgstr "等待虚拟机启动"
