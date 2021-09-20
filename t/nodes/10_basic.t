@@ -1529,11 +1529,11 @@ sub test_displays($vm, $node, $no_builtin=0) {
     like($req->error,qr{^($|rsync done)}) or exit;
 
     $domain = Ravada::Domain->open($domain->id);
-    my @displays1 = $domain->display_info(user_admin);
+    my @displays1 = grep {!$_->{is_secondary} } $domain->display_info(user_admin);
     is(scalar(@displays1),1,Dumper(\@displays1));
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
-    my @displays_f = $domain_f->display_info(user_admin);
+    my @displays_f = grep {!$_->{is_secondary} } $domain_f->display_info(user_admin);
     is(scalar(@displays_f),$n_displays-1,Dumper(\@displays_f));
 
     $domain->remove(user_admin);

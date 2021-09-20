@@ -1447,17 +1447,18 @@ sub _add_grants($self) {
 
 sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, description FROM grant_types WHERE name=?"
+        "SELECT id, description,is_int FROM grant_types WHERE name=?"
     );
     $sth->execute($grant);
-    my ($id, $current_description) = $sth->fetchrow();
+    my ($id, $current_description, $current_int) = $sth->fetchrow();
     $sth->finish;
+    $current_int = 0 if !$current_int;
 
-    if ($id && $current_description ne $description) {
+    if ($id && ( $current_description ne $description || $current_int != $is_int) ) {
         my $sth = $CONNECTOR->dbh->prepare(
-            "UPDATE grant_types SET description = ? WHERE id = ?;"
+            "UPDATE grant_types SET description = ?,is_int=? WHERE id = ?;"
         );
-        $sth->execute($description, $id);
+        $sth->execute($description, $is_int, $id);
         $sth->finish;
     }
     return if $id;
