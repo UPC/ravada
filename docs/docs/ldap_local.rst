@@ -64,6 +64,13 @@ The config file usually is /etc/ravada.conf. Add this configuration:
             password: 12345678
         base: 'dc=example,dc=com'
 
+Then restart the services:
+
+.. prompt:: bash
+
+    sudo systemctl restart rvd_back
+    sudo systemctl restart rvd_front
+
 Insert one test user
 --------------------
 
