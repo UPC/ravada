@@ -307,7 +307,7 @@ msgid "Password"
 msgstr "Contrasenya"
 
 msgid "Start session"
-msgstr "Inicieu la Sessió\n"
+msgstr "Inicieu la Sessió"
 
 msgid "bits) in your computer."
 msgstr "bits) al teu ordinador."
@@ -972,3 +972,10 @@ msgstr "Esperant que surti la xarxa"
 
 msgid "Press SHIFT + F12 to exit"
 msgstr "Premeu SHIFT + F12 per sortir"
+
+msgid "Permission granted to user"
+msgstr "Permís concedit a l'usuari"
+
+msgid "Permission revoked from user"
+msgstr "Permís denegat a l'usuari"
+

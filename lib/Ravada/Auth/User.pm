@@ -176,6 +176,7 @@ sub send_message($self, $subject, $message='') {
         "INSERT INTO messages (id_user, subject, message) "
         ." VALUES(?, ? , ? )");
 
+    $subject = substr($subject,0,120) if length($subject)>120;
     $sth->execute($self->id, $subject, $message);
 }
 

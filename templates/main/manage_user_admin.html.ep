@@ -1,12 +1,12 @@
 <div class="card">
     <div class="card-body">
-        <form method="post" action="/admin/user/<%= $user->id %>.html">
-        %   my $checked = '';
-        %   $checked = 'checked' if $user->is_admin;
-            <input type="checkbox" name="is_admin" value="1" <%= $checked %>>
+        <i ng-show="!user" class="fas fa-sync-alt fa-spin"></i>
+        <form ng-show="user">
+            <input type="checkbox" name="is_admin"
+                ng-click="change_user({ 'is_admin': !user.is_admin})"
+                ng-model="user.is_admin"
+            />
             <label for="is_admin"><%=l 'is admin' %></label><br/>
-            <button type="reset" class="btn btn-outline-secondary" onclick = "location='/admin/users'"><%=l 'Cancel' %></button>
-            <input type="submit" class="btn btn-primary" name="make_admin" value="<%=l 'Submit' %>">
         </form>
     </div>
 </div>

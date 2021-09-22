@@ -1216,6 +1216,7 @@ sub _add_indexes_generic($self) {
             "unique(id_domain,n_order)"
             ,"unique(id_domain,driver)"
             ,"unique(id_vm,port)"
+            ,"index(id_domain)"
         ]
         ,domain_ports => [
             "unique (id_domain,internal_port):domain_port"
@@ -1224,6 +1225,7 @@ sub _add_indexes_generic($self) {
         ]
         ,group_access => [
             "unique (id_domain,name)"
+            ,"index(id_domain)"
         ]
         ,requests => [
             "index(status,at_time)"
@@ -1254,17 +1256,23 @@ sub _add_indexes_generic($self) {
         ]
         ,booking_entry_ldap_groups => [
             "index(id_booking_entry,ldap_group)"
+            ,"index(id_booking_entry)"
         ]
         ,booking_entry_users => [
             "index(id_booking_entry,id_user)"
+            ,"index(id_booking_entry)"
+            ,"index(id_user)"
         ]
         ,booking_entry_bases => [
             "index(id_booking_entry,id_base)"
+            ,"index(id_base)"
+            ,"index(id_booking_entry)"
         ]
 
         ,volumes => [
-            'UNIQUE (id_domain,name):id_domain',
-            'UNIQUE (id_domain,n_order):id_domain2'
+            "index(id_domain)"
+            ,'UNIQUE (id_domain,name):id_domain_name'
+            ,'UNIQUE (id_domain,n_order):id_domain2'
         ]
 
         ,vms=> [
@@ -1430,7 +1438,7 @@ sub _add_grants($self) {
     $self->_add_grant('reboot_all', 0,"Can reboot all virtual machines.");
     $self->_add_grant('reboot_clones', 0,"Can reboot clones own virtual machines.");
     $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
-    $self->_add_grant('start_many',0,"Can have more than one machine started.");
+    $self->_add_grant('start_many',0,"Can have an unlimited amount of machines started.");
     $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
     $self->_add_grant('view_groups',0,'Can view groups.');
     $self->_add_grant('manage_groups',0,'Can manage groups.');
@@ -1439,17 +1447,18 @@ sub _add_grants($self) {
 
 sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, description FROM grant_types WHERE name=?"
+        "SELECT id, description,is_int FROM grant_types WHERE name=?"
     );
     $sth->execute($grant);
-    my ($id, $current_description) = $sth->fetchrow();
+    my ($id, $current_description, $current_int) = $sth->fetchrow();
     $sth->finish;
+    $current_int = 0 if !$current_int;
 
-    if ($id && $current_description ne $description) {
+    if ($id && ( $current_description ne $description || $current_int != $is_int) ) {
         my $sth = $CONNECTOR->dbh->prepare(
-            "UPDATE grant_types SET description = ? WHERE id = ?;"
+            "UPDATE grant_types SET description = ?,is_int=? WHERE id = ?;"
         );
-        $sth->execute($description, $id);
+        $sth->execute($description, $is_int, $id);
         $sth->finish;
     }
     return if $id;
@@ -3150,14 +3159,17 @@ sub process_requests {
 
         next if $request_type ne 'all' && $req->type ne $request_type;
 
-        next if $duplicated{$id_request}++;
+        next if $duplicated{"id_req.$id_request"}++;
         next if $req->command !~ /shutdown/i
             && $self->_domain_working($id_domain, $id_request);
 
         my $domain = '';
         $domain = $id_domain if $id_domain;
         $domain .= ($req->defined_arg('name') or '');
-        next if $duplicated{$req->command.":$domain"}++;
+        next if $domain && $duplicated{$domain};
+        my $id_base = $req->defined_arg('id_base');
+        next if $id_base && $duplicated{$id_base};
+        $duplicated{"domain.$domain"}++;
         push @reqs,($req);
     }
     $sth->finish;
@@ -3320,6 +3332,7 @@ sub _kill_stale_process($self) {
         ." WHERE start_time<? "
         ." AND ( command = 'refresh_vms' or command = 'screenshot' or command = 'set_time' "
         ."      OR command = 'open_exposed_ports' OR command='remove' "
+        ."      OR command = 'refresh_machine_ports'"
         .") "
         ." AND status <> 'done' "
         ." AND start_time IS NOT NULL "
@@ -4483,7 +4496,7 @@ sub _cmd_refresh_machine($self, $request) {
     $domain->client_status(1) if $is_active;
 
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id
-        ,retry => 20)
+        ,timeout => 60, retry => 20)
     if $is_active && $domain->ip;
 }
 
@@ -4882,7 +4895,11 @@ sub _check_duplicated_iptable($self, $request = undef ) {
                 my $rule = join(" ", map { $_." ".$args{$_} }  sort keys %args);
 
                 if ($dupe{$rule}) {
-                    warn "clean duplicated iptables rule ".Dumper($line);
+                    my %args2;
+                    while (my ($key, $value) = each %args) {
+                        $args2{"-$key"} = $value;
+                    }
+                    warn "clean duplicated iptables rule ".join(" ",%args2)."\n";
                     $self->_delete_iptables_rule($vm,'filter', \%args);
                 }
                 $dupe{$rule}++;
