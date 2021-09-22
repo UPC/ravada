@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html ng-app="ravada.app">
-%= include 'bootstrap/header'
+<html>
+%= include 'bootstrap/vue/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
     <div id="wrapper">
-%= include 'bootstrap/navigation'
+%= include 'bootstrap/vue/navigation'
         <div id="page-wrapper">
             <div>
                 <div class="page-title">
@@ -20,7 +20,7 @@
                         <ul>
                             <li><%=l 'It is programmed in' %>&nbsp;<a href="https://www.perl.org/">Perl</a>,</li>
                             <li><%=l 'with perl framework' %>&nbsp;<a href="http://www.mojolicious.org/">Mojolicious</a> v<%= $Mojolicious::VERSION %>,</li>
-                            <li><%=l 'and' %> HTML, CSS, <%=l 'and' %> JS framework <a href="http://getbootstrap.com/">Bootstrap</a></li>
+                            <li><%=l 'and' %> HTML, CSS, <%=l 'and' %> JS framework <a href="http://getbootstrap.com/">Bootstrap</a> and <a href="https://vuejs.org">Vue.js</a></li>
                         </ul>
                         <span><%=l 'The code is available on ' %> <a href="https://github.com/UPC/Ravada">Github</a>.</span>
                         <h3><%=l 'License' %></h3>
@@ -30,7 +30,7 @@
             </div>
         </div>
     </div>
-%= include 'bootstrap/scripts'
 %= include $footer
+<script src="/js/vue/navigation.js"></script>
 </body>
 </html>

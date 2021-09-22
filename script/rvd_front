@@ -167,6 +167,7 @@ hook before_routes => sub {
             ,monitoring => 0
             ,fallback => $CONFIG_FRONT->{fallback}
             ,check_netdata => 0
+            ,url_netdata => "https://$host:19999/index.html"
             ,guide => $CONFIG_FRONT->{guide}
             ,host => $host
             ,bookings => $RAVADA->setting('/backend/bookings')
@@ -1549,6 +1550,7 @@ any '/ng-templates/(#template).html' => sub {
 any '/about' => sub {
     my $c = shift;
 
+    push @{$c->stash->{css}}, '/css/vue.css';
     $c->render(template => 'main/about');
 };
 
