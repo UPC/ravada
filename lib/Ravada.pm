@@ -11,7 +11,7 @@ use DBIx::Connector;
 use File::Copy;
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
-use JSON::XS;
+use Mojo::JSON qw( decode_json );
 use Moose;
 use POSIX qw(WNOHANG);
 use Proc::PID::File;
@@ -5125,21 +5125,57 @@ sub _cmd_cleanup($self, $request) {
             $self->_clean_requests($cmd, $request,'done');
     }
 }
+sub _verify_connection($self, $domain) {
+    for ( 1 .. 60 ) {
+        my $status = $domain->client_status(1);
+        if ( $status && $status ne 'disconnected' ) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+sub _domain_just_started($self, $domain) {
+    my $sth = $CONNECTOR->dbh->prepare(
+       "SELECT id,command,args "
+        ." FROM requests "
+        ." WHERE start_time>? "
+        ." OR status <> 'done' "
+        ." OR start_time IS NULL "
+    );
+    my $start_time = time - 300;
+    $sth->execute($start_time);
+    while ( my ($id, $command, $args) = $sth->fetchrow ) {
+        next if $command !~ /create|clone|start|open/i;
+        my $args_h = decode_json($args);
+        return 1 if exists $args_h->{id_domain} && defined $args_h->{id_domain}
+        && $args_h->{id_domain} == $domain->id;
+        return 1 if exists $args_h->{name} && defined $args_h->{name}
+        && $args_h->{name} eq $domain->name;
+    }
+    return 0;
+}
 
 sub _shutdown_disconnected($self) {
     for my $dom ( $self->list_domains_data(status => 'active') ) {
         next if !$dom->{shutdown_disconnected};
         my $domain = Ravada::Domain->open($dom->{id}) or next;
         my $is_active = $domain->is_active;
-        my ($req_shutdown) = grep { $_->command eq 'shutdown' } $domain->list_requests(1);
+        my ($req_shutdown) = grep { $_->command eq 'shutdown'
+            && $_->defined_arg('check')
+            && $_->defined_arg('check') eq 'disconnected'
+        } $domain->list_requests(1);
+
         if ($is_active && $domain->client_status eq 'disconnected') {
+            next if $self->_domain_just_started($domain) || $self->_verify_connection($domain);
             next if $req_shutdown;
             Ravada::Request->shutdown_domain(
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $domain->id
                 ,at => time + 120
+                ,check => 'disconnected'
             );
-        } else {
+        } elsif ($req_shutdown) {
             $req_shutdown->status('done','Canceled') if $req_shutdown;
         }
     }

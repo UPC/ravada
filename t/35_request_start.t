@@ -101,6 +101,7 @@ sub test_start {
     {
         my $domain = $vm->search_domain($name);
         ok(!$domain->is_active,"Domain $name should be inactive") or return;
+        is(rvd_back->_domain_just_started($domain),0);
     }
     my $req2 = Ravada::Request->start_domain(name => $name, uid => $USER->id
         ,remote_ip => $remote_ip
@@ -123,6 +124,7 @@ sub test_start {
         my $domain2 = $vm->search_domain($name);
         ok($domain2->is_active);
         is($domain2->is_volatile,0);
+        is(rvd_back->_domain_just_started($domain),1);
     }
 
     $req2 = undef;
