@@ -1655,7 +1655,7 @@ sub ip($self) {
     return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
 
     @ip = $self->_ip_arp();
-    return $ip[0]->{addrs}->[0]->{addr} if ($ip[0]);
+    return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
 
     return $self->_ip_agent();
 
