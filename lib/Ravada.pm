@@ -11,7 +11,7 @@ use DBIx::Connector;
 use File::Copy;
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
-use Mojo::JSON qw( decode_json );
+use Mojo::JSON qw( encode_json decode_json );
 use Moose;
 use POSIX qw(WNOHANG);
 use Proc::PID::File;
