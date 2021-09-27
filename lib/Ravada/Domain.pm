@@ -2839,7 +2839,17 @@ sub _pre_shutdown {
 
     my $user = delete $arg{user};
     delete $arg{timeout};
-    delete $arg{request};
+    my $request = delete $arg{request};
+
+    if ($request && $request->defined_arg('check')) {
+        my $check = $request->defined_arg('check');
+        if ($check eq 'disconnected') {
+            die "Virtual machine reconnected"
+            if $self->client_status ne 'disconnected';
+        } elsif ($check) {
+            confess "Error: unknown shutdown check '$check'";
+        }
+    }
 
     confess "Unknown args ".join(",",sort keys %arg)
         if keys %arg;
