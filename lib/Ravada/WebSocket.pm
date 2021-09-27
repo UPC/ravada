@@ -66,23 +66,7 @@ sub _list_alerts($rvd, $args) {
     my $ret_old = $args->{ret};
     my @ret = map { $_->{time} = time; $_ } $user->unshown_messages();
 
-    my @ret2=();
-
-    my %new;
-    for my $alert (@ret) {
-        my $cmd_machine = $alert->{subject};
-        $cmd_machine =~ s{(.*?\s.*?)\s+.*}{$1};
-        $new{$cmd_machine}++;
-    }
-
-    for my $alert (@$ret_old) {
-        my $cmd_machine = $alert->{subject};
-        $cmd_machine =~ s{(.*?\s.*?)\s+.*}{$1};
-        push @ret2,($alert) if time - $alert->{time} < 10
-            && $cmd_machine && !$new{$cmd_machine};
-    }
-
-    return [@ret2,@ret];
+    return [@ret];
 }
 
 sub _list_bases($rvd, $args) {
