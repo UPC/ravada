@@ -1641,12 +1641,11 @@ sub _ip_agent($self) {
 }
 
 sub _ip_arp($self) {
+    my @sys_virt_version = split('\.', $Sys::Virt::VERSION);
+    return undef if ($sys_virt_version[0] < 5);
     my @ip;
-warn "000000000000000000000000000000000000000000000";
     eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_ARP); };
-use Data::Dumper; 
-warn Dumper "11111111111111111111111111111111111", $@, \@ip;
-    return undef;
+    return @ip;
 }
 
 sub ip($self) {
@@ -1656,7 +1655,7 @@ sub ip($self) {
     return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
 
     @ip = $self->_ip_arp();
-    return $ip[0] if ($ip[0]);
+    return $ip[0]->{addrs}->[0]->{addr} if ($ip[0]);
 
     return $self->_ip_agent();
 
