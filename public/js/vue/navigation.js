@@ -3,7 +3,6 @@ var navigation = new Vue({
     ,
     data: {
         anonymous: false
-        ,title: "Patata"
     }
 
 });
