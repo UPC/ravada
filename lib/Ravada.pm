@@ -5521,6 +5521,8 @@ sub _clean_volatile_machines($self, %args) {
 }
 
 sub _cmd_post_login($self, $request) {
+    my $user = Ravada::Auth::SQL->new(name => $request->args('user'));
+    $user->unshown_messages();
     $self->_post_login_locale($request);
 }
 
