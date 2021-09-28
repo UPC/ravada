@@ -38,9 +38,9 @@
     <div class="row" ng-repeat="port in showmachine.ports" style="margin-top: 10px">
          <div class="col-lg-2 mt-2">
             {{port.internal_port}}
-            <span ng-show="showmachine.is_active && !port.is_up"
+            <span ng-show="showmachine.is_active && !port.is_active"
                 class="badge badge-danger">down</span>
-            <span ng-show="showmachine.is_active && port.is_up"
+            <span ng-show="showmachine.is_active && port.is_active"
                 class="badge badge-info">up</span>
          </div>
         <div class="col-lg-2 mt-2">
