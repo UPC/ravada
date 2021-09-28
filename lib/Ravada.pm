@@ -4443,8 +4443,8 @@ sub _cmd_set_driver {
 
 sub _cmd_refresh_storage($self, $request=undef) {
 
-    if ($request && ( my $id_recent = $request->done_recently(60))) {
-        die "Command ".$request->command." run recently by $id_recent.\n";
+    if ($request && ( my $recent = $request->done_recently(60))) {
+        die "Command ".$request->command." run recently by ".$recent->id."\n";
     }
     my $vm;
     if ($request && $request->defined_arg('id_vm')) {
@@ -4558,8 +4558,8 @@ sub _cmd_domain_autostart($self, $request ) {
 
 sub _cmd_refresh_vms($self, $request=undef) {
 
-    if ($request && !$request->defined_arg('_force') && (my $id_recent = $request->done_recently(30))) {
-        die "Command ".$request->command." run recently by $id_recent.\n";
+    if ($request && !$request->defined_arg('_force') && (my $recent = $request->done_recently(30))) {
+        die "Command ".$request->command." run recently by ".$recent->id."\n";
     }
 
     $self->_refresh_disabled_nodes( $request );
@@ -5421,8 +5421,8 @@ sub _user_is_admin($self, $id_user) {
 
 sub _enforce_limits_active($self, $request) {
     confess if !$request;
-    if (my $id_recent = $request->done_recently(30)) {
-        die "Command ".$request->command." run recently by $id_recent.\n";
+    if (my $recent = $request->done_recently(30)) {
+        die "Command ".$request->command." run recently by ".$recent->id."\n";
     }
     my $timeout = ($request->defined_arg('timeout') or 10);
     my $start_limit_default = $self->setting('/backend/start_limit');
