@@ -1324,7 +1324,7 @@ sub _clean_remote_nodes {
 sub clean_remote_node {
     my $node = shift;
 
-    start_node($node);
+    start_node($node) if !$node->is_local();
     _remove_old_domains_vm($node);
     wait_request(debug => 0);
     _remove_old_disks($node);
