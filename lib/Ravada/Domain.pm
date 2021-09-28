@@ -3964,7 +3964,7 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, $jump,
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
 
-    $self->_vm->iptables(
+    $self->_vm->iptables_unique(
                 A => $IPTABLES_CHAIN
                 ,m => 'tcp'
                 ,p => 'tcp'
