@@ -18,6 +18,7 @@ function grpCtrl(apiLDAP, $scope, $timeout) {
     const msgError = msg => { self.err = msg; $timeout(() => self.err=null,2000)};
     self.available_groups = [];
     self.group_selected = null;
+
     self.$onInit = () => {
         self.ngModel.$render = () => {
             self.selected_groups = self.ngModel.$viewValue;
@@ -27,8 +28,10 @@ function grpCtrl(apiLDAP, $scope, $timeout) {
             self.required = Object.prototype.hasOwnProperty.call(self.ngModel.$validators,"required");
             if (self.required) self.ngModel.$setValidity("required",!!value.length);
         });
-        apiLDAP.list_groups({}, res => self.available_groups = res)
+        self.getGroups()
     };
+    self.getGroups = async qry => await apiLDAP.list_groups({ qry }).$promise
+
     self.add_ldap_group = () => {
         if (!self.group_selected) return;
         if (self.selected_groups.indexOf(self.group_selected) >= 0) {
