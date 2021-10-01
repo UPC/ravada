@@ -1,9 +1,14 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 LABEL maintainer="ravada@telecos.upc.edu"
 LABEL description="Ravada Backend + KVM"
 
-RUN apt-get update \
- && apt-get install -y -q --no-install-recommends \
+RUN apt-get update
+ENV TZ=Europe/Madrid
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN dpkg-reconfigure --frontend noninteractive tzdata
+
+RUN apt-get install -y -q --no-install-recommends \
     perl libmojolicious-perl libauthen-passphrase-perl \
     libdbd-mysql-perl libdbi-perl libdbix-connector-perl libipc-run3-perl libnet-ldap-perl \
     libproc-pid-file-perl libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl \
@@ -16,10 +21,6 @@ RUN apt-get update \
     libnet-openssh-perl libdatetime-format-dateparse-perl file\
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-ENV TZ=Europe/Madrid
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata \
 
 RUN echo "listen_tls = 0" >> /etc/libvirt/libvirtd.conf \
  && echo 'listen_tcp = 1' >> /etc/libvirt/libvirtd.conf \

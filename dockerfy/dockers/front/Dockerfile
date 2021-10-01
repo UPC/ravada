@@ -1,9 +1,14 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 LABEL maintainer="ravada@telecos.upc.edu"
 LABEL description="Ravada Frontend"
 
-RUN apt-get update \
- && apt-get install -y -q --no-install-recommends \
+RUN apt-get update
+ENV TZ=Europe/Madrid
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN dpkg-reconfigure --frontend noninteractive tzdata
+
+RUN apt-get install -y -q --no-install-recommends \
     perl libmojolicious-perl libauthen-passphrase-perl \
     libdbd-mysql-perl libdbi-perl libdbix-connector-perl libipc-run3-perl libnet-ldap-perl \
     libproc-pid-file-perl libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl \
@@ -14,14 +19,7 @@ RUN apt-get update \
     libio-stringy-perl libvirt-clients liblwp-useragent-determined-perl supervisor net-tools apt-utils lsof mysql-client \
 	curl bash vim wget libnet-openssh-perl libdatetime-format-dateparse-perl \
  && apt-get clean \
-
-ENV TZ=Europe/Madrid
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata \
- && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN mkdir -p /var/log/supervisor \
  && mkdir -p /run/sshd
