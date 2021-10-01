@@ -9,7 +9,7 @@ export {
 svcBookings.$inject = ["$resource"];
 
 function svcBookings($resource) {
-    return $resource('/v1/bookings/:id');
+    return $resource('/v1/bookings/:id_booking');
 }
 
 svcEntry.$inject = ["$resource"];
