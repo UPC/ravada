@@ -6,6 +6,8 @@ export default {
     },
     bindings: {
         editable: '<',
+        onAdd: '&',
+        onDelete: '&'
     },
     templateUrl: '/js/booking/ldapGroup.component.html',
     controller: grpCtrl
@@ -39,8 +41,12 @@ function grpCtrl(apiLDAP, $scope, $timeout) {
         } else {
             self.selected_groups.push(self.group_selected);
         }
+        self.onAdd({ group: self.group_selected})
         self.group_selected = null;
     };
-    self.remove_ldap_group =  group => self.selected_groups = remove_array_element(self.selected_groups,group);
+    self.remove_ldap_group =  group => {
+        self.selected_groups = remove_array_element(self.selected_groups,group)
+        self.onDelete({ group })
+    }
 
 }
