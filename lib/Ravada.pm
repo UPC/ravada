@@ -11,7 +11,7 @@ use DBIx::Connector;
 use File::Copy;
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
-use JSON::XS;
+use Mojo::JSON qw( encode_json decode_json );
 use Moose;
 use POSIX qw(WNOHANG);
 use Proc::PID::File;
@@ -1447,17 +1447,18 @@ sub _add_grants($self) {
 
 sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, description FROM grant_types WHERE name=?"
+        "SELECT id, description,is_int FROM grant_types WHERE name=?"
     );
     $sth->execute($grant);
-    my ($id, $current_description) = $sth->fetchrow();
+    my ($id, $current_description, $current_int) = $sth->fetchrow();
     $sth->finish;
+    $current_int = 0 if !$current_int;
 
-    if ($id && $current_description ne $description) {
+    if ($id && ( $current_description ne $description || $current_int != $is_int) ) {
         my $sth = $CONNECTOR->dbh->prepare(
-            "UPDATE grant_types SET description = ? WHERE id = ?;"
+            "UPDATE grant_types SET description = ?,is_int=? WHERE id = ?;"
         );
-        $sth->execute($description, $id);
+        $sth->execute($description, $is_int, $id);
         $sth->finish;
     }
     return if $id;
@@ -3538,10 +3539,32 @@ sub _set_domain_changed($self, $request) {
     }
     return if !defined $id_domain;
 
+    my $sth_date = $CONNECTOR->dbh->prepare("SELECT date_changed FROM domains WHERE id=?");
+    $sth_date->execute($id_domain);
+    my ($date) = $sth_date->fetchrow();
+
     my $sth = $CONNECTOR->dbh->prepare("UPDATE domains set date_changed=CURRENT_TIMESTAMP"
         ." WHERE id=? ");
     $sth->execute($id_domain);
 
+    $sth_date->execute($id_domain);
+    my ($date2) = $sth_date->fetchrow();
+
+    if (defined $date && defined $date2 && $date2 eq $date) {
+        my ($n) = $date2 =~ /.*(\d\d)$/;
+        if (!defined $n) {
+            sleep 1;
+            $sth->execute($id_domain);
+        } else {
+            $n++;
+            $n=00 if $n>59;
+            $n = "0$n" if length($n)<2;
+            $date2 =~ s/(.*)(\d\d)$/$1$n/;
+            my $sth2 = $CONNECTOR->dbh->prepare("UPDATE domains set date_changed=?"
+                ." WHERE id=? ");
+            $sth2->execute($date2,$id_domain);
+        }
+    }
 }
 
 sub _cmd_manage_pools($self, $request) {
@@ -4420,8 +4443,8 @@ sub _cmd_set_driver {
 
 sub _cmd_refresh_storage($self, $request=undef) {
 
-    if ($request && ( my $id_recent = $request->done_recently(60))) {
-        die "Command ".$request->command." run recently by $id_recent.\n";
+    if ($request && ( my $recent = $request->done_recently(60))) {
+        die "Command ".$request->command." run recently by ".$recent->id."\n";
     }
     my $vm;
     if ($request && $request->defined_arg('id_vm')) {
@@ -4495,7 +4518,7 @@ sub _cmd_refresh_machine($self, $request) {
     $domain->client_status(1) if $is_active;
 
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id
-        ,timeout => 60, retry => 20)
+        ,timeout => 60, retry => 10)
     if $is_active && $domain->ip;
 }
 
@@ -4535,8 +4558,8 @@ sub _cmd_domain_autostart($self, $request ) {
 
 sub _cmd_refresh_vms($self, $request=undef) {
 
-    if ($request && !$request->defined_arg('_force') && (my $id_recent = $request->done_recently(30))) {
-        die "Command ".$request->command." run recently by $id_recent.\n";
+    if ($request && !$request->defined_arg('_force') && (my $recent = $request->done_recently(30))) {
+        die "Command ".$request->command." run recently by ".$recent->id."\n";
     }
 
     $self->_refresh_disabled_nodes( $request );
@@ -5102,21 +5125,57 @@ sub _cmd_cleanup($self, $request) {
             $self->_clean_requests($cmd, $request,'done');
     }
 }
+sub _verify_connection($self, $domain) {
+    for ( 1 .. 60 ) {
+        my $status = $domain->client_status(1);
+        if ( $status && $status ne 'disconnected' ) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+sub _domain_just_started($self, $domain) {
+    my $sth = $CONNECTOR->dbh->prepare(
+       "SELECT id,command,args "
+        ." FROM requests "
+        ." WHERE start_time>? "
+        ." OR status <> 'done' "
+        ." OR start_time IS NULL "
+    );
+    my $start_time = time - 300;
+    $sth->execute($start_time);
+    while ( my ($id, $command, $args) = $sth->fetchrow ) {
+        next if $command !~ /create|clone|start|open/i;
+        my $args_h = decode_json($args);
+        return 1 if exists $args_h->{id_domain} && defined $args_h->{id_domain}
+        && $args_h->{id_domain} == $domain->id;
+        return 1 if exists $args_h->{name} && defined $args_h->{name}
+        && $args_h->{name} eq $domain->name;
+    }
+    return 0;
+}
 
 sub _shutdown_disconnected($self) {
     for my $dom ( $self->list_domains_data(status => 'active') ) {
         next if !$dom->{shutdown_disconnected};
         my $domain = Ravada::Domain->open($dom->{id}) or next;
         my $is_active = $domain->is_active;
-        my ($req_shutdown) = grep { $_->command eq 'shutdown' } $domain->list_requests(1);
+        my ($req_shutdown) = grep { $_->command eq 'shutdown'
+            && $_->defined_arg('check')
+            && $_->defined_arg('check') eq 'disconnected'
+        } $domain->list_requests(1);
+
         if ($is_active && $domain->client_status eq 'disconnected') {
+            next if $self->_domain_just_started($domain) || $self->_verify_connection($domain);
             next if $req_shutdown;
             Ravada::Request->shutdown_domain(
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $domain->id
                 ,at => time + 120
+                ,check => 'disconnected'
             );
-        } else {
+        } elsif ($req_shutdown) {
             $req_shutdown->status('done','Canceled') if $req_shutdown;
         }
     }
@@ -5362,8 +5421,8 @@ sub _user_is_admin($self, $id_user) {
 
 sub _enforce_limits_active($self, $request) {
     confess if !$request;
-    if (my $id_recent = $request->done_recently(30)) {
-        die "Command ".$request->command." run recently by $id_recent.\n";
+    if (my $recent = $request->done_recently(30)) {
+        die "Command ".$request->command." run recently by ".$recent->id."\n";
     }
     my $timeout = ($request->defined_arg('timeout') or 10);
     my $start_limit_default = $self->setting('/backend/start_limit');
@@ -5462,6 +5521,8 @@ sub _clean_volatile_machines($self, %args) {
 }
 
 sub _cmd_post_login($self, $request) {
+    my $user = Ravada::Auth::SQL->new(name => $request->args('user'));
+    $user->unshown_messages();
     $self->_post_login_locale($request);
 }
 
@@ -5503,7 +5564,8 @@ sub _cmd_open_exposed_ports($self, $request) {
     Ravada::Request->refresh_machine_ports(
         uid => $request->args('uid'),
         ,id_domain => $domain->id
-        ,retry => 100
+        ,retry => 20
+        ,timeout => 180
     );
 
 }
