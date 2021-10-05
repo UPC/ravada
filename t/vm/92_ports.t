@@ -138,21 +138,29 @@ sub test_start_after_hibernate($domain
     my $internal_net = $internal_ip;
     $internal_net =~ s{(.*)\.\d+$}{$1.0/24};
 
-    $domain->start(user => user_admin, remote_ip => $remote_ip);
-
-    delete_request('enforce_limits');
-    wait_request(debug => 0);
-
     my ($in,$out,$err);
     run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
-    die $err if $err;
     my @out = split /\n/,$out;
+    run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    @out = split /\n/,$out;
+    Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,remote_ip => $remote_ip
+    );
+
+    delete_request('enforce_limits');
+    wait_request(debug => 0, skip => 'enforce_limits');
+
+    run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    die $err if $err;
+    @out = split /\n/,$out;
     is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1);
 
     run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
     die $err if $err;
     @out = split /\n/,$out;
-    is(grep(m{^ACCEPT.*$internal_net\s+state NEW},@out),1) or die $out;
+    is(grep(m{^ACCEPT.*$internal_net\s+state NEW},@out),1) or die $domain->name."\n".$out;
 
     run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
     die $err if $err;
