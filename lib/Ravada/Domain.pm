@@ -2625,6 +2625,7 @@ sub _post_remove_base {
 sub _post_spinoff($self) {
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set id_base=NULL WHERE id=?");
     $sth->execute($self->id);
+    $domain->list_volumes_info();
 }
 
 sub _pre_shutdown_domain {}
@@ -3341,7 +3342,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
     if ($public_port
-        && ( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port") 
+        && ( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port")
             || $self->_used_port_displays($public_port,$id_port))
         ) {
         warn $self->name." cleared duplicate $public_port\n"
