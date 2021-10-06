@@ -604,7 +604,28 @@ sub _update_isos {
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
-
+        ,devuan_beowulf_amd64=> {
+            name =>'Devuan Beowulf 64 bits'
+            ,description => 'Devuan Beowulf Desktop Live (amd64)'
+            ,arch => 'amd64'
+            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
+            ,file_re => 'devuan_beowulf_.*_amd64_desktop-live.iso'
+            ,sha256_url => '$url/SHASUMS.txt'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,devuan_beowulf_i386=> {
+            name =>'Devuan Beowulf 32 bits'
+            ,description => 'Devuan Beowulf Desktop Live (i386)'
+            ,arch => 'i386'
+            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
+            ,file_re => 'devuan_beowulf_.*_i386_desktop-live.iso'
+            ,sha256_url => '$url/SHASUMS.txt'
+            ,xml => 'jessie-i386.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
         ,kali_64 => {
             name => 'Kali Linux 2020'
             ,description => 'Kali Linux 2020 64 Bits'
