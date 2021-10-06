@@ -188,7 +188,9 @@
                     save
                 </button>
                 <button ng-click="load_settings()"
-                    ng-disabled="formSettings.$pristine">cancel</button>
+                        ng-disabled="formSettings.$pristine">
+                  <%=l 'cancel' %>
+                </button>
             </div>
         </div>
 

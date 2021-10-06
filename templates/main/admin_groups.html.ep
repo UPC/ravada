@@ -52,7 +52,7 @@
                             </tbody>
                     </table>
                     <div ng-show="ldap_groups.length == 0">
-                        No groups found
+                      <%=l 'No groups found' %>
                     </div>
                 </div>
               </div>

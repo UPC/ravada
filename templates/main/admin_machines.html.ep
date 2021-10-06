@@ -194,12 +194,14 @@
                                </div>
                                <div class="modal-body" ng-show="can_prepare_base(machine)">
                                    <div ng-show="machine.info.cdrom">
-                                   <p>This machine has a CD-ROM</p>
-                                   <ul>
+                                     <p>
+                                     <%=l 'This machine has a CD-ROM' %>
+                                     </p>
+                                     <ul>
                                        <li ng-repeat="cdrom in machine.info.cdrom">{{cdrom}}</li>
-                                   </ul>
-                                   <input type="checkbox" ng-model="with_cd" name="with_cd"/>
-                                    <label for="with_cd"><%=l 'Keep the CD for the clones' %></label>
+                                     </ul>
+                                     <input type="checkbox" ng-model="with_cd" name="with_cd"/>
+                                     <label for="with_cd"><%=l 'Keep the CD for the clones' %></label>
                                    </div>
                                  <p><%=l 'Are you sure you want to prepare the base of' %> {{machine.name}}?</p>
                                </div>
@@ -218,7 +220,7 @@
                         <input type="checkbox" checked ng-show="machine.is_public" ng-click="open_modal('mp_',machine)" title="<%=l 'Make private'%>" ng-cloak>
 
                          <input type="checkbox" ng-hide="!machine.is_base || machine.is_public" ng-click="open_modal('mp_',machine)" title="<%=l 'Make public' %>" ng-cloak>
-                       
+
                         <div class="modal fade" tabindex="-1" role="dialog" id="mp_{{machine.id}}">
                            <div class="modal-dialog" role="document">
                              <div class="modal-content">
@@ -238,7 +240,7 @@
                          </div>
                        </td>
 
-                         
+
 %                       if ($autostart) {
                             <td class="lgMachToggle">
 				    <input type="checkbox" ng-hide="machine.has_clones || machine.is_base" ng-model="machine.autostart" ng-true-value="1" ng-false-value="0" ng-change="set_autostart(machine.id,machine.autostart)" title="{{ machine.autostart ? 'Disable' : 'Enable'}} autostart">

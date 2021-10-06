@@ -11,7 +11,9 @@
         >
     </select>
     <button ng-show="new_group"
-        ng-click="add_group_member(<%= $user->id %>,'<%= $user->name %>',new_group)">Add</button>
+            ng-click="add_group_member(<%= $user->id %>,'<%= $user->name %>',new_group)">
+      <%=l 'Add' %>
+    </button>
 </div>
                 {{error}}
 
