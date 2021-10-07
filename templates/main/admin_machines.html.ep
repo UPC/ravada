@@ -179,7 +179,7 @@
                                ng-show="can_remove_base(machine)"
                                ng-click="open_modal('mb_',machine)"/>
                         <input type="checkbox"
-                               ng-show="can_prepare_base(machine)"
+                               ng-show="!machine.is_volatile && can_prepare_base(machine)"
                             ng-click="open_modal('mb_',machine)"
                             title ="<%=l 'Prepare base' %>" ng-cloak="1"/>
                         <div class="modal fade" tabindex="-1" role="dialog" id="mb_{{machine.id}}">
