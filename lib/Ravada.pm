@@ -626,6 +626,28 @@ sub _update_isos {
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
+        ,parrot_xfce_amd64 => {
+            name => 'Parrot Home Edition XFCE'
+            ,description => 'Parrot Home Edition XFCE 64 Bits'
+            ,arch => 'amd64'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,url => 'https://download.parrot.sh/parrot/iso/4.11.2/'
+            ,file_re => 'Parrot-xfce-4.11.2_amd64.iso'
+            ,sha256_url => '$url/signed-hashes.txt'
+            ,min_disk_size => '10'
+        }
+        ,parrot_mate_amd64 => {
+		  name => 'Parrot Security Edition MATE'
+            ,description => 'Parrot Security Edition MATE 64 Bits'
+            ,arch => 'amd64'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,url => 'https://download.parrot.sh/parrot/iso/4.11.2/'
+            ,file_re => 'Parrot-security-4.11.2_amd64.iso'
+            ,sha256_url => '$url/signed-hashes.txt'
+            ,min_disk_size => '10'
+        }
         ,kali_64 => {
             name => 'Kali Linux 2020'
             ,description => 'Kali Linux 2020 64 Bits'
