@@ -1812,6 +1812,27 @@ sub test_removed_leftover($vm) {
     Test::Ravada::_check_leftovers();
 }
 
+sub test_long_iso($vm) {
+    my $iso_file = '/var/lib/libvirt/'.('a' x 1250);
+
+    my $req;
+    eval { $req = Ravada::Request->create_domain( name => 'a', id_template => 1
+            , iso_file => $iso_file
+            , id_owner => user_admin->id
+            , vm => $vm->type
+        );
+    };
+    is($@,'');
+
+    if ($req) {
+        is($req->args('iso_file'), $iso_file);
+
+        my $req2 = Ravada::Request->open($req->id);
+
+        is($req2->args('iso_file'), $iso_file);
+    }
+}
+
 #######################################################################33
 
 for my $db ( 'mysql', 'sqlite' ) {
@@ -1819,7 +1840,7 @@ for my $db ( 'mysql', 'sqlite' ) {
     if ($db eq 'mysql') {
         init('/etc/ravada.conf',0, 1);
         if ( !ping_backend() ) {
-            diag("no backend");
+            diag("SKIPPED: no backend running");
             next;
         }
         $Test::Ravada::BACKGROUND=1;
@@ -1866,6 +1887,7 @@ for my $vm_name ( vm_names() ) {
         }
         flush_rules() if !$<;
 
+        test_long_iso($vm);
         test_change_display_settings($vm);
         test_display_drivers($vm,0);
         test_display_drivers($vm,1); #remove after testing display type
