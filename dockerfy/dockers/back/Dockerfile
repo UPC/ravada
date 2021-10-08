@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 LABEL maintainer="ravada@telecos.upc.edu"
 LABEL description="Ravada Backend + KVM"
 
