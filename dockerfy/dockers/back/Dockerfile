@@ -3,7 +3,7 @@ LABEL maintainer="ravada@telecos.upc.edu"
 LABEL description="Ravada Backend + KVM"
 
 RUN apt-get update \
- && apt-get install -y -q --no-install-recommends \
+ && DEBIAN_FRONTEND="noninteractive" TZ=$TZ apt-get install -y -q --no-install-recommends \
     perl libmojolicious-perl libauthen-passphrase-perl \
     libdbd-mysql-perl libdbi-perl libdbix-connector-perl libipc-run3-perl libnet-ldap-perl \
     libproc-pid-file-perl libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl \
@@ -12,14 +12,11 @@ RUN apt-get update \
     libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl debconf adduser libdigest-sha-perl libnet-ssh2-perl \
     libfile-rsync-perl libdate-calc-perl libparallel-forkmanager-perl libdatetime-perl libencode-locale-perl netcat-openbsd \
     liblwp-useragent-determined-perl libvirt-clients supervisor net-tools openssh-client apt-utils curl libpbkdf2-tiny-perl \
-    libio-stringy-perl libvirt-daemon-system libvirt-clients netcat-openbsd qemu-kvm qemu-utils iproute2 wget bridge-utils firewalld dnsmasq iptables ebtables \
-    libnet-openssh-perl libdatetime-format-dateparse-perl file\
+    libio-stringy-perl libvirt-daemon-system libvirt-clients netcat-openbsd qemu-kvm qemu-utils iproute2 wget bridge-utils firewalld dnsmasq iptables ebtables iptstate \
+    libnet-openssh-perl libdatetime-format-dateparse-perl file tzdata \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-ENV TZ=Europe/Madrid
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata \
 
 RUN echo "listen_tls = 0" >> /etc/libvirt/libvirtd.conf \
  && echo 'listen_tcp = 1' >> /etc/libvirt/libvirtd.conf \
