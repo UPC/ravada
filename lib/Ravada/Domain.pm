@@ -2625,7 +2625,7 @@ sub _post_remove_base {
 sub _post_spinoff($self) {
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set id_base=NULL WHERE id=?");
     $sth->execute($self->id);
-    $domain->list_volumes_info();
+    $self->list_volumes_info();
 }
 
 sub _pre_shutdown_domain {}
