@@ -1015,3 +1015,21 @@ msgstr "End"
 
 msgid "Time"
 msgstr "Time"
+
+msgid "Virtual machines pre-started"
+msgstr "Virtual machines pre-started"
+
+msgid "Warning: this virtual machine will be prepared as a base. This may take long."
+msgstr "Warning: this virtual machine will be prepared as a base. This may take long."
+
+msgid "Assign this virtual machine to the pre-started pool"
+msgstr "Assign this virtual machine to the pre-started pool"
+
+msgid "Virtual machines in the pool."
+msgstr "Virtual machines in the pool."
+
+msgid "Pool"
+msgstr "Pool"
+
+msgid "Prepare this machine as a base to create clones from it."
+msgstr "Prepare this machine as a base to create clones from it."
