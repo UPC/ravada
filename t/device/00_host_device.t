@@ -37,7 +37,9 @@ sub _search_unused_device {
     my ($in, $out, $err);
     run3(["lsusb"], \$in, \$out, \$err);
     for my $line ( split /\n/, $out ) {
-        next unless $line =~ $USB_DEVICE or $line =~ /Bluetooth|flash|disk|cam/i;
+        next unless (defined $USB_DEVICE && $line =~ $USB_DEVICE) 
+        || $line =~ /Bluetooth|flash|disk|cam/i;
+
         my ($filter) = $line =~ /(ID [a-f0-9]+):/;
         die "ID \\d+ not found in $line" if !$filter;
         return ("lsusb",$filter);
