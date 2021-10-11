@@ -150,7 +150,8 @@ sub _fetch_template_args($self, $device) {
         } else {
             my ($value) = $device =~ qr($re);
             confess "Error: $re not found in '$device'" if !defined $value;
-            $ret->{$name} = $value;
+            $value =~ s/^0+// if $value =~ /^[0-9]+$/;
+            $ret->{$name} = ''.$value;
         }
     }
     return $ret;
