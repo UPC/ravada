@@ -914,3 +914,104 @@ msgstr "Open ports"
 msgid "up"
 msgstr "up"
 
+msgid "No members found"
+msgstr "No members found"
+
+msgid "No groups found"
+msgstr "No groups found"
+
+msgid "This machine has a CD-ROM"
+msgstr "This machine has a CD-ROM"
+
+msgid "Keep the CD for the clones"
+msgstr "Keep the CD for the clones"
+
+msgid "Accept"
+msgstr "Accept"
+
+msgid "Fail"
+msgstr "Fail"
+
+msgid "This Virtual Machine has no display hardware attached"
+msgstr "This Virtual Machine has no display hardware attached"
+
+msgid "NAT"
+msgstr "NAT"
+
+msgid "Bridge"
+msgstr "Bridge"
+
+msgid "No bridges found"
+msgstr "No bridges found"
+
+msgid "disk"
+msgstr "disk"
+
+msgid "cdrom"
+msgstr "cdrom"
+
+msgid "system"
+msgstr "system"
+
+msgid "temporary"
+msgstr "temporary"
+
+msgid "data"
+msgstr "data"
+
+msgid "Content will be cleaned on restore"
+msgstr "Content will be cleaned on restore"
+
+msgid "Content will be cleaned on restore and shutdown"
+msgstr "Content will be cleaned on restore and shutdown"
+
+msgid "Content will be kept on restore"
+msgstr "Content will be kept on restore"
+
+msgid "type"
+msgstr "type"
+
+msgid "All machines"
+msgstr "All machines"
+
+msgid "Users from this network can run all virtual machines"
+msgstr "Users from this network can run all virtual machines"
+
+msgid "No machines"
+msgstr "No machines"
+
+msgid "Users from this network can run no virtual machines"
+msgstr "Users from this network can run no virtual machines"
+
+msgid "Anonymous"
+msgstr "Anonymous"
+
+msgid "Warning: anonymous machines won't show up unless you enable allowed."
+msgstr "Warning: anonymous machines won't show up unless you enable allowed."
+
+msgid "Network name is required"
+msgstr "Network name is required"
+
+msgid "This name is duplicated"
+msgstr "This name is duplicated"
+
+msgid "host"
+msgstr "host"
+
+msgid "base storage"
+msgstr "base storage"
+
+msgid "clone storage"
+msgstr "clone storage"
+
+msgid "default storage"
+msgstr "default storage"
+
+msgid "This virtual machine has no backups to purge"
+msgstr "This virtual machine has no backups to purge"
+
+msgid "End"
+msgstr "End"
+
+msgid "Time"
+msgstr "Time"
