@@ -1651,10 +1651,21 @@ sub _ip_agent($self) {
     }
 }
 
+sub _ip_arp($self) {
+    my @sys_virt_version = split('\.', $Sys::Virt::VERSION);
+    return undef if ($sys_virt_version[0] < 5);
+    my @ip;
+    eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_ARP); };
+    return @ip;
+}
+
 sub ip($self) {
     my @ip;
     eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
     warn $@ if $@;
+    return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
+
+    @ip = $self->_ip_arp();
     return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
 
     return $self->_ip_agent();

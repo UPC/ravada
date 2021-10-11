@@ -65,6 +65,7 @@ our %VALID_ARG = (
     ,remove_domain => $args_manage
     ,restore_domain => { id_domain => 1, uid => 1 }
     ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
+                       , check => 2
                        , id_vm => 2 }
     ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
     ,reboot_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
@@ -103,7 +104,7 @@ our %VALID_ARG = (
     ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 2, data => 1 }
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
-    ,refresh_machine_ports => { id_domain => 1, uid => 1 }
+    ,refresh_machine_ports => { id_domain => 1, uid => 1, timeout => 2 }
     ,rebase => { uid => 1, id_base => 1, id_domain => 1 }
     ,set_time => { uid => 1, id_domain => 1 }
     ,rsync_back => { uid => 1, id_domain => 1, id_node => 1 }
@@ -168,6 +169,8 @@ qw(
     rsync_back
     cleanup
     list_host_devices
+    refresh_machine_ports
+    set_time
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -207,14 +210,14 @@ our %COMMAND = (
         limit => 50
         ,priority => 4
         ,commands => ['shutdown','shutdown_now', 'manage_pools','enforce_limits', 'set_time'
-            ,'remove_domain'
+            ,'remove_domain','refresh_machine_ports'
         ]
     }
 
     ,important=> {
         limit => 20
         ,priority => 1
-        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine']
+        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine','open_exposed_ports']
     }
 );
 lock_hash %COMMAND;
@@ -840,10 +843,14 @@ sub _send_message {
 
     if (!$uid) {
         my $user = $self->defined_arg('user');
-        $uid = $user->id if $user;
+        if ( $user ) {
+            my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM users where name=?");
+            $sth->execute($user);
+            ($uid) = $sth->fetchrow;
+        }
     }
 
-    return if !$uid;
+    return if !$uid || $uid == Ravada::Utils::user_daemon->id;
 
     my $domain_name = $self->defined_arg('name');
     if (!$domain_name) {

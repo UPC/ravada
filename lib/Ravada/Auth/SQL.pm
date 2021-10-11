@@ -953,7 +953,12 @@ sub list_all_permissions($self) {
         lock_hash(%$row);
         push @list,($row);
     }
-    return @list;
+    my @list2 = sort {
+        return -1 if $a->{name} eq 'start_many' && $b->{name} eq 'start_limit';
+        return +1 if $b->{name} eq 'start_many' && $a->{name} eq 'start_limit';
+        $a->{name} cmp $b->{name};
+    } @list;
+    return @list2;
 }
 
 sub grant_type($self, $permission) {

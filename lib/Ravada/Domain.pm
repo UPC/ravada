@@ -2383,6 +2383,7 @@ sub is_locked {
         ."   AND command <> 'refresh_machine'"
         ."   AND command <> 'refresh_machine_ports'"
         ."   AND command <> 'screenshot'"
+        ."   AND command <> 'add_hardware'"
     );
     $sth->execute($self->id);
     my ($id, $at_time) = $sth->fetchrow;
@@ -2856,7 +2857,17 @@ sub _pre_shutdown {
 
     my $user = delete $arg{user};
     delete $arg{timeout};
-    delete $arg{request};
+    my $request = delete $arg{request};
+
+    if ($request && $request->defined_arg('check')) {
+        my $check = $request->defined_arg('check');
+        if ($check eq 'disconnected') {
+            die "Virtual machine reconnected"
+            if $self->client_status ne 'disconnected';
+        } elsif ($check) {
+            confess "Error: unknown shutdown check '$check'";
+        }
+    }
 
     confess "Unknown args ".join(",",sort keys %arg)
         if keys %arg;
@@ -3971,7 +3982,7 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, $jump,
                         ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
 
-    $self->_vm->iptables(
+    $self->_vm->iptables_unique(
                 A => $IPTABLES_CHAIN
                 ,m => 'tcp'
                 ,p => 'tcp'

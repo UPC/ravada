@@ -275,7 +275,7 @@ sub search_user {
     my $escape_username = 1;
     $escape_username = delete $args{escape_username} if exists $args{escape_username};
     my $filter_orig = delete $args{filter};
-    my $sizelimit = (delete $args{sizelimit} or 100);
+    my $sizelimit = (delete $args{sizelimit} or $$CONFIG->{ldap}->{size_limit} or 1000);
     my $timelimit = (delete $args{timelimit} or 60);
 
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
@@ -419,7 +419,7 @@ sub search_group {
     my $mesg = $ldap ->search (
         filter => $filter
          ,base => $base
-         ,sizelimit => 100
+         ,sizelimit => ($$CONFIG->{ldap}->{size_limit} or 1000)
     );
     warn "LDAP retry ".$mesg->code." ".$mesg->error." [filter: $filter , base: $base]" if $retry > 1;
     if ($mesg->code == 4 ) {
@@ -463,10 +463,12 @@ sub search_group {
 sub search_group_members($cn, $retry = 0) {
     my $base = "ou=groups,"._dc_base();
     my $ldap = _init_ldap_admin();
+    my $sizelimit = ($$CONFIG->{ldap}->{size_limit} or 1000);
+
     my $mesg = $ldap ->search (
         filter => "memberuid=$cn"
          ,base => $base
-         ,sizelimit => 100
+         ,sizelimit => $sizelimit
     );
     if ( ($mesg->code == 1 || $mesg->code == 81) && $retry <3 ) {
         $LDAP_ADMIN = undef;
@@ -479,7 +481,7 @@ sub search_group_members($cn, $retry = 0) {
     $mesg = $ldap ->search (
         filter => "member=cn=$cn,"._dc_base()
          ,base => $base
-         ,sizelimit => 100
+         ,sizelimit => $sizelimit
     );
     my @entries2 = map { $_->get_value('cn') } $mesg->entries();
 
