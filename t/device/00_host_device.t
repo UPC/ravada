@@ -274,7 +274,7 @@ sub test_devices($host_device, $expected_available, $match = undef) {
     return if !$match;
 
     for (@devices) {
-        next if $_ =~ qr($USB_DEVICE);
+        next if defined $USB_DEVICE && $_ =~ qr($USB_DEVICE);
         like($_,qr($match));
     }
 }
