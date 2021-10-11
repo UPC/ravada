@@ -131,6 +131,31 @@ our @TEMPLATES_KVM  = (
 #        ]
 #    }
 #
+
+    ,
+    { name => "GPU Mediated Device"
+        ,list_command => "mdevctl list"
+        ,list_filter => '.*'
+        ,template_args => encode_json(
+            { uuid => '^(.*?) '}
+        )
+        ,templates => [{
+            path => '/domain/devices/hostdev'
+            ,template =>
+   "<hostdev mode='subsystem' type='mdev' managed='no' model='vfio-pci' display='on'>
+      <source>
+        <address uuid='<%= \$uuid %>'/>
+      </source>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x0d' function='0x0'/>
+    </hostdev>"
+            }
+            ,{
+                path => '/domain/devices/video'
+                ,type => 'unique_node'
+                ,template => "<video><model type='none'/></video>"
+            }
+        ]
+    }
 );
 
 our @TEMPLATES_VOID = (

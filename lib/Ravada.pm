@@ -1852,7 +1852,7 @@ sub _sql_create_tables($self) {
                 ,name => 'char(80) not null'
                 ,id_vm => 'integer NOT NULL references `vms`(`id`) ON DELETE CASCADE'
                 ,list_command => 'varchar(128) not null'
-                ,list_filter => 'varchar(128) not null'
+                ,list_filter => 'varchar(128) not null default ".*"'
                 ,template_args => 'varchar(255) not null'
                 ,devices => 'TEXT'
                 ,enabled => "integer NOT NULL default 1"
