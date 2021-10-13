@@ -77,6 +77,7 @@ sub search_by_id($self, $id) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM host_devices WHERE id=?");
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
+    die "Error: device id='$id' not found" if !exists $row->{id};
     $row->{devices} = '' if !defined $row->{devices};
 
     return Ravada::HostDevice->new(%$row);

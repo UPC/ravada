@@ -1472,6 +1472,7 @@ sub is_in_maintenance($self) {
 
 sub update_host_device($self, $args) {
     my $id = delete $args->{id} or die "Error: missing id ".Dumper($args);
+    Ravada::Utils::check_sql_valid_params(keys %$args);
     $args->{devices} = undef;
     my $query = "UPDATE host_devices SET ".join(" , ", map { "$_=?" } sort keys %$args);
     $query .= " WHERE id=?";

@@ -622,9 +622,25 @@ sub test_check_list_command($vm) {
     $hdev->remove();
 }
 
+sub test_invalid_param {
+    eval {
+        rvd_front->update_host_device({ id => 1, 'list_command' => 'a' });
+    };
+    is($@,'');
+    for my $wrong ( qr(` ' % ; ) ) {
+        eval {
+            rvd_front->update_host_device({id => 1, 'list_command'.$wrong => 'a'});
+        };
+        like($@,qr/invalid/);
+    }
+    wait_request(check_error => 0);
+}
+
 #########################################################
 
 clean();
+
+test_invalid_param();
 
 for my $vm_name (reverse vm_names()) {
     my $vm;
