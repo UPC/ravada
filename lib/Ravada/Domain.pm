@@ -817,6 +817,7 @@ Prepares the virtual machine as a base:
 sub prepare_base($self, $with_cd) {
     my @base_img;
     for my $volume ($self->list_volumes_info()) {
+        next if !$volume->file;
         my $base_file = $volume->base_filename;
         next if !$base_file || $base_file =~ /\.iso$/;
         confess "Error: file '$base_file' already exists in ".$self->_vm->name
@@ -860,6 +861,9 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
     # TODO: if disk is not base and disks have not been modified, do not generate them
     # again, just re-attach them
 #    $self->_check_disk_modified(
+    die "Error: domain ".$self->name." is volatile and it can't be prepared as a base.\n"
+    if $self->is_volatile();
+
     confess "ERROR: domain ".$self->name." is already a base" if $self->is_base();
     $self->_check_has_clones();
 
@@ -891,6 +895,8 @@ sub _check_free_space_prepare_base($self) {
     $pool_base = $self->_vm->base_storage_pool()   if $self->_vm->base_storage_pool();
 
     for my $volume ($self->list_volumes_info(device => 'disk')) {;
+        next if !$volume->file;
+        die "Error: volume ".$volume->file." is missing.\n" if !$self->_vm->file_exists($volume->file);
         $self->_vm->_check_free_disk($volume->capacity * 2, $pool_base);
     }
 };
