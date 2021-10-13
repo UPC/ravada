@@ -1644,7 +1644,7 @@ sub _ip_arp($self) {
     my @sys_virt_version = split('\.', $Sys::Virt::VERSION);
     return undef if ($sys_virt_version[0] < 5);
     my @ip;
-    eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_ARP); };
+    eval " @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_ARP); ";
     return @ip;
 }
 
