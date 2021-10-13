@@ -55,9 +55,7 @@
 
         <div class="row">
             <div class="col-md-12">
-                <div ng-show="showmachine.pools &&
-                              showmachine.pool_clones >0 &&
-                              showmachine.is_base==0">
+                <div ng-show="showmachine.pools && showmachine.pool_clones >0 && showmachine.is_base==0">
                   <%=l 'Warning: this virtual machine will be prepared as a base. This may take long.' %>
                 </div>
                 <div ng-show="showmachine.pool_start > showmachine.pool_clones"
