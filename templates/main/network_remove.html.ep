@@ -1,8 +1,8 @@
 <div ng-show="network && network.id">
     Are you sure you want to remove the <%= $item %> {{network.name}}
 
-    <button ng-click="remove_network(network.id)">yes</button>
-    <button onclick="location='/admin/networks'">cancel</button>
+    <button ng-click="remove_network(network.id)"><%=l 'yes' %></button>
+    <button onclick="location='/admin/networks'"><%=l 'cancel' %></button>
 </div>
 
 <div ng-show="message">{{message}}</div>
