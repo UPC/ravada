@@ -894,6 +894,10 @@ sub _check_free_space_prepare_base($self) {
     my $pool_base = $self->_vm->default_storage_pool_name;
     $pool_base = $self->_vm->base_storage_pool()   if $self->_vm->base_storage_pool();
 
+    for my $volume ($self->list_volumes(device => 'disk')) {;
+        next if !$volume;
+        die "Error: volume $volume is missing.\n" if !$self->_vm->file_exists($volume);
+    }
     for my $volume ($self->list_volumes_info(device => 'disk')) {;
         next if !$volume->file;
         die "Error: volume ".$volume->file." is missing.\n" if !$self->_vm->file_exists($volume->file);
