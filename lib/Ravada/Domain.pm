@@ -4814,6 +4814,7 @@ Example:
 =cut
 
 sub allow_ldap_access($self, $attribute, $value, $allowed=1, $last=0 ) {
+    confess "Error: undefined value" unless defined $value;
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT max(n_order) FROM access_ldap_attribute "
         ." WHERE id_domain=?"
@@ -5062,11 +5063,15 @@ Argument: id of the access from the table access_ldap_attribute
 =cut
 
 #TODO: check something has been deleted
-sub delete_ldap_access($self, $id_access) {
+sub delete_ldap_access($self, @id_access) {
+    for my $id_access (@id_access) {
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "DELETE FROM access_ldap_attribute "
         ."WHERE id_domain=? AND id=? ");
     $sth->execute($self->id, $id_access);
+
+    }
 }
 
 =head2 list_ldap_access
@@ -5105,6 +5110,7 @@ Example:
 =cut
 
 sub deny_ldap_access($self, $attribute, $value) {
+    confess "Error: undefined value" unless defined $value;
     $self->allow_ldap_access($attribute, $value, 0);
 }
 

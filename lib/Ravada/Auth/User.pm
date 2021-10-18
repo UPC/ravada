@@ -385,7 +385,7 @@ sub _load_allowed {
                     if !exists $self->{_allowed}->{$id_domain};
                 last;
             } elsif ( $ldap_entry && defined $ldap_entry->get_value($attribute)
-                    && $ldap_entry->get_value($attribute) eq $value ) {
+                    && grep { $value eq $_ } $ldap_entry->get_value($attribute) ) {
 
                 $self->{_allowed}->{$id_domain} = $allowed;
 
