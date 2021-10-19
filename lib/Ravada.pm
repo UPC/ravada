@@ -3444,7 +3444,11 @@ sub _domain_working {
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, status FROM requests "
         ." WHERE id <> ? AND id_domain=? "
         ." AND (status <> 'requested' AND status <> 'done' AND status <> 'waiting' "
-        ." AND command <> 'set_base_vm')");
+        ."      AND command <> 'set_base_vm'"
+        ."      AND command <> 'set_time'"
+        ."      AND command NOT LIKE 'refresh_machine%' "
+        ."     )"
+    );
     $sth->execute($id_request, $id_domain);
     my ($id, $status) = $sth->fetchrow;
 #    warn "CHECKING DOMAIN WORKING "
