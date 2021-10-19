@@ -1818,8 +1818,9 @@ sub test_prepare_base_disk_missing($vm) {
 
     my @volumes = $domain->list_volumes();
 
-    my ($one, $two) = @volumes;
-    unlink $two;
+    my ($two) = grep(!/iso$/i, reverse @volumes);
+    unlink $two or die "$! $two";
+    is($vm->file_exists($two),undef);
 
     eval {
     $domain->prepare_base(user_admin);
@@ -1832,8 +1833,12 @@ sub test_prepare_base_disk_missing($vm) {
     print $out "Error\n";
     close $two;
 
+    eval {
     $domain->prepare_base(user_admin);
+    };
+    like($@,qr/Unknown capacity/,"Expecting unknown capacity for $two") if $@;
 
+    unlink $two;
     $domain->remove(user_admin);
 }
 

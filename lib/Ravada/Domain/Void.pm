@@ -614,13 +614,24 @@ sub disk_device {
     return list_volumes(@_);
 }
 
-sub list_volumes($self, @args) {
-    my @vol = $self->list_volumes_info(@args);
-    my @vol2;
-    for (@vol) {
-        push @vol2,($_->{file});
+sub list_volumes($self, $attribute=undef, $value=undef) {
+    my $data = $self->_load();
+
+    return () if !exists $data->{hardware}->{device};
+    my @vol;
+    my $n_order = 0;
+    for my $dev (@{$data->{hardware}->{device}}) {
+        next if exists $dev->{type}
+                && $dev->{type} eq 'base';
+        if (exists $dev->{file} ) {
+            confess "Error loading $dev->{file} ".$@ if $@;
+            next if defined $attribute
+                && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);
+        }
+        push @vol,($dev->{file});
     }
-    return @vol2;
+    return @vol;
+
 }
 
 sub list_volumes_info($self, $attribute=undef, $value=undef) {
