@@ -164,68 +164,36 @@ to search for the PCI device numbers we found in the very first step.
   [    2.474726] pci 0000:1b:00.0: Adding to iommu group 38
   [    2.474807] pci 0000:1b:00.1: Adding to iommu group 38
 
-Virtual Machine Setup
+Ravada Setup
 ---------------------
 
 Now we want to use the GPU, by now we will only try to execute CUDA so it
 will not be a device used for display. This can also be achieved but it will
 be addressed in future releases.
 
-Edit the virtual machine configuration with `sudo virsh edit virtual-machine`.
+After we have the host configured we must tell Ravada we want to pass
+some PCI devices to the virtual machines.
 
-Hide KVM
-~~~~~~~~
+Configure the Node Host Device
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Some vendor drivers refuse to load when they detect KVM.
-We must hide KVM in the virtual machine and pass the PCI device.
-Add this in the features section to hide KVM to the virtual machine.
-There are more unlisted features that may be different from yours. Keep them
-in your virtual machine. The important part is the **KVM hidden state** entry.
+At the node configuration we add a PCI Host Device group. This is a pool of
+devices that will be added to the clones.
 
-.. code-block:: xml
+In this example we select PCI and then click on "Add host device".
 
- <features>
-    <kvm>
-      <hidden state='on'/>
-    </kvm>
-    <acpi/>
-    <apic/>
-    <vmport state='off'/>
-  </features>
+.. figure:: images/node_hostdev.png
 
-Pass the Device
-~~~~~~~~~~~~~~~
+After a few seconds we can see the PCI devices available in the host, we
+filter only the Nvidia brand.
 
-This is the part where we pass the real device to the Virtual Machine. Only one
-started virtual machine can have it.
+Now the Host Device will be available in the Hardware configuration in the
+virtual machine.
 
-Add it anywhere inside the *devices* section.
+.. figure:: images/vm_hostdev.png
 
-The source address must be created with the PCI information we found in the first step.
-So the device 0000:1b:00.0 will have:
-
-* domain: 0x0000
-* bus: 0x1b
-* slot: 0x00
-* function: 0x0
-
-We set the *rombar* to *on* just in case, please report to us if you have more insight
-about this issue.
-
-Finally we create a PCI device in the virtual machine, so we find a free PCI
-spot and add it. If it is duplicated it will warn on startup, you can change it
-as you like.
-
-.. code-block:: xml
-
-    <hostdev mode='subsystem' type='pci' managed='yes'>
-      <source>
-        <address domain='0x0000' bus='0x1b' slot='0x00' function='0x0'/>
-      </source>
-      <rom bar='on'/>
-      <address type='pci' domain='0x0000' bus='0x01' slot='0x01' function='0x0'/>
-    </hostdev>
-
+Now, when the virtual machine is started it will pick one of the free
+devices and it will appear as a PCI entry.
 
 Virtual Machine GPU Ubuntu setup
 --------------------------------
