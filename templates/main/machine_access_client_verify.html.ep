@@ -1,7 +1,9 @@
 <div class="card alert-info" ng-show="domain_access.length">
 <h4>Client headers
-    <span class="badge badge-success" ng-show="check_client_access">Accept</span>
-    <span class="badge badge-danger" ng-hide="check_client_access">Fail</span>
+    <span class="badge badge-success"
+          ng-show="check_client_access"><%=l 'Accept' %></span>
+    <span class="badge badge-danger"
+          ng-hide="check_client_access"><%=l 'Fail' %></span>
 </h4>
 <ul>
 % for my $name (sort @{$headers->names}) {

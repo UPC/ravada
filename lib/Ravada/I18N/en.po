@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-11-10 06:07+0000\n"
+"PO-Revision-Date: 2021-10-13 10:44+0000\n"
 "Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
 "Language-Team: English <https://hosted.weblate.org/projects/ravada/"
 "translation/en/>\n"
@@ -15,7 +15,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.4-dev\n"
+"X-Generator: Weblate 4.9-dev\n"
 
 msgid "Ravada broker"
 msgstr "Ravada broker"
@@ -622,7 +622,7 @@ msgid "is admin"
 msgstr "is admin"
 
 msgid "Add new user"
-msgstr "Add new user "
+msgstr "Add new user"
 
 msgid "Register"
 msgstr "Register"
@@ -655,7 +655,7 @@ msgid "The machine will shutdown after these minutes"
 msgstr "The machine will shutdown after these minutes"
 
 msgid "The machine will turn off after this time"
-msgstr "The machine will turn off atfer this time"
+msgstr "The machine will turn off after this time"
 
 msgid "Cancel"
 msgstr "Cancel"
@@ -914,3 +914,122 @@ msgstr "Open ports"
 msgid "up"
 msgstr "up"
 
+msgid "No members found"
+msgstr "No members found"
+
+msgid "No groups found"
+msgstr "No groups found"
+
+msgid "This machine has a CD-ROM"
+msgstr "This machine has a CD-ROM"
+
+msgid "Keep the CD for the clones"
+msgstr "Keep the CD for the clones"
+
+msgid "Accept"
+msgstr "Accept"
+
+msgid "Fail"
+msgstr "Fail"
+
+msgid "This Virtual Machine has no display hardware attached"
+msgstr "This Virtual Machine has no display hardware attached"
+
+msgid "NAT"
+msgstr "NAT"
+
+msgid "Bridge"
+msgstr "Bridge"
+
+msgid "No bridges found"
+msgstr "No bridges found"
+
+msgid "disk"
+msgstr "disk"
+
+msgid "cdrom"
+msgstr "cdrom"
+
+msgid "system"
+msgstr "system"
+
+msgid "temporary"
+msgstr "temporary"
+
+msgid "data"
+msgstr "data"
+
+msgid "Content will be cleaned on restore"
+msgstr "Content will be cleaned on restore"
+
+msgid "Content will be cleaned on restore and shutdown"
+msgstr "Content will be cleaned on restore and shutdown"
+
+msgid "Content will be kept on restore"
+msgstr "Content will be kept on restore"
+
+msgid "type"
+msgstr "type"
+
+msgid "All machines"
+msgstr "All machines"
+
+msgid "Users from this network can run all virtual machines"
+msgstr "Users from this network can run all virtual machines"
+
+msgid "No machines"
+msgstr "No machines"
+
+msgid "Users from this network can run no virtual machines"
+msgstr "Users from this network can run no virtual machines"
+
+msgid "Anonymous"
+msgstr "Anonymous"
+
+msgid "Warning: anonymous machines won't show up unless you enable allowed."
+msgstr "Warning: anonymous machines won't show up unless you enable allowed."
+
+msgid "Network name is required"
+msgstr "Network name is required"
+
+msgid "This name is duplicated"
+msgstr "This name is duplicated"
+
+msgid "host"
+msgstr "host"
+
+msgid "base storage"
+msgstr "base storage"
+
+msgid "clone storage"
+msgstr "clone storage"
+
+msgid "default storage"
+msgstr "default storage"
+
+msgid "This virtual machine has no backups to purge"
+msgstr "This virtual machine has no backups to purge"
+
+msgid "End"
+msgstr "End"
+
+msgid "Time"
+msgstr "Time"
+
+msgid "Virtual machines pre-started"
+msgstr "Virtual machines pre-started"
+
+msgid "Warning: this virtual machine will be prepared as a base. This may take long."
+msgstr "Warning: this virtual machine will be prepared as a base. This may take long."
+
+msgid "Assign this virtual machine to the pre-started pool"
+msgstr "Assign this virtual machine to the pre-started pool"
+
+msgid "Virtual machines in the pool."
+msgstr "Virtual machines in the pool."
+
+msgid "Pool"
+msgstr "Pool"
+
+msgid "Prepare this machine as a base to create clones from it."
+msgstr "Prepare this machine as a base to create clones from it."

@@ -256,9 +256,9 @@ sub test_add_cdrom($domain) {
         my $iso = $domain->_vm->_search_iso(search_id_iso('Alpine'));
         $data->{file} = $iso->{device};
     } else {
-        $data->{file} = $file_iso;
         $data->{boot} = 2;
     }
+    $data->{file} = $file_iso if !$data->{file};
     my $found = 0;
     test_add_hardware_request($domain->_vm, $domain,'disk', $data);
 

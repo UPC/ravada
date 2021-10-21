@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2021-08-17 21:34+0000\n"
+"PO-Revision-Date: 2021-10-14 16:36+0000\n"
 "Last-Translator: Oğuz Ersen <oguzersen@protonmail.com>\n"
 "Language-Team: Turkish <https://hosted.weblate.org/projects/ravada/"
 "translation/tr/>\n"
@@ -16,7 +16,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"X-Generator: Weblate 4.8-dev\n"
+"X-Generator: Weblate 4.9-dev\n"
 
 msgid "Ravada broker"
 msgstr "Ravada Aracı"
@@ -321,7 +321,7 @@ msgid "can change the settings of any virtual machines."
 msgstr "herhangi bir sanal makinenin ayarlarını değiştirebilir."
 
 msgid "can change the settings of any virtual machines "
-msgstr "Herhangi bir sanal makinenin ayarlarını değiştirebilir"
+msgstr "herhangi bir sanal makinenin ayarlarını değiştirebilir"
 
 msgid "cloned from one base owned by the user."
 msgstr "kullanıcının sahip olduğu bir tabandan kopyalandı."
@@ -610,7 +610,7 @@ msgid "Below are listed the technologies used in this project:"
 msgstr "Aşağıda bu projede kullanılan teknolojiler listelenmiştir:"
 
 msgid "The code is available on "
-msgstr "Kodun bulunabileceği yer:"
+msgstr "Kodlar şurada bulunabilir"
 
 msgid "The code is "
 msgstr "Kod"
@@ -924,3 +924,125 @@ msgstr "Makinenin başlaması bekleniyor"
 
 msgid "up"
 msgstr "açık"
+
+msgid "NAT"
+msgstr "NAT"
+
+msgid "type"
+msgstr "tür"
+
+msgid "disk"
+msgstr "disk"
+
+msgid "system"
+msgstr "sistem"
+
+msgid "host"
+msgstr "ana makine"
+
+msgid "End"
+msgstr "Son"
+
+msgid "No machines"
+msgstr "Makine yok"
+
+msgid "This virtual machine has no backups to purge"
+msgstr "Bu sanal makinenin temizlenecek yedeklemesi yok"
+
+msgid "Users from this network can run all virtual machines"
+msgstr "Bu ağdaki kullanıcılar tüm sanal makineleri çalıştırabilir"
+
+msgid "Warning: anonymous machines won't show up unless you enable allowed."
+msgstr ""
+"Uyarı: izin verilenleri etkinleştirmediğiniz sürece anonim makineler "
+"görünmeyecektir."
+
+msgid "This name is duplicated"
+msgstr "Bu ad zaten var"
+
+msgid "Bridge"
+msgstr "Köprü"
+
+msgid "Network name is required"
+msgstr "Ağ adı gerekli"
+
+msgid "Accept"
+msgstr "Kabul et"
+
+msgid "No members found"
+msgstr "Üye bulunamadı"
+
+msgid "All machines"
+msgstr "Tüm makineler"
+
+msgid "clone storage"
+msgstr "klon depolaması"
+
+msgid "Time"
+msgstr "Zaman"
+
+msgid "No groups found"
+msgstr "Grup bulunamadı"
+
+msgid "This machine has a CD-ROM"
+msgstr "Bu makinenin bir CD-ROM'u var"
+
+msgid "Keep the CD for the clones"
+msgstr "CD'yi klonlar için sakla"
+
+msgid "Fail"
+msgstr "Başarısız"
+
+msgid "This Virtual Machine has no display hardware attached"
+msgstr "Bu sanal makineye bağlı ekran donanımı yok"
+
+msgid "No bridges found"
+msgstr "Köprü bulunamadı"
+
+msgid "cdrom"
+msgstr "cdrom"
+
+msgid "Content will be cleaned on restore and shutdown"
+msgstr "İçerik, geri yükleme ve kapatma sırasında temizlenecek"
+
+msgid "Content will be kept on restore"
+msgstr "İçerik, geri yükleme sırasında tutulacak"
+
+msgid "Users from this network can run no virtual machines"
+msgstr "Bu ağdaki kullanıcılar hiçbir sanal makineyi çalıştıramaz"
+
+msgid "temporary"
+msgstr "geçici"
+
+msgid "data"
+msgstr "veri"
+
+msgid "Content will be cleaned on restore"
+msgstr "İçerik, geri yükleme sırasında temizlenecek"
+
+msgid "Anonymous"
+msgstr "Anonim"
+
+msgid "base storage"
+msgstr "temel depolama"
+
+msgid "default storage"
+msgstr "öntanımlı depolama"
+
+msgid "Warning: this virtual machine will be prepared as a base. This may take long."
+msgstr "Uyarı: bu sanal makine temel olarak hazırlanacak. Bu uzun sürebilir."
+
+msgid "Pool"
+msgstr "Havuz"
+
+msgid "Prepare this machine as a base to create clones from it."
+msgstr "Bu makineyi, ondan klonlar oluşturmak için bir temel olarak hazırla."
+
+msgid "Virtual machines pre-started"
+msgstr "Önceden başlatılan sanal makineler"
+
+msgid "Assign this virtual machine to the pre-started pool"
+msgstr "Bu sanal makineyi önceden başlatılan havuza ata"
+
+msgid "Virtual machines in the pool."
+msgstr "Havuzdaki sanal makineler."

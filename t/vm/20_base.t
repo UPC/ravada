@@ -1833,6 +1833,51 @@ sub test_long_iso($vm) {
     }
 }
 
+sub test_prepare_base_disk_missing($vm) {
+    my $domain = create_domain($vm);
+    $domain->add_volume();
+
+    my @volumes = $domain->list_volumes();
+
+    my ($two) = grep(!/iso$/i, reverse @volumes);
+    unlink $two or die "$! $two";
+    is($vm->file_exists($two),undef);
+
+    eval {
+    $domain->prepare_base(user_admin);
+    };
+    like($@,qr/volume.*issing/) or die $domain->name;
+
+    $domain->remove_base(user_admin) if $domain->is_base;
+
+    open my $out,">",$two or die "$! $two";
+    print $out "Error\n";
+    close $two;
+
+    eval {
+    $domain->prepare_base(user_admin);
+    };
+    like($@,qr/Unknown capacity/,"Expecting unknown capacity for $two") if $@;
+
+    unlink $two;
+    $domain->remove(user_admin);
+}
+
+sub test_prepare_base_volatile($vm) {
+    my $domain = create_domain($vm);
+    $domain->volatile_clones(1);
+    $domain->prepare_base(user_admin);
+
+    my $clone = $domain->clone(name => new_domain_name, user => user_admin);
+    is($clone->is_volatile(), 1);
+
+    eval { $clone->prepare_base(user_admin) };
+    like($@,qr/Error.*is volatile/);
+
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
+}
+
 #######################################################################33
 
 for my $db ( 'mysql', 'sqlite' ) {
@@ -1888,6 +1933,10 @@ for my $vm_name ( vm_names() ) {
         flush_rules() if !$<;
 
         test_long_iso($vm);
+
+        test_prepare_base_disk_missing($vm);
+        test_prepare_base_volatile($vm);
+
         test_change_display_settings($vm);
         test_display_drivers($vm,0);
         test_display_drivers($vm,1); #remove after testing display type

@@ -6,8 +6,12 @@
         <input type="text" name="name" ng-model="network.name" required
             ng-change='check_duplicate("name")'
         >
-        <span ng-show="formNetwork.name.$error.required">Network name is required</span>
-        <span ng-show="network._duplicated_name">This name is duplicated</span>
+        <span ng-show="formNetwork.name.$error.required">
+          <%=l 'Network name is required' %>
+        </span>
+        <span ng-show="network._duplicated_name">
+          <%=l 'This name is duplicated' %>
+        </span>
     </div>
 </div>
 
@@ -34,7 +38,9 @@
 </div>
 
 <div class="row">
-    <div class="col-md-3" align="right">All machines</div>
+  <div class="col-md-3" align="right">
+    <%=l 'All machines' %>
+  </div>
     <div class="col-md-1" align="left">
         <input type="checkbox" name="address" ng-model="network.all_domains"
             ng-true-value="1" ng-false-value="0"

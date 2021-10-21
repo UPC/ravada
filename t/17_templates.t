@@ -66,7 +66,7 @@ sub _check_html_lint($url, $content, $option = {}) {
     for my $error ( $lint->errors() ) {
         next if $error->errtext =~ /Entity .*is unknown/;
         next if $option->{internal} && $error->errtext =~ /(body|head|html|title).*required/;
-        if ( $error->errtext =~ /Unknown element <(footer|header|nav)/
+        if ( $error->errtext =~ /Unknown element <(footer|header|nav|ldap-groups)/
             || $error->errtext =~ /Entity && is unknown/
             || $error->errtext =~ /should be written as/
             || $error->errtext =~ /Unknown attribute.*%/
