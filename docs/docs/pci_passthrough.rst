@@ -1,5 +1,5 @@
-PCI Device Passthrough
-======================
+PCI GPU Device Passthrough
+==========================
 
 In this document we show how to add a NVIDIA GPU to a KVM virtual Machine
 in Ravada VDI. Any PCI device could be added in a similar way.

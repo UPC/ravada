@@ -117,6 +117,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/Rebase
    docs/spinoff_clone
    docs/chatwoot
+   docs/pci_passthrough
 
 .. _guest-docs:
 
