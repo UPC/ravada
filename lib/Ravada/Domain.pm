@@ -6407,6 +6407,8 @@ Refresh the status of the exposed ports
 =cut
 
 sub refresh_ports($self, $request=undef) {
+    return if !$self->list_ports;
+
     my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_ports "
         ." SET is_active=? "
         ." WHERE id_domain=? AND id=?"
