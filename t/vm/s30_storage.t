@@ -12,6 +12,7 @@ use feature qw(signatures);
 use lib 't/lib';
 use Test::Ravada;
 
+my $DIR = "/var/tmp";
 
 ###########################################################
 
@@ -31,7 +32,7 @@ sub test_storage_pools($vm) {
 }
 
 sub _add_fstab($vm) {
-    my $dir = "/mnt/".base_domain_name();
+    my $dir = "$DIR/".base_domain_name();
     if (!-e $dir) {
         mkdir $dir;
     }
@@ -79,7 +80,7 @@ sub test_storage_pools_fail($vm) {
 }
 
 sub _clean_local {
-    my $dir = "/mnt/".base_domain_name();
+    my $dir = "$DIR/".base_domain_name();
     my $file = "$dir/check_storage";# or die "$!";
     unlink $file or die "$! $file" if -e $file;
 }
