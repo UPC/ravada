@@ -1068,7 +1068,7 @@ sub test_req_expose($vm_name) {
             ,id_domain => $domain->id
     );
     for ( 1 .. 10 ) {
-        wait_request(request => $req, debug => 1);
+        wait_request(request => $req, debug => 0);
         last if $req->status eq 'done';
         sleep 1;
     }
@@ -1381,11 +1381,7 @@ sub test_expose_nested_base($vm) {
 
 for my $db ( 'mysql', 'sqlite' ) {
 
-clean();
 
-add_network_10(0);
-
-test_can_expose_ports();
 for my $vm_name ( reverse vm_names() ) {
 
     if ($db eq 'mysql') {
@@ -1400,6 +1396,8 @@ for my $vm_name ( reverse vm_names() ) {
     }
     diag("Testing $vm_name on $db");
     clean();
+    add_network_10(0);
+    test_can_expose_ports();
 
     SKIP: {
     my $vm = rvd_back->search_vm($vm_name);

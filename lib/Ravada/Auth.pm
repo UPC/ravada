@@ -100,7 +100,7 @@ sub login_external {
             return $login_ok;
         }
     }
-    return undef;
+    return;
 }
 
 =head2 enable_LDAP
