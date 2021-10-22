@@ -1309,8 +1309,9 @@ sub test_prepare_chained($vm) {
 
 sub test_change_display_settings($vm) {
     my $domain = create_domain($vm);
+    wait_request(debug => 0);
     if ($vm->type eq 'Void') {
-        test_change_display_settings_kvm($domain);
+        # TODO
     } elsif ($vm->type eq 'KVM') {
         test_change_display_settings_kvm($domain);
     }
@@ -1650,7 +1651,9 @@ sub test_display_conflict_next($vm) {
 
     for ( 1 .. 10 ) {
         $displays1 = $domain1->info(user_admin)->{hardware}->{display};
-        isnt($displays1->[1+$TLS]->{port}, $next_port_builtin);
+        if ($vm->type eq 'KVM') {
+            isnt($displays1->[1+$TLS]->{port}, $next_port_builtin) or die Dumper($displays1);
+        }
 
         # Now conflict x2go with next builtin display
         my ($display_x2go) = grep { $_->{driver} eq 'x2go' } @$displays1;
@@ -1812,14 +1815,42 @@ sub test_removed_leftover($vm) {
     Test::Ravada::_check_leftovers();
 }
 
+sub test_long_iso($vm) {
+    my $file_dir;
+    if ($vm->type eq 'KVM') {
+        $file_dir = '/var/lib/libvirt/images/';
+    } else {
+        $file_dir = "/var/tmp";
+    }
+    my $iso_file = $file_dir."/".('a' x 200).".iso";
+
+    my $req;
+    eval { $req = Ravada::Request->create_domain( name => new_domain_name(), id_template => 1
+            , iso_file => $iso_file
+            , id_owner => user_admin->id
+            , vm => $vm->type
+        );
+    };
+    is($@,'');
+
+    if ($req) {
+        is($req->args('iso_file'), $iso_file);
+
+        my $req2 = Ravada::Request->open($req->id);
+
+        is($req2->args('iso_file'), $iso_file);
+    }
+}
+
 sub test_prepare_base_disk_missing($vm) {
     my $domain = create_domain($vm);
     $domain->add_volume();
 
     my @volumes = $domain->list_volumes();
 
-    my ($one, $two) = @volumes;
-    unlink $two;
+    my ($two) = grep(!/iso$/i, reverse @volumes);
+    unlink $two or die "$! $two";
+    is($vm->file_exists($two),undef);
 
     eval {
     $domain->prepare_base(user_admin);
@@ -1832,8 +1863,12 @@ sub test_prepare_base_disk_missing($vm) {
     print $out "Error\n";
     close $two;
 
+    eval {
     $domain->prepare_base(user_admin);
+    };
+    like($@,qr/Unknown capacity/,"Expecting unknown capacity for $two") if $@;
 
+    unlink $two;
     $domain->remove(user_admin);
 }
 
@@ -1859,7 +1894,7 @@ for my $db ( 'mysql', 'sqlite' ) {
     if ($db eq 'mysql') {
         init('/etc/ravada.conf',0, 1);
         if ( !ping_backend() ) {
-            diag("no backend");
+            diag("SKIPPED: no backend running");
             next;
         }
         $Test::Ravada::BACKGROUND=1;
@@ -1906,6 +1941,8 @@ for my $vm_name ( vm_names() ) {
         }
         flush_rules() if !$<;
 
+        test_long_iso($vm);
+
         test_prepare_base_disk_missing($vm);
         test_prepare_base_volatile($vm);
 
@@ -1927,7 +1964,6 @@ for my $vm_name ( vm_names() ) {
         test_display_info($vm);
 
         test_display_port_already_used($vm);
-        test_change_display_settings($vm);
 
         test_remove_display($vm);
 

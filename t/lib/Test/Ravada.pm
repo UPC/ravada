@@ -1558,7 +1558,7 @@ sub flush_rules_node($node) {
     is($err,'') or die `iptables-save`;
     for my $rule (@FLUSH_RULES) {
         ($out, $err) = $node->run_command("iptables",@$rule,"-w");
-        like($err,qr(^$|chain/target/match by that name));
+        like($err,qr(^$|chain/target/match by that name|does not exist));
     }
 
     _flush_forward($node);
