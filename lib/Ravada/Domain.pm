@@ -706,7 +706,7 @@ sub _around_add_volume {
         confess "Error: volume $name already exists"
             if grep {$_->info->{name} eq $name} $self->list_volumes_info;
     }
-    confess "Error: target $args{target} already exists"
+    confess "Error: target $args{target} already exists in domain ".$self->name
             if grep {$_->info->{target} eq $args{target} } $self->list_volumes_info;
 
     my $ok = $self->$orig(%args);
