@@ -308,11 +308,11 @@ sub test_exposed_port($vm) {
     $base->expose(22);
 
     my $req = Ravada::Request->manage_pools(uid => user_admin->id , _no_duplicate => 1);
-    wait_request( debug => 1, skip => 'set_time' );
+    wait_request( debug => 0, skip => 'set_time' );
     is($req->status, 'done');
 
     my $req_refresh = Ravada::Request->refresh_vms( _no_duplicate => 1);
-    wait_request( debug => 1 ,skip => 'set_time' );
+    wait_request( debug => 0 ,skip => 'set_time' );
     is($req_refresh->status, 'done');
     is(scalar($base->clones), $n);
 

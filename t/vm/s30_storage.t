@@ -22,7 +22,7 @@ sub test_storage_pools($vm) {
     my $req_cleanup = Ravada::Request->cleanup(
         after_request_ok => $req->id
     );
-    wait_request( debug => 1);
+    wait_request( debug => 0);
     is($req->status,'done');
     is($req->error, '');
 
@@ -67,7 +67,7 @@ sub test_storage_pools_fail($vm) {
         after_request_ok => $req->id
     );
     is($req_cleanup->after_request_ok,$req->id);
-    wait_request( debug => 1, check_error => 0);
+    wait_request( debug => 0, check_error => 0);
     is($req->status,'done');
     like($req->error, qr/not mounted/);
 
