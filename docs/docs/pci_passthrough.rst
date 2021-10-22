@@ -15,8 +15,9 @@ might not work in your environment
 Requirements
 ------------
 
-* A NVidia GPU
-* A properly configured kernel along with a recent version of qemu. We were successful with Ubuntu 20.04.
+* One or more NVidia GPUs
+* A properly configured kernel along with a recent version of qemu. We were successful with Ubuntu 20.04 with kernel 5.8.
+* Ravada version 2.0. It is currently labelled as *alpha* but it is being used in production in our own servers.
 
 Hardware Identification
 -----------------------
