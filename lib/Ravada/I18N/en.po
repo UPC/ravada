@@ -286,6 +286,9 @@ msgstr ""
 msgid "Login"
 msgstr "Login"
 
+msgid "SSO/CAS Login"
+msgstr "SSO/CAS Login"
+
 msgid "Welcome"
 msgstr "Welcome"
 

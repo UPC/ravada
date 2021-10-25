@@ -15,7 +15,7 @@
 
                <input type="hidden" name="url" value="<%= $url %>">
                <!-- <input type="submit" name="submit" value="launch"> -->
-               <button id="submit" class="btn btn-success btn-lg btn-block" href="/" type="submit" name="submit" value="launch"><%=l 'Login with user/password' %></button>
+               <button id="submit" class="btn btn-success btn-lg btn-block" href="/" type="submit" name="submit" value="launch"><%=l 'Login' %></button>
                 % if (scalar @$error) {
                 %       for my $i (@$error) {
                             <div class="alert alert-danger">
