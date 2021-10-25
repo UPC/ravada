@@ -1,5 +1,5 @@
 <div ng-show="domain.hardware.display.length<1">
-This Virtual Machine has no display hardware attached
+  <%=l 'This Virtual Machine has no display hardware attached' %>
 </div>
 
 <ul ng-show="domain_display.length>0" class="nav nav-tabs"

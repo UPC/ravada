@@ -108,7 +108,7 @@
     <div class="col-md-7">
         <span><%=l 'Purge disk volumes' %></span>
         <div ng-hide="showmachine.has_backups">
-            This virtual machine has no backups to purge
+          <%=l 'This virtual machine has no backups to purge' %>
         </div>
     </div>
   </div>

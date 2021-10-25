@@ -31,12 +31,17 @@
                     >
                     </select>
                     <button ng-show="new_member && new_member.name"
-                        ng-click="add_member(new_member.name)">Add</button>
+                            ng-click="add_member(new_member.name)">
+                      <%=l 'Add' %>
+                    </button>
                 </div>
 
                 <div ng-show="!removed">
                 <div class="alert alert-danger" ng-show="error">{{error}}</div>
-                <div class="alert alert-warning" ng-show="!error && group_members.length==0">No members found</div>
+                <div class="alert alert-warning"
+                     ng-show="!error && group_members.length==0">
+                  <%=l 'No members found' %>
+                </div>
                 </div>
 
                 <table class="table table-striped" ng-show="group_members.length>0">

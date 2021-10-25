@@ -240,6 +240,7 @@ git fetch upstream
 Now we create a new branch:
 
 ```sh
+git checkout develop
 git checkout -b feature/cool_thing upstream/develop
 ```
 

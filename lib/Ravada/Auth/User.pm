@@ -386,7 +386,7 @@ sub _load_allowed {
                     if !exists $self->{_allowed}->{$id_domain};
                 last;
             } elsif ( $ldap_entry && defined $ldap_entry->get_value($attribute)
-                    && $ldap_entry->get_value($attribute) eq $value ) {
+                    && grep { $value eq $_ } $ldap_entry->get_value($attribute) ) {
 
                 $self->{_allowed}->{$id_domain} = $allowed;
 
@@ -421,6 +421,10 @@ sub _load_allowed_groups($self) {
         $self->{_allowed}->{$id_domain} = 0;
 
         next unless $self->is_external && $self->external_auth eq 'ldap';
+
+        if (!Ravada::Auth::LDAP::search_group(name => $name)) {
+            next;
+        }
 
         $self->{_allowed}->{$id_domain} = 1
         if Ravada::Auth::LDAP::is_member($self->ldap_entry, $name);

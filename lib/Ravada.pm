@@ -604,7 +604,50 @@ sub _update_isos {
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
-
+        ,devuan_beowulf_amd64=> {
+            name =>'Devuan Beowulf 64 bits'
+            ,description => 'Devuan Beowulf Desktop Live (amd64)'
+            ,arch => 'amd64'
+            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
+            ,file_re => 'devuan_beowulf_.*_amd64_desktop-live.iso'
+            ,sha256_url => '$url/SHASUMS.txt'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,devuan_beowulf_i386=> {
+            name =>'Devuan Beowulf 32 bits'
+            ,description => 'Devuan Beowulf Desktop Live (i386)'
+            ,arch => 'i386'
+            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
+            ,file_re => 'devuan_beowulf_.*_i386_desktop-live.iso'
+            ,sha256_url => '$url/SHASUMS.txt'
+            ,xml => 'jessie-i386.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,parrot_xfce_amd64 => {
+            name => 'Parrot Home Edition XFCE'
+            ,description => 'Parrot Home Edition XFCE 64 Bits'
+            ,arch => 'amd64'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,url => 'https://download.parrot.sh/parrot/iso/4.11.2/'
+            ,file_re => 'Parrot-xfce-4.11.2_amd64.iso'
+            ,sha256_url => '$url/signed-hashes.txt'
+            ,min_disk_size => '10'
+        }
+        ,parrot_mate_amd64 => {
+		  name => 'Parrot Security Edition MATE'
+            ,description => 'Parrot Security Edition MATE 64 Bits'
+            ,arch => 'amd64'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,url => 'https://download.parrot.sh/parrot/iso/4.11.2/'
+            ,file_re => 'Parrot-security-4.11.2_amd64.iso'
+            ,sha256_url => '$url/signed-hashes.txt'
+            ,min_disk_size => '10'
+        }
         ,kali_64 => {
             name => 'Kali Linux 2020'
             ,description => 'Kali Linux 2020 64 Bits'
@@ -2206,7 +2249,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
     $self->_upgrade_table('requests','retry','int(11) DEFAULT NULL');
-    $self->_upgrade_table('requests','args','char(255)');
+    $self->_upgrade_table('requests','args','TEXT');
 
     $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
     $self->_clean_iso_mini();
@@ -3401,7 +3444,11 @@ sub _domain_working {
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, status FROM requests "
         ." WHERE id <> ? AND id_domain=? "
         ." AND (status <> 'requested' AND status <> 'done' AND status <> 'waiting' "
-        ." AND command <> 'set_base_vm')");
+        ."      AND command <> 'set_base_vm'"
+        ."      AND command <> 'set_time'"
+        ."      AND command NOT LIKE 'refresh_machine%' "
+        ."     )"
+    );
     $sth->execute($id_request, $id_domain);
     my ($id, $status) = $sth->fetchrow;
 #    warn "CHECKING DOMAIN WORKING "
@@ -4530,6 +4577,8 @@ sub _cmd_refresh_machine_ports($self, $request) {
 
     die "USER $uid not authorized to refresh machine ports for domain ".$domain->name
     unless $domain->_data('id_owner') ==  $user->id || $user->is_operator;
+
+    return if !$domain->is_active;
 
     $domain->refresh_ports($request);
     $domain->client_status(1) if $domain->is_active;

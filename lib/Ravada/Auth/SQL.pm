@@ -961,6 +961,12 @@ sub list_all_permissions($self) {
     return @list2;
 }
 
+=head2 grant_type
+
+Returns the type of a grant type, currently it can be 'boolaean' or 'int'
+
+=cut
+
 sub grant_type($self, $permission) {
     return 'boolean' if !exists $self->{_grant_type}->{$permission};
     return $self->{_grant_type}->{$permission};
@@ -1128,6 +1134,14 @@ sub grants($self) {
     return () if !$self->{_grant};
     return %{$self->{_grant}};
 }
+
+=head2 grants_info
+
+Returns a list of the permissions granted to an user as a hash.
+Each entry is a reference to a list where the first value is
+the grant and the second the type
+
+=cut
 
 sub grants_info($self) {
     my %grants = $self->grants();

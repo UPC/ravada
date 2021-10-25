@@ -706,7 +706,7 @@ sub _around_add_volume {
         confess "Error: volume $name already exists"
             if grep {$_->info->{name} eq $name} $self->list_volumes_info;
     }
-    confess "Error: target $args{target} already exists"
+    confess "Error: target $args{target} already exists in domain ".$self->name
             if grep {$_->info->{target} eq $args{target} } $self->list_volumes_info;
 
     my $ok = $self->$orig(%args);
@@ -817,6 +817,7 @@ Prepares the virtual machine as a base:
 sub prepare_base($self, $with_cd) {
     my @base_img;
     for my $volume ($self->list_volumes_info()) {
+        next if !$volume->file;
         my $base_file = $volume->base_filename;
         next if !$base_file || $base_file =~ /\.iso$/;
         confess "Error: file '$base_file' already exists in ".$self->_vm->name
@@ -860,6 +861,9 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
     # TODO: if disk is not base and disks have not been modified, do not generate them
     # again, just re-attach them
 #    $self->_check_disk_modified(
+    die "Error: domain ".$self->name." is volatile and it can't be prepared as a base.\n"
+    if $self->is_volatile();
+
     confess "ERROR: domain ".$self->name." is already a base" if $self->is_base();
     $self->_check_has_clones();
 
@@ -890,7 +894,13 @@ sub _check_free_space_prepare_base($self) {
     my $pool_base = $self->_vm->default_storage_pool_name;
     $pool_base = $self->_vm->base_storage_pool()   if $self->_vm->base_storage_pool();
 
+    for my $volume ($self->list_volumes(device => 'disk')) {;
+        next if !$volume;
+        die "Error: volume $volume is missing.\n" if !$self->_vm->file_exists($volume);
+    }
     for my $volume ($self->list_volumes_info(device => 'disk')) {;
+        next if !$volume->file;
+        die "Error: volume ".$volume->file." is missing.\n" if !$self->_vm->file_exists($volume->file);
         $self->_vm->_check_free_disk($volume->capacity * 2, $pool_base);
     }
 };
@@ -2625,6 +2635,7 @@ sub _post_remove_base {
 sub _post_spinoff($self) {
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set id_base=NULL WHERE id=?");
     $sth->execute($self->id);
+    $self->list_volumes_info();
 }
 
 sub _pre_shutdown_domain {}
@@ -3341,7 +3352,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
     if ($public_port
-        && ( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port") 
+        && ( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port")
             || $self->_used_port_displays($public_port,$id_port))
         ) {
         warn $self->name." cleared duplicate $public_port\n"
@@ -5575,6 +5586,7 @@ Example:
 =cut
 
 sub allow_ldap_access($self, $attribute, $value, $allowed=1, $last=0 ) {
+    confess "Error: undefined value" unless defined $value;
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT max(n_order) FROM access_ldap_attribute "
         ." WHERE id_domain=?"
@@ -5855,11 +5867,15 @@ Argument: id of the access from the table access_ldap_attribute
 =cut
 
 #TODO: check something has been deleted
-sub delete_ldap_access($self, $id_access) {
+sub delete_ldap_access($self, @id_access) {
+    for my $id_access (@id_access) {
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "DELETE FROM access_ldap_attribute "
         ."WHERE id_domain=? AND id=? ");
     $sth->execute($self->id, $id_access);
+
+    }
 }
 
 =head2 list_ldap_access
@@ -5898,6 +5914,7 @@ Example:
 =cut
 
 sub deny_ldap_access($self, $attribute, $value) {
+    confess "Error: undefined value" unless defined $value;
     $self->allow_ldap_access($attribute, $value, 0);
 }
 
@@ -6359,7 +6376,7 @@ sub purge($self, $request=undef) {
 }
 
 sub _check_port($self, $port, $ip=$self->ip, $request=undef) {
-    my ($out, $err) = $self->_vm->run_command("nc","-z","-v",$ip,$port);
+    my ($out, $err) = $self->_vm->run_command("nc","-z","-v","-w",1,$ip,$port);
 
     return 1 if $err =~ /succeeded!/;
     return 0 if $err =~ /failed/;
@@ -6390,6 +6407,8 @@ Refresh the status of the exposed ports
 =cut
 
 sub refresh_ports($self, $request=undef) {
+    return if !$self->list_ports;
+
     my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_ports "
         ." SET is_active=? "
         ." WHERE id_domain=? AND id=?"

@@ -711,7 +711,7 @@ sub mojo_login( $t, $user, $pass ) {
     $t->ua->get($URL_LOGOUT);
 
     $t->post_ok('/login' => form => {login => $user, password => $pass});
-    like($t->tx->res->code(),qr/^(200|302)$/);
+    like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body;
     #    ->status_is(302);
 $MOJO_USER = $user;
     $MOJO_PASSWORD = $pass;
@@ -1558,7 +1558,7 @@ sub flush_rules_node($node) {
     is($err,'') or die `iptables-save`;
     for my $rule (@FLUSH_RULES) {
         ($out, $err) = $node->run_command("iptables",@$rule,"-w");
-        like($err,qr(^$|chain/target/match by that name));
+        like($err,qr(^$|chain/target/match by that name|does not exist));
     }
 
     _flush_forward($node);

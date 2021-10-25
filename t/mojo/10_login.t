@@ -31,7 +31,7 @@ sub remove_machines(@machines) {
         my $domain = rvd_front->search_domain($name) or next;
         remove_domain_and_clones_req($domain,1); #remove and wait
     }
-    _wait_request(debug => 1, background => 1, timeout => 120);
+    _wait_request(debug => 0, background => 1, timeout => 120);
 }
 
 sub _wait_request(@args) {
@@ -87,7 +87,7 @@ sub test_many_clones($base) {
         warn Dumper($response);
     };
 
-    wait_request(debug => 1, background => 1);
+    wait_request(debug => 0, background => 1);
     ok(scalar($base->clones)>=$n_clones);
 
     test_iptables_clones($base);
@@ -119,7 +119,7 @@ sub test_different_mac(@domain) {
 
 sub test_iptables_clones($base) {
     delete_request('set_time','screenshot','refresh_machine_ports');
-    wait_request(background => 1, debug => 1);
+    wait_request(background => 1, debug => 0);
     my %port_display;
     for my $clone_data ( $base->clones ) {
         next if $clone_data->{is_base};
@@ -199,7 +199,7 @@ sub test_copy_without_prepare($clone) {
 
     my $n_clones = 3;
     mojo_request($t, "clone", { id_domain => $clone->id, number => $n_clones });
-    wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+    wait_request(debug => 0, check_error => 1, background => 1, timeout => 120);
 
     my @clones = $clone->clones();
     is(scalar @clones, $n_clones) or exit;
@@ -260,7 +260,7 @@ sub _check_html_lint($url, $content, $option = {}) {
     for my $error ( $lint->errors() ) {
         next if $error->errtext =~ /Entity .*is unknown/;
         next if $option->{internal} && $error->errtext =~ /(body|head|html|title).*required/;
-        if ( $error->errtext =~ /Unknown element <(footer|header|nav)/
+        if ( $error->errtext =~ /Unknown element <(footer|header|nav|ldap-groups)/
             || $error->errtext =~ /Entity && is unknown/
             || $error->errtext =~ /should be written as/
             || $error->errtext =~ /Unknown attribute.*%/
@@ -404,7 +404,7 @@ sub test_admin_can_do_anything($t, $base) {
 
 ########################################################################################
 
-$ENV{MOJO_MODE} = 'devel';
+$ENV{MOJO_MODE} = 'development';
 init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
 like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
@@ -454,7 +454,7 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
         }
     )->status_is(302);
 
-    _wait_request(debug => 1, background => 1, check_error => 1);
+    _wait_request(debug => 0, background => 1, check_error => 1);
     my $base0;
     for ( 1 .. 10 ) {
         $base0 = rvd_front->search_domain($name);
@@ -467,7 +467,7 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     test_admin_can_do_anything($t, $base0);
 
     mojo_request($t, "add_hardware", { id_domain => $base0->id, name => 'network' });
-    wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+    wait_request(debug => 0, check_error => 1, background => 1, timeout => 120);
 
     test_validate_html("/machine/manage/".$base0->id.".html");
 

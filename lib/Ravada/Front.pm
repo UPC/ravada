@@ -1343,6 +1343,16 @@ sub settings_global($self) {
     return $self->_get_settings();
 }
 
+=head2 setting
+
+Sets or gets a global setting parameter
+
+    $rvd_front->('debug')
+
+Settings are defined and stored in the table settings in the database.
+
+=cut
+
 sub setting($self, $name, $new_value=undef) {
 
     confess "Error: wrong new value '$new_value' for $name"
@@ -1392,6 +1402,15 @@ sub _settings_by_id($self) {
     }
     return $orig_settings;
 }
+
+=head2 feature
+
+Returns if a feature is available
+
+  if ($rvd_front->$feature('ldap')) {
+     ....
+
+=cut
 
 sub feature($self,$name=undef) {
     if (!defined $name) {

@@ -126,7 +126,7 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
     async function editEntry(eventClickInfo) {
         // parameter object details in https://fullcalendar.io/docs/eventClick
         const res = await apiEntry.get({ id: eventClickInfo.event.id}).$promise;
-        const resBooking = await apiBookings.get({ id: eventClickInfo.event.groupId}).$promise;
+        const resBooking = await apiBookings.get({ id_booking: eventClickInfo.event.groupId}).$promise;
         res.editable = self.userId === resBooking.id_owner && self.editable;
         res.background_color = resBooking.background_color;
         res.id_owner = resBooking.id_owner;
