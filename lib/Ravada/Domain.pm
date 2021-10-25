@@ -6376,7 +6376,7 @@ sub purge($self, $request=undef) {
 }
 
 sub _check_port($self, $port, $ip=$self->ip, $request=undef) {
-    my ($out, $err) = $self->_vm->run_command("nc","-z","-v",$ip,$port);
+    my ($out, $err) = $self->_vm->run_command("nc","-z","-v","-w",1,$ip,$port);
 
     return 1 if $err =~ /succeeded!/;
     return 0 if $err =~ /failed/;
@@ -6407,6 +6407,8 @@ Refresh the status of the exposed ports
 =cut
 
 sub refresh_ports($self, $request=undef) {
+    return if !$self->list_ports;
+
     my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_ports "
         ." SET is_active=? "
         ." WHERE id_domain=? AND id=?"
