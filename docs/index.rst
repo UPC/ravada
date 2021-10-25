@@ -88,7 +88,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/Server_Hardware
    docs/Cluster_Hardware
    docs/CLI
-   docs/cas_login
+   docs/sso_login
    docs/apparmor
 
 .. _feature-docs:
