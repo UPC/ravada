@@ -202,7 +202,7 @@ hook before_routes => sub {
         || $url =~ m{^/ws/subscribe}
         ) && !_logged_in($c)) {
         $USER = _anonymous_user($c);
-        return if $USER->is_temporary;
+        return if (! $USER) || ($USER->is_temporary);
     }
     return access_denied($c)
         if $url =~ /(screenshot|\.json)/
@@ -271,7 +271,7 @@ get '/anonymous' => sub {
     my $c = shift;
 #    $c->render(template => 'bases', base => list_bases());
     $USER = _anonymous_user($c);
-    return list_bases_anonymous($c);
+    return list_bases_anonymous($c) if ($USER);
 };
 
 get '/anonymous_logout.html' => sub {
@@ -289,7 +289,7 @@ get '/anonymous/(#base_id).html' => sub {
     my $base = $RAVADA->search_domain_by_id($base_id);
 
     $USER = _anonymous_user($c);
-    return quick_start_domain($c,$base->id, $USER->name);
+    return quick_start_domain($c,$base->id, $USER->name) if ($USER);
 };
 
 get '/settings_global.json' => sub($c) {
@@ -1575,7 +1575,7 @@ get '/anonymous/request/(:id).(:type)' => sub {
 
     $USER = _anonymous_user($c);
 
-    return _show_request($c,$id);
+    return _show_request($c,$id) if ($USER);
 };
 
 get '/requests.json' => sub {
@@ -3303,6 +3303,18 @@ sub list_requests {
     $c->render(json => $list_requests);
 }
 
+sub access_denied_if_no_anonymous_bases
+{
+    my $c = shift;
+
+    my $bases_anonymous = $RAVADA->list_bases_anonymous(_remote_ip($c));
+
+    return undef if scalar @$bases_anonymous;
+
+    access_denied($c);
+    return 1;
+}
+
 sub list_bases_anonymous {
     my $c = shift;
 
@@ -3342,9 +3354,10 @@ sub _get_anonymous_user {
 sub _anonymous_user {
     my $c = shift;
 
+    return undef if (access_denied_if_no_anonymous_bases($c));
+
     $c->stash(_user => undef);
     my $name = $c->session('anonymous_user');
-
     if (!$name) {
         $name = _new_anonymous_user($c);
         $c->session(anonymous_user => $name);

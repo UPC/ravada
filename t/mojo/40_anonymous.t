@@ -15,7 +15,7 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-$ENV{MOJO_MODE} = 'devel';
+$ENV{MOJO_MODE} = 'development';
 my $SCRIPT = path(__FILE__)->dirname->sibling('../script/rvd_front');
 
 init('/etc/ravada.conf',0);
@@ -54,16 +54,13 @@ for my $action ( qw(clone display info view ) ) {
     is(list_anonymous_users(), $n_anonymous, $url);
 }
 
-for my $route ( qw( list_bases_anonymous request ws/subscribe anonymous_logout.html 
-    anonymous/1.html anonymous/request/1.html
-    ) ) {
+for my $route ( qw( list_bases_anonymous request/1.json ws/subscribe anonymous_logout.html anonymous/1.html anonymous/request/1.html) ) {
     my $url = "/$route";
     $n_anonymous = list_anonymous_users();
     $t->reset_session;
     $t->get_ok($url);
-    is($t->tx->res->code(), 403 );
+    is($t->tx->res->code(), $route eq "anonymous_logout.html" ? 302 : 403 );
     is(list_anonymous_users(), $n_anonymous, $url);
-
 }
 
 done_testing();
