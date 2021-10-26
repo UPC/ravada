@@ -1826,6 +1826,7 @@ sub test_long_iso($vm) {
 
     my $req;
     eval { $req = Ravada::Request->create_domain( name => new_domain_name(), id_template => 1
+            , id_iso => 1
             , iso_file => $iso_file
             , id_owner => user_admin->id
             , vm => $vm->type
