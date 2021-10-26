@@ -1,8 +1,10 @@
-Use a CAS login service to login into Ravada
-============================================
+Single Sign On
+==============
 
-In order to authenticate users into Ravada using an external CAS service you need to 
-configure the URL of the external CAS service into ravada.conf YML file.
+In this doc we show an example of how to configure the server to use a Single Sign On or CAS login service to login into Ravada.
+
+In order to authenticate users into Ravada using an external Single Sign On service
+you need to configure the URL of the external service into ravada.conf YML file.
 
 Configuration
 -------------
@@ -11,7 +13,7 @@ The config file usually is /etc/ravada.conf. Add this configuration:
 
 ::
 
-    cas:
+    sso:
         url: https://cas.example.com		        # External CAS Service location
         service: http://localhost:3000/login		# Ravada Service URL 
         logout: true                                    # Set to also logout from CAS Service when logout from Ravada
