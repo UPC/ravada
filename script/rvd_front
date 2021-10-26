@@ -3309,10 +3309,11 @@ sub access_denied_if_no_anonymous_bases
 
     my $bases_anonymous = $RAVADA->list_bases_anonymous(_remote_ip($c));
 
-    return undef if scalar @$bases_anonymous;
-
-    access_denied($c);
-    return 1;
+    if !scalar @$bases_anonymous
+	{
+		access_denied($c);
+		return 1;
+	}
 }
 
 sub list_bases_anonymous {
