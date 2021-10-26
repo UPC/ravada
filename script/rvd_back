@@ -10,6 +10,7 @@ use Data::Dumper;
 use Getopt::Long;
 use POSIX ":sys_wait_h";
 use Proc::PID::File;
+use File::Tee;
 
 use Ravada;
 use Ravada::Auth::SQL;
@@ -44,6 +45,7 @@ my $REMOVE_ADMIN_USER;
 my $START = 1;
 my $TEST_LDAP;
 my $CLEAN_DB_LEFTOVERS;
+my $LOG_FILENAME;
 
 my $URL_ISOS;
 my $ALL;
@@ -73,6 +75,7 @@ my $USAGE = "$0 "
         ." [--rebase MACHINE]"
         ." [--remove-user=name]"
         ." [--clean-db-leftovers]"
+        ." [--log=pathname]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
@@ -106,6 +109,7 @@ my $USAGE = "$0 "
         ." --active: execute on active running machines\n"
         ."Maintenance operations:\n"
         ." --clean-db-leftovers: properly clean database unreferenced entries\n"
+        ." --log: saves STDOUT and STDERR app traces to the specified filename\n"
         ."\n"
     ;
 
@@ -148,6 +152,7 @@ GetOptions (       help => \$help
         ,'migrate=s'    => \$MIGRATE
 
         ,"clean-db-leftovers" => \$CLEAN_DB_LEFTOVERS
+        ,"log=s"              => \$LOG_FILENAME
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
@@ -190,8 +195,18 @@ my $RVD_BACK;
 ###################################################################
 #
 
+sub _do_start_logging {
+    $LOG_FILENAME = $CONFIG{"log"} if (! $LOG_FILENAME);
+    return undef if (! $LOG_FILENAME);
+    File::Tee::tee(STDOUT, '>>', $LOG_FILENAME) or die "Cannot redirect STDOUT to the specified log file";
+    File::Tee::tee(STDERR, '>>', $LOG_FILENAME) or die "Cannot redirect STDERR to the spedicied log file";
+    return $LOG_FILENAME;
+}
+
 sub do_start {
-    warn "Starting rvd_back v".Ravada::version."\n";
+    my $log_file = _do_start_logging();
+    my $log_reference = $log_file ? sprintf(" (logging to %s)", $log_file) : "";
+    warn sprintf("Starting rvd_back v%s%s\n", Ravada::version, $log_reference);
     my $old_error = ($@ or '');
     my $cnt_error = 0;
 
@@ -218,7 +233,6 @@ sub do_start {
         }
         sleep 1 if time - $t0 <1;
     }
-
 }
 
 sub done_request {
