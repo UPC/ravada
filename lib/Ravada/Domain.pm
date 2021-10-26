@@ -6443,14 +6443,11 @@ sub refresh_ports($self, $request=undef) {
     die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
     die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"
     if $port_down;
-warn ">>>>> 1 " . $msg . " -- " . $request;
 
     if (($msg) && ($request))
     {
         my $uid = $request->args("uid");
-warn "!!!!! 2 $uid";
         my $user = Ravada::Auth::SQL->search_by_id($uid) if ($uid);
-warn "!!!!! 3 $user";
         $user->send_message($msg) if ($user);
     }
 }
