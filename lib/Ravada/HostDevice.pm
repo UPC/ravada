@@ -201,6 +201,7 @@ sub _data($self, $field, $value=undef) {
         );
         $sth->execute($value, $self->id);
         $self->meta->get_attribute($field)->set_value($self, $value);
+        $self->_dettach_in_domains() if $field =~ /^list_/;
         return $value;
     } else {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM host_devices"
@@ -222,6 +223,14 @@ sub list_domains_with_device($self) {
         push @domains,($id_domain);
     }
     return @domains;
+}
+
+
+sub _dettach_in_domains($self) {
+    for my $id_domain ( $self->list_domains_with_device() ) {
+        my $domain = Ravada::Domain->open($id_domain);
+        $domain->_dettach_host_device($self);
+    }
 }
 
 sub add_host_device($self, %args ) {
