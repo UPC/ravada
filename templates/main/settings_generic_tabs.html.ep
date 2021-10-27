@@ -1,5 +1,5 @@
 % my %tabs_item = (
-%    node => ['options' , 'bases', 'remove']
+%    node => ['options' , 'bases', 'remove' , 'hostdev']
 %   ,network => ['options', 'machines', 'remove']
 % );
 % my $tabs = $tabs_item{$item};

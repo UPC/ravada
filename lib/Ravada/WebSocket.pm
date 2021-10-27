@@ -5,6 +5,7 @@ use strict;
 
 use Data::Dumper;
 use Hash::Util qw( lock_hash unlock_hash);
+use Mojo::JSON qw(decode_json);
 use Moose;
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -29,6 +30,7 @@ my %SUB = (
                   ,list_bases => \&_list_bases
                   ,list_isos  => \&_list_isos
                   ,list_nodes => \&_list_nodes
+           ,list_host_devices => \&_list_host_devices
                ,list_machines => \&_list_machines
           ,list_machines_tree => \&_list_machines_tree
           ,list_machines_user => \&_list_machines_user
@@ -54,6 +56,7 @@ our %TABLE_CHANNEL = (
 );
 
 my $A_WHILE;
+my %A_WHILE;
 my $LIST_MACHINES_FIRST_TIME = 1;
 my $TZ;
 ######################################################################
@@ -201,6 +204,44 @@ sub _list_bases_anonymous($rvd, $args) {
     return $rvd->list_bases_anonymous($remote_ip);
 }
 
+sub _list_host_devices($rvd, $args) {
+    my ($id_vm) = $args->{channel} =~ m{/(\d+)};
+
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login)
+        or die "Error: uknown user $login";
+
+    my $sth = $rvd->_dbh->prepare( "SELECT id,name,list_command,list_filter,devices,date_changed "
+        ." FROM host_devices WHERE id_vm=?");
+
+    $sth->execute($id_vm);
+
+    my @found;
+    while (my $row = $sth->fetchrow_hashref) {
+        $row->{devices} = decode_json($row->{devices}) if $row->{devices};
+        $row->{_domains} = _list_domains_with_device($rvd, $row->{id});
+        push @found, $row;
+        next unless _its_been_a_while_channel($args->{channel});
+        my $req = Ravada::Request->list_host_devices(
+            uid => $user->id
+            ,id_host_device => $row->{id}
+        );
+    }
+    return \@found;
+}
+
+sub _list_domains_with_device($rvd,$id_hd) {
+    my $sth=$rvd->_dbh->prepare("SELECT d.name FROM domains d,host_devices_domain hdd"
+        ." WHERE  d.id= hdd.id_domain "
+        ."  AND hdd.id_host_device=?"
+    );
+    $sth->execute($id_hd);
+    my @domains;
+    while ( my ($name) = $sth->fetchrow ) {
+        push @domains,($name);
+    }
+    return \@domains;
+}
 
 sub _list_requests($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
@@ -312,6 +353,15 @@ sub _list_next_bookings_today($rvd, $args) {
     );
     return \@ret;
 }
+
+sub _its_been_a_while_channel($channel) {
+    if (!$A_WHILE{$channel} || time -$A_WHILE{$channel} > 5) {
+        $A_WHILE{$channel} = time;
+        return 1;
+    }
+    return 0;
+}
+
 
 sub _its_been_a_while($reset=0) {
     if ($reset) {
