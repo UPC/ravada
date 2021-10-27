@@ -638,6 +638,7 @@ sub test_invalid_param {
 
 #########################################################
 
+init();
 clean();
 
 test_invalid_param();
