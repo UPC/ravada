@@ -17,6 +17,7 @@
 				<div class="row">
                     %= include "main/settings_generic_tabs"
 				</div>
+                <div class="alert alert-danger" ng-show="error">{{error}}</div>
             </div>
         </div>
     </div>
