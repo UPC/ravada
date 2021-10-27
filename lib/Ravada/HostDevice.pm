@@ -213,6 +213,17 @@ sub _data($self, $field, $value=undef) {
     }
 }
 
+sub list_domains_with_device($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_domain FROM host_devices_domain "
+        ." WHERE id_host_device=?");
+    $sth->execute($self->id);
+    my @domains;
+    while (my ($id_domain) = $sth->fetchrow ) {
+        push @domains,($id_domain);
+    }
+    return @domains;
+}
+
 sub add_host_device($self, %args ) {
     my $template = delete $args{template} or confess "Error: missing template name";
     my $info = Ravada::HostDevice::Templates::template($self->type, $template);

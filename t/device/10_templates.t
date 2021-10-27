@@ -88,6 +88,22 @@ sub test_hostdev_in_domain_config($domain, $expect_feat_kvm) {
     }
 }
 
+sub _fix_host_device($hd) {
+    if ($hd->{name} =~ /PCI/) {
+        _set_hd_nvidia($hd);
+    } elsif ($hd->{name} =~ /USB/ ) {
+        _set_hd_usb($hd);
+    }
+}
+
+sub _create_domain_hd($vm, $hd) {
+    my $domain = create_domain($vm);
+    $domain->add_host_device($hd);
+
+    return $domain if $vm->type ne 'KVM';
+
+   return $domain;
+}
 
 sub test_hd_in_domain($vm , $hd) {
 
@@ -285,6 +301,41 @@ sub _count_locked() {
     return $n;
 }
 
+sub test_templates_change_filter($vm) {
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+    ok(@$templates);
+
+    for my $first  (@$templates) {
+        diag("Testing $first->{name} Hostdev on ".$vm->type);
+        $vm->add_host_device(template => $first->{name});
+        my @list_hostdev = $vm->list_host_devices();
+        my ($hd) = $list_hostdev[-1];
+
+        _fix_host_device($hd) if $vm->type eq 'KVM';
+
+        next if !$hd->list_devices;
+
+        is(scalar($hd->list_domains_with_device()),0);
+
+        my $domain = _create_domain_hd($vm, $hd);
+        $domain->start(user_admin);
+
+        is(scalar($hd->list_domains_with_device()),1);
+        $domain->shutdown_now(user_admin);
+
+        $hd->_data('list_filter','AAAA AAAA');
+        die "Error: list filter not enough restrictive" if $hd->list_devices();
+
+        test_hostdev_not_in_domain_config($domain);
+
+        $domain->remove(user_admin);
+    }
+
+    for my $hd ( $vm->list_host_devices ) {
+        test_hd_remove($vm, $hd);
+    }
+}
+
 sub test_templates($vm) {
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
     ok(@$templates);
@@ -432,6 +483,7 @@ for my $vm_name ( vm_names()) {
         diag("Testing host devices in $vm_name");
 
         test_templates($vm);
+        test_templates_change_filter($vm);
 
     }
 }
