@@ -5,11 +5,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: shogo82148/actions-setup-perl@v1
-      - name: Install package
+      - name: Install packages
         run: |
-          sudo apt-get -y install libtest-perl-critic-perl liblist-moreutils-perl
+          sudo apt-get -y install perl libtest-perl-critic-perl liblist-moreutils-perl
       - name: Find pm
         run: find /usr/share -iname Moreutils.pm
       - name: Test critic
-        run:  prove -lv -I /usr/share/perl5 -I /usr/lib/x86_64-linux-gnu/perl5/5.30 t/critic.t
+        run:  prove -lv t/critic.t
