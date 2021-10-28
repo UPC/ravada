@@ -544,6 +544,7 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
         name => $domain->name
         ,uid => user_admin->id
     );
+    wait_request(debug => 0) if $wait;
 }
 
 sub _remove_old_domains_vm($vm_name) {

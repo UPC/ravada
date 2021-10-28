@@ -24,6 +24,7 @@ use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
 
+use Ravada::HostDevice;
 use Ravada::Utils;
 
 no warnings "experimental::signatures";
@@ -462,6 +463,7 @@ sub _around_create_domain {
             delete @port{'id','id_domain','public_port','id_vm', 'is_secondary'};
             $domain->expose(%port);
         }
+        $base->_copy_host_devices($domain);
         my @displays = $base->_get_controller_display();
         for my $display (@displays) {
             delete $display->{id};
@@ -2163,6 +2165,69 @@ sub _check_equal_storage_pools($vm1, $vm2) {
     return 1;
 }
 
+sub _max_hd($self, $name) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT MAX(name) FROM host_devices "
+        ." WHERE name like ? AND id_vm = ?"
+    );
+    $sth->execute("$name%", $self->id);
+
+    my ($found ) =$sth->fetchrow;
+
+    return 0 if !$found;
+
+    my ($max) = $found =~ /.*?(\d+)$/;
+    return ($max or 0);
+
+}
+
+sub add_host_device($self, %args) {
+    _init_connector();
+
+    my $template = delete $args{template} or confess "Error: template required";
+    my $info = Ravada::HostDevice::Templates::template($self->type, $template);
+    my $template_list = delete $info->{templates};
+    $info->{id_vm} = $self->id;
+
+    $info->{name}.= " ".($self->_max_hd($info->{name})+1);
+
+    my $query = "INSERT INTO host_devices "
+    ."( ".join(", ",sort keys %$info)." ) "
+    ." VALUES ( ".join(", ",map { '?' } keys %$info)." ) "
+    ;
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+    $sth->execute(map { $info->{$_} } sort keys %$info );
+
+    my $id = Ravada::Request->_last_insert_id( $$CONNECTOR );
+
+    for my $template( @$template_list ) {
+        $template->{id_host_device} = $id;
+        $template->{type} = 'node' if !exists $template->{type};
+        $query = "INSERT INTO host_device_templates "
+        ."( ".join(", ",sort keys %$template)." ) "
+        ." VALUES ( ".join(", ",map { '?' } keys %$template)." ) "
+        ;
+
+        my $sth2= $$CONNECTOR->dbh->prepare($query);
+        $sth2->execute(map { $template->{$_} } sort keys %$template);
+
+    }
+
+    return $id;
+}
+
+sub list_host_devices($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM host_devices WHERE id_vm=?");
+    $sth->execute($self->id);
+
+    my @found;
+    while (my $row = $sth->fetchrow_hashref) {
+	    $row->{devices} = '' if !defined $row->{devices};
+        push @found,(Ravada::HostDevice->new(%$row));
+    }
+
+    return @found;
+}
 
 1;
 

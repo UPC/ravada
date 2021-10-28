@@ -1285,6 +1285,18 @@ sub _add_indexes_generic($self) {
         ,iptables => [
             "index(id_domain,time_deleted,time_req)"
         ]
+        ,host_devices => [
+            "unique(name, id_vm)"
+        ]
+        ,host_device_templates => [
+            "unique(id_host_device,path)"
+        ]
+        ,host_devices_domain => [
+            "unique(id_host_device, id_domain)"
+        ]
+        ,host_devices_domain_locked => [
+            "unique(id_vm,name)"
+        ],
         ,messages => [
              "index(id_user)"
              ,"index(date_changed)"
@@ -1835,6 +1847,48 @@ sub _sql_create_tables($self) {
         ]
         ,
         [
+            host_devices => {
+                id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+                ,name => 'char(80) not null'
+                ,id_vm => 'integer NOT NULL references `vms`(`id`) ON DELETE CASCADE'
+                ,list_command => 'varchar(128) not null'
+                ,list_filter => 'varchar(128) not null'
+                ,template_args => 'varchar(255) not null'
+                ,devices => 'TEXT'
+                ,enabled => "integer NOT NULL default 1"
+                ,'date_changed'
+                    => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+            }
+        ]
+        ,
+        [
+            host_device_templates=> {
+                id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+                ,id_host_device => 'integer NOT NULL references `host_devices`(`id`) ON DELETE CASCADE'
+                ,path => 'varchar(255)'
+                ,type => 'char(40)'
+                ,template=> 'TEXT'
+            }
+        ]
+        ,
+        [
+            host_devices_domain => {
+                id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+                ,id_host_device => 'integer NOT NULL references `host_devices`(`id`) ON DELETE CASCADE'
+                ,id_domain => 'integer NOT NULL references `domains`(`id`) ON DELETE CASCADE'
+                ,name => 'varchar(255)'
+            }
+        ]
+        ,[
+            host_devices_domain_locked => {
+                id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+                ,id_vm => 'integer NOT NULL references `vms`(`id`) ON DELETE CASCADE'
+                ,id_domain => 'integer NOT NULL references `domains`(`id`) ON DELETE CASCADE'
+                ,name => 'varchar(255)'
+            }
+        ]
+        ,
+        [
         settings => {
             id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
             , id_parent => 'INT NOT NULL'
@@ -2000,6 +2054,19 @@ sub _delete_limit($self, $query) {
 
 }
 
+sub _fix_constraint($self, $definition) {
+    my ($table,$post) = $$definition =~ /^\s*`(\w+)`\s*(\(.*)/;
+    if ( !$table ) {
+        my $field;
+        ($table,$field,$post) = $$definition =~ /^\s*(\w+)\s*\((.*)\)\s+(.*)/;
+        confess "Error: constraint $$definition without ON DELETE" if !$post;
+        $$definition = "`$table` (`$field`) $post";
+        return;
+    }
+
+    $$definition = "`$table` $post";
+}
+
 sub _create_constraints($self, $table, @constraints) {
     return if $CONNECTOR->dbh->{Driver}{Name} !~ /mysql/i;
 
@@ -2008,9 +2075,15 @@ sub _create_constraints($self, $table, @constraints) {
     for my $constraint ( @constraints ) {
         my ($field, $definition) = @$constraint;
         #my $sql = "alter table $table add CONSTRAINT constraint_${table}_$field FOREIGN KEY ($field) references $definition";
+        $self->_fix_constraint(\$definition);
         my $sql = "FOREIGN KEY (`$field`) REFERENCES $definition";
         my $name = "constraint_${table}_$field";
         next if $known->{$name} && $known->{$name} eq $sql;
+
+        if ($known->{$name}) {
+            warn "Warning: Constraint duplicated $name\n$known->{$name}\n$sql\n";
+            next;
+        }
 
         $sql = "alter table $table add CONSTRAINT $name $sql";
         #        $CONNECTOR->dbh->do($sql);
@@ -3773,6 +3846,31 @@ sub _cmd_create{
 
 }
 
+sub _cmd_list_host_devices($self, $request) {
+    my $id_host_device = $request->args('id_host_device');
+
+    my $hd = Ravada::HostDevice->search_by_id(
+        $id_host_device
+    );
+
+    $hd->list_devices;
+
+}
+
+sub _cmd_remove_host_device($self, $request) {
+    my $id_host_device = $request->args('id_host_device');
+    my $host_device = Ravada::HostDevice->search_by_id($id_host_device);
+
+    my $id_domain = $request->defined_arg('id_domain');
+
+    if ($id_domain) {
+        my $domain = Ravada::Domain->open($id_domain);
+        $domain->remove_host_device($host_device);
+    } else {
+        $host_device->remove;
+    }
+}
+
 sub _can_fork {
     my $self = shift;
     my $req = shift or confess "Missing request";
@@ -4567,6 +4665,8 @@ sub _cmd_refresh_machine($self, $request) {
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id
         ,timeout => 60, retry => 10)
     if $is_active && $domain->ip;
+
+    $domain->_unlock_host_devices() if !$is_active;
 }
 
 sub _cmd_refresh_machine_ports($self, $request) {
@@ -5073,6 +5173,7 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
 
         if (defined $id_vm && !$active_vm->{$id_vm} ) {
             $domain->_set_data(status => 'shutdown');
+            $domain->_post_shutdown()
         } else {
             my $status = 'shutdown';
             $status = 'active' if $domain->is_active;
@@ -5310,6 +5411,8 @@ sub _req_method {
     ,list_isos => \&_cmd_list_isos
 
     ,manage_pools => \&_cmd_manage_pools
+    ,list_host_devices => \&_cmd_list_host_devices
+    ,remove_host_device => \&_cmd_remove_host_device
     );
     return $methods{$cmd};
 }
