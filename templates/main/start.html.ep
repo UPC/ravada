@@ -15,7 +15,7 @@
 
                <input type="hidden" name="url" value="<%= $url %>">
                <!-- <input type="submit" name="submit" value="launch"> -->
-               <button id="submit" class="btn btn-success btn-lg btn-block" href="/" type="submit" name="submit" value="launch"><%=l 'Login with user/password' %></button>
+               <button id="submit" class="btn btn-success btn-lg btn-block" href="/" type="submit" name="submit" value="launch"><%=l 'Login' %></button>
                 % if (scalar @$error) {
                 %       for my $i (@$error) {
                             <div class="alert alert-danger">
@@ -27,7 +27,7 @@
                 <form class="form-singin" method="post">
                 <input type="hidden" name="url" value="<%= $url %>">
                 % if ($sso_available) {
-                <button id="submit" class="btn btn-success btn-lg btn-block" href="/" type="submit" name="submit" value="sso"><%=l 'SSO/CAS Login' %></button>
+                <button id="submit" class="btn btn-success btn-lg btn-block" href="/" type="submit" name="submit" value="sso" style="margin-top: 0"><%=l 'SSO/CAS Login' %></button>
                 % }
                 </form>
                 <div class="alert alert-warning">

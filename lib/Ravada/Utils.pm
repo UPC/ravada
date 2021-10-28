@@ -142,4 +142,10 @@ sub max_id($dbh, $table) {
     return ($max or 0);
 }
 
+sub check_sql_valid_params(@params) {
+    for my $param (@params) {
+        die "Error: invalid param '$param'" unless $param =~ /^[a-z][a-z_]+$/i;
+    }
+}
+
 1;

@@ -1074,6 +1074,7 @@ sub _domain_create_from_base {
         $with_cd = grep (/\.iso$/ ,@device_disk);
     }
     _xml_remove_cdrom($xml) if !$with_cd;
+    _xml_remove_hostdev($xml);
     my ($node_name) = $xml->findnodes('/domain/name/text()');
     $node_name->setData($args{name});
 
@@ -2042,6 +2043,15 @@ sub _xml_add_sysinfo_entry($self, $doc, $field, $value) {
     }
     ($hostname) = $oemstrings->addNewChild(undef,'entry');
     $hostname->appendText("$field: $value");
+}
+sub _xml_remove_hostdev {
+    my $doc = shift;
+
+    for my $devices ( $doc->findnodes('/domain/devices') ) {
+        for my $node_hostdev ( $devices->findnodes('hostdev') ) {
+            $devices->removeChild($node_hostdev);
+        }
+    }
 }
 
 sub _xml_remove_cdrom {

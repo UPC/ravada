@@ -288,6 +288,9 @@ msgstr ""
 msgid "Login"
 msgstr "Accedir"
 
+msgid "SSO/CAS Login"
+msgstr "Accedir amb SSO/CAS"
+
 msgid "Welcome"
 msgstr "Benvingut"
 
