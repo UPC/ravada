@@ -24,11 +24,11 @@ use I18N::LangTags::Detect;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-
+use Ravada::Auth;
 use Ravada::Booking;
 use Ravada::Front;
 use Ravada::Front::Domain;
-use Ravada::Auth;
+use Ravada::HostDevice::Templates;
 use Ravada::Network;
 use Ravada::WebSocket;
 use POSIX qw(locale_h strftime);
@@ -361,6 +361,83 @@ get '/list_nodes.json' => sub {
     my $c = shift;
     $c->render(json => [$RAVADA->list_vms]);
 };
+
+get '/list_host_devices/(:id_vm)' => sub($c) {
+    $c->render(json => Ravada::WebSocket::_list_host_devices($RAVADA
+            , {
+                channel => '/'.$c->stash('id_vm')
+                ,login => $USER->name
+            }
+        )
+    );
+};
+
+get '/machine/host_device/add/(#id_domain)/(#id_hd)' => sub($c) {
+
+    return access_denied($c) unless $USER->is_admin;
+
+    my $domain = Ravada::Front::Domain->open($c->stash('id_domain'));
+    my $ok = 0;
+    eval {
+        $domain->add_host_device($c->stash('id_hd'));
+        $ok = 1;
+    };
+    return $c->render(json => { ok => $ok, error => ($@ or '') } );
+};
+
+get '/machine/host_device/remove/(#id_domain)/(#id_hd)' => sub($c) {
+
+    return access_denied($c) unless $USER->is_admin;
+
+    my $domain = Ravada::Front::Domain->open($c->stash('id_domain'));
+    my $ok = 0;
+    eval {
+        $domain->remove_host_device($c->stash('id_hd'));
+        $ok = 1;
+    };
+    return $c->render(json => { ok => $ok, error => ($@ or '') } );
+};
+
+post '/node/host_device/add' => sub($c) {
+    my $arg = decode_json($c->req->body);
+    my $id_vm = $arg->{id_vm} or die "Error: missing id_vm ".Dumper($arg);
+    my $vm = Ravada::VM->open( readonly => 1
+        ,id => $id_vm
+    );
+    my $id = $vm->add_host_device(template => $arg->{template});
+    Ravada::Request->list_host_devices(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_host_device => $id
+        ,_force => 1
+    );
+
+    return $c->render( json => { ok => 1 } );
+};
+
+post '/node/host_device/update' => sub($c) {
+    my $arg = decode_json($c->req->body);
+    for my $key ( keys %$arg ) {
+        delete $arg->{$key} if $key =~ /^_/ || $key =~ /^(devices|\$\$hashKey)$/;
+    }
+    my $id = $arg->{id};
+    my $ok;
+    eval {
+        $ok = $RAVADA->update_host_device($arg);
+    };
+    my $error = ( $@ or '');
+    return $c->render( json => { ok => $ok, error => $error } );
+};
+
+get '/node/host_device/remove/(:id)' => sub($c) {
+    return access_denied($c) unless $USER->is_admin;
+    my $id = $c->stash('id');
+    my $req = Ravada::Request->remove_host_device(
+        uid => $USER->id
+        ,id_host_device => $id
+    );
+    return $c->render(json => { ok => 1 });
+};
+
 
 get '/list_networks.json' => sub {
     my $c = shift;
@@ -1551,6 +1628,7 @@ post '/request/(:name)/' => sub {
                 ,%$args
             );
         };
+        warn $@ if $@;
     }
     return $c->render(json => { ok => 0, error => $@ }) if !$req;
     return $c->render(json => { ok => 1, request => $req->id });
@@ -2126,6 +2204,20 @@ get '/session/(#tag)/(#value)' => sub {
     $c->session($tag => $value);
     return $c->render( json => { ok => "Session $tag set to $value " });
 };
+
+###################################################
+#
+# host devices
+#
+#
+get '/host_devices/templates/list/(#id_vm)' => sub($c) {
+
+    my $id_vm = $c->stash('id_vm');
+    my $templates = Ravada::HostDevice::Templates::list_templates($id_vm);
+    return $c->render( json => $templates);
+
+};
+
 ###################################################
 
 sub _init_error {
