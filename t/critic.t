@@ -6,5 +6,5 @@ if ($@ ) {
     diag($@);
     plan(skip_all => "Test::Perl::Critic required to criticise code");
 } else {
-    Test::Perl::Critic::all_critic_ok('lib');
+    Test::Perl::Critic::all_critic_ok('lib','script');
 }
