@@ -8,7 +8,7 @@ jobs:
       - uses: shogo82148/actions-setup-perl@v1
       - name: Install package
         run: |
-          sudo apt-get -y install libtest-perl-critic-perl
+          sudo apt-get -y install libtest-perl-critic-perl liblist-moreutils-perl
       - name: Find Critic.pm
         run: find /usr/share -iname Critic.pm
       - name: Test critic
