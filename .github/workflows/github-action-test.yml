@@ -12,4 +12,4 @@ jobs:
       - name: Find Critic.pm
         run: find /usr/share -iname Critic.pm
       - name: Test critic
-        run:  PER5LIB=$PERL5LIB:/usr/share/perl5 prove -lv t/critic.t
+        run:  prove -lv -I /usr/share/perl5 t/critic.t
