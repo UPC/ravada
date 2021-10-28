@@ -205,6 +205,7 @@
                     <select class="form-control" ng-model="new_owner" name="id_owner"
                         ng-options="user.name for user in list_users track by user.id"
                         ng-change="set_value('id_owner',new_owner.id)"
+                         ng-show="new_owner"
                     >
                     </select>
                 </div>
