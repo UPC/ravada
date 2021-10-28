@@ -10,20 +10,26 @@ In order to upgrade Ravada, you have to do a few steps:
 Steps for a clean update
 ------------------------
 
-Step 1 
+Step 1
 ~~~~~~
 
 Download the *deb* package of the new version found at the `UPC
 ETSETB repository <http://infoteleco.upc.edu/img/debian/>`__.
 
-Step 2 
+.. prompt:: bash
+
+    wget http://infoteleco.upc.edu/img/debian/ravada_1.1.0_ubuntu-20.04_all.deb
+
+
+Step 2
 ~~~~~~
 
 Install the *deb* package.
 
 .. prompt:: bash
 
-    sudo dpkg -i <deb file>
+    sudo apt install ./ravada_1.1.0_ubuntu-20.04_all.deb
+
 
 On some upgrades may be required to install some dependencies. You will see
 because the packaging system will warn about it:
