@@ -2167,7 +2167,7 @@ websocket '/ws/subscribe' => sub {
                 return;
             }
             return access_denied($c)
-              if !$ALLOWED_ANONYMOUS_WS{$channel} && $USER->is_temporary;
+              if !_allowed_anonymous_ws($channel) && $USER->is_temporary;
 
             $WS->subscribe( ws => $ws
                 , channel => $channel
@@ -2179,6 +2179,11 @@ websocket '/ws/subscribe' => sub {
 
     $c->on(finish => sub { my $ws = shift; $WS->unsubscribe($ws) });
 } => 'ws_subscribe';
+
+sub _allowed_anonymous_ws($channel) {
+    return 1 if $channel =~ m{^(machine_info|request)/} || $ALLOWED_ANONYMOUS_WS{$channel};
+    return 0;
+}
 
 sub _headers($c) {
     my %client;
@@ -3376,7 +3381,7 @@ sub resume_machine {
 
 sub get_execution_machines_limit_per_current_user {
     my $c = shift;
-    return login($c) if !_logged_in($c);
+    return login($c) if !$USER && !_logged_in($c);
 
     my %grants = $USER->grants();
     my $start_limit = ((exists($grants{'start_limit'})) && (defined($grants{'start_limit'})) && ($grants{'start_limit'} > 0)) ? $grants{'start_limit'} : $RAVADA->settings_global()->{'backend'}->{'start_limit'}->{'value'};
