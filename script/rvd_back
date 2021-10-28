@@ -11,6 +11,8 @@ use Getopt::Long;
 use POSIX ":sys_wait_h";
 use Proc::PID::File;
 use File::Tee;
+use File::Path;
+use File::Basename;
 
 use Ravada;
 use Ravada::Auth::SQL;
@@ -196,17 +198,23 @@ my $RVD_BACK;
 #
 
 sub _do_start_logging {
-    $LOG_FILENAME = $CONFIG{"log"} if (! $LOG_FILENAME);
-    return undef if (! $LOG_FILENAME);
-    File::Tee::tee(STDOUT, '>>', $LOG_FILENAME) or die "Cannot redirect STDOUT to the specified log file";
-    File::Tee::tee(STDERR, '>>', $LOG_FILENAME) or die "Cannot redirect STDERR to the spedicied log file";
-    return $LOG_FILENAME;
+    $LOG_FILENAME = $Ravada::CONFIG->{"log"} if (! $LOG_FILENAME);
+    if ($LOG_FILENAME)
+    {
+        File::Path::make_path(File::Basename::dirname($LOG_FILENAME));
+        if (open(my $handle, ">>", $LOG_FILENAME))
+        {
+            print $handle "Starting rvd_back v".Ravada::version."\n";
+            close($handle);
+        }
+        print "Trying to redirect log messages to $LOG_FILENAME\n";
+        File::Tee::tee(STDOUT, ">>", $LOG_FILENAME) or warn "Cannot redirect STDOUT to the specified log file";
+        File::Tee::tee(STDERR, ">>", $LOG_FILENAME) or warn "Cannot redirect STDERR to the spedicied log file";
+    }
 }
 
 sub do_start {
-    my $log_file = _do_start_logging();
-    my $log_reference = $log_file ? sprintf(" (logging to %s)", $log_file) : "";
-    warn sprintf("Starting rvd_back v%s%s\n", Ravada::version, $log_reference);
+    warn "Starting rvd_back v".Ravada::version."\n";
     my $old_error = ($@ or '');
     my $cnt_error = 0;
 
@@ -214,6 +222,8 @@ sub do_start {
     my $t_refresh = 0;
 
     my $ravada = Ravada->new( %CONFIG );
+    _do_start_logging();
+
     #    Ravada::Request->enforce_limits();
     #Ravada::Request->refresh_vms();
     for (;;) {
