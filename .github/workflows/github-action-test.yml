@@ -3,13 +3,13 @@ on: pull_request
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+        PERL5LIB=$PERL5LIB:/usr/share/perl5
     steps:
       - uses: actions/checkout@v2
       - uses: shogo82148/actions-setup-perl@v1
       - name: Install package
         run: |
           sudo apt-get -y install libtest-perl-critic-perl
-      - name: Show pm file
-        run: find / -iname Critic.pm
       - name: Test critic
         run: prove -lv t/critic.t
