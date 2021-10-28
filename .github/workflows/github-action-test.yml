@@ -5,10 +5,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: shogo82148/actions-setup-perl@v1
       - name: Install package
         run: |
-          sudo apt-get -y install libtest-perl-critic-perl
-      - run: cpanm --installdeps .
+          sudo apt-get -y install perl libtest-perl-critic-perl liblist-moreutils-perl
       - name: Test critic
         run: prove -lv t/critic.t
