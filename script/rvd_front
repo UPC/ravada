@@ -200,6 +200,7 @@ hook before_routes => sub {
     if (($url =~ m{^/machine/(clone|display|info|view)/}
         || $url =~ m{^/(list_bases_anonymous|request/)}i
         || $url =~ m{^/ws/subscribe}
+        || $url =~ m{^/execution_machines_limit$}
         ) && !_logged_in($c)) {
         $USER = _anonymous_user($c);
         return if (! $USER) || ($USER->is_temporary);
@@ -2076,11 +2077,13 @@ get '/iso/download/(#id).json' => sub {
 websocket '/ws/subscribe' => sub {
     my $c = shift;
     my $expiration = $SESSION_TIMEOUT;
+    $USER = _logged_in($c) if !$USER;
     return if !$USER;
     $expiration = $SESSION_TIMEOUT_ADMIN    if $USER->is_operator;
     $c->inactivity_timeout( $expiration );
     $c->on(message => sub {
             my ($ws, $channel ) = @_;
+            $USER = _logged_in($c) if !$USER;
             if (!$USER) {
                 cluck "Warning: USER unknown";
                 return;
@@ -3369,6 +3372,7 @@ sub _anonymous_user {
         confess "USER $name has no id after creation"
             if !$user->id;
     }
+    $c->stash( _user => $user );
 
     return $user;
 }
