@@ -9,7 +9,7 @@ jobs:
       - name: Install package
         run: |
           sudo apt-get -y install libtest-perl-critic-perl liblist-moreutils-perl
-      - name: Find Critic.pm
-        run: find /usr/share -iname Critic.pm
+      - name: Find pm
+        run: find /usr/share -iname Moreutils.pm
       - name: Test critic
-        run:  prove -lv -I /usr/share/perl5 t/critic.t
+        run:  prove -lv -I /usr/share/perl5 -I /usr/lib/x86_64-linux-gnu/perl5/5.30 t/critic.t
