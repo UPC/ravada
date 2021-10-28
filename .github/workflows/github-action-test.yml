@@ -9,4 +9,7 @@ jobs:
       - name: Install package
         run: |
           sudo apt-get -y install libtest-perl-critic-perl
-      - run: prove -lv t/critic.t
+      - name: Show pm file
+        run: find / -iname Critic.pm
+      - name: Test critic
+        run: prove -lv t/critic.t
