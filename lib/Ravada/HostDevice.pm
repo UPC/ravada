@@ -196,12 +196,16 @@ sub _data($self, $field, $value=undef) {
             || $value !~ /^(ls|find)/);
 
         $value = encode_json($value) if ref($value);
+
+        my $old_value = $self->_data($field);
+        return if defined $old_value && $old_value eq $value;
+
         my $sth = $$CONNECTOR->dbh->prepare("UPDATE host_devices SET $field=?"
             ." WHERE id=? "
         );
         $sth->execute($value, $self->id);
         $self->meta->get_attribute($field)->set_value($self, $value);
-        $self->_dettach_in_domains() if $field =~ /^list_/;
+        $self->_dettach_in_domains() if $field =~ /^(devices|list_)/;
         return $value;
     } else {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM host_devices"
