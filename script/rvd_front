@@ -200,6 +200,7 @@ hook before_routes => sub {
     if (($url =~ m{^/machine/(clone|display|info|view)/}
         || $url =~ m{^/(list_bases_anonymous|request/)}i
         || $url =~ m{^/ws/subscribe}
+        || $url =~ m{^/execution_machines_limit$}
         ) && !_logged_in($c)) {
         $USER = _anonymous_user($c);
         return if (! $USER) || ($USER->is_temporary);
