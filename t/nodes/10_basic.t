@@ -1539,6 +1539,35 @@ sub test_displays($vm, $node, $no_builtin=0) {
     $domain->remove(user_admin);
 }
 
+sub _check_internal_autostart($domain, $expected) {
+    if ($domain->type eq 'KVM') {
+        ok($domain->domain->get_autostart)  if $expected;
+        ok(!$domain->domain->get_autostart) if !$expected;
+    } elsif ($domain->type eq 'Void') {
+        ok($domain->_value('autostart'))    if $expected;
+        ok(!$domain->_value('autostart'),$domain->name) or exit   if !$expected;
+    } else {
+        diag("WARNING: I don't know how to check ".$domain->type." internal autostart");
+    }
+}
+
+# check autostart is managed by Ravada when nodes
+sub test_autostart($vm, $node) {
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+    my $domain = $base->clone(name => new_domain_name , user => user_admin);
+    $domain->autostart(1,user_admin);
+    is($domain->autostart,1);
+    _check_internal_autostart($domain,1);
+
+    $base->set_base_vm(node => $node, user => user_admin);
+    is($domain->autostart,1) or exit;
+    _check_internal_autostart($domain,0);
+
+    $domain->remove(user_admin);
+    $base->remove(user_admin);
+}
+
 ##################################################################################
 
 if ($>)  {

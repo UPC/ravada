@@ -290,6 +290,9 @@ msgstr ""
 msgid "Login"
 msgstr "Conéctate"
 
+msgid "SSO/CAS Login"
+msgstr "Login con SSO/CAS"
+
 msgid "Welcome"
 msgstr "Bienvenido"
 
