@@ -9,6 +9,7 @@ jobs:
       - name: Install package
         run: |
           sudo apt-get -y install libtest-perl-critic-perl
-      - run: cpanm --installdeps .
+      - name: Find Critic.pm
+        run: find /usr/share -iname Critic.pm
       - name: Test critic
-        run: prove -lv t/critic.t
+        run:  PER5LIB=$PERL5LIB:/usr/share/perl5 prove -lv t/critic.t
