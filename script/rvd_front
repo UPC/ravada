@@ -3451,7 +3451,7 @@ sub _get_anonymous_user {
 sub _anonymous_user {
     my $c = shift;
 
-    return undef if (access_denied_if_no_anonymous_bases($c));
+    return if (access_denied_if_no_anonymous_bases($c));
 
     $c->stash(_user => undef);
     my $name = $c->session('anonymous_user');
