@@ -200,9 +200,10 @@ hook before_routes => sub {
     if (($url =~ m{^/machine/(clone|display|info|view)/}
         || $url =~ m{^/(list_bases_anonymous|request/)}i
         || $url =~ m{^/ws/subscribe}
+        || $url =~ m{^/execution_machines_limit$}
         ) && !_logged_in($c)) {
         $USER = _anonymous_user($c);
-        return if $USER->is_temporary;
+        return if (! $USER) || ($USER->is_temporary);
     }
     return access_denied($c)
         if $url =~ /(screenshot|\.json)/
@@ -271,7 +272,7 @@ get '/anonymous' => sub {
     my $c = shift;
 #    $c->render(template => 'bases', base => list_bases());
     $USER = _anonymous_user($c);
-    return list_bases_anonymous($c);
+    return list_bases_anonymous($c) if ($USER);
 };
 
 get '/anonymous_logout.html' => sub {
@@ -289,7 +290,7 @@ get '/anonymous/(#base_id).html' => sub {
     my $base = $RAVADA->search_domain_by_id($base_id);
 
     $USER = _anonymous_user($c);
-    return quick_start_domain($c,$base->id, $USER->name);
+    return quick_start_domain($c,$base->id, $USER->name) if ($USER);
 };
 
 get '/settings_global.json' => sub($c) {
@@ -1653,7 +1654,7 @@ get '/anonymous/request/(:id).(:type)' => sub {
 
     $USER = _anonymous_user($c);
 
-    return _show_request($c,$id);
+    return _show_request($c,$id) if ($USER);
 };
 
 get '/requests.json' => sub {
@@ -2154,17 +2155,19 @@ get '/iso/download/(#id).json' => sub {
 websocket '/ws/subscribe' => sub {
     my $c = shift;
     my $expiration = $SESSION_TIMEOUT;
+    $USER = _logged_in($c) if !$USER;
     return if !$USER;
     $expiration = $SESSION_TIMEOUT_ADMIN    if $USER->is_operator;
     $c->inactivity_timeout( $expiration );
     $c->on(message => sub {
             my ($ws, $channel ) = @_;
+            $USER = _logged_in($c) if !$USER;
             if (!$USER) {
                 cluck "Warning: USER unknown";
                 return;
             }
             return access_denied($c)
-              if !$ALLOWED_ANONYMOUS_WS{$channel} && $USER->is_temporary;
+              if !_allowed_anonymous_ws($channel) && $USER->is_temporary;
 
             $WS->subscribe( ws => $ws
                 , channel => $channel
@@ -2176,6 +2179,11 @@ websocket '/ws/subscribe' => sub {
 
     $c->on(finish => sub { my $ws = shift; $WS->unsubscribe($ws) });
 } => 'ws_subscribe';
+
+sub _allowed_anonymous_ws($channel) {
+    return 1 if $channel =~ m{^(machine_info|request)/} || $ALLOWED_ANONYMOUS_WS{$channel};
+    return 0;
+}
 
 sub _headers($c) {
     my %client;
@@ -3373,7 +3381,7 @@ sub resume_machine {
 
 sub get_execution_machines_limit_per_current_user {
     my $c = shift;
-    return login($c) if !_logged_in($c);
+    return login($c) if !$USER && !_logged_in($c);
 
     my %grants = $USER->grants();
     my $start_limit = ((exists($grants{'start_limit'})) && (defined($grants{'start_limit'})) && ($grants{'start_limit'} > 0)) ? $grants{'start_limit'} : $RAVADA->settings_global()->{'backend'}->{'start_limit'}->{'value'};
@@ -3393,6 +3401,15 @@ sub list_requests {
 
     my $list_requests = $RAVADA->list_requests();
     $c->render(json => $list_requests);
+}
+
+sub access_denied_if_no_anonymous_bases
+{
+    my $c = shift;
+
+    my $bases_anonymous = $RAVADA->list_bases_anonymous(_remote_ip($c));
+
+    return access_denied($c)    if !scalar @$bases_anonymous;
 }
 
 sub list_bases_anonymous {
@@ -3434,9 +3451,10 @@ sub _get_anonymous_user {
 sub _anonymous_user {
     my $c = shift;
 
+    return if (access_denied_if_no_anonymous_bases($c));
+
     $c->stash(_user => undef);
     my $name = $c->session('anonymous_user');
-
     if (!$name) {
         $name = _new_anonymous_user($c);
         $c->session(anonymous_user => $name);
@@ -3451,6 +3469,7 @@ sub _anonymous_user {
         confess "USER $name has no id after creation"
             if !$user->id;
     }
+    $c->stash( _user => $user );
 
     return $user;
 }
