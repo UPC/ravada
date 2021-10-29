@@ -331,6 +331,7 @@ sub test_templates_change_devices($vm) {
     $vm->add_host_device(template => $template->{name});
     my ($hostdev) = $vm->list_host_devices();
     $hostdev->_data(list_command => "ls $path");
+    $hostdev->_data(list_filter => $name);
     $hostdev->list_devices();
 
     my $domain = _create_domain_hd($vm, $hostdev);
@@ -341,14 +342,12 @@ sub test_templates_change_devices($vm) {
     $domain->shutdown_now(user_admin);
     my $file = "$path/".$dev_attached->{name};
     unlink $file or die "$! $file";
-    warn $file;
 
     $domain->start(user_admin);
     my ($dev_attached2) = ($domain->list_host_devices_attached);
-    isnt($dev_attached2->{name}, $dev_attached->{name});
+    isnt($dev_attached2->{name}, $dev_attached->{name}) or die $domain->name;
 
-    die $domain->name;
-
+    remove_domain($domain);
 }
 
 sub test_templates_change_filter($vm) {
