@@ -1,0 +1,12 @@
+name: PR Workflow
+on: pull_request
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install package
+        run: |
+          sudo apt-get -y install perl libtest-perl-critic-perl liblist-moreutils-perl
+      - name: Test critic
+        run: prove -lv t/critic.t
