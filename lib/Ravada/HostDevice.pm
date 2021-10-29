@@ -196,11 +196,16 @@ sub _data($self, $field, $value=undef) {
             || $value !~ /^(ls|find)/);
 
         $value = encode_json($value) if ref($value);
+
+        my $old_value = $self->_data($field);
+        return if defined $old_value && $old_value eq $value;
+
         my $sth = $$CONNECTOR->dbh->prepare("UPDATE host_devices SET $field=?"
             ." WHERE id=? "
         );
         $sth->execute($value, $self->id);
         $self->meta->get_attribute($field)->set_value($self, $value);
+        $self->_dettach_in_domains() if $field =~ /^(devices|list_)/;
         return $value;
     } else {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM host_devices"
@@ -210,6 +215,25 @@ sub _data($self, $field, $value=undef) {
         my $row = $sth->fetchrow_hashref();
         die "Error: No field '$field' in host_devices" if !exists $row->{$field};
         return $row->{$field};
+    }
+}
+
+sub list_domains_with_device($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_domain FROM host_devices_domain "
+        ." WHERE id_host_device=?");
+    $sth->execute($self->id);
+    my @domains;
+    while (my ($id_domain) = $sth->fetchrow ) {
+        push @domains,($id_domain);
+    }
+    return @domains;
+}
+
+
+sub _dettach_in_domains($self) {
+    for my $id_domain ( $self->list_domains_with_device() ) {
+        my $domain = Ravada::Domain->open($id_domain);
+        $domain->_dettach_host_device($self);
     }
 }
 
