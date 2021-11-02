@@ -3,9 +3,10 @@
         <form name="new_machineForm" role="form" method="post" action="/new_machine.html" novalidate>
             <div class="form-group row">
                 <label for="backend" class="col-xl-3 col-form-label"><%=l 'Backend' %> <a
-                  title="Choose the virtualization type of the Virtual Machine."><i class="fa fa-info-circle"></i></a></label>
+                  title="Choose the virtualization type of the Virtual Machine." ng-show="backends.length > 1"><i class="fa fa-info-circle"></i></a></label>
                 <div class="col-lg-9">
-                    <select class= "form-control"
+                    <label for="backend" class="col-xl-3 col-form-label" ng-show="backends.length === 1">{{backends[0]}}</label>
+                    <select class= "form-control" ng-show="backends.length > 1"
                         ng-change="loadTemplate()"
                         name="backend"
                         ng-model="backend"
@@ -20,13 +21,14 @@
                     <label for="id_iso" class="col-xl-3 col-form-label"><%=l 'Select Template' %> <a
                       title="Choose the OS you want to install."><i class="fa fa-info-circle"></i></a></label>
                     <div class="col-lg-9">
-                        <select class="form-control"
-                            name ="id_iso"
-                            ng-model="id_iso"
-                            ng-options="item.name for item in images track by item.id"
-                            ng-change="iso_file = change_iso(id_iso)"
-                            required=""
-                        ></select>
+                        <input type="hidden" name="id_iso_id" ng-value="id_iso_id">
+                        <input type="text" class="form-control" placeholder="<%=l 'Type the template name' %>"
+                                   name="id_iso"
+                                   ng-model="id_iso" 
+                                   required=""
+                                   uib-typeahead="item as item.name for item in images"
+                                   typeahead-editable="false"
+                                   typeahead-on-select="iso_file = change_iso(id_iso)">
                         <div class="mb-2" ng-show="id_iso.description" >
                             <small ng-bind-html="id_iso.description">{{id_iso.description}}</small>
                         </div>
@@ -44,13 +46,12 @@
                         <label for="iso_file" class="col-xl-3 col-form-label"><%=l 'Select ISO' %> <a
                           title="Select the .iso file the machine will utilize when installing the OS." href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html"><i class="fa fa-info-circle"></i></a></label>
                         <div class="col-lg-9"  ng-init="iso_file = '<NONE>'" >
-                            <select class="form-control"
-                                name ="iso_file"
-                                ng-model="iso_file"
-                                ng-options="item for item in isos track by item"
-                                required=""
-
-                            ></select>
+                            <input type="text" class="form-control" placeholder="<%=l 'Type the ISO pathname' %>"
+                                   name="id_file"
+                                   ng-model="id_file" 
+                                   required=""
+                                   uib-typeahead="item for item in isos"
+                                   typeahead-editable="false">
                         </div>
                 </div>
             </div>

@@ -106,6 +106,7 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.showMinSize = false;
       $scope.min_size = 15;
       $scope.change_iso = function(id) {
+          $scope.id_iso_id = id.id;
           if (id.min_disk_size != null) {
             $scope.min_size = id.min_disk_size;
             $scope.showMinSize = true;
