@@ -8,6 +8,9 @@ use Data::Dumper;
 use lib 't/lib';
 use Test::Ravada;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use_ok('Ravada::Repository::ISO');
 
 init();
@@ -52,8 +55,7 @@ sub test_insert_request {
 
  }
 
-sub test_download {
-    my $iso_name = 'linkat';
+sub test_download($iso_name) {
     my $id_iso = search_id_iso($iso_name);
     ok($id_iso) or return;
 

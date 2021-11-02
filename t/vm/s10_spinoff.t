@@ -114,4 +114,5 @@ for my $vm_name ( vm_names() ) {
 }
 
 end();
+
 done_testing();
