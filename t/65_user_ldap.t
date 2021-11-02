@@ -599,11 +599,17 @@ sub test_uid_cn($user, $with_posix_group) {
     Ravada::Auth::LDAP::init();
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
     my $entry = $user->{_ldap_entry};
-
     my $field = 'uid';
+    my $uid_value = new_domain_name();
+    my $mesg = $entry->replace( $field => $uid_value )->update($ldap);
+    $mesg->code  and  die $mesg->error;          # check for errors
+
+
+    _add_to_posix_group($uid_value, $with_posix_group);
+
     my %data = (
         cn => $entry->get_value('cn')
-        ,$field => $entry->get_value($field)
+        ,$field => $uid_value
 
     );
 
@@ -622,11 +628,14 @@ sub test_login_fields($data) {
     my $login_ok;
     for my $field ( sort keys %$data ) {
         my $value = $data->{$field};
+        $Ravada::CONFIG->{ldap}->{field} = $field;
+        warn "$field: $value";
         eval { $login_ok = Ravada::Auth::login($value, $password) };
 
-        is($@,''," $field: $value");
+        is($@,''," $field: $value") or confess;
         ok($login_ok, $value);
     }
+    delete $Ravada::CONFIG->{ldap}->{field};
 }
 
 sub test_pass_storage($with_posix_group) {
@@ -705,6 +714,8 @@ SKIP: {
             test_pass_storage($with_posix_group);
 
             my $user = test_user( 'pepe.mcnulty', $with_posix_group );
+
+            test_user_bind($user, $fly_config, $with_posix_group);
 
             test_add_group();
             test_manage_group($with_admin, $with_posix_group);
