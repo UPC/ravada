@@ -6465,7 +6465,8 @@ sub refresh_ports($self, $request=undef) {
     if (($msg) && ($request))
     {
         my $uid = $request->args("uid");
-        my $user = Ravada::Auth::SQL->search_by_id($uid) if ($uid);
+        my $user;
+        $user = Ravada::Auth::SQL->search_by_id($uid) if ($uid);
         $user->send_message($msg) if ($user);
     }
 }
@@ -6569,8 +6570,10 @@ sub _add_host_devices($self, @args) {
     my $doc = $self->get_config();
     for my $host_device ( @host_devices ) {
         next if !$host_device->enabled();
+        my @devices = $host_device->list_devices();
         if ( my $device_configured = $self->_device_already_configured($host_device)) {
-            if ( $self->_lock_host_device($host_device) ) {
+            if (grep(/^$device_configured$/, @devices)
+                    && $self->_lock_host_device($host_device) ) {
                 next;
             } else {
                 $self->_dettach_host_device($host_device, $doc);

@@ -8,7 +8,7 @@ jobs:
       - name: Install packages
         run: |
           sudo apt-get -y install perl libtest-perl-critic-perl liblist-moreutils-perl
-      - name: Find pm
-        run: find /usr/share -iname Moreutils.pm
       - name: Test critic
-        run:  prove -lv t/critic.t
+        run: prove -l t/critic.t
+      - name: Auth
+        run: prove -l t/40_auth_sql.t t/60_user_sql.t t/65_user_ldap.t t/66_group_ldap.t t/67_group_ldap_base.t t/front/60_ldap.t t/front/70_ldap_access.t t/front/80_access.t t/mojo/30_grants.t t/user/20_grants.t t/user/25_grant_rename.t t/user/30_grant_remove.t t/user/40_grant_shutdown.t
