@@ -7,7 +7,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install packages
         run: |
-          sudo apt-get -y install perl libtest-perl-critic-perl liblist-moreutils-perl libyaml-perl libipc-run3-perl libmojolicious-perl libmojolicious-plugin-i18n-perl libxml-libxml-perl libdbix-connector-perl libmoose-perl libproc-pid-file-perl libimage-magick-perl libdatetime-perl libdatetime-format-dateparse-perl libjson-xs-perl libauthen-passphrase-perl libpbkdf2-tiny-perl libfile-rsync-perl libmoosex-types-netaddr-ip-perl libnet-dns-perl libnet-openssh-perl libio-interface-perl libsys-virt-perl libdbd-sqlite3-perl liblocale-maketext-lexicon-perl libtest-moose-more-perl qemu-utils
+          sudo apt-get -y install perl libtest-perl-critic-perl liblist-moreutils-perl libyaml-perl libipc-run3-perl libmojolicious-perl libmojolicious-plugin-i18n-perl libxml-libxml-perl libdbix-connector-perl libmoose-perl libproc-pid-file-perl libimage-magick-perl libdatetime-perl libdatetime-format-dateparse-perl libjson-xs-perl libauthen-passphrase-perl libpbkdf2-tiny-perl libfile-rsync-perl libmoosex-types-netaddr-ip-perl libnet-dns-perl libnet-openssh-perl libio-interface-perl libsys-virt-perl libdbd-sqlite3-perl liblocale-maketext-lexicon-perl libtest-moose-more-perl qemu-utils make cpanminus libhtml-lint-perl
       - name: Install cpanm
         run: sudo cpanm  --force Authen::ModAuthPubTkt
       - name: Test critic
