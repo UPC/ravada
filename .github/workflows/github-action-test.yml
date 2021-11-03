@@ -5,12 +5,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install packages
+      - name: Install auth packages
         run: |
-          sudo apt-get -y install perl libtest-perl-critic-perl liblist-moreutils-perl libyaml-perl libipc-run3-perl libmojolicious-perl libmojolicious-plugin-i18n-perl libxml-libxml-perl libdbix-connector-perl libmoose-perl libproc-pid-file-perl libimage-magick-perl libdatetime-perl libdatetime-format-dateparse-perl libjson-xs-perl libauthen-passphrase-perl libpbkdf2-tiny-perl libfile-rsync-perl libmoosex-types-netaddr-ip-perl libnet-dns-perl libnet-openssh-perl libio-interface-perl libsys-virt-perl libdbd-sqlite3-perl liblocale-maketext-lexicon-perl libtest-moose-more-perl qemu-utils make cpanminus libhtml-lint-perl
-      - name: Install cpanm
-        run: sudo cpanm  --force Authen::ModAuthPubTkt
+          sudo apt-get -y install perl libtest-perl-critic-perl liblist-moreutils-perl libyaml-perl libipc-run3-perl libmojolicious-perl libmojolicious-plugin-i18n-perl libxml-libxml-perl libdbix-connector-perl libmoose-perl libproc-pid-file-perl libimage-magick-perl libdatetime-perl libdatetime-format-dateparse-perl libjson-xs-perl libauthen-passphrase-perl libpbkdf2-tiny-perl libfile-rsync-perl libmoosex-types-netaddr-ip-perl libnet-dns-perl libnet-openssh-perl libio-interface-perl libsys-virt-perl libdbd-sqlite3-perl liblocale-maketext-lexicon-perl qemu-utils make cpanminus
       - name: Test critic
         run: prove -l t/critic.t
+      - name: Install localization and doc packages
+        run: sudo apt install gettext libtest-pod-coverage-perl
+      - name: Test localization and doc
+        run: prove -l t/pod_coverage.t t/90_pos.t
+      - name: Install test packages
+        run: sudo apt install libsys-statistics-linux-perl libhtml-lint-perl libtest-moose-more-perl
+      - name: Install LDAP server
+        run: sudo apt-get install 389-ds-base
+      - name: Install cpanm
+        run: sudo cpanm  --force Authen::ModAuthPubTkt
       - name: Auth
         run: prove -lr t/40_auth_sql.t t/60_user_sql.t t/65_user_ldap.t t/66_group_ldap.t t/front/60_ldap.t t/front/70_ldap_access.t t/front/80_access.t t/mojo/30_grants.t t/user
