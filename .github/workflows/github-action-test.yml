@@ -13,7 +13,8 @@ jobs:
       - name: Install localization and doc packages
         run: sudo apt install gettext libtest-pod-coverage-perl
       - name: Test localization and doc
-        run: prove -l t/pod_coverage.t t/90_pos.t
+        run: prove -l t/90_pos.t
+        run: prove -l t/pod_coverage.t
       - name: Install test packages
         run: sudo apt install libsys-statistics-linux-perl libhtml-lint-perl libtest-moose-more-perl
       - name: Install LDAP server
@@ -22,5 +23,7 @@ jobs:
         run: sudo dscreate from-file t/etc/ds389.conf
       - name: Install cpanm
         run: sudo cpanm  --force Authen::ModAuthPubTkt
+      - name: Install iptables
+        run: sudo apt install iptables iptstate
       - name: Auth
         run: prove -lr t/40_auth_sql.t t/60_user_sql.t t/65_user_ldap.t t/66_group_ldap.t t/front/60_ldap.t t/front/70_ldap_access.t t/front/80_access.t t/mojo/30_grants.t t/user
