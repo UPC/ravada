@@ -18,6 +18,8 @@ jobs:
         run: sudo apt install libsys-statistics-linux-perl libhtml-lint-perl libtest-moose-more-perl
       - name: Install LDAP server
         run: sudo apt-get install 389-ds-base
+      - name: Configure LDAP server
+        run: sudo dscreate from-file t/etc/ds389.conf
       - name: Install cpanm
         run: sudo cpanm  --force Authen::ModAuthPubTkt
       - name: Auth
