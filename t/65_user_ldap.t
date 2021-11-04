@@ -629,7 +629,6 @@ sub test_login_fields($data) {
     for my $field ( sort keys %$data ) {
         my $value = $data->{$field};
         $Ravada::CONFIG->{ldap}->{field} = $field;
-        warn "$field: $value";
         eval { $login_ok = Ravada::Auth::login($value, $password) };
 
         is($@,''," $field: $value") or confess;
@@ -714,8 +713,6 @@ SKIP: {
             test_pass_storage($with_posix_group);
 
             my $user = test_user( 'pepe.mcnulty', $with_posix_group );
-
-            test_user_bind($user, $fly_config, $with_posix_group);
 
             test_add_group();
             test_manage_group($with_admin, $with_posix_group);
