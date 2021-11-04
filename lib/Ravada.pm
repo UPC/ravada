@@ -56,7 +56,7 @@ use feature qw(signatures);
 our %VALID_CONFIG = (
     vm => undef
     ,warn_error => undef
-    ,db => {user => undef, password => undef,  hostname => undef}
+    ,db => {user => undef, password => undef,  hostname => undef, host => undef}
     ,ldap => { admin_user => { dn => undef, password => undef }
         ,filter => undef
         ,base => undef
@@ -2379,6 +2379,11 @@ sub _connect_dbh {
     my $db_pass = ($CONFIG->{db}->{password} or undef);
     my $db = ( $CONFIG->{db}->{db} or 'ravada' );
     my $host = $CONFIG->{db}->{host};
+    my $hostname = $CONFIG->{db}->{hostname};
+    if (defined $host && defined $hostname && $host ne $hostname) {
+        warn "Warning: DB config in $FILE_CONFIG conflicting parameters host='$host', hostname='$hostname'\n";
+    }
+    $host = $hostname if !defined $host && defined $hostname;
 
     my $data_source = "DBI:$driver:$db";
     $data_source = "DBI:$driver:database=$db;host=$host"
