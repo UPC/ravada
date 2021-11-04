@@ -2380,6 +2380,11 @@ sub _connect_dbh {
     my $db_pass = ($CONFIG->{db}->{password} or undef);
     my $db = ( $CONFIG->{db}->{db} or 'ravada' );
     my $host = $CONFIG->{db}->{host};
+    my $hostname = $CONFIG->{db}->{hostname};
+    if (defined $host && defined $hostname && $host ne $hostname) {
+        warn "Warning: DB config in $FILE_CONFIG conflicting parameters host='$host', hostname='$hostname'\n";
+    }
+    $host = $hostname if !defined $host && defined $hostname;
 
     my $data_source = "DBI:$driver:$db";
     $data_source = "DBI:$driver:database=$db;host=$host"
