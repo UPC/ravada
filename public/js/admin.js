@@ -136,9 +136,23 @@ ravadaApp.directive("solShowMachine", swMach)
             }
       };
 
+      $scope.getVisualizableObjects = function(value, objects, name) {
+          var visualizable_objects = [];
+          if (objects) {
+              var lowercased_value = value ? value.toLowerCase() : '';
+              for (var i = 0, j = objects.length; i < j; i ++) {
+                  var search_value = name ? objects[i][name] : objects[i];
+                  if ((! value) || (search_value.toLowerCase().indexOf(lowercased_value) >= 0)) {
+                      visualizable_objects.push(objects[i]);  
+                  }
+              }
+          }
+          return visualizable_objects;
+      };
+
       $scope.type = function(v) {
         return typeof(v);
-      }
+      };
 
       $scope.get_machine_info = function(id) {
           $http.get('/machine/info/'+id+'.json')

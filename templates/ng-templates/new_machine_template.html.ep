@@ -26,8 +26,7 @@
                                    name="id_iso"
                                    ng-model="id_iso" 
                                    required=""
-                                   uib-typeahead="item as item.name for item in images"
-                                   typeahead-editable="false"
+                                   uib-typeahead="item as item.name for item in getVisualizableObjects($viewValue, images, 'name')"
                                    typeahead-on-select="iso_file = change_iso(id_iso)">
                         <div class="mb-2" ng-show="id_iso.description" >
                             <small ng-bind-html="id_iso.description">{{id_iso.description}}</small>
@@ -50,7 +49,7 @@
                                    name="id_file"
                                    ng-model="id_file" 
                                    required=""
-                                   uib-typeahead="item for item in isos"
+                                   uib-typeahead="item for item in getVisualizableObjects($viewValue, isos)"
                                    typeahead-editable="false">
                         </div>
                 </div>
