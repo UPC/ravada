@@ -88,6 +88,22 @@ sub test_hostdev_in_domain_config($domain, $expect_feat_kvm) {
     }
 }
 
+sub _fix_host_device($hd) {
+    if ($hd->{name} =~ /PCI/) {
+        _set_hd_nvidia($hd);
+    } elsif ($hd->{name} =~ /USB/ ) {
+        _set_hd_usb($hd);
+    }
+}
+
+sub _create_domain_hd($vm, $hd) {
+    my $domain = create_domain($vm);
+    $domain->add_host_device($hd);
+
+    return $domain if $vm->type ne 'KVM';
+
+   return $domain;
+}
 
 sub test_hd_in_domain($vm , $hd) {
 
@@ -285,6 +301,90 @@ sub _count_locked() {
     return $n;
 }
 
+sub test_templates_change_devices($vm) {
+    return if $vm->type ne 'Void';
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+    ok(@$templates);
+
+    my ($template) = grep { $_->{list_command} eq 'lsusb' } @$templates;
+
+    my $path  = "/var/tmp/$</ravada/dev";
+    make_path($path) if !-e $path;
+
+    my $name = base_domain_name()." Mock_device ID";
+
+    opendir my $dir,$path or die "$! $path";
+    while ( my $file = readdir $dir ) {
+        next if $file !~ /^$name/;
+        unlink "$path/$file" or die "$! $path/$file";
+    }
+    closedir $dir;
+
+    my $n_devices = 3;
+    for ( 1 .. $n_devices ) {
+        open my $out,">","$path/${name} $_:$_ Foo bar"
+            or die $!;
+        print $out "fff6f017-3417-4ad3-b05e-17ae3e1a461".int(rand(10));
+        close $out;
+    }
+
+    $vm->add_host_device(template => $template->{name});
+    my ($hostdev) = $vm->list_host_devices();
+    $hostdev->_data(list_command => "ls $path");
+    $hostdev->_data(list_filter => $name);
+    $hostdev->list_devices();
+
+    my $domain = _create_domain_hd($vm, $hostdev);
+    $domain->start(user_admin);
+
+    is(scalar($hostdev->list_domains_with_device()),1);
+    my ($dev_attached) = ($domain->list_host_devices_attached);
+    $domain->shutdown_now(user_admin);
+    my $file = "$path/".$dev_attached->{name};
+    unlink $file or die "$! $file";
+
+    $domain->start(user_admin);
+    my ($dev_attached2) = ($domain->list_host_devices_attached);
+    isnt($dev_attached2->{name}, $dev_attached->{name}) or die $domain->name;
+
+    remove_domain($domain);
+}
+
+sub test_templates_change_filter($vm) {
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+    ok(@$templates);
+
+    for my $first  (@$templates) {
+        diag("Testing $first->{name} Hostdev on ".$vm->type);
+        $vm->add_host_device(template => $first->{name});
+        my @list_hostdev = $vm->list_host_devices();
+        my ($hd) = $list_hostdev[-1];
+
+        _fix_host_device($hd) if $vm->type eq 'KVM';
+
+        next if !$hd->list_devices;
+
+        is(scalar($hd->list_domains_with_device()),0);
+
+        my $domain = _create_domain_hd($vm, $hd);
+        $domain->start(user_admin);
+
+        is(scalar($hd->list_domains_with_device()),1);
+        $domain->shutdown_now(user_admin);
+
+        $hd->_data('list_filter','AAAA AAAA');
+        die "Error: list filter not enough restrictive" if $hd->list_devices();
+
+        test_hostdev_not_in_domain_config($domain);
+
+        $domain->remove(user_admin);
+    }
+
+    for my $hd ( $vm->list_host_devices ) {
+        test_hd_remove($vm, $hd);
+    }
+}
+
 sub test_templates($vm) {
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
     ok(@$templates);
@@ -418,7 +518,7 @@ sub test_hd_remove($vm, $host_device) {
 
 clean();
 
-for my $vm_name ( vm_names()) {
+for my $vm_name (reverse vm_names()) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -431,7 +531,9 @@ for my $vm_name ( vm_names()) {
 
         diag("Testing host devices in $vm_name");
 
+        test_templates_change_devices($vm);
         test_templates($vm);
+        test_templates_change_filter($vm);
 
     }
 }
