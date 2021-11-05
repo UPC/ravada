@@ -159,8 +159,9 @@ sub _get_gid() {
         add_group('users');
         ($group_users) = search_group(name => 'users');
         confess "Error: I can create nor find LDAP group 'users'" if !$group_users;
+        warn "Warning: group users has no gidNumber".Dumper($group_users) if !$group_users->get_value('gidNumber');
     }
-    return $group_users->get_value('gidNumber');
+    return ($group_users->get_value('gidNumber') or '1000');
 }
 
 sub _new_uid($ldap=_init_ldap_admin(), $base=_dc_base()) {

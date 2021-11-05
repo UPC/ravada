@@ -63,6 +63,8 @@ our %VALID_CONFIG = (
         ,auth => undef
         ,admin_group => undef
         ,ravada_posix_group => undef
+        ,groups_base => undef
+        ,field => undef
     }
     ,log => undef
 );
