@@ -55,6 +55,7 @@ our %VALID_ARG = (
       ,remote_ip => 2
           ,start => 2
            ,data => 2
+           ,options => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
