@@ -363,6 +363,7 @@ sub _update_isos {
                 ,file_re => '^ubuntu-18.04.*desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
+            ,arch => 'amd64'
         }
 
         ,serena64 => {
@@ -543,6 +544,7 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'amd64'
         }
        ,debian_stretch_32 => {
             name =>'Debian Stretch 32 bits'
@@ -563,6 +565,7 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'amd64'
         }
         ,debian_buster_64=> {
             name =>'Debian Buster 64 bits'
@@ -573,6 +576,7 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'amd64'
         }
         ,debian_buster_32=> {
             name =>'Debian Buster 32 bits'
@@ -586,6 +590,7 @@ sub _update_isos {
         }
         ,debian_bullseye_64=> {
             name =>'Debian Bullseye 64 bits'
+            ,arch => 'amd64'
             ,description => 'Debian 11 Bullseye 64 bits (netinst)'
             ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/amd64/iso-cd/'
             ,file_re => 'debian-11.[\d\.]+-amd64-netinst.iso'
@@ -677,6 +682,7 @@ sub _update_isos {
           ,xml => 'windows_7.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '21'
+          ,arch => 'amd64'
         }
         ,windows_10 => {
           name => 'Windows 10'
@@ -685,6 +691,7 @@ sub _update_isos {
           ,xml => 'windows_10.xml'
           ,xml_volume => 'windows10-volume.xml'
           ,min_disk_size => '21'
+          ,arch => 'amd64'
         }
         ,windows_xp => {
           name => 'Windows XP'
@@ -693,6 +700,7 @@ sub _update_isos {
           ,xml => 'windows_xp.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '3'
+          ,arch => 'amd64'
         }
         ,windows_12 => {
           name => 'Windows 2012'
@@ -701,6 +709,7 @@ sub _update_isos {
           ,xml => 'windows_12.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '21'
+          ,arch => 'amd64'
         }
         ,windows_8 => {
           name => 'Windows 8.1'
@@ -709,6 +718,7 @@ sub _update_isos {
           ,xml => 'windows_8.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '21'
+          ,arch => 'amd64'
         }
        ,empty_32bits => {
           name => 'Empty Machine 32 bits'
@@ -723,6 +733,7 @@ sub _update_isos {
           ,xml => 'empty-amd64.xml'
           ,xml_volume => 'jessie-volume.xml'
           ,min_disk_size => '0'
+          ,arch => 'amd64'
         }
     );
     $self->_scheduled_fedora_releases(\%data) if $0 !~ /\.t$/;
@@ -2688,7 +2699,7 @@ sub create_domain {
     my $id_base = $args{id_base};
     my $data = delete $args{data};
     my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
-    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool));
+    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool options));
 
     confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
 
