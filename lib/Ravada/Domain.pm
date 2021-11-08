@@ -3516,8 +3516,19 @@ sub open_exposed_ports($self) {
         die "Error: No ip in domain ".$self->name.". Retry.\n";
     }
 
+    my $info = $self->info(Ravada::Utils::user_daemon);
+
+    my $sth_update = $$CONNECTOR->dbh->prepare(
+        "UPDATE domain_ports SET public_port=? WHERE id_domain=?"
+    );
     $self->display_info(Ravada::Utils::user_daemon);
     for my $expose ( @ports ) {
+        warn Dumper($expose);
+        if ( $info->{hardware}->{network}->[0]->{bridge} ) {
+            warn Dumper([$expose->{internal_port}, $self->id]);
+            $sth_update->execute($expose->{internal_port}, $self->id);
+            next;
+        }
         $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
             ,$expose->{restricted});
     }
