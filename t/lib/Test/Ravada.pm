@@ -159,7 +159,11 @@ sub user_admin {
     return $USER_ADMIN if $USER_ADMIN;
 
     my $login;
+<<<<<<< HEAD
     my $admin_name = base_domain_name()."-$$";
+=======
+    my $admin_name = base_domain_name().".admin";
+>>>>>>> e742c24c... test: do not clone private bases
     my $admin_pass = "$$ $$";
     eval {
         $login = Ravada::Auth::SQL->new(name => $admin_name, password => $admin_pass );
@@ -496,6 +500,7 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
     my @machines2 = _leftovers();
     my @reqs;
     for my $machine ( @$machines, @machines2) {
+<<<<<<< HEAD
         next if $machine->{name} !~ /^$base_name/;
         remove_domain_and_clones_req($machine,$wait, $run_request);
     }
@@ -509,6 +514,10 @@ sub remove_domain(@bases) {
             remove_domain($d_clone);
         }
         $base->remove(user_admin);
+=======
+        next unless $machine->{name} =~ /$base_name/;
+        remove_domain_and_clones_req($machine,$wait);
+>>>>>>> e742c24c... test: do not clone private bases
     }
 
 }
@@ -713,7 +722,7 @@ sub mojo_login( $t, $user, $pass ) {
     $t->post_ok('/login' => form => {login => $user, password => $pass});
     like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body;
     #    ->status_is(302);
-$MOJO_USER = $user;
+    $MOJO_USER = $user;
     $MOJO_PASSWORD = $pass;
 
     return $t->success;
