@@ -220,8 +220,11 @@ sub test_login_non_admin($t, $base, $clone){
     $t->get_ok("/machine/clone/".$base->id.".html")
     ->status_is(200);
 
-    wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
-    $clone_new = rvd_front->search_domain($clone_new_name);
+    for ( 1 .. 10 ) {
+        wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+        $clone_new = rvd_front->search_domain($clone_new_name);
+        last if $clone_new;
+    }
     ok($clone_new,"Expecting $clone_new_name does exist") or exit;
 
     mojo_check_login($t, $name, $pass);
