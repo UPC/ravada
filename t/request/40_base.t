@@ -538,7 +538,8 @@ for my $vm_name ( vm_names ) {
     my $vm_connected;
     eval {
         my $rvd_back = rvd_back();
-        my $vm= $rvd_back->search_vm($vm_name)  if rvd_back();
+        my $vm;
+        $vm= $rvd_back->search_vm($vm_name)  if rvd_back();
         $vm_connected = $vm if $vm;
         @ARG_CREATE_DOM = ( id_iso => search_id_iso('Alpine'), vm => $vm_name, id_owner => $USER->id, disk => 1024 * 1024 );
 
@@ -569,6 +570,8 @@ for my $vm_name ( vm_names ) {
         test_req_prepare_base($vm_name, $base_name);
         test_req_create_from_base_novm($vm_name, $base_name);
         my $clone_name = test_req_create_from_base($vm_name, $base_name);
+
+        test_req_clone_deny($vm, $base_name);
 
         ok($clone_name) or next;
 
