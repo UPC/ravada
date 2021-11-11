@@ -704,7 +704,17 @@ get '/machine/view/(:id).(:type)' => sub {
 any '/machine/clone/(:id).(:type)' => sub {
     my $c = shift;
 
-    return clone_machine($c)    if $USER && $USER->can_clone() && !$USER->is_temporary();
+    return clone_machine($c) if $USER->can_clone_all();
+
+    if ( $USER && $USER->can_clone() && !$USER->is_temporary() ) {
+        my $base = Ravada::Front::Domain->open($c->stash('id'));
+        if (!$base->is_public) {
+            my @clones = $base->clones();
+            my ($clone) = grep { $_->{id_owner} == $USER->id } @clones;
+            return access_denied($c) if !$clone;
+        }
+        return clone_machine($c);
+    }
 
     my $bases_anonymous = $RAVADA->list_bases_anonymous(_remote_ip($c));
     for (@$bases_anonymous) {
