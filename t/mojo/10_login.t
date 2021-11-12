@@ -51,6 +51,7 @@ sub login( $user=$USERNAME, $pass=$PASSWORD ) {
     #    ->status_is(302);
 
     exit if !$t->success;
+    mojo_check_login($t, $user, $pass);
 }
 
 sub test_many_clones($base) {
@@ -137,6 +138,128 @@ sub _init_mojo_client {
     $t->get_ok('/')->status_is(200)->content_like(qr/choose a machine/i);
 }
 
+sub test_login_non_admin($t, $base, $clone){
+    mojo_check_login($t, $USERNAME, $PASSWORD);
+    if (! $clone->is_base) {
+        $t->get_ok("/machine/prepare/".$clone->id.".json")->status_is(200);
+        for ( 1 .. 10 ) {
+            my $clone2 = rvd_front->search_domain($clone->name);
+            last if $clone2->is_base || !$clone2->list_requests;
+            _wait_request(debug => 1, background => 1, check_error => 1);
+            mojo_check_login($t, $USERNAME, $PASSWORD);
+        }
+        is($clone->is_base,1) or next;
+    }
+    $clone->is_public(1);
+
+    my $name = new_domain_name();
+    my $pass = "$$ $$";
+    my $user = Ravada::Auth::SQL->new(name => $name);
+    $user->remove();
+    $user = create_user($name, $pass);
+    is($user->is_admin(),0);
+    $base->is_public(0);
+
+    login($name, $pass);
+    $t->get_ok('/')->status_is(200)->content_like(qr/choose a machine/i);
+
+
+    $t->get_ok("/machine/clone/".$clone->id.".html")
+    ->status_is(200);
+    wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+    mojo_check_login($t, $name, $pass);
+
+    my $clone_new_name = $base->name."-".$name;
+    my $clone_new = rvd_front->search_domain($clone_new_name);
+    ok(!$clone_new,"Expecting $clone_new_name does not exist") or exit;
+    $t->get_ok("/machine/clone/".$base->id.".html")
+    ->status_is(403);
+
+    $clone_new = rvd_front->search_domain($clone_new_name);
+    ok(!$clone_new,"Expecting $clone_new_name does not exist") or exit;
+
+    $base->is_public(1);
+
+    $t->get_ok("/machine/clone/".$base->id.".html")
+    ->status_is(200);
+
+    wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+    $clone_new = rvd_front->search_domain($clone_new_name);
+    ok($clone_new,"Expecting $clone_new_name does exist") or exit;
+
+    mojo_check_login($t, $name, $pass);
+    $base->is_public(0);
+
+    $t->get_ok("/machine/clone/".$base->id.".html")
+    ->status_is(200);
+    exit if $t->tx->res->code() != 200;
+}
+
+sub test_login_non_admin_req($t, $base, $clone){
+    mojo_check_login($t, $USERNAME, $PASSWORD);
+    if (!$clone->is_base) {
+        $t->get_ok("/machine/prepare/".$clone->id.".json")->status_is(200);
+        for ( 1 .. 10 ) {
+            my $clone2 = rvd_front->search_domain($clone->name);
+            last if $clone2->is_base || !$clone2->list_requests;
+            _wait_request(debug => 1, background => 1, check_error => 1);
+            mojo_check_login($t, $USERNAME, $PASSWORD);
+        }
+        is($clone->is_base,1) or next;
+    }
+    $clone->is_public(1);
+
+    my $name = new_domain_name();
+    my $pass = "$$ $$";
+    my $user = Ravada::Auth::SQL->new(name => $name);
+    $user->remove();
+    $user = create_user($name, $pass);
+    is($user->is_admin(),0);
+    $base->is_public(0);
+
+    login($name, $pass);
+    $t->get_ok('/')->status_is(200)->content_like(qr/choose a machine/i);
+
+    my $clone_new_name = new_domain_name();
+    $t->post_ok('/request/clone' => json =>
+        {   id_domain => $base->id
+            ,name => new_domain_name()
+        }
+    );
+
+    wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+    mojo_check_login($t, $name, $pass);
+
+    my $clone_new = rvd_front->search_domain($clone_new_name);
+    ok(!$clone_new,"Expecting $clone_new_name does not exist") or exit;
+    $t->get_ok("/machine/clone/".$base->id.".html")
+    ->status_is(403);
+
+    $clone_new_name = new_domain_name();
+    $base->is_public(1);
+    $t->post_ok('/request/clone' => json =>
+        {   id_domain => $base->id
+            ,name => $clone_new_name
+        }
+    );
+
+
+    for ( 1 .. 10 ) {
+        wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+        $clone_new = rvd_front->search_domain($clone_new_name);
+        last if $clone_new;
+    }
+    ok($clone_new,"Expecting $clone_new_name does exist") or exit;
+
+    mojo_check_login($t, $name, $pass);
+    $base->is_public(0);
+
+    $t->get_ok("/machine/clone/".$base->id.".html")
+    ->status_is(200);
+    exit if $t->tx->res->code() != 200;
+}
+
+
 sub test_login_fail {
     $t->post_ok('/login' => form => {login => "fail", password => 'bigtime'});
     is($t->tx->res->code(),403);
@@ -156,14 +279,30 @@ sub test_login_fail {
 }
 
 sub test_copy_without_prepare($clone) {
+    login();
     is ($clone->is_base,0) or die "Clone ".$clone->name." is supposed to be non-base";
+
+    my $base = Ravada::Front::Domain->open($clone->_data('id_base'));
+    my $n_clones_clone= scalar($clone->clones());
 
     my $n_clones = 3;
     mojo_request($t, "clone", { id_domain => $clone->id, number => $n_clones });
     wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
 
+    mojo_check_login($t);
+
     my @clones = $clone->clones();
-    is(scalar @clones, $n_clones) or exit;
+    is(scalar @clones, $n_clones_clone+$n_clones,"Expecting clones from ".$clone->name) or exit;
+
+    mojo_request($t, "spinoff", { id_domain => $clone->id  });
+    wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+    # is($clone->id_base,0 );
+    mojo_check_login($t);
+    mojo_request($t, "clone", { id_domain => $clone->id, number => $n_clones });
+    wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+    is($clone->is_base, 1 );
+    my @n_clones_clone_2= $clone->clones();
+    is(scalar @n_clones_clone_2, $n_clones_clone+$n_clones*2) or exit;
 
     remove_machines($clone);
 }
@@ -287,6 +426,29 @@ sub test_logout_ldap {
     is($t->tx->res->code(),302);
 }
 
+sub test_create_base($t, $vm_name, $name) {
+    $t->post_ok('/new_machine.html' => form => {
+            backend => $vm_name
+            ,id_iso => search_id_iso('Alpine%')
+            ,name => $name
+            ,disk => 1
+            ,ram => 1
+            ,swap => 1
+            ,submit => 1
+        }
+    )->status_is(302);
+
+    _wait_request(debug => 1, background => 1, check_error => 1);
+    my $base;
+    for ( 1 .. 10 ) {
+        $base = rvd_front->search_domain($name);
+        last if $base;
+        sleep 1;
+    }
+    ok($base, "Expecting domain $name create") or exit;
+    return $base;
+}
+
 ########################################################################################
 
 $ENV{MOJO_MODE} = 'devel';
@@ -327,29 +489,15 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
 
     _init_mojo_client();
 
-    $t->post_ok('/new_machine.html' => form => {
-            backend => $vm_name
-            ,id_iso => search_id_iso('Alpine%')
-            ,name => $name
-            ,disk => 1
-            ,ram => 1
-            ,swap => 1
-            ,submit => 1
-        }
-    )->status_is(302);
-
-    _wait_request(debug => 1, background => 1, check_error => 1);
-    my $base;
-    for ( 1 .. 10 ) {
-        $base = rvd_front->search_domain($name);
-        last if $base;
-        sleep 1;
-    }
-    ok($base, "Expecting domain $name create") or exit;
+    my $base = test_create_base($t, $vm_name, $name);
     push @bases,($base->name);
+
+    my $base2 =test_create_base($t, $vm_name, new_domain_name()."-$vm_name");
+    push @bases,($base2->name);
 
     mojo_request($t, "add_hardware", { id_domain => $base->id, name => 'network' });
     wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+    mojo_check_login($t, $USERNAME, $PASSWORD);
 
     test_validate_html("/machine/manage/".$base->id.".html");
 
@@ -360,24 +508,34 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
         _wait_request(debug => 1, background => 1, check_error => 1);
     }
     is($base->is_base,1) or next;
-
+    $base->is_public(1);
     is(scalar($base->list_ports),0);
-    mojo_check_login($t);
+
     $t->get_ok("/machine/clone/".$base->id.".json")->status_is(200);
-    _wait_request(debug => 0, background => 1, check_error => 1);
-    my $clone = rvd_front->search_domain($name."-".user_admin->name);
-    ok($clone,"Expecting clone created") or next;
+    my $clone_name = $name."-".$USERNAME;
+    $clone_name =~ s/\./-/g;
+    my $clone;
+    for ( 1 .. 10 ) {
+        _wait_request(debug => 0, background => 1, check_error => 1);
+        $clone = rvd_front->search_domain($clone_name);
+    }
+    ok($clone,"Expecting clone $clone_name created") or exit;
+
     ok($clone->name);
     if ($clone) {
         is($clone->is_volatile,0) or exit;
         is(scalar($clone->list_ports),0);
     }
+    test_login_non_admin($t, $base, $base2);
 
     push @bases, ( $clone );
-    mojo_check_login($t);
+    mojo_check_login($t, $USERNAME, $PASSWORD);
     test_copy_without_prepare($clone);
-    mojo_check_login($t);
+    mojo_check_login($t, $USERNAME, $PASSWORD);
     test_many_clones($base);
+
+    test_login_non_admin_req($t, $base, $base2);
+    test_login_non_admin($t, $base, $base2);
 }
 ok(@bases,"Expecting some machines created");
 remove_machines(@bases);
