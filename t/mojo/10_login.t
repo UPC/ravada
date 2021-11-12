@@ -239,7 +239,7 @@ sub test_login_non_admin_req($t, $base, $clone){
     $base->is_public(1);
     $t->post_ok('/request/clone' => json =>
         {   id_domain => $base->id
-            ,name => new_domain_name()
+            ,name => $clone_new_name
         }
     );
 
