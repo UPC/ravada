@@ -102,6 +102,8 @@ sub test_many_clones($base) {
     }
 }
 
+
+
 sub test_different_mac(@domain) {
     my %found;
     for my $domain (@domain) {
@@ -562,7 +564,6 @@ sub test_create_base($t, $vm_name, $name) {
     }
     ok($base, "Expecting domain $name create") or exit;
     return $base;
->>>>>>> e742c24c... test: do not clone private bases
 }
 
 ########################################################################################
@@ -634,16 +635,14 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
         is($clone->is_volatile,0) or exit;
         is(scalar($clone->list_ports),0);
     }
-    test_login_non_admin($t, $base, $base2);
-
     push @bases, ( $clone );
     mojo_check_login($t, $USERNAME, $PASSWORD);
     test_copy_without_prepare($clone);
     mojo_check_login($t, $USERNAME, $PASSWORD);
-    test_many_clones($base);
+    test_many_clones($base1);
 
-    test_login_non_admin_req($t, $base, $base2);
-    test_login_non_admin($t, $base, $base2);
+    test_login_non_admin_req($t, $base1, $base2);
+    test_login_non_admin($t, $base1, $base2);
     remove_machines(reverse @bases);
 }
 ok(@bases,"Expecting some machines created");

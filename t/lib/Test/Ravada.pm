@@ -159,11 +159,7 @@ sub user_admin {
     return $USER_ADMIN if $USER_ADMIN;
 
     my $login;
-<<<<<<< HEAD
     my $admin_name = base_domain_name()."-$$";
-=======
-    my $admin_name = base_domain_name().".admin";
->>>>>>> e742c24c... test: do not clone private bases
     my $admin_pass = "$$ $$";
     eval {
         $login = Ravada::Auth::SQL->new(name => $admin_name, password => $admin_pass );
@@ -500,24 +496,8 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
     my @machines2 = _leftovers();
     my @reqs;
     for my $machine ( @$machines, @machines2) {
-<<<<<<< HEAD
-        next if $machine->{name} !~ /^$base_name/;
-        remove_domain_and_clones_req($machine,$wait, $run_request);
-    }
-}
-
-sub remove_domain(@bases) {
-
-    for my $base (@bases) {
-        for my $clone ($base->clones) {
-            my $d_clone = Ravada::Domain->open($clone->{id});
-            remove_domain($d_clone);
-        }
-        $base->remove(user_admin);
-=======
         next unless $machine->{name} =~ /$base_name/;
         remove_domain_and_clones_req($machine,$wait);
->>>>>>> e742c24c... test: do not clone private bases
     }
 
 }
