@@ -209,6 +209,10 @@ our %COMMAND = (
 );
 lock_hash %COMMAND;
 
+our %CMD_VALIDATE = (
+    clone => \&_validate_clone
+);
+
 sub _init_connector {
     $CONNECTOR = \$Ravada::CONNECTOR;
     $CONNECTOR = \$Ravada::Front::CONNECTOR   if !$$CONNECTOR;
@@ -724,9 +728,43 @@ sub _new_request {
 
 
     my $request = $self->open($self->{id});
-    $request->status('requested');
+    $request->_validate();
+    $request->status('requested') if $request->status ne'done';
 
     return $request;
+}
+
+sub _validate($self) {
+    return if !exists $CMD_VALIDATE{$self->command};
+    my $method = $CMD_VALIDATE{$self->command};
+    return if !$method;
+    $method->($self);
+}
+
+sub _validate_clone($self) {
+    my $base = Ravada::Front::Domain->open($self->args('id_domain'));
+
+    my $uid = $self->args('uid');
+    if ( !$uid ) {
+        $self->status('done');
+        $self->error("Error: missing uid");
+        return;
+    }
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    if ( !$user ) {
+        $self->status('done');
+        $self->error("Error: user id='$uid' does not exist");
+        return;
+    }
+    return if $user->is_admin;
+    return if $user->can_clone_all;
+    return $self->_status_error('done'
+        ,"Error: user ".$user->name." can not clone.")
+        if !$user->can_clone();
+
+    return $self->_status_error('done'
+        ,"Error: ".$base->name." is not public.")
+        if !$base->is_public;
 }
 
 sub _last_insert_id {
@@ -776,6 +814,11 @@ sub status {
     $self->_send_message($status, $message)
         if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
     return $status;
+}
+
+sub _status_error($self, $status, $error) {
+    $self->status($status);
+    return $self->error($error);
 }
 
 =head2 at
