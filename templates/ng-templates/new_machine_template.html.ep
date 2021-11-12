@@ -53,7 +53,6 @@
                                    uib-typeahead="item for item in getVisualizableObjects($viewValue, isos)"
                                    typeahead-min-length="0">
                         </div>
---{{id_file}}--
                 </div>
             </div>
 
