@@ -111,12 +111,19 @@ Now the setup process will install minimal applications to start the server.
 Installing more software
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-You should at least install these applications:
+You should at least install these applications and start udev:
 
 
 .. prompt:: bash #
 
-    apk add qemu-guest-agent acpi
+    apk add qemu-guest-agent acpi udev
+
+    rc-update add udev
+    rc-update add udev-trigger
+    rc-update add udev-settle
+    rc-update add udev-postmount
+    rc-update add qemu-guest-agent
+
 
 
 
