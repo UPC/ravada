@@ -2,16 +2,6 @@
 log file
 ========
 
-Default
-=======
-
-By default Ravada logs to syslog. Check the output of the ravada process
-in a terminal this way:
-
-.. code-block:: bash
-
-    root@server:~# tail -f /var/log/syslog | grep rvd_
-
 Frontend log file
 =================
 

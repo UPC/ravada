@@ -19,22 +19,15 @@ repository <http://infoteleco.upc.edu/img/debian/>`__.
 
 Install the ravada package. Choose the one that matches your OS release:
 
-- ravada_1.1.0_debian-10_all.deb
+- ravada_1.1.1_debian-10_all.deb
 
 When you run dpkg now it may show some errors, it is ok, keep reading.
 
 .. prompt:: bash $
 
-     wget http://infoteleco.upc.edu/img/debian/ravada_1.1.0_debian-10_all.deb
-     sudo dpkg -i ravada_1.1.0_debian-10_all.deb
-
-The last command will show a warning about missing dependencies. Install
-them running:
-
-.. prompt:: bash $
-
-     sudo apt-get update
-     sudo apt-get -f install
+     wget http://infoteleco.upc.edu/img/debian/ravada_1.1.1_debian-10_all.deb
+     sudo apt update
+     sudo apt install ./ravada_1.1.1_debian-10_all.deb
 
 Debian KVM
 ~~~~~~~~~~
