@@ -4,6 +4,7 @@
            ng-if="$ctrl.editable"
            ng-required="!$ctrl.ngModel.$valid"
            uib-typeahead="name for name in $ctrl.getGroups($viewValue)"
+           typeahead-min-length="0"
            typeahead-on-select="$ctrl.add_ldap_group()"
            typeahead-loading="$ctrl.loadingGroups"
            typeahead-no-results="$ctrl.noResults"
