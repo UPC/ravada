@@ -6,6 +6,9 @@ use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use_ok('Ravada');
 use_ok('Ravada::Request');
 
@@ -15,6 +18,7 @@ use Test::Ravada;
 init();
 
 my $USER = create_user("foo","bar", 1);
+my $USER_REGULAR = create_user(new_domain_name,$$);
 
 rvd_back();
 my $ID_ISO = search_id_iso('Alpine');
@@ -522,6 +526,53 @@ sub test_shutdown_by_id {
     is($domain2->is_active,0);
 }
 
+sub test_req_clone_deny($vm, $base_name) {
+
+    my $base = $vm->search_domain($base_name);
+    $base->is_public(0),
+
+    my $name = new_domain_name();
+
+    my $req = Ravada::Request->clone(
+        name => $name
+        ,uid => $USER_REGULAR->id
+        ,id_domain => $base->id
+    );
+    is($req->status(),'done');
+    like($req->error,qr/is not public/) or exit;
+
+    $req = Ravada::Request->clone(
+        name => $name
+        ,uid => -1
+        ,id_domain => $base->id
+    );
+    is($req->status(),'done');
+    like($req->error,qr/user.* does not exist/) or exit;
+
+    $base->is_public(1),
+    $req = Ravada::Request->clone(
+        name => $name
+        ,uid => $USER_REGULAR->id
+        ,id_domain => $base->id
+    );
+    is($req->status(),'requested');
+    wait_request(debug => 0);
+    my $clone = $vm->search_domain($name);
+    ok($clone,"Expecting clone $name");
+
+    $base->is_public(0);
+    $req = Ravada::Request->clone(
+        name => $name
+        ,uid => $USER_REGULAR->id
+        ,id_domain => $base->id
+    );
+    is($req->status(),'done');
+    like($req->error,qr/is not public/) or exit;
+
+    $clone->remove(user_admin);
+
+}
+
 ################################################
 
 {
@@ -571,7 +622,7 @@ for my $vm_name ( vm_names ) {
         test_req_create_from_base_novm($vm_name, $base_name);
         my $clone_name = test_req_create_from_base($vm_name, $base_name);
 
-        test_req_clone_deny($vm, $base_name);
+        test_req_clone_deny($vm_connected, $base_name);
 
         ok($clone_name) or next;
 
