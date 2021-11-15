@@ -526,6 +526,40 @@ sub test_shutdown_by_id {
     is($domain2->is_active,0);
 }
 
+sub test_req_deny($vm, $base_name) {
+    test_req_clone_deny($vm, $base_name);
+
+    test_req_create_deny($vm);
+}
+
+sub test_req_create_deny($vm) {
+    my $name = new_domain_name();
+
+    my @args = (
+        name => $name
+        ,id_owner => $USER_REGULAR->id
+        ,vm => $vm->type
+    );
+    my $req = Ravada::Request->create_domain(@args);
+    is($req->status(),'done');
+    like($req->error,qr/access denied/);
+    wait_request();
+
+    my $domain= $vm->search_domain($name);
+    ok(!$domain);
+
+    user_admin->grant($USER_REGULAR,'create_machine');
+    my $req = Ravada::Request->create_domain(@args);
+    is($req->status(),'requested');
+    wait_request();
+
+    $domain= $vm->search_domain($name);
+    ok($domain);
+    $domain->remove(user_admin) if $domain;
+
+}
+
+
 sub test_req_clone_deny($vm, $base_name) {
 
     my $base = $vm->search_domain($base_name);
@@ -622,7 +656,7 @@ for my $vm_name ( vm_names ) {
         test_req_create_from_base_novm($vm_name, $base_name);
         my $clone_name = test_req_create_from_base($vm_name, $base_name);
 
-        test_req_clone_deny($vm_connected, $base_name);
+        test_req_deny($vm_connected, $base_name);
 
         ok($clone_name) or next;
 
