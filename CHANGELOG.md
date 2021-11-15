@@ -2,12 +2,10 @@
 
 **Implemented enhancements:**
 
-- Debian 11 (Bullesye) ISO support [\#1580]
 
 **Bugfixes**
 
-- Remove disk volume in frontend deletes all volumes #1582
+- Access grant with multiple LDAP values fails [\#1625]
 
 **Refactor**
 
-- responsive grants and show errors
