@@ -3381,6 +3381,7 @@ sub _kill_stale_process($self) {
         ." AND ( command = 'refresh_vms' or command = 'screenshot' or command = 'set_time' "
         ."      OR command = 'open_exposed_ports' OR command='remove' "
         ."      OR command = 'refresh_machine_ports'"
+        ."      OR command = 'post_login'"
         .") "
         ." AND status <> 'done' "
         ." AND start_time IS NOT NULL "
@@ -4249,6 +4250,7 @@ sub _cmd_download {
         return;
     }
     my $device_cdrom = $vm->_iso_name($iso, $request, $verbose);
+    Ravada::Request->refresh_storage();
 }
 
 sub _cmd_add_hardware {
