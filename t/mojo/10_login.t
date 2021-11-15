@@ -570,6 +570,22 @@ sub _download_iso($iso_name) {
 
 }
 
+sub _download_iso($iso_name) {
+    my $id_iso = search_id_iso($iso_name);
+    my $sth = connector->dbh->prepare("SELECT device FROM iso_images WHERE id=?");
+    $sth->execute($id_iso);
+    my ($device) = $sth->fetchrow;
+    return if $device;
+    my $req = Ravada::Request->download(id_iso => $id_iso);
+    for ( 1 .. 300 ) {
+        last if $req->status eq 'done';
+        _wait_request(debug => 1, background => 1, check_error => 1);
+    }
+    is($req->status,'done');
+    is($req->error, '') or exit;
+
+}
+
 sub test_create_base($t, $vm_name, $name) {
     my $iso_name = 'Alpine%';
     _download_iso($iso_name);
