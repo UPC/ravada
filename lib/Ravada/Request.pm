@@ -211,6 +211,8 @@ lock_hash %COMMAND;
 
 our %CMD_VALIDATE = (
     clone => \&_validate_clone
+    ,create => \&_validate_create_domain
+    ,create_domain => \&_validate_create_domain
 );
 
 sub _init_connector {
@@ -741,10 +743,30 @@ sub _validate($self) {
     $method->($self);
 }
 
-sub _validate_clone($self) {
-    my $base = Ravada::Front::Domain->open($self->args('id_domain'));
+sub _validate_create_domain($self) {
 
-    my $uid = $self->args('uid');
+    my $base;
+    my $id_base = $self->defined_arg('id_base');
+
+    my $id_owner = $self->defined_arg('id_owner') or confess "ERROR: Missing id_owner";
+    my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Unknown user id: $id_owner";
+
+    $self->_validate_clone($id_base, $id_owner) if $id_base;
+
+    return if $owner->is_admin
+            || $owner->can_create_machine()
+            || ($id_base && $owner->can_clone);
+
+    return $self->_status_error("done","Error: access denied to user ".$owner->name);
+
+}
+
+sub _validate_clone($self
+                , $id_base= $self->args('id_domain')
+                , $uid=$self->args('uid')) {
+
+    my $base = Ravada::Front::Domain->open($id_base);
+
     if ( !$uid ) {
         $self->status('done');
         $self->error("Error: missing uid");
