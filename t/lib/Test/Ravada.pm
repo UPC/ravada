@@ -786,8 +786,7 @@ sub remove_old_disks {
     _remove_old_disks_kvm() if !$>;
 }
 
-sub create_user {
-    my ($name, $pass, $is_admin) = @_;
+sub create_user($name=new_domain_name(), $pass=$$, $is_admin=0) {
 
     Ravada::Auth::SQL::add_user(name => $name, password => $pass, is_admin => $is_admin);
 
