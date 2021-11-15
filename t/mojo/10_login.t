@@ -240,6 +240,9 @@ sub test_login_non_admin_req($t, $base, $clone){
     mojo_check_login($t, $USERNAME, $PASSWORD);
     if (!$clone->is_base) {
         $t->get_ok("/machine/prepare/".$clone->id.".json")->status_is(200);
+        die "Error preparing username='$USERNAME'"
+        if $t->tx->res->code() != 200;
+
         for ( 1 .. 10 ) {
             my $clone2 = rvd_front->search_domain($clone->name);
             last if $clone2->is_base || !$clone2->list_requests;
@@ -321,12 +324,17 @@ sub test_login_fail {
 
 sub test_copy_without_prepare($clone) {
     login();
+    delete_request('set_time','screenshot','refresh_machine_ports');
+    mojo_request($t,"remove_base", {id_domain => $clone->id })
+    if $clone->is_base;
+
     is ($clone->is_base,0) or die "Clone ".$clone->name." is supposed to be non-base";
 
     my $base = Ravada::Front::Domain->open($clone->_data('id_base'));
     my $n_clones_clone= scalar($clone->clones());
 
     my $n_clones = 3;
+    delete_request('set_time','screenshot','refresh_machine_ports');
     mojo_request($t, "clone", { id_domain => $clone->id, number => $n_clones });
     wait_request(debug => 0, check_error => 1, background => 1, timeout => 120);
 
@@ -496,6 +504,9 @@ sub _clone_and_base($vm_name, $t, $base0) {
 }
 
 sub test_clone($base1) {
+    mojo_request($t,"prepare_base", {id_domain => $base1->id })
+    if !$base1->is_base();
+
     $t->get_ok("/machine/clone/".$base1->id.".html")->status_is(200);
     my $body = $t->tx->res->body;
     my ($id_req) = $body =~ m{subscribe',(\d+)};
@@ -633,7 +644,6 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     if ($clone) {
         push @bases, ( $clone->name );
         is($clone->is_volatile,0) or exit;
-        is(scalar($clone->list_ports),0);
     }
     push @bases, ( $clone );
     mojo_check_login($t, $USERNAME, $PASSWORD);
@@ -643,9 +653,11 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
 
     test_login_non_admin_req($t, $base1, $base2);
     test_login_non_admin($t, $base1, $base2);
+    delete_request('set_time','screenshot','refresh_machine_ports');
     remove_machines(reverse @bases);
 }
 ok(@bases,"Expecting some machines created");
+delete_request('set_time','screenshot','refresh_machine_ports');
 remove_machines(reverse @bases);
 _wait_request(background => 1);
 remove_old_domains_req(0); # 0=do not wait for them
