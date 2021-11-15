@@ -15,7 +15,7 @@ use Test::Ravada;
 use Ravada::Auth::LDAP;
 
 sub test_external_auth {
-    my ($name, $password) = ('jimmy','jameson');
+    my ($name, $password) = (new_domain_name().'.jimmy','jameson');
     create_ldap_user($name, $password);
     my $login_ok;
     eval { $login_ok = Ravada::Auth::login($name, $password) };
