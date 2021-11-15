@@ -85,6 +85,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                       ,file => $FILE_CONFIG
 };
 
+delete $CONFIG_FRONT->{login_custom} if $ENV{MOJO_MODE} && $ENV{MOJO_MODE} eq 'development';
 #####
 #####
 #####
@@ -2189,6 +2190,7 @@ sub login($c, $status=200) {
     my $url = ($c->param('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
 
+
     my @error =();
 
     if (((defined $login) || (defined $password) || ((defined $c->param('submit')) && ($c->param('submit') ne 'sso'))) && (! $ticket)) {
@@ -2242,7 +2244,7 @@ sub login($c, $status=200) {
                     ." url($CONFIG_FRONT->{login_bg_file})"
                     ." no-repeat bottom center scroll;\n\t}"];
 
-    sleep 5 if scalar(@error);
+    sleep 5 if scalar(@error) && !$ENV{mode} && !$ENV{mode} eq 'development';
     my @error_status = ( status => $status );
     @error_status = ( status => 403) if @error;
 
