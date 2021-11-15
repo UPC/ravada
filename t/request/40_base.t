@@ -534,13 +534,14 @@ sub test_req_deny($vm, $base_name) {
 
 sub test_req_create_deny($vm) {
     my $name = new_domain_name();
+    my $user = create_user();
 
     my @args = (
-        name => $name
-        ,id_owner => $USER_REGULAR->id
+        id_owner => $user->id
         ,vm => $vm->type
+        ,id_iso => $ID_ISO
     );
-    my $req = Ravada::Request->create_domain(@args);
+    my $req = Ravada::Request->create_domain(@args,name => $name);
     is($req->status(),'done');
     like($req->error,qr/access denied/);
     wait_request();
@@ -548,14 +549,18 @@ sub test_req_create_deny($vm) {
     my $domain= $vm->search_domain($name);
     ok(!$domain);
 
-    user_admin->grant($USER_REGULAR,'create_machine');
-    my $req = Ravada::Request->create_domain(@args);
+    user_admin->grant($user,'create_machine');
+    $name = new_domain_name();
+    $req = Ravada::Request->create_domain(@args, name => $name);
     is($req->status(),'requested');
     wait_request();
 
-    $domain= $vm->search_domain($name);
-    ok($domain);
-    $domain->remove(user_admin) if $domain;
+    my $domain2 = $vm->search_domain($name);
+    ok($domain2);
+
+    $domain->remove(user_admin)  if $domain;
+    $domain2->remove(user_admin) if $domain2;
+    $user->remove();
 
 }
 
