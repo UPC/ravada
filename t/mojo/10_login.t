@@ -231,7 +231,11 @@ sub test_login_non_admin($t, $base, $clone){
     }
     my ($req) = reverse $user->list_requests();
     is($req->error, '');
-    $clone_new = rvd_front->search_domain($clone_new_name);
+    for ( 1 .. 20 ) {
+        $clone_new = rvd_front->search_domain($clone_new_name);
+        last if $clone_new;
+        sleep 1;
+    }
     ok($clone_new,"Expecting $clone_new_name does exist") or exit;
 
     mojo_check_login($t, $name, $pass);
