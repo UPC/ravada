@@ -183,8 +183,18 @@ sub test_login_non_admin($t, $base, $clone){
     $t->get_ok("/machine/clone/".$base->id.".html")
     ->status_is(200);
 
-    wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
-    $clone_new = rvd_front->search_domain($clone_new_name);
+    for ( 1 .. 60 ) {
+        my ($req) = grep { $_->status ne 'done' } $user->list_requests();
+        last if !$req;
+        wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+    }
+    my ($req) = reverse $user->list_requests();
+    is($req->error, '');
+    for ( 1 .. 20 ) {
+        $clone_new = rvd_front->search_domain($clone_new_name);
+        last if $clone_new;
+        sleep 1;
+    }
     ok($clone_new,"Expecting $clone_new_name does exist") or exit;
 
     mojo_check_login($t, $name, $pass);
@@ -426,10 +436,28 @@ sub test_logout_ldap {
     is($t->tx->res->code(),302);
 }
 
+sub _download_iso($iso_name) {
+    my $id_iso = search_id_iso($iso_name);
+    my $sth = connector->dbh->prepare("SELECT device FROM iso_images WHERE id=?");
+    $sth->execute($id_iso);
+    my ($device) = $sth->fetchrow;
+    return if $device;
+    my $req = Ravada::Request->download(id_iso => $id_iso);
+    for ( 1 .. 300 ) {
+        last if $req->status eq 'done';
+        _wait_request(debug => 1, background => 1, check_error => 1);
+    }
+    is($req->status,'done');
+    is($req->error, '') or exit;
+
+}
+
 sub test_create_base($t, $vm_name, $name) {
+    my $iso_name = 'Alpine%';
+    _download_iso($iso_name);
     $t->post_ok('/new_machine.html' => form => {
             backend => $vm_name
-            ,id_iso => search_id_iso('Alpine%')
+            ,id_iso => search_id_iso($iso_name)
             ,name => $name
             ,disk => 1
             ,ram => 1
@@ -438,20 +466,28 @@ sub test_create_base($t, $vm_name, $name) {
         }
     )->status_is(302);
 
+    my $user = Ravada::Auth::SQL->new(name => $USERNAME);
+    my @requests = $user->list_requests();
+    my ($req_create) = grep { $_->command eq 'create' } @requests;
+
     _wait_request(debug => 1, background => 1, check_error => 1);
     my $base;
-    for ( 1 .. 10 ) {
+    for ( 1 .. 120 ) {
         $base = rvd_front->search_domain($name);
-        last if $base;
+        last if $base || $req_create->status eq 'done';
         sleep 1;
+        diag("waiting for $name");
     }
+    is($req_create->status,'done');
+    is($req_create->error,'');
+
     ok($base, "Expecting domain $name create") or exit;
     return $base;
 }
 
 ########################################################################################
 
-$ENV{MOJO_MODE} = 'devel';
+$ENV{MOJO_MODE} = 'development';
 init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
 like($connector->{driver} , qr/mysql/i) or BAIL_OUT;

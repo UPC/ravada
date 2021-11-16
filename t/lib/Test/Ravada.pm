@@ -626,6 +626,7 @@ sub remove_old_domains {
 }
 
 sub mojo_init() {
+    $ENV{MOJO_MODE} = 'development';
     my $script = path(__FILE__)->dirname->sibling('../../script/rvd_front');
 
     my $t = Test::Mojo->new($script);
@@ -658,6 +659,7 @@ sub mojo_login( $t, $user, $pass ) {
 }
 
 sub mojo_create_domain($t, $vm_name) {
+    mojo_check_login($t);
     my $name = new_domain_name()."-".$vm_name;
     $t->post_ok('/new_machine.html' => form => {
             backend => $vm_name
@@ -669,6 +671,7 @@ sub mojo_create_domain($t, $vm_name) {
             ,submit => 1
         }
     )->status_is(302);
+    die $t->tx->res->body if !$t->success;
 
     wait_request(debug => 0, background => 1);
     my $domain = rvd_front->search_domain($name);
@@ -783,8 +786,7 @@ sub remove_old_disks {
     _remove_old_disks_kvm() if !$>;
 }
 
-sub create_user {
-    my ($name, $pass, $is_admin) = @_;
+sub create_user($name=new_domain_name(), $pass=$$, $is_admin=0) {
 
     Ravada::Auth::SQL::add_user(name => $name, password => $pass, is_admin => $is_admin);
 
