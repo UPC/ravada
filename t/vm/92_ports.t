@@ -254,6 +254,7 @@ sub test_one_port($vm) {
     # start
     #
     $domain->start(user => user_admin, remote_ip => $remote_ip);
+    _wait_ip($vm, $domain);
     delete_request('enforce_limits');
     wait_request(debug => 0, background => 0);
 
@@ -399,7 +400,7 @@ sub test_crash_domain($vm_name) {
     my $client_ip = $domain->remote_ip();
     is($client_ip, $remote_ip);
 
-    _wait_ip($vm_name, $domain);
+    _wait_ip($vm, $domain);
 
     my $domain_ip = $domain->ip or do {
         diag("[$vm_name] Expecting an IP for domain ".$domain->name);
