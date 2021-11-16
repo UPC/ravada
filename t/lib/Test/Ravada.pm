@@ -2343,6 +2343,7 @@ sub unload_nbd() {
 }
 
 sub _unload_nbd() {
+    return if $<;
     my @cmd = ($QEMU_NBD,"-d", $DEV_NBD);
     my ($in, $out, $err);
     run3(\@cmd,\$in,\$out,\$err);

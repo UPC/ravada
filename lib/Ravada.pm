@@ -4243,9 +4243,10 @@ sub _cmd_download {
     my $delay = $request->defined_arg('delay');
     sleep $delay if $delay;
     my $verbose = $request->defined_arg('verbose');
+    my $test = $request->defined_arg('test');
 
     my $iso = $vm->_search_iso($id_iso);
-    if ($iso->{device} && -e $iso->{device}) {
+    if (!$test && $iso->{device} && -e $iso->{device}) {
         $request->status('done',"$iso->{device} already downloaded");
         return;
     }
