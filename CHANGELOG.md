@@ -5,7 +5,7 @@
 
 **Bugfixes**
 
-- Access grant with multiple LDAP values fails [\#1625]
+- Check access to clone private base
 
 **Refactor**
 
