@@ -923,6 +923,7 @@ sub create_ldap_user($name, $password, $keep=0) {
         }
     }
 
+    my $user;
     eval { $user = Ravada::Auth::LDAP::search_user($name) };
     die $@ if $@ && $@ !~ /No such object/;
 
