@@ -209,6 +209,12 @@ our %COMMAND = (
 );
 lock_hash %COMMAND;
 
+our %CMD_VALIDATE = (
+    clone => \&_validate_clone
+    ,create => \&_validate_create_domain
+    ,create_domain => \&_validate_create_domain
+);
+
 sub _init_connector {
     $CONNECTOR = \$Ravada::CONNECTOR;
     $CONNECTOR = \$Ravada::Front::CONNECTOR   if !$$CONNECTOR;
@@ -724,9 +730,63 @@ sub _new_request {
 
 
     my $request = $self->open($self->{id});
-    $request->status('requested');
+    $request->_validate();
+    $request->status('requested') if $request->status ne'done';
 
     return $request;
+}
+
+sub _validate($self) {
+    return if !exists $CMD_VALIDATE{$self->command};
+    my $method = $CMD_VALIDATE{$self->command};
+    return if !$method;
+    $method->($self);
+}
+
+sub _validate_create_domain($self) {
+
+    my $base;
+    my $id_base = $self->defined_arg('id_base');
+
+    my $id_owner = $self->defined_arg('id_owner') or confess "ERROR: Missing id_owner";
+    my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Unknown user id: $id_owner";
+
+    $self->_validate_clone($id_base, $id_owner) if $id_base;
+
+    return if $owner->is_admin
+            || $owner->can_create_machine()
+            || ($id_base && $owner->can_clone);
+
+    return $self->_status_error("done","Error: access denied to user ".$owner->name);
+
+}
+
+sub _validate_clone($self
+                , $id_base= $self->args('id_domain')
+                , $uid=$self->args('uid')) {
+
+    my $base = Ravada::Front::Domain->open($id_base);
+
+    if ( !$uid ) {
+        $self->status('done');
+        $self->error("Error: missing uid");
+        return;
+    }
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    if ( !$user ) {
+        $self->status('done');
+        $self->error("Error: user id='$uid' does not exist");
+        return;
+    }
+    return if $user->is_admin;
+    return if $user->can_clone_all;
+    return $self->_status_error('done'
+        ,"Error: user ".$user->name." can not clone.")
+        if !$user->can_clone();
+
+    return $self->_status_error('done'
+        ,"Error: ".$base->name." is not public.")
+        if !$base->is_public;
 }
 
 sub _last_insert_id {
@@ -776,6 +836,11 @@ sub status {
     $self->_send_message($status, $message)
         if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
     return $status;
+}
+
+sub _status_error($self, $status, $error) {
+    $self->status($status);
+    return $self->error($error);
 }
 
 =head2 at

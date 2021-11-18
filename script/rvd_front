@@ -85,6 +85,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                       ,file => $FILE_CONFIG
 };
 
+delete $CONFIG_FRONT->{login_custom} if $ENV{MOJO_MODE} && $ENV{MOJO_MODE} eq 'development';
 #####
 #####
 #####
@@ -706,7 +707,17 @@ get '/machine/view/(:id).(:type)' => sub {
 any '/machine/clone/(:id).(:type)' => sub {
     my $c = shift;
 
-    return clone_machine($c)    if $USER && $USER->can_clone() && !$USER->is_temporary();
+    return clone_machine($c) if $USER->can_clone_all();
+
+    if ( $USER && $USER->can_clone() && !$USER->is_temporary() ) {
+        my $base = Ravada::Front::Domain->open($c->stash('id'));
+        if (!$base->is_public) {
+            my @clones = $base->clones();
+            my ($clone) = grep { $_->{id_owner} == $USER->id } @clones;
+            return access_denied($c) if !$clone;
+        }
+        return clone_machine($c);
+    }
 
     my $bases_anonymous = $RAVADA->list_bases_anonymous(_remote_ip($c));
     for (@$bases_anonymous) {
@@ -2181,6 +2192,7 @@ sub login($c, $status=200) {
     my $url = ($c->param('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
 
+
     my @error =();
 
     if (((defined $login) || (defined $password) || ((defined $c->param('submit')) && ($c->param('submit') ne 'sso'))) && (! $ticket)) {
@@ -2234,7 +2246,7 @@ sub login($c, $status=200) {
                     ." url($CONFIG_FRONT->{login_bg_file})"
                     ." no-repeat bottom center scroll;\n\t}"];
 
-    sleep 5 if scalar(@error);
+    sleep 5 if scalar(@error) && !$ENV{mode} && !$ENV{mode} eq 'development';
     my @error_status = ( status => $status );
     @error_status = ( status => 403) if @error;
 

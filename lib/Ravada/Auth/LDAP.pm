@@ -103,7 +103,7 @@ sub add_user($name, $password, $storage='rfc2307', $algorithm=undef ) {
 
     my $mesg = $LDAP_ADMIN->add($dn, attr => [%entry]);
     if ($mesg->code) {
-        die "Error afegint $name to $dn ".$mesg->error;
+        die "Error creating $dn: ".$mesg->error;
     }
 }
 
@@ -307,7 +307,9 @@ sub search_user {
 
     );
 
-    if ( $retry <= 3 && $mesg->code && $mesg->code != 4 && $mesg->code != 32) {
+    if ( $retry <= 3 && $mesg->code && $mesg->code != 4
+        && $mesg->code != 32
+    ) {
          warn "LDAP error ".$mesg->code." ".$mesg->error."."
             ."Retrying ! [$retry]"  if $retry;
          $LDAP_ADMIN = undef;

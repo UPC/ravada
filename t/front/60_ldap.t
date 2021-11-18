@@ -19,7 +19,7 @@ init( $CONFIG_FILE);
 rvd_back();
 
 my $RVD_FRONT;
-my $USER_DATA = { name => 'jimmy.'.new_domain_name, password => 'jameson' };
+my $USER_DATA = { name => new_domain_name.'.jimmy', password => 'jameson' };
 
 #########################################################################
 

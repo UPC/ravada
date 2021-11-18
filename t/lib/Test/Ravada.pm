@@ -496,9 +496,10 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
     my @machines2 = _leftovers();
     my @reqs;
     for my $machine ( @$machines, @machines2) {
-        next if $machine->{name} !~ /^$base_name/;
-        remove_domain_and_clones_req($machine,$wait, $run_request);
+        next unless $machine->{name} =~ /$base_name/;
+        remove_domain_and_clones_req($machine,$wait);
     }
+
 }
 
 sub remove_domain(@bases) {
@@ -678,6 +679,7 @@ sub remove_old_domains {
 }
 
 sub mojo_init() {
+    $ENV{MOJO_MODE} = 'development';
     my $script = path(__FILE__)->dirname->sibling('../../script/rvd_front');
 
     my $t = Test::Mojo->new($script);
@@ -713,7 +715,7 @@ sub mojo_login( $t, $user, $pass ) {
     $t->post_ok('/login' => form => {login => $user, password => $pass});
     like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body;
     #    ->status_is(302);
-$MOJO_USER = $user;
+    $MOJO_USER = $user;
     $MOJO_PASSWORD = $pass;
 
     return $t->success;
@@ -732,6 +734,7 @@ sub mojo_create_domain($t, $vm_name) {
             ,submit => 1
         }
     )->status_is(302);
+    die $t->tx->res->body if !$t->success;
 
     wait_request(debug => 0, background => 1);
     my $domain = rvd_front->search_domain($name);
@@ -886,10 +889,7 @@ sub remove_old_disks {
     _remove_old_disks_kvm() if !$>;
 }
 
-sub create_user {
-    my ($name, $pass, $is_admin) = @_;
-    $is_admin = 1 if $is_admin;
-
+sub create_user($name=new_domain_name(), $pass=$$, $is_admin=0) {
     my $login;
     eval { $login = Ravada::Auth::SQL->new(name => $name, password => $pass ) };
     return $login if $login;
@@ -923,7 +923,10 @@ sub create_ldap_user($name, $password, $keep=0) {
         }
     }
 
-    my $user = Ravada::Auth::LDAP::search_user($name);
+    my $user;
+    eval { $user = Ravada::Auth::LDAP::search_user($name) };
+    die $@ if $@ && $@ !~ /No such object/;
+
     ok(!$user,"I shouldn't find user $name in the LDAP server") or return;
 
     my $user_db = Ravada::Auth::SQL->new( name => $name);
@@ -943,7 +946,7 @@ sub create_ldap_user($name, $password, $keep=0) {
 
     my @user = Ravada::Auth::LDAP::search_user(name => $name, filter => '');
     #    diag("Adding $name to ldap");
-    my $user_ldap = $user[0];
+    my $user_ldap = $user[0] or die "Error: ldap user '$name' not found";
     my $user_sql
     = Ravada::Auth::SQL::add_user(name => $name, is_external => 1, external_auth => 'ldap');
 

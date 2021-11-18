@@ -11,6 +11,7 @@ Ravada::Auth::User - User management and tools library for Ravada
 
 use Carp qw(confess croak);
 use Data::Dumper;
+use Mojo::JSON qw(decode_json);
 use Moose::Role;
 
 no warnings "experimental::signatures";
@@ -429,6 +430,39 @@ sub _load_allowed_groups($self) {
         $self->{_allowed}->{$id_domain} = 1
         if Ravada::Auth::LDAP::is_member($self->ldap_entry, $name);
     }
+}
+
+=head2 list_requests
+
+List the requests for this user. It returns requests from the last hour
+by default.
+
+Arguments: optionally pass the date to start search for requests.
+
+
+=cut
+
+sub list_requests($self, $date_req=Ravada::Utils::date_now(3600)) {
+    my $sth = $$CONNECTOR->dbh
+    ->prepare("SELECT id,args FROM requests WHERE date_req > ?"
+    ." ORDER BY date_req DESC");
+
+    my ($id, $args_json);
+
+    $sth->execute($date_req);
+    $sth->bind_columns(\($id, $args_json));
+
+    my @req;
+    while ( $sth->fetch ) {
+        my $args = decode_json($args_json);
+        next if !length $args;
+        my $uid = ($args->{uid} or $args->{id_owner}) or next;
+        next if $uid != $self->id;
+
+        my $req = Ravada::Request->open($id);
+        push @req, ( $req );
+    }
+    return @req;
 }
 
 1;
