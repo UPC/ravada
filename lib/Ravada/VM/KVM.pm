@@ -1152,15 +1152,17 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
         if $VERIFY_ISO && $iso->{url} && !$iso->{md5} && !$iso->{sha256};
 
     my $downloaded = 0;
-    if (! -e $device || ! -s $device) {
+    my $test = 0;
+    $test = 1 if $req && $req->defined_arg('test');
+
+    if ($test || ! -e $device || ! -s $device) {
         $req->status("downloading $iso_name file"
                 ,"Downloading ISO file for $iso_name "
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _fill_url($iso);
-        my $test = 0;
-        $test = 1 if $req && $req->defined_arg('test');
         my $url = $self->_download_file_external($iso->{url}, $device, $verbose, $test);
+        $req->output($url) if $req;
         $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
             if !$test && ! -e $device;
@@ -1269,9 +1271,10 @@ sub _download_file_external_headers($self,$url) {
     run3(\@cmd,\$in,\$out,\$err);
     my ($status) = $err =~ /^\s*(HTTP.*\d+.*)/m;
 
-    return $url if $status =~ /(200|301|302) ([\w\s]+)$/;
+    return $url if $status =~ /(200|301|302|307) ([\w\s]+)$/;
     # 200: OK
     # 302: redirect
+    # 307: temporary redirect
     die "Error: $url not found $status";
 }
 

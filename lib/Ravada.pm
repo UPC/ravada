@@ -56,14 +56,17 @@ use feature qw(signatures);
 our %VALID_CONFIG = (
     vm => undef
     ,warn_error => undef
-    ,db => {user => undef, password => undef,  hostname => undef, host => undef}
+    ,db => {user => undef, password => undef,  hostname => undef, host => undef, db => undef}
     ,ldap => { admin_user => { dn => undef, password => undef }
         ,filter => undef
         ,base => undef
         ,auth => undef
         ,admin_group => undef
         ,ravada_posix_group => undef
+        ,groups_base => undef
+        ,field => undef
     }
+    ,log => undef
 );
 
 =head1 NAME
@@ -2509,19 +2512,19 @@ sub _create_vm_kvm {
     return $vm_kvm;
 }
 
-sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG ) {
+sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG, $quiet = $0=~/\.t$/ ) {
     return 1 if !defined $config_orig;
     my %config = %$config_orig;
 
     for my $key (sort keys %$valid_config) {
         if ( $config{$key} && ref($valid_config->{$key})) {
-           my $ok = _check_config( $config{$key} , $valid_config->{$key} );
+           my $ok = _check_config( $config{$key} , $valid_config->{$key}, $quiet );
            return 0 if !$ok;
         }
         delete $config{$key};
     }
     if ( keys %config ) {
-        warn "Error: Unknown config entry \n".Dumper(\%config) if ! $0 =~ /\.t$/;
+        warn "Error: Unknown config entry \n".Dumper(\%config) if ! $quiet;
         return 0;
     }
     warn "Warning: LDAP authentication with match is discouraged. Try bind.\n"
@@ -3381,6 +3384,7 @@ sub _kill_stale_process($self) {
         ." AND ( command = 'refresh_vms' or command = 'screenshot' or command = 'set_time' "
         ."      OR command = 'open_exposed_ports' OR command='remove' "
         ."      OR command = 'refresh_machine_ports'"
+        ."      OR command = 'post_login'"
         .") "
         ." AND status <> 'done' "
         ." AND start_time IS NOT NULL "
@@ -4242,13 +4246,15 @@ sub _cmd_download {
     my $delay = $request->defined_arg('delay');
     sleep $delay if $delay;
     my $verbose = $request->defined_arg('verbose');
+    my $test = $request->defined_arg('test');
 
     my $iso = $vm->_search_iso($id_iso);
-    if ($iso->{device} && -e $iso->{device}) {
+    if (!$test && $iso->{device} && -e $iso->{device}) {
         $request->status('done',"$iso->{device} already downloaded");
         return;
     }
     my $device_cdrom = $vm->_iso_name($iso, $request, $verbose);
+    Ravada::Request->refresh_storage();
 }
 
 sub _cmd_add_hardware {

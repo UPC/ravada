@@ -906,24 +906,21 @@ sub create_user($name=new_domain_name(), $pass=$$, $is_admin=0) {
 
 sub create_ldap_user($name, $password, $keep=0) {
 
-    my $user;
-    eval {
-        $user = Ravada::Auth::LDAP::search_user($name);
-    };
-    die $@ if $@ && $@ !~ /No such object/;
-    return if $user && $keep;
-
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
-
-    for my $field ( ('uid', 'cn')) {
-        eval {
-            $user = Ravada::Auth::LDAP::search_user(name => $name
-                , field => $field);
-        };
-        die $@ if $@ && $@ !~ /No such object/;
-        next if !$user;
-        diag("Removing $field=$name");
-        $user->delete->update($ldap);
+    for my $field (qw(cn uid)) {
+        if (my $user = Ravada::Auth::LDAP::search_user(field => $field, name => $name) ) {
+            return if $keep;
+            diag("Removing ".$user->dn);
+            my $mesg;
+            for ( 1 .. 2 ) {
+                $mesg = $user->delete()->update($ldap);
+                if ($mesg->code == 81 ) {
+                    Ravada::Auth::LDAP::init();
+                    $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+                }
+            }
+            die $mesg->code." ".$mesg->error if $mesg->code && $mesg->code != 32;
+        }
     }
 
     eval { $user = Ravada::Auth::LDAP::search_user($name) };
@@ -1402,7 +1399,6 @@ sub _remove_old_groups_ldap() {
     die $@ if $@;
     for my $group ( @groups ) {
         next if !$group;
-        warn $group->dn;
         for my $n ( 1 .. 3 ) {
             my $mesg = $ldap->delete($group);
             last if !$mesg->code;
@@ -2359,6 +2355,7 @@ sub unload_nbd() {
 }
 
 sub _unload_nbd() {
+    return if $<;
     my @cmd = ($QEMU_NBD,"-d", $DEV_NBD);
     my ($in, $out, $err);
     run3(\@cmd,\$in,\$out,\$err);
