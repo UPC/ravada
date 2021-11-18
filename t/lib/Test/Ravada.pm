@@ -906,13 +906,29 @@ sub create_user($name=new_domain_name(), $pass=$$, $is_admin=0) {
 
 sub create_ldap_user($name, $password, $keep=0) {
 
-    if ( Ravada::Auth::LDAP::search_user($name) ) {
-        return if $keep;
-                diag("Removing $name");
-        Ravada::Auth::LDAP::remove_user($name)  
+    my $user;
+    eval {
+        $user = Ravada::Auth::LDAP::search_user($name);
+    };
+    die $@ if $@ && $@ !~ /No such object/;
+    return if $user && $keep;
+
+    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+
+    for my $field ( ('uid', 'cn')) {
+        eval {
+            $user = Ravada::Auth::LDAP::search_user(name => $name
+                , field => $field);
+        };
+        die $@ if $@ && $@ !~ /No such object/;
+        next if !$user;
+        diag("Removing $field=$name");
+        $user->delete->update($ldap);
     }
 
-    my $user = Ravada::Auth::LDAP::search_user($name);
+    eval { $user = Ravada::Auth::LDAP::search_user($name) };
+    die $@ if $@ && $@ !~ /No such object/;
+
     ok(!$user,"I shouldn't find user $name in the LDAP server") or return;
 
     my $user_db = Ravada::Auth::SQL->new( name => $name);
@@ -932,7 +948,7 @@ sub create_ldap_user($name, $password, $keep=0) {
 
     my @user = Ravada::Auth::LDAP::search_user(name => $name, filter => '');
     #    diag("Adding $name to ldap");
-    my $user_ldap = $user[0];
+    my $user_ldap = $user[0] or die "Error: ldap user '$name' not found";
     my $user_sql
     = Ravada::Auth::SQL::add_user(name => $name, is_external => 1, external_auth => 'ldap');
 
