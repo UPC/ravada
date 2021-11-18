@@ -317,7 +317,9 @@ get '/admin/group/#name' => sub($c) {
         ."<a href='/admin/groups/'>Groups</a>"
         , status => 302) if !$group;
     $c->stash(object_class => [ grep !/^top$/,$group->get_value('objectClass')]);
-    return $c->render( template => "/main/admin_group");
+    return $c->render( template => "/main/admin_group"
+        ,group => $group
+    );
 };
 
 any '/admin/#type' => sub {

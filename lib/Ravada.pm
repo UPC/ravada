@@ -56,14 +56,17 @@ use feature qw(signatures);
 our %VALID_CONFIG = (
     vm => undef
     ,warn_error => undef
-    ,db => {user => undef, password => undef,  hostname => undef, host => undef}
+    ,db => {user => undef, password => undef,  hostname => undef, host => undef, db => undef}
     ,ldap => { admin_user => { dn => undef, password => undef }
         ,filter => undef
         ,base => undef
         ,auth => undef
         ,admin_group => undef
         ,ravada_posix_group => undef
+        ,groups_base => undef
+        ,field => undef
     }
+    ,log => undef
 );
 
 =head1 NAME
@@ -2509,19 +2512,19 @@ sub _create_vm_kvm {
     return $vm_kvm;
 }
 
-sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG ) {
+sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG, $quiet = $0=~/\.t$/ ) {
     return 1 if !defined $config_orig;
     my %config = %$config_orig;
 
     for my $key (sort keys %$valid_config) {
         if ( $config{$key} && ref($valid_config->{$key})) {
-           my $ok = _check_config( $config{$key} , $valid_config->{$key} );
+           my $ok = _check_config( $config{$key} , $valid_config->{$key}, $quiet );
            return 0 if !$ok;
         }
         delete $config{$key};
     }
     if ( keys %config ) {
-        warn "Error: Unknown config entry \n".Dumper(\%config) if ! $0 =~ /\.t$/;
+        warn "Error: Unknown config entry \n".Dumper(\%config) if ! $quiet;
         return 0;
     }
     warn "Warning: LDAP authentication with match is discouraged. Try bind.\n"
