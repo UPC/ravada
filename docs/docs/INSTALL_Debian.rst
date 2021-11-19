@@ -42,7 +42,7 @@ Mysql Database
 --------------
 
 MariaDB server
-~~~~~~~~~~~~
+~~~~~~~~~~~~~~
 
 It is required a MySQL or MariaDB server, it can be installed in another host or in
 the same one as the ravada package.
@@ -53,7 +53,7 @@ the same one as the ravada package.
 
 
 MariaDB database and user
-~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It is required a database for internal use. In this examples we call it *ravada*.
 We also need an user and a password to connect to the database. It is customary to call it *rvd_user*.

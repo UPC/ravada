@@ -11,7 +11,7 @@ You can translate Ravada at `Weblate <https://hosted.weblate.org/engage/ravada/>
 - Quality checks
 - Attribution, all translator are properly credited
 
-You can read weblate feaures `here <https://hosted.weblate.org/projects/ravada/#languages>`_.
+You can read weblate features in follow `link <https://hosted.weblate.org/projects/ravada/#languages>`_.
 
 Ravada weblate repository is updated from Github, and the contributions goes automatic to develop branch in Github.
 

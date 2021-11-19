@@ -7,7 +7,7 @@ Requirements
 OS
 --
 
-Ravada works in any Linux distribution but we only support the package for `Ubuntu <https://www.ubuntu.com/download/>`_ , Debian
+Ravada works in any Linux distribution but we only support the package for `Canonical Ltd. Ubuntu <https://www.ubuntu.com/download/>`_ , Debian
 and `Fedora <https://getfedora.org/es/>`_ server.
 
 You can also install Ravada using Docker.

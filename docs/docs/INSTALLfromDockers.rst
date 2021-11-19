@@ -43,7 +43,7 @@ disks images, so clones won't require many space.
 Install Ravada from dockers
 ---------------------------
 
-.. Info:: Ravada source must be (locally) in: ``~/src/ravada``  
+.. info:: Ravada source must be (locally) in: ``~/src/ravada``  
 
 Follow this steps:
 
