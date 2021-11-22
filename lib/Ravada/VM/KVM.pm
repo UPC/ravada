@@ -862,6 +862,7 @@ sub _domain_create_from_iso {
             if !$args{$_};
     }
     my $remove_cpu = delete $args2{remove_cpu};
+    my $options = delete $args2{options};
     for (qw(disk swap active request vm memory iso_file id_template volatile spice_password
             listen_ip)) {
         delete $args2{$_};
@@ -906,6 +907,8 @@ sub _domain_create_from_iso {
 
     my $file_xml =  $DIR_XML."/".$iso->{xml_volume};
 
+=pod
+
     my $device_disk = $self->create_volume(
           name => "$args{name}-vda-".Ravada::Utils::random_name(4)
          , xml => $file_xml
@@ -913,7 +916,11 @@ sub _domain_create_from_iso {
         ,target => 'vda'
     );
 
-    my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
+=cut
+
+    my $device_disk;
+
+    my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}", $options);
 
     if ($device_cdrom) {
         _xml_modify_cdrom($xml, $device_cdrom);
@@ -921,7 +928,8 @@ sub _domain_create_from_iso {
         _xml_remove_cdrom($xml);
     }
     _xml_remove_cpu($xml)                     if $remove_cpu;
-    _xml_modify_disk($xml, [$device_disk])    if $device_disk;
+    _xml_remove_disk($xml);
+    #    _xml_modify_disk($xml, [$device_disk])    if $device_disk;
     $self->_xml_modify_usb($xml);
     _xml_modify_video($xml);
 
@@ -930,6 +938,7 @@ sub _domain_create_from_iso {
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner}
         , id_vm => $self->id
     );
+    $domain->add_volume( boot => 1, target => 'vda', size => $disk_size );
 
     $domain->_set_spice_password($spice_password)
         if $spice_password;
@@ -1134,7 +1143,7 @@ sub _fix_pci_slots {
 
 }
 
-sub _iso_name($self, $iso, $req, $verbose=1) {
+sub _iso_name($self, $iso, $req=undef, $verbose=1) {
 
     my $iso_name;
     if ($iso->{rename_file}) {
@@ -1594,9 +1603,7 @@ sub _fetch_sha256($self,$row) {
 # XML methods
 #
 
-sub _define_xml {
-    my $self = shift;
-    my ($name, $xml_source) = @_;
+sub _define_xml($self, $name, $xml_source, $options=undef) {
     my $doc = $XML->parse_file($xml_source) or die "ERROR: $! $xml_source\n";
 
         my ($node_name) = $doc->findnodes('/domain/name/text()');
@@ -1606,9 +1613,114 @@ sub _define_xml {
     $self->_xml_modify_uuid($doc);
     $self->_xml_modify_spice_port($doc);
     _xml_modify_video($doc);
+    $self->_xml_modify_options($doc, $options);
 
     return $doc;
 
+}
+
+sub _xml_modify_options($self, $doc, $options=undef) {
+    return if !$options || !scalar(keys (%$options));
+    my $uefi = delete $options->{uefi};
+    my $machine = delete $options->{machine};
+    my $arch = delete $options->{arch};
+
+    confess "Arguments unknown ".Dumper($options)  if keys %$options;
+
+    if ( $uefi ) {
+        #        $self->_xml_add_libosinfo_win2k16($doc);
+        my ($xml_name) = $doc->findnodes('/domain/name');
+        $self->_xml_add_uefi($doc, $xml_name->textContent);
+    }
+    if ($arch) {
+        $self->_xml_set_arch($doc, $arch);
+    }
+    if ($machine) {
+        $self->_xml_set_machine($doc, $machine);
+    }
+}
+
+sub _xml_set_arch($self, $doc, $arch) {
+    my ($type) = $doc->findnodes('/domain/os/type');
+    $type->setAttribute(arch => $arch);
+}
+
+
+
+sub _xml_set_machine($self, $doc, $machine) {
+    my ($type) = $doc->findnodes('/domain/os/type');
+    $type->setAttribute(machine => $machine);
+    if ($machine =~ /i440/) {
+        #$self->_xml_remove_ide($doc);
+        $self->_xml_remove_vmport($doc);
+    }
+    if ($machine =~ /q35/) {
+        $self->_xml_set_pcie($doc);
+        $self->_xml_remove_ide($doc);
+    }
+}
+
+sub _xml_remove_ide($self, $doc) {
+    my ($devices) = $doc->findnodes("/domain/devices");
+    for my $controller ($doc->findnodes("/domain/devices/controller")) {
+        next if $controller->getAttribute('type') ne 'ide';
+        $devices->removeChild($controller);
+    }
+    for my $disk ($doc->findnodes("/domain/devices/disk")) {
+        my ($target) = $disk->findnodes("target");
+        $target->setAttribute('bus' => 'sata') if $target->getAttribute('bus') eq 'ide';
+
+        my ($address) = $disk->findnodes("address");
+        $disk->removeChild($address);
+    }
+
+}
+
+sub _xml_remove_vmport($self, $doc) {
+    my ($features) = $doc->findnodes("/domain/features");
+    my ($vmport) = $features->findnodes("vmport");
+    return if !$vmport;
+    $features->removeChild($vmport);
+}
+
+
+sub _xml_set_pcie($self, $doc) {
+    for my $controller ($doc->findnodes("/domain/devices/controller")) {
+        next if $controller->getAttribute('type') ne 'pci';
+        $controller->setAttribute('model' => 'pcie-root');
+    }
+}
+
+sub _xml_add_libosinfo_win2k16($self, $doc) {
+    my ($domain) = $doc->findnodes('/domain');
+    my ($metadata) = $domain->findnodes('metadata');
+    if (!$metadata) {
+        $metadata = $domain->addNewChild(undef,"metadata");
+    }
+    my $libosinfo = $metadata->addNewChild(undef,'libosinfo:libosinfo');
+    $libosinfo->setAttribute('xmlns:libosinfo' =>
+        "http://libosinfo.org/xmlns/libvirt/domain/1.0"
+    );
+    my $os = $libosinfo->addNewChild(undef, 'libosinfo:os');
+    $os->setAttribute('id' => "http://microsoft.com/win/2k16" );
+
+}
+
+sub _xml_add_uefi($self, $doc, $name) {
+    my ($os) = $doc->findnodes('/domain/os');
+    my ($loader) = $doc->findnodes('/domain/os/loader');
+    if (!$loader) {
+        $loader= $os->addNewChild(undef,"loader");
+    }
+    $loader->setAttribute('readonly' => 'yes');
+    $loader->setAttribute('type' => 'pflash');
+    $loader->appendText('/usr/share/OVMF/OVMF_CODE.fd');
+
+    my ($nvram) =$doc->findnodes("/domain/os/nvram");
+    if (!$nvram) {
+        $nvram = $os->addNewChild(undef,"nvram");
+    }
+    $nvram->appendText("/var/lib/libvirt/qemu/nvram/$name.fd");
 }
 
 sub _xml_remove_cpu {
@@ -1617,6 +1729,16 @@ sub _xml_remove_cpu {
     my ($cpu) = $domain->findnodes('cpu');
     $domain->removeChild($cpu)  if $cpu;
 }
+
+sub _xml_remove_disk($doc){
+    my ($dev) = $doc->findnodes('/domain/devices')
+        or confess "Missing node domain/devices";
+    for my $disk ( $dev->findnodes('disk') ) {
+        $dev->removeChild($disk)
+            if $disk && $disk->getAttribute('device') eq 'disk';
+    }
+}
+
 
 sub _xml_modify_video {
     my $doc = shift;
@@ -2407,6 +2529,38 @@ sub free_disk($self, $pool_name = undef ) {
         sleep 1;
     }
     return $info->{available};
+}
+
+sub list_machine_types($self) {
+
+    my %todo = map { $_ => 1 }
+    ('isapc', 'microvm');
+
+    my %ret_types;
+    my $xml = $self->vm->get_capabilities();
+    my $doc = XML::LibXML->load_xml(string => $xml);
+    for my $node_arch ($doc->findnodes("/capabilities/guest/arch")) {
+        my $arch = $node_arch->getAttribute('name');
+        my %types;
+        for my $node_machine (sort { $a->textContent cmp $b->textContent } $node_arch->findnodes("machine")) {
+            my $machine = $node_machine->textContent;
+            next if $machine !~ /^(pc-i440fx|pc-q35)-(\d+.\d+)/
+            && $machine !~ /^(pc)-(\d+\d+)$/
+            && $machine !~ /^([a-z]+)$/;
+
+            next if $todo{$machine};
+            my $version = ( $2 or 0 );
+            $types{$1} = [ $version,$machine ]
+            if !exists $types{$1} || $version > $types{$1}->[0];
+        }
+        my @types;
+        for (keys %types) {
+            push @types,($types{$_}->[1]);
+        }
+        $ret_types{$arch} = [sort @types];
+    }
+    return %ret_types;
+
 }
 
 1;

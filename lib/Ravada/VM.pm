@@ -400,7 +400,7 @@ sub _around_create_domain {
      my $request = delete $args{request};
      delete $args{iso_file};
      delete $args{id_template};
-     delete @args{'description','remove_cpu','vm','start'};
+     delete @args{'description','remove_cpu','vm','start','options'};
 
     confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
 
@@ -2163,6 +2163,9 @@ sub _check_equal_storage_pools($vm1, $vm2) {
     return 1;
 }
 
+sub list_machine_types($self) {
+    return ();
+}
 
 1;
 
