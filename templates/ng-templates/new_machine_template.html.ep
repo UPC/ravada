@@ -15,8 +15,7 @@
                 </div>
             </div>
 
-            <div ng-if="backend == 'KVM' || backend == 'Void'" class="form-group">
-                <div class="from-group row">
+            <div ng-show="backend == 'KVM' || backend == 'Void'" class="form-group row">
                     <label for="id_iso" class="col-xl-3 col-form-label"><%=l 'Select Template' %> <a
                       title="Choose the OS you want to install."><i class="fa fa-info-circle"></i></a></label>
                     <div class="col-lg-9">
@@ -38,9 +37,9 @@
                             > <%=l "Download now" %></a>
                         </div>
                     </div>
-                </div>
-                <div class="from-group row" ng-show="id_iso.name">
-                        <br/>
+            </div>
+
+            <div class="form-group row" ng-show="id_iso.name">
                         <label for="iso_file" class="col-xl-3 col-form-label"><%=l 'Select ISO' %> <a
                           title="Select the .iso file the machine will utilize when installing the OS." href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html"><i class="fa fa-info-circle"></i></a></label>
                         <div class="col-lg-9"  ng-init="iso_file = '<NONE>'" >
@@ -52,7 +51,6 @@
 
                             ></select>
                         </div>
-                </div>
             </div>
 
             <div class="form-group row">
@@ -66,13 +64,13 @@
                 </div>
             </div>
 
-            <div ng-if="backend == 'LXC'" class="from-group row">
+            <div ng-show="backend == 'LXC'" class="from-group row">
                 <label for="id_template" class="col-xl-3 col-form-label"><%=l 'Template' %></label>
                 <div class="col-lg-9">
                     <select name ="id_template"
                         ng-model="id_template"
                         ng-options="item.name for item in templates_lxc track by item.id"
-                        required="">
+                        >
                     </select>
                 </div>
             </div>
@@ -84,7 +82,7 @@
                     </div>
             </div>
 
-            <div class="form-group row" ng-if="backend == 'KVM' || backend =='Void'">
+            <div class="form-group row" ng-show="backend == 'KVM' || backend =='Void'">
                 <label for="disk" class="col-xl-3 col-form-label"><%=l 'System Disk: (GB)' %></label>
                 <div class="col-lg-2">
                     <input class="form-control" ng-model="ddsize" type="number" min ="{{min_size}}" name="disk" required="">
@@ -93,7 +91,23 @@
                     <font color="orange"><%=l 'The Minimum Disk Size needed for this ISO is' %> {{min_size}}GB.</font>
                 </div>
             </div>
-            <div class="form-group row" ng-if="backend == 'KVM' || backend=='Void'">
+            <div class="from-group row">
+                <label for="_advanced_options" class="col-xl-3 col-form-label">
+                    <b><%=l 'Advanced options' %></b>
+                </label>
+                <div class="col-lg-9">
+                    <input type="checkbox" ng-model="_advanced_options"
+                        name="_advanced_options" value="0"/>
+                </div>
+            </div>
+
+                machine_types: {{machine_types[backend]}}
+                <br/>
+{{id_iso.arch}} : {{ machine_types[backend][id_iso.arch] }}
+<br/>
+            <div ng-show="_advanced_options">
+
+            <div class="form-group row" ng-show="backend == 'KVM' || backend=='Void'">
                 <label for="swap" class="col-xl-3 col-form-label">
                     <span ng-model="swap.label"
                         ng-class='{"text-muted": !swap.enabled}'><%=l 'Swap' %>
@@ -101,7 +115,7 @@
                     </span>
                 </label>
                 <div class="col-lg-2">
-                    <input class="form-control" ng-model="swap.value" type="number" min ="0.1"name="swap"  id="swap" ng-disabled="!swap.enabled">
+                    <input class="form-control" ng-model="swap.value" type="number" min ="0.1" name="swap"  id="swap" ng-disabled="!swap.enabled || !_advanced_options"/>
                 </div>
                 <div class="col-lg-1">
                    <a ng-show="!swap.enabled"
@@ -115,7 +129,7 @@
                     <span>Content will be cleaned on restore and shutdown</span>
                </div>
             </div>
-            <div class="form-group row" ng-if="backend == 'KVM' || backend=='Void'">
+            <div class="form-group row" ng-show="backend == 'KVM' || backend=='Void'">
                 <label for="swap" class="col-xl-3 col-form-label">
                     <span ng-model="data.label"
                         ng-class='{"text-muted": !data.enabled}'><%=l 'Data' %>
@@ -123,7 +137,7 @@
                     </span>
                 </label>
                 <div class="col-lg-2">
-                    <input class="form-control" ng-model="data.value" type="number" min ="0.1"name="data"  id="data" ng-disabled="!data.enabled">
+                    <input class="form-control" ng-model="data.value" type="number" min ="0.1" name="data"  id="data" ng-disabled="!data.enabled || !_advanced_options">
                 </div>
                 <div class="col-lg-1">
                    <a ng-show="!data.enabled"
@@ -137,6 +151,28 @@
                     <span>Content will be kept on restore</span>
                </div>
             </div>
+
+                <div ng-show="id_iso.arch == 'amd64'" class="from-group row">
+                    <label for="bios" class="col-xl-3 col-form-label"><%=l 'BIOS' %></label>
+                    <div class="col-lg-9">
+                    <select name="bios">
+                        <option value="Legacy"><%=l 'Legacy' %></option>
+                        <option value="UEFI"><%=l 'UEFI' %></option>
+                    </select>
+                    </div>
+                </div>
+
+
+                <div ng-show="machine_types[backend][id_iso.arch]" class="from-group row">
+                    <label for="machine" class="col-xl-3 col-form-label"><%=l 'Machine' %></label>
+                    <div class="col-lg-9">
+                    <select name="machine" ng-model="machine"
+                    ng-options="machine for machine in machine_types[backend][id_iso.arch]">
+                    </select>
+                    </div>
+                </div>
+            </div><!-- ng show advanced -->
+
             <div class="form-group row">
                 <div ng-show="new_machineForm.$submitted || new_machineForm.name.$touched">
                     <div ng-show="new_machineForm.name.$error.required" class="alert alert-warning" role="alert">

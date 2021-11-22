@@ -1489,6 +1489,35 @@ sub is_in_maintenance($self) {
     return 0;
 }
 
+=head2 list_machine_types
+
+Returns a reference to a list of the architectures and its machine types
+
+=cut
+
+sub list_machine_types($self, $uid, $vm_type) {
+
+    my $key="list_machine_types";
+    my $cache = $self->_cache_get($key);
+    return $cache if $cache;
+
+    my $req = Ravada::Request->list_machine_types(
+        vm_type => $vm_type
+        ,uid => $uid
+    );
+    return {} if !$req;
+    $self->wait_request($req);
+    return {} if $req->status ne 'done';
+
+    my $types = {};
+    $types = decode_json($req->output()) if $req->output;
+
+    $self->_cache_store($key,$types);
+
+    return $types;
+}
+
+
 =head2 version
 
 Returns the version of the main module

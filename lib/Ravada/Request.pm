@@ -126,6 +126,8 @@ our %VALID_ARG = (
     ,compact => { uid => 1, id_domain => 1 , keep_backup => 2 }
       ,purge => { uid => 1, id_domain => 1 }
 
+    ,list_machine_types => { uid => 1, id_vm => 2, vm_type => 2}
+
     #users
     ,post_login => { user => 1, locale => 2 }
 

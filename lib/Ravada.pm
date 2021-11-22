@@ -277,7 +277,7 @@ sub _update_isos {
 	    androidx86 => {
                     name => 'Android 8.1 x86'
             ,description => 'Android-x86 64 bits. Requires an user provided ISO image.'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'android-amd64.xml'
              ,xml_volume => 'android-volume.xml'
 	     ,min_disk_size => '4'
@@ -344,7 +344,7 @@ sub _update_isos {
 	,focal_fossa=> {
                     name => 'Ubuntu Focal Fossa'
             ,description => 'Ubuntu 20.04 Focal Fossa 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'focal_fossa-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/20.04/'
@@ -393,7 +393,7 @@ sub _update_isos {
         ,alpine381_64 => {
             name => 'Alpine 3.8 64 bits'
     ,description => 'Alpine Linux 3.8 64 bits ( Minimal Linux Distribution )'
-           ,arch => 'amd64'
+           ,arch => 'x86_64'
             ,xml => 'alpine-amd64.xml'
      ,xml_volume => 'alpine381_64-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/'
@@ -404,7 +404,7 @@ sub _update_isos {
         ,alpine381_32 => {
             name => 'Alpine 3.8 32 bits'
     ,description => 'Alpine Linux 3.8 32 bits ( Minimal Linux Distribution )'
-           ,arch => 'i386'
+           ,arch => 'i686'
             ,xml => 'alpine-i386.xml'
      ,xml_volume => 'alpine381_32-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/'
@@ -590,7 +590,7 @@ sub _update_isos {
         }
         ,debian_bullseye_64=> {
             name =>'Debian Bullseye 64 bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,description => 'Debian 11 Bullseye 64 bits (netinst)'
             ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/amd64/iso-cd/'
             ,file_re => 'debian-11.[\d\.]+-amd64-netinst.iso'
@@ -601,6 +601,7 @@ sub _update_isos {
         }
         ,debian_bullseye_32=> {
             name =>'Debian Bullseye 32 bits'
+            ,arch => 'i686'
             ,description => 'Debian 10 Bullseye 32 bits (netinst)'
             ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/i386/iso-cd/'
             ,file_re => 'debian-11.[\d\.]+-i386-netinst.iso'
@@ -2724,7 +2725,7 @@ sub create_domain {
 
     my $error = $@;
     if ( $request ) {
-        $request->error($error) if $error;
+        $request->error(''.$error) if $error;
         if ($error =~ /has \d+ requests/) {
             $request->status('retry');
         }
@@ -4720,6 +4721,18 @@ sub _cmd_list_isos($self, $request){
     $request->output(encode_json(\@isos));
 }
 
+sub _cmd_list_machine_types($self, $request) {
+    my $id_vm = $request->defined_arg('id_vm');
+    my $vm_type = $request->defined_arg('vm_type');
+    my $vm;
+    $vm = Ravada::VM->open(type => $vm_type) if $vm_type;
+    $vm = Ravada::VM->open($id_vm) if $id_vm;
+    die "Error: No id_vm nor vm_type defined ".Dumper($request->args)
+    if !$id_vm && ! $vm_type;
+    my %out = $vm->list_machine_types();
+    $request->output(encode_json(\%out));
+}
+
 sub _cmd_set_time($self, $request) {
     my $id_domain = $request->args('id_domain');
     my $domain = Ravada::Domain->open($id_domain)
@@ -5284,6 +5297,7 @@ sub _req_method {
  ,rename_domain => \&_cmd_rename_domain
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
+ ,list_machine_types => \&_cmd_list_machine_types
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
 ,force_reboot   => \&_cmd_force_reboot
