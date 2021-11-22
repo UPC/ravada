@@ -585,7 +585,7 @@ sub _remove_old_domains_vm($vm_name) {
         eval {$domain->remove( $USER_ADMIN ) }  if $domain;
         warn $@ if $@;
         if ( $@ && $@ =~ /No DB info/i ) {
-            eval { $domain->domain->undefine() if $domain->domain };
+            eval { $domain->domain->undefine($Sys::Virt::Domain::UNDEFINE_NVRAM) if $domain->domain };
         }
 
     }
@@ -667,7 +667,7 @@ sub _remove_old_domains_kvm {
         };
         warn $@ if $@ && $@ !~ /error code: 42,/;
 
-        eval { $domain->undefine };
+        eval { $domain->undefine(Sys::Virt::Domain::UNDEFINE_NVRAM) };
         warn $@ if $@ && $@ !~ /error code: 42,/;
     }
 }

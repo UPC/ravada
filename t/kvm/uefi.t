@@ -46,58 +46,196 @@ sub _machine_types($vm, $node_arch) {
     my %types;
     for my $node_machine (sort { $a->textContent cmp $b->textContent } $node_arch->findnodes("machine")) {
         my $machine = $node_machine->textContent;
-        warn$machine;
-        next if $machine !~ /^(pc-i440fx|pc-q35)-(\d+.\d+)/;
-        $types{$1} = $machine if !exists $types{$1} || $2 > $types{$1};
+        next if $machine !~ /^(pc-i440fx|pc-q35)-(\d+.\d+)/
+            && $machine !~ /^(pc)-(\d+\d+)$/;
+        my $version = ( $2 or 0 );
+        $types{$1} = [ $version,$machine ]
+        if !exists $types{$1} || $version > $types{$1}->[0];
     }
-    warn Dumper(\%types);
-    return sort values %types;
+    my @types;
+    for (keys %types) {
+        push @types,($types{$_}->[1]);
+    }
+    return @types,('pc');
 }
 
 sub test_machine_types($vm) {
     my $xml = $vm->vm->get_capabilities();
     my $doc = XML::LibXML->load_xml(string => $xml);
-    my ($node_emulator) = $doc->findnodes("/capabilities/guest/arch/emulator");
-    die $doc->toString if !$node_emulator;
-    my $emulator = $node_emulator->textContent;
-    for my $node_arch ($doc->findnodes("/capabilities/guest/arch")) {
-        my $arch = $node_arch->getAttribute('name');
-        next if $arch ne 'amd64';
-        for my $machine (_machine_types($vm, $node_arch)) {
-            diag("$emulator $arch $machine");
-            my $name = new_domain_name();
-            my $id_iso = search_id_iso('Alpine');
+    my @node_emulator = $doc->findnodes("/capabilities/guest/arch/emulator");
+    die $doc->toString if !$node_emulator[0];
+    for my $node_emulator (@node_emulator) {
+        my $emulator = $node_emulator->textContent;
+        for my $node_arch ($doc->findnodes("/capabilities/guest/arch")) {
+            my $arch = $node_arch->getAttribute('name');
+            next if $arch eq 'i386' || $emulator =~ /i[36]86/;
+            for my $machine (_machine_types($vm, $node_arch)) {
 
-            my $req = Ravada::Request->create_domain(
-                name => $name
-                ,vm => $vm->type
-                ,id_iso => $id_iso
-                ,id_owner => user_admin->id
-                ,memory => 512 * 1024
-                ,disk => 1024 * 1024
-                ,options => { machine => $machine, arch => $arch }
-            );
-            wait_request();
-            my $domain = $vm->search_domain($name);
-            ok($domain);
-            my $config = $domain->xml_description();
-            my $doc = XML::LibXML->load_xml(string => $config);
-            my ($node_type) = $doc->findnodes("/domain/os/type");
-            if ($machine !~ /^ubuntu/) {
-                if ($machine eq 'q35') {
-                    like($node_type->getAttribute('machine'), qr/^pc-q35/);
-                } elsif ($machine eq 'pc') {
-                    like($node_type->getAttribute('machine'), qr/^pc-/);
-                } else {
-                    is($node_type->getAttribute('machine'), $machine) or exit;
-                }
+                my $id_iso = search_id_iso('Alpine%32');
+                $id_iso = search_id_iso('Alpine%64') if $arch eq 'x86_64';
+
+                my $iso = $vm->_search_iso($id_iso);
+                diag("$arch $machine $iso->{name}");
+
+                my $name = new_domain_name();
+
+                my $req = Ravada::Request->create_domain(
+                    name => $name
+                    ,vm => $vm->type
+                    ,id_iso => $id_iso
+                    ,id_owner => user_admin->id
+                    ,memory => 512 * 1024
+                    ,disk => 1024 * 1024
+                    ,options => { machine => $machine, arch => $arch }
+                );
+                wait_request();
+                my $domain = $vm->search_domain($name);
+                ok($domain);
+                my $config = $domain->xml_description();
+                my $doc = XML::LibXML->load_xml(string => $config);
+                my ($node_type) = $doc->findnodes("/domain/os/type");
+                my $dom_machine = $node_type->getAttribute('machine');
+                is($dom_machine, $machine) if ($machine ne 'pc');
+                is($node_type->getAttribute('arch'), $arch);
+
+                is($node_type->getAttribute('arch'), $iso->{arch});
+
+                $domain->start(user_admin);
+                $domain->shutdown_now(user_admin);
+                $domain->remove(user_admin) if $domain;
             }
-            $domain->start(user_admin);
-            $domain->shutdown_now(user_admin);
-            $domain->remove(user_admin) if $domain;
         }
     }
 }
+
+sub test_req_machine_types($vm) {
+    my $req = Ravada::Request->list_machine_types(
+        id_vm => $vm->id
+        ,uid => user_admin->id
+    );
+    wait_request();
+    my $out_json = $req->output;
+    my $out = decode_json($out_json);
+    my $n = 2;
+    ok(scalar(keys %$out) >= $n,"Expecting at least $n machine architectures"
+        .  Dumper($out));
+    my $types = $out->{x86_64};
+    my $n_types = 3;
+    ok(scalar(@$types) >= $n_types," Expecting at least $n_types in 64 bits"
+        .Dumper($types));
+}
+
+sub test_req_machine_types2($vm) {
+    my $req = Ravada::Request->list_machine_types(
+        vm_type => $vm->type
+        ,uid => user_admin->id
+    );
+    wait_request();
+    my $out_json = $req->output;
+    my $out = decode_json($out_json);
+    my $n = 2;
+    ok(scalar(keys %$out) >= $n,"Expecting at least $n machine architectures"
+        .  Dumper($out));
+    my $types = $out->{x86_64};
+    my $n_types = 3;
+    ok(scalar(@$types) >= $n_types," Expecting at least $n_types in 64 bits"
+        .Dumper($types));
+}
+
+sub test_isos($vm) {
+
+    my $req = Ravada::Request->list_machine_types(
+        vm_type => $vm->type
+        ,uid => user_admin->id
+    );
+    wait_request($req);
+    is($req->error,'');
+    like($req->output,qr/./);
+
+    my $machine_types = {};
+    $machine_types = decode_json($req->output());
+
+    my $isos = rvd_front->list_iso_images();
+
+    my @skip = ('Android');
+    for my $iso_frontend ( @$isos ) {
+        my $iso = $vm->_search_iso($iso_frontend->{id});
+        next if !$iso->{arch} || $iso->{arch} !~ /^(i686|x86_64)$/;
+        next if grep {$iso->{name} =~ /$_/} @skip;
+        die Dumper($iso) if !$iso->{device};
+        for my $machine (@{$machine_types->{$iso->{arch}}}) {
+            next if $machine eq 'ubuntu';
+            for my $uefi ( 0,1 ) {
+                diag($iso->{arch}." ".$iso->{name}." ".$machine
+                ." uefi=$uefi");
+                my $name = new_domain_name();
+                my $req = Ravada::Request->create_domain(
+                    name => $name
+                    ,vm => $vm->type
+                    ,id_iso => $iso->{id}
+                    ,id_owner => user_admin->id
+                    ,memory => 512 * 1024
+                    ,disk => 1024 * 1024
+                    ,swap => 1024 * 1024
+                    ,data => 1024 * 1024
+                    ,options => { machine => $machine
+                        , arch => $iso->{arch}
+                        , uefi => $uefi
+                    }
+                );
+                wait_request();
+                my $domain = $vm->search_domain($name);
+                ok($domain);
+                wait_request();
+                my $config = $domain->xml_description();
+                my $doc = XML::LibXML->load_xml(string => $config);
+                my ($node_type) = $doc->findnodes("/domain/os/type");
+                my $dom_machine = $node_type->getAttribute('machine');
+                is($dom_machine, $machine) if ($machine ne 'pc');
+
+                is($node_type->getAttribute('arch'), $iso->{arch});
+
+
+                $domain->start(user_admin);
+                test_drives($doc);
+                $domain->shutdown_now(user_admin);
+                $domain->remove(user_admin) if $domain;
+            }
+        }
+    }
+}
+
+sub test_drives($doc) {
+    my @drives = $doc->findnodes("/domain/devices/disk");
+    die "Error: only ".scalar(@drives) if scalar(@drives)<4;
+    my $previous = '';
+    my $prev_target = '';
+    my $prev_file = '';
+    for my $drive (@drives) {
+        my ($address) = $drive->findnodes("address");
+        my ($source) = $drive->findnodes("source");
+        my $file = $source->getAttribute('file');
+        next if $file =~ /\.iso$/;
+        ok($file gt $prev_file);
+        $prev_file = $file;
+        if ($address->getAttribute('type') eq 'drive') {
+            next;
+        } else {
+            my $bus = $address->getAttribute('bus');
+            my $slot = $address->getAttribute('slot');
+            my $function = $address->getAttribute('function');
+
+            my ($target_node) = $drive->findnodes('target');
+            my $target = $target_node->getAttribute('dev');
+
+            my $current = "$bus.$slot.$function";
+            ok($current gt $previous, "Expecting $target greather than $prev_target $current < $previous");
+            $previous = $current;
+            $prev_target = $target;
+        }
+    }
+}
+
 ########################################################################
 
 init();
@@ -117,6 +255,9 @@ for my $vm_name ( 'KVM' ) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        test_isos($vm);
+        test_req_machine_types($vm);
+        test_req_machine_types2($vm);
         test_machine_types($vm);
         test_uefi($vm);
     }

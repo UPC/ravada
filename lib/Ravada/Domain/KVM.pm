@@ -291,7 +291,7 @@ sub remove {
         warn $@ if $@;
     }
 
-    eval { $self->domain->undefine()    if $self->domain && !$self->is_removed };
+    eval { $self->domain->undefine(Sys::Virt::Domain::UNDEFINE_NVRAM)    if $self->domain && !$self->is_removed };
     confess $@ if $@ && $@ !~ /libvirt error code: 42/;
 
     eval { $self->remove_disks() if $self->is_known };

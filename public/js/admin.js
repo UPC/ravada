@@ -73,7 +73,17 @@ ravadaApp.directive("solShowMachine", swMach)
             $scope.backends = response.data;
             $scope.backend = response.data[0];
             $scope.loadTemplates();
+        $scope.list_machine_types($scope.backend);
     });
+
+      $scope.list_machine_types = function(backend) {
+          console.log(backend);
+          $http.get('/list_machine_types.json?vm_type='+backend).then(function(response) {
+              $scope.machine_types[backend] = response.data;
+          });
+
+      };
+
       $scope.loadTemplates = function() {
         $http.get('/list_images.json',{
           params: {
@@ -105,6 +115,9 @@ ravadaApp.directive("solShowMachine", swMach)
 
       $scope.showMinSize = false;
       $scope.min_size = 15;
+
+      $scope.iso = { arch: 'unknown' };
+      $scope.machine_types = { };
 
       $scope.change_iso = function(id) {
           $scope.id_iso_id = id.id;
