@@ -606,7 +606,6 @@ get '/list_machine_types.json' => sub {
 
     my $vm_name = $c->param('vm_type');
     my $types = $RAVADA->list_machine_types($USER->id, $vm_name );
-    warn Dumper($types);
     $c->render(json => $types);
 };
 
