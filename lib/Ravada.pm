@@ -408,6 +408,7 @@ sub _update_isos {
             ,xml => 'alpine-i386.xml'
      ,xml_volume => 'alpine381_32-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/'
+            ,options => { machine => 'pc-q35' }
         ,file_re => 'alpine-standard-3.8.1-x86.iso'
         ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/alpine-standard-3.8.1-x86.iso.sha256'
             ,min_disk_size => '1'
@@ -747,6 +748,13 @@ sub _update_table_isos_url($self, $data) {
     my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE name=?");
     for my $release (sort keys %$data) {
         my $entry = $data->{$release};
+        if (exists $entry->{options} && $entry->{options} 
+            && ref($entry->{options})
+        ) {
+            unlock_hash(%$entry);
+            $entry->{options} = encode_json($entry->{options});
+            lock_hash(%$entry);
+        }
         $sth->execute($entry->{name});
         my $row = $sth->fetchrow_hashref();
         for my $field (keys %$entry) {
@@ -1650,9 +1658,7 @@ sub _upgrade_table_fields($self, $table, $fields ) {
     }
 }
 
-sub _upgrade_table {
-    my $self = shift;
-    my ($table, $field, $definition) = @_;
+sub _upgrade_table($self, $table, $field, $definition) {
     my $dbh = $CONNECTOR->dbh;
 
     my ($new_size) = $definition =~ m{\((\d+)};
@@ -2271,6 +2277,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
     $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
+    $self->_upgrade_table('iso_images','options','varchar(255)');
 
     $self->_upgrade_table('users','language','char(40) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {

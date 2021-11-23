@@ -152,7 +152,7 @@
                </div>
             </div>
 
-                <div ng-show="id_iso.arch == 'amd64'" class="from-group row">
+                <div ng-show="id_iso.arch == 'x86_64'" class="from-group row">
                     <label for="bios" class="col-xl-3 col-form-label"><%=l 'BIOS' %></label>
                     <div class="col-lg-9">
                     <select name="bios">
