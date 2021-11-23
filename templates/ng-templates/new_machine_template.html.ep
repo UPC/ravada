@@ -102,10 +102,6 @@
                 </div>
             </div>
 
-                machine_types: {{machine_types[backend]}}
-                <br/>
-{{id_iso.arch}} : {{ machine_types[backend][id_iso.arch] }}
-<br/>
             <div ng-show="_advanced_options">
 
             <div class="form-group row" ng-show="backend == 'KVM' || backend=='Void'">
@@ -156,7 +152,7 @@
                 <div ng-show="id_iso.arch == 'x86_64'" class="from-group row">
                     <label for="bios" class="col-xl-3 col-form-label"><%=l 'BIOS' %></label>
                     <div class="col-lg-9">
-                    <select name="bios">
+                    <select name="bios" ng-model="bios">
                         <option value="Legacy"><%=l 'Legacy' %></option>
                         <option value="UEFI"><%=l 'UEFI' %></option>
                     </select>
