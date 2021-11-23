@@ -304,6 +304,7 @@ sub _update_isos {
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04.*/release/ubuntu-mate-20.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         },
         mate_bionic => {
                     name => 'Ubuntu Mate Bionic 64 bits'
@@ -354,6 +355,7 @@ sub _update_isos {
                 ,file_re => '^ubuntu-20.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
 
         ,bionic=> {
@@ -403,6 +405,7 @@ sub _update_isos {
         ,file_re => 'alpine-standard-3.8.1-x86_64.iso'
         ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/alpine-standard-3.8.1-x86_64.iso.sha256'
             ,min_disk_size => '1'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,alpine381_32 => {
             name => 'Alpine 3.8 32 bits'
@@ -411,7 +414,7 @@ sub _update_isos {
             ,xml => 'alpine-i386.xml'
      ,xml_volume => 'alpine381_32-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/'
-            ,options => { machine => 'pc-q35' }
+            ,options => { machine => 'pc-i440fx' }
         ,file_re => 'alpine-standard-3.8.1-x86.iso'
         ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/alpine-standard-3.8.1-x86.iso.sha256'
             ,min_disk_size => '1'
@@ -436,6 +439,7 @@ sub _update_isos {
             ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/20.04.*/release/'
             ,file_re => 'kubuntu-20.04.*-desktop-amd64.iso'
             ,rename_file => 'kubuntu_focal_fossa_64.iso'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,kubuntu_64 => {
             name => 'Kubuntu Bionic Beaver 64 bits'
@@ -602,6 +606,7 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,debian_bullseye_32=> {
             name =>'Debian Bullseye 32 bits'
@@ -613,6 +618,7 @@ sub _update_isos {
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,options => { machine => 'pc-i440fx' }
         }
         ,devuan_beowulf_amd64=> {
             name =>'Devuan Beowulf 64 bits'

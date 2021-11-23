@@ -659,6 +659,8 @@ sub list_iso_images {
     );
     $sth->execute;
     while (my $row = $sth->fetchrow_hashref) {
+        $row->{options} = decode_json($row->{options})
+            if $row->{options};
         push @iso,($row);
     }
     $sth->finish;
