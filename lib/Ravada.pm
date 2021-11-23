@@ -299,7 +299,7 @@ sub _update_isos {
 	mate_focal_fossa => {
                     name => 'Ubuntu Mate Focal Fossa 64 bits'
             ,description => 'Ubuntu Mate 20.04 (Focal Fossa) 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86:64'
                     ,xml => 'focal_fossa-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04.*/release/ubuntu-mate-20.04.*-desktop-amd64.iso'
@@ -356,6 +356,7 @@ sub _update_isos {
                 ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
+                   ,arch => 'x86:64'
         }
 
         ,bionic=> {
@@ -432,7 +433,7 @@ sub _update_isos {
 	      ,kubuntu_64_focal_fossa => {
             name => 'Kubuntu Focal Fossa 64 bits'
             ,description => 'Kubuntu 20.04 Focal Fossa 64 bits'
-            ,arch => 'amd64'
+            ,arch => 'x86:64'
             ,xml => 'focal_fossa-amd64.xml'
             ,xml_volume => 'focal_fossa64-volume.xml'
             ,sha256_url => '$url/SHA256SUMS'
