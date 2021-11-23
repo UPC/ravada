@@ -142,6 +142,35 @@ sub test_req_machine_types2($vm) {
         .Dumper($types));
 }
 
+sub _mock_device($vm,$iso) {
+    my $device = $iso->{device};
+
+    if ( ! $iso->{device} ) {
+        my $iso_name;
+        if ($iso->{rename_file}) {
+            $iso_name = $iso->{rename_file};
+        } else {
+            ($iso_name) = $iso->{url} =~ m{.*/(.*)} if $iso->{url};
+            ($iso_name) = $iso->{device} if !$iso_name;
+        }
+
+        confess "Unknown iso_name for ".Dumper($iso)    if !$iso_name;
+
+        die Dumper($iso) if $iso_name =~ m{[*+]};
+
+        $device = $vm->dir_img."/$iso_name";
+        $iso->{device} = $device;
+
+    }
+
+    return if -e $device && -s $device;
+
+    open my $dev,">>",$device or die "$! $device";
+    print $dev "mock iso file\n";
+    close $dev or die "$! $device";
+}
+
+
 sub test_isos($vm) {
 
     my $req = Ravada::Request->list_machine_types(
@@ -162,7 +191,8 @@ sub test_isos($vm) {
         my $iso = $vm->_search_iso($iso_frontend->{id});
         next if !$iso->{arch} || $iso->{arch} !~ /^(i686|x86_64)$/;
         next if grep {$iso->{name} =~ /$_/} @skip;
-        die Dumper($iso) if !$iso->{device};
+        _mock_device($vm,$iso);
+        die Dumper($iso) if !$iso->{device} || !-e $iso->{device};
         for my $machine (@{$machine_types->{$iso->{arch}}}) {
             next if $machine eq 'ubuntu';
             for my $uefi ( 0,1 ) {
