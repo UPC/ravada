@@ -77,6 +77,7 @@ ravadaApp.directive("solShowMachine", swMach)
     });
 
       $scope.list_machine_types = function(backend) {
+          console.log(backend);
           $http.get('/list_machine_types.json?vm_type='+backend).then(function(response) {
               $scope.machine_types[backend] = response.data;
           });

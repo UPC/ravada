@@ -2504,6 +2504,7 @@ sub req_new_domain {
     my $bios = $c->param('bios');
     my $machine = $c->param('machine');
     $machine =~ s/^string://;
+
     my $data = ($c->param('data') or 0);
     $data *= 1024*1024*1024;
 
