@@ -2163,6 +2163,13 @@ sub _check_equal_storage_pools($vm1, $vm2) {
     return 1;
 }
 
+=head2 list_machine_types
+
+Placeholder for list machine types that returns an empty list by default.
+It can be overloaded in each backend module.
+
+=cut
+
 sub list_machine_types($self) {
     return ();
 }
