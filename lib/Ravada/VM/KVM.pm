@@ -2534,7 +2534,7 @@ sub free_disk($self, $pool_name = undef ) {
 sub list_machine_types($self) {
 
     my %todo = map { $_ => 1 }
-    ('isapc', 'microvm', 'xenfv');
+    ('isapc', 'microvm', 'xenfv','xenpv');
 
     my %ret_types;
     my $xml = $self->vm->get_capabilities();
