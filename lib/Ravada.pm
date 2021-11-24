@@ -65,6 +65,8 @@ our %VALID_CONFIG = (
         ,ravada_posix_group => undef
         ,groups_base => undef
         ,field => undef
+        ,server => undef
+        ,port => undef
     }
     ,log => undef
 );
