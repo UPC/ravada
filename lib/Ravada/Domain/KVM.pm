@@ -1160,6 +1160,8 @@ sub add_volume {
 
 #    confess "Missing vm"    if !$args{vm};
     $args{vm} = $self->_vm if !$args{vm};
+
+    my ($machine_type) = $self->_os_type_machine();
     my ($target_dev) = ($args{target} or $self->_new_target_dev());
     my $name = delete $args{name};
     if (!$args{xml}) {
@@ -1196,6 +1198,7 @@ sub add_volume {
     if ( !defined $bus ) {
         if  ($device eq 'cdrom') {
             $bus = 'ide';
+            $bus = 'sata' if $machine_type =~ /^pc-q35/;
         } else {
             $bus = 'virtio'
         }
@@ -1328,7 +1331,7 @@ sub _search_volume_index($self, $file) {
     my $index = 0;
     for my $device ($doc->findnodes('/domain/devices/disk')) {
         my ($source) = $device->findnodes('source');
-        return $index if $source->getAttribute('file') eq $file;
+        return $index if $source && $source->getAttribute('file') eq $file;
         $index++;
     }
     confess "I can't find file $file in ".$self->name;
@@ -2415,6 +2418,12 @@ sub _check_uuid($self, $doc, $node) {
 sub _check_machine($self,$doc) {
     my ($os_type) = $doc->findnodes('/domain/os/type');
     $os_type->setAttribute( machine => 'pc');
+}
+
+sub _os_type_machine($self) {
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description());
+    my ($os_type) = $doc->findnodes('/domain/os/type');
+    return $os_type->getAttribute('machine');
 }
 
 sub migrate($self, $node, $request=undef) {

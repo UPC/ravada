@@ -907,26 +907,12 @@ sub _domain_create_from_iso {
 
     my $file_xml =  $DIR_XML."/".$iso->{xml_volume};
 
-=pod
-
-    my $device_disk = $self->create_volume(
-          name => "$args{name}-vda-".Ravada::Utils::random_name(4)
-         , xml => $file_xml
-        , size => $disk_size
-        ,target => 'vda'
-    );
-
-=cut
-
     my $device_disk;
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}", $options);
 
-    if ($device_cdrom) {
-        _xml_modify_cdrom($xml, $device_cdrom);
-    } else {
-        _xml_remove_cdrom($xml);
-    }
+
+    _xml_remove_cdrom_device($xml);
     _xml_remove_cpu($xml)                     if $remove_cpu;
     _xml_remove_disk($xml);
     #    _xml_modify_disk($xml, [$device_disk])    if $device_disk;
@@ -939,6 +925,10 @@ sub _domain_create_from_iso {
         , id_vm => $self->id
     );
     $domain->add_volume( boot => 1, target => 'vda', size => $disk_size );
+    $domain->add_volume( boot => 2, target => 'hda'
+        ,device => 'cdrom'
+        ,file => $device_cdrom
+    );
 
     $domain->_set_spice_password($spice_password)
         if $spice_password;
@@ -1078,7 +1068,6 @@ sub _domain_create_from_base {
 
 
     my @device_disk = $self->_create_disk($base, $args{name});
-#    _xml_modify_cdrom($xml);
     if ( !defined $with_cd ) {
         $with_cd = grep (/\.iso$/ ,@device_disk);
     }
@@ -1329,6 +1318,8 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE id = ?");
     $sth->execute($id_iso);
     my $row = $sth->fetchrow_hashref;
+    $row->{options} = decode_json($row->{options})
+    if $row->{options} && !ref($row->{options});
     die "Missing iso_image id=$id_iso" if !keys %$row;
 
     return $row if $file_iso && -e $file_iso;
@@ -1624,6 +1615,12 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     my $uefi = delete $options->{uefi};
     my $machine = delete $options->{machine};
     my $arch = delete $options->{arch};
+    my $bios = delete $options->{'bios'};
+    confess "Error: bios=$bios and uefi=$uefi clash"
+    if defined $uefi && defined $bios
+        && ($bios !~/uefi/i && $uefi || $bios =~/uefi/i && !$uefi);
+
+    $uefi = 1 if $bios && $bios =~ /uefi/i;
 
     confess "Arguments unknown ".Dumper($options)  if keys %$options;
 
@@ -1638,6 +1635,18 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     if ($machine) {
         $self->_xml_set_machine($doc, $machine);
     }
+    my ($type) = $doc->findnodes('/domain/os/type');
+
+    my $machine_found = $type->getAttribute('machine');
+    if ($machine_found =~ /i440/) {
+        #$self->_xml_remove_ide($doc);
+    }
+    if ($machine_found =~ /q35/) {
+        $self->_xml_set_pcie($doc);
+        $self->_xml_remove_ide($doc);
+        #       $self->_xml_remove_vmport($doc);
+    }
+
 }
 
 sub _xml_set_arch($self, $doc, $arch) {
@@ -1650,14 +1659,6 @@ sub _xml_set_arch($self, $doc, $arch) {
 sub _xml_set_machine($self, $doc, $machine) {
     my ($type) = $doc->findnodes('/domain/os/type');
     $type->setAttribute(machine => $machine);
-    if ($machine =~ /i440/) {
-        #$self->_xml_remove_ide($doc);
-        $self->_xml_remove_vmport($doc);
-    }
-    if ($machine =~ /q35/) {
-        $self->_xml_set_pcie($doc);
-        $self->_xml_remove_ide($doc);
-    }
 }
 
 sub _xml_remove_ide($self, $doc) {
@@ -1828,23 +1829,6 @@ sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
         return $new_uuid if !grep /^$new_uuid$/,@uuids;
     }
     confess "I can't find a new unique uuid";
-}
-
-sub _xml_modify_cdrom {
-    my ($doc, $iso) = @_;
-
-    my @nodes = $doc->findnodes('/domain/devices/disk');
-    for my $disk (@nodes) {
-        next if $disk->getAttribute('device') ne 'cdrom';
-        for my $child ($disk->childNodes) {
-            if ($child->nodeName eq 'source') {
-                $child->setAttribute(file => $iso);
-                return;
-            }
-        }
-
-    }
-    die "I can't find CDROM on ". join("\n",map { $_->toString() } @nodes);
 }
 
 sub _xml_modify_memory {
@@ -2168,6 +2152,19 @@ sub _xml_add_sysinfo_entry($self, $doc, $field, $value) {
     ($hostname) = $oemstrings->addNewChild(undef,'entry');
     $hostname->appendText("$field: $value");
 }
+
+sub _xml_remove_cdrom_device {
+    my $doc = shift;
+
+    my ($devices) = $doc->findnodes('/domain/devices');
+    for my $disk ($devices->findnodes('disk')) {
+        if ( $disk->nodeName eq 'disk'
+            && $disk->getAttribute('device') eq 'cdrom') {
+            $devices->removeChild($disk);
+        }
+    }
+}
+
 
 sub _xml_remove_cdrom {
     my $doc = shift;

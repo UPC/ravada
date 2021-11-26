@@ -2502,7 +2502,7 @@ sub req_new_domain {
     my $vm = ( $c->param('backend') or 'KVM');
     $swap = int($swap * 1024*1024*1024);
     my $bios = $c->param('bios');
-    my $machine = $c->param('machine');
+    my $machine = ($c->param('machine') or '');
     $machine =~ s/^string://;
 
     my $data = ($c->param('data') or 0);
