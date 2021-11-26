@@ -2,7 +2,7 @@ package Test::Ravada;
 use strict;
 use warnings;
 
-use  Carp qw(carp confess);
+use  Carp qw(carp confess croak);
 use Data::Dumper;
 use Fcntl qw(:flock SEEK_END);
 use File::Path qw(make_path remove_tree);
@@ -33,13 +33,13 @@ require Exporter;
 
 @EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin rvd_front init init_vm clean new_pool_name new_volume_name
 create_domain
+    create_domain_v2
     import_domain
     test_chain_prerouting
     find_ip_rule
     search_id_iso
     flush_rules_node
     flush_rules
-    arg_create_dom
     vm_names
 
     remote_config
@@ -119,8 +119,11 @@ my $RAVADA_POSIX_GROUP = "rvd_posix_group";
 my ($LDAP_USER , $LDAP_PASS) = ("cn=Directory Manager","saysomething");
 
 our %ARG_CREATE_DOM = (
-    KVM => []
-    ,Void => []
+    KVM => {}
+    ,Void => {}
+);
+our %ARG_CREATE_DOM_OPTIONS = (
+    KVM  => { machine => 'pc', uefi => 0}
 );
 
 our %VM_VALID = ( KVM => 1
@@ -182,7 +185,15 @@ sub arg_create_dom {
     my $vm_name = shift;
     confess "Unknown vm $vm_name"
         if !$ARG_CREATE_DOM{$vm_name};
-    return @{$ARG_CREATE_DOM{$vm_name}};
+    my %ret = %{$ARG_CREATE_DOM{$vm_name}};
+
+    my %options = ();
+    %options = %{$ARG_CREATE_DOM_OPTIONS{$vm_name}}
+    if $ARG_CREATE_DOM_OPTIONS{$vm_name};
+
+    $ret{options} = \%options;
+
+    return %ret;
 }
 
 sub add_ubuntu_minimal_iso {
@@ -221,6 +232,82 @@ sub import_domain($vm, $name=$BASE_NAME, $import_base=1) {
         ,import_base => $import_base
     );
     return $domain;
+}
+
+sub create_domain_v2(%args) {
+    my %args0 = %args;
+    my $vm_name = delete $args{vm_name};
+    my $vm = delete $args{vm};
+    croak "Error: vm or vm_name necessary ".Dumper(\%args0)
+    if !$vm && !$vm_name;
+
+    my $user = (delete $args{user} or $USER_ADMIN);
+    my $iso_name = delete $args{iso_name};
+    my $id_iso = delete $args{id_iso};
+    croak "Error: supply either iso_name or id_iso ".Dumper(\%args)
+    if $iso_name && $id_iso;
+
+    if (!$iso_name && !$id_iso) {
+        $iso_name = 'Alpine%64';
+    }
+    if ($iso_name) {
+        my $id_iso2 = search_id_iso($iso_name)
+            or confess "Error: iso '$iso_name' not found";
+        croak "Error: id_iso '$id_iso' && iso '$iso_name' not match"
+        if $id_iso && $id_iso != $id_iso2;
+
+        $id_iso = $id_iso2;
+    }
+
+    $vm = rvd_back()->search_vm($vm_name) if !$vm;
+    my $iso = $vm->_search_iso($id_iso);
+    my $swap = delete $args{swap};
+    my $data = delete $args{data};
+    my $options = delete $args{options};
+
+    croak "Error: unknown arguments ".Dumper(\%args)
+    if keys %args;
+
+    my $disk = ($iso->{min_disk_size} or 2 );
+
+    diag("Creating [$id_iso] $iso->{name}");
+    if ( !$options ) {
+        $options = $iso->{options};
+        $options->{machine}
+            = _search_latest_machine($vm,$iso->{arch}, $options->{machine}, )
+            if exists $options->{machine}
+    }
+
+    my %arg_create = (
+        id_iso => $id_iso
+        ,name => new_domain_name()
+        ,options => $options
+        ,id_owner => $user->id
+        ,active => 0
+        ,memory => 512*1024
+        ,disk => $disk*1024*1024
+    );
+
+    $arg_create{swap} = 1024 * 1024 if $swap;
+
+    my $domain;
+    eval { $domain = $vm->create_domain(%arg_create) };
+    is(''.$@, '',Dumper(\%arg_create)) or exit;
+
+    Ravada::Request->add_hardware(
+        uid => $args{id_owner}
+        ,id_domain => $domain->id
+        ,name => 'disk'
+        ,data => { size => $data, type => 'data' }
+    ) if $domain && $data;
+    return $domain;
+}
+
+sub _search_latest_machine($vm, $arch, $machine) {
+    my %machine_types =$vm->list_machine_types();
+    for my $type (@{$machine_types{$arch}}) {
+        return $type if $type =~ /^$machine/;
+    }
 }
 
 sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine', $swap=undef) {
@@ -334,8 +421,8 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
 
     user_admin();
     $RVD_BACK = $rvd;
-    $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') , disk => 1024 * 1024 ];
-    $ARG_CREATE_DOM{Void} = [ id_iso => search_id_iso('Alpine') ];
+    $ARG_CREATE_DOM{KVM} = { id_iso => search_id_iso('Alpine') , disk => 1024 * 1024 };
+    $ARG_CREATE_DOM{Void} = { id_iso => search_id_iso('Alpine') };
 
     delete $ARG_CREATE_DOM{KVM} if $<;
 

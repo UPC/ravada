@@ -1,12 +1,16 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
 use Test::More;
 
 use lib 't/lib';
 use Test::Ravada;
+
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 init();
 
@@ -24,12 +28,15 @@ sub test_create_domain {
 
     my $name = new_domain_name();
 
+    my %arg_create = arg_create_dom($vm_name);
+    my %options = %{$arg_create{options}};
+    confess if !keys %options;
 
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
                     , id_owner => $USER->id
                     , disk => 1024 * 1024
-                    , arg_create_dom($vm_name)
+                    , %arg_create
                      );
     };
 
@@ -40,16 +47,26 @@ sub test_create_domain {
         ." for VM $vm_name"
     );
 
-
     return $domain;
 }
 
-sub test_drivers_id {
-    my $vm_name = shift;
-    my $type = shift;
+sub test_driver_id_64bits_options($vm_name, $type) {
+    next if $vm_name ne 'KVM';
+    my $vm =rvd_back->search_vm($vm_name);
+    my $domain = create_domain_v2(vm_name => $vm_name
+        ,swap => 1
+        ,data => 1
+        ,iso_name => 'Alpine%64'
+    );
+
+    test_drivers_id($vm_name, $type, $domain);
+
+}
+
+sub test_drivers_id($vm_name, $type, $domain=undef) {
 
     my $vm =rvd_back->search_vm($vm_name);
-    my $domain = test_create_domain($vm_name);
+    $domain = test_create_domain($vm_name) if !$domain;
 
     my @drivers = $domain->drivers();
     ok(scalar @drivers,"Expecting defined drivers");
@@ -76,7 +93,7 @@ sub test_drivers_id {
         );
         rvd_back->_process_requests_dont_fork();
         is($req->status,'done') or next;
-        is($req->error,'') or exit;
+        is($req->error,'') or die Dumper($domain->name,$option);
 
         ok(!$@,"Expecting no error, got : ".($@ or ''));
         my $value = $domain->get_driver($type);
@@ -118,8 +135,10 @@ sub test_settings {
     for my $driver ( Ravada::Domain::drivers(undef,undef,$vm_name) ) {
         next if $driver->name eq 'display';
 #        next if $driver->name ne 'video';
-#        diag("Testing drivers for $vm_name ".$driver->name);
+        diag("Testing drivers for $vm_name ".$driver->name);
+        test_driver_id_64bits_options($vm_name, $driver->name);
         test_drivers_id($vm_name, $driver->name);
+
     }
 }
 

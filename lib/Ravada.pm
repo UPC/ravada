@@ -405,7 +405,7 @@ sub _update_isos {
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/'
         ,file_re => 'alpine-standard-3.8.1-x86_64.iso'
         ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/alpine-standard-3.8.1-x86_64.iso.sha256'
-            ,min_disk_size => '1'
+            ,min_disk_size => '2'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,alpine381_32 => {

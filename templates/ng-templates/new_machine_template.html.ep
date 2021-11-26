@@ -1,6 +1,7 @@
 <div class="tab-pane fade show active" id="fromtemplate" role="tabpanel">
     <div class="card-body">
-        <form name="new_machineForm" role="form" method="post" action="/new_machine.html" novalidate>
+        <div ng-show="!images">Loading... <i class="fas fa-sync-alt fa-spin"></i></div>
+        <form name="new_machineForm" role="form" method="post" action="/new_machine.html" novalidate ng-show="images">
             <div class="form-group row">
                 <label for="backend" class="col-xl-3 col-form-label"><%=l 'Backend' %> <a
                   title="Choose the virtualization type of the Virtual Machine." ng-show="backends.length > 1"><i class="fa fa-info-circle"></i></a></label>
