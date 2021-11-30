@@ -236,4 +236,14 @@ sub _get_driver_display($self) {
     return $driver;
 }
 
+sub _os_type_machine($self) {
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description());
+    my ($os_type) = $doc->findnodes('/domain/os/type');
+    return $os_type->getAttribute('machine');
+}
+
+sub xml_description($self) {
+        return $self->_data_extra('xml');
+}
+
 1;
