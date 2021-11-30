@@ -2420,12 +2420,6 @@ sub _check_machine($self,$doc) {
     $os_type->setAttribute( machine => 'pc');
 }
 
-sub _os_type_machine($self) {
-    my $doc = XML::LibXML->load_xml(string => $self->xml_description());
-    my ($os_type) = $doc->findnodes('/domain/os/type');
-    return $os_type->getAttribute('machine');
-}
-
 sub migrate($self, $node, $request=undef) {
     my $dom;
     eval { $dom = $node->vm->get_domain_by_name($self->name) };
