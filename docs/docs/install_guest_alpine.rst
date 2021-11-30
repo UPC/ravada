@@ -116,6 +116,15 @@ The setup script will ask the disk
 
 Now the setup process will install minimal applications to start the server.
 
+Reboot
+~~~~~~
+
+Once it is installed reboot to continue setting this virtual machine.
+
+.. prompt:: bash #
+
+    reboot
+
 Installing more software
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
