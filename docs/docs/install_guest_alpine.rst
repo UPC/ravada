@@ -48,6 +48,14 @@ Start the setup typing:
 
     setup-alpine
 
+If you see an error about missing mirrors you must stop the process
+pressing CTRL+C , then set manually a mirror like this one:
+
+.. prompt:: bash #
+
+    export MIRRORS=http://mirror.leaseweb.com/alpine/
+    setup-alpine
+
 Keyboard
 ~~~~~~~~
 First choose a keyboard layout and variant.
@@ -85,7 +93,7 @@ it to *none*.
 Mirror
 ~~~~~~
 
-Choose a mirror for Alpine to download packages from. Type *f* will check your connection
+Choose a mirror for Alpine to download packages from. Type *1* if you set the mirror manually with an export before. If not type *f* and it will check your connection
 and choose the best one, it may take a while.
 
 SSH Server
