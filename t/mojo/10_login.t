@@ -67,7 +67,7 @@ sub test_many_clones($base) {
     $n_clones = 10 if !$ENV{TEST_STRESS} && ! $ENV{TEST_LONG};
 
     $t->post_ok('/machine/copy' => json => {id_base => $base->id, copy_number => $n_clones, copy_ram => 0.128 });
-    like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body->to_string;
+    like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body;
 
     my $response = $t->tx->res->json();
     ok(exists $response->{request}) or return;
@@ -80,7 +80,7 @@ sub test_many_clones($base) {
         {   id_domain => $base->id, sequential => $sequential
         }
     );
-    like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body->to_string;
+    like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body;
     $response = $t->tx->res->json();
     if (exists $response->{request}) {
         wait_request(request => $response->{request}, background => 1);
@@ -580,6 +580,19 @@ sub _download_iso($iso_name) {
 
 }
 
+sub test_new_machine($t) {
+    $t->get_ok("/new_machine.html")->status_is(200) or return;
+    my $dom = Mojo::DOM->new( $t->tx->res->body );
+    my $form_name = 'new_machineForm';
+    my $form = $dom->find('form')->grep( sub {$_->attr('name') eq $form_name});
+    ok($form->[0], "Expecting form name=$form_name") or return;
+    for my $name ('id_iso', 'name', 'iso_file' ) {
+        my $inputs = $form->[0]->find("input")
+        ->grep( sub { $_->attr('name') eq $name } );
+        ok($inputs->[0],"Expecting input name='$name'");
+    }
+}
+
 sub test_create_base($t, $vm_name, $name) {
     my $iso_name = 'Alpine%';
     _download_iso($iso_name);
@@ -654,6 +667,7 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
 
     _init_mojo_client();
 
+    test_new_machine($t);
     my $base0 = test_create_base($t, $vm_name, $name);
     push @bases,($base0->name);
     test_admin_can_do_anything($t, $base0);
