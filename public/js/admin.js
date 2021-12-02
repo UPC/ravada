@@ -116,12 +116,12 @@ ravadaApp.directive("solShowMachine", swMach)
             $scope.showMinSize = false;
             $scope.min_size = 1;
           }
-          return (id.device != null) ? id.device : "<NONE>";
+          return (id.device != null) ? id.device : "";
       };
 
       $scope.onIdIsoSelected = function() {
         $scope.iso_file = $scope.change_iso(this.id_iso)
-        $scope.id_file = ($scope.iso_file === "<NONE>") ? "" : $scope.iso_file;
+//        $scope.id_file = ($scope.iso_file === "<NONE>") ? "" : $scope.iso_file;
       };
 
       $scope.validate_new_name = function() {

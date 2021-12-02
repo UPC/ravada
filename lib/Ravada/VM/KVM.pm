@@ -882,11 +882,8 @@ sub _domain_create_from_iso {
         
     my $device_cdrom;
 
-    confess "Template ".$iso->{name}." has no URL, iso_file argument required."
-        if !$iso->{url} && !$iso_file && !$iso->{device};
-
-    if ($iso_file) {
-        if ( $iso_file ne "<NONE>") {
+    if (defined $iso_file) {
+        if ( $iso_file ne "<NONE>" || $iso_file ) {
             $device_cdrom = $iso_file;
         }
     }
@@ -915,7 +912,7 @@ sub _domain_create_from_iso {
 
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
 
-    if ($device_cdrom) {
+    if ($device_cdrom && $device_cdrom ne '<NONE>') {
         _xml_modify_cdrom($xml, $device_cdrom);
     } else {
         _xml_remove_cdrom($xml);
