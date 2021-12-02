@@ -15,6 +15,8 @@ jobs:
           mysql root password: root
           mysql user: 'rvd_user' # Required if "mysql root password" is empty, default is empty. The superuser for the specified database. Can use secrets, too
           mysql password: Pword12345*
+      - name: Update packages
+        run: sudo apt update
       - name: Install auth packages
         run: |
           sudo apt-get -y install perl libtest-perl-critic-perl liblist-moreutils-perl libyaml-perl libipc-run3-perl libmojolicious-perl libmojolicious-plugin-i18n-perl libxml-libxml-perl libdbix-connector-perl libmoose-perl libproc-pid-file-perl libimage-magick-perl libdatetime-perl libdatetime-format-dateparse-perl libjson-xs-perl libauthen-passphrase-perl libpbkdf2-tiny-perl libfile-rsync-perl libmoosex-types-netaddr-ip-perl libnet-dns-perl libnet-openssh-perl libio-interface-perl libsys-virt-perl libdbd-sqlite3-perl liblocale-maketext-lexicon-perl qemu-utils make cpanminus libnet-ldap-perl
