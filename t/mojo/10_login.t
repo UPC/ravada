@@ -593,6 +593,76 @@ sub test_new_machine($t) {
     }
 }
 
+sub test_new_machine_empty($t, $vm_name) {
+    for my $iso_file ( '', '<NONE>') {
+        for my $iso_name ( 'Empty%32', 'Empty%64') {
+            my $name = new_domain_name();
+
+            $t->post_ok('/new_machine.html' => form => {
+                    backend => $vm_name
+                    ,id_iso => search_id_iso($iso_name)
+                    ,iso_file => $iso_file
+                    ,name => $name
+                    ,disk => 1
+                    ,ram => 1
+                    ,swap => 1
+                    ,submit => 1
+                }
+            )->status_is(302);
+
+            wait_request();
+
+            my $domain = rvd_front->search_domain($name);
+            ok($domain);
+
+            remove_domain_and_clones_req($domain) if $domain;
+        }
+    }
+}
+
+sub test_new_machine_change_iso($t, $vm_name) {
+    my $iso_name = 'Alpine%32 bits';
+    _download_iso($iso_name);
+    my $iso_name2 = 'Alpine%64 bits';
+    _download_iso($iso_name2);
+
+    my $isos = rvd_front->list_iso_images();
+    my $id_iso = search_id_iso($iso_name);
+    my $id_iso2 = search_id_iso($iso_name2);
+
+    my ($iso2) = grep { $_->{id} == $id_iso2 } @$isos;
+
+    my $name = new_domain_name();
+
+    $t->post_ok('/new_machine.html' => form => {
+            backend => $vm_name
+            ,id_iso => $id_iso
+            ,iso_file => $iso2->{device}
+            ,name => $name
+            ,disk => 1
+            ,ram => 1
+            ,swap => 1
+            ,submit => 1
+        }
+    )->status_is(302);
+
+    wait_request();
+
+    my $domain = rvd_front->search_domain($name);
+
+    my $xml = XML::LibXML->load_xml(string => $domain->_data_extra('xml'));
+    my @sources = $xml->findnodes("/domain/devices/disk/source");
+    my ($cd) = grep { $_->getAttribute('file') eq $iso2->{device} }
+        @sources;
+
+    ok($cd,"Expecting a disk device with source file=$iso2->{device}"
+        ." in $name")
+        or exit;
+
+    remove_domain_and_clones_req($domain); #remove and wait
+}
+
+
 sub test_create_base($t, $vm_name, $name) {
     my $iso_name = 'Alpine%';
     _download_iso($iso_name);
@@ -668,6 +738,10 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     _init_mojo_client();
 
     test_new_machine($t);
+    if ($vm_name eq 'KVM') {
+        test_new_machine_change_iso($t, $vm_name);
+        test_new_machine_empty($t, $vm_name);
+    }
     my $base0 = test_create_base($t, $vm_name, $name);
     push @bases,($base0->name);
     test_admin_can_do_anything($t, $base0);
