@@ -168,6 +168,25 @@ ravadaApp.directive("solShowMachine", swMach)
                 });
       };
 
+      $scope.refresh_storage = function() {
+          $scope.refresh_working = true;
+          $http.post('/request/refresh_storage/',
+              JSON.stringify({})
+          ).then(function(response) {
+              if(response.status == 300 ) {
+                  console.error('Response error', response.status);
+              }
+              setTimeout(function(){
+                  $http.get('/iso_file.json').then(function(response) {
+                      $scope.isos = response.data;
+                      $scope.refresh_working = false;
+                  });
+              }, 3000);
+          }
+        );
+
+      };
+
       $http.get('/list_machines.json').then(function(response) {
               $scope.base = response.data;
       });

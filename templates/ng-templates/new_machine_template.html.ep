@@ -1,6 +1,7 @@
 <div class="tab-pane fade show active" id="fromtemplate" role="tabpanel">
     <div class="card-body">
-        <form name="new_machineForm" role="form" method="post" action="/new_machine.html" novalidate>
+        <div ng-show="!images">Loading... <i class="fas fa-sync-alt fa-spin"></i></div>
+        <form name="new_machineForm" role="form" method="post" action="/new_machine.html" novalidate ng-show="images">
             <div class="form-group row">
                 <label for="backend" class="col-xl-3 col-form-label"><%=l 'Backend' %> <a
                   title="Choose the virtualization type of the Virtual Machine." ng-show="backends.length > 1"><i class="fa fa-info-circle"></i></a></label>
@@ -44,14 +45,17 @@
                 <div class="from-group row" ng-show="id_iso.name">
                         <br/>
                         <label for="iso_file" class="col-xl-3 col-form-label"><%=l 'Select ISO' %> <a
-                          title="Select the .iso file the machine will utilize when installing the OS." href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html"><i class="fa fa-info-circle"></i></a></label>
+                          title="Select the .iso file the machine will utilize when installing the OS." href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html"><i class="fa fa-info-circle"></i></a>
+                            <i class="badge badge-warning" ng-click="refresh_storage()"><i class="fa fa-sync-alt" aria-hidden="true"></i></i>
+                            </label>
                         <div class="col-lg-9"  ng-init="iso_file = '<NONE>'" >
                             <input type="text" class="form-control" placeholder="<%=l 'Type the ISO pathname' %>"
                                    name="id_file"
                                    ng-model="id_file" 
+                                   ng-hide="refresh_working || !isos"
                                    required=""
                                    uib-typeahead="item for item in getVisualizableObjects($viewValue, isos)"
-                                   typeahead-min-length="0">
+                                   typeahead-min-length="0"/>
                         </div>
                 </div>
             </div>
