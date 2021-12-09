@@ -201,6 +201,7 @@ sub do_start {
     my $ravada = Ravada->new( %CONFIG );
     #    Ravada::Request->enforce_limits();
     #Ravada::Request->refresh_vms();
+    Ravada::Request->refresh_storage();
     for (;;) {
         my $t0 = time;
         $ravada->process_priority_requests()

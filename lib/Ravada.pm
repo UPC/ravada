@@ -4503,9 +4503,6 @@ sub _cmd_set_driver {
 
 sub _cmd_refresh_storage($self, $request=undef) {
 
-    if ($request && ( my $recent = $request->done_recently(60))) {
-        die "Command ".$request->command." run recently by ".$recent->id."\n";
-    }
     my $vm;
     if ($request && $request->defined_arg('id_vm')) {
         $vm = Ravada::VM->open($request->defined_arg('id_vm'));
