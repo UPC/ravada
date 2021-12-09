@@ -3,7 +3,8 @@
 **Implemented enhancements:**
 
 - LDAP groups base [\#1637]
-
+- German translation updated [\#1653]
+- Chinese (Simplified) translation updated [\#1653]
 
 **Bugfixes**
 

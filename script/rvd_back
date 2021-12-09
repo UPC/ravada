@@ -10,6 +10,9 @@ use Data::Dumper;
 use Getopt::Long;
 use POSIX ":sys_wait_h";
 use Proc::PID::File;
+use File::Tee;
+use File::Path;
+use File::Basename;
 
 use Ravada;
 use Ravada::Auth::SQL;
@@ -44,6 +47,7 @@ my $REMOVE_ADMIN_USER;
 my $START = 1;
 my $TEST_LDAP;
 my $CLEAN_DB_LEFTOVERS;
+my $LOG_FILENAME;
 
 my $URL_ISOS;
 my $ALL;
@@ -73,6 +77,7 @@ my $USAGE = "$0 "
         ." [--rebase MACHINE]"
         ." [--remove-user=name]"
         ." [--clean-db-leftovers]"
+        ." [--log=pathname]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
@@ -106,6 +111,7 @@ my $USAGE = "$0 "
         ." --active: execute on active running machines\n"
         ."Maintenance operations:\n"
         ." --clean-db-leftovers: properly clean database unreferenced entries\n"
+        ." --log: saves STDOUT and STDERR app traces to the specified filename\n"
         ."\n"
     ;
 
@@ -148,6 +154,7 @@ GetOptions (       help => \$help
         ,'migrate=s'    => \$MIGRATE
 
         ,"clean-db-leftovers" => \$CLEAN_DB_LEFTOVERS
+        ,"log=s"              => \$LOG_FILENAME
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
@@ -190,6 +197,22 @@ my $RVD_BACK;
 ###################################################################
 #
 
+sub _do_start_logging {
+    $LOG_FILENAME = $Ravada::CONFIG->{"log"} if (! $LOG_FILENAME);
+    if ($LOG_FILENAME)
+    {
+        File::Path::make_path(File::Basename::dirname($LOG_FILENAME));
+        if (open(my $handle, ">>", $LOG_FILENAME))
+        {
+            print $handle "Starting rvd_back v".Ravada::version."\n";
+            close($handle);
+        }
+        print "Trying to redirect log messages to $LOG_FILENAME\n";
+        File::Tee::tee(STDOUT, ">>", $LOG_FILENAME) or warn "Cannot redirect STDOUT to the specified log file";
+        File::Tee::tee(STDERR, ">>", $LOG_FILENAME) or warn "Cannot redirect STDERR to the spedicied log file";
+    }
+}
+
 sub do_start {
     warn "Starting rvd_back v".Ravada::version."\n";
     my $old_error = ($@ or '');
@@ -199,6 +222,8 @@ sub do_start {
     my $t_refresh = 0;
 
     my $ravada = Ravada->new( %CONFIG );
+    _do_start_logging();
+
     #    Ravada::Request->enforce_limits();
     #Ravada::Request->refresh_vms();
     Ravada::Request->refresh_storage();
@@ -219,7 +244,6 @@ sub do_start {
         }
         sleep 1 if time - $t0 <1;
     }
-
 }
 
 sub done_request {

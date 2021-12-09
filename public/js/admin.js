@@ -105,7 +105,9 @@ ravadaApp.directive("solShowMachine", swMach)
 
       $scope.showMinSize = false;
       $scope.min_size = 15;
+
       $scope.change_iso = function(id) {
+          $scope.id_iso_id = id.id;
           if (id.min_disk_size != null) {
             $scope.min_size = id.min_disk_size;
             $scope.showMinSize = true;
@@ -114,10 +116,12 @@ ravadaApp.directive("solShowMachine", swMach)
             $scope.showMinSize = false;
             $scope.min_size = 1;
           }
-          if (id.device != null) {
-             return id.device;
-          }
-          else return "<NONE>";
+          return (id.device != null) ? id.device : "<NONE>";
+      };
+
+      $scope.onIdIsoSelected = function() {
+        $scope.iso_file = $scope.change_iso(this.id_iso)
+        $scope.id_file = ($scope.iso_file === "<NONE>") ? "" : $scope.iso_file;
       };
 
       $scope.validate_new_name = function() {
@@ -135,9 +139,23 @@ ravadaApp.directive("solShowMachine", swMach)
             }
       };
 
+      $scope.getVisualizableObjects = function(value, objects, name) {
+          var visualizable_objects = [];
+          if (objects) {
+              var lowercased_value = value ? value.toLowerCase() : '';
+              for (var i = 0, j = objects.length; i < j; i ++) {
+                  var search_value = name ? objects[i][name] : objects[i];
+                  if ((! lowercased_value) || (search_value.toLowerCase().indexOf(lowercased_value) >= 0)) {
+                      visualizable_objects.push(objects[i]);  
+                  }
+              }
+          }
+          return visualizable_objects;
+      };
+
       $scope.type = function(v) {
         return typeof(v);
-      }
+      };
 
       $scope.get_machine_info = function(id) {
           $http.get('/machine/info/'+id+'.json')
