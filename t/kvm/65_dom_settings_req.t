@@ -14,7 +14,7 @@ use feature qw(signatures);
 
 init();
 
-my $USER = create_user('foo','bar', 1);
+my $USER = create_user(new_domain_name().'.foo','bar', 1);
 our $TIMEOUT_SHUTDOWN = 10;
 
 our %SKIP_DEFAULT_VALUE = map { $_ => 1 } qw(image jpeg playback streaming zlib);
@@ -82,6 +82,13 @@ sub test_drivers_id($vm_name, $type, $domain=undef) {
     my @options = $driver_type->get_options();
     isa_ok(\@options,'ARRAY');
     ok(scalar @options > 1,"Expecting more than 1 options , got ".scalar(@options));
+
+    my $req_add_usb = Ravada::Request->add_hardware(
+        id_domain => $domain->id
+        , uid => $USER->id
+        , name => 'usb'
+    );
+    wait_request(debug => 1);
 
     for my $option (@options) {
         _domain_shutdown($domain);

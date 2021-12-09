@@ -88,6 +88,8 @@ create_domain
 
     check_libvirt_tls
 
+    search_latest_machine
+
     ping_backend
 
     end
@@ -260,7 +262,6 @@ sub create_domain_v2(%args) {
     }
 
     $vm = rvd_back()->search_vm($vm_name) if !$vm;
-    my $iso = $vm->_search_iso($id_iso);
     my $swap = delete $args{swap};
     my $data = delete $args{data};
     my $options = delete $args{options};
@@ -268,13 +269,21 @@ sub create_domain_v2(%args) {
     croak "Error: unknown arguments ".Dumper(\%args)
     if keys %args;
 
-    my $disk = ($iso->{min_disk_size} or 2 );
+    my $iso;
+    my $disk;
+    if ($vm->type eq 'KVM' && (!$iso_name || $iso_name !~ /Alpine/i)) {
+        $iso = $vm->_search_iso($id_iso);
+        $disk = ($iso->{min_disk_size} or 2 );
+        diag("Creating [$id_iso] $iso->{name}");
+    } else {
+        $disk = 2;
+    }
 
-    diag("Creating [$id_iso] $iso->{name}");
-    if ( !$options ) {
+    if ($vm->type eq 'KVM' && !$options ) {
+        $iso = $vm->_search_iso($id_iso) if !$iso;
         $options = $iso->{options};
         $options->{machine}
-            = _search_latest_machine($vm,$iso->{arch}, $options->{machine}, )
+            = search_latest_machine($vm,$iso->{arch}, $options->{machine}, )
             if exists $options->{machine}
     }
 
@@ -295,26 +304,26 @@ sub create_domain_v2(%args) {
     is(''.$@, '',Dumper(\%arg_create)) or exit;
 
     Ravada::Request->add_hardware(
-        uid => $args{id_owner}
+        uid => $user->id
         ,id_domain => $domain->id
         ,name => 'disk'
-        ,data => { size => $data, type => 'data' }
+        ,data => { size => $data*1024*1024, type => 'data' }
     ) if $domain && $data;
     return $domain;
 }
 
-sub _search_latest_machine($vm, $arch, $machine) {
+sub search_latest_machine($vm, $arch, $machine) {
     my %machine_types =$vm->list_machine_types();
     for my $type (@{$machine_types{$arch}}) {
         return $type if $type =~ /^$machine/;
     }
 }
 
-sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine', $swap=undef) {
+sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine%64', $swap=undef) {
     confess if !defined $vm_name;
     $vm_name = 'KVM' if $vm_name eq 'qemu';
 
-    $id_iso = 'Alpine' if !defined $id_iso;
+    $id_iso = 'Alpine%64' if !defined $id_iso;
     $user = $USER_ADMIN if !defined $user;
 
     if ( $id_iso && $id_iso !~ /^\d+$/) {
@@ -333,6 +342,18 @@ sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine', $swap=undef) {
 
     confess "ERROR: Domains can only be created at localhost"
         if $vm->host ne 'localhost';
+
+=pod
+    // TODO: use create v2 from now on
+
+    return create_domain_v2(
+        vm => $vm
+        ,user => $user
+        ,id_iso => $id_iso
+        ,swap => $swap
+    );
+
+=cut
 
     my $name = new_domain_name();
 

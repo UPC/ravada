@@ -1935,8 +1935,9 @@ for my $vm_name ( vm_names() ) {
 
         use_ok($CLASS);
         if ($vm_name eq 'KVM' ) {
-            $BASE = rvd_back->search_domain('zz-test-base-alpine');
-            $BASE = import_domain($vm,'zz-test-base-alpine') if !$BASE;
+            my $name = 'zz-test-base-alpine-q35-uefi';
+            $BASE = rvd_back->search_domain($name);
+            $BASE = import_domain($vm,$name) if !$BASE;
         } else {
             $BASE = create_domain($vm);
         }

@@ -508,7 +508,7 @@ sub _check_args {
 
     for (keys %{$VALID_ARG{$sub}}) {
         next if $VALID_ARG{$sub}->{$_} == 2; # optional arg
-        confess "Missing argument $_"   if !exists $args->{$_};
+        confess "Missing argument $_"   if !exists $args->{$_} || !defined $args->{$_};
     }
 
     return $args;
