@@ -4281,7 +4281,8 @@ sub _cmd_remove_hardware {
     my $uid = $request->args('uid');
     my $hardware = $request->args('name') or confess "Missing argument name";
     my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
-    my $index = $request->args('index');
+    my $index = $request->defined_arg('index');
+    my $option = $request->defined_arg('option');
 
     my $domain = $self->search_domain_by_id($id_domain);
 
@@ -4290,7 +4291,7 @@ sub _cmd_remove_hardware {
     .$domain->name
         if !$user->is_admin;
 
-    $domain->remove_controller($hardware, $index);
+    $domain->remove_controller($hardware, $index, $option);
 }
 
 sub _cmd_change_hardware {

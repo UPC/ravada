@@ -7,6 +7,9 @@ use strict;
 use Data::Dumper;
 use Test::More;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -56,6 +59,187 @@ sub test_frontend_refresh {
     isa_ok($disk->[0],'HASH', Dumper($disk));
 
     $domain->remove(user_admin);
+}
+
+sub test_remove_disk($vm, %options) {
+    diag(Dumper(\%options));
+    my $make_base = delete $options{make_base};
+    my $clone = delete $options{clone};
+    my $remove_by_file = ( delete $options{remove_by_file} or 0);
+    my $remove_by_index = ( delete $options{remove_by_index} or 1);
+    my $add_iso_to_clone = delete $options{add_iso_to_clone};
+    return if $clone && $vm->type eq 'Void';
+
+    my $id_iso = ( delete $options{id_iso} or search_id_iso('Alpine%64'));
+
+    die "Error: unknown options ".Dumper(\%options)
+    if keys %options;
+
+    for my $index ( 0 .. 3 ) {
+        diag("\tindex=$index");
+        my $name = new_domain_name();
+        my $req = Ravada::Request->create_domain(
+            name => $name
+            ,id_owner => user_admin->id
+            ,swap => 1024 * 1024
+            ,data => 1024 * 1024
+            ,id_iso => $id_iso
+            ,vm => $vm->type
+        );
+        wait_request(debug => 0);
+
+        is($req->error,'');
+        my $domain = rvd_back->search_domain($name);
+        ok($domain) or return;
+
+        if ($make_base) {
+            $domain->prepare_base(user_admin);
+            $domain->remove_base(user_admin);
+        }
+        if ($clone || $add_iso_to_clone) {
+            $domain->prepare_base(user_admin);
+            my $clone = $domain->clone(
+                name => new_domain_name()
+                ,user => user_admin
+            );
+            $domain = $clone;
+            _add_iso_to_clone($domain) if $add_iso_to_clone;
+        }
+
+        my $info0 = $domain->info(user_admin);
+        my $n_disks0 = scalar(@{$info0->{hardware}->{disk}});
+        my %files0 = map { ($_->{file} or '') => 1 } @{$info0->{hardware}->{disk}};
+        my $expect_removed = $info0->{hardware}->{disk}->[$index];
+
+        my @way = ( index => $index );
+        @way = ( option => { "source/file" => $expect_removed->{file} } )
+        if $remove_by_file && $expect_removed->{file};
+
+        push @way ,( index => $index )
+        if $remove_by_index;
+
+        my $req_rm = Ravada::Request->remove_hardware(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,name => 'disk'
+            ,@way
+        );
+        wait_request(debug => 0);
+        is($req_rm->status,'done');
+        is($req_rm->error, '');
+        my $info = $domain->info(user_admin);
+        my $n_disks = scalar(@{$info->{hardware}->{disk}});
+        my %files = map { ($_->{file} or '') => 1 } @{$info->{hardware}->{disk}};
+        is($n_disks, $n_disks0-1) or exit;
+
+        isnt($info->{hardware}->{disk}->[$index]->{file}
+            ,$info0->{hardware}->{disk}->[$index]->{file})
+        if $index<3;
+
+        if ($expect_removed->{file}) {
+            if ($expect_removed->{device} eq 'cdrom') {
+                ok(-e $expect_removed->{file},$expect_removed->{file});
+            } else {
+                ok(!-e $expect_removed->{file}) or die "$expect_removed->{file} should be removed";
+            }
+        }
+        _check_volumes_table($domain, $n_disks, $expect_removed->{file});
+        _check_info($domain, $n_disks, $expect_removed->{file});
+        _check_info_front($domain->id, $n_disks, $expect_removed->{file});
+
+        $domain->remove(user_admin);
+    }
+}
+
+sub _add_iso_to_clone($domain) {
+    my $req = Ravada::Request->add_hardware(
+        id_domain => $domain->id
+        ,uid => user_admin->id
+        ,'data' => {
+            'driver' => 'ide',
+            'type' => 'sys',
+            'allocation' => '0.1G',
+            'device' => 'cdrom',
+            'file' => '/var/lib/libvirt/images/alpine-standard-3.8.1-x86.iso',
+            'capacity' => '1G'
+        },
+        'name' => 'disk',
+    );
+    wait_request();
+}
+
+sub _check_volumes_table($domain, $n_disks, $file) {
+    my $sth = connector->dbh->prepare(
+        "SELECT count(*) FROM volumes WHERE id_domain=?"
+    );
+    $sth->execute($domain->id);
+    my ($count) = $sth->fetchrow;
+    is($count, $n_disks) or exit;
+
+    return if !$file;
+    $sth = connector->dbh->prepare(
+        "SELECT * FROM volumes WHERE id_domain=? AND file=?"
+    );
+    $sth->execute($domain->id, $file);
+    my $row = $sth->fetchrow_hashref;
+    ok(!$row->{id}) or die Dumper($row);
+}
+
+sub _check_info($domain, $n_disks, $file) {
+    my $info = $domain->info(user_admin);
+    my @disks = @{$info->{hardware}->{disk}};
+    is(scalar(@disks), $n_disks) or die Dumper(\@disks);
+
+    return if !$file;
+    my ($gone) = grep { defined $_->{file} && $_->{file} eq $file} @disks;
+    ok(!$gone, "Expecting $file gone") or die Dumper(\@disks);
+}
+
+sub _check_info_front($id_domain, $n_disks, $file) {
+
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    my $info = $domain->info(user_admin);
+    my @disks = @{$info->{hardware}->{disk}};
+    is(scalar(@disks), $n_disks) or die Dumper(\@disks);
+
+    return if !$file;
+    my ($gone) = grep { defined $_->{file} && $_->{file} eq $file} @disks;
+    ok(!$gone, "Expecting $file gone") or die Dumper(\@disks);
+}
+
+
+sub test_add_cd($vm, $data) {
+
+    my $domain = create_domain($vm);
+
+    my $info0 = $domain->info(user_admin);
+    my $n_disks0 = scalar(@{$info0->{hardware}->{disk}});
+    my %targets0 = map { $_->{target} => 1 } @{$info0->{hardware}->{disk}};
+
+    my $req = Ravada::Request->add_hardware(
+        id_domain => $domain->id
+        ,name => 'disk'
+        ,uid => user_admin->id
+        ,'data' => $data
+    );
+    ok($req);
+    rvd_back->_process_requests_dont_fork();
+
+    is($req->status,'done');
+    is($req->error,'');
+    my $info = $domain->info(user_admin);
+    my $n_disks = scalar(@{$info->{hardware}->{disk}});
+    is($n_disks, $n_disks0+1);
+
+    my $new_dev;
+    for my $dev ( @{$info->{hardware}->{disk}} ) {
+        next if $targets0{$dev->{target}};
+        $new_dev = $dev;
+        last;
+    }
+    is($new_dev->{driver_type}, 'raw');
+    is($new_dev->{driver}, 'ide');
+    is($new_dev->{file},$data->{file});
 }
 
 sub test_add_disk {
@@ -129,12 +313,105 @@ sub test_add_disk_boot_order {
     is($volumes[0]->info->{boot}, 1 );
 }
 
+sub test_add_cd_twice($vm) {
+
+    my $domain = create_domain($vm);
+
+    my $info0 = $domain->info(user_admin);
+    my $n_disks0 = scalar(@{$info0->{hardware}->{disk}});
+    my %targets0 = map { $_->{target} => 1 } @{$info0->{hardware}->{disk}};
+    my ($file) = map { $_->{file} }
+        grep { $_->{device} eq 'cdrom' }
+        @{$info0->{hardware}->{disk}};
+
+    my $req = Ravada::Request->add_hardware(
+        id_domain => $domain->id
+        ,name => 'disk'
+        ,uid => user_admin->id
+        ,'data' => {
+            'device' => 'cdrom'
+            ,'file' => $file
+        }
+    );
+    ok($req);
+    rvd_back->_process_requests_dont_fork();
+
+    is($req->status,'done');
+    like($req->error,qr/already/i);
+
+    Ravada::Request->refresh_machine(id_domain => $domain->id
+        ,uid => user_admin->id
+    );
+    wait_request();
+
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $info_f = $domain_f->info(user_admin);
+    my $n_disks_f = scalar(@{$info_f->{hardware}->{disk}});
+    is($n_disks_f, $n_disks0)
+        or die Dumper($info_f->{hardware}->{disk});
+
+    my $info = $domain->info(user_admin);
+    my $n_disks = scalar(@{$info->{hardware}->{disk}});
+    is($n_disks, $n_disks0) or die Dumper($info->{hardware}->{disk});
+
+}
+
+sub test_add_cd_kvm($vm) {
+    test_add_cd($vm
+        , { 'device' => 'cdrom',
+            'driver' => 'ide'
+        });
+    test_add_cd($vm
+        , { 'device' => 'cdrom'
+            ,'driver' => 'ide'
+            ,capacity => '1G'
+        });
+    test_add_cd($vm
+        , { 'device' => 'cdrom'
+            ,'driver' => 'ide'
+            ,capacity => '1G'
+            ,allocation => '1G'
+        });
+    test_add_cd($vm
+        , { 'device' => 'cdrom'
+            ,'driver' => 'ide'
+            ,'file' => "/tmp/a.iso"
+        });
+}
+
+sub _list_id_isos($vm) {
+    return search_id_iso('Alpine%64') if $vm->type eq 'Void';
+    return search_id_iso('Alpine%64') if !$ENV{TEST_STRESS};
+    my $list = rvd_front->list_iso_images();
+
+    my ($alpine0) = grep { $_->{name} =~ /Alpine.*64/ } @$list;
+
+    my $alpine = $vm->_search_iso($alpine0->{id});
+    my $device = $alpine->{device} or die "Error: no device in "
+    .Dumper($alpine);
+
+    my $sth = connector->dbh->prepare(
+        "UPDATE iso_images set device=? WHERE id=?"
+    );
+    my @list;
+    for my $iso (@$list) {
+        next if $iso->{device} && -e $iso->{device};
+        next if $iso->{name} =~ /Empty/;
+        next if $iso->{name} =~ /Android/i;
+
+        die Dumper($iso) if !defined $iso->{id};
+
+        $sth->execute($device, $iso->{id});
+        push @list, ( $iso->{id} );
+    }
+    return @list;
+}
 #############################################################################
 
 clean();
 
 
-for my $vm_name ( vm_names() ) {
+for my $vm_name (vm_names() ) {
     my $vm = rvd_back->search_vm($vm_name);
 
     SKIP: {
@@ -147,8 +424,38 @@ for my $vm_name ( vm_names() ) {
         }
 
         skip($msg,10)   if !$vm;
-        diag("Testing volatile for $vm_name");
+        diag("Testing disks for $vm_name");
 
+        test_add_cd_twice($vm);
+        test_add_cd_kvm($vm) if $vm_name eq 'KVM';
+
+        for my $id_iso ( _list_id_isos($vm) ) {
+            diag("Testing id iso = ".($id_iso or '<UNDEF>'));
+            for my $by_file ( 1, 0 ) {
+                for my $by_index ( 0, 1 ) {
+                    diag("by_file=$by_file, by_index=$by_index");
+                    test_remove_disk($vm
+                        ,clone => 1
+                        ,id_iso => $id_iso
+                        ,remove_by_file => $by_file
+                        ,remove_by_index => $by_index
+                    );
+                    test_remove_disk($vm
+                        ,add_iso_to_clone => 1
+                        ,id_iso => $id_iso
+                        ,remove_by_file => $by_file
+                        ,remove_by_index => $by_index
+                    );
+
+                    test_remove_disk($vm, id_iso => $id_iso
+                        ,remove_by_index => $by_index
+                        ,remove_by_file => $by_file);
+                    test_remove_disk($vm, make_base => 1, id_iso => $id_iso
+                        ,remove_by_index => $by_index
+                        ,remove_by_file => $by_file);
+                }
+            }
+        }
         test_add_disk_boot_order($vm);
 
         test_frontend($vm);
