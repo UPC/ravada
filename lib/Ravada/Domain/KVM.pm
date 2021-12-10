@@ -2184,10 +2184,10 @@ sub _set_controller_usb($self,$numero, $data={}) {
         }
     }
     $numero = $count+1 if !defined $numero;
-    if ( $numero >= $count ) {
+    if ( $numero > $count ) {
         my $missing = $numero-$count;
         
-        for my $i (0..$missing) {
+        for my $i (1..$missing) {
             my $controller = $devices->addNewChild(undef,"redirdev");
             $controller->setAttribute(bus => 'usb');
             $controller->setAttribute(type => $tipo );

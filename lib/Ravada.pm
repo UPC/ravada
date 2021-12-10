@@ -4373,7 +4373,7 @@ sub _cmd_shutdown {
 
     Ravada::Request->refresh_machine(
                    uid => $uid
-            ,id_domain => $id_domain
+            ,id_domain => $domain->id
         ,after_request => $request->id
     );
     my $user = Ravada::Auth::SQL->search_by_id( $uid);

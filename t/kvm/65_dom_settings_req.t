@@ -87,6 +87,7 @@ sub test_drivers_id($vm_name, $type, $domain=undef) {
         id_domain => $domain->id
         , uid => $USER->id
         , name => 'usb'
+        , number => 3
     );
     wait_request(debug => 1);
 
