@@ -149,7 +149,6 @@
                     <span>Content will be kept on restore</span>
                </div>
             </div>
-<<<<<<< HEAD
 
                 <div ng-show="id_iso.arch == 'x86_64'" class="from-group row">
                     <label for="bios" class="col-xl-3 col-form-label"><%=l 'BIOS' %></label>
@@ -172,31 +171,6 @@
                 </div>
             </div><!-- ng show advanced -->
 
-||||||| 1e01a0d0
-=======
-
-                <div ng-show="id_iso.arch == 'x86_64'" class="from-group row">
-                    <label for="bios" class="col-xl-3 col-form-label"><%=l 'BIOS' %></label>
-                    <div class="col-lg-9">
-                    <select name="bios">
-                        <option value="Legacy"><%=l 'Legacy' %></option>
-                        <option value="UEFI"><%=l 'UEFI' %></option>
-                    </select>
-                    </div>
-                </div>
-
-
-                <div ng-show="machine_types[backend][id_iso.arch]" class="from-group row">
-                    <label for="machine" class="col-xl-3 col-form-label"><%=l 'Machine' %></label>
-                    <div class="col-lg-9">
-                    <select name="machine" ng-model="machine"
-                    ng-options="machine for machine in machine_types[backend][id_iso.arch]">
-                    </select>
-                    </div>
-                </div>
-            </div><!-- ng show advanced -->
-
->>>>>>> b52f3dda75eb8aa7ce19d685bcb8f93ce2a8e95e
             <div class="form-group row">
                 <div ng-show="new_machineForm.$submitted || new_machineForm.name.$touched">
                     <div ng-show="new_machineForm.name.$error.required" class="alert alert-warning" role="alert">
