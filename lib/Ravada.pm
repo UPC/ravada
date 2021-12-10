@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '1.1.0';
+our $VERSION = '1.1.2';
 
 use Carp qw(carp croak cluck);
 use Data::Dumper;
@@ -65,6 +65,8 @@ our %VALID_CONFIG = (
         ,ravada_posix_group => undef
         ,groups_base => undef
         ,field => undef
+        ,server => undef
+        ,port => undef
     }
     ,log => undef
 );
@@ -4504,9 +4506,6 @@ sub _cmd_set_driver {
 
 sub _cmd_refresh_storage($self, $request=undef) {
 
-    if ($request && ( my $recent = $request->done_recently(60))) {
-        die "Command ".$request->command." run recently by ".$recent->id."\n";
-    }
     my $vm;
     if ($request && $request->defined_arg('id_vm')) {
         $vm = Ravada::VM->open($request->defined_arg('id_vm'));

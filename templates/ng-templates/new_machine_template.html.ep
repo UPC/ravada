@@ -48,13 +48,17 @@
                 <div class="from-group row" ng-show="id_iso.name && id_iso.has_cd">
                         <br/>
                         <label for="iso_file" class="col-xl-3 col-form-label"><%=l 'Select ISO' %> <a
-                          title="Select the .iso file the machine will utilize when installing the OS." href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html"><i class="fa fa-info-circle"></i></a></label>
-                        <div class="col-lg-9">
+                          title="Select the .iso file the machine will utilize when installing the OS." href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html"><i class="fa fa-info-circle"></i></a>
+                            <i class="badge badge-warning" ng-click="refresh_storage()"><i class="fa fa-sync-alt" aria-hidden="true"></i></i>
+                            </label>
+                        <div class="col-lg-9"  ng-init="iso_file = '<NONE>'" >
                             <input type="text" class="form-control" placeholder="<%=l 'Type the ISO pathname' %>"
                                    name="iso_file"
-                                   ng-model="iso_file"
+                                   ng-model="iso_file" 
+                                   ng-hide="refresh_working || !isos"
+                                   required=""
                                    uib-typeahead="item for item in getVisualizableObjects($viewValue, isos)"
-                                   typeahead-min-length="0">
+                                   typeahead-min-length="0"/>
                         </div>
                 </div>
             </div>
