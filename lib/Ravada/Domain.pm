@@ -700,7 +700,7 @@ sub _around_add_volume {
     confess "Error creating volume, out of space $size . Disk free: "
             .Ravada::Utils::number_to_size($free_out)
             ."\n"
-        if exists $args{size} && $args{size} >= $free;
+        if exists $args{size} && $args{size} && $args{size} >= $free;
 
     if ($name) {
         confess "Error: volume $name already exists"
