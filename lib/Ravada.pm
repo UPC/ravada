@@ -721,6 +721,7 @@ sub _update_isos {
           ,xml => 'empty-i386.xml'
           ,xml_volume => 'jessie-volume.xml'
           ,min_disk_size => '0'
+          ,has_cd => 0
         }
        ,empty_64bits => {
           name => 'Empty Machine 64 bits'
@@ -728,6 +729,7 @@ sub _update_isos {
           ,xml => 'empty-amd64.xml'
           ,xml_volume => 'jessie-volume.xml'
           ,min_disk_size => '0'
+          ,has_cd => 0
         }
     );
     $self->_scheduled_fedora_releases(\%data) if $0 !~ /\.t$/;
@@ -2264,6 +2266,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
     $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
+    $self->_upgrade_table('iso_images','has_cd','int (1) DEFAULT "1"');
 
     $self->_upgrade_table('users','language','char(40) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
