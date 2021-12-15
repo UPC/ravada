@@ -5,6 +5,7 @@ use Data::Dumper;
 use Test::More;
 
 use HTML::Lint;
+use Mojo::DOM;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -108,6 +109,32 @@ sub _check_html_lint($url, $content, $option = {}) {
 
 }
 
+sub _load_file($name) {
+    open my $in,"<",$name or die "$! $name";
+    my $string = join("",<$in>);
+    close $in;
+    return $string;
+}
+
+sub test_form_new_machine() {
+    my $file = "templates/ng-templates/new_machine_template.html.ep";
+
+    my $dom = Mojo::DOM->new(_load_file($file));
+    my $form_name = 'new_machineForm';
+    my $form = $dom->find('form')->grep( sub {$_->attr('name') eq $form_name});
+    ok($form->[0], "Expecting form name=$form_name") or return;
+    for my $name ('id_iso', 'name', 'iso_file', 'memory','disk'
+        , 'swap', 'data') {
+        my $inputs = $form->[0]->find("input")
+        ->grep( sub { $_->attr('name') eq $name } );
+        ok($inputs->[0],"Expecting input name='$name' in $file");
+    }
+
+}
+
+##################################################################3
+
+test_form_new_machine();
 test_validate_html_local("templates/bootstrap");
 test_validate_html_local("templates/main");
 test_validate_html_local("templates/ng-templates");

@@ -883,11 +883,12 @@ sub _domain_create_from_iso {
         
     my $device_cdrom;
 
-    confess "Template ".$iso->{name}." has no URL, iso_file argument required."
-        if !$iso->{url} && !$iso_file && !$iso->{device};
 
-    if ($iso_file) {
-        if ( $iso_file ne "<NONE>") {
+    confess "Template ".$iso->{name}." has no URL, iso_file argument required."
+        if $iso->{has_cd} && !$iso->{url} && !$iso_file && !$iso->{device};
+
+    if (defined $iso_file) {
+        if ( $iso_file ne "<NONE>" || $iso_file ) {
             $device_cdrom = $iso_file;
         }
     }
@@ -907,15 +908,11 @@ sub _domain_create_from_iso {
 
     my $file_xml =  $DIR_XML."/".$iso->{xml_volume};
 
-    my $device_disk;
-
     my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}", $options);
-
 
     _xml_remove_cdrom_device($xml);
     _xml_remove_cpu($xml)                     if $remove_cpu;
     _xml_remove_disk($xml);
-    #    _xml_modify_disk($xml, [$device_disk])    if $device_disk;
     $self->_xml_modify_usb($xml);
     _xml_modify_video($xml);
 
@@ -928,7 +925,7 @@ sub _domain_create_from_iso {
     $domain->add_volume( boot => 2, target => 'hda'
         ,device => 'cdrom'
         ,file => $device_cdrom
-    );
+    ) if $device_cdrom && $device_cdrom ne '<NONE>';
 
     $domain->_set_spice_password($spice_password)
         if $spice_password;

@@ -2470,6 +2470,7 @@ sub new_machine {
         }
     } else {
         my $req = Ravada::Request->refresh_storage();
+        $RAVADA->_cache_delete('list_isos');
         # TODO handle possible errors
     }
     $c->stash(errors => \@error);

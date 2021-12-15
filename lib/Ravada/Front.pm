@@ -1252,6 +1252,10 @@ sub add_node($self,%arg) {
     return $req->id;
 }
 
+sub _cache_delete($self, $key) {
+    delete $self->{cache}->{$key};
+}
+
 sub _cache_store($self, $key, $value, $timeout=60) {
     $self->{cache}->{$key} = [ $value, time+$timeout ];
 }

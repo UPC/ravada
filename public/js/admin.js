@@ -128,7 +128,7 @@ ravadaApp.directive("solShowMachine", swMach)
             $scope.showMinSize = false;
             $scope.min_size = 1;
           }
-          return (id.device != null) ? id.device : "<NONE>";
+          return (id.device != null) ? id.device : "";
       };
 
       $scope.onIdIsoSelected = function() {
@@ -196,6 +196,25 @@ ravadaApp.directive("solShowMachine", swMach)
                         $scope.ramsize = 1;
                     }
                 });
+      };
+
+      $scope.refresh_storage = function() {
+          $scope.refresh_working = true;
+          $http.post('/request/refresh_storage/',
+              JSON.stringify({})
+          ).then(function(response) {
+              if(response.status == 300 ) {
+                  console.error('Response error', response.status);
+              }
+              setTimeout(function(){
+                  $http.get('/iso_file.json').then(function(response) {
+                      $scope.isos = response.data;
+                      $scope.refresh_working = false;
+                  });
+              }, 3000);
+          }
+        );
+
       };
 
       $http.get('/list_machines.json').then(function(response) {
