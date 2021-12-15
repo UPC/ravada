@@ -59,6 +59,7 @@
                                    uib-typeahead="item for item in getVisualizableObjects($viewValue, isos)"
                                    typeahead-min-length="0"/>
                         </div>
+                </div>
             </div>
 
             <div class="form-group row">
@@ -99,7 +100,6 @@
                     <font color="orange"><%=l 'The Minimum Disk Size needed for this ISO is' %> {{min_size}}GB.</font>
                 </div>
             </div>
-<<<<<<< HEAD
             <div class="from-group row">
                 <label for="_advanced_options" class="col-xl-3 col-form-label">
                     <b><%=l 'Advanced options' %></b>
@@ -113,11 +113,6 @@
             <div ng-show="_advanced_options">
 
             <div class="form-group row" ng-show="backend == 'KVM' || backend=='Void'">
-||||||| b90e88bc
-            <div class="form-group row" ng-if="backend == 'KVM' || backend=='Void'">
-=======
-            <div class="form-group row" ng-show="backend == 'KVM' || backend=='Void'">
->>>>>>> main
                 <label for="swap" class="col-xl-3 col-form-label">
                     <span ng-model="swap.label"
                         ng-class='{"text-muted": !swap.enabled}'><%=l 'Swap' %>
