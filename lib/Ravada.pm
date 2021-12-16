@@ -290,7 +290,7 @@ sub _update_isos {
         arch_1909 => {
                     name => 'Arch Linux 19.09'
             ,description => 'Arch Linux 19.09.01 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'https://archive.archlinux.org/iso/2019.09.01/'
@@ -311,7 +311,7 @@ sub _update_isos {
         mate_bionic => {
                     name => 'Ubuntu Mate Bionic 64 bits'
             ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-amd64.iso'
@@ -329,7 +329,7 @@ sub _update_isos {
         ubuntu_xenial => {
                     name => 'Ubuntu Xenial Xerus 64 bits'
             ,description => 'Ubuntu 16.04 LTS Xenial Xerus 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'xenial64-amd64.xml'
              ,xml_volume => 'xenial64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/16.04/ubuntu-16.04.*-desktop-amd64.iso'
@@ -340,7 +340,7 @@ sub _update_isos {
         mate_xenial => {
                     name => 'Ubuntu Mate Xenial'
             ,description => 'Ubuntu Mate 16.04.3 (Xenial) 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/16.04.*/release/ubuntu-mate-16.04.*-desktop-amd64.iso'
@@ -364,20 +364,20 @@ sub _update_isos {
         ,bionic=> {
                     name => 'Ubuntu Bionic Beaver'
             ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/18.04/'
                 ,file_re => '^ubuntu-18.04.*desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
         }
 
         ,serena64 => {
             name => 'Mint 18.1 Mate 64 bits'
     ,description => 'Mint Serena 18.1 with Mate Desktop based on Ubuntu Xenial 64 bits'
-           ,arch => 'amd64'
+           ,arch => 'x86_64'
             ,xml => 'xenial64-amd64.xml'
      ,xml_volume => 'xenial64-volume.xml'
             ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/18.3'
@@ -390,7 +390,7 @@ sub _update_isos {
         ,mint20_64 => {
             name => 'Mint 20 Mate 64 bits'
     ,description => 'Mint Ulyana 20 with Mate Desktop 64 bits'
-           ,arch => 'amd64'
+           ,arch => 'x86_64'
             ,xml => 'xenial64-amd64.xml'
      ,xml_volume => 'xenial64-volume.xml'
             ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/20.2'
@@ -426,7 +426,7 @@ sub _update_isos {
             name => 'Fedora 28'
             ,description => 'RedHat Fedora 28 Workstation 64 bits'
             ,url => 'https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/28/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-28-.*\.iso'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => '$url/Fedora-Workstation-28-.*-x86_64-CHECKSUM'
@@ -447,7 +447,7 @@ sub _update_isos {
         ,kubuntu_64 => {
             name => 'Kubuntu Bionic Beaver 64 bits'
             ,description => 'Kubuntu 18.04 Bionic Beaver 64 bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,sha256_url => '$url/SHA256SUMS'
@@ -469,7 +469,7 @@ sub _update_isos {
         ,suse_15 => {
             name => "openSUSE Leap 15"
             ,description => "openSUSE Leap 15 64 bits"
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,url => 'https://download.opensuse.org/distribution/leap/15.0/iso/'
@@ -480,7 +480,7 @@ sub _update_isos {
         ,xubuntu_beaver_64 => {
             name => 'Xubuntu Bionic Beaver 64 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 64 bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,sha256_url => '$url/../SHA256SUMS'
@@ -555,7 +555,7 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
         }
        ,debian_stretch_32 => {
             name =>'Debian Stretch 32 bits'
@@ -576,7 +576,7 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
         }
         ,debian_buster_64=> {
             name =>'Debian Buster 64 bits'
@@ -587,7 +587,7 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
         }
         ,debian_buster_32=> {
             name =>'Debian Buster 32 bits'
@@ -626,7 +626,7 @@ sub _update_isos {
         ,devuan_beowulf_amd64=> {
             name =>'Devuan Beowulf 64 bits'
             ,description => 'Devuan Beowulf Desktop Live (amd64)'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
             ,file_re => 'devuan_beowulf_.*_amd64_desktop-live.iso'
             ,sha256_url => '$url/SHASUMS.txt'
@@ -648,7 +648,7 @@ sub _update_isos {
         ,parrot_xfce_amd64 => {
             name => 'Parrot Home Edition XFCE'
             ,description => 'Parrot Home Edition XFCE 64 Bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,url => 'https://download.parrot.sh/parrot/iso/4.11.2/'
@@ -659,7 +659,7 @@ sub _update_isos {
         ,parrot_mate_amd64 => {
 		  name => 'Parrot Security Edition MATE'
             ,description => 'Parrot Security Edition MATE 64 Bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,url => 'https://download.parrot.sh/parrot/iso/4.11.2/'
@@ -670,7 +670,7 @@ sub _update_isos {
         ,kali_64 => {
             name => 'Kali Linux 2020'
             ,description => 'Kali Linux 2020 64 Bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,url => 'https://cdimage.kali.org/kali-2020.\d+/'
@@ -681,7 +681,7 @@ sub _update_isos {
         ,kali_64_netinst => {
             name => 'Kali Linux 2020 (NetInstaller)'
             ,description => 'Kali Linux 2020 64 Bits (light NetInstall)'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,url => 'https://cdimage.kali.org/kali-2020.\d+/'
@@ -696,7 +696,7 @@ sub _update_isos {
           ,xml => 'windows_7.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '21'
-          ,arch => 'amd64'
+          ,arch => 'x86_64'
         }
         ,windows_10 => {
           name => 'Windows 10'
@@ -705,7 +705,7 @@ sub _update_isos {
           ,xml => 'windows_10.xml'
           ,xml_volume => 'windows10-volume.xml'
           ,min_disk_size => '21'
-          ,arch => 'amd64'
+          ,arch => 'x86_64'
         }
         ,windows_xp => {
           name => 'Windows XP'
@@ -714,7 +714,7 @@ sub _update_isos {
           ,xml => 'windows_xp.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '3'
-          ,arch => 'amd64'
+          ,arch => 'x86_64'
         }
         ,windows_12 => {
           name => 'Windows 2012'
@@ -723,7 +723,7 @@ sub _update_isos {
           ,xml => 'windows_12.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '21'
-          ,arch => 'amd64'
+          ,arch => 'x86_64'
         }
         ,windows_8 => {
           name => 'Windows 8.1'
@@ -732,7 +732,7 @@ sub _update_isos {
           ,xml => 'windows_8.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '21'
-          ,arch => 'amd64'
+          ,arch => 'x86_64'
         }
        ,empty_32bits => {
           name => 'Empty Machine 32 bits'
@@ -748,7 +748,7 @@ sub _update_isos {
           ,xml => 'empty-amd64.xml'
           ,xml_volume => 'jessie-volume.xml'
           ,min_disk_size => '0'
-          ,arch => 'amd64'
+          ,arch => 'x86_64'
           ,has_cd => 0
         }
     );
@@ -828,7 +828,7 @@ sub _scheduled_fedora_releases($self,$data) {
             $data->{$name} = {
             name => 'Fedora '.$release
             ,description => "RedHat Fedora $release Workstation 64 bits"
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,url => $url_file
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
