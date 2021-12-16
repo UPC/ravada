@@ -192,7 +192,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
 		$req = Ravada::Request->add_hardware(uid => $USER->id
                 , id_domain => $domain->id
                 , name => $hardware
-                , number => $numero
+                , number => $numero+1
                 , data => $data
             );
 	};
