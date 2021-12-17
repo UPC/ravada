@@ -911,7 +911,7 @@ sub _init_ldap_admin {
     return $LDAP_ADMIN if $LDAP_ADMIN;
 
     my ($dn, $pass);
-    if ($$CONFIG->{ldap} ) {
+    if (exists $$CONFIG->{ldap} && $$CONFIG->{ldap} ) {
         ($dn, $pass) = ( $$CONFIG->{ldap}->{admin_user}->{dn} 
             , $$CONFIG->{ldap}->{admin_user}->{password});
     } else {

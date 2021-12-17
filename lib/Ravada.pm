@@ -2427,7 +2427,8 @@ sub display_ip($self=undef, $new_ip=undef) {
             $CONFIG->{display_ip} = $new_ip;
         }
     }
-    my $ip = $CONFIG->{display_ip};
+    my $ip;
+    $ip = $CONFIG->{display_ip} if exists $CONFIG->{display_ip};
     return $ip if $ip;
 }
 
@@ -2468,6 +2469,7 @@ sub _init_config {
         delete $default_vms{Void};
         $CONFIG->{vm} = [keys %default_vms];
     }
+    #    lock_hash(%$CONFIG);
 #    $CONNECTOR = ( $connector or _connect_dbh());
 
     _init_config_vm();
