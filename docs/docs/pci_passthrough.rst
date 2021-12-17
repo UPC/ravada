@@ -72,6 +72,20 @@ Blacklist modules creating the file /etc/modprobe.d/blacklist-gpu.conf
   blacklist snd_hda_intel
   blacklist nvidiafb
 
+GPUs with embedded USB
+~~~~~~~~~~~~~~~~~~~~~~
+
+If your *GPU* also sports an *USB device*, you need to check what driver
+this device is using and blacklist it here also. Use `lspci -Dnn -k` to
+check what driver it is using.
+
+Then add it to the endh of the file /etc/modprobe.d/blacklist-gpu.conf:
+
+::
+
+
+  blacklist xhci_pci
+
 Also prevent the nvidia drivers to load and raise vfio-pci instead in /etc/modprobe.d/nvidia.conf
 
 ::
