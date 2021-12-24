@@ -22,7 +22,7 @@ Initializes the submodules
 
 sub init {
     my ($config, $db_con) = @_;
-    if ($config->{ldap} && (!defined $LDAP_OK || $LDAP_OK) ) {
+    if (exists $config->{ldap} && $config->{ldap} && (!defined $LDAP_OK || $LDAP_OK) ) {
         eval {
             $LDAP_OK = 0;
             require Ravada::Auth::LDAP;
@@ -34,7 +34,7 @@ sub init {
         $LDAP_OK = 0;
     }
 
-    if ($config->{sso} && (!defined $SSO_OK || $SSO_OK) ) {
+    if (exists $config->{sso} && $config->{sso} && (!defined $SSO_OK || $SSO_OK) ) {
         eval {
 		    $SSO_OK = 0;
             require Ravada::Auth::SSO;
