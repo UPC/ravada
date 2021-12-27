@@ -1086,7 +1086,7 @@ sub test_fill_memory($vm, $node, $migrate) {
         my $clone = rvd_back->search_domain($clone_name) or last;
         ok($clone,"Expecting clone $clone_name") or exit;
         $clone->migrate($node) if $migrate;
-        wait_request(debug => 1);
+        wait_request(debug => 0);
         eval { $clone->start(user_admin) };
         $error = $@;
         diag($error) if $error;
@@ -1098,12 +1098,12 @@ sub test_fill_memory($vm, $node, $migrate) {
         $nodes{$clone->_vm->name}++;
 
         last if $migrate && exists $nodes{$vm->name} && $nodes{$vm->name} > 2;
-        if ($migrate || keys(%nodes) > 1) {
+        if ($migrate || keys(%nodes) > 0) {
             $memory = int($memory*1.5);
         }
     }
     ok(exists $nodes{$vm->name},"Expecting some clones to node ".$vm->name." ".$vm->id);
-    ok(exists $nodes{$node->name},"Expecting some clones to node ".$node->name." ".$node->id);
+    ok(exists $nodes{$node->name},"Expecting some clones to node ".$node->name." ".$node->id) or exit;
     _remove_clones($base);
 }
 

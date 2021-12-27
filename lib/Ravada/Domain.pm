@@ -6463,7 +6463,8 @@ sub refresh_ports($self, $request=undef) {
     if (($msg) && ($request))
     {
         my $uid = $request->args("uid");
-        my $user = Ravada::Auth::SQL->search_by_id($uid) if ($uid);
+        my $user;
+        $user = Ravada::Auth::SQL->search_by_id($uid) if ($uid);
         $user->send_message($msg) if ($user);
     }
 }

@@ -2458,6 +2458,7 @@ sub new_machine {
         }
     } else {
         my $req = Ravada::Request->refresh_storage();
+        $RAVADA->_cache_delete('list_isos');
         # TODO handle possible errors
     }
     $c->stash(errors => \@error);
@@ -3495,13 +3496,16 @@ sub maintenance($c) {
 }
 
 sub _list_ldap_groups($c, $name='*') {
+    return $c->render(json => []) if !$RAVADA->feature('ldap');
+
     $name = '*'.$name.'*' if $name !~ /\*/;
-    my @groups;
-    @groups = Ravada::Auth::LDAP::search_group( name => $name ) if $RAVADA->feature('ldap');
+    my @groups = Ravada::Auth::LDAP::search_group( name => $name );
     return $c->render(json => [ sort { $a cmp $b } map { $_->get_value('cn') } @groups ] );
 };
 
 sub _list_ldap_users($c, $filter='*' ) {
+    return $c->render(json => []) if !$RAVADA->feature('ldap');
+
     $filter = '*' if $filter eq 'undefined';
     $filter = '*'.$filter if length($filter) && $filter !~ /^\*/;
 
