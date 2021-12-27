@@ -626,7 +626,9 @@
                     return;
                 }
             }
-            item.remove = false;
+            if(typeof(item) == 'object') {
+                item.remove = false;
+            }
               $http.get('/machine/hardware/remove/'
                       +$scope.showmachine.id+'/'+hardware+'/'+index).then(function(response) {
                       });

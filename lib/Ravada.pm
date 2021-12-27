@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '1.1.0';
+our $VERSION = '1.1.2';
 
 use Carp qw(carp croak cluck);
 use Data::Dumper;
@@ -56,14 +56,19 @@ use feature qw(signatures);
 our %VALID_CONFIG = (
     vm => undef
     ,warn_error => undef
-    ,db => {user => undef, password => undef,  hostname => undef, host => undef}
+    ,db => {user => undef, password => undef,  hostname => undef, host => undef, db => undef}
     ,ldap => { admin_user => { dn => undef, password => undef }
         ,filter => undef
         ,base => undef
         ,auth => undef
         ,admin_group => undef
         ,ravada_posix_group => undef
+        ,groups_base => undef
+        ,field => undef
+        ,server => undef
+        ,port => undef
     }
+    ,log => undef
 );
 
 =head1 NAME
@@ -716,6 +721,7 @@ sub _update_isos {
           ,xml => 'empty-i386.xml'
           ,xml_volume => 'jessie-volume.xml'
           ,min_disk_size => '0'
+          ,has_cd => 0
         }
        ,empty_64bits => {
           name => 'Empty Machine 64 bits'
@@ -723,6 +729,7 @@ sub _update_isos {
           ,xml => 'empty-amd64.xml'
           ,xml_volume => 'jessie-volume.xml'
           ,min_disk_size => '0'
+          ,has_cd => 0
         }
     );
     $self->_scheduled_fedora_releases(\%data) if $0 !~ /\.t$/;
@@ -2332,6 +2339,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
     $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
+    $self->_upgrade_table('iso_images','has_cd','int (1) DEFAULT "1"');
 
     $self->_upgrade_table('users','language','char(40) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
@@ -2492,7 +2500,8 @@ sub display_ip($self=undef, $new_ip=undef) {
             $CONFIG->{display_ip} = $new_ip;
         }
     }
-    my $ip = $CONFIG->{display_ip};
+    my $ip;
+    $ip = $CONFIG->{display_ip} if exists $CONFIG->{display_ip};
     return $ip if $ip;
 }
 
@@ -2533,6 +2542,7 @@ sub _init_config {
         delete $default_vms{Void};
         $CONFIG->{vm} = [keys %default_vms];
     }
+    #    lock_hash(%$CONFIG);
 #    $CONNECTOR = ( $connector or _connect_dbh());
 
     _init_config_vm();
@@ -2582,19 +2592,19 @@ sub _create_vm_kvm {
     return $vm_kvm;
 }
 
-sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG ) {
+sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG, $quiet = $0=~/\.t$/ ) {
     return 1 if !defined $config_orig;
     my %config = %$config_orig;
 
     for my $key (sort keys %$valid_config) {
         if ( $config{$key} && ref($valid_config->{$key})) {
-           my $ok = _check_config( $config{$key} , $valid_config->{$key} );
+           my $ok = _check_config( $config{$key} , $valid_config->{$key}, $quiet );
            return 0 if !$ok;
         }
         delete $config{$key};
     }
     if ( keys %config ) {
-        warn "Error: Unknown config entry \n".Dumper(\%config) if ! $0 =~ /\.t$/;
+        warn "Error: Unknown config entry \n".Dumper(\%config) if ! $quiet;
         return 0;
     }
     warn "Warning: LDAP authentication with match is discouraged. Try bind.\n"
@@ -4596,9 +4606,6 @@ sub _cmd_set_driver {
 
 sub _cmd_refresh_storage($self, $request=undef) {
 
-    if ($request && ( my $recent = $request->done_recently(60))) {
-        die "Command ".$request->command." run recently by ".$recent->id."\n";
-    }
     my $vm;
     if ($request && $request->defined_arg('id_vm')) {
         $vm = Ravada::VM->open($request->defined_arg('id_vm'));

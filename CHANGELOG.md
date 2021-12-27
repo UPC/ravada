@@ -2,21 +2,15 @@
 
 **Implemented enhancements:**
 
-- Machine schedule reservation [\#1337]
-- Manage nodes and networks settings [\#1305]
-- User management part in ravada [\#1500]
-- Manage LDAP groups
-- Limit to start virtual machines [\#1490]
-- Add access filter to a machine with LDAP groups [\#1488]
-- Debian 11 (Bullesye) ISO support [\#1580]
-
-**Refactor**
-
-- Confusing button placement in ports form [\#1469]
-- Clones number sequence coherency [\#1454]
-- Responsive grants form
+- Review Create Machine form [\#1639]
+- Translated using Weblate (Turkish)
+- Translated using Weblate (Chinese (Simplified))
+- Translated using Weblate (German)
+- Added a log file for backend [\#1530]
+- Improve description displayed when hovering over [\#1511]
 
 **Bugfixes**
 
-- Linux Mint ISO Download fails [\#1576]
-- Machine in a node returns to KVMlocalhost when a machine option is modified [\#1440]
+- Can't create machine from Windows iso [#1657]
+- ISO file not showing in new machine form [#1660]
+- Fix private base [#1652]

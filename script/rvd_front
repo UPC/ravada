@@ -85,6 +85,7 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                       ,file => $FILE_CONFIG
 };
 
+delete $CONFIG_FRONT->{login_custom} if $ENV{MOJO_MODE} && $ENV{MOJO_MODE} eq 'development';
 #####
 #####
 #####
@@ -318,7 +319,9 @@ get '/admin/group/#name' => sub($c) {
         ."<a href='/admin/groups/'>Groups</a>"
         , status => 302) if !$group;
     $c->stash(object_class => [ grep !/^top$/,$group->get_value('objectClass')]);
-    return $c->render( template => "/main/admin_group");
+    return $c->render( template => "/main/admin_group"
+        ,group => $group
+    );
 };
 
 any '/admin/#type' => sub {
@@ -782,7 +785,17 @@ get '/machine/view/(:id).(:type)' => sub {
 any '/machine/clone/(:id).(:type)' => sub {
     my $c = shift;
 
-    return clone_machine($c)    if $USER && $USER->can_clone() && !$USER->is_temporary();
+    return clone_machine($c) if $USER->can_clone_all();
+
+    if ( $USER && $USER->can_clone() && !$USER->is_temporary() ) {
+        my $base = Ravada::Front::Domain->open($c->stash('id'));
+        if (!$base->is_public) {
+            my @clones = $base->clones();
+            my ($clone) = grep { $_->{id_owner} == $USER->id } @clones;
+            return access_denied($c) if !$clone;
+        }
+        return clone_machine($c);
+    }
 
     my $bases_anonymous = $RAVADA->list_bases_anonymous(_remote_ip($c));
     for (@$bases_anonymous) {
@@ -2279,6 +2292,7 @@ sub login($c, $status=200) {
     my $url = ($c->param('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
 
+
     my @error =();
 
     if (((defined $login) || (defined $password) || ((defined $c->param('submit')) && ($c->param('submit') ne 'sso'))) && (! $ticket)) {
@@ -2332,7 +2346,7 @@ sub login($c, $status=200) {
                     ." url($CONFIG_FRONT->{login_bg_file})"
                     ." no-repeat bottom center scroll;\n\t}"];
 
-    sleep 5 if scalar(@error);
+    sleep 5 if scalar(@error) && !$ENV{mode} && !$ENV{mode} eq 'development';
     my @error_status = ( status => $status );
     @error_status = ( status => 403) if @error;
 
@@ -2536,6 +2550,7 @@ sub new_machine {
         }
     } else {
         my $req = Ravada::Request->refresh_storage();
+        $RAVADA->_cache_delete('list_isos');
         # TODO handle possible errors
     }
     $c->stash(errors => \@error);
@@ -3573,13 +3588,16 @@ sub maintenance($c) {
 }
 
 sub _list_ldap_groups($c, $name='*') {
+    return $c->render(json => []) if !$RAVADA->feature('ldap');
+
     $name = '*'.$name.'*' if $name !~ /\*/;
-    my @groups;
-    @groups = Ravada::Auth::LDAP::search_group( name => $name ) if $RAVADA->feature('ldap');
+    my @groups = Ravada::Auth::LDAP::search_group( name => $name );
     return $c->render(json => [ sort { $a cmp $b } map { $_->get_value('cn') } @groups ] );
 };
 
 sub _list_ldap_users($c, $filter='*' ) {
+    return $c->render(json => []) if !$RAVADA->feature('ldap');
+
     $filter = '*' if $filter eq 'undefined';
     $filter = '*'.$filter if length($filter) && $filter !~ /^\*/;
 

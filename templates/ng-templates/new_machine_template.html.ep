@@ -1,6 +1,11 @@
 <div class="tab-pane fade show active" id="fromtemplate" role="tabpanel">
     <div class="card-body">
-        <form name="new_machineForm" role="form" method="post" action="/new_machine.html" novalidate>
+        <div ng-hide="isos && isos.length">
+            Loading ... <i class="fas fa-sync-alt fa-spin"></i>
+        </div>
+        <form name="new_machineForm" role="form" method="post"
+                action="/new_machine.html" novalidate ng-cloak="1"
+                ng-show="isos && isos.length">
             <div class="form-group row">
                 <label for="backend" class="col-xl-3 col-form-label"><%=l 'Backend' %> <a
                   title="Choose the virtualization type of the Virtual Machine." ng-show="backends.length > 1"><i class="fa fa-info-circle"></i></a></label>
@@ -15,8 +20,7 @@
                     ></select>
                 </div>
             </div>
-
-            <div ng-if="backend == 'KVM' || backend == 'Void'" class="form-group">
+            <div ng-show="backend == 'KVM' || backend == 'Void'" class="form-group">
                 <div class="from-group row">
                     <label for="id_iso" class="col-xl-3 col-form-label"><%=l 'Select Template' %> <a
                       title="Choose the OS you want to install."><i class="fa fa-info-circle"></i></a></label>
@@ -41,17 +45,20 @@
                         </div>
                     </div>
                 </div>
-                <div class="from-group row" ng-show="id_iso.name">
+                <div class="from-group row" ng-show="id_iso.name && id_iso.has_cd">
                         <br/>
                         <label for="iso_file" class="col-xl-3 col-form-label"><%=l 'Select ISO' %> <a
-                          title="Select the .iso file the machine will utilize when installing the OS." href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html"><i class="fa fa-info-circle"></i></a></label>
+                          title="Select the .iso file the machine will utilize when installing the OS." href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html"><i class="fa fa-info-circle"></i></a>
+                            <i class="badge badge-warning" ng-click="refresh_storage()"><i class="fa fa-sync-alt" aria-hidden="true"></i></i>
+                            </label>
                         <div class="col-lg-9"  ng-init="iso_file = '<NONE>'" >
                             <input type="text" class="form-control" placeholder="<%=l 'Type the ISO pathname' %>"
-                                   name="id_file"
-                                   ng-model="id_file" 
+                                   name="iso_file"
+                                   ng-model="iso_file" 
+                                   ng-hide="refresh_working || !isos"
                                    required=""
                                    uib-typeahead="item for item in getVisualizableObjects($viewValue, isos)"
-                                   typeahead-min-length="0">
+                                   typeahead-min-length="0"/>
                         </div>
                 </div>
             </div>
@@ -67,13 +74,13 @@
                 </div>
             </div>
 
-            <div ng-if="backend == 'LXC'" class="from-group row">
+            <div ng-show="backend == 'LXC'" class="from-group row">
                 <label for="id_template" class="col-xl-3 col-form-label"><%=l 'Template' %></label>
                 <div class="col-lg-9">
                     <select name ="id_template"
                         ng-model="id_template"
                         ng-options="item.name for item in templates_lxc track by item.id"
-                        required="">
+                        >
                     </select>
                 </div>
             </div>
@@ -85,7 +92,7 @@
                     </div>
             </div>
 
-            <div class="form-group row" ng-if="backend == 'KVM' || backend =='Void'">
+            <div class="form-group row" ng-show="backend == 'KVM' || backend =='Void'">
                 <label for="disk" class="col-xl-3 col-form-label"><%=l 'System Disk: (GB)' %></label>
                 <div class="col-lg-2">
                     <input class="form-control" ng-model="ddsize" type="number" min ="{{min_size}}" name="disk" required="">
@@ -94,7 +101,7 @@
                     <font color="orange"><%=l 'The Minimum Disk Size needed for this ISO is' %> {{min_size}}GB.</font>
                 </div>
             </div>
-            <div class="form-group row" ng-if="backend == 'KVM' || backend=='Void'">
+            <div class="form-group row" ng-show="backend == 'KVM' || backend=='Void'">
                 <label for="swap" class="col-xl-3 col-form-label">
                     <span ng-model="swap.label"
                         ng-class='{"text-muted": !swap.enabled}'><%=l 'Swap' %>
@@ -116,7 +123,7 @@
                     <span>Content will be cleaned on restore and shutdown</span>
                </div>
             </div>
-            <div class="form-group row" ng-if="backend == 'KVM' || backend=='Void'">
+            <div class="form-group row" ng-show="backend == 'KVM' || backend=='Void'">
                 <label for="swap" class="col-xl-3 col-form-label">
                     <span ng-model="data.label"
                         ng-class='{"text-muted": !data.enabled}'><%=l 'Data' %>
