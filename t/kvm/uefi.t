@@ -204,6 +204,7 @@ sub test_isos($vm) {
                         , arch => $iso->{arch}
                         , uefi => $uefi
                     }
+                    ,iso_file => $iso->{device}
                 );
                 wait_request();
                 my $domain = $vm->search_domain($name);
