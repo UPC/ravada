@@ -1631,13 +1631,20 @@ sub _ip_agent($self) {
     return if $@ && $@ =~ /^libvirt error code: (74|86),/;
     warn $@ if $@;
 
+    my $found;
     for my $if (@ip) {
         next if $if->{name} =~ /^lo/;
         for my $addr ( @{$if->{addrs}} ) {
+
+            next unless $addr->{type} == 0 && $addr->{addr} !~ /^127\./;
+
+            $found = $addr->{addr} if !$found;
+
             return $addr->{addr}
-            if $addr->{type} == 0 && $addr->{addr} !~ /^127\./;
+            if $self->_vm->_is_ip_bridged($addr->{addr});
         }
     }
+    return $found;
 }
 
 #sub _ip_arp($self) {
@@ -1655,7 +1662,7 @@ sub ip($self) {
     return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
 
 #    @ip = $self->_ip_arp();
-    return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
+#    return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
 
     return $self->_ip_agent();
 

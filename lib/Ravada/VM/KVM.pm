@@ -2410,4 +2410,19 @@ sub free_disk($self, $pool_name = undef ) {
     return $info->{available};
 }
 
+sub _is_ip_bridged($self, $ip0) {
+    my $ip = NetAddr::IP->new($ip0);
+    for my $net ( $self->vm->list_networks ) {
+        my $xml = XML::LibXML->load_xml(string
+            => $net->get_xml_description());
+        my ($xml_ip) = $xml->findnodes("/network/ip");
+        next if !$xml_ip;
+        my $address = $xml_ip->getAttribute('address');
+        my $netmask = $xml_ip->getAttribute('netmask');
+        my $net = NetAddr::IP->new($address,$netmask);
+        return 1 if $ip->within($net);
+    }
+    return 0;
+}
+
 1;
