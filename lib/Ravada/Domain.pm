@@ -2268,7 +2268,7 @@ sub _redefine_instances($self) {
         $@ = '';
         eval { $domain = $vm->search_domain($domain_name) } if $vm;
         warn $@ if $@;
-        $domain->copy_config($self);
+        $domain->copy_config($self) if $domain;
     }
 }
 
