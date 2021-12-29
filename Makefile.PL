@@ -34,6 +34,7 @@ WriteMakefile(
   },
   BUILD_REQUIRES => {
     'Test::Perl::Critic' => 0
+    ,'Test::Moose::More' => 0
   },
 
   test      => {TESTS => 't/*.t t/*/*.t'},
