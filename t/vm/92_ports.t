@@ -1351,7 +1351,7 @@ sub _wait_requests($domain) {
 
 sub import_base($vm) {
     if ($vm->type eq 'KVM') {
-        $BASE = rvd_back->search_domain('zz-test-base-alpine');
+        $BASE = rvd_back->search_domain($BASE_NAME);
         $BASE = import_domain($vm->type, $BASE_NAME, 1) if !$BASE;
         confess "Error: domain $BASE_NAME is not base" unless $BASE->is_base;
 
