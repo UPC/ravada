@@ -479,17 +479,17 @@ sub test_shutdown_by_name {
     };
     is($@,'') or return;
     ok($req);
-    rvd_back->_process_all_requests_dont_fork();
+    wait_request(debug => 0, request => $req);
     is($req->status(),'done');
 
     for ( 1 .. 2 ) {
-        rvd_back->_process_all_requests_dont_fork();
-        last if !$domain->is_active;
+        wait_request(debug => 0, request => $req);
+        last if !$domain->is_active || ! scalar($domain->list_requests);
         sleep 1;
     }
 
     my $domain2 = $vm->search_domain($domain_name);
-    is($domain2->is_active,0);
+    is($domain2->is_active,0,"Expecting $domain_name down") or exit;
 }
 
 sub test_shutdown_by_id {

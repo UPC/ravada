@@ -73,7 +73,16 @@ ravadaApp.directive("solShowMachine", swMach)
             $scope.backends = response.data;
             $scope.backend = response.data[0];
             $scope.loadTemplates();
+        $scope.list_machine_types($scope.backend);
     });
+
+      $scope.list_machine_types = function(backend) {
+          $http.get('/list_machine_types.json?vm_type='+backend).then(function(response) {
+              $scope.machine_types[backend] = response.data;
+          });
+
+      };
+
       $scope.loadTemplates = function() {
         $http.get('/list_images.json',{
           params: {
@@ -106,6 +115,9 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.showMinSize = false;
       $scope.min_size = 15;
 
+      $scope.iso = { arch: 'unknown' };
+      $scope.machine_types = { };
+
       $scope.change_iso = function(id) {
           $scope.id_iso_id = id.id;
           if (id.min_disk_size != null) {
@@ -121,7 +133,25 @@ ravadaApp.directive("solShowMachine", swMach)
 
       $scope.onIdIsoSelected = function() {
         $scope.iso_file = $scope.change_iso(this.id_iso)
-//        $scope.id_file = ($scope.iso_file === "<NONE>") ? "" : $scope.iso_file;
+        $scope.id_file = ($scope.iso_file === "<NONE>") ? "" : $scope.iso_file;
+        if ($scope.backend && $scope.machine_types[$scope.backend] 
+            && $scope.id_iso && $scope.id_iso.options
+            && $scope.id_iso.options['machine']) {
+            var types = $scope.machine_types[$scope.backend][$scope.id_iso.arch];
+            var option = $scope.id_iso.options['machine'];
+            for (var i=0; i<types.length
+            ;i++) {
+                var current = types[i];
+                if (current.substring(0,option.length) == option) {
+                    $scope.machine=current;
+                }
+            }
+        }
+        if ($scope.id_iso && $scope.id_iso.options
+                          && $scope.id_iso.options['bios']) {
+            $scope.bios = $scope.id_iso.options['bios'];
+        }
+
       };
 
       $scope.validate_new_name = function() {

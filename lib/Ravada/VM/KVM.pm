@@ -862,6 +862,7 @@ sub _domain_create_from_iso {
             if !$args{$_};
     }
     my $remove_cpu = delete $args2{remove_cpu};
+    my $options = delete $args2{options};
     for (qw(disk swap active request vm memory iso_file id_template volatile spice_password
             listen_ip)) {
         delete $args2{$_};
@@ -907,22 +908,11 @@ sub _domain_create_from_iso {
 
     my $file_xml =  $DIR_XML."/".$iso->{xml_volume};
 
-    my $device_disk = $self->create_volume(
-          name => "$args{name}-vda-".Ravada::Utils::random_name(4)
-         , xml => $file_xml
-        , size => $disk_size
-        ,target => 'vda'
-    );
+    my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}", $options);
 
-    my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
-
-    if ($device_cdrom && $device_cdrom ne '<NONE>') {
-        _xml_modify_cdrom($xml, $device_cdrom);
-    } else {
-        _xml_remove_cdrom($xml);
-    }
+    _xml_remove_cdrom_device($xml);
     _xml_remove_cpu($xml)                     if $remove_cpu;
-    _xml_modify_disk($xml, [$device_disk])    if $device_disk;
+    _xml_remove_disk($xml);
     $self->_xml_modify_usb($xml);
     _xml_modify_video($xml);
 
@@ -931,6 +921,11 @@ sub _domain_create_from_iso {
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner}
         , id_vm => $self->id
     );
+    $domain->add_volume( boot => 1, target => 'vda', size => $disk_size );
+    $domain->add_volume( boot => 2, target => 'hda'
+        ,device => 'cdrom'
+        ,file => $device_cdrom
+    ) if $device_cdrom && $device_cdrom ne '<NONE>';
 
     $domain->_set_spice_password($spice_password)
         if $spice_password;
@@ -1070,7 +1065,6 @@ sub _domain_create_from_base {
 
 
     my @device_disk = $self->_create_disk($base, $args{name});
-#    _xml_modify_cdrom($xml);
     if ( !defined $with_cd ) {
         $with_cd = grep (/\.iso$/ ,@device_disk);
     }
@@ -1135,7 +1129,7 @@ sub _fix_pci_slots {
 
 }
 
-sub _iso_name($self, $iso, $req, $verbose=1) {
+sub _iso_name($self, $iso, $req=undef, $verbose=1) {
 
     my $iso_name;
     if ($iso->{rename_file}) {
@@ -1321,6 +1315,8 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE id = ?");
     $sth->execute($id_iso);
     my $row = $sth->fetchrow_hashref;
+    $row->{options} = decode_json($row->{options})
+    if $row->{options} && !ref($row->{options});
     die "Missing iso_image id=$id_iso" if !keys %$row;
 
     return $row if $file_iso && -e $file_iso;
@@ -1595,9 +1591,7 @@ sub _fetch_sha256($self,$row) {
 # XML methods
 #
 
-sub _define_xml {
-    my $self = shift;
-    my ($name, $xml_source) = @_;
+sub _define_xml($self, $name, $xml_source, $options=undef) {
     my $doc = $XML->parse_file($xml_source) or die "ERROR: $! $xml_source\n";
 
         my ($node_name) = $doc->findnodes('/domain/name/text()');
@@ -1607,9 +1601,124 @@ sub _define_xml {
     $self->_xml_modify_uuid($doc);
     $self->_xml_modify_spice_port($doc);
     _xml_modify_video($doc);
+    $self->_xml_modify_options($doc, $options);
 
     return $doc;
 
+}
+
+sub _xml_modify_options($self, $doc, $options=undef) {
+    return if !$options || !scalar(keys (%$options));
+    my $uefi = delete $options->{uefi};
+    my $machine = delete $options->{machine};
+    my $arch = delete $options->{arch};
+    my $bios = delete $options->{'bios'};
+    confess "Error: bios=$bios and uefi=$uefi clash"
+    if defined $uefi && defined $bios
+        && ($bios !~/uefi/i && $uefi || $bios =~/uefi/i && !$uefi);
+
+    $uefi = 1 if $bios && $bios =~ /uefi/i;
+
+    confess "Arguments unknown ".Dumper($options)  if keys %$options;
+
+    if ( $uefi ) {
+        #        $self->_xml_add_libosinfo_win2k16($doc);
+        my ($xml_name) = $doc->findnodes('/domain/name');
+        $self->_xml_add_uefi($doc, $xml_name->textContent);
+    }
+    if ($arch) {
+        $self->_xml_set_arch($doc, $arch);
+    }
+    if ($machine) {
+        $self->_xml_set_machine($doc, $machine);
+    }
+    my ($type) = $doc->findnodes('/domain/os/type');
+
+    my $machine_found = $type->getAttribute('machine');
+    if ($machine_found =~ /i440/) {
+        #$self->_xml_remove_ide($doc);
+    }
+    if ($machine_found =~ /q35/) {
+        $self->_xml_set_pcie($doc);
+        $self->_xml_remove_ide($doc);
+        #       $self->_xml_remove_vmport($doc);
+    }
+
+}
+
+sub _xml_set_arch($self, $doc, $arch) {
+    my ($type) = $doc->findnodes('/domain/os/type');
+    $type->setAttribute(arch => $arch);
+}
+
+
+
+sub _xml_set_machine($self, $doc, $machine) {
+    my ($type) = $doc->findnodes('/domain/os/type');
+    $type->setAttribute(machine => $machine);
+}
+
+sub _xml_remove_ide($self, $doc) {
+    my ($devices) = $doc->findnodes("/domain/devices");
+    for my $controller ($doc->findnodes("/domain/devices/controller")) {
+        next if $controller->getAttribute('type') ne 'ide';
+        $devices->removeChild($controller);
+    }
+    for my $disk ($doc->findnodes("/domain/devices/disk")) {
+        my ($target) = $disk->findnodes("target");
+        $target->setAttribute('bus' => 'sata') if $target->getAttribute('bus') eq 'ide';
+
+        my ($address) = $disk->findnodes("address");
+        $disk->removeChild($address);
+    }
+
+}
+
+sub _xml_remove_vmport($self, $doc) {
+    my ($features) = $doc->findnodes("/domain/features");
+    my ($vmport) = $features->findnodes("vmport");
+    return if !$vmport;
+    $features->removeChild($vmport);
+}
+
+
+sub _xml_set_pcie($self, $doc) {
+    for my $controller ($doc->findnodes("/domain/devices/controller")) {
+        next if $controller->getAttribute('type') ne 'pci';
+        $controller->setAttribute('model' => 'pcie-root');
+    }
+}
+
+sub _xml_add_libosinfo_win2k16($self, $doc) {
+    my ($domain) = $doc->findnodes('/domain');
+    my ($metadata) = $domain->findnodes('metadata');
+    if (!$metadata) {
+        $metadata = $domain->addNewChild(undef,"metadata");
+    }
+    my $libosinfo = $metadata->addNewChild(undef,'libosinfo:libosinfo');
+    $libosinfo->setAttribute('xmlns:libosinfo' =>
+        "http://libosinfo.org/xmlns/libvirt/domain/1.0"
+    );
+    my $os = $libosinfo->addNewChild(undef, 'libosinfo:os');
+    $os->setAttribute('id' => "http://microsoft.com/win/2k16" );
+
+}
+
+sub _xml_add_uefi($self, $doc, $name) {
+    my ($os) = $doc->findnodes('/domain/os');
+    my ($loader) = $doc->findnodes('/domain/os/loader');
+    if (!$loader) {
+        $loader= $os->addNewChild(undef,"loader");
+    }
+    $loader->setAttribute('readonly' => 'yes');
+    $loader->setAttribute('type' => 'pflash');
+    $loader->appendText('/usr/share/OVMF/OVMF_CODE.fd');
+
+    my ($nvram) =$doc->findnodes("/domain/os/nvram");
+    if (!$nvram) {
+        $nvram = $os->addNewChild(undef,"nvram");
+    }
+    $nvram->appendText("/var/lib/libvirt/qemu/nvram/$name.fd");
 }
 
 sub _xml_remove_cpu {
@@ -1618,6 +1727,16 @@ sub _xml_remove_cpu {
     my ($cpu) = $domain->findnodes('cpu');
     $domain->removeChild($cpu)  if $cpu;
 }
+
+sub _xml_remove_disk($doc){
+    my ($dev) = $doc->findnodes('/domain/devices')
+        or confess "Missing node domain/devices";
+    for my $disk ( $dev->findnodes('disk') ) {
+        $dev->removeChild($disk)
+            if $disk && $disk->getAttribute('device') eq 'disk';
+    }
+}
+
 
 sub _xml_modify_video {
     my $doc = shift;
@@ -1707,23 +1826,6 @@ sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
         return $new_uuid if !grep /^$new_uuid$/,@uuids;
     }
     confess "I can't find a new unique uuid";
-}
-
-sub _xml_modify_cdrom {
-    my ($doc, $iso) = @_;
-
-    my @nodes = $doc->findnodes('/domain/devices/disk');
-    for my $disk (@nodes) {
-        next if $disk->getAttribute('device') ne 'cdrom';
-        for my $child ($disk->childNodes) {
-            if ($child->nodeName eq 'source') {
-                $child->setAttribute(file => $iso);
-                return;
-            }
-        }
-
-    }
-    die "I can't find CDROM on ". join("\n",map { $_->toString() } @nodes);
 }
 
 sub _xml_modify_memory {
@@ -2047,6 +2149,19 @@ sub _xml_add_sysinfo_entry($self, $doc, $field, $value) {
     ($hostname) = $oemstrings->addNewChild(undef,'entry');
     $hostname->appendText("$field: $value");
 }
+
+sub _xml_remove_cdrom_device {
+    my $doc = shift;
+
+    my ($devices) = $doc->findnodes('/domain/devices');
+    for my $disk ($devices->findnodes('disk')) {
+        if ( $disk->nodeName eq 'disk'
+            && $disk->getAttribute('device') eq 'cdrom') {
+            $devices->removeChild($disk);
+        }
+    }
+}
+
 
 sub _xml_remove_cdrom {
     my $doc = shift;
@@ -2408,6 +2523,52 @@ sub free_disk($self, $pool_name = undef ) {
         sleep 1;
     }
     return $info->{available};
+}
+
+sub list_machine_types($self) {
+
+    my %todo = map { $_ => 1 }
+    ('isapc', 'microvm', 'xenfv','xenpv');
+
+    my %ret_types;
+    my $xml = $self->vm->get_capabilities();
+    my $doc = XML::LibXML->load_xml(string => $xml);
+    for my $node_arch ($doc->findnodes("/capabilities/guest/arch")) {
+        my $arch = $node_arch->getAttribute('name');
+        my %types;
+        for my $node_machine (sort { $a->textContent cmp $b->textContent } $node_arch->findnodes("machine")) {
+            my $machine = $node_machine->textContent;
+            next if $machine !~ /^(pc-i440fx|pc-q35)-(\d+.\d+)/
+            && $machine !~ /^(pc)-(\d+\d+)$/
+            && $machine !~ /^([a-z]+)$/;
+
+            next if $todo{$machine};
+            my $version = ( $2 or 0 );
+            $types{$1} = [ $version,$machine ]
+            if !exists $types{$1} || $version > $types{$1}->[0];
+        }
+        my @types;
+        for (keys %types) {
+            push @types,($types{$_}->[1]);
+        }
+        $ret_types{$arch} = [sort @types];
+    }
+    return %ret_types;
+}
+
+sub _is_ip_bridged($self, $ip0) {
+    my $ip = NetAddr::IP->new($ip0);
+    for my $net ( $self->vm->list_networks ) {
+        my $xml = XML::LibXML->load_xml(string
+            => $net->get_xml_description());
+        my ($xml_ip) = $xml->findnodes("/network/ip");
+        next if !$xml_ip;
+        my $address = $xml_ip->getAttribute('address');
+        my $netmask = $xml_ip->getAttribute('netmask');
+        my $net = NetAddr::IP->new($address,$netmask);
+        return 1 if $ip->within($net);
+    }
+    return 0;
 }
 
 1;

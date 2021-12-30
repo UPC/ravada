@@ -46,7 +46,6 @@
                     </div>
                 </div>
                 <div class="from-group row" ng-show="id_iso.name && id_iso.has_cd">
-                        <br/>
                         <label for="iso_file" class="col-xl-3 col-form-label"><%=l 'Select ISO' %> <a
                           title="Select the .iso file the machine will utilize when installing the OS." href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html"><i class="fa fa-info-circle"></i></a>
                             <i class="badge badge-warning" ng-click="refresh_storage()"><i class="fa fa-sync-alt" aria-hidden="true"></i></i>
@@ -101,6 +100,18 @@
                     <font color="orange"><%=l 'The Minimum Disk Size needed for this ISO is' %> {{min_size}}GB.</font>
                 </div>
             </div>
+            <div class="from-group row">
+                <label for="_advanced_options" class="col-xl-3 col-form-label">
+                    <b><%=l 'Advanced options' %></b>
+                </label>
+                <div class="col-lg-9">
+                    <input type="checkbox" ng-model="_advanced_options"
+                        name="_advanced_options" value="0"/>
+                </div>
+            </div>
+
+            <div ng-show="_advanced_options">
+
             <div class="form-group row" ng-show="backend == 'KVM' || backend=='Void'">
                 <label for="swap" class="col-xl-3 col-form-label">
                     <span ng-model="swap.label"
@@ -109,7 +120,7 @@
                     </span>
                 </label>
                 <div class="col-lg-2">
-                    <input class="form-control" ng-model="swap.value" type="number" min ="0.1"name="swap"  id="swap" ng-disabled="!swap.enabled">
+                    <input class="form-control" ng-model="swap.value" type="number" min ="0.1" name="swap"  id="swap" ng-disabled="!swap.enabled || !_advanced_options"/>
                 </div>
                 <div class="col-lg-1">
                    <a ng-show="!swap.enabled"
@@ -131,7 +142,7 @@
                     </span>
                 </label>
                 <div class="col-lg-2">
-                    <input class="form-control" ng-model="data.value" type="number" min ="0.1"name="data"  id="data" ng-disabled="!data.enabled">
+                    <input class="form-control" ng-model="data.value" type="number" min ="0.1" name="data"  id="data" ng-disabled="!data.enabled || !_advanced_options">
                 </div>
                 <div class="col-lg-1">
                    <a ng-show="!data.enabled"
@@ -145,6 +156,28 @@
                     <span>Content will be kept on restore</span>
                </div>
             </div>
+
+                <div ng-show="id_iso.arch == 'x86_64'" class="from-group row">
+                    <label for="bios" class="col-xl-3 col-form-label"><%=l 'BIOS' %></label>
+                    <div class="col-lg-9">
+                    <select name="bios" ng-model="bios">
+                        <option value="Legacy"><%=l 'Legacy' %></option>
+                        <option value="UEFI"><%=l 'UEFI' %></option>
+                    </select>
+                    </div>
+                </div>
+
+
+                <div ng-show="machine_types[backend][id_iso.arch]" class="from-group row">
+                    <label for="machine" class="col-xl-3 col-form-label"><%=l 'Machine' %></label>
+                    <div class="col-lg-9">
+                    <select name="machine" ng-model="machine"
+                    ng-options="machine for machine in machine_types[backend][id_iso.arch]">
+                    </select>
+                    </div>
+                </div>
+            </div><!-- ng show advanced -->
+
             <div class="form-group row">
                 <div ng-show="new_machineForm.$submitted || new_machineForm.name.$touched">
                     <div ng-show="new_machineForm.name.$error.required" class="alert alert-warning" role="alert">
