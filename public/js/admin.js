@@ -311,7 +311,12 @@ ravadaApp.directive("solShowMachine", swMach)
           ws.onmessage = function(event) {
             var data = JSON.parse(event.data);
             $scope.$apply(function () {
-                        $scope.pingbe_fail = !data;
+                        var time1 = new Date() / 1000;
+                        if(time1 - time0 > 120 ) {
+                            $scope.pingbe_fail = !data;
+                        } else {
+                            $scope.pingbe_fail = false;
+                        }
             });
           }
       };
@@ -436,6 +441,8 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.new_name_duplicated=false;
     $scope.show_clones = { '0': false };
     $scope.show_machine = { '0': false };
+    $scope.pingbe_fail = false;
+    var time0 = new Date() / 1000;
   };
 
     function usersPageC($scope, $http, $interval, request) {
