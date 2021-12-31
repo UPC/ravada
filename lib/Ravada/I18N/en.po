@@ -245,8 +245,17 @@ msgstr "Machine settings"
 msgid "Cannot remove base, machine has clones"
 msgstr "Cannot remove base, machine has clones"
 
+msgid "Show active"
+msgstr "Show active"
+
+msgid "Show clones"
+msgstr "Show clones"
+
 msgid "show clones"
 msgstr "show clones"
+
+msgid "Hide clones"
+msgstr "Hide clones"
 
 msgid "hide clones"
 msgstr "hide clones"
@@ -308,7 +317,7 @@ msgid "Password"
 msgstr "Password"
 
 msgid "Start session"
-msgstr "Start session\n"
+msgstr "Start session"
 
 msgid "bits) in your computer."
 msgstr "bits) in your computer."
