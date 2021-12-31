@@ -60,8 +60,23 @@
     cursor: not-allowed;
 }
 
+span.request{
+    color: black;
+}
+
+
+.machine {
+    font-weight: normal;
+    color: black;
+}
+
 .base {
     font-weight: bold;
+    color: black;
+}
+
+.active_machine {
+    color: darkgreen;
 }
 
 .comment {
