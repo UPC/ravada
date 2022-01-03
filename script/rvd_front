@@ -2455,10 +2455,21 @@ sub admin {
     $c->render( template => 'main/admin_'.$page);
 };
 
+sub _search_id_iso($name) {
+    my $sth = $RAVADA->_dbh
+        ->prepare("SELECT id FROM iso_images WHERE name=?");
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    return $id;
+}
+
 sub new_machine {
     my $c = shift;
     my @error ;
     if ($c->param('submit')) {
+        if (!$c->param('id_iso_id') && $c->param('id_iso')) {
+            $c->param('id_iso_id', _search_id_iso($c->param('id_iso')));
+        }
         $c->param('id_iso', $c->param('id_iso_id')) if $c->param('id_iso_id');
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"

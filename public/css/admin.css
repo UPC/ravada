@@ -67,3 +67,13 @@
 .comment {
     color: gray
 }
+
+input.ng-invalid {
+  background-color: pink;
+  border: 1px solid red;
+}
+
+input.ng-invalid.ng-touched {
+    border: 1px solid red;
+}
+

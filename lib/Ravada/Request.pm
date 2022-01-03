@@ -756,11 +756,72 @@ sub _validate_create_domain($self) {
 
     $self->_validate_clone($id_base, $id_owner) if $id_base;
 
+    $self->_check_downloading();
+
     return if $owner->is_admin
             || $owner->can_create_machine()
             || ($id_base && $owner->can_clone);
 
     return $self->_status_error("done","Error: access denied to user ".$owner->name);
+
+}
+
+sub _check_downloading($self) {
+    my $id_iso = $self->defined_arg('id_iso');
+    my $iso_file = $self->defined_arg('iso_file');
+
+    return if !$id_iso && !$iso_file;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,downloading,device "
+        ." FROM iso_images "
+        ." WHERE (id=? or device=?) "
+    );
+    $sth->execute($id_iso,$iso_file);
+    my ($id_iso2,$downloading, $device) = $sth->fetchrow;
+    return if !$downloading && $device;
+
+    my $req_download = _search_request('download', id_iso => $id_iso2);
+    if (!$device && !$req_download) {
+        $req_download = Ravada::Request->download(
+            id_iso => $id_iso2
+            ,uid => Ravada::Utils::user_daemon->id
+        );
+    }
+    if (! $req_download) {
+        _mark_iso_downloaded($id_iso2);
+    } else {
+        $self->after_request($req_download->id);
+    }
+}
+
+sub _mark_iso_downloaded($id_iso) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE iso_images "
+        ." set downloading=0 "
+        ." WHERE id=?"
+    );
+    $sth->execute($id_iso);
+}
+
+sub _search_request($command,%fields) {
+    my $sth= $$CONNECTOR->dbh->prepare(
+        "SELECT id, args FROM requests WHERE command = ?"
+        ." AND status <> 'done' "
+    );
+    $sth->execute($command);
+
+    while ( my ($id, $args_json) = $sth->fetchrow ) {
+        return Ravada::Request->open($id) if !keys %fields;
+
+        my $args = decode_json($args_json);
+        my $found=1;
+        for my $key (keys %fields) {
+            if ( $args->{$key} ne $fields{$key} ) {
+                $found = 0;
+                last;
+            }
+        }
+        return Ravada::Request->open($id) if $found;
+    }
 
 }
 

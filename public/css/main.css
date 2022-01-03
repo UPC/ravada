@@ -359,4 +359,8 @@ div.tab button.active {
 
 input.ng-invalid {
   background-color: pink;
+
+span.info {
+    color: black;
+    text-width: italic;
 }
