@@ -83,6 +83,11 @@ span.request{
     color: gray
 }
 
+span.info {
+    color: black;
+    text-width: italic;
+}
+
 input.ng-invalid {
   background-color: pink;
   border: 1px solid red;

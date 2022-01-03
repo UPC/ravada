@@ -47,9 +47,9 @@
                                 && !id_iso.downloading
                                 && (iso_file == '<NONE>' || !iso_file) ">
                             <font color="#500000"><%=l 'This ISO image has not been already downloaded. This may take many minutes, even hours until the file is fetched from Internet.' %></font>
-                            <a type="button" class="btn btn-warning"
+                            <input type="checkbox" name="_download_"
                                 ng-click="iso_download(id_iso)"
-                            > <%=l "Download now" %></a>
+                            /> <%=l "Download now" %>
                         </div>
                     </div>
                 </div>
@@ -62,10 +62,10 @@
                             <input type="text" class="form-control" placeholder="<%=l 'Type the ISO pathname' %>"
                                    name="iso_file"
                                    ng-model="iso_file" 
-                                   ng-hide="refresh_working || !isos"
+                                   ng-hide="refresh_working || !isos ||id_iso.downloading"
                                    uib-typeahead="item for item in getVisualizableObjects($viewValue, isos)"
                                    typeahead-min-length="0"/>
-                        <span class="small" ng-show="id_iso.downloading">This ISO is being downloaded. The virtual machine will be created after.</span>
+                        <span class="info" ng-show="id_iso.downloading">This ISO is being downloaded. The virtual machine will be created after.</span>
                         </div>
                 </div>
             </div>

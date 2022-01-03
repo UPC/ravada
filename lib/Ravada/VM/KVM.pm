@@ -1298,7 +1298,7 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
     confess "ERROR: wget missing"   if !$WGET;
 
     return $self->_download_file_external_headers($url)    if $test;
-    return if -e $device;
+    return $url if -e $device;
 
     my @cmd = ($WGET,'-nv',$url,'-O',$device);
     my ($in,$out,$err) = @_;
@@ -1474,6 +1474,11 @@ sub _fetch_filename {
     if (@found) {
         $row->{device} = $found[0]->get_path;
         ($row->{filename}) = $found[0]->get_path =~ m{.*/(.*)};
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE iso_images SET device=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($row->{device}, $row->{id});
         return;
     } else {
         @found = $self->_search_url_file($row->{url}, $row->{file_re}) if !@found;
