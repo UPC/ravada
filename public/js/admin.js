@@ -349,7 +349,6 @@ ravadaApp.directive("solShowMachine", swMach)
                           n_active_current++;
                           if (!mach.show) {
                               $scope.n_active_hidden++;
-                              console.log(mach.name);
                           }
                       }
                   }
