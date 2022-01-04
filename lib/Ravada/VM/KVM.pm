@@ -1129,6 +1129,14 @@ sub _fix_pci_slots {
 
 }
 
+sub _set_iso_downloading($self, $iso,$value) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE iso_images SET downloading=?"
+        ." WHERE id=?"
+    );
+    $sth->execute($value,$iso->{id});
+}
+
 sub _iso_name($self, $iso, $req=undef, $verbose=1) {
 
     my $iso_name;
@@ -1156,7 +1164,10 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _fill_url($iso);
+
+        $self->_set_iso_downloading($iso,1);
         my $url = $self->_download_file_external($iso->{url}, $device, $verbose, $test);
+        $self->_set_iso_downloading($iso,0);
         $req->output($url) if $req;
         $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
@@ -1287,6 +1298,7 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
     confess "ERROR: wget missing"   if !$WGET;
 
     return $self->_download_file_external_headers($url)    if $test;
+    return $url if -e $device;
 
     my @cmd = ($WGET,'-nv',$url,'-O',$device);
     my ($in,$out,$err) = @_;
@@ -1462,6 +1474,11 @@ sub _fetch_filename {
     if (@found) {
         $row->{device} = $found[0]->get_path;
         ($row->{filename}) = $found[0]->get_path =~ m{.*/(.*)};
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE iso_images SET device=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($row->{device}, $row->{id});
         return;
     } else {
         @found = $self->_search_url_file($row->{url}, $row->{file_re}) if !@found;

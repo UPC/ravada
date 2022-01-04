@@ -1,11 +1,12 @@
 <div class="tab-pane fade show active" id="fromtemplate" role="tabpanel">
     <div class="card-body">
-        <div ng-hide="isos && isos.length">
+        <div ng-show="!backends">
             Loading ... <i class="fas fa-sync-alt fa-spin"></i>
         </div>
         <form name="new_machineForm" role="form" method="post"
+                class="needs-validation"
                 action="/new_machine.html" novalidate ng-cloak="1"
-                ng-show="isos && isos.length">
+                ng-show="backends">
             <div class="form-group row">
                 <label for="backend" class="col-xl-3 col-form-label"><%=l 'Backend' %> <a
                   title="Choose the virtualization type of the Virtual Machine." ng-show="backends.length > 1"><i class="fa fa-info-circle"></i></a></label>
@@ -24,24 +25,31 @@
                 <div class="from-group row">
                     <label for="id_iso" class="col-xl-3 col-form-label"><%=l 'Select Template' %> <a
                       title="Choose the OS you want to install."><i class="fa fa-info-circle"></i></a></label>
-                    <div class="col-lg-9">
+                    <div class="col-lg-9" ng-show="images">
                         <input type="hidden" name="id_iso_id" ng-value="id_iso_id">
                         <input type="text" class="form-control" placeholder="<%=l 'Type the template name' %>"
                                    name="id_iso"
                                    ng-model="id_iso" 
                                    required=""
+                                   autocomplete="off"
+                                   ng-show="images.length"
+                                   ng-class="{'ng-invalid': !id_iso.id }"
                                    uib-typeahead="item as item.name for item in getVisualizableObjects($viewValue, images, 'name')"
                                    typeahead-min-length="0"
                                    typeahead-on-select="onIdIsoSelected()">
+                        <i ng-hide="images.length"
+                            class="fas fa-sync-alt fa-spin"></i>
+
                         <div class="mb-2" ng-show="id_iso.description" >
                             <small ng-bind-html="id_iso.description">{{id_iso.description}}</small>
                         </div>
                         <div ng-show="id_iso.name && ( !id_iso.device && id_iso.url )
+                                && !id_iso.downloading
                                 && (iso_file == '<NONE>' || !iso_file) ">
                             <font color="#500000"><%=l 'This ISO image has not been already downloaded. This may take many minutes, even hours until the file is fetched from Internet.' %></font>
-                            <a type="button" class="btn btn-warning"
-                                ng-click="iso_download(id_iso.id)"
-                            > <%=l "Download now" %></a>
+                            <input type="checkbox" name="_download_"
+                                ng-click="iso_download(id_iso)"
+                            /> <%=l "Download now" %>
                         </div>
                     </div>
                 </div>
@@ -54,10 +62,10 @@
                             <input type="text" class="form-control" placeholder="<%=l 'Type the ISO pathname' %>"
                                    name="iso_file"
                                    ng-model="iso_file" 
-                                   ng-hide="refresh_working || !isos"
-                                   required=""
+                                   ng-hide="refresh_working || !isos ||id_iso.downloading"
                                    uib-typeahead="item for item in getVisualizableObjects($viewValue, isos)"
                                    typeahead-min-length="0"/>
+                        <span class="info" ng-show="id_iso.downloading">This ISO is being downloaded. The virtual machine will be created after.</span>
                         </div>
                 </div>
             </div>
@@ -210,12 +218,16 @@
                 <div ng-show="new_machineForm.name.$error.pattern" class="alert alert-warning" role="alert">
                         <strong><%=l 'Error' %></strong> <%=l 'The machine name must contain only alphabetic, numbers, undercores and dashes.' %>
                 </div>
+                <div ng-show="id_iso && !id_iso.id" class="alert alert-warning"
+                    role="alert">
+                    <strong><%=l 'Error' %></strong> <%=l 'Invalid Template' %>
+                </div>
             </div>
 
             <div class="form-group row">
                 <button type="reset" class="btn btn-outline-secondary mr-2" onclick = "location='/admin/machines'"><%=l 'Cancel' %></button>
                 <input type="submit" class="btn btn-primary" name="submit" value="<%=l 'Create' %>"
-                     ng-disabled="new_machineForm.$invalid || name_duplicated">
+                     ng-disabled="new_machineForm.$invalid || name_duplicated || (id_iso && !id_iso.id)">
             </div>
         </form>
     </div>

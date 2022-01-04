@@ -2293,6 +2293,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
     $self->_upgrade_table('iso_images','options','varchar(255)');
     $self->_upgrade_table('iso_images','has_cd','int (1) DEFAULT "1"');
+    $self->_upgrade_table('iso_images','downloading','int (1) DEFAULT "0"');
 
     $self->_upgrade_table('users','language','char(40) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
@@ -3200,6 +3201,13 @@ sub clean_old_requests {
     $self->_clean_requests('cleanup');
 }
 
+sub _clean_interrupted_downloads($self) {
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE iso_images "
+        ." SET downloading=0 WHERE downloading=1"
+    );
+    $sth->execute();
+}
+
 =head2 process_requests
 
 This is run in the ravada backend. It processes the commands requested by the fronted
@@ -3443,7 +3451,7 @@ sub _kill_dead_process($self) {
         "SELECT id,pid,command,start_time "
         ." FROM requests "
         ." WHERE start_time<? "
-        ." AND status = 'working' "
+        ." AND ( status like 'working%' OR status like 'downloading%') "
         ." AND pid IS NOT NULL "
     );
     $sth->execute(time - 2);
