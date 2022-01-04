@@ -1656,6 +1656,9 @@ sub _ip_agent($self) {
 #}
 
 sub ip($self) {
+    my ($ip) = $self->_ip_agent();
+    return $ip if $ip;
+
     my @ip;
     eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
     warn $@ if $@;
@@ -1664,8 +1667,7 @@ sub ip($self) {
 #    @ip = $self->_ip_arp();
 #    return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
 
-    return $self->_ip_agent();
-
+    return;
 }
 
 =head2 set_max_mem
