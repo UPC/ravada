@@ -282,7 +282,7 @@ sub _update_isos {
 	    androidx86 => {
                     name => 'Android 8.1 x86'
             ,description => 'Android-x86 64 bits. Requires an user provided ISO image.'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'android-amd64.xml'
              ,xml_volume => 'android-volume.xml'
 	     ,min_disk_size => '4'
@@ -290,7 +290,7 @@ sub _update_isos {
         arch_1909 => {
                     name => 'Arch Linux 19.09'
             ,description => 'Arch Linux 19.09.01 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'https://archive.archlinux.org/iso/2019.09.01/'
@@ -301,16 +301,17 @@ sub _update_isos {
 	mate_focal_fossa => {
                     name => 'Ubuntu Mate Focal Fossa 64 bits'
             ,description => 'Ubuntu Mate 20.04 (Focal Fossa) 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'focal_fossa-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04.*/release/ubuntu-mate-20.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         },
         mate_bionic => {
                     name => 'Ubuntu Mate Bionic 64 bits'
             ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-amd64.iso'
@@ -328,7 +329,7 @@ sub _update_isos {
         ubuntu_xenial => {
                     name => 'Ubuntu Xenial Xerus 64 bits'
             ,description => 'Ubuntu 16.04 LTS Xenial Xerus 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'xenial64-amd64.xml'
              ,xml_volume => 'xenial64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/16.04/ubuntu-16.04.*-desktop-amd64.iso'
@@ -339,7 +340,7 @@ sub _update_isos {
         mate_xenial => {
                     name => 'Ubuntu Mate Xenial'
             ,description => 'Ubuntu Mate 16.04.3 (Xenial) 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/16.04.*/release/ubuntu-mate-16.04.*-desktop-amd64.iso'
@@ -349,31 +350,34 @@ sub _update_isos {
 	,focal_fossa=> {
                     name => 'Ubuntu Focal Fossa'
             ,description => 'Ubuntu 20.04 Focal Fossa 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'focal_fossa-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/20.04/'
                 ,file_re => '^ubuntu-20.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+                   ,arch => 'x86_64'
         }
 
         ,bionic=> {
                     name => 'Ubuntu Bionic Beaver'
             ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/18.04/'
                 ,file_re => '^ubuntu-18.04.*desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
+            ,arch => 'x86_64'
         }
 
         ,serena64 => {
             name => 'Mint 18.1 Mate 64 bits'
     ,description => 'Mint Serena 18.1 with Mate Desktop based on Ubuntu Xenial 64 bits'
-           ,arch => 'amd64'
+           ,arch => 'x86_64'
             ,xml => 'xenial64-amd64.xml'
      ,xml_volume => 'xenial64-volume.xml'
             ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/18.3'
@@ -386,7 +390,7 @@ sub _update_isos {
         ,mint20_64 => {
             name => 'Mint 20 Mate 64 bits'
     ,description => 'Mint Ulyana 20 with Mate Desktop 64 bits'
-           ,arch => 'amd64'
+           ,arch => 'x86_64'
             ,xml => 'xenial64-amd64.xml'
      ,xml_volume => 'xenial64-volume.xml'
             ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/20.2'
@@ -397,21 +401,23 @@ sub _update_isos {
         ,alpine381_64 => {
             name => 'Alpine 3.8 64 bits'
     ,description => 'Alpine Linux 3.8 64 bits ( Minimal Linux Distribution )'
-           ,arch => 'amd64'
+           ,arch => 'x86_64'
             ,xml => 'alpine-amd64.xml'
      ,xml_volume => 'alpine381_64-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/'
         ,file_re => 'alpine-standard-3.8.1-x86_64.iso'
         ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/alpine-standard-3.8.1-x86_64.iso.sha256'
-            ,min_disk_size => '1'
+            ,min_disk_size => '2'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,alpine381_32 => {
             name => 'Alpine 3.8 32 bits'
     ,description => 'Alpine Linux 3.8 32 bits ( Minimal Linux Distribution )'
-           ,arch => 'i386'
+           ,arch => 'i686'
             ,xml => 'alpine-i386.xml'
      ,xml_volume => 'alpine381_32-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/'
+            ,options => { machine => 'pc-i440fx' }
         ,file_re => 'alpine-standard-3.8.1-x86.iso'
         ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/alpine-standard-3.8.1-x86.iso.sha256'
             ,min_disk_size => '1'
@@ -420,7 +426,7 @@ sub _update_isos {
             name => 'Fedora 28'
             ,description => 'RedHat Fedora 28 Workstation 64 bits'
             ,url => 'https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/28/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-28-.*\.iso'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => '$url/Fedora-Workstation-28-.*-x86_64-CHECKSUM'
@@ -429,18 +435,19 @@ sub _update_isos {
 	      ,kubuntu_64_focal_fossa => {
             name => 'Kubuntu Focal Fossa 64 bits'
             ,description => 'Kubuntu 20.04 Focal Fossa 64 bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'focal_fossa-amd64.xml'
             ,xml_volume => 'focal_fossa64-volume.xml'
             ,sha256_url => '$url/SHA256SUMS'
             ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/20.04.*/release/'
             ,file_re => 'kubuntu-20.04.*-desktop-amd64.iso'
             ,rename_file => 'kubuntu_focal_fossa_64.iso'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,kubuntu_64 => {
             name => 'Kubuntu Bionic Beaver 64 bits'
             ,description => 'Kubuntu 18.04 Bionic Beaver 64 bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,sha256_url => '$url/SHA256SUMS'
@@ -462,7 +469,7 @@ sub _update_isos {
         ,suse_15 => {
             name => "openSUSE Leap 15"
             ,description => "openSUSE Leap 15 64 bits"
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,url => 'https://download.opensuse.org/distribution/leap/15.0/iso/'
@@ -473,7 +480,7 @@ sub _update_isos {
         ,xubuntu_beaver_64 => {
             name => 'Xubuntu Bionic Beaver 64 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 64 bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,sha256_url => '$url/../SHA256SUMS'
@@ -548,6 +555,7 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'x86_64'
         }
        ,debian_stretch_32 => {
             name =>'Debian Stretch 32 bits'
@@ -568,6 +576,7 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'x86_64'
         }
         ,debian_buster_64=> {
             name =>'Debian Buster 64 bits'
@@ -578,6 +587,7 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'x86_64'
         }
         ,debian_buster_32=> {
             name =>'Debian Buster 32 bits'
@@ -591,6 +601,7 @@ sub _update_isos {
         }
         ,debian_bullseye_64=> {
             name =>'Debian Bullseye 64 bits'
+            ,arch => 'x86_64'
             ,description => 'Debian 11 Bullseye 64 bits (netinst)'
             ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/amd64/iso-cd/'
             ,file_re => 'debian-11.[\d\.]+-amd64-netinst.iso'
@@ -598,9 +609,11 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,debian_bullseye_32=> {
             name =>'Debian Bullseye 32 bits'
+            ,arch => 'i686'
             ,description => 'Debian 10 Bullseye 32 bits (netinst)'
             ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/i386/iso-cd/'
             ,file_re => 'debian-11.[\d\.]+-i386-netinst.iso'
@@ -608,11 +621,12 @@ sub _update_isos {
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,options => { machine => 'pc-i440fx' }
         }
         ,devuan_beowulf_amd64=> {
             name =>'Devuan Beowulf 64 bits'
             ,description => 'Devuan Beowulf Desktop Live (amd64)'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
             ,file_re => 'devuan_beowulf_.*_amd64_desktop-live.iso'
             ,sha256_url => '$url/SHASUMS.txt'
@@ -634,7 +648,7 @@ sub _update_isos {
         ,parrot_xfce_amd64 => {
             name => 'Parrot Home Edition XFCE'
             ,description => 'Parrot Home Edition XFCE 64 Bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,url => 'https://download.parrot.sh/parrot/iso/4.11.2/'
@@ -645,7 +659,7 @@ sub _update_isos {
         ,parrot_mate_amd64 => {
 		  name => 'Parrot Security Edition MATE'
             ,description => 'Parrot Security Edition MATE 64 Bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,url => 'https://download.parrot.sh/parrot/iso/4.11.2/'
@@ -656,7 +670,7 @@ sub _update_isos {
         ,kali_64 => {
             name => 'Kali Linux 2020'
             ,description => 'Kali Linux 2020 64 Bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,url => 'https://cdimage.kali.org/kali-2020.\d+/'
@@ -667,7 +681,7 @@ sub _update_isos {
         ,kali_64_netinst => {
             name => 'Kali Linux 2020 (NetInstaller)'
             ,description => 'Kali Linux 2020 64 Bits (light NetInstall)'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,url => 'https://cdimage.kali.org/kali-2020.\d+/'
@@ -682,6 +696,7 @@ sub _update_isos {
           ,xml => 'windows_7.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '21'
+          ,arch => 'x86_64'
         }
         ,windows_10 => {
           name => 'Windows 10'
@@ -690,6 +705,7 @@ sub _update_isos {
           ,xml => 'windows_10.xml'
           ,xml_volume => 'windows10-volume.xml'
           ,min_disk_size => '21'
+          ,arch => 'x86_64'
         }
         ,windows_xp => {
           name => 'Windows XP'
@@ -698,6 +714,7 @@ sub _update_isos {
           ,xml => 'windows_xp.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '3'
+          ,arch => 'x86_64'
         }
         ,windows_12 => {
           name => 'Windows 2012'
@@ -706,6 +723,7 @@ sub _update_isos {
           ,xml => 'windows_12.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '21'
+          ,arch => 'x86_64'
         }
         ,windows_8 => {
           name => 'Windows 8.1'
@@ -714,6 +732,7 @@ sub _update_isos {
           ,xml => 'windows_8.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '21'
+          ,arch => 'x86_64'
         }
        ,empty_32bits => {
           name => 'Empty Machine 32 bits'
@@ -729,6 +748,7 @@ sub _update_isos {
           ,xml => 'empty-amd64.xml'
           ,xml_volume => 'jessie-volume.xml'
           ,min_disk_size => '0'
+          ,arch => 'x86_64'
           ,has_cd => 0
         }
     );
@@ -742,6 +762,13 @@ sub _update_table_isos_url($self, $data) {
     my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE name=?");
     for my $release (sort keys %$data) {
         my $entry = $data->{$release};
+        if (exists $entry->{options} && $entry->{options} 
+            && ref($entry->{options})
+        ) {
+            unlock_hash(%$entry);
+            $entry->{options} = encode_json($entry->{options});
+            lock_hash(%$entry);
+        }
         $sth->execute($entry->{name});
         my $row = $sth->fetchrow_hashref();
         for my $field (keys %$entry) {
@@ -801,7 +828,7 @@ sub _scheduled_fedora_releases($self,$data) {
             $data->{$name} = {
             name => 'Fedora '.$release
             ,description => "RedHat Fedora $release Workstation 64 bits"
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,url => $url_file
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
@@ -1645,9 +1672,7 @@ sub _upgrade_table_fields($self, $table, $fields ) {
     }
 }
 
-sub _upgrade_table {
-    my $self = shift;
-    my ($table, $field, $definition) = @_;
+sub _upgrade_table($self, $table, $field, $definition) {
     my $dbh = $CONNECTOR->dbh;
 
     my ($new_size) = $definition =~ m{\((\d+)};
@@ -2266,6 +2291,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
     $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
+    $self->_upgrade_table('iso_images','options','varchar(255)');
     $self->_upgrade_table('iso_images','has_cd','int (1) DEFAULT "1"');
 
     $self->_upgrade_table('users','language','char(40) DEFAULT NULL');
@@ -2698,7 +2724,7 @@ sub create_domain {
     my $id_base = $args{id_base};
     my $data = delete $args{data};
     my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
-    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool));
+    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool options));
 
     confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
 
@@ -2723,7 +2749,7 @@ sub create_domain {
 
     my $error = $@;
     if ( $request ) {
-        $request->error($error) if $error;
+        $request->error(''.$error) if $error;
         if ($error =~ /has \d+ requests/) {
             $request->status('retry');
         }
@@ -4354,7 +4380,7 @@ sub _cmd_shutdown {
 
     Ravada::Request->refresh_machine(
                    uid => $uid
-            ,id_domain => $id_domain
+            ,id_domain => $domain->id
         ,after_request => $request->id
     );
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
@@ -4717,6 +4743,18 @@ sub _cmd_list_isos($self, $request){
     my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
 
     $request->output(encode_json(\@isos));
+}
+
+sub _cmd_list_machine_types($self, $request) {
+    my $id_vm = $request->defined_arg('id_vm');
+    my $vm_type = $request->defined_arg('vm_type');
+    my $vm;
+    $vm = Ravada::VM->open(type => $vm_type) if $vm_type;
+    $vm = Ravada::VM->open($id_vm) if $id_vm;
+    die "Error: No id_vm nor vm_type defined ".Dumper($request->args)
+    if !$id_vm && ! $vm_type;
+    my %out = $vm->list_machine_types();
+    $request->output(encode_json(\%out));
 }
 
 sub _cmd_set_time($self, $request) {
@@ -5283,6 +5321,7 @@ sub _req_method {
  ,rename_domain => \&_cmd_rename_domain
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
+ ,list_machine_types => \&_cmd_list_machine_types
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
 ,force_reboot   => \&_cmd_force_reboot

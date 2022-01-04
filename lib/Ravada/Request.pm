@@ -55,6 +55,7 @@ our %VALID_ARG = (
       ,remote_ip => 2
           ,start => 2
            ,data => 2
+           ,options => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
@@ -124,6 +125,8 @@ our %VALID_ARG = (
     }
     ,compact => { uid => 1, id_domain => 1 , keep_backup => 2 }
       ,purge => { uid => 1, id_domain => 1 }
+
+    ,list_machine_types => { uid => 1, id_vm => 2, vm_type => 2}
 
     #users
     ,post_login => { user => 1, locale => 2 }
@@ -505,7 +508,7 @@ sub _check_args {
 
     for (keys %{$VALID_ARG{$sub}}) {
         next if $VALID_ARG{$sub}->{$_} == 2; # optional arg
-        confess "Missing argument $_"   if !exists $args->{$_};
+        confess "Missing argument $_"   if !exists $args->{$_} || !defined $args->{$_};
     }
 
     return $args;

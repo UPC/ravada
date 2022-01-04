@@ -45,6 +45,7 @@ for my $vm_name ( 'KVM' ) {
         skip $msg,10    if !$vm;
 
         test_nat($vm);
+
     }
 }
 

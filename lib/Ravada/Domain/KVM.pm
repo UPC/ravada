@@ -291,7 +291,7 @@ sub remove {
         warn $@ if $@;
     }
 
-    eval { $self->domain->undefine()    if $self->domain && !$self->is_removed };
+    eval { $self->domain->undefine(Sys::Virt::Domain::UNDEFINE_NVRAM)    if $self->domain && !$self->is_removed };
     confess $@ if $@ && $@ !~ /libvirt error code: 42/;
 
     eval { $self->remove_disks() if $self->is_known };
@@ -1160,6 +1160,8 @@ sub add_volume {
 
 #    confess "Missing vm"    if !$args{vm};
     $args{vm} = $self->_vm if !$args{vm};
+
+    my ($machine_type) = $self->_os_type_machine();
     my ($target_dev) = ($args{target} or $self->_new_target_dev());
     my $name = delete $args{name};
     if (!$args{xml}) {
@@ -1196,6 +1198,7 @@ sub add_volume {
     if ( !defined $bus ) {
         if  ($device eq 'cdrom') {
             $bus = 'ide';
+            $bus = 'sata' if $machine_type =~ /^pc-q35/;
         } else {
             $bus = 'virtio'
         }
@@ -1328,7 +1331,7 @@ sub _search_volume_index($self, $file) {
     my $index = 0;
     for my $device ($doc->findnodes('/domain/devices/disk')) {
         my ($source) = $device->findnodes('source');
-        return $index if $source->getAttribute('file') eq $file;
+        return $index if $source && $source->getAttribute('file') eq $file;
         $index++;
     }
     confess "I can't find file $file in ".$self->name;
@@ -1641,7 +1644,7 @@ sub _ip_agent($self) {
             $found = $addr->{addr} if !$found;
 
             return $addr->{addr}
-            if $self->_vm->_is_ip_nat($addr->{addr});
+            if $self->_vm->_is_ip_bridged($addr->{addr});
         }
     }
     return $found;
@@ -2190,10 +2193,10 @@ sub _set_controller_usb($self,$numero, $data={}) {
         }
     }
     $numero = $count+1 if !defined $numero;
-    if ( $numero >= $count ) {
+    if ( $numero > $count ) {
         my $missing = $numero-$count;
         
-        for my $i (0..$missing) {
+        for my $i (1..$missing) {
             my $controller = $devices->addNewChild(undef,"redirdev");
             $controller->setAttribute(bus => 'usb');
             $controller->setAttribute(type => $tipo );

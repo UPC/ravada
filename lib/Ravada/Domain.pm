@@ -700,7 +700,7 @@ sub _around_add_volume {
     confess "Error creating volume, out of space $size . Disk free: "
             .Ravada::Utils::number_to_size($free_out)
             ."\n"
-        if exists $args{size} && $args{size} >= $free;
+        if exists $args{size} && $args{size} && $args{size} >= $free;
 
     if ($name) {
         confess "Error: volume $name already exists"
@@ -2268,7 +2268,7 @@ sub _redefine_instances($self) {
         $@ = '';
         eval { $domain = $vm->search_domain($domain_name) } if $vm;
         warn $@ if $@;
-        $domain->copy_config($self);
+        $domain->copy_config($self) if $domain;
     }
 }
 
@@ -4393,6 +4393,10 @@ sub drivers($self, $name=undef, $type=undef, $list=0) {
 
     _init_connector();
 
+    my $machine = 'unknown';
+    $machine = $self->_os_type_machine()
+    if defined $self && $self->type eq 'KVM';
+
     my $query = "SELECT id from domain_drivers_types ";
 
     my @sql_args = ();
@@ -4423,6 +4427,9 @@ sub drivers($self, $name=undef, $type=undef, $list=0) {
         if ($list) {
             my @options;
             for my $option ( $cur_driver->get_options ) {
+                next if $machine =~ /^pc-q35/
+                    && $name eq 'disk'
+                    && $option->{name} =~ /^IDE$/i;
                 push @options,($option->{name});
             }
             push @drivers, \@options;

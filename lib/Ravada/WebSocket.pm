@@ -267,7 +267,7 @@ sub _list_recent_requests($rvd, $seconds) {
 }
 
 sub _ping_backend($rvd, $args) {
-    my @reqs = _list_recent_requests($rvd, 20);
+    my @reqs = _list_recent_requests($rvd, 120);
 
     my $requested = scalar( grep { $_->{status} eq 'requested' } @reqs );
 
