@@ -1644,7 +1644,7 @@ sub _ip_agent($self) {
             $found = $addr->{addr} if !$found;
 
             return $addr->{addr}
-            if $self->_vm->_is_ip_bridged($addr->{addr});
+            if $self->_vm->_is_ip_nat($addr->{addr});
         }
     }
     return $found;

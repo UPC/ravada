@@ -2556,7 +2556,7 @@ sub list_machine_types($self) {
     return %ret_types;
 }
 
-sub _is_ip_bridged($self, $ip0) {
+sub _is_ip_nat($self, $ip0) {
     my $ip = NetAddr::IP->new($ip0);
     for my $net ( $self->vm->list_networks ) {
         my $xml = XML::LibXML->load_xml(string
