@@ -59,4 +59,4 @@ jobs:
       - name: Test Templates
         run: prove -lr t/17_templates.t
       - name: Test mock VM
-        run: prove -lr t/vm/60_new_args.t
+        run: prove -lr t/vm/60_new_args.t t/30_request.t
