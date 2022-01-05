@@ -15,16 +15,16 @@ use feature qw(signatures);
 
 ########################################################################
 
-sub test_bridge($vm) {
+sub test_nat($vm) {
     for my $net ( $vm->vm->list_all_networks ) {
         my $xml = XML::LibXML->load_xml(string
             => $net->get_xml_description());
         my ($xml_ip) = $xml->findnodes("/network/ip");
         my $address = $xml_ip->getAttribute('address');
         $address =~ s/\.\d+$/.4/;
-        is($vm->_is_ip_bridged($address),1);
+        is($vm->_is_ip_nat($address),1);
     }
-    is($vm->_is_ip_bridged("127.0.0.1"),0);
+    is($vm->_is_ip_nat("127.0.0.1"),0);
 }
 
 ########################################################################
@@ -44,7 +44,8 @@ for my $vm_name ( 'KVM' ) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
-        test_bridge($vm);
+        test_nat($vm);
+
     }
 }
 
