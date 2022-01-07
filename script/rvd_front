@@ -2535,7 +2535,7 @@ sub req_new_domain {
         ,swap => $swap
         ,data => $data
     );
-    $args{iso_file} => $c->param('iso_file') if defined $c->param('iso_file');
+    $args{iso_file} = $c->param('iso_file') if defined $c->param('iso_file');
     $args{options}->{uefi} = 1 if $bios && $bios eq 'UEFI';
     $args{options}->{machine} = $machine if $machine;
     $args{memory} = int($c->param('memory')*1024*1024)  if $c->param('memory');
