@@ -794,6 +794,21 @@ sub _check_downloading($self) {
     } else {
         $self->after_request($req_download->id);
     }
+    $sth = $$CONNECTOR->dbh->prepare("SELECT args FROM requests"
+            ." WHERE id=?"
+    );
+    $sth->execute($self->id);
+    my $args_json = $sth->fetchrow();
+    my $args = decode_json($args_json);
+
+    if (exists $args->{iso_file} && !$args->{iso_file}) {
+        delete $args->{iso_file};
+        $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set args=?"
+            ." WHERE id=?"
+        );
+        $sth->execute(encode_json($args), $self->id);
+    }
+
 }
 
 sub _mark_iso_downloaded($id_iso) {
@@ -1099,12 +1114,26 @@ Sets or gets de value of an argument of a Request
 
 =cut
 
-sub arg($self, $name, $value) {
+sub arg($self, $name, $value=undef) {
 
     confess "Unknown argument $name ".Dumper($self->{args})
         if !exists $self->{args}->{$name} && !defined $value;
 
-    $self->{args}->{$name} = $value if defined $value;
+    if (defined $value) {
+        $self->{args}->{$name} = $value;
+
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT args FROM requests"
+            ." WHERE id=?"
+        );
+        $sth->execute($self->id);
+        my $args_json = $sth->fetchrow();
+        my $args = decode_json($args_json);
+        $args->{$name} = $value;
+        $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set args=?"
+            ." WHERE id=?"
+        );
+        $sth->execute(encode_json($args),$self->id);
+    }
     return $self->{args}->{$name};
 }
 
