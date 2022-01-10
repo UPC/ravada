@@ -93,10 +93,7 @@ sub test_req_create_domain_iso {
     ok($req->status eq 'requested'
         ,"Status of request is ".$req->status." it should be requested");
 
-    my $rvd_back = rvd_back();
-#    $rvd_back->process_requests(1);
-    $rvd_back->process_requests();
-    wait_request(background => 1);
+    wait_request(background => 0);
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
@@ -159,8 +156,7 @@ sub test_req_create_domain {
         ,"Status of request is ".$req->status." it should be requested");
 
     my $rvd_back = rvd_back();
-    $rvd_back->process_requests();
-    wait_request(background => 1);
+    wait_request(background => 0);
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");

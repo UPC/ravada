@@ -82,7 +82,7 @@ our %VALID_ARG = (
     ,dettach => { uid => 1, id_domain => 1 }
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
-    ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2, delay => 2, test => 2}
+    ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2 }
     ,list_storage_pools => { id_vm => 1 , uid => 1 }
     ,check_storage => { uid => 1 }
@@ -756,14 +756,14 @@ sub _validate_create_domain($self) {
 
     $self->_validate_clone($id_base, $id_owner) if $id_base;
 
-    $self->_check_downloading();
-
-    return if $owner->is_admin
+    unless ( $owner->is_admin
             || $owner->can_create_machine()
-            || ($id_base && $owner->can_clone);
+            || ($id_base && $owner->can_clone)) {
 
-    return $self->_status_error("done","Error: access denied to user ".$owner->name);
+        return $self->_status_error("done","Error: access denied to user ".$owner->name);
+    }
 
+    $self->_check_downloading();
 }
 
 sub _check_downloading($self) {
@@ -772,19 +772,21 @@ sub _check_downloading($self) {
 
     return if !$id_iso && !$iso_file;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,downloading,device "
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id,downloading,device,has_cd "
         ." FROM iso_images "
         ." WHERE (id=? or device=?) "
     );
     $sth->execute($id_iso,$iso_file);
-    my ($id_iso2,$downloading, $device) = $sth->fetchrow;
+    my ($id_iso2,$downloading, $device, $has_cd) = $sth->fetchrow;
     return if !$downloading && $device;
 
     my $req_download = _search_request('download', id_iso => $id_iso2);
-    if (!$device && !$req_download) {
+    if ($has_cd && !$device && !$req_download) {
         $req_download = Ravada::Request->download(
             id_iso => $id_iso2
             ,uid => Ravada::Utils::user_daemon->id
+            ,vm => $self->defined_arg('vm')
         );
     }
     if (! $req_download) {

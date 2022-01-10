@@ -426,6 +426,33 @@ sub _is_ip_nat($self, $ip) {
     return 1;
 }
 
+sub _search_iso($self, $id, $device = undef) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images "
+        ." WHERE id=?"
+    );
+    $sth->execute($id);
+    my $row = $sth->fetchrow_hashref;
+    $row->{device} = $device if defined $device;
+    return $row;
+}
+
+sub _iso_name($self, $iso, $request=undef, $verbose=0) {
+    my $name = ($iso->{device} or $iso->{rename_file} or $iso->{file_re});
+    confess Dumper($iso) if !$name;
+    $name =~ s/(.*)\.\*(.*)/$1$2/;
+    $name =~ s/(.*)\.\+(.*)/$1.$2/;
+    confess $name if $name =~ m{[*+\\]};
+
+    $name = $self->dir_img."/".$name unless $name =~ m{^/};
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE iso_images "
+        ." SET device=? WHERE id=?"
+    );
+    $sth->execute($name, $iso->{id});
+    return $name;
+}
+
 #########################################################################3
 
 1;

@@ -4282,6 +4282,9 @@ sub _cmd_download {
 
     my $vm;
     $vm = Ravada::VM->open($request->args('id_vm')) if $request->defined_arg('id_vm');
+    $vm = Ravada::VM->open(type => $request->args('vm'))
+    if $request->defined_arg('vm');
+
     $vm = $self->search_vm('KVM')   if !$vm;
 
     my $delay = $request->defined_arg('delay');
@@ -4295,7 +4298,7 @@ sub _cmd_download {
         return;
     }
     my $device_cdrom = $vm->_iso_name($iso, $request, $verbose);
-    Ravada::Request->refresh_storage();
+    Ravada::Request->refresh_storage(id_vm => $vm->id);
 }
 
 sub _cmd_add_hardware {
