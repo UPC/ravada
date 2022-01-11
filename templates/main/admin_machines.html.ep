@@ -275,6 +275,11 @@
                 </tr>
             </tbody>
         </table>
+
+        <div ng-show="show_active && !n_show">
+            There are no active virtual machines.
+            <button ng-click="reload_list()">reload list</button>
+        </div>
     </div>
 </div>
 </div>
