@@ -72,6 +72,28 @@ Blacklist modules creating the file /etc/modprobe.d/blacklist-gpu.conf
   blacklist snd_hda_intel
   blacklist nvidiafb
 
+GPUs with embedded USB
+~~~~~~~~~~~~~~~~~~~~~~
+
+If your *GPU* also sports an *USB device*, you need to check what driver
+this device is using and blacklist it here also. Use `lspci -Dnn -k` to
+check what driver it is using.
+
+
+::
+
+    $ lspci -Dnn -k
+    000:b1:00.2 USB controller [0c03]: NVIDIA Corporation TU104 USB 3.1 Host Controller [10de:1ad8] (rev a1)
+    Subsystem: NVIDIA Corporation TU104 USB 3.1 Host Controller [10de:129f]
+    Kernel drivers in use: xhci_pci
+
+Then add it to the end of the file /etc/modprobe.d/blacklist-gpu.conf:
+
+::
+
+
+  blacklist xhci_pci
+
 Also prevent the nvidia drivers to load and raise vfio-pci instead in /etc/modprobe.d/nvidia.conf
 
 ::
@@ -136,12 +158,12 @@ The device should use vfio driver:
 ::
 
   1b:00.0 VGA compatible controller: NVIDIA Corporation Device 2204 (rev a1)
-	Subsystem: Gigabyte Technology Co., Ltd Device 403b
-	Kernel driver in use: vfio-pci
-	Kernel modules: nvidiafb, nouveau
+    Subsystem: Gigabyte Technology Co., Ltd Device 403b
+    Kernel driver in use: vfio-pci
+    Kernel modules: nvidiafb, nouveau
   1b:00.1 Audio device: NVIDIA Corporation Device 1aef (rev a1)
-	Subsystem: Gigabyte Technology Co., Ltd Device 403b
-	Kernel modules: snd_hda_intel
+    Subsystem: Gigabyte Technology Co., Ltd Device 403b
+   	Kernel modules: snd_hda_intel
 
 See that though in the NVIDIA VGA the preferred kernel modules are nvidiafb and nouveau,
 it actually loads vfio-pci which is great.
@@ -290,6 +312,55 @@ If it works nvidia smi will show the detected hardware:
     GPU 00000000:01:01.0
     Product Name                          : GeForce RTX 3090
     Product Brand                         : GeForce
+
+
+Common Problems
+---------------
+
+Error: iommu group is not viable
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you get this error trying to start the virtual machine with a GPU attached:
+
+::
+
+    2021-12-17T07:35:06.533164Z qemu-system-x86_64: -device vfio-pci,host=0000:b1:00.0,id=hostdev0,bus=pci.1,addr=0x1,rombar=1: vfio 0000:b1:00.0:
+    group 155 is not viable
+    Please ensure all devices within the iommu_group are bound to their vfio bus driver.
+
+This means the PCI you want to pass through has more devices. Possibly
+an USB embedded is loading its driver and preventing the GPU from being
+attached in the virtual machine.
+
+::
+
+  # dmesg | grep iommu | grep "group 155"
+  [    1.893555] pci 0000:b1:00.0: Adding to iommu group 155
+  [    1.893653] pci 0000:b1:00.1: Adding to iommu group 155
+  [    1.893751] pci 0000:b1:00.2: Adding to iommu group 155
+  [    1.893848] pci 0000:b1:00.3: Adding to iommu group 155
+
+
+If your *GPU* also sports an *USB device*, you need to check what
+driver this device is using and blacklist it here also. Use
+*lspci -Dnn -k* to check what driver it is using. Search for the PCI
+device numbers you found in the previous command.
+
+
+::
+
+    $ lspci -Dnn -k
+    000:b1:00.2 USB controller [0c03]: NVIDIA Corporation TU104 USB 3.1 Host Controller [10de:1ad8] (rev a1)
+    Subsystem: NVIDIA Corporation TU104 USB 3.1 Host Controller [10de:129f]
+    Kernel drivers in use: xhci_pci
+
+Then add it to the end of the file /etc/modprobe.d/blacklist-gpu.conf:
+
+::
+
+
+  blacklist xhci_pci
+
 
 References
 ----------
