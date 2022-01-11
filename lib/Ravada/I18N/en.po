@@ -1045,3 +1045,9 @@ msgstr "Pool"
 
 msgid "Prepare this machine as a base to create clones from it."
 msgstr "Prepare this machine as a base to create clones from it."
+
+msgid "There are no active virtual machines"
+msgstr "There are no active virtual machines"
+
+msgid "reload list"
+msgstr "reload list"

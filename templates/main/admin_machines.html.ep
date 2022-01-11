@@ -276,9 +276,10 @@
             </tbody>
         </table>
 
-        <div ng-show="show_active && !n_show">
-            There are no active virtual machines.
-            <button ng-click="reload_list()">reload list</button>
+        <div ng-cloak="1"
+            ng-show="list_machines && list_machines_time > 2 && show_active && !n_show">
+            <%=l 'There are no active virtual machines'%>
+            <button ng-click="reload_list()"><%=l 'reload list' %></button>
         </div>
     </div>
 </div>
