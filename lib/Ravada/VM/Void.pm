@@ -176,6 +176,7 @@ sub _add_cdrom($self, $domain, %args) {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE id=?");
         $sth->execute($id_iso);
         my $row = $sth->fetchrow_hashref();
+        return if !$row->{has_cd};
         $iso_file = $row->{device};
         if (!$iso_file) {
             $iso_file = $row->{name};
@@ -437,10 +438,14 @@ sub _search_iso($self, $id, $device = undef) {
 }
 
 sub _iso_name($self, $iso, $request=undef, $verbose=0) {
+
+    return '' if !$iso->{has_cd};
+
     my $name = ($iso->{device} or $iso->{rename_file} or $iso->{file_re});
     confess Dumper($iso) if !$name;
     $name =~ s/(.*)\.\*(.*)/$1$2/;
     $name =~ s/(.*)\.\+(.*)/$1.$2/;
+    $name =~ s/(.*)\[\\d.*?\]\+(.*)/${1}1$2/;
     confess $name if $name =~ m{[*+\\]};
 
     $name = $self->dir_img."/".$name unless $name =~ m{^/};
