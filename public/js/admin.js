@@ -414,9 +414,13 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.hide_clones = true;
     $scope.showClones = function(value){
         $scope.auto_hide_clones = false;
+        $scope.show_active = false;
         $scope.hide_clones = !value;
         for (var i in $scope.list_machines){
             mach = $scope.list_machines[i];
+            if (mach._level == 0 ) {
+                mach.show = true;
+            }
             if (mach.is_base) {
                 $scope.toggle_show_clones(mach.id,value);
             }
@@ -548,16 +552,38 @@ ravadaApp.directive("solShowMachine", swMach)
         }
     };
     $scope.do_show_active = function() {
+        $scope.show_active=true;
+        $scope.hide_clones = true;
         $scope.n_active_hidden = 0;
+        var n_show = 0;
         for (var [key, mach ] of Object.entries($scope.list_machines)) {
             if (mach.status =='active') {
                 $scope.show_machine[mach.id_base] = true;
-                show_parents(mach);
                 mach.show = true;
+                n_show++;
+            } else {
+                mach.show = false;
             }
         }
         $scope.show_active=true;
+        $scope.n_show = n_show;
     };
+    $scope.reload_list = function() {
+        $scope.show_active=false;
+        $scope.hide_clones = true;
+        $scope.n_active_hidden = 0;
+        for (var [key, mach ] of Object.entries($scope.list_machines)) {
+            if (mach._level == 0 ) {
+                mach.show = true;
+            } else {
+                mach.show = false;
+                if (mach.status == 'active') {
+                    $scope.n_active_hidden++;
+                }
+            }
+        }
+    };
+
     //On load code
     $scope.modalOpened=false;
     $scope.rename= {new_name: 'new_name'};
