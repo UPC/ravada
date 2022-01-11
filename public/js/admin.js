@@ -69,12 +69,18 @@ ravadaApp.directive("solShowMachine", swMach)
 
   function newMachineCtrl($scope, $http) {
 
-    $http.get('/list_vm_types.json').then(function(response) {
-            $scope.backends = response.data;
-            $scope.backend = response.data[0];
-            $scope.loadTemplates();
-        $scope.list_machine_types($scope.backend);
-    });
+      $scope.init = function(url) {
+          $scope.url = url;
+          $scope.images = [];
+          subscribe_list_isos(url);
+          subscribe_list_images(url);
+          subscribe_list_machines(url);
+          $http.get('/list_vm_types.json').then(function(response) {
+              $scope.backends = response.data;
+              $scope.backend = response.data[0];
+              $scope.loadTemplates(url);
+          });
+      }
 
       $scope.list_machine_types = function(backend) {
           $http.get('/list_machine_types.json?vm_type='+backend).then(function(response) {
@@ -84,25 +90,60 @@ ravadaApp.directive("solShowMachine", swMach)
       };
 
       $scope.loadTemplates = function() {
-        $http.get('/list_images.json',{
-          params: {
-            backend: $scope.backend
-          }
-        }).then(function(response) {
-                $scope.images = response.data;
-        });
+          $scope.list_machine_types($scope.backend);
+          subscribe_list_images($scope.backend);
       }
+
+      /*
       $http.get('/iso_file.json').then(function(response) {
               $scope.isos = response.data;
       });
+      */
+
+      subscribe_list_isos = function() {
+          var ws = new WebSocket($scope.url);
+          ws.onopen = function(event) { ws.send('list_isos') };
+          ws.onmessage = function(event) {
+              var data = JSON.parse(event.data);
+              $scope.$apply(function () {
+                  $scope.isos = data;
+              });
+          }
+      };
+
+      subscribe_list_machines = function() {
+          var ws = new WebSocket($scope.url);
+          ws.onopen = function(event) { ws.send('list_machines') };
+          ws.onmessage = function(event) {
+              var data = JSON.parse(event.data);
+              $scope.$apply(function () {
+                  $scope.base = data;
+              });
+          }
+      };
 
 
+
+      subscribe_list_images = function(backend) {
+          var ws = new WebSocket($scope.url);
+          ws.onopen = function(event) { ws.send('list_iso_images/'+backend) };
+          ws.onmessage = function(event) {
+              var data = JSON.parse(event.data);
+              $scope.$apply(function () {
+                  $scope.images = data;
+              });
+          }
+      };
+
+
+      /*
       $http.get('/list_lxc_templates.json').then(function(response) {
               $scope.templates_lxc = response.data;
       });
-      $scope.iso_download=function(id_iso) {
-            $http.get('/iso/download/'+id_iso+'.json').then(function() {
-                window.location.href = '/admin/machines';
+      */
+      $scope.iso_download=function(iso) {
+            iso.downloading=1;
+            $http.get('/iso/download/'+iso.id+'.json').then(function() {
             });
       };
       $scope.name_duplicated = false;
@@ -118,17 +159,17 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.iso = { arch: 'unknown' };
       $scope.machine_types = { };
 
-      $scope.change_iso = function(id) {
-          $scope.id_iso_id = id.id;
-          if (id.min_disk_size != null) {
-            $scope.min_size = id.min_disk_size;
+      $scope.change_iso = function(iso) {
+          $scope.id_iso_id = iso.id;
+          if (iso.min_disk_size != null) {
+            $scope.min_size = iso.min_disk_size;
             $scope.showMinSize = true;
           }
           else {
             $scope.showMinSize = false;
             $scope.min_size = 1;
           }
-          return (id.device != null) ? id.device : "";
+          return (iso.device != null) ? iso.device : "";
       };
 
       $scope.onIdIsoSelected = function() {
@@ -214,12 +255,7 @@ ravadaApp.directive("solShowMachine", swMach)
               }, 3000);
           }
         );
-
       };
-
-      $http.get('/list_machines.json').then(function(response) {
-              $scope.base = response.data;
-      });
 
       $scope.swap = {
           enabled: true
@@ -313,7 +349,6 @@ ravadaApp.directive("solShowMachine", swMach)
                           n_active_current++;
                           if (!mach.show) {
                               $scope.n_active_hidden++;
-                              console.log(mach.name);
                           }
                       }
                   }
@@ -379,9 +414,13 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.hide_clones = true;
     $scope.showClones = function(value){
         $scope.auto_hide_clones = false;
+        $scope.show_active = false;
         $scope.hide_clones = !value;
         for (var i in $scope.list_machines){
             mach = $scope.list_machines[i];
+            if (mach._level == 0 ) {
+                mach.show = true;
+            }
             if (mach.is_base) {
                 $scope.toggle_show_clones(mach.id,value);
             }
@@ -513,16 +552,38 @@ ravadaApp.directive("solShowMachine", swMach)
         }
     };
     $scope.do_show_active = function() {
+        $scope.show_active=true;
+        $scope.hide_clones = true;
         $scope.n_active_hidden = 0;
+        var n_show = 0;
         for (var [key, mach ] of Object.entries($scope.list_machines)) {
             if (mach.status =='active') {
                 $scope.show_machine[mach.id_base] = true;
-                show_parents(mach);
                 mach.show = true;
+                n_show++;
+            } else {
+                mach.show = false;
             }
         }
         $scope.show_active=true;
+        $scope.n_show = n_show;
     };
+    $scope.reload_list = function() {
+        $scope.show_active=false;
+        $scope.hide_clones = true;
+        $scope.n_active_hidden = 0;
+        for (var [key, mach ] of Object.entries($scope.list_machines)) {
+            if (mach._level == 0 ) {
+                mach.show = true;
+            } else {
+                mach.show = false;
+                if (mach.status == 'active') {
+                    $scope.n_active_hidden++;
+                }
+            }
+        }
+    };
+
     //On load code
     $scope.modalOpened=false;
     $scope.rename= {new_name: 'new_name'};

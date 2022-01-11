@@ -109,9 +109,7 @@ sub test_req_create_domain{
     }
     ok($req,"Expecting request to create_domain");
 
-    rvd_back()->process_requests();
-
-    wait_request(background => 1);
+    wait_request(background => 0);
     ok($req->status('done'),"Expecting status='done' , got ".$req->status);
     ok(!$req->error,"Expecting error '' , got '".($req->error or '')."'");
 
@@ -145,6 +143,7 @@ sub test_req_create_fail {
     } else {
         rvd_back->_process_all_requests_dont_fork();
     }
+    delete_request('refresh_storage');
 
     wait_request( background => $fork, check_error => 0 );
     ok($req->status('done'),"Expecting status='done' , got ".$req->status);
@@ -222,6 +221,7 @@ sub test_args {
     }
     {
         my $domain = test_req_create_domain($vm_name, $memory, $disk, "Request");
+        return if !$domain;
         test_memory($vm_name, $domain, $memory, "Request") if $domain;
 
         my $domain_backend = rvd_back->search_domain($domain->name);

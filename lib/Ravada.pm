@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '1.1.2';
+our $VERSION = '1.3.0-beta6';
 
 use Carp qw(carp croak cluck);
 use Data::Dumper;
@@ -2293,6 +2293,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
     $self->_upgrade_table('iso_images','options','varchar(255)');
     $self->_upgrade_table('iso_images','has_cd','int (1) DEFAULT "1"');
+    $self->_upgrade_table('iso_images','downloading','int (1) DEFAULT "0"');
 
     $self->_upgrade_table('users','language','char(40) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
@@ -3200,6 +3201,13 @@ sub clean_old_requests {
     $self->_clean_requests('cleanup');
 }
 
+sub _clean_interrupted_downloads($self) {
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE iso_images "
+        ." SET downloading=0 WHERE downloading=1"
+    );
+    $sth->execute();
+}
+
 =head2 process_requests
 
 This is run in the ravada backend. It processes the commands requested by the fronted
@@ -3443,7 +3451,7 @@ sub _kill_dead_process($self) {
         "SELECT id,pid,command,start_time "
         ." FROM requests "
         ." WHERE start_time<? "
-        ." AND status = 'working' "
+        ." AND ( status like 'working%' OR status like 'downloading%') "
         ." AND pid IS NOT NULL "
     );
     $sth->execute(time - 2);
@@ -4274,6 +4282,9 @@ sub _cmd_download {
 
     my $vm;
     $vm = Ravada::VM->open($request->args('id_vm')) if $request->defined_arg('id_vm');
+    $vm = Ravada::VM->open(type => $request->args('vm'))
+    if $request->defined_arg('vm');
+
     $vm = $self->search_vm('KVM')   if !$vm;
 
     my $delay = $request->defined_arg('delay');
@@ -4287,7 +4298,7 @@ sub _cmd_download {
         return;
     }
     my $device_cdrom = $vm->_iso_name($iso, $request, $verbose);
-    Ravada::Request->refresh_storage();
+    Ravada::Request->refresh_storage(id_vm => $vm->id);
 }
 
 sub _cmd_add_hardware {

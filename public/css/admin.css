@@ -82,3 +82,18 @@ span.request{
 .comment {
     color: gray
 }
+
+span.info {
+    color: black;
+    text-width: italic;
+}
+
+input.ng-invalid {
+  background-color: pink;
+  border: 1px solid red;
+}
+
+input.ng-invalid.ng-touched {
+    border: 1px solid red;
+}
+

@@ -162,7 +162,7 @@ sub test_req_create_base {
     ok($req->status eq 'requested'
         ,"Status of request is ".$req->status." it should be requested");
 
-    $ravada->_process_requests_dont_fork();
+    wait_request();
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");

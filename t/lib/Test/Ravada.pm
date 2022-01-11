@@ -1157,6 +1157,11 @@ sub wait_request {
                     $run_at = 'now' if !$run_at;
                     $run_at = " $run_at";
                 }
+                if ($req->command eq 'refresh_machine_ports'
+                    && $req->error =~ /has ports .*up/) {
+                    $req->status('done');
+                    next;
+                }
                 if ($debug && (time%5 == 0)) {
                     diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
                         .$run_at." bg=$background"
@@ -1180,6 +1185,7 @@ sub wait_request {
                             like($error,qr{^($|.*port \d+ already used|rsync done)}) or confess $req->command;
                         } elsif($req->command eq 'refresh_machine_ports') {
                             like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
+                            $req->status('done');
                         } elsif($req->command eq 'open_exposed_ports') {
                             like($error,qr{^($|.*No ip in domain|.*duplicated port)});
                         } elsif($req->command eq 'compact') {

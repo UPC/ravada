@@ -3512,8 +3512,13 @@ sub open_exposed_ports($self) {
     return if !@ports;
     return if !$self->is_active;
 
-    if ( ! $self->ip ) {
+    my $ip = $self->ip;
+    if ( ! $ip ) {
         die "Error: No ip in domain ".$self->name.". Retry.\n";
+    }
+
+    if (!$self->_vm->_is_ip_nat($ip)) {
+        die "Error: No NAT ip in domain ".$self->name." found. Retry.\n";
     }
 
     $self->display_info(Ravada::Utils::user_daemon);
