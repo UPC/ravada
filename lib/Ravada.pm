@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '1.3.0-beta6';
+our $VERSION = '1.3.0';
 
 use Carp qw(carp croak cluck);
 use Data::Dumper;
