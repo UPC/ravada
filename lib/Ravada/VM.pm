@@ -401,7 +401,7 @@ sub _around_create_domain {
      my $request = delete $args{request};
      delete $args{iso_file};
      delete $args{id_template};
-     delete @args{'description','remove_cpu','vm','start'};
+     delete @args{'description','remove_cpu','vm','start','options'};
 
     confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
 
@@ -2241,6 +2241,17 @@ sub list_host_devices($self) {
     }
 
     return @found;
+}
+
+=head2 list_machine_types
+
+Placeholder for list machine types that returns an empty list by default.
+It can be overloaded in each backend module.
+
+=cut
+
+sub list_machine_types($self) {
+    return ();
 }
 
 1;

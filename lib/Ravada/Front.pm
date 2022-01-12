@@ -521,7 +521,7 @@ sub list_vm_types {
 
     return $self->{cache}->{vm_types} if $self->{cache}->{vm_types};
 
-    my $result = [@VM_TYPES];
+    my $result = [sort @VM_TYPES];
 
     $self->{cache}->{vm_types} = $result if $result->[0];
 
@@ -659,6 +659,8 @@ sub list_iso_images {
     );
     $sth->execute;
     while (my $row = $sth->fetchrow_hashref) {
+        $row->{options} = decode_json($row->{options})
+            if $row->{options};
         push @iso,($row);
     }
     $sth->finish;
@@ -1516,6 +1518,34 @@ sub update_host_device($self, $args) {
         ,_force => 1
     );
     return 1;
+}
+
+=head2 list_machine_types
+
+Returns a reference to a list of the architectures and its machine types
+
+=cut
+
+sub list_machine_types($self, $uid, $vm_type) {
+
+    my $key="list_machine_types";
+    my $cache = $self->_cache_get($key);
+    return $cache if $cache;
+
+    my $req = Ravada::Request->list_machine_types(
+        vm_type => $vm_type
+        ,uid => $uid
+    );
+    return {} if !$req;
+    $self->wait_request($req);
+    return {} if $req->status ne 'done';
+
+    my $types = {};
+    $types = decode_json($req->output()) if $req->output;
+
+    $self->_cache_store($key,$types);
+
+    return $types;
 }
 
 =head2 version

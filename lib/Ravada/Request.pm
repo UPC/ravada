@@ -55,6 +55,7 @@ our %VALID_ARG = (
       ,remote_ip => 2
           ,start => 2
            ,data => 2
+           ,options => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
@@ -81,7 +82,7 @@ our %VALID_ARG = (
     ,dettach => { uid => 1, id_domain => 1 }
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
-    ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2, delay => 2, test => 2}
+    ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2 }
     ,list_storage_pools => { id_vm => 1 , uid => 1 }
     ,check_storage => { uid => 1 }
@@ -124,6 +125,8 @@ our %VALID_ARG = (
     }
     ,compact => { uid => 1, id_domain => 1 , keep_backup => 2 }
       ,purge => { uid => 1, id_domain => 1 }
+
+    ,list_machine_types => { uid => 1, id_vm => 2, vm_type => 2}
 
     #users
     ,post_login => { user => 1, locale => 2 }
@@ -518,7 +521,7 @@ sub _check_args {
 
     for (keys %{$VALID_ARG{$sub}}) {
         next if $VALID_ARG{$sub}->{$_} == 2; # optional arg
-        confess "Missing argument $_"   if !exists $args->{$_};
+        confess "Missing argument $_"   if !exists $args->{$_} || !defined $args->{$_};
     }
 
     return $args;
@@ -776,11 +779,88 @@ sub _validate_create_domain($self) {
 
     $self->_validate_clone($id_base, $id_owner) if $id_base;
 
-    return if $owner->is_admin
+    unless ( $owner->is_admin
             || $owner->can_create_machine()
-            || ($id_base && $owner->can_clone);
+            || ($id_base && $owner->can_clone)) {
 
-    return $self->_status_error("done","Error: access denied to user ".$owner->name);
+        return $self->_status_error("done","Error: access denied to user ".$owner->name);
+    }
+
+    $self->_check_downloading();
+}
+
+sub _check_downloading($self) {
+    my $id_iso = $self->defined_arg('id_iso');
+    my $iso_file = $self->defined_arg('iso_file');
+
+    return if !$id_iso && !$iso_file;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id,downloading,device,has_cd "
+        ." FROM iso_images "
+        ." WHERE (id=? or device=?) "
+    );
+    $sth->execute($id_iso,$iso_file);
+    my ($id_iso2,$downloading, $device, $has_cd) = $sth->fetchrow;
+
+    my $req_download = _search_request('download', id_iso => $id_iso2);
+    if ($has_cd && !$device && !$req_download) {
+        $req_download = Ravada::Request->download(
+            id_iso => $id_iso2
+            ,uid => Ravada::Utils::user_daemon->id
+            ,vm => $self->defined_arg('vm')
+        );
+    }
+    if (! $req_download) {
+        _mark_iso_downloaded($id_iso2);
+    } else {
+        $self->after_request($req_download->id);
+    }
+    $sth = $$CONNECTOR->dbh->prepare("SELECT args FROM requests"
+            ." WHERE id=?"
+    );
+    $sth->execute($self->id);
+    my $args_json = $sth->fetchrow();
+    my $args = decode_json($args_json);
+
+    if (exists $args->{iso_file} && !$args->{iso_file}) {
+        delete $args->{iso_file};
+        $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set args=?"
+            ." WHERE id=?"
+        );
+        $sth->execute(encode_json($args), $self->id);
+    }
+
+}
+
+sub _mark_iso_downloaded($id_iso) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE iso_images "
+        ." set downloading=0 "
+        ." WHERE id=?"
+    );
+    $sth->execute($id_iso);
+}
+
+sub _search_request($command,%fields) {
+    my $sth= $$CONNECTOR->dbh->prepare(
+        "SELECT id, args FROM requests WHERE command = ?"
+        ." AND status <> 'done' "
+    );
+    $sth->execute($command);
+
+    while ( my ($id, $args_json) = $sth->fetchrow ) {
+        return Ravada::Request->open($id) if !keys %fields;
+
+        my $args = decode_json($args_json);
+        my $found=1;
+        for my $key (keys %fields) {
+            if ( $args->{$key} ne $fields{$key} ) {
+                $found = 0;
+                last;
+            }
+        }
+        return Ravada::Request->open($id) if $found;
+    }
 
 }
 
@@ -1057,12 +1137,26 @@ Sets or gets de value of an argument of a Request
 
 =cut
 
-sub arg($self, $name, $value) {
+sub arg($self, $name, $value=undef) {
 
     confess "Unknown argument $name ".Dumper($self->{args})
         if !exists $self->{args}->{$name} && !defined $value;
 
-    $self->{args}->{$name} = $value if defined $value;
+    if (defined $value) {
+        $self->{args}->{$name} = $value;
+
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT args FROM requests"
+            ." WHERE id=?"
+        );
+        $sth->execute($self->id);
+        my $args_json = $sth->fetchrow();
+        my $args = decode_json($args_json);
+        $args->{$name} = $value;
+        $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set args=?"
+            ." WHERE id=?"
+        );
+        $sth->execute(encode_json($args),$self->id);
+    }
     return $self->{args}->{$name};
 }
 

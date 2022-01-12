@@ -93,10 +93,7 @@ sub test_req_create_domain_iso {
     ok($req->status eq 'requested'
         ,"Status of request is ".$req->status." it should be requested");
 
-    my $rvd_back = rvd_back();
-#    $rvd_back->process_requests(1);
-    $rvd_back->process_requests();
-    wait_request(background => 1);
+    wait_request(background => 0);
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
@@ -159,8 +156,7 @@ sub test_req_create_domain {
         ,"Status of request is ".$req->status." it should be requested");
 
     my $rvd_back = rvd_back();
-    $rvd_back->process_requests();
-    wait_request(background => 1);
+    wait_request(background => 0);
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
@@ -479,17 +475,17 @@ sub test_shutdown_by_name {
     };
     is($@,'') or return;
     ok($req);
-    rvd_back->_process_all_requests_dont_fork();
+    wait_request(debug => 0, request => $req);
     is($req->status(),'done');
 
     for ( 1 .. 2 ) {
-        rvd_back->_process_all_requests_dont_fork();
-        last if !$domain->is_active;
+        wait_request(debug => 0, request => $req);
+        last if !$domain->is_active || ! scalar($domain->list_requests);
         sleep 1;
     }
 
     my $domain2 = $vm->search_domain($domain_name);
-    is($domain2->is_active,0);
+    is($domain2->is_active,0,"Expecting $domain_name down") or exit;
 }
 
 sub test_shutdown_by_id {
