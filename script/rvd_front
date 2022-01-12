@@ -2521,7 +2521,7 @@ sub req_new_domain {
     my $data = ($c->param('data') or 0);
     $data *= 1024*1024*1024;
 
-    if (!$c->param('_advanced')) {
+    if (!$c->param('_advanced_options')) {
         $swap = int(1024 * 1024 * 1024) if !$swap;
         $data = int(1024 * 1024 * 1024) if !$data;
     }
