@@ -779,7 +779,6 @@ sub _check_downloading($self) {
     );
     $sth->execute($id_iso,$iso_file);
     my ($id_iso2,$downloading, $device, $has_cd) = $sth->fetchrow;
-    return if !$downloading && $device;
 
     my $req_download = _search_request('download', id_iso => $id_iso2);
     if ($has_cd && !$device && !$req_download) {
