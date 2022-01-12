@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2021-10-26 16:38+0000\n"
+"PO-Revision-Date: 2022-01-13 16:53+0000\n"
 "Last-Translator: Oğuz Ersen <oguzersen@protonmail.com>\n"
 "Language-Team: Turkish <https://hosted.weblate.org/projects/ravada/"
 "translation/tr/>\n"
@@ -16,7 +16,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"X-Generator: Weblate 4.9-dev\n"
+"X-Generator: Weblate 4.10.1\n"
 
 msgid "Ravada broker"
 msgstr "Ravada Aracı"
@@ -306,7 +306,7 @@ msgid "Password"
 msgstr "Parola"
 
 msgid "Start session"
-msgstr "Oturumu başlat\n"
+msgstr "Oturumu başlat"
 
 msgid "bits) in your computer."
 msgstr "bit) bilgisayarınızda."
@@ -1049,3 +1049,18 @@ msgstr "Havuzdaki sanal makineler."
 
 msgid "SSO/CAS Login"
 msgstr "SSO/CAS ile Oturum Açma"
+
+msgid "Hide clones"
+msgstr "Klonları gizle"
+
+msgid "Show active"
+msgstr "Etkinleri göster"
+
+msgid "Show clones"
+msgstr "Klonları göster"
+
+msgid "There are no active virtual machines"
+msgstr "Etkin sanal makine yok"
+
+msgid "reload list"
+msgstr "listeyi yeniden yükle"
