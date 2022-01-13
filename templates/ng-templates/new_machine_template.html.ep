@@ -114,7 +114,7 @@
                 </label>
                 <div class="col-lg-9">
                     <input type="checkbox" ng-model="_advanced_options"
-                        name="_advanced_options" value="0"/>
+                        name="_advanced_options" value="1"/>
                 </div>
             </div>
 
