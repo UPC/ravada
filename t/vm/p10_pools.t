@@ -359,6 +359,43 @@ sub test_remove_clone($vm) {
 
 }
 
+sub test_pool_with_volatiles($vm) {
+    # Clones should be created.
+    # As are volatile, they should be started
+    # On shutdown they should be destroyed
+    # In a while new clones should appear to honor the pool
+    #
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
+
+    $base->pools(1);
+    $base->volatile_clones(1);
+
+    my $n = 5;
+    $base->pool_clones($n);
+    $base->pool_start($n);
+    my $req = Ravada::Request->manage_pools(uid => user_admin->id
+        ,_no_duplicate => 1);
+    wait_request( debug => 0);
+    is($req->status, 'done');
+
+    my @clones = $base->clones();
+    is(scalar @clones, $n);
+
+    $req = Ravada::Request->shutdown_domain(uid => user_admin->id
+        ,id_domain => $clones[0]->{id}
+    );
+    wait_request();
+    is(scalar($base->clones()),$n-1);
+
+    $req = Ravada::Request->manage_pools(uid => user_admin->id
+        ,_no_duplicate => 1);
+    wait_request( debug => 0);
+    is($req->status, 'done');
+
+    is(scalar($base->clones()),$n);
+    remove_domain($base);
+}
+
 ###############################################################
 
 init();
@@ -381,6 +418,8 @@ for my $vm_name (reverse vm_names() ) {
 
         diag("*** Testing pools in $vm_name ***");
         import_base($vm);
+
+        test_pool_with_volatiles($vm);
 
         test_exposed_port($vm);
 
