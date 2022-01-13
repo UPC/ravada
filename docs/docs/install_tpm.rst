@@ -1,7 +1,7 @@
 Install TPM ( Trusted Platform Module )
 =======================================
 
-This is a guide to install a Trusted Platform Module emulator in Ubuntu.
+This is a guide to install a Trusted Platform Module emulator in Linux.
 It is required to install Windows 11 virtual machines.
 
 Ubuntu
@@ -42,3 +42,8 @@ Redhat and derivatives
 Packages for RPM based distributions are likely to appear and
 the installation should be possible with dnf.
 `Please report <https://ravada.upc.edu/#help>`_.
+
+References
+----------
+
+* https://getlabsdone.com/how-to-enable-tpm-and-secure-boot-on-kvm/
