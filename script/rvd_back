@@ -223,6 +223,7 @@ sub do_start {
 
     my $ravada = Ravada->new( %CONFIG );
     _do_start_logging();
+    $ravada->_clean_requests('ping_backend');
 
     #    Ravada::Request->enforce_limits();
     #Ravada::Request->refresh_vms();
@@ -259,6 +260,7 @@ sub done_request {
 sub clean_old_requests {
     my $ravada = Ravada->new( %CONFIG );
     $ravada->clean_old_requests();
+    $ravada->_clean_interrupted_downloads();
 }
 
 sub autostart_machines {

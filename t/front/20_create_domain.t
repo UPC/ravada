@@ -161,6 +161,8 @@ for my $vm_name ( vm_names() ) {
     ok($req, "Request $name not created");
 
     $RVD_FRONT->wait_request($req);
+    $RVD_FRONT->wait_request($req);
+    $RVD_FRONT->wait_request($req);
 
     ok($req->status eq 'done',"Request for create $vm domain ".$req->status);
     ok(!$req->error,$req->error);

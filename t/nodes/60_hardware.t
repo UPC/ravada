@@ -105,6 +105,13 @@ sub test_driver_migrate($vm, $node, $domain, $driver_name) {
 sub test_drivers_type($type, $vm, $node) {
 
     my $domain = create_domain($vm->type);
+
+    my $req = Ravada::Request->add_hardware(uid => user_admin->id
+                , id_domain => $domain->id
+                , name => 'usb'
+                , number => 3
+    );
+    wait_request(debug => 0);
     my $driver_type = $domain->drivers($type);
 
     if (!$HAS_NOT_VALUE{$type}) {
@@ -279,8 +286,8 @@ for my $vm_name ( vm_names() ) {
         clean_remote_node($node1);
         clean_remote_node($node2)   if $node2;
 
-        test_graphics($vm, $node1);
         test_drivers($vm, $node1);
+        test_graphics($vm, $node1);
 
         test_change_hardware($vm);
         test_change_hardware($vm, $node1);

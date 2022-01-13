@@ -878,16 +878,16 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
     confess "Error: hardware $number already added ".Dumper($list)
     if defined $number && $number < scalar(@$list);
 
-    $#$list = $number if defined $number && scalar @$list <= $number;
+    $#$list = $number-1 if defined $number && scalar @$list < $number;
 
     my @list2;
     if (!defined $number) {
         @list2 = @$list;
         push @list2,($data or " $name z 1");
     } else {
-        $number = $#$list if !defined $number;
         my $count = 0;
         for my $item ( @$list ) {
+            $count++;
             if ($number == $count) {
                 my $data2 = ( $data or " $name a ".($count+1));
                 $data2 = " $name b ".($count+1) if defined $data2 && ref($data2) && !keys %$data2;
@@ -898,7 +898,6 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
             $item = { driver => 'spice' , port => 'auto' , listen_ip => $self->_vm->listen_ip }
             if $name eq 'display' && !defined $item;
             push @list2,($item or " $name b ".($count+1));
-            $count++;
         }
     }
     $hardware->{$name} = \@list2;

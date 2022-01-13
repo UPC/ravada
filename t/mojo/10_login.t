@@ -228,6 +228,7 @@ sub test_login_non_admin($t, $base, $clone){
         my ($req) = grep { $_->status ne 'done' } $user->list_requests();
         last if !$req;
         wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+        delete_request('open_exposed_ports');
     }
     my ($req) = reverse $user->list_requests();
     is($req->error, '');

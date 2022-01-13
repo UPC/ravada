@@ -79,7 +79,7 @@ sub _check_html_lint($url, $content, $option = {}) {
             || $error->errtext =~ /Unknown attribute "image.* for tag <div/
             || $error->errtext =~ /Unknown attribute "ipaddress"/
             || $error->errtext =~ /Unknown attribute "sizes" for tag .link/
-            || $error->errtext =~ /Unknown attribute "(uib|typeahead).*?" for tag .input/
+            || $error->errtext =~ /Unknown attribute "(autocomplete|uib|typeahead).*?" for tag .input/
          ) {
              next;
          }

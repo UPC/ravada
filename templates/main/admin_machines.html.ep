@@ -100,20 +100,6 @@
       </div>
         <div class="row">
             <div class="col-md-5"><h2><%=l 'Virtual Machines' %></h2></div>
-            <div class="col-md-4" align="left">
-% 		if ($_user->can_create_machine){
-                <h2>
-                    <button class="btn btn-warning" ng-click="list_machines={};subscribe_all('<%= url_for('ws_subscribe')->to_abs %>');"><i class="fa fa-sync-alt" aria-hidden="true"></i></button>
-                    <a type="button" class="btn btn-success" href="/new_machine.html">
-                        <b><%=l 'New Machine' %></b>
-                    <i ng-show="download_working"
-                        class="fa fa-angle-double-down" aria-hidden="true"></i>
-                    <i ng-show="download_done && !download_working"
-                        class="fa fa-check" aria-hidden="true"></i>
-                    </a>
-                </h2>
-%		}
-            </div>
         </div>
 
 %=      include 'bootstrap/requests'
@@ -125,14 +111,6 @@
                 <tr>
                     <th ><div class="lgMachName machine-button" style="display:inline;float:down">
                       <%=l 'Machine Name' %></div>
-                        <div style="float:right" ng-show="n_clones">
-                            <a ng-show="hide_clones" ng-click="showClones(true)"
-                              class="badge badge-primary dropdown-toggle text-white"
-                              align="right"><%=l 'show clones' %></a>
-                            <a ng-show="!hide_clones" ng-click="showClones(false)"
-                              class="badge badge-primary dropdown-toggle text-white"
-                              align="right"><%=l 'hide clones' %></a>
-                        </div>
                     </th>
                     <th class="lgMachToggle">
                       <span
@@ -158,8 +136,12 @@
                         <i class="far fa-file-alt" title="Pool" ng-show="machine.is_pool"></i>
 
                         <a align="right" href="/machine/manage/{{machine.id}}.html"
-                              ng-class="{base: machine.is_base
-                              ,disabled: !machine.can_manage}"
+                            class="machine"
+                              ng-class="{
+                              disabled: !machine.can_manage
+                              ,base: machine.is_base
+                              ,active_machine: machine.status == 'active'
+                              }"
                         title ="<%=l 'Manage machine' %>">{{machine.name}}</a> {{machine.comment}}
                    <span class="comment" ng-show="machine.is_volatile"><%=l 'Volatile' %></span>
                         <button ng-show="machine.has_clones" type="button"
@@ -293,6 +275,12 @@
                 </tr>
             </tbody>
         </table>
+
+        <div ng-cloak="1"
+            ng-show="list_machines && list_machines_time > 2 && show_active && !n_show">
+            <%=l 'There are no active virtual machines'%>
+            <button ng-click="reload_list()"><%=l 'reload list' %></button>
+        </div>
     </div>
 </div>
 </div>

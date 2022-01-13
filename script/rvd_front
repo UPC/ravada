@@ -598,6 +598,18 @@ get '/list_images.json' => sub {
     $c->render(json => $RAVADA->list_iso_images($vm_name or undef));
 };
 
+get '/list_machine_types.json' => sub {
+    my $c = shift;
+
+    return access_denied($c) unless _logged_in($c)
+        && $USER->can_create_machine();
+
+    my $vm_name = $c->param('vm_type');
+    my $types = $RAVADA->list_machine_types($USER->id, $vm_name );
+    $c->render(json => $types);
+};
+
+
 get '/iso_file.json' => sub {
     my $c = shift;
     return access_denied($c) unless _logged_in($c)
@@ -2443,10 +2455,21 @@ sub admin {
     $c->render( template => 'main/admin_'.$page);
 };
 
+sub _search_id_iso($name) {
+    my $sth = $RAVADA->_dbh
+        ->prepare("SELECT id FROM iso_images WHERE name=?");
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    return $id;
+}
+
 sub new_machine {
     my $c = shift;
     my @error ;
     if ($c->param('submit')) {
+        if (!$c->param('id_iso_id') && $c->param('id_iso')) {
+            $c->param('id_iso_id', _search_id_iso($c->param('id_iso')));
+        }
         $c->param('id_iso', $c->param('id_iso_id')) if $c->param('id_iso_id');
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"
@@ -2490,20 +2513,31 @@ sub req_new_domain {
     my $swap = ($c->param('swap') or 0);
     my $vm = ( $c->param('backend') or 'KVM');
     $swap = int($swap * 1024*1024*1024);
+    my $bios = $c->param('bios');
+    my $machine = ($c->param('machine') or '');
+    $machine =~ s/^string://;
+    $machine = '' if $machine eq '?';
 
     my $data = ($c->param('data') or 0);
     $data *= 1024*1024*1024;
+
+    if (!$c->param('_advanced')) {
+        $swap = int(1024 * 1024 * 1024) if !$swap;
+        $data = int(1024 * 1024 * 1024) if !$data;
+    }
 
     my %args = (
            name => $name
         ,id_iso => $c->param('id_iso')
         ,id_template => $c->param('id_template')
-        ,iso_file => $c->param('iso_file')
         ,vm=> $vm
         ,id_owner => $USER->id
         ,swap => $swap
         ,data => $data
     );
+    $args{iso_file} = $c->param('iso_file') if defined $c->param('iso_file');
+    $args{options}->{uefi} = 1 if $bios && $bios eq 'UEFI';
+    $args{options}->{machine} = $machine if $machine;
     $args{memory} = int($c->param('memory')*1024*1024)  if $c->param('memory');
     $args{disk} = int($c->param('disk')*1024*1024*1024) if $c->param('disk');
     $args{id_template} = $c->param('id_template')   if $vm =~ /^LX/;

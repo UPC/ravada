@@ -60,10 +60,40 @@
     cursor: not-allowed;
 }
 
+span.request{
+    color: black;
+}
+
+
+.machine {
+    font-weight: normal;
+    color: black;
+}
+
 .base {
     font-weight: bold;
+    color: black;
+}
+
+.active_machine {
+    color: darkgreen;
 }
 
 .comment {
     color: gray
 }
+
+span.info {
+    color: black;
+    text-width: italic;
+}
+
+input.ng-invalid {
+  background-color: pink;
+  border: 1px solid red;
+}
+
+input.ng-invalid.ng-touched {
+    border: 1px solid red;
+}
+
