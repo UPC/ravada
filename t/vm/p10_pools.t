@@ -369,6 +369,7 @@ sub test_pool_with_volatiles($vm) {
 
     $base->pools(1);
     $base->volatile_clones(1);
+    $base->_data('shutdown_disconnected', 1);
 
     my $n = 5;
     $base->pool_clones($n);
@@ -378,14 +379,37 @@ sub test_pool_with_volatiles($vm) {
     wait_request( debug => 0);
     is($req->status, 'done');
 
-    my @clones = $base->clones();
-    is(scalar @clones, $n);
+    my @clones0 = $base->clones();
+    is(scalar @clones0, $n);
+    my @clones;
+    for my $c (@clones0) {
+        push @clones,(Ravada::Domain->open($c->{id}));
+        is($c->{status},'active');
+        is($c->{is_volatile},1);
+        is($c->{is_pool},1);
+        Ravada::Request->start_domain(
+            uid => user_admin->id
+            ,id_domain => $c->{id}
+            ,remote_ip => '1.2.3.4'
+        );
+    }
+    wait_request(debug => 1);
+    delete_request('start','create','clone');
+    for my $clone (@clones ) {
+        $clone->_data('client_status','disconnected');
+    }
 
-    $req = Ravada::Request->shutdown_domain(uid => user_admin->id
-        ,id_domain => $clones[0]->{id}
-    );
-    wait_request();
-    is(scalar($base->clones()),$n-1);
+    for ( 1 .. 60 ) {
+        my $req_shutdown = Ravada::Request::_search_request(
+                'shutdown_domain'
+        );
+        wait_request(debug => 0);
+        last if $req_shutdown || scalar($base->clones()) < $n;
+        Ravada::Request->enforce_limits();
+        wait_request(debug => 0);
+        sleep 1;
+    }
+    ok(scalar($base->clones()) < $n, "Expecting less than $n up");
 
     $req = Ravada::Request->manage_pools(uid => user_admin->id
         ,_no_duplicate => 1);
