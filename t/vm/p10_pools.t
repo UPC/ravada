@@ -393,7 +393,7 @@ sub test_pool_with_volatiles($vm) {
             ,remote_ip => '1.2.3.4'
         );
     }
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     delete_request('start','create','clone');
     for my $clone (@clones ) {
         $clone->_data('client_status','disconnected');
