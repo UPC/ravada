@@ -6,7 +6,7 @@ SPICE client setup for MacOS
 ::
 
 	brew tap jeffreywildman/homebrew-virt-manager
-    brew install virt-viewer
+	brew install virt-viewer
 
 2. Once that's installed should be able make a call **remote-viewer** with a spice file, for example 405.vv file downloaded from Ravada.
     
@@ -27,7 +27,7 @@ We want remote-viewer to automatically start and open the session when we double
 
 	/usr/local/bin/remote-viewer "$@"
 
-Make sure to select as arguments for passing the input. Save as ~/Applications/ravada-spice-launcher.app.
+Make sure to select as arguments for passing the input. Save as **~/Applications/ravada-spice-launcher.app**
 
 3. Locate a ravada spice file .vv file or any file with .vv extension, and then hold down the Control key. With the Control key pressed, click on the .vv file, and then right click, open with, look for the .app file you just made, and check the Always Open With checkbox in the bottom of the dialog. This took a couple of tries for it to stick, but eventually remembered.
 
