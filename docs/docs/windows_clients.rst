@@ -1,5 +1,5 @@
-Windows SPICE Clients
-=====================
+SPICE client setup for Windows
+==============================
 
 Download Virt Viewer
 --------------------
