@@ -783,7 +783,7 @@ get '/machine/view/(:id).(:type)' => sub {
     my $id = $c->stash('id');
     my $type = $c->stash('type');
 
-    return $c->redirect_to('/login') if !_logged_in($c);
+#    return $c->redirect_to('/login') if !_logged_in($c);
 
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
@@ -2692,10 +2692,8 @@ sub access_denied_json($c, $msg='Access denied') {
 }
 
 sub access_denied {
-
     my $c = shift;
     my $msg = shift;
-
     if (!$msg) {
         $msg = 'Access denied to '.$c->req->url->to_abs->path;
         $msg .= ' for user '.$USER->name if $USER && !$USER->is_temporary;
@@ -2704,7 +2702,21 @@ sub access_denied {
     if (defined $c->stash('type') && $c->stash('type') eq 'json') {
         return $c->render(json => { error => $msg }, status => 403);
     }
-    return $c->render(text => $msg, status => 403);
+    my @css_snippets = ["\t.intro {\n\t\tbackground:"
+                    ." url($CONFIG_FRONT->{login_bg_file})"
+                    ." no-repeat bottom center scroll;\n\t}"];
+
+    return $c->render(
+                    template => ($CONFIG_FRONT->{access_denied} or 'main/access_denied')
+                    ,css => ['/css/main.css']
+                    ,csssnippets => @css_snippets
+                    ,js => ['/js/main.js?v='.$RAVADA->version]
+                    ,navbar_custom => 1
+                    ,error => $msg
+                    ,can_login => ((! $USER) || ($USER->is_temporary))
+                    ,guide => $CONFIG_FRONT->{guide}
+                    ,status => 403
+    );
 }
 
 sub _access_denied { return access_denied(@_) }
