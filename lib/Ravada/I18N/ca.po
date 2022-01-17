@@ -1103,3 +1103,9 @@ msgstr "Anònim"
 
 msgid "This name is duplicated"
 msgstr "Aquest nom està duplicat"
+
+msgid "There are no active virtual machines"
+msgstr "No hi han màquines virtuals actives"
+
+msgid "reload list"
+msgstr "torna a carregar la llista"

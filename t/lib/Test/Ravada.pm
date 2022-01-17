@@ -51,6 +51,7 @@ create_domain
     start_node shutdown_node remove_node hibernate_node
     start_domain_internal   shutdown_domain_internal
     hibernate_domain_internal
+    remove_domain_internal
     remote_node
     remote_node_2
     remote_node_shared
@@ -2004,6 +2005,16 @@ sub shutdown_domain_internal($domain) {
         $domain->_store(is_active => 0 );
     } else {
         confess "ERROR: I don't know how to shutdown internal domain of type ".$domain->type;
+    }
+}
+
+sub remove_domain_internal($domain) {
+    if ( $domain->type eq 'KVM') {
+        $domain->domain->undefine();
+    } elsif ($domain->type eq 'Void') {
+        unlink $domain->_config_file();
+    } else {
+        confess "I don't know how to remove ".$domain->name;
     }
 }
 
