@@ -7,7 +7,7 @@ Requirements
 ------------
 
 Windows 11 requires TPM ( Trusted Platform Module ).
-Follow `this guide <http://ravada.readthedocs.io/en/latest/docs/install_TPM.html>`_
+Follow `this guide <http://ravada.readthedocs.io/en/latest/docs/install_tpm.html>`_
 
 Base Guest
 ~~~~~~~~~~
