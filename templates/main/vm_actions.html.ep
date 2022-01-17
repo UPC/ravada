@@ -1,4 +1,15 @@
 <div class="card-body">
+
+<div><span>{{machine}}</span></div>
+
+  <div class="lgMachActions">
+    <span ng-show="showmachine.is_paused && showmachine.is_active" class="badge label-warning" ng-cloak><%=l 'Paused' %></span>
+    <span ng-show="!showmachine.is_paused && showmachine.is_active" class="badge badge-success" ng-cloak><%=l 'Running' %></span>
+    <span ng-show="!showmachine.is_active && !showmachine.is_hibernated" class="badge badge-danger" ng-cloak><%=l 'Down' %></span>
+    <span ng-show="showmachine.is_hibernated" class="badge badge-warning" ng-cloak><%=l 'Hibernated' %></span>
+    <br>
+  </div>
+
   <span ng-show="!showmachine"><i class="fas fa-sync-alt fa-spin"></i></span>
   <div ng-show="!showmachine || showmachine.can_start">
     <button type="button" class="btn btn-success btn-sm"
