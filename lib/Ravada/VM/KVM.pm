@@ -927,34 +927,11 @@ sub _domain_create_from_iso {
         ,file => $device_cdrom
     ) if $device_cdrom && $device_cdrom ne '<NONE>';
 
-    $self->_add_extra_iso($domain, $iso->{extra_iso}) if $iso->{extra_iso};
-
     $domain->_set_spice_password($spice_password)
         if $spice_password;
     $domain->xml_description();
 
     return $domain;
-}
-
-sub _add_extra_iso($self, $domain, $extra_iso) {
-    my ($url, $file_re) = $extra_iso =~ m{(.*)/(.*)};
-    my $volume = $self->search_volume_re(qr($file_re));
-    if (!$volume) {
-        my ($url) = $self->_search_url_file($extra_iso);
-        my ($device) = $url =~ m{.*/(.*)};
-        $self->_download_file_external($url, $self->dir_img()."/$device");
-    } else {
-        $volume = $volume->get_path();
-    }
-    Ravada::Request->add_hardware(
-        name => 'disk'
-        ,uid => Ravada::Utils::user_daemon->id
-        ,id_domain => $domain->id
-        ,data => {
-            file => $volume
-            ,device => 'cdrom'
-        }
-    );
 }
 
 sub _domain_create_common {
