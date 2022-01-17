@@ -11,18 +11,27 @@
              ng-controller="singleMachinePage"
              ng-init="init(<%= $id %>, '<%= url_for('ws_subscribe')->to_abs %>',<%= $USER->is_admin %> )">
              <div class="card-header">
-%              if ($domain->is_base) {
-                 <h2><%=l 'Virtual Machine' %>
-                     <b><%= $domain->name %></b>
-                     <%=l 'Settings' %>
-                 </h2>
-%               } else {
-                 <h2><%=l 'Virtual Machine' %>
-                     <a ng-hide="domain_remove_done" 
-                         href="/machine/view/<%= $domain->id %>.html"><%= $domain->name %></a>
-                     <%=l 'Settings' %>
-                 </h2>
-%               }
+               <div>
+                 <div style="display: inline-block">
+%                  if ($domain->is_base) {
+                     <h2><%=l 'Virtual Machine' %>
+                       <b><%= $domain->name %></b>
+                       <%=l 'Settings' %>
+                     </h2>
+%                  } else {
+                     <h2><%=l 'Virtual Machine' %>
+                       <a ng-hide="domain_remove_done" href="/machine/view/<%= $domain->id %>.html"><%= $domain->name %></a>
+                       <%=l 'Settings' %>
+                     </h2>
+%                  }
+                 </div>
+                 <div class="lgMachActions" style="display:inline-block; float: right">
+                   <span style="float:right;" ng-show="showmachine.is_paused && showmachine.is_active" class="badge label-warning" ng-cloak><%=l 'Paused' %></span>
+                   <span style="float:right;" ng-show="!showmachine.is_paused && showmachine.is_active" class="badge badge-success" ng-cloak><%=l 'Running' %></span>
+                   <span style="float:right;" ng-show="!showmachine.is_active && !showmachine.is_hibernated" class="badge badge-danger" ng-cloak><%=l 'Down' %></span>
+                   <span style="float:right;" ng-show="showmachine.is_hibernated" class="badge badge-warning" ng-cloak><%=l 'Hibernated' %></span>
+                 </div>
+               </div>
             </div>
             <div class="card-body">
 				<div class="row">
