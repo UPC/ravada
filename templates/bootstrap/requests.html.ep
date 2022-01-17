@@ -2,7 +2,7 @@
     ng-cloak="true"
     ng-controler="requestsCtrl">
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-11">
 % 		if ($_user->can_create_machine){
                     <a type="button" class="btn btn-success btn-sm"
                         href="/new_machine.html">
@@ -38,6 +38,9 @@
             align="right"><%=l 'hide clones' %></a>
     </button>
 
+    <input type="text" ng-model="filter" placeholder="<%=l 'filter' %>"
+        ng-change="show_filter()"
+    />
 
     <button class="btn btn-outline-warning btn-sm"
         title="<%=l 'Reload' %>"

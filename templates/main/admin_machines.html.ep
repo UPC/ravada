@@ -129,7 +129,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr ng-repeat="machine in list_machines" ng-show="machine.show" class="bg-light">
+                <tr ng-repeat="machine in list_machines" ng-show="machine.show || machine.show_filter" class="bg-light">
                     <td class="lgMachName" style="padding-left: {{1+machine._level*2}}em">
 
                         <i class="far fa-clone" title="Cloned" ng-show="!machine.is_pool && machine.id_base>0"></i>
@@ -144,7 +144,8 @@
                               }"
                         title ="<%=l 'Manage machine' %>">{{machine.name}}</a> {{machine.comment}}
                    <span class="comment" ng-show="machine.is_volatile"><%=l 'Volatile' %></span>
-                        <button ng-show="machine.has_clones" type="button"
+                        <button ng-show="machine.has_clones && !filter"
+                                         type="button"
                         class="badge badge-light text-blue"
                         ng-click="toggle_show_clones(machine.id)"
                         title="<%=l 'Show/Hide clones' %>">

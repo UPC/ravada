@@ -1181,7 +1181,7 @@ sub wait_request {
                         } elsif($req->command eq 'refresh_machine_ports') {
                             like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
                         } elsif($req->command eq 'open_exposed_ports') {
-                            like($error,qr{^($|.*No ip in domain|.*duplicated port)});
+                            like($error,qr{^($|.*No ip in domain|.*duplicated port|I can't get the internal IP)});
                         } elsif($req->command eq 'compact') {
                             like($error,qr{^($|.*compacted)});
                         } else {
