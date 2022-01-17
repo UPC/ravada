@@ -2554,7 +2554,24 @@ sub access_denied {
     if (defined $c->stash('type') && $c->stash('type') eq 'json') {
         return $c->render(json => { error => $msg }, status => 403);
     }
-    return $c->render(text => $msg, status => 403);
+
+    my @css_snippets = ["\t.intro {\n\t\tbackground:"
+                    ." url($CONFIG_FRONT->{login_bg_file})"
+                    ." no-repeat bottom center scroll;\n\t}"];
+
+    return $c->render(
+                    template => ($CONFIG_FRONT->{login_custom} or 'main/access_denied')
+                    ,css => ['/css/main.css']
+                    ,csssnippets => @css_snippets
+                    ,js => ['/js/main.js?v='.$RAVADA->version]
+                    ,navbar_custom => 1
+                    ,error => $msg
+                    ,can_login => ((! $USER) || ($USER->is_temporary))
+                    ,guide => $CONFIG_FRONT->{guide}
+                    ,status => 403
+    );
+
+#    return $c->render(text => $msg, status => 403);
 }
 
 sub _access_denied { return access_denied(@_) }
