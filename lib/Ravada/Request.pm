@@ -781,7 +781,7 @@ sub _check_downloading($self) {
     my ($id_iso2,$downloading, $device, $has_cd) = $sth->fetchrow;
 
     my $req_download = _search_request('download', id_iso => $id_iso2);
-    if ($has_cd && !$device && !$req_download) {
+    if ($has_cd && !$device && !$iso_file && !$req_download) {
         $req_download = Ravada::Request->download(
             id_iso => $id_iso2
             ,uid => Ravada::Utils::user_daemon->id
