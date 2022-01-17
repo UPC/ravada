@@ -707,6 +707,8 @@ sub _update_isos {
           ,xml_volume => 'windows10-volume.xml'
           ,min_disk_size => '21'
           ,arch => 'x86_64'
+          ,extra_iso => 'https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.215-\d+/virtio-win-0.1.\d+.iso'
+
         }
         ,windows_xp => {
           name => 'Windows XP'
@@ -2295,6 +2297,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','options','varchar(255)');
     $self->_upgrade_table('iso_images','has_cd','int (1) DEFAULT "1"');
     $self->_upgrade_table('iso_images','downloading','int (1) DEFAULT "0"');
+    $self->_upgrade_table('iso_images','extra_iso','varchar(255)');
 
     $self->_upgrade_table('users','language','char(40) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
