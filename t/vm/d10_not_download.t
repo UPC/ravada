@@ -9,6 +9,8 @@ use Test::More;
 use lib 't/lib';
 use Test::Ravada;
 
+use feature qw(signatures);
+no warnings "experimental::signatures";
 
 use_ok('Ravada');
 my %ARG_CREATE_DOM = (
@@ -35,12 +37,13 @@ sub test_dont_download {
     );
     $sth->execute;
     my $name = new_domain_name();
+    my $id_iso = search_id_iso('test'.$vm->type);
     eval {
         $vm->create_domain(
                  name => $name
                   ,vm => $vm
                 ,disk => 1024 * 1024
-              ,id_iso => search_id_iso('test')
+              ,id_iso => $id_iso
             ,id_owner => user_admin->id
         );
     };
@@ -52,8 +55,44 @@ sub test_dont_download {
     $domain->remove(user_admin) if $domain;
 
     unlink $device;
+    $sth = connector->dbh->prepare(
+        "DELETE FROM iso_images WHERE id=?"
+    );
+    $sth->execute($id_iso);
 }
 
+sub test_windows($vm) {
+    my $isos = rvd_front->list_iso_images();
+    my $dev = "/var/tmp/a.iso";
+    for my $iso (@$isos) {
+        next unless $iso->{name} =~ /windows/i || !$iso->{url};
+        is($iso->{has_cd},1) unless $iso->{name} =~ /^Empty/;
+        is($iso->{url}, undef);
+        my $name = new_domain_name();
+        my @args =(
+            id_owner => user_admin->id
+            ,name => $name
+            ,id_iso => $iso->{id}
+            ,vm => $vm->type
+        );
+        my $req = Ravada::Request->create_domain(@args);
+        ok($req->status,'done');
+        like($req->error,qr/ISO.*required/) unless $iso->{name} =~ /Empty/;
+        wait_request(debug => 0);
+
+        $name = new_domain_name();
+        push @args, ( iso_file => $dev) if $iso->{has_cd};
+
+        my $req2 = Ravada::Request->create_domain(@args,name => $name );
+        ok($req2->status,'requested');
+        wait_request( debug => 0);
+        ok($req2->status,'done');
+        is($req2->error, '');
+        my $domain = rvd_back->search_domain($name);
+        ok($domain, "Expected domain $name created") or exit;
+
+    }
+}
 #########################################################
 
 clean();
@@ -72,6 +111,7 @@ for my $vm_name ( vm_names() ) {
 
         skip($msg,10)   if !$vm;
 
+        test_windows($vm);
         test_dont_download($vm);
     }
 
