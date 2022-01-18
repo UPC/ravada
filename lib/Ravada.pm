@@ -2789,11 +2789,21 @@ sub create_domain {
     return $domain;
 }
 
+sub _search_iso($id) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM iso_images"
+        ." WHERE id = ? "
+    );
+    $sth->execute($id);
+    my $row = $sth->fetchrow_hashref;
+    return $row;
+}
+
 sub _add_extra_iso($domain, $request, $previous_request) {
     return if !$request;
     my $id_iso = $request->defined_arg('id_iso');
     return if !$id_iso;
-    my $iso = $domain->_vm->_search_iso($id_iso);
+    my $iso = _search_iso($id_iso);
 
     my $extra_iso = $iso->{extra_iso};
     return if !$extra_iso;
