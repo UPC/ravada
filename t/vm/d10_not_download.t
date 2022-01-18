@@ -74,6 +74,9 @@ sub test_windows($vm) {
             ,name => $name
             ,id_iso => $iso->{id}
             ,vm => $vm->type
+            ,swap => 10*1024
+            ,data => 10*1024
+            ,options => { 'uefi' => 1 , machine => 'pc-q35-4.2' }
         );
         my $req = Ravada::Request->create_domain(@args);
         ok($req->status,'done');

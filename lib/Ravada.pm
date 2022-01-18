@@ -2775,31 +2775,35 @@ sub create_domain {
         die $error if $error && !$request;
         $request->error($error) if $error;
     }
-    Ravada::Request->add_hardware(
-        uid => $args{id_owner}
-        ,id_domain => $domain->id
-        ,name => 'disk'
-        ,data => { size => $data, type => 'data' }
-    ) if $domain && $data;
-    _add_extra_iso($domain, $request) if $domain;
+    return if !$domain;
+    my $req_add_data;
+    if ($data) {
+        $req_add_data = Ravada::Request->add_hardware(
+            uid => $args{id_owner}
+            ,id_domain => $domain->id
+            ,name => 'disk'
+            ,data => { size => $data, type => 'data' }
+        );
+    }
+    _add_extra_iso($domain, $request,$req_add_data) if $domain;
     return $domain;
 }
 
-sub _add_extra_iso($domain, $request) {
+sub _add_extra_iso($domain, $request, $previous_request) {
     my $id_iso = $request->defined_arg('id_iso');
-    my $iso = $domain->vm->_search_iso($id_iso);
+    return if !$id_iso;
+    my $iso = $domain->_vm->_search_iso($id_iso);
 
     my $extra_iso = $iso->{extra_iso};
     return if !$extra_iso;
 
     my ($url, $file_re) = $extra_iso =~ m{(.*)/(.*)};
-    my $volume = $domain->_vm->search_volume_re(qr($file_re));
+    my $volume = $domain->_vm->search_volume_path_re(qr($file_re));
     if (!$volume) {
-        my ($url) = $self->_search_url_file($extra_iso);
+        my ($url) = $domain->_vm->_search_url_file($extra_iso);
         my ($device) = $url =~ m{.*/(.*)};
-        $domain->_vm->_download_file_external($url, $self->dir_img()."/$device");
-    } else {
-        $volume = $volume->get_path();
+        $volume = $domain->_vm->dir_img()."/$device";
+        $domain->_vm->_download_file_external($url, $volume) ;
     }
     Ravada::Request->add_hardware(
         name => 'disk'
@@ -2809,6 +2813,7 @@ sub _add_extra_iso($domain, $request) {
             file => $volume
             ,device => 'cdrom'
         }
+        ,after_request => $previous_request->id
     );
 
 }
