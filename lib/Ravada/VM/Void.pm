@@ -458,6 +458,23 @@ sub _iso_name($self, $iso, $request=undef, $verbose=0) {
     return $name;
 }
 
+sub _search_url_file($self, $url) {
+    my ($url0,$file) = $url =~ m{(.*)/(.*)};
+    confess "Undefined file in url=$url" if !$file;
+    my $file0 = $file;
+    $file =~ s/(.*)\.\*(.*)/$1$2/;
+    $file =~ s/(.*)\.\+(.*)/$1.$2/;
+    $file =~ s/(.*)\[\\d.*?\]\+(.*)/${1}1$2/;
+    $file =~ s/(.*)\\d\+(.*)/${1}1$2/;
+    confess Dumper($url, $file0,$file) if $file =~ m{[*+\\]}
+    || $file !~ /\.iso$/;
+
+    return "$url0/$file";
+}
+
+sub _download_file_external($self, $url, $device) {
+}
+
 #########################################################################3
 
 1;

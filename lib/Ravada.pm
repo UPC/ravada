@@ -707,6 +707,8 @@ sub _update_isos {
           ,xml_volume => 'windows10-volume.xml'
           ,min_disk_size => '21'
           ,arch => 'x86_64'
+          ,extra_iso => 'https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.215-\d+/virtio-win-0.1.\d+.iso'
+
         }
         ,windows_xp => {
           name => 'Windows XP'
@@ -2295,6 +2297,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','options','varchar(255)');
     $self->_upgrade_table('iso_images','has_cd','int (1) DEFAULT "1"');
     $self->_upgrade_table('iso_images','downloading','int (1) DEFAULT "0"');
+    $self->_upgrade_table('iso_images','extra_iso','varchar(255)');
 
     $self->_upgrade_table('users','language','char(40) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
@@ -2772,13 +2775,58 @@ sub create_domain {
         die $error if $error && !$request;
         $request->error($error) if $error;
     }
-    Ravada::Request->add_hardware(
-        uid => $args{id_owner}
-        ,id_domain => $domain->id
-        ,name => 'disk'
-        ,data => { size => $data, type => 'data' }
-    ) if $domain && $data;
+    return if !$domain;
+    my $req_add_data;
+    if ($data) {
+        $req_add_data = Ravada::Request->add_hardware(
+            uid => $args{id_owner}
+            ,id_domain => $domain->id
+            ,name => 'disk'
+            ,data => { size => $data, type => 'data' }
+        );
+    }
+    _add_extra_iso($domain, $request,$req_add_data) if $domain;
     return $domain;
+}
+
+sub _search_iso($id) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM iso_images"
+        ." WHERE id = ? "
+    );
+    $sth->execute($id);
+    my $row = $sth->fetchrow_hashref;
+    return $row;
+}
+
+sub _add_extra_iso($domain, $request, $previous_request) {
+    return if !$request;
+    my $id_iso = $request->defined_arg('id_iso');
+    return if !$id_iso;
+    my $iso = _search_iso($id_iso);
+
+    my $extra_iso = $iso->{extra_iso};
+    return if !$extra_iso;
+
+    my ($url, $file_re) = $extra_iso =~ m{(.*)/(.*)};
+    my $volume = $domain->_vm->search_volume_path_re(qr($file_re));
+    if (!$volume) {
+        my ($url) = $domain->_vm->_search_url_file($extra_iso);
+        my ($device) = $url =~ m{.*/(.*)};
+        $volume = $domain->_vm->dir_img()."/$device";
+        $domain->_vm->_download_file_external($url, $volume) ;
+    }
+    Ravada::Request->add_hardware(
+        name => 'disk'
+        ,uid => Ravada::Utils::user_daemon->id
+        ,id_domain => $domain->id
+        ,data => {
+            file => $volume
+            ,device => 'cdrom'
+        }
+        ,after_request => $previous_request->id
+    );
+
 }
 
 sub _check_args($args,@) {

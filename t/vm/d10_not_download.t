@@ -74,6 +74,9 @@ sub test_windows($vm) {
             ,name => $name
             ,id_iso => $iso->{id}
             ,vm => $vm->type
+            ,swap => 10*1024
+            ,data => 10*1024
+            ,options => { 'uefi' => 1 , machine => 'pc-q35-4.2' }
         );
         my $req = Ravada::Request->create_domain(@args);
         ok($req->status,'done');
@@ -91,8 +94,39 @@ sub test_windows($vm) {
         my $domain = rvd_back->search_domain($name);
         ok($domain, "Expected domain $name created") or exit;
 
+        test_cd_removed($domain);
+
+        test_extra_iso($domain) if $iso->{extra_iso};
+
     }
 }
+
+sub test_extra_iso($domain) {
+    my $disks = $domain->info(user_admin)->{hardware}->{disk};
+    my @cds = grep { defined $_->{file} && $_->{file} =~ /\.iso$/i } @$disks;
+    is(scalar(@cds),2);
+
+}
+
+sub test_cd_removed($domain) {
+    my $req = Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+    my $name = new_domain_name();
+    Ravada::Request->clone(
+        id_domain => $domain->id
+        ,uid => user_admin->id
+        ,name => $name
+    );
+    wait_request();
+    my $clone = rvd_back->search_domain($name);
+    my $disks = $clone->info(user_admin)->{hardware}->{disk};
+    my @cds = grep { defined $_->{file} && $_->{file} =~ /\.iso$/i } @$disks;
+    is(scalar(@cds),0);
+}
+
 #########################################################
 
 clean();
