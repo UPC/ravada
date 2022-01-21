@@ -59,6 +59,9 @@
                             <i class="badge badge-warning" ng-click="refresh_storage()"><i class="fa fa-sync-alt" aria-hidden="true"></i></i>
                             </label>
                         <div class="col-lg-9"  ng-init="iso_file = '<NONE>'" >
+                            <i class="fas fa-sync-alt fa-spin"
+                                   ng-show="refresh_working || !isos"
+                            ></i>
                             <input type="text" class="form-control" placeholder="<%=l 'Type the ISO pathname' %>"
                                    name="iso_file"
                                    ng-model="iso_file" 

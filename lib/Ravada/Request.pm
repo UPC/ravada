@@ -216,6 +216,11 @@ our %CMD_VALIDATE = (
     clone => \&_validate_clone
     ,create => \&_validate_create_domain
     ,create_domain => \&_validate_create_domain
+    ,start_domain => \&_validate_start_domain
+    ,start => \&_validate_start_domain
+    ,add_hardware=> \&_validate_change_hardware
+    ,change_hardware=> \&_validate_change_hardware
+    ,remove_hardware=> \&_validate_change_hardware
 );
 
 sub _init_connector {
@@ -746,6 +751,35 @@ sub _validate($self) {
     $method->($self);
 }
 
+sub _validate_start_domain($self) {
+
+    my $id_domain = $self->defined_arg('id_domain');
+    if (!$id_domain) {
+        my $domain_name = $self->defined_arg('name');
+        $id_domain = _search_domain_id(undef,$domain_name);
+    }
+    return if !$id_domain;
+    my $req = $self->_search_request('%_hardware', id_domain => $id_domain);
+
+    $self->after_request($req->id) if $req;
+}
+
+sub _validate_change_hardware($self) {
+
+    return if $self->after_request();
+
+    my $id_domain = $self->defined_arg('id_domain');
+    if (!$id_domain) {
+        my $domain_name = $self->defined_arg('name');
+        $id_domain = _search_domain_id(undef,$domain_name);
+    }
+    return if !$id_domain;
+    my $req = $self->_search_request('%_hardware', id_domain => $id_domain);
+
+    $self->after_request($req->id) if $req;
+}
+
+
 sub _validate_create_domain($self) {
 
     my $base;
@@ -785,7 +819,7 @@ sub _check_downloading($self) {
 
     return if !$downloading && $device;
 
-    my $req_download = _search_request('download', id_iso => $id_iso2);
+    my $req_download = $self->_search_request('download', id_iso => $id_iso2);
 
     return $self->_status_error("done"
         ,"Error: ISO file required for $iso_name")
@@ -828,13 +862,16 @@ sub _mark_iso_downloaded($id_iso) {
     $sth->execute($id_iso);
 }
 
-sub _search_request($command,%fields) {
-    my $sth= $$CONNECTOR->dbh->prepare(
-        "SELECT id, args FROM requests WHERE command = ?"
-        ." AND status <> 'done' "
-    );
+sub _search_request($self,$command,%fields) {
+    my $query =
+        "SELECT id, args FROM requests WHERE command like ?"
+        ." AND status <> 'done' ";
+    $query .= "AND id <> ".$self->id if $self;
+    $query .= " ORDER BY date_req,id DESC ";
+    my $sth= $$CONNECTOR->dbh->prepare($query);
     $sth->execute($command);
 
+    my @reqs;
     while ( my ($id, $args_json) = $sth->fetchrow ) {
         return Ravada::Request->open($id) if !keys %fields;
 
@@ -846,9 +883,12 @@ sub _search_request($command,%fields) {
                 last;
             }
         }
-        return Ravada::Request->open($id) if $found;
+        next if !$found;
+        my $req = Ravada::Request->open($id);
+        return $req if !wantarray;
+        push @reqs,($req);
     }
-
+    return @reqs;
 }
 
 sub _validate_clone($self

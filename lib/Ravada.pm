@@ -2816,6 +2816,9 @@ sub _add_extra_iso($domain, $request, $previous_request) {
         $volume = $domain->_vm->dir_img()."/$device";
         $domain->_vm->_download_file_external($url, $volume) ;
     }
+    my $req=Ravada::Request->refresh_storage(
+        after_request => $previous_request->id
+    );
     Ravada::Request->add_hardware(
         name => 'disk'
         ,uid => Ravada::Utils::user_daemon->id
@@ -2824,7 +2827,7 @@ sub _add_extra_iso($domain, $request, $previous_request) {
             file => $volume
             ,device => 'cdrom'
         }
-        ,after_request => $previous_request->id
+        ,after_request => $req->id
     );
 
 }
