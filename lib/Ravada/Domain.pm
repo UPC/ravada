@@ -6401,6 +6401,7 @@ sub add_host_device($self, $host_device) {
 }
 
 sub remove_host_device($self, $host_device) {
+    confess if $self->readonly;
     $self->_dettach_host_device($host_device);
 
     my $id_hd = $host_device;
