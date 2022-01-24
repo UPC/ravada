@@ -12,12 +12,14 @@
               <div class="card" id="admin-content">
                 <div class="card-header">
                     <h2 class="display-5"><%=l 'Group' %> <%= $name %></h2>
-                    <%= join(" - ",sort @$object_class) %>
+                    object class: <b><%= join(" - ",sort @$object_class) %></b>
+                    <br/>
+                    dn: <b><%= $group->dn %></b>
                 </div>
               </div>
             </div>
             <div class="card-body">
-                <div ng-show="<%= $_user->can_manage_groups %>">
+                <div ng-show="<%= $_user->can_manage_groups %> && !removed">
                     <%=l 'New group member' %>
                     <input type="text" ng-model="username_filter"
                                        ng-change="list_users()"
@@ -31,9 +33,19 @@
                     >
                     </select>
                     <button ng-show="new_member && new_member.name"
-                        ng-click="add_member(new_member.name)">Add</button>
+                            ng-click="add_member(new_member.name)">
+                      <%=l 'Add' %>
+                    </button>
                 </div>
-                {{error}}
+
+                <div ng-show="!removed">
+                <div class="alert alert-danger" ng-show="error">{{error}}</div>
+                <div class="alert alert-warning"
+                     ng-show="!error && group_members.length==0">
+                  <%=l 'No members found' %>
+                </div>
+                </div>
+
                 <table class="table table-striped" ng-show="group_members.length>0">
                     <thead>
                         <tr>
@@ -46,12 +58,28 @@
                                         <button ng-click="remove_member(user)"
                                             ng-show="<%= $_user->can_manage_groups %>"
                                             class="badge badge-light text-blue">x</button>
-                                        {{user}}
+                                        <a ng-bind-html="user" href="/admin/user/{{user}}.html?origin=ldap">{{user}}</a>
                                     </td>
                                 </tr>
                     </tbody>
                 </table>
-                <div ng-show="group_members.length==0">No members found</div>
+               <div class="alert alert-warning" ng-show="removed"><%=l 'This group has been removed.'%></div>
+
+                <input type="button" class="btn btn-outline-secondary"
+                                     ng-show="group_members && group_members.length==0
+                                               && !removed && !confirm_remove"
+                                     ng-click="confirm_remove=true"
+                                     value="Remove group"/>
+                <div ng-show="confirm_remove" class="card">
+                <div ng-show="confirm_remove" class="card-body">
+                    <span><%=l 'Are you sure you want to remove this group ?'%></span><br/>
+                    <input type="button" class="btn btn-primary" value="Yes"
+                    ng-click="remove_group()"/>
+                    <input type="button" class="btn btn-danger" value="No"
+                    ng-click="confirm_remove=false"/>
+
+                </div>
+                </div>
             </div>
         </div>
     </div>

@@ -394,7 +394,7 @@
           $scope.init = function(id, url,is_admin) {
                 url_ws = url;
                 $scope.showmachineId=id;
-                $scope.tab_access=['client']
+                $scope.tab_access=['group']
                 $scope.client_attributes = [ 'User-Agent'
                    , 'Accept', 'Connection', 'Accept-Language', 'DNT', 'Host'
                    , 'Accept-Encoding', 'Cache-Control', 'X-Forwarded-For'
@@ -426,6 +426,7 @@
                                 list_interfaces();
                                 list_users();
                                 list_host_devices();
+                                list_access_groups();
                             }
                             $scope.hardware_types = Object.keys(response.data.hardware);
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
@@ -625,7 +626,9 @@
                     return;
                 }
             }
-            item.remove = false;
+            if(typeof(item) == 'object') {
+                item.remove = false;
+            }
               $http.get('/machine/hardware/remove/'
                       +$scope.showmachine.id+'/'+hardware+'/'+index).then(function(response) {
                       });
@@ -879,7 +882,7 @@
                     $http.get('/machine/host_device/add/'+$scope.showmachine.id
                         +"/"+id_hd).then(function(response) {
                             $scope.error = response.data.error;
-                        });
+                    });
                 }
             };
             /* End Host Devices */
@@ -931,6 +934,24 @@
                 });
             };
 
+            var list_access_groups = function() {
+                $http.get("/machine/list_access_groups/"+$scope.showmachine.id).then(function(response) {
+                    $scope.access_groups=response.data;
+                });
+            };
+            $scope.add_group_access = function(group) {
+                $http.get("/machine/add_access_group/"+$scope.showmachine.id+"/"+group)
+                    .then(function(response) {
+                        list_access_groups();
+                });
+            };
+
+            $scope.remove_group_access = function(group) {
+                $http.get("/machine/remove_access_group/"+$scope.showmachine.id+"/"+group)
+                    .then(function(response) {
+                        list_access_groups();
+                });
+            };
             $scope.message = [];
             $scope.disk_remove = [];
             $scope.pending_before = 10;

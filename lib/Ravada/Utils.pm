@@ -4,6 +4,8 @@ use warnings;
 use strict;
 
 use Carp qw(confess);
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -19,12 +21,13 @@ our $USER_DAEMON_NAME = 'daemon';
 
 =head2 now
 
-Returns the current datetime
+Returns the current datetime. Optionally you can pass seconds
+to substract to the current time.
 
 =cut
 
-sub now {
-     my @now = localtime(time);
+sub now($seconds=0) {
+    my @now = localtime(time - $seconds);
     $now[5]+=1900;
     $now[4]++;
     for ( 0 .. 4 ) {
@@ -32,6 +35,12 @@ sub now {
     }
 
     return "$now[5]-$now[4]-$now[3] $now[2]:$now[1]:$now[0].0";
+}
+
+sub date_now($seconds=0) {
+    my $date = now($seconds);
+    $date =~ s/\.\d+$//;
+    return $date;
 }
 
 =head2 random_name
@@ -140,6 +149,12 @@ sub max_id($dbh, $table) {
     $sth->execute();
     my ($max) = $sth->fetchrow;
     return ($max or 0);
+}
+
+sub check_sql_valid_params(@params) {
+    for my $param (@params) {
+        die "Error: invalid param '$param'" unless $param =~ /^[a-z][a-z_]+$/i;
+    }
 }
 
 1;

@@ -250,14 +250,20 @@ sub test_limit_change($vm, $limit) {
     is(scalar @list,1) or warn Dumper([map { $_->name } @list]);
 
     user_admin->grant($user, 'start_limit', 2);
+    is($user->can_start_limit,2) or exit;
     $clone1->start(user_admin);
     $clone2->start(user_admin);
     $clone3->start(user_admin);
+    delete_request('set_time');
 
     @list = rvd_back->list_domains(user => $user, active => 1);
     is(scalar @list,3) or warn Dumper([map { $_->name } @list]);
+    wait_request( debug => 0);
+
+    @list = rvd_back->list_domains(user => $user, active => 1);
 
     $req = Ravada::Request->enforce_limits(timeout => 1, _force => 1);
+    delete_request('set_time');
     wait_request( debug => 0);
     is($req->status,'done');
     is($req->error,'');

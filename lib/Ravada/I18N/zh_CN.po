@@ -5,8 +5,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2021-04-29 04:32+0000\n"
-"Last-Translator: Bigtree zhang <xiaohua1021@gmail.com>\n"
+"PO-Revision-Date: 2021-11-23 01:53+0000\n"
+"Last-Translator: fishfree <winofchina@hotmail.com>\n"
 "Language-Team: Chinese (Simplified) <https://hosted.weblate.org/projects/"
 "ravada/translation/zh_Hans/>\n"
 "Language: zh_CN\n"
@@ -14,7 +14,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Weblate 4.7-dev\n"
+"X-Generator: Weblate 4.10-dev\n"
 
 msgid "Ravada broker"
 msgstr "Ravada 连接器"
@@ -312,7 +312,7 @@ msgid "can change the settings of any virtual machines."
 msgstr "可以修改任何虚拟机的设置。"
 
 msgid "can change the settings of any virtual machines "
-msgstr ""
+msgstr "可更改任意虚拟机的设置"
 
 msgid "cloned from one base owned by the user."
 msgstr "从用户所拥有的基础镜像进行克隆"
@@ -589,10 +589,10 @@ msgid "Below are listed the technologies used in this project:"
 msgstr "以下为该项目所使用到的技术："
 
 msgid "The code is available on "
-msgstr ""
+msgstr "代码位于"
 
 msgid "The code is "
-msgstr ""
+msgstr "代码是"
 
 msgid "License"
 msgstr "授权"
@@ -886,3 +886,147 @@ msgstr "新节点"
 
 msgid "Clones"
 msgstr "克隆"
+
+msgid "The machine will turn off after this time"
+msgstr "虚拟机这次将自动关闭"
+
+msgid "up"
+msgstr "运行"
+
+msgid "Open ports"
+msgstr "开放端口"
+
+msgid "Hardware address"
+msgstr "硬件地址"
+
+msgid "Waiting for network to come up"
+msgstr "正在等待网络启动"
+
+msgid "This machine will shut down"
+msgstr "虚拟机正在关闭"
+
+msgid "Waiting for machine to start"
+msgstr "等待虚拟机启动"
+
+msgid "SSO/CAS Login"
+msgstr "CAS单点登录"
+
+msgid "No members found"
+msgstr "未找到成员"
+
+msgid "No groups found"
+msgstr "未找到组"
+
+msgid "This machine has a CD-ROM"
+msgstr "该机器有光驱"
+
+msgid "Keep the CD for the clones"
+msgstr "保持克隆的机器里含有光驱"
+
+msgid "Accept"
+msgstr "接受"
+
+msgid "Fail"
+msgstr "失败"
+
+msgid "This Virtual Machine has no display hardware attached"
+msgstr "该虚拟机无显示设备"
+
+msgid "NAT"
+msgstr "NAT"
+
+msgid "Bridge"
+msgstr "网桥"
+
+msgid "No bridges found"
+msgstr "未找到bridges"
+
+msgid "disk"
+msgstr "磁盘"
+
+msgid "cdrom"
+msgstr "光驱"
+
+msgid "system"
+msgstr "系统"
+
+msgid "temporary"
+msgstr "临时"
+
+msgid "data"
+msgstr "数据"
+
+msgid "Content will be cleaned on restore"
+msgstr "在恢复时内容将被清空"
+
+msgid "Content will be cleaned on restore and shutdown"
+msgstr "在恢复和关机时内容将被清空"
+
+msgid "Content will be kept on restore"
+msgstr "在恢复时内容将被保留"
+
+msgid "type"
+msgstr "类型"
+
+msgid "All machines"
+msgstr "所有机器"
+
+msgid "No machines"
+msgstr "无机器"
+
+msgid "Users from this network can run all virtual machines"
+msgstr "用户可从该网络运行所有虚拟机"
+
+msgid "Users from this network can run no virtual machines"
+msgstr "用户从该网络无虚拟机可运行"
+
+msgid "Warning: anonymous machines won't show up unless you enable allowed."
+msgstr "警告：除非您启用允许，否则匿名机器不会显示。"
+
+msgid "Anonymous"
+msgstr "匿名"
+
+msgid "Network name is required"
+msgstr "网络名称必填"
+
+msgid "This name is duplicated"
+msgstr "该名称已被使用"
+
+msgid "host"
+msgstr "主机"
+
+msgid "base storage"
+msgstr "基础存储"
+
+msgid "clone storage"
+msgstr "克隆存储"
+
+msgid "default storage"
+msgstr "默认存储"
+
+msgid "This virtual machine has no backups to purge"
+msgstr "该虚拟机无备份可删除"
+
+msgid "End"
+msgstr "结束"
+
+msgid "Time"
+msgstr "时间"
+
+msgid "Virtual machines pre-started"
+msgstr "提前启动的虚拟机"
+
+msgid "Warning: this virtual machine will be prepared as a base. This may take long."
+msgstr "警告：该虚拟机将被制备为一个基础镜像，将会消耗一段时间。"
+
+msgid "Assign this virtual machine to the pre-started pool"
+msgstr "将该虚拟机分配至该提前启动的池子"
+
+msgid "Virtual machines in the pool."
+msgstr "在池子里的虚拟机。"
+
+msgid "Pool"
+msgstr "池子"
+
+msgid "Prepare this machine as a base to create clones from it."
+msgstr "将该虚拟机制备为基础镜像，以后可从其克隆新虚拟机。"

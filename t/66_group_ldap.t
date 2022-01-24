@@ -34,7 +34,7 @@ sub _create_group($oc=['top','groupOfNames']) {
     return $group;
 }
 
-init('t/etc/ravada_ldap.conf');
+init('t/etc/ravada_ldap_basic.conf');
 
 for my $oc (
     ['top','groupOfUniqueNames','nsMemberOf','posixGroup']
@@ -86,4 +86,5 @@ for my $oc (
 
     delete $Ravada::CONFIG->{ldap}->{group};
 }
+end();
 done_testing();

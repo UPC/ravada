@@ -192,7 +192,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
 		$req = Ravada::Request->add_hardware(uid => $USER->id
                 , id_domain => $domain->id
                 , name => $hardware
-                , number => $numero
+                , number => $numero+1
                 , data => $data
             );
 	};
@@ -256,9 +256,9 @@ sub test_add_cdrom($domain) {
         my $iso = $domain->_vm->_search_iso(search_id_iso('Alpine'));
         $data->{file} = $iso->{device};
     } else {
-        $data->{file} = $file_iso;
         $data->{boot} = 2;
     }
+    $data->{file} = $file_iso if !$data->{file};
     my $found = 0;
     test_add_hardware_request($domain->_vm, $domain,'disk', $data);
 
@@ -719,8 +719,14 @@ sub test_all_drivers($domain, $hardware) {
 }
 
 sub _create_base($vm) {
-    return import_domain($vm, "zz-test-base-alpine") if $vm->type eq 'KVM';
-    return create_domain($vm);
+    if ($vm->type eq 'KVM') {
+        my @base;
+        push @base,(import_domain($vm, "zz-test-base-alpine-q35-uefi"));
+        push @base,(import_domain($vm, "zz-test-base-alpine-q35"));
+        push @base,(import_domain($vm, "zz-test-base-alpine"));
+        return @base;
+    }
+    return (create_domain($vm));
 }
 
 sub test_remove_display($vm) {
@@ -787,10 +793,11 @@ for my $vm_name ( vm_names()) {
 	    diag("Skipping VM $vm_name in this system");
 	    next;
 	}
-    _download_alpine64();
+    _download_alpine64() if !$<;
     $TLS = 0;
     $TLS = 1 if check_libvirt_tls() && $vm_name eq 'KVM';
-    $BASE = _create_base($vm);
+    for my $base ( _create_base($vm) ) {
+        $BASE = $base;
 	my $name = new_domain_name();
 	my $domain_b = $BASE->clone(
         name => $name
@@ -832,7 +839,7 @@ for my $vm_name ( vm_names()) {
 
         $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
         ok(!$domain_b->is_active);
-
+        }
     }
     ok($TEST_TIMESTAMP);
 }

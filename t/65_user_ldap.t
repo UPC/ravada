@@ -49,7 +49,6 @@ sub _remove_user_ldap($name) {
 
 sub test_user($name, $with_posix_group=0, $password='jameson', $storage=undef, $algorithm=undef) {
     if ( Ravada::Auth::LDAP::search_user($name) ) {
-        diag("Removing $name");
         Ravada::Auth::LDAP::remove_user($name)  
     }
     _remove_user_ldap($name);
@@ -93,6 +92,7 @@ sub test_user($name, $with_posix_group=0, $password='jameson', $storage=undef, $
     eval { $mcnulty->allowed_access(1) };
     is($@,'');
     # try to login
+     diag($name,$password);
     my $mcnulty_login = Ravada::Auth::login($name,$password);
     ok($mcnulty_login,"No login");
     ok(ref $mcnulty_login && ref($mcnulty_login) eq 'Ravada::Auth::LDAP',
@@ -599,11 +599,17 @@ sub test_uid_cn($user, $with_posix_group) {
     Ravada::Auth::LDAP::init();
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
     my $entry = $user->{_ldap_entry};
-
     my $field = 'uid';
+    my $uid_value = new_domain_name();
+    my $mesg = $entry->replace( $field => $uid_value )->update($ldap);
+    $mesg->code  and  die $mesg->error;          # check for errors
+
+
+    _add_to_posix_group($uid_value, $with_posix_group);
+
     my %data = (
         cn => $entry->get_value('cn')
-        ,$field => $entry->get_value($field)
+        ,$field => $uid_value
 
     );
 
@@ -622,11 +628,13 @@ sub test_login_fields($data) {
     my $login_ok;
     for my $field ( sort keys %$data ) {
         my $value = $data->{$field};
+        $Ravada::CONFIG->{ldap}->{field} = $field;
         eval { $login_ok = Ravada::Auth::login($value, $password) };
 
-        is($@,''," $field: $value");
+        is($@,''," $field: $value") or confess;
         ok($login_ok, $value);
     }
+    delete $Ravada::CONFIG->{ldap}->{field};
 }
 
 sub test_pass_storage($with_posix_group) {
@@ -663,6 +671,7 @@ SKIP: {
     test_filter();
     test_filter_gid();
     my $file_config = "t/etc/ravada_ldap.conf";
+    init($file_config);
     for my $with_posix_group (0,1) {
     for my $with_admin (0,1) {
     for my $with_dn_posix_group (0,1) {

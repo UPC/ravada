@@ -9,7 +9,7 @@ export {
 svcBookings.$inject = ["$resource"];
 
 function svcBookings($resource) {
-    return $resource('/v1/bookings/:id');
+    return $resource('/v1/bookings/:id_booking');
 }
 
 svcEntry.$inject = ["$resource"];
@@ -21,11 +21,11 @@ function svcEntry($resource) {
 svcLDAP.$inject = ["$resource"];
 
 function svcLDAP($resource) {
-    return $resource('/:qry',{ qry: '@qry' }, {
+    return $resource('/:action/:qry',{ qry: '@qry' }, {
         list_groups: {
             method: 'GET',
             isArray: true,
-            params: { qry: 'list_ldap_groups'}
+            params: { action: 'list_ldap_groups'}
         }
     });
 }

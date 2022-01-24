@@ -364,10 +364,7 @@ sub user_allowed($entry, $user_name) {
         return 1 if $user_name eq $allowed_user_name;
     }
     for my $group_name ($entry->ldap_groups) {
-        my $group = Ravada::Auth::LDAP->_search_posix_group($group_name);
-        my @member = $group->get_value('memberUid');
-        my ($found) = grep /^$user_name$/,@member;
-        return 1 if $found;
+        return 1 if Ravada::Auth::LDAP::is_member($user_name, $group_name);
     }
     return 0;
 }

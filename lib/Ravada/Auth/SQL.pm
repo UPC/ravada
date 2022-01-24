@@ -533,6 +533,10 @@ sub change_password {
 
     die "Password too small" if length($password)<6;
 
+    if ($self->is_external) {
+        return $self->_change_password_external($password);
+    }
+
     my $sth;
     if (defined($force_change_password)) {
         $sth= $$CON->dbh->prepare("UPDATE users set password=?, change_password=?"
@@ -543,6 +547,23 @@ sub change_password {
             ." WHERE name=?");
         $sth->execute(sha1_hex($password), $self->name);
     }
+}
+
+sub _change_password_external($self,$password) {
+
+    if ($self->external_auth eq 'ldap') {
+        my $ldap_entry = $self->ldap_entry() or die "Error: no ldap entry";
+        $ldap_entry->replace(
+            userPassword => Ravada::Auth::LDAP::_password_store($password,'rfc2307'));
+        my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+        my $mesg = $ldap_entry->update($ldap);
+        die "ERROR: ".$mesg->code." : ".$mesg->error
+        if $mesg->code;
+    } else {
+        confess
+        "Error: I don't know how to change external password for ".$self->external_auth;
+    }
+
 }
 
 =head2 compare_password
@@ -628,7 +649,7 @@ Returns if the user is allowed to perform a privileged action
 sub can_do($self, $grant) {
     $self->_load_grants();
 
-    confess "Wrong grant '$grant'\n".Dumper($self->{_grant_alias})
+    confess "Permission '$grant' invalid\n".Dumper($self->{_grant_alias})
         if $grant !~ /^[a-z_]+$/;
 
     $grant = $self->_grant_alias($grant);
@@ -718,6 +739,8 @@ sub _load_grants($self) {
         my $grant_alias = $self->_grant_alias($name);
         $self->{_grant}->{$grant_alias} = $allowed     if $enabled;
         $self->{_grant_disabled}->{$grant_alias} = !$enabled;
+        $self->{_grant_type}->{$grant_alias} = 'boolean';
+        $self->{_grant_type}->{$grant_alias} = 'int' if $is_int;
     }
     $sth->finish;
 }
@@ -855,6 +878,16 @@ sub grant($self,$user,$permission,$value=1) {
             .Dumper(\@perms);
     }
 
+    if ( $self->grant_type($permission) eq 'boolean' ) {
+        if ($value eq 'false' || !$value ) {
+            $value = 0;
+        } else {
+            $value = 1;
+        }
+    }
+
+    return 0 if !$value && !$user->can_do($permission);
+
     my $value_sql = $user->can_do($permission);
     return 0 if !$value && !$value_sql;
     return $value if defined $value_sql && $value_sql eq $value;
@@ -920,7 +953,23 @@ sub list_all_permissions($self) {
         lock_hash(%$row);
         push @list,($row);
     }
-    return @list;
+    my @list2 = sort {
+        return -1 if $a->{name} eq 'start_many' && $b->{name} eq 'start_limit';
+        return +1 if $b->{name} eq 'start_many' && $a->{name} eq 'start_limit';
+        $a->{name} cmp $b->{name};
+    } @list;
+    return @list2;
+}
+
+=head2 grant_type
+
+Returns the type of a grant type, currently it can be 'boolaean' or 'int'
+
+=cut
+
+sub grant_type($self, $permission) {
+    return 'boolean' if !exists $self->{_grant_type}->{$permission};
+    return $self->{_grant_type}->{$permission};
 }
 
 =head2 list_permissions
@@ -1086,6 +1135,24 @@ sub grants($self) {
     return %{$self->{_grant}};
 }
 
+=head2 grants_info
+
+Returns a list of the permissions granted to an user as a hash.
+Each entry is a reference to a list where the first value is
+the grant and the second the type
+
+=cut
+
+sub grants_info($self) {
+    my %grants = $self->grants();
+    my %grants_info;
+    for my $key ( keys %grants ) {
+        $grants_info{$key}->[0] = $grants{$key};
+        $grants_info{$key}->[1] = $self->{_grant_type}->{$key};
+    }
+    return %grants_info;
+}
+
 =head2 ldap_entry
 
 Returns the ldap entry as a Net::LDAP::Entry of the user if it has
@@ -1099,10 +1166,27 @@ sub ldap_entry($self) {
 
     return $self->{_ldap_entry} if $self->{_ldap_entry};
 
-    my @entries = Ravada::Auth::LDAP::search_user( name => $self->name );
-    $self->{_ldap_entry} = $entries[0];
+    for my $field ( qw(uid cn)) {
+        my ($entry) = Ravada::Auth::LDAP::search_user( name => $self->name,field => $field );
+        next if !$entry;
+        $self->{_ldap_entry} = $entry;
+        return $entry;
+    }
 
-    return $self->{_ldap_entry};
+    return;
+}
+
+=head2 groups
+
+Returns a list of the groups this user belogs to
+
+=cut
+
+sub groups($self) {
+    return () if !$self->external_auth || $self->external_auth ne 'ldap';
+    my @groups = Ravada::Auth::LDAP::search_group_members($self->name);
+    return @groups;
+
 }
 
 sub AUTOLOAD($self, $domain=undef) {

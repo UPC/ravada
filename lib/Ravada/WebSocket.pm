@@ -29,6 +29,7 @@ my %SUB = (
                   list_alerts => \&_list_alerts
                   ,list_bases => \&_list_bases
                   ,list_isos  => \&_list_isos
+                  ,list_iso_images  => \&_list_iso_images
                   ,list_nodes => \&_list_nodes
            ,list_host_devices => \&_list_host_devices
                ,list_machines => \&_list_machines
@@ -50,6 +51,8 @@ our %TABLE_CHANNEL = (
     list_alerts => 'messages'
     ,list_machines => 'domains'
     ,list_machines_tree => 'domains'
+    ,list_machines_user_including_privates => ['domains','bookings','booking_entries'
+        ,'booking_entry_ldap_groups', 'booking_entry_users','booking_entry_bases']
     ,list_requests => 'requests'
 );
 
@@ -105,6 +108,14 @@ sub _list_isos($rvd, $args) {
     $type = 'KVM' if !defined $type;
 
     return $rvd->iso_file($type);
+}
+
+sub _list_iso_images($rvd, $args) {
+    my ($type) = $args->{channel} =~ m{/(.*)};
+    $type = 'KVM' if !defined $type;
+
+    my $images=$rvd->list_iso_images($type);
+    return $images;
 }
 
 sub _list_nodes($rvd, $args) {
@@ -306,7 +317,7 @@ sub _list_recent_requests($rvd, $seconds) {
 }
 
 sub _ping_backend($rvd, $args) {
-    my @reqs = _list_recent_requests($rvd, 20);
+    my @reqs = _list_recent_requests($rvd, 120);
 
     my $requested = scalar( grep { $_->{status} eq 'requested' } @reqs );
 
@@ -440,7 +451,7 @@ sub _date_changed_table($self, $table) {
     my $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM $table");
     $sth->execute;
     my ($date) = $sth->fetchrow;
-    return $date;
+    return ($date or '');
 }
 
 sub _count_table($self, $table) {
@@ -456,9 +467,22 @@ sub _new_info($self, $key) {
     my $channel = $self->clients->{$key}->{channel};
     $channel =~ s{/.*}{};
 
-    my $table = $TABLE_CHANNEL{$channel} or return;
+    my $table0 = $TABLE_CHANNEL{$channel} or return;
+    if (!ref($table0)) {
+        $table0 = [$table0];
+    }
 
-    return ($self->_count_table($table),$self->_date_changed_table($table));
+    my $count = '';
+    my $date = '';
+
+    for my $table (@$table0) {
+        $count .= ":" if $count;
+        $count .= $self->_count_table($table);
+
+        $date .= ":" if $date;
+        $date .= $self->_date_changed_table($table)
+    }
+    return ($count, $date);
 
 }
 

@@ -1,7 +1,14 @@
 <span ng-show="!host_devices"><i class="fas fa-sync-alt fa-spin"></i></span>
 
+<div class="col-md-12">
+    <div class="alert alert-danger" role="alert" ng-show="showmachine.is_active">
+        <%=l "This machine is running and can't be changed" %>
+    </div>
+</div>
+
 <div ng-repeat="hdev in host_devices">
     <input type="checkbox"
+    ng-disabled="showmachine.is_active"
     ng-model="hdev.is_attached"
     ng-click="toggle_host_device(hdev.id)"/> <b>{{hdev.name}}</b>
        <ul>
@@ -15,4 +22,4 @@
 <a ng-show="host_devices" type="button" class="btn btn-outline-secondary"
     href="/node/settings/{{showmachine.id_vm}}.html"><b>Manage Host Devices</b></a>
 
-{{showmachine.host_devices}}
+%= include "/main/pending_request"

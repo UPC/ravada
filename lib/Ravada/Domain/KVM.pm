@@ -291,7 +291,7 @@ sub remove {
         warn $@ if $@;
     }
 
-    eval { $self->domain->undefine()    if $self->domain && !$self->is_removed };
+    eval { $self->domain->undefine(Sys::Virt::Domain::UNDEFINE_NVRAM)    if $self->domain && !$self->is_removed };
     confess $@ if $@ && $@ !~ /libvirt error code: 42/;
 
     eval { $self->remove_disks() if $self->is_known };
@@ -1171,6 +1171,8 @@ sub add_volume {
 
 #    confess "Missing vm"    if !$args{vm};
     $args{vm} = $self->_vm if !$args{vm};
+
+    my ($machine_type) = $self->_os_type_machine();
     my ($target_dev) = ($args{target} or $self->_new_target_dev());
     my $name = delete $args{name};
     if (!$args{xml}) {
@@ -1207,6 +1209,7 @@ sub add_volume {
     if ( !defined $bus ) {
         if  ($device eq 'cdrom') {
             $bus = 'ide';
+            $bus = 'sata' if $machine_type =~ /^pc-q35/;
         } else {
             $bus = 'virtio'
         }
@@ -1264,6 +1267,20 @@ sub _set_boot_order($self, $index, $order) {
     $self->domain($new_domain);
 }
 
+sub _get_boot_order($self, $index) {
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
+    my $count = 0;
+    for my $device ($doc->findnodes('/domain/devices/disk')) {
+        if ( $count++ == $index ) {
+            my ($boot) = $device->findnodes('boot');
+            if ($boot) {
+                return $boot->getAttribute('order');
+            }
+            return;
+        }
+    }
+}
+
 sub _cmd_boot_order($self, $set, $index=undef, $order=1) {
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
     my $count = 0;
@@ -1271,24 +1288,53 @@ sub _cmd_boot_order($self, $set, $index=undef, $order=1) {
     # if index is not numeric is the file, search the real index
     $index = $self->_search_volume_index($index) if defined $index && $index !~ /^\d+$/;
 
+    if ( $set ) {
+        my $current_order = $self->_get_boot_order($index);
+        return $doc if defined $current_order && $current_order == $order;
+    }
+
+    my %used_order;
+    my $changed = 0;
     for my $device ($doc->findnodes('/domain/devices/disk')) {
         my ($boot) = $device->findnodes('boot');
         if ( defined $index && $count++ != $index) {
             next if !$set || !$boot;
             my $this_order = $boot->getAttribute('order');
-            next if $this_order < $order;
+            next if !defined $this_order || $this_order < $order;
             $boot->setAttribute( order => $this_order+1);
+            $used_order{$this_order+1}++;
+            $changed++;
             next;
         }
         if (!$set) {
             next if !$boot;
             $device->removeChild($boot);
         } else {
+            my $old_order;
+            $old_order = $boot->getAttribute('order') if $boot;
+            return $doc if defined $old_order && $old_order == $order;
+
             $boot = $device->addNewChild(undef,'boot')  if !$boot;
             $boot->setAttribute( order => $order );
+            $used_order{$order}++;
+            $changed++;
         }
     }
+    $self->_bump_boot_order_interfaces($doc,\%used_order) if $changed;
     return $doc;
+}
+
+sub _bump_boot_order_interfaces($self, $doc, $used_order) {
+    for my $boot ($doc->findnodes('/domain/devices/interface/boot')) {
+        my $current_order = $boot->getAttribute('order');
+        next if !defined $current_order || !$used_order->{$current_order};
+        my $free_order = $current_order;
+        for (;;) {
+            last if !$used_order->{$free_order};
+            $free_order++;
+        }
+        $boot->setAttribute('order' => $free_order);
+    }
 }
 
 sub _search_volume_index($self, $file) {
@@ -1296,7 +1342,7 @@ sub _search_volume_index($self, $file) {
     my $index = 0;
     for my $device ($doc->findnodes('/domain/devices/disk')) {
         my ($source) = $device->findnodes('source');
-        return $index if $source->getAttribute('file') eq $file;
+        return $index if $source && $source->getAttribute('file') eq $file;
         $index++;
     }
     confess "I can't find file $file in ".$self->name;
@@ -1599,23 +1645,43 @@ sub _ip_agent($self) {
     return if $@ && $@ =~ /^libvirt error code: (74|86),/;
     warn $@ if $@;
 
+    my $found;
     for my $if (@ip) {
         next if $if->{name} =~ /^lo/;
         for my $addr ( @{$if->{addrs}} ) {
+
+            next unless $addr->{type} == 0 && $addr->{addr} !~ /^127\./;
+
+            $found = $addr->{addr} if !$found;
+
             return $addr->{addr}
-            if $addr->{type} == 0 && $addr->{addr} !~ /^127\./;
+            if $self->_vm->_is_ip_nat($addr->{addr});
         }
     }
+    return $found;
 }
 
+#sub _ip_arp($self) {
+#    my @sys_virt_version = split('\.', $Sys::Virt::VERSION);
+#    return undef if ($sys_virt_version[0] < 5);
+#    my @ip;
+#    eval " @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_ARP); ";
+#    return @ip;
+#}
+
 sub ip($self) {
+    my ($ip) = $self->_ip_agent();
+    return $ip if $ip;
+
     my @ip;
     eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
     warn $@ if $@;
     return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
 
-    return $self->_ip_agent();
+#    @ip = $self->_ip_arp();
+#    return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
 
+    return;
 }
 
 =head2 set_max_mem
@@ -2138,10 +2204,10 @@ sub _set_controller_usb($self,$numero, $data={}) {
         }
     }
     $numero = $count+1 if !defined $numero;
-    if ( $numero >= $count ) {
+    if ( $numero > $count ) {
         my $missing = $numero-$count;
         
-        for my $i (0..$missing) {
+        for my $i (1..$missing) {
             my $controller = $devices->addNewChild(undef,"redirdev");
             $controller->setAttribute(bus => 'usb');
             $controller->setAttribute(type => $tipo );
@@ -2533,7 +2599,6 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
         return if $target->getAttribute('bus') eq $bus;
         $target->setAttribute(bus => $bus);
         $self->_change_xml_address($doc, $address, $bus);
-
     }
     confess "Error: disk $index not found in ".$self->name if !$changed;
 
@@ -2634,16 +2699,29 @@ sub _change_hardware_network($self, $index, $data) {
 
 
 
-sub reload_config($self, $doc) {
+sub _validate_xml($self, $doc) {
     my $in = $doc->toString();
     my ($out, $err);
     run3(["virt-xml-validate","-"],\$in,\$out,\$err);
-    warn $out if $out;
-    die "\$?=$? $err\n$in" if $?;
+    if ( $? ){
+        warn $out if $out;
+        my $file_out = "/var/tmp/".$self->name().".xml";
+        open my $out1,">",$file_out or die $!;
+        print $out1 $self->xml_description();
+        close $out1;
+        open my $out2,">","/var/tmp/".$self->name().".new.xml" or die $!;
+        my $doc_string = $doc->toString();
+        $doc_string =~ s/^<.xml.*//;
+        $doc_string =~ s/"/'/g;
+        print $out2 $doc_string;
+        close $out2;
 
-    #   my ($namespace) = $doc->toString() =~ /<domain(.*)/m;
-    #   $self->{_namespace} = $namespace if $namespace =~ /xmlns/;
+        confess "\$?=$? $err\ncheck $file_out" if $?;
+    }
+}
 
+sub reload_config($self, $doc) {
+    $self->_validate_xml($doc) if $self->_vm->vm->get_major_version >= 4;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
 }
@@ -2684,11 +2762,20 @@ sub _change_xml_address_usb($self, $address) {
     for (keys %attribute) {
         $address->setAttribute($_ => $attribute{$_});
     }
+
+    for (qw(controller unit target domain slot function)) {
+        $address->removeAttribute($_);
+    }
+
+=pod
+
     $address->setAttribute(unit => $self->_new_address_xml(
             match => 'usb'
        ,attribute => 'port'
         )
     );
+
+=cut
 
 }
 

@@ -42,7 +42,8 @@ sub test_remove_domain {
     my $vm = shift;
     my $name = shift;
 
-    my $domain = $name if ref($name);
+    my $domain;
+    $domain = $name if ref($name);
     $domain = $vm->search_domain($name,1);
 
     if ($domain) {
@@ -161,7 +162,7 @@ sub test_req_create_base {
     ok($req->status eq 'requested'
         ,"Status of request is ".$req->status." it should be requested");
 
-    $ravada->_process_requests_dont_fork();
+    wait_request();
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");

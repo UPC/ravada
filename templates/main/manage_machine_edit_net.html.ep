@@ -16,8 +16,8 @@
                     </select>
         </li>
         <li class="list-group-item list-group-item-primary">
-            <span ng-show="item.type == 'NAT'">nat</span>
-            <span ng-show="item.type == 'bridge'">bridge</span>
+            <span ng-show="item.type == 'NAT'"><%=l 'nat' %></span>
+            <span ng-show="item.type == 'bridge'"><%=l 'bridge' %></span>
         </li>
         <li class="list-group-item">
             <select ng-model="item.network"
@@ -33,7 +33,7 @@
                         >
             </select>
             <span ng-hide="item.type == 'NAT' || network_bridges[0]">
-                No bridges found
+              <%=l 'No bridges found' %>
             </span>
         </li>
     </ul>

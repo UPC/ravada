@@ -11,7 +11,7 @@
             <div class="page-header">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <h2>Virtual Machine <%= $domain->name %></h2>
+                        <h2><%=l 'Virtual Machine' %> <%= $domain->name %></h2>
                     </div>
                         <form action="<%= $uri %>" method="post">
                         <input type="submit" name="start" value="start" <%= $_start_disabled %>>
@@ -24,7 +24,7 @@
                         <a href="/machine/screenshot/<%= $domain->id %>.html"><%=l Screenshot %></a>
                     </form>
                     <img src="/img/screenshots/<%= $domain->id %>.png" width=400>
-                    
+
                 </div>
             </div>
         </div>

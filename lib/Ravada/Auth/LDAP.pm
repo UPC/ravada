@@ -78,6 +78,9 @@ sub add_user($name, $password, $storage='rfc2307', $algorithm=undef ) {
 
     _init_ldap_admin();
 
+    my $base = ( $$CONFIG->{ldap}->{base} or _dc_base() );
+    my $field = ( $$CONFIG->{ldap}->{field} or "cn" );
+
     $name = escape_filter_value($name);
     $password = escape_filter_value($password);
 
@@ -87,7 +90,7 @@ sub add_user($name, $password, $storage='rfc2307', $algorithm=undef ) {
 
     my %entry = (
         cn => $name
-        , uid => $name
+        , $field => $name
 #        , uidNumber => _new_uid()
 #        , gidNumber => $GID
         , objectClass => [@OBJECT_CLASS]
@@ -96,11 +99,11 @@ sub add_user($name, $password, $storage='rfc2307', $algorithm=undef ) {
 #        , homeDirectory => "/home/$name"
         ,userPassword => _password_store($password, $storage, $algorithm)
     );
-    my $dn = "cn=$name,"._dc_base();
+    my $dn = "$field=$name,".$base;
 
     my $mesg = $LDAP_ADMIN->add($dn, attr => [%entry]);
     if ($mesg->code) {
-        die "Error afegint $name to $dn ".$mesg->error;
+        die "Error creating $dn: ".$mesg->error;
     }
 }
 
@@ -156,8 +159,9 @@ sub _get_gid() {
         add_group('users');
         ($group_users) = search_group(name => 'users');
         confess "Error: I can create nor find LDAP group 'users'" if !$group_users;
+        warn "Warning: group users has no gidNumber".Dumper($group_users) if !$group_users->get_value('gidNumber');
     }
-    return $group_users->get_value('gidNumber');
+    return ($group_users->get_value('gidNumber') or '1000');
 }
 
 sub _new_uid($ldap=_init_ldap_admin(), $base=_dc_base()) {
@@ -181,11 +185,7 @@ sub _new_uid($ldap=_init_ldap_admin(), $base=_dc_base()) {
     }
 }
 
-sub default_object_class() {
-    return @OBJECT_CLASS;
-}
-
-sub _password_store($password, $storage, $algorithm) {
+sub _password_store($password, $storage, $algorithm=undef) {
     return _password_rfc2307($password, $algorithm) if lc($storage) eq 'rfc2307';
     return _password_pbkdf2($password, $algorithm)  if lc($storage) eq 'pbkdf2';
 
@@ -272,14 +272,14 @@ sub search_user {
 
     my $username = delete $args{name} or confess "Missing user name";
     my $retry = (delete $args{retry} or 0);
-    my $field = (delete $args{field} or $$CONFIG->{ldap}->{field} or 'uid');
+    my $field = (delete $args{field} or $$CONFIG->{ldap}->{field} or 'cn');
     my $ldap = (delete $args{ldap} or _init_ldap_admin());
     my $base = (delete $args{base} or _dc_base());
     my $typesonly= (delete $args{typesonly} or 0);
     my $escape_username = 1;
     $escape_username = delete $args{escape_username} if exists $args{escape_username};
     my $filter_orig = delete $args{filter};
-    my $sizelimit = (delete $args{sizelimit} or 100);
+    my $sizelimit = (delete $args{sizelimit} or $$CONFIG->{ldap}->{size_limit} or 1000);
     my $timelimit = (delete $args{timelimit} or 60);
 
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
@@ -306,9 +306,10 @@ sub search_user {
     timelimit => $timelimit
 
     );
-    warn "LDAP retry ".$mesg->code." ".$mesg->error if $retry > 1;
 
-    if ( $retry <= 3 && $mesg->code && $mesg->code != 4 ) {
+    if ( $retry <= 3 && $mesg->code && $mesg->code != 4
+        && $mesg->code != 32
+    ) {
          warn "LDAP error ".$mesg->code." ".$mesg->error."."
             ."Retrying ! [$retry]"  if $retry;
          $LDAP_ADMIN = undef;
@@ -341,25 +342,27 @@ Add a group to the LDAP
 
 =cut
 
-sub add_group($name, $base=_dc_base(), $class=['groupOfUniqueNames','nsMemberOf','posixGroup','top' ]) {
-    $base = _dc_base() if !defined $base;
+sub add_group($name, $base=undef, $class=['groupOfUniqueNames','nsMemberOf','posixGroup','top' ]) {
+    $base = ($$CONFIG->{ldap}->{groups_base} or "ou=groups,"._dc_base()) if !defined $base;
+
+    my $ldap = _init_ldap_admin();
+
     $name = escape_filter_value($name);
     my $oc_posix_group;
     $oc_posix_group = grep { /^posixGroup$/ } @$class;
 
     my @attrs =( cn=>$name
                     ,objectClass => $class
-                    ,ou => 'Groups'
                     ,description => "Group for $name"
     );
     push @attrs, (gidNumber => _search_new_gid()) if $oc_posix_group;
 
     my @data = (
-        dn => "cn=$name,ou=groups,$base"
+        dn => "cn=$name,$base"
         , cn => $name
         , attrs => \@attrs
       );
-    my $mesg = $LDAP_ADMIN->add(@data);
+    my $mesg = $ldap->add(@data);
     if ($mesg->code) {
         die "Error creating group $name : ".$mesg->error."\n".Dumper(\@data);
     }
@@ -391,9 +394,8 @@ Removes the group from the LDAP directory. Use with caution
 
 sub remove_group {
     my $name = shift;
-    my $base = shift;
 
-    $base = "ou=groups,"._dc_base() if !$base;
+    my $base = ( $$CONFIG->{ldap}->{groups_base} or "ou=groups,"._dc_base() );
 
     my $entry = search_group(name => $name, base => $base);
     if (!$entry) {
@@ -414,7 +416,7 @@ sub search_group {
     my %args = @_;
 
     my $name = delete $args{name} or confess "Error: missing name";
-    my $base = ( delete $args{base} or "ou=groups,"._dc_base() );
+    my $base = ( delete $args{base} or $$CONFIG->{ldap}->{groups_base} or "ou=groups,"._dc_base() );
     my $ldap = ( delete $args{ldap} or _init_ldap_admin());
     my $retry =( delete $args{retry} or 0);
 
@@ -424,7 +426,7 @@ sub search_group {
     my $mesg = $ldap ->search (
         filter => $filter
          ,base => $base
-         ,sizelimit => 100
+         ,sizelimit => ($$CONFIG->{ldap}->{size_limit} or 1000)
     );
     warn "LDAP retry ".$mesg->code." ".$mesg->error." [filter: $filter , base: $base]" if $retry > 1;
     if ($mesg->code == 4 ) {
@@ -443,7 +445,7 @@ sub search_group {
         );
     }
 
-    if ( $retry <= 3 && $mesg->code){
+    if ( $retry <= 3 && $mesg->code && $mesg->code != 32){
         warn "LDAP error ".$mesg->code." ".$mesg->error.". [cn=$name] "
             ."Retrying ! [$retry]"  if $retry;
          $LDAP_ADMIN = undef;
@@ -461,6 +463,39 @@ sub search_group {
     return $entries[0];
 }
 
+=head2 search_group_members
+
+=cut
+
+sub search_group_members($cn, $retry = 0) {
+    my $base = ($$CONFIG->{ldap}->{groups_base} or "ou=groups,"._dc_base());
+
+    my $ldap = _init_ldap_admin();
+    my $sizelimit = ($$CONFIG->{ldap}->{size_limit} or 1000);
+
+    my $mesg = $ldap ->search (
+        filter => "memberuid=$cn"
+         ,base => $base
+         ,sizelimit => $sizelimit
+    );
+    if ( ($mesg->code == 1 || $mesg->code == 81) && $retry <3 ) {
+        $LDAP_ADMIN = undef;
+        return search_group_members($cn, $retry+1);
+    }
+    warn $mesg->code." ".$mesg->error." [base: $base]" if $mesg->code;
+
+    my @entries = map { $_->get_value('cn') } $mesg->entries();
+
+    $mesg = $ldap ->search (
+        filter => "member=cn=$cn,".$base
+         ,base => $base
+         ,sizelimit => $sizelimit
+    );
+    my @entries2 = map { $_->get_value('cn') } $mesg->entries();
+
+    return (sort (@entries,@entries2));
+}
+
 =head2 add_to_group
 
 Adds user to group
@@ -472,7 +507,10 @@ Adds user to group
 sub add_to_group {
     my ($dn, $group_name) = @_;
     if ( $dn !~ /=.*,/ ) {
-        my $user = search_user(name => $dn) or confess "Error: user '$dn' not found";
+        my $user = search_user(name => $dn, field => 'uid');
+        $user = search_user(name => $dn, field => 'cn') if !$user;
+
+        confess "Error: user '$dn' not found" if !$user;
         $dn = $user->dn;
     }
 
@@ -544,7 +582,8 @@ sub remove_from_group {
 =cut
 
 sub _search_posix_group($self, $name) {
-    my $base = 'ou=groups,'._dc_base();
+    my $base = ($$CONFIG->{ldap}->{groups_base} or "ou=groups,"._dc_base());
+
     my $field = 'cn';
     if ($name =~ /(.*?)=(.*)/) {
         $field = $1;
@@ -564,6 +603,12 @@ sub _search_posix_group($self, $name) {
         if (scalar @posix_group > 1);
     return $posix_group[0];
 }
+
+=head2 group_members
+
+Returns a list of the group members
+
+=cut
 
 sub group_members {
     return _group_members(@_);
@@ -866,7 +911,7 @@ sub _init_ldap_admin {
     return $LDAP_ADMIN if $LDAP_ADMIN;
 
     my ($dn, $pass);
-    if ($$CONFIG->{ldap} ) {
+    if (exists $$CONFIG->{ldap} && $$CONFIG->{ldap} ) {
         ($dn, $pass) = ( $$CONFIG->{ldap}->{admin_user}->{dn} 
             , $$CONFIG->{ldap}->{admin_user}->{password});
     } else {
@@ -931,9 +976,16 @@ sub is_member($cn, $group) {
     my @members = _group_members($group);
     return 1 if grep /^$cn$/, @members;
 
-    $user = search_user($cn) or confess "Error: unknown user '$cn'"
-    if !$user;
-    $dn = $user->dn if !$dn;
+    if (!$dn) {
+        if (!$user) {
+            for my $field ( 'uid','cn') {
+                $user = search_user(name => $cn, field => $field);
+                last if $user;
+            }
+            confess "Error: unknown user '$cn'" if !$user;
+        }
+        $dn = $user->dn if !$dn;
+    }
 
     return 1 if grep /^$dn$/, @members;
 

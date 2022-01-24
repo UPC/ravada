@@ -77,6 +77,7 @@ sub search_by_id($self, $id) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM host_devices WHERE id=?");
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
+    die "Error: device id='$id' not found" if !exists $row->{id};
     $row->{devices} = '' if !defined $row->{devices};
 
     return Ravada::HostDevice->new(%$row);
@@ -150,7 +151,8 @@ sub _fetch_template_args($self, $device) {
         } else {
             my ($value) = $device =~ qr($re);
             confess "Error: $re not found in '$device'" if !defined $value;
-            $ret->{$name} = $value;
+            $value =~ s/^0+// if $value =~ /^[0-9]+$/;
+            $ret->{$name} = ''.$value;
         }
     }
     return $ret;

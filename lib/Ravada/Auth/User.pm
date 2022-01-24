@@ -11,6 +11,7 @@ Ravada::Auth::User - User management and tools library for Ravada
 
 use Carp qw(confess croak);
 use Data::Dumper;
+use Mojo::JSON qw(decode_json);
 use Moose::Role;
 
 no warnings "experimental::signatures";
@@ -176,6 +177,7 @@ sub send_message($self, $subject, $message='') {
         "INSERT INTO messages (id_user, subject, message) "
         ." VALUES(?, ? , ? )");
 
+    $subject = substr($subject,0,120) if length($subject)>120;
     $sth->execute($self->id, $subject, $message);
 }
 
@@ -362,6 +364,7 @@ sub _load_allowed {
     my $ldap_entry;
     $ldap_entry = $self->ldap_entry if $self->external_auth && $self->external_auth eq 'ldap';
 
+
     my @domains = $self->_list_domains_access();
 
     for my $id_domain ( @domains ) {
@@ -384,7 +387,7 @@ sub _load_allowed {
                     if !exists $self->{_allowed}->{$id_domain};
                 last;
             } elsif ( $ldap_entry && defined $ldap_entry->get_value($attribute)
-                    && $ldap_entry->get_value($attribute) eq $value ) {
+                    && grep { $value eq $_ } $ldap_entry->get_value($attribute) ) {
 
                 $self->{_allowed}->{$id_domain} = $allowed;
 
@@ -403,6 +406,63 @@ sub _load_allowed {
             $self->{_allowed}->{$id_domain} = 1;
         }
     }
+
+    $self->_load_allowed_groups();
+}
+
+sub _load_allowed_groups($self) {
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_domain,name from group_access");
+    my ($id_domain, $name);
+    $sth->execute();
+    $sth->bind_columns(\($id_domain, $name));
+    while ( $sth->fetch ) {
+        next if $self->{_allowed}->{$id_domain};
+
+        $self->{_allowed}->{$id_domain} = 0;
+
+        next unless $self->is_external && $self->external_auth eq 'ldap';
+
+        if (!Ravada::Auth::LDAP::search_group(name => $name)) {
+            next;
+        }
+
+        $self->{_allowed}->{$id_domain} = 1
+        if Ravada::Auth::LDAP::is_member($self->ldap_entry, $name);
+    }
+}
+
+=head2 list_requests
+
+List the requests for this user. It returns requests from the last hour
+by default.
+
+Arguments: optionally pass the date to start search for requests.
+
+
+=cut
+
+sub list_requests($self, $date_req=Ravada::Utils::date_now(3600)) {
+    my $sth = $$CONNECTOR->dbh
+    ->prepare("SELECT id,args FROM requests WHERE date_req > ?"
+    ." ORDER BY date_req DESC");
+
+    my ($id, $args_json);
+
+    $sth->execute($date_req);
+    $sth->bind_columns(\($id, $args_json));
+
+    my @req;
+    while ( $sth->fetch ) {
+        my $args = decode_json($args_json);
+        next if !length $args;
+        my $uid = ($args->{uid} or $args->{id_owner}) or next;
+        next if $uid != $self->id;
+
+        my $req = Ravada::Request->open($id);
+        push @req, ( $req );
+    }
+    return @req;
 }
 
 1;

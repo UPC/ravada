@@ -42,6 +42,13 @@
                 <li><b><%=l 'Max Memory' %>:</b> {{domain.max_mem}}</li>
                 <li><b><%=l 'Memory' %>:</b> {{domain.memory}}</li>
                 <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
+                <li ng-show="domain.host_devices && domain.host_devices.length"><b>Host Devices</b>
+                    <ul>
+                        <li ng-repeat="device in domain.host_devices">
+                            {{device.name}}
+                        </li>
+                    </ul>
+                </li>
             </ul>
             <h3 ng-show="domain.ports.length">Open ports</h3>
             <div class="container pl-5">

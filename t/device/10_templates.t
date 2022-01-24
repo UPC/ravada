@@ -24,7 +24,7 @@ sub _set_hd_nvidia($hd) {
 }
 
 sub _set_hd_usb($hd) {
-    $hd->_data( list_filter => '(flash|audio|cam|bluetoo)');
+    $hd->_data( list_filter => '(disk|flash|audio|smartcard|cam|bluetoo)');
 }
 
 sub test_hostdev_not_in_domain_void($domain) {
@@ -121,7 +121,6 @@ sub test_hd_in_domain($vm , $hd) {
 
         test_device_unlocked($clone);
         if ($hd->list_devices) {
-            diag($clone->name);
             eval { $clone->start(user_admin) };
             if (!$count) {
                 like($@,qr/No available devices/);
@@ -182,7 +181,8 @@ sub test_grab_free_device($base) {
     ($up_dev) = $up->list_host_devices_attached();
     is($up_dev->{is_locked},0);
 
-    $down->start(user_admin);
+    eval { $down->start(user_admin) };
+    is(''.$@,'') or die "Error starting ".$down->name;
     ($down_dev) = $down->list_host_devices_attached();
     ok($down_dev->{name});
     ($up_dev) = $up->list_host_devices_attached();
@@ -328,8 +328,8 @@ sub test_templates($vm) {
         };
         my $devices = Ravada::WebSocket::_list_host_devices(rvd_front(), $ws_args);
         is(scalar(@$devices), 2+$n) or die Dumper($devices, $list_hostdev[-1]);
+        $n+=2;
         next if !(scalar(@{$devices->[-1]->{devices}})>1);
-        $n++;
 
         my $list_filter = $list_hostdev[-1]->_data('list_filter');
         $list_hostdev[-1]->_data('list_filter' => '002');

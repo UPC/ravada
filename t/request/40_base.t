@@ -6,6 +6,9 @@ use Data::Dumper;
 use POSIX qw(WNOHANG);
 use Test::More;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use_ok('Ravada');
 use_ok('Ravada::Request');
 
@@ -15,6 +18,7 @@ use Test::Ravada;
 init();
 
 my $USER = create_user("foo","bar", 1);
+my $USER_REGULAR = create_user(new_domain_name,$$);
 
 rvd_back();
 my $ID_ISO = search_id_iso('Alpine');
@@ -89,10 +93,7 @@ sub test_req_create_domain_iso {
     ok($req->status eq 'requested'
         ,"Status of request is ".$req->status." it should be requested");
 
-    my $rvd_back = rvd_back();
-#    $rvd_back->process_requests(1);
-    $rvd_back->process_requests();
-    wait_request(background => 1);
+    wait_request(background => 0);
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
@@ -155,8 +156,7 @@ sub test_req_create_domain {
         ,"Status of request is ".$req->status." it should be requested");
 
     my $rvd_back = rvd_back();
-    $rvd_back->process_requests();
-    wait_request(background => 1);
+    wait_request(background => 0);
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
@@ -475,17 +475,17 @@ sub test_shutdown_by_name {
     };
     is($@,'') or return;
     ok($req);
-    rvd_back->_process_all_requests_dont_fork();
+    wait_request(debug => 0, request => $req);
     is($req->status(),'done');
 
     for ( 1 .. 2 ) {
-        rvd_back->_process_all_requests_dont_fork();
-        last if !$domain->is_active;
+        wait_request(debug => 0, request => $req);
+        last if !$domain->is_active || ! scalar($domain->list_requests);
         sleep 1;
     }
 
     my $domain2 = $vm->search_domain($domain_name);
-    is($domain2->is_active,0);
+    is($domain2->is_active,0,"Expecting $domain_name down") or exit;
 }
 
 sub test_shutdown_by_id {
@@ -522,6 +522,92 @@ sub test_shutdown_by_id {
     is($domain2->is_active,0);
 }
 
+sub test_req_deny($vm, $base_name) {
+    test_req_clone_deny($vm, $base_name);
+
+    test_req_create_deny($vm);
+}
+
+sub test_req_create_deny($vm) {
+    my $name = new_domain_name();
+    my $user = create_user();
+
+    my @args = (
+        id_owner => $user->id
+        ,vm => $vm->type
+        ,id_iso => $ID_ISO
+    );
+    my $req = Ravada::Request->create_domain(@args,name => $name);
+    is($req->status(),'done');
+    like($req->error,qr/access denied/);
+    wait_request();
+
+    my $domain= $vm->search_domain($name);
+    ok(!$domain);
+
+    user_admin->grant($user,'create_machine');
+    $name = new_domain_name();
+    $req = Ravada::Request->create_domain(@args, name => $name);
+    is($req->status(),'requested');
+    wait_request();
+
+    my $domain2 = $vm->search_domain($name);
+    ok($domain2);
+
+    $domain->remove(user_admin)  if $domain;
+    $domain2->remove(user_admin) if $domain2;
+    $user->remove();
+
+}
+
+
+sub test_req_clone_deny($vm, $base_name) {
+
+    my $base = $vm->search_domain($base_name);
+    $base->is_public(0),
+
+    my $name = new_domain_name();
+
+    my $req = Ravada::Request->clone(
+        name => $name
+        ,uid => $USER_REGULAR->id
+        ,id_domain => $base->id
+    );
+    is($req->status(),'done');
+    like($req->error,qr/is not public/) or exit;
+
+    $req = Ravada::Request->clone(
+        name => $name
+        ,uid => -1
+        ,id_domain => $base->id
+    );
+    is($req->status(),'done');
+    like($req->error,qr/user.* does not exist/) or exit;
+
+    $base->is_public(1),
+    $req = Ravada::Request->clone(
+        name => $name
+        ,uid => $USER_REGULAR->id
+        ,id_domain => $base->id
+    );
+    is($req->status(),'requested');
+    wait_request(debug => 0);
+    my $clone = $vm->search_domain($name);
+    ok($clone,"Expecting clone $name");
+
+    $base->is_public(0);
+    $req = Ravada::Request->clone(
+        name => $name
+        ,uid => $USER_REGULAR->id
+        ,id_domain => $base->id
+    );
+    is($req->status(),'done');
+    like($req->error,qr/is not public/) or exit;
+
+    $clone->remove(user_admin);
+
+}
+
 ################################################
 
 {
@@ -538,7 +624,8 @@ for my $vm_name ( vm_names ) {
     my $vm_connected;
     eval {
         my $rvd_back = rvd_back();
-        my $vm= $rvd_back->search_vm($vm_name)  if rvd_back();
+        my $vm;
+        $vm= $rvd_back->search_vm($vm_name)  if rvd_back();
         $vm_connected = $vm if $vm;
         @ARG_CREATE_DOM = ( id_iso => search_id_iso('Alpine'), vm => $vm_name, id_owner => $USER->id, disk => 1024 * 1024 );
 
@@ -569,6 +656,8 @@ for my $vm_name ( vm_names ) {
         test_req_prepare_base($vm_name, $base_name);
         test_req_create_from_base_novm($vm_name, $base_name);
         my $clone_name = test_req_create_from_base($vm_name, $base_name);
+
+        test_req_deny($vm_connected, $base_name);
 
         ok($clone_name) or next;
 

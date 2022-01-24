@@ -308,11 +308,11 @@ sub test_exposed_port($vm) {
     $base->expose(22);
 
     my $req = Ravada::Request->manage_pools(uid => user_admin->id , _no_duplicate => 1);
-    wait_request( debug => 1, skip => 'set_time' );
+    wait_request( debug => 0, skip => 'set_time' );
     is($req->status, 'done');
 
     my $req_refresh = Ravada::Request->refresh_vms( _no_duplicate => 1);
-    wait_request( debug => 1 ,skip => 'set_time' );
+    wait_request( debug => 0 ,skip => 'set_time' );
     is($req_refresh->status, 'done');
     is(scalar($base->clones), $n);
 
@@ -359,6 +359,67 @@ sub test_remove_clone($vm) {
 
 }
 
+sub test_pool_with_volatiles($vm) {
+    # Clones should be created.
+    # As are volatile, they should be started
+    # On shutdown they should be destroyed
+    # In a while new clones should appear to honor the pool
+    #
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
+
+    $base->pools(1);
+    $base->volatile_clones(1);
+    $base->_data('shutdown_disconnected', 1);
+
+    my $n = 5;
+    $base->pool_clones($n);
+    $base->pool_start($n);
+    my $req = Ravada::Request->manage_pools(uid => user_admin->id
+        ,_no_duplicate => 1);
+    wait_request( debug => 0);
+    is($req->status, 'done');
+
+    my @clones0 = $base->clones();
+    is(scalar @clones0, $n);
+    my @clones;
+    for my $c (@clones0) {
+        push @clones,(Ravada::Domain->open($c->{id}));
+        is($c->{status},'active');
+        is($c->{is_volatile},1);
+        is($c->{is_pool},1);
+        Ravada::Request->start_domain(
+            uid => user_admin->id
+            ,id_domain => $c->{id}
+            ,remote_ip => '1.2.3.4'
+        );
+    }
+    wait_request(debug => 0);
+    delete_request('start','create','clone');
+    for my $clone (@clones ) {
+        $clone->_data('client_status','disconnected');
+    }
+
+    for ( 1 .. 60 ) {
+        my $req_shutdown = Ravada::Request::_search_request(
+                'shutdown_domain'
+        );
+        wait_request(debug => 0);
+        last if $req_shutdown || scalar($base->clones()) < $n;
+        Ravada::Request->enforce_limits();
+        wait_request(debug => 0);
+        sleep 1;
+    }
+    ok(scalar($base->clones()) < $n, "Expecting less than $n up");
+
+    $req = Ravada::Request->manage_pools(uid => user_admin->id
+        ,_no_duplicate => 1);
+    wait_request( debug => 0);
+    is($req->status, 'done');
+
+    is(scalar($base->clones()),$n);
+    remove_domain($base);
+}
+
 ###############################################################
 
 init();
@@ -381,6 +442,8 @@ for my $vm_name (reverse vm_names() ) {
 
         diag("*** Testing pools in $vm_name ***");
         import_base($vm);
+
+        test_pool_with_volatiles($vm);
 
         test_exposed_port($vm);
 

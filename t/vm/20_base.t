@@ -1309,8 +1309,9 @@ sub test_prepare_chained($vm) {
 
 sub test_change_display_settings($vm) {
     my $domain = create_domain($vm);
+    wait_request(debug => 0);
     if ($vm->type eq 'Void') {
-        test_change_display_settings_kvm($domain);
+        # TODO
     } elsif ($vm->type eq 'KVM') {
         test_change_display_settings_kvm($domain);
     }
@@ -1628,12 +1629,12 @@ sub _check_iptables_fixed_conflict($vm, $port) {
 
 sub test_display_conflict_next($vm) {
     rvd_back->setting("/backend/expose_port_min" => 5900 );
-    my $domain0 = $BASE->clone(name => new_domain_name, user => user_admin, memory =>128*1024);
+    my $domain0 = $BASE->clone(name => new_domain_name, user => user_admin, memory =>512*1024);
     $domain0->_reset_free_port() if $vm->type eq 'Void';
     my $next_port_builtin = _next_port_builtin($domain0);
     rvd_back->setting('/backend/expose_port_min' => $next_port_builtin+3);
 
-    my $domain1 = $BASE->clone(name => new_domain_name, user => user_admin, memory => 128*1024);
+    my $domain1 = $BASE->clone(name => new_domain_name, user => user_admin, memory => 512*1024);
     _add_hardware($domain1, 'display', { driver => 'x2go'} );
     # conflict x2go with previous builtin display
     _set_public_exposed($domain1, $next_port_builtin);
@@ -1650,7 +1651,9 @@ sub test_display_conflict_next($vm) {
 
     for ( 1 .. 10 ) {
         $displays1 = $domain1->info(user_admin)->{hardware}->{display};
-        isnt($displays1->[1+$TLS]->{port}, $next_port_builtin);
+        if ($vm->type eq 'KVM') {
+            isnt($displays1->[1+$TLS]->{port}, $next_port_builtin) or die Dumper($displays1);
+        }
 
         # Now conflict x2go with next builtin display
         my ($display_x2go) = grep { $_->{driver} eq 'x2go' } @$displays1;
@@ -1812,6 +1815,79 @@ sub test_removed_leftover($vm) {
     Test::Ravada::_check_leftovers();
 }
 
+sub test_long_iso($vm) {
+    my $file_dir;
+    if ($vm->type eq 'KVM') {
+        $file_dir = '/var/lib/libvirt/images/';
+    } else {
+        $file_dir = "/var/tmp";
+    }
+    my $iso_file = $file_dir."/".('a' x 200).".iso";
+
+    my $req;
+    eval { $req = Ravada::Request->create_domain( name => new_domain_name(), id_template => 1
+            , id_iso => 1
+            , iso_file => $iso_file
+            , id_owner => user_admin->id
+            , vm => $vm->type
+        );
+    };
+    is($@,'');
+
+    if ($req) {
+        is($req->args('iso_file'), $iso_file);
+
+        my $req2 = Ravada::Request->open($req->id);
+
+        is($req2->args('iso_file'), $iso_file);
+    }
+}
+
+sub test_prepare_base_disk_missing($vm) {
+    my $domain = create_domain($vm);
+    $domain->add_volume();
+
+    my @volumes = $domain->list_volumes();
+
+    my ($two) = grep(!/iso$/i, reverse @volumes);
+    unlink $two or die "$! $two";
+    is($vm->file_exists($two),undef);
+
+    eval {
+    $domain->prepare_base(user_admin);
+    };
+    like($@,qr/volume.*issing/) or die $domain->name;
+
+    $domain->remove_base(user_admin) if $domain->is_base;
+
+    open my $out,">",$two or die "$! $two";
+    print $out "Error\n";
+    close $two;
+
+    eval {
+    $domain->prepare_base(user_admin);
+    };
+    like($@,qr/Unknown capacity/,"Expecting unknown capacity for $two") if $@;
+
+    unlink $two;
+    $domain->remove(user_admin);
+}
+
+sub test_prepare_base_volatile($vm) {
+    my $domain = create_domain($vm);
+    $domain->volatile_clones(1);
+    $domain->prepare_base(user_admin);
+
+    my $clone = $domain->clone(name => new_domain_name, user => user_admin);
+    is($clone->is_volatile(), 1);
+
+    eval { $clone->prepare_base(user_admin) };
+    like($@,qr/Error.*is volatile/);
+
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
+}
+
 #######################################################################33
 
 for my $db ( 'mysql', 'sqlite' ) {
@@ -1819,7 +1895,7 @@ for my $db ( 'mysql', 'sqlite' ) {
     if ($db eq 'mysql') {
         init('/etc/ravada.conf',0, 1);
         if ( !ping_backend() ) {
-            diag("no backend");
+            diag("SKIPPED: no backend running");
             next;
         }
         $Test::Ravada::BACKGROUND=1;
@@ -1859,12 +1935,18 @@ for my $vm_name ( vm_names() ) {
 
         use_ok($CLASS);
         if ($vm_name eq 'KVM' ) {
-            $BASE = rvd_back->search_domain('zz-test-base-alpine');
-            $BASE = import_domain($vm,'zz-test-base-alpine') if !$BASE;
+            my $name = 'zz-test-base-alpine-q35-uefi';
+            $BASE = rvd_back->search_domain($name);
+            $BASE = import_domain($vm,$name) if !$BASE;
         } else {
             $BASE = create_domain($vm);
         }
         flush_rules() if !$<;
+
+        test_long_iso($vm);
+
+        test_prepare_base_disk_missing($vm);
+        test_prepare_base_volatile($vm);
 
         test_change_display_settings($vm);
         test_display_drivers($vm,0);
@@ -1884,7 +1966,6 @@ for my $vm_name ( vm_names() ) {
         test_display_info($vm);
 
         test_display_port_already_used($vm);
-        test_change_display_settings($vm);
 
         test_remove_display($vm);
 
