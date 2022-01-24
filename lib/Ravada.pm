@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '1.1.0';
+our $VERSION = '1.3.1';
 
 use Carp qw(carp croak cluck);
 use Data::Dumper;
@@ -11,7 +11,7 @@ use DBIx::Connector;
 use File::Copy;
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
-use JSON::XS;
+use Mojo::JSON qw( encode_json decode_json );
 use Moose;
 use POSIX qw(WNOHANG);
 use Proc::PID::File;
@@ -56,14 +56,20 @@ use feature qw(signatures);
 our %VALID_CONFIG = (
     vm => undef
     ,warn_error => undef
-    ,db => {user => undef, password => undef,  hostname => undef}
+    ,db => {user => undef, password => undef,  hostname => undef, host => undef, db => undef}
     ,ldap => { admin_user => { dn => undef, password => undef }
         ,filter => undef
         ,base => undef
         ,auth => undef
         ,admin_group => undef
         ,ravada_posix_group => undef
+        ,groups_base => undef
+        ,field => undef
+        ,server => undef
+        ,port => undef
+        ,size_limit => undef
     }
+    ,log => undef
 );
 
 =head1 NAME
@@ -277,7 +283,7 @@ sub _update_isos {
 	    androidx86 => {
                     name => 'Android 8.1 x86'
             ,description => 'Android-x86 64 bits. Requires an user provided ISO image.'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'android-amd64.xml'
              ,xml_volume => 'android-volume.xml'
 	     ,min_disk_size => '4'
@@ -285,7 +291,7 @@ sub _update_isos {
         arch_1909 => {
                     name => 'Arch Linux 19.09'
             ,description => 'Arch Linux 19.09.01 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'https://archive.archlinux.org/iso/2019.09.01/'
@@ -296,16 +302,17 @@ sub _update_isos {
 	mate_focal_fossa => {
                     name => 'Ubuntu Mate Focal Fossa 64 bits'
             ,description => 'Ubuntu Mate 20.04 (Focal Fossa) 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'focal_fossa-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04.*/release/ubuntu-mate-20.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         },
         mate_bionic => {
                     name => 'Ubuntu Mate Bionic 64 bits'
             ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-amd64.iso'
@@ -323,7 +330,7 @@ sub _update_isos {
         ubuntu_xenial => {
                     name => 'Ubuntu Xenial Xerus 64 bits'
             ,description => 'Ubuntu 16.04 LTS Xenial Xerus 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'xenial64-amd64.xml'
              ,xml_volume => 'xenial64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/16.04/ubuntu-16.04.*-desktop-amd64.iso'
@@ -334,7 +341,7 @@ sub _update_isos {
         mate_xenial => {
                     name => 'Ubuntu Mate Xenial'
             ,description => 'Ubuntu Mate 16.04.3 (Xenial) 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'yakkety64-amd64.xml'
              ,xml_volume => 'yakkety64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/16.04.*/release/ubuntu-mate-16.04.*-desktop-amd64.iso'
@@ -344,31 +351,34 @@ sub _update_isos {
 	,focal_fossa=> {
                     name => 'Ubuntu Focal Fossa'
             ,description => 'Ubuntu 20.04 Focal Fossa 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'focal_fossa-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/20.04/'
                 ,file_re => '^ubuntu-20.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+                   ,arch => 'x86_64'
         }
 
         ,bionic=> {
                     name => 'Ubuntu Bionic Beaver'
             ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
-                   ,arch => 'amd64'
+                   ,arch => 'x86_64'
                     ,xml => 'bionic-amd64.xml'
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/18.04/'
                 ,file_re => '^ubuntu-18.04.*desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
+            ,arch => 'x86_64'
         }
 
         ,serena64 => {
             name => 'Mint 18.1 Mate 64 bits'
     ,description => 'Mint Serena 18.1 with Mate Desktop based on Ubuntu Xenial 64 bits'
-           ,arch => 'amd64'
+           ,arch => 'x86_64'
             ,xml => 'xenial64-amd64.xml'
      ,xml_volume => 'xenial64-volume.xml'
             ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/18.3'
@@ -381,7 +391,7 @@ sub _update_isos {
         ,mint20_64 => {
             name => 'Mint 20 Mate 64 bits'
     ,description => 'Mint Ulyana 20 with Mate Desktop 64 bits'
-           ,arch => 'amd64'
+           ,arch => 'x86_64'
             ,xml => 'xenial64-amd64.xml'
      ,xml_volume => 'xenial64-volume.xml'
             ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/20.2'
@@ -392,21 +402,23 @@ sub _update_isos {
         ,alpine381_64 => {
             name => 'Alpine 3.8 64 bits'
     ,description => 'Alpine Linux 3.8 64 bits ( Minimal Linux Distribution )'
-           ,arch => 'amd64'
+           ,arch => 'x86_64'
             ,xml => 'alpine-amd64.xml'
      ,xml_volume => 'alpine381_64-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/'
         ,file_re => 'alpine-standard-3.8.1-x86_64.iso'
         ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/alpine-standard-3.8.1-x86_64.iso.sha256'
-            ,min_disk_size => '1'
+            ,min_disk_size => '2'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,alpine381_32 => {
             name => 'Alpine 3.8 32 bits'
     ,description => 'Alpine Linux 3.8 32 bits ( Minimal Linux Distribution )'
-           ,arch => 'i386'
+           ,arch => 'i686'
             ,xml => 'alpine-i386.xml'
      ,xml_volume => 'alpine381_32-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/'
+            ,options => { machine => 'pc-i440fx' }
         ,file_re => 'alpine-standard-3.8.1-x86.iso'
         ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/alpine-standard-3.8.1-x86.iso.sha256'
             ,min_disk_size => '1'
@@ -415,7 +427,7 @@ sub _update_isos {
             name => 'Fedora 28'
             ,description => 'RedHat Fedora 28 Workstation 64 bits'
             ,url => 'https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/28/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-28-.*\.iso'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
             ,sha256_url => '$url/Fedora-Workstation-28-.*-x86_64-CHECKSUM'
@@ -424,18 +436,19 @@ sub _update_isos {
 	      ,kubuntu_64_focal_fossa => {
             name => 'Kubuntu Focal Fossa 64 bits'
             ,description => 'Kubuntu 20.04 Focal Fossa 64 bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'focal_fossa-amd64.xml'
             ,xml_volume => 'focal_fossa64-volume.xml'
             ,sha256_url => '$url/SHA256SUMS'
             ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/20.04.*/release/'
             ,file_re => 'kubuntu-20.04.*-desktop-amd64.iso'
             ,rename_file => 'kubuntu_focal_fossa_64.iso'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,kubuntu_64 => {
             name => 'Kubuntu Bionic Beaver 64 bits'
             ,description => 'Kubuntu 18.04 Bionic Beaver 64 bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,sha256_url => '$url/SHA256SUMS'
@@ -457,7 +470,7 @@ sub _update_isos {
         ,suse_15 => {
             name => "openSUSE Leap 15"
             ,description => "openSUSE Leap 15 64 bits"
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,url => 'https://download.opensuse.org/distribution/leap/15.0/iso/'
@@ -468,7 +481,7 @@ sub _update_isos {
         ,xubuntu_beaver_64 => {
             name => 'Xubuntu Bionic Beaver 64 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 64 bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,sha256_url => '$url/../SHA256SUMS'
@@ -543,6 +556,7 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'x86_64'
         }
        ,debian_stretch_32 => {
             name =>'Debian Stretch 32 bits'
@@ -563,6 +577,7 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'x86_64'
         }
         ,debian_buster_64=> {
             name =>'Debian Buster 64 bits'
@@ -573,6 +588,7 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'x86_64'
         }
         ,debian_buster_32=> {
             name =>'Debian Buster 32 bits'
@@ -586,6 +602,7 @@ sub _update_isos {
         }
         ,debian_bullseye_64=> {
             name =>'Debian Bullseye 64 bits'
+            ,arch => 'x86_64'
             ,description => 'Debian 11 Bullseye 64 bits (netinst)'
             ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/amd64/iso-cd/'
             ,file_re => 'debian-11.[\d\.]+-amd64-netinst.iso'
@@ -593,9 +610,11 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,debian_bullseye_32=> {
             name =>'Debian Bullseye 32 bits'
+            ,arch => 'i686'
             ,description => 'Debian 10 Bullseye 32 bits (netinst)'
             ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/i386/iso-cd/'
             ,file_re => 'debian-11.[\d\.]+-i386-netinst.iso'
@@ -603,12 +622,56 @@ sub _update_isos {
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,options => { machine => 'pc-i440fx' }
         }
-
+        ,devuan_beowulf_amd64=> {
+            name =>'Devuan Beowulf 64 bits'
+            ,description => 'Devuan Beowulf Desktop Live (amd64)'
+            ,arch => 'x86_64'
+            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
+            ,file_re => 'devuan_beowulf_.*_amd64_desktop-live.iso'
+            ,sha256_url => '$url/SHASUMS.txt'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,devuan_beowulf_i386=> {
+            name =>'Devuan Beowulf 32 bits'
+            ,description => 'Devuan Beowulf Desktop Live (i386)'
+            ,arch => 'i386'
+            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
+            ,file_re => 'devuan_beowulf_.*_i386_desktop-live.iso'
+            ,sha256_url => '$url/SHASUMS.txt'
+            ,xml => 'jessie-i386.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,parrot_xfce_amd64 => {
+            name => 'Parrot Home Edition XFCE'
+            ,description => 'Parrot Home Edition XFCE 64 Bits'
+            ,arch => 'x86_64'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,url => 'https://download.parrot.sh/parrot/iso/4.11.2/'
+            ,file_re => 'Parrot-xfce-4.11.2_amd64.iso'
+            ,sha256_url => '$url/signed-hashes.txt'
+            ,min_disk_size => '10'
+        }
+        ,parrot_mate_amd64 => {
+		  name => 'Parrot Security Edition MATE'
+            ,description => 'Parrot Security Edition MATE 64 Bits'
+            ,arch => 'x86_64'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,url => 'https://download.parrot.sh/parrot/iso/4.11.2/'
+            ,file_re => 'Parrot-security-4.11.2_amd64.iso'
+            ,sha256_url => '$url/signed-hashes.txt'
+            ,min_disk_size => '10'
+        }
         ,kali_64 => {
             name => 'Kali Linux 2020'
             ,description => 'Kali Linux 2020 64 Bits'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,url => 'https://cdimage.kali.org/kali-2020.\d+/'
@@ -619,7 +682,7 @@ sub _update_isos {
         ,kali_64_netinst => {
             name => 'Kali Linux 2020 (NetInstaller)'
             ,description => 'Kali Linux 2020 64 Bits (light NetInstall)'
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,url => 'https://cdimage.kali.org/kali-2020.\d+/'
@@ -634,6 +697,7 @@ sub _update_isos {
           ,xml => 'windows_7.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '21'
+          ,arch => 'x86_64'
         }
         ,windows_10 => {
           name => 'Windows 10'
@@ -642,6 +706,9 @@ sub _update_isos {
           ,xml => 'windows_10.xml'
           ,xml_volume => 'windows10-volume.xml'
           ,min_disk_size => '21'
+          ,arch => 'x86_64'
+          ,extra_iso => 'https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.215-\d+/virtio-win-0.1.\d+.iso'
+
         }
         ,windows_xp => {
           name => 'Windows XP'
@@ -650,6 +717,7 @@ sub _update_isos {
           ,xml => 'windows_xp.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '3'
+          ,arch => 'x86_64'
         }
         ,windows_12 => {
           name => 'Windows 2012'
@@ -658,6 +726,7 @@ sub _update_isos {
           ,xml => 'windows_12.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '21'
+          ,arch => 'x86_64'
         }
         ,windows_8 => {
           name => 'Windows 8.1'
@@ -666,6 +735,7 @@ sub _update_isos {
           ,xml => 'windows_8.xml'
           ,xml_volume => 'wisuvolume.xml'
           ,min_disk_size => '21'
+          ,arch => 'x86_64'
         }
        ,empty_32bits => {
           name => 'Empty Machine 32 bits'
@@ -673,6 +743,7 @@ sub _update_isos {
           ,xml => 'empty-i386.xml'
           ,xml_volume => 'jessie-volume.xml'
           ,min_disk_size => '0'
+          ,has_cd => 0
         }
        ,empty_64bits => {
           name => 'Empty Machine 64 bits'
@@ -680,6 +751,8 @@ sub _update_isos {
           ,xml => 'empty-amd64.xml'
           ,xml_volume => 'jessie-volume.xml'
           ,min_disk_size => '0'
+          ,arch => 'x86_64'
+          ,has_cd => 0
         }
     );
     $self->_scheduled_fedora_releases(\%data) if $0 !~ /\.t$/;
@@ -692,6 +765,13 @@ sub _update_table_isos_url($self, $data) {
     my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE name=?");
     for my $release (sort keys %$data) {
         my $entry = $data->{$release};
+        if (exists $entry->{options} && $entry->{options} 
+            && ref($entry->{options})
+        ) {
+            unlock_hash(%$entry);
+            $entry->{options} = encode_json($entry->{options});
+            lock_hash(%$entry);
+        }
         $sth->execute($entry->{name});
         my $row = $sth->fetchrow_hashref();
         for my $field (keys %$entry) {
@@ -751,7 +831,7 @@ sub _scheduled_fedora_releases($self,$data) {
             $data->{$name} = {
             name => 'Fedora '.$release
             ,description => "RedHat Fedora $release Workstation 64 bits"
-            ,arch => 'amd64'
+            ,arch => 'x86_64'
             ,url => $url_file
             ,xml => 'xenial64-amd64.xml'
             ,xml_volume => 'xenial64-volume.xml'
@@ -1320,7 +1400,7 @@ sub _add_indexes_generic($self) {
             $self->_clean_index_conflicts($table, $name);
 
             print "+" if $FIRST_TIME_RUN;
-            if ($table eq 'domain_displays' && $name eq 'id_vm_port') {
+            if ($table eq 'domain_displays' && $name =~ /port/) {
                 my $sth_clean=$CONNECTOR->dbh->prepare(
                     "UPDATE domain_displays set port=NULL"
                 );
@@ -1459,17 +1539,18 @@ sub _add_grants($self) {
 
 sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, description FROM grant_types WHERE name=?"
+        "SELECT id, description,is_int FROM grant_types WHERE name=?"
     );
     $sth->execute($grant);
-    my ($id, $current_description) = $sth->fetchrow();
+    my ($id, $current_description, $current_int) = $sth->fetchrow();
     $sth->finish;
+    $current_int = 0 if !$current_int;
 
-    if ($id && $current_description ne $description) {
+    if ($id && ( $current_description ne $description || $current_int != $is_int) ) {
         my $sth = $CONNECTOR->dbh->prepare(
-            "UPDATE grant_types SET description = ? WHERE id = ?;"
+            "UPDATE grant_types SET description = ?,is_int=? WHERE id = ?;"
         );
-        $sth->execute($description, $id);
+        $sth->execute($description, $is_int, $id);
         $sth->finish;
     }
     return if $id;
@@ -1606,9 +1687,7 @@ sub _upgrade_table_fields($self, $table, $fields ) {
     }
 }
 
-sub _upgrade_table {
-    my $self = shift;
-    my ($table, $field, $definition) = @_;
+sub _upgrade_table($self, $table, $field, $definition) {
     my $dbh = $CONNECTOR->dbh;
 
     my ($new_size) = $definition =~ m{\((\d+)};
@@ -2278,7 +2357,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
     $self->_upgrade_table('requests','retry','int(11) DEFAULT NULL');
-    $self->_upgrade_table('requests','args','char(255)');
+    $self->_upgrade_table('requests','args','TEXT');
 
     $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
     $self->_clean_iso_mini();
@@ -2288,6 +2367,10 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
     $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
+    $self->_upgrade_table('iso_images','options','varchar(255)');
+    $self->_upgrade_table('iso_images','has_cd','int (1) DEFAULT "1"');
+    $self->_upgrade_table('iso_images','downloading','int (1) DEFAULT "0"');
+    $self->_upgrade_table('iso_images','extra_iso','varchar(255)');
 
     $self->_upgrade_table('users','language','char(40) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
@@ -2408,6 +2491,11 @@ sub _connect_dbh {
     my $db_pass = ($CONFIG->{db}->{password} or undef);
     my $db = ( $CONFIG->{db}->{db} or 'ravada' );
     my $host = $CONFIG->{db}->{host};
+    my $hostname = $CONFIG->{db}->{hostname};
+    if (defined $host && defined $hostname && $host ne $hostname) {
+        warn "Warning: DB config in $FILE_CONFIG conflicting parameters host='$host', hostname='$hostname'\n";
+    }
+    $host = $hostname if !defined $host && defined $hostname;
 
     my $data_source = "DBI:$driver:$db";
     $data_source = "DBI:$driver:database=$db;host=$host"
@@ -2443,7 +2531,8 @@ sub display_ip($self=undef, $new_ip=undef) {
             $CONFIG->{display_ip} = $new_ip;
         }
     }
-    my $ip = $CONFIG->{display_ip};
+    my $ip;
+    $ip = $CONFIG->{display_ip} if exists $CONFIG->{display_ip};
     return $ip if $ip;
 }
 
@@ -2484,6 +2573,7 @@ sub _init_config {
         delete $default_vms{Void};
         $CONFIG->{vm} = [keys %default_vms];
     }
+    #    lock_hash(%$CONFIG);
 #    $CONNECTOR = ( $connector or _connect_dbh());
 
     _init_config_vm();
@@ -2533,19 +2623,19 @@ sub _create_vm_kvm {
     return $vm_kvm;
 }
 
-sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG ) {
+sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG, $quiet = $0=~/\.t$/ ) {
     return 1 if !defined $config_orig;
     my %config = %$config_orig;
 
     for my $key (sort keys %$valid_config) {
         if ( $config{$key} && ref($valid_config->{$key})) {
-           my $ok = _check_config( $config{$key} , $valid_config->{$key} );
+           my $ok = _check_config( $config{$key} , $valid_config->{$key}, $quiet );
            return 0 if !$ok;
         }
         delete $config{$key};
     }
     if ( keys %config ) {
-        warn "Error: Unknown config entry \n".Dumper(\%config) if ! $0 =~ /\.t$/;
+        warn "Error: Unknown config entry \n".Dumper(\%config) if ! $quiet;
         return 0;
     }
     warn "Warning: LDAP authentication with match is discouraged. Try bind.\n"
@@ -2712,7 +2802,7 @@ sub create_domain {
     my $id_base = $args{id_base};
     my $data = delete $args{data};
     my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
-    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool));
+    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool options));
 
     confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
 
@@ -2737,7 +2827,7 @@ sub create_domain {
 
     my $error = $@;
     if ( $request ) {
-        $request->error($error) if $error;
+        $request->error(''.$error) if $error;
         if ($error =~ /has \d+ requests/) {
             $request->status('retry');
         }
@@ -2758,13 +2848,58 @@ sub create_domain {
         die $error if $error && !$request;
         $request->error($error) if $error;
     }
-    Ravada::Request->add_hardware(
-        uid => $args{id_owner}
-        ,id_domain => $domain->id
-        ,name => 'disk'
-        ,data => { size => $data, type => 'data' }
-    ) if $domain && $data;
+    return if !$domain;
+    my $req_add_data;
+    if ($data) {
+        $req_add_data = Ravada::Request->add_hardware(
+            uid => $args{id_owner}
+            ,id_domain => $domain->id
+            ,name => 'disk'
+            ,data => { size => $data, type => 'data' }
+        );
+    }
+    _add_extra_iso($domain, $request,$req_add_data) if $domain;
     return $domain;
+}
+
+sub _search_iso($id) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM iso_images"
+        ." WHERE id = ? "
+    );
+    $sth->execute($id);
+    my $row = $sth->fetchrow_hashref;
+    return $row;
+}
+
+sub _add_extra_iso($domain, $request, $previous_request) {
+    return if !$request;
+    my $id_iso = $request->defined_arg('id_iso');
+    return if !$id_iso;
+    my $iso = _search_iso($id_iso);
+
+    my $extra_iso = $iso->{extra_iso};
+    return if !$extra_iso;
+
+    my ($url, $file_re) = $extra_iso =~ m{(.*)/(.*)};
+    my $volume = $domain->_vm->search_volume_path_re(qr($file_re));
+    if (!$volume) {
+        my ($url) = $domain->_vm->_search_url_file($extra_iso);
+        my ($device) = $url =~ m{.*/(.*)};
+        $volume = $domain->_vm->dir_img()."/$device";
+        $domain->_vm->_download_file_external($url, $volume) ;
+    }
+    Ravada::Request->add_hardware(
+        name => 'disk'
+        ,uid => Ravada::Utils::user_daemon->id
+        ,id_domain => $domain->id
+        ,data => {
+            file => $volume
+            ,device => 'cdrom'
+        }
+        ,after_request => $previous_request->id
+    );
+
 }
 
 sub _check_args($args,@) {
@@ -3188,6 +3323,13 @@ sub clean_old_requests {
     $self->_clean_requests('cleanup');
 }
 
+sub _clean_interrupted_downloads($self) {
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE iso_images "
+        ." SET downloading=0 WHERE downloading=1"
+    );
+    $sth->execute();
+}
+
 =head2 process_requests
 
 This is run in the ravada backend. It processes the commands requested by the fronted
@@ -3405,6 +3547,7 @@ sub _kill_stale_process($self) {
         ." AND ( command = 'refresh_vms' or command = 'screenshot' or command = 'set_time' "
         ."      OR command = 'open_exposed_ports' OR command='remove' "
         ."      OR command = 'refresh_machine_ports'"
+        ."      OR command = 'post_login'"
         .") "
         ." AND status <> 'done' "
         ." AND start_time IS NOT NULL "
@@ -3430,7 +3573,7 @@ sub _kill_dead_process($self) {
         "SELECT id,pid,command,start_time "
         ." FROM requests "
         ." WHERE start_time<? "
-        ." AND status = 'working' "
+        ." AND ( status like 'working%' OR status like 'downloading%') "
         ." AND pid IS NOT NULL "
     );
     $sth->execute(time - 2);
@@ -3473,7 +3616,11 @@ sub _domain_working {
     my $sth = $CONNECTOR->dbh->prepare("SELECT id, status FROM requests "
         ." WHERE id <> ? AND id_domain=? "
         ." AND (status <> 'requested' AND status <> 'done' AND status <> 'waiting' "
-        ." AND command <> 'set_base_vm')");
+        ."      AND command <> 'set_base_vm'"
+        ."      AND command <> 'set_time'"
+        ."      AND command NOT LIKE 'refresh_machine%' "
+        ."     )"
+    );
     $sth->execute($id_request, $id_domain);
     my ($id, $status) = $sth->fetchrow;
 #    warn "CHECKING DOMAIN WORKING "
@@ -3611,10 +3758,32 @@ sub _set_domain_changed($self, $request) {
     }
     return if !defined $id_domain;
 
+    my $sth_date = $CONNECTOR->dbh->prepare("SELECT date_changed FROM domains WHERE id=?");
+    $sth_date->execute($id_domain);
+    my ($date) = $sth_date->fetchrow();
+
     my $sth = $CONNECTOR->dbh->prepare("UPDATE domains set date_changed=CURRENT_TIMESTAMP"
         ." WHERE id=? ");
     $sth->execute($id_domain);
 
+    $sth_date->execute($id_domain);
+    my ($date2) = $sth_date->fetchrow();
+
+    if (defined $date && defined $date2 && $date2 eq $date) {
+        my ($n) = $date2 =~ /.*(\d\d)$/;
+        if (!defined $n) {
+            sleep 1;
+            $sth->execute($id_domain);
+        } else {
+            $n++;
+            $n=00 if $n>59;
+            $n = "0$n" if length($n)<2;
+            $date2 =~ s/(.*)(\d\d)$/$1$n/;
+            my $sth2 = $CONNECTOR->dbh->prepare("UPDATE domains set date_changed=?"
+                ." WHERE id=? ");
+            $sth2->execute($date2,$id_domain);
+        }
+    }
 }
 
 sub _cmd_manage_pools($self, $request) {
@@ -4260,18 +4429,23 @@ sub _cmd_download {
 
     my $vm;
     $vm = Ravada::VM->open($request->args('id_vm')) if $request->defined_arg('id_vm');
+    $vm = Ravada::VM->open(type => $request->args('vm'))
+    if $request->defined_arg('vm');
+
     $vm = $self->search_vm('KVM')   if !$vm;
 
     my $delay = $request->defined_arg('delay');
     sleep $delay if $delay;
     my $verbose = $request->defined_arg('verbose');
+    my $test = $request->defined_arg('test');
 
     my $iso = $vm->_search_iso($id_iso);
-    if ($iso->{device} && -e $iso->{device}) {
+    if (!$test && $iso->{device} && -e $iso->{device}) {
         $request->status('done',"$iso->{device} already downloaded");
         return;
     }
     my $device_cdrom = $vm->_iso_name($iso, $request, $verbose);
+    Ravada::Request->refresh_storage(id_vm => $vm->id);
 }
 
 sub _cmd_add_hardware {
@@ -4364,7 +4538,7 @@ sub _cmd_shutdown {
 
     Ravada::Request->refresh_machine(
                    uid => $uid
-            ,id_domain => $id_domain
+            ,id_domain => $domain->id
         ,after_request => $request->id
     );
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
@@ -4518,9 +4692,6 @@ sub _cmd_set_driver {
 
 sub _cmd_refresh_storage($self, $request=undef) {
 
-    if ($request && ( my $id_recent = $request->done_recently(60))) {
-        die "Command ".$request->command." run recently by $id_recent.\n";
-    }
     my $vm;
     if ($request && $request->defined_arg('id_vm')) {
         $vm = Ravada::VM->open($request->defined_arg('id_vm'));
@@ -4593,7 +4764,7 @@ sub _cmd_refresh_machine($self, $request) {
     $domain->client_status(1) if $is_active;
 
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id
-        ,timeout => 60, retry => 20)
+        ,timeout => 60, retry => 10)
     if $is_active && $domain->ip;
 
     $domain->_unlock_host_devices() if !$is_active;
@@ -4607,6 +4778,8 @@ sub _cmd_refresh_machine_ports($self, $request) {
 
     die "USER $uid not authorized to refresh machine ports for domain ".$domain->name
     unless $domain->_data('id_owner') ==  $user->id || $user->is_operator;
+
+    return if !$domain->is_active;
 
     $domain->refresh_ports($request);
     $domain->client_status(1) if $domain->is_active;
@@ -4635,8 +4808,8 @@ sub _cmd_domain_autostart($self, $request ) {
 
 sub _cmd_refresh_vms($self, $request=undef) {
 
-    if ($request && !$request->defined_arg('_force') && (my $id_recent = $request->done_recently(30))) {
-        die "Command ".$request->command." run recently by $id_recent.\n";
+    if ($request && !$request->defined_arg('_force') && (my $recent = $request->done_recently(30))) {
+        die "Command ".$request->command." run recently by ".$recent->id."\n";
     }
 
     $self->_refresh_disabled_nodes( $request );
@@ -4730,6 +4903,18 @@ sub _cmd_list_isos($self, $request){
     my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
 
     $request->output(encode_json(\@isos));
+}
+
+sub _cmd_list_machine_types($self, $request) {
+    my $id_vm = $request->defined_arg('id_vm');
+    my $vm_type = $request->defined_arg('vm_type');
+    my $vm;
+    $vm = Ravada::VM->open(type => $vm_type) if $vm_type;
+    $vm = Ravada::VM->open($id_vm) if $id_vm;
+    die "Error: No id_vm nor vm_type defined ".Dumper($request->args)
+    if !$id_vm && ! $vm_type;
+    my %out = $vm->list_machine_types();
+    $request->output(encode_json(\%out));
 }
 
 sub _cmd_set_time($self, $request) {
@@ -5203,21 +5388,57 @@ sub _cmd_cleanup($self, $request) {
             $self->_clean_requests($cmd, $request,'done');
     }
 }
+sub _verify_connection($self, $domain) {
+    for ( 1 .. 60 ) {
+        my $status = $domain->client_status(1);
+        if ( $status && $status ne 'disconnected' ) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+sub _domain_just_started($self, $domain) {
+    my $sth = $CONNECTOR->dbh->prepare(
+       "SELECT id,command,args "
+        ." FROM requests "
+        ." WHERE start_time>? "
+        ." OR status <> 'done' "
+        ." OR start_time IS NULL "
+    );
+    my $start_time = time - 300;
+    $sth->execute($start_time);
+    while ( my ($id, $command, $args) = $sth->fetchrow ) {
+        next if $command !~ /create|clone|start|open/i;
+        my $args_h = decode_json($args);
+        return 1 if exists $args_h->{id_domain} && defined $args_h->{id_domain}
+        && $args_h->{id_domain} == $domain->id;
+        return 1 if exists $args_h->{name} && defined $args_h->{name}
+        && $args_h->{name} eq $domain->name;
+    }
+    return 0;
+}
 
 sub _shutdown_disconnected($self) {
     for my $dom ( $self->list_domains_data(status => 'active') ) {
         next if !$dom->{shutdown_disconnected};
         my $domain = Ravada::Domain->open($dom->{id}) or next;
         my $is_active = $domain->is_active;
-        my ($req_shutdown) = grep { $_->command eq 'shutdown' } $domain->list_requests(1);
+        my ($req_shutdown) = grep { $_->command eq 'shutdown'
+            && $_->defined_arg('check')
+            && $_->defined_arg('check') eq 'disconnected'
+        } $domain->list_requests(1);
+
         if ($is_active && $domain->client_status eq 'disconnected') {
+            next if $self->_domain_just_started($domain) || $self->_verify_connection($domain);
             next if $req_shutdown;
             Ravada::Request->shutdown_domain(
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $domain->id
                 ,at => time + 120
+                ,check => 'disconnected'
             );
-        } else {
+        } elsif ($req_shutdown) {
             $req_shutdown->status('done','Canceled') if $req_shutdown;
         }
     }
@@ -5261,6 +5482,7 @@ sub _req_method {
  ,rename_domain => \&_cmd_rename_domain
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
+ ,list_machine_types => \&_cmd_list_machine_types
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
 ,force_reboot   => \&_cmd_force_reboot
@@ -5465,8 +5687,8 @@ sub _user_is_admin($self, $id_user) {
 
 sub _enforce_limits_active($self, $request) {
     confess if !$request;
-    if (my $id_recent = $request->done_recently(30)) {
-        die "Command ".$request->command." run recently by $id_recent.\n";
+    if (my $recent = $request->done_recently(30)) {
+        die "Command ".$request->command." run recently by ".$recent->id."\n";
     }
     my $timeout = ($request->defined_arg('timeout') or 10);
     my $start_limit_default = $self->setting('/backend/start_limit');
@@ -5565,6 +5787,8 @@ sub _clean_volatile_machines($self, %args) {
 }
 
 sub _cmd_post_login($self, $request) {
+    my $user = Ravada::Auth::SQL->new(name => $request->args('user'));
+    $user->unshown_messages();
     $self->_post_login_locale($request);
 }
 
@@ -5606,7 +5830,8 @@ sub _cmd_open_exposed_ports($self, $request) {
     Ravada::Request->refresh_machine_ports(
         uid => $request->args('uid'),
         ,id_domain => $domain->id
-        ,retry => 100
+        ,retry => 20
+        ,timeout => 180
     );
 
 }

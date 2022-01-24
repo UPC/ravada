@@ -23,7 +23,7 @@
     %   if ($domain->drivers && $USER->can_change_settings($domain->id) && $has_graphics_spice) {
         <a class="nav-link" id="v-pills-graphics-tab" ng-click="refresh_machine()" href="#v-pills-graphics" data-toggle="pill" role="tab" aria-controls="v-pills-graphics" aria-selected="false"><%=l 'Graphics' %></a>
     %   }
-    %   if ($USER->is_admin) {
+    %   if ($USER->is_admin && !$domain->is_volatile) {
         <a class="nav-link" id="v-pills-base-tab" href="#v-pills-base" data-toggle="pill" role="tab" aria-controls="v-pills-base" aria-selected="false">Base</a>
     %   }
     %   if ($USER->is_admin || $USER->can_clone_all ){

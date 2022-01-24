@@ -10,6 +10,9 @@ use Test::More;
 use lib 't/lib';
 use Test::Ravada;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 init();
 #############################################################################
 
@@ -95,10 +98,11 @@ sub test_add_disk {
     $domain->remove(user_admin);
 }
 
-sub test_add_disk_boot_order {
-    my $vm = shift;
+sub test_add_disk_boot_order($vm, $iso_name, $options=undef) {
     return if $vm->type ne 'KVM';
-    my $domain = create_domain($vm);
+
+    my $domain = create_domain_v2(vm => $vm, iso_name => $iso_name
+    , options => $options);
     $domain->add_volume( boot => 1 , name => $domain->name.'-troy' );
     my @volumes = $domain->list_volumes_info();
     my ($troy) = grep { $_->name =~ m/-troy\.\w+$/ } @volumes;
@@ -129,6 +133,38 @@ sub test_add_disk_boot_order {
     is($volumes[0]->info->{boot}, 1 );
 }
 
+sub combine_iso_options($vm, $iso_name) {
+
+    return (undef) if $vm->type ne 'KVM';
+
+    $Ravada::VM::KVM::VERIFY_ISO = 0;
+    my $iso = $vm->_search_iso(search_id_iso($iso_name));
+    my @options = (
+        { machine => 'pc' }
+        ,{ machine => search_latest_machine($vm, $iso->{arch},'pc-i440fx')}
+    );
+    my $machine = $iso->{options}->{machine};
+    if ($machine) {
+        my $found = 0;
+        for my $option (@options) {
+            $found++ if $option->{machine} eq $machine;
+        }
+        push @options,(
+            {machine =>search_latest_machine($vm, $iso->{arch},$machine)})
+        if !$found;
+    }
+    if ($iso->{options}->{bios} && $iso->{options}->{bios} eq 'UEFI') {
+        my @options2;
+        for my $option (@options) {
+            my %option2 = %$option;
+            $option2{uefi} = 1;
+            push @options2, \%option2;
+        }
+        push @options,@options2;
+    }
+    return @options;
+}
+
 #############################################################################
 
 clean();
@@ -147,9 +183,14 @@ for my $vm_name ( vm_names() ) {
         }
 
         skip($msg,10)   if !$vm;
-        diag("Testing volatile for $vm_name");
+        diag("Testing disk for $vm_name");
 
-        test_add_disk_boot_order($vm);
+        for my $iso_name ('Alpine%64 bits', 'Alpine%32 bits') {
+            for my $options ( combine_iso_options($vm, $iso_name)) {
+                warn $iso_name.Dumper($options);
+                test_add_disk_boot_order($vm, $iso_name, $options);
+            }
+        }
 
         test_frontend($vm);
         test_frontend_refresh($vm);

@@ -9,15 +9,17 @@ eval {
 SKIP: {
     diag($@) if $@;
     skip(2,$@)  if $@;
-    for my $type ( qw(VM Domain ) ){
+    # TODO: doc for Ravada::Domain::* qw(VM Domain)
+    for my $type ( qw(VM) ){
         Test::Pod::Coverage::pod_coverage_ok( "Ravada::$type"
                 , { also_private => [ qr/^[A-Z]+$/ ]}
                 , "Ravada::$type is covered" );
         for my $backend (keys %Ravada::VALID_VM ) {
+            my $module = "Ravada::".$type."::$backend";
             Test::Pod::Coverage::pod_coverage_ok(
-                "Ravada::$type::$backend"
+                $module
                 , { also_private => [ qr/^[A-Z]+$/ ]}
-                , "Ravada::$type::$backend is covered" );
+                , "$module is covered" );
         }
     }
     for my $pkg ( 'Ravada' , 'Ravada::Front' , 'Ravada::Request', 'Ravada::Auth' ) {

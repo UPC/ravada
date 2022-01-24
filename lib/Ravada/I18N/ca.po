@@ -8,8 +8,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2021-06-24 14:35+0000\n"
-"Last-Translator: Xean <xeanhort007@gmail.com>\n"
+"PO-Revision-Date: 2021-10-13 10:44+0000\n"
+"Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
 "Language-Team: Catalan <https://hosted.weblate.org/projects/ravada/"
 "translation/ca/>\n"
 "Language: ca\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.7.1-dev\n"
+"X-Generator: Weblate 4.9-dev\n"
 
 msgid "Ravada broker"
 msgstr "Broker Ravada"
@@ -287,6 +287,9 @@ msgstr ""
 
 msgid "Login"
 msgstr "Accedir"
+
+msgid "SSO/CAS Login"
+msgstr "Accedir amb SSO/CAS"
 
 msgid "Welcome"
 msgstr "Benvingut"
@@ -633,7 +636,7 @@ msgid "is admin"
 msgstr "és administrador"
 
 msgid "Add new user"
-msgstr "Afegeix nou usuari"
+msgstr "Afegeix nou usuari "
 
 msgid "Register"
 msgstr "Registrar"
@@ -979,3 +982,130 @@ msgstr "Permís concedit a l'usuari"
 msgid "Permission revoked from user"
 msgstr "Permís denegat a l'usuari"
 
+msgid "Keep the CD for the clones"
+msgstr "Conserveu el CD per als clons"
+
+msgid "Accept"
+msgstr "Acceptar"
+
+msgid "Fail"
+msgstr "Falla"
+
+msgid "This Virtual Machine has no display hardware attached"
+msgstr "Aquesta màquina virtual no té cap maquinari de visualització connectat"
+
+msgid "NAT"
+msgstr "NAT"
+
+msgid "No bridges found"
+msgstr "No s'ha trobat cap pont"
+
+msgid "disk"
+msgstr "disc"
+
+msgid "cdrom"
+msgstr "cdrom"
+
+msgid "system"
+msgstr "sistema"
+
+msgid "data"
+msgstr "dades"
+
+msgid "type"
+msgstr "tipus"
+
+msgid "Warning: anonymous machines won't show up unless you enable allowed."
+msgstr ""
+"Advertiment: les màquines anònimes no apareixeran tret que activeu el permís."
+
+msgid "Network name is required"
+msgstr "El nom de la xarxa és obligatori"
+
+msgid "host"
+msgstr "amfitrió"
+
+msgid "base storage"
+msgstr "emmagatzematge de la base"
+
+msgid "clone storage"
+msgstr "emmagatzematge del clon"
+
+msgid "default storage"
+msgstr "emmagatzematge per defecte"
+
+msgid "This virtual machine has no backups to purge"
+msgstr "Aquesta màquina virtual no té còpies de seguretat per purgar"
+
+msgid "End"
+msgstr "Fi"
+
+msgid "Time"
+msgstr "Temps"
+
+msgid "Warning: this virtual machine will be prepared as a base. This may take long."
+msgstr ""
+"Avís: aquesta màquina virtual es prepararà com a base. Això pot trigar molt."
+
+msgid "Assign this virtual machine to the pre-started pool"
+msgstr "Assigneu aquesta màquina virtual a l'agrupació prèvia"
+
+msgid "Virtual machines in the pool."
+msgstr "Màquines virtuals al pool."
+
+msgid "Pool"
+msgstr "Pool"
+
+msgid "Prepare this machine as a base to create clones from it."
+msgstr "Prepareu aquesta màquina com a base per crear clons a partir d’ella."
+
+msgid "No groups found"
+msgstr "No s'ha trobat cap grup"
+
+msgid "No members found"
+msgstr "No s'ha trobat cap membre"
+
+msgid "Bridge"
+msgstr "Pont"
+
+msgid "temporary"
+msgstr "temporal"
+
+msgid "Content will be cleaned on restore"
+msgstr "El contingut es netejarà a la restauració"
+
+msgid "Virtual machines pre-started"
+msgstr "Màquines virtuals preiniciades"
+
+msgid "This machine has a CD-ROM"
+msgstr "Aquesta màquina té un CD-ROM"
+
+msgid "Content will be cleaned on restore and shutdown"
+msgstr "El contingut es netejarà quan es restauri i es tanqui"
+
+msgid "Content will be kept on restore"
+msgstr "El contingut es conservarà a la restauració"
+
+msgid "All machines"
+msgstr "Totes les màquines"
+
+msgid "Users from this network can run all virtual machines"
+msgstr "Els usuaris d'aquesta xarxa poden executar totes les màquines virtuals"
+
+msgid "No machines"
+msgstr "Sense màquines"
+
+msgid "Users from this network can run no virtual machines"
+msgstr "Els usuaris d’aquesta xarxa no poden executar cap màquina virtual"
+
+msgid "Anonymous"
+msgstr "Anònim"
+
+msgid "This name is duplicated"
+msgstr "Aquest nom està duplicat"
+
+msgid "There are no active virtual machines"
+msgstr "No hi han màquines virtuals actives"
+
+msgid "reload list"
+msgstr "torna a carregar la llista"

@@ -15,7 +15,7 @@
         <ul class="nav nav-tabs" id="myTab" role="tablist">
             <li class="nav-item"><a class="nav-link active" href="#fromtemplate" data-toggle="tab"><%=l 'From Template' %></a></li>
 %           if ( $_user->is_admin ) {
-            <li class="nav-item" ng-show="base"><a class="nav-link" href="#frommachine" data-toggle="tab"><%=l 'From Machine' %></a></li>
+            <li class="nav-item"><a class="nav-link" href="#frommachine" data-toggle="tab"><%=l 'From Machine' %></a></li>
 %           }
         </ul>
         <div class="tab-content" id="myTabContent">

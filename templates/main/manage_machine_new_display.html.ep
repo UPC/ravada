@@ -2,7 +2,7 @@
     <h2><%=l 'Add new Display' %></h2>
     <div class="row">
         <div class="col-lg-2">
-            <label for="type">type</label>
+            <label for="type"><%=l 'type' %></label>
         </div>
         <div class="col-lg-2">
             <select name="type" ng-model="add_display.driver"

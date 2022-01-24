@@ -1085,20 +1085,23 @@ sub test_fill_memory($vm, $node, $migrate) {
         my $clone = rvd_back->search_domain($clone_name) or last;
         ok($clone,"Expecting clone $clone_name") or exit;
         $clone->migrate($node) if $migrate;
+        wait_request(debug => 0);
         eval { $clone->start(user_admin) };
         $error = $@;
         like($error, qr/(^$|No free memory)/);
         exit if $error && $error !~ /No free memory/;
         last if $error;
-        $nodes{$clone->_vm->name}++;
+
+        my $clone_2 = Ravada::Domain->open($clone->id);
+        $nodes{$clone_2->_vm->name}++;
 
         last if $migrate && exists $nodes{$vm->name} && $nodes{$vm->name} > 2;
-        if (keys(%nodes) > 1) {
+        if (scalar keys(%nodes) > 0) {
             $memory = int($memory*1.5);
         }
     }
     ok(exists $nodes{$vm->name},"Expecting some clones to node ".$vm->name." ".$vm->id);
-    ok(exists $nodes{$node->name},"Expecting some clones to node ".$node->name." ".$node->id);
+    ok(exists $nodes{$node->name},"Expecting some clones to node ".$node->name." ".$node->id) or exit;
     _remove_clones($base);
 }
 
@@ -1529,11 +1532,11 @@ sub test_displays($vm, $node, $no_builtin=0) {
     like($req->error,qr{^($|rsync done)}) or exit;
 
     $domain = Ravada::Domain->open($domain->id);
-    my @displays1 = $domain->display_info(user_admin);
+    my @displays1 = grep {!$_->{is_secondary} } $domain->display_info(user_admin);
     is(scalar(@displays1),1,Dumper(\@displays1));
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
-    my @displays_f = $domain_f->display_info(user_admin);
+    my @displays_f = grep {!$_->{is_secondary} } $domain_f->display_info(user_admin);
     is(scalar(@displays_f),$n_displays-1,Dumper(\@displays_f));
 
     $domain->remove(user_admin);

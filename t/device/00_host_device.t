@@ -20,9 +20,17 @@ use_ok('Ravada::HostDevice');
 use_ok('Ravada::HostDevice::Templates');
 
 my $N_DEVICE = 0;
+my $USB_DEVICE;
+load_usb_device();
 #########################################################
 
 # we will try to find an unused bluetooth usb dongle
+
+sub load_usb_device() {
+    open my $in,"<","t/etc/usb_device.conf" or return;
+    $USB_DEVICE = <$in>;
+    chomp $USB_DEVICE;
+}
 
 sub _search_unused_device {
     my @cmd =("lsusb");
@@ -30,6 +38,9 @@ sub _search_unused_device {
     run3(["lsusb"], \$in, \$out, \$err);
     for my $line ( split /\n/, $out ) {
         next if $line !~ /Bluetooth|flash|disk|cam/i;
+        next unless (defined $USB_DEVICE && $line =~ $USB_DEVICE) 
+        || $line =~ /Bluetooth|flash|disk|cam/i;
+
         my ($filter) = $line =~ /(ID [a-f0-9]+):/;
         die "ID \\d+ not found in $line" if !$filter;
         return ("lsusb",$filter);
@@ -259,11 +270,12 @@ sub test_devices($host_device, $expected_available, $match = undef) {
     ok(scalar(@devices));
 
     my @devices_available = $host_device->list_available_devices();
-    is(scalar(@devices_available) , $expected_available) or confess;
+    ok(scalar(@devices_available) >= $expected_available,Dumper(\@devices)) or confess;
 
     return if !$match;
 
     for (@devices) {
+        next if defined $USB_DEVICE && $_ =~ qr($USB_DEVICE);
         like($_,qr($match));
     }
 }
@@ -300,7 +312,7 @@ sub test_host_device_usb($vm) {
     my @list_hostdev_b = $base->list_host_devices();
     is(scalar @list_hostdev_b, 1);
 
-    test_devices($list_hostdev[0],1, qr/Bluetooth|flash|disk|camera/i);
+    test_devices($list_hostdev[0],1, qr/Bluetooth|flash|disk|cam/i);
 
     $base->prepare_base(user_admin);
     my $clone = $base->clone(name => new_domain_name
@@ -324,10 +336,13 @@ sub test_host_device_usb($vm) {
 
     #### it will fail in another clone
 
-    my $clone2 = $base->clone( name => new_domain_name
-        ,user => user_admin
-    );
-    eval { $clone2->start(user_admin) };
+    for ( 1 .. 10 ) {
+        my $clone2 = $base->clone( name => new_domain_name
+            ,user => user_admin
+        );
+        eval { $clone2->start(user_admin) };
+        last if $@;
+    }
     like ($@ , qr(No available devices));
 
     $list_hostdev[0]->remove();
@@ -401,7 +416,6 @@ sub test_host_device_usb_mock($vm, $n_hd=1) {
 
     $base->prepare_base(user_admin);
 
-    diag("cloning from ".$base->name);
     my @clones;
     for my $n ( 1 .. $n_devices+1 ) {
         my $clone = $base->clone(name => new_domain_name
@@ -410,7 +424,6 @@ sub test_host_device_usb_mock($vm, $n_hd=1) {
 
         _check_hostdev($clone, 0 );
         eval { $clone->start(user_admin) };
-        diag($clone->name." ".($@ or ''));
         # the last one should fail
         if ($n > $n_devices) {
             like( ''.$@,qr(No available devices));
@@ -532,6 +545,7 @@ sub test_hostdev_gpu($domain) {
 }
 
 sub test_host_device_gpu($vm) {
+    return if $vm->type eq 'KVM' && ! -e "/dev/dri";
     my $n_devices = 3;
     my ($list_command,$list_filter) = _create_mock_devices( $n_devices, "GPU" , "0000:00:02." );
 
@@ -610,11 +624,28 @@ sub test_check_list_command($vm) {
     $hdev->remove();
 }
 
+sub test_invalid_param {
+    eval {
+        rvd_front->update_host_device({ id => 1, 'list_command' => 'a' });
+    };
+    is($@,'');
+    for my $wrong ( qr(` ' % ; ) ) {
+        eval {
+            rvd_front->update_host_device({id => 1, 'list_command'.$wrong => 'a'});
+        };
+        like($@,qr/invalid/);
+    }
+    wait_request(check_error => 0);
+}
+
 #########################################################
 
+init();
 clean();
 
+test_invalid_param();
 for my $vm_name (vm_names()) {
+
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 

@@ -12,7 +12,9 @@
               <div class="card" id="admin-content">
                 <div class="card-header">
                     <h2 class="display-5"><%=l 'Group' %> <%= $name %></h2>
-                    <%= join(" - ",sort @$object_class) %>
+                    object class: <b><%= join(" - ",sort @$object_class) %></b>
+                    <br/>
+                    dn: <b><%= $group->dn %></b>
                 </div>
               </div>
             </div>
@@ -31,12 +33,17 @@
                     >
                     </select>
                     <button ng-show="new_member && new_member.name"
-                        ng-click="add_member(new_member.name)">Add</button>
+                            ng-click="add_member(new_member.name)">
+                      <%=l 'Add' %>
+                    </button>
                 </div>
 
                 <div ng-show="!removed">
                 <div class="alert alert-danger" ng-show="error">{{error}}</div>
-                <div class="alert alert-warning" ng-show="!error && group_members.length==0">No members found</div>
+                <div class="alert alert-warning"
+                     ng-show="!error && group_members.length==0">
+                  <%=l 'No members found' %>
+                </div>
                 </div>
 
                 <table class="table table-striped" ng-show="group_members.length>0">

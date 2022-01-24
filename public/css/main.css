@@ -164,7 +164,6 @@ a:focus {
 @media(min-width:768px) {
     .intro {
         height: 100%;
-        padding: 0;
     }
 
     .intro .intro-body .brand-heading {
@@ -360,4 +359,8 @@ div.tab button.active {
 
 input.ng-invalid {
   background-color: pink;
+
+span.info {
+    color: black;
+    text-width: italic;
 }

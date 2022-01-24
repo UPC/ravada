@@ -269,10 +269,12 @@ sub test_all_boot_order($domain, $old_boot) {
     }
 }
 
+SKIP: {
+    skip("This test must run as root",56) if $<;
 my $vm = rvd_back->search_vm('KVM');
 test_change_capacity($vm);
 for my $n ( 1 .. 4 ) {
     test_change_capacity($vm,$n);
 }
-
+}
 done_testing();

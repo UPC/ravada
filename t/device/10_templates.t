@@ -122,7 +122,6 @@ sub test_hd_in_domain($vm , $hd) {
         }
     }
     diag("Testing HD ".$hd->{name}." ".$hd->list_filter." in ".$vm->type);
-    die Dumper([$hd->list_devices]) if $hd->{name} =~ /PCI/;
     $domain->add_host_device($hd);
 
     if ($hd->list_devices) {
@@ -139,7 +138,6 @@ sub test_hd_in_domain($vm , $hd) {
 
         test_device_unlocked($clone);
         if ($hd->list_devices) {
-            diag($clone->name);
             eval { $clone->start(user_admin) };
             if (!$count) {
                 like($@,qr/No available devices/);
@@ -183,12 +181,16 @@ sub test_grab_free_device($base) {
     ok($down && exists $down->{id}) or die Dumper(\@clones);
     $up = Ravada::Domain->open($up->{id});
     $down = Ravada::Domain->open($down->{id});
+
     my ($up_dev) = $up->list_host_devices_attached();
+    die "Error: no host devices attached to ".$up->name
+    if !$up_dev;
+
     my ($down_dev) = $down->list_host_devices_attached();
     ok($up_dev->{name});
     is($up_dev->{is_locked},1);
     is($down_dev->{name},undef);
-    my $expect_feat_kvm = $up_dev->{host_device_name} =~ /PCI/ && $base->type eq /KVM/;
+    my $expect_feat_kvm = $up_dev->{host_device_name} =~ /PCI/ && $base->type eq 'KVM';
     test_hostdev_in_domain_config($up, $expect_feat_kvm);
     test_hostdev_not_in_domain_config($down);
 
@@ -196,7 +198,8 @@ sub test_grab_free_device($base) {
     ($up_dev) = $up->list_host_devices_attached();
     is($up_dev->{is_locked},0);
 
-    $down->start(user_admin);
+    eval { $down->start(user_admin) };
+    is(''.$@,'') or die "Error starting ".$down->name;
     ($down_dev) = $down->list_host_devices_attached();
     ok($down_dev->{name});
     ($up_dev) = $up->list_host_devices_attached();
@@ -466,13 +469,13 @@ sub test_templates($vm) {
     my $templates2 = Ravada::HostDevice::Templates::list_templates($vm->id);
     is_deeply($templates2,$templates);
 
-    my $n=scalar($vm->list_host_devices);
 
     for my $first  (@$templates) {
 
         next if $first->{name } =~ /^GPU dri/ && $vm->type eq 'KVM';
 
-        diag("Testing $first->{name} Hostdev on ".$vm->type);
+        my $n=scalar($vm->list_host_devices);
+        diag("Testing add '$first->{name}' Hostdev on ".$vm->type. " n=$n" );
         $vm->add_host_device(template => $first->{name});
 
         my @list_hostdev = $vm->list_host_devices();
@@ -480,7 +483,7 @@ sub test_templates($vm) {
 
         $vm->add_host_device(template => $first->{name});
         @list_hostdev = $vm->list_host_devices();
-        is(scalar @list_hostdev, $n+2);
+        is(scalar @list_hostdev , $n+2);
         like ($list_hostdev[-1]->{name} , qr/[a-zA-Z] \d+$/) or exit;
 
         test_hd_in_domain($vm, $list_hostdev[-1]);
@@ -529,8 +532,10 @@ sub test_templates($vm) {
         $list_hostdev[-1]->_data('list_filter' => $list_filter);
     }
 
+    my $n = $vm->list_host_devices;
     for my $hd ( $vm->list_host_devices ) {
         test_hd_remove($vm, $hd);
+        is($vm->list_host_devices,--$n, $hd->name) or die Dumper([$vm->list_host_devices]);
     }
 }
 

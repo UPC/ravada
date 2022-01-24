@@ -401,7 +401,7 @@ sub _around_create_domain {
      my $request = delete $args{request};
      delete $args{iso_file};
      delete $args{id_template};
-     delete @args{'description','remove_cpu','vm','start'};
+     delete @args{'description','remove_cpu','vm','start','options'};
 
     confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
 
@@ -829,7 +829,7 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports);
     my @requests;
     for my $req ( $base->list_requests ) {
         push @requests,($req) if !$ignore_requests{$req->command};
@@ -2227,6 +2227,17 @@ sub list_host_devices($self) {
     }
 
     return @found;
+}
+
+=head2 list_machine_types
+
+Placeholder for list machine types that returns an empty list by default.
+It can be overloaded in each backend module.
+
+=cut
+
+sub list_machine_types($self) {
+    return ();
 }
 
 1;
