@@ -3,6 +3,7 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json);
 use Ravada::Request;
 use Ravada::WebSocket;
@@ -24,7 +25,7 @@ sub _set_hd_nvidia($hd) {
 }
 
 sub _set_hd_usb($hd) {
-    $hd->_data( list_filter => '(disk|flash|audio|cam|bluetoo)');
+    $hd->_data( list_filter => '(disk|flash|audio|smartcard|cam|bluetoo)');
 }
 
 sub test_hostdev_not_in_domain_void($domain) {
@@ -88,6 +89,22 @@ sub test_hostdev_in_domain_config($domain, $expect_feat_kvm) {
     }
 }
 
+sub _fix_host_device($hd) {
+    if ($hd->{name} =~ /PCI/) {
+        _set_hd_nvidia($hd);
+    } elsif ($hd->{name} =~ /USB/ ) {
+        _set_hd_usb($hd);
+    }
+}
+
+sub _create_domain_hd($vm, $hd) {
+    my $domain = create_domain($vm);
+    $domain->add_host_device($hd);
+
+    return $domain if $vm->type ne 'KVM';
+
+   return $domain;
+}
 
 sub test_hd_in_domain($vm , $hd) {
 
@@ -284,6 +301,163 @@ sub _count_locked() {
     my ($n) = $sth->fetchrow;
     return $n;
 }
+sub test_templates_start_nohd($vm) {
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+    ok(@$templates);
+
+    for my $first  (@$templates) {
+        $vm->add_host_device(template => $first->{name});
+        my @list_hostdev = $vm->list_host_devices();
+        my ($hd) = $list_hostdev[-1];
+
+        _fix_host_device($hd) if $vm->type eq 'KVM';
+
+        next if !$hd->list_devices;
+
+        my $domain = _create_domain_hd($vm, $hd);
+        $domain->start(user_admin);
+        my $info = $domain->info(user_admin);
+        is($info->{host_devices}->[0]->{is_locked},1);
+        $domain->shutdown_now(user_admin);
+
+        my $req = Ravada::Request->start_domain( uid => user_admin->id
+            ,id_domain => $domain->id
+            ,enable_host_devices => 0
+        );
+        wait_request();
+        is($req->error, '');
+        test_hostdev_not_in_domain_config($domain);
+        $domain->shutdown_now(user_admin);
+
+        $req = Ravada::Request->start_domain( uid => user_admin->id
+            ,id_domain => $domain->id
+            ,enable_host_devices => 1
+        );
+        wait_request();
+        is($req->error, '');
+        test_hostdev_in_domain_config($domain,1);
+        $domain->shutdown_now(user_admin);
+
+        $domain->remove(user_admin);
+    }
+    for my $hd ( $vm->list_host_devices ) {
+        test_hd_remove($vm, $hd);
+    }
+}
+
+sub test_templates_gone_usb($vm) {
+    return if $vm->type ne 'KVM';
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+    ok(@$templates);
+
+    for my $first  (@$templates) {
+        next if $first->{name} !~ 'USB';
+        $vm->add_host_device(template => $first->{name});
+        my @list_hostdev = $vm->list_host_devices();
+        my ($hd) = $list_hostdev[-1];
+
+        _fix_host_device($hd) if $vm->type eq 'KVM';
+
+        next if !$hd->list_devices;
+
+        my $domain = _create_domain_hd($vm, $hd);
+        $domain->start(user_admin);
+
+        is(scalar($hd->list_domains_with_device()),1);
+        $domain->shutdown_now(user_admin);
+        _mangle_dom_hd($domain);
+        my $req = Ravada::Request->start_domain(uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        wait_request(check_error => 0, debug => 0);
+        my $req2 = Ravada::Request->open($req->id);
+        like($req2->error,qr/Did not find USB device/);
+
+        my $req_no_hd = Ravada::Request->start_domain(uid => user_admin->id
+            ,id_domain => $domain->id
+            ,enable_host_devices => 0
+        );
+        wait_request(check_error => 0, debug => 0);
+        my $req_no_hd2 = Ravada::Request->open($req_no_hd->id);
+        is($req_no_hd2->error,'');
+        is($domain->is_active,1);
+
+        test_hostdev_not_in_domain_config($domain);
+
+        $domain->remove(user_admin);
+    }
+
+    for my $hd ( $vm->list_host_devices ) {
+        test_hd_remove($vm, $hd);
+    }
+
+}
+
+sub _mangle_dom_hd($domain) {
+    my ($in, $out,$err);
+    run3(['lsusb'], \$in, \$out, \$err);
+    my $device=0;
+    for my $line (split /\n/, $out) {
+        my ($current) = $line =~ /Device (\d+)/;
+        $device = $current if $current>$device;
+    }
+    my $xml = XML::LibXML->load_xml(string => $domain->domain->get_xml_description);
+
+    my ($address) = $xml->findnodes("/domain/devices/hostdev/source/address");
+    my ($old_device) = $address->getAttribute('device');
+    my $sth = connector->dbh->prepare("SELECT id,name FROM host_devices_domain "
+        ." WHERE id_domain=?");
+    $sth->execute($domain->id);
+    my ($id_hd, $device_name) = $sth->fetchrow;
+    $address->setAttribute(device => ++$device);
+    $device_name =~ s/(.*Device )\d+(.*)/$1$device$2/;
+    $sth = connector->dbh->prepare("UPDATE host_devices_domain set name=?"
+        ." WHERE id=?");
+    $sth->execute($device_name, $id_hd);
+    $domain->reload_config($xml);
+}
+
+sub test_templates_change_filter($vm) {
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+    ok(@$templates);
+
+    for my $first  (@$templates) {
+        diag("Testing $first->{name} Hostdev on ".$vm->type);
+        $vm->add_host_device(template => $first->{name});
+        my @list_hostdev = $vm->list_host_devices();
+        my ($hd) = $list_hostdev[-1];
+
+        _fix_host_device($hd) if $vm->type eq 'KVM';
+
+        next if !$hd->list_devices;
+
+        is(scalar($hd->list_domains_with_device()),0);
+
+        my $domain = _create_domain_hd($vm, $hd);
+        $domain->start(user_admin);
+
+        is(scalar($hd->list_domains_with_device()),1);
+        $domain->shutdown_now(user_admin);
+
+        $hd->_data('list_filter','AAAA AAAA');
+        die "Error: list filter not enough restrictive" if $hd->list_devices();
+
+        test_hostdev_not_in_domain_config($domain);
+
+        $domain->remove(user_admin);
+    }
+
+    for my $hd ( $vm->list_host_devices ) {
+        my $req = Ravada::Request->remove_host_device(
+            uid => user_admin->id
+            ,id_host_device => $hd->id
+        );
+        wait_request();
+        is($req->status,'done');
+        is($req->error, '') or exit;
+    }
+
+}
 
 sub test_templates($vm) {
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
@@ -325,8 +499,8 @@ sub test_templates($vm) {
         };
         my $devices = Ravada::WebSocket::_list_host_devices(rvd_front(), $ws_args);
         is(scalar(@$devices), 2+$n) or die Dumper($devices, $list_hostdev[-1]);
+        $n+=2;
         next if !(scalar(@{$devices->[-1]->{devices}})>1);
-        $n++;
 
         my $list_filter = $list_hostdev[-1]->_data('list_filter');
         $list_hostdev[-1]->_data('list_filter' => '002');
@@ -352,7 +526,6 @@ sub test_templates($vm) {
             }
         }
         ok(!$equal) or die Dumper($dev0, $dev2);
-        $n++;
         $list_hostdev[-1]->_data('list_filter' => $list_filter);
     }
 
@@ -432,6 +605,9 @@ for my $vm_name ( vm_names()) {
 
         diag("Testing host devices in $vm_name");
 
+        test_templates_start_nohd($vm);
+        test_templates_gone_usb($vm) if $vm_name eq 'KVM';
+        test_templates_change_filter($vm);
         test_templates($vm);
 
     }

@@ -3034,10 +3034,16 @@ sub view_machine {
     app->log->info($USER->name." requesting start_domain ".$domain->name." from "._remote_ip($c))
     if $CONFIG_FRONT->{log}->{log};
 
+    my $disable_host_devices = $c->req->param('disable_host_devices');
+    $disable_host_devices=0 if !defined $disable_host_devices;
+    my @disable_host_devices;
+    @disable_host_devices = ( 'disable_host_devices' => $disable_host_devices );
+
     return run_request($c, Ravada::Request->start_domain(
                     uid => $USER->id
              ,id_domain => $domain->id
             , remote_ip => _remote_ip($c)
+            , @disable_host_devices
             )
     );
 }

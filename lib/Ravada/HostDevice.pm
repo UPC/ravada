@@ -150,7 +150,8 @@ sub _fetch_template_args($self, $device) {
         } else {
             my ($value) = $device =~ qr($re);
             confess "Error: $re not found in '$device'" if !defined $value;
-            $ret->{$name} = $value;
+            $value =~ s/^0+// if $value =~ /^[0-9]+$/;
+            $ret->{$name} = ''.$value;
         }
     }
     return $ret;
@@ -199,6 +200,7 @@ sub _data($self, $field, $value=undef) {
         );
         $sth->execute($value, $self->id);
         $self->meta->get_attribute($field)->set_value($self, $value);
+        $self->_dettach_in_domains() if $field =~ /^list_/;
         return $value;
     } else {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM host_devices"
@@ -208,6 +210,24 @@ sub _data($self, $field, $value=undef) {
         my $row = $sth->fetchrow_hashref();
         die "Error: No field '$field' in host_devices" if !exists $row->{$field};
         return $row->{$field};
+    }
+}
+
+sub list_domains_with_device($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_domain FROM host_devices_domain "
+        ." WHERE id_host_device=?");
+    $sth->execute($self->id);
+    my @domains;
+    while (my ($id_domain) = $sth->fetchrow ) {
+        push @domains,($id_domain);
+    }
+    return @domains;
+}
+
+sub _dettach_in_domains($self) {
+    for my $id_domain ( $self->list_domains_with_device() ) {
+        my $domain = Ravada::Domain->open($id_domain);
+        $domain->_dettach_host_device($self);
     }
 }
 

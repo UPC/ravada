@@ -29,7 +29,7 @@ sub _search_unused_device {
     my ($in, $out, $err);
     run3(["lsusb"], \$in, \$out, \$err);
     for my $line ( split /\n/, $out ) {
-        next if $line !~ /Bluetooth|flash|disk/i;
+        next if $line !~ /Bluetooth|flash|disk|cam/i;
         my ($filter) = $line =~ /(ID [a-f0-9]+):/;
         die "ID \\d+ not found in $line" if !$filter;
         return ("lsusb",$filter);
@@ -45,7 +45,7 @@ sub _template_usb($vm) {
             <source>
                 <vendor id='0x<%= \$vendor_id %>'/>
                 <product id='0x<%= \$product_id %>'/>
-                <address bus='1' device='7'/>
+                <address bus='<%= \$bus %>' device='<%= \$device %>'/>
             </source>
         </hostdev>"
         })
@@ -157,6 +157,8 @@ sub _template_args_usb {
     return encode_json ({
         vendor_id => 'ID ([a-f0-9]+)'
         ,product_id => 'ID .*?:([a-f0-9]+)'
+        ,bus => 'Bus (\d+)'
+        ,device => 'Device (\d+)'
     });
 }
 
@@ -283,13 +285,22 @@ sub test_host_device_usb($vm) {
     isa_ok($list_hostdev[0],'Ravada::HostDevice');
 
     my $base = create_domain($vm);
-    $base->_set_controller_usb(5) if $base->type eq 'KVM';
+    if ($base->type eq 'KVM') {
+        my $req = Ravada::Request->remove_hardware(
+            name => 'usb'
+            ,id_domain => $base->id
+            ,uid => user_admin->id
+            ,index => 2
+        );
+        wait_request();
+        #    $base->_set_controller_usb(5) if $base->type eq 'KVM';
+    }
 
     $base->add_host_device($list_hostdev[0]);
     my @list_hostdev_b = $base->list_host_devices();
     is(scalar @list_hostdev_b, 1);
 
-    test_devices($list_hostdev[0],1, qr/Bluetooth|flash|disk/i);
+    test_devices($list_hostdev[0],1, qr/Bluetooth|flash|disk|camera/i);
 
     $base->prepare_base(user_admin);
     my $clone = $base->clone(name => new_domain_name
@@ -297,8 +308,12 @@ sub test_host_device_usb($vm) {
     );
     my @list_hostdev_c = $clone->list_host_devices();
     is(scalar @list_hostdev_c, 1) or exit;
+    my $device = $list_hostdev_c[0]->{devices};
+
+    test_kvm_usb_template_args($device, $list_hostdev_c[0]);
 
     _check_hostdev($clone);
+    diag($clone->name);
     $clone->start(user_admin);
     _check_hostdev($clone, 1);
 
@@ -325,6 +340,16 @@ sub test_host_device_usb($vm) {
     $list_hostdev[0]->remove();
 }
 
+sub test_kvm_usb_template_args($device_usb, $hostdev) {
+    my ($bus, $device, $vendor_id, $product_id)
+    = $device_usb =~ /Bus 0*(\d+) Device 0*(\d+).*ID (.*?):(.*?) /;
+    my $args = $hostdev->_fetch_template_args($device_usb);
+    is($args->{device}, $device);
+    is($args->{bus}, $bus);
+    is($args->{vendor_id}, $vendor_id);
+    is($args->{product_id}, $product_id);
+}
+
 sub _create_mock_devices($n_devices, $type, $value="fff:fff") {
     my $path  = "/var/tmp/$</ravada/dev";
     make_path($path) if !-e $path;
@@ -345,6 +370,7 @@ sub _create_mock_devices($n_devices, $type, $value="fff:fff") {
         close $out;
     }
     $N_DEVICE ++;
+
     return ("find $path/",$name);
 }
 
@@ -353,7 +379,7 @@ sub test_host_device_usb_mock($vm, $n_hd=1) {
 
     my $n_devices = 3;
 
-    my ($list_command,$list_filter) = _create_mock_devices( $n_devices*$n_hd , "USB" );
+    my ($list_command,$list_filter) = _create_mock_devices( $n_devices*$n_hd , "USB" , " Device 1 Bus 1 aaa:aaa" );
 
     for ( 1 .. $n_hd ) {
         _insert_hostdev_data_usb($vm, "USB Mock $_", $list_command, $list_filter);
@@ -588,7 +614,7 @@ sub test_check_list_command($vm) {
 
 clean();
 
-for my $vm_name (reverse vm_names()) {
+for my $vm_name (vm_names()) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -603,10 +629,10 @@ for my $vm_name (reverse vm_names()) {
 
         test_check_list_command($vm);
 
+        test_host_device_usb($vm);
+
         test_xmlns($vm);
         test_host_device_gpu($vm);
-
-        test_host_device_usb($vm);
 
         test_host_device_usb_mock($vm);
         test_host_device_usb_mock($vm,2);
