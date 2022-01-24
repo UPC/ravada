@@ -1388,7 +1388,7 @@ sub _add_indexes_generic($self) {
             $self->_clean_index_conflicts($table, $name);
 
             print "+" if $FIRST_TIME_RUN;
-            if ($table eq 'domain_displays' && $name eq 'id_vm_port') {
+            if ($table eq 'domain_displays' && $name =~ /port/) {
                 my $sth_clean=$CONNECTOR->dbh->prepare(
                     "UPDATE domain_displays set port=NULL"
                 );
