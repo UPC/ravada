@@ -169,6 +169,10 @@ ravadaApp.directive("solShowMachine", swMach)
             $scope.showMinSize = false;
             $scope.min_size = 1;
           }
+          if ( $scope.swap.value < iso.min_swap_size ) {
+              $scope.swap.value = iso.min_swap_size + 0.1;
+              console.log($scope.swap.value);
+          }
           return (iso.device != null) ? iso.device : "";
       };
 

@@ -262,6 +262,12 @@
                 ws.onopen = function(event) { ws.send('machine_info/'+$scope.showmachineId) };
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
+                    if (data === null || typeof(data) == undefined ) {
+                        console.log("close");
+                        ws.close();
+                        $scope.domain_removed = true;
+                        return;
+                    }
                     $scope.$apply(function () {
                         $scope.showmachine = data;
                         $scope.copy_is_volatile = $scope.showmachine.is_volatile;

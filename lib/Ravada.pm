@@ -706,6 +706,7 @@ sub _update_isos {
           ,xml => 'windows_10.xml'
           ,xml_volume => 'windows10-volume.xml'
           ,min_disk_size => '21'
+          ,min_swap_size => '2'
           ,arch => 'x86_64'
           ,extra_iso => 'https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.215-\d+/virtio-win-0.1.\d+.iso'
 
@@ -2294,6 +2295,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
     $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
+    $self->_upgrade_table('iso_images','min_swap_size','int (11) DEFAULT NULL');
     $self->_upgrade_table('iso_images','options','varchar(255)');
     $self->_upgrade_table('iso_images','has_cd','int (1) DEFAULT "1"');
     $self->_upgrade_table('iso_images','downloading','int (1) DEFAULT "0"');
@@ -2725,7 +2727,7 @@ sub create_domain {
     }
     my $vm_name = delete $args{vm};
 
-    my $start = $args{start};
+    my $start = delete $args{start};
     my $id_base = $args{id_base};
     my $data = delete $args{data};
     my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
@@ -2749,6 +2751,10 @@ sub create_domain {
 
     $request->status("creating machine")    if $request;
 
+    unlock_hash(%args);
+    my $swap = delete $args{swap};
+    lock_hash(%args);
+
     my $domain;
     eval { $domain = $vm->create_domain(%args)};
 
@@ -2761,21 +2767,16 @@ sub create_domain {
     } elsif ($error) {
         die $error;
     }
-    if (!$error && $start) {
-        $request->status("starting") if $request;
-        eval {
-            my $remote_ip;
-            $remote_ip = $request->defined_arg('remote_ip') if $request;
-            $domain->start(
-                user => $user
-                ,remote_ip => $remote_ip
-            )
-        };
-        my $error = $@;
-        die $error if $error && !$request;
-        $request->error($error) if $error;
-    }
     return if !$domain;
+    my $req_add_swap;
+    if ($swap) {
+        $req_add_swap = Ravada::Request->add_hardware(
+            uid => $args{id_owner}
+            ,id_domain => $domain->id
+            ,name => 'disk'
+            ,data => { size => $swap, type => 'data' }
+        );
+    }
     my $req_add_data;
     if ($data) {
         $req_add_data = Ravada::Request->add_hardware(
@@ -2784,9 +2785,29 @@ sub create_domain {
             ,name => 'disk'
             ,data => { size => $data, type => 'data' }
         );
+        $req_add_data->after_request($req_add_swap->id)
+        if $req_add_swap;
     }
-    _add_extra_iso($domain, $request,$req_add_data) if $domain;
+    my $previous_req = ( $req_add_data or $req_add_swap );
+    $previous_req = _add_extra_iso($domain, $request,$previous_req);
+    _start_domain_after_create($domain, $request, $previous_req) if $start;
     return $domain;
+}
+
+sub _start_domain_after_create($domain, $request, $previous_request) {
+    my $remote_ip;
+    $remote_ip = $request->defined_arg('remote_ip') if $request;
+
+    my $uid = $request->defined_arg('id_owner');
+    $uid = $request->defined_arg('uid') if !$uid;
+
+    my $req = Ravada::Request->start_domain(
+        uid => $uid
+        ,id_domain => $domain->id
+        ,remote_ip => $remote_ip
+    );
+    $req->after_request($previous_request->id) if $previous_request;
+
 }
 
 sub _search_iso($id) {
@@ -2816,10 +2837,10 @@ sub _add_extra_iso($domain, $request, $previous_request) {
         $volume = $domain->_vm->dir_img()."/$device";
         $domain->_vm->_download_file_external($url, $volume) ;
     }
-    my $req=Ravada::Request->refresh_storage(
-        after_request => $previous_request->id
-    );
-    Ravada::Request->add_hardware(
+    my $req=Ravada::Request->refresh_storage();
+    $req->after_request($previous_request->id) if $previous_request;
+
+    return Ravada::Request->add_hardware(
         name => 'disk'
         ,uid => Ravada::Utils::user_daemon->id
         ,id_domain => $domain->id
@@ -3863,8 +3884,8 @@ sub _cmd_create{
     my $msg = '';
 
     if ($domain) {
-       $msg = 'Domain '
-            ."<a href=\"/machine/view/".$domain->id.".html\">"
+       $msg = 'Machine'
+            ." <a href=\"/machine/manage/".$domain->id.".html\">"
             .$request->args('name')."</a>"
             ." created."
         ;
@@ -4144,8 +4165,8 @@ sub _cmd_start {
         uid => Ravada::Utils::user_daemon->id
     ) if $domain->is_pool && $request->defined_arg('remote_ip');
 
-    my $msg = 'Domain '
-            ."<a href=\"/machine/view/".$domain->id.".html\">"
+    my $msg = 'Machine'
+            ." <a href=\"/machine/view/".$domain->id.".html\">"
             .$domain->name."</a>"
             ." started"
         ;
