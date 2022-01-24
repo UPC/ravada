@@ -2428,6 +2428,7 @@ sub admin {
         }
     }
     if ($page eq 'machines') {
+        _count_nodes($c);
         Ravada::Request->refresh_vms();
         $c->stash(n_clones_hide => ($CONFIG_FRONT->{admin}->{hide_clones} or 10) );
         $c->stash(autostart => ( $CONFIG_FRONT->{admin}->{autostart} or 0));
@@ -2454,6 +2455,15 @@ sub admin {
     }
     $c->render( template => 'main/admin_'.$page);
 };
+
+sub _count_nodes($c) {
+    my $sth = $RAVADA->_dbh->prepare(
+        "SELECT count(*) FROM vms"
+    );
+    $sth->execute();
+    my ($n) = $sth->fetchrow;
+    $c->stash( _n_nodes => $n );
+}
 
 sub _search_id_iso($name) {
     my $sth = $RAVADA->_dbh
@@ -2521,7 +2531,7 @@ sub req_new_domain {
     my $data = ($c->param('data') or 0);
     $data *= 1024*1024*1024;
 
-    if (!$c->param('_advanced')) {
+    if (!$c->param('_advanced_options')) {
         $swap = int(1024 * 1024 * 1024) if !$swap;
         $data = int(1024 * 1024 * 1024) if !$data;
     }

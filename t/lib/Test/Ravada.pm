@@ -51,6 +51,7 @@ create_domain
     start_node shutdown_node remove_node hibernate_node
     start_domain_internal   shutdown_domain_internal
     hibernate_domain_internal
+    remove_domain_internal
     remote_node
     remote_node_2
     remote_node_shared
@@ -1157,6 +1158,11 @@ sub wait_request {
                     $run_at = 'now' if !$run_at;
                     $run_at = " $run_at";
                 }
+                if ($req->command eq 'refresh_machine_ports'
+                    && $req->error =~ /has ports .*up/) {
+                    $req->status('done');
+                    next;
+                }
                 if ($debug && (time%5 == 0)) {
                     diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
                         .$run_at." bg=$background"
@@ -1180,6 +1186,7 @@ sub wait_request {
                             like($error,qr{^($|.*port \d+ already used|rsync done)}) or confess $req->command;
                         } elsif($req->command eq 'refresh_machine_ports') {
                             like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
+                            $req->status('done');
                         } elsif($req->command eq 'open_exposed_ports') {
                             like($error,qr{^($|.*No ip in domain|.*duplicated port|I can't get the internal IP)});
                         } elsif($req->command eq 'compact') {
@@ -1998,6 +2005,16 @@ sub shutdown_domain_internal($domain) {
         $domain->_store(is_active => 0 );
     } else {
         confess "ERROR: I don't know how to shutdown internal domain of type ".$domain->type;
+    }
+}
+
+sub remove_domain_internal($domain) {
+    if ( $domain->type eq 'KVM') {
+        $domain->domain->undefine();
+    } elsif ($domain->type eq 'Void') {
+        unlink $domain->_config_file();
+    } else {
+        confess "I don't know how to remove ".$domain->name;
     }
 }
 

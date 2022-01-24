@@ -60,3 +60,5 @@ jobs:
         run: prove -lr t/17_templates.t
       - name: Test mock VM
         run: prove -lr t/vm/60_new_args.t t/30_request.t
+      - name: Test create from ISO
+        run: prove -lr t/request/25_create_from_iso.t t/vm/d10_not_download.t

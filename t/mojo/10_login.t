@@ -228,6 +228,7 @@ sub test_login_non_admin($t, $base, $clone){
         my ($req) = grep { $_->status ne 'done' } $user->list_requests();
         last if !$req;
         wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+        delete_request('open_exposed_ports');
     }
     my ($req) = reverse $user->list_requests();
     is($req->error, '');
@@ -620,6 +621,84 @@ sub test_new_machine_empty($t, $vm_name) {
     }
 }
 
+sub test_new_machine_default($t, $vm_name) {
+    my $name = new_domain_name();
+
+    my $iso_name = 'Alpine%64 bits';
+    my $id_iso = search_id_iso($iso_name);
+    $t->post_ok('/new_machine.html' => form => {
+            backend => $vm_name
+            ,id_iso => $id_iso
+            ,name => $name
+            ,disk => 1
+            ,ram => 1
+            ,submit => 1
+        }
+    )->status_is(302);
+
+    wait_request();
+
+    my $domain = rvd_front->search_domain($name);
+
+    my $disks = $domain->info(user_admin)->{hardware}->{disk};
+
+    my ($swap ) = grep { $_->{file} =~ /SWAP/ } @$disks;
+    ok($swap,"Expecting a swap disk volume");
+
+    my ($data) = grep { $_->{file} =~ /DATA/ } @$disks;
+    ok($data,"Expecting a data disk volume");
+
+    my ($iso) = grep { $_->{file} =~ /iso$/ } @$disks;
+    ok($iso,"Expecting an ISO cdrom disk volume");
+}
+
+sub test_new_machine_advanced_options($t, $vm_name, $swap=undef ,$data=undef) {
+    my $name = new_domain_name();
+
+    my $iso_name = 'Alpine%64 bits';
+    my $id_iso = search_id_iso($iso_name);
+    my @args = (
+        backend => $vm_name
+        ,id_iso => $id_iso
+        ,name => $name
+        ,disk => 1
+        ,ram => 1
+        ,submit => 1
+        ,_advanced_options => 1
+    );
+    push @args,(swap => 1) if $swap;
+    push @args,(data => 1) if $data;
+
+    $t->post_ok('/new_machine.html' => form => {
+            @args
+        }
+    )->status_is(302);
+
+    wait_request();
+
+    my $domain = rvd_front->search_domain($name);
+
+    my $disks = $domain->info(user_admin)->{hardware}->{disk};
+
+    my ($d_swap ) = grep { $_->{file} =~ /SWAP/ } @$disks;
+    if ($swap) {
+        ok($d_swap,"Expecting swap disk volume");
+    } else {
+        ok(!$d_swap,"Expecting no swap disk volume");
+    }
+
+    my ($d_data) = grep { $_->{file} =~ /DATA/ } @$disks;
+    if ($data) {
+        ok($d_data,"Expecting data disk volume");
+    } else {
+        ok(!$d_data,"Expecting no data disk volume");
+    }
+
+    my ($iso) = grep { $_->{file} =~ /iso$/ } @$disks;
+    ok($iso,"Expecting an ISO cdrom disk volume") or warn Dumper($disks);
+}
+
+
 sub test_new_machine_change_iso($t, $vm_name) {
     my $iso_name = 'Alpine%32 bits';
     _download_iso($iso_name);
@@ -739,6 +818,11 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
 
     test_new_machine($t);
     if ($vm_name eq 'KVM') {
+        test_new_machine_default($t, $vm_name);
+        test_new_machine_advanced_options($t, $vm_name);
+        test_new_machine_advanced_options($t, $vm_name,1);
+        test_new_machine_advanced_options($t, $vm_name,0,1);
+        test_new_machine_advanced_options($t, $vm_name,1,1);
         test_new_machine_change_iso($t, $vm_name);
         test_new_machine_empty($t, $vm_name);
     }

@@ -125,7 +125,9 @@
                       <div style="float:right">
                         <%=l 'Status' %></div></th>
                     <th class="lgMachActions"><%=l 'Actions' %></th>
+                    % if ($_n_nodes>1 ) {
                     <th class="lgMachNode"><%=l 'Node' %></th>
+                    % }
                 </tr>
             </thead>
             <tbody>
@@ -270,12 +272,21 @@
                       <div ng-show="machine.is_base && !machine.is_locked"
                           ng-cloak><span class="badge badge-pill badge-light"><%=l 'This Machine is a base' %></span></div>
                     </td>
+
+                    % if ($_n_nodes>1 ) {
                     <td class="lgMachNode">
                         <span class="badge badge-info" title="<%=l 'Node'%>">{{machine.node}}</span>
                     </td>
+                    % }
                 </tr>
             </tbody>
         </table>
+
+        <div ng-cloak="1"
+            ng-show="list_machines && list_machines_time > 2 && show_active && !n_show">
+            <%=l 'There are no active virtual machines'%>
+            <button ng-click="reload_list()"><%=l 'reload list' %></button>
+        </div>
     </div>
 </div>
 </div>

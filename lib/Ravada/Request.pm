@@ -82,7 +82,7 @@ our %VALID_ARG = (
     ,dettach => { uid => 1, id_domain => 1 }
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
-    ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2, delay => 2, test => 2}
+    ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2 }
     ,list_storage_pools => { id_vm => 1 , uid => 1 }
     ,check_storage => { uid => 1 }
@@ -756,35 +756,46 @@ sub _validate_create_domain($self) {
 
     $self->_validate_clone($id_base, $id_owner) if $id_base;
 
-    $self->_check_downloading();
-
-    return if $owner->is_admin
+    unless ( $owner->is_admin
             || $owner->can_create_machine()
-            || ($id_base && $owner->can_clone);
+            || ($id_base && $owner->can_clone)) {
 
-    return $self->_status_error("done","Error: access denied to user ".$owner->name);
+        return $self->_status_error("done","Error: access denied to user ".$owner->name);
+    }
 
+    $self->_check_downloading();
 }
 
 sub _check_downloading($self) {
     my $id_iso = $self->defined_arg('id_iso');
     my $iso_file = $self->defined_arg('iso_file');
 
+    $iso_file = '' if $iso_file && $iso_file eq '<NONE>';
+
     return if !$id_iso && !$iso_file;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,downloading,device "
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id,downloading,device,has_cd,name,url "
         ." FROM iso_images "
         ." WHERE (id=? or device=?) "
     );
     $sth->execute($id_iso,$iso_file);
-    my ($id_iso2,$downloading, $device) = $sth->fetchrow;
+    my ($id_iso2,$downloading, $device, $has_cd, $iso_name, $iso_url)
+        = $sth->fetchrow;
+
     return if !$downloading && $device;
 
     my $req_download = _search_request('download', id_iso => $id_iso2);
-    if (!$device && !$req_download) {
+
+    return $self->_status_error("done"
+        ,"Error: ISO file required for $iso_name")
+    if $has_cd && !$device && !$iso_file && !$iso_url && !$device;
+
+    if ($has_cd && !$device && !$iso_file && !$req_download) {
         $req_download = Ravada::Request->download(
             id_iso => $id_iso2
             ,uid => Ravada::Utils::user_daemon->id
+            ,vm => $self->defined_arg('vm')
         );
     }
     if (! $req_download) {
@@ -792,6 +803,21 @@ sub _check_downloading($self) {
     } else {
         $self->after_request($req_download->id);
     }
+    $sth = $$CONNECTOR->dbh->prepare("SELECT args FROM requests"
+            ." WHERE id=?"
+    );
+    $sth->execute($self->id);
+    my $args_json = $sth->fetchrow();
+    my $args = decode_json($args_json);
+
+    if (exists $args->{iso_file} && !$args->{iso_file}) {
+        delete $args->{iso_file};
+        $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set args=?"
+            ." WHERE id=?"
+        );
+        $sth->execute(encode_json($args), $self->id);
+    }
+
 }
 
 sub _mark_iso_downloaded($id_iso) {
@@ -1097,12 +1123,26 @@ Sets or gets de value of an argument of a Request
 
 =cut
 
-sub arg($self, $name, $value) {
+sub arg($self, $name, $value=undef) {
 
     confess "Unknown argument $name ".Dumper($self->{args})
         if !exists $self->{args}->{$name} && !defined $value;
 
-    $self->{args}->{$name} = $value if defined $value;
+    if (defined $value) {
+        $self->{args}->{$name} = $value;
+
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT args FROM requests"
+            ." WHERE id=?"
+        );
+        $sth->execute($self->id);
+        my $args_json = $sth->fetchrow();
+        my $args = decode_json($args_json);
+        $args->{$name} = $value;
+        $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set args=?"
+            ." WHERE id=?"
+        );
+        $sth->execute(encode_json($args),$self->id);
+    }
     return $self->{args}->{$name};
 }
 

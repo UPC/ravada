@@ -1139,6 +1139,7 @@ sub _set_iso_downloading($self, $iso,$value) {
 
 sub _iso_name($self, $iso, $req=undef, $verbose=1) {
 
+    return '' if !$iso->{has_cd};
     my $iso_name;
     if ($iso->{rename_file}) {
         $iso_name = $iso->{rename_file};

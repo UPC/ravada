@@ -24,10 +24,16 @@
         <span class="badge badge-warning" ng-show="show_requests">hide</span>
     </button>
     <button type="button" class="btn btn-outline-primary btn-sm"
-        ng-click="do_show_active();"
-        ng-disabled="!n_active_hidden"
+        ng-disabled="!n_active || (!n_active_hidden && !show_active)"
     >
-        <span><%=l 'Show active' %></span>
+        <span ng-show="!show_active"
+            ng-enabled="n_active"
+            ng-click="do_show_active();"
+        ><%=l 'Show active' %></span>
+
+        <span ng-show="show_active"
+            ng-click="reload_list()"
+        ><%=l 'Hide active' %></span>
         <span class="badge badge-warning">{{n_active}}</span>
     </button>
 

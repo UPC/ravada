@@ -176,6 +176,7 @@ sub _add_cdrom($self, $domain, %args) {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE id=?");
         $sth->execute($id_iso);
         my $row = $sth->fetchrow_hashref();
+        return if !$row->{has_cd};
         $iso_file = $row->{device};
         if (!$iso_file) {
             $iso_file = $row->{name};
@@ -424,6 +425,54 @@ sub file_exists( $self, $file ) {
 
 sub _is_ip_nat($self, $ip) {
     return 1;
+}
+
+sub _search_iso($self, $id, $device = undef) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images "
+        ." WHERE id=?"
+    );
+    $sth->execute($id);
+    my $row = $sth->fetchrow_hashref;
+    $row->{device} = $device if defined $device;
+    return $row;
+}
+
+sub _iso_name($self, $iso, $request=undef, $verbose=0) {
+
+    return '' if !$iso->{has_cd};
+
+    my $name = ($iso->{device} or $iso->{rename_file} or $iso->{file_re});
+    confess Dumper($iso) if !$name;
+    $name =~ s/(.*)\.\*(.*)/$1$2/;
+    $name =~ s/(.*)\.\+(.*)/$1.$2/;
+    $name =~ s/(.*)\[\\d.*?\]\+(.*)/${1}1$2/;
+    confess $name if $name =~ m{[*+\\]};
+
+    $name = $self->dir_img."/".$name unless $name =~ m{^/};
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE iso_images "
+        ." SET device=? WHERE id=?"
+    );
+    $sth->execute($name, $iso->{id});
+    return $name;
+}
+
+sub _search_url_file($self, $url) {
+    my ($url0,$file) = $url =~ m{(.*)/(.*)};
+    confess "Undefined file in url=$url" if !$file;
+    my $file0 = $file;
+    $file =~ s/(.*)\.\*(.*)/$1$2/;
+    $file =~ s/(.*)\.\+(.*)/$1.$2/;
+    $file =~ s/(.*)\[\\d.*?\]\+(.*)/${1}1$2/;
+    $file =~ s/(.*)\\d\+(.*)/${1}1$2/;
+    confess Dumper($url, $file0,$file) if $file =~ m{[*+\\]}
+    || $file !~ /\.iso$/;
+
+    return "$url0/$file";
+}
+
+sub _download_file_external($self, $url, $device) {
 }
 
 #########################################################################3

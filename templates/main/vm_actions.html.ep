@@ -25,7 +25,7 @@
   <div ng-show="!showmachine || showmachine.can_hibernate">
     <button type="button" class="btn btn-warning btn-sm"
      ng-click="action('machine','hibernate',showmachine.id)"
-     ng-disabled="showmachine || !showmachine.is_active"
+     ng-disabled="showmachine && !showmachine.is_active"
      title="<%=l 'Hibernate' %>">
       <i class="fa fa-pause"></i>
    </button>
