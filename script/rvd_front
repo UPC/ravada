@@ -382,19 +382,6 @@ get '/machine/host_device/add/(#id_domain)/(#id_hd)' => sub($c) {
     return $c->render(json => { ok => $ok, error => ($@ or '') } );
 };
 
-get '/machine/host_device/remove/(#id_domain)/(#id_hd)' => sub($c) {
-
-    return access_denied($c) unless $USER->is_admin;
-
-    my $domain = Ravada::Front::Domain->open($c->stash('id_domain'));
-    my $ok = 0;
-    eval {
-        $domain->remove_host_device($c->stash('id_hd'));
-        $ok = 1;
-    };
-    return $c->render(json => { ok => $ok, error => ($@ or '') } );
-};
-
 post '/node/host_device/add' => sub($c) {
     my $arg = decode_json($c->req->body);
     my $id_vm = $arg->{id_vm} or die "Error: missing id_vm ".Dumper($arg);
@@ -1476,6 +1463,7 @@ post '/request/(:name)/' => sub {
                 ,%$args
             );
         };
+        warn $@ if $@;
     }
     return $c->render(json => { ok => 0, error => $@ }) if !$req;
     return $c->render(json => { ok => 1, request => $req->id });
