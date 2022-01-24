@@ -258,13 +258,13 @@ sub test_limit_change($vm, $limit) {
 
     @list = rvd_back->list_domains(user => $user, active => 1);
     is(scalar @list,3) or warn Dumper([map { $_->name } @list]);
-    wait_request( debug => 1);
+    wait_request( debug => 0);
 
     @list = rvd_back->list_domains(user => $user, active => 1);
 
     $req = Ravada::Request->enforce_limits(timeout => 1, _force => 1);
     delete_request('set_time');
-    wait_request( debug => 1);
+    wait_request( debug => 0);
     is($req->status,'done');
     is($req->error,'');
 

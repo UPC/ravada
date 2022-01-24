@@ -6,7 +6,10 @@
                         <input class="form-control" type="hidden" name="id_base" value="{{src_machine.id}}">
                         <label for="src_machine" class="col-xl-3 col-form-label"><%=l 'Source Machine' %></label>
                         <div class="col-lg-9">
+                            <i ng-hide="base"
+                                class="fas fa-sync-alt fa-spin"></i>
                             <select class="form-control"
+                                ng-show="base"
                                 name ="src_machine"
                                 ng-model="src_machine"
                                 ng-options="item.name for item in base | orderBy:'name' track by item.id "
@@ -18,7 +21,7 @@
                 <div ng-show="src_machine">
                     <div class="form-group row">
                         <div class="col-xl-3">
-                            <h5><strong><%=l 'Destination Machine' %></strong></h5>
+                            <h5><strong><%=l 'New Machine' %></strong></h5>
                         </div>
                     </div>
                     <div class="form-group row">

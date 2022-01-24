@@ -528,6 +528,7 @@ sub add_volume {
 }
 
 sub _create_volume($self, $file, $format, $data=undef) {
+    confess "Undefined format" if !defined $format;
     if ($format =~ /iso|raw|void/) {
         $data->{format} = $format;
         $self->_vm->write_file($file, Dump($data)),
@@ -614,13 +615,24 @@ sub disk_device {
     return list_volumes(@_);
 }
 
-sub list_volumes($self, @args) {
-    my @vol = $self->list_volumes_info(@args);
-    my @vol2;
-    for (@vol) {
-        push @vol2,($_->{file});
+sub list_volumes($self, $attribute=undef, $value=undef) {
+    my $data = $self->_load();
+
+    return () if !exists $data->{hardware}->{device};
+    my @vol;
+    my $n_order = 0;
+    for my $dev (@{$data->{hardware}->{device}}) {
+        next if exists $dev->{type}
+                && $dev->{type} eq 'base';
+        if (exists $dev->{file} ) {
+            confess "Error loading $dev->{file} ".$@ if $@;
+            next if defined $attribute
+                && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);
+        }
+        push @vol,($dev->{file});
     }
-    return @vol2;
+    return @vol;
+
 }
 
 sub list_volumes_info($self, $attribute=undef, $value=undef) {
@@ -866,16 +878,16 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
     confess "Error: hardware $number already added ".Dumper($list)
     if defined $number && $number < scalar(@$list);
 
-    $#$list = $number if defined $number && scalar @$list <= $number;
+    $#$list = $number-1 if defined $number && scalar @$list < $number;
 
     my @list2;
     if (!defined $number) {
         @list2 = @$list;
         push @list2,($data or " $name z 1");
     } else {
-        $number = $#$list if !defined $number;
         my $count = 0;
         for my $item ( @$list ) {
+            $count++;
             if ($number == $count) {
                 my $data2 = ( $data or " $name a ".($count+1));
                 $data2 = " $name b ".($count+1) if defined $data2 && ref($data2) && !keys %$data2;
@@ -886,7 +898,6 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
             $item = { driver => 'spice' , port => 'auto' , listen_ip => $self->_vm->listen_ip }
             if $name eq 'display' && !defined $item;
             push @list2,($item or " $name b ".($count+1));
-            $count++;
         }
     }
     $hardware->{$name} = \@list2;

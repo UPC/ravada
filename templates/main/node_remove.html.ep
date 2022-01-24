@@ -24,11 +24,10 @@
             ng-click="remove_node(node.id)"
         >Yes</button>
 
-        <button onclick="location='/admin/nodes'">Cancel</button>
+        <button onclick="location='/admin/nodes'"><%=l 'Cancel' %></button>
         </div>
     </div>
 
 </div>
 
 <div ng-show="message">{{message}}</div>
-

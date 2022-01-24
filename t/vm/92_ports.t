@@ -261,6 +261,7 @@ sub test_one_port($vm) {
     # start
     #
     $domain->start(user => user_admin, remote_ip => $remote_ip);
+    _wait_ip($vm, $domain);
     delete_request('enforce_limits');
     wait_request(debug => 0);
 
@@ -406,7 +407,7 @@ sub test_crash_domain($vm_name) {
     my $client_ip = $domain->remote_ip();
     is($client_ip, $remote_ip);
 
-    _wait_ip($vm_name, $domain);
+    _wait_ip($vm, $domain);
 
     my $domain_ip = $domain->ip or do {
         diag("[$vm_name] Expecting an IP for domain ".$domain->name);
@@ -1068,7 +1069,7 @@ sub test_req_expose($vm_name) {
             ,id_domain => $domain->id
     );
     for ( 1 .. 10 ) {
-        wait_request(request => $req, debug => 1);
+        wait_request(request => $req, debug => 0);
         last if $req->status eq 'done';
         sleep 1;
     }
@@ -1350,7 +1351,7 @@ sub _wait_requests($domain) {
 
 sub import_base($vm) {
     if ($vm->type eq 'KVM') {
-        $BASE = rvd_back->search_domain('zz-test-base-alpine');
+        $BASE = rvd_back->search_domain($BASE_NAME);
         $BASE = import_domain($vm->type, $BASE_NAME, 1) if !$BASE;
         confess "Error: domain $BASE_NAME is not base" unless $BASE->is_base;
 
@@ -1381,11 +1382,7 @@ sub test_expose_nested_base($vm) {
 
 for my $db ( 'mysql', 'sqlite' ) {
 
-clean();
 
-add_network_10(0);
-
-test_can_expose_ports();
 for my $vm_name ( reverse vm_names() ) {
 
     if ($db eq 'mysql') {
@@ -1400,6 +1397,8 @@ for my $vm_name ( reverse vm_names() ) {
     }
     diag("Testing $vm_name on $db");
     clean();
+    add_network_10(0);
+    test_can_expose_ports();
 
     SKIP: {
     my $vm = rvd_back->search_vm($vm_name);

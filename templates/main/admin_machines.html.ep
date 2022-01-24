@@ -100,20 +100,6 @@
       </div>
         <div class="row">
             <div class="col-md-5"><h2><%=l 'Virtual Machines' %></h2></div>
-            <div class="col-md-4" align="left">
-% 		if ($_user->can_create_machine){
-                <h2>
-                    <button class="btn btn-warning" ng-click="list_machines={};subscribe_all('<%= url_for('ws_subscribe')->to_abs %>');"><i class="fa fa-sync-alt" aria-hidden="true"></i></button>
-                    <a type="button" class="btn btn-success" href="/new_machine.html">
-                        <b><%=l 'New Machine' %></b>
-                    <i ng-show="download_working"
-                        class="fa fa-angle-double-down" aria-hidden="true"></i>
-                    <i ng-show="download_done && !download_working"
-                        class="fa fa-check" aria-hidden="true"></i>
-                    </a>
-                </h2>
-%		}
-            </div>
         </div>
 
 %=      include 'bootstrap/requests'
@@ -125,14 +111,6 @@
                 <tr>
                     <th ><div class="lgMachName machine-button" style="display:inline;float:down">
                       <%=l 'Machine Name' %></div>
-                        <div style="float:right" ng-show="n_clones">
-                            <a ng-show="hide_clones" ng-click="showClones(true)"
-                              class="badge badge-primary dropdown-toggle text-white"
-                              align="right"><%=l 'show clones' %></a>
-                            <a ng-show="!hide_clones" ng-click="showClones(false)"
-                              class="badge badge-primary dropdown-toggle text-white"
-                              align="right"><%=l 'hide clones' %></a>
-                        </div>
                     </th>
                     <th class="lgMachToggle">
                       <span
@@ -147,7 +125,9 @@
                       <div style="float:right">
                         <%=l 'Status' %></div></th>
                     <th class="lgMachActions"><%=l 'Actions' %></th>
+                    % if ($_n_nodes>1 ) {
                     <th class="lgMachNode"><%=l 'Node' %></th>
+                    % }
                 </tr>
             </thead>
             <tbody>
@@ -158,8 +138,12 @@
                         <i class="far fa-file-alt" title="Pool" ng-show="machine.is_pool"></i>
 
                         <a align="right" href="/machine/manage/{{machine.id}}.html"
-                              ng-class="{base: machine.is_base
-                              ,disabled: !machine.can_manage}"
+                            class="machine"
+                              ng-class="{
+                              disabled: !machine.can_manage
+                              ,base: machine.is_base
+                              ,active_machine: machine.status == 'active'
+                              }"
                         title ="<%=l 'Manage machine' %>">{{machine.name}}</a> {{machine.comment}}
                    <span class="comment" ng-show="machine.is_volatile"><%=l 'Volatile' %></span>
                         <button ng-show="machine.has_clones" type="button"
@@ -179,7 +163,7 @@
                                ng-show="can_remove_base(machine)"
                                ng-click="open_modal('mb_',machine)"/>
                         <input type="checkbox"
-                               ng-show="can_prepare_base(machine)"
+                               ng-show="!machine.is_volatile && can_prepare_base(machine)"
                             ng-click="open_modal('mb_',machine)"
                             title ="<%=l 'Prepare base' %>" ng-cloak="1"/>
                         <div class="modal fade" tabindex="-1" role="dialog" id="mb_{{machine.id}}">
@@ -194,12 +178,14 @@
                                </div>
                                <div class="modal-body" ng-show="can_prepare_base(machine)">
                                    <div ng-show="machine.info.cdrom">
-                                   <p>This machine has a CD-ROM</p>
-                                   <ul>
+                                     <p>
+                                     <%=l 'This machine has a CD-ROM' %>
+                                     </p>
+                                     <ul>
                                        <li ng-repeat="cdrom in machine.info.cdrom">{{cdrom}}</li>
-                                   </ul>
-                                   <input type="checkbox" ng-model="with_cd" name="with_cd"/>
-                                    <label for="with_cd"><%=l 'Keep the CD for the clones' %></label>
+                                     </ul>
+                                     <input type="checkbox" ng-model="with_cd" name="with_cd"/>
+                                     <label for="with_cd"><%=l 'Keep the CD for the clones' %></label>
                                    </div>
                                  <p><%=l 'Are you sure you want to prepare the base of' %> {{machine.name}}?</p>
                                </div>
@@ -218,7 +204,7 @@
                         <input type="checkbox" checked ng-show="machine.is_public" ng-click="open_modal('mp_',machine)" title="<%=l 'Make private'%>" ng-cloak>
 
                          <input type="checkbox" ng-hide="!machine.is_base || machine.is_public" ng-click="open_modal('mp_',machine)" title="<%=l 'Make public' %>" ng-cloak>
-                       
+
                         <div class="modal fade" tabindex="-1" role="dialog" id="mp_{{machine.id}}">
                            <div class="modal-dialog" role="document">
                              <div class="modal-content">
@@ -238,7 +224,7 @@
                          </div>
                        </td>
 
-                         
+
 %                       if ($autostart) {
                             <td class="lgMachToggle">
 				    <input type="checkbox" ng-hide="machine.has_clones || machine.is_base" ng-model="machine.autostart" ng-true-value="1" ng-false-value="0" ng-change="set_autostart(machine.id,machine.autostart)" title="{{ machine.autostart ? 'Disable' : 'Enable'}} autostart">
@@ -285,12 +271,21 @@
                       <div ng-show="machine.is_base && !machine.is_locked"
                           ng-cloak><span class="badge badge-pill badge-light"><%=l 'This Machine is a base' %></span></div>
                     </td>
+
+                    % if ($_n_nodes>1 ) {
                     <td class="lgMachNode">
                         <span class="badge badge-info" title="<%=l 'Node'%>">{{machine.node}}</span>
                     </td>
+                    % }
                 </tr>
             </tbody>
         </table>
+
+        <div ng-cloak="1"
+            ng-show="list_machines && list_machines_time > 2 && show_active && !n_show">
+            <%=l 'There are no active virtual machines'%>
+            <button ng-click="reload_list()"><%=l 'reload list' %></button>
+        </div>
     </div>
 </div>
 </div>

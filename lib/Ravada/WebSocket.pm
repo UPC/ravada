@@ -29,6 +29,7 @@ my %SUB = (
                   list_alerts => \&_list_alerts
                   ,list_bases => \&_list_bases
                   ,list_isos  => \&_list_isos
+                  ,list_iso_images  => \&_list_iso_images
                   ,list_nodes => \&_list_nodes
            ,list_host_devices => \&_list_host_devices
                ,list_machines => \&_list_machines
@@ -107,6 +108,14 @@ sub _list_isos($rvd, $args) {
     $type = 'KVM' if !defined $type;
 
     return $rvd->iso_file($type);
+}
+
+sub _list_iso_images($rvd, $args) {
+    my ($type) = $args->{channel} =~ m{/(.*)};
+    $type = 'KVM' if !defined $type;
+
+    my $images=$rvd->list_iso_images($type);
+    return $images;
 }
 
 sub _list_nodes($rvd, $args) {
@@ -308,7 +317,7 @@ sub _list_recent_requests($rvd, $seconds) {
 }
 
 sub _ping_backend($rvd, $args) {
-    my @reqs = _list_recent_requests($rvd, 20);
+    my @reqs = _list_recent_requests($rvd, 120);
 
     my $requested = scalar( grep { $_->{status} eq 'requested' } @reqs );
 

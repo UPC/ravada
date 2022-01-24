@@ -5,8 +5,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-10-26 16:40+0200\n"
-"PO-Revision-Date: 2020-11-20 04:28+0000\n"
-"Last-Translator: J. Lavoie <j.lavoie@net-c.ca>\n"
+"PO-Revision-Date: 2021-11-29 20:29+0000\n"
+"Last-Translator: Enno G. <matrixfueller@gmail.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/ravada/"
 "translation/de/>\n"
 "Language: de\n"
@@ -14,10 +14,10 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.4-dev\n"
+"X-Generator: Weblate 4.10-dev\n"
 
 msgid "Ravada broker"
-msgstr ""
+msgstr "Ravada Vermittler"
 
 msgid "Name of the machine"
 msgstr "Name der Maschine"
@@ -492,3 +492,248 @@ msgstr "Beschreibung hinzufügen"
 
 msgid "Yes, shutwdown all the clones"
 msgstr "Ja, alle Klone herunterfahren"
+
+msgid ""
+"Be aware that in Windows, Spice redirection is not automatic. It is "
+"necessary to associate protocol with the app."
+msgstr ""
+"Seien Sie sich bewusst das in Windows die Spice Weiterleitung nicht "
+"automatisch ist. Es ist notwendig ein Protokoll zu assoziieren"
+
+msgid "Once you delete the machine, there is no going back. Please be certain."
+msgstr ""
+"Wenn sie die Maschine löschen gibt es kein zurück. Bitte seinen Sie sich "
+"sicher."
+
+msgid "This will remove all the"
+msgstr "Das wird alle entfernen, die"
+
+msgid "This virtual machine can't be removed because it has"
+msgstr ""
+"Diese virtuelle Maschine kann nicht entfernt werden weil sie folgendes hat"
+
+msgid "Development"
+msgstr "Entwicklung"
+
+msgid "Machine locked by"
+msgstr "Maschine gesperrt von"
+
+msgid "For more information, check"
+msgstr "Für mehr Informationen, überprüfen Sie"
+
+msgid "The machine will shutdown after these minutes"
+msgstr "Die Maschine wird sich nach diesen Minuten herunterfahren"
+
+msgid "Update password"
+msgstr "Passwort aktualisieren"
+
+msgid "Start all clones"
+msgstr "Strate alle Klone"
+
+msgid "Available Machines"
+msgstr "Verfügbare Maschinen"
+
+msgid "is admin"
+msgstr "ist Administrator"
+
+msgid "Add new user"
+msgstr "Neuen Nutzer hinzufügen"
+
+msgid "Register"
+msgstr "Registrieren"
+
+msgid "This Machine is a base"
+msgstr "Die Maschine ist die Basis"
+
+msgid "Current Password:"
+msgstr "Aktuelles Passwort:"
+
+msgid "Cloned"
+msgstr "Kopiert"
+
+msgid "License"
+msgstr "Lizenz"
+
+msgid "Machine Name"
+msgstr "Maschinen Name"
+
+msgid "Choose a Machine to Start"
+msgstr "Wählen Sie eine Maschine zum Starten"
+
+msgid "New Machine"
+msgstr "Neue Maschine"
+
+msgid "This machine will shut down"
+msgstr "Diese Maschine wird herunterfahren"
+
+msgid "No entries found"
+msgstr "Keine Einträge gefunden"
+
+msgid "Username"
+msgstr "Benutzername"
+
+msgid "Hide Private"
+msgstr "Verstecke Private"
+
+msgid "Rename"
+msgstr "Umbenennen"
+
+msgid "Options"
+msgstr "Optionen"
+
+msgid "Drivers"
+msgstr "Treiber"
+
+msgid "Graphics"
+msgstr "Grafik"
+
+msgid "Remove Machine"
+msgstr "Maschine entfernen"
+
+msgid "System overview"
+msgstr "Systemübersicht"
+
+msgid "Danger Zone"
+msgstr "gefährlicher Bereich"
+
+msgid "Danger"
+msgstr "Gefahr"
+
+msgid "Yes, remove"
+msgstr "Ja, entferne"
+
+msgid "Virtual Machine"
+msgstr "Virtuelle Maschine"
+
+msgid "clones of the machine"
+msgstr "klone der Maschine"
+
+msgid "Yes, remove all the clones"
+msgstr "Ja, entferne alle Klone"
+
+msgid "Enter Username"
+msgstr "Benutzername eingeben"
+
+msgid "Portuguese"
+msgstr "Portugiesisch"
+
+msgid "in your downloads folder."
+msgstr "in Ihrem Download Ordner."
+
+msgid "copied to clipboard"
+msgstr "in die Zwischenablage kopiert"
+
+msgid "the Windows Clients documentation"
+msgstr "die Windows Endgeräte Dokumentation"
+
+msgid "It is programmed in"
+msgstr "Es ist programmiert in"
+
+msgid "with perl framework"
+msgstr "mit dem Perl Framework"
+
+msgid "Memory"
+msgstr "Arbeitsspeicher"
+
+msgid "MB available"
+msgstr "MB verfügbar"
+
+msgid "Cancel"
+msgstr "Abbrechen"
+
+msgid "Please enter the following information to create the account"
+msgstr ""
+"Bitte geben Sie die folgenden Informationen ein um ein Konto zu erstellen"
+
+msgid "Enter Password"
+msgstr "Passwort eingeben"
+
+msgid "Username is required"
+msgstr "Benutzername wird benötigt"
+
+msgid "Empty login name"
+msgstr "Leerer Benutzername"
+
+msgid "Empty password"
+msgstr "Leeres Passwort"
+
+msgid "Session timeout"
+msgstr "Sitzung abgelaufen"
+
+msgid "Vietnamese"
+msgstr "Vietnamesisch"
+
+msgid "Italian"
+msgstr "Italienisch"
+
+msgid "Attribute"
+msgstr "Attribut"
+
+msgid "User name"
+msgstr "Benutzername"
+
+msgid "NAT"
+msgstr "NAT"
+
+msgid "Bridge"
+msgstr "Brücke"
+
+msgid "Copying the screenshot, please wait a moment..."
+msgstr "Bildschirmfoto wird kopiert, bitte warten Sie einen Moment…"
+
+msgid "Hardware address"
+msgstr "Hardware Adresse"
+
+msgid "Open ports"
+msgstr "Offene Ports"
+
+msgid "Waiting for network to come up"
+msgstr "Warten auf die Verfügbarkeit des Netzwerkes"
+
+msgid "No machines"
+msgstr "Keine Maschinen"
+
+msgid "All machines"
+msgstr "Alle Maschinen"
+
+msgid "Users from this network can run all virtual machines"
+msgstr "Benutzer von diesem Netzwerk können alle virtuellen Maschinen ausführen"
+
+msgid "Description"
+msgstr "Beschreibung"
+
+msgid "Password must be at least 5 characters"
+msgstr "Passwort muss mindestens 5 Zeichen lang sein"
+
+msgid "Access denied"
+msgstr "Zugriff verweigert"
+
+msgid "It may take a couple of minutes."
+msgstr "Es kann ein paar Minuten dauern."
+
+msgid "For Spice redirection you will need to install"
+msgstr "Für die Spice Weiterleitung müssen Sie folgendes installieren"
+
+msgid "and"
+msgstr "und"
+
+msgid "No bridges found"
+msgstr "Keine Brücken gefunden"
+
+msgid "removed"
+msgstr "entfernt"
+
+msgid "SSO/CAS Login"
+msgstr "SSO/CAS Login"
+
+msgid "Password is required"
+msgstr "Passwort wird benötigt"
+
+msgid "not found in LDAP server"
+msgstr "nicht gefunden in LDAP Server"
+
+msgid "Confirm Password"
+msgstr "Passwort bestätigen"
+
+msgid "The machine will turn off after this time"
+msgstr "Die Maschine wird sich nach dieser Zeit ausschalten"

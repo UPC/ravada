@@ -55,6 +55,7 @@ our %VALID_ARG = (
       ,remote_ip => 2
           ,start => 2
            ,data => 2
+           ,options => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
@@ -81,7 +82,7 @@ our %VALID_ARG = (
     ,dettach => { uid => 1, id_domain => 1 }
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
-    ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2, delay => 2, test => 2}
+    ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2 }
     ,list_storage_pools => { id_vm => 1 , uid => 1 }
     ,check_storage => { uid => 1 }
@@ -124,6 +125,8 @@ our %VALID_ARG = (
     }
     ,compact => { uid => 1, id_domain => 1 , keep_backup => 2 }
       ,purge => { uid => 1, id_domain => 1 }
+
+    ,list_machine_types => { uid => 1, id_vm => 2, vm_type => 2}
 
     #users
     ,post_login => { user => 1, locale => 2 }
@@ -221,6 +224,12 @@ our %COMMAND = (
     }
 );
 lock_hash %COMMAND;
+
+our %CMD_VALIDATE = (
+    clone => \&_validate_clone
+    ,create => \&_validate_create_domain
+    ,create_domain => \&_validate_create_domain
+);
 
 sub _init_connector {
     $CONNECTOR = \$Ravada::CONNECTOR;
@@ -512,7 +521,7 @@ sub _check_args {
 
     for (keys %{$VALID_ARG{$sub}}) {
         next if $VALID_ARG{$sub}->{$_} == 2; # optional arg
-        confess "Missing argument $_"   if !exists $args->{$_};
+        confess "Missing argument $_"   if !exists $args->{$_} || !defined $args->{$_};
     }
 
     return $args;
@@ -747,9 +756,150 @@ sub _new_request {
 
 
     my $request = $self->open($self->{id});
-    $request->status('requested');
+    $request->_validate();
+    $request->status('requested') if $request->status ne'done';
 
     return $request;
+}
+
+sub _validate($self) {
+    return if !exists $CMD_VALIDATE{$self->command};
+    my $method = $CMD_VALIDATE{$self->command};
+    return if !$method;
+    $method->($self);
+}
+
+sub _validate_create_domain($self) {
+
+    my $base;
+    my $id_base = $self->defined_arg('id_base');
+
+    my $id_owner = $self->defined_arg('id_owner') or confess "ERROR: Missing id_owner";
+    my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Unknown user id: $id_owner";
+
+    $self->_validate_clone($id_base, $id_owner) if $id_base;
+
+    unless ( $owner->is_admin
+            || $owner->can_create_machine()
+            || ($id_base && $owner->can_clone)) {
+
+        return $self->_status_error("done","Error: access denied to user ".$owner->name);
+    }
+
+    $self->_check_downloading();
+}
+
+sub _check_downloading($self) {
+    my $id_iso = $self->defined_arg('id_iso');
+    my $iso_file = $self->defined_arg('iso_file');
+
+    $iso_file = '' if $iso_file && $iso_file eq '<NONE>';
+
+    return if !$id_iso && !$iso_file;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id,downloading,device,has_cd,name,url "
+        ." FROM iso_images "
+        ." WHERE (id=? or device=?) "
+    );
+    $sth->execute($id_iso,$iso_file);
+    my ($id_iso2,$downloading, $device, $has_cd, $iso_name, $iso_url)
+        = $sth->fetchrow;
+
+    return if !$downloading && $device;
+
+    my $req_download = _search_request('download', id_iso => $id_iso2);
+
+    return $self->_status_error("done"
+        ,"Error: ISO file required for $iso_name")
+    if $has_cd && !$device && !$iso_file && !$iso_url && !$device;
+
+    if ($has_cd && !$device && !$iso_file && !$req_download) {
+        $req_download = Ravada::Request->download(
+            id_iso => $id_iso2
+            ,uid => Ravada::Utils::user_daemon->id
+            ,vm => $self->defined_arg('vm')
+        );
+    }
+    if (! $req_download) {
+        _mark_iso_downloaded($id_iso2);
+    } else {
+        $self->after_request($req_download->id);
+    }
+    $sth = $$CONNECTOR->dbh->prepare("SELECT args FROM requests"
+            ." WHERE id=?"
+    );
+    $sth->execute($self->id);
+    my $args_json = $sth->fetchrow();
+    my $args = decode_json($args_json);
+
+    if (exists $args->{iso_file} && !$args->{iso_file}) {
+        delete $args->{iso_file};
+        $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set args=?"
+            ." WHERE id=?"
+        );
+        $sth->execute(encode_json($args), $self->id);
+    }
+
+}
+
+sub _mark_iso_downloaded($id_iso) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE iso_images "
+        ." set downloading=0 "
+        ." WHERE id=?"
+    );
+    $sth->execute($id_iso);
+}
+
+sub _search_request($command,%fields) {
+    my $sth= $$CONNECTOR->dbh->prepare(
+        "SELECT id, args FROM requests WHERE command = ?"
+        ." AND status <> 'done' "
+    );
+    $sth->execute($command);
+
+    while ( my ($id, $args_json) = $sth->fetchrow ) {
+        return Ravada::Request->open($id) if !keys %fields;
+
+        my $args = decode_json($args_json);
+        my $found=1;
+        for my $key (keys %fields) {
+            if ( $args->{$key} ne $fields{$key} ) {
+                $found = 0;
+                last;
+            }
+        }
+        return Ravada::Request->open($id) if $found;
+    }
+
+}
+
+sub _validate_clone($self
+                , $id_base= $self->args('id_domain')
+                , $uid=$self->args('uid')) {
+
+    my $base = Ravada::Front::Domain->open($id_base);
+
+    if ( !$uid ) {
+        $self->status('done');
+        $self->error("Error: missing uid");
+        return;
+    }
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    if ( !$user ) {
+        $self->status('done');
+        $self->error("Error: user id='$uid' does not exist");
+        return;
+    }
+    return if $user->is_admin;
+    return if $user->can_clone_all;
+    return $self->_status_error('done'
+        ,"Error: user ".$user->name." can not clone.")
+        if !$user->can_clone();
+
+    return $self->_status_error('done'
+        ,"Error: ".$base->name." is not public.")
+        if !$base->is_public;
 }
 
 sub _last_insert_id {
@@ -800,6 +950,11 @@ sub status {
     $self->_send_message($status, $message)
         if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
     return $status;
+}
+
+sub _status_error($self, $status, $error) {
+    $self->status($status);
+    return $self->error($error);
 }
 
 =head2 at
@@ -992,12 +1147,26 @@ Sets or gets de value of an argument of a Request
 
 =cut
 
-sub arg($self, $name, $value) {
+sub arg($self, $name, $value=undef) {
 
     confess "Unknown argument $name ".Dumper($self->{args})
         if !exists $self->{args}->{$name} && !defined $value;
 
-    $self->{args}->{$name} = $value if defined $value;
+    if (defined $value) {
+        $self->{args}->{$name} = $value;
+
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT args FROM requests"
+            ." WHERE id=?"
+        );
+        $sth->execute($self->id);
+        my $args_json = $sth->fetchrow();
+        my $args = decode_json($args_json);
+        $args->{$name} = $value;
+        $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set args=?"
+            ." WHERE id=?"
+        );
+        $sth->execute(encode_json($args),$self->id);
+    }
     return $self->{args}->{$name};
 }
 
