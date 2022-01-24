@@ -124,6 +124,7 @@ sub test_form_new_machine() {
     my $form = $dom->find('form')->grep( sub {$_->attr('name') eq $form_name});
     ok($form->[0], "Expecting form name=$form_name") or return;
     for my $name ('id_iso', 'name', 'iso_file', 'memory','disk'
+        , '_advanced_options'
         , 'swap', 'data') {
         my $inputs = $form->[0]->find("input")
         ->grep( sub { $_->attr('name') eq $name } );

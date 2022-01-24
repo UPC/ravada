@@ -770,18 +770,28 @@ sub _check_downloading($self) {
     my $id_iso = $self->defined_arg('id_iso');
     my $iso_file = $self->defined_arg('iso_file');
 
+    $iso_file = '' if $iso_file && $iso_file eq '<NONE>';
+
     return if !$id_iso && !$iso_file;
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id,downloading,device,has_cd "
+        "SELECT id,downloading,device,has_cd,name,url "
         ." FROM iso_images "
         ." WHERE (id=? or device=?) "
     );
     $sth->execute($id_iso,$iso_file);
-    my ($id_iso2,$downloading, $device, $has_cd) = $sth->fetchrow;
+    my ($id_iso2,$downloading, $device, $has_cd, $iso_name, $iso_url)
+        = $sth->fetchrow;
+
+    return if !$downloading && $device;
 
     my $req_download = _search_request('download', id_iso => $id_iso2);
-    if ($has_cd && !$device && !$req_download) {
+
+    return $self->_status_error("done"
+        ,"Error: ISO file required for $iso_name")
+    if $has_cd && !$device && !$iso_file && !$iso_url && !$device;
+
+    if ($has_cd && !$device && !$iso_file && !$req_download) {
         $req_download = Ravada::Request->download(
             id_iso => $id_iso2
             ,uid => Ravada::Utils::user_daemon->id

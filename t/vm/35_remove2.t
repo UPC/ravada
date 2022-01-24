@@ -115,6 +115,31 @@ sub _remove_domain(@domain) {
     }
 }
 
+sub test_remove_parent_already_removed($vm){
+    my $base = create_domain($vm->type);
+    $base->prepare_base(user_admin);
+    my $name = new_domain_name();
+    Ravada::Request->clone(
+        id_owner => user_admin->id
+        ,uid => user_admin->id
+        ,name => $name
+        ,id_domain=> $base->id
+    );
+    wait_request();
+    my $clone = rvd_back->search_domain($name);
+    remove_domain_internal($base);
+    my $req = Ravada::Request->remove_domain(
+        uid => user_admin->id
+        ,name => $clone->name
+    );
+    wait_request();
+    is($req->status,'done');
+    is($req->error, '');
+    my $clone2 = rvd_back->search_domain($name);
+    ok(!$clone2);
+    remove_domain($base);
+}
+
 ##############################################################################
 
 clean();
@@ -138,6 +163,7 @@ for my $vm_name ( vm_names() ) {
 
         diag("Testing remove on $vm_name");
 
+        test_remove_parent_already_removed($vm);
         test_remove_rename($vm);
 		test_remove_domain($vm);        
         test_remove_domain_volumes_already_gone($vm);

@@ -528,6 +528,7 @@ sub add_volume {
 }
 
 sub _create_volume($self, $file, $format, $data=undef) {
+    confess "Undefined format" if !defined $format;
     if ($format =~ /iso|raw|void/) {
         $data->{format} = $format;
         $self->_vm->write_file($file, Dump($data)),

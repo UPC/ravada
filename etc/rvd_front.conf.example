@@ -17,7 +17,7 @@
   ,secrets => ['changeme1','changeme2']
   ,login_custom => ''
   ,footer => '/bootstrap/footer'
-  ,login_bg_file => 'img/intro-bg.jpg'
+  ,login_bg_file => '/img/intro-bg.jpg'
   ,login_message => 'Acme VDI service'
   ,monitoring => 0
   ,guide => ''
