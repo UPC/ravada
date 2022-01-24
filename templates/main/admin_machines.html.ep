@@ -131,7 +131,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr ng-repeat="machine in list_machines" ng-show="machine.show || machine.show_filter" class="bg-light">
+                <tr ng-repeat="machine in list_machines" ng-show="machine.show" class="bg-light">
                     <td class="lgMachName" style="padding-left: {{1+machine._level*2}}em">
 
                         <i class="far fa-clone" title="Cloned" ng-show="!machine.is_pool && machine.id_base>0"></i>
