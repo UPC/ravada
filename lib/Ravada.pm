@@ -2837,7 +2837,7 @@ sub _add_extra_iso($domain, $request, $previous_request) {
         $volume = $domain->_vm->dir_img()."/$device";
         $domain->_vm->_download_file_external($url, $volume) ;
     }
-    my $req=Ravada::Request->refresh_storage();
+    my $req = Ravada::Request->refresh_storage(id_vm => $domain->_vm->id);
     $req->after_request($previous_request->id) if $previous_request;
 
     return Ravada::Request->add_hardware(
