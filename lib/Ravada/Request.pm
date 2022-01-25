@@ -1605,8 +1605,10 @@ sub requirements_done($self) {
     my $ok = 0;
     if ($after_request) {
         $ok = 0;
-        my $req = Ravada::Request->open($self->after_request);
-        $ok = 1 if $req->status eq 'done';
+        my $req;
+        eval { $req = Ravada::Request->open($self->after_request) };
+        die $@ if $@ && $@!~ /I can't find|not found/i;
+        $ok = 1 if !$req || $req->status eq 'done';
     }
     if ($after_request_ok) {
         $ok = 0;
