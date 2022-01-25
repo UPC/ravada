@@ -2774,7 +2774,7 @@ sub create_domain {
             uid => $args{id_owner}
             ,id_domain => $domain->id
             ,name => 'disk'
-            ,data => { size => $swap, type => 'data' }
+            ,data => { size => $swap, type => 'swap' }
         );
     }
     my $req_add_data;
