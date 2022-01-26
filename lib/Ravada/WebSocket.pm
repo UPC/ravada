@@ -67,20 +67,10 @@ sub _list_alerts($rvd, $args) {
     my $ret_old = $args->{ret};
     my @ret = map { $_->{time} = time; $_ } $user->unshown_messages();
 
-    my @ret2=();
-
-    my %new;
-    for my $alert (@ret) {
-        my $cmd_machine = $alert->{subject};
-        $cmd_machine =~ s{(.*?\s.*?)\s+.*}{$1};
-        $new{$cmd_machine}++;
-    }
-
+    my @ret2;
     for my $alert (@$ret_old) {
-        my $cmd_machine = $alert->{subject};
-        $cmd_machine =~ s{(.*?\s.*?)\s+.*}{$1};
         push @ret2,($alert) if time - $alert->{time} < 10
-            && $cmd_machine && !$new{$cmd_machine};
+        && ! grep { $_->{id_request} == $alert->{id_request} } @ret;
     }
 
     return [@ret2,@ret];
@@ -222,7 +212,7 @@ sub _get_machine_info($rvd, $args) {
     my ($id_domain) = $args->{channel} =~ m{/(\d+)};
     my $domain = $rvd->search_domain_by_id($id_domain) or do {
         warn "Error: domain $id_domain not found.";
-        return {};
+        return;
     };
 
 
@@ -459,6 +449,7 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
         $self->clients->{$key}->{ret} = $ret;
     }
     $self->unsubscribe($key) if $channel eq 'ping_backend' && $ret eq 2;
+    $self->unsubscribe($key) if !$ret;
 }
 
 sub subscribe($self, %args) {

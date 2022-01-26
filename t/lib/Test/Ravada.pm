@@ -310,6 +310,8 @@ sub create_domain_v2(%args) {
         ,name => 'disk'
         ,data => { size => $data*1024*1024, type => 'data' }
     ) if $domain && $data;
+    delete_request( 'enforce_limits', 'set_time' );
+    wait_request(debug => 1);
     return $domain;
 }
 
@@ -1019,7 +1021,6 @@ sub create_ldap_user($name, $password, $keep=0) {
     for my $field (qw(cn uid)) {
         if (my $user = Ravada::Auth::LDAP::search_user(field => $field, name => $name) ) {
             return if $keep;
-            diag("Removing ".$user->dn);
             my $mesg;
             for ( 1 .. 2 ) {
                 $mesg = $user->delete()->update($ldap);
@@ -1176,7 +1177,7 @@ sub wait_request {
                 $done{$req->{id}}++;
                 if ($check_error) {
                     if ($req->command =~ /remove/) {
-                        like($req->error,qr(^$|Unknown domain));
+                        like($req->error,qr(^$|Unknown domain|Domain not found));
                     } elsif($req->command eq 'set_time') {
                         like($req->error,qr(^$|libvirt error code));
                     } else {
