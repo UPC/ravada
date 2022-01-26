@@ -1,15 +1,15 @@
 # Change Log
 
 **Implemented enhancements:**
-- hide node row
+
+- Define min swap space for machine templates [\#1697]
+- Filter virtual machine by name [\#1696]
+- Download extra ISO file for installation [\#1695]
 
 **Refactors**
 
-- allow size_limit in config
-- ignore warning when no port defined
-- test new machine advanced options
+- enforce ordered adding of hardware [\#1697]
 
 **Bugfixes**
 
-- default swap and data only when no advanced
-- do not try to download when no URL
+- hibernate button was always disabled
