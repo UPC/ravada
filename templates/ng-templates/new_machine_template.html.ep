@@ -59,6 +59,9 @@
                             <i class="badge badge-warning" ng-click="refresh_storage()"><i class="fa fa-sync-alt" aria-hidden="true"></i></i>
                             </label>
                         <div class="col-lg-9"  ng-init="iso_file = '<NONE>'" >
+                            <i class="fas fa-sync-alt fa-spin"
+                                   ng-show="refresh_working || !isos"
+                            ></i>
                             <input type="text" class="form-control" placeholder="<%=l 'Type the ISO pathname' %>"
                                    name="iso_file"
                                    ng-model="iso_file" 
@@ -109,10 +112,12 @@
                 </div>
             </div>
             <div class="from-group row">
-                <label for="_advanced_options" class="col-xl-3 col-form-label">
+                <div class="col-xl-3" align="right">
+                <label for="_advanced_options">
                     <b><%=l 'Advanced options' %></b>
                 </label>
-                <div class="col-lg-9">
+                </div>
+                <div class="col-xl-3">
                     <input type="checkbox" ng-model="_advanced_options"
                         name="_advanced_options" value="1"/>
                 </div>
@@ -121,14 +126,16 @@
             <div ng-show="_advanced_options">
 
             <div class="form-group row" ng-show="backend == 'KVM' || backend=='Void'">
-                <label for="swap" class="col-xl-3 col-form-label">
+                <div class="col-xl-3" align="right">
+                <label for="swap">
                     <span ng-model="swap.label"
                         ng-class='{"text-muted": !swap.enabled}'><%=l 'Swap' %>
                         <span ng-show="!swap.enabled">( <%=l 'disabled' %> )</span>
                     </span>
                 </label>
+                </div>
                 <div class="col-lg-2">
-                    <input class="form-control" ng-model="swap.value" type="number" min ="0.1" name="swap"  id="swap" ng-disabled="!swap.enabled || !_advanced_options"/>
+                    <input class="form-control" ng-model="swap.value" type="number" min ="id_iso.min_swap_size" name="swap"  id="swap" ng-disabled="!swap.enabled || !_advanced_options"/>
                 </div>
                 <div class="col-lg-1">
                    <a ng-show="!swap.enabled"
@@ -138,17 +145,22 @@
                       ng-click="swap.enabled=false"
                       align="right"><span class="badge badge-primary ml-2">Disable</span></a>
                </div>
-               <div>
+               <div class="col-lg-6">
+                  <span ng-show="swap.enabled && swap.value < id_iso.min_swap_size">
+                    <font color="orange"><%=l 'The Minimum Swap Disk Size needed for this ISO is' %> {{id_iso.min_swap_size}}GB.</font>
+                  </span>
                     <span>Content will be cleaned on restore and shutdown</span>
                </div>
             </div>
             <div class="form-group row" ng-show="backend == 'KVM' || backend=='Void'">
-                <label for="swap" class="col-xl-3 col-form-label">
+                <div class="col-xl-3" align="right">
+                <label for="swap">
                     <span ng-model="data.label"
                         ng-class='{"text-muted": !data.enabled}'><%=l 'Data' %>
                         <span ng-show="!data.enabled">( <%=l 'disabled' %> )</span>
                     </span>
                 </label>
+                </div>
                 <div class="col-lg-2">
                     <input class="form-control" ng-model="data.value" type="number" min ="0.1" name="data"  id="data" ng-disabled="!data.enabled || !_advanced_options">
                 </div>
@@ -160,13 +172,15 @@
                       ng-click="data.enabled=false"
                       align="right"><span class="badge badge-primary ml-2">Disable</span></a>
                </div>
-               <div>
+               <div class="col-lg-6">
                     <span>Content will be kept on restore</span>
                </div>
             </div>
 
                 <div ng-show="id_iso.arch == 'x86_64'" class="from-group row">
-                    <label for="bios" class="col-xl-3 col-form-label"><%=l 'BIOS' %></label>
+                    <div class="col-xl-3" align="right">
+                        <label for="bios"><%=l 'BIOS' %></label>
+                    </div>
                     <div class="col-lg-9">
                     <select name="bios" ng-model="bios">
                         <option value="Legacy"><%=l 'Legacy' %></option>
@@ -177,12 +191,24 @@
 
 
                 <div ng-show="machine_types[backend][id_iso.arch]" class="from-group row">
-                    <label for="machine" class="col-xl-3 col-form-label"><%=l 'Machine' %></label>
+                    <div class="col-xl-3" align="right">
+                        <label for="machine"><%=l 'Machine' %></label>
+                    </div>
                     <div class="col-lg-9">
                     <select name="machine" ng-model="machine"
                     ng-options="machine for machine in machine_types[backend][id_iso.arch]">
                     </select>
                     </div>
+                </div>
+                <div class="from-group row">
+                    <div class="col-xl-3" align="right">
+                        <label for="start"><%=l 'Start' %></label>
+                    </div>
+                    <div class="col-lg-9">
+                        <input type="checkbox" name="start" checked="1"/>
+                        <span class="info"><%=l 'Start after create the virtual machine' %></span>
+                    </div>
+
                 </div>
             </div><!-- ng show advanced -->
 
@@ -222,12 +248,22 @@
                     role="alert">
                     <strong><%=l 'Error' %></strong> <%=l 'Invalid Template' %>
                 </div>
+                <div ng-show="id_iso && id_iso.has_cd && !id_iso.url
+                    && (!iso_file || iso_file == '' || iso_file == '<NONE')
+                " class="alert alert-warning"
+                    role="alert">
+                    <strong><%=l 'Error' %></strong> <%=l 'Please select an ISO file' %>
+                </div>
             </div>
 
             <div class="form-group row">
                 <button type="reset" class="btn btn-outline-secondary mr-2" onclick = "location='/admin/machines'"><%=l 'Cancel' %></button>
                 <input type="submit" class="btn btn-primary" name="submit" value="<%=l 'Create' %>"
-                     ng-disabled="new_machineForm.$invalid || name_duplicated || (id_iso && !id_iso.id)">
+                     ng-disabled="new_machineForm.$invalid || name_duplicated || (id_iso && !id_iso.id)
+                    || (id_iso && id_iso.has_cd && !id_iso.url
+                        && (!iso_file || iso_file == '' || iso_file == '<NONE')
+                    )
+                ">
             </div>
         </form>
     </div>

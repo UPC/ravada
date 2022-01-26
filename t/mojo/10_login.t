@@ -830,7 +830,7 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     push @bases,($base0->name);
     test_admin_can_do_anything($t, $base0);
 
-    my $base2 =test_create_base($t, $vm_name, new_domain_name()."-$vm_name");
+    my $base2 =test_create_base($t, $vm_name, new_domain_name()."-$vm_name-$$");
     push @bases,($base2->name);
 
     mojo_request($t, "add_hardware", { id_domain => $base0->id, name => 'network' });
@@ -863,6 +863,7 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     test_login_non_admin($t, $base1, $base2);
     delete_request('set_time','screenshot','refresh_machine_ports');
     remove_machines(reverse @bases);
+    remove_old_domains_req(0); # 0=do not wait for them
 }
 ok(@bases,"Expecting some machines created");
 delete_request('set_time','screenshot','refresh_machine_ports');

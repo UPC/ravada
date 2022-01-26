@@ -3,6 +3,7 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use Mojo::JSON qw(decode_json);
 use POSIX qw(WNOHANG);
 use Test::More;
 
@@ -56,7 +57,7 @@ sub test_volatile_clone_req {
         ,remote_ip => $remote_ip
         ,start => 1
     );
-    rvd_back->_process_requests_dont_fork();
+    wait_request();
 
     my $clone2 = rvd_back->search_domain($clone_name2);
     is($clone2->is_active, 1);
@@ -362,16 +363,32 @@ sub test_old_machine_req {
     $domain->remove(user_admin);
 }
 
+sub _search_ips {
+    my $out = `ip -4 -j route`;
+    my $info = decode_json($out);
+    my @ips;
+    my %net;
+    for my $ip (@$info) {
+        my ($down) = grep /^linkdown$/,@{$ip->{flags}};
+        next if $down;
+        next if !$ip->{prefsrc};
+        my $dst = $ip->{dst};
+        my $metric = $ip->{metric};
+        my $metric_old = ($net{$dst}->[1] or 0 );
+        next if $metric_old && $metric>$metric_old;
+        $net{$dst} = [$ip->{prefsrc}, $metric];
+    }
+    for (keys %net) {
+        push @ips,($net{$_}->[0]);
+    }
+    return @ips;
+}
+
 sub test_ips {
     my $vm = shift;
 
     my $public_ip = $vm->_data('public_ip');
-    my $out = `ip -4 -o a`;
-    my @ips;
-    for my $line (split /\n/, $out) {
-        my ($if, $ip) = $line =~ /\s(\w+)\s+inet\s+(\d+\.\d+\.\d+\.\d+)/;
-        push @ips ,($ip) if (($if) && ($if !~ /^virbr/));
-    }
+    my @ips = _search_ips();
 
     for my $ip (@ips) {
         diag("Testing ip $ip");

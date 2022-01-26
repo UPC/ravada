@@ -151,6 +151,7 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             expose remove_expose
             rebase rebase_volumes
             shutdown_node reboot_node start_node
+            start_domain
     );
 
 our %CMD_NO_DUPLICATE = map { $_ => 1 }
@@ -216,6 +217,11 @@ our %CMD_VALIDATE = (
     clone => \&_validate_clone
     ,create => \&_validate_create_domain
     ,create_domain => \&_validate_create_domain
+    ,start_domain => \&_validate_start_domain
+    ,start => \&_validate_start_domain
+    ,add_hardware=> \&_validate_change_hardware
+    ,change_hardware=> \&_validate_change_hardware
+    ,remove_hardware=> \&_validate_change_hardware
 );
 
 sub _init_connector {
@@ -746,6 +752,35 @@ sub _validate($self) {
     $method->($self);
 }
 
+sub _validate_start_domain($self) {
+
+    my $id_domain = $self->defined_arg('id_domain');
+    if (!$id_domain) {
+        my $domain_name = $self->defined_arg('name');
+        $id_domain = _search_domain_id(undef,$domain_name);
+    }
+    return if !$id_domain;
+    my $req = $self->_search_request('%_hardware', id_domain => $id_domain);
+
+    $self->after_request($req->id) if $req;
+}
+
+sub _validate_change_hardware($self) {
+
+    return if $self->after_request();
+
+    my $id_domain = $self->defined_arg('id_domain');
+    if (!$id_domain) {
+        my $domain_name = $self->defined_arg('name');
+        $id_domain = _search_domain_id(undef,$domain_name);
+    }
+    return if !$id_domain;
+    my $req = $self->_search_request('%_hardware', id_domain => $id_domain);
+
+    $self->after_request($req->id) if $req;
+}
+
+
 sub _validate_create_domain($self) {
 
     my $base;
@@ -770,17 +805,27 @@ sub _check_downloading($self) {
     my $id_iso = $self->defined_arg('id_iso');
     my $iso_file = $self->defined_arg('iso_file');
 
+    $iso_file = '' if $iso_file && $iso_file eq '<NONE>';
+
     return if !$id_iso && !$iso_file;
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id,downloading,device,has_cd "
+        "SELECT id,downloading,device,has_cd,name,url "
         ." FROM iso_images "
         ." WHERE (id=? or device=?) "
     );
     $sth->execute($id_iso,$iso_file);
-    my ($id_iso2,$downloading, $device, $has_cd) = $sth->fetchrow;
+    my ($id_iso2,$downloading, $device, $has_cd, $iso_name, $iso_url)
+        = $sth->fetchrow;
 
-    my $req_download = _search_request('download', id_iso => $id_iso2);
+    return if !$downloading && $device;
+
+    my $req_download = $self->_search_request('download', id_iso => $id_iso2);
+
+    return $self->_status_error("done"
+        ,"Error: ISO file required for $iso_name")
+    if $has_cd && !$device && !$iso_file && !$iso_url && !$device;
+
     if ($has_cd && !$device && !$iso_file && !$req_download) {
         $req_download = Ravada::Request->download(
             id_iso => $id_iso2
@@ -818,13 +863,16 @@ sub _mark_iso_downloaded($id_iso) {
     $sth->execute($id_iso);
 }
 
-sub _search_request($command,%fields) {
-    my $sth= $$CONNECTOR->dbh->prepare(
-        "SELECT id, args FROM requests WHERE command = ?"
-        ." AND status <> 'done' "
-    );
+sub _search_request($self,$command,%fields) {
+    my $query =
+        "SELECT id, args FROM requests WHERE command like ?"
+        ." AND status <> 'done' ";
+    $query .= "AND id <> ".$self->id if $self;
+    $query .= " ORDER BY date_req,id DESC ";
+    my $sth= $$CONNECTOR->dbh->prepare($query);
     $sth->execute($command);
 
+    my @reqs;
     while ( my ($id, $args_json) = $sth->fetchrow ) {
         return Ravada::Request->open($id) if !keys %fields;
 
@@ -836,9 +884,12 @@ sub _search_request($command,%fields) {
                 last;
             }
         }
-        return Ravada::Request->open($id) if $found;
+        next if !$found;
+        my $req = Ravada::Request->open($id);
+        return $req if !wantarray;
+        push @reqs,($req);
     }
-
+    return @reqs;
 }
 
 sub _validate_clone($self
@@ -1554,8 +1605,10 @@ sub requirements_done($self) {
     my $ok = 0;
     if ($after_request) {
         $ok = 0;
-        my $req = Ravada::Request->open($self->after_request);
-        $ok = 1 if $req->status eq 'done';
+        my $req;
+        eval { $req = Ravada::Request->open($self->after_request) };
+        die $@ if $@ && $@!~ /I can't find|not found/i;
+        $ok = 1 if !$req || $req->status eq 'done';
     }
     if ($after_request_ok) {
         $ok = 0;

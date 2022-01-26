@@ -49,7 +49,7 @@
                         <a type="button" class="btn btn-primary text-white font-weight-bold"
                             ng-click="domain_remove=0"><%=l 'No' %></a>
                         <a type="button" class="btn btn-danger text-white font-weight-bold"
-                            ng-click="remove(<%= $domain->id %>);domain_remove=0;domain_remove_done=1;" onclick = "location='/'"
+                            ng-click="remove(<%= $domain->id %>);domain_remove=0;domain_remove_done=1;"
                             ><%=l 'Yes, remove'%> {{showmachine.name}}</a>
                  </p>
            </div><!-- del domain remove -->
@@ -62,7 +62,7 @@
                         <a type="button" class="btn btn-primary text-white"
                             ng-click="domain_remove_clones=0"
                         ><%=l 'No' %></a>
-                        <a type="button" class="btn btn-danger text-white" ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;" onclick = "location='/'"
+                        <a type="button" class="btn btn-danger text-white" ng-click="remove_clones(<%= $domain->id %>);domain_remove_clones=0;"
                         ><%=l 'Yes, remove all the clones' %></a>
            </div><!-- del domain remove clones-->
 
