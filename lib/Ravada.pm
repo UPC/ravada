@@ -2903,7 +2903,7 @@ sub remove_domain {
     eval { $domain = Ravada::Domain->open(id => $id, _force => 1, id_vm => $vm->id) };
     warn $@ if $@;
     if (!$domain) {
-            warn "Warning: I can't find domain '$id', maybe already removed.";
+            warn "Warning: I can't find domain '$id', maybe already removed.\n";
             Ravada::Domain::_remove_domain_data_db($id);
             return;
     };
