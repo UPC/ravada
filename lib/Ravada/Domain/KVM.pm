@@ -2948,7 +2948,7 @@ sub remove_config_node($self, $path, $content, $doc) {
             }
             my $element_s = $element->toString();
             $element_s =~ s/^\s+//mg;
-            if ( $content eq $element_s ) {
+            if ( _xml_equal_hostdev($content, $element_s) ) {
                 $parent->removeChild($element);
             } else {
                 my @lines_c = split /\n/,$content;
@@ -2963,6 +2963,40 @@ sub remove_config_node($self, $path, $content, $doc) {
             }
         }
     }
+}
+
+sub _xml_equal_hostdev($doc1, $doc2) {
+    my $xml1 = XML::LibXML->load_xml(string => $doc1);
+
+    my $xml2 = XML::LibXML->load_xml(string => $doc2);
+    for my $xml ( $xml1, $xml2) {
+        my ($hostdev) = $xml->findnodes("/hostdev");
+        next if !$hostdev;
+
+        my ($address ) = $hostdev->findnodes("/hostdev/address");
+        $hostdev->removeChild($address) if $address;
+
+        my ($source) = $hostdev->findnodes("/hostdev/source");
+        if ($source) {
+            ($address) = $source->findnodes("address");
+
+            $address->setAttribute("domain","0x0000")
+            if $address->getAttribute("domain") eq "0x";
+
+            $address->setAttribute("function","0x0")
+            if $address->getAttribute("function") eq "0x";
+
+            $address->setAttribute("slot","0x00")
+            if $address->getAttribute("slot") eq "0x";
+        }
+        my $txt = '';
+        for my $line ( split /\n/,$xml->toString() ) {
+            $txt .= $line."\n" if $line =~ /./;
+        }
+        $xml = XML::LibXML->load_xml(string => $txt);
+    }
+    return $xml1->toString() eq $xml2->toString();
+
 }
 
 sub add_config_node($self, $path, $content, $doc) {
