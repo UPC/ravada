@@ -708,8 +708,7 @@ sub _update_isos {
           ,min_disk_size => '21'
           ,min_swap_size => '2'
           ,arch => 'x86_64'
-          ,extra_iso => 'https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.215-\d+/virtio-win-0.1.\d+.iso'
-
+          ,extra_iso => 'https://infoteleco.upc.edu/img/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.2\d+-\d+/virtio-win-0.1.2\d+.iso'
         }
         ,windows_xp => {
           name => 'Windows XP'
@@ -2841,32 +2840,34 @@ sub create_domain {
         die $error;
     }
     return if !$domain;
-    my $req_add_swap;
-    if ($swap) {
-        $req_add_swap = Ravada::Request->add_hardware(
-            uid => $args{id_owner}
-            ,id_domain => $domain->id
-            ,name => 'disk'
-            ,data => { size => $swap, type => 'swap' }
-        );
+    my $req_add_swap = _req_add_disk($args{id_owner}, $domain->id,
+        ,'swap', $swap ,$request);
+    my $req_add_data = _req_add_disk($args{id_owner}, $domain->id
+        ,'data', $data, ($req_add_swap or $request ));
+
+    my $previous_req = ($req_add_data or $req_add_swap or $request);
+
+    my $req_add_iso = _add_extra_iso($domain, $request,$previous_req);
+    if ( $start ) {
+        $previous_req = ($req_add_iso or $req_add_data or $req_add_swap
+                or $request);
+        _start_domain_after_create($domain, $request, $previous_req)
     }
-    my $req_add_data;
-    if ($data) {
-        $req_add_data = Ravada::Request->add_hardware(
-            uid => $args{id_owner}
-            ,id_domain => $domain->id
-            ,name => 'disk'
-            ,data => { size => $data, type => 'data' }
-        );
-        $req_add_data->after_request($req_add_swap->id)
-        if $req_add_swap;
-    }
-    my $previous_req = ( $req_add_data or $req_add_swap );
-    $previous_req = _add_extra_iso($domain, $request,$previous_req);
-    _start_domain_after_create($domain, $request, $previous_req) if $start;
     return $domain;
 }
 
+sub _req_add_disk($uid, $id_domain, $type, $size, $request) {
+    return if !$size;
+    my @after_req;
+    @after_req = (after_request => $request->id ) if $request;
+    return Ravada::Request->add_hardware(
+        uid => $uid
+        ,id_domain => $id_domain
+        ,name => 'disk'
+        ,data => { size => $size, type => $type }
+        ,@after_req
+    );
+}
 sub _start_domain_after_create($domain, $request, $previous_request) {
     my $remote_ip;
     $remote_ip = $request->defined_arg('remote_ip') if $request;
@@ -2874,12 +2875,22 @@ sub _start_domain_after_create($domain, $request, $previous_request) {
     my $uid = $request->defined_arg('id_owner');
     $uid = $request->defined_arg('uid') if !$uid;
 
+    my @after_req;
+    @after_req = (after_request => $request->id ) if $request;
+    my $req_refresh = Ravada::Request->refresh_machine(
+        uid => $uid
+        ,id_domain => $domain->id
+        ,@after_req
+    );
+    @after_req = (after_request => $req_refresh->id )
+    if $req_refresh;
+
     my $req = Ravada::Request->start_domain(
         uid => $uid
         ,id_domain => $domain->id
         ,remote_ip => $remote_ip
+        ,@after_req
     );
-    $req->after_request($previous_request->id) if $previous_request;
 
 }
 
@@ -2904,16 +2915,22 @@ sub _add_extra_iso($domain, $request, $previous_request) {
 
     my ($url, $file_re) = $extra_iso =~ m{(.*)/(.*)};
     my $volume = $domain->_vm->search_volume_path_re(qr($file_re));
+
+    my $download = 0;
     if (!$volume) {
         my ($url) = $domain->_vm->_search_url_file($extra_iso);
         my ($device) = $url =~ m{.*/(.*)};
+        die "Error: file not found in $extra_iso\n"
+        if !$device;
+
         $volume = $domain->_vm->dir_img()."/$device";
-        $domain->_vm->_download_file_external($url, $volume) ;
+        $download = 1 if $device;
     }
     my $req = Ravada::Request->refresh_storage(id_vm => $domain->_vm->id);
+
     $req->after_request($previous_request->id) if $previous_request;
 
-    return Ravada::Request->add_hardware(
+    my $req_add = Ravada::Request->add_hardware(
         name => 'disk'
         ,uid => Ravada::Utils::user_daemon->id
         ,id_domain => $domain->id
@@ -2924,6 +2941,10 @@ sub _add_extra_iso($domain, $request, $previous_request) {
         ,after_request => $req->id
     );
 
+    $domain->_vm->_download_file_external($url, $volume)
+    if $download;
+
+    return $req_add;
 }
 
 sub _check_args($args,@) {
