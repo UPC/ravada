@@ -817,7 +817,9 @@ sub _scheduled_fedora_releases($self,$data) {
             my $url_file = $url.$release
                     .'/Workstation/x86_64/iso/Fedora-Workstation-.*-x86_64-'.$release
                     .'-.*\.iso';
-            my @found = $vm->_search_url_file($url_file);
+            my @found;
+            eval { @found = $vm->_search_url_file($url_file) };
+            die $@ if $@ && $@ !~ /Not Found/i;
             if(!@found) {
                 next if $url =~ m{//archives};
 
