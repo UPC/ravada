@@ -169,6 +169,9 @@ ravadaApp.directive("solShowMachine", swMach)
             $scope.showMinSize = false;
             $scope.min_size = 1;
           }
+          if ( $scope.swap.value < iso.min_swap_size ) {
+              $scope.swap.value = iso.min_swap_size + 0.1;
+          }
           return (iso.device != null) ? iso.device : "";
       };
 
@@ -416,6 +419,7 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.auto_hide_clones = false;
         $scope.show_active = false;
         $scope.hide_clones = !value;
+        $scope.filter = '';
         for (var i in $scope.list_machines){
             mach = $scope.list_machines[i];
             if (mach._level == 0 ) {
@@ -552,6 +556,7 @@ ravadaApp.directive("solShowMachine", swMach)
         }
     };
     $scope.do_show_active = function() {
+        $scope.filter = '';
         $scope.show_active=true;
         $scope.hide_clones = true;
         $scope.n_active_hidden = 0;
@@ -578,6 +583,33 @@ ravadaApp.directive("solShowMachine", swMach)
             } else {
                 mach.show = false;
                 if (mach.status == 'active') {
+                    $scope.n_active_hidden++;
+                }
+            }
+        }
+    };
+
+    $scope.show_filter = function() {
+        $scope.hide_clones = true;
+        $scope.n_active_current = 0;
+        $scope.n_active_hidden = 0;
+        for (var [key, mach ] of Object.entries($scope.list_machines)) {
+            if ($scope.filter.length > 0) {
+                if ( mach.name.indexOf($scope.filter)>= 0) {
+                    mach.show = true;
+                } else {
+                    mach.show = false;
+                }
+            } else {
+                if (mach._level > 0 ) {
+                    mach.show = false;
+                } else {
+                    mach.show = true;
+                }
+            }
+            if (mach.status == 'active') {
+                $scope.n_active_current++;
+                if (!mach.show) {
                     $scope.n_active_hidden++;
                 }
             }

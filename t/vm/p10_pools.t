@@ -400,7 +400,7 @@ sub test_pool_with_volatiles($vm) {
     }
 
     for ( 1 .. 60 ) {
-        my $req_shutdown = Ravada::Request::_search_request(
+        my $req_shutdown = Ravada::Request::_search_request(undef,
                 'shutdown_domain'
         );
         wait_request(debug => 0);

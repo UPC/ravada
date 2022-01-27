@@ -2606,6 +2606,7 @@ sub req_new_domain {
     my $machine = ($c->param('machine') or '');
     $machine =~ s/^string://;
     $machine = '' if $machine eq '?';
+    my $start = $c->param('start');
 
     my $data = ($c->param('data') or 0);
     $data *= 1024*1024*1024;
@@ -2613,6 +2614,7 @@ sub req_new_domain {
     if (!$c->param('_advanced_options')) {
         $swap = int(1024 * 1024 * 1024) if !$swap;
         $data = int(1024 * 1024 * 1024) if !$data;
+        $start = 1 if !defined $start;
     }
 
     my %args = (
@@ -2623,6 +2625,8 @@ sub req_new_domain {
         ,id_owner => $USER->id
         ,swap => $swap
         ,data => $data
+        ,start => $start
+        ,remote_ip => _remote_ip($c)
     );
     $args{iso_file} = $c->param('iso_file') if defined $c->param('iso_file');
     $args{options}->{uefi} = 1 if $bios && $bios eq 'UEFI';

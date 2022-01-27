@@ -24,16 +24,26 @@
                  </h2>
 %               }
             </div>
-            <div class="card-body">
-				<div class="row">
+            <div class="card-body" ng-cloak="1">
+				<div class="row" ng-hide="domain_removed">
 					<div class="col-2">
 						%= include 'main/settings_machine_tabs_head'
 					</div>
-					<div class="col-10">
-                        <div class="alert alert-danger" ng-show="error">{{error}}</div>
+					<div class="col-10" ng-hide="domain_removed">
 						%= include 'main/settings_machine_tabs_body'
 					</div>
 				</div>
+				<div class="row" ng-show="domain_removed">
+					<div>
+						%= include 'main/settings_machine_tabs_head'
+					</div>
+					<div class="col-10" ng-show="domain_removed">
+                        <h3><%=l 'Machine removed' %></h3>
+                        <p>
+                            <a href="/"><%=l 'Available Machines' %></a>
+                        </p>
+                    </div>
+                </div>
             </div>
         </div><!-- del panel default-->
     </div><!-- del page-header -->

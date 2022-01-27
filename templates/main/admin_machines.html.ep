@@ -146,7 +146,8 @@
                               }"
                         title ="<%=l 'Manage machine' %>">{{machine.name}}</a> {{machine.comment}}
                    <span class="comment" ng-show="machine.is_volatile"><%=l 'Volatile' %></span>
-                        <button ng-show="machine.has_clones" type="button"
+                        <button ng-show="machine.has_clones && !filter"
+                                         type="button"
                         class="badge badge-light text-blue"
                         ng-click="toggle_show_clones(machine.id)"
                         title="<%=l 'Show/Hide clones' %>">
