@@ -6662,6 +6662,11 @@ sub _dettach_host_device($self, $host_device, $doc=$self->get_config) {
     $self->reload_config($doc);
 
     $self->_unlock_host_device($device);
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE host_devices_domain SET name=NULL "
+        ." WHERE id_domain=? AND id_host_device=?"
+    );
+    $sth->execute($self->id, $host_device->id);
 
 }
 
