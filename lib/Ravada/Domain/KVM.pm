@@ -2709,14 +2709,16 @@ sub _validate_xml($self, $doc) {
         open my $out1,">",$file_out or die $!;
         print $out1 $self->xml_description();
         close $out1;
-        open my $out2,">","/var/tmp/".$self->name().".new.xml" or die $!;
+        my $file_out_new = "/var/tmp/".$self->name()."."
+	    .int(rand(100)).".new.xml";
+        open my $out2,">",$file_out_new or die $!;
         my $doc_string = $doc->toString();
         $doc_string =~ s/^<.xml.*//;
         $doc_string =~ s/"/'/g;
         print $out2 $doc_string;
         close $out2;
 
-        confess "\$?=$? $err\ncheck $file_out" if $?;
+        confess "\$?=$? $err\ncheck $file_out and $file_out_new" if $?;
     }
 }
 
@@ -2966,9 +2968,12 @@ sub remove_config_node($self, $path, $content, $doc) {
 }
 
 sub _xml_equal_hostdev($doc1, $doc2) {
-    my $xml1 = XML::LibXML->load_xml(string => $doc1);
-
-    my $xml2 = XML::LibXML->load_xml(string => $doc2);
+    return 1 if $doc1 eq $doc2;
+    my $parser = XML::LibXML->new() or die $!;
+    $doc1 =~ s{(</?)\w+:(\w+)}{$1$2}mg;
+    my $xml1 = $parser->parse_string($doc1);
+    $doc2 =~ s{(</?)\w+:(\w+)}{$1$2}mg;
+    my $xml2 = $parser->parse_string($doc2);
     for my $xml ( $xml1, $xml2) {
         my ($hostdev) = $xml->findnodes("/hostdev");
         next if !$hostdev;
