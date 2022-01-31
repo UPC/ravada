@@ -331,6 +331,8 @@ sub test_templates_start_nohd($vm) {
         is($req->error, '');
         test_hostdev_not_in_domain_config($domain);
         $domain->shutdown_now(user_admin);
+        my $device_configured = $domain->_device_already_configured($hd);
+        is($device_configured, undef);
 
         $req = Ravada::Request->start_domain( uid => user_admin->id
             ,id_domain => $domain->id
@@ -425,7 +427,6 @@ sub test_templates_change_filter($vm) {
     ok(@$templates);
 
     for my $first  (@$templates) {
-        diag("Testing $first->{name} Hostdev on ".$vm->type);
         $vm->add_host_device(template => $first->{name});
         my @list_hostdev = $vm->list_host_devices();
         my ($hd) = $list_hostdev[-1];
@@ -475,7 +476,6 @@ sub test_templates($vm) {
         next if $first->{name } =~ /^GPU dri/ && $vm->type eq 'KVM';
 
         my $n=scalar($vm->list_host_devices);
-        diag("Testing add '$first->{name}' Hostdev on ".$vm->type. " n=$n" );
         $vm->add_host_device(template => $first->{name});
 
         my @list_hostdev = $vm->list_host_devices();
