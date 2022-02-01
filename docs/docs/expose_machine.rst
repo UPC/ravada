@@ -16,7 +16,7 @@ Setting a public IP
 One way to expose the virtual machine is use a public IP instead the
 private used by default. To do so you have to manually edit the machine
 definition before creating the base. Change the network settings to
-`bridge <http://ravada.readthedocs.io/en/latest/docs/network_bridge.html`_.
+`bridge <http://ravada.readthedocs.io/en/latest/docs/network_bridge.html>`__.
 
 This setting gives the more exposure to the virtual machine, so firewalls
 and other security measures must be configured.

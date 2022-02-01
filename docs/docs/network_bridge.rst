@@ -36,7 +36,6 @@ Type `ip a` and find the name of the device after a number, a
 couple of lines later you will be able to see the IP of your host.
 
 ..
-
   2: enp0s31f6: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
     link/ether 54:05:db:ac:b1:cb brd ff:ff:ff:ff:ff:ff
     inet 192.168.1.61/24 brd 192.168.1.255 scope global dynamic noprefixroute enp0s31f6
@@ -53,7 +52,6 @@ Create a new *bridges* section and add there a new bridge linked
 to that interface.
 
 ..
-
   network:
     version: 2
     renderer: networkd
