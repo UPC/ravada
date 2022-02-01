@@ -2780,7 +2780,7 @@ sub create_domain {
     if ( $start ) {
         $previous_req = ($req_add_iso or $req_add_data or $req_add_swap
                 or $request);
-        _start_domain_after_create($domain, $request, $previous_req)
+        _start_domain_after_create($domain, $request, $id_owner, $previous_req)
     }
     return $domain;
 }
@@ -2797,15 +2797,12 @@ sub _req_add_disk($uid, $id_domain, $type, $size, $request) {
         ,@after_req
     );
 }
-sub _start_domain_after_create($domain, $request, $previous_request) {
+sub _start_domain_after_create($domain, $request, $uid,$previous_request) {
     my $remote_ip;
     $remote_ip = $request->defined_arg('remote_ip') if $request;
 
-    my $uid = $request->defined_arg('id_owner');
-    $uid = $request->defined_arg('uid') if !$uid;
-
     my @after_req;
-    @after_req = (after_request => $request->id ) if $request;
+    @after_req = (after_request => $previous_request->id );
     my $req_refresh = Ravada::Request->refresh_machine(
         uid => $uid
         ,id_domain => $domain->id
