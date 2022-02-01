@@ -2765,6 +2765,7 @@ sub create_domain {
         if ($error =~ /has \d+ requests/) {
             $request->status('retry');
         }
+        $request->id_domain($domain->id) if $domain;
     } elsif ($error) {
         die $error;
     }
