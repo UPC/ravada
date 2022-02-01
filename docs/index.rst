@@ -119,6 +119,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/spinoff_clone
    docs/chatwoot
    docs/pci_passthrough
+   docs/network_bridge
 
 .. _guest-docs:
 
