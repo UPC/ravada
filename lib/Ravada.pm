@@ -218,7 +218,7 @@ sub _do_create_constraints($self) {
         my ($name) = $constraint =~ /CONSTRAINT (\w+)\s/;
 
         warn "INFO: creating constraint $name \n"
-        if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+        if $name && !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         print "+" if $FIRST_TIME_RUN && !$CAN_FORK;
 
         $self->_clean_db_leftovers();
@@ -2047,6 +2047,12 @@ sub _create_constraints($self, $table, @constraints) {
         my $sql = "FOREIGN KEY (`$field`) REFERENCES $definition";
         my $name = "constraint_${table}_$field";
         next if $known->{$name} && $known->{$name} eq $sql;
+
+        if ($known->{$name}) {
+           push @{$self->{_constraints}}
+           ,"alter table $table DROP constraint $name";
+        }
+
 
         $sql = "alter table $table add CONSTRAINT $name $sql";
         #        $CONNECTOR->dbh->do($sql);
