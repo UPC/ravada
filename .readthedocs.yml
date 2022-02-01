@@ -1,13 +1,19 @@
 # Formats in addition to HTML
 
+version: 2
+
+# Set the version of Python and other tools you might need
+build:
+  os: ubuntu-20.04
+  image: latest
+  tools:
+    python: "3.9"
+
 formats:
     - epub
     - pdf
 
 # Pip requirements
-requirements_file: docs/requirements.txt
-
-# Build Container
-build:
-   image: latest
-
+python:
+   install:
+   - requirements: docs/requirements.txt
