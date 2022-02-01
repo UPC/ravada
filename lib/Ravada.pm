@@ -708,7 +708,7 @@ sub _update_isos {
           ,min_disk_size => '21'
           ,min_swap_size => '2'
           ,arch => 'x86_64'
-          ,extra_iso => 'https://infoteleco.upc.edu/img/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.2\d+-\d+/virtio-win-0.1.2\d+.iso'
+          ,extra_iso => 'https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.215-\d+/virtio-win-0.1.\d+.iso'
         }
         ,windows_xp => {
           name => 'Windows XP'
@@ -2842,13 +2842,13 @@ sub _add_extra_iso($domain, $request, $previous_request) {
     my $extra_iso = $iso->{extra_iso};
     return if !$extra_iso;
 
-    my ($url, $file_re) = $extra_iso =~ m{(.*)/(.*)};
+    my ($url, $file_re) = $extra_iso =~ m{(.*/)(.*)};
     my $volume = $domain->_vm->search_volume_path_re(qr($file_re));
 
     my $download = 0;
     if (!$volume) {
-        my ($url) = $domain->_vm->_search_url_file($extra_iso);
-        my ($device) = $url =~ m{.*/(.*)};
+        my ($url_match) = $domain->_vm->_search_url_file($extra_iso);
+        my ($device) = $url_match =~ m{.*/(.*)};
         die "Error: file not found in $extra_iso\n"
         if !$device;
 
@@ -2870,7 +2870,7 @@ sub _add_extra_iso($domain, $request, $previous_request) {
         ,after_request => $req->id
     );
 
-    $domain->_vm->_download_file_external($url, $volume)
+    $domain->_vm->_download_file_external($extra_iso, $volume)
     if $download;
 
     return $req_add;
