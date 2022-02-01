@@ -27,11 +27,15 @@ read the
 Network interface
 ~~~~~~~~~~~~~~~~~
 
+.. warning::
+      The following step will change the host network settings. This may turn the network unusable and the remote access may be disrupted. Make sure you have ways to access the server console just in case you can not access from outside.
+
+
 First of all you have to identify the network interface.
 Type `ip a` and find the name of the device after a number, a
 couple of lines later you will be able to see the IP of your host.
 
-.. prompt::
+..
 
   2: enp0s31f6: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
     link/ether 54:05:db:ac:b1:cb brd ff:ff:ff:ff:ff:ff
@@ -65,3 +69,13 @@ to that interface.
         nameservers:
             addresses: [192.168.1.4, 192.168.1.1 , 8.8.8.8]
 
+Apply this configuration typing
+
+.. prompt:: $
+
+  sudo netplan try
+
+If everything went fine now when you type `ip a` you will see
+the former interface without any IP assigned, and the new
+bridge *br0* configured properly. Reboot the server to make
+sure everything starts correctly.
