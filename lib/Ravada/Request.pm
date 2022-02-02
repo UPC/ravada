@@ -760,9 +760,13 @@ sub _validate_start_domain($self) {
         $id_domain = _search_domain_id(undef,$domain_name);
     }
     return if !$id_domain;
-    my $req = $self->_search_request('%_hardware', id_domain => $id_domain);
-
-    $self->after_request($req->id) if $req;
+    for my $command ('start','%_hardware') {
+        my $req=$self->_search_request($command, id_domain => $id_domain);
+        next if !$req;
+        next if $req->at_time;
+        next if $command eq 'start' && !$req->after_request();
+        $self->after_request($req->id);
+    }
 }
 
 sub _validate_change_hardware($self) {
