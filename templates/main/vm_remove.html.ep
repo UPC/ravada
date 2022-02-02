@@ -36,7 +36,7 @@
             </div> <!-- from list clones -->
             </div> <!-- from card-header -->
 
-            <div ng-show="domain_remove || !showmachine.has_clones"
+            <div ng-show="(domain_remove || !showmachine.has_clones) && !domain_remove_done"
                 class="card-header"
             >
                 <p><%=l 'Once you delete the machine, there is no going back. Please be certain.' %></p>
@@ -56,7 +56,7 @@
 
            <div ng-show="domain_remove_clones">
                         <b><%=l 'Danger'%></b>.
-                        <%=l 'This will remove all the'%> {{showmachine.has_clones}} <%=l 'clones of the machine' %><i><%= $domain->name %></i>.
+                        <%=l 'This will remove all the'%> {{showmachine.has_clones}} <%=l 'clones of the machine' %> <i><%= $domain->name %></i>.
                         <b><%=l 'This action can\'t be undone' %></b>.
                         <%=l 'Are you sure ?'%><br/>
                         <a type="button" class="btn btn-primary text-white"
@@ -67,7 +67,7 @@
            </div><!-- del domain remove clones-->
 
            <div ng-show="domain_remove_done">
-                <%=l 'Virtual Machine' %><b>{{showmachine.name}}</b> <%=l 'removed' %>.
+                <%=l 'Virtual Machine' %> <b>{{showmachine.name}}</b> <%=l 'removed' %>.
            </div>
 
            </div>
