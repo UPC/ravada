@@ -304,7 +304,7 @@ sub list_dists {
     die "Error: no dists control files found in 'debian' dir"
         if !@dists;
 
-    return @dists;
+    return reverse @dists;
 }
 
 sub set_control_file {
