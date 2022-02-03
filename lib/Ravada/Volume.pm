@@ -90,7 +90,7 @@ sub _type_from_extension($file) {
     );
 
     return $type{$ext} if exists $type{$ext};
-    return uc($ext);
+    return 'RAW';
 }
 
 sub _type($file,$vm = undef) {

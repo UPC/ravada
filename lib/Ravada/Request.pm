@@ -83,7 +83,7 @@ our %VALID_ARG = (
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
-    ,refresh_storage => { id_vm => 2 }
+    ,refresh_storage => { id_vm => 2, uid => 2 }
     ,list_storage_pools => { id_vm => 1 , uid => 1 }
     ,check_storage => { uid => 1 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
@@ -760,9 +760,13 @@ sub _validate_start_domain($self) {
         $id_domain = _search_domain_id(undef,$domain_name);
     }
     return if !$id_domain;
-    my $req = $self->_search_request('%_hardware', id_domain => $id_domain);
-
-    $self->after_request($req->id) if $req;
+    for my $command ('start','%_hardware') {
+        my $req=$self->_search_request($command, id_domain => $id_domain);
+        next if !$req;
+        next if $req->at_time;
+        next if $command eq 'start' && !$req->after_request();
+        $self->after_request($req->id);
+    }
 }
 
 sub _validate_change_hardware($self) {
