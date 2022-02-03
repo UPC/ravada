@@ -36,7 +36,7 @@ sub download($url, $dst = $DIR_FALLBACK) {
         $dst .= $filename;
     }
 
-    return $dst if -e $dst;
+    return if -e $dst;
 
     print "get $url\n";
     my $res = $ua->get($url)->result;
@@ -89,6 +89,6 @@ while (<$in>) {
     next if /^#/;
     my ($url, $dst) = split;
     my $file = download($url, $dst);
-    uncompress($file) if $file =~ /\.zip$/;
+    uncompress($file) if $file && $file =~ /\.zip$/;
 }
 close $in;

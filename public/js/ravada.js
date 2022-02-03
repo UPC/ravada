@@ -265,7 +265,7 @@
                     if (data === null || typeof(data) == undefined ) {
                         console.log("close");
                         ws.close();
-                        $scope.domain_removed = true;
+                        window.location.href="/";
                         return;
                     }
                     $scope.$apply(function () {
