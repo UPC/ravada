@@ -1198,7 +1198,7 @@ sub add_volume {
     if ( !defined $bus ) {
         if  ($device eq 'cdrom') {
             $bus = 'ide';
-            $bus = 'sata' if $machine_type =~ /^pc-q35/;
+            $bus = 'sata' if $machine_type =~ /^pc-(i440fx|q35)/;
         } else {
             $bus = 'virtio'
         }
