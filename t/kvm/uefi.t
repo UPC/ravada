@@ -207,7 +207,7 @@ sub test_isos($vm) {
                     }
                     ,iso_file => $iso->{device}
                 );
-                wait_request(debug => 1);
+                wait_request(debug => 0);
                 my $domain = $vm->search_domain($name);
                 ok($domain);
                 wait_request();
