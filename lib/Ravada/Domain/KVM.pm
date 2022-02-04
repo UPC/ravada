@@ -1214,7 +1214,6 @@ sub add_volume {
 
     eval { $self->domain->attach_device($xml_device,Sys::Virt::Domain::DEVICE_MODIFY_CONFIG) };
     die $@ if $@;
-
     $self->_set_boot_order($path, $boot) if $boot;
     return $path;
 }
@@ -1422,7 +1421,7 @@ sub _new_pci_slot{
             }
         }
     }
-    for my $dec ( 1 .. 99) {
+    for my $dec ( 2 .. 99) {
         next if $target{$dec};
         return sprintf("0x%X", $dec);
     }
@@ -2765,6 +2764,7 @@ sub _change_xml_address_usb($self, $address) {
 }
 
 sub _change_xml_address_ide($self, $doc, $address, $max_bus=2, $max_unit=9) {
+
     return if $address->getAttribute('type') eq 'drive'
         && $address->getAttribute('bus') =~ /^\d+$/
         && $address->getAttribute('bus') <= $max_bus

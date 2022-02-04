@@ -610,7 +610,7 @@
               }
 
               if ( hardware == 'disk' && extra.device == 'cdrom') {
-                  extra.driver = 'ide';
+                  extra.driver = 'sata';
               }
 
               if (hardware == 'display' && ! extra) {

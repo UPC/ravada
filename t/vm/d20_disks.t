@@ -183,7 +183,7 @@ sub _req_create($vm, $iso, $options) {
     push @args,(options => $options) if defined $options;
 
     my $req = Ravada::Request->create_domain(@args);
-    wait_request( debug => 1);
+    wait_request( debug => 0);
     my $domain = $vm->search_domain($name);
     ok($domain) or die "No machine $name ".Dumper($iso);
     $domain->shutdown_now(user_admin);
@@ -239,7 +239,6 @@ sub _machine_types($vm) {
     my $machine_types = {};
     $machine_types = decode_json($req->output());
 
-    warn Dumper($machine_types);
     return $machine_types;
 }
 
@@ -258,20 +257,21 @@ sub test_cdrom($vm) {
         die $@ if $@;
         $iso->{device} = $device_iso;
 
-        diag(("@" x 10)." ".$iso->{name});
+        my %done;
         for my $bios (undef, 'legacy','uefi') {
             die Dumper($iso) if !$machine_types->{$iso->{arch}};
             for my $machine ( @{$machine_types->{$iso->{arch}}}) {
                 die if !$iso->{arch};
-                diag(($bios or '')." ".($machine or ''));
-                next;
+                my $key = ($bios or '')."-".($machine or '')."-"
+                    .$iso->{xml}."-".($iso->{xml_volume} or '');
+                next if $done{$key}++;
                 my %options;
                 $options{bios}=$bios if defined $bios;
                 $options{machine}=$machine if defined $machine;
 
                 my $domain = _req_create($vm, $iso, \%options);
-                next;
 
+                _req_add_cd($domain);
                 _req_remove_cd($domain);
                 _req_add_cd($domain);
                 $domain->prepare_base(user_admin);

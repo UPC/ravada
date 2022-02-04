@@ -1664,7 +1664,7 @@ sub _xml_modify_options($self, $doc, $options=undef) {
         $self->_xml_remove_vmport($doc);
         $self->_xml_remove_ide($doc);
     }
-    if ($machine_found =~ /q35/ && $uefi) {
+    if ($machine_found =~ /q35/ ) {
         $self->_xml_set_pcie($doc);
         $self->_xml_remove_ide($doc);
         $self->_xml_remove_vmport($doc);
