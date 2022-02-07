@@ -207,7 +207,7 @@ sub add_ubuntu_minimal_iso {
         ,xml => 'bionic-i386.xml'
         ,xml_volume => 'bionic32-volume.xml'
         ,rename_file => 'ubuntu_bionic_mini.iso'
-        ,arch => 'i386'
+        ,arch => 'i686'
         ,md5 => 'c7b21dea4d2ea037c3d97d5dac19af99'
     });
     my $device = "/var/lib/libvirt/images/".$info{$distro}->{rename_file};

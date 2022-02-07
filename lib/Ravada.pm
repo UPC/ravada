@@ -321,7 +321,7 @@ sub _update_isos {
         mate_bionic_i386 => {
                     name => 'Ubuntu Mate Bionic 32 bits'
             ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 32 bits'
-                   ,arch => 'i386'
+                   ,arch => 'i686'
                     ,xml => 'bionic-i386.xml'
              ,xml_volume => 'bionic32-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
@@ -459,7 +459,7 @@ sub _update_isos {
         ,kubuntu_32 => {
             name => 'Kubuntu Bionic Beaver 32 bits'
             ,description => 'Kubuntu 18.04 Bionic Beaver 32 bits'
-            ,arch => 'i386'
+            ,arch => 'i686'
             ,xml => 'bionic-i386.xml'
             ,xml_volume => 'bionic32-volume.xml'
             ,sha256_url => '$url/SHA256SUMS'
@@ -492,7 +492,7 @@ sub _update_isos {
         ,xubuntu_beaver_32 => {
             name => 'Xubuntu Bionic Beaver 32 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 32 bits'
-            ,arch => 'i386'
+            ,arch => 'i686'
             ,xml => 'bionic-i386.xml'
             ,xml_volume => 'bionic32-volume.xml'
             ,md5_url => '$url/../MD5SUMS'
@@ -521,7 +521,7 @@ sub _update_isos {
          ,lubuntu_bionic_32 => {
              name => 'Lubuntu Bionic Beaver 32 bits'
              ,description => 'Lubuntu 18.04 Bionic Beaver 32 bits'
-             ,arch => 'i386'
+             ,arch => 'i686'
              ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-i386.iso'
              ,sha256_url => '$url/SHA256SUMS'
              ,xml => 'bionic-i386.xml'
@@ -546,6 +546,7 @@ sub _update_isos {
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'i686'
         }
         ,debian_jessie_64 => {
             name =>'Debian Jessie 64 bits'
@@ -567,6 +568,7 @@ sub _update_isos {
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'i686'
         }
         ,debian_stretch_64 => {
             name =>'Debian Stretch 64 bits'
@@ -599,6 +601,7 @@ sub _update_isos {
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'i686'
         }
         ,debian_bullseye_64=> {
             name =>'Debian Bullseye 64 bits'
@@ -638,7 +641,7 @@ sub _update_isos {
         ,devuan_beowulf_i386=> {
             name =>'Devuan Beowulf 32 bits'
             ,description => 'Devuan Beowulf Desktop Live (i386)'
-            ,arch => 'i386'
+            ,arch => 'i686'
             ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
             ,file_re => 'devuan_beowulf_.*_i386_desktop-live.iso'
             ,sha256_url => '$url/SHASUMS.txt'

@@ -1660,13 +1660,14 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     my ($type) = $doc->findnodes('/domain/os/type');
 
     my $machine_found = $type->getAttribute('machine');
-    if ($machine_found =~ /i440/) {
-        #$self->_xml_remove_ide($doc);
+    if ($machine_found =~ /pc-i440fx/ && !$uefi) {
+        $self->_xml_remove_vmport($doc);
+        $self->_xml_remove_ide($doc);
     }
-    if ($machine_found =~ /q35/) {
+    if ($machine_found =~ /q35/ ) {
         $self->_xml_set_pcie($doc);
         $self->_xml_remove_ide($doc);
-        #       $self->_xml_remove_vmport($doc);
+        $self->_xml_remove_vmport($doc);
     }
 
 }
