@@ -790,6 +790,29 @@ sub test_start_limit_upgrade{
     $usera->remove();
 }
 
+sub test_view_all_upgrade
+{
+    my $sth = connector->dbh->prepare("SELECT id FROM grant_types WHERE name='view_all'");
+    $sth->execute();
+    my ($id) = $sth->fetchrow;
+
+    $sth = connector->dbh->prepare("DELETE FROM grants_user WHERE id_grant=?");
+    $sth->execute($id);
+
+    $sth = connector->dbh->prepare("DELETE FROM grant_types WHERE id=?");
+    $sth->execute($id);
+
+    my $user = create_user("oper_start","bar");
+    my $usera = create_user("admin_start","bar",'is admin');
+    rvd_back->{_null_grants}=0;
+    rvd_back->_install();
+    is($user->can_view_all,0);
+    is($usera->can_view_all,0);
+
+    $user->remove();
+    $usera->remove();
+}
+
 sub test_start_many_upgrade{
     my $user = create_user("oper_startm","bar");
     my $usera = create_user("admin_startm","bar",1);
@@ -822,6 +845,8 @@ sub test_start_many_upgrade{
 test_start_many();
 test_start_limit_upgrade();
 test_start_many_upgrade();
+
+test_view_all_upgrade();
 
 test_defaults();
 test_admin();

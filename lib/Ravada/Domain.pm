@@ -601,22 +601,22 @@ sub _allow_manage_args {
     confess "Disabled from read only connection"
         if $self->readonly;
 
-    my %args = @_;
+    my ($allow_if_can_view_all, %args) = @_;
 
     confess "Missing user arg ".Dumper(\%args)
         if !$args{user} ;
 
-    $self->_allowed($args{user});
+    $self->_allowed($args{user}, $allow_if_can_view_all);
 
 }
 sub _allow_manage {
     my $self = shift;
 
-    return $self->_allow_manage_args(@_)
+    return $self->_allow_manage_args(1, @_)
         if scalar(@_) % 2 == 0;
 
     my ($user) = @_;
-    return $self->_allow_manage_args( user => $user);
+    return $self->_allow_manage_args(1, user => $user);
 
 }
 
@@ -1092,13 +1092,15 @@ sub _check_disk_modified {
 sub _allowed {
     my $self = shift;
 
-    my ($user) = @_;
+    my ($user, $allow_if_can_view_all) = @_;
 
     confess "Missing user"  if !defined $user;
     confess "ERROR: User '$user' not class user , it is ".(ref($user) or 'SCALAR')
         if !ref $user || ref($user) !~ /Ravada::Auth/;
 
     return if $user->is_admin;
+	return if $allow_if_can_view_all && $user->can_view_all;
+
     my $id_owner;
     eval { $id_owner = $self->id_owner };
     my $err = $@;
