@@ -22,7 +22,7 @@ INSERT INTO grant_types(name,description) VALUES('hibernate_clone_all',"can hibe
 
 /* Special users should be allowed these */
 INSERT INTO grant_types(name,description, is_int, default_admin) VALUES('start_limit',"can have their own limit on started machines.", 1, 0); /* the value in grants_user will be the maximum number of concurrent machines instead of a boolean */
-INSERT INTO grant_types(name,description, is_int, default_admin) VALUES('view_all', "The user can start and access the screen of any virtual machine"); 
+INSERT INTO grant_types(name,description, is_int, default_admin) VALUES('view_all', "The user can start and access the screen of any virtual machine", 0, 1); 
 
 /* admins should be allowed these */
 INSERT INTO grant_types(name,description) VALUES('clone_all',"can clone any virtual machine.");

@@ -807,7 +807,7 @@ sub test_view_all_upgrade
     rvd_back->{_null_grants}=0;
     rvd_back->_install();
     is($user->can_view_all,0);
-    is($usera->can_view_all,0);
+    is($usera->can_view_all,1);
 
     $user->remove();
     $usera->remove();
