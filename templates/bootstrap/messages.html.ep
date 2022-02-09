@@ -14,7 +14,7 @@ ng-cloak>
   <div ng-bind-html="alert.subject">
   {{alert.subject}}
   </div>
-    <div class="alert-info">
+    <div class="alert-info" ng-show="alert.message">
         <small ng-bind-html="alert.message">{{alert.message}}</small>
     </div>
 </div>
