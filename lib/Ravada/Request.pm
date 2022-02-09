@@ -151,6 +151,7 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             expose remove_expose
             rebase rebase_volumes
             shutdown_node reboot_node start_node
+            compact purge
     );
 
 our %CMD_NO_DUPLICATE = map { $_ => 1 }

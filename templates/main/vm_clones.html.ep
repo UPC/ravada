@@ -40,8 +40,4 @@
                         ><%=l 'Yes, shutwdown all the clones' %></a>
            </div>
 
-        <div class="row" ng-show="pending_request">
-            %= include "/main/pending_request"
-        </div>
-
 </div>

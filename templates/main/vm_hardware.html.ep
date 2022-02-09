@@ -133,5 +133,4 @@
 
 %= include 'main/manage_machine_new_disk'
 %= include 'main/manage_machine_new_display'
-%= include "/main/pending_request"
 </div>
