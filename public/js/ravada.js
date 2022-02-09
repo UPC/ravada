@@ -635,7 +635,7 @@
                 }
                 var file = $scope.showmachine.hardware.disk[index].file;
                 if (typeof(file) != 'undefined' && file) {
-                    console.log(file);
+                    $scope.showmachine.requests++;
                     $http.post('/request/remove_hardware/'
                         ,JSON.stringify({
                             'id_domain': $scope.showmachine.id
@@ -650,6 +650,7 @@
                 }
 
             }
+            $scope.showmachine.requests++;
             if(typeof(item) == 'object') {
                 item.remove = false;
             }
@@ -899,6 +900,7 @@
             };
 
             $scope.request = function(request, args) {
+                $scope.showmachine.requests++;
                 $scope.pending_request = undefined;
                 $http.post('/request/'+request+'/'
                     ,JSON.stringify(args)
