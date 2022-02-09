@@ -3512,6 +3512,11 @@ sub open_exposed_ports($self) {
     return if !@ports;
     return if !$self->is_active;
 
+    if (!$self->has_nat_interfaces) {
+        $self->_set_ports_direct();
+        return;
+    }
+
     my $ip = $self->ip;
     if ( ! $ip ) {
         die "Error: No ip in domain ".$self->name.". Retry.\n";
@@ -3526,6 +3531,15 @@ sub open_exposed_ports($self) {
         $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
             ,$expose->{restricted});
     }
+}
+
+sub _set_ports_direct($self) {
+    my $sth_update = $$CONNECTOR->dbh->prepare(
+        "UPDATE domain_ports set public_port=NULL "
+        ." WHERE id_domain=?"
+    );
+    $sth_update->execute($self->id);
+
 }
 
 sub _close_exposed_port($self,$internal_port_req=undef) {
@@ -6306,6 +6320,10 @@ sub has_non_shared_storage($self, $node=$self->_vm->new(host => 'localhost')) {
     $shared_storage->{$nodes_id}= $has_non_shared;
     $self->_data('shared_storage' => encode_json($shared_storage));
     return $has_non_shared;
+}
+
+sub has_nat_interfaces($self) {
+    return 0;
 }
 
 sub _base_in_nodes($self) {

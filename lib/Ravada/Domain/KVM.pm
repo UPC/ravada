@@ -2844,4 +2844,15 @@ sub _remove_backingstore($self, $file) {
     $self->reload_config($doc);
 }
 
+sub has_nat_interfaces($self) {
+    my $doc = XML::LibXML->load_xml(string
+            => $self->xml_description(Sys::Virt::Domain::XML_INACTIVE))
+        or die "ERROR: $!\n";
+
+    for my $if ($doc->findnodes('/domain/devices/interface/source')) {
+        return 1 if $if->getAttribute('network');
+    }
+    return 0;
+}
+
 1;
