@@ -76,13 +76,9 @@ sub test_new_domain_req {
         ,id_base => $base->id
         ,id_owner => user_admin->id
         ,remote_ip => '127.0.0.1'
-        ,start => 1
     );
     ok($req) or return;
-    rvd_back->_process_requests_dont_fork();
-
-    ok($req->status eq 'done');
-    like($req->error,qr(.));
+    wait_request($req);
 
     my $domain = rvd_back->search_domain($name);
     ok($domain) or return;
