@@ -50,7 +50,7 @@
 
     <button class="btn btn-outline-warning btn-sm"
         title="<%=l 'Reload' %>"
-        ng-click="list_machines={};subscribe_all('<%= url_for('ws_subscribe')->to_abs %>');"><i class="fa fa-sync-alt" aria-hidden="true"></i></button>
+        ng-click="list_machines={};filter='';subscribe_all('<%= url_for('ws_subscribe')->to_abs %>');"><i class="fa fa-sync-alt" aria-hidden="true"></i></button>
 
         </div>
 
