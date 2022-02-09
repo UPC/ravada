@@ -218,7 +218,7 @@ sub _do_create_constraints($self) {
         my ($name) = $constraint =~ /CONSTRAINT (\w+)\s/;
 
         warn "INFO: creating constraint $name \n"
-        if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+        if $name && !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         print "+" if $FIRST_TIME_RUN && !$CAN_FORK;
 
         $self->_clean_db_leftovers();
@@ -321,7 +321,7 @@ sub _update_isos {
         mate_bionic_i386 => {
                     name => 'Ubuntu Mate Bionic 32 bits'
             ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 32 bits'
-                   ,arch => 'i386'
+                   ,arch => 'i686'
                     ,xml => 'bionic-i386.xml'
              ,xml_volume => 'bionic32-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
@@ -459,7 +459,7 @@ sub _update_isos {
         ,kubuntu_32 => {
             name => 'Kubuntu Bionic Beaver 32 bits'
             ,description => 'Kubuntu 18.04 Bionic Beaver 32 bits'
-            ,arch => 'i386'
+            ,arch => 'i686'
             ,xml => 'bionic-i386.xml'
             ,xml_volume => 'bionic32-volume.xml'
             ,sha256_url => '$url/SHA256SUMS'
@@ -492,7 +492,7 @@ sub _update_isos {
         ,xubuntu_beaver_32 => {
             name => 'Xubuntu Bionic Beaver 32 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 32 bits'
-            ,arch => 'i386'
+            ,arch => 'i686'
             ,xml => 'bionic-i386.xml'
             ,xml_volume => 'bionic32-volume.xml'
             ,md5_url => '$url/../MD5SUMS'
@@ -521,7 +521,7 @@ sub _update_isos {
          ,lubuntu_bionic_32 => {
              name => 'Lubuntu Bionic Beaver 32 bits'
              ,description => 'Lubuntu 18.04 Bionic Beaver 32 bits'
-             ,arch => 'i386'
+             ,arch => 'i686'
              ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-i386.iso'
              ,sha256_url => '$url/SHA256SUMS'
              ,xml => 'bionic-i386.xml'
@@ -546,6 +546,7 @@ sub _update_isos {
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'i686'
         }
         ,debian_jessie_64 => {
             name =>'Debian Jessie 64 bits'
@@ -567,6 +568,7 @@ sub _update_isos {
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'i686'
         }
         ,debian_stretch_64 => {
             name =>'Debian Stretch 64 bits'
@@ -599,6 +601,7 @@ sub _update_isos {
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'i686'
         }
         ,debian_bullseye_64=> {
             name =>'Debian Bullseye 64 bits'
@@ -638,7 +641,7 @@ sub _update_isos {
         ,devuan_beowulf_i386=> {
             name =>'Devuan Beowulf 32 bits'
             ,description => 'Devuan Beowulf Desktop Live (i386)'
-            ,arch => 'i386'
+            ,arch => 'i686'
             ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
             ,file_re => 'devuan_beowulf_.*_i386_desktop-live.iso'
             ,sha256_url => '$url/SHASUMS.txt'
@@ -652,8 +655,8 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://download.parrot.sh/parrot/iso/4.11.2/'
-            ,file_re => 'Parrot-xfce-4.11.2_amd64.iso'
+            ,url => 'https://edge1.parrot.run/parrot/iso/4.11.3/'
+            ,file_re => 'Parrot-xfce-4.11.3_amd64.iso'
             ,sha256_url => '$url/signed-hashes.txt'
             ,min_disk_size => '10'
         }
@@ -663,30 +666,30 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://download.parrot.sh/parrot/iso/4.11.2/'
-            ,file_re => 'Parrot-security-4.11.2_amd64.iso'
+            ,url => 'https://edge1.parrot.run/parrot/iso/4.11.3/'
+            ,file_re => 'Parrot-security-4.11.3_amd64.iso'
             ,sha256_url => '$url/signed-hashes.txt'
             ,min_disk_size => '10'
         }
         ,kali_64 => {
-            name => 'Kali Linux 2020'
-            ,description => 'Kali Linux 2020 64 Bits'
+            name => 'Kali Linux 2021'
+            ,description => 'Kali Linux 2021 64 Bits'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2020.\d+/'
-            ,file_re => 'kali-linux-2020.\d+-installer-amd64.iso'
+            ,url => 'https://cdimage.kali.org/kali-2021.\d+/'
+            ,file_re => 'kali-linux-2021.\d+-installer-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
         ,kali_64_netinst => {
-            name => 'Kali Linux 2020 (NetInstaller)'
-            ,description => 'Kali Linux 2020 64 Bits (light NetInstall)'
+            name => 'Kali Linux 2021 (NetInstaller)'
+            ,description => 'Kali Linux 2021 64 Bits (light NetInstall)'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2020.\d+/'
-            ,file_re => 'kali-linux-2020.\d+-installer-netinst-amd64.iso'
+            ,url => 'https://cdimage.kali.org/kali-2021.\d+/'
+            ,file_re => 'kali-linux-2021.\d+-installer-netinst-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
@@ -708,7 +711,7 @@ sub _update_isos {
           ,min_disk_size => '21'
           ,min_swap_size => '2'
           ,arch => 'x86_64'
-          ,extra_iso => 'https://infoteleco.upc.edu/img/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.2\d+-\d+/virtio-win-0.1.2\d+.iso'
+          ,extra_iso => 'https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.215-\d+/virtio-win-0.1.\d+.iso'
         }
         ,windows_xp => {
           name => 'Windows XP'
@@ -2118,9 +2121,10 @@ sub _create_constraints($self, $table, @constraints) {
         next if $known->{$name} && $known->{$name} eq $sql;
 
         if ($known->{$name}) {
-            warn "Warning: Constraint duplicated $name\n$known->{$name}\n$sql\n";
-            next;
+           push @{$self->{_constraints}}
+           ,"alter table $table DROP constraint $name";
         }
+
 
         $sql = "alter table $table add CONSTRAINT $name $sql";
         #        $CONNECTOR->dbh->do($sql);
@@ -2838,6 +2842,7 @@ sub create_domain {
         if ($error =~ /has \d+ requests/) {
             $request->status('retry');
         }
+        $request->id_domain($domain->id) if $domain;
     } elsif ($error) {
         die $error;
     }
@@ -2853,7 +2858,7 @@ sub create_domain {
     if ( $start ) {
         $previous_req = ($req_add_iso or $req_add_data or $req_add_swap
                 or $request);
-        _start_domain_after_create($domain, $request, $previous_req)
+        _start_domain_after_create($domain, $request, $id_owner, $previous_req)
     }
     return $domain;
 }
@@ -2870,15 +2875,12 @@ sub _req_add_disk($uid, $id_domain, $type, $size, $request) {
         ,@after_req
     );
 }
-sub _start_domain_after_create($domain, $request, $previous_request) {
+sub _start_domain_after_create($domain, $request, $uid,$previous_request) {
     my $remote_ip;
     $remote_ip = $request->defined_arg('remote_ip') if $request;
 
-    my $uid = $request->defined_arg('id_owner');
-    $uid = $request->defined_arg('uid') if !$uid;
-
     my @after_req;
-    @after_req = (after_request => $request->id ) if $request;
+    @after_req = (after_request => $previous_request->id );
     my $req_refresh = Ravada::Request->refresh_machine(
         uid => $uid
         ,id_domain => $domain->id
@@ -2891,6 +2893,7 @@ sub _start_domain_after_create($domain, $request, $previous_request) {
         uid => $uid
         ,id_domain => $domain->id
         ,remote_ip => $remote_ip
+        ,at => time + 3
         ,@after_req
     );
 
@@ -2915,22 +2918,29 @@ sub _add_extra_iso($domain, $request, $previous_request) {
     my $extra_iso = $iso->{extra_iso};
     return if !$extra_iso;
 
-    my ($url, $file_re) = $extra_iso =~ m{(.*)/(.*)};
+    $previous_request = $request if !$previous_request;
+
+    my ($url, $file_re) = $extra_iso =~ m{(.*/)(.*)};
     my $volume = $domain->_vm->search_volume_path_re(qr($file_re));
 
     my $download = 0;
     if (!$volume) {
-        my ($url) = $domain->_vm->_search_url_file($extra_iso);
-        my ($device) = $url =~ m{.*/(.*)};
+        my ($url_match) = $domain->_vm->_search_url_file($extra_iso);
+        my ($device) = $url_match =~ m{.*/(.*)};
         die "Error: file not found in $extra_iso\n"
         if !$device;
 
         $volume = $domain->_vm->dir_img()."/$device";
         $download = 1 if $device;
     }
-    my $req = Ravada::Request->refresh_storage(id_vm => $domain->_vm->id);
+    my @after_request;
+    @after_request = ( after_request => $previous_request->id )
+    if $previous_request;
 
-    $req->after_request($previous_request->id) if $previous_request;
+    my $req = Ravada::Request->refresh_storage(id_vm => $domain->_vm->id
+                                        ,@after_request);
+
+    @after_request = ( after_request => $req->id ) if $req;
 
     my $req_add = Ravada::Request->add_hardware(
         name => 'disk'
@@ -2940,10 +2950,11 @@ sub _add_extra_iso($domain, $request, $previous_request) {
             file => $volume
             ,device => 'cdrom'
         }
-        ,after_request => $req->id
+        ,@after_request
+        ,at => time+5
     );
 
-    $domain->_vm->_download_file_external($url, $volume)
+    $domain->_vm->_download_file_external($extra_iso, $volume)
     if $download;
 
     return $req_add;
@@ -4519,7 +4530,8 @@ sub _cmd_remove_hardware {
     my $uid = $request->args('uid');
     my $hardware = $request->args('name') or confess "Missing argument name";
     my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
-    my $index = $request->args('index');
+    my $index = $request->defined_arg('index');
+    my $option = $request->defined_arg('option');
 
     my $domain = $self->search_domain_by_id($id_domain);
 
@@ -4528,7 +4540,7 @@ sub _cmd_remove_hardware {
     .$domain->name
         if !$user->is_admin;
 
-    $domain->remove_controller($hardware, $index);
+    $domain->remove_controller($hardware, $index, $option);
 }
 
 sub _cmd_change_hardware {

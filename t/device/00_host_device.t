@@ -357,7 +357,7 @@ sub test_host_device_usb($vm) {
 
 sub test_kvm_usb_template_args($device_usb, $hostdev) {
     my ($bus, $device, $vendor_id, $product_id)
-    = $device_usb =~ /Bus 0*(\d+) Device 0*(\d+).*ID (.*?):(.*?) /;
+    = $device_usb =~ /Bus (\d+) Device (\d+).*ID (.*?):(.*?) /;
     my $args = $hostdev->_fetch_template_args($device_usb);
     is($args->{device}, $device);
     is($args->{bus}, $bus);

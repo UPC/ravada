@@ -13,6 +13,9 @@
         </div>
     </div>
 
+<div ng-show="!showmachine || (pending_request && pending_request.status != 'done')"><i class="fas fa-sync-alt fa-spin"></i>
+</div>
+
 <div ng-hide="!showmachine || (pending_request && pending_request.status != 'done')">
 
     %= include "/main/vm_rebase"
@@ -23,10 +26,6 @@
 
     %= include "/main/vm_remove_base"
 
-</div>
-
-<div ng-show="pending_request">
-    %= include "/main/pending_request"
 </div>
 
 <div ng-show="showmachine.is_base && !nodes">

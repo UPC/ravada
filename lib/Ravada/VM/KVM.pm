@@ -1409,8 +1409,16 @@ sub _ua_get($self, $url) {
         my $dom = Mojo::DOM->new($cache);
         return $dom;
     }
+    my ($ip) = $url =~ m{://(.*?)[:/]};
+    sleep 1 if !$ip || $self->{_url_get}->{$ip};
     my $ua = $self->_web_user_agent();
-    my $res = $ua->get($url)->res;
+    my $res;
+    for my $try ( 1 .. 3 ) {
+        $res = $ua->get($url)->res;
+        last if $res && defined $res->code;
+        sleep 1+$try;
+    }
+    confess "Error getting '$url'" if !$res;
     confess "ERROR ".$res->code." ".$res->message." : $url"
         unless $res->code == 200 || $res->code == 301;
 
@@ -1653,13 +1661,14 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     my ($type) = $doc->findnodes('/domain/os/type');
 
     my $machine_found = $type->getAttribute('machine');
-    if ($machine_found =~ /i440/) {
-        #$self->_xml_remove_ide($doc);
+    if ($machine_found =~ /pc-i440fx/ && !$uefi) {
+        $self->_xml_remove_vmport($doc);
+        $self->_xml_remove_ide($doc);
     }
-    if ($machine_found =~ /q35/) {
+    if ($machine_found =~ /q35/ ) {
         $self->_xml_set_pcie($doc);
         $self->_xml_remove_ide($doc);
-        #       $self->_xml_remove_vmport($doc);
+        $self->_xml_remove_vmport($doc);
     }
 
 }

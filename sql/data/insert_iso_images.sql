@@ -1,7 +1,7 @@
 INSERT INTO iso_images
 (name,description,arch,xml,xml_volume,url, file_re, md5_url, min_disk_size)
 VALUES('Ubuntu Xenial Xerus 32 bits','Ubuntu 16.04 LTS Xenial Xerus 32 bits'
-    ,'i386'
+    ,'i686'
     ,'xenial-i386.xml'
     ,'xenial-volume.xml'
     ,'http://releases.ubuntu.com/16.04/'
@@ -14,7 +14,7 @@ INSERT INTO iso_images
 (name,description,arch,xml,xml_volume,url,file_re,md5_url)
 VALUES('Debian Jessie 64 bits'
     ,'Debian 8.5.0 Jessie 64 bits (netsinst)'
-    ,'amd64'
+    ,'x86_64'
     ,'jessie-amd64.xml'
     ,'jessie-volume.xml'
     ,'http://cdimage.debian.org/cdimage/archive/8.5.0/amd64/iso-cd/'
@@ -24,7 +24,7 @@ VALUES('Debian Jessie 64 bits'
 INSERT INTO iso_images
 (name,description,arch,xml,xml_volume,url, file_re, md5_url)
 VALUES('Ubuntu Zesty Zapus',' Ubuntu 17.04 Zesty Zapus 64 bits'
-    ,'amd64'
+    ,'x86_64'
     ,'zesty-amd64.xml'
     ,'zesty-volume.xml'
     ,'http://releases.ubuntu.com/17.04/'

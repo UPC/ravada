@@ -599,6 +599,7 @@ sub test_new_machine_empty($t, $vm_name) {
         for my $iso_name ( 'Empty%32', 'Empty%64') {
             my $name = new_domain_name();
 
+            mojo_check_login($t);
             $t->post_ok('/new_machine.html' => form => {
                     backend => $vm_name
                     ,id_iso => search_id_iso($iso_name)
@@ -653,6 +654,7 @@ sub test_new_machine_default($t, $vm_name) {
 }
 
 sub test_new_machine_advanced_options($t, $vm_name, $swap=undef ,$data=undef) {
+    mojo_check_login($t);
     my $name = new_domain_name();
 
     my $iso_name = 'Alpine%64 bits';
@@ -713,6 +715,7 @@ sub test_new_machine_change_iso($t, $vm_name) {
 
     my $name = new_domain_name();
 
+    mojo_check_login($t);
     $t->post_ok('/new_machine.html' => form => {
             backend => $vm_name
             ,id_iso => $id_iso
@@ -745,6 +748,7 @@ sub test_new_machine_change_iso($t, $vm_name) {
 sub test_create_base($t, $vm_name, $name) {
     my $iso_name = 'Alpine%';
     _download_iso($iso_name);
+    mojo_check_login($t);
     $t->post_ok('/new_machine.html' => form => {
             backend => $vm_name
             ,id_iso => search_id_iso($iso_name)
