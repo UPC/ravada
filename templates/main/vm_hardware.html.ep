@@ -16,13 +16,13 @@
             >
                 <button title="edit {{name}} {{$index+1}}"
                     ng-show="(name == 'network' ||name == 'disk') && !item.edit && !item.remove"
-                    ng-disabled="pending_requests > 0"
+                    ng-disabled="showmachine.requests > 0 || showmachine.is_active || showmachine.is_base"
                     ng-click="item.edit=!item.edit"
                             ><i class="fa fa-sticky-note"></i>
                 </button>
                 <button title="remove {{name}} {{$index+1}}"
                     ng-hide="item.edit"
-                    ng-disabled="pending_requests > 0 || item.is_secondary"
+                    ng-disabled="showmachine.requests > 0 || item.is_secondary || showmachine.is_active || showmachine.is_base"
                     ng-click="confirm_remove='';remove_hardware(name,$index,item)"><i class="fa fa-times"></i>
                 </button>
                 <span ng-class='{"h5": item.edit }'>

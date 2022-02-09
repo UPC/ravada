@@ -612,6 +612,9 @@
               if ( hardware == 'disk' && extra.device == 'cdrom') {
                   extra.driver = 'sata';
               }
+              if ( hardware == 'disk' && extra.device != 'cdrom') {
+                  extra.file= '';
+              }
 
               if (hardware == 'display' && ! extra) {
                   $scope.show_new_display = true;
@@ -630,7 +633,24 @@
                     item.remove = !item.remove;
                     return;
                 }
+                var file = $scope.showmachine.hardware.disk[index].file;
+                if (typeof(file) != 'undefined' && file) {
+                    $scope.showmachine.requests++;
+                    $http.post('/request/remove_hardware/'
+                        ,JSON.stringify({
+                            'id_domain': $scope.showmachine.id
+                            ,'name': 'disk'
+                            ,'option': { 'source/file': file }
+                        })
+                    ).then(function(response) {
+                    });
+                    item.remove = false;
+
+                    return;
+                }
+
             }
+            $scope.showmachine.requests++;
             if(typeof(item) == 'object') {
                 item.remove = false;
             }
@@ -880,6 +900,7 @@
             };
 
             $scope.request = function(request, args) {
+                $scope.showmachine.requests++;
                 $scope.pending_request = undefined;
                 $http.post('/request/'+request+'/'
                     ,JSON.stringify(args)

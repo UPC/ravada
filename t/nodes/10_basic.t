@@ -1072,6 +1072,7 @@ sub test_fill_memory($vm, $node, $migrate) {
     my @clones;
     for ( 1 .. 100  ) {
         my $clone_name = new_domain_name();
+        diag("Try $_ , $clone_name may go to ".$node->name);
         my $req = Ravada::Request->create_domain(
             name => $clone_name
             ,id_owner => user_admin->id
@@ -1088,15 +1089,16 @@ sub test_fill_memory($vm, $node, $migrate) {
         wait_request(debug => 0);
         eval { $clone->start(user_admin) };
         $error = $@;
+        diag($error) if $error;
         like($error, qr/(^$|No free memory)/);
         exit if $error && $error !~ /No free memory/;
         last if $error;
 
-        my $clone_2 = Ravada::Domain->open($clone->id);
-        $nodes{$clone_2->_vm->name}++;
+        $clone = Ravada::Domain->open($clone->id);
+        $nodes{$clone->_vm->name}++;
 
         last if $migrate && exists $nodes{$vm->name} && $nodes{$vm->name} > 2;
-        if (scalar keys(%nodes) > 0) {
+        if ($migrate || keys(%nodes) > 0) {
             $memory = int($memory*1.5);
         }
     }
@@ -1590,6 +1592,8 @@ for my $vm_name (vm_names() ) {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+
+        test_fill_memory($vm, $node, 1); # migrate
 
         # test displays with no builtin added
         test_displays($vm, $node,1) if $tls;

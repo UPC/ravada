@@ -101,7 +101,7 @@ our %VALID_ARG = (
     }
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }
-    ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
+    ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 2, option => 2}
     ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 2, data => 1 }
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
@@ -218,6 +218,7 @@ our %CMD_VALIDATE = (
     clone => \&_validate_clone
     ,create => \&_validate_create_domain
     ,create_domain => \&_validate_create_domain
+    ,remove_hardware => \&_validate_remove_hardware
     ,start_domain => \&_validate_start_domain
     ,start => \&_validate_start_domain
     ,add_hardware=> \&_validate_change_hardware
@@ -753,6 +754,21 @@ sub _validate($self) {
     $method->($self);
 }
 
+sub _validate_remove_hardware($self) {
+    my $name = $self->args('name');
+
+    my $args = $self->args();
+
+    die "Error: you must pass option or index"
+    if !exists $args->{option} && !exists $args->{index}
+    && !defined $args->{option} && !defined $args->{index};
+
+    die "Error: attribute value must be defined ".
+        join(" ", map { $_ or '<UNDEF>' } %{$args->{option}})
+    if $args->{option} && grep { !defined } values %{$args->{option}};
+
+}
+
 sub _validate_start_domain($self) {
 
     my $id_domain = $self->defined_arg('id_domain');
@@ -784,7 +800,6 @@ sub _validate_change_hardware($self) {
 
     $self->after_request($req->id) if $req;
 }
-
 
 sub _validate_create_domain($self) {
 
