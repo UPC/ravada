@@ -214,11 +214,4 @@
         </div><!-- of form-group -->
     </form>
 
-            <div ng-show="pending_request"
-                class="alert alert-warning">
-                {{pending_request.command_text}} {{showmachine.name}} {{pending_request.status}}.
-                <br/>
-                {{pending_request.error}}
-            </div>
-
 </div><!-- of card-body options -->
