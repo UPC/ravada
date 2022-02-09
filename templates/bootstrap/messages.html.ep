@@ -4,7 +4,7 @@ ng-cloak>
 <script type="text/ng-template" id="alert.html">
 <div ng-transclude></div>
 </script>
-<div ng-repeat="alert in alerts_ws"
+<div uib-alert ng-repeat="alert in alerts_ws"
  class="row"
  ng-class="'alert-' + (alert.type || 'success')"
   ng-click="closeAlert($index)"
@@ -17,6 +17,5 @@ ng-cloak>
     <div class="alert-info" ng-show="alert.message">
         <small ng-bind-html="alert.message">{{alert.message}}</small>
     </div>
-</div>
 </div>
 </div>
