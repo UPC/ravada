@@ -71,7 +71,7 @@ sub test_hostdev_in_domain_kvm($domain, $expect_feat_kvm=1) {
     if ($expect_feat_kvm) {
         my ($feat) = $xml->findnodes("/domain/features");
         my ($feat_kvm) = $xml->findnodes("/domain/features/kvm");
-        ok($feat_kvm) or die "Error, no /domain/features/kvm in ".$domain->name
+        ok($feat_kvm) or confess "Error, no /domain/features/kvm in ".$domain->name
         .$feat->toString;
     }
 
@@ -304,6 +304,17 @@ sub _count_locked() {
     my ($n) = $sth->fetchrow;
     return $n;
 }
+
+sub _fix_usb_ports($domain) {
+    my $req = Ravada::Request->remove_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => 'usb'
+        ,index => 3
+    );
+    wait_request(debug => 1);
+}
+
 sub test_templates_start_nohd($vm) {
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
     ok(@$templates);
@@ -318,6 +329,7 @@ sub test_templates_start_nohd($vm) {
         next if !$hd->list_devices;
 
         my $domain = _create_domain_hd($vm, $hd);
+        _fix_usb_ports($domain) if $first->{name} =~ /usb/i && $vm->type =~ /KVM/;
         $domain->start(user_admin);
         my $info = $domain->info(user_admin);
         is($info->{host_devices}->[0]->{is_locked},1);

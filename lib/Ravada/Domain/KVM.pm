@@ -2762,6 +2762,18 @@ sub reload_config($self, $doc) {
     $self->domain($new_domain);
 }
 
+sub _save_xml_tmp($self,$doc) {
+    my $file_out_new = "/var/tmp/".$self->name()."."
+    .int(rand(100)).".new.xml";
+    open my $out2,">",$file_out_new or die $!;
+    my $doc_string = $doc->toString();
+    $doc_string =~ s/^<.xml.*//;
+    $doc_string =~ s/"/'/g;
+    print $out2 $doc_string;
+    close $out2;
+
+}
+
 sub copy_config($self, $domain) {
     my $doc = XML::LibXML->load_xml(string => $domain->xml_description(Sys::Virt::Domain::XML_INACTIVE));
     my ($uuid) = $doc->findnodes("/domain/uuid/text()");
