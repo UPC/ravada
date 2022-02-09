@@ -30,7 +30,7 @@ sub test_create($vm, $with_iso_file=1, $no_cd=0) {
     my $req = Ravada::Request->create_domain(@args);
 
     unless ($no_cd) {
-        my $req_download = Ravada::Request::_search_request('download');
+        my $req_download = $req->_search_request('download');
         ok($req_download,"Expecting a download request") or die;
         $req_download->arg(test => 1);
     }

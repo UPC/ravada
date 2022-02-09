@@ -51,6 +51,7 @@ create_domain
     start_node shutdown_node remove_node hibernate_node
     start_domain_internal   shutdown_domain_internal
     hibernate_domain_internal
+    remove_domain_internal
     remote_node
     remote_node_2
     remote_node_shared
@@ -206,7 +207,7 @@ sub add_ubuntu_minimal_iso {
         ,xml => 'bionic-i386.xml'
         ,xml_volume => 'bionic32-volume.xml'
         ,rename_file => 'ubuntu_bionic_mini.iso'
-        ,arch => 'i386'
+        ,arch => 'i686'
         ,md5 => 'c7b21dea4d2ea037c3d97d5dac19af99'
     });
     my $device = "/var/lib/libvirt/images/".$info{$distro}->{rename_file};
@@ -309,6 +310,8 @@ sub create_domain_v2(%args) {
         ,name => 'disk'
         ,data => { size => $data*1024*1024, type => 'data' }
     ) if $domain && $data;
+    delete_request( 'enforce_limits', 'set_time' );
+    wait_request(debug => 1);
     return $domain;
 }
 
@@ -1018,7 +1021,6 @@ sub create_ldap_user($name, $password, $keep=0) {
     for my $field (qw(cn uid)) {
         if (my $user = Ravada::Auth::LDAP::search_user(field => $field, name => $name) ) {
             return if $keep;
-            diag("Removing ".$user->dn);
             my $mesg;
             for ( 1 .. 2 ) {
                 $mesg = $user->delete()->update($ldap);
@@ -1175,7 +1177,7 @@ sub wait_request {
                 $done{$req->{id}}++;
                 if ($check_error) {
                     if ($req->command =~ /remove/) {
-                        like($req->error,qr(^$|Unknown domain));
+                        like($req->error,qr(^$|Unknown domain|Domain not found));
                     } elsif($req->command eq 'set_time') {
                         like($req->error,qr(^$|libvirt error code));
                     } else {
@@ -1187,7 +1189,7 @@ sub wait_request {
                             like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
                             $req->status('done');
                         } elsif($req->command eq 'open_exposed_ports') {
-                            like($error,qr{^($|.*No ip in domain|.*duplicated port)});
+                            like($error,qr{^($|.*No ip in domain|.*duplicated port|I can't get the internal IP)});
                         } elsif($req->command eq 'compact') {
                             like($error,qr{^($|.*compacted)});
                         } else {
@@ -2007,6 +2009,16 @@ sub shutdown_domain_internal($domain) {
     }
 }
 
+sub remove_domain_internal($domain) {
+    if ( $domain->type eq 'KVM') {
+        $domain->domain->undefine();
+    } elsif ($domain->type eq 'Void') {
+        unlink $domain->_config_file();
+    } else {
+        confess "I don't know how to remove ".$domain->name;
+    }
+}
+
 sub start_domain_internal($domain) {
     if ($domain->type eq 'KVM') {
         $domain->_set_spice_ip(1,$domain->_vm->ip);
@@ -2305,11 +2317,6 @@ sub _check_iptables() {
         ,"-A LIBVIRT_PRT -s 192.168.122.0/24 ! -d 192.168.122.0/24 -p tcp -j MASQUERADE --to-ports 1024-65535"
         ,"-A LIBVIRT_PRT -s 192.168.122.0/24 ! -d 192.168.122.0/24 -p udp -j MASQUERADE --to-ports 1024-65535"
         ,"-A LIBVIRT_PRT -s 192.168.122.0/24 ! -d 192.168.122.0/24 -j MASQUERADE"
-        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 -d 224.0.0.0/24 -j RETURN"
-        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 -d 255.255.255.255/32 -j RETURN"
-        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 ! -d 192.168.130.0/24 -p tcp -j MASQUERADE --to-ports 1024-65535"
-        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 ! -d 192.168.130.0/24 -p udp -j MASQUERADE --to-ports 1024-65535"
-        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 ! -d 192.168.130.0/24 -j MASQUERADE"
     ) {
         my @found = grep /^$rule$/ , split (/\n/, $out);
         die "$rule not found in @cmd \n$err\n" if !@found;

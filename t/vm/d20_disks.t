@@ -5,6 +5,7 @@ use warnings;
 use strict;
 
 use Data::Dumper;
+use Mojo::JSON qw(decode_json);
 use Test::More;
 
 no warnings "experimental::signatures";
@@ -443,6 +444,125 @@ sub combine_iso_options($vm, $iso_name) {
     return @options;
 }
 
+sub _req_create($vm, $iso, $options) {
+    my $name = new_domain_name();
+    my @args = (
+        name => $name
+        ,vm => $vm->type
+        ,id_iso => $iso->{id}
+        ,id_owner => user_admin->id
+        ,memory => 512 * 1024
+        ,disk => 1024 * 1024
+        #        ,swap => 1024 * 1024
+        #   ,data => 1024 * 1024
+        ,iso_file => $iso->{device}
+        ,start => 1
+    );
+    push @args,(options => $options) if defined $options;
+
+    my $req = Ravada::Request->create_domain(@args);
+    wait_request( debug => 0);
+    my $domain = $vm->search_domain($name);
+    ok($domain) or die "No machine $name ".Dumper($iso);
+    $domain->shutdown_now(user_admin);
+    return $domain;
+}
+
+sub _req_remove_cd($domain) {
+    my $info = $domain->info(user_admin);
+    my $disks = $info->{hardware}->{disk};
+    my $n=0;
+    for my $disk (@$disks) {
+        last if $disk->{file} =~ /\.iso$/;
+        $n++;
+    }
+    my $req = Ravada::Request->remove_hardware(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_domain => $domain->id
+        ,name => 'disk'
+        ,index => $n
+    );
+    wait_request( debug => 0);
+}
+
+sub _req_add_cd($domain) {
+    my $info = $domain->info(user_admin);
+    my $disks = $info->{hardware}->{disk};
+    my $req = Ravada::Request->add_hardware(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_domain => $domain->id
+        ,name => 'disk'
+        ,data => { type => 'cdrom'
+            ,file => "/var/tmp/a.iso"
+        }
+    );
+    wait_request(debug => 0);
+}
+
+
+sub _search_iso_alpine($vm) {
+    my $id_alpine = search_id_iso('Alpine%32');
+    my $iso = $vm->_search_iso($id_alpine);
+    return $iso->{device};
+}
+sub _machine_types($vm) {
+    my $req = Ravada::Request->list_machine_types(
+        vm_type => $vm->type
+        ,uid => user_admin->id
+    );
+    wait_request($req);
+    is($req->error,'');
+    like($req->output,qr/./);
+
+    my $machine_types = {};
+    $machine_types = decode_json($req->output());
+
+    return $machine_types;
+}
+
+sub test_cdrom($vm) {
+    return if $vm->type ne 'KVM';
+
+    my $device_iso = _search_iso_alpine($vm);
+    my $machine_types = _machine_types($vm);
+
+    my $isos = rvd_front->list_iso_images();
+    for my $iso_frontend (@$isos) {
+        next if !$iso_frontend->{arch};
+        my $iso;
+        eval { $iso = $vm->_search_iso($iso_frontend->{id}, $device_iso) };
+        next if $@ && $@ =~ /No.*iso.*found/;
+        die $@ if $@;
+        $iso->{device} = $device_iso;
+
+        my %done;
+        for my $bios (undef, 'legacy','uefi') {
+            die Dumper($iso) if !$iso->{arch} || !$machine_types->{$iso->{arch}};
+            for my $machine ( @{$machine_types->{$iso->{arch}}}) {
+                my $key = ($bios or '')."-".($machine or '')."-"
+                    .$iso->{xml}."-".($iso->{xml_volume} or '');
+                next if $done{$key}++;
+                my %options;
+                $options{bios}=$bios if defined $bios;
+                $options{machine}=$machine if defined $machine;
+
+                my $domain = _req_create($vm, $iso, \%options);
+
+                _req_add_cd($domain);
+                _req_remove_cd($domain);
+                _req_add_cd($domain);
+                $domain->prepare_base(user_admin);
+                $domain->remove_base(user_admin);
+
+                _req_add_cd($domain);
+
+                remove_domain($domain);
+
+            }
+        }
+    }
+}
+
 #############################################################################
 
 clean();
@@ -496,11 +616,14 @@ for my $vm_name (vm_names() ) {
         }
         test_add_disk_boot_order($vm);
 
+        test_cdrom($vm);
+
         for my $iso_name ('Alpine%64 bits', 'Alpine%32 bits') {
             for my $options ( combine_iso_options($vm, $iso_name)) {
                 test_add_disk_boot_order($vm, $iso_name, $options);
             }
         }
+
 
         test_frontend($vm);
         test_frontend_refresh($vm);

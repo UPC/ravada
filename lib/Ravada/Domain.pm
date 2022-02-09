@@ -3655,7 +3655,8 @@ sub list_ports($self) {
     while (my $data = $sth->fetchrow_hashref) {
         lock_hash(%$data);
         push @list,($data);
-        $clone_port{$data->{internal_port}}++;
+        $clone_port{$data->{internal_port}}++
+        if $data->{internal_port};
     }
 
     if ($self->is_known() && !$self->is_base && $self->id_base) {

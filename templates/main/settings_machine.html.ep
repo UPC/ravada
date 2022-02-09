@@ -18,14 +18,14 @@
                  </h2>
 %               } else {
                  <h2><%=l 'Virtual Machine' %>
-                     <a ng-hide="domain_remove_done" 
+                     <a ng-hide="domain_remove_done"
                          href="/machine/view/<%= $domain->id %>.html"><%= $domain->name %></a>
                      <%=l 'Settings' %>
                  </h2>
 %               }
             </div>
-            <div class="card-body">
-				<div class="row">
+            <div class="card-body" ng-cloak="1">
+                <div class="row">
 					<div class="col-2">
 						%= include 'main/settings_machine_tabs_head'
 					</div>
@@ -34,7 +34,7 @@
 					</div>
 				</div>
             </div>
-            <div class="alert alert-danger" ng-show="error">{{error}}</div>
+            <div ng-cloak="1" class="alert alert-danger" ng-show="error">{{error}}</div>
         </div><!-- del panel default-->
     </div><!-- del page-header -->
 </div> <!-- del page-wrapper -->
