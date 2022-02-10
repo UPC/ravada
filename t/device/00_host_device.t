@@ -41,7 +41,7 @@ sub _search_unused_device {
         next unless (defined $USB_DEVICE && $line =~ $USB_DEVICE) 
         || $line =~ /Bluetooth|flash|disk|cam/i;
 
-        my ($filter) = $line =~ /(ID [a-f0-9]+):/;
+        my ($filter) = $line =~ /(ID [a-f0-9]+:[a-f0-9]+)/;
         die "ID \\d+ not found in $line" if !$filter;
         return ("lsusb",$filter);
     }
@@ -276,7 +276,7 @@ sub test_devices($host_device, $expected_available, $match = undef) {
 
     for (@devices) {
         next if defined $USB_DEVICE && $_ =~ qr($USB_DEVICE);
-        like($_,qr($match));
+        like($_,qr($match)) or confess;
     }
 }
 
@@ -357,7 +357,7 @@ sub test_host_device_usb($vm) {
 
 sub test_kvm_usb_template_args($device_usb, $hostdev) {
     my ($bus, $device, $vendor_id, $product_id)
-    = $device_usb =~ /Bus (\d+) Device (\d+).*ID (.*?):(.*?) /;
+    = $device_usb =~ /Bus 0*(\d+) Device 0*(\d+).*ID 0*(.*?):0*(.*?) /;
     my $args = $hostdev->_fetch_template_args($device_usb);
     is($args->{device}, $device);
     is($args->{bus}, $bus);

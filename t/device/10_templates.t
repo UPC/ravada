@@ -25,7 +25,7 @@ sub _set_hd_nvidia($hd) {
 }
 
 sub _set_hd_usb($hd) {
-    $hd->_data( list_filter => '(disk|flash|audio|smartcard|cam|bluetoo)');
+    $hd->_data( list_filter => '(disk|flash|audio|cam|bluetoo)');
 }
 
 sub test_hostdev_not_in_domain_void($domain) {
@@ -118,6 +118,7 @@ sub test_hd_in_domain($vm , $hd) {
                 return;
             }
         } elsif ($hd->{name} =~ /USB/ ) {
+            _fix_usb_ports($domain) if $hd->{name} =~ /usb/i && $vm->type =~ /KVM/;
             _set_hd_usb($hd);
         }
     }
@@ -161,6 +162,8 @@ sub test_hd_in_domain($vm , $hd) {
         $clone->is_active();
 
     }
+    die "Error: I can't find 2 free devices ".Dumper([$hd->list_devices()])
+    if scalar ($hd->list_devices)<2;
     test_grab_free_device($domain) if $hd->list_devices();
 
     remove_domain($domain);
@@ -306,13 +309,20 @@ sub _count_locked() {
 }
 
 sub _fix_usb_ports($domain) {
+    my $info = $domain->info(user_admin);
+
+    return if !exists $info->{hardware}->{usb};
+
+    my @usb_ports = @{$info->{hardware}->{usb}};
+    return if scalar(@usb_ports)<4;
+
     my $req = Ravada::Request->remove_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
         ,name => 'usb'
         ,index => 3
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 }
 
 sub test_templates_start_nohd($vm) {
@@ -320,7 +330,9 @@ sub test_templates_start_nohd($vm) {
     ok(@$templates);
 
     for my $first  (@$templates) {
+        diag("Test template $first->{name}");
         $vm->add_host_device(template => $first->{name});
+        my $expect_feat_kvm = $first->{name} =~ /PCI/i;
         my @list_hostdev = $vm->list_host_devices();
         my ($hd) = $list_hostdev[-1];
 
@@ -331,6 +343,7 @@ sub test_templates_start_nohd($vm) {
         my $domain = _create_domain_hd($vm, $hd);
         _fix_usb_ports($domain) if $first->{name} =~ /usb/i && $vm->type =~ /KVM/;
         $domain->start(user_admin);
+        test_hostdev_in_domain_config($domain,$expect_feat_kvm);
         my $info = $domain->info(user_admin);
         is($info->{host_devices}->[0]->{is_locked},1);
         $domain->shutdown_now(user_admin);
@@ -340,7 +353,7 @@ sub test_templates_start_nohd($vm) {
             ,enable_host_devices => 0
         );
         wait_request();
-        is($req->error, '');
+        is($req->error, '') or exit;
         test_hostdev_not_in_domain_config($domain);
         $domain->shutdown_now(user_admin);
         my $device_configured = $domain->_device_already_configured($hd);
@@ -352,7 +365,7 @@ sub test_templates_start_nohd($vm) {
         );
         wait_request();
         is($req->error, '');
-        test_hostdev_in_domain_config($domain,1);
+        test_hostdev_in_domain_config($domain, $expect_feat_kvm);
         $domain->shutdown_now(user_admin);
 
         $domain->remove(user_admin);
@@ -369,6 +382,7 @@ sub test_templates_gone_usb($vm) {
 
     for my $first  (@$templates) {
         next if $first->{name} !~ 'USB';
+        diag("Test template USB gone $first->{name}");
         $vm->add_host_device(template => $first->{name});
         my @list_hostdev = $vm->list_host_devices();
         my ($hd) = $list_hostdev[-1];
@@ -378,6 +392,7 @@ sub test_templates_gone_usb($vm) {
         next if !$hd->list_devices;
 
         my $domain = _create_domain_hd($vm, $hd);
+        _fix_usb_ports($domain);
         $domain->start(user_admin);
 
         is(scalar($hd->list_domains_with_device()),1);
@@ -450,6 +465,7 @@ sub test_templates_change_filter($vm) {
         is(scalar($hd->list_domains_with_device()),0);
 
         my $domain = _create_domain_hd($vm, $hd);
+        _fix_usb_ports($domain) if $first->{name} =~ /USB/i;
         $domain->start(user_admin);
 
         is(scalar($hd->list_domains_with_device()),1);
@@ -546,6 +562,7 @@ sub test_templates($vm) {
 
     my $n = $vm->list_host_devices;
     for my $hd ( $vm->list_host_devices ) {
+        _fix_host_device($hd);
         test_hd_remove($vm, $hd);
         is($vm->list_host_devices,--$n, $hd->name) or die Dumper([$vm->list_host_devices]);
     }
@@ -560,6 +577,7 @@ sub test_hd_dettach($vm, $host_device) {
     $start_fails = 1 if !$start_fails && !$host_device->list_devices;
 
     my $domain = create_domain($vm);
+    _fix_usb_ports($domain);
     $domain->add_host_device($host_device);
 
     eval { $domain->start(user_admin) };
@@ -583,6 +601,7 @@ sub test_hd_remove($vm, $host_device) {
         $start_fails = 1 if !$host_device->list_devices();
     }
     my $domain = create_domain($vm);
+    _fix_usb_ports($domain);
     $domain->add_host_device($host_device);
 
     eval { $domain->start(user_admin) };
