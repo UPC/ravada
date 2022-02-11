@@ -144,7 +144,7 @@ sub unshown_messages {
     my $count = shift;
     $count = 50 if !defined $count;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject, message FROM messages "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject, message, id_request FROM messages "
         ." WHERE id_user=? AND date_shown IS NULL"
         ."    ORDER BY date_send DESC "
         ." LIMIT ?,?");

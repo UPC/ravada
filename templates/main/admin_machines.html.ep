@@ -125,7 +125,9 @@
                       <div style="float:right">
                         <%=l 'Status' %></div></th>
                     <th class="lgMachActions"><%=l 'Actions' %></th>
+                    % if ($_n_nodes>1 ) {
                     <th class="lgMachNode"><%=l 'Node' %></th>
+                    % }
                 </tr>
             </thead>
             <tbody>
@@ -144,7 +146,8 @@
                               }"
                         title ="<%=l 'Manage machine' %>">{{machine.name}}</a> {{machine.comment}}
                    <span class="comment" ng-show="machine.is_volatile"><%=l 'Volatile' %></span>
-                        <button ng-show="machine.has_clones" type="button"
+                        <button ng-show="machine.has_clones && !filter"
+                                         type="button"
                         class="badge badge-light text-blue"
                         ng-click="toggle_show_clones(machine.id)"
                         title="<%=l 'Show/Hide clones' %>">
@@ -269,9 +272,12 @@
                       <div ng-show="machine.is_base && !machine.is_locked"
                           ng-cloak><span class="badge badge-pill badge-light"><%=l 'This Machine is a base' %></span></div>
                     </td>
+
+                    % if ($_n_nodes>1 ) {
                     <td class="lgMachNode">
                         <span class="badge badge-info" title="<%=l 'Node'%>">{{machine.node}}</span>
                     </td>
+                    % }
                 </tr>
             </tbody>
         </table>

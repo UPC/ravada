@@ -68,6 +68,5 @@
         ng-click="request('refresh_machine_ports',{ id_domain: showmachine.id , retry: 10 } )"
         >Refresh ports</button>
     <br/>
-    %= include "/main/pending_request"
 
 </div>

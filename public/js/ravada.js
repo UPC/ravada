@@ -262,6 +262,12 @@
                 ws.onopen = function(event) { ws.send('machine_info/'+$scope.showmachineId) };
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
+                    if (data === null || typeof(data) == undefined ) {
+                        console.log("close");
+                        ws.close();
+                        window.location.href="/";
+                        return;
+                    }
                     $scope.$apply(function () {
                         $scope.showmachine = data;
                         $scope.copy_is_volatile = $scope.showmachine.is_volatile;
@@ -605,7 +611,10 @@
               }
 
               if ( hardware == 'disk' && extra.device == 'cdrom') {
-                  extra.driver = 'ide';
+                  extra.driver = 'sata';
+              }
+              if ( hardware == 'disk' && extra.device != 'cdrom') {
+                  extra.file= '';
               }
 
               if (hardware == 'display' && ! extra) {
@@ -625,7 +634,24 @@
                     item.remove = !item.remove;
                     return;
                 }
+                var file = $scope.showmachine.hardware.disk[index].file;
+                if (typeof(file) != 'undefined' && file) {
+                    $scope.showmachine.requests++;
+                    $http.post('/request/remove_hardware/'
+                        ,JSON.stringify({
+                            'id_domain': $scope.showmachine.id
+                            ,'name': 'disk'
+                            ,'option': { 'source/file': file }
+                        })
+                    ).then(function(response) {
+                    });
+                    item.remove = false;
+
+                    return;
+                }
+
             }
+            $scope.showmachine.requests++;
             if(typeof(item) == 'object') {
                 item.remove = false;
             }
@@ -913,6 +939,7 @@
             };
 
             $scope.request = function(request, args) {
+                $scope.showmachine.requests++;
                 $scope.pending_request = undefined;
                 $http.post('/request/'+request+'/'
                     ,JSON.stringify(args)

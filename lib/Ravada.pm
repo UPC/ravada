@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '1.3.0-beta6';
+our $VERSION = '1.3.1';
 
 use Carp qw(carp croak cluck);
 use Data::Dumper;
@@ -67,6 +67,7 @@ our %VALID_CONFIG = (
         ,field => undef
         ,server => undef
         ,port => undef
+        ,size_limit => undef
     }
     ,log => undef
 );
@@ -217,7 +218,7 @@ sub _do_create_constraints($self) {
         my ($name) = $constraint =~ /CONSTRAINT (\w+)\s/;
 
         warn "INFO: creating constraint $name \n"
-        if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+        if $name && !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         print "+" if $FIRST_TIME_RUN && !$CAN_FORK;
 
         $self->_clean_db_leftovers();
@@ -320,7 +321,7 @@ sub _update_isos {
         mate_bionic_i386 => {
                     name => 'Ubuntu Mate Bionic 32 bits'
             ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 32 bits'
-                   ,arch => 'i386'
+                   ,arch => 'i686'
                     ,xml => 'bionic-i386.xml'
              ,xml_volume => 'bionic32-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
@@ -458,7 +459,7 @@ sub _update_isos {
         ,kubuntu_32 => {
             name => 'Kubuntu Bionic Beaver 32 bits'
             ,description => 'Kubuntu 18.04 Bionic Beaver 32 bits'
-            ,arch => 'i386'
+            ,arch => 'i686'
             ,xml => 'bionic-i386.xml'
             ,xml_volume => 'bionic32-volume.xml'
             ,sha256_url => '$url/SHA256SUMS'
@@ -491,7 +492,7 @@ sub _update_isos {
         ,xubuntu_beaver_32 => {
             name => 'Xubuntu Bionic Beaver 32 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 32 bits'
-            ,arch => 'i386'
+            ,arch => 'i686'
             ,xml => 'bionic-i386.xml'
             ,xml_volume => 'bionic32-volume.xml'
             ,md5_url => '$url/../MD5SUMS'
@@ -520,7 +521,7 @@ sub _update_isos {
          ,lubuntu_bionic_32 => {
              name => 'Lubuntu Bionic Beaver 32 bits'
              ,description => 'Lubuntu 18.04 Bionic Beaver 32 bits'
-             ,arch => 'i386'
+             ,arch => 'i686'
              ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-i386.iso'
              ,sha256_url => '$url/SHA256SUMS'
              ,xml => 'bionic-i386.xml'
@@ -545,6 +546,7 @@ sub _update_isos {
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'i686'
         }
         ,debian_jessie_64 => {
             name =>'Debian Jessie 64 bits'
@@ -566,6 +568,7 @@ sub _update_isos {
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'i686'
         }
         ,debian_stretch_64 => {
             name =>'Debian Stretch 64 bits'
@@ -598,6 +601,7 @@ sub _update_isos {
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'i686'
         }
         ,debian_bullseye_64=> {
             name =>'Debian Bullseye 64 bits'
@@ -637,7 +641,7 @@ sub _update_isos {
         ,devuan_beowulf_i386=> {
             name =>'Devuan Beowulf 32 bits'
             ,description => 'Devuan Beowulf Desktop Live (i386)'
-            ,arch => 'i386'
+            ,arch => 'i686'
             ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
             ,file_re => 'devuan_beowulf_.*_i386_desktop-live.iso'
             ,sha256_url => '$url/SHASUMS.txt'
@@ -705,7 +709,9 @@ sub _update_isos {
           ,xml => 'windows_10.xml'
           ,xml_volume => 'windows10-volume.xml'
           ,min_disk_size => '21'
+          ,min_swap_size => '2'
           ,arch => 'x86_64'
+          ,extra_iso => 'https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.215-\d+/virtio-win-0.1.\d+.iso'
         }
         ,windows_xp => {
           name => 'Windows XP'
@@ -814,7 +820,9 @@ sub _scheduled_fedora_releases($self,$data) {
             my $url_file = $url.$release
                     .'/Workstation/x86_64/iso/Fedora-Workstation-.*-x86_64-'.$release
                     .'-.*\.iso';
-            my @found = $vm->_search_url_file($url_file);
+            my @found;
+            eval { @found = $vm->_search_url_file($url_file) };
+            die $@ if $@ && $@ !~ /Not Found/i;
             if(!@found) {
                 next if $url =~ m{//archives};
 
@@ -1397,7 +1405,7 @@ sub _add_indexes_generic($self) {
             $self->_clean_index_conflicts($table, $name);
 
             print "+" if $FIRST_TIME_RUN;
-            if ($table eq 'domain_displays' && $name eq 'id_vm_port') {
+            if ($table eq 'domain_displays' && $name =~ /port/) {
                 my $sth_clean=$CONNECTOR->dbh->prepare(
                     "UPDATE domain_displays set port=NULL"
                 );
@@ -2113,9 +2121,10 @@ sub _create_constraints($self, $table, @constraints) {
         next if $known->{$name} && $known->{$name} eq $sql;
 
         if ($known->{$name}) {
-            warn "Warning: Constraint duplicated $name\n$known->{$name}\n$sql\n";
-            next;
+           push @{$self->{_constraints}}
+           ,"alter table $table DROP constraint $name";
         }
+
 
         $sql = "alter table $table add CONSTRAINT $name $sql";
         #        $CONNECTOR->dbh->do($sql);
@@ -2364,9 +2373,11 @@ sub _upgrade_tables {
     $self->_upgrade_table('iso_images','file_re','char(64)');
     $self->_upgrade_table('iso_images','device','varchar(255)');
     $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
+    $self->_upgrade_table('iso_images','min_swap_size','int (11) DEFAULT NULL');
     $self->_upgrade_table('iso_images','options','varchar(255)');
     $self->_upgrade_table('iso_images','has_cd','int (1) DEFAULT "1"');
     $self->_upgrade_table('iso_images','downloading','int (1) DEFAULT "0"');
+    $self->_upgrade_table('iso_images','extra_iso','varchar(255)');
 
     $self->_upgrade_table('users','language','char(40) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
@@ -2794,7 +2805,7 @@ sub create_domain {
     }
     my $vm_name = delete $args{vm};
 
-    my $start = $args{start};
+    my $start = delete $args{start};
     my $id_base = $args{id_base};
     my $data = delete $args{data};
     my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
@@ -2818,6 +2829,10 @@ sub create_domain {
 
     $request->status("creating machine")    if $request;
 
+    unlock_hash(%args);
+    my $swap = delete $args{swap};
+    lock_hash(%args);
+
     my $domain;
     eval { $domain = $vm->create_domain(%args)};
 
@@ -2827,30 +2842,122 @@ sub create_domain {
         if ($error =~ /has \d+ requests/) {
             $request->status('retry');
         }
+        $request->id_domain($domain->id) if $domain;
     } elsif ($error) {
         die $error;
     }
-    if (!$error && $start) {
-        $request->status("starting") if $request;
-        eval {
-            my $remote_ip;
-            $remote_ip = $request->defined_arg('remote_ip') if $request;
-            $domain->start(
-                user => $user
-                ,remote_ip => $remote_ip
-            )
-        };
-        my $error = $@;
-        die $error if $error && !$request;
-        $request->error($error) if $error;
+    return if !$domain;
+    my $req_add_swap = _req_add_disk($args{id_owner}, $domain->id,
+        ,'swap', $swap ,$request);
+    my $req_add_data = _req_add_disk($args{id_owner}, $domain->id
+        ,'data', $data, ($req_add_swap or $request ));
+
+    my $previous_req = ($req_add_data or $req_add_swap or $request);
+
+    my $req_add_iso = _add_extra_iso($domain, $request,$previous_req);
+    if ( $start ) {
+        $previous_req = ($req_add_iso or $req_add_data or $req_add_swap
+                or $request);
+        _start_domain_after_create($domain, $request, $id_owner, $previous_req)
     }
-    Ravada::Request->add_hardware(
-        uid => $args{id_owner}
-        ,id_domain => $domain->id
-        ,name => 'disk'
-        ,data => { size => $data, type => 'data' }
-    ) if $domain && $data;
     return $domain;
+}
+
+sub _req_add_disk($uid, $id_domain, $type, $size, $request) {
+    return if !$size;
+    my @after_req;
+    @after_req = (after_request => $request->id ) if $request;
+    return Ravada::Request->add_hardware(
+        uid => $uid
+        ,id_domain => $id_domain
+        ,name => 'disk'
+        ,data => { size => $size, type => $type }
+        ,@after_req
+    );
+}
+sub _start_domain_after_create($domain, $request, $uid,$previous_request) {
+    my $remote_ip;
+    $remote_ip = $request->defined_arg('remote_ip') if $request;
+
+    my @after_req;
+    @after_req = (after_request => $previous_request->id );
+    my $req_refresh = Ravada::Request->refresh_machine(
+        uid => $uid
+        ,id_domain => $domain->id
+        ,@after_req
+    );
+    @after_req = (after_request => $req_refresh->id )
+    if $req_refresh;
+
+    my $req = Ravada::Request->start_domain(
+        uid => $uid
+        ,id_domain => $domain->id
+        ,remote_ip => $remote_ip
+        ,at => time + 3
+        ,@after_req
+    );
+
+}
+
+sub _search_iso($id) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM iso_images"
+        ." WHERE id = ? "
+    );
+    $sth->execute($id);
+    my $row = $sth->fetchrow_hashref;
+    return $row;
+}
+
+sub _add_extra_iso($domain, $request, $previous_request) {
+    return if !$request;
+    my $id_iso = $request->defined_arg('id_iso');
+    return if !$id_iso;
+    my $iso = _search_iso($id_iso);
+
+    my $extra_iso = $iso->{extra_iso};
+    return if !$extra_iso;
+
+    $previous_request = $request if !$previous_request;
+
+    my ($url, $file_re) = $extra_iso =~ m{(.*/)(.*)};
+    my $volume = $domain->_vm->search_volume_path_re(qr($file_re));
+
+    my $download = 0;
+    if (!$volume) {
+        my ($url_match) = $domain->_vm->_search_url_file($extra_iso);
+        my ($device) = $url_match =~ m{.*/(.*)};
+        die "Error: file not found in $extra_iso\n"
+        if !$device;
+
+        $volume = $domain->_vm->dir_img()."/$device";
+        $download = 1 if $device;
+    }
+    my @after_request;
+    @after_request = ( after_request => $previous_request->id )
+    if $previous_request;
+
+    my $req = Ravada::Request->refresh_storage(id_vm => $domain->_vm->id
+                                        ,@after_request);
+
+    @after_request = ( after_request => $req->id ) if $req;
+
+    my $req_add = Ravada::Request->add_hardware(
+        name => 'disk'
+        ,uid => Ravada::Utils::user_daemon->id
+        ,id_domain => $domain->id
+        ,data => {
+            file => $volume
+            ,device => 'cdrom'
+        }
+        ,@after_request
+        ,at => time+5
+    );
+
+    $domain->_vm->_download_file_external($extra_iso, $volume)
+    if $download;
+
+    return $req_add;
 }
 
 sub _check_args($args,@) {
@@ -2903,7 +3010,7 @@ sub remove_domain {
     eval { $domain = Ravada::Domain->open(id => $id, _force => 1, id_vm => $vm->id) };
     warn $@ if $@;
     if (!$domain) {
-            warn "Warning: I can't find domain '$id', maybe already removed.";
+            warn "Warning: I can't find domain '$id', maybe already removed.\n";
             Ravada::Domain::_remove_domain_data_db($id);
             return;
     };
@@ -3884,8 +3991,8 @@ sub _cmd_create{
     my $msg = '';
 
     if ($domain) {
-       $msg = 'Domain '
-            ."<a href=\"/machine/view/".$domain->id.".html\">"
+       $msg = 'Machine'
+            ." <a href=\"/machine/manage/".$domain->id.".html\">"
             .$request->args('name')."</a>"
             ." created."
         ;
@@ -4190,8 +4297,8 @@ sub _cmd_start {
         uid => Ravada::Utils::user_daemon->id
     ) if $domain->is_pool && $request->defined_arg('remote_ip');
 
-    my $msg = 'Domain '
-            ."<a href=\"/machine/view/".$domain->id.".html\">"
+    my $msg = 'Machine'
+            ." <a href=\"/machine/view/".$domain->id.".html\">"
             .$domain->name."</a>"
             ." started"
         ;
@@ -4423,7 +4530,8 @@ sub _cmd_remove_hardware {
     my $uid = $request->args('uid');
     my $hardware = $request->args('name') or confess "Missing argument name";
     my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
-    my $index = $request->args('index');
+    my $index = $request->defined_arg('index');
+    my $option = $request->defined_arg('option');
 
     my $domain = $self->search_domain_by_id($id_domain);
 
@@ -4432,7 +4540,7 @@ sub _cmd_remove_hardware {
     .$domain->name
         if !$user->is_admin;
 
-    $domain->remove_controller($hardware, $index);
+    $domain->remove_controller($hardware, $index, $option);
 }
 
 sub _cmd_change_hardware {

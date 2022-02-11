@@ -119,10 +119,7 @@ sub test_req_create_domain_iso {
     ok($req->status eq 'requested'
         ,"$$ Status of request is ".$req->status." it should be requested");
 
-    $ravada->process_requests();
-
-    $ravada->_wait_pids();
-    wait_request($req);
+    wait_request(request => $req, debug => 1);
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done") or return ;
@@ -219,7 +216,7 @@ sub test_unread_messages {
     my @messages = $user->unread_messages();
 
     ok(scalar @messages == $n_unread,"$test: Expecting $n_unread unread messages , got "
-        .scalar@messages." ".Dumper(\@messages));
+        .scalar@messages." ".Dumper(\@messages)) or confess;
 
     $user->mark_all_messages_read();
 }

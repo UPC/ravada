@@ -33,8 +33,8 @@
                  </div>
                </div>
             </div>
-            <div class="card-body">
-				<div class="row">
+            <div class="card-body" ng-cloak="1">
+                <div class="row">
 					<div class="col-2">
 						%= include 'main/settings_machine_tabs_head'
 					</div>

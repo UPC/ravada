@@ -1290,7 +1290,7 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
     $url .= "/" if $url !~ m{/$} && $url !~ m{.*/([^/]+\.[^/]+)$};
     if ($url =~ m{[^*]}) {
         my @found = $self->_search_url_file($url);
-        confess "No match for $url" if !scalar @found;
+        die "Error: URL not found '$url'" if !scalar @found;
         $url = $found[-1];
     }
     if ( $url =~ m{/$} ) {
@@ -1362,7 +1362,7 @@ sub _download($self, $url) {
     $url =~ s{(http://.*)//(.*)}{$1/$2};
     if ($url =~ m{[^*]}) {
         my @found = $self->_search_url_file($url);
-        confess "No match for $url" if !scalar @found;
+        die "Error: URL not found '$url'" if !scalar @found;
         $url = $found[-1];
     }
 
@@ -1390,13 +1390,9 @@ sub _match_url($self,$url) {
     $url2 = '' if !$url2;
 
     confess "No url1 from $url" if !defined $url1;
-    my $ua = Mojo::UserAgent->new;
-    my $res = $ua->get(($url1 or '/'))->res;
-    confess "ERROR ".$res->code." ".$res->message." : $url1"
-        unless $res->code == 200 || $res->code == 301;
-
+    my $dom = $self->_ua_get($url1);
     my @found;
-    my $links = $res->dom->find('a')->map( attr => 'href');
+    my $links = $dom->find('a')->map( attr => 'href');
     for my $link (@$links) {
         next if !defined $link;
         $link =~ s{/$}{};
@@ -1407,19 +1403,40 @@ sub _match_url($self,$url) {
     return @found;
 }
 
+sub _ua_get($self, $url) {
+    my $cache = $self->_cache_get($url);
+    if ( $cache ) {
+        my $dom = Mojo::DOM->new($cache);
+        return $dom;
+    }
+    my ($ip) = $url =~ m{://(.*?)[:/]};
+    sleep 1 if !$ip || $self->{_url_get}->{$ip};
+    my $ua = $self->_web_user_agent();
+    my $res;
+    for my $try ( 1 .. 3 ) {
+        $res = $ua->get($url)->res;
+        last if $res && defined $res->code;
+        sleep 1+$try;
+    }
+    confess "Error getting '$url'" if !$res;
+    confess "ERROR ".$res->code." ".$res->message." : $url"
+        unless $res->code == 200 || $res->code == 301;
+
+    $self->_cache_store($url,$res->body);
+    return $res->dom;
+
+}
+
 sub _cache_get($self, $url) {
     my $file = _cache_filename($url);
 
     my @stat = stat($file)  or return;
-    return if time-$stat[9] > 300;
+    return if time-$stat[9] > 600;
     open my $in ,'<' , $file or return;
     return join("",<$in>);
 }
 
-sub _cache_store {
-    my $self = shift;
-    my $url = shift;
-    my $content = shift;
+sub _cache_store($self, $url, $content) {
 
     my $file = _cache_filename($url);
     open my $out ,'>' , $file or die "$! $file";
@@ -1528,17 +1545,7 @@ sub _match_file($self, $url, $file_re) {
 
     $url .= '/' if $url !~ m{/$};
 
-    my $res;
-    for ( 1 .. 10 ) {
-        eval { $res = $self->_web_user_agent->get($url)->res(); };
-        last if !$@ && $res && defined $res->code;
-        next if $@ && $@ =~ /timeout/i;
-        confess $@ if $@;
-    }
-
-    return unless defined $res->code && ( $res->code == 200 || $res->code == 301);
-
-    my $dom= $res->dom;
+    my $dom = $self->_ua_get($url);
 
     my @found;
 
@@ -1654,13 +1661,14 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     my ($type) = $doc->findnodes('/domain/os/type');
 
     my $machine_found = $type->getAttribute('machine');
-    if ($machine_found =~ /i440/) {
-        #$self->_xml_remove_ide($doc);
+    if ($machine_found =~ /pc-i440fx/ && !$uefi) {
+        $self->_xml_remove_vmport($doc);
+        $self->_xml_remove_ide($doc);
     }
-    if ($machine_found =~ /q35/) {
+    if ($machine_found =~ /q35/ ) {
         $self->_xml_set_pcie($doc);
         $self->_xml_remove_ide($doc);
-        #       $self->_xml_remove_vmport($doc);
+        $self->_xml_remove_vmport($doc);
     }
 
 }

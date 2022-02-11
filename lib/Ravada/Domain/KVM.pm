@@ -228,7 +228,7 @@ sub _vol_remove {
     my $file = shift;
     my $warning = shift;
 
-    confess "Error: I won't remove an iso file " if $file =~ /\.iso$/i;
+    confess "Error: I won't remove an iso file " if $file && $file =~ /\.iso$/i;
 
     my $name;
     ($name) = $file =~ m{.*/(.*)}   if $file =~ m{/};
@@ -256,6 +256,8 @@ sub _vol_remove {
 }
 
 sub remove_volume {
+    my ($file) = $_[1];
+    return if !defined $file || $file =~ /\.iso$/;
     return _vol_remove(@_);
 }
 
@@ -1192,7 +1194,7 @@ sub add_volume {
         ,format => $format
         ,allocation => ($args{allocation} or undef)
         ,target => $target_dev
-    )   if !$path;
+    )   if !$path && $device ne 'cdrom';
     ($name) = $path =~ m{.*/(.*)} if !$name;
 
 # TODO check if <target dev="/dev/vda" bus='virtio'/> widhout dev works it out
@@ -1209,7 +1211,7 @@ sub add_volume {
     if ( !defined $bus ) {
         if  ($device eq 'cdrom') {
             $bus = 'ide';
-            $bus = 'sata' if $machine_type =~ /^pc-q35/;
+            $bus = 'sata' if $machine_type =~ /^pc-(i440fx|q35)/;
         } else {
             $bus = 'virtio'
         }
@@ -1225,9 +1227,8 @@ sub add_volume {
 
     eval { $self->domain->attach_device($xml_device,Sys::Virt::Domain::DEVICE_MODIFY_CONFIG) };
     die $@ if $@;
-
     $self->_set_boot_order($path, $boot) if $boot;
-    return $path;
+    return ( $path or $name);
 }
 
 sub _set_boot_hd($self, $value) {
@@ -1350,7 +1351,7 @@ sub _search_volume_index($self, $file) {
 
 sub _xml_new_device($self , %arg) {
     my $bus = delete $arg{bus} or confess "Missing bus.";
-    my $file = delete $arg{file} or confess "Missing target.";
+    my $file = ( delete $arg{file} or '');
     my $boot = delete $arg{boot};
     my $device = delete $arg{device};
 
@@ -1433,7 +1434,7 @@ sub _new_pci_slot{
             }
         }
     }
-    for my $dec ( 1 .. 99) {
+    for my $dec ( 2 .. 99) {
         next if $target{$dec};
         return sprintf("0x%X", $dec);
     }
@@ -2339,8 +2340,8 @@ sub remove_controller($self, $name, $index=0,$attribute_name=undef, $attribute_v
     my $ret;
 
     #some hardware can be removed searching by attribute
-    if($name eq 'display') {
-        $ret = $sub->($self, 0, $attribute_name, $attribute_value);
+    if($name eq 'display' || defined $attribute_name ) {
+        $ret = $sub->($self, undef, $attribute_name, $attribute_value);
     } else {
         $ret = $sub->($self, $index);
     }
@@ -2348,25 +2349,51 @@ sub remove_controller($self, $name, $index=0,$attribute_name=undef, $attribute_v
     return $ret;
 }
 
-sub _remove_device($self, $index, $device, $attribute_name=undef, $attribute_value=undef) {
+sub _find_child($controller, $name) {
+    return ($controller,$name) if !defined $name || $name !~ m{(.*?)/(.*)};
+
+    my ($child_name, $attribute) = ($1,$2);
+    my ($item) = $controller->findnodes($child_name);
+    return ($controller,$name) if !$item;
+
+    return _find_child($item, $attribute);
+}
+
+sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_value=undef) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
     my ($devices) = $doc->findnodes('/domain/devices');
     my $ind=0;
+    my @found;
     for my $controller ($devices->findnodes($device)) {
-        next if defined $attribute_name
-            && $controller->getAttribute($attribute_name) !~ $attribute_value;
+        my ($item, $attr_name)= _find_child($controller, $attribute_name0);
 
-        if( $ind++==$index ){
+        my $found = 0;
+        if ( defined $attr_name ) {
+            my $found_value = $item->getAttribute($attr_name);
+            push @found,($found_value or '');
+
+            $found = 1
+            if defined $found_value && $found_value =~ $attribute_value;
+        }
+
+        if($found || defined $index && $ind++==$index ){
+            my ($source ) = $controller->findnodes("source");
+            my $file;
+            $file = $source->getAttribute('file') if $source;
+
             $devices->removeChild($controller);
             $self->_vm->connect if !$self->_vm->vm;
             $self->reload_config($doc);
-            return;
+
+            return $file;
         }
     }
 
     my $msg = "";
-    $msg = " $attribute_name=$attribute_value " if defined $attribute_name;
-    confess "ERROR: $device $msg $index"
+    $msg = " $attribute_name0=$attribute_value ".join(",",@found)
+    if defined $attribute_name0;
+
+    confess "ERROR: $device $msg ".($index or '<UNDEF>')
         ." not removed, only ".($ind)." found in ".$self->name."\n";
 }
 
@@ -2379,20 +2406,27 @@ sub _remove_controller_usb($self, $index) {
     $self->_remove_device($index,'redirdev', bus => 'usb');
 }
 
-sub _remove_controller_disk($self, $index) {
+sub _remove_controller_disk($self, $index,  $attribute_name=undef, $attribute_value=undef) {
     my @volumes = $self->list_volumes_info();
     confess "Error: domain ".$self->name
         ." trying to remove $index"
         ." has only ".scalar(@volumes)
-        if $index >= scalar(@volumes);
+        if defined $index && $index >= scalar(@volumes);
 
     confess "Error: undefined volume $index ".Dumper(\@volumes)
-        if !defined $volumes[$index];
+        if defined $index && !defined $volumes[$index];
 
-    $self->_remove_device($index,'disk');
+    confess "Error: undefined index and attribute"
+        if !defined $index && !defined $attribute_name;
 
-    my $file = $volumes[$index]->{file};
-    $self->remove_volume( $file ) if $file && $file !~ /\.iso$/;
+    my $file;
+    if ($attribute_name) {
+        $file = $self->_remove_device($index,'disk',$attribute_name => $attribute_value);
+    } else {
+        $file = $self->_remove_device($index,'disk');
+    }
+
+    $self->remove_volume( $file );
     $self->info(Ravada::Utils::user_daemon);
 }
 
@@ -2780,6 +2814,7 @@ sub _change_xml_address_usb($self, $address) {
 }
 
 sub _change_xml_address_ide($self, $doc, $address, $max_bus=2, $max_unit=9) {
+
     return if $address->getAttribute('type') eq 'drive'
         && $address->getAttribute('bus') =~ /^\d+$/
         && $address->getAttribute('bus') <= $max_bus

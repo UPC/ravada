@@ -90,7 +90,7 @@ sub _type_from_extension($file) {
     );
 
     return $type{$ext} if exists $type{$ext};
-    return uc($ext);
+    return 'RAW';
 }
 
 sub _type($file,$vm = undef) {
@@ -236,13 +236,14 @@ sub _get_cached_info($self) {
         ." ORDER by n_order"
     );
     $sth->execute($self->name, $self->domain->id);
-    my $row = $sth->fetchrow_hashref();
-
-    return if !$row || !keys %$row;
-    if ( $row->{info} ) {
-        $row->{info} = decode_json($row->{info})
-    }
-    return $row;
+    my $found;
+    while ( my $row = $sth->fetchrow_hashref()) {
+        if ( $row->{info} ) {
+            $row->{info} = decode_json($row->{info})
+        }
+        return $row;
+    };
+    return $found;
 }
 
 sub _cache_volume_info($self) {
@@ -267,7 +268,8 @@ sub _cache_volume_info($self) {
             ,$name
             ,$file
             ,$n_order
-            ,encode_json(\%info));
+            ,encode_json(\%info)
+        );
         };
         confess "$name / $n_order \n".$@ if $@;
         return;
