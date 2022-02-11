@@ -614,8 +614,6 @@ for my $vm_name (vm_names() ) {
                 }
             }
         }
-        test_add_disk_boot_order($vm);
-
         test_cdrom($vm);
 
         for my $iso_name ('Alpine%64 bits', 'Alpine%32 bits') {
