@@ -3032,6 +3032,7 @@ sub _xml_equal_hostdev($doc1, $doc2) {
         for my $node ( $source->findnodes('*')) {
             for my $attrib ( $node->attributes ) {
                 my $value2 = $attrib->value;
+                $value2 = '0x0' if $value2 eq '0x';
                 $value2 =~ s/^(0x)0*(.+)/$1$2/;
                 $node->setAttribute($attrib->name,$value2)
                 if $value2 ne $attrib->value;
