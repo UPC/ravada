@@ -153,7 +153,7 @@ sub _fetch_template_args($self, $device) {
             confess "Error: $re not found in '$device'" if !defined $value;
             # we do have to remove leading 0 or those numbers
             # will be converted from Octal !
-            $value =~ s/^0+// if $value =~ /^0*[1-9][0-9]*$/;
+            $value =~ s/^0+([0-9a-f]+)/$1/ if $value =~ /^0*[0-9a-f]*$/;
             $ret->{$name} = ''.$value;
         }
     }

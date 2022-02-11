@@ -3029,17 +3029,13 @@ sub _xml_equal_hostdev($doc1, $doc2) {
         $hostdev->removeChild($address) if $address;
 
         my ($source) = $hostdev->findnodes("/hostdev/source");
-        if ($source) {
-            ($address) = $source->findnodes("address");
-
-            $address->setAttribute("domain","0x0000")
-            if $address->getAttribute("domain") eq "0x";
-
-            $address->setAttribute("function","0x0")
-            if $address->getAttribute("function") eq "0x";
-
-            $address->setAttribute("slot","0x00")
-            if $address->getAttribute("slot") eq "0x";
+        for my $node ( $source->findnodes('*')) {
+            for my $attrib ( $node->attributes ) {
+                my $value2 = $attrib->value;
+                $value2 =~ s/^(0x)0*(.+)/$1$2/;
+                $node->setAttribute($attrib->name,$value2)
+                if $value2 ne $attrib->value;
+            }
         }
         my $txt = '';
         for my $line ( split /\n/,$xml->toString() ) {

@@ -357,11 +357,11 @@ sub test_host_device_usb($vm) {
 
 sub test_kvm_usb_template_args($device_usb, $hostdev) {
     my ($bus, $device, $vendor_id, $product_id)
-    = $device_usb =~ /Bus 0*(\d+) Device 0*(\d+).*ID 0*(.*?):0*(.*?) /;
+    = $device_usb =~ /Bus 0*([0-9a-f]+) Device 0*([0-9a-f]+).*ID 0*([0-9a-f]+):0*([0-9a-f]+) /;
     my $args = $hostdev->_fetch_template_args($device_usb);
-    is($args->{device}, $device);
+    is($args->{device}, $device, $device_usb) or exit;
     is($args->{bus}, $bus);
-    is($args->{vendor_id}, $vendor_id);
+    is($args->{vendor_id}, $vendor_id) or exit;
     is($args->{product_id}, $product_id);
 }
 
@@ -638,6 +638,23 @@ sub test_invalid_param {
     wait_request(check_error => 0);
 }
 
+sub test_template_args($vm) {
+    return if $vm->type ne 'KVM';
+
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+
+    my ($t_usb) = grep{ $_->{name} =~ /usb/i } @$templates;
+    $vm->add_host_device(template => $t_usb->{name});
+    my ($hostdev) = $vm->list_host_devices();
+    test_kvm_usb_template_args("Bus 001 Device 003: ID 04f2:b6be Chicony Electronics Co., Ltd Integrated Camera", $hostdev);
+    test_kvm_usb_template_args("Bus 001 Device 003: ID 04f2:06be Chicony Electronics Co., Ltd Integrated Camera", $hostdev);
+    test_kvm_usb_template_args("Bus 011 Device 013: ID 04f2:b6be Chicony Electronics Co., Ltd Integrated Camera", $hostdev);
+    test_kvm_usb_template_args("Bus 01a Device 01b: ID 04f2:0bbe Chicony Electronics Co., Ltd Integrated Camera", $hostdev);
+    test_kvm_usb_template_args("Bus 000 Device 000: ID 0000:0000 Chicony Electronics Co., Ltd Integrated Camera", $hostdev);
+    $hostdev->remove();
+
+}
+
 #########################################################
 
 init();
@@ -658,6 +675,7 @@ for my $vm_name (vm_names()) {
 
         diag("Testing host devices in $vm_name");
 
+        test_template_args($vm);
         test_check_list_command($vm);
 
         test_host_device_usb($vm);

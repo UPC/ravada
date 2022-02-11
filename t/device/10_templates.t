@@ -330,7 +330,7 @@ sub test_templates_start_nohd($vm) {
     ok(@$templates);
 
     for my $first  (@$templates) {
-        diag("Test template $first->{name}");
+        diag("Test template $first->{name} nohd");
         $vm->add_host_device(template => $first->{name});
         my $expect_feat_kvm = $first->{name} =~ /PCI/i;
         my @list_hostdev = $vm->list_host_devices();
@@ -369,6 +369,7 @@ sub test_templates_start_nohd($vm) {
         $domain->shutdown_now(user_admin);
 
         $domain->remove(user_admin);
+        $hd->remove();
     }
     for my $hd ( $vm->list_host_devices ) {
         test_hd_remove($vm, $hd);
