@@ -347,6 +347,28 @@ sub _set_three_devices($domain, $hardware) {
     wait_request(debug => 0);
 }
 
+sub test_remove_hardware_by_index_network_kvm($vm, $hardware) {
+    return if $hardware ne 'network' || $vm->type ne 'KVM';
+
+    my $domain = create_domain($vm);
+    _set_three_devices($domain, $hardware);
+
+    my $info_hw1 = $domain->info(user_admin)->{hardware};
+    my $items1 = [];
+    $items1 = $info_hw1->{$hardware};
+
+    $domain->_remove_device(1,"interface", type => qr'(bridge|network)');
+    my $info_hw2 = $domain->info(user_admin)->{hardware};
+    my $items2 = [];
+    $items2 = $info_hw2->{$hardware};
+
+    is($items2->[0]->{name},$items1->[0]->{name});
+    is($items2->[1]->{name},$items1->[2]->{name});
+
+    remove_domain($domain);
+}
+
+
 sub test_remove_hardware_by_index($vm, $hardware) {
     return if $hardware eq 'usb';
 
@@ -866,7 +888,8 @@ for my $vm_name ( vm_names()) {
     for my $hardware ( reverse sort keys %controllers ) {
         diag("Testing $hardware controllers for VM $vm_name");
         test_remove_hardware_by_index($vm, $hardware);
-        next;
+        test_remove_hardware_by_index_network_kvm($vm, $hardware);
+
         test_front_hardware($vm, $domain_b, $hardware);
 
         test_add_hardware_custom($domain_b, $hardware);

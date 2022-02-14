@@ -2349,6 +2349,12 @@ sub _find_child($controller, $name) {
 }
 
 sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_value=undef) {
+    confess "Error: I need index defined or attribute name=value"
+    if !defined $index && !defined $attribute_name0;
+
+    confess "Error: I attribute value to search must be defined"
+    if defined $attribute_name0 && !defined $attribute_value;
+
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
     my ($devices) = $doc->findnodes('/domain/devices');
     my $ind=0;
@@ -2361,11 +2367,17 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
             my $found_value = $item->getAttribute($attr_name);
             push @found,($found_value or '');
 
-            $found = 1
-            if defined $found_value && $found_value =~ $attribute_value;
+            if ( $found_value =~ $attribute_value ) {
+                $found=1 if !defined $index || $ind == $index;
+                $ind++;
+            }
+
+        } else {
+            $found = 1 if defined $index && $ind == $index;
+            $ind++;
         }
 
-        if($found || defined $index && $ind==$index ){
+        if($found ){
             my ($source ) = $controller->findnodes("source");
             my $file;
             $file = $source->getAttribute('file') if $source;
@@ -2376,7 +2388,6 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
 
             return $file;
         }
-        $ind++;
     }
 
     my $msg = "";
