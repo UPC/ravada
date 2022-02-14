@@ -2365,7 +2365,7 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
             if defined $found_value && $found_value =~ $attribute_value;
         }
 
-        if($found || defined $index && $ind++==$index ){
+        if($found || defined $index && $ind==$index ){
             my ($source ) = $controller->findnodes("source");
             my $file;
             $file = $source->getAttribute('file') if $source;
@@ -2376,6 +2376,7 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
 
             return $file;
         }
+        $ind++;
     }
 
     my $msg = "";
@@ -2420,7 +2421,7 @@ sub _remove_controller_disk($self, $index,  $attribute_name=undef, $attribute_va
 }
 
 sub _remove_controller_network($self, $index) {
-    $self->_remove_device($index,'interface', type => qr'(bridge|network)');
+    $self->_remove_device($index,'interface' );
 }
 
 =head2 pre_remove
