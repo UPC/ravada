@@ -6521,10 +6521,10 @@ sub add_host_device($self, $host_device) {
 }
 
 sub remove_host_device($self, $host_device) {
+    confess if !ref($host_device);
+
     confess if $self->readonly;
     $self->_dettach_host_device($host_device);
-
-    confess if !ref($host_device);
 
     my $id_hd = $host_device->id;
 
@@ -6647,7 +6647,6 @@ sub _add_host_devices($self, @args) {
     $self->reload_config($doc);
 
 }
-
 
 sub _dettach_host_devices($self) {
     my @host_devices = $self->list_host_devices();

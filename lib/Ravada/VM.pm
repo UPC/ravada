@@ -2180,6 +2180,14 @@ sub _max_hd($self, $name) {
 
 }
 
+=head2 add_host_device
+
+Add a new host device configuration to this Virtual Machines Manager from a previous template
+
+   $vm->add_host_device(template => 'name');
+
+=cut
+
 sub add_host_device($self, %args) {
     _init_connector();
 
@@ -2215,6 +2223,12 @@ sub add_host_device($self, %args) {
 
     return $id;
 }
+
+=head2 list_host_devices
+
+List all the configured host devices in this node
+
+=cut
 
 sub list_host_devices($self) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM host_devices WHERE id_vm=?");

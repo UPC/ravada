@@ -37,7 +37,6 @@ sub _search_unused_device {
     my ($in, $out, $err);
     run3(["lsusb"], \$in, \$out, \$err);
     for my $line ( split /\n/, $out ) {
-        next if $line !~ /Bluetooth|flash|disk|cam/i;
         next unless (defined $USB_DEVICE && $line =~ $USB_DEVICE) 
         || $line =~ /Bluetooth|flash|disk|cam/i;
 
@@ -325,7 +324,6 @@ sub test_host_device_usb($vm) {
     test_kvm_usb_template_args($device, $list_hostdev_c[0]);
 
     _check_hostdev($clone);
-    diag($clone->name);
     $clone->start(user_admin);
     _check_hostdev($clone, 1);
 
@@ -662,7 +660,6 @@ clean();
 
 test_invalid_param();
 for my $vm_name (vm_names()) {
-
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 

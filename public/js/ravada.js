@@ -900,10 +900,9 @@
 
             $scope.toggle_host_device = function(id_hd) {
                 if (_host_device_in_machine(id_hd)) {
-                    $scope.request('remove_host_device'
-                        ,{ id_domain: $scope.showmachine.id
-                            ,id_host_device: id_hd
-                        });
+                    $scope.request('remove_host_device',
+                        {id_domain: $scope.showmachine.id
+                        ,id_host_device: id_hd});
                 } else {
                     $http.get('/machine/host_device/add/'+$scope.showmachine.id
                         +"/"+id_hd).then(function(response) {

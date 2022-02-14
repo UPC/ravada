@@ -1495,6 +1495,14 @@ sub is_in_maintenance($self) {
     return 0;
 }
 
+=head2 update_host_device
+
+Update the host device information, then it requests a list of the current available devices
+
+    $rvd_front->update_host_device( field => 'value' );
+
+=cut
+
 sub update_host_device($self, $args) {
     my $id = delete $args->{id} or die "Error: missing id ".Dumper($args);
     Ravada::Utils::check_sql_valid_params(keys %$args);
@@ -1539,7 +1547,6 @@ sub list_machine_types($self, $uid, $vm_type) {
 
     return $types;
 }
-
 
 =head2 version
 

@@ -92,7 +92,6 @@ sub test_user($name, $with_posix_group=0, $password='jameson', $storage=undef, $
     eval { $mcnulty->allowed_access(1) };
     is($@,'');
     # try to login
-     diag($name,$password);
     my $mcnulty_login = Ravada::Auth::login($name,$password);
     ok($mcnulty_login,"No login");
     ok(ref $mcnulty_login && ref($mcnulty_login) eq 'Ravada::Auth::LDAP',
