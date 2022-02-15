@@ -782,7 +782,7 @@ sub _validate_start_domain($self) {
         next if !$req;
         next if $req->at_time;
         next if $command eq 'start' && !$req->after_request();
-        $self->after_request($req->id);
+        $self->after_request($req->id) if $req->id < $self->id;
     }
 }
 
@@ -798,7 +798,7 @@ sub _validate_change_hardware($self) {
     return if !$id_domain;
     my $req = $self->_search_request('%_hardware', id_domain => $id_domain);
 
-    $self->after_request($req->id) if $req;
+    $self->after_request($req->id) if $req && $req->id < $self->id;
 }
 
 sub _validate_create_domain($self) {
