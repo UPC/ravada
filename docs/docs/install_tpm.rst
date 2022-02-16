@@ -14,7 +14,7 @@ Add the swtpm repository to your package sources
 
 .. prompt:: bash $
 
-  echo "deb [trusted=yes] http://ppa.launchpad.net/stefanberger/swtpm-focal/ubuntu focal main" >> /etc/apt/sources.list
+    echo "deb [trusted=yes] http://ppa.launchpad.net/stefanberger/swtpm-focal/ubuntu focal main" | sudo tee -a /etc/apt/sources.list
 
 Update and install
 
