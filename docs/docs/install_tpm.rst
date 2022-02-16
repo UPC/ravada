@@ -19,6 +19,7 @@ Add the swtpm repository to your package sources
 Update and install
 
 .. prompt:: bash $
+
     sudo apt update
     sudo apt install swtpm-tools
 
@@ -28,6 +29,7 @@ Ubuntu 22.04
 Software TPM is expected to ship with Ubuntu 22.04.
 
 .. prompt:: bash $
+
     sudo apt update
     sudo apt install swtpm-tools
 
