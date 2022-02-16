@@ -209,7 +209,13 @@ our %COMMAND = (
     ,important=> {
         limit => 20
         ,priority => 1
-        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine','open_exposed_ports']
+        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine']
+    }
+
+    ,iptables => {
+        limit => 1
+        ,priority => 2
+        ,commands => ['open_exposed_ports']
     }
 );
 lock_hash %COMMAND;
@@ -782,7 +788,7 @@ sub _validate_start_domain($self) {
         next if !$req;
         next if $req->at_time;
         next if $command eq 'start' && !$req->after_request();
-        $self->after_request($req->id) if $req->id < $self->id;
+        $self->after_request($req->id) if $req && $req->id < $self->id;
     }
 }
 
