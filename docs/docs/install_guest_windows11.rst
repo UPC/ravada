@@ -1,7 +1,7 @@
-Install Windows 10
+Install Windows 11
 ==================
 
-These are guidelines to install Windows 10 inside a  Ravada KVM Guest.
+These are guidelines to install Windows 11 inside a  Ravada KVM Guest.
 
 Requirements
 ------------
