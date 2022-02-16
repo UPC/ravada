@@ -634,17 +634,13 @@
                 }
                 var file = $scope.showmachine.hardware.disk[index].file;
                 if (typeof(file) != 'undefined' && file) {
-                    $scope.showmachine.requests++;
-                    $http.post('/request/remove_hardware/'
-                        ,JSON.stringify({
+                    $scope.request('remove_hardware'
+                        ,{
                             'id_domain': $scope.showmachine.id
                             ,'name': 'disk'
                             ,'option': { 'source/file': file }
-                        })
-                    ).then(function(response) {
                     });
                     item.remove = false;
-
                     return;
                 }
 
@@ -653,10 +649,11 @@
             if(typeof(item) == 'object') {
                 item.remove = false;
             }
-              $http.get('/machine/hardware/remove/'
-                      +$scope.showmachine.id+'/'+hardware+'/'+index).then(function(response) {
-                      });
-
+            $scope.request('remove_hardware',{
+                    'id_domain': $scope.showmachine.id
+                     ,'name': hardware
+                     ,'index': index
+            });
           };
           $scope.list_ldap_attributes= function() {
               $scope.ldap_entries = 0;
