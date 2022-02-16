@@ -33,7 +33,7 @@ From the web management tools, go to "New Machine" and create
 select the Windows 11 Template and the ISO image you just downloaded.
 
 
-.. figure images/install_w11.jpg
+.. figure:: images/install_w11.jpg
     :alt: Install Windows 11
 
     Set more than 4 GB of RAM and at least 65 GB for the disk drive.
@@ -48,7 +48,7 @@ Install The Operative System
 From the Virtual Machines admin tools , click on the blue screen
 from the one you just created.
 
-.. figure images/w11_screen.jpg
+.. figure:: images/w11_screen.jpg
     :alt: Launch Windows 11
 
 
@@ -62,7 +62,7 @@ Boot from CD
 
 You may see this screen and a *Shell>* prompt.
 
-.. figure images/uefi_shell.jpg
+.. figure:: images/uefi_shell.jpg
     :alt: UEFI shell prompt
 
 If you see this screen is because you missed the CD search screen.
@@ -87,7 +87,7 @@ the operative system you are installing:
 
 *Red Hat VirtIO SCSI controller (E:\amd64\w11\viostor.inf)*
 
-.. figure images/load_windows_drivers.jpg
+.. figure:: images/load_windows_drivers.jpg
     :alt: VirtIO Windows Drivers
 
 Choose Destination Drive
