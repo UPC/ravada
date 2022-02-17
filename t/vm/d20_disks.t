@@ -218,6 +218,10 @@ sub test_add_cd($vm, $data) {
     my $n_disks0 = scalar(@{$info0->{hardware}->{disk}});
     my %targets0 = map { $_->{target} => 1 } @{$info0->{hardware}->{disk}};
 
+    if ($data->{device} eq 'cdrom' && exists $data->{file} && $data->{file} =~ /tmp/) {
+        open my $out, ">>",$data->{file} or die "$! $data->{file}";
+        close $out;
+    }
     my $req = Ravada::Request->add_hardware(
         id_domain => $domain->id
         ,name => 'disk'
@@ -242,6 +246,10 @@ sub test_add_cd($vm, $data) {
     is($new_dev->{driver_type}, 'raw');
     is($new_dev->{driver}, 'ide');
     is($new_dev->{file},$data->{file});
+    if ($data->{device} eq 'cdrom' && exists $data->{file} && $data->{file} =~ /tmp/) {
+        unlink $data->{file} or die "$! $data->{file}";
+    }
+
 }
 
 sub test_add_disk {
