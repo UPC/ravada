@@ -66,7 +66,6 @@ sub test_frontend_refresh {
 }
 
 sub test_remove_disk($vm, %options) {
-    diag(Dumper(\%options));
     my $make_base = delete $options{make_base};
     my $clone = delete $options{clone};
     my $remove_by_file = ( delete $options{remove_by_file} or 0);
@@ -80,7 +79,6 @@ sub test_remove_disk($vm, %options) {
     if keys %options;
 
     for my $index ( 0 .. 3 ) {
-        diag("\tindex=$index");
         my $name = new_domain_name();
         my $req = Ravada::Request->create_domain(
             name => $name
@@ -380,7 +378,7 @@ sub test_add_cd_kvm($vm) {
     test_add_cd($vm
         , { 'device' => 'cdrom'
             ,'driver' => 'ide'
-            ,'file' => "/tmp/a.iso"
+            ,'file' => "/tmp/".new_domain_name()."a.iso"
         });
 }
 
@@ -403,8 +401,6 @@ sub _list_id_isos($vm) {
         next if $iso->{device} && -e $iso->{device};
         next if $iso->{name} =~ /Empty/;
         next if $iso->{name} =~ /Android/i;
-
-        die Dumper($iso) if !defined $iso->{id};
 
         $sth->execute($device, $iso->{id});
         push @list, ( $iso->{id} );
@@ -493,7 +489,7 @@ sub _req_add_cd($domain) {
         ,id_domain => $domain->id
         ,name => 'disk'
         ,data => { type => 'cdrom'
-            ,file => "/var/tmp/a.iso"
+            ,file => "/var/tmp/".new_domain_name()."a.iso"
         }
     );
     wait_request(debug => 0);
@@ -588,10 +584,9 @@ for my $vm_name (vm_names() ) {
         test_add_cd_kvm($vm) if $vm_name eq 'KVM';
 
         for my $id_iso ( _list_id_isos($vm) ) {
-            diag("Testing id iso = ".($id_iso or '<UNDEF>'));
             for my $by_file ( 1, 0 ) {
                 for my $by_index ( 0, 1 ) {
-                    diag("by_file=$by_file, by_index=$by_index");
+                    diag("Testing id_iso: $id_iso , by_file:$by_file, by_index:$by_index");
                     test_remove_disk($vm
                         ,clone => 1
                         ,id_iso => $id_iso
