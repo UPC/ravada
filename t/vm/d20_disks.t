@@ -14,8 +14,7 @@ use feature qw(signatures);
 use lib 't/lib';
 use Test::Ravada;
 
-no warnings "experimental::signatures";
-use feature qw(signatures);
+my @MOCK_ISOS;
 
 init();
 #############################################################################
@@ -489,15 +488,36 @@ sub _req_remove_cd($domain) {
     wait_request( debug => 0);
 }
 
+sub _create_mock_iso($vm) {
+
+    my $file = $vm->dir_img()."/".new_domain_name()."a.iso";
+    open my $out, ">>",$file or die "$! $file";
+    print $out "test\n";
+    close $out;
+
+    push @MOCK_ISOS,($file);
+
+    return $file;
+}
+
+sub remove_mock_isos() {
+    for my $file (@MOCK_ISOS) {
+        next if $file !~ m{/tst_};
+        unlink $file if -e $file;
+    }
+}
+
 sub _req_add_cd($domain) {
     my $info = $domain->info(user_admin);
     my $disks = $info->{hardware}->{disk};
+
+    my $file = _create_mock_iso($domain->_vm);
     my $req = Ravada::Request->add_hardware(
         uid => Ravada::Utils::user_daemon->id
         ,id_domain => $domain->id
         ,name => 'disk'
         ,data => { type => 'cdrom'
-            ,file => "/var/tmp/".new_domain_name()."a.iso"
+            ,file => $file
         }
     );
     wait_request(debug => 0);
@@ -561,6 +581,7 @@ sub test_cdrom($vm) {
                 _req_add_cd($domain);
 
                 remove_domain($domain);
+                remove_mock_isos();
 
             }
         }
