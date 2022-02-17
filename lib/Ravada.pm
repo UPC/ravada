@@ -1954,7 +1954,7 @@ sub _sql_create_tables($self) {
             volumes => {
                 id => 'integer PRIMARY KEY AUTO_INCREMENT',
                 id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE',
-                name => 'char(200) NOT NULL',
+                name => 'char(255) NOT NULL',
                 file => 'varchar(255) NOT NULL',
                 n_order => 'integer NOT NULL',
                 info => 'TEXT',
