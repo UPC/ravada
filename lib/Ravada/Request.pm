@@ -905,7 +905,8 @@ sub _search_request($self,$command,%fields) {
         my $args = decode_json($args_json);
         my $found=1;
         for my $key (keys %fields) {
-            if ( $args->{$key} ne $fields{$key} ) {
+            if (!exists $args->{$key} || !defined $args->{$key}
+                || $args->{$key} ne $fields{$key} ) {
                 $found = 0;
                 last;
             }

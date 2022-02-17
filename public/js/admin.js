@@ -335,7 +335,7 @@ ravadaApp.directive("solShowMachine", swMach)
                             || $scope.list_machines[i].date_changed != mach.date_changed
                       ){
                         var show=false;
-                        if (mach._level == 0 ) {
+                        if (mach._level == 0 && !$scope.filter && !$scope.show_active) {
                             mach.show=true;
                         }
                         if ($scope.show_machine[mach.id]) {
@@ -357,6 +357,7 @@ ravadaApp.directive("solShowMachine", swMach)
                   }
                   $scope.n_active=n_active_current;
                   if ( $scope.show_active ) { $scope.do_show_active() };
+                  if ( $scope.filter) { $scope.show_filter() };
               });
           }
       }
@@ -591,6 +592,7 @@ ravadaApp.directive("solShowMachine", swMach)
 
     $scope.show_filter = function() {
         $scope.hide_clones = true;
+        $scope.show_active = false;
         $scope.n_active_current = 0;
         $scope.n_active_hidden = 0;
         for (var [key, mach ] of Object.entries($scope.list_machines)) {
