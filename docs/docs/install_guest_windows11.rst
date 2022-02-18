@@ -95,3 +95,34 @@ Choose Destination Drive
 
 Some disk drives volumes will appear. Choose the bigger one
 to install Windows 11 there.
+
+
+Setup
+-----
+
+Follow the usual procedure to install Windows11.
+
+When the installations it's finished, you need to install:
+
+* qemu-guest agent, see the instructions here: https://pve.proxmox.com/wiki/Qemu-guest-agent#Windows
+* Windows guest tools - `spice-guest-tools <https://www.spice-space.org/download/windows/spice-guest-tools/spice-guest-tools-latest.exe>`_ .
+* make sure that acpi service it's activated.
+
+If you experience slow response from the mouse or other glitches you may try installing
+`VirtIO Drivers <https://pve.proxmox.com/wiki/Windows_VirtIO_Drivers>`_ .
+
+The drivers CDROM should have been automatically located in the
+secondary cd drive in your system.
+
+Use a swap partition for pagefiles
+----------------------------------
+
+By default the Windows pagefiles will go to the C: disk drive. That will make the clones partitions
+grow up too much and fill your host disk drive.
+It should go to the *SWAP* volume, problaby in your D: or E: drive.
+
+In this link you can see how to move pagefiles to another disk:
+
+https://winaero.com/blog/how-to-move-page-file-in-windows-10-to-another-disk/
+
+

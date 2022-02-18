@@ -130,6 +130,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/install_guest_linux
    docs/install_guest_alpine
    docs/install_guest_windows10
+   docs/install_guest_windows11
    docs/resize_hard_drive_windows
    docs/resize_hard_drive_linux_machine
    docs/config_console
