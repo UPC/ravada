@@ -246,6 +246,7 @@
             $scope.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
             $scope.exec_time_start = new Date();
             $scope.exec_time = new Date();
+            $scope.edit = 0;
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -255,12 +256,23 @@
             $scope.isPastTime = function(date, now_date) {
                 return $scope.getUnixTimeFromDate(date) < $scope.getUnixTimeFromDate(now_date ? now_date : new Date());
             };
+            $scope.toggle_edit = function(item) {
+                if (!item.edit) {
+                    item.edit = true;
+                    $scope.edit++;
+                } else {
+                    item.edit = false;
+                    $scope.edit--;
+                }
+        }
+        $scope.edit = 0;
 
             var subscribed_extra = false;
             var subscribe_machine_info= function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('machine_info/'+$scope.showmachineId) };
                 ws.onmessage = function(event) {
+                    if ($scope.edit) return;
                     var data = JSON.parse(event.data);
                     if (data === null || typeof(data) == undefined ) {
                         console.log("close");
@@ -820,6 +832,17 @@
                 });
 
             };
+            $scope.change_video = function(id_machine,index) {
+                var new_settings = $scope.showmachine.hardware.video[index];
+                delete new_settings.edit;
+                $scope.request('change_hardware',
+                    {'id_domain': id_machine
+                        ,'hardware': 'video'
+                        ,'index': index
+                        ,'data': new_settings
+                    }
+                );
+            }
             $scope.change_network = function(id_machine, index ) {
                 var new_settings ={
                     driver: $scope.showmachine.hardware.network[index].driver,
@@ -1063,6 +1086,9 @@
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);
                 $scope.$apply(function () {
+                    if ($scope.edit) {
+                        return;
+                    }
                     $scope.domain = data;
                     for ( var i=0;i<$scope.domain.hardware.display.length; i++ ) {
                         if (typeof($scope.domain_display[i]) == 'undefined') {
