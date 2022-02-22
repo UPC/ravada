@@ -263,7 +263,6 @@
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     if (data === null || typeof(data) == undefined ) {
-                        console.log("close");
                         ws.close();
                         window.location.href="/";
                         return;
@@ -1001,7 +1000,6 @@
         var already_subscribed_to_domain = false;
         $scope.copy_password= function(driver) {
             $scope.view_password=1;
-            console.log("copy-password "+driver);
             var copyTextarea = document.querySelector('.js-copytextarea-'+driver);
             if (copyTextarea) {
                     copyTextarea.select();
@@ -1046,8 +1044,19 @@
                     already_subscribed_to_domain = true;
                     $scope.id_domain=data.id_domain;
                     $scope.subscribe_domain_info(url, data.id_domain);
+                    $scope.open_ports(url, data.id_domain, id_request);
                 }
             }
+        }
+        $scope.open_ports = function(url, id_domain, id_request) {
+            $http.post('/request/open_exposed_ports/'
+                ,JSON.stringify(
+                    { 'id_domain': id_domain
+                        ,'after_request': id_request
+                    })
+            ).then(function(response) {
+                $scope.request_open_ports = true;
+            });
         }
         $scope.subscribe_domain_info= function(url, id_domain) {
             already_subscribed_to_domain = true;
@@ -1089,6 +1098,9 @@
                             +$scope.domain.id+"."+$scope.domain_display[0].file_extension;
                         redirected_display=true;
                     }
+                }
+                if ($scope.request_open_ports && $scope.domain.ip && $scope.domain.requests == 0) {
+                    $scope.request_open_ports_done = true;
                 }
 
             }

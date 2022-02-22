@@ -13,7 +13,6 @@
     <div class="jumbotron" ng-cloak="">
 
         <h2><%=l 'Running' %> {{domain.name}}</h2>
-
             <div class="alert alert-warning">
                 <%=l 'A viewer is required to run the virtual machines.' %>
                 <a href="/requirements"><%=l 'Read more.' %></a>
@@ -43,8 +42,14 @@
                 <li><b><%=l 'Memory' %>:</b> {{domain.memory}}</li>
                 <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
             </ul>
-            <h3 ng-show="domain.ports.length">Open ports</h3>
-            <div class="container pl-5">
+            <h3 ng-show="domain.ports.length">Open ports
+                <i ng-hide="request_open_ports && request_open_ports_done"
+                class="fas fa-sync-alt fa-spin"></i>
+            </h3>
+
+            <div class="container pl-5"
+                ng-show="request_open_ports && request_open_ports_done">
+
             <table border="0">
                 <tr ng-repeat="port in domain.ports">
                     <td align="right">
