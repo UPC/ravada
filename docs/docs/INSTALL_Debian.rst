@@ -10,14 +10,12 @@ if you are only upgrading Ravada from a previous version already installed.
 Debian
 ------
 
-This is the guide to install Ravada in Debian Buster.
-Follow this `guide <http://disbauxes.upc.es/code/installing-and-using-ravadavdi-on-debian-jessie/>`_ if you prefer Debian Jessie.
+This is the guide to install Ravada in Debian Bullseye and Buster. It is reccomended you use Buster for better perfomance.
 
 We provide *deb* packages on the `UPC ETSETB
 repository <http://infoteleco.upc.edu/img/debian/>`__.
 
-
-Install the ravada package. Choose the one that matches your OS release:
+Install the ravada package. It is called *debian-10* but works fine in *debian-11* also.
 
 - ravada_1.3.4_debian-10_all.deb
 
@@ -38,8 +36,8 @@ You must enable spice KVM manually:
 
    sudo ln -s /usr/bin/kvm /usr/bin/kvm-spice
 
-Mysql Database
---------------
+Mysql/MariaDB Database
+----------------------
 
 MariaDB server
 ~~~~~~~~~~~~~~
