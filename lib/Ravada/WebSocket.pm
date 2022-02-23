@@ -52,11 +52,13 @@ our %TABLE_CHANNEL = (
     ,list_machines_user_including_privates => ['domains','bookings','booking_entries'
         ,'booking_entry_ldap_groups', 'booking_entry_users','booking_entry_bases']
     ,list_requests => 'requests'
+    ,machine_info => 'domains'
 );
 
 my $A_WHILE;
 my $LIST_MACHINES_FIRST_TIME = 1;
 my $TZ;
+my %TIME0;
 ######################################################################
 
 
@@ -223,7 +225,9 @@ sub _get_machine_info($rvd, $args) {
     if ($info->{is_active} && ( !exists $info->{ip} || !$info->{ip})) {
        Ravada::Request->refresh_machine(id_domain => $info->{id}, uid => $user->id);
     }
-
+    unlock_hash(%$info);
+    $info->{_date_changed} = $domain->_data('date_changed');
+    lock_hash(%$info);
     return $info;
 }
 
@@ -430,15 +434,20 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
     $channel =~ s{/.*}{};
     my $exec = $SUB{$channel} or die "Error: unknown channel $channel";
 
-    my $old_ret = $self->clients->{$key}->{ret};
-    my ($old_count, $old_changed) = $self->_old_info($key);
-    my ($new_count, $new_changed) = $self->_new_info($key);
+    my $old_ret;
+    if (!defined $TIME0{$channel} || time < $TIME0{$channel}+60) {
+        my ($old_count, $old_changed) = $self->_old_info($key);
+        my ($new_count, $new_changed) = $self->_new_info($key);
 
-    return $old_ret if defined $new_count && defined $new_changed
-    && $old_count eq $new_count && $old_changed eq $new_changed;
+        return $old_ret if defined $new_count && defined $new_changed
+        && $old_count eq $new_count && $old_changed eq $new_changed;
 
-    $self->_old_info($key, $new_count, $new_changed)
-    unless $channel =~ /list_machines/ && $LIST_MACHINES_FIRST_TIME;
+        $self->_old_info($key, $new_count, $new_changed);
+
+        $old_ret = $self->clients->{$key}->{ret};
+    }
+
+    $TIME0{$channel} = time;
 
     my $ret = $exec->($self->ravada, $self->clients->{$key});
 
