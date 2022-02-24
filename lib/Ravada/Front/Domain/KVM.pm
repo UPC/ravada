@@ -3,6 +3,7 @@ package Ravada::Front::Domain::KVM;
 use Carp qw(confess);
 use Data::Dumper;
 use Moose;
+use Hash::Util qw(lock_hash);
 
 use XML::LibXML;
 
@@ -16,6 +17,8 @@ our %GET_CONTROLLER_SUB = (
     ,disk => \&_get_controller_disk
     ,display => \&_get_controller_display
     ,network => \&_get_controller_network
+    ,video => \&_get_controller_video
+    ,sound => \&_get_controller_sound
     );
 
 our %GET_DRIVER_SUB = (
@@ -49,12 +52,63 @@ sub _get_controller_usb {
     
     for my $controller ($doc->findnodes('/domain/devices/redirdev')) {
         next if $controller->getAttribute('bus') ne 'usb';
-        
-        push @ret,('type="'.$controller->getAttribute('type').'"');
-    } 
+        push @ret,({ name => $controller->getAttribute('type')});
+    }
 
     return $ret[0] if !wantarray && scalar@ret <2;
     return @ret;
+}
+
+sub _get_controller_video($self) {
+    my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
+
+    my @ret;
+
+    my $count = 0;
+    for my $dev ($doc->findnodes('/domain/devices/video')) {
+        my ($model) = $dev->findnodes("model");
+        my $type = $model->getAttribute('type');
+        my $item = { type => $type };
+        _xml_elements($model,$item);
+        lock_hash(%$item);
+        push @ret,($item);
+    }
+    return @ret;
+
+}
+
+sub _get_controller_sound($self) {
+    return $self->_get_controller_generic('sound');
+}
+
+sub _get_controller_generic($self,$type) {
+    my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
+
+    my @ret;
+
+    my $count = 0;
+    for my $dev ($doc->findnodes('/domain/devices/'.$type)) {
+        my $item = { };
+        _xml_elements($dev,$item);
+        delete $item->{address};
+        lock_hash(%$item);
+        push @ret,($item);
+    }
+    return @ret;
+
+}
+
+
+sub _xml_elements($xml, $item) {
+    for my $attribute ( $xml->attributes ) {
+        $item->{$attribute->name} = $attribute->value;
+    }
+
+    for my $node ( $xml->findnodes('*') ) {
+        my $h_node = {};
+        _xml_elements($node, $h_node);
+        $item->{$node->nodeName} = $h_node;
+    }
 }
 
 sub _get_controller_network($self) {
