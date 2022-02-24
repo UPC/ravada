@@ -6607,14 +6607,15 @@ sub _add_host_devices($self, @args) {
 
     my $doc = $self->get_config();
     for my $host_device ( @host_devices ) {
-        next if !$host_device->enabled();
-        if ( my $device_configured = $self->_device_already_configured($host_device)) {
-            if ( $self->_lock_host_device($host_device) ) {
+        my $device_configured = $self->_device_already_configured($host_device);
+        if ( $device_configured ) {
+            if ( $host_device->enabled() && $host_device->is_device($device_configured) && $self->_lock_host_device($host_device) ) {
                 next;
             } else {
                 $self->_dettach_host_device($host_device, $doc);
             }
         }
+        next if !$host_device->enabled();
 
         my ($device) = $host_device->list_available_devices();
         if ( !$device ) {

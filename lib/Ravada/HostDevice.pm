@@ -104,6 +104,10 @@ sub list_devices($self) {
     return @device;
 }
 
+sub is_device($self, $device) {
+    return grep m{^$device$},$self->list_devices;
+}
+
 sub _device_locked($self, $name) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM host_devices_domain_locked "
         ." WHERE id_vm=? AND name=? "
