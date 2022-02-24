@@ -171,7 +171,6 @@ sub test_hd_in_domain($vm , $hd) {
 }
 
 sub test_grab_free_device($base) {
-    diag("grab free device in ".$base->type);
     wait_request();
     rvd_back->_cmd_refresh_vms();
     my @clones = $base->clones();
@@ -210,7 +209,6 @@ sub test_grab_free_device($base) {
     test_hostdev_in_domain_config($up, $expect_feat_kvm);
     test_hostdev_in_domain_config($down, $expect_feat_kvm);
 
-    diag("trying to start ".$up->id." ".$up->name);
     eval { $up->start(user_admin) };
     my $err = $@;
     is($up->is_active,0);
@@ -223,8 +221,6 @@ sub test_grab_free_device($base) {
     $third = Ravada::Domain->open($third->{id});
     my ($third_dev) = $third->list_host_devices_attached();
     $third->shutdown_now(user_admin);
-    diag("just released [".$third->id."] ".$third->name);
-    diag($third_dev->{name});
 
     eval { $up->start(user_admin) };
     is(''.$@,'') or die "Error starting ".$up->name;
@@ -330,7 +326,6 @@ sub test_templates_start_nohd($vm) {
     ok(@$templates);
 
     for my $first  (@$templates) {
-        diag("Test template $first->{name} nohd");
         $vm->add_host_device(template => $first->{name});
         my $expect_feat_kvm = $first->{name} =~ /PCI/i;
         my @list_hostdev = $vm->list_host_devices();
@@ -376,14 +371,13 @@ sub test_templates_start_nohd($vm) {
     }
 }
 
-sub test_templates_gone_usb($vm) {
+sub test_templates_changed_usb($vm) {
     return if $vm->type ne 'KVM';
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
     ok(@$templates);
 
     for my $first  (@$templates) {
         next if $first->{name} !~ 'USB';
-        diag("Test template USB gone $first->{name}");
         $vm->add_host_device(template => $first->{name});
         my @list_hostdev = $vm->list_host_devices();
         my ($hd) = $list_hostdev[-1];
@@ -404,7 +398,53 @@ sub test_templates_gone_usb($vm) {
         );
         wait_request(check_error => 0, debug => 0);
         my $req2 = Ravada::Request->open($req->id);
-        like($req2->error,qr/Did not find USB device/);
+        is($req2->status,'done');
+        is($req2->error,'');
+
+        $domain->remove(user_admin);
+    }
+
+    for my $hd ( $vm->list_host_devices ) {
+        test_hd_remove($vm, $hd);
+    }
+
+}
+
+sub test_templates_gone_usb($vm) {
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+    ok(@$templates);
+
+    for my $first  (@$templates) {
+        next if $first->{name} !~ 'USB';
+        $vm->add_host_device(template => $first->{name});
+        my @list_hostdev = $vm->list_host_devices();
+        my ($hd) = $list_hostdev[-1];
+
+        _fix_host_device($hd) if $vm->type eq 'KVM';
+
+        next if !$hd->list_devices;
+
+        my $domain = _create_domain_hd($vm, $hd);
+        _fix_usb_ports($domain);
+        $domain->start(user_admin);
+
+        my $dev_config = $domain->_device_already_configured($hd);
+        ok($dev_config) or exit;
+
+        is(scalar($hd->list_domains_with_device()),1);
+        $domain->shutdown_now(user_admin);
+        is($domain->_device_already_configured($hd), $dev_config) or exit;
+
+        _mangle_dom_hd($domain);
+        warn $domain->_device_already_configured($hd);
+        $hd->_data('list_filter',"no match");
+        diag("try to start again, it should fail");
+        my $req = Ravada::Request->start_domain(uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        wait_request(check_error => 0, debug => 0);
+        my $req2 = Ravada::Request->open($req->id);
+        like($req2->error,qr/No available devices/);
 
         my $req_no_hd = Ravada::Request->start_domain(uid => user_admin->id
             ,id_domain => $domain->id
@@ -426,7 +466,44 @@ sub test_templates_gone_usb($vm) {
 
 }
 
+
 sub _mangle_dom_hd($domain) {
+    if ($domain->type eq 'KVM') {
+        _mangle_dom_hd_kvm($domain);
+    } elsif ($domain->type eq 'Void') {
+        _mangle_dom_hd_void($domain);
+    } else {
+        confess "I don't know how to mangle ".$domain->type." ".$domain->name;
+    }
+}
+
+sub _mangle_dom_hd_void($domain) {
+    my $config = $domain->_load();
+    die "Error: ho host devices in ".$domain->name
+    if !exists $config->{hardware}->{host_devices}
+        || !exists $config->{hardware}->{host_devices}->[0]
+        || !defined $config->{hardware}->{host_devices}->[0]
+    ;
+    my ($hd) = $config->{hardware}->{host_devices}->[0];
+    my $vendor_id = $hd->{vendor_id};
+    my $sth = connector->dbh->prepare("SELECT id,name FROM host_devices_domain "
+        ." WHERE id_domain=?");
+    $sth->execute($domain->id);
+    my $new_id = "aaaa";
+    my ($id_hd, $device_name) = $sth->fetchrow;
+    $device_name =~ s/(.* ID ).*?(:.*)/${1}$new_id$2/;
+
+    $config->{hardware}->{host_devices}->[0]->{vendor_id} = $new_id;
+    $domain->_store(hardware => $config->{hardware});
+
+    warn $device_name;
+    $sth = connector->dbh->prepare("UPDATE host_devices_domain set name=?"
+        ." WHERE id=?");
+    $sth->execute($device_name, $id_hd);
+
+}
+
+sub _mangle_dom_hd_kvm($domain) {
     my ($in, $out,$err);
     run3(['lsusb'], \$in, \$out, \$err);
     my $device=0;
@@ -695,8 +772,10 @@ for my $vm_name ( vm_names()) {
 
         diag("Testing host devices in $vm_name");
 
+        test_templates_gone_usb($vm);
+        test_templates_changed_usb($vm);
+
         test_templates_start_nohd($vm);
-        test_templates_gone_usb($vm) if $vm_name eq 'KVM';
         test_templates_change_filter($vm);
         test_templates($vm);
         test_templates_change_devices($vm);

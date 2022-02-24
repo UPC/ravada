@@ -105,6 +105,7 @@ sub list_devices($self) {
 }
 
 sub is_device($self, $device) {
+    return if !defined $device;
     return grep m{^$device$},$self->list_devices;
 }
 
