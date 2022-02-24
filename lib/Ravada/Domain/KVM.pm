@@ -3144,8 +3144,9 @@ sub remove_host_devices($self) {
         or die "ERROR: $!\n";
 
     my ($dev) = $doc->findnodes("/domain/devices");
-    for my $hostdev ( $dev->findnodes("/hostdev") ) {
-        $doc->removeChild($hostdev);
+    for my $hostdev ( $dev->findnodes("hostdev") ) {
+        $dev->removeChild($hostdev);
+        warn $hostdev->toString();
     }
     $self->reload_config($doc);
 }

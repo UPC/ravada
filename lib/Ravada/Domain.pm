@@ -6610,11 +6610,12 @@ sub _add_host_devices($self, @args) {
         my $device_configured = $self->_device_already_configured($host_device);
 
         warn $host_device->name." ".($device_configured or '<UNDEF>');
+        warn $host_device->is_device($device_configured);
         if ( $device_configured ) {
             if ( $host_device->enabled() && $host_device->is_device($device_configured) && $self->_lock_host_device($host_device) ) {
                 next;
             } else {
-                $self->_dettach_host_device($host_device, $doc);
+                $self->_dettach_host_device($host_device, $doc, $device_configured);
             }
         }
         next if !$host_device->enabled();
@@ -6656,11 +6657,14 @@ sub _dettach_host_devices($self) {
     for my $host_device ( @host_devices ) {
         $self->_dettach_host_device($host_device);
     }
+    $self->remove_host_devices();
 }
 
-sub _dettach_host_device($self, $host_device, $doc=$self->get_config) {
+sub _dettach_host_device($self, $host_device, $doc=$self->get_config
+    ,$device = $self->_device_already_configured($host_device)
+) {
 
-    my $device = $self->_device_already_configured($host_device) or return;
+    return if !defined $device or !length($device);
 
     for my $entry( $host_device->render_template($device) ) {
         if ($entry->{type} eq 'node') {

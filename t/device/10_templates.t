@@ -410,6 +410,58 @@ sub test_templates_changed_usb($vm) {
 
 }
 
+sub test_templates_gone_usb_2($vm) {
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+    ok(@$templates);
+
+    for my $first  (@$templates) {
+        next if $first->{name} !~ 'USB';
+        $vm->add_host_device(template => $first->{name});
+        my @list_hostdev = $vm->list_host_devices();
+        my ($hd) = $list_hostdev[-1];
+
+        _fix_host_device($hd) if $vm->type eq 'KVM';
+
+        next if !$hd->list_devices;
+
+        my $domain = _create_domain_hd($vm, $hd);
+        _fix_usb_ports($domain);
+        $domain->start(user_admin);
+
+        my $dev_config = $domain->_device_already_configured($hd);
+        ok($dev_config) or exit;
+
+        is(scalar($hd->list_domains_with_device()),1);
+        $domain->shutdown_now(user_admin);
+        $hd->_data('list_filter',"no match");
+        diag("try to start again, it should fail");
+        my $req = Ravada::Request->start_domain(uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        wait_request(check_error => 0, debug => 0);
+        my $req2 = Ravada::Request->open($req->id);
+        like($req2->error,qr/No available devices/);
+
+        my $req_no_hd = Ravada::Request->start_domain(uid => user_admin->id
+            ,id_domain => $domain->id
+            ,enable_host_devices => 0
+        );
+        wait_request(check_error => 0, debug => 0);
+        my $req_no_hd2 = Ravada::Request->open($req_no_hd->id);
+        is($req_no_hd2->error,'');
+        is($domain->is_active,1);
+
+        test_hostdev_not_in_domain_config($domain);
+
+        $domain->remove(user_admin);
+    }
+
+    for my $hd ( $vm->list_host_devices ) {
+        test_hd_remove($vm, $hd);
+    }
+}
+
+
 sub test_templates_gone_usb($vm) {
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
     ok(@$templates);
@@ -772,6 +824,7 @@ for my $vm_name ( vm_names()) {
 
         diag("Testing host devices in $vm_name");
 
+        test_templates_gone_usb_2($vm);
         test_templates_gone_usb($vm);
         test_templates_changed_usb($vm);
 
