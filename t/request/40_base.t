@@ -608,6 +608,34 @@ sub test_req_clone_deny($vm, $base_name) {
 
 }
 
+sub test_domain_name_iso($vm) {
+    my $name = new_domain_name()."-iso";
+    my $req = Ravada::Request->create_domain(
+        name => $name
+        ,id_owner => user_admin->id
+        ,vm => $vm->type
+        ,id_iso => search_id_iso('%alpine%')
+    );
+    wait_request();
+    my ($domain) = $vm->search_domain($name);
+    ok($domain) or return;
+
+    $domain->prepare_base(user_admin);
+    my $name2 = new_domain_name."-iso";
+    my $req2 = Ravada::Request->clone(
+        id_domain => $domain->id
+        ,uid => user_admin->id
+        ,name => $name2
+    );
+    wait_request();
+
+    my ($clone) = $vm->search_domain($name2);
+    ok($clone) or return;
+
+    $clone->remove(user_admin) if $clone;
+    $domain->remove(user_admin) if $domain;
+}
+
 ################################################
 
 {
@@ -645,6 +673,7 @@ for my $vm_name ( vm_names ) {
             my $iso = $vm_connected->_search_iso($ID_ISO);
             $vm_connected->_iso_name($iso, undef);
         }
+        test_domain_name_iso($vm_connected);
         test_swap($vm_name);
 
         my $domain_name = test_req_create_domain_iso($vm_name);
