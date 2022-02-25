@@ -20,25 +20,16 @@ use_ok('Ravada::HostDevice');
 use_ok('Ravada::HostDevice::Templates');
 
 my $N_DEVICE = 0;
-my $USB_DEVICE;
-load_usb_device();
 #########################################################
 
-# we will try to find an unused bluetooth usb dongle
-
-sub load_usb_device() {
-    open my $in,"<","t/etc/usb_device.conf" or return;
-    $USB_DEVICE = <$in>;
-    chomp $USB_DEVICE;
-}
-
 sub _search_unused_device {
+
+    my $usb_filter = config_host_devices('usb');
     my @cmd =("lsusb");
     my ($in, $out, $err);
     run3(["lsusb"], \$in, \$out, \$err);
     for my $line ( split /\n/, $out ) {
-        next unless (defined $USB_DEVICE && $line =~ $USB_DEVICE) 
-        || $line =~ /Bluetooth|flash|disk|cam/i;
+        next unless $line =~ qr($usb_filter)i;
 
         my ($filter) = $line =~ /(ID [a-f0-9]+:[a-f0-9]+)/;
         die "ID \\d+ not found in $line" if !$filter;
@@ -273,10 +264,6 @@ sub test_devices($host_device, $expected_available, $match = undef) {
 
     return if !$match;
 
-    for (@devices) {
-        next if defined $USB_DEVICE && $_ =~ qr($USB_DEVICE);
-        like($_,qr($match)) or confess;
-    }
 }
 
 sub test_host_device_usb($vm) {

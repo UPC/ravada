@@ -25,7 +25,7 @@ sub _set_hd_nvidia($hd) {
 }
 
 sub _set_hd_usb($hd) {
-    $hd->_data( list_filter => '(disk|flash|audio|cam|bluetoo)');
+    $hd->_data( list_filter => config_host_devices('usb'));
 }
 
 sub test_hostdev_not_in_domain_void($domain) {
@@ -420,7 +420,7 @@ sub test_templates_gone_usb_2($vm) {
         my @list_hostdev = $vm->list_host_devices();
         my ($hd) = $list_hostdev[-1];
 
-        _fix_host_device($hd) if $vm->type eq 'KVM';
+        _fix_host_device($hd);
 
         next if !$hd->list_devices;
 
@@ -697,12 +697,16 @@ sub test_templates($vm) {
         is(scalar @list_hostdev , $n+2);
         like ($list_hostdev[-1]->{name} , qr/[a-zA-Z] \d+$/) or exit;
 
-        test_hd_in_domain($vm, $list_hostdev[-1]);
-        test_hd_dettach($vm, $list_hostdev[-1]);
+        my $host_device = $list_hostdev[-1];
+
+        _fix_host_device($host_device) if $vm->type eq 'KVM';
+
+        test_hd_in_domain($vm, $host_device);
+        test_hd_dettach($vm, $host_device);
 
         my $req = Ravada::Request->list_host_devices(
             uid => user_admin->id
-            ,id_host_device => $list_hostdev[-1]->id
+            ,id_host_device => $host_device->id
             ,_force => 1
         );
         wait_request( debug => 0);
@@ -712,15 +716,15 @@ sub test_templates($vm) {
             ,login => user_admin->name
         };
         my $devices = Ravada::WebSocket::_list_host_devices(rvd_front(), $ws_args);
-        is(scalar(@$devices), 2+$n) or die Dumper($devices, $list_hostdev[-1]);
+        is(scalar(@$devices), 2+$n) or die Dumper($devices, $host_device);
         $n+=2;
         next if !(scalar(@{$devices->[-1]->{devices}})>1);
 
-        my $list_filter = $list_hostdev[-1]->_data('list_filter');
-        $list_hostdev[-1]->_data('list_filter' => '002');
+        my $list_filter = $host_device->_data('list_filter');
+        $host_device->_data('list_filter' => 'fail match');
         my $req2 = Ravada::Request->list_host_devices(
             uid => user_admin->id
-            ,id_host_device => $list_hostdev[-1]->id
+            ,id_host_device => $host_device->id
             ,_force => 1
         );
         wait_request();
@@ -732,7 +736,7 @@ sub test_templates($vm) {
         my $dev2 = $devices2->[-1]->{devices};
         $equal = scalar(@$dev0) == scalar (@$dev2);
         if ($equal ) {
-            for ( 0 .. scalar(@$dev0)) {
+            for ( 0 .. scalar(@$dev0)-1) {
                 if ($dev0->[$_] ne $dev2->[$_]) {
                     $equal = 0;
                     last;
@@ -740,7 +744,7 @@ sub test_templates($vm) {
             }
         }
         ok(!$equal) or die Dumper($dev0, $dev2);
-        $list_hostdev[-1]->_data('list_filter' => $list_filter);
+        $host_device->_data('list_filter' => $list_filter);
     }
 
     my $n = $vm->list_host_devices;
@@ -754,7 +758,7 @@ sub test_templates($vm) {
 sub test_hd_dettach($vm, $host_device) {
     my $start_fails = 0;
     if (!$host_device->list_devices && $host_device->name =~ /^PCI/ && $vm->type eq 'KVM' ) {
-        $host_device->_data('list_filter' => 'VGA');
+        $host_device->_data('list_filter' => config_host_devices('pci'));
         $start_fails = 1;
     }
     $start_fails = 1 if !$start_fails && !$host_device->list_devices;
@@ -785,6 +789,7 @@ sub test_hd_remove($vm, $host_device) {
     }
     my $domain = create_domain($vm);
     _fix_usb_ports($domain);
+    _fix_host_device($host_device) if $vm->type eq 'KVM';
     $domain->add_host_device($host_device);
 
     eval { $domain->start(user_admin) };
