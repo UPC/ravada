@@ -6609,8 +6609,6 @@ sub _add_host_devices($self, @args) {
     for my $host_device ( @host_devices ) {
         my $device_configured = $self->_device_already_configured($host_device);
 
-        warn $host_device->name." ".($device_configured or '<UNDEF>');
-        warn $host_device->is_device($device_configured) if $device_configured;
         if ( $device_configured ) {
             if ( $host_device->enabled() && $host_device->is_device($device_configured) && $self->_lock_host_device($host_device) ) {
                 next;
