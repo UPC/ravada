@@ -8,30 +8,25 @@
 </div>
 <div class="panel-body">
 %=   include "main/needs_restart"
-    reqs: {{showmachine.requests}}
-    <br/>
-    date: '{{showmachine._date_changed}}'
-    <br/>
-    edit: {{edit}}
     <div ng-repeat="(name,value) in showmachine.hardware" ng-hide="show_new_disk||show_new_display">
         <h2>{{name}}</h2>
         <div ng-show="value">
             <div ng-repeat="item in value track by $index"
-                ng-class='{"border rounded border-primary mb-4 p-4": item.edit}'
+                ng-class='{"border rounded border-primary mb-4 p-4": item._edit}'
             >
                 <button title="edit {{name}} {{$index+1}}"
-                    ng-show="(name == 'network' ||name == 'disk' || name == 'video') && !item.edit && !item.remove"
+                    ng-show="(name == 'network' ||name == 'disk' || name == 'video' || name == 'sound') && !item._edit && !item.remove"
                     ng-disabled="showmachine.requests > 0 || showmachine.is_active || showmachine.is_base"
                     ng-click="toggle_edit(item)"
-                            ><i class="fa fa-sticky-note"></i>
+                            ><i class="fas fa-pencil-alt"></i>
                 </button>
                 <button title="remove {{name}} {{$index+1}}"
-                    ng-hide="item.edit"
+                    ng-hide="item._edit"
                     ng-disabled="showmachine.requests > 0 || item.is_secondary || showmachine.is_active || showmachine.is_base"
                     ng-click="confirm_remove='';remove_hardware(name,$index,item)"><i class="fa fa-times"></i>
                 </button>
-                <span ng-class='{"h5": item.edit }'>
-                    {{item.name || item.driver}}
+                <span ng-class='{"h5": item._edit }'>
+                    {{item.name || item.driver || item.type || item.model}}
                 </span>
                 <div ng-show="name == 'disk' && item.remove"
                     ng-class='{"border border-danger p-4 m-4": item.device == "disk"}'
@@ -57,7 +52,8 @@
                 </div>
                 %= include 'main/manage_machine_edit_net'
                 %= include 'main/manage_machine_edit_video'
-                <div ng-show="name == 'disk' && item.edit" class="form-group mt-4">
+                %= include 'main/manage_machine_edit_sound'
+                <div ng-show="name == 'disk' && item._edit" class="form-group mt-4">
                     <div class="row" ng-show="item.device == 'disk'">
                         <div class="col-lg-2">
                             <p class="text-right"><%=l 'bus' %></p>
@@ -106,7 +102,7 @@
                             <button ng-click="toggle_edit(item);change_disk(showmachine.id, $index)"
                                 class="btn btn-primary"
                             ><%=l 'Submit' %></button>
-                            <button ng-click="item.edit=false"
+                            <button ng-click="toggle_edit(item)"
                                 class="btn btn-outline-secondary"
                             ><%=l 'Cancel' %></button>
                         </div>
