@@ -3563,7 +3563,8 @@ sub _kill_dead_process($self) {
         "SELECT id,pid,command,start_time "
         ." FROM requests "
         ." WHERE start_time<? "
-        ." AND ( status like 'working%' OR status like 'downloading%') "
+        ." AND ( status like 'working%' OR status like 'downloading%'"
+        ."      OR status like 'start%' ) "
         ." AND pid IS NOT NULL "
     );
     $sth->execute(time - 2);
