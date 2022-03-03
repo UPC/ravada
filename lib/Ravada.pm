@@ -978,25 +978,25 @@ sub _update_domain_drivers_options($self) {
             id => 1,
             ,id_driver_type => 1,
             ,name => 'QXL'
-           ,value => 'type="qxl" ram="65536" vram="65536" vgamem="16384" heads="1" primary="yes"'
+           ,value => 'qxl'
         },
         vmvga => {
             id => 2,
             ,id_driver_type => 1,
             ,name => 'VMVGA'
-           ,value => 'type="vmvga" vram="16384" heads="1" primary="yes"'
+           ,value => 'vmvga'
         },
         cirrus => {
             id => 3,
             ,id_driver_type => 1,
             ,name => 'Cirrus'
-           ,value => 'type="cirrus" vram="16384" heads="1" primary="yes"'
+           ,value => 'cirrus'
         },
         vga => {
             id => 4,
             ,id_driver_type => 1,
             ,name => 'VGA'
-           ,value => 'type="vga" vram="16384" heads="1" primary="yes"'
+           ,value => 'vga'
         },
         ich6 => {
             id => 6,

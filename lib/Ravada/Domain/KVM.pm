@@ -1985,7 +1985,7 @@ sub _text_to_hash {
     for my $item (split /\s+/,$text) {
         my ($name, $value) = $item =~ m{(.*?)=(.*)};
         if (!defined $name) {
-            warn "I can't find name=value in '$item'";
+            confess "I can't find name=value in '$item'";
             next;
         }
         $value =~ s/^"(.*)"$/$1/;
@@ -2130,9 +2130,9 @@ sub _set_driver_streaming {
     return $self->_set_driver_generic_simple('/domain/devices/graphics/streaming',@_);
 }
 
-sub _set_driver_video {
-    my $self = shift;
-    return $self->_set_driver_generic('/domain/devices/video',@_);
+sub _set_driver_video($self,$value) {
+    $value = "type=$value" unless $value =~ /=/;
+    return $self->_set_driver_generic('/domain/devices/video',$value);
 }
 
 sub _set_driver_network {

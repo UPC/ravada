@@ -178,9 +178,7 @@ sub get_driver {
     return $sub->($self);
 }
 
-sub _get_driver_generic {
-    my $self = shift;
-    my $xml_path = shift;
+sub _get_driver_generic($self,$xml_path,$attribute=undef) {
 
     my ($tag) = $xml_path =~ m{.*/(.*)};
 
@@ -188,9 +186,13 @@ sub _get_driver_generic {
     my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
 
     for my $driver ($doc->findnodes($xml_path)) {
-        my $str = $driver->toString;
-        $str =~ s{^<$tag (.*)/>}{$1};
-        push @ret,($str);
+        if (defined $attribute) {
+            push @ret,($driver->getAttribute($attribute));
+        } else {
+            my $str = $driver->toString;
+            $str =~ s{^<$tag (.*)/>}{$1};
+            push @ret,($str);
+        }
     }
 
     return $ret[0] if !wantarray && scalar@ret <2;
@@ -249,9 +251,8 @@ sub _get_driver_streaming {
     return $self->_get_driver_graphics('/domain/devices/graphics/streaming',@_);
 }
 
-sub _get_driver_video {
-    my $self = shift;
-    return $self->_get_driver_generic('/domain/devices/video/model',@_);
+sub _get_driver_video($self) {
+    return $self->_get_driver_generic('/domain/devices/video/model','type');
 }
 
 sub _get_driver_network {
