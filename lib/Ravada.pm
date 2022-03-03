@@ -822,7 +822,10 @@ sub _scheduled_fedora_releases($self,$data) {
                     .'-.*\.iso';
             my @found;
             eval { @found = $vm->_search_url_file($url_file) };
-            die $@ if $@ && $@ !~ /Not Found/i;
+            if ( $@ && $@ !~ /Not Found/i ) {
+                warn $@;
+                return;
+            }
             if(!@found) {
                 next if $url =~ m{//archives};
 
