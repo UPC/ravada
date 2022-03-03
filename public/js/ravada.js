@@ -257,11 +257,11 @@
                 return $scope.getUnixTimeFromDate(date) < $scope.getUnixTimeFromDate(now_date ? now_date : new Date());
             };
             $scope.toggle_edit = function(item) {
-                if (!item.edit) {
-                    item.edit = true;
+                if (!item._edit) {
+                    item._edit = true;
                     $scope.edit++;
                 } else {
-                    item.edit = false;
+                    item._edit = false;
                     $scope.edit--;
                 }
         }
@@ -832,16 +832,17 @@
                 });
 
             };
-            $scope.change_video = function(id_machine,index) {
-                var new_settings = $scope.showmachine.hardware.video[index];
-                delete new_settings.edit;
+            $scope.change_hardware= function(item,hardware,index) {
+                var new_settings = $scope.showmachine.hardware[hardware][index];
+                delete new_settings._edit;
                 $scope.request('change_hardware',
-                    {'id_domain': id_machine
-                        ,'hardware': 'video'
+                    {'id_domain': $scope.showmachine.id
+                        ,'hardware': hardware
                         ,'index': index
                         ,'data': new_settings
                     }
                 );
+                item._edit=false;
             }
             $scope.change_network = function(id_machine, index ) {
                 var new_settings ={
@@ -928,6 +929,9 @@
                 $http.post('/request/'+request+'/'
                     ,JSON.stringify(args)
                 ).then(function(response) {
+                    if (typeof(response) == null || response.status == 401 || response.status == 403 ) {
+                        window.location.href="/logout";
+                    }
                     if (! response.data.request ) {
                         $scope.pending_request = {
                             'status': 'done'
