@@ -3,6 +3,7 @@ use strict;
 
 use Carp qw(carp confess cluck);
 use Data::Dumper;
+use Hash::Util qw(lock_hash);
 use POSIX qw(WNOHANG);
 use Sys::Virt;
 use Test::More;
@@ -41,10 +42,19 @@ sub _download_alpine64 {
     is($req->status,'done') or exit;
 }
 
+sub _driver_field($hardware) {
+    my $driver_field = 'driver';
+    $driver_field = 'type' if $hardware eq 'video';
+    $driver_field = 'model' if $hardware eq 'sound';
+    return $driver_field;
+}
+
 sub test_add_hardware_request_drivers {
 	my $vm = shift;
 	my $domain = shift;
 	my $hardware = shift;
+
+    my $driver_field = _driver_field($hardware);
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my $info0 = $domain->info(user_admin);
@@ -54,16 +64,17 @@ sub test_add_hardware_request_drivers {
     for my $remove ( 1,0 ) {
         test_remove_almost_all_hardware($vm, $domain, $hardware);
         for my $driver (@$options) {
+            $driver = lc($driver);
             diag("Testing new $hardware $driver remove=$remove");
 
             my $info0 = $domain->info(user_admin);
-            my @dev0 = sort map { $_->{driver} }
-                        grep { !$_->{is_secondary} }
+            my @dev0 = sort map { $_->{$driver_field} }
+                        grep { !exists $_->{is_secondary} || !$_->{is_secondary} }
                         @{$info0->{hardware}->{$hardware}};
-            test_add_hardware_request($vm, $domain, $hardware, { driver => $driver} );
+            test_add_hardware_request($vm, $domain, $hardware, { $driver_field => $driver} );
 
             my $info1 = $domain->info(user_admin);
-            my @dev1 = sort map { $_->{driver} } @{$info1->{hardware}->{$hardware}};
+            my @dev1 = sort map { $_->{$driver_field} } @{$info1->{hardware}->{$hardware}};
 
             if ( scalar @dev1 == scalar(@dev0)) {
                 my $different = 0;
@@ -77,8 +88,14 @@ sub test_add_hardware_request_drivers {
             }
             my $driver_short = _get_driver_short_name($domain, $hardware,$driver);
 
-            is($info1->{hardware}->{$hardware}->[-1]->{driver}, $driver_short) or confess( $domain->name
-                , Dumper($info1->{hardware}->{$hardware}));
+            if ($hardware eq 'video' ) {
+                my ($new) = grep {$_->{$driver_field} eq $driver_short }
+                    @{$info1->{hardware}->{$hardware}};
+                ok($new,"Expecting a $hardware $driver_short");
+            } else {
+                is($info1->{hardware}->{$hardware}->[-1]->{$driver_field}, $driver_short) or confess( $domain->name
+                    , Dumper($info1->{hardware}->{$hardware}))
+            }
 
             test_display_data($domain , $driver) if $hardware eq 'display';
 
@@ -97,7 +114,7 @@ sub _get_driver_short_name($domain,$hardware, $option) {
 
     my $driver = $domain->drivers($hardware);
     my ($selected)
-    = grep { $_->{name} eq $option|| $_->{value} eq $option}
+    = grep { lc($_->{name}) eq lc($option) || lc($_->{value}) eq lc($option)}
     $driver->get_options;
 
     return $selected->{value};
@@ -169,23 +186,60 @@ sub test_display_db($domain, $n_expected) {
     is(scalar(@ports),$n_expected_non_builtin) or die Dumper(\@displays,\@ports);
 }
 
+sub _remove_other_video_primary($domain) {
+    my @list_hardware = $domain->get_controller('video');
+    my $removed = 0;
+    for my $index (reverse 0 .. scalar(@list_hardware)-1 ) {
+        next if $list_hardware[$index]->{type} !~ /vmvga|cirrus/;
+        Ravada::Request->remove_hardware(
+            name => 'video'
+            ,id_domain => $domain->id
+            ,index => $index
+            ,uid => user_admin->id
+        );
+        $removed++;
+    }
+    wait_request() if $removed;
+}
+
 sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
 
+    $domain = Ravada::Domain->open($domain->id);
+
     confess if !ref($data) || ref($data) ne 'HASH';
+
+    if ($hardware eq 'video' && exists $data->{type} &&  $data->{type} eq 'cirrus') {
+        _remove_other_video_primary($domain);
+    }
 
     my $date_changed = $domain->_data('date_changed');
 
     my @list_hardware1 = $domain->get_controller($hardware);
     @list_hardware1 = map { $_->{file} } @list_hardware1 if $hardware eq 'disk';
+
 	my $numero = scalar(@list_hardware1);
-    while (($hardware eq 'display' && $numero > 0 ) || ($hardware eq 'usb' && $numero > 3)) {
+
+    while (($hardware =~ /display/ && $numero > 0 ) || ($hardware eq 'usb' && $numero > 3) || ($hardware =~ /video/ && $numero > 0)) {
+        my $n_old = $numero;
         test_remove_hardware($vm, $domain, $hardware, 0);
+        $domain = Ravada::Domain->open($domain->id);
         @list_hardware1 = $domain->get_controller($hardware);
 	    $numero = scalar(@list_hardware1);
+        last if $n_old == 1 && scalar(@list_hardware1)==1 && $hardware eq 'video';
     }
     test_display_db($domain,0) if $hardware eq 'display';
 
     $data = { driver => 'spice' } if !keys %$data && $hardware eq 'display';
+
+    if ($hardware eq 'video') {
+        Ravada::Request->change_hardware(uid => $USER->id
+            ,id_domain => $domain->id
+            ,hardware => $hardware
+            ,index => 0
+            ,data => { driver => 'qxl'}
+        );
+        wait_request();
+    }
 
 	my $req;
 	eval {
@@ -225,6 +279,8 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
                 .Dumper(\@list_hardware2, \@list_hardware1)) or exit;
     }
     $domain = Ravada::Domain->open($domain->id);
+    my @list_hardware3 = $domain->get_controller($hardware);
+    is(scalar(@list_hardware3), $numero+$n) or exit;
     my $info = $domain->info(user_admin);
     is(scalar(@{$info->{hardware}->{$hardware}}), $numero+$n) or exit;
     my $new_hardware = $info->{hardware}->{$hardware}->[$numero-1];
@@ -235,6 +291,212 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     if (!$TEST_TIMESTAMP++) {
         isnt($domain->_data('date_changed'), $date_changed);
     }
+    return $domain;
+}
+
+sub _remove_hardware_video($domain) {
+    my $info = $domain->info(user_admin);
+    my $video = $info->{hardware}->{video};
+    for my $n ( reverse 0 .. scalar(@$video)-1 ) {
+        next if $video->[$n]->{type} =~ /qxl/;
+        Ravada::Request->remove_hardware(
+            name => 'video'
+            ,index => $n
+            ,id_domain => $domain->id
+            ,uid => user_admin->id
+        );
+    }
+    wait_request();
+}
+
+sub test_video_primary($domain) {
+    my $req = Ravada::Request->add_hardware(
+            name => 'video'
+            ,uid => user_admin->id
+            ,id_domain => $domain->id
+            ,data => { 'driver' => 'qxl','primary' => 'yes'}
+    );
+    wait_request();
+
+    my $driver = $domain->drivers('video');
+    for my $option ( $driver->get_options ) {
+        _remove_hardware_video($domain);
+        my $option_value = lc($option->{name});
+        my $info = $domain->info(user_admin);
+        my $video = $info->{hardware}->{video};
+        my $n;
+        for ( 0 .. scalar(@$video)-1 ) {
+            $n = $_;
+            last if !exists $video->[$n]->{primary}
+            || $video->[$n]->{primary} !~ /yes/;
+        }
+        die "Error: I can't find a non primary video ".Dumper($video)
+        if !defined $n;
+
+        my @args = (
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,hardware => 'video'
+            ,index => $n
+        );
+        diag($domain->name." $option_value");
+        $req = Ravada::Request->change_hardware(
+            @args
+            ,data => { driver => $option_value}
+        );
+        wait_request();
+    }
+}
+
+sub _remove_all_video_but_one($domain, $keep = 'virtio') {
+    my $info = $domain->info(user_admin);
+    my $video = $info->{hardware}->{video};
+
+    for my $n ( reverse 0 .. scalar(@$video)-1 ) {
+        confess Dumper($info->{hardware}) if !exists $video->[$n]->{type};
+        next if $video->[$n]->{type} eq $keep;
+        Ravada::Request->remove_hardware(name => 'video'
+            ,uid => user_admin->id
+            ,id_domain => $domain->id
+            ,index => $n
+        );
+    }
+    wait_request();
+
+    $info = $domain->info(user_admin);
+    $video = $info->{hardware}->{video};
+
+    my $n;
+    for ( 0 .. scalar(@$video)-1 ) {
+        $n = $_;
+        last if $video->[$n]->{type} eq $keep
+    }
+    return $n if defined $n;
+
+    my $req = Ravada::Request->change_hardware(
+        hardware => 'video'
+        ,uid => user_admin->id
+        ,id_domain => $domain->id
+        ,data => { 'type' => $keep }
+        ,index => 0
+    );
+    wait_request();
+
+    $info = $domain->info(user_admin);
+    $video = $info->{hardware}->{video};
+
+    for ( 0 .. scalar(@$video)-1 ) {
+        $n = $_;
+        last if $video->[$n]->{type} eq 'virtio'
+    }
+
+    die "Error: I can't find video virtio ".Dumper($video)
+    if !defined $n;
+
+    return $n;
+}
+
+sub test_video_vgamem($domain) {
+    my $n = _remove_all_video_but_one($domain, 'qxl');
+    my @args = (
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware => 'video'
+        ,index => $n
+    );
+    for my $field ( 'vgamem', 'ram' ) {
+        for my $type ( 'cirrus', 'qxl','vga', 'virtio','vmvga') {
+            Ravada::Request->change_hardware(
+                @args
+                ,data => { type => 'qxl'
+                    ,$field => '16384'
+                }
+            );
+            wait_request( debug => 0);
+            my $req = Ravada::Request->change_hardware(
+                @args
+                ,data => { type => $type
+                    ,$field => '16384'
+                }
+            );
+            wait_request( debug => 0);
+        }
+    }
+}
+
+sub test_video_virtio_3d_change_type($domain) {
+    my $n = _remove_all_video_but_one($domain);
+    my $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware => 'video'
+        ,index => $n
+        ,data => { type => 'virtio'
+            , acceleration => { accel3d => 'yes'}
+        }
+    );
+    wait_request( debug => 0);
+
+    $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware => 'video'
+        ,index => $n
+        ,data => { type => 'cirrus'
+            , acceleration => { accel3d => 'yes'}
+        }
+    );
+    wait_request(debug => 0);
+}
+
+sub test_video_virtio_3d($domain) {
+    my $n = _remove_all_video_but_one($domain);
+
+    my $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware => 'video'
+        ,index => $n
+        ,data => { type => 'virtio'
+            , acceleration => { accel3d => 'yes'}
+        }
+    );
+    wait_request( debug => 0);
+
+    _test_kvm_accel3d($domain, 'yes');
+    $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware => 'video'
+        ,index => $n
+        ,data => { type => 'virtio'
+            , acceleration => { accel3d => 'no'}
+        }
+    );
+    wait_request( debug => 0);
+    _test_kvm_accel3d($domain,'no');
+}
+
+sub _test_kvm_accel3d($domain,$value) {
+    return if $domain->type ne 'KVM';
+    my $xml = XML::LibXML->load_xml(
+            string => $domain->domain->get_xml_description()
+    );
+    my $path = "/domain/devices/video/model/acceleration";
+    my ($acceleration ) = $xml->findnodes($path);
+    ok($acceleration,"Expecting $path in ".$domain->name)
+        or exit;
+    is($acceleration->getAttribute('accel3d'), $value)
+        or die $domain->name;
+}
+
+sub test_add_video($domain) {
+    my $data = { type => 'virtio', heads => 1 };
+    test_video_vgamem($domain);
+    test_video_virtio_3d_change_type($domain);
+    test_video_virtio_3d($domain);
+    test_add_hardware_request($domain->_vm,$domain,'video',$data);
+    test_video_primary($domain);
 }
 
 sub test_add_cdrom($domain) {
@@ -315,6 +577,8 @@ sub test_add_hardware_custom($domain, $hardware) {
         ,usb => sub {}
         ,mock => sub {}
         ,network => sub {}
+        ,video => \&test_add_video
+        ,sound => sub {}
     );
 
     my $exec = $sub{$hardware} or die "No custom add $hardware";
@@ -420,9 +684,13 @@ sub test_remove_hardware($vm, $domain, $hardware, $index) {
 	};
 	is($@, '') or return;
 	ok($req, 'Request');
-	rvd_back->_process_all_requests_dont_fork();
+    wait_request(debug => 0);
 	is($req->status(), 'done');
 	is($req->error(), '') or exit;
+
+    # there is no poing in checking if removed because
+    # a new video device will be created when there is none
+    return if $hardware eq 'video' && scalar(@list_hardware1)==1;
 
     my $n = 1;
     $n++ if $hardware eq 'display' && grep({ $_->{driver} =~ /-tls/ } @list_hardware1);
@@ -705,12 +973,35 @@ sub test_change_hardware($vm, $domain, $hardware) {
         ,mock => sub {}
          ,usb => sub {}
          ,display => sub {}
+         ,video => sub {}
+         ,sound => sub {}
     );
     my $exec = $sub{$hardware} or die "I don't know how to test $hardware";
     $exec->($vm, $domain);
 }
 
+sub _remove_usbs($domain, $hardware) {
+
+    return unless $domain->type eq 'KVM'
+    && $hardware =~ /usb|disk/;
+
+    my $info = $domain->info(user_admin);
+
+    return if !exists $info->{hardware}->{usb}
+    || scalar(@{$info->{hardware}->{usb}} < 3);
+
+    Ravada::Request->remove_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => 'usb'
+        ,index => 0
+    );
+    wait_request();
+}
+
 sub test_change_drivers($domain, $hardware) {
+
+    _remove_usbs($domain, $hardware);
 
     my $info = $domain->info(user_admin);
     my $options = $info->{drivers}->{$hardware};
@@ -718,7 +1009,9 @@ sub test_change_drivers($domain, $hardware) {
     for my $option ( @$options ) {
         is(ref($option),'',"Invalid option for driver $hardware") or exit;
     }
-
+    my $driver_field = 'driver';
+    $driver_field = 'type' if $hardware eq 'video';
+    $driver_field = 'model' if $hardware eq 'sound';
     for my $option (@$options) {
         my $index = 0;
         $index = _search_disk($domain) if $hardware eq 'disk';
@@ -728,7 +1021,7 @@ sub test_change_drivers($domain, $hardware) {
             id_domain => $domain->id
             ,hardware => $hardware
             ,index => $index
-            ,data => { driver => $option }
+            ,data => { $driver_field => $option }
             ,uid => user_admin->id
         );
 
@@ -739,18 +1032,18 @@ sub test_change_drivers($domain, $hardware) {
 
         my $domain_f = Ravada::Front::Domain->open($domain->id);
         $info = $domain_f->info(user_admin);
-        is ($info->{hardware}->{$hardware}->[$index]->{driver}, $option
+        is ($info->{hardware}->{$hardware}->[$index]->{$driver_field}, $option
         ,Dumper($domain_f->name,$info->{hardware}->{$hardware}->[$index])) or exit;
 
         my $domain_b = Ravada::Domain->open($domain->id);
         my $info_b = $domain_b->info(user_admin);
-        is ($info_b->{hardware}->{$hardware}->[$index]->{driver}, $option
+        is ($info_b->{hardware}->{$hardware}->[$index]->{$driver_field}, $option
         ,Dumper($info_b->{hardware}->{$hardware}->[$index])) or exit;
 
         $domain_b->start(user_admin);
         is($domain_b->is_active,1);
         $info_b = $domain_b->info(user_admin);
-        is ($info_b->{hardware}->{$hardware}->[$index]->{driver}, $option
+        is ($info_b->{hardware}->{$hardware}->[$index]->{$driver_field}, $option
         ,Dumper($info_b->{hardware}->{$hardware}->[$index])) or exit;
         $domain_b->shutdown_now(user_admin);
     }
@@ -763,6 +1056,19 @@ sub test_all_drivers($domain, $hardware) {
     my $index = int(scalar(@{$info->{hardware}->{$hardware}}) / 2);
 
     my $domain_b = Ravada::Domain->open($domain->id);
+    if ($hardware eq 'video') {
+        for ( 1 .. 4 ) {
+            Ravada::Request->remove_hardware(
+                id_domain => $domain->id
+                ,uid => user_admin->id
+                ,name => $hardware
+                ,index => 0
+            );
+        }
+        wait_request();
+    }
+
+    my $driver_field = _driver_field($hardware);
     for my $option1 (@$options) {
         for my $option2 (@$options) {
             # diag("Testing $hardware type from $option1 to $option2");
@@ -770,7 +1076,7 @@ sub test_all_drivers($domain, $hardware) {
                 id_domain => $domain->id
                 ,hardware => $hardware
                 ,index => $index
-                ,data => { driver => lc($option1) }
+                ,data => { $driver_field => lc($option1) }
                 ,uid => user_admin->id
             );
             rvd_back->_process_requests_dont_fork();
@@ -781,7 +1087,7 @@ sub test_all_drivers($domain, $hardware) {
                 id_domain => $domain->id
                 ,hardware => $hardware
                 ,index => $index
-                ,data => { driver => lc($option2) }
+                ,data => { $driver_field => lc($option2) }
                 ,uid => user_admin->id
             );
             rvd_back->_process_requests_dont_fork();
@@ -802,7 +1108,7 @@ sub _create_base($vm) {
         push @base,(import_domain($vm, "zz-test-base-alpine-q35-uefi"));
         push @base,(import_domain($vm, "zz-test-base-alpine-q35"));
         push @base,(import_domain($vm, "zz-test-base-alpine"));
-        return @base;
+        return reverse @base;
     }
     return (create_domain($vm));
 }
@@ -865,7 +1171,7 @@ clean();
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name ( vm_names()) {
+for my $vm_name (reverse vm_names()) {
     my $vm;
     $vm = rvd_back->search_vm($vm_name)  if rvd_back();
 	if ( !$vm || ($vm_name eq 'KVM' && $>)) {
@@ -884,6 +1190,7 @@ for my $vm_name ( vm_names()) {
     );
     test_remove_display($vm);
     my %controllers = $domain_b->list_controllers;
+    lock_hash(%controllers);
 
     for my $hardware ( reverse sort keys %controllers ) {
         diag("Testing $hardware controllers for VM $vm_name");
@@ -922,6 +1229,8 @@ for my $vm_name ( vm_names()) {
         $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
         ok(!$domain_b->is_active);
         }
+
+    $domain_b->remove(user_admin);
     }
     ok($TEST_TIMESTAMP);
 }

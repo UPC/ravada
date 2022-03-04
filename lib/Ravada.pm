@@ -822,7 +822,10 @@ sub _scheduled_fedora_releases($self,$data) {
                     .'-.*\.iso';
             my @found;
             eval { @found = $vm->_search_url_file($url_file) };
-            die $@ if $@ && $@ !~ /Not Found/i;
+            if ( $@ && $@ !~ /Not Found/i ) {
+                warn $@;
+                return;
+            }
             if(!@found) {
                 next if $url =~ m{//archives};
 
@@ -978,25 +981,25 @@ sub _update_domain_drivers_options($self) {
             id => 1,
             ,id_driver_type => 1,
             ,name => 'QXL'
-           ,value => 'type="qxl" ram="65536" vram="65536" vgamem="16384" heads="1" primary="yes"'
+           ,value => 'qxl'
         },
         vmvga => {
             id => 2,
             ,id_driver_type => 1,
             ,name => 'VMVGA'
-           ,value => 'type="vmvga" vram="16384" heads="1" primary="yes"'
+           ,value => 'vmvga'
         },
         cirrus => {
             id => 3,
             ,id_driver_type => 1,
             ,name => 'Cirrus'
-           ,value => 'type="cirrus" vram="16384" heads="1" primary="yes"'
+           ,value => 'cirrus'
         },
         vga => {
             id => 4,
             ,id_driver_type => 1,
             ,name => 'VGA'
-           ,value => 'type="vga" vram="16384" heads="1" primary="yes"'
+           ,value => 'vga'
         },
         ich6 => {
             id => 6,
@@ -1149,6 +1152,22 @@ sub _update_domain_drivers_options_disk($self) {
     } @options;
 
     $self->_update_table('domain_drivers_options','id',\%data);
+    return $id;
+}
+
+sub _update_domain_drivers_options_video($self, $id) {
+    my @options_video = ('virtio');
+
+    my %data = map {
+        $_ => {
+            id => $id++
+            ,id_driver_type => 1,
+            ,name => $_
+            ,value => $_
+        }
+    } @options_video;
+
+    $self->_update_table('domain_drivers_options','id',\%data);
 }
 
 sub _sth_search($table, $field) {
@@ -1244,7 +1263,8 @@ sub _update_data {
     $self->_remove_old_indexes();
     $self->_update_domain_drivers_types();
     $self->_update_domain_drivers_options();
-    $self->_update_domain_drivers_options_disk();
+    my $id = $self->_update_domain_drivers_options_disk();
+    $self->_update_domain_drivers_options_video($id);
     $self->_update_old_qemus();
 
     $self->_add_domain_drivers_display();
@@ -3739,7 +3759,7 @@ sub _do_execute_command {
         if $request->status() ne 'done'
             && $request->status() !~ /^retry/i;
     }
-    $self->_set_domain_changed($request) if $request->status eq 'done';
+    $self->_set_domain_changed($request);
 }
 
 sub _set_domain_changed($self, $request) {

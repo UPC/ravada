@@ -4436,7 +4436,7 @@ sub drivers($self, $name=undef, $type=undef, $list=0) {
                 next if $machine =~ /^pc-q35/
                     && $name eq 'disk'
                     && $option->{name} =~ /^IDE$/i;
-                push @options,($option->{name});
+                push @options,lc($option->{name});
             }
             push @drivers, \@options;
         } else {
@@ -5450,7 +5450,7 @@ sub _get_display_port($self, $display) {
     my $driver = $self->drivers('display');
 
     my ($selected)
-    = grep { $_->{name} eq $display->{driver}|| $_->{value} eq $display->{driver}}
+    = grep { lc($_->{name}) eq lc($display->{driver}) || lc($_->{value}) eq lc($display->{driver})}
     $driver->get_options;
 
     confess "Error: unknown display driver $display->{driver}" if !$selected;
