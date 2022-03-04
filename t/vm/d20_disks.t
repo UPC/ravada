@@ -14,8 +14,7 @@ use feature qw(signatures);
 use lib 't/lib';
 use Test::Ravada;
 
-no warnings "experimental::signatures";
-use feature qw(signatures);
+my @MOCK_ISOS;
 
 init();
 #############################################################################
@@ -66,7 +65,6 @@ sub test_frontend_refresh {
 }
 
 sub test_remove_disk($vm, %options) {
-    diag(Dumper(\%options));
     my $make_base = delete $options{make_base};
     my $clone = delete $options{clone};
     my $remove_by_file = ( delete $options{remove_by_file} or 0);
@@ -80,7 +78,6 @@ sub test_remove_disk($vm, %options) {
     if keys %options;
 
     for my $index ( 0 .. 3 ) {
-        diag("\tindex=$index");
         my $name = new_domain_name();
         my $req = Ravada::Request->create_domain(
             name => $name
@@ -220,6 +217,10 @@ sub test_add_cd($vm, $data) {
     my $n_disks0 = scalar(@{$info0->{hardware}->{disk}});
     my %targets0 = map { $_->{target} => 1 } @{$info0->{hardware}->{disk}};
 
+    if ($data->{device} eq 'cdrom' && exists $data->{file} && $data->{file} =~ /tmp/) {
+        open my $out, ">>",$data->{file} or die "$! $data->{file}";
+        close $out;
+    }
     my $req = Ravada::Request->add_hardware(
         id_domain => $domain->id
         ,name => 'disk'
@@ -244,6 +245,10 @@ sub test_add_cd($vm, $data) {
     is($new_dev->{driver_type}, 'raw');
     is($new_dev->{driver}, 'ide');
     is($new_dev->{file},$data->{file});
+    if ($data->{device} eq 'cdrom' && exists $data->{file} && $data->{file} =~ /tmp/) {
+        unlink $data->{file} or die "$! $data->{file}";
+    }
+
 }
 
 sub test_add_disk {
@@ -380,7 +385,7 @@ sub test_add_cd_kvm($vm) {
     test_add_cd($vm
         , { 'device' => 'cdrom'
             ,'driver' => 'ide'
-            ,'file' => "/tmp/a.iso"
+            ,'file' => "/tmp/".new_domain_name()."a.iso"
         });
 }
 
@@ -403,8 +408,6 @@ sub _list_id_isos($vm) {
         next if $iso->{device} && -e $iso->{device};
         next if $iso->{name} =~ /Empty/;
         next if $iso->{name} =~ /Android/i;
-
-        die Dumper($iso) if !defined $iso->{id};
 
         $sth->execute($device, $iso->{id});
         push @list, ( $iso->{id} );
@@ -485,15 +488,36 @@ sub _req_remove_cd($domain) {
     wait_request( debug => 0);
 }
 
+sub _create_mock_iso($vm) {
+
+    my $file = $vm->dir_img()."/".new_domain_name()."a.iso";
+    open my $out, ">>",$file or die "$! $file";
+    print $out "test\n";
+    close $out;
+
+    push @MOCK_ISOS,($file);
+
+    return $file;
+}
+
+sub remove_mock_isos() {
+    for my $file (@MOCK_ISOS) {
+        next if $file !~ m{/tst_};
+        unlink $file if -e $file;
+    }
+}
+
 sub _req_add_cd($domain) {
     my $info = $domain->info(user_admin);
     my $disks = $info->{hardware}->{disk};
+
+    my $file = _create_mock_iso($domain->_vm);
     my $req = Ravada::Request->add_hardware(
         uid => Ravada::Utils::user_daemon->id
         ,id_domain => $domain->id
         ,name => 'disk'
         ,data => { type => 'cdrom'
-            ,file => "/var/tmp/a.iso"
+            ,file => $file
         }
     );
     wait_request(debug => 0);
@@ -557,6 +581,7 @@ sub test_cdrom($vm) {
                 _req_add_cd($domain);
 
                 remove_domain($domain);
+                remove_mock_isos();
 
             }
         }
@@ -588,10 +613,9 @@ for my $vm_name (vm_names() ) {
         test_add_cd_kvm($vm) if $vm_name eq 'KVM';
 
         for my $id_iso ( _list_id_isos($vm) ) {
-            diag("Testing id iso = ".($id_iso or '<UNDEF>'));
             for my $by_file ( 1, 0 ) {
                 for my $by_index ( 0, 1 ) {
-                    diag("by_file=$by_file, by_index=$by_index");
+                    diag("Testing id_iso: $id_iso , by_file:$by_file, by_index:$by_index");
                     test_remove_disk($vm
                         ,clone => 1
                         ,id_iso => $id_iso

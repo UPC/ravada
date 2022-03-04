@@ -585,6 +585,84 @@ sub test_add_hardware_custom($domain, $hardware) {
     return $exec->($domain);
 }
 
+sub _set_three_devices($domain, $hardware) {
+    my %drivers = map { $_ => 1 } @{$domain->info(user_admin)->{drivers}->{$hardware}};
+    my $info_hw = $domain->info(user_admin)->{hardware};
+    my $items = [];
+    $items = $info_hw->{$hardware};
+    for my $item (@$items) {
+        delete $drivers{$item->{driver}} if ref($item);
+    }
+    for (1 .. 3-scalar(@$items)) {
+        my @driver;
+        if ($hardware eq 'display') {
+            my ($driver) = keys %drivers;
+            delete $drivers{$driver};
+            @driver =( data => { driver => $driver } );
+        }
+
+        Ravada::Request->add_hardware(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,name => $hardware
+            ,@driver
+        );
+    }
+    wait_request(debug => 0);
+}
+
+sub test_remove_hardware_by_index_network_kvm($vm, $hardware) {
+    return if $hardware ne 'network' || $vm->type ne 'KVM';
+
+    my $domain = create_domain($vm);
+    _set_three_devices($domain, $hardware);
+
+    my $info_hw1 = $domain->info(user_admin)->{hardware};
+    my $items1 = [];
+    $items1 = $info_hw1->{$hardware};
+
+    $domain->_remove_device(1,"interface", type => qr'(bridge|network)');
+    my $info_hw2 = $domain->info(user_admin)->{hardware};
+    my $items2 = [];
+    $items2 = $info_hw2->{$hardware};
+
+    is($items2->[0]->{name},$items1->[0]->{name});
+    is($items2->[1]->{name},$items1->[2]->{name});
+
+    remove_domain($domain);
+}
+
+
+sub test_remove_hardware_by_index($vm, $hardware) {
+    return if $hardware eq 'usb';
+
+    my $domain = create_domain($vm);
+    _set_three_devices($domain, $hardware);
+    my $info_hw1 = $domain->info(user_admin)->{hardware};
+    my $items1 = [];
+    $items1 = $info_hw1->{$hardware};
+
+    Ravada::Request->remove_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => $hardware
+        ,index => 1
+    );
+    wait_request();
+    my $info_hw2 = $domain->info(user_admin)->{hardware};
+    my $items2 = [];
+    $items2 = $info_hw2->{$hardware};
+    if (!ref($items2->[0])) {
+        is($items2->[0], $items1->[0]);
+        is($items2->[1], $items1->[2]);
+    } else {
+        is($items2->[0]->{name},$items1->[0]->{name});
+        is($items2->[1]->{name},$items1->[2]->{name});
+    }
+
+    $domain->remove(user_admin);
+}
+
 sub test_remove_hardware($vm, $domain, $hardware, $index) {
 
     $domain->shutdown_now(user_admin)   if $domain->is_active;
@@ -1089,6 +1167,7 @@ ok($rvd_back,"Launch Ravada");# or exit;
 
 ok($Ravada::CONNECTOR,"Expecting conector, got ".($Ravada::CONNECTOR or '<unde>'));
 
+clean();
 remove_old_domains();
 remove_old_disks();
 
@@ -1113,8 +1192,11 @@ for my $vm_name (reverse vm_names()) {
     my %controllers = $domain_b->list_controllers;
     lock_hash(%controllers);
 
-    for my $hardware ( sort keys %controllers ) {
-        diag("Testing $hardware controllers for VM $vm_name in ".$base->name);
+    for my $hardware ( reverse sort keys %controllers ) {
+        diag("Testing $hardware controllers for VM $vm_name");
+        test_remove_hardware_by_index($vm, $hardware);
+        test_remove_hardware_by_index_network_kvm($vm, $hardware);
+
         test_front_hardware($vm, $domain_b, $hardware);
 
         test_add_hardware_custom($domain_b, $hardware);

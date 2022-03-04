@@ -1386,6 +1386,11 @@ sub _fix_duplicate_display_port($self, $port) {
     if($is_builtin ) {
         my $domain_conflict = Ravada::Domain->open($id_domain);
         if ($domain_conflict && $domain_conflict->is_active) {
+            Ravada::Request->refresh_machine(
+                id_domain=> $domain_conflict->id
+                ,uid => Ravada::Utils::user_daemon->id
+                ,_force => 1
+            );
             my $req = Ravada::Request->shutdown_domain(
                 id_domain => $self->id
                 ,uid => Ravada::Utils::user_daemon->id
