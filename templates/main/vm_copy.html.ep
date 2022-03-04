@@ -57,11 +57,6 @@
                 </div>
             </div>
 %   }
-            <div ng-show="copy_request" class="alert alert-warning">
-                Copy {{showmachine.name}} {{copy_request.status}}.
-                <br/>
-                {{copy_request.error}}
-            </div>
 
             <div ng-hide="copy_request && copy_request.status !== 'done'">
             <button type="reset" class="btn btn-outline-secondary mr-2"><%=l 'Cancel' %></button>

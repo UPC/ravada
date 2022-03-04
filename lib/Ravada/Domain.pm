@@ -1386,6 +1386,11 @@ sub _fix_duplicate_display_port($self, $port) {
     if($is_builtin ) {
         my $domain_conflict = Ravada::Domain->open($id_domain);
         if ($domain_conflict && $domain_conflict->is_active) {
+            Ravada::Request->refresh_machine(
+                id_domain=> $domain_conflict->id
+                ,uid => Ravada::Utils::user_daemon->id
+                ,_force => 1
+            );
             my $req = Ravada::Request->shutdown_domain(
                 id_domain => $self->id
                 ,uid => Ravada::Utils::user_daemon->id
@@ -5503,6 +5508,20 @@ sub _add_hardware_display($orig, $self, $index, $data) {
     $orig->($self, 'display', $index, $data) if $is_builtin;
 }
 
+sub _check_duplicated_volume_name($self, $file) {
+    return if !$file;
+
+    my ($name) = $file =~ m{.*/(.*)};
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id,name FROM volumes WHERE id_domain=? "
+        ." AND (name=? or file=?)"
+    );
+    $sth->execute($self->id, $name, $file);
+    my ($id_found) = $sth->fetchrow;
+    die "Error: volume '$name' already exists in ".$self->name."\n"
+    if $id_found;
+}
+
 sub _add_hardware_disk($orig, $self, $index, $data) {
     my $real_id_vm;
     if (!$self->_vm->is_local) {
@@ -5511,6 +5530,7 @@ sub _add_hardware_disk($orig, $self, $index, $data) {
         $self->_set_vm($vm_local, 1);
     }
 
+    $self->_check_duplicated_volume_name($data->{file});
     $orig->($self, 'disk', $index, $data);
 
     if (( defined $index || $data ) && $self->is_known() ) {
@@ -5554,7 +5574,8 @@ sub _delete_db_display_by_driver($self, $driver) {
     $sth->execute($self->id, $driver);
 }
 
-sub _around_remove_hardware($orig, $self, $hardware, $index) {
+sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=undef) {
+    confess "Error: supply either index or options when removing hardware " if !defined $index && !defined $options;
     my $display;
     if ( $hardware eq 'display' ) {
         $display = $self->_get_display_by_index($index);
@@ -5583,7 +5604,7 @@ sub _around_remove_hardware($orig, $self, $hardware, $index) {
             $self->_delete_db_display_by_driver($driver);
         }
     } else {
-        $orig->($self, $hardware, $index)
+        $orig->($self, $hardware, $index, %$options)
     }
 
     if ( $self->is_known() && !$self->is_base ) {

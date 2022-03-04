@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '1.3.1';
+our $VERSION = '1.4.0';
 
 use Carp qw(carp croak cluck);
 use Data::Dumper;
@@ -218,7 +218,7 @@ sub _do_create_constraints($self) {
         my ($name) = $constraint =~ /CONSTRAINT (\w+)\s/;
 
         warn "INFO: creating constraint $name \n"
-        if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
+        if $name && !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         print "+" if $FIRST_TIME_RUN && !$CAN_FORK;
 
         $self->_clean_db_leftovers();
@@ -321,7 +321,7 @@ sub _update_isos {
         mate_bionic_i386 => {
                     name => 'Ubuntu Mate Bionic 32 bits'
             ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 32 bits'
-                   ,arch => 'i386'
+                   ,arch => 'i686'
                     ,xml => 'bionic-i386.xml'
              ,xml_volume => 'bionic32-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
@@ -459,7 +459,7 @@ sub _update_isos {
         ,kubuntu_32 => {
             name => 'Kubuntu Bionic Beaver 32 bits'
             ,description => 'Kubuntu 18.04 Bionic Beaver 32 bits'
-            ,arch => 'i386'
+            ,arch => 'i686'
             ,xml => 'bionic-i386.xml'
             ,xml_volume => 'bionic32-volume.xml'
             ,sha256_url => '$url/SHA256SUMS'
@@ -492,7 +492,7 @@ sub _update_isos {
         ,xubuntu_beaver_32 => {
             name => 'Xubuntu Bionic Beaver 32 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 32 bits'
-            ,arch => 'i386'
+            ,arch => 'i686'
             ,xml => 'bionic-i386.xml'
             ,xml_volume => 'bionic32-volume.xml'
             ,md5_url => '$url/../MD5SUMS'
@@ -521,7 +521,7 @@ sub _update_isos {
          ,lubuntu_bionic_32 => {
              name => 'Lubuntu Bionic Beaver 32 bits'
              ,description => 'Lubuntu 18.04 Bionic Beaver 32 bits'
-             ,arch => 'i386'
+             ,arch => 'i686'
              ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-i386.iso'
              ,sha256_url => '$url/SHA256SUMS'
              ,xml => 'bionic-i386.xml'
@@ -540,17 +540,18 @@ sub _update_isos {
         ,debian_jessie_32 => {
             name =>'Debian Jessie 32 bits'
             ,description => 'Debian 8 Jessie 32 bits'
-            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/i386/iso-cd/'
+            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\.1\d+\.\d$/i386/iso-cd/'
             ,file_re => 'debian-8.[\d\.]+-i386-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'i686'
         }
         ,debian_jessie_64 => {
             name =>'Debian Jessie 64 bits'
             ,description => 'Debian 8 Jessie 64 bits'
-            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/amd64/iso-cd/'
+            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\.1\d+.*\d$/amd64/iso-cd/'
             ,file_re => 'debian-8.[\d\.]+-amd64-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -561,17 +562,18 @@ sub _update_isos {
        ,debian_stretch_32 => {
             name =>'Debian Stretch 32 bits'
             ,description => 'Debian 9 Stretch 32 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\..*\d$/i386/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\.1\d.*\d$/i386/iso-cd/'
             ,file_re => 'debian-9.[\d\.]+-i386-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'i686'
         }
         ,debian_stretch_64 => {
             name =>'Debian Stretch 64 bits'
             ,description => 'Debian 9 Stretch 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\..*/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\.1\d.*/amd64/iso-cd/'
             ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -582,7 +584,7 @@ sub _update_isos {
         ,debian_buster_64=> {
             name =>'Debian Buster 64 bits'
             ,description => 'Debian 10 Buster 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/cdimage/archive/^10\..*\d$/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^10\.1\d+.*\d$/amd64/iso-cd/'
             ,file_re => 'debian-10.[\d\.]+-amd64-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -593,12 +595,13 @@ sub _update_isos {
         ,debian_buster_32=> {
             name =>'Debian Buster 32 bits'
             ,description => 'Debian 10 Buster 32 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/cdimage/archive/^10\..*\d$/i386/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^10\.1\d+.*\d$/i386/iso-cd/'
             ,file_re => 'debian-10.[\d\.]+-i386-(netinst|xfce-CD-1).iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'i686'
         }
         ,debian_bullseye_64=> {
             name =>'Debian Bullseye 64 bits'
@@ -638,7 +641,7 @@ sub _update_isos {
         ,devuan_beowulf_i386=> {
             name =>'Devuan Beowulf 32 bits'
             ,description => 'Devuan Beowulf Desktop Live (i386)'
-            ,arch => 'i386'
+            ,arch => 'i686'
             ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
             ,file_re => 'devuan_beowulf_.*_i386_desktop-live.iso'
             ,sha256_url => '$url/SHASUMS.txt'
@@ -652,8 +655,8 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://download.parrot.sh/parrot/iso/4.11.2/'
-            ,file_re => 'Parrot-xfce-4.11.2_amd64.iso'
+            ,url => 'https://edge1.parrot.run/parrot/iso/4.11.3/'
+            ,file_re => 'Parrot-xfce-4.11.3_amd64.iso'
             ,sha256_url => '$url/signed-hashes.txt'
             ,min_disk_size => '10'
         }
@@ -663,30 +666,30 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://download.parrot.sh/parrot/iso/4.11.2/'
-            ,file_re => 'Parrot-security-4.11.2_amd64.iso'
+            ,url => 'https://edge1.parrot.run/parrot/iso/4.11.3/'
+            ,file_re => 'Parrot-security-4.11.3_amd64.iso'
             ,sha256_url => '$url/signed-hashes.txt'
             ,min_disk_size => '10'
         }
         ,kali_64 => {
-            name => 'Kali Linux 2020'
-            ,description => 'Kali Linux 2020 64 Bits'
+            name => 'Kali Linux 2021'
+            ,description => 'Kali Linux 2021 64 Bits'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2020.\d+/'
-            ,file_re => 'kali-linux-2020.\d+-installer-amd64.iso'
+            ,url => 'https://cdimage.kali.org/kali-2021.\d+/'
+            ,file_re => 'kali-linux-2021.\d+-installer-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
         ,kali_64_netinst => {
-            name => 'Kali Linux 2020 (NetInstaller)'
-            ,description => 'Kali Linux 2020 64 Bits (light NetInstall)'
+            name => 'Kali Linux 2021 (NetInstaller)'
+            ,description => 'Kali Linux 2021 64 Bits (light NetInstall)'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2020.\d+/'
-            ,file_re => 'kali-linux-2020.\d+-installer-netinst-amd64.iso'
+            ,url => 'https://cdimage.kali.org/kali-2021.\d+/'
+            ,file_re => 'kali-linux-2021.\d+-installer-netinst-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
@@ -1951,7 +1954,7 @@ sub _sql_create_tables($self) {
             volumes => {
                 id => 'integer PRIMARY KEY AUTO_INCREMENT',
                 id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE',
-                name => 'char(200) NOT NULL',
+                name => 'char(255) NOT NULL',
                 file => 'varchar(255) NOT NULL',
                 n_order => 'integer NOT NULL',
                 info => 'TEXT',
@@ -2048,6 +2051,12 @@ sub _create_constraints($self, $table, @constraints) {
         my $sql = "FOREIGN KEY (`$field`) REFERENCES $definition";
         my $name = "constraint_${table}_$field";
         next if $known->{$name} && $known->{$name} eq $sql;
+
+        if ($known->{$name}) {
+           push @{$self->{_constraints}}
+           ,"alter table $table DROP constraint $name";
+        }
+
 
         $sql = "alter table $table add CONSTRAINT $name $sql";
         #        $CONNECTOR->dbh->do($sql);
@@ -3554,7 +3563,8 @@ sub _kill_dead_process($self) {
         "SELECT id,pid,command,start_time "
         ." FROM requests "
         ." WHERE start_time<? "
-        ." AND ( status like 'working%' OR status like 'downloading%') "
+        ." AND ( status like 'working%' OR status like 'downloading%'"
+        ."      OR status like 'start%' ) "
         ." AND pid IS NOT NULL "
     );
     $sth->execute(time - 2);
@@ -4428,7 +4438,8 @@ sub _cmd_remove_hardware {
     my $uid = $request->args('uid');
     my $hardware = $request->args('name') or confess "Missing argument name";
     my $id_domain = $request->defined_arg('id_domain') or confess "Missing argument id_domain";
-    my $index = $request->args('index');
+    my $index = $request->defined_arg('index');
+    my $option = $request->defined_arg('option');
 
     my $domain = $self->search_domain_by_id($id_domain);
 
@@ -4437,7 +4448,7 @@ sub _cmd_remove_hardware {
     .$domain->name
         if !$user->is_admin;
 
-    $domain->remove_controller($hardware, $index);
+    $domain->remove_controller($hardware, $index, $option);
 }
 
 sub _cmd_change_hardware {

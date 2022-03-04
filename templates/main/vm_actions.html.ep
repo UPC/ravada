@@ -114,7 +114,3 @@
   </div>
 
 </div>
-
-  <div ng-show="pending_request">
-    %= include "/main/pending_request"
-  </div>

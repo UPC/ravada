@@ -255,6 +255,7 @@ sub test_missing_routes() {
             next if $href =~ /anonymous/;
 
             my $href2 = _fill_href($href);
+            mojo_check_login($t);
             $t->get_ok($href2, "file: $file href='$href'");
             like($t->tx->res->code(),qr/200|302|40\d+|500/) or die $t->tx->res->to_string();
         }

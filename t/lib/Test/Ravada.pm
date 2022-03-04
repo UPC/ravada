@@ -207,7 +207,7 @@ sub add_ubuntu_minimal_iso {
         ,xml => 'bionic-i386.xml'
         ,xml_volume => 'bionic32-volume.xml'
         ,rename_file => 'ubuntu_bionic_mini.iso'
-        ,arch => 'i386'
+        ,arch => 'i686'
         ,md5 => 'c7b21dea4d2ea037c3d97d5dac19af99'
     });
     my $device = "/var/lib/libvirt/images/".$info{$distro}->{rename_file};
@@ -2317,11 +2317,6 @@ sub _check_iptables() {
         ,"-A LIBVIRT_PRT -s 192.168.122.0/24 ! -d 192.168.122.0/24 -p tcp -j MASQUERADE --to-ports 1024-65535"
         ,"-A LIBVIRT_PRT -s 192.168.122.0/24 ! -d 192.168.122.0/24 -p udp -j MASQUERADE --to-ports 1024-65535"
         ,"-A LIBVIRT_PRT -s 192.168.122.0/24 ! -d 192.168.122.0/24 -j MASQUERADE"
-        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 -d 224.0.0.0/24 -j RETURN"
-        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 -d 255.255.255.255/32 -j RETURN"
-        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 ! -d 192.168.130.0/24 -p tcp -j MASQUERADE --to-ports 1024-65535"
-        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 ! -d 192.168.130.0/24 -p udp -j MASQUERADE --to-ports 1024-65535"
-        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 ! -d 192.168.130.0/24 -j MASQUERADE"
     ) {
         my @found = grep /^$rule$/ , split (/\n/, $out);
         die "$rule not found in @cmd \n$err\n" if !@found;

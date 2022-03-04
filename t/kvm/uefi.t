@@ -188,6 +188,7 @@ sub test_isos($vm) {
         for my $machine (@{$machine_types->{$iso->{arch}}}) {
             next if $machine eq 'ubuntu';
             for my $uefi ( 0,1 ) {
+                next if $machine =~ /^pc-q35/ && $iso->{arch} !~ /x86_64/ && !$uefi;
                 diag($iso->{arch}." ".$iso->{name}." ".$machine
                 ." uefi=$uefi");
                 my $name = new_domain_name();
@@ -206,7 +207,7 @@ sub test_isos($vm) {
                     }
                     ,iso_file => $iso->{device}
                 );
-                wait_request();
+                wait_request(debug => 0);
                 my $domain = $vm->search_domain($name);
                 ok($domain);
                 wait_request();

@@ -547,14 +547,15 @@ sub remove_volume($self, $file) {
     $self->_vol_remove($file);
 }
 
-sub _remove_controller_disk($self,$file) {
+sub _remove_controller_disk($self,$index) {
     return if ! $self->_vm->file_exists($self->_config_file);
     my $data = $self->_load();
     my $hardware = $data->{hardware};
 
     my @devices_new;
+    my $n = 0;
     for my $info (@{$hardware->{device}}) {
-        next if $info->{file} eq $file;
+        next if $n++ == $index;
         push @devices_new,($info);
     }
     $hardware->{device} = \@devices_new;
@@ -915,8 +916,9 @@ sub _remove_disk {
     my ($self, $index) = @_;
     confess "Index is '$index' not number" if !defined $index || $index !~ /^\d+$/;
     my @volumes = $self->list_volumes();
-    $self->remove_volume($volumes[$index]);
-    $self->_remove_controller_disk($volumes[$index]);
+    $self->remove_volume($volumes[$index])
+        if $volumes[$index] && $volumes[$index] !~ /\.iso$/;
+    $self->_remove_controller_disk($index);
 }
 
 sub remove_controller {

@@ -101,7 +101,7 @@ our %VALID_ARG = (
     }
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }
-    ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
+    ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 2, option => 2}
     ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 2, data => 1 }
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
@@ -151,6 +151,7 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             expose remove_expose
             rebase rebase_volumes
             shutdown_node reboot_node start_node
+            compact purge
             start_domain
     );
 
@@ -208,7 +209,13 @@ our %COMMAND = (
     ,important=> {
         limit => 20
         ,priority => 1
-        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine','open_exposed_ports']
+        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine']
+    }
+
+    ,iptables => {
+        limit => 1
+        ,priority => 2
+        ,commands => ['open_exposed_ports']
     }
 );
 lock_hash %COMMAND;
@@ -217,6 +224,7 @@ our %CMD_VALIDATE = (
     clone => \&_validate_clone
     ,create => \&_validate_create_domain
     ,create_domain => \&_validate_create_domain
+    ,remove_hardware => \&_validate_remove_hardware
     ,start_domain => \&_validate_start_domain
     ,start => \&_validate_start_domain
     ,add_hardware=> \&_validate_change_hardware
@@ -752,6 +760,21 @@ sub _validate($self) {
     $method->($self);
 }
 
+sub _validate_remove_hardware($self) {
+    my $name = $self->args('name');
+
+    my $args = $self->args();
+
+    die "Error: you must pass option or index"
+    if !exists $args->{option} && !exists $args->{index}
+    && !defined $args->{option} && !defined $args->{index};
+
+    die "Error: attribute value must be defined ".
+        join(" ", map { $_ or '<UNDEF>' } %{$args->{option}})
+    if $args->{option} && grep { !defined } values %{$args->{option}};
+
+}
+
 sub _validate_start_domain($self) {
 
     my $id_domain = $self->defined_arg('id_domain');
@@ -765,7 +788,7 @@ sub _validate_start_domain($self) {
         next if !$req;
         next if $req->at_time;
         next if $command eq 'start' && !$req->after_request();
-        $self->after_request($req->id);
+        $self->after_request($req->id) if $req && $req->id < $self->id;
     }
 }
 
@@ -781,9 +804,8 @@ sub _validate_change_hardware($self) {
     return if !$id_domain;
     my $req = $self->_search_request('%_hardware', id_domain => $id_domain);
 
-    $self->after_request($req->id) if $req;
+    $self->after_request($req->id) if $req && $req->id < $self->id;
 }
-
 
 sub _validate_create_domain($self) {
 
@@ -883,7 +905,8 @@ sub _search_request($self,$command,%fields) {
         my $args = decode_json($args_json);
         my $found=1;
         for my $key (keys %fields) {
-            if ( $args->{$key} ne $fields{$key} ) {
+            if (!exists $args->{$key} || !defined $args->{$key}
+                || $args->{$key} ne $fields{$key} ) {
                 $found = 0;
                 last;
             }

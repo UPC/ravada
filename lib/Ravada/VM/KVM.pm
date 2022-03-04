@@ -1418,8 +1418,7 @@ sub _ua_get($self, $url) {
         sleep 1+$try;
     }
     confess "Error getting '$url'" if !$res;
-    confess "ERROR ".$res->code." ".$res->message." : $url"
-        unless $res->code == 200 || $res->code == 301;
+    return unless $res->code == 200 || $res->code == 301;
 
     $self->_cache_store($url,$res->body);
     return $res->dom;
@@ -1520,13 +1519,16 @@ sub _search_url_file($self, $url_re, $file_re=undef) {
         ($url_re, $file_re) = $old_url_re =~ m{(.*)/(.*)};
         confess "ERROR: Missing file part in $old_url_re"
             if !$file_re;
+        if ($url_re =~ /\.\.$/) {
+            $url_re =~ s{(.*)/.*/\.\.$}{$1};
+        }
     }
 
     $file_re .= '$' if $file_re !~ m{\$$};
     my @found;
     for my $url ($self->_match_url($url_re)) {
-        push @found,
-        $self->_match_file($url, $file_re);
+        my @file = $self->_match_file($url, $file_re);
+        push @found, @file if scalar @file;
     }
     return (sort @found);
 }
@@ -1545,6 +1547,7 @@ sub _match_file($self, $url, $file_re) {
     $url .= '/' if $url !~ m{/$};
 
     my $dom = $self->_ua_get($url);
+    return if !$dom;
 
     my @found;
 
@@ -1660,13 +1663,14 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     my ($type) = $doc->findnodes('/domain/os/type');
 
     my $machine_found = $type->getAttribute('machine');
-    if ($machine_found =~ /i440/) {
-        #$self->_xml_remove_ide($doc);
+    if ($machine_found =~ /pc-i440fx/ && !$uefi) {
+        $self->_xml_remove_vmport($doc);
+        $self->_xml_remove_ide($doc);
     }
-    if ($machine_found =~ /q35/) {
+    if ($machine_found =~ /q35/ ) {
         $self->_xml_set_pcie($doc);
         $self->_xml_remove_ide($doc);
-        #       $self->_xml_remove_vmport($doc);
+        $self->_xml_remove_vmport($doc);
     }
 
 }
