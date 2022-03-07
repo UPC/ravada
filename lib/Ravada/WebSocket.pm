@@ -475,6 +475,9 @@ sub subscribe($self, %args) {
         $LIST_MACHINES_FIRST_TIME = 1 ;
     }
     $self->_send_answer($ws,$args{channel});
+    my $channel = $args{channel};
+    $channel =~ s{/.*}{};
+    $TIME0{$channel} = 0;
 }
 
 sub unsubscribe($self, $ws) {
