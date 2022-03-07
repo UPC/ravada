@@ -477,7 +477,7 @@ sub subscribe($self, %args) {
     $self->_send_answer($ws,$args{channel});
     my $channel = $args{channel};
     $channel =~ s{/.*}{};
-    $TIME0{$channel} = 0;
+    $TIME0{$channel} = 0 if $channel =~ /list_machines/i;
 }
 
 sub unsubscribe($self, $ws) {
