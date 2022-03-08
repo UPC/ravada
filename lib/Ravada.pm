@@ -740,6 +740,18 @@ sub _update_isos {
           ,min_disk_size => '21'
           ,arch => 'x86_64'
         }
+        ,windows_11 => {
+          name => 'Windows 11'
+          ,description => 'Windows 11 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_11.xml'
+          ,xml_volume => 'windows11-volume.xml'
+          ,min_disk_size => '64'
+          ,min_swap_size => '2'
+          ,arch => 'x86_64'
+          ,extra_iso => 'https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.2\d+-\d+/virtio-win-0.1.2\d+.iso'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+        }
        ,empty_32bits => {
           name => 'Empty Machine 32 bits'
           ,description => 'Empty Machine 32 bits Boot PXE'
