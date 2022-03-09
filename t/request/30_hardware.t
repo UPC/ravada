@@ -661,6 +661,7 @@ sub test_remove_hardware_by_index($vm, $hardware) {
     $items2 = $info_hw2->{$hardware};
     my $name_field = 'name';
     $name_field = 'driver'  if $hardware eq 'display';
+    $name_field = 'model'   if $hardware eq 'sound';
     if (!ref($items2->[0])) {
         is($items2->[0], $items1->[0]);
         is($items2->[1], $items1->[2]);
