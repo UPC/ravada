@@ -2910,7 +2910,7 @@ sub manage_machine {
     my @reqs = ();
 
     my %cur_driver;
-    for my $driver (qw(sound video network image jpeg zlib playback streaming)) {
+    for my $driver (qw(image jpeg zlib playback streaming)) {
         next if !$domain->drivers($driver);
         $cur_driver{$driver} = $domain->get_driver_id($driver);
         my $value = $c->param("driver_$driver");
@@ -2931,18 +2931,6 @@ sub manage_machine {
     }
     $c->stash(cur_driver => \%cur_driver);
 
-    for (qw(usb)) {#add hardware here
-        my $hardware = "hardware_$_";
-        if ( defined $c->param($hardware) ) {
-            my $req3 = Ravada::Request->add_hardware(uid => $USER->id
-                , id_domain => $domain->id
-                , name => $hardware
-                , number => $c->param($hardware)
-            );
-            push @messages,('Changes will apply on next start');
-            push @reqs, ($req3);
-        }
-    }
     for my $option (qw(description)) {
 
         next if $option eq 'description' && !$c->param('btn_description');

@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '1.3.1';
+our $VERSION = '1.4.0';
 
 use Carp qw(carp croak cluck);
 use Data::Dumper;
@@ -540,7 +540,7 @@ sub _update_isos {
         ,debian_jessie_32 => {
             name =>'Debian Jessie 32 bits'
             ,description => 'Debian 8 Jessie 32 bits'
-            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/i386/iso-cd/'
+            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\.1\d+\.\d$/i386/iso-cd/'
             ,file_re => 'debian-8.[\d\.]+-i386-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-i386.xml'
@@ -551,7 +551,7 @@ sub _update_isos {
         ,debian_jessie_64 => {
             name =>'Debian Jessie 64 bits'
             ,description => 'Debian 8 Jessie 64 bits'
-            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\..*/amd64/iso-cd/'
+            ,url => 'http://cdimage.debian.org/cdimage/archive/^8\.1\d+.*\d$/amd64/iso-cd/'
             ,file_re => 'debian-8.[\d\.]+-amd64-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -562,7 +562,7 @@ sub _update_isos {
        ,debian_stretch_32 => {
             name =>'Debian Stretch 32 bits'
             ,description => 'Debian 9 Stretch 32 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\..*\d$/i386/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\.1\d.*\d$/i386/iso-cd/'
             ,file_re => 'debian-9.[\d\.]+-i386-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-i386.xml'
@@ -573,7 +573,7 @@ sub _update_isos {
         ,debian_stretch_64 => {
             name =>'Debian Stretch 64 bits'
             ,description => 'Debian 9 Stretch 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\..*/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\.1\d.*/amd64/iso-cd/'
             ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -584,7 +584,7 @@ sub _update_isos {
         ,debian_buster_64=> {
             name =>'Debian Buster 64 bits'
             ,description => 'Debian 10 Buster 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/cdimage/archive/^10\..*\d$/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^10\.1\d+.*\d$/amd64/iso-cd/'
             ,file_re => 'debian-10.[\d\.]+-amd64-xfce-CD-1.iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -595,7 +595,7 @@ sub _update_isos {
         ,debian_buster_32=> {
             name =>'Debian Buster 32 bits'
             ,description => 'Debian 10 Buster 32 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/cdimage/archive/^10\..*\d$/i386/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^10\.1\d+.*\d$/i386/iso-cd/'
             ,file_re => 'debian-10.[\d\.]+-i386-(netinst|xfce-CD-1).iso'
             ,md5_url => '$url/MD5SUMS'
             ,xml => 'jessie-i386.xml'
@@ -740,6 +740,18 @@ sub _update_isos {
           ,min_disk_size => '21'
           ,arch => 'x86_64'
         }
+        ,windows_11 => {
+          name => 'Windows 11'
+          ,description => 'Windows 11 64 bits. Requires an user provided ISO image.'
+          .'<a target="_blank" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html">[help]</a>'
+          ,xml => 'windows_11.xml'
+          ,xml_volume => 'windows11-volume.xml'
+          ,min_disk_size => '64'
+          ,min_swap_size => '2'
+          ,arch => 'x86_64'
+          ,extra_iso => 'https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.2\d+-\d+/virtio-win-0.1.2\d+.iso'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+        }
        ,empty_32bits => {
           name => 'Empty Machine 32 bits'
           ,description => 'Empty Machine 32 bits Boot PXE'
@@ -822,7 +834,10 @@ sub _scheduled_fedora_releases($self,$data) {
                     .'-.*\.iso';
             my @found;
             eval { @found = $vm->_search_url_file($url_file) };
-            die $@ if $@ && $@ !~ /Not Found/i;
+            if ( $@ && $@ !~ /Not Found/i ) {
+                warn $@;
+                return;
+            }
             if(!@found) {
                 next if $url =~ m{//archives};
 
@@ -978,25 +993,25 @@ sub _update_domain_drivers_options($self) {
             id => 1,
             ,id_driver_type => 1,
             ,name => 'QXL'
-           ,value => 'type="qxl" ram="65536" vram="65536" vgamem="16384" heads="1" primary="yes"'
+           ,value => 'qxl'
         },
         vmvga => {
             id => 2,
             ,id_driver_type => 1,
             ,name => 'VMVGA'
-           ,value => 'type="vmvga" vram="16384" heads="1" primary="yes"'
+           ,value => 'vmvga'
         },
         cirrus => {
             id => 3,
             ,id_driver_type => 1,
             ,name => 'Cirrus'
-           ,value => 'type="cirrus" vram="16384" heads="1" primary="yes"'
+           ,value => 'cirrus'
         },
         vga => {
             id => 4,
             ,id_driver_type => 1,
             ,name => 'VGA'
-           ,value => 'type="vga" vram="16384" heads="1" primary="yes"'
+           ,value => 'vga'
         },
         ich6 => {
             id => 6,
@@ -1149,6 +1164,22 @@ sub _update_domain_drivers_options_disk($self) {
     } @options;
 
     $self->_update_table('domain_drivers_options','id',\%data);
+    return $id;
+}
+
+sub _update_domain_drivers_options_video($self, $id) {
+    my @options_video = ('virtio');
+
+    my %data = map {
+        $_ => {
+            id => $id++
+            ,id_driver_type => 1,
+            ,name => $_
+            ,value => $_
+        }
+    } @options_video;
+
+    $self->_update_table('domain_drivers_options','id',\%data);
 }
 
 sub _sth_search($table, $field) {
@@ -1212,7 +1243,7 @@ sub _remove_old_isos {
             ."  WHERE url like '%debian-9.0%iso'"
         ,"DELETE FROM iso_images"
             ."  WHERE name like 'Debian%' "
-            ."      AND NOT url  like '%*%' "
+            ."      AND NOT ( url  like '%*%' OR url like '%+%') "
         ,"DELETE FROM iso_images "
             ."  WHERE name like 'Lubuntu Artful%'"
             ."      AND url NOT LIKE '%*%' "
@@ -1244,7 +1275,8 @@ sub _update_data {
     $self->_remove_old_indexes();
     $self->_update_domain_drivers_types();
     $self->_update_domain_drivers_options();
-    $self->_update_domain_drivers_options_disk();
+    my $id = $self->_update_domain_drivers_options_disk();
+    $self->_update_domain_drivers_options_video($id);
     $self->_update_old_qemus();
 
     $self->_add_domain_drivers_display();
@@ -1954,7 +1986,7 @@ sub _sql_create_tables($self) {
             volumes => {
                 id => 'integer PRIMARY KEY AUTO_INCREMENT',
                 id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE',
-                name => 'char(200) NOT NULL',
+                name => 'char(255) NOT NULL',
                 file => 'varchar(255) NOT NULL',
                 n_order => 'integer NOT NULL',
                 info => 'TEXT',
@@ -3563,7 +3595,8 @@ sub _kill_dead_process($self) {
         "SELECT id,pid,command,start_time "
         ." FROM requests "
         ." WHERE start_time<? "
-        ." AND ( status like 'working%' OR status like 'downloading%') "
+        ." AND ( status like 'working%' OR status like 'downloading%'"
+        ."      OR status like 'start%' ) "
         ." AND pid IS NOT NULL "
     );
     $sth->execute(time - 2);
@@ -3738,7 +3771,7 @@ sub _do_execute_command {
         if $request->status() ne 'done'
             && $request->status() !~ /^retry/i;
     }
-    $self->_set_domain_changed($request) if $request->status eq 'done';
+    $self->_set_domain_changed($request);
 }
 
 sub _set_domain_changed($self, $request) {

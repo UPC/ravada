@@ -11,9 +11,6 @@
     %   if ($USER->can_change_settings($domain->id) ) {
         <a class="nav-link" id="v-pills-options-tab" ng-click="refresh_machine()" href="#v-pills-options" data-toggle="pill" role="tab" aria-controls="v-pills-options" aria-selected="false"><%=l 'Options' %></a>
     %   }
-    %   if ($USER->can_change_settings($domain->id) && $domain->drivers) {
-        <a class="nav-link" id="v-pills-drivers-tab" ng-click="refresh_machine()" href="#v-pills-drivers" data-toggle="pill" role="tab" aria-controls="v-pills-drivers" aria-selected="false"><%=l 'Drivers' %></a>
-    %   }
     %	if ($USER->can_change_settings($domain->id) && $USER->is_admin){
         <a class="nav-link" id="v-pills-hardware-tab" ng-click="refresh_machine()" href="#v-pills-hardware" data-toggle="pill" role="tab" aria-controls="v-pills-hardware" aria-selected="false"><%=l 'Hardware' %></a>
     %	}

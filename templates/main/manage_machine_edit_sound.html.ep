@@ -1,0 +1,21 @@
+<div ng-show="name == 'sound' && item._edit" class="form-group mt-4">
+    <ul class="list-group list-group-horizontal-md">
+        <li class="list-group-item list-group-item-primary"><%=l 'model' %></li>
+        <li class="list-group-item">
+            <select ng-model="item.model"
+                    ng-options="model.toLowerCase() for model in showmachine.drivers['sound']"
+            >
+            </select>
+        </li>
+    </ul>
+    <div class="row">
+        <div class="col-lg-1">
+        </div>
+        <div class="col-md-12 mt-3">
+            <button class="btn btn-primary"
+                ng-click="toggle_edit(item);change_hardware(item,'sound', $index)"><%=l 'Submit' %></button>
+            <button class="btn btn-outline-secondary"
+                ng-click="toggle_edit(item);machine_info(showmachine.id)"><%=l 'Cancel' %></button>
+        </div>
+    </div>
+</div>

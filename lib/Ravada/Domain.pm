@@ -1386,6 +1386,11 @@ sub _fix_duplicate_display_port($self, $port) {
     if($is_builtin ) {
         my $domain_conflict = Ravada::Domain->open($id_domain);
         if ($domain_conflict && $domain_conflict->is_active) {
+            Ravada::Request->refresh_machine(
+                id_domain=> $domain_conflict->id
+                ,uid => Ravada::Utils::user_daemon->id
+                ,_force => 1
+            );
             my $req = Ravada::Request->shutdown_domain(
                 id_domain => $self->id
                 ,uid => Ravada::Utils::user_daemon->id
@@ -3512,6 +3517,11 @@ sub open_exposed_ports($self) {
     return if !@ports;
     return if !$self->is_active;
 
+    if (!$self->has_nat_interfaces) {
+        $self->_set_ports_direct();
+        return;
+    }
+
     my $ip = $self->ip;
     if ( ! $ip ) {
         die "Error: No ip in domain ".$self->name.". Retry.\n";
@@ -3526,6 +3536,15 @@ sub open_exposed_ports($self) {
         $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
             ,$expose->{restricted});
     }
+}
+
+sub _set_ports_direct($self) {
+    my $sth_update = $$CONNECTOR->dbh->prepare(
+        "UPDATE domain_ports set public_port=NULL "
+        ." WHERE id_domain=?"
+    );
+    $sth_update->execute($self->id);
+
 }
 
 sub _close_exposed_port($self,$internal_port_req=undef) {
@@ -4431,7 +4450,7 @@ sub drivers($self, $name=undef, $type=undef, $list=0) {
                 next if $machine =~ /^pc-q35/
                     && $name eq 'disk'
                     && $option->{name} =~ /^IDE$/i;
-                push @options,($option->{name});
+                push @options,lc($option->{name});
             }
             push @drivers, \@options;
         } else {
@@ -5445,7 +5464,7 @@ sub _get_display_port($self, $display) {
     my $driver = $self->drivers('display');
 
     my ($selected)
-    = grep { $_->{name} eq $display->{driver}|| $_->{value} eq $display->{driver}}
+    = grep { lc($_->{name}) eq lc($display->{driver}) || lc($_->{value}) eq lc($display->{driver})}
     $driver->get_options;
 
     confess "Error: unknown display driver $display->{driver}" if !$selected;
@@ -6322,6 +6341,10 @@ sub has_non_shared_storage($self, $node=$self->_vm->new(host => 'localhost')) {
     $shared_storage->{$nodes_id}= $has_non_shared;
     $self->_data('shared_storage' => encode_json($shared_storage));
     return $has_non_shared;
+}
+
+sub has_nat_interfaces($self) {
+    return 0;
 }
 
 sub _base_in_nodes($self) {

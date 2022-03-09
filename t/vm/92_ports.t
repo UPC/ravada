@@ -716,6 +716,7 @@ sub _iptables_save($vm,$table=undef,$chain=undef) {
 }
 
 sub test_interfaces($vm) {
+    return if $vm->type ne 'KVM';
     my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     $domain->start( remote_ip => '10.1.1.2', user => user_admin);
 

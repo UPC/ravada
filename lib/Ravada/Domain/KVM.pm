@@ -68,18 +68,24 @@ our %GET_CONTROLLER_SUB = (
     usb => \&_get_controller_usb
     ,disk => \&_get_controller_disk
     ,network => \&_get_controller_network
+    ,video => \&_get_controller_video
+    ,sound => \&_get_controller_sound
     );
 our %SET_CONTROLLER_SUB = (
     usb => \&_set_controller_usb
     ,disk => \&_set_controller_disk
     ,display => \&_set_controller_display
     ,network => \&_set_controller_network
+    ,video => \&_set_controller_video
+    ,sound => \&_set_controller_sound
     );
 our %REMOVE_CONTROLLER_SUB = (
     usb => \&_remove_controller_usb
     ,disk => \&_remove_controller_disk
     ,display => \&_remove_controller_display
     ,network => \&_remove_controller_network
+    ,video => \&_remove_controller_video
+    ,sound => \&_remove_controller_sound
     );
 
 our %CHANGE_HARDWARE_SUB = (
@@ -88,6 +94,8 @@ our %CHANGE_HARDWARE_SUB = (
     ,vcpus => \&_change_hardware_vcpus
     ,memory => \&_change_hardware_memory
     ,network => \&_change_hardware_network
+    ,video => \&_change_hardware_video
+    ,sound => \&_change_hardware_sound
 );
 ##################################################
 
@@ -1977,7 +1985,7 @@ sub _text_to_hash {
     for my $item (split /\s+/,$text) {
         my ($name, $value) = $item =~ m{(.*?)=(.*)};
         if (!defined $name) {
-            warn "I can't find name=value in '$item'";
+            confess "I can't find name=value in '$item'";
             next;
         }
         $value =~ s/^"(.*)"$/$1/;
@@ -2122,9 +2130,9 @@ sub _set_driver_streaming {
     return $self->_set_driver_generic_simple('/domain/devices/graphics/streaming',@_);
 }
 
-sub _set_driver_video {
-    my $self = shift;
-    return $self->_set_driver_generic('/domain/devices/video',@_);
+sub _set_driver_video($self,$value) {
+    $value = "type=$value" unless $value =~ /=/;
+    return $self->_set_driver_generic('/domain/devices/video',$value);
 }
 
 sub _set_driver_network {
@@ -2210,6 +2218,53 @@ sub _set_controller_usb($self,$numero, $data={}) {
 
 sub _set_controller_disk($self, $number, $data) {
     $self->add_volume(%$data);
+}
+
+sub _set_controller_sound($self, $number , $data={ model => 'ich6' } ) {
+    $data->{model} = 'ich6' if !exists $data->{model};
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
+    my ($devices) = $doc->findnodes("/domain/devices");
+    my $sound = $devices->addNewChild(undef,'sound');
+    for my $field (keys %$data) {
+        confess Dumper($data->{$field}) if ref($data->{$field});
+        $sound->setAttribute($field,$data->{$field});
+    }
+
+    $self->reload_config($doc);
+}
+
+sub _set_controller_video($self, $number, $data={type => 'qxl'}) {
+    $data->{type} = 'qxl' if !exists $data->{type};
+    $data->{type} = lc(delete $data->{driver}) if exists $data->{driver};
+    my $pci_slot = $self->_new_pci_slot();
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
+    my ($devices) = $doc->findnodes("/domain/devices");
+    if (exists $data->{primary} && $data->{primary} =~ /yes/) {
+        _remove_all_video_primary($devices);
+    }
+    my $video = $devices->addNewChild(undef,'video');
+    my $model = $video->addNewChild(undef,'model');
+    for my $field (keys %$data) {
+        confess Dumper($data->{$field}) if ref($data->{$field});
+        $model->setAttribute($field,$data->{$field});
+    }
+    if ( $model->getAttribute('type') =~ /cirrus|vga/i ) {
+        if ( !$model->getAttribute('primary')
+            || $model->getAttribute('primary') !~ /yes/i) {
+            _remove_all_video_primary($devices);
+            $model->setAttribute('primary','yes')
+        }
+    }
+    $self->reload_config($doc);
+}
+
+sub _remove_all_video_primary($devices) {
+    for my $video ($devices->findnodes("video")) {
+        for my $model ($video->findnodes('model')) {
+            $model->removeAttribute('primary');
+        }
+    }
 }
 
 sub _set_controller_network($self, $number, $data) {
@@ -2349,6 +2404,12 @@ sub _find_child($controller, $name) {
 }
 
 sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_value=undef) {
+    confess "Error: I need index defined or attribute name=value"
+    if !defined $index && !defined $attribute_name0;
+
+    confess "Error: I attribute value to search must be defined"
+    if defined $attribute_name0 && !defined $attribute_value;
+
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
     my ($devices) = $doc->findnodes('/domain/devices');
     my $ind=0;
@@ -2361,11 +2422,17 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
             my $found_value = $item->getAttribute($attr_name);
             push @found,($found_value or '');
 
-            $found = 1
-            if defined $found_value && $found_value =~ $attribute_value;
+            if ( $found_value =~ $attribute_value ) {
+                $found=1 if !defined $index || $ind == $index;
+                $ind++;
+            }
+
+        } else {
+            $found = 1 if defined $index && $ind == $index;
+            $ind++;
         }
 
-        if($found || defined $index && $ind++==$index ){
+        if($found ){
             my ($source ) = $controller->findnodes("source");
             my $file;
             $file = $source->getAttribute('file') if $source;
@@ -2419,8 +2486,16 @@ sub _remove_controller_disk($self, $index,  $attribute_name=undef, $attribute_va
     $self->info(Ravada::Utils::user_daemon);
 }
 
+sub _remove_controller_sound($self, $index) {
+    $self->_remove_device($index,'sound');
+}
+
+sub _remove_controller_video($self, $index) {
+    $self->_remove_device($index,'video');
+}
+
 sub _remove_controller_network($self, $index) {
-    $self->_remove_device($index,'interface', type => qr'(bridge|network)');
+    $self->_remove_device($index,'interface' );
 }
 
 =head2 pre_remove
@@ -2669,6 +2744,112 @@ sub _change_hardware_memory($self, $index, $data) {
 
 }
 
+sub _fix_hw_video_args($data) {
+    $data->{type} = lc(delete $data->{driver})
+    if exists $data->{driver};
+
+    my $driver = $data->{type};
+
+    delete $data->{ram} if $driver ne 'qxl';
+    delete $data->{vgamem} if $driver ne 'qxl';
+
+    if ($driver eq 'cirrus' or $driver eq 'vga') {
+        delete $data->{vgamem};
+        $data->{primary} = "yes";
+    }
+
+    delete $data->{acceleration} unless $driver eq 'virtio';
+}
+
+sub _change_hardware_sound($self, $index, $data) {
+    confess "Error: nothing to change ".Dumper($data)
+    if !keys %$data;
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my $count = 0;
+    my $changed = 0;
+
+    my ($devices) = $doc->findnodes('/domain/devices');
+    for my $device ($devices->findnodes('sound')) {
+        next if $count++ != $index;
+        for my $field (keys %$data) {
+            if (ref($data->{$field})) {
+                _change_xml($device, $field, $data->{$field});
+                $changed++;
+                next;
+            }
+            if ( !defined $device->getAttribute($field)
+                || $device->getAttribute($field) ne $data->{$field}) {
+                    $device->setAttribute($field, $data->{$field});
+                    $changed++;
+            }
+
+        }
+        last;
+    }
+
+    $self->reload_config($doc) if $changed;
+}
+
+sub _change_hardware_video($self, $index, $data) {
+    confess "Error: nothing to change ".Dumper($data)
+    if !keys %$data;
+
+    _fix_hw_video_args($data);
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my $count = 0;
+    my $changed = 0;
+
+    my ($devices) = $doc->findnodes('/domain/devices');
+    for my $interface ($devices->findnodes('video')) {
+        next if $count++ != $index;
+
+        my ($model) = $interface->findnodes('model') or die "No model";
+
+        for my $field (keys %$data) {
+            if (ref($data->{$field})) {
+                _change_xml($model, $field, $data->{$field});
+                $changed++;
+                next;
+            }
+            if ( !defined $model->getAttribute($field)
+                || $model->getAttribute($field) ne $data->{$field}) {
+
+                if ($field eq 'type' && $data->{$field} =~ /vga|cirrus/) {
+                    _remove_all_video_primary($devices);
+                    _remove_acceleration($model);
+                    $model->setAttribute('primary' => 'yes');
+                }
+                $model->setAttribute($field,$data->{$field});
+                $changed++;
+                if ($field eq 'type' && $data->{$field} ne 'qxl') {
+                    $model->removeAttribute('ram');
+                    $model->removeAttribute('vgamem');
+                    #$model->removeAttribute('heads');
+                }
+            }
+        }
+        last;
+
+    }
+    $self->reload_config($doc) if $changed;
+}
+
+sub _remove_acceleration($video) {
+    my ($acceleration) = $video->findnodes("acceleration");
+    $video->removeChild($acceleration) if $acceleration;
+}
+
+sub _change_xml($xml, $name, $data) {
+    my ($node) = $xml->findnodes($name);
+    $node = $xml->addNewChild(undef,$name) if !$node;
+    confess Dumper([$name, $data]) if !ref($data) || ref($data) ne 'HASH';
+    for my $field (keys %$data) {
+        $node->setAttribute($field, $data->{$field});
+    }
+}
+
 sub _change_hardware_network($self, $index, $data) {
     confess if !defined $index;
 
@@ -2877,6 +3058,17 @@ sub _remove_backingstore($self, $file) {
         $disk->removeChild($backingstore) if $backingstore;
     }
     $self->reload_config($doc);
+}
+
+sub has_nat_interfaces($self) {
+    my $doc = XML::LibXML->load_xml(string
+            => $self->xml_description(Sys::Virt::Domain::XML_INACTIVE))
+        or die "ERROR: $!\n";
+
+    for my $if ($doc->findnodes('/domain/devices/interface/source')) {
+        return 1 if $if->getAttribute('network');
+    }
+    return 0;
 }
 
 1;
