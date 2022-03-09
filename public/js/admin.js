@@ -595,9 +595,11 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.show_active = false;
         $scope.n_active_current = 0;
         $scope.n_active_hidden = 0;
+        var filter = $scope.filter.toLowerCase();
         for (var [key, mach ] of Object.entries($scope.list_machines)) {
             if ($scope.filter.length > 0) {
-                if ( mach.name.indexOf($scope.filter)>= 0) {
+                var name = mach.name.toLowerCase();
+                if ( name.indexOf(filter)>= 0) {
                     mach.show = true;
                 } else {
                     mach.show = false;
