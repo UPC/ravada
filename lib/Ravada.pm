@@ -1243,7 +1243,7 @@ sub _remove_old_isos {
             ."  WHERE url like '%debian-9.0%iso'"
         ,"DELETE FROM iso_images"
             ."  WHERE name like 'Debian%' "
-            ."      AND NOT url  like '%*%' "
+            ."      AND NOT ( url  like '%*%' OR url like '%+%') "
         ,"DELETE FROM iso_images "
             ."  WHERE name like 'Lubuntu Artful%'"
             ."      AND url NOT LIKE '%*%' "
