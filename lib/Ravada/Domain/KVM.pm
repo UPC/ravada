@@ -2470,9 +2470,23 @@ sub _check_uuid($self, $doc, $node) {
 
 }
 
-sub _check_machine($self,$doc) {
+sub _check_machine($self,$doc, $node) {
     my ($os_type) = $doc->findnodes('/domain/os/type');
-    $os_type->setAttribute( machine => 'pc');
+    my $machine = $os_type->getAttribute('machine');
+
+    my ($machine_bare) = $machine =~ /(.*)-\d+\.\d+$/;
+    my %machine_types = $node->list_machine_types;
+    my $new_machine = $machine;
+
+    my $arch = $os_type->getAttribute('arch');
+    for my $try ( @{$machine_types{$arch}} ) {
+        if ($try eq $machine) {
+            $new_machine = $try;
+            last;
+        }
+        $new_machine = $try if $try =~ /^$machine_bare/;
+    }
+    $os_type->setAttribute( machine => $new_machine);
 }
 
 sub migrate($self, $node, $request=undef) {
@@ -2488,7 +2502,7 @@ sub migrate($self, $node, $request=undef) {
         my $xml = $self->domain->get_xml_description();
 
         my $doc = XML::LibXML->load_xml(string => $xml);
-        $self->_check_machine($doc);
+        $self->_check_machine($doc, $node);
         for ( ;; ) {
             $self->_check_uuid($doc, $node);
             eval { $dom = $node->vm->define_domain($doc->toString()) };
