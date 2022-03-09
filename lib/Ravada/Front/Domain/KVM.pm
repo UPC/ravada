@@ -65,10 +65,17 @@ sub _get_controller_video($self) {
     my @ret;
 
     my $count = 0;
+    my %dupe_name;
     for my $dev ($doc->findnodes('/domain/devices/video')) {
         my ($model) = $dev->findnodes("model");
         my $type = $model->getAttribute('type');
         my $item = { type => $type };
+        my $name = $type;
+        for my $n (0..10) {
+            $name = "$type-$n";
+            last if !$dupe_name{$name}++;
+        }
+        $item->{_name} = $name;
         _xml_elements($model,$item);
         lock_hash(%$item);
         push @ret,($item);
