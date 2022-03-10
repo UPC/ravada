@@ -590,15 +590,22 @@ sub _set_three_devices($domain, $hardware) {
     my $info_hw = $domain->info(user_admin)->{hardware};
     my $items = [];
     $items = $info_hw->{$hardware};
+
+    my $driver_field = 'driver';
+    $driver_field = 'type' if $hardware eq 'video';
+    $driver_field = 'model' if $hardware eq 'sound';
+
     for my $item (@$items) {
-        delete $drivers{$item->{driver}} if ref($item);
+        next if !ref($item);
+        confess Dumper($item) if !exists $item->{$driver_field};
+        delete $drivers{$item->{$driver_field}} if ref($item);
     }
     for (1 .. 3-scalar(@$items)) {
         my @driver;
         if ($hardware eq 'display') {
             my ($driver) = keys %drivers;
             delete $drivers{$driver};
-            @driver =( data => { driver => $driver } );
+            @driver =( data => { $driver_field => $driver } );
         }
 
         Ravada::Request->add_hardware(
@@ -652,12 +659,17 @@ sub test_remove_hardware_by_index($vm, $hardware) {
     my $info_hw2 = $domain->info(user_admin)->{hardware};
     my $items2 = [];
     $items2 = $info_hw2->{$hardware};
+    my $name_field = 'name';
+    $name_field = 'driver'  if $hardware eq 'display';
+    $name_field = 'model'   if $hardware eq 'sound';
     if (!ref($items2->[0])) {
         is($items2->[0], $items1->[0]);
         is($items2->[1], $items1->[2]);
-    } else {
-        is($items2->[0]->{name},$items1->[0]->{name});
-        is($items2->[1]->{name},$items1->[2]->{name});
+    } elsif ($hardware ne 'video') {
+        die "Error: no $name_field in ".Dumper($items2) if !exists $items2->[0]->{$name_field};
+
+        is($items2->[0]->{$name_field},$items1->[0]->{$name_field});
+        is($items2->[1]->{$name_field},$items1->[2]->{$name_field});
     }
 
     $domain->remove(user_admin);

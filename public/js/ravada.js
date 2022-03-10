@@ -831,6 +831,7 @@
             $scope.change_hardware= function(item,hardware,index) {
                 var new_settings = $scope.showmachine.hardware[hardware][index];
                 delete new_settings._edit;
+                delete new_settings._name;
                 $scope.request('change_hardware',
                     {'id_domain': $scope.showmachine.id
                         ,'hardware': hardware
