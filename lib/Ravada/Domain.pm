@@ -316,6 +316,9 @@ sub _around_start($orig, $self, @arg) {
     my $request = delete $arg{request};
     my $listen_ip = delete $arg{listen_ip};
     my $remote_ip = $arg{remote_ip};
+    my $enable_host_devices;
+    $enable_host_devices = $request->defined_arg('enable_host_devices') if $request;
+    $enable_host_devices = 1 if !defined $enable_host_devices;
 
     for (;;) {
         eval { $self->_start_checks(@arg) };
@@ -349,7 +352,11 @@ sub _around_start($orig, $self, @arg) {
             }
             $arg{listen_ip} = $display_ip;
         }
-        $self->_add_host_devices(@arg);
+        if ($enable_host_devices) {
+            $self->_add_host_devices(@arg);
+        } else {
+            $self->_dettach_host_devices();
+        }
         $$CONNECTOR->disconnect;
         eval { $self->$orig(%arg) };
         $error = $@;
@@ -6514,8 +6521,10 @@ sub add_host_device($self, $host_device) {
 }
 
 sub remove_host_device($self, $host_device) {
-
     confess if !ref($host_device);
+
+    confess if $self->readonly;
+    $self->_dettach_host_device($host_device);
 
     my $id_hd = $host_device->id;
 
@@ -6581,7 +6590,7 @@ sub list_host_devices_attached($self) {
 }
 
 # adds host devices to domain instance
-# usuarlly run right before startup
+# usually run right before startup
 sub _add_host_devices($self, @args) {
     my @host_devices = $self->list_host_devices();
     return if !@host_devices;
@@ -6598,16 +6607,16 @@ sub _add_host_devices($self, @args) {
 
     my $doc = $self->get_config();
     for my $host_device ( @host_devices ) {
-        next if !$host_device->enabled();
-        my @devices = $host_device->list_devices();
-        if ( my $device_configured = $self->_device_already_configured($host_device)) {
-            if (grep(/^$device_configured$/, @devices)
-                    && $self->_lock_host_device($host_device) ) {
+        my $device_configured = $self->_device_already_configured($host_device);
+
+        if ( $device_configured ) {
+            if ( $host_device->enabled() && $host_device->is_device($device_configured) && $self->_lock_host_device($host_device) ) {
                 next;
             } else {
-                $self->_dettach_host_device($host_device, $doc);
+                $self->_dettach_host_device($host_device, $doc, $device_configured);
             }
         }
+        next if !$host_device->enabled();
 
         my ($device) = $host_device->list_available_devices();
         if ( !$device ) {
@@ -6636,15 +6645,24 @@ sub _add_host_devices($self, @args) {
                 ." Unknown type ".($entry->{type} or '<UNDEF>');
             }
         }
-
     }
     $self->reload_config($doc);
 
 }
 
-sub _dettach_host_device($self, $host_device, $doc=$self->get_config) {
+sub _dettach_host_devices($self) {
+    my @host_devices = $self->list_host_devices();
+    for my $host_device ( @host_devices ) {
+        $self->_dettach_host_device($host_device);
+    }
+    $self->remove_host_devices();
+}
 
-    my $device = $self->_device_already_configured($host_device) or return;
+sub _dettach_host_device($self, $host_device, $doc=$self->get_config
+    ,$device = $self->_device_already_configured($host_device)
+) {
+
+    return if !defined $device or !length($device);
 
     for my $entry( $host_device->render_template($device) ) {
         if ($entry->{type} eq 'node') {
@@ -6664,6 +6682,11 @@ sub _dettach_host_device($self, $host_device, $doc=$self->get_config) {
     $self->reload_config($doc);
 
     $self->_unlock_host_device($device);
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE host_devices_domain SET name=NULL "
+        ." WHERE id_domain=? AND id_host_device=?"
+    );
+    $sth->execute($self->id, $host_device->id);
 
 }
 

@@ -104,6 +104,11 @@ sub list_devices($self) {
     return @device;
 }
 
+sub is_device($self, $device) {
+    return if !defined $device;
+    return grep m{^$device$},$self->list_devices;
+}
+
 sub _device_locked($self, $name) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM host_devices_domain_locked "
         ." WHERE id_vm=? AND name=? "
@@ -151,7 +156,9 @@ sub _fetch_template_args($self, $device) {
         } else {
             my ($value) = $device =~ qr($re);
             confess "Error: $re not found in '$device'" if !defined $value;
-            $value =~ s/^0+// if $value =~ /^[0-9]+$/;
+            # we do have to remove leading 0 or those numbers
+            # will be converted from Octal !
+            $value =~ s/^0+([0-9a-f]+)/$1/ if $value =~ /^0*[0-9a-f]*$/;
             $ret->{$name} = ''.$value;
         }
     }
@@ -229,11 +236,10 @@ sub list_domains_with_device($self) {
     return @domains;
 }
 
-
 sub _dettach_in_domains($self) {
     for my $id_domain ( $self->list_domains_with_device() ) {
         my $domain = Ravada::Domain->open($id_domain);
-        $domain->_dettach_host_device($self);
+        $domain->_dettach_host_device($self) if !$domain->is_active();
     }
 }
 

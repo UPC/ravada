@@ -93,11 +93,14 @@ create_domain
 
     ping_backend
 
+    config_host_devices
+
     end
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 our $FILE_CONFIG_REMOTE = "t/etc/remote_vm.conf";
+our $FILE_CONFIG_HOST_DEVICES = "t/etc/host_devices.conf";
 
 $Ravada::Front::Domain::Void = "/var/tmp/test/rvd_void/".getpwuid($>);
 
@@ -159,6 +162,25 @@ my @FLUSH_RULES=(
 );
 
 $Ravada::CAN_FORK = 0;
+
+sub config_host_devices($type) {
+    my $config;
+    if (!-e $FILE_CONFIG_HOST_DEVICES) {
+        warn "Missing host devices config file '$FILE_CONFIG_HOST_DEVICES'";
+        my $config = {
+            'usb' => '(disk|flash|audio|camera|bluetoo)'
+            ,'pci' => ''
+        };
+        DumpFile($FILE_CONFIG_HOST_DEVICES, $config);
+    }
+    eval { $config = LoadFile($FILE_CONFIG_HOST_DEVICES) };
+
+    die "Error loading $FILE_CONFIG_HOST_DEVICES $@" if $@;
+
+    die "Error: no host devices config in $FILE_CONFIG_HOST_DEVICES for $type"
+    if !exists $config->{$type} || !$config->{$type};
+    return $config->{$type};
+}
 
 sub user_admin {
 
@@ -1161,7 +1183,7 @@ sub wait_request {
                     $run_at = " $run_at";
                 }
                 if ($req->command eq 'refresh_machine_ports'
-                    && $req->error =~ /has ports .*up/) {
+                    && $req->error && $req->error =~ /has ports .*up/) {
                     $req->status('done');
                     next;
                 }

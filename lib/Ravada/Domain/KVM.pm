@@ -2755,14 +2755,16 @@ sub _validate_xml($self, $doc) {
         open my $out1,">",$file_out or die $!;
         print $out1 $self->xml_description();
         close $out1;
-        open my $out2,">","/var/tmp/".$self->name().".new.xml" or die $!;
+        my $file_out_new = "/var/tmp/".$self->name()."."
+	    .int(rand(100)).".new.xml";
+        open my $out2,">",$file_out_new or die $!;
         my $doc_string = $doc->toString();
         $doc_string =~ s/^<.xml.*//;
         $doc_string =~ s/"/'/g;
         print $out2 $doc_string;
         close $out2;
 
-        confess "\$?=$? $err\ncheck $file_out" if $?;
+        confess "\$?=$? $err\ncheck $file_out and $file_out_new" if $?;
     }
 }
 
@@ -2770,6 +2772,18 @@ sub reload_config($self, $doc) {
     $self->_validate_xml($doc) if $self->_vm->vm->get_major_version >= 4;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
+}
+
+sub _save_xml_tmp($self,$doc) {
+    my $file_out_new = "/var/tmp/".$self->name()."."
+    .int(rand(100)).".new.xml";
+    open my $out2,">",$file_out_new or die $!;
+    my $doc_string = $doc->toString();
+    $doc_string =~ s/^<.xml.*//;
+    $doc_string =~ s/"/'/g;
+    print $out2 $doc_string;
+    close $out2;
+
 }
 
 sub copy_config($self, $domain) {
@@ -2995,7 +3009,7 @@ sub remove_config_node($self, $path, $content, $doc) {
             }
             my $element_s = $element->toString();
             $element_s =~ s/^\s+//mg;
-            if ( $content eq $element_s ) {
+            if ( _xml_equal_hostdev($content, $element_s) ) {
                 $parent->removeChild($element);
             } else {
                 my @lines_c = split /\n/,$content;
@@ -3010,6 +3024,40 @@ sub remove_config_node($self, $path, $content, $doc) {
             }
         }
     }
+}
+
+sub _xml_equal_hostdev($doc1, $doc2) {
+    return 1 if $doc1 eq $doc2;
+    my $parser = XML::LibXML->new() or die $!;
+    $doc1 =~ s{(</?)\w+:(\w+)}{$1$2}mg;
+    my $xml1 = $parser->parse_string($doc1);
+    $doc2 =~ s{(</?)\w+:(\w+)}{$1$2}mg;
+    my $xml2 = $parser->parse_string($doc2);
+    for my $xml ( $xml1, $xml2) {
+        my ($hostdev) = $xml->findnodes("/hostdev");
+        next if !$hostdev;
+
+        my ($address ) = $hostdev->findnodes("/hostdev/address");
+        $hostdev->removeChild($address) if $address;
+
+        my ($source) = $hostdev->findnodes("/hostdev/source");
+        for my $node ( $source->findnodes('*')) {
+            for my $attrib ( $node->attributes ) {
+                my $value2 = $attrib->value;
+                $value2 = '0x0' if $value2 eq '0x';
+                $value2 =~ s/^(0x)0*(.+)/$1$2/;
+                $node->setAttribute($attrib->name,$value2)
+                if $value2 ne $attrib->value;
+            }
+        }
+        my $txt = '';
+        for my $line ( split /\n/,$xml->toString() ) {
+            $txt .= $line."\n" if $line =~ /./;
+        }
+        $xml = XML::LibXML->load_xml(string => $txt);
+    }
+    return $xml1->toString() eq $xml2->toString();
+
 }
 
 sub add_config_node($self, $path, $content, $doc) {
@@ -3108,8 +3156,9 @@ sub remove_host_devices($self) {
         or die "ERROR: $!\n";
 
     my ($dev) = $doc->findnodes("/domain/devices");
-    for my $hostdev ( $dev->findnodes("/hostdev") ) {
-        $doc->removeChild($hostdev);
+    for my $hostdev ( $dev->findnodes("hostdev") ) {
+        $dev->removeChild($hostdev);
+        warn $hostdev->toString();
     }
     $self->reload_config($doc);
 }

@@ -388,19 +388,6 @@ get '/machine/host_device/add/(#id_domain)/(#id_hd)' => sub($c) {
     return $c->render(json => { ok => $ok, error => ($@ or '') } );
 };
 
-get '/machine/host_device/remove/(#id_domain)/(#id_hd)' => sub($c) {
-
-    return access_denied($c) unless $USER->is_admin;
-
-    my $domain = Ravada::Front::Domain->open($c->stash('id_domain'));
-    my $ok = 0;
-    eval {
-        $domain->remove_host_device($c->stash('id_hd'));
-        $ok = 1;
-    };
-    return $c->render(json => { ok => $ok, error => ($@ or '') } );
-};
-
 post '/node/host_device/add' => sub($c) {
     my $arg = decode_json($c->req->body);
     my $id_vm = $arg->{id_vm} or die "Error: missing id_vm ".Dumper($arg);
@@ -3117,10 +3104,16 @@ sub view_machine {
     app->log->info($USER->name." requesting start_domain ".$domain->name." from "._remote_ip($c))
     if $CONFIG_FRONT->{log}->{log};
 
+    my $enable_host_devices = $c->req->param('enable_host_devices');
+    $enable_host_devices=1 if !defined $enable_host_devices;
+    my @enable_host_devices;
+    @enable_host_devices = ( 'enable_host_devices' => $enable_host_devices );
+
     return run_request($c, Ravada::Request->start_domain(
                     uid => $USER->id
              ,id_domain => $domain->id
             , remote_ip => _remote_ip($c)
+            , @enable_host_devices
             )
     );
 }
