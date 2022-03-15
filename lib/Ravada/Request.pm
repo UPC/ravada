@@ -163,6 +163,7 @@ qw(
     cleanup
     refresh_machine_ports
     set_time
+    open_exposed_ports
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -1545,10 +1546,10 @@ sub done_recently($self, $seconds=60,$command=undef) {
         $command = $self->command;
     }
     my $query = "SELECT id FROM requests"
-        ." WHERE date_changed > ? "
+        ." WHERE date_changed >= ? "
         ."        AND command = ? "
-        ."         AND ( status = 'done' OR status ='working') "
-        ."         AND  error = '' "
+        ."         AND ( status = 'done' OR status ='working' OR status = 'requested') "
+        ."         AND ( ISNULL(error) OR error = '' ) "
         ."         AND id <> ? ";
 
     my $sth = $$CONNECTOR->dbh->prepare( $query );

@@ -9,7 +9,7 @@ Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
 
 =cut
 
-use Carp qw(carp confess croak cluck);
+use Carp qw(carp confess croak);
 use Data::Dumper;
 use File::Copy qw(copy move);
 use File::Rsync;
@@ -3350,6 +3350,9 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     my $internal_ip = $self->ip;
     confess "Error: I can't get the internal IP of ".$self->name
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
+
+    die "Error: No NAT ip in domain ".$self->name." found. Retry.\n"
+    if !$self->_vm->_is_ip_nat($internal_ip);
 
     if ($public_port
         && ( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port")
