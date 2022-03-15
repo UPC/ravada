@@ -1549,7 +1549,7 @@ sub done_recently($self, $seconds=60,$command=undef) {
         ." WHERE date_changed >= ? "
         ."        AND command = ? "
         ."         AND ( status = 'done' OR status ='working' OR status = 'requested') "
-        ."         AND ( ISNULL(error) OR error = '' ) "
+        ."         AND ( error IS NULL OR error = '' ) "
         ."         AND id <> ? ";
 
     my $sth = $$CONNECTOR->dbh->prepare( $query );
