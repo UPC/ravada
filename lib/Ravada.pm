@@ -5168,6 +5168,7 @@ sub _reopen_ports($self, $port) {
     Ravada::Request->open_exposed_ports(
                uid => Ravada::Utils::user_daemon->id
         ,id_domain => $id_domain
+        , retry => 20
     ) if $domain->is_active;
 }
 

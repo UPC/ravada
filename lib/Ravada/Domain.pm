@@ -1422,6 +1422,7 @@ sub _fix_duplicate_display_port($self, $port) {
     Ravada::Request->open_exposed_ports(
         uid => Ravada::Utils::user_daemon->id
         ,id_domain => $id_domain
+        ,retry => 20
     ) if $is_active;
 }
 
@@ -3876,6 +3877,7 @@ sub _check_port_conflicts($self) {
                            uid => Ravada::Utils::user_daemon->id
                     ,id_domain => $id_domain
                 ,after_request => $req_close->id
+                ,retry => 20
                 );
             }
         }

@@ -2654,6 +2654,7 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
                  Ravada::Request->open_exposed_ports(
                     uid => $USER->id
                 , id_domain => $domain->id
+                , retry => 20
                 );
             }
 

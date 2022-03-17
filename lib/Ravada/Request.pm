@@ -724,8 +724,9 @@ sub _new_request {
         return $dupe if $dupe;
 
         my $recent;
-        $recent = done_recently(undef, 60, $args{command})
+        $recent = done_recently(undef, 60, $args{command}, $args{args})
         if $args{command} !~ /^(clone|migrate|set_base_vm)$/;
+
         return if $recent;
 
     }
@@ -1538,14 +1539,23 @@ This method is used for commands that take long to run as garbage collection.
 
 =cut
 
-sub done_recently($self, $seconds=60,$command=undef) {
+sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
     _init_connector();
     my $id_req = 0;
+    my $args_d= {};
     if ($self) {
         $id_req = $self->id;
+        confess "Error: do not supply args if you supply request" if $args;
+        confess "Error: do not supply command if you supply request" if $command;
+        $args_d = $self->args;
         $command = $self->command;
+    } else {
+        $args_d = decode_json($args) if $args;
     }
-    my $query = "SELECT id FROM requests"
+    delete $args_d->{uid};
+    delete $args_d->{at};
+
+    my $query = "SELECT id,args FROM requests"
         ." WHERE date_changed >= ? "
         ."        AND command = ? "
         ."         AND ( status = 'done' OR status ='working' OR status = 'requested') "
@@ -1555,9 +1565,25 @@ sub done_recently($self, $seconds=60,$command=undef) {
     my $sth = $$CONNECTOR->dbh->prepare( $query );
     my $date= Time::Piece->localtime(time - $seconds);
     $sth->execute($date->ymd." ".$date->hms, $command, $id_req);
-    my ($id) = $sth->fetchrow;
-    return if !defined $id;
-    return Ravada::Request->open($id);
+    while (my ($id,$args_found) = $sth->fetchrow) {
+        next if $self && $self->id == $id;
+
+        return Ravada::Request->open($id) if !defined $args;
+
+
+        my $args_found_d = decode_json($args_found);
+        delete $args_found_d->{uid};
+        delete $args_found_d->{at};
+
+        next if join(".",sort keys %$args_d) ne join(".",sort keys %$args_found_d);
+        my $args_d_s = join(".",map { $args_d->{$_} } sort keys %$args_d);
+        my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
+        next if defined $args && $args_d_s ne $args_found_s;
+
+        return Ravada::Request->open($id);
+    }
+
+    return;
 }
 
 sub _requested($command, %fields) {
