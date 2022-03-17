@@ -1077,13 +1077,25 @@
             }
         }
         $scope.refresh_ports = function(url, id_domain, id_request) {
-            $http.post('/request/refresh_machine_ports/'
+            $http.post('/request/open_exposed_ports/'
                 ,JSON.stringify(
                     { 'id_domain': id_domain
                         ,'after_request': id_request
+                        ,'retry': 20
                     })
             ).then(function(response) {
-                $scope.request_open_ports = true;
+                if (response.data.request) {
+                    id_request = response.data.request;
+                }
+                $http.post('/request/refresh_machine_ports/'
+                    ,JSON.stringify(
+                    { 'id_domain': id_domain
+                        ,'after_request': id_request
+                        ,'retry': 20
+                    })
+                    ).then(function(response) {
+                        $scope.request_open_ports = true;
+                    });
             });
         }
         $scope.subscribe_domain_info= function(url, id_domain) {
