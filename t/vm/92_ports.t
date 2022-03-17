@@ -143,6 +143,7 @@ sub test_start_after_hibernate($domain
     my @out = split /\n/,$out;
     run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
     @out = split /\n/,$out;
+    delete_request('open_exposed_ports');
     Ravada::Request->start_domain(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -766,7 +767,7 @@ sub test_redirect_ip_duplicated($vm) {
     my @out = split /\n/, `iptables-save -t nat`;
     my @open = (grep /--to-destination $ip/, @out);
     is(scalar(@open),2) or die Dumper(\@open);
-
+    delete_request('open_exposed_ports');
     $domain->start( remote_ip => '10.1.1.2', user => user_admin);
     wait_request(debug => 0);
 
@@ -819,6 +820,7 @@ sub test_redirect_ip_duplicated_refresh($vm) {
 
 sub test_open_port_duplicated($vm) {
     diag("Test open port duplicated ".$vm->type);
+
     my $base = $BASE->clone(name => new_domain_name, user => user_admin);
     $base->expose(port => 22, name => "ssh");
     my @base_ports0 = $base->list_ports();
@@ -850,9 +852,10 @@ sub test_open_port_duplicated($vm) {
     my @out2 = split /\n/, `iptables-save -t nat`;
     my @open2 = (grep /--dport $public_port/, @out2);
     is(scalar(@open2),2) or die Dumper(\@open2);
+    warn Dumper(\@open2);
 
     my $req = Ravada::Request->refresh_vms(_force => 1);
-    wait_request(request => $req, debug => 0);
+    wait_request(request => $req, debug => 0, debug => 1);
     is($req->status,'done');
     is($req->error, '') or exit;
 
@@ -947,6 +950,7 @@ sub test_clone_exports_add_ports($vm) {
     wait_request( debug => 0, request => \@req );
     for (@req) {
         next if $_->command eq 'set_time';
+        warn Dumper([$_->command, [$_->args]]);;
         is($_->status,'done')   or exit;
         is($_->error,'')        or exit;
     }

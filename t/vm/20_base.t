@@ -1388,7 +1388,7 @@ sub test_display_drivers($vm, $remove) {
     }
     wait_request(debug => 0);
     my $n_displays=0;
-    for my $driver ( @{$domain->info(user_admin)->{drivers}->{display}} ) {
+    for my $driver (reverse @{$domain->info(user_admin)->{drivers}->{display}} ) {
         diag("adding display $driver");
         $domain->display_info(user_admin);
         next if $domain->_get_display($driver);
@@ -1628,6 +1628,10 @@ sub _check_iptables_fixed_conflict($vm, $port) {
 }
 
 sub test_display_conflict_next($vm) {
+    delete $Ravada::Request::CMD_NO_DUPLICATE{refresh_machine};
+    delete $Ravada::Request::CMD_NO_DUPLICATE{refresh_machine_ports};
+    delete $Ravada::Request::CMD_NO_DUPLICATE{open_exposed_ports};
+
     rvd_back->setting("/backend/expose_port_min" => 5900 );
     my $domain0 = $BASE->clone(name => new_domain_name, user => user_admin, memory =>512*1024);
     $domain0->_reset_free_port() if $vm->type eq 'Void';
