@@ -1428,6 +1428,7 @@ sub _fix_duplicate_display_port($self, $port) {
         uid => Ravada::Utils::user_daemon->id
         ,id_domain => $id_domain
         ,retry => 20
+        ,_force => 1
     ) if $is_active;
 }
 
@@ -3897,6 +3898,7 @@ sub _check_port_conflicts($self) {
                     ,id_domain => $id_domain
                 ,after_request => $req_close->id
                 ,retry => 20
+                ,_force => 1
                 );
             }
         }
@@ -5472,7 +5474,7 @@ sub _get_display_port($self, $display) {
     = grep { lc($_->{name}) eq lc($display->{driver}) || lc($_->{value}) eq lc($display->{driver})}
     $driver->get_options;
 
-    confess "Error: unknown display driver $display->{driver}" if !$selected;
+    confess "Error: unknown display driver $display->{driver} ".Dumper([$driver->get_options]) if !$selected;
 
     die "Error: display driver port not defined ".Dumper($selected)
     unless defined $selected->{data};

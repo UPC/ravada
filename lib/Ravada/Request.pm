@@ -9,7 +9,7 @@ Ravada::Request - Requests library for Ravada
 
 =cut
 
-use Carp qw(confess);
+use Carp qw(confess carp cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
@@ -659,6 +659,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id,args FROM requests WHERE (status <> 'done')"
         ." AND command=?"
+        ." AND ( error = '' OR error is NULL)"
     );
     $sth->execute($command);
     while (my ($id,$args_found) = $sth->fetchrow) {
@@ -695,6 +696,11 @@ sub _new_request {
         delete $args{name};
     }
     my $no_duplicate = delete $args{_no_duplicate};
+    my $force = delete $args{_force};
+
+    confess "Error: do not supply both _force & _no_duplicate"
+    if $force && !$no_duplicate;
+
     my $uid;
     if ( ref $args{args} ) {
         $args{args}->{uid} = $args{args}->{id_owner}
@@ -717,14 +723,20 @@ sub _new_request {
         $args{args} = encode_json($args{args});
     }
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
-    if ($args{command} =~ /^(clone|manage_pools)$/
+    if (!$force
+        && ($args{command} =~ /^(clone|manage_pools)$/
         || $CMD_NO_DUPLICATE{$args{command}}
-        || ($no_duplicate && $args{command} =~ /^(screenshot)$/)) {
-        my $dupe = _duplicated_request(undef, $args{command}, $args{args});
+        || ($no_duplicate && $args{command} =~ /^(screenshot)$/))
+        ){
+        my $dupe = $self->_duplicated_request();
+
+        cluck "$args{command} dupe ".Dumper($args{args})
+        if $args{command} !~ /cleanup|set_time/i && $dupe;
+
         return $dupe if $dupe;
 
         my $recent;
-        $recent = done_recently(undef, 60, $args{command}, $args{args})
+        $recent = $self->done_recently()
         if $args{command} !~ /^(clone|migrate|set_base_vm)$/;
 
         return if $recent;
@@ -1495,7 +1507,7 @@ sub refresh_machine {
     my $id_requested = _requested('refresh_machine',id_domain => $id_domain);
     return Ravada::Request->open($id_requested) if $id_requested;
 
-    return if done_recently(undef,60,'refresh_machine');
+    return if $self->done_recently();
 
     my $req = _new_request($self
         , command => 'refresh_machine'
