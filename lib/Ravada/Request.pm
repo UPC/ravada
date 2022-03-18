@@ -157,13 +157,16 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
 
 our %CMD_NO_DUPLICATE = map { $_ => 1 }
 qw(
+    clone
     set_base_vm
     remove_base_vm
     rsync_back
     cleanup
+    refresh_machine
     refresh_machine_ports
     set_time
     open_exposed_ports
+    manage_pools
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -654,8 +657,12 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
     } else {
         $args_d = decode_json($args);
     }
+    confess "Error: missing command " if !$command;
     delete $args_d->{uid};
     delete $args_d->{at};
+    delete $args_d->{status};
+    delete $args_d->{timeout};
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id,args FROM requests WHERE (status <> 'done')"
         ." AND command=?"
@@ -663,15 +670,18 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
     );
     $sth->execute($command);
     while (my ($id,$args_found) = $sth->fetchrow) {
-        next if $self && $self->id == $id;
+        next if $self && $self->id && $self->id == $id;
 
         my $args_found_d = decode_json($args_found);
         delete $args_found_d->{uid};
         delete $args_found_d->{at};
+        delete $args_found_d->{status};
+        delete $args_found_d->{timeout};
 
         next if join(".",sort keys %$args_d) ne join(".",sort keys %$args_found_d);
         my $args_d_s = join(".",map { $args_d->{$_} } sort keys %$args_d);
         my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
+
         next if $args_d_s ne $args_found_s;
 
         return Ravada::Request->open($id);
@@ -690,6 +700,7 @@ sub _new_request {
     my %args = @_;
 
     $args{status} = 'requested';
+    $self->{command} = $args{command};
 
     if ($args{name}) {
         $args{domain_name} = $args{name};
@@ -722,16 +733,14 @@ sub _new_request {
 
         $args{args} = encode_json($args{args});
     }
+    $self->{args} = decode_json($args{args});
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
     if (!$force
-        && ($args{command} =~ /^(clone|manage_pools)$/
-        || $CMD_NO_DUPLICATE{$args{command}}
+        && (
+        $CMD_NO_DUPLICATE{$args{command}}
         || ($no_duplicate && $args{command} =~ /^(screenshot)$/))
         ){
         my $dupe = $self->_duplicated_request();
-
-        cluck "$args{command} dupe ".Dumper($args{args})
-        if $args{command} !~ /cleanup|set_time/i && $dupe;
 
         return $dupe if $dupe;
 

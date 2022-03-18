@@ -1650,6 +1650,7 @@ for my $vm_name (vm_names() ) {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+        test_duplicated_set_base_vm($vm, $node);
 
         test_pc_other($vm,$node);
 
@@ -1697,7 +1698,6 @@ for my $vm_name (vm_names() ) {
         test_removed_base_file_and_swap_remote($vm, $node);
         test_removed_remote_swap($vm, $node);
         test_removed_local_swap($vm, $node);
-        test_duplicated_set_base_vm($vm, $node);
 
         test_set_vm($vm, $node);
 
