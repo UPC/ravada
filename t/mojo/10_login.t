@@ -133,6 +133,8 @@ sub test_iptables_clones($base) {
         my $clone = Ravada::Front::Domain->open($clone_data->{id});
         wait_request();
         my $displays = $clone->info(user_admin)->{hardware}->{display};
+        Ravada::Request->refresh_vms(_force => 1);
+        Ravada::Request->refresh_machine(uid => user_admin->id, id_domain => $clone_data->{id});
         wait_request();
         for my $display (@$displays) {
             for my $port ($display->{port}, $display->{extra}->{tls_port}) {

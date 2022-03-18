@@ -3355,7 +3355,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     my ($id_port, $public_port) = $sth->fetchrow();
 
     my $internal_ip = $self->ip;
-    confess "Error: I can't get the internal IP of ".$self->name
+    die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry."
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
     die "Error: No NAT ip in domain ".$self->name." found. Retry.\n"
