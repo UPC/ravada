@@ -1160,7 +1160,8 @@ sub wait_request {
                     $run_at = " $run_at";
                 }
                 if ($req->command eq 'refresh_machine_ports'
-                    && $req->error && $req->error =~ /has ports .*up/) {
+                    && defined $req->error
+                    && $req->error =~ /has ports .*up/) {
                     $req->status('done');
                     next;
                 }

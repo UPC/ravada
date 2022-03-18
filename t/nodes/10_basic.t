@@ -1041,6 +1041,64 @@ sub test_change_clone($vm, $node) {
     $base->remove(user_admin);
 }
 
+sub _machine_types($vm) {
+
+    my $xml = $vm->vm->get_capabilities();
+    my $doc = XML::LibXML->load_xml(string => $xml);
+
+    my @types;
+
+    for my $node_arch ($doc->findnodes("/capabilities/guest/arch")) {
+        my %types;
+        for my $node_machine (sort { $a->textContent cmp $b->textContent } $node_arch->findnodes("machine")) {
+            my $machine = $node_machine->textContent;
+            next if $machine !~ /^(pc-i440fx|pc-q35)-(\d+.\d+)/
+            && $machine !~ /^(pc)-(\d+\d+)$/;
+            my $version = ( $2 or 0 );
+            $types{$1} = [ $version,$machine ]
+            if !exists $types{$1} || $version > $types{$1}->[0];
+        }
+        warn Dumper(\%types);
+        for (keys %types) {
+            push @types,($types{$_}->[1]);
+        }
+    }
+    confess "Error: no types found"
+    if !scalar @types;
+
+    return @types;
+}
+
+sub test_pc_other($vm, $node) {
+    return if $vm->type eq 'Void';
+    my $id_iso = search_id_iso('Alpine%64');
+
+    for my $machine (_machine_types($vm)) {
+        my $name = new_domain_name();
+        my $req = Ravada::Request->create_domain(
+            name => $name
+            ,vm => $vm->type
+            ,id_iso => $id_iso
+            ,id_owner => user_admin->id
+            ,memory => 512 * 1024
+            ,disk => 1024 * 1024
+            ,options => { uefi => 1 , machine => $machine }
+        );
+        wait_request(debug => 1);
+        my $base = $vm->search_domain($name);
+        die if !$base;
+
+        Ravada::Request->set_base_vm(id_vm => $node->id
+            ,uid => user_admin->id
+            ,id_domain => $base->id
+        );
+        wait_request( debug => 1);
+
+        remove_domain($base);
+    }
+
+}
+
 sub test_fill_memory($vm, $node, $migrate) {
     #TODO: Void VMs
     return if $vm->type eq 'Void';
@@ -1593,6 +1651,8 @@ for my $vm_name (vm_names() ) {
 
         start_node($node);
         test_duplicated_set_base_vm($vm, $node);
+
+        test_pc_other($vm,$node);
 
         test_fill_memory($vm, $node, 1); # migrate
 
