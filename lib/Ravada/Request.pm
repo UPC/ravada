@@ -1590,7 +1590,6 @@ sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
 
         return Ravada::Request->open($id) if !defined $args;
 
-
         my $args_found_d = decode_json($args_found);
         delete $args_found_d->{uid};
         delete $args_found_d->{at};

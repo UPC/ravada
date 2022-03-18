@@ -1084,7 +1084,7 @@ sub test_pc_other($vm, $node) {
             ,disk => 1024 * 1024
             ,options => { uefi => 1 , machine => $machine }
         );
-        wait_request(debug => 1);
+        wait_request(debug => 0);
         my $base = $vm->search_domain($name);
         die if !$base;
 
@@ -1092,7 +1092,7 @@ sub test_pc_other($vm, $node) {
             ,uid => user_admin->id
             ,id_domain => $base->id
         );
-        wait_request( debug => 1);
+        wait_request( debug => 0);
 
         remove_domain($base);
     }

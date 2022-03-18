@@ -852,10 +852,9 @@ sub test_open_port_duplicated($vm) {
     my @out2 = split /\n/, `iptables-save -t nat`;
     my @open2 = (grep /--dport $public_port/, @out2);
     is(scalar(@open2),2) or die Dumper(\@open2);
-    warn Dumper(\@open2);
 
     my $req = Ravada::Request->refresh_vms(_force => 1);
-    wait_request(request => $req, debug => 0, debug => 0);
+    wait_request(request => $req, debug => 0);
     is($req->status,'done');
     is($req->error, '') or exit;
 
