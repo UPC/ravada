@@ -21,7 +21,7 @@ my $BASE;
 sub test_duplicate_req {
         my $req = Ravada::Request->manage_pools(uid => user_admin->id);
         my $req_dupe = Ravada::Request->manage_pools(uid => user_admin->id);
-        is($req_dupe->id, $req->id) or exit;
+        is($req_dupe->id, $req->id);
         my $req_dupe_user =Ravada::Request->manage_pools(uid => Ravada::Utils::user_daemon->id);
         is($req_dupe_user->id, $req->id);
 }

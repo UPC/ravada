@@ -1650,7 +1650,6 @@ for my $vm_name (vm_names() ) {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
-        test_duplicated_set_base_vm($vm, $node);
 
         test_pc_other($vm,$node);
 

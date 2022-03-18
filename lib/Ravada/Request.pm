@@ -9,7 +9,7 @@ Ravada::Request - Requests library for Ravada
 
 =cut
 
-use Carp qw(confess carp cluck);
+use Carp qw(confess);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
@@ -747,7 +747,6 @@ sub _new_request {
         my $recent;
         $recent = $self->done_recently()
         if $args{command} !~ /^(clone|migrate|set_base_vm)$/;
-
         return if $recent;
 
     }

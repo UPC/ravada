@@ -1388,7 +1388,7 @@ sub test_display_drivers($vm, $remove) {
     }
     wait_request(debug => 0);
     my $n_displays=0;
-    for my $driver (reverse @{$domain->info(user_admin)->{drivers}->{display}} ) {
+    for my $driver ( @{$domain->info(user_admin)->{drivers}->{display}} ) {
         diag("adding display $driver");
         $domain->display_info(user_admin);
         next if $domain->_get_display($driver);

@@ -821,7 +821,6 @@ sub test_redirect_ip_duplicated_refresh($vm) {
 
 sub test_open_port_duplicated($vm) {
     diag("Test open port duplicated ".$vm->type);
-
     my $base = $BASE->clone(name => new_domain_name, user => user_admin);
     $base->expose(port => 22, name => "ssh");
     my @base_ports0 = $base->list_ports();
@@ -856,7 +855,7 @@ sub test_open_port_duplicated($vm) {
     warn Dumper(\@open2);
 
     my $req = Ravada::Request->refresh_vms(_force => 1);
-    wait_request(request => $req, debug => 0, debug => 1);
+    wait_request(request => $req, debug => 0, debug => 0);
     is($req->status,'done');
     is($req->error, '') or exit;
 
@@ -951,7 +950,6 @@ sub test_clone_exports_add_ports($vm) {
     wait_request( debug => 0, request => \@req );
     for (@req) {
         next if $_->command eq 'set_time';
-        warn Dumper([$_->command, [$_->args]]);;
         is($_->status,'done')   or exit;
         is($_->error,'')        or exit;
     }
