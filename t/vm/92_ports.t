@@ -143,6 +143,7 @@ sub test_start_after_hibernate($domain
     my @out = split /\n/,$out;
     run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
     @out = split /\n/,$out;
+    delete_request('open_exposed_ports');
     Ravada::Request->start_domain(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -767,7 +768,7 @@ sub test_redirect_ip_duplicated($vm) {
     my @out = split /\n/, `iptables-save -t nat`;
     my @open = (grep /--to-destination $ip/, @out);
     is(scalar(@open),2) or die Dumper(\@open);
-
+    delete_request('open_exposed_ports');
     $domain->start( remote_ip => '10.1.1.2', user => user_admin);
     wait_request(debug => 0);
 

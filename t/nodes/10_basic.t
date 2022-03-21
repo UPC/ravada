@@ -1084,7 +1084,7 @@ sub test_pc_other($vm, $node) {
             ,disk => 1024 * 1024
             ,options => { uefi => 1 , machine => $machine }
         );
-        wait_request(debug => 1);
+        wait_request(debug => 0);
         my $base = $vm->search_domain($name);
         die if !$base;
 
@@ -1092,7 +1092,7 @@ sub test_pc_other($vm, $node) {
             ,uid => user_admin->id
             ,id_domain => $base->id
         );
-        wait_request( debug => 1);
+        wait_request( debug => 0);
 
         remove_domain($base);
     }
@@ -1697,7 +1697,6 @@ for my $vm_name (vm_names() ) {
         test_removed_base_file_and_swap_remote($vm, $node);
         test_removed_remote_swap($vm, $node);
         test_removed_local_swap($vm, $node);
-        test_duplicated_set_base_vm($vm, $node);
 
         test_set_vm($vm, $node);
 

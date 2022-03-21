@@ -1628,6 +1628,10 @@ sub _check_iptables_fixed_conflict($vm, $port) {
 }
 
 sub test_display_conflict_next($vm) {
+    delete $Ravada::Request::CMD_NO_DUPLICATE{refresh_machine};
+    delete $Ravada::Request::CMD_NO_DUPLICATE{refresh_machine_ports};
+    delete $Ravada::Request::CMD_NO_DUPLICATE{open_exposed_ports};
+
     rvd_back->setting("/backend/expose_port_min" => 5900 );
     my $domain0 = $BASE->clone(name => new_domain_name, user => user_admin, memory =>512*1024);
     $domain0->_reset_free_port() if $vm->type eq 'Void';

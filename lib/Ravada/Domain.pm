@@ -9,7 +9,7 @@ Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
 
 =cut
 
-use Carp qw(carp confess croak cluck);
+use Carp qw(carp confess croak);
 use Data::Dumper;
 use File::Copy qw(copy move);
 use File::Rsync;
@@ -1427,6 +1427,8 @@ sub _fix_duplicate_display_port($self, $port) {
     Ravada::Request->open_exposed_ports(
         uid => Ravada::Utils::user_daemon->id
         ,id_domain => $id_domain
+        ,retry => 20
+        ,_force => 1
     ) if $is_active;
 }
 
@@ -3353,8 +3355,11 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     my ($id_port, $public_port) = $sth->fetchrow();
 
     my $internal_ip = $self->ip;
-    confess "Error: I can't get the internal IP of ".$self->name
+    die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry."
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
+
+    die "Error: No NAT ip in domain ".$self->name." found. Retry.\n"
+    if !$self->_vm->_is_ip_nat($internal_ip);
 
     if ($public_port
         && ( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port")
@@ -3892,6 +3897,8 @@ sub _check_port_conflicts($self) {
                            uid => Ravada::Utils::user_daemon->id
                     ,id_domain => $id_domain
                 ,after_request => $req_close->id
+                ,retry => 20
+                ,_force => 1
                 );
             }
         }
@@ -5467,7 +5474,7 @@ sub _get_display_port($self, $display) {
     = grep { lc($_->{name}) eq lc($display->{driver}) || lc($_->{value}) eq lc($display->{driver})}
     $driver->get_options;
 
-    confess "Error: unknown display driver $display->{driver}" if !$selected;
+    confess "Error: unknown display driver $display->{driver} ".Dumper([$driver->get_options]) if !$selected;
 
     die "Error: display driver port not defined ".Dumper($selected)
     unless defined $selected->{data};

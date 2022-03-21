@@ -48,21 +48,27 @@
             </h3>
 
             <div class="container pl-5"
-                ng-show="request_open_ports && request_open_ports_done">
+                ng-show="request_open_ports"
+                >
 
             <table border="0">
                 <tr ng-repeat="port in domain.ports">
                     <td align="right">
                     <span ng-show="!port.is_active" class="badge badge-danger">down</span>
-                    <span ng-show="port.is_active" class="badge badge-info">up</span>
+                    <span ng-show="port.is_active" class="badge badge-info">up
+                    </span>
                     </td>
                     <td align="left">
                     <b>{{port.name}}</b>
                     </td>
                     <td>
-                    {{domain.display.ip}}:{{port.public_port}}
-                    <i class="fa fa-arrow-right"></i>
+                        <span ng-class='{"loading": !request_open_ports_done || !domain.ip }'>
+                        {{domain.display.ip}}:{{port.public_port}}
+                        </span>
+                        <i class="fa fa-arrow-right"></i>
+                        <span>
                     {{port.internal_port}}
+                        </span>
                     </td>
                 </tr>
             </table>
