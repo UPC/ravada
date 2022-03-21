@@ -368,7 +368,7 @@ sub BUILD {
         ->{backend}->{time_zone}->{value})
     if !defined $TZ;
 
-    Mojo::IOLoop->recurring(1 => sub {
+    Mojo::IOLoop->recurring(3 => sub {
             for my $key ( keys %{$self->clients} ) {
                 my $ws_client = $self->clients->{$key}->{ws};
                 my $channel = $self->clients->{$key}->{channel};

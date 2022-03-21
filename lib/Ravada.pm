@@ -33,6 +33,7 @@ use Ravada::VM::Void;
 our %VALID_VM;
 our %ERROR_VM;
 our $TIMEOUT_STALE_PROCESS;
+our $TIMEOUT_REFRESH_REQUESTS = 0;
 
 eval {
     require Ravada::VM::KVM and do {
@@ -3369,9 +3370,13 @@ sub process_requests {
             ." or priority"
         if $request_type !~ /^(long|huge|priority|all)$/;
 
-    $self->_wait_pids();
-    $self->_kill_stale_process();
-    $self->_kill_dead_process();
+    if (time - $TIMEOUT_REFRESH_REQUESTS > 60) {
+        $TIMEOUT_REFRESH_REQUESTS = time;
+        $self->_wait_pids();
+        $self->_kill_stale_process();
+        $self->_kill_dead_process();
+        $self->_timeout_requests();
+    }
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
         ." WHERE "
@@ -3397,7 +3402,7 @@ sub process_requests {
 
         next if $duplicated{"id_req.$id_request"}++;
         next if $req->command !~ /shutdown/i
-            && $self->_domain_working($id_domain, $id_request);
+            && $self->_domain_working($id_domain, $req);
 
         my $domain = '';
         $domain = $id_domain if $id_domain;
@@ -3437,7 +3442,6 @@ sub process_requests {
 
     }
 
-    $self->_timeout_requests();
     warn Dumper([map { $_->id." ".($_->pid or '')." ".$_->command." ".$_->status }
             grep { $_->id } @reqs ])
         if ($DEBUG || $debug ) && @reqs;
@@ -3617,12 +3621,11 @@ sub _kill_dead_process($self) {
 
 sub _domain_working {
     my $self = shift;
-    my ($id_domain, $id_request) = @_;
+    my ($id_domain, $req) = @_;
 
-    confess "Missing id_request" if !defined$id_request;
+    confess "Missing request" if !defined $req;
 
     if (!$id_domain) {
-        my $req = Ravada::Request->open($id_request);
         $id_domain = $req->defined_arg('id_base');
         if (!$id_domain) {
             my $domain_name = $req->defined_arg('name');
@@ -3644,7 +3647,7 @@ sub _domain_working {
         ."      AND command NOT LIKE 'refresh_machine%' "
         ."     )"
     );
-    $sth->execute($id_request, $id_domain);
+    $sth->execute($req->id, $id_domain);
     my ($id, $status) = $sth->fetchrow;
 #    warn "CHECKING DOMAIN WORKING "
 #        ."[$id_request] id_domain $id_domain working in request ".($id or '<NULL>')
