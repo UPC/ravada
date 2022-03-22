@@ -1148,6 +1148,30 @@
 
             }
         }
+
+        $scope.reload_ports = function() {
+            $scope.request_open_ports_done = false;
+            $http.post('/request/close_exposed_ports/'
+                ,JSON.stringify(
+                    { 'id_domain': $scope.domain.id})
+            ).then(function(response) {
+                var id_request = 0;
+                if (response.data.request) {
+                    id_request = response.data.request;
+                }
+                $http.post('/request/open_exposed_ports/'
+                    ,JSON.stringify(
+                    { 'id_domain': $scope.domain.id
+                        ,'after_request': id_request
+                        ,'retry': 20
+                    })
+                    ).then(function(response) {
+                        $scope.request_open_ports = true;
+                        $scope.request_open_ports_done = false;
+                    });
+            });
+        }
+
         $scope.domain_display = [];
         $scope.redirect_done = false;
         //$scope.wait_request();

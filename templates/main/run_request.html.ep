@@ -42,10 +42,20 @@
                 <li><b><%=l 'Memory' %>:</b> {{domain.memory}}</li>
                 <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
             </ul>
-            <h3 ng-show="domain.ports.length">Open ports
+            <div class="list-group list-group-horizontal-md">
+                <h3 ng-show="domain.ports.length"><%=l 'Open ports' %>
+                </h3>
+                <div>
+                <button
+                     ng-show="request_open_ports && request_open_ports_done"
+                     ng-click="reload_ports()"
+                     ><%=l 'reopen' %></button>
+                </div>
+                <small>
                 <i ng-hide="request_open_ports && request_open_ports_done"
                 class="fas fa-sync-alt fa-spin"></i>
-            </h3>
+                </small>
+            </div>
 
             <div class="container pl-5"
                 ng-show="request_open_ports"

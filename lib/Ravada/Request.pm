@@ -217,7 +217,7 @@ our %COMMAND = (
     }
 
     ,iptables => {
-        limit => 1
+        limit => 4
         ,priority => 2
         ,commands => ['open_exposed_ports']
     }
