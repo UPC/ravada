@@ -1163,6 +1163,7 @@
                     ,JSON.stringify(
                     { 'id_domain': $scope.domain.id
                         ,'after_request': id_request
+                        ,'_force': 1
                         ,'retry': 20
                     })
                     ).then(function(response) {

@@ -50,11 +50,11 @@
                      ng-show="request_open_ports && request_open_ports_done"
                      ng-click="reload_ports()"
                      ><%=l 'reopen' %></button>
-                </div>
                 <small>
                 <i ng-hide="request_open_ports && request_open_ports_done"
                 class="fas fa-sync-alt fa-spin"></i>
                 </small>
+                </div>
             </div>
 
             <div class="container pl-5"
