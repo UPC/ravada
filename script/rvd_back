@@ -230,9 +230,7 @@ sub do_start {
     Ravada::Request->refresh_storage();
     for (;;) {
         my $t0 = time;
-        $ravada->process_priority_requests()
-            or $ravada->process_long_requests()
-            or $ravada->process_requests();
+        $ravada->process_requests();
 		$ravada->set_debug_value();
         exit if done_request();
 
