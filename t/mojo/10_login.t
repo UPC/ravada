@@ -624,20 +624,22 @@ sub test_new_machine_empty($t, $vm_name) {
     }
 }
 
-sub test_new_machine_default($t, $vm_name) {
+sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
     my $name = new_domain_name();
 
     my $iso_name = 'Alpine%64 bits';
     my $id_iso = search_id_iso($iso_name);
-    $t->post_ok('/new_machine.html' => form => {
+    my $args = {
             backend => $vm_name
             ,id_iso => $id_iso
             ,name => $name
             ,disk => 1
             ,ram => 1
             ,submit => 1
-        }
-    )->status_is(302);
+    };
+    $args->{iso_file} = '' if $empty_iso_file;
+
+    $t->post_ok('/new_machine.html' => form => $args)->status_is(302);
 
     wait_request();
 
@@ -825,6 +827,7 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     test_new_machine($t);
     if ($vm_name eq 'KVM') {
         test_new_machine_default($t, $vm_name);
+        test_new_machine_default($t, $vm_name, 1); # with empty iso file
         test_new_machine_advanced_options($t, $vm_name);
         test_new_machine_advanced_options($t, $vm_name,1);
         test_new_machine_advanced_options($t, $vm_name,0,1);
