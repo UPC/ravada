@@ -865,9 +865,11 @@ sub id {
 
 sub _data($self, $field, $value=undef) {
     if (defined $value && $self->store
-        && exists $self->{_data}->{$field}
-        && defined $self->{_data}->{$field}
-        && $value ne $self->{_data}->{$field}
+        && (
+          !exists $self->{_data}->{$field}
+          || !defined $self->{_data}->{$field}
+          || $value ne $self->{_data}->{$field}
+        )
     ) {
         $self->{_data}->{$field} = $value;
         my $sth = $$CONNECTOR->dbh->prepare(
