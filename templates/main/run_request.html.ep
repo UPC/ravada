@@ -42,7 +42,8 @@
                 <li><b><%=l 'Memory' %>:</b> {{domain.memory}}</li>
                 <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
             </ul>
-            <div class="list-group list-group-horizontal-md">
+            <div class="list-group list-group-horizontal-md"
+                ng-show="domain.ports.length">
                 <h3 ng-show="domain.ports.length"><%=l 'Open ports' %>
                 </h3>
                 <div>
