@@ -1562,7 +1562,7 @@ sub _set_public_exposed($domain, $port) {
         ." WHERE public_port=?");
     $sth->execute($port);
 
-    my $sth =$domain->_dbh->prepare("UPDATE domain_displays set port=NULL"
+    $sth =$domain->_dbh->prepare("UPDATE domain_displays set port=NULL"
         ." WHERE port=?");
     $sth->execute($port);
 
