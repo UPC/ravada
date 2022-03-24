@@ -213,10 +213,17 @@ sub _do_create_constraints($self) {
         return;
     }
     $pid_file->touch;
-
     my $dbh = $CONNECTOR->dbh;
+
+    my $known_constraints;
+
     for my $constraint (@{$self->{_constraints}}) {
-        my ($name) = $constraint =~ /CONSTRAINT (\w+)\s/;
+        my ($table,$name) = $constraint =~ /ALTER TABLE (\w+) .*?CONSTRAINT (\w+)\s/;
+        if (!exists $known_constraints->{$table}) {
+            my $current = $self->_get_constraints($table);
+            $known_constraints->{$table} = $current;
+        }
+        next if exists $known_constraints->{$table}->{$name};
 
         warn "INFO: creating constraint $name \n"
         if $name && !$FIRST_TIME_RUN && $0 !~ /\.t$/;
@@ -1900,6 +1907,21 @@ sub _sql_create_tables($self) {
         }
         ]
         ,[
+            domain_ports => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
+            ,'id_domain' => 'int(11) NOT NULL'
+            ,'public_port' => 'int(11) DEFAULT NULL'
+            ,'internal_port' => 'int(11) DEFAULT NULL'
+            ,'name' => 'varchar(32) DEFAULT NULL'
+            ,'restricted' => 'int(1) DEFAULT 0'
+            ,'internal_ip' => 'char(200) DEFAULT NULL'
+            ,'is_active' => 'int(1) DEFAULT 0'
+            ,'is_secondary' => 'int(1) DEFAULT 0'
+            ,'id_vm' => 'int(11) DEFAULT NULL'
+            }
+        ]
+        ,[
             group_access => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
@@ -2021,6 +2043,7 @@ sub _sql_create_tables($self) {
         }
 
         my $sql = "CREATE TABLE $table ( $sql_fields )";
+
         $CONNECTOR->dbh->do($sql);
         $self->_create_constraints($table, @constraints);
         $created++;
@@ -2410,13 +2433,6 @@ sub _upgrade_tables {
     $self->_upgrade_table('domain_displays', 'id_vm','int DEFAULT NULL');
 
     $self->_upgrade_table('domain_drivers_options','data', 'char(200) ');
-
-    $self->_upgrade_table('domain_ports', 'id_domain','int NOT NULL references `domains` (`id`) ON DELETE CASCADE');
-    $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
-    $self->_upgrade_table('domain_ports', 'restricted','int(1) DEFAULT 0');
-    $self->_upgrade_table('domain_ports', 'is_active','int(1) DEFAULT 0');
-    $self->_upgrade_table('domain_ports', 'is_secondary','int(1) DEFAULT 0');
-    $self->_upgrade_table('domain_ports', 'id_vm','int DEFAULT NULL');
 
     $self->_upgrade_table('messages','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 
