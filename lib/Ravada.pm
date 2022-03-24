@@ -218,7 +218,8 @@ sub _do_create_constraints($self) {
     my $known_constraints;
 
     for my $constraint (@{$self->{_constraints}}) {
-        my ($table,$name) = $constraint =~ /ALTER TABLE (\w+) .*?CONSTRAINT (\w+)\s/;
+        my ($table,$name) = $constraint =~ /ALTER TABLE (\w+) .*?CONSTRAINT (\w+)\s/i;
+        confess $constraint if !defined $table;
         if (!exists $known_constraints->{$table}) {
             my $current = $self->_get_constraints($table);
             $known_constraints->{$table} = $current;
