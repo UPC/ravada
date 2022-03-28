@@ -892,9 +892,9 @@ sub _domain_create_from_iso {
             $device_cdrom = $iso_file;
         }
     }
-    else {
-      $device_cdrom = $self->_iso_name($iso, $args{request});
-    }
+
+    $device_cdrom  =$self->_iso_name($iso, $args{request})
+    if !$device_cdrom && $iso->{has_cd};
     
     #if ((not exists $args{iso_file}) || ((exists $args{iso_file}) && ($args{iso_file} eq "<NONE>"))) {
     #    $device_cdrom = $self->_iso_name($iso, $args{request});
@@ -1671,6 +1671,8 @@ sub _xml_modify_options($self, $doc, $options=undef) {
         $self->_xml_set_pcie($doc);
         $self->_xml_remove_ide($doc);
         $self->_xml_remove_vmport($doc);
+    } else {
+        $self->_xml_set_pci_noe($doc);
     }
 
 }
@@ -1717,6 +1719,55 @@ sub _xml_set_pcie($self, $doc) {
         $controller->setAttribute('model' => 'pcie-root');
     }
 }
+
+sub _xml_set_pci_noe($self, $doc) {
+    my $changed = 0;
+    for my $controller ($doc->findnodes("/domain/devices/controller")) {
+        next if $controller->getAttribute('type') ne 'pci';
+
+        $controller->setAttribute('model' => 'pci-root')
+        if $controller->getAttribute('model') eq 'pcie-root';
+
+        $changed++;
+    }
+
+    return if !$changed;
+    my %slot;
+    for my $address ($doc->findnodes("/domain/devices/*/address")) {
+        next if $address->getAttribute('type') ne'pci';
+        my ($n) = $address->getAttribute('slot') =~ /0x0*(\d+)/;
+        $slot{$n}++;
+    }
+
+    my $n = 2;
+    for my $address ($doc->findnodes("/domain/devices/*/address")) {
+        next if $address->getAttribute('type') ne'pci';
+        next if $address->getAttribute('slot') !~ /^0x00+$/;
+
+        my $new_slot = "0x0$n";
+        for (;;) {
+            $new_slot = "0x0$n";
+            last if !$slot{$n}++;
+            $n++;
+        }
+        $address->setAttribute('slot' => $new_slot);
+    }
+
+    # video can't be 0x00 nor 0x01
+    for my $address ($doc->findnodes("/domain/devices/video/address")) {
+        next if $address->getAttribute('type') ne'pci';
+        next if $address->getAttribute('slot') !~ /^0x0*(0|1)$/;
+        my $new_slot = "0x0$n";
+        for (;;) {
+            $new_slot = "0x0$n";
+            last if !$slot{$n}++;
+            $n++;
+        }
+        $address->setAttribute('slot' => $new_slot);
+    }
+
+}
+
 
 sub _xml_add_libosinfo_win2k16($self, $doc) {
     my ($domain) = $doc->findnodes('/domain');
@@ -1779,6 +1830,9 @@ sub _xml_modify_video {
                      ,map { $_->toString() } $doc->findnodes('/domain/devices/video'))
 
         if !$video;
+
+    return if $video->getAttribute('type') eq 'qxl';
+
     $video->setAttribute(type => 'qxl');
     $video->setAttribute( ram => 65536 );
     $video->setAttribute( vram => 65536 );

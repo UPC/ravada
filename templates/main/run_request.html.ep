@@ -42,27 +42,44 @@
                 <li><b><%=l 'Memory' %>:</b> {{domain.memory}}</li>
                 <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
             </ul>
-            <h3 ng-show="domain.ports.length">Open ports
+            <div class="list-group list-group-horizontal-md"
+                ng-show="domain.ports.length">
+                <h3 ng-show="domain.ports.length"><%=l 'Open ports' %>
+                </h3>
+                <div>
+                <button
+                     ng-show="request_open_ports && request_open_ports_done"
+                     ng-click="reload_ports()"
+                     ><%=l 'reopen' %></button>
+                <small>
                 <i ng-hide="request_open_ports && request_open_ports_done"
                 class="fas fa-sync-alt fa-spin"></i>
-            </h3>
+                </small>
+                </div>
+            </div>
 
             <div class="container pl-5"
-                ng-show="request_open_ports && request_open_ports_done">
+                ng-show="request_open_ports"
+                >
 
             <table border="0">
                 <tr ng-repeat="port in domain.ports">
                     <td align="right">
                     <span ng-show="!port.is_active" class="badge badge-danger">down</span>
-                    <span ng-show="port.is_active" class="badge badge-info">up</span>
+                    <span ng-show="port.is_active" class="badge badge-info">up
+                    </span>
                     </td>
                     <td align="left">
                     <b>{{port.name}}</b>
                     </td>
                     <td>
-                    {{domain.display.ip}}:{{port.public_port}}
-                    <i class="fa fa-arrow-right"></i>
+                        <span ng-class='{"loading": !request_open_ports_done || !domain.ip }'>
+                        {{domain.display.ip}}:{{port.public_port}}
+                        </span>
+                        <i class="fa fa-arrow-right"></i>
+                        <span>
                     {{port.internal_port}}
+                        </span>
                     </td>
                 </tr>
             </table>

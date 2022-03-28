@@ -864,7 +864,13 @@ sub id {
 }
 
 sub _data($self, $field, $value=undef) {
-    if (defined $value && $self->store ) {
+    if (defined $value && $self->store
+        && (
+          !exists $self->{_data}->{$field}
+          || !defined $self->{_data}->{$field}
+          || $value ne $self->{_data}->{$field}
+        )
+    ) {
         $self->{_data}->{$field} = $value;
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE vms set $field=?"
@@ -1564,7 +1570,7 @@ sub _search_iptables($self, %rule) {
         $rule{A} = delete $rule{I};
     }
     $rule{m} = $rule{p} if exists $rule{p} && !exists $rule{m};
-    $rule{d} = "$rule{d}/32" if exists $rule{d} && $rule{d} !~ m{/\d+$};
+    $rule{d} = "$rule{d}/32" if exists $rule{d} && defined $rule{d} && $rule{d} !~ m{/\d+$};
     $rule{s} = "$rule{s}/32" if exists $rule{s} && $rule{s} !~ m{/\d+$};
 
     for my $line (@{$iptables->{$table}}) {

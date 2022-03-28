@@ -33,6 +33,7 @@ use Ravada::VM::Void;
 our %VALID_VM;
 our %ERROR_VM;
 our $TIMEOUT_STALE_PROCESS;
+our $TIMEOUT_REFRESH_REQUESTS = 0;
 
 eval {
     require Ravada::VM::KVM and do {
@@ -212,10 +213,21 @@ sub _do_create_constraints($self) {
         return;
     }
     $pid_file->touch;
-
     my $dbh = $CONNECTOR->dbh;
+
+    my $known_constraints;
+
     for my $constraint (@{$self->{_constraints}}) {
-        my ($name) = $constraint =~ /CONSTRAINT (\w+)\s/;
+        my ($table,$name) = $constraint =~ /ALTER TABLE (.*?) .*?CONSTRAINT (\w+)\s/i;
+        if ( !defined $table ) {
+            cluck "Warning: I can't find the table in this constraint: $constraint";
+            next;
+        }
+        if (!exists $known_constraints->{$table}) {
+            my $current = $self->_get_constraints($table);
+            $known_constraints->{$table} = $current;
+        }
+        next if exists $known_constraints->{$table}->{$name};
 
         warn "INFO: creating constraint $name \n"
         if $name && !$FIRST_TIME_RUN && $0 !~ /\.t$/;
@@ -1899,6 +1911,21 @@ sub _sql_create_tables($self) {
         }
         ]
         ,[
+            domain_ports => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
+            ,'id_domain' => 'int(11) NOT NULL'
+            ,'public_port' => 'int(11) DEFAULT NULL'
+            ,'internal_port' => 'int(11) DEFAULT NULL'
+            ,'name' => 'varchar(32) DEFAULT NULL'
+            ,'restricted' => 'int(1) DEFAULT 0'
+            ,'internal_ip' => 'char(200) DEFAULT NULL'
+            ,'is_active' => 'int(1) DEFAULT 0'
+            ,'is_secondary' => 'int(1) DEFAULT 0'
+            ,'id_vm' => 'int(11) DEFAULT NULL'
+            }
+        ]
+        ,[
             group_access => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
@@ -2020,6 +2047,7 @@ sub _sql_create_tables($self) {
         }
 
         my $sql = "CREATE TABLE $table ( $sql_fields )";
+
         $CONNECTOR->dbh->do($sql);
         $self->_create_constraints($table, @constraints);
         $created++;
@@ -2093,6 +2121,7 @@ sub _create_constraints($self, $table, @constraints) {
         $sql = "alter table $table add CONSTRAINT $name $sql";
         #        $CONNECTOR->dbh->do($sql);
         push @{$self->{_constraints}},($sql);
+
     }
 }
 
@@ -2409,13 +2438,6 @@ sub _upgrade_tables {
     $self->_upgrade_table('domain_displays', 'id_vm','int DEFAULT NULL');
 
     $self->_upgrade_table('domain_drivers_options','data', 'char(200) ');
-
-    $self->_upgrade_table('domain_ports', 'id_domain','int NOT NULL references `domains` (`id`) ON DELETE CASCADE');
-    $self->_upgrade_table('domain_ports', 'internal_ip','char(200)');
-    $self->_upgrade_table('domain_ports', 'restricted','int(1) DEFAULT 0');
-    $self->_upgrade_table('domain_ports', 'is_active','int(1) DEFAULT 0');
-    $self->_upgrade_table('domain_ports', 'is_secondary','int(1) DEFAULT 0');
-    $self->_upgrade_table('domain_ports', 'id_vm','int DEFAULT NULL');
 
     $self->_upgrade_table('messages','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 
@@ -3369,9 +3391,13 @@ sub process_requests {
             ." or priority"
         if $request_type !~ /^(long|huge|priority|all)$/;
 
-    $self->_wait_pids();
-    $self->_kill_stale_process();
-    $self->_kill_dead_process();
+    if (time - $TIMEOUT_REFRESH_REQUESTS > 60) {
+        $TIMEOUT_REFRESH_REQUESTS = time;
+        $self->_wait_pids();
+        $self->_kill_stale_process();
+        $self->_kill_dead_process();
+        $self->_timeout_requests();
+    }
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
         ." WHERE "
@@ -3397,7 +3423,7 @@ sub process_requests {
 
         next if $duplicated{"id_req.$id_request"}++;
         next if $req->command !~ /shutdown/i
-            && $self->_domain_working($id_domain, $id_request);
+            && $self->_domain_working($id_domain, $req);
 
         my $domain = '';
         $domain = $id_domain if $id_domain;
@@ -3437,7 +3463,6 @@ sub process_requests {
 
     }
 
-    $self->_timeout_requests();
     warn Dumper([map { $_->id." ".($_->pid or '')." ".$_->command." ".$_->status }
             grep { $_->id } @reqs ])
         if ($DEBUG || $debug ) && @reqs;
@@ -3617,12 +3642,11 @@ sub _kill_dead_process($self) {
 
 sub _domain_working {
     my $self = shift;
-    my ($id_domain, $id_request) = @_;
+    my ($id_domain, $req) = @_;
 
-    confess "Missing id_request" if !defined$id_request;
+    confess "Missing request" if !defined $req;
 
     if (!$id_domain) {
-        my $req = Ravada::Request->open($id_request);
         $id_domain = $req->defined_arg('id_base');
         if (!$id_domain) {
             my $domain_name = $req->defined_arg('name');
@@ -3644,7 +3668,7 @@ sub _domain_working {
         ."      AND command NOT LIKE 'refresh_machine%' "
         ."     )"
     );
-    $sth->execute($id_request, $id_domain);
+    $sth->execute($req->id, $id_domain);
     my ($id, $status) = $sth->fetchrow;
 #    warn "CHECKING DOMAIN WORKING "
 #        ."[$id_request] id_domain $id_domain working in request ".($id or '<NULL>')
@@ -5201,6 +5225,8 @@ sub _reopen_ports($self, $port) {
     Ravada::Request->open_exposed_ports(
                uid => Ravada::Utils::user_daemon->id
         ,id_domain => $id_domain
+        ,_force => 1
+        , retry => 20
     ) if $domain->is_active;
 }
 
