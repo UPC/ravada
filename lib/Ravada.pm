@@ -218,8 +218,11 @@ sub _do_create_constraints($self) {
     my $known_constraints;
 
     for my $constraint (@{$self->{_constraints}}) {
-        my ($table,$name) = $constraint =~ /ALTER TABLE (\w+) .*?CONSTRAINT (\w+)\s/i;
-        confess $constraint if !defined $table;
+        my ($table,$name) = $constraint =~ /ALTER TABLE (.*?) .*?CONSTRAINT (\w+)\s/i;
+        if ( !defined $table ) {
+            cluck "Warning: I can't find the table in this constraint: $constraint";
+            next;
+        }
         if (!exists $known_constraints->{$table}) {
             my $current = $self->_get_constraints($table);
             $known_constraints->{$table} = $current;
@@ -2118,6 +2121,7 @@ sub _create_constraints($self, $table, @constraints) {
         $sql = "alter table $table add CONSTRAINT $name $sql";
         #        $CONNECTOR->dbh->do($sql);
         push @{$self->{_constraints}},($sql);
+
     }
 }
 
