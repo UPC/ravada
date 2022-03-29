@@ -127,6 +127,7 @@ our %VALID_ARG = (
       ,purge => { uid => 1, id_domain => 1 }
 
     ,list_machine_types => { uid => 1, id_vm => 2, vm_type => 2}
+    ,list_cpu_models => { uid => 1, id_domain => 1}
 
     #users
     ,post_login => { user => 1, locale => 2 }

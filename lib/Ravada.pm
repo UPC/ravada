@@ -907,6 +907,43 @@ sub _add_domain_drivers_display($self) {
     }
 }
 
+sub _add_domain_drivers_cpu($self) {
+    my %data = (
+        'KVM' => [
+            'custom'
+            ,'host-model'
+            ,'host-passthrough'
+        ]
+    );
+
+    my $id_type = Ravada::Utils::max_id($CONNECTOR->dbh, 'domain_drivers_types')+1;
+    my $id_option = Ravada::Utils::max_id($CONNECTOR->dbh, 'domain_drivers_options');
+    for my $vm ( keys %data) {
+        my $type = {
+            id => $id_type
+            ,name => 'cpu'
+            ,description => 'CPU'
+            ,vm => $vm
+        };
+
+        $self->_update_table('domain_drivers_types','name,vm',$type)
+            and do {
+            for my $option ( @{$data{$vm}} ) {
+                if (!ref($option)) {
+                    $option = { name => $option
+                        ,value => $option
+                    };
+                }
+                $option->{value} = $option->{name} if !exists $option->{value};
+                $option->{id_driver_type} = $id_type;
+                $option->{id} = ++$id_option;
+                $self->_update_table('domain_drivers_options','id_driver_type,name',$option)
+            }
+            $id_type++;
+        };
+    }
+}
+
 sub _update_domain_drivers_types($self) {
 
     my $data = {
@@ -1280,6 +1317,7 @@ sub _update_data {
     $self->_update_old_qemus();
 
     $self->_add_domain_drivers_display();
+    $self->_add_domain_drivers_cpu();
 
     $self->_add_indexes();
 }
@@ -4914,6 +4952,20 @@ sub _cmd_list_machine_types($self, $request) {
     $request->output(encode_json(\%out));
 }
 
+sub _cmd_list_cpu_models($self, $request) {
+
+    my $id_domain = $request->args('id_domain');
+
+    my $domain = Ravada::Domain->open($id_domain);
+    my $info = $domain->get_info();
+    warn Dumper($info);
+    my $vm = $domain->_vm->vm;
+
+    my @out = $vm->get_cpu_model_names('x86_64');
+    $request->output(encode_json(\@out));
+}
+
+
 sub _cmd_set_time($self, $request) {
     my $id_domain = $request->args('id_domain');
     my $domain = Ravada::Domain->open($id_domain)
@@ -5479,6 +5531,7 @@ sub _req_method {
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
  ,list_machine_types => \&_cmd_list_machine_types
+ ,list_cpu_models => \&_cmd_list_cpu_models
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
 ,force_reboot   => \&_cmd_force_reboot
