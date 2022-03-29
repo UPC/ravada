@@ -18,7 +18,7 @@ ETSETB repository <http://infoteleco.upc.edu/img/debian/>`__.
 
 .. prompt:: bash
 
-    wget http://infoteleco.upc.edu/img/debian/ravada_1.3.5_ubuntu-20.04_all.deb
+    wget http://infoteleco.upc.edu/img/debian/ravada_1.3.6_ubuntu-20.04_all.deb
 
 
 Step 2
@@ -28,7 +28,7 @@ Install the *deb* package.
 
 .. prompt:: bash
 
-    sudo apt install ./ravada_1.3.5_ubuntu-20.04_all.deb
+    sudo apt install ./ravada_1.3.6_ubuntu-20.04_all.deb
 
 
 On some upgrades may be required to install some dependencies. You will see
