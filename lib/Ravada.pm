@@ -761,6 +761,7 @@ sub _update_isos {
           ,xml_volume => 'windows11-volume.xml'
           ,min_disk_size => '64'
           ,min_swap_size => '2'
+          ,min_ram => 4
           ,arch => 'x86_64'
           ,extra_iso => 'https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.2\d+-\d+/virtio-win-0.1.2\d+.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
@@ -1939,7 +1940,7 @@ sub _sql_create_tables($self) {
         ,
         [
             iso_images => {
-            'id' => 'int(11) NOT NULL AUTO_INCREMENT'
+            'id' => 'int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY'
             ,'file_re' => 'char(64) DEFAULT NULL'
             ,'name' => 'char(64) NOT NULL'
             ,'description' => 'varchar(255) DEFAULT NULL'
@@ -1959,7 +1960,7 @@ sub _sql_create_tables($self) {
             ,'downloading' => 'int(1) DEFAULT 0'
             ,'extra_iso'=> 'varchar(255) DEFAULT NULL'
             ,'min_swap_size'=> 'int(11) DEFAULT NULL'
-            ,'min_ram'=> 'float DEFAULT NULL'
+            ,'min_ram'=> 'float DEFAULT 0.2'
             }
         ],
         [
