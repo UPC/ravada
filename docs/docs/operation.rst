@@ -10,7 +10,6 @@ Create users
 .. prompt:: bash
 
     sudo ./usr/sbin/rvd_back --add-user=username
-
     sudo ./usr/sbin/rvd_back --add-user-ldap=username
 
 Import KVM virtual machines
@@ -23,7 +22,20 @@ imported from existing KVM domains. Once the domain is created :
 
     sudo ./usr/sbin/rvd_back --import-domain=a
 
-It will ask the name of the user the domain will be owned by.
+It will ask the name of the user the domain will be owned by. You must
+enter a valid username that will own the virtual machine within Ravada.
+
+Also you will be asked wether you want to spinoff the disk volumes or
+not.
+
+.. ::
+
+  Do you want to spinoff the virtual machine volumes ?
+  This will flatten the volumes out of backing files. Please answer y/n [no]:
+
+You probably want to answer **no**. You should answer *yes* if you created
+the volumes with a backend file and want to flatten them out just. It may
+be the case if you migrated the virtual machine from another server.
 
 View all rvd\_back options
 --------------------------
