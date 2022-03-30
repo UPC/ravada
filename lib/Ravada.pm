@@ -1940,7 +1940,7 @@ sub _sql_create_tables($self) {
         ,
         [
             iso_images => {
-            'id' => 'int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY'
+            'id' => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,'file_re' => 'char(64) DEFAULT NULL'
             ,'name' => 'char(64) NOT NULL'
             ,'description' => 'varchar(255) DEFAULT NULL'
