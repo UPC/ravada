@@ -370,6 +370,7 @@ sub _update_isos {
                 ,file_re => '^ubuntu-20.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
+          ,min_ram => 1
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
                    ,arch => 'x86_64'
         }
@@ -1356,6 +1357,9 @@ sub _add_indexes_generic($self) {
             "unique (id_domain,name)"
             ,"index(id_domain)"
         ]
+        ,iso_images => [
+            "unique (name)"
+        ]
         ,requests => [
             "index(status,at_time)"
             ,"index(id,date_changed,status,at_time)"
@@ -1934,6 +1938,31 @@ sub _sql_create_tables($self) {
         ]
         ,
         [
+            iso_images => {
+            'id' => 'int(11) NOT NULL AUTO_INCREMENT'
+            ,'file_re' => 'char(64) DEFAULT NULL'
+            ,'name' => 'char(64) NOT NULL'
+            ,'description' => 'varchar(255) DEFAULT NULL'
+            ,'arch' => 'char(8) DEFAULT NULL'
+            ,'xml' => 'varchar(64) DEFAULT NULL'
+            ,'xml_volume' => 'varchar(64) DEFAULT NULL'
+            ,'url' => 'varchar(255) DEFAULT NULL'
+            ,'md5' => 'varchar(32) DEFAULT NULL'
+            ,'md5_url' => 'varchar(255) DEFAULT NULL'
+            ,'sha256_url' => 'varchar(255) DEFAULT NULL'
+            ,'device' => 'varchar(255) DEFAULT NULL'
+            ,'min_disk_size' => 'int(11) DEFAULT NULL'
+            ,'rename_file' => 'varchar(80) DEFAULT NULL'
+            ,'sha256' => 'varchar(255) DEFAULT NULL'
+            ,'options' => 'varchar(255) DEFAULT NULL'
+            ,'has_cd' => 'int(1) DEFAULT 1'
+            ,'downloading' => 'int(1) DEFAULT 0'
+            ,'extra_iso'=> 'varchar(255) DEFAULT NULL'
+            ,'min_swap_size'=> 'int(11) DEFAULT NULL'
+            ,'min_ram'=> 'float DEFAULT NULL'
+            }
+        ],
+        [
         settings => {
             id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
             , id_parent => 'INT NOT NULL'
@@ -2357,20 +2386,6 @@ sub _upgrade_tables {
     $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
     $self->_upgrade_table('requests','retry','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','args','TEXT');
-
-    $self->_upgrade_table('iso_images','rename_file','varchar(80) DEFAULT NULL');
-    $self->_clean_iso_mini();
-    $self->_upgrade_table('iso_images','md5_url','varchar(255)');
-    $self->_upgrade_table('iso_images','sha256','varchar(255)');
-    $self->_upgrade_table('iso_images','sha256_url','varchar(255)');
-    $self->_upgrade_table('iso_images','file_re','char(64)');
-    $self->_upgrade_table('iso_images','device','varchar(255)');
-    $self->_upgrade_table('iso_images','min_disk_size','int (11) DEFAULT NULL');
-    $self->_upgrade_table('iso_images','min_swap_size','int (11) DEFAULT NULL');
-    $self->_upgrade_table('iso_images','options','varchar(255)');
-    $self->_upgrade_table('iso_images','has_cd','int (1) DEFAULT "1"');
-    $self->_upgrade_table('iso_images','downloading','int (1) DEFAULT "0"');
-    $self->_upgrade_table('iso_images','extra_iso','varchar(255)');
 
     $self->_upgrade_table('users','language','char(40) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
