@@ -661,6 +661,7 @@ sub list_iso_images {
     while (my $row = $sth->fetchrow_hashref) {
         $row->{options} = decode_json($row->{options})
             if $row->{options};
+        $row->{min_ram} = 0.2 if !$row->{min_ram};
         push @iso,($row);
     }
     $sth->finish;

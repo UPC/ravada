@@ -98,8 +98,13 @@
             <div class="form-group row" ng-show="backend == 'KVM' || backend == 'LXC'">
                     <label for="memory" class="col-xl-3 col-form-label"><%=l 'Ram: (GB)' %></label>
                     <div class="col-lg-2">
-                            <input class="form-control" ng-model="ramSize" type="number" min ="0.1" name="memory">
+                            <input class="form-control" ng-model="ramSize" type="number" min ="{{id_iso.min_ram}}" name="memory">
                     </div>
+                  <div ng-show="!ramSize || ramSize < id_iso.min_ram">
+                    <font color="orange" ng-show="id_iso.min_ram"
+                    ><%=l 'The Minimum memory needed for this virtual machine is' %> {{id_iso.min_ram}}GB.</font>
+                </div>
+
             </div>
 
             <div class="form-group row" ng-show="backend == 'KVM' || backend =='Void'">
