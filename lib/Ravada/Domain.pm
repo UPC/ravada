@@ -4380,22 +4380,8 @@ sub get_controllers($self) {
     for my $name ( sort keys %controllers ) {
         $info->{$name} = [$self->get_controller($name)];
     }
-    my %sub = (
-    );
-
-    for my $name ( sort $self->_list_hardware_common ) {
-        confess "Error: hardware $name already parsed in ".$self->name
-        if $info->{$name};
-
-        my $sub = $sub{$name} or confess "Error: no sub for $name ".Dumper(\%sub);
-        $info->{$name} = $sub->($self);
-    }
 
     return $info;
-}
-
-sub _list_hardware_common($self) {
-    #    return ('display');
 }
 
 =head2 drivers

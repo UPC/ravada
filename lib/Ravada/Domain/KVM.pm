@@ -90,6 +90,7 @@ our %REMOVE_CONTROLLER_SUB = (
 
 our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
+    ,cpu => \&_change_hardware_cpu
     ,display => \&_change_hardware_display
     ,vcpus => \&_change_hardware_vcpus
     ,memory => \&_change_hardware_memory
@@ -2775,6 +2776,42 @@ sub _fix_hw_video_args($data) {
     delete $data->{acceleration} unless $driver eq 'virtio';
 }
 
+sub _change_hardware_cpu($self, $index, $data) {
+    confess "Error: nothing to change ".Dumper($data)
+    if !keys %$data;
+
+    lock_hash(%$data);
+    delete $data->{cpu}->{model}->{'$$hashKey'};
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my $count = 0;
+    my $changed = 0;
+
+    my ($n_vcpu) = $doc->findnodes('/domain/vcpu/text()');
+    if ($n_vcpu ne $data->{vcpu}->{_text}) {
+        my ($vcpu) = $doc->findnodes('/domain/vcpu');
+        $vcpu->removeChildNodes();
+        $vcpu->appendText($data->{vcpu}->{_text});
+    }
+    my ($cpu) = $doc->findnodes('/domain/cpu');
+    for my $field (keys %{$data->{cpu}}) {
+        if (ref($data->{cpu}->{$field})) {
+            _change_xml($cpu, $field, $data->{cpu}->{$field});
+            $changed++;
+            next;
+        }
+
+        if ( !defined $cpu->getAttribute($field)
+            || $cpu->getAttribute($field) ne $data->{cpu}->{$field}) {
+            $cpu->setAttribute($field, $data->{cpu}->{$field});
+            $changed++;
+        }
+    }
+
+    $self->reload_config($doc) if $changed;
+}
+
+
 sub _change_hardware_sound($self, $index, $data) {
     confess "Error: nothing to change ".Dumper($data)
     if !keys %$data;
@@ -2859,6 +2896,13 @@ sub _change_xml($xml, $name, $data) {
     my ($node) = $xml->findnodes($name);
     $node = $xml->addNewChild(undef,$name) if !$node;
     confess Dumper([$name, $data]) if !ref($data) || ref($data) ne 'HASH';
+
+    my $text = delete $data->{_text};
+    if ($text) {
+        $node->removeChildNodes();
+        $node->appendText($text);
+    }
+
     for my $field (keys %$data) {
         $node->setAttribute($field, $data->{$field});
     }
