@@ -1,0 +1,65 @@
+<div ng-show="name == '0cpu' && item._edit" class="form-group mt-4">
+{{item}}
+    <ul
+        class="list-group list-group-vertical-md">
+        <li class="list-group-item list-group-item">
+                <%=l 'vCPU allocation' %>
+                <input type="text" ng-model="item.vcpu._text"/>
+        </li>
+    </ul>
+    <ul class="list-group list-group-horizontal-md">
+        <li class="list-group-item list-group-item-primary"><%=l 'mode' %></li>
+        <li class="list-group-item">
+            <select ng-model="item.cpu.mode"
+                    ng-options="mode.toLowerCase() for mode in showmachine.drivers['cpu']"
+            >
+            </select>
+        </li>
+        <li class="list-group-item list-group-item-primary"><%=l 'check' %></li>
+        <li class="list-group-item">
+            <select ng-model="item.cpu.check"
+                    ng-options="check for check in ['none','partial','full']"
+            >
+            </select>
+        </li>
+        <li ng-show="item.cpu.mode=='custom'"
+            class="list-group-item list-group-item-primary"><%=l 'match' %></li>
+        <li ng-show="item.cpu.mode=='custom'"
+            class="list-group-item">
+            <select ng-model="item.cpu.match"
+                    ng-options="match for match in ['exact','strict']"
+            >
+            </select>
+        </li>
+    </ul>
+    <ul ng-show="item.cpu.mode=='custom'"
+        class="list-group list-group-vertical-md">
+        <li class="list-group-item list-group-item">
+                <%=l 'model' %>
+            <select ng-model="item.cpu.model._text"
+                    ng-options="cpu for cpu in cpu_models"
+            >
+            </select>
+        </li>
+        <li class="list-group-item list-group-item">
+                <%=l 'fallback' %>
+            <select ng-model="item.cpu.model.fallback"
+                    ng-options="option for option in ['allow','forbid']"
+            >
+            </select>
+        </li>
+    </ul>
+
+    <div class="row">
+        <div class="col-lg-1">
+        </div>
+        <div class="col-md-12 mt-3">
+            <button class="btn btn-primary"
+                ng-click="toggle_edit(item);change_hardware(item,'0cpu', $index)"
+><%=l 'Submit' %></button>
+            <button class="btn btn-outline-secondary"
+                ng-click="toggle_edit(item);machine_info(showmachine.id)"><%=l '
+Cancel' %></button>
+        </div>
+    </div>
+</div>

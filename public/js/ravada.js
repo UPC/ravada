@@ -451,6 +451,7 @@
                     $scope.list_ldap_attributes();
                     list_ldap_groups();
                 }
+                $scope.list_cpu_models();
           };
 
           var list_interfaces = function() {
@@ -831,10 +832,10 @@
             $scope.change_hardware= function(item,hardware,index) {
                 var new_settings = $scope.showmachine.hardware[hardware][index];
                 delete new_settings._edit;
-                delete new_settings._name;
+                var hw2 = hardware.replace(/\d+(.*)/,'$1');
                 $scope.request('change_hardware',
                     {'id_domain': $scope.showmachine.id
-                        ,'hardware': hardware
+                        ,'hardware': hw2
                         ,'index': index
                         ,'data': new_settings
                     }
@@ -963,6 +964,14 @@
                         list_access_groups();
                 });
             };
+
+            $scope.list_cpu_models = function() {
+                $http.get("/list_cpu_models.json?id_domain="
+                +$scope.showmachineId).then(function(response) {
+                    $scope.cpu_models=response.data;
+                });
+            };
+
             $scope.message = [];
             $scope.disk_remove = [];
             $scope.pending_before = 10;

@@ -9,24 +9,24 @@
 <div class="panel-body">
 %=   include "main/needs_restart"
     <div ng-repeat="(name,value) in showmachine.hardware" ng-hide="show_new_disk||show_new_display">
-        <h2>{{name}}</h2>
+        <h2 ng-hide="name=='0cpu' || name=='1features'">{{name}}</h2>
         <div ng-show="value">
             <div ng-repeat="item in value track by $index"
                 ng-class='{"border rounded border-primary mb-4 p-4": item._edit}'
             >
                 <button title="edit {{name}} {{$index+1}}"
-                    ng-show="(name == 'network' ||name == 'disk' || name == 'video' || name == 'sound') && !item._edit && !item.remove"
+                    ng-show="(name == 'network' ||name == 'disk' || name == 'video' || name == 'sound' || name=='0cpu' || name=='1features') && !item._edit && !item.remove"
                     ng-disabled="showmachine.requests > 0 || showmachine.is_active || showmachine.is_base"
                     ng-click="toggle_edit(item)"
                             ><i class="fas fa-pencil-alt"></i>
                 </button>
                 <button title="remove {{name}} {{$index+1}}"
-                    ng-hide="item._edit"
+                    ng-hide="item._edit || name=='0cpu' || name=='1features'"
                     ng-disabled="showmachine.requests > 0 || item.is_secondary || showmachine.is_active || showmachine.is_base"
                     ng-click="confirm_remove='';remove_hardware(name,$index,item)"><i class="fa fa-times"></i>
                 </button>
                 <span ng-class='{"h5": item._edit }'>
-                    {{item.name || item.driver || item.type || item.model}}
+                    {{item.name || item._name || item.driver || item.type || item.model}}
                 </span>
                 <div ng-show="name == 'disk' && item.remove"
                     ng-class='{"border border-danger p-4 m-4": item.device == "disk"}'
@@ -50,6 +50,8 @@
                     ><%=l 'Cancel' %></button>
                     </p>
                 </div>
+                %= include 'main/manage_machine_edit_cpu'
+                %= include 'main/manage_machine_edit_features'
                 %= include 'main/manage_machine_edit_net'
                 %= include 'main/manage_machine_edit_video'
                 %= include 'main/manage_machine_edit_sound'
