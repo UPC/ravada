@@ -320,6 +320,7 @@ sub _update_isos {
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04.*/release/ubuntu-mate-20.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
+                ,min_ram => 1
         },
         mate_bionic => {
                     name => 'Ubuntu Mate Bionic 64 bits'
@@ -329,6 +330,7 @@ sub _update_isos {
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
+                ,min_ram => 1
         },
         mate_bionic_i386 => {
                     name => 'Ubuntu Mate Bionic 32 bits'
@@ -338,6 +340,7 @@ sub _update_isos {
              ,xml_volume => 'bionic32-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
                 ,sha256_url => '$url/SHA256SUMS'
+                ,min_ram => 1
         },
         ubuntu_xenial => {
                     name => 'Ubuntu Xenial Xerus 64 bits'
@@ -385,6 +388,7 @@ sub _update_isos {
                 ,file_re => '^ubuntu-18.04.*desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '9'
+                ,min_ram => 1
             ,arch => 'x86_64'
         }
 
@@ -457,6 +461,7 @@ sub _update_isos {
             ,file_re => 'kubuntu-20.04.*-desktop-amd64.iso'
             ,rename_file => 'kubuntu_focal_fossa_64.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
+                ,min_ram => 1
         }
         ,kubuntu_64 => {
             name => 'Kubuntu Bionic Beaver 64 bits'
