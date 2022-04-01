@@ -45,7 +45,7 @@ sub test_no_dupe($vm) {
 
     # No requests because no ports exposed
     is(scalar @request,0) or exit;
-    delete_request('enforce_limits');
+    delete_request('enforce_limits','set_time');
     wait_request(debug => 0);
 
     my $client_ip = $domain->remote_ip();
@@ -60,7 +60,7 @@ sub test_no_dupe($vm) {
         , name => $name_port
         , restricted => 1
     );
-    delete_request('enforce_limits');
+    delete_request('enforce_limits','set_time');
     wait_request(debug => 0);
 
     run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
@@ -151,7 +151,7 @@ sub test_start_after_hibernate($domain
     );
 
     delete_request('enforce_limits');
-    wait_request(debug => 0, skip => 'enforce_limits');
+    wait_request(debug => 0, skip => ['set_time', 'enforce_limits']);
 
     run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
     die $err if $err;
@@ -263,8 +263,9 @@ sub test_one_port($vm) {
     #
     $domain->start(user => user_admin, remote_ip => $remote_ip);
     _wait_ip($vm, $domain);
-    delete_request('enforce_limits');
+    delete_request('enforce_limits','set_time');
     wait_request(debug => 0);
+    _wait_open_port($domain,$internal_port);
 
     ($n_rule)
         = search_iptable_remote(local_ip => "$local_ip/32"
@@ -546,10 +547,10 @@ sub test_routing_hibernated($vm) {
 
     my $public_port1 = $base_ports1[0]->{public_port};
 
-    my ($out, $err) = $vm->run_command("iptables-save");
-    my @lines = grep(/$internal_ip:$internal_port/, split /\n/,$out);
+    my @lines = _wait_open_port($base,$internal_port);
     is (scalar @lines,1) or die Dumper(\@lines);
 
+    my ($out, $err) = $vm->run_command("iptables-save");
     my @lines0 = grep(/-A FORWARD .*ACCEPT$/, split/\n/,$out);
     @lines = grep(m{d $internal_ip/32 .*dport $internal_port}, @lines0);
     is (scalar @lines,1,"Expecting 1 line $internal_ip .*dport $internal_port")
@@ -569,6 +570,7 @@ sub test_routing_hibernated($vm) {
 
     is($public_port2, $public_port1) or exit;
 
+    _wait_open_port($base, $internal_port);
     ($out, $err) = $vm->run_command("iptables-save");
     @lines = grep(/$internal_ip:$internal_port/, split /\n/,$out);
     is (scalar @lines,1) or die Dumper(\@lines);
@@ -606,13 +608,14 @@ sub test_routing_already_used($vm, $source=0, $restricted=0) {
     $vm->iptables( @rule );
 
     my @iptables0 = _iptables_save($vm,'nat','PREROUTING');
-
     my $remote_ip = '3.3.3.3';
     $base->start(remote_ip => $remote_ip,  user => user_admin);
 
     _wait_ip($vm, $base);
     my $internal_ip = $base->ip;
-    wait_request( debug => 0 );
+    wait_request( debug => 0 , skip => ['set_time','enforce_limits'] );
+    rvd_back->_check_duplicated_prerouting();
+    _wait_open_port($base, $internal_port);
 
     my @base_ports1 = $base->list_ports();
 
@@ -749,9 +752,18 @@ sub test_redirect_ip_duplicated($vm) {
     my $internal_port = 22;
     my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     $domain->expose(port => $internal_port, name => "ssh");
-    $domain->start( remote_ip => '10.1.1.2', user => user_admin);
-    my $ip = _wait_ip2($vm, $domain);
+    Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,remote_ip => '10.1.1.2'
+    );
     wait_request(debug => 0);
+    my $ip = _wait_ip2($vm, $domain);
+    wait_request(debug => 0, skip => [ 'set_time','enforce_limits']);
+
+    my @out0 = split /\n/, `iptables-save -t nat`;
+    my @open0 = (grep /--to-destination $ip/, @out0);
+    is(scalar(@open0),1) or die Dumper(\@open0);
 
     my @ports0 = $domain->list_ports();
     my ($public_port) = $ports0[0]->{public_port};
@@ -768,9 +780,10 @@ sub test_redirect_ip_duplicated($vm) {
     my @out = split /\n/, `iptables-save -t nat`;
     my @open = (grep /--to-destination $ip/, @out);
     is(scalar(@open),2) or die Dumper(\@open);
-    delete_request('open_exposed_ports');
+    delete_request('open_exposed_ports','set_time','enforce_limits');
     $domain->start( remote_ip => '10.1.1.2', user => user_admin);
     wait_request(debug => 0);
+    rvd_back->_check_duplicated_prerouting();
 
     @out = split /\n/, `iptables-save -t nat`;
     @open = (grep /--to-destination $ip/, @out);
@@ -818,6 +831,28 @@ sub test_redirect_ip_duplicated_refresh($vm) {
     _clean_iptables($vm, @rule);
 }
 
+sub _wait_open_port($domain, $port ) {
+    my @open;
+    for my $n ( 1 .. 21 ) {
+        wait_request(debug => 0, skip => [ 'set_time','enforce_limits']);
+        my @out = split /\n/, `iptables-save -t nat`;
+        @open = (grep /--to-destination [\d\.]+:$port/, @out);
+        last if scalar(@open);
+        if (! ($n % 5) ) {
+            diag("Open exposed port for ".$domain->id);
+            Ravada::Request->open_exposed_ports(
+                id_domain => $domain->id
+                ,uid => user_admin->id
+                ,_force => 1
+            );
+            next;
+        }
+        diag("$n waiting for port $port from domain ".$domain->name);
+        sleep 1;
+    }
+
+    return @open;
+}
 
 sub test_open_port_duplicated($vm) {
     diag("Test open port duplicated ".$vm->type);
@@ -829,14 +864,12 @@ sub test_open_port_duplicated($vm) {
 
     my $clone = $base->clone(name => new_domain_name, user => user_admin);
 
-    $clone->start(remote_ip => '10.1.1.1', user => user_admin);
+    my $remote_ip = "10.1.1.1";
+    $clone->start(remote_ip => $remote_ip, user => user_admin);
     _wait_ip2($vm, $clone);
 
-    wait_request();
-
-    my @out = split /\n/, `iptables-save -t nat`;
-    my @open = (grep /--to-destination [\d\.]+:22/, @out);
-    is(scalar(@open),1);
+    my @open=_wait_open_port($clone,22);
+    is(scalar(@open),1) or die "Expecting open port 22 for ".$clone->name;
     my ($public_port) = $open[0] =~ /--dport (\d+)/;
     die "Error: no public port in $open[0]" if !$public_port;
     my @rule = (
@@ -876,15 +909,13 @@ sub test_close_port($vm) {
     $base->prepare_base(user => user_admin);
 
     my $clone = $base->clone(name => new_domain_name, user => user_admin);
-
-    $clone->start(remote_ip => '10.1.1.1', user => user_admin);
+    my $remote_ip = '10.1.1.1';
+    $clone->start(remote_ip => $remote_ip , user => user_admin);
     _wait_ip2($vm, $clone);
 
-    wait_request();
+    my @open=_wait_open_port($clone,22);
 
-    my @out = split /\n/, `iptables-save -t nat`;
-    my @open = (grep /--to-destination [\d\.]+:22/, @out);
-    is(scalar(@open),1);
+    is(scalar(@open),1) or exit;
     my ($public_port) = $open[0] =~ /--dport (\d+)/;
     die "Error: no public port in $open[0]" if !$public_port;
     my @rule = (
@@ -946,14 +977,16 @@ sub test_clone_exports_add_ports($vm) {
         is($base_ports[$n]->{name}, $clone_ports[$n]->{name});
     }
     _wait_ip2($vm, $clone);
+    wait_request( debug => 0);
     wait_request( debug => 0, request => \@req );
     for (@req) {
         next if $_->command eq 'set_time';
         is($_->status,'done')   or exit;
         is($_->error,'')        or exit;
     }
+    _wait_open_port($clone,22);
     my @out = split /\n/, `iptables -t nat -L PREROUTING -n`;
-    ok(grep /dpt:\d+.*\d+:22/, @out);
+    ok(grep /dpt:\d+.*\d+:22/, @out) or die Dumper([$clone->name,\@out]);
     ok(grep /dpt:\d+.*\d+:80/, @out);
 
     $clone->remove(user_admin);
@@ -1347,7 +1380,7 @@ sub _wait_requests($domain) {
         last if !$domain->list_requests(1);
         sleep 1;
     }
-    delete_request('enforce_limits');
+    delete_request('enforce_limits','set_time');
     wait_request( );
 }
 
@@ -1415,6 +1448,7 @@ for my $vm_name ( reverse vm_names() ) {
     skip $msg,10    if !$vm;
 
     flush_rules() if !$<;
+    rvd_back->setting("/backend/wait_retry",1);
     import_base($vm);
 
     test_expose_nested_base($vm);
@@ -1455,6 +1489,7 @@ for my $vm_name ( reverse vm_names() ) {
     test_clone_exports($vm);
     test_clone_exports_spinoff($vm);
 
+    rvd_back->setting("/backend/wait_retry",10);
     NEXT:
     }; # of SKIP
 }

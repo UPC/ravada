@@ -3788,7 +3788,7 @@ sub _do_execute_command {
     if ($err && $err =~ /retry.?$/i) {
         my $retry = $request->retry;
         if (defined $retry && $retry>0) {
-            my $retry_wait = $self->setting('/backend/wait_retry');
+            my $wait_retry = $self->setting('/backend/wait_retry');
             $wait_retry = 10 if !$wait_retry;
             $request->status('requested');
             $request->at(time + $wait_retry);
