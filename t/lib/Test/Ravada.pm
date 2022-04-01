@@ -1206,7 +1206,7 @@ sub wait_request {
         if ( $done_all ) {
             for my $req (@$request) {
                 $req = Ravada::Request->open($req) if !ref($req);
-                next if $skip{$req->command};
+                next if !$req->id || $skip{$req->command};
                 if ($req->status ne 'done') {
                     $done_all = 0;
                     if ( $debug && (time%5 == 0) ) {

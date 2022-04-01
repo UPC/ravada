@@ -2263,6 +2263,12 @@ sub _sql_insert_defaults($self){
                 ,name => 'expose_port_min'
                 ,value => '60000'
             }
+            ,{
+                id_parent => $id_backend
+                ,name => 'wait_retry'
+                ,value => '10'
+
+            }
         ]
     );
     my %field = ( settings => 'name' );
@@ -3803,8 +3809,10 @@ sub _do_execute_command {
     if ($err && $err =~ /retry.?$/i) {
         my $retry = $request->retry;
         if (defined $retry && $retry>0) {
+            my $wait_retry = $self->setting('/backend/wait_retry');
+            $wait_retry = 10 if !$wait_retry;
             $request->status('requested');
-            $request->at(time + 10);
+            $request->at(time + $wait_retry);
             $request->retry($retry-1);
         } else {
             $request->status('done');
