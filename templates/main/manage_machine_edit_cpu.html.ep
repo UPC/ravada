@@ -1,12 +1,8 @@
-<div ng-show="name == '0cpu' && item._edit" class="form-group mt-4">
-{{item}}
-    <ul
-        class="list-group list-group-vertical-md">
-        <li class="list-group-item list-group-item">
-                <%=l 'vCPU allocation' %>
-                <input type="text" ng-model="item.vcpu._text"/>
-        </li>
-    </ul>
+<div ng-show="name=='0cpu' && is_edit(name,$index)">
+    <div class="p-2">
+         <label for="vcpu"><%=l 'vCPU allocation' %></label>
+         <input type="text" ng-model="item.vcpu._text" name="vcpu"/>
+    </div>
     <ul class="list-group list-group-horizontal-md">
         <li class="list-group-item list-group-item-primary"><%=l 'mode' %></li>
         <li class="list-group-item">
@@ -32,34 +28,21 @@
             </select>
         </li>
     </ul>
-    <ul ng-show="item.cpu.mode=='custom'"
-        class="list-group list-group-vertical-md">
-        <li class="list-group-item list-group-item">
+    <div class="p-2" ng-show="item.cpu.mode=='custom'">
+        <label for="model">
                 <%=l 'model' %>
-            <select ng-model="item.cpu.model._text"
+        </label>
+            <select ng-model="item.cpu.model._text" name="model"
                     ng-options="cpu for cpu in cpu_models"
             >
             </select>
-        </li>
-        <li class="list-group-item list-group-item">
+        <label for="fallback">
                 <%=l 'fallback' %>
-            <select ng-model="item.cpu.model.fallback"
+        </label>
+        <select ng-model="item.cpu.model.fallback" name="fallback"
                     ng-options="option for option in ['allow','forbid']"
-            >
-            </select>
-        </li>
-    </ul>
-
-    <div class="row">
-        <div class="col-lg-1">
-        </div>
-        <div class="col-md-12 mt-3">
-            <button class="btn btn-primary"
-                ng-click="toggle_edit(item);change_hardware(item,'0cpu', $index)"
-><%=l 'Submit' %></button>
-            <button class="btn btn-outline-secondary"
-                ng-click="toggle_edit(item);machine_info(showmachine.id)"><%=l '
-Cancel' %></button>
-        </div>
+        >
+        </select>
     </div>
+
 </div>
