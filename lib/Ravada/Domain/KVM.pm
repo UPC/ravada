@@ -92,6 +92,7 @@ our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
     ,cpu => \&_change_hardware_cpu
     ,display => \&_change_hardware_display
+    ,features => \&_change_hardware_features
     ,vcpus => \&_change_hardware_vcpus
     ,memory => \&_change_hardware_memory
     ,network => \&_change_hardware_network
@@ -2776,8 +2777,69 @@ sub _fix_hw_video_args($data) {
     delete $data->{acceleration} unless $driver eq 'virtio';
 }
 
+sub _change_hardware_features($self, $index, $data) {
+    $data = { 'acpi' => 1, 'apic' => 1, 'kvm' => undef, 'hap' => 0 }
+    if !keys %$data;
+
+    $data->{kvm} = {hidden=> { state => 'off'}} if exists $data->{kvm} && $data->{kvm} == 1;
+
+    lock_hash(%$data);
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my $count = 0;
+    my $changed = 0;
+
+
+    my ($features) = $doc->findnodes('/domain/features');
+    for my $field (keys %$data) {
+        next if $field =~ /^_/;
+        my ($item) = $features->findnodes($field);
+        next if !$item && !$data->{$field};
+        if (ref($data->{$field})) {
+            if (!$item) {
+                $item = $features->addNewChild(undef,$field);
+                $changed++;
+            }
+            _change_xml($features,$field,$data->{$field});
+            $changed++;
+        }
+        if (!$item) {
+            $item = $features->addNewChild(undef,$field);
+            $changed++;
+        } elsif (!$data->{$field}) {
+            $features->removeChild($item);
+            $changed++;
+        }
+    }
+    $self->reload_config($doc) if $changed;
+}
+
+sub _default_cpu($self) {
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my ($type) = $doc->findnodes("/domain/os/type");
+
+    my $data = {
+        'vcpu'=> {_text => 1 , 'placement' => 'static'}
+        ,'cpu' => { 'model' => { '_text' => 'qemu64' } }
+    };
+
+    my ($x86) = $type->getAttribute('arch') =~ /^x86_(\d+)/;
+    if ($x86) {
+        $data->{cpu} = { 'mode' =>'custom'
+            , 'model' => { '_text' => 'qemu'.$x86 } };
+    } else {
+        warn "I don't know default CPU for arch ".$type->getAttribute()
+        ." in domain ".$self->name;
+        $data->{cpu} = { 'mode' => 'host-model' };
+    }
+
+    return $data;
+
+}
+
 sub _change_hardware_cpu($self, $index, $data) {
-    confess "Error: nothing to change ".Dumper($data)
+    $data = $self->_default_cpu()
     if !keys %$data;
 
     lock_hash(%$data);
@@ -2904,7 +2966,11 @@ sub _change_xml($xml, $name, $data) {
     }
 
     for my $field (keys %$data) {
-        $node->setAttribute($field, $data->{$field});
+        if (ref($data->{$field})) {
+            _change_xml($node,$field,$data->{$field});
+        } else {
+            $node->setAttribute($field, $data->{$field});
+        }
     }
 }
 
