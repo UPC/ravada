@@ -113,11 +113,22 @@ sub _list_nodes($rvd, $args) {
     return \@nodes;
 }
 
+sub _request_exists($rvd, $id_request) {
+
+    my $sth = $rvd->_dbh->prepare(
+        "SELECT id FROM requests WHERE id=?"
+    );
+    $sth->execute($id_request);
+    my ($id_found) = $sth->fetchrow;
+    return $id_found;
+}
+
 sub _request($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login);
 
     my ($id_request) = $args->{channel} =~ m{/(.*)};
+    return if ! _request_exists($rvd, $id_request);
     my $req = Ravada::Request->open($id_request);
     my $command_text = $req->command;
     $command_text =~ s/_/ /g;
@@ -368,7 +379,7 @@ sub BUILD {
         ->{backend}->{time_zone}->{value})
     if !defined $TZ;
 
-    Mojo::IOLoop->recurring(1 => sub {
+    Mojo::IOLoop->recurring(3 => sub {
             for my $key ( keys %{$self->clients} ) {
                 my $ws_client = $self->clients->{$key}->{ws};
                 my $channel = $self->clients->{$key}->{channel};
@@ -459,9 +470,11 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
 
     $TIME0{$channel} = time;
 
-    my $ret = $exec->($self->ravada, $self->clients->{$key});
+    my $ret;
+    eval { $ret = $exec->($self->ravada, $self->clients->{$key}) };
+    warn $@ if $@;
 
-    if ( _different($ret, $old_ret )) {
+    if ( defined $ret && _different($ret, $old_ret )) {
 
         warn localtime(time)." WS: send $channel " if $DEBUG;
         $ws_client->send( {json => $ret} );

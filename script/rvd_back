@@ -6,6 +6,7 @@ use strict;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
+use Carp qw(confess);
 use Data::Dumper;
 use Getopt::Long;
 use POSIX ":sys_wait_h";
@@ -230,9 +231,7 @@ sub do_start {
     Ravada::Request->refresh_storage();
     for (;;) {
         my $t0 = time;
-        $ravada->process_priority_requests()
-            or $ravada->process_long_requests()
-            or $ravada->process_requests();
+        $ravada->process_requests();
 		$ravada->set_debug_value();
         exit if done_request();
 
@@ -463,6 +462,25 @@ sub remove_admin {
     print "USER $login removed admin permissions, granted normal user permissions.\n";
 }
 
+sub _ask_yes_no($default = undef) {
+    confess "Error: default must be y/n" unless $default =~ /^(y|n)/i;
+    my $answer = "";
+    for ( ;; ) {
+        print "Please answer y/n ";
+        print "[$default]" if defined $default;
+        print ":";
+        $answer = <STDIN>;
+        chomp $answer;
+        $answer = $default if !$answer && defined $default;
+        return $answer if $answer =~ /^(y|n)/i;
+    }
+}
+
+sub _one_zero($value) {
+    return 1 if $value =~ /^y/i;
+    return 0 if $value =~ /^n/i;
+    confess "Error: unknown value $value , expecting yes/no";
+}
 
 sub import_domain {
     my $name = shift;
@@ -473,8 +491,17 @@ sub import_domain {
         $user = <STDIN>;
         chomp $user;
     }
+    print "Do you want to spinoff the virtual machine volumes ? This will flatten the volumes out of backing files. ";
+    my $spinoff_disks = _one_zero(_ask_yes_no("no"));
+
     my $ravada = Ravada->new( %CONFIG );
-    $ravada->import_domain(name => $name, vm => 'KVM', user => $user);
+
+    $ravada->import_domain(name => $name, vm => 'KVM', user => $user
+        ,spinoff_disks => $spinoff_disks
+    );
+
+    print "$name imported for user $user\n";
+
 }
 
 sub import_vbox {

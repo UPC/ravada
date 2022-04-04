@@ -825,8 +825,7 @@
                 );
             };
             $scope.change_hardware= function(item,hardware,index) {
-//                var new_settings = $scope.showmachine.hardware[hardware][index];
-                var new_settings = item;
+                var new_settings = $scope.showmachine.hardware[hardware][index];
                 var hw2 = hardware.replace(/\d+(.*)/,'$1');
                 $scope.request('change_hardware',
                     {'id_domain': $scope.showmachine.id
@@ -1075,18 +1074,30 @@
                     already_subscribed_to_domain = true;
                     $scope.id_domain=data.id_domain;
                     $scope.subscribe_domain_info(url, data.id_domain);
-                    $scope.open_ports(url, data.id_domain, id_request);
+                    $scope.refresh_ports(url, data.id_domain, id_request);
                 }
             }
         }
-        $scope.open_ports = function(url, id_domain, id_request) {
+        $scope.refresh_ports = function(url, id_domain, id_request) {
             $http.post('/request/open_exposed_ports/'
                 ,JSON.stringify(
                     { 'id_domain': id_domain
                         ,'after_request': id_request
+                        ,'retry': 20
                     })
             ).then(function(response) {
-                $scope.request_open_ports = true;
+                if (response.data.request) {
+                    id_request = response.data.request;
+                }
+                $http.post('/request/refresh_machine_ports/'
+                    ,JSON.stringify(
+                    { 'id_domain': id_domain
+                        ,'after_request': id_request
+                        ,'retry': 20
+                    })
+                    ).then(function(response) {
+                        $scope.request_open_ports = true;
+                    });
             });
         }
         $scope.subscribe_domain_info= function(url, id_domain) {
@@ -1139,6 +1150,31 @@
 
             }
         }
+
+        $scope.reload_ports = function() {
+            $scope.request_open_ports_done = false;
+            $http.post('/request/close_exposed_ports/'
+                ,JSON.stringify(
+                    { 'id_domain': $scope.domain.id})
+            ).then(function(response) {
+                var id_request = 0;
+                if (response.data.request) {
+                    id_request = response.data.request;
+                }
+                $http.post('/request/open_exposed_ports/'
+                    ,JSON.stringify(
+                    { 'id_domain': $scope.domain.id
+                        ,'after_request': id_request
+                        ,'_force': 1
+                        ,'retry': 20
+                    })
+                    ).then(function(response) {
+                        $scope.request_open_ports = true;
+                        $scope.request_open_ports_done = false;
+                    });
+            });
+        }
+
         $scope.domain_display = [];
         $scope.redirect_done = false;
         //$scope.wait_request();

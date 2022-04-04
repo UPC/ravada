@@ -892,9 +892,9 @@ sub _domain_create_from_iso {
             $device_cdrom = $iso_file;
         }
     }
-    else {
-      $device_cdrom = $self->_iso_name($iso, $args{request});
-    }
+
+    $device_cdrom  =$self->_iso_name($iso, $args{request})
+    if !$device_cdrom && $iso->{has_cd};
     
     #if ((not exists $args{iso_file}) || ((exists $args{iso_file}) && ($args{iso_file} eq "<NONE>"))) {
     #    $device_cdrom = $self->_iso_name($iso, $args{request});
