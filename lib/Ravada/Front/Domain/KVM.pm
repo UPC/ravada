@@ -136,6 +136,10 @@ sub _get_controller_features($self) {
     my ($xml) = $doc->findnodes("/domain/features");
     _xml_elements($xml, $item);
 
+    for my $feat (sort qw(acpi pae apic hap kvm vmport)) {
+        $item->{$feat} = 0 if !exists $item->{$feat};
+    }
+
     lock_hash(%$item);
     return ($item);
 }
@@ -152,6 +156,7 @@ sub _xml_elements($xml, $item) {
     for my $node ( $xml->findnodes('*') ) {
         my $h_node = {};
         _xml_elements($node, $h_node);
+        $h_node = 1 if !keys %$h_node;
         $item->{$node->nodeName} = $h_node;
     }
 }
