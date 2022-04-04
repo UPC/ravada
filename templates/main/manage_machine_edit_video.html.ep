@@ -1,4 +1,4 @@
-<div ng-show="name == 'video' && item._edit" class="form-group mt-4">
+<div ng-show="name == 'video' && edit" class="form-group mt-4">
     <ul class="list-group list-group-horizontal-md">
         <li class="list-group-item list-group-item-primary"><%=l 'type' %></li>
         <li class="list-group-item">
@@ -32,14 +32,4 @@
         </li>
     </ul>
 
-    <div class="row">
-        <div class="col-lg-1">
-        </div>
-        <div class="col-md-12 mt-3">
-            <button class="btn btn-primary"
-                ng-click="toggle_edit(item);change_hardware(item,'video', $index)"><%=l 'Submit' %></button>
-            <button class="btn btn-outline-secondary"
-                ng-click="toggle_edit(item);machine_info(showmachine.id)"><%=l 'Cancel' %></button>
-        </div>
-    </div>
 </div>

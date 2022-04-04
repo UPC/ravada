@@ -2628,11 +2628,19 @@ sub change_hardware($self, $hardware, @args) {
     return $sub->($self, @args);
 }
 
+sub _fix_hw_disk_args($data) {
+    for (qw( allocation backing bus device driver_cache driver_name driver_type name target type )) {
+        delete $data->{$_};
+    }
+}
+
 sub _change_hardware_disk($self, $index, $data) {
     my @volumes = $self->list_volumes_info();
     confess "Error: Unknown volume $index, only ".(scalar(@volumes)-1)." found"
         .Dumper(\@volumes)
         if $index>=scalar(@volumes);
+
+    _fix_hw_disk_args($data);
 
     my $driver = delete $data->{driver};
     my $boot = delete $data->{boot};

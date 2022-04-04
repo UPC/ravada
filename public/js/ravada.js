@@ -246,7 +246,7 @@
             $scope.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
             $scope.exec_time_start = new Date();
             $scope.exec_time = new Date();
-            $scope.edit = 0;
+            $scope.edit = "";
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -256,23 +256,30 @@
             $scope.isPastTime = function(date, now_date) {
                 return $scope.getUnixTimeFromDate(date) < $scope.getUnixTimeFromDate(now_date ? now_date : new Date());
             };
-            $scope.toggle_edit = function(item) {
-                if (!item._edit) {
-                    item._edit = true;
-                    $scope.edit++;
-                } else {
-                    item._edit = false;
-                    $scope.edit--;
-                }
-        }
-        $scope.edit = 0;
 
+            $scope.set_edit=function(name,index) {
+                if(!name) {
+                    $scope.edit = '';
+                } else {
+                    $scope.edit = name+index;
+                }
+            };
+            $scope.toggle_edit=function(name,index) {
+                if(!name || $scope.edit == name+index) {
+                    $scope.edit = '';
+                } else {
+                    $scope.edit = name+index;
+                }
+            };
+
+            $scope.is_edit = function(name,index) {
+                return $scope.edit == name+index;
+            };
             var subscribed_extra = false;
             var subscribe_machine_info= function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('machine_info/'+$scope.showmachineId) };
                 ws.onmessage = function(event) {
-                    if ($scope.edit) return;
                     var data = JSON.parse(event.data);
                     if (data === null || typeof(data) == undefined ) {
                         ws.close();
@@ -658,7 +665,6 @@
                 }
 
             }
-            $scope.showmachine.requests++;
             if(typeof(item) == 'object') {
                 item.remove = false;
             }
@@ -809,29 +815,18 @@
               $scope.new_port_name = null;
               $scope.new_port_restricted = false;
           };
-            $scope.change_disk = function(id_machine, index ) {
-                var new_settings={
-                  driver: $scope.showmachine.hardware.disk[index].driver,
-                  boot: $scope.showmachine.hardware.disk[index].boot,
-                  file: $scope.showmachine.hardware.disk[index].file,
-                };
-                if ($scope.showmachine.hardware.disk[index].device === 'disk') {
-                  new_settings.capacity = $scope.showmachine.hardware.disk[index].capacity;
-                }
-                $http.post('/machine/hardware/change'
-                    ,JSON.stringify({
-                        'id_domain': id_machine
-                        ,'hardware': 'disk'
-                           ,'index': index
-                            ,'data': new_settings
-                    })
-                ).then(function(response) {
-                });
-
+            $scope.set_defaults=function(hardware,index) {
+                var hw2 = hardware.replace(/\d+(.*)/,'$1');
+                $scope.request('change_hardware',
+                    {'id_domain': $scope.showmachine.id
+                        ,'hardware': hw2
+                        ,'index': index
+                    }
+                );
             };
             $scope.change_hardware= function(item,hardware,index) {
-                var new_settings = $scope.showmachine.hardware[hardware][index];
-                delete new_settings._edit;
+//                var new_settings = $scope.showmachine.hardware[hardware][index];
+                var new_settings = item;
                 var hw2 = hardware.replace(/\d+(.*)/,'$1');
                 $scope.request('change_hardware',
                     {'id_domain': $scope.showmachine.id
@@ -840,7 +835,6 @@
                         ,'data': new_settings
                     }
                 );
-                item._edit=false;
             }
             $scope.change_network = function(id_machine, index ) {
                 var new_settings ={

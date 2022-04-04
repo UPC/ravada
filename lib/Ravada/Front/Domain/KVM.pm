@@ -186,7 +186,7 @@ sub _get_controller_network($self) {
         $count++;
         push @ret,({
                      type => $type
-                    ,name => $name
+                    ,_name => $name
                   ,driver => $model->getAttribute('type')
                   ,bridge => $source->getAttribute('bridge')
                  ,network => $source->getAttribute('network')

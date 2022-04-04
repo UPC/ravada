@@ -390,10 +390,17 @@ sub _old_info($self, $key, $new_count=undef, $new_changed=undef) {
     return ($old_count, $old_changed);
 }
 
-sub _date_changed_table($self, $table) {
+sub _date_changed_table($self, $table, $id) {
     my $rvd = $self->ravada;
-    my $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM $table");
-    $sth->execute;
+    my $sth;
+    if (defined $id) {
+        $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM $table "
+            ." WHERE id=?");
+        $sth->execute($id);
+    } else {
+        $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM $table");
+        $sth->execute;
+    }
     my ($date) = $sth->fetchrow;
     return ($date or '');
 }
@@ -409,7 +416,9 @@ sub _count_table($self, $table) {
 
 sub _new_info($self, $key) {
     my $channel = $self->clients->{$key}->{channel};
-    $channel =~ s{/.*}{};
+    $channel =~ s{/(.*)}{};
+    my $id;
+    $id = $1 if defined $1;
 
     my $table0 = $TABLE_CHANNEL{$channel} or return;
     if (!ref($table0)) {
@@ -424,7 +433,7 @@ sub _new_info($self, $key) {
         $count .= $self->_count_table($table);
 
         $date .= ":" if $date;
-        $date .= $self->_date_changed_table($table)
+        $date .= $self->_date_changed_table($table, $id);
     }
     return ($count, $date);
 
@@ -435,16 +444,17 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
     my $exec = $SUB{$channel} or die "Error: unknown channel $channel";
 
     my $old_ret;
-    if (!defined $TIME0{$channel} || time < $TIME0{$channel}+60) {
+    if (defined $TIME0{$channel} && time < $TIME0{$channel}+60) {
         my ($old_count, $old_changed) = $self->_old_info($key);
         my ($new_count, $new_changed) = $self->_new_info($key);
+
+        $old_ret = $self->clients->{$key}->{ret};
 
         return $old_ret if defined $new_count && defined $new_changed
         && $old_count eq $new_count && $old_changed eq $new_changed;
 
         $self->_old_info($key, $new_count, $new_changed);
 
-        $old_ret = $self->clients->{$key}->{ret};
     }
 
     $TIME0{$channel} = time;
@@ -453,12 +463,14 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
 
     if ( _different($ret, $old_ret )) {
 
-        warn "WS: send $channel" if $DEBUG;
-        $ws_client->send( { json => $ret } );
+        warn localtime(time)." WS: send $channel " if $DEBUG;
+        $ws_client->send( {json => $ret} );
         $self->clients->{$key}->{ret} = $ret;
     }
     $self->unsubscribe($key) if $channel eq 'ping_backend' && $ret eq 2;
-    $self->unsubscribe($key) if !$ret;
+    if (!$ret) {
+        $self->unsubscribe($key);
+    }
 }
 
 sub subscribe($self, %args) {

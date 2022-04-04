@@ -6,8 +6,10 @@
         This machine is base and can't be modified.
     </div>
 </div>
-<div class="panel-body">
-%=   include "main/needs_restart"
+<div>
+    <div ng-show="!showmachine || !showmachine.hardware">
+        <i ng-show="!display.is_active" class="fas fa-sync-alt fa-spin"></i>
+    </div>
     <div ng-repeat="(name,value) in showmachine.hardware" ng-hide="show_new_disk||show_new_display">
         <h2 ng-hide="name=='0cpu' || name=='1features'">{{name}}</h2>
         <div ng-show="value">
@@ -15,14 +17,14 @@
                 ng-class='{"border rounded border-primary mb-4 p-4": item._edit}'
             >
                 <button title="edit {{name}} {{$index+1}}"
-                    ng-show="(name == 'network' ||name == 'disk' || name == 'video' || name == 'sound' || name=='0cpu' || name=='1features') && !item._edit && !item.remove"
-                    ng-disabled="showmachine.requests > 0 || showmachine.is_active || showmachine.is_base"
-                    ng-click="toggle_edit(item)"
+                    ng-show="(name == 'network' ||name == 'disk' || name == 'video' || name == 'sound' || name=='0cpu' || name=='1features') && !item.remove"
+                    ng-disabled="showmachine.requests > 0 || showmachine.is_active || showmachine.is_base || edit"
+                    ng-click="toggle_edit(name,$index)"
                             ><i class="fas fa-pencil-alt"></i>
                 </button>
                 <button title="remove {{name}} {{$index+1}}"
                     ng-hide="item._edit || name=='0cpu' || name=='1features'"
-                    ng-disabled="showmachine.requests > 0 || item.is_secondary || showmachine.is_active || showmachine.is_base"
+                    ng-disabled="showmachine.requests > 0 || item.is_secondary || showmachine.is_active || showmachine.is_base || edit"
                     ng-click="confirm_remove='';remove_hardware(name,$index,item)"><i class="fa fa-times"></i>
                 </button>
                 <span ng-class='{"h5": item._edit }'>
@@ -50,78 +52,21 @@
                     ><%=l 'Cancel' %></button>
                     </p>
                 </div>
-                %= include 'main/manage_machine_edit_cpu'
-                %= include 'main/manage_machine_edit_features'
-                %= include 'main/manage_machine_edit_net'
-                %= include 'main/manage_machine_edit_video'
-                %= include 'main/manage_machine_edit_sound'
-                <div ng-show="name == 'disk' && item._edit" class="form-group mt-4">
-                    <div class="row" ng-show="item.device == 'disk'">
-                        <div class="col-lg-2">
-                            <p class="text-right"><%=l 'bus' %></p>
-                        </div>
-                        <div class="col-lg-2">
-                            <select ng-model="item.driver"
-                            ng-options="model for model in showmachine.drivers['disk']"
-                            >
-                            </select>
-                        </div>
-                    </div>
-                    <div class="row" ng-show="item.device == 'disk'">
-                        <div class="col-lg-2">
-                            <p class="text-right"><%=l 'capacity' %></p>
-                        </div>
-                        <div class="col-lg-2">
-                            <input type="text"
-                            name="capacity"
-                            ng-model="item.capacity"
-                            >
-                        </div>
-                    </div>
-                    <div class="row" ng-show="item.device == 'cdrom'">
-                        <div class="col-lg-2">
-                            <p class="text-right"><%=l 'ISO file' %></p>
-                        </div>
-                        <div class="col-lg-2">
-                            <select name="file" ng-model="item.file"
-                                ng-options="iso for iso in list_isos"
-                            >
-                            </select>
-                        </div>
-                    </div>
-                   <div class="row">
-                        <div class="col-lg-2">
-                            <p class="text-right"><%=l 'boot order' %></p>
-                        </div>
-                        <div class="col-lg-2">
-                            <input type="text" name="boot" ng-model="item.boot">
-                        </div>
-                    </div>
-                   <div class="row">
-                        <div class="col-lg-2">
-                        </div>
-                        <div class="col-md-12">
-                            <button ng-click="toggle_edit(item);change_disk(showmachine.id, $index)"
-                                class="btn btn-primary"
-                            ><%=l 'Submit' %></button>
-                            <button ng-click="toggle_edit(item)"
-                                class="btn btn-outline-secondary"
-                            ><%=l 'Cancel' %></button>
-                        </div>
-                    </div>
-                </div><!-- element ( former li ) -->
+                %= include "main/manage_machine_edit"
             </div>
         </div>
-        <div ng-show="value.length == 0">
+        <div ng-show="value.length == 0"
+                class="form-group border border-primary">
             No {{name}} hardware found.
         </div>
     </div>
 
-    <div ng-hide="show_new_disk||show_new_display" class="input-group mt-3" style="max-width: 18rem;">
+    <div ng-hide="show_new_disk||show_new_display||edit || !showmachine"
+            class="input-group mt-3" style="max-width: 18rem;">
         <div class="input-group-prepend">
-            <i ng-show="showmachine.requests>0" class="fas fa-sync-alt fa-spin"></i>
+            <i ng-show="showmachine.requests>0 && show_machine._date_changed" class="fas fa-sync-alt fa-spin"></i>
             <button class="btn btn-primary"
-                ng-disabled="showmachine.requests > 0 || showmachine.is_base || showmachine.is_active"
+                ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || showmachine.is_base || showmachine.is_active"
                 ng-click="add_hardware(new_hardware)"
                 type="button">
             <%=l 'Add'%></button>
