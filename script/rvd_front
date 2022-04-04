@@ -609,6 +609,18 @@ get '/list_machine_types.json' => sub {
     $c->render(json => $types);
 };
 
+get '/list_cpu_models.json' => sub {
+    my $c = shift;
+
+    return access_denied($c) unless _logged_in($c)
+        && $USER->can_create_machine();
+
+    my $id_domain = $c->param('id_domain');
+    my $models = $RAVADA->list_cpu_models($USER->id, $id_domain);
+    $c->render(json => $models);
+};
+
+
 
 get '/iso_file.json' => sub {
     my $c = shift;
@@ -1552,6 +1564,8 @@ post '/request/(:name)/' => sub {
     $name = 'start_clones_sequentially' if (($name eq 'start_clones') && ($args->{'exec_sequentially'}));
     delete($args->{exec_sequentially});
     delete($args->{at}) if ((! $args->{at}) || ($args->{at} < time()));
+
+    delete $args->{data}->{_name} if $name eq 'change_hardware';
 
     if ($name eq 'start_clones_sequentially') {
 

@@ -1,0 +1,48 @@
+<div ng-show="name=='0cpu' && is_edit(name,$index)">
+    <div class="p-2">
+         <label for="vcpu"><%=l 'vCPU allocation' %></label>
+         <input type="text" ng-model="item.vcpu._text" name="vcpu"/>
+    </div>
+    <ul class="list-group list-group-horizontal-md">
+        <li class="list-group-item list-group-item-primary"><%=l 'mode' %></li>
+        <li class="list-group-item">
+            <select ng-model="item.cpu.mode"
+                    ng-options="mode.toLowerCase() for mode in showmachine.drivers['cpu']"
+            >
+            </select>
+        </li>
+        <li class="list-group-item list-group-item-primary"><%=l 'check' %></li>
+        <li class="list-group-item">
+            <select ng-model="item.cpu.check"
+                    ng-options="check for check in ['none','partial','full']"
+            >
+            </select>
+        </li>
+        <li ng-show="item.cpu.mode=='custom'"
+            class="list-group-item list-group-item-primary"><%=l 'match' %></li>
+        <li ng-show="item.cpu.mode=='custom'"
+            class="list-group-item">
+            <select ng-model="item.cpu.match"
+                    ng-options="match for match in ['exact','strict']"
+            >
+            </select>
+        </li>
+    </ul>
+    <div class="p-2" ng-show="item.cpu.mode=='custom'">
+        <label for="model">
+                <%=l 'model' %>
+        </label>
+            <select ng-model="item.cpu.model._text" name="model"
+                    ng-options="cpu for cpu in cpu_models"
+            >
+            </select>
+        <label for="fallback">
+                <%=l 'fallback' %>
+        </label>
+        <select ng-model="item.cpu.model.fallback" name="fallback"
+                    ng-options="option for option in ['allow','forbid']"
+        >
+        </select>
+    </div>
+
+</div>

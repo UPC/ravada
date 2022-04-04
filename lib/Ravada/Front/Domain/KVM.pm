@@ -14,8 +14,10 @@ use feature qw(signatures);
 
 our %GET_CONTROLLER_SUB = (
     usb => \&_get_controller_usb
+    ,'0cpu' => \&_get_controller_cpu
     ,disk => \&_get_controller_disk
     ,display => \&_get_controller_display
+    ,'1features' => \&_get_controller_features
     ,network => \&_get_controller_network
     ,video => \&_get_controller_video
     ,sound => \&_get_controller_sound
@@ -105,8 +107,48 @@ sub _get_controller_generic($self,$type) {
 
 }
 
+sub _get_controller_cpu($self) {
+    my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
+    my $item = {
+        _name => 'cpu'
+        ,_order => 0
+        ,cpu => {}
+        ,vcpu => {}
+    };
+
+    my ($xml_cpu) = $doc->findnodes("/domain/cpu");
+    _xml_elements($xml_cpu, $item->{cpu});
+
+    my ($xml_vcpu) = $doc->findnodes("/domain/vcpu");
+    _xml_elements($xml_vcpu, $item->{vcpu});
+
+    lock_hash(%$item);
+    return ($item);
+}
+
+sub _get_controller_features($self) {
+    my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
+    my $item = {
+        _name => 'features'
+        ,_order => 1
+    };
+
+    my ($xml) = $doc->findnodes("/domain/features");
+    _xml_elements($xml, $item);
+
+    for my $feat (sort qw(acpi pae apic hap kvm vmport)) {
+        $item->{$feat} = 0 if !exists $item->{$feat};
+    }
+
+    lock_hash(%$item);
+    return ($item);
+}
+
 
 sub _xml_elements($xml, $item) {
+    my $text = $xml->textContent;
+    $item->{_text} = $text if $text && $text !~ /\n/m;
+
     for my $attribute ( $xml->attributes ) {
         $item->{$attribute->name} = $attribute->value;
     }
@@ -114,6 +156,7 @@ sub _xml_elements($xml, $item) {
     for my $node ( $xml->findnodes('*') ) {
         my $h_node = {};
         _xml_elements($node, $h_node);
+        $h_node = 1 if !keys %$h_node;
         $item->{$node->nodeName} = $h_node;
     }
 }
