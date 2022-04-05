@@ -532,6 +532,9 @@ sub _around_import_domain {
     my $self = shift;
     my ($name, $user, $spinoff, $import_base) = @_;
 
+    die "Error: base for '$name' can't be imported when volumes are"
+        ." spinned off\n" if $spinoff && $import_base;
+
     my $domain = $self->$orig($name, $user, $spinoff);
 
     $domain->_insert_db(name => $name, id_owner => $user->id);

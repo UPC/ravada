@@ -491,16 +491,38 @@ sub import_domain {
         $user = <STDIN>;
         chomp $user;
     }
-    print "Do you want to spinoff the virtual machine volumes ? This will flatten the volumes out of backing files. ";
-    my $spinoff_disks = _one_zero(_ask_yes_no("no"));
 
     my $ravada = Ravada->new( %CONFIG );
-
-    $ravada->import_domain(name => $name, vm => 'KVM', user => $user
-        ,spinoff_disks => $spinoff_disks
+    my $domain = $ravada->import_domain(name => $name, vm => 'KVM'
+        ,user => $user
+        ,spinoff_disks => 0
     );
 
-    print "$name imported for user $user\n";
+    my @backing_files;
+
+    for my $vol ($domain->list_volumes_info) {
+        push @backing_files,( $vol->backing_file) if $vol->backing_file;
+    }
+
+    return if !@backing_files;
+
+    print "This virtual machine has ".@backing_files." backing files."
+        ." Do you want to import it as a base ? ";
+    my $import_base = _one_zero(_ask_yes_no("yes"));
+    if ($import_base) {
+        $domain->_vm->_import_base($domain);
+        return;
+    }
+
+    print "Do you want to spinoff the virtual machine volumes ? This will flatten the volumes out of backing files. ";
+
+    if ( _one_zero(_ask_yes_no("no")) ) {
+        $domain->spinoff;
+        if (@backing_files) {
+            print "This backing files may be removed:\n"
+            .join("\n",@backing_files)."\n";
+        }
+    }
 
 }
 
