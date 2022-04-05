@@ -7,6 +7,7 @@
                         <span aria-hidden="true">&times;</span>
                         </button>
     </div>
+    <form name="form_edit">
 
                 %= include 'main/manage_machine_edit_cpu'
                 %= include 'main/manage_machine_edit_features'
@@ -19,24 +20,33 @@
         <div class="col-md-1">
         </div>
         <div class="col-md-8 mt-3 mb-1">
-            <button class="btn btn-outline-secondary"
-                ng-click="set_edit()"><%=l 'Cancel' %></button>
+            <button class="btn btn-primary"
+                ng-hide="name=='video'"
+                ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || showmachine.is_base || showmachine.is_active || form_edit.$pristine"
+                ng-click="change_hardware(item,name,$index)">
+                    <%=l 'Apply' %>
+            </button>
 
             <button class="btn btn-primary"
-                ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || showmachine.is_base || showmachine.is_active"
-                ng-click="change_hardware(item,name,$index)">
-                    <%=l 'Save' %>
+                ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || showmachine.is_base || showmachine.is_active || form_edit.$pristine"
+                ng-click="change_hardware(item,name,$index);set_edit()">
+                    <%=l 'Accept' %>
             </button>
+
+            <button class="btn btn-outline-secondary"
+                ng-click="set_edit()"><%=l 'Close' %></button>
+
+
         </div>
-        <div class="col-md-3 mt-3 mb-1" ng-show="name=='0cpu' || name == '1features'">
+        <div class="col-md-3 mt-3 mb-1" ng-show="name=='0cpu' || name == '1features' || name=='network' || name == 'video'">
             <button class="btn btn-outline-primary"
                 ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || showmachine.is_base || showmachine.is_active"
-                ng-click="change_hardware({},name, $index)"
+                ng-click="set_defaults(name, $index)"
             >
                 <%=l 'Set defaults' %>
             </button>
        </div>
-
+    </form>
 
     </div>
 

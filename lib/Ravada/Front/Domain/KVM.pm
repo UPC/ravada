@@ -79,6 +79,7 @@ sub _get_controller_video($self) {
         }
         $item->{_name} = $name;
         _xml_elements($model,$item);
+        $item->{_primary} = $item->{primary} if exists $item->{primary} && $item->{primary};
         lock_hash(%$item);
         push @ret,($item);
     }
@@ -127,14 +128,20 @@ sub _get_controller_cpu($self) {
 }
 
 sub _get_controller_features($self) {
+
     my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
+
+    die "Error: no xml found for ".$self->name
+    if !$doc;
+
     my $item = {
         _name => 'features'
         ,_order => 1
     };
 
     my ($xml) = $doc->findnodes("/domain/features");
-    _xml_elements($xml, $item);
+
+    _xml_elements($xml, $item) if $xml;
 
     for my $feat (sort qw(acpi pae apic hap kvm vmport)) {
         $item->{$feat} = 0 if !exists $item->{$feat};
@@ -146,6 +153,7 @@ sub _get_controller_features($self) {
 
 
 sub _xml_elements($xml, $item) {
+    confess if !defined $xml;
     my $text = $xml->textContent;
     $item->{_text} = $text if $text && $text !~ /\n/m;
 

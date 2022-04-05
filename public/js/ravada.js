@@ -247,6 +247,7 @@
             $scope.exec_time_start = new Date();
             $scope.exec_time = new Date();
             $scope.edit = "";
+            $scope.lock_info = false;
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -262,6 +263,7 @@
                     $scope.edit = '';
                 } else {
                     $scope.edit = name+index;
+                    $scope.lock_info = true;
                 }
             };
             $scope.toggle_edit=function(name,index) {
@@ -269,6 +271,7 @@
                     $scope.edit = '';
                 } else {
                     $scope.edit = name+index;
+                    $scope.lock_info = true;
                 }
             };
 
@@ -287,6 +290,10 @@
                         return;
                     }
                     $scope.$apply(function () {
+                        if ($scope.lock_info) {
+                            $scope.showmachine.requests = data.requests;
+                            return;
+                        }
                         $scope.showmachine = data;
                         $scope.copy_is_volatile = $scope.showmachine.is_volatile;
                         if (!subscribed_extra) {
@@ -294,6 +301,7 @@
                             subscribe_nodes(url,data.type);
                             //subscribe_bases(url);
                         }
+                        if ($scope.edit) { $scope.lock_info = true }
                     });
                     _select_new_base();
                 }
@@ -823,6 +831,9 @@
                         ,'index': index
                     }
                 );
+                $scope.lock_info = false;
+                if (hw2 == 'video') $scope.edit=false;
+
             };
             $scope.change_hardware= function(item,hardware,index) {
                 var new_settings = $scope.showmachine.hardware[hardware][index];
@@ -834,28 +845,9 @@
                         ,'data': new_settings
                     }
                 );
+                $scope.lock_info = false;
+                if (hw2 == 'video') $scope.edit=false;
             }
-            $scope.change_network = function(id_machine, index ) {
-                var new_settings ={
-                    driver: $scope.showmachine.hardware.network[index].driver,
-                    type: $scope.showmachine.hardware.network[index].type,
-                };
-                if ($scope.showmachine.hardware.network[index].type == 'NAT' ) {
-                    new_settings.network=$scope.showmachine.hardware.network[index].network;
-                }
-                if ($scope.showmachine.hardware.network[index].type == 'bridge' ) {
-                    new_settings.bridge=$scope.showmachine.hardware.network[index].bridge;
-                }
-                $http.post('/machine/hardware/change'
-                    ,JSON.stringify({
-                        'id_domain': id_machine
-                        ,'hardware': 'network'
-                           ,'index': index
-                            ,'data': new_settings
-                    })
-                ).then(function(response) {
-                });
-            };
             $scope.list_bases = function() {
                 $http.get('/list_bases.json')
                     .then(function(response) {

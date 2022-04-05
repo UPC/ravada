@@ -11,9 +11,14 @@
         <li class="list-group-item">
             <input type="checkbox" ng-model="item.primary"
                 ng-true-value="'yes'" ng-false-falue="'no'"
-                ng-disabled="item.type != 'qxl' && item.type != 'virtio'"
+                ng-disabled="item._primary || (item.type != 'qxl' && item.type != 'virtio')"
             />
         </li>
+        <li class="list-group-item" ng-show="item._primary">
+            <span class="info">Primary can not be unset, enable it in another video device</span>
+        </li>
+    </ul>
+    <ul class="list-group list-group-horizontal-md">
 
         <li ng-show="item.type == 'qxl'"
         class="list-group-item list-group-item-primary"><%=l 'ram' %></li>

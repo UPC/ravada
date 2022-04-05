@@ -2783,6 +2783,14 @@ sub _fix_hw_video_args($data) {
     }
 
     delete $data->{acceleration} unless $driver eq 'virtio';
+
+    if (exists $data->{primary}) {
+        if ($data->{primary}) {
+            $data->{primary} = 'yes'
+        } else {
+            delete $data->{primary};
+        }
+    }
 }
 
 sub _change_hardware_features($self, $index, $data) {
@@ -2799,6 +2807,10 @@ sub _change_hardware_features($self, $index, $data) {
 
 
     my ($features) = $doc->findnodes('/domain/features');
+    if (!$features) {
+        my ($domain) = $doc->findnodes("/domain");
+        $features = $domain->addNewChild(undef,'features');
+    }
     for my $field (keys %$data) {
         next if $field =~ /^_/;
         my ($item) = $features->findnodes($field);
@@ -2913,8 +2925,13 @@ sub _change_hardware_sound($self, $index, $data) {
 }
 
 sub _change_hardware_video($self, $index, $data) {
-    confess "Error: nothing to change ".Dumper($data)
-    if !keys %$data;
+    if (!keys %$data) {
+        $data = { 'type' => 'qxl'
+                  ,'ram' => 65536
+                 ,'vram' => 65536
+                ,'heads' => 1
+        };
+    }
 
     _fix_hw_video_args($data);
 
@@ -2941,6 +2958,10 @@ sub _change_hardware_video($self, $index, $data) {
                     _remove_all_video_primary($devices);
                     _remove_acceleration($model);
                     $model->setAttribute('primary' => 'yes');
+                }
+                if ($field eq 'primary' && $data->{$field}) {
+                    _remove_all_video_primary($devices);
+                    $changed++;
                 }
                 $model->setAttribute($field,$data->{$field});
                 $changed++;
@@ -2987,6 +3008,14 @@ sub _change_hardware_network($self, $index, $data) {
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
 
+    if (!keys %$data) {
+        $data = {
+            driver => 'virtio'
+            ,type => 'nat'
+            ,network => 'default'
+        }
+    }
+
        my $type = delete $data->{type};
      my $driver = lc(delete $data->{driver} or '');
      my $bridge = delete $data->{bridge};
@@ -2999,10 +3028,10 @@ sub _change_hardware_network($self, $index, $data) {
     die "Error: Unknown type '$type' . Known: bridge, NAT"
         if $type && $type !~ /^(bridge|nat)$/;
 
-    die "Error: Bridged type requires bridge ".Dumper($data)
+    die "Error: Bridged type requires bridge.\n"
         if $type && $type eq 'bridge' && !$bridge;
 
-    die "Error: NAT type requires network ".Dumper($data)
+    die "Error: NAT type requires network.\n"
         if $type && $type eq 'nat' && !$network;
 
     $type = 'network' if $type && $type eq 'nat';
