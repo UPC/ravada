@@ -95,8 +95,8 @@ to destination.
     <source file='/var/lib/libvirt/images/Lubuntu1704-vda-X18J.img'/>
     root@origin:~# qemu-img info /var/lib/libvirt/images/base-vda-X18J.img | grep -i backing
     backing file: /var/lib/libvirt/images/Lubuntu1704-vda-X18J.ro.qcow2
-    root@origin:~# rsync -av /var/lib/libvirt/images/base-vda-X18J.ro.qcow2 frankie@dst.domain:/var/lib/libvirt/images/tmp
-    root@origin:~# rsync -av /var/lib/libvirt/images/Lubuntu1704-vda-X18J.img frankie@dst.domain:/var/lib/libvirt/images/tmp
+    root@origin:~# rsync -avPS /var/lib/libvirt/images/base-vda-X18J.ro.qcow2 frankie@dst.domain:/var/lib/libvirt/images/tmp
+    root@origin:~# rsync -avPS /var/lib/libvirt/images/Lubuntu1704-vda-X18J.img frankie@dst.domain:/var/lib/libvirt/images/tmp
 
 
 Move the volumes on destination
