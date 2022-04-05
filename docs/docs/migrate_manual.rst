@@ -6,6 +6,56 @@ machine from one to another.
 
 In this example we copy the base for a virtual machine called *Lubuntu-1704*.
 
+
+Check the storage pools directories
+-----------------------------------
+
+If the filesystem layout of both servers is different, the migration
+can be complicated. You have to bear in mind the disk volumes may
+have backing files in a different location and you need to rebase it.
+
+Check first the directory where the volumes are stored, if you can't
+have them in both servers you have to create a clone, spin if off and
+migrate it to the new server.
+
+In this example we inspect first the full path of the volumes.
+::
+
+  root@origin:~# virsh dumpxml Lubuntu1704 | grep "source file"
+
+      <source file='/var/lib/libvirt/images/lubuntu-vda-k1dj.qcow2'/>
+
+For each source file, check its backing  file:
+
+::
+
+  root@origin:~# qemu-img info /var/lib/libvirt/images/lubuntu-vda-k1dj.qcow2 | grep "backing file"
+
+    backing file: /var/lib/libvirt/images.2/lubuntu-vda.ro.qcow2
+
+So we now know we have to move one file to _/var/lib/libvirt/images/_
+and another one to  _/var/lib/libvirt/images.2/_ . Check if the
+new server has these directories in storage pools.
+
+::
+
+  root@destionation:~# virsh pool-list
+
+    Name          State    Autostart
+    -----------------------------------
+
+    default active yes
+
+::
+
+  root@destination:~# virsh pool-dumpxml default | grep path
+    <path>/var/lib/libvirt/images</path>
+
+In this case migrate the virtual machine as it is will be difficult.
+We have to rebase the volumes. The easiest way would be to create a
+clone, spin off the volumes from the web frontend administration and
+migrate it then.
+
 Temporary space in destination
 ------------------------------
 
@@ -17,6 +67,7 @@ can do ssh from origin to destination:
 
     root@destination:~# mkdir /var/lib/libvirt/images/tmp
     root@destination:~# chown frankie /var/lib/libvirt/images/tmp
+
 
 Import the Base
 ---------------
@@ -81,13 +132,13 @@ Run this command and you should see the base on the Ravada web admin page.
 ::
 
     root@dst:~# rvd_back --import-domain Lubuntu1704
-
+    This virtual machine has 3 backing files. Do you want to import it as a base ? Please answer y/n [yes]:
 
 Importing clones
 ----------------
 
 Now if you want to import a clone too, first you have to ask the clone owner to
-start the machine on destination. Then you have to copy the volumes from origin
+start and stop the machine on destination. Then you have to copy the volumes from origin
 and overwrite what has just been created on destination.
 
 
@@ -102,7 +153,7 @@ owned by the correct user. Stop the domain on destination:
 
     root@dst:~# virsh shutdown Lubuntu1704-juan-ramon
 
-Mke sure it is stopped
+Make sure it is stopped
 
 ::
 
