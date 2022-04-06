@@ -5428,9 +5428,16 @@ sub _fix_hw_booleans($data) {
     }
 }
 
+sub _fix_hw_ignore_fields($data) {
+    for my $key (keys %$data) {
+        delete $data->{$key} if $key =~ /^_/;
+    }
+}
+
 sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) {
 
     _fix_hw_booleans($data);
+    _fix_hw_ignore_fields($data);
 
     my $real_id_vm;
     if ($hardware eq 'disk' && !$self->_vm->is_local) {

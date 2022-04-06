@@ -941,6 +941,12 @@ msgstr "Keep the CD for the clones"
 msgid "Accept"
 msgstr "Accept"
 
+msgid "Close"
+msgstr "Close"
+
+msgid "Apply"
+msgstr "Apply"
+
 msgid "Fail"
 msgstr "Fail"
 

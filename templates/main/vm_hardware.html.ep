@@ -55,9 +55,10 @@
                 %= include "main/manage_machine_edit"
             </div>
         </div>
-        <div ng-show="value.length == 0"
-                class="form-group border border-primary">
-            No {{name}} hardware found.
+        <div ng-show="value.length == 0">
+            <span class="form-group alert alert-warning">
+                <%=l 'No hardware found for' %> {{name}}
+            </span>
         </div>
     </div>
 
