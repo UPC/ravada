@@ -46,8 +46,7 @@
                 <%=l 'Set defaults' %>
             </button>
        </div>
+    </div><!-- list-group -->
     </form>
 
-    </div>
-
-</div>
+</div><!-- ng-show -->
