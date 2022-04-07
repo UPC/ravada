@@ -5407,10 +5407,9 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
 sub _remove_unnecessary_downs($self, $domain) {
 
         my @requests = $domain->list_requests(1);
-        my $uid_daemon = Ravada::Utils::user_daemon->id();
         for my $req (@requests) {
-            $req->status('done') if $req->command =~ /shutdown/
-            && (!$req->at_time || $req->defined_arg('uid') == $uid_daemon );
+            $req->status('done')
+                if $req->command =~ /shutdown/ && !$req->at_time;
             $req->_remove_messages();
         }
 }
