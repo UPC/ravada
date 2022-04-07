@@ -1,4 +1,4 @@
-<div ng-show="name=='0cpu' && is_edit(name,$index)">
+<div ng-show="name=='cpu' && is_edit(name,$index)">
     <div class="p-2">
          <label for="vcpu"><%=l 'vCPU allocation' %></label>
          <input type="text" ng-model="item.vcpu._text" name="vcpu"/>

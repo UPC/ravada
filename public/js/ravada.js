@@ -1,5 +1,3 @@
-'use strict';
-
     var ravadaApp = angular.module("ravada.app",['ngResource','ngSanitize','ravada.booking'])
             .config( [
                 '$compileProvider',
@@ -32,7 +30,11 @@
             .controller("notifCrtl", notifCrtl)
             .controller("run_domain_req",run_domain_req_ctrl)
 
+            .filter('custom_order_by',custom_order_by)
 
+
+    function custom_order_by() {
+    };
 
     function newMachineCtrl($scope, $http) {
 
@@ -258,6 +260,9 @@
                 return $scope.getUnixTimeFromDate(date) < $scope.getUnixTimeFromDate(now_date ? now_date : new Date());
             };
 
+            $scope.sort_hardware=function(v1,v2) {
+                return v2.value.localeCompare(v1.value);
+            };
             $scope.set_edit=function(name,index) {
                 if(!name) {
                     $scope.edit = '';
@@ -294,6 +299,12 @@
                             $scope.showmachine.requests = data.requests;
                             return;
                         }
+                        $scope.hardware = Object.keys(data.hardware);
+                        $scope.hardware.sort(function(a,b) {
+                            if( a == 'features' && b != 'cpu') return -1;
+                            if( b == 'features' && b != 'cpu') return 1;
+                            return a >b;
+                        });
                         $scope.showmachine = data;
                         $scope.copy_is_volatile = $scope.showmachine.is_volatile;
                         if (!subscribed_extra) {
@@ -630,7 +641,7 @@
 
           //On load code
 //          $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
-          $scope.add_hardware = function(hardware, number, extra) {
+          $scope.add_hardware = function(hardware, extra) {
               if (hardware == 'disk' && ! extra) {
                   $scope.show_new_disk = true;
                   return;
@@ -650,7 +661,6 @@
               $scope.request('add_hardware'
                       , { 'id_domain': $scope.showmachine.id
                             ,'name': hardware
-                            ,'number': number
                             ,'data': extra
                       })
           };

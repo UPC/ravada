@@ -14,10 +14,10 @@ use feature qw(signatures);
 
 our %GET_CONTROLLER_SUB = (
     usb => \&_get_controller_usb
-    ,'0cpu' => \&_get_controller_cpu
+    ,'cpu' => \&_get_controller_cpu
     ,disk => \&_get_controller_disk
     ,display => \&_get_controller_display
-    ,'1features' => \&_get_controller_features
+    ,'features' => \&_get_controller_features
     ,network => \&_get_controller_network
     ,video => \&_get_controller_video
     ,sound => \&_get_controller_sound

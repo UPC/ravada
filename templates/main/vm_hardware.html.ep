@@ -10,20 +10,20 @@
     <div ng-show="!showmachine || !showmachine.hardware">
         <i ng-show="!display.is_active" class="fas fa-sync-alt fa-spin"></i>
     </div>
-    <div ng-repeat="(name,value) in showmachine.hardware" ng-hide="show_new_disk||show_new_display">
-        <h2 ng-hide="name=='0cpu' || name=='1features'">{{name}}</h2>
-        <div ng-show="value">
-            <div ng-repeat="item in value track by $index"
+    <div ng-repeat="name in hardware" ng-hide="show_new_disk||show_new_display">
+        <h2 ng-hide="name=='cpu' || name=='features'">{{name}}</h2>
+        <div ng-show="showmachine.hardware[name]">
+            <div ng-repeat="item in showmachine.hardware[name] track by $index"
                 ng-class='{"border rounded border-primary mb-4 p-4": item._edit}'
             >
                 <button title="edit {{name}} {{$index+1}}"
-                    ng-show="(name == 'network' ||name == 'disk' || name == 'video' || name == 'sound' || name=='0cpu' || name=='1features') && !item.remove"
+                    ng-show="(name == 'network' ||name == 'disk' || name == 'video' || name == 'sound' || name=='cpu' || name=='features') && !item.remove"
                     ng-disabled="showmachine.requests > 0 || showmachine.is_active || showmachine.is_base || edit"
                     ng-click="toggle_edit(name,$index)"
                             ><i class="fas fa-pencil-alt"></i>
                 </button>
                 <button title="remove {{name}} {{$index+1}}"
-                    ng-hide="item._edit || name=='0cpu' || name=='1features'"
+                    ng-hide="item._edit || name=='cpu' || name=='features'"
                     ng-disabled="showmachine.requests > 0 || item.is_secondary || showmachine.is_active || showmachine.is_base || edit"
                     ng-click="confirm_remove='';remove_hardware(name,$index,item)"><i class="fa fa-times"></i>
                 </button>
@@ -55,7 +55,7 @@
                 %= include "main/manage_machine_edit"
             </div>
         </div>
-        <div ng-show="value.length == 0">
+        <div ng-show="showmachine.hardware[name].length == 0">
             <span class="form-group alert alert-warning">
                 <%=l 'No hardware found for' %> {{name}}
             </span>

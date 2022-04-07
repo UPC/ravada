@@ -38,7 +38,7 @@
 
 
         </div>
-        <div class="col-md-3 mt-3 mb-1" ng-show="name=='0cpu' || name == '1features' || name=='network' || name == 'video'">
+        <div class="col-md-3 mt-3 mb-1" ng-show="name=='cpu' || name == 'features' || name=='network' || name == 'video'">
             <button class="btn btn-outline-primary"
                 ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || showmachine.is_base || showmachine.is_active"
                 ng-click="set_defaults(name, $index)"

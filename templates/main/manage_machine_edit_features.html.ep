@@ -1,4 +1,4 @@
-<div ng-show="name=='1features' && is_edit(name,$index)">
+<div ng-show="name=='features' && is_edit(name,$index)">
     <div ng-repeat="(feat,value) in item "
         ng-show="feat.substr(0,1) != '_'"
     >

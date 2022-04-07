@@ -4381,7 +4381,6 @@ Returns a hashref of the hardware controllers for this virtual machine
 
 =cut
 
-
 sub get_controllers($self) {
     my $info;
     my %controllers = $self->list_controllers();
