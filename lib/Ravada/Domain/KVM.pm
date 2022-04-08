@@ -3004,7 +3004,7 @@ sub _change_xml($xml, $name, $data) {
 }
 
 sub _change_hardware_network($self, $index, $data) {
-    confess if !defined $index;
+    die "Error: index number si required.\n" if !defined $index;
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
 
