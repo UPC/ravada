@@ -14,8 +14,7 @@ them.
 
 .. image:: images/nodes_machines.png
 
-This feature is currently in alpha stage. It works but the management forms are ugly
-and we need to test it more.
+This feature is currently stable. It works but there are some management forms that we have to polish, and we need to test it more.
 
 Nodes
 =====
@@ -33,6 +32,8 @@ be up and down at the administrator will and that they could be easily added
 to a cluster.
 Ravada should be able to cope with sudden death of those nodes, though it is better if
 they are disabled and shut down nicely from the Ravada node administation frontend.
+
+.. note:: A Base virtual machine must always exist first in the main host. Then you can enable it in some secondary nodes. It is not possible to have a base in a node but not in the main server. If you remove the base from main it will become a normal virtual machine.
 
 Storage
 =======
