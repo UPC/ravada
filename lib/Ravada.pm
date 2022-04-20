@@ -1397,6 +1397,9 @@ sub _add_indexes_generic($self) {
             ,"unique (id_domain,name):name"
             ,"unique(id_vm,public_port)"
         ]
+        ,domains_kvm => [
+            "unique (id_domain)"
+        ]
         ,group_access => [
             "unique (id_domain,name)"
             ,"index(id_domain)"
@@ -1974,6 +1977,13 @@ sub _sql_create_tables($self) {
             }
         ]
         ,[
+            domains_kvm => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
+            ,xml => 'TEXT'
+            }
+        ]
+        ,[
             group_access => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
@@ -2491,7 +2501,6 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
-    $self->_upgrade_table('domains_kvm','xml','TEXT');
     $self->_upgrade_table('iptables','id_vm','int DEFAULT NULL');
     $self->_upgrade_table('vms','security','varchar(255) default NULL');
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
