@@ -394,6 +394,8 @@ sub _around_create_domain {
        my $swap = delete $args{swap};
        my $from_pool = delete $args{from_pool};
 
+    my $config = delete $args{config};
+
      # args get deleted but kept on %args_create so when we call $self->$orig below are passed
      delete $args{disk};
      delete $args{memory};

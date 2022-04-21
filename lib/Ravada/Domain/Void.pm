@@ -1056,4 +1056,8 @@ sub has_nat_interfaces($self) {
     return 0;
 }
 
+sub config_files($self) {
+    return $self->_config_file();
+}
+
 1;

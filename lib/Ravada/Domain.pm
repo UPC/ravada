@@ -2199,6 +2199,9 @@ sub _after_remove_domain {
         #        $self->_do_remove_base($user);
         $self->_remove_files_base();
     }
+    for my $backup ( $self->list_backups ) {
+        $self->remove_backup($backup);
+    }
     $self->_remove_all_volumes();
     return if !$self->{_data};
     return if $cascade;
@@ -6497,6 +6500,144 @@ sub refresh_ports($self, $request=undef) {
         $user = Ravada::Auth::SQL->search_by_id($uid) if ($uid);
         $user->send_message($msg) if ($user);
     }
+}
+
+sub list_backups($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM domain_backups "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+    my @ret;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @ret, ( $row );
+    }
+    return @ret;
+}
+
+sub config_files($self) {
+}
+
+sub _backup_owner($self) {
+    my $owner = Ravada::Auth::SQL->search_by_id($self->_data('id_owner'));
+    my $filename = $self->_vm->dir_img()."/".$self->name."_owner.json";
+    CORE::open my $out,">",$filename or die "$! $filename";
+    print $out encode_json($owner->{_data});
+    close $filename;
+
+    return $filename;
+}
+
+sub backup($self) {
+    my @files_data = $self->config_files();
+    #read data extra just in case it wasn't already read
+    $self->_data_extra('id_domain');
+    for my $field ( keys %$self) {
+        next if $field !~ /^_data/;
+        my $filename = $self->_vm->dir_img()."/".$self->name.$field.".json";
+        CORE::open my $out,">",$filename or die "$! $filename";
+        if ($field eq '_data') {
+            $self->{$field}->{owner} = Ravada::Utils::search_user_name($$CONNECTOR->dbh,$self->{$field}->{id_owner});
+        }
+        print $out encode_json($self->{$field});
+        close $filename;
+        push @files_data,($filename);
+    }
+    push @files_data,($self->_backup_owner);
+
+    my $now = Ravada::Utils::date_now();
+    $now =~ tr/ :/_-/;
+    my $file_backup = $self->_vm->dir_img()."/".$self->name.".$now.tgz";
+    my @cmd = ("tar","czvf",$file_backup,@files_data
+    ,$self->list_volumes);
+    $self->_vm->run_command(@cmd);
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO domain_backups (id_domain, file, date_created) "
+        ." VALUES (?,?,?)"
+    );
+    $sth->execute($self->id, $file_backup, Ravada::Utils::date_now());
+}
+
+sub restore_backup($self, $backup) {
+    my ($file) = $backup->{file};
+    die "Error: missing file  '$file'" if ! -e $file;
+    my @cmd = ("tar","xzvf",$file,"-C","/");
+    my ($out,$err) = $self->_vm->run_command(@cmd);
+    warn $err if $err;
+
+    my ($file_data) = $out =~ m{^(.*_data.json)$}m;
+    my ($file_data_extra) = $out =~ m{^(.*_data_domains.*.json)$}m;
+    my ($file_data_owner) = $out =~ m{^(.*owner.json)$}m;
+
+    $self->_restore_backup_metadata("/$file_data"
+        ,"/$file_data_owner");
+}
+sub _restore_owner($self, $data, $file_data_owner) {
+    my $id_owner = Ravada::Utils::search_user_id($$CONNECTOR->dbh
+        ,delete $data->{owner});
+    if ($id_owner) {
+        $data->{id_owner} = $id_owner;
+        return;
+    }
+
+    CORE::open my $f,"<",$file_data_owner or confess "$! $file_data_owner";
+    my $json = join "",<$f>;
+    close $f;
+
+    my $data_owner = decode_json($json);
+
+    my $id = $data_owner->{id};
+    my $clashed_user = Ravada::Auth::SQL->search_by_id($id);
+
+    if ($clashed_user) {
+        die "Error: Owner id $id clashes with user ".$clashed_user->name
+        ." here.";
+    }
+
+    my $sql = "INSERT INTO users (".join(",",sort keys %$data_owner).")"
+    ." VALUES(".join(",",map {'?'} keys %$data_owner)." )";
+
+    my $sth = $$CONNECTOR->dbh->prepare($sql);
+    $sth->execute(map { $data_owner->{$_}} sort keys %$data_owner );
+}
+
+sub _restore_backup_metadata($self, $file_data, $file_data_owner) {
+    CORE::open my $f,"<",$file_data or confess "$! $file_data";
+    my $json = join "",<$f>;
+    close $f;
+
+    my $data = decode_json($json);
+    delete $data->{id};
+    delete $data->{internal_id};
+    delete $data->{info};
+    delete $data->{date_changed};
+
+    $self->_restore_owner($data,$file_data_owner);
+
+    for my $field (keys %$data) {
+        next if( !exists $self->{_data}->{$field} || !defined $self->{_data}->{$field})
+        && !defined $data->{$field};
+
+        next if exists $self->{_data}->{$field}
+        && defined $self->{_data}->{$field}
+        && defined $data->{$field}
+        && $self->{_data}->{$field} eq $data->{$field};
+
+        $self->_data($field => $data->{$field});
+    }
+
+}
+
+sub remove_backup($self, $backup) {
+    my ($file) = $backup->{file};
+    if ( -e $file ) {
+        unlink $file or die "$! $file";
+    }
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM domain_backups WHERE id=?"
+    );
+    $sth->execute($backup->{id});
 }
 
 1;

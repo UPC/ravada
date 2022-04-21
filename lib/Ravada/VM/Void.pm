@@ -94,6 +94,9 @@ sub create_domain {
     my ($out, $err) = $self->run_command("/usr/bin/test",
          "-e ".$domain->_config_file." && echo 1" );
     chomp $out;
+
+    return $domain if $out && exists $args{config};
+
     die "Error: Domain $args{name} already exists " if $out;
     $domain->_set_default_info($listen_ip);
     $domain->_store( autostart => 0 );
@@ -142,7 +145,7 @@ sub create_domain {
         my $drivers = {};
         $drivers = $domain_base->_value('drivers');
         $domain->_store( drivers => $drivers );
-    } else {
+    } elsif (!exists $args{config}) {
         my ($file_img) = $domain->disk_device();
         my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".void";
         $file_img =~ m{.*/(.*)} if $file_img;

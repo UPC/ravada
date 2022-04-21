@@ -1959,6 +1959,14 @@ sub _sql_create_tables($self) {
         }
         ]
         ,[
+        domain_backups => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
+            ,file => 'char(200) not null'
+            ,date_created => 'date not null'
+        }
+        ]
+        ,[
             domain_ports => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
@@ -5980,9 +5988,68 @@ sub set_debug_value($self) {
 Returns the value of a configuration setting
 
 =cut
-
 sub setting {
     return Ravada::Front::setting(@_);
+}
+
+
+sub restore_backup($self, $file) {
+    die "Error: file '$file' not found\n" if !-e $file;
+
+    my @cmd = ("tar","xzvf",$file,"-C","/");
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out,\$err);
+    warn $err if $err;
+    my ($file_data) = $out =~ m{^(.*_data.json)$}m;
+    my ($file_data_extra) = $out =~ m{^(.*_data_domains.*.json)$}m;
+    my ($file_data_owner) = $out =~ m{^(.*owner.json)$}m;
+
+    die "Error: no file data extra in $out"
+        if !$file_data_extra;
+
+    $self->_restore_backup_data("/$file_data", "/$file_data_extra"
+    ,"/$file_data_owner");
+}
+
+sub _restore_backup_data($self, $file_data, $file_data_extra
+                            ,$file_data_owner) {
+    open my $f,"<",$file_data or die "$! $file_data";
+    my $json = join "",<$f>;
+    close $f;
+
+    my $data = decode_json($json);
+
+    open my $f2,"<",$file_data_extra or die "$! $file_data_extra";
+    my $json2 = join "",<$f2>;
+    close $f2;
+
+    my $data_extra = decode_json($json2);
+
+    my $id = $data->{id};
+    my $name = $data->{name};
+    my $vm = $self->search_vm($data->{vm});
+
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains "
+        ."WHERE id=? OR name=?"
+    );
+    $sth->execute($id,$name);
+    my $domain_old = $sth->fetchrow_hashref;
+    if ($domain_old && $domain_old->{name} ne $name) {
+        die "Domain id='$id' already exists, it is called "
+            .$domain_old->{name};
+    }
+    if (!$domain_old) {
+        my $domain = $vm->create_domain(
+            name => $name
+            ,config => $data_extra->{xml}
+            ,id_owner => Ravada::Utils::user_daemon->id
+        );
+        $domain_old = $domain;
+    } else {
+        $domain_old = Ravada::Domain->open($domain_old->{id});
+    }
+    $domain_old->_restore_backup_metadata($file_data, $file_data_owner);
+    return $data;
 }
 
 sub DESTROY($self) {
