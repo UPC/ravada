@@ -311,7 +311,7 @@ sub create_domain_v2(%args) {
         ,data => { size => $data*1024*1024, type => 'data' }
     ) if $domain && $data;
     delete_request( 'enforce_limits', 'set_time' );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     return $domain;
 }
 

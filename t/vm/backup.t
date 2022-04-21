@@ -54,8 +54,12 @@ sub _remove_iso($domain) {
     wait_request(debug => 0);
 }
 
-sub backup($vm) {
-    my $domain = create_domain_v2(vm => $vm, swap => 1, data => 1);
+sub backup($vm,$remove_user=undef) {
+    my $user = create_user();
+    user_admin->make_admin($user->id);
+    my $domain = create_domain_v2(vm => $vm, swap => 1, data => 1
+        ,user => $user
+    );
     _remove_iso($domain);
 
     is($domain->list_backups(),0);
@@ -66,11 +70,24 @@ sub backup($vm) {
     is($domain->list_backups(),1);
 
     _change_domain($domain);
+
+    my $id_owner = $domain->_data('id_owner');
+    if ($remove_user) {
+        $user->remove();
+    } else {
+        $domain->_data(id_owner => 999);
+    }
+
     my ($backup) = $domain->list_backups();
     $domain->restore_backup($backup);
 
     my @md5_restored = _vols_md5($domain);
     is_deeply(\@md5_restored, \@md5) or exit;
+
+    is($domain->_data('id_owner'),$id_owner);
+
+    my $new_owner = Ravada::Auth::SQL->search_by_id($domain->_data('id_owner'));
+    ok($new_owner);
 
     is($domain->list_backups(),1);
 
@@ -86,7 +103,7 @@ sub backup($vm) {
     ok(!-e $backup->{file},"$backup->{file} should have been removed");
 }
 
-sub restore_from_file($vm) {
+sub restore_from_file($vm, $remove=undef) {
     my $domain = create_domain_v2(vm => $vm, swap => 1, data => 1);
     _remove_iso($domain);
 
@@ -106,7 +123,7 @@ sub restore_from_file($vm) {
 
     my $name = $domain->name;
 
-    $domain->remove(user_admin);
+    $domain->remove(user_admin) if $remove;
 
     rvd_back->restore_backup($file2);
 
@@ -120,12 +137,16 @@ sub restore_from_file($vm) {
 
     if ($domain) {
         my @vols2 = sort $domain->list_volumes();
-        is_deeply(\@vols2,\@vols);
+        is_deeply(\@vols2,\@vols) or exit;
         is_deeply([_vols_md5($domain)],\@md5);
         $domain->remove(user_admin);
     }
 
     unlink($file2) or die "$! $file2";
+}
+
+sub backup_clash_user($vm) {
+    #TODO
 }
 
 ########################################################################
@@ -148,9 +169,12 @@ for my $vm_name ( vm_names() ) {
         skip $msg,10    if !$vm;
 
         restore_from_file($vm);
+        restore_from_file($vm,"remove");
 
         backup($vm);
+        backup($vm,"remove_user");
 
+        backup_clash_user($vm);
     }
 }
 
