@@ -158,7 +158,7 @@ sub test_drivers_type($type, $vm, $node) {
 sub test_drivers($vm, $node) {
     my @drivers = $vm->list_drivers();
      for my $driver ( @drivers ) {
-         next if $driver->name =~ /display|cpu|features/;
+         next if $driver->name =~ /display|features/;
          test_drivers_type($driver->name, $vm, $node);
      }
 
@@ -195,7 +195,7 @@ sub test_change_hardware($vm, @nodes) {
     my @hardware = grep (!/^disk$/, sort keys %{$info->{hardware}});
     push @hardware,("disk");
     for my $hardware ( @hardware) {
-        next if $hardware eq 'cpu';
+        next if $hardware =~ /cpu|features/;
         my $tls = 0;
         $tls = grep {$_->{driver} =~ /-tls/} @{$info->{hardware}->{$hardware}}
         if $hardware eq 'display';

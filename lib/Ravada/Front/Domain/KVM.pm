@@ -34,6 +34,7 @@ our %GET_DRIVER_SUB = (
      ,streaming => \&_get_driver_streaming
      ,disk => \&_get_driver_disk
      ,display => \&_get_driver_display
+     ,cpu => \&_get_driver_cpu
 );
 
 
@@ -255,6 +256,10 @@ sub _get_driver_generic($self,$xml_path,$attribute=undef) {
 
     return $ret[0] if !wantarray && scalar@ret <2;
     return @ret;
+}
+
+sub _get_driver_cpu($self) {
+    return $self->_get_driver_generic('/domain/cpu','mode');
 }
 
 sub _get_driver_graphics {

@@ -45,7 +45,7 @@ sub _download_alpine64 {
 sub _driver_field($hardware) {
     my $driver_field = 'driver';
     $driver_field = 'type' if $hardware eq 'video';
-    $driver_field = 'model' if $hardware eq 'sound';
+    $driver_field = 'model' if $hardware =~ /cpu|sound/;
     return $driver_field;
 }
 
@@ -592,9 +592,7 @@ sub _set_three_devices($domain, $hardware) {
     my $items = [];
     $items = $info_hw->{$hardware};
 
-    my $driver_field = 'driver';
-    $driver_field = 'type' if $hardware eq 'video';
-    $driver_field = 'model' if $hardware eq 'sound';
+    my $driver_field = _driver_field($hardware);
 
     for my $item (@$items) {
         next if !ref($item);
@@ -1050,9 +1048,9 @@ sub test_change_drivers($domain, $hardware) {
     for my $option ( @$options ) {
         is(ref($option),'',"Invalid option for driver $hardware") or exit;
     }
-    my $driver_field = 'driver';
-    $driver_field = 'type' if $hardware eq 'video';
-    $driver_field = 'model' if $hardware eq 'sound';
+
+    my $driver_field = _driver_field($hardware);
+
     for my $option (@$options) {
         my $index = 0;
         $index = _search_disk($domain) if $hardware eq 'disk';
@@ -1250,8 +1248,8 @@ for my $vm_name (reverse vm_names()) {
         test_change_hardware($vm, $domain_b, $hardware);
 
         # change driver is not possible for displays
-        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock|cpu|features)$/;
-        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock|cpu|features)$/;
+        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock|features)$/;
+        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock|features)$/;
 
         # try to add with the machine started
         $domain_b->start(user_admin) if !$domain_b->is_active;

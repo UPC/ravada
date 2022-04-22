@@ -141,7 +141,7 @@ sub test_settings {
     my $vm_name = shift;
 
     for my $driver ( Ravada::Domain::drivers(undef,undef,$vm_name) ) {
-        next if $driver->name =~ /cpu|features|display/;
+        next if $driver->name =~ /features|display/;
         diag("Testing drivers for $vm_name ".$driver->name);
         test_driver_id_64bits_options($vm_name, $driver->name);
         test_drivers_id($vm_name, $driver->name);
@@ -154,7 +154,7 @@ sub test_needs_shutdown {
 
     my $domain = test_create_domain($vm_name);
 
-    my ($type) = grep { $_->name !~ /(cpu|features)/ }
+    my ($type) = grep { $_->name !~ /(features)/ }
         Ravada::Domain::drivers(undef,undef,$vm_name);
 
     my $driver_type = $domain->drivers($type->name);

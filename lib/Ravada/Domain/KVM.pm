@@ -62,6 +62,7 @@ our %SET_DRIVER_SUB = (
      ,playback => \&_set_driver_playback
      ,streaming => \&_set_driver_streaming
      ,disk => \&_set_driver_disk
+     ,cpu => \&_set_driver_cpu
 );
 
 our %GET_CONTROLLER_SUB = (
@@ -2176,6 +2177,10 @@ sub _set_driver_disk($self, $value) {
     return $self->change_hardware('disk',0,{driver => $value });
 }
 
+sub _set_driver_cpu($self, $value) {
+    return $self->change_hardware('cpu',0,{cpu => { mode => $value}});
+}
+
 sub set_controller($self, $name, $number=undef, $data=undef) {
     my $sub = $SET_CONTROLLER_SUB{$name};
     die "I can't get controller $name for domain ".$self->name
@@ -2862,15 +2867,15 @@ sub _change_hardware_cpu($self, $index, $data) {
     $data = $self->_default_cpu()
     if !keys %$data;
 
-    lock_hash(%$data);
     delete $data->{cpu}->{model}->{'$$hashKey'};
+    lock_hash(%$data);
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
     my $count = 0;
     my $changed = 0;
 
     my ($n_vcpu) = $doc->findnodes('/domain/vcpu/text()');
-    if ($n_vcpu ne $data->{vcpu}->{_text}) {
+    if (exists $data->{vcpu} && $n_vcpu ne $data->{vcpu}->{_text}) {
         my ($vcpu) = $doc->findnodes('/domain/vcpu');
         $vcpu->removeChildNodes();
         $vcpu->appendText($data->{vcpu}->{_text});
