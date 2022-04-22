@@ -5992,6 +5992,11 @@ sub setting {
     return Ravada::Front::setting(@_);
 }
 
+=head2 restore_backup
+
+  Restores a virtual machine from a backup file
+
+=cut
 
 sub restore_backup($self, $file) {
     die "Error: file '$file' not found\n" if !-e $file;
