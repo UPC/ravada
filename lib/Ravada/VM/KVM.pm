@@ -1044,6 +1044,7 @@ sub _search_domain_by_id {
 
 sub _domain_create_from_config($self, %args) {
     my $config = delete $args{config};
+    my $id = delete $args{id};
     my $xml = XML::LibXML->load_xml(string => $config);
 
     my $dom = $self->vm->define_domain($xml->toString());
@@ -1054,6 +1055,7 @@ sub _domain_create_from_config($self, %args) {
     );
 
     $domain->_insert_db(name=> $args{name}
+        , id => $id
         , id_owner => $args{id_owner}
         , id_vm => $self->id
     );

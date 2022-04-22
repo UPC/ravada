@@ -86,6 +86,8 @@ sub create_domain {
     my $description = delete $args{description};
     confess if $args{name} eq 'tst_vm_v20_volatile_clones_02' && !$listen_ip;
     my $remote_ip = delete $args{remote_ip};
+    my $id = delete $args{id};
+
     my $domain = Ravada::Domain::Void->new(
                                            %args
                                            , domain => $args{name}
@@ -104,6 +106,7 @@ sub create_domain {
     $domain->set_memory($args{memory}) if $args{memory};
 
     $domain->_insert_db(name => $args{name} , id_owner => $user->id
+        , id => $id
         , id_vm => $self->id
         , id_base => $args{id_base} 
         , description => $description

@@ -6557,21 +6557,99 @@ sub backup($self) {
         ." VALUES (?,?,?)"
     );
     $sth->execute($self->id, $file_backup, Ravada::Utils::date_now());
+    return $file_backup;
 }
 
-sub restore_backup($self, $backup) {
-    my ($file) = $backup->{file};
+sub _confirm_restore($self) {
+    if ($ENV{TERM}) {
+            print "Virtual Machine ".$self->name." already exists."
+            ." All the data will be overwritten."
+            ." Are you sure you want to restore a backup ?";
+            my $answer = <STDIN>;
+            return 0 unless $answer =~ /^y/i;
+    }
+    return 1;
+}
+
+sub _select_vm($self) {
+    return $self->_vm if $self;
+    my $sth = _dbh->prepare("SELECT id FROM vms");
+    $sth->execute();
+    my ($id) = $sth->fetchrow;
+    return Ravada::VM->open($id);
+}
+
+sub _parse_file($file) {
+    CORE::open my $f,"<",$file or die "$! $file";
+    my $json = join "",<$f>;
+    close $f;
+
+    return decode_json($json);
+}
+
+sub _search_domain_to_restore($file,$file_extra) {
+    my $data = _parse_file($file);
+    my $data_extra = _parse_file($file_extra);
+
+    my $id = $data->{id};
+    my $name = $data->{name};
+    my $vm = Ravada::VM->open($data->{id_vm});
+
+    my $sth = _dbh->prepare("SELECT * FROM domains "
+        ."WHERE id=? OR name=?"
+    );
+    $sth->execute($id,$name);
+    my $domain_old = $sth->fetchrow_hashref;
+    if ($domain_old && $domain_old->{name} ne $name) {
+        die "Domain id='$id' already exists, it is called "
+            .$domain_old->{name};
+    }
+    if (!$domain_old) {
+        my $domain = $vm->create_domain(
+            name => $name
+            ,config => $data_extra->{xml}
+            ,id_owner => Ravada::Utils::user_daemon->id
+            ,id => $id
+        );
+        $domain_old = $domain;
+    } else {
+        $domain_old = Ravada::Domain->open($domain_old->{id});
+    }
+}
+
+sub restore_backup($self, $backup, $interactive, $rvd_back=undef) {
+    my $file = $backup;
+    $file = $backup->{file} if ref($backup);
+
     die "Error: missing file  '$file'" if ! -e $file;
+
+    if (!$self) {
+        my ($name) = $file =~ m{.*/(.*?).\d{4}-\d\d-\d\d_\d\d-\d\d-};
+        $self = $rvd_back->search_domain($name);
+    }
+    die "Error: ".$self->name." is active, shut it down to restore.\n"
+    if $self && $self->is_active;
+
+    return if $self && $interactive && !$self->_confirm_restore();
+
+    my $vm = _select_vm($self);
+
     my @cmd = ("tar","xzvf",$file,"-C","/");
-    my ($out,$err) = $self->_vm->run_command(@cmd);
+    my ($out,$err) = $vm->run_command(@cmd);
     warn $err if $err;
 
     my ($file_data) = $out =~ m{^(.*_data.json)$}m;
     my ($file_data_extra) = $out =~ m{^(.*_data_domains.*.json)$}m;
     my ($file_data_owner) = $out =~ m{^(.*owner.json)$}m;
 
-    $self->_restore_backup_metadata("/$file_data"
-        ,"/$file_data_owner");
+    $self = _search_domain_to_restore("/$file_data","/$file_data_extra") if !$self;
+
+    _restore_backup_metadata($self
+        ,"/$file_data"
+        ,"/$file_data_owner"
+    );
+
+    return $self;
 }
 sub _restore_owner($self, $data, $file_data_owner) {
     my $id_owner = Ravada::Utils::search_user_id($$CONNECTOR->dbh
@@ -6613,7 +6691,7 @@ sub _restore_backup_metadata($self, $file_data, $file_data_owner) {
     delete $data->{info};
     delete $data->{date_changed};
 
-    $self->_restore_owner($data,$file_data_owner);
+    _restore_owner($self,$data,$file_data_owner);
 
     for my $field (keys %$data) {
         next if( !exists $self->{_data}->{$field} || !defined $self->{_data}->{$field})

@@ -79,12 +79,15 @@ sub backup($vm,$remove_user=undef) {
     }
 
     my ($backup) = $domain->list_backups();
-    $domain->restore_backup($backup);
+    $domain->restore_backup($backup,0);
 
     my @md5_restored = _vols_md5($domain);
     is_deeply(\@md5_restored, \@md5) or exit;
 
     is($domain->_data('id_owner'),$id_owner);
+
+    my $domain2 = $vm->search_domain($domain->name);
+    is($domain2->id, $domain->id);
 
     my $new_owner = Ravada::Auth::SQL->search_by_id($domain->_data('id_owner'));
     ok($new_owner);
@@ -125,20 +128,22 @@ sub restore_from_file($vm, $remove=undef) {
 
     $domain->remove(user_admin) if $remove;
 
-    rvd_back->restore_backup($file2);
+    rvd_back->restore_backup($file2,0);
 
     for my $vol (@md5) {
         my ($file) = keys %$vol;
         ok(-e $file,"Expecting $file") or exit;
     }
 
-    $domain = rvd_back->search_domain($name);
+    my $domain2 = rvd_back->search_domain($name);
     ok($domain,"Expecting domain '$name'");
 
-    if ($domain) {
+    if ($domain2) {
         my @vols2 = sort $domain->list_volumes();
         is_deeply(\@vols2,\@vols) or exit;
         is_deeply([_vols_md5($domain)],\@md5);
+
+        is($domain2->id,$domain->id, $vm->type) or exit;
         $domain->remove(user_admin);
     }
 

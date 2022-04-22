@@ -5998,22 +5998,10 @@ sub setting {
 
 =cut
 
-sub restore_backup($self, $file) {
+sub restore_backup($self, $file, $interactive) {
     die "Error: file '$file' not found\n" if !-e $file;
 
-    my @cmd = ("tar","xzvf",$file,"-C","/");
-    my ($in, $out, $err);
-    run3(\@cmd, \$in, \$out,\$err);
-    warn $err if $err;
-    my ($file_data) = $out =~ m{^(.*_data.json)$}m;
-    my ($file_data_extra) = $out =~ m{^(.*_data_domains.*.json)$}m;
-    my ($file_data_owner) = $out =~ m{^(.*owner.json)$}m;
-
-    die "Error: no file data extra in $out"
-        if !$file_data_extra;
-
-    $self->_restore_backup_data("/$file_data", "/$file_data_extra"
-    ,"/$file_data_owner");
+    return Ravada::Domain::restore_backup(undef, $file, $interactive, $self);
 }
 
 sub _restore_backup_data($self, $file_data, $file_data_extra
@@ -6048,13 +6036,14 @@ sub _restore_backup_data($self, $file_data, $file_data_extra
             name => $name
             ,config => $data_extra->{xml}
             ,id_owner => Ravada::Utils::user_daemon->id
+            ,id => $id
         );
         $domain_old = $domain;
     } else {
         $domain_old = Ravada::Domain->open($domain_old->{id});
     }
     $domain_old->_restore_backup_metadata($file_data, $file_data_owner);
-    return $data;
+    return $domain_old;
 }
 
 sub DESTROY($self) {

@@ -70,6 +70,9 @@ my $IMPORT_DOMAIN_OWNER;
 
 my $ADD_LOCALE_REPOSITORY;
 
+my $BACKUP;
+my $RESTORE;
+
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
         ." [--change-password] [--make-admin=username] [--import-vbox=image_file.vdi]"
@@ -102,6 +105,9 @@ my $USAGE = "$0 "
         ." --hibernate machine\n"
         ." --shutdown machine\n"
         ." --remove machine\n"
+        ." --backup machine1 machine2 ... machineN\n"
+        ." --restore machine1 machine2 ... machineN\n"
+        ." --restore file1 file2 ... fileN\n"
         ." --migrate node machine1 machine2 ... machineN\n"
         ."\n"
         ."Operations modifiers:\n"
@@ -155,6 +161,9 @@ GetOptions (       help => \$help
         ,'migrate=s'    => \$MIGRATE
 
         ,"clean-db-leftovers" => \$CLEAN_DB_LEFTOVERS
+
+        ,"backup" => \$BACKUP
+        ,"restore" => \$RESTORE
         ,"log=s"              => \$LOG_FILENAME
 ) or exit;
 
@@ -896,6 +905,44 @@ sub clean_db_leftovers {
     $rvd_back->_clean_db_leftovers();
 }
 
+sub backup($rvd_back) {
+    die "Error: please provide the virtual machine name to backup.\n"
+    unless scalar(@ARGV);
+
+    for my $name (@ARGV) {
+        my $dom;
+        if ( $name =~ /^\d+$/ ) {
+            $dom = Ravada::Domain->open($name);
+        } else {
+            $dom = $rvd_back->search_domain($name);
+        }
+        if ($dom->is_active) {
+            warn "Error: $name is active, not backing up.\n";
+            next;
+        }
+        print $dom->backup()."\n";
+    }
+    exit 0;
+}
+
+sub restore($rvd_back) {
+    die "Error: please provide the file to restore.\n"
+    unless scalar(@ARGV);
+
+    for my $item (@ARGV) {
+        if ($item =~ m{/}) {
+            my $dom = $rvd_back->restore_backup($item,1);
+            if ($dom) {
+                print $dom->name." restored successfuly.\n";
+            } else {
+                print "backup for $item aborted.\n";
+            }
+        } else {
+            warn "TODO";
+        }
+    }
+}
+
 sub DESTROY {
 }
 
@@ -935,6 +982,9 @@ run_request($RUN_REQUEST)           if $RUN_REQUEST;
 migrate($MIGRATE)                   if $MIGRATE;
 
 clean_db_leftovers($rvd_back)       if $CLEAN_DB_LEFTOVERS;
+
+backup($rvd_back)                   if $BACKUP;
+restore($rvd_back)                  if $RESTORE;
 }
 
 
