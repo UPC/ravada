@@ -9,6 +9,8 @@ OS
 
 Ravada works in any Linux distribution.
 
+.. note:: RPM packages are kindly built by a third party. Please check the release available. If you want the latest verstion it is adviced to install it on top of Ubuntu or Debian.
+
 Hardware
 --------
 
