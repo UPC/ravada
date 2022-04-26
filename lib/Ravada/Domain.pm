@@ -4381,7 +4381,6 @@ Returns a hashref of the hardware controllers for this virtual machine
 
 =cut
 
-
 sub get_controllers($self) {
     my $info;
     my %controllers = $self->list_controllers();
@@ -5414,7 +5413,31 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
 }
 
+sub _fix_hw_booleans($data) {
+    for my $key (keys %$data) {
+        next if !ref($data->{$key});
+        if (ref($data->{$key}) eq 'HASH') {
+                _fix_hw_booleans($data->{$key});
+        } elsif(ref($data->{$key}) eq 'JSON::PP::Boolean') {
+                $data->{$key} = ''.$data->{$key};
+        } else {
+            confess "Error: expecting scalar or hash or boolean "
+                .Dumper($data);
+        }
+    }
+}
+
+sub _fix_hw_ignore_fields($data) {
+    for my $key (keys %$data) {
+        delete $data->{$key} if $key =~ /^_/;
+    }
+}
+
 sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) {
+
+    _fix_hw_booleans($data);
+    _fix_hw_ignore_fields($data);
+
     my $real_id_vm;
     if ($hardware eq 'disk' && !$self->_vm->is_local) {
         $real_id_vm = $self->_vm->id;
