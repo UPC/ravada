@@ -254,9 +254,6 @@
                 return $scope.getUnixTimeFromDate(date) < $scope.getUnixTimeFromDate(now_date ? now_date : new Date());
             };
 
-            $scope.sort_hardware=function(v1,v2) {
-                return v2.value.localeCompare(v1.value);
-            };
             $scope.set_edit=function(name,index) {
                 if(!name) {
                     $scope.edit = '';
