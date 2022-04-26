@@ -62,6 +62,7 @@ our %SET_DRIVER_SUB = (
      ,playback => \&_set_driver_playback
      ,streaming => \&_set_driver_streaming
      ,disk => \&_set_driver_disk
+     ,cpu => \&_set_driver_cpu
 );
 
 our %GET_CONTROLLER_SUB = (
@@ -2176,6 +2177,10 @@ sub _set_driver_disk($self, $value) {
     return $self->change_hardware('disk',0,{driver => $value });
 }
 
+sub _set_driver_cpu($self, $value) {
+    return $self->change_hardware('cpu',0,{cpu => { mode => $value}});
+}
+
 sub set_controller($self, $name, $number=undef, $data=undef) {
     my $sub = $SET_CONTROLLER_SUB{$name};
     die "I can't get controller $name for domain ".$self->name
@@ -2628,11 +2633,19 @@ sub change_hardware($self, $hardware, @args) {
     return $sub->($self, @args);
 }
 
+sub _fix_hw_disk_args($data) {
+    for (qw( allocation backing bus device driver_cache driver_name driver_type name target type )) {
+        delete $data->{$_};
+    }
+}
+
 sub _change_hardware_disk($self, $index, $data) {
     my @volumes = $self->list_volumes_info();
     confess "Error: Unknown volume $index, only ".(scalar(@volumes)-1)." found"
         .Dumper(\@volumes)
         if $index>=scalar(@volumes);
+
+    _fix_hw_disk_args($data);
 
     my $driver = delete $data->{driver};
     my $boot = delete $data->{boot};
@@ -2775,6 +2788,14 @@ sub _fix_hw_video_args($data) {
     }
 
     delete $data->{acceleration} unless $driver eq 'virtio';
+
+    if (exists $data->{primary}) {
+        if ($data->{primary}) {
+            $data->{primary} = 'yes'
+        } else {
+            delete $data->{primary};
+        }
+    }
 }
 
 sub _change_hardware_features($self, $index, $data) {
@@ -2791,6 +2812,10 @@ sub _change_hardware_features($self, $index, $data) {
 
 
     my ($features) = $doc->findnodes('/domain/features');
+    if (!$features) {
+        my ($domain) = $doc->findnodes("/domain");
+        $features = $domain->addNewChild(undef,'features');
+    }
     for my $field (keys %$data) {
         next if $field =~ /^_/;
         my ($item) = $features->findnodes($field);
@@ -2842,15 +2867,15 @@ sub _change_hardware_cpu($self, $index, $data) {
     $data = $self->_default_cpu()
     if !keys %$data;
 
-    lock_hash(%$data);
     delete $data->{cpu}->{model}->{'$$hashKey'};
+    lock_hash(%$data);
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
     my $count = 0;
     my $changed = 0;
 
     my ($n_vcpu) = $doc->findnodes('/domain/vcpu/text()');
-    if ($n_vcpu ne $data->{vcpu}->{_text}) {
+    if (exists $data->{vcpu} && $n_vcpu ne $data->{vcpu}->{_text}) {
         my ($vcpu) = $doc->findnodes('/domain/vcpu');
         $vcpu->removeChildNodes();
         $vcpu->appendText($data->{vcpu}->{_text});
@@ -2905,8 +2930,13 @@ sub _change_hardware_sound($self, $index, $data) {
 }
 
 sub _change_hardware_video($self, $index, $data) {
-    confess "Error: nothing to change ".Dumper($data)
-    if !keys %$data;
+    if (!keys %$data) {
+        $data = { 'type' => 'qxl'
+                  ,'ram' => 65536
+                 ,'vram' => 65536
+                ,'heads' => 1
+        };
+    }
 
     _fix_hw_video_args($data);
 
@@ -2933,6 +2963,10 @@ sub _change_hardware_video($self, $index, $data) {
                     _remove_all_video_primary($devices);
                     _remove_acceleration($model);
                     $model->setAttribute('primary' => 'yes');
+                }
+                if ($field eq 'primary' && $data->{$field}) {
+                    _remove_all_video_primary($devices);
+                    $changed++;
                 }
                 $model->setAttribute($field,$data->{$field});
                 $changed++;
@@ -2975,9 +3009,17 @@ sub _change_xml($xml, $name, $data) {
 }
 
 sub _change_hardware_network($self, $index, $data) {
-    confess if !defined $index;
+    die "Error: index number si required.\n" if !defined $index;
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+
+    if (!keys %$data) {
+        $data = {
+            driver => 'virtio'
+            ,type => 'nat'
+            ,network => 'default'
+        }
+    }
 
        my $type = delete $data->{type};
      my $driver = lc(delete $data->{driver} or '');
@@ -2991,10 +3033,10 @@ sub _change_hardware_network($self, $index, $data) {
     die "Error: Unknown type '$type' . Known: bridge, NAT"
         if $type && $type !~ /^(bridge|nat)$/;
 
-    die "Error: Bridged type requires bridge ".Dumper($data)
+    die "Error: Bridged type requires bridge.\n"
         if $type && $type eq 'bridge' && !$bridge;
 
-    die "Error: NAT type requires network ".Dumper($data)
+    die "Error: NAT type requires network.\n"
         if $type && $type eq 'nat' && !$network;
 
     $type = 'network' if $type && $type eq 'nat';

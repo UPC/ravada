@@ -14,10 +14,10 @@ use feature qw(signatures);
 
 our %GET_CONTROLLER_SUB = (
     usb => \&_get_controller_usb
-    ,'0cpu' => \&_get_controller_cpu
+    ,'cpu' => \&_get_controller_cpu
     ,disk => \&_get_controller_disk
     ,display => \&_get_controller_display
-    ,'1features' => \&_get_controller_features
+    ,'features' => \&_get_controller_features
     ,network => \&_get_controller_network
     ,video => \&_get_controller_video
     ,sound => \&_get_controller_sound
@@ -34,6 +34,7 @@ our %GET_DRIVER_SUB = (
      ,streaming => \&_get_driver_streaming
      ,disk => \&_get_driver_disk
      ,display => \&_get_driver_display
+     ,cpu => \&_get_driver_cpu
 );
 
 
@@ -79,6 +80,7 @@ sub _get_controller_video($self) {
         }
         $item->{_name} = $name;
         _xml_elements($model,$item);
+        $item->{_primary} = $item->{primary} if exists $item->{primary} && $item->{primary};
         lock_hash(%$item);
         push @ret,($item);
     }
@@ -127,14 +129,20 @@ sub _get_controller_cpu($self) {
 }
 
 sub _get_controller_features($self) {
+
     my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
+
+    die "Error: no xml found for ".$self->name
+    if !$doc;
+
     my $item = {
         _name => 'features'
         ,_order => 1
     };
 
     my ($xml) = $doc->findnodes("/domain/features");
-    _xml_elements($xml, $item);
+
+    _xml_elements($xml, $item) if $xml;
 
     for my $feat (sort qw(acpi pae apic hap kvm vmport)) {
         $item->{$feat} = 0 if !exists $item->{$feat};
@@ -146,6 +154,7 @@ sub _get_controller_features($self) {
 
 
 sub _xml_elements($xml, $item) {
+    confess if !defined $xml;
     my $text = $xml->textContent;
     $item->{_text} = $text if $text && $text !~ /\n/m;
 
@@ -186,7 +195,7 @@ sub _get_controller_network($self) {
         $count++;
         push @ret,({
                      type => $type
-                    ,name => $name
+                    ,_name => $name
                   ,driver => $model->getAttribute('type')
                   ,bridge => $source->getAttribute('bridge')
                  ,network => $source->getAttribute('network')
@@ -247,6 +256,10 @@ sub _get_driver_generic($self,$xml_path,$attribute=undef) {
 
     return $ret[0] if !wantarray && scalar@ret <2;
     return @ret;
+}
+
+sub _get_driver_cpu($self) {
+    return $self->_get_driver_generic('/domain/cpu','mode');
 }
 
 sub _get_driver_graphics {

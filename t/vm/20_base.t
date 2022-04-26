@@ -192,7 +192,7 @@ sub test_remove_display($vm) {
 }
 
 sub test_add_display_builtin($vm) {
-    my $domain = create_domain($vm);
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     my $req2 = Ravada::Request->remove_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -228,7 +228,7 @@ sub test_add_display_builtin($vm) {
 }
 
 sub test_add_display($vm) {
-    my $domain = create_domain($vm);
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     my $req = Ravada::Request->add_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
