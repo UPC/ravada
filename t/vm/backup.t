@@ -94,8 +94,10 @@ sub backup($vm,$remove_user=undef) {
 
     is($domain->list_backups(),1);
 
-    $domain->remove_backup($backup);
+    $domain->remove_backup($backup, 0);
+    ok(-e $backup->{file},"$backup->{file} should not have been removed");
 
+    $domain->remove_backup($backup, 1);
     ok(!-e $backup->{file},"$backup->{file} should have been removed");
     is($domain->list_backups(),0);
 
@@ -103,7 +105,9 @@ sub backup($vm,$remove_user=undef) {
     ($backup) = $domain->list_backups();
 
     $domain->remove(user_admin);
-    ok(!-e $backup->{file},"$backup->{file} should have been removed");
+    ok(-e $backup->{file},"$backup->{file} should not have been removed");
+
+    unlink($backup->{file}) or die "$! $backup->{file}";
 }
 
 sub restore_from_file($vm, $remove=undef) {
@@ -150,6 +154,153 @@ sub restore_from_file($vm, $remove=undef) {
     unlink($file2) or die "$! $file2";
 }
 
+sub backup_clone($vm) {
+    my $base = create_domain_v2(vm => $vm, swap => 1, data => 1);
+    _remove_iso($base);
+    my $clone = $base->clone(name => new_domain_name()
+        ,user => user_admin
+    );
+
+    my @vols = sort $clone->list_volumes();
+    my @md5 = _vols_md5($clone);
+
+    $clone->backup();
+
+    my ($backup) = $clone->list_backups;
+
+    my $file = $backup->{file};
+    my $file2 = $file.".copy.tgz";
+    copy($file,$file2);
+
+    my $name = $clone->name;
+
+    $clone->remove(user_admin);
+
+    my $clone_restored;
+    $clone_restored = rvd_back->restore_backup($file2,0);
+    ok($clone_restored,"Expected clone restored");
+
+    is($clone_restored->id,$clone->id);
+    is($clone_restored->id_base, $base->id);
+
+    $clone_restored->remove(user_admin) if $clone_restored;
+
+}
+
+sub backup_clone_fail($vm) {
+    my $base = create_domain_v2(vm => $vm, swap => 1, data => 1);
+    _remove_iso($base);
+    my $clone = $base->clone(name => new_domain_name()
+        ,user => user_admin
+    );
+
+    my @vols = sort $clone->list_volumes();
+    my @md5 = _vols_md5($clone);
+
+    $clone->backup();
+
+    my ($backup) = $clone->list_backups;
+
+    my $file = $backup->{file};
+    my $file2 = $file.".copy.tgz";
+    copy($file,$file2);
+
+    my $name = $clone->name;
+
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+
+    my $clone_restored;
+    eval {
+        $clone_restored = rvd_back->restore_backup($file2,0);
+    };
+    ok(!$clone_restored,"Expected fail when trying to restore a clone without the base");
+    like($@,qr/base .*not found/);
+    diag($@);
+    $clone_restored->remove(user_admin) if $clone_restored;
+
+}
+
+sub backup_clone_and_base($vm) {
+    my $base = create_domain_v2(vm => $vm, swap => 1, data => 1);
+    _remove_iso($base);
+    my $clone = $base->clone(name => new_domain_name()
+        ,user => user_admin
+    );
+
+    my @vols_base = $base->list_files_base(1);
+    my @md5 = _vols_md5($clone);
+
+    $base->backup();
+    $clone->backup();
+
+    my ($backup_base) = $base->list_backups;
+    my ($backup_clone) = $clone->list_backups;
+
+    my $clone_name = $clone->name;
+    my $base_name = $base->name;
+    my $clone_id = $clone->id;
+    my $base_id = $base->id;
+
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+
+    rvd_back->restore_backup($backup_base->{file});
+    rvd_back->restore_backup($backup_clone->{file});
+
+    my $base_restored = rvd_back->search_domain($base_name);
+    ok($base_restored);
+    is($base_restored->id, $base_id);
+    is_deeply([$base_restored->list_files_base(1)], \@vols_base)
+        or die Dumper([$base_restored->list_files_base()], \@vols_base);
+
+    my $clone_restored = rvd_back->search_domain($clone_name);
+    ok($clone_restored);
+    is($clone_restored->id, $clone_id);
+    is($clone_restored->_data('id_base'), $base_id);
+
+    $clone_restored->remove(user_admin) if $clone_restored;
+    $base_restored->remove(user_admin)  if $base_restored;
+
+}
+sub backup_clone_base_different($vm) {
+    my $base = create_domain_v2(vm => $vm, swap => 1, data => 1);
+    _remove_iso($base);
+    my $clone = $base->clone(name => new_domain_name()
+        ,user => user_admin
+    );
+
+    my @vols = sort $clone->list_volumes();
+    my @md5 = _vols_md5($clone);
+
+    $clone->backup();
+
+    my ($backup) = $clone->list_backups;
+
+    my $file = $backup->{file};
+    my $file2 = $file.".copy.tgz";
+    copy($file,$file2);
+
+    my $clone_name = $clone->name;
+    my $base_name = $base->name;
+
+    $clone->remove(user_admin);
+    $base->remove(user_admin);
+
+    my $base2 = create_domain_v2(vm => $vm, swap => 1, data => 1
+        ,name => $base_name
+    );
+    my $clone_restored;
+    eval {
+        $clone_restored = rvd_back->restore_backup($file2,0);
+    };
+    ok(!$clone_restored,"Expected fail when trying to restore a clone with wrong base");
+    like($@,qr/base .*not found/);
+    diag($@);
+    $clone_restored->remove(user_admin) if $clone_restored;
+
+}
+
 sub backup_clash_user($vm) {
     #TODO
 }
@@ -165,13 +316,15 @@ for my $vm_name ( vm_names() ) {
         my $vm = rvd_back->search_vm($vm_name);
 
         my $msg = "SKIPPED test: No $vm_name VM found ";
-        if ($vm && $>) {
-              $msg = "SKIPPED: Test must run as root";
-              $vm = undef;
-        }
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        backup_clone_and_base($vm);
+        backup_clone_base_different($vm);
+
+        backup_clone($vm);
+        backup_clone_fail($vm);
 
         restore_from_file($vm);
         restore_from_file($vm,"remove");

@@ -5998,8 +5998,12 @@ sub setting {
 
 =cut
 
-sub restore_backup($self, $file, $interactive) {
+sub restore_backup($self, $file, $interactive=undef) {
     die "Error: file '$file' not found\n" if !-e $file;
+
+    if (!defined $interactive) {
+        $interactive = $ENV{TERM};
+    }
 
     return Ravada::Domain::restore_backup(undef, $file, $interactive, $self);
 }
