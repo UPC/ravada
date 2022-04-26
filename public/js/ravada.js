@@ -30,12 +30,6 @@
             .controller("notifCrtl", notifCrtl)
             .controller("run_domain_req",run_domain_req_ctrl)
 
-            .filter('custom_order_by',custom_order_by)
-
-
-    function custom_order_by() {
-    };
-
     function newMachineCtrl($scope, $http) {
 
         $http.get('/list_images.json').then(function(response) {
