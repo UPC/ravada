@@ -5426,7 +5426,7 @@ sub _remove_unnecessary_downs($self, $domain) {
         my @requests = $domain->list_requests(1);
         for my $req (@requests) {
             $req->status('done')
-                if $req->command =~ /shutdown/ && !$req->at_time;
+                if $req->command =~ /shutdown/ && (!$req->at_time || $req->at_time <= time+180);
             $req->_remove_messages();
         }
 }
