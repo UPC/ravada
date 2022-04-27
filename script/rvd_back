@@ -738,7 +738,9 @@ sub shutdown_domain {
                 my @after_req = ( after_request => $req_start->id);
             }
 
-            print "\tShutting down ".$domain->name." at ".($at - time)."\n";
+            print "\tShutting down ".$domain->name;
+            print " in ".($at - time)." seconds" if $at;
+            print "\n";
             Ravada::Request->shutdown_domain(uid => Ravada::Utils::user_daemon()->id
                 ,id_domain => $domain->id
                 , timeout => 300
