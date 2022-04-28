@@ -44,8 +44,9 @@ sub _download_alpine64 {
 
 sub _driver_field($hardware) {
     my $driver_field = 'driver';
-    $driver_field = 'type' if $hardware eq 'video';
-    $driver_field = 'model' if $hardware =~ /cpu|sound/;
+    $driver_field = 'type'  if $hardware eq 'video';
+    $driver_field = 'model' if $hardware =~ /sound/;
+    $driver_field = 'mode'  if $hardware eq 'cpu';
     return $driver_field;
 }
 
@@ -1071,6 +1072,10 @@ sub test_change_drivers($domain, $hardware) {
 
         my $domain_f = Ravada::Front::Domain->open($domain->id);
         $info = $domain_f->info(user_admin);
+
+        die "Error: no field $driver_field in $hardware [$index] ".Dumper($info->{hardware}->{$hardware}->[$index])
+        if !exists $info->{hardware}->{$hardware}->[$index]->{$driver_field};
+
         is ($info->{hardware}->{$hardware}->[$index]->{$driver_field}, $option
         ,Dumper($domain_f->name,$info->{hardware}->{$hardware}->[$index])) or exit;
 
@@ -1248,7 +1253,7 @@ for my $vm_name (reverse vm_names()) {
         test_change_hardware($vm, $domain_b, $hardware);
 
         # change driver is not possible for displays
-        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock|features)$/;
+        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock|features|cpu)$/;
         test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock|features)$/;
 
         # try to add with the machine started

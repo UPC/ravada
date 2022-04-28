@@ -707,7 +707,7 @@ sub shutdown_domain {
         print $domain->name." status = ".($client_status or '<UNDEF>')."\n" if $DISCONNECTED && $VERBOSE && $is_active;
         if ((defined $domain_name && $domain->name eq $domain_name)
             || ($hibernated && $domain->is_hibernated)
-            || ($DISCONNECTED && $client_status eq 'disconnected' )
+            || ($DISCONNECTED && $is_active && ( $client_status eq 'disconnected' || !$client_status) )
             || $all ){
             $found++;
             if (!$is_active && !$domain->is_hibernated) {
@@ -716,23 +716,36 @@ sub shutdown_domain {
                         if !$all;
                 next;
             }
-            if ($domain->is_hibernated) {
-                print "Starting ".$domain->name."\n";
-                Ravada::Request->start_domain(
+            if ($DISCONNECTED && $client_status
+                    && $client_status eq 'disconnected') {
+                if ( $domain->autostart() ) {
+                    print "\tautostart set, skipping shutdown\n";
+                    next;
+                }
+                next DOMAIN if _verify_connection($domain);
+            }
+            my $at = 0;
+            my $txt_time = '';
+            my @after_req;
+            if ($domain->is_hibernated && !$DISCONNECTED) {
+                print $domain->name." is hibernated. Starting ".$domain->name."\n";
+                my $req_start = Ravada::Request->start_domain(
                     uid => Ravada::Utils::user_daemon->id
                     ,id_domain => $domain->id
                 );
-
+                $at = time + 180;
+                $txt_time = " in 3 minutes";
+                my @after_req = ( after_request => $req_start->id);
             }
-            if ($DISCONNECTED && $client_status
-                    && $client_status eq 'disconnected') {
 
-                next DOMAIN if _verify_connection($domain);
-            }
-            print "Shutting down ".$domain->name.".\n";
+            print "\tShutting down ".$domain->name;
+            print " in ".($at - time)." seconds" if $at;
+            print "\n";
             Ravada::Request->shutdown_domain(uid => Ravada::Utils::user_daemon()->id
                 ,id_domain => $domain->id
                 , timeout => 300
+                ,@after_req
+                ,at => $at
             );
             $down++;
             warn $@ if $@;
