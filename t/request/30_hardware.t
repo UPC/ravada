@@ -44,8 +44,9 @@ sub _download_alpine64 {
 
 sub _driver_field($hardware) {
     my $driver_field = 'driver';
-    $driver_field = 'type' if $hardware eq 'video';
-    $driver_field = 'model' if $hardware eq 'sound';
+    $driver_field = 'type'  if $hardware eq 'video';
+    $driver_field = 'model' if $hardware =~ /sound/;
+    $driver_field = 'mode'  if $hardware eq 'cpu';
     return $driver_field;
 }
 
@@ -571,6 +572,7 @@ sub test_add_disk($domain) {
 }
 
 sub test_add_hardware_custom($domain, $hardware) {
+    return if $hardware =~ /cpu|features/i;
     my %sub = (
         disk => \&test_add_disk
         ,display => sub {}
@@ -591,9 +593,7 @@ sub _set_three_devices($domain, $hardware) {
     my $items = [];
     $items = $info_hw->{$hardware};
 
-    my $driver_field = 'driver';
-    $driver_field = 'type' if $hardware eq 'video';
-    $driver_field = 'model' if $hardware eq 'sound';
+    my $driver_field = _driver_field($hardware);
 
     for my $item (@$items) {
         next if !ref($item);
@@ -662,6 +662,7 @@ sub test_remove_hardware_by_index($vm, $hardware) {
     my $name_field = 'name';
     $name_field = 'driver'  if $hardware eq 'display';
     $name_field = 'model'   if $hardware eq 'sound';
+    $name_field = '_name'   if ref($items2->[0]) && !exists $items2->[0]->{$name_field};
     if (!ref($items2->[0])) {
         is($items2->[0], $items1->[0]);
         is($items2->[1], $items1->[2]);
@@ -976,7 +977,32 @@ sub test_change_network($vm, $domain) {
 
     test_change_network_bridge($vm, $domain, $index);
     test_change_network_nat($vm, $domain, $index);
+    _test_change_defaults($domain,'network');
 }
+
+sub _test_change_defaults($domain,$hardware) {
+    my @args = (
+        hardware => $hardware
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+        ,index => 0
+    );
+    my $req = Ravada::Request->change_hardware(
+        @args
+        ,data => {}
+    );
+    wait_request();
+
+}
+
+sub _test_change_cpu($vm, $domain) {
+    _test_change_defaults($domain,'cpu');
+}
+
+sub _test_change_features($vm, $domain) {
+    _test_change_defaults($domain,'cpu');
+}
+
 
 sub test_change_hardware($vm, $domain, $hardware) {
     my %sub = (
@@ -987,6 +1013,8 @@ sub test_change_hardware($vm, $domain, $hardware) {
          ,display => sub {}
          ,video => sub {}
          ,sound => sub {}
+         ,cpu => \&_test_change_cpu
+         ,features => \&_test_change_features
     );
     my $exec = $sub{$hardware} or die "I don't know how to test $hardware";
     $exec->($vm, $domain);
@@ -1021,9 +1049,9 @@ sub test_change_drivers($domain, $hardware) {
     for my $option ( @$options ) {
         is(ref($option),'',"Invalid option for driver $hardware") or exit;
     }
-    my $driver_field = 'driver';
-    $driver_field = 'type' if $hardware eq 'video';
-    $driver_field = 'model' if $hardware eq 'sound';
+
+    my $driver_field = _driver_field($hardware);
+
     for my $option (@$options) {
         my $index = 0;
         $index = _search_disk($domain) if $hardware eq 'disk';
@@ -1044,6 +1072,10 @@ sub test_change_drivers($domain, $hardware) {
 
         my $domain_f = Ravada::Front::Domain->open($domain->id);
         $info = $domain_f->info(user_admin);
+
+        die "Error: no field $driver_field in $hardware [$index] ".Dumper($info->{hardware}->{$hardware}->[$index])
+        if !exists $info->{hardware}->{$hardware}->[$index]->{$driver_field};
+
         is ($info->{hardware}->{$hardware}->[$index]->{$driver_field}, $option
         ,Dumper($domain_f->name,$info->{hardware}->{$hardware}->[$index])) or exit;
 
@@ -1204,33 +1236,35 @@ for my $vm_name (reverse vm_names()) {
     my %controllers = $domain_b->list_controllers;
     lock_hash(%controllers);
 
-    for my $hardware ( reverse sort keys %controllers ) {
+    for my $hardware (reverse sort keys %controllers ) {
         diag("Testing $hardware controllers for VM $vm_name");
-        test_remove_hardware_by_index($vm, $hardware);
-        test_remove_hardware_by_index_network_kvm($vm, $hardware);
+        if ($hardware !~ /cpu|features/) {
+            test_remove_hardware_by_index($vm, $hardware);
+            test_remove_hardware_by_index_network_kvm($vm, $hardware);
+            test_add_hardware_request($vm, $domain_b, $hardware);
+            test_remove_hardware($vm, $domain_b, $hardware, 0);
+            test_add_hardware_request_drivers($vm, $domain_b, $hardware);
+            test_add_hardware_request($vm, $domain_b, $hardware);
+        }
 
         test_front_hardware($vm, $domain_b, $hardware);
 
         test_add_hardware_custom($domain_b, $hardware);
-        test_add_hardware_request($vm, $domain_b, $hardware);
         test_change_hardware($vm, $domain_b, $hardware);
-        test_remove_hardware($vm, $domain_b, $hardware, 0);
 
         # change driver is not possible for displays
-        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock)$/;
-        test_add_hardware_request_drivers($vm, $domain_b, $hardware);
-        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock)$/;
+        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock|features|cpu)$/;
+        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock|features)$/;
 
         # try to add with the machine started
         $domain_b->start(user_admin) if !$domain_b->is_active;
         ok($domain_b->is_active) or next;
 
-        test_add_hardware_request($vm, $domain_b, $hardware);
 
         $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
         is($domain_b->is_active,0) or next;
 
-        if ( $hardware ne 'usb' ) {
+        if ( $hardware !~ /cpu|features|usb/ ) {
             for (1 .. 3 ) {
                 test_add_hardware_request($vm, $domain_b, $hardware);
             }

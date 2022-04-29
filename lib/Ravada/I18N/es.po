@@ -312,7 +312,7 @@ msgid "Password"
 msgstr "Contraseña"
 
 msgid "Start session"
-msgstr "Iniciar sesión\n"
+msgstr "Iniciar sesión"
 
 msgid "bits) in your computer."
 msgstr "bits) en tu ordenador."

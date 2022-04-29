@@ -639,6 +639,7 @@ sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
     };
     $args->{iso_file} = '' if $empty_iso_file;
 
+    mojo_check_login($t);
     $t->post_ok('/new_machine.html' => form => $args)->status_is(302);
 
     wait_request();
