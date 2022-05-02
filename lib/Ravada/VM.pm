@@ -2185,6 +2185,13 @@ sub list_machine_types($self) {
     return ();
 }
 
+=head2 dir_backup
+
+Directory where virtual machines backup will be stored. It can
+be changed from the frontend nodes page management.
+
+=cut
+
 sub dir_backup($self) {
     my $dir_backup = $self->_data('dir_backup');
 
