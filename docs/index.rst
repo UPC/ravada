@@ -6,23 +6,23 @@
 Welcome to Ravada VDI documentation
 ===================================
 
-The chances are you're here because you've been searching for free Virtual Desktop Infrastructure (VDI) documentation.
+The chances are you're here because you've been searching for free Virtual Desktop Infrastructure (`VDI`_) documentation.
 Whether it is a large or a small project, you can start with VDI and see its benefits right away! We assume you
-do want to start your VDI project as quickly as possible. Therefore, RAVADA VDI is the perfect software for you!
+do want to start your `VDI`_ project as quickly as possible. Therefore, RAVADA VDI is the perfect software for you!
 
-`Ravada VDI`_ is a free and open-source project that allows users to connect to a virtual desktop. So it is a VDI broker.
+`Ravada VDI`_ is a free and open-source project that allows users to connect to a virtual desktop. So it is a `VDI`_ `broker`_.
 
 Ravada delivers
 ---------------
 
-By following the documentation and editing some configuration files, you'll be able to deploy a VM within minutes.
+By following the documentation `and editing some configuration files, you'll be able to deploy a VM within minutes.
 
 Who is Ravada meant for?
 ------------------------
 
 Ravada is meant for sysadmins who have some background in GNU/Linux, and want to deploy a VDI project.
 
-.. note:: Get started with VDI, without reinventing the wheel.
+.. note:: Get started with `VDI`_, without reinventing the wheel.
 
 We have written some documentation and hosted it on `Read the Docs`_ for you.
 This documentation is *on-going*, so if there is something you think is missing, don't hesitate and drop us a line! In the
@@ -31,6 +31,8 @@ meantime, we are still improving RAVADA VDI and its documentation, so new sectio
 Our code uses the `AGPL`_ license and it is `available on GitHub`_.
 
 .. _Ravada VDI: https://ravada.upc.edu/
+.. _VDI: https://en.wikipedia.org/wiki/Desktop_virtualization
+.. _broker: https://en.wikipedia.org/wiki/Connection_broker
 .. _AGPL: https://github.com/UPC/ravada/blob/master/LICENSE
 .. _Read the Docs: http://readthedocs.org/
 .. _available on GitHub: https://github.com/UPC/ravada
