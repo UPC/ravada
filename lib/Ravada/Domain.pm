@@ -6543,7 +6543,7 @@ sub config_files($self) {
 
 sub _backup_owner($self) {
     my $owner = Ravada::Auth::SQL->search_by_id($self->_data('id_owner'));
-    my $filename = $self->_vm->dir_img()."/".$self->name."_owner.json";
+    my $filename = $self->_vm->dir_backup()."/".$self->name."_owner.json";
     CORE::open my $out,">",$filename or die "$! $filename";
     print $out encode_json($owner->{_data});
     close $filename;
@@ -6576,13 +6576,15 @@ sub _expand_backup_metadata($self, $data) {
     }
 }
 
+
+
 sub backup($self) {
     my @files_data = $self->config_files();
     #read data extra just in case it wasn't already read
     $self->_data_extra('id_domain');
     for my $field ( keys %$self) {
         next if $field !~ /^_data/;
-        my $filename = $self->_vm->dir_img()."/".$self->name.$field.".json";
+        my $filename = $self->_vm->dir_backup()."/".$self->name.$field.".json";
         CORE::open my $out,">",$filename or die "$! $filename";
 
         my %data = %{$self->{$field}};
@@ -6598,7 +6600,7 @@ sub backup($self) {
 
     my $now = Ravada::Utils::date_now();
     $now =~ tr/ :/_-/;
-    my $file_backup = $self->_vm->dir_img()."/".$self->name.".$now.tgz";
+    my $file_backup = $self->_vm->dir_backup()."/".$self->name.".$now.tgz";
     my @cmd = ("tar","czvf",$file_backup,@files_data
     ,$self->list_volumes);
     $self->_vm->run_command(@cmd);

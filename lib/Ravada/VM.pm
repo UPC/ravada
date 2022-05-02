@@ -2185,6 +2185,24 @@ sub list_machine_types($self) {
     return ();
 }
 
+sub dir_backup($self) {
+    my $dir_backup = $self->_data('dir_backup');
+
+    if (!$dir_backup) {
+        $dir_backup = $self->dir_img."/backup";
+        $self->_data('dir_backup', $dir_backup);
+    }
+    if (!$self->file_exists($dir_backup)) {
+        if ($self->is_local) {
+            make_path($dir_backup) or die "$! $dir_backup";
+        } else {
+            my ($out,$error)= $self->run_command("mkdir","-p",$dir_backup);
+            die "Error on mkdir -p $dir_backup $error" if $error;
+        }
+    }
+    return $dir_backup;
+}
+
 1;
 
 
