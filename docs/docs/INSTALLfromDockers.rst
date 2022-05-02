@@ -103,6 +103,8 @@ Dockers troubleshoots
    If you see this message remember that the source project must be in your HOME directory inside src directory:
    ~/src/ravada
    
+   If you run `docker-compose` with `sudo you may have problems with the code inside the docker. It is preferable to exec `docker-compose` with your user. 
+   
 .. prompt:: bash
   
   root@6f8d2946c40c:/ravada# PERL5LIB=./lib ./script/rvd_back --add-user soporte
@@ -118,6 +120,13 @@ Dockers troubleshoots
   cd ~/src/ravada/dockerfy/utils
   ./remove_all.sh 
 
+* **This type of credential error:**
+  `docker.credentials.errors.InitializationError: docker-credential-secretservice not installed or not available in PATH
+  [2171475] Failed to execute script docker-compose`
+  
+  This package fix it, `golang-docker-credential-helpers`.
+  
+  
 Help
 ----
 
