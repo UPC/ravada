@@ -124,7 +124,7 @@ Dockers troubleshoots
   `docker.credentials.errors.InitializationError: docker-credential-secretservice not installed or not available in PATH
   [2171475] Failed to execute script docker-compose`
   
-  This package fix it, `golang-docker-credential-helpers`.
+  This package fix it, `golang-docker-credential-helpers`, you must install in your computer.
   
   
 Help
