@@ -929,7 +929,7 @@ sub _remove_old_disks_kvm {
 #    ok($vm,"I can't find a KVM virtual manager") or return;
 
     eval { $vm->_refresh_storage_pools() };
-    return if $@ && $@ =~ /Cannot recv data/;
+    return if $@ && $@ =~ /Cannot recv data|client_loop: send disconnect/;
 
     ok(!$@,"Expecting error = '' , got '".($@ or '')."'"
         ." after refresh storage pool") or return;

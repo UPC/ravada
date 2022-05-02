@@ -1397,6 +1397,9 @@ sub _add_indexes_generic($self) {
             ,"unique (id_domain,name):name"
             ,"unique(id_vm,public_port)"
         ]
+        ,domains_kvm => [
+            "unique (id_domain)"
+        ]
         ,group_access => [
             "unique (id_domain,name)"
             ,"index(id_domain)"
@@ -1982,6 +1985,13 @@ sub _sql_create_tables($self) {
             }
         ]
         ,[
+            domains_kvm => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
+            ,xml => 'TEXT'
+            }
+        ]
+        ,[
             group_access => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
@@ -2499,7 +2509,6 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
-    $self->_upgrade_table('domains_kvm','xml','TEXT');
     $self->_upgrade_table('iptables','id_vm','int DEFAULT NULL');
     $self->_upgrade_table('vms','security','varchar(255) default NULL');
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
@@ -4461,6 +4470,7 @@ sub _cmd_prepare_base {
 
     die "Unknown domain id '$id_domain'\n" if !$domain;
 
+    $self->_remove_unnecessary_request($domain);
     $self->_remove_unnecessary_downs($domain);
     $domain->prepare_base(user => $user, with_cd => $with_cd);
 
@@ -4641,6 +4651,7 @@ sub _cmd_shutdown {
     );
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
+    $self->_remove_unnecessary_request($domain);
     $domain->shutdown(timeout => $timeout, user => $user
                     , request => $request);
 
@@ -4666,6 +4677,7 @@ sub _cmd_force_shutdown {
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
     die "Error: unknown user id=$uid in request= ".$request->id if !$user;
 
+    $self->_remove_unnecessary_request($domain);
     $domain->force_shutdown($user,$request);
 
 }
@@ -4707,6 +4719,7 @@ sub _cmd_reboot {
     );
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
+    $self->_remove_unnecessary_request($domain);
     $domain->reboot(timeout => $timeout, user => $user
                     , request => $request);
 
@@ -4731,6 +4744,7 @@ sub _cmd_force_reboot {
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
+    $self->_remove_unnecessary_request($domain);
     $domain->force_reboot($user,$request);
 
 }
@@ -5412,13 +5426,24 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
     }
 }
 
+sub _remove_unnecessary_request($self, $domain, $command = ['set_time', 'open_exposed_ports']) {
+    $command = [$command] if !ref($command);
+    my %remove = map { $_ => 1 } @$command;
+
+    my @requests = $domain->list_requests(1);
+    for my $req (@requests) {
+        $req->status('done') if $remove{$req->command};
+        $req->_remove_messages();
+    }
+
+}
+
 sub _remove_unnecessary_downs($self, $domain) {
 
         my @requests = $domain->list_requests(1);
-        my $uid_daemon = Ravada::Utils::user_daemon->id();
         for my $req (@requests) {
-            $req->status('done') if $req->command =~ /shutdown/
-            && (!$req->at_time || $req->defined_arg('uid') == $uid_daemon );
+            $req->status('done')
+                if $req->command =~ /shutdown/ && (!$req->at_time || $req->at_time <= time+180);
             $req->_remove_messages();
         }
 }

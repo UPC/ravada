@@ -446,5 +446,10 @@ ul.alert-dropdown {
 
 span.loading {
     color: darkgray;
-    text-width: italic;
+    font-style: italic;
+}
+
+span.info {
+    color: darkgray;
+    font-style: italic;
 }
