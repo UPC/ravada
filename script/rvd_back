@@ -295,7 +295,6 @@ sub start {
     {
         my $ravada = Ravada->new( %CONFIG );
         $Ravada::CONNECTOR->dbh;
-        $ravada->_install();
 		$ravada->set_debug_value();
         $ravada->_wait_pids();
         autostart_machines($ravada);
@@ -312,7 +311,6 @@ sub add_user {
     my $login = shift;
 
     my $ravada = Ravada->new( %CONFIG);
-    $ravada->_install();
 
     print "$login password: ";
     my $password = <STDIN>;
@@ -951,7 +949,7 @@ sub restore($rvd_back) {
                 print "backup for $item aborted.\n";
             }
         } else {
-            warn "TODO";
+            warn "Error: I can't find '$item'. Plese pass the path with the backed up filename.\n";
         }
     }
 }
@@ -964,6 +962,7 @@ sub DESTROY {
 {
 
 my $rvd_back = Ravada->new(%CONFIG);
+$rvd_back->_install();
 
 add_user($ADD_USER)                 if $ADD_USER;
 add_user_ldap($ADD_USER_LDAP)       if $ADD_USER_LDAP;
