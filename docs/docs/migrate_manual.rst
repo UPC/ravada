@@ -4,7 +4,9 @@ Virtual Machine Manual Migration
 If you have several Ravada servers you may want to copy a virtual
 machine from one to another.
 
-In this example we copy the base for a virtual machine called *Lubuntu-1704*.
+.. warning: The easiest way to migrte Virtual Machines is using the new :ref:`Backup` tool added in release 1.5.
+
+In this example we use the old manual procedure to copy the base for a virtual machine called *Lubuntu-1704*.
 
 
 Check the storage pools directories
