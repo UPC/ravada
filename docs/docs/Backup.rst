@@ -4,7 +4,7 @@ Backup Virtual Machines
 Since release 1.5 it is possible to back up and restore Virtual Machines.
 This feature can be used to move machines to another server.
 
-The backup and restore procedures must be used from the comman line.
+The backup and restore procedures must be used from the command line.
 
 Synopsis
 --------
@@ -77,3 +77,14 @@ up manually after restoring.
 
   sudo rvd_back --restore /home/machine1-2022-04-06.tgz
 
+Backup directory
+----------------
+
+The default backup directory will be the folder *backup* inside the
+default storage pool. In most systems that will be located at:
+*/var/lib/libvirt/images/backup*. You can set another directory
+from the *Node Management* menu in the frontend: go to *Admin Tools*
+and select *Nodes*, then in *KVM_localhost* change the backup
+directory and save it.
+
+.. image:: images/node_backup_directory.jpg
