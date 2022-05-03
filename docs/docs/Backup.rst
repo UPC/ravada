@@ -2,7 +2,8 @@ Backup Virtual Machines
 =======================
 
 Since release 1.5 it is possible to back up and restore Virtual Machines.
-This feature can be used to move machines to another server.
+This feature can be used to recover deleted machines, restore contents
+after changes and even to migrate machines to another server.
 
 The backup and restore procedures must be used from the command line.
 
