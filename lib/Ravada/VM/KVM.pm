@@ -751,6 +751,17 @@ sub list_domains {
     return @list;
 }
 
+sub discover($self) {
+    my @known = $self->list_domains(read_only => 1);
+    my %known = map { $_->name => 1 } @known;
+
+    my @list;
+    for my $dom ($self->vm->list_all_domains) {
+        push @list,($dom->get_name) if !$known{$dom->get_name};
+    }
+    return @list;
+}
+
 =head2 create_volume
 
 Creates a new storage volume. It requires a name and a xml template file defining the volume

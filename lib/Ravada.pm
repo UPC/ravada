@@ -3126,41 +3126,6 @@ sub search_domain($self, $name, $import = 0) {
     return Ravada::Domain->open($id);
 }
 
-sub _search_domain {
-    my $self = shift;
-    my $name = shift;
-    my $import = shift;
-
-    my $vm = $self->search_vm('Void');
-    warn "No Void VM" if !$vm;
-    return if !$vm;
-
-    my $domain = $vm->search_domain($name, $import);
-    return $domain if $domain;
-
-    my @vms;
-    eval { @vms = $self->vm };
-    return if $@ && $@ =~ /No VMs found/i;
-    die $@ if $@;
-
-    for my $vm (@{$self->vm}) {
-        my $domain = $vm->search_domain($name, $import);
-        next if !$domain;
-        next if !$domain->_select_domain_db && !$import;
-        my $id;
-        eval { $id = $domain->id };
-        # TODO import the domain in the database with an _insert_db or something
-        warn $@ if $@   && $DEBUG;
-        next if !$id && !$import;
-
-        $domain->_vm($domain->last_vm())    if $id && $domain->last_vm;
-        return $domain;
-    }
-
-
-    return;
-}
-
 =head2 search_domain_by_id
 
   my $domain = $ravada->search_domain_by_id($id);
@@ -3834,7 +3799,7 @@ sub _do_execute_command {
     $request->error(''.$err)   if $err;
     if ($err) {
         my $user = $request->defined_arg('user');
-        if ($user) {
+        if ($user && ref($user)) {
             my $subject = $err;
             my $message = '';
             if (length($subject) > 40 ) {
@@ -3941,6 +3906,13 @@ sub _cmd_manage_pools($self, $request) {
             }
         }
     }
+}
+
+sub _cmd_discover($self, $request) {
+    my $id_vm = $request->args('id_vm');
+    my $vm = Ravada::VM->open($id_vm);
+    my @list = $vm->discover();
+    $request->output(encode_json(\@list));
 }
 
 sub _pool_create_clones($self, $domain, $number, $request) {
@@ -4857,6 +4829,7 @@ sub _cmd_refresh_machine($self, $request) {
     $self->_remove_unnecessary_downs($domain) if !$is_active;
     $domain->info($user);
     $domain->client_status(1) if $is_active;
+    $domain->_check_port_conflicts()    if $is_active;
 
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id
         ,timeout => 60, retry => 10)
@@ -5646,6 +5619,9 @@ sub _req_method {
     ,list_isos => \&_cmd_list_isos
 
     ,manage_pools => \&_cmd_manage_pools
+
+    ,discover => \&_cmd_discover
+    ,import_domain => \&_cmd_import
     );
     return $methods{$cmd};
 }
@@ -5980,6 +5956,16 @@ sub _cmd_close_exposed_ports($self, $request) {
             $sth_update->execute($domain->id);
         }
     }
+}
+
+sub _cmd_import($self, $request) {
+    my $owner=Ravada::Auth::SQL->search_by_id($request->args('id_owner'));
+    $self->import_domain(
+        name => $request->args('name')
+        ,user => $owner->name
+        ,vm => $request->args('vm')
+        ,spinoff_disks => $request->defined_arg('spinoff_disks')
+    );
 }
 
 =head2 set_debug_value

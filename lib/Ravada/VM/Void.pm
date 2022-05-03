@@ -273,6 +273,23 @@ sub list_domains($self, %args) {
     return $self->_list_domains_remote(%args);
 }
 
+sub discover($self) {
+    opendir my $ls,dir_img or return;
+
+    my %known = map { $_->name => 1 } $self->list_domains();
+
+    my @list;
+    while (my $file = readdir $ls ) {
+        next if $file !~ /\.yml$/;
+        $file =~ s/\.\w+//;
+        $file =~ s/(.*)\.qcow.*$/$1/;
+        return if $file !~ /\w/;
+        next if $known{$file};
+        push @list,($file);
+    }
+    return @list;
+}
+
 sub search_domain {
     my $self = shift;
     my $name = shift or confess "ERROR: Missing name";
