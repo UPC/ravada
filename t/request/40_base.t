@@ -536,6 +536,7 @@ sub test_req_create_deny($vm) {
         id_owner => $user->id
         ,vm => $vm->type
         ,id_iso => $ID_ISO
+        ,disk => 1024*1024*2
     );
     my $req = Ravada::Request->create_domain(@args,name => $name);
     is($req->status(),'done');
@@ -615,6 +616,7 @@ sub test_domain_name_iso($vm) {
         ,id_owner => user_admin->id
         ,vm => $vm->type
         ,id_iso => search_id_iso('%alpine%')
+        ,disk => 1024*1024*2
     );
     wait_request();
     my ($domain) = $vm->search_domain($name);

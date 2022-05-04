@@ -82,6 +82,7 @@ sub test_remove_disk($vm, %options) {
         my $req = Ravada::Request->create_domain(
             name => $name
             ,id_owner => user_admin->id
+            ,disk => 2*1024 * 1024
             ,swap => 1024 * 1024
             ,data => 1024 * 1024
             ,id_iso => $id_iso

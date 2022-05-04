@@ -151,4 +151,22 @@ sub max_id($dbh, $table) {
     return ($max or 0);
 }
 
+sub search_user_name($dbh, $id_user) {
+    my $sth = $dbh->prepare("SELECT name FROM users WHERE id=? ");
+    $sth->execute($id_user);
+    my ($name) = $sth->fetchrow();
+    return $name;
+}
+
+sub search_user_id($dbh, $user) {
+    confess if !defined $user;
+    return $user if $user =~ /^\d+$/;
+
+    my $sth = $dbh->prepare("SELECT id FROM users WHERE name=? ");
+    $sth->execute($user);
+    my ($id) = $sth->fetchrow;
+    return $id;
+
+}
+
 1;

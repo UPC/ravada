@@ -869,6 +869,8 @@ Grant an user a specific permission, or revoke it
 
 sub grant($self,$user,$permission,$value=1) {
 
+    confess "Error: undefined user" if !defined $user;
+
     confess "ERROR: permission '$permission' disabled "
         if $self->{_grant_disabled}->{$permission};
 

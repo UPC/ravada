@@ -1045,14 +1045,23 @@ sub _search_domain_name {
     my $self = shift;
     my $domain_id = shift;
 
+    _init_connector();
+
     my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM domains where id=?");
     $sth->execute($domain_id);
     return $sth->fetchrow;
 }
 
+sub _dbh($self=undef) {
+
+    _init_connector();
+    return $$CONNECTOR->dbh;
+
+}
+
 sub _search_domain_id($self,$domain_name) {
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM domains where name=?");
+    my $sth = _dbh($self)->prepare("SELECT id FROM domains where name=?");
     $sth->execute($domain_name);
     return $sth->fetchrow;
 }

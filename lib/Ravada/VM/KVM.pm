@@ -631,14 +631,16 @@ sub create_domain {
 
     croak "argument name required"       if !$args{name};
     croak "argument id_owner required"   if !$args{id_owner};
-    confess "argument id_iso or id_base required ".Dumper(\%args)
-        if !$args{id_iso} && !$args{id_base};
+    confess "argument id_iso or id_base or config required ".Dumper(\%args)
+        if !$args{id_iso} && !$args{id_base} && !$args{config};
 
     my $domain;
     if ($args{id_iso}) {
         $domain = $self->_domain_create_from_iso(@_);
     } elsif($args{id_base}) {
         $domain = $self->_domain_create_from_base(@_);
+    } elsif($args{config}) {
+        $domain = $self->_domain_create_from_config(@_);
     } else {
         confess "TODO";
     }
@@ -1049,6 +1051,28 @@ sub _search_domain_by_id {
     $sth->finish;
 
     return $self->search_domain($row->{name});
+}
+
+sub _domain_create_from_config($self, %args) {
+    my $config = delete $args{config};
+    my $id = delete $args{id};
+    my $xml = XML::LibXML->load_xml(string => $config);
+
+    my $dom = $self->vm->define_domain($xml->toString());
+    my $domain = Ravada::Domain::KVM->new(
+              _vm => $self
+         , domain => $dom
+       , id_owner => $args{id_owner}
+    );
+
+    $domain->_insert_db(name=> $args{name}
+        , id => $id
+        , id_owner => $args{id_owner}
+        , id_vm => $self->id
+    );
+    $domain->xml_description();
+    return $domain;
+
 }
 
 sub _domain_create_from_base {

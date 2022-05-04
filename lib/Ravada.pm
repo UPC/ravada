@@ -1397,6 +1397,9 @@ sub _add_indexes_generic($self) {
             ,"unique (id_domain,name):name"
             ,"unique(id_vm,public_port)"
         ]
+        ,domains_kvm => [
+            "unique (id_domain)"
+        ]
         ,group_access => [
             "unique (id_domain,name)"
             ,"index(id_domain)"
@@ -1959,6 +1962,14 @@ sub _sql_create_tables($self) {
         }
         ]
         ,[
+        domain_backups => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
+            ,file => 'char(200) not null'
+            ,date_created => 'date not null'
+        }
+        ]
+        ,[
             domain_ports => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
@@ -1971,6 +1982,13 @@ sub _sql_create_tables($self) {
             ,'is_active' => 'int(1) DEFAULT 0'
             ,'is_secondary' => 'int(1) DEFAULT 0'
             ,'id_vm' => 'int(11) DEFAULT NULL'
+            }
+        ]
+        ,[
+            domains_kvm => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
+            ,xml => 'TEXT'
             }
         ]
         ,[
@@ -2424,6 +2442,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms', 'active_limit','int DEFAULT NULL');
     $self->_upgrade_table('vms', 'base_storage','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('vms', 'clone_storage','varchar(64) DEFAULT NULL');
+    $self->_upgrade_table('vms','dir_backup','varchar(128) DEFAULT NULL');
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','pid','int(11) DEFAULT NULL');
@@ -2491,7 +2510,6 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
-    $self->_upgrade_table('domains_kvm','xml','TEXT');
     $self->_upgrade_table('iptables','id_vm','int DEFAULT NULL');
     $self->_upgrade_table('vms','security','varchar(255) default NULL');
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
@@ -5397,10 +5415,9 @@ sub _remove_unnecessary_request($self, $domain, $command = ['set_time', 'open_ex
 sub _remove_unnecessary_downs($self, $domain) {
 
         my @requests = $domain->list_requests(1);
-        my $uid_daemon = Ravada::Utils::user_daemon->id();
         for my $req (@requests) {
-            $req->status('done') if $req->command =~ /shutdown/
-            && (!$req->at_time || $req->defined_arg('uid') == $uid_daemon );
+            $req->status('done')
+                if $req->command =~ /shutdown/ && (!$req->at_time || $req->at_time <= time+180);
             $req->_remove_messages();
         }
 }
@@ -5983,9 +6000,66 @@ sub set_debug_value($self) {
 Returns the value of a configuration setting
 
 =cut
-
 sub setting {
     return Ravada::Front::setting(@_);
+}
+
+=head2 restore_backup
+
+  Restores a virtual machine from a backup file
+
+=cut
+
+sub restore_backup($self, $file, $interactive=undef) {
+    die "Error: file '$file' not found\n" if !-e $file;
+
+    if (!defined $interactive) {
+        $interactive = $ENV{TERM};
+    }
+
+    return Ravada::Domain::restore_backup(undef, $file, $interactive, $self);
+}
+
+sub _restore_backup_data($self, $file_data, $file_data_extra
+                            ,$file_data_owner) {
+    open my $f,"<",$file_data or die "$! $file_data";
+    my $json = join "",<$f>;
+    close $f;
+
+    my $data = decode_json($json);
+
+    open my $f2,"<",$file_data_extra or die "$! $file_data_extra";
+    my $json2 = join "",<$f2>;
+    close $f2;
+
+    my $data_extra = decode_json($json2);
+
+    my $id = $data->{id};
+    my $name = $data->{name};
+    my $vm = $self->search_vm($data->{vm});
+
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM domains "
+        ."WHERE id=? OR name=?"
+    );
+    $sth->execute($id,$name);
+    my $domain_old = $sth->fetchrow_hashref;
+    if ($domain_old && $domain_old->{name} ne $name) {
+        die "Domain id='$id' already exists, it is called "
+            .$domain_old->{name};
+    }
+    if (!$domain_old) {
+        my $domain = $vm->create_domain(
+            name => $name
+            ,config => $data_extra->{xml}
+            ,id_owner => Ravada::Utils::user_daemon->id
+            ,id => $id
+        );
+        $domain_old = $domain;
+    } else {
+        $domain_old = Ravada::Domain->open($domain_old->{id});
+    }
+    $domain_old->_restore_backup_metadata($file_data, $file_data_owner);
+    return $domain_old;
 }
 
 sub DESTROY($self) {

@@ -2199,6 +2199,9 @@ sub _after_remove_domain {
         #        $self->_do_remove_base($user);
         $self->_remove_files_base();
     }
+    for my $backup ( $self->list_backups ) {
+        $self->remove_backup($backup);
+    }
     $self->_remove_all_volumes();
     return if !$self->{_data};
     return if $cascade;
@@ -6520,6 +6523,319 @@ sub refresh_ports($self, $request=undef) {
         $user = Ravada::Auth::SQL->search_by_id($uid) if ($uid);
         $user->send_message($msg) if ($user);
     }
+}
+
+sub list_backups($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM domain_backups "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+    my @ret;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @ret, ( $row );
+    }
+    return @ret;
+}
+
+sub config_files($self) {
+}
+
+sub _backup_owner($self) {
+    my $owner = Ravada::Auth::SQL->search_by_id($self->_data('id_owner'));
+    my $filename = $self->_vm->dir_backup()."/".$self->name."_owner.json";
+    CORE::open my $out,">",$filename or die "$! $filename";
+    print $out encode_json($owner->{_data});
+    close $filename;
+
+    return $filename;
+}
+
+sub _list_parent_volumes($self) {
+    die "Error: ".$self->name." has no parent" if !$self->_data('id_base');
+    my $base = Ravada::Domain->open($self->_data('id_base'));
+
+    return [$base->list_files_base()];
+}
+
+sub _expand_backup_metadata($self, $data) {
+    $data->{owner} = Ravada::Utils::search_user_name($$CONNECTOR->dbh
+        ,$data->{id_owner});
+
+    delete $data->{screenshot};
+    delete $data->{info};
+    delete $data->{spice_password};
+
+    if($data->{id_base}) {
+        $data->{base} = Ravada::Request::_search_domain_name(undef
+            ,delete $data->{id_base});
+        $data->{parent_volumes} = $self->_list_parent_volumes();
+    }
+    if ($data->{is_base}) {
+        $data->{base_volumes} = [$self->list_files_base(1)];
+    }
+}
+
+
+
+sub backup($self) {
+    my @files_data = $self->config_files();
+    #read data extra just in case it wasn't already read
+    $self->_data_extra('id_domain');
+    for my $field ( keys %$self) {
+        next if $field !~ /^_data/;
+        my $filename = $self->_vm->dir_backup()."/".$self->name.$field.".json";
+        CORE::open my $out,">",$filename or die "$! $filename";
+
+        my %data = %{$self->{$field}};
+        $self->_expand_backup_metadata(\%data) if $field eq '_data';
+
+        print $out encode_json(\%data);
+        close $filename;
+        push @files_data,($filename);
+    }
+    push @files_data,($self->_backup_owner);
+
+    push @files_data,($self->list_files_base()) if $self->is_base();
+
+    my $now = Ravada::Utils::date_now();
+    $now =~ tr/ :/_-/;
+    my $file_backup = $self->_vm->dir_backup()."/".$self->name.".$now.tgz";
+    my @cmd = ("tar","czvf",$file_backup,@files_data
+    ,$self->list_volumes);
+    $self->_vm->run_command(@cmd);
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO domain_backups (id_domain, file, date_created) "
+        ." VALUES (?,?,?)"
+    );
+    $sth->execute($self->id, $file_backup, Ravada::Utils::date_now());
+    return $file_backup;
+}
+
+sub _confirm_restore($self) {
+    if ($ENV{TERM}) {
+            print "Virtual Machine ".$self->name." already exists."
+            ." All the data will be overwritten."
+            ." Are you sure you want to restore a backup ?";
+            my $answer = <STDIN>;
+            return 0 unless $answer =~ /^y/i;
+    }
+    return 1;
+}
+
+sub _parse_file($file) {
+    CORE::open my $f,"<",$file or confess "$! $file";
+    my $json = join "",<$f>;
+    close $f;
+
+    return decode_json($json);
+}
+
+sub _search_domain_to_restore($data, $file_extra) {
+    my $data_extra = _parse_file($file_extra);
+
+    my $id = $data->{id};
+    my $name = $data->{name};
+    my $vm = Ravada::VM->open($data->{id_vm});
+
+    my $sth = _dbh->prepare("SELECT * FROM domains "
+        ."WHERE id=? OR name=?"
+    );
+    $sth->execute($id,$name);
+    my $domain_old = $sth->fetchrow_hashref;
+    if ($domain_old && $domain_old->{name} ne $name) {
+        die "Domain id='$id' already exists, it is called "
+            .$domain_old->{name};
+    }
+    if (!$domain_old) {
+        my $domain = $vm->create_domain(
+            name => $name
+            ,config => $data_extra->{xml}
+            ,id_owner => Ravada::Utils::user_daemon->id
+            ,id => $id
+        );
+        $domain_old = $domain;
+    } else {
+        $domain_old = Ravada::Domain->open($domain_old->{id});
+    }
+}
+
+sub _extract_metadata($file, $name) {
+    my $dir = "/var/tmp";
+    my @cmd = ("tar","tzvf",$file,"-C",$dir);
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+
+    my ($file_data) = $out =~ m{^.*\d{4}-\d\d-\d\d [0-9:]+ (.*_data.json)$}m;
+    @cmd = ("tar","xzvf",$file,"-C",$dir,$file_data);
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+
+    my $data = _parse_file("$dir/$file_data");
+    unlink "$dir/$file_data";
+    lock_hash(%$data);
+    return $data;
+}
+
+sub _check_metadata_before_restore($data) {
+    return if !exists $data->{base};
+    unlock_hash(%$data);
+    my $base = delete $data->{base};
+    if ($base) {
+        my $id = Ravada::Request::_search_domain_id(undef,$base);
+        if (!$id) {
+            die "Error: base $base not found.\n";
+        }
+        $data->{id_base} = $id;
+    }
+    lock_hash(%$data);
+}
+
+sub _check_parent_base_volumes($data, $file) {
+    return if !$data->{id_base};
+
+    if (!exists $data->{parent_volumes}
+        || ! scalar(@{$data->{parent_volumes}})) {
+            warn "Warning: this machine is clone but I can't see the parent volumes list ".Dumper($data);
+            return;
+    }
+    my $vm = Ravada::VM->open(type => $data->{vm});
+    my %fail = ();
+    for my $vol (@{$data->{parent_volumes}}) {
+        next if $vm->file_exists($vol);
+        $fail{$vol}++;
+    }
+    die "Error: base files not found : ".join(" ",sort keys %fail)
+    ."\n" if keys %fail;
+
+    unlock_hash(%$data);
+    delete $data->{parent_volumes};
+    lock_hash(%$data);
+
+}
+
+sub restore_backup($self, $backup, $interactive, $rvd_back=undef) {
+    my $file = $backup;
+    $file = $backup->{file} if ref($backup);
+
+    die "Error: missing file  '$file'" if ! -e $file;
+
+    my ($name) = $file =~ m{.*/(.*?).\d{4}-\d\d-\d\d_\d\d-\d\d-};
+    if (!$self) {
+        $self = $rvd_back->search_domain($name);
+    }
+    die "Error: ".$self->name." is active, shut it down to restore.\n"
+    if $self && $self->is_active;
+
+    return if $self && $interactive && !$self->_confirm_restore();
+
+    my $data = _extract_metadata($file,$name);
+    _check_metadata_before_restore($data);
+    _check_parent_base_volumes($data, $file) if $data->{id_base};
+
+    my $vm = Ravada::VM->open(type => $data->{vm});
+
+    my @cmd = ("tar","xzvf",$file,"-C","/");
+    my ($out,$err) = $vm->run_command(@cmd);
+    warn $err if $err;
+
+    my ($file_data_extra) = $out =~ m{^(.*_data_domains.*.json)$}m;
+    my ($file_data_owner) = $out =~ m{^(.*owner.json)$}m;
+
+    $self = _search_domain_to_restore($data,"/$file_data_extra") if !$self;
+
+    _restore_backup_metadata($self
+        ,$data
+        ,"/$file_data_owner"
+    );
+
+    return $self;
+}
+
+sub _restore_owner($self, $data, $file_data_owner) {
+    my $id_owner = Ravada::Utils::search_user_id($$CONNECTOR->dbh
+        ,delete $data->{owner});
+    if ($id_owner) {
+        $data->{id_owner} = $id_owner;
+        return;
+    }
+
+    CORE::open my $f,"<",$file_data_owner or confess "$! $file_data_owner";
+    my $json = join "",<$f>;
+    close $f;
+
+    my $data_owner = decode_json($json);
+
+    my $id = $data_owner->{id};
+    my $clashed_user = Ravada::Auth::SQL->search_by_id($id);
+
+    if ($clashed_user) {
+        die "Error: Owner id $id clashes with user ".$clashed_user->name
+        ." here.";
+    }
+
+    my $sql = "INSERT INTO users (".join(",",sort keys %$data_owner).")"
+    ." VALUES(".join(",",map {'?'} keys %$data_owner)." )";
+
+    my $sth = $$CONNECTOR->dbh->prepare($sql);
+    $sth->execute(map { $data_owner->{$_}} sort keys %$data_owner );
+}
+
+sub _restore_base_volumes_metadata($self, $data) {
+    return if !exists $data->{base_volumes};
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO file_base_images "
+        ." (id_domain , file_base_img, target )"
+        ." VALUES(?,?,?)"
+    );
+
+    for my $vol ( @{$data->{base_volumes}}) {
+        $sth->execute($self->id, $vol->[0], $vol->[1]);
+    }
+    unlock_hash(%$data);
+    delete $data->{base_volumes};
+    lock_hash(%$data);
+}
+
+sub _restore_backup_metadata($self, $data, $file_data_owner) {
+    unlock_hash(%$data);
+    delete $data->{id};
+    delete $data->{internal_id};
+    delete $data->{info};
+    delete $data->{date_changed};
+
+    _restore_owner($self,$data,$file_data_owner);
+    _restore_base_volumes_metadata($self, $data);
+
+    for my $field (keys %$data) {
+        next if( !exists $self->{_data}->{$field} || !defined $self->{_data}->{$field})
+        && !defined $data->{$field};
+
+        next if exists $self->{_data}->{$field}
+        && defined $self->{_data}->{$field}
+        && defined $data->{$field}
+        && $self->{_data}->{$field} eq $data->{$field};
+
+        $self->_data($field => $data->{$field});
+    }
+    lock_hash(%$data);
+
+}
+
+sub remove_backup($self, $backup, $remove_file=0) {
+    if ($remove_file) {
+        my ($file) = $backup->{file};
+        if ( $self->_vm->file_exists($file) ) {
+            $self->_vm->remove_file($file) or die "$! $file";
+        }
+    }
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM domain_backups WHERE id=?"
+    );
+    $sth->execute($backup->{id});
 }
 
 1;
