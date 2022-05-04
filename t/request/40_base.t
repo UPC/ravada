@@ -282,7 +282,6 @@ sub test_req_create_from_base_novm {
             name => $clone_name
             , id_base => $id_base
             , id_owner => $USER->id
-            , disk => 2*1024*1024
         );
         ok($req->status eq 'requested'
             ,"Status of request is ".$req->status." it should be requested");
