@@ -394,13 +394,15 @@ sub _around_create_domain {
        my $swap = delete $args{swap};
        my $from_pool = delete $args{from_pool};
 
+    my $config = delete $args{config};
+
      # args get deleted but kept on %args_create so when we call $self->$orig below are passed
      delete $args{disk};
      delete $args{memory};
      my $request = delete $args{request};
      delete $args{iso_file};
      delete $args{id_template};
-     delete @args{'description','remove_cpu','vm','start','options'};
+     delete @args{'description','remove_cpu','vm','start','options','id'};
 
     confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
 
@@ -2181,6 +2183,31 @@ It can be overloaded in each backend module.
 
 sub list_machine_types($self) {
     return ();
+}
+
+=head2 dir_backup
+
+Directory where virtual machines backup will be stored. It can
+be changed from the frontend nodes page management.
+
+=cut
+
+sub dir_backup($self) {
+    my $dir_backup = $self->_data('dir_backup');
+
+    if (!$dir_backup) {
+        $dir_backup = $self->dir_img."/backup";
+        $self->_data('dir_backup', $dir_backup);
+    }
+    if (!$self->file_exists($dir_backup)) {
+        if ($self->is_local) {
+            make_path($dir_backup) or die "$! $dir_backup";
+        } else {
+            my ($out,$error)= $self->run_command("mkdir","-p",$dir_backup);
+            die "Error on mkdir -p $dir_backup $error" if $error;
+        }
+    }
+    return $dir_backup;
 }
 
 1;

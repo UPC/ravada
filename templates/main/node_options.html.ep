@@ -49,6 +49,14 @@
         </select>
     </div>
 </div>
+
+<div class="row">
+    <div class="col-md-3" align="right"><%=l 'backup directory' %></div>
+    <div class="col-md-8">
+        <input type="text" size="60" ng-model="node.dir_backup"/>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-md-3" align="right"></div>
     <div class="col-md-4" align="left">

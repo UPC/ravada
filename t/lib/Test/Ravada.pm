@@ -266,6 +266,7 @@ sub create_domain_v2(%args) {
     my $swap = delete $args{swap};
     my $data = delete $args{data};
     my $options = delete $args{options};
+    my $name = (delete $args{name} or new_domain_name());
 
     croak "Error: unknown arguments ".Dumper(\%args)
     if keys %args;
@@ -290,7 +291,7 @@ sub create_domain_v2(%args) {
 
     my %arg_create = (
         id_iso => $id_iso
-        ,name => new_domain_name()
+        ,name => $name
         ,options => $options
         ,id_owner => $user->id
         ,active => 0
@@ -311,7 +312,7 @@ sub create_domain_v2(%args) {
         ,data => { size => $data*1024*1024, type => 'data' }
     ) if $domain && $data;
     delete_request( 'enforce_limits', 'set_time' );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     return $domain;
 }
 
