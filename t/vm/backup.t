@@ -151,6 +151,7 @@ sub restore_from_file($vm, $remove=undef) {
         $domain->remove(user_admin);
     }
 
+    unlink($backup->{file});
     unlink($file2) or die "$! $file2";
 }
 
@@ -185,6 +186,8 @@ sub backup_clone($vm) {
 
     $clone_restored->remove(user_admin) if $clone_restored;
 
+    unlink($backup->{file});
+    unlink($file2);
 }
 
 sub backup_clone_fail($vm) {
@@ -219,6 +222,8 @@ sub backup_clone_fail($vm) {
     diag($@);
     $clone_restored->remove(user_admin) if $clone_restored;
 
+    unlink($backup->{file});
+    unlink($file2);
 }
 
 sub backup_clone_and_base($vm) {
@@ -261,6 +266,8 @@ sub backup_clone_and_base($vm) {
 
     $clone_restored->remove(user_admin) if $clone_restored;
     $base_restored->remove(user_admin)  if $base_restored;
+    unlink($backup_base->{file});
+    unlink($backup_clone->{file});
 
 }
 sub backup_clone_base_different($vm) {
@@ -296,9 +303,10 @@ sub backup_clone_base_different($vm) {
     };
     ok(!$clone_restored,"Expected fail when trying to restore a clone with wrong base");
     like($@,qr/base .*not found/);
-    diag($@);
     $clone_restored->remove(user_admin) if $clone_restored;
 
+    unlink($backup->{file});
+    unlink($file2);
 }
 
 sub backup_clash_user($vm) {
