@@ -5,6 +5,7 @@ use strict;
 
 our $LDAP_OK;
 our $SSO_OK;
+our $KERBEROS_OK;
 
 use Ravada::Auth::SQL;
 
@@ -46,6 +47,18 @@ sub init {
         $SSO_OK = 0;
     }
 
+    if (exists $config->{kerberos} && $config->{kerberos} && (!defined $KERBEROS_OK || $KERBEROS_OK) ) {
+        eval {
+		    $KERBEROS_OK = 0;
+            require Ravada::Auth::KERBEROS;
+            Ravada::Auth::KERBEROS::init($config);
+            $KERBEROS_OK = 1;
+        };
+        warn $@ if $@;
+    } else {
+        $KERBEROS_OK = 0;
+    }
+
 #    Ravada::Auth::SQL::init($config, $db_con);
 }
 
@@ -60,7 +73,7 @@ Tries login in all the submodules
 sub login {
     my ($name, $pass, $quiet) = @_;
 
-    my ($login_ok, $ldap_err);
+    my ($login_ok, $ldap_err, $kerberos_err);
     if (!defined $LDAP_OK || $LDAP_OK) {
         eval {
             $login_ok = Ravada::Auth::LDAP->new(name => $name, password => $pass);
@@ -71,9 +84,21 @@ sub login {
             return $login_ok;
         }
     }
+    if (!defined $KERBEROS_OK || $KERBEROS_OK) {
+        eval {
+            $login_ok = Ravada::Auth::Kerberos->new(name => $name, password => $pass);
+        };
+        $kerberos_err = $@ if $@ && $KERBEROS_OK && !$quiet;
+        if ( $login_ok ) {
+            warn $kerberos_err if $kerberos_err && $KERBEROS_OK && !$quiet;
+            return $login_ok;
+        }
+    }
+
     my $sql_login = Ravada::Auth::SQL->new(name => $name, password => $pass);
     unless ($sql_login) {
         warn $ldap_err if $ldap_err && $LDAP_OK && !$quiet;
+        warn $kerberos_err if $kerberos_err && $KERBEROS_OK && !$quiet;
     }
     return $sql_login;
 }

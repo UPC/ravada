@@ -70,6 +70,7 @@ our %VALID_CONFIG = (
         ,port => undef
         ,size_limit => undef
     }
+    ,kerberos => { server => undef }
     ,log => undef
 );
 
