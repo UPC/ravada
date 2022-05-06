@@ -45,4 +45,49 @@
         </select>
     </div>
 
+    <hr>
+
+    <b><%=l 'CPU Features' %></b>
+    <div class="card-body">
+        <div class="row" ng-repeat="feature in item.cpu.feature"
+        ng-hide="!feature"
+        >
+            <div class="col-md-3" align="right">
+                {{feature.name}}
+            </div>
+
+            <div class="col-md-2">
+                <select ng-model="feature.policy"
+                    ng-options="option for option in
+                    [ 'disable','forbid', 'force', 'optional','require']">
+                </select>
+            </div>
+
+            <div class="col-md-1" align="left">
+                <small>
+                    <button type="badge" alt="remove"
+                        ng-click="feature=0;
+                        item.cpu.feature[$index]=undefined;
+                        form_edit.$pristine=false"
+                    >
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </small>
+            </div>
+
+        </div><!-- row -->
+    </div><!-- card-body -->
+
+    New feature <input type="text" ng-model="new_feature"/>
+        <button type="badge"
+            ng-disabled="!new_feature"
+            ng-click="item.cpu.feature[item.cpu.feature.length]=
+                {'name': new_feature, 'policy': 'require'};
+                form_edit.$pristine=false;
+                new_feature='';
+                ">
+            add
+        </button>
+
+    <hr>
 </div>
