@@ -1705,6 +1705,20 @@ sub requirements_done($self) {
     return $ok;
 }
 
+=head2 redo
+
+    Set the request to be executed again
+
+=cut
+
+sub redo($self) {
+    my $sth = $self->_dbh->prepare(
+        "UPDATE requests SET status='requested',start_time=NULL "
+        ." WHERE id=?"
+    );
+    $sth->execute($self->id);
+}
+
 sub AUTOLOAD {
     my $self = shift;
 

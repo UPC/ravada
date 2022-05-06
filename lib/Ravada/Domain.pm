@@ -5421,11 +5421,15 @@ sub _fix_hw_booleans($data) {
         next if !ref($data->{$key});
         if (ref($data->{$key}) eq 'HASH') {
                 _fix_hw_booleans($data->{$key});
+        } elsif(ref($data->{$key}) eq 'ARRAY') {
+            for my $item (@{$data->{$key}}) {
+                _fix_hw_booleans($item);
+            }
         } elsif(ref($data->{$key}) eq 'JSON::PP::Boolean') {
                 $data->{$key} = ''.$data->{$key};
         } else {
             confess "Error: expecting scalar or hash or boolean "
-                .Dumper($data);
+                .Dumper(ref($data->{$key}) ,$data->{$key});
         }
     }
 }
