@@ -65,7 +65,7 @@
 
             <div class="col-md-1" align="left">
                 <small>
-                    <button type="badge" alt="remove"
+                    <button type="badge" title="remove"
                         ng-click="feature=0;
                         item.cpu.feature[$index]=undefined;
                         form_edit.$pristine=false"
