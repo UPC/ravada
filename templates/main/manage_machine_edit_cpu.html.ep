@@ -47,47 +47,56 @@
 
     <hr>
 
-    <b><%=l 'CPU Features' %></b>
-    <div class="card-body">
-        <div class="row" ng-repeat="feature in item.cpu.feature"
-        ng-hide="!feature"
-        >
-            <div class="col-md-3" align="right">
-                {{feature.name}}
-            </div>
+    <small><b><%=l 'CPU Features' %></b></small>
 
-            <div class="col-md-2">
-                <select ng-model="feature.policy"
-                    ng-options="option for option in
-                    [ 'disable','forbid', 'force', 'optional','require']">
-                </select>
-            </div>
+    <div class="card-body ml-2" ng-show=item.cpu.feature.length">
+    <ul class="list-group list-group-horizontal-md"
+        ng-show="feature"
+        ng-repeat="feature in item.cpu.feature">
 
-            <div class="col-md-1" align="left">
-                <small>
-                    <button type="badge" title="remove"
+        <li class="list-group-item list-group-item-primary col-md-3">
+            {{feature.name}}
+        </li>
+        <li class="list-group-item">
+            <select ng-model="feature.policy"
+                ng-options="option for option in
+                [ 'disable','forbid', 'force', 'optional','require']">
+            </select>
+
+        </li>
+        <li class="list-group-item">
+            <small>
+                <button type="badge" title="remove"
                         ng-click="feature=0;
                         item.cpu.feature[$index]=undefined;
                         form_edit.$pristine=false"
-                    >
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </small>
-            </div>
+                >
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </small>
+        </li>
+    </ul>
+    </div>
 
-        </div><!-- row -->
-    </div><!-- card-body -->
-
-    New feature <input type="text" ng-model="new_feature"/>
-        <button type="badge"
+    <div class="ml-4">
+    <div class="row">
+        <div class="col-md-6">
+            <label for="new_feature">
+                <%=l 'New feature' %>
+            </label>
+            <input type="text" ng-model="new_feature" name="new_feature"/>
+            <button type="badge"
             ng-disabled="!new_feature"
             ng-click="item.cpu.feature[item.cpu.feature.length]=
                 {'name': new_feature, 'policy': 'require'};
                 form_edit.$pristine=false;
                 new_feature='';
                 ">
-            add
-        </button>
+                add
+            </button>
+        </div>
+    </div><!-- row -->
+    </div>
 
     <hr>
 </div>
