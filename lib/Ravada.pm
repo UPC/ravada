@@ -4847,7 +4847,7 @@ sub _cmd_refresh_machine($self, $request) {
     $self->_remove_unnecessary_downs($domain) if !$is_active;
     $domain->info($user);
     $domain->client_status(1) if $is_active;
-    $domain->_check_port_conflicts()    if $is_active;
+    $domain->_check_port_conflicts();
 
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id
         ,timeout => 60, retry => 10)

@@ -168,7 +168,7 @@ sub _recheck_found($port, $id_domain1, $found) {
                 for my $port1 ($display1->{port}, $display1->{extra}->{tls_port}) {
                     for my $port2 ($display2->{port}, $display2->{extra}->{tls_port}) {
                         next if !defined $port1 || !defined $port2 || $port1 ne $port2;
-                        warn Dumper($display1,$display2);
+                        warn Dumper([$port1,$display1,$display2]);
                         $found2 = $port1;
                     }
                 }
@@ -183,7 +183,7 @@ sub _recheck_found($port, $id_domain1, $found) {
         Ravada::Request->refresh_machine(uid => user_admin->id
             , _force => 1
             , id_domain => $id_domain2);
-        wait_request();
+        wait_request(debug => 1);
     }
     return $found;
 }
