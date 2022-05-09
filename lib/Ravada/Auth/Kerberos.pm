@@ -11,8 +11,7 @@ Ravada::Auth::Kerberos - Kerberos library for Ravada
 
 use Data::Dumper;
 use Moose;
-# TODO: find out a Kerberos perl library
-#use Kerberos;
+use Authen::Krb5::Simple;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -34,7 +33,7 @@ sub _connect_kerberos($self) {
     return $KERBEROS if $KERBEROS;
 
     my $server = $$CONFIG->{kerberos}->{server} or die "Error: missing kerberos server in config file";
-    $KERBEROS = Kerberos::connect($server);
+    $KERBEROS = Authen::Krb5::Simple->connect($server);
 }
 
 sub login($self) {
