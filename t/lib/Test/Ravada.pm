@@ -602,8 +602,40 @@ sub _leftovers {
     return @machines;
 }
 
+sub _discover() {
+    my $sth = connector()->dbh->prepare("SELECT id,vm_type FROM vms");
+    $sth->execute();
+
+    my $name = base_domain_name();
+
+    while ( my ($id_vm, $vm_type) = $sth->fetchrow ) {
+        my $req=Ravada::Request->discover(
+            uid => user_admin->id
+            ,id_vm => $id_vm
+        );
+        wait_request();
+        my $out = $req->output;
+        warn $req->error if $req->error;
+        return if !$out;
+        my $discover = decode_json($out);
+        my @list = grep { $_ =~ /^$name/ } @$discover;
+        for my $name (@list) {
+            diag("Importing $name");
+            $req = Ravada::Request->import_domain(
+                name => $name
+                ,id_owner => user_admin->id
+                ,vm => $vm_type
+                ,uid => user_admin->id
+                ,spinoff_disks => 0
+            );
+        }
+    }
+    wait_request(debug => 1);
+}
+
 sub remove_old_domains_req($wait=1, $run_request=0) {
     my $base_name = base_domain_name();
+    _discover();
     my $machines = rvd_front->list_machines(user_admin);
     my @machines2 = _leftovers();
     my @reqs;
@@ -611,6 +643,7 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
         next unless $machine->{name} =~ /$base_name/;
         remove_domain_and_clones_req($machine,$wait);
     }
+    wait_request(debug => 1);
 
 }
 
@@ -1195,7 +1228,7 @@ sub wait_request {
                         } elsif($req->command eq 'compact') {
                             like($error,qr{^($|.*compacted)});
                         } else {
-                            like($error,qr/^$|run recently/)
+                            like($error,qr/^$|libvirt error code:38,|run recently/)
                                 or confess $req->id." ".$req->command;
                         }
                     }

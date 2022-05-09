@@ -140,12 +140,52 @@ sub test_iptables_clones($base) {
             for my $port ($display->{port}, $display->{extra}->{tls_port}) {
                 next if !defined $port;
                 my $found = $port_display{$port};
+                $found = _recheck_found($port, $clone->id, $found) if $found;
                 my $value = "$clone_data->{id} $display->{driver}:$port";
                 ok(!$found,"Duplicated display $port on $clone_data->{name} $value and ".($found or "")) or exit;
                 $port_display{$port} = $value;
             }
         }
     }
+}
+
+sub _recheck_found($port, $id_domain1, $found) {
+    warn "rechecking $found";
+
+    my ($id_domain2) = $found =~ /^(\d+)/;
+    die "Error: no id domain found in '$found'" if !$id_domain2;
+
+    my $found2;
+    for my $try ( 0 .. 1 ) {
+        my $domain1 = Ravada::Front::Domain->open($id_domain1);
+        my $domain2 = Ravada::Front::Domain->open($id_domain2);
+        return if !$domain1->is_active || !$domain2->is_active;
+        my $displays1 = $domain1->info(user_admin)->{hardware}->{display};
+        my $displays2 = $domain2->info(user_admin)->{hardware}->{display};
+
+        for my $display1 (@$displays1) {
+            for my $display2 (@$displays2) {
+                for my $port1 ($display1->{port}, $display1->{extra}->{tls_port}) {
+                    for my $port2 ($display2->{port}, $display2->{extra}->{tls_port}) {
+                        next if !defined $port1 || !defined $port2 || $port1 ne $port2;
+                        warn Dumper([$port1,$display1,$display2]);
+                        $found2 = $port1;
+                    }
+                }
+            }
+        }
+        return if !$found2;
+
+        Ravada::Request->refresh_machine(uid => user_admin->id
+            , _force => 1
+            , id_domain => $id_domain1);
+
+        Ravada::Request->refresh_machine(uid => user_admin->id
+            , _force => 1
+            , id_domain => $id_domain2);
+        wait_request(debug => 1);
+    }
+    return $found;
 }
 
 sub test_re_expose($base) {

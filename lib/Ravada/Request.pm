@@ -140,6 +140,11 @@ our %VALID_ARG = (
 
     ,manage_pools => { uid => 2, id_domain => 2 }
     ,ping_backend => {}
+
+    ,discover => { uid => 1, id_vm => 1 }
+    ,import_domain => { uid => 1, vm => 1, id_owner => 1, name => 1
+        ,spinoff_disks => 2
+    }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }

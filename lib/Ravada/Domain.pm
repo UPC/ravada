@@ -1323,7 +1323,11 @@ sub _clean_display_order($self, $n_order) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domain_displays set n_order=? WHERE n_order=? AND id_domain=?"
     );
-    $sth->execute($max_n_order+1,$n_order, $self->id);
+    for ( 1 .. 10 ) {
+        $max_n_order++;
+        eval { $sth->execute($max_n_order,$n_order, $self->id) };
+        last if !$@;
+    }
 }
 
 sub _update_display( $self, $new_display_orig, $old_display ) {
