@@ -316,7 +316,7 @@ sub test_displays_added_on_refresh($domain, $n_expected, $delete=1) {
         "SELECT count(*) FROM domain_displays WHERE id_domain=?");
     $sth_count->execute($domain->id);
     my ($count) = $sth_count->fetchrow;
-    is($count, $n_expected,"Expecting $n_expected displays on table domain_displays for ".$domain->name) or confess;
+    ok($count>=$n_expected,"Expecting $n_expected displays on table domain_displays for ".$domain->name) or confess;
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my $display = $domain_f->info(user_admin)->{hardware}->{display};
