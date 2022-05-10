@@ -124,6 +124,17 @@ sub _get_controller_cpu($self) {
     my ($xml_vcpu) = $doc->findnodes("/domain/vcpu");
     _xml_elements($xml_vcpu, $item->{vcpu});
 
+    if (exists $item->{cpu}->{feature} && ref($item->{cpu}->{feature}) ne 'ARRAY') {
+        $item->{cpu}->{feature} = [ $item->{cpu}->{feature} ];
+    }
+
+    $item->{cpu}->{feature} = []
+    if !exists $item->{cpu}->{feature};
+
+    $item->{cpu}->{feature}
+    = _sort_xml_list($item->{cpu}->{feature},'name');
+
+
     lock_hash(%$item);
     return ($item);
 }
@@ -152,6 +163,15 @@ sub _get_controller_features($self) {
     return ($item);
 }
 
+sub _sort_xml_list($list, $field) {
+    my @sorted = sort {
+        my ($name_a) = ($a->{$field} or '');
+        my ($name_b) = ($b->{$field} or '');
+        $name_a cmp $name_b
+    }@$list;
+
+    return \@sorted;
+}
 
 sub _xml_elements($xml, $item) {
     confess if !defined $xml;
@@ -166,7 +186,17 @@ sub _xml_elements($xml, $item) {
         my $h_node = {};
         _xml_elements($node, $h_node);
         $h_node = 1 if !keys %$h_node;
-        $item->{$node->nodeName} = $h_node;
+        my $name = $node->nodeName;
+        if (!exists $item->{$name}) {
+            $item->{$node->nodeName} = $h_node;
+        } else {
+            my $entry = $item->{$name};
+            if (ref($entry) eq 'HASH') {
+                $item->{$name} = [ $entry , $h_node ];
+            } else {
+                push @{$item->{$name}},($h_node);
+            }
+        }
     }
 }
 

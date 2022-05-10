@@ -2881,6 +2881,8 @@ sub _change_hardware_cpu($self, $index, $data) {
         $vcpu->appendText($data->{vcpu}->{_text});
     }
     my ($cpu) = $doc->findnodes('/domain/cpu');
+    my $feature = delete $data->{cpu}->{feature};
+
     for my $field (keys %{$data->{cpu}}) {
         if (ref($data->{cpu}->{$field})) {
             _change_xml($cpu, $field, $data->{cpu}->{$field});
@@ -2893,6 +2895,10 @@ sub _change_hardware_cpu($self, $index, $data) {
             $cpu->setAttribute($field, $data->{cpu}->{$field});
             $changed++;
         }
+    }
+    if ( $feature ) {
+        _change_xml_list($cpu, 'feature', $feature, 'name');
+        $changed++;
     }
 
     $self->reload_config($doc) if $changed;
@@ -2988,10 +2994,34 @@ sub _remove_acceleration($video) {
     $video->removeChild($acceleration) if $acceleration;
 }
 
+sub _change_xml_list($xml,$name, $data, $field='name') {
+    my %keep;
+    for my $entry (@$data) {
+        next if !defined $entry ||!$entry;
+        $keep{$entry->{$field}}++;
+        my $node;
+        for my $curr ($xml->findnodes($name)) {
+            $node = $curr if $curr->getAttribute($field) eq $entry->{$field};
+        }
+        $node = $xml->addNewChild(undef, $name) if !$node;
+        for my $field (keys %$entry) {
+            next if $field eq '$$hashKey';
+            $node->setAttribute($field, $entry->{$field});
+        }
+    }
+
+    for my $curr ($xml->findnodes($name)) {
+        my $curr_name = $curr->getAttribute($field);
+        $xml->removeChild($curr) if !$keep{$curr_name};
+    }
+}
+
 sub _change_xml($xml, $name, $data) {
+    confess Dumper([$name, $data])
+    if !ref($data) || ( ref($data) ne 'HASH' && ref($data) ne 'ARRAY');
+
     my ($node) = $xml->findnodes($name);
     $node = $xml->addNewChild(undef,$name) if !$node;
-    confess Dumper([$name, $data]) if !ref($data) || ref($data) ne 'HASH';
 
     my $text = delete $data->{_text};
     if ($text) {
