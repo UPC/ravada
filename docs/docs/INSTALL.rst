@@ -38,13 +38,19 @@ if you want to buy a new dedicated server.
 Install Ravada
 --------------
 
-Follow the detailed instructions in this section to install on different operating systems:
+Follow the detailed instructions in this section to install on different operating systems.
+
+Ubuntu and Debian packages are built by the Ravada team:
 
 * `Ubuntu <http://ravada.readthedocs.io/en/latest/docs/INSTALL_Ubuntu.html>`_
 * `Debian <http://ravada.readthedocs.io/en/latest/docs/INSTALL_Debian.html>`_
+
+RPMs are kindly provided by *Eclipseo*.
+
 * `RedHat Fedora <http://ravada.readthedocs.io/en/latest/docs/INSTALL_Fedora.html>`_
 
-Ravada can be installed from package or using docker.
+Ravada can be installed from package or using docker. It is more suitable
+for development and testing:
 
 * `Docker <http://ravada.readthedocs.io/en/latest/docs/INSTALLfromDockers.html>`_
 
