@@ -1305,6 +1305,9 @@ sub _insert_display( $self, $display ) {
                 $used_port->{$display->{port}}++;
                 $display->{port} = $self->_vm->_new_free_port($used_port);
             }
+        } elsif ($field =~ /\.id_domain_driver/) {
+            warn "Warning: Already added ".Dumper($display);
+            return;
         } else {
             confess "Error: I don't know how to deal with duplicated $field on ".$self->name
             .Dumper($display);
