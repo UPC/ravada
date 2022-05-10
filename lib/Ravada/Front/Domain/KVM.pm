@@ -174,7 +174,7 @@ sub _sort_xml_list($list, $field) {
 }
 
 sub _xml_elements($xml, $item) {
-    confess if !defined $xml;
+    return {} if !defined $xml;
     my $text = $xml->textContent;
     $item->{_text} = $text if $text && $text !~ /\n/m;
 
