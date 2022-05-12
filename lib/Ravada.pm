@@ -377,6 +377,21 @@ sub _update_isos {
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
                    ,arch => 'x86_64'
         }
+        ,jammy_jellyfish => {
+                    name => 'Ubuntu Jammy Jellyfish'
+            ,description => 'Ubuntu 22.04 Jammy Jellyfish 64 bits'
+                   ,arch => 'x86_64'
+                    ,xml => 'focal_fossa-amd64.xml'
+             ,xml_volume => 'focal_fossa64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/22.04/'
+                ,file_re => '^ubuntu-22.04.*-desktop-amd64.iso'
+                ,sha256_url => '$url/SHA256SUMS'
+          ,min_disk_size => '9'
+          ,min_ram => 1
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+                   ,arch => 'x86_64'
+
+        }
 
         ,bionic=> {
                     name => 'Ubuntu Bionic Beaver'
