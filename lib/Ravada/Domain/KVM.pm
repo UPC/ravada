@@ -2881,6 +2881,10 @@ sub _change_hardware_cpu($self, $index, $data) {
         $vcpu->appendText($data->{vcpu}->{_text});
     }
     my ($cpu) = $doc->findnodes('/domain/cpu');
+    if (!$cpu) {
+        my ($domain) = $doc->findnodes('/domain');
+        $cpu = $domain->addNewChild(undef,'cpu');
+    }
     my $feature = delete $data->{cpu}->{feature};
 
     for my $field (keys %{$data->{cpu}}) {
