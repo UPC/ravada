@@ -2296,7 +2296,7 @@ sub _xml_remove_cdrom {
                 if ($source) {
 #                    warn "\n\t->removing ".$source->nodeName." ".$source->getAttribute('file')
 #                        ."\n";
-                    $disk->removeChild($source);
+                    $context->removeChild($disk);
                 }
             }
         }
