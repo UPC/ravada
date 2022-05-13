@@ -170,8 +170,11 @@
                            <div class="modal-dialog" role="document">
                              <div class="modal-content">
                                <div class="modal-header">
-                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                                  <h4 class="modal-title"><%=l 'Changing Base State' %></h4>
+                                 <button type="button" class="close"
+                                 data-dismiss="modal" aria-label="Close"
+i                               ng-click="cancel_modal(machine,'is_base')"
+                                     ><span aria-hidden="true">&times;</span></button>
                                </div>
                                <div class="modal-body" ng-show="!machine.is_base">
                                  <p><%=l 'Are you sure you want to remove the base of' %> {{machine.name}}?</p>
@@ -216,8 +219,12 @@
                            <div class="modal-dialog" role="document">
                              <div class="modal-content">
                                <div class="modal-header">
-                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                                  <h4 class="modal-title"><%=l 'Changing Public State' %></h4>
+                                 <button type="button" class="close"
+                                     data-dismiss="modal"
+                                     aria-label="Close"
+                                ng-click="cancel_modal(machine,'is_public')"
+                                     ><span aria-hidden="true">&times;</span></button>
                                </div>
                                <div class="modal-body">
                                  <p><%=l 'Are you sure you want to change the Public state of' %> {{machine.name}} <%=l 'to' %> {{!(machine.is_public==0)}}?</p>
