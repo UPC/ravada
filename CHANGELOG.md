@@ -2,14 +2,23 @@
 
 **Implemented enhancements:**
 
-- Define min swap space for machine templates [\#1697]
-- Filter virtual machine by name [\#1696]
-- Download extra ISO file for installation [\#1695]
+- Ubuntu 22.04 [\#1756]
+- Feature: cpu features [\#1752]
+- Discover virtual machines [\#1751]
+- Backup and restore [\#1746]
+- Min memory [\#1733]
+- Base import [\#1737]
+- Enable Nested Virtualization option [\#1726]
 
 **Refactors**
 
-- enforce ordered adding of hardware [\#1697]
+- Improved create base form [\#1755]
+- Remove the whole CD section on create base [\#1754]
+- Hardware setup in frontend [\#1738]
 
 **Bugfixes**
 
-- hibernate button was always disabled
+- cpu detection in bionic libvirt [\#1753]
+- CLI shutdown disconnected [\#1450]
+- Login LDAP with several uid's [\#1284]
+
