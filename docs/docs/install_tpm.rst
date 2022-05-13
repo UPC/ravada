@@ -18,6 +18,12 @@ Add the swtpm repository to your package sources
 
 Update and install
 
+If you get the following message "the public key is not available: NO_PUBKEY xxxxxxxxxxx"
+
+.. prompt:: bash $
+
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys xxxxxxxxxxx
+
 .. prompt:: bash $
 
     sudo apt update
