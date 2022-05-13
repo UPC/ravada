@@ -10,7 +10,7 @@ if you are only upgrading Ravada from a previous version already installed.
 Ubuntu
 ------
 
-.. note:: We only provide support for Ubuntu 18.04 and 20.04.
+.. note:: We only provide support for Ubuntu 20.04 and 22.04.
 
 We provide *deb* Ubuntu packages on the `UPC ETSETB
 repository <http://infoteleco.upc.edu/img/debian/>`__.
@@ -18,15 +18,15 @@ repository <http://infoteleco.upc.edu/img/debian/>`__.
 
 Install the ravada package. Choose the one that matches your OS release:
 
-- ravada_1.4.0_ubuntu-18.04_all.deb
-- ravada_1.4.0_ubuntu-20.04_all.deb
+- ravada_1.5.0_ubuntu-18.04_all.deb
+- ravada_1.5.0_ubuntu-20.04_all.deb
 
 When you run dpkg now it may show some errors, it is ok, keep reading.
 
 .. prompt:: bash $
 
-     wget http://infoteleco.upc.edu/img/debian/ravada_1.4.0_ubuntu-20.04_all.deb
-     sudo apt install ./ravada_1.4.0_ubuntu-20.04_all.deb
+     wget http://infoteleco.upc.edu/img/debian/ravada_1.5.0_ubuntu-20.04_all.deb
+     sudo apt install ./ravada_1.5.0_ubuntu-20.04_all.deb
 
 The last command will show a warning about missing dependencies. Install
 them running:
