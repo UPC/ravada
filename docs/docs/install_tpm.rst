@@ -22,7 +22,7 @@ If you get the following message "the public key is not available: NO_PUBKEY xxx
 
 .. prompt:: bash $
 
-sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys xxxxxxxxxxx
+    sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys xxxxxxxxxxx
 
 .. prompt:: bash $
 
