@@ -156,28 +156,30 @@
                         </button>
 
                     </td>
-                    <td class="lgMachToggle">
+                    <td class="lgMachToggle" >
 %                       if ($_user->can_create_base ) {
                             <i ng-show="machine.has_clones" class="fa fa-check" aria-hidden="true"
                         title ="<%=l 'Cannot remove base, machine has clones' %>" ng-cloak></i>
-                        <input type="checkbox" checked
-                               ng-show="can_remove_base(machine)"
-                               ng-click="open_modal('mb_',machine)"/>
                         <input type="checkbox"
-                               ng-show="!machine.is_volatile && can_prepare_base(machine)"
-                            ng-click="open_modal('mb_',machine)"
-                            title ="<%=l 'Prepare base' %>" ng-cloak="1"/>
+                               ng-model="machine.is_base"
+                               ng-true-value="1" ng-false-value="0"
+                               ng-show="can_manage_base(machine)"
+                               ng-disabled="list_machines_time<2"
+                               ng-click="open_modal('mb_',machine)"/>
                         <div class="modal fade" tabindex="-1" role="dialog" id="mb_{{machine.id}}">
                            <div class="modal-dialog" role="document">
                              <div class="modal-content">
                                <div class="modal-header">
-                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                                  <h4 class="modal-title"><%=l 'Changing Base State' %></h4>
+                                 <button type="button" class="close"
+                                 data-dismiss="modal" aria-label="Close"
+                                 ng-click="cancel_modal(machine,'is_base')"
+                                     ><span aria-hidden="true">&times;</span></button>
                                </div>
-                               <div class="modal-body" ng-show="can_remove_base(machine)">
+                               <div class="modal-body" ng-show="!machine.is_base">
                                  <p><%=l 'Are you sure you want to remove the base of' %> {{machine.name}}?</p>
                                </div>
-                               <div class="modal-body" ng-show="can_prepare_base(machine)">
+                               <div class="modal-body" ng-show="machine.is_base">
                                    <div ng-show="machine.info.cdrom">
                                      <p>
                                      <%=l 'This machine has a CD-ROM' %>
@@ -190,10 +192,13 @@
                                    </div>
                                  <p><%=l 'Are you sure you want to prepare the base of' %> {{machine.name}}?</p>
                                </div>
+                               <div ng-show="!machine.info">
+                                  <i class="fas fa-sync-alt fa-spin"></i>
+                               </div>
                                <div class="modal-footer" ng-show="machine.info">
-                                 <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
-                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();action('machine','remove_base',machine.id)" ng-show="can_remove_base(machine)" data-dismiss="modal"><%=l 'Yes' %></button>
-                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();request('prepare_base',{ 'id_domain': machine.id, 'with_cd': with_cd })" ng-show="can_prepare_base(machine)" data-dismiss="modal"><%=l 'Yes' %></button>
+                                 <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="cancel_modal(machine,'is_base')"><%=l 'No' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal(machine);action('machine','remove_base',machine.id)" ng-show="!machine.is_base" data-dismiss="modal"><%=l 'Yes' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();request('prepare_base',{ 'id_domain': machine.id, 'with_cd': with_cd })" ng-show="machine.is_base" data-dismiss="modal"><%=l 'Yes' %></button>
                                </div>
                              </div>
                            </div>
@@ -202,23 +207,31 @@
                     </td>
                     <td class="lgMachToggle">
 %                       if ($_user->can_create_base ) {
-                        <input type="checkbox" checked ng-show="machine.is_public" ng-click="open_modal('mp_',machine)" title="<%=l 'Make private'%>" ng-cloak>
-
-                         <input type="checkbox" ng-hide="!machine.is_base || machine.is_public" ng-click="open_modal('mp_',machine)" title="<%=l 'Make public' %>" ng-cloak>
+                        <input type="checkbox"
+                               ng-click="open_modal('mp_',machine)"
+                               title="<%=l 'Make public'%>"
+                               ng-disabled="list_machines_time<2"                                          ng-model="machine.is_public"
+                               ng-true-value="1" ng-false-value="0"
+                                ng-show="machine.is_base"
+                               >
 
                         <div class="modal fade" tabindex="-1" role="dialog" id="mp_{{machine.id}}">
                            <div class="modal-dialog" role="document">
                              <div class="modal-content">
                                <div class="modal-header">
-                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                                  <h4 class="modal-title"><%=l 'Changing Public State' %></h4>
+                                 <button type="button" class="close"
+                                     data-dismiss="modal"
+                                     aria-label="Close"
+                                ng-click="cancel_modal(machine,'is_public')"
+                                     ><span aria-hidden="true">&times;</span></button>
                                </div>
                                <div class="modal-body">
-                                 <p><%=l 'Are you sure you want to change the Public state of' %> {{machine.name}} <%=l 'to' %> {{(machine.is_public==0)}}?</p>
+                                 <p><%=l 'Are you sure you want to change the Public state of' %> {{machine.name}} <%=l 'to' %> {{!(machine.is_public==0)}}?</p>
                                </div>
                                <div class="modal-footer">
-                                 <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="cancel_modal()"><%=l 'No' %></button>
-                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();set_public(machine.id, machine.is_public==0)" data-dismiss="modal"><%=l 'Yes' %></button>
+                                 <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="cancel_modal(machine,'is_public')"><%=l 'No' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();set_public(machine.id, machine.is_public)" data-dismiss="modal"><%=l 'Yes' %></button>
                                </div>
                              </div>
                            </div>
