@@ -173,7 +173,7 @@
                                  <h4 class="modal-title"><%=l 'Changing Base State' %></h4>
                                  <button type="button" class="close"
                                  data-dismiss="modal" aria-label="Close"
-i                               ng-click="cancel_modal(machine,'is_base')"
+                                 ng-click="cancel_modal(machine,'is_base')"
                                      ><span aria-hidden="true">&times;</span></button>
                                </div>
                                <div class="modal-body" ng-show="!machine.is_base">
