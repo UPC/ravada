@@ -1,9 +1,0 @@
-name: Linkat 18.04 - 64 bits
-description: Distribuci&oacute; educativa del Departament d'Ensenyament de Catalunya. Versi&oacute; de 64 bits
-url: http://download-linkat.xtec.cat/distribution/linkat-edu-18.04/iso/
-file_re: linkat-edu-18.04-amd64.iso
-md5_url: $url/MD5SUMS
-arch: amd64
-xml: bionic-amd64.xml
-xml_volume: bionic64-volume.xml
-min_disk_size: 19

@@ -1,9 +1,0 @@
-<div ng-show="ws_fail" class="alert alert-danger" ng-cloak>
-    <strong><%=l 'Error:' %> </strong>
-    <%=l 'Web Service connection failed.' %>
-    <%=l 'Check' %>
-    <a href="https://ravada.readthedocs.io/en/latest/docs/apache.html">
-        <%=l 'Ravada Apache documentation' %>
-    </a>.
-</div>
-

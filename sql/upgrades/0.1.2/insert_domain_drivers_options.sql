@@ -1,1 +1,0 @@
-../../data/insert_domain_drivers_options.sql

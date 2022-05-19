@@ -1,6 +1,0 @@
-<div ng-show="pending_request" class="alert alert-warning">
-    Request {{pending_request.command_text}} {{showmachine.name}} {{pending_request.status}}.
-    <br/>
-    {{pending_request.error}}
-</div>
-
