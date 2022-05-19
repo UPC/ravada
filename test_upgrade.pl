@@ -180,6 +180,7 @@ sub install_deb {
         next if $line !~ /[a-z]/;
         next if $line =~ /No timezone found/i;
         next if $line =~ /INF.*UEFI/i;
+        next if $line =~ /No storage pool.*creating/i;
         $err2 .= "$line\n";
     }
     die "Error en apt $deb $err2" if $err2;
