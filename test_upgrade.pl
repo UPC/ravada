@@ -32,7 +32,10 @@ my $COUNT = 0;
 
 sub _connect_dbh {
     $CONFIG = YAML::LoadFile($FILE_CONFIG) if -e $FILE_CONFIG;
-    return if !$CONFIG || !keys %$CONFIG;
+    if ( !$CONFIG || !keys %$CONFIG ) {
+        warning "Empty or missing $FILE_CONFIG, trying defaults to "
+        ."connect to db\n";
+    }
 
     my $driver= ($CONFIG->{db}->{driver} or 'mysql');;
     my $db_user = ($CONFIG->{db}->{user} or getpwnam($>));;
