@@ -33,7 +33,7 @@ my $COUNT = 0;
 sub _connect_dbh {
     $CONFIG = YAML::LoadFile($FILE_CONFIG) if -e $FILE_CONFIG;
     if ( !$CONFIG || !keys %$CONFIG ) {
-        warning "Empty or missing $FILE_CONFIG, trying defaults to "
+        warn "Empty or missing $FILE_CONFIG, trying defaults to "
         ."connect to db\n";
     }
 
