@@ -167,7 +167,6 @@ sub install_deb {
     warn $out if $out;
     $err2 = '';
     for my $line ( split /\n/, $err ) {
-        print "$line\n" if $line =~ /constraint/;
         next if $line =~ /^INFO/;
         next if $line =~ /'\w+' =>/;
         next if $line =~ /\s+}/;
@@ -226,7 +225,7 @@ sub upgrades {
     my $os = get_os();
     open my $in,"<","$dir/index.html" or die $!;
     my $found_first_release = 0;
-    warn $os;
+    warn "checking all upgrades for $os\n";
     while (my $line = <$in>) {
         my ($release) = $line =~ /a href="(ravada_[0-9\.\-]+_$os.*?)"/;
         if (!$release && $os eq 'debian-11') {
@@ -461,7 +460,7 @@ sub test_user($name) {
 
 sub get_install_and_upgrade($deb, $os) {
 
-    warn $deb;
+    warn $deb."\n";
     wget("$URL/$deb");
     remove_tables();
     remove_ravada();
@@ -512,7 +511,6 @@ sub get_last_release {
     open my $in,"<","$dir/index.html" or die "$! $dir/index.html";
     while (<$in>) {
         my ($release) = /a href="ravada_([0-9\.\-]+)/;
-        warn $release if $release;
         return $release if $release;
     }
     close $in;
