@@ -59,22 +59,27 @@ sub _connect_dbh {
 }
 
 sub list_tables {
-        my $sth = $CONNECTOR->dbh->prepare("show tables");
-        $sth->execute();
+    my $sth = $CONNECTOR->dbh->prepare("show tables");
+    $sth->execute();
 
-        my @tables = qw(booking_entry_ldap_groups booking_entry_users booking_entry_bases booking_entries group_access file_base_images volumes domain_access base_xml domain_instances domains_kvm domains_void domains_network);
-        my %done = map { $_ => 1 } @tables;
-        my %all;
-        while (my ($table) = $sth->fetchrow ) {
-            $all{$table}++;
-            next if $done{$table};
-            push @tables,($table);
-        }
-        my @tables2;
-        for my $table (@tables) {
-            push @tables2,($table) if $all{$table};
-        }
-        return @tables2;
+    my @tables = qw(booking_entry_ldap_groups booking_entry_users booking_entry_bases booking_entries group_access file_base_images volumes domain_access base_xml domain_instances domains_kvm domains_void domains_network);
+    push @tables,(qw(host_devices_domain_locked
+        host_devices_domain
+        host_device_templates
+        host_devices
+        ));
+    my %done = map { $_ => 1 } @tables;
+    my %all;
+    while (my ($table) = $sth->fetchrow ) {
+        $all{$table}++;
+        next if $done{$table};
+        push @tables,($table);
+    }
+    my @tables2;
+    for my $table (@tables) {
+        push @tables2,($table) if $all{$table};
+    }
+    return @tables2;
 }
 
 sub backup {
@@ -100,9 +105,14 @@ sub backup {
 }
 
 sub remove_tables {
+    my $dbh = $CONNECTOR->dbh;
     for my $table (list_tables()) {
-        my $sth = $CONNECTOR->dbh->prepare("drop table $table");
-        $sth->execute();
+        my $sth = $dbh->prepare("drop table $table");
+        eval {
+           $sth->execute();
+        };
+        warn "Error dropping table $table : ".$dbh->errstr
+        if $dbh->err;
 
         my $errstr = $CONNECTOR->dbh->errstr;
         die $CONNECTOR->dbh->err." ".$errstr
@@ -199,7 +209,7 @@ sub get_os {
     if ($name =~ /ubuntu/i) {
         my ($n) = $version =~ m{^(\d+)\.};
         die "I can't find major version in '$version'" if !defined $n;
-	    return "20.04" if $n > 20;
+	    return "ubuntu-20.04" if $n > 20;
     }
     $version =~ s{(\d+\.\d+)\..*}{$1};
     return lc($name)."-$version";
@@ -510,7 +520,7 @@ sub get_last_release {
 
 $CONNECTOR = _connect_dbh();
 
-test_domain();
+#test_domain();
 
 get_os();
 
