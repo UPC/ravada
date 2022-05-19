@@ -17,8 +17,7 @@ just like when you install it.
 
 ```
 sudo mysqladmin -u root -p create ravada
-sudo mysql -u root -p ravada -e "create user 'rvd_user'@'localhost' identif
-ied by 'Pword12345*'"
+sudo mysql -u root -p ravada -e "create user 'rvd_user'@'localhost' identified by 'Pword12345*'"
 sudo mysql -u root -p ravada -e "grant all on ravada.* to 'rvd_user'@'localhost'"
 ```
 
