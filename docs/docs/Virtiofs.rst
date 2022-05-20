@@ -1,7 +1,10 @@
+VirtioFS
+========
+
 Virtiofs is a shared file system that lets virtual machines access a directory tree on the host. It will be available with Ravada v1.6.
 
 Requirements
-============
+-------------
 
 VirtioFS works only with libvirt 6.2. It is installed in these Linux
 Distributions:
@@ -11,7 +14,7 @@ Distributions:
 ( TODO : Please contribute if you are aware of more , thank you ! )
 
 Virtual Machine Configuration
-=============================
+-----------------------------
 
 In the hardware section of the virtual machine, add a new *filesystem* item.
 You have to pass the full path you want to share with the virtual machine.
@@ -19,7 +22,7 @@ You have to pass the full path you want to share with the virtual machine.
 .. image:: images/new_virtiofs.jpg
 
 Linux
-=====
+-----
 
 Using virtiofs from Linux virtual machines is pretty straightforward
 and the drivers come already with any latest kernel.
@@ -28,7 +31,7 @@ We have not managed to use virtiofs in Alpine Linux. It runs
 fine with any Debian, Ubuntu and other mainstream distributions.
 
 Mount
------
+~~~~~
 
 To mount the partition add a line in the fstab with the source name
 and the directory you want to mount it. In this example we mount
@@ -43,7 +46,7 @@ the virtual machine.
 Create the mount path */mnt/shared* and type `mount -a` to try it.
 
 Mount read-only
----------------
+~~~~~~~~~~~~~~~
 
 In the first example we accessed the directory with read and write options.
 If you want to access it read only, mount it this way:
@@ -54,11 +57,11 @@ If you want to access it read only, mount it this way:
 
 
 Mount in Windows
-================
+----------------
 
 `See this manual to use VirtioFS from Windows <https://virtio-fs.gitlab.io/howto-windows.html>`_.
 
 Read More
-=========
+---------
 
 `More information about VirtioFS <https://virtio-fs.gitlab.io/>`_.
