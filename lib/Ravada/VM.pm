@@ -1378,7 +1378,7 @@ sub run_command($self, @command) {
     if ($exec !~ m{^/}) {
         my ($exec_command,$args) = $exec =~ /(.*?) (.*)/;
         $exec_command = $exec if !defined $exec_command;
-        $exec = $self->_findbin($exec_command);
+        $exec = $self->_which($exec_command);
         $command[0] = $exec;
         $command[0] .= " $args" if $args;
     }
@@ -1514,16 +1514,6 @@ sub create_iptables_chain($self, $chain, $jchain='INPUT') {
 
     $self->run_command("iptables", '-I', $jchain, '-j' => $chain);
 
-}
-
-sub _findbin($self, $name) {
-    my $exec = "_exec_$name";
-    return $self->{$exec} if $self->{$exec};
-    my ($out, $err) = $self->run_command('/usr/bin/which', $name);
-    chomp $out;
-    $self->{$exec} = $out;
-    confess "Error: Command '$name' not found" if !$out;
-    return $out;
 }
 
 =head2 iptables
@@ -2122,7 +2112,18 @@ sub _list_qemu_bridges($self) {
 
 sub _which($self, $command) {
     return $self->{_which}->{$command} if exists $self->{_which} && exists $self->{_which}->{$command};
-    my @cmd = ( '/bin/which',$command);
+    my $bin_which = $self->{_which}->{which};
+    if (!$bin_which) {
+        for my $try ( "/bin/which","/usr/bin/which") {
+            $bin_which = $try if $self->file_exists($try);
+            last if $bin_which;
+        }
+        if (!$bin_which) {
+            warn "Warning: No which found in /bin nor /usr/bin\n";
+            $bin_which = "which";
+        }
+    }
+    my @cmd = ( $bin_which,$command);
     my ($out,$err) = $self->run_command(@cmd);
     chomp $out;
     $self->{_which}->{$command} = $out;
