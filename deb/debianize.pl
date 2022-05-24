@@ -123,7 +123,7 @@ sub create_deb {
 
     mkdir "ravada_release" if !-e "ravada_release";
     my $deb = "ravada_release/ravada_${VERSION}_${dist}_all.deb";
-    my @cmd = ('dpkg','-b',"$DIR_DST/",$deb);
+    my @cmd = ('dpkg-deb','-b','-Zgzip',"$DIR_DST/",$deb);
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
     die $err if $err;
