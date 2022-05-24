@@ -465,6 +465,30 @@ sub test_user($name) {
     die "Error. I can't find user '$name'" if !$user;
 }
 
+sub fix_net_default {
+    my @cmd=("virsh","net-dumpxml","default");
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+    die join(" ",@cmd)."\n".$err if $err;
+
+    $out =~ s/122/123/g;
+
+    @cmd = ("virsh","net-define",$out);
+    run3(\@cmd, \$in, \$out, \$err);
+    die join(" ",@cmd)."\n".$err if $err;
+
+}
+
+sub check_network {
+    my @cmd=("ip","route");
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+    my ($dev_122) = $out =~ m{^192.168.122.0.* dev ([a-z0-9]+)}ms;
+    return if !$dev_122 || $dev_122 =~ /^virbr/;
+
+    fix_net_default();
+}
+
 sub get_install_and_upgrade($deb, $os) {
 
     warn $deb."\n";
@@ -472,6 +496,7 @@ sub get_install_and_upgrade($deb, $os) {
     remove_tables();
     remove_ravada();
     install_deb($deb);
+    check_network();
 
     rvd();
     my $domain_name = new_domain_name();
@@ -550,7 +575,7 @@ sub clean_old {
     chdir $DIR_IMG;
     while (my $file = readdir $dir ) {
         next if $file !~ /^tst_upgrade/;
-        print "$file\n";
+        print "removing $file\n";
         unlink $file or die "$! $file\n";
     }
 }
@@ -560,6 +585,8 @@ sub clean_old {
 $CONNECTOR = _connect_dbh();
 
 #test_domain();
+
+check_network();
 
 clean_old();
 
