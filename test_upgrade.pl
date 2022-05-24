@@ -28,7 +28,10 @@ qw(requests messages);
 
 $ENV{LANG}='C';
 
+die "Error: this must be run as root\n" if $>;
+
 my $COUNT = 0;
+my $DIR_IMG = "/var/lib/libvirt/images";
 
 sub _connect_dbh {
     $CONFIG = YAML::LoadFile($FILE_CONFIG) if -e $FILE_CONFIG;
@@ -299,11 +302,14 @@ sub _search_id_iso($name) {
     return $id;
 }
 
-sub virsh_remove_domain($name){
+sub virsh_remove_domain($name, $storage=0){
     my @cmd = ("virsh","destroy",$name);
     my ($in, $out, $err);
     run3(\@cmd,\$in,\$out,\$err);
     @cmd = ("virsh","undefine",$name);
+
+    push @cmd,("--remove-all-storage") if $storage;
+
     run3(\@cmd,\$in,\$out,\$err);
 
     warn $err if $err;
@@ -518,11 +524,44 @@ sub get_last_release {
     die "Error: I can't find a href=\"ravada_ in $URL";
 }
 
+sub install_virsh {
+    my @cmd = ("apt-get","install","libvirt-clients","libvirt-daemon"
+    ,"libvirt-daemon-driver-qemu");
+    my ($in, $out, $err);
+    run3(\@cmd,\$in,\$out,\$err);
+    die $err if $err;
+}
+
+sub clean_old {
+    install_virsh();
+    my @cmd = ("virsh","list","--all");
+    my ($in, $out, $err);
+    run3(\@cmd,\$in,\$out,\$err);
+
+    my @cmd_remove = ("virsh","undefine");
+
+    for my $line (split/\n/,$out) {
+        next if $line !~ /tst_upgrade/i;
+        my ($name) = $line =~ /.* (tst_upgrade.*?) /;
+        print "removing $name\n";
+        virsh_remove_domain($name,1);
+    }
+
+    opendir my $dir,$DIR_IMG or return;
+    while (my $file = readdir $dir ) {
+        next if $file !~ /^tst_upgrade/;
+        print "$file\n";
+        unlink $file or die "$! $file\n";
+    }
+}
+
 ################################################################
 
 $CONNECTOR = _connect_dbh();
 
 #test_domain();
+
+clean_old();
 
 get_os();
 
