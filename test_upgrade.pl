@@ -17,6 +17,8 @@ our $FILE_CONFIG = "/etc/ravada.conf";
 my $URL = "http://infoteleco.upc.edu/img/debian";
 my $RELEASE = get_last_release();
 
+print "Checking upgrades to release $RELEASE\n";
+
 my $DOMAIN_NAME = "tst_upgrade_01";
 my $USER_NAME = "tst_upgrade_01";
 
@@ -127,15 +129,28 @@ sub remove_tables {
     }
 }
 
+sub recent {
+    my $file = shift;
+    return if ! -e $file;
+
+    my @stat = stat($file);
+    if ($file =~ /deb$/) {
+        return time - $stat[9] < 3600;
+    } else {
+        return time - $stat[9] < 300;
+    }
+}
+
 sub wget {
     my $url = shift;
 
     my ($file) = $url =~ m{.*/(.*)};
     $file = "index.html" if !length($file);
-    if (-e $file) {
+    if (-e $file && recent($file)) {
         warn "File $file already downloaded\n";
         return;
     }
+    unlink $file if -e $file;
     my @cmd = ("wget",$url);
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
@@ -241,6 +256,7 @@ sub upgrades {
         }
         next if !$found_first_release;
         get_install_and_upgrade($release, $os);
+	exit;
     }
     close $in;
     die "Error: no first release found\n" if !$found_first_release;
@@ -499,7 +515,6 @@ sub check_network {
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
     my ($dev_122) = $out =~ m{^192.168.122.0.* dev ([a-z0-9]+)}ms;
-    warn $dev_122;
     return if !$dev_122 || $dev_122 =~ /^virbr/;
 
     fix_net_default();
@@ -552,9 +567,7 @@ sub get_last_release {
     chdir $dir;
 
     die "Error: no url" if !$URL;
-    if (! -e "$dir/index.html") {
-        wget("$URL/index.html");
-    }
+    wget("$URL/index.html");
 
     open my $in,"<","$dir/index.html" or die "$! $dir/index.html";
     while (<$in>) {
@@ -566,9 +579,10 @@ sub get_last_release {
 }
 
 sub install_virsh {
-    my @cmd = ("apt-get","install","libvirt-clients","libvirt-daemon");
+    my @cmd = ("apt-get","-y","install","libvirt-clients","libvirt-daemon");
     my ($in, $out, $err);
     run3(\@cmd,\$in,\$out,\$err);
+    warn $out if $out;
     die $err if $err;
 }
 
@@ -602,9 +616,9 @@ $CONNECTOR = _connect_dbh();
 
 #test_domain();
 
-check_network();
-
 clean_old();
+
+check_network();
 
 get_os();
 
