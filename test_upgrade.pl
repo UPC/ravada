@@ -215,7 +215,7 @@ sub get_os {
     if ($name =~ /ubuntu/i) {
         my ($n) = $version =~ m{^(\d+)\.};
         die "I can't find major version in '$version'" if !defined $n;
-	    return "ubuntu-20.04" if $n > 20;
+        return "ubuntu-20.04" if $n > 20;
     }
     $version =~ s{(\d+\.\d+)\..*}{$1};
     return lc($name)."-$version";
@@ -473,9 +473,24 @@ sub fix_net_default {
 
     $out =~ s/122/123/g;
 
-    @cmd = ("virsh","net-define",$out);
-    run3(\@cmd, \$in, \$out, \$err);
-    die join(" ",@cmd)."\n".$err if $err;
+    warn "fixing network $out";
+
+    @cmd = ("virsh","net-destroy","default");
+    my ($in2, $out2, $err2);
+    run3(\@cmd, \$in2, \$out2, \$err2);
+
+    my $file = "/tmp/default.xml";
+    open my $net,">",$file or die $!;
+    print $net $out;
+    close $out;
+
+    @cmd = ("virsh","net-define",$file);
+    my ($in3, $out3, $err3);
+    run3(\@cmd, \$in3 , \$out3, \$err3);
+    die join(" ",@cmd)."\n".$err3 if $err3;
+
+    @cmd = ("virsh","net-start","default");
+    run3(\@cmd, \$in2, \$out2, \$err2);
 
 }
 
@@ -484,6 +499,7 @@ sub check_network {
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
     my ($dev_122) = $out =~ m{^192.168.122.0.* dev ([a-z0-9]+)}ms;
+    warn $dev_122;
     return if !$dev_122 || $dev_122 =~ /^virbr/;
 
     fix_net_default();
