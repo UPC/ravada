@@ -525,8 +525,7 @@ sub get_last_release {
 }
 
 sub install_virsh {
-    my @cmd = ("apt-get","install","libvirt-clients","libvirt-daemon"
-    ,"libvirt-daemon-driver-qemu");
+    my @cmd = ("apt-get","install","libvirt-clients","libvirt-daemon");
     my ($in, $out, $err);
     run3(\@cmd,\$in,\$out,\$err);
     die $err if $err;
@@ -548,6 +547,7 @@ sub clean_old {
     }
 
     opendir my $dir,$DIR_IMG or return;
+    chdir $DIR_IMG;
     while (my $file = readdir $dir ) {
         next if $file !~ /^tst_upgrade/;
         print "$file\n";
