@@ -2,7 +2,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2022-05-26 08:03+0000\n"
+"PO-Revision-Date: 2022-05-26 08:56+0000\n"
 "Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
 "Language-Team: Russian <https://hosted.weblate.org/projects/ravada/"
 "translation/ru/>\n"
@@ -21,166 +21,166 @@ msgid "Machine Name"
 msgstr "Имя машины"
 
 msgid "Tools"
-msgstr ""
+msgstr "Инструменты"
 
 msgid "Choose a Machine to Start"
-msgstr ""
+msgstr "Выберите машину для запуска"
 
 msgid "Start"
-msgstr ""
+msgstr "Запустить"
 
 msgid "Stop"
 msgstr ""
 
 msgid "View"
-msgstr ""
+msgstr "Вид"
 
 msgid "Prepare base"
-msgstr ""
+msgstr "Подготовить базу"
 
 msgid "Clone"
-msgstr ""
+msgstr "Клонировать"
 
 msgid "Clone/s"
-msgstr ""
+msgstr "Клон/ы"
 
 msgid "Users List"
-msgstr ""
+msgstr "Список пользователей"
 
 msgid "Name"
-msgstr ""
+msgstr "Имя"
 
 msgid "Log Out"
-msgstr ""
+msgstr "Выйти"
 
 msgid "Available Machines"
-msgstr ""
+msgstr "Доступные машины"
 
 msgid "Help"
-msgstr ""
+msgstr "Справка"
 
 msgid "Requirements"
-msgstr ""
+msgstr "Требования"
 
 msgid "About"
-msgstr ""
+msgstr "О программе"
 
 msgid "Mark all as read"
-msgstr ""
+msgstr "Отметить всё как прочитанное"
 
 msgid "Settings"
-msgstr ""
+msgstr "Настройки"
 
 msgid "New Machine"
-msgstr ""
+msgstr "Новая машина"
 
 msgid "I want to change my password"
-msgstr ""
+msgstr "Я хочу изменить свой пароль"
 
 msgid "I want to change my language"
-msgstr ""
+msgstr "Я хочу изменить язык"
 
 msgid "Language:"
-msgstr ""
+msgstr "Язык:"
 
 msgid "English"
-msgstr ""
+msgstr "Английский"
 
 msgid "Spanish"
-msgstr ""
+msgstr "Испанский"
 
 msgid "Catalan"
-msgstr ""
+msgstr "Каталонский"
 
 msgid "Galician"
-msgstr ""
+msgstr "Галисийский"
 
 msgid "French"
-msgstr ""
+msgstr "Французский"
 
 msgid "Hindi"
-msgstr ""
+msgstr "Хинди"
 
 msgid "Indonesian"
-msgstr ""
+msgstr "Индонезийский"
 
 msgid "Persian"
-msgstr ""
+msgstr "Персидский"
 
 msgid "Japanese"
-msgstr ""
+msgstr "Японский"
 
 msgid "German"
-msgstr ""
+msgstr "Немецкий"
 
 msgid "New Password:"
-msgstr ""
+msgstr "Новый пароль:"
 
 msgid "Confirm Password:"
-msgstr ""
+msgstr "Подтвердите пароль:"
 
 msgid "Submit"
-msgstr ""
+msgstr "Применить"
 
 msgid "Your language has been changed successfully"
-msgstr ""
+msgstr "Язык успешно изменён"
 
 msgid "Your password has been changed successfully"
-msgstr ""
+msgstr "Пароль был успешно изменён"
 
 msgid "Password is too short"
-msgstr ""
+msgstr "Пароль слишком короткий"
 
 msgid "Password fields do not match"
-msgstr ""
+msgstr "Пароли не совпадают"
 
 msgid "Some of the password fields are empty"
-msgstr ""
+msgstr "Некоторые поля пароля пусты"
 
 msgid "Status"
-msgstr ""
+msgstr "Статус"
 
 msgid "Actions"
-msgstr ""
+msgstr "Действия"
 
 msgid "Down"
-msgstr ""
+msgstr "Выключена"
 
 msgid "Running"
-msgstr ""
+msgstr "Работает"
 
 msgid "Shutdown"
-msgstr ""
+msgstr "Выключить"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "Снимок экрана"
 
 msgid "Paused"
-msgstr ""
+msgstr "Приостановлена"
 
 msgid "Machine locked by request"
-msgstr ""
+msgstr "Машина заблокирована по запросу"
 
 msgid "Process"
-msgstr ""
+msgstr "Процесс"
 
 msgid "Copy"
-msgstr ""
+msgstr "Копировать"
 
 msgid "Error!"
-msgstr ""
+msgstr "Ошибка!"
 
 msgid "Error"
-msgstr ""
+msgstr "Ошибка"
 
 msgid "Backend not available!"
-msgstr ""
+msgstr "Backend недоступен!"
 
 msgid "Subject"
-msgstr ""
+msgstr "Тема"
 
 msgid "Date"
-msgstr ""
+msgstr "Дата"
 
 msgid "Mark as read"
 msgstr ""
@@ -189,79 +189,79 @@ msgid "Mark as unread"
 msgstr ""
 
 msgid "No messages to show"
-msgstr ""
+msgstr "Нет сообщений"
 
 msgid "Admin"
-msgstr ""
+msgstr "Администратор"
 
 msgid "Machines"
-msgstr ""
+msgstr "Машины"
 
 msgid "machines"
-msgstr ""
+msgstr "машины"
 
 msgid "Users"
-msgstr ""
+msgstr "Пользователи"
 
 msgid "users"
-msgstr ""
+msgstr "пользователи"
 
 msgid "Messages"
-msgstr ""
+msgstr "Сообщения"
 
 msgid "messages"
-msgstr ""
+msgstr "сообщения"
 
 msgid "Admin tools"
-msgstr ""
+msgstr "Инструменты администратора"
 
 msgid "Remove base"
-msgstr ""
+msgstr "Удалить базу"
 
 msgid "Restore"
-msgstr ""
+msgstr "Восстановить"
 
 msgid "Hibernate"
-msgstr ""
+msgstr "Режим гибернации"
 
 msgid "Are you sure?"
-msgstr ""
+msgstr "Вы уверены?"
 
 msgid "Yes"
-msgstr ""
+msgstr "Да"
 
 msgid "No"
-msgstr ""
+msgstr "Нет"
 
 msgid "Make public"
-msgstr ""
+msgstr "Опубликовать"
 
 msgid "Machine settings"
-msgstr ""
+msgstr "Настройки машины"
 
 msgid "Cannot remove base, machine has clones"
-msgstr ""
+msgstr "Не удаётся удалить базу, у машины есть клоны"
 
 msgid "show clones"
-msgstr ""
+msgstr "показать клоны"
 
 msgid "hide clones"
-msgstr ""
+msgstr "скрыть клоны"
 
 msgid "For Spice redirection you will need to install"
-msgstr ""
+msgstr "Для Spice перенаправления необходимо установить"
 
 msgid "in your computer."
-msgstr ""
+msgstr "на компьютер."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr ""
 
 msgid "You will need to install"
-msgstr ""
+msgstr "Необходимо установить"
 
 msgid "and USB drivers ("
-msgstr ""
+msgstr "и USB -драйверы ("
 
 msgid ""
 "Be aware that in Windows, Spice redirection is not automatic. It is "
@@ -269,290 +269,304 @@ msgid ""
 msgstr ""
 
 msgid "To make this possible, download"
-msgstr ""
+msgstr "Чтобы это стало возможным, скачайте"
 
 msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
 msgstr ""
+"или скопируйте следующие строки в кодировке ASCII в файл, сохраните его с "
+"расширением .reg и запустите файл."
 
 msgid "Login"
-msgstr ""
+msgstr "Войти"
 
 msgid "Welcome"
-msgstr ""
+msgstr "Добро пожаловать"
 
 msgid "A viewer is required to run the virtual machines."
-msgstr ""
+msgstr "Для запуска виртуальных машин требуется средство просмотра."
 
 msgid "It is required a viewer to run the virtual machines."
-msgstr ""
+msgstr "Для запуска виртуальных машин требуется средство просмотра."
 
 msgid "Virtual Machines"
-msgstr ""
+msgstr "Виртуальные машины"
 
 msgid "User"
-msgstr ""
+msgstr "Пользователь"
 
 msgid "Password"
-msgstr ""
+msgstr "Пароль"
 
 msgid "Start session"
 msgstr ""
 
 msgid "bits) in your computer."
-msgstr ""
+msgstr "бит) на вашем компьютере."
 
 msgid "Permissions"
-msgstr ""
+msgstr "Разрешения"
 
 msgid "can change the settings of owned virtual machines."
-msgstr ""
+msgstr "может изменять настройки собственных виртуальных машин."
 
 msgid "can change the settings of any virtual machines."
-msgstr ""
+msgstr "может изменять настройки любых виртуальных машин."
 
 msgid "can change the settings of any virtual machines "
-msgstr ""
+msgstr "может изменять настройки любых виртуальных машин"
 
 msgid "cloned from one base owned by the user."
-msgstr ""
+msgstr "клонированных из одной базы, принадлежащей пользователю."
 
 msgid "can clone public virtual machines."
-msgstr ""
+msgstr "может клонировать общедоступные виртуальные машины."
 
 msgid "can clone any virtual machine."
-msgstr ""
+msgstr "может клонировать любую виртуальную машину."
 
 msgid "can create bases."
-msgstr ""
+msgstr "можно создавать базы."
 
 msgid "can create virtual machines."
-msgstr ""
+msgstr "может создавать виртуальные машины."
 
 msgid "can grant permissions to other users"
-msgstr ""
+msgstr "может предоставлять разрешения другим пользователям"
 
 msgid "can hibernate any virtual machine."
-msgstr ""
+msgstr "может перевести в спящий режим любую виртуальную машину."
 
 msgid "can hibernate clones from virtual machines owned by the user."
 msgstr ""
+"может переводить в спящий режим клоны виртуальных машин, принадлежащих "
+"пользователю."
 
 msgid "can hibernate any clone."
-msgstr ""
+msgstr "может перевести в спящий режим любой клон."
 
 msgid "can remove any virtual machines owned by the user."
-msgstr ""
+msgstr "может удалить любые виртуальные машины, принадлежащие пользователю."
 
 msgid "can remove any virtual machine."
-msgstr ""
+msgstr "может удалить любую виртуальную машину."
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr ""
+msgstr "может удалять клоны виртуальных машин, принадлежащих пользователю."
 
 msgid "can remove any clone."
-msgstr ""
+msgstr "может удалить любой клон."
 
 msgid "can take a screenshot of any virtual machine owned by the user."
 msgstr ""
+"может сделать снимок экрана любой виртуальной машины, принадлежащей "
+"пользователю."
 
 msgid "can take a screenshot of any virtual machine."
-msgstr ""
+msgstr "может сделать снимок экрана любой виртуальной машины."
 
 msgid "can shutdown any virtual machine."
-msgstr ""
+msgstr "может выключить любую виртуальную машину."
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr ""
+msgstr "может выключить клоны виртуальных машин, принадлежащих пользователю."
 
 msgid "Submit Query"
-msgstr ""
+msgstr "Отправить запрос"
 
 msgid "From Template"
-msgstr ""
+msgstr "Из шаблона"
 
 msgid "From Machine"
-msgstr ""
+msgstr "Из машины"
 
 msgid "Backend"
-msgstr ""
+msgstr "Backend"
 
 msgid "Select Template"
-msgstr ""
+msgstr "Выберите шаблон"
 
 msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
 msgstr ""
+"Этот ISO-образ еще не загружен. Загрузка файла из Интернета может занять "
+"несколько минут или даже часов."
 
 msgid "Download now"
-msgstr ""
+msgstr "Скачать сейчас"
 
 msgid "Select ISO"
-msgstr ""
+msgstr "Выбрать ISO"
 
 msgid "Template"
-msgstr ""
+msgstr "Шаблон"
 
 msgid "Disk Size: (GB)"
-msgstr ""
+msgstr "Размер диска: (ГБ)"
 
 msgid "Swap Size: (GB)"
-msgstr ""
+msgstr "Размер Swap: (ГБ)"
 
 msgid "Ram: (GB)"
-msgstr ""
+msgstr "ОЗУ: (ГБ)"
 
 msgid "Machine name is required."
-msgstr ""
+msgstr "Имя машины обязательно."
 
 msgid "Machine name can't exceed 20 characters."
-msgstr ""
+msgstr "Имя машины не может превышать 20 символов."
 
 msgid "Backend selection is required."
-msgstr ""
+msgstr "Необходимо выбрать Backend."
 
 msgid "ISO image selection is required."
-msgstr ""
+msgstr "Необходимо выбрать ISO-образ."
 
 msgid "Template selection is required."
-msgstr ""
+msgstr "Необходимо выбрать шаблон."
 
 msgid "A machine with that name already exists."
-msgstr ""
+msgstr "Машина с таким именем уже существует."
 
 msgid "The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points."
 msgstr ""
+"Имя машины может состоять только из символов латинского алфавита, цифр, тире "
+"и точек."
 
 msgid "Create"
-msgstr ""
+msgstr "Создать"
 
 msgid ""
 "can change the settings of all virtual machines "
 "cloned from one base owned by the user."
 msgstr ""
+"может изменять настройки всех виртуальных машин, клонированных из одной "
+"базы, принадлежащей пользователю."
 
 msgid "monitoring"
-msgstr ""
+msgstr "мониторинг"
 
 msgid "Are you sure you want to remove the Base of"
-msgstr ""
+msgstr "Вы уверены, что хотите удалить Базу"
 
 msgid "Are you sure you want to prepare the Base of"
-msgstr ""
+msgstr "Вы уверены, что хотите подготовить Базу"
 
 msgid "Are you sure you want to change the Public state of"
-msgstr ""
+msgstr "Вы уверены, что хотите изменить общедоступное состояние"
 
 msgid "Search"
-msgstr ""
+msgstr "Поиск"
 
 msgid "There are no public bases available in this system."
-msgstr ""
+msgstr "В этой системе нет общедоступных баз."
 
 msgid "There are no machines available in this system."
-msgstr ""
+msgstr "В этой системе нет доступных машин."
 
 msgid "Create one."
-msgstr ""
+msgstr "Создать."
 
 msgid "not public"
 msgstr ""
 
 msgid "User Settings"
-msgstr ""
+msgstr "Настройки пользователя"
 
 msgid "Create a new account"
-msgstr ""
+msgstr "Создать новую учётную запись"
 
 msgid "Username"
-msgstr ""
+msgstr "Имя пользователя"
 
 msgid "Hide Private"
 msgstr ""
 
 msgid "Show All"
-msgstr ""
+msgstr "Показать все"
 
 msgid "Shutting down ..."
-msgstr ""
+msgstr "Выключить …"
 
 msgid "It may take a couple of minutes."
-msgstr ""
+msgstr "Это может занять пару минут."
 
 msgid "Hybernating ..."
 msgstr ""
 
 msgid "Description"
-msgstr ""
+msgstr "Описание"
 
 msgid "Rename"
-msgstr ""
+msgstr "Переименовать"
 
 msgid "Options"
-msgstr ""
+msgstr "Параметры"
 
 msgid "Drivers"
-msgstr ""
+msgstr "Драйверы"
 
 msgid "Graphics"
-msgstr ""
+msgstr "Графика"
 
 msgid "Remove Machine"
-msgstr ""
+msgstr "Удалить машину"
 
 msgid "System overview"
 msgstr ""
 
 msgid "Danger Zone"
-msgstr ""
+msgstr "Опасная зона"
 
 msgid "Once you delete the machine, there is no going back. Please be certain."
 msgstr ""
+"Отменить удаление машины невозможно. Пожалуйста, убедитесь, что вы знаете, "
+"что делаете."
 
 msgid "Danger"
-msgstr ""
+msgstr "Опасность"
 
 msgid "This will remove all the contents of the machine"
-msgstr ""
+msgstr "Это удалит всё содержимое машины"
 
 msgid "This action can't be undone"
-msgstr ""
+msgstr "Это действие нельзя отменить"
 
 msgid "Are you sure ?"
-msgstr ""
+msgstr "Вы уверены?"
 
 msgid "Yes, remove"
-msgstr ""
+msgstr "Да, удалить"
 
 msgid "Virtual Machine"
-msgstr ""
+msgstr "Виртуальная машина"
 
 msgid "removed"
 msgstr ""
 
 msgid "This will remove all the"
-msgstr ""
+msgstr "Это удалит все"
 
 msgid "clones of the machine"
-msgstr ""
+msgstr "клоны машины"
 
 msgid "Yes, remove all the clones"
-msgstr ""
+msgstr "Да, удалить все клоны"
 
 msgid "This virtual machine can't be removed because it has"
-msgstr ""
+msgstr "Эту виртуальную машину нельзя удалить, так как она"
 
 msgid "clones"
-msgstr ""
+msgstr "клоны"
 
 msgid "Clones"
-msgstr ""
+msgstr "Клоны"
 
 msgid "This machine has not Graphics parameters!"
-msgstr ""
+msgstr "У этой машины нет графических параметров!"
 
 msgid "recommended"
-msgstr ""
+msgstr "рекомендуемые"
 
 msgid "to"
 msgstr ""
@@ -564,268 +578,272 @@ msgid "Changing Base State"
 msgstr ""
 
 msgid "action"
-msgstr ""
+msgstr "действие"
 
 msgid "Grants"
-msgstr ""
+msgstr "Права"
 
 msgid "public"
 msgstr ""
 
 msgid "New Base"
-msgstr ""
+msgstr "Новая база"
 
 msgid "Version"
-msgstr ""
+msgstr "Версия"
 
 msgid "Authors"
-msgstr ""
+msgstr "Авторы"
 
 msgid "Development"
-msgstr ""
+msgstr "Разработка"
 
 msgid "Below are listed the technologies used in this project:"
-msgstr ""
+msgstr "Ниже перечислены технологии, используемые в этом проекте:"
 
 msgid "The code is available on "
-msgstr ""
+msgstr "Код доступен на"
 
 msgid "The code is "
 msgstr ""
 
 msgid "License"
-msgstr ""
+msgstr "Лицензия"
 
 msgid "Machine locked by"
-msgstr ""
+msgstr "Машина заблокирована"
 
 msgid "This Machine is a base"
-msgstr ""
+msgstr "Эта машина является базой"
 
 msgid "Cloned"
 msgstr ""
 
 msgid "is admin"
-msgstr ""
+msgstr "администратор"
 
 msgid "Add new user"
-msgstr ""
+msgstr "Добавить нового пользователя"
 
 msgid "Register"
 msgstr ""
 
 msgid "Current Password:"
-msgstr ""
+msgstr "Текущий пароль:"
 
 msgid "For more information, check"
-msgstr ""
+msgstr "Для получения дополнительной информации, смотрите"
 
 msgid "the Windows Clients documentation"
-msgstr ""
+msgstr "документацию по клиентам Windows"
 
 msgid "It is programmed in"
-msgstr ""
+msgstr "Он создан на"
 
 msgid "with perl framework"
-msgstr ""
+msgstr "используется Perl фреймворк"
 
 msgid "and"
-msgstr ""
+msgstr "и"
 
 msgid "Memory"
-msgstr ""
+msgstr "Память"
 
 msgid "MB available"
-msgstr ""
+msgstr "МБ доступно"
 
 msgid "The machine will shutdown after these minutes"
-msgstr ""
+msgstr "Машина будет выключена, по истечении этого количества минут"
 
 msgid "Cancel"
-msgstr ""
+msgstr "Отменить"
 
 msgid "Please enter the following information to create the account"
-msgstr ""
+msgstr "Пожалуйста, введите следующую информацию для создания учётной записи"
 
 msgid "Enter Username"
-msgstr ""
+msgstr "Введите имя пользователя"
 
 msgid "Enter Password"
-msgstr ""
+msgstr "Введите пароль"
 
 msgid "Confirm Password"
-msgstr ""
+msgstr "Подтвердите пароль"
 
 msgid "Username is required"
-msgstr ""
+msgstr "Имя пользователя обязательно"
 
 msgid "Username can not exceed 20 characters"
-msgstr ""
+msgstr "Имя пользователя не может превышать 20 символов"
 
 msgid "Username must be at least 5 characters"
-msgstr ""
+msgstr "Имя пользователя должно быть не менее 5 символов"
 
 msgid "Username can only contain words, numbers, dashes, dots and underscores"
 msgstr ""
+"Имя пользователя может состоять только из символов латинского алфавита, "
+"цифр, тире, точек и символов подчеркивания"
 
 msgid "Password is required"
-msgstr ""
+msgstr "Пароль обязателен"
 
 msgid "Password can not exceed 20 characters"
-msgstr ""
+msgstr "Пароль не может превышать 20 символов"
 
 msgid "Password must be at least 5 characters"
-msgstr ""
+msgstr "Пароль должен быть не менее 5 символов"
 
 msgid "Password can only contain words and numbers"
-msgstr ""
+msgstr "Пароль может содержать только слова и цифры"
 
 msgid "Confirm Password is required"
-msgstr ""
+msgstr "Требуется подтверждение пароля"
 
 msgid "Confirm Password can not exceed 20 characters"
-msgstr ""
+msgstr "Подтверждение пароля не может превышать 20 символов"
 
 msgid "Confirm Password must be at least 5 characters"
-msgstr ""
+msgstr "Подтверждение пароля должно быть не менее 5 символов"
 
 msgid "Confirm Password can only contain words and numbers"
-msgstr ""
+msgstr "Подтверждение пароля может содержать только слова и цифры"
 
 msgid "This information will be available to the users"
-msgstr ""
+msgstr "Эта информация будет доступна пользователям"
 
 msgid "Volatile Clones"
-msgstr ""
+msgstr "Неустойчивые клоны"
 
 msgid "Owner"
-msgstr ""
+msgstr "Владелец"
 
 msgid "Change the owner of the machine"
-msgstr ""
+msgstr "Изменить владельца машины"
 
 msgid "Press SHIFT + F12 to exit"
-msgstr ""
+msgstr "Для выхода нажмите SHIFT + F12"
 
 msgid "If you can not see the machine screen in a few seconds check for a file called"
 msgstr ""
+"Если вы не увидите экран машины через несколько секунд, проверьте наличие "
+"файла с именем"
 
 msgid "in your downloads folder."
-msgstr ""
+msgstr "в каталоге загрузки."
 
 msgid "copied to clipboard"
-msgstr ""
+msgstr "скопировано в буфер обмена"
 
 msgid "Portuguese"
-msgstr ""
+msgstr "Португальский"
 
 msgid "Read more."
-msgstr ""
+msgstr "Читать далее."
 
 msgid "The password for this virtual machine connection is :"
-msgstr ""
+msgstr "Пароль для подключения к этой виртуальной машине:"
 
 msgid "view"
-msgstr ""
+msgstr "вид"
 
 msgid "Start again"
 msgstr ""
 
 msgid "The machine is down."
-msgstr ""
+msgstr "Машина выключена."
 
 msgid "Remove"
-msgstr ""
+msgstr "Удалить"
 
 msgid "The machine must be started to take the screenshot."
-msgstr ""
+msgstr "Для возможности получения снимка экрана, машина должна быть запущена."
 
 msgid "Take screenshot"
-msgstr ""
+msgstr "Сделать снимок экрана"
 
 msgid "Set base picture"
-msgstr ""
+msgstr "Установить базовое изображение"
 
 msgid "Saving the screenshot, please wait a moment..."
-msgstr ""
+msgstr "Сохранение снимка экрана, пожалуйста, подождите немного…"
 
 msgid "You need to run the machine in order to take a screenshot."
-msgstr ""
+msgstr "Чтобы сделать снимок экрана нужно запустить машину."
 
 msgid "Copying the screenshot, please wait a moment..."
-msgstr ""
+msgstr "Копирование снимка экрана, пожалуйста, подождите немного…"
 
 msgid "You need a screenshot in order to copy it to the base machine."
-msgstr ""
+msgstr "Снимок экрана нужен для того, чтобы скопировать его на базовую машину."
 
 msgid "Add"
-msgstr ""
+msgstr "Добавить"
 
 msgid "The changes will apply on next restart"
-msgstr ""
+msgstr "Изменения будут применены при следующем перезапуске"
 
 msgid "This VM is running and can't be renamed."
-msgstr ""
+msgstr "Эта ВМ работает и не может быть переименована."
 
 msgid "Thanks to:"
-msgstr ""
+msgstr "Спасибо:"
 
 msgid "licensed."
-msgstr ""
+msgstr "лицензирован."
 
 msgid "New Node"
-msgstr ""
+msgstr "Новый узел"
 
 msgid "Address"
-msgstr ""
+msgstr "Адрес"
 
 msgid "A node with that name already exists."
-msgstr ""
+msgstr "Узел с таким именем уже существует."
 
 msgid "Setting your default language"
-msgstr ""
+msgstr "Установка языка по умолчанию"
 
 msgid "Change password"
-msgstr ""
+msgstr "Изменить пароль"
 
 msgid "Update password"
-msgstr ""
+msgstr "Обновить пароль"
 
 msgid "Start all clones"
-msgstr ""
+msgstr "Запустить все клоны"
 
 msgid "Access denied"
-msgstr ""
+msgstr "Доступ запрещён"
 
 msgid "Empty login name"
-msgstr ""
+msgstr "Пустое имя для входа"
 
 msgid "Empty password"
-msgstr ""
+msgstr "Пустой пароль"
 
 msgid "Session timeout"
 msgstr ""
 
 msgid "Vietnamese"
-msgstr ""
+msgstr "Вьетнамский"
 
 msgid "Italian"
-msgstr ""
+msgstr "Итальянский"
 
 msgid "Type a typical LDAP user name to fetch the attribute list"
 msgstr ""
 
 msgid "User name"
-msgstr ""
+msgstr "Имя пользователя"
 
 msgid "not found in LDAP server"
 msgstr ""
 
 msgid "Attribute"
-msgstr ""
+msgstr "Атрибут"
 
 msgid "Value"
-msgstr ""
+msgstr "Значение"
 
 msgid "Allowed"
 msgstr ""
@@ -834,46 +852,186 @@ msgid "Last"
 msgstr ""
 
 msgid "Default"
-msgstr ""
+msgstr "По умолчанию"
 
 msgid "If none of the previous match, access is allowed."
-msgstr ""
+msgstr "Если ни одно из предыдущих совпадений, доступ разрешен."
 
 msgid "If none of the previous match, access is denied."
-msgstr ""
+msgstr "Если ни одно из предыдущих совпадений, доступ запрещён."
 
 msgid "verify"
-msgstr ""
+msgstr "проверить"
 
 msgid "save"
-msgstr ""
+msgstr "сохранить"
 
 msgid "Verifying"
-msgstr ""
+msgstr "Проверка"
 
 msgid "No entries found"
-msgstr ""
+msgstr "Записи не найдены"
 
 msgid "has at least"
-msgstr ""
+msgstr "имеет по крайней мере"
 
 msgid "entries."
-msgstr ""
+msgstr "записей."
 
 msgid "Enable last for not allowed restrictions."
 msgstr ""
 
 msgid "Add description"
-msgstr ""
+msgstr "Добавить описание"
 
 msgid "These actions affect all the clones on the machine"
-msgstr ""
+msgstr "Эти действия влияют на все клоны машины"
 
 msgid "Shutdown all clones"
-msgstr ""
+msgstr "Выключить все клоны"
 
 msgid "Keep in mind that there may be users using a clone"
-msgstr ""
+msgstr "Имейте в виду, клон может использоваться пользователями"
 
 msgid "Yes, shutwdown all the clones"
+msgstr "Да, выключить все клоны"
+
+msgid "temporary"
+msgstr "временный"
+
+msgid "cdrom"
+msgstr "cdrom"
+
+msgid "End"
+msgstr "Конец"
+
+msgid "Open ports"
+msgstr "Открытые порты"
+
+msgid "No groups found"
+msgstr "Группы не найдены"
+
+msgid "This machine has a CD-ROM"
+msgstr "У этой машины есть CD-ROM"
+
+msgid "type"
+msgstr "тип"
+
+msgid "Time"
+msgstr "Время"
+
+msgid "clone storage"
+msgstr "клонировать хранилище"
+
+msgid "There are no active virtual machines"
+msgstr "Нет активных виртуальных машин"
+
+msgid "Prepare this machine as a base to create clones from it."
 msgstr ""
+"Подготовьте эту машину в качестве базы, чтобы иметь возможность создавать из "
+"нее клоны."
+
+msgid "This virtual machine has no backups to purge"
+msgstr "У этой виртуальной машины нет резервных копий для очистки"
+
+msgid "Warning: anonymous machines won't show up unless you enable allowed."
+msgstr ""
+"Предупреждение: анонимные машины не будут отображаться, если вы не разрешите."
+
+msgid "Users from this network can run no virtual machines"
+msgstr "Пользователи из этой сети не могут запускать виртуальные машины"
+
+msgid "All machines"
+msgstr "Все машины"
+
+msgid "Content will be kept on restore"
+msgstr "Содержимое будет сохранено при восстановлении"
+
+msgid "Content will be cleaned on restore"
+msgstr "Содержимое будет очищено при восстановлении"
+
+msgid "data"
+msgstr "данные"
+
+msgid "disk"
+msgstr "диск"
+
+msgid "default storage"
+msgstr "хранилище по умолчанию"
+
+msgid "Show clones"
+msgstr "Показать клоны"
+
+msgid "SSO/CAS Login"
+msgstr "Войти с помощью SSO/CAS"
+
+msgid "The machine will turn off after this time"
+msgstr "Машина будет выключена через это время"
+
+msgid "Waiting for machine to start"
+msgstr "Ожидание запуска машины"
+
+msgid "This machine will shut down"
+msgstr "Эта машина будет выключена"
+
+msgid "Hardware address"
+msgstr "Аппаратный адрес"
+
+msgid "NAT"
+msgstr "NAT"
+
+msgid "Bridge"
+msgstr "Мост"
+
+msgid "reload list"
+msgstr "перезагрузить список"
+
+msgid "This name is duplicated"
+msgstr "Это имя повторяется"
+
+msgid "No machines"
+msgstr "Нет машин"
+
+msgid "base storage"
+msgstr "базовое хранилище"
+
+msgid "Network name is required"
+msgstr "Укажите имя сети"
+
+msgid "Show active"
+msgstr "Показать активные"
+
+msgid "Hide clones"
+msgstr "Скрыть клоны"
+
+msgid "Keep the CD for the clones"
+msgstr "Оставить CD-диск для клонов"
+
+msgid "Accept"
+msgstr "Принять"
+
+msgid "No bridges found"
+msgstr "Мосты не найдены"
+
+msgid "system"
+msgstr "система"
+
+msgid "No members found"
+msgstr "Участники не найдены"
+
+msgid "Anonymous"
+msgstr "Анонимный"
+
+msgid "Users from this network can run all virtual machines"
+msgstr "Пользователи из этой сети могут запускать все виртуальные машины"
+
+msgid "Warning: this virtual machine will be prepared as a base. This may take long."
+msgstr ""
+"Предупреждение: эта виртуальная машина будет подготовлена в качестве базы. "
+"Это может занять много времени."
+
+msgid "Waiting for network to come up"
+msgstr "Ждем, пока появится сеть"
+
+msgid "Content will be cleaned on restore and shutdown"
+msgstr "Содержимое будет очищено при восстановлении и завершении работы"
