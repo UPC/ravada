@@ -232,6 +232,12 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
 
     $data = { driver => 'spice' } if !keys %$data && $hardware eq 'display';
 
+    if ( !keys %$data && $hardware eq 'filesystem' ) {
+        my $dir = "/var/tmp/".new_domain_name();
+        mkdir $dir if ! -e $dir;
+        $data = { source => $dir }
+    }
+
     if ($hardware eq 'video') {
         Ravada::Request->change_hardware(uid => $USER->id
             ,id_domain => $domain->id
@@ -571,11 +577,67 @@ sub test_add_disk($domain) {
     test_add_cdrom($domain);
 }
 
+sub test_add_filesystem_fail($domain) {
+    my @args = (
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => 'filesystem'
+    );
+    my $req = Ravada::Request->add_hardware(
+        @args
+        ,data => { source => '/home/fail' }
+    );
+    wait_request( check_error => 0);
+    like($req->error, qr/./);
+    is($req->status,'done');
+
+}
+
+sub test_add_filesystem_missing($domain) {
+    my @args = (
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => 'filesystem'
+    );
+    my $dir = "/var/tmp/".new_domain_name();
+    mkdir $dir if ! -e $dir;
+    my $req = Ravada::Request->add_hardware(
+        @args
+        ,data => { source => $dir }
+    );
+    wait_request( check_error => 0);
+    is($req->error, '');
+    is($req->status,'done');
+    rmdir $dir or die "$! $dir";
+    $req = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request( check_error => 0 );
+    like($req->error, qr/./);
+    is($req->status,'done') or exit;
+    my $info = $domain->info(user_admin);
+    my $index = scalar (@{$info->{hardware}->{filesystem}})-1;
+    Ravada::Request->remove_hardware(
+        @args
+        ,index => $index
+    );
+    wait_request( debug => 1);
+
+}
+
+sub test_add_filesystem($domain) {
+    test_add_filesystem_missing($domain);
+    test_add_filesystem_fail($domain);
+}
+
+
 sub test_add_hardware_custom($domain, $hardware) {
     return if $hardware =~ /cpu|features/i;
     my %sub = (
         disk => \&test_add_disk
         ,display => sub {}
+        ,filesystem => \&test_add_filesystem
         ,usb => sub {}
         ,mock => sub {}
         ,network => sub {}
@@ -600,14 +662,17 @@ sub _set_three_devices($domain, $hardware) {
         confess Dumper($item) if !exists $item->{$driver_field};
         delete $drivers{$item->{$driver_field}} if ref($item);
     }
-    for (1 .. 3-scalar(@$items)) {
+    for my $n (1 .. 3-scalar(@$items)) {
         my @driver;
         if ($hardware eq 'display') {
             my ($driver) = keys %drivers;
             delete $drivers{$driver};
             @driver =( data => { $driver_field => $driver } );
+        } elsif ($hardware eq 'filesystem') {
+            my $source = "/var/tmp/".new_domain_name();
+            mkdir $source if ! -e $source;
+            @driver =( data => { source => $source } )
         }
-
         Ravada::Request->add_hardware(
             uid => user_admin->id
             ,id_domain => $domain->id
@@ -764,6 +829,9 @@ sub test_remove_almost_all_hardware {
 
 sub test_front_hardware {
     my ($vm, $domain, $hardware ) = @_;
+
+    _set_three_devices($domain, $hardware)
+    if $hardware eq 'filesystem';
 
     $domain->list_volumes();
     my $domain_f = Ravada::Front::Domain->open($domain->id);
@@ -980,6 +1048,19 @@ sub test_change_network($vm, $domain) {
     _test_change_defaults($domain,'network');
 }
 
+sub test_change_filesystem($vm,$domain) {
+    my $new_source = "/var/tmp/".new_domain_name();
+    mkdir $new_source if ! -e $new_source;
+    my $req = Ravada::Request->change_hardware(
+        hardware => 'filesystem'
+        ,index => 0
+        ,data => { source => $new_source }
+        ,uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request(debug => 1);
+}
+
 sub _test_change_defaults($domain,$hardware) {
     my @args = (
         hardware => $hardware
@@ -1003,11 +1084,11 @@ sub _test_change_features($vm, $domain) {
     _test_change_defaults($domain,'cpu');
 }
 
-
 sub test_change_hardware($vm, $domain, $hardware) {
     my %sub = (
       network => \&test_change_network
         ,disk => \&test_change_disk
+        ,filesystem => \&test_change_filesystem
         ,mock => sub {}
          ,usb => sub {}
          ,display => sub {}
