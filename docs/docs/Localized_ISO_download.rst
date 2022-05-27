@@ -15,16 +15,19 @@ Enabling localized distributions
 There are two ways these special localized Linux Distributions are
 enabled: when an user logs in using this language or from the CLI.
 
-Enabling localized distrubionts logging in
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Enabling localized distributions logging in
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 As soon as an user logs in and has the web browser configured with
-one of the avaialable localized ISO this is added to the list.
+one of the languages known to us, if there is a localized ISO,
+it is added to the list. It is also added if the user selects
+this language from the profile settings.
+
 When the user creates a new virtual machine the new template is
 automatically available.
 
-Enabling localized distrubionts from CLI
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Enabling localized distributions from CLI
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There is an easy way to enable the localized Linux Distribution
 from the command line. Just call the *rvd_back* application with
