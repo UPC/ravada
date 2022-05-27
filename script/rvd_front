@@ -2008,6 +2008,7 @@ sub _translations($c) {
         ,tr => 'Turkish'
         ,ja => 'Japanese'
         ,'cat@valencia' => 'Valencian'
+        ,'ru' => 'Russian'
         ,vi => 'Vietnamese'
     );
     $c->stash(lang_name => \%lang_name);
