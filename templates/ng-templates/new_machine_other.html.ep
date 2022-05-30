@@ -60,7 +60,7 @@
                     </div>
                     <div ng-show="new_machine_other_form.copy_name.$error.pattern"
                         class="form-group row alert alert-danger" role="alert">
-                        <strong><%=l 'Error' %> : </strong> <%=l 'The machine name must contain only alphabetic, numbers, undercores and dashes.' %>
+                        <strong><%=l 'Error' %> : </strong> <%=l 'The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points.' %>
                     </div>
 
 

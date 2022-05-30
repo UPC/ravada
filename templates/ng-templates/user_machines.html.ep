@@ -1,6 +1,6 @@
 <div class="card-body">
     <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
-        <strong><%=l 'Error!' %></strong><%=l 'Backend no available!' %>
+        <strong><%=l 'Error!' %></strong><%=l 'Backend not available!' %>
       </div>
     <div ng-repeat="machine in list_bases">
         <div class="col-md-4">
