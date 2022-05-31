@@ -2689,4 +2689,8 @@ sub _is_ip_nat($self, $ip0) {
     return 0;
 }
 
+sub get_library_version($self) {
+    return $self->vm->get_library_version();
+}
+
 1;

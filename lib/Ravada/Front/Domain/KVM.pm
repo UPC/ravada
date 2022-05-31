@@ -17,6 +17,7 @@ our %GET_CONTROLLER_SUB = (
     ,'cpu' => \&_get_controller_cpu
     ,disk => \&_get_controller_disk
     ,display => \&_get_controller_display
+    ,filesystem => \&_get_controller_filesystem
     ,'features' => \&_get_controller_features
     ,network => \&_get_controller_network
     ,video => \&_get_controller_video
@@ -39,6 +40,11 @@ our %GET_DRIVER_SUB = (
 
 
 sub get_controller_by_name($self, $name) {
+    if ( $GET_CONTROLLER_SUB{filesystem}
+        && $self->vm_version() < 6200000) {
+        delete $GET_CONTROLLER_SUB{filesystem};
+    }
+
     return $GET_CONTROLLER_SUB{$name};
 }
 
@@ -86,6 +92,17 @@ sub _get_controller_video($self) {
     }
     return @ret;
 
+}
+
+sub _get_controller_filesystem($self) {
+    my @fs = $self->_get_controller_generic('filesystem');
+    for my $fs ( @fs ) {
+        my $name = $fs->{target}->{dir};
+        unlock_hash(%$fs);
+        $fs->{_name} = $name;
+        lock_hash(%$fs);
+    }
+    return @fs;
 }
 
 sub _get_controller_sound($self) {
@@ -372,6 +389,17 @@ sub _get_driver_sound {
 sub _get_driver_disk($self) {
     my @volumes = $self->list_volumes_info();
     return $volumes[0]->info()->{driver};
+}
+
+sub vm_version($self) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT version FROM vms v, domains d"
+        ." WHERE v.id=d.id_vm "
+        ."    AND d.id=?"
+    );
+    $sth->execute($self->id);
+    my ($version) = $sth->fetchrow;
+    return ($version or 0);
 }
 
 sub _get_driver_display($self) {

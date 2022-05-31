@@ -67,6 +67,7 @@ our %SET_DRIVER_SUB = (
 
 our %GET_CONTROLLER_SUB = (
     usb => \&_get_controller_usb
+    ,filesystem => \&_get_controller_filesystem
     ,disk => \&_get_controller_disk
     ,network => \&_get_controller_network
     ,video => \&_get_controller_video
@@ -74,6 +75,7 @@ our %GET_CONTROLLER_SUB = (
     );
 our %SET_CONTROLLER_SUB = (
     usb => \&_set_controller_usb
+    ,filesystem => \&_set_controller_filesystem
     ,disk => \&_set_controller_disk
     ,display => \&_set_controller_display
     ,network => \&_set_controller_network
@@ -83,6 +85,7 @@ our %SET_CONTROLLER_SUB = (
 our %REMOVE_CONTROLLER_SUB = (
     usb => \&_remove_controller_usb
     ,disk => \&_remove_controller_disk
+    ,filesystem => \&_remove_controller_filesystem
     ,display => \&_remove_controller_display
     ,network => \&_remove_controller_network
     ,video => \&_remove_controller_video
@@ -93,6 +96,7 @@ our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
     ,cpu => \&_change_hardware_cpu
     ,display => \&_change_hardware_display
+    ,filesystem => \&_change_controller_filesystem
     ,features => \&_change_hardware_features
     ,vcpus => \&_change_hardware_vcpus
     ,memory => \&_change_hardware_memory
@@ -2240,6 +2244,52 @@ sub _set_controller_sound($self, $number , $data={ model => 'ich6' } ) {
     $self->reload_config($doc);
 }
 
+sub _set_shared_memory($self, $doc) {
+    my ($mem) = $doc->findnodes("/domain/memoryBacking");
+    if (!$mem) {
+        my ($domain) = $doc->findnodes("/domain");
+        $mem = $domain->addNewChild(undef, "memoryBacking");
+    }
+    my ($source) = $mem->findnodes("source");
+    $source = $mem->addNewChild(undef,"source") if !$source;
+    $source->setAttribute('type' => 'memfd');
+
+    my ($access) = $mem->findnodes("access");
+    $access = $mem->addNewChild(undef,"access") if !$access;
+    $access->setAttribute('mode' => 'shared');
+}
+
+sub _set_controller_filesystem($self, $number, $data) {
+    my $source = delete $data->{source} or die "Error: missing source";
+
+    die "Error: source '$source' doesn't exist"
+    if !$self->_vm->file_exists($source);
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
+
+    $self->_set_shared_memory($doc);
+
+    my ($devices) = $doc->findnodes("/domain/devices");
+
+    my $fs = $devices->addNewChild(undef,'filesystem');
+    $fs->setAttribute( 'type' => 'mount' );
+    $fs->setAttribute( 'accessmode' => 'passthrough' );
+    my $driver = $fs->addNewChild(undef,'driver');
+    $driver->setAttribute('type' => 'virtiofs');
+    my $source_xml = $fs->addNewChild(undef,'source');
+    $source_xml->setAttribute('dir' => $source);
+
+    my $target = $source;
+    $target =~ s{^/}{};
+    $target =~ s{/$}{};
+    $target =~ s{/}{_}g;
+
+    my $target_xml = $fs->addNewChild(undef,'target');
+    $target_xml->setAttribute('dir' => $target);
+
+    $self->reload_config($doc);
+}
+
 sub _set_controller_video($self, $number, $data={type => 'qxl'}) {
     $data->{type} = 'qxl' if !exists $data->{type};
     $data->{type} = lc(delete $data->{driver}) if exists $data->{driver};
@@ -2491,6 +2541,10 @@ sub _remove_controller_disk($self, $index,  $attribute_name=undef, $attribute_va
 
     $self->remove_volume( $file );
     $self->info(Ravada::Utils::user_daemon);
+}
+
+sub _remove_controller_filesystem($self, $index) {
+    $self->_remove_device($index,'filesystem');
 }
 
 sub _remove_controller_sound($self, $index) {
@@ -2836,6 +2890,39 @@ sub _change_hardware_features($self, $index, $data) {
             $changed++;
         }
     }
+    $self->reload_config($doc) if $changed;
+}
+
+sub _change_hardware_filesystem($self, $index, $data) {
+    confess "Error: nothing to change ".Dumper($data)
+    if !keys %$data;
+
+    my $source = delete $data->{source};
+    my $target = delete $data->{target};
+
+    confess "Error: extra arguments ".Dumper($data)
+    if keys %$data;
+
+    if (!$target) {
+        $target = $source;
+        $target =~ s{^/}{};
+        $target =~ s{/$}{};
+        $target =~ s{/}{_}g;
+    }
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my $count = 0;
+    my $changed = 0;
+
+    my ($devices) = $doc->findnodes('/domain/devices');
+    for my $fs ($devices->findnodes('filesystem')) {
+        next if $count++ != $index;
+        my ($source) = $fs->findnodes("source");
+        my ($target) = $fs->findnodes("target");
+        $source->setAttribute(dir => $source);
+        $target->setAttribute(dir => $target);
+    }
+
     $self->reload_config($doc) if $changed;
 }
 

@@ -359,7 +359,9 @@ sub _around_start($orig, $self, @arg) {
         next if $error && ref($error) && $error->code == 1
         && $error !~ /internal error.*unexpected address/
         && $error !~ /process exited while connecting to monitor/
-        && $error !~ /Could not run .*swtpm/i;
+        && $error !~ /Could not run .*swtpm/i
+        && $error !~ /virtiofs/
+        ;
 
         if ($error && $self->id_base && !$self->is_local && $self->_vm->enabled) {
             $self->_request_set_base();

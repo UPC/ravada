@@ -649,6 +649,12 @@
                   $scope.show_new_display = true;
                   return;
               }
+
+              if (hardware == 'filesystem' && ! extra) {
+                  $scope.show_new_filesystem= true;
+                  return;
+              }
+
               $scope.request('add_hardware'
                       , { 'id_domain': $scope.showmachine.id
                             ,'name': hardware

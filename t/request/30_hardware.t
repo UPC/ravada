@@ -1334,8 +1334,8 @@ for my $vm_name (reverse vm_names()) {
         test_change_hardware($vm, $domain_b, $hardware);
 
         # change driver is not possible for displays
-        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock|features|cpu)$/;
-        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock|features)$/;
+        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|filesystem|usb|mock|features|cpu)$/;
+        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(display|filesystem|usb|mock|features)$/;
 
         # try to add with the machine started
         $domain_b->start(user_admin) if !$domain_b->is_active;
