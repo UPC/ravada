@@ -459,14 +459,15 @@ sub file_exists($self, $file) {
 }
 
 sub _file_exists_remote($self, $file) {
-    $file = $self->_follow_link($file);
+    $file = $self->_follow_link($file) unless $file =~ /which$/;
     for my $pool ($self->vm->list_all_storage_pools ) {
         $self->_wait_storage( sub { $pool->refresh() } );
         my @volumes = $self->_wait_storage( sub { $pool->list_all_volumes });
         for my $vol ( @volumes ) {
             my $found;
             eval {
-                my $path = $self->_follow_link($vol->get_path);
+                my $path = $vol->get_path;
+                $self->_follow_link($vol->get_path) unless $file =~ /which$/;
                 $found = 1 if $path eq $file;
             };
             # volume was removed in the nick of time
@@ -474,7 +475,12 @@ sub _file_exists_remote($self, $file) {
             return 1 if $found;
         }
     }
-    return 0;
+
+    die "Error: invalid file '$file'" if $file =~ /[`;(\[" ]/;
+    my ($out,$err) = $self->_ssh->capture2("ls $file");
+    my @ls = split /\n/,$out;
+    for (@ls) { chomp };
+    return scalar(@ls);
 }
 
 sub _follow_link($self, $file) {
