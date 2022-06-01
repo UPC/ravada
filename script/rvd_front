@@ -3082,6 +3082,11 @@ sub _do_remove_machine {
 
     my $domain = _search_requested_machine($c);
 
+    if (!$domain) {
+        $c->render(json => { msg => "Virtual Machine already removed" });
+        return;
+    }
+
     my $req = Ravada::Request->remove_domain(
         name => $domain->name
         ,uid => $USER->id
