@@ -1,13 +1,13 @@
 <div class="card" id="admin-content">
     <div class="card-header" ng-show="!<%= $FEATURE->{ldap} %>">
         <p>
-                      This feature requires a LDAP server configured.
-                      See documentation about:
+                      <%= l 'This feature requires a LDAP server configured.' %>
+                      <%=l 'See documentation about:' %>
         </p>
         <ul>
-            <li><a href="https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html">Configure LDAP Authentication</a></li>
+            <li><a href="https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html"><%=l 'Configure LDAP Authentication' %></a></li>
             <li><a href="https://ravada.readthedocs.io/en/latest/docs
-/ldap_local.html">Setup a LDAP Server</a></li>
+/ldap_local.html"><%=l 'Setup a LDAP Server' %></a></li>
         </ul>
     </div>
 </div>
