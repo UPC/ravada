@@ -7,7 +7,7 @@
         <div class="card text-white bg-success machine">
 
         <div class="card-header">
-            <h3 class="card-title">{{machine.name}} <i ng-hide="{{machine.is_public}}">( not public )</i></h3><br>
+            <h3 class="card-title">{{machine.name}} <i ng-hide="{{machine.is_public}}">( <%=l 'not public' %> )</i></h3><br>
             <img id="screensh" ng-src="/img/screenshots/{{machine.id}}.png">
         </div>
         <div class="card-body machine-card">

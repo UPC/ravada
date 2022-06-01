@@ -1,16 +1,16 @@
 <div class="panel panel-default">
 <div class="panel-heading">
-  <h4 class="panel-title">Machines Notifications<a style="float: right;" data-toggle="collapse" href="#collapse1"><i class="fa fa-angle-double-up" aria-hidden="true"></i></a> </h4>
+  <h4 class="panel-title"><%=l 'Machines Notifications' %><a style="float: right;" data-toggle="collapse" href="#collapse1"><i class="fa fa-angle-double-up" aria-hidden="true"></i></a> </h4>
 </div><!-- from panel-heading -->
 <div id="collapse1" class="panel-collapse collapse in">
 
   	<ul class="list-group">
 	    <li class="list-group-item" ng-repeat="request in res">
 	        <div ng-show="request.error != ''">
-	            <strong>Machine {{request.name}} -> {{request.command}}: </strong>Error: {{request.error}} {{request.date_changed | date:'MM/dd/yyyy @ h:mma'}}
+	            <strong><%=l 'Machine' %> {{request.name}} -> {{request.command}}: </strong><%=l 'Error' %>: {{request.error}} {{request.date_changed | date:'MM/dd/yyyy @ h:mma'}}
 	        </div>
 	        <div ng-show="request.error == ''">
-	            <strong>Machine {{request.name}} -> {{request.command}}: </strong>Status: {{request.status}} {{request.date_changed | date:'MM/dd/yyyy @ h:mma'}}
+	            <strong><%=l 'Machine' %> {{request.name}} -> {{request.command}}: </strong><%=l 'Status' %>: {{request.status}} {{request.date_changed | date:'MM/dd/yyyy @ h:mma'}}
 	        </div>
 	    </li>
 	</ul>

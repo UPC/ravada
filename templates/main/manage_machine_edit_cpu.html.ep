@@ -92,7 +92,7 @@
                 form_edit.$pristine=false;
                 new_feature='';
                 ">
-                add
+                <%=l 'Add' %>
             </button>
         </div>
     </div><!-- row -->

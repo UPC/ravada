@@ -63,12 +63,12 @@
 
         <div ng-show="machine.anonymous == 1 && machine.allowed== 0"
             class="alert alert-warning">
-          Warning: anonymous machines won't show up unless you enable allowed.
+            <%=l 'Warning: anonymous machines won\'t show up unless you enable allowed.' %>
         </div>
 
         <div ng-show="machine.anonymous == 1 && machine.is_public == 0"
             class="alert alert-warning">
-                Warning: anonymous machines won't show up unless you set them public.
+            <%=l 'Warning: anonymous machines won\'t show up unless you set them public.' %>
         </div>
 
     </div>

@@ -15,10 +15,10 @@
             />
         </li>
         <li class="list-group-item" ng-show="!item._primary && item.primary">
-            <span class="info">Primary video devices will move to first</span>
+            <span class="info"><%=l 'Primary video devices will move to first' %></span>
         </li>
         <li class="list-group-item" ng-show="item._primary">
-            <span class="info">Primary can not be unset, enable it in another video device</span>
+            <span class="info"><%=l 'Primary can not be unset, enable it in another video device' %></span>
         </li>
     </ul>
     <ul class="list-group list-group-horizontal-md">

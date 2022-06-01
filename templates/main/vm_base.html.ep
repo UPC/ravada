@@ -1,15 +1,15 @@
 <div class="card-body">
     <div class="alert alert-success" ng-show="domain.is_locked">
-        <%=l 'This machine is locked by process' %> <a href="/request/{{domain.is_locked}}.html">process</a>
+        <%=l 'This machine is locked by process' %> <a href="/request/{{domain.is_locked}}.html"><%=l 'process' %></a>
     </div>
     <div class="alert alert-warning" ng-show="domain.has_clones">
         <%=l 'This base can\'t be removed because the domain has clones.' %>
     </div>
 
     <div ng-hide="showmachine || (pending_request && pending_request.status != 'done')">
-        Loading machine <i class="fas fa-sync-alt fa-spin"></i>
+        <%=l 'Loading machine' %> <i class="fas fa-sync-alt fa-spin"></i>
         <div ng-show="pending_request && pending_request.status !='done'">
-            waiting for requests {{pending_request}}
+            <%=l 'waiting for requests' %> {{pending_request}}
         </div>
     </div>
 
@@ -29,12 +29,12 @@
 </div>
 
 <div ng-show="showmachine.is_base && !nodes">
-Loading nodes <i class="fas fa-sync-alt fa-spin"></i>
+<%=l 'Loading nodes' %> <i class="fas fa-sync-alt fa-spin"></i>
 </div>
 
 <div ng-show="showmachine.is_base && nodes && nodes.length>1">
 <hr>
-<h4>Nodes</h4>
+<h4><%=l 'Nodes' %></h4>
 
 <div class="row" ng-repeat="node in nodes">
     <div class="col-md-1" ng-show="{{node.type == showmachine.type}}">
@@ -48,10 +48,10 @@ Loading nodes <i class="fas fa-sync-alt fa-spin"></i>
         {{node.name}}
     </div>
     <div class="col-md-4" ng-show="{{node.type == showmachine.type}}">
-        <div ng-hide="node.is_active">Node down</div>
-        <div ng-hide="node.enabled">Node disabled</div>
-        <div ng-show="node.is_local && showmachine.has_clones">This base has clones</div>
-        <div ng-show="!node.is_local && showmachine.clones[node.id]">This node has {{ showmachine.clones[node.id].length }} clones</div>
+        <div ng-hide="node.is_active"><%=l 'Node down' %></div>
+        <div ng-hide="node.enabled"><%=l 'Node disabled' %></div>
+        <div ng-show="node.is_local && showmachine.has_clones"><%=l 'This base has clones' %></div>
+        <div ng-show="!node.is_local && showmachine.clones[node.id]"><%=l 'This node has' %> {{ showmachine.clones[node.id].length }} <%=l 'clones' %></div>
     </div>
 </div>
 </div>

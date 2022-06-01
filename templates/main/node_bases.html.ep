@@ -11,7 +11,7 @@
         ng-disabled="base.clones>0 && node.is_local"
         ng-true-value="1" ng-false-value="0"
         ng-change="set_base_vm(base.id, base.enabled)"
-        title="This base has {{base.clones}} clones"
+        title="<%= l 'This base has' %> {{base.clones}} <%= l 'clones' %>"
         >
     </div>
 
