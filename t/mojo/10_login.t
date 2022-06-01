@@ -287,6 +287,19 @@ sub test_login_non_admin($t, $base, $clone){
     $t->get_ok("/machine/clone/".$base->id.".html")
     ->status_is(200);
     exit if $t->tx->res->code() != 200;
+
+    test_list_ldap_attributes($t, 0);
+}
+
+sub test_list_ldap_attributes($t, $expected_ok) {
+    $t->get_ok("/list_ldap_attributes/failuser.$$");
+
+    if ($expected_ok) {
+        is($t->tx->res->code(), 200);
+    } else {
+        is($t->tx->res->code(), 401);
+    }
+
 }
 
 sub test_login_non_admin_req($t, $base, $clone){
@@ -373,6 +386,8 @@ sub test_login_fail {
 
     $t->get_ok("/admin/users")->status_is(401);
     like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
+
+    test_list_ldap_attributes($t, 0);
 }
 
 sub test_copy_without_prepare($clone) {
@@ -854,6 +869,11 @@ remove_old_domains_req();
 
 my $t0 = time;
 diag("starting tests at ".localtime($t0));
+
+_init_mojo_client();
+
+test_list_ldap_attributes($t, 1);
+
 for my $vm_name ( @{rvd_front->list_vm_types} ) {
 
     diag("Testing new machine in $vm_name");

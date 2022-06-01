@@ -1313,6 +1313,10 @@ get '/list_ldap_attributes/(#cn)' => sub {
 
     return _access_denied($c) if !$USER->is_admin;
 
+
+    return $c->render( json => {attributes => []} )
+    if !$RAVADA->feature('ldap');
+
     my $cn = $c->stash('cn');
     return $c->render(json => $LDAP_ATTRIBUTES{$cn}) if exists $LDAP_ATTRIBUTES{$cn};
 
@@ -2971,6 +2975,7 @@ sub manage_machine {
     $c->stash(has_graphics_spice => $has_graphics_spice);
     return $c->render(template => 'main/settings_machine'
         , nodes => [$RAVADA->list_vms($domain->type)]
+        , FEATURE => $RAVADA->feature()
         , list_clones => [map { $_->{name} } grep { !$_->{is_base} } $domain->clones]
         , list_clones_base => [ map { $_->{name } } grep { $_->{is_base} } $domain->clones]
         , action => $c->req->url->to_abs->path
