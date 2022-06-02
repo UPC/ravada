@@ -2,8 +2,8 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2022-05-26 08:56+0000\n"
-"Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
+"PO-Revision-Date: 2022-05-28 15:19+0000\n"
+"Last-Translator: Elena Mishina <lepata@basealt.ru>\n"
 "Language-Team: Russian <https://hosted.weblate.org/projects/ravada/"
 "translation/ru/>\n"
 "Language: ru\n"
@@ -30,7 +30,7 @@ msgid "Start"
 msgstr "Запустить"
 
 msgid "Stop"
-msgstr ""
+msgstr "Остановить"
 
 msgid "View"
 msgstr "Вид"
@@ -183,10 +183,10 @@ msgid "Date"
 msgstr "Дата"
 
 msgid "Mark as read"
-msgstr ""
+msgstr "Пометить прочитанным"
 
 msgid "Mark as unread"
-msgstr ""
+msgstr "Пометить непрочитанным"
 
 msgid "No messages to show"
 msgstr "Нет сообщений"
@@ -255,7 +255,7 @@ msgid "in your computer."
 msgstr "на компьютер."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr ""
+msgstr "Посмотрите в своем дистрибутиве, например, на Debian/Ubuntu"
 
 msgid "You will need to install"
 msgstr "Необходимо установить"
@@ -267,6 +267,8 @@ msgid ""
 "Be aware that in Windows, Spice redirection is not automatic. It is "
 "necessary to associate protocol with the app."
 msgstr ""
+"Имейте в виду, что в Windows перенаправление Spice не выполняется "
+"автоматически. Необходимо зарегистрировать протокол"
 
 msgid "To make this possible, download"
 msgstr "Чтобы это стало возможным, скачайте"
@@ -300,7 +302,7 @@ msgid "Password"
 msgstr "Пароль"
 
 msgid "Start session"
-msgstr ""
+msgstr "Начать сеанс"
 
 msgid "bits) in your computer."
 msgstr "бит) на вашем компьютере."
@@ -468,7 +470,7 @@ msgid "Create one."
 msgstr "Создать."
 
 msgid "not public"
-msgstr ""
+msgstr "не опубликовано"
 
 msgid "User Settings"
 msgstr "Настройки пользователя"
@@ -480,7 +482,7 @@ msgid "Username"
 msgstr "Имя пользователя"
 
 msgid "Hide Private"
-msgstr ""
+msgstr "Скрыть неопубликованные"
 
 msgid "Show All"
 msgstr "Показать все"
@@ -492,7 +494,7 @@ msgid "It may take a couple of minutes."
 msgstr "Это может занять пару минут."
 
 msgid "Hybernating ..."
-msgstr ""
+msgstr "Спящий режим…"
 
 msgid "Description"
 msgstr "Описание"
@@ -513,7 +515,7 @@ msgid "Remove Machine"
 msgstr "Удалить машину"
 
 msgid "System overview"
-msgstr ""
+msgstr "Обзор системы"
 
 msgid "Danger Zone"
 msgstr "Опасная зона"
@@ -542,7 +544,7 @@ msgid "Virtual Machine"
 msgstr "Виртуальная машина"
 
 msgid "removed"
-msgstr ""
+msgstr "удалено"
 
 msgid "This will remove all the"
 msgstr "Это удалит все"
@@ -572,10 +574,10 @@ msgid "to"
 msgstr ""
 
 msgid "Changing Public State"
-msgstr ""
+msgstr "Изменение общедоступного состояния"
 
 msgid "Changing Base State"
-msgstr ""
+msgstr "Изменение базового состояния"
 
 msgid "action"
 msgstr "действие"
@@ -584,7 +586,7 @@ msgid "Grants"
 msgstr "Права"
 
 msgid "public"
-msgstr ""
+msgstr "опубликовано"
 
 msgid "New Base"
 msgstr "Новая база"
@@ -605,7 +607,7 @@ msgid "The code is available on "
 msgstr "Код доступен на"
 
 msgid "The code is "
-msgstr ""
+msgstr "Код под"
 
 msgid "License"
 msgstr "Лицензия"
@@ -617,7 +619,7 @@ msgid "This Machine is a base"
 msgstr "Эта машина является базой"
 
 msgid "Cloned"
-msgstr ""
+msgstr "Клонированный"
 
 msgid "is admin"
 msgstr "администратор"
@@ -626,7 +628,7 @@ msgid "Add new user"
 msgstr "Добавить нового пользователя"
 
 msgid "Register"
-msgstr ""
+msgstr "Зарегистрироваться"
 
 msgid "Current Password:"
 msgstr "Текущий пароль:"
@@ -747,7 +749,7 @@ msgid "view"
 msgstr "вид"
 
 msgid "Start again"
-msgstr ""
+msgstr "Запустить снова"
 
 msgid "The machine is down."
 msgstr "Машина выключена."
@@ -822,7 +824,7 @@ msgid "Empty password"
 msgstr "Пустой пароль"
 
 msgid "Session timeout"
-msgstr ""
+msgstr "Длительность сессии"
 
 msgid "Vietnamese"
 msgstr "Вьетнамский"
@@ -831,13 +833,13 @@ msgid "Italian"
 msgstr "Итальянский"
 
 msgid "Type a typical LDAP user name to fetch the attribute list"
-msgstr ""
+msgstr "Введите типичное имя пользователя LDAP, чтобы получить список атрибутов"
 
 msgid "User name"
 msgstr "Имя пользователя"
 
 msgid "not found in LDAP server"
-msgstr ""
+msgstr "не найден на сервере LDAP"
 
 msgid "Attribute"
 msgstr "Атрибут"
@@ -846,10 +848,10 @@ msgid "Value"
 msgstr "Значение"
 
 msgid "Allowed"
-msgstr ""
+msgstr "Разрешено"
 
 msgid "Last"
-msgstr ""
+msgstr "Последний"
 
 msgid "Default"
 msgstr "По умолчанию"
@@ -879,7 +881,7 @@ msgid "entries."
 msgstr "записей."
 
 msgid "Enable last for not allowed restrictions."
-msgstr ""
+msgstr "Включить последний для недопустимых ограничений."
 
 msgid "Add description"
 msgstr "Добавить описание"
@@ -1035,3 +1037,24 @@ msgstr "Ждем, пока появится сеть"
 
 msgid "Content will be cleaned on restore and shutdown"
 msgstr "Содержимое будет очищено при восстановлении и завершении работы"
+
+msgid "up"
+msgstr "поднять"
+
+msgid "Fail"
+msgstr "Ошибка"
+
+msgid "This Virtual Machine has no display hardware attached"
+msgstr "К этой виртуальной машине не подключен дисплей"
+
+msgid "host"
+msgstr "хост"
+
+msgid "Virtual machines pre-started"
+msgstr "Предварительно запущенные виртуальные машины"
+
+msgid "Assign this virtual machine to the pre-started pool"
+msgstr "Назначить эту виртуальную машину предварительно запущенному пулу"
+
+msgid "Virtual machines in the pool."
+msgstr "Виртуальные машины в пуле."
