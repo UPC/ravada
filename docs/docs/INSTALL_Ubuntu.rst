@@ -26,6 +26,7 @@ When you run dpkg now it may show some errors, it is ok, keep reading.
 .. prompt:: bash $
 
      wget http://infoteleco.upc.edu/img/debian/ravada_1.5.1_ubuntu-20.04_all.deb
+     sudo apt-get update
      sudo apt install ./ravada_1.5.1_ubuntu-20.04_all.deb
 
 The last command will show a warning about missing dependencies. Install
