@@ -1329,6 +1329,9 @@ sub _remove_old_isos {
         ,"DELETE FROM iso_images "
             ."WHERE name like 'Ubuntu Focal%' "
             ."  AND ( file_re like '%20.04.1%' OR file_re like '%20.04.%d+%')"
+        ,"DELETE FROM iso_images "
+            ." WHERE name like 'Astra Linux 2%'"
+            ." AND url like '%current%'"
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute();
