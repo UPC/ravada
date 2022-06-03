@@ -5025,7 +5025,6 @@ sub _cmd_list_cpu_models($self, $request) {
 
     my $domain = Ravada::Domain->open($id_domain);
     my $info = $domain->get_info();
-    warn Dumper($info);
     my $vm = $domain->_vm->vm;
 
     my @out = $vm->get_cpu_model_names('x86_64');
