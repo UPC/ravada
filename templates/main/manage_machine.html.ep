@@ -23,7 +23,7 @@
                         <a href="/machine/remove/<%= $domain->id %>.html"><%=l Remove %></a>
                         <a href="/machine/screenshot/<%= $domain->id %>.html"><%=l Screenshot %></a>
                     </form>
-                    <img src="/img/screenshots/<%= $domain->id %>.png" width=400>
+                    <img src="/img/screenshots/<%= $domain->id %>.png" width="400">
 
                 </div>
             </div>

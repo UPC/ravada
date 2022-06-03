@@ -5,6 +5,7 @@ use Data::Dumper;
 use Test::More;
 
 use HTML::Lint;
+use HTML::Tidy;
 use Mojo::DOM;
 
 no warnings "experimental::signatures";
@@ -31,8 +32,11 @@ sub _remove_embedded_perl($content) {
     my $return = '';
     my $changed = 0;
     for my $line (split /\n/,$$content) {
+        next if $line =~ /^\s*%=/;
+        next if $line =~ /^\s*%/;
         if ($line =~ /<%=/) {
-            $line =~ s/(.*)<%=.*?%>(.*)/$1$2/;
+            $line =~ s/(.*href=.*)<%=\s*(.*?)\s*%>(.*)/$1$2$3/;
+            $line =~ s/(.*)<%=\s*(.*?)\s*%>(.*)/$1$3/;
             $changed++;
         }
         $return .= "$line\n";
@@ -48,13 +52,51 @@ sub test_validate_html_local($dir) {
         open my $in,"<", $path or die "$path";
         my $content = join ("",<$in>);
         close $in;
-        _check_html_lint($path,$content, {internal => 1});
+
+        _check_html($path,$content, {internal => 1});
     }
 }
 
+sub _check_html($url, $content, $option = {}) {
+    _check_count_divs($url, $content);
+    _check_html_lint($url, $content, $option);
+    _check_html_tidy($url, $content, $option);
+}
+
+sub _check_html_tidy($url, $content, $option = {}) {
+    _remove_embedded_perl(\$content);
+
+    my $tidy = HTML::Tidy->new();
+    $tidy->ignore(
+        text => qr/script. attribute .* lacks value/
+        ,text => qr/trimming empty/
+        ,text => qr/discarding unexpected plain text/
+        ,text => qr/ldap-groups>/
+    );
+    $tidy->parse($url, $content);
+
+    my $n_messages = 0;
+    for my $message($tidy->messages) {
+        my $string = $message->as_string();
+
+
+        if ( $option->{internal} ) {
+            next if $string =~ /Warning: missing (title|<!DOCTYPE)/;
+            next if $string =~ /Warning: inserting missing 'title/;
+            next if $string =~ /Warning: inserting implicit <body/;
+        }
+
+        warn $message->as_string;
+
+        next if $string =~ /Warning: <img> lacks "alt/;
+        $n_messages++;
+    }
+    is($n_messages,0,"Expecting no errors in $url") or die ;
+}
+
+
 sub _check_html_lint($url, $content, $option = {}) {
     _remove_embedded_perl(\$content);
-    _check_count_divs($url, $content);
 
     my $lint = HTML::Lint->new;
     #    $lint->only_types( HTML::Lint::Error::STRUCTURE );
