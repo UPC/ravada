@@ -49,7 +49,7 @@
 
     <small><b><%=l 'CPU Features' %></b></small>
 
-    <div class="card-body ml-2" ng-show=item.cpu.feature.length">
+    <div class="card-body ml-2" ng-show="item.cpu.feature.length">
     <ul class="list-group list-group-horizontal-md"
         ng-show="feature"
         ng-repeat="feature in item.cpu.feature">
