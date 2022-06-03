@@ -288,17 +288,13 @@ sub test_login_non_admin($t, $base, $clone){
     ->status_is(200);
     exit if $t->tx->res->code() != 200;
 
-    test_list_ldap_attributes($t, 0);
+    test_list_ldap_attributes($t, 403);
 }
 
-sub test_list_ldap_attributes($t, $expected_ok) {
+sub test_list_ldap_attributes($t, $expected_code=200) {
     $t->get_ok("/list_ldap_attributes/failuser.$$");
 
-    if ($expected_ok) {
-        is($t->tx->res->code(), 200);
-    } else {
-        is($t->tx->res->code(), 401);
-    }
+    is($t->tx->res->code(), $expected_code);
 
 }
 
@@ -387,7 +383,6 @@ sub test_login_fail {
     $t->get_ok("/admin/users")->status_is(401);
     like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
 
-    test_list_ldap_attributes($t, 0);
 }
 
 sub test_copy_without_prepare($clone) {
@@ -839,6 +834,27 @@ sub test_create_base($t, $vm_name, $name) {
     return $base;
 }
 
+sub test_frontend_non_admin($t) {
+    $t->ua->get($URL_LOGOUT);
+    test_list_ldap_attributes($t, 401);
+
+    my $name = new_domain_name();
+    my $pass = "$$ $$";
+    my $user = Ravada::Auth::SQL->new(name => $name);
+    $user->remove();
+    $user = create_user($name, $pass);
+    is($user->is_admin(),0);
+
+    login($name, $pass);
+
+    test_list_ldap_attributes($t, 403);
+}
+
+sub test_frontend_admin($t) {
+    test_list_ldap_attributes($t, 200);
+}
+
+
 ########################################################################################
 
 $ENV{MOJO_MODE} = 'development';
@@ -862,6 +878,7 @@ my @clones;
 test_logout_ldap();
 
 test_login_fail();
+test_frontend_non_admin($t);
 
 test_validate_html("/login");
 
@@ -872,7 +889,7 @@ diag("starting tests at ".localtime($t0));
 
 _init_mojo_client();
 
-test_list_ldap_attributes($t, 1);
+test_frontend_admin($t);
 
 for my $vm_name ( @{rvd_front->list_vm_types} ) {
 
