@@ -23,3 +23,4 @@
 - Login LDAP with several uid's [\#1284]
 - Fixed changes for Ubuntu Jammy 22.04 [\#1757]
 - Fix find which binary in remote nodes [\#1771]
+- CPU features missing quote
