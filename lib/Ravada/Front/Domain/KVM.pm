@@ -3,7 +3,7 @@ package Ravada::Front::Domain::KVM;
 use Carp qw(confess);
 use Data::Dumper;
 use Moose;
-use Hash::Util qw(lock_hash);
+use Hash::Util qw(lock_hash unlock_hash);
 
 use XML::LibXML;
 
