@@ -74,6 +74,7 @@ sub test_windows($vm) {
             ,name => $name
             ,id_iso => $iso->{id}
             ,vm => $vm->type
+            ,disk => 10*1024
             ,swap => 10*1024
             ,data => 10*1024
             ,options => { 'uefi' => 1 , machine => 'pc-q35-4.2' }
