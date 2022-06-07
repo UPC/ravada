@@ -14,7 +14,7 @@
             <button class="btn btn-primary"
             ng-disabled="!add_filesystem.source"
             ng-click=
-            "add_hardware('filesystem', undefined, add_filesystem);show_new_filesystem=false"><%=l 'Submit' %></button>
+            "add_hardware('filesystem', add_filesystem);show_new_filesystem=false"><%=l 'Submit' %></button>
             <button ng-click="show_new_filesystem=false"
                 class="btn btn-outline-secondary"
             ><%=l 'Cancel' %></button>

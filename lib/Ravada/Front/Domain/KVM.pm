@@ -49,6 +49,10 @@ sub get_controller_by_name($self, $name) {
 }
 
 sub list_controllers($self) {
+    if ( $GET_CONTROLLER_SUB{filesystem}
+        && $self->vm_version() < 6200000) {
+        delete $GET_CONTROLLER_SUB{filesystem};
+    }
     return %GET_CONTROLLER_SUB;
 }
 
