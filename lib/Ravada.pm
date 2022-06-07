@@ -432,27 +432,27 @@ sub _update_isos {
             ,min_disk_size => '15'
         }
         ,alpine381_64 => {
-            name => 'Alpine 3.8 64 bits'
-    ,description => 'Alpine Linux 3.8 64 bits ( Minimal Linux Distribution )'
+            name => 'Alpine 3.16 64 bits'
+    ,description => 'Alpine Linux 3.16 64 bits ( Minimal Linux Distribution )'
            ,arch => 'x86_64'
             ,xml => 'alpine-amd64.xml'
      ,xml_volume => 'alpine381_64-volume.xml'
-            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/'
-        ,file_re => 'alpine-standard-3.8.1-x86_64.iso'
-        ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86_64/alpine-standard-3.8.1-x86_64.iso.sha256'
+            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86_64/'
+        ,file_re => 'alpine-standard-3.16.*-x86_64.iso'
+        ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
             ,min_disk_size => '2'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,alpine381_32 => {
-            name => 'Alpine 3.8 32 bits'
-    ,description => 'Alpine Linux 3.8 32 bits ( Minimal Linux Distribution )'
+            name => 'Alpine 3.16 32 bits'
+    ,description => 'Alpine Linux 3.16 32 bits ( Minimal Linux Distribution )'
            ,arch => 'i686'
             ,xml => 'alpine-i386.xml'
      ,xml_volume => 'alpine381_32-volume.xml'
-            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/'
+            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86/'
             ,options => { machine => 'pc-i440fx' }
-        ,file_re => 'alpine-standard-3.8.1-x86.iso'
-        ,sha256_url => 'http://dl-cdn.alpinelinux.org/alpine/v3.8/releases/x86/alpine-standard-3.8.1-x86.iso.sha256'
+        ,file_re => 'alpine-standard-3.16.*-x86.iso'
+        ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
             ,min_disk_size => '1'
         }
         ,fedora_28 => {
@@ -1332,6 +1332,9 @@ sub _remove_old_isos {
         ,"DELETE FROM iso_images "
             ." WHERE name like 'Astra Linux 2%'"
             ." AND url like '%current%'"
+
+        ,"DELETE FROM iso_images "
+            ." WHERE name like 'Alpine%3.8%'"
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute();
