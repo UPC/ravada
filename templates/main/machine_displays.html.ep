@@ -40,15 +40,15 @@
                 />
                 <i ng-show="password_clipboard"><%=l 'copied to clipboard' %></i>
             </li>
-            <li ng-show="display.display"><b>Display URL :</b>
+            <li ng-show="display.display"><b><%=l 'Display URL :' %></b>
                     <a ng-click="copy_password(display.driver); redirect()"
                         ng-show="display.is_active"
                         href="{{display.display}}">{{display.display}}</a>
                     <i ng-show="!display.is_active" class="fas fa-sync-alt fa-spin"></i>
             </li>
-            <li><b>Display IP :</b> {{display.ip}} </li>
-            <li><b>Display Port :</b> {{display.port}} </li>
-            <li ng-show="display.extra.tls_port"><b>Display Port secure :</b> {{display.extra.tls_port}} </li>
+            <li><b><%=l 'Display IP :' %></b> {{display.ip}} </li>
+            <li><b><%=l 'Display Port :' %></b> {{display.port}} </li>
+            <li ng-show="display.extra.tls_port"><b><%=l 'Display Port secure :' %></b> {{display.extra.tls_port}} </li>
         </ul>
         <div ng-show="domain.is_active && display.is_active && display.file_extension && display.file_extension.length>0">
             <div>

@@ -10,17 +10,17 @@
         />
         <span ng-show="(feat=='vmport' ||  feat == 'hap')
                     && ( value != '1' && value != '0' )">
-        state
+        <%=l 'state' %>
             <select ng-model="item[feat].state" >
-            <option>on</option>
-            <option>off</option>
+            <option><%=l 'on' %></option>
+            <option><%=l 'off' %></option>
             </select>
         </span>
         <span ng-show="feat == 'kvm' && value != '1' && value != '0'">
-            hidden
+            <%=l 'hidden' %>
             <select ng-model="item[feat].hidden.state">
-                <option>on</option>
-                <option>off</option>
+                <option><%=l 'on' %></option>
+                <option><%=l 'off' %></option>
             </select>
         </span>
         <small>

@@ -1,11 +1,11 @@
 <div class="card-body" ng-show="1">
 <div ng-show="bookings_today.length" class="col-sm-12 d-inline-block mb-2">
 <div class="card-header">
-<h4>Today Schedule</h4>
+<h4><%=l 'Today Schedule' %></h4>
 
     <p>
-    This server has reservations for today. Machines from users out of
-    the booking list will be shut down.
+    <%=l 'This server has reservations for today. Machines from users out of
+    the booking list will be shutdown.' %>
     </p>
 
     <table border="1" bordercolor="darkgray" cellpadding="5">

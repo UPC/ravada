@@ -12,9 +12,9 @@
             <div class="page-header">
                 <div class="card">
                     <div class="card-header">
-                        <h2>Request <%= $request->{command} %> <%= $request->args->{name} %> <%= $request->{status} %></h2>
+                        <h2><%=l 'Request' %> <%= $request->{command} %> <%= $request->args->{name} %> <%= $request->{status} %></h2>
                         <p>
-                            <a href="/request/<%= $request->{id} %>.html">Refresh</a>
+                            <a href="/request/<%= $request->{id} %>.html"><%=l 'Refresh' %></a>
                         </p>
                     </div>
                     <p><%= Data::Dumper::Dumper($request) %></p>

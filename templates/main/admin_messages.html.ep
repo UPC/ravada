@@ -11,7 +11,7 @@
 <div class="panel-body">
     <div class="col-lg-12">
         <div ng-show="pingbe_fail" class="alert alert-danger" ng-cloak>
-            <strong><%=l 'Error!' %></strong> <%=l 'Backend no available!' %>
+            <strong><%=l 'Error!' %></strong> <%=l 'Backend not available!' %>
         </div>
         <table class="table table-striped">
             <thead>
