@@ -2856,7 +2856,7 @@ sub register {
    if($username) {
        my @list_users = Ravada::Auth::SQL::list_all_users();
 
-       if (grep {$_ eq $username} @list_users) {
+       if (grep {lc($_) eq lc($username)} @list_users) {
            push @error,("Username already exists, please choose another one");
            $c->render(template => 'bootstrap/new_user',error => \@error);
        }
