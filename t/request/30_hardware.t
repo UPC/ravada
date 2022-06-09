@@ -247,7 +247,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
         );
         wait_request();
     }
-
+    _remove_usbs($domain,$hardware);
 	my $req;
 	eval {
 		$req = Ravada::Request->add_hardware(uid => $USER->id
@@ -622,7 +622,7 @@ sub test_add_filesystem_missing($domain) {
         @args
         ,index => $index
     );
-    wait_request( debug => 1);
+    wait_request( debug => 0);
 
 }
 
@@ -1296,7 +1296,7 @@ clean();
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (reverse vm_names()) {
+for my $vm_name (vm_names()) {
     my $vm;
     $vm = rvd_back->search_vm($vm_name)  if rvd_back();
 	if ( !$vm || ($vm_name eq 'KVM' && $>)) {
@@ -1308,16 +1308,23 @@ for my $vm_name (reverse vm_names()) {
     $TLS = 1 if check_libvirt_tls() && $vm_name eq 'KVM';
     for my $base ( _create_base($vm) ) {
         $BASE = $base;
-	my $name = new_domain_name();
-	my $domain_b = $BASE->clone(
-        name => $name
+	my $domain_b0 = $BASE->clone(
+        name => new_domain_name()
         ,user => $USER
+        ,memory => 500 * 1024
     );
     test_remove_display($vm);
-    my %controllers = $domain_b->list_controllers;
+    my %controllers = $domain_b0->list_controllers;
     lock_hash(%controllers);
 
-    for my $hardware (reverse sort keys %controllers ) {
+    for my $hardware (sort keys %controllers ) {
+	    my $name= new_domain_name();
+	    my $domain_b = $BASE->clone(
+            name => $name
+            ,user => $USER
+            ,memory => 500 * 1024
+        );
+
         diag("Testing $hardware controllers for VM $vm_name");
         if ($hardware !~ /cpu|features/) {
             test_remove_hardware_by_index($vm, $hardware);
@@ -1355,9 +1362,10 @@ for my $vm_name (reverse vm_names()) {
 
         $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
         ok(!$domain_b->is_active);
+        $domain_b->remove(user_admin);
         }
 
-    $domain_b->remove(user_admin);
+    $domain_b0->remove(user_admin);
     }
     ok($TEST_TIMESTAMP);
 }
