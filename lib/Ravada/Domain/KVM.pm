@@ -1423,7 +1423,7 @@ sub _new_pci_slot{
 
     my %target;
 
-    for my $name (qw(disk controller interface graphics sound video memballoon)) {
+    for my $name (qw(disk controller interface graphics sound video memballoon * )) {
         for my $disk ($doc->findnodes("/domain/devices/$name")) {
 
 
