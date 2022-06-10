@@ -5,12 +5,12 @@
     </div>
     <div class="col-sm-8" ng-hide="confirm_spinoff">
         <p>
-            Spinoff this clone from its base.
+            <%= l 'Spinoff this clone from its base.' %>
         </p>
     </div>
 </div>
 <div ng-show="confirm_spinoff" class="alert alert-warning">
-            <p><%=l 'Are you sure you want to spinoff from the base ? ' %></p>
+            <p><%=l 'Are you sure you want to spinoff from the base ?' %></p>
             <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="confirm_spinoff=false"><%=l 'No' %></button>
             <button type="button" class="btn btn-primary"
                 ng-click="confirm_spinoff=false;request('spinoff',{ 'id_domain': showmachine.id })" ><%=l 'Yes' %></button>

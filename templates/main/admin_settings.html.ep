@@ -11,7 +11,7 @@
     <div class="page-header">
         <div class="card">
             <div class="card-header">
-                <h2>Global Settings</h2>
+                <h2><%=l 'Global Settings' %></h2>
             </div>
         </div>
     </div>
@@ -20,7 +20,7 @@
         <div class="row">
             <div class="col-md-1"></div>
             <div class="col-md-1">
-            <h3>Frontend</h3>
+            <h3><%=l 'Frontend' %></h3>
             </div>
         </div>
         <div class="row" ng-hide="true">
@@ -88,7 +88,7 @@
         <div class="row">
             <div class="col-md-1"></div>
             <div class="col-md-1">
-            <h3>Backend</h3>
+            <h3><%=l 'Backend' %></h3>
             </div>
         </div>
 		<div class="row">
@@ -135,7 +135,7 @@
         <div class="row">
             <div class="col-md-1"></div>
             <div class="col-md-2">
-            <label for="bookings">Bookings</label>
+            <label for="bookings"><%= l 'Bookings' %></label>
             </div>
             <div class="col-md-2">
                 <input name="bookings" ng-model="settings.backend.bookings.value"
@@ -144,7 +144,7 @@
                 >
             </div>
             <div class="col-md-6">
-                Bookings require LDAP authentication. <a href="https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html"><i class="fa fa-info"></i></a>
+                <%=l 'Bookings require LDAP authentication.' %> <a href="https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html"><i class="fa fa-info"></i></a>
             </div>
         </div>
 
@@ -167,7 +167,7 @@
         <div class="row">
             <div class="col-md-1"></div>
             <div class="col-md-2">
-            <label for="debug">Port expose</label>
+            <label for="debug"><%= l 'Port expose' %></label>
             </div>
             <div class="col-md-2">
             <input name="debug" ng-model="settings.backend.expose_port_min.value"
@@ -185,11 +185,11 @@
             <div class="col-md-2">
                 <button ng-click="update_settings()"
                     ng-disabled="!formSettings.$valid || formSettings.$pristine">
-                    save
+                   <%=l 'Save' %>
                 </button>
                 <button ng-click="load_settings()"
                         ng-disabled="formSettings.$pristine">
-                  <%=l 'cancel' %>
+                  <%=l 'Cancel' %>
                 </button>
             </div>
         </div>

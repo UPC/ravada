@@ -1,9 +1,9 @@
 <div class="panel-body" ng-show="showmachine.is_active || showmachine.is_base">
     <div ng-show="showmachine.is_active" class="alert alert-danger" role="alert">
-        This machine is running and can't be modified.
+        <%=l 'This machine is running and can\'t be modified.' %>
     </div>
     <div ng-show="showmachine.is_base" class="alert alert-danger" role="alert">
-        This machine is base and can't be modified.
+        <%=l 'This machine is base and can\'t be modified.' %>
     </div>
 </div>
 <div>
@@ -34,10 +34,10 @@
                     ng-class='{"border border-danger p-4 m-4": item.device == "disk"}'
                 >
                         <p class="h4" ng-show="item.device == 'disk'">
-                            Danger: This will destroy all the disk data permantently.
+                            <%=l 'Danger: This will destroy all the disk data permantently.' %>
                         </p>
                     <label for="confirm_remove">
-                        Type the name of the volume disk to confirm:
+                        <%=l 'Type the name of the volume disk to confirm:' %>
                     </label>
                     <input name="confirm_remove" ng-model="confirm_remove" type="text"
                         ng-value=""
@@ -70,7 +70,7 @@
                 ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || showmachine.is_base || showmachine.is_active"
                 ng-click="add_hardware(new_hardware)"
                 type="button">
-            <%=l 'Add'%></button>
+            <%=l 'Add' %></button>
         </div>
         <div class="custom-file">
             <select class="custom-select" ng-model="new_hardware"

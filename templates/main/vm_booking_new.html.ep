@@ -65,14 +65,14 @@ my %dow = (
 
 <div class="row">
     <div class="col-md-2">
-        Group
+        <%=l 'Group' %>
     </div>
     <div class="col-md-2">
         <select ng-options="name for name in ldap_groups"
         ng-model="booking.ldap_groups" required></select>
     </div>
     <div class="col-md-2">
-        <span class="badge badge-primary"><%=l 'add' %></span>
+        <span class="badge badge-primary"><%=l 'Add' %></span>
     </div>
 </div>
 
@@ -81,7 +81,7 @@ my %dow = (
             <button ng-click="save_booking()"
                     ng-disabled="!form_booking.$valid || form_booking.$pristine
                         || booking.day_of_week == '0000000'">
-              <%=l 'save' %>
+              <%=l 'Save' %>
             </button>
     </div>
 </div>

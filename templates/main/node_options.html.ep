@@ -61,13 +61,13 @@
     <div class="col-md-3" align="right"></div>
     <div class="col-md-4" align="left">
         <button ng-show="node.id" class="btn btn-outline-secondary"
-            ng-click="load_node()"><%=l 'cancel' %></button>
+            ng-click="load_node()"><%=l 'Cancel' %></button>
         <button class="btn btn-primary"
             ng-click="update_node()"
             ng-disabled="!formNode.$valid || formNode.$pristine
             || node._duplicated_name
             || node._duplicated_address
-            ">save</button>
+            "><%=l 'Save' %></button>
     </div>
 </div>
 
@@ -75,7 +75,7 @@
 
 <div class="row">
     <div class="col-md-8 alert alert-info" ng-show="saved && formNode.$pristine">
-        Node {{node.name}} saved.
+        <%=l 'Node' %> {{node.name}} <%=l 'saved.' %>
     </div>
     <div class="col-md-8 alert alert-danger" ng-show="error">
         {{error}}

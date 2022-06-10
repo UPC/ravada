@@ -40,7 +40,7 @@
                 <li ng-show="domain.interfaces"><b><%=l 'Hardware address' %></b> {{domain.interfaces[0].hwaddr}} </li>
                 <li><b><%=l 'Max Memory' %>:</b> {{domain.max_mem}}</li>
                 <li><b><%=l 'Memory' %>:</b> {{domain.memory}}</li>
-                <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
+                <li><b><%=l 'CPUs' %>:</b> {{domain.nrVirtCpu}}</li>
             </ul>
             <div class="list-group list-group-horizontal-md"
                 ng-show="domain.ports.length">
@@ -65,8 +65,8 @@
             <table border="0">
                 <tr ng-repeat="port in domain.ports">
                     <td align="right">
-                    <span ng-show="!port.is_active" class="badge badge-danger">down</span>
-                    <span ng-show="port.is_active" class="badge badge-info">up
+                    <span ng-show="!port.is_active" class="badge badge-danger"><%=l 'down' %></span>
+                    <span ng-show="port.is_active" class="badge badge-info"><%=l 'up' %>
                     </span>
                     </td>
                     <td align="left">
