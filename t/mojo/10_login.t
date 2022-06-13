@@ -7,6 +7,7 @@ use HTML::Lint;
 use Test::More;
 use Test::Mojo;
 use Mojo::File 'path';
+use Mojo::JSON qw(decode_json);
 
 use lib 't/lib';
 use Test::Ravada;
@@ -855,6 +856,42 @@ sub test_frontend_admin($t) {
 }
 
 
+sub test_username_case($t) {
+
+    my $user = uc($USERNAME);
+    my $pass = "$$ $$";
+
+    $t->post_ok("/users/register" =>
+    form => {username => $user, password => $pass});
+
+    is($t->tx->res->code(),200);
+    like ($t->tx->res->body, qr/Username already exists/);
+
+}
+
+sub test_network_case($t) {
+
+    $t->post_ok("/v1/exists/networks",json => { name => 'default' } );
+    is($t->tx->res->code(),200);
+    my $body = $t->tx->res->body;
+    my $json;
+    eval { $json = decode_json($body) };
+    is($@, '') or return;
+
+    ok($json->{id},"Expecting an id in ".Dumper($json));
+
+    $t->post_ok("/v1/exists/networks",json => { name => 'Default' } );
+    is($t->tx->res->code(),200);
+    my $body2 = $t->tx->res->body;
+    my $json2;
+    eval { $json2 = decode_json($body2) };
+    is($@, '') or return;
+
+    is($json2->{id}, $json->{id},"Expecting an id in ".Dumper($json2));
+
+}
+
+
 ########################################################################################
 
 $ENV{MOJO_MODE} = 'development';
@@ -890,6 +927,8 @@ diag("starting tests at ".localtime($t0));
 _init_mojo_client();
 
 test_frontend_admin($t);
+test_username_case($t);
+test_network_case($t);
 
 for my $vm_name ( @{rvd_front->list_vm_types} ) {
 
