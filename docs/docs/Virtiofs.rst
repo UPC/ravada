@@ -39,7 +39,7 @@ the directory exported from */home/shared*, that will be called
 *home_shared*. It will be mounted in the path */mnt/shared* inside
 the virtual machine.
 
-.. ::
+.. code::
 
   home_shared /mnt/shared virtiofs rw,relatime 0 0
 
@@ -51,7 +51,7 @@ Mount read-only
 In the first example we accessed the directory with read and write options.
 If you want to access it read only, mount it this way:
 
-.. ::
+.. code::
 
   home_software /mnt/software virtiofs ro,relatime 0 0
 
@@ -60,6 +60,7 @@ Mount in Windows
 ----------------
 
 `See this manual to use VirtioFS from Windows <https://virtio-fs.gitlab.io/howto-windows.html>`_.
+
 
 Read More
 ---------
