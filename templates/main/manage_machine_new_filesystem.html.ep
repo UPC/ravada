@@ -19,7 +19,7 @@
         <div class="col-lg-8">
             <input type="checkbox" name="chroot"
                 ng-model="add_filesystem.chroot"/>
-            <span class="help">
+            <span class="info">
                 <%=l 'Creates a new subdirectory for each clone'%>
             </span>
         </div>
@@ -34,7 +34,7 @@
                 ng-model="add_filesystem.subdir_uid"
                 placeholder="500"
                 />
-            <span class="help">
+            <span class="info">
                 <%=l 'User ID for the subdirectory'%>
             </span>
         </div>

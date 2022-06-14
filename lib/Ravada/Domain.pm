@@ -5657,10 +5657,10 @@ sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
     } elsif ($hardware eq 'disk') {
         _add_hardware_disk($orig, $self, $index, $data);
     } else {
+        $orig->($self, $hardware, $index, $data);
         if ( $hardware eq 'filesystem' ) {
             $self->_add_info_filesystem($data);
         }
-        $orig->($self, $hardware, $index, $data);
     }
     if (!$hardware eq 'disk' && $self->is_known() && !$self->is_base ) {
         # disk is changed in main node, then redefined already
