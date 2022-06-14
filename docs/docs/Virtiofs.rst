@@ -19,7 +19,8 @@ Virtual Machine Configuration
 In the hardware section of the virtual machine, add a new *filesystem* item.
 You have to pass the full path you want to share with the virtual machine.
 
-.. image:: images/new_virtiofs.jpg
+.. figure:: images/new_virtiofs.jpg
+    :class: with-border
 
 Linux
 -----
