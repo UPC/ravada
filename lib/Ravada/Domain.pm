@@ -359,7 +359,9 @@ sub _around_start($orig, $self, @arg) {
         next if $error && ref($error) && $error->code == 1
         && $error !~ /internal error.*unexpected address/
         && $error !~ /process exited while connecting to monitor/
-        && $error !~ /Could not run .*swtpm/i;
+        && $error !~ /Could not run .*swtpm/i
+        && $error !~ /virtiofs/
+        ;
 
         if ($error && $self->id_base && !$self->is_local && $self->_vm->enabled) {
             $self->_request_set_base();
@@ -1305,7 +1307,7 @@ sub _insert_display( $self, $display ) {
                 $used_port->{$display->{port}}++;
                 $display->{port} = $self->_vm->_new_free_port($used_port);
             }
-        } elsif ($field =~ /\.id_domain_driver/) {
+        } elsif ($field =~ /id_domain_driver/) {
             warn "Warning: Already added ".Dumper($display);
             return;
         } else {

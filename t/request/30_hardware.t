@@ -232,6 +232,12 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
 
     $data = { driver => 'spice' } if !keys %$data && $hardware eq 'display';
 
+    if ( !keys %$data && $hardware eq 'filesystem' ) {
+        my $dir = "/var/tmp/".new_domain_name();
+        mkdir $dir if ! -e $dir;
+        $data = { source => $dir }
+    }
+
     if ($hardware eq 'video') {
         Ravada::Request->change_hardware(uid => $USER->id
             ,id_domain => $domain->id
@@ -241,7 +247,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
         );
         wait_request();
     }
-
+    _remove_usbs($domain,$hardware);
 	my $req;
 	eval {
 		$req = Ravada::Request->add_hardware(uid => $USER->id
@@ -571,11 +577,67 @@ sub test_add_disk($domain) {
     test_add_cdrom($domain);
 }
 
+sub test_add_filesystem_fail($domain) {
+    my @args = (
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => 'filesystem'
+    );
+    my $req = Ravada::Request->add_hardware(
+        @args
+        ,data => { source => '/home/fail' }
+    );
+    wait_request( check_error => 0);
+    like($req->error, qr/./);
+    is($req->status,'done');
+
+}
+
+sub test_add_filesystem_missing($domain) {
+    my @args = (
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => 'filesystem'
+    );
+    my $dir = "/var/tmp/".new_domain_name();
+    mkdir $dir if ! -e $dir;
+    my $req = Ravada::Request->add_hardware(
+        @args
+        ,data => { source => $dir }
+    );
+    wait_request( check_error => 0);
+    is($req->error, '');
+    is($req->status,'done');
+    rmdir $dir or die "$! $dir";
+    $req = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request( check_error => 0 );
+    like($req->error, qr/./);
+    is($req->status,'done') or exit;
+    my $info = $domain->info(user_admin);
+    my $index = scalar (@{$info->{hardware}->{filesystem}})-1;
+    Ravada::Request->remove_hardware(
+        @args
+        ,index => $index
+    );
+    wait_request( debug => 0);
+
+}
+
+sub test_add_filesystem($domain) {
+    test_add_filesystem_missing($domain);
+    test_add_filesystem_fail($domain);
+}
+
+
 sub test_add_hardware_custom($domain, $hardware) {
     return if $hardware =~ /cpu|features/i;
     my %sub = (
         disk => \&test_add_disk
         ,display => sub {}
+        ,filesystem => \&test_add_filesystem
         ,usb => sub {}
         ,mock => sub {}
         ,network => sub {}
@@ -600,14 +662,17 @@ sub _set_three_devices($domain, $hardware) {
         confess Dumper($item) if !exists $item->{$driver_field};
         delete $drivers{$item->{$driver_field}} if ref($item);
     }
-    for (1 .. 3-scalar(@$items)) {
+    for my $n (1 .. 3-scalar(@$items)) {
         my @driver;
         if ($hardware eq 'display') {
             my ($driver) = keys %drivers;
             delete $drivers{$driver};
             @driver =( data => { $driver_field => $driver } );
+        } elsif ($hardware eq 'filesystem') {
+            my $source = "/var/tmp/".new_domain_name();
+            mkdir $source if ! -e $source;
+            @driver =( data => { source => $source } )
         }
-
         Ravada::Request->add_hardware(
             uid => user_admin->id
             ,id_domain => $domain->id
@@ -764,6 +829,9 @@ sub test_remove_almost_all_hardware {
 
 sub test_front_hardware {
     my ($vm, $domain, $hardware ) = @_;
+
+    _set_three_devices($domain, $hardware)
+    if $hardware eq 'filesystem';
 
     $domain->list_volumes();
     my $domain_f = Ravada::Front::Domain->open($domain->id);
@@ -980,6 +1048,19 @@ sub test_change_network($vm, $domain) {
     _test_change_defaults($domain,'network');
 }
 
+sub test_change_filesystem($vm,$domain) {
+    my $new_source = "/var/tmp/".new_domain_name();
+    mkdir $new_source if ! -e $new_source;
+    my $req = Ravada::Request->change_hardware(
+        hardware => 'filesystem'
+        ,index => 0
+        ,data => { source => $new_source }
+        ,uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request(debug => 1);
+}
+
 sub _test_change_defaults($domain,$hardware) {
     my @args = (
         hardware => $hardware
@@ -1003,11 +1084,11 @@ sub _test_change_features($vm, $domain) {
     _test_change_defaults($domain,'cpu');
 }
 
-
 sub test_change_hardware($vm, $domain, $hardware) {
     my %sub = (
       network => \&test_change_network
         ,disk => \&test_change_disk
+        ,filesystem => \&test_change_filesystem
         ,mock => sub {}
          ,usb => sub {}
          ,display => sub {}
@@ -1215,7 +1296,7 @@ clean();
 remove_old_domains();
 remove_old_disks();
 
-for my $vm_name (reverse vm_names()) {
+for my $vm_name (vm_names()) {
     my $vm;
     $vm = rvd_back->search_vm($vm_name)  if rvd_back();
 	if ( !$vm || ($vm_name eq 'KVM' && $>)) {
@@ -1227,16 +1308,23 @@ for my $vm_name (reverse vm_names()) {
     $TLS = 1 if check_libvirt_tls() && $vm_name eq 'KVM';
     for my $base ( _create_base($vm) ) {
         $BASE = $base;
-	my $name = new_domain_name();
-	my $domain_b = $BASE->clone(
-        name => $name
+	my $domain_b0 = $BASE->clone(
+        name => new_domain_name()
         ,user => $USER
+        ,memory => 500 * 1024
     );
     test_remove_display($vm);
-    my %controllers = $domain_b->list_controllers;
+    my %controllers = $domain_b0->list_controllers;
     lock_hash(%controllers);
 
-    for my $hardware (reverse sort keys %controllers ) {
+    for my $hardware (sort keys %controllers ) {
+	    my $name= new_domain_name();
+	    my $domain_b = $BASE->clone(
+            name => $name
+            ,user => $USER
+            ,memory => 500 * 1024
+        );
+
         diag("Testing $hardware controllers for VM $vm_name");
         if ($hardware !~ /cpu|features/) {
             test_remove_hardware_by_index($vm, $hardware);
@@ -1253,8 +1341,8 @@ for my $vm_name (reverse vm_names()) {
         test_change_hardware($vm, $domain_b, $hardware);
 
         # change driver is not possible for displays
-        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock|features|cpu)$/;
-        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(display|usb|mock|features)$/;
+        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|filesystem|usb|mock|features|cpu)$/;
+        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(display|filesystem|usb|mock|features)$/;
 
         # try to add with the machine started
         $domain_b->start(user_admin) if !$domain_b->is_active;
@@ -1274,9 +1362,10 @@ for my $vm_name (reverse vm_names()) {
 
         $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
         ok(!$domain_b->is_active);
+        $domain_b->remove(user_admin);
         }
 
-    $domain_b->remove(user_admin);
+    $domain_b0->remove(user_admin);
     }
     ok($TEST_TIMESTAMP);
 }

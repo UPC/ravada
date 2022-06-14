@@ -211,6 +211,14 @@ sub open {
 
 }
 
+sub _refresh_version($self) {
+    my $version = $self->get_library_version();
+    return if defined $self->_data('version')
+    && $self->_data('version') eq $version;
+
+    $self->_data('version' => $version);
+}
+
 sub _clean_cache {
     %VM = ();
 }
@@ -297,6 +305,7 @@ sub _around_connect($orig, $self) {
     if ($result) {
         $self->is_active(1);
         $self->_fetch_tls();
+        $self->_refresh_version();
     } else {
         $self->is_active(0);
     }

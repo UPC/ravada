@@ -603,12 +603,13 @@ sub _leftovers {
 }
 
 sub _discover() {
-    my $sth = connector()->dbh->prepare("SELECT id,vm_type FROM vms");
+    my $sth = connector()->dbh->prepare("SELECT id,vm_type,hostname FROM vms");
     $sth->execute();
 
     my $name = base_domain_name();
 
-    while ( my ($id_vm, $vm_type) = $sth->fetchrow ) {
+    while ( my ($id_vm, $vm_type, $hostname) = $sth->fetchrow ) {
+        next if $hostname ne 'localhost';
         my $req=Ravada::Request->discover(
             uid => user_admin->id
             ,id_vm => $id_vm
@@ -630,7 +631,7 @@ sub _discover() {
             );
         }
     }
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 }
 
 sub remove_old_domains_req($wait=1, $run_request=0) {
@@ -643,7 +644,7 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
         next unless $machine->{name} =~ /$base_name/;
         remove_domain_and_clones_req($machine,$wait);
     }
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
 }
 
@@ -1795,7 +1796,7 @@ sub hibernate_node($node) {
         eval { $domain_node->hibernate( user_admin ) };
         my $error = $@;
         warn $error if $error;
-        last if !$error || $error =~ /is not active/;
+        last if !$error || $error =~ /is not active|not valid/;
     }
 
     my $max_wait = 30;

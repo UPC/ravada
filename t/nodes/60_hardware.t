@@ -164,9 +164,29 @@ sub test_drivers($vm, $node) {
 
 }
 
+sub _add_hardware($domain) {
+    return unless $domain->type eq 'KVM';
+
+    my $dir = "/var/tmp/".new_domain_name();
+    mkdir $dir or die $! unless -e $dir;
+
+    my $req = Ravada::Request->add_hardware(
+        name => 'filesystem'
+        ,uid => user_admin->id
+        ,id_domain => $domain->id
+        ,data => {
+            source => $dir
+        }
+    );
+    wait_request(debug => 1);
+}
+
 sub test_change_hardware($vm, @nodes) {
     diag("[".$vm->type."] testing remove with ".scalar(@nodes)." node ".join(",",map { $_->name } @nodes));
     my $domain = create_domain($vm);
+
+    _add_hardware($domain);
+
     my $clone = $domain->clone(name => new_domain_name, user => user_admin);
     $clone->add_volume(size => 128*1024 , type => 'data');
     my @volumes = $clone->list_volumes();
@@ -286,6 +306,8 @@ for my $vm_name ( vm_names() ) {
 
         clean_remote_node($node1);
         clean_remote_node($node2)   if $node2;
+
+        test_change_hardware($vm);
 
         test_drivers($vm, $node1);
         test_graphics($vm, $node1);

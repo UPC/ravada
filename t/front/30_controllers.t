@@ -9,6 +9,9 @@ use XML::LibXML;
 use lib 't/lib';
 use Test::Ravada;
 
+use feature qw(signatures);
+no warnings "experimental::signatures";
+
 use_ok('Ravada::Front');
 
 my $CONFIG_FILE = 't/etc/ravada.conf';
@@ -56,22 +59,41 @@ sub test_create_domain {
     
     ok($domain_b);
 
+    _add_hardware($domain_b);
+
     my $domain_f = $RVD_FRONT->search_domain($name);
     ok($domain_f);
 
     return $name;
 }
 
+sub _add_hardware($domain) {
+    return unless $domain->type eq 'KVM';
+
+    my $dir = "/var/tmp/".new_domain_name();
+    mkdir $dir or die $! unless -e $dir;
+
+    my $req = Ravada::Request->add_hardware(
+        name => 'filesystem'
+        ,uid => user_admin->id
+        ,id_domain => $domain->id
+        ,data => {
+            source => $dir
+        }
+    );
+    wait_request();
+}
+
 sub test_vm_controllers_fe {
 	my $vm_name = shift;
-	my $name = shift;
-	my $domain_f = $RVD_FRONT->search_domain($name);
+	my $dom_name = shift;
+	my $domain_f = $RVD_FRONT->search_domain($dom_name);
 	isa_ok($domain_f, "Ravada::Front::Domain::$vm_name");
 	
     my %ctrl = $domain_f->list_controllers;
     for my $name (keys %ctrl) {
-        my @usbs = $domain_f->get_controller($name);
-        ok(scalar @usbs > 0, "Got USB: @usbs");
+        my @devs = $domain_f->get_controller($name);
+        ok(scalar @devs > 0, "Expecting more than 0 $name devices, got ".scalar(@devs)) or die $name;
     }
 	
 	#my $nusb = $domain_f->set_controller('usb' , 'spicevmc');

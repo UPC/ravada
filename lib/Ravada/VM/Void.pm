@@ -498,6 +498,14 @@ sub _search_url_file($self, $url) {
 sub _download_file_external($self, $url, $device) {
 }
 
+sub get_library_version($self) {
+    my ($n1,$n2,$n3) = $Ravada::VERSION =~ /(\d+)\.(\d+)\.(\d+)/;
+    return $n1*1000000
+    +$n2*1000
+    +$n3;
+}
+
+
 #########################################################################3
 
 1;
