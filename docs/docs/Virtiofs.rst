@@ -31,8 +31,8 @@ and the drivers come already with any latest kernel.
 We have not managed to use virtiofs in Alpine Linux. It runs
 fine with any Debian, Ubuntu and other mainstream distributions.
 
-Mount
-~~~~~
+Mount in the Virtual Machine
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To mount the partition add a line in the fstab with the source name
 and the directory you want to mount it. In this example we mount
@@ -86,6 +86,12 @@ and that command.
 
 The very first numerical value returned is the one you must configure for
 the shared filesystem.
+
+The owner of the shared filesystem must be set first in the host.
+
+.. prompt:: #
+
+   chown 1000 /home/shared
 
 Mount Subdirectory in the base
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
