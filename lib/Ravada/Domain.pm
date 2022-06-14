@@ -13,6 +13,7 @@ use Carp qw(carp confess croak);
 use Data::Dumper;
 use File::Copy qw(copy move);
 use File::Rsync;
+use Fcntl ':mode';
 use Hash::Util qw(lock_hash unlock_hash);
 use Image::Magick;
 use JSON::XS;
@@ -5493,6 +5494,74 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
     $self->_post_change_hardware($hardware, $index, $data);
 }
 
+
+
+sub _add_info_filesystem($self, $data) {
+    return if !keys %$data;
+
+    my %data2 = %$data;
+    $data2{id_domain} = $self->id;
+    $data2{source} = $data2{source}->{dir} if ref($data2{source});
+
+    my $sql = "INSERT INTO domain_filesystems ("
+    .join(",",sort keys %data2)
+    .") VALUES ("
+    .join(",",map { '?' } keys %data2)
+    .")";
+
+    my $sth = $$CONNECTOR->dbh->prepare($sql);
+    $sth->execute(map {$data2{$_} } sort keys %data2);
+}
+
+sub _create_filesystem($self, $source, $uid, $gid=0) {
+    return if !defined $source;
+
+    my @stat = stat($source);
+    if (!@stat) {
+        mkdir($source) or confess "$! mkdir $source";
+    } else {
+        my $mode = $stat[2];
+        die "Error: $source already exists and is not a directory"
+        if !S_ISDIR($mode) && !S_ISLNK($mode);
+    }
+    if (defined $uid &&( !@stat || $stat[4] != $uid)) {
+        chown $uid,undef,$source or die "$! chown $uid, $gid, $source";
+    }
+
+}
+
+sub _chroot_filesystems($self) {
+    my $id_base = $self->id_base() or return;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_filesystems "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($id_base);
+    while ( my $row = $sth->fetchrow_hashref ) {
+        next if !$row->{chroot};
+        confess Dumper($row) if $row->{source} !~ m{^/};
+        my $source = $row->{source}."/".$self->name;
+        my $index = $self->_search_filesystem_index($row->{source});
+
+        $self->change_hardware('filesystem',$index
+            ,{source => $source
+            , keep_target => 1
+        })
+        if defined $index;
+
+        $self->_create_filesystem($source,$row->{subdir_uid});
+    }
+    $sth->finish;
+}
+
+sub _search_filesystem_index($self, $source) {
+    my $hw = $self->get_controllers();
+    for my $n ( 0 .. scalar(@{$hw->{filesystem}}) ) {
+        return $n if $hw->{filesystem}->[$n]->{source}->{dir} eq $source;
+    }
+    return;
+}
+
 sub _get_display_port($self, $display) {
     my $driver = $self->drivers('display');
 
@@ -5588,6 +5657,9 @@ sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
     } elsif ($hardware eq 'disk') {
         _add_hardware_disk($orig, $self, $index, $data);
     } else {
+        if ( $hardware eq 'filesystem' ) {
+            $self->_add_info_filesystem($data);
+        }
         $orig->($self, $hardware, $index, $data);
     }
     if (!$hardware eq 'disk' && $self->is_known() && !$self->is_base ) {

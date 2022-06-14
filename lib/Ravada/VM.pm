@@ -483,6 +483,7 @@ sub _around_create_domain {
             delete $display->{port};
             $domain->_store_display($display);
         }
+        $domain->_chroot_filesystems();
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
     $domain->is_volatile(1)     if $user->is_temporary() || $volatile;

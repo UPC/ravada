@@ -2260,7 +2260,10 @@ sub _set_shared_memory($self, $doc) {
 }
 
 sub _set_controller_filesystem($self, $number, $data) {
-    my $source = delete $data->{source} or die "Error: missing source";
+    die "Error: missing source in ".Dumper($data) if !exists $data->{source};
+    die "Error: missing source->{dir} in ".Dumper($data) if !ref($data->{source}) || !exists $data->{source}->{dir};
+
+    my $source = delete $data->{source}->{dir} or die "Error: missing source";
 
     die "Error: source '$source' doesn't exist"
     if !$self->_vm->file_exists($source);
@@ -2897,8 +2900,24 @@ sub _change_hardware_filesystem($self, $index, $data) {
     confess "Error: nothing to change ".Dumper($data)
     if !keys %$data;
 
-    my $source = delete $data->{source};
-    my $target = delete $data->{target};
+    die "Error: missing source ".Dumper($data)
+    if !exists $data->{source};
+
+    $data->{source} = {dir => $data->{source}}
+    if !ref($data->{source});
+
+    confess "Error: missing source->{dir} ".Dumper($data)
+    if !ref($data->{source}) || !exists $data->{source}->{dir}
+    || !defined $data->{source}->{dir};
+
+    my $source = delete $data->{source}->{dir};
+    my $target = delete $data->{target}->{dir};
+    my $keep_target = delete $data->{keep_target};
+
+    delete $data->{source}
+    if !keys %{$data->{source}};
+    delete $data->{target}
+    if !keys %{$data->{target}};
 
     confess "Error: extra arguments ".Dumper($data)
     if keys %$data;
@@ -2917,10 +2936,11 @@ sub _change_hardware_filesystem($self, $index, $data) {
     my ($devices) = $doc->findnodes('/domain/devices');
     for my $fs ($devices->findnodes('filesystem')) {
         next if $count++ != $index;
-        my ($source) = $fs->findnodes("source");
-        my ($target) = $fs->findnodes("target");
-        $source->setAttribute(dir => $source);
-        $target->setAttribute(dir => $target);
+        my ($xml_source) = $fs->findnodes("source");
+        my ($xml_target) = $fs->findnodes("target");
+        $xml_source->setAttribute(dir => $source);
+        $xml_target->setAttribute(dir => $target) unless $keep_target;
+        $changed++;
     }
 
     $self->reload_config($doc) if $changed;
