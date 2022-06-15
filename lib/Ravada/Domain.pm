@@ -20,6 +20,7 @@ use JSON::XS;
 use Moose::Role;
 use NetAddr::IP;
 use IPC::Run3 qw(run3);
+use Storable qw(dclone);
 use Time::Piece;
 
 no warnings "experimental::signatures";
@@ -5499,6 +5500,10 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
 sub _add_info_filesystem($self, $data) {
     return if !keys %$data;
 
+    confess "Error: undefined source ".Dumper($data)
+    if exists $data->{source} && !defined $data->{source}
+    || (ref($data->{source}) && !keys %{$data->{source}});
+
     my %data2 = %$data;
     $data2{id_domain} = $self->id;
     $data2{source} = $data2{source}->{dir} if ref($data2{source});
@@ -5652,6 +5657,9 @@ sub _add_hardware_disk($orig, $self, $index, $data) {
 sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
     confess "Error: minimal add hardware index>=0 , got '$index'" if defined $index && $index <0;
 
+    my $data_orig = undef;
+    $data_orig = dclone($data ) if ref($data);
+
     if ($hardware eq 'display' ) {
         _add_hardware_display($orig, $self, $index, $data);
     } elsif ($hardware eq 'disk') {
@@ -5659,7 +5667,7 @@ sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
     } else {
         $orig->($self, $hardware, $index, $data);
         if ( $hardware eq 'filesystem' ) {
-            $self->_add_info_filesystem($data);
+            $self->_add_info_filesystem($data_orig);
         }
     }
     if (!$hardware eq 'disk' && $self->is_known() && !$self->is_base ) {
