@@ -78,7 +78,7 @@ sub _add_hardware($domain) {
         ,uid => user_admin->id
         ,id_domain => $domain->id
         ,data => {
-            source => $dir
+            source => { dir => $dir }
         }
     );
     wait_request();
