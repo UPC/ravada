@@ -10,6 +10,8 @@ VirtioFS works only with libvirt 6.2. It is installed in these Linux
 Distributions:
 
 * Ubuntu 22.04
+* Debian 11
+* Alpine 3.16
 
 ( TODO : Please contribute if you are aware of more , thank you ! )
 
@@ -26,9 +28,6 @@ Linux
 
 Using virtiofs from Linux virtual machines is pretty straightforward
 and the drivers come already with any latest kernel.
-
-We have not managed to use virtiofs in Alpine Linux. It runs
-fine with any Debian, Ubuntu and other mainstream distributions.
 
 Mount
 ~~~~~
