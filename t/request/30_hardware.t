@@ -47,6 +47,7 @@ sub _driver_field($hardware) {
     $driver_field = 'type'  if $hardware eq 'video';
     $driver_field = 'model' if $hardware =~ /sound/;
     $driver_field = 'mode'  if $hardware eq 'cpu';
+    $driver_field = '_name' if $hardware eq 'filesystem';
     return $driver_field;
 }
 
@@ -235,7 +236,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     if ( !keys %$data && $hardware eq 'filesystem' ) {
         my $dir = "/var/tmp/".new_domain_name();
         mkdir $dir if ! -e $dir;
-        $data = { source => $dir }
+        $data = { source => { dir => $dir } }
     }
 
     if ($hardware eq 'video') {
@@ -585,7 +586,7 @@ sub test_add_filesystem_fail($domain) {
     );
     my $req = Ravada::Request->add_hardware(
         @args
-        ,data => { source => '/home/fail' }
+        ,data => { source => { dir => '/home/fail' } }
     );
     wait_request( check_error => 0);
     like($req->error, qr/./);
@@ -603,7 +604,7 @@ sub test_add_filesystem_missing($domain) {
     mkdir $dir if ! -e $dir;
     my $req = Ravada::Request->add_hardware(
         @args
-        ,data => { source => $dir }
+        ,data => { source => { dir => $dir } }
     );
     wait_request( check_error => 0);
     is($req->error, '');
@@ -671,7 +672,7 @@ sub _set_three_devices($domain, $hardware) {
         } elsif ($hardware eq 'filesystem') {
             my $source = "/var/tmp/".new_domain_name();
             mkdir $source if ! -e $source;
-            @driver =( data => { source => $source } )
+            @driver =( data => { source => { dir =>  $source } } )
         }
         Ravada::Request->add_hardware(
             uid => user_admin->id
@@ -1054,11 +1055,11 @@ sub test_change_filesystem($vm,$domain) {
     my $req = Ravada::Request->change_hardware(
         hardware => 'filesystem'
         ,index => 0
-        ,data => { source => $new_source }
+        ,data => { source => { dir => $new_source } }
         ,uid => user_admin->id
         ,id_domain => $domain->id
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 }
 
 sub _test_change_defaults($domain,$hardware) {

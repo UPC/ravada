@@ -1,0 +1,19 @@
+<div ng-show="name == 'filesystem'" class="form-group mt-4">
+    <ul class="list-group list-group-horizontal-md">
+        <li class="list-group-item list-group-item-primary col-md-3">
+            <%=l 'Source' %>
+        </li>
+        <li class="list-group-item">
+            <input type="text" ng-model="item.source.dir"/>
+        </li>
+    </ul>
+    <ul class="list-group list-group-horizontal-md">
+        <li class="list-group-item list-group-item-primary col-md-3">
+            <%=l 'Target' %>
+        </li>
+        <li class="list-group-item">
+            <input type="text" ng-model="item.target.dir"/>
+            <a href="https://ravada.readthedocs.io/en/latest/docs/Virtiofs.html">?</a>
+        </li>
+    </ul>
+</div>

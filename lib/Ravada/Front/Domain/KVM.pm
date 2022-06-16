@@ -104,6 +104,10 @@ sub _get_controller_filesystem($self) {
         my $name = $fs->{target}->{dir};
         unlock_hash(%$fs);
         $fs->{_name} = $name;
+        delete $fs->{accessmode};
+        delete $fs->{driver};
+        delete $fs->{type};
+
         lock_hash(%$fs);
     }
     return @fs;

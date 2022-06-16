@@ -12,6 +12,7 @@
                 %= include 'main/manage_machine_edit_cpu'
                 %= include 'main/manage_machine_edit_features'
                 %= include 'main/manage_machine_edit_disk'
+                %= include 'main/manage_machine_edit_filesystem'
                 %= include 'main/manage_machine_edit_net'
                 %= include 'main/manage_machine_edit_video'
                 %= include 'main/manage_machine_edit_sound'

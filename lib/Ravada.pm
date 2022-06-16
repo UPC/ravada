@@ -1413,6 +1413,9 @@ sub _add_indexes_generic($self) {
             ,"unique(id_vm,port)"
             ,"index(id_domain)"
         ]
+        ,domain_filesystems => [
+            "unique(id_domain,source)"
+        ]
         ,domain_ports => [
             "unique (id_domain,internal_port):domain_port"
             ,"unique (id_domain,name):name"
@@ -1799,9 +1802,9 @@ sub _upgrade_table_fields($self, $table, $fields ) {
 sub _upgrade_table($self, $table, $field, $definition) {
     my $dbh = $CONNECTOR->dbh;
 
-    my ($new_size) = $definition =~ m{\((\d+)};
     my ($new_type) = $definition =~ m{(\w+)};
-    $new_type = 'INT' if $new_type eq 'INTEGER';
+    my ($new_size) = $definition =~ m{$new_type\s*\((\d+)};
+    $new_type = 'INT' if lc($new_type) eq lc('INTEGER');
 
     my ($constraint) = $definition =~ /references\s+(.*)/;
 
@@ -1989,6 +1992,16 @@ sub _sql_create_tables($self) {
             ,file => 'char(200) not null'
             ,date_created => 'date not null'
         }
+        ]
+        ,[
+     domain_filesystems => {
+            id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain => 'integer(11) NOT NULL references `domains` (`id`) ON DELETE CASCADE'
+            ,source => 'char(120) NOT NULL'
+            ,chroot => 'integer(4) not null default(0)'
+            ,subdir_uid => 'integer not null default(1000)'
+
+            }
         ]
         ,[
             domain_ports => {
