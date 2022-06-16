@@ -6,6 +6,7 @@ use strict;
 use DBIx::Connector;
 use File::Copy qw(copy);
 use IPC::Run3 qw(run3);
+use Getopt::Long;
 
 use feature qw(signatures);
 no warnings "experimental::signatures";
@@ -16,6 +17,16 @@ my $HOME = "/var/tmp";
 our $FILE_CONFIG = "/etc/ravada.conf";
 my $URL = "http://infoteleco.upc.edu/img/debian";
 my $RELEASE = get_last_release();
+
+my $help;
+GetOptions(
+       help => \$help
+) or exit;
+
+$RELEASE = $ARGV[0] if $ARGV[0];
+
+print "$0 [--help] release-x.y.z\n" if $help;
+exit if $help;
 
 print "Checking upgrades to release $RELEASE\n";
 
