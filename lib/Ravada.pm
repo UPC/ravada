@@ -1521,7 +1521,9 @@ sub _add_indexes_generic($self) {
             my $sth = $CONNECTOR->dbh->prepare($sql);
             $sth->execute();
         }
+        my $known2 = $self->_get_indexes($table);
         for my $name ( sort keys %$known) {
+            next if !exists $known2->{$name};
             next if $name eq 'PRIMARY' || $name =~ /^constraint_/i || $checked_index->{$name};
             warn "INFO: Removing index from $table $name\n"
             if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
@@ -1996,10 +1998,10 @@ sub _sql_create_tables($self) {
         ,[
      domain_filesystems => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
-            ,id_domain => 'integer(11) NOT NULL references `domains` (`id`) ON DELETE CASCADE'
+            ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
             ,source => 'char(120) NOT NULL'
-            ,chroot => 'integer(4) not null default(0)'
-            ,subdir_uid => 'integer not null default(1000)'
+            ,chroot => 'integer(4) not null default 0'
+            ,subdir_uid => 'integer not null default 1000'
 
             }
         ]
