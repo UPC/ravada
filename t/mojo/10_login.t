@@ -7,6 +7,7 @@ use HTML::Lint;
 use Test::More;
 use Test::Mojo;
 use Mojo::File 'path';
+use Mojo::JSON qw(decode_json);
 
 use lib 't/lib';
 use Test::Ravada;
@@ -133,17 +134,59 @@ sub test_iptables_clones($base) {
         my $clone = Ravada::Front::Domain->open($clone_data->{id});
         wait_request();
         my $displays = $clone->info(user_admin)->{hardware}->{display};
+        Ravada::Request->refresh_vms(_force => 1);
+        Ravada::Request->refresh_machine(uid => user_admin->id, id_domain => $clone_data->{id});
         wait_request();
         for my $display (@$displays) {
             for my $port ($display->{port}, $display->{extra}->{tls_port}) {
                 next if !defined $port;
                 my $found = $port_display{$port};
+                $found = _recheck_found($port, $clone->id, $found) if $found;
                 my $value = "$clone_data->{id} $display->{driver}:$port";
                 ok(!$found,"Duplicated display $port on $clone_data->{name} $value and ".($found or "")) or exit;
                 $port_display{$port} = $value;
             }
         }
     }
+}
+
+sub _recheck_found($port, $id_domain1, $found) {
+    warn "rechecking $found";
+
+    my ($id_domain2) = $found =~ /^(\d+)/;
+    die "Error: no id domain found in '$found'" if !$id_domain2;
+
+    my $found2;
+    for my $try ( 0 .. 1 ) {
+        my $domain1 = Ravada::Front::Domain->open($id_domain1);
+        my $domain2 = Ravada::Front::Domain->open($id_domain2);
+        return if !$domain1->is_active || !$domain2->is_active;
+        my $displays1 = $domain1->info(user_admin)->{hardware}->{display};
+        my $displays2 = $domain2->info(user_admin)->{hardware}->{display};
+
+        for my $display1 (@$displays1) {
+            for my $display2 (@$displays2) {
+                for my $port1 ($display1->{port}, $display1->{extra}->{tls_port}) {
+                    for my $port2 ($display2->{port}, $display2->{extra}->{tls_port}) {
+                        next if !defined $port1 || !defined $port2 || $port1 ne $port2;
+                        warn Dumper([$port1,$display1,$display2]);
+                        $found2 = $port1;
+                    }
+                }
+            }
+        }
+        return if !$found2;
+
+        Ravada::Request->refresh_machine(uid => user_admin->id
+            , _force => 1
+            , id_domain => $id_domain1);
+
+        Ravada::Request->refresh_machine(uid => user_admin->id
+            , _force => 1
+            , id_domain => $id_domain2);
+        wait_request(debug => 1);
+    }
+    return $found;
 }
 
 sub test_re_expose($base) {
@@ -245,6 +288,15 @@ sub test_login_non_admin($t, $base, $clone){
     $t->get_ok("/machine/clone/".$base->id.".html")
     ->status_is(200);
     exit if $t->tx->res->code() != 200;
+
+    test_list_ldap_attributes($t, 403);
+}
+
+sub test_list_ldap_attributes($t, $expected_code=200) {
+    $t->get_ok("/list_ldap_attributes/failuser.$$");
+
+    is($t->tx->res->code(), $expected_code);
+
 }
 
 sub test_login_non_admin_req($t, $base, $clone){
@@ -331,6 +383,7 @@ sub test_login_fail {
 
     $t->get_ok("/admin/users")->status_is(401);
     like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
+
 }
 
 sub test_copy_without_prepare($clone) {
@@ -622,20 +675,23 @@ sub test_new_machine_empty($t, $vm_name) {
     }
 }
 
-sub test_new_machine_default($t, $vm_name) {
+sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
     my $name = new_domain_name();
 
     my $iso_name = 'Alpine%64 bits';
     my $id_iso = search_id_iso($iso_name);
-    $t->post_ok('/new_machine.html' => form => {
+    my $args = {
             backend => $vm_name
             ,id_iso => $id_iso
             ,name => $name
             ,disk => 1
             ,ram => 1
             ,submit => 1
-        }
-    )->status_is(302);
+    };
+    $args->{iso_file} = '' if $empty_iso_file;
+
+    mojo_check_login($t);
+    $t->post_ok('/new_machine.html' => form => $args)->status_is(302);
 
     wait_request();
 
@@ -779,6 +835,63 @@ sub test_create_base($t, $vm_name, $name) {
     return $base;
 }
 
+sub test_frontend_non_admin($t) {
+    $t->ua->get($URL_LOGOUT);
+    test_list_ldap_attributes($t, 401);
+
+    my $name = new_domain_name();
+    my $pass = "$$ $$";
+    my $user = Ravada::Auth::SQL->new(name => $name);
+    $user->remove();
+    $user = create_user($name, $pass);
+    is($user->is_admin(),0);
+
+    login($name, $pass);
+
+    test_list_ldap_attributes($t, 403);
+}
+
+sub test_frontend_admin($t) {
+    test_list_ldap_attributes($t, 200);
+}
+
+
+sub test_username_case($t) {
+
+    my $user = uc($USERNAME);
+    my $pass = "$$ $$";
+
+    $t->post_ok("/users/register" =>
+    form => {username => $user, password => $pass});
+
+    is($t->tx->res->code(),200);
+    like ($t->tx->res->body, qr/Username already exists/);
+
+}
+
+sub test_network_case($t) {
+
+    $t->post_ok("/v1/exists/networks",json => { name => 'default' } );
+    is($t->tx->res->code(),200);
+    my $body = $t->tx->res->body;
+    my $json;
+    eval { $json = decode_json($body) };
+    is($@, '') or return;
+
+    ok($json->{id},"Expecting an id in ".Dumper($json));
+
+    $t->post_ok("/v1/exists/networks",json => { name => 'Default' } );
+    is($t->tx->res->code(),200);
+    my $body2 = $t->tx->res->body;
+    my $json2;
+    eval { $json2 = decode_json($body2) };
+    is($@, '') or return;
+
+    is($json2->{id}, $json->{id},"Expecting an id in ".Dumper($json2));
+
+}
+
+
 ########################################################################################
 
 $ENV{MOJO_MODE} = 'development';
@@ -802,6 +915,7 @@ my @clones;
 test_logout_ldap();
 
 test_login_fail();
+test_frontend_non_admin($t);
 
 test_validate_html("/login");
 
@@ -809,6 +923,13 @@ remove_old_domains_req();
 
 my $t0 = time;
 diag("starting tests at ".localtime($t0));
+
+_init_mojo_client();
+
+test_frontend_admin($t);
+test_username_case($t);
+test_network_case($t);
+
 for my $vm_name ( @{rvd_front->list_vm_types} ) {
 
     diag("Testing new machine in $vm_name");
@@ -823,6 +944,7 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     test_new_machine($t);
     if ($vm_name eq 'KVM') {
         test_new_machine_default($t, $vm_name);
+        test_new_machine_default($t, $vm_name, 1); # with empty iso file
         test_new_machine_advanced_options($t, $vm_name);
         test_new_machine_advanced_options($t, $vm_name,1);
         test_new_machine_advanced_options($t, $vm_name,0,1);

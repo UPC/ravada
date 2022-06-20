@@ -1,0 +1,54 @@
+<div ng-show="show_new_filesystem" class="form-group">
+    <h2><%=l 'Add new Filesystem' %></h2>
+    <div class="row">
+        <div class="col-lg-2">
+            <label for="source"><%=l 'Source' %></label>
+            <a href="https://ravada.readthedocs.io/en/latest/docs/Virtiofs.html">?</a>
+        </div>
+        <div class="col-lg-8">
+            <input type="text" ng-model="add_filesystem.source.dir"
+            placeholder="/home/shared"
+            />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-2">
+            <label for="chroot"><%=l 'Subdirectory' %></label>
+        </div>
+        <div class="col-lg-8">
+            <input type="checkbox" name="chroot"
+                ng-model="add_filesystem.chroot"/>
+            <span class="info">
+                <%=l 'Creates a new subdirectory for each clone'%>
+            </span>
+        </div>
+    </div>
+
+    <div class="row" ng-show="add_filesystem.chroot">
+        <div class="col-lg-2">
+            <label for="uid"><%=l 'User id' %></label>
+        </div>
+        <div class="col-lg-8">
+            <input type="text" name="uid"
+                ng-model="add_filesystem.subdir_uid"
+                placeholder="500"
+                />
+            <span class="info">
+                <%=l 'User ID for the subdirectory'%>
+            </span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-mb-12 mt-3">
+            <button class="btn btn-primary"
+            ng-disabled="!add_filesystem.source"
+            ng-click=
+            "add_hardware('filesystem', add_filesystem);show_new_filesystem=false"><%=l 'Submit' %></button>
+            <button ng-click="show_new_filesystem=false"
+                class="btn btn-outline-secondary"
+            ><%=l 'Cancel' %></button>
+        </div>
+    </div>
+</div>

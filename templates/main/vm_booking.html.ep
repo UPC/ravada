@@ -1,4 +1,4 @@
-<h1>Bookings</h1>
+<h1><%=l 'Bookings' %></h1>
 
 <div ng-hide="new_booking">
 <button class="btn btn-success" ng-click="init_new_booking()">

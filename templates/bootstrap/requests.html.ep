@@ -21,7 +21,7 @@
         ng-click="show_requests = !show_requests"
     ><%=l 'Requests' %>
         <span class="badge badge-warning" ng-hide="show_requests">{{requests.length}}</span>
-        <span class="badge badge-warning" ng-show="show_requests">hide</span>
+        <span class="badge badge-warning" ng-show="show_requests"><%=l 'hide' %></span>
     </button>
     <button type="button" class="btn btn-outline-primary btn-sm"
         ng-disabled="!n_active || (!n_active_hidden && !show_active)"
@@ -39,9 +39,9 @@
 
     <button type="button" class="btn btn-outline-primary btn-sm">
         <a ng-show="hide_clones" ng-click="showClones(true)"
-            align="right"><%=l 'show clones' %></a>
+            align="right"><%=l 'Show clones' %></a>
         <a ng-show="!hide_clones" ng-click="showClones(false)"
-            align="right"><%=l 'hide clones' %></a>
+            align="right"><%=l 'Hide clones' %></a>
     </button>
 
     <input type="text" ng-model="filter" placeholder="<%=l 'filter' %>"
@@ -50,7 +50,7 @@
 
     <button class="btn btn-outline-warning btn-sm"
         title="<%=l 'Reload' %>"
-        ng-click="list_machines={};subscribe_all('<%= url_for('ws_subscribe')->to_abs %>');"><i class="fa fa-sync-alt" aria-hidden="true"></i></button>
+        ng-click="list_machines={};filter='';subscribe_all('<%= url_for('ws_subscribe')->to_abs %>');"><i class="fa fa-sync-alt" aria-hidden="true"></i></button>
 
         </div>
 

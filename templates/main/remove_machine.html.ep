@@ -9,19 +9,19 @@
         <div class="page-header">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    <h2>Removing Virtual Machine <%= $domain->name %> ?</h2>
+                    <h2><%=l 'Removing Virtual Machine' %> <%= $domain->name %> ?</h2>
                 </div>
                 <form method="post" action="/machine/remove/<%= $domain->id %>.html">
                     <p>
-                    <b>This can't be undone</b> and will remove all the disk and information
-                    of this virtual machine.
+                    <b><%=l 'This can\'t be undone' %></b>
+                    <%=l 'and will remove all the disk and information of this virtual machine.' %>
                     </p>
                     <p>
-                        Are you sure ?
-                        <input type="text" name="sure"><font color="red"> Please insert <b>yes</b> or <b>not</b> to apply.</font>
+                        <%=l 'Are you sure ?' %>
+                        <input type="text" name="sure"><font color="red"> <%=l 'Please insert' %> <b><%=l 'yes' %></b> <%=l 'or' %> <b><%=l 'not' %></b> <%=l 'to apply.' %></font>
                     </p>
-                    <input type="submit" name="Remove" value="Remove">
-                    <input type="submit" name="cancel" value="Cancel">
+                    <input type="submit" name="Remove" value="<%=l 'Remove' %>">
+                    <input type="submit" name="cancel" value="<%=l 'Cancel' %>">
                 </form>
             </div>
         </div>

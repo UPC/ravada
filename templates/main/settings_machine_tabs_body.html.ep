@@ -23,15 +23,6 @@
         %= include 'main/vm_options'
     </div>
 % }
-% if ($USER->can_change_settings($domain->id) && $domain->drivers) {
-    <div class="tab-pane fade" id="v-pills-drivers" role="tabpanel" aria-labelledby="v-pills-drivers-tab">
-% if ($domain->is_base) {
-        %= include 'main/vm_locked_is_base'
-% } else {
-        %= include 'main/vm_drivers'
-% }
-    </div>
-% }
 % if ($USER->can_change_settings($domain->id) && !$domain->is_base ) {
     <div class="tab-pane fade" id="v-pills-screenshot" role="tabpanel" aria-labelledby="v-pills-screenshot-tab">
         %= include 'main/vm_screenshot'

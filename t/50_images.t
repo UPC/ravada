@@ -11,7 +11,7 @@ use Test::Ravada;
 use_ok('Ravada');
 
 my $ravada = Ravada->new( connector => connector(), config => 't/etc/ravada.conf');
-
+$ravada->_install();
 my @images = $ravada->list_images();
 
 ok(scalar @images,"No images ".Dumper(\@images));

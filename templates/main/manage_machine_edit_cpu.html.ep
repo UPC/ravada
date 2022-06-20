@@ -1,0 +1,102 @@
+<div ng-show="name=='cpu' && is_edit(name,$index)">
+    <div class="p-2">
+         <label for="vcpu"><%=l 'vCPU allocation' %></label>
+         <input type="text" ng-model="item.vcpu._text" name="vcpu"/>
+    </div>
+    <ul class="list-group list-group-horizontal-md">
+        <li class="list-group-item list-group-item-primary"><%=l 'mode' %></li>
+        <li class="list-group-item">
+            <select ng-model="item.cpu.mode"
+                    ng-options="mode.toLowerCase() for mode in showmachine.drivers['cpu']"
+            >
+            </select>
+        </li>
+        <li class="list-group-item list-group-item-primary"><%=l 'check' %></li>
+        <li class="list-group-item">
+            <select ng-model="item.cpu.check"
+                    ng-options="check for check in ['none','partial','full']"
+            >
+            </select>
+        </li>
+        <li ng-show="item.cpu.mode=='custom'"
+            class="list-group-item list-group-item-primary"><%=l 'match' %></li>
+        <li ng-show="item.cpu.mode=='custom'"
+            class="list-group-item">
+            <select ng-model="item.cpu.match"
+                    ng-options="match for match in ['exact','strict']"
+            >
+            </select>
+        </li>
+    </ul>
+    <div class="p-2" ng-show="item.cpu.mode=='custom'">
+        <label for="model">
+                <%=l 'model' %>
+        </label>
+            <select ng-model="item.cpu.model._text" name="model"
+                    ng-options="cpu for cpu in cpu_models"
+            >
+            </select>
+        <label for="fallback">
+                <%=l 'fallback' %>
+        </label>
+        <select ng-model="item.cpu.model.fallback" name="fallback"
+                    ng-options="option for option in ['allow','forbid']"
+        >
+        </select>
+    </div>
+
+    <hr>
+
+    <small><b><%=l 'CPU Features' %></b></small>
+
+    <div class="card-body ml-2" ng-show="item.cpu.feature.length">
+    <ul class="list-group list-group-horizontal-md"
+        ng-show="feature"
+        ng-repeat="feature in item.cpu.feature">
+
+        <li class="list-group-item list-group-item-primary col-md-3">
+            {{feature.name}}
+        </li>
+        <li class="list-group-item">
+            <select ng-model="feature.policy"
+                ng-options="option for option in
+                [ 'disable','forbid', 'force', 'optional','require']">
+            </select>
+
+        </li>
+        <li class="list-group-item">
+            <small>
+                <button type="badge" title="remove"
+                        ng-click="feature=0;
+                        item.cpu.feature[$index]=undefined;
+                        form_edit.$pristine=false"
+                >
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </small>
+        </li>
+    </ul>
+    </div>
+
+    <div class="ml-4">
+    <div class="row">
+        <div class="col-md-6">
+            <label for="new_feature">
+                <%=l 'New feature' %>
+            </label>
+            <input type="text" ng-model="new_feature" name="new_feature"/>
+            <button type="badge"
+            ng-disabled="!new_feature"
+            ng-click="item.cpu.feature[item.cpu.feature.length]=
+                {'name': new_feature, 'policy': 'require'};
+                form_edit.$pristine=false;
+                new_feature='';
+                ">
+                <%=l 'Add' %>
+            </button>
+        </div>
+    </div><!-- row -->
+    </div>
+
+    <hr>
+</div>

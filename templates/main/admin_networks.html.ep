@@ -7,18 +7,20 @@
     <div id="page-wrapper" ng-controller="manage_networks">
     <div id="admin-content">
         <div class="row">
-            <div class="col-md-8"><h2>Networks</h2></div>
+            <div class="col-md-8"><h2><%=l 'Networks' %></h2></div>
             <div class="col-md-4" align="right">
                   <h2><a type="button"
                           class="btn btn-success" href="/network/new">
-                            <b>New Network</b></a>
+                            <b><%=l 'New Network' %></b></a>
                   </h2>
             </div>
         </div>
         <div class="row">
             <div class="col-md-4"></div>
             <!-- <div class="col-md-2">enabled</div> -->
-            <div class="col-md-2">requires password</div>
+            <div class="col-md-2">
+                <%=l 'requires password' %>
+            </div>
         </div>
         <div ng-repeat="network in networks | orderObjectBy:'n_order'"
             class="row"

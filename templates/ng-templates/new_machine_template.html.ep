@@ -1,7 +1,7 @@
 <div class="tab-pane fade show active" id="fromtemplate" role="tabpanel">
     <div class="card-body">
         <div ng-show="!backends">
-            Loading ... <i class="fas fa-sync-alt fa-spin"></i>
+            <%=l 'Loading ...' %> <i class="fas fa-sync-alt fa-spin"></i>
         </div>
         <form name="new_machineForm" role="form" method="post"
                 class="needs-validation"
@@ -9,7 +9,7 @@
                 ng-show="backends">
             <div class="form-group row">
                 <label for="backend" class="col-xl-3 col-form-label"><%=l 'Backend' %> <a
-                  title="Choose the virtualization type of the Virtual Machine." ng-show="backends.length > 1"><i class="fa fa-info-circle"></i></a></label>
+                  title="<%=l 'Choose the virtualization type of the Virtual Machine.' %>" ng-show="backends.length > 1"><i class="fa fa-info-circle"></i></a></label>
                 <div class="col-lg-9">
                     <label for="backend" class="col-xl-3 col-form-label" ng-show="backends.length === 1">{{backends[0]}}</label>
                     <select class= "form-control" ng-show="backends.length > 1"
@@ -46,16 +46,16 @@
                         <div ng-show="id_iso.name && ( !id_iso.device && id_iso.url )
                                 && !id_iso.downloading
                                 && (iso_file == '<NONE>' || !iso_file) ">
-                            <font color="#500000"><%=l 'This ISO image has not been already downloaded. This may take many minutes, even hours until the file is fetched from Internet.' %></font>
+                            <font color="#500000"><%=l 'This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet.' %></font>
                             <input type="checkbox" name="_download_"
                                 ng-click="iso_download(id_iso)"
-                            /> <%=l "Download now" %>
+                            /> <%=l 'Download now' %>
                         </div>
                     </div>
                 </div>
                 <div class="from-group row" ng-show="id_iso.name && id_iso.has_cd">
                         <label for="iso_file" class="col-xl-3 col-form-label"><%=l 'Select ISO' %> <a
-                          title="Select the .iso file the machine will utilize when installing the OS." href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html"><i class="fa fa-info-circle"></i></a>
+                          title="<%=l 'Select the .iso file the machine will utilize when installing the OS.' %>" href="http://ravada.readthedocs.io/en/latest/docs/new_iso_image.html"><i class="fa fa-info-circle"></i></a>
                             <i class="badge badge-warning" ng-click="refresh_storage()"><i class="fa fa-sync-alt" aria-hidden="true"></i></i>
                             </label>
                         <div class="col-lg-9"  ng-init="iso_file = '<NONE>'" >
@@ -68,7 +68,7 @@
                                    ng-hide="refresh_working || !isos ||id_iso.downloading"
                                    uib-typeahead="item for item in getVisualizableObjects($viewValue, isos)"
                                    typeahead-min-length="0"/>
-                        <span class="info" ng-show="id_iso.downloading">This ISO is being downloaded. The virtual machine will be created after.</span>
+                        <span class="info" ng-show="id_iso.downloading"><%=l 'This ISO is being downloaded. The virtual machine will be created after.' %></span>
                         </div>
                 </div>
             </div>
@@ -98,8 +98,13 @@
             <div class="form-group row" ng-show="backend == 'KVM' || backend == 'LXC'">
                     <label for="memory" class="col-xl-3 col-form-label"><%=l 'Ram: (GB)' %></label>
                     <div class="col-lg-2">
-                            <input class="form-control" ng-model="ramSize" type="number" min ="0.1" name="memory">
+                            <input class="form-control" ng-model="ramSize" type="number" min ="{{id_iso.min_ram}}" name="memory">
                     </div>
+                  <div ng-show="!ramSize || ramSize < id_iso.min_ram">
+                    <font color="orange" ng-show="id_iso.min_ram"
+                    ><%=l 'The Minimum memory needed for this virtual machine is' %> {{id_iso.min_ram}}GB.</font>
+                </div>
+
             </div>
 
             <div class="form-group row" ng-show="backend == 'KVM' || backend =='Void'">
@@ -140,16 +145,16 @@
                 <div class="col-lg-1">
                    <a ng-show="!swap.enabled"
                       ng-click="swap.enabled=true"
-                      align="right"><span class="badge badge-primary ml-2">Enable</span></a>
+                      align="right"><span class="badge badge-primary ml-2"><%=l 'Enable' %></span></a>
                   <a ng-show="swap.enabled"
                       ng-click="swap.enabled=false"
-                      align="right"><span class="badge badge-primary ml-2">Disable</span></a>
+                      align="right"><span class="badge badge-primary ml-2"><%=l 'Disable' %></span></a>
                </div>
                <div class="col-lg-6">
                   <span ng-show="swap.enabled && swap.value < id_iso.min_swap_size">
                     <font color="orange"><%=l 'The Minimum Swap Disk Size needed for this ISO is' %> {{id_iso.min_swap_size}}GB.</font>
                   </span>
-                    <span>Content will be cleaned on restore and shutdown</span>
+                    <span><%=l 'Content will be cleaned on restore and shutdown' %></span>
                </div>
             </div>
             <div class="form-group row" ng-show="backend == 'KVM' || backend=='Void'">
@@ -167,13 +172,13 @@
                 <div class="col-lg-1">
                    <a ng-show="!data.enabled"
                       ng-click="data.enabled=true"
-                      align="right"><span class="badge badge-primary ml-2">Enable</span></a>
+                      align="right"><span class="badge badge-primary ml-2"><%=l 'Enable' %></span></a>
                   <a ng-show="data.enabled"
                       ng-click="data.enabled=false"
-                      align="right"><span class="badge badge-primary ml-2">Disable</span></a>
+                      align="right"><span class="badge badge-primary ml-2"><%=l 'Disable' %></span></a>
                </div>
                <div class="col-lg-6">
-                    <span>Content will be kept on restore</span>
+                    <span><%=l 'Content will be kept on restore' %></span>
                </div>
             </div>
 
@@ -242,7 +247,7 @@
                         <strong><%=l 'Error' %></strong> <%=l 'A machine with that name already exists.' %>
                 </div>
                 <div ng-show="new_machineForm.name.$error.pattern" class="alert alert-warning" role="alert">
-                        <strong><%=l 'Error' %></strong> <%=l 'The machine name must contain only alphabetic, numbers, undercores and dashes.' %>
+                        <strong><%=l 'Error' %></strong> <%=l 'The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points.' %>
                 </div>
                 <div ng-show="id_iso && !id_iso.id" class="alert alert-warning"
                     role="alert">

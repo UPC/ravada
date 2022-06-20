@@ -16,7 +16,7 @@
             <button class="btn btn-primary"
             ng-disabled="!add_display.driver"
             ng-click=
-            "add_hardware('display', undefined, add_display);show_new_display=false"><%=l 'Submit' %></button>
+            "add_hardware('display', add_display);show_new_display=false"><%=l 'Submit' %></button>
             <button ng-click="show_new_display=false"
                 class="btn btn-outline-secondary"
             ><%=l 'Cancel' %></button>

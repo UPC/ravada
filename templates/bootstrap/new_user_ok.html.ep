@@ -8,16 +8,16 @@
            <div class="page-header">
                 <div class="card">
                     <div class="card-header">
-                        <h2>Congrats
+                        <h2><%=l 'Congrats' %>
                             <!--<button style="float: right; margin: 0 10px;" onclick="location='/users'" ><i class="fa fa-arrow-circle-left" aria-hidden="true"></i></button>-->
                         </h2>
                     </div>
                     <div class="card-text alert alert-success">
-                        The new user <strong><%= $username %> </strong> has been added successfully!
+                        <%=l 'The new user' %> <strong><%= $username %> </strong> <%=l 'has been added successfully!' %>
                     </div>
                    <div class="card-body">
-                        <h4>What do you want to do now?</h4>
-                        <button class="btn btn-success" style="float: center; " onclick="location='/users/register'" ><i class="fas fa-plus-circle fa-2x" aria-hidden="true"></i>Add another user</button>
+                        <h4><%=l 'What do you want to do now?' %></h4>
+                        <button class="btn btn-success" style="float: center; " onclick="location='/users/register'" ><i class="fas fa-plus-circle fa-2x" aria-hidden="true"></i><%=l 'Add another user' %></button>
                     </div>
                       
                 </div>

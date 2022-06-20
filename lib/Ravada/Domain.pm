@@ -9,16 +9,18 @@ Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
 
 =cut
 
-use Carp qw(carp confess croak cluck);
+use Carp qw(carp confess croak);
 use Data::Dumper;
 use File::Copy qw(copy move);
 use File::Rsync;
+use Fcntl ':mode';
 use Hash::Util qw(lock_hash unlock_hash);
 use Image::Magick;
 use JSON::XS;
 use Moose::Role;
 use NetAddr::IP;
 use IPC::Run3 qw(run3);
+use Storable qw(dclone);
 use Time::Piece;
 
 no warnings "experimental::signatures";
@@ -372,7 +374,10 @@ sub _around_start($orig, $self, @arg) {
         ;# pool has asynchronous jobs running.
         next if $error && ref($error) && $error->code == 1
         && $error !~ /internal error.*unexpected address/
-        && $error !~ /process exited while connecting to monitor/;
+        && $error !~ /process exited while connecting to monitor/
+        && $error !~ /Could not run .*swtpm/i
+        && $error !~ /virtiofs/
+        ;
 
         if ($error && $self->id_base && !$self->is_local && $self->_vm->enabled) {
             $self->_request_set_base();
@@ -1318,6 +1323,9 @@ sub _insert_display( $self, $display ) {
                 $used_port->{$display->{port}}++;
                 $display->{port} = $self->_vm->_new_free_port($used_port);
             }
+        } elsif ($field =~ /id_domain_driver/) {
+            warn "Warning: Already added ".Dumper($display);
+            return;
         } else {
             confess "Error: I don't know how to deal with duplicated $field on ".$self->name
             .Dumper($display);
@@ -1336,7 +1344,11 @@ sub _clean_display_order($self, $n_order) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domain_displays set n_order=? WHERE n_order=? AND id_domain=?"
     );
-    $sth->execute($max_n_order+1,$n_order, $self->id);
+    for ( 1 .. 10 ) {
+        $max_n_order++;
+        eval { $sth->execute($max_n_order,$n_order, $self->id) };
+        last if !$@;
+    }
 }
 
 sub _update_display( $self, $new_display_orig, $old_display ) {
@@ -1400,6 +1412,11 @@ sub _fix_duplicate_display_port($self, $port) {
     if($is_builtin ) {
         my $domain_conflict = Ravada::Domain->open($id_domain);
         if ($domain_conflict && $domain_conflict->is_active) {
+            Ravada::Request->refresh_machine(
+                id_domain=> $domain_conflict->id
+                ,uid => Ravada::Utils::user_daemon->id
+                ,_force => 1
+            );
             my $req = Ravada::Request->shutdown_domain(
                 id_domain => $self->id
                 ,uid => Ravada::Utils::user_daemon->id
@@ -1436,6 +1453,8 @@ sub _fix_duplicate_display_port($self, $port) {
     Ravada::Request->open_exposed_ports(
         uid => Ravada::Utils::user_daemon->id
         ,id_domain => $id_domain
+        ,retry => 20
+        ,_force => 1
     ) if $is_active;
 }
 
@@ -2205,6 +2224,9 @@ sub _after_remove_domain {
     if ($self->is_known && $self->is_base) {
         #        $self->_do_remove_base($user);
         $self->_remove_files_base();
+    }
+    for my $backup ( $self->list_backups ) {
+        $self->remove_backup($backup);
     }
     $self->_remove_all_volumes();
     return if !$self->{_data};
@@ -3373,8 +3395,11 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     my ($id_port, $public_port) = $sth->fetchrow();
 
     my $internal_ip = $self->ip;
-    confess "Error: I can't get the internal IP of ".$self->name
+    die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry."
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
+
+    die "Error: No NAT ip in domain ".$self->name." found. Retry.\n"
+    if !$self->_vm->_is_ip_nat($internal_ip);
 
     if ($public_port
         && ( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port")
@@ -3537,6 +3562,11 @@ sub open_exposed_ports($self) {
     return if !@ports;
     return if !$self->is_active;
 
+    if (!$self->has_nat_interfaces) {
+        $self->_set_ports_direct();
+        return;
+    }
+
     my $ip = $self->ip;
     if ( ! $ip ) {
         die "Error: No ip in domain ".$self->name.". Retry.\n";
@@ -3551,6 +3581,15 @@ sub open_exposed_ports($self) {
         $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
             ,$expose->{restricted});
     }
+}
+
+sub _set_ports_direct($self) {
+    my $sth_update = $$CONNECTOR->dbh->prepare(
+        "UPDATE domain_ports set public_port=NULL "
+        ." WHERE id_domain=?"
+    );
+    $sth_update->execute($self->id);
+
 }
 
 sub _close_exposed_port($self,$internal_port_req=undef) {
@@ -3898,6 +3937,8 @@ sub _check_port_conflicts($self) {
                            uid => Ravada::Utils::user_daemon->id
                     ,id_domain => $id_domain
                 ,after_request => $req_close->id
+                ,retry => 20
+                ,_force => 1
                 );
             }
         }
@@ -4379,29 +4420,14 @@ Returns a hashref of the hardware controllers for this virtual machine
 
 =cut
 
-
 sub get_controllers($self) {
     my $info;
     my %controllers = $self->list_controllers();
     for my $name ( sort keys %controllers ) {
         $info->{$name} = [$self->get_controller($name)];
     }
-    my %sub = (
-    );
-
-    for my $name ( sort $self->_list_hardware_common ) {
-        confess "Error: hardware $name already parsed in ".$self->name
-        if $info->{$name};
-
-        my $sub = $sub{$name} or confess "Error: no sub for $name ".Dumper(\%sub);
-        $info->{$name} = $sub->($self);
-    }
 
     return $info;
-}
-
-sub _list_hardware_common($self) {
-    #    return ('display');
 }
 
 =head2 drivers
@@ -4456,7 +4482,7 @@ sub drivers($self, $name=undef, $type=undef, $list=0) {
                 next if $machine =~ /^pc-q35/
                     && $name eq 'disk'
                     && $option->{name} =~ /^IDE$/i;
-                push @options,($option->{name});
+                push @options,lc($option->{name});
             }
             push @drivers, \@options;
         } else {
@@ -5426,7 +5452,35 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
 }
 
+sub _fix_hw_booleans($data) {
+    for my $key (keys %$data) {
+        next if !ref($data->{$key});
+        if (ref($data->{$key}) eq 'HASH') {
+                _fix_hw_booleans($data->{$key});
+        } elsif(ref($data->{$key}) eq 'ARRAY') {
+            for my $item (@{$data->{$key}}) {
+                _fix_hw_booleans($item);
+            }
+        } elsif(ref($data->{$key}) eq 'JSON::PP::Boolean') {
+                $data->{$key} = ''.$data->{$key};
+        } else {
+            confess "Error: expecting scalar or hash or boolean "
+                .Dumper(ref($data->{$key}) ,$data->{$key});
+        }
+    }
+}
+
+sub _fix_hw_ignore_fields($data) {
+    for my $key (keys %$data) {
+        delete $data->{$key} if $key =~ /^_/;
+    }
+}
+
 sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) {
+
+    _fix_hw_booleans($data);
+    _fix_hw_ignore_fields($data);
+
     my $real_id_vm;
     if ($hardware eq 'disk' && !$self->_vm->is_local) {
         $real_id_vm = $self->_vm->id;
@@ -5466,14 +5520,86 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
     $self->_post_change_hardware($hardware, $index, $data);
 }
 
+
+
+sub _add_info_filesystem($self, $data) {
+    return if !keys %$data;
+
+    confess "Error: undefined source ".Dumper($data)
+    if exists $data->{source} && !defined $data->{source}
+    || (ref($data->{source}) && !keys %{$data->{source}});
+
+    my %data2 = %$data;
+    $data2{id_domain} = $self->id;
+    $data2{source} = $data2{source}->{dir} if ref($data2{source});
+
+    my $sql = "INSERT INTO domain_filesystems ("
+    .join(",",sort keys %data2)
+    .") VALUES ("
+    .join(",",map { '?' } keys %data2)
+    .")";
+
+    my $sth = $$CONNECTOR->dbh->prepare($sql);
+    $sth->execute(map {$data2{$_} } sort keys %data2);
+}
+
+sub _create_filesystem($self, $source, $uid, $gid=0) {
+    return if !defined $source;
+
+    my @stat = stat($source);
+    if (!@stat) {
+        mkdir($source) or confess "$! mkdir $source";
+    } else {
+        my $mode = $stat[2];
+        die "Error: $source already exists and is not a directory"
+        if !S_ISDIR($mode) && !S_ISLNK($mode);
+    }
+    if (defined $uid &&( !@stat || $stat[4] != $uid)) {
+        chown $uid,undef,$source or die "$! chown $uid, $gid, $source";
+    }
+
+}
+
+sub _chroot_filesystems($self) {
+    my $id_base = $self->id_base() or return;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_filesystems "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($id_base);
+    while ( my $row = $sth->fetchrow_hashref ) {
+        next if !$row->{chroot};
+        confess Dumper($row) if $row->{source} !~ m{^/};
+        my $source = $row->{source}."/".$self->name;
+        my $index = $self->_search_filesystem_index($row->{source});
+
+        $self->change_hardware('filesystem',$index
+            ,{source => $source
+            , keep_target => 1
+        })
+        if defined $index;
+
+        $self->_create_filesystem($source,$row->{subdir_uid});
+    }
+    $sth->finish;
+}
+
+sub _search_filesystem_index($self, $source) {
+    my $hw = $self->get_controllers();
+    for my $n ( 0 .. scalar(@{$hw->{filesystem}}) ) {
+        return $n if $hw->{filesystem}->[$n]->{source}->{dir} eq $source;
+    }
+    return;
+}
+
 sub _get_display_port($self, $display) {
     my $driver = $self->drivers('display');
 
     my ($selected)
-    = grep { $_->{name} eq $display->{driver}|| $_->{value} eq $display->{driver}}
+    = grep { lc($_->{name}) eq lc($display->{driver}) || lc($_->{value}) eq lc($display->{driver})}
     $driver->get_options;
 
-    confess "Error: unknown display driver $display->{driver}" if !$selected;
+    confess "Error: unknown display driver $display->{driver} ".Dumper([$driver->get_options]) if !$selected;
 
     die "Error: display driver port not defined ".Dumper($selected)
     unless defined $selected->{data};
@@ -5556,12 +5682,18 @@ sub _add_hardware_disk($orig, $self, $index, $data) {
 sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
     confess "Error: minimal add hardware index>=0 , got '$index'" if defined $index && $index <0;
 
+    my $data_orig = undef;
+    $data_orig = dclone($data ) if ref($data);
+
     if ($hardware eq 'display' ) {
         _add_hardware_display($orig, $self, $index, $data);
     } elsif ($hardware eq 'disk') {
         _add_hardware_disk($orig, $self, $index, $data);
     } else {
         $orig->($self, $hardware, $index, $data);
+        if ( $hardware eq 'filesystem' ) {
+            $self->_add_info_filesystem($data_orig);
+        }
     }
     if (!$hardware eq 'disk' && $self->is_known() && !$self->is_base ) {
         # disk is changed in main node, then redefined already
@@ -6349,6 +6481,10 @@ sub has_non_shared_storage($self, $node=$self->_vm->new(host => 'localhost')) {
     return $has_non_shared;
 }
 
+sub has_nat_interfaces($self) {
+    return 0;
+}
+
 sub _base_in_nodes($self) {
     my $base = Ravada::Front::Domain->open($self->id_base);
     confess "Error: no id_base ".($self->id_base or '<NULL>')
@@ -6800,6 +6936,319 @@ sub _refresh_domains_with_locked_devices($host_device) {
         $free_device = $device;
     }
     return $free_device;
+}
+
+sub list_backups($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM domain_backups "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+    my @ret;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @ret, ( $row );
+    }
+    return @ret;
+}
+
+sub config_files($self) {
+}
+
+sub _backup_owner($self) {
+    my $owner = Ravada::Auth::SQL->search_by_id($self->_data('id_owner'));
+    my $filename = $self->_vm->dir_backup()."/".$self->name."_owner.json";
+    CORE::open my $out,">",$filename or die "$! $filename";
+    print $out encode_json($owner->{_data});
+    close $filename;
+
+    return $filename;
+}
+
+sub _list_parent_volumes($self) {
+    die "Error: ".$self->name." has no parent" if !$self->_data('id_base');
+    my $base = Ravada::Domain->open($self->_data('id_base'));
+
+    return [$base->list_files_base()];
+}
+
+sub _expand_backup_metadata($self, $data) {
+    $data->{owner} = Ravada::Utils::search_user_name($$CONNECTOR->dbh
+        ,$data->{id_owner});
+
+    delete $data->{screenshot};
+    delete $data->{info};
+    delete $data->{spice_password};
+
+    if($data->{id_base}) {
+        $data->{base} = Ravada::Request::_search_domain_name(undef
+            ,delete $data->{id_base});
+        $data->{parent_volumes} = $self->_list_parent_volumes();
+    }
+    if ($data->{is_base}) {
+        $data->{base_volumes} = [$self->list_files_base(1)];
+    }
+}
+
+
+
+sub backup($self) {
+    my @files_data = $self->config_files();
+    #read data extra just in case it wasn't already read
+    $self->_data_extra('id_domain');
+    for my $field ( keys %$self) {
+        next if $field !~ /^_data/;
+        my $filename = $self->_vm->dir_backup()."/".$self->name.$field.".json";
+        CORE::open my $out,">",$filename or die "$! $filename";
+
+        my %data = %{$self->{$field}};
+        $self->_expand_backup_metadata(\%data) if $field eq '_data';
+
+        print $out encode_json(\%data);
+        close $filename;
+        push @files_data,($filename);
+    }
+    push @files_data,($self->_backup_owner);
+
+    push @files_data,($self->list_files_base()) if $self->is_base();
+
+    my $now = Ravada::Utils::date_now();
+    $now =~ tr/ :/_-/;
+    my $file_backup = $self->_vm->dir_backup()."/".$self->name.".$now.tgz";
+    my @cmd = ("tar","czvf",$file_backup,@files_data
+    ,$self->list_volumes);
+    $self->_vm->run_command(@cmd);
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO domain_backups (id_domain, file, date_created) "
+        ." VALUES (?,?,?)"
+    );
+    $sth->execute($self->id, $file_backup, Ravada::Utils::date_now());
+    return $file_backup;
+}
+
+sub _confirm_restore($self) {
+    if ($ENV{TERM}) {
+            print "Virtual Machine ".$self->name." already exists."
+            ." All the data will be overwritten."
+            ." Are you sure you want to restore a backup ?";
+            my $answer = <STDIN>;
+            return 0 unless $answer =~ /^y/i;
+    }
+    return 1;
+}
+
+sub _parse_file($file) {
+    CORE::open my $f,"<",$file or confess "$! $file";
+    my $json = join "",<$f>;
+    close $f;
+
+    return decode_json($json);
+}
+
+sub _search_domain_to_restore($data, $file_extra) {
+    my $data_extra = _parse_file($file_extra);
+
+    my $id = $data->{id};
+    my $name = $data->{name};
+    my $vm = Ravada::VM->open($data->{id_vm});
+
+    my $sth = _dbh->prepare("SELECT * FROM domains "
+        ."WHERE id=? OR name=?"
+    );
+    $sth->execute($id,$name);
+    my $domain_old = $sth->fetchrow_hashref;
+    if ($domain_old && $domain_old->{name} ne $name) {
+        die "Domain id='$id' already exists, it is called "
+            .$domain_old->{name};
+    }
+    if (!$domain_old) {
+        my $domain = $vm->create_domain(
+            name => $name
+            ,config => $data_extra->{xml}
+            ,id_owner => Ravada::Utils::user_daemon->id
+            ,id => $id
+        );
+        $domain_old = $domain;
+    } else {
+        $domain_old = Ravada::Domain->open($domain_old->{id});
+    }
+}
+
+sub _extract_metadata($file, $name) {
+    my $dir = "/var/tmp";
+    my @cmd = ("tar","tzvf",$file,"-C",$dir);
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+
+    my ($file_data) = $out =~ m{^.*\d{4}-\d\d-\d\d [0-9:]+ (.*_data.json)$}m;
+    @cmd = ("tar","xzvf",$file,"-C",$dir,$file_data);
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+
+    my $data = _parse_file("$dir/$file_data");
+    unlink "$dir/$file_data";
+    lock_hash(%$data);
+    return $data;
+}
+
+sub _check_metadata_before_restore($data) {
+    return if !exists $data->{base};
+    unlock_hash(%$data);
+    my $base = delete $data->{base};
+    if ($base) {
+        my $id = Ravada::Request::_search_domain_id(undef,$base);
+        if (!$id) {
+            die "Error: base $base not found.\n";
+        }
+        $data->{id_base} = $id;
+    }
+    lock_hash(%$data);
+}
+
+sub _check_parent_base_volumes($data, $file) {
+    return if !$data->{id_base};
+
+    if (!exists $data->{parent_volumes}
+        || ! scalar(@{$data->{parent_volumes}})) {
+            warn "Warning: this machine is clone but I can't see the parent volumes list ".Dumper($data);
+            return;
+    }
+    my $vm = Ravada::VM->open(type => $data->{vm});
+    my %fail = ();
+    for my $vol (@{$data->{parent_volumes}}) {
+        next if $vm->file_exists($vol);
+        $fail{$vol}++;
+    }
+    die "Error: base files not found : ".join(" ",sort keys %fail)
+    ."\n" if keys %fail;
+
+    unlock_hash(%$data);
+    delete $data->{parent_volumes};
+    lock_hash(%$data);
+
+}
+
+sub restore_backup($self, $backup, $interactive, $rvd_back=undef) {
+    my $file = $backup;
+    $file = $backup->{file} if ref($backup);
+
+    die "Error: missing file  '$file'" if ! -e $file;
+
+    my ($name) = $file =~ m{.*/(.*?).\d{4}-\d\d-\d\d_\d\d-\d\d-};
+    if (!$self) {
+        $self = $rvd_back->search_domain($name);
+    }
+    die "Error: ".$self->name." is active, shut it down to restore.\n"
+    if $self && $self->is_active;
+
+    return if $self && $interactive && !$self->_confirm_restore();
+
+    my $data = _extract_metadata($file,$name);
+    _check_metadata_before_restore($data);
+    _check_parent_base_volumes($data, $file) if $data->{id_base};
+
+    my $vm = Ravada::VM->open(type => $data->{vm});
+
+    my @cmd = ("tar","xzvf",$file,"-C","/");
+    my ($out,$err) = $vm->run_command(@cmd);
+    warn $err if $err;
+
+    my ($file_data_extra) = $out =~ m{^(.*_data_domains.*.json)$}m;
+    my ($file_data_owner) = $out =~ m{^(.*owner.json)$}m;
+
+    $self = _search_domain_to_restore($data,"/$file_data_extra") if !$self;
+
+    _restore_backup_metadata($self
+        ,$data
+        ,"/$file_data_owner"
+    );
+
+    return $self;
+}
+
+sub _restore_owner($self, $data, $file_data_owner) {
+    my $id_owner = Ravada::Utils::search_user_id($$CONNECTOR->dbh
+        ,delete $data->{owner});
+    if ($id_owner) {
+        $data->{id_owner} = $id_owner;
+        return;
+    }
+
+    CORE::open my $f,"<",$file_data_owner or confess "$! $file_data_owner";
+    my $json = join "",<$f>;
+    close $f;
+
+    my $data_owner = decode_json($json);
+
+    my $id = $data_owner->{id};
+    my $clashed_user = Ravada::Auth::SQL->search_by_id($id);
+
+    if ($clashed_user) {
+        die "Error: Owner id $id clashes with user ".$clashed_user->name
+        ." here.";
+    }
+
+    my $sql = "INSERT INTO users (".join(",",sort keys %$data_owner).")"
+    ." VALUES(".join(",",map {'?'} keys %$data_owner)." )";
+
+    my $sth = $$CONNECTOR->dbh->prepare($sql);
+    $sth->execute(map { $data_owner->{$_}} sort keys %$data_owner );
+}
+
+sub _restore_base_volumes_metadata($self, $data) {
+    return if !exists $data->{base_volumes};
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO file_base_images "
+        ." (id_domain , file_base_img, target )"
+        ." VALUES(?,?,?)"
+    );
+
+    for my $vol ( @{$data->{base_volumes}}) {
+        $sth->execute($self->id, $vol->[0], $vol->[1]);
+    }
+    unlock_hash(%$data);
+    delete $data->{base_volumes};
+    lock_hash(%$data);
+}
+
+sub _restore_backup_metadata($self, $data, $file_data_owner) {
+    unlock_hash(%$data);
+    delete $data->{id};
+    delete $data->{internal_id};
+    delete $data->{info};
+    delete $data->{date_changed};
+
+    _restore_owner($self,$data,$file_data_owner);
+    _restore_base_volumes_metadata($self, $data);
+
+    for my $field (keys %$data) {
+        next if( !exists $self->{_data}->{$field} || !defined $self->{_data}->{$field})
+        && !defined $data->{$field};
+
+        next if exists $self->{_data}->{$field}
+        && defined $self->{_data}->{$field}
+        && defined $data->{$field}
+        && $self->{_data}->{$field} eq $data->{$field};
+
+        $self->_data($field => $data->{$field});
+    }
+    lock_hash(%$data);
+
+}
+
+sub remove_backup($self, $backup, $remove_file=0) {
+    if ($remove_file) {
+        my ($file) = $backup->{file};
+        if ( $self->_vm->file_exists($file) ) {
+            $self->_vm->remove_file($file) or die "$! $file";
+        }
+    }
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM domain_backups WHERE id=?"
+    );
+    $sth->execute($backup->{id});
 }
 
 1;

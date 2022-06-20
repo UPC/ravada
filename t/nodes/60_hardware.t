@@ -158,15 +158,35 @@ sub test_drivers_type($type, $vm, $node) {
 sub test_drivers($vm, $node) {
     my @drivers = $vm->list_drivers();
      for my $driver ( @drivers ) {
-         next if $driver->name eq 'display';
+         next if $driver->name =~ /display|features/;
          test_drivers_type($driver->name, $vm, $node);
      }
 
 }
 
+sub _add_hardware($domain) {
+    return unless $domain->type eq 'KVM';
+
+    my $dir = "/var/tmp/".new_domain_name();
+    mkdir $dir or die $! unless -e $dir;
+
+    my $req = Ravada::Request->add_hardware(
+        name => 'filesystem'
+        ,uid => user_admin->id
+        ,id_domain => $domain->id
+        ,data => {
+            source => { dir => $dir }
+        }
+    );
+    wait_request(debug => 1);
+}
+
 sub test_change_hardware($vm, @nodes) {
     diag("[".$vm->type."] testing remove with ".scalar(@nodes)." node ".join(",",map { $_->name } @nodes));
     my $domain = create_domain($vm);
+
+    _add_hardware($domain);
+
     my $clone = $domain->clone(name => new_domain_name, user => user_admin);
     $clone->add_volume(size => 128*1024 , type => 'data');
     my @volumes = $clone->list_volumes();
@@ -195,6 +215,7 @@ sub test_change_hardware($vm, @nodes) {
     my @hardware = grep (!/^disk$/, sort keys %{$info->{hardware}});
     push @hardware,("disk");
     for my $hardware ( @hardware) {
+        next if $hardware =~ /cpu|features/;
         my $tls = 0;
         $tls = grep {$_->{driver} =~ /-tls/} @{$info->{hardware}->{$hardware}}
         if $hardware eq 'display';
@@ -285,6 +306,8 @@ for my $vm_name ( vm_names() ) {
 
         clean_remote_node($node1);
         clean_remote_node($node2)   if $node2;
+
+        test_change_hardware($vm);
 
         test_drivers($vm, $node1);
         test_graphics($vm, $node1);

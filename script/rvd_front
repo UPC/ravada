@@ -673,6 +673,18 @@ get '/list_machine_types.json' => sub {
     $c->render(json => $types);
 };
 
+get '/list_cpu_models.json' => sub {
+    my $c = shift;
+
+    return access_denied($c) unless _logged_in($c)
+        && $USER->can_create_machine();
+
+    my $id_domain = $c->param('id_domain');
+    my $models = $RAVADA->list_cpu_models($USER->id, $id_domain);
+    $c->render(json => $models);
+};
+
+
 
 get '/iso_file.json' => sub {
     my $c = shift;
@@ -1365,6 +1377,10 @@ get '/list_ldap_attributes/(#cn)' => sub {
 
     return _access_denied($c) if !$USER->is_admin;
 
+
+    return $c->render( json => {attributes => []} )
+    if !$RAVADA->feature('ldap');
+
     my $cn = $c->stash('cn');
     return $c->render(json => $LDAP_ATTRIBUTES{$cn}) if exists $LDAP_ATTRIBUTES{$cn};
 
@@ -1616,6 +1632,8 @@ post '/request/(:name)/' => sub {
     $name = 'start_clones_sequentially' if (($name eq 'start_clones') && ($args->{'exec_sequentially'}));
     delete($args->{exec_sequentially});
     delete($args->{at}) if ((! $args->{at}) || ($args->{at} < time()));
+
+    delete $args->{data}->{_name} if $name eq 'change_hardware';
 
     if ($name eq 'start_clones_sequentially') {
 
@@ -2059,6 +2077,7 @@ sub _translations($c) {
         ,tr => 'Turkish'
         ,ja => 'Japanese'
         ,'cat@valencia' => 'Valencian'
+        ,'ru' => 'Russian'
         ,vi => 'Vietnamese'
     );
     $c->stash(lang_name => \%lang_name);
@@ -2745,6 +2764,7 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
                  Ravada::Request->open_exposed_ports(
                     uid => $USER->id
                 , id_domain => $domain->id
+                , retry => 20
                 );
             }
 
@@ -2927,7 +2947,7 @@ sub register {
    if($username) {
        my @list_users = Ravada::Auth::SQL::list_all_users();
 
-       if (grep {$_ eq $username} @list_users) {
+       if (grep {lc($_) eq lc($username)} @list_users) {
            push @error,("Username already exists, please choose another one");
            $c->render(template => 'bootstrap/new_user',error => \@error);
        }
@@ -3001,7 +3021,7 @@ sub manage_machine {
     my @reqs = ();
 
     my %cur_driver;
-    for my $driver (qw(sound video network image jpeg zlib playback streaming)) {
+    for my $driver (qw(image jpeg zlib playback streaming)) {
         next if !$domain->drivers($driver);
         $cur_driver{$driver} = $domain->get_driver_id($driver);
         my $value = $c->param("driver_$driver");
@@ -3022,18 +3042,6 @@ sub manage_machine {
     }
     $c->stash(cur_driver => \%cur_driver);
 
-    for (qw(usb)) {#add hardware here
-        my $hardware = "hardware_$_";
-        if ( defined $c->param($hardware) ) {
-            my $req3 = Ravada::Request->add_hardware(uid => $USER->id
-                , id_domain => $domain->id
-                , name => $hardware
-                , number => $c->param($hardware)
-            );
-            push @messages,('Changes will apply on next start');
-            push @reqs, ($req3);
-        }
-    }
     for my $option (qw(description)) {
 
         next if $option eq 'description' && !$c->param('btn_description');
@@ -3058,6 +3066,7 @@ sub manage_machine {
     $c->stash(has_graphics_spice => $has_graphics_spice);
     return $c->render(template => 'main/settings_machine'
         , nodes => [$RAVADA->list_vms($domain->type)]
+        , FEATURE => $RAVADA->feature()
         , list_clones => [map { $_->{name} } grep { !$_->{is_base} } $domain->clones]
         , list_clones_base => [ map { $_->{name } } grep { $_->{is_base} } $domain->clones]
         , action => $c->req->url->to_abs->path
@@ -3174,6 +3183,11 @@ sub _do_remove_machine {
     return login($c) if !_logged_in($c);
 
     my $domain = _search_requested_machine($c);
+
+    if (!$domain) {
+        $c->render(json => { msg => "Virtual Machine already removed" });
+        return;
+    }
 
     my $req = Ravada::Request->remove_domain(
         name => $domain->name

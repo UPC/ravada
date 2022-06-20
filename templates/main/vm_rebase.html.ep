@@ -2,7 +2,7 @@
 
     <div ng-show="bases" class="row">
         <div class="col-md-1">
-            <label>Base</label>
+            <label><%=l 'Base' %></label>
         </div>
         <div class="col-md-11">
             <select ng-model="new_base"
@@ -12,19 +12,19 @@
             <button class="btn btn-primary"
             ng-click="change_base=true"
             ng-show="new_base && new_base.id != showmachine.id_base && new_base.id !=showmachine.id"
-            >Change</button>
+            ><%=l 'Change' %></button>
             <button class="btn btn-outline-secondary"
                 ng-click="new_base=undefined;list_bases()"
                 ng-show="new_base && new_base.id != showmachine.id_base && new_base.id !=showmachine.id"
-            >Cancel</button>
+            ><%=l 'Cancel' %></button>
         </div>
     </div>
     <div ng-show="bases" class="row">
         <div class="col-md-1">
         </div>
         <div class="col-md-11">
-            <p ng-show="showmachine.is_base">Rebase all the clones to a new base</p>
-            <p ng-show="showmachine.id_base && !showmachine.has_clones">Rebase this machine to another virtual machine</p>
+            <p ng-show="showmachine.is_base"><%=l 'Rebase all the clones to a new base' %></p>
+            <p ng-show="showmachine.id_base && !showmachine.has_clones"><%=l 'Rebase this machine to another virtual machine' %></p>
         </div>
     </div>
     <div ng-show="bases" class="row">
@@ -32,19 +32,19 @@
             && (showmachine.is_base || showmachine.id_base != new_base_id)"
             class="alert alert-danger">
 
-            <h3>Warning</h3>
+            <h3><%=l 'Warning' %></h3>
             <p>
-                Changing the base of a virtual machine is potentially dangerous
-                and can't be undone.
+                <%=l 'Changing the base of a virtual machine is potentially dangerous
+                and can\'t be undone.' %>
             </p>
-            <p>Are you sure ?
+            <p><%=l 'Are you sure ?' %>
                 <button class="btn btn-primary" ng-click="change_base=false;list_bases()"
-                >No, cancel</button>
-                <button class="btn btn-danger" ng-click="rebase();change_base=false">Yes, rebase</button>
+                ><%=l 'No, cancel' %></button>
+                <button class="btn btn-danger" ng-click="rebase();change_base=false"><%=l 'Yes, rebase' %></button>
             </p>
         </div>
         <div ng-show="rebase_request" class="alert alert-warning">
-             Rebase {{rebase_request.command}} {{showmachine.name}} to {{req_new_base.name}} {{rebase_request.status}}.
+             <%=l 'Rebase' %> {{rebase_request.command}} {{showmachine.name}} <%=l 'to' %> {{req_new_base.name}} {{rebase_request.status}}.
             <br/>
             {{rebase_request.error}}
         </div>

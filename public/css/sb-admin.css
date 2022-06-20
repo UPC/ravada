@@ -443,3 +443,13 @@ ul.alert-dropdown {
   transform: translate(-50%, -50%);
   text-align: center;
 }
+
+span.loading {
+    color: darkgray;
+    font-style: italic;
+}
+
+span.info {
+    color: darkgray;
+    font-style: italic;
+}

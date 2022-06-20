@@ -288,6 +288,7 @@ sub create_domain_v2(%args) {
     my $swap = delete $args{swap};
     my $data = delete $args{data};
     my $options = delete $args{options};
+    my $name = (delete $args{name} or new_domain_name());
 
     croak "Error: unknown arguments ".Dumper(\%args)
     if keys %args;
@@ -312,7 +313,7 @@ sub create_domain_v2(%args) {
 
     my %arg_create = (
         id_iso => $id_iso
-        ,name => new_domain_name()
+        ,name => $name
         ,options => $options
         ,id_owner => $user->id
         ,active => 0
@@ -333,7 +334,7 @@ sub create_domain_v2(%args) {
         ,data => { size => $data*1024*1024, type => 'data' }
     ) if $domain && $data;
     delete_request( 'enforce_limits', 'set_time' );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     return $domain;
 }
 
@@ -623,8 +624,41 @@ sub _leftovers {
     return @machines;
 }
 
+sub _discover() {
+    my $sth = connector()->dbh->prepare("SELECT id,vm_type,hostname FROM vms");
+    $sth->execute();
+
+    my $name = base_domain_name();
+
+    while ( my ($id_vm, $vm_type, $hostname) = $sth->fetchrow ) {
+        next if $hostname ne 'localhost';
+        my $req=Ravada::Request->discover(
+            uid => user_admin->id
+            ,id_vm => $id_vm
+        );
+        wait_request();
+        my $out = $req->output;
+        warn $req->error if $req->error;
+        return if !$out;
+        my $discover = decode_json($out);
+        my @list = grep { $_ =~ /^$name/ } @$discover;
+        for my $name (@list) {
+            diag("Importing $name");
+            $req = Ravada::Request->import_domain(
+                name => $name
+                ,id_owner => user_admin->id
+                ,vm => $vm_type
+                ,uid => user_admin->id
+                ,spinoff_disks => 0
+            );
+        }
+    }
+    wait_request(debug => 0);
+}
+
 sub remove_old_domains_req($wait=1, $run_request=0) {
     my $base_name = base_domain_name();
+    _discover();
     my $machines = rvd_front->list_machines(user_admin);
     my @machines2 = _leftovers();
     my @reqs;
@@ -632,6 +666,7 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
         next unless $machine->{name} =~ /$base_name/;
         remove_domain_and_clones_req($machine,$wait);
     }
+    wait_request(debug => 0);
 
 }
 
@@ -951,7 +986,7 @@ sub _remove_old_disks_kvm {
 #    ok($vm,"I can't find a KVM virtual manager") or return;
 
     eval { $vm->_refresh_storage_pools() };
-    return if $@ && $@ =~ /Cannot recv data/;
+    return if $@ && $@ =~ /Cannot recv data|client_loop: send disconnect/;
 
     ok(!$@,"Expecting error = '' , got '".($@ or '')."'"
         ." after refresh storage pool") or return;
@@ -1183,7 +1218,8 @@ sub wait_request {
                     $run_at = " $run_at";
                 }
                 if ($req->command eq 'refresh_machine_ports'
-                    && $req->error && $req->error =~ /has ports .*up/) {
+                    && defined $req->error
+                    && $req->error =~ /has ports .*up/) {
                     $req->status('done');
                     next;
                 }
@@ -1212,11 +1248,11 @@ sub wait_request {
                             like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
                             $req->status('done');
                         } elsif($req->command eq 'open_exposed_ports') {
-                            like($error,qr{^($|.*No ip in domain|.*duplicated port|I can't get the internal IP)});
+                            like($error,qr{^($|.*No ip in domain|.*duplicated port|.*I can't get the internal IP)});
                         } elsif($req->command eq 'compact') {
                             like($error,qr{^($|.*compacted)});
                         } else {
-                            like($error,qr/^$|run recently/)
+                            like($error,qr/^$|libvirt error code:38,|run recently/)
                                 or confess $req->id." ".$req->command;
                         }
                     }
@@ -1228,7 +1264,7 @@ sub wait_request {
         if ( $done_all ) {
             for my $req (@$request) {
                 $req = Ravada::Request->open($req) if !ref($req);
-                next if $skip{$req->command};
+                next if !$req->id || $skip{$req->command};
                 if ($req->status ne 'done') {
                     $done_all = 0;
                     if ( $debug && (time%5 == 0) ) {
@@ -1783,7 +1819,7 @@ sub hibernate_node($node) {
         eval { $domain_node->hibernate( user_admin ) };
         my $error = $@;
         warn $error if $error;
-        last if !$error || $error =~ /is not active/;
+        last if !$error || $error =~ /is not active|not valid/;
     }
 
     my $max_wait = 30;

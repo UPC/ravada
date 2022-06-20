@@ -309,7 +309,6 @@ sub _init_config(%arg) {
     delete $config->{ldap}->{admin_group}   if !$with_admin;
     if ($with_posix_group) {
             $config->{ldap}->{ravada_posix_group} = $ravada_posix_group;
-            diag("Adding ravada_posix_group = $ravada_posix_group in $file_config");
     } else {
         delete $config->{ldap}->{ravada_posix_group};
     }
@@ -340,7 +339,7 @@ sub _add_posix_group {
     my $base = "ou=groups,".Ravada::Auth::LDAP::_dc_base();
 
     my $mesg;
-    for ( 1 .. 10 ) {
+    for my $count ( 1 .. 10 ) {
         $mesg = $ldap->add(
         cn => $RAVADA_POSIX_GROUP
         ,dn => "cn=$RAVADA_POSIX_GROUP,$base"
@@ -348,10 +347,10 @@ sub _add_posix_group {
                     ,objectClass=> [ 'posixGroup' ]
                     ,gidNumber => 999
                 ]
-    );
-    last if !$mesg->code;
-    warn "Error ".$mesg->code." adding $RAVADA_POSIX_GROUP ".$mesg->error
-        if $mesg->code && $mesg->code != 68;
+        );
+        last if !$mesg->code;
+        warn "Error ".$mesg->code." adding $RAVADA_POSIX_GROUP ".$mesg->error
+        if $count>2 && $mesg->code && $mesg->code != 68;
 
         Ravada::Auth::LDAP::init();
         $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
@@ -595,12 +594,27 @@ sub _replace_field($entry, $field, $with_posix_group) {
 }
 
 sub test_uid_cn($user, $with_posix_group) {
-    Ravada::Auth::LDAP::init();
-    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
-    my $entry = $user->{_ldap_entry};
+
     my $field = 'uid';
     my $uid_value = new_domain_name();
-    my $mesg = $entry->replace( $field => $uid_value )->update($ldap);
+
+    my $ldap;
+    my $msg;
+
+    my $base = Ravada::Auth::LDAP::_dc_base();
+    for ( 1 .. 10 ){
+        $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+
+        $msg = $ldap->search(filter => "cn=".$user->name
+            ,base => $base
+        );
+        last if !$msg->code;
+        Ravada::Auth::LDAP::init();
+    }
+    my ($entry)=$msg->entries or die "Error: no entries found cn=".$user->name;
+    $entry->replace($field => $uid_value);
+    #    my $mesg = $entry->replace( $field => $uid_value )->update($ldap);
+    my $mesg = $entry->update($ldap);
     $mesg->code  and  die $mesg->error;          # check for errors
 
 
@@ -620,6 +634,42 @@ sub test_uid_cn($user, $with_posix_group) {
 
     $entry->replace($field => $old_value);
     $entry->update($ldap);
+}
+
+sub test_user_many_uids($ldap, $with_posix_group) {
+    my ($name, $pass) = (new_domain_name(),$$);
+
+    my $user_ldap= create_ldap_user($name, $pass);
+
+    my ($uid1, $uid2) = (new_domain_name(), new_domain_name());
+
+    _add_to_posix_group($name, $with_posix_group);
+    _add_to_posix_group($uid1, $with_posix_group);
+    _add_to_posix_group($uid2, $with_posix_group);
+
+    $user_ldap->add( uid => $uid1 );
+    $user_ldap->add( uid => $uid2 );
+
+    $user_ldap->update($ldap);
+
+    Ravada::Auth::enable_LDAP(1);
+
+    my $login_ok;
+    eval{ $login_ok = Ravada::Auth::login($name, $pass) };
+    ok($login_ok);
+
+    my $old_field = $Ravada::CONFIG->{ldap}->{field};
+    $Ravada::CONFIG->{ldap}->{field} = 'uid';
+
+    my ($login_uid1, $login_uid2);
+    eval { $login_uid1 = Ravada::Auth::login($uid1, $pass) };
+    ok($login_uid1) or exit;
+    eval { $login_uid2 = Ravada::Auth::login($uid2, $pass) };
+    ok($login_uid2) or exit;
+
+    is($login_uid2->name, $login_uid1->name) or exit;
+
+    $Ravada::CONFIG->{ldap}->{field} = $old_field;
 }
 
 sub test_login_fields($data) {
@@ -674,7 +724,6 @@ SKIP: {
     for my $with_posix_group (0,1) {
     for my $with_admin (0,1) {
     for my $with_dn_posix_group (0,1) {
-    next if !$with_posix_group;
     for my $with_cn_posix_group (0,1) {
         my $fly_config = _init_config(
             file_config => $file_config
@@ -709,6 +758,9 @@ SKIP: {
         ok($ldap) and do {
 
             test_user_fail();
+
+            test_user_many_uids($ldap, $with_posix_group);
+
             test_pass_storage($with_posix_group);
 
             my $user = test_user( 'pepe.mcnulty', $with_posix_group );

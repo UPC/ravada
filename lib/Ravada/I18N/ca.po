@@ -988,6 +988,12 @@ msgstr "Conserveu el CD per als clons"
 msgid "Accept"
 msgstr "Acceptar"
 
+msgid "Close"
+msgstr "Tancar"
+
+msgid "Apply"
+msgstr "Aplicar"
+
 msgid "Fail"
 msgstr "Falla"
 

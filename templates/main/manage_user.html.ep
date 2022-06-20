@@ -23,8 +23,8 @@
         <%=l 'This user has never logged in the Ravada server.' %>
         <br/>
 
-    <a class="btn btn-outline-secondary" href="/admin/groups">Cancel</a>
-    <a class="btn btn-primary" href="/admin/user/<%= $user->name %>.html?origin=<%= $origin %>&import=1">Import</a>
+    <a class="btn btn-outline-secondary" href="/admin/groups"><%=l 'Cancel' %></a>
+    <a class="btn btn-primary" href="/admin/user/<%= $user->name %>.html?origin=<%= $origin %>&import=1"><%=l 'Import' %></a>
     </div>
 % }
 
@@ -36,22 +36,22 @@
         <ul class="nav nav-tabs" id="myTab" role="tablist">
 % if ( $_user->is_admin ) {
             <li class="nav-item">
-                <a class="nav-link active" href="#admin" role="tab" data-toggle="tab" aria-controls="admin" aria-selected="true">Admin</a>
+                <a class="nav-link active" href="#admin" role="tab" data-toggle="tab" aria-controls="admin" aria-selected="true"><%=l 'Admin' %></a>
             </li>
 % }
 % if ( $_user->can_grant) {
             <li class="nav-item">
-                <a class="nav-link" href="#grants" role="tab" data-toggle="tab" aria-controls="grants" aria-selected="true">Grants</a>
+                <a class="nav-link" href="#grants" role="tab" data-toggle="tab" aria-controls="grants" aria-selected="true"><%=l 'Grants' %></a>
             </li>
 % }
 % if (( $_user->is_admin ) && (! $user->is_external)) {
             <li class="nav-item">
-                <a class="nav-link" href="#password" role="tab" data-toggle="tab" aria-controls="password" aria-selected="true">Password</a>
+                <a class="nav-link" href="#password" role="tab" data-toggle="tab" aria-controls="password" aria-selected="true"><%=l 'Password' %></a>
             </li>
 % }
 % if ( $_user->is_admin && $user->is_external && $user->external_auth eq 'ldap' && $user->ldap_entry ) {
             <li class="nav-item">
-                <a class="nav-link" href="#groups" role="tab" data-toggle="tab" aria-controls="groups" aria-selected="true">Groups</a>
+                <a class="nav-link" href="#groups" role="tab" data-toggle="tab" aria-controls="groups" aria-selected="true"><%=l 'Groups' %></a>
             </li>
 % }
 

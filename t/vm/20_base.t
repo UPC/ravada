@@ -192,7 +192,7 @@ sub test_remove_display($vm) {
 }
 
 sub test_add_display_builtin($vm) {
-    my $domain = create_domain($vm);
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     my $req2 = Ravada::Request->remove_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -228,7 +228,7 @@ sub test_add_display_builtin($vm) {
 }
 
 sub test_add_display($vm) {
-    my $domain = create_domain($vm);
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     my $req = Ravada::Request->add_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -279,11 +279,25 @@ sub test_add_display($vm) {
 
 }
 
+
+sub _wait_ip($domain) {
+
+    $domain->start(user => user_admin, remote_ip => '1.2.3.5') unless $domain->is_active();
+    for ( 1 .. 30 ) {
+        return $domain->ip if $domain->ip;
+        diag("Waiting for ".$domain->name. " ip") if !(time % 10);
+        sleep 1;
+    }
+    confess "Error : no ip for ".$domain->name;
+}
+
 sub test_displays_added_on_refresh($domain, $n_expected, $delete=1) {
 
     delete_request_not_done('shutdown','shutdown_domain', 'force_shutdown');
     Ravada::Request->start_domain(uid => user_admin->id, id_domain => $domain->id
         ,remote_ip => '1.2.3.4');
+
+    _wait_ip($domain);
 
     if ($delete) {
         my $sth = connector->dbh->prepare("DELETE FROM domain_displays WHERE id_domain=?");
@@ -295,12 +309,14 @@ sub test_displays_added_on_refresh($domain, $n_expected, $delete=1) {
             ,_force => 1
     );
 
-    wait_request(debug => 0);
+    wait_request(debug => 0, skip => [ 'set_time','enforce_limits'] );
+    is($req->status,'done');
+    is($req->error,'');
     my $sth_count = connector->dbh->prepare(
         "SELECT count(*) FROM domain_displays WHERE id_domain=?");
     $sth_count->execute($domain->id);
     my ($count) = $sth_count->fetchrow;
-    is($count, $n_expected,"Expecting $n_expected displays on table domain_displays for ".$domain->name) or confess;
+    ok($count>=$n_expected,"Expecting $n_expected displays on table domain_displays for ".$domain->name) or confess;
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my $display = $domain_f->info(user_admin)->{hardware}->{display};
@@ -320,8 +336,8 @@ sub test_display_iptables($vm) {
         user => user_admin
         ,remote_ip => '3.2.3.4'
     );
-    delete_request_not_done('set_time','refresh_machine_ports');
-    wait_request(debug => 0, skip => [ 'set_time', 'refresh_machine_ports']);
+    delete_request_not_done('set_time','enforce_limits','refresh_machine_ports');
+    wait_request(debug => 0, skip => [ 'set_time','enforce_limits', 'refresh_machine_ports']);
     my $info = $domain->info(user_admin);
 
     my ($out_iptables_all, $err0) = $vm->run_command("iptables-save");
@@ -1562,6 +1578,11 @@ sub _set_public_exposed($domain, $port) {
         ." WHERE public_port=?");
     $sth->execute($port);
 
+    $sth =$domain->_dbh->prepare("UPDATE domain_displays set port=NULL"
+        ." WHERE port=?");
+    $sth->execute($port);
+
+
     $sth = $domain->_dbh->prepare("UPDATE domain_ports "
         ." SET public_port=? "
         ." WHERE id_domain=?"
@@ -1592,7 +1613,7 @@ sub _conflict_port($domain1, $port_conflict) {
         my $domain = $BASE->clone(name => new_domain_name, user => user_admin, memory => 128*1024);
         push @domains,($domain);
         $domain->start(user => user_admin, remote_ip => '2.3.4.'.$n);
-        delete_request('set_time');
+        delete_request('set_time','enforce_limits');
         wait_request( debug => 0 );
         for my $d (@{$domain->info(user_admin)->{hardware}->{display}}) {
             last COUNT if $d->{port} >= $port_conflict;
@@ -1628,6 +1649,10 @@ sub _check_iptables_fixed_conflict($vm, $port) {
 }
 
 sub test_display_conflict_next($vm) {
+    delete $Ravada::Request::CMD_NO_DUPLICATE{refresh_machine};
+    delete $Ravada::Request::CMD_NO_DUPLICATE{refresh_machine_ports};
+    delete $Ravada::Request::CMD_NO_DUPLICATE{open_exposed_ports};
+
     rvd_back->setting("/backend/expose_port_min" => 5900 );
     my $domain0 = $BASE->clone(name => new_domain_name, user => user_admin, memory =>512*1024);
     $domain0->_reset_free_port() if $vm->type eq 'Void';
@@ -1640,7 +1665,7 @@ sub test_display_conflict_next($vm) {
     _set_public_exposed($domain1, $next_port_builtin);
 
     $domain1->start(user => user_admin, remote_ip => '2.3.4.5');
-    delete_request('set_time');
+    delete_request('set_time','enforce_limits');
     for ( 1 .. 30 ) {
         last if $domain1->ip;
         sleep 1;
@@ -1910,7 +1935,6 @@ for my $db ( 'mysql', 'sqlite' ) {
     is(user_admin->can_grant(),1) or die user_admin->name." ".user_admin->id;
 
     $USER = create_user(new_domain_name(),"bar");
-    rvd_back->setting('/backend/debug_ports' => 0);
 
 for my $vm_name ( vm_names() ) {
 

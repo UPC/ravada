@@ -1,0 +1,37 @@
+<div ng-show="name=='features' && is_edit(name,$index)">
+    <div ng-repeat="(feat,value) in item "
+        ng-show="feat.substr(0,1) != '_'"
+    >
+        <b>{{feat}}:</b>
+
+        <input type="checkbox" ng-model="item[feat]"
+            ng-true-value="1" ng-false-value="0"
+            ng-show="value=='0' || value=='1'"
+        />
+        <span ng-show="(feat=='vmport' ||  feat == 'hap')
+                    && ( value != '1' && value != '0' )">
+        <%=l 'state' %>
+            <select ng-model="item[feat].state" >
+            <option><%=l 'on' %></option>
+            <option><%=l 'off' %></option>
+            </select>
+        </span>
+        <span ng-show="feat == 'kvm' && value != '1' && value != '0'">
+            <%=l 'hidden' %>
+            <select ng-model="item[feat].hidden.state">
+                <option><%=l 'on' %></option>
+                <option><%=l 'off' %></option>
+            </select>
+        </span>
+        <small>
+        <button type="badge"
+            ng-show="(feat=='kvm' || feat=='hap' || feat=='vmport')
+                && value !='0' && value!='1'"
+            ng-click="item[feat]=0;form_edit.$pristine=false"
+        >
+            <span aria-hidden="true">&times;</span>
+        </button>
+        </small>
+
+    </div>
+</div>

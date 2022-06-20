@@ -12,7 +12,7 @@
              ng-init="init()"
         >
         <div class="card-header">
-            <h2>New network</h2>
+            <h2><%=l 'New network' %></h2>
         </div>
         <div class="card-body">
 %=          include '/main/network_options'
