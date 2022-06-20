@@ -1,4 +1,4 @@
-<div class="header"> <%=l 'Status'%>:
+<div class="header"> <%=l 'Status' %>:
     <span ng-show="{{showmachine.is_paused && showmachine.is_active}}"
                          class="label label-warning">
                           <%=l 'Paused' %>
@@ -13,6 +13,6 @@
     <hr>
     <div ng-show="{{showmachine.is_locked}}">
                         <%=l 'Machine locked by' %>
-                        <a href="/request/{{showmachine.is_locked}}.html"><%=l ' process' %></a>
+                        <a href="/request/{{showmachine.is_locked}}.html"> <%=l 'process' %></a>
     </div>
 </div>

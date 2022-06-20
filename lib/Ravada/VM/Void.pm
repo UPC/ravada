@@ -86,6 +86,8 @@ sub create_domain {
     my $description = delete $args{description};
     confess if $args{name} eq 'tst_vm_v20_volatile_clones_02' && !$listen_ip;
     my $remote_ip = delete $args{remote_ip};
+    my $id = delete $args{id};
+
     my $domain = Ravada::Domain::Void->new(
                                            %args
                                            , domain => $args{name}
@@ -94,6 +96,9 @@ sub create_domain {
     my ($out, $err) = $self->run_command("/usr/bin/test",
          "-e ".$domain->_config_file." && echo 1" );
     chomp $out;
+
+    return $domain if $out && exists $args{config};
+
     die "Error: Domain $args{name} already exists " if $out;
     $domain->_set_default_info($listen_ip);
     $domain->_store( autostart => 0 );
@@ -101,6 +106,7 @@ sub create_domain {
     $domain->set_memory($args{memory}) if $args{memory};
 
     $domain->_insert_db(name => $args{name} , id_owner => $user->id
+        , id => $id
         , id_vm => $self->id
         , id_base => $args{id_base} 
         , description => $description
@@ -142,7 +148,7 @@ sub create_domain {
         my $drivers = {};
         $drivers = $domain_base->_value('drivers');
         $domain->_store( drivers => $drivers );
-    } else {
+    } elsif (!exists $args{config}) {
         my ($file_img) = $domain->disk_device();
         my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".void";
         $file_img =~ m{.*/(.*)} if $file_img;
@@ -271,6 +277,23 @@ sub _list_domains_remote($self, %args) {
 sub list_domains($self, %args) {
     return $self->_list_domains_local(%args) if $self->is_local();
     return $self->_list_domains_remote(%args);
+}
+
+sub discover($self) {
+    opendir my $ls,dir_img or return;
+
+    my %known = map { $_->name => 1 } $self->list_domains();
+
+    my @list;
+    while (my $file = readdir $ls ) {
+        next if $file !~ /\.yml$/;
+        $file =~ s/\.\w+//;
+        $file =~ s/(.*)\.qcow.*$/$1/;
+        return if $file !~ /\w/;
+        next if $known{$file};
+        push @list,($file);
+    }
+    return @list;
 }
 
 sub search_domain {
@@ -474,6 +497,14 @@ sub _search_url_file($self, $url) {
 
 sub _download_file_external($self, $url, $device) {
 }
+
+sub get_library_version($self) {
+    my ($n1,$n2,$n3) = $Ravada::VERSION =~ /(\d+)\.(\d+)\.(\d+)/;
+    return $n1*1000000
+    +$n2*1000
+    +$n3;
+}
+
 
 #########################################################################3
 

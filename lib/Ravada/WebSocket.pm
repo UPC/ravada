@@ -54,12 +54,14 @@ our %TABLE_CHANNEL = (
     ,list_machines_user_including_privates => ['domains','bookings','booking_entries'
         ,'booking_entry_ldap_groups', 'booking_entry_users','booking_entry_bases']
     ,list_requests => 'requests'
+    ,machine_info => 'domains'
 );
 
 my $A_WHILE;
 my %A_WHILE;
 my $LIST_MACHINES_FIRST_TIME = 1;
 my $TZ;
+my %TIME0;
 ######################################################################
 
 
@@ -114,11 +116,22 @@ sub _list_nodes($rvd, $args) {
     return \@nodes;
 }
 
+sub _request_exists($rvd, $id_request) {
+
+    my $sth = $rvd->_dbh->prepare(
+        "SELECT id FROM requests WHERE id=?"
+    );
+    $sth->execute($id_request);
+    my ($id_found) = $sth->fetchrow;
+    return $id_found;
+}
+
 sub _request($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login);
 
     my ($id_request) = $args->{channel} =~ m{/(.*)};
+    return if ! _request_exists($rvd, $id_request);
     my $req = Ravada::Request->open($id_request);
     my $command_text = $req->command;
     $command_text =~ s/_/ /g;
@@ -264,7 +277,9 @@ sub _get_machine_info($rvd, $args) {
     if ($info->{is_active} && ( !exists $info->{ip} || !$info->{ip})) {
        Ravada::Request->refresh_machine(id_domain => $info->{id}, uid => $user->id);
     }
-
+    unlock_hash(%$info);
+    $info->{_date_changed} = $domain->_data('date_changed');
+    lock_hash(%$info);
     return $info;
 }
 
@@ -414,7 +429,7 @@ sub BUILD {
         ->{backend}->{time_zone}->{value})
     if !defined $TZ;
 
-    Mojo::IOLoop->recurring(1 => sub {
+    Mojo::IOLoop->recurring(3 => sub {
             for my $key ( keys %{$self->clients} ) {
                 my $ws_client = $self->clients->{$key}->{ws};
                 my $channel = $self->clients->{$key}->{channel};
@@ -436,10 +451,17 @@ sub _old_info($self, $key, $new_count=undef, $new_changed=undef) {
     return ($old_count, $old_changed);
 }
 
-sub _date_changed_table($self, $table) {
+sub _date_changed_table($self, $table, $id) {
     my $rvd = $self->ravada;
-    my $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM $table");
-    $sth->execute;
+    my $sth;
+    if (defined $id) {
+        $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM $table "
+            ." WHERE id=?");
+        $sth->execute($id);
+    } else {
+        $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM $table");
+        $sth->execute;
+    }
     my ($date) = $sth->fetchrow;
     return ($date or '');
 }
@@ -455,7 +477,9 @@ sub _count_table($self, $table) {
 
 sub _new_info($self, $key) {
     my $channel = $self->clients->{$key}->{channel};
-    $channel =~ s{/.*}{};
+    $channel =~ s{/(.*)}{};
+    my $id;
+    $id = $1 if defined $1;
 
     my $table0 = $TABLE_CHANNEL{$channel} or return;
     if (!ref($table0)) {
@@ -470,7 +494,7 @@ sub _new_info($self, $key) {
         $count .= $self->_count_table($table);
 
         $date .= ":" if $date;
-        $date .= $self->_date_changed_table($table)
+        $date .= $self->_date_changed_table($table, $id);
     }
     return ($count, $date);
 
@@ -480,26 +504,36 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
     $channel =~ s{/.*}{};
     my $exec = $SUB{$channel} or die "Error: unknown channel $channel";
 
-    my $old_ret = $self->clients->{$key}->{ret};
-    my ($old_count, $old_changed) = $self->_old_info($key);
-    my ($new_count, $new_changed) = $self->_new_info($key);
+    my $old_ret;
+    if (defined $TIME0{$channel} && time < $TIME0{$channel}+60) {
+        my ($old_count, $old_changed) = $self->_old_info($key);
+        my ($new_count, $new_changed) = $self->_new_info($key);
 
-    return $old_ret if defined $new_count && defined $new_changed
-    && $old_count eq $new_count && $old_changed eq $new_changed;
+        $old_ret = $self->clients->{$key}->{ret};
 
-    $self->_old_info($key, $new_count, $new_changed)
-    unless $channel =~ /list_machines/ && $LIST_MACHINES_FIRST_TIME;
+        return $old_ret if defined $new_count && defined $new_changed
+        && $old_count eq $new_count && $old_changed eq $new_changed;
 
-    my $ret = $exec->($self->ravada, $self->clients->{$key});
+        $self->_old_info($key, $new_count, $new_changed);
 
-    if ( _different($ret, $old_ret )) {
+    }
 
-        warn "WS: send $channel" if $DEBUG;
-        $ws_client->send( { json => $ret } );
+    $TIME0{$channel} = time;
+
+    my $ret;
+    eval { $ret = $exec->($self->ravada, $self->clients->{$key}) };
+    warn $@ if $@;
+
+    if ( defined $ret && _different($ret, $old_ret )) {
+
+        warn localtime(time)." WS: send $channel " if $DEBUG;
+        $ws_client->send( {json => $ret} );
         $self->clients->{$key}->{ret} = $ret;
     }
     $self->unsubscribe($key) if $channel eq 'ping_backend' && $ret eq 2;
-    $self->unsubscribe($key) if !$ret;
+    if (!$ret) {
+        $self->unsubscribe($key);
+    }
 }
 
 sub subscribe($self, %args) {
@@ -516,6 +550,9 @@ sub subscribe($self, %args) {
         $LIST_MACHINES_FIRST_TIME = 1 ;
     }
     $self->_send_answer($ws,$args{channel});
+    my $channel = $args{channel};
+    $channel =~ s{/.*}{};
+    $TIME0{$channel} = 0 if $channel =~ /list_machines/i;
 }
 
 sub unsubscribe($self, $ws) {

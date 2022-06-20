@@ -661,6 +661,7 @@ sub list_iso_images {
     while (my $row = $sth->fetchrow_hashref) {
         $row->{options} = decode_json($row->{options})
             if $row->{options};
+        $row->{min_ram} = 0.2 if !$row->{min_ram};
         push @iso,($row);
     }
     $sth->finish;
@@ -1546,6 +1547,37 @@ sub list_machine_types($self, $uid, $vm_type) {
     $self->_cache_store($key,$types);
 
     return $types;
+}
+
+=head2 list_cpu_models
+
+Returns a reference to a list of the CPU models
+
+=cut
+
+sub list_cpu_models($self, $uid, $id_domain) {
+
+    my $key="list_cpu_models";
+    my $dom = Ravada::Front::Domain->open($id_domain);
+    $key.='#'.$dom->type;
+
+    my $cache = $self->_cache_get($key);
+    return $cache if $cache;
+
+    my $req = Ravada::Request->list_cpu_models(
+        id_domain => $id_domain
+        ,uid => $uid
+    );
+    return {} if !$req;
+    $self->wait_request($req);
+    return {} if $req->status ne 'done';
+
+    my $models= {};
+    $models = decode_json($req->output()) if $req->output;
+
+    $self->_cache_store($key,$models);
+
+    return $models;
 }
 
 =head2 version

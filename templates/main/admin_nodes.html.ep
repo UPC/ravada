@@ -7,10 +7,13 @@
     <div id="page-wrapper" ng-controller="manage_nodes">
       <div id="admin-content" ng-cloak="1">
           <div class="row">
-              <div class="col-md-8"><h2>Nodes</h2></div>
+              <div class="col-md-8"><h2><%=l 'Nodes' %></h2></div>
               <div class="col-md-4" align="right">
-                  <h2><a type="button"
-                          class="btn btn-success" href="/v1/node/new"><b>New Node</b></a>
+                  <h2>
+                    <a type="button"
+                          class="btn btn-success" href="/v1/node/new">
+                            <b><%=l 'New Node' %></b>
+                    </a>
                   </h2>
               </div>
           </div>
@@ -92,13 +95,13 @@
                                 <button type="button" class="close" data-dismiss="modal"
                                     aria-label="Close"><span aria-hidden="true">&times;</span>
                                 </button>
-                                <h4 class="modal-title">Confirm disable node</h4>
+                                <h4 class="modal-title"><%=l 'Confirm disable node' %></h4>
                             </div>
                             <div class="modal-body">
-                                <p>Disabling this node will shut all the
+                                <p><%=l 'Disabling this node will shut all the' %>
                                     {{node.machines.length}}
-                                    machines down.
-                                    Are you sure ?</p>
+                                    <%=l 'machines down.' %>
+                                    <%=l 'Are you sure ?' %></p>
                                 <ul>
                                     <li ng-repeat="machine in node.machines">
                                         {{machine.name}}

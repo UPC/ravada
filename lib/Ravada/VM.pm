@@ -212,6 +212,14 @@ sub open {
 
 }
 
+sub _refresh_version($self) {
+    my $version = $self->get_library_version();
+    return if defined $self->_data('version')
+    && $self->_data('version') eq $version;
+
+    $self->_data('version' => $version);
+}
+
 sub _clean_cache {
     %VM = ();
 }
@@ -298,6 +306,7 @@ sub _around_connect($orig, $self) {
     if ($result) {
         $self->is_active(1);
         $self->_fetch_tls();
+        $self->_refresh_version();
     } else {
         $self->is_active(0);
     }
@@ -395,13 +404,15 @@ sub _around_create_domain {
        my $swap = delete $args{swap};
        my $from_pool = delete $args{from_pool};
 
+    my $config = delete $args{config};
+
      # args get deleted but kept on %args_create so when we call $self->$orig below are passed
      delete $args{disk};
      delete $args{memory};
      my $request = delete $args{request};
      delete $args{iso_file};
      delete $args{id_template};
-     delete @args{'description','remove_cpu','vm','start','options'};
+     delete @args{'description','remove_cpu','vm','start','options','id'};
 
     confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
 
@@ -474,6 +485,7 @@ sub _around_create_domain {
             delete $display->{port};
             $domain->_store_display($display);
         }
+        $domain->_chroot_filesystems();
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
     $domain->is_volatile(1)     if $user->is_temporary() || $volatile;
@@ -533,6 +545,9 @@ sub _around_import_domain {
     my $orig = shift;
     my $self = shift;
     my ($name, $user, $spinoff, $import_base) = @_;
+
+    die "Error: base for '$name' can't be imported when volumes are"
+        ." spinned off\n" if $spinoff && $import_base;
 
     my $domain = $self->$orig($name, $user, $spinoff);
 
@@ -829,7 +844,7 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports);
     my @requests;
     for my $req ( $base->list_requests ) {
         push @requests,($req) if !$ignore_requests{$req->command};
@@ -866,7 +881,13 @@ sub id {
 }
 
 sub _data($self, $field, $value=undef) {
-    if (defined $value && $self->store ) {
+    if (defined $value && $self->store
+        && (
+          !exists $self->{_data}->{$field}
+          || !defined $self->{_data}->{$field}
+          || $value ne $self->{_data}->{$field}
+        )
+    ) {
         $self->{_data}->{$field} = $value;
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE vms set $field=?"
@@ -1369,7 +1390,7 @@ sub run_command($self, @command) {
     if ($exec !~ m{^/}) {
         my ($exec_command,$args) = $exec =~ /(.*?) (.*)/;
         $exec_command = $exec if !defined $exec_command;
-        $exec = $self->_findbin($exec_command);
+        $exec = $self->_which($exec_command);
         $command[0] = $exec;
         $command[0] .= " $args" if $args;
     }
@@ -1507,16 +1528,6 @@ sub create_iptables_chain($self, $chain, $jchain='INPUT') {
 
 }
 
-sub _findbin($self, $name) {
-    my $exec = "_exec_$name";
-    return $self->{$exec} if $self->{$exec};
-    my ($out, $err) = $self->run_command('/usr/bin/which', $name);
-    chomp $out;
-    $self->{$exec} = $out;
-    confess "Error: Command '$name' not found" if !$out;
-    return $out;
-}
-
 =head2 iptables
 
 Runs an iptables command in the virtual manager
@@ -1566,7 +1577,7 @@ sub _search_iptables($self, %rule) {
         $rule{A} = delete $rule{I};
     }
     $rule{m} = $rule{p} if exists $rule{p} && !exists $rule{m};
-    $rule{d} = "$rule{d}/32" if exists $rule{d} && $rule{d} !~ m{/\d+$};
+    $rule{d} = "$rule{d}/32" if exists $rule{d} && defined $rule{d} && $rule{d} !~ m{/\d+$};
     $rule{s} = "$rule{s}/32" if exists $rule{s} && $rule{s} !~ m{/\d+$};
 
     for my $line (@{$iptables->{$table}}) {
@@ -2113,7 +2124,22 @@ sub _list_qemu_bridges($self) {
 
 sub _which($self, $command) {
     return $self->{_which}->{$command} if exists $self->{_which} && exists $self->{_which}->{$command};
-    my @cmd = ( '/bin/which',$command);
+
+    confess "Error: deep recursion"
+    if $self->{_deep_recursion}->{$command}++;
+
+    my $bin_which = $self->{_which}->{which};
+    if (!$bin_which) {
+        for my $try ( "/bin/which","/usr/bin/which") {
+            $bin_which = $try if $self->file_exists($try);
+            last if $bin_which;
+        }
+        if (!$bin_which) {
+            die "Error: No which found in /bin nor /usr/bin ".$self->name."\n";
+            $bin_which = "which";
+        }
+    }
+    my @cmd = ( $bin_which,$command);
     my ($out,$err) = $self->run_command(@cmd);
     chomp $out;
     $self->{_which}->{$command} = $out;
@@ -2252,6 +2278,31 @@ It can be overloaded in each backend module.
 
 sub list_machine_types($self) {
     return ();
+}
+
+=head2 dir_backup
+
+Directory where virtual machines backup will be stored. It can
+be changed from the frontend nodes page management.
+
+=cut
+
+sub dir_backup($self) {
+    my $dir_backup = $self->_data('dir_backup');
+
+    if (!$dir_backup) {
+        $dir_backup = $self->dir_img."/backup";
+        $self->_data('dir_backup', $dir_backup);
+    }
+    if (!$self->file_exists($dir_backup)) {
+        if ($self->is_local) {
+            make_path($dir_backup) or die "$! $dir_backup";
+        } else {
+            my ($out,$error)= $self->run_command("mkdir","-p",$dir_backup);
+            die "Error on mkdir -p $dir_backup $error" if $error;
+        }
+    }
+    return $dir_backup;
 }
 
 1;

@@ -459,14 +459,15 @@ sub file_exists($self, $file) {
 }
 
 sub _file_exists_remote($self, $file) {
-    $file = $self->_follow_link($file);
+    $file = $self->_follow_link($file) unless $file =~ /which$/;
     for my $pool ($self->vm->list_all_storage_pools ) {
         $self->_wait_storage( sub { $pool->refresh() } );
         my @volumes = $self->_wait_storage( sub { $pool->list_all_volumes });
         for my $vol ( @volumes ) {
             my $found;
             eval {
-                my $path = $self->_follow_link($vol->get_path);
+                my $path = $vol->get_path;
+                $self->_follow_link($vol->get_path) unless $file =~ /which$/;
                 $found = 1 if $path eq $file;
             };
             # volume was removed in the nick of time
@@ -474,7 +475,12 @@ sub _file_exists_remote($self, $file) {
             return 1 if $found;
         }
     }
-    return 0;
+
+    die "Error: invalid file '$file'" if $file =~ /[`;(\[" ]/;
+    my ($out,$err) = $self->_ssh->capture2("ls $file");
+    my @ls = split /\n/,$out;
+    for (@ls) { chomp };
+    return scalar(@ls);
 }
 
 sub _follow_link($self, $file) {
@@ -631,14 +637,16 @@ sub create_domain {
 
     croak "argument name required"       if !$args{name};
     croak "argument id_owner required"   if !$args{id_owner};
-    confess "argument id_iso or id_base required ".Dumper(\%args)
-        if !$args{id_iso} && !$args{id_base};
+    confess "argument id_iso or id_base or config required ".Dumper(\%args)
+        if !$args{id_iso} && !$args{id_base} && !$args{config};
 
     my $domain;
     if ($args{id_iso}) {
         $domain = $self->_domain_create_from_iso(@_);
     } elsif($args{id_base}) {
         $domain = $self->_domain_create_from_base(@_);
+    } elsif($args{config}) {
+        $domain = $self->_domain_create_from_config(@_);
     } else {
         confess "TODO";
     }
@@ -747,6 +755,17 @@ sub list_domains {
             $domain = Ravada::Domain->open( id => $id, vm => $self);
         }
         push @list,($domain) if $domain;
+    }
+    return @list;
+}
+
+sub discover($self) {
+    my @known = $self->list_domains(read_only => 1);
+    my %known = map { $_->name => 1 } @known;
+
+    my @list;
+    for my $dom ($self->vm->list_all_domains) {
+        push @list,($dom->get_name) if !$known{$dom->get_name};
     }
     return @list;
 }
@@ -892,9 +911,9 @@ sub _domain_create_from_iso {
             $device_cdrom = $iso_file;
         }
     }
-    else {
-      $device_cdrom = $self->_iso_name($iso, $args{request});
-    }
+
+    $device_cdrom  =$self->_iso_name($iso, $args{request})
+    if !$device_cdrom && $iso->{has_cd};
     
     #if ((not exists $args{iso_file}) || ((exists $args{iso_file}) && ($args{iso_file} eq "<NONE>"))) {
     #    $device_cdrom = $self->_iso_name($iso, $args{request});
@@ -1038,6 +1057,28 @@ sub _search_domain_by_id {
     $sth->finish;
 
     return $self->search_domain($row->{name});
+}
+
+sub _domain_create_from_config($self, %args) {
+    my $config = delete $args{config};
+    my $id = delete $args{id};
+    my $xml = XML::LibXML->load_xml(string => $config);
+
+    my $dom = $self->vm->define_domain($xml->toString());
+    my $domain = Ravada::Domain::KVM->new(
+              _vm => $self
+         , domain => $dom
+       , id_owner => $args{id_owner}
+    );
+
+    $domain->_insert_db(name=> $args{name}
+        , id => $id
+        , id_owner => $args{id_owner}
+        , id_vm => $self->id
+    );
+    $domain->xml_description();
+    return $domain;
+
 }
 
 sub _domain_create_from_base {
@@ -1419,8 +1460,7 @@ sub _ua_get($self, $url) {
         sleep 1+$try;
     }
     confess "Error getting '$url'" if !$res;
-    confess "ERROR ".$res->code." ".$res->message." : $url"
-        unless $res->code == 200 || $res->code == 301;
+    return unless $res->code == 200 || $res->code == 301;
 
     $self->_cache_store($url,$res->body);
     return $res->dom;
@@ -1521,13 +1561,16 @@ sub _search_url_file($self, $url_re, $file_re=undef) {
         ($url_re, $file_re) = $old_url_re =~ m{(.*)/(.*)};
         confess "ERROR: Missing file part in $old_url_re"
             if !$file_re;
+        if ($url_re =~ /\.\.$/) {
+            $url_re =~ s{(.*)/.*/\.\.$}{$1};
+        }
     }
 
     $file_re .= '$' if $file_re !~ m{\$$};
     my @found;
     for my $url ($self->_match_url($url_re)) {
-        push @found,
-        $self->_match_file($url, $file_re);
+        my @file = $self->_match_file($url, $file_re);
+        push @found, @file if scalar @file;
     }
     return (sort @found);
 }
@@ -1546,6 +1589,7 @@ sub _match_file($self, $url, $file_re) {
     $url .= '/' if $url !~ m{/$};
 
     my $dom = $self->_ua_get($url);
+    return if !$dom;
 
     my @found;
 
@@ -1669,6 +1713,8 @@ sub _xml_modify_options($self, $doc, $options=undef) {
         $self->_xml_set_pcie($doc);
         $self->_xml_remove_ide($doc);
         $self->_xml_remove_vmport($doc);
+    } else {
+        $self->_xml_set_pci_noe($doc);
     }
 
 }
@@ -1715,6 +1761,55 @@ sub _xml_set_pcie($self, $doc) {
         $controller->setAttribute('model' => 'pcie-root');
     }
 }
+
+sub _xml_set_pci_noe($self, $doc) {
+    my $changed = 0;
+    for my $controller ($doc->findnodes("/domain/devices/controller")) {
+        next if $controller->getAttribute('type') ne 'pci';
+
+        $controller->setAttribute('model' => 'pci-root')
+        if $controller->getAttribute('model') eq 'pcie-root';
+
+        $changed++;
+    }
+
+    return if !$changed;
+    my %slot;
+    for my $address ($doc->findnodes("/domain/devices/*/address")) {
+        next if $address->getAttribute('type') ne'pci';
+        my ($n) = $address->getAttribute('slot') =~ /0x0*(\d+)/;
+        $slot{$n}++;
+    }
+
+    my $n = 2;
+    for my $address ($doc->findnodes("/domain/devices/*/address")) {
+        next if $address->getAttribute('type') ne'pci';
+        next if $address->getAttribute('slot') !~ /^0x00+$/;
+
+        my $new_slot = "0x0$n";
+        for (;;) {
+            $new_slot = "0x0$n";
+            last if !$slot{$n}++;
+            $n++;
+        }
+        $address->setAttribute('slot' => $new_slot);
+    }
+
+    # video can't be 0x00 nor 0x01
+    for my $address ($doc->findnodes("/domain/devices/video/address")) {
+        next if $address->getAttribute('type') ne'pci';
+        next if $address->getAttribute('slot') !~ /^0x0*(0|1)$/;
+        my $new_slot = "0x0$n";
+        for (;;) {
+            $new_slot = "0x0$n";
+            last if !$slot{$n}++;
+            $n++;
+        }
+        $address->setAttribute('slot' => $new_slot);
+    }
+
+}
+
 
 sub _xml_add_libosinfo_win2k16($self, $doc) {
     my ($domain) = $doc->findnodes('/domain');
@@ -1777,6 +1872,9 @@ sub _xml_modify_video {
                      ,map { $_->toString() } $doc->findnodes('/domain/devices/video'))
 
         if !$video;
+
+    return if $video->getAttribute('type') eq 'qxl';
+
     $video->setAttribute(type => 'qxl');
     $video->setAttribute( ram => 65536 );
     $video->setAttribute( vram => 65536 );
@@ -2214,7 +2312,7 @@ sub _xml_remove_cdrom {
                 if ($source) {
 #                    warn "\n\t->removing ".$source->nodeName." ".$source->getAttribute('file')
 #                        ."\n";
-                    $disk->removeChild($source);
+                    $context->removeChild($disk);
                 }
             }
         }
@@ -2605,6 +2703,10 @@ sub _is_ip_nat($self, $ip0) {
         return 1 if $ip->within($net);
     }
     return 0;
+}
+
+sub get_library_version($self) {
+    return $self->vm->get_library_version();
 }
 
 1;

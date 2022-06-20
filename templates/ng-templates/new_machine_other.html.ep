@@ -39,7 +39,7 @@
                     </div>
                     <div class="form-group row">
                         <div class="col-xl-2">
-                            <label class="col-xl-12 text-muted" for="copy_ram">RAM (Gb):</label>
+                            <label class="col-xl-12 text-muted" for="copy_ram"><%=l 'RAM (Gb)' %>:</label>
                         </div>
                         <div class="col-xl-2">
                             <input class="form-control" ng-model="ramsize" type="text"
@@ -50,9 +50,9 @@
                     </div>
                     <div class="form-group row alert alert-warning"
                         ng-hide="src_machine.is_base || !src_machine">
-                        The source machine is not a base. It must be
+                        <%=l 'The source machine is not a base. It must be
                         prepared before it can be copied. This
-                        process may take some minutes.
+                        process may take some minutes.' %>
                     </div>
                     <div ng-show="name_duplicated" class="form-group row alert alert-danger"
                             role="alert">
@@ -60,7 +60,7 @@
                     </div>
                     <div ng-show="new_machine_other_form.copy_name.$error.pattern"
                         class="form-group row alert alert-danger" role="alert">
-                        <strong><%=l 'Error' %> : </strong> <%=l 'The machine name must contain only alphabetic, numbers, undercores and dashes.' %>
+                        <strong><%=l 'Error' %> : </strong> <%=l 'The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points.' %>
                     </div>
 
 

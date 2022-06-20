@@ -77,11 +77,12 @@ sub test_remove_disk($vm, %options) {
     die "Error: unknown options ".Dumper(\%options)
     if keys %options;
 
-    for my $index ( 0 .. 3 ) {
+    for my $index ( 0 .. 2 ) {
         my $name = new_domain_name();
         my $req = Ravada::Request->create_domain(
             name => $name
             ,id_owner => user_admin->id
+            ,disk => 2*1024 * 1024
             ,swap => 1024 * 1024
             ,data => 1024 * 1024
             ,id_iso => $id_iso

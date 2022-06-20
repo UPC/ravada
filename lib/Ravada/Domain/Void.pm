@@ -710,14 +710,17 @@ sub _set_default_info($self, $listen_ip=undef) {
             ,time => time
     };
 
-    $info->{interfaces}->[0] = {
-        hwaddr => $info->{mac}
-        ,address => $info->{ip}
-    };
-
     $self->_store(info => $info);
     $self->_set_display($listen_ip);
     my $hardware = $self->_value('hardware');
+
+    $hardware->{network}->[0] = {
+        hwaddr => $info->{mac}
+        ,address => $info->{ip}
+        ,type => 'nat'
+    };
+    $self->_store(hardware => $hardware );
+
     my %controllers = $self->list_controllers;
     for my $name ( sort keys %controllers) {
         next if $name eq 'disk' || $name eq 'display';
@@ -1157,5 +1160,16 @@ sub reload_config($self, $data) {
     confess $@ if $@;
 }
 
+sub has_nat_interfaces($self) {
+    my $config = $self->_load();
+    for my $if (@{$config->{hardware}->{network}}) {
+        return 1 if exists $if->{type} && $if->{type} eq 'nat';
+    }
+    return 0;
+}
+
+sub config_files($self) {
+    return $self->_config_file();
+}
 
 1;

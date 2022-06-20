@@ -8,7 +8,7 @@
     <div class="page-header">
         <div class="card">
             <div class="card-header">
-                <h2>Bookings</h2>
+                <h2><%=l 'Bookings' %></h2>
             </div>
         </div>
     </div>

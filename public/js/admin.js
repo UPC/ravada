@@ -316,6 +316,10 @@ ravadaApp.directive("solShowMachine", swMach)
               ws = new WebSocket(url);
           };
           ws.onmessage = function (event) {
+
+              if ( $scope.modalOpened == true ) {
+                  return;
+              }
               $scope.list_machines_time++;
               var data = JSON.parse(event.data);
 
@@ -482,6 +486,14 @@ ravadaApp.directive("solShowMachine", swMach)
         return machine.is_base == 0 && machine.is_locked ==0;
     };
 
+    $scope.can_manage_base = function(machine) {
+        if (machine.is_base) {
+            return $scope.can_remove_base(machine);
+        } else {
+            return $scope.can_prepare_base(machine);
+        }
+    };
+
     $scope.list_images=function() {
         $http.get('/list_images.json').then(function(response) {
               $scope.images = response.data;
@@ -492,12 +504,26 @@ ravadaApp.directive("solShowMachine", swMach)
       $('#'+prefix+machine.id).modal({show:true})
       $scope.with_cd = false;
       $http.get("/machine/info/"+machine.id+".json").then(function(response) {
+          if(response.status != 200 ) {
+               window.location.reload();
+          }
           machine.info=response.data;
       }
-      );
+      ,function errorCallback(response) {
+          console.log(response);
+          window.location.reload();
+      });
     }
-    $scope.cancel_modal=function(){
-      $scope.modalOpened=false;
+    $scope.cancel_modal=function(machine,field){
+        $scope.modalOpened=false;
+        if (typeof(machine)!='undefined' && typeof(field)!='undefined') {
+            console.log(field);
+            if (machine[field]) {
+                machine[field]=0;
+            } else {
+                machine[field]=1;
+            }
+        }
     }
     $scope.toggle_show_clones =function(id, value) {
         if (typeof(value) == 'undefined') {
@@ -595,9 +621,11 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.show_active = false;
         $scope.n_active_current = 0;
         $scope.n_active_hidden = 0;
+        var filter = $scope.filter.toLowerCase();
         for (var [key, mach ] of Object.entries($scope.list_machines)) {
             if ($scope.filter.length > 0) {
-                if ( mach.name.indexOf($scope.filter)>= 0) {
+                var name = mach.name.toLowerCase();
+                if ( name.indexOf(filter)>= 0) {
                     mach.show = true;
                 } else {
                     mach.show = false;

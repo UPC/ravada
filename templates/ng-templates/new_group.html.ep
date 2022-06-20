@@ -31,6 +31,6 @@
         % }
     </form>
     <div ng-show="<%= $groupname && !scalar(@$error) %>">
-        Group name <a href="/admin/group/<%= $groupname %>"><%= $groupname %></a> added.
+        <%=l 'Group name' %> <a href="/admin/group/<%= $groupname %>"><%= $groupname %></a> <%=l 'added' %>.
     </div>
 </div>

@@ -93,7 +93,7 @@
     <div class="col-md-7">
         <div><%=l 'Compact disk volumes' %></div>
         <div ng-show="showmachine.is_compacted">
-            This virtual machine has already been compacted
+            <%=l 'This virtual machine has already been compacted' %>
         </div>
     </div>
   </div>

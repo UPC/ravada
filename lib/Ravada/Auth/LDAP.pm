@@ -63,6 +63,17 @@ sub BUILD {
     my $self = shift;
     die "ERROR: Login failed '".$self->name."'"
         if !$self->login;
+
+    return $self
+        if !exists $self->{_ldap_entry}
+        || ! defined $self->{_ldap_entry};
+
+    my $field = ( $$CONFIG->{ldap}->{field} or "cn" );
+    my @names = $self->{_ldap_entry}->get_value($field);
+    if (scalar (@names) > 1 ) {
+        eval { $self->name($names[0]) };
+        warn $@ if$@;
+    }
     return $self;
 }
 
