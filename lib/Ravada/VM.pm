@@ -453,7 +453,7 @@ sub _around_create_domain {
     if ($self->is_local && $base && $base->is_base
             && ( $base->volatile_clones || $owner->is_temporary )) {
         $request->status("balancing")                       if $request;
-        my $vm = $self->balance_vm($base) or die "Error: No free nodes available.";
+        my $vm = $self->balance_vm($owner->id, $base) or die "Error: No free nodes available.";
         $request->status("creating machine on ".$vm->name)  if $request;
         $self = $vm;
         $args_create{listen_ip} = $self->listen_ip($remote_ip);
@@ -1653,7 +1653,15 @@ Returns a Virtual Manager from all the nodes to run a virtual machine.
 When the optional base argument is passed it returns a node from the list
 of VMs where the base is prepared.
 
-Argument: base [optional]
+Arguments
+
+=over
+
+=item uid
+
+=item base [optional]
+
+=item id_domain [optional]
 
 =cut
 
@@ -1661,9 +1669,11 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef) {
 
     my @vms;
     if ($base) {
+        confess "Error: base is not an object ".Dumper($base)
+        if !ref($base);
+
         @vms = $base->list_vms();
     } else {
-        confess "Error: we need a base to balance ";
         @vms = $self->list_nodes();
     }
 
