@@ -1,7 +1,28 @@
 VirtioFS
 ========
 
-Virtiofs is a shared file system that lets virtual machines access a directory tree on the host. It will be available with Ravada v1.6.
+Virtiofs is a shared file system that lets virtual machines access a directory tree on the host. It is available since Ravada v1.6.
+
+Usage Examples
+--------------
+
+Shared Space
+~~~~~~~~~~~~
+
+Directories and files can be shared from the host to the virtual
+machines. All kinds of files and data can be stored for read and
+write access. Read-only mode can be optionally enforced at mount time.
+
+.. figure:: images/virtiofs_example1.jpg
+
+Private Space
+~~~~~~~~~~~~~
+
+It can be configured a private space for each virtual machine.
+Unprivileged users will only be able to write and read their own files.
+It can be granted special access to all the data if it is required.
+A case usage could be to store students assignments and the teacher
+is granted access to all the files.
 
 Requirements
 -------------
