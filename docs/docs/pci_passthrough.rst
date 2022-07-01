@@ -76,8 +76,13 @@ GPUs with embedded USB
 ~~~~~~~~~~~~~~~~~~~~~~
 
 If your *GPU* also sports an *USB device*, you need to check what driver
-this device is using and blacklist it here also. Use `lspci -Dnn -k` to
-check what driver it is using.
+this device is using and blacklist it here also.
+
+.. warning::
+
+    This procedure will render all the USB devices of the server unavailable. From now on the USB keyboard can not be used anymore. Make sure you always have access with ssh. In case you needed to use the keyboard again you have to remove the *blacklist xhci_pci* from the file /etc/modprobe.d/blacklist-gpu.conf, issue *update-grub* and reboot the server.
+
+Use `lspci -Dnn -k` to check what driver it is using.
 
 
 ::
