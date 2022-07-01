@@ -100,18 +100,20 @@ It is usually created at installation time. If you are not sure
 what is the name of the user, just boot the base, enter the desktop
 and that command.
 
-.. prompt:: bash
+.. prompt:: bash user@virtual-machine:~$
 
    id `whoami`
 
 The very first numerical value returned is the one you must configure for
 the shared filesystem.
 
-The owner of the shared filesystem must be set first in the host.
+The owner of the shared filesystem must be set first in the host. Access
+the server where all the virtual machines are stored and change the owner
+with the *uid* you just found out in the previous step.
 
-.. prompt:: #
+.. prompt:: bash frankie@host:~$
 
-   chown 1000 /home/shared
+   sudo chown 1000 /home/shared
 
 Mount Subdirectory in the base
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -119,7 +121,7 @@ Mount Subdirectory in the base
 First you have to create the mount point in the virtual machine.
 The owner of that subdirectory must be the user that runs the desktop.
 
-.. prompt:: bash
+.. prompt:: bash root@virtual-machine:~#
 
    mkdir /mnt/shared
    chown 1000 /mnt/shared
@@ -146,9 +148,8 @@ and the mount point.
 
 Check the user is able to write there:
 
-.. prompt:: bash
+.. prompt:: bash user@virtual-machine:~$
 
-   su - username
    touch /mnt/shared/test
    rm /mnt/shared/test
 
