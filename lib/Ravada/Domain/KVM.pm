@@ -3556,12 +3556,32 @@ sub add_config_node($self, $path, $content, $doc) {
     die $@ if $@ && $@ !~ /Undefined namespace prefix/;
     return if $element && $element->toString eq $content;
 
+    $self->_fix_slot(\$content);
+
     if ($content =~ /<qemu:commandline/) {
         _add_xml_parse($parent[0], $content);
     } else {
         $parent[0]->appendWellBalancedChunk($content);
     }
 
+}
+
+sub _fix_slot($self, $content) {
+    my ($machine_type) = $self->_os_type_machine();
+    return if $machine_type !~ /pc-q35/;
+
+    $XML::LibXML::skipXMLDeclaration = 1;
+
+    my $xml = XML::LibXML->load_xml( string => $$content );
+    for my $address ( $xml->findnodes('*/address') ) {
+
+        my $slot = $address->getAttribute('slot');
+        $address->setAttribute('slot' => '0x00') if $slot eq'0x01';
+
+    }
+    $$content = $xml->toString();
+
+    $XML::LibXML::skipXMLDeclaration = 1;
 }
 
 sub add_config_unique_node($self, $path, $content, $doc) {

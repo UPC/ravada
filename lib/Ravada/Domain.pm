@@ -6783,7 +6783,6 @@ sub _add_host_devices($self, @args) {
         }
     }
     $self->reload_config($doc);
-
 }
 
 sub _dettach_host_devices($self) {
