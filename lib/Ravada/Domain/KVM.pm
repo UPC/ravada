@@ -3556,7 +3556,7 @@ sub add_config_node($self, $path, $content, $doc) {
     die $@ if $@ && $@ !~ /Undefined namespace prefix/;
     return if $element && $element->toString eq $content;
 
-    $self->_fix_slot(\$content);
+    $self->_fix_pci_slot(\$content);
 
     if ($content =~ /<qemu:commandline/) {
         _add_xml_parse($parent[0], $content);
@@ -3566,22 +3566,48 @@ sub add_config_node($self, $path, $content, $doc) {
 
 }
 
-sub _fix_slot($self, $content) {
+sub _fix_pci_slot($self, $content) {
     my ($machine_type) = $self->_os_type_machine();
-    return if $machine_type !~ /pc-q35/;
 
-    $XML::LibXML::skipXMLDeclaration = 1;
-
-    my $xml = XML::LibXML->load_xml( string => $$content );
-    for my $address ( $xml->findnodes('*/address') ) {
-
+    my %dupe;
+    my $config = XML::LibXML->load_xml(string => $self->xml_description);
+    for my $address ($config->findnodes("/domain/devices/*/address")) {
         my $slot = $address->getAttribute('slot');
-        $address->setAttribute('slot' => '0x00') if $slot eq'0x01';
+        $slot='0x01' if !defined $slot;
+        my $d = $address->getAttribute('domain');
+        next if !defined $d;
+        my $b = $address->getAttribute('bus');
+        my $f = $address->getAttribute('function');
+        $dupe{"$d:$b:$slot.$f"}++;
+    }
+    $XML::LibXML::skipXMLDeclaration = 1;
+    my $xml = XML::LibXML->load_xml( string => $$content );
 
+    my ($address) = $xml->findnodes('*/address');
+    if ( !$address ) {
+        $XML::LibXML::skipXMLDeclaration = 0;
+        return;
+    }
+
+    my $changed = 0;
+    my $slot = $address->getAttribute('slot');
+    if ($machine_type =~ /pc-q35/ && $slot ne '0x00') {
+        $slot = '0x00';
+        $address->setAttribute('slot' => $slot);
+        $changed++;
+    }
+    for my $f (0 .. 9,'a' .. 'f') {
+        my $d = $address->getAttribute('domain');
+        my $b = $address->getAttribute('bus');
+        my $new = "$d:$b:$slot.0x$f";
+        next if $dupe{$new};
+        $address->setAttribute('function'=>$f);
+        $changed++;
+        last;
     }
     $$content = $xml->toString();
 
-    $XML::LibXML::skipXMLDeclaration = 1;
+    $XML::LibXML::skipXMLDeclaration = 0;
 }
 
 sub add_config_unique_node($self, $path, $content, $doc) {

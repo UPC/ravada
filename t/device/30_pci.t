@@ -26,9 +26,29 @@ sub test_pci($vm) {
 
     my $domain = create_domain_v2(
         vm => $vm
-        ,options => { machine => 'q35' } );
+        ,options => { machine => 'q35' }
+        ,iso_name => '%bull%64%'
+    );
+    _check_there_is_address($domain, '0x0000:0x01:0x00.0x0');
     $domain->add_host_device($id);
     $domain->start(user_admin);
+}
+
+sub _check_there_is_address($domain, $address) {
+    my $xml = XML::LibXML->load_xml( string => $domain->xml_description );
+    for my $node ( $xml->findnodes("/domain/devices/*/address") ) {
+        my $d = $node->getAttribute('domain');
+        next if !defined $d;
+        my $b = $node->getAttribute('bus');
+        my $s = $node->getAttribute('slot');
+        my $f = $node->getAttribute('function');
+        next if !defined $f;
+        my $found = "$d:$b:$s.$f";
+        if ($found eq $address ) {
+            return;
+        }
+    }
+    die "Error: address '$address' not found";
 }
 
 ########################################################################
