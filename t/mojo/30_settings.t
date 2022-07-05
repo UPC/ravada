@@ -225,6 +225,7 @@ sub _hrefs($file) {
     for my $line ( <$in> ) {
         chomp $line;
         my ($found) = $line =~ /href=["'](.*?)["']/;
+        next if $found && $found =~ /^\?/;
         push @href,($found) if $found;
     }
     close $in;
