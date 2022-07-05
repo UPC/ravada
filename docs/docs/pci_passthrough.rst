@@ -99,6 +99,9 @@ Then add it to the end of the file /etc/modprobe.d/blacklist-gpu.conf:
 
   blacklist xhci_pci
 
+Make drivers use vfio
+~~~~~~~~~~~~~~~~~~~~~
+
 Also prevent the nvidia drivers to load and raise vfio-pci instead in /etc/modprobe.d/nvidia.conf
 
 ::
