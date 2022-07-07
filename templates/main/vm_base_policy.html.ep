@@ -1,0 +1,19 @@
+<div class="row" ng-show="balance_options.length && showmachine">
+    <div class="col-md-1">
+            <label><%=l 'Balance' %></label>
+    </div>
+    <div class="col-md-11">
+
+        <select ng-model="new_balance_policy"
+            ng-change="set_value('balance_policy',new_balance_policy)"
+        />
+            <option ng-repeat="pol in balance_options" value="{{pol.id}}"
+                ng-selected="pol.selected"
+            >
+                {{pol.name}}
+            </option>
+        </select>
+    {{new_balance_policy}}
+    {{balance_options}}
+    </div>
+</div>
