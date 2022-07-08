@@ -1,4 +1,4 @@
-<div class="row">
+<div class="row" ng-show="showmachine.is_base && nodes.length && balance_options.length">
     <div class="col-md-1">
             <label><b><%=l 'Balance' %></b></label>
     </div>
