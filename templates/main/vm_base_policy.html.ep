@@ -13,7 +13,5 @@
                 {{pol.name}}
             </option>
         </select>
-    {{new_balance_policy}}
-    {{balance_options}}
     </div>
 </div>
