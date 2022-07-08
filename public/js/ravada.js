@@ -244,7 +244,6 @@
             $scope.exec_time = new Date();
             $scope.edit = "";
             $scope.lock_info = false;
-            $scope.balance_options = [];
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -281,7 +280,6 @@
                     .then(function(response) {
                         console.log($scope.showmachine.balance_policy);
                         $scope.balance_options = response.data;
-                        $scope.balance_options[1].selected = true;
                     });
             };
 
@@ -463,7 +461,7 @@
                                 $scope.new_autostart = $scope.showmachine.autostart;
                                 $scope.new_shutdown_disconnected
                                     = $scope.showmachine.shutdown_disconnected;
-                                $scope.new_balance_policy = $scope.showmachine.balance_policy;
+                                $scope.new_balance_policy=$scope.showmachine.balance_policy;
                                 load_balance_options();
                             }
                             if (is_admin) {
