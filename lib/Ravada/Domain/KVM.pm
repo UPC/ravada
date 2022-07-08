@@ -3556,11 +3556,10 @@ sub add_config_node($self, $path, $content, $doc) {
     die $@ if $@ && $@ !~ /Undefined namespace prefix/;
     return if $element && $element->toString eq $content;
 
-    $self->_fix_pci_slot(\$content);
-
     if ($content =~ /<qemu:commandline/) {
         _add_xml_parse($parent[0], $content);
     } else {
+        $self->_fix_pci_slot(\$content);
         $parent[0]->appendWellBalancedChunk($content);
     }
 
