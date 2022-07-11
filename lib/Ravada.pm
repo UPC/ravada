@@ -4011,6 +4011,9 @@ sub _cmd_manage_pools($self, $request) {
         next if !$domain->pools();
         my @clone_pool = $domain->clones(is_pool => 1);
         my $number = $domain->pool_clones() - scalar(@clone_pool);
+        if ($domain->_data('volatile_clones')) {
+            $number = $domain->pool_start() - scalar(@clone_pool);
+        }
         if ($number > 0 ) {
             $self->_pool_create_clones($domain, $number, $request);
         }
@@ -4984,7 +4987,7 @@ sub _cmd_refresh_machine($self, $request) {
 
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id
         ,timeout => 60, retry => 10)
-    if $is_active && $domain->ip;
+    if $is_active && $domain->ip && $domain->list_ports;
 
     $domain->_unlock_host_devices() if !$is_active;
 }

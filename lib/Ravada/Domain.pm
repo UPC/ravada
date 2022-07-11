@@ -5235,7 +5235,8 @@ sub _search_pool_clone($self, $user) {
         } elsif ($current->{is_pool}) {
             $clones_in_pool++;
             my $clone = Ravada::Domain->open($current->{id});
-            if(!$clone->client_status || $clone->client_status eq 'disconnected') {
+            if(!$clone->client_status
+                || lc($clone->client_status) eq lc('disconnected')) {
                 if ( $clone->status =~ /^(active|hibernated)$/ ) {
                     $clone_free_up = $current;
                 } else {
@@ -5247,8 +5248,10 @@ sub _search_pool_clone($self, $user) {
         }
     }
 
-
     my $clone_data = ($clone_down or $clone_free_up or $clone_free_down);
+    if (!$clone_data && $self->clones < $self->pool_clones) {
+        $clone_data = $self->_create_clone_in_pool();
+    }
     die "Error: no free clones in pool for ".$self->name
         .". Usage: $clones_used used from $clones_in_pool virtual machines created.\n"
         if !$clone_data;
@@ -5257,6 +5260,21 @@ sub _search_pool_clone($self, $user) {
     $clone->id_owner($user->id);
     $clone->_data( comment => $user->name );
     return $clone;
+}
+
+sub _create_clone_in_pool($self) {
+
+    my $owner = Ravada::Auth::SQL->search_by_id($self->_data('id_owner'));
+    my $clone = $self->clone(
+        user => $owner
+        ,name => $self->name."-".$$.int(rand(100))
+        ,add_to_pool => 1
+        ,from_pool => 0
+        ,start => 1
+    );
+    my $clone_data = { id => $clone->id };
+    return $clone_data;
+
 }
 
 =head2 internal_id
