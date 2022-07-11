@@ -26,6 +26,8 @@
 
     %= include "/main/vm_remove_base"
 
+    %= include "/main/vm_base_policy"
+
 </div>
 
 <div ng-show="showmachine.is_base && !nodes">

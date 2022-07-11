@@ -1979,7 +1979,7 @@ sub info($self, $user) {
         ,volatile_clones => $self->volatile_clones
         ,id_vm => $self->_data('id_vm')
     };
-    for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups)) {
+    for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups balance_policy)) {
         $info->{$_} = $self->_data($_);
     }
     if ($self->is_known() ) {
