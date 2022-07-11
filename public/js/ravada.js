@@ -244,6 +244,7 @@
             $scope.exec_time = new Date();
             $scope.edit = "";
             $scope.lock_info = false;
+            $scope.balance_options = [];
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -274,6 +275,16 @@
             $scope.is_edit = function(name,index) {
                 return $scope.edit == name+index;
             };
+
+            var load_balance_options = function() {
+                $http.get("/balance_options.json")
+                    .then(function(response) {
+                        console.log($scope.showmachine.balance_policy);
+                        $scope.balance_options = response.data;
+                        $scope.balance_options[1].selected = true;
+                    });
+            };
+
             var subscribed_extra = false;
             var subscribe_machine_info= function(url) {
                 var ws = new WebSocket(url);
@@ -452,6 +463,8 @@
                                 $scope.new_autostart = $scope.showmachine.autostart;
                                 $scope.new_shutdown_disconnected
                                     = $scope.showmachine.shutdown_disconnected;
+                                $scope.new_balance_policy = $scope.showmachine.balance_policy;
+                                load_balance_options();
                             }
                             if (is_admin) {
                                 $scope.init_domain_access();
@@ -592,7 +605,19 @@
             if ($scope.pending_request && $scope.pending_request.status == 'done' ) {
                 $scope.pending_request = undefined;
             }
-            $http.get("/machine/set/"+$scope.showmachine.id+"/"+field+"/"+value);
+
+            var value_text = value;
+            if (field == 'balance_policy')
+                value_text = "'"+$scope.balance_options[value].name+"'";
+
+            $http.post("/machine/set/"
+                      , JSON.stringify({
+                          'id': $scope.showmachine.id
+                          ,'field': field
+                          ,'value': value
+                          ,'value_text': value_text
+                      })
+            );
           };
           $scope.set_public = function(machineId, value) {
             if (value) value=1;
