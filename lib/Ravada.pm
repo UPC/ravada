@@ -4306,6 +4306,7 @@ sub _req_clone_many($self, $request) {
         my $req_prepare = Ravada::Request->prepare_base(
                     id_domain => $base->id
                         , uid => $uid
+                        ,_force => 1
         );
         $args->{after_request} = $req_prepare->id;
     }
@@ -4483,6 +4484,8 @@ sub _cmd_prepare_base {
 
     $self->_remove_unnecessary_request($domain);
     $self->_remove_unnecessary_downs($domain);
+    return if $domain->is_base();
+
     $domain->prepare_base(user => $user, with_cd => $with_cd);
 
 }
