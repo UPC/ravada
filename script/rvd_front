@@ -1277,12 +1277,13 @@ get '/user/grant/(:id_user)/(:grant)/(:value)' => sub($c) {
     my $user = Ravada::Auth::SQL->search_by_id($c->stash('id_user'));
     my $error = '';
     my $value = $c->stash('value');
+    my $grant = $c->stash('grant');
     if ($value eq 'false' || !$value) {
         $value = 0;
-    } else {
+    } elsif ($USER->grant_type($grant) eq 'boolean' ) {
         $value = 1;
     }
-    eval { $USER->grant($user,$c->stash('grant'),$value) };
+    eval { $USER->grant($user,$grant,$value) };
     $error = $@;
     my $info = '';
     if ($error) {
