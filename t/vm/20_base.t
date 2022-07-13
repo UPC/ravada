@@ -1971,8 +1971,6 @@ sub test_already_requested_recent($vm) {
     $domain->remove(user_admin);
 }
 
-
-
 #######################################################################33
 
 for my $db ( 'mysql', 'sqlite' ) {
