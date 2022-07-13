@@ -26,12 +26,13 @@ my $SCRIPT = path(__FILE__)->dirname->sibling('../script/rvd_front');
 my %FILES;
 my %HREFS;
 
-sub _remove_node($vm_name, @name) {
+sub _remove_nodes($vm_name) {
     my @list_nodes = rvd_front->list_vms();
 
-    for my $name (@name) {
-        my ($found) = grep { $_->{name} =~ /^$name/} @list_nodes;
-        next if !$found;
+    my $name = base_domain_name();
+    my @found = grep { $_->{name} =~ /^$name/} @list_nodes;
+
+    for my $found (@found) {
 
         $t->get_ok("/v1/node/remove/".$found->{id});
         is($t->tx->res->code(),200) or die $t->tx->res->body;
@@ -43,7 +44,7 @@ sub test_nodes($vm_name) {
     mojo_check_login($t);
     my $name = new_domain_name();
 
-    _remove_node($vm_name, $name, base_domain_name());
+    _remove_nodes($vm_name);
 
     $t->post_ok('/v1/node/new' => form => {
         vm_type => $vm_name
