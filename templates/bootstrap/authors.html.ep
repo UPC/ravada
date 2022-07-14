@@ -1,5 +1,6 @@
 <ul>
 <li>Alex Muntada</li>
+<li>Allan Nordhøy</li>
 <li>Amparo Gombau</li>
 <li>Antonio Mesones</li>
 <li>Angel Aguilera</li>
@@ -11,6 +12,7 @@
 <li>Dito Baskoro</li>
 <li>Eneko Romo</li>
 <li>Enno G.</li>
+<li>Elena Mishina</li>
 <li>ergün elvan bilsel</li>
 <li>Fernando Verdugo</li>
 <li>FishFree</li>
@@ -42,11 +44,14 @@
 <li>Shobhit Srivastava</li>
 <li>Silvério Santos</li>
 <li>Tim Fechner</li>
+<li>Vivek Shah</li>
+<li>Weblate (bot)</li>
 <li>Wermeille Bastien</li>
 </ul>
 <%=l 'Thanks to:' %>
 <ul>
     <li>Albert Petit</li>
+    <li>Eloi Cambras</li>
     <li>Francesc Oller</li>
     <li>Jorge Mata</li>
     <li>Jose Manuel Martin Torilo</li>
