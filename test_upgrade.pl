@@ -267,7 +267,6 @@ sub upgrades {
         }
         next if !$found_first_release;
         get_install_and_upgrade($release, $os);
-	exit;
     }
     close $in;
     die "Error: no first release found\n" if !$found_first_release;
