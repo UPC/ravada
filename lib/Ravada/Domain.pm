@@ -500,16 +500,18 @@ sub _start_checks($self, @args) {
             $self->_balance_vm($request);
         }
         if ( !$self->is_volatile && !$self->_vm->is_local() ) {
-            my $args = {
-                uid => Ravada::Utils::user_daemon->id
-                ,id_domain => $self->id_base
-                ,id_vm => $self->_vm->id
-            };
+            if (!base_in_vm($self->id_base, $self->_vm->id)) {
+                my $args = {
+                    uid => Ravada::Utils::user_daemon->id
+                    ,id_domain => $self->id_base
+                    ,id_vm => $self->_vm->id
+                };
 
-            my $req;
-            $req = Ravada::Request->set_base_vm(%$args)
-            unless Ravada::Request::_duplicated_request(undef
-                ,'set_base_vm', encode_json($args));
+                my $req;
+                $req = Ravada::Request->set_base_vm(%$args)
+                unless Ravada::Request::_duplicated_request(undef
+                    ,'set_base_vm', encode_json($args));
+            }
 
             $self->rsync(request => $request);
         }
@@ -580,7 +582,7 @@ sub _balance_vm($self, $request=undef) {
 
     my $vm_free;
     for (;;) {
-        $vm_free = $self->_vm->balance_vm($base);
+        $vm_free = $self->_vm->balance_vm($self->_data('id_owner'),$base, $self->id);
         return if !$vm_free;
 
         last if $vm_free->id == $self->_vm->id;
@@ -2007,7 +2009,7 @@ sub info($self, $user) {
         ,volatile_clones => $self->volatile_clones
         ,id_vm => $self->_data('id_vm')
     };
-    for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups)) {
+    for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups balance_policy)) {
         $info->{$_} = $self->_data($_);
     }
     if ($self->is_known() ) {
@@ -2784,7 +2786,7 @@ sub clone {
 
     my $vm = $self->_vm;
     if ($self->volatile_clones ) {
-        $vm = $vm->balance_vm($self);
+        $vm = $vm->balance_vm($uid, $self);
     } elsif( !$vm->is_local ) {
         for my $node ($self->_vm->list_nodes) {
             $vm = $node if $node->is_local;

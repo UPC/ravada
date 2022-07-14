@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '1.6.0';
+our $VERSION = '1.7.0';
 
 use Carp qw(carp croak cluck);
 use Data::Dumper;
@@ -2606,6 +2606,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','shutdown_disconnected','int not null default 0');
     $self->_upgrade_table('domains','shutdown_timeout','int default null');
     $self->_upgrade_table('domains','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
+    $self->_upgrade_table('domains','balance_policy','int default 0');
 
     if ($self->_upgrade_table('domains','screenshot','MEDIUMBLOB')) {
 
@@ -4403,6 +4404,7 @@ sub _req_clone_many($self, $request) {
         my $req_prepare = Ravada::Request->prepare_base(
                     id_domain => $base->id
                         , uid => $uid
+                        ,_force => 1
         );
         $args->{after_request} = $req_prepare->id;
     }
@@ -4580,6 +4582,8 @@ sub _cmd_prepare_base {
 
     $self->_remove_unnecessary_request($domain);
     $self->_remove_unnecessary_downs($domain);
+    return if $domain->is_base();
+
     $domain->prepare_base(user => $user, with_cd => $with_cd);
 
 }
