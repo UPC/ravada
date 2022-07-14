@@ -74,7 +74,10 @@ sub  _test_user_grants($user, $expected_code) {
     is($t->tx->res->code(),$expected_code);
 
     _test_set_admin($user, $expected_code);
+
+    _test_all_grants($expected_code);
     _test_grant($user, $expected_code);
+
 }
 
 sub _test_set_admin($user,$expected_code) {
@@ -108,6 +111,39 @@ sub _test_set_admin($user,$expected_code) {
         is($t->tx->res->json->{error},'');
         $user->_load_data();
         is($user->is_admin,0);
+    }
+
+}
+
+sub _test_all_grants($expected_code) {
+    return if $expected_code != 200;
+    my ($username, $password) = ( new_domain_name(),$$);
+    my $user_db = Ravada::Auth::SQL->new( name => $username);
+    $user_db->remove();
+
+    my $user = create_user( $username, $password);
+
+    for my $grant ( user_admin->list_all_permissions) {
+        my $value0 = ( $user->can_do($grant->{name}) or 0 );
+        for my $value ( !$value0, $value0) {
+
+            my $value2 = ($value or 0 );
+
+            my $url = "/user/grant/".$user->id."/$grant->{name}/".$value2;
+            $t->get_ok($url);
+            is($t->tx->res->code(),$expected_code) or do {
+                open my $out ,">","error.html";
+                print $out $t->tx->res->to_string;
+                close $out;
+                exit;
+            };
+
+            is($t->tx->res->json->{error},'');
+            $user->_reload_grants();
+            is($user->can_do($grant->{name}),$value2,"Expecting user ".$user->name." ".$user->id." can do $grant->{name} $value2") or die;
+
+        }
+
     }
 
 }
@@ -151,6 +187,18 @@ sub _test_grant($user, $expected_code) {
     } else {
         ok(!$user->can_clone_all);
     }
+
+    $t->get_ok("/user/grant/".$user->id."/start_limit/4");
+    is($t->tx->res->code(),$expected_code);
+
+    if ($expected_code == 200 ) {
+        is($t->tx->res->json->{error},'');
+        $user->_reload_grants();
+        is($user->can_start_limit, 4,"Expecting user ".$user->name." ".$user->id." start limit changed") or die;
+    } else {
+        ok(!$user->can_start_limit);
+    }
+
 
     $user->remove();
 }
