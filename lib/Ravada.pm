@@ -1665,6 +1665,7 @@ sub _add_grants($self) {
     $self->_add_grant('view_groups',0,'Can view groups.');
     $self->_add_grant('manage_groups',0,'Can manage groups.');
     $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1, 0);
+    $self->_add_grant('view_all',0,"The user can start and access the screen of any virtual machine");
 }
 
 sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
@@ -1740,6 +1741,7 @@ sub _enable_grants($self) {
         ,'start_many'
         ,'view_groups',     'manage_groups'
         ,'start_limit',     'start_many'
+        ,'view_all'
     );
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
