@@ -21,7 +21,7 @@ use_ok('Ravada::HostDevice::Templates');
 
 sub _set_hd_nvidia($hd) {
     $hd->_data( list_command => 'lspci -Dnn');
-    $hd->_data( list_filter => 'VGA.*NVIDIA');
+    $hd->_data( list_filter => config_host_devices('pci') );
 }
 
 sub _set_hd_usb($hd) {
@@ -162,9 +162,14 @@ sub test_hd_in_domain($vm , $hd) {
         $clone->is_active();
 
     }
-    die "Error: I can't find 2 free devices ".Dumper([$hd->list_devices()])
-    if scalar ($hd->list_devices)<2;
-    test_grab_free_device($domain) if $hd->list_devices();
+    if ( scalar ($hd->list_devices)<2 ) {
+        my $msg
+        ="Error: I can't find 2 free devices "
+        ." in ".$hd->name
+        .Dumper([$hd->list_devices()])
+    } else {
+        test_grab_free_device($domain) if $hd->list_devices();
+    }
 
     remove_domain($domain);
 
@@ -488,7 +493,6 @@ sub test_templates_gone_usb($vm) {
         is($domain->_device_already_configured($hd), $dev_config) or exit;
 
         _mangle_dom_hd($domain);
-        warn $domain->_device_already_configured($hd);
         $hd->_data('list_filter',"no match");
         diag("try to start again, it should fail");
         my $req = Ravada::Request->start_domain(uid => user_admin->id

@@ -568,7 +568,7 @@ sub test_xmlns($vm) {
     my $base = create_domain($vm);
     $base->add_host_device($list_hostdev[0]);
     eval { $base->start(user_admin) };
-    like ($@,qr{^($|.*Unable to stat|.*device not found.*mediated|.*there is no device "hostdev)} , $base->name) or exit;
+    like ($@,qr{^($|.*Unable to stat|.*device not found.*mediated|.*there is no device "hostdev)}m , $base->name) or exit;
 
     my $doc = XML::LibXML->load_xml( string => $base->domain->get_xml_description);
     my ($domain_xml) = $doc->findnodes("/domain");
