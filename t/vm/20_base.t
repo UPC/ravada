@@ -1913,6 +1913,64 @@ sub test_prepare_base_volatile($vm) {
     $domain->remove(user_admin);
 }
 
+sub test_already_requested($vm) {
+    my $domain=create_domain($vm);
+    my @args = (
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    my $req = Ravada::Request->prepare_base(@args);
+    my $req2 = Ravada::Request->prepare_base(@args);
+
+    wait_request();
+    is($req->status, 'done');
+    is($req2->status, 'done');
+    is($req->error, '');
+    is($req2->error, '');
+
+    $domain->remove(user_admin);
+}
+
+sub test_already_requested_working($vm) {
+    my $domain=create_domain($vm);
+    my @args = (
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    my $req = Ravada::Request->prepare_base(@args);
+    $req->status('working');
+    my $req2 = Ravada::Request->prepare_base(@args);
+    $req->status('requested');
+
+    is($req2->id, $req->id);
+    wait_request();
+    is($req->status, 'done');
+    is($req2->status, 'done');
+    is($req->error, '');
+    is($req2->error, '');
+
+    $domain->remove(user_admin);
+}
+
+sub test_already_requested_recent($vm) {
+    my $domain=create_domain($vm);
+    my @args = (
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    my $req = Ravada::Request->prepare_base(@args);
+    wait_request();
+    my $req2 = Ravada::Request->prepare_base(@args);
+
+    wait_request();
+    is($req->status, 'done');
+    is($req2->status, 'done');
+    is($req->error, '');
+    is($req2->error, '');
+
+    $domain->remove(user_admin);
+}
+
 #######################################################################33
 
 for my $db ( 'mysql', 'sqlite' ) {
@@ -1966,6 +2024,10 @@ for my $vm_name ( vm_names() ) {
             $BASE = create_domain($vm);
         }
         flush_rules() if !$<;
+
+        test_already_requested($vm);
+        test_already_requested_working($vm);
+        test_already_requested_recent($vm);
 
         test_long_iso($vm);
 

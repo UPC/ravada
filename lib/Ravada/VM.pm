@@ -454,7 +454,7 @@ sub _around_create_domain {
     if ($self->is_local && $base && $base->is_base
             && ( $base->volatile_clones || $owner->is_temporary )) {
         $request->status("balancing")                       if $request;
-        my $vm = $self->balance_vm($base) or die "Error: No free nodes available.";
+        my $vm = $self->balance_vm($owner->id, $base) or die "Error: No free nodes available.";
         $request->status("creating machine on ".$vm->name)  if $request;
         $self = $vm;
         $args_create{listen_ip} = $self->listen_ip($remote_ip);
@@ -1136,17 +1136,23 @@ This node has requests running or waiting to be run
 =cut
 
 sub is_locked($self) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, at_time, args FROM requests "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, at_time, args, command "
+        ." FROM requests "
         ." WHERE status <> 'done' "
+        ."   AND command <> 'start' AND command <> 'start_domain'"
+        ."   AND command not like '%shutdown'"
     );
     $sth->execute;
-    my ($id, $at, $args);
-    $sth->bind_columns(\($id, $at, $args));
+    my ($id, $at, $args, $command);
+    $sth->bind_columns(\($id, $at, $args, $command));
     while ( $sth->fetch ) {
         next if defined $at && $at < time + 2;
         next if !$args;
         my $args_d = decode_json($args);
-        return 1 if exists $args_d->{id_vm} && $args_d->{id_vm} == $self->id
+        if ( exists $args_d->{id_vm} && $args_d->{id_vm} == $self->id ) {
+            warn "locked by $command\n";
+            return 1;
+        }
     }
     return 0;
 }
@@ -1649,11 +1655,66 @@ Returns a Virtual Manager from all the nodes to run a virtual machine.
 When the optional base argument is passed it returns a node from the list
 of VMs where the base is prepared.
 
-Argument: base [optional]
+Arguments
+
+=over
+
+=item uid
+
+=item base [optional]
+
+=item id_domain [optional]
 
 =cut
 
-sub balance_vm($self, $base=undef) {
+sub balance_vm($self, $uid, $base=undef, $id_domain=undef) {
+
+    my @vms;
+    if ($base) {
+        confess "Error: base is not an object ".Dumper($base)
+        if !ref($base);
+
+        @vms = $base->list_vms();
+    } else {
+        @vms = $self->list_nodes();
+    }
+
+    return $vms[0] if scalar(@vms)<=1;
+    if ($base && $base->_data('balance_policy') == 1 ) {
+        my $vm = $self->_balance_already_started($uid, $id_domain, \@vms);
+        return $vm if $vm;
+    }
+    return $self->_balance_free_memory($base, \@vms);
+}
+
+sub _balance_already_started($self, $uid, $id_domain, $vms) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm,name,status "
+        ." FROM domains "
+        ." WHERE id_owner=? "
+        ."   AND id <> ? "
+        ."   AND id_vm IS NOT NULL "
+        ." ORDER BY status DESC"
+    );
+    $sth->execute($uid, $id_domain);
+    my ($id_vm);
+    my %valid_id = map { $_->id => $_ } @$vms;
+
+    my $id_hibernated;
+    my $id_starting;
+    while (my ($id_vm, $name, $status) = $sth->fetchrow ) {
+        next if ! $valid_id{$id_vm};
+        $id_hibernated = $id_vm if $status =~ /h.bernated/;
+        $id_starting = $id_vm if $status =~ /starting/;
+        next if $status ne 'active';
+        return $valid_id{$id_vm}
+    }
+    return if !defined $id_hibernated && !defined $id_starting;
+    return $valid_id{$id_hibernated} if $id_hibernated;
+    return $valid_id{$id_starting} if $id_starting;
+    return;
+}
+
+sub _balance_free_memory($self , $base, $vms) {
 
     my $min_memory = $Ravada::Domain::MIN_FREE_MEMORY;
     $min_memory = $base->get_info->{memory} if $base;
@@ -1661,15 +1722,7 @@ sub balance_vm($self, $base=undef) {
     my %vm_list;
     my @status;
 
-    my @vms;
-    if ($base) {
-        @vms = $base->list_vms();
-    } else {
-        confess "Error: we need a base to balance ";
-        @vms = $self->list_nodes();
-    }
-    return $vms[0] if scalar(@vms)<=1;
-    for my $vm (_random_list( @vms )) {
+    for my $vm (_random_list( @$vms )) {
         next if !$vm->enabled();
         my $active = 0;
         eval { $active = $vm->is_active() };
