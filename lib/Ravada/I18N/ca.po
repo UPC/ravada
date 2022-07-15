@@ -1151,3 +1151,6 @@ msgstr "Capçaleres del client"
 
 msgid "locked"
 msgstr "Bloquejat"
+
+msgid "Node with more free memory"
+msgstr "Node amb més memòria lliure"
