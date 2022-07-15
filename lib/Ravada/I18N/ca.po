@@ -1124,3 +1124,30 @@ msgstr "Mostra clons"
 
 msgid "Hide clones"
 msgstr "Amaga clons"
+
+msgid "Can get a screenshot of own virtual machines."
+msgstr "Poden obtenir una captura de pantalla de màquines virtuals proòpies"
+
+msgid "Can have an unlimited amount of machines started."
+msgstr "Pot tenir un numero ilimitat de màquines enceses"
+
+msgid "Can view groups."
+msgstr "Pot veure grups"
+
+msgid "Can manage groups."
+msgstr "Pot gestionar grups"
+
+msgid "can have their own limit on started machines."
+msgstr "pot tenir el seu propi límit a les màquines iniciades"
+
+msgid "Search group"
+msgstr "Buscar grup"
+
+msgid "No Results Found"
+msgstr "No s'han trobat resultats"
+
+msgid "Client headers"
+msgstr "Capçaleres del client"
+
+msgid "locked"
+msgstr "Bloquejat"
