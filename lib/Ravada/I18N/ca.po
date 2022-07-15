@@ -1126,10 +1126,10 @@ msgid "Hide clones"
 msgstr "Amaga clons"
 
 msgid "Can get a screenshot of own virtual machines."
-msgstr "Poden obtenir una captura de pantalla de màquines virtuals proòpies"
+msgstr "Poden obtenir una captura de pantalla de màquines virtuals pròpies"
 
 msgid "Can have an unlimited amount of machines started."
-msgstr "Pot tenir un numero ilimitat de màquines enceses"
+msgstr "Pot tenir un nombre il·limitat de màquines enceses"
 
 msgid "Can view groups."
 msgstr "Pot veure grups"
@@ -1150,7 +1150,7 @@ msgid "Client headers"
 msgstr "Capçaleres del client"
 
 msgid "locked"
-msgstr "Bloquejat"
+msgstr "bloquejat"
 
 msgid "Node with more free memory"
 msgstr "Node amb més memòria lliure"
