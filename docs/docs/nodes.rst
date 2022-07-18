@@ -254,7 +254,18 @@ There is a drawback we have yet to fix: if many virtual machines are
 started at the same time, some may probably go to the same node. This
 is because a lot of work is done in parallel.
 
-If you think this could be improved we are open to suggestions.
+Selection algorithm
+~~~~~~~~~~~~~~~~~~~
+
+Now you can choose to run virtual machines in the node where the user
+has other machines started. This may be usefull if you want to do
+networking among virtual machines like in teaching environments.
+
+Go to the base virtual machines settings and select the *Base* tab.
+Change the algorithm for all the bases you want to have started in
+the same node.
+
+.. image:: images/balance_algorithm.jpg
 
 TODO
 ====
