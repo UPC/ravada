@@ -6,9 +6,12 @@ use strict;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
+use Carp qw(confess);
 use Data::Dumper qw(Dumper);
 use File::Copy qw(copy);
 use IPC::Run3 qw(run3);
+use File::Path qw(make_path);
+use Text::Diff;
 
 my $FILE_GRUB="/etc/default/grub";
 my $FILE_BLACKLIST="/etc/modprobe.d/blacklist-gpu.conf";
@@ -17,10 +20,10 @@ my $FILE_MODULES = "/etc/modules";
 my $FILE_KVM ="/etc/modprobe.d/kvm.conf";
 my $FILE_INITRAMFS = "/etc/initramfs-tools/modules";
 
-sub configure_grub($devices,$file=$FILE_GRUB) {
-    my $file_out = _file_out($file);
+sub configure_grub($devices, $file=$FILE_GRUB, $dst="/") {
+    $file = $FILE_GRUB if !defined $file;
 
-    my $changed = 0;
+    my $file_out = _file_out($file);
 
     open my $in,"<",$file       or die "$! $file";
     open my $out,">",$file_out  or die "$! $file_out";
@@ -40,7 +43,6 @@ sub configure_grub($devices,$file=$FILE_GRUB) {
             my $grub_value_new =join(" ",sort keys %fields);
 
             print $out "$var=\"$grub_value_new\"\n";
-            $changed++ if $grub_value_new ne $grub_value;
         } else {
             print $out "$line\n";
         }
@@ -48,14 +50,11 @@ sub configure_grub($devices,$file=$FILE_GRUB) {
     close $in;
     close $out;
 
-    _update_file($file, $file_out, $changed);
-    return $changed;
+    _update_file($file, $file_out, $dst);
 }
 
 sub configure_blacklist($devices,$file=$FILE_BLACKLIST) {
     my $file_out = _file_out($file);
-
-    my $changed = 0;
 
     my %found;
 
@@ -68,7 +67,6 @@ sub configure_blacklist($devices,$file=$FILE_BLACKLIST) {
         if (defined $configure) {
             $found{$module}++;
             if (!$configure) {
-                $changed++;
                 next;
             }
         }
@@ -78,19 +76,16 @@ sub configure_blacklist($devices,$file=$FILE_BLACKLIST) {
     for my $driver ( _drivers_blacklist($devices) ) {
         next if $found{$driver};
         print $out "blacklist $driver\n";
-        $changed++;
     }
 
     close $in;
     close $out;
 
-    _update_file($file, $file_out, $changed);
-    return $changed;
+    _update_file($file, $file_out);
 }
 
 sub configure_vfio($devices, $file=$FILE_VFIO) {
     my $file_out= _file_out($file);
-    my $changed = 0;
 
     my %found;
 
@@ -103,7 +98,6 @@ sub configure_vfio($devices, $file=$FILE_VFIO) {
         if (defined $configure) {
             $found{$module}++;
             if (!$configure) {
-                $changed++;
                 next;
             }
         }
@@ -113,20 +107,17 @@ sub configure_vfio($devices, $file=$FILE_VFIO) {
     for my $driver ( _drivers_blacklist($devices) ) {
         next if $found{$driver};
         print $out "softdep $driver pre: vfio-pci\n";
-        $changed++;
     }
 
     close $in;
     close $out;
 
-    _update_file($file, $file_out, $changed);
-    return $changed;
+    _update_file($file, $file_out);
 
 }
 
 sub configure_vfio_ids($devices, $file=$FILE_VFIO) {
     my $file_out= _file_out($file);
-    my $changed = 0;
 
     my $ids = join(",",_configure_ids($devices));
 
@@ -140,9 +131,7 @@ sub configure_vfio_ids($devices, $file=$FILE_VFIO) {
             $found++;
             if ($ids ne $1) {
                 print $out "options vfio-pci ids=$ids $2\n";
-                $changed++;
             } else {
-                $changed++;
                 next;
             }
         }
@@ -151,14 +140,12 @@ sub configure_vfio_ids($devices, $file=$FILE_VFIO) {
 
     if (!$found) {
         print $out "options vfio-pci ids=$ids disable_vga=1\n";
-        $changed++;
     }
 
     close $in;
     close $out;
 
-    _update_file($file, $file_out, $changed);
-    return $changed;
+    _update_file($file, $file_out);
 
 }
 
@@ -167,7 +154,6 @@ sub configure_modules($devices, $file=$FILE_MODULES) {
     my $ids = join(",",_configure_ids($devices));
 
     my $file_out= _file_out($file);
-    my $changed = 0;
 
     my $found;
 
@@ -179,23 +165,19 @@ sub configure_modules($devices, $file=$FILE_MODULES) {
             $found = 1;
             if ($ids && $ids ne $1) {
                 print $out "vfio vfio_iommu_type1 vfio_pci ids=$ids\n";
-                $changed++;
             }
-            $changed++ if !$ids && $1;
         } else {
             print $out "$line\n";
         }
     }
     if (!$found && $ids) {
         print $out "vfio vfio_iommu_type1 vfio_pci ids=$ids\n";
-        $changed++;
     }
 
     close $out;
     close $in;
 
-    _update_file($file, $file_out, $changed);
-    return $changed;
+    _update_file($file, $file_out);
 
 }
 
@@ -203,7 +185,6 @@ sub configure_msrs($devices,$file=$FILE_KVM) {
     my $ids = join(",",_configure_ids($devices));
 
     my $file_out= _file_out($file);
-    my $changed = 0;
 
     my $found;
 
@@ -216,10 +197,8 @@ sub configure_msrs($devices,$file=$FILE_KVM) {
             if ($ids) {
                 next if $line =~ /ignore_msrs=1/;
                 print $out  "options kvm ignore_msrs=1\n";
-                $changed++;
             } else {
                 next if $line =~ /ignore_msrs=0/ || $line !~ /ignore_msrs/;
-                $changed++;
             }
             next;
         }
@@ -227,13 +206,11 @@ sub configure_msrs($devices,$file=$FILE_KVM) {
     }
     if (!$found) {
         print $out  "options kvm ignore_msrs=1\n";
-        $changed++;
     }
     close $out;
     close $in;
 
-    _update_file($file, $file_out, $changed);
-    return $changed;
+    _update_file($file, $file_out);
 
 }
 
@@ -241,7 +218,6 @@ sub configure_initramfs($devices,$file=$FILE_INITRAMFS) {
     my $ids = join(",",_configure_ids($devices));
 
     my $file_out= _file_out($file);
-    my $changed = 0;
 
     my $found;
 
@@ -256,7 +232,6 @@ sub configure_initramfs($devices,$file=$FILE_INITRAMFS) {
                 $found=0;
                 next;
             } else {
-                $changed++;
             }
             next;
         }
@@ -265,13 +240,11 @@ sub configure_initramfs($devices,$file=$FILE_INITRAMFS) {
     if (!$found) {
         print $out "vfio vfio_iommu_type1 vfio_virqfd vfio_pci"
         ." ids=$ids\n";
-        $changed++;
     }
     close $out;
     close $in;
 
-    _update_file($file, $file_out, $changed);
-    return $changed;
+    _update_file($file, $file_out);
 
 
 }
@@ -295,12 +268,21 @@ sub _is_module_configured($devices, $module) {
     return undef;
 }
 
-sub _update_file($file, $file_out, $changed) {
-    if (!$changed) {
+sub _update_file($file, $file_out, $dst='/') {
+    my $diff = diff $file,$file_out;
+    warn $diff;
+    if (!$diff) {
         unlink $file_out;
         return;
     }else {
-        copy($file_out, $file);
+        $file = "$dst/$file" if $dst ne "/";
+        my ($path) = $file =~ m{(.*)/};
+        make_path($path) or die "$! $path"
+        if ! -e $path;
+
+        warn $file;
+
+        copy($file_out, $file) or die "$file_out -> $file";
     }
 }
 
@@ -396,6 +378,8 @@ sub now {
 }
 
 sub _file_out($path) {
+    confess "Undefinde path" if !defined $path;
+
     if (! -e $path ) {
         open my $out,">",$path or die "$! $path";
         close $out;
@@ -404,6 +388,72 @@ sub _file_out($path) {
     $name = $path if !defined $name;
 
     return "/tmp/$name.".now();
+}
+
+sub _run_lspci() {
+    my @cmd = ("lspci","-D","-knn");
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+
+    return $out;
+}
+
+sub _clean_dupes($devices) {
+    for my $pci (keys %$devices) {
+        my %driver = map { $_ => 1 } @{$devices->{$pci}->{driver}};
+        my %dev = map { $_ => 1 } @{$devices->{$pci}->{dev}};
+        $devices->{$pci}->{driver} = [ keys %driver ];
+        $devices->{$pci}->{dev} = [ keys %dev ];
+    }
+}
+
+sub _load_devices ($vm,$file=undef) {
+    my $lspci;
+    if (!defined $file) {
+        $lspci = _run_lspci();
+    } else {
+        open my $in,"<",$file or die "$! $file";
+        $lspci = join"",<$in>;
+        close $in;
+    }
+    my $found;
+    my %devices;
+    for my $line (split /\n/,$lspci) {
+        my ($pci_data) = $line =~ m{^([0-9a-f]{4}.*?) };
+        if (!$found || $pci_data ) {
+            next if !$pci_data;
+            for my $hd ( $vm->list_host_devices ) {
+                my $filter = $hd->list_filter();
+                next if !defined $filter;
+
+                if ( $line =~ qr($filter)i ) {
+                    $found = $pci_data;
+                    warn "found $line\n";
+                }
+                last if $found;
+            }
+        }
+        next if !$found;
+        my ($dev) = $line =~ m{\[([0-9a-f]{4}\:[0-9a-f]{4})\]};
+        push @{$devices{$found}->{dev}} , ($dev) if $dev;
+        my ($driver) = $line =~ /\s+Kernel (?:driver|modules).*: ([a-zA-Z0-9_]+)/;
+
+        my ($field, $value) = $line =~ /^\s+(.*?)\s*:\s*(.*)/;
+        push @{$devices{$found}->{driver}},$driver if $driver && $driver !~ /vfio/i;
+    }
+    _clean_dupes(\%devices);
+
+    return \%devices;
+}
+
+sub configure($vm, $file=undef, $dst='/') {
+    my $devices = _load_devices($vm, $file);
+
+    if (! -e $dst ) {
+        make_path($dst);
+    }
+    configure_grub($devices, undef, $dst);
 }
 
 1;

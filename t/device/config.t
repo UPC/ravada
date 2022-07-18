@@ -7,6 +7,7 @@ use File::Copy qw(copy);
 use Hash::Util qw(lock_hash);
 use IPC::Run3;
 use Ravada::HostDevice::Config;
+use Ravada::HostDevice::Templates;
 use Test::More;
 
 use lib 't/lib';
@@ -15,6 +16,8 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 my $DEFAULT_GRUB = "/etc/default/grub";
+
+my @FILES;
 
 sub _create_grub_file() {
     my $grub_file = "/var/tmp/grub_default";
@@ -29,6 +32,8 @@ sub _create_grub_file() {
     }
     close $in;
     close $out;
+
+    push @FILES,($grub_file);
 
     return $grub_file;
 }
@@ -142,7 +147,7 @@ sub test_grub() {
         ,'GRUB_CMDLINE_LINUX_DEFAULT','"quiet splash"');
 
     my $data = _pci_data();
-    Ravada::HostDevice::Config::configure_grub($data,$file);
+    Ravada::HostDevice::Config::configure_grub($data, $file);
 
     _check_variable($file
         ,'GRUB_CMDLINE_LINUX_DEFAULT',
@@ -152,7 +157,7 @@ sub test_grub() {
     _set_pci_data($data,'radeon',0);
     _set_pci_data($data,'tg3',1);
 
-    Ravada::HostDevice::Config::configure_grub($data,$file);
+    Ravada::HostDevice::Config::configure_grub($data, $file);
     _check_variable($file
         ,'GRUB_CMDLINE_LINUX_DEFAULT',
         '"intel_iommu=on pci-stub.ids=14e4:165a quiet splash tg3.blacklist=1"'
@@ -164,7 +169,7 @@ sub test_grub() {
         $data->{$pci}->{configure} = 0;
     }
 
-    Ravada::HostDevice::Config::configure_grub($data,$file);
+    Ravada::HostDevice::Config::configure_grub($data, $file);
 
     _check_variable($file
         ,'GRUB_CMDLINE_LINUX_DEFAULT',
@@ -177,6 +182,8 @@ sub _create_file($name) {
     my $file = "/var/tmp/$name";
     open my $out,">",$file or die "$! $file";
     close $out;
+
+    push @FILES,($file);
     return $file;
 }
 
@@ -185,6 +192,8 @@ sub _create_blacklist_file() {
     open my $out,">",$file or die "$! $file";
     print $out "blacklist foo\n";
     close $out;
+
+    push @FILES,($file);
 
     return $file;
 }
@@ -260,6 +269,8 @@ sub _copy_file($file) {
     $new = "/var/tmp/$new";
 
     copy($file, $new);
+
+    push @FILES,($new);
     return $new;
 }
 
@@ -339,18 +350,71 @@ sub test_initramfs() {
     _check_line($file,"vfio vfio_iommu_type1 vfio_virqfd vfio_pci ids=$ids",1);
 }
 
+sub test_configs() {
+    test_grub();
+    test_blacklist();
+    test_vfio();
+
+    test_modules();
+
+    test_vfio_ids();
+
+    test_msrs();
+
+    test_initramfs();
+}
+
+sub test_example_ati_tg3($vm) {
+
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->id);
+    my ($pci) = grep { $_->{name} eq 'PCI' } @$templates;
+    ok($pci,"Expecting PCI template in ".$vm->name) or return;
+
+    my $id = $vm->add_host_device(template => $pci->{name});
+
+    my @list_hostdev = $vm->list_host_devices();
+    my ($hd) = $list_hostdev[-1];
+    $hd->_data( 'list_filter' => '(Broad|VGA.*Radeon)');
+
+    my $dst = "/var/tmp/".new_domain_name();
+    Ravada::HostDevice::Config::configure($vm,'t/etc/lspci_ati_tg3.txt'
+    ,$dst);
+
+    ok( -e "$dst/default/grub") or die "Missing $dst/default/grub";
+
+}
+
+sub _clean_files() {
+    for my $file (@FILES) {
+        unlink $file or die "$! $file"
+        if -e $file;
+    }
+}
+
 ########################################################################
 
-test_grub();
-test_blacklist();
-test_vfio();
 
-test_modules();
+init();
+clean();
 
-test_vfio_ids();
+for my $vm_name ( 'KVM' ) {
 
-test_msrs();
+    SKIP: {
+        my $vm = rvd_back->search_vm($vm_name);
 
-test_initramfs();
+        my $msg = "SKIPPED test: No $vm_name VM found ";
+
+        diag($msg)      if !$vm;
+        skip $msg,10    if !$vm;
+
+        test_example_ati_tg3($vm);
+    }
+}
+
+test_configs();
+
+_clean_files();
+
+end();
 
 done_testing();
