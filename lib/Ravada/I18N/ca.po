@@ -1125,6 +1125,54 @@ msgstr "Mostra clons"
 msgid "Hide clones"
 msgstr "Amaga clons"
 
+msgid "Add another user"
+msgstr "Afegir un altre usuari"
+
+msgid "Create a new group"
+msgstr "Crear un nou grup"
+
+msgid "Schedule"
+msgstr "Programació"
+
+msgid "groups"
+msgstr "grups"
+
+msgid "nodes"
+msgstr "nodes"
+
+msgid "networks"
+msgstr "xarxes"
+
+msgid "settings"
+msgstr "configuracions"
+
+msgid "can manage users."
+msgstr "pot gestionar usuaris."
+
+msgid "Can expose virtual machine ports."
+msgstr "Pot exposar ports de màquines virtuals."
+
+msgid "Can rename any virtual machine owned by the user."
+msgstr "Pot canviar el nom de qualsevol màquina virtual propietat de l'usuari."
+
+msgid "Can rename any virtual machine."
+msgstr "Pot canviar el nom de qualsevol màquina virtual."
+
+msgid "Can rename clones from virtual machines owned by the user."
+msgstr "Pot canviar el nom dels clons de màquines virtuals propietat de l'usuari."
+
+msgid "Can shutdown own virtual machines."
+msgstr "Pot apagar les pròpies màquines virtuals."
+
+msgid "Can reboot own virtual machines."
+msgstr "Pot reiniciar les pròpies màquines virtuals
+
+msgid "Can reboot all virtual machines."
+msgstr "Pot reiniciar totes les màquines virtuals."
+
+msgid "Can reboot clones own virtual machines."
+msgstr "Pot reiniciar les màquines virtuals pròpies dels clons."
+
 msgid "Can get a screenshot of own virtual machines."
 msgstr "Poden obtenir una captura de pantalla de màquines virtuals pròpies."
 
