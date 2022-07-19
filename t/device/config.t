@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 
-use Carp qw(confess);
+use Carp qw(confess croak);
 use Data::Dumper;
 use File::Copy qw(copy);
 use Hash::Util qw(lock_hash);
@@ -79,7 +79,7 @@ sub _check_variable($file, %var) {
             if ($found{$name}) {
                 ok(0,"Variable $name duplicated in $file");
             } else {
-                is($value,$var{$name},"$name=$var{$name} in $file");
+                is($value,$var{$name},"$name=$var{$name} in $file") or croak;
                 $found{$name}++;
             }
         }
@@ -87,6 +87,7 @@ sub _check_variable($file, %var) {
 }
 
 sub _check_line($file, %var) {
+    ok(-e $file,"Expecting file '$file'") or return;
     open my $in,"<",$file or die "$! $file";
     my %found;
     while (my $line = <$in>) {
@@ -103,7 +104,7 @@ sub _check_line($file, %var) {
     for my $name( keys %var ) {
         $found{$name}=0 if !$found{$name};
 
-        is($found{$name},$var{$name},"Line '$name' in $file");
+        is($found{$name},$var{$name},"Line '$name' in $file") or croak;
     }
 }
 
@@ -242,19 +243,25 @@ sub test_blacklist() {
 }
 
 sub test_vfio() {
-    my $file=_create_file('vfio.conf');
+    my $file=_create_file(new_domain_name().'vfio.conf');
 
     my $data = _pci_data();
+    my $ids = '1002:95c5,1787:2252';
 
     Ravada::HostDevice::Config::configure_vfio($data,$file);
     _check_line($file,"softdep radeon pre: vfio-pci",1);
 
+    _check_line($file,"options vfio-pci ids=$ids disable_vga=1",1);
+
     _set_pci_data($data,'radeon',0);
     _set_pci_data($data,'tg3',1);
+
+    $ids = '14e4:165a';
 
     Ravada::HostDevice::Config::configure_vfio($data,$file);
     _check_line($file,"softdep radeon pre: vfio-pci",0);
     _check_line($file,"softdep tg3 pre: vfio-pci", 1);
+    _check_line($file,"options vfio-pci ids=$ids disable_vga=1",1);
 
     _set_pci_data($data,'tg3',0);
     Ravada::HostDevice::Config::configure_vfio($data,$file);
@@ -300,8 +307,8 @@ sub test_modules() {
 
 }
 
-sub test_vfio_ids() {
-    my $file = _create_file('vfio.conf');
+sub _old_test_vfio_ids() {
+    my $file = _create_file(new_domain_name().'vfio.conf');
 
     my $data = _pci_data();
 
@@ -357,11 +364,24 @@ sub test_configs() {
 
     test_modules();
 
-    test_vfio_ids();
-
     test_msrs();
 
     test_initramfs();
+}
+
+sub _current_default_grub {
+    my $quiet = '';
+    my $splash = '';
+    open my $in,"<","/etc/default/grub" or die $!;
+    while (my $line = <$in>) {
+        if ($line =~ /^GRUB_CMDLINE_LINUX_DEFAULT/) {
+            my ($quiet) = $line =~ /(quiet)/;
+            my ($splash) = $line =~ /(splash)/;
+            $quiet = " $quiet" if $quiet;
+            $splash = " $splash" if $splash;
+            return ($quiet, $splash);
+        }
+    }
 }
 
 sub test_example_ati_tg3($vm) {
@@ -379,8 +399,30 @@ sub test_example_ati_tg3($vm) {
     my $dst = "/var/tmp/".new_domain_name();
     Ravada::HostDevice::Config::configure($vm,'t/etc/lspci_ati_tg3.txt'
     ,$dst);
+    my $file = "$dst/etc/default/grub";
+    ok( -e $file)  or die "Missing $file";
+    my $ids = "1002:95c5,14e4:165a,1787:2252";
+    my ($quiet, $splash) = _current_default_grub();
+    _check_variable($file
+        ,'GRUB_CMDLINE_LINUX_DEFAULT',
+        '"intel_iommu=on pci-stub.ids='.$ids."$quiet radeon.blacklist=1$splash tg3.blacklist=1\""
+    );
 
-    ok( -e "$dst/default/grub") or die "Missing $dst/default/grub";
+    _check_line("$dst/etc/modprobe.d/blacklist-rvd.conf"
+            ,'blacklist tg3',1
+            ,'blacklist radeon',1);
+
+    _check_line("$dst/etc/modprobe.d/vfio.conf","softdep radeon pre: vfio-pci",1);
+    _check_line("$dst/etc/modprobe.d/vfio.conf","softdep tg3 pre: vfio-pci", 1);
+
+    _check_line("$dst/etc/modprobe.d/vfio.conf","options vfio-pci ids=$ids disable_vga=1",1);
+
+    _check_line("$dst/etc/modules","vfio vfio_iommu_type1 vfio_pci ids=$ids",1);
+
+    _check_line("$dst/etc/modprobe.d/kvm.conf",'options kvm ignore_msrs=1',1);
+
+    _check_line("$dst/etc/initramfs-tools/modules","vfio vfio_iommu_type1 vfio_virqfd vfio_pci ids=$ids",1);
+
 
 }
 
