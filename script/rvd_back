@@ -72,6 +72,7 @@ my $ADD_LOCALE_REPOSITORY;
 
 my $BACKUP;
 my $RESTORE;
+my $TIME_CONNECTION = 10;
 
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
@@ -138,8 +139,8 @@ GetOptions (       help => \$help
             ,'test-ldap'=> \$TEST_LDAP
            ,'add-user=s'=> \$ADD_USER
            ,'url-isos=s'=> \$URL_ISOS
-           ,'shutdown:s'=> \$SHUTDOWN_DOMAIN
-          ,'hibernate:s'=> \$HIBERNATE_DOMAIN
+           ,'shutdown'=> \$SHUTDOWN_DOMAIN
+          ,'hibernate'=> \$HIBERNATE_DOMAIN
              ,'remove:s'=> \$REMOVE_DOMAIN
          ,'disconnected'=> \$DISCONNECTED
         ,'remove-user=s'=> \$REMOVE_USER
@@ -165,6 +166,8 @@ GetOptions (       help => \$help
         ,"backup" => \$BACKUP
         ,"restore" => \$RESTORE
         ,"log=s"              => \$LOG_FILENAME
+
+        ,"time-connection=s" => \$TIME_CONNECTION
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
@@ -192,6 +195,10 @@ die "ERROR: Hibernate requires a domain name, or --all , --disconnected\n"
 
 die "ERROR: Missing the machine name or id\n$USAGE"
     if $REBASE && !@ARGV;
+
+die "ERROR: Supply either --all or --disconnected or --active\n"
+if ( $ALL && ( $DISCONNECTED || $ACTIVE ))
+    || ( $DISCONNECTED && ( $ALL || $ACTIVE ));
 
 my %CONFIG;
 %CONFIG = ( config => $FILE_CONFIG )    if $FILE_CONFIG;
@@ -612,42 +619,29 @@ sub list {
     print "$found machines found.\n";
 }
 
-sub hibernate {
-    my $domain_name = shift;
-    my $all = shift;
+sub hibernate(@domains) {
 
-    my $rvd_back = Ravada->new(%CONFIG);
-
-    my $down = 0;
     my $found = 0;
-    for my $domain ($rvd_back->list_domains) {
-        if ( ($all && $domain->is_active)
-                || ($domain_name && $domain->name eq $domain_name)
-                || ($DISCONNECTED && _client_status($domain) eq 'disconnected')
-           ) {
+    for my $domain (@domains) {
+        next if $domain->is_hibernated;
+        if ($domain->can_hibernate) {
             $found++;
-            if (!$domain->is_active) {
-                warn "WARNING: Virtual machine ".$domain->name
-                    ." is already down.\n";
-                next;
+            Ravada::Request->hybernate(
+                uid => Ravada::Utils->user_daemon->id
+                ,id_domain => $domain->id
+            );
+            if ($VERBOSE) {
+                print "Hibernating ".$domain->name."\n";
             }
-            if ( $DISCONNECTED && $domain->client_status() eq 'disconnected') {
-                next if _verify_connection($domain);
-            }
-            if ($domain->can_hibernate) {
-                $domain->hibernate( Ravada::Utils::user_daemon() );
-                $down++;
-            } else {
-                warn "WARNING: Virtual machine ".$domain->name
-                    ." can't hibernate because it is not supported in ".$domain->type
-                    ." domains."
-                    ."\n";
-            }
+        } else {
+            warn "WARNING: Virtual machine ".$domain->name
+            ." can't hibernate because it is not supported in ".$domain->type
+            ." domains."
+            ."\n";
         }
     }
-    print "$down machines hibernated.\n";
-    warn "ERROR: Domain $domain_name not found.\n"
-        if !$domain_name && !$found;
+    print "$found machines hibernated\n" if $VERBOSE;
+    exit;
 }
 
 sub remove_domain {
@@ -694,73 +688,44 @@ sub start_domain {
 
 sub _client_status($domain_f) {
     my $domain = Ravada::Domain->open($domain_f->id) or return '';
-    return $domain->client_status(1);
+    my $status = $domain->client_status(1);
+    return 'disconnected' if!defined $status || $status eq '';
+    return $status;
 }
 
-sub shutdown_domain {
-    my $domain_name = shift;
-    my ($all,$hibernated) = @_;
-
-    my $rvd_back = Ravada->new(%CONFIG);
+sub shutdown_domain(@domains) {
 
     my $down = 0;
-    my $found = 0;
-    DOMAIN:
-    for my $domain_data ($rvd_back->list_domains_data) {
-        my $domain = Ravada::Front::Domain->open($domain_data->{id});
+    for my $domain (@domains) {
         my $is_active = $domain->is_active;
-        my $client_status = '?';
-        $client_status = _client_status($domain) if $DISCONNECTED;
-        print $domain->name." status = ".($client_status or '<UNDEF>')."\n" if $DISCONNECTED && $VERBOSE && $is_active;
-        if ((defined $domain_name && $domain->name eq $domain_name)
-            || ($hibernated && $domain->is_hibernated)
-            || ($DISCONNECTED && $is_active && ( $client_status eq 'disconnected' || !$client_status) )
-            || $all ){
-            $found++;
-            if (!$is_active && !$domain->is_hibernated) {
-                warn "WARNING: Virtual machine ".$domain->name
-                    ." is already down.\n"
-                        if !$all;
+        if (!$is_active && !$domain->is_hibernated) {
                 next;
-            }
-            if ($DISCONNECTED && $client_status
-                    && $client_status eq 'disconnected') {
-                if ( $domain->autostart() ) {
-                    print "\tautostart set, skipping shutdown\n";
-                    next;
-                }
-                next DOMAIN if _verify_connection($domain);
-            }
-            my $at = 0;
-            my $txt_time = '';
-            my @after_req;
-            if ($domain->is_hibernated && !$DISCONNECTED) {
-                print $domain->name." is hibernated. Starting ".$domain->name."\n";
-                my $req_start = Ravada::Request->start_domain(
-                    uid => Ravada::Utils::user_daemon->id
-                    ,id_domain => $domain->id
-                );
-                $at = time + 180;
-                $txt_time = " in 3 minutes";
-                my @after_req = ( after_request => $req_start->id);
-            }
-
-            print "\tShutting down ".$domain->name;
-            print " in ".($at - time)." seconds" if $at;
-            print "\n";
-            Ravada::Request->shutdown_domain(uid => Ravada::Utils::user_daemon()->id
-                ,id_domain => $domain->id
-                , timeout => 300
-                ,@after_req
-                ,at => $at
-            );
-            $down++;
-            warn $@ if $@;
         }
+
+        my @after_req;
+        if ($domain->is_hibernated ) {
+            print $domain->name." is hibernated. Starting ".$domain->name."\n";
+            my $req_start = Ravada::Request->start_domain(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $domain->id
+            );
+            @after_req = ( after_request => $req_start->id
+                ,at => time + 180
+            );
+        }
+        if ($VERBOSE) {
+            print "\tShutting down ".$domain->name;
+            print "\n";
+        }
+        Ravada::Request->shutdown_domain(uid => Ravada::Utils::user_daemon()->id
+            ,id_domain => $domain->id
+            , timeout => 300
+            ,@after_req
+        );
+        $down++;
+
     }
-    warn "ERROR: Domain $domain_name not found.\n"
-        if $domain_name && !$found;
-    print "$down domains shut down.\n";
+    print "$down domains shut down.\n" if $VERBOSE;
     exit;
 }
 
@@ -770,7 +735,7 @@ sub _verify_connection {
     print "Verifying connection for ".$domain->name
                         ." ".($domain->remote_ip or '')." "
         if $VERBOSE;
-    for ( 1 .. 25 ) {
+    for ( 1 .. $TIME_CONNECTION ) {
         my $status = $domain->client_status(1);
         if ( $status && $status ne 'disconnected' ) {
             print "\n\t".$status." ".$domain->remote_ip
@@ -954,6 +919,49 @@ sub restore($rvd_back) {
     }
 }
 
+sub _list_domains($rvd_back
+        ,$all, $active, $hibernated, $disconnected) {
+
+    my %name = map { $_ => 1 } @ARGV ;
+
+    my @domains;
+    for my $domain ($rvd_back->list_domains) {
+
+        next if $domain->is_base;
+
+        if ( $all
+            || $name{$domain->name}
+            || ( $active && $domain->is_active && !$domain->autostart )
+            || ( $hibernated && $domain->is_hibernated )
+            || ( $disconnected && $domain->is_active
+                && !$domain->autostart
+                && _client_status($domain) eq 'disconnected')
+        ) {
+
+            delete $name{$domain->name};
+            if ( $disconnected && $domain->client_status() eq 'disconnected') {
+                next if _verify_connection($domain);
+            }
+            if ($HIBERNATE_DOMAIN && $domain->is_hibernated && $VERBOSE) {
+                print $domain->name." already hibernated.\n";
+                next;
+            }
+
+            if ($SHUTDOWN_DOMAIN && $domain->status eq 'down' && $VERBOSE) {
+                print $domain->name." already down.\n";
+                next;
+            }
+
+            push @domains,($domain);
+
+        }
+    }
+    warn "Warning: Domain not found ".(join(",", sort keys %name))."\n"
+    if keys %name;
+
+    return @domains;
+}
+
 sub DESTROY {
 }
 
@@ -963,6 +971,11 @@ sub DESTROY {
 
 my $rvd_back = Ravada->new(%CONFIG);
 $rvd_back->_install();
+
+my @domains;
+@domains = _list_domains($rvd_back
+    , $ALL, $ACTIVE, $HIBERNATED, $DISCONNECTED)
+if $HIBERNATE_DOMAIN || $SHUTDOWN_DOMAIN;
 
 add_user($ADD_USER)                 if $ADD_USER;
 add_user_ldap($ADD_USER_LDAP)       if $ADD_USER_LDAP;
@@ -980,12 +993,11 @@ test_ldap                           if $TEST_LDAP;
 rebase()                            if $REBASE;
 
 list($ALL)                          if $LIST;
-hibernate($HIBERNATE_DOMAIN , $ALL) if defined $HIBERNATE_DOMAIN;
 remove_domain($REMOVE_DOMAIN)              if defined $REMOVE_DOMAIN;
 start_domain($START_DOMAIN)         if $START_DOMAIN;
 
-shutdown_domain($SHUTDOWN_DOMAIN, $ALL, $HIBERNATED)
-                                    if defined $SHUTDOWN_DOMAIN;
+shutdown_domain(@domains)           if defined $SHUTDOWN_DOMAIN;
+hibernate(@domains)                 if defined $HIBERNATE_DOMAIN;
 
 add_locale_repository($ADD_LOCALE_REPOSITORY) if $ADD_LOCALE_REPOSITORY;
 
