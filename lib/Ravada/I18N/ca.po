@@ -8,8 +8,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2022-02-28 17:57+0000\n"
-"Last-Translator: Maite Guix <maite.guix@gmail.com>\n"
+"PO-Revision-Date: 2022-07-19 11:09+0000\n"
+"Last-Translator: Dani Sanchez <dani@fib.upc.edu>\n"
 "Language-Team: Catalan <https://hosted.weblate.org/projects/ravada/"
 "translation/ca/>\n"
 "Language: ca\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.11.1-dev\n"
+"X-Generator: Weblate 4.14-dev\n"
 
 msgid "Ravada broker"
 msgstr "Broker Ravada"
@@ -379,7 +379,7 @@ msgid "can shutdown any virtual machine."
 msgstr "pot apagar qualsevol màquina virtual."
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr "pot apagar clons de màquines virtuals propietat de l'usuari."
+msgstr "pot aturar clons de màquines virtuals propietat de l'usuari."
 
 msgid "Submit Query"
 msgstr "Enviar Pregunta"
@@ -1154,3 +1154,893 @@ msgstr "bloquejat"
 
 msgid "Node with more free memory"
 msgstr "Node amb més memòria lliure"
+
+msgid "Select the .iso file the machine will utilize when installing the OS."
+msgstr "Escull el fitxer .iso per instal·lar el SO."
+
+msgid "Bookings require LDAP authentication."
+msgstr "Les reserves requereixen autenticació LDAP."
+
+msgid "Old Password can only contain words and numbers"
+msgstr "L'antiga contrasenya només pot contenir paraules i nombres"
+
+msgid "Old and New Passwords match!"
+msgstr "Ambdues contrasenyes coincideixen!"
+
+msgid "Debug Ports Exposed"
+msgstr "Ports de depuració exposats"
+
+msgid "device"
+msgstr "dispositiu"
+
+msgid "Repeated New Password is required"
+msgstr "És necessari repetir la nova contrasenya"
+
+msgid "Type"
+msgstr "Tipus"
+
+msgid "Enables display password when available"
+msgstr "Activa la contrasenya de visualització quan estigui disponible"
+
+msgid "Start Limit"
+msgstr "Límit d'inici"
+
+msgid "Admin users can still log in from"
+msgstr "Els usuaris administradors encara poden iniciar sessió"
+
+msgid "Display Password"
+msgstr "Mostra la contrasenya"
+
+msgid "Bookings"
+msgstr "Reserves"
+
+msgid "Web Service connection failed."
+msgstr "La connexió amb el Web Service ha fallat."
+
+msgid "Error: the LDAP entry for this user has been removed."
+msgstr "Error: l'entrada LDAP d'aquest usuari s'ha eliminat."
+
+msgid "No machines found"
+msgstr "Cap màquina trobada"
+
+msgid "This address is duplicated"
+msgstr "Aquesta adreça està duplicada"
+
+msgid "New Password must be at least 6 characters"
+msgstr "La nova contrasenya ha de tenir almenys 6 caràcters"
+
+msgid "password"
+msgstr "contrasenya"
+
+msgid "Nothing to monitoring"
+msgstr "Res a monitoritzar"
+
+msgid "bases."
+msgstr "bases."
+
+msgid "and will remove all the disk and information of this virtual machine."
+msgstr "i eliminarà tot el disc i la informació d'aquesta màquina virtual."
+
+msgid "A node with that address already exists."
+msgstr "Ja existeix un node amb aquesta adreça."
+
+msgid "Remove Base"
+msgstr "Esborrar Base"
+
+msgid "To make this possible, copy the content of"
+msgstr "Per fer-ho possible, copia el contingut de"
+
+msgid "to an ASCII file and save it with a .reg extension, then execute the file."
+msgstr ""
+"a un fitxer ASCII i guarda-ho amb extensió .reg, llavors executa el fitxer."
+
+msgid "Please, make sure you have the right path and release, according to your PC configuration."
+msgstr ""
+"Si-us plau, assegureu-vos que el camí i la versió és correcte, segons la "
+"configuració del vostre ordinador."
+
+msgid "can change the settings of any virtual machine."
+msgstr "pot canviar la configuració d'una màquina virtual."
+
+msgid "can change the settings of any virtual machine "
+msgstr "pot canviar la configuració de qualsevol màquina virtual "
+
+msgid "can remove any virtual machine owned by the user."
+msgstr "pot esborrar les màquines virtuals d'aquest usuari."
+
+msgid "Template selection is required"
+msgstr "És necessari escollir una plantilla"
+
+msgid "Are you sure you want to remove the base of"
+msgstr "Estàs segur que vols esborrar la base de"
+
+msgid "Are you sure you want to prepare the base of"
+msgstr "Estàs segur que vols preparar la base de"
+
+msgid "Confirm password is required"
+msgstr "És necessari confirmar la contrasenya"
+
+msgid "Confirm password can not exceed 20 characters"
+msgstr "La confirmació de la contrasenya no pot excedir els 20 caràcters"
+
+msgid "Confirm password must be at least 5 characters"
+msgstr "La confirmació de la contrasenya ha de tenir com a mínim 5 caràcters"
+
+msgid "Confirm password can only contain words and numbers"
+msgstr "La confirmació de la contrasenya només pot tenir paraules i nombres"
+
+msgid "This machine is running and can't be renamed."
+msgstr "Aquesta màquina està en marxa i no pot ser canviada de nom."
+
+msgid "Remove group"
+msgstr "Esborrar grup"
+
+msgid "Group"
+msgstr "Grup"
+
+msgid "New group member"
+msgstr "Nou membre de grup"
+
+msgid "This group has been removed."
+msgstr "Aquest grup ha estat esborrat."
+
+msgid "Are you sure you want to remove this group ?"
+msgstr "Estàs segur que vols esborrar aquest grup?"
+
+msgid "object class:"
+msgstr "object class:"
+
+msgid "Groups require a LDAP server configured."
+msgstr "Els grups necessiten un servidor LDAP configurat."
+
+msgid "See documentation about:"
+msgstr "Veure documentació sobre:"
+
+msgid "Configure LDAP Authentication"
+msgstr "Configura l'autenticació LDAP"
+
+msgid "Setup a LDAP Server"
+msgstr "Configura un servidor LDAP"
+
+msgid "Groups"
+msgstr "Grups"
+
+msgid "New Group"
+msgstr "Nou grup"
+
+msgid "Loading ..."
+msgstr "Carregant..."
+
+msgid "Show/Hide clones"
+msgstr "Mostra/Amaga clons"
+
+msgid "Public"
+msgstr "Públic"
+
+msgid "Autostart"
+msgstr "Inici automàtic"
+
+msgid "Node"
+msgstr "Node"
+
+msgid "Manage machine"
+msgstr "Gestionar la màquina"
+
+msgid "Volatile"
+msgstr "Volàtil"
+
+msgid "Hibernated"
+msgstr "Hibernat"
+
+msgid "No message to show!"
+msgstr "No hi ha cap missatge per mostrar!"
+
+msgid "Refresh"
+msgstr "Actualitzar"
+
+msgid "Networks"
+msgstr "Xarxes"
+
+msgid "New Network"
+msgstr "Nova Xarxa"
+
+msgid "requires password"
+msgstr "cal contrasenya"
+
+msgid "Nodes"
+msgstr "Nodes"
+
+msgid "Bases"
+msgstr "Bases"
+
+msgid "Action"
+msgstr "Acció"
+
+msgid "Active"
+msgstr "Actiu"
+
+msgid "This node is local"
+msgstr "Aquest node és local"
+
+msgid "Enable"
+msgstr "Activa"
+
+msgid "Disable"
+msgstr "Desactiva"
+
+msgid "Confirm disable node"
+msgstr "Confirmeu la desactivació del node"
+
+msgid "Disabling this node will shut all the"
+msgstr "Desactivar aquest node aturarà tots les"
+
+msgid "machines down."
+msgstr "màquines aturades."
+
+msgid "Maintenance"
+msgstr "Manteniment"
+
+msgid "Maintenance Start"
+msgstr "Inici del Manteniment"
+
+msgid "Maintenance End"
+msgstr "Fi de Manteniment"
+
+msgid "Debug"
+msgstr "Depuració"
+
+msgid "Debug Ports"
+msgstr "Ports de depuració"
+
+msgid "Number of virtual machines that normal users can have running at the same time"
+msgstr ""
+"Nombre de màquines virtuals que els usuaris normals poden tenir en execució "
+"al mateix temps"
+
+msgid "Port expose"
+msgstr "Port exposat"
+
+msgid "Minimum port number to expose virtual machine services."
+msgstr "Número de port mínim per exposar els serveis de la màquina virtual."
+
+msgid "cancel"
+msgstr "cancel · lar"
+
+msgid "New user"
+msgstr "Nou usuari"
+
+msgid "Error:"
+msgstr "Error:"
+
+msgid "Ravada Apache documentation"
+msgstr "Documentació de Ravada Apache"
+
+msgid "Client"
+msgstr "Client"
+
+msgid "LDAP"
+msgstr "LDAP"
+
+msgid "Display URL :"
+msgstr "URL visible:"
+
+msgid "Display IP :"
+msgstr "IP de visualització:"
+
+msgid "Display Port :"
+msgstr "Port de visualització:"
+
+msgid "Display Port secure :"
+msgstr "Port de visualització segur:"
+
+msgid "Sorry"
+msgstr "Ho sento"
+
+msgid "Server in maintenance until"
+msgstr "Servidor en manteniment fins"
+
+msgid "vCPU allocation"
+msgstr "Assignació de vCPU"
+
+msgid "mode"
+msgstr "mode"
+
+msgid "model"
+msgstr "model"
+
+msgid "Disabled"
+msgstr "Desactivat"
+
+msgid "Global Settings"
+msgstr "Paràmetres globals"
+
+msgid "CPU Features"
+msgstr "Característiques de la CPU"
+
+msgid "New feature"
+msgstr "Nova característica"
+
+msgid "add"
+msgstr "afegir"
+
+msgid "bus"
+msgstr "bus"
+
+msgid "capacity"
+msgstr "capacitat"
+
+msgid "ISO file"
+msgstr "fitxer ISO"
+
+msgid "boot order"
+msgstr "ordre d'arrencada"
+
+msgid "hidden"
+msgstr "amagat"
+
+msgid "state"
+msgstr "estat"
+
+msgid "primary"
+msgstr "primari"
+
+msgid "Set defaults"
+msgstr "Estableix valors predeterminats"
+
+msgid "Add new disk"
+msgstr "Afegeix un nou disc"
+
+msgid "size"
+msgstr "mida"
+
+msgid "Add new Display"
+msgstr "Afegeix nou Display"
+
+msgid "PrepareBase"
+msgstr "Preparar Base"
+
+msgid "Add to group"
+msgstr "Afegir a grup"
+
+msgid "No LDAP groups created."
+msgstr "No s'ha creat cap grup LDAP."
+
+msgid "Add groups"
+msgstr "Afegir grups"
+
+msgid "User is not member of any group."
+msgstr "L'usuari no és membre de cap grup."
+
+msgid "New password"
+msgstr "Nova contrasenya"
+
+msgid "Force change password on first access"
+msgstr "Força el canvi de contrasenya en el primer accés"
+
+msgid "Oops!"
+msgstr "Vaja!"
+
+msgid "Set New Password"
+msgstr "Establir nova contrasenya"
+
+msgid "This user has never logged in the Ravada server."
+msgstr "Aquest usuari mai no ha iniciat sessió al servidor Ravada."
+
+msgid "Import"
+msgstr "Importar"
+
+msgid "Warning: anonymous machines won't show up unless you set them public."
+msgstr ""
+"Avís: les màquines anònimes no es mostraran tret que les configureu "
+"públiques."
+
+msgid "New network"
+msgstr "Nova xarxa"
+
+msgid "name"
+msgstr "nom"
+
+msgid "address"
+msgstr "adreça"
+
+msgid "Network address is required."
+msgstr "L'adreça de xarxa és necessària."
+
+msgid "Invalid IP network address. Expecting a.b.c.d/e"
+msgstr "Adreça de xarxa IP no vàlida. Esperant a.b.c.d/e"
+
+msgid "all machines"
+msgstr "totes les màquines"
+
+msgid "or"
+msgstr "ó"
+
+msgid "no machines"
+msgstr "cap màquina"
+
+msgid "for users in this network"
+msgstr "per als usuaris d'aquesta xarxa"
+
+msgid "Network"
+msgstr "Xarxa"
+
+msgid "saved."
+msgstr "guardat."
+
+msgid "Are you sure you want to remove the"
+msgstr "Esteu segur que voleu eliminar el"
+
+msgid "yes"
+msgstr "sí"
+
+msgid "Primary video devices will move to first"
+msgstr "Els dispositius de vídeo primari es mouran primer"
+
+msgid "Primary can not be unset, enable it in another video device"
+msgstr ""
+"El primari no es pot desactivar, activeu-lo en un altre dispositiu de vídeo"
+
+msgid "Choose the virtualization type of the Node."
+msgstr "Escull el tipus de virtualització del node."
+
+msgid "Check connection to"
+msgstr "Comproveu la connexió a"
+
+msgid "bridge"
+msgstr "pont"
+
+msgid "allocation"
+msgstr "assignació"
+
+msgid "This virtual machine has already been compacted"
+msgstr "Aquesta màquina virtual ja s'ha compactat"
+
+msgid "Loading machine"
+msgstr "Carregant Màquina"
+
+msgid "waiting for requests"
+msgstr "esperant les peticions"
+
+msgid "Loading nodes"
+msgstr "Carregant nodes"
+
+msgid "Node down"
+msgstr "Node caigut"
+
+msgid "Node disabled"
+msgstr "Node desactivat"
+
+msgid "This machine is locked by process"
+msgstr "Aquesta màquina està bloquejada per procés"
+
+msgid "process"
+msgstr "procés"
+
+msgid "This base can't be removed because the domain has clones."
+msgstr "Aquesta base no pot ser esborrada perquè té clons."
+
+msgid "Hardware"
+msgstr "Maquinari"
+
+msgid "Base"
+msgstr "Base"
+
+msgid "Ports"
+msgstr "Ports"
+
+msgid "Access"
+msgstr "Accés"
+
+msgid "Waiting for requests to complete"
+msgstr "Esperant que es completin les sol·licituds"
+
+msgid "Recent requests"
+msgstr "Sol·licituds recents"
+
+msgid "Compact"
+msgstr "Compactar"
+
+msgid "Compact disk volumes"
+msgstr "Compactar volums"
+
+msgid "Purge"
+msgstr "Purgar"
+
+msgid "Purge disk volumes"
+msgstr "Purgar volums"
+
+msgid "Testing connection to"
+msgstr "Provant connexió a"
+
+msgid "No bases found"
+msgstr "No s'han trobat bases"
+
+msgid "This base has"
+msgstr "Aquesta base té"
+
+msgid "backup directory"
+msgstr "directori de còpia de seguretat"
+
+msgid "This is a main node and can't be removed."
+msgstr "Aquest és un node principal i no es pot eliminar."
+
+msgid "Are you sure you want to remove the node"
+msgstr "Esteu segur que voleu eliminar el node"
+
+msgid "This node has"
+msgstr "Aquest node té"
+
+msgid "Remove bases in node"
+msgstr "Esborrar bases en aquest node"
+
+msgid "Request"
+msgstr "Sol·licitud"
+
+msgid "Removing Virtual Machine"
+msgstr "Eliminant la màquina virtual"
+
+msgid "This can't be undone"
+msgstr "Això no es pot desfer"
+
+msgid "Please insert"
+msgstr "Si us plau introdueix"
+
+msgid "not"
+msgstr "no"
+
+msgid "to apply."
+msgstr "aplicar."
+
+msgid "Save"
+msgstr "Guardar"
+
+msgid "I don't know settings tabs for:"
+msgstr "No conec les pestanyes de configuració de:"
+
+msgid "This base has clones"
+msgstr "Aquesta base té clons"
+
+msgid "today"
+msgstr "avui"
+
+msgid "New Booking"
+msgstr "Nova Reserva"
+
+msgid "Exec. time"
+msgstr "Temps d'execució"
+
+msgid "Exec clones sequentially"
+msgstr "Executar clons seqüencialment"
+
+msgid "This name is invalid. It can only contain alphabetic, numbers, undercores and dashes and must start by a letter."
+msgstr ""
+"Aquest nom no és vàlid. Només pot contenir alfabètics, números, guions "
+"baixos i guions i ha de començar per una lletra."
+
+msgid "I can't find"
+msgstr "No puc trobar"
+
+msgid "This machine is running and can't be modified."
+msgstr "Aquesta màquina està en marxa i no pot ser modificada."
+
+msgid "This machine is base and can't be modified."
+msgstr "Aquesta màquina és una base i no pot ser modificada."
+
+msgid "Danger: This will destroy all the disk data permantently."
+msgstr "Perill: això destruirà totes les dades del disc de manera permanent."
+
+msgid "Type the name of the volume disk to confirm:"
+msgstr "Escriviu el nom del disc del volum per confirmar:"
+
+msgid "-- choose hardware --"
+msgstr "-- tria el maquinari --"
+
+msgid "This machine is base and it can't be modified."
+msgstr "Aquesta màquina és una base i no pot ser modificada."
+
+msgid "The VM is"
+msgstr "Aquesta MV és"
+
+msgid "stopped"
+msgstr "aturat"
+
+msgid "This virtual machine is running. It must be shut down before migrate."
+msgstr ""
+"Aquesta màquina està en marxa. Ha de ser aturada abans de fer la migració."
+
+msgid "Are you sure you want to migrate"
+msgstr "Esteu segur que voleu migrar"
+
+msgid "Max memory (MB)"
+msgstr "Màxima memòria (MB)"
+
+msgid "Current memory (MB)"
+msgstr "Memòria actual (MB)"
+
+msgid "No hardware found for"
+msgstr "No s'ha trobat maquinari per a"
+
+msgid "Any remote client can access this port"
+msgstr "Qualsevol client pot accedir a aquest port"
+
+msgid "Refresh ports"
+msgstr "Actualitzar ports"
+
+msgid "Prepare Base"
+msgstr "Preparar Base"
+
+msgid "Change"
+msgstr "Canviar"
+
+msgid "Warning"
+msgstr "Alerta"
+
+msgid "Changing the base of a virtual machine is potentially dangerous and can't be undone."
+msgstr ""
+"Canviar la base d'una màquina virtual és potencialment perillós i es pot "
+"desfer."
+
+msgid "No, cancel"
+msgstr "No, cancel·lar"
+
+msgid "Remove the base prepared from this machine"
+msgstr "Esborrar la base preparada per aquesta màquina"
+
+msgid "Remove Clones"
+msgstr "Esborrar Clons"
+
+msgid "Only remote client can access this port"
+msgstr "Només el client remot pot accedir a aquest port"
+
+msgid "Only remote client can access this port if restricted"
+msgstr "Només el client remot pot accedir a aquest port si està restringit"
+
+msgid "The machine will power off after this minutes after shutdown."
+msgstr "La màquina s'apagarà després d'aquests minuts després de l'aturada."
+
+msgid "Clones created from this machine will be removed on shutdown."
+msgstr "Els clons creats des d'aquesta màquina s'eliminaran quan s'aturi."
+
+msgid "Virtual Machine will start on host start."
+msgstr "La màquina virtual s'iniciarà a l'inici de l'amfitrió."
+
+msgid "Shutdown disconnected"
+msgstr "L'apagat s'ha desconnectat"
+
+msgid "Virtual Machine will be shutdown when user disconnects."
+msgstr "La màquina virtual s'apagarà quan l'usuari es desconnecti."
+
+msgid "Clones are volatile, so all the pool will be started."
+msgstr "Els clons són volàtils, de manera que s'iniciarà tot el grup."
+
+msgid "Error: you want to have"
+msgstr "Error: vols tenir"
+
+msgid "but there are only"
+msgstr "però només n'hi ha"
+
+msgid "clones defined."
+msgstr "clons definits."
+
+msgid "Port"
+msgstr "Port"
+
+msgid "Restricted"
+msgstr "Restringit"
+
+msgid "Public Port"
+msgstr "Port Públic"
+
+msgid "Type the ISO pathname"
+msgstr "Escriu el camí del fitxer ISO"
+
+msgid "allowed"
+msgstr "permès"
+
+msgid "not allowed"
+msgstr "no permès"
+
+msgid "Machines Notifications"
+msgstr "Notificacions de Màquines"
+
+msgid "Machine"
+msgstr "Màquina"
+
+msgid "Group name"
+msgstr "Nom de Grup"
+
+msgid "Enter group name"
+msgstr "Escriu el nom del grup"
+
+msgid "Group name is required"
+msgstr "Es requereix un nom de grup"
+
+msgid "Group name can not exceed 80 characters"
+msgstr "El nom del grup no pot excedir els 80 caràcters"
+
+msgid "added"
+msgstr "afegit"
+
+msgid "The source machine is not a base. It must be prepared before it can be copied. This process may take some minutes."
+msgstr ""
+"La màquina font no és una base. Ha de ser preperada abans de ser copiada. "
+"Aquest procés pot trigar alguns minuts."
+
+msgid "Choose the virtualization type of the Virtual Machine."
+msgstr "Escull el tipus de virtualització per la Màquina Virtual."
+
+msgid "Type the template name"
+msgstr "Escull el nom de la plantilla"
+
+msgid "Today Schedule"
+msgstr "Horari d'avui"
+
+msgid "This machine is hibernated and can't be renamed."
+msgstr "Aquesta màquina està hivernada i no pot ser canviada de nom."
+
+msgid "New name"
+msgstr "Nou nom"
+
+msgid "This virtual machine has clones that are bases and won't be removed"
+msgstr "Aquesta màquina virtual té clons que són bases i no pot ser esborrat"
+
+msgid "Enter Old Password"
+msgstr "Escriu la contrasenya antiga"
+
+msgid "Enter New Password"
+msgstr "Escriu la nova contrasenya"
+
+msgid "Re-Enter New Password"
+msgstr "Torna a escriure la nova contrasenya"
+
+msgid "Old Password is required"
+msgstr "Es requereix l'antiga contrasenya"
+
+msgid "New Password is required"
+msgstr "Es requereix una nova contrasenya"
+
+msgid "New Password can only contain words and numbers"
+msgstr "La nova contrasenya només pot contenir paraules i nombres"
+
+msgid "Password and their confirmation do not match!"
+msgstr "La confirmació de la contrasenya no coincideix!"
+
+msgid "This server has reservations for today. Machines from users out of the booking list will be shutdown."
+msgstr ""
+"Aquest servidor té reserves per avui. Les màquines d'usuaris fora de la "
+"reserva seran aturades."
+
+msgid "disabled"
+msgstr "desactivat"
+
+msgid "Legacy"
+msgstr "Llegat"
+
+msgid "The Minimum Disk Size needed for this ISO is"
+msgstr "La mida mínima per una ISO és"
+
+msgid "Advanced options"
+msgstr "Opcions avançades"
+
+msgid "Swap"
+msgstr "Intercanvi"
+
+msgid "The Minimum Swap Disk Size needed for this ISO is"
+msgstr "La mida mínima pel disc d'intercanvi és"
+
+msgid "Data"
+msgstr "Dada"
+
+msgid "What do you want to do now?"
+msgstr "Què vols fer ara?"
+
+msgid "filter"
+msgstr "filtrar"
+
+msgid "Please select an ISO file"
+msgstr "Escull un fitxer ISO"
+
+msgid "Schedule"
+msgstr "Horari"
+
+msgid "Start after create the virtual machine"
+msgstr "Començar després de crear la màquina virtual"
+
+msgid "Invalid Template"
+msgstr "Plantilla no vàlida"
+
+msgid "Passwords do not match!"
+msgstr "Les contrasenyes no coincideixen!"
+
+msgid "Support Contact"
+msgstr "Contacte de suport"
+
+msgid "Email"
+msgstr "Correu electrònic"
+
+msgid "If you have any issue, you can contact the Suport crew and we will try to help you. Please, only contact Support Center if it is strictly necessary."
+msgstr ""
+"Si tens cap problema, pots contactar amb l'equip de Suport i intentarem "
+"ajudar-te. Si us plau, només poseu-vos en contacte amb el Centre "
+"d'assistència si és estrictament necessari."
+
+msgid "Phone Number"
+msgstr "Número de telèfon"
+
+msgid "Attachment"
+msgstr "Adjunt"
+
+msgid "Contact Method"
+msgstr "Mètode de contacte"
+
+msgid "Phone"
+msgstr "Telèfon"
+
+msgid "Fill required camps with valid data"
+msgstr "Ompliu els camps requerits amb dades vàlides"
+
+msgid "Will be destroyed on shutdown"
+msgstr "Es destruirà a quan s'aturi"
+
+msgid "volatile"
+msgstr "volàtil"
+
+msgid "hide"
+msgstr "amagar"
+
+msgid "Hide active"
+msgstr "Amaga actius"
+
+msgid "groups"
+msgstr "grups"
+
+msgid "nodes"
+msgstr "nodes"
+
+msgid "networks"
+msgstr "xarxes"
+
+msgid "settings"
+msgstr "configuracions"
+
+msgid "Congrats"
+msgstr "Felicitats"
+
+msgid "has been added successfully!"
+msgstr "s'ha afegit amb èxit!"
+
+msgid "Add another user"
+msgstr "Afegeix un altre usuari"
+
+msgid "Create a new group"
+msgstr "Crear un nou grup"
+
+msgid "The new user"
+msgstr "nou usuari"
+
+msgid "Can rename any virtual machine owned by the user."
+msgstr "Permet canviar el nom de qualsevol màquina virtual d'aquest usuari."
+
+msgid "Can rename any virtual machine."
+msgstr "Permet canviar el nom de qualsevol màquina virtual."
+
+msgid "Can rename clones from virtual machines owned by the user."
+msgstr "Permet canviar el nom dels clons de màquines virtuals d'aquest usuari."
+
+msgid "Can shutdown own virtual machines."
+msgstr "Permet apagar les seves màquines virtuals."
+
+msgid "Can reboot all virtual machines."
+msgstr "Pot reiniciar totes les màquines virtuals."
+
+msgid "Can reboot clones own virtual machines."
+msgstr "Poden reiniciar els clons de les màquines virtuals pròpies."
+
+msgid "Can reboot own virtual machines."
+msgstr "Pot reiniciar les màquines virtuals pròpies."
+
+msgid "Can expose virtual machine ports."
+msgstr "Pot exposar ports de màquines virtuals."
+
+msgid "can manage users."
+msgstr "pot gestionar usuaris."
