@@ -712,6 +712,10 @@ sub shutdown_domain(@domains) {
             @after_req = ( after_request => $req_start->id
                 ,at => time + 180
             );
+            for ( 1 .. 30 ) {
+                last if $req_start->status eq 'done';
+                sleep 1;
+            }
         }
         if ($VERBOSE) {
             print "\tShutting down ".$domain->name;
@@ -942,6 +946,10 @@ sub _list_domains($rvd_back
             if ( $disconnected && $domain->client_status() eq 'disconnected') {
                 next if _verify_connection($domain);
             }
+            next if $all && $HIBERNATE_DOMAIN && !$domain->is_active;
+            next if $all && $SHUTDOWN_DOMAIN && !$domain->is_active
+            && !$domain->is_hibernated;
+
             if ($HIBERNATE_DOMAIN && $domain->is_hibernated && $VERBOSE) {
                 print $domain->name." already hibernated.\n";
                 next;
