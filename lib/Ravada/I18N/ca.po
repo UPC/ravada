@@ -1165,7 +1165,7 @@ msgid "Can shutdown own virtual machines."
 msgstr "Pot apagar les pròpies màquines virtuals."
 
 msgid "Can reboot own virtual machines."
-msgstr "Pot reiniciar les pròpies màquines virtuals
+msgstr "Pot reiniciar les pròpies màquines virtuals."
 
 msgid "Can reboot all virtual machines."
 msgstr "Pot reiniciar totes les màquines virtuals."
