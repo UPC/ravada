@@ -411,7 +411,6 @@ sub test_example_ati_tg3($vm) {
 
     $hd->remove();
 
-    warn Dumper($config->{log});
 }
 
 sub _clean_files() {
