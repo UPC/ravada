@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-11-05 13:22+0000\n"
+"PO-Revision-Date: 2022-07-19 11:09+0000\n"
 "Last-Translator: Dani Sanchez <dani@fib.upc.edu>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/ravada/"
 "translation/es/>\n"
@@ -19,7 +19,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.3.2-dev\n"
+"X-Generator: Weblate 4.14-dev\n"
 
 msgid "Ravada broker"
 msgstr "Broker Ravada"
@@ -965,3 +965,128 @@ msgstr "Visualización"
 
 msgid "Max Memory"
 msgstr "Memoria Max"
+
+msgid "Bookings"
+msgstr "Reservas"
+
+msgid "bridge"
+msgstr "puente"
+
+msgid "primary"
+msgstr "primario"
+
+msgid "Set defaults"
+msgstr "Valores por defecto"
+
+msgid "Add new disk"
+msgstr "Añadir nuevo disco"
+
+msgid "device"
+msgstr "dispositivo"
+
+msgid "size"
+msgstr "tamaño"
+
+msgid "Add new Display"
+msgstr "Añadir nuevo Display"
+
+msgid "PrepareBase"
+msgstr "PrepararBase"
+
+msgid "Add to group"
+msgstr "Añadir a grupo"
+
+msgid "No LDAP groups created."
+msgstr "No se ha creado ningún grupo de LDAP."
+
+msgid "Add groups"
+msgstr "Añadir grupos"
+
+msgid "User is not member of any group."
+msgstr "El usuario no es miembro de ningún grupo."
+
+msgid "New password"
+msgstr "Nueva contraseña"
+
+msgid "Force change password on first access"
+msgstr "Forzar cambio de contraseña al inicio de la primera sesión"
+
+msgid "Oops!"
+msgstr "¡Vaya!"
+
+msgid "New Password must be at least 6 characters"
+msgstr "La nueva contraseña de tener al menos 6 caracteres"
+
+msgid "Set New Password"
+msgstr "Nueva contraseña"
+
+msgid "This user has never logged in the Ravada server."
+msgstr "Este usuario nunca ha iniciado sesión en el servidor de Ravada."
+
+msgid "Import"
+msgstr "Importar"
+
+msgid "Error: the LDAP entry for this user has been removed."
+msgstr "Error: la entrada LDAP para este usuario ha sido borrada."
+
+msgid "No machines found"
+msgstr "No se encuentra ninguna máquina"
+
+msgid "Warning: anonymous machines won't show up unless you set them public."
+msgstr ""
+"Atención: las máquinas anónimas no se mostrarán a menos que se configuren "
+"como públicas."
+
+msgid "New network"
+msgstr "Nueva red"
+
+msgid "name"
+msgstr "nombre"
+
+msgid "address"
+msgstr "dirección"
+
+msgid "Recent requests"
+msgstr "Peticiones recientes"
+
+msgid "Re-Enter New Password"
+msgstr "Vuelve a introducir el nuevo password"
+
+msgid "filter"
+msgstr "filtrar"
+
+msgid "Reload"
+msgstr "Recargar"
+
+msgid "Congrats"
+msgstr "Felicidades"
+
+msgid "The new user"
+msgstr "El nuevo usuario"
+
+msgid "groups"
+msgstr "grupos"
+
+msgid "has been added successfully!"
+msgstr "ha sido añadido correctamente!"
+
+msgid "What do you want to do now?"
+msgstr "¿Qué quieres hacer ahora?"
+
+msgid "nodes"
+msgstr "nodos"
+
+msgid "Add another user"
+msgstr "Añadir otro usuario"
+
+msgid "Create a new group"
+msgstr "Crear un nuevo grupo"
+
+msgid "Schedule"
+msgstr "Horario"
+
+msgid "networks"
+msgstr "redes"
+
+msgid "locked"
+msgstr "bloqueado"
