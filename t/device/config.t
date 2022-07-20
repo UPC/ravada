@@ -87,7 +87,7 @@ sub _check_variable($file, %var) {
 }
 
 sub _check_line($file, %var) {
-    ok(-e $file,"Expecting file '$file'") or return;
+    ok(-e $file,"Expecting file '$file'") or croak;
     open my $in,"<",$file or die "$! $file";
     my %found;
     while (my $line = <$in>) {
@@ -141,14 +141,14 @@ sub _set_pci_data($data, $driver, $value=1) {
     $data->{$found}->{configure} = $value;
 }
 
-sub test_grub() {
+sub test_grub($config) {
     my $file=_create_grub_file();
 
     _check_variable($file
         ,'GRUB_CMDLINE_LINUX_DEFAULT','"quiet splash"');
 
     my $data = _pci_data();
-    Ravada::HostDevice::Config::configure_grub($data, $file);
+    $config->configure_grub($data, $file);
 
     _check_variable($file
         ,'GRUB_CMDLINE_LINUX_DEFAULT',
@@ -158,7 +158,7 @@ sub test_grub() {
     _set_pci_data($data,'radeon',0);
     _set_pci_data($data,'tg3',1);
 
-    Ravada::HostDevice::Config::configure_grub($data, $file);
+    $config->configure_grub($data, $file);
     _check_variable($file
         ,'GRUB_CMDLINE_LINUX_DEFAULT',
         '"intel_iommu=on pci-stub.ids=14e4:165a quiet splash tg3.blacklist=1"'
@@ -170,7 +170,7 @@ sub test_grub() {
         $data->{$pci}->{configure} = 0;
     }
 
-    Ravada::HostDevice::Config::configure_grub($data, $file);
+    $config->configure_grub($data, $file);
 
     _check_variable($file
         ,'GRUB_CMDLINE_LINUX_DEFAULT',
@@ -199,7 +199,7 @@ sub _create_blacklist_file() {
     return $file;
 }
 
-sub test_blacklist() {
+sub test_blacklist($config) {
     my $file=_create_blacklist_file();
 
     my $data = _pci_data();
@@ -207,9 +207,8 @@ sub test_blacklist() {
     _check_line($file
         ,'blacklist foo',1
         ,'blacklist radeon',0);
-
     for ( 1 .. 2 ) {
-        Ravada::HostDevice::Config::configure_blacklist($data,$file);
+        $config->configure_blacklist($data,$file);
 
         _check_line($file
             ,'blacklist foo',1
@@ -220,7 +219,7 @@ sub test_blacklist() {
 
     _set_pci_data($data,'radeon',0);
     _set_pci_data($data,'tg3',1);
-    Ravada::HostDevice::Config::configure_blacklist($data,$file);
+    $config->configure_blacklist($data,$file);
 
     _check_line($file
             ,'blacklist foo',1
@@ -233,7 +232,7 @@ sub test_blacklist() {
         $data->{$pci}->{configure} = 0;
     }
 
-    Ravada::HostDevice::Config::configure_blacklist($data,$file);
+    $config->configure_blacklist($data,$file);
 
     _check_line($file
             ,'blacklist foo',1
@@ -242,13 +241,13 @@ sub test_blacklist() {
 
 }
 
-sub test_vfio() {
+sub test_vfio($config) {
     my $file=_create_file(new_domain_name().'vfio.conf');
 
     my $data = _pci_data();
     my $ids = '1002:95c5,1787:2252';
 
-    Ravada::HostDevice::Config::configure_vfio($data,$file);
+    $config->configure_vfio($data,$file);
     _check_line($file,"softdep radeon pre: vfio-pci",1);
 
     _check_line($file,"options vfio-pci ids=$ids disable_vga=1",1);
@@ -258,13 +257,13 @@ sub test_vfio() {
 
     $ids = '14e4:165a';
 
-    Ravada::HostDevice::Config::configure_vfio($data,$file);
+    $config->configure_vfio($data,$file);
     _check_line($file,"softdep radeon pre: vfio-pci",0);
     _check_line($file,"softdep tg3 pre: vfio-pci", 1);
     _check_line($file,"options vfio-pci ids=$ids disable_vga=1",1);
 
     _set_pci_data($data,'tg3',0);
-    Ravada::HostDevice::Config::configure_vfio($data,$file);
+    $config->configure_vfio($data,$file);
     _check_line($file,"softdep tg3 pre: vfio-pci", 0);
 }
 
@@ -281,13 +280,13 @@ sub _copy_file($file) {
     return $new;
 }
 
-sub test_modules() {
+sub test_modules($config) {
     my $file = _copy_file("/etc/modules");
     my $data = _pci_data();
 
     my $ids = '1002:95c5,1787:2252';
 
-    Ravada::HostDevice::Config::configure_modules($data,$file);
+    $config->configure_modules($data,$file);
     _check_line($file,"vfio vfio_iommu_type1 vfio_pci ids=$ids",1);
 
     _set_pci_data($data,'radeon',0);
@@ -295,57 +294,35 @@ sub test_modules() {
 
     $ids = '14e4:165a';
 
-    Ravada::HostDevice::Config::configure_modules($data,$file);
+    $config->configure_modules($data,$file);
     _check_line($file,"vfio vfio_iommu_type1 vfio_pci ids=$ids",1);
     _check_line_begins_with($file,"vfio vfio_iommu_type1 vfio_pci",1);
 
     _set_pci_data($data,'tg3',0);
 
-    Ravada::HostDevice::Config::configure_modules($data,$file);
+    $config->configure_modules($data,$file);
     _check_line($file,"vfio vfio_iommu_type1 vfio_pci ids=$ids",0);
     _check_line_begins_with($file,"vfio vfio_iommu_type1 vfio_pci",0);
 
 }
 
-sub _old_test_vfio_ids() {
-    my $file = _create_file(new_domain_name().'vfio.conf');
-
-    my $data = _pci_data();
-
-    my $ids = '1002:95c5,1787:2252';
-
-    _check_line_begins_with($file,"options vfio-pci ",0);
-
-    Ravada::HostDevice::Config::configure_vfio_ids($data,$file);
-    _check_line($file,"options vfio-pci ids=$ids disable_vga=1",1);
-
-    _set_pci_data($data,'radeon',0);
-    _set_pci_data($data,'tg3',1);
-
-    $ids = '14e4:165a';
-
-    Ravada::HostDevice::Config::configure_vfio_ids($data,$file);
-    _check_line($file,"options vfio-pci ids=$ids disable_vga=1",1);
-
-}
-
-sub test_msrs() {
+sub test_msrs($config) {
 
     my $file = _create_file('kvm.conf');
 
     my $data = _pci_data();
 
-    Ravada::HostDevice::Config::configure_msrs($data, $file);
+    $config->configure_msrs($data, $file);
     _check_line($file,"options kvm ignore_msrs=1",1);
 
     $data = {};
 
-    Ravada::HostDevice::Config::configure_msrs($data, $file);
+    $config->configure_msrs($data, $file);
     _check_line($file,"options kvm ignore_msrs=1",0);
 
 }
 
-sub test_initramfs() {
+sub test_initramfs($config) {
 
     my $file = _copy_file('/etc/initramfs-tools/modules');
 
@@ -353,20 +330,23 @@ sub test_initramfs() {
 
     my $ids = '1002:95c5,1787:2252';
 
-    Ravada::HostDevice::Config::configure_initramfs($data, $file);
+    $config->configure_initramfs($data, $file);
     _check_line($file,"vfio vfio_iommu_type1 vfio_virqfd vfio_pci ids=$ids",1);
 }
 
-sub test_configs() {
-    test_grub();
-    test_blacklist();
-    test_vfio();
+sub test_configs($vm) {
 
-    test_modules();
+    my $config = Ravada::HostDevice::Config->new(vm => $vm);
 
-    test_msrs();
+    test_grub($config);
+    test_blacklist($config);
+    test_vfio($config);
 
-    test_initramfs();
+    test_modules($config);
+
+    test_msrs($config);
+
+    test_initramfs($config);
 }
 
 sub _current_default_grub {
@@ -379,9 +359,10 @@ sub _current_default_grub {
             my ($splash) = $line =~ /(splash)/;
             $quiet = " $quiet" if $quiet;
             $splash = " $splash" if $splash;
-            return ($quiet, $splash);
+            return (($quiet or ''), ($splash or ''));
         }
     }
+    return ('','');
 }
 
 sub test_example_ati_tg3($vm) {
@@ -397,8 +378,13 @@ sub test_example_ati_tg3($vm) {
     $hd->_data( 'list_filter' => '(Broad|VGA.*Radeon)');
 
     my $dst = "/var/tmp/".new_domain_name();
-    Ravada::HostDevice::Config::configure($vm,'t/etc/lspci_ati_tg3.txt'
-    ,$dst);
+
+    my $config = Ravada::HostDevice::Config->new( vm => $vm
+        , dst => $dst
+    );
+    ok($config);
+
+    $config->configure('t/etc/lspci_ati_tg3.txt');
     my $file = "$dst/etc/default/grub";
     ok( -e $file)  or die "Missing $file";
     my $ids = "1002:95c5,14e4:165a,1787:2252";
@@ -423,7 +409,9 @@ sub test_example_ati_tg3($vm) {
 
     _check_line("$dst/etc/initramfs-tools/modules","vfio vfio_iommu_type1 vfio_virqfd vfio_pci ids=$ids",1);
 
+    $hd->remove();
 
+    warn Dumper($config->{log});
 }
 
 sub _clean_files() {
@@ -450,10 +438,9 @@ for my $vm_name ( 'KVM' ) {
         skip $msg,10    if !$vm;
 
         test_example_ati_tg3($vm);
+        test_configs($vm);
     }
 }
-
-test_configs();
 
 _clean_files();
 

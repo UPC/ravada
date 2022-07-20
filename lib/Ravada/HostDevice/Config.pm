@@ -3,15 +3,16 @@ package Ravada::HostDevice::Config;
 use warnings;
 use strict;
 
-no warnings "experimental::signatures";
-use feature qw(signatures);
-
 use Carp qw(confess croak);
 use Data::Dumper qw(Dumper);
 use File::Copy qw(copy);
 use IPC::Run3 qw(run3);
 use File::Path qw(make_path);
+use Moose;
 use Text::Diff;
+
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 my $FILE_GRUB="/etc/default/grub";
 my $FILE_BLACKLIST="/etc/modprobe.d/blacklist-rvd.conf";
@@ -20,7 +21,20 @@ my $FILE_MODULES = "/etc/modules";
 my $FILE_KVM ="/etc/modprobe.d/kvm.conf";
 my $FILE_INITRAMFS = "/etc/initramfs-tools/modules";
 
-sub configure_grub($devices, $file, $dst="/") {
+has 'dst' => (
+    is => 'ro'
+    ,isa => 'Str'
+    ,required => 0
+    ,default => sub { return '/' }
+);
+
+has 'vm' => (
+    is => 'ro'
+    ,does => 'Ravada::VM'
+    ,required => 1
+);
+
+sub configure_grub($self, $devices, $file=$FILE_GRUB) {
 
     my $file_out = _file_out($file);
 
@@ -35,9 +49,9 @@ sub configure_grub($devices, $file, $dst="/") {
 
             my %fields = map { $_ => 1 } split /\s+/,$grub_value;
 
-            _grub_blacklist(\%fields, $devices);
-            _grub_iommu(\%fields, $devices);
-            _grub_pci_stub(\%fields, $devices);
+            $self->_grub_blacklist(\%fields, $devices);
+            $self->_grub_iommu(\%fields, $devices);
+            $self->_grub_pci_stub(\%fields, $devices);
 
             my $grub_value_new =join(" ",sort keys %fields);
 
@@ -49,10 +63,10 @@ sub configure_grub($devices, $file, $dst="/") {
     close $in;
     close $out;
 
-    _update_file($file, $file_out, $dst);
+    $self->_update_file($file, $file_out);
 }
 
-sub configure_blacklist($devices,$file, $dst="/") {
+sub configure_blacklist($self, $devices,$file, $dst="/") {
 
     my $file_out = _file_out($file);
 
@@ -86,10 +100,10 @@ sub configure_blacklist($devices,$file, $dst="/") {
     close $in if $in;
     close $out;
 
-    _update_file($file, $file_out, $dst);
+    $self->_update_file($file, $file_out);
 }
 
-sub configure_vfio($devices, $file, $dst="/") {
+sub configure_vfio($self,$devices, $file) {
 
     my $file_out= _file_out($file);
 
@@ -140,11 +154,11 @@ sub configure_vfio($devices, $file, $dst="/") {
     close $in;
     close $out;
 
-    _update_file($file, $file_out, $dst);
+    $self->_update_file($file, $file_out);
 
 }
 
-sub _configure_vfio_ids($devices, $file=$FILE_VFIO, $dst="/") {
+sub _configure_vfio_ids($self, $devices, $file=$FILE_VFIO) {
     $file = $FILE_VFIO if !defined $file;
     my $file_out= _file_out($file);
 
@@ -173,12 +187,12 @@ sub _configure_vfio_ids($devices, $file=$FILE_VFIO, $dst="/") {
     close $in;
     close $out;
 
-    _update_file($file, $file_out, $dst);
+    $self->_update_file($file, $file_out);
 
 }
 
 
-sub configure_modules($devices, $file, $dst=undef) {
+sub configure_modules($self, $devices, $file) {
     my $ids = join(",",_configure_ids($devices));
 
     my $file_out= _file_out($file);
@@ -205,11 +219,11 @@ sub configure_modules($devices, $file, $dst=undef) {
     close $out;
     close $in;
 
-    _update_file($file, $file_out, $dst);
+    $self->_update_file($file, $file_out);
 
 }
 
-sub configure_msrs($devices,$file, $dst=undef) {
+sub configure_msrs($self, $devices,$file) {
     my $ids = join(",",_configure_ids($devices));
 
     my $file_out= _file_out($file);
@@ -241,11 +255,11 @@ sub configure_msrs($devices,$file, $dst=undef) {
     close $out;
     close $in;
 
-    _update_file($file, $file_out, $dst);
+    $self->_update_file($file, $file_out);
 
 }
 
-sub configure_initramfs($devices,$file, $dst="/") {
+sub configure_initramfs($self, $devices,$file) {
     my $ids = join(",",_configure_ids($devices));
 
     my $file_out= _file_out($file);
@@ -277,8 +291,7 @@ sub configure_initramfs($devices,$file, $dst="/") {
     close $out;
     close $in;
 
-    _update_file($file, $file_out, $dst);
-
+    $self->_update_file($file, $file_out);
 
 }
 
@@ -302,15 +315,22 @@ sub _is_module_configured($devices, $module) {
     return;
 }
 
-sub _update_file($file, $file_out, $dst='/') {
-    my $diff = 1;
+sub _file_contents($file) {
+    open my $in,"<",$file or die $!;
+    return join("",<$in>);
+}
+
+sub _update_file($self, $file, $file_out) {
+    my $diff;
     if (-e $file) {
-        $diff = diff $file,$file_out;
+        $diff = diff($file,$file_out, {STYLE => 'Unified'});
     }
-    if (!$diff) {
+    $self->{log}->{$file} = ($diff or _file_contents($file_out));
+    if (defined $diff && !$diff) {
         unlink $file_out;
         return;
     }else {
+        my $dst = $self->dst;
         $file = "$dst$file" if defined $dst && $dst ne "/";
         my ($path) = $file =~ m{(.*)/};
         make_path($path) or die "$! $path"
@@ -320,7 +340,9 @@ sub _update_file($file, $file_out, $dst='/') {
     }
 }
 
-sub _grub_blacklist($fields, $devices) {
+sub _grub_blacklist($self,$fields, $devices) {
+
+    confess if !ref($devices);
 
     for my $entry (keys %$fields) {
         delete $fields->{$entry} if $entry =~ m{[a-z][a-z0-9]+\.blacklist=1$};
@@ -336,11 +358,11 @@ sub _grub_blacklist($fields, $devices) {
     }
 }
 
-sub _grub_iommu($fields, $devices) {
+sub _grub_iommu($self, $fields, $devices) {
 
     my $configure = grep { $devices->{$_}->{configure} } keys %$devices;
 
-    my @iommu_fields = _grub_iommu_by_cpu();
+    my @iommu_fields = $self->_grub_iommu_by_cpu();
 
     for (@iommu_fields) {
         if ($configure) {
@@ -364,7 +386,7 @@ sub _cpu_vendor() {
     die "Error: unknown cpu vendor $vendor\n$out";
 }
 
-sub _grub_iommu_by_cpu() {
+sub _grub_iommu_by_cpu($self) {
     if (_cpu_vendor() eq 'intel') {
         return("intel_iommu=on");
     } elsif (_cpu_vendor() eq 'amd') {
@@ -390,7 +412,7 @@ sub _configure_ids($devices) {
     return @ids2;
 }
 
-sub _grub_pci_stub($fields, $devices) {
+sub _grub_pci_stub($self, $fields, $devices) {
     my $found;
     for my $field (keys %$fields) {
         $found = $field if $field =~ m/^pci-stub.ids=/;
@@ -446,7 +468,7 @@ sub _clean_dupes($devices) {
     }
 }
 
-sub _load_devices ($vm,$file=undef) {
+sub _load_devices ($self, $file=undef) {
     my $lspci;
     if (!defined $file) {
         $lspci = _run_lspci();
@@ -463,7 +485,7 @@ sub _load_devices ($vm,$file=undef) {
             next if !$pci_data;
             $found = $pci_data;
             $devices{$found}->{configure}=0;
-            for my $hd ( $vm->list_host_devices ) {
+            for my $hd ( $self->vm->list_host_devices ) {
                 my $filter = $hd->list_filter();
                 next if !defined $filter;
 
@@ -487,19 +509,20 @@ sub _load_devices ($vm,$file=undef) {
     return \%devices;
 }
 
-sub configure($vm, $file=undef, $dst='/') {
-    my $devices = _load_devices($vm, $file);
+sub configure($self, $file=undef) {
+    my $devices = $self->_load_devices($file);
 
-    if (! -e $dst ) {
-        make_path($dst);
+    if (! -e $self->dst ) {
+        make_path($self->dst);
     }
-    configure_grub($devices, $FILE_GRUB, $dst);
-    configure_blacklist($devices, $FILE_BLACKLIST, $dst);
-    configure_vfio($devices, $FILE_VFIO, $dst);
-    configure_modules($devices, $FILE_MODULES, $dst);
+    $self->configure_grub($devices, $FILE_GRUB);
+    $self->configure_blacklist($devices, $FILE_BLACKLIST);
 
-    configure_msrs($devices, $FILE_KVM, $dst);
-    configure_initramfs($devices, $FILE_INITRAMFS, $dst);
+    $self->configure_vfio($devices, $FILE_VFIO);
+    $self->configure_modules($devices, $FILE_MODULES);
+
+    $self->configure_msrs($devices, $FILE_KVM);
+    $self->configure_initramfs($devices, $FILE_INITRAMFS);
 }
 
 1;
