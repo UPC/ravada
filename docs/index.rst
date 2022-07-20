@@ -92,6 +92,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/Server_Hardware
    docs/Cluster_Hardware
    docs/CLI
+   docs/Automatic_daily_operations
    docs/sso_login
    docs/apparmor
 
