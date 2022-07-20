@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2022-07-19 11:09+0000\n"
+"PO-Revision-Date: 2022-07-22 15:16+0000\n"
 "Last-Translator: Dani Sanchez <dani@fib.upc.edu>\n"
 "Language-Team: Catalan <https://hosted.weblate.org/projects/ravada/"
 "translation/ca/>\n"
@@ -1962,7 +1962,7 @@ msgid "disabled"
 msgstr "desactivat"
 
 msgid "Legacy"
-msgstr "Llegat"
+msgstr "Antic"
 
 msgid "The Minimum Disk Size needed for this ISO is"
 msgstr "La mida mínima per una ISO és"
@@ -2092,3 +2092,114 @@ msgstr "Pot exposar ports de màquines virtuals."
 
 msgid "can manage users."
 msgstr "pot gestionar usuaris."
+
+msgid "dn:"
+msgstr "dn:"
+
+msgid "Frontend"
+msgstr "Aplicació frontal"
+
+msgid "fallback"
+msgstr "sistema alternatiu"
+
+msgid "Fallback"
+msgstr "Sistema alternatiu"
+
+msgid "match"
+msgstr "coincidència"
+
+msgid "check"
+msgstr "comprovació"
+
+msgid "Check"
+msgstr "Comprovació"
+
+msgid "off"
+msgstr "desactivat"
+
+msgid "on"
+msgstr "activat"
+
+msgid "nat"
+msgstr "nat"
+
+msgid "vram"
+msgstr "vram"
+
+msgid "swap"
+msgstr "intercanvi"
+
+msgid "Requires viewer password when implemented"
+msgstr "Requereix la contrasenya del visor si s'implementa"
+
+msgid "ram"
+msgstr "ram"
+
+msgid "sys"
+msgstr "sys"
+
+msgid "Set either"
+msgstr "Establir qualsevol"
+
+msgid "heads"
+msgstr "sortides"
+
+msgid "reopen"
+msgstr "tornar a obrir"
+
+msgid "CPUs"
+msgstr "CPUs"
+
+msgid "down"
+msgstr "aturada"
+
+msgid "RAM (Gb)"
+msgstr "RAM (Gb)"
+
+msgid "driver"
+msgstr "driver"
+
+msgid "Start after migration"
+msgstr "Començar després de la migració"
+
+msgid "Run Timeout"
+msgstr "Temps d'espera en execució"
+
+msgid "Shutdown Timeout"
+msgstr "Temps d'espera d'apagada"
+
+msgid "Rebase"
+msgstr "Canviar de base"
+
+msgid "Rebase all the clones to a new base"
+msgstr "Canviar de base tots el clons a una nova base"
+
+msgid "Rebase this machine to another virtual machine"
+msgstr "Canviar de base aquesta màquina a un altre màquina virtual"
+
+msgid "Yes, rebase"
+msgstr "Sí, aplicar nova base"
+
+msgid "System Disk: (GB)"
+msgstr "Disc de sistema: (GB)"
+
+msgid "This ISO is being downloaded. The virtual machine will be created after."
+msgstr "S'està baixant aquesta ISO. La màquina virtual es crearà després."
+
+msgid "Spinoff clone"
+msgstr "Escindir clon"
+
+msgid "Spinoff this clone from its base."
+msgstr "Escindir aquest clon de la seva base."
+
+msgid "Are you sure you want to spinoff from the base ?"
+msgstr "Estàs segur que vols escindir de la seva base?"
+
+msgid "BIOS"
+msgstr "BIOS"
+
+msgid "Reload"
+msgstr "Recarregar"
+
+msgid "UEFI"
+msgstr "UEFI"
