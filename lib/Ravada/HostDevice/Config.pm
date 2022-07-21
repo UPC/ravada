@@ -49,10 +49,9 @@ has 'file' => (
 
 sub configure_grub($self, $devices, $file=$FILE_GRUB) {
 
-    my $file_out = _file_out($file);
 
     open my $in,"<",$file       or die "$! $file";
-    open my $out,">",$file_out  or die "$! $file_out";
+    my $out = '';
     while (my $line = <$in>) {
         chomp $line;
 
@@ -68,25 +67,22 @@ sub configure_grub($self, $devices, $file=$FILE_GRUB) {
 
             my $grub_value_new =join(" ",sort keys %fields);
 
-            print $out "$var=\"$grub_value_new\"\n";
+            $out .= "$var=\"$grub_value_new\"\n";
         } else {
-            print $out "$line\n";
+            $out .= "$line\n";
         }
     }
     close $in;
-    close $out;
 
-    $self->_update_file($file, $file_out);
+    $self->_update_file($file, $out);
 }
 
 sub configure_blacklist($self, $devices,$file, $dst="/") {
 
-    my $file_out = _file_out($file);
-
     my %found;
 
     my $fh = open my $in,"<",$file;
-    open my $out,">",$file_out  or die "$! $file_out";
+    my $out = '';
 
     if ($fh) {
         while (my $line = <$in>) {
@@ -101,24 +97,21 @@ sub configure_blacklist($self, $devices,$file, $dst="/") {
                     }
                 }
             }
-            print $out "$line\n";
+            $out .= "$line\n";
         }
     }
 
     for my $driver ( _drivers_blacklist($devices) ) {
         next if $found{$driver};
-        print $out "blacklist $driver\n";
+        $out .= "blacklist $driver\n";
     }
 
     close $in if $in;
-    close $out;
 
-    $self->_update_file($file, $file_out);
+    $self->_update_file($file, $out);
 }
 
 sub configure_vfio($self,$devices, $file) {
-
-    my $file_out= _file_out($file);
 
     my $ids = join(",",_configure_ids($devices));
 
@@ -126,7 +119,7 @@ sub configure_vfio($self,$devices, $file) {
     my $found_options;
 
     my $fh = open my $in,"<",$file;
-    open my $out,">",$file_out  or die "$! $file_out";
+    my $out = '';
 
     if ($fh ) {
         while (my $line = <$in>) {
@@ -146,28 +139,27 @@ sub configure_vfio($self,$devices, $file) {
             if ($line =~ /^\s*options vfio-pci ids=(.*?) (.*)/) {
                 $found_options++;
                 if ($ids && $ids ne $1) {
-                    print $out "options vfio-pci ids=$ids $2\n";
+                    $out .= "options vfio-pci ids=$ids $2\n";
                 } else {
                     next;
                 }
             }
 
-            print $out "$line\n";
+            $out .= "$line\n";
         }
     }
 
     for my $driver ( _drivers_blacklist($devices) ) {
         next if $found{$driver};
-        print $out "softdep $driver pre: vfio-pci\n";
+        $out .= "softdep $driver pre: vfio-pci\n";
     }
     if (!$found_options && $ids) {
-        print $out "options vfio-pci ids=$ids disable_vga=1\n";
+        $out .= "options vfio-pci ids=$ids disable_vga=1\n";
     }
 
     close $in;
-    close $out;
 
-    $self->_update_file($file, $file_out);
+    $self->_update_file($file, $out);
 
 }
 
@@ -208,43 +200,38 @@ sub _configure_vfio_ids($self, $devices, $file=$FILE_VFIO) {
 sub configure_modules($self, $devices, $file) {
     my $ids = join(",",_configure_ids($devices));
 
-    my $file_out= _file_out($file);
-
     my $found;
 
     open my $in,"<",$file       or die "$! $file";
-    open my $out,">",$file_out  or die "$! $file_out";
+    my $out = '';
     while (my $line = <$in>) {
         chomp $line;
         if ($line =~ /^\s*vfio vfio_iommu_type1 vfio_pci ids=(.*)/) {
             $found = 1;
             if ($ids && $ids ne $1) {
-                print $out "vfio vfio_iommu_type1 vfio_pci ids=$ids\n";
+                $out .= "vfio vfio_iommu_type1 vfio_pci ids=$ids\n";
             }
         } else {
-            print $out "$line\n";
+            $out .= "$line\n";
         }
     }
     if (!$found && $ids) {
-        print $out "vfio vfio_iommu_type1 vfio_pci ids=$ids\n";
+        $out .= "vfio vfio_iommu_type1 vfio_pci ids=$ids\n";
     }
 
-    close $out;
     close $in;
 
-    $self->_update_file($file, $file_out);
+    $self->_update_file($file, $out);
 
 }
 
 sub configure_msrs($self, $devices,$file) {
     my $ids = join(",",_configure_ids($devices));
 
-    my $file_out= _file_out($file);
-
     my $found;
 
     my $fh = open my $in,"<",$file;
-    open my $out,">",$file_out  or die "$! $file_out";
+    my $out = '';
     if ($fh) {
         while (my $line = <$in>) {
             chomp $line;
@@ -259,28 +246,25 @@ sub configure_msrs($self, $devices,$file) {
                 }
                 next;
             }
-            print $out "$line\n";
+            $out .= "$line\n";
         }
     }
     if (!$found && $ids) {
-        print $out  "options kvm ignore_msrs=1\n";
+        $out .= "options kvm ignore_msrs=1\n";
     }
-    close $out;
     close $in;
 
-    $self->_update_file($file, $file_out);
+    $self->_update_file($file, $out);
 
 }
 
 sub configure_initramfs($self, $devices,$file) {
     my $ids = join(",",_configure_ids($devices));
 
-    my $file_out= _file_out($file);
-
     my $found;
 
     my $fh = open my $in,"<",$file;
-    open my $out,">",$file_out  or die "$! $file_out";
+    my $out = '';
     if ($fh ) {
         while (my $line = <$in>) {
             chomp $line;
@@ -294,17 +278,16 @@ sub configure_initramfs($self, $devices,$file) {
                 }
                 next;
             }
-            print $out "$line\n";
+            $out .= "$line\n";
         }
     }
     if (!$found && $ids) {
-        print $out "vfio vfio_iommu_type1 vfio_virqfd vfio_pci"
+        $out .= "vfio vfio_iommu_type1 vfio_virqfd vfio_pci"
         ." ids=$ids\n";
     }
-    close $out;
     close $in;
 
-    $self->_update_file($file, $file_out);
+    $self->_update_file($file, $out);
 
 }
 
@@ -333,27 +316,34 @@ sub _file_contents($file) {
     return join("",<$in>);
 }
 
-sub _update_file($self, $file, $file_out) {
+sub _update_file($self, $file, $out) {
+    confess $out if ref($out) || $out =~ m{^/};
     my $diff;
     if (-e $file) {
-        $diff = diff($file,$file_out, {STYLE => 'Unified'});
+        $diff = diff($file,\$out, {STYLE => 'Unified'});
     } else {
-        $diff = _file_contents($file_out);
+        $diff = $out;
     }
 
     $self->{log}->{$file} = $diff;
 
     if (defined $diff && !$diff) {
-        unlink $file_out;
         return;
     }else {
         my $dst = $self->dst;
-        $file = "$dst$file" if defined $dst && $dst ne "/";
+        if ( defined $dst && $dst ne "/" ) {
+            $file = "$dst$file";
+        } else {
+            copy($file, _file_backup($file));
+        }
         my ($path) = $file =~ m{(.*)/};
         make_path($path) or die "$! $path"
         if ! -e $path;
 
-        copy($file_out, $file) or die "$file_out -> $file";
+        open my $fh_out,">",$file or die "$! $file";
+        print $fh_out $out;
+        close $fh_out;
+
     }
 }
 
@@ -452,16 +442,16 @@ sub now {
     return "$now[5]-$now[4]-$now[3].$now[2]:$now[1]:$now[0]";
 }
 
-sub _file_out($path) {
+sub _file_backup($path) {
     confess "Undefined path" if !defined $path;
 
     my ($name) = $path =~ m{.*/(.*)};
     $name = $path if !defined $name;
 
-    my $file = "/tmp/$name.".now();
+    my $file = "$name.".now();
     my $n=2;
     while ( -e $file ) {
-        $file = "/tmp/$name.$n.".now();
+        $file = "$name.".now().".$n";
         $n++;
     }
     return $file;
