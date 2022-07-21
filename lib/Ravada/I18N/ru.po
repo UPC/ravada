@@ -2,7 +2,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2022-07-12 12:15+0000\n"
+"PO-Revision-Date: 2022-07-22 15:16+0000\n"
 "Last-Translator: Elena Mishina <lepata@basealt.ru>\n"
 "Language-Team: Russian <https://hosted.weblate.org/projects/ravada/"
 "translation/ru/>\n"
@@ -2049,3 +2049,34 @@ msgstr "Может выключать собственные виртуальн�
 
 msgid "Can manage groups."
 msgstr "Может управлять группами."
+
+msgid "Purge"
+msgstr "Очистить"
+
+msgid "Purge disk volumes"
+msgstr "Очистить разделы диска"
+
+msgid "Error: you want to have"
+msgstr "Ошибка: вы хотите запустить"
+
+msgid "but there are only"
+msgstr "но только"
+
+msgid "clones defined."
+msgstr "клона определено."
+
+msgid "Only remote client can access this port if restricted"
+msgstr ""
+"Если отмечено, только удаленный клиент может получить доступ к этому порту"
+
+msgid "Only remote client can access this port"
+msgstr "Только удаленный клиент может получить доступ к этому порту"
+
+msgid "Any remote client can access this port"
+msgstr "Любой удаленный клиент может получить доступ к этому порту"
+
+msgid "Refresh ports"
+msgstr "Обновить порты"
+
+msgid "Client headers"
+msgstr "Заголовки клиента"
