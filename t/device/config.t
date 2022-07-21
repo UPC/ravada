@@ -6,6 +6,7 @@ use Data::Dumper;
 use File::Copy qw(copy);
 use Hash::Util qw(lock_hash);
 use IPC::Run3;
+use Mojo::JSON qw(decode_json);
 use Ravada::HostDevice::Config;
 use Ravada::HostDevice::Templates;
 use Test::More;
@@ -413,6 +414,52 @@ sub test_example_ati_tg3($vm) {
 
 }
 
+sub test_request_empty($vm) {
+    my $req = Ravada::Request->configure_boot_hostdevices(
+        id_vm => $vm->id
+        ,uid => user_admin->id
+    );
+    wait_request();
+    ok($req->status, '');
+    my $out;
+    eval { $out = decode_json($req->output) };
+    is($@,'');
+
+    for my $file (keys %$out) {
+        is($out->{$file},'');
+    }
+}
+
+sub test_request($vm) {
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->id);
+    my ($pci) = grep { $_->{name} eq 'PCI' } @$templates;
+    ok($pci,"Expecting PCI template in ".$vm->name) or return;
+
+    my $id = $vm->add_host_device(template => $pci->{name});
+
+    my @list_hostdev = $vm->list_host_devices();
+    my ($hd) = $list_hostdev[-1];
+    $hd->_data( 'list_filter' => '(Broad|VGA.*Radeon)');
+
+    my $req = Ravada::Request->configure_boot_hostdevices(
+        id_vm => $vm->id
+        ,uid => user_admin->id
+        ,test => 1
+        ,file => 't/etc/lspci_ati_tg3.txt'
+    );
+
+    wait_request();
+    ok($req->status, '');
+    my $out;
+    eval { $out = decode_json($req->output) };
+    is($@,'');
+
+    for my $file (keys %$out) {
+        like($out->{$file},qr'.');
+    }
+}
+
+
 sub _clean_files() {
     for my $file (@FILES) {
         unlink $file or die "$! $file"
@@ -438,6 +485,8 @@ for my $vm_name ( 'KVM' ) {
 
         test_example_ati_tg3($vm);
         test_configs($vm);
+        test_request_empty($vm);
+        test_request($vm);
     }
 }
 

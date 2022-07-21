@@ -1,6 +1,7 @@
 
-<div>
+<div class="row">
 
+    <div class="col">
 <select ng-model="new_template"
     ng-options="template.name for template in templates | orderBy:'name'">
 </select>
@@ -8,6 +9,13 @@
 <button ng-disabled="!new_template" class="btn btn-primary"
     ng-click="add_host_device()"
 ><%=l 'Add host device' %></button>
+
+    </div>
+    <div>
+	<button ng-disabled="host_devices.length==0"
+	    ng-click="configure_hostdevices()"
+	>Configure Boot</button>
+    </div>
 
 </div>
 

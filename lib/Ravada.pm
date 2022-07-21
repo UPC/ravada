@@ -4183,6 +4183,19 @@ sub _cmd_remove_host_device($self, $request) {
     }
 }
 
+sub _cmd_configure_boot_hostdevices($self, $request) {
+    my $id_vm = $request->args('id_vm');
+    my $vm = Ravada::VM->open($id_vm);
+    my $config = Ravada::HostDevice::Config->new(
+        vm => $vm
+        ,dst => "/tmp/$$"
+        ,test => $request->defined_arg('test')
+        ,file => ($request->defined_arg('file') or '')
+    );
+    $config->configure();
+    $request->output(encode_json($config->{log}));
+}
+
 sub _can_fork {
     my $self = shift;
     my $req = shift or confess "Missing request";
@@ -5777,6 +5790,7 @@ sub _req_method {
     ,manage_pools => \&_cmd_manage_pools
     ,list_host_devices => \&_cmd_list_host_devices
     ,remove_host_device => \&_cmd_remove_host_device
+    ,configure_boot_hostdevices => \&_cmd_configure_boot_hostdevices
 
     ,discover => \&_cmd_discover
     ,import_domain => \&_cmd_import

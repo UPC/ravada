@@ -34,6 +34,19 @@ has 'vm' => (
     ,required => 1
 );
 
+has 'test' => (
+    is => 'ro'
+    ,isa => 'Bool'
+    ,default => 1
+);
+
+has 'file' => (
+    is => 'ro'
+    ,isa => 'Str'
+    ,required => 0
+);
+
+
 sub configure_grub($self, $devices, $file=$FILE_GRUB) {
 
     my $file_out = _file_out($file);
@@ -132,7 +145,7 @@ sub configure_vfio($self,$devices, $file) {
             }
             if ($line =~ /^\s*options vfio-pci ids=(.*?) (.*)/) {
                 $found_options++;
-                if ($ids ne $1) {
+                if ($ids && $ids ne $1) {
                     print $out "options vfio-pci ids=$ids $2\n";
                 } else {
                     next;
@@ -147,7 +160,7 @@ sub configure_vfio($self,$devices, $file) {
         next if $found{$driver};
         print $out "softdep $driver pre: vfio-pci\n";
     }
-    if (!$found_options) {
+    if (!$found_options && $ids) {
         print $out "options vfio-pci ids=$ids disable_vga=1\n";
     }
 
@@ -249,7 +262,7 @@ sub configure_msrs($self, $devices,$file) {
             print $out "$line\n";
         }
     }
-    if (!$found) {
+    if (!$found && $ids) {
         print $out  "options kvm ignore_msrs=1\n";
     }
     close $out;
@@ -284,7 +297,7 @@ sub configure_initramfs($self, $devices,$file) {
             print $out "$line\n";
         }
     }
-    if (!$found) {
+    if (!$found && $ids) {
         print $out "vfio vfio_iommu_type1 vfio_virqfd vfio_pci"
         ." ids=$ids\n";
     }
@@ -324,8 +337,12 @@ sub _update_file($self, $file, $file_out) {
     my $diff;
     if (-e $file) {
         $diff = diff($file,$file_out, {STYLE => 'Unified'});
+    } else {
+        $diff = _file_contents($file_out);
     }
-    $self->{log}->{$file} = ($diff or _file_contents($file_out));
+
+    $self->{log}->{$file} = $diff;
+
     if (defined $diff && !$diff) {
         unlink $file_out;
         return;
@@ -470,7 +487,7 @@ sub _clean_dupes($devices) {
 
 sub _load_devices ($self, $file=undef) {
     my $lspci;
-    if (!defined $file) {
+    if (!defined $file || !length($file)) {
         $lspci = _run_lspci();
     } else {
         open my $in,"<",$file or die "$! $file";
@@ -509,7 +526,7 @@ sub _load_devices ($self, $file=undef) {
     return \%devices;
 }
 
-sub configure($self, $file=undef) {
+sub configure($self, $file=$self->file) {
     my $devices = $self->_load_devices($file);
 
     if (! -e $self->dst ) {

@@ -1184,7 +1184,19 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.toggle_show_hdev = function(id) {
             $scope.show_hdev[id] = ! $scope.show_hdev[id];
         };
+
+        $scope.configure_hostdevices = function() {
+            $http.post('/request/configure_hostdevices/'
+                ,JSON.stringify({ 'id_vm': id_node })
+            ).then(function(response) {
+                console.log(response.data);
+            });
+
+        };
+
         $scope.show_hdev = { 1: true};
+
+
 
     };
 
