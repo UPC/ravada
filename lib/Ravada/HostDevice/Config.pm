@@ -448,10 +448,10 @@ sub _file_backup($path) {
     my ($name) = $path =~ m{.*/(.*)};
     $name = $path if !defined $name;
 
-    my $file = "$name.".now();
+    my $file = "$path.".now();
     my $n=2;
     while ( -e $file ) {
-        $file = "$name.".now().".$n";
+        $file = "$path.".now().".$n";
         $n++;
     }
     return $file;
