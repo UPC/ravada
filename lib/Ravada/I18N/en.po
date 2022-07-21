@@ -1830,8 +1830,12 @@ msgstr "Password and their confirmation do not match!"
 msgid "Today Schedule"
 msgstr "Today Schedule"
 
-msgid "This server has reservations for today. Machines from users out of the booking list will be shutdown."
-msgstr "This server has reservations for today. Machines from users out of the booking list will be shutdown."
+msgid ""
+"This server has reservations for today. Machines from users out of\n"
+"    the booking list will be shutdown."
+msgstr ""
+"This server has reservations for today. Machines from users out of\n"
+"    the booking list will be shutdown."
 
 msgid "allowed"
 msgstr "allowed"
@@ -2048,3 +2052,63 @@ msgstr "Client headers"
 
 msgid "locked"
 msgstr "locked"
+
+msgid "Poweroff"
+msgstr "Poweroff"
+
+msgid "Requests"
+msgstr "Requests"
+
+msgid "This virtual machine has no group restrictions."
+msgstr "This virtual machine has no group restrictions."
+
+msgid "There are no LDAP groups defined."
+msgstr "There are no LDAP groups defined."
+
+msgid "Only users from these groups will be allowed to execute this machine"
+msgstr "Only users from these groups will be allowed to execute this machine"
+
+msgid "Event properties"
+msgstr "Event properties"
+
+msgid "This field is required"
+msgstr "This field is required"
+
+msgid "Title"
+msgstr "Title"
+
+msgid "Color"
+msgstr "Color"
+
+msgid "Repeat"
+msgstr "Repeat"
+
+msgid "Weekly"
+msgstr "Weekly"
+
+msgid "Until"
+msgstr "Until"
+
+msgid "Groups with permissions"
+msgstr "Groups with permissions"
+
+msgid "Delete"
+msgstr "Delete"
+
+msgid "Save changes"
+msgstr "Save changes"
+
+msgid "This booking overlaps already scheduled reservations"
+msgstr "This booking overlaps already scheduled reservations"
+
+msgid "options"
+msgstr "options"
+
+msgid "bases"
+msgstr "bases"
+
+msgid "remove"
+msgstr "remove"
+
+msgid "can change the settings of any virtual machine cloned from one base owned by the user."
+msgstr "can change the settings of any virtual machine cloned from one base owned by the user."

@@ -1,6 +1,6 @@
 <div>
 
-    <input type="text" ng-model="$ctrl.group_selected" placeholder="<%=l 'Search group' %>"
+    <input type="text" ng-model="$ctrl.group_selected" placeholder="Search group"
            ng-if="$ctrl.editable"
            ng-required="!$ctrl.ngModel.$valid"
            uib-typeahead="name for name in $ctrl.getGroups($viewValue)"
@@ -11,7 +11,7 @@
            class="form-control">
     <i ng-show="$ctrl.loadingGroups" class="fas fa-refresh"></i>
     <div ng-show="$ctrl.noResults">
-        <i class="fas fa-times"></i> <%=l 'No Results Found' %>
+        <i class="fas fa-times"></i> No Results Found
     </div>
 
     <div class="container-fluid">
