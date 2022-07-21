@@ -3,6 +3,8 @@
 **Implemented enhancements:**
 
 - Preference setting for balance algorithm - Ravada Cluster [\#1782]
+- Catalan Lines added [\#1800]
+- Spanish and Catalan translations
 
 **Refactors**
 
