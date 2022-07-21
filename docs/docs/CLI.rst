@@ -72,3 +72,9 @@ user to belong to:
     - teachers :
     Add user to LDAP group: teachers
 
+Daily Hibernating and Stopping
+------------------------------
+
+With the CLI you can set automatic hibernation and shutdown of idle
+virtual machines. Check the documentation about
+`Automatic Daily Operations <https://ravada.readthedocs.io/en/latest/docs/Automatic_daily_operations.html>`_.
