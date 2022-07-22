@@ -2182,6 +2182,10 @@ sub _headers($c) {
     return \%client
 }
 
+get '/booking/(#template).html' => sub($c) {
+    return $c->render( template => '/booking/'.$c->stash('template'));
+};
+
 ###################################################
 #
 # session settings
