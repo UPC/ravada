@@ -20,6 +20,6 @@
 
 
 <a ng-show="host_devices" type="button" class="btn btn-outline-secondary"
-    href="/node/settings/{{showmachine.id_vm}}.html"><b>Manage Host Devices</b></a>
+    href="/node/settings/{{showmachine.id_vm}}.html?tab=hostdev"><b>Manage Host Devices</b></a>
 
 %= include "/main/pending_request"
