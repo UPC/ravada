@@ -1159,6 +1159,8 @@ any '/admin/user/(#id).(:type)' => sub {
     my $c = shift;
     return access_denied($c) unless $USER->can_manage_users() && $USER->can_grant();
 
+    my $password = $c->param('password');
+
     _add_admin_libs($c);
     my $id = $c->stash('id');
     my $user;
@@ -1184,6 +1186,15 @@ any '/admin/user/(#id).(:type)' => sub {
                 , external_auth => $origin);
             $user = Ravada::Auth::SQL->new(name => $user->name);
         }
+    }
+
+    if ($password) {
+        #TODO: set an error status
+        return $c->render(text => "You can not change the password for "
+            ."an external user. ".$user->name." is ".$user->external_auth
+        ) if $user->is_external;
+        my $force_change= $c->param('force_change_password');
+        $user->change_password($password, $force_change);
     }
 
     $c->stash(user => $user);
