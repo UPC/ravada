@@ -5,6 +5,8 @@ use strict;
 
 our $VERSION = '1.7.0';
 
+use utf8;
+
 use Carp qw(carp croak cluck);
 use Data::Dumper;
 use DBIx::Connector;
@@ -3861,7 +3863,8 @@ sub _do_execute_command {
             if (length($subject) > 40 ) {
                 $message = $subject;
                 $subject = substr($subject,0,40);
-                $user->send_message($subject, $message);
+                $user->send_message(Encode::decode_utf8($subject)
+                    , Encode::decode_utf8($message));
             }
         }
     }
@@ -4362,7 +4365,7 @@ sub _cmd_start {
             .$domain->name."</a>"
             ." started"
         ;
-    $request->status('done', $msg);
+    $request->status('done', Encode::decode_utf8($msg));
 
 }
 

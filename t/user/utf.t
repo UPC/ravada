@@ -37,13 +37,14 @@ sub test_user_cyrillic($vm) {
 
     ok(utf8::valid($clonef->{name}));
 
-    _test_messages_utf8($user);
+    _test_utf8($user);
 
     my $clone = Ravada::Domain->open($clonef->{id});
     Ravada::Request->start_domain(
             uid => $user->id
             ,id_domain => $clone->id
     );
+    _test_requests();
     wait_request();
 
     Ravada::Request->shutdown_domain(
@@ -51,6 +52,7 @@ sub test_user_cyrillic($vm) {
             ,id_domain => $clone->id
             ,timeout => 3
     );
+    _test_requests();
     wait_request();
     _test_messages_utf8($user);
 
@@ -58,8 +60,23 @@ sub test_user_cyrillic($vm) {
     wait_request();
     _test_messages_utf8($user);
 
-
     remove_domain($base);
+}
+
+sub _test_utf8($user) {
+    _test_messages_utf8($user);
+    _test_requests();
+}
+
+sub _test_requests() {
+    my $reqs = rvd_front->list_requests();
+    warn scalar(@$reqs);
+    for my $req (@$reqs) {
+        ok(utf8::valid($req->{name}))    if $req->{name};
+        ok(utf8::valid($req->{message})) if $req->{message};
+        diag($req->{name}) if $req->{name};
+        diag($req->{message}) if $req->{message};
+    }
 }
 
 sub _test_messages_utf8($user) {
@@ -67,7 +84,7 @@ sub _test_messages_utf8($user) {
         ok(utf8::valid($msg->{subject}));
         ok(utf8::valid($msg->{message})) if $msg->{message};
 
-        warn Dumper([$msg->{subject}, $msg->{message}]);
+        #        warn Dumper([$msg->{subject}, $msg->{message}]);
     }
 }
 

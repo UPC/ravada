@@ -67,7 +67,8 @@ sub _list_alerts($rvd, $args) {
     my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
 
     my $ret_old = $args->{ret};
-    my @ret = map { $_->{time} = time; $_ } $user->unshown_messages();
+    my @ret = map { $_->{time} = time;
+        $_ } $user->unshown_messages();
 
     my @ret2;
     for my $alert (@$ret_old) {
@@ -238,6 +239,7 @@ sub _get_machine_info($rvd, $args) {
     }
     unlock_hash(%$info);
     $info->{_date_changed} = $domain->_data('date_changed');
+    $info->{name} = $info->{name};
     lock_hash(%$info);
     return $info;
 }

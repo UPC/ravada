@@ -9,6 +9,8 @@ Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
 
 =cut
 
+use utf8;
+
 use Carp qw(carp confess croak);
 use Data::Dumper;
 use File::Copy qw(copy move);
@@ -3092,8 +3094,13 @@ sub _around_reboot_now {
 sub _around_name($orig,$self) {
     return $self->{_name} if $self->{_name};
 
-    $self->{_name} = $self->{_data}->{name} if $self->{_data};
-    $self->{_name} = $self->$orig()         if !$self->{_name};
+    if  ($self->{_data} ) {
+        $self->{_name} = $self->{_data}->{name};
+    }
+    if ( !$self->{_name}) {
+        $self->{_name} = $self->$orig();
+    }
+    utf8::decode($self->{_name});
 
     return $self->{_name};
 }
@@ -5026,7 +5033,7 @@ sub _pre_clone($self,%args) {
     delete $args{remote_ip};
 
     confess "ERROR: Missing clone name "    if !$name;
-    confess "ERROR: Invalid name '$name'"   if $name !~ /^[a-z0-9_-]+$/i;
+    #    confess "ERROR: Invalid name '$name'"   if $name !~ /^[a-z0-9_-]+$/i;
 
     confess "ERROR: Missing user owner of new domain"   if !$user;
 

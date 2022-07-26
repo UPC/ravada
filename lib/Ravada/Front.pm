@@ -153,7 +153,7 @@ sub list_machines_user($self, $user, $access_data={}) {
             ,id_base => $id
         );
         next unless $clone || $user->is_admin || ($is_public && $user->allowed_access($id));
-        my %base = ( id => $id, name => $name
+        my %base = ( id => $id, name => Encode::decode_utf8($name)
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
             , description => ($description or '')
@@ -321,6 +321,7 @@ sub list_domains($self, %args) {
             $self->_remove_domain_db($row->{id});
             next;
         }
+        $row->{name}=Encode::decode_utf8($row->{name});
         $row->{has_clones} = 0 if !exists $row->{has_clones};
         $row->{is_locked} = 0 if !exists $row->{is_locked};
         $row->{is_active} = 0;
@@ -983,7 +984,7 @@ sub search_domain {
 
 =head2 list_requests
 
-Returns a list of ruquests : ( id , domain_name, status, error )
+Returns a list of requests : ( id , domain_name, status, error )
 
 =cut
 
@@ -1061,8 +1062,8 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
         push @reqs,{ id => $id_request,  command => $command, date_changed => $date_changed, status => $status, name => $args->{name}
             ,domain => $domain
             ,date => $date_changed
-            ,message => $message
-            ,error => $error
+            ,message => Encode::decode_utf8($message)
+            ,error => Encode::decode_utf8($error)
         };
     }
     $sth->finish;
@@ -1171,7 +1172,7 @@ sub list_bases_anonymous {
     my @bases;
     while ( $sth->fetch) {
         next if !$net->allowed_anonymous($id);
-        my %base = ( id => $id, name => $name
+        my %base = ( id => $id, name => Encode::decode_utf8($name)
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
             , is_active => 0

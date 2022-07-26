@@ -13,13 +13,13 @@
              <div class="card-header">
 %              if ($domain->is_base) {
                  <h2><%=l 'Virtual Machine' %>
-                     <b><%= $domain->name %></b>
+                     <b><%= Encode::decode_utf8($domain->name) %></b>
                      <%=l 'Settings' %>
                  </h2>
 %               } else {
                  <h2><%=l 'Virtual Machine' %>
                      <a ng-hide="domain_remove_done"
-                         href="/machine/view/<%= $domain->id %>.html"><%= $domain->name %></a>
+                         href="/machine/view/<%= $domain->id %>.html"><%= Encode::decode_utf8($domain->name) %></a>
                      <%=l 'Settings' %>
                  </h2>
 %               }
