@@ -5,7 +5,7 @@ export default {
         modalInstance: "<",
         resolve: "<"
     },
-    templateUrl: "/js/booking/entryModal.component.html",
+    templateUrl: "/booking/entryModal.component.html",
     controller: modalCtrl
 }
 
