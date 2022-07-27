@@ -6,7 +6,7 @@ export default {
         onSave: '&',
         onCancel: '&'
     },
-    templateUrl: '/js/booking/formEvent.component.html',
+    templateUrl: '/booking/formEvent.component.html',
     controller: formEventCtrl
 }
 

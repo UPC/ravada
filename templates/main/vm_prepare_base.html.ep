@@ -5,7 +5,7 @@
     </div>
     <div class="col-sm-8">
     <p>
-      <%= 'Prepare this machine as a base to create clones from it.' %>
+      <%=l 'Prepare this machine as a base to create clones from it.' %>
     </p>
     </div>
 </div>

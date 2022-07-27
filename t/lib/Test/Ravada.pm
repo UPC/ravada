@@ -1818,8 +1818,8 @@ sub hibernate_node($node) {
         my $domain_node = _domain_node($node);
         eval { $domain_node->hibernate( user_admin ) };
         my $error = $@;
-        warn $error if $error;
         last if !$error || $error =~ /is not active|not valid/;
+        confess $error if $error;
     }
 
     my $max_wait = 30;
