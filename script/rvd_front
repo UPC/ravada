@@ -764,6 +764,7 @@ any '/machine/manage/(:id).(:type)' => sub {
 any '/(:item)/settings/(:id).html' => sub($c) {
 
     _add_admin_libs($c);
+    $c->stash(tab => ($c->param('tab') or ''));
 
     return $c->render( template => '/main/settings_generic' );
 };
