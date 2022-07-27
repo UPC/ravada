@@ -14,10 +14,21 @@
 <div class="card-body" ng-show="<%= $item %>.id">
 <div class="nav flex-column nav-pills bg-light" id="v-pills-tab"
     role="tablist" aria-orientation="vertical">
-% for my $tab (@$tabs) {
-<a class="nav-link <%= $active %>" id="v-pills-<%= $tab %>-tab"
-    href="#v-pills-<%= $tab %>" data-toggle="pill" role="tab"
-    aria-controls="v-pills-bases" aria-selected="<%= $selected %>"><%=l $tab %></a>
+% for my $current (@$tabs) {
+<%
+    if ($tab) {
+        if ($tab eq $current) {
+            $active= 'active';
+            $selected = 'true';
+        } else {
+            $active = '';
+            $selected = '';
+        }
+    }
+%>
+<a class="nav-link <%= $active %>" id="v-pills-<%= $current %>-tab"
+    href="#v-pills-<%= $current %>" data-toggle="pill" role="tab"
+    aria-controls="v-pills-bases" aria-selected="<%= $selected %>"><%=l $current %></a>
 % $active = '';
 % $selected = "false";
 % }
@@ -29,11 +40,20 @@
 <div class="col-10">
 <div class="card-body">
 <div class="tab-content" id="v-pills-tabContent">
-% for my $tab (@$tabs) {
+% for my $current (@$tabs) {
+<%
+    if ($tab) {
+        if ($tab eq $current) {
+            $active= 'active';
+        } else {
+            $active = '';
+        }
+    }
+%>
     <div class="tab-pane fade show <%= $active %>"
-    id="v-pills-<%= $tab %>" role="tabpanel"
-    aria-labelledby="v-pills-<%= $tab %>-tab">
-        %= include "main/${item}_$tab"
+    id="v-pills-<%= $current %>" role="tabpanel"
+    aria-labelledby="v-pills-<%= $current %>-tab">
+        %= include "main/${item}_$current"
     </div>
 %   $active = '';
 % }
