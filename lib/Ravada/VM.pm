@@ -2203,7 +2203,9 @@ sub _list_bridges($self) {
 
     my %qemu_bridge = map { $_ => 1 } $self->_list_qemu_bridges();
 
-    my @cmd = ( $self->_which('brctl'),'show');
+    my $brctl = 'brctl';
+    my @cmd = ( $self->_which(),'show');
+    die "Error: missing $brctl" if !$cmd[0];
     my ($out,$err) = $self->run_command(@cmd);
 
     die $err if $err;
