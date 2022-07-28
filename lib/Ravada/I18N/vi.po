@@ -20,7 +20,7 @@ msgstr ""
 "X-Generator: Poedit 1.8.7.1\n"
 
 msgid "Ravada broker"
-msgstr "Ravada broker"
+msgstr "Mô giới Ravada"
 
 msgid "Machine Name"
 msgstr "Tên máy tính"
@@ -29,7 +29,7 @@ msgid "Tools"
 msgstr "Công cụ"
 
 msgid "Choose a Machine to Start"
-msgstr "Chọn một máy để bắt đầu"
+msgstr "Chọn Máy Tính để bắt đầu"
 
 msgid "Start"
 msgstr "Bắt đầu"
@@ -41,13 +41,13 @@ msgid "View"
 msgstr "Lượt xem"
 
 msgid "Prepare base"
-msgstr "Chuẩn bị cơ sở dữ liệu"
+msgstr "Chuẩn bị máy tính cơ sở"
 
 msgid "Clone"
-msgstr "Bản sao"
+msgstr "Làm bản sao"
 
 msgid "Clone/s"
-msgstr "Bản sao"
+msgstr "Làm bản sao"
 
 msgid "Users List"
 msgstr "Danh sách người dùng"
@@ -98,7 +98,7 @@ msgid "Catalan"
 msgstr "Tiếng Catalan"
 
 msgid "Galician"
-msgstr "Tiếng Galicia"
+msgstr "Tiếng Galician"
 
 msgid "French"
 msgstr "Tiếng Pháp"
@@ -221,7 +221,7 @@ msgid "Admin tools"
 msgstr "Công cụ quản trị"
 
 msgid "Remove base"
-msgstr "Loại bỏ cơ sở"
+msgstr "Loại bỏ máy cơ sở"
 
 msgid "Restore"
 msgstr "Khôi phục"
@@ -233,7 +233,7 @@ msgid "Are you sure?"
 msgstr "Bạn có chắc không?"
 
 msgid "Yes"
-msgstr "Vâng"
+msgstr "Có"
 
 msgid "No"
 msgstr "Không"
@@ -245,7 +245,7 @@ msgid "Machine settings"
 msgstr "Cài đặt máy"
 
 msgid "Cannot remove base, machine has clones"
-msgstr "Không thể loại bỏ cơ sở, máy đang có bản sao"
+msgstr "Không thể loại bỏ máy cơ sở, máy đang có bản sao"
 
 msgid "show clones"
 msgstr "Hiển thị bản sao"
@@ -325,7 +325,7 @@ msgid "can change the settings of any virtual machines "
 msgstr "có thể thay đổi cài đặt của bất kỳ máy ảo nào"
 
 msgid "cloned from one base owned by the user."
-msgstr "nhân bản từ một cơ sở thuộc sở hữu của người dùng."
+msgstr "nhân bản từ một máy cơ sở thuộc sở hữu của người dùng."
 
 msgid "can clone public virtual machines."
 msgstr "có thể sao chép máy ảo công cộng."
@@ -334,7 +334,7 @@ msgid "can clone any virtual machine."
 msgstr "có thể bản sao bất kỳ máy ảo nào."
 
 msgid "can create bases."
-msgstr "Có thể tạo cơ sở."
+msgstr "có thể tạo máy cơ sở."
 
 msgid "can create virtual machines."
 msgstr "có thể tạo máy ảo."
@@ -395,8 +395,8 @@ msgid ""
 "This ISO image has not been downloaded yet. It may take some minutes, even "
 "hours until the file is fetched from the Internet."
 msgstr ""
-"Hình ảnh ISO này chưa được tải xuống. Sẽ có thể mất vài phút, thậm chí vài giờ "
-"cho tới khi tinh tệp được lấy xuống từ Internet."
+"Hình ảnh ISO này chưa được tải xuống. Sẽ có thể mất vài phút, thậm chí vài"
+"giờ cho tới khi tinh tệp được lấy xuống từ Internet."
 
 msgid "Download now"
 msgstr "Tải ngay"
@@ -447,20 +447,20 @@ msgid ""
 "can change the settings of all virtual machines cloned from one base owned "
 "by the user."
 msgstr ""
-"có thể thay đổi cài đặt của tất cả các máy ảo được nhân bản từ một cơ sở "
+"có thể thay đổi cài đặt của tất cả các máy ảo được nhân bản từ một máy cơ sở "
 "thuộc sở hữu của người dùng."
 
 msgid "monitoring"
 msgstr "Giám sát"
 
 msgid "Are you sure you want to remove the Base of"
-msgstr "Bạn có chắc chắn muốn xóa Base of"
+msgstr "Bạn có chắc chắn muốn xóa máy cơ sở"
 
 msgid "Are you sure you want to prepare the Base of"
-msgstr "Bạn có chắc chắn muốn chuẩn bị Base of"
+msgstr "Bạn có chắc chắn muốn chuẩn bị Máy Cơ Sở"
 
 msgid "Are you sure you want to change the Public state of"
-msgstr "Bạn có chắc chắn muốn thay đổi Public state of"
+msgstr "Bạn có chắc chắn muốn thay đổi trạng thái Sông Khai cho"
 
 msgid "Search"
 msgstr "Tìm kiếm"
@@ -581,7 +581,7 @@ msgid "Changing Public State"
 msgstr "Thay đổi Public State"
 
 msgid "Changing Base State"
-msgstr "Thay đổi Base State"
+msgstr "Thay đổi Trạng Thái của Máy Cơ Sở"
 
 msgid "action"
 msgstr "hoạt động"
@@ -593,7 +593,7 @@ msgid "public"
 msgstr "công cộng"
 
 msgid "New Base"
-msgstr "Cơ sở mới"
+msgstr "Máy cơ sở mới"
 
 msgid "Version"
 msgstr "Phiên bản"
@@ -620,7 +620,7 @@ msgid "Machine locked by"
 msgstr "Máy bị khóa bởi"
 
 msgid "This Machine is a base"
-msgstr "Máy tính này là một cơ sở"
+msgstr "Máy tính này là máy cơ sở"
 
 msgid "Cloned"
 msgstr "Được sao bản"
@@ -781,7 +781,7 @@ msgid "Copying the screenshot, please wait a moment..."
 msgstr "Sao chép ảnh chụp màn hình, vui lòng đợi trong giây lát ..."
 
 msgid "You need a screenshot in order to copy it to the base machine."
-msgstr "Bạn cần một ảnh chụp màn hình để sao chép vào máy tính chủ."
+msgstr "Bạn cần một ảnh chụp màn hình để sao chép vào máy tính cơ sở."
 
 msgid "Add"
 msgstr "Thêm vào"
