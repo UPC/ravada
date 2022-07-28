@@ -283,7 +283,7 @@ msgid ""
 "then execute the file."
 msgstr ""
 "hoặc sao chép các dòng sau đây trong tệp ASCII và lưu vào với đuôi file .reg, sau"
-" đó thực thi tệp."
+"đó thực thi tệp."
 
 msgid "Login"
 msgstr "Đăng nhập"
