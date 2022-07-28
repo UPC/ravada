@@ -371,6 +371,8 @@ sub search_volume_path_re {
 sub import_domain($self, $name, $user, $backing_file) {
 
     my $file = $self->dir_img."/$name.yml";
+    $file = $self->dir_img."/".Encode::decode_utf8($name).".yml"
+    if ! -e $file;
 
     die "Error: domain $name not found in ".$self->dir_img if !-e $file;
 

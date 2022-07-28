@@ -36,6 +36,10 @@ sub test_user_cyrillic($vm) {
     my ($clonef) = $base->clones();
 
     ok(utf8::valid($clonef->{name}));
+    is($clonef->{name},$base->name."-000".$user->id) or exit;
+
+    my $base_name = $base->name;
+    like($clonef->{alias},qr/$base_name-$name/) or exit;
 
     _test_utf8($user);
 
@@ -70,12 +74,9 @@ sub _test_utf8($user) {
 
 sub _test_requests() {
     my $reqs = rvd_front->list_requests();
-    warn scalar(@$reqs);
     for my $req (@$reqs) {
         ok(utf8::valid($req->{name}))    if $req->{name};
         ok(utf8::valid($req->{message})) if $req->{message};
-        diag($req->{name}) if $req->{name};
-        diag($req->{message}) if $req->{message};
     }
 }
 

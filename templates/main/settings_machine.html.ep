@@ -10,16 +10,18 @@
         <div class="card"
              ng-controller="singleMachinePage"
              ng-init="init(<%= $id %>, '<%= url_for('ws_subscribe')->to_abs %>',<%= $USER->is_admin %> )">
+
+% my $name = Encode::decode_utf8($domain->_data('alias') or $domain->name);
              <div class="card-header">
 %              if ($domain->is_base) {
                  <h2><%=l 'Virtual Machine' %>
-                     <b><%= Encode::decode_utf8($domain->name) %></b>
+                     <b><%= $name %></b>
                      <%=l 'Settings' %>
                  </h2>
 %               } else {
                  <h2><%=l 'Virtual Machine' %>
                      <a ng-hide="domain_remove_done"
-                         href="/machine/view/<%= $domain->id %>.html"><%= Encode::decode_utf8($domain->name) %></a>
+                         href="/machine/view/<%= $domain->id %>.html"><%= $name %></a>
                      <%=l 'Settings' %>
                  </h2>
 %               }

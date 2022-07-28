@@ -2458,7 +2458,7 @@ sub clones($self, %filter) {
     _init_connector();
 
     my $query =
-        "SELECT id, id_vm, name, id_owner, status, client_status, is_pool, is_base"
+        "SELECT id, id_vm, name,alias, id_owner, status, client_status, is_pool, is_base"
             ." ,is_volatile "
             ." FROM domains "
             ." WHERE id_base = ? ";
@@ -2472,6 +2472,7 @@ sub clones($self, %filter) {
     my @clones;
     while (my $row = $sth->fetchrow_hashref) {
         # TODO: open the domain, now it returns only the id
+        $row->{alias} = Encode::decode_utf8($row->{alias});
         lock_hash(%$row);
         push @clones , $row;
     }
@@ -2720,6 +2721,7 @@ sub clone {
     my $with_cd = delete $args{with_cd};
     my $volatile = delete $args{volatile};
     my $id_owner = delete $args{id_owner};
+    my $alias = delete $args{alias};
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
@@ -2736,6 +2738,12 @@ sub clone {
 
     my %args2 = @_;
     delete $args2{from_pool};
+    if ($name !~ /^[a-z0-9_-]+$/i) {
+        $name =~ tr/[a-z0-9_\-]//c;
+        $name .= Ravada::Utils::random_name(6);
+        $args2{name} = $name;
+    }
+
     return $self->_copy_clone(%args2)   if !$self->is_base && $self->id_base();
 
     my $uid = $id_owner || $user->id;
@@ -2746,6 +2754,7 @@ sub clone {
     }
 
     my @args_copy = ();
+    push @args_copy, ( alias => $alias )        if $alias;
     push @args_copy, ( start => $start )        if $start;
     push @args_copy, ( memory => $memory )      if $memory;
     push @args_copy, ( request => $request )    if $request;
@@ -3094,13 +3103,8 @@ sub _around_reboot_now {
 sub _around_name($orig,$self) {
     return $self->{_name} if $self->{_name};
 
-    if  ($self->{_data} ) {
-        $self->{_name} = $self->{_data}->{name};
-    }
-    if ( !$self->{_name}) {
-        $self->{_name} = $self->$orig();
-    }
-    utf8::decode($self->{_name});
+    $self->{_name} = $self->{_data}->{name} if $self->{_data};
+    $self->{_name} = $self->$orig()         if !$self->{_name};
 
     return $self->{_name};
 }
@@ -5033,11 +5037,10 @@ sub _pre_clone($self,%args) {
     delete $args{remote_ip};
 
     confess "ERROR: Missing clone name "    if !$name;
-    #    confess "ERROR: Invalid name '$name'"   if $name !~ /^[a-z0-9_-]+$/i;
 
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
-    for (qw(is_pool start add_to_pool from_pool with_cd volatile id_owner)) {
+    for (qw(is_pool start add_to_pool from_pool with_cd volatile id_owner alias)) {
         delete $args{$_};
     }
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;

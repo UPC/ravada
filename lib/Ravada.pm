@@ -2508,7 +2508,9 @@ sub _upgrade_tables {
     $self->_upgrade_table('networks','requires_password','int(11)');
     $self->_upgrade_table('networks','n_order','int(11) not null default 0');
 
+    $self->_upgrade_table('domains','alias','varchar(255) DEFAULT NULL');
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
+    $self->_upgrade_table('domains','name','VARCHAR(255) NOT NULL');
     $self->_upgrade_table('domains','description','text DEFAULT NULL');
     $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
     $self->_upgrade_table('domains','id_vm','int DEFAULT NULL');
@@ -2631,6 +2633,10 @@ sub _connect_dbh {
         warn "Try $try $@\n";
     }
     die ($@ or "Can't connect to $driver $db at $host");
+}
+
+sub _dbh($self) {
+    return $CONNECTOR->dbh;
 }
 
 =head2 display_ip
@@ -3139,7 +3145,7 @@ sub search_domain($self, $name, $import = 0) {
         ." FROM domains d LEFT JOIN vms "
         ."      ON d.id_vm = vms.id "
         ." WHERE "
-        ."    d.name=? "
+        ."    (d.name=? OR d.alias=?) "
         ;
     my $sth = $CONNECTOR->dbh->prepare($query);
     $sth->execute($name);
@@ -4275,13 +4281,47 @@ sub _cmd_clone($self, $request) {
         delete $args->{$_};
     }
 
-    my $name = ( $request->defined_arg('name') or $domain->name."-".$user->name );
+    my $name = $request->defined_arg('name');
+    my $alias0 = ($request->defined_arg('alias') or $name);
+    my $alias;
+    ($name,$alias) = $self->_new_clone_name($domain, $user) if !$name;
+
+    $alias = $alias0 if $alias0;
+
+    $args->{alias} = $alias if $alias;
 
     my $clone = $domain->clone(
         name => $name
         ,%$args
     );
 }
+
+sub _new_clone_name($self, $base,$user) {
+    my $name;
+    my $alias = $base->name;
+    $alias = $base->_data('alias') if $base->_data('alias');
+    $alias .= "-".$user->name;
+    if ($user->name =~ /^[a-z0-9]/i) {
+        $name = $base->name."-".$user->name;
+    } else {
+        my $length = length($user->id);
+        my $n = "0" x (4-$length);
+        $name = $base->name."-".$n.$user->id;
+    }
+    return ($name,$alias) if !$self->_domain_exists($name);
+
+    my $count =1;
+    my $name2;
+    for ( ;; ) {
+        $name2 = "$name-".++$count;
+        return $name2 if !$self->_domain_exists($name2);
+    }
+}
+
+sub _domain_exists {
+    return Ravada::Front::domain_exists(@_);
+}
+
 
 sub _get_last_used_clone_id
 {
