@@ -1,4 +1,5 @@
 # Translators:
+# Lam Huynh, <thienlam2000@gmail.com>, 2022
 # Fernando Verdugo, 2019
 # Amparo _rvd <amparorvd@gmail.com>, 2019
 # Joel Alarcón <joelalju100@gmail.com>, 2017
@@ -19,34 +20,34 @@ msgstr ""
 "X-Generator: Poedit 1.8.7.1\n"
 
 msgid "Ravada broker"
-msgstr "Môi giới"
+msgstr "Mô giới Ravada"
 
 msgid "Machine Name"
-msgstr "Tên may moc"
+msgstr "Tên máy tính"
 
 msgid "Tools"
 msgstr "Công cụ"
 
 msgid "Choose a Machine to Start"
-msgstr "Chọn một máy để bắt đầu"
+msgstr "Chọn Máy Tính để bắt đầu"
 
 msgid "Start"
-msgstr "bắt đầu"
+msgstr "Bắt đầu"
 
 msgid "Stop"
-msgstr "dừng lại"
+msgstr "Dừng lại"
 
 msgid "View"
 msgstr "Lượt xem"
 
 msgid "Prepare base"
-msgstr "Chuẩn bị cơ sở"
+msgstr "Chuẩn bị máy tính cơ sở"
 
 msgid "Clone"
-msgstr "nhân bản"
+msgstr "Làm bản sao"
 
 msgid "Clone/s"
-msgstr "nhân bản"
+msgstr "Làm bản sao"
 
 msgid "Users List"
 msgstr "Danh sách người dùng"
@@ -55,52 +56,52 @@ msgid "Name"
 msgstr "Tên"
 
 msgid "Log Out"
-msgstr "đăng xuất"
+msgstr "Đăng xuất"
 
 msgid "Available Machines"
-msgstr "Máy có sẵn"
+msgstr "Máy tính có sẵn"
 
 msgid "Help"
-msgstr "Cứu giúp"
+msgstr "Trợ giúp"
 
 msgid "Requirements"
 msgstr "Yêu cầu"
 
 msgid "About"
-msgstr "trong khoảng"
+msgstr "Trong khoảng"
 
 msgid "Mark all as read"
-msgstr "đánh dấu tất cả như đã đọc"
+msgstr "Đánh dấu tất cả đã đọc"
 
 msgid "Settings"
 msgstr "Cài đặt"
 
 msgid "New Machine"
-msgstr "Máy mới"
+msgstr "Máy tính mới"
 
 msgid "I want to change my password"
 msgstr "Tôi muốn thay đổi mật khẩu"
 
 msgid "I want to change my language"
-msgstr "Tôi muốn thay đổi ngôn ngữ của tôi"
+msgstr "Tôi muốn thay đổi ngôn ngữ"
 
 msgid "Language:"
 msgstr "Ngôn ngữ:"
 
 msgid "English"
-msgstr "Anh"
+msgstr "Tiếng Anh"
 
 msgid "Spanish"
-msgstr "người Tây Ban Nha"
+msgstr "Tiếng Tây Ban Nha"
 
 msgid "Catalan"
 msgstr "Tiếng Catalan"
 
 msgid "Galician"
-msgstr "Galicia"
+msgstr "Tiếng Galician"
 
 msgid "French"
-msgstr "người Pháp"
+msgstr "Tiếng Pháp"
 
 msgid "Hindi"
 msgstr "Tiếng Hindi"
@@ -109,37 +110,37 @@ msgid "Indonesian"
 msgstr "Tiếng Indonesia"
 
 msgid "Persian"
-msgstr "Ba Tư"
+msgstr "Tiếng Ba Tư"
 
 msgid "Japanese"
-msgstr "tiếng Nhật"
+msgstr "Tiếng Nhật"
 
 msgid "German"
-msgstr "tiếng Đức"
+msgstr "Tiếng Đức"
 
 msgid "New Password:"
-msgstr "mật khẩu mới :"
+msgstr "Mật khẩu mới:"
 
 msgid "Confirm Password:"
 msgstr "Xác nhận mật khẩu:"
 
 msgid "Submit"
-msgstr "Gửi đi"
+msgstr "Gửi"
 
 msgid "Your language has been changed successfully"
-msgstr "ngôn ngữ của bạn đã được thay đổi thành công"
+msgstr "Ngôn ngữ của bạn đã được thay đổi thành công"
 
 msgid "Your password has been changed successfully"
 msgstr "Mật khẩu của bạn đã được thay đổi thành công"
 
 msgid "Password is too short"
-msgstr "Mật khẩu quá nhỏ"
+msgstr "Mật khẩu quá ngắn"
 
 msgid "Password fields do not match"
-msgstr "Các trường mật khẩu không bằng nhau"
+msgstr "Mật khẩu nhập không trùng"
 
 msgid "Some of the password fields are empty"
-msgstr "Một số trường mật khẩu trống"
+msgstr "Mật khẩu nhập đang trống"
 
 msgid "Status"
 msgstr "Trạng thái"
@@ -154,10 +155,10 @@ msgid "Running"
 msgstr "Đang chạy"
 
 msgid "Shutdown"
-msgstr "tắt máy"
+msgstr "Tắt máy"
 
 msgid "Screenshot"
-msgstr "ảnh chụp màn hình"
+msgstr "Chụp màn hình"
 
 msgid "Paused"
 msgstr "Tạm dừng"
@@ -169,7 +170,7 @@ msgid "Process"
 msgstr "Quá trình"
 
 msgid "Copy"
-msgstr "bản sao"
+msgstr "Sao chép"
 
 msgid "Error!"
 msgstr "Lỗi!"
@@ -178,31 +179,31 @@ msgid "Error"
 msgstr "Lỗi"
 
 msgid "Backend not available!"
-msgstr "Cuối cùng không có sẵn!"
+msgstr "Back-end không có sẵn!"
 
 msgid "Subject"
-msgstr "Môn học"
+msgstr "Chủ đề"
 
 msgid "Date"
-msgstr "ngày tháng"
+msgstr "Ngày"
 
 msgid "Mark as read"
-msgstr "đánh dấu là đã đọc"
+msgstr "Đánh dấu đã đọc"
 
 msgid "Mark as unread"
-msgstr "đánh dấu là chưa đọc"
+msgstr "Đánh dấu chưa đọc"
 
 msgid "No messages to show"
-msgstr "Không có tin nhắn để hiển thị!"
+msgstr "Không có tin nhắn để hiển thị"
 
 msgid "Admin"
-msgstr "quản trị viên"
+msgstr "Quản trị viên"
 
 msgid "Machines"
-msgstr "Máy móc"
+msgstr "Máy tính"
 
 msgid "machines"
-msgstr "máy móc"
+msgstr "máy tính"
 
 msgid "Users"
 msgstr "Người dùng"
@@ -217,49 +218,49 @@ msgid "messages"
 msgstr "tin nhắn"
 
 msgid "Admin tools"
-msgstr "công cụ quản trị"
+msgstr "Công cụ quản trị"
 
 msgid "Remove base"
-msgstr "loại bỏ cơ sở"
+msgstr "Loại bỏ máy cơ sở"
 
 msgid "Restore"
-msgstr "khôi phục"
+msgstr "Khôi phục"
 
 msgid "Hibernate"
-msgstr "Ngủ đông"
+msgstr "Để máy tính chạy ngầm"
 
 msgid "Are you sure?"
-msgstr "Bạn có chắc không"
+msgstr "Bạn có chắc không?"
 
 msgid "Yes"
-msgstr "Vâng"
+msgstr "Có"
 
 msgid "No"
 msgstr "Không"
 
 msgid "Make public"
-msgstr "công khai"
+msgstr "Công khai cho mọi người"
 
 msgid "Machine settings"
 msgstr "Cài đặt máy"
 
 msgid "Cannot remove base, machine has clones"
-msgstr "Không thể loại bỏ cơ sở, máy có bản sao"
+msgstr "Không thể loại bỏ máy cơ sở, máy đang có bản sao"
 
 msgid "show clones"
-msgstr "hiển thị bản sao"
+msgstr "Hiển thị bản sao"
 
 msgid "hide clones"
-msgstr "ẩn bản sao"
+msgstr "Ẩn bản sao"
 
 msgid "For Spice redirection you will need to install"
-msgstr "cho chuyển hướng Spice bạn sẽ cần cài đặt"
+msgstr "Để chuyển hướng Spice, bạn sẽ phải cần cài đặt"
 
 msgid "in your computer."
-msgstr "trong máy tính của bạn"
+msgstr "Trong máy tính của bạn"
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr "Tìm kiếm trong distro của bạn, e. g. trong Debian / Ubuntu với"
+msgstr "Tìm kiếm distro của bạn, e. g. Debian / Ubuntu"
 
 msgid "You will need to install"
 msgstr "Bạn sẽ cần phải cài đặt"
@@ -271,18 +272,18 @@ msgid ""
 "Be aware that in Windows, Spice redirection is not automatic. It is "
 "necessary to associate protocol with the app."
 msgstr ""
-"Xin lưu ý rằng trong Windows, chuyển hướng Spice không tự động. Đó là giao "
-"thức liên quan cần thiết với Ứng dụng."
+"Xin lưu ý rằng trong Windows, chuyển hướng Spice không có tự động. Đó là giao "
+"thức liên quan với Ứng dụng."
 
 msgid "To make this possible, download"
-msgstr "Để thực hiện điều này, tải xuống"
+msgstr "Để thực hiện điều này, cần phải tải xuống"
 
 msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
 msgstr ""
-"hoặc sao chép các dòng sau trong tệp ASCII và lưu với phần mở rộng .reg, sau"
-" đó thực thi tệp."
+"hoặc sao chép các dòng sau đây trong tệp ASCII và lưu vào với đuôi file .reg, sau"
+"đó thực thi tệp."
 
 msgid "Login"
 msgstr "Đăng nhập"
@@ -291,10 +292,10 @@ msgid "Welcome"
 msgstr "Chào mừng bạn"
 
 msgid "A viewer is required to run the virtual machines."
-msgstr "Một người xem được yêu cầu để chạy các máy ảo."
+msgstr "Cần một người xem để chạy các máy ảo."
 
 msgid "It is required a viewer to run the virtual machines."
-msgstr "Nó được yêu cầu người xem để chạy các máy ảo."
+msgstr "Phần yêu cầu người xem để chạy các máy ảo."
 
 msgid "Virtual Machines"
 msgstr "Máy ảo"
@@ -306,13 +307,13 @@ msgid "Password"
 msgstr "Mật khẩu"
 
 msgid "Start session"
-msgstr "Bắt đầu phiên"
+msgstr "Bắt đầu sử lí"
 
 msgid "bits) in your computer."
-msgstr "bit) trong máy tính của bạn."
+msgstr "bits) trong máy tính của bạn."
 
 msgid "Permissions"
-msgstr "Quyền"
+msgstr "Quyền hạn"
 
 msgid "can change the settings of owned virtual machines."
 msgstr "có thể thay đổi cài đặt của các máy ảo sở hữu."
@@ -324,31 +325,31 @@ msgid "can change the settings of any virtual machines "
 msgstr "có thể thay đổi cài đặt của bất kỳ máy ảo nào"
 
 msgid "cloned from one base owned by the user."
-msgstr "nhân bản từ một cơ sở thuộc sở hữu của người dùng."
+msgstr "nhân bản từ một máy cơ sở thuộc sở hữu của người dùng."
 
 msgid "can clone public virtual machines."
 msgstr "có thể sao chép máy ảo công cộng."
 
 msgid "can clone any virtual machine."
-msgstr "có thể sao chép bất kỳ máy ảo nào."
+msgstr "có thể bản sao bất kỳ máy ảo nào."
 
 msgid "can create bases."
-msgstr "Có thể tạo căn cứ."
+msgstr "có thể tạo máy cơ sở."
 
 msgid "can create virtual machines."
 msgstr "có thể tạo máy ảo."
 
 msgid "can grant permissions to other users"
-msgstr "có thể cấp quyền cho người dùng khác"
+msgstr "có thể cấp quyền hạn cho người dùng khác"
 
 msgid "can hibernate any virtual machine."
-msgstr "có thể ngủ đông bất kỳ máy ảo."
+msgstr "có thể chạy ngầm bất kỳ máy ảo."
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr "có thể nhân bản ngủ đông từ các máy ảo thuộc sở hữu của người dùng."
+msgstr "có thể chạy ngầm các bản sao từ các máy ảo thuộc sở hữu của người dùng."
 
 msgid "can hibernate any clone."
-msgstr "có thể ngủ đông bất kỳ bản sao."
+msgstr "có thể chạy ngầm bất kỳ bản sao."
 
 msgid "can remove any virtual machines owned by the user."
 msgstr "có thể loại bỏ bất kỳ máy ảo nào thuộc sở hữu của người dùng."
@@ -379,23 +380,23 @@ msgid "Submit Query"
 msgstr "Gửi truy vấn"
 
 msgid "From Template"
-msgstr "Từ mẫu"
+msgstr "Từ sườn template"
 
 msgid "From Machine"
 msgstr "Từ máy"
 
 msgid "Backend"
-msgstr "Cuối tuần"
+msgstr "Backend"
 
 msgid "Select Template"
-msgstr "Chọn mẫu"
+msgstr "Chọn sườn mẫu"
 
 msgid ""
 "This ISO image has not been downloaded yet. It may take some minutes, even "
 "hours until the file is fetched from the Internet."
 msgstr ""
-"Hình ảnh ISO này chưa được tải xuống. Có thể mất vài phút, thậm chí vài giờ "
-"cho đến khi tệp được tải từ Internet."
+"Hình ảnh ISO này chưa được tải xuống. Sẽ có thể mất vài phút, thậm chí vài"
+"giờ cho tới khi tinh tệp được lấy xuống từ Internet."
 
 msgid "Download now"
 msgstr "Tải ngay"
@@ -404,7 +405,7 @@ msgid "Select ISO"
 msgstr "Chọn ISO"
 
 msgid "Template"
-msgstr "Bản mẫu"
+msgstr "Sườn mẫu"
 
 msgid "Disk Size: (GB)"
 msgstr "Kích thước đĩa: (GB)"
@@ -416,22 +417,22 @@ msgid "Ram: (GB)"
 msgstr "Ram: (GB) "
 
 msgid "Machine name is required."
-msgstr "Tên máy là bắt buộc."
+msgstr "Cần tên máy tính."
 
 msgid "Machine name can't exceed 20 characters."
-msgstr "Tên máy không thể vượt quá 20 ký tự."
+msgstr "Tên máy tính không thể vượt quá 20 ký tự."
 
 msgid "Backend selection is required."
-msgstr "Lựa chọn cuối cùng là cần thiết."
+msgstr "Yêu cầu chọn Backend."
 
 msgid "ISO image selection is required."
-msgstr "Lựa chọn hình ảnh ISO là bắt buộc."
+msgstr "Yêu cầu hình ảnh ISO."
 
 msgid "Template selection is required."
-msgstr "Lựa chọn mẫu là bắt buộc."
+msgstr "Yêu cầu chọn sườn mẫu."
 
 msgid "A machine with that name already exists."
-msgstr "Một máy có tên đó đã tồn tại."
+msgstr "Tên của máy tinh đã tồn tại."
 
 msgid ""
 "The machine name is only allowed to consist of alphabetic characters, "
@@ -440,26 +441,26 @@ msgstr ""
 "Tên máy chỉ được phép bao gồm các ký tự chữ cái, số, dấu gạch ngang và điểm."
 
 msgid "Create"
-msgstr "Tạo nên"
+msgstr "Khởi tạo"
 
 msgid ""
 "can change the settings of all virtual machines cloned from one base owned "
 "by the user."
 msgstr ""
-"có thể thay đổi cài đặt của tất cả các máy ảo được nhân bản từ một cơ sở "
+"có thể thay đổi cài đặt của tất cả các máy ảo được nhân bản từ một máy cơ sở "
 "thuộc sở hữu của người dùng."
 
 msgid "monitoring"
-msgstr "giám sát"
+msgstr "Giám sát"
 
 msgid "Are you sure you want to remove the Base of"
-msgstr "Bạn có chắc chắn muốn xóa Base"
+msgstr "Bạn có chắc chắn muốn xóa máy cơ sở"
 
 msgid "Are you sure you want to prepare the Base of"
-msgstr "Bạn có chắc chắn muốn chuẩn bị Cơ sở của"
+msgstr "Bạn có chắc chắn muốn chuẩn bị Máy Cơ Sở"
 
 msgid "Are you sure you want to change the Public state of"
-msgstr "Bạn có chắc chắn muốn thay đổi trạng thái Công khai của"
+msgstr "Bạn có chắc chắn muốn thay đổi trạng thái Sông Khai cho"
 
 msgid "Search"
 msgstr "Tìm kiếm"
@@ -471,7 +472,7 @@ msgid "There are no machines available in this system."
 msgstr "Không có máy có sẵn trong hệ thống này."
 
 msgid "Create one."
-msgstr "Tạo một cái."
+msgstr "Tạo một máy."
 
 msgid "not public"
 msgstr "không được công khai"
@@ -486,22 +487,22 @@ msgid "Username"
 msgstr "Tên đăng nhập"
 
 msgid "Hide Private"
-msgstr "Ẩn riêng tư"
+msgstr "Ẩn phần riêng tư"
 
 msgid "Show All"
 msgstr "Hiển thị tất cả"
 
 msgid "Shutting down ..."
-msgstr "Đang Tắt ..."
+msgstr "Tắt máy ..."
 
 msgid "It may take a couple of minutes."
 msgstr "Nó có thể mất một vài phút."
 
 msgid "Hybernating ..."
-msgstr "Ngủ đông ..."
+msgstr "Chạy ngầm ..."
 
 msgid "Description"
-msgstr "Sự miêu tả"
+msgstr "Giải thích"
 
 msgid "Rename"
 msgstr "Đổi tên"
@@ -516,17 +517,17 @@ msgid "Graphics"
 msgstr "Đồ họa"
 
 msgid "Remove Machine"
-msgstr "Tháo máy"
+msgstr "Loại bỏ máy"
 
 msgid "System overview"
-msgstr "Tổng quan hệ thống"
+msgstr "Tổng quan hệ thống máy"
 
 msgid "Danger Zone"
 msgstr "Khu vực nguy hiểm"
 
 msgid ""
 "Once you delete the machine, there is no going back. Please be certain."
-msgstr "Một khi bạn xóa máy, không có trở lại. Hãy chắc chắn."
+msgstr "Một khi bạn xóa máy, sẽ không có thao tác trở lại. Bạn cần phải chắc chắn."
 
 msgid "Danger"
 msgstr "Nguy hiểm"
@@ -535,7 +536,7 @@ msgid "This will remove all the contents of the machine"
 msgstr "Thao tác này sẽ xóa tất cả nội dung của máy"
 
 msgid "This action can't be undone"
-msgstr "Hành động này không thể được hoàn tác"
+msgstr "Hành động này không thể được hủy"
 
 msgid "Are you sure ?"
 msgstr "Bạn có chắc không ?"
@@ -556,7 +557,7 @@ msgid "clones of the machine"
 msgstr "bản sao của máy"
 
 msgid "Yes, remove all the clones"
-msgstr "Có, loại bỏ tất cả các bản sao"
+msgstr "Vâng, loại bỏ tất cả các bản sao"
 
 msgid "This virtual machine can't be removed because it has"
 msgstr "Máy ảo này không thể bị xóa vì nó có"
@@ -577,10 +578,10 @@ msgid "to"
 msgstr "đến"
 
 msgid "Changing Public State"
-msgstr "Thay đổi nhà nước công cộng"
+msgstr "Thay đổi Public State"
 
 msgid "Changing Base State"
-msgstr "Thay đổi trạng thái cơ sở"
+msgstr "Thay đổi Trạng Thái của Máy Cơ Sở"
 
 msgid "action"
 msgstr "hoạt động"
@@ -592,7 +593,7 @@ msgid "public"
 msgstr "công cộng"
 
 msgid "New Base"
-msgstr "Cơ sở mới"
+msgstr "Máy cơ sở mới"
 
 msgid "Version"
 msgstr "Phiên bản"
@@ -604,10 +605,10 @@ msgid "Development"
 msgstr "Phát triển"
 
 msgid "Below are listed the technologies used in this project:"
-msgstr "Dưới đây được liệt kê các công nghệ được sử dụng trong dự án này:"
+msgstr "Dưới đây là các công nghệ được sử dụng trong dự án này:"
 
 msgid "The code is available on "
-msgstr "Mã có sẵn trên"
+msgstr "Mã đã có sẵn trên"
 
 msgid "The code is "
 msgstr "Mã là"
@@ -619,10 +620,10 @@ msgid "Machine locked by"
 msgstr "Máy bị khóa bởi"
 
 msgid "This Machine is a base"
-msgstr "Máy này là một cơ sở"
+msgstr "Máy tính này là máy cơ sở"
 
 msgid "Cloned"
-msgstr "Nhân bản"
+msgstr "Được sao bản"
 
 msgid "is admin"
 msgstr "là quản trị viên"
@@ -640,7 +641,7 @@ msgid "For more information, check"
 msgstr "Để biết thêm thông tin, kiểm tra"
 
 msgid "the Windows Clients documentation"
-msgstr "tài liệu Windows Client"
+msgstr "tài liệu của Windows Client"
 
 msgid "It is programmed in"
 msgstr "Nó được lập trình trong"
@@ -652,31 +653,31 @@ msgid "and"
 msgstr "và"
 
 msgid "Memory"
-msgstr "Ký ức"
+msgstr "Bộ nhớ"
 
 msgid "MB available"
 msgstr "MB có sẵn"
 
 msgid "The machine will shutdown after these minutes"
-msgstr "Máy sẽ tắt sau những phút này"
+msgstr "Máy sẽ tắt sau sau những phút này"
 
 msgid "Cancel"
 msgstr "Hủy bỏ"
 
 msgid "Please enter the following information to create the account"
-msgstr "Vui lòng nhập các thông tin sau để tạo tài khoản"
+msgstr "Vui lòng nhập các thông tin sau đây để tạo tài khoản"
 
 msgid "Enter Username"
 msgstr "Điền tên đăng nhập"
 
 msgid "Enter Password"
-msgstr "Nhập mật khẩu"
+msgstr "Điền mật khẩu"
 
 msgid "Confirm Password"
 msgstr "Xác nhận mật khẩu"
 
 msgid "Username is required"
-msgstr "tên người dùng là bắt buộc"
+msgstr "Cần tên người dùng"
 
 msgid "Username can not exceed 20 characters"
 msgstr "Tên người dùng không được vượt quá 20 ký tự"
@@ -690,7 +691,7 @@ msgstr ""
 "dưới"
 
 msgid "Password is required"
-msgstr "Mật khẩu là bắt buộc"
+msgstr "Cần nhập mật khẩu"
 
 msgid "Password can not exceed 20 characters"
 msgstr "Mật khẩu không được vượt quá 20 ký tự"
@@ -702,25 +703,25 @@ msgid "Password can only contain words and numbers"
 msgstr "Mật khẩu chỉ có thể chứa từ và số"
 
 msgid "Confirm Password is required"
-msgstr "Xác nhận mật khẩu là bắt buộc"
+msgstr " Cần xác nhận mật khẩu"
 
 msgid "Confirm Password can not exceed 20 characters"
-msgstr "Xác nhận mật khẩu không được vượt quá 20 ký tự"
+msgstr "Mật khẩu xác nhận không được vượt quá 20 ký tự"
 
 msgid "Confirm Password must be at least 5 characters"
-msgstr "Xác nhận mật khẩu phải có ít nhất 5 ký tự"
+msgstr "Mật khẩu xác nhận phải có ít nhất 5 ký tự"
 
 msgid "Confirm Password can only contain words and numbers"
-msgstr "Xác nhận mật khẩu chỉ có thể chứa từ và số"
+msgstr "Mật khẩu xác nhận chỉ có thể chứa từ và số"
 
 msgid "This information will be available to the users"
 msgstr "Thông tin này sẽ có sẵn cho người dùng"
 
 msgid "Volatile Clones"
-msgstr "Bản sao dễ bay hơi"
+msgstr "Bản sao mỗng"
 
 msgid "Owner"
-msgstr "Chủ nhân"
+msgstr "Chủ sở hữu"
 
 msgid "Change the owner of the machine"
 msgstr "Thay đổi chủ sở hữu của máy"
@@ -732,22 +733,22 @@ msgid ""
 "If you can not see the machine screen in a few seconds check for a file "
 "called"
 msgstr ""
-"Nếu bạn không thể thấy màn hình máy trong vài giây, hãy kiểm tra tệp có tên"
+"Nếu bạn không thể thấy màn hình máy trong vài giây, vui lòng kiểm tra tinh tệp"
 
 msgid "in your downloads folder."
-msgstr "trong thư mục tải xuống của bạn."
+msgstr "trong thư mục tải xuống của máy."
 
 msgid "copied to clipboard"
 msgstr "sao chép vào clipboard"
 
 msgid "Portuguese"
-msgstr "Bồ Đào Nha"
+msgstr "Tiếng Bồ Đào Nha"
 
 msgid "Read more."
 msgstr "Đọc thêm."
 
 msgid "The password for this virtual machine connection is :"
-msgstr "Mật khẩu cho kết nối máy ảo này là:"
+msgstr "Mật khẩu để kết nối vào máy ảo này là:"
 
 msgid "view"
 msgstr "lượt xem"
@@ -759,37 +760,37 @@ msgid "The machine is down."
 msgstr "Máy bị sập."
 
 msgid "Remove"
-msgstr "Tẩy"
+msgstr "Loại bỏ"
 
 msgid "The machine must be started to take the screenshot."
-msgstr "Máy phải được bắt đầu để chụp ảnh màn hình."
+msgstr "Máy cần phải được bắt đầu để chụp ảnh màn hình."
 
 msgid "Take screenshot"
 msgstr "Chụp màn hình"
 
 msgid "Set base picture"
-msgstr "Đặt ảnh cơ sở"
+msgstr "Đặt ảnh nền"
 
 msgid "Saving the screenshot, please wait a moment..."
 msgstr "Lưu ảnh chụp màn hình, vui lòng đợi trong giây lát ..."
 
 msgid "You need to run the machine in order to take a screenshot."
-msgstr "Bạn cần chạy máy để chụp ảnh màn hình."
+msgstr "Bạn cần phải chạy máy để chụp ảnh màn hình."
 
 msgid "Copying the screenshot, please wait a moment..."
 msgstr "Sao chép ảnh chụp màn hình, vui lòng đợi trong giây lát ..."
 
 msgid "You need a screenshot in order to copy it to the base machine."
-msgstr "Bạn cần một ảnh chụp màn hình để sao chép nó vào máy cơ sở."
+msgstr "Bạn cần một ảnh chụp màn hình để sao chép vào máy tính cơ sở."
 
 msgid "Add"
 msgstr "Thêm vào"
 
 msgid "The changes will apply on next restart"
-msgstr "Những thay đổi sẽ được áp dụng vào lần khởi động lại tiếp theo"
+msgstr "Những thay đổi sẽ được áp dụng vào lần khởi khi máy tính khởi động lại"
 
 msgid "This VM is running and can't be renamed."
-msgstr "VM này đang chạy và không thể đổi tên."
+msgstr "Máy ảo này đang chạy, không thể đổi tên."
 
 msgid "Thanks to:"
 msgstr "Nhờ vào:"
@@ -798,37 +799,37 @@ msgid "licensed."
 msgstr "được cấp phép."
 
 msgid "New Node"
-msgstr "Nút mới"
+msgstr "Nốt mới"
 
 msgid "Address"
-msgstr "Địa chỉ nhà"
+msgstr "Địa chỉ"
 
 msgid "A node with that name already exists."
-msgstr "Một nút có tên đó đã tồn tại."
+msgstr "Nốt tên đã tồn tại."
 
 msgid "Setting your default language"
 msgstr "Đặt ngôn ngữ mặc định của bạn"
 
 msgid "Change password"
-msgstr "Đổi mật khẩu"
+msgstr "Thay đổi mật khẩu"
 
 msgid "Update password"
 msgstr "Cập nhật mật khẩu"
 
 msgid "Start all clones"
-msgstr "Bắt đầu tất cả các bản sao"
+msgstr "Bắt đầu chạy tất cả các bản sao"
 
 msgid "Access denied"
-msgstr "Truy cập bị từ chối"
+msgstr "Truy cập từ chối"
 
 msgid "Empty login name"
-msgstr "Tên đăng nhập trống"
+msgstr "Tên đăng nhập đang trống"
 
 msgid "Empty password"
-msgstr "Mật khẩu trống"
+msgstr "Mật khẩu đang trống"
 
 msgid "Session timeout"
-msgstr "Thời gian chờ phiên"
+msgstr "Phần mềm chạy tạm dừng"
 
 msgid "Italian"
-msgstr ""
+msgstr "Tiếng Ý"
