@@ -1778,6 +1778,9 @@ sub _select_domain_db {
     $data = "_data_$table" if $table ne 'domains';
     $self->{$data} = $row;
 
+    $row->{alias} = Encode::decode_utf8($row->{alias})
+    if exists $row->{alias} && defined $row->{alias};
+
     return $row if $row->{id};
 }
 
@@ -1918,7 +1921,7 @@ sub _display_file_spice($self,$display, $tls = 0) {
 
     $ret .=
         "fullscreen=1\n"
-        ."title=".$self->name." - Press SHIFT+F12 to exit\n"
+        ."title=".$self->alias." - Press SHIFT+F12 to exit\n"
         ."enable-smartcard=0\n"
         ."enable-usbredir=1\n"
         ."enable-usb-autoshare=1\n"
@@ -1981,6 +1984,8 @@ sub info($self, $user) {
         ,volatile_clones => $self->volatile_clones
         ,id_vm => $self->_data('id_vm')
     };
+
+    $info->{alias} = ( $self->_data('alias') or $info->{name} );
     for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups balance_policy)) {
         $info->{$_} = $self->_data($_);
     }
@@ -2738,11 +2743,6 @@ sub clone {
 
     my %args2 = @_;
     delete $args2{from_pool};
-    if ($name !~ /^[a-z0-9_-]+$/i) {
-        $name =~ tr/[a-z0-9_\-]//c;
-        $name .= Ravada::Utils::random_name(6);
-        $args2{name} = $name;
-    }
 
     return $self->_copy_clone(%args2)   if !$self->is_base && $self->id_base();
 
@@ -2806,6 +2806,7 @@ sub _copy_clone($self, %args) {
     my $volatile = delete $args{volatile};
     my $id_owner = delete $args{id_owner};
     $id_owner = $user->id if (! $id_owner);
+    my $alias = delete $args{alias};
 
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)
         if keys %args;
@@ -2813,6 +2814,7 @@ sub _copy_clone($self, %args) {
     my $base = Ravada::Domain->open($self->id_base);
 
     my @copy_arg;
+    push @copy_arg, ( alias => $alias )   if $alias;
     push @copy_arg, ( memory => $memory ) if $memory;
     push @copy_arg, ( volatile => $volatile ) if $volatile;
 
@@ -3108,6 +3110,8 @@ sub _around_name($orig,$self) {
 
     return $self->{_name};
 }
+
+sub alias($self){ return ($self->_data('alias') or $self->_data('name')) }
 
 =head2 can_hybernate
 

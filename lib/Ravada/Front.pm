@@ -130,14 +130,14 @@ Returns: listref of machines
 
 sub list_machines_user($self, $user, $access_data={}) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,is_public, description, screenshot, id_owner"
+        "SELECT id,name,alias,is_public, description, screenshot, id_owner"
         ." FROM domains "
         ." WHERE is_base=1"
         ." ORDER BY name "
     );
-    my ($id, $name, $is_public, $description, $screenshot, $id_owner);
+    my ($id, $name, $alias, $is_public, $description, $screenshot, $id_owner);
     $sth->execute;
-    $sth->bind_columns(\($id, $name, $is_public, $description, $screenshot, $id_owner));
+    $sth->bind_columns(\($id, $name, $alias, $is_public, $description, $screenshot, $id_owner));
 
     my $bookings_enabled = $self->setting('/backend/bookings');
     my @list;
@@ -153,6 +153,7 @@ sub list_machines_user($self, $user, $access_data={}) {
             ,id_base => $id
         );
         next unless $clone || $user->is_admin || ($is_public && $user->allowed_access($id));
+        $name = $alias if defined $alias;
         my %base = ( id => $id, name => Encode::decode_utf8($name)
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')

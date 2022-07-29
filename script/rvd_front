@@ -2545,7 +2545,7 @@ sub new_machine {
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"
                 .".It can only contain alphabetic, numbers, undercores and dashes.")
-            if $c->param('name') && $c->param('name') !~ /^[а-яА-Яa-zA-Z0-9àèìòùáéíóúÀÈÌÒÙÁÉÍÓÚçÇïÏüÜ_-]+$/;
+            if $c->param('name') && $c->param('name') !~ /^[а-яА-Яa-zA-Z0-9àèìòùáéíóúäëïöüçñ€_\$\-]+$/i;
         if (!@error) {
             req_new_domain($c);
             $c->redirect_to("/admin/machines");
@@ -3305,7 +3305,7 @@ sub copy_machine {
     my @create_args = ( from_pool => 0 );
     push @create_args,( memory => $ram ) if $ram;
     push @create_args, ( name => $name ) if !defined $number || $number == 1;
-    push @create_args, ( name => $name ) if $number == 1;
+    push @create_args, ( name => $name ) if !$number || $number == 1;
     push @create_args, ( id_owner => $owner ) if ($owner);
     push @create_args, ( volatile => $arg->{copy_is_volatile} ? 1 : 0 );
     push @create_args, ( add_to_pool => $arg->{copy_is_pool} && $base->is_pool() ? 1 : 0 );

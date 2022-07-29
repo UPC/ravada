@@ -3148,7 +3148,7 @@ sub search_domain($self, $name, $import = 0) {
         ."    (d.name=? OR d.alias=?) "
         ;
     my $sth = $CONNECTOR->dbh->prepare($query);
-    $sth->execute($name);
+    $sth->execute($name, $name);
     my ($id, $id_vm ) = $sth->fetchrow();
 
     return if !$id;
@@ -4294,19 +4294,22 @@ sub _cmd_clone($self, $request) {
         name => $name
         ,%$args
     );
+
+    $request->id_domain($clone->id) if $clone;
 }
 
 sub _new_clone_name($self, $base,$user) {
     my $name;
     my $alias = $base->name;
     $alias = $base->_data('alias') if $base->_data('alias');
-    $alias .= "-".$user->name;
-    if ($user->name =~ /^[a-z0-9]/i) {
+    if ($user->name =~ /^[a-z0-9]+$/i) {
         $name = $base->name."-".$user->name;
+        $alias .= "-".$user->name;
     } else {
         my $length = length($user->id);
         my $n = "0" x (4-$length);
         $name = $base->name."-".$n.$user->id;
+        $alias .= "-".Encode::decode_utf8($user->name);
     }
     return ($name,$alias) if !$self->_domain_exists($name);
 

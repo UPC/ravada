@@ -89,6 +89,46 @@ sub _test_messages_utf8($user) {
     }
 }
 
+sub test_domain_catalan($vm) {
+    my $name0 = new_domain_name();
+    my $name = $name0.'á';
+
+    my $domain = create_domain_v2(vm => $vm, name => $name);
+    is($domain->_data('name'),$name0.'a') or die Dumper(
+        [$domain->_data('name'),$name0.'a']
+    );
+    remove_domain($domain);
+
+    $name0 = new_domain_name();
+    $name = $name0.'Á';
+
+    $domain = create_domain_v2(vm => $vm, name => $name);
+    is($domain->_data('name'),$name0.'A');
+    remove_domain($domain);
+
+    $name0 = new_domain_name();
+    $name = $name0.'áéíóú';
+
+    $domain = create_domain_v2(vm => $vm, name => $name);
+    is($domain->_data('name'),$name0.'aeiou');
+    remove_domain($domain);
+
+    $name0 = new_domain_name();
+    $name = $name0.'ÁÉÍÓÚÇÑ';
+
+    $domain = create_domain_v2(vm => $vm, name => $name);
+    is($domain->_data('name'),$name0.'AEIOUCN');
+    remove_domain($domain);
+
+    $name0 = new_domain_name();
+    $name = $name0.'ÁÉÍÓÚÇÑ'.'пользователя';
+    $domain = create_domain_v2(vm => $vm, name => $name);
+    my $expected = $name0.'AEIOUCN';
+    like($domain->_data('name'),qr/$expected-\w{11}$/);
+    remove_domain($domain);
+
+}
+
 ########################################################################
 
 init();
@@ -106,6 +146,7 @@ for my $vm_name (vm_names()) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+        test_domain_catalan($vm);
         test_user_cyrillic($vm);
     }
 }

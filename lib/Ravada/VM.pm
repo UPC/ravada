@@ -9,6 +9,7 @@ Ravada::VM - Virtual Managers library for Ravada
 
 =cut
 
+use utf8;
 use Carp qw( carp confess croak cluck);
 use Data::Dumper;
 use File::Path qw(make_path);
@@ -408,12 +409,18 @@ sub _around_create_domain {
 
     if ($name !~ /^[a-zA-Z0-9_-]+$/) {
         $alias = $name if !$alias;
-        $name =~ tr/A-Za-z0-9/\-/c;
-        $name =~ s/^\-+/\-/;
-        $name =~ s/\-+$//;
-        $name =~ s/\-\-+/\-/;
-        $name .= "-" if length($name);
-        $name .= Ravada::Utils::random_name(6);
+        my $length = length($name);
+        $name =~ tr/áéíóúàèìòùäëïöüçñ€$/aeiouaeiouaeioucnes/;
+        $name =~ tr/ÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÇÑ€$/AEIOUAEIOUAEIOUCNES/;
+        $name =~ tr/A-Za-z0-9_\-/\-/c;
+        confess if $name eq '--';
+        $name =~ s/^\-*//;
+        $name =~ s/\-*$//;
+        $name =~ s/\-\-+/\-/g;
+        if (length($name) < $length) {
+            $name .= "-" if length($name);
+            $name .= Ravada::Utils::random_name($length-length($name));
+        }
         $args_create{name} = $name;
     }
 
