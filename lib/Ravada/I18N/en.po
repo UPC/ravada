@@ -1794,8 +1794,8 @@ msgstr "Spinoff clone"
 msgid "Spinoff this clone from its base."
 msgstr "Spinoff this clone from its base."
 
-msgid "Are you sure you want to spinoff from the base ?"
-msgstr "Are you sure you want to spinoff from the base ?"
+msgid "Are you sure you want to spinoff from the base?"
+msgstr "Are you sure you want to spinoff from the base?"
 
 msgid "Enter Old Password"
 msgstr "Enter Old Password"

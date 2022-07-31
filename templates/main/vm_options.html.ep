@@ -43,8 +43,7 @@
                         <label for="start"><%=l 'Start after migration' %></label>
                     </div>
                     <div ng-show="showmachine.is_active">
-                        <%=l 'This virtual machine is running. It must be shut down before
-                        migrate.' %>
+                        <%=l 'This virtual machine is running. It must be shut down before migrate.' %>
                     </div>
                     <div>
                         <%=l 'Are you sure you want to migrate' %> {{showmachine.name}}
