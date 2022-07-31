@@ -2169,3 +2169,6 @@ msgstr "This feature requires a LDAP server configured."
 
 msgid "Source Machine"
 msgstr "Source Machine"
+
+msgid "Monitoring"
+msgstr "Monitoring"
