@@ -8,8 +8,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2022-07-26 08:25+0000\n"
-"Last-Translator: Dani Sanchez <dani@fib.upc.edu>\n"
+"PO-Revision-Date: 2022-08-02 03:22+0000\n"
+"Last-Translator: Maite Guix <maite.guix@gmail.com>\n"
 "Language-Team: Catalan <https://hosted.weblate.org/projects/ravada/"
 "translation/ca/>\n"
 "Language: ca\n"
@@ -2203,3 +2203,72 @@ msgstr "Recarregar"
 
 msgid "UEFI"
 msgstr "UEFI"
+
+msgid "Requests"
+msgstr "Sol·licituds"
+
+msgid "This virtual machine has no group restrictions."
+msgstr "Aquesta màquina virtual no té restriccions de grup."
+
+msgid "There are no LDAP groups defined."
+msgstr "No hi ha grups LDAP definits."
+
+msgid "Event properties"
+msgstr "Propietats de l'esdeveniment"
+
+msgid "Title"
+msgstr "Títol"
+
+msgid "Color"
+msgstr "Color"
+
+msgid "Weekly"
+msgstr "Setmanal"
+
+msgid "Until"
+msgstr "Fins"
+
+msgid "Groups with permissions"
+msgstr "Grups amb permisos"
+
+msgid "remove"
+msgstr "eliminar"
+
+msgid "Save changes"
+msgstr "Guardar canvis"
+
+msgid "This booking overlaps already scheduled reservations"
+msgstr "Aquesta reserva es superposa a les reserves ja programades"
+
+msgid ""
+"This server has reservations for today. Machines from users out of\n"
+"    the booking list will be shutdown."
+msgstr ""
+"Aquest servidor té reserves per avui. Màquines d'usuaris fora de\n"
+"    la llista de reserves es tancarà."
+
+msgid "This field is required"
+msgstr "Aquest camp és obligatori"
+
+msgid "bases"
+msgstr "bases"
+
+msgid "Poweroff"
+msgstr "Apagar"
+
+msgid "Only users from these groups will be allowed to execute this machine"
+msgstr "Només els usuaris d'aquests grups podran executar aquesta màquina"
+
+msgid "Repeat"
+msgstr "Repetir"
+
+msgid "Delete"
+msgstr "Suprimir"
+
+msgid "options"
+msgstr "opcions"
+
+msgid "can change the settings of any virtual machine cloned from one base owned by the user."
+msgstr ""
+"pot canviar la configuració de qualsevol màquina virtual clonada des d'una "
+"base propietat de l'usuari."
