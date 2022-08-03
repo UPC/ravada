@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2022-07-22 15:16+0000\n"
+"PO-Revision-Date: 2022-08-04 10:22+0000\n"
 "Last-Translator: Dani Sanchez <dani@fib.upc.edu>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/ravada/"
 "translation/es/>\n"
@@ -2142,3 +2142,72 @@ msgstr "No se encuentran resultados"
 
 msgid "Client headers"
 msgstr "Cabeceras de cliente"
+
+msgid "Poweroff"
+msgstr "Apagar"
+
+msgid "Requests"
+msgstr "Peticiones"
+
+msgid "This virtual machine has no group restrictions."
+msgstr "Esta máquina no tiene restricciones de grupo."
+
+msgid "Only users from these groups will be allowed to execute this machine"
+msgstr "Solo los usuarios de estos grupos tiene permitido ejecutar esta máquina"
+
+msgid "Event properties"
+msgstr "Propiedades del evento"
+
+msgid "This field is required"
+msgstr "Se precisa este campo"
+
+msgid "Title"
+msgstr "Título"
+
+msgid "Color"
+msgstr "Color"
+
+msgid "Repeat"
+msgstr "Repetir"
+
+msgid "Weekly"
+msgstr "Semanalmente"
+
+msgid "Until"
+msgstr "Hasta"
+
+msgid "Groups with permissions"
+msgstr "Grupos con permisos"
+
+msgid "Delete"
+msgstr "Borrar"
+
+msgid "Save changes"
+msgstr "Guardar cambios"
+
+msgid "remove"
+msgstr "eliminar"
+
+msgid "bases"
+msgstr "bases"
+
+msgid "This booking overlaps already scheduled reservations"
+msgstr "Esta reserva se solapa con otras reservas programadas"
+
+msgid "There are no LDAP groups defined."
+msgstr "No hay grupos de LDAP definidos."
+
+msgid "can change the settings of any virtual machine cloned from one base owned by the user."
+msgstr ""
+"puede cambiar los parámetros de cualquier máquina virtual clonada de una "
+"base en posesión."
+
+msgid ""
+"This server has reservations for today. Machines from users out of\n"
+"    the booking list will be shutdown."
+msgstr ""
+"Este servidor tiene reservas para hoy. Las máquinas de usuarios fuera de \n"
+"    la lista de reservas serán apagadas."
+
+msgid "options"
+msgstr "opciones"
