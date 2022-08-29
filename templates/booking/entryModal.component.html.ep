@@ -1,5 +1,5 @@
 <div class="modal-header">
-    <h3 class="modal-title" id="modal-title">Event properties</h3>
+    <h3 class="modal-title" id="modal-title"><%=l 'Event properties' %></h3>
     <button type="button" class="close"
             ng-click="$ctrl.cancel()"
             data-dismiss="modal" aria-label="Close">
