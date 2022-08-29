@@ -2,7 +2,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2022-07-12 12:15+0000\n"
+"PO-Revision-Date: 2022-08-02 03:22+0000\n"
 "Last-Translator: Elena Mishina <lepata@basealt.ru>\n"
 "Language-Team: Russian <https://hosted.weblate.org/projects/ravada/"
 "translation/ru/>\n"
@@ -557,7 +557,7 @@ msgid "Yes, remove all the clones"
 msgstr "Да, удалить все клоны"
 
 msgid "This virtual machine can't be removed because it has"
-msgstr "Эту виртуальную машину нельзя удалить, так у неё есть"
+msgstr "Эту виртуальную машину нельзя удалить, так как у неё есть"
 
 msgid "clones"
 msgstr "клон(а/ов)"
@@ -825,7 +825,7 @@ msgid "Empty password"
 msgstr "Пустой пароль"
 
 msgid "Session timeout"
-msgstr "Длительность сессии"
+msgstr "Время жизни сеанса"
 
 msgid "Vietnamese"
 msgstr "Вьетнамский"
@@ -2049,3 +2049,101 @@ msgstr "Может выключать собственные виртуальн�
 
 msgid "Can manage groups."
 msgstr "Может управлять группами."
+
+msgid "Purge"
+msgstr "Очистить"
+
+msgid "Purge disk volumes"
+msgstr "Очистить разделы диска"
+
+msgid "Error: you want to have"
+msgstr "Ошибка: вы хотите запустить"
+
+msgid "but there are only"
+msgstr "но только"
+
+msgid "clones defined."
+msgstr "клона определено."
+
+msgid "Only remote client can access this port if restricted"
+msgstr ""
+"Если отмечено, только удаленный клиент может получить доступ к этому порту"
+
+msgid "Only remote client can access this port"
+msgstr "Только удаленный клиент может получить доступ к этому порту"
+
+msgid "Any remote client can access this port"
+msgstr "Любой удаленный клиент может получить доступ к этому порту"
+
+msgid "Refresh ports"
+msgstr "Обновить порты"
+
+msgid "Client headers"
+msgstr "Заголовки клиента"
+
+msgid ""
+"This server has reservations for today. Machines from users out of\n"
+"    the booking list will be shutdown."
+msgstr ""
+"На этом сервере есть зарезервированные машины на сегодня. Машины "
+"пользователей,\n"
+"    не включенных в список резервирования, будут отключены."
+
+msgid "Requests"
+msgstr "Запросы"
+
+msgid "There are no LDAP groups defined."
+msgstr "Группы LDAP не определены."
+
+msgid "Only users from these groups will be allowed to execute this machine"
+msgstr "Только пользователям из этих групп будет разрешено запускать эту машину"
+
+msgid "Event properties"
+msgstr "Свойства события"
+
+msgid "This field is required"
+msgstr "Это поле необходимо заполнить"
+
+msgid "Title"
+msgstr "Название"
+
+msgid "Color"
+msgstr "Цвет"
+
+msgid "Repeat"
+msgstr "Повторять"
+
+msgid "Weekly"
+msgstr "Еженедельно"
+
+msgid "Until"
+msgstr "До"
+
+msgid "Save changes"
+msgstr "Сохранить изменения"
+
+msgid "This booking overlaps already scheduled reservations"
+msgstr "Это бронирование пересекается с уже запланированными бронированиями"
+
+msgid "Groups with permissions"
+msgstr "Группы с разрешениями"
+
+msgid "Delete"
+msgstr "Удалить"
+
+msgid "options"
+msgstr "параметры"
+
+msgid "bases"
+msgstr "базы"
+
+msgid "remove"
+msgstr "удалить"
+
+msgid "can change the settings of any virtual machine cloned from one base owned by the user."
+msgstr ""
+"может изменять настройки любой виртуальной машины, клонированной из одной "
+"базы, принадлежащей пользователю."
+
+msgid "This virtual machine has no group restrictions."
+msgstr "Эта виртуальная машина не имеет групповых ограничений."
