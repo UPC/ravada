@@ -137,7 +137,7 @@ msgid "Password is too short"
 msgstr "Mật khẩu quá ngắn"
 
 msgid "Password fields do not match"
-msgstr "Mật khẩu nhập không trùng"
+msgstr "Mật khẩu nhập không giống"
 
 msgid "Some of the password fields are empty"
 msgstr "Mật khẩu nhập đang trống"
@@ -227,7 +227,7 @@ msgid "Restore"
 msgstr "Khôi phục"
 
 msgid "Hibernate"
-msgstr "Để máy tính chạy ngầm"
+msgstr "Chế độ ngủ đông"
 
 msgid "Are you sure?"
 msgstr "Bạn có chắc không?"
@@ -343,13 +343,13 @@ msgid "can grant permissions to other users"
 msgstr "có thể cấp quyền hạn cho người dùng khác"
 
 msgid "can hibernate any virtual machine."
-msgstr "có thể chạy ngầm bất kỳ máy ảo."
+msgstr "có thể chạy chế độ bất kỳ máy ảo."
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr "có thể chạy ngầm các bản sao từ các máy ảo thuộc sở hữu của người dùng."
+msgstr "có thể chạy chế độ ngủ đông các bản sao từ các máy ảo thuộc sở hữu của người dùng."
 
 msgid "can hibernate any clone."
-msgstr "có thể chạy ngầm bất kỳ bản sao."
+msgstr "có thể chạy chế độ ngủ đông bất kỳ bản sao."
 
 msgid "can remove any virtual machines owned by the user."
 msgstr "có thể loại bỏ bất kỳ máy ảo nào thuộc sở hữu của người dùng."
@@ -441,7 +441,7 @@ msgstr ""
 "Tên máy chỉ được phép bao gồm các ký tự chữ cái, số, dấu gạch ngang và điểm."
 
 msgid "Create"
-msgstr "Khởi tạo"
+msgstr "Tạo"
 
 msgid ""
 "can change the settings of all virtual machines cloned from one base owned "
@@ -460,7 +460,7 @@ msgid "Are you sure you want to prepare the Base of"
 msgstr "Bạn có chắc chắn muốn chuẩn bị Máy Cơ Sở"
 
 msgid "Are you sure you want to change the Public state of"
-msgstr "Bạn có chắc chắn muốn thay đổi trạng thái Sông Khai cho"
+msgstr "Bạn có chắc chắn muốn thay đổi trạng thái Công Cộng cho"
 
 msgid "Search"
 msgstr "Tìm kiếm"
@@ -498,8 +498,8 @@ msgstr "Tắt máy ..."
 msgid "It may take a couple of minutes."
 msgstr "Nó có thể mất một vài phút."
 
-msgid "Hybernating ..."
-msgstr "Chạy ngầm ..."
+msgid "Hibernating ..."
+msgstr "Đang chạy trong chế độ ngủ đông ..."
 
 msgid "Description"
 msgstr "Giải thích"
@@ -578,10 +578,10 @@ msgid "to"
 msgstr "đến"
 
 msgid "Changing Public State"
-msgstr "Thay đổi Public State"
+msgstr "Thay đổi Trạng Thái Công Cộng"
 
 msgid "Changing Base State"
-msgstr "Thay đổi Trạng Thái của Máy Cơ Sở"
+msgstr "Thay đổi Trạng Thái Cơ Sở"
 
 msgid "action"
 msgstr "hoạt động"
@@ -829,7 +829,7 @@ msgid "Empty password"
 msgstr "Mật khẩu đang trống"
 
 msgid "Session timeout"
-msgstr "Phần mềm chạy tạm dừng"
+msgstr "Thời gian chờ phiên"
 
 msgid "Italian"
 msgstr "Tiếng Ý"
