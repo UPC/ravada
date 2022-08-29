@@ -408,19 +408,8 @@ sub _around_create_domain {
     my $config = delete $args{config};
 
     if ($name !~ /^[a-zA-Z0-9_-]+$/) {
-        $alias = $name if !$alias;
-        my $length = length($name);
-        $name =~ tr/áéíóúàèìòùäëïöüçñ€$/aeiouaeiouaeioucnes/;
-        $name =~ tr/ÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÇÑ€$/AEIOUAEIOUAEIOUCNES/;
-        $name =~ tr/A-Za-z0-9_\-/\-/c;
-        confess if $name eq '--';
-        $name =~ s/^\-*//;
-        $name =~ s/\-*$//;
-        $name =~ s/\-\-+/\-/g;
-        if (length($name) < $length) {
-            $name .= "-" if length($name);
-            $name .= Ravada::Utils::random_name($length-length($name));
-        }
+        $alias = $self->_set_alias_unique($alias or $name);
+        $name = $self->_set_ascii_name($name);
         $args_create{name} = $name;
     }
 
@@ -524,6 +513,38 @@ sub _around_create_domain {
     return $domain;
 }
 
+sub _set_ascii_name($self, $name) {
+    my $length = length($name);
+    $name =~ tr/áéíóúàèìòùäëïöüçñ€$/aeiouaeiouaeioucnes/;
+    $name =~ tr/ÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÇÑ€$/AEIOUAEIOUAEIOUCNES/;
+    $name =~ tr/A-Za-z0-9_\-/\-/c;
+    confess if $name eq '--';
+    $name =~ s/^\-*//;
+    $name =~ s/\-*$//;
+    $name =~ s/\-\-+/\-/g;
+    if (length($name) < $length) {
+        $name .= "-" if length($name);
+        $name .= Ravada::Utils::random_name($length-length($name));
+    }
+    for (;;) {
+        last if !$self->_check_duplicate_name($name,0);
+        $name .= Ravada::Utils::random_name(1);
+    }
+    return $name;
+}
+
+sub _set_alias_unique($self, $alias) {
+    my $alias0 = $alias;
+    my $n = 2;
+    for (;;) {
+        last if !$self->_check_duplicate_name($alias,0);
+        $alias ="$alias0-$n";
+        $n++;
+    }
+    return $alias;
+
+}
+
 sub _add_instance_db($self, $id_domain) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_instances "
         ." WHERE id_domain=? AND id_vm=?"
@@ -550,12 +571,13 @@ sub _define_spice_password($self, $remote_ip) {
     return $spice_password;
 }
 
-sub _check_duplicate_name($self, $name) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,name,vm FROM domains where name=?");
-    $sth->execute($name);
+sub _check_duplicate_name($self, $name, $die=1) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,name,vm FROM domains where name=? or alias=?");
+    $sth->execute($name,$name);
     my $row = $sth->fetchrow_hashref;
     confess "Error: machine with name '$name' already exists ".Dumper($row)
-        if $row->{id};
+        if $row->{id} && $die;
+    return 0 if !$row || !$row->{id};
     return 1;
 }
 

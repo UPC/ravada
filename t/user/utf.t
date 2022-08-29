@@ -129,6 +129,33 @@ sub test_domain_catalan($vm) {
 
 }
 
+sub test_renamed_conflict($vm) {
+    my @domain2;
+    my %dupe;
+    for my $extra ( 'á','€','по') {
+        my $name0 = new_domain_name();
+        my $name = $name0.$extra;
+
+        my $domain = create_domain_v2(vm => $vm, name => $name);
+        push @domain2,($domain);
+
+        for ( 1 .. 3 ) {
+            my $domain2 = create_domain_v2(vm => $vm, name => $name);
+            my $name2 = $name0;
+            my $alias2 = $name0.$extra;
+            like($domain2->_data('name'),qr/^$name2.+/) or die Dumper(
+                [$domain2->_data('name'),$name0.'a']
+            );
+            like($domain2->_data('alias'),qr/^$alias2/) or exit;
+            push @domain2,($domain2);
+            is($dupe{$domain2->_data('name')}++,0);
+            is($dupe{$domain2->_data('alias')}++,0);
+        }
+    }
+
+    remove_domain(@domain2);
+}
+
 ########################################################################
 
 init();
@@ -139,13 +166,14 @@ for my $vm_name (vm_names()) {
         my $vm = rvd_back->search_vm($vm_name);
 
         my $msg = "SKIPPED test: No $vm_name VM found ";
-        if ($vm && $>) {
+        if ($vm && $> && $vm_name eq 'KVM') {
               $msg = "SKIPPED: Test must run as root";
               $vm = undef;
         }
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+        test_renamed_conflict($vm);
         test_domain_catalan($vm);
         test_user_cyrillic($vm);
     }
