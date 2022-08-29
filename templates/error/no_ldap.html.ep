@@ -1,7 +1,7 @@
 <div class="card" id="admin-content">
     <div class="card-header" ng-show="!<%= $FEATURE->{ldap} %>">
         <p>
-                      <%= l 'This feature requires a LDAP server configured.' %>
+                      <%=l 'This feature requires a LDAP server configured.' %>
                       <%=l 'See documentation about:' %>
         </p>
         <ul>
