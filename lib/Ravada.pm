@@ -688,19 +688,8 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://edge1.parrot.run/parrot/iso/4.11.3/'
-            ,file_re => 'Parrot-xfce-4.11.3_amd64.iso'
-            ,sha256_url => '$url/signed-hashes.txt'
-            ,min_disk_size => '10'
-        }
-        ,parrot_mate_amd64 => {
-		  name => 'Parrot Security Edition MATE'
-            ,description => 'Parrot Security Edition MATE 64 Bits'
-            ,arch => 'x86_64'
-            ,xml => 'jessie-amd64.xml'
-            ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://edge1.parrot.run/parrot/iso/4.11.3/'
-            ,file_re => 'Parrot-security-4.11.3_amd64.iso'
+            ,url => 'https://download.parrot.sh/parrot/iso/5.0.1/'
+            ,file_re => 'Parrot-home-5.0.1_amd64.iso'
             ,sha256_url => '$url/signed-hashes.txt'
             ,min_disk_size => '10'
         }
@@ -806,11 +795,17 @@ sub _update_isos {
     );
     $self->_scheduled_fedora_releases(\%data) if $0 !~ /\.t$/;
     $self->_update_table($table, $field, \%data);
+
+    # old entries to remove
+    $data{parrot_mate_amd64} = {
+		  name => 'Parrot Security Edition MATE'
+    };
     $self->_update_table_isos_url(\%data);
 
 }
 
 sub _update_table_isos_url($self, $data) {
+    my $sth_delete = $CONNECTOR->dbh->prepare("DELETE FROM iso_images WHERE id=?");
     my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE name=?");
     for my $release (sort keys %$data) {
         my $entry = $data->{$release};
@@ -823,6 +818,13 @@ sub _update_table_isos_url($self, $data) {
         }
         $sth->execute($entry->{name});
         my $row = $sth->fetchrow_hashref();
+        if (keys %$entry == 1) {
+            if ($row->{id} && !$row->{device}) {
+                warn "INFO: removing old $entry->{name}\n";
+                $sth_delete->execute($row->{id});
+            }
+            next;
+        }
         for my $field (keys %$entry) {
             next if defined $row->{$field} && $row->{$field} eq $entry->{$field};
             my $sth_update = $CONNECTOR->dbh->prepare(
