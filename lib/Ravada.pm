@@ -4302,7 +4302,7 @@ sub _new_clone_name($self, $base,$user) {
     my $name;
     my $alias = $base->name;
     $alias = $base->_data('alias') if $base->_data('alias');
-    if ($user->name =~ /^[a-z0-9]+$/i) {
+    if ($user->name =~ /^[a-z0-9_\-]+$/i) {
         $name = $base->name."-".$user->name;
         $alias .= "-".$user->name;
     } else {
