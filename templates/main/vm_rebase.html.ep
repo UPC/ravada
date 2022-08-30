@@ -34,8 +34,7 @@
 
             <h3><%=l 'Warning' %></h3>
             <p>
-                <%=l 'Changing the base of a virtual machine is potentially dangerous
-                and can\'t be undone.' %>
+                <%=l 'Changing the base of a virtual machine is potentially dangerous and can\'t be undone.' %>
             </p>
             <p><%=l 'Are you sure ?' %>
                 <button class="btn btn-primary" ng-click="change_base=false;list_bases()"
