@@ -2217,9 +2217,6 @@ sub _list_qemu_bridges($self) {
 sub _which($self, $command) {
     return $self->{_which}->{$command} if exists $self->{_which} && exists $self->{_which}->{$command};
 
-    confess "Error: deep recursion"
-    if $self->{_deep_recursion}->{$command}++;
-
     my $bin_which = $self->{_which}->{which};
     if (!$bin_which) {
         for my $try ( "/bin/which","/usr/bin/which") {
