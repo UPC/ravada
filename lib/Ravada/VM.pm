@@ -518,7 +518,6 @@ sub _set_ascii_name($self, $name) {
     $name =~ tr/áéíóúàèìòùäëïöüçñ€$/aeiouaeiouaeioucnes/;
     $name =~ tr/ÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÇÑ€$/AEIOUAEIOUAEIOUCNES/;
     $name =~ tr/A-Za-z0-9_\-/\-/c;
-    confess if $name eq '--';
     $name =~ s/^\-*//;
     $name =~ s/\-*$//;
     $name =~ s/\-\-+/\-/g;

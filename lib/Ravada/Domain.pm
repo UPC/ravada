@@ -2743,7 +2743,6 @@ sub clone {
 
     my %args2 = @_;
     delete $args2{from_pool};
-
     return $self->_copy_clone(%args2)   if !$self->is_base && $self->id_base();
 
     my $uid = $id_owner || $user->id;

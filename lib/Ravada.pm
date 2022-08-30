@@ -4325,7 +4325,6 @@ sub _domain_exists {
     return Ravada::Front::domain_exists(@_);
 }
 
-
 sub _get_last_used_clone_id
 {
     my ($base_name, $domains) = @_;
