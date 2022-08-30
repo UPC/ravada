@@ -23,7 +23,7 @@
                     <%=l 'New group member' %>
                     <input type="text" ng-model="username_filter"
                                        ng-change="list_users()"
-                                       placeholder="search"
+                                       placeholder="<%=l 'Search' %>"
                     />
                     <span ng-show="loading_users"><i class="fas fa-sync-alt fa-spin"></i></span>
                     <select

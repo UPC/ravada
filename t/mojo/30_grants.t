@@ -35,6 +35,9 @@ sub test_non_admin() {
 
     my $user = create_user( $username, $password);
     mojo_login($t, $user->name, $password);
+
+    _test_change_own_password( $username, $password );
+    _test_change_password(403);
     _test_user_grants($user, 403);
     $user->remove();
 }
@@ -53,6 +56,7 @@ sub test_admin() {
 
     my $user= create_user( $username, $password);
 
+    _test_change_password(200);
     _test_user_grants($user, 200);
     $user->remove();
 }
@@ -202,6 +206,64 @@ sub _test_grant($user, $expected_code) {
 
     $user->remove();
 }
+
+sub _test_change_own_password($username, $current_password) {
+
+    my $new_password = "$username.12ab";
+    $t->post_ok("/user_settings", form => {
+            'password-form' => 1
+            ,'current_password' => $current_password
+            ,password => $new_password
+            ,'conf_password' => 'fail'
+        }
+    )->status_is(200);
+
+    my $user_db = Ravada::Auth::SQL->new( name => $username);
+    is($user_db->compare_password($current_password), 1);
+
+    $t->post_ok("/user_settings", form => {
+            'password-form' => 1
+            ,'current_password' => $current_password
+            ,password => $new_password
+            ,'conf_password' => $new_password
+        }
+    )->status_is(200);
+
+    $user_db = Ravada::Auth::SQL->new( name => $username);
+    is($user_db->compare_password($new_password), 1);
+
+}
+
+sub _test_change_password($expected_status) {
+    my $n = 1;
+    for my $force_change ( undef,0,1 ) {
+        my ($username, $password) = ( new_domain_name(),$$);
+        my $user_db = Ravada::Auth::SQL->new( name => $username);
+        $user_db->remove();
+
+        my $user = create_user( $username, $password);
+
+        my $new_password = "hola1234".$n++;
+
+        my %args = ( password => $new_password);
+        $args{force_change_password} = $force_change
+        if defined $force_change;
+
+        $t->post_ok("/admin/user/".$user->id.".html" => form => \%args)->status_is($expected_status);
+
+        $user_db = Ravada::Auth::SQL->new( name => $username);
+        if ($expected_status == 200 ) {
+            is($user_db->compare_password($new_password), 1);
+            my $curr_force_change = ($force_change or 0 );
+            is($user_db->password_will_be_changed(), $curr_force_change);
+        } else {
+            is($user_db->compare_password($new_password), 0);
+            is($user_db->password_will_be_changed(), 0);
+        }
+    }
+}
+
+################################################################
 
 test_non_admin();
 test_admin();
