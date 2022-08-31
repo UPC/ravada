@@ -1420,7 +1420,6 @@ sub clean($ldap=undef) {
     _remove_old_entries('networks');
     _remove_old_groups_ldap();
     remove_old_user_ldap();
-    remove_old_users()      if $CONNECTOR;
 
     if ($file_remote_config) {
         my $config;
@@ -1542,7 +1541,6 @@ sub remove_old_users() {
     my $users =  rvd_front->list_users();
 
     my $base_name = base_domain_name();
-    warn scalar(@$users);
     for my $user (@$users) {
         next unless $user->{name} =~ /^$base_name/;
         remove_old_user($user->{name});
@@ -2389,6 +2387,7 @@ sub end($ldap=undef) {
     _check_leftovers();
     _check_iptables();
     clean($ldap);
+    remove_old_users()      if $CONNECTOR;
     _unlock_all();
     _file_db();
     rmdir _dir_db();
