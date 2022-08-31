@@ -81,6 +81,7 @@ create_domain
     mojo_request_url_post
 
     remove_old_user
+    remove_old_users
 
     mangle_volume
     test_volume_contents
@@ -1418,6 +1419,8 @@ sub clean($ldap=undef) {
     _remove_old_entries('vms');
     _remove_old_entries('networks');
     _remove_old_groups_ldap();
+    remove_old_user_ldap();
+    remove_old_users()      if $CONNECTOR;
 
     if ($file_remote_config) {
         my $config;
@@ -1532,6 +1535,17 @@ sub remove_old_user_ldap {
         if ( Ravada::Auth::LDAP::search_user($name) ) {
             Ravada::Auth::LDAP::remove_user($name)  
         }
+    }
+}
+
+sub remove_old_users() {
+    my $users =  rvd_front->list_users();
+
+    my $base_name = base_domain_name();
+    warn scalar(@$users);
+    for my $user (@$users) {
+        next unless $user->{name} =~ /^$base_name/;
+        remove_old_user($user->{name});
     }
 }
 
@@ -2263,6 +2277,7 @@ sub connector {
 sub DESTROY {
     shutdown_nodes();
     remove_old_user_ldap() if $CONNECTOR;
+    remove_old_users()      if $CONNECTOR;
     _unlock_all();
 }
 
