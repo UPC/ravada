@@ -297,7 +297,6 @@ sub search_user {
     confess "ERROR: I can't connect to LDAP " if!$ldap;
 
     $username = escape_filter_value($username) if $escape_username;
-    $username =~ s/ /\\ /g;
 
     my $filter = "($field=$username)";
     if (!defined $filter_orig && exists $$CONFIG->{ldap}->{filter} ) {
