@@ -15,6 +15,8 @@ use Time::Piece;
 #use Mojolicious::Plugin::I18N;
 use Mojo::Home;
 
+use utf8;
+
 use I18N::LangTags::Detect;
 #####
 #my $self->plugin('I18N');
@@ -1222,6 +1224,7 @@ any '/group/new' => sub {
 
 any '/admin/user/(#id).(:type)' => sub {
     my $c = shift;
+
     return access_denied($c) unless $USER->can_manage_users() && $USER->can_grant();
 
     my $password = $c->param('password');
@@ -1374,7 +1377,8 @@ get '/user/grant/(:id_user)/(:grant)/(:value)' => sub($c) {
         }
         $info = $c->stash->{i18n}->localize($info);
 
-        $USER->send_message($info." ".$user->name." : $grant");
+        $USER->send_message($info." ".Encode::decode_utf8($user->name)
+            ." : $grant");
     }
     return $c->render(json => { error => $error, info => $info });
 };
@@ -2621,7 +2625,7 @@ sub new_machine {
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"
                 .".It can only contain alphabetic, numbers, undercores and dashes.")
-            if $c->param('name') && $c->param('name') !~ /^[a-zA-Z0-9_-]+$/;
+            if $c->param('name') && $c->param('name') !~ /^[а-яА-Яa-zA-Z0-9àèìòùáéíóúäëïöüçñ€_\$\-]+$/i;
         if (!@error) {
             req_new_domain($c);
             $c->redirect_to("/admin/machines");
@@ -2825,16 +2829,16 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
     my @create_args = ( start => 1, remote_ip => _remote_ip($c));
     push @create_args, ( memory => $ram ) if $ram;
     push @create_args, (   disk => $disk) if $disk;
-    my $req = Ravada::Request->create_domain(
-             name => $name
-        , id_base => $id_base
-       , id_owner => $USER->id
+    my $req = Ravada::Request->clone(
+        id_domain => $id_base
+        ,uid => $USER->id
        ,@create_args
     );
 
 }
 
 sub _new_domain_name {
+    confess;
     my $name = shift;
     my $count = 1;
     my $name2;
@@ -3363,7 +3367,7 @@ sub start_machine {
     if $CONFIG_FRONT->{log}->{log};
 
     my $req = Ravada::Request->start_domain( uid => $USER->id
-                                           ,name => $domain->name
+                                           ,id_domain => $domain->id
                                       ,remote_ip => _remote_ip($c)
     );
 
@@ -3399,7 +3403,7 @@ sub copy_machine {
     my @create_args = ( from_pool => 0 );
     push @create_args,( memory => $ram ) if $ram;
     push @create_args, ( name => $name ) if !defined $number || $number == 1;
-    push @create_args, ( name => $name ) if $number == 1;
+    push @create_args, ( name => $name ) if !$number || $number == 1;
     push @create_args, ( id_owner => $owner ) if ($owner);
     push @create_args, ( volatile => $arg->{copy_is_volatile} ? 1 : 0 );
     push @create_args, ( add_to_pool => $arg->{copy_is_pool} && $base->is_pool() ? 1 : 0 );
