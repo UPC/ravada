@@ -33,19 +33,27 @@ sub _init_ldap() {
     my $login = Ravada::Auth::login($user_name,$$);
     ok($login);
 
-    return ($user_name, $user_name2);
+    return (Ravada::Auth::SQL->new(name => $user_name)
+        ,Ravada::Auth::SQL->new(name => $user_name2)
+    );
 }
 
-sub test_access($vm, $user_name, $user_name2) {
+sub test_access($vm, $user1, $user2) {
 
     my $domain = create_domain($vm);
     $domain->prepare_base(user_admin);
     $domain->is_public(1);
 
-    $domain->allow_ldap_access('cn' => $user_name,0);
-    $domain->allow_ldap_access('cn' => $user_name2,1,1);
+    $domain->allow_ldap_access('cn' => $user1->name,0);
+    $domain->allow_ldap_access('cn' => $user2->name,1,1);
+
     $domain->default_access('ldap',0);
 
+    my $list1 = rvd_front->list_machines_user($user1);
+    my $list2 = rvd_front->list_machines_user($user2);
+    is(scalar(@$list1),0);
+    is(scalar(@$list2),1);
+    warn Dumper([$list1, $list2]);
 }
 
 ###############################################################
