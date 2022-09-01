@@ -185,7 +185,7 @@ sub _load_data {
     my $self = shift;
     _init_connector();
 
-    die "No login name nor id " if !$self->name && !$self->id;
+    confess "No login name nor id " if !defined $self->name && !$self->id;
 
     confess "Undefined \$\$CON" if !defined $$CON;
     my $sth = $$CON->dbh->prepare(

@@ -448,8 +448,8 @@
                     .then(function(response) {
                             $scope.showmachine=response.data;
                             if (typeof $scope.new_name == 'undefined' ) {
-                                $scope.new_name=$scope.showmachine.name+"-2";
-                                $scope.validate_new_name($scope.showmachine.name);
+                                $scope.new_name=$scope.showmachine.alias+"-2";
+                                $scope.validate_new_name($scope.showmachine.alias);
                                 $scope.new_n_virt_cpu= $scope.showmachine.n_virt_cpu;
                                 $scope.new_memory = ($scope.showmachine.memory / 1024);
                                 $scope.new_max_mem = ($scope.showmachine.max_mem / 1024);
@@ -567,11 +567,6 @@
             if(old_name == $scope.new_name) {
               $scope.new_name_invalid=false;
               return;
-            }
-            var valid_domain_name = /^[a-zA-Z][\w_-]+$/;
-            if ( !valid_domain_name.test($scope.new_name)) {
-                $scope.new_name_invalid = true;
-                return;
             }
             $scope.new_name_invalid = false;
             $http.get('/machine/exists/'+$scope.new_name)

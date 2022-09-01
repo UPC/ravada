@@ -3,7 +3,7 @@
     <form name="new_userForm" role="form" method="post" action="/users/register" novalidate>
         <div class="from-group">
             <label for="username"><%=l 'Username' %></label>
-                <input class="form-control" ng-model="username" ng-model-onblur  placeholder="<%=l 'Enter Username' %>" type="text" ng-maxlength="20" ng-minlength="5" name="username" ng-pattern="/^[a-zA-Z0-9_.-]*$/" id="username" required=""><br/>    
+                <input class="form-control" ng-model="username" ng-model-onblur  placeholder="<%=l 'Enter Username' %>" type="text" name="username" id="username" required=""><br/>
             </div>
         <div class="card-text" ng-show="new_userForm.$submitted || (new_userForm.username.$touched && new_userForm.username.$dirty)">
             <div ng-show="new_userForm.username.$error.required" class="alert alert-warning">
