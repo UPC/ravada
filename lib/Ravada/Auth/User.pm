@@ -9,8 +9,10 @@ Ravada::Auth::User - User management and tools library for Ravada
 
 =cut
 
+use utf8;
 use Carp qw(confess croak);
 use Data::Dumper;
+use Encode;
 use Mojo::JSON qw(decode_json);
 use Moose::Role;
 
@@ -153,6 +155,8 @@ sub unshown_messages {
     my @rows;
 
     while (my $row = $sth->fetchrow_hashref ) {
+        $row->{subject} = Encode::decode_utf8($row->{subject});
+        $row->{message} = Encode::decode_utf8($row->{message});
         push @rows,($row);
         $self->mark_message_shown($row->{id})   if $row->{id};
     }

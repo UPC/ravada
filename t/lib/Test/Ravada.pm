@@ -622,6 +622,10 @@ sub _discover() {
         my @list = grep { $_ =~ /^$name/ } @$discover;
         for my $name (@list) {
             diag("Importing $name");
+
+            #            $name = Encode::decode_utf8($name)
+            # if utf8::valid($name);
+
             $req = Ravada::Request->import_domain(
                 name => $name
                 ,id_owner => user_admin->id

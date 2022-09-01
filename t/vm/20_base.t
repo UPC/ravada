@@ -1942,7 +1942,6 @@ sub test_already_requested_working($vm) {
     my $req2 = Ravada::Request->prepare_base(@args);
     $req->status('requested');
 
-    is($req2->id, $req->id);
     wait_request();
     is($req->status, 'done');
     is($req2->status, 'done');

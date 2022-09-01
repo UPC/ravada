@@ -9,6 +9,8 @@ Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
 
 =cut
 
+use utf8;
+
 use Carp qw(carp confess croak);
 use Data::Dumper;
 use File::Copy qw(copy move);
@@ -1776,6 +1778,9 @@ sub _select_domain_db {
     $data = "_data_$table" if $table ne 'domains';
     $self->{$data} = $row;
 
+    $row->{alias} = Encode::decode_utf8($row->{alias})
+    if exists $row->{alias} && defined $row->{alias};
+
     return $row if $row->{id};
 }
 
@@ -1916,7 +1921,7 @@ sub _display_file_spice($self,$display, $tls = 0) {
 
     $ret .=
         "fullscreen=1\n"
-        ."title=".$self->name." - Press SHIFT+F12 to exit\n"
+        ."title=".$self->alias." - Press SHIFT+F12 to exit\n"
         ."enable-smartcard=0\n"
         ."enable-usbredir=1\n"
         ."enable-usb-autoshare=1\n"
@@ -1979,6 +1984,8 @@ sub info($self, $user) {
         ,volatile_clones => $self->volatile_clones
         ,id_vm => $self->_data('id_vm')
     };
+
+    $info->{alias} = ( $self->_data('alias') or $info->{name} );
     for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups balance_policy)) {
         $info->{$_} = $self->_data($_);
     }
@@ -2456,7 +2463,7 @@ sub clones($self, %filter) {
     _init_connector();
 
     my $query =
-        "SELECT id, id_vm, name, id_owner, status, client_status, is_pool, is_base"
+        "SELECT id, id_vm, name,alias, id_owner, status, client_status, is_pool, is_base"
             ." ,is_volatile "
             ." FROM domains "
             ." WHERE id_base = ? ";
@@ -2470,6 +2477,7 @@ sub clones($self, %filter) {
     my @clones;
     while (my $row = $sth->fetchrow_hashref) {
         # TODO: open the domain, now it returns only the id
+        $row->{alias} = Encode::decode_utf8($row->{alias});
         lock_hash(%$row);
         push @clones , $row;
     }
@@ -2718,6 +2726,7 @@ sub clone {
     my $with_cd = delete $args{with_cd};
     my $volatile = delete $args{volatile};
     my $id_owner = delete $args{id_owner};
+    my $alias = delete $args{alias};
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
@@ -2744,6 +2753,7 @@ sub clone {
     }
 
     my @args_copy = ();
+    push @args_copy, ( alias => $alias )        if $alias;
     push @args_copy, ( start => $start )        if $start;
     push @args_copy, ( memory => $memory )      if $memory;
     push @args_copy, ( request => $request )    if $request;
@@ -2795,6 +2805,7 @@ sub _copy_clone($self, %args) {
     my $volatile = delete $args{volatile};
     my $id_owner = delete $args{id_owner};
     $id_owner = $user->id if (! $id_owner);
+    my $alias = delete $args{alias};
 
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)
         if keys %args;
@@ -2802,6 +2813,7 @@ sub _copy_clone($self, %args) {
     my $base = Ravada::Domain->open($self->id_base);
 
     my @copy_arg;
+    push @copy_arg, ( alias => $alias )   if $alias;
     push @copy_arg, ( memory => $memory ) if $memory;
     push @copy_arg, ( volatile => $volatile ) if $volatile;
 
@@ -3097,6 +3109,8 @@ sub _around_name($orig,$self) {
 
     return $self->{_name};
 }
+
+sub alias($self){ return ($self->_data('alias') or $self->_data('name')) }
 
 =head2 can_hybernate
 
@@ -5026,11 +5040,10 @@ sub _pre_clone($self,%args) {
     delete $args{remote_ip};
 
     confess "ERROR: Missing clone name "    if !$name;
-    confess "ERROR: Invalid name '$name'"   if $name !~ /^[a-z0-9_-]+$/i;
 
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
-    for (qw(is_pool start add_to_pool from_pool with_cd volatile id_owner)) {
+    for (qw(is_pool start add_to_pool from_pool with_cd volatile id_owner alias)) {
         delete $args{$_};
     }
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;
