@@ -82,6 +82,7 @@ create_domain
 
     remove_old_user
     remove_old_users
+    remove_old_users_ldap
 
     mangle_volume
     test_volume_contents
@@ -1529,8 +1530,9 @@ sub remove_old_user($user_name=undef) {
     $sth->execute($user_name);
 }
 
-sub remove_old_user_ldap {
-    for my $name (@USERS_LDAP ) {
+sub remove_old_user_ldap(@users) {
+    @users = @USERS_LDAP if !@users;
+    for my $name (@users) {
         if ( Ravada::Auth::LDAP::search_user($name) ) {
             Ravada::Auth::LDAP::remove_user($name)  
         }
@@ -1544,6 +1546,22 @@ sub remove_old_users() {
     for my $user (@$users) {
         next unless $user->{name} =~ /^$base_name/;
         remove_old_user($user->{name});
+    }
+
+}
+
+sub remove_old_users_ldap() {
+
+    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    return if !$ldap;
+    my @users;
+    eval { @users = Ravada::Auth::LDAP::search_user(name => '*', escape_username => 0) };
+    warn $@ if $@;
+    my $base_name = base_domain_name();
+    for my $user (@users) {
+        next if $user->get_value('cn') !~ /^$base_name/;
+        warn $user->get_value('cn');
+        $user->delete()->update($ldap);
     }
 }
 
@@ -2395,7 +2413,10 @@ sub end($ldap=undef) {
 
 sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
                     , $with_admin=0
-                    , $with_posix_group=0) {
+                    , $with_posix_group=0
+                    , $extra=undef) {
+
+    $file_config = 't/etc/ravada_ldap.conf' if !defined $file_config;
 
     if ( ! -e $file_config) {
         my $config = {
@@ -2423,6 +2444,12 @@ sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
 
     $config->{vm}=['KVM','Void'];
     delete $config->{ldap}->{ravada_posix_group}   if !$with_posix_group;
+
+    if(defined $extra) {
+        for my $field (keys %$extra) {
+            $config->{ldap}->{$field} = $extra->{$field};
+        }
+    }
 
     my $fly_config = "/var/tmp/ravada_".base_domain_name().".$$.conf";
     DumpFile($fly_config, $config);
