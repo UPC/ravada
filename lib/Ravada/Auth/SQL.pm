@@ -1168,14 +1168,10 @@ sub ldap_entry($self) {
 
     return $self->{_ldap_entry} if $self->{_ldap_entry};
 
-    for my $field ( qw(uid cn)) {
-        my ($entry) = Ravada::Auth::LDAP::search_user( name => $self->name,field => $field );
-        next if !$entry;
-        $self->{_ldap_entry} = $entry;
-        return $entry;
-    }
+    my ($entry) = Ravada::Auth::LDAP::search_user( name => $self->name );
+    $self->{_ldap_entry} = $entry;
 
-    return;
+    return $entry;
 }
 
 =head2 groups
