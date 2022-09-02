@@ -1560,7 +1560,6 @@ sub remove_old_users_ldap() {
     my $base_name = base_domain_name();
     for my $user (@users) {
         next if $user->get_value('cn') !~ /^$base_name/;
-        warn $user->get_value('cn');
         $user->delete()->update($ldap);
     }
 }
