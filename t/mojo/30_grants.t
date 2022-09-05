@@ -21,6 +21,7 @@ my $SCRIPT = path(__FILE__)->dirname->sibling('../script/rvd_front');
 
 $ENV{MOJO_MODE} = 'development';
 init('/etc/ravada.conf',0);
+$Test::Ravada::BACKGROUND=1;
 my $connector = rvd_back->connector;
 like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
 
@@ -61,7 +62,106 @@ sub test_admin() {
     $user->remove();
 }
 
+sub _mojo_login($admin) {
+    my ($username, $password) = ( new_domain_name(),new_domain_name());
+    my $user_db = Ravada::Auth::SQL->new( name => $username);
+    $user_db->remove();
 
+    my $user= create_ldap_user( $username, $password);
+    $user_db = Ravada::Auth::SQL->new( name => $username);
+    user_admin->make_admin($user_db->id) if $admin;
+
+    mojo_login($t, $username, $password);
+
+    return $user_db;
+}
+
+sub _create_base($vm_name) {
+    my $name = new_domain_name();
+
+    my $args = {
+            backend => $vm_name
+            ,id_iso => search_id_iso('Alpine%64 bits')
+            ,name => $name
+            ,disk => 1
+            ,submit => 1
+    };
+
+    mojo_check_login($t);
+    $t->post_ok('/new_machine.html' => form => $args)->status_is(302) or return;
+
+    wait_request();
+
+    my $domain = rvd_front->search_domain($name);
+
+    mojo_request($t,"prepare_base", {id_domain => $domain->id });
+    $domain->is_public(1);
+
+    return $domain;
+
+}
+
+sub test_clone($base,$expected=0) {
+    my @clones0 = $base->clones();
+    my $expected_status = 200;
+    $expected_status = 403 if !$expected;
+    $t->get_ok("/machine/clone/".$base->id.".html")->status_is($expected_status);
+    wait_request();
+
+    my @clones = $base->clones();
+    is(scalar(@clones),scalar(@clones0)+$expected);
+
+    if (scalar(@clones)>scalar(@clones0)) {
+        my $req= Ravada::Request->remove_domain(
+            name => $clones[-1]->{name}
+            ,uid => user_admin->id
+        );
+        wait_request();
+
+    }
+}
+
+sub test_clone_request($base, $expected=0) {
+
+    my @clones0 = $base->clones();
+    my $id_req = mojo_request($t,"clone", {id_domain => $base->id });
+    my $request = Ravada::Request->open($id_req);
+    wait_request();
+    is($request->status,'done');
+    if (!$expected) {
+        like($request->error,qr/user.*can not clone/);
+    } else {
+        is($request->error,'');
+    }
+    my @clones = $base->clones();
+    is(scalar(@clones),scalar(@clones0)+$expected);
+
+    if (scalar(@clones)>scalar(@clones0)) {
+        my $req= Ravada::Request->remove_domain(
+            name => $clones[-1]->{name}
+            ,uid => user_admin->id
+        );
+        wait_request();
+    }
+
+}
+sub test_access($vm_name) {
+    my $user_admin = _mojo_login(1);
+    #create base
+    my $base = _create_base($vm_name);
+
+    my $user= _mojo_login(0);
+
+    test_clone($base,1);
+    test_clone_request($base,1);
+
+    $base->allow_ldap_access('cn' => $user->ldap_entry->get_value('cn'),0);
+
+    is($user->allowed_access($base->id),0);
+
+    test_clone($base);
+    test_clone_request($base);
+}
 
 sub  _test_user_grants($user, $expected_code) {
 
@@ -268,4 +368,11 @@ sub _test_change_password($expected_status) {
 test_non_admin();
 test_admin();
 
+remove_old_domains_req(1); # 0=do not wait for them
+wait_request();
+for my $vm_name( 'Void' ) {
+    test_access($vm_name);
+}
+
+remove_old_domains_req(0); # 0=do not wait for them
 done_testing();

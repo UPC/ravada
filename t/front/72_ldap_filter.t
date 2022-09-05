@@ -93,6 +93,15 @@ sub test_access($vm, $user1, $user2) {
     is(scalar(@$list1),0);
     is(scalar(@$list2),1);
 
+    my $clone;
+    eval {
+        $clone = $domain->clone(name => new_domain_name()
+            ,user => $user1
+        );
+    };
+    like($@,qr/user.*can not clone/);
+    ok(!$clone);
+
     remove_domain($domain);
 }
 

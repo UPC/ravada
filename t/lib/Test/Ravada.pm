@@ -898,6 +898,7 @@ sub mojo_request($t, $req_name, $args) {
     my $response = $t->tx->res->json();
     ok(exists $response->{request}) or return;
     wait_request(background => 1);
+    return $response->{request};
 }
 
 sub mojo_request_url_post($t,$url, $json) {
