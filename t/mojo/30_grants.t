@@ -368,11 +368,16 @@ sub _test_change_password($expected_status) {
 test_non_admin();
 test_admin();
 
-remove_old_domains_req(1); # 0=do not wait for them
-wait_request();
-for my $vm_name( 'Void' ) {
-    test_access($vm_name);
+if (ping_backend()) {
+    remove_old_domains_req(1); # 0=do not wait for them
+    wait_request();
+    for my $vm_name( 'Void' ) {
+        test_access($vm_name);
+    }
+
+    remove_old_domains_req(0); # 0=do not wait for them
+} else {
+    diag("SKIPPED: no backend");
 }
 
-remove_old_domains_req(0); # 0=do not wait for them
 done_testing();
