@@ -88,7 +88,7 @@
         <div>
             <div class="panel-body">
                 <div ng-show="request.error && !domain.is_active">{{request.error}}</div>
-                <div ng-show="domain && request.status == 'done' && domain.is_active == 0"><%=l 'The machine is down.' %>
+                <div ng-show="domain && request.status == 'done' && domain.is_active == 0 && count_start>2"><%=l 'The machine is down.' %>
                  <button type="submit" class="btn btn-primary" onclick="location.reload('forceGet')"><%=l 'Start again' %></button>
                 </div>
             </div>
