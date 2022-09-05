@@ -741,6 +741,9 @@ any '/machine/clone/(:id).(:type)' => sub {
             my ($clone) = grep { $_->{id_owner} == $USER->id } @clones;
             return access_denied($c) if !$clone;
         }
+
+        return access_denied($c) if !$USER->allowed_access($base->id);
+
         return clone_machine($c);
     }
 

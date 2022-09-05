@@ -421,6 +421,10 @@ sub _around_create_domain {
         $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
         $base = $vm_local->search_domain_by_id($id_base)
             or confess "Error: I can't find domain $id_base on ".$self->name;
+
+        die "Error: user ".$owner->name." can not clone from ".$base->name
+        unless $owner->allowed_access($base->id);
+
         $volatile = $base->volatile_clones if (! defined($volatile));
         if ($add_to_pool) {
             confess "Error: you can't add to pool and also pick from pool" if $from_pool;

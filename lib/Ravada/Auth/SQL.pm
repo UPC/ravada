@@ -344,8 +344,7 @@ Returns true if the user is admin.
 =cut
 
 
-sub is_admin {
-    my $self = shift;
+sub is_admin($self) {
     return ($self->{_data}->{is_admin} or 0);
 }
 
