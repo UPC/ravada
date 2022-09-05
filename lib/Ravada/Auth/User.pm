@@ -342,6 +342,7 @@ sub allowed_access($self,$id_domain) {
 
 sub _list_domains_access($self) {
 
+    _init_connector();
     my @domains;
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT distinct(id_domain) FROM access_ldap_attribute"
