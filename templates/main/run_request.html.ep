@@ -17,7 +17,11 @@
                 <%=l 'A viewer is required to run the virtual machines.' %>
                 <a href="/requirements"><%=l 'Read more.' %></a>
             </div>
-        <div ng-hide="request.status == 'done'"><%=l 'Waiting for machine to start' %> <i class="fas fa-sync-alt fa-spin"></i></div>
+
+        <div ng-show="request.status != 'done' 
+            || (domain && domain.is_base )
+            || (domain && domain.is_active==0 && count_start<=2)"
+            ><%=l 'Waiting for machine to start' %> <i class="fas fa-sync-alt fa-spin"></i></div>
         <div ng-show="domain">
             <div ng-show="domain.description ||(domain.is_active && domain.msg_timeout)">
                 <span ng-bind-html="domain.description"
@@ -95,7 +99,8 @@
         <div>
             <div class="panel-body">
                 <div ng-show="request.error && !domain.is_active">{{request.error}}</div>
-                <div ng-show="domain && request.status == 'done' && domain.is_active == 0"><%=l 'The machine is down.' %>
+
+                <div ng-show="domain && request.status == 'done' && domain.is_active == 0 && count_start>2"><%=l 'The machine is down.' %>
                  <a class="btn btn-primary" href="?enable_host_devices=1"><%=l 'Start again' %></a>
                  <a ng-show="domain.host_devices.length > 0" class="btn btn-secondary" href="?enable_host_devices=0"><%=l 'Start without host devices' %></a>
                 </div>
