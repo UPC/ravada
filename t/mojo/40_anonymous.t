@@ -63,4 +63,5 @@ for my $route ( qw( list_bases_anonymous request/1.json ws/subscribe anonymous_l
     is(list_anonymous_users(), $n_anonymous, $url);
 }
 
+end();
 done_testing();

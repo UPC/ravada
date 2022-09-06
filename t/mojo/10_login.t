@@ -997,5 +997,6 @@ delete_request('set_time','screenshot','refresh_machine_ports');
 remove_machines(reverse @bases);
 _wait_request(background => 1);
 remove_old_domains_req(0); # 0=do not wait for them
+remove_old_users();
 
 done_testing();
