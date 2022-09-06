@@ -11,5 +11,6 @@
 
 - Admin can't change user passwords [\#1805]
 - LDAP access control issue [\#1821]
-- fix: parrot linux updated [\#1819]
+- Fix: parrot linux updated [\#1819]
+- Fix clone from scratch in frontend [\#1823]
 
