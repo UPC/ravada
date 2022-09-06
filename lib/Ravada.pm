@@ -4298,6 +4298,14 @@ sub _cmd_clone($self, $request) {
     );
 
     $request->id_domain($clone->id) if $clone;
+
+    Ravada::Request->start_domain(
+        uid => $user->id
+        ,id_domain => $clone->id
+        ,remote_ip => $request->defined_arg('remote_ip')
+        ,after_request => $request->id
+    ) if $request->defined_arg('start');
+
 }
 
 sub _new_clone_name($self, $base,$user) {
