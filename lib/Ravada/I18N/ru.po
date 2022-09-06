@@ -2,7 +2,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2022-08-02 03:22+0000\n"
+"PO-Revision-Date: 2022-09-05 20:20+0000\n"
 "Last-Translator: Elena Mishina <lepata@basealt.ru>\n"
 "Language-Team: Russian <https://hosted.weblate.org/projects/ravada/"
 "translation/ru/>\n"
@@ -12,7 +12,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
 "%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;\n"
-"X-Generator: Weblate 4.14-dev\n"
+"X-Generator: Weblate 4.14.1-dev\n"
 
 msgid "Ravada broker"
 msgstr "Брокер Ravada"
@@ -2147,3 +2147,98 @@ msgstr ""
 
 msgid "This virtual machine has no group restrictions."
 msgstr "Эта виртуальная машина не имеет групповых ограничений."
+
+msgid "Poweroff"
+msgstr "Выключить принудительно"
+
+msgid "Node with machines from the same user"
+msgstr "Узел с машинами от одного пользователя"
+
+msgid "Node with more free memory"
+msgstr "Узел, где больше свободной памяти"
+
+msgid "Permission revoked from user"
+msgstr "Разрешение, отозванное у пользователя"
+
+msgid "Permission granted to user"
+msgstr "Разрешение, предоставленное пользователю"
+
+msgid "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+msgstr ""
+"Для настройки резервирования необходимы настроенные группы LDAP. Группы "
+"найдены, но в них нет пользователей. <a href='/admin/groups'>Создать.</a>"
+
+msgid "Fallback"
+msgstr "Резерв"
+
+msgid "swap"
+msgstr "swap"
+
+msgid "fallback"
+msgstr "резерв"
+
+msgid "New feature"
+msgstr "Новые характеристики"
+
+msgid "ram"
+msgstr "ram"
+
+msgid "vram"
+msgstr "vram"
+
+msgid "sys"
+msgstr "sys"
+
+msgid "CPU Features"
+msgstr "Характеристики ЦПУ"
+
+msgid "reopen"
+msgstr "переоткрыть"
+
+msgid "User not found"
+msgstr "Пользователь не найден"
+
+msgid "Event saved successfully"
+msgstr "Событие успешно сохранено"
+
+msgid "Edit the event"
+msgstr "Редактировать событие"
+
+msgid "Delete the event"
+msgstr "Удалить событие"
+
+msgid "This event"
+msgstr "Это событие"
+
+msgid "This event and the following"
+msgstr "Это событие и последующие"
+
+msgid "This event and the following with same day of week"
+msgstr "Это и последующие события в один и тот же день недели"
+
+msgid "All events"
+msgstr "Все события"
+
+msgid "Confirm"
+msgstr "Подтвердить"
+
+msgid "This feature requires a LDAP server configured."
+msgstr "Для этой функции требуется настроенный сервер LDAP."
+
+msgid "Source Machine"
+msgstr "Исходная машина"
+
+msgid "Monitoring"
+msgstr "Мониторинг"
+
+msgid "To"
+msgstr "По"
+
+msgid "From"
+msgstr "С"
+
+msgid "Are you sure you want to spinoff from the base?"
+msgstr "Вы уверены, что хотите отделить клон от базы?"
+
+msgid "Balance"
+msgstr "Баланс"
