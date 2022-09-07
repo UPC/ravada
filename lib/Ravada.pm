@@ -4508,12 +4508,11 @@ sub _cmd_start {
         uid => Ravada::Utils::user_daemon->id
     ) if $domain->is_pool && $request->defined_arg('remote_ip');
 
-    my $msg = 'Machine'
-            ." <a href=\"/machine/view/".$domain->id.".html\">"
-            .$domain->name."</a>"
-            ." started"
+    my $msg = $user->maketext('Machine started');
+    $msg .= " <a href=\"/machine/view/".$domain->id.".html\">"
+            .$domain->alias."</a>"
         ;
-    $request->status('done', Encode::decode_utf8($msg));
+    $request->status('done', $msg);
 
 }
 

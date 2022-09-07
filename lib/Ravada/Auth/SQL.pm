@@ -602,13 +602,13 @@ sub compare_password {
 
 =cut
 
-  sub language {
-    my $self = shift;
-    my $tongue = shift;
+sub language($self, $tongue=undef) {
+    _init_connector();
     if (defined $tongue) {
       my $sth= $$CON->dbh->prepare("UPDATE users set language=?"
           ." WHERE name=?");
       $sth->execute($tongue, $self->name);
+      $self->language_handle($self->_build_lh());
     }
     else {
       my $sth = $$CON->dbh->prepare(
@@ -616,7 +616,7 @@ sub compare_password {
       $sth->execute($self->name);
       return $sth->fetchrow();
     }
-  }
+}
 
 
 =head2 remove

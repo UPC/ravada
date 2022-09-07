@@ -1089,15 +1089,17 @@ sub _send_message {
     $uid = $self->args('uid')      if !$uid && $self->defined_arg('uid');
 
     if (!$uid) {
-        my $user = $self->defined_arg('user');
-        if ( $user ) {
+        my $user_name = $self->defined_arg('user');
+        if ( $user_name ) {
             my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM users where name=?");
-            $sth->execute($user);
+            $sth->execute($user_name);
             ($uid) = $sth->fetchrow;
         }
     }
 
     return if !$uid || $uid == Ravada::Utils::user_daemon->id;
+
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
 
     my $domain_name = $self->defined_arg('name');
     if (!$domain_name) {
@@ -1105,11 +1107,18 @@ sub _send_message {
         $domain_name = $self->_search_domain_name($domain_id)   if $domain_id;
         $domain_name = '' if !defined $domain_name;
     }
-    $domain_name = "$domain_name "  if length $domain_name;
 
     $self->_remove_unnecessary_messages() if $self->status eq 'done';
 
-    my $subject = $self->command." $domain_name ".$self->status;
+    my $command = $self->command;
+    $command =~ s/_/ /g;
+
+    # Command - name - status
+    # TODO: we may change this order for other languages
+    my $subject = $user->maketext("\u$command")
+    ." ".$domain_name
+    ." ".$user->maketext($self->status)
+    ;
     $subject = $message if $message && $self->status eq 'done'
             && length ($message)<60;
 

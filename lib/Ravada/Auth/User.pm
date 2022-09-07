@@ -15,6 +15,7 @@ use Data::Dumper;
 use Encode;
 use Mojo::JSON qw(decode_json);
 use Moose::Role;
+use Ravada::I18N;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -33,6 +34,12 @@ has 'password' => (
            is => 'ro'
          ,isa => 'Str'
     ,required => 0
+);
+
+has 'language_handle' => (
+    is => 'rw'
+    ,builder => '_build_lh'
+    ,lazy => 1
 );
 #
 #####################################################
@@ -468,6 +475,14 @@ sub list_requests($self, $date_req=Ravada::Utils::date_now(3600)) {
         push @req, ( $req );
     }
     return @req;
+}
+
+sub _build_lh($self) {
+    return Ravada::I18N->get_handle($self->language);
+}
+
+sub maketext($self, $text) {
+    return $self->language_handle->maketext($text);
 }
 
 1;

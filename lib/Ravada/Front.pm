@@ -991,7 +991,7 @@ Returns a list of requests : ( id , domain_name, status, error )
 
 =cut
 
-sub list_requests($self, $id_domain_req=undef, $seconds=60) {
+sub list_requests($self, $user, $id_domain_req=undef, $seconds=60) {
 
     my @now = localtime(time-$seconds);
     $now[4]++;
@@ -1032,6 +1032,8 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
         next if $command eq 'enforce_limits'
                 || $command eq 'refresh_storage'
                 || $command eq 'refresh_machine'
+                || $command eq 'refresh_machine_ports'
+                || $command eq 'refresh_vms'
                 || $command eq 'ping_backend'
                 || $command eq 'cleanup'
                 || $command eq 'screenshot'
@@ -1040,6 +1042,9 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'list_network_interfaces'
                 || $command eq 'list_isos'
                 || $command eq 'manage_pools'
+                || $command eq 'list_cpu_models'
+                || $command eq 'check_storage'
+                || $command eq 'list_host_devices'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'force_reboot'
@@ -1064,7 +1069,14 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
         my $message = ( $self->_last_message($id_request) or $error or '');
         $message =~ s/^$command\s+$status(.*)/$1/i;
 
-        push @reqs,{ id => $id_request,  command => $command, date_changed => $date_changed, status => $status, name => $args->{name}
+        $command =~ s/_/ /g;
+        $command = "\u$command" if $command;
+
+        push @reqs,{ id => $id_request
+            ,command => $user->maketext($command)
+            ,date_changed => $date_changed
+            ,status => $user->maketext($status)
+            ,name => $args->{name}
             ,domain => $domain
             ,date => $date_changed
             ,message => Encode::decode_utf8($message)

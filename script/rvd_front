@@ -2631,9 +2631,6 @@ sub new_machine {
         }
         $c->param('id_iso', $c->param('id_iso_id')) if $c->param('id_iso_id');
         push @error,("Name is mandatory")   if !$c->param('name');
-        push @error,("Invalid name '".$c->param('name')."'"
-                .".It can only contain alphabetic, numbers, undercores and dashes.")
-            if $c->param('name') && $c->param('name') !~ /^[а-яА-Яa-zA-Z0-9àèìòùáéíóúäëïöüçñ€_\$\-]+$/i;
         if (!@error) {
             req_new_domain($c);
             $c->redirect_to("/admin/machines");

@@ -2272,3 +2272,36 @@ msgid "can change the settings of any virtual machine cloned from one base owned
 msgstr ""
 "pot canviar la configuració de qualsevol màquina virtual clonada des d'una "
 "base propietat de l'usuari."
+
+msgid "Machine started"
+msgstr "Màquina arrencada"
+
+msgid "Add hardware"
+msgstr "Afegir maquinari"
+
+msgid "Remove hardware"
+msgstr "Esborrar maquinari"
+
+msgid "Change hardware"
+msgstr "Canviar maquinari"
+
+msgid "Set time"
+msgstr "Posar en hora"
+
+msgid "Force shutdown"
+msgstr "Força l'aturada"
+
+msgid "Shutdown clones"
+msgstr "Atura els clons"
+
+msgid "Spinoff"
+msgstr "Escindir"
+
+msgid "requested"
+msgstr "sol·licitat"
+
+msgid "working"
+msgstr "processant"
+
+msgid "done"
+msgstr "finalitzat"

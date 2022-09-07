@@ -259,7 +259,7 @@ sub _list_requests($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
     return [] unless $user->is_operator || $user->is_admin;
-    return $rvd->list_requests;
+    return $rvd->list_requests($user);
 }
 
 sub _get_machine_info($rvd, $args) {
