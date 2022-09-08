@@ -29,6 +29,7 @@ my %BASE_NAME =(
     C => 'a'
     ,cyrillic => "пользователя"
     ,catalan => 'áçìüèò'
+    ,arabic => 'جميل'
 );
 my $N = 0;
 ########################################################################
@@ -107,8 +108,10 @@ sub test_clone_utf8_user($t, $vm_name, $name, $utf8_base=0) {
         });
     $t->get_ok('/machine/public/'.$domain->id."/1")->status_is(200);
     wait_request(debug => 0);
+    _test_copy_default($domain, $base_name);
+    _test_copy_many($domain, $base_name);
     _test_list_machines_user($base_name, $user);
-    my ($clone) = _test_clone($domain, $base_name, $user);
+    _test_clone($domain, $base_name, $user);
 
     _test_copy($domain, $base_name);
 }
@@ -134,8 +137,9 @@ sub _test_clone($domain, $base_name, $user) {
         like($clone->{name},qr/^[a-z0-9_\-]+$/) or exit;
         like($clone->{alias},qr/$base_name-$user_name/) or exit;
 
+        remove_domain_and_clones_req($clone);
+
     }
-    return $domain->clones();
 }
 
 sub _test_copy($domain, $base_name) {
@@ -150,8 +154,61 @@ sub _test_copy($domain, $base_name) {
     ok($copy);
     like($copy->_data('name'),qr/^[a-z0-9_\-]+$/);
     unlike($copy->_data('name'),qr/--+/) or exit;
+}
+
+sub _test_copy_default($domain, $base_name) {
+    my @clones0 = $domain->clones();
+    my %clones0 = map { $_->{name} => $_->{id} } @clones0;
+    $t->post_ok("/machine/copy/" => json => {
+        id_base=> $domain->id
+    });
+    wait_request(debug => 1);
+    my @clones = $domain->clones();
+    my $copy;
+    for my $clone (@clones) {
+        if ( !$clones0{$clone->{id}} ) {
+            $copy = Ravada::Front::Domain->open($clone->{id});
+            last;
+        }
+    }
+
+    ok($copy) or die "Expecting a copy from $base_name";
+
+    like($copy->_data('name'),qr/^[a-z0-9_\-]+$/);
+    unlike($copy->_data('name'),qr/--+/) or exit;
+    like($copy->alias,qr/$base_name/);
+
+    remove_domain_and_clones_req($copy);
+}
+
+sub _test_copy_many($domain, $base_name) {
+    my @clones0 = $domain->clones();
+    my %clones0 = map { $_->{name} => $_->{id} } @clones0;
+    my $number = 3;
+    $t->post_ok("/machine/copy/" => json => {
+        id_base=> $domain->id
+        ,copy_number => $number
+    });
+    wait_request(debug => 1);
+    my @clones = $domain->clones();
+    my $found=0;
+    for my $clone (@clones) {
+        if ( !$clones0{$clone->{id}} ) {
+            $found++;
+            my $copy = Ravada::Front::Domain->open($clone->{id});
+
+            like($copy->_data('name'),qr/^[a-z0-9_\-]+$/);
+            unlike($copy->_data('name'),qr/--+/) or exit;
+            like($copy->alias,qr/$base_name/);
+            remove_domain_and_clones_req($copy);
+
+        }
+    }
+    is($found,$number);
 
 }
+
+
 
 ########################################################################
 
