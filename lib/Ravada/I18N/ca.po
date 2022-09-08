@@ -229,6 +229,9 @@ msgstr "Restaura"
 msgid "Hibernate"
 msgstr "Hiverna"
 
+msgid "Hybernate"
+msgstr "Hiverna"
+
 msgid "Are you sure?"
 msgstr "Estàs segur/a?"
 
@@ -2303,5 +2306,17 @@ msgstr "sol·licitat"
 msgid "working"
 msgstr "processant"
 
+msgid "waiting"
+msgstr "esperant"
+
 msgid "done"
 msgstr "finalitzat"
+
+msgid "disconnected"
+msgstr "desconnectat"
+
+msgid "waiting for processes to finish"
+msgstr "esperant que acabin els processos"
+
+msgid "limit:"
+msgstr "limit:"
