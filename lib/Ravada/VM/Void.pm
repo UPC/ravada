@@ -219,6 +219,7 @@ sub _storage_path($self, $storage) {
 
 sub _list_domains_local($self, %args) {
     my $active = delete $args{active};
+    my $read_only = delete $args{read_only};
 
     confess "Wrong arguments ".Dumper(\%args)
         if keys %args;
@@ -227,7 +228,7 @@ sub _list_domains_local($self, %args) {
 
     my @domain;
     while (my $file = readdir $ls ) {
-        my $domain = $self->_is_a_domain($file) or next;
+        my $domain = $self->_is_a_domain($file, $read_only) or next;
         next if defined $active && $active && !$domain->is_active;
         push @domain , ($domain);
     }
@@ -237,7 +238,7 @@ sub _list_domains_local($self, %args) {
     return @domain;
 }
 
-sub _is_a_domain($self, $file) {
+sub _is_a_domain($self, $file, $read_only=0) {
 
     chomp $file;
 
@@ -247,8 +248,9 @@ sub _is_a_domain($self, $file) {
     return if $file !~ /\w/;
 
     my $domain = Ravada::Domain::Void->new(
-                    domain => $file
-                     , _vm => $self
+            domain => $file
+            , _vm => $self
+            , read_only => $read_only
     );
     return if !$domain->is_known;
     return $domain;
@@ -279,10 +281,8 @@ sub list_domains($self, %args) {
     return $self->_list_domains_remote(%args);
 }
 
-sub discover($self) {
+sub discover($self, $known) {
     opendir my $ls,dir_img or return;
-
-    my %known = map { $_->name => 1 } $self->list_domains();
 
     my @list;
     while (my $file = readdir $ls ) {
@@ -290,7 +290,7 @@ sub discover($self) {
         $file =~ s/\.\w+//;
         $file =~ s/(.*)\.qcow.*$/$1/;
         return if $file !~ /\w/;
-        next if $known{$file};
+        next if $known->{$file};
         push @list,($file);
     }
     return @list;
