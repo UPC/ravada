@@ -9,6 +9,7 @@ Ravada::VM - Virtual Managers library for Ravada
 
 =cut
 
+use utf8;
 use Carp qw( carp confess croak cluck);
 use Data::Dumper;
 use File::Path qw(make_path);
@@ -403,8 +404,15 @@ sub _around_create_domain {
        my $name = delete $args{name};
        my $swap = delete $args{swap};
        my $from_pool = delete $args{from_pool};
+       my $alias = delete $args{alias};
 
     my $config = delete $args{config};
+
+    if ($name !~ /^[a-zA-Z0-9_-]+$/) {
+        $alias = $self->_set_alias_unique($alias or $name);
+        $name = $self->_set_ascii_name($name);
+        $args_create{name} = $name;
+    }
 
      # args get deleted but kept on %args_create so when we call $self->$orig below are passed
      delete $args{disk};
@@ -412,7 +420,7 @@ sub _around_create_domain {
      my $request = delete $args{request};
      delete $args{iso_file};
      delete $args{id_template};
-     delete @args{'description','remove_cpu','vm','start','options','id'};
+     delete @args{'description','remove_cpu','vm','start','options','id', 'alias'};
 
     confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
 
@@ -422,6 +430,10 @@ sub _around_create_domain {
         $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
         $base = $vm_local->search_domain_by_id($id_base)
             or confess "Error: I can't find domain $id_base on ".$self->name;
+
+        die "Error: user ".$owner->name." can not clone from ".$base->name
+        unless $owner->allowed_access($base->id);
+
         $volatile = $base->volatile_clones if (! defined($volatile));
         if ($add_to_pool) {
             confess "Error: you can't add to pool and also pick from pool" if $from_pool;
@@ -464,6 +476,7 @@ sub _around_create_domain {
     $self->_add_instance_db($domain->id);
     $domain->add_volume_swap( size => $swap )   if $swap;
     $domain->_data('is_compacted' => 1);
+    $domain->_data('alias' => $alias) if $alias;
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
@@ -506,6 +519,37 @@ sub _around_create_domain {
     return $domain;
 }
 
+sub _set_ascii_name($self, $name) {
+    my $length = length($name);
+    $name =~ tr/áéíóúàèìòùäëïöüçñ€$/aeiouaeiouaeioucnes/;
+    $name =~ tr/ÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÇÑ€$/AEIOUAEIOUAEIOUCNES/;
+    $name =~ tr/A-Za-z0-9_\-/\-/c;
+    $name =~ s/^\-*//;
+    $name =~ s/\-*$//;
+    $name =~ s/\-\-+/\-/g;
+    if (length($name) < $length) {
+        $name .= "-" if length($name);
+        $name .= Ravada::Utils::random_name($length-length($name));
+    }
+    for (;;) {
+        last if !$self->_check_duplicate_name($name,0);
+        $name .= Ravada::Utils::random_name(1);
+    }
+    return $name;
+}
+
+sub _set_alias_unique($self, $alias) {
+    my $alias0 = $alias;
+    my $n = 2;
+    for (;;) {
+        last if !$self->_check_duplicate_name($alias,0);
+        $alias ="$alias0-$n";
+        $n++;
+    }
+    return $alias;
+
+}
+
 sub _add_instance_db($self, $id_domain) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_instances "
         ." WHERE id_domain=? AND id_vm=?"
@@ -532,12 +576,13 @@ sub _define_spice_password($self, $remote_ip) {
     return $spice_password;
 }
 
-sub _check_duplicate_name($self, $name) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,name,vm FROM domains where name=?");
-    $sth->execute($name);
+sub _check_duplicate_name($self, $name, $die=1) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,name,vm FROM domains where name=? or alias=?");
+    $sth->execute($name,$name);
     my $row = $sth->fetchrow_hashref;
     confess "Error: machine with name '$name' already exists ".Dumper($row)
-        if $row->{id};
+        if $row->{id} && $die;
+    return 0 if !$row || !$row->{id};
     return 1;
 }
 
@@ -838,7 +883,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
@@ -2178,9 +2223,6 @@ sub _list_qemu_bridges($self) {
 sub _which($self, $command) {
     return $self->{_which}->{$command} if exists $self->{_which} && exists $self->{_which}->{$command};
 
-    confess "Error: deep recursion"
-    if $self->{_deep_recursion}->{$command}++;
-
     my $bin_which = $self->{_which}->{which};
     if (!$bin_which) {
         for my $try ( "/bin/which","/usr/bin/which") {
@@ -2203,7 +2245,9 @@ sub _list_bridges($self) {
 
     my %qemu_bridge = map { $_ => 1 } $self->_list_qemu_bridges();
 
-    my @cmd = ( $self->_which('brctl'),'show');
+    my $brctl = 'brctl';
+    my @cmd = ( $self->_which($brctl),'show');
+    die "Error: missing $brctl" if !$cmd[0];
     my ($out,$err) = $self->run_command(@cmd);
 
     die $err if $err;

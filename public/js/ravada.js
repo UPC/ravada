@@ -448,8 +448,8 @@
                     .then(function(response) {
                             $scope.showmachine=response.data;
                             if (typeof $scope.new_name == 'undefined' ) {
-                                $scope.new_name=$scope.showmachine.name+"-2";
-                                $scope.validate_new_name($scope.showmachine.name);
+                                $scope.new_name=$scope.showmachine.alias+"-2";
+                                $scope.validate_new_name($scope.showmachine.alias);
                                 $scope.new_n_virt_cpu= $scope.showmachine.n_virt_cpu;
                                 $scope.new_memory = ($scope.showmachine.memory / 1024);
                                 $scope.new_max_mem = ($scope.showmachine.max_mem / 1024);
@@ -567,11 +567,6 @@
             if(old_name == $scope.new_name) {
               $scope.new_name_invalid=false;
               return;
-            }
-            var valid_domain_name = /^[a-zA-Z][\w_-]+$/;
-            if ( !valid_domain_name.test($scope.new_name)) {
-                $scope.new_name_invalid = true;
-                return;
             }
             $scope.new_name_invalid = false;
             $http.get('/machine/exists/'+$scope.new_name)
@@ -1089,6 +1084,7 @@
     function run_domain_req_ctrl($scope, $http, $timeout, request ) {
         var redirected_display = false;
         var already_subscribed_to_domain = false;
+        $scope.count_start = 0;
         $scope.copy_password= function(driver) {
             $scope.view_password=1;
             var copyTextarea = document.querySelector('.js-copytextarea-'+driver);
@@ -1175,6 +1171,12 @@
                     if ($scope.edit) {
                         return;
                     }
+                    if (data.is_base) {
+                        already_subscribed_to_domain = false;
+                        $scope.count_start = 0;
+                        return;
+                    }
+                    $scope.count_start++;
                     $scope.domain = data;
                     for ( var i=0;i<$scope.domain.hardware.display.length; i++ ) {
                         if (typeof($scope.domain_display[i]) == 'undefined') {
@@ -1195,7 +1197,7 @@
                         }
                     }
                 });
-                if ($scope.domain.is_active && $scope.request.status == 'done') {
+                if ($scope.domain && $scope.domain.is_active && $scope.request.status == 'done') {
                     $scope.redirect();
                     if ($scope.auto_view && !redirected_display && $scope.domain_display[0]
                         && $scope.domain_display[0].file_extension
@@ -1205,7 +1207,7 @@
                         redirected_display=true;
                     }
                 }
-                if ($scope.request_open_ports && $scope.domain.ip && $scope.domain.requests == 0) {
+                if ($scope.request_open_ports && $scope.domain && $scope.domain.ip && $scope.domain.requests == 0) {
                     $scope.request_open_ports_done = true;
                 }
 

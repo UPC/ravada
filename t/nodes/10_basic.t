@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use utf8;
 use Carp qw(confess);
 use Data::Dumper;
 use Digest::MD5;
@@ -1230,7 +1231,7 @@ sub test_check_instances($vm, $node) {
 }
 
 sub test_migrate_req($vm, $node) {
-    my $domain = create_domain($vm);
+    my $domain = create_domain_v2(vm => $vm, name => new_domain_name()."-áéíóú-пользователя");
     $domain->start(user_admin);
     my $req = Ravada::Request->migrate(
         id_domain => $domain->id

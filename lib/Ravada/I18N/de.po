@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-10-26 16:40+0200\n"
-"PO-Revision-Date: 2021-11-29 20:29+0000\n"
+"PO-Revision-Date: 2022-08-15 14:22+0000\n"
 "Last-Translator: Enno G. <matrixfueller@gmail.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/ravada/"
 "translation/de/>\n"
@@ -14,7 +14,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.10-dev\n"
+"X-Generator: Weblate 4.14-dev\n"
 
 msgid "Ravada broker"
 msgstr "Ravada Vermittler"
@@ -737,3 +737,226 @@ msgstr "Passwort bestätigen"
 
 msgid "The machine will turn off after this time"
 msgstr "Die Maschine wird sich nach dieser Zeit ausschalten"
+
+msgid "monitoring"
+msgstr "Überwachung"
+
+msgid "Authors"
+msgstr "Autoren"
+
+msgid "Username can only contain words, numbers, dashes, dots and underscores"
+msgstr ""
+"Der Nutzername kann nur Wörter, Zahlen, Bindestriche, Punkte und "
+"Unterstriche enthalten"
+
+msgid "Change password"
+msgstr "Ändere Passwort"
+
+msgid "public"
+msgstr "öffentlich"
+
+msgid "It is required a viewer to run the virtual machines."
+msgstr "Zum Ausführen der virtuellen Maschinen ist ein Viewer erforderlich."
+
+msgid "Hybernating ..."
+msgstr "Ruhezustand …"
+
+msgid "This machine has not Graphics parameters!"
+msgstr "Diese Maschine hat keine Grafik-Parameter!"
+
+msgid "Add"
+msgstr "Hinzufügen"
+
+msgid "Show active"
+msgstr "Aktive anzeigen"
+
+msgid "Shutting down ..."
+msgstr "Fährt herunter …"
+
+msgid "Hide clones"
+msgstr "Klone verstecken"
+
+msgid "can change the settings of any virtual machine."
+msgstr "kann die Einstellungen jeglicher virtuellen Maschine ändern."
+
+msgid "Change the owner of the machine"
+msgstr "Ändere den Eigentümer der Maschine"
+
+msgid "to an ASCII file and save it with a .reg extension, then execute the file."
+msgstr ""
+"in eine ASCII Datei und speichere sie mit einer .reg Erweiterung und führe "
+"die Datei aus."
+
+msgid "Show clones"
+msgstr "Klone anzeigen"
+
+msgid "can remove any virtual machine owned by the user."
+msgstr "kann jede virtuelle Maschine entfernen, die dem Benutzer gehört."
+
+msgid "clones"
+msgstr "Klone"
+
+msgid "Changing Base State"
+msgstr "Basis Status ändern"
+
+msgid "Username must be at least 5 characters"
+msgstr "Der Nutzername muss mindestens 4 Buchstaben haben"
+
+msgid "Confirm password is required"
+msgstr "Das Passwort muss bestätigt werden"
+
+msgid "action"
+msgstr "Aktion"
+
+msgid "Start again"
+msgstr "Starte neu"
+
+msgid "The password for this virtual machine connection is :"
+msgstr "Das Passwort für die Verbindung zur virtuellen Maschine ist:"
+
+msgid "The machine is down."
+msgstr "Die Maschine ist ausgeschaltet."
+
+msgid "Remove"
+msgstr "Entferne"
+
+msgid "licensed."
+msgstr "lizenziert."
+
+msgid "Setting your default language"
+msgstr "Die Standardsprache einstellen"
+
+msgid "Remove Base"
+msgstr "Basis entfernen"
+
+msgid "To make this possible, copy the content of"
+msgstr "Um dies zu ermöglichen, kopiere den Inhalt von"
+
+msgid "Please, make sure you have the right path and release, according to your PC configuration."
+msgstr ""
+"Bitte stellen Sie sicher, dass Sie den richtigen Pfad und die richtige "
+"Version entsprechend Ihrer PC-Konfiguration haben."
+
+msgid "can change the settings of any virtual machine "
+msgstr "kann die Einstellungen jeder virtuellen Maschine ändern "
+
+msgid "Template selection is required"
+msgstr "Eine Vorlagenauswahl ist erforderlich"
+
+msgid "Search"
+msgstr "Suche"
+
+msgid "There are no public bases available in this system."
+msgstr "In diesem System sind keine öffentlichen Basen verfügbar."
+
+msgid "There are no machines available in this system."
+msgstr "In diesem System sind keine Maschinen verfügbar."
+
+msgid "Create one."
+msgstr "Erstelle eine."
+
+msgid "not public"
+msgstr "nicht öffentlich"
+
+msgid "User Settings"
+msgstr "Benutzereinstellungen"
+
+msgid "Create a new account"
+msgstr "Neues Konto erstellen"
+
+msgid "Show All"
+msgstr "Alles anzeigen"
+
+msgid "This will remove all the contents of the machine"
+msgstr "Das wird den Inhalt der Maschine komplett entfernen"
+
+msgid "This action can't be undone"
+msgstr "Diese Aktion kann nicht rückgängig gemacht werden"
+
+msgid "Are you sure ?"
+msgstr "Sind Sie sicher?"
+
+msgid "Clones"
+msgstr "Klone"
+
+msgid "recommended"
+msgstr "empfohlen"
+
+msgid "to"
+msgstr "zu"
+
+msgid "Changing Public State"
+msgstr "Öffentlichen Status ändern"
+
+msgid "Below are listed the technologies used in this project:"
+msgstr "Untenstehend die Technologien die im Projekt verwendet werden:"
+
+msgid "The code is available on "
+msgstr "Der Quellcode ist verfügbar auf"
+
+msgid "The code is "
+msgstr "Der Code ist"
+
+msgid "Username can not exceed 20 characters"
+msgstr "Nutzername kann 20 Zeichen nicht überschreiten"
+
+msgid "Password can not exceed 20 characters"
+msgstr "Passwort kann nicht länger als 20 Zeichen sein"
+
+msgid "Password can only contain words and numbers"
+msgstr "Passwort kann nur Wörter und Zahlen enthalten"
+
+msgid "Confirm password can not exceed 20 characters"
+msgstr "Bestätige dass das Passwort nicht mehr als 20 Zeichen hat"
+
+msgid "Confirm password must be at least 5 characters"
+msgstr "Bestätige dass das Passwort mindestens 5 Zeichen haben muss"
+
+msgid "Confirm password can only contain words and numbers"
+msgstr "Bestätige dass das Passwort nur Wörter und Ziffern enthalten kann"
+
+msgid "This information will be available to the users"
+msgstr "Diese Information wird den Nutzern verfügbar sein"
+
+msgid "Owner"
+msgstr "Eigentümer"
+
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Drücke SHIFT + F12 um die virtuelle Maschine zu verlassen"
+
+msgid "Version"
+msgstr "Version"
+
+msgid "Volatile Clones"
+msgstr "Flüchtige Klone"
+
+msgid "Read more."
+msgstr "Lese mehr."
+
+msgid "The machine must be started to take the screenshot."
+msgstr "Die Maschine muss angeschaltet sein um ein Bildschirmfoto aufzunehmen."
+
+msgid "Take screenshot"
+msgstr "Bildschirmfoto aufnehmen"
+
+msgid "Saving the screenshot, please wait a moment..."
+msgstr "Bildschirmfoto wird aufgenommen, bitte warte einen Moment…"
+
+msgid "The changes will apply on next restart"
+msgstr "Die Änderungen werden beim nächsten Neustart aktiv"
+
+msgid "This machine is running and can't be renamed."
+msgstr ""
+"Während die Maschine eingeschaltet ist, kann sie nicht umbenannt werden."
+
+msgid "Thanks to:"
+msgstr "Dank geht an:"
+
+msgid "Address"
+msgstr "Adresse"
+
+msgid "A node with that name already exists."
+msgstr "Ein Knoten mit diesem Namen existiert bereits."
+
+msgid "New Node"
+msgstr "Neuer Knoten"

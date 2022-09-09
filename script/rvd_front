@@ -15,6 +15,8 @@ use Time::Piece;
 #use Mojolicious::Plugin::I18N;
 use Mojo::Home;
 
+use utf8;
+
 use I18N::LangTags::Detect;
 #####
 #my $self->plugin('I18N');
@@ -764,6 +766,7 @@ any '/machine/manage/(:id).(:type)' => sub {
 any '/(:item)/settings/(:id).html' => sub($c) {
 
     _add_admin_libs($c);
+    $c->stash(tab => ($c->param('tab') or ''));
 
     return $c->render( template => '/main/settings_generic' );
 };
@@ -805,6 +808,9 @@ any '/machine/clone/(:id).(:type)' => sub {
             my ($clone) = grep { $_->{id_owner} == $USER->id } @clones;
             return access_denied($c) if !$clone;
         }
+
+        return access_denied($c) if !$USER->allowed_access($base->id);
+
         return clone_machine($c);
     }
 
@@ -1221,7 +1227,10 @@ any '/group/new' => sub {
 
 any '/admin/user/(#id).(:type)' => sub {
     my $c = shift;
+
     return access_denied($c) unless $USER->can_manage_users() && $USER->can_grant();
+
+    my $password = $c->param('password');
 
     _add_admin_libs($c);
     my $id = $c->stash('id');
@@ -1248,6 +1257,15 @@ any '/admin/user/(#id).(:type)' => sub {
                 , external_auth => $origin);
             $user = Ravada::Auth::SQL->new(name => $user->name);
         }
+    }
+
+    if ($password) {
+        #TODO: set an error status
+        return $c->render(text => "You can not change the password for "
+            ."an external user. ".$user->name." is ".$user->external_auth
+        ) if $user->is_external;
+        my $force_change= $c->param('force_change_password');
+        $user->change_password($password, $force_change);
     }
 
     $c->stash(user => $user);
@@ -1362,7 +1380,8 @@ get '/user/grant/(:id_user)/(:grant)/(:value)' => sub($c) {
         }
         $info = $c->stash->{i18n}->localize($info);
 
-        $USER->send_message($info." ".$user->name." : $grant");
+        $USER->send_message($info." ".Encode::decode_utf8($user->name)
+            ." : $grant");
     }
     return $c->render(json => { error => $error, info => $info });
 };
@@ -1427,7 +1446,13 @@ get '/count_ldap_entries/(#attribute)/(#value)' => sub {
             ,typesonly => 1
         );
     };
-    @entries = [ 'too many' ] if $@ =~ /Sizelimit exceeded/;
+    if ($@) {
+        if ( $@ =~ /Sizelimit exceeded/ ) {
+            @entries = [ 'too many' ];
+        } else {
+            warn $@;
+        }
+    }
     return $c->render(json => { entries => scalar @entries });
 };
 
@@ -1589,7 +1614,6 @@ get '/set_ldap_access/(#id_domain)/(#id_access)/(#allowed)/(#last)' => sub {
     } else {
         $last= 1;
     }
-    warn "last = $last";
 
     $domain->set_ldap_access($c->stash('id_access'), $allowed, $last);
     return $c->render(json => { ok => 1});
@@ -2247,6 +2271,10 @@ sub _headers($c) {
     return \%client
 }
 
+get '/booking/(#template).html' => sub($c) {
+    return $c->render( template => '/booking/'.$c->stash('template'));
+};
+
 ###################################################
 #
 # session settings
@@ -2605,7 +2633,7 @@ sub new_machine {
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"
                 .".It can only contain alphabetic, numbers, undercores and dashes.")
-            if $c->param('name') && $c->param('name') !~ /^[a-zA-Z0-9_-]+$/;
+            if $c->param('name') && $c->param('name') !~ /^[а-яА-Яa-zA-Z0-9àèìòùáéíóúäëïöüçñ€_\$\-]+$/i;
         if (!@error) {
             req_new_domain($c);
             $c->redirect_to("/admin/machines");
@@ -2809,16 +2837,16 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
     my @create_args = ( start => 1, remote_ip => _remote_ip($c));
     push @create_args, ( memory => $ram ) if $ram;
     push @create_args, (   disk => $disk) if $disk;
-    my $req = Ravada::Request->create_domain(
-             name => $name
-        , id_base => $id_base
-       , id_owner => $USER->id
+    my $req = Ravada::Request->clone(
+        id_domain => $id_base
+        ,uid => $USER->id
        ,@create_args
     );
 
 }
 
 sub _new_domain_name {
+    confess;
     my $name = shift;
     my $count = 1;
     my $name2;
@@ -3347,7 +3375,7 @@ sub start_machine {
     if $CONFIG_FRONT->{log}->{log};
 
     my $req = Ravada::Request->start_domain( uid => $USER->id
-                                           ,name => $domain->name
+                                           ,id_domain => $domain->id
                                       ,remote_ip => _remote_ip($c)
     );
 
@@ -3383,7 +3411,7 @@ sub copy_machine {
     my @create_args = ( from_pool => 0 );
     push @create_args,( memory => $ram ) if $ram;
     push @create_args, ( name => $name ) if !defined $number || $number == 1;
-    push @create_args, ( name => $name ) if $number == 1;
+    push @create_args, ( name => $name ) if !$number || $number == 1;
     push @create_args, ( id_owner => $owner ) if ($owner);
     push @create_args, ( volatile => $arg->{copy_is_volatile} ? 1 : 0 );
     push @create_args, ( add_to_pool => $arg->{copy_is_pool} && $base->is_pool() ? 1 : 0 );

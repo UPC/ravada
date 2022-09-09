@@ -1794,8 +1794,8 @@ msgstr "Spinoff clone"
 msgid "Spinoff this clone from its base."
 msgstr "Spinoff this clone from its base."
 
-msgid "Are you sure you want to spinoff from the base ?"
-msgstr "Are you sure you want to spinoff from the base ?"
+msgid "Are you sure you want to spinoff from the base?"
+msgstr "Are you sure you want to spinoff from the base?"
 
 msgid "Enter Old Password"
 msgstr "Enter Old Password"
@@ -1830,8 +1830,12 @@ msgstr "Password and their confirmation do not match!"
 msgid "Today Schedule"
 msgstr "Today Schedule"
 
-msgid "This server has reservations for today. Machines from users out of the booking list will be shutdown."
-msgstr "This server has reservations for today. Machines from users out of the booking list will be shutdown."
+msgid ""
+"This server has reservations for today. Machines from users out of\n"
+"    the booking list will be shutdown."
+msgstr ""
+"This server has reservations for today. Machines from users out of\n"
+"    the booking list will be shutdown."
 
 msgid "allowed"
 msgstr "allowed"
@@ -2048,3 +2052,123 @@ msgstr "Client headers"
 
 msgid "locked"
 msgstr "locked"
+
+msgid "Poweroff"
+msgstr "Poweroff"
+
+msgid "Requests"
+msgstr "Requests"
+
+msgid "This virtual machine has no group restrictions."
+msgstr "This virtual machine has no group restrictions."
+
+msgid "There are no LDAP groups defined."
+msgstr "There are no LDAP groups defined."
+
+msgid "Only users from these groups will be allowed to execute this machine"
+msgstr "Only users from these groups will be allowed to execute this machine"
+
+msgid "Event properties"
+msgstr "Event properties"
+
+msgid "This field is required"
+msgstr "This field is required"
+
+msgid "Title"
+msgstr "Title"
+
+msgid "Color"
+msgstr "Color"
+
+msgid "Repeat"
+msgstr "Repeat"
+
+msgid "Weekly"
+msgstr "Weekly"
+
+msgid "Until"
+msgstr "Until"
+
+msgid "Groups with permissions"
+msgstr "Groups with permissions"
+
+msgid "Delete"
+msgstr "Delete"
+
+msgid "Save changes"
+msgstr "Save changes"
+
+msgid "This booking overlaps already scheduled reservations"
+msgstr "This booking overlaps already scheduled reservations"
+
+msgid "options"
+msgstr "options"
+
+msgid "bases"
+msgstr "bases"
+
+msgid "remove"
+msgstr "remove"
+
+msgid "can change the settings of any virtual machine cloned from one base owned by the user."
+msgstr "can change the settings of any virtual machine cloned from one base owned by the user."
+
+msgid "Balance"
+msgstr "Balance"
+
+msgid "Node with more free memory"
+msgstr "Node with more free memory"
+
+msgid "Node with machines from the same user"
+msgstr "Node with machines from the same user"
+
+msgid "Permission granted to user"
+msgstr "Permission granted to user"
+
+msgid "Permission revoked from user"
+msgstr "Permission revoked from user"
+
+msgid "User not found"
+msgstr "User not found"
+
+msgid "Event saved successfully"
+msgstr "Event saved successfully"
+
+msgid "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+msgstr "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+
+msgid "From"
+msgstr "From"
+
+msgid "To"
+msgstr "To"
+
+msgid "Edit the event"
+msgstr "Edit the event"
+
+msgid "Delete the event"
+msgstr "Delete the event"
+
+msgid "This event"
+msgstr "This event"
+
+msgid "This event and the following"
+msgstr "This event and the following"
+
+msgid "This event and the following with same day of week"
+msgstr "This event and the following with same day of week"
+
+msgid "All events"
+msgstr "All events"
+
+msgid "Confirm"
+msgstr "Confirm"
+
+msgid "This feature requires a LDAP server configured."
+msgstr "This feature requires a LDAP server configured."
+
+msgid "Source Machine"
+msgstr "Source Machine"
+
+msgid "Monitoring"
+msgstr "Monitoring"
