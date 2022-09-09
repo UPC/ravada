@@ -1185,11 +1185,20 @@ ravadaApp.directive("solShowMachine", swMach)
             $scope.show_hdev[id] = ! $scope.show_hdev[id];
         };
 
-        $scope.configure_hostdevices = function() {
-            $http.post('/request/configure_hostdevices/'
+        $scope.configure_boot_hostdevices = function() {
+
+            $scope.req_config_hd_output = undefined;
+
+            $http.post('/request/configure_boot_hostdevices/'
                 ,JSON.stringify({ 'id_vm': id_node })
             ).then(function(response) {
-                console.log(response.data);
+                if (response.data.request) {
+                    $scope.req_config_hd=response.data.request;
+                    subscribe_request(response.data.request, function(data) {
+                        $scope.req_config_hd_output
+                            = JSON.parse(data.output);
+                    });
+                }
             });
 
         };

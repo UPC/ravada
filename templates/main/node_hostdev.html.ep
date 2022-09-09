@@ -12,11 +12,25 @@
 
     </div>
     <div>
-	<button ng-disabled="host_devices.length==0"
-	    ng-click="configure_hostdevices()"
+	<button
+	    ng-click="configure_boot_hostdevices()"
 	>Configure Boot</button>
     </div>
 
+</div>
+
+<div ng-show="req_config_hd">
+    <span ng-show="!req_config_hd_output">
+    Checking system configuration
+    <i class="fas fa-sync-alt fa-spin"></i>
+    </span>
+<br/>
+    <div ng-repeat="(key,value) in req_config_hd_output">
+        <b>{{key}}</b><br/>
+        <div class="border rounded border-dark m-2 p-4">
+        <pre>{{value || 'No changes'}}</pre>
+        </div>
+    </div>
 </div>
 
 <hr>

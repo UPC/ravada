@@ -26,6 +26,7 @@ use feature qw(signatures);
 
 use Ravada::Auth;
 use Ravada::Booking;
+use Ravada::HostDevice::Config;
 use Ravada::Request;
 use Ravada::Repository::ISO;
 use Ravada::VM::Void;
