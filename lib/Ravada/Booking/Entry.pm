@@ -206,6 +206,10 @@ sub _open($self, $id) {
     my $row = $sth->fetchrow_hashref;
     confess "Error: Booking entry $id not found " if !keys %$row;
     $self->{_data} = $row;
+    for my $field ( qw(title description) )  {
+        $row->{$field} =  Encode::decode_utf8($row->{$field})
+        if defined $row->{$field};
+    }
 
     return $self;
 }
