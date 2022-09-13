@@ -1058,9 +1058,14 @@ sub _search_domain_name {
 
     _init_connector();
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM domains where id=?");
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT alias,name FROM domains where id=?");
     $sth->execute($domain_id);
-    return $sth->fetchrow;
+    my ($alias, $name) = $sth->fetchrow;
+
+    $alias = Encode::decode_utf8($alias)    if defined $alias;
+    $name = Encode::decode_utf8($name)      if defined $name;
+
+    return ($alias or $name);
 }
 
 sub _dbh($self=undef) {
@@ -1101,12 +1106,11 @@ sub _send_message {
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
-    my $domain_name = $self->defined_arg('name');
-    if (!$domain_name) {
-        my $domain_id = $self->defined_arg('id_domain');
-        $domain_name = $self->_search_domain_name($domain_id)   if $domain_id;
-        $domain_name = '' if !defined $domain_name;
-    }
+    my $domain_name0 = $self->defined_arg('name');
+    my $domain_id = $self->defined_arg('id_domain');
+    my $domain_name = $domain_name0;
+    $domain_name = $self->_search_domain_name($domain_id)   if $domain_id;
+    $domain_name = '' if !defined $domain_name;
 
     $self->_remove_unnecessary_messages() if $self->status eq 'done';
 
