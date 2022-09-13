@@ -4215,16 +4215,20 @@ sub _can_fork {
     my $n_pids = scalar(keys %reqs);
     return 1 if $n_pids < $req->requests_limit();
 
-    my $msg = $req->command
-                ." waiting for processes to finish"
-                ." limit ".$req->requests_limit;
+    my $uid = $req->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    $user = Ravada::Utils::user_daemon if !$user;
+
+    my $msg = $user->maketext("waiting for processes to finish")
+                ." "
+                .$user->maketext("limit: ")
+                .$req->requests_limit;
 
     warn $msg if $DEBUG;
 
     $req->error($msg);
     $req->at_time(time+10);
     $req->status('waiting') if $req->status() !~ 'waiting';
-    $req->at_time(time+10);
     return 0;
 }
 
@@ -4449,7 +4453,11 @@ sub _req_clone_many($self, $request) {
     my $base = Ravada::Domain->open($id_domain) or die "Error: Domain '$id_domain' not found";
     my $number = ( delete $args->{number} or 1 );
     my $domains = $self->list_domains_data();
-    my %domain_exists = map { $_->{name} => 1 } @$domains;
+    my %domain_exists;
+    for (@$domains ) {
+        $domain_exists{$_->{name}} = 1;
+        $domain_exists{$_->{alias}} = 1 if $_->{alias};
+    }
 
     if (!$base->is_base) {
         my $uid = $request->defined_arg('uid');
@@ -4468,7 +4476,7 @@ sub _req_clone_many($self, $request) {
         my $name;
         for ( ;; ) {
             while (length($n) < length($number)) { $n = "0".$n };
-            $name = $base->name."-".$n;
+            $name = $base->alias."-".$n;
             last if !$domain_exists{$name}++;
             $n++;
         }

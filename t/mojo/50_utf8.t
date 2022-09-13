@@ -29,11 +29,13 @@ my %BASE_NAME =(
     C => 'a'
     ,cyrillic => "пользователя"
     ,catalan => 'áçìüèò'
+    ,arabic => 'جميل'
 );
 my $N = 0;
 ########################################################################
 
 sub test_utf8($t, $vm_name) {
+
     for my $lang (reverse sort keys %BASE_NAME) {
         diag("testing $lang $vm_name");
         test_clone_utf8_domain($t, $vm_name, $BASE_NAME{$lang});
@@ -65,7 +67,46 @@ sub _new_machine($vm_name, $user, $base_name) {
     )->status_is(302);
     wait_request(debug => 0);
 
+    _check_discover($t,$vm_name);
+
     return rvd_front->search_domain($base_name);
+}
+
+sub _id_vm($vm_name) {
+    my $sth = connector->dbh->prepare("SELECT id FROM vms WHERE vm_type=?");
+    $sth->execute($vm_name);
+    my ($id) = $sth->fetchrow;
+    die "Error: I can't find vm=$vm_name" if !defined $id;
+    return $id;
+}
+
+sub _check_remove($t, $domain) {
+    if (ref($domain) !~ /Ravada/) {
+        $domain = Ravada::Front::Domain->open($domain->{id});
+    }
+    for my $clone ($domain->clones ) {
+        _check_remove($t, $clone);
+    }
+    my $req = Ravada::Request->remove_domain(name => $domain->name
+    ,uid => user_admin->id);
+    wait_request(debug => 1);
+    is($req->error,'');
+
+    _check_discover($t, $domain->vm);
+}
+
+sub _check_discover($t, $vm_name ) {
+    my $base_name = base_domain_name();
+    my $id_req = mojo_request($t,"discover",{ id_vm => _id_vm($vm_name) });
+    wait_request();
+    my $req = Ravada::Request->open($id_req);
+    my $output_json = $req->output;
+    my $output = [];
+    $output = decode_json($output_json) if length($output_json);
+    for my $name ( @$output ) {
+        confess $name if $name =~ /$base_name/;
+    }
+
 }
 
 sub test_clone_utf8_user($t, $vm_name, $name, $utf8_base=0) {
@@ -107,10 +148,21 @@ sub test_clone_utf8_user($t, $vm_name, $name, $utf8_base=0) {
         });
     $t->get_ok('/machine/public/'.$domain->id."/1")->status_is(200);
     wait_request(debug => 0);
+    _test_copy_default($domain, $base_name);
+
+    _test_copy_many($domain, $base_name);
     _test_list_machines_user($base_name, $user);
-    my ($clone) = _test_clone($domain, $base_name, $user);
+    _check_discover($t, $vm_name);
+    _test_clone($domain, $base_name, $user);
+    _check_discover($t, $vm_name);
 
     _test_copy($domain, $base_name);
+    _check_discover($t, $vm_name);
+
+    _check_remove($t, $domain);
+     warn $domain->name."\n".$domain->alias."\n";
+
+    _check_discover($t, $vm_name);
 }
 
 sub _test_list_machines_user($base_name, $user) {
@@ -134,8 +186,8 @@ sub _test_clone($domain, $base_name, $user) {
         like($clone->{name},qr/^[a-z0-9_\-]+$/) or exit;
         like($clone->{alias},qr/$base_name-$user_name/) or exit;
 
+        _check_remove($t, $clone);
     }
-    return $domain->clones();
 }
 
 sub _test_copy($domain, $base_name) {
@@ -151,7 +203,62 @@ sub _test_copy($domain, $base_name) {
     like($copy->_data('name'),qr/^[a-z0-9_\-]+$/);
     unlike($copy->_data('name'),qr/--+/) or exit;
 
+    _check_remove($t, $copy);
 }
+
+sub _test_copy_default($domain, $base_name) {
+    my @clones0 = $domain->clones();
+    my %clones0 = map { $_->{name} => $_->{id} } @clones0;
+    $t->post_ok("/machine/copy/" => json => {
+        id_base=> $domain->id
+    });
+    wait_request(debug => 1);
+    my @clones = $domain->clones();
+    my $copy;
+    for my $clone (@clones) {
+        if ( !$clones0{$clone->{id}} ) {
+            $copy = Ravada::Front::Domain->open($clone->{id});
+            last;
+        }
+    }
+
+    ok($copy) or die "Expecting a copy from $base_name";
+
+    like($copy->_data('name'),qr/^[a-z0-9_\-]+$/);
+    unlike($copy->_data('name'),qr/--+/) or exit;
+    like($copy->alias,qr/$base_name/);
+
+    _check_remove($t, $copy);
+}
+
+sub _test_copy_many($domain, $base_name) {
+    my @clones0 = $domain->clones();
+    my %clones0 = map { $_->{name} => $_->{id} } @clones0;
+    my $number = 3;
+    $t->post_ok("/machine/copy/" => json => {
+        id_base=> $domain->id
+        ,copy_number => $number
+    });
+    wait_request(debug => 1);
+    my @clones = $domain->clones();
+    my $found=0;
+    for my $clone (@clones) {
+        if ( !$clones0{$clone->{id}} ) {
+            $found++;
+            my $copy = Ravada::Front::Domain->open($clone->{id});
+
+            like($copy->_data('name'),qr/^[a-z0-9_\-]+$/);
+            unlike($copy->_data('name'),qr/--+/) or exit;
+            like($copy->alias,qr/$base_name/);
+            _check_remove($t, $copy);
+
+        }
+    }
+    is($found,$number);
+
+}
+
+
 
 ########################################################################
 
@@ -173,7 +280,7 @@ $Test::Ravada::BACKGROUND=1;
 $t = Test::Mojo->new($SCRIPT);
 $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
-remove_old_domains_req(0); # 0=do not wait for them
+remove_old_domains_req(1); # 0=do not wait for them
 
 for my $vm_name (sort @{rvd_front->list_vm_types} ) {
     test_utf8($t, $vm_name);

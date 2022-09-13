@@ -95,6 +95,8 @@ sub messages {
     my @rows;
 
     while (my $row = $sth->fetchrow_hashref ) {
+        $row->{subject} =  Encode::decode_utf8($row->{subject});
+        $row->{message} =  Encode::decode_utf8($row->{message});
         push @rows,($row);
     }
     $sth->finish;

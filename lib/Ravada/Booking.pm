@@ -1,7 +1,9 @@
 package Ravada::Booking;
 
+use utf8;
 use Carp qw(carp croak);
 use Data::Dumper;
+use Encode;
 
 use DateTime::Format::DateParse;
 use Moose;
@@ -128,6 +130,11 @@ sub _open($self, $id) {
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
     die "Error: booking $id not found " if !$row || !keys %$row || !exists $row->{id};
+
+    for my $field ( qw(title description) )  {
+        $row->{$field} =  Encode::decode_utf8($row->{$field})
+        if defined $row->{$field};
+    }
     $self->{_data} = $row;
 
     return $self;

@@ -759,14 +759,11 @@ sub list_domains {
     return @list;
 }
 
-sub discover($self) {
-    my @known = $self->list_domains(read_only => 1);
-    my %known = map { $_->name => 1 } @known;
-
+sub discover($self, $known) {
     my @list;
     for my $dom ($self->vm->list_all_domains) {
         my $name = Encode::decode_utf8($dom->get_name);
-        push @list,($name) if !$known{$name};
+        push @list,($name) if !$known->{$name};
     }
     return @list;
 }

@@ -144,6 +144,8 @@ around 'ping' => \&_around_ping;
 around 'connect' => \&_around_connect;
 after 'disconnect' => \&_post_disconnect;
 
+around 'discover' => \&_around_discover;
+
 #############################################################
 #
 # method modifiers
@@ -621,6 +623,16 @@ sub _import_base($self, $domain) {
     $domain->_post_prepare_base( Ravada::Utils::user_daemon());
 }
 
+sub _around_discover($orig,$self) {
+    my @known = $self->list_domains(read_only => 1);
+    my %known = map { $_->name => 1 } @known;
+    for  ( @known ) {
+        $known{$_->alias} = 1 if $_->alias;
+    }
+
+    $self->$orig(\%known);
+
+}
 
 ############################################################
 #
