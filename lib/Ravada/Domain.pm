@@ -4195,14 +4195,6 @@ sub _active_iptables {
     return @iptables;
 }
 
-sub _check_duplicate_domain_name {
-    my $self = shift;
-# TODO
-#   check name not in current domain in db
-#   check name not in other VM domain
-    $self->id();
-}
-
 =head2 is_public
 
 Sets or get the domain public
@@ -4328,7 +4320,9 @@ sub _around_rename($orig, $self, %args) {
     my $name = delete $args{name};
     my $user = delete $args{user};
 
-    $self->_check_duplicate_domain_name($name);
+    $self->id();
+
+    $self->_vm->_check_duplicate_name($name, 1);
 
     $self->shutdown(user => $user)  if $self->is_active;
 
