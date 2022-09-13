@@ -213,8 +213,8 @@ sub test_req_rename_utf_ru($vm_name) {
     wait_request();
 
     my $dom2 =Ravada::Front::Domain->open($domain->id);
-    like($dom2->name,qr/^[a-z_\-]+$/);
-    is($dom2->_data('name'), qr/^[a-z_\-]+$/);
+    like($dom2->name,qr/^[a-z0-9_\-]+$/);
+    like($dom2->_data('name'), qr/^[a-z0-9_\-]+$/);
     is($dom2->alias(),$new_name);
 
 }
@@ -260,8 +260,8 @@ sub test_req_rename_utf_ar($vm_name) {
 
     my $dom2 =Ravada::Front::Domain->open($domain->id);
 
-    like($dom2->name,qr/^[a-z_\-]+$/);
-    is($dom2->_data('name'), qr/^[a-z_\-]+$/);
+    like($dom2->name,qr/^[a-z0-9_\-]+$/);
+    like($dom2->_data('name'), qr/^[a-z0-9_\-]+$/);
     is($dom2->alias(),$new_name);
 
 }
