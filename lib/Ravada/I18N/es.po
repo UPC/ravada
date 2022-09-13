@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2022-08-04 10:22+0000\n"
+"PO-Revision-Date: 2022-09-14 12:20+0000\n"
 "Last-Translator: Dani Sanchez <dani@fib.upc.edu>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/ravada/"
 "translation/es/>\n"
@@ -19,7 +19,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.14-dev\n"
+"X-Generator: Weblate 4.14.1-dev\n"
 
 msgid "Ravada broker"
 msgstr "Broker Ravada"
@@ -2211,3 +2211,69 @@ msgstr ""
 
 msgid "options"
 msgstr "opciones"
+
+msgid "This event and the following"
+msgstr "Este evento y el siguiente"
+
+msgid "This event"
+msgstr "Este evento"
+
+msgid "Permission revoked from user"
+msgstr "Permiso revocado del usuario"
+
+msgid "Are you sure you want to spinoff from the base?"
+msgstr "¿Estás seguro que quieres escindirla de su base?"
+
+msgid "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+msgstr ""
+"Son necesarios grupos LDAP para crear reservas. Se han encontrado grupos, "
+"pero ningún miembro pertenece a él.\n"
+"<a href='/admin/groups'>Añade nuevas entradas aquí.</a>"
+
+msgid "Edit the event"
+msgstr "Editar el evento"
+
+msgid "Delete the event"
+msgstr "Eliminar el evento"
+
+msgid "Balance"
+msgstr "Balance"
+
+msgid "Node with more free memory"
+msgstr "Nodo con más memoria libre"
+
+msgid "Node with machines from the same user"
+msgstr "Nodo con máquinas del mismo usuario"
+
+msgid "Permission granted to user"
+msgstr "Permiso otorgado al usuario"
+
+msgid "User not found"
+msgstr "Usuario no encontrado"
+
+msgid "Event saved successfully"
+msgstr "Evento grabado correctamente"
+
+msgid "From"
+msgstr "Desde"
+
+msgid "To"
+msgstr "A"
+
+msgid "This event and the following with same day of week"
+msgstr "Este evento y los siguientes del mismo día de la semana"
+
+msgid "All events"
+msgstr "Todos los eventos"
+
+msgid "Confirm"
+msgstr "Confirmación"
+
+msgid "Source Machine"
+msgstr "Máquina Origen"
+
+msgid "This feature requires a LDAP server configured."
+msgstr "Esta característica necesita un servidor LDAP configurado."
+
+msgid "Monitoring"
+msgstr "Monitorización"
