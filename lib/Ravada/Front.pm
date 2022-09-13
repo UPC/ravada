@@ -666,6 +666,9 @@ sub list_iso_images {
         $row->{options} = decode_json($row->{options})
             if $row->{options};
         $row->{min_ram} = 0.2 if !$row->{min_ram};
+        $row->{name} = Encode::decode_utf8($row->{name});
+        $row->{description} = Encode::decode_utf8($row->{description});
+
         push @iso,($row);
     }
     $sth->finish;
