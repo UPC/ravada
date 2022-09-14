@@ -36,14 +36,48 @@ my $N = 0;
 sub test_utf8($t, $vm_name) {
     for my $lang (reverse sort keys %BASE_NAME) {
         diag("testing $lang $vm_name");
+        test_rename_ascii($t, $vm_name, $BASE_NAME{$lang});
         test_clone_utf8_domain($t, $vm_name, $BASE_NAME{$lang});
         test_clone_utf8_user($t, $vm_name, $BASE_NAME{$lang});
     }
 }
 
+sub test_rename_ascii($t, $vm_name, $base_name) {
+    my $user_name = new_domain_name();
+
+    my $user_db = Ravada::Auth::SQL->new( name => $user_name);
+    $user_db->remove();
+
+    my $user = create_user($user_name, $$);
+    user_admin->make_admin($user->id);
+
+    mojo_login($t, $user_name, $$);
+
+    my $domain = _new_machine($vm_name, $user, $base_name);
+
+    my $new_name = new_domain_name();
+
+    my $id_req = mojo_request($t, "rename_domain", {
+            id_domain => $domain->id
+            ,name => $new_name
+    });
+    ok($id_req) or return;
+    my $req = Ravada::Request->open($id_req);
+
+    wait_request();
+    is($req->error,'') or exit;
+
+    my $domain2 = Ravada::Front::Domain->open($domain->id);
+    is($domain2->name,$new_name) or exit;
+    is($domain2->_data('name'), $new_name);
+    is($domain2->_data('alias'), $new_name);
+
+}
+
 sub test_clone_utf8_domain($t, $vm_name, $base_name) {
     test_clone_utf8_user($t, $vm_name,$base_name, 1);
 }
+
 sub _new_machine($vm_name, $user, $base_name) {
 
     my $iso_name = 'Alpine%64 bits';
