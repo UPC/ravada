@@ -747,6 +747,36 @@ sub test_interfaces($vm) {
     $domain->remove(user_admin);
 }
 
+sub test_port_already_open($vm) {
+    diag("Test redirect ip duplicated ".$vm->type);
+    my $internal_port = 22;
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+    Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,remote_ip => '10.1.1.2'
+    );
+    wait_request();
+    my $display = $domain->display_info(user_admin);
+    my $port = $display->{port};
+    shutdown_domain_internal($domain);
+    my $sth = connector->dbh->prepare("DELETE FROM iptables");
+    $sth->execute();
+
+    Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,remote_ip => '10.1.1.33'
+    );
+    wait_request();
+
+    my @out = split /\n/, `iptables-save`;
+    my @port = (grep /--dport $port/, @out);
+    is(scalar(@port),2) or die Dumper(\@port);
+
+    remove_domain($domain);
+}
+
 sub test_redirect_ip_duplicated($vm) {
     diag("Test redirect ip duplicated ".$vm->type);
     my $internal_port = 22;
@@ -1454,6 +1484,8 @@ for my $vm_name ( reverse vm_names() ) {
     test_expose_nested_base($vm);
 
     test_interfaces($vm);
+
+    test_port_already_open($vm);
 
     test_redirect_ip_duplicated($vm);
     test_open_port_duplicated($vm);
