@@ -3784,6 +3784,24 @@ sub _remove_iptables {
             $sth->execute($id);
         }
     }
+
+    $self->_clean_iptables($port) if $port;
+}
+
+sub _clean_iptables($self, $port) {
+    my ($out, $err) = $self->_vm->run_command("iptables-save");
+    my @open1 = (grep /--dport $port/, split/\n/,$out );
+
+    for my $line ( @open1 ) {
+        next if $line !~ /^-A RAVADA/;
+        warn $self->name." clean $line\n";# if $debug_ports;
+        $line =~ s/^-A/-D/;
+        my ($out,$err) = $self->_vm->run_command("iptables",split(/ /,$line),"-w");
+        warn $out if$out;
+        warn $err if $err;
+    }
+
+
 }
 
 sub _test_iptables_jump {
