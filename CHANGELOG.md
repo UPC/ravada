@@ -12,4 +12,4 @@
 - Admin can't change user passwords [\#1805]
 - LDAP access control issue [\#1821]
 - fix: parrot linux updated [\#1819]
-
+- VM is not renamed [\#1826]
