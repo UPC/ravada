@@ -749,6 +749,7 @@ sub test_interfaces($vm) {
 
 sub test_port_already_open($vm) {
     diag("Test redirect ip duplicated ".$vm->type);
+    flush_rules();
     my $internal_port = 22;
     my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     Ravada::Request->start_domain(
@@ -783,7 +784,8 @@ sub test_port_already_open($vm) {
 }
 
 sub test_port_prerouting_already_open($vm) {
-    diag("Test redirect ip duplicated ".$vm->type);
+    diag("Test redirect ip duplicated prerouting ".$vm->type);
+    flush_rules();
     my $internal_port = 29;
     my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     $domain->expose(port => $internal_port
@@ -832,8 +834,9 @@ sub test_port_prerouting_already_open($vm) {
 }
 
 sub test_port_prerouting_already_open_clones($vm) {
-    diag("Test redirect ip duplicated ".$vm->type);
-    my $internal_port = 31;
+    diag("Test redirect ip duplicated prerouting clones ".$vm->type);
+    flush_rules();
+    my $internal_port = 22;
     my $base = $BASE->clone(name => new_domain_name, user => user_admin);
     $base->expose(port => $internal_port
         , name => "ssh"
@@ -861,21 +864,29 @@ sub test_port_prerouting_already_open_clones($vm) {
         ,id_domain => $clone1->id
         ,remote_ip => $remote_ip1
     );
+    wait_request();
+    my $ip1 = _wait_ip2($vm, $clone1);
+    ok($ip1) or die "No ip for ".$clone1->name;
+
     Ravada::Request->start_domain(
         uid => user_admin->id
         ,id_domain => $clone2->id
         ,remote_ip => $remote_ip2
     );
-
     wait_request();
+
+    my $ip2 = _wait_ip2($vm, $clone2);
+    ok($ip2) or die "No ip for ".$clone2->name;;
+
+    wait_request(debug => 1);
 
     my @out = split /\n/, `iptables-save`;
 
     my @port1 = (grep /-s $remote_ip1.32.*--dport $internal_port -j ACCEPT/, @out);
-    is(scalar(@port1),1,"Expecting $internal_port") or die Dumper(\@port1);
+    is(scalar(@port1),1,"Expecting -s $remote_ip1 --dport $internal_port -j ACCEPT") or die Dumper(\@port1);
 
     my @port2 = (grep /-s $remote_ip2.32.*--dport $internal_port -j ACCEPT/, @out);
-    is(scalar(@port2),1,"Expecting $internal_port") or die Dumper(\@port2);
+    is(scalar(@port2),1,"Expecting -s $remote_ip2 --dport $internal_port") or die Dumper(\@port2);
 
     my @port_drop = (grep /--dport $internal_port -j DROP/, @out);
     is(scalar(@port_drop),2) or die Dumper(\@port_drop);
@@ -893,6 +904,8 @@ sub test_port_prerouting_already_open_clones($vm) {
 
     remove_domain($clone1);
     remove_domain($clone2);
+    remove_domain($base);
+
 }
 
 sub _check_one_port($remote_ip, $internal_port) {
@@ -1056,9 +1069,19 @@ sub test_open_port_duplicated($vm) {
     is($req->status,'done');
     is($req->error, '') or exit;
 
-    my @out3 = split /\n/, `iptables-save -t nat`;
-    my @open3 = (grep /--dport $public_port/, @out3);
-    is(scalar(@open3),1) or die Dumper(\@open3);
+    my (@out3,@open3);
+    for ( 1 .. 5 ) {
+        @out3 = split /\n/, `iptables-save -t nat`;
+        @open3 = (grep /--dport $public_port/, @out3);
+        last if scalar(@open3);
+        Ravada::Request->open_exposed_ports(
+            uid => user_admin->id
+            ,id_domain => $clone->id
+            ,_force => 1
+        );
+        wait_request();
+    }
+    is(scalar(@open3),1,"Expecting 1 --dport $public_port") or die Dumper(\@open3,\@out3);
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
@@ -1260,7 +1283,8 @@ sub test_req_expose($vm_name) {
 
     $domain->start(user => user_admin, remote_ip => $remote_ip);
 
-    _wait_ip($vm_name, $domain);
+    my $ip = _wait_ip($vm_name, $domain);
+    ok($ip) or die $domain->name." is down or has no ip";
 
     my $internal_port = 22;
     my $req = Ravada::Request->expose(
@@ -1268,9 +1292,9 @@ sub test_req_expose($vm_name) {
             ,port => $internal_port
             ,id_domain => $domain->id
     );
-    for ( 1 .. 10 ) {
+    for ( 1 .. 30 ) {
         wait_request(request => $req, debug => 0);
-        last if $req->status eq 'done';
+        last if $req->status eq 'done' && ! $req->error =~ /retry/;
         sleep 1;
     }
 
@@ -1362,7 +1386,7 @@ sub test_restricted($vm, $restricted) {
             , jump => 'ACCEPT'
         );
         last if $n_rule;
-        wait_requests(skip => '');
+        wait_request(skip => '');
     }
     ($n_rule_drop)
         = search_iptable_remote(
