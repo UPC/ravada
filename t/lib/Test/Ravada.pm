@@ -2069,8 +2069,15 @@ sub local_ips($vm) {
     return @ips;
 }
 
-sub shutdown_domain_internal($domain) {
+sub shutdown_domain_internal($domain, $nice=0) {
     if ($domain->type eq 'KVM') {
+        if ($nice) {
+            $domain->domain->shutdown();
+            for ( 1 .. 60 ) {
+                return if !$domain->domain->is_active;
+                sleep 1;
+            }
+        }
         $domain->domain->destroy();
     } elsif ($domain->type eq 'Void') {
         $domain->_store(is_active => 0 );
