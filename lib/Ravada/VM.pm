@@ -1635,7 +1635,9 @@ sub _search_iptables($self, %rule) {
         $args{s} = "0.0.0.0/0" if !exists $args{s};
         my $match = 1;
         for my $key (keys %rule) {
-            $match = 0 if !exists $args{$key} || $args{$key} ne $rule{$key};
+            $match = 0 if !exists $args{$key} || !exists $rule{$key}
+            || !defined $rule{$key}
+            || $args{$key} ne $rule{$key};
             last if !$match;
         }
         if ( $match ) {
