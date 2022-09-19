@@ -3411,18 +3411,9 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     $self->_update_display_port_exposed($name, $local_ip, $public_port, $internal_port);
 
     if ( !$> && $public_port ) {
-        my ($out, $err) = $self->_vm->run_command("iptables-save","-t","nat");
-        my @open1 = (grep /--dport $public_port/, split/\n/,$out );
-        my @open2 = (grep /--to-destination $internal_ip:$internal_port/, split/\n/,$out );
-        my %removed;
-        for my $line ( @open1, @open2 ) {
-            next if $removed{$line}++;
-            warn $self->name." clean $line\n" if $debug_ports;
-            $line =~ s/^-A/-t nat -D/;
-            my ($out,$err) = $self->_vm->run_command("iptables",split(/ /,$line),"-w");
-            warn $out if$out;
-            warn $err if $err;
-        }
+        $self->_delete_iptables_nat($public_port, $internal_ip
+            , $internal_port, $debug_ports);
+        $self->_delete_iptables_forward($internal_ip, $internal_port);
 
         warn $self->name." open $public_port ->"
         ." $internal_ip:$internal_port\n"
@@ -3440,6 +3431,34 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
 
         $self->_open_iptables_state();
         $self->_open_exposed_port_client($internal_port, $restricted);
+    }
+}
+
+sub _delete_iptables_forward($self,$internal_ip, $internal_port) {
+    my ($out, $err) = $self->_vm->run_command("iptables-save");
+    my @open1 = (grep /-A FORWARD.* -d $internal_ip\/32 .*--dport $internal_port -j ACCEPT/, split/\n/,$out );
+    for my $line (@open1) {
+        $line =~ s/^-A/-D/;
+        my ($out,$err) = $self->_vm->run_command("iptables",split(/ /,$line),"-w");
+        warn $out if$out;
+        warn $err if $err;
+    }
+
+}
+
+sub _delete_iptables_nat($self, $public_port, $internal_ip, $internal_port
+                            , $debug_ports) {
+    my ($out, $err) = $self->_vm->run_command("iptables-save","-t","nat");
+    my @open1 = (grep /--dport $public_port/, split/\n/,$out );
+    my @open2 = (grep /--to-destination $internal_ip:$internal_port/, split/\n/,$out );
+    my %removed;
+    for my $line ( @open1, @open2 ) {
+        next if $removed{$line}++;
+        warn $self->name." clean $line\n" if $debug_ports;
+        $line =~ s/^-A/-t nat -D/;
+        my ($out,$err) = $self->_vm->run_command("iptables",split(/ /,$line),"-w");
+        warn $out if$out;
+        warn $err if $err;
     }
 }
 
