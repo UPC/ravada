@@ -97,3 +97,7 @@ input.ng-invalid.ng-touched {
     border: 1px solid red;
 }
 
+.dropdown-menu {
+    max-height: 280px;
+    overflow-y: auto;
+}
