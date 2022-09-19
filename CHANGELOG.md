@@ -13,3 +13,4 @@
 - LDAP access control issue [\#1821]
 - fix: parrot linux updated [\#1819]
 - VM is not renamed [\#1826]
+- Open ports left from shut down machines [\#1829]
