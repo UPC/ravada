@@ -1370,7 +1370,7 @@ sub test_req_expose($vm_name) {
     );
     for ( 1 .. 30 ) {
         wait_request(request => $req, debug => 0);
-        last if $req->status eq 'done' && ! $req->error =~ /retry/;
+        last if $req->status eq 'done' && ! $req->error =~ /retry/i;
         sleep 1;
     }
 
@@ -1689,7 +1689,7 @@ for my $vm_name ( reverse vm_names() ) {
         init('/etc/ravada.conf',0, 1);
         next if !ping_backend();
         $Test::Ravada::BACKGROUND=1;
-        remove_old_domains_req();
+        remove_old_domains_req(1);
         wait_request();
     } elsif ( $db eq 'sqlite') {
         $Test::Ravada::BACKGROUND=0;
