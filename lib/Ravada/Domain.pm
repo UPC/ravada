@@ -1428,7 +1428,6 @@ sub _fix_duplicate_display_port($self, $port) {
         }
     }
 
-    warn "clear ".$self->name." $port";
     my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_displays set port=NULL "
         ." WHERE id=?"
     );
@@ -3811,9 +3810,10 @@ sub _clean_iptables($self, $port) {
     my ($out, $err) = $self->_vm->run_command("iptables-save");
     my @open1 = (grep /--dport $port/, split/\n/,$out );
 
+    my $debug_ports = Ravada::setting(undef,'/backend/debug_ports');
     for my $line ( @open1 ) {
         next if $line !~ /^-A RAVADA/;
-        warn $self->name." clean $line\n";# if $debug_ports;
+        warn $self->name." clean $line\n" if $debug_ports;
         $line =~ s/^-A/-D/;
         my ($out,$err) = $self->_vm->run_command("iptables",split(/ /,$line),"-w");
         warn $out if$out;
