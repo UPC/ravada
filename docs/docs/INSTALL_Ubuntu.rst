@@ -18,16 +18,16 @@ repository <http://infoteleco.upc.edu/img/debian/>`__.
 
 Install the ravada package. Choose the one that matches your OS release:
 
-- ravada_1.7.3_ubuntu-18.04_all.deb
-- ravada_1.7.3_ubuntu-20.04_all.deb for Ubuntu 20.04 and Ubuntu 22.04
+- ravada_1.7.5_ubuntu-18.04_all.deb
+- ravada_1.7.5_ubuntu-20.04_all.deb for Ubuntu 20.04 and Ubuntu 22.04
 
 When you run dpkg now it may show some errors, it is ok, keep reading.
 
 .. prompt:: bash $
 
-     wget http://infoteleco.upc.edu/img/debian/ravada_1.7.3_ubuntu-20.04_all.deb
+     wget http://infoteleco.upc.edu/img/debian/ravada_1.7.5_ubuntu-20.04_all.deb
      sudo apt-get update
-     sudo apt install ./ravada_1.7.3_ubuntu-20.04_all.deb
+     sudo apt install ./ravada_1.7.5_ubuntu-20.04_all.deb
 
 The last command will show a warning about missing dependencies. Install
 them running:
