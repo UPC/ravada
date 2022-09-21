@@ -639,6 +639,7 @@ sub test_routing_already_used($vm, $source=0, $restricted=0) {
             ,remote_ip => $remote_ip
         );
         wait_request(debug => 0);
+        $internal_ip = $base->ip;
         is($req->status,'done');
         is($req->error, '');
 
