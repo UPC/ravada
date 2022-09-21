@@ -1598,7 +1598,7 @@ sub iptables($self, @args) {
 
     }
     my ($out, $err) = $self->run_command(@cmd);
-    confess "@cmd $err" if $err && $err =~/unknown option/;
+    confess "@cmd $err" if $err && $err !~ /does a matching rule exist in that chain/;
     warn $err if $err;
 }
 
