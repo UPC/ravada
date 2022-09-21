@@ -727,6 +727,8 @@ sub _remove_old_domains_vm($vm_name) {
 
     my @domains;
     eval { @domains = $vm->list_domains() };
+    warn $@ if $@;
+    return if $@;
     for my $domain ( sort { $b->name cmp $a->name }  @domains) {
         next if $domain->name !~ /^$base_name/i;
 
@@ -780,12 +782,14 @@ sub _remove_old_domains_kvm {
     my $vm = shift;
 
     if (!$vm) {
+        my $vm_internal;
         eval {
             my $rvd_back = rvd_back();
             $vm = $rvd_back->search_vm('KVM');
+            $vm_internal = $vm->vm;
         };
         diag($@) if $@;
-        return if !$vm;
+        return if !$vm || !$vm_internal;
     }
     return if !$vm->vm;
     _activate_storage_pools($vm);
