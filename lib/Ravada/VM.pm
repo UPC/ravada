@@ -1600,7 +1600,7 @@ sub iptables($self, @args) {
 
     }
     my ($out, $err) = $self->run_command(@cmd);
-    confess "@cmd $err" if $err && $err =~/unknown option/;
+    confess "@cmd $err" if $err && $err !~ /does a matching rule exist in that chain/;
     warn $err if $err;
 }
 
@@ -1637,7 +1637,9 @@ sub _search_iptables($self, %rule) {
         $args{s} = "0.0.0.0/0" if !exists $args{s};
         my $match = 1;
         for my $key (keys %rule) {
-            $match = 0 if !exists $args{$key} || $args{$key} ne $rule{$key};
+            $match = 0 if !exists $args{$key} || !exists $rule{$key}
+            || !defined $rule{$key}
+            || $args{$key} ne $rule{$key};
             last if !$match;
         }
         if ( $match ) {
