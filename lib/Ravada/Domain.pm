@@ -204,8 +204,7 @@ before 'remove_base' => \&_pre_remove_base;
 after 'remove_base' => \&_post_remove_base;
 after 'spinoff' => \&_post_spinoff;
 
-before 'rename' => \&_pre_rename;
-after 'rename' => \&_post_rename;
+around 'rename' => \&_around_rename;
 
 after 'dettach' => \&_post_dettach;
 
@@ -1443,7 +1442,6 @@ sub _fix_duplicate_display_port($self, $port) {
         }
     }
 
-    warn "clear ".$self->name." $port";
     my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_displays set port=NULL "
         ." WHERE id=?"
     );
@@ -3437,18 +3435,9 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     $self->_update_display_port_exposed($name, $local_ip, $public_port, $internal_port);
 
     if ( !$> && $public_port ) {
-        my ($out, $err) = $self->_vm->run_command("iptables-save","-t","nat");
-        my @open1 = (grep /--dport $public_port/, split/\n/,$out );
-        my @open2 = (grep /--to-destination $internal_ip:$internal_port/, split/\n/,$out );
-        my %removed;
-        for my $line ( @open1, @open2 ) {
-            next if $removed{$line}++;
-            warn $self->name." clean $line\n" if $debug_ports;
-            $line =~ s/^-A/-t nat -D/;
-            my ($out,$err) = $self->_vm->run_command("iptables",split(/ /,$line),"-w");
-            warn $out if$out;
-            warn $err if $err;
-        }
+        $self->_delete_iptables_nat($public_port, $internal_ip
+            , $internal_port, $debug_ports);
+        $self->_delete_iptables_forward($internal_ip, $internal_port);
 
         warn $self->name." open $public_port ->"
         ." $internal_ip:$internal_port\n"
@@ -3466,6 +3455,34 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
 
         $self->_open_iptables_state();
         $self->_open_exposed_port_client($internal_port, $restricted);
+    }
+}
+
+sub _delete_iptables_forward($self,$internal_ip, $internal_port) {
+    my ($out, $err) = $self->_vm->run_command("iptables-save");
+    my @open1 = (grep /-A FORWARD.* -d $internal_ip\/32 .*--dport $internal_port -j ACCEPT/, split/\n/,$out );
+    for my $line (@open1) {
+        $line =~ s/^-A/-D/;
+        my ($out,$err) = $self->_vm->run_command("iptables",split(/ /,$line),"-w");
+        warn $out if$out;
+        warn $err if $err;
+    }
+
+}
+
+sub _delete_iptables_nat($self, $public_port, $internal_ip, $internal_port
+                            , $debug_ports) {
+    my ($out, $err) = $self->_vm->run_command("iptables-save","-t","nat");
+    my @open1 = (grep /--dport $public_port/, split/\n/,$out );
+    my @open2 = (grep /--to-destination $internal_ip:$internal_port/, split/\n/,$out );
+    my %removed;
+    for my $line ( @open1, @open2 ) {
+        next if $removed{$line}++;
+        warn $self->name." clean $line\n" if $debug_ports;
+        $line =~ s/^-A/-t nat -D/;
+        my ($out,$err) = $self->_vm->run_command("iptables",split(/ /,$line),"-w");
+        warn $out if$out;
+        warn $err if $err;
     }
 }
 
@@ -3810,6 +3827,25 @@ sub _remove_iptables {
             $sth->execute($id);
         }
     }
+
+    $self->_clean_iptables($port) if $port;
+}
+
+sub _clean_iptables($self, $port) {
+    my ($out, $err) = $self->_vm->run_command("iptables-save");
+    my @open1 = (grep /--dport $port/, split/\n/,$out );
+
+    my $debug_ports = Ravada::setting(undef,'/backend/debug_ports');
+    for my $line ( @open1 ) {
+        next if $line !~ /^-A RAVADA/;
+        warn $self->name." clean $line\n" if $debug_ports;
+        $line =~ s/^-A/-D/;
+        my ($out,$err) = $self->_vm->run_command("iptables",split(/ /,$line),"-w");
+        warn $out if$out;
+        warn $err if $err;
+    }
+
+
 }
 
 sub _test_iptables_jump {
@@ -4221,23 +4257,6 @@ sub _active_iptables {
     return @iptables;
 }
 
-sub _check_duplicate_domain_name {
-    my $self = shift;
-# TODO
-#   check name not in current domain in db
-#   check name not in other VM domain
-    $self->id();
-}
-
-sub _rename_domain_db {
-    my $self = shift;
-    my %args = @_;
-
-    my $new_name = $args{name} or confess "Missing new name";
-
-    $self->_data(name => $new_name);
-}
-
 =head2 is_public
 
 Sets or get the domain public
@@ -4359,29 +4378,35 @@ sub clean_swap_volumes {
 }
 
 
-sub _pre_rename {
-    my $self = shift;
+sub _around_rename($orig, $self, %args) {
+    my $name = delete $args{name};
+    my $user = delete $args{user};
 
-    confess "Error: odd number of arguments" if scalar(@_) % 2;
+    $self->id();
 
-    my %args = @_;
-    my $name = $args{name};
-    my $user = $args{user};
-
-    $self->_check_duplicate_domain_name(@_);
+    $self->_vm->_check_duplicate_name($name, 1);
 
     $self->shutdown(user => $user)  if $self->is_active;
-}
 
-sub _post_rename {
-    my $self = shift;
-    my %args = @_;
+    my $alias = $name;
+    if ($name !~ /^[a-zA-Z0-9_-]+$/) {
+        $alias = $self->_vm->_set_alias_unique($alias or $name);
+        $name = $self->_vm->_set_ascii_name($name);
+    }
 
-    my $new_name = $args{new_name};
+    confess if !defined $name || !length($name);
 
-    $self->_rename_domain_db(@_);
+    $self->$orig(name => $name);
 
-    $self->{_name} = $new_name;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains set name=?,alias=? WHERE id=?"
+    );
+    $sth->execute($name, $alias, $self->id);
+
+    $self->{_name} = $name;
+    $self->{_data}->{name} = $name;
+    $self->{_data}->{alias} = $alias;
+
 }
 
 sub _post_dettach($self, @) {

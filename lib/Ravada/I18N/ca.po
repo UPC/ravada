@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2022-08-02 03:22+0000\n"
+"PO-Revision-Date: 2022-09-16 06:42+0000\n"
 "Last-Translator: Maite Guix <maite.guix@gmail.com>\n"
 "Language-Team: Catalan <https://hosted.weblate.org/projects/ravada/"
 "translation/ca/>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.14-dev\n"
+"X-Generator: Weblate 4.14.1-dev\n"
 
 msgid "Ravada broker"
 msgstr "Broker Ravada"
@@ -1339,7 +1339,7 @@ msgid "Are you sure you want to remove this group ?"
 msgstr "Estàs segur que vols esborrar aquest grup?"
 
 msgid "object class:"
-msgstr "object class:"
+msgstr "classe d'objectes:"
 
 msgid "Groups require a LDAP server configured."
 msgstr "Els grups necessiten un servidor LDAP configurat."
@@ -2139,7 +2139,7 @@ msgid "ram"
 msgstr "ram"
 
 msgid "sys"
-msgstr "sys"
+msgstr "sis"
 
 msgid "Set either"
 msgstr "Establir qualsevol"
@@ -2160,7 +2160,7 @@ msgid "RAM (Gb)"
 msgstr "RAM (Gb)"
 
 msgid "driver"
-msgstr "driver"
+msgstr "controlador"
 
 msgid "Start after migration"
 msgstr "Començar després de la migració"
@@ -2320,3 +2320,60 @@ msgstr "esperant que acabin els processos"
 
 msgid "limit:"
 msgstr "limit:"
+
+msgid "This event and the following with same day of week"
+msgstr "Aquest esdeveniment i el següent del mateix dia de la setmana"
+
+msgid "Balance"
+msgstr "Balanç"
+
+msgid "Node with machines from the same user"
+msgstr "Node amb màquines del mateix usuari"
+
+msgid "User not found"
+msgstr "Usuari no trobat"
+
+msgid "From"
+msgstr "Des de"
+
+msgid "Edit the event"
+msgstr "Editar l'esdeveniment"
+
+msgid "To"
+msgstr "A"
+
+msgid "Delete the event"
+msgstr "Esborrar l'esdeveniment"
+
+msgid "This event"
+msgstr "Aquest esdeveniment"
+
+msgid "Confirm"
+msgstr "Confirmeu"
+
+msgid "Are you sure you want to spinoff from the base?"
+msgstr "Estas segur que la vols escindir de la seva base?"
+
+msgid "This event and the following"
+msgstr "Aquest esdeveniment i el següent"
+
+msgid "All events"
+msgstr "Tots els esdeveniments"
+
+msgid "This feature requires a LDAP server configured."
+msgstr "Aquesta característica requereix un servidor LDAP configurat."
+
+msgid "Source Machine"
+msgstr "Màquina Font"
+
+msgid "Monitoring"
+msgstr "Monitorització"
+
+msgid "Event saved successfully"
+msgstr "L'esdeveniment desat correctament"
+
+msgid "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+msgstr ""
+"Són necessaris grups LDAP per configurar les reserves. S'han trobat alguns "
+"grups, però cap membre hi pertany.<a href='/admin/groups'>Afegeix noves "
+"entrades aquí. </a>"

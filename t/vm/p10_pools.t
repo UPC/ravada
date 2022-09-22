@@ -64,6 +64,13 @@ sub test_clones($domain, $n_clones) {
 
 sub test_active($domain, $n_start) {
     is($domain->pool_start,0);
+
+    my @clones0 = $domain->clones(is_pool => 1 );
+    for my $clone_data (@clones0) {
+        my $clone = Ravada::Domain->open($clone_data->{id});
+        $clone->shutdown_now(user_admin);
+    }
+
     $domain->pool_start($n_start);
     is($domain->pool_start, $n_start);
     _remove_enforce_limits();
@@ -155,7 +162,7 @@ sub test_user($base, $n_start) {
 
     my ($clone) = grep { $_->{id_owner} == $user->id } @clones2;
     ok($clone,"Expecting clone that belongs to ".$user->name);
-    like($clone->{client_status},qr'^connect', $clone->{name}) or exit;
+    like($clone->{client_status},qr'^(1.2.3.4|connect)', $clone->{name}) or exit;
     is($clone->{is_pool},1) or exit;
 
     my $clone2 = $base->_search_pool_clone($user);
