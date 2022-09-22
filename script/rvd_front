@@ -2843,7 +2843,6 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
 }
 
 sub _new_domain_name {
-    confess;
     my $name = shift;
     my $count = 1;
     my $name2;
