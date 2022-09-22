@@ -808,7 +808,15 @@ sub disk_size {
 sub ip {
     my $self = shift;
     my $info = $self->_value('info');
-    return $info->{ip};
+    my $ip = $info->{ip};
+    return $ip if $ip;
+
+    $self->_set_default_info();
+    $info = $self->_value('info');
+    $ip = $info->{ip};
+    confess if !$ip;
+
+    return $ip;
 }
 
 sub clean_disk($self, $file) {
