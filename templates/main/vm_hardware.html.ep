@@ -17,7 +17,7 @@
                 ng-class='{"border rounded border-primary mb-4 p-4": item._edit}'
             >
                 <button title="edit {{name}} {{$index+1}}"
-                    ng-show="(name == 'network' ||name == 'disk' || name == 'video' || name == 'sound' || name=='cpu' || name=='features' || name=='filesystem' ) && !item.remove"
+                    ng-show="(name == 'network' ||name == 'disk' || name == 'video' || name == 'sound' || name=='cpu' || name=='features' || name=='filesystem' || name == 'usb_controller' ) && !item.remove"
                     ng-disabled="showmachine.requests > 0 || showmachine.is_active || showmachine.is_base || edit"
                     ng-click="toggle_edit(name,$index)"
                             ><i class="fas fa-pencil-alt"></i>
