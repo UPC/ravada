@@ -43,20 +43,20 @@
                 <p>
                         <span class="text-danger"><b><%=l 'Danger' %></b>.
                         <%=l 'This will remove all the contents of the machine' %>
-                        <i><%= $domain->name %></i>.
+                        <i><%= $domain->alias %></i>.
                         <b><%=l 'This action can\'t be undone' %></b>.
                         <%=l 'Are you sure ?'%></span><br/>
                         <a type="button" class="btn btn-primary text-white font-weight-bold"
                             ng-click="domain_remove=0"><%=l 'No' %></a>
                         <a type="button" class="btn btn-danger text-white font-weight-bold"
                             ng-click="remove(<%= $domain->id %>);domain_remove=0;domain_remove_done=1;"
-                            ><%=l 'Yes, remove'%> {{showmachine.name}}</a>
+                            ><%=l 'Yes, remove'%> {{showmachine.alias}}</a>
                  </p>
            </div><!-- del domain remove -->
 
            <div ng-show="domain_remove_clones">
                         <b><%=l 'Danger'%></b>.
-                        <%=l 'This will remove all the'%> {{showmachine.has_clones}} <%=l 'clones of the machine' %> <i><%= $domain->name %></i>.
+                        <%=l 'This will remove all the'%> {{showmachine.has_clones}} <%=l 'clones of the machine' %> <i><%= $domain->alias %></i>.
                         <b><%=l 'This action can\'t be undone' %></b>.
                         <%=l 'Are you sure ?'%><br/>
                         <a type="button" class="btn btn-primary text-white"
@@ -67,7 +67,7 @@
            </div><!-- del domain remove clones-->
 
            <div ng-show="domain_remove_done">
-                <%=l 'Virtual Machine' %> <b>{{showmachine.name}}</b> <%=l 'removed' %>.
+                <%=l 'Virtual Machine' %> <b>{{showmachine.alias}}</b> <%=l 'removed' %>.
            </div>
 
            </div>

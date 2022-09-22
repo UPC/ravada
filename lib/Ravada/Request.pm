@@ -1052,6 +1052,18 @@ sub at($self, $value) {
     $sth->execute($value, $self->{id});
 }
 
+sub _search_domain_alias($self,$domain_name) {
+    _init_connector();
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT alias"
+        ." FROM domains WHERE name=?");
+    $sth->execute($domain_name);
+    my ($alias) = $sth->fetchrow;
+
+    return ($alias or $domain_name);
+
+}
+
 sub _search_domain_name {
     my $self = shift;
     my $domain_id = shift;
@@ -1108,8 +1120,12 @@ sub _send_message {
 
     my $domain_name0 = $self->defined_arg('name');
     my $domain_id = $self->defined_arg('id_domain');
-    my $domain_name = $domain_name0;
-    $domain_name = $self->_search_domain_name($domain_id)   if $domain_id;
+    my $domain_name = '';
+    if ($domain_id) {
+        $domain_name = $self->_search_domain_name($domain_id);
+    } else {
+        $domain_name = $self->_search_domain_alias($domain_name0);
+    }
     $domain_name = '' if !defined $domain_name;
 
     $self->_remove_unnecessary_messages() if $self->status eq 'done';

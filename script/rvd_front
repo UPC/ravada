@@ -3115,8 +3115,8 @@ sub manage_machine {
     return $c->render(template => 'main/settings_machine'
         , nodes => [$RAVADA->list_vms($domain->type)]
         , FEATURE => $RAVADA->feature()
-        , list_clones => [map { $_->{name} } grep { !$_->{is_base} } $domain->clones]
-        , list_clones_base => [ map { $_->{name } } grep { $_->{is_base} } $domain->clones]
+        , list_clones => [map { $_->{alias} } grep { !$_->{is_base} } $domain->clones]
+        , list_clones_base => [ map { $_->{alias} } grep { $_->{is_base} } $domain->clones]
         , action => $c->req->url->to_abs->path
         , headers => $c->req->headers
     );

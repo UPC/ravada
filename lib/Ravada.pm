@@ -4299,7 +4299,15 @@ sub _cmd_remove {
     confess "Unknown user id ".$request->args->{uid}
         if !defined $request->args->{uid};
 
+    my $domain_name;
+    $domain_name = $request->defined_arg('name');
+
+    my $alias = '';
+    $alias = $request->_search_domain_alias($domain_name) if $domain_name;
+
     $self->remove_domain(name => $request->args('name'), uid => $request->args('uid'));
+
+    $request->arg(name => Encode::decode_utf8($alias)) if $alias;
 }
 
 sub _cmd_restore_domain($self,$request) {
