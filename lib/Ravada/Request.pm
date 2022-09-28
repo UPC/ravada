@@ -1059,6 +1059,7 @@ sub _search_domain_alias($self,$domain_name) {
         ." FROM domains WHERE name=?");
     $sth->execute($domain_name);
     my ($alias) = $sth->fetchrow;
+    $alias = Encode::decode_utf8($alias) if $alias;
 
     return ($alias or $domain_name);
 

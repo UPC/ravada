@@ -107,7 +107,9 @@ sub _new_machine($vm_name, $user, $base_name) {
 }
 
 sub _id_vm($vm_name) {
-    my $sth = connector->dbh->prepare("SELECT id FROM vms WHERE vm_type=?");
+    my $sth = connector->dbh->prepare("SELECT id FROM vms "
+        ." WHERE vm_type=? "
+        ."   AND hostname='localhost'");
     $sth->execute($vm_name);
     my ($id) = $sth->fetchrow;
     die "Error: I can't find vm=$vm_name" if !defined $id;
@@ -138,7 +140,7 @@ sub _check_discover($t, $vm_name ) {
     my $output = [];
     $output = decode_json($output_json) if length($output_json);
     for my $name ( @$output ) {
-        confess $name if $name =~ /$base_name/;
+        confess "$vm_name : $name" if $name =~ /$base_name/;
     }
 
 }
@@ -194,7 +196,6 @@ sub test_clone_utf8_user($t, $vm_name, $name, $utf8_base=0) {
     _check_discover($t, $vm_name);
 
     _check_remove($t, $domain);
-     warn $domain->name."\n".$domain->alias."\n";
 
     _check_discover($t, $vm_name);
 }

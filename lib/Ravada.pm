@@ -4307,7 +4307,7 @@ sub _cmd_remove {
 
     $self->remove_domain(name => $request->args('name'), uid => $request->args('uid'));
 
-    $request->arg(name => Encode::decode_utf8($alias)) if $alias;
+    $request->arg(name => $alias) if $alias;
 }
 
 sub _cmd_restore_domain($self,$request) {
