@@ -4312,8 +4312,10 @@ sub _new_clone_name($self, $base,$user) {
     my $name;
     my $alias = $base->name;
     $alias = $base->_data('alias') if $base->_data('alias');
-    if ($user->name =~ /^[a-z0-9_\-]+$/i) {
-        $name = $base->name."-".$user->name;
+    my $user_name = Encode::decode_utf8($user->name);
+    if ($user_name =~ /^[a-zA-Z0-9âêîôûáéíóúàèìòùäëïöüçñ'_\.\-€\$]+$/i) {
+        $user_name = $base->_vm->_set_ascii_name(Encode::decode_utf8($user->name));
+        $name = $base->name."-".$user_name;
         $alias .= "-".$user->name;
     } else {
         my $length = length($user->id);
