@@ -989,7 +989,7 @@ sub _add_domain_drivers_usb_controller($self) {
         ]
     );
     my $type = {
-        name => 'usb_controller'
+        name => 'usb controller'
         ,description => 'USB Controller'
     };
     $self->_add_domain_drivers_generic($type, \%data);
