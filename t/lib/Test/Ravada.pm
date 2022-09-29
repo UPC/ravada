@@ -657,9 +657,18 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
 sub remove_domain(@bases) {
 
     for my $base (@bases) {
+        confess if !defined $base;
         for my $clone ($base->clones) {
             my $d_clone = Ravada::Domain->open($clone->{id});
-            remove_domain($d_clone);
+            if ( $d_clone ) {
+                remove_domain($d_clone);
+            } else {
+                Ravada::Request->remove_domain(
+                    uid => user_admin->id
+                    ,name => $clone->{name}
+                );
+                wait_request();
+            }
         }
         $base->remove(user_admin);
     }
