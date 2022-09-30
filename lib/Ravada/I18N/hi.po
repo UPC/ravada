@@ -487,3 +487,100 @@ msgstr "नामपरिर्वातन"
 
 msgid "Options"
 msgstr "पसन्द"
+
+msgid "Graphics"
+msgstr "ग्राफिक्स"
+
+msgid "Danger"
+msgstr "खतरा"
+
+msgid "Development"
+msgstr "विकास"
+
+msgid "License"
+msgstr "अधिकार", "अनुज्ञा पत्र"
+
+msgid "and"
+msgstr "और"
+
+msgid "Memory"
+msgstr "स्मृति"
+
+msgid "Cancel"
+msgstr "रद्द"
+
+msgid "Username can not exceed 20 characters"
+msgstr "उपयोगकर्ता नाम बीस अक्षर के ऊपर नहीं हो सकत"
+
+msgid "Attribute"
+msgstr "गुण"
+
+msgid "Default"
+msgstr "अनुपस्थिति"
+
+msgid "Last"
+msgstr "आखिरी"
+
+msgid "Add description"
+msgstr "विवरण जोड़ें"
+
+msgid "Waiting for machine to start"
+msgstr "मशीन शुरू होने की राह देख रहे है"
+
+msgid "today"
+msgstr "आज"
+
+msgid "Compact"
+msgstr "सघन", "सुगठित"
+
+msgid "process"
+msgstr "प्रक्रिया"
+
+msgid "driver"
+msgstr "चालक"
+
+msgid "-- choose hardware --"
+msgstr "हार्डवेयर चुनिए"
+
+msgid "Nothing to monitoring"
+msgstr "जांच के लिए कुछ नहीं"
+
+msgid "Max memory (MB)"
+msgstr "अधिकतम स्मृति"
+
+msgid "Port"
+msgstr "द्वार"
+
+msgid "Public Port"
+msgstr "सार्वजनिक द्वार"
+
+msgid "Type the template name"
+msgstr "टेम्पलेट नाम लिखिए"
+
+msgid "Swap"
+msgstr "विनिमय"
+
+msgid "Data"
+msgstr "जानकारी"
+
+msgid "Congrats"
+msgstr "अभिनन्दन"
+
+msgid "groups"
+msgstr "समूह"
+
+msgid "networks"
+msgstr "नेटवर्क"
+
+msgid "locked"
+msgstr "बंद"
+
+msgid "Requests"
+msgstr "अनुरोध"
+
+msgid "Title"
+msgstr "शीर्षक"
+
+msgid "Color"
+msgstr "रंग"
+
