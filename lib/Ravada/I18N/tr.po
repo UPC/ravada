@@ -500,7 +500,7 @@ msgstr "Kapanıyor…"
 msgid "It may take a couple of minutes."
 msgstr "Birkaç dakika sürebilir."
 
-msgid "Hybernating ..."
+msgid "Hibernating ..."
 msgstr "Hazırda bekletiliyor…"
 
 msgid "Description"

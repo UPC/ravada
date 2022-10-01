@@ -838,7 +838,7 @@ msgstr "Renomear"
 msgid "Description"
 msgstr "Descrição"
 
-msgid "Hybernating ..."
+msgid "Hibernating ..."
 msgstr "A hibernar…"
 
 msgid "It may take a couple of minutes."
