@@ -11,8 +11,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-11-02 08:20+0000\n"
-"Last-Translator: J. Lavoie <j.lavoie@net-c.ca>\n"
+"PO-Revision-Date: 2022-10-03 08:05+0000\n"
+"Last-Translator: Anne-Laure Gaillard <alaure.gaillard@gmail.com>\n"
 "Language-Team: French <https://hosted.weblate.org/projects/ravada/"
 "translation/fr/>\n"
 "Language: fr\n"
@@ -20,7 +20,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"X-Generator: Weblate 4.3.2-dev\n"
+"X-Generator: Weblate 4.14.1\n"
 
 msgid "Ravada broker"
 msgstr "Courtier Ravada"
@@ -200,7 +200,7 @@ msgid "No messages to show"
 msgstr "Aucun message à afficher"
 
 msgid "Admin"
-msgstr "Administrateur"
+msgstr "Administration"
 
 msgid "Machines"
 msgstr "Machines"
@@ -423,7 +423,7 @@ msgid "Template"
 msgstr "Modèle"
 
 msgid "Disk Size: (GB)"
-msgstr "Taille du disque: (GB)"
+msgstr "Taille du disque : (GB)"
 
 msgid "Swap Size: (GB)"
 msgstr "Taille du fichier Swap : (Go)"
@@ -467,7 +467,7 @@ msgstr ""
 "partir d'une base appartenant à l'utilisateur."
 
 msgid "monitoring"
-msgstr "Supervision"
+msgstr "supervision"
 
 msgid "Are you sure you want to remove the Base of"
 msgstr "Êtes-vous sûr·e de vouloir détruire la Base de"
@@ -557,7 +557,7 @@ msgid "This action can't be undone"
 msgstr "Cette action ne peut pas être annulée"
 
 msgid "Are you sure ?"
-msgstr "Etes-vous sûr ?"
+msgstr "Êtes-vous sûr ?"
 
 msgid "Yes, remove"
 msgstr "Oui, supprimer"
@@ -627,7 +627,7 @@ msgstr ""
 "Voici la liste des technologies utilisées dans le cadre de ce projet :"
 
 msgid "The code is available on "
-msgstr "Le code est disponible à l'adresse suivante "
+msgstr "Le code est disponible à l'adresse suivante"
 
 msgid "The code is "
 msgstr "Le code est"
@@ -693,7 +693,7 @@ msgid "Enter Password"
 msgstr "Insérer votre mot de passe"
 
 msgid "Confirm Password"
-msgstr "Confirmer votre mot de passe"
+msgstr "Confirmer le mot de passe"
 
 msgid "Username is required"
 msgstr "Le nom d'utilisateur est requis"
@@ -972,3 +972,457 @@ msgstr "Affichage"
 
 msgid "Max Memory"
 msgstr "Mémoire Max"
+
+msgid "Advanced options"
+msgstr "Options avancées"
+
+msgid "From"
+msgstr "De"
+
+msgid "bases."
+msgstr "bases."
+
+msgid "Data"
+msgstr "Données"
+
+msgid "Enter New Password"
+msgstr "Insérer le nouveau mot de passe"
+
+msgid "Close"
+msgstr "Fermer"
+
+msgid "To"
+msgstr "Vers"
+
+msgid "Add new disk"
+msgstr "Ajouter un nouveau disque"
+
+msgid "Delete the event"
+msgstr "Supprimer l'événement"
+
+msgid "added"
+msgstr "ajouté"
+
+msgid "Add to group"
+msgstr "Ajouter au groupe"
+
+msgid "Display Port :"
+msgstr "Afficher le port :"
+
+msgid "Can reboot all virtual machines."
+msgstr "Peut redémarrer toutes les machines virtuelles."
+
+msgid "Groups"
+msgstr "Groupes"
+
+msgid "New Group"
+msgstr "Nouveau groupe"
+
+msgid "New name"
+msgstr "Nouveau nom"
+
+msgid "A node with that address already exists."
+msgstr "Un nœud portant cette adresse existe déjà."
+
+msgid "backup directory"
+msgstr "répertoire de sauvegarde"
+
+msgid "Enter Old Password"
+msgstr "Insérer l'ancien mot de passe"
+
+msgid "disabled"
+msgstr "désactivé"
+
+msgid "Node disabled"
+msgstr "Nœud désactivé"
+
+msgid "volatile"
+msgstr "volatile"
+
+msgid "Can rename any virtual machine."
+msgstr "Peut renommer n'importe quelle machine virtuelle."
+
+msgid "New password"
+msgstr "Nouveau mot de passe"
+
+msgid "size"
+msgstr "taille"
+
+msgid "Color"
+msgstr "Couleur"
+
+msgid "Repeat"
+msgstr "Répéter"
+
+msgid "Title"
+msgstr "Titre"
+
+msgid "Save changes"
+msgstr "Sauvegarder les changements"
+
+msgid "bases"
+msgstr "bases"
+
+msgid "Delete"
+msgstr "Supprimer"
+
+msgid "can change the settings of any virtual machine cloned from one base owned by the user."
+msgstr ""
+"peut modifier les paramètres de n'importe quelle machine virtuelle clonée "
+"vers une base appartenant à l'utilisateur."
+
+msgid "Until"
+msgstr "Jusqu'à"
+
+msgid "options"
+msgstr "options"
+
+msgid "No bridges found"
+msgstr "Aucun pont trouvé"
+
+msgid "cdrom"
+msgstr "CD-ROM"
+
+msgid "system"
+msgstr "système"
+
+msgid "disk"
+msgstr "disque"
+
+msgid "type"
+msgstr "type"
+
+msgid "The machine will turn off after this time"
+msgstr "La machine s'éteindra après ce délai"
+
+msgid "Hide clones"
+msgstr "Masquer les clones"
+
+msgid "SSO/CAS Login"
+msgstr "Connexion SSO/CAS"
+
+msgid "Remove Base"
+msgstr "Enlever la base"
+
+msgid "can change the settings of any virtual machine."
+msgstr "peut modifier les paramètres de n'importe quelle machine virtuelle."
+
+msgid "can change the settings of any virtual machine "
+msgstr "peut modifier les paramètres de n'importe quelle machine virtuelle "
+
+msgid "can remove any virtual machine owned by the user."
+msgstr ""
+"Peut supprimer n'importe quelle machine virtuelle appartenant à "
+"l'utilisateur."
+
+msgid "Are you sure you want to remove the base of"
+msgstr "Êtes-vous sûr de vouloir de supprimer la base de"
+
+msgid "Are you sure you want to prepare the base of"
+msgstr "Êtes-vous sûr de vouloir préparer la base de"
+
+msgid "No members found"
+msgstr "Aucun membre trouvé"
+
+msgid "No groups found"
+msgstr "Aucun groupe trouvé"
+
+msgid "Apply"
+msgstr "Appliquer"
+
+msgid "This machine has a CD-ROM"
+msgstr "Cette machine a un CD-ROM"
+
+msgid "Accept"
+msgstr "Accepter"
+
+msgid "temporary"
+msgstr "temporaire"
+
+msgid "data"
+msgstr "données"
+
+msgid "Fail"
+msgstr "Échoué"
+
+msgid "NAT"
+msgstr "NAT"
+
+msgid "Bridge"
+msgstr "Pont"
+
+msgid "All machines"
+msgstr "Toutes les machines"
+
+msgid "No machines"
+msgstr "Aucune machine"
+
+msgid "Anonymous"
+msgstr "Anonyme"
+
+msgid "base storage"
+msgstr "stockage de base"
+
+msgid "End"
+msgstr "Fin"
+
+msgid "Assign this virtual machine to the pre-started pool"
+msgstr "Attribuer cette machine virtuelle au pool prédémarrage"
+
+msgid "Group"
+msgstr "Groupe"
+
+msgid "New group member"
+msgstr "Nouveau membre du groupe"
+
+msgid "Are you sure you want to remove this group ?"
+msgstr "Êtes-vous sûr de vouloir supprimer ce groupe ?"
+
+msgid "Autostart"
+msgstr "Démarrage automatique"
+
+msgid "Volatile"
+msgstr "Volatile"
+
+msgid "Node"
+msgstr "Nœud"
+
+msgid "Bases"
+msgstr "Bases"
+
+msgid "Type"
+msgstr "Type"
+
+msgid "Nodes"
+msgstr "Nœuds"
+
+msgid "Action"
+msgstr "Action"
+
+msgid "Active"
+msgstr "Actif"
+
+msgid "Disabled"
+msgstr "Désactivé"
+
+msgid "This node is local"
+msgstr "Ce nœud est local"
+
+msgid "Enable"
+msgstr "Activer"
+
+msgid "Refresh"
+msgstr "Rafraichir"
+
+msgid "Disable"
+msgstr "Désactiver"
+
+msgid "Confirm disable node"
+msgstr "Confirmer la désactivation du nœud"
+
+msgid "Admin users can still log in from"
+msgstr "Les administrateurs peuvent toujours se connecter depuis"
+
+msgid "Display Password"
+msgstr "Afficher le mot de passe"
+
+msgid "Bookings"
+msgstr "Réservations"
+
+msgid "Bookings require LDAP authentication."
+msgstr "Les réservations nécessitent une authentification par LDAP."
+
+msgid "add"
+msgstr "ajouter"
+
+msgid "Add groups"
+msgstr "Ajouter des groupes"
+
+msgid "Add new Display"
+msgstr "Ajouter un nouvel affichage"
+
+msgid "Display IP :"
+msgstr "Afficher l'IP :"
+
+msgid "cancel"
+msgstr "annuler"
+
+msgid "Error:"
+msgstr "Erreur :"
+
+msgid "LDAP"
+msgstr "LDAP"
+
+msgid "model"
+msgstr "modèle"
+
+msgid "allocation"
+msgstr "allocation"
+
+msgid "bridge"
+msgstr "pont"
+
+msgid "bus"
+msgstr "bus"
+
+msgid "boot order"
+msgstr "ordre de démarrage"
+
+msgid "capacity"
+msgstr "capacité"
+
+msgid "check"
+msgstr "vérifier"
+
+msgid "Check"
+msgstr "Vérifier"
+
+msgid "Client"
+msgstr "Client"
+
+msgid "hidden"
+msgstr "masqué"
+
+msgid "ISO file"
+msgstr "fichier ISO"
+
+msgid "New user"
+msgstr "Nouvel utilisateur"
+
+msgid "mode"
+msgstr "mode"
+
+msgid "address"
+msgstr "adresse"
+
+msgid "yes"
+msgstr "oui"
+
+msgid "all machines"
+msgstr "toutes les machines"
+
+msgid "name"
+msgstr "nom"
+
+msgid "Save"
+msgstr "Enregistrer"
+
+msgid "Testing connection to"
+msgstr "Tester la connexion à"
+
+msgid "and will remove all the disk and information of this virtual machine."
+msgstr ""
+"et supprimera tout le disque et les informations de cette machine virtuelle."
+
+msgid "Are you sure you want to remove the"
+msgstr "Êtes-vous sûr de vouloir de supprimer le"
+
+msgid "Are you sure you want to remove the node"
+msgstr "Êtes-vous sûr de vouloir de supprimer le nœud"
+
+msgid "Check connection to"
+msgstr "Vérifier la connexion à"
+
+msgid "or"
+msgstr "ou"
+
+msgid "password"
+msgstr "mot de passe"
+
+msgid "Access"
+msgstr "Accès"
+
+msgid "Base"
+msgstr "Base"
+
+msgid "CPUs"
+msgstr "CPUs"
+
+msgid "driver"
+msgstr "driver"
+
+msgid "Are you sure you want to migrate"
+msgstr "Êtes-vous sûr de vouloir migrer"
+
+msgid "Any remote client can access this port"
+msgstr "Tout client distant peut accéder à ce port"
+
+msgid "but there are only"
+msgstr "mais il y a seulement"
+
+msgid "Change"
+msgstr "Changer"
+
+msgid "Yes, rebase"
+msgstr "Oui, procéder au rebase"
+
+msgid "allowed"
+msgstr "autorisé"
+
+msgid "Group name"
+msgstr "Nom du groupe"
+
+msgid "Machine"
+msgstr "Machine"
+
+msgid "Enter group name"
+msgstr "Entrer le nom du groupe"
+
+msgid "BIOS"
+msgstr "BIOS"
+
+msgid "Attachment"
+msgstr "Joindre"
+
+msgid "hide"
+msgstr "masquer"
+
+msgid "Add another user"
+msgstr "Ajouter un autre utilisateur"
+
+msgid "Create a new group"
+msgstr "Créer un nouveau groupe"
+
+msgid "groups"
+msgstr "groupes"
+
+msgid "nodes"
+msgstr "nœuds"
+
+msgid "Can rename any virtual machine owned by the user."
+msgstr ""
+"Peut renommer n'importe quelle machine virtuelle appartenant à l'utilisateur."
+
+msgid "Can rename clones from virtual machines owned by the user."
+msgstr ""
+"Peut renommer les clones des machines virtuelles appartenant à l'utilisateur."
+
+msgid "Can view groups."
+msgstr "peut voir les groupes."
+
+msgid "Edit the event"
+msgstr "Modifier l'événement"
+
+msgid "This event"
+msgstr "Cet événement"
+
+msgid "This event and the following"
+msgstr "Cet événement et les suivants"
+
+msgid "All events"
+msgstr "Tous les événements"
+
+msgid "Confirm"
+msgstr "Confirmer"
+
+msgid "Monitoring"
+msgstr "Supervision"
+
+msgid "Balance"
+msgstr "Balance"
+
+msgid "Are you sure you want to spinoff from the base?"
+msgstr "Êtes-vous sûr de vouloir dériver de la base ?"
+
+msgid "User not found"
+msgstr "Utilisateur non trouvé"
