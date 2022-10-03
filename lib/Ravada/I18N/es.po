@@ -505,7 +505,7 @@ msgstr "Apagando …"
 msgid "It may take a couple of minutes."
 msgstr "Puede tardar un par de minutos."
 
-msgid "Hybernating ..."
+msgid "Hibernating ..."
 msgstr "Hibernando …"
 
 msgid "Description"

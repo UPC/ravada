@@ -702,8 +702,12 @@ msgstr "Passwort kann nicht länger als 20 Zeichen sein"
 msgid "Password must be at least 5 characters"
 msgstr "Passwort muss mindestens 5 Zeichen lang sein"
 
+
 msgid "Password can only contain words and numbers"
 msgstr "Passwort kann nur Wörter und Zahlen enthalten"
+
+msgid "Hibernating ..."
+msgstr "Ruhezustand …"
 
 msgid "Confirm Password is required"
 msgstr "Das Passwort muss bestätigt werden"
