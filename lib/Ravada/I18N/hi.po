@@ -498,7 +498,7 @@ msgid "Development"
 msgstr "विकास"
 
 msgid "License"
-msgstr "अधिकार", "अनुज्ञा पत्र"
+msgstr "अधिकार"
 
 msgid "and"
 msgstr "और"
