@@ -758,7 +758,7 @@ msgstr "öffentlich"
 msgid "It is required a viewer to run the virtual machines."
 msgstr "Zum Ausführen der virtuellen Maschinen ist ein Viewer erforderlich."
 
-msgid "Hybernating ..."
+msgid "Hibernating ..."
 msgstr "Ruhezustand …"
 
 msgid "This machine has not Graphics parameters!"

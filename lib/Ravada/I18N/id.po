@@ -570,7 +570,7 @@ msgstr "Mematikan ..."
 msgid "It may take a couple of minutes."
 msgstr "Mungkin butuh beberapa menit."
 
-msgid "Hybernating ..."
+msgid "Hibernating ..."
 msgstr "Hibernasi ..."
 
 msgid "Description"

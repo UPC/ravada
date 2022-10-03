@@ -514,7 +514,7 @@ msgstr "Arrêt en cours..."
 msgid "It may take a couple of minutes."
 msgstr "Cela peut prendre quelques minutes."
 
-msgid "Hybernating ..."
+msgid "Hibernating ..."
 msgstr "Mise en veille..."
 
 msgid "Description"
