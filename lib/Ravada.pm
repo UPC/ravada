@@ -985,6 +985,7 @@ sub _add_domain_drivers_usb_controller($self) {
     my %data = (
         'KVM' => [
             'nec-xhci'
+            ,'piix3-uhci'
             ,'qemu-xhci'
         ]
     );

@@ -63,6 +63,8 @@ our %SET_DRIVER_SUB = (
      ,streaming => \&_set_driver_streaming
      ,disk => \&_set_driver_disk
      ,cpu => \&_set_driver_cpu
+     ,'usb controller'=> \&_set_driver_usb_controller
+
 );
 
 our %GET_HW_SUB = (
@@ -2189,6 +2191,9 @@ sub _set_driver_cpu($self, $value) {
     return $self->change_hardware('cpu',0,{cpu => { mode => $value}});
 }
 
+sub _set_driver_usb_controller($self, $value) {
+    return $self->change_hardware('usb controller',0,{ model => $value});
+}
 sub set_controller($self, $name, $number=undef, $data=undef) {
     my $sub = $SET_CONTROLLER_SUB{$name};
     die "I can't get controller $name for domain ".$self->name
@@ -3177,6 +3182,9 @@ sub _change_hardware_usb_controller($self, $index, $data) {
     my $changed = 0;
 
     my ($devices) = $doc->findnodes('/domain/devices');
+
+    my $changed_piix3_uhci=0;
+
     for my $device ($devices->findnodes('controller')) {
         next if $device->getAttribute('type') ne 'usb';
         next if $count++ != $index;
@@ -3184,17 +3192,27 @@ sub _change_hardware_usb_controller($self, $index, $data) {
             if (ref($data->{$field})) {
                 _change_xml($device, $field, $data->{$field});
                 $changed++;
+
                 next;
             }
             if ( !defined $device->getAttribute($field)
                 || $device->getAttribute($field) ne $data->{$field}) {
-                    $device->setAttribute($field, $data->{$field});
-                    $changed++;
+                $device->setAttribute($field, $data->{$field});
+                $changed++;
+
+                $changed_piix3_uhci++
+                if $field eq 'model' && $data->{$field} eq 'piix3-uhci';
+
+                _change_xml($device,'address', {
+                        slot => '0x01'
+                        ,function => '0x2'
+                    });
             }
 
         }
         last;
     }
+
 
     $self->reload_config($doc) if $changed;
 }
