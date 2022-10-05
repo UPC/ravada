@@ -531,7 +531,7 @@ msgid "today"
 msgstr "आज"
 
 msgid "Compact"
-msgstr "सघन", "सुगठित"
+msgstr "सघन"
 
 msgid "process"
 msgstr "प्रक्रिया"
