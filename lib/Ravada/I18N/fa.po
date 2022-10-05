@@ -20,2134 +20,2134 @@ msgid "Ravada broker"
 msgstr "واسطه راوادا"
 
 msgid "Machine Name"
-msgstr"نام ماشین"
+msgstr "نام ماشین"
 
 msgid "Tools"
-msgstr"ابزار"
+msgstr "ابزار"
 
 msgid "Choose a Machine to Start"
-msgstr"ماشینی را برای شروع انتخاب کنید"
+msgstr "ماشینی را برای شروع انتخاب کنید"
 
 msgid "Start"
-msgstr"شروع کنید"
+msgstr "شروع کنید"
 
 msgid "Stop"
-msgstr"متوقف کردن"
+msgstr "متوقف کردن"
 
 msgid "View"
-msgstr"چشم انداز"
+msgstr "چشم انداز"
 
 msgid "Prepare base"
-msgstr"پایه را آماده کنید"
+msgstr "پایه را آماده کنید"
 
 msgid "Clone"
-msgstr"شبیه"
+msgstr "شبیه"
 
 msgid "Clone/s"
-msgstr"کلون/ها"
+msgstr "کلون/ها"
 
 msgid "Users List"
-msgstr"لیست کاربران"
+msgstr "لیست کاربران"
 
 msgid "Name"
-msgstr"نام"
+msgstr "نام"
 
 msgid "Log Out"
-msgstr"خروج"
+msgstr "خروج"
 
 msgid "Available Machines"
-msgstr"ماشین آلات موجود"
+msgstr "ماشین آلات موجود"
 
 msgid "Help"
-msgstr"کمک"
+msgstr "کمک"
 
 msgid "Requirements"
-msgstr"الزامات"
+msgstr "الزامات"
 
 msgid "About"
-msgstr"در باره"
+msgstr "در باره"
 
 msgid "Mark all as read"
-msgstr"همه را به عنوان خوانده شده علامت بزن"
+msgstr "همه را به عنوان خوانده شده علامت بزن"
 
 msgid "Settings"
-msgstr"تنظیمات"
+msgstr "تنظیمات"
 
 msgid "New Machine"
-msgstr"ماشین جدید"
+msgstr "ماشین جدید"
 
 msgid "I want to change my password"
-msgstr"من می خواهم رمز عبور خود را تغییر دهم"
+msgstr "من می خواهم رمز عبور خود را تغییر دهم"
 
 msgid "I want to change my language"
-msgstr"من می خواهم زبانم را عوض کنم"
+msgstr "من می خواهم زبانم را عوض کنم"
 
 msgid "Language:"
-msgstr"زبان:"
+msgstr "زبان:"
 
 msgid "English"
-msgstr"انگلیسی"
+msgstr "انگلیسی"
 
 msgid "Spanish"
-msgstr"اسپانیایی"
+msgstr "اسپانیایی"
 
 msgid "Catalan"
-msgstr"کاتالان"
+msgstr "کاتالان"
 
 msgid "Galician"
-msgstr"گالیسیایی"
+msgstr "گالیسیایی"
 
 msgid "French"
-msgstr"فرانسوی"
+msgstr "فرانسوی"
 
 msgid "Hindi"
-msgstr"هندی"
+msgstr "هندی"
 
 msgid "Indonesian"
-msgstr"اندونزیایی"
+msgstr "اندونزیایی"
 
 msgid "Persian"
-msgstr"فارسی"
+msgstr "فارسی"
 
 msgid "Japanese"
-msgstr"ژاپنی"
+msgstr "ژاپنی"
 
 msgid "German"
-msgstr"آلمانی"
+msgstr "آلمانی"
 
 msgid "New Password:"
-msgstr"رمز عبور جدید:"
+msgstr "رمز عبور جدید:"
 
 msgid "Confirm Password:"
-msgstr"تایید رمز عبور:"
+msgstr "تایید رمز عبور:"
 
 msgid "Submit"
-msgstr"ارسال"
+msgstr "ارسال"
 
 msgid "Your language has been changed successfully"
-msgstr"زبان شما با موفقیت تغییر کرده است"
+msgstr "زبان شما با موفقیت تغییر کرده است"
 
 msgid "Your password has been changed successfully"
-msgstr"گذرواژه ی شما با موفقیت تغییر کرد"
+msgstr "گذرواژه ی شما با موفقیت تغییر کرد"
 
 msgid "Password is too short"
-msgstr"رمز عبور خیلی کوتاه است"
+msgstr "رمز عبور خیلی کوتاه است"
 
 msgid "Password fields do not match"
-msgstr"فیلدهای رمز عبور مطابقت ندارند"
+msgstr "فیلدهای رمز عبور مطابقت ندارند"
 
 msgid "Some of the password fields are empty"
-msgstr"برخی از فیلدهای رمز عبور خالی هستند"
+msgstr "برخی از فیلدهای رمز عبور خالی هستند"
 
 msgid "Status"
-msgstr"وضعیت"
+msgstr "وضعیت"
 
 msgid "Actions"
-msgstr"اقدامات"
+msgstr "اقدامات"
 
 msgid "Down"
-msgstr"پایین"
+msgstr "پایین"
 
 msgid "Running"
-msgstr"در حال دویدن"
+msgstr "در حال دویدن"
 
 msgid "Shutdown"
-msgstr"خاموش شدن"
+msgstr "خاموش شدن"
 
 msgid "Screenshot"
-msgstr"اسکرین شات"
+msgstr "اسکرین شات"
 
 msgid "Paused"
-msgstr"مکث کرد"
+msgstr "مکث کرد"
 
 msgid "Machine locked by request"
-msgstr"ماشین طبق درخواست قفل شد"
+msgstr "ماشین طبق درخواست قفل شد"
 
 msgid "Process"
-msgstr"روند"
+msgstr "روند"
 
 msgid "Copy"
-msgstr"کپی 🀄"
+msgstr "کپی 🀄"
 
 msgid "Error!"
-msgstr"خطا!"
+msgstr "خطا!"
 
 msgid "Error"
-msgstr"خطا"
+msgstr "خطا"
 
 msgid "Backend not available!"
-msgstr"Backend در دسترس نیست!"
+msgstr "Backend در دسترس نیست!"
 
 msgid "Subject"
-msgstr"موضوع"
+msgstr "موضوع"
 
 msgid "Date"
-msgstr"تاریخ"
+msgstr "تاریخ"
 
 msgid "Mark as read"
-msgstr"به عنوان خوانده شده علامت بزن"
+msgstr "به عنوان خوانده شده علامت بزن"
 
 msgid "Mark as unread"
-msgstr"به عنوان "خوانده نشده" علامت گذاری کن"
+msgstr "به عنوان "خوانده نشده" علامت گذاری کن"
 
 msgid "No messages to show"
-msgstr"هیچ پیامی برای نمایش وجود ندارد"
+msgstr "هیچ پیامی برای نمایش وجود ندارد"
 
 msgid "Admin"
-msgstr"مدیر"
+msgstr "مدیر"
 
 msgid "Machines"
-msgstr"ماشین آلات"
+msgstr "ماشین آلات"
 
 msgid "machines"
-msgstr"ماشین آلات"
+msgstr "ماشین آلات"
 
 msgid "Users"
-msgstr"کاربران"
+msgstr "کاربران"
 
 msgid "users"
-msgstr"کاربران"
+msgstr "کاربران"
 
 msgid "Messages"
-msgstr"پیام ها"
+msgstr "پیام ها"
 
 msgid "messages"
-msgstr"پیام ها"
+msgstr "پیام ها"
 
 msgid "Admin tools"
-msgstr"ابزارهای مدیریت"
+msgstr "ابزارهای مدیریت"
 
 msgid "Remove Base"
-msgstr"حذف پایه"
+msgstr "حذف پایه"
 
 msgid "Restore"
-msgstr"بازگرداندن"
+msgstr "بازگرداندن"
 
 msgid "Hibernate"
-msgstr"خواب زمستانی"
+msgstr "خواب زمستانی"
 
 msgid "Are you sure?"
-msgstr"مطمئنی؟"
+msgstr "مطمئنی؟"
 
 msgid "Yes"
-msgstr"آره"
+msgstr "آره"
 
 msgid "No"
-msgstr"خیر"
+msgstr "خیر"
 
 msgid "Make public"
-msgstr"عمومی کردن"
+msgstr "عمومی کردن"
 
 msgid "Machine settings"
-msgstr"تنظیمات ماشین"
+msgstr "تنظیمات ماشین"
 
 msgid "Cannot remove base, machine has clones"
-msgstr"نمی توان پایه را حذف کرد، دستگاه کلون دارد"
+msgstr "نمی توان پایه را حذف کرد، دستگاه کلون دارد"
 
 msgid "Show active"
-msgstr"نمایش فعال"
+msgstr "نمایش فعال"
 
 msgid "Show clones"
-msgstr"نمایش کلون ها"
+msgstr "نمایش کلون ها"
 
 msgid "show clones"
-msgstr"نمایش کلون ها"
+msgstr "نمایش کلون ها"
 
 msgid "Hide clones"
-msgstr"مخفی کردن کلون ها"
+msgstr "مخفی کردن کلون ها"
 
 msgid "hide clones"
-msgstr"کلون ها را پنهان کنید"
+msgstr "کلون ها را پنهان کنید"
 
 msgid "For Spice redirection you will need to install"
-msgstr"برای تغییر مسیر Spice باید نصب کنید"
+msgstr "برای تغییر مسیر Spice باید نصب کنید"
 
 msgid "in your computer."
-msgstr"در کامپیوتر شما"
+msgstr "در کامپیوتر شما"
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr"در توزیع خود جستجو کنید، به عنوان مثال در دبیان/اوبونتو با"
+msgstr "در توزیع خود جستجو کنید، به عنوان مثال در دبیان/اوبونتو با"
 
 msgid "You will need to install"
-msgstr"شما باید نصب کنید"
+msgstr "شما باید نصب کنید"
 
 msgid "and USB drivers ("
-msgstr"و درایورهای USB ("
+msgstr "و درایورهای USB ("
 
 msgid "To make this possible, copy the content of"
-msgstr"برای ایجاد این امکان، محتوای آن را کپی کنید"
+msgstr "برای ایجاد این امکان، محتوای آن را کپی کنید"
 
 msgid "to an ASCII file and save it with a .reg extension, then execute the file."
-msgstr"در یک فایل ASCII و با پسوند reg ذخیره کنید، سپس فایل را اجرا کنید."
+msgstr "در یک فایل ASCII و با پسوند reg ذخیره کنید، سپس فایل را اجرا کنید."
 
 msgid "Please, make sure you have the right path and release, according to your PC configuration."
-msgstr"لطفاً مطمئن شوید که با توجه به پیکربندی رایانه شخصی خود، مسیر و انتشار درست را دارید."
+msgstr "لطفاً مطمئن شوید که با توجه به پیکربندی رایانه شخصی خود، مسیر و انتشار درست را دارید."
 
 msgid "Login"
-msgstr"وارد شدن"
+msgstr "وارد شدن"
 
 msgid "SSO/CAS Login"
-msgstr"ورود به سیستم SSO/CAS"
+msgstr "ورود به سیستم SSO/CAS"
 
 msgid "Welcome"
-msgstr"خوش آمدی"
+msgstr "خوش آمدی"
 
 msgid "A viewer is required to run the virtual machines."
-msgstr"برای اجرای ماشین های مجازی به بیننده نیاز است."
+msgstr "برای اجرای ماشین های مجازی به بیننده نیاز است."
 
 msgid "It is required a viewer to run the virtual machines."
-msgstr"برای اجرای ماشین های مجازی به یک بیننده نیاز است."
+msgstr "برای اجرای ماشین های مجازی به یک بیننده نیاز است."
 
 msgid "Virtual Machines"
-msgstr"ماشین های مجازی"
+msgstr "ماشین های مجازی"
 
 msgid "User"
-msgstr"کاربر"
+msgstr "کاربر"
 
 msgid "Password"
-msgstr"کلمه عبور"
+msgstr "کلمه عبور"
 
 msgid "Start session"
-msgstr"شروع جلسه"
+msgstr "شروع جلسه"
 
 msgid "bits) in your computer."
-msgstr"بیت) در رایانه شما."
+msgstr "بیت) در رایانه شما."
 
 msgid "Permissions"
-msgstr"مجوزها"
+msgstr "مجوزها"
 
 msgid "can change the settings of owned virtual machines."
-msgstr"می تواند تنظیمات ماشین های مجازی متعلق به خود را تغییر دهد."
+msgstr "می تواند تنظیمات ماشین های مجازی متعلق به خود را تغییر دهد."
 
 msgid "can change the settings of any virtual machine."
-msgstr"می تواند تنظیمات هر ماشین مجازی را تغییر دهد."
+msgstr "می تواند تنظیمات هر ماشین مجازی را تغییر دهد."
 
 msgid "can change the settings of any virtual machine "
-msgstr"می تواند تنظیمات هر ماشین مجازی را تغییر دهد"
+msgstr "می تواند تنظیمات هر ماشین مجازی را تغییر دهد"
 
 msgid "cloned from one base owned by the user."
-msgstr"از یک پایگاه متعلق به کاربر کلون شده است."
+msgstr "از یک پایگاه متعلق به کاربر کلون شده است."
 
 msgid "can clone public virtual machines."
-msgstr"می تواند ماشین های مجازی عمومی را شبیه سازی کند."
+msgstr "می تواند ماشین های مجازی عمومی را شبیه سازی کند."
 
 msgid "can clone any virtual machine."
-msgstr"می تواند هر ماشین مجازی را شبیه سازی کند."
+msgstr "می تواند هر ماشین مجازی را شبیه سازی کند."
 
 msgid "can create bases."
-msgstr"می تواند پایه ایجاد کند."
+msgstr "می تواند پایه ایجاد کند."
 
 msgid "can create virtual machines."
-msgstr"می تواند ماشین های مجازی ایجاد کند."
+msgstr "می تواند ماشین های مجازی ایجاد کند."
 
 msgid "can grant permissions to other users"
-msgstr"می تواند به کاربران دیگر مجوز بدهد"
+msgstr "می تواند به کاربران دیگر مجوز بدهد"
 
 msgid "can hibernate any virtual machine."
-msgstr"می تواند هر ماشین مجازی را خواب زمستانی کند."
+msgstr "می تواند هر ماشین مجازی را خواب زمستانی کند."
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr"می تواند کلون ها را از ماشین های مجازی متعلق به کاربر در حالت خواب زمستانی قرار دهد."
+msgstr "می تواند کلون ها را از ماشین های مجازی متعلق به کاربر در حالت خواب زمستانی قرار دهد."
 
 msgid "can hibernate any clone."
-msgstr"می تواند هر کلونی را خواب زمستانی کند."
+msgstr "می تواند هر کلونی را خواب زمستانی کند."
 
 msgid "can remove any virtual machine owned by the user."
-msgstr"می تواند هر ماشین مجازی متعلق به کاربر را حذف کند."
+msgstr "می تواند هر ماشین مجازی متعلق به کاربر را حذف کند."
 
 msgid "can remove any virtual machine."
-msgstr"می تواند هر ماشین مجازی را حذف کند."
+msgstr "می تواند هر ماشین مجازی را حذف کند."
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr"می تواند کلون ها را از ماشین های مجازی متعلق به کاربر حذف کند."
+msgstr "می تواند کلون ها را از ماشین های مجازی متعلق به کاربر حذف کند."
 
 msgid "can remove any clone."
-msgstr"می تواند هر کلونی را حذف کند."
+msgstr "می تواند هر کلونی را حذف کند."
 
 msgid "can take a screenshot of any virtual machine owned by the user."
-msgstr"می تواند از هر ماشین مجازی متعلق به کاربر اسکرین شات بگیرد."
+msgstr "می تواند از هر ماشین مجازی متعلق به کاربر اسکرین شات بگیرد."
 
 msgid "can take a screenshot of any virtual machine."
-msgstr"می تواند از هر ماشین مجازی اسکرین شات بگیرد."
+msgstr "می تواند از هر ماشین مجازی اسکرین شات بگیرد."
 
 msgid "can shutdown any virtual machine."
-msgstr"می تواند هر ماشین مجازی را خاموش کند."
+msgstr "می تواند هر ماشین مجازی را خاموش کند."
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr"می تواند کلون ها را از ماشین های مجازی متعلق به کاربر خاموش کند."
+msgstr "می تواند کلون ها را از ماشین های مجازی متعلق به کاربر خاموش کند."
 
 msgid "Submit Query"
-msgstr"ارسال پرس و جو"
+msgstr "ارسال پرس و جو"
 
 msgid "From Template"
-msgstr"از قالب"
+msgstr "از قالب"
 
 msgid "From Machine"
-msgstr"از ماشین"
+msgstr "از ماشین"
 
 msgid "Backend"
-msgstr"Backend"
+msgstr "Backend"
 
 msgid "Select Template"
-msgstr"الگو را انتخاب کنید"
+msgstr "الگو را انتخاب کنید"
 
 msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
-msgstr"0"
+msgstr "0"
 
 msgid "Download now"
-msgstr"اکنون بارگیری کن"
+msgstr "اکنون بارگیری کن"
 
 msgid "Select ISO"
-msgstr"ISO را انتخاب کنید"
+msgstr "ISO را انتخاب کنید"
 
 msgid "Template"
-msgstr"قالب"
+msgstr "قالب"
 
 msgid "Disk Size: (GB)"
-msgstr"حجم دیسک: (گیگابایت)"
+msgstr "حجم دیسک: (گیگابایت)"
 
 msgid "Swap Size: (GB)"
-msgstr"حجم مبادله: (گیگابایت)"
+msgstr "حجم مبادله: (گیگابایت)"
 
 msgid "Ram: (GB)"
-msgstr"رم: (GB)"
+msgstr "رم: (GB)"
 
 msgid "Machine name is required."
-msgstr"نام ماشین الزامی است."
+msgstr "نام ماشین الزامی است."
 
 msgid "Machine name can't exceed 20 characters."
-msgstr"نام ماشین نمی تواند بیش از 20 نویسه باشد."
+msgstr "نام ماشین نمی تواند بیش از 20 نویسه باشد."
 
 msgid "Backend selection is required."
-msgstr"انتخاب Backend مورد نیاز است."
+msgstr "انتخاب Backend مورد نیاز است."
 
 msgid "ISO image selection is required."
-msgstr"انتخاب تصویر ISO الزامی است."
+msgstr "انتخاب تصویر ISO الزامی است."
 
 msgid "Template selection is required"
-msgstr"انتخاب الگو الزامی است"
+msgstr "انتخاب الگو الزامی است"
 
 msgid "A machine with that name already exists."
-msgstr"ماشینی با آن نام از قبل وجود دارد."
+msgstr "ماشینی با آن نام از قبل وجود دارد."
 
 msgid "The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points."
-msgstr"نام دستگاه فقط مجاز است از حروف الفبا، اعداد، خط تیره و نقاط تشکیل شده باشد."
+msgstr "نام دستگاه فقط مجاز است از حروف الفبا، اعداد، خط تیره و نقاط تشکیل شده باشد."
 
 msgid "machine"
-msgstr"خط تیره"
+msgstr "خط تیره"
 
 msgid "Create"
-msgstr"ایجاد کردن"
+msgstr "ایجاد کردن"
 
 msgid "monitoring"
-msgstr"نظارت بر"
+msgstr "نظارت بر"
 
 msgid "Are you sure you want to remove the base of"
-msgstr"آیا مطمئن هستید که می خواهید پایه را بردارید؟"
+msgstr "آیا مطمئن هستید که می خواهید پایه را بردارید؟"
 
 msgid "Are you sure you want to prepare the base of"
-msgstr"آیا مطمئن هستید که می خواهید پایه آن را تهیه کنید"
+msgstr "آیا مطمئن هستید که می خواهید پایه آن را تهیه کنید"
 
 msgid "Are you sure you want to change the Public state of"
-msgstr"آیا مطمئن هستید که می خواهید وضعیت عمومی را تغییر دهید"
+msgstr "آیا مطمئن هستید که می خواهید وضعیت عمومی را تغییر دهید"
 
 msgid "Search"
-msgstr"جستجو کردن"
+msgstr "جستجو کردن"
 
 msgid "There are no public bases available in this system."
-msgstr"هیچ پایگاه عمومی در این سیستم موجود نیست."
+msgstr "هیچ پایگاه عمومی در این سیستم موجود نیست."
 
 msgid "There are no machines available in this system."
-msgstr"هیچ ماشینی در این سیستم موجود نیست."
+msgstr "هیچ ماشینی در این سیستم موجود نیست."
 
 msgid "Create one."
-msgstr"یکی بساز."
+msgstr "یکی بساز."
 
 msgid "not public"
-msgstr"عمومی نیست"
+msgstr "عمومی نیست"
 
 msgid "User Settings"
-msgstr"تنظیمات کاربر"
+msgstr "تنظیمات کاربر"
 
 msgid "Create a new account"
-msgstr"ایجاد یک حساب کاربری جدید"
+msgstr "ایجاد یک حساب کاربری جدید"
 
 msgid "Username"
-msgstr"نام کاربری"
+msgstr "نام کاربری"
 
 msgid "Hide Private"
-msgstr"پنهان کردن خصوصی"
+msgstr "پنهان کردن خصوصی"
 
 msgid "Show All"
-msgstr"نمایش همه"
+msgstr "نمایش همه"
 
 msgid "Shutting down ..."
-msgstr"خاموش شدن …"
+msgstr "خاموش شدن …"
 
 msgid "It may take a couple of minutes."
-msgstr"ممکن است چند دقیقه طول بکشد."
+msgstr "ممکن است چند دقیقه طول بکشد."
 
 msgid "Hibernating ..."
-msgstr"خواب زمستانی…"
+msgstr "خواب زمستانی…"
 
 msgid "Description"
-msgstr"شرح"
+msgstr "شرح"
 
 msgid "Rename"
-msgstr"تغییر نام دهید"
+msgstr "تغییر نام دهید"
 
 msgid "Options"
-msgstr"گزینه ها"
+msgstr "گزینه ها"
 
 msgid "Drivers"
-msgstr"رانندگان"
+msgstr "رانندگان"
 
 msgid "Graphics"
-msgstr"گرافیک"
+msgstr "گرافیک"
 
 msgid "Remove Machine"
-msgstr"ماشین را بردارید"
+msgstr "ماشین را بردارید"
 
 msgid "System overview"
-msgstr"بررسی اجمالی سیستم"
+msgstr "بررسی اجمالی سیستم"
 
 msgid "Danger Zone"
-msgstr"منطقه خطر"
+msgstr "منطقه خطر"
 
 msgid "Once you delete the machine, there is no going back. Please be certain."
-msgstr"هنگامی که دستگاه را حذف می کنید، دیگر راه برگشتی وجود ندارد. لطفا مطمئن باشید"
+msgstr "هنگامی که دستگاه را حذف می کنید، دیگر راه برگشتی وجود ندارد. لطفا مطمئن باشید"
 
 msgid "Danger"
-msgstr"خطر"
+msgstr "خطر"
 
 msgid "This will remove all the contents of the machine"
-msgstr"با این کار تمام محتویات دستگاه حذف می شود"
+msgstr "با این کار تمام محتویات دستگاه حذف می شود"
 
 msgid "This action can't be undone"
-msgstr"این عمل قابل واگرد نیست"
+msgstr "این عمل قابل واگرد نیست"
 
 msgid "Are you sure ?"
-msgstr"مطمئنی؟"
+msgstr "مطمئنی؟"
 
 msgid "Yes, remove"
-msgstr"بله حذف کنید"
+msgstr "بله حذف کنید"
 
 msgid "Virtual Machine"
-msgstr"ماشین مجازی"
+msgstr "ماشین مجازی"
 
 msgid "removed"
-msgstr"حذف شده"
+msgstr "حذف شده"
 
 msgid "This will remove all the"
-msgstr"این همه را حذف می کند"
+msgstr "این همه را حذف می کند"
 
 msgid "clones of the machine"
-msgstr"کلون های دستگاه"
+msgstr "کلون های دستگاه"
 
 msgid "Yes, remove all the clones"
-msgstr"بله، تمام کلون ها را حذف کنید"
+msgstr "بله، تمام کلون ها را حذف کنید"
 
 msgid "This virtual machine can't be removed because it has"
-msgstr"این ماشین مجازی را نمی توان حذف کرد زیرا این کار را انجام داده است"
+msgstr "این ماشین مجازی را نمی توان حذف کرد زیرا این کار را انجام داده است"
 
 msgid "clones"
-msgstr"کلون ها"
+msgstr "کلون ها"
 
 msgid "Clones"
-msgstr"کلون ها"
+msgstr "کلون ها"
 
 msgid "This machine has not Graphics parameters!"
-msgstr"این دستگاه پارامترهای گرافیکی ندارد!"
+msgstr "این دستگاه پارامترهای گرافیکی ندارد!"
 
 msgid "recommended"
-msgstr"توصیه شده"
+msgstr "توصیه شده"
 
 msgid "to"
-msgstr"به"
+msgstr "به"
 
 msgid "Changing Public State"
-msgstr"تغییر حالت عمومی"
+msgstr "تغییر حالت عمومی"
 
 msgid "Changing Base State"
-msgstr"تغییر حالت پایه"
+msgstr "تغییر حالت پایه"
 
 msgid "action"
-msgstr"عمل"
+msgstr "عمل"
 
 msgid "Grants"
-msgstr"کمک های مالی"
+msgstr "کمک های مالی"
 
 msgid "public"
-msgstr"عمومی"
+msgstr "عمومی"
 
 msgid "New Base"
-msgstr"پایگاه جدید"
+msgstr "پایگاه جدید"
 
 msgid "Version"
-msgstr"نسخه"
+msgstr "نسخه"
 
 msgid "Authors"
-msgstr"نویسندگان"
+msgstr "نویسندگان"
 
 msgid "Development"
-msgstr"توسعه"
+msgstr "توسعه"
 
 msgid "Below are listed the technologies used in this project:"
-msgstr"در زیر فناوری های مورد استفاده در این پروژه ذکر شده است:"
+msgstr "در زیر فناوری های مورد استفاده در این پروژه ذکر شده است:"
 
 msgid "The code is available on "
-msgstr"کد در دسترس است"
+msgstr "کد در دسترس است"
 
 msgid "The code is "
-msgstr"کد است"
+msgstr "کد است"
 
 msgid "License"
-msgstr"مجوز"
+msgstr "مجوز"
 
 msgid "Machine locked by"
-msgstr"دستگاه قفل شده است"
+msgstr "دستگاه قفل شده است"
 
 msgid "This Machine is a base"
-msgstr"این ماشین یک پایه است"
+msgstr "این ماشین یک پایه است"
 
 msgid "Cloned"
-msgstr"کلون شده"
+msgstr "کلون شده"
 
 msgid "is admin"
-msgstr"ادمین است"
+msgstr "ادمین است"
 
 msgid "Add new user"
-msgstr"کاربر جدید اضافه کنید"
+msgstr "کاربر جدید اضافه کنید"
 
 msgid "Register"
-msgstr"ثبت نام"
+msgstr "ثبت نام"
 
 msgid "Current Password:"
-msgstr"رمز عبور فعلی:"
+msgstr "رمز عبور فعلی:"
 
 msgid "For more information, check"
-msgstr"برای اطلاعات بیشتر، بررسی کنید"
+msgstr "برای اطلاعات بیشتر، بررسی کنید"
 
 msgid "the Windows Clients documentation"
-msgstr"اسناد Windows Clients"
+msgstr "اسناد Windows Clients"
 
 msgid "It is programmed in"
-msgstr"در برنامه ریزی شده است"
+msgstr "در برنامه ریزی شده است"
 
 msgid "with perl framework"
-msgstr"با چارچوب پرل"
+msgstr "با چارچوب پرل"
 
 msgid "and"
-msgstr"و"
+msgstr "و"
 
 msgid "Memory"
-msgstr"حافظه"
+msgstr "حافظه"
 
 msgid "MB available"
-msgstr"مگابایت موجود است"
+msgstr "مگابایت موجود است"
 
 msgid "The machine will shutdown after these minutes"
-msgstr"بعد از این دقایق دستگاه خاموش می شود"
+msgstr "بعد از این دقایق دستگاه خاموش می شود"
 
 msgid "The machine will turn off after this time"
-msgstr"بعد از این مدت دستگاه خاموش می شود"
+msgstr "بعد از این مدت دستگاه خاموش می شود"
 
 msgid "Cancel"
-msgstr"لغو کنید"
+msgstr "لغو کنید"
 
 msgid "Please enter the following information to create the account"
-msgstr"لطفا اطلاعات زیر را برای ایجاد حساب وارد کنید"
+msgstr "لطفا اطلاعات زیر را برای ایجاد حساب وارد کنید"
 
 msgid "Enter Username"
-msgstr"نام کاربری را وارد کنید"
+msgstr "نام کاربری را وارد کنید"
 
 msgid "Enter Password"
-msgstr"رمز عبور را وارد کنید"
+msgstr "رمز عبور را وارد کنید"
 
 msgid "Confirm Password"
-msgstr"رمز عبور را تایید کنید"
+msgstr "رمز عبور را تایید کنید"
 
 msgid "Username is required"
-msgstr"نام کاربری مورد نیاز است"
+msgstr "نام کاربری مورد نیاز است"
 
 msgid "Username can not exceed 20 characters"
-msgstr"نام کاربری نمی تواند بیش از 20 کاراکتر باشد"
+msgstr "نام کاربری نمی تواند بیش از 20 کاراکتر باشد"
 
 msgid "Username must be at least 5 characters"
-msgstr"نام کاربری باید حداقل 5 کاراکتر باشد"
+msgstr "نام کاربری باید حداقل 5 کاراکتر باشد"
 
 msgid "Username can only contain words, numbers, dashes, dots and underscores"
-msgstr"نام کاربری فقط می تواند شامل کلمات، اعداد، خط تیره، نقطه و زیرخط باشد"
+msgstr "نام کاربری فقط می تواند شامل کلمات، اعداد، خط تیره، نقطه و زیرخط باشد"
 
 msgid "Password is required"
-msgstr"رمز عبور مورد نیاز است"
+msgstr "رمز عبور مورد نیاز است"
 
 msgid "Password can not exceed 20 characters"
-msgstr"رمز عبور نمی تواند بیش از 20 کاراکتر باشد"
+msgstr "رمز عبور نمی تواند بیش از 20 کاراکتر باشد"
 
 msgid "Password must be at least 5 characters"
-msgstr"رمز عبور باید حداقل 5 کاراکتر باشد"
+msgstr "رمز عبور باید حداقل 5 کاراکتر باشد"
 
 msgid "Password can only contain words and numbers"
-msgstr"رمز عبور فقط می تواند شامل کلمات و اعداد باشد"
+msgstr "رمز عبور فقط می تواند شامل کلمات و اعداد باشد"
 
 msgid "Confirm password is required"
-msgstr"تایید رمز عبور لازم است"
+msgstr "تایید رمز عبور لازم است"
 
 msgid "Confirm password can not exceed 20 characters"
-msgstr"تایید رمز عبور نمی تواند بیش از 20 کاراکتر باشد"
+msgstr "تایید رمز عبور نمی تواند بیش از 20 کاراکتر باشد"
 
 msgid "Confirm password must be at least 5 characters"
-msgstr"رمز عبور تأیید باید حداقل 5 کاراکتر باشد"
+msgstr "رمز عبور تأیید باید حداقل 5 کاراکتر باشد"
 
 msgid "Confirm password can only contain words and numbers"
-msgstr"رمز عبور تأیید فقط می تواند حاوی کلمات و اعداد باشد"
+msgstr "رمز عبور تأیید فقط می تواند حاوی کلمات و اعداد باشد"
 
 msgid "This information will be available to the users"
-msgstr"این اطلاعات در اختیار کاربران قرار خواهد گرفت"
+msgstr "این اطلاعات در اختیار کاربران قرار خواهد گرفت"
 
 msgid "Volatile Clones"
-msgstr"کلون های فرار"
+msgstr "کلون های فرار"
 
 msgid "Owner"
-msgstr"مالک"
+msgstr "مالک"
 
 msgid "Change the owner of the machine"
-msgstr"صاحب دستگاه را تغییر دهید"
+msgstr "صاحب دستگاه را تغییر دهید"
 
 msgid "Press SHIFT + F12 to exit the virtual machine"
-msgstr"SHIFT + F12 را فشار دهید تا از ماشین مجازی خارج شوید"
+msgstr "SHIFT + F12 را فشار دهید تا از ماشین مجازی خارج شوید"
 
 msgid "If you can not see the machine screen in a few seconds check for a file called"
-msgstr"0"
+msgstr "0"
 
 msgid "in your downloads folder."
-msgstr"در پوشه دانلودهای شما"
+msgstr "در پوشه دانلودهای شما"
 
 msgid "copied to clipboard"
-msgstr"در کلیپ بورد کپی شد"
+msgstr "در کلیپ بورد کپی شد"
 
 msgid "Portuguese"
-msgstr"پرتغالی"
+msgstr "پرتغالی"
 
 msgid "Read more."
-msgstr"ادامه مطلب"
+msgstr "ادامه مطلب"
 
 msgid "The password for this virtual machine connection is :"
-msgstr"رمز عبور این اتصال ماشین مجازی:"
+msgstr "رمز عبور این اتصال ماشین مجازی:"
 
 msgid "view"
-msgstr"چشم انداز"
+msgstr "چشم انداز"
 
 msgid "Start again"
-msgstr"دوباره شروع کن"
+msgstr "دوباره شروع کن"
 
 msgid "The machine is down."
-msgstr"دستگاه از کار افتاده است."
+msgstr "دستگاه از کار افتاده است."
 
 msgid "Remove"
-msgstr"برداشتن"
+msgstr "برداشتن"
 
 msgid "The machine must be started to take the screenshot."
-msgstr"برای گرفتن اسکرین شات، دستگاه باید راه اندازی شود."
+msgstr "برای گرفتن اسکرین شات، دستگاه باید راه اندازی شود."
 
 msgid "Take screenshot"
-msgstr"عکسبرداری از صفحه مانیتور"
+msgstr "عکسبرداری از صفحه مانیتور"
 
 msgid "Set base picture"
-msgstr"تنظیم تصویر پایه"
+msgstr "تنظیم تصویر پایه"
 
 msgid "Saving the screenshot, please wait a moment..."
-msgstr"در حال ذخیره اسکرین شات، لطفاً یک لحظه صبر کنید…"
+msgstr "در حال ذخیره اسکرین شات، لطفاً یک لحظه صبر کنید…"
 
 msgid "You need to run the machine in order to take a screenshot."
-msgstr"برای گرفتن اسکرین شات باید دستگاه را اجرا کنید."
+msgstr "برای گرفتن اسکرین شات باید دستگاه را اجرا کنید."
 
 msgid "Copying the screenshot, please wait a moment..."
-msgstr"در حال کپی کردن اسکرین شات، لطفا یک لحظه صبر کنید…"
+msgstr "در حال کپی کردن اسکرین شات، لطفا یک لحظه صبر کنید…"
 
 msgid "You need a screenshot in order to copy it to the base machine."
-msgstr"برای کپی کردن آن در دستگاه پایه به یک اسکرین شات نیاز دارید."
+msgstr "برای کپی کردن آن در دستگاه پایه به یک اسکرین شات نیاز دارید."
 
 msgid "Add"
-msgstr"اضافه کردن"
+msgstr "اضافه کردن"
 
 msgid "The changes will apply on next restart"
-msgstr"تغییرات در راه اندازی مجدد بعدی اعمال می شود"
+msgstr "تغییرات در راه اندازی مجدد بعدی اعمال می شود"
 
 msgid "This machine is running and can't be renamed."
-msgstr"این دستگاه در حال اجرا است و نمی توان نام آن را تغییر داد."
+msgstr "این دستگاه در حال اجرا است و نمی توان نام آن را تغییر داد."
 
 msgid "Thanks to:"
-msgstr"با تشکر از:"
+msgstr "با تشکر از:"
 
 msgid "licensed."
-msgstr"دارای مجوز"
+msgstr "دارای مجوز"
 
 msgid "New Node"
-msgstr"گره جدید"
+msgstr "گره جدید"
 
 msgid "Address"
-msgstr"نشانی"
+msgstr "نشانی"
 
 msgid "A node with that name already exists."
-msgstr"یک گره با آن نام از قبل وجود دارد."
+msgstr "یک گره با آن نام از قبل وجود دارد."
 
 msgid "Setting your default language"
-msgstr"تنظیم زبان پیش فرض"
+msgstr "تنظیم زبان پیش فرض"
 
 msgid "Change password"
-msgstr"رمز عبور را تغییر دهید"
+msgstr "رمز عبور را تغییر دهید"
 
 msgid "Update password"
-msgstr"رمز عبور را به روز کنید"
+msgstr "رمز عبور را به روز کنید"
 
 msgid "Start all clones"
-msgstr"همه کلون ها را شروع کنید"
+msgstr "همه کلون ها را شروع کنید"
 
 msgid "Access denied"
-msgstr"دسترسی رد شد"
+msgstr "دسترسی رد شد"
 
 msgid "Empty login name"
-msgstr"نام ورود به سیستم خالی"
+msgstr "نام ورود به سیستم خالی"
 
 msgid "Empty password"
-msgstr"رمز خالی"
+msgstr "رمز خالی"
 
 msgid "Session timeout"
-msgstr"پایان جلسه"
+msgstr "پایان جلسه"
 
 msgid "Vietnamese"
-msgstr"ویتنامی"
+msgstr "ویتنامی"
 
 msgid "Italian"
-msgstr"ایتالیایی"
+msgstr "ایتالیایی"
 
 msgid "Type a typical LDAP user name to fetch the attribute list"
-msgstr"یک نام کاربری معمولی LDAP را برای واکشی لیست ویژگی ها تایپ کنید"
+msgstr "یک نام کاربری معمولی LDAP را برای واکشی لیست ویژگی ها تایپ کنید"
 
 msgid "User name"
-msgstr"نام کاربری"
+msgstr "نام کاربری"
 
 msgid "not found in LDAP server"
-msgstr"در سرور LDAP یافت نشد"
+msgstr "در سرور LDAP یافت نشد"
 
 msgid "Attribute"
-msgstr"صفت"
+msgstr "صفت"
 
 msgid "Value"
-msgstr"ارزش"
+msgstr "ارزش"
 
 msgid "Allowed"
-msgstr"مجاز"
+msgstr "مجاز"
 
 msgid "Last"
-msgstr"آخر"
+msgstr "آخر"
 
 msgid "Default"
-msgstr"پیش فرض"
+msgstr "پیش فرض"
 
 msgid "If none of the previous match, access is allowed."
-msgstr"اگر هیچ یک از موارد قبلی مطابقت نداشت، دسترسی مجاز است."
+msgstr "اگر هیچ یک از موارد قبلی مطابقت نداشت، دسترسی مجاز است."
 
 msgid "If none of the previous match, access is denied."
-msgstr"اگر هیچ یک از موارد قبلی مطابقت نداشته باشد، دسترسی ممنوع است."
+msgstr "اگر هیچ یک از موارد قبلی مطابقت نداشته باشد، دسترسی ممنوع است."
 
 msgid "verify"
-msgstr"تایید کنید"
+msgstr "تایید کنید"
 
 msgid "save"
-msgstr"صرفه جویی"
+msgstr "صرفه جویی"
 
 msgid "Verifying"
-msgstr"در حال تأیید"
+msgstr "در حال تأیید"
 
 msgid "No entries found"
-msgstr"هیچ ورودی یافت نشد"
+msgstr "هیچ ورودی یافت نشد"
 
 msgid "has at least"
-msgstr"حداقل دارد"
+msgstr "حداقل دارد"
 
 msgid "entries."
-msgstr"ورودی های."
+msgstr "ورودی های."
 
 msgid "Enable last for not allowed restrictions."
-msgstr"آخرین را برای محدودیت‌های مجاز فعال کنید."
+msgstr "آخرین را برای محدودیت‌های مجاز فعال کنید."
 
 msgid "Add description"
-msgstr"توضیحات اضافه کنید"
+msgstr "توضیحات اضافه کنید"
 
 msgid "These actions affect all the clones on the machine"
-msgstr"این اقدامات بر تمام کلون های روی دستگاه تأثیر می گذارد"
+msgstr "این اقدامات بر تمام کلون های روی دستگاه تأثیر می گذارد"
 
 msgid "Shutdown all clones"
-msgstr"تمام کلون ها را خاموش کنید"
+msgstr "تمام کلون ها را خاموش کنید"
 
 msgid "Keep in mind that there may be users using a clone"
-msgstr"به خاطر داشته باشید که ممکن است کاربرانی از کلون استفاده کنند"
+msgstr "به خاطر داشته باشید که ممکن است کاربرانی از کلون استفاده کنند"
 
 msgid "Yes, shutwdown all the clones"
-msgstr"بله، تمام کلون ها را خاموش کنید"
+msgstr "بله، تمام کلون ها را خاموش کنید"
 
 msgid "Waiting for machine to start"
-msgstr"در انتظار راه اندازی دستگاه"
+msgstr "در انتظار راه اندازی دستگاه"
 
 msgid "This machine will shut down"
-msgstr"این دستگاه خاموش خواهد شد"
+msgstr "این دستگاه خاموش خواهد شد"
 
 msgid "Waiting for network to come up"
-msgstr"منتظر بالا آمدن شبکه"
+msgstr "منتظر بالا آمدن شبکه"
 
 msgid "Hardware address"
-msgstr"آدرس سخت افزار"
+msgstr "آدرس سخت افزار"
 
 msgid "Open ports"
-msgstr"پورت ها را باز کنید"
+msgstr "پورت ها را باز کنید"
 
 msgid "up"
-msgstr"بالا"
+msgstr "بالا"
 
 msgid "No members found"
-msgstr"هیچ عضوی پیدا نشد"
+msgstr "هیچ عضوی پیدا نشد"
 
 msgid "No groups found"
-msgstr"هیچ گروهی یافت نشد"
+msgstr "هیچ گروهی یافت نشد"
 
 msgid "This machine has a CD-ROM"
-msgstr"این دستگاه دارای سی دی رام می باشد"
+msgstr "این دستگاه دارای سی دی رام می باشد"
 
 msgid "Keep the CD for the clones"
-msgstr"سی دی را برای کلون ها نگه دارید"
+msgstr "سی دی را برای کلون ها نگه دارید"
 
 msgid "Accept"
-msgstr"تایید کنید"
+msgstr "تایید کنید"
 
 msgid "Close"
-msgstr"نزدیک"
+msgstr "نزدیک"
 
 msgid "Apply"
-msgstr"درخواست دادن"
+msgstr "درخواست دادن"
 
 msgid "Fail"
-msgstr"مردود شدن"
+msgstr "مردود شدن"
 
 msgid "This Virtual Machine has no display hardware attached"
-msgstr"این ماشین مجازی هیچ سخت افزار نمایشگر متصل ندارد"
+msgstr "این ماشین مجازی هیچ سخت افزار نمایشگر متصل ندارد"
 
 msgid "NAT"
-msgstr"NAT"
+msgstr "NAT"
 
 msgid "Bridge"
-msgstr"پل"
+msgstr "پل"
 
 msgid "No bridges found"
-msgstr"هیچ پل پیدا نشد"
+msgstr "هیچ پل پیدا نشد"
 
 msgid "disk"
-msgstr"دیسک"
+msgstr "دیسک"
 
 msgid "cdrom"
-msgstr"سی دی رام"
+msgstr "سی دی رام"
 
 msgid "system"
-msgstr"سیستم"
+msgstr "سیستم"
 
 msgid "temporary"
-msgstr"موقت"
+msgstr "موقت"
 
 msgid "data"
-msgstr"داده ها"
+msgstr "داده ها"
 
 msgid "Content will be cleaned on restore"
-msgstr"محتوا با بازیابی پاک می شود"
+msgstr "محتوا با بازیابی پاک می شود"
 
 msgid "Content will be cleaned on restore and shutdown"
-msgstr"پس از بازیابی و خاموش شدن، محتوا پاک خواهد شد"
+msgstr "پس از بازیابی و خاموش شدن، محتوا پاک خواهد شد"
 
 msgid "Content will be kept on restore"
-msgstr"محتوا در بازیابی حفظ خواهد شد"
+msgstr "محتوا در بازیابی حفظ خواهد شد"
 
 msgid "type"
-msgstr"نوع"
+msgstr "نوع"
 
 msgid "All machines"
-msgstr"تمام ماشین آلات"
+msgstr "تمام ماشین آلات"
 
 msgid "Users from this network can run all virtual machines"
-msgstr"کاربران این شبکه می توانند تمام ماشین های مجازی را اجرا کنند"
+msgstr "کاربران این شبکه می توانند تمام ماشین های مجازی را اجرا کنند"
 
 msgid "No machines"
-msgstr"بدون ماشین"
+msgstr "بدون ماشین"
 
 msgid "Users from this network can run no virtual machines"
-msgstr"کاربران این شبکه نمی توانند هیچ ماشین مجازی را اجرا کنند"
+msgstr "کاربران این شبکه نمی توانند هیچ ماشین مجازی را اجرا کنند"
 
 msgid "Anonymous"
-msgstr"ناشناس"
+msgstr "ناشناس"
 
 msgid "Warning: anonymous machines won't show up unless you enable allowed."
-msgstr"هشدار: ماشین‌های ناشناس نمایش داده نمی‌شوند مگر اینکه مجاز را فعال کنید."
+msgstr "هشدار: ماشین‌های ناشناس نمایش داده نمی‌شوند مگر اینکه مجاز را فعال کنید."
 
 msgid "Network name is required"
-msgstr"نام شبکه مورد نیاز است"
+msgstr "نام شبکه مورد نیاز است"
 
 msgid "This name is duplicated"
-msgstr"این نام تکراری است"
+msgstr "این نام تکراری است"
 
 msgid "host"
-msgstr"میزبان"
+msgstr "میزبان"
 
 msgid "base storage"
-msgstr"ذخیره سازی پایه"
+msgstr "ذخیره سازی پایه"
 
 msgid "clone storage"
-msgstr"ذخیره سازی کلون"
+msgstr "ذخیره سازی کلون"
 
 msgid "default storage"
-msgstr"ذخیره سازی پیش فرض"
+msgstr "ذخیره سازی پیش فرض"
 
 msgid "This virtual machine has no backups to purge"
-msgstr"این ماشین مجازی هیچ نسخه پشتیبان برای پاکسازی ندارد"
+msgstr "این ماشین مجازی هیچ نسخه پشتیبان برای پاکسازی ندارد"
 
 msgid "End"
-msgstr"پایان"
+msgstr "پایان"
 
 msgid "Time"
-msgstr"زمان"
+msgstr "زمان"
 
 msgid "Virtual machines pre-started"
-msgstr"ماشین های مجازی از قبل راه اندازی شده اند"
+msgstr "ماشین های مجازی از قبل راه اندازی شده اند"
 
 msgid "Warning: this virtual machine will be prepared as a base. This may take long."
-msgstr"هشدار: این ماشین مجازی به عنوان پایه آماده خواهد شد. این ممکن است طولانی شود."
+msgstr "هشدار: این ماشین مجازی به عنوان پایه آماده خواهد شد. این ممکن است طولانی شود."
 
 msgid "Assign this virtual machine to the pre-started pool"
-msgstr"این ماشین مجازی را به استخر از پیش راه اندازی شده اختصاص دهید"
+msgstr "این ماشین مجازی را به استخر از پیش راه اندازی شده اختصاص دهید"
 
 msgid "Virtual machines in the pool."
-msgstr"ماشین های مجازی در استخر."
+msgstr "ماشین های مجازی در استخر."
 
 msgid "Pool"
-msgstr"استخر"
+msgstr "استخر"
 
 msgid "Prepare this machine as a base to create clones from it."
-msgstr"این دستگاه را به عنوان پایه ای برای ایجاد کلون از آن آماده کنید."
+msgstr "این دستگاه را به عنوان پایه ای برای ایجاد کلون از آن آماده کنید."
 
 msgid "There are no active virtual machines"
-msgstr"هیچ ماشین مجازی فعالی وجود ندارد"
+msgstr "هیچ ماشین مجازی فعالی وجود ندارد"
 
 msgid "reload list"
-msgstr"لیست بارگذاری مجدد"
+msgstr "لیست بارگذاری مجدد"
 
 msgid "Group"
-msgstr"گروه"
+msgstr "گروه"
 
 msgid "New group member"
-msgstr"عضو جدید گروه"
+msgstr "عضو جدید گروه"
 
 msgid "This group has been removed."
-msgstr"این گروه حذف شده است."
+msgstr "این گروه حذف شده است."
 
 msgid "Remove group"
-msgstr"حذف گروه"
+msgstr "حذف گروه"
 
 msgid "Are you sure you want to remove this group ?"
-msgstr"آیا مطمئن هستید که می خواهید این گروه را حذف کنید؟"
+msgstr "آیا مطمئن هستید که می خواهید این گروه را حذف کنید؟"
 
 msgid "object class:"
-msgstr"کلاس شی:"
+msgstr "کلاس شی:"
 
 msgid "dn:"
-msgstr"dn:"
+msgstr "dn:"
 
 msgid "Groups require a LDAP server configured."
-msgstr"گروه ها به یک سرور LDAP پیکربندی شده نیاز دارند."
+msgstr "گروه ها به یک سرور LDAP پیکربندی شده نیاز دارند."
 
 msgid "See documentation about:"
-msgstr"مشاهده مستندات در مورد:"
+msgstr "مشاهده مستندات در مورد:"
 
 msgid "Configure LDAP Authentication"
-msgstr"احراز هویت LDAP را پیکربندی کنید"
+msgstr "احراز هویت LDAP را پیکربندی کنید"
 
 msgid "Setup a LDAP Server"
-msgstr"یک سرور LDAP راه اندازی کنید"
+msgstr "یک سرور LDAP راه اندازی کنید"
 
 msgid "Groups"
-msgstr"گروه ها"
+msgstr "گروه ها"
 
 msgid "New Group"
-msgstr"گروه جدید"
+msgstr "گروه جدید"
 
 msgid "Loading ..."
-msgstr"بارگذاری ..."
+msgstr "بارگذاری ..."
 
 msgid "Show/Hide clones"
-msgstr"نمایش/پنهان کردن کلون ها"
+msgstr "نمایش/پنهان کردن کلون ها"
 
 msgid "Public"
-msgstr"عمومی"
+msgstr "عمومی"
 
 msgid "Autostart"
-msgstr"شروع خودکار"
+msgstr "شروع خودکار"
 
 msgid "Node"
-msgstr"گره"
+msgstr "گره"
 
 msgid "Manage machine"
-msgstr"ماشین را مدیریت کنید"
+msgstr "ماشین را مدیریت کنید"
 
 msgid "Volatile"
-msgstr"فرار"
+msgstr "فرار"
 
 msgid "Hibernated"
-msgstr"خواب زمستانی"
+msgstr "خواب زمستانی"
 
 msgid "ShutDown"
-msgstr"خاموش شدن"
+msgstr "خاموش شدن"
 
 msgid "No message to show!"
-msgstr"پیامی برای نمایش وجود ندارد!"
+msgstr "پیامی برای نمایش وجود ندارد!"
 
 msgid "Networks"
-msgstr"شبکه های"
+msgstr "شبکه های"
 
 msgid "New Network"
-msgstr"شبکه جدید"
+msgstr "شبکه جدید"
 
 msgid "requires password"
-msgstr"نیاز به رمز عبور دارد"
+msgstr "نیاز به رمز عبور دارد"
 
 msgid "Nodes"
-msgstr"گره ها"
+msgstr "گره ها"
 
 msgid "Type"
-msgstr"تایپ کنید"
+msgstr "تایپ کنید"
 
 msgid "Bases"
-msgstr"پایه ها"
+msgstr "پایه ها"
 
 msgid "Action"
-msgstr"عمل"
+msgstr "عمل"
 
 msgid "Active"
-msgstr"فعال"
+msgstr "فعال"
 
 msgid "Disabled"
-msgstr"معلول"
+msgstr "معلول"
 
 msgid "This node is local"
-msgstr"این گره محلی است"
+msgstr "این گره محلی است"
 
 msgid "Refresh"
-msgstr"تازه کردن"
+msgstr "تازه کردن"
 
 msgid "Enable"
-msgstr"فعال کردن"
+msgstr "فعال کردن"
 
 msgid "Disable"
-msgstr"غیر فعال کردن"
+msgstr "غیر فعال کردن"
 
 msgid "Confirm disable node"
-msgstr"غیرفعال کردن گره را تأیید کنید"
+msgstr "غیرفعال کردن گره را تأیید کنید"
 
 msgid "Disabling this node will shut all the"
-msgstr"غیرفعال کردن این گره تمام گره ها را می بندد"
+msgstr "غیرفعال کردن این گره تمام گره ها را می بندد"
 
 msgid "machines down."
-msgstr"ماشین آلات پایین"
+msgstr "ماشین آلات پایین"
 
 msgid "Global Settings"
-msgstr"تنظیمات جهانی"
+msgstr "تنظیمات جهانی"
 
 msgid "Frontend"
-msgstr"Frontend"
+msgstr "Frontend"
 
 msgid "Fallback"
-msgstr"بازگشت به عقب"
+msgstr "بازگشت به عقب"
 
 msgid "Maintenance"
-msgstr"نگهداری"
+msgstr "نگهداری"
 
 msgid "Admin users can still log in from"
-msgstr"کاربران ادمین هنوز هم می توانند از اینجا وارد شوند"
+msgstr "کاربران ادمین هنوز هم می توانند از اینجا وارد شوند"
 
 msgid "Maintenance Start"
-msgstr"شروع تعمیر و نگهداری"
+msgstr "شروع تعمیر و نگهداری"
 
 msgid "Maintenance End"
-msgstr"پایان تعمیر و نگهداری"
+msgstr "پایان تعمیر و نگهداری"
 
 msgid "Debug"
-msgstr"اشکال زدایی"
+msgstr "اشکال زدایی"
 
 msgid "Debug Ports"
-msgstr"اشکال زدایی پورت ها"
+msgstr "اشکال زدایی پورت ها"
 
 msgid "Debug Ports Exposed"
-msgstr"پورت های اشکال زدایی در معرض دید قرار گرفت"
+msgstr "پورت های اشکال زدایی در معرض دید قرار گرفت"
 
 msgid "Display Password"
-msgstr"نمایش رمز عبور"
+msgstr "نمایش رمز عبور"
 
 msgid "Enables display password when available"
-msgstr"پسورد نمایش را در صورت موجود بودن فعال می کند"
+msgstr "پسورد نمایش را در صورت موجود بودن فعال می کند"
 
 msgid "Bookings"
-msgstr"رزروها"
+msgstr "رزروها"
 
 msgid "Bookings require LDAP authentication."
-msgstr"رزروها به احراز هویت LDAP نیاز دارند."
+msgstr "رزروها به احراز هویت LDAP نیاز دارند."
 
 msgid "Start Limit"
-msgstr"حد شروع"
+msgstr "حد شروع"
 
 msgid "Number of virtual machines that normal users can have running at the same time"
-msgstr"تعداد ماشین های مجازی که کاربران عادی می توانند همزمان در حال اجرا باشند"
+msgstr "تعداد ماشین های مجازی که کاربران عادی می توانند همزمان در حال اجرا باشند"
 
 msgid "Port expose"
-msgstr"در معرض دید بندر"
+msgstr "در معرض دید بندر"
 
 msgid "Minimum port number to expose virtual machine services."
-msgstr"حداقل تعداد پورت برای نمایش خدمات ماشین مجازی."
+msgstr "حداقل تعداد پورت برای نمایش خدمات ماشین مجازی."
 
 msgid "cancel"
-msgstr"لغو"
+msgstr "لغو"
 
 msgid "New user"
-msgstr"کاربر جدید"
+msgstr "کاربر جدید"
 
 msgid "Error:"
-msgstr"خطا:"
+msgstr "خطا:"
 
 msgid "Web Service connection failed."
-msgstr"اتصال وب سرویس ناموفق بود."
+msgstr "اتصال وب سرویس ناموفق بود."
 
 msgid "Check"
-msgstr"بررسی"
+msgstr "بررسی"
 
 msgid "Ravada Apache documentation"
-msgstr"مستندات راوادا آپاچی"
+msgstr "مستندات راوادا آپاچی"
 
 msgid "Client"
-msgstr"مشتری"
+msgstr "مشتری"
 
 msgid "LDAP"
-msgstr"LDAP"
+msgstr "LDAP"
 
 msgid "Display URL :"
-msgstr"نشانی اینترنتی نمایش:"
+msgstr "نشانی اینترنتی نمایش:"
 
 msgid "Display IP :"
-msgstr"نمایش IP:"
+msgstr "نمایش IP:"
 
 msgid "Display Port :"
-msgstr"پورت نمایش:"
+msgstr "پورت نمایش:"
 
 msgid "Display Port secure :"
-msgstr"نمایش پورت امن:"
+msgstr "نمایش پورت امن:"
 
 msgid "Sorry"
-msgstr"متاسف"
+msgstr "متاسف"
 
 msgid "Server in maintenance until"
-msgstr"سرور در تعمیر و نگهداری تا"
+msgstr "سرور در تعمیر و نگهداری تا"
 
 msgid "vCPU allocation"
-msgstr"تخصیص vCPU"
+msgstr "تخصیص vCPU"
 
 msgid "mode"
-msgstr"حالت"
+msgstr "حالت"
 
 msgid "check"
-msgstr"بررسی"
+msgstr "بررسی"
 
 msgid "match"
-msgstr"همخوانی داشتن"
+msgstr "همخوانی داشتن"
 
 msgid "model"
-msgstr"مدل"
+msgstr "مدل"
 
 msgid "fallback"
-msgstr"بازگشتی"
+msgstr "بازگشتی"
 
 msgid "CPU Features"
-msgstr"ویژگی های CPU"
+msgstr "ویژگی های CPU"
 
 msgid "New feature"
-msgstr"ویژگی جدید"
+msgstr "ویژگی جدید"
 
 msgid "add"
-msgstr"اضافه کردن"
+msgstr "اضافه کردن"
 
 msgid "bus"
-msgstr"اتوبوس"
+msgstr "اتوبوس"
 
 msgid "capacity"
-msgstr"ظرفیت"
+msgstr "ظرفیت"
 
 msgid "ISO file"
-msgstr"فایل ISO"
+msgstr "فایل ISO"
 
 msgid "boot order"
-msgstr"سفارش بوت"
+msgstr "سفارش بوت"
 
 msgid "state"
-msgstr"حالت"
+msgstr "حالت"
 
 msgid "on"
-msgstr"بر"
+msgstr "بر"
 
 msgid "off"
-msgstr"خاموش"
+msgstr "خاموش"
 
 msgid "hidden"
-msgstr"پنهان شده است"
+msgstr "پنهان شده است"
 
 msgid "nat"
-msgstr"nat"
+msgstr "nat"
 
 msgid "bridge"
-msgstr"پل"
+msgstr "پل"
 
 msgid "primary"
-msgstr"اولیه"
+msgstr "اولیه"
 
 msgid "Primary video devices will move to first"
-msgstr"دستگاه‌های ویدیویی اصلی به حالت اول منتقل می‌شوند"
+msgstr "دستگاه‌های ویدیویی اصلی به حالت اول منتقل می‌شوند"
 
 msgid "Primary can not be unset, enable it in another video device"
-msgstr"تنظیم اولیه را نمی توان لغو کرد، آن را در دستگاه ویدیویی دیگری فعال کنید"
+msgstr "تنظیم اولیه را نمی توان لغو کرد، آن را در دستگاه ویدیویی دیگری فعال کنید"
 
 msgid "ram"
-msgstr"رم"
+msgstr "رم"
 
 msgid "vram"
-msgstr"vram"
+msgstr "vram"
 
 msgid "heads"
-msgstr"سرها"
+msgstr "سرها"
 
 msgid "Set defaults"
-msgstr"تنظیمات پیش فرض"
+msgstr "تنظیمات پیش فرض"
 
 msgid "Add new disk"
-msgstr"دیسک جدید اضافه کنید"
+msgstr "دیسک جدید اضافه کنید"
 
 msgid "device"
-msgstr"دستگاه"
+msgstr "دستگاه"
 
 msgid "sys"
-msgstr"سیستم"
+msgstr "سیستم"
 
 msgid "swap"
-msgstr"مبادله"
+msgstr "مبادله"
 
 msgid "size"
-msgstr"اندازه"
+msgstr "اندازه"
 
 msgid "allocation"
-msgstr"تخصیص"
+msgstr "تخصیص"
 
 msgid "Add new Display"
-msgstr"افزودن نمایشگر جدید"
+msgstr "افزودن نمایشگر جدید"
 
 msgid "PrepareBase"
-msgstr"PrepareBase"
+msgstr "PrepareBase"
 
 msgid "Add to group"
-msgstr"به گروه اضافه کنید"
+msgstr "به گروه اضافه کنید"
 
 msgid "No LDAP groups created."
-msgstr"هیچ گروه LDAP ایجاد نشد."
+msgstr "هیچ گروه LDAP ایجاد نشد."
 
 msgid "Add groups"
-msgstr"گروه ها را اضافه کنید"
+msgstr "گروه ها را اضافه کنید"
 
 msgid "User is not member of any group."
-msgstr"کاربر عضو هیچ گروهی نیست"
+msgstr "کاربر عضو هیچ گروهی نیست"
 
 msgid "New password"
-msgstr"رمز عبور جدید"
+msgstr "رمز عبور جدید"
 
 msgid "Force change password on first access"
-msgstr"تغییر اجباری رمز عبور در اولین دسترسی"
+msgstr "تغییر اجباری رمز عبور در اولین دسترسی"
 
 msgid "Oops!"
-msgstr"اوه!"
+msgstr "اوه!"
 
 msgid "New Password must be at least 6 characters"
-msgstr"رمز عبور جدید باید حداقل 6 کاراکتر باشد"
+msgstr "رمز عبور جدید باید حداقل 6 کاراکتر باشد"
 
 msgid "Set New Password"
-msgstr"تنظیم رمز جدید"
+msgstr "تنظیم رمز جدید"
 
 msgid "This user has never logged in the Ravada server."
-msgstr"این کاربر هرگز وارد سرور راوادا نشده است."
+msgstr "این کاربر هرگز وارد سرور راوادا نشده است."
 
 msgid "Import"
-msgstr"وارد كردن"
+msgstr "وارد كردن"
 
 msgid "Error: the LDAP entry for this user has been removed."
-msgstr"خطا: ورودی LDAP برای این کاربر حذف شده است."
+msgstr "خطا: ورودی LDAP برای این کاربر حذف شده است."
 
 msgid "No machines found"
-msgstr"هیچ ماشینی پیدا نشد"
+msgstr "هیچ ماشینی پیدا نشد"
 
 msgid "Warning: anonymous machines won't show up unless you set them public."
-msgstr"هشدار: ماشین‌های ناشناس نمایش داده نمی‌شوند مگر اینکه آنها را عمومی کنید."
+msgstr "هشدار: ماشین‌های ناشناس نمایش داده نمی‌شوند مگر اینکه آنها را عمومی کنید."
 
 msgid "New network"
-msgstr"شبکه جدید"
+msgstr "شبکه جدید"
 
 msgid "name"
-msgstr"نام"
+msgstr "نام"
 
 msgid "address"
-msgstr"نشانی"
+msgstr "نشانی"
 
 msgid "Network address is required."
-msgstr"آدرس شبکه مورد نیاز است."
+msgstr "آدرس شبکه مورد نیاز است."
 
 msgid "Invalid IP network address. Expecting a.b.c.d/e"
-msgstr"آدرس شبکه IP نامعتبر است. انتظار abcd/e"
+msgstr "آدرس شبکه IP نامعتبر است. انتظار abcd/e"
 
 msgid "This address is duplicated"
-msgstr"این آدرس تکراری است"
+msgstr "این آدرس تکراری است"
 
 msgid "password"
-msgstr"کلمه عبور"
+msgstr "کلمه عبور"
 
 msgid "Requires viewer password when implemented"
-msgstr"هنگام اجرا به رمز عبور بیننده نیاز دارد"
+msgstr "هنگام اجرا به رمز عبور بیننده نیاز دارد"
 
 msgid "Set either"
-msgstr"تنظیم کنید"
+msgstr "تنظیم کنید"
 
 msgid "all machines"
-msgstr"تمام ماشین آلات"
+msgstr "تمام ماشین آلات"
 
 msgid "or"
-msgstr"یا"
+msgstr "یا"
 
 msgid "no machines"
-msgstr"بدون ماشین"
+msgstr "بدون ماشین"
 
 msgid "for users in this network"
-msgstr"برای کاربران این شبکه"
+msgstr "برای کاربران این شبکه"
 
 msgid "Network"
-msgstr"شبکه"
+msgstr "شبکه"
 
 msgid "saved."
-msgstr"ذخیره."
+msgstr "ذخیره."
 
 msgid "Are you sure you want to remove the"
-msgstr"آیا مطمئن هستید که می خواهید آن را حذف کنید"
+msgstr "آیا مطمئن هستید که می خواهید آن را حذف کنید"
 
 msgid "yes"
-msgstr"آره"
+msgstr "آره"
 
 msgid "Choose the virtualization type of the Node."
-msgstr"نوع مجازی سازی Node را انتخاب کنید."
+msgstr "نوع مجازی سازی Node را انتخاب کنید."
 
 msgid "Check connection to"
-msgstr"اتصال به را بررسی کنید"
+msgstr "اتصال به را بررسی کنید"
 
 msgid "A node with that address already exists."
-msgstr"یک گره با آن آدرس از قبل وجود دارد."
+msgstr "یک گره با آن آدرس از قبل وجود دارد."
 
 msgid "Save"
-msgstr"صرفه جویی"
+msgstr "صرفه جویی"
 
 msgid "Testing connection to"
-msgstr"تست اتصال به"
+msgstr "تست اتصال به"
 
 msgid "No bases found"
-msgstr"هیچ پایه ای پیدا نشد"
+msgstr "هیچ پایه ای پیدا نشد"
 
 msgid "This base has"
-msgstr"این پایگاه دارد"
+msgstr "این پایگاه دارد"
 
 msgid "backup directory"
-msgstr"دایرکتوری پشتیبان"
+msgstr "دایرکتوری پشتیبان"
 
 msgid "This is a main node and can't be removed."
-msgstr"این یک گره اصلی است و نمی توان آن را حذف کرد."
+msgstr "این یک گره اصلی است و نمی توان آن را حذف کرد."
 
 msgid "Are you sure you want to remove the node"
-msgstr"آیا مطمئن هستید که می خواهید گره را حذف کنید؟"
+msgstr "آیا مطمئن هستید که می خواهید گره را حذف کنید؟"
 
 msgid "This node has"
-msgstr"این گره دارد"
+msgstr "این گره دارد"
 
 msgid "bases."
-msgstr"پایه ها"
+msgstr "پایه ها"
 
 msgid "Remove bases in node"
-msgstr"پایه ها را در گره بردارید"
+msgstr "پایه ها را در گره بردارید"
 
 msgid "Request"
-msgstr"درخواست"
+msgstr "درخواست"
 
 msgid "Removing Virtual Machine"
-msgstr"حذف ماشین مجازی"
+msgstr "حذف ماشین مجازی"
 
 msgid "This can't be undone"
-msgstr"این قابل واگرد نیست"
+msgstr "این قابل واگرد نیست"
 
 msgid "and will remove all the disk and information of this virtual machine."
-msgstr"و تمام دیسک و اطلاعات این ماشین مجازی را حذف خواهد کرد."
+msgstr "و تمام دیسک و اطلاعات این ماشین مجازی را حذف خواهد کرد."
 
 msgid "Please insert"
-msgstr"لطفا وارد کنید"
+msgstr "لطفا وارد کنید"
 
 msgid "not"
-msgstr"نه"
+msgstr "نه"
 
 msgid "to apply."
-msgstr"بکار گرفتن."
+msgstr "بکار گرفتن."
 
 msgid "Display"
-msgstr"نمایش دادن"
+msgstr "نمایش دادن"
 
 msgid "Machine Information"
-msgstr"اطلاعات ماشین"
+msgstr "اطلاعات ماشین"
 
 msgid "Internal IP"
-msgstr"IP داخلی"
+msgstr "IP داخلی"
 
 msgid "waiting for network to come up"
-msgstr"منتظر آمدن شبکه"
+msgstr "منتظر آمدن شبکه"
 
 msgid "Max Memory"
-msgstr"حداکثر حافظه"
+msgstr "حداکثر حافظه"
 
 msgid "CPUs"
-msgstr"CPU ها"
+msgstr "CPU ها"
 
 msgid "reopen"
-msgstr"بازگشایی"
+msgstr "بازگشایی"
 
 msgid "down"
-msgstr"پایین"
+msgstr "پایین"
 
 msgid "I don't know settings tabs for:"
-msgstr"من برگه های تنظیمات را نمی دانم:"
+msgstr "من برگه های تنظیمات را نمی دانم:"
 
 msgid "Hardware"
-msgstr"سخت افزار"
+msgstr "سخت افزار"
 
 msgid "Base"
-msgstr"پایه"
+msgstr "پایه"
 
 msgid "Ports"
-msgstr"پورت ها"
+msgstr "پورت ها"
 
 msgid "Access"
-msgstr"دسترسی داشته باشید"
+msgstr "دسترسی داشته باشید"
 
 msgid "Waiting for requests to complete"
-msgstr"در انتظار تکمیل درخواست ها"
+msgstr "در انتظار تکمیل درخواست ها"
 
 msgid "Recent requests"
-msgstr"درخواست های اخیر"
+msgstr "درخواست های اخیر"
 
 msgid "Force ShutDown"
-msgstr"خاموش کردن اجباری"
+msgstr "خاموش کردن اجباری"
 
 msgid "Reboot"
-msgstr"راه اندازی مجدد"
+msgstr "راه اندازی مجدد"
 
 msgid "Force Reboot"
-msgstr"راه اندازی مجدد اجباری"
+msgstr "راه اندازی مجدد اجباری"
 
 msgid "Compact"
-msgstr"فشرده - جمع و جور"
+msgstr "فشرده - جمع و جور"
 
 msgid "Compact disk volumes"
-msgstr"حجم دیسک فشرده"
+msgstr "حجم دیسک فشرده"
 
 msgid "This virtual machine has already been compacted"
-msgstr"این ماشین مجازی قبلا فشرده شده است"
+msgstr "این ماشین مجازی قبلا فشرده شده است"
 
 msgid "Purge"
-msgstr"پاکسازی"
+msgstr "پاکسازی"
 
 msgid "Purge disk volumes"
-msgstr"پاکسازی حجم دیسک"
+msgstr "پاکسازی حجم دیسک"
 
 msgid "This machine is locked by process"
-msgstr"این دستگاه با فرآیند قفل می شود"
+msgstr "این دستگاه با فرآیند قفل می شود"
 
 msgid "process"
-msgstr"روند"
+msgstr "روند"
 
 msgid "This base can't be removed because the domain has clones."
-msgstr"این پایه قابل حذف نیست زیرا دامنه دارای کلون است."
+msgstr "این پایه قابل حذف نیست زیرا دامنه دارای کلون است."
 
 msgid "Loading machine"
-msgstr"ماشین بارگیری"
+msgstr "ماشین بارگیری"
 
 msgid "waiting for requests"
-msgstr"در انتظار درخواست ها"
+msgstr "در انتظار درخواست ها"
 
 msgid "Loading nodes"
-msgstr"در حال بارگذاری گره ها"
+msgstr "در حال بارگذاری گره ها"
 
 msgid "Node down"
-msgstr"گره پایین"
+msgstr "گره پایین"
 
 msgid "Node disabled"
-msgstr"گره غیرفعال است"
+msgstr "گره غیرفعال است"
 
 msgid "This base has clones"
-msgstr"این پایگاه دارای کلون می باشد"
+msgstr "این پایگاه دارای کلون می باشد"
 
 msgid "today"
-msgstr"امروز"
+msgstr "امروز"
 
 msgid "New Booking"
-msgstr"رزرو جدید"
+msgstr "رزرو جدید"
 
 msgid "Exec. time"
-msgstr"مجری زمان"
+msgstr "مجری زمان"
 
 msgid "Exec clones sequentially"
-msgstr"Exec به صورت متوالی کلون می شود"
+msgstr "Exec به صورت متوالی کلون می شود"
 
 msgid "RAM (Gb)"
-msgstr"رم (گیگابایت)"
+msgstr "رم (گیگابایت)"
 
 msgid "This name is invalid. It can only contain alphabetic, numbers, undercores and dashes and must start by a letter."
-msgstr"این نام نامعتبر است. فقط می تواند شامل حروف الفبا، اعداد، زیر هسته و خط تیره باشد و باید با یک حرف شروع شود."
+msgstr "این نام نامعتبر است. فقط می تواند شامل حروف الفبا، اعداد، زیر هسته و خط تیره باشد و باید با یک حرف شروع شود."
 
 msgid "I can't find"
-msgstr"من نمی توانم پیدا کنم"
+msgstr "من نمی توانم پیدا کنم"
 
 msgid "driver"
-msgstr"راننده"
+msgstr "راننده"
 
 msgid "This machine is running and can't be modified."
-msgstr"این دستگاه در حال کار است و نمی توان آن را تغییر داد."
+msgstr "این دستگاه در حال کار است و نمی توان آن را تغییر داد."
 
 msgid "This machine is base and can't be modified."
-msgstr"این دستگاه پایه است و قابل تغییر نیست."
+msgstr "این دستگاه پایه است و قابل تغییر نیست."
 
 msgid "Danger: This will destroy all the disk data permantently."
-msgstr"خطر: این کار تمام داده های دیسک را برای همیشه از بین می برد."
+msgstr "خطر: این کار تمام داده های دیسک را برای همیشه از بین می برد."
 
 msgid "Type the name of the volume disk to confirm:"
-msgstr"برای تأیید، نام دیسک صدا را تایپ کنید:"
+msgstr "برای تأیید، نام دیسک صدا را تایپ کنید:"
 
 msgid "No hardware found for"
-msgstr"هیچ سخت افزاری برای"
+msgstr "هیچ سخت افزاری برای"
 
 msgid "-- choose hardware --"
-msgstr"-- انتخاب سخت افزار --"
+msgstr "-- انتخاب سخت افزار --"
 
 msgid "This machine is base and it can't be modified."
-msgstr"این دستگاه پایه است و نمی توان آن را تغییر داد."
+msgstr "این دستگاه پایه است و نمی توان آن را تغییر داد."
 
 msgid "The VM is"
-msgstr"VM است"
+msgstr "VM است"
 
 msgid "stopped"
-msgstr"متوقف شد"
+msgstr "متوقف شد"
 
 msgid "Nothing to monitoring"
-msgstr"چیزی برای نظارت نیست"
+msgstr "چیزی برای نظارت نیست"
 
 msgid "Start after migration"
-msgstr"بعد از مهاجرت شروع کنید"
+msgstr "بعد از مهاجرت شروع کنید"
 
 msgid "This virtual machine is running. It must be shut down before migrate."
-msgstr"این ماشین مجازی در حال اجراست. قبل از مهاجرت باید خاموش شود."
+msgstr "این ماشین مجازی در حال اجراست. قبل از مهاجرت باید خاموش شود."
 
 msgid "Are you sure you want to migrate"
-msgstr"آیا مطمئن هستید که می خواهید مهاجرت کنید؟"
+msgstr "آیا مطمئن هستید که می خواهید مهاجرت کنید؟"
 
 msgid "Max memory (MB)"
-msgstr"حداکثر حافظه (MB)"
+msgstr "حداکثر حافظه (MB)"
 
 msgid "Current memory (MB)"
-msgstr"حافظه فعلی (MB)"
+msgstr "حافظه فعلی (MB)"
 
 msgid "Run Timeout"
-msgstr"اجرای Timeout"
+msgstr "اجرای Timeout"
 
 msgid "Shutdown Timeout"
-msgstr"زمان خاموش شدن"
+msgstr "زمان خاموش شدن"
 
 msgid "The machine will power off after this minutes after shutdown."
-msgstr"دستگاه پس از این دقیقه پس از خاموش شدن خاموش می شود."
+msgstr "دستگاه پس از این دقیقه پس از خاموش شدن خاموش می شود."
 
 msgid "Clones created from this machine will be removed on shutdown."
-msgstr"کلون های ایجاد شده از این دستگاه با خاموش شدن حذف خواهند شد."
+msgstr "کلون های ایجاد شده از این دستگاه با خاموش شدن حذف خواهند شد."
 
 msgid "Virtual Machine will start on host start."
-msgstr"ماشین مجازی با شروع میزبان شروع می شود."
+msgstr "ماشین مجازی با شروع میزبان شروع می شود."
 
 msgid "Shutdown disconnected"
-msgstr"خاموش شدن قطع شد"
+msgstr "خاموش شدن قطع شد"
 
 msgid "Virtual Machine will be shutdown when user disconnects."
-msgstr"با قطع ارتباط کاربر، ماشین مجازی خاموش می شود."
+msgstr "با قطع ارتباط کاربر، ماشین مجازی خاموش می شود."
 
 msgid "Clones are volatile, so all the pool will be started."
-msgstr"کلون ها فرار هستند، بنابراین تمام استخر شروع به کار خواهد کرد."
+msgstr "کلون ها فرار هستند، بنابراین تمام استخر شروع به کار خواهد کرد."
 
 msgid "Error: you want to have"
-msgstr"خطا: می خواهید داشته باشید"
+msgstr "خطا: می خواهید داشته باشید"
 
 msgid "but there are only"
-msgstr"اما فقط وجود دارد"
+msgstr "اما فقط وجود دارد"
 
 msgid "clones defined."
-msgstr"کلون تعریف شده است."
+msgstr "کلون تعریف شده است."
 
 msgid "Port"
-msgstr"بندر"
+msgstr "بندر"
 
 msgid "Restricted"
-msgstr"محصور"
+msgstr "محصور"
 
 msgid "Public Port"
-msgstr"بندر عمومی"
+msgstr "بندر عمومی"
 
 msgid "Only remote client can access this port if restricted"
-msgstr"فقط کلاینت از راه دور می تواند به این پورت دسترسی داشته باشد در صورت محدودیت"
+msgstr "فقط کلاینت از راه دور می تواند به این پورت دسترسی داشته باشد در صورت محدودیت"
 
 msgid "Only remote client can access this port"
-msgstr"فقط مشتری راه دور می تواند به این پورت دسترسی داشته باشد"
+msgstr "فقط مشتری راه دور می تواند به این پورت دسترسی داشته باشد"
 
 msgid "Any remote client can access this port"
-msgstr"هر مشتری راه دور می تواند به این پورت دسترسی داشته باشد"
+msgstr "هر مشتری راه دور می تواند به این پورت دسترسی داشته باشد"
 
 msgid "Refresh ports"
-msgstr"پورت ها را به روز کنید"
+msgstr "پورت ها را به روز کنید"
 
 msgid "Prepare Base"
-msgstr"پایه را آماده کنید"
+msgstr "پایه را آماده کنید"
 
 msgid "Change"
-msgstr"تغییر دادن"
+msgstr "تغییر دادن"
 
 msgid "Rebase all the clones to a new base"
-msgstr"همه کلون‌ها را به یک پایگاه جدید تغییر دهید"
+msgstr "همه کلون‌ها را به یک پایگاه جدید تغییر دهید"
 
 msgid "Rebase this machine to another virtual machine"
-msgstr"این ماشین را به ماشین مجازی دیگری تغییر دهید"
+msgstr "این ماشین را به ماشین مجازی دیگری تغییر دهید"
 
 msgid "Warning"
-msgstr"هشدار"
+msgstr "هشدار"
 
 msgid "Changing the base of a virtual machine is potentially dangerous and can't be undone."
-msgstr"تغییر پایه یک ماشین مجازی به طور بالقوه خطرناک است و قابل بازگشت نیست."
+msgstr "تغییر پایه یک ماشین مجازی به طور بالقوه خطرناک است و قابل بازگشت نیست."
 
 msgid "No, cancel"
-msgstr"نه، لغو"
+msgstr "نه، لغو"
 
 msgid "Yes, rebase"
-msgstr"بله، rebase"
+msgstr "بله، rebase"
 
 msgid "Rebase"
-msgstr"Rebase"
+msgstr "Rebase"
 
 msgid "Remove the base prepared from this machine"
-msgstr"پایه تهیه شده از این دستگاه را بردارید"
+msgstr "پایه تهیه شده از این دستگاه را بردارید"
 
 msgid "Remove Clones"
-msgstr"کلون ها را حذف کنید"
+msgstr "کلون ها را حذف کنید"
 
 msgid "This virtual machine has clones that are bases and won't be removed"
-msgstr"این ماشین مجازی دارای کلون هایی است که پایه هستند و حذف نمی شوند"
+msgstr "این ماشین مجازی دارای کلون هایی است که پایه هستند و حذف نمی شوند"
 
 msgid "This machine is hibernated and can't be renamed."
-msgstr"این دستگاه در حالت خواب زمستانی است و نمی توان نام آن را تغییر داد."
+msgstr "این دستگاه در حالت خواب زمستانی است و نمی توان نام آن را تغییر داد."
 
 msgid "New name"
-msgstr"نام جدید"
+msgstr "نام جدید"
 
 msgid "Spinoff clone"
-msgstr"کلون اسپین آف"
+msgstr "کلون اسپین آف"
 
 msgid "Spinoff this clone from its base."
-msgstr"این کلون را از پایه آن جدا کنید."
+msgstr "این کلون را از پایه آن جدا کنید."
 
 msgid "Are you sure you want to spinoff from the base?"
-msgstr"آیا مطمئنید که می‌خواهید از پایه جدا شوید؟"
+msgstr "آیا مطمئنید که می‌خواهید از پایه جدا شوید؟"
 
 msgid "Enter Old Password"
-msgstr"رمز عبور قدیمی را وارد کنید"
+msgstr "رمز عبور قدیمی را وارد کنید"
 
 msgid "Enter New Password"
-msgstr"رمز عبور جدید را وارد کنید"
+msgstr "رمز عبور جدید را وارد کنید"
 
 msgid "Re-Enter New Password"
-msgstr"رمز عبور جدید را دوباره وارد کنید"
+msgstr "رمز عبور جدید را دوباره وارد کنید"
 
 msgid "Old Password is required"
-msgstr"رمز عبور قدیمی مورد نیاز است"
+msgstr "رمز عبور قدیمی مورد نیاز است"
 
 msgid "Old Password can only contain words and numbers"
-msgstr"رمز عبور قدیمی فقط می تواند حاوی کلمات و اعداد باشد"
+msgstr "رمز عبور قدیمی فقط می تواند حاوی کلمات و اعداد باشد"
 
 msgid "New Password is required"
-msgstr"رمز عبور جدید مورد نیاز است"
+msgstr "رمز عبور جدید مورد نیاز است"
 
 msgid "New Password can only contain words and numbers"
-msgstr"رمز عبور جدید فقط می تواند حاوی کلمات و اعداد باشد"
+msgstr "رمز عبور جدید فقط می تواند حاوی کلمات و اعداد باشد"
 
 msgid "Old and New Passwords match!"
-msgstr"گذرواژه‌های قدیمی و جدید مطابقت دارند!"
+msgstr "گذرواژه‌های قدیمی و جدید مطابقت دارند!"
 
 msgid "Repeated New Password is required"
-msgstr"تکرار رمز عبور جدید مورد نیاز است"
+msgstr "تکرار رمز عبور جدید مورد نیاز است"
 
 msgid "Password and their confirmation do not match!"
-msgstr"رمز عبور و تایید آنها مطابقت ندارد!"
+msgstr "رمز عبور و تایید آنها مطابقت ندارد!"
 
 msgid "Today Schedule"
-msgstr"برنامه امروز"
+msgstr "برنامه امروز"
 
 msgid "server"
-msgstr"سرور"
+msgstr "سرور"
 
 msgid "server"
-msgstr"سرور"
+msgstr "سرور"
 
 msgid "allowed"
-msgstr"مجاز"
+msgstr "مجاز"
 
 msgid "not allowed"
-msgstr"مجاز نیست"
+msgstr "مجاز نیست"
 
 msgid "Machines Notifications"
-msgstr"اعلان های ماشین آلات"
+msgstr "اعلان های ماشین آلات"
 
 msgid "Machine"
-msgstr"دستگاه"
+msgstr "دستگاه"
 
 msgid "Group name"
-msgstr"اسم گروه"
+msgstr "اسم گروه"
 
 msgid "Enter group name"
-msgstr"نام گروه را وارد کنید"
+msgstr "نام گروه را وارد کنید"
 
 msgid "Group name is required"
-msgstr"نام گروه الزامی است"
+msgstr "نام گروه الزامی است"
 
 msgid "Group name can not exceed 80 characters"
-msgstr"نام گروه نمی تواند بیش از 80 کاراکتر باشد"
+msgstr "نام گروه نمی تواند بیش از 80 کاراکتر باشد"
 
 msgid "added"
-msgstr"اضافه"
+msgstr "اضافه"
 
 msgid "The source machine is not a base. It must be prepared before it can be copied. This process may take some minutes."
-msgstr"ماشین منبع یک پایه نیست. قبل از کپی کردن باید آماده شود. این فرآیند ممکن است چند دقیقه طول بکشد."
+msgstr "ماشین منبع یک پایه نیست. قبل از کپی کردن باید آماده شود. این فرآیند ممکن است چند دقیقه طول بکشد."
 
 msgid "Choose the virtualization type of the Virtual Machine."
-msgstr"نوع مجازی سازی ماشین مجازی را انتخاب کنید."
+msgstr "نوع مجازی سازی ماشین مجازی را انتخاب کنید."
 
 msgid "Type the template name"
-msgstr"نام قالب را تایپ کنید"
+msgstr "نام قالب را تایپ کنید"
 
 msgid "Select the .iso file the machine will utilize when installing the OS."
-msgstr"فایل iso را که دستگاه هنگام نصب سیستم عامل از آن استفاده می کند، انتخاب کنید."
+msgstr "فایل iso را که دستگاه هنگام نصب سیستم عامل از آن استفاده می کند، انتخاب کنید."
 
 msgid "Type the ISO pathname"
-msgstr"نام مسیر ISO را تایپ کنید"
+msgstr "نام مسیر ISO را تایپ کنید"
 
 msgid "This ISO is being downloaded. The virtual machine will be created after."
-msgstr"این ISO در حال دانلود است. پس از آن ماشین مجازی ایجاد خواهد شد."
+msgstr "این ISO در حال دانلود است. پس از آن ماشین مجازی ایجاد خواهد شد."
 
 msgid "System Disk: (GB)"
-msgstr"دیسک سیستم: (GB)"
+msgstr "دیسک سیستم: (GB)"
 
 msgid "The Minimum Disk Size needed for this ISO is"
-msgstr"حداقل اندازه دیسک مورد نیاز برای این ISO است"
+msgstr "حداقل اندازه دیسک مورد نیاز برای این ISO است"
 
 msgid "Advanced options"
-msgstr"گزینه های پیشرفته"
+msgstr "گزینه های پیشرفته"
 
 msgid "Swap"
-msgstr"تعویض کنید"
+msgstr "تعویض کنید"
 
 msgid "disabled"
-msgstr"معلول"
+msgstr "معلول"
 
 msgid "The Minimum Swap Disk Size needed for this ISO is"
-msgstr"حداقل اندازه دیسک تعویض مورد نیاز برای این ISO است"
+msgstr "حداقل اندازه دیسک تعویض مورد نیاز برای این ISO است"
 
 msgid "Data"
-msgstr"داده ها"
+msgstr "داده ها"
 
 msgid "BIOS"
-msgstr"BIOS"
+msgstr "BIOS"
 
 msgid "Legacy"
-msgstr"میراث"
+msgstr "میراث"
 
 msgid "UEFI"
-msgstr"UEFI"
+msgstr "UEFI"
 
 msgid "Start after create the virtual machine"
-msgstr"بعد از ایجاد ماشین مجازی شروع کنید"
+msgstr "بعد از ایجاد ماشین مجازی شروع کنید"
 
 msgid "Invalid Template"
-msgstr"الگوی نامعتبر"
+msgstr "الگوی نامعتبر"
 
 msgid "Please select an ISO file"
-msgstr"لطفا یک فایل ISO را انتخاب کنید"
+msgstr "لطفا یک فایل ISO را انتخاب کنید"
 
 msgid "Passwords do not match!"
-msgstr"رمزهای ورود مطابقت ندارند!"
+msgstr "رمزهای ورود مطابقت ندارند!"
 
 msgid "Support Contact"
-msgstr"تماس با پشتیبانی"
+msgstr "تماس با پشتیبانی"
 
 msgid "If you have any issue, you can contact the Suport crew and we will try to help you. Please, only contact Support Center if it is strictly necessary."
-msgstr"اگر مشکلی دارید، می توانید با خدمه پشتیبانی تماس بگیرید و ما سعی خواهیم کرد به شما کمک کنیم. لطفاً فقط در صورت لزوم با مرکز پشتیبانی تماس بگیرید."
+msgstr "اگر مشکلی دارید، می توانید با خدمه پشتیبانی تماس بگیرید و ما سعی خواهیم کرد به شما کمک کنیم. لطفاً فقط در صورت لزوم با مرکز پشتیبانی تماس بگیرید."
 
 msgid "Email"
-msgstr"پست الکترونیک"
+msgstr "پست الکترونیک"
 
 msgid "Phone Number"
-msgstr"شماره تلفن"
+msgstr "شماره تلفن"
 
 msgid "Attachment"
-msgstr"پیوست"
+msgstr "پیوست"
 
 msgid "Contact Method"
-msgstr"روش تماس"
+msgstr "روش تماس"
 
 msgid "Phone"
-msgstr"تلفن"
+msgstr "تلفن"
 
 msgid "Fill required camps with valid data"
-msgstr"کمپ های مورد نیاز را با داده های معتبر پر کنید"
+msgstr "کمپ های مورد نیاز را با داده های معتبر پر کنید"
 
 msgid "Will be destroyed on shutdown"
-msgstr"در صورت خاموش شدن از بین خواهد رفت"
+msgstr "در صورت خاموش شدن از بین خواهد رفت"
 
 msgid "volatile"
-msgstr"فرار"
+msgstr "فرار"
 
 msgid "hide"
-msgstr"پنهان شدن"
+msgstr "پنهان شدن"
 
 msgid "Hide active"
-msgstr"پنهان کردن فعال"
+msgstr "پنهان کردن فعال"
 
 msgid "filter"
-msgstr"فیلتر"
+msgstr "فیلتر"
 
 msgid "Reload"
-msgstr"بارگذاری مجدد"
+msgstr "بارگذاری مجدد"
 
 msgid "Congrats"
-msgstr"تبریک میگم"
+msgstr "تبریک میگم"
 
 msgid "The new user"
-msgstr"کاربر جدید"
+msgstr "کاربر جدید"
 
 msgid "has been added successfully!"
-msgstr"با موفقیت اضافه شد!"
+msgstr "با موفقیت اضافه شد!"
 
 msgid "What do you want to do now?"
-msgstr"شما چه می خواهید انجام دهید؟"
+msgstr "شما چه می خواهید انجام دهید؟"
 
 msgid "Add another user"
-msgstr"کاربر دیگری اضافه کنید"
+msgstr "کاربر دیگری اضافه کنید"
 
 msgid "Create a new group"
-msgstr"یک گروه جدید ایجاد کنید"
+msgstr "یک گروه جدید ایجاد کنید"
 
 msgid "Schedule"
-msgstr"برنامه"
+msgstr "برنامه"
 
 msgid "groups"
-msgstr"گروه ها"
+msgstr "گروه ها"
 
 msgid "nodes"
-msgstr"گره ها"
+msgstr "گره ها"
 
 msgid "networks"
-msgstr"شبکه های"
+msgstr "شبکه های"
 
 msgid "settings"
-msgstr"تنظیمات"
+msgstr "تنظیمات"
 
 msgid "can manage users."
-msgstr"می تواند کاربران را مدیریت کند."
+msgstr "می تواند کاربران را مدیریت کند."
 
 msgid "Can expose virtual machine ports."
-msgstr"می تواند پورت های ماشین مجازی را در معرض دید قرار دهد."
+msgstr "می تواند پورت های ماشین مجازی را در معرض دید قرار دهد."
 
 msgid "Can rename any virtual machine owned by the user."
-msgstr"می تواند هر ماشین مجازی متعلق به کاربر را تغییر نام دهد."
+msgstr "می تواند هر ماشین مجازی متعلق به کاربر را تغییر نام دهد."
 
 msgid "Can rename any virtual machine."
-msgstr"می تواند هر ماشین مجازی را تغییر نام دهد."
+msgstr "می تواند هر ماشین مجازی را تغییر نام دهد."
 
 msgid "Can rename clones from virtual machines owned by the user."
-msgstr"می تواند کلون ها را از ماشین های مجازی متعلق به کاربر تغییر نام دهد."
+msgstr "می تواند کلون ها را از ماشین های مجازی متعلق به کاربر تغییر نام دهد."
 
 msgid "Can shutdown own virtual machines."
-msgstr"می تواند ماشین های مجازی خود را خاموش کند."
+msgstr "می تواند ماشین های مجازی خود را خاموش کند."
 
 msgid "Can reboot own virtual machines."
-msgstr"می تواند ماشین های مجازی خود را راه اندازی مجدد کند."
+msgstr "می تواند ماشین های مجازی خود را راه اندازی مجدد کند."
 
 msgid "Can reboot all virtual machines."
-msgstr"می تواند تمام ماشین های مجازی را راه اندازی مجدد کند."
+msgstr "می تواند تمام ماشین های مجازی را راه اندازی مجدد کند."
 
 msgid "Can reboot clones own virtual machines."
-msgstr"آیا کلون ها می توانند ماشین های مجازی خود را راه اندازی مجدد کنند."
+msgstr "آیا کلون ها می توانند ماشین های مجازی خود را راه اندازی مجدد کنند."
 
 msgid "Can get a screenshot of own virtual machines."
-msgstr"می تواند از ماشین های مجازی خود اسکرین شات بگیرد."
+msgstr "می تواند از ماشین های مجازی خود اسکرین شات بگیرد."
 
 msgid "Can have an unlimited amount of machines started."
-msgstr"می توان تعداد نامحدودی از ماشین ها را راه اندازی کرد."
+msgstr "می توان تعداد نامحدودی از ماشین ها را راه اندازی کرد."
 
 msgid "Can view groups."
-msgstr"می تواند گروه ها را مشاهده کند."
+msgstr "می تواند گروه ها را مشاهده کند."
 
 msgid "Can manage groups."
-msgstr"می تواند گروه ها را مدیریت کند."
+msgstr "می تواند گروه ها را مدیریت کند."
 
 msgid "can have their own limit on started machines."
-msgstr"می توانند محدودیت خاص خود را در ماشین های راه اندازی شده داشته باشند."
+msgstr "می توانند محدودیت خاص خود را در ماشین های راه اندازی شده داشته باشند."
 
 msgid "Search group"
-msgstr"جستجوی گروه"
+msgstr "جستجوی گروه"
 
 msgid "No Results Found"
-msgstr"نتیجه ای پیدا نشد"
+msgstr "نتیجه ای پیدا نشد"
 
 msgid "Client headers"
-msgstr"سرصفحه های مشتری"
+msgstr "سرصفحه های مشتری"
 
 msgid "locked"
-msgstr"قفل شده است"
+msgstr "قفل شده است"
 
 msgid "Poweroff"
-msgstr"خاموش"
+msgstr "خاموش"
 
 msgid "Requests"
-msgstr"درخواست ها"
+msgstr "درخواست ها"
 
 msgid "This virtual machine has no group restrictions."
-msgstr"این ماشین مجازی هیچ محدودیت گروهی ندارد."
+msgstr "این ماشین مجازی هیچ محدودیت گروهی ندارد."
 
 msgid "There are no LDAP groups defined."
-msgstr"هیچ گروه LDAP تعریف نشده است."
+msgstr "هیچ گروه LDAP تعریف نشده است."
 
 msgid "Only users from these groups will be allowed to execute this machine"
-msgstr"فقط کاربران این گروه‌ها مجاز به اجرای این دستگاه خواهند بود"
+msgstr "فقط کاربران این گروه‌ها مجاز به اجرای این دستگاه خواهند بود"
 
 msgid "Event properties"
-msgstr"ویژگی های رویداد"
+msgstr "ویژگی های رویداد"
 
 msgid "This field is required"
-msgstr"این فیلد الزامی است"
+msgstr "این فیلد الزامی است"
 
 msgid "Title"
-msgstr"عنوان"
+msgstr "عنوان"
 
 msgid "Color"
-msgstr"رنگ"
+msgstr "رنگ"
 
 msgid "Repeat"
-msgstr"تکرار"
+msgstr "تکرار"
 
 msgid "Weekly"
-msgstr"هفتگی"
+msgstr "هفتگی"
 
 msgid "Until"
-msgstr"تا زمان"
+msgstr "تا زمان"
 
 msgid "Groups with permissions"
-msgstr"گروه های دارای مجوز"
+msgstr "گروه های دارای مجوز"
 
 msgid "Delete"
-msgstr"حذف"
+msgstr "حذف"
 
 msgid "Save changes"
-msgstr"ذخیره تغییرات"
+msgstr "ذخیره تغییرات"
 
 msgid "This booking overlaps already scheduled reservations"
-msgstr"این رزرو با رزروهای از قبل برنامه ریزی شده همپوشانی دارد"
+msgstr "این رزرو با رزروهای از قبل برنامه ریزی شده همپوشانی دارد"
 
 msgid "options"
-msgstr"گزینه ها"
+msgstr "گزینه ها"
 
 msgid "bases"
-msgstr"پایه ها"
+msgstr "پایه ها"
 
 msgid "remove"
-msgstr"برداشتن"
+msgstr "برداشتن"
 
 msgid "can change the settings of any virtual machine cloned from one base owned by the user."
-msgstr"می تواند تنظیمات هر ماشین مجازی شبیه سازی شده از یک پایگاه متعلق به کاربر را تغییر دهد."
+msgstr "می تواند تنظیمات هر ماشین مجازی شبیه سازی شده از یک پایگاه متعلق به کاربر را تغییر دهد."
 
 msgid "Balance"
-msgstr"تعادل"
+msgstr "تعادل"
 
 msgid "Node with more free memory"
-msgstr"گره با حافظه آزاد بیشتر"
+msgstr "گره با حافظه آزاد بیشتر"
 
 msgid "Node with machines from the same user"
-msgstr"گره با ماشین هایی از همان کاربر"
+msgstr "گره با ماشین هایی از همان کاربر"
 
 msgid "Permission granted to user"
-msgstr"مجوز به کاربر داده شده است"
+msgstr "مجوز به کاربر داده شده است"
 
 msgid "Permission revoked from user"
-msgstr"مجوز از کاربر لغو شد"
+msgstr "مجوز از کاربر لغو شد"
 
 msgid "User not found"
-msgstr"کاربر پیدا نشد"
+msgstr "کاربر پیدا نشد"
 
 msgid "Event saved successfully"
-msgstr"رویداد با موفقیت ذخیره شد"
+msgstr "رویداد با موفقیت ذخیره شد"
 
 msgid "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
-msgstr"گروه های LDAP برای تنظیم رزرو مورد نیاز هستند. برخی از گروه ها یافت شدند اما هیچ عضوی به آنها تعلق نداشت. <a href='/admin/groups'>موردهای جدید را اینجا اضافه کنید.</a>"
+msgstr "گروه های LDAP برای تنظیم رزرو مورد نیاز هستند. برخی از گروه ها یافت شدند اما هیچ عضوی به آنها تعلق نداشت. <a href='/admin/groups'>موردهای جدید را اینجا اضافه کنید.</a>"
 
 msgid "From"
-msgstr"از جانب"
+msgstr "از جانب"
 
 msgid "To"
-msgstr"به"
+msgstr "به"
 
 msgid "Edit the event"
-msgstr"رویداد را ویرایش کنید"
+msgstr "رویداد را ویرایش کنید"
 
 msgid "Delete the event"
-msgstr"رویداد را حذف کنید"
+msgstr "رویداد را حذف کنید"
 
 msgid "This event"
-msgstr"این رخداد"
+msgstr "این رخداد"
 
 msgid "This event and the following"
-msgstr"این رویداد و موارد زیر"
+msgstr "این رویداد و موارد زیر"
 
 msgid "This event and the following with same day of week"
-msgstr"این رویداد و موارد بعدی با همان روز هفته"
+msgstr "این رویداد و موارد بعدی با همان روز هفته"
 
 msgid "All events"
-msgstr"همه رویدادها"
+msgstr "همه رویدادها"
 
 msgid "Confirm"
-msgstr"تایید"
+msgstr "تایید"
 
 msgid "This feature requires a LDAP server configured."
-msgstr"این ویژگی به یک سرور LDAP پیکربندی شده نیاز دارد."
+msgstr "این ویژگی به یک سرور LDAP پیکربندی شده نیاز دارد."
 
 msgid "Source Machine"
-msgstr"ماشین منبع"
+msgstr "ماشین منبع"
 
 msgid "Monitoring"
-msgstr"نظارت بر"
+msgstr "نظارت بر"
