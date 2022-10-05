@@ -116,7 +116,7 @@ msgid "New Password:"
 msgstr "Nytt passord:"
 
 msgid "Confirm Password:"
-msgstr " Bekreft passord:"
+msgstr "Bekreft passord:"
 
 msgid "Submit"
 msgstr "Send inn"
@@ -131,748 +131,754 @@ msgid "Password is too short"
 msgstr "Passordet er for kort"
 
 msgid "Password fields do not match"
-msgstr ""
+msgstr "Passordfeltene matcher ikke"
 
 msgid "Some of the password fields are empty"
-msgstr ""
+msgstr "Noen av passordfeltene er tomme"
 
 msgid "Status"
-msgstr ""
+msgstr "Status"
 
 msgid "Actions"
-msgstr ""
+msgstr "Handlinger"
 
 msgid "Down"
-msgstr ""
+msgstr "Ned"
 
 msgid "Running"
-msgstr ""
+msgstr "Kjører"
 
 msgid "Shutdown"
-msgstr ""
+msgstr "Slå av"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "Skjermbilde"
 
 msgid "Paused"
-msgstr ""
+msgstr "Pauset"
 
 msgid "Machine locked by request"
-msgstr ""
+msgstr "Maskin låst etter forespørsel"
 
 msgid "Process"
-msgstr ""
+msgstr "Prosess"
 
 msgid "Copy"
-msgstr ""
+msgstr "Kopier"
 
 msgid "Error!"
-msgstr ""
+msgstr "Feil!"
 
 msgid "Error"
-msgstr ""
+msgstr "Feil"
 
 msgid "Backend not available!"
-msgstr ""
+msgstr "Backend ikke tilgjengelig!"
 
 msgid "Subject"
-msgstr ""
+msgstr "Emne"
 
 msgid "Date"
-msgstr ""
+msgstr "Dato"
 
 msgid "Mark as read"
-msgstr ""
+msgstr "Merk som lest"
 
 msgid "Mark as unread"
-msgstr ""
+msgstr "Merk som ulest"
 
 msgid "No messages to show"
-msgstr ""
+msgstr "Ingen meldinger å vise"
 
 msgid "Admin"
-msgstr ""
+msgstr "Admin"
 
 msgid "Machines"
-msgstr ""
+msgstr "Maskiner"
 
 msgid "machines"
-msgstr ""
+msgstr "maskiner"
 
 msgid "Users"
-msgstr ""
+msgstr "Brukere"
 
 msgid "users"
-msgstr ""
+msgstr "brukere"
 
 msgid "Messages"
-msgstr ""
+msgstr "Meldinger"
 
 msgid "messages"
-msgstr ""
+msgstr "meldinger"
 
 msgid "Admin tools"
-msgstr ""
+msgstr "Administrasjonsverktøy"
 
 msgid "Remove base"
-msgstr ""
+msgstr "Fjern basen"
 
 msgid "Restore"
-msgstr ""
+msgstr "Gjenopprett"
 
 msgid "Hibernate"
-msgstr ""
+msgstr "Gå i dvale"
 
 msgid "Are you sure?"
-msgstr ""
+msgstr "Er du sikker?"
 
 msgid "Yes"
-msgstr ""
+msgstr "Ja"
 
 msgid "No"
-msgstr ""
+msgstr "Nei"
 
 msgid "Make public"
-msgstr ""
+msgstr "Gjør offentlig"
 
 msgid "Machine settings"
-msgstr ""
+msgstr "Maskininnstillinger"
 
 msgid "Cannot remove base, machine has clones"
-msgstr ""
+msgstr "Kan ikke fjerne basen, maskinen har kloner"
 
 msgid "show clones"
-msgstr ""
+msgstr "vise kloner"
 
 msgid "hide clones"
-msgstr ""
+msgstr "skjule kloner"
 
 msgid "For Spice redirection you will need to install"
-msgstr ""
+msgstr "For Spice-omdirigering må du installere"
 
 msgid "in your computer."
-msgstr ""
+msgstr "i datamaskinen din."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr ""
+msgstr "Søk i distroen din, f.eks. i Debian/Ubuntu med"
 
 msgid "You will need to install"
-msgstr ""
+msgstr "Du må installere"
 
 msgid "and USB drivers ("
-msgstr ""
+msgstr "og USB-drivere ("
 
 msgid ""
 "Be aware that in Windows, Spice redirection is not automatic. It is "
 "necessary to associate protocol with the app."
 msgstr ""
+"Vær oppmerksom på at i Windows er ikke Spice-omdirigering automatisk. Det er "
+"nødvendig å knytte protokollen til appen."
 
 msgid "To make this possible, download"
-msgstr ""
+msgstr "For å gjøre dette mulig, last ned"
 
 msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
 msgstr ""
+"eller kopier følgende linjer i en ASCII-fil og lagre med filtypen .reg,"
+"kjør deretter filen."
 
 msgid "Login"
-msgstr ""
+msgstr "Logg inn"
 
 msgid "Welcome"
-msgstr ""
+msgstr "Velkommen"
 
 msgid "A viewer is required to run the virtual machines."
-msgstr ""
+msgstr "En viewer kreves for å kjøre de virtuelle maskinene."
 
 msgid "It is required a viewer to run the virtual machines."
-msgstr ""
+msgstr "Det kreves en seer for å kjøre de virtuelle maskinene."
 
 msgid "Virtual Machines"
-msgstr ""
+msgstr "Virtuelle maskiner"
 
 msgid "User"
-msgstr ""
+msgstr "Bruker"
 
 msgid "Password"
-msgstr ""
+msgstr "Passord"
 
 msgid "Start session"
-msgstr ""
+msgstr "Start økten"
 
 msgid "bits) in your computer."
-msgstr ""
+msgstr "bits) på datamaskinen."
 
 msgid "Permissions"
-msgstr ""
+msgstr "Tillatelser"
 
 msgid "can change the settings of owned virtual machines."
-msgstr ""
+msgstr "kan endre innstillingene til eide virtuelle maskiner."
 
 msgid "can change the settings of any virtual machines."
-msgstr ""
+msgstr "kan endre innstillingene til alle virtuelle maskiner."
 
 msgid "can change the settings of any virtual machines "
-msgstr ""
+msgstr "kan endre innstillingene til alle virtuelle maskiner"
 
 msgid "cloned from one base owned by the user."
-msgstr ""
+msgstr "klonet fra en base som eies av brukeren."
 
 msgid "can clone public virtual machines."
-msgstr ""
+msgstr "kan klone offentlige virtuelle maskiner."
 
 msgid "can clone any virtual machine."
-msgstr ""
+msgstr "kan klone hvilken som helst virtuell maskin."
 
 msgid "can create bases."
-msgstr ""
+msgstr "kan lage baser."
 
 msgid "can create virtual machines."
-msgstr ""
+msgstr "kan lage virtuelle maskiner."
 
 msgid "can grant permissions to other users"
-msgstr ""
+msgstr "kan gi tillatelser til andre brukere"
 
 msgid "can hibernate any virtual machine."
-msgstr ""
+msgstr "kan sende hvilken som helst virtuell maskin i dvale."
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr ""
+msgstr "kan sende kloner fra virtuelle maskiner som eies av brukeren i dvale."
 
 msgid "can hibernate any clone."
-msgstr ""
+msgstr "kan sende hvilken som helst klone i dvale."
 
 msgid "can remove any virtual machines owned by the user."
-msgstr ""
+msgstr "kan fjerne eventuelle virtuelle maskiner som eies av brukeren."
 
 msgid "can remove any virtual machine."
-msgstr ""
+msgstr "kan fjerne enhver virtuell maskin."
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr ""
+msgstr "kan fjerne kloner fra virtuelle maskiner som eies av brukeren."
 
 msgid "can remove any clone."
-msgstr ""
+msgstr "kan fjerne enhver klone."
 
 msgid "can take a screenshot of any virtual machine owned by the user."
-msgstr ""
+msgstr "kan ta et skjermbilde av en hvilken som helst virtuell maskin som eies av brukeren."
 
 msgid "can take a screenshot of any virtual machine."
-msgstr ""
+msgstr "kan ta et skjermbilde av hvilken som helst virtuell maskin."
 
 msgid "can shutdown any virtual machine."
-msgstr ""
+msgstr "kan slå av hvilken som helst virtuell maskin."
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr ""
+msgstr "kan slå av kloner fra virtuelle maskiner som eies av brukeren."
 
 msgid "Submit Query"
-msgstr ""
+msgstr "Send inn forespørsel"
 
 msgid "From Template"
-msgstr ""
+msgstr "Fra mal"
 
 msgid "From Machine"
-msgstr ""
+msgstr "Fra Maskin"
 
 msgid "Backend"
-msgstr ""
+msgstr "Baksiden"
 
 msgid "Select Template"
-msgstr ""
+msgstr "Velg Mal"
 
 msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
-msgstr ""
+msgstr "Dette ISO-bildet er ikke lastet ned ennå. Det kan ta noen minutter, til og med timer, før filen hentes fra Internett."
 
 msgid "Download now"
-msgstr ""
+msgstr "Last ned nå"
 
 msgid "Select ISO"
-msgstr ""
+msgstr "Velg ISO"
 
 msgid "Template"
-msgstr ""
+msgstr "Mal"
 
 msgid "Disk Size: (GB)"
-msgstr ""
+msgstr "Diskstørrelse: (GB)"
 
 msgid "Swap Size: (GB)"
-msgstr ""
+msgstr "Byttestørrelse: (GB)"
 
 msgid "Ram: (GB)"
-msgstr ""
+msgstr "Ram: (GB)"
 
 msgid "Machine name is required."
-msgstr ""
+msgstr "Maskinnavn er påkrevd."
 
 msgid "Machine name can't exceed 20 characters."
-msgstr ""
+msgstr "Maskinnavnet kan ikke overstige 20 tegn."
 
 msgid "Backend selection is required."
-msgstr ""
+msgstr "Backend-valg er nødvendig."
 
 msgid "ISO image selection is required."
-msgstr ""
+msgstr "ISO-bildevalg er nødvendig."
 
 msgid "Template selection is required."
-msgstr ""
+msgstr "Valg av mal er nødvendig."
 
 msgid "A machine with that name already exists."
-msgstr ""
+msgstr "En maskin med det navnet finnes allerede."
 
 msgid "The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points."
-msgstr ""
+msgstr "Maskinnavnet er kun tillatt å bestå av alfabetiske tegn, tall, bindestreker og punkter."
 
 msgid "Create"
-msgstr ""
+msgstr "Opprett"
 
 msgid ""
 "can change the settings of all virtual machines "
 "cloned from one base owned by the user."
 msgstr ""
+"kan endre innstillingene for alle virtuelle maskiner"
+"klonet fra en base som eies av brukeren."
 
 msgid "monitoring"
-msgstr ""
+msgstr "overvåker"
 
 msgid "Are you sure you want to remove the Base of"
-msgstr ""
+msgstr "Er du sikker på at du vil fjerne basen til"
 
 msgid "Are you sure you want to prepare the Base of"
-msgstr ""
+msgstr "Er du sikker på at du vil forberede basen til"
 
 msgid "Are you sure you want to change the Public state of"
-msgstr ""
+msgstr "Er du sikker på at du vil endre den offentlige tilstanden til"
 
 msgid "Search"
-msgstr ""
+msgstr "Søk"
 
 msgid "There are no public bases available in this system."
-msgstr ""
+msgstr "Det er ingen offentlige baser tilgjengelig i dette systemet."
 
 msgid "There are no machines available in this system."
-msgstr ""
+msgstr "Det er ingen tilgjengelige maskiner i dette systemet."
 
 msgid "Create one."
-msgstr ""
+msgstr "Lag en."
 
 msgid "not public"
-msgstr ""
+msgstr "ikke offentlig"
 
 msgid "User Settings"
-msgstr ""
+msgstr "Brukerinstillinger"
 
 msgid "Create a new account"
-msgstr ""
+msgstr "Lag en ny bruker"
 
 msgid "Username"
-msgstr ""
+msgstr "Brukernavn"
 
 msgid "Hide Private"
-msgstr ""
+msgstr "Skjul privat"
 
 msgid "Show All"
-msgstr ""
+msgstr "Vis alt"
 
 msgid "Shutting down ..."
-msgstr ""
+msgstr "Slår av ..."
 
 msgid "It may take a couple of minutes."
-msgstr ""
+msgstr "Det kan ta et par minutter."
 
 msgid "Hibernating ..."
-msgstr ""
+msgstr "Går i dvale ..."
 
 msgid "Description"
-msgstr ""
+msgstr "Beskrivelse"
 
 msgid "Rename"
-msgstr ""
+msgstr "Gi nytt navn"
 
 msgid "Options"
-msgstr ""
+msgstr "Alternativer"
 
 msgid "Drivers"
-msgstr ""
+msgstr "Drivere"
 
 msgid "Graphics"
-msgstr ""
+msgstr "Grafikk"
 
 msgid "Remove Machine"
-msgstr ""
+msgstr "Fjern maskinen"
 
 msgid "System overview"
-msgstr ""
+msgstr "Systemoversikt"
 
 msgid "Danger Zone"
-msgstr ""
+msgstr "Faresone"
 
 msgid "Once you delete the machine, there is no going back. Please be certain."
-msgstr ""
+msgstr "Når du har slettet maskinen, er det ingen vei tilbake. Vær sikker."
 
 msgid "Danger"
-msgstr ""
+msgstr "Fare"
 
 msgid "This will remove all the contents of the machine"
-msgstr ""
+msgstr "Dette vil fjerne alt innholdet på maskinen"
 
 msgid "This action can't be undone"
-msgstr ""
+msgstr "Denne handlingen kan ikke angres"
 
 msgid "Are you sure ?"
-msgstr ""
+msgstr "Er du sikker?"
 
 msgid "Yes, remove"
-msgstr ""
+msgstr "Ja, fjern"
 
 msgid "Virtual Machine"
-msgstr ""
+msgstr "Virtuell maskin"
 
 msgid "removed"
-msgstr ""
+msgstr "fjernet"
 
 msgid "This will remove all the"
-msgstr ""
+msgstr "Dette vil fjerne alle"
 
 msgid "clones of the machine"
-msgstr ""
+msgstr "kloner av maskinen"
 
 msgid "Yes, remove all the clones"
-msgstr ""
+msgstr "Ja, fjern alle klonene"
 
 msgid "This virtual machine can't be removed because it has"
-msgstr ""
+msgstr "Denne virtuelle maskinen kan ikke fjernes fordi den har"
 
 msgid "clones"
-msgstr ""
+msgstr "kloner"
 
 msgid "Clones"
-msgstr ""
+msgstr "Kloner"
 
 msgid "This machine has not Graphics parameters!"
-msgstr ""
+msgstr "Denne maskinen har ikke grafikkparametere!"
 
 msgid "recommended"
-msgstr ""
+msgstr "anbefales"
 
 msgid "to"
-msgstr ""
+msgstr "til"
 
 msgid "Changing Public State"
-msgstr ""
+msgstr "Endre offentlig tilstand"
 
 msgid "Changing Base State"
-msgstr ""
+msgstr "Endring av basetilstand"
 
 msgid "action"
-msgstr ""
+msgstr "handling"
 
 msgid "Grants"
-msgstr ""
+msgstr "Grants"
 
 msgid "public"
-msgstr ""
+msgstr "offentlig"
 
 msgid "New Base"
-msgstr ""
+msgstr "Ny base"
 
 msgid "Version"
-msgstr ""
+msgstr "Versjon"
 
 msgid "Authors"
-msgstr ""
+msgstr "Forfattere"
 
 msgid "Development"
-msgstr ""
+msgstr "Utvikling"
 
 msgid "Below are listed the technologies used in this project:"
-msgstr ""
+msgstr "Nedenfor er teknologiene oppført som brukes i dette prosjektet:"
 
 msgid "The code is available on "
-msgstr ""
+msgstr "Koden er tilgjengelig på"
 
 msgid "The code is "
-msgstr ""
+msgstr "Koden er"
 
 msgid "License"
-msgstr ""
+msgstr "Tillatelse"
 
 msgid "Machine locked by"
-msgstr ""
+msgstr "Maskin låst av"
 
 msgid "This Machine is a base"
-msgstr ""
+msgstr "Denne maskinen er en base"
 
 msgid "Cloned"
-msgstr ""
+msgstr "Klonet"
 
 msgid "is admin"
-msgstr ""
+msgstr "er admin"
 
 msgid "Add new user"
-msgstr ""
+msgstr "Legg til ny bruker"
 
 msgid "Register"
-msgstr ""
+msgstr "Registrere"
 
 msgid "Current Password:"
-msgstr ""
+msgstr "Nåværende passord:"
 
 msgid "For more information, check"
-msgstr ""
+msgstr "For mer informasjon, sjekk"
 
 msgid "the Windows Clients documentation"
-msgstr ""
+msgstr "dokumentasjonen for Windows-klienter"
 
 msgid "It is programmed in"
-msgstr ""
+msgstr "Den er programmert i"
 
 msgid "with perl framework"
-msgstr ""
+msgstr "med perl-rammeverk"
 
 msgid "and"
-msgstr ""
+msgstr "og"
 
 msgid "Memory"
-msgstr ""
+msgstr "Hukommelse"
 
 msgid "MB available"
-msgstr ""
+msgstr "MB tilgjengelig"
 
 msgid "The machine will shutdown after these minutes"
-msgstr ""
+msgstr "Maskinen vil slå seg av etter disse minuttene"
 
 msgid "Cancel"
-msgstr ""
+msgstr "Avbryt"
 
 msgid "Please enter the following information to create the account"
-msgstr ""
+msgstr "Vennligst skriv inn følgende informasjon for å opprette kontoen"
 
 msgid "Enter Username"
-msgstr ""
+msgstr "Skriv inn brukernavn"
 
 msgid "Enter Password"
-msgstr ""
+msgstr "Oppgi passord"
 
 msgid "Confirm Password"
-msgstr ""
+msgstr "Bekreft passord"
 
 msgid "Username is required"
-msgstr ""
+msgstr "Brukernavn er påkrevd"
 
 msgid "Username can not exceed 20 characters"
-msgstr ""
+msgstr "Brukernavnet kan ikke overstige 20 tegn"
 
 msgid "Username must be at least 5 characters"
-msgstr ""
+msgstr "Brukernavnet må være på minst 5 tegn"
 
 msgid "Username can only contain words, numbers, dashes, dots and underscores"
-msgstr ""
+msgstr "Brukernavn kan bare inneholde ord, tall, bindestreker, prikker og understreker"
 
 msgid "Password is required"
-msgstr ""
+msgstr "Passord er påkrevd"
 
 msgid "Password can not exceed 20 characters"
-msgstr ""
+msgstr "Passordet kan ikke overstige 20 tegn"
 
 msgid "Password must be at least 5 characters"
-msgstr ""
+msgstr "Passordet må være på minst 5 tegn"
 
 msgid "Password can only contain words and numbers"
-msgstr ""
+msgstr "Passord kan bare inneholde ord og tall"
 
 msgid "Confirm Password is required"
-msgstr ""
+msgstr "Bekreft passord er nødvendig"
 
 msgid "Confirm Password can not exceed 20 characters"
-msgstr ""
+msgstr "Bekreft passord kan ikke overstige 20 tegn"
 
 msgid "Confirm Password must be at least 5 characters"
-msgstr ""
+msgstr "Bekreft passord må være på minst 5 tegn"
 
 msgid "Confirm Password can only contain words and numbers"
-msgstr ""
+msgstr "Bekreft passord kan bare inneholde ord og tall"
 
 msgid "This information will be available to the users"
-msgstr ""
+msgstr "Denne informasjonen vil være tilgjengelig for brukerne"
 
 msgid "Volatile Clones"
-msgstr ""
+msgstr "Flyktige kloner"
 
 msgid "Owner"
-msgstr ""
+msgstr "Eieren"
 
 msgid "Change the owner of the machine"
-msgstr ""
+msgstr "Bytt eier av maskinen"
 
 msgid "Press SHIFT + F12 to exit"
-msgstr ""
+msgstr "Trykk SHIFT + F12 for å avslutte"
 
 msgid "If you can not see the machine screen in a few seconds check for a file called"
-msgstr ""
+msgstr "Hvis du ikke kan se maskinens skjerm i løpet av noen få sekunder, se etter en fil som heter"
 
 msgid "in your downloads folder."
-msgstr ""
+msgstr "i nedlastingsmappen."
 
 msgid "copied to clipboard"
-msgstr ""
+msgstr "kopiert til utklippstavlen"
 
 msgid "Portuguese"
-msgstr ""
+msgstr "portugisisk"
 
 msgid "Read more."
-msgstr ""
+msgstr "Les mer."
 
 msgid "The password for this virtual machine connection is :"
-msgstr ""
+msgstr "Passordet for denne virtuelle maskintilkoblingen er:"
 
 msgid "view"
-msgstr ""
+msgstr "visning"
 
 msgid "Start again"
-msgstr ""
+msgstr "Start på nytt"
 
 msgid "The machine is down."
-msgstr ""
+msgstr "Maskinen er nede."
 
 msgid "Remove"
-msgstr ""
+msgstr "Fjerne"
 
 msgid "The machine must be started to take the screenshot."
-msgstr ""
+msgstr "Maskinen må startes for å ta skjermbildet."
 
 msgid "Take screenshot"
-msgstr ""
+msgstr "Ta skjermbilde"
 
 msgid "Set base picture"
-msgstr ""
+msgstr "Sett grunnbilde"
 
 msgid "Saving the screenshot, please wait a moment..."
-msgstr ""
+msgstr "Lagrer skjermbildet, vennligst vent et øyeblikk..."
 
 msgid "You need to run the machine in order to take a screenshot."
-msgstr ""
+msgstr "Du må kjøre maskinen for å ta et skjermbilde."
 
 msgid "Copying the screenshot, please wait a moment..."
-msgstr ""
+msgstr "Kopierer skjermbildet, vennligst vent et øyeblikk..."
 
 msgid "You need a screenshot in order to copy it to the base machine."
-msgstr ""
+msgstr "Du trenger et skjermbilde for å kopiere det til basismaskinen."
 
 msgid "Add"
-msgstr ""
+msgstr "Legge til"
 
 msgid "The changes will apply on next restart"
-msgstr ""
+msgstr "Endringene vil gjelde ved neste omstart"
 
 msgid "This VM is running and can't be renamed."
-msgstr ""
+msgstr "Denne virtuelle maskinen kjører og kan ikke gis nytt navn."
 
 msgid "Thanks to:"
-msgstr ""
+msgstr "Takk til:"
 
 msgid "licensed."
-msgstr ""
+msgstr "lisensiert."
 
 msgid "New Node"
-msgstr ""
+msgstr "Ny node"
 
 msgid "Address"
-msgstr ""
+msgstr "Adresse"
 
 msgid "A node with that name already exists."
-msgstr ""
+msgstr "En node med det navnet finnes allerede."
 
 msgid "Setting your default language"
-msgstr ""
+msgstr "Angi standardspråk"
 
 msgid "Change password"
-msgstr ""
+msgstr "Bytt passord"
 
 msgid "Update password"
-msgstr ""
+msgstr "Oppdater passord"
 
 msgid "Start all clones"
-msgstr ""
+msgstr "Start alle kloner"
 
 msgid "Access denied"
-msgstr ""
+msgstr "Ingen tilgang"
 
 msgid "Empty login name"
-msgstr ""
+msgstr "Tomt påloggingsnavn"
 
 msgid "Empty password"
-msgstr ""
+msgstr "Tomt passord"
 
 msgid "Session timeout"
-msgstr ""
+msgstr "Tidsavbrudd for økten"
 
 msgid "Vietnamese"
-msgstr ""
+msgstr "vietnamesisk"
 
 msgid "Italian"
-msgstr ""
+msgstr "italiensk"
 
 msgid "Type a typical LDAP user name to fetch the attribute list"
-msgstr ""
+msgstr "Skriv inn et typisk LDAP-brukernavn for å hente attributtlisten"
 
 msgid "User name"
-msgstr ""
+msgstr "Brukernavn"
 
 msgid "not found in LDAP server"
-msgstr ""
+msgstr "ikke funnet i LDAP-serveren"
 
 msgid "Attribute"
-msgstr ""
+msgstr "Egenskap"
 
 msgid "Value"
-msgstr ""
+msgstr "Verdi"
 
 msgid "Allowed"
-msgstr ""
+msgstr "Tillatt"
 
 msgid "Last"
-msgstr ""
+msgstr "Siste"
 
 msgid "Default"
-msgstr ""
+msgstr "Standard"
 
 msgid "If none of the previous match, access is allowed."
-msgstr ""
+msgstr "Hvis ingen av de forrige passer, er tilgang tillatt."
 
 msgid "If none of the previous match, access is denied."
-msgstr ""
+msgstr "Hvis ingen av de forrige passer, nektes tilgang."
 
 msgid "verify"
-msgstr ""
+msgstr "bekreft"
 
 msgid "save"
-msgstr ""
+msgstr "lagre"
 
 msgid "Verifying"
-msgstr ""
+msgstr "Bekrefter"
 
 msgid "No entries found"
-msgstr ""
+msgstr "Ingen oppføringer funnet"
 
 msgid "has at least"
-msgstr ""
+msgstr "har i det minste"
 
 msgid "entries."
-msgstr ""
+msgstr "oppføringer."
 
 msgid "Enable last for not allowed restrictions."
-msgstr ""
+msgstr "Aktiver sist for ikke tillatte begrensninger."
 
 msgid "Add description"
-msgstr ""
+msgstr "Legg til beskrivelse"
 
 msgid "These actions affect all the clones on the machine"
-msgstr ""
+msgstr "Disse handlingene påvirker alle klonene på maskinen"
 
 msgid "Shutdown all clones"
-msgstr ""
+msgstr "Slå av alle kloner"
 
 msgid "Keep in mind that there may be users using a clone"
-msgstr ""
+msgstr "Husk at det kan være brukere som bruker en klone"
 
 msgid "Yes, shutwdown all the clones"
-msgstr ""
+msgstr "Ja, slå av alle klonene"
