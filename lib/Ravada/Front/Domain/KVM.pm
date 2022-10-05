@@ -201,10 +201,13 @@ sub _sort_xml_list($list, $field) {
 sub _xml_elements($xml, $item) {
     return {} if !defined $xml;
     my $text = $xml->textContent;
-    $item->{_text} = $text if $text && $text !~ /\n/m;
+    $text = 0+$text if $text =~ /^\d+$/;
+    $item->{'#text'} = $text if $text && $text !~ /\n/m;
 
     for my $attribute ( $xml->attributes ) {
-        $item->{$attribute->name} = $attribute->value;
+        my $value = $attribute->value;
+        $value = 0+$value if $value=~ /^\d+$/;
+        $item->{$attribute->name} = $value;
     }
 
     for my $node ( $xml->findnodes('*') ) {
@@ -401,7 +404,7 @@ sub _get_driver_disk($self) {
 
 sub vm_version($self) {
     my $sth = $self->_dbh->prepare(
-        "SELECT version FROM vms v, domains d"
+        "SELECT v.version FROM vms v, domains d"
         ." WHERE v.id=d.id_vm "
         ."    AND d.id=?"
     );

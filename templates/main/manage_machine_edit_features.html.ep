@@ -24,7 +24,7 @@
             </select>
         </span>
         <small>
-        <button type="badge"
+        <button type="button" class="badge"
             ng-show="(feat=='kvm' || feat=='hap' || feat=='vmport')
                 && value !='0' && value!='1'"
             ng-click="item[feat]=0;form_edit.$pristine=false"
