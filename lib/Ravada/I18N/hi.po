@@ -48,13 +48,13 @@ msgid "Prepare base"
 msgstr "बेस तैयार करें"
 
 msgid "Clone"
-msgstr "क्लोन"
+msgstr " प्रतिरूप "
 
 msgid "Can't Prepare Base, Remove Base or Delete. Machine has"
 msgstr "आधार तैयार नहीं कर सकते, आधार निकालें या हटाएं  |"
 
 msgid "Clone/s"
-msgstr "क्लोन"
+msgstr "प्रतिरूप"
 
 msgid "Users List"
 msgstr "उपयोगकर्ता की सूची"
@@ -66,7 +66,7 @@ msgid "Log Out"
 msgstr "लोग आउट"
 
 msgid "Available Machines"
-msgstr "उपलब्ध मशीनें"
+msgstr "उपलब्ध यंत्र"
 
 msgid "Help"
 msgstr "मदद"
@@ -87,7 +87,7 @@ msgid "Settings"
 msgstr "सेटिंग्स"
 
 msgid "New Machine"
-msgstr "नई मशीन"
+msgstr "नया यंत्"
 
 msgid "I want to change my password"
 msgstr "मैं अपना पासवर्ड बदलना चाहता हूं"
@@ -96,7 +96,7 @@ msgid "I want to change my language"
 msgstr "मैं अपनी भाषा बदलना चाहता हूं"
 
 msgid "Language:"
-msgstr "भाषा:"
+msgstr "भाषा"
 
 msgid "English"
 msgstr "अंग्रेज़ी"
@@ -141,7 +141,7 @@ msgid "Actions"
 msgstr "क्रिया"
 
 msgid "Machines"
-msgstr "मशीनें"
+msgstr "यंत्र"
 
 msgid "Down"
 msgstr "नीचे"
@@ -194,9 +194,6 @@ msgstr "दिखाने के लिए कोई संदेश नही�
 msgid "Admin"
 msgstr "व्यवस्थापक"
 
-msgid "machines"
-msgstr "मशीन"
-
 msgid "users"
 msgstr "उपयोगकर्ताओं"
 
@@ -246,7 +243,7 @@ msgid "Machine settings"
 msgstr "मशीन सेटिंग्स"
 
 msgid "Cannot remove base, machine has clones"
-msgstr "आधार को हटा नहीं सकते, मशीन में क्लोन हैं I"
+msgstr "आधार को हटा नहीं सकते, यंत्र के प्रतिरूप हैं I"
 
 msgid "Show/Hide clones"
 msgstr "क्लोन दिखाएँ / छिपाएं"
@@ -293,7 +290,7 @@ msgid "A viewer is required to run the virtual machines."
 msgstr "वर्चुअल मशीन चलाने के लिए एक दर्शक की आवश्यकता है."
 
 msgid "Virtual Machines"
-msgstr "वर्चुअल मशीन"
+msgstr "वर्चुअल यंत्र"
 
 msgid "user"
 msgstr "उपयोगकर्ता"
@@ -308,7 +305,7 @@ msgid "Login with Intranet UPC's username."
 msgstr "इंट्रानेट UPC के उपयोगकर्ता नाम के साथ लॉगिन करें"
 
 msgid "bits) in your computer."
-msgstr "बिट्स) आपके कंप्यूटर में."
+msgstr "बिट्स) आपके संगणक में."
 
 msgid "Permissions"
 msgstr "अनुमतियां"
@@ -347,7 +344,7 @@ msgid "can hibernate clones from virtual machines owned by the user."
 msgstr "उपयोगकर्ता के स्वामित्व वाले वर्चुअल मशीनों से क्लोन को हाइबरनेट कर सकते हैं"
 
 msgid "can hibernate any clone."
-msgstr "कोई भी क्लोन हाइबरनेट कर सकते हैं।"
+msgstr "किसी भी क्लोन को हाइबरनेट कर सकते हैं।"
 
 msgid "can remove any virtual machines owned by the user."
 msgstr "उपयोगकर्ता के स्वामित्व वाले किसी भी वर्चुअल मशीन को निकाल सकते हैं"
@@ -401,13 +398,13 @@ msgid "Template"
 msgstr "टेम्पलेट"
 
 msgid "Disk Size: (GB)"
-msgstr "डिस्क परिमाण: (जीबी)"
+msgstr "डिस्क परिमाण (जीबी)"
 
 msgid "Swap Size: (GB)"
-msgstr "स्वैप परिमाण: (जीबी)"
+msgstr "स्वैप परिमाण (जीबी)"
 
 msgid "Ram: (GB)"
-msgstr "रैम: (जीबी)"
+msgstr "रैम (जीबी)"
 
 msgid "Machine name is required."
 msgstr "मशीन का नाम आवश्यक है"
@@ -457,3 +454,411 @@ msgstr "हिंदी"
 
 msgid "Japanese"
 msgstr "जापानी"
+
+msgid "monitoring"
+msgstr "जांच"
+
+msgid "Are you sure you want to remove the base of"
+msgstr "क्या आपको यकीन है आपको आधार हटाना हैं"
+
+msgid "Are you sure you want to prepare the base of"
+msgstr "क्या आपको यकीन है आपको आधार बनाना हैं"
+
+msgid "Search"
+msgstr "खोज"
+
+msgid "There are no public bases available in this system."
+msgstr "इस सिस्टीम में सार्वजनिक आधार उपलब्ध नहीं है"
+
+msgid "There are no machines available in this system."
+msgstr "इस सिस्टीम में कोई भी मशीन उपलब्ध नहीं है"
+
+msgid "Create a new account"
+msgstr "नया अकाउंट बनाये"
+
+msgid "Show All"
+msgstr "सबको दिखाओ"
+
+msgid "Description"
+msgstr "विवरण"
+
+msgid "Rename"
+msgstr "नामपरिर्वातन"
+
+msgid "Options"
+msgstr "पसन्द"
+
+msgid "Graphics"
+msgstr "ग्राफिक्स"
+
+msgid "Danger"
+msgstr "खतरा"
+
+msgid "Development"
+msgstr "विकास"
+
+msgid "License"
+msgstr "अधिकार"
+
+msgid "and"
+msgstr "और"
+
+msgid "Memory"
+msgstr "स्मृति"
+
+msgid "Cancel"
+msgstr "रद्द"
+
+msgid "Username can not exceed 20 characters"
+msgstr "उपयोगकर्ता नाम बीस अक्षर के ऊपर नहीं हो सकत"
+
+msgid "Attribute"
+msgstr "गुण"
+
+msgid "Default"
+msgstr "अनुपस्थिति"
+
+msgid "Last"
+msgstr "आखिरी"
+
+msgid "Add description"
+msgstr "विवरण जोड़ें"
+
+msgid "Waiting for machine to start"
+msgstr "मशीन शुरू होने की राह देख रहे है"
+
+msgid "today"
+msgstr "आज"
+
+msgid "Compact"
+msgstr "सघन", "सुगठित"
+
+msgid "process"
+msgstr "प्रक्रिया"
+
+msgid "driver"
+msgstr "चालक"
+
+msgid "-- choose hardware --"
+msgstr "हार्डवेयर चुनिए"
+
+msgid "Nothing to monitoring"
+msgstr "जांच के लिए कुछ नहीं"
+
+msgid "Max memory (MB)"
+msgstr "अधिकतम स्मृति"
+
+msgid "Port"
+msgstr "द्वार"
+
+msgid "Public Port"
+msgstr "सार्वजनिक द्वार"
+
+msgid "Type the template name"
+msgstr "टेम्पलेट नाम लिखिए"
+
+msgid "Swap"
+msgstr "विनिमय"
+
+msgid "Data"
+msgstr "जानकारी"
+
+msgid "Congrats"
+msgstr "अभिनन्दन"
+
+msgid "groups"
+msgstr "समूह"
+
+msgid "networks"
+msgstr "नेटवर्क"
+
+msgid "locked"
+msgstr "बंद"
+
+msgid "Requests"
+msgstr "अनुरोध"
+
+msgid "Title"
+msgstr "शीर्षक"
+
+msgid "Color"
+msgstr "रंग"
+
+msgid "to"
+msgstr "तरफ़"
+
+msgid "Changing Public State"
+msgstr "सार्वजनिक स्थिति बदलना"
+
+msgid "Changing Base State"
+msgstr "आधार स्थिति बदलन"
+
+msgid "action"
+msgstr "क्रिया"
+
+msgid "Grants"
+msgstr "अनुमति"
+
+msgid "public"
+msgstr "सार्वजनिक"
+
+msgid "New Base"
+msgstr "नया आधार"
+
+msgid "Version"
+msgstr "संस्करण"
+
+msgid "Authors"
+msgstr "लेखक"
+
+msgid "Below are listed the technologies used in this project:"
+msgstr "नीचे इस परियोजना को लगे तकनीकी लिखे हैं"
+
+msgid "The code is available on "
+msgstr "कोड यहाँ उपलब्ध हैं"
+
+msgid "The code is "
+msgstr "कोड हैं"
+
+msgid "is admin"
+msgstr "व्यवस्थापक हैं"
+
+msgid "Add new user"
+msgstr "नय उपयोगकर्ता "
+
+msgid "Register"
+msgstr "रजिस्टर"
+
+msgid "Current Password:"
+msgstr "वर्तमान पासवर्ड:"
+
+msgid "For more information, check"
+msgstr "अधिक जानकारी के लिए देखना"
+
+msgid "the Windows Clients documentation"
+msgstr "विंडोज ग्राहक प्रलेखन"
+
+msgid "It is programmed in"
+msgstr "कोड इसमें लिखा है"
+
+msgid "with perl framework"
+msgstr "पल्‌ रूपरेखा के साथ"
+
+msgid "MB available"
+msgstr "MB उपलब्ध"
+
+msgid "The machine will shutdown after these minutes"
+msgstr "मिंटन में मशीन बंद होगा"
+
+msgid "Cancel"
+msgstr "रद्द"
+
+msgid "Please enter the following information to create the account"
+msgstr "खाता खोलने के लिए जानकारी भरिये"
+
+msgid "Owner"
+msgstr "मालिक"
+
+msgid "Change the owner of the machine"
+msgstr "मशीन का मालिक बदलिए"
+
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "आभासी मशीन से बाहर आने के लिए SHIFT + F12 दबाये"
+
+msgid "in your downloads folder."
+msgstr "डाउनलोड फोल्डर में"
+
+msgid "copied to clipboard"
+msgstr "क्लिपबोर्ड पर नकल"
+
+msgid "Portuguese"
+msgstr "पुर्तगाली"
+
+msgid "Read more."
+msgstr "और पढ़िए"
+
+msgid "The password for this virtual machine connection is :"
+msgstr "आभासी मशीन के संपर्क का पासवर्ड :"
+
+msgid "Start again"
+msgstr "फिर से शुरू करे"
+
+msgid "The machine is down."
+msgstr "मशीन बैंड है."
+
+msgid "Remove"
+msgstr "हटाना"
+
+msgid "The machine must be started to take the screenshot."
+msgstr "छायाचित्र लेने के लिए मशीन शुरू करे."
+
+msgid "Take screenshot"
+msgstr "छायाचित्र लीजिये"
+
+msgid "Set base picture"
+msgstr "आधार चिट्र"
+
+msgid "Saving the screenshot, please wait a moment..."
+msgstr "स्क्रीनशॉट सहेजा जा रहा है, कृपया कुछ क्षण प्रतीक्षा करें"
+
+msgid "You need to run the machine in order to take a screenshot."
+msgstr "छायाचित्र लेने के लिए मशीन शुरू करे."
+
+msgid "Copying the screenshot, please wait a moment..."
+msgstr "स्क्रीनशॉट कॉपी जा रहा है, कृपया कुछ क्षण प्रतीक्षा करें"
+
+msgid "You need a screenshot in order to copy it to the base machine."
+msgstr "इसे आधार मशीन पर कॉपी करने के लिए आपको एक स्क्रीनशॉट की आवश्यकता होगी."
+
+msgid "Add"
+msgstr "जोड़ें"
+
+msgid "The changes will apply on next restart"
+msgstr "परिवर्तन अगले पुनरारंभ पर लागू होंगे"
+
+msgid "This machine is running and can't be renamed."
+msgstr "यह मशीन चल रही है और इसका नाम बदला नहीं जा सकता."
+
+msgid "Thanks to:"
+msgstr "धन्यवाद:"
+
+msgid "Setting your default language"
+msgstr "अपनी डिफ़ॉल्ट भाषा सेट करना"
+
+msgid "Access denied"
+msgstr "पहुंच अस्वीकृत"
+
+msgid "Empty login name"
+msgstr "खाली प्रयोक्ता नाम"
+
+msgid "Empty password"
+msgstr "खाली पासवर्ड"
+
+msgid "Session timeout"
+msgstr "सेशन खत्म"
+
+msgid "Vietnamese"
+msgstr "वियतनामी"
+
+msgid "Italian"
+msgstr "इतालवी"
+
+msgid "Type a typical LDAP user name to fetch the attribute list"
+msgstr "विशेषता लिस्ट देखने के लिए ठेठ LDAP प्रयोक्ता नाम लिखिए "
+
+msgid "User name"
+msgstr "प्रयोक्ता नाम"
+
+msgid "not found in LDAP server"
+msgstr "LDAP server मैं प्रयोक्ता नाम नहीं पाया गया"
+
+msgid "save"
+msgstr "सहेजें"
+
+msgid "No entries found"
+msgstr "प्रवेश नहीं पाया गया"
+
+msgid "has at least"
+msgstr "कम से कम है"
+
+msgid "Waiting for network to come up"
+msgstr "नेटवर्क आने का इंतजार"
+
+msgid "Accept"
+msgstr "मानना"
+
+msgid "Close"
+msgstr "बंद"
+
+msgid "Apply"
+msgstr "लागू"
+
+msgid "Fail"
+msgstr "असफल"
+
+msgid "Bridge"
+msgstr "पुल"
+
+msgid "disk"
+msgstr "डिस्क"
+
+msgid "cdrom"
+msgstr "सीडी रॉम"
+
+msgid "system"
+msgstr "प्रणाली"
+
+msgid "type"
+msgstr "प्रकार"
+
+msgid "Anonymous"
+msgstr "अनाम"
+
+msgid "Network name is required"
+msgstr "नेटवर्क नाम आवश्यक है"
+
+msgid "Time"
+msgstr "समय"
+
+msgid "reload list"
+msgstr "रीलोड"
+
+msgid "Autostart"
+msgstr "स्वस्थैर्य"
+
+msgid "Volatile"
+msgstr "परिवर्तनशील"
+
+msgid "Enable"
+msgstr "सक्षम करना"
+
+msgid "Frontend"
+msgstr "फ़्रंट एंड"
+
+msgid "Fallback"
+msgstr "पीछे हटना"
+
+msgid "Maintenance"
+msgstr "भरण पोषण"
+
+msgid "Bookings"
+msgstr "बुकिंग"
+
+msgid "Client"
+msgstr "ग्राहक"
+
+msgid "Sorry"
+msgstr "माफ़"
+
+msgid "match"
+msgstr "मिलान"
+
+msgid "New feature"
+msgstr "नयी विशेषता"
+
+msgid "bus"
+msgstr "बस"
+
+msgid "state"
+msgstr "स्थिति"
+
+msgid "on"
+msgstr "चालू"
+
+msgid "off"
+msgstr "बंद"
+
+msgid "ram"
+msgstr "रम"
+
+msgid "device"
+msgstr "उपकरण"
+
+
+
+
+
+
+
+
+
