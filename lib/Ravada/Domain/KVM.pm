@@ -3025,14 +3025,15 @@ sub _default_cpu($self) {
     my ($type) = $doc->findnodes("/domain/os/type");
 
     my $data = {
-        'vcpu'=> {_text => 1 , 'placement' => 'static'}
-        ,'cpu' => { 'model' => { '_text' => 'qemu64' } }
+        'vcpu'=> {'#text' => 1 , 'placement' => 'static'}
+        ,'cpu' => { 'model' => { '#text' => 'qemu64' } 
+        }
     };
 
     my ($x86) = $type->getAttribute('arch') =~ /^x86_(\d+)/;
     if ($x86) {
         $data->{cpu} = { 'mode' =>'custom'
-            , 'model' => { '_text' => 'qemu'.$x86 } };
+            , 'model' => { '#text' => 'qemu'.$x86 } };
     } else {
         warn "I don't know default CPU for arch ".$type->getAttribute()
         ." in domain ".$self->name;
@@ -3043,43 +3044,61 @@ sub _default_cpu($self) {
 
 }
 
+sub _fix_vcpu_from_topology($self, $data) {
+    if (!exists $data->{cpu}->{topology}
+        || !defined($data->{cpu}->{topology})) {
+
+        return;
+    }
+
+    if (!keys %{$data->{cpu}->{topology}}) {
+        $data->{cpu}->{topology} = undef;
+        return;
+    }
+    for (qw(dies sockets cores threads)) {
+        $data->{cpu}->{topology}->{$_} = 1
+        if !$data->{cpu}->{topology}->{$_};
+    }
+    my $dies = $data->{cpu}->{topology}->{dies} or 1;
+    my $sockets = $data->{cpu}->{topology}->{sockets} or 1;
+    my $cores = $data->{cpu}->{topology}->{cores} or 1;
+    my $threads = $data->{cpu}->{topology}->{threads} or 1;
+
+    $data->{vcpu}->{'#text'} = $dies * $sockets * $cores * $threads ;
+}
+
 sub _change_hardware_cpu($self, $index, $data) {
     $data = $self->_default_cpu()
     if !keys %$data;
 
+    $data->{'cpu'}->{'model'}->{'#text'} = 'qemu64'
+    if !$data->{cpu}->{'model'}->{'#text'};
+
     delete $data->{cpu}->{model}->{'$$hashKey'};
-    lock_hash(%$data);
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
     my $count = 0;
     my $changed = 0;
 
     my ($n_vcpu) = $doc->findnodes('/domain/vcpu/text()');
-    if (exists $data->{vcpu} && $n_vcpu ne $data->{vcpu}->{_text}) {
-        my ($vcpu) = $doc->findnodes('/domain/vcpu');
+
+    $self->_fix_vcpu_from_topology($data);
+    lock_hash(%$data);
+
+    my ($vcpu) = $doc->findnodes('/domain/vcpu');
+    if (exists $data->{vcpu} && $n_vcpu ne $data->{vcpu}->{'#text'}) {
         $vcpu->removeChildNodes();
-        $vcpu->appendText($data->{vcpu}->{_text});
+        $vcpu->appendText($data->{vcpu}->{'#text'});
     }
+    my ($domain) = $doc->findnodes('/domain');
     my ($cpu) = $doc->findnodes('/domain/cpu');
     if (!$cpu) {
-        my ($domain) = $doc->findnodes('/domain');
         $cpu = $domain->addNewChild(undef,'cpu');
     }
     my $feature = delete $data->{cpu}->{feature};
 
-    for my $field (keys %{$data->{cpu}}) {
-        if (ref($data->{cpu}->{$field})) {
-            _change_xml($cpu, $field, $data->{cpu}->{$field});
-            $changed++;
-            next;
-        }
+    $changed += _change_xml($domain, 'cpu', $data->{cpu});
 
-        if ( !defined $cpu->getAttribute($field)
-            || $cpu->getAttribute($field) ne $data->{cpu}->{$field}) {
-            $cpu->setAttribute($field, $data->{cpu}->{$field});
-            $changed++;
-        }
-    }
     if ( $feature ) {
         _change_xml_list($cpu, 'feature', $feature, 'name');
         $changed++;
@@ -3249,22 +3268,46 @@ sub _change_xml($xml, $name, $data) {
     confess Dumper([$name, $data])
     if !ref($data) || ( ref($data) ne 'HASH' && ref($data) ne 'ARRAY');
 
-    my ($node) = $xml->findnodes($name);
-    $node = $xml->addNewChild(undef,$name) if !$node;
+    my $changed = 0;
 
-    my $text = delete $data->{_text};
-    if ($text) {
-        $node->removeChildNodes();
-        $node->appendText($text);
+    my ($node) = $xml->findnodes($name);
+    if (!$node) {
+        $node = $xml->addNewChild(undef,$name);
+        $changed++;
     }
 
     for my $field (keys %$data) {
+        if ($field eq '#text') {
+            my $text = $data->{$field};
+            if ($node->textContent ne $text) {
+                $node->setText($text);
+            }
+            next;
+        }
+        if (!defined $data->{$field}) {
+            my ($child) = $node->findnodes($field);
+            $node->removeChild($child) if $child;
+            next;
+        }
         if (ref($data->{$field})) {
-            _change_xml($node,$field,$data->{$field});
+            $changed += _change_xml($node,$field,$data->{$field});
         } else {
+            next if defined $node->getAttribute($field)
+            && $node->getAttribute($field) eq $data->{$field};
+
             $node->setAttribute($field, $data->{$field});
+            $changed++;
         }
     }
+    for my $child ( $node->childNodes() ) {
+        my $name = $child->nodeName();
+        if (!exists $data->{$name} || !defined $data->{$name} ) {
+            $node->removeChild($child);
+            $changed++;
+        }
+    }
+
+    return $changed;
 }
 
 sub _change_hardware_network($self, $index, $data) {
@@ -3338,14 +3381,15 @@ sub _validate_xml($self, $doc) {
         open my $out1,">",$file_out or die $!;
         print $out1 $self->xml_description();
         close $out1;
-        open my $out2,">","/var/tmp/".$self->name().".new.xml" or die $!;
+        my $file_new = "/var/tmp/".$self->name().".new.xml";
+        open my $out2,">",$file_new or die $!;
         my $doc_string = $doc->toString();
         $doc_string =~ s/^<.xml.*//;
         $doc_string =~ s/"/'/g;
         print $out2 $doc_string;
         close $out2;
 
-        confess "\$?=$? $err\ncheck $file_out" if $?;
+        confess "\$?=$? $err\ncheck $file_new" if $?;
     }
 }
 
