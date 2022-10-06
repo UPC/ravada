@@ -124,6 +124,33 @@ sub test_description {
     $clone->remove($USER);
 }
 
+sub test_clone_default_name($vm) {
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+    $base->is_public(1);
+    my $user = create_user(new_domain_name(),$$);
+    my $req = Ravada::Request->clone(
+        uid => $user->id
+        ,id_domain => $base->id
+    );
+    wait_request( check_error => 0);
+    ok($req->status,'done');
+    is($req->error,'');
+    my @clones = $base->clones;
+    is($clones[0]->{name},$base->name."-".$user->name) or exit;
+
+    $req = Ravada::Request->clone(
+        uid => $user->id
+        ,id_domain => $base->id
+    );
+    wait_request( check_error => 0);
+    ok($req->status,'done');
+    is($req->error,'');
+    my @clones2 = $base->clones;
+    is(scalar(@clones2),2);
+
+}
+
 sub test_clone_private($vm) {
     my $base = create_domain($vm);
     my $user = create_user(new_domain_name(),$$);
@@ -198,6 +225,7 @@ for my $vm_name (reverse sort @VMS) {
         use_ok("Ravada::VM::$vm_name");
         test_description($vm_name);
         test_clone_private($vm);
+        test_clone_default_name($vm);
 
         my $domain = test_create_domain($vm_name);
 

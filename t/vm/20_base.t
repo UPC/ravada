@@ -1417,7 +1417,11 @@ sub test_display_drivers($vm, $remove) {
         Ravada::Request->start_domain(uid => user_admin->id
             ,id_domain => $domain->id
         );
-        wait_request(debug => 0);
+        for ( 1 .. 10 ) {
+            wait_request(debug => 0);
+            last if !$req->error || $req->error !~ /Retry/i;
+            sleep 1;
+        }
         is($req->status, 'done');
         is($req->error, '') or die $domain->name;
         $n_displays++;
@@ -1942,7 +1946,6 @@ sub test_already_requested_working($vm) {
     my $req2 = Ravada::Request->prepare_base(@args);
     $req->status('requested');
 
-    is($req2->id, $req->id);
     wait_request();
     is($req->status, 'done');
     is($req2->status, 'done');

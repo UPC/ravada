@@ -12,12 +12,16 @@
     >
     <div class="jumbotron" ng-cloak="">
 
-        <h2><%=l 'Running' %> {{domain.name}}</h2>
+        <h2><%=l 'Running' %> {{domain.alias}}</h2>
             <div class="alert alert-warning">
                 <%=l 'A viewer is required to run the virtual machines.' %>
                 <a href="/requirements"><%=l 'Read more.' %></a>
             </div>
-        <div ng-hide="request.status == 'done'"><%=l 'Waiting for machine to start' %> <i class="fas fa-sync-alt fa-spin"></i></div>
+
+        <div ng-show="request.status != 'done' 
+            || (domain && domain.is_base )
+            || (domain && domain.is_active==0 && count_start<=2)"
+            ><%=l 'Waiting for machine to start' %> <i class="fas fa-sync-alt fa-spin"></i></div>
         <div ng-show="domain">
             <div ng-show="domain.description ||(domain.is_active && domain.msg_timeout)">
                 <span ng-bind-html="domain.description"
@@ -88,7 +92,7 @@
         <div>
             <div class="panel-body">
                 <div ng-show="request.error && !domain.is_active">{{request.error}}</div>
-                <div ng-show="domain && request.status == 'done' && domain.is_active == 0"><%=l 'The machine is down.' %>
+                <div ng-show="domain && request.status == 'done' && domain.is_active == 0 && count_start>2"><%=l 'The machine is down.' %>
                  <button type="submit" class="btn btn-primary" onclick="location.reload('forceGet')"><%=l 'Start again' %></button>
                 </div>
             </div>

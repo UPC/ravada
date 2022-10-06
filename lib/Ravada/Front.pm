@@ -130,14 +130,14 @@ Returns: listref of machines
 
 sub list_machines_user($self, $user, $access_data={}) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,is_public, description, screenshot, id_owner"
+        "SELECT id,name,alias,is_public, description, screenshot, id_owner"
         ." FROM domains "
         ." WHERE is_base=1"
         ." ORDER BY name "
     );
-    my ($id, $name, $is_public, $description, $screenshot, $id_owner);
+    my ($id, $name, $alias, $is_public, $description, $screenshot, $id_owner);
     $sth->execute;
-    $sth->bind_columns(\($id, $name, $is_public, $description, $screenshot, $id_owner));
+    $sth->bind_columns(\($id, $name, $alias, $is_public, $description, $screenshot, $id_owner));
 
     my $bookings_enabled = $self->setting('/backend/bookings');
     my @list;
@@ -153,7 +153,8 @@ sub list_machines_user($self, $user, $access_data={}) {
             ,id_base => $id
         );
         next unless $clone || $user->is_admin || ($is_public && $user->allowed_access($id));
-        my %base = ( id => $id, name => $name
+        $name = $alias if defined $alias;
+        my %base = ( id => $id, name => Encode::decode_utf8($name)
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
             , description => ($description or '')
@@ -284,7 +285,7 @@ Returns a list of the domains as a listref
 
 sub list_domains($self, %args) {
 
-    my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status, is_public "
+    my $query = "SELECT d.name,d.alias, d.id, id_base, is_base, id_vm, status, is_public "
         ."      ,vms.name as node , is_volatile, client_status, id_owner "
         ."      ,comment, is_pool"
         ."      ,d.date_changed"
@@ -321,6 +322,10 @@ sub list_domains($self, %args) {
             $self->_remove_domain_db($row->{id});
             next;
         }
+
+        $row->{name}=Encode::decode_utf8($row->{alias})
+        if defined $row->{alias} && length($row->{alias});
+
         $row->{has_clones} = 0 if !exists $row->{has_clones};
         $row->{is_locked} = 0 if !exists $row->{is_locked};
         $row->{is_active} = 0;
@@ -470,20 +475,19 @@ sub domain_exists {
     my $self = shift;
     my $name = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare(
+    my $sth = $self->_dbh->prepare(
         "SELECT id FROM domains "
-        ." WHERE name=? "
+        ." WHERE (name=? OR alias=?) "
         ."    AND ( is_volatile = 0 "
         ."          OR is_volatile=1 AND status = 'active' "
         ."         ) "
     );
-    $sth->execute($name);
+    $sth->execute($name,$name);
     my ($id) = $sth->fetchrow;
     $sth->finish;
     return 0 if !defined $id;
     return 1;
 }
-
 
 =head2 node_exists
 
@@ -974,8 +978,8 @@ sub search_domain {
 
     my $name = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id, vm FROM domains WHERE name=?");
-    $sth->execute($name);
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, vm FROM domains WHERE name=? OR alias=?");
+    $sth->execute($name, $name);
     my ($id, $tipo) = $sth->fetchrow or return;
 
     return Ravada::Front::Domain->open($id);
@@ -983,7 +987,7 @@ sub search_domain {
 
 =head2 list_requests
 
-Returns a list of ruquests : ( id , domain_name, status, error )
+Returns a list of requests : ( id , domain_name, status, error )
 
 =cut
 
@@ -999,6 +1003,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT requests.id, command, args, requests.date_changed, requests.status"
             ." ,requests.error, id_domain ,domains.name as domain"
+            ." ,domains.alias as domain_alias"
         ." FROM requests left join domains "
         ."  ON requests.id_domain = domains.id"
         ." WHERE "
@@ -1009,9 +1014,9 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
     $sth->execute($time_recent);
     my @reqs;
     my ($id_request, $command, $j_args, $date_changed, $status
-        , $error, $id_domain, $domain);
+        , $error, $id_domain, $domain, $alias);
     $sth->bind_columns(\($id_request, $command, $j_args, $date_changed, $status
-        , $error, $id_domain, $domain));
+        , $error, $id_domain, $domain, $alias));
 
     while ( $sth->fetch) {
         my $epoch_date_changed = time;
@@ -1050,6 +1055,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
         my $args;
         $args = decode_json($j_args) if $j_args;
 
+        $domain = Encode::decode_utf8($alias) if defined $alias;
         if (!$domain && $args->{id_domain}) {
             $domain = $args->{id_domain};
         }
@@ -1061,8 +1067,8 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
         push @reqs,{ id => $id_request,  command => $command, date_changed => $date_changed, status => $status, name => $args->{name}
             ,domain => $domain
             ,date => $date_changed
-            ,message => $message
-            ,error => $error
+            ,message => Encode::decode_utf8($message)
+            ,error => Encode::decode_utf8($error)
         };
     }
     $sth->finish;
@@ -1171,7 +1177,7 @@ sub list_bases_anonymous {
     my @bases;
     while ( $sth->fetch) {
         next if !$net->allowed_anonymous($id);
-        my %base = ( id => $id, name => $name
+        my %base = ( id => $id, name => Encode::decode_utf8($name)
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
             , is_active => 0

@@ -5,6 +5,8 @@ use strict;
 
 our $VERSION = '1.7.0';
 
+use utf8;
+
 use Carp qw(carp croak cluck);
 use Data::Dumper;
 use DBIx::Connector;
@@ -688,19 +690,8 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://edge1.parrot.run/parrot/iso/4.11.3/'
-            ,file_re => 'Parrot-xfce-4.11.3_amd64.iso'
-            ,sha256_url => '$url/signed-hashes.txt'
-            ,min_disk_size => '10'
-        }
-        ,parrot_mate_amd64 => {
-		  name => 'Parrot Security Edition MATE'
-            ,description => 'Parrot Security Edition MATE 64 Bits'
-            ,arch => 'x86_64'
-            ,xml => 'jessie-amd64.xml'
-            ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://edge1.parrot.run/parrot/iso/4.11.3/'
-            ,file_re => 'Parrot-security-4.11.3_amd64.iso'
+            ,url => 'https://download.parrot.sh/parrot/iso/5.0.1/'
+            ,file_re => 'Parrot-home-5.0.1_amd64.iso'
             ,sha256_url => '$url/signed-hashes.txt'
             ,min_disk_size => '10'
         }
@@ -806,11 +797,17 @@ sub _update_isos {
     );
     $self->_scheduled_fedora_releases(\%data) if $0 !~ /\.t$/;
     $self->_update_table($table, $field, \%data);
+
+    # old entries to remove
+    $data{parrot_mate_amd64} = {
+		  name => 'Parrot Security Edition MATE'
+    };
     $self->_update_table_isos_url(\%data);
 
 }
 
 sub _update_table_isos_url($self, $data) {
+    my $sth_delete = $CONNECTOR->dbh->prepare("DELETE FROM iso_images WHERE id=?");
     my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE name=?");
     for my $release (sort keys %$data) {
         my $entry = $data->{$release};
@@ -823,6 +820,13 @@ sub _update_table_isos_url($self, $data) {
         }
         $sth->execute($entry->{name});
         my $row = $sth->fetchrow_hashref();
+        if (keys %$entry == 1) {
+            if ($row->{id} && !$row->{device}) {
+                warn "INFO: removing old $entry->{name}\n";
+                $sth_delete->execute($row->{id});
+            }
+            next;
+        }
         for my $field (keys %$entry) {
             next if defined $row->{$field} && $row->{$field} eq $entry->{$field};
             my $sth_update = $CONNECTOR->dbh->prepare(
@@ -2526,7 +2530,9 @@ sub _upgrade_tables {
     $self->_upgrade_table('networks','requires_password','int(11)');
     $self->_upgrade_table('networks','n_order','int(11) not null default 0');
 
+    $self->_upgrade_table('domains','alias','varchar(255) DEFAULT NULL');
     $self->_upgrade_table('domains','spice_password','varchar(20) DEFAULT NULL');
+    $self->_upgrade_table('domains','name','VARCHAR(255) NOT NULL');
     $self->_upgrade_table('domains','description','text DEFAULT NULL');
     $self->_upgrade_table('domains','run_timeout','int DEFAULT NULL');
     $self->_upgrade_table('domains','id_vm','int DEFAULT NULL');
@@ -2649,6 +2655,10 @@ sub _connect_dbh {
         warn "Try $try $@\n";
     }
     die ($@ or "Can't connect to $driver $db at $host");
+}
+
+sub _dbh($self) {
+    return $CONNECTOR->dbh;
 }
 
 =head2 display_ip
@@ -3157,10 +3167,10 @@ sub search_domain($self, $name, $import = 0) {
         ." FROM domains d LEFT JOIN vms "
         ."      ON d.id_vm = vms.id "
         ." WHERE "
-        ."    d.name=? "
+        ."    (d.name=? OR d.alias=?) "
         ;
     my $sth = $CONNECTOR->dbh->prepare($query);
-    $sth->execute($name);
+    $sth->execute($name, $name);
     my ($id, $id_vm ) = $sth->fetchrow();
 
     return if !$id;
@@ -3881,7 +3891,8 @@ sub _do_execute_command {
             if (length($subject) > 40 ) {
                 $message = $subject;
                 $subject = substr($subject,0,40);
-                $user->send_message($subject, $message);
+                $user->send_message(Encode::decode_utf8($subject)
+                    , Encode::decode_utf8($message));
             }
         }
     }
@@ -4292,12 +4303,56 @@ sub _cmd_clone($self, $request) {
         delete $args->{$_};
     }
 
-    my $name = ( $request->defined_arg('name') or $domain->name."-".$user->name );
+    my $name = $request->defined_arg('name');
+    my $alias0 = ($request->defined_arg('alias') or $name);
+    my $alias;
+    ($name,$alias) = $self->_new_clone_name($domain, $user) if !$name;
+
+    $alias = $alias0 if $alias0;
+
+    $args->{alias} = $alias if $alias;
 
     my $clone = $domain->clone(
         name => $name
         ,%$args
     );
+
+    $request->id_domain($clone->id) if $clone;
+
+    Ravada::Request->start_domain(
+        uid => $user->id
+        ,id_domain => $clone->id
+        ,remote_ip => $request->defined_arg('remote_ip')
+        ,after_request => $request->id
+    ) if $request->defined_arg('start');
+
+}
+
+sub _new_clone_name($self, $base,$user) {
+    my $name;
+    my $alias = $base->name;
+    $alias = $base->_data('alias') if $base->_data('alias');
+    if ($user->name =~ /^[a-z0-9_\-]+$/i) {
+        $name = $base->name."-".$user->name;
+        $alias .= "-".$user->name;
+    } else {
+        my $length = length($user->id);
+        my $n = "0" x (4-$length);
+        $name = $base->name."-".$n.$user->id;
+        $alias .= "-".Encode::decode_utf8($user->name);
+    }
+    return ($name,$alias) if !$self->_domain_exists($name);
+
+    my $count =1;
+    my $name2;
+    for ( ;; ) {
+        $name2 = "$name-".++$count;
+        return $name2 if !$self->_domain_exists($name2);
+    }
+}
+
+sub _domain_exists {
+    return Ravada::Front::domain_exists(@_);
 }
 
 sub _get_last_used_clone_id
@@ -4382,7 +4437,7 @@ sub _cmd_start {
             .$domain->name."</a>"
             ." started"
         ;
-    $request->status('done', $msg);
+    $request->status('done', Encode::decode_utf8($msg));
 
 }
 
