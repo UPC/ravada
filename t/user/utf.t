@@ -72,7 +72,6 @@ sub test_user_name_surname($vm) {
     my $base = create_domain_v2(vm => $vm);
     $base->is_public(1);
     $base->prepare_base(user_admin);
-    diag($base->name);
 
     for my $sep (qw (. _ -)) {
         my $name = new_domain_name()."${sep}pep${sep}bartroli";
@@ -89,11 +88,18 @@ sub test_user_name_surname($vm) {
         ok($clonef,"Expecting a clone owned by ".$user->id) or next;
 
         ok(utf8::valid($clonef->{name}));
-        is($clonef->{name},$base->name."-".$user->name) or exit;
+        my $user_name = $user->name;
+        $user_name =~ tr/./-/;
+        is($clonef->{name},$base->name."-".$user_name) or exit;
 
         my $base_name = $base->name;
-        is($clonef->{name},"$base_name-$name") or exit;
-        is($clonef->{alias},$clonef->{name});
+        is($clonef->{name},"$base_name-$user_name") or exit;
+
+        if ($sep eq '.' ) {
+            is($clonef->{alias},$base->alias."-".$user->name);
+        } else {
+            is($clonef->{alias},$clonef->{name});
+        }
 
         _test_utf8($user);
         _test_messages_utf8($user);
@@ -126,12 +132,15 @@ sub test_user_name_europe($vm) {
         ,"'" => '_'
         ,'€' => 'E'
         ,'$' => 'S'
+        ,'.' => '-'
+        ,'2' => '2'
 
     );
     for my $letter (sort keys %replace) {
         my $prefix = new_domain_name();
         my $name = "$prefix.$letter.pep${letter}";
-        my $expected =$prefix.".".$replace{$letter}.".pep".$replace{$letter};
+        my $expected =$prefix."-".$replace{$letter}."-pep".$replace{$letter}."";
+        $expected =~ s/--+/-/g;
         my $user = create_user($name, $$);
         ok(utf8::valid($user->name));
 
@@ -147,8 +156,12 @@ sub test_user_name_europe($vm) {
         ok(utf8::valid($clonef->{name}));
 
         my $base_name = $base->name;
-        is($clonef->{name},"$base_name-$expected") or exit;
-        is($clonef->{alias},"$base_name-$name");
+        if ($letter eq '.') {
+            like($clonef->{name},qr/^$base_name-$expected/);
+        } else {
+            is($clonef->{name},"$base_name-$expected") or exit;
+        }
+        is($clonef->{alias},$base->alias."-".$name);
         isnt($clonef->{alias},$clonef->{name});
 
         _test_utf8($user);

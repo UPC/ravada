@@ -407,7 +407,7 @@ sub _around_create_domain {
 
     my $config = delete $args{config};
 
-    if ($name !~ /^[a-zA-Z0-9_\.\-]+$/) {
+    if ($name !~ /^[a-zA-Z0-9_\-]+$/) {
         $alias = $self->_set_alias_unique($alias or $name);
         $name = $self->_set_ascii_name($name);
         $args_create{name} = $name;
@@ -519,7 +519,7 @@ sub _around_create_domain {
 
 sub _set_ascii_name($self, $name) {
     my $length = length($name);
-    $name =~ tr/âêîôûáéíóúàèìòùäëïöüçñ'/aeiouaeiouaeiouaeioucn_/;
+    $name =~ tr/.âêîôûáéíóúàèìòùäëïöüçñ'/-aeiouaeiouaeiouaeioucn_/;
     $name =~ tr/ÂÊÎÔÛÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÇÑ€$/AEIOUAEIOUAEIOUAEIOUCNES/;
     $name =~ tr/A-Za-z0-9_\.\-/\-/c;
     $name =~ s/^\-*//;
