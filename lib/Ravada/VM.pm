@@ -1543,7 +1543,7 @@ sub read_file( $self, $file ) {
 
 sub _read_file_local( $self, $file ) {
     confess "Error: file undefined" if !defined $file;
-    CORE::open my $in,'<',$file or die "$! $file";
+    CORE::open my $in,'<',$file or croak "$! $file";
     return join('',<$in>);
 }
 

@@ -12,8 +12,8 @@ extends 'Ravada::Front::Domain';
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-our %GET_CONTROLLER_SUB = (
-    usb => \&_get_controller_usb
+our %GET_HW_SUB = (
+    usb => \&_get_hw_usb
     ,'cpu' => \&_get_controller_cpu
     ,disk => \&_get_controller_disk
     ,display => \&_get_controller_display
@@ -22,6 +22,7 @@ our %GET_CONTROLLER_SUB = (
     ,network => \&_get_controller_network
     ,video => \&_get_controller_video
     ,sound => \&_get_controller_sound
+    ,'usb controller' => \&_get_hw_usb_controller
     );
 
 our %GET_DRIVER_SUB = (
@@ -36,27 +37,28 @@ our %GET_DRIVER_SUB = (
      ,disk => \&_get_driver_disk
      ,display => \&_get_driver_display
      ,cpu => \&_get_driver_cpu
+     ,'usb controller'=> \&_get_driver_usb_controller
 );
 
 
 sub get_controller_by_name($self, $name) {
-    if ( $GET_CONTROLLER_SUB{filesystem}
+    if ( $GET_HW_SUB{filesystem}
         && $self->vm_version() < 6200000) {
-        delete $GET_CONTROLLER_SUB{filesystem};
+        delete $GET_HW_SUB{filesystem};
     }
 
-    return $GET_CONTROLLER_SUB{$name};
+    return $GET_HW_SUB{$name};
 }
 
 sub list_controllers($self) {
-    if ( $GET_CONTROLLER_SUB{filesystem}
+    if ( $GET_HW_SUB{filesystem}
         && $self->vm_version() < 6200000) {
-        delete $GET_CONTROLLER_SUB{filesystem};
+        delete $GET_HW_SUB{filesystem};
     }
-    return %GET_CONTROLLER_SUB;
+    return %GET_HW_SUB;
 }
 
-sub _get_controller_usb {
+sub _get_hw_usb {
 	my $self = shift;
     $self->xml_description if !$self->readonly();
     my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
@@ -65,12 +67,44 @@ sub _get_controller_usb {
     
     for my $controller ($doc->findnodes('/domain/devices/redirdev')) {
         next if $controller->getAttribute('bus') ne 'usb';
-        push @ret,({ name => $controller->getAttribute('type')});
+        push @ret,({ type => $controller->getAttribute('type')
+                ,_can_remove => 1
+            });
     }
 
     return $ret[0] if !wantarray && scalar@ret <2;
     return @ret;
 }
+
+sub _get_hw_usb_controller {
+	my $self = shift;
+    $self->xml_description if !$self->readonly();
+    my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
+
+    my @ret;
+    my %dupe;
+    my $n = 1;
+    for my $controller ($doc->findnodes('/domain/devices/controller')) {
+        next if $controller->getAttribute('type') ne 'usb';
+        my $model = $controller->getAttribute('model');
+        my $dev = { model => $model, _can_edit => 1, _can_remove => 1 };
+        my $name;
+        for ( ;; ) {
+            $name = "$model-$n";
+            last if !$dupe{$name}++;
+            $n++;
+        }
+        $dev->{_name} = $name;
+        push @ret,($dev);
+    }
+
+    if (scalar(@ret) == 1) {
+        $ret[0]->{_can_remove} = 0;
+    }
+    return $ret[0] if !wantarray && scalar@ret <2;
+    return @ret;
+}
+
 
 sub _get_controller_video($self) {
     my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
@@ -82,7 +116,8 @@ sub _get_controller_video($self) {
     for my $dev ($doc->findnodes('/domain/devices/video')) {
         my ($model) = $dev->findnodes("model");
         my $type = $model->getAttribute('type');
-        my $item = { type => $type };
+        my $item = { type => $type, _can_edit => 1, _can_remove => 1
+        };
         my $name = $type;
         for my $n (0..10) {
             $name = "$type-$n";
@@ -107,6 +142,8 @@ sub _get_controller_filesystem($self) {
         delete $fs->{accessmode};
         delete $fs->{driver};
         delete $fs->{type};
+        $fs->{_can_edit} = 1;
+        $fs->{_can_remove} = 1;
 
         lock_hash(%$fs);
     }
@@ -124,7 +161,7 @@ sub _get_controller_generic($self,$type) {
 
     my $count = 0;
     for my $dev ($doc->findnodes('/domain/devices/'.$type)) {
-        my $item = { };
+        my $item = { _can_edit => 1, _can_remove => 1 };
         _xml_elements($dev,$item);
         delete $item->{address};
         lock_hash(%$item);
@@ -141,6 +178,8 @@ sub _get_controller_cpu($self) {
         ,_order => 0
         ,cpu => {}
         ,vcpu => {}
+        ,_can_edit => 1
+        ,_cat_remove => 0
     };
 
     my ($xml_cpu) = $doc->findnodes("/domain/cpu");
@@ -174,6 +213,7 @@ sub _get_controller_features($self) {
     my $item = {
         _name => 'features'
         ,_order => 1
+        ,_can_edit => 1
     };
 
     my ($xml) = $doc->findnodes("/domain/features");
@@ -254,6 +294,8 @@ sub _get_controller_network($self) {
                   ,driver => $model->getAttribute('type')
                   ,bridge => $source->getAttribute('bridge')
                  ,network => $source->getAttribute('network')
+                 ,_can_edit => 1
+                 ,_can_remove => 1
         });
     }
 
@@ -301,7 +343,10 @@ sub _get_driver_generic($self,$xml_path,$attribute=undef) {
 
     for my $driver ($doc->findnodes($xml_path)) {
         if (defined $attribute) {
-            push @ret,($driver->getAttribute($attribute));
+            my $value = $driver->getAttribute($attribute);
+            confess "Error: attribute $attribute not in "
+            .$driver->toString() if !defined $value;
+            push @ret,($value);
         } else {
             my $str = $driver->toString;
             $str =~ s{^<$tag (.*)/>}{$1};
@@ -315,6 +360,10 @@ sub _get_driver_generic($self,$xml_path,$attribute=undef) {
 
 sub _get_driver_cpu($self) {
     return $self->_get_driver_generic('/domain/cpu','mode');
+}
+
+sub _get_driver_usb_controller($self) {
+    return $self->_get_driver_generic('/domain/devices/controller[@type="usb"]','model');
 }
 
 sub _get_driver_graphics {
@@ -401,7 +450,7 @@ sub _get_driver_disk($self) {
 
 sub vm_version($self) {
     my $sth = $self->_dbh->prepare(
-        "SELECT version FROM vms v, domains d"
+        "SELECT v.version FROM vms v, domains d"
         ." WHERE v.id=d.id_vm "
         ."    AND d.id=?"
     );
