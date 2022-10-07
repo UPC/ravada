@@ -393,14 +393,14 @@ sub test_pool_with_nested_bases($vm) {
             ,name => new_domain_name()."-base"
         );
     }
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     for my $clone ( $base->clones() ) {
         Ravada::Request->prepare_base(
             uid => user_admin->id
             ,id_domain => $clone->{id}
         );
     }
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     $base->pools(1);
     my $n = 5;
     my $started = 3;
