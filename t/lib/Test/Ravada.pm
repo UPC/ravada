@@ -81,6 +81,8 @@ create_domain
     mojo_request_url_post
 
     remove_old_user
+    remove_old_users
+    remove_old_users_ldap
 
     mangle_volume
     test_volume_contents
@@ -644,6 +646,10 @@ sub _discover() {
         my @list = grep { $_ =~ /^$name/ } @$discover;
         for my $name (@list) {
             diag("Importing $name");
+
+            #            $name = Encode::decode_utf8($name)
+            # if utf8::valid($name);
+
             $req = Ravada::Request->import_domain(
                 name => $name
                 ,id_owner => user_admin->id
@@ -744,6 +750,8 @@ sub _remove_old_domains_vm($vm_name) {
 
     my @domains;
     eval { @domains = $vm->list_domains() };
+    warn $@ if $@;
+    return if $@;
     for my $domain ( sort { $b->name cmp $a->name }  @domains) {
         next if $domain->name !~ /^$base_name/i;
 
@@ -797,12 +805,14 @@ sub _remove_old_domains_kvm {
     my $vm = shift;
 
     if (!$vm) {
+        my $vm_internal;
         eval {
             my $rvd_back = rvd_back();
             $vm = $rvd_back->search_vm('KVM');
+            $vm_internal = $vm->vm;
         };
         diag($@) if $@;
-        return if !$vm;
+        return if !$vm || !$vm_internal;
     }
     return if !$vm->vm;
     _activate_storage_pools($vm);
@@ -919,6 +929,7 @@ sub mojo_request($t, $req_name, $args) {
     my $response = $t->tx->res->json();
     ok(exists $response->{request}) or return;
     wait_request(background => 1);
+    return $response->{request};
 }
 
 sub mojo_request_url_post($t,$url, $json) {
@@ -1441,6 +1452,7 @@ sub clean($ldap=undef) {
     _remove_old_entries('vms');
     _remove_old_entries('networks');
     _remove_old_groups_ldap();
+    remove_old_user_ldap();
 
     if ($file_remote_config) {
         my $config;
@@ -1550,11 +1562,37 @@ sub remove_old_user($user_name=undef) {
     $sth->execute($user_name);
 }
 
-sub remove_old_user_ldap {
-    for my $name (@USERS_LDAP ) {
+sub remove_old_user_ldap(@users) {
+    @users = @USERS_LDAP if !@users;
+    for my $name (@users) {
         if ( Ravada::Auth::LDAP::search_user($name) ) {
             Ravada::Auth::LDAP::remove_user($name)  
         }
+    }
+}
+
+sub remove_old_users() {
+    my $users =  rvd_front->list_users();
+
+    my $base_name = base_domain_name();
+    for my $user (@$users) {
+        next unless $user->{name} =~ /^$base_name/;
+        remove_old_user($user->{name});
+    }
+
+}
+
+sub remove_old_users_ldap() {
+
+    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    return if !$ldap;
+    my @users;
+    eval { @users = Ravada::Auth::LDAP::search_user(name => '*', escape_username => 0) };
+    warn $@ if $@;
+    my $base_name = base_domain_name();
+    for my $user (@users) {
+        next if $user->get_value('cn') !~ /^$base_name/;
+        $user->delete()->update($ldap);
     }
 }
 
@@ -1818,8 +1856,8 @@ sub hibernate_node($node) {
         my $domain_node = _domain_node($node);
         eval { $domain_node->hibernate( user_admin ) };
         my $error = $@;
-        warn $error if $error;
         last if !$error || $error =~ /is not active|not valid/;
+        confess $error if $error;
     }
 
     my $max_wait = 30;
@@ -2058,8 +2096,15 @@ sub local_ips($vm) {
     return @ips;
 }
 
-sub shutdown_domain_internal($domain) {
+sub shutdown_domain_internal($domain, $nice=0) {
     if ($domain->type eq 'KVM') {
+        if ($nice) {
+            $domain->domain->shutdown();
+            for ( 1 .. 60 ) {
+                return if !$domain->domain->is_active;
+                sleep 1;
+            }
+        }
         $domain->domain->destroy();
     } elsif ($domain->type eq 'Void') {
         $domain->_store(is_active => 0 );
@@ -2286,6 +2331,7 @@ sub connector {
 sub DESTROY {
     shutdown_nodes();
     remove_old_user_ldap() if $CONNECTOR;
+    remove_old_users()      if $CONNECTOR;
     _unlock_all();
 }
 
@@ -2397,6 +2443,7 @@ sub end($ldap=undef) {
     _check_leftovers();
     _check_iptables();
     clean($ldap);
+    remove_old_users()      if $CONNECTOR;
     _unlock_all();
     _file_db();
     rmdir _dir_db();
@@ -2404,7 +2451,10 @@ sub end($ldap=undef) {
 
 sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
                     , $with_admin=0
-                    , $with_posix_group=0) {
+                    , $with_posix_group=0
+                    , $extra=undef) {
+
+    $file_config = 't/etc/ravada_ldap.conf' if !defined $file_config;
 
     if ( ! -e $file_config) {
         my $config = {
@@ -2432,6 +2482,12 @@ sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
 
     $config->{vm}=['KVM','Void'];
     delete $config->{ldap}->{ravada_posix_group}   if !$with_posix_group;
+
+    if(defined $extra) {
+        for my $field (keys %$extra) {
+            $config->{ldap}->{$field} = $extra->{$field};
+        }
+    }
 
     my $fly_config = "/var/tmp/ravada_".base_domain_name().".$$.conf";
     DumpFile($fly_config, $config);

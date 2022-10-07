@@ -50,9 +50,7 @@
                     </div>
                     <div class="form-group row alert alert-warning"
                         ng-hide="src_machine.is_base || !src_machine">
-                        <%=l 'The source machine is not a base. It must be
-                        prepared before it can be copied. This
-                        process may take some minutes.' %>
+                        <%=l 'The source machine is not a base. It must be prepared before it can be copied. This process may take some minutes.' %>
                     </div>
                     <div ng-show="name_duplicated" class="form-group row alert alert-danger"
                             role="alert">

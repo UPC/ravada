@@ -185,7 +185,7 @@ sub _load_data {
     my $self = shift;
     _init_connector();
 
-    die "No login name nor id " if !$self->name && !$self->id;
+    confess "No login name nor id " if !defined $self->name && !$self->id;
 
     confess "Undefined \$\$CON" if !defined $$CON;
     my $sth = $$CON->dbh->prepare(
@@ -344,8 +344,7 @@ Returns true if the user is admin.
 =cut
 
 
-sub is_admin {
-    my $self = shift;
+sub is_admin($self) {
     return ($self->{_data}->{is_admin} or 0);
 }
 
@@ -1171,14 +1170,10 @@ sub ldap_entry($self) {
 
     return $self->{_ldap_entry} if $self->{_ldap_entry};
 
-    for my $field ( qw(uid cn)) {
-        my ($entry) = Ravada::Auth::LDAP::search_user( name => $self->name,field => $field );
-        next if !$entry;
-        $self->{_ldap_entry} = $entry;
-        return $entry;
-    }
+    my ($entry) = Ravada::Auth::LDAP::search_user( name => $self->name );
+    $self->{_ldap_entry} = $entry;
 
-    return;
+    return $entry;
 }
 
 =head2 groups

@@ -10,25 +10,25 @@
     <div class="form-check">
         <input class="form-check-input" type="radio" ng-model="$ctrl.confirm.type" id="current" value="current">
         <label class="form-check-label" for="current">
-            This event
+            <%=l 'This event' %>
         </label>
     </div>
     <div class="form-check">
         <input class="form-check-input" type="radio" ng-model="$ctrl.confirm.type" id="next" value="next">
         <label class="form-check-label" for="next">
-            This event and the following
+            <%=l 'This event and the following' %>
         </label>
     </div>
     <div class="form-check">
         <input class="form-check-input" type="radio" ng-model="$ctrl.confirm.type" id="next_dow" value="next_dow">
         <label class="form-check-label" for="next">
-            This event and the following with same day of week
+            <%=l 'This event and the following with same day of week' %>
         </label>
     </div>
     <div class="form-check">
         <input class="form-check-input" type="radio" ng-model="$ctrl.confirm.type" id="all" value="all">
         <label class="form-check-label" for="all">
-            All events
+            <%=l 'All events' %>
         </label>
     </div>
 </div>
@@ -36,11 +36,11 @@
     <div class="d-flex">
         <button type="button" class="btn btn-secondary" ng-click="$ctrl.onCancel()"
                 data-dismiss="modal"
-        >Cancel
+        ><%=l 'Cancel' %>
         </button>
         <button type="button" class="btn btn-primary ml-2"
                 ng-click="$ctrl.onConfirm($ctrl.confirm.type)"
-        >Confirm
+        ><%=l 'Confirm' %>
         </button>
     </div>
 </div>

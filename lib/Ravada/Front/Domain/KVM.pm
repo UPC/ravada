@@ -401,7 +401,7 @@ sub _get_driver_disk($self) {
 
 sub vm_version($self) {
     my $sth = $self->_dbh->prepare(
-        "SELECT version FROM vms v, domains d"
+        "SELECT v.version FROM vms v, domains d"
         ." WHERE v.id=d.id_vm "
         ."    AND d.id=?"
     );
