@@ -9,6 +9,7 @@ Ravada::VM - Virtual Managers library for Ravada
 
 =cut
 
+use utf8;
 use Carp qw( carp confess croak cluck);
 use Data::Dumper;
 use File::Path qw(make_path);
@@ -403,8 +404,15 @@ sub _around_create_domain {
        my $name = delete $args{name};
        my $swap = delete $args{swap};
        my $from_pool = delete $args{from_pool};
+       my $alias = delete $args{alias};
 
     my $config = delete $args{config};
+
+    if ($name !~ /^[a-zA-Z0-9_-]+$/) {
+        $alias = $self->_set_alias_unique($alias or $name);
+        $name = $self->_set_ascii_name($name);
+        $args_create{name} = $name;
+    }
 
      # args get deleted but kept on %args_create so when we call $self->$orig below are passed
      delete $args{disk};
@@ -412,7 +420,7 @@ sub _around_create_domain {
      my $request = delete $args{request};
      delete $args{iso_file};
      delete $args{id_template};
-     delete @args{'description','remove_cpu','vm','start','options','id'};
+     delete @args{'description','remove_cpu','vm','start','options','id', 'alias'};
 
     confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
 
@@ -422,6 +430,10 @@ sub _around_create_domain {
         $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
         $base = $vm_local->search_domain_by_id($id_base)
             or confess "Error: I can't find domain $id_base on ".$self->name;
+
+        die "Error: user ".$owner->name." can not clone from ".$base->name
+        unless $owner->allowed_access($base->id);
+
         $volatile = $base->volatile_clones if (! defined($volatile));
         if ($add_to_pool) {
             confess "Error: you can't add to pool and also pick from pool" if $from_pool;
@@ -454,7 +466,7 @@ sub _around_create_domain {
     if ($self->is_local && $base && $base->is_base
             && ( $base->volatile_clones || $owner->is_temporary )) {
         $request->status("balancing")                       if $request;
-        my $vm = $self->balance_vm($base) or die "Error: No free nodes available.";
+        my $vm = $self->balance_vm($owner->id, $base) or die "Error: No free nodes available.";
         $request->status("creating machine on ".$vm->name)  if $request;
         $self = $vm;
         $args_create{listen_ip} = $self->listen_ip($remote_ip);
@@ -464,6 +476,7 @@ sub _around_create_domain {
     $self->_add_instance_db($domain->id);
     $domain->add_volume_swap( size => $swap )   if $swap;
     $domain->_data('is_compacted' => 1);
+    $domain->_data('alias' => $alias) if $alias;
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
@@ -506,6 +519,37 @@ sub _around_create_domain {
     return $domain;
 }
 
+sub _set_ascii_name($self, $name) {
+    my $length = length($name);
+    $name =~ tr/áéíóúàèìòùäëïöüçñ€$/aeiouaeiouaeioucnes/;
+    $name =~ tr/ÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÇÑ€$/AEIOUAEIOUAEIOUCNES/;
+    $name =~ tr/A-Za-z0-9_\-/\-/c;
+    $name =~ s/^\-*//;
+    $name =~ s/\-*$//;
+    $name =~ s/\-\-+/\-/g;
+    if (length($name) < $length) {
+        $name .= "-" if length($name);
+        $name .= Ravada::Utils::random_name($length-length($name));
+    }
+    for (;;) {
+        last if !$self->_check_duplicate_name($name,0);
+        $name .= Ravada::Utils::random_name(1);
+    }
+    return $name;
+}
+
+sub _set_alias_unique($self, $alias) {
+    my $alias0 = $alias;
+    my $n = 2;
+    for (;;) {
+        last if !$self->_check_duplicate_name($alias,0);
+        $alias ="$alias0-$n";
+        $n++;
+    }
+    return $alias;
+
+}
+
 sub _add_instance_db($self, $id_domain) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_instances "
         ." WHERE id_domain=? AND id_vm=?"
@@ -532,12 +576,13 @@ sub _define_spice_password($self, $remote_ip) {
     return $spice_password;
 }
 
-sub _check_duplicate_name($self, $name) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,name,vm FROM domains where name=?");
-    $sth->execute($name);
+sub _check_duplicate_name($self, $name, $die=1) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,name,vm FROM domains where name=? or alias=?");
+    $sth->execute($name,$name);
     my $row = $sth->fetchrow_hashref;
     confess "Error: machine with name '$name' already exists ".Dumper($row)
-        if $row->{id};
+        if $row->{id} && $die;
+    return 0 if !$row || !$row->{id};
     return 1;
 }
 
@@ -838,7 +883,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
@@ -1136,17 +1181,23 @@ This node has requests running or waiting to be run
 =cut
 
 sub is_locked($self) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, at_time, args FROM requests "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, at_time, args, command "
+        ." FROM requests "
         ." WHERE status <> 'done' "
+        ."   AND command <> 'start' AND command <> 'start_domain'"
+        ."   AND command not like '%shutdown'"
     );
     $sth->execute;
-    my ($id, $at, $args);
-    $sth->bind_columns(\($id, $at, $args));
+    my ($id, $at, $args, $command);
+    $sth->bind_columns(\($id, $at, $args, $command));
     while ( $sth->fetch ) {
         next if defined $at && $at < time + 2;
         next if !$args;
         my $args_d = decode_json($args);
-        return 1 if exists $args_d->{id_vm} && $args_d->{id_vm} == $self->id
+        if ( exists $args_d->{id_vm} && $args_d->{id_vm} == $self->id ) {
+            warn "locked by $command\n";
+            return 1;
+        }
     }
     return 0;
 }
@@ -1549,7 +1600,7 @@ sub iptables($self, @args) {
 
     }
     my ($out, $err) = $self->run_command(@cmd);
-    confess "@cmd $err" if $err && $err =~/unknown option/;
+    confess "@cmd $err" if $err && $err !~ /does a matching rule exist in that chain/;
     warn $err if $err;
 }
 
@@ -1586,7 +1637,9 @@ sub _search_iptables($self, %rule) {
         $args{s} = "0.0.0.0/0" if !exists $args{s};
         my $match = 1;
         for my $key (keys %rule) {
-            $match = 0 if !exists $args{$key} || $args{$key} ne $rule{$key};
+            $match = 0 if !exists $args{$key} || !exists $rule{$key}
+            || !defined $rule{$key}
+            || $args{$key} ne $rule{$key};
             last if !$match;
         }
         if ( $match ) {
@@ -1649,11 +1702,66 @@ Returns a Virtual Manager from all the nodes to run a virtual machine.
 When the optional base argument is passed it returns a node from the list
 of VMs where the base is prepared.
 
-Argument: base [optional]
+Arguments
+
+=over
+
+=item uid
+
+=item base [optional]
+
+=item id_domain [optional]
 
 =cut
 
-sub balance_vm($self, $base=undef) {
+sub balance_vm($self, $uid, $base=undef, $id_domain=undef) {
+
+    my @vms;
+    if ($base) {
+        confess "Error: base is not an object ".Dumper($base)
+        if !ref($base);
+
+        @vms = $base->list_vms();
+    } else {
+        @vms = $self->list_nodes();
+    }
+
+    return $vms[0] if scalar(@vms)<=1;
+    if ($base && $base->_data('balance_policy') == 1 ) {
+        my $vm = $self->_balance_already_started($uid, $id_domain, \@vms);
+        return $vm if $vm;
+    }
+    return $self->_balance_free_memory($base, \@vms);
+}
+
+sub _balance_already_started($self, $uid, $id_domain, $vms) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm,name,status "
+        ." FROM domains "
+        ." WHERE id_owner=? "
+        ."   AND id <> ? "
+        ."   AND id_vm IS NOT NULL "
+        ." ORDER BY status DESC"
+    );
+    $sth->execute($uid, $id_domain);
+    my ($id_vm);
+    my %valid_id = map { $_->id => $_ } @$vms;
+
+    my $id_hibernated;
+    my $id_starting;
+    while (my ($id_vm, $name, $status) = $sth->fetchrow ) {
+        next if ! $valid_id{$id_vm};
+        $id_hibernated = $id_vm if $status =~ /h.bernated/;
+        $id_starting = $id_vm if $status =~ /starting/;
+        next if $status ne 'active';
+        return $valid_id{$id_vm}
+    }
+    return if !defined $id_hibernated && !defined $id_starting;
+    return $valid_id{$id_hibernated} if $id_hibernated;
+    return $valid_id{$id_starting} if $id_starting;
+    return;
+}
+
+sub _balance_free_memory($self , $base, $vms) {
 
     my $min_memory = $Ravada::Domain::MIN_FREE_MEMORY;
     $min_memory = $base->get_info->{memory} if $base;
@@ -1661,15 +1769,7 @@ sub balance_vm($self, $base=undef) {
     my %vm_list;
     my @status;
 
-    my @vms;
-    if ($base) {
-        @vms = $base->list_vms();
-    } else {
-        confess "Error: we need a base to balance ";
-        @vms = $self->list_nodes();
-    }
-    return $vms[0] if scalar(@vms)<=1;
-    for my $vm (_random_list( @vms )) {
+    for my $vm (_random_list( @$vms )) {
         next if !$vm->enabled();
         my $active = 0;
         eval { $active = $vm->is_active() };
@@ -2125,9 +2225,6 @@ sub _list_qemu_bridges($self) {
 sub _which($self, $command) {
     return $self->{_which}->{$command} if exists $self->{_which} && exists $self->{_which}->{$command};
 
-    confess "Error: deep recursion"
-    if $self->{_deep_recursion}->{$command}++;
-
     my $bin_which = $self->{_which}->{which};
     if (!$bin_which) {
         for my $try ( "/bin/which","/usr/bin/which") {
@@ -2150,7 +2247,9 @@ sub _list_bridges($self) {
 
     my %qemu_bridge = map { $_ => 1 } $self->_list_qemu_bridges();
 
-    my @cmd = ( $self->_which('brctl'),'show');
+    my $brctl = 'brctl';
+    my @cmd = ( $self->_which($brctl),'show');
+    die "Error: missing $brctl" if !$cmd[0];
     my ($out,$err) = $self->run_command(@cmd);
 
     die $err if $err;

@@ -487,7 +487,7 @@ msgstr "اغلاق ..."
 msgid "It may take a couple of minutes."
 msgstr "قد يستغرق الأمر بضع دقائق"
 
-msgid "Hybernating ..."
+msgid "Hibernating ..."
 msgstr ""
 
 msgid "Description"

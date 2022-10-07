@@ -106,7 +106,11 @@ sub list_devices($self) {
 
 sub is_device($self, $device) {
     return if !defined $device;
-    return grep m{^$device$},$self->list_devices;
+    for my $dev ( $self->list_devices ) {
+       return 1 if $dev eq $device;
+    }
+    return 0;
+
 }
 
 sub _device_locked($self, $name) {

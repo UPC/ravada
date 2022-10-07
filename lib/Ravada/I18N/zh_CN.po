@@ -482,7 +482,7 @@ msgstr "关机中…"
 msgid "It may take a couple of minutes."
 msgstr "这将会花费几分钟。"
 
-msgid "Hybernating ..."
+msgid "Hibernating ..."
 msgstr "休眠中…"
 
 msgid "Description"

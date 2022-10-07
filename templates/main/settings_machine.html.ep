@@ -10,17 +10,18 @@
         <div class="card"
              ng-controller="singleMachinePage"
              ng-init="init(<%= $id %>, '<%= url_for('ws_subscribe')->to_abs %>',<%= $USER->is_admin %> )">
+
              <div class="card-header">
                <div>
                  <div style="display: inline-block">
 %                  if ($domain->is_base) {
                      <h2><%=l 'Virtual Machine' %>
-                       <b><%= $domain->name %></b>
+                       <b><%= $domain->alias %></b>
                        <%=l 'Settings' %>
                      </h2>
 %                  } else {
                      <h2><%=l 'Virtual Machine' %>
-                       <a ng-hide="domain_remove_done" href="/machine/view/<%= $domain->id %>.html"><%= $domain->name %></a>
+                       <a ng-hide="domain_remove_done" href="/machine/view/<%= $domain->id %>.html"><%= $domain->alias %></a>
                        <%=l 'Settings' %>
                      </h2>
 %                  }

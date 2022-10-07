@@ -586,6 +586,7 @@ sub test_clone($base1) {
     is($req->error, '') or return;
 
     my $id_domain = $req->id_domain;
+    isnt($id_domain, $base1->id);
     my $clone = Ravada::Front::Domain->open($id_domain);
 
     my $clone_name  = $base1->name."-".user_admin->name;
@@ -996,5 +997,6 @@ delete_request('set_time','screenshot','refresh_machine_ports');
 remove_machines(reverse @bases);
 _wait_request(background => 1);
 remove_old_domains_req(0); # 0=do not wait for them
+remove_old_users();
 
 done_testing();

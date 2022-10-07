@@ -503,7 +503,7 @@ msgstr "Chiudere ..."
 msgid "It may take a couple of minutes."
 msgstr "Potrebbero volerci un paio di minuti."
 
-msgid "Hybernating ..."
+msgid "Hibernating ..."
 msgstr "Ibernazione ..."
 
 msgid "Description"

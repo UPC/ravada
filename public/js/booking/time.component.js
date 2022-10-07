@@ -8,7 +8,7 @@ export default {
     require: {
         ngModel: '^ngModel'
     },
-    templateUrl: '/js/booking/time.component.html',
+    templateUrl: '/booking/time.component.html',
     controller: timeCtrl,
 };
 timeCtrl.$inject = ["$element","$scope"]

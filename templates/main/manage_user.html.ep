@@ -8,7 +8,7 @@
     <div class="page-header">
         <div class="card">
              <div class="card-header">
-                 <h2><%=l 'User' %>&nbsp;<%= $user->name %>
+                 <h2><%=l 'User' %>&nbsp;<%= Encode::decode_utf8($user->name) %>
 %               if ( $user->external_auth || $origin ) {
                     (<%= ($user->external_auth or $origin) %>)
 %               }
