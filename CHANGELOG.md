@@ -12,3 +12,4 @@
 - fix: parrot linux updated [\#1819]
 - Virtual Machine is not renamed [\#1826]
 - Open ports left from shut down machines [\#1829]
+- Fix clone name with dot in name [\#1843]
