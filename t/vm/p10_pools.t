@@ -366,6 +366,56 @@ sub test_remove_clone($vm) {
 
 }
 
+sub test_pool_with_nested_bases($vm) {
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
+    Ravada::Request->prepare_base(
+                uid => user_admin->id
+                ,id_domain => $base->id
+    );
+    wait_request();
+    $base->is_public(1);
+
+    $base->_data('shutdown_disconnected', 1);
+
+    my $n_bases = 2;
+
+    for ( 1 .. $n_bases ) {
+        Ravada::Request->clone(
+            uid => user_admin->id
+            ,id_domain => $base->id
+            ,name => new_domain_name()."-base"
+        );
+    }
+    wait_request(debug => 1);
+    for my $clone ( $base->clones() ) {
+        Ravada::Request->prepare_base(
+            uid => user_admin->id
+            ,id_domain => $clone->{id}
+        );
+    }
+    wait_request(debug => 1);
+    $base->pools(1);
+    my $n = 5;
+    my $started = 3;
+
+    $base->pool_clones($n);
+    $base->pool_start($started);
+    my $req = Ravada::Request->manage_pools(uid => user_admin->id
+        ,_no_duplicate => 1);
+    wait_request( debug => 0);
+    is($req->status, 'done');
+    is($req->error,'');
+
+    my @clones0 = $base->clones();
+    is(scalar @clones0, $n+$n_bases)
+        or die Dumper([map {$_->{name} } @clones0]);
+
+    my @clones_avail = grep { !$_->{is_base} } $base->clones ;
+    is(scalar @clones_avail, $n);
+
+    remove_domain($base);
+}
+
 sub test_pool_with_volatiles($vm) {
     # Clones should be created.
     # As are volatile, only the started should be created
@@ -507,6 +557,7 @@ for my $vm_name (reverse vm_names() ) {
         diag("*** Testing pools in $vm_name ***");
         import_base($vm);
 
+        test_pool_with_nested_bases($vm);
 
         test_exposed_port($vm);
 
