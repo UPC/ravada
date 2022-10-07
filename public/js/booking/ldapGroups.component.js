@@ -9,7 +9,7 @@ export default {
         onAdd: '&',
         onDelete: '&'
     },
-    templateUrl: '/js/booking/ldapGroup.component.html',
+    templateUrl: '/booking/ldapGroup.component.html',
     controller: grpCtrl
 }
 grpCtrl.$inject = ["apiLDAP","$scope","$timeout"];

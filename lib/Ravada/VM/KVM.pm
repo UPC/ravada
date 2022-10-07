@@ -765,7 +765,8 @@ sub discover($self) {
 
     my @list;
     for my $dom ($self->vm->list_all_domains) {
-        push @list,($dom->get_name) if !$known{$dom->get_name};
+        my $name = Encode::decode_utf8($dom->get_name);
+        push @list,($name) if !$known{$name};
     }
     return @list;
 }

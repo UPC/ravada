@@ -41,8 +41,7 @@
                     <%=l 'This name is duplicated' %>
                 </div>
                 <div ng-show="new_name_invalid">
-                       <%=l 'This name is invalid. It can only contain alphabetic, numbers, undercores and dashes
-                       and must start by a letter.' %>
+                       <%=l 'This name is invalid. It can only contain alphabetic, numbers, undercores and dashes and must start by a letter.' %>
                 </div>
             </div>
         </div>

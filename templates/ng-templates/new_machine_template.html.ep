@@ -78,7 +78,6 @@
                 <div class="col-lg-9">
                     <input class="form-control" ng-model="name" type="text"
                         name="name" required=""
-                        ng-pattern ="/^[a-zA-Z0-9_-]+$/"
                         ng-change="validate_new_name()"
                     >
                 </div>

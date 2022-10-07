@@ -1117,6 +1117,7 @@ sub _send_message {
         "INSERT INTO messages ( id_user, id_request, subject, message, date_shown ) "
         ." VALUES ( ?,?,?,?, NULL)"
     );
+    $subject = substr($subject,0,60) if length($subject)>60;
     $sth->execute($uid, $self->id,$subject, $message);
     $sth->finish;
 }

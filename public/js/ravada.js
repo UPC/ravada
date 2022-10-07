@@ -274,6 +274,15 @@
             $scope.is_edit = function(name,index) {
                 return $scope.edit == name+index;
             };
+
+            var load_balance_options = function() {
+                $http.get("/balance_options.json")
+                    .then(function(response) {
+                        console.log($scope.showmachine.balance_policy);
+                        $scope.balance_options = response.data;
+                    });
+            };
+
             var subscribed_extra = false;
             var subscribe_machine_info= function(url) {
                 var ws = new WebSocket(url);
@@ -439,8 +448,8 @@
                     .then(function(response) {
                             $scope.showmachine=response.data;
                             if (typeof $scope.new_name == 'undefined' ) {
-                                $scope.new_name=$scope.showmachine.name+"-2";
-                                $scope.validate_new_name($scope.showmachine.name);
+                                $scope.new_name=$scope.showmachine.alias+"-2";
+                                $scope.validate_new_name($scope.showmachine.alias);
                                 $scope.new_n_virt_cpu= $scope.showmachine.n_virt_cpu;
                                 $scope.new_memory = ($scope.showmachine.memory / 1024);
                                 $scope.new_max_mem = ($scope.showmachine.max_mem / 1024);
@@ -452,6 +461,8 @@
                                 $scope.new_autostart = $scope.showmachine.autostart;
                                 $scope.new_shutdown_disconnected
                                     = $scope.showmachine.shutdown_disconnected;
+                                $scope.new_balance_policy=$scope.showmachine.balance_policy;
+                                load_balance_options();
                             }
                             if (is_admin) {
                                 $scope.init_domain_access();
@@ -557,11 +568,6 @@
               $scope.new_name_invalid=false;
               return;
             }
-            var valid_domain_name = /^[a-zA-Z][\w_-]+$/;
-            if ( !valid_domain_name.test($scope.new_name)) {
-                $scope.new_name_invalid = true;
-                return;
-            }
             $scope.new_name_invalid = false;
             $http.get('/machine/exists/'+$scope.new_name)
             .then(duplicated_callback, unique_callback);
@@ -593,7 +599,19 @@
             if ($scope.pending_request && $scope.pending_request.status == 'done' ) {
                 $scope.pending_request = undefined;
             }
-            $http.get("/machine/set/"+$scope.showmachine.id+"/"+field+"/"+value);
+
+            var value_text = value;
+            if (field == 'balance_policy')
+                value_text = "'"+$scope.balance_options[value].name+"'";
+
+            $http.post("/machine/set/"
+                      , JSON.stringify({
+                          'id': $scope.showmachine.id
+                          ,'field': field
+                          ,'value': value
+                          ,'value_text': value_text
+                      })
+            );
           };
           $scope.set_public = function(machineId, value) {
             if (value) value=1;
@@ -1066,6 +1084,7 @@
     function run_domain_req_ctrl($scope, $http, $timeout, request ) {
         var redirected_display = false;
         var already_subscribed_to_domain = false;
+        $scope.count_start = 0;
         $scope.copy_password= function(driver) {
             $scope.view_password=1;
             var copyTextarea = document.querySelector('.js-copytextarea-'+driver);
@@ -1152,6 +1171,12 @@
                     if ($scope.edit) {
                         return;
                     }
+                    if (data.is_base) {
+                        already_subscribed_to_domain = false;
+                        $scope.count_start = 0;
+                        return;
+                    }
+                    $scope.count_start++;
                     $scope.domain = data;
                     for ( var i=0;i<$scope.domain.hardware.display.length; i++ ) {
                         if (typeof($scope.domain_display[i]) == 'undefined') {
@@ -1172,7 +1197,7 @@
                         }
                     }
                 });
-                if ($scope.domain.is_active && $scope.request.status == 'done') {
+                if ($scope.domain && $scope.domain.is_active && $scope.request.status == 'done') {
                     $scope.redirect();
                     if ($scope.auto_view && !redirected_display && $scope.domain_display[0]
                         && $scope.domain_display[0].file_extension
@@ -1182,7 +1207,7 @@
                         redirected_display=true;
                     }
                 }
-                if ($scope.request_open_ports && $scope.domain.ip && $scope.domain.requests == 0) {
+                if ($scope.request_open_ports && $scope.domain && $scope.domain.ip && $scope.domain.requests == 0) {
                     $scope.request_open_ports_done = true;
                 }
 
