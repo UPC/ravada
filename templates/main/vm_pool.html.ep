@@ -25,7 +25,7 @@
                     style="width: 5em"
                 >
             </div>
-            <div class="col-mg-4">
+            <div class="col-mg-6">
                 <small class="text-secondary"><%=l 'Virtual machines in the pool.' %></small>
             </div>
         </div>
@@ -41,17 +41,16 @@
                     style="width: 5em"
                 >
             </div>
-            <div class="col-mg-4" ng-hide="showmachine.volatile_clones">
-                <small class="text-secondary">
+            <div class="col-mg-6">
+                <small class="text-secondary"
+                    ng-hide="showmachine.volatile_clones">
                   <%=l 'Virtual machines pre-started' %>
                 </small>
-            </div>
-            <div class="col-md-6" ng-show="showmachine.volatile_clones">
-                <small class="text-secondary">
+                <small class="text-secondary"
+                    ng-show="showmachine.volatile_clones">
                     <%=l 'Clones are volatile, so only started clones will be created.' %>
                 </small>
             </div>
-
         </div>
 
         <div class="row">
