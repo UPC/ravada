@@ -297,7 +297,7 @@ msgid "Password"
 msgstr "密码"
 
 msgid "Start session"
-msgstr "开始会话\n"
+msgstr "开始会话"
 
 msgid "bits) in your computer."
 msgstr "字节) 在您的电脑上。"
@@ -1250,7 +1250,7 @@ msgstr "暴露的调试端口"
 msgid "Display Password"
 msgstr "显示密码"
 
-msgid ""Enables display password when available
+msgid "Enables display password when available"
 msgstr "可用时启用显示密码"
 
 msgid "Bookings"
@@ -1871,10 +1871,8 @@ msgstr "密码和他们的确认不匹配！"
 msgid "Today Schedule"
 msgstr "今日日程"
 
-msgid "This server has reservations for today. Machines from users out of
-    the booking list will be shutdown."
-msgstr "此服务器今天已经被预订。从自用户机器的
-    预订列表将被关闭。"
+msgid "This server has reservations for today. Machines from users out of the booking list will be shutdown."
+msgstr "此服务器今天已经被预订。此用户机器的预订列表将被关闭。"
 
 msgid "allowed"
 msgstr "允许"
