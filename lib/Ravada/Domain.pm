@@ -5263,7 +5263,10 @@ sub _search_pool_clone($self, $user) {
 
     my ($clone_down, $clone_free_up, $clone_free_down);
     my ($clones_in_pool, $clones_used) = (0,0);
+    my $id_daemon = Ravada::Utils::user_daemon->id;
     for my $current ( sort { $a->{name} cmp $b->{name} } $self->clones) {
+        next if $current->{is_base} ||
+            ( $current->{is_volatile} && $current->{id_owner} != $id_daemon);
         if ( $current->{id_owner} == $user->id
                 && $current->{status} =~ /^(active|hibernated)$/) {
             my $clone = Ravada::Domain->open($current->{id});
@@ -5275,6 +5278,8 @@ sub _search_pool_clone($self, $user) {
         } elsif ($current->{is_pool}) {
             $clones_in_pool++;
             my $clone = Ravada::Domain->open($current->{id});
+            next if !$clone; #it may be removed on shutdown
+
             if(!$clone->client_status
                 || lc($clone->client_status) eq lc('disconnected')) {
                 if ( $clone->status =~ /^(active|hibernated)$/ ) {
@@ -5289,7 +5294,8 @@ sub _search_pool_clone($self, $user) {
     }
 
     my $clone_data = ($clone_down or $clone_free_up or $clone_free_down);
-    if (!$clone_data && $self->clones < $self->pool_clones) {
+    my @clones = grep {!$_->{is_base} && $_->{is_pool} } $self->clones ;
+    if (!$clone_data && scalar(@clones)<$self->pool_clones) {
         $clone_data = $self->_create_clone_in_pool();
     }
     die "Error: no free clones in pool for ".$self->name
@@ -5305,9 +5311,11 @@ sub _search_pool_clone($self, $user) {
 sub _create_clone_in_pool($self) {
 
     my $owner = Ravada::Auth::SQL->search_by_id($self->_data('id_owner'));
+
+    my $n = scalar $self->clones()+1;
     my $clone = $self->clone(
         user => $owner
-        ,name => $self->name."-".$$.int(rand(100))
+        ,name => $self->name."-".$n."-".Ravada::Utils::random_name(2)
         ,add_to_pool => 1
         ,from_pool => 0
         ,start => 1
