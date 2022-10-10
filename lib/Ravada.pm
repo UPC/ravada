@@ -3125,8 +3125,8 @@ sub remove_domain {
 
     lock_hash(%arg);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id,vm FROM domains WHERE name = ?");
-    $sth->execute($name);
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,vm FROM domains WHERE name = ? or alias=?");
+    $sth->execute($name,$name);
 
     my ($id,$vm_type)= $sth->fetchrow;
     confess "Error: Unknown domain $name"   if !$id;
@@ -4339,7 +4339,8 @@ sub _new_clone_name($self, $base,$user) {
         $alias .= "-".Encode::decode_utf8($user->name);
     } else {
         my $length = length($user->id);
-        my $n = "0" x (4-$length);
+        my $n =  '';
+        $n = "0" x (4-$length) if $length < 4;
         $name = $base->name."-".$n.$user->id;
         $alias .= "-".Encode::decode_utf8($user->name);
     }

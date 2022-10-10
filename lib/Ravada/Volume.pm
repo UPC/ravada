@@ -211,7 +211,7 @@ sub base_extension($self) {
 
 sub set_info($self, $name, $value) {
     $self->{info}->{$name} = $value;
-    $self->_cache_volume_info() if $self->domain();
+    $self->_cache_volume_info() if $self->domain() && $self->domain()->is_known();
 }
 
 sub delete($self) {
@@ -272,6 +272,7 @@ sub _cache_volume_info($self) {
             ,encode_json(\%info)
         );
         };
+        return if $@ && $@ =~ /foreign key constraint fails/i;
         confess "$name / $n_order \n".$@ if $@;
         return;
     }
