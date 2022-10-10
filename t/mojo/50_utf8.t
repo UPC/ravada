@@ -175,6 +175,7 @@ sub test_clone_utf8_user($t, $vm_name, $name, $utf8_base=0) {
 
     _test_discover($vm_name);
 
+    mojo_login($t, $user_name, $$);
     $t->post_ok("/request/prepare_base/", json => {
             id_domain => $domain->id
         });
