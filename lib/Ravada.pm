@@ -6054,6 +6054,8 @@ sub _cmd_remove_expose($self, $request) {
 
 sub _cmd_open_exposed_ports($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain) or return;
+    return if !$domain->list_ports();
+
     $domain->open_exposed_ports();
 
     Ravada::Request->refresh_machine_ports(
