@@ -3125,8 +3125,8 @@ sub remove_domain {
 
     lock_hash(%arg);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id,vm FROM domains WHERE name = ? or alias=?");
-    $sth->execute($name,$name);
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,vm FROM domains WHERE name = ?");
+    $sth->execute($name);
 
     my ($id,$vm_type)= $sth->fetchrow;
     confess "Error: Unknown domain $name"   if !$id;
