@@ -2953,7 +2953,7 @@ sub _default_cpu($self) {
 
     my $data = {
         'vcpu'=> {'#text' => 1 , 'placement' => 'static'}
-        ,'cpu' => { 'model' => { '#text' => 'qemu64' } 
+        ,'cpu' => { 'model' => { '#text' => 'qemu64' }
         }
     };
 
