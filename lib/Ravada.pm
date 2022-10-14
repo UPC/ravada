@@ -4071,12 +4071,14 @@ sub _pool_create_clones($self, $domain, $number, $request) {
         );
         push @arg_clone, ( after_request => $req_base->id ) if $req_base;
     }
+    my $start = 0;
+    $start = 1 if $domain->volatile_clones();
     Ravada::Request->clone(
         uid => $request->args('uid')
         ,id_domain => $domain->id
         ,number => $number
         ,add_to_pool => 1
-        ,start => 1
+        ,start => $start
         ,@arg_clone
     );
 }
