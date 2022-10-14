@@ -17,13 +17,13 @@
                 ng-class='{"border rounded border-primary mb-4 p-4": item._edit}'
             >
                 <button title="edit {{name}} {{$index+1}}"
-                    ng-show="(name == 'network' ||name == 'disk' || name == 'video' || name == 'sound' || name=='cpu' || name=='features' || name=='filesystem' || name == 'usb_controller' ) && !item.remove"
+                    ng-show="item._can_edit && !item.remove"
                     ng-disabled="showmachine.requests > 0 || showmachine.is_active || showmachine.is_base || edit"
                     ng-click="toggle_edit(name,$index)"
                             ><i class="fas fa-pencil-alt"></i>
                 </button>
                 <button title="remove {{name}} {{$index+1}}"
-                    ng-hide="item._edit || name=='cpu' || name=='features'"
+                    ng-show="item._can_remove && !item._edit"
                     ng-disabled="showmachine.requests > 0 || item.is_secondary || showmachine.is_active || showmachine.is_base || edit"
                     ng-click="confirm_remove='';remove_hardware(name,$index,item)"><i class="fa fa-times"></i>
                 </button>
