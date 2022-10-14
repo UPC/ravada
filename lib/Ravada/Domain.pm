@@ -1794,6 +1794,7 @@ sub _select_domain_db {
     if exists $row->{alias} && defined $row->{alias};
 
     return $row if $row->{id};
+    return;
 }
 
 sub _post_select_domain_db {

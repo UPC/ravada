@@ -2633,7 +2633,7 @@ sub new_machine {
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"
                 .".It can only contain alphabetic, numbers, undercores and dashes.")
-            if $c->param('name') && $c->param('name') !~ /^[а-яА-Яa-zA-Z0-9àèìòùáéíóúäëïöüçñ€_\$\-]+$/i;
+            if $c->param('name') && $c->param('name') !~ /^[а-яА-Яa-zA-Z0-9àèìòùáéíóúäëïöüçñ€_\$\-\.]+$/i;
         if (!@error) {
             req_new_domain($c);
             $c->redirect_to("/admin/machines");
@@ -2816,7 +2816,7 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
                     uid => $USER->id
                 , id_domain => $domain->id
                 , retry => 20
-                );
+                ) if $domain->list_ports();
             }
 
             app->log->info($USER->name." start_domain ".$domain->name." from "._remote_ip($c))

@@ -242,7 +242,7 @@ sub _is_a_domain($self, $file) {
     chomp $file;
 
     return if $file !~ /\.yml$/;
-    $file =~ s/\.\w+//;
+    $file =~ s/\.\w+$//;
     $file =~ s/(.*)\.qcow.*$/$1/;
     return if $file !~ /\w/;
 
