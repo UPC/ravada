@@ -5299,8 +5299,7 @@ sub _search_pool_clone($self, $user) {
     if (!$clone_data && scalar(@clones)<$self->pool_clones) {
         $clone_data = $self->_create_clone_in_pool();
     }
-    die "Error: no free clones in pool for ".$self->name
-        .". Usage: $clones_used used from $clones_in_pool virtual machines created.\n"
+    die "Error: no free clones in pool for ".$self->name."\n"
         if !$clone_data;
 
     my $clone = Ravada::Domain->open($clone_data->{id});
