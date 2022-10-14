@@ -157,6 +157,10 @@ sub list_volumes($self, $attribute=undef, $value=undef)
         push @volumes, (Ravada::Volume->new(file => $row->{file}, info => $row->{info}));
     }
     $sth->finish;
+    for (@volumes) {
+        $_->{_can_edit} = 1;
+        $_->{_can_remove} = 1;
+    }
     return @volumes;
 }
 
@@ -241,6 +245,7 @@ sub _get_controller_display($self) {
 
         }
 
+        $row->{_can_remove} = 1;
         push @displays, ($row);
     }
     #    $self->_fix_ports_duplicated(\@displays) if $self->is_active();

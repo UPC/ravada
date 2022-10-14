@@ -36,9 +36,10 @@ sub test_user_cyrillic($vm) {
     my ($clonef) = $base->clones();
 
     ok(utf8::valid($clonef->{name}));
-    is($clonef->{name},$base->name."-000".$user->id) or exit;
-
     my $base_name = $base->name;
+    my $user_id = $user->id;
+    like($clonef->{name},qr/^${base_name}-0+${user_id}$/) or exit;
+
     like($clonef->{alias},qr/$base_name-$name/) or exit;
 
     _test_utf8($user);
@@ -66,6 +67,114 @@ sub test_user_cyrillic($vm) {
 
     remove_domain($base);
 }
+
+sub test_user_name_surname($vm) {
+    my $base = create_domain_v2(vm => $vm);
+    $base->is_public(1);
+    $base->prepare_base(user_admin);
+
+    for my $sep (qw (. _ -)) {
+        my $name = new_domain_name()."${sep}pep${sep}bartroli";
+        my $user = create_user($name, $$);
+        ok(utf8::valid($user->name));
+
+        my $req = Ravada::Request->clone(
+            uid => $user->id
+            ,id_domain => $base->id
+        );
+        wait_request();
+        is($req->error,'');
+        my ($clonef) = grep { $_->{id_owner} == $user->id } $base->clones();
+        ok($clonef,"Expecting a clone owned by ".$user->id) or next;
+
+        ok(utf8::valid($clonef->{name}));
+        my $user_name = $user->name;
+        $user_name =~ tr/./-/;
+        is($clonef->{name},$base->name."-".$user_name) or exit;
+
+        my $base_name = $base->name;
+        is($clonef->{name},"$base_name-$user_name") or exit;
+
+        if ($sep eq '.' ) {
+            is($clonef->{alias},$base->alias."-".$user->name);
+        } else {
+            is($clonef->{alias},$clonef->{name});
+        }
+
+        _test_utf8($user);
+        _test_messages_utf8($user);
+    }
+
+    remove_domain($base);
+}
+
+sub test_user_name_europe($vm) {
+    my $base = create_domain_v2(vm => $vm);
+    $base->is_public(1);
+    $base->prepare_base(user_admin);
+    diag($base->name);
+
+    my %replace = (
+        'á' => 'a'
+        ,'è' => 'e'
+        ,'ï' => 'i'
+        ,'ò' => 'o'
+        ,'ó' => 'o'
+        ,'ü' => 'u'
+        ,'ç' => 'c'
+        ,'À' => 'A'
+        ,'È' => 'E'
+        ,'Ï' => 'I'
+        ,'Ö' => 'O'
+        ,'Ú' => 'U'
+        ,'â' => 'a'
+        ,'Ê' => 'E'
+        ,"'" => '_'
+        ,'€' => 'E'
+        ,'$' => 'S'
+        ,'.' => '-'
+        ,'2' => '2'
+
+    );
+    for my $letter (sort keys %replace) {
+        my $prefix = new_domain_name();
+        my $name = "$prefix.$letter.pep${letter}";
+        my $expected =$prefix."-".$replace{$letter}."-pep".$replace{$letter}."";
+        $expected =~ s/--+/-/g;
+        my $user = create_user($name, $$);
+        ok(utf8::valid($user->name));
+
+        my $req = Ravada::Request->clone(
+            uid => $user->id
+            ,id_domain => $base->id
+        );
+        wait_request();
+        is($req->error,'');
+        my ($clonef) = grep { $_->{id_owner} == $user->id } $base->clones();
+        ok($clonef,"Expecting a clone owned by ".$user->id) or next;
+
+        ok(utf8::valid($clonef->{name}));
+
+        my $base_name = $base->name;
+        if ($letter eq '.') {
+            like($clonef->{name},qr/^$base_name-$expected/);
+        } else {
+            is($clonef->{name},"$base_name-$expected") or exit;
+        }
+        is($clonef->{alias},$base->alias."-".$name);
+        isnt($clonef->{alias},$clonef->{name});
+
+        _test_utf8($user);
+        _test_messages_utf8($user);
+
+        my $clone = Ravada::Domain->open($clonef->{id});
+        ok($clone,"Expecting domain $clonef->{id} $clonef->{name} $clonef->{alias}") or exit;
+    }
+
+    remove_domain($base);
+}
+
+
 
 sub _test_utf8($user) {
     _test_messages_utf8($user);
@@ -173,6 +282,8 @@ for my $vm_name (vm_names()) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+        test_user_name_surname($vm);
+        test_user_name_europe($vm);
         test_renamed_conflict($vm);
         test_domain_catalan($vm);
         test_user_cyrillic($vm);

@@ -44,8 +44,8 @@ sub _download_alpine64 {
 
 sub _driver_field($hardware) {
     my $driver_field = 'driver';
-    $driver_field = 'type'  if $hardware eq 'video';
-    $driver_field = 'model' if $hardware =~ /sound/;
+    $driver_field = 'type'  if $hardware =~ /^video$/;
+    $driver_field = 'model' if $hardware =~ /^(sound|usb_controller)$/;
     $driver_field = 'mode'  if $hardware eq 'cpu';
     $driver_field = '_name' if $hardware eq 'filesystem';
     return $driver_field;
@@ -732,7 +732,7 @@ sub test_remove_hardware_by_index($vm, $hardware) {
     if (!ref($items2->[0])) {
         is($items2->[0], $items1->[0]);
         is($items2->[1], $items1->[2]);
-    } elsif ($hardware ne 'video') {
+    } elsif ($hardware !~ /^(usb_controller|video)$/) {
         die "Error: no $name_field in ".Dumper($items2) if !exists $items2->[0]->{$name_field};
 
         is($items2->[0]->{$name_field},$items1->[0]->{$name_field});
@@ -1318,7 +1318,8 @@ for my $vm_name (vm_names()) {
     my %controllers = $domain_b0->list_controllers;
     lock_hash(%controllers);
 
-    for my $hardware (sort keys %controllers ) {
+    for my $hardware (reverse sort keys %controllers ) {
+        next if $hardware eq 'video';
 	    my $name= new_domain_name();
 	    my $domain_b = $BASE->clone(
             name => $name

@@ -63,24 +63,28 @@ our %SET_DRIVER_SUB = (
      ,streaming => \&_set_driver_streaming
      ,disk => \&_set_driver_disk
      ,cpu => \&_set_driver_cpu
+     ,'usb controller'=> \&_set_driver_usb_controller
+
 );
 
-our %GET_CONTROLLER_SUB = (
-    usb => \&_get_controller_usb
+our %GET_HW_SUB = (
+    usb => \&_get_hw_usb
     ,filesystem => \&_get_controller_filesystem
     ,disk => \&_get_controller_disk
     ,network => \&_get_controller_network
     ,video => \&_get_controller_video
     ,sound => \&_get_controller_sound
+    ,'usb controller' => \&_get_hw_usb_controller
     );
 our %SET_CONTROLLER_SUB = (
-    usb => \&_set_controller_usb
+    usb => \&_set_hw_usb
     ,filesystem => \&_set_controller_filesystem
     ,disk => \&_set_controller_disk
     ,display => \&_set_controller_display
     ,network => \&_set_controller_network
     ,video => \&_set_controller_video
     ,sound => \&_set_controller_sound
+    ,'usb controller' => \&_set_hw_usb_controller
     );
 our %REMOVE_CONTROLLER_SUB = (
     usb => \&_remove_controller_usb
@@ -90,6 +94,7 @@ our %REMOVE_CONTROLLER_SUB = (
     ,network => \&_remove_controller_network
     ,video => \&_remove_controller_video
     ,sound => \&_remove_controller_sound
+    ,'usb controller' => \&_remove_hw_usb_controller
     );
 
 our %CHANGE_HARDWARE_SUB = (
@@ -103,6 +108,7 @@ our %CHANGE_HARDWARE_SUB = (
     ,network => \&_change_hardware_network
     ,video => \&_change_hardware_video
     ,sound => \&_change_hardware_sound
+    ,'usb controller' => \&_change_hardware_usb_controller
 );
 ##################################################
 
@@ -2196,6 +2202,9 @@ sub _set_driver_cpu($self, $value) {
     return $self->change_hardware('cpu',0,{cpu => { mode => $value}});
 }
 
+sub _set_driver_usb_controller($self, $value) {
+    return $self->change_hardware('usb controller',0,{ model => $value});
+}
 sub set_controller($self, $name, $number=undef, $data=undef) {
     my $sub = $SET_CONTROLLER_SUB{$name};
     die "I can't get controller $name for domain ".$self->name
@@ -2206,7 +2215,7 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
     return $ret;
 }
 #The only '$tipo' suported right now is 'spicevmc'
-sub _set_controller_usb($self,$numero, $data={}) {
+sub _set_hw_usb($self,$numero, $data={}) {
 
     my $tipo = 'spicevmc';
     $tipo = (delete $data->{type} or 'spicevmc');
@@ -2225,18 +2234,78 @@ sub _set_controller_usb($self,$numero, $data={}) {
     }
     $numero = $count+1 if !defined $numero;
     if ( $numero > $count ) {
+        my @usb_ctrl = $devices->findnodes('./controller[@type="usb"]');
+        if ($numero > scalar(@usb_ctrl)*4) {
+            $self->_set_hw_usb_controller(undef);
+            $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
+            ($devices) = $doc->findnodes('/domain/devices');
+        }
         my $missing = $numero-$count;
-        
         for my $i (1..$missing) {
             my $controller = $devices->addNewChild(undef,"redirdev");
             $controller->setAttribute(bus => 'usb');
             $controller->setAttribute(type => $tipo );
-        } 
+        }
     }
-    $self->_vm->connect if !$self->_vm->vm;
-    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
-    $self->domain($new_domain);
+    $self->reload_config($doc);
 }
+
+sub _set_hw_usb_controller($self, $number=undef, $data={model => 'qemu-xhci'}) {
+
+    confess "Error: I can't add a negative number of usb controllers"
+    if defined $number && $number <1;
+
+    $data->{model} = 'qemu-xhci' if !exists $data->{model};
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
+
+    my ($devices) = $doc->findnodes("/domain/devices");
+    my @usb_ctrl = $devices->findnodes('./controller[@type="usb"]');
+
+    $number = scalar(@usb_ctrl)+1 if !$number;
+    for my $n( scalar(@usb_ctrl)+1 .. $number ) {
+        my $device = $devices->addNewChild(undef,'controller');
+        $device->setAttribute('type' => 'usb');
+        for my $field (keys %$data) {
+            confess Dumper($data->{$field}) if ref($data->{$field});
+            $device->setAttribute($field,$data->{$field});
+        }
+    }
+    $self->reload_config($doc);
+
+}
+
+sub _has_usb_hub($self) {
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
+    for my $hub ( $doc->findnodes("/domain/devices/hub") ) {
+        return 1 if $hub->getAttribute('type') eq 'usb';
+    }
+    return 0;
+}
+
+sub _add_usb_hub($self) {
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
+    my @n = $doc->findnodes("/domain/devices/redirdev");
+    my ($devices) = $doc->findnodes('/domain/devices');
+    my $n = 0;
+    my $type;
+    for my $redirdev ($devices->findnodes("redirdev")) {
+        if ( $n==scalar(@n)-1 ) {
+            $type = $redirdev->getAttribute('type');
+            $devices->removeChild($redirdev);
+            last;
+        }
+        $n++;
+    }
+    my $hub = $devices->addNewChild(undef,"hub");
+    $hub->setAttribute(type => "usb");
+    $self->reload_config($doc);
+    my $controller = $devices->addNewChild(undef,"redirdev");
+    $controller->setAttribute(bus => 'usb');
+    $controller->setAttribute(type => $type);
+
+    return $doc;
+}
+
 
 sub _set_controller_disk($self, $number, $data) {
     $self->add_volume(%$data);
@@ -2531,6 +2600,10 @@ sub _remove_controller_display($self, $index, $attribute_name=undef, $attribute_
 
 sub _remove_controller_usb($self, $index) {
     $self->_remove_device($index,'redirdev', bus => 'usb');
+}
+
+sub _remove_hw_usb_controller($self, $index) {
+    $self->_remove_device($index,'controller', type => 'usb');
 }
 
 sub _remove_controller_disk($self, $index,  $attribute_name=undef, $attribute_value=undef) {
@@ -3110,6 +3183,51 @@ sub _change_hardware_video($self, $index, $data) {
     }
     $self->reload_config($doc) if $changed;
 }
+
+sub _change_hardware_usb_controller($self, $index, $data) {
+    confess "Error: nothing to change ".Dumper($data)
+    if !keys %$data;
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my $count = 0;
+    my $changed = 0;
+
+    my ($devices) = $doc->findnodes('/domain/devices');
+
+    my $changed_piix3_uhci=0;
+
+    for my $device ($devices->findnodes('controller')) {
+        next if $device->getAttribute('type') ne 'usb';
+        next if $count++ != $index;
+        for my $field (keys %$data) {
+            if (ref($data->{$field})) {
+                _change_xml($device, $field, $data->{$field});
+                $changed++;
+
+                next;
+            }
+            if ( !defined $device->getAttribute($field)
+                || $device->getAttribute($field) ne $data->{$field}) {
+                $device->setAttribute($field, $data->{$field});
+                $changed++;
+
+                $changed_piix3_uhci++
+                if $field eq 'model' && $data->{$field} eq 'piix3-uhci';
+
+                _change_xml($device,'address', {
+                        slot => '0x01'
+                        ,function => '0x2'
+                    });
+            }
+
+        }
+        last;
+    }
+
+
+    $self->reload_config($doc) if $changed;
+}
+
 
 sub _remove_acceleration($video) {
     my ($acceleration) = $video->findnodes("acceleration");
