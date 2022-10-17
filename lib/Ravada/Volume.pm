@@ -129,7 +129,7 @@ sub BUILD($self, $arg) {
             && $self->vm->file_exists($arg->{file})
             ;
         $self->_cache_volume_info()
-        if $arg->{domain} && $arg->{domain}->is_known();
+           if $arg->{domain} && $arg->{domain}->is_known();
     } else {
         $arg->{info} = $self->_get_cached_info();
     }

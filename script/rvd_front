@@ -2813,7 +2813,7 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
                     uid => $USER->id
                 , id_domain => $domain->id
                 , retry => 20
-                );
+                ) if $domain->list_ports();
             }
 
             app->log->info($USER->name." start_domain ".$domain->name." from "._remote_ip($c))

@@ -410,7 +410,7 @@ sub _around_create_domain {
 
     my $config = delete $args{config};
 
-    if ($name !~ /^[a-zA-Z0-9_-]+$/) {
+    if ($name !~ /^[a-zA-Z0-9_\-]+$/) {
         $alias = $self->_set_alias_unique($alias or $name);
         $name = $self->_set_ascii_name($name);
         $args_create{name} = $name;
@@ -523,9 +523,9 @@ sub _around_create_domain {
 
 sub _set_ascii_name($self, $name) {
     my $length = length($name);
-    $name =~ tr/áéíóúàèìòùäëïöüçñ€$/aeiouaeiouaeioucnes/;
-    $name =~ tr/ÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÇÑ€$/AEIOUAEIOUAEIOUCNES/;
-    $name =~ tr/A-Za-z0-9_\-/\-/c;
+    $name =~ tr/.âêîôûáéíóúàèìòùäëïöüçñ'/-aeiouaeiouaeiouaeioucn_/;
+    $name =~ tr/ÂÊÎÔÛÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÇÑ€$/AEIOUAEIOUAEIOUAEIOUCNES/;
+    $name =~ tr/A-Za-z0-9_\.\-/\-/c;
     $name =~ s/^\-*//;
     $name =~ s/\-*$//;
     $name =~ s/\-\-+/\-/g;
@@ -1557,7 +1557,7 @@ sub read_file( $self, $file ) {
 
 sub _read_file_local( $self, $file ) {
     confess "Error: file undefined" if !defined $file;
-    CORE::open my $in,'<',$file or die "$! $file";
+    CORE::open my $in,'<',$file or croak "$! $file";
     return join('',<$in>);
 }
 

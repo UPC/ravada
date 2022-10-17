@@ -2070,11 +2070,7 @@ sub _xml_remove_usb {
     }
 }
 
-sub _xml_add_usb_xhci {
-    my $self = shift;
-    my $devices = shift;
-
-    my $model = 'nec-xhci';
+sub _xml_add_usb_xhci($self, $devices, $model='qemu-xhci') {
     my $ctrl = _search_xml(
                            xml => $devices
                          ,name => 'controller'
@@ -2628,6 +2624,7 @@ sub _free_memory_available($self) {
 }
 
 sub _fetch_dir_cert($self) {
+    return '' if $<;
     my $in = $self->read_file($FILE_CONFIG_QEMU);
     for my $line (split /\n/,$in) {
         chomp $line;

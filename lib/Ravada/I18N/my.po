@@ -1,14 +1,14 @@
 # Translators:
-# Kimia Mirehbar 	<kimia@etsetb.upc.edu>, 2017
+# Ditta F
 msgid ""
 msgstr ""
 "Project-Id-Version: ravada\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-10-02 20:02+0700\n"
-"Last-Translator: Mahyuddin <yudi.al@gmail.com>\n"
-"Language-Team: Indonesian <yudi.al@gmail.com>\n"
-"Language: id\n"
+"POT-Creation-Date: 2022-10-08 10:12+0300\n"
+"PO-Revision-Date: 2022-10-08 20:02+0700\n"
+"Last-Translator: Ditta F\n"
+"Language-Team: Malaysia\n"
+"Language: my\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -51,7 +51,7 @@ msgid "Clone"
 msgstr "Klon"
 
 msgid "Can't Prepare Base, Remove Base nor Delete. Machine has"
-msgstr "Tidak Bisa Mempersiapkan Basis, Buang Basis atau Hapus. Mesin telah"
+msgstr "Tidak Boleh Menyediakan Basis, Buang Basis atau Padam. Mesin telah"
 
 msgid "Clone/s"
 msgstr "Klon/s"
@@ -102,7 +102,7 @@ msgid "Copy"
 msgstr "Salin"
 
 msgid "Error!"
-msgstr "Galat!"
+msgstr "Kesilapan!"
 
 msgid "Backend no available!"
 msgstr "Backend tidak tersedia!"
@@ -123,7 +123,7 @@ msgid "Mark as UnRead"
 msgstr "Tandai belum Dibaca"
 
 msgid "No message to show!"
-msgstr "Tidak ada pesan untuk ditampilkan!"
+msgstr "Tiada pesan untuk ditampilkan!"
 
 msgid "Admin"
 msgstr "Admin"
@@ -132,16 +132,16 @@ msgid "Show/Hide clones"
 msgstr "Tampilkan/Sembunyikan klone"
 
 msgid "I want to change my password"
-msgstr "Saya ingin mengganti kata sandi saya"
+msgstr "Saya ingin mengganti kata laluan saya"
 
 msgid "I want to change my language"
-msgstr "Saya ingin mengubah bahasa saya"
+msgstr "Saya mahu menukar bahasa saya"
 
 msgid "Language:"
 msgstr "Bahasa:"
 
 msgid "English"
-msgstr "Inggris"
+msgstr "Inggeris"
 
 msgid "Spanish"
 msgstr "Spanyol"
@@ -150,10 +150,10 @@ msgid "Catalan"
 msgstr "Catalan"
 
 msgid "New Password:"
-msgstr "Kata Sandi Baru:"
+msgstr "Kata kata laluan Baru:"
 
 msgid "Confirm Password:"
-msgstr "Konfirmasi Sandi:"
+msgstr "Konfirmasi kata laluan:"
 
 msgid "Submit"
 msgstr "Kirim"
@@ -162,16 +162,16 @@ msgid "Your language has been changed successfully"
 msgstr "Bahasa Anda telah berhasil diubah"
 
 msgid "Your password has been changed successfully"
-msgstr "Kata sandi Anda telah berhasil diubah"
+msgstr "Kata kata laluan Anda telah berhasil diubah"
 
 msgid "Password too small"
 msgstr "Password terlalu kecil"
 
 msgid "Password fields aren't equal"
-msgstr "Bidang kata sandi tidak sama"
+msgstr "Bidang kata laluan tidak sama"
 
 msgid "Some of the password's fields are empty"
-msgstr "Beberapa bidang kata sandi kosong"
+msgstr "Beberapa bidang kata laluan kosong"
 
 msgid "Public"
 msgstr "Publik"
@@ -228,7 +228,7 @@ msgid "will remove all the contents of the machine"
 msgstr "akan menghapus semua isi mesin"
 
 msgid "Are you sure?"
-msgstr "Apakah Anda yakin?"
+msgstr "Apakah Anda pasti?"
 
 msgid "Yes"
 msgstr "Iya"
@@ -243,7 +243,7 @@ msgid "Machine settings"
 msgstr "Pengaturan mesin"
 
 msgid "Cannot remove base, machine has clones"
-msgstr "Tidak dapat menghapus dasar, mesin memiliki klon"
+msgstr "Tidak boleh menghapus pangkalan, mesin memiliki klon"
 
 msgid "For spice redirection you'll need to install"
 msgstr "Untuk pengalihan spice Anda harus memasang"
@@ -267,7 +267,7 @@ msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, then "
 "execute the file."
 msgstr ""
-"atau salin baris berikut ini dalam berkas ASCII dan simpan dengan ekstensi .reg, "
+"atau salin baris berikut dalam fail ASCII dan simpan dengan sambungan .reg, kemudian "
 "lalu jalankan berkas tersebut."
 
 msgid "Login"
@@ -286,7 +286,7 @@ msgid "user"
 msgstr "pengguna"
 
 msgid "password"
-msgstr "kata sandi"
+msgstr "kata laluan"
 
 msgid "Start session"
 msgstr "Mulai sesi"
@@ -298,67 +298,67 @@ msgid "Permissions"
 msgstr "Izin"
 
 msgid "can change the settings of owned virtual machines."
-msgstr "bisa mengubah pengaturan mesin virtual yang dimiliki."
+msgstr "boleh mengubah pengaturan mesin virtual yang dimiliki."
 
 msgid "can change the settings of any virtual machines."
-msgstr "dapat mengubah pengaturan dari setiap mesin virtual."
+msgstr "boleh mengubah pengaturan dari setiap mesin virtual."
 
 msgid ""
 "can change the settings of any virtual machines cloned from one base owned by the "
 "user."
 msgstr ""
-"dapat mengubah pengaturan mesin virtual apapun yang dikloning dari satu basis "
+"boleh mengubah pengaturan mesin virtual apapun yang dikloning dari satu basis "
 "yang dimiliki oleh pengguna."
 
 msgid "can clone public virtual machines."
-msgstr "Bisa mengkloning mesin virtual publik."
+msgstr "Boleh mengkloning mesin virtual publik."
 
 msgid "can clone any virtual machine."
-msgstr "Bisa mengkloning mesin virtual apapun."
+msgstr "Boleh mengkloning mesin virtual apapun."
 
 msgid "can create bases."
-msgstr "bisa membuat basis."
+msgstr "boleh membuat basis."
 
 msgid "can create virtual machines."
-msgstr "bisa membuat mesin virtual."
+msgstr "boleh membuat mesin virtual."
 
 msgid "can grant permissions to other users"
-msgstr "dapat memberikan izin kepada pengguna lain"
+msgstr "boleh memberikan izin kepada pengguna lain"
 
 msgid "can hibernate any virtual machine."
-msgstr "bisa hibernasi mesin virtual apapun."
+msgstr "boleh hibernasi mesin virtual apapun."
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr "Bisa hibernasi klon dari mesin virtual yang dimiliki oleh pengguna."
+msgstr "Boleh hibernasi klon dari mesin virtual yang dimiliki oleh pengguna."
 
 msgid "can hibernate any clone."
-msgstr "bisa hibernasi klon apapun."
+msgstr "boleh hibernasi klon apapun."
 
 msgid "can remove any virtual machines owned by the user."
-msgstr "dapat menghapus mesin virtual yang dimiliki oleh pengguna."
+msgstr "boleh menghapus mesin virtual yang dimiliki oleh pengguna."
 
 msgid "can remove any virtual machine."
-msgstr "bisa menghapus mesin virtual apapun."
+msgstr "boleh menghapus mesin virtual apapun."
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr "dapat menghapus klon dari mesin virtual yang dimiliki oleh pengguna."
+msgstr "boleh mengeluarkan klon daripada mesin maya yang dimiliki oleh pengguna."
 
 msgid "can remove any clone."
-msgstr "bisa menghapus kloning."
+msgstr "boleh menghapus kloning."
 
 msgid "can take a screenshot of any virtual machine owned by the user."
 msgstr ""
-"bisa mengambil tangkapan layar dari setiap mesin virtual yang dimiliki oleh "
+"boleh mengambil tangkapan layar dari setiap mesin virtual yang dimiliki oleh "
 "pengguna."
 
 msgid "can take a screenshot of any virtual machine."
-msgstr "bisa mengambil tangkapan layar dari mesin virtual manapun."
+msgstr "boleh mengambil tangkapan layar dari mesin virtual manapun."
 
 msgid "can shutdown any virtual machine."
-msgstr "bisa mematikan mesin virtual apapun."
+msgstr "boleh mematikan mesin virtual apapun."
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr "Bisa mematikan klon dari mesin virtual yang dimiliki oleh user."
+msgstr "Boleh mematikan klon dari mesin virtual yang dimiliki oleh user."
 
 msgid "Submit Query"
 msgstr "Kirim Query"
@@ -382,13 +382,13 @@ msgid "German"
 msgstr "Jerman"
 
 msgid "Password is too short"
-msgstr "Kata sandi terlalu pendek"
+msgstr "Kata laluan terlalu pendek"
 
 msgid "Password fields do not match"
-msgstr "Kata sandi tidak cocok"
+msgstr "Kata laluan tidak cocok"
 
 msgid "Some of the password fields are empty"
-msgstr "Beberapa kata sandi kosong"
+msgstr "Beberapa kata laluan kosong"
 
 msgid "Status"
 msgstr "Status"
@@ -406,7 +406,7 @@ msgid "Backend not available!"
 msgstr "Backend tidak tersedia!"
 
 msgid "No messages to show"
-msgstr "Tidak ada pesan untuk ditampilkan"
+msgstr "Tiada pesan untuk ditampilkan"
 
 msgid "Hibernate"
 msgstr "Hibernasi"
@@ -456,7 +456,7 @@ msgid "bits) in your computer."
 msgstr "bits) di komputer anda."
 
 msgid "can change the settings of any virtual machines "
-msgstr "dapat mengubah pengaturan dari mesin virtual "
+msgstr "boleh mengubah pengaturan dari mesin virtual "
 
 msgid "cloned from one base owned by the user."
 msgstr "dikloning dari satu basis yang dimiliki pengguna."
@@ -519,29 +519,29 @@ msgid ""
 "can change the settings of all virtual machines "
 "cloned from one base owned by the user."
 msgstr ""
-"bisa mengubah pengaturan untuk semua mesin virtual "
+"boleh mengubah pengaturan untuk semua mesin virtual "
 "kloning dari salah satu basis yang dimiliki pengguna."
 
 msgid "monitoring"
 msgstr "Memonitor"
 
 msgid "Are you sure you want to remove the Base of"
-msgstr "Apakah anda yakin akan menghapus basis dari"
+msgstr "Adakah anda pasti mahu mengalih keluar Base of"
 
 msgid "Are you sure you want to prepare the Base of"
-msgstr "Apakah anda yakin akan mempersiapkan basis dari"
+msgstr "Adakah anda pasti mahu menyediakan Pangkalan"
 
 msgid "Are you sure you want to change the Public state of"
-msgstr "Apakah anda yakin akan mengubah status publik dari"
+msgstr "Adakah anda pasti mahu menukar keadaan Awam"
 
 msgid "Search"
 msgstr "Cari"
 
 msgid "There are no public bases available in this system."
-msgstr "Tidak ada basis publik tersedia di sistem ini."
+msgstr "Tiada basis publik tersedia di sistem ini."
 
 msgid "There are no machines available in this system."
-msgstr "Tidak ada mesin tersedia di sistem ini."
+msgstr "Tiada mesin tersedia di sistem ini."
 
 msgid "Create one."
 msgstr "Buat satu."
@@ -598,7 +598,7 @@ msgid "Danger Zone"
 msgstr "Zona Bahaya"
 
 msgid "Once you delete the machine, there is no going back. Please be certain."
-msgstr "Sekali anda menghapus mesin, tidak bisa dikembalikan. Tolong Pastikan."
+msgstr "Sekali anda menghapus mesin, tidak boleh dikembalikan. Tolong Pastikan."
 
 msgid "Danger"
 msgstr "Bahaya"
@@ -607,10 +607,10 @@ msgid "This will remove all the contents of the machine"
 msgstr "Ini akan menghapush semua konten dari mesin"
 
 msgid "This action can't be undone"
-msgstr "Aksi ini tidak bisa dikembalikan"
+msgstr "Aksi ini tidak boleh dikembalikan"
 
 msgid "Are you sure ?"
-msgstr "Apakah anda yakin ?"
+msgstr "Apakah anda pasti ?"
 
 msgid "Yes, remove"
 msgstr "Ya, Hapus"
@@ -631,7 +631,7 @@ msgid "Yes, remove all the clones"
 msgstr "Ya, hapush semua klon"
 
 msgid "This virtual machine can't be removed because it has"
-msgstr "Mesin virtual ini tidak bisa dihapus karena"
+msgstr "Mesin virtual ini tidak boleh dihapus karena"
 
 msgid "clones"
 msgstr "klon"
@@ -739,10 +739,10 @@ msgid "Enter Username"
 msgstr "Masukan nama pengguna"
 
 msgid "Enter Password"
-msgstr "Masukan kata sandi"
+msgstr "Masukan kata laluan"
 
 msgid "Confirm Password"
-msgstr "Konfirmasi kata sandi"
+msgstr "Konfirmasi kata laluan"
 
 msgid "Username is required"
 msgstr "Nama pengguna dibutuhkan"
@@ -757,28 +757,28 @@ msgid "Username can only contain words, numbers, dashes, dots and underscores"
 msgstr "Nama pengguna hanya boleh menggunakan kata, angka, tanda garis, titik dan garis bawah"
 
 msgid "Password is required"
-msgstr "Kata sandi dibutuhkan"
+msgstr "Kata kata laluan dibutuhkan"
 
 msgid "Password can not exceed 20 characters"
-msgstr "Kata sandi tidak boleh melebihi 20 karakter"
+msgstr "Kata kata laluan tidak boleh melebihi 20 karakter"
 
 msgid "Password must be at least 5 characters"
-msgstr "Kata sandi harus paling sedikit 5 karakter"
+msgstr "Kata kata laluan harus paling sedikit 5 karakter"
 
 msgid "Password can only contain words and numbers"
-msgstr "Kata sandi hanya boleh menggunakan kata dan angka"
+msgstr "Kata kata laluan hanya boleh menggunakan kata dan angka"
 
 msgid "Confirm Password is required"
-msgstr "Konfirmasi kata sandi dibutuhkan"
+msgstr "Konfirmasi kata laluan dibutuhkan"
 
 msgid "Confirm Password can not exceed 20 characters"
-msgstr "Konfirmasi kata sandi tidak boleh melebihi 20 karakter"
+msgstr "Konfirmasi kata laluan tidak boleh melebihi 20 karakter"
 
 msgid "Confirm Password must be at least 5 characters"
-msgstr "Konfirmasi Kata sandi harus paling sedikit 5 karakter"
+msgstr "Konfirmasi Kata kata laluan harus paling sedikit 5 karakter"
 
 msgid "Confirm Password can only contain words and numbers"
-msgstr "Konfirmasi Kata sandi hanya boleh menggunakan kata dan angka"
+msgstr "Konfirmasi Kata kata laluan hanya boleh menggunakan kata dan angka"
 
 msgid "This information will be available to the users"
 msgstr "Informasi ini akan tersdia untuk pengguna-pengguna"
@@ -796,7 +796,7 @@ msgid "Press SHIFT + F12 to exit"
 msgstr "Tekan SHIT + F12 untuk keluar"
 
 msgid "If you can not see the machine screen in a few seconds check for a file called"
-msgstr "Jika anda tidak dapat melihat layar mesin dalam beberapa saat cek file"
+msgstr "Jika anda tidak boleh melihat layar mesin dalam beberapa saat cek file"
 
 msgid "in your downloads folder."
 msgstr "di dalam folder unduhan"
@@ -811,7 +811,7 @@ msgid "Read more."
 msgstr "Baca lagi."
 
 msgid "The password for this virtual machine connection is :"
-msgstr "Kata sandi dari koneksi mesin virtual ini adalah :"
+msgstr "Kata kata laluan dari koneksi mesin virtual ini adalah :"
 
 msgid "view"
 msgstr "lihat"
