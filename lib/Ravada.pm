@@ -945,28 +945,15 @@ sub _add_domain_drivers_display($self) {
     }
 }
 
-sub _add_domain_drivers_cpu($self) {
-    my %data = (
-        'KVM' => [
-            'custom'
-            ,'host-model'
-            ,'host-passthrough'
-        ]
-    );
-
+sub _add_domain_drivers_generic($self, $type, $data) {
     my $id_type = Ravada::Utils::max_id($CONNECTOR->dbh, 'domain_drivers_types')+1;
     my $id_option = Ravada::Utils::max_id($CONNECTOR->dbh, 'domain_drivers_options');
-    for my $vm ( keys %data) {
-        my $type = {
-            id => $id_type
-            ,name => 'cpu'
-            ,description => 'CPU'
-            ,vm => $vm
-        };
-
+    for my $vm ( keys %$data) {
+        $type->{id} = $id_type;
+        $type->{vm} = $vm;
         $self->_update_table('domain_drivers_types','name,vm',$type)
             and do {
-            for my $option ( @{$data{$vm}} ) {
+            for my $option ( @{$data->{$vm}} ) {
                 if (!ref($option)) {
                     $option = { name => $option
                         ,value => $option
@@ -980,6 +967,38 @@ sub _add_domain_drivers_cpu($self) {
             $id_type++;
         };
     }
+
+}
+
+sub _add_domain_drivers_cpu($self) {
+    my %data = (
+        'KVM' => [
+            'custom'
+            ,'host-model'
+            ,'host-passthrough'
+        ]
+    );
+    my $type = {
+        name => 'cpu'
+        ,description => 'CPU'
+    };
+    $self->_add_domain_drivers_generic($type, \%data);
+}
+
+sub _add_domain_drivers_usb_controller($self) {
+    my %data = (
+        'KVM' => [
+            'nec-xhci'
+            ,'piix3-uhci'
+            ,'qemu-xhci'
+        ]
+    );
+    my $type = {
+        name => 'usb controller'
+        ,description => 'USB Controller'
+    };
+    $self->_add_domain_drivers_generic($type, \%data);
+
 }
 
 sub _update_domain_drivers_types($self) {
@@ -1362,6 +1381,7 @@ sub _update_data {
 
     $self->_add_domain_drivers_display();
     $self->_add_domain_drivers_cpu();
+    $self->_add_domain_drivers_usb_controller();
 
     $self->_add_indexes();
 }
@@ -4408,9 +4428,11 @@ sub _new_clone_name($self, $base,$user) {
     my $name;
     my $alias = $base->name;
     $alias = $base->_data('alias') if $base->_data('alias');
-    if ($user->name =~ /^[a-z0-9_\-]+$/i) {
-        $name = $base->name."-".$user->name;
-        $alias .= "-".$user->name;
+    my $user_name = Encode::decode_utf8($user->name);
+    if ($user_name =~ /^[a-zA-Z0-9âêîôûáéíóúàèìòùäëïöüçñ'_\.\-€\$]+$/i) {
+        $user_name = $base->_vm->_set_ascii_name(Encode::decode_utf8($user->name));
+        $name = $base->name."-".$user_name;
+        $alias .= "-".Encode::decode_utf8($user->name);
     } else {
         my $length = length($user->id);
         my $n = "0" x (4-$length);
@@ -6133,6 +6155,8 @@ sub _cmd_remove_expose($self, $request) {
 
 sub _cmd_open_exposed_ports($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain) or return;
+    return if !$domain->list_ports();
+
     $domain->open_exposed_ports();
 
     Ravada::Request->refresh_machine_ports(

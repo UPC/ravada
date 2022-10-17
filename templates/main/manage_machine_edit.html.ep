@@ -16,6 +16,7 @@
                 %= include 'main/manage_machine_edit_net'
                 %= include 'main/manage_machine_edit_video'
                 %= include 'main/manage_machine_edit_sound'
+                %= include 'main/manage_machine_edit_usb'
 
     <div class="list-group list-group-horizontal-md">
         <div class="col-md-1">

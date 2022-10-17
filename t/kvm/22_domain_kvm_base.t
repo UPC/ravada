@@ -102,14 +102,14 @@ sub test_usb {
     my $expect = 3;
     ok(scalar @redir == $expect,"Expecting $expect redirdev, got ".scalar(@redir));
 
-    for my $model ( 'nec-xhci') {
+    for my $model ( 'xhci') {
         my @usb = $devices->findnodes('controller');
         my @usb_found;
 
         for my $dev (@usb) {
             next if $dev->getAttribute('type') ne 'usb';
             next if ! $dev->getAttribute('model') 
-                    || $dev->getAttribute('model') ne $model;
+                    || $dev->getAttribute('model') !~ qr/$model/;
 
             push @usb_found,($dev);
         }
@@ -274,7 +274,7 @@ sub test_dont_allow_remove_base_before_sons {
 my $vm;
 
 clean();
-eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
+eval { $vm = $RAVADA->search_vm('KVM') } if $RAVADA;
 
 SKIP: {
     my $msg = "SKIPPED test: No KVM backend found";
