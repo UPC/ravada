@@ -278,7 +278,6 @@
             var load_balance_options = function() {
                 $http.get("/balance_options.json")
                     .then(function(response) {
-                        console.log($scope.showmachine.balance_policy);
                         $scope.balance_options = response.data;
                     });
             };
@@ -863,16 +862,15 @@
             };
             $scope.change_hardware= function(item,hardware,index) {
                 var new_settings = $scope.showmachine.hardware[hardware][index];
-                var hw2 = hardware.replace(/\d+(.*)/,'$1');
                 $scope.request('change_hardware',
                     {'id_domain': $scope.showmachine.id
-                        ,'hardware': hw2
+                        ,'hardware': hardware
                         ,'index': index
                         ,'data': new_settings
                     }
                 );
                 $scope.lock_info = false;
-                if (hw2 == 'video') $scope.edit=false;
+                if (hardware == 'video') $scope.edit=false;
             }
             $scope.list_bases = function() {
                 $http.get('/list_bases.json')

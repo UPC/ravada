@@ -45,7 +45,7 @@ sub _download_alpine64 {
 sub _driver_field($hardware) {
     my $driver_field = 'driver';
     $driver_field = 'type'  if $hardware =~ /^video$/;
-    $driver_field = 'model' if $hardware =~ /^(sound|usb_controller)$/;
+    $driver_field = 'model' if $hardware =~ /^(sound|usb controller)$/;
     $driver_field = 'mode'  if $hardware eq 'cpu';
     $driver_field = '_name' if $hardware eq 'filesystem';
     return $driver_field;
@@ -644,6 +644,7 @@ sub test_add_hardware_custom($domain, $hardware) {
         ,network => sub {}
         ,video => \&test_add_video
         ,sound => sub {}
+        ,'usb controller' => sub {}
     );
 
     my $exec = $sub{$hardware} or die "No custom add $hardware";
@@ -732,7 +733,7 @@ sub test_remove_hardware_by_index($vm, $hardware) {
     if (!ref($items2->[0])) {
         is($items2->[0], $items1->[0]);
         is($items2->[1], $items1->[2]);
-    } elsif ($hardware !~ /^(usb_controller|video)$/) {
+    } elsif ($hardware !~ /^(usb controller|video)$/) {
         die "Error: no $name_field in ".Dumper($items2) if !exists $items2->[0]->{$name_field};
 
         is($items2->[0]->{$name_field},$items1->[0]->{$name_field});
@@ -753,6 +754,10 @@ sub test_remove_hardware($vm, $domain, $hardware, $index) {
         .Dumper(\@list_hardware1)
             if $index > scalar @list_hardware1;
 
+    $index = scalar(@list_hardware1)-1 if $index ==-1;
+    confess "Error: I can't remove index $index for $hardware"
+    if $hardware eq 'usb controller' && $index<1;
+
 	my $req;
 	{
 		$req = Ravada::Request->remove_hardware(uid => $USER->id
@@ -766,6 +771,7 @@ sub test_remove_hardware($vm, $domain, $hardware, $index) {
     wait_request(debug => 0);
 	is($req->status(), 'done');
 	is($req->error(), '') or exit;
+
 
     # there is no poing in checking if removed because
     # a new video device will be created when there is none
@@ -819,7 +825,8 @@ sub test_remove_almost_all_hardware {
     $n_keep = 0 if $hardware eq 'display' || $hardware eq 'disk';
 
     #TODO test remove hardware out of bounds
-    my $total_hardware = scalar($domain->get_controller($hardware));
+    my @hw = $domain->get_controller($hardware);
+    my $total_hardware = scalar(@hw);
     return if !defined $total_hardware || $total_hardware <= $n_keep;
     for my $index ( reverse 0 .. $total_hardware-1) {
         diag("removing $hardware $index");
@@ -1097,6 +1104,7 @@ sub test_change_hardware($vm, $domain, $hardware) {
          ,sound => sub {}
          ,cpu => \&_test_change_cpu
          ,features => \&_test_change_features
+         ,'usb controller' => sub {}
     );
     my $exec = $sub{$hardware} or die "I don't know how to test $hardware";
     $exec->($vm, $domain);
@@ -1137,6 +1145,10 @@ sub test_change_drivers($domain, $hardware) {
     for my $option (@$options) {
         my $index = 0;
         $index = _search_disk($domain) if $hardware eq 'disk';
+
+        $index = scalar(@{$info->{hardware}->{"usb controller"}}) -1
+        if $hardware eq 'usb controller';
+
         diag("Testing $hardware type $option in $hardware $index");
         $option = lc($option);
         my $req = Ravada::Request->change_hardware(
@@ -1332,7 +1344,9 @@ for my $vm_name (vm_names()) {
             test_remove_hardware_by_index($vm, $hardware);
             test_remove_hardware_by_index_network_kvm($vm, $hardware);
             test_add_hardware_request($vm, $domain_b, $hardware);
-            test_remove_hardware($vm, $domain_b, $hardware, 0);
+            my $n = 0;
+            $n = -1 if $hardware eq 'usb controller';
+            test_remove_hardware($vm, $domain_b, $hardware, $n);
             test_add_hardware_request_drivers($vm, $domain_b, $hardware);
             test_add_hardware_request($vm, $domain_b, $hardware);
         }
