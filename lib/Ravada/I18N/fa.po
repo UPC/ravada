@@ -188,7 +188,7 @@ msgid "Mark as read"
 msgstr "به عنوان خوانده شده علامت بزن"
 
 msgid "Mark as unread"
-msgstr "به عنوان "خوانده نشده" علامت گذاری کن"
+msgstr "به عنوان خوانده نشده علامت گذاری کن"
 
 msgid "No messages to show"
 msgstr "هیچ پیامی برای نمایش وجود ندارد"
@@ -1809,9 +1809,6 @@ msgstr "رمز عبور و تایید آنها مطابقت ندارد!"
 
 msgid "Today Schedule"
 msgstr "برنامه امروز"
-
-msgid "server"
-msgstr "سرور"
 
 msgid "server"
 msgstr "سرور"
