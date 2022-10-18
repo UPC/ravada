@@ -1,6 +1,5 @@
 # Translators:
-# Oğuz Ersen <oguzersen@protonmail.com>, 2022
- kavun# ergün elvan bilsel <bilselergun@gmail.com>, 2020
+# ergün elvan bilsel <bilselergun@gmail.com>, 2020
 # Joel Alarcón <joelalju100@gmail.com>, 2017
 # Fernando Verdugo <fv3rdugo@gmail.com>, 2017
 msgid ""
