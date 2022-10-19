@@ -1076,6 +1076,7 @@
     function run_domain_req_ctrl($scope, $http, $timeout, request ) {
         var redirected_display = false;
         var already_subscribed_to_domain = false;
+        var already_refreshed_ports = false;
         $scope.count_start = 0;
         $scope.copy_password= function(driver) {
             $scope.view_password=1;
@@ -1120,11 +1121,11 @@
                     already_subscribed_to_domain = true;
                     $scope.id_domain=data.id_domain;
                     $scope.subscribe_domain_info(url, data.id_domain);
-                    $scope.refresh_ports(url, data.id_domain, id_request);
                 }
             }
         }
-        $scope.refresh_ports = function(url, id_domain, id_request) {
+        $scope.refresh_ports = function(url, id_domain ) {
+            var id_request = $scope.request.id;
             $http.post('/request/open_exposed_ports/'
                 ,JSON.stringify(
                     { 'id_domain': id_domain
@@ -1160,6 +1161,11 @@
                         already_subscribed_to_domain = false;
                         $scope.count_start = 0;
                         return;
+                    } else if(!already_refreshed_ports) {
+                        if(data.ports && data.ports.length) {
+                            $scope.refresh_ports(url, data.id);
+                        }
+                        already_refreshed_ports = true;
                     }
                     $scope.count_start++;
                     $scope.domain = data;

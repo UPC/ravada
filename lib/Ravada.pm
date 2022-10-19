@@ -4042,7 +4042,12 @@ sub _cmd_manage_pools($self, $request) {
     for my $domain ( @domains ) {
         next if !$domain->pools();
         my @clone_pool = $domain->clones(is_pool => 1);
-        my $number = $domain->pool_clones() - scalar(@clone_pool);
+        my @reqs = grep {$_->command eq 'clone' } $domain->list_requests();
+        my $n_clones = scalar(@clone_pool)+ scalar(@reqs);
+        my $number = $domain->pool_clones() - $n_clones;
+        if ($domain->_data('volatile_clones')) {
+            $number = $domain->pool_start() - $n_clones;
+        }
         if ($number > 0 ) {
             $self->_pool_create_clones($domain, $number, $request);
         }
@@ -4086,12 +4091,14 @@ sub _pool_create_clones($self, $domain, $number, $request) {
         );
         push @arg_clone, ( after_request => $req_base->id ) if $req_base;
     }
+    my $start = 0;
+    $start = 1 if $domain->volatile_clones();
     Ravada::Request->clone(
         uid => $request->args('uid')
         ,id_domain => $domain->id
         ,number => $number
         ,add_to_pool => 1
-        ,start => 1
+        ,start => $start
         ,@arg_clone
     );
 }
@@ -5054,7 +5061,10 @@ sub _cmd_refresh_machine($self, $request) {
 
     my $id_domain = $request->args('id_domain');
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
-    my $domain = Ravada::Domain->open($id_domain) or confess "Error: domain $id_domain not found";
+
+    # it may have been removed on shutdown when volatile
+    my $domain = Ravada::Domain->open($id_domain) or return;
+
     $domain->check_status();
     $domain->list_volumes_info();
     my $is_active = $domain->is_active;
@@ -5065,7 +5075,7 @@ sub _cmd_refresh_machine($self, $request) {
 
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id
         ,timeout => 60, retry => 10)
-    if $is_active && $domain->ip;
+    if $is_active && $domain->ip && $domain->list_ports;
 
     $domain->_unlock_host_devices() if !$is_active;
 }
