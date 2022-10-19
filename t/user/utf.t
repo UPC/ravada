@@ -49,7 +49,7 @@ sub test_user_cyrillic($vm) {
             uid => $user->id
             ,id_domain => $clone->id
     );
-    _test_requests();
+    _test_requests($user);
     wait_request();
 
     Ravada::Request->shutdown_domain(
@@ -57,7 +57,7 @@ sub test_user_cyrillic($vm) {
             ,id_domain => $clone->id
             ,timeout => 3
     );
-    _test_requests();
+    _test_requests($user);
     wait_request();
     _test_messages_utf8($user);
 
@@ -178,11 +178,11 @@ sub test_user_name_europe($vm) {
 
 sub _test_utf8($user) {
     _test_messages_utf8($user);
-    _test_requests();
+    _test_requests($user);
 }
 
-sub _test_requests() {
-    my $reqs = rvd_front->list_requests();
+sub _test_requests($user) {
+    my $reqs = rvd_front->list_requests($user);
     for my $req (@$reqs) {
         ok(utf8::valid($req->{name}))    if $req->{name};
         ok(utf8::valid($req->{message})) if $req->{message};

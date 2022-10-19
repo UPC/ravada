@@ -1118,6 +1118,7 @@ sub _send_message {
     return if !$uid || $uid == Ravada::Utils::user_daemon->id;
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
+    return if !$user;
 
     my $domain_name0 = $self->defined_arg('name');
     my $domain_id = $self->defined_arg('id_domain');
