@@ -158,7 +158,7 @@ sub test_drivers_type($type, $vm, $node) {
 sub test_drivers($vm, $node) {
     my @drivers = $vm->list_drivers();
      for my $driver ( @drivers ) {
-         next if $driver->name =~ /display|features/;
+         next if $driver->name =~ /display|features|usb controller/;
          test_drivers_type($driver->name, $vm, $node);
      }
 
@@ -178,7 +178,12 @@ sub _add_hardware($domain) {
             source => { dir => $dir }
         }
     );
-    wait_request(debug => 1);
+    Ravada::Request->add_hardware(
+        name => 'usb controller'
+        ,uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request(debug => 0);
 }
 
 sub test_change_hardware($vm, @nodes) {
@@ -226,7 +231,11 @@ sub test_change_hardware($vm, @nodes) {
         diag("Testing remove $hardware");
 
         my $current_vm = $clone->_vm;
-        $clone->remove_controller($hardware,0);
+        my $n = 0;
+        $n = scalar(@{$info->{hardware}->{$hardware}})-1
+        if $hardware eq 'usb controller';
+
+        $clone->remove_controller($hardware,$n);
         is (scalar($clone->list_instances()), $n_instances);
 
         my $n_expected = scalar(@{$info->{hardware}->{$hardware}})-1;
