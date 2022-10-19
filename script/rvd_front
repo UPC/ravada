@@ -150,7 +150,6 @@ hook before_routes => sub {
    "object-src 'auto';"
   ."media-src 'self';"
   ." frame-src 'self';"
-  ." font-src 'self';"
   ." connect-src 'self'; ");
 
   $USER = undef;
