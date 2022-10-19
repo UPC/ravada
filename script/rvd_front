@@ -146,6 +146,11 @@ sub _time() {
 
 hook before_routes => sub {
   my $c = shift;
+  $c ->res->headers->content_security_policy (
+   "object-src 'auto';"
+  ."media-src 'self';"
+  ." frame-src 'self';"
+  ." connect-src 'self'; ");
 
   $USER = undef;
 
