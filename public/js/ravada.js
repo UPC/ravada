@@ -165,9 +165,6 @@
                     ws_connected = true;
                     ws.send(channel);
                 };
-                ws.onclose = function() {
-                    ws = new WebSocket(url);
-                };
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
@@ -349,9 +346,6 @@
             var subscribe_requests = function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_requests') };
-                ws.onclose = function() {
-                    ws = new WebSocket(url);
-                };
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
@@ -1116,9 +1110,6 @@
             already_subscribed_to_domain = false;
             var ws = new WebSocket(url);
             ws.onopen = function(event) { ws.send('request/'+id_request) };
-            ws.onclose = function() {
-                $scope.subscribe_request(url, id_request);
-            };
 
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);
@@ -1159,10 +1150,6 @@
             already_subscribed_to_domain = true;
             var ws = new WebSocket(url);
             ws.onopen = function(event) { ws.send('machine_info/'+id_domain) };
-            ws.onclose = function() {
-                $scope.subscribe_domain_info(url, id_domain);
-            };
-
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);
                 $scope.$apply(function () {
@@ -1302,9 +1289,6 @@
       $scope.subscribe_alerts = function(url) {
           var ws = new WebSocket(url);
           ws.onopen = function(event) { ws.send('list_alerts') };
-          ws.onclose = function() {
-                ws = new WebSocket(url);
-          };
 
           ws.onmessage = function(event) {
               var data = JSON.parse(event.data);
