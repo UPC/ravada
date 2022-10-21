@@ -2988,7 +2988,11 @@ sub _post_shutdown {
     my $is_active = $self->is_active;
 
     if ( $self->is_known && !$self->is_volatile && !$is_active ) {
-        $self->_data(status => 'shutdown');
+        if ($self->is_hibernated) {
+            $self->_data(status => 'hibernated');
+        } else {
+            $self->_data(status => 'shutdown');
+        }
         $self->_data(post_shutdown => 1);
     }
 
