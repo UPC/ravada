@@ -13,6 +13,8 @@ use utf8;
 
 use Carp qw(carp confess croak);
 use Data::Dumper;
+use DateTime;
+use DateTime::Format::DateParse;
 use File::Copy qw(copy move);
 use File::Rsync;
 use Fcntl ':mode';
@@ -558,6 +560,7 @@ sub _search_already_started($self, $fast = 0) {
 
             my $status = 'shutdown';
             $status = 'active'  if $domain->is_active;
+            $status = 'hibernated' if $domain->is_hibernated;
             $domain->_data(status => $status);
         }
     }
@@ -1574,12 +1577,25 @@ sub _data($self, $field, $value=undef, $table='domains') {
         confess "ERROR: Invalid field '$field'"
             if $field !~ /^[a-z]+[a-z0-9_]*$/;
 
+        return if $field eq 'status'
+        && $self->{$data}->{$field} eq 'active'
+        && $value eq 'starting';
+
         $self->_assert_update($table, $field => $value);
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE $table set $field=? WHERE $field_id=?"
         );
         $sth->execute($value, $self->id);
         $sth->finish;
+
+        if ($data eq '_data' && $field eq 'status'
+            && $value ne $self->{$data}->{$field}
+        ) {
+            confess "$self->{$data}->{$field} => $value"
+            if $self->{$data}->{$field} eq 'hibernated'
+            && $value eq 'shutdown';
+            $self->_data('date_status_change'=>Ravada::Utils::now());
+        }
         $self->{$data}->{$field} = $value;
         $self->_propagate_data($field,$value) if $PROPAGATE_FIELD{$field};
         $self->_execute_request($field,$value);
@@ -2041,11 +2057,45 @@ sub info($self, $user) {
     $info->{cdrom} = \@cdrom;
     $info->{requests} = $self->list_requests();
     $info->{host_devices} = [ $self->list_host_devices_attached() ];
+    $info->{date_status_change} = $self->_date_status_change();
 
     Ravada::Front::_init_available_actions($user, $info);
 
     lock_hash(%$info);
     return $info;
+}
+
+sub _date_status_change($self) {
+    my $date = $self->_data('date_status_change');
+    if (!$date) {
+        return {
+            date => ''
+            ,date_txt => ''
+            ,duration => ''
+        }
+    }
+    my $date_txt = $date;
+    my $dt = DateTime::Format::DateParse->parse_datetime($date);
+    if ($dt->day == DateTime->now()->day) {
+        $date_txt =~ s/.*?(\d\d*:\d\d):\d\d$/$1/;
+    }
+    my $dur= DateTime->now() - $dt;
+    my @units = ('years','months','weeks','days','hours','minutes');
+    my @units_one = ('year','month','week','day','hour','minute');
+    my @dur = $dur->in_units(@units);
+    my $duration = ['now',''];
+    for my $n (0 .. scalar(@units)-1) {
+        my $value = $dur[$n];
+        next if $value == 0;
+        $duration = [$value,$units[$n]];
+        $duration->[1]=$units_one[$n] if $value == 1;
+        last;
+    }
+    return {
+        date => $date
+        ,date_txt => $date_txt
+        ,duration => $duration
+    };
 }
 
 sub _load_drivers($self) {
@@ -2963,7 +3013,11 @@ sub _post_shutdown {
 
     if ( $self->is_known && !$self->is_volatile && !$is_active ) {
         $self->_unlock_host_devices();
-        $self->_data(status => 'shutdown');
+        if ($self->is_hibernated) {
+            $self->_data(status => 'hibernated');
+        } else {
+            $self->_data(status => 'shutdown');
+        }
         $self->_data(post_shutdown => 1);
     }
 

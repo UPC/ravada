@@ -2642,6 +2642,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','post_hibernated','int not null default 0');
     $self->_upgrade_table('domains','is_compacted','int not null default 0');
     $self->_upgrade_table('domains','has_backups','int not null default 0');
+    $self->_upgrade_table('domains','date_status_change' , 'datetime');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -4442,7 +4443,8 @@ sub _new_clone_name($self, $base,$user) {
         $alias .= "-".Encode::decode_utf8($user->name);
     } else {
         my $length = length($user->id);
-        my $n = "0" x (4-$length);
+        my $n =  '';
+        $n = "0" x (4-$length) if $length < 4;
         $name = $base->name."-".$n.$user->id;
         $alias .= "-".Encode::decode_utf8($user->name);
     }
