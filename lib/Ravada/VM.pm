@@ -476,6 +476,7 @@ sub _around_create_domain {
     $domain->add_volume_swap( size => $swap )   if $swap;
     $domain->_data('is_compacted' => 1);
     $domain->_data('alias' => $alias) if $alias;
+    $domain->_data('date_status_change', Ravada::Utils::now());
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
