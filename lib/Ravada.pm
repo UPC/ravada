@@ -2571,6 +2571,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','post_hibernated','int not null default 0');
     $self->_upgrade_table('domains','is_compacted','int not null default 0');
     $self->_upgrade_table('domains','has_backups','int not null default 0');
+    $self->_upgrade_table('domains','date_status_change' , 'datetime');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 

@@ -398,6 +398,7 @@ sub start($self, @args) {
     $listen_ip = $self->_vm->listen_ip($remote_ip) if !$listen_ip;
 
     $self->_store(is_active => 1);
+    $self->_store(is_hibernated => 0);
     my $password;
     $password = Ravada::Utils::random_name() if $set_password;
     $self->_set_displays_ip( $password, $listen_ip );
