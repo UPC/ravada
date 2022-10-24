@@ -1676,18 +1676,18 @@ sub _alias_grants($self) {
 }
 
 sub _add_grants($self) {
-    $self->_add_grant('rename', 0,"Can rename any virtual machine owned by the user.");
-    $self->_add_grant('rename_all', 0,"Can rename any virtual machine.");
-    $self->_add_grant('rename_clones', 0,"Can rename clones from virtual machines owned by the user.");
-    $self->_add_grant('shutdown', 1,"Can shutdown own virtual machines.");
-    $self->_add_grant('reboot', 1,"Can reboot own virtual machines.");
-    $self->_add_grant('reboot_all', 0,"Can reboot all virtual machines.");
-    $self->_add_grant('reboot_clones', 0,"Can reboot clones own virtual machines.");
-    $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
-    $self->_add_grant('start_many',0,"Can have an unlimited amount of machines started.");
-    $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
-    $self->_add_grant('view_groups',0,'Can view groups.');
-    $self->_add_grant('manage_groups',0,'Can manage groups.');
+    $self->_add_grant('rename', 0,"can rename any virtual machine owned by the user.");
+    $self->_add_grant('rename_all', 0,"can rename any virtual machine.");
+    $self->_add_grant('rename_clones', 0,"can rename clones from virtual machines owned by the user.");
+    $self->_add_grant('shutdown', 1,"can shutdown own virtual machines.");
+    $self->_add_grant('reboot', 1,"can reboot own virtual machines.");
+    $self->_add_grant('reboot_all', 0,"can reboot all virtual machines.");
+    $self->_add_grant('reboot_clones', 0,"can reboot clones own virtual machines.");
+    $self->_add_grant('screenshot', 1,"can get a screenshot of own virtual machines.");
+    $self->_add_grant('start_many',0,"can have an unlimited amount of machines started.");
+    $self->_add_grant('expose_ports',0,"can expose virtual machine ports.");
+    $self->_add_grant('view_groups',0,'can view groups.');
+    $self->_add_grant('manage_groups',0,'can manage groups.');
     $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1, 0);
 }
 
