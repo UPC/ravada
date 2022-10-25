@@ -1670,6 +1670,8 @@ sub _add_grants($self) {
     $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
     $self->_add_grant('start_many',0,"Can have an unlimited amount of machines started.");
     $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
+    $self->_add_grant('expose_ports_clones',0,"Can expose ports from clones of own virtual machines.");
+    $self->_add_grant('expose_ports_all',0,"Can expose ports from any virtual machine.");
     $self->_add_grant('view_groups',0,'Can view groups.');
     $self->_add_grant('manage_groups',0,'Can manage groups.');
     $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1, 0);
@@ -1736,7 +1738,7 @@ sub _enable_grants($self) {
     my @grants = (
         'change_settings',  'change_settings_all',  'change_settings_clones'
         ,'clone',           'clone_all',            'create_base', 'create_machine'
-        ,'expose_ports'
+        ,'expose_ports','expose_ports_clones','expose_ports_all'
         ,'grant'
         ,'manage_users'
         ,'rename', 'rename_all', 'rename_clones'
@@ -6040,6 +6042,11 @@ sub _post_login_locale($self, $request) {
 }
 
 sub _cmd_expose($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+
+    die "Error: access denied to expose ports for ".$user->name
+    if !$user->can_expose_ports($request->id_domain);
+
     my $domain = Ravada::Domain->open($request->id_domain);
     $domain->expose(
                port => $request->args('port')
