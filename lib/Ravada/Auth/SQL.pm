@@ -675,7 +675,7 @@ Returns if the user is allowed to perform a privileged action in a virtual machi
 =cut
 
 sub can_do_domain($self, $grant, $domain) {
-    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown reboot rename);
+    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown reboot rename expose_ports);
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
     return 0 if !$self->can_do($grant) && !$self->_domain_id_base($domain);
