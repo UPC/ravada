@@ -84,6 +84,22 @@ Upgrade your MySQL server or change:  ``datetime`` for ``timestamp``
 
 More information `about <https://stackoverflow.com/questions/36882149/error-1067-42000-invalid-default-value-for-created-at>`_.
 
+MySQL binlogs fill the disk
+---------------------------
+
+If you are using MySQL it may create a lot of binlog files that
+in some cases may fill your disk drive. If you are not using
+replication it is safe to disable them if it is only used for Ravada.
+
+Edit the file /etc/mysql/mysql.conf.d/mysqld.cnf and comment the next
+lines:
+
+::
+
+    # binlog_expire_logs_seconds	= 2592000
+    # max_binlog_size   = 100M
+
+
 Spice-Warning Error in certificate chain verification
 -----------------------------------------------------
 
