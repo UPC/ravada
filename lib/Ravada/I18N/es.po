@@ -2277,3 +2277,6 @@ msgstr "Esta característica necesita un servidor LDAP configurado."
 
 msgid "Monitoring"
 msgstr "Monitorización"
+
+msgid "For Spice client setup follow this "
+msgstr "Para configurar el cliente Spice, seguid este "
