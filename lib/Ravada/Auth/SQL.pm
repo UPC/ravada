@@ -1210,6 +1210,12 @@ sub groups($self) {
 
 }
 
+=head2 disk_used
+
+Returns the amount of disk space used by this user in MB
+
+=cut
+
 sub disk_used($self) {
     my $sth = $$CON->dbh->prepare(
         "SELECT v.* FROM volumes v,domains d "
