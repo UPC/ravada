@@ -2,14 +2,15 @@
 
 **Implemented enhancements:**
 
-- Translations update Catalan, Spanish and Russian [\#1817]
-- Vietnamese translation [\#1809]
+- grant open ports [\#1858]
+- show time changed state [\#1856]
+- info actual year [\#1874]
+- manage USB controllers [\#1846]
 
 **Refactors**
 
+
 **Bugfixes**
 
-- Admin can't change user passwords [\#1805]
-- LDAP access control issue [\#1821]
-- fix: parrot linux updated [\#1819]
-
+- do not reconnect web services for proper logout
+- properly check and remove machines with UTF names [\#1854]
