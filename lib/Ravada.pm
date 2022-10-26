@@ -1689,6 +1689,8 @@ sub _add_grants($self) {
     $self->_add_grant('view_groups',0,'can view groups.');
     $self->_add_grant('manage_groups',0,'can manage groups.');
     $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1, 0);
+    $self->_add_grant('create_disk',0,'can create disk volumes');
+    $self->_add_grant('quota_disk',0,'disk space limit',1);
 }
 
 sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
@@ -1764,6 +1766,7 @@ sub _enable_grants($self) {
         ,'start_many'
         ,'view_groups',     'manage_groups'
         ,'start_limit',     'start_many'
+        ,'create_disk', 'quota_disk'
     );
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
@@ -4763,9 +4766,28 @@ sub _cmd_add_hardware {
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
     die "Error: User ".$user->name." not allowed to add hardware to machine ".$domain->name
-        if !$user->is_admin;
+        unless $user->is_admin
+            || ($hardware eq 'disk' && $user->can_create_disk )
+        ;
+    $self->_check_quota_disk($user,$request);
 
     $domain->set_controller($hardware, $request->defined_arg('number'), $request->defined_arg('data'));
+}
+
+sub _check_quota_disk($self, $user, $request) {
+    return 1 if !$user->quota_disk();
+    return 1 if $user->is_admin();
+
+    my $quota
+    = int(Ravada::Utils::size_to_number($user->quota_disk().'G')/1024/1024/1024);
+    my $used = int($user->disk_used() / 1024 / 1024 / 1024 );
+    my $size = ($request->args('data')->{size} or $request->args('data')->{capacity} or '10G');
+    my $new = int(Ravada::Utils::size_to_number($size)/1024/1024/1024);
+    die "Error: User ".$user->name." out of disk quota."
+    ." Using: $used Gb"
+    ." requested: $new Gb"
+    ." Quota: $quota Gb"."\n"
+    if $quota < ($used+$new);
 }
 
 sub _cmd_remove_hardware {

@@ -1382,6 +1382,7 @@ get '/user/grant/(:id_user)/(:grant)/(:value)' => sub($c) {
             $info = "Permission granted to user"
         } else {
             $info = "Permission revoked from user";
+            $info = "Unlimited quota" if $grant =~ /^quota/;
         }
         $info = $c->stash->{i18n}->localize($info);
 
