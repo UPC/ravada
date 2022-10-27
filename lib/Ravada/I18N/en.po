@@ -2172,3 +2172,6 @@ msgstr "Source Machine"
 
 msgid "Monitoring"
 msgstr "Monitoring"
+
+msgid "For Spice client setup follow this "
+msgstr "For Spice client setup follow this "

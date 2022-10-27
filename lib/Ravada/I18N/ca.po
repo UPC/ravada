@@ -2329,3 +2329,6 @@ msgstr ""
 "Són necessaris grups LDAP per configurar les reserves. S'han trobat alguns "
 "grups, però cap membre hi pertany.<a href='/admin/groups'>Afegeix noves "
 "entrades aquí. </a>"
+
+msgid "For Spice client setup follow this "
+msgstr "Per a la configuració del client Spice, seguiu aquest "
