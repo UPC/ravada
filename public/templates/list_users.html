@@ -12,7 +12,7 @@
                 <tr ng-repeat="user in list_users">
 			<td>{{user.name}}</td>
             		<td><a style="cursor:pointer;" ng-show="{{user.is_admin}}" ng-click="remove_admin(user.id)" class="fa fa-check" aria-hidden="true"</a>
-                	    <a style="cursor:pointer;" ng-show="{{user.is_admin!=1}}" ng-click="make_admin(user.id)" class="fa fa-times" aria-hiden="true"</a></td>                
+                	    <a style="cursor:pointer;" ng-show="{{user.is_admin!=1}}" ng-click="make_admin(user.id)" class="fa fa-times" aria-hidden="true"</a></td>                
                 </tr>
         </tbody>
         </table>       
