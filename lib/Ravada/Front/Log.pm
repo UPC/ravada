@@ -141,7 +141,8 @@ sub _fill_empty($data, $unit, $time) {
         my ($key2) = $key =~ /(.*):\d\d/;
 
         $key2 =~ s/.*? (.*)/$1/ if $dayn eq $day0;
-        $key2 =~ s/(.*) .*/$1/ if ( $unit eq 'hours' && $time >=7*24 ) || ($unit eq 'days' && $time > 7) || ($unit eq 'weeks' && $time > 1);
+        $key2 =~ s/(.*) .*/$1/ if ( $unit eq 'hours' && $time >=7*24 ) || ($unit eq 'days' && $time > 7) || ($unit eq 'weeks' && $time > 1)
+        || $unit eq 'months' || $unit eq 'years';
         $key2 =~ s/\d\d\d\d-(.*)/$1/ if $yearn eq $year0;
 
         $data->{$key2} = delete $data->{$key};

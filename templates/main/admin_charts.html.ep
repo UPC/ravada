@@ -27,7 +27,10 @@ ent">
                   ng-options="item.id as item.title for item in options_m"
                   ng-change="load_chart('month')"
                   ></select>
-
+          <select ng-model="year"
+                  ng-options="item.id as item.title for item in options_y"
+                  ng-change="load_chart('year')"
+                  ></select>
         <div>
             <canvas id="myChart"></canvas>
         </div>

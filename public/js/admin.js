@@ -1297,6 +1297,7 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.day = 0;
         $scope.week = 0;
         $scope.month = 0;
+        $scope.year = 0;
 
         var max_y = 10;
         $scope.options_h = [
@@ -1329,6 +1330,14 @@ ravadaApp.directive("solShowMachine", swMach)
             ,{id:6 , title: '6 months'}
             ,{id:9 , title: '9 months'}
         ];
+        $scope.options_y = [
+            {id:0 , title: 'years'}
+            ,{id:1 , title: '1 year'}
+            ,{id:2 , title: '2 years'}
+            ,{id:3 , title: '3 years'}
+            ,{id:6 , title: '6 years'}
+            ,{id:9 , title: '9 years'}
+        ];
 
         var url;
 
@@ -1340,17 +1349,20 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.load_chart = function(type) {
             my_chart.destroy();
             if (type == 'hour') {
-                $scope.day=0;$scope.week=0;$scope.month=0;
+                $scope.day=0;$scope.week=0;$scope.month=0;$scope.year=0;
                 subscribe_log_active_domains(url,'hours',$scope.hour);
             } else if( type =='day') {
-                $scope.hour=0;$scope.week=0;$scope.month=0;
+                $scope.hour=0;$scope.week=0;$scope.month=0;$scope.year=0;
                 subscribe_log_active_domains(url,'days',$scope.day);
             } else if ( type == 'week') {
-                $scope.hour=0; $scope.day=0;$scope.month=0;
+                $scope.hour=0; $scope.day=0;$scope.month=0;$scope.year=0;
                 subscribe_log_active_domains(url,'weeks',$scope.week);
             } else if ( type == 'month') {
-                $scope.hour=0; $scope.day=0;$scope.week=0;
+                $scope.hour=0; $scope.day=0;$scope.week=0;$scope.year=0;
                 subscribe_log_active_domains(url,'months',$scope.month);
+            } else if ( type == 'year') {
+                $scope.hour=0; $scope.day=0;$scope.week=0;$scope.month=0;
+                subscribe_log_active_domains(url,'years',$scope.year);
             }
         };
 
