@@ -460,10 +460,12 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
 
     my @connector;
     @connector = ( connector => connector() ) if $sqlite;
+    my $pid_name = "ravada_install".base_domain_name();
     my $rvd = Ravada->new(
             @connector
                 , config => ( $config or $DEFAULT_CONFIG)
                 , warn_error => 1
+                , pid_name => $pid_name
     );
     $rvd->_install();
     $CONNECTOR = $rvd->connector if !$sqlite;

@@ -1382,7 +1382,6 @@ get '/user/grant/(:id_user)/(:grant)/(:value)' => sub($c) {
             $info = "Permission granted to user"
         } else {
             $info = "Permission revoked from user";
-            $info = "Unlimited quota" if $grant =~ /^quota/;
         }
         $info = $c->stash->{i18n}->localize($info);
 
@@ -2834,7 +2833,6 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
                 , remote_ip => _remote_ip($c)
             )
         }
-        $name = _new_domain_name($name);
     }
 
     app->log->info($USER->name." requesting create_domain ".$name." from "._remote_ip($c))
@@ -2849,17 +2847,6 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
        ,@create_args
     );
 
-}
-
-sub _new_domain_name {
-    confess;
-    my $name = shift;
-    my $count = 1;
-    my $name2;
-    for ( ;; ) {
-        $name2 = "$name-".++$count;
-        return $name2 if !$RAVADA->domain_exists($name2);
-    }
 }
 
 sub run_request($c, $request, $anonymous = 0) {

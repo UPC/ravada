@@ -53,7 +53,7 @@ for my $vm_name ( 'KVM' ) {
         my $vm = rvd_back->search_vm($vm_name);
 
         my $msg = "SKIPPED test: No $vm_name VM found ";
-        if ($vm && $vm eq 'KVM' && $>) {
+        if ($vm && $vm_name eq 'KVM' && $>) {
               $msg = "SKIPPED: Test must run as root";
               $vm = undef;
         }

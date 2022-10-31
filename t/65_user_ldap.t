@@ -448,6 +448,7 @@ sub _create_users(@groups) {
 sub _init_ravada($fly_config) {
     my $ravada;
     $ravada = Ravada->new(config => $fly_config
+        , pid_name => "ravada_install".base_domain_name()
         , connector => connector);
     $ravada->_install();
     Ravada::Auth::LDAP::init();
@@ -500,7 +501,9 @@ sub test_filter {
     SKIP: {
         my $ravada;
         eval { $ravada = Ravada->new(config => $fly_config
-                , connector => connector);
+                , connector => connector
+                , pid_name => "ravada_install".base_domain_name()
+            );
             $ravada->_install();
             Ravada::Auth::LDAP::init();
             Ravada::Auth::LDAP::_init_ldap_admin();
@@ -733,6 +736,7 @@ SKIP: {
             ,with_cn_posix_group => $with_cn_posix_group
         );
         my $ravada = Ravada->new(config => $fly_config
+                , pid_name => "ravada_install".base_domain_name()
                         , connector => connector);
         $ravada->_install();
         Ravada::Auth::LDAP::init();
