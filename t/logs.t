@@ -87,7 +87,7 @@ sub test_add_missing($vm) {
     $now = DateTime->now()-DateTime::Duration->new(seconds => 5);
     $sth->execute(2,$now->ymd." ".$now->hms);
 
-    my $log = Ravada::Front::Log::list_active_recent(1);
+    my $log = Ravada::Front::Log::list_active_recent(hours => 1);
     my $data = $log->{data};
     my $labels = $log->{labels};
     is(scalar(@$data),7) or die Dumper($log);
@@ -128,8 +128,8 @@ sub test_1day() {
         last if $d >= $now;
     }
 
-    my $log = Ravada::Front::Log::list_active_recent(24);
-    is(scalar (@{$log->{labels}}),25);
+    my $log = Ravada::Front::Log::list_active_recent('days' => 1);
+    is(scalar (@{$log->{labels}}),25) or die Dumper($log);
     is(scalar (@{$log->{data}}),25);
     for (@{$log->{labels}}) {
         like($_,qr/\:00$/);
@@ -142,7 +142,7 @@ sub test_1week() {
         ."(active,date_changed)"
         ." VALUES (?,?) "
     );
-    my $d= DateTime->now()-DateTime::Duration->new(days => 7);
+    my $d= DateTime->now()-DateTime::Duration->new(days => 1);
     my $now = DateTime->now();
     for my $h ( 0 .. 23 ) {
         for my $m ( 1,2,5 ) {
@@ -157,20 +157,26 @@ sub test_1week() {
         last if $d >= $now;
     }
 
-    my $log = Ravada::Front::Log::list_active_recent(24*7);
-    is(scalar (@{$log->{labels}}),8 );
-    is(scalar (@{$log->{data}}), 8);
+    my $log = Ravada::Front::Log::list_active_recent('weeks' => 1);
+    is(scalar (@{$log->{labels}}),185 );
+    is(scalar (@{$log->{data}}), 185);
 
     $log->{labels}->[0] = '2022-'.$log->{labels}->[0]
     if $log->{labels}->[0] !~ /^\d{4}/;
 
     for (@{$log->{labels}}) {
-        like($_,qr/(\d{4}-)?\d+-\d+$/);
+        like($_,qr/(\d{4}-)?\d+-\d+ \d\d:00/);
     }
 
 }
 
+sub test_1month() {
+    my $log = Ravada::Front::Log::list_active_recent('months'=>'1');
+}
 
+sub test_1year() {
+    my $log = Ravada::Front::Log::list_active_recent('years'=>1);
+}
 
 ########################################################################
 
@@ -188,6 +194,8 @@ for my $vm_name ( 'Void' ) {
         test_add_missing($vm);
         test_1day();
         test_1week();
+        test_1month();
+        test_1year();
     }
 }
 

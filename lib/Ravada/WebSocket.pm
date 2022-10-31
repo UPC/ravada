@@ -375,10 +375,9 @@ sub _list_next_bookings_today($rvd, $args) {
 
 sub _log_active_domains($rvd, $args) {
 
-    my ($hour) = $args->{channel} =~ m{/(\d+)};
+    my ($unit, $time) = $args->{channel} =~ m{/(\w+)/(\d+)};
 
-    $hour = 1 if !$hour || $hour<1;
-    return Ravada::Front::Log::list_active_recent($hour);
+    return Ravada::Front::Log::list_active_recent($unit,$time);
 }
 
 sub _its_been_a_while_channel($channel) {

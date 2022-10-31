@@ -1333,7 +1333,7 @@ ravadaApp.directive("solShowMachine", swMach)
         var url;
 
         $scope.init = function(url0) {
-            subscribe_log_active_domains(url0,1);
+            subscribe_log_active_domains(url0,'hours',1);
             url = url0;
         }
 
@@ -1341,20 +1341,20 @@ ravadaApp.directive("solShowMachine", swMach)
             my_chart.destroy();
             if (type == 'hour') {
                 $scope.day=0;$scope.week=0;$scope.month=0;
-                subscribe_log_active_domains(url,$scope.hour);
+                subscribe_log_active_domains(url,'hours',$scope.hour);
             } else if( type =='day') {
                 $scope.hour=0;$scope.week=0;$scope.month=0;
-                subscribe_log_active_domains(url,$scope.day*24);
+                subscribe_log_active_domains(url,'days',$scope.day);
             } else if ( type == 'week') {
                 $scope.hour=0; $scope.day=0;$scope.month=0;
-                subscribe_log_active_domains(url,$scope.week*24*7);
+                subscribe_log_active_domains(url,'weeks',$scope.week);
             } else if ( type == 'month') {
                 $scope.hour=0; $scope.day=0;$scope.week=0;
-                subscribe_log_active_domains(url,$scope.month*4*24*7);
+                subscribe_log_active_domains(url,'months',$scope.month);
             }
         };
 
-        subscribe_log_active_domains = function(url,time) {
+        subscribe_log_active_domains = function(url,unit,time) {
             var chart_data = {
                 labels: [],
                 datasets: [{
@@ -1385,7 +1385,7 @@ ravadaApp.directive("solShowMachine", swMach)
 
             var ws = new WebSocket(url);
             ws.onopen = function(event) {
-                ws.send('log_active_domains/'+time);
+                ws.send('log_active_domains/'+unit+'/'+time);
             };
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);

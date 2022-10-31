@@ -23,14 +23,12 @@ sub _init_connector {
     $CONNECTOR = \$Ravada::Front::CONNECTOR   if !$$CONNECTOR;
 }
 
-sub list_active_recent($hours=1) {
-
-    confess "Error: incorrect hours" if $hours !~ /^\d+$/;
+sub list_active_recent($unit='hours',$time=1) {
 
     _init_connector();
-    my $t = DateTime->now()- DateTime::Duration->new( hours => $hours);;
+    my $t = DateTime->now()- DateTime::Duration->new( $unit => $time);;
     my $minute = $t->minute;
-    $minute = "00" if $hours>3;
+    $minute = "00" if $unit eq 'hours' && $time>3 || $unit ne 'hours';
     $minute = "0$minute" if length($minute)<2;
     $minute =~ s/(.)./${1}0/;
     my $hour = $t->hour;
@@ -55,7 +53,10 @@ sub list_active_recent($hours=1) {
 
     my ($prev_time, $prev_active);
     my $date_start2 = $date_start;
-    $date_start2 =~ s/(.*) .*/$1 00:00:00/ if $hours>=7*24;
+
+    $date_start2 =~ s/(.*) .*/$1 00:00:00/
+    if ( $unit eq 'days' && $time>3) || ($unit ne 'hours' && $unit ne 'days');
+
     my %data = ( $date_start2 => undef);
     my $row;
     my $last_active;
@@ -64,9 +65,9 @@ sub list_active_recent($hours=1) {
         $n++;
         $last_active = $row->{active};
         my ($curr_time) = $row->{date_changed};
-        if ($hours<6) {
+        if ($unit eq 'hours' && $time<6) {
             $curr_time =~ s{(.*)\d:\d\d}{${1}0:00};
-        } elsif($hours < 7 *24) {
+        } elsif(($unit eq 'hours' && $time < 7 *24) || ($unit eq 'days' && $time < 7) || ( $unit eq 'weeks' && $time <3 ) ) {
             $curr_time =~ s{(.*):\d\d:\d\d}{${1}:00:00};
         } else {
             $curr_time =~ s{(.*) .*}{${1} 00:00:00};
@@ -89,7 +90,7 @@ sub list_active_recent($hours=1) {
         $data{$prev_time} = $last_active;
     }
 
-    my $last_time = _fill_empty(\%data, $hours);
+    my $last_time = _fill_empty(\%data, $unit, $time);
 
     $data{$last_time} = $last_active;
 
@@ -99,18 +100,19 @@ sub list_active_recent($hours=1) {
     };
 }
 
-sub _fill_empty($data, $hours) {
+sub _fill_empty($data, $unit, $time) {
     my @labels = sort keys %$data;
     my $t = DateTime::Format::DateParse->parse_datetime($labels[0]);
     my $duration = DateTime::Duration->new(minutes => 10);
-    if ($hours <6 ) {
+    if ($unit eq 'hours' && $time<6 ) {
         $duration = DateTime::Duration->new(minutes => 10);
-    } elsif ($hours < 7*24) {
+    } elsif (($unit eq 'hours' && $time< 7*24)
+        || ( $unit eq 'days' && $time <7)
+        || ( $unit eq 'weeks' && $time < 3)){
         $duration = DateTime::Duration->new(hours => 1);
     } else {
         $duration = DateTime::Duration->new(days=> 1);
     }
-
 
     my $count=0;
     for (;;) {
@@ -139,7 +141,7 @@ sub _fill_empty($data, $hours) {
         my ($key2) = $key =~ /(.*):\d\d/;
 
         $key2 =~ s/.*? (.*)/$1/ if $dayn eq $day0;
-        $key2 =~ s/(.*) .*/$1/ if $hours>=7*24;
+        $key2 =~ s/(.*) .*/$1/ if ( $unit eq 'hours' && $time >=7*24 ) || ($unit eq 'days' && $time > 7) || ($unit eq 'weeks' && $time > 1);
         $key2 =~ s/\d\d\d\d-(.*)/$1/ if $yearn eq $year0;
 
         $data->{$key2} = delete $data->{$key};
