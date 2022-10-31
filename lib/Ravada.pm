@@ -1755,7 +1755,7 @@ sub _enable_grants($self) {
     my @grants = (
         'change_settings',  'change_settings_all',  'change_settings_clones'
         ,'clone',           'clone_all',            'create_base', 'create_machine'
-        ,'expose_ports','expose_ports_clones','expose_ports_all'
+        ,'expose_ports','expose_ports_clones'
         ,'grant'
         ,'manage_users'
         ,'rename', 'rename_all', 'rename_clones'
