@@ -18,7 +18,6 @@
                 <a href="/requirements"><%=l 'Read more.' %></a>
             </div>
 
-            {{request.id}} {{request.error}}
         <div ng-show="request.status != 'done' 
             || (domain && domain.is_base )
             || (domain && domain.is_active==0 && count_start<=2)"
