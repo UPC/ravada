@@ -7,6 +7,8 @@ use Data::Dumper;
 use Hash::Util qw( lock_hash unlock_hash);
 use Mojo::JSON qw(decode_json);
 use Moose;
+use Ravada::Front::Log;
+
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
@@ -45,6 +47,8 @@ my %SUB = (
 
 # bookings
                  ,list_next_bookings_today => \&_list_next_bookings_today
+
+                 ,log_active_domains => \&_log_active_domains
 );
 
 our %TABLE_CHANNEL = (
@@ -55,6 +59,7 @@ our %TABLE_CHANNEL = (
         ,'booking_entry_ldap_groups', 'booking_entry_users','booking_entry_bases']
     ,list_requests => 'requests'
     ,machine_info => 'domains'
+    ,log_active_domains => 'log_active_domains'
 );
 
 my $A_WHILE;
@@ -368,6 +373,14 @@ sub _list_next_bookings_today($rvd, $args) {
     return \@ret;
 }
 
+sub _log_active_domains($rvd, $args) {
+
+    my ($hour) = $args->{channel} =~ m{/(\d+)};
+
+    $hour = 1 if !$hour || $hour<1;
+    return Ravada::Front::Log::list_active_recent($hour);
+}
+
 sub _its_been_a_while_channel($channel) {
     if (!$A_WHILE{$channel} || time -$A_WHILE{$channel} > 5) {
         $A_WHILE{$channel} = time;
@@ -419,6 +432,9 @@ sub _different($var1, $var2) {
     return 1 if ref($var1) ne ref($var2);
     return _different_list($var1, $var2) if ref($var1) eq 'ARRAY';
     return _different_hash($var1, $var2) if ref($var1) eq 'HASH';
+    return 1 if !defined $var1 && defined $var2
+                || defined $var1 && !defined $var2;
+    return 0 if !defined $var1 && !defined $var2;
     return $var1 ne $var2;
 }
 

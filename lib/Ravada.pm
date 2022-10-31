@@ -2117,6 +2117,15 @@ sub _sql_create_tables($self) {
             }
         ]
         ,[
+            log_active_domains => {
+            'id' => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,'active','integer not null default 0'
+            ,'date_changed'
+                    => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+
+            }
+        ]
+        ,[
             iso_images => {
             'id' => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,'file_re' => 'char(64) DEFAULT NULL'
@@ -5129,6 +5138,7 @@ sub _cmd_refresh_vms($self, $request=undef) {
 
     my $active_vm = $self->_refresh_active_vms();
     my $active_domain = $self->_refresh_active_domains($request);
+    $self->_log_active_domains($active_domain);
     $self->_refresh_down_domains($active_domain, $active_vm);
 
     $self->_clean_requests('refresh_vms', $request);
@@ -5137,6 +5147,20 @@ sub _cmd_refresh_vms($self, $request=undef) {
     $self->_check_duplicated_prerouting();
     $self->_check_duplicated_iptable();
     $request->error('')                             if $request;
+}
+
+sub _log_active_domains($self, $list) {
+    my $active = 0;
+    for my $key (keys %$list) {
+            $active++ if $list->{$key}==1;
+    }
+
+    my $sth2 = $CONNECTOR->dbh->prepare(
+        "INSERT INTO log_active_domains "
+        ." (active,date_changed) "
+        ." values(?,?)"
+    );
+    $sth2->execute(scalar($active),Ravada::Utils::date_now());
 }
 
 sub _cmd_shutdown_node($self, $request) {

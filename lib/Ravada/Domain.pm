@@ -1550,6 +1550,22 @@ sub _execute_request($self, $field, $value) {
     );
 }
 
+sub _log_active_domains($self) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT count(*) FROM domains "
+        ." WHERE status='active'"
+    );
+    $sth->execute();
+    my ($active) = $sth->fetchrow;
+    my $sth2 = $self->_dbh->prepare(
+        "INSERT INTO log_active_domains "
+        ." ( active) "
+        ." values(?)"
+    );
+    $sth2->execute(scalar($active));
+
+}
+
 sub _data($self, $field, $value=undef, $table='domains') {
 
     _init_connector();
@@ -1595,6 +1611,8 @@ sub _data($self, $field, $value=undef, $table='domains') {
             if $self->{$data}->{$field} eq 'hibernated'
             && $value eq 'shutdown';
             $self->_data('date_status_change'=>Ravada::Utils::now());
+
+            $self->_log_active_domains();
         }
         $self->{$data}->{$field} = $value;
         $self->_propagate_data($field,$value) if $PROPAGATE_FIELD{$field};

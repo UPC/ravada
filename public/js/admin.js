@@ -13,6 +13,7 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("new_node", newNodeCtrl)
         .controller("settings_global", settings_global_ctrl)
         .controller("admin_groups", admin_groups_ctrl)
+        .controller('admin_charts', admin_charts_ctrl)
     ;
 
     ravadaApp.directive('ipaddress', function() {
@@ -1284,5 +1285,128 @@ ravadaApp.directive("solShowMachine", swMach)
                 }
             });
         };
+    };
+
+
+    function admin_charts_ctrl($scope, $http) {
+        $scope.data = [];
+        $scope.labels = [];
+        var my_chart;
+
+        $scope.hour = 0;
+        $scope.day = 0;
+        $scope.week = 0;
+        $scope.month = 0;
+
+        var max_y = 10;
+        $scope.options_h = [
+            {id:0, title: 'hours'}
+            ,{id:1 , title: '1 hour'}
+            ,{id:2 , title: '2 hours'}
+            ,{id:3 , title: '3 hours'}
+            ,{id:6 , title: '6 hours'}
+            ,{id:8 , title: '8 hours'}
+        ];
+        $scope.options_d = [
+            {id:0 , title: 'days'}
+            ,{id:1 , title: '1 day'}
+            ,{id:2 , title: '2 days'}
+            ,{id:3 , title: '3 days'}
+            ,{id:6 , title: '6 days'}
+        ];
+        $scope.options_w = [
+            {id:0 , title: 'weeks'}
+            ,{id:1 , title: '1 week'}
+            ,{id:2 , title: '2 weeks'}
+            ,{id:3 , title: '3 weeks'}
+            ,{id:4 , title: '4 weeks'}
+        ];
+        $scope.options_m = [
+            {id:0 , title: 'months'}
+            ,{id:1 , title: '1 month'}
+            ,{id:2 , title: '2 months'}
+            ,{id:3 , title: '3 months'}
+            ,{id:6 , title: '6 months'}
+            ,{id:9 , title: '9 months'}
+        ];
+
+        var url;
+
+        $scope.init = function(url0) {
+            subscribe_log_active_domains(url0,1);
+            url = url0;
+        }
+
+        $scope.load_chart = function(type) {
+            my_chart.destroy();
+            if (type == 'hour') {
+                $scope.day=0;$scope.week=0;$scope.month=0;
+                subscribe_log_active_domains(url,$scope.hour);
+            } else if( type =='day') {
+                $scope.hour=0;$scope.week=0;$scope.month=0;
+                subscribe_log_active_domains(url,$scope.day*24);
+            } else if ( type == 'week') {
+                $scope.hour=0; $scope.day=0;$scope.month=0;
+                subscribe_log_active_domains(url,$scope.week*24*7);
+            } else if ( type == 'month') {
+                $scope.hour=0; $scope.day=0;$scope.week=0;
+                subscribe_log_active_domains(url,$scope.month*4*24*7);
+            }
+        };
+
+        subscribe_log_active_domains = function(url,time) {
+            var chart_data = {
+                labels: [],
+                datasets: [{
+                    label: 'Active',
+                    backgroundColor: 'rgb(0, 199, 132)',
+                    borderColor: 'rgb(0, 99, 132)',
+                    data: [],
+                    tension: 0.2
+                }]
+            };
+            var chart_config ={
+                type: 'line',
+                data: chart_data,
+                options: {
+                    scales : {
+                        y : {
+                            min: 0,
+                            max: max_y
+                        }
+                    }
+                    ,borderColor: 'black'
+                }
+            };
+            my_chart = new Chart(
+                            document.getElementById('myChart'),
+                            chart_config
+                        );
+
+            var ws = new WebSocket(url);
+            ws.onopen = function(event) {
+                ws.send('log_active_domains/'+time);
+            };
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                $scope.$apply(function () {
+                    $scope.data = data.data;
+                    $scope.labels = data.labels;
+
+                    chart_config.data.datasets[0].data = data.data;
+                    chart_config.data.labels = data.labels;
+                    var new_max = Math.max(...data.data);
+                    new_max = Math.round(new_max/5+1)*5;
+                    if (new_max > chart_config.options.scales.y.max) {
+                        console.log(new_max);
+                        chart_config.options.scales.y.max = new_max;
+                    }
+                    my_chart.update();
+
+                });
+            }
+        };
+
+
     };
 }());
