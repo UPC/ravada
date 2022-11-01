@@ -128,6 +128,12 @@ has 'warn_error' => (
     ,default => sub { 1 }
 );
 
+has 'pid_name' => (
+    is => 'ro'
+    ,isa => 'Str'
+    , default => sub { 'ravada_install' }
+);
+
 =head2 BUILD
 
 Internal constructor
@@ -165,7 +171,7 @@ sub _set_first_time_run($self) {
 }
 
 sub _install($self) {
-    my $pid = Proc::PID::File->new(name => "ravada_install");
+    my $pid = Proc::PID::File->new(name => $self->pid_name);
     $pid->file({dir => "/run/user/$>"}) if $>;
     if ( $pid->alive ) {
         print "Waiting for install process to finish" if $ENV{TERM};
