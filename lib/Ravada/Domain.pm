@@ -1607,9 +1607,6 @@ sub _data($self, $field, $value=undef, $table='domains') {
         if ($data eq '_data' && $field eq 'status'
             && $value ne $self->{$data}->{$field}
         ) {
-            confess "$self->{$data}->{$field} => $value"
-            if $self->{$data}->{$field} eq 'hibernated'
-            && $value eq 'shutdown';
             $self->_data('date_status_change'=>Ravada::Utils::now());
 
             $self->_log_active_domains();

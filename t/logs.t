@@ -142,7 +142,7 @@ sub test_1week() {
         ."(active,date_changed)"
         ." VALUES (?,?) "
     );
-    my $d= DateTime->now()-DateTime::Duration->new(days => 1);
+    my $d= DateTime->now()-DateTime::Duration->new(weeks => 1);
     my $now = DateTime->now();
     for my $h ( 0 .. 23 ) {
         for my $m ( 1,2,5 ) {
@@ -158,8 +158,8 @@ sub test_1week() {
     }
 
     my $log = Ravada::Front::Log::list_active_recent('weeks' => 1);
-    is(scalar (@{$log->{labels}}),185 );
-    is(scalar (@{$log->{data}}), 185);
+    ok(scalar (@{$log->{labels}}) > 6*24 ) or die Dumper($log);
+    is(scalar (@{$log->{data}}), scalar(@{$log->{labels}}));
 
     $log->{labels}->[0] = '2022-'.$log->{labels}->[0]
     if $log->{labels}->[0] !~ /^\d{4}/;

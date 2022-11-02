@@ -26,7 +26,8 @@ sub _init_connector {
 sub list_active_recent($unit='hours',$time=1) {
 
     _init_connector();
-    my $t = DateTime->now()- DateTime::Duration->new( $unit => $time);;
+    my $t = DateTime->from_epoch( epoch => time() , time_zone => $LOCAL_TZ);
+    $t -= DateTime::Duration->new( $unit => $time);
     my $minute = $t->minute;
     $minute = "00" if $unit eq 'hours' && $time>3 || $unit ne 'hours';
     $minute = "0$minute" if length($minute)<2;

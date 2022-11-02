@@ -1293,7 +1293,7 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.labels = [];
         var my_chart;
 
-        $scope.hour = 0;
+        $scope.hour = 1;
         $scope.day = 0;
         $scope.week = 0;
         $scope.month = 0;
@@ -1408,9 +1408,10 @@ ravadaApp.directive("solShowMachine", swMach)
                     chart_config.data.datasets[0].data = data.data;
                     chart_config.data.labels = data.labels;
                     var new_max = Math.max(...data.data);
-                    new_max = Math.round(new_max/5+1)*5;
+                    var div = 5;
+                    if (new_max>30) { div = 10 };
+                    new_max = Math.round(new_max/div+1)*div;
                     if (new_max > chart_config.options.scales.y.max) {
-                        console.log(new_max);
                         chart_config.options.scales.y.max = new_max;
                     }
                     my_chart.update();
