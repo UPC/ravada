@@ -460,10 +460,12 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
 
     my @connector;
     @connector = ( connector => connector() ) if $sqlite;
+    my $pid_name = "ravada_install".base_domain_name();
     my $rvd = Ravada->new(
             @connector
                 , config => ( $config or $DEFAULT_CONFIG)
                 , warn_error => 1
+                , pid_name => $pid_name
     );
     $rvd->_install();
     $CONNECTOR = $rvd->connector if !$sqlite;
@@ -706,8 +708,9 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
         return if $@ && $@ =~ /Unknown domain/;
         die $@ if $@;
     }
+    my $req_clone;
     for my $clone ($domain->clones) {
-        remove_domain_and_clones_req($clone, $wait, $run_request);
+        $req_clone = remove_domain_and_clones_req($clone, $wait, $run_request);
     }
     if ( $wait || $domain->clones ) {
         my $n_clones = scalar($domain->clones);
@@ -722,13 +725,20 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
             }
         }
     }
-    Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id)
+    my $req_rm;
+    $req_rm = Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id)
     if $domain->is_base;
+
+    my @after_req;
+    @after_req = ( after_request => $req_clone->id ) if $req_clone;
+    @after_req = ( after_request => $req_rm->id ) if $req_rm;
     my $req= Ravada::Request->remove_domain(
         name => $domain->name
         ,uid => user_admin->id
+        ,@after_req
     );
     wait_request(debug => 0) if $wait;
+    return $req;
 }
 
 sub _remove_old_domains_vm($vm_name) {
@@ -1254,7 +1264,7 @@ sub wait_request {
             } elsif (!$done{$req->id}) {
                 $t0 = time;
                 $done{$req->{id}}++;
-                if ($check_error) {
+                if ($check_error && $req->command ne 'set_time') {
                     if ($req->command =~ /remove/) {
                         like($req->error,qr(^$|Unknown domain|Domain not found));
                     } elsif($req->command eq 'set_time') {

@@ -49,6 +49,7 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
 % }
 % if ($_user->is_admin) {
                             <a class="dropdown-item" href="/admin/settings"><i class="fas fa-tachometer-alt" aria-hidden="true"></i>&nbsp;<%=l 'Settings' %></a>
+                            <a class="dropdown-item" href="/admin/charts"><i class="fas fa-chart-line" aria-hidden="true"></i>&nbsp;<%=l 'Charts' %></a>
 % }
                       </div>
                     </li>

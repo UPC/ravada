@@ -272,6 +272,7 @@ sub _cache_volume_info($self) {
             ,encode_json(\%info)
         );
         };
+        return if $@ && $@ =~ /foreign key constraint fails/i;
         confess "$name / $n_order \n".$@ if $@;
         return;
     }

@@ -165,9 +165,6 @@
                     ws_connected = true;
                     ws.send(channel);
                 };
-                ws.onclose = function() {
-                    ws = new WebSocket(url);
-                };
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
@@ -278,7 +275,6 @@
             var load_balance_options = function() {
                 $http.get("/balance_options.json")
                     .then(function(response) {
-                        console.log($scope.showmachine.balance_policy);
                         $scope.balance_options = response.data;
                     });
             };
@@ -350,9 +346,6 @@
             var subscribe_requests = function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_requests') };
-                ws.onclose = function() {
-                    ws = new WebSocket(url);
-                };
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
@@ -863,16 +856,15 @@
             };
             $scope.change_hardware= function(item,hardware,index) {
                 var new_settings = $scope.showmachine.hardware[hardware][index];
-                var hw2 = hardware.replace(/\d+(.*)/,'$1');
                 $scope.request('change_hardware',
                     {'id_domain': $scope.showmachine.id
-                        ,'hardware': hw2
+                        ,'hardware': hardware
                         ,'index': index
                         ,'data': new_settings
                     }
                 );
                 $scope.lock_info = false;
-                if (hw2 == 'video') $scope.edit=false;
+                if (hardware == 'video') $scope.edit=false;
             }
             $scope.list_bases = function() {
                 $http.get('/list_bases.json')
@@ -1084,6 +1076,7 @@
     function run_domain_req_ctrl($scope, $http, $timeout, request ) {
         var redirected_display = false;
         var already_subscribed_to_domain = false;
+        var already_refreshed_ports = false;
         $scope.count_start = 0;
         $scope.copy_password= function(driver) {
             $scope.view_password=1;
@@ -1118,9 +1111,6 @@
             already_subscribed_to_domain = false;
             var ws = new WebSocket(url);
             ws.onopen = function(event) { ws.send('request/'+id_request) };
-            ws.onclose = function() {
-                $scope.subscribe_request(url, id_request);
-            };
 
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);
@@ -1131,11 +1121,11 @@
                     already_subscribed_to_domain = true;
                     $scope.id_domain=data.id_domain;
                     $scope.subscribe_domain_info(url, data.id_domain);
-                    $scope.refresh_ports(url, data.id_domain, id_request);
                 }
             }
         }
-        $scope.refresh_ports = function(url, id_domain, id_request) {
+        $scope.refresh_ports = function(url, id_domain ) {
+            var id_request = $scope.request.id;
             $http.post('/request/open_exposed_ports/'
                 ,JSON.stringify(
                     { 'id_domain': id_domain
@@ -1161,10 +1151,6 @@
             already_subscribed_to_domain = true;
             var ws = new WebSocket(url);
             ws.onopen = function(event) { ws.send('machine_info/'+id_domain) };
-            ws.onclose = function() {
-                $scope.subscribe_domain_info(url, id_domain);
-            };
-
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);
                 $scope.$apply(function () {
@@ -1175,6 +1161,11 @@
                         already_subscribed_to_domain = false;
                         $scope.count_start = 0;
                         return;
+                    } else if(!already_refreshed_ports) {
+                        if(data.ports && data.ports.length) {
+                            $scope.refresh_ports(url, data.id);
+                        }
+                        already_refreshed_ports = true;
                     }
                     $scope.count_start++;
                     $scope.domain = data;
@@ -1304,9 +1295,6 @@
       $scope.subscribe_alerts = function(url) {
           var ws = new WebSocket(url);
           ws.onopen = function(event) { ws.send('list_alerts') };
-          ws.onclose = function() {
-                ws = new WebSocket(url);
-          };
 
           ws.onmessage = function(event) {
               var data = JSON.parse(event.data);

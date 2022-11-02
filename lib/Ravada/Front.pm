@@ -332,9 +332,15 @@ sub list_domains($self, %args) {
         $row->{remote_ip} = undef;
         if ( $domain ) {
             $row->{is_locked} = $domain->is_locked;
-            $row->{is_hibernated} = ( $domain->is_hibernated or 0);
-            $row->{is_paused} = 1 if $domain->is_paused;
-            $row->{is_active} = 1 if $row->{status} =~ /active|starting/;
+            if ($row->{status} =~ /active|starting/) {
+                $row->{is_active} = 1;
+                $row->{is_hibernated} = 0;
+                $row->{is_paused} = 0;
+            } else {
+                $row->{is_active} = 0;
+                $row->{is_hibernated} = ( $domain->is_hibernated or 0);
+                $row->{is_paused} = 1 if $domain->is_paused;
+            }
             $row->{has_clones} = $domain->has_clones;
 #            $row->{disk_size} = ( $domain->disk_size or 0);
 #            $row->{disk_size} /= (1024*1024*1024);
@@ -356,6 +362,7 @@ sub list_domains($self, %args) {
                     $row->{status} = 'down';
                 }
             }
+            $row->{date_status_change} = $domain->_date_status_change();
         }
         delete $row->{spice_password};
         push @domains, ($row);

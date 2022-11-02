@@ -106,6 +106,7 @@ sub test_ldap_search_space {
 
 SKIP: {
     my $ravada = Ravada->new(config => $CONFIG_FILE
+                        , pid_name => "ravada_install".base_domain_name()
                         , connector => connector());
     $ravada->_install();
     my $ldap;

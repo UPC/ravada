@@ -13,6 +13,8 @@ use utf8;
 
 use Carp qw(carp confess croak);
 use Data::Dumper;
+use DateTime;
+use DateTime::Format::DateParse;
 use File::Copy qw(copy move);
 use File::Rsync;
 use Fcntl ':mode';
@@ -558,6 +560,7 @@ sub _search_already_started($self, $fast = 0) {
 
             my $status = 'shutdown';
             $status = 'active'  if $domain->is_active;
+            $status = 'hibernated' if $domain->is_hibernated;
             $domain->_data(status => $status);
         }
     }
@@ -1547,6 +1550,22 @@ sub _execute_request($self, $field, $value) {
     );
 }
 
+sub _log_active_domains($self) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT count(*) FROM domains "
+        ." WHERE status='active'"
+    );
+    $sth->execute();
+    my ($active) = $sth->fetchrow;
+    my $sth2 = $self->_dbh->prepare(
+        "INSERT INTO log_active_domains "
+        ." ( active) "
+        ." values(?)"
+    );
+    $sth2->execute(scalar($active));
+
+}
+
 sub _data($self, $field, $value=undef, $table='domains') {
 
     _init_connector();
@@ -1574,12 +1593,24 @@ sub _data($self, $field, $value=undef, $table='domains') {
         confess "ERROR: Invalid field '$field'"
             if $field !~ /^[a-z]+[a-z0-9_]*$/;
 
+        return if $field eq 'status'
+        && $self->{$data}->{$field} eq 'active'
+        && $value eq 'starting';
+
         $self->_assert_update($table, $field => $value);
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE $table set $field=? WHERE $field_id=?"
         );
         $sth->execute($value, $self->id);
         $sth->finish;
+
+        if ($data eq '_data' && $field eq 'status'
+            && $value ne $self->{$data}->{$field}
+        ) {
+            $self->_data('date_status_change'=>Ravada::Utils::now());
+
+            $self->_log_active_domains();
+        }
         $self->{$data}->{$field} = $value;
         $self->_propagate_data($field,$value) if $PROPAGATE_FIELD{$field};
         $self->_execute_request($field,$value);
@@ -2041,11 +2072,45 @@ sub info($self, $user) {
     $info->{cdrom} = \@cdrom;
     $info->{requests} = $self->list_requests();
     $info->{host_devices} = [ $self->list_host_devices_attached() ];
+    $info->{date_status_change} = $self->_date_status_change();
 
     Ravada::Front::_init_available_actions($user, $info);
 
     lock_hash(%$info);
     return $info;
+}
+
+sub _date_status_change($self) {
+    my $date = $self->_data('date_status_change');
+    if (!$date) {
+        return {
+            date => ''
+            ,date_txt => ''
+            ,duration => ''
+        }
+    }
+    my $date_txt = $date;
+    my $dt = DateTime::Format::DateParse->parse_datetime($date);
+    if ($dt->day == DateTime->now()->day) {
+        $date_txt =~ s/.*?(\d\d*:\d\d):\d\d$/$1/;
+    }
+    my $dur= DateTime->now() - $dt;
+    my @units = ('years','months','weeks','days','hours','minutes');
+    my @units_one = ('year','month','week','day','hour','minute');
+    my @dur = $dur->in_units(@units);
+    my $duration = ['now',''];
+    for my $n (0 .. scalar(@units)-1) {
+        my $value = $dur[$n];
+        next if $value == 0;
+        $duration = [$value,$units[$n]];
+        $duration->[1]=$units_one[$n] if $value == 1;
+        last;
+    }
+    return {
+        date => $date
+        ,date_txt => $date_txt
+        ,duration => $duration
+    };
 }
 
 sub _load_drivers($self) {
@@ -2963,7 +3028,11 @@ sub _post_shutdown {
 
     if ( $self->is_known && !$self->is_volatile && !$is_active ) {
         $self->_unlock_host_devices();
-        $self->_data(status => 'shutdown');
+        if ($self->is_hibernated) {
+            $self->_data(status => 'hibernated');
+        } else {
+            $self->_data(status => 'shutdown');
+        }
         $self->_data(post_shutdown => 1);
     }
 
@@ -5264,7 +5333,10 @@ sub _search_pool_clone($self, $user) {
 
     my ($clone_down, $clone_free_up, $clone_free_down);
     my ($clones_in_pool, $clones_used) = (0,0);
+    my $id_daemon = Ravada::Utils::user_daemon->id;
     for my $current ( sort { $a->{name} cmp $b->{name} } $self->clones) {
+        next if $current->{is_base} ||
+            ( $current->{is_volatile} && $current->{id_owner} != $id_daemon);
         if ( $current->{id_owner} == $user->id
                 && $current->{status} =~ /^(active|hibernated)$/) {
             my $clone = Ravada::Domain->open($current->{id});
@@ -5276,7 +5348,10 @@ sub _search_pool_clone($self, $user) {
         } elsif ($current->{is_pool}) {
             $clones_in_pool++;
             my $clone = Ravada::Domain->open($current->{id});
-            if(!$clone->client_status || $clone->client_status eq 'disconnected') {
+            next if !$clone; #it may be removed on shutdown
+
+            if(!$clone->client_status
+                || lc($clone->client_status) eq lc('disconnected')) {
                 if ( $clone->status =~ /^(active|hibernated)$/ ) {
                     $clone_free_up = $current;
                 } else {
@@ -5288,16 +5363,35 @@ sub _search_pool_clone($self, $user) {
         }
     }
 
-
     my $clone_data = ($clone_down or $clone_free_up or $clone_free_down);
-    die "Error: no free clones in pool for ".$self->name
-        .". Usage: $clones_used used from $clones_in_pool virtual machines created.\n"
+    my @clones = grep {!$_->{is_base} && $_->{is_pool} } $self->clones ;
+    if (!$clone_data && scalar(@clones)<$self->pool_clones) {
+        $clone_data = $self->_create_clone_in_pool();
+    }
+    die "Error: no free clones in pool for ".$self->name."\n"
         if !$clone_data;
 
     my $clone = Ravada::Domain->open($clone_data->{id});
     $clone->id_owner($user->id);
     $clone->_data( comment => $user->name );
     return $clone;
+}
+
+sub _create_clone_in_pool($self) {
+
+    my $owner = Ravada::Auth::SQL->search_by_id($self->_data('id_owner'));
+
+    my $n = scalar $self->clones()+1;
+    my $clone = $self->clone(
+        user => $owner
+        ,name => $self->name."-".$n."-".Ravada::Utils::random_name(2)
+        ,add_to_pool => 1
+        ,from_pool => 0
+        ,start => 1
+    );
+    my $clone_data = { id => $clone->id };
+    return $clone_data;
+
 }
 
 =head2 internal_id
