@@ -1264,7 +1264,7 @@ sub wait_request {
             } elsif (!$done{$req->id}) {
                 $t0 = time;
                 $done{$req->{id}}++;
-                if ($check_error) {
+                if ($check_error && $req->command ne 'set_time') {
                     if ($req->command =~ /remove/) {
                         like($req->error,qr(^$|Unknown domain|Domain not found));
                     } elsif($req->command eq 'set_time') {
