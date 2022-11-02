@@ -17,6 +17,8 @@ use feature qw(signatures);
 
 use_ok('Ravada::Front::Log');
 
+our $LOCAL_TZ = DateTime::TimeZone->new(name => 'local');
+
 ########################################################################
 
 sub test_log_inactive($vm) {
@@ -53,14 +55,15 @@ sub _now() {
         last if $now[3] % 10 > 0;
         sleep 1;
     }
-    my $date = DateTime->now()-DateTime::Duration->new(hours => 1);
+
+    my $date = DateTime->from_epoch( epoch => time() , time_zone => $LOCAL_TZ) -DateTime::Duration->new(hours => 1);
     my $min = $date->minute % 10;
     $date -= DateTime::Duration->new(minutes => $min-1);
     return $date;
 }
 
 sub _yesterday() {
-    my $date = DateTime->now()-DateTime::Duration->new(hours => 23);
+    my $date = DateTime->from_epoch( epoch => time() , time_zone => $LOCAL_TZ) -DateTime::Duration->new(hours => 23);
     return $date;
 }
 
@@ -84,7 +87,7 @@ sub test_add_missing($vm) {
         );
         $now += DateTime::Duration->new(minutes => 10);
     }
-    $now = DateTime->now()-DateTime::Duration->new(seconds => 5);
+    $now = DateTime->from_epoch( epoch => time() , time_zone => $LOCAL_TZ)-DateTime::Duration->new(seconds => 5);
     $sth->execute(2,$now->ymd." ".$now->hms);
 
     my $log = Ravada::Front::Log::list_active_recent(hours => 1);
@@ -100,7 +103,7 @@ sub test_add_missing($vm) {
     is($data->[6],2);
 
     # last one just changed
-    $now = DateTime->now()-DateTime::Duration->new(seconds => 3);
+    $now = DateTime->from_epoch( epoch => time() , time_zone => $LOCAL_TZ)-DateTime::Duration->new(seconds => 1);
     $sth->execute(1,$now->ymd." ".$now->hms);
 
     my $log2 = Ravada::Front::Log::list_active_recent();
