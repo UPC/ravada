@@ -5513,7 +5513,12 @@ sub _check_duplicated_prerouting($self, $request = undef ) {
         eval { $vm = Ravada::VM->open($id) };
         warn $@ if $@;
         if ($vm) {
-            my $iptables = $vm->iptables_list();
+            my $iptables;
+            eval { $vm = $vm->iptables_list() };
+            if ($@ ) {
+                warn $@;
+                next;
+            }
             my %prerouting;
             my %already_open;
             my %already_clean;
@@ -5549,7 +5554,9 @@ sub _check_duplicated_iptable($self, $request = undef ) {
         eval { $vm = Ravada::VM->open($id) };
         warn $@ if $@;
         if ($vm) {
-            my $iptables = $vm->iptables_list();
+            my $iptables;
+            eval { $iptables = $vm->iptables_list() };
+            next if $@;
             my %dupe;
             my %already_open;
             for my $line (@{$iptables->{'filter'}}) {
