@@ -2,10 +2,11 @@
 
 **Implemented enhancements:**
 
-- grant open ports [\#1858]
-- show time changed state [\#1856]
+- Grant open ports [\#1868]
+- Show date of status change [\#1856]
+- Manage USB controllers [\#1851]
 - info actual year [\#1874]
-- manage USB controllers [\#1846]
+- Updates on Catalan, Spanish, Russian and Vietnamese
 
 **Refactors**
 
@@ -14,3 +15,4 @@
 
 - do not reconnect web services for proper logout
 - properly check and remove machines with UTF names [\#1854]
+- Clone name with name.surname [\#1843]
