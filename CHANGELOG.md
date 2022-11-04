@@ -2,6 +2,7 @@
 
 **Implemented enhancements:**
 
+- Manage CPU topology [\#1882]
 - Grant open ports [\#1868]
 - Show date of status change [\#1856]
 - Manage USB controllers [\#1851]
