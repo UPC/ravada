@@ -241,6 +241,7 @@
             $scope.exec_time = new Date();
             $scope.edit = "";
             $scope.lock_info = false;
+            $scope.topology = false;
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -270,6 +271,21 @@
 
             $scope.is_edit = function(name,index) {
                 return $scope.edit == name+index;
+            };
+
+            $scope.topology_changed = function() {
+                var cpu = $scope.showmachine.hardware.cpu[0];
+                var item = cpu.cpu.topology;
+                if(typeof(item) == undefined || !item) {
+                    $scope.topology = false;
+                    return;
+                }
+                cpu.vcpu['#text'] = item.dies
+                    * item.sockets
+                    * item.cores
+                    * item.threads;
+
+                $scope.topology = true;
             };
 
             var load_balance_options = function() {
@@ -309,6 +325,7 @@
                             //subscribe_bases(url);
                         }
                         if ($scope.edit) { $scope.lock_info = true }
+                        $scope.topology_changed();
                     });
                     _select_new_base();
                 }
