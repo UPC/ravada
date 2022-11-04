@@ -295,6 +295,13 @@
                     });
             };
 
+            var get_node_info = function(id) {
+                $http.get("/node/info/"+id+".json")
+                    .then(function(response) {
+                        $scope.node = response.data;
+                    });
+            };
+
             var subscribed_extra = false;
             var subscribe_machine_info= function(url) {
                 var ws = new WebSocket(url);
@@ -473,6 +480,7 @@
                                     = $scope.showmachine.shutdown_disconnected;
                                 $scope.new_balance_policy=$scope.showmachine.balance_policy;
                                 load_balance_options();
+                                get_node_info($scope.showmachine.id_vm);
                             }
                             if (is_admin) {
                                 $scope.init_domain_access();
