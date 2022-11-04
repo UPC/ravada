@@ -1,8 +1,53 @@
 <div ng-show="name=='cpu' && is_edit(name,$index)">
-    <div class="p-2">
-         <label for="vcpu"><%=l 'vCPU allocation' %></label>
-         <input type="text" ng-model="item.vcpu._text" name="vcpu"/>
+    <div class="p-2 row" >
+         <div class="col-4">
+         <label for="vcpu"
+            ng-class='{"disabled": topology}'
+         ><%=l 'vCPU allocation' %></label>
+         <input type="number" size="3" min="1"
+            ng-model="item.vcpu['#text']" name="vcpu"
+            ng-class='{"disabled": topology}'
+            ng-disabled="topology"
+         />
+         </div>
+
+        <div class="col-8">
+        <label for="sockets"
+            ng-class='{"disabled": !topology}'
+        ><small><%=l 'Sockets' %></small></label>
+        <input type="number" size="3" min="1"
+            ng-change="topology_changed()"
+            ng-model="item.cpu.topology.sockets" name="sockets"/>
+
+        <label for="dies"
+            ng-class='{"disabled": !topology}'
+        ><small><%=l 'Dies' %></small></label>
+        <input type="number" size="3" min="1"
+            ng-change="topology_changed()"
+            ng-model="item.cpu.topology.dies" name="dies"/>
+
+        <label for="cores"
+            ng-class='{"disabled": !topology}'
+        ><small><%=l 'Cores' %></small></label>
+        <input type="number" size="3" min="1"
+            ng-change="topology_changed()"
+            ng-model="item.cpu.topology.cores" name="cores"/>
+
+        <label for="threads"
+            ng-class='{"disabled": !topology}'
+        ><small><%=l 'Threads' %></small></label>
+        <input type="number" size="3" min="1"
+            ng-change="topology_changed()"
+            ng-model="item.cpu.topology.threads" name="threads"/>
+
+        <button type="button" class="badge badge-light text-blue"
+        ng-show="topology"
+        ng-click="item.cpu.topology={};change_hardware(item,'cpu',$index)"><%=l 'clear' %></button>
+        </div>
+
     </div>
+    <hr>
+
     <ul class="list-group list-group-horizontal-md">
         <li class="list-group-item list-group-item-primary"><%=l 'mode' %></li>
         <li class="list-group-item">
@@ -32,7 +77,7 @@
         <label for="model">
                 <%=l 'model' %>
         </label>
-            <select ng-model="item.cpu.model._text" name="model"
+            <select ng-model="item.cpu.model['#text']" name="model"
                     ng-options="cpu for cpu in cpu_models"
             >
             </select>
@@ -66,7 +111,7 @@
         </li>
         <li class="list-group-item">
             <small>
-                <button type="badge" title="remove"
+                <button type="button" class="badge" title="remove"
                         ng-click="feature=0;
                         item.cpu.feature[$index]=undefined;
                         form_edit.$pristine=false"
