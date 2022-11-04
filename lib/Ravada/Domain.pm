@@ -2955,8 +2955,9 @@ sub _pre_shutdown {
 
     $self->_pre_shutdown_domain();
 
-    if ($self->is_paused) {
+    if ($self->is_paused || $self->is_hibernated) {
         $self->resume(user => Ravada::Utils::user_daemon, set_time => 0);
+        $self->_data('status' => 'active');
     }
     $self->list_disks;
     $self->_remove_start_requests();
