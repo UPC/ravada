@@ -7,8 +7,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2022-01-13 16:53+0000\n"
-"Last-Translator: Çılga İşcan Tercanlı <cilgaiscan@gmail.com>\n"
+"PO-Revision-Date: 2022-11-06 19:02+0000\n"
+"Last-Translator: Oğuz Ersen <oguz@ersen.moe>\n"
 "Language-Team: Turkish <https://hosted.weblate.org/projects/ravada/"
 "translation/tr/>\n"
 "Language: tr\n"
@@ -16,7 +16,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"X-Generator: Weblate 4.10.1\n"
+"X-Generator: Weblate 4.14.2\n"
 
 msgid "Ravada broker"
 msgstr "Ravada Aracı"
@@ -1077,7 +1077,7 @@ msgid "dn:"
 msgstr "dn:"
 
 msgid "Groups require a LDAP server configured."
-msgstr "Gruplar LDAP server konfigürasyonuna ihtiyaç duyar."
+msgstr "Gruplar yapılandırılmış bir LDAP sunucusu gerektirir."
 
 msgid "See documentation about:"
 msgstr ": hakkındaki dökümantasyonu inceleyin"
@@ -1086,7 +1086,7 @@ msgid "Configure LDAP Authentication"
 msgstr "LDAP Kimlik Doğrulaması konfigürasyonu"
 
 msgid "Setup a LDAP Server"
-msgstr "LDAP Serveri kurun"
+msgstr "LDAP Sunucusu kurun"
 
 msgid "Groups"
 msgstr "Gruplar"
@@ -1146,7 +1146,7 @@ msgid "Action"
 msgstr "Aksiyon"
 
 msgid "Active"
-msgstr "Aktif"
+msgstr "Etkin"
 
 msgid "Disabled"
 msgstr "Devre dışı"
@@ -1197,10 +1197,10 @@ msgid "Debug"
 msgstr "Hata ayıklama"
 
 msgid "Debug Ports"
-msgstr "Hata Ayıklama Portları"
+msgstr "Hata Ayıklama Bağlantı Noktaları"
 
 msgid "Debug Ports Exposed"
-msgstr "Hata ayıklama Portları açığa çıktı"
+msgstr "Hata Ayıklama Bağlantı Noktaları açığa çıktı"
 
 msgid "Display Password"
 msgstr "Parolayı Göster"
@@ -1221,10 +1221,12 @@ msgid "Number of virtual machines that normal users can have running at the same
 msgstr "Normal kullanıcıların aynı anda çalıştırabileceği sanal makinelerin sayısı"
 
 msgid "Port expose"
-msgstr "Portu dışarı aç "
+msgstr "Bağlantı noktasını dışarı aç"
 
 msgid "Minimum port number to expose virtual machine services."
-msgstr "Sanal makine servislerini dışarı açabilmek için gereken çıkarılacak minimum port sayısı."
+msgstr ""
+"Sanal makine hizmetlerini dışarı açabilmek için gereken çıkarılacak en az "
+"bağlantı noktası sayısı."
 
 msgid "cancel"
 msgstr "iptal"
@@ -1257,16 +1259,16 @@ msgid "Display IP :"
 msgstr "Görüntüleme IP :"
 
 msgid "Display Port :"
-msgstr "Görüntüleme Portu :"
+msgstr "Görüntüleme Bağlantı Noktası:"
 
 msgid "Display Port secure :"
-msgstr "Görüntüleme Port güvenliği :"
+msgstr "Görüntüleme Bağlantı Noktası güvenliği :"
 
 msgid "Sorry"
 msgstr "Üzgünüz"
 
 msgid "Server in maintenance until"
-msgstr " a kadar server bakımda"
+msgstr "a kadar sunucu bakımda"
 
 msgid "vCPU allocation"
 msgstr "vCPU paylaşımı"
@@ -1329,10 +1331,10 @@ msgid "primary"
 msgstr "birincil"
 
 msgid "Primary video devices will move to first"
-msgstr "Birincil vidyo aygıtları ilk sıraya taşınacak"
+msgstr "Birincil video aygıtları ilk sıraya taşınacak"
 
 msgid "Primary can not be unset, enable it in another video device"
-msgstr "Birincil değiştirilemez, başka bir vidyo cihazında aktifleştirin"
+msgstr "Birincil değiştirilemez, başka bir video aygıtında etkinleştirin"
 
 msgid "ram"
 msgstr "ram"
@@ -1386,7 +1388,7 @@ msgid "New password"
 msgstr "Yeni parola"
 
 msgid "Force change password on first access"
-msgstr "İlk girişte şifre değişimini zorla"
+msgstr "İlk girişte parolayı değiştirmeye zorla"
 
 msgid "Oops!"
 msgstr "Oops!"
@@ -1398,7 +1400,7 @@ msgid "Set New Password"
 msgstr "Yeni şifreyi seç"
 
 msgid "This user has never logged in the Ravada server."
-msgstr "Bu kullanıcı Ravada serverine hiç giriş yapmadı."
+msgstr "Bu kullanıcı Ravada sunucusunda hiç oturum açmadı."
 
 msgid "Import"
 msgstr "Yükle"
@@ -1434,7 +1436,7 @@ msgid "password"
 msgstr "parola"
 
 msgid "Requires viewer password when implemented"
-msgstr "İmplemente edildiğinde görüntüleyici parolasına ihtiyaç duyar."
+msgstr "Uygulandığında görüntüleyici parolası gerektirir"
 
 msgid "Set either"
 msgstr "İkisini de seç"
@@ -1512,7 +1514,7 @@ msgid "This can't be undone"
 msgstr "Bu işlem geri alınamaz"
 
 msgid "and will remove all the disk and information of this virtual machine."
-msgstr "ve bu sanal makineye ait tüm diski ve bilgileri siler"
+msgstr "ve bu sanal makineye ait tüm diski ve bilgileri siler."
 
 msgid "Please insert"
 msgstr "Lütfen takınız"
@@ -1536,7 +1538,7 @@ msgid "waiting for network to come up"
 msgstr "Ağın görünmesini bekliyor"
 
 msgid "Max Memory"
-msgstr "Maksimum Bellek"
+msgstr "En Yüksek Bellek"
 
 msgid "CPUs"
 msgstr "CPUlar"
@@ -1557,7 +1559,7 @@ msgid "Base"
 msgstr "Taban"
 
 msgid "Ports"
-msgstr "Portlar"
+msgstr "Bağlantı Noktaları"
 
 msgid "Access"
 msgstr "İzin"
@@ -1644,10 +1646,10 @@ msgid "driver"
 msgstr "sürücü"
 
 msgid "This machine is running and can't be modified."
-msgstr "Bu makine çalışıyor ve modifiye edilemez"
+msgstr "Bu makine çalışıyor ve değiştirilemez."
 
 msgid "This machine is base and can't be modified."
-msgstr "Bu makine tabandır ve modifiye edilemez."
+msgstr "Bu makine tabandır ve değiştirilemez."
 
 msgid "Danger: This will destroy all the disk data permantently."
 msgstr "Tehlike: Bu işlem tüm verileri yok eder."
@@ -1662,7 +1664,7 @@ msgid "-- choose hardware --"
 msgstr "-- donanım seç --"
 
 msgid "This machine is base and it can't be modified."
-msgstr "Bu makine tabandır ve modifiye edilemez."
+msgstr "Bu makine tabandır ve değiştirilemez."
 
 msgid "The VM is"
 msgstr "Sanal makine"
@@ -1683,7 +1685,7 @@ msgid "Are you sure you want to migrate"
 msgstr "Taşımak istediğinizden emin misiniz"
 
 msgid "Max memory (MB)"
-msgstr "Maksimum bellek (MB)"
+msgstr "En yüksek bellek (MB)"
 
 msgid "Current memory (MB)"
 msgstr "Şimdiki bellek (MB)"
@@ -1722,25 +1724,26 @@ msgid "clones defined."
 msgstr "klonlar tanımlı."
 
 msgid "Port"
-msgstr "Port"
+msgstr "Bağlantı Noktası"
 
 msgid "Restricted"
 msgstr "Kısıtlanmış"
 
 msgid "Public Port"
-msgstr "Herkese Açık Port"
+msgstr "Herkese Açık Bağlantı Noktası"
 
 msgid "Only remote client can access this port if restricted"
-msgstr "Kısıtlama halinde sadece uzak istemciler bu porta erişebilir"
+msgstr ""
+"Kısıtlama halinde sadece uzak istemciler bu bağlantı noktasına erişebilir"
 
 msgid "Only remote client can access this port"
-msgstr "Sadece uzak istemciler bu porta erişebilir"
+msgstr "Sadece uzak istemciler bu bağlantı noktasına erişebilir"
 
 msgid "Any remote client can access this port"
-msgstr "Tüm uzak istemciler bu porta erişebilir"
+msgstr "Tüm uzak istemciler bu bağlantı noktasına erişebilir"
 
 msgid "Refresh ports"
-msgstr "Portları yenile"
+msgstr "Bağlantı noktalarını yenile"
 
 msgid "Prepare Base"
 msgstr "Tabanı hazırla"
@@ -1830,8 +1833,8 @@ msgid ""
 "This server has reservations for today. Machines from users out of\n"
 "    the booking list will be shutdown."
 msgstr ""
-"Bu server bugün için rezervasyonlara sahip.\n"
-"    Rezervasyon dışı kullanıcılara ait cihazlar kapatılacak."
+"Bu sunucunun bugün için rezervasyonları var.\n"
+"    Rezervasyon dışı kullanıcılara ait aygıtlar kapatılacak."
 
 msgid "allowed"
 msgstr "İzin verilen"
@@ -1882,7 +1885,7 @@ msgid "System Disk: (GB)"
 msgstr "Sistem Diski: (GB)"
 
 msgid "The Minimum Disk Size needed for this ISO is"
-msgstr "Bu ISO için gereken minimum disk boyutu"
+msgstr "Bu ISO için gereken en düşük disk boyutu"
 
 msgid "Advanced options"
 msgstr "Gelişmiş ayarlar"
@@ -1894,7 +1897,7 @@ msgid "disabled"
 msgstr "devre dışı"
 
 msgid "The Minimum Swap Disk Size needed for this ISO is"
-msgstr "Bu ISO için gereken minimum swap disk alanı"
+msgstr "Bu ISO için gereken en düşük swap disk alanı"
 
 msgid "Data"
 msgstr "Veri"
@@ -1903,7 +1906,7 @@ msgid "BIOS"
 msgstr "BIOS"
 
 msgid "Legacy"
-msgstr "Legacy"
+msgstr "Eski"
 
 msgid "UEFI"
 msgstr "UEFI"
@@ -1999,7 +2002,7 @@ msgid "can manage users."
 msgstr "kullanıcıları yönetebilir."
 
 msgid "Can expose virtual machine ports."
-msgstr "sanal makine portlarını açabilir."
+msgstr "Sanal makine bağlantı noktalarını açabilir."
 
 msgid "Can rename any virtual machine owned by the user."
 msgstr "kullanıcıya ait herhangi bir sanal makineyi yeniden adlandırabilir."
@@ -2161,10 +2164,22 @@ msgid "Confirm"
 msgstr "Onayla"
 
 msgid "This feature requires a LDAP server configured."
-msgstr "Bu özellik LDAP server konfigürasyonuna ihtiyaç duyar."
+msgstr "Bu özellik yapılandırılmış bir LDAP sunucusu gerektirir."
 
 msgid "Source Machine"
 msgstr "Kaynak cihaz"
 
 msgid "Monitoring"
 msgstr "İzleniyor"
+
+msgid "For Spice client setup follow this "
+msgstr "Spice istemci kurulumu için şunu izleyin "
+
+msgid "Remove Base"
+msgstr "Tabanı Kaldır"
+
+msgid "can remove any virtual machine owned by the user."
+msgstr "kullanıcının sahip olduğu herhangi bir sanal makineyi kaldırabilir."
+
+msgid "Shutdown all clones"
+msgstr "Tüm klonları kapat"
