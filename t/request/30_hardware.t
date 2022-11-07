@@ -1278,6 +1278,7 @@ sub _remove_usbs($domain, $hardware) {
 }
 
 sub test_change_drivers($domain, $hardware) {
+    return if $domain->type eq 'KVM' && $hardware eq 'usb controller';
 
     _remove_usbs($domain, $hardware);
 

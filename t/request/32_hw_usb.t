@@ -35,7 +35,7 @@ sub test_usb_many($vm) {
 
     }
 
-    my $usb_controller = $info->{hardware}->{usb_controller};
+    my $usb_controller = $info->{hardware}->{"usb controller"};
     ok($usb_controller) && do {
         is(scalar(@$usb_controller),1) or die $domain->name;
     };
