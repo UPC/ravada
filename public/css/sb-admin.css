@@ -453,3 +453,9 @@ span.info {
     color: darkgray;
     font-style: italic;
 }
+
+.disabled {
+    color: darkgray;
+    cursor: not-allowed;
+}
+

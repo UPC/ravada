@@ -1482,7 +1482,12 @@ sub _set_display_ip($self, $display) {
 sub _around_get_info($orig, $self) {
     my $info = $self->$orig();
     if (ref($self) =~ /^Ravada::Domain/ && $self->is_known()) {
-        $info->{ip} = $self->ip() if $self->is_active;
+        if ( $self->is_active
+        && (!exists $info->{ip} || !defined $info->{ip} || !$info->{ip})) {
+            unlock_hash(%$info);
+            $info->{ip} = $self->ip();
+            lock_hash(%$info);
+        }
         $self->_data(info => encode_json($info));
     }
     return $info;
@@ -1921,7 +1926,7 @@ sub display($self, $user) {
 
     my ($display_info) = grep { $_->{driver} !~ /-tls$/ } @display_info;
 
-    confess "Error: I can't find builtin display info for ".$self->name." ".ref($self)
+    confess "Error: I can't find builtin display info for ".$self->name." ".ref($self)."\n".Dumper($display_info)
     if !exists $display_info->{port};
 
     return '' if !$display_info->{driver} || !$display_info->{ip}
@@ -2027,6 +2032,7 @@ sub info($self, $user) {
         ,autostart => $self->autostart
         ,volatile_clones => $self->volatile_clones
         ,id_vm => $self->_data('id_vm')
+        ,date_changed => $self->_data('date_changed')
     };
 
     $info->{alias} = ( $self->_data('alias') or $info->{name} );
@@ -2994,8 +3000,9 @@ sub _pre_shutdown {
 
     $self->_pre_shutdown_domain();
 
-    if ($self->is_paused) {
+    if ($self->is_paused || $self->is_hibernated) {
         $self->resume(user => Ravada::Utils::user_daemon, set_time => 0);
+        $self->_data('status' => 'active');
     }
     $self->list_disks;
     $self->_remove_start_requests();
@@ -3478,7 +3485,12 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     $sth->execute($self->id, $internal_port);
     my ($id_port, $public_port) = $sth->fetchrow();
 
-    my $internal_ip = $self->ip;
+    my $internal_ip;
+    for ( 1 .. 5 ) {
+        $internal_ip = $self->ip;
+        last if $internal_ip;
+        sleep 1;
+    }
     die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry."
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
