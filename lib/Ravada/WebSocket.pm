@@ -72,7 +72,8 @@ sub _list_alerts($rvd, $args) {
     my @ret2;
     for my $alert (@$ret_old) {
         push @ret2,($alert) if time - $alert->{time} < 10
-        && ! grep { $_->{id_request} == $alert->{id_request} } @ret;
+         && ! grep {defined $_->{id_request} && defined $alert->{id_request}
+         && $_->{id_request} == $alert->{id_request} } @ret;
     }
 
     return [@ret2,@ret];

@@ -20,9 +20,11 @@
             ng-model="item.cpu.topology.sockets" name="sockets"/>
 
         <label for="dies"
+            ng-show="node.version >= 8000000"
             ng-class='{"disabled": !topology}'
         ><small><%=l 'Dies' %></small></label>
         <input type="number" size="3" min="1"
+            ng-show="node.version >= 8000000"
             ng-change="topology_changed()"
             ng-model="item.cpu.topology.dies" name="dies"/>
 
