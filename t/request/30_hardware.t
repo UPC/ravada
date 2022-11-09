@@ -1084,8 +1084,156 @@ sub _test_change_defaults($domain,$hardware) {
 
 }
 
+sub _test_cpu_features_topology($domain) {
+
+    $domain->shutdown_now() if $domain->is_active;
+
+    my $doc = XML::LibXML->load_xml(string => $domain->xml_description);
+
+    my ($type) = $doc->findnodes("/domain/os/type");
+    my ($cpu) = $doc->findnodes("/domain/cpu");
+
+    my ($model ) = $cpu->findnodes("model");
+    $model = $cpu->addNewChild(undef,'model') if !$model;
+    $model->setAttribute('fallback'=>'forbid');
+
+    $domain->reload_config($doc);
+
+    my @feature;
+    for my $name ('x2apic', 'hypervisor', 'lahf_lm') {
+        push @feature, { name => $name, policy => 'require'}
+    }
+    my $req = Ravada::Request->change_hardware(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,hardware =>'cpu'
+            ,data => { cpu => { feature => \@feature } }
+        );
+        wait_request($req);
+        is($req->error,'');
+    $domain = Ravada::Domain->open($domain->id);
+    my $doc2 = XML::LibXML->load_xml(string => $domain->xml_description);
+    my ($cpu2) = $doc2->findnodes("/domain/cpu");
+
+    my $topology = { sockets => 1
+                        ,dies => 1
+                        ,cores => 1
+                        , threads => 2
+    };
+
+    $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware =>'cpu'
+        ,data => {
+            cpu => { 'topology'=> $topology, feature => \@feature }
+        }
+    );
+    wait_request($req);
+    is($req->error, '');
+
+    $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware =>'cpu'
+        ,data => {
+            cpu => { 'topology'=> $topology, feature => [] }
+        }
+    );
+    wait_request($req);
+    is($req->error, '');
+
+}
+
 sub _test_change_cpu($vm, $domain) {
+
+    _test_cpu_features_topology($domain);
+
+    _test_cpu_features($domain);
+    _test_cpu_topology_empty($domain);
+    _test_change_cpu_topology($domain);
     _test_change_defaults($domain,'cpu');
+}
+
+sub _test_change_cpu_topology($domain) {
+    diag("testing cpu topology");
+    for my $dies ( reverse 1 .. 3 ) {
+        for my $sockets ( reverse 1 .. 3 ) {
+            for my $cores ( reverse 1 .. 3 ) {
+                for my $threads ( reverse 1 .. 3 ) {
+
+                    my $topology = { sockets => $sockets
+                        ,dies => $dies
+                        ,cores => $cores
+                        , threads => $threads
+                    };
+
+                    my $req = Ravada::Request->change_hardware(
+                        uid => user_admin->id
+                        ,id_domain => $domain->id
+                        ,hardware =>'cpu'
+                        ,data => {
+                              cpu => { 'topology'=> $topology}
+                        }
+                    );
+                    wait_request($req);
+                    is($req->error, '');
+                    is($req->status,'done');
+
+                    my $doc = XML::LibXML->load_xml( string => $domain->xml_description());
+                    my ($xml_topology) = $doc->findnodes("/domain/cpu/topology");
+                    ok($xml_topology) or exit;
+                    for my $field ( keys %$topology ) {
+                        is($xml_topology->getAttribute($field)
+                            ,$topology->{$field},$field) or exit;
+                    }
+                }
+            }
+        }
+    }
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware =>'cpu'
+        ,data => { }
+    );
+    wait_request($req);
+    is($req->error, '');
+    is($req->status,'done');
+
+    my $doc = XML::LibXML->load_xml( string => $domain->xml_description());
+    my ($xml_cpu) = $doc->findnodes("/domain/cpu");
+    my ($xml_topology) = $doc->findnodes("/domain/cpu/topology");
+    ok(!$xml_topology) or die $xml_cpu->toString();
+
+}
+
+sub _test_cpu_features($domain) {
+    my $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware =>'cpu'
+        ,data => { cpu => { feature => [
+                        {name => 'acpi' ,policy => 'require'}
+                ] } }
+    );
+    wait_request($req);
+    is($req->error, '');
+    is($req->status,'done');
+
+}
+
+sub _test_cpu_topology_empty($domain) {
+    my $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware =>'cpu'
+        ,data => { cpu => { 'topology'=> undef } }
+    );
+    wait_request($req);
+    is($req->error, '');
+    is($req->status,'done');
 }
 
 sub _test_change_features($vm, $domain) {
@@ -1130,6 +1278,7 @@ sub _remove_usbs($domain, $hardware) {
 }
 
 sub test_change_drivers($domain, $hardware) {
+    return if $domain->type eq 'KVM' && $hardware eq 'usb controller';
 
     _remove_usbs($domain, $hardware);
 
@@ -1210,6 +1359,10 @@ sub test_all_drivers($domain, $hardware) {
     for my $option1 (@$options) {
         for my $option2 (@$options) {
             # diag("Testing $hardware type from $option1 to $option2");
+            next if $hardware eq 'usb controller'
+            && $option1 eq 'nec-xhci' &&
+            ( $option2 eq 'nec-xhci' || $option2 eq 'pixx3-uhci');
+
             my $req = Ravada::Request->change_hardware(
                 id_domain => $domain->id
                 ,hardware => $hardware

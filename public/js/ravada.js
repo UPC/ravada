@@ -241,6 +241,7 @@
             $scope.exec_time = new Date();
             $scope.edit = "";
             $scope.lock_info = false;
+            $scope.topology = false;
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -272,10 +273,32 @@
                 return $scope.edit == name+index;
             };
 
+            $scope.topology_changed = function() {
+                var cpu = $scope.showmachine.hardware.cpu[0];
+                var item = cpu.cpu.topology;
+                if(typeof(item) == undefined || !item) {
+                    $scope.topology = false;
+                    return;
+                }
+                cpu.vcpu['#text'] = item.dies
+                    * item.sockets
+                    * item.cores
+                    * item.threads;
+
+                $scope.topology = true;
+            };
+
             var load_balance_options = function() {
                 $http.get("/balance_options.json")
                     .then(function(response) {
                         $scope.balance_options = response.data;
+                    });
+            };
+
+            var get_node_info = function(id) {
+                $http.get("/node/info/"+id+".json")
+                    .then(function(response) {
+                        $scope.node = response.data;
                     });
             };
 
@@ -309,6 +332,7 @@
                             //subscribe_bases(url);
                         }
                         if ($scope.edit) { $scope.lock_info = true }
+                        $scope.topology_changed();
                     });
                     _select_new_base();
                 }
@@ -456,6 +480,7 @@
                                     = $scope.showmachine.shutdown_disconnected;
                                 $scope.new_balance_policy=$scope.showmachine.balance_policy;
                                 load_balance_options();
+                                get_node_info($scope.showmachine.id_vm);
                             }
                             if (is_admin) {
                                 $scope.init_domain_access();
@@ -1188,25 +1213,28 @@
                         }
                     }
                 });
-                if ($scope.domain && $scope.domain.is_active && $scope.request.status == 'done') {
+                if ($scope.request_open_ports && $scope.domain && $scope.domain.ip && $scope.domain.requests == 0) {
+                    $scope.request_open_ports_done = true;
+                }
+
+                if ($scope.domain && $scope.domain.is_active && $scope.request.status == 'done' && $scope.domain.requests == 0 && (!$scope.open_ports || $scope.request_open_ports_done) && $scope.redirect_time--<0) {
                     $scope.redirect();
                     if ($scope.auto_view && !redirected_display && $scope.domain_display[0]
                         && $scope.domain_display[0].file_extension
+                        && $scope.domain.ports.length==0
                         && !$scope.domain_display[0].password) {
                         location.href='/machine/display/'+$scope.domain_display[0].driver+"/"
                             +$scope.domain.id+"."+$scope.domain_display[0].file_extension;
                         redirected_display=true;
                     }
                 }
-                if ($scope.request_open_ports && $scope.domain && $scope.domain.ip && $scope.domain.requests == 0) {
-                    $scope.request_open_ports_done = true;
-                }
-
             }
         }
 
         $scope.reload_ports = function() {
             $scope.request_open_ports_done = false;
+            $scope.redirect_time=2;
+            $scope.domain.requests=-1;
             $http.post('/request/close_exposed_ports/'
                 ,JSON.stringify(
                     { 'id_domain': $scope.domain.id})
@@ -1233,6 +1261,7 @@
         $scope.redirect_done = false;
         //$scope.wait_request();
         $scope.view_clicked=false;
+        $scope.redirect_time = 1;
     };
 // list users
     function usersCrtl($scope, $http, request, listUsers) {

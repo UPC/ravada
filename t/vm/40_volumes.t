@@ -446,7 +446,7 @@ sub test_too_big($vm) {
     like($@, qr(out of space),$vm->type) or exit;
     ok(!$file);
     my $free_disk2 = $vm->free_disk();
-    is(int($free_disk2/1024), int($free_disk/1024));
+    is(int($free_disk2/1024/2), int($free_disk/1024/2));
     $domain->remove(user_admin);
 }
 

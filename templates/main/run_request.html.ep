@@ -59,12 +59,12 @@
                 </h3>
                 <div>
                 <button
-                     ng-show="request_open_ports && request_open_ports_done"
+                     ng-show="request_open_ports && domain.requests==0"
                      ng-click="reload_ports()"
                      ><%=l 'reopen' %></button>
                 <small>
-                <i ng-hide="request_open_ports && request_open_ports_done"
-                class="fas fa-sync-alt fa-spin"></i>
+                <i ng-hide="domain.requests==0"
+                   class="fas fa-sync-alt fa-spin"></i>
                 </small>
                 </div>
             </div>
@@ -98,7 +98,8 @@
             </div><!-- domain is active -->
         <div>
             <div class="panel-body">
-                <div ng-show="domain && request.status == 'done' && domain.is_active == 0 && count_start>2"><%=l 'The machine is down.' %>
+                <div ng-show="request && request.error && (!domain || !domain.is_active)">{{request.error}}</div>
+                <div ng-show="domain && request.status == 'done' && (!domain || domain.is_active == 0) && count_start>2"><%=l 'The machine is down.' %>
                  <a class="btn btn-primary" href="?enable_host_devices=1"><%=l 'Start again' %></a>
                  <a ng-show="domain.host_devices.length > 0" class="btn btn-secondary" href="?enable_host_devices=0"><%=l 'Start without host devices' %></a>
                 </div>

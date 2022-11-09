@@ -776,6 +776,15 @@ any '/(:item)/settings/(:id).html' => sub($c) {
     return $c->render( template => '/main/settings_generic' );
 };
 
+get '/node/info/(:id).json' => sub($c) {
+    my $sth = $RAVADA->_dbh->prepare("SELECT id,name,version FROM vms "
+        ." WHERE id=?"
+    );
+    $sth->execute($c->stash('id'));
+    my $row = $sth->fetchrow_hashref;
+    return $c->render(json => $row);
+};
+
 get '/node/list_bases/(:id)' => sub($c) {
     return $c->render( json => $RAVADA->_list_bases_vm_all($c->stash('id')));
 };

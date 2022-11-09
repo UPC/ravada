@@ -241,10 +241,13 @@ sub _sort_xml_list($list, $field) {
 sub _xml_elements($xml, $item) {
     return {} if !defined $xml;
     my $text = $xml->textContent;
-    $item->{_text} = $text if $text && $text !~ /\n/m;
+    $text = 0+$text if $text =~ /^\d+$/;
+    $item->{'#text'} = $text if $text && $text !~ /\n/m;
 
     for my $attribute ( $xml->attributes ) {
-        $item->{$attribute->name} = $attribute->value;
+        my $value = $attribute->value;
+        $value = 0+$value if $value=~ /^\d+$/;
+        $item->{$attribute->name} = $value;
     }
 
     for my $node ( $xml->findnodes('*') ) {
