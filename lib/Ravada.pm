@@ -690,30 +690,30 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://download.parrot.sh/parrot/iso/5.0.1/'
-            ,file_re => 'Parrot-home-5.0.1_amd64.iso'
+            ,url => 'https://download.parrot.sh/parrot/iso/5.1.\d+/'
+            ,file_re => 'Parrot-home-5.1.\d+_amd64.iso'
             ,sha256_url => '$url/signed-hashes.txt'
             ,min_disk_size => '10'
         }
         ,kali_64 => {
-            name => 'Kali Linux 2021'
-            ,description => 'Kali Linux 2021 64 Bits'
+            name => 'Kali Linux 2022'
+            ,description => 'Kali Linux 2022 64 Bits'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2021.\d+/'
-            ,file_re => 'kali-linux-2021.\d+-installer-amd64.iso'
+            ,url => 'https://cdimage.kali.org/kali-2022.\d+/'
+            ,file_re => 'kali-linux-202\d.\d+-installer-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
         ,kali_64_netinst => {
-            name => 'Kali Linux 2021 (NetInstaller)'
-            ,description => 'Kali Linux 2021 64 Bits (light NetInstall)'
+            name => 'Kali Linux 2022 (NetInstaller)'
+            ,description => 'Kali Linux 2022 64 Bits (light NetInstall)'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2021.\d+/'
-            ,file_re => 'kali-linux-2021.\d+-installer-netinst-amd64.iso'
+            ,url => 'https://cdimage.kali.org/kali-2022.\d+/'
+            ,file_re => 'kali-linux-202\d.\d+-installer-netinst-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
@@ -1354,7 +1354,7 @@ sub _remove_old_isos {
             ."  AND ( file_re like '%20.04.1%' OR file_re like '%20.04.%d+%')"
         ,"DELETE FROM iso_images "
             ." WHERE name like 'Astra Linux 2%'"
-            ." AND url like '%current%'"
+            ." AND ( url like '%current%' OR url like '%orel%')"
 
         ,"DELETE FROM iso_images "
             ." WHERE name like 'Alpine%3.8%'"
