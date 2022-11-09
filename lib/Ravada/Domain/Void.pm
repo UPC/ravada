@@ -402,6 +402,23 @@ sub start($self, @args) {
     my $password;
     $password = Ravada::Utils::random_name() if $set_password;
     $self->_set_displays_ip( $password, $listen_ip );
+    $self->_set_ip_address();
+
+}
+
+sub _set_ip_address($self) {
+    return if !$self->is_active;
+
+    my $hardware = $self->_value('hardware');
+    my $changed = 0;
+    for my $net (@{$hardware->{network}}) {
+        next if !ref($net);
+        next if exists $net->{address} && $net->{address};
+        next if $net->{type} ne 'nat';
+        $net->{address} = '198.51.100.'.int(rand(253)+2);
+        $changed++;
+    }
+    $self->_store('hardware' => $hardware) if $changed;
 
 }
 
@@ -688,6 +705,7 @@ sub get_info {
     if (!$info->{memory}) {
         $info = $self->_set_default_info();
     }
+    $info->{ip} = $self->ip;
     lock_keys(%$info);
     return $info;
 }
@@ -706,7 +724,6 @@ sub _set_default_info($self, $listen_ip=undef) {
             ,cpu_time => 1
             ,n_virt_cpu => 1
             ,state => 'UNKNOWN'
-            ,ip =>'1.1.1.'.int(rand(254)+1)
             ,mac => _new_mac()
             ,time => time
     };
@@ -808,16 +825,18 @@ sub disk_size {
 
 sub ip {
     my $self = shift;
-    my $info = $self->_value('info');
-    my $ip = $info->{ip};
-    return $ip if $ip;
+    my $hardware = $self->_value('hardware');
+    return if !exists $hardware->{network};
+    for ( 1 .. 2 ) {
+        for my $network(@{$hardware->{network}}) {
+            return $network->{address}
+            if $network->{address};
+        }
 
-    $self->_set_default_info();
-    $info = $self->_value('info');
-    $ip = $info->{ip};
-    confess if !$ip;
+        $self->_set_ip_address();
+    }
 
-    return $ip;
+    return;
 }
 
 sub clean_disk($self, $file) {
