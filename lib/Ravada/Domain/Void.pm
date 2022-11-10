@@ -831,7 +831,7 @@ sub ip {
     for ( 1 .. 2 ) {
         for my $network(@{$hardware->{network}}) {
             return $network->{address}
-            if ref($network->{address}) && $network->{address};
+            if ref($network) && $network->{address};
         }
 
         $self->_set_ip_address();
