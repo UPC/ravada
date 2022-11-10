@@ -640,9 +640,9 @@ sub test_routing_already_used($vm, $source=0, $restricted=0) {
             ,remote_ip => $remote_ip
         );
         wait_request(debug => 0);
-        $internal_ip = $base->ip;
         is($req->status,'done');
         is($req->error, '');
+        $internal_ip = _wait_ip($vm,$base);
 
         my @base_ports2 = $base->list_ports();
 
@@ -1215,7 +1215,7 @@ sub test_close_port($vm) {
     $clone->shutdown_now(user_admin);
     wait_request();
 
-    my $clone_ip = $clone->ip;
+    my $clone_ip = _wait_ip($vm,$clone);
     my @out3 = split /\n/, `iptables-save -t nat`;
     my @open3 = (grep /--to-destination $clone_ip:22/, @out3);
     is(scalar(@open3),0, Dumper(\@open3));
@@ -1276,6 +1276,7 @@ sub test_clone_exports_add_ports($vm) {
 }
 
 sub _wait_ip2($vm_name, $domain) {
+    confess if !ref($domain) || ref($domain) !~ /Domain/;
     $domain->start(user => user_admin, remote_ip => '1.2.3.5') unless $domain->is_active();
     for ( 1 .. 30 ) {
         return $domain->ip if $domain->ip;
@@ -1373,7 +1374,7 @@ sub test_req_expose($vm_name) {
 
     my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
 
-    my $remote_ip = '10.0.0.6';
+    my $remote_ip = '10.0.0.'.int(rand(200)+2);
 
     $domain->start(user => user_admin, remote_ip => $remote_ip);
 
