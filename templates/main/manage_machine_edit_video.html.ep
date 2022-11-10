@@ -10,7 +10,7 @@
         <li class="list-group-item list-group-item-primary"><%=l 'primary' %></li>
         <li class="list-group-item">
             <input type="checkbox" ng-model="item.primary"
-                ng-true-value="'yes'" ng-false-falue="'no'"
+                ng-true-value="'yes'" ng-false-value="'no'"
                 ng-disabled="item._primary || (item.type != 'qxl' && item.type != 'virtio')"
             />
         </li>
