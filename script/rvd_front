@@ -706,6 +706,15 @@ any '/(:item)/settings/(:id).html' => sub($c) {
     return $c->render( template => '/main/settings_generic' );
 };
 
+get '/node/info/(:id).json' => sub($c) {
+    my $sth = $RAVADA->_dbh->prepare("SELECT id,name,version FROM vms "
+        ." WHERE id=?"
+    );
+    $sth->execute($c->stash('id'));
+    my $row = $sth->fetchrow_hashref;
+    return $c->render(json => $row);
+};
+
 get '/node/list_bases/(:id)' => sub($c) {
     return $c->render( json => $RAVADA->_list_bases_vm_all($c->stash('id')));
 };
@@ -2736,7 +2745,6 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
                 , remote_ip => _remote_ip($c)
             )
         }
-        $name = _new_domain_name($name);
     }
 
     app->log->info($USER->name." requesting create_domain ".$name." from "._remote_ip($c))
@@ -2751,17 +2759,6 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
        ,@create_args
     );
 
-}
-
-sub _new_domain_name {
-    confess;
-    my $name = shift;
-    my $count = 1;
-    my $name2;
-    for ( ;; ) {
-        $name2 = "$name-".++$count;
-        return $name2 if !$RAVADA->domain_exists($name2);
-    }
 }
 
 sub run_request($c, $request, $anonymous = 0) {

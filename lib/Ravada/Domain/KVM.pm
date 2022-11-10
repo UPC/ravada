@@ -3064,6 +3064,8 @@ sub _fix_vcpu_from_topology($self, $data) {
     my $cores = $data->{cpu}->{topology}->{cores} or 1;
     my $threads = $data->{cpu}->{topology}->{threads} or 1;
 
+    delete $data->{cpu}->{topology}->{dies} if $self->_vm->_data('version') < 8000000;
+
     $data->{vcpu}->{'#text'} = $dies * $sockets * $cores * $threads ;
 }
 
