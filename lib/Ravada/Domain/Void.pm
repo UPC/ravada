@@ -9,7 +9,7 @@ use Fcntl qw(:flock SEEK_END);
 use File::Copy;
 use File::Path qw(make_path);
 use File::Rsync;
-use Hash::Util qw(lock_keys);
+use Hash::Util qw(lock_keys unlock_hash);
 use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json);
 use Moose;
@@ -793,6 +793,7 @@ sub _set_info {
     my $info = $self->get_info();
     confess "Unknown field $field" if !exists $info->{$field};
 
+    unlock_hash(%$info);
     $info->{$field} = $value;
     $self->_store(info => $info);
 }
@@ -830,7 +831,7 @@ sub ip {
     for ( 1 .. 2 ) {
         for my $network(@{$hardware->{network}}) {
             return $network->{address}
-            if $network->{address};
+            if ref($network) && $network->{address};
         }
 
         $self->_set_ip_address();
