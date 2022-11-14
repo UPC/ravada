@@ -11,7 +11,7 @@
     <div ng-show="!showmachine || !showmachine.hardware">
         <i ng-show="!display.is_active" class="fas fa-sync-alt fa-spin"></i>
     </div>
-    <div ng-repeat="name in hardware" ng-hide="show_new_disk||show_new_display||show_new_filesystem || showmachine.hardware[name].length == 0">
+    <div ng-repeat="name in hardware" ng-hide="show_new_disk||show_new_display||show_new_filesystem || showmachine.hardware[name].length == 0 || new_hardware">
         <h2 ng-hide="name=='cpu' || name=='features' || edit">{{name}}</h2>
         <div ng-show="showmachine.hardware[name]">
             <div ng-repeat="item in showmachine.hardware[name] track by $index"
@@ -59,7 +59,4 @@
         </div>
     </div>
 
-%= include 'main/manage_machine_new_disk'
-%= include 'main/manage_machine_new_display'
-%= include 'main/manage_machine_new_filesystem'
 </div>

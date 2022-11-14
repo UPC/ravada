@@ -5,6 +5,7 @@ use Carp qw(carp confess cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use POSIX qw(WNOHANG);
+use Storable qw(dclone);
 use Sys::Virt;
 use Test::More;
 use YAML qw(Dump);
@@ -1057,16 +1058,33 @@ sub test_change_network($vm, $domain) {
 }
 
 sub test_change_filesystem($vm,$domain) {
+
+    my $list_hw_fs = $domain->info(user_admin)->{hardware}->{filesystem};
+
+    my $hw_fs0 = $list_hw_fs->[0];
+
     my $new_source = "/var/tmp/".new_domain_name();
     mkdir $new_source if ! -e $new_source;
-    my $req = Ravada::Request->change_hardware(
+    my $data = dclone($hw_fs0);
+    $data->{source}->{dir} = $new_source;
+
+    my %args = (
         hardware => 'filesystem'
         ,index => 0
-        ,data => { source => { dir => $new_source } }
+        ,data => $data
         ,uid => user_admin->id
         ,id_domain => $domain->id
     );
-    wait_request(debug => 0);
+    my $req = Ravada::Request->change_hardware(%args);
+    wait_request(debug => 1);
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    my $list_hw_fs2 = $domain2->info(user_admin)->{hardware}->{filesystem};
+    my ($hw_fs2) = grep { $_->{_id} == $data->{_id} } @$list_hw_fs2;
+    ok($hw_fs2) or die Dumper($list_hw_fs2);
+    is($hw_fs2->{source}->{dir}, $new_source);
+    ok($hw_fs2->{_id}) or die Dumper($hw_fs2);
+    is($hw_fs2->{_id},$hw_fs0->{_id});
 }
 
 sub _test_change_defaults($domain,$hardware) {
@@ -1278,7 +1296,6 @@ sub _remove_usbs($domain, $hardware) {
 }
 
 sub test_change_drivers($domain, $hardware) {
-    return if $domain->type eq 'KVM' && $hardware eq 'usb controller';
 
     _remove_usbs($domain, $hardware);
 
@@ -1483,7 +1500,7 @@ for my $vm_name (vm_names()) {
     my %controllers = $domain_b0->list_controllers;
     lock_hash(%controllers);
 
-    for my $hardware (reverse sort keys %controllers ) {
+    for my $hardware ('filesystem', reverse sort keys %controllers ) {
         next if $hardware eq 'video';
 	    my $name= new_domain_name();
 	    my $domain_b = $BASE->clone(

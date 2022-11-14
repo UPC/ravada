@@ -4494,7 +4494,10 @@ sub get_controller {
     die "I can't get controller $name for domain ".$self->name
         if !$sub;
 
-    return $sub->($self);
+    my @ret = $sub->($self);
+    $self->_load_info_filesystem(\@ret) if $name eq 'filesystem';
+
+    return @ret;
 }
 
 =head2 get_controllers
@@ -5561,6 +5564,11 @@ sub _fix_hw_ignore_fields($data) {
 sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) {
 
     _fix_hw_booleans($data);
+
+    if ($hardware eq 'filesystem') {
+        $self->_change_info_filesystem($data);
+    }
+
     _fix_hw_ignore_fields($data);
 
     my $real_id_vm;
@@ -5571,6 +5579,7 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
     }
 
     my $is_display_builtin;
+
     if ($hardware eq 'display') {
 
         my @display = Ravada::Front::Domain::_get_controller_display($self);
@@ -5623,6 +5632,64 @@ sub _add_info_filesystem($self, $data) {
 
     my $sth = $$CONNECTOR->dbh->prepare($sql);
     $sth->execute(map {$data2{$_} } sort keys %data2);
+}
+
+sub _remove_info_filesystem($self, $id_filesystem) {
+
+    my $sth = $self->_dbh->prepare("SELECT * FROM domain_filesystems "
+        ." WHERE id_domain=? AND id=?"
+    );
+    $sth->execute($self->id, $id_filesystem);
+}
+
+sub _change_info_filesystem($self, $data) {
+    return if !keys %$data;
+
+    my $data2 = dclone($data);
+    my $chroot = delete $data->{chroot};
+    my $subdir_uid = delete $data->{subdir_uid};
+
+    $data2->{source} = $data2->{source}->{dir} if ref($data2->{source});
+    delete $data2->{target};
+
+    my $id = delete $data2->{_id};
+    confess "Missing id in data2 ".Dumper($data2) if !defined $id;
+    for my $key (keys %$data2) {
+        delete $data2->{$key} if $key =~ /^_/;
+    }
+
+    my $sql = "UPDATE domain_filesystems SET "
+        .join(",", map { "$_=?" } sort keys %$data2)
+        ;
+
+    my @values = map { $data2->{$_} } sort keys %$data2;
+    my $sth = $self->_dbh->prepare("$sql WHERE id=?");
+    $sth->execute(@values,$id);
+}
+
+sub _load_info_filesystem($self, $list) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT * FROM domain_filesystems "
+        ." WHERE id_domain=? AND source=?"
+    );
+    for my $item (@$list) {
+        unlock_hash(%$item);
+
+        my $source = $item->{source};
+        $source = $item->{source}->{dir} if ref($item->{source});
+
+        $sth->execute($self->id,$source);
+        my $info = $sth->fetchrow_hashref();
+
+        confess "Error: I can't file domain_filesystem "
+        ."id_domain= ".$self->id." , source=$source"
+        if !$info->{id};
+
+        $item->{chroot} = delete $info->{chroot};
+        $item->{subdir_uid} = delete $info->{subdir_uid};
+        $item->{_id} = $info->{id};
+        lock_hash(%$item);
+    }
 }
 
 sub _create_filesystem($self, $source, $uid, $gid=0) {
@@ -5796,6 +5863,12 @@ sub _delete_db_display_by_driver($self, $driver) {
 
 sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=undef) {
     confess "Error: supply either index or options when removing hardware " if !defined $index && !defined $options;
+
+    my $id_filesystem;
+    if ( $hardware eq 'filesystem') {
+        my @fs = $self->get_controller('filesystem');
+        $id_filesystem = $fs[$index]->{_id};
+    }
     my $display;
     if ( $hardware eq 'display' ) {
         $display = $self->_get_display_by_index($index);
@@ -5826,6 +5899,9 @@ sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=unde
     } else {
         $orig->($self, $hardware, $index, %$options)
     }
+
+    $self->_remove_info_filesystem($id_filesystem)
+    if $hardware eq 'filesystem';
 
     if ( $self->is_known() && !$self->is_base ) {
         $self->_redefine_instances();

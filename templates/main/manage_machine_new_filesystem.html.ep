@@ -1,12 +1,11 @@
-<div ng-show="show_new_filesystem" class="form-group">
-    <h2><%=l 'Add new Filesystem' %></h2>
+<div ng-show="new_hardware=='filesystem'" class="form-group">
     <div class="row">
         <div class="col-lg-2">
             <label for="source"><%=l 'Source' %></label>
             <a href="https://ravada.readthedocs.io/en/latest/docs/Virtiofs.html">?</a>
         </div>
         <div class="col-lg-8">
-            <input type="text" ng-model="add_filesystem.source.dir"
+            <input type="text" ng-model="item.source.dir"
             placeholder="/home/shared"
             />
         </div>
@@ -18,7 +17,7 @@
         </div>
         <div class="col-lg-8">
             <input type="checkbox" name="chroot"
-                ng-model="add_filesystem.chroot"/>
+                ng-model="item.chroot"/>
             <span class="info">
                 <%=l 'Creates a new subdirectory for each clone'%>
             </span>
@@ -31,7 +30,7 @@
         </div>
         <div class="col-lg-8">
             <input type="text" name="uid"
-                ng-model="add_filesystem.subdir_uid"
+                ng-model="item.subdir_uid"
                 placeholder="500"
                 />
             <span class="info">
