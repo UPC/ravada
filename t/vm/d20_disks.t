@@ -154,6 +154,10 @@ sub test_remove_disk($vm, %options) {
 }
 
 sub _add_iso_to_clone($domain) {
+
+    my $file = '/var/lib/libvirt/images/alpine-standard-3.8.1-x86.iso';
+    $file = "/var/tmp/alpine-standard-3.8.1-x86.iso" if $<;
+
     my $req = Ravada::Request->add_hardware(
         id_domain => $domain->id
         ,uid => user_admin->id
@@ -162,7 +166,7 @@ sub _add_iso_to_clone($domain) {
             'type' => 'sys',
             'allocation' => '0.1G',
             'device' => 'cdrom',
-            'file' => '/var/lib/libvirt/images/alpine-standard-3.8.1-x86.iso',
+            'file' => $file
             'capacity' => '1G'
         },
         'name' => 'disk',
