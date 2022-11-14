@@ -325,6 +325,16 @@
                             return a >b;
                         });
                         $scope.showmachine = data;
+                        $scope.hardware_add = [];
+                        for ( var n_key=0 ; n_key< $scope.hardware.length; n_key++) {
+
+                            var item = $scope.hardware[n_key];
+                            if (item != 'cpu' && item != 'features'
+                        && !($scope.showmachine.is_base && item == 'disk')
+                            ) {
+                                $scope.hardware_add.push(item);
+                            }
+                        }
                         $scope.copy_is_volatile = $scope.showmachine.is_volatile;
                         if (!subscribed_extra) {
                             subscribed_extra = true;
@@ -490,7 +500,6 @@
                                 list_users();
                                 list_access_groups();
                             }
-                            $scope.hardware_types = Object.keys(response.data.hardware);
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
                 });
                 if (is_admin ) {

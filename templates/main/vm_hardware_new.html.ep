@@ -1,20 +1,18 @@
-    <div ng-hide="show_new_disk||show_new_display||show_new_filesystem||edit || !showmachine || !hardware_add || !hardware_add.length"
+<div ng-hide="show_new_disk||show_new_display||show_new_filesystem||edit || !showmachine || !hardware_add || !hardware_add.length"
             class="input-group mb-3" style="max-width: 18rem;">
-        <div class="input-group-prepend">
+    <div class="input-group-prepend">
             <i ng-show="showmachine.requests>0 && show_machine._date_changed" class="fas fa-sync-alt fa-spin"></i>
             <button class="btn btn-primary"
                 ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || showmachine.is_base || showmachine.is_active"
                 ng-click="add_hardware(new_hardware)"
                 type="button">
             <%=l 'Add' %></button>
-        </div>
-        <div class="custom-file ml-4">
-            <select class="custom-select" ng-model="new_hardware"
-                ng-options="type for type in hardware_add"
-            >
-            <option value=""><%=l '-- choose hardware --' %></option>
-            </select>
-        </div>
     </div>
-
-
+    <div class="custom-file ml-2">
+        <select class="custom-select" ng-model="new_hardware"
+                ng-options="type for type in hardware_add"
+        >
+            <option value=""><%=l '-- choose hardware --' %></option>
+        </select>
+    </div>
+</div>
