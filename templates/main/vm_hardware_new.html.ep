@@ -22,6 +22,7 @@
         %= include 'main/manage_machine_edit_disk'
         %= include 'main/manage_machine_edit_filesystem'
         %= include 'main/manage_machine_edit_sound'
+        %= include 'main/manage_machine_edit_video'
 
         </div>
 
@@ -39,6 +40,10 @@
             (new_hardware=='display' && !item.driver)
             ||
             (new_hardware=='filesystem' && (!item.source || !item.source.dir))
+            ||
+            (new_hardware=='sound' && !item.model)
+            ||
+            (new_hardware=='video' && !item.type)
             "
             ng-click="add_hardware(new_hardware)">ok</button>
         </div>

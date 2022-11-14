@@ -1,43 +1,54 @@
-<div ng-show="name == 'video' && edit" class="form-group mt-4">
-    <ul class="list-group list-group-horizontal-md">
-        <li class="list-group-item list-group-item-primary"><%=l 'type' %></li>
-        <li class="list-group-item">
+<div ng-show="new_hardware=='video' || name == 'video' && edit" class="form-group mt-4">
+    <div class="row">
+        <div class="col-lg-2" align="right"><%=l 'type' %></div>
+        <div class="col-lg-2">
             <select ng-model="item.type"
                     ng-options="model.toLowerCase() for model in showmachine.drivers['video']"
             >
             </select>
-        </li>
-        <li class="list-group-item list-group-item-primary"><%=l 'primary' %></li>
-        <li class="list-group-item">
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-2" align="right"><%=l 'primary' %></div>
+        <div class="col-lg-2">
             <input type="checkbox" ng-model="item.primary"
                 ng-true-value="'yes'" ng-false-value="'no'"
                 ng-disabled="item._primary || (item.type != 'qxl' && item.type != 'virtio')"
             />
-        </li>
-        <li class="list-group-item" ng-show="!item._primary && item.primary">
+        </div>
+        <div class="col-lg-8" ng-show="!item._primary && item.primary">
             <span class="info"><%=l 'Primary video devices will move to first' %></span>
-        </li>
-        <li class="list-group-item" ng-show="item._primary">
+        </div>
+        <div class="col-lg-8" ng-show="item._primary">
             <span class="info"><%=l 'Primary can not be unset, enable it in another video device' %></span>
-        </li>
-    </ul>
-    <ul class="list-group list-group-horizontal-md">
+        </div>
+    </div>
+    <div class="row">
 
-        <li ng-show="item.type == 'qxl'"
-        class="list-group-item list-group-item-primary"><%=l 'ram' %></li>
-        <li class="list-group-item" ng-show="item.type == 'qxl'">
-            <input type="text" ng-model="item.ram" size="7"/>
-        </li>
-
-        <li class="list-group-item list-group-item-primary"><%=l 'vram' %></li>
-        <li class="list-group-item">
+        <div class="col-lg-2" align="right"><%=l 'vram' %></div>
+        <div class="col-lg-1">
             <input type="text" ng-model="item.vram" size="7"/>
-        </li>
+        </div>
 
-        <li class="list-group-item list-group-item-primary"><%=l 'heads' %></li>
-        <li class="list-group-item">
+        <div ng-show="item.type == 'qxl'"
+        class="col-lg-2" align="right"><%=l 'ram' %></div>
+        <div class="" ng-show="item.type == 'qxl'">
+            <input type="text" ng-model="item.ram" size="7"/>
+        </div>
+
+    </div>
+
+    <div class="row">
+        <div class="col-lg-2" align="right"><%=l 'heads' %></div>
+        <div class="col-lg-2">
             <input type="text" size="2" ng-model="item.heads"/>
-        </li>
-    </ul>
+        </div>
+    </div>
 
+    <div class="row">
+        <span class="info"
+            ng-show="item.type=='cirrus' && !item.primary">
+<%=l "video type 'cirrus' is only valid as primary video device" %>
+        </span>
+    </div>
 </div>
