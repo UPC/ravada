@@ -22,6 +22,7 @@
         </div>
         <div class="col-lg-8">
             <input type="checkbox" name="chroot"
+                ng-true-value="1" ng-false-value="0"
                 ng-model="item.chroot"/>
             <span class="info">
                 <%=l 'Creates a new subdirectory for each clone'%>
@@ -43,5 +44,4 @@
             </span>
         </div>
     </div>
-
 </div>
