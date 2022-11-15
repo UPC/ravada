@@ -2782,7 +2782,7 @@ sub _fix_hw_disk_args($data) {
 
 
     for (qw( allocation backing bus device driver_cache driver_name driver_type name target type )) {
-        delete $data->{$_};
+        delete $data->{$_} if exists $data->{$_};
     }
 }
 
