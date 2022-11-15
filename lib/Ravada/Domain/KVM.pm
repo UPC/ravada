@@ -2776,7 +2776,9 @@ sub change_hardware($self, $hardware, @args) {
 
 sub _fix_hw_disk_args($data) {
     delete $data->{capacity}
-    if $data->{device} eq 'cdrom' || $data->{file} =~ /\.iso$/;
+    if ( exists $data->{device} && $data->{device} eq 'cdrom')
+    || ( exists $data->{file} && $data->{file} =~ /\.iso$/)
+    ;
 
 
     for (qw( allocation backing bus device driver_cache driver_name driver_type name target type )) {

@@ -9,7 +9,7 @@ use Fcntl qw(:flock SEEK_END);
 use File::Copy;
 use File::Path qw(make_path);
 use File::Rsync;
-use Hash::Util qw(lock_keys unlock_hash);
+use Hash::Util qw(lock_keys lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json);
 use Moose;
@@ -993,14 +993,18 @@ sub _change_disk_data($self, $index, $field, $value) {
 sub _change_hardware_disk($self, $index, $data_new) {
     my @volumes = $self->list_volumes_info();
 
-    my $driver = delete $data_new->{driver};
+    unlock_hash(%$data_new);
+    my $driver;
+    $driver = delete $data_new->{driver} if exists $data_new->{driver};
+    lock_hash(%$data_new);
     return $self->_change_driver_disk($index, $driver) if $driver;
 
     die "Error: volume $index not found, only ".scalar(@volumes)." found."
         if $index >= scalar(@volumes);
 
     my $file = $volumes[$index]->{file};
-    my $new_file = $data_new->{file};
+    my $new_file;
+    $new_file = $data_new->{file} if exists $data_new->{file};
     return $self->_change_disk_data($index, file => $new_file) if defined $new_file;
 
     return if !$file;
