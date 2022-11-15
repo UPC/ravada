@@ -487,6 +487,7 @@ sub _around_create_domain {
             delete @port{'id','id_domain','public_port','id_vm', 'is_secondary'};
             $domain->expose(%port);
         }
+        $domain->_clone_filesystems();
         my @displays = $base->_get_controller_display();
         for my $display (@displays) {
             delete $display->{id};

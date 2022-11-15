@@ -13,7 +13,7 @@ use Carp qw(cluck confess croak);
 use Data::Dumper;
 use File::Copy;
 use File::Path qw(make_path);
-use Hash::Util qw(lock_keys lock_hash);
+use Hash::Util qw(lock_keys lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use MIME::Base64;
 use Moose;
@@ -2999,13 +2999,15 @@ sub _change_hardware_filesystem($self, $index, $data) {
     || !defined $data->{source}->{dir};
 
     my $source = delete $data->{source}->{dir};
-    my $target = delete $data->{target}->{dir};
-    my $keep_target = delete $data->{keep_target};
+    my $target;
+    $target = delete $data->{target}->{dir} if exists $data->{target};
 
+    unlock_hash(%$data);
     delete $data->{source}
     if !keys %{$data->{source}};
     delete $data->{target}
     if !keys %{$data->{target}};
+    lock_hash(%$data);
 
     confess "Error: extra arguments ".Dumper($data)
     if keys %$data;
@@ -3027,7 +3029,7 @@ sub _change_hardware_filesystem($self, $index, $data) {
         my ($xml_source) = $fs->findnodes("source");
         my ($xml_target) = $fs->findnodes("target");
         $xml_source->setAttribute(dir => $source);
-        $xml_target->setAttribute(dir => $target) unless $keep_target;
+        $xml_target->setAttribute(dir => $target) if $target;
         $changed++;
     }
 

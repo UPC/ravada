@@ -5556,9 +5556,11 @@ sub _fix_hw_booleans($data) {
 }
 
 sub _fix_hw_ignore_fields($data) {
+    unlock_hash(%$data);
     for my $key (keys %$data) {
         delete $data->{$key} if $key =~ /^_/;
     }
+    lock_hash(%$data);
 }
 
 sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) {
@@ -5620,23 +5622,23 @@ sub _add_info_filesystem($self, $data) {
     if exists $data->{source} && !defined $data->{source}
     || (ref($data->{source}) && !keys %{$data->{source}});
 
-    my %data2 = %$data;
-    $data2{id_domain} = $self->id;
-    $data2{source} = $data2{source}->{dir} if ref($data2{source});
+    my $data2 = dclone($data);
+    $data2->{id_domain} = $self->id;
+    $data2->{source} = $data2->{source}->{dir} if ref($data2->{source});
 
     my $sql = "INSERT INTO domain_filesystems ("
-    .join(",",sort keys %data2)
+    .join(",",sort keys %$data2)
     .") VALUES ("
-    .join(",",map { '?' } keys %data2)
+    .join(",",map { '?' } keys %$data2)
     .")";
 
     my $sth = $$CONNECTOR->dbh->prepare($sql);
-    $sth->execute(map {$data2{$_} } sort keys %data2);
+    $sth->execute(map {$data2->{$_} } sort keys %$data2);
 }
 
 sub _remove_info_filesystem($self, $id_filesystem) {
 
-    my $sth = $self->_dbh->prepare("SELECT * FROM domain_filesystems "
+    my $sth = $self->_dbh->prepare("DELETE FROM domain_filesystems "
         ." WHERE id_domain=? AND id=?"
     );
     $sth->execute($self->id, $id_filesystem);
@@ -5646,14 +5648,17 @@ sub _change_info_filesystem($self, $data) {
     return if !keys %$data;
 
     my $data2 = dclone($data);
+    unlock_hash(%$data);
     my $chroot = delete $data->{chroot};
     my $subdir_uid = delete $data->{subdir_uid};
+    lock_hash(%$data);
 
+    unlock_hash(%$data2);# it is local to this sub, so we may change it
     $data2->{source} = $data2->{source}->{dir} if ref($data2->{source});
     delete $data2->{target};
 
     my $id = delete $data2->{_id};
-    confess "Missing id in data2 ".Dumper($data2) if !defined $id;
+    confess "Missing _id in data2 ".Dumper($data2) if !defined $id;
     for my $key (keys %$data2) {
         delete $data2->{$key} if $key =~ /^_/;
     }
@@ -5709,6 +5714,19 @@ sub _create_filesystem($self, $source, $uid, $gid=0) {
 
 }
 
+sub _clone_filesystems($self) {
+    my $id_base = $self->id_base() or return;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_filesystems "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($id_base);
+    while ( my $row = $sth->fetchrow_hashref ) {
+        delete $row->{id};
+        $self->_add_info_filesystem($row);
+    }
+}
+
 sub _chroot_filesystems($self) {
     my $id_base = $self->id_base() or return;
 
@@ -5719,14 +5737,14 @@ sub _chroot_filesystems($self) {
     while ( my $row = $sth->fetchrow_hashref ) {
         next if !$row->{chroot};
         confess Dumper($row) if $row->{source} !~ m{^/};
+        my $data = $self->_search_filesystem_index($row->{source});
+        unlock_hash(%$data);
         my $source = $row->{source}."/".$self->name;
-        my $index = $self->_search_filesystem_index($row->{source});
+        $data->{source}->{dir} = $source;
+        my $index = delete $data->{_index};
+        lock_hash(%$data);
 
-        $self->change_hardware('filesystem',$index
-            ,{source => $source
-            , keep_target => 1
-        })
-        if defined $index;
+        $self->change_hardware('filesystem',$index, $data);
 
         $self->_create_filesystem($source,$row->{subdir_uid});
     }
@@ -5736,7 +5754,11 @@ sub _chroot_filesystems($self) {
 sub _search_filesystem_index($self, $source) {
     my $hw = $self->get_controllers();
     for my $n ( 0 .. scalar(@{$hw->{filesystem}}) ) {
-        return $n if $hw->{filesystem}->[$n]->{source}->{dir} eq $source;
+        my $fs = $hw->{filesystem}->[$n];
+        unlock_hash(%$fs);
+        $fs->{_index} = $n;
+        lock_hash(%$fs);
+        return $fs if $fs->{source}->{dir} eq $source;
     }
     return;
 }
