@@ -166,7 +166,7 @@ sub _add_iso_to_clone($domain) {
             'type' => 'sys',
             'allocation' => '0.1G',
             'device' => 'cdrom',
-            'file' => $file
+            'file' => $file,
             'capacity' => '1G'
         },
         'name' => 'disk',

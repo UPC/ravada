@@ -1033,6 +1033,7 @@ sub _change_hardware_vcpus($self, $index, $data) {
 }
 
 sub _change_hardware_memory($self, $index, $data) {
+    unlock_hash(%$data);
     my $memory = delete $data->{memory};
     my $max_mem = delete $data->{max_mem};
     confess "Error: unknown args ".Dumper($data) if keys %$data;
