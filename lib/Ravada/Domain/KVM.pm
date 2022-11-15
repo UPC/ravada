@@ -13,7 +13,7 @@ use Carp qw(cluck confess croak);
 use Data::Dumper;
 use File::Copy;
 use File::Path qw(make_path);
-use Hash::Util qw(lock_keys lock_hash unlock_hash);
+use Hash::Util qw(lock_keys lock_hash);
 use IPC::Run3 qw(run3);
 use MIME::Base64;
 use Moose;
@@ -2400,7 +2400,7 @@ sub _set_controller_network($self, $number, $data) {
 
     my $driver = (delete $data->{driver} or 'virtio');
     my $type = ( delete $data->{type} or 'NAT' );
-    my $network =(delete $data->{network} or '');
+    my $network =(delete $data->{network} or 'default');
     my $bridge = (delete $data->{bridge}  or '');
 
     confess "Error: unkonwn fields in data ".Dumper($data) if keys %$data;
@@ -2794,10 +2794,8 @@ sub _change_hardware_disk($self, $index, $data) {
 
     _fix_hw_disk_args($data);
 
-    unlock_hash(%$data);
     my $driver = delete $data->{driver};
     my $boot = delete $data->{boot};
-    lock_hash(%$data);
 
     $self->_change_hardware_disk_bus($index, $driver)   if $driver;
     $self->_set_boot_order($index, $boot)               if $boot;
@@ -3012,12 +3010,10 @@ sub _change_hardware_filesystem($self, $index, $data) {
     my $target;
     $target = delete $data->{target}->{dir} if exists $data->{target};
 
-    unlock_hash(%$data);
     delete $data->{source}
     if !keys %{$data->{source}};
     delete $data->{target}
     if !keys %{$data->{target}};
-    lock_hash(%$data);
 
     confess "Error: extra arguments ".Dumper($data)
     if keys %$data;

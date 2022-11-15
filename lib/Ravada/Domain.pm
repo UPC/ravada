@@ -4494,10 +4494,7 @@ sub get_controller {
     die "I can't get controller $name for domain ".$self->name
         if !$sub;
 
-    my @ret = $sub->($self);
-    $self->_load_info_filesystem(\@ret) if $name eq 'filesystem';
-
-    return @ret;
+    return $sub->($self);
 }
 
 =head2 get_controllers
@@ -5601,6 +5598,7 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
 
     }
     if ( $hardware ne 'display' || $is_display_builtin) {
+        unlock_hash(%$data);
         $orig->($self, $hardware, $index,$data);
         $self->_redefine_instances() if $self->is_known();
     }
