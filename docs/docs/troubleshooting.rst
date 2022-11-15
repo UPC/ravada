@@ -91,14 +91,23 @@ If you are using MySQL it may create a lot of binlog files that
 in some cases may fill your disk drive. If you are not using
 replication it is safe to disable them if it is only used for Ravada.
 
-Edit the file /etc/mysql/mysql.conf.d/mysqld.cnf and comment the next
-lines:
+Edit the file /etc/mysql/mysql.conf.d/mysqld.cnf comment the binlog
+lines and add *skip-log-bin=true* :
 
 ::
 
+    [mysqld]
+
+    skip-log-bin = true
     # binlog_expire_logs_seconds	= 2592000
     # max_binlog_size   = 100M
 
+
+To purge the logs run the mysql client and type:
+
+::
+
+    mysql> purge binary logs before '2024-11-15';
 
 Spice-Warning Error in certificate chain verification
 -----------------------------------------------------
