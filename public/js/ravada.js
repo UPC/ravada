@@ -325,6 +325,16 @@
                             return a >b;
                         });
                         $scope.showmachine = data;
+                        $scope.hardware_add = [];
+                        for ( var n_key=0 ; n_key< $scope.hardware.length; n_key++) {
+
+                            var item = $scope.hardware[n_key];
+                            if (item != 'cpu' && item != 'features'
+                        && !($scope.showmachine.is_base && item == 'disk')
+                            ) {
+                                $scope.hardware_add.push(item);
+                            }
+                        }
                         $scope.copy_is_volatile = $scope.showmachine.is_volatile;
                         if (!subscribed_extra) {
                             subscribed_extra = true;
@@ -491,7 +501,6 @@
                                 list_host_devices();
                                 list_access_groups();
                             }
-                            $scope.hardware_types = Object.keys(response.data.hardware);
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
                 });
                 if (is_admin ) {
@@ -669,35 +678,40 @@
 
           //On load code
 //          $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
-          $scope.add_hardware = function(hardware, extra) {
-              if (hardware == 'disk' && ! extra) {
-                  $scope.show_new_disk = true;
-                  return;
-              }
+            var new_hw={
+                'network': {'driver': 'virtio', 'type': 'NAT' }
+                ,'disk': {
+                    'device': 'disk'
+                    ,'type': 'sys'
+                    ,'capacity': '20G'
+                    ,'allocation': '1G'
+                    ,'driver': 'virtio'
+                }
+            };
+            $scope.pre_add_hw=function() {
+                if (typeof(new_hw[$scope.new_hardware]) == 'undefined') {
+                    new_hw[$scope.new_hardware] = {};
+                }
+                $scope.item = new_hw[$scope.new_hardware];
+            }
+            $scope.add_hardware = function(hardware) {
+                var extra=new_hw[hardware];
+                if ( hardware == 'disk') {
+                    if ( extra.device == 'cdrom') {
+                        extra.driver = 'sata';
+                    } else {
+                        extra.file= '';
+                    }
+                }
 
-              if ( hardware == 'disk' && extra.device == 'cdrom') {
-                  extra.driver = 'sata';
-              }
-              if ( hardware == 'disk' && extra.device != 'cdrom') {
-                  extra.file= '';
-              }
+                $scope.new_hardware = undefined;
 
-              if (hardware == 'display' && ! extra) {
-                  $scope.show_new_display = true;
-                  return;
-              }
-
-              if (hardware == 'filesystem' && ! extra) {
-                  $scope.show_new_filesystem= true;
-                  return;
-              }
-
-              $scope.request('add_hardware'
+                $scope.request('add_hardware'
                       , { 'id_domain': $scope.showmachine.id
                             ,'name': hardware
                             ,'data': extra
                       })
-          };
+            };
           $scope.remove_hardware = function(hardware, index, item, confirmation) {
             if (hardware == 'disk') {
                 if (!confirmation) {

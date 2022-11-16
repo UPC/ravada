@@ -1659,9 +1659,6 @@ msgstr "Danger: This will destroy all the disk data permantently."
 msgid "Type the name of the volume disk to confirm:"
 msgstr "Type the name of the volume disk to confirm:"
 
-msgid "No hardware found for"
-msgstr "No hardware found for"
-
 msgid "-- choose hardware --"
 msgstr "-- choose hardware --"
 

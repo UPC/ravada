@@ -301,7 +301,8 @@ sub test_login_non_admin_req($t, $base, $clone){
     mojo_check_login($t, $USERNAME, $PASSWORD);
     if (!$clone->is_base) {
         $t->get_ok("/machine/prepare/".$clone->id.".json")->status_is(200);
-        die "Error preparing username='$USERNAME'"
+        die "Error preparing username='$USERNAME'\n"
+            .$t->tx->res->body()
         if $t->tx->res->code() != 200;
 
         for ( 1 .. 10 ) {

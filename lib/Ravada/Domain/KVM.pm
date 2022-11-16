@@ -2410,15 +2410,26 @@ sub _remove_all_video_primary($devices) {
 sub _set_controller_network($self, $number, $data) {
 
     my $driver = (delete $data->{driver} or 'virtio');
+    my $type = ( delete $data->{type} or 'NAT' );
+    my $network =(delete $data->{network} or 'default');
+    my $bridge = (delete $data->{bridge}  or '');
 
     confess "Error: unkonwn fields in data ".Dumper($data) if keys %$data;
 
     my $pci_slot = $self->_new_pci_slot();
 
     my $device = "<interface type='network'>
-        <mac address='".$self->_vm->_new_mac()."'/>
-        <source network='default'/>
-        <model type='$driver'/>
+        <mac address='".$self->_vm->_new_mac()."'/>";
+    if ($type eq 'NAT') {
+        $device .= "<source network='$network'/>"
+    } elsif ($type eq 'bridge') {
+        $device .= "<source bridge='$bridge'/>"
+    } else {
+        die "Error adding network, unknown type '$type'";
+    }
+
+    $device .=
+        "<model type='$driver'/>
         <address type='pci' domain='0x0000' bus='0x00' slot='$pci_slot' function='0x0'/>
       </interface>";
 
@@ -2775,8 +2786,14 @@ sub change_hardware($self, $hardware, @args) {
 }
 
 sub _fix_hw_disk_args($data) {
+    delete $data->{capacity}
+    if ( exists $data->{device} && $data->{device} eq 'cdrom')
+    || ( exists $data->{file} && $data->{file} =~ /\.iso$/)
+    ;
+
+
     for (qw( allocation backing bus device driver_cache driver_name driver_type name target type )) {
-        delete $data->{$_};
+        delete $data->{$_} if exists $data->{$_};
     }
 }
 
@@ -2794,11 +2811,17 @@ sub _change_hardware_disk($self, $index, $data) {
     $self->_change_hardware_disk_bus($index, $driver)   if $driver;
     $self->_set_boot_order($index, $boot)               if $boot;
 
-    my $capacity = delete $data->{'capacity'};
-    $self->_change_hardware_disk_capacity($index, $capacity) if $capacity;
+    if ( exists $data->{'capacity'} ) {
+        my $capacity = delete $data->{'capacity'};
+        $self->_change_hardware_disk_capacity($index,$capacity)
+            if $capacity;
+    }
 
-    my $file_new = delete $data->{'file'};
-    $self->_change_hardware_disk_file($index, $file_new)    if defined $file_new;
+    if ( exists $data->{'file'}) {
+        my $file_new = delete $data->{'file'};
+        $self->_change_hardware_disk_file($index, $file_new)
+            if defined $file_new;
+    }
 
     die "Error: I don't know how to change ".Dumper($data) if keys %$data;
 
@@ -2995,8 +3018,8 @@ sub _change_hardware_filesystem($self, $index, $data) {
     || !defined $data->{source}->{dir};
 
     my $source = delete $data->{source}->{dir};
-    my $target = delete $data->{target}->{dir};
-    my $keep_target = delete $data->{keep_target};
+    my $target;
+    $target = delete $data->{target}->{dir} if exists $data->{target};
 
     delete $data->{source}
     if !keys %{$data->{source}};
@@ -3023,7 +3046,7 @@ sub _change_hardware_filesystem($self, $index, $data) {
         my ($xml_source) = $fs->findnodes("source");
         my ($xml_target) = $fs->findnodes("target");
         $xml_source->setAttribute(dir => $source);
-        $xml_target->setAttribute(dir => $target) unless $keep_target;
+        $xml_target->setAttribute(dir => $target) if $target;
         $changed++;
     }
 
