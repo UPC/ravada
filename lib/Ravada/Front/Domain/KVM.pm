@@ -147,6 +147,9 @@ sub _get_controller_filesystem($self) {
 
         lock_hash(%$fs);
     }
+
+    $self->_load_info_filesystem(\@fs);
+
     return @fs;
 }
 

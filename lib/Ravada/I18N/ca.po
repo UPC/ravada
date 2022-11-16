@@ -1805,9 +1805,6 @@ msgstr "Màxima memòria (MB)"
 msgid "Current memory (MB)"
 msgstr "Memòria actual (MB)"
 
-msgid "No hardware found for"
-msgstr "No s'ha trobat maquinari per a"
-
 msgid "Any remote client can access this port"
 msgstr "Qualsevol client pot accedir a aquest port"
 

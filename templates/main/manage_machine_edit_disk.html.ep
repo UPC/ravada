@@ -1,6 +1,41 @@
-<div ng-show="name == 'disk' && is_edit(name,$index)" class="form-group mt-4">
-    <div class="row" ng-show="item.device == 'disk'">
+<div ng-show="new_hardware=='disk' || (name == 'disk' && is_edit(name,$index))" class="form-group mt-4">
+    <div class="row" ng-show="new_hardware=='disk'">
+        <div class="col-lg-2" align="right">
+            <label for="device"><%=l 'device' %></label>
+        </div>
+         <div class="col-lg-2">
+            <select name="device" ng-model="item.device">
+                <option value="disk" selected><%=l 'disk' %></option>
+                <option value="cdrom"><%=l 'cdrom' %></option>
+            </select>
+        </div>
+    </div>
+    <div class="row" ng-show="new_hardware=='disk' && item.device == 'disk'">
+        <div class="col-lg-2" align="right">
+            <label for="type"><%=l 'type' %></label>
+        </div>
         <div class="col-lg-2">
+           <select name="type" ng-model="add_disk.type">
+                <option value='sys'><%=l 'system' %></option>
+                <option value='swap'><%=l 'temporary' %></option>
+                <option value='data'><%=l 'data' %></option>
+            </select>
+         </div>
+         <div class="col-lg-6">
+           <span ng-show="add_disk.type == 'sys'">
+             <%=l 'Content will be cleaned on restore' %>
+           </span>
+           <span ng-show="add_disk.type == 'swap'">
+             <%=l 'Content will be cleaned on restore and shutdown' %>
+           </span>
+           <span ng-show="add_disk.type == 'data'">
+             <%=l 'Content will be kept on restore' %>
+           </span>
+        </div>
+    </div>
+
+    <div class="row" ng-show="item.device == 'disk'">
+        <div class="col-lg-2" align="right">
             <p class="text-right"><%=l 'bus' %></p>
         </div>
         <div class="col-lg-2">
@@ -21,8 +56,16 @@
                             >
         </div>
     </div>
-    <div class="row" ng-show="item.device == 'cdrom'">
+    <div class="row" ng-show="new_hardware=='disk' && add_disk.device == 'disk'">
+        <div class="col-lg-2" align="right">
+            <label for="allocation"><%=l 'allocation' %></label>
+        </div>
         <div class="col-lg-2">
+            <input type="text" name="allocation" ng-model="add_disk.allocation">
+        </div>
+    </div>
+    <div class="row" ng-show="item.device == 'cdrom'">
+        <div class="col-lg-2" align="right">
                             <p class="text-right"><%=l 'ISO file' %></p>
         </div>
         <div class="col-lg-2">
