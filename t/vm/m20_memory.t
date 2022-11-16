@@ -89,6 +89,30 @@ sub test_change_memory_base {
     $domain->remove(user_admin);
 }
 
+sub test_change_max_mem_active($vm) {
+    my $domain = create_domain($vm);
+    my $max_mem = $domain->info(user_admin)->{max_mem};
+    my $mem = $domain->info(user_admin)->{memory};
+
+    my $new_max_mem = int($max_mem * 1.5 ) + 1;
+    my $new_mem = int($mem * 1.5 ) + 1;
+    $domain->start(user_admin);
+
+    my $req1 = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware => 'memory'
+        ,data => { max_mem => $new_max_mem }
+    );
+    wait_request();
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    is($domain2->info(user_admin)->{max_mem},$new_mem);
+
+    is($domain2->_data('needs_restart'),1);
+    $domain->remove(user_admin);
+}
+
 sub test_req_change_mem($vm) {
     my $domain = create_domain($vm);
     my $max_mem = $domain->info(user_admin)->{max_mem};
@@ -127,6 +151,56 @@ sub test_req_change_mem($vm) {
 
     $domain->remove(user_admin);
 }
+
+sub test_change_max_mem_base($vm) {
+    my $base = create_domain($vm);
+    my $max_mem = $base->info(user_admin)->{max_mem};
+    my $mem = $base->info(user_admin)->{memory};
+
+    my $new_max_mem = int($max_mem * 1.5 ) + 1;
+    Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    wait_request();
+    is($base->is_base,1);
+
+    my $clone = $base->clone(user => user_admin, name => new_domain_name);
+    my $req1 = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,hardware => 'memory'
+        ,data => { max_mem => $new_max_mem }
+    );
+    wait_request( debug => 0);
+
+    my $domain2 = Ravada::Domain->open($base->id);
+    is($domain2->info(user_admin)->{max_mem},$new_max_mem);
+
+    is($clone->info(user_admin)->{max_mem},$max_mem) or exit;
+
+    $new_max_mem = int($new_max_mem * 1.5 ) + 1;
+
+    $req1 = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,hardware => 'memory'
+        ,data => { max_mem => $new_max_mem }
+        ,apply_clones => 1
+    );
+    wait_request(debug => 0);
+
+    my $domain3 = Ravada::Domain->open($base->id);
+    is($domain3->info(user_admin)->{max_mem},$new_max_mem);
+
+    is($clone->info(user_admin)->{max_mem},$new_max_mem) or exit;
+
+    my $clone2 = $domain3->clone(user => user_admin, name => new_domain_name);
+    is($clone2->info(user_admin)->{max_mem},$new_max_mem) or
+    die Dumper({base => $base->name
+            ,max_mem => $max_mem,new_max_mem => $new_max_mem});
+}
+
 ####################################################################
 
 for my $vm_name ( vm_names() ) {
@@ -147,6 +221,9 @@ for my $vm_name ( vm_names() ) {
         skip $msg,10    if !$vm;
 
         diag("Testing free mem on $vm_name");
+
+        test_change_max_mem_active($vm);
+        test_change_max_mem_base($vm);
 
         test_req_change_mem($vm);
 
