@@ -20,7 +20,7 @@ sub test_add_hw($hardware, $base, $clone) {
     my $before_c = $clone->info(user_admin)->{hardware}->{$hardware};
 
     my $data = _data($base->_vm, $hardware);
-    my @args = ('apply_clones' => 1);
+    my @args;
     push @args, ( data => $data ) if $data;
 
     my $req = Ravada::Request->add_hardware(
@@ -88,7 +88,6 @@ sub test_rm_hw($hardware, $base, $clone) {
         ,uid => user_admin->id
         ,id_domain => $base->id
         ,index => scalar(@$before_c)-1
-        ,apply_clones => 1
     );
 
     my $check_error = 1;

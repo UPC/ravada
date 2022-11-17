@@ -166,27 +166,13 @@ sub test_change_max_mem_base($vm) {
     is($base->is_base,1);
 
     my $clone = $base->clone(user => user_admin, name => new_domain_name);
+    $new_max_mem = int($new_max_mem * 1.5 ) + 1;
+
     my $req1 = Ravada::Request->change_hardware(
         uid => user_admin->id
         ,id_domain => $base->id
         ,hardware => 'memory'
         ,data => { max_mem => $new_max_mem }
-    );
-    wait_request( debug => 0);
-
-    my $domain2 = Ravada::Domain->open($base->id);
-    is($domain2->info(user_admin)->{max_mem},$new_max_mem);
-
-    is($clone->info(user_admin)->{max_mem},$max_mem) or exit;
-
-    $new_max_mem = int($new_max_mem * 1.5 ) + 1;
-
-    $req1 = Ravada::Request->change_hardware(
-        uid => user_admin->id
-        ,id_domain => $base->id
-        ,hardware => 'memory'
-        ,data => { max_mem => $new_max_mem }
-        ,apply_clones => 1
     );
     wait_request(debug => 0);
 
