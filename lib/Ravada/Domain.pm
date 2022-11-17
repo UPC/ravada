@@ -5532,6 +5532,7 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     $self->info(Ravada::Utils->user_daemon) if $self->is_known();
 
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
+    $self->post_prepare_base() if $self->is_base();
 }
 
 sub _fix_hw_booleans($data) {
@@ -5824,6 +5825,10 @@ sub _check_duplicated_volume_name($self, $file) {
 }
 
 sub _add_hardware_disk($orig, $self, $index, $data) {
+
+    die "Error: new disk volumes can not be added to bases\n"
+    if $self->is_base;
+
     my $real_id_vm;
     if (!$self->_vm->is_local) {
         $real_id_vm = $self->_vm->id;
@@ -5889,6 +5894,10 @@ sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=unde
         my @fs = $self->get_controller('filesystem');
         $id_filesystem = $fs[$index]->{_id};
     }
+
+    die "Error: disk volumes can not be removed from bases\n"
+    if $hardware eq 'disk' && $self->is_base;
+
     my $display;
     if ( $hardware eq 'display' ) {
         $display = $self->_get_display_by_index($index);

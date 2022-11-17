@@ -4719,7 +4719,7 @@ sub _apply_clones($self, $request) {
 
     my $id_domain = $request->args('id_domain') or confess "Missing argument id_domain";
     my $domain = Ravada::Front::Domain->open($id_domain);
-    return if !$domain->is_base || !$request->defined_arg('apply_clones');
+    return if !$domain->is_base;
 
     my $args = $request->args;
     for my $clone ($domain->clones) {
