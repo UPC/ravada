@@ -5685,7 +5685,7 @@ sub _load_info_filesystem($self, $list) {
         $sth->execute($self->id,$source);
         my $info = $sth->fetchrow_hashref();
 
-        confess "Error: I can't file domain_filesystem "
+        confess "Error: I can't find domain_filesystem "
         ."id_domain= ".$self->id." , source=$source"
         if !$info->{id};
 

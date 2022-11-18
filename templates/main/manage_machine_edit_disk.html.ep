@@ -36,24 +36,34 @@
 
     <div class="row" ng-show="item.device == 'disk'">
         <div class="col-lg-2" align="right">
-            <p class="text-right"><%=l 'bus' %></p>
+            <label for="driver" class="text-right"><%=l 'bus' %></p>
         </div>
         <div class="col-lg-2">
                             <select ng-model="item.driver"
+                            name="driver"
                             ng-options="model for model in showmachine.drivers['disk']"
                             >
                             </select>
         </div>
     </div>
     <div class="row" ng-show="item.device == 'disk'">
-        <div class="col-lg-2">
-                            <p class="text-right"><%=l 'capacity' %></p>
+        <div class="col-lg-2" align="right">
+            <label for="capacity" class="disabled">
+                <%=l 'capacity' %>
+            </label>
         </div>
         <div class="col-lg-2">
                             <input type="text"
                             name="capacity"
+                            size="6"
+                            ng-disabled="showmachine.is_base"
                             ng-model="item.capacity"
                             >
+        </div>
+        <div class="col-lg-8">
+            <span class="info">
+            <%=l 'This virtual machine is base and disk capacity can not be changed' %>
+            </span>
         </div>
     </div>
     <div class="row" ng-show="new_hardware=='disk' && add_disk.device == 'disk'">
@@ -61,7 +71,9 @@
             <label for="allocation"><%=l 'allocation' %></label>
         </div>
         <div class="col-lg-2">
-            <input type="text" name="allocation" ng-model="add_disk.allocation">
+            <input type="text"
+                size="6"
+                name="allocation" ng-model="add_disk.allocation">
         </div>
     </div>
     <div class="row" ng-show="item.device == 'cdrom'">
@@ -80,7 +92,7 @@
                             <p class="text-right"><%=l 'boot order' %></p>
         </div>
         <div class="col-lg-2">
-                            <input type="text" name="boot" ng-model="item.boot">
+            <input type="text" size="6" name="boot" ng-model="item.boot">
         </div>
     </div>
 </div><!-- element ( former li ) -->
