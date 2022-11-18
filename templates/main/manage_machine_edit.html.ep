@@ -18,19 +18,22 @@
                 %= include 'main/manage_machine_edit_sound'
                 %= include 'main/manage_machine_edit_usb'
 
-    <div class="list-group list-group-horizontal-md">
+%=  include '/main/manage_machine_apply_clones'
+
+    <div class="row">
         <div class="col-md-1">
         </div>
-        <div class="col-md-8 mt-3 mb-1">
+        <div class="col-md-8 mt-1 mb-1">
+
             <button class="btn btn-primary"
                 ng-hide="name=='video'"
-                ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || showmachine.is_base || showmachine.is_active || form_edit.$pristine"
+                ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || form_edit.$pristine"
                 ng-click="change_hardware(item,name,$index)">
                     <%=l 'Apply' %>
             </button>
 
             <button class="btn btn-primary"
-                ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || showmachine.is_base || showmachine.is_active || form_edit.$pristine"
+                ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || form_edit.$pristine"
                 ng-click="change_hardware(item,name,$index);set_edit()">
                     <%=l 'Accept' %>
             </button>
@@ -42,7 +45,7 @@
         </div>
         <div class="col-md-3 mt-3 mb-1" ng-show="name=='cpu' || name == 'features' || name=='network' || name == 'video'">
             <button class="btn btn-outline-primary"
-                ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || showmachine.is_base || showmachine.is_active"
+                ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) "
                 ng-click="set_defaults(name, $index)"
             >
                 <%=l 'Set defaults' %>
