@@ -101,7 +101,7 @@ our %VALID_ARG = (
                 ,with_cd => 2
     }
     ,change_owner => {uid => 1, id_domain => 1}
-    ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2, }
+    ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }
     ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 2, option => 2 }
     ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 2, data => 1 }
     ,enforce_limits => { timeout => 2, _force => 2 }
