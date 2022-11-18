@@ -582,11 +582,20 @@ sub _set_volumes_backing_store($self) {
 
 sub _store_xml($self) {
     my $xml = $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE);
-    my $sth = $self->_dbh->prepare(
-        "INSERT INTO base_xml (id_domain, xml) "
-        ." VALUES ( ?,? ) "
+    my $sth0 = $self->_dbh->prepare("SELECT id FROM base_xml "
+        ." WHERE id_domain=?"
     );
-    $sth->execute($self->id , $xml);
+    $sth0->execute($self->id);
+
+    my ($id) =$sth0->fetchrow();
+
+    my $sql = "INSERT INTO base_xml (xml,id_domain) "
+        ." VALUES ( ?,? ) ";
+    $sql = "UPDATE base_xml set xml=? WHERE id_domain=?" if $id;
+
+    my $sth = $self->_dbh->prepare($sql);
+    $sth->execute($xml, $self->id);
+
     $sth->finish;
 }
 
