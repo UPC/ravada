@@ -26,6 +26,8 @@
 
         </div>
 
+%=      include '/main/manage_machine_apply_clones'
+
         <div>
         <button class="btn btn-secondary"
             ng-click="new_hardware=undefined">cancel</button>

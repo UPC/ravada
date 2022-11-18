@@ -712,12 +712,9 @@
                             ,'data': extra
                       })
             };
-          $scope.remove_hardware = function(hardware, index, item, confirmation) {
+          $scope.remove_hardware = function(hardware, index ) {
+            $scope.remove_item=undefined;
             if (hardware == 'disk') {
-                if (!confirmation) {
-                    item.remove = !item.remove;
-                    return;
-                }
                 var file = $scope.showmachine.hardware.disk[index].file;
                 if (typeof(file) != 'undefined' && file) {
                     $scope.request('remove_hardware'
@@ -726,13 +723,9 @@
                             ,'name': 'disk'
                             ,'option': { 'source/file': file }
                     });
-                    item.remove = false;
                     return;
                 }
 
-            }
-            if(typeof(item) == 'object') {
-                item.remove = false;
             }
             $scope.request('remove_hardware',{
                     'id_domain': $scope.showmachine.id
@@ -1049,6 +1042,12 @@
                 $http.get("/list_cpu_models.json?id_domain="
                 +$scope.showmachineId).then(function(response) {
                     $scope.cpu_models=response.data;
+                });
+            };
+
+            $scope.reboot = function() {
+                $http.get("/machine/stop_start/"+$scope.showmachine.id+".json")
+                .then(function(response) {
                 });
             };
 
