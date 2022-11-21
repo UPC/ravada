@@ -400,14 +400,14 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
         $info->{target} = $target;
         # we use driver to make it compatible with other hardware but it is more accurate
         # to say bus
-        $info->{driver} = $bus;
         $info->{bus} = $bus;
         $info->{n_order} = $n_order++;
         $info->{boot} = $boot_node->getAttribute('order') if $boot_node;
         $info->{file} = $file if defined $file;
+
         if ($driver_node) {
             for my $attr  ($driver_node->attributes()) {
-                $info->{"driver_".$attr->name} = $attr->getValue();
+                $info->{driver}->{$attr->name} = $attr->getValue();
             }
         }
         $info->{backing} = $backing_node->toString()
@@ -462,7 +462,6 @@ sub _volume_info($self, $file, $refresh=0) {
     warn "WARNING: $@" if $@ && $@ !~ /^libvirt error code: 50,/;
     $info->{file} = $file;
     $info->{name} = $name;
-    $info->{driver} = delete $info->{bus} if exists $info->{bus};
 
     return $info;
 }
@@ -1174,11 +1173,12 @@ sub add_volume {
     my $self = shift;
     my %args = @_;
 
-    my $bus = delete $args{driver};# or 'virtio');
+    my $bus = delete $args{bus};# or 'virtio');
     my $boot = (delete $args{boot} or undef);
     my $device = (delete $args{device} or 'disk');
     my $type = delete $args{type};
     my $format = delete $args{format};
+    my $cache = (delete $args{cache} or 'unsafe');
     my %valid_arg = map { $_ => 1 } ( qw( driver name size vm xml swap target file allocation));
 
     for my $arg_name (keys %args) {
@@ -1220,7 +1220,6 @@ sub add_volume {
 # change dev=vd*  , slot=*
 #
     my $driver_type = ( $format or 'qcow2');
-    my $cache = 'default';
 
     if ( $args{swap} || $device eq 'cdrom' ) {
         $cache = 'none';
@@ -1373,10 +1372,11 @@ sub _xml_new_device($self , %arg) {
     my $file = ( delete $arg{file} or '');
     my $boot = delete $arg{boot};
     my $device = delete $arg{device};
+    my $cache = ( delete $arg{cache} or '<unsafe>');
 
     my $xml = <<EOT;
     <disk type='file' device='$device'>
-      <driver name='qemu' type='$arg{type}' cache='$arg{cache}'/>
+      <driver name='qemu' type='$arg{type}' cache='$cache'/>
       <source file='$file'/>
       <target bus='$bus' dev='$arg{target}'/>
       <address type=''/>
@@ -1633,7 +1633,7 @@ sub get_info {
         string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
 
     my ($mem_node) = $doc->findnodes('/domain/currentMemory/text()');
-    my $mem_xml = $mem_node->getData();
+    my $mem_xml = $mem_node->getValue();
     $info->{memory} = $mem_xml if $mem_xml ne $info->{memory};
 
     $info->{max_mem} = $info->{maxMem};
@@ -1713,6 +1713,8 @@ Set the maximum memory for the domain
 sub set_max_mem {
     my $self = shift;
     my $value = shift;
+
+    return if $value == $self->get_info->{max_mem};
 
     $self->_set_max_memory_xml($value);
     if ( $self->is_active ) {
@@ -2790,7 +2792,7 @@ sub _fix_hw_disk_args($data) {
     ;
 
 
-    for (qw( allocation backing bus device driver_cache driver_name driver_type name target type )) {
+    for (qw( allocation backing device name target type )) {
         delete $data->{$_} if exists $data->{$_};
     }
 }
@@ -2803,10 +2805,10 @@ sub _change_hardware_disk($self, $index, $data) {
 
     _fix_hw_disk_args($data);
 
-    my $driver = delete $data->{driver};
+    my $bus = delete $data->{bus};
     my $boot = delete $data->{boot};
 
-    $self->_change_hardware_disk_bus($index, $driver)   if $driver;
+    $self->_change_hardware_disk_bus($index, $bus)      if $bus;
     $self->_set_boot_order($index, $boot)               if $boot;
 
     if ( exists $data->{'capacity'} ) {
@@ -2821,9 +2823,20 @@ sub _change_hardware_disk($self, $index, $data) {
             if defined $file_new;
     }
 
-    die "Error: I don't know how to change ".Dumper($data) if keys %$data;
-
+    $self->_change_disk_settings($index, $data);
 }
+
+sub _change_disk_settings($self, $index, $data) {
+
+    return if !exists $data->{driver};
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my $item = $self->_search_device_xml($doc, 'disk', $index);
+
+    _change_xml($item,'driver', $data->{driver})
+    && $self->reload_config($doc);
+}
+
 
 sub _change_hardware_disk_capacity($self, $index, $capacity) {
     my @volumes = $self->list_volumes_info();
@@ -2837,8 +2850,10 @@ sub _change_hardware_disk_capacity($self, $index, $capacity) {
     }
     die "Error: Volume file $file not found in ".$self->_vm->name    if !$volume;
 
+    my $old_capacity = $vol_orig->info->{capacity};
     my ($name) = $file =~ m{.*/(.*)};
     my $new_capacity = Ravada::Utils::size_to_number($capacity);
+    return if int($new_capacity/1024/1024)==int($old_capacity/1024/1024);
     #    my $old_capacity = $volume->get_info->{'capacity'};
     #    if ( $old_capacity ) {
     #    $vol_orig->set_info( capacity => $old_capacity);
@@ -3311,6 +3326,7 @@ sub _change_xml($xml, $name, $data) {
     }
 
     for my $field (keys %$data) {
+        next if $field =~ /^\$\$hashKey/;
         if ($field eq '#text') {
             my $text = $data->{$field};
             if ($node->textContent ne $text) {
