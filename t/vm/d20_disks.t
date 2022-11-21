@@ -162,7 +162,7 @@ sub _add_iso_to_clone($domain) {
         id_domain => $domain->id
         ,uid => user_admin->id
         ,'data' => {
-            'driver' => 'ide',
+            'bus' => 'ide',
             'type' => 'sys',
             'allocation' => '0.1G',
             'device' => 'cdrom',
