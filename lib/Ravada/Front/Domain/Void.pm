@@ -4,6 +4,9 @@ use Data::Dumper;
 use Moose;
 use YAML qw(LoadFile);
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 extends 'Ravada::Front::Domain';
 
 my $DIR_TMP = "/var/tmp/rvd_void/".getpwuid($>);
@@ -15,6 +18,13 @@ our %GET_CONTROLLER_SUB = (
 
 );
 
+sub _driver_field($self, $hardware) {
+    my $field = 'driver';
+    $field = 'bus' if $hardware eq 'device';
+
+    return $field;
+}
+
 sub get_driver {
     my $self = shift;
     my $name = shift;
@@ -25,7 +35,9 @@ sub get_driver {
     my $hardware = $self->_value('hardware');
 
     $name = 'device' if $name eq 'disk';
-    return $hardware->{$name}->[0]->{driver}
+    my $field = $self->_driver_field($name);
+
+    return $hardware->{$name}->[0]->{$field}
         if $hardware->{$name} && $hardware->{$name}->[0];
 }
 
@@ -72,8 +84,8 @@ sub _get_controller_disk {
     return Ravada::Front::Domain::_get_controller_disk(@_);
 }
 
-sub _get_controller_display() {
-    return Ravada::Front::Domain::_get_controller_display(@_);
+sub _get_controller_display(@args) {
+    return Ravada::Front::Domain::_get_controller_display(@args);
 }
 
 1;
