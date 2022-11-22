@@ -51,7 +51,7 @@ sub test_domain_with_swap_raw($vm) {
         next if $vol->file !~ /(SWAP|TMP)/;
         delete $vol->{domain};
         delete $vol->{vm};
-        is($vol->info()->{driver_type},'raw') or die warn Dumper($vol);
+        is($vol->info()->{driver}->{type},'raw') or die warn Dumper($vol);
         $found++;
     }
     is($found,2) or exit;
@@ -81,7 +81,7 @@ sub test_clone_raw($domain ) {
         $found++;
         delete $vol->{domain};
         delete $vol->{vm};
-        is($vol->info()->{driver_type},'qcow2') or die warn Dumper($vol);
+        is($vol->info()->{driver}->{type},'qcow2') or die warn Dumper($vol);
         my ($out, $err) = $domain->_vm->run_command("file",$vol->file);
         like($out,qr(QEMU)) or next;
         my $backing = $vol->info->{backing};
