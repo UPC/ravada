@@ -59,7 +59,7 @@ sub test_add_rm_hw($base) {
     my %controllers = $base->list_controllers;
 
     for my $hardware (sort keys %controllers ) {
-        next if $hardware eq 'display';
+        next if $hardware eq 'display' || $hardware eq 'memory';
         next if $base->type eq 'KVM' && $hardware =~ /^(cpu|features)$/;
 
         test_add_hw($hardware, $base, $clone);
