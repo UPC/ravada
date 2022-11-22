@@ -2195,7 +2195,7 @@ sub _set_driver_sound {
 }
 
 sub _set_driver_disk($self, $value) {
-    return $self->change_hardware('disk',0,{driver => $value });
+    return $self->change_hardware('disk',0,{bus => $value });
 }
 
 sub _set_driver_cpu($self, $value) {
