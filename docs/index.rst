@@ -125,6 +125,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/pci_passthrough
    docs/network_bridge
    docs/Virtiofs
+   docs/Firewall
 
 .. _guest-docs:
 
