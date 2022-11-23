@@ -23,7 +23,7 @@ so at the end this file can be used in restore.
 
 .. prompt:: #
 
-  echo "\*filter" > ravada.iptables
+  echo "*filter" > ravada.iptables
   iptables-save | grep RAVADA >> ravada.iptables
   echo COMMIT >> ravada.iptables
 
