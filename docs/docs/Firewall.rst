@@ -21,7 +21,7 @@ Step 1: Save the Ravada rules
 A line must be added at the begining and the end of the RAVADA rules
 so at the end this file can be used in restore.
 
-.. prompt:: #
+.. prompt:: bash #
 
   echo "*filter" > ravada.iptables
   iptables-save | grep RAVADA >> ravada.iptables
@@ -38,7 +38,7 @@ Step 3: Restore the Ravada rules
 
 Now we must restore the rules we saved in step 1.
 
-.. prompt:: #
+.. prompt:: bash #
 
    iptables-restore -n < ravada.iptables
 

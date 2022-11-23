@@ -71,7 +71,7 @@ to that interface.
 
 Apply this configuration typing
 
-.. prompt:: $
+.. prompt:: bash $
 
   sudo netplan try
 
