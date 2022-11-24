@@ -158,9 +158,6 @@ sub list_volumes($self, $attribute=undef, $value=undef)
             $row->{info}->{_can_edit} = 1;
             $row->{info}->{_can_remove} = 1;
         }
-        if ( $self->is_base || $self->is_active) {
-            $row->{info}->{_is_locked} = 1;
-        }
         push @volumes, (Ravada::Volume->new(file => $row->{file}, info => $row->{info}));
     }
     $sth->finish;

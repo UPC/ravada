@@ -1,0 +1,27 @@
+<div ng-show="name=='memory'" class="form-group mt-4">
+    <div class="row">
+        <div class="col-lg-2" align="right">
+            <label for="max"><%=l 'Max' %></label>
+        </div>
+         <div class="col-lg-2">
+            <input type="text"
+                size="6"
+                ng-model="item.max_mem"/>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-2" align="right">
+            <label for="type"><%=l 'Current' %></label>
+        </div>
+        <div class="col-lg-2">
+            <input type="text"
+                size="6"
+                ng-model="item.memory"/>
+        </div>
+        <div class="col-lg-6">
+            <span class="info" ng-show="showmachine.is_active">
+                <%=l 'Current memory can be changed while running' %>
+            </span>
+        </div>
+    </div>
+</div>

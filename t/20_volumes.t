@@ -346,7 +346,7 @@ sub test_defaults($vm, $volume_type=undef) {
     my $disk_f = $info_f->{hardware}->{disk};
 
     is(scalar(@$disk), scalar(@$disk_f));
-    for my $field ( qw(name driver capacity device type target)) {
+    for my $field ( qw(name bus capacity device type target)) {
         for my $n ( 0 .. @$disk ) {
             my $dev = $disk->[0];
             my $dev_f = $disk_f->[0];

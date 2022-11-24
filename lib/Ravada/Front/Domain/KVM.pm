@@ -19,6 +19,7 @@ our %GET_HW_SUB = (
     ,display => \&_get_controller_display
     ,filesystem => \&_get_controller_filesystem
     ,'features' => \&_get_controller_features
+    ,'memory' => \&_get_hw_memory
     ,network => \&_get_controller_network
     ,video => \&_get_controller_video
     ,sound => \&_get_controller_sound
@@ -204,6 +205,21 @@ sub _get_controller_cpu($self) {
 
     lock_hash(%$item);
     return ($item);
+}
+
+sub _get_hw_memory($self) {
+
+    my $info = $self->get_info();
+    my ($memory, $current) = ($info->{max_mem}, $info->{memory});
+
+    my $item = {
+        max_mem => int($memory/1024)
+        ,memory=> int($current/1024)
+        ,_can_remove => 0
+        ,_can_edit => 1
+        ,_name => 'memory'
+    };
+    return $item;
 }
 
 sub _get_controller_features($self) {
@@ -451,7 +467,7 @@ sub _get_driver_sound {
 
 sub _get_driver_disk($self) {
     my @volumes = $self->list_volumes_info();
-    return $volumes[0]->info()->{driver};
+    return $volumes[0]->info()->{bus};
 }
 
 sub vm_version($self) {

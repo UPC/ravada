@@ -508,7 +508,7 @@ sub add_volume {
     $args{capacity} = 1024 if !exists $args{capacity};
 
     my %valid_arg = map { $_ => 1 } ( qw( name capacity file vm type swap target allocation
-        driver boot
+        bus boot
     ));
 
     for my $arg_name (keys %args) {
@@ -521,7 +521,7 @@ sub add_volume {
 
     my $data = $self->_load();
     $args{target} = $self->_new_target() if !$args{target};
-    $args{driver} = 'foo' if !exists $args{driver};
+    $args{bus} = 'foo' if !exists $args{bus};
 
     my $hardware = $data->{hardware};
     my $device_list = $hardware->{device};
@@ -531,7 +531,7 @@ sub add_volume {
         ,file => $file
         ,type => $args{type}
         ,target => $args{target}
-        ,driver => $args{driver}
+        ,bus => $args{bus}
         ,device => $device
     };
     $data_new->{boot} = $args{boot} if $args{boot};
@@ -539,7 +539,7 @@ sub add_volume {
     $hardware->{device} = $device_list;
     $self->_store(hardware => $hardware);
 
-    delete @args{'name', 'target', 'driver'};
+    delete @args{'name', 'target', 'bus'};
     $self->_create_volume($file, $format, \%args) if ! -e $file;
 
     return $file;
@@ -670,7 +670,7 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
                 && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);
         }
         $dev->{n_order} = $n_order++;
-        $dev->{driver_type} = 'void';
+        $dev->{driver}->{type} = 'void';
         my $vol = Ravada::Volume->new(
             file => $dev->{file}
             ,info => $dev
@@ -974,7 +974,7 @@ sub remove_controller {
 
 sub _change_driver_disk($self, $index, $driver) {
     my $hardware = $self->_value('hardware');
-    $hardware->{device}->[$index]->{driver} = $driver;
+    $hardware->{device}->[$index]->{bus} = $driver;
 
     $self->_store(hardware => $hardware);
 }
@@ -995,7 +995,7 @@ sub _change_hardware_disk($self, $index, $data_new) {
 
     unlock_hash(%$data_new);
     my $driver;
-    $driver = delete $data_new->{driver} if exists $data_new->{driver};
+    $driver = delete $data_new->{bus} if exists $data_new->{bus};
     lock_hash(%$data_new);
     return $self->_change_driver_disk($index, $driver) if $driver;
 
@@ -1039,8 +1039,14 @@ sub _change_hardware_memory($self, $index, $data) {
     confess "Error: unknown args ".Dumper($data) if keys %$data;
 
     my $info = $self->_value('info');
-    $info->{memory} = $memory       if defined $memory;
-    $info->{max_mem} = $max_mem     if defined $max_mem;
+    if (defined $memory && $info->{memory} != $memory) {
+        $info->{memory} = $memory;
+    }
+
+    if (defined $max_mem && $info->{max_mem} != $max_mem) {
+        $info->{max_mem} = $max_mem;
+        $self->needs_restart(1);
+    }
 
     $self->_store(info => $info);
 }
