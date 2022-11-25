@@ -7,5 +7,8 @@
 
 **Refactors**
 
+- Update ISO URLs in background [\#1889]
+- Hardware frontend for fs and network [\#1886]
+
 **Bugfixes**
 
