@@ -104,6 +104,7 @@ sub test_shutdown_clones_from_own_base {
     my $base = create_domain($vm->type, $user);
     $base->start(user_admin)    if !$base->is_active;
     is($base->is_active, 1) or BAIL_OUT();
+    $base->shutdown_now(user_admin);
 
     my $clone = $base->clone(
           name => new_domain_name

@@ -2,14 +2,13 @@
 
 **Implemented enhancements:**
 
-- Translations update Catalan, Spanish and Russian [\#1817]
-- Vietnamese translation [\#1809]
+- Grant open ports [\#1868]
+- Show date of status change [\#1856]
+- Manage USB controllers [\#1851]
+- Updates on Catalan, Spanish, Russian and Vietnamese
 
 **Refactors**
 
 **Bugfixes**
 
-- Admin can't change user passwords [\#1805]
-- LDAP access control issue [\#1821]
-- fix: parrot linux updated [\#1819]
-
+- Clone name with name.surname [\#1843]

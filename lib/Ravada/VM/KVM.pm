@@ -749,11 +749,14 @@ sub list_domains {
     my @list;
     while ( my ($id) = $sth->fetchrow) {
         my $domain;
-        if ($read_only) {
-            $domain = Ravada::Front::Domain->open( $id );
-        } else {
-            $domain = Ravada::Domain->open( id => $id, vm => $self);
-        }
+        eval{
+            if ($read_only) {
+                $domain = Ravada::Front::Domain->open( $id );
+            } else {
+                $domain = Ravada::Domain->open( id => $id, vm => $self);
+            }
+        };
+        die $@ if $@ && $@ !~ /Unkown domain/i;
         push @list,($domain) if $domain;
     }
     return @list;

@@ -145,6 +145,15 @@ sub create_domain {
             }
         }
         $domain->_store(hardware => $clone_hw);
+
+        my $base_info = $domain_base->_value('info');
+        my $clone_info = $domain->_value('info');
+        for my $item ( keys %$base_info) {
+            $clone_info->{$item} = $base_info->{$item}
+            if $item !~ /^(mac|state)$/;
+        }
+        $domain->_store(info => $clone_info);
+
         my $drivers = {};
         $drivers = $domain_base->_value('drivers');
         $domain->_store( drivers => $drivers );

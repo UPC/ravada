@@ -26,7 +26,7 @@
     %   if ($USER->is_admin || $USER->can_clone_all ){
         <a class="nav-link" id="v-pills-copy-tab" ng-click="refresh_machine()" href="#v-pills-copy" data-toggle="pill" role="tab" aria-controls="v-pills-copy" aria-selected="false"><%=l 'Copy' %></a>
     %   }
-    %   if ( $USER->can_expose_ports()) {
+    %   if ( $USER->can_expose_ports($domain->id)) {
         <a class="nav-link ports" id="v-pills-remove-tab" href="#v-pills-ports" data-toggle="pill" role="tab" aria-controls="v-pills-ports" aria-selected="false"><%=l 'Ports' %></a>
     %   }
     %   if ( $USER->is_admin()) {

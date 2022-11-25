@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '1.7.0';
+our $VERSION = '1.8.0';
 
 use utf8;
 
@@ -690,30 +690,30 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://download.parrot.sh/parrot/iso/5.0.1/'
-            ,file_re => 'Parrot-home-5.0.1_amd64.iso'
+            ,url => 'https://download.parrot.sh/parrot/iso/5.1.\d+/'
+            ,file_re => 'Parrot-home-5.1.\d+_amd64.iso'
             ,sha256_url => '$url/signed-hashes.txt'
             ,min_disk_size => '10'
         }
         ,kali_64 => {
-            name => 'Kali Linux 2021'
-            ,description => 'Kali Linux 2021 64 Bits'
+            name => 'Kali Linux 2022'
+            ,description => 'Kali Linux 2022 64 Bits'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2021.\d+/'
-            ,file_re => 'kali-linux-2021.\d+-installer-amd64.iso'
+            ,url => 'https://cdimage.kali.org/kali-2022.\d+/'
+            ,file_re => 'kali-linux-202\d.\d+-installer-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
         ,kali_64_netinst => {
-            name => 'Kali Linux 2021 (NetInstaller)'
-            ,description => 'Kali Linux 2021 64 Bits (light NetInstall)'
+            name => 'Kali Linux 2022 (NetInstaller)'
+            ,description => 'Kali Linux 2022 64 Bits (light NetInstall)'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2021.\d+/'
-            ,file_re => 'kali-linux-2021.\d+-installer-netinst-amd64.iso'
+            ,url => 'https://cdimage.kali.org/kali-2022.\d+/'
+            ,file_re => 'kali-linux-202\d.\d+-installer-netinst-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
@@ -1365,7 +1365,7 @@ sub _remove_old_isos {
             ."  AND ( file_re like '%20.04.1%' OR file_re like '%20.04.%d+%')"
         ,"DELETE FROM iso_images "
             ." WHERE name like 'Astra Linux 2%'"
-            ." AND url like '%current%'"
+            ." AND ( url like '%current%' OR url like '%orel%')"
 
         ,"DELETE FROM iso_images "
             ." WHERE name like 'Alpine%3.8%'"
@@ -1681,6 +1681,8 @@ sub _add_grants($self) {
     $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
     $self->_add_grant('start_many',0,"Can have an unlimited amount of machines started.");
     $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
+    $self->_add_grant('expose_ports_clones',0,"Can expose ports from clones of own virtual machines.");
+    $self->_add_grant('expose_ports_all',0,"Can expose ports from any virtual machine.");
     $self->_add_grant('view_groups',0,'Can view groups.');
     $self->_add_grant('manage_groups',0,'Can manage groups.');
     $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1, 0);
@@ -1747,7 +1749,7 @@ sub _enable_grants($self) {
     my @grants = (
         'change_settings',  'change_settings_all',  'change_settings_clones'
         ,'clone',           'clone_all',            'create_base', 'create_machine'
-        ,'expose_ports'
+        ,'expose_ports','expose_ports_clones','expose_ports_all'
         ,'grant'
         ,'manage_users'
         ,'rename', 'rename_all', 'rename_clones'
@@ -2582,6 +2584,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','post_hibernated','int not null default 0');
     $self->_upgrade_table('domains','is_compacted','int not null default 0');
     $self->_upgrade_table('domains','has_backups','int not null default 0');
+    $self->_upgrade_table('domains','date_status_change' , 'datetime');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -4350,7 +4353,8 @@ sub _new_clone_name($self, $base,$user) {
         $alias .= "-".Encode::decode_utf8($user->name);
     } else {
         my $length = length($user->id);
-        my $n = "0" x (4-$length);
+        my $n =  '';
+        $n = "0" x (4-$length) if $length < 4;
         $name = $base->name."-".$n.$user->id;
         $alias .= "-".Encode::decode_utf8($user->name);
     }
@@ -4672,6 +4676,8 @@ sub _cmd_add_hardware {
         if !$user->is_admin;
 
     $domain->set_controller($hardware, $request->defined_arg('number'), $request->defined_arg('data'));
+
+    $self->_apply_clones($request);
 }
 
 sub _cmd_remove_hardware {
@@ -4692,6 +4698,8 @@ sub _cmd_remove_hardware {
         if !$user->is_admin;
 
     $domain->remove_controller($hardware, $index, $option);
+
+    $self->_apply_clones($request);
 }
 
 sub _cmd_change_hardware {
@@ -4702,6 +4710,7 @@ sub _cmd_change_hardware {
     my $hardware = $request->args('hardware') or confess "Missing argument hardware";
     my $id_domain = $request->args('id_domain') or confess "Missing argument id_domain";
 
+    my $data = $request->defined_arg('data');
     my $domain = $self->search_domain_by_id($id_domain);
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
@@ -4712,8 +4721,25 @@ sub _cmd_change_hardware {
     $domain->change_hardware(
          $request->args('hardware')
         ,$request->defined_arg('index')
-        ,$request->args('data')
+        ,$data
     );
+    $self->_apply_clones($request);
+}
+
+sub _apply_clones($self, $request) {
+
+    my $id_domain = $request->args('id_domain') or confess "Missing argument id_domain";
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    return if !$domain->is_base;
+
+    my $args = $request->args;
+    for my $clone ($domain->clones) {
+        Ravada::Request->new_request(
+            $request->command
+            ,%$args
+            ,id_domain => $clone->{id}
+        );
+    }
 }
 
 sub _cmd_shutdown {
@@ -6051,6 +6077,11 @@ sub _post_login_locale($self, $request) {
 }
 
 sub _cmd_expose($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+
+    die "Error: access denied to expose ports for ".$user->name
+    if !$user->can_expose_ports($request->id_domain);
+
     my $domain = Ravada::Domain->open($request->id_domain);
     $domain->expose(
                port => $request->args('port')

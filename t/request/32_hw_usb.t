@@ -35,7 +35,7 @@ sub test_usb_many($vm) {
 
     }
 
-    my $usb_controller = $info->{hardware}->{usb_controller};
+    my $usb_controller = $info->{hardware}->{"usb controller"};
     ok($usb_controller) && do {
         is(scalar(@$usb_controller),1) or die $domain->name;
     };
@@ -53,7 +53,7 @@ for my $vm_name ( 'KVM' ) {
         my $vm = rvd_back->search_vm($vm_name);
 
         my $msg = "SKIPPED test: No $vm_name VM found ";
-        if ($vm && $vm eq 'KVM' && $>) {
+        if ($vm_name eq 'KVM' && $>) {
               $msg = "SKIPPED: Test must run as root";
               $vm = undef;
         }

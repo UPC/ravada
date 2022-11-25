@@ -11,8 +11,10 @@ Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
 
 use utf8;
 
-use Carp qw(carp confess croak);
+use Carp qw(carp confess croak cluck);
 use Data::Dumper;
+use DateTime;
+use DateTime::Format::DateParse;
 use File::Copy qw(copy move);
 use File::Rsync;
 use Fcntl ':mode';
@@ -544,6 +546,7 @@ sub _search_already_started($self, $fast = 0) {
 
             my $status = 'shutdown';
             $status = 'active'  if $domain->is_active;
+            $status = 'hibernated' if $domain->is_hibernated;
             $domain->_data(status => $status);
         }
     }
@@ -1465,7 +1468,12 @@ sub _set_display_ip($self, $display) {
 sub _around_get_info($orig, $self) {
     my $info = $self->$orig();
     if (ref($self) =~ /^Ravada::Domain/ && $self->is_known()) {
-        $info->{ip} = $self->ip() if $self->is_active;
+        if ( $self->is_active
+        && (!exists $info->{ip} || !defined $info->{ip} || !$info->{ip})) {
+            unlock_hash(%$info);
+            $info->{ip} = $self->ip();
+            lock_hash(%$info);
+        }
         $self->_data(info => encode_json($info));
     }
     return $info;
@@ -1560,12 +1568,25 @@ sub _data($self, $field, $value=undef, $table='domains') {
         confess "ERROR: Invalid field '$field'"
             if $field !~ /^[a-z]+[a-z0-9_]*$/;
 
+        return if $field eq 'status'
+        && $self->{$data}->{$field} eq 'active'
+        && $value eq 'starting';
+
         $self->_assert_update($table, $field => $value);
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE $table set $field=? WHERE $field_id=?"
         );
         $sth->execute($value, $self->id);
         $sth->finish;
+
+        if ($data eq '_data' && $field eq 'status'
+            && $value ne $self->{$data}->{$field}
+        ) {
+            confess "$self->{$data}->{$field} => $value"
+            if $self->{$data}->{$field} eq 'hibernated'
+            && $value eq 'shutdown';
+            $self->_data('date_status_change'=>Ravada::Utils::now());
+        }
         $self->{$data}->{$field} = $value;
         $self->_propagate_data($field,$value) if $PROPAGATE_FIELD{$field};
         $self->_execute_request($field,$value);
@@ -1876,7 +1897,7 @@ sub display($self, $user) {
 
     my ($display_info) = grep { $_->{driver} !~ /-tls$/ } @display_info;
 
-    confess "Error: I can't find builtin display info for ".$self->name." ".ref($self)
+    confess "Error: I can't find builtin display info for ".$self->name." ".ref($self)."\n".Dumper($display_info)
     if !exists $display_info->{port};
 
     return '' if !$display_info->{driver} || !$display_info->{ip}
@@ -1982,6 +2003,7 @@ sub info($self, $user) {
         ,autostart => $self->autostart
         ,volatile_clones => $self->volatile_clones
         ,id_vm => $self->_data('id_vm')
+        ,date_changed => $self->_data('date_changed')
     };
 
     $info->{alias} = ( $self->_data('alias') or $info->{name} );
@@ -2026,11 +2048,45 @@ sub info($self, $user) {
     }
     $info->{cdrom} = \@cdrom;
     $info->{requests} = $self->list_requests();
+    $info->{date_status_change} = $self->_date_status_change();
 
     Ravada::Front::_init_available_actions($user, $info);
 
     lock_hash(%$info);
     return $info;
+}
+
+sub _date_status_change($self) {
+    my $date = $self->_data('date_status_change');
+    if (!$date) {
+        return {
+            date => ''
+            ,date_txt => ''
+            ,duration => ''
+        }
+    }
+    my $date_txt = $date;
+    my $dt = DateTime::Format::DateParse->parse_datetime($date);
+    if ($dt->day == DateTime->now()->day) {
+        $date_txt =~ s/.*?(\d\d*:\d\d):\d\d$/$1/;
+    }
+    my $dur= DateTime->now() - $dt;
+    my @units = ('years','months','weeks','days','hours','minutes');
+    my @units_one = ('year','month','week','day','hour','minute');
+    my @dur = $dur->in_units(@units);
+    my $duration = ['now',''];
+    for my $n (0 .. scalar(@units)-1) {
+        my $value = $dur[$n];
+        next if $value == 0;
+        $duration = [$value,$units[$n]];
+        $duration->[1]=$units_one[$n] if $value == 1;
+        last;
+    }
+    return {
+        date => $date
+        ,date_txt => $date_txt
+        ,duration => $duration
+    };
 }
 
 sub _load_drivers($self) {
@@ -2905,8 +2961,9 @@ sub _pre_shutdown {
 
     $self->_pre_shutdown_domain();
 
-    if ($self->is_paused) {
+    if ($self->is_paused || $self->is_hibernated) {
         $self->resume(user => Ravada::Utils::user_daemon, set_time => 0);
+        $self->_data('status' => 'active');
     }
     $self->list_disks;
     $self->_remove_start_requests();
@@ -2938,7 +2995,11 @@ sub _post_shutdown {
     my $is_active = $self->is_active;
 
     if ( $self->is_known && !$self->is_volatile && !$is_active ) {
-        $self->_data(status => 'shutdown');
+        if ($self->is_hibernated) {
+            $self->_data(status => 'hibernated');
+        } else {
+            $self->_data(status => 'shutdown');
+        }
         $self->_data(post_shutdown => 1);
     }
 
@@ -3384,7 +3445,12 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     $sth->execute($self->id, $internal_port);
     my ($id_port, $public_port) = $sth->fetchrow();
 
-    my $internal_ip = $self->ip;
+    my $internal_ip;
+    for ( 1 .. 5 ) {
+        $internal_ip = $self->ip;
+        last if $internal_ip;
+        sleep 1;
+    }
     die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry."
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
@@ -5465,7 +5531,8 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     }
     $self->info(Ravada::Utils->user_daemon) if $self->is_known();
 
-    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
+    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active' && $hardware ne 'memory';
+    $self->post_prepare_base() if $self->is_base();
 }
 
 sub _fix_hw_booleans($data) {
@@ -5487,14 +5554,21 @@ sub _fix_hw_booleans($data) {
 }
 
 sub _fix_hw_ignore_fields($data) {
+    unlock_hash(%$data);
     for my $key (keys %$data) {
         delete $data->{$key} if $key =~ /^_/;
     }
+    lock_hash(%$data);
 }
 
 sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) {
 
     _fix_hw_booleans($data);
+
+    if ($hardware eq 'filesystem') {
+        $self->_change_info_filesystem($data);
+    }
+
     _fix_hw_ignore_fields($data);
 
     my $real_id_vm;
@@ -5505,6 +5579,7 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
     }
 
     my $is_display_builtin;
+
     if ($hardware eq 'display') {
 
         my @display = Ravada::Front::Domain::_get_controller_display($self);
@@ -5524,6 +5599,7 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
 
     }
     if ( $hardware ne 'display' || $is_display_builtin) {
+        unlock_hash(%$data);
         $orig->($self, $hardware, $index,$data);
         $self->_redefine_instances() if $self->is_known();
     }
@@ -5545,18 +5621,79 @@ sub _add_info_filesystem($self, $data) {
     if exists $data->{source} && !defined $data->{source}
     || (ref($data->{source}) && !keys %{$data->{source}});
 
-    my %data2 = %$data;
-    $data2{id_domain} = $self->id;
-    $data2{source} = $data2{source}->{dir} if ref($data2{source});
+    my $data2 = dclone($data);
+    $data2->{id_domain} = $self->id;
+    $data2->{source} = $data2->{source}->{dir} if ref($data2->{source});
 
     my $sql = "INSERT INTO domain_filesystems ("
-    .join(",",sort keys %data2)
+    .join(",",sort keys %$data2)
     .") VALUES ("
-    .join(",",map { '?' } keys %data2)
+    .join(",",map { '?' } keys %$data2)
     .")";
 
     my $sth = $$CONNECTOR->dbh->prepare($sql);
-    $sth->execute(map {$data2{$_} } sort keys %data2);
+    $sth->execute(map {$data2->{$_} } sort keys %$data2);
+}
+
+sub _remove_info_filesystem($self, $id_filesystem) {
+
+    my $sth = $self->_dbh->prepare("DELETE FROM domain_filesystems "
+        ." WHERE id_domain=? AND id=?"
+    );
+    $sth->execute($self->id, $id_filesystem);
+}
+
+sub _change_info_filesystem($self, $data) {
+    return if !keys %$data;
+
+    my $data2 = dclone($data);
+    unlock_hash(%$data);
+    my $chroot = delete $data->{chroot};
+    my $subdir_uid = delete $data->{subdir_uid};
+    lock_hash(%$data);
+
+    unlock_hash(%$data2);# it is local to this sub, so we may change it
+    $data2->{source} = $data2->{source}->{dir} if ref($data2->{source});
+    delete $data2->{target};
+
+    my $id = delete $data2->{_id};
+    confess "Missing _id in data2 ".Dumper($data2) if !defined $id;
+    for my $key (keys %$data2) {
+        delete $data2->{$key} if $key =~ /^_/;
+    }
+
+    my $sql = "UPDATE domain_filesystems SET "
+        .join(",", map { "$_=?" } sort keys %$data2)
+        ;
+
+    my @values = map { $data2->{$_} } sort keys %$data2;
+    my $sth = $self->_dbh->prepare("$sql WHERE id=?");
+    $sth->execute(@values,$id);
+}
+
+sub _load_info_filesystem($self, $list) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT * FROM domain_filesystems "
+        ." WHERE id_domain=? AND source=?"
+    );
+    for my $item (@$list) {
+        unlock_hash(%$item);
+
+        my $source = $item->{source};
+        $source = $item->{source}->{dir} if ref($item->{source});
+
+        $sth->execute($self->id,$source);
+        my $info = $sth->fetchrow_hashref();
+
+        confess "Error: I can't find domain_filesystem "
+        ."id_domain= ".$self->id." , source=$source"
+        if !$info->{id};
+
+        $item->{chroot} = delete $info->{chroot};
+        $item->{subdir_uid} = delete $info->{subdir_uid};
+        $item->{_id} = $info->{id};
+        lock_hash(%$item);
+    }
 }
 
 sub _create_filesystem($self, $source, $uid, $gid=0) {
@@ -5576,6 +5713,19 @@ sub _create_filesystem($self, $source, $uid, $gid=0) {
 
 }
 
+sub _clone_filesystems($self) {
+    my $id_base = $self->id_base() or return;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_filesystems "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($id_base);
+    while ( my $row = $sth->fetchrow_hashref ) {
+        delete $row->{id};
+        $self->_add_info_filesystem($row);
+    }
+}
+
 sub _chroot_filesystems($self) {
     my $id_base = $self->id_base() or return;
 
@@ -5586,14 +5736,14 @@ sub _chroot_filesystems($self) {
     while ( my $row = $sth->fetchrow_hashref ) {
         next if !$row->{chroot};
         confess Dumper($row) if $row->{source} !~ m{^/};
+        my $data = $self->_search_filesystem_index($row->{source});
+        unlock_hash(%$data);
         my $source = $row->{source}."/".$self->name;
-        my $index = $self->_search_filesystem_index($row->{source});
+        $data->{source}->{dir} = $source;
+        my $index = delete $data->{_index};
+        lock_hash(%$data);
 
-        $self->change_hardware('filesystem',$index
-            ,{source => $source
-            , keep_target => 1
-        })
-        if defined $index;
+        $self->change_hardware('filesystem',$index, $data);
 
         $self->_create_filesystem($source,$row->{subdir_uid});
     }
@@ -5603,7 +5753,11 @@ sub _chroot_filesystems($self) {
 sub _search_filesystem_index($self, $source) {
     my $hw = $self->get_controllers();
     for my $n ( 0 .. scalar(@{$hw->{filesystem}}) ) {
-        return $n if $hw->{filesystem}->[$n]->{source}->{dir} eq $source;
+        my $fs = $hw->{filesystem}->[$n];
+        unlock_hash(%$fs);
+        $fs->{_index} = $n;
+        lock_hash(%$fs);
+        return $fs if $fs->{source}->{dir} eq $source;
     }
     return;
 }
@@ -5671,6 +5825,10 @@ sub _check_duplicated_volume_name($self, $file) {
 }
 
 sub _add_hardware_disk($orig, $self, $index, $data) {
+
+    die "Error: new disk volumes can not be added to bases\n"
+    if $self->is_base;
+
     my $real_id_vm;
     if (!$self->_vm->is_local) {
         $real_id_vm = $self->_vm->id;
@@ -5730,6 +5888,16 @@ sub _delete_db_display_by_driver($self, $driver) {
 
 sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=undef) {
     confess "Error: supply either index or options when removing hardware " if !defined $index && !defined $options;
+
+    my $id_filesystem;
+    if ( $hardware eq 'filesystem') {
+        my @fs = $self->get_controller('filesystem');
+        $id_filesystem = $fs[$index]->{_id};
+    }
+
+    die "Error: disk volumes can not be removed from bases\n"
+    if $hardware eq 'disk' && $self->is_base;
+
     my $display;
     if ( $hardware eq 'display' ) {
         $display = $self->_get_display_by_index($index);
@@ -5760,6 +5928,9 @@ sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=unde
     } else {
         $orig->($self, $hardware, $index, %$options)
     }
+
+    $self->_remove_info_filesystem($id_filesystem)
+    if $hardware eq 'filesystem';
 
     if ( $self->is_known() && !$self->is_base ) {
         $self->_redefine_instances();

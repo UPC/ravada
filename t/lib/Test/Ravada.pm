@@ -684,8 +684,9 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
         return if $@ && $@ =~ /Unknown domain/;
         die $@ if $@;
     }
+    my $req_clone;
     for my $clone ($domain->clones) {
-        remove_domain_and_clones_req($clone, $wait, $run_request);
+        $req_clone = remove_domain_and_clones_req($clone, $wait, $run_request);
     }
     if ( $wait || $domain->clones ) {
         my $n_clones = scalar($domain->clones);
@@ -700,12 +701,19 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
             }
         }
     }
-    Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id)
+    my $req_rm;
+    $req_rm = Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id)
     if $domain->is_base;
+
+    my @after_req;
+    @after_req = ( after_request => $req_clone->id ) if $req_clone;
+    @after_req = ( after_request => $req_rm->id ) if $req_rm;
     my $req= Ravada::Request->remove_domain(
         name => $domain->name
         ,uid => user_admin->id
+        ,@after_req
     );
+    return $req;
 }
 
 sub _remove_old_domains_vm($vm_name) {
@@ -2752,7 +2760,7 @@ sub test_volume_format(@volume) {
             qcow2 => \&_check_qcow2
             ,void => \&_check_yaml
         );
-        is($volume->info->{driver_type}, $extension) or confess Dumper($volume->file, $volume->info);
+        is($volume->info->{driver}->{type}, $extension) or confess Dumper($volume->file, $volume->info);
         my $exec = $sub{$extension} or confess "Error: I don't know how to check "
             .$volume->file." [$extension]";
         $exec->($volume);

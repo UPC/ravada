@@ -31,6 +31,7 @@
 						%= include 'main/settings_machine_tabs_head'
 					</div>
 					<div class="col-10">
+                        %= include 'main/needs_restart'
 						%= include 'main/settings_machine_tabs_body'
 					</div>
 				</div>

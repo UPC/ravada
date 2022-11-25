@@ -699,7 +699,7 @@ sub _test_compare($display1, $display2) {
     delete $display1b{id_domain}
     if !exists $display2b{id_domain};
 
-    for (qw(n_order display id_vm is_secondary _can_remove)) {
+    for (qw(n_order display id_vm is_secondary _can_remove _can_edit)) {
         delete $display1b{$_};
         delete $display2b{$_};
     }

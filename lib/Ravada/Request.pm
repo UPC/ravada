@@ -14,6 +14,7 @@ use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Hash::Util;
+use Storable qw(dclone);
 use Time::Piece;
 use Ravada;
 use Ravada::Front;
@@ -34,7 +35,7 @@ my $COUNT = 0;
 our %FIELD = map { $_ => 1 } qw(error output);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
-our $args_manage = { name => 1 , uid => 1 };
+our $args_manage = { name => 1 , uid => 1, after_request => 2 };
 our $args_prepare = { id_domain => 1 , uid => 1, with_cd => 2 };
 our $args_remove_base = { id_domain => 1 , uid => 1 };
 our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
@@ -101,7 +102,7 @@ our %VALID_ARG = (
     }
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }
-    ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 2, option => 2}
+    ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 2, option => 2 }
     ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 2, data => 1 }
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
@@ -1217,11 +1218,21 @@ Returns the arguments of a request or the value of one argument field
 sub args {
     my $self = shift;
     my $name = shift;
-    return $self->{args}    if !$name;
+
+    if ( !$name ) {
+        my $args = $self->{args};
+        $args = dclone($self->{args}) if ref($args);
+        return $args;
+    }
 
     confess "Unknown argument $name ".Dumper($self->{args})
         if !exists $self->{args}->{$name};
-    return $self->{args}->{$name};
+
+    my $ret = $self->{args}->{$name};
+    if (ref($ret)) {
+        return dclone($ret);
+    }
+    return $ret;
 }
 
 =head2 arg
@@ -1264,7 +1275,10 @@ sub defined_arg {
     my $self = shift;
     my $name = shift;
     confess "ERROR: missing arg name" if !defined $name;
-    return $self->{args}->{$name};
+
+    my $ret = $self->{args}->{$name};
+    $ret = dclone($ret) if ref($ret);
+    return $ret;
 }
 
 =head2 copy_screenshot

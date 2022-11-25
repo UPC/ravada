@@ -706,6 +706,15 @@ any '/(:item)/settings/(:id).html' => sub($c) {
     return $c->render( template => '/main/settings_generic' );
 };
 
+get '/node/info/(:id).json' => sub($c) {
+    my $sth = $RAVADA->_dbh->prepare("SELECT id,name,version FROM vms "
+        ." WHERE id=?"
+    );
+    $sth->execute($c->stash('id'));
+    my $row = $sth->fetchrow_hashref;
+    return $c->render(json => $row);
+};
+
 get '/node/list_bases/(:id)' => sub($c) {
     return $c->render( json => $RAVADA->_list_bases_vm_all($c->stash('id')));
 };
@@ -780,6 +789,12 @@ get '/machine/reboot/(:id).(:type)' => sub {
 
         return reboot_machine($c);
 };
+
+get '/machine/stop_start/(:id).(:type)' => sub($c) {
+    return access_denied($c)        if !$USER ->can_reboot($c->stash('id'));
+    return stop_start($c);
+};
+
 
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
@@ -2736,7 +2751,6 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
                 , remote_ip => _remote_ip($c)
             )
         }
-        $name = _new_domain_name($name);
     }
 
     app->log->info($USER->name." requesting create_domain ".$name." from "._remote_ip($c))
@@ -2751,17 +2765,6 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
        ,@create_args
     );
 
-}
-
-sub _new_domain_name {
-    confess;
-    my $name = shift;
-    my $count = 1;
-    my $name2;
-    for ( ;; ) {
-        $name2 = "$name-".++$count;
-        return $name2 if !$RAVADA->domain_exists($name2);
-    }
 }
 
 sub run_request($c, $request, $anonymous = 0) {
@@ -3118,6 +3121,22 @@ sub reboot_machine {
 
     return $c->redirect_to('/machines') if $type eq 'html';
     return $c->render(json => { req => $req->id });
+}
+
+sub stop_start($c) {
+    return login($c) if !_logged_in($c);
+
+    my ($domain, $type) = _search_requested_machine($c);
+
+    my $req = Ravada::Request->shutdown_domain(name => $domain->name
+        ,uid => $USER->id
+    );
+    my $req2 = Ravada::Request->start_domain(id_domain => $domain->id
+        ,uid => $USER->id
+        ,after_request => $req->id
+    );
+
+    return $c->render(json => { req => $req2->id });
 }
 
 sub force_shutdown_machine {

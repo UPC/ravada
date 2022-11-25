@@ -124,69 +124,67 @@ sub test_different_mac(@domain) {
 sub test_iptables_clones($base) {
     delete_request('set_time','screenshot','refresh_machine_ports');
     wait_request(background => 1, debug => 0);
-    my %port_display;
-    for my $clone_data ( $base->clones ) {
-        next if $clone_data->{is_base};
-        if ($clone_data->{status} ne 'active') {
-            diag("$clone_data->{name} $clone_data->{status}");
-            next;
-        }
-        my $clone = Ravada::Front::Domain->open($clone_data->{id});
-        wait_request();
-        my $displays = $clone->info(user_admin)->{hardware}->{display};
-        Ravada::Request->refresh_vms(_force => 1);
-        Ravada::Request->refresh_machine(uid => user_admin->id, id_domain => $clone_data->{id});
-        wait_request();
-        for my $display (@$displays) {
-            for my $port ($display->{port}, $display->{extra}->{tls_port}) {
-                next if !defined $port;
-                my $found = $port_display{$port};
-                $found = _recheck_found($port, $clone->id, $found) if $found;
-                my $value = "$clone_data->{id} $display->{driver}:$port";
-                ok(!$found,"Duplicated display $port on $clone_data->{name} $value and ".($found or "")) or exit;
-                $port_display{$port} = $value;
+
+    my ($port_display, $dupe) = _fetch_ports_display($base);
+    if (!$dupe) {
+        ok(1,"No duplicated ports found");
+        return;
+    }
+    for my $port (keys %$port_display) {
+        my @clone_id = @{$port_display->{$port}};
+        next if scalar(@clone_id) <2;
+        my %dup;
+        for my $id (@clone_id) {
+            my $clone = Ravada::Front::Domain->open($id);
+            my $displays = $clone->info(user_admin)->{hardware}->{display};
+
+            for my $display (@$displays) {
+                for my $port ($display->{port}, $display->{extra}->{tls_port}) {
+                    next if !defined $port;
+                    if ($dup{$port}) {
+                        my $m="Duplicated port $port in $dup{$port} && $id";
+                        diag($m);
+                        ok(0,$m);
+                    }
+                }
             }
         }
     }
 }
 
-sub _recheck_found($port, $id_domain1, $found) {
-    warn "rechecking $found";
+sub _fetch_ports_display($base) {
 
-    my ($id_domain2) = $found =~ /^(\d+)/;
-    die "Error: no id domain found in '$found'" if !$id_domain2;
+    my $dupe = 0;
+    my %port_display;
+    for my $clone_data ( $base->clones ) {
+        next if $clone_data->{is_base} || $clone_data->{status} ne 'active';
+        my $clone = Ravada::Front::Domain->open($clone_data->{id});
+        my $displays = $clone->info(user_admin)->{hardware}->{display};
 
-    my $found2;
-    for my $try ( 0 .. 1 ) {
-        my $domain1 = Ravada::Front::Domain->open($id_domain1);
-        my $domain2 = Ravada::Front::Domain->open($id_domain2);
-        return if !$domain1->is_active || !$domain2->is_active;
-        my $displays1 = $domain1->info(user_admin)->{hardware}->{display};
-        my $displays2 = $domain2->info(user_admin)->{hardware}->{display};
-
-        for my $display1 (@$displays1) {
-            for my $display2 (@$displays2) {
-                for my $port1 ($display1->{port}, $display1->{extra}->{tls_port}) {
-                    for my $port2 ($display2->{port}, $display2->{extra}->{tls_port}) {
-                        next if !defined $port1 || !defined $port2 || $port1 ne $port2;
-                        warn Dumper([$port1,$display1,$display2]);
-                        $found2 = $port1;
+        for my $display (@$displays) {
+            for my $port ($display->{port}, $display->{extra}->{tls_port}) {
+                next if !defined $port;
+                if ($port_display{$port}) {
+                    my %done;
+                    for my $clone_id ($clone_data->{id}, @{$port_display{$port}} ) {
+                        next if $done{$clone_id}++;
+                        Ravada::Request->refresh_machine(
+                            uid => user_admin->id
+                            ,id_domain => $clone_id
+                            ,_force => 1
+                        );
                     }
+                    $dupe++;
                 }
+                push @{$port_display{$port}},($clone->id);
             }
         }
-        return if !$found2;
-
-        Ravada::Request->refresh_machine(uid => user_admin->id
-            , _force => 1
-            , id_domain => $id_domain1);
-
-        Ravada::Request->refresh_machine(uid => user_admin->id
-            , _force => 1
-            , id_domain => $id_domain2);
-        wait_request(debug => 1);
     }
-    return $found;
+    if ($dupe) {
+        Ravada::Request->refresh_vms(_force => 1);
+        wait_request();
+    }
+    return (\%port_display,$dupe);
 }
 
 sub test_re_expose($base) {
@@ -303,7 +301,8 @@ sub test_login_non_admin_req($t, $base, $clone){
     mojo_check_login($t, $USERNAME, $PASSWORD);
     if (!$clone->is_base) {
         $t->get_ok("/machine/prepare/".$clone->id.".json")->status_is(200);
-        die "Error preparing username='$USERNAME'"
+        die "Error preparing username='$USERNAME'\n"
+            .$t->tx->res->body()
         if $t->tx->res->code() != 200;
 
         for ( 1 .. 10 ) {
