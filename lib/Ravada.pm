@@ -812,6 +812,17 @@ sub _update_isos {
 
 }
 
+sub _cmd_update_iso_urls($self, $request) {
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    die "Error: ".$user->name." not authorized\n"
+    unless $user->is_admin;
+
+    $self->_update_isos();
+}
+
 sub _update_table_isos_url($self, $data) {
     my $sth_delete = $CONNECTOR->dbh->prepare("DELETE FROM iso_images WHERE id=?");
     my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE name=?");
@@ -5952,6 +5963,8 @@ sub _req_method {
 
     ,discover => \&_cmd_discover
     ,import_domain => \&_cmd_import
+    ,update_iso_urls => \&_cmd_update_iso_urls
+
     );
     return $methods{$cmd};
 }

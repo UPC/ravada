@@ -162,7 +162,7 @@ sub _add_iso_to_clone($domain) {
         id_domain => $domain->id
         ,uid => user_admin->id
         ,'data' => {
-            'driver' => 'ide',
+            'bus' => 'ide',
             'type' => 'sys',
             'allocation' => '0.1G',
             'device' => 'cdrom',
@@ -247,8 +247,8 @@ sub test_add_cd($vm, $data) {
         $new_dev = $dev;
         last;
     }
-    is($new_dev->{driver_type}, 'raw');
-    is($new_dev->{driver}, 'ide');
+    is($new_dev->{driver}->{type}, 'raw');
+    is($new_dev->{bus}, 'sata');
     is($new_dev->{file},$data->{file});
     if ($data->{device} eq 'cdrom' && exists $data->{file} && $data->{file} =~ /tmp/) {
         unlink $data->{file} or die "$! $data->{file}";

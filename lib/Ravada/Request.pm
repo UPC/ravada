@@ -157,6 +157,7 @@ our %VALID_ARG = (
     ,import_domain => { uid => 1, vm => 1, id_owner => 1, name => 1
         ,spinoff_disks => 2
     }
+    ,update_iso_urls => { uid => 1 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }

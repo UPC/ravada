@@ -278,7 +278,7 @@ sub test_domain_n_volumes {
         } else {
             like($file,qr/-$target/);
         }
-        ok($vol->info->{driver}) or exit;
+        ok($vol->info->{bus}) or exit;
     }
     test_volume_format(@volumes_clone);
     $domain_clone->remove(user_admin);

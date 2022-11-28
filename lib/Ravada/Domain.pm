@@ -11,7 +11,7 @@ Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
 
 use utf8;
 
-use Carp qw(carp confess croak);
+use Carp qw(carp confess croak cluck);
 use Data::Dumper;
 use DateTime;
 use DateTime::Format::DateParse;
@@ -5596,7 +5596,7 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     }
     $self->info(Ravada::Utils->user_daemon) if $self->is_known();
 
-    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
+    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active' && $hardware ne 'memory';
     $self->post_prepare_base() if $self->is_base();
 }
 
@@ -5750,7 +5750,7 @@ sub _load_info_filesystem($self, $list) {
         $sth->execute($self->id,$source);
         my $info = $sth->fetchrow_hashref();
 
-        confess "Error: I can't file domain_filesystem "
+        confess "Error: I can't find domain_filesystem "
         ."id_domain= ".$self->id." , source=$source"
         if !$info->{id};
 
