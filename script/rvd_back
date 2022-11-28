@@ -245,6 +245,7 @@ sub do_start {
     #    Ravada::Request->enforce_limits();
     #Ravada::Request->refresh_vms();
     Ravada::Request->refresh_storage();
+    Ravada::Request->update_iso_urls(uid =>Ravada::Utils::user_daemon->id);
     for (;;) {
         my $t0 = time;
         $ravada->process_requests();
