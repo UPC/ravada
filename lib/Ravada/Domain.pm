@@ -5685,9 +5685,14 @@ sub _load_info_filesystem($self, $list) {
         $sth->execute($self->id,$source);
         my $info = $sth->fetchrow_hashref();
 
-        confess "Error: I can't find domain_filesystem "
-        ."id_domain= ".$self->id." , source=$source"
-        if !$info->{id};
+        if ( !$info->{id} ) {
+            my $data = {
+                source => $source
+            };
+            $self->_add_info_filesystem($data);
+            $sth->execute($self->id,$source);
+            $info = $sth->fetchrow_hashref();
+        }
 
         $item->{chroot} = delete $info->{chroot};
         $item->{subdir_uid} = delete $info->{subdir_uid};
