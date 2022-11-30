@@ -2,13 +2,16 @@
 
 **Implemented enhancements:**
 
-- Grant open ports [\#1868]
-- Show date of status change [\#1856]
-- Manage USB controllers [\#1851]
-- Updates on Catalan, Spanish, Russian and Vietnamese
+- Configure disk cache [\#1890]
+- Apply changes to all the clones [\#1888]
 
 **Refactors**
 
+- Update ISO URLs in background [\#1889]
+- Hardware frontend for fs and network [\#1886]
+- warn if hash can not be downloaded [\#1894] [\#1895]
+
 **Bugfixes**
 
-- Clone name with name.surname [\#1843]
+- Fix fallback javascript maps [\#1892]
+- Add filesystem info to table [\#1893]
