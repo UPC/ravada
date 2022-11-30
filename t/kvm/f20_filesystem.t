@@ -60,6 +60,41 @@ sub test_fs_bare($vm) {
     }
 }
 
+sub test_fs_added($vm) {
+    my $domain = create_domain($vm);
+    my $source = _new_source();
+    my $req = Ravada::Request->add_hardware(
+        name => 'filesystem'
+        ,uid => user_admin->id
+        ,id_domain => $domain->id
+        ,data => { source => {dir => $source }}
+    );
+    wait_request();
+
+    my $sth = connector->dbh->prepare(
+        "DELETE FROM domain_filesystems WHERE id_domain=?"
+    );
+    $sth->execute($domain->id);
+
+    $req = Ravada::Request->refresh_machine(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+
+    $sth = connector->dbh->prepare(
+        "DELETE FROM domain_filesystems WHERE id_domain=?"
+    );
+    $sth->execute($domain->id);
+
+    $req = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+
+}
+
 sub test_remove_fs($domain) {
     my $req = Ravada::Request->remove_hardware(
         name => 'filesystem'
@@ -306,6 +341,8 @@ for my $vm_name ( 'KVM' ) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        test_fs_added($vm);
 
         test_fs_bare($vm);
         test_fs_change($vm);
