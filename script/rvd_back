@@ -49,6 +49,7 @@ my $START = 1;
 my $TEST_LDAP;
 my $CLEAN_DB_LEFTOVERS;
 my $LOG_FILENAME;
+my $LIST_UNUSED_VOLS;
 
 my $URL_ISOS;
 my $ALL;
@@ -120,6 +121,7 @@ my $USAGE = "$0 "
         ."Maintenance operations:\n"
         ." --clean-db-leftovers: properly clean database unreferenced entries\n"
         ." --log: saves STDOUT and STDERR app traces to the specified filename\n"
+        ." --list-unused-volumes\n"
         ."\n"
     ;
 
@@ -166,6 +168,7 @@ GetOptions (       help => \$help
         ,"backup" => \$BACKUP
         ,"restore" => \$RESTORE
         ,"log=s"              => \$LOG_FILENAME
+        ,'list-unused-volumes' => \$LIST_UNUSED_VOLS
 
         ,"time-connection=s" => \$TIME_CONNECTION
 ) or exit;
@@ -970,6 +973,18 @@ sub _list_domains($rvd_back
     return @domains;
 }
 
+sub list_unused_vols($rvd_back) {
+    my $vols = $rvd_back->_cmd_list_unused_volumes(undef);
+    for my $vm (sort keys %$vols) {
+        next if !scalar(@{$vols->{$vm}});
+
+        for my $vol (sort @{$vols->{$vm}} ) {
+            print "  - $vol\n";
+        }
+    }
+    exit;
+}
+
 sub DESTROY {
 }
 
@@ -1017,6 +1032,8 @@ clean_db_leftovers($rvd_back)       if $CLEAN_DB_LEFTOVERS;
 
 backup($rvd_back)                   if $BACKUP;
 restore($rvd_back)                  if $RESTORE;
+
+list_unused_vols($rvd_back)         if $LIST_UNUSED_VOLS;
 }
 
 

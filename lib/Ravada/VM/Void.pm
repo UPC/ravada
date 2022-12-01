@@ -335,6 +335,10 @@ sub search_volume($self, $pattern) {
     return;
 }
 
+sub list_unused_volumes($self) {
+    return ();
+}
+
 sub _search_volume_remote($self, $pattern) {
 
     my ($out, $err) = $self->run_command("ls -1 ".$self->dir_img);
