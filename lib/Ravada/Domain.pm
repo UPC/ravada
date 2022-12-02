@@ -4426,7 +4426,16 @@ sub _around_rename($orig, $self, %args) {
 
     $self->id();
 
-    $self->_vm->_check_duplicate_name($name, 1);
+    return if $name eq $self->_data('name')
+            && $name eq $self->_data('alias');
+
+    $self->_vm->_check_duplicate_name($name, 1)
+    if $name ne $self->_data('name');
+
+    if ($name eq $self->_data('name') && $name ne $self->_data('alias')) {
+        $self->_data('alias' => $name);
+        return;
+    }
 
     $self->shutdown(user => $user)  if $self->is_active;
 
