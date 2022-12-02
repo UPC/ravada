@@ -1157,10 +1157,14 @@ sub test_open_port_duplicated($vm) {
     my @open2 = (grep /--dport $public_port/, @out2);
     is(scalar(@open2),2) or die Dumper(\@open2);
 
-    my $req = Ravada::Request->refresh_vms(_force => 1);
-    wait_request(request => $req, debug => 0);
+    my $req;
+    for ( 1 .. 10 ) {
+        $req = Ravada::Request->refresh_vms(_force => 1);
+        wait_request(request => $req, debug => 0);
+        last if $req->error eq '';
+    }
     is($req->status,'done');
-    is($req->error, '') or exit;
+    like($req->error, qr/^($|recently)/) or exit;
 
     my (@out3,@open3);
     for ( 1 .. 5 ) {
