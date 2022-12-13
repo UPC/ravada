@@ -503,8 +503,8 @@ msgstr "Shutting down …"
 msgid "It may take a couple of minutes."
 msgstr "It may take a couple of minutes."
 
-msgid "Hybernating ..."
-msgstr "Hybernating …"
+msgid "Hibernating ..."
+msgstr "Hibernating …"
 
 msgid "Description"
 msgstr "Description"
@@ -2169,3 +2169,6 @@ msgstr "Source Machine"
 
 msgid "Monitoring"
 msgstr "Monitoring"
+
+msgid "For Spice client setup follow this "
+msgstr "For Spice client setup follow this "

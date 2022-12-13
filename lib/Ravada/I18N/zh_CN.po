@@ -5,8 +5,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2021-11-23 01:53+0000\n"
-"Last-Translator: fishfree <winofchina@hotmail.com>\n"
+"PO-Revision-Date: 2022-01-20 08:54+0000\n"
+"Last-Translator: poi <erbaotao@outlook.com>\n"
 "Language-Team: Chinese (Simplified) <https://hosted.weblate.org/projects/"
 "ravada/translation/zh_Hans/>\n"
 "Language: zh_CN\n"
@@ -14,7 +14,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Weblate 4.10-dev\n"
+"X-Generator: Weblate 4.11-dev\n"
 
 msgid "Ravada broker"
 msgstr "Ravada 连接器"
@@ -297,7 +297,7 @@ msgid "Password"
 msgstr "密码"
 
 msgid "Start session"
-msgstr "开始会话\n"
+msgstr "开始会话"
 
 msgid "bits) in your computer."
 msgstr "字节) 在您的电脑上。"
@@ -441,7 +441,7 @@ msgid "Are you sure you want to remove the Base of"
 msgstr "您确认要移除基础镜像"
 
 msgid "Are you sure you want to prepare the Base of"
-msgstr "你确认要开始准备基础镜像"
+msgstr "您确认要开始准备基础镜像"
 
 msgid "Are you sure you want to change the Public state of"
 msgstr "您确认需要变更公共状态为"
@@ -482,7 +482,7 @@ msgstr "关机中…"
 msgid "It may take a couple of minutes."
 msgstr "这将会花费几分钟。"
 
-msgid "Hybernating ..."
+msgid "Hibernating ..."
 msgstr "休眠中…"
 
 msgid "Description"
@@ -753,7 +753,7 @@ msgid "Saving the screenshot, please wait a moment..."
 msgstr "保存快照，请等待几分钟…"
 
 msgid "You need to run the machine in order to take a screenshot."
-msgstr "你需要运行主机以便于执行快照。"
+msgstr "您需要运行主机以便于执行快照。"
 
 msgid "Copying the screenshot, please wait a moment..."
 msgstr "复制快照中，请稍候…"
@@ -1030,3 +1030,1182 @@ msgstr "池子"
 
 msgid "Prepare this machine as a base to create clones from it."
 msgstr "将该虚拟机制备为基础镜像，以后可从其克隆新虚拟机。"
+
+msgid "Show active"
+msgstr "显示活动状态"
+
+msgid "Show clones"
+msgstr "显示克隆"
+
+msgid "Hide clones"
+msgstr "隐藏克隆"
+
+msgid "Remove Base"
+msgstr "移除基础镜像"
+
+msgid "To make this possible, copy the content of"
+msgstr "要成为可能，请复制内容"
+
+msgid "to an ASCII file and save it with a .reg extension, then execute the file."
+msgstr "转换为 ASCII 文件并以 .reg 扩展名保存，然后执行该文件。"
+
+msgid "Please, make sure you have the right path and release, according to your PC configuration."
+msgstr "请根据您的 PC 配置确保您拥有正确的路径和版本。"
+
+msgid "can change the settings of any virtual machine."
+msgstr "可以更改任何虚拟机的设置。"
+
+msgid "can change the settings of any virtual machine "
+msgstr "可以更改任何虚拟机的设置 "
+
+msgid "can remove any virtual machine owned by the user."
+msgstr "可以删除此用户拥有的任何虚拟机。"
+
+msgid "Template selection is required"
+msgstr "需要选择模板"
+
+msgid "Are you sure you want to remove the base of"
+msgstr "您确认要移除基础镜像"
+
+msgid "Are you sure you want to prepare the base of"
+msgstr "您确认要开始准备基础镜像"
+
+msgid "Confirm password is required"
+msgstr "请求确认密码"
+
+msgid "Confirm password can not exceed 20 characters"
+msgstr "请确认密码不超过 20 个字符"
+
+msgid "Confirm password must be at least 5 characters"
+msgstr "请确认密码不少于 5 个字符"
+
+msgid "Confirm password can only contain words and numbers"
+msgstr "请确认密码只能包含单词和数字"
+
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "请点击 SHIFT + F12 退出虚拟机"
+
+msgid "This machine is running and can't be renamed."
+msgstr "虚拟机正在运行中不能重命名"
+
+msgid "Close"
+msgstr "关闭"
+
+msgid "Apply"
+msgstr "应用"
+
+msgid "There are no active virtual machines"
+msgstr "没有活动的虚拟机"
+
+msgid "reload list"
+msgstr "重新加载列表"
+
+msgid "Group"
+msgstr "团队"
+
+msgid "New group member"
+msgstr "新组成员"
+
+msgid "This group has been removed."
+msgstr "该组已被移除。"
+
+msgid "Remove group"
+msgstr "移除组"
+
+msgid "Are you sure you want to remove this group ?"
+msgstr "您确定要删除此群组吗？"
+
+msgid "object class:"
+msgstr "object class:"
+
+msgid "dn:"
+msgstr "dn:"
+
+msgid "Groups require a LDAP server configured."
+msgstr "组需要配置 LDAP 服务器。"
+
+msgid "See documentation about:"
+msgstr "请参阅有关以下内容的文档："
+
+msgid "Configure LDAP Authentication"
+msgstr "配置 LDAP 身份验证"
+
+msgid "Setup a LDAP Server"
+msgstr "启动 LDAP 服务"
+
+msgid "Groups"
+msgstr "群组"
+
+msgid "New Group"
+msgstr "新组"
+
+msgid "Loading ..."
+msgstr "正在加载..."
+
+msgid "Show/Hide clones"
+msgstr "显示/隐藏克隆"
+
+msgid "Public"
+msgstr "公共"
+
+msgid "Autostart"
+msgstr "自动开启"
+
+msgid "Node"
+msgstr "节点"
+
+msgid "Manage machine"
+msgstr "管理虚拟机"
+
+msgid "Volatile"
+msgstr "易失的"
+
+msgid "Hibernated"
+msgstr "休眠"
+
+msgid "ShutDown"
+msgstr "关闭"
+
+msgid "No message to show!"
+msgstr "没有可显示的消息！"
+
+msgid "Networks"
+msgstr "网络"
+
+msgid "New Network"
+msgstr "新的网络"
+
+msgid "requires password"
+msgstr "请求密码"
+
+msgid "Nodes"
+msgstr "节点"
+
+msgid "Type"
+msgstr "类型"
+
+msgid "Bases"
+msgstr "基地"
+
+msgid "Action"
+msgstr "行为"
+
+msgid "Active"
+msgstr "积极的"
+
+msgid "Disabled"
+msgstr "被禁用的"
+
+msgid "This node is local"
+msgstr "这个节点是本地的"
+
+msgid "Refresh"
+msgstr "刷新"
+
+msgid "Enable"
+msgstr "使能的"
+
+msgid "Disable"
+msgstr "禁用的"
+
+msgid "Confirm disable node"
+msgstr "确认禁用节点"
+
+msgid "Disabling this node will shut all the"
+msgstr "禁用此节点将会关闭所有"
+
+msgid "machines down."
+msgstr "虚拟机关闭"
+
+msgid "Global Settings"
+msgstr "全局设置"
+
+msgid "Frontend"
+msgstr "前端"
+
+msgid "Fallback"
+msgstr "回退"
+
+msgid "Maintenance"
+msgstr "维护"
+
+msgid "Admin users can still log in from"
+msgstr "管理员用户仍然可以从"
+
+msgid "Maintenance Start"
+msgstr "维护开始"
+
+msgid "Maintenance End"
+msgstr "维护结束"
+
+msgid "Debug"
+msgstr "调试"
+
+msgid "Debug Ports"
+msgstr "调试端口"
+
+msgid "Debug Ports Exposed"
+msgstr "暴露的调试端口"
+
+msgid "Display Password"
+msgstr "显示密码"
+
+msgid "Enables display password when available"
+msgstr "可用时启用显示密码"
+
+msgid "Bookings"
+msgstr "预订"
+
+msgid "Bookings require LDAP authentication."
+msgstr "预订需要 LDAP 身份验证。"
+
+msgid "Start Limit"
+msgstr "开始限制"
+
+msgid "Number of virtual machines that normal users can have running at the same time"
+msgstr "普通用户可以同时运行的虚拟机数量"
+
+msgid "Port expose"
+msgstr "端口暴露"
+
+msgid "Minimum port number to expose virtual machine services."
+msgstr "公开虚拟机服务的最小端口号。"
+
+msgid "cancel"
+msgstr "取消"
+
+msgid "New user"
+msgstr "新用户"
+
+msgid "Error:"
+msgstr "错误:"
+
+msgid "Web Service connection failed."
+msgstr "Web 服务连接失败。"
+
+msgid "Check"
+msgstr "检查"
+
+msgid "Ravada Apache documentation"
+msgstr "Ravada Apache 文档"
+
+msgid "Client"
+msgstr "客户"
+
+msgid "LDAP"
+msgstr "LDAP"
+
+msgid "Display URL :"
+msgstr "显示网址："
+
+msgid "Display IP :"
+msgstr "显示IP："
+
+msgid "Display Port :"
+msgstr "显示端口："
+
+msgid "Display Port secure :"
+msgstr "显示安全端口："
+
+msgid "Sorry"
+msgstr "对不起"
+
+msgid "Server in maintenance until"
+msgstr "服务器在维护中，直到"
+
+msgid "vCPU allocation"
+msgstr "vCPU 分配"
+
+msgid "mode"
+msgstr "模式"
+
+msgid "check"
+msgstr "检查"
+
+msgid "match"
+msgstr "匹配"
+
+msgid "model"
+msgstr "模型"
+
+msgid "fallback"
+msgstr "回退"
+
+msgid "CPU Features"
+msgstr "CPU特性"
+
+msgid "New feature"
+msgstr "新特性"
+
+msgid "add"
+msgstr "新增"
+
+msgid "bus"
+msgstr "总线"
+
+msgid "capacity"
+msgstr "容量"
+
+msgid "ISO file"
+msgstr "ISO 文件"
+
+msgid "boot order"
+msgstr "boot 菜单"
+
+msgid "state"
+msgstr "状态"
+
+msgid "on"
+msgstr "on"
+
+msgid "off"
+msgstr "off"
+
+msgid "hidden"
+msgstr "隐藏"
+
+msgid "nat"
+msgstr "nat"
+
+msgid "bridge"
+msgstr "网桥"
+
+msgid "primary"
+msgstr "基本的"
+
+msgid "Primary video devices will move to first"
+msgstr "主要视频设备将移至首位"
+
+msgid "Primary can not be unset, enable it in another video device"
+msgstr "无法取消基本设置，请在其他视频设备中启用它"
+
+msgid "ram"
+msgstr "内存"
+
+msgid "vram"
+msgstr "虚拟内存"
+
+msgid "heads"
+msgstr "头"
+
+msgid "Set defaults"
+msgstr "设置默认值"
+
+msgid "Add new disk"
+msgstr "添加新磁盘"
+
+msgid "device"
+msgstr "设备"
+
+msgid "sys"
+msgstr "系统"
+
+msgid "swap"
+msgstr "交换"
+
+msgid "size"
+msgstr "尺寸"
+
+msgid "allocation"
+msgstr "分配"
+
+msgid "Add new Display"
+msgstr "添加新显示器"
+
+msgid "PrepareBase"
+msgstr "准备基地"
+
+msgid "Add to group"
+msgstr "添加到组"
+
+msgid "No LDAP groups created."
+msgstr "未创建 LDAP 组。"
+
+msgid "Add groups"
+msgstr "添加组"
+
+msgid "User is not member of any group."
+msgstr "用户不是任何组的成员。"
+
+msgid "New password"
+msgstr "新密码"
+
+msgid "Force change password on first access"
+msgstr "首次访问时强制更改密码"
+
+msgid "Oops!"
+msgstr "哎呀！"
+
+msgid "New Password must be at least 6 characters"
+msgstr "新密码必须至少为 6 个字符"
+
+msgid "Set New Password"
+msgstr "设置新密码"
+
+msgid "This user has never logged in the Ravada server."
+msgstr "此用户从未登录过 Ravada 服务器。"
+
+msgid "Import"
+msgstr "进口"
+
+msgid "Error: the LDAP entry for this user has been removed."
+msgstr "错误：此用户的 LDAP 条目已被删除。"
+
+msgid "No machines found"
+msgstr "没有找到虚拟机"
+
+msgid "Warning: anonymous machines won't show up unless you set them public."
+msgstr "警告：匿名虚拟机不会出现，除非您将它们设为公开。"
+
+msgid "New network"
+msgstr "新网络"
+
+msgid "name"
+msgstr "名字"
+
+msgid "address"
+msgstr "地址"
+
+msgid "Network address is required."
+msgstr "网络地址是必需的。"
+
+msgid "Invalid IP network address. Expecting a.b.c.d/e"
+msgstr "IP 网络地址无效。期待 a.b.c.d/e"
+
+msgid "This address is duplicated"
+msgstr "此地址重复"
+
+msgid "password"
+msgstr "密码"
+
+msgid "Requires viewer password when implemented"
+msgstr "实施时需要查看者密码"
+
+msgid "Set either"
+msgstr "设置任一个"
+
+msgid "all machines"
+msgstr "所有虚拟机"
+
+msgid "or"
+msgstr "或者"
+
+msgid "no machines"
+msgstr "没有虚拟机"
+
+msgid "for users in this network"
+msgstr "对于此网络中的用户"
+
+msgid "Network"
+msgstr "网络"
+
+msgid "saved."
+msgstr "保存。"
+
+msgid "Are you sure you want to remove the"
+msgstr "您确定要删除"
+
+msgid "yes"
+msgstr "是的"
+
+msgid "Choose the virtualization type of the Node."
+msgstr "选择节点的虚拟化类型。"
+
+msgid "Check connection to"
+msgstr "检查连接到"
+
+msgid "A node with that address already exists."
+msgstr "具有该地址的节点已存在。"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Testing connection to"
+msgstr "测试连接到"
+
+msgid "No bases found"
+msgstr "没有找到基地"
+
+msgid "This base has"
+msgstr "这个基地有"
+
+msgid "backup directory"
+msgstr "备份目录"
+
+msgid "This is a main node and can't be removed."
+msgstr "这是一个主节点，无法删除。"
+
+msgid "Are you sure you want to remove the node"
+msgstr "您确定要删除该节点吗"
+
+msgid "This node has"
+msgstr "这个节点有"
+
+msgid "bases."
+msgstr "基地。"
+
+msgid "Remove bases in node"
+msgstr "删除节点中的基地"
+
+msgid "Request"
+msgstr "请求"
+
+msgid "Removing Virtual Machine"
+msgstr "移除虚拟机"
+
+msgid "This can't be undone"
+msgstr "这无法撤消"
+
+msgid "and will remove all the disk and information of this virtual machine."
+msgstr "并将删除此虚拟机的所有磁盘和信息。"
+
+msgid "Please insert"
+msgstr "请插入"
+
+msgid "not"
+msgstr "不是"
+
+msgid "to apply."
+msgstr "去申请。"
+
+msgid "Display"
+msgstr "展示"
+
+msgid "Machine Information"
+msgstr "机器信息"
+
+msgid "Internal IP"
+msgstr "内部 IP"
+
+msgid "waiting for network to come up"
+msgstr "等待网络启动"
+
+msgid "Max Memory"
+msgstr "最大内存"
+
+msgid "CPUs"
+msgstr "CPUs"
+
+msgid "reopen"
+msgstr "重新打开"
+
+msgid "down"
+msgstr "下"
+
+msgid "I don't know settings tabs for:"
+msgstr "我不知道以下设置选项："
+
+msgid "Hardware"
+msgstr "硬件"
+
+msgid "Base"
+msgstr "根据"
+
+msgid "Ports"
+msgstr "端口"
+
+msgid "Access"
+msgstr "访问"
+
+msgid "Waiting for requests to complete"
+msgstr "等待请求完成"
+
+msgid "Recent requests"
+msgstr "最近的请求"
+
+msgid "Force ShutDown"
+msgstr "强制关机"
+
+msgid "Reboot"
+msgstr "重启"
+
+msgid "Force Reboot"
+msgstr "强制重启"
+
+msgid "Compact"
+msgstr "压缩"
+
+msgid "Compact disk volumes"
+msgstr "压缩磁盘卷"
+
+msgid "This virtual machine has already been compacted"
+msgstr "此虚拟机已被压缩"
+
+msgid "Purge"
+msgstr "清除"
+
+msgid "Purge disk volumes"
+msgstr "清除磁盘卷"
+
+msgid "This machine is locked by process"
+msgstr "这台机器被进程锁定"
+
+msgid "process"
+msgstr "过程"
+
+msgid "This base can't be removed because the domain has clones."
+msgstr "无法删除此基础镜像，因为该域有克隆。"
+
+msgid "Loading machine"
+msgstr "装载虚拟机"
+
+msgid "waiting for requests"
+msgstr "等待请求"
+
+msgid "Loading nodes"
+msgstr "加载节点"
+
+msgid "Node down"
+msgstr "节点关闭"
+
+msgid "Node disabled"
+msgstr "节点禁用"
+
+msgid "This base has clones"
+msgstr "这个基础镜像有克隆"
+
+msgid "today"
+msgstr "今天"
+
+msgid "New Booking"
+msgstr "新预订"
+
+msgid "Exec. time"
+msgstr "执行。时间"
+
+msgid "Exec clones sequentially"
+msgstr "按顺序执行克隆"
+
+msgid "RAM (Gb)"
+msgstr "内存 (Gb)"
+
+msgid "This name is invalid. It can only contain alphabetic, numbers, undercores and dashes and must start by a letter."
+msgstr "此名称无效。它只能包含字母、数字、下划线和破折号，并且必须以字母开头。"
+
+msgid "I can't find"
+msgstr "我找不到"
+
+msgid "driver"
+msgstr "驱动程序"
+
+msgid "This machine is running and can't be modified."
+msgstr "这台机器正在运行，无法修改。"
+
+msgid "This machine is base and can't be modified."
+msgstr "这台机器是基础镜像，不能修改。"
+
+msgid "Danger: This will destroy all the disk data permantently."
+msgstr "危险：这将永久破坏所有磁盘数据。"
+
+msgid "Type the name of the volume disk to confirm:"
+msgstr "键入要确认的卷磁盘的名称："
+
+msgid "No hardware found for"
+msgstr "找不到硬件"
+
+msgid "-- choose hardware --"
+msgstr "-- 选择硬件 --"
+
+msgid "This machine is base and it can't be modified."
+msgstr "这台机器是基础镜像，不能修改。"
+
+msgid "The VM is"
+msgstr "这个虚拟机是"
+
+msgid "stopped"
+msgstr "已停止"
+
+msgid "Nothing to monitoring"
+msgstr "没有可监控的"
+
+msgid "Start after migration"
+msgstr "迁移后开始"
+
+msgid "This virtual machine is running. It must be shut down before migrate."
+msgstr "此虚拟机正在运行。迁移前必须关闭它。"
+
+msgid "Are you sure you want to migrate"
+msgstr "您确定要迁移吗"
+
+msgid "Max memory (MB)"
+msgstr "最大内存 (MB)"
+
+msgid "Current memory (MB)"
+msgstr "当前内存 (MB)"
+
+msgid "Run Timeout"
+msgstr "运行超时"
+
+msgid "Shutdown Timeout"
+msgstr "关机超时"
+
+msgid "The machine will power off after this minutes after shutdown."
+msgstr "虚拟机将在停机后的这分钟后关闭。"
+
+msgid "Clones created from this machine will be removed on shutdown."
+msgstr "从这台虚拟机创建的克隆将在关机时被删除。"
+
+msgid "Virtual Machine will start on host start."
+msgstr "虚拟机将在主机启动时启动"
+
+msgid "Shutdown disconnected"
+msgstr "关机断开"
+
+msgid "Virtual Machine will be shutdown when user disconnects."
+msgstr "当用户断开连接时，虚拟机将关闭。"
+
+msgid "Clones are volatile, so all the pool will be started."
+msgstr "克隆是易失的，因此将启动所有池。"
+
+msgid "Error: you want to have"
+msgstr "错误：您想拥有"
+
+msgid "but there are only"
+msgstr "但那只有"
+
+msgid "clones defined."
+msgstr "定义的克隆。"
+
+msgid "Port"
+msgstr "端口"
+
+msgid "Restricted"
+msgstr "受限制的"
+
+msgid "Public Port"
+msgstr "公共端口"
+
+msgid "Only remote client can access this port if restricted"
+msgstr "如果受到限制，只有远程客户端可以访问此端口"
+
+msgid "Only remote client can access this port"
+msgstr "只有远程客户端可以访问该端口"
+
+msgid "Any remote client can access this port"
+msgstr "任何远程客户端都可以访问此端口"
+
+msgid "Refresh ports"
+msgstr "刷新端口"
+
+msgid "Prepare Base"
+msgstr "准备基础镜像"
+
+msgid "Change"
+msgstr "改变"
+
+msgid "Rebase all the clones to a new base"
+msgstr "将所有克隆重新设置为新的基础镜像"
+
+msgid "Rebase this machine to another virtual machine"
+msgstr "将此虚拟机重新设置为另一个虚拟机"
+
+msgid "Warning"
+msgstr "警告"
+
+msgid "Changing the base of a virtual machine is potentially dangerous and can't be undone."
+msgstr "更改虚拟机的基础具有潜在的危险性，并且无法撤消。"
+
+msgid "No, cancel"
+msgstr "不，取消"
+
+msgid "Yes, rebase"
+msgstr "是的，重新设定"
+
+msgid "Rebase"
+msgstr "重新设定"
+
+msgid "Remove the base prepared from this machine"
+msgstr "移除本机准备好的基础镜像"
+
+msgid "Remove Clones"
+msgstr "移除克隆"
+
+msgid "This virtual machine has clones that are bases and won't be removed"
+msgstr "此虚拟机已经克隆的基础克隆，不会被删除"
+
+msgid "This machine is hibernated and can't be renamed."
+msgstr "此机器已休眠，无法重命名。"
+
+msgid "New name"
+msgstr "新名字"
+
+msgid "Spinoff clone"
+msgstr "衍生克隆"
+
+msgid "Spinoff this clone from its base."
+msgstr "将此克隆从其基础克隆中剥离。"
+
+msgid "Are you sure you want to spinoff from the base?"
+msgstr "您确定要从基础克隆中剥离吗？"
+
+msgid "Enter Old Password"
+msgstr "输入旧密码"
+
+msgid "Enter New Password"
+msgstr "输入新密码"
+
+msgid "Re-Enter New Password"
+msgstr "再次输入新密码"
+
+msgid "Old Password is required"
+msgstr "旧密码是必需的"
+
+msgid "Old Password can only contain words and numbers"
+msgstr "旧密码只能包含单词和数字"
+
+msgid "New Password is required"
+msgstr "新密码是必需的"
+
+msgid "New Password can only contain words and numbers"
+msgstr "新密码只能包含单词和数字"
+
+msgid "Old and New Passwords match!"
+msgstr "新旧密码匹配！"
+
+msgid "Repeated New Password is required"
+msgstr "需要重复输入新密码"
+
+msgid "Password and their confirmation do not match!"
+msgstr "密码和他们的确认不匹配！"
+
+msgid "Today Schedule"
+msgstr "今日日程"
+
+msgid "This server has reservations for today. Machines from users out of the booking list will be shutdown."
+msgstr "此服务器今天已经被预订。此用户机器的预订列表将被关闭。"
+
+msgid "allowed"
+msgstr "允许"
+
+msgid "not allowed"
+msgstr "不允许"
+
+msgid "Machines Notifications"
+msgstr "机器通知"
+
+msgid "Machine"
+msgstr "机器"
+
+msgid "Group name"
+msgstr "组名称"
+
+msgid "Enter group name"
+msgstr "输入组名称"
+
+msgid "Group name is required"
+msgstr "组名称是必填项"
+
+msgid "Group name can not exceed 80 characters"
+msgstr "组名称不能超过 80 个字符"
+
+msgid "added"
+msgstr "添加"
+
+msgid "The source machine is not a base. It must be prepared before it can be copied. This process may take some minutes."
+msgstr "源机器不是基础镜像。必须先准备好，然后才能复制。此过程可能需要几分钟时间。"
+
+msgid "Choose the virtualization type of the Virtual Machine."
+msgstr "选择虚拟机的虚拟化类型。"
+
+msgid "Type the template name"
+msgstr "输入模板名称"
+
+msgid "Select the .iso file the machine will utilize when installing the OS."
+msgstr "选择机器在安装操作系统时将使用的 .iso 文件。"
+
+msgid "Type the ISO pathname"
+msgstr "输入 ISO 路径名"
+
+msgid "This ISO is being downloaded. The virtual machine will be created after."
+msgstr "正在下载此 ISO。之后将创建虚拟机。"
+
+msgid "System Disk: (GB)"
+msgstr "系统磁盘：（GB）"
+
+msgid "The Minimum Disk Size needed for this ISO is"
+msgstr "此 ISO 所需的最小磁盘大小为"
+
+msgid "Advanced options"
+msgstr "高级选项"
+
+msgid "Swap"
+msgstr "交换"
+
+msgid "disabled"
+msgstr "禁用"
+
+msgid "The Minimum Swap Disk Size needed for this ISO is"
+msgstr "此 ISO 所需的最小交换磁盘大小为"
+
+msgid "Data"
+msgstr "数据"
+
+msgid "BIOS"
+msgstr "BIOS"
+
+msgid "Legacy"
+msgstr "Legacy"
+
+msgid "UEFI"
+msgstr "UEFI"
+
+msgid "Start after create the virtual machine"
+msgstr "创建虚拟机后启动"
+
+msgid "Invalid Template"
+msgstr "无效的模板"
+
+msgid "Please select an ISO file"
+msgstr "请选择一个 ISO 文件"
+
+msgid "Passwords do not match!"
+msgstr "密码不匹配！"
+
+msgid "Support Contact"
+msgstr "支持联系人"
+
+msgid "If you have any issue, you can contact the Suport crew and we will try to help you. Please, only contact Support Center if it is strictly necessary."
+msgstr "如果您有任何问题，您可以联系支持人员，我们会尽力帮助您。请仅在绝对必要时再联系支持中心。"
+
+msgid "Email"
+msgstr "电子邮件"
+
+msgid "Phone Number"
+msgstr "电话号码"
+
+msgid "Attachment"
+msgstr "附件"
+
+msgid "Contact Method"
+msgstr "联系方式"
+
+msgid "Phone"
+msgstr "电话"
+
+msgid "Fill required camps with valid data"
+msgstr "使用有效数据填所需的地址"
+
+msgid "Will be destroyed on shutdown"
+msgstr "将在关机时销毁"
+
+msgid "volatile"
+msgstr "易变的"
+
+msgid "hide"
+msgstr "隐藏"
+
+msgid "Hide active"
+msgstr "隐藏活动"
+
+msgid "filter"
+msgstr "筛选"
+
+msgid "Reload"
+msgstr "重新加载"
+
+msgid "Congrats"
+msgstr "恭喜"
+
+msgid "The new user"
+msgstr "新用户"
+
+msgid "has been added successfully!"
+msgstr "已添加成功！"
+
+msgid "已添加成功！"
+msgstr "你现在想要做什么？"
+
+msgid "Add another user"
+msgstr "添加其他用户"
+
+msgid "Create a new group"
+msgstr "创建一个新组"
+
+msgid "Schedule"
+msgstr "日程"
+
+msgid "groups"
+msgstr "团队"
+
+msgid "nodes"
+msgstr "节点"
+
+msgid "networks"
+msgstr "网络"
+
+msgid "settings"
+msgstr "设置"
+
+msgid "can manage users."
+msgstr "可以管理用户。"
+
+msgid "Can expose virtual machine ports."
+msgstr "可以暴露虚拟机端口。"
+
+msgid "Can rename any virtual machine owned by the user."
+msgstr "可以重命名此用户拥有的任何虚拟机。"
+
+msgid "Can rename any virtual machine."
+msgstr "可以重命名任何虚拟机。"
+
+msgid "Can rename clones from virtual machines owned by the user."
+msgstr "可以重命名此用户拥有的克隆虚拟机"
+
+msgid "Can shutdown own virtual machines."
+msgstr "可以关闭自己的虚拟机。"
+
+msgid "Can reboot own virtual machines."
+msgstr "可以重启自己的虚拟机。"
+
+msgid "Can reboot all virtual machines."
+msgstr "可以重启所有虚拟机"
+
+msgid "Can reboot clones own virtual machines."
+msgstr "可以重启所有的克隆虚拟机"
+
+msgid "Can get a screenshot of own virtual machines."
+msgstr "可以获得自己虚拟机的截图。"
+
+msgid "Can have an unlimited amount of machines started."
+msgstr "可以启动无限数量的虚拟机。"
+
+msgid "Can view groups."
+msgstr "可以查看组。"
+
+msgid "Can manage groups."
+msgstr "可以管理组"
+
+msgid "can have their own limit on started machines."
+msgstr "可以对已启动的机器自定义限制。"
+
+msgid "Search group"
+msgstr "查找组"
+
+msgid "No Results Found"
+msgstr "未找到结果"
+
+msgid "Client headers"
+msgstr "客户端头文件"
+
+msgid "locked"
+msgstr "锁定"
+
+msgid "Poweroff"
+msgstr "停机"
+
+msgid "Requests"
+msgstr "要求"
+
+msgid "This virtual machine has no group restrictions."
+msgstr "此虚拟机没有组限制。"
+
+msgid "There are no LDAP groups defined."
+msgstr "没有定义 LDAP 组。"
+
+msgid "Only users from these groups will be allowed to execute this machine"
+msgstr "只有来自这些组的用户才被允许控制这台虚拟机"
+
+msgid "Event properties"
+msgstr "事件属性"
+
+msgid "This field is required"
+msgstr "这是必填栏"
+
+msgid "Title"
+msgstr "标题"
+
+msgid "Color"
+msgstr "颜色"
+
+msgid "Repeat"
+msgstr "重复"
+
+msgid "Weekly"
+msgstr "每周"
+
+msgid "Until"
+msgstr "直到"
+
+msgid "Groups with permissions"
+msgstr "有权限的组"
+
+msgid "Delete"
+msgstr "删除"
+
+msgid "Save changes"
+msgstr "保存更改"
+
+msgid "This booking overlaps already scheduled reservations"
+msgstr "此预订与已安排的预订重叠"
+
+msgid "options"
+msgstr "选项"
+
+msgid "bases"
+msgstr "基地"
+
+msgid "remove"
+msgstr "移除"
+
+msgid "can change the settings of any virtual machine cloned from one base owned by the user."
+msgstr "可以更改任何来着用户拥有的基础的克隆虚拟机的设置。"
+
+msgid "Balance"
+msgstr "平衡"
+
+msgid "Node with more free memory"
+msgstr "具有更多可用内存的节点"
+
+msgid "Node with machines from the same user"
+msgstr "具有来自同一用户的机器的节点"
+
+msgid "Permission granted to user"
+msgstr "授予用户的权限"
+
+msgid "Permission revoked from user"
+msgstr "用户权限被撤销"
+
+msgid "User not found"
+msgstr "未找到用户"
+
+msgid "Event saved successfully"
+msgstr "成功保存事件"
+
+msgid "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+msgstr "需要 LDAP 组来设置预订。找到一些组，但它们没有成员。 <a href='/admin/groups'>在此处添加新条目。</a>"
+
+msgid "From"
+msgstr "来自"
+
+msgid "To"
+msgstr "到"
+
+msgid "Edit the event"
+msgstr "编辑事件"
+
+msgid "Delete the event"
+msgstr "删除事件"
+
+msgid "This event"
+msgstr "此事件"
+
+msgid "This event and the following"
+msgstr "本次事件及以下"
+
+msgid "This event and the following with same day of week"
+msgstr "在同一周的同一天的事件及以下事件"
+
+msgid "All events"
+msgstr "所有事件"
+
+msgid "Confirm"
+msgstr "确认"
+
+msgid "This feature requires a LDAP server configured."
+msgstr "此功能需要配置 LDAP 服务器。"
+
+msgid "Source Machine"
+msgstr "源机器"
+
+msgid "Monitoring"
+msgstr "监控"

@@ -184,6 +184,8 @@ sub test_clone_utf8_user($t, $vm_name, $name, $utf8_base=0) {
     _test_list_machines_user($base_name, $user);
     my ($clone) = _test_clone($domain, $base_name, $user);
 
+    mojo_check_login($t);
+
     _test_copy($domain, $base_name);
 
     remove_domain_and_clones_req($domain);

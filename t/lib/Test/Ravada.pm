@@ -95,11 +95,14 @@ create_domain
 
     ping_backend
 
+    config_host_devices
+
     end
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 our $FILE_CONFIG_REMOTE = "t/etc/remote_vm.conf";
+our $FILE_CONFIG_HOST_DEVICES = "t/etc/host_devices.conf";
 
 $Ravada::Front::Domain::Void = "/var/tmp/test/rvd_void/".getpwuid($>);
 
@@ -161,6 +164,25 @@ my @FLUSH_RULES=(
 );
 
 $Ravada::CAN_FORK = 0;
+
+sub config_host_devices($type) {
+    my $config;
+    if (!-e $FILE_CONFIG_HOST_DEVICES) {
+        warn "Missing host devices config file '$FILE_CONFIG_HOST_DEVICES'";
+        my $config = {
+            'usb' => '(disk|flash|audio|camera|bluetoo)'
+            ,'pci' => ''
+        };
+        DumpFile($FILE_CONFIG_HOST_DEVICES, $config);
+    }
+    eval { $config = LoadFile($FILE_CONFIG_HOST_DEVICES) };
+
+    die "Error loading $FILE_CONFIG_HOST_DEVICES $@" if $@;
+
+    die "Error: no host devices config in $FILE_CONFIG_HOST_DEVICES for $type"
+    if !exists $config->{$type} || !$config->{$type};
+    return $config->{$type};
+}
 
 sub user_admin {
 
@@ -438,10 +460,12 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
 
     my @connector;
     @connector = ( connector => connector() ) if $sqlite;
+    my $pid_name = "ravada_install".base_domain_name();
     my $rvd = Ravada->new(
             @connector
                 , config => ( $config or $DEFAULT_CONFIG)
                 , warn_error => 1
+                , pid_name => $pid_name
     );
     $rvd->_install();
     $CONNECTOR = $rvd->connector if !$sqlite;
@@ -713,6 +737,7 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
         ,uid => user_admin->id
         ,@after_req
     );
+    wait_request(debug => 0) if $wait;
     return $req;
 }
 
@@ -1239,7 +1264,7 @@ sub wait_request {
             } elsif (!$done{$req->id}) {
                 $t0 = time;
                 $done{$req->{id}}++;
-                if ($check_error) {
+                if ($check_error && $req->command ne 'set_time') {
                     if ($req->command =~ /remove/) {
                         like($req->error,qr(^$|Unknown domain|Domain not found));
                     } elsif($req->command eq 'set_time') {
@@ -1256,6 +1281,8 @@ sub wait_request {
                             like($error,qr{^($|.*No ip in domain|.*duplicated port|.*I can't get the internal IP)});
                         } elsif($req->command eq 'compact') {
                             like($error,qr{^($|.*compacted)});
+                        } elsif($req->command eq 'refresh_machine') {
+                            like($error,qr{^($|.*port.*already used)});
                         } else {
                             like($error,qr/^$|libvirt error code:38,|run recently/)
                                 or confess $req->id." ".$req->command;
@@ -1850,8 +1877,8 @@ sub hibernate_node($node) {
         my $domain_node = _domain_node($node);
         eval { $domain_node->hibernate( user_admin ) };
         my $error = $@;
-        warn $error if $error;
         last if !$error || $error =~ /is not active|not valid/;
+        confess $error if $error;
     }
 
     my $max_wait = 30;

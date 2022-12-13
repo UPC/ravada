@@ -253,7 +253,7 @@
                         <br><span style="float:right;" ng-show="machine.is_active" class="badge badge-secondary">{{machine.remote_ip}}</span>
                         <button style="float:right;"
                                 title="{{machine.date_status_change.date_txt}}"
-                            ng-hide="machine.is_active || !machine.date_status_change.date_txt"
+                            ng-hide="machine.is_active || machine.is_base || !machine.date_status_change.date_txt"
                             class="badge badge-light border border-secondary info"
                             >
                             <span class="info">

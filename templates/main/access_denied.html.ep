@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+%= include 'bootstrap/header'
+<body role="document">
+    %= include 'bootstrap/navigation'
+     <header id="page-top" class="intro">
+        <div class="intro-body">
+            <div class="container" ng-controller="">
+                <h2 class="form-signin-heading">ERROR</h2>
+                <p><%= $error %></p>
+                % if ($can_login) {
+                    <form class="form-singin" method="get" action="/">
+                        <button id="submit" class="btn btn-success btn-lg btn-block" type="submit"><%=l 'Login' %></button>
+                    </form>
+                % }
+            </div>
+               
+        </div>
+     
+    </header>
+
+    %= include 'bootstrap/scripts'
+    %= include $footer
+</body>
+</html>

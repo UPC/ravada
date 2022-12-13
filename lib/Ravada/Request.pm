@@ -76,7 +76,7 @@ our %VALID_ARG = (
     ,screenshot => { id_domain => 1 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1 }
-    ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2 }
+    ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2, enable_host_devices => 2 }
     ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1, sequential => 2 }
     ,shutdown_clones => { id_domain => 1, uid => 1, timeout => 2 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
@@ -142,6 +142,17 @@ our %VALID_ARG = (
     ,manage_pools => { uid => 2, id_domain => 2 }
     ,ping_backend => {}
 
+    ,list_host_devices => {
+        uid => 1
+        ,id_host_device => 1
+        ,_force => 2
+    }
+    ,remove_host_device => {
+        uid => 1
+        ,id_host_device => 1
+        ,id_domain => 2
+    }
+
     ,discover => { uid => 1, id_vm => 1 }
     ,import_domain => { uid => 1, vm => 1, id_owner => 1, name => 1
         ,spinoff_disks => 2
@@ -170,6 +181,7 @@ qw(
     remove_base_vm
     rsync_back
     cleanup
+    list_host_devices
     refresh_machine
     refresh_machine_ports
     set_time
@@ -692,7 +704,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
 
         next if $args_d_s ne $args_found_s;
 
-        return Ravada::Request->open($id);
+        return $id;
     }
     return 0;
 }
@@ -715,13 +727,11 @@ sub _new_request {
         delete $args{name};
     }
     my $no_duplicate = delete $args{_no_duplicate};
-    my $force = delete $args{_force};
-
-    confess "Error: do not supply both _force & _no_duplicate"
-    if $force && !$no_duplicate;
+    my $force;
 
     my $uid;
     if ( ref $args{args} ) {
+        $force = delete $args{args}->{_force};
         $args{args}->{uid} = $args{args}->{id_owner}
             if !exists $args{args}->{uid};
         $uid = $args{args}->{uid} if exists $args{args}->{uid};
@@ -748,14 +758,14 @@ sub _new_request {
         $CMD_NO_DUPLICATE{$args{command}}
         || ($no_duplicate && $args{command} =~ /^(screenshot)$/))
         ){
-        my $dupe = $self->_duplicated_request();
+        my $id_dupe = $self->_duplicated_request();
 
-        return $dupe if $dupe;
-
-        my $recent;
-        $recent = $self->done_recently()
+        my $id_recent;
+        $id_recent = $self->done_recently()
         if $args{command} !~ /^(clone|migrate|set_base_vm)$/;
-        return if $recent;
+
+        my $id = ( $id_dupe or $id_recent );
+        return Ravada::Request->open($id) if $id;
 
     }
 
@@ -978,6 +988,7 @@ sub _validate_clone($self
 }
 
 sub _last_insert_id {
+    _init_connector();
     return Ravada::Utils::last_insert_id($$CONNECTOR->dbh);
 }
 

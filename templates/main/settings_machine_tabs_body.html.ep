@@ -90,5 +90,11 @@
         %= include 'main/vm_pool'
     </div>
 % }
+%if ($USER->is_admin) {
+    <div class="tab-pane fade" id="v-pills-hostdev" role="tabpanel" aria-labelledby="v-pills-hostdev-tab">
+        %= include 'main/vm_hostdev'
+    </div>
+% }
+
 
 </div><!-- from tab content -->
