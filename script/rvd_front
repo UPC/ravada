@@ -2111,12 +2111,13 @@ any '/user_settings' => sub {
     user_settings($c);
 };
 
-sub _translations($c) {
+sub _languages() {
     my %lang_name=(
         ar => 'Arab'
         ,en => 'English'
         ,ca => 'Catalan'
         ,es => 'Spanish'
+        ,eu => 'Euskara'
         ,gl => 'Galician'
         ,fa => 'Persian'
         ,fr => 'French'
@@ -2134,11 +2135,21 @@ sub _translations($c) {
         ,vi => 'Vietnamese'
         ,zh_CN => 'Chinese'
     );
-    $c->stash(lang_name => \%lang_name);
+    return \%lang_name;
+}
+
+get '/translations' => sub($c) {
+    my $lang_name = _languages();
+    return $c->render(json => $lang_name);
+};
+
+sub _translations($c) {
+    my $lang_name = _languages();
+    $c->stash(lang_name => $lang_name);
     my $language = $USER->language;
     if (!$language) {
         for my $detected_lang (_detect_languages($c)) {
-            if ( $lang_name{$detected_lang}) {
+            if ( exists $lang_name->{$detected_lang}) {
                 $language = $detected_lang;
                 last;
             }

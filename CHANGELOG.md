@@ -7,7 +7,7 @@
 - Grant Open Ports [\#1858]
 - Grant permission to create volumes [\#1871]
 - Name conflict when creating a clone [\#1879]
-- Language updates: Catalan, Chinese, French, Hindi, Italian, Spanish, Turkish, Vietnamese
+- Language updates: Catalan, Chinese, Euskara, French, Hindi, Italian, Spanish, Turkish, Vietnamese
 - New languages : Norwegian, Melayu
 - Active machines chart [\#1878]
 - Queue volatiles clones [\#1853]
