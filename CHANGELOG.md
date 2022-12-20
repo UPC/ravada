@@ -2,13 +2,15 @@
 
 **Implemented enhancements:**
 
-- Grant open ports [\#1868]
-- Show date of status change [\#1856]
-- Manage USB controllers [\#1851]
-- Updates on Catalan, Spanish, Russian and Vietnamese
-
-**Refactors**
+- GPU Host Device Support [\#1706]
+- International characters in machine name [\#1804], [\#1824]
+- Grant Open Ports [\#1858]
+- Grant permission to create volumes [\#1871]
+- Name conflict when creating a clone [\#1879]
+- Language updates: Catalan, Chinese, French, Hindi, Italian, Spanish, Turkish, Vietnamese
+- New languages : Norwegian, Melayu
 
 **Bugfixes**
 
-- Clone name with name.surname [\#1843]
+- Rename base [\#1896]
+
