@@ -220,7 +220,7 @@ sub test_change_hardware($vm, @nodes) {
     my @hardware = grep (!/^disk$/, sort keys %{$info->{hardware}});
     push @hardware,("disk");
     for my $hardware ( @hardware) {
-        next if $hardware =~ /cpu|features/;
+        next if $hardware =~ /memory|cpu|features/;
         my $tls = 0;
         $tls = grep {$_->{driver} =~ /-tls/} @{$info->{hardware}->{$hardware}}
         if $hardware eq 'display';

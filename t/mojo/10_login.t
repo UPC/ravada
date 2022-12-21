@@ -589,7 +589,7 @@ sub test_clone($base1) {
     my $clone = Ravada::Front::Domain->open($id_domain);
 
     my $clone_name  = $base1->name."-".user_admin->name;
-    is($clone->name, $clone_name);
+    like($clone->name, qr/^$clone_name/);
     ok($clone->name);
     is($clone->is_volatile,0) or exit;
     is(scalar($clone->list_ports),2);
@@ -891,6 +891,34 @@ sub test_network_case($t) {
 
 }
 
+sub test_clone_same_name($t, $base) {
+    mojo_check_login($t);
+
+    my @clones = $base->clones();
+    $t->get_ok("/machine/clone/".$base->id.".html")
+    ->status_is(200);
+
+    wait_request();
+
+    my @clones2 = $base->clones();
+    my $clone = $clones2[-1];
+    is(scalar(@clones2) , scalar(@clones)+1);
+
+    mojo_request($t,"prepare_base", {id_domain => $clone->{id} });
+
+    $t->get_ok("/machine/clone/".$base->id.".html")
+    ->status_is(200);
+
+    wait_request();
+
+    my @clones3 = $base->clones();
+    is(scalar(@clones3) , scalar(@clones2)+1);
+
+    for my $c ($base->clones) {
+        mojo_request($t,"remove_domain", {name => $c->{name} });
+    }
+
+}
 
 ########################################################################################
 
@@ -942,6 +970,11 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     _init_mojo_client();
 
     test_new_machine($t);
+    my $base0 = test_create_base($t, $vm_name, $name);
+    push @bases,($base0->name);
+
+    test_clone_same_name($t, $base0);
+
     if ($vm_name eq 'KVM') {
         test_new_machine_default($t, $vm_name);
         test_new_machine_default($t, $vm_name, 1); # with empty iso file
@@ -952,8 +985,6 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
         test_new_machine_change_iso($t, $vm_name);
         test_new_machine_empty($t, $vm_name);
     }
-    my $base0 = test_create_base($t, $vm_name, $name);
-    push @bases,($base0->name);
     test_admin_can_do_anything($t, $base0);
 
     my $base2 =test_create_base($t, $vm_name, new_domain_name()."-$vm_name-$$");

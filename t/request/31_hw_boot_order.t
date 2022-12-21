@@ -26,7 +26,7 @@ my $xml =<<EOT;
       <libosinfo:os id="http://microsoft.com/win/10"/>
     </libosinfo:libosinfo>
   </metadata>
-  <memory unit='KiB'>4194304</memory>
+  <memory unit='KiB'>3194304</memory>
   <currentMemory unit='KiB'>4194304</currentMemory>
   <vcpu placement='static'>2</vcpu>
   <sysinfo type='smbios'/>

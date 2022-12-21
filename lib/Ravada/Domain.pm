@@ -321,6 +321,9 @@ sub _around_start($orig, $self, @arg) {
     my $request = delete $arg{request};
     my $listen_ip = delete $arg{listen_ip};
     my $remote_ip = $arg{remote_ip};
+    my $enable_host_devices;
+    $enable_host_devices = $request->defined_arg('enable_host_devices') if $request;
+    $enable_host_devices = 1 if !defined $enable_host_devices;
 
     for (;;) {
         eval { $self->_start_checks(@arg) };
@@ -354,10 +357,21 @@ sub _around_start($orig, $self, @arg) {
             }
             $arg{listen_ip} = $display_ip;
         }
+        if ($enable_host_devices) {
+            $self->_add_host_devices(@arg);
+        } else {
+            $self->_dettach_host_devices();
+        }
         $$CONNECTOR->disconnect;
         eval { $self->$orig(%arg) };
         $error = $@;
         last if !$error;
+
+        die "Error: starting ".$self->name." on ".$self->_vm->name." $error"
+        if $error =~ /there is no device|Did not find .*device/;
+
+        die $error if $error =~ /No DRM render nodes/;
+
         warn "WARNING: $error ".$self->_vm->name." ".$self->_vm->enabled if $error;
 
         ;# pool has asynchronous jobs running.
@@ -1004,7 +1018,7 @@ sub _check_free_vm_memory {
 
     return if $vm_free_mem > $min_free_memory;
 
-    $self->_data(status => 'down');
+    $self->_data(status => 'shutdown');
 
     my $msg = "Error: No free memory in ".$self->_vm->name.". Only "._gb($vm_free_mem)." out of "
         ._gb($min_free_memory)." GB required.\n";
@@ -1541,6 +1555,22 @@ sub _execute_request($self, $field, $value) {
     );
 }
 
+sub _log_active_domains($self) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT count(*) FROM domains "
+        ." WHERE status='active'"
+    );
+    $sth->execute();
+    my ($active) = $sth->fetchrow;
+    my $sth2 = $self->_dbh->prepare(
+        "INSERT INTO log_active_domains "
+        ." ( active) "
+        ." values(?)"
+    );
+    $sth2->execute(scalar($active));
+
+}
+
 sub _data($self, $field, $value=undef, $table='domains') {
 
     _init_connector();
@@ -1582,10 +1612,9 @@ sub _data($self, $field, $value=undef, $table='domains') {
         if ($data eq '_data' && $field eq 'status'
             && $value ne $self->{$data}->{$field}
         ) {
-            confess "$self->{$data}->{$field} => $value"
-            if $self->{$data}->{$field} eq 'hibernated'
-            && $value eq 'shutdown';
             $self->_data('date_status_change'=>Ravada::Utils::now());
+
+            $self->_log_active_domains();
         }
         $self->{$data}->{$field} = $value;
         $self->_propagate_data($field,$value) if $PROPAGATE_FIELD{$field};
@@ -2048,6 +2077,7 @@ sub info($self, $user) {
     }
     $info->{cdrom} = \@cdrom;
     $info->{requests} = $self->list_requests();
+    $info->{host_devices} = [ $self->list_host_devices_attached() ];
     $info->{date_status_change} = $self->_date_status_change();
 
     Ravada::Front::_init_available_actions($user, $info);
@@ -2332,6 +2362,7 @@ sub _remove_domain_data_db($id, $type=undef) {
     _finish_requests_db($id);
     for my $table (
         'access_ldap_attribute','domain_access'
+        ,'host_devices_domain'
         ,'domain_displays' , 'domain_ports', 'volumes', 'domains_void', 'domains_kvm', 'domain_instances', 'bases_vm', 'domain_access', 'base_xml', 'file_base_images', 'iptables', 'domains_network') {
         my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM $table WHERE id_domain=?");
         $sth->execute($id);
@@ -2885,6 +2916,7 @@ sub _copy_clone($self, %args) {
 
     _copy_volumes($self, $copy);
     _copy_ports($self, $copy);
+    _copy_host_devices($self, $copy);
     $copy->is_pool(1) if $add_to_pool;
     return $copy;
 }
@@ -2915,6 +2947,13 @@ sub _copy_ports($base, $copy) {
     }
 
 }
+
+sub _copy_host_devices($base, $copy) {
+    for my $host_device ( $base->list_host_devices() ) {
+        $copy->add_host_device($host_device);
+    }
+}
+
 
 sub _post_pause {
     my $self = shift;
@@ -2995,6 +3034,7 @@ sub _post_shutdown {
     my $is_active = $self->is_active;
 
     if ( $self->is_known && !$self->is_volatile && !$is_active ) {
+        $self->_unlock_host_devices();
         if ($self->is_hibernated) {
             $self->_data(status => 'hibernated');
         } else {
@@ -4426,7 +4466,16 @@ sub _around_rename($orig, $self, %args) {
 
     $self->id();
 
-    $self->_vm->_check_duplicate_name($name, 1);
+    return if $name eq $self->_data('name')
+            && $name eq $self->_data('alias');
+
+    $self->_vm->_check_duplicate_name($name, 1)
+    if $name ne $self->_data('name');
+
+    if ($name eq $self->_data('name') && $name ne $self->_data('alias')) {
+        $self->_data('alias' => $name);
+        return;
+    }
 
     $self->shutdown(user => $user)  if $self->is_active;
 
@@ -5305,7 +5354,10 @@ sub _search_pool_clone($self, $user) {
 
     my ($clone_down, $clone_free_up, $clone_free_down);
     my ($clones_in_pool, $clones_used) = (0,0);
+    my $id_daemon = Ravada::Utils::user_daemon->id;
     for my $current ( sort { $a->{name} cmp $b->{name} } $self->clones) {
+        next if $current->{is_base} ||
+            ( $current->{is_volatile} && $current->{id_owner} != $id_daemon);
         if ( $current->{id_owner} == $user->id
                 && $current->{status} =~ /^(active|hibernated)$/) {
             my $clone = Ravada::Domain->open($current->{id});
@@ -5317,7 +5369,10 @@ sub _search_pool_clone($self, $user) {
         } elsif ($current->{is_pool}) {
             $clones_in_pool++;
             my $clone = Ravada::Domain->open($current->{id});
-            if(!$clone->client_status || $clone->client_status eq 'disconnected') {
+            next if !$clone; #it may be removed on shutdown
+
+            if(!$clone->client_status
+                || lc($clone->client_status) eq lc('disconnected')) {
                 if ( $clone->status =~ /^(active|hibernated)$/ ) {
                     $clone_free_up = $current;
                 } else {
@@ -5329,16 +5384,35 @@ sub _search_pool_clone($self, $user) {
         }
     }
 
-
     my $clone_data = ($clone_down or $clone_free_up or $clone_free_down);
-    die "Error: no free clones in pool for ".$self->name
-        .". Usage: $clones_used used from $clones_in_pool virtual machines created.\n"
+    my @clones = grep {!$_->{is_base} && $_->{is_pool} } $self->clones ;
+    if (!$clone_data && scalar(@clones)<$self->pool_clones) {
+        $clone_data = $self->_create_clone_in_pool();
+    }
+    die "Error: no free clones in pool for ".$self->name."\n"
         if !$clone_data;
 
     my $clone = Ravada::Domain->open($clone_data->{id});
     $clone->id_owner($user->id);
     $clone->_data( comment => $user->name );
     return $clone;
+}
+
+sub _create_clone_in_pool($self) {
+
+    my $owner = Ravada::Auth::SQL->search_by_id($self->_data('id_owner'));
+
+    my $n = scalar $self->clones()+1;
+    my $clone = $self->clone(
+        user => $owner
+        ,name => $self->name."-".$n."-".Ravada::Utils::random_name(2)
+        ,add_to_pool => 1
+        ,from_pool => 0
+        ,start => 1
+    );
+    my $clone_data = { id => $clone->id };
+    return $clone_data;
+
 }
 
 =head2 internal_id
@@ -6833,6 +6907,301 @@ sub refresh_ports($self, $request=undef) {
         $user = Ravada::Auth::SQL->search_by_id($uid) if ($uid);
         $user->send_message($msg) if ($user);
     }
+}
+
+sub can_host_devices { return 0 }
+
+sub add_host_device($self, $host_device) {
+    my $id_hd = $host_device;
+    $id_hd = $host_device->id if ref($host_device);
+
+    my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO host_devices_domain "
+        ."(id_host_device, id_domain) "
+        ." VALUES ( ?, ? ) "
+    );
+    $sth->execute($id_hd, $self->id);
+}
+
+sub remove_host_device($self, $host_device) {
+    confess if !ref($host_device);
+
+    confess if $self->readonly;
+    $self->_dettach_host_device($host_device);
+
+    my $id_hd = $host_device->id;
+
+    $self->_dettach_host_device($host_device);
+
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain "
+        ." WHERE id_domain=? AND id_host_device=?"
+    );
+    $sth->execute($self->id, $id_hd);
+    if ($self->is_base) {
+        for my $clone_data ( $self->clones ) {
+            my $clone = Ravada::Domain->open($clone_data->{id});
+            $clone->remove_host_device($host_device);
+        }
+    }
+}
+
+sub list_host_devices($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM host_devices WHERE id IN (SELECT id_host_device FROM  host_devices hd, host_devices_domain hdd "
+        ." WHERE hdd.id_domain=?"
+        ."    AND hdd.id_host_device = hd.id )"
+        ."    AND enabled=1"
+    );
+    $sth->execute($self->id);
+
+    my @found;
+    while (my $row = $sth->fetchrow_hashref) {
+        $row->{devices} = '' if !defined $row->{devices};
+        push @found,(Ravada::HostDevice->new(%$row));
+    }
+
+    return @found;
+}
+
+sub list_host_devices_attached($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT hdd.*, hd.name as host_device_name "
+        ." FROM host_devices_domain hdd , host_devices hd "
+        ." WHERE hdd.id_domain=? "
+        ."   AND hdd.id_host_device = hd.id "
+        ."   AND hd.enabled=1"
+    );
+    $sth->execute($self->id);
+
+    my $sth_locked = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM host_devices_domain_locked "
+        ." WHERE id_domain=? AND name=?"
+    );
+
+    my @found;
+    while (my $row = $sth->fetchrow_hashref) {
+        $row->{is_locked} = 0;
+        if ($row->{name}) {
+            $sth_locked->execute($self->id, $row->{name});
+            my ($is_locked) = $sth_locked->fetchrow();
+            $row->{is_locked} = 1 if $is_locked;
+        }
+        push @found,($row);
+    }
+
+    return @found;
+}
+
+# adds host devices to domain instance
+# usually run right before startup
+sub _add_host_devices($self, @args) {
+    my @host_devices = $self->list_host_devices();
+    return if !@host_devices;
+    return if $self->is_active();
+
+    my $vm_local = $self->_vm->new( host => 'localhost' );
+    my $vm = $vm_local;
+
+    my ($id_vm, $request);
+    if (!(scalar(@args) % 2)) {
+        my %args = @args;
+        $request = delete $args{request} if exists $args{request};
+    }
+
+    my $doc = $self->get_config();
+    for my $host_device ( @host_devices ) {
+        my $device_configured = $self->_device_already_configured($host_device);
+
+        if ( $device_configured ) {
+            if ( $host_device->enabled() && $host_device->is_device($device_configured) && $self->_lock_host_device($host_device) ) {
+                next;
+            } else {
+                $self->_dettach_host_device($host_device, $doc, $device_configured);
+            }
+        }
+        next if !$host_device->enabled();
+
+        my ($device) = $host_device->list_available_devices();
+        if ( !$device ) {
+            $device = _refresh_domains_with_locked_devices($host_device);
+            if (!$device) {
+                $self->_data(status => 'down');
+                $self->_unlock_host_devices();
+                die "Error: No available devices in ".$host_device->name."\n";
+            }
+        }
+
+        $self->_lock_host_device($host_device, $device);
+
+        for my $entry( $host_device->render_template($device) ) {
+            if ($entry->{type} eq 'node') {
+                $self->add_config_node($entry->{path}, $entry->{content}, $doc);
+            } elsif ($entry->{type} eq 'unique_node') {
+                $self->add_config_unique_node($entry->{path}, $entry->{content}, $doc);
+            } elsif($entry->{type} eq 'attribute') {
+                $self->change_config_attribute($entry->{path}, $entry->{content}, $doc);
+            } elsif($entry->{type} eq 'namespace') {
+                $self->change_namespace($entry->{path}, $entry->{content}, $doc);
+            } else {
+                die "Error in host_device ".$host_device->name
+                ." template: ".$entry->{path}
+                ." Unknown type ".($entry->{type} or '<UNDEF>');
+            }
+        }
+    }
+    $self->reload_config($doc);
+
+}
+
+sub _dettach_host_devices($self) {
+    my @host_devices = $self->list_host_devices();
+    for my $host_device ( @host_devices ) {
+        $self->_dettach_host_device($host_device);
+    }
+    $self->remove_host_devices();
+}
+
+sub _dettach_host_device($self, $host_device, $doc=$self->get_config
+    ,$device = $self->_device_already_configured($host_device)
+) {
+
+    return if !defined $device or !length($device);
+
+    for my $entry( $host_device->render_template($device) ) {
+        if ($entry->{type} eq 'node') {
+            $self->remove_config_node($entry->{path}, $entry->{content}, $doc);
+        } elsif ($entry->{type} eq 'unique_node') {
+            $self->remove_config_node($entry->{path}, $entry->{content}, $doc);
+        } elsif($entry->{type} eq 'attribute') {
+            $self->remove_config_attribute($entry->{path}, $entry->{content}, $doc);
+        } elsif($entry->{type} eq 'namespace') {
+            $self->remove_namespace($entry->{path}, $entry->{content}, $doc);
+        } else {
+            die "Error in host_device ".$host_device->name
+            ." template: ".$entry->{path}
+            ." Unknown type ".($entry->{type} or '<UNDEF>');
+        }
+    }
+    $self->reload_config($doc);
+
+    $self->_unlock_host_device($device);
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE host_devices_domain SET name=NULL "
+        ." WHERE id_domain=? AND id_host_device=?"
+    );
+    $sth->execute($self->id, $host_device->id);
+
+}
+
+# marks a host device as being used by a domain
+sub _lock_host_device($self, $host_device, $device=undef) {
+    if (!defined $device) {
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM host_devices_domain "
+            ." WHERE id_domain=? AND id_host_device=?"
+        );
+        $sth->execute($self->id, $host_device->id);
+        ($device) = $sth->fetchrow;
+        confess "Error: no device name defined for id_domain=".$self->id
+        ." and id_host_device=".$host_device->id
+        if !defined $device || !length($device);
+    }
+
+    my $id_domain_locked = $self->_check_host_device_already_used($device);
+    return 1 if defined $id_domain_locked &&  $self->id == $id_domain_locked;
+
+    return 0 if defined $id_domain_locked;
+
+    my $query = "INSERT INTO host_devices_domain_locked (id_domain,id_vm,name) VALUES(?,?,?)";
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+    eval { $sth->execute($self->id,$self->_vm->id, $device) };
+    if ($@) {
+        warn $@;
+        $self->_data(status => 'shutdown');
+        die "Error: device $device already in use $@\n";
+    }
+
+    $sth=$$CONNECTOR->dbh->prepare("UPDATE host_devices_domain SET name=?"
+        ." WHERE id_domain=? AND id_host_device=?"
+    );
+    $sth->execute($device, $self->id, $host_device->id);
+
+    return 1;
+}
+
+sub _unlock_host_devices($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+}
+
+sub _unlock_host_device($self, $name) {
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
+        ." WHERE id_domain=? AND name=?"
+    );
+    $sth->execute($self->id, $name);
+}
+
+
+sub _check_host_device_already_used($self, $device) {
+
+    my $query = "SELECT id_domain FROM host_devices_domain_locked "
+    ." WHERE id_vm=? AND name=?"
+    ;
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+    $sth->execute($self->_vm->id, $device);
+    my ($id_domain) = $sth->fetchrow;
+    #    warn "\n".($id_domain or '<UNDEF>')." [".$self->id."] had locked $device\n";
+
+    return if !defined $id_domain;
+    return $id_domain if $id_domain == $self->id;
+
+    my $domain = Ravada::Domain->open($id_domain);
+
+    return $id_domain if $domain->is_active;
+
+    $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
+        ." WHERE id_domain=?");
+    $sth->execute($id_domain);
+    return;
+}
+
+sub _device_already_configured($self, $host_device) {
+    my $query = "SELECT name FROM host_devices_domain WHERE id_domain=? AND id_host_device=?";
+
+    confess if !ref($host_device);
+    my @args = ($self->id, $host_device->id);
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+    $sth->execute(@args);
+
+    my ($name) = $sth->fetchrow;
+    return $name;
+}
+
+sub _refresh_domains_with_locked_devices($host_device) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT hdd.id_domain,hdd_locked.name "
+        ." FROM host_devices_domain hdd, host_devices_domain_locked hdd_locked"
+        ." WHERE hdd.id_host_device=?"
+        ."   AND hdd.id_domain=hdd_locked.id_domain"
+    );
+    my $sth_delete = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
+        ." WHERE id_domain=?");
+    $sth->execute($host_device->id);
+
+    my $free_device;
+    while ( my ($id_domain, $device) = $sth->fetchrow ) {
+        my $domain = Ravada::Domain->open($id_domain);
+        next if $domain->is_active();
+        $sth_delete->execute($id_domain);
+        Ravada::Request->refresh_machine(
+            id_domain => $id_domain
+            ,uid => Ravada::Utils::user_daemon->id
+        );
+        $free_device = $device;
+    }
+    return $free_device;
 }
 
 sub list_backups($self) {

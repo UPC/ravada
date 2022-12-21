@@ -696,7 +696,7 @@ sub display_info($self, $user) {
         } elsif ($type eq 'vnc' ) {
             $display= _display_info_vnc($graph);
         } else {
-            confess "I don't know how to check info for $type display";
+            $display= _display_info_default($graph);
         }
 
         $display->{port} = undef if $display->{port} && $display->{port}==-1;
@@ -720,6 +720,17 @@ sub display_info($self, $user) {
     }
     return $display[0] if !wantarray;
     return @display;
+}
+
+sub _display_info_default($graph) {
+    my ($type) = $graph->getAttribute('type');
+    my %display = ( driver => $type );
+    for my $attr ( $graph->getAttributes()) {
+        my $value = $attr->toString();
+        $value =~ s/^\s+//;
+        $display{$attr->getName()} = $value;
+    }
+    return \%display;
 }
 
 sub _display_info_vnc($graph) {
@@ -3433,15 +3444,16 @@ sub _validate_xml($self, $doc) {
         open my $out1,">",$file_out or die $!;
         print $out1 $self->xml_description();
         close $out1;
-        my $file_new = "/var/tmp/".$self->name().".new.xml";
-        open my $out2,">",$file_new or die $!;
+        my $file_out_new = "/var/tmp/".$self->name()."."
+	    .int(rand(100)).".new.xml";
+        open my $out2,">",$file_out_new or die $!;
         my $doc_string = $doc->toString();
         $doc_string =~ s/^<.xml.*//;
         $doc_string =~ s/"/'/g;
         print $out2 $doc_string;
         close $out2;
 
-        confess "\$?=$? $err\ncheck $file_new" if $?;
+        confess "\$?=$? $err\ncheck $file_out and $file_out_new" if $?;
     }
 }
 
@@ -3449,6 +3461,18 @@ sub reload_config($self, $doc) {
     $self->_validate_xml($doc) if $self->_vm->vm->get_major_version >= 4;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
+}
+
+sub _save_xml_tmp($self,$doc) {
+    my $file_out_new = "/var/tmp/".$self->name()."."
+    .int(rand(100)).".new.xml";
+    open my $out2,">",$file_out_new or die $!;
+    my $doc_string = $doc->toString();
+    $doc_string =~ s/^<.xml.*//;
+    $doc_string =~ s/"/'/g;
+    print $out2 $doc_string;
+    close $out2;
+
 }
 
 sub copy_config($self, $domain) {
@@ -3459,6 +3483,10 @@ sub copy_config($self, $domain) {
     $uuid->setData($self->domain->get_uuid_string);
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
+}
+
+sub get_config($self) {
+    return XML::LibXML->load_xml( string => $self->xml_description());
 }
 
 sub _change_xml_address($self, $doc, $address, $bus) {
@@ -3581,10 +3609,299 @@ sub _remove_backingstore($self, $file) {
     $self->reload_config($doc);
 }
 
+sub _xml_create_path($self, $doc, $path0) {
+    my $path = '';
+    my $parent;
+    for my $current ( split m{/}, $path0 ) {
+        next if $current eq '';
+        $path .= "/$current";
+        my @nodes = $doc->findnodes($path);
+        if ( scalar(@nodes) ) {
+            $parent = $nodes[0];
+            next;
+        }
+
+        $parent->addNewChild(undef, $current);
+    }
+    return $doc->findnodes($path0);
+}
+
+sub can_host_devices { return 1 }
+
+sub _add_xml_parse($parent, $content) {
+    for my $line ( split /\n/,$content) {
+        next if $line =~ /^\s*$/;
+        last if $line =~ m{</};
+        my ($name) = $line =~ /<(.*?)[> ]/;
+        die "I can get node name from '$line'" if !$name;
+        my $child = $parent->addNewChild(undef, $name);
+
+        if ( $line !~ m{/>} ) {
+            $parent = $child;
+        }
+        my ($attr, $value, $extra) = $line =~ m{<.*?\s+(.*?)='(.*)'\s*(.*)};
+        next if !$attr;
+        $child->setAttribute($attr => $value);
+        die "Too much content in $line : $extra" if $extra && $extra !~ m{^[/>\s]+$};
+    }
+
+}
+
+sub remove_config_node($self, $path, $content, $doc) {
+    my ($dir,$entry) = $path =~ m{(.*)/(.*)};
+    confess "Error: missing entry in '$path'" if !$entry;
+
+    my @parent = $doc->findnodes($dir);
+    return if !scalar(@parent);
+
+    if ($entry eq 'hostdev') {
+        my $content_xml = XML::LibXML->load_xml(string => $content);
+        my ($hostdev) = $content_xml->findnodes('/hostdev');
+        if ($hostdev->getAttribute('type') =~ m/pci|mdev|usb/) {
+            my ($address) = $content_xml->findnodes("/hostdev/source/address");
+            my $address_string = $address->toString();
+            $address_string =~ s/"00/"/g;
+            die $content_xml->toString if !$address;
+            for my $parent (@parent) {
+                for my $element ($parent->childNodes()) {
+                    next if $element->getName ne $entry;
+                    my ($source) = $element->findnodes("source");
+                    my ($address_e);
+                    ($address_e) = $source->findnodes("address") if $source;
+                    if ($address_e) {
+                        my $address_e_string = $address_e->toString();
+                        $address_e_string =~ s/"00/"/g;
+                        if( $address_string eq $address_e_string) {
+                            $parent->removeChild($element);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    # unknown hostdev kind, we try to match the whole content
+
+    $content =~ s/^\s+//mg;
+    $content =~ s/\'/"/g;
+    chomp $content;
+
+    for my $parent (@parent) {
+        for my $element ($parent->childNodes()) {
+            next if $element->getName ne $entry;
+            if ($entry eq 'hostdev') {
+                for my $address ( $element->childNodes() ) {
+                    if ( $address->getName eq 'address' || $address->getName eq 'alias' ) {
+                        $element->removeChild($address);
+                    }
+                }
+            }
+            my $element_s = $element->toString();
+            $element_s =~ s/^\s+//mg;
+            if ( _xml_equal_hostdev($content, $element_s) ) {
+                $parent->removeChild($element);
+            } else {
+                my @lines_c = split /\n/,$content;
+                my @lines_e = split /\n/,$element_s;
+                warn $element->getName." ".(scalar(@lines_c)." ".scalar(@lines_e));
+                for ( 0 .. scalar(@lines_c) ) {
+                    warn Dumper([$_,$lines_c[$_],$lines_e[$_]])
+                    if $lines_c[$_] ne $lines_e[$_];
+                }
+                warn $content;
+                die $self->name if $element->getName eq 'hostdev';
+            }
+        }
+    }
+}
+
+sub _xml_equal_hostdev($doc1, $doc2) {
+    return 1 if $doc1 eq $doc2;
+    my $parser = XML::LibXML->new() or die $!;
+    $doc1 =~ s{(</?)\w+:(\w+)}{$1$2}mg;
+    my $xml1 = $parser->parse_string($doc1);
+    $doc2 =~ s{(</?)\w+:(\w+)}{$1$2}mg;
+    my $xml2 = $parser->parse_string($doc2);
+    for my $xml ( $xml1, $xml2) {
+        my ($hostdev) = $xml->findnodes("/hostdev");
+        next if !$hostdev;
+
+        my ($address ) = $hostdev->findnodes("/hostdev/address");
+        $hostdev->removeChild($address) if $address;
+
+        my ($source) = $hostdev->findnodes("/hostdev/source");
+        for my $node ( $source->findnodes('*')) {
+            for my $attrib ( $node->attributes ) {
+                my $value2 = $attrib->value;
+                $value2 = '0x0' if $value2 eq '0x';
+                $value2 =~ s/^(0x)0*(.+)/$1$2/;
+                $node->setAttribute($attrib->name,$value2)
+                if $value2 ne $attrib->value;
+            }
+        }
+        my $txt = '';
+        for my $line ( split /\n/,$xml->toString() ) {
+            $txt .= $line."\n" if $line =~ /./;
+        }
+        $xml = XML::LibXML->load_xml(string => $txt);
+    }
+    return $xml1->toString() eq $xml2->toString();
+
+}
+
+sub add_config_node($self, $path, $content, $doc) {
+
+    my ($dir,$entry) = $path =~ m{(.*)/(.*)};
+    confess "Error: missing entry in '$path'" if !$entry;
+
+    my @parent = $doc->findnodes($dir);
+    if (scalar(@parent)==0) {
+        @parent = $self->_xml_create_path($doc, $dir);
+    }
+
+    die "Error: I found ".scalar(@parent)." nodes for $dir, expecting 1"
+    unless scalar(@parent)==1;
+
+    my $element;
+    eval {
+    ($element) = $parent[0]->findnodes($entry);
+    };
+    die $@ if $@ && $@ !~ /Undefined namespace prefix/;
+    return if $element && $element->toString eq $content;
+
+    if ($content =~ /<qemu:commandline/) {
+        _add_xml_parse($parent[0], $content);
+    } else {
+        $self->_fix_pci_slot(\$content);
+        $parent[0]->appendWellBalancedChunk($content);
+    }
+
+}
+
+sub _fix_pci_slot($self, $content) {
+    my ($machine_type) = $self->_os_type_machine();
+
+    my %dupe;
+    my $config = XML::LibXML->load_xml(string => $self->xml_description);
+    for my $address ($config->findnodes("/domain/devices/*/address")) {
+        my $slot = $address->getAttribute('slot');
+        $slot='0x01' if !defined $slot;
+        my $d = $address->getAttribute('domain');
+        next if !defined $d;
+        my $b = $address->getAttribute('bus');
+        my $f = $address->getAttribute('function');
+        $dupe{"$d:$b:$slot.$f"}++;
+    }
+    $XML::LibXML::skipXMLDeclaration = 1;
+    my $xml = XML::LibXML->load_xml( string => $$content );
+
+    my ($address) = $xml->findnodes('*/address');
+    if ( !$address ) {
+        $XML::LibXML::skipXMLDeclaration = 0;
+        return;
+    }
+
+    my $changed = 0;
+    my $slot = $address->getAttribute('slot');
+    if ($machine_type =~ /pc-q35/ && $slot ne '0x00') {
+        $slot = '0x00';
+        $address->setAttribute('slot' => $slot);
+        $changed++;
+    }
+    for my $f (0 .. 9,'a' .. 'f') {
+        my $d = $address->getAttribute('domain');
+        my $b = $address->getAttribute('bus');
+        my $new = "$d:$b:$slot.0x$f";
+        next if $dupe{$new};
+        $address->setAttribute('function'=>$f);
+        $changed++;
+        last;
+    }
+    $$content = $xml->toString();
+
+    $XML::LibXML::skipXMLDeclaration = 0;
+}
+
+sub add_config_unique_node($self, $path, $content, $doc) {
+
+    my ($dir,$entry) = $path =~ m{(.*)/(.*)};
+    confess "Error: missing entry in '$path'" if !$entry;
+
+    my @parent = $doc->findnodes($dir);
+    if (scalar(@parent)==0) {
+        @parent = $self->_xml_create_path($doc, $dir);
+    }
+
+    die "Error: I found ".scalar(@parent)." nodes for $dir, expecting 1"
+    unless scalar(@parent)==1;
+
+    my $element;
+    eval {
+    ($element) = $parent[0]->findnodes($entry);
+    };
+    die $@ if $@ && $@ !~ /Undefined namespace prefix/;
+    return if $element && $element->toString eq $content;
+
+    if ($element ) {
+        my $child = $parent[0]->removeChild($element);
+    }
+    if ($content =~ /<qemu:commandline/) {
+        _add_xml_parse($parent[0], $content);
+    } else {
+        $parent[0]->appendWellBalancedChunk($content);
+    }
+
+}
+sub change_config_attribute($self, $path, $content, $doc) {
+
+    confess "Error: empty path" if !length($path);
+    my @node = $doc->findnodes($path);
+
+    die "Error: I found ".scalar(@node)." nodes for $path, expecting 1"
+    unless scalar(@node)==1;
+
+    for ( ;; ) {
+        my ($field, $value, $more) = $content =~ m{([A-Za-z0-9:]+)='(.*)'(.*)};
+        $node[0]->setAttribute($field => $value);
+        last if !$more || $more =~ /\s+/;
+    }
+
+}
+sub change_namespace($self, $path, $content, $doc) {
+    confess "Error: empty path" if !length($path);
+    my @node = $doc->findnodes($path);
+
+    my ($prefix,$uri) = $content =~ /(.*?)=(.*)/;
+    $uri =~ s/^'(.*)'/$1/;
+
+    $node[0]->setNamespace($uri, $prefix, 0);
+}
+
+sub remove_namespace($self, $path, $content, $doc) {
+    my @node = $doc->findnodes($path);
+    my ($prefix,$uri) = $content =~ /(.*?)=(.*)/;
+    $uri =~ s/^'(.*)'/$1/;
+    # die Dumper([$node[0]->getNameSpaces()]);
+}
+
+sub remove_host_devices($self) {
+    my $doc = XML::LibXML->load_xml(string
+            => $self->xml_description(Sys::Virt::Domain::XML_INACTIVE))
+        or die "ERROR: $!\n";
+
+    my ($dev) = $doc->findnodes("/domain/devices");
+    for my $hostdev ( $dev->findnodes("hostdev") ) {
+        $dev->removeChild($hostdev);
+        warn $hostdev->toString();
+    }
+    $self->reload_config($doc);
+}
+
 sub has_nat_interfaces($self) {
     my $doc = XML::LibXML->load_xml(string
             => $self->xml_description(Sys::Virt::Domain::XML_INACTIVE))
         or die "ERROR: $!\n";
+
 
     for my $if ($doc->findnodes('/domain/devices/interface/source')) {
         return 1 if $if->getAttribute('network');
