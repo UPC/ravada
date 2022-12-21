@@ -15,3 +15,4 @@
 
 - Fix fallback javascript maps [\#1892]
 - Add filesystem info to table [\#1893]
+- Clones disk volume changed [\#1901]
