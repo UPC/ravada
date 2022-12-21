@@ -5,6 +5,7 @@ use Test::More;
 
 use Carp qw(carp confess cluck);
 use Data::Dumper;
+use Storable qw(dclone);
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -53,7 +54,43 @@ sub test_add_hw($hardware, $base, $clone) {
 
 }
 
-sub test_add_rm_hw($base) {
+sub _test_change_disk($base, $clone) {
+    my $disks_base = $base->info(user_admin)->{hardware}->{disk};
+    my $disks_clone = $clone->info(user_admin)->{hardware}->{disk};
+    my $data_base = dclone($disks_base->[0]);
+    my $data_clone = dclone($disks_clone->[0]);
+    my $cache = 'none';
+    $cache = 'unsafe' if $data_base->{driver}->{cache} eq 'none';
+    $data_base->{driver}->{cache} = 'none';
+    my $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,hardware => 'disk'
+        ,id_domain => $base->id
+        ,index => 0
+        ,data => $data_base
+    );
+    wait_request();
+    my $disks_base2 = $base->info(user_admin)->{hardware}->{disk};
+    my $disks_clone2 = $clone->info(user_admin)->{hardware}->{disk};
+
+    my $data_base2 = dclone($disks_base2->[0]);
+    my $data_clone2 = dclone($disks_clone2->[0]);
+
+    is_deeply($data_base2, $data_base);
+    is($data_clone2->{file}, $data_clone->{file}) or exit;
+}
+
+sub test_change_hw($hardware, $base, $clone) {
+    my %tests = (
+        'disk.KVM' => \&_test_change_disk
+    );
+    my $cmd = $tests{$hardware.".".$base->type};
+    return if !$cmd;
+
+    $cmd->($base,$clone);
+}
+
+sub test_add_rm_change_hw($base) {
     my ($clone_d) = $base->clones;
     my $clone = Ravada::Domain->open($clone_d->{id});
     my %controllers = $base->list_controllers;
@@ -63,6 +100,7 @@ sub test_add_rm_hw($base) {
         next if $base->type eq 'KVM' && $hardware =~ /^(cpu|features)$/;
 
         test_add_hw($hardware, $base, $clone);
+        test_change_hw($hardware, $base, $clone);
         test_rm_hw($hardware, $base, $clone);
     }
 }
@@ -135,7 +173,7 @@ for my $vm_name (vm_names()) {
     );
     wait_request();
 
-    test_add_rm_hw($base);
+    test_add_rm_change_hw($base);
 }
 
 end();

@@ -12,9 +12,11 @@
 - Active machines chart [\#1878]
 - Queue volatiles clones [\#1853]
 
+
 **Bugfixes**
 
 - Rename base [\#1896]
+- Clones disk volume changed [\#1901]
 
 **Refactors**
 

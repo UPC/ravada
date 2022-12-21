@@ -2835,6 +2835,8 @@ sub _change_hardware_disk($self, $index, $data) {
     }
 
     $self->_change_disk_settings($index, $data);
+
+    $self->_set_volumes_backing_store();
 }
 
 sub _change_disk_settings($self, $index, $data) {

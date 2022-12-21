@@ -4873,6 +4873,9 @@ sub _apply_clones($self, $request) {
     return if !$domain->is_base;
 
     my $args = $request->args;
+    delete $args->{data}->{file}
+    if $request->command eq 'change_hardware' && $args->{'hardware'} eq 'disk';
+
     for my $clone ($domain->clones) {
         Ravada::Request->new_request(
             $request->command
