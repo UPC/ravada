@@ -252,6 +252,7 @@ sub test_requests_by_domain {
     is($req2->status , 'done');
 
     is($req4->status , 'done');
+    $domain->_refresh_db();
     is($domain->is_base,1) or exit;
 
     my $req4b = Ravada::Request->open($req4->id);

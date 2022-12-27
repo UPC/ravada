@@ -89,7 +89,7 @@ sub test_clone_raw($domain ) {
         my ($format) = $doc->findnodes('/backingStore/format');
         ok($format,"Expecing <format.. > in backing: ".$doc->toString) or next;
         is($format->getAttribute('type'),'qcow2',"Expecting format ".$format->toString)
-            or exit;
+            or die Dumper($vol);
     }
     is($found,2);
 

@@ -1257,6 +1257,7 @@ sub add_volume {
     eval { $self->domain->attach_device($xml_device,Sys::Virt::Domain::DEVICE_MODIFY_CONFIG) };
     die $@ if $@;
     $self->_set_boot_order($path, $boot) if $boot;
+    $self->_set_volumes_backing_store();
     return ( $path or $name);
 }
 

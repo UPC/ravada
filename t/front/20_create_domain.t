@@ -123,7 +123,8 @@ sub test_domain_info {
 
     $domain_b->shutdown_now(user_admin);
 
-    ok(!exists $domain->info(user_admin)->{ip},"Expecting no IP after shutdown");
+    my $info = $domain_b->info(user_admin);
+    ok(!exists $info->{ip} || !defined $info->{ip},"Expecting no IP after shutdown");
 }
 
 ####################################################################

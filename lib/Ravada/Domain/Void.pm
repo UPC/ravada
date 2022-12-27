@@ -347,6 +347,9 @@ sub shutdown {
     for my $display (@{$hardware->{'display'}}) {
         $display->{port} = 'auto';
     }
+    for my $network ( @{$hardware->{network}} ) {
+        delete $network->{address};
+    }
     $self->_store(hardware => $hardware);
 }
 
@@ -914,16 +917,19 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
     $#$list = $number-1 if defined $number && scalar @$list < $number;
 
     my @list2;
+    $data = { name => "$name-".Ravada::Utils::random_name(2)
+        , driver => 'void'}
+    if !defined $data || (ref($data) && !keys %$data);
+
     if (!defined $number) {
         @list2 = @$list;
-        push @list2,($data or " $name z 1");
+        push @list2,($data);
     } else {
         my $count = 0;
         for my $item ( @$list ) {
             $count++;
             if ($number == $count) {
-                my $data2 = ( $data or " $name a ".($count+1));
-                $data2 = " $name b ".($count+1) if defined $data2 && ref($data2) && !keys %$data2;
+                my $data2 = $data;
 
                 push @list2,($data2);
                 next if !defined $item;

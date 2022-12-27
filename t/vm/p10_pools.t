@@ -48,6 +48,7 @@ sub test_clones($domain, $n_clones) {
     $domain->pool_clones($n_clones);
     is($domain->pool_clones, $n_clones);
     wait_request(debug => 0);
+    $domain->_refresh_db();
     is($domain->is_base,1);
     is($domain->clones(), $n_clones) or exit;
     is($domain->clones(is_pool => 1), $n_clones);
@@ -323,6 +324,7 @@ sub test_exposed_port($vm) {
     wait_request( debug => 0, skip => 'set_time' );
     is($req->status, 'done');
     is($req->error,'');
+    $base->_refresh_db();
     is($base->is_base,1) or exit;
 
     my $req_refresh = Ravada::Request->refresh_vms( _no_duplicate => 1);

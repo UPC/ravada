@@ -226,7 +226,7 @@ sub test_needs_shutdown {
         my $value = $domain_f->get_driver($type->name);
         is($value , $option->{value});
 
-        is($domain_f->needs_restart, 0);
+        is($domain_f->needs_restart, 0) or exit;
     }
     $domain->remove(user_admin);
 }

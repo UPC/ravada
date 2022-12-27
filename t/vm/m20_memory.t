@@ -163,6 +163,7 @@ sub test_change_max_mem_base($vm) {
         ,id_domain => $base->id
     );
     wait_request();
+    $base->_refresh_db();
     is($base->is_base,1);
 
     my $clone = $base->clone(user => user_admin, name => new_domain_name);

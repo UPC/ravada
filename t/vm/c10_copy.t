@@ -179,6 +179,7 @@ sub test_copy_req_nonbase {
     my $copy = rvd_back->search_domain($name_copy);
     ok($copy,"[$vm_name] Expecting domain $name_copy");
 
+    $domain->_refresh_db();
     is($domain->is_base,1);
 
     my $id_copy = $copy->id;
@@ -212,6 +213,7 @@ sub test_copy_req_many {
     is($req->status(),'done');
     is($req->error,'');
 
+    $domain->_refresh_db();
     is($domain->is_base,1);
 
     my @clones = $domain->clones();

@@ -883,7 +883,7 @@ sub test_port_prerouting_already_open_clones($vm) {
     my $ip2 = _wait_ip2($vm, $clone2);
     ok($ip2) or die "No ip for ".$clone2->name;;
 
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my @out = split /\n/, `iptables-save`;
 
@@ -960,12 +960,12 @@ sub test_port_prerouting_already_open_clones_no_restricted($vm) {
         ,id_domain => $clone2->id
         ,remote_ip => $remote_ip2
     );
-    wait_request( debug => 1);
+    wait_request( debug => 0);
 
     my $ip2 = _wait_ip2($vm, $clone2);
     ok($ip2) or die "No ip for ".$clone2->name;;
 
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my @out = split /\n/, `iptables-save`;
 
@@ -1166,13 +1166,14 @@ sub test_open_port_duplicated($vm) {
     for ( 1 .. 5 ) {
         @out3 = split /\n/, `iptables-save -t nat`;
         @open3 = (grep /--dport $public_port/, @out3);
-        last if scalar(@open3);
+        last if scalar(@open3)==1;
         Ravada::Request->open_exposed_ports(
             uid => user_admin->id
             ,id_domain => $clone->id
             ,_force => 1
         );
         wait_request();
+        rvd_back->_check_duplicated_prerouting();
     }
     is(scalar(@open3),1,"Expecting 1 --dport $public_port") or die Dumper(\@open3,\@out3);
 
@@ -1239,7 +1240,13 @@ sub test_clone_exports_add_ports($vm) {
     $base->prepare_base(user => user_admin, with_cd => 1);
 
     my $clone = $base->clone(name => new_domain_name, user => user_admin);
-    $base->expose(port => 80, name => "web");
+    Ravada::Request->expose(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,port => 80
+        ,name => 'web'
+    );
+    wait_request();
     my @base_ports = $base->list_ports();
     is(scalar @base_ports, scalar @base_ports0 + 1);
 

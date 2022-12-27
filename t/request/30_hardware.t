@@ -735,7 +735,8 @@ sub test_remove_hardware_by_index($vm, $hardware) {
     $name_field = '_name'   if ref($items2->[0]) && !exists $items2->[0]->{$name_field};
     if (!ref($items2->[0])) {
         is($items2->[0], $items1->[0]);
-        is($items2->[1], $items1->[2]);
+        is($items2->[1], $items1->[2]) or die Dumper($items2);
+        is_deeply($items2->[1], $items1->[2]);
     } elsif ($hardware !~ /^(usb controller|video)$/) {
         die "Error: no $name_field in ".Dumper($items2) if !exists $items2->[0]->{$name_field};
 
@@ -877,6 +878,8 @@ sub test_change_disk_nothing($vm, $domain) {
         my $domain2 = Ravada::Front::Domain->open($domain->id);
         my $info2 = $domain_f->info(user_admin);
         my $data2= $info2->{hardware}->{$hardware}->[$count];
+        delete $data2->{backing} if exists $data2->{backing} && defined $data2->{backing} && $data2->{backing} eq '<backingStore/>';
+        delete $data->{backing} if exists $data->{backing} && defined $data->{backing} && $data->{backing} eq '<backingStore/>';
         is_deeply($data2, $data)
             or die Dumper([$domain->name, $data2, $data]);
     }
@@ -1144,7 +1147,7 @@ sub test_change_filesystem($vm,$domain) {
         ,id_domain => $domain->id
     );
     my $req = Ravada::Request->change_hardware(%args);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my $domain2 = Ravada::Domain->open($domain->id);
     my $list_hw_fs2 = $domain2->info(user_admin)->{hardware}->{filesystem};

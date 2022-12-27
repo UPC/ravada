@@ -885,6 +885,7 @@ sub test_prepare_base_with_cd_req {
     is($req->status, 'done');
     is($req->error, '');
 
+    $domain->_refresh_db();
     is($domain->is_base, 1);
 
     my @volumes_base = $domain->list_files_base_target;
@@ -991,6 +992,7 @@ sub test_clone_with_cd_req {
                  ,uid => user_admin->id
     );
     wait_request(debug => 0);
+    $domain->_refresh_db();
     is($domain->is_base,1);
     is($req->status, 'done');
     is($req->error,'');

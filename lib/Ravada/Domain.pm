@@ -151,6 +151,13 @@ has 'description' => (
     ,trigger => \&_update_description
 );
 
+has 'base' => (
+    is => 'rw'
+    ,isa => 'Object'
+    ,lazy => 1
+    ,builder => '_base'
+);
+
 ##################################################################################3
 #
 
@@ -250,6 +257,13 @@ sub BUILD {
     $self->_init_connector();
 
     $self->is_known();
+}
+
+sub _base($self) {
+    my $id_base = $self->id_base();
+    return if !$id_base;
+    my $base = Ravada::Front::Domain->open($id_base);
+    return $base;
 }
 
 sub _check_clean_shutdown($self) {
@@ -661,9 +675,10 @@ sub _allow_remove($self, $user) {
         && $self->id_base
         && ($user->can_remove_clones() || $user->can_remove_clone_all())
     ) {
-        my $base = $self->open(id => $self->id_base, id_vm => $self->_vm->id);
+        my $base = Ravada::Domain->open(id => $self->id_base, id_vm => $self->_vm->id);
         return if ($user->can_remove_clone_all() || ($base->id_owner == $user->id));
     }
+
 
 }
 
@@ -810,6 +825,7 @@ sub _around_prepare_base($orig, $self, @args) {
     $self->_prepare_base_db(@base_img);
 
     $self->_post_prepare_base($user, $request);
+    $self->_refresh_db();
 }
 
 =head2 pre_prepare_base
@@ -1004,7 +1020,7 @@ sub _check_has_clones {
     return if !$self->is_known();
 
     my @clones = $self->clones;
-    confess "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
+    confess "Domain ".$self->id." ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
         if $#clones>=0;
 }
 
@@ -1763,10 +1779,16 @@ Returns if the domain is known in Ravada.
 
 =cut
 
-sub is_known {
-    my $self = shift;
-    return 1    if $self->_select_domain_db(name => $self->name);
-    return 0;
+sub is_known($self) {
+
+    return 0 if $self->{_is_removed};
+    return $self->{_is_known} if exists $self->{_is_known};
+
+    my $ret = 0;
+    $ret = 1    if $self->_select_domain_db(name => $self->name);
+    $self->{_is_known} = $ret;
+
+    return $ret;
 }
 
 =head2 is_known_extra
@@ -1796,6 +1818,10 @@ domain was started.
 sub start_time {
     my $self = shift;
     return $self->_data('start_time');
+}
+
+sub _refresh_db($self) {
+    $self->_select_domain_db();
 }
 
 sub _select_domain_db {
@@ -1829,7 +1855,10 @@ sub _select_domain_db {
     $row->{alias} = Encode::decode_utf8($row->{alias})
     if exists $row->{alias} && defined $row->{alias};
 
-    return $row if $row->{id};
+    if ( $row->{id} ) {
+        $self->{_is_known} = 1;
+        return $row;
+    }
     return;
 }
 
@@ -2047,8 +2076,8 @@ sub info($self, $user) {
         die $@ if $@ && $@ !~ /not allowed/i;
     }
     if (!$info->{description} && $self->id_base) {
-        my $base = Ravada::Front::Domain->open($self->id_base);
-        $info->{description} = $base->description;
+        my $base = $self->base;
+        $info->{description} = $base->description if $base;
     }
 
     $info->{hardware} = $self->get_controllers();
@@ -2209,7 +2238,7 @@ sub pre_remove { }
 
 sub _pre_remove_domain($self, $user, @) {
 
-    eval { $self->id };
+    eval { $self->is_known() };
     warn $@ if $@;
 
     $self->_allow_remove($user);
@@ -2251,12 +2280,14 @@ are kept untouched.
 =cut
 
 sub restore($self,$user){
+    my $id_base = $self->id_base;
     die "Error: ".$self->name." is not a clone. Only clones can be restored."
-        if !$self->id_base;
+        if !$id_base;
 
     $self->_pre_remove_domain($user);
+    confess if !$self->id_base;
 
-    my $base = Ravada::Domain->open($self->id_base);
+    my $base = Ravada::Domain->open($id_base);
     my @volumes = $self->list_volumes_info();
     my %file = map { $_->info->{target} => $_->file } @volumes;
 
@@ -2296,6 +2327,9 @@ sub _after_remove_domain {
     my $self = shift;
     my ($user, $cascade) = @_;
 
+    my $id = $self->{_id};
+    cluck "No id" if !$id;
+
     $self->_remove_iptables( );
     $self->remove_expose();
     $self->_remove_domain_cascade($user)   if !$cascade;
@@ -2311,7 +2345,6 @@ sub _after_remove_domain {
     return if !$self->{_data};
     return if $cascade;
     return if !$self->{_data}->{id};
-    my $id = $self->{_data}->{id};
 
     my $type = $self->type;
 
@@ -2460,9 +2493,12 @@ sub is_base {
     my $self = shift;
     my $value = shift;
 
-    $self->_select_domain_db or return 0;
+    $self->_refresh_db() if !exists $self->{_data}->{is_base};
+
+    return 0 if !exists $self->{_data}->{is_base};
 
     if (defined $value ) {
+        $self->{_data}->{is_base}=$value;
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE domains SET is_base=? "
             ." WHERE id=?");
@@ -2835,7 +2871,8 @@ sub clone {
 
     if ( !$self->is_base() ) {
         $request->status("working","Preparing base")    if $request;
-        $self->prepare_base(user => $user, with_cd => $with_cd)
+        $self->prepare_base(user => $user, with_cd => $with_cd);
+        $self->_refresh_db();
     }
 
     my @args_copy = ();
@@ -3097,6 +3134,7 @@ sub _post_shutdown {
         );
     }
 
+    $self->_refresh_db();
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
                                 && !$is_active;
@@ -3836,28 +3874,6 @@ sub list_ports($self) {
         push @list,($data);
         $clone_port{$data->{internal_port}}++
         if $data->{internal_port};
-    }
-
-    if ($self->is_known() && !$self->is_base && $self->id_base) {
-        my $base = Ravada::Front::Domain->open($self->id_base);
-        my @ports_base = $base->list_ports();
-        for my $data (@ports_base) {
-            next if exists $clone_port{$data->{internal_port}};
-            if ($self->_vm) {
-                unlock_hash(%$data);
-                eval {
-                    $data->{public_port} = '';
-                    $data->{public_port} = $self->_vm->_new_free_port();
-                };
-                my $error = $@;
-                if ($error) {
-                    my $user = Ravada::Auth::SQL->search_by_id($self->_data('id_owner'));
-                    $user->send_message(substr($error,0,80));
-                }
-                lock_hash(%$data);
-            }
-            push @list,($data);
-        }
     }
 
     return @list;

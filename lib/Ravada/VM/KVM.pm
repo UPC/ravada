@@ -714,7 +714,6 @@ sub search_domain($self, $name, $force=undef) {
         };
         warn $@ if $@;
         if ($domain) {
-            $domain->xml_description()  if $dom && $domain->is_known();
             return $domain;
         }
 

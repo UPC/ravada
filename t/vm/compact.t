@@ -16,6 +16,7 @@ sub test_compact($vm) {
     $domain->add_volume(type => 'TMP' , format => 'qcow2', size => 1024 * 10);
     is($domain->_data('is_compacted'),1) or exit;
     $domain->start(user_admin);
+    $domain->_refresh_db();
     is($domain->_data('is_compacted'),0) or exit;
 
     eval { $domain->compact() };

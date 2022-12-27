@@ -5,6 +5,7 @@ use Test::More;
 
 use Carp qw(carp confess cluck);
 use Data::Dumper;
+use Hash::Util qw(unlock_hash);
 use Storable qw(dclone);
 
 no warnings "experimental::signatures";
@@ -105,6 +106,96 @@ sub test_add_rm_change_hw($base) {
     }
 }
 
+sub test_ports($base) {
+    test_add_ports($base);
+    test_change_ports($base);
+    test_remove_ports($base);
+}
+
+sub test_add_ports($base) {
+    my ($clone_d) = $base->clones;
+    my $clone = Ravada::Domain->open($clone_d->{id});
+
+    for my $n ( 1 .. 2 ) {
+        Ravada::Request->expose(
+            uid => user_admin->id
+            ,id_domain => $base->id
+            ,restricted => 1
+            ,port => 22+$n
+            ,name => 'ssh'.$n
+        );
+        wait_request();
+
+        my @ports_base = $base->list_ports();
+        my @ports_clone = $clone->list_ports();
+
+        _check_ports_equal(\@ports_base, \@ports_clone);
+    }
+}
+
+sub test_change_ports($base) {
+    my ($clone_d) = $base->clones;
+    my $clone = Ravada::Domain->open($clone_d->{id});
+
+    my @ports_base0 = $base->list_ports();
+    my @ports_clone0 = $clone->list_ports();
+    my $new_restricted = $ports_base0[0]->{restricted};
+    if ($new_restricted) {
+        $new_restricted = 0;
+    } else {
+        $new_restricted = 1;
+    }
+
+    Ravada::Request->expose(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_port => $ports_base0[0]->{id}
+        ,port => $ports_base0[0]->{internal_port}
+        ,name=> $ports_base0[0]->{name}
+        ,restricted => $new_restricted
+    );
+    wait_request();
+    my @ports_base = $base->list_ports();
+    my @ports_clone = $clone->list_ports();
+    is($ports_base[0]->{restricted},$new_restricted);
+
+    _check_ports_equal(\@ports_base, \@ports_clone);
+
+
+}
+
+sub test_remove_ports($base) {
+    my ($clone_d) = $base->clones;
+    my $clone = Ravada::Domain->open($clone_d->{id});
+
+    my @ports_base0 = $base->list_ports();
+    my @ports_clone0 = $clone->list_ports();
+
+    Ravada::Request->remove_expose(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,port => $ports_base0[0]->{internal_port}
+    );
+    wait_request();
+
+    my @ports_base = $base->list_ports();
+    is(scalar(@ports_base),scalar(@ports_base0)-1);
+    my @ports_clone = $clone->list_ports();
+    is(scalar(@ports_clone),scalar(@ports_clone0)-1);
+
+    _check_ports_equal(\@ports_base, \@ports_clone);
+}
+
+sub _check_ports_equal($ports_base, $ports_clone) {
+    for (@$ports_base, @$ports_clone) {
+        unlock_hash(%$_);
+        delete $_->{public_port};
+        delete $_->{id};
+        delete $_->{id_domain};
+    }
+
+    is_deeply($ports_clone, $ports_base);
+}
 sub _data($vm, $hardware) {
     my $data;
     if ( $hardware eq 'filesystem' ) {
@@ -172,7 +263,9 @@ for my $vm_name (vm_names()) {
         ,name => new_domain_name()
     );
     wait_request();
+    $base->_refresh_db();
 
+    test_ports($base);
     test_add_rm_change_hw($base);
 }
 

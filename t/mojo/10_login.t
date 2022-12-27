@@ -311,6 +311,7 @@ sub test_login_non_admin_req($t, $base, $clone){
             _wait_request(debug => 1, background => 1, check_error => 1);
             mojo_check_login($t, $USERNAME, $PASSWORD);
         }
+        $clone->_refresh_db();
         is($clone->is_base,1) or next;
     }
     $clone->is_public(1);
@@ -404,7 +405,7 @@ sub test_copy_without_prepare($clone) {
     mojo_check_login($t);
 
     my @clones = $clone->clones();
-    is(scalar @clones, $n_clones_clone+$n_clones,"Expecting clones from ".$clone->name) or exit;
+    is(scalar @clones, $n_clones_clone+$n_clones,"Expecting clones from ".$clone->name);
 
     mojo_request($t, "spinoff", { id_domain => $clone->id  });
     wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
@@ -412,6 +413,7 @@ sub test_copy_without_prepare($clone) {
     mojo_check_login($t);
     mojo_request($t, "clone", { id_domain => $clone->id, number => $n_clones });
     wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+    $clone->_refresh_db();
     is($clone->is_base, 1 );
     my @n_clones_clone_2= $clone->clones();
     is(scalar @n_clones_clone_2, $n_clones_clone+$n_clones*2) or exit;
@@ -563,6 +565,7 @@ sub _clone_and_base($vm_name, $t, $base0) {
     _add_displays($t, $base1);
     mojo_check_login($t);
     mojo_request_url($t , "/machine/prepare/".$base1->id.".json");
+    $base1->_refresh_db();
     return $base1;
 }
 

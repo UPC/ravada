@@ -474,6 +474,7 @@ sub _around_create_domain {
 
     my $domain = $self->$orig(%args_create, volatile => $volatile);
     $self->_add_instance_db($domain->id);
+    $domain->_refresh_db();
     $domain->add_volume_swap( size => $swap )   if $swap;
     $domain->_data('is_compacted' => 1);
     $domain->_data('alias' => $alias) if $alias;

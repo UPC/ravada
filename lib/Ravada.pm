@@ -17,6 +17,7 @@ use Mojo::JSON qw( encode_json decode_json );
 use Moose;
 use POSIX qw(WNOHANG);
 use Proc::PID::File;
+use Storable qw(dclone);
 use Time::HiRes qw(gettimeofday tv_interval);
 use YAML;
 use MIME::Base64;
@@ -4792,6 +4793,8 @@ sub _cmd_add_hardware {
 
     my $domain = $self->search_domain_by_id($id_domain);
 
+    die "Error: unknown domain id ".$id_domain if !$domain;
+
     my $user = Ravada::Auth::SQL->search_by_id($uid);
     die "Error: User ".$user->name." not allowed to add hardware to machine ".$domain->name
         unless $user->is_admin
@@ -4877,9 +4880,16 @@ sub _apply_clones($self, $request) {
     if $request->command eq 'change_hardware' && $args->{'hardware'} eq 'disk';
 
     for my $clone ($domain->clones) {
+        my $args2 = dclone($args);
+        if ($request->command eq 'expose' && $args->{id_port}) {
+            my $clone_d = Ravada::Front::Domain->open($clone->{id});
+            my $id_port = $args->{id_port};
+            my ($port) = grep { $_->{internal_port} == $args->{port} } $clone_d->list_ports();
+            $args2->{id_port} = $port->{id};
+        }
         Ravada::Request->new_request(
             $request->command
-            ,%$args
+            ,%$args2
             ,id_domain => $clone->{id}
         );
     }
@@ -6262,11 +6272,14 @@ sub _cmd_expose($self, $request) {
            ,id_port => $request->defined_arg('id_port')
         ,restricted => $request->defined_arg('restricted')
     );
+
+    $self->_apply_clones($request);
 }
 
 sub _cmd_remove_expose($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain);
     $domain->remove_expose($request->args('port'));
+    $self->_apply_clones($request);
 }
 
 sub _cmd_open_exposed_ports($self, $request) {
