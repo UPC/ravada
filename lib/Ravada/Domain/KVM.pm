@@ -2947,8 +2947,8 @@ sub _change_hardware_memory($self, $index, $data) {
     my $max_mem= delete $data->{max_mem};
     confess "Error: Unkown args ".Dumper($data) if keys %$data;
 
-    $self->set_memory($memory)      if defined $memory;
     $self->set_max_mem($max_mem)    if defined $max_mem;
+    $self->set_memory($memory)      if defined $memory;
 
 }
 
