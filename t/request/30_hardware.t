@@ -1326,6 +1326,32 @@ sub _test_change_features($vm, $domain) {
     _test_change_defaults($domain,'cpu');
 }
 
+sub _test_change_memory($vm, $domain) {
+
+    for ( 1 .. 3 ) {
+        my $info = $domain->info(user_admin);
+        my $hw_mem = $info->{hardware}->{memory}->[0];
+        warn Dumper([$domain->type,$hw_mem]);
+        my $new_mem = int($hw_mem->{memory}*1.5);
+        $new_mem = 1024*1024 if $new_mem < 1024*1024;
+        my $req = Ravada::Request->change_hardware(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,hardware =>'memory'
+            ,data => { memory => $new_mem*1024,max_mem => ($new_mem+1)*1024 }
+            ,index => 0
+        );
+        wait_request(debug => 1);
+        is($req->error, '');
+        is($req->status,'done');
+
+        my $info2 = $domain->info(user_admin);
+        my $hw_mem2 = $info2->{hardware}->{memory}->[0];
+        is($hw_mem2->{memory}, $new_mem);
+        is($hw_mem2->{max_mem}, $new_mem+1);
+    }
+}
+
 sub test_change_hardware($vm, $domain, $hardware) {
     my %sub = (
       network => \&test_change_network
@@ -1339,7 +1365,7 @@ sub test_change_hardware($vm, $domain, $hardware) {
          ,cpu => \&_test_change_cpu
          ,features => \&_test_change_features
          ,'usb controller' => sub {}
-         ,'memory' => sub {}
+         ,'memory' => \&_test_change_memory
     );
     my $exec = $sub{$hardware} or die "I don't know how to test $hardware";
     $exec->($vm, $domain);
