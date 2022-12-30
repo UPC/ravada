@@ -756,7 +756,7 @@ sub list_domains {
                 $domain = Ravada::Domain->open( id => $id, vm => $self);
             }
         };
-        die $@ if $@ && $@ !~ /Unkown domain/i;
+        die $@ if $@ && $@ !~ /Unknown domain/i;
         push @list,($domain) if $domain;
     }
     return @list;
