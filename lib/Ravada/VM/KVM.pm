@@ -365,12 +365,7 @@ sub _list_volumes($self) {
            warn "WARNING: on search volume_re: $@";
            sleep 1;
        }
-       for my $vol ( @vols ) {
-           my $file;
-           eval { ($file) = $vol->get_path };
-           confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
-           push @volumes,($file);
-       }
+       push @volumes,@vols;
     }
     return @volumes;
 }
@@ -429,8 +424,18 @@ sub _list_used_volumes($self) {
 sub list_unused_volumes($self) {
     my %used = map { $_ => 1 } $self->_list_used_volumes();
     my @unused;
+    my $file;
     for my $vol ( sort $self->_list_volumes ) {
-        push @unused,($vol) unless $used{$vol};
+
+        eval { ($file) = $vol->get_path };
+        confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
+
+        next if $used{$file};
+
+        my $info = $vol->get_info();
+        next if $info->{type} eq 2;
+
+        push @unused,($file);
     }
     return @unused;
 }
