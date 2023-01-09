@@ -20,10 +20,17 @@ sub test_list_unused($vm, $machine, $hidden_vols) {
     my $dir = $vm->dir_img();
     my $file;
     for ( ;; ) {
-        $file = $dir."/".Ravada::Utils::random_name().".txt";
+        $file = $dir."/".new_domain_name()."-".Ravada::Utils::random_name().".txt";
         last if !$vm->file_exists($file);
     }
     push @FILES,($file);
+
+    my $new_dir = $dir."/".new_domain_name();
+    push @FILES,($new_dir);
+
+    if (! -e $new_dir) {
+        mkdir $new_dir or die "$! $new_dir";
+    }
 
     open my $out,">",$file or die "$! $file";
     print $out "hi\n";
@@ -39,12 +46,30 @@ sub test_list_unused($vm, $machine, $hidden_vols) {
     my $output = decode_json($out_json);
     my $found = _search_file($output, $file);
 
-    ok($found,"Expecting $file in ".Dumper($output));
+    ok($found,"Expecting $file found ") or exit;
 
     my @used_vols = _used_volumes($machine);
     for my $vol (@used_vols, @$hidden_vols) {
         my $found = _search_file($output, $vol);
         ok(!$found,"Expecting $vol not found");
+    }
+
+    my ($found_dir) = _search_file($output, $new_dir);
+    ok(!$found_dir,"Expecting not found $new_dir");
+
+    _test_vm($vm, $machine, $output);
+}
+
+sub _test_vm($vm, $domain, $output) {
+    if ($vm->type eq 'Void') {
+        my $config = $domain->_config_file();
+        my ($found) = _search_file($output, $config);
+        ok(!$found,"Expecting no $config found");
+
+        my $lock = "$config.lock";
+
+        ($found) = _search_file($output, $lock);
+        ok(!$found,"Expecting no $lock found");
     }
 }
 
@@ -74,7 +99,11 @@ sub _used_volumes($machine) {
 
 sub _clean_files() {
     for my $file (@FILES) {
-        unlink $file or warn "$! $file";
+        if (-d $file) {
+            rmdir $file or warn "$! $file";
+        } else {
+            unlink $file or warn "$! $file";
+        }
     }
 }
 
@@ -127,7 +156,7 @@ for my $vm_name ( vm_names() ) {
         my $vm = rvd_back->search_vm($vm_name);
 
         my $msg = "SKIPPED test: No $vm_name VM found ";
-        if ($vm && $>) {
+        if ($vm && $vm_name eq 'KVM' && $>) {
               $msg = "SKIPPED: Test must run as root";
               $vm = undef;
         }

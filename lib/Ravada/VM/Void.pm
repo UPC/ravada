@@ -340,6 +340,8 @@ sub _list_used_volumes($self) {
     for my $domain ($self->list_domains) {
         push @disk,($domain->list_disks());
         push @disk,($domain->list_files_base()) if $domain->is_base;
+        push @disk,($domain->_config_file());
+        push @disk,($domain->_config_file().".lock");
     }
     return @disk
 }
@@ -360,9 +362,11 @@ sub _list_volumes($self) {
 }
 
 sub list_unused_volumes($self) {
+    die "Error: TODO remote!" if !$self->is_local;
     my %used = map { $_ => 1 } $self->_list_used_volumes();
     my @unused;
     for my $vol ( sort $self->_list_volumes ) {
+        next if ! -f $vol;
         push @unused,($vol) unless $used{$vol};
     }
     return @unused;

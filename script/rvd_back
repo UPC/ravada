@@ -979,7 +979,7 @@ sub list_unused_vols($rvd_back) {
         next if !scalar(@{$vols->{$vm}});
 
         for my $vol (sort @{$vols->{$vm}} ) {
-            print "  - $vol\n";
+            print "$vol\n";
         }
     }
     exit;
