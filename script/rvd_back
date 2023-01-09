@@ -50,6 +50,7 @@ my $TEST_LDAP;
 my $CLEAN_DB_LEFTOVERS;
 my $LOG_FILENAME;
 my $LIST_UNUSED_VOLS;
+my $SHOW_VOLUME;
 
 my $URL_ISOS;
 my $ALL;
@@ -170,6 +171,7 @@ GetOptions (       help => \$help
         ,"restore" => \$RESTORE
         ,"log=s"              => \$LOG_FILENAME
         ,'list-unused-volumes' => \$LIST_UNUSED_VOLS
+        ,'show-volume' => \$SHOW_VOLUME
 
         ,"purge-nodes"      => \$PURGE_NODES
 
@@ -1075,6 +1077,40 @@ sub list_unused_vols($rvd_back) {
     exit;
 }
 
+sub _show_volume_cached($rvd_back, $file) {
+
+    my $sth = $rvd_back->connector->dbh->prepare(
+        "SELECT d.name FROM volumes v,domains d "
+        ." WHERE d.id=v.id_domain AND v.file=?");
+    $sth->execute($file);
+    my @dom;
+    while (my $row = $sth->fetchrow_hashref()) {
+        push @dom,($row->{name})
+    }
+    return @dom;
+}
+
+sub show_volume($rvd_back) {
+    die "Error: $0 --show-volume file1 file2 ... filen\n"
+    unless @ARGV;
+
+    for my $file (@ARGV) {
+        print "$file\n";
+        if ($file !~ m{^/}) {
+            print "Error: '$file' is not absolute path\n";
+            next;
+        }
+        my @dom = _show_volume_cached($rvd_back, $file);
+        if (scalar(@dom)) {
+            for (@dom) {
+                print "  - $_\n";
+            }
+        } else {
+            print "  - <UNUSED>\n";
+        }
+    }
+}
+
 sub DESTROY {
 }
 
@@ -1126,6 +1162,7 @@ restore($rvd_back)                  if $RESTORE;
 purge_nodes($rvd_back)              if $PURGE_NODES;
 
 list_unused_vols($rvd_back)         if $LIST_UNUSED_VOLS;
+show_volume($rvd_back)              if $SHOW_VOLUME;
 }
 
 
