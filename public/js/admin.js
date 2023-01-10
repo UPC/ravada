@@ -8,8 +8,10 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("messagesPage", messagesPageC)
         .controller("manage_nodes",manage_nodes)
         .controller("manage_networks",manage_networks)
+        .controller("manage_storage_pools",manage_storage_pools)
         .controller("settings_node",settings_node)
         .controller("settings_network",settings_network)
+        .controller("settings_storage",settings_storage)
         .controller("new_node", newNodeCtrl)
         .controller("settings_global", settings_global_ctrl)
         .controller("admin_groups", admin_groups_ctrl)
@@ -863,6 +865,16 @@ ravadaApp.directive("solShowMachine", swMach)
         list_networks();
     }
 
+
+    function manage_storage_pools($scope, $http, $interval, $timeout) {
+        $scope.list_unused_volumes=function() {
+            $scope.unused_volumes = undefined;
+            $http.get('/storage/list_unused_volumes').then(function(response) {
+                $scope.unused_volumes = response.data;
+            });
+        }
+    }
+
     function newNodeCtrl($scope, $http, $timeout) {
         $http.get('/list_vm_types.json').then(function(response) {
             $scope.backends = response.data;
@@ -1113,6 +1125,12 @@ ravadaApp.directive("solShowMachine", swMach)
                 $scope.message = "Node "+$scope.node.name+" removed";
                 $scope.node={};
             });
+        };
+    };
+
+    function settings_storage($scope, $http, $timeout) {
+        var url_ws;
+        $scope.init = function() {
         };
     };
 
