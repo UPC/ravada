@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+<div id="wrapper">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper" ng-controller="manage_storage_pools"
+                           ng-init="init()"
+        >
+    <h2>Storage</h2>
+    <div class="row">
+        <div class="col"><h5><%=l 'Unused volumes' %></h5></div>
+    </div>
+    <i ng-show="!unused_volumes" class="fas fa-sync-alt fa-spin"></i>
+    <div ng-show="unused_volumes" class="ml-4">
+        <button type="button" ng-click="remove_selected()">
+            <%=l 'Remove Selected' %>
+        </button>
+
+        <div ng-repeat="(vm,volumes) in unused_volumes">
+                <b>{{vm}}</b>
+                <div ng-repeat="volume in volumes">
+                    <input type="checkbox"
+                        ng-model="volume.checked"/>
+                    <label>{{volume.file}}</label>
+                </div>
+        </div>
+
+        <a href="#" ng-click="more()">
+            <%=l 'more' %>
+        </a>
+    </div>
+
+    </div>
+</div>
+%= include $footer
+%= include 'bootstrap/scripts'
+</body>
+</html>
