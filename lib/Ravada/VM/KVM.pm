@@ -421,11 +421,13 @@ sub _list_used_volumes($self) {
     return @used;
 }
 
-sub list_unused_volumes($self) {
+sub list_unused_volumes($self, $start=0, $limit=10) {
     my %used = map { $_ => 1 } $self->_list_used_volumes();
     my @unused;
     my $file;
-    for my $vol ( sort $self->_list_volumes ) {
+
+    my $n_found=0;
+    for my $vol ( $self->_list_volumes ) {
 
         eval { ($file) = $vol->get_path };
         confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
@@ -435,7 +437,11 @@ sub list_unused_volumes($self) {
         my $info = $vol->get_info();
         next if $info->{type} eq 2;
 
+        next if $n_found++ < $start;
+
         push @unused,($file);
+
+        last if scalar(@unused)>=$limit;
     }
     return @unused;
 }

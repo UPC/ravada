@@ -868,12 +868,33 @@ ravadaApp.directive("solShowMachine", swMach)
 
 
     function manage_storage_pools($scope, $http, $interval, $timeout) {
+        var start=0;
+        var limit=10;
+        $scope.init=function() {
+            $scope.list_unused_volumes();
+        };
+
         $scope.list_unused_volumes=function() {
-            $scope.unused_volumes = undefined;
-            $http.get('/storage/list_unused_volumes').then(function(response) {
-                $scope.unused_volumes = response.data;
+            $http.get('/storage/list_unused_volumes/'+start+'/'+limit)
+                    .then(function(response) {
+                if (!$scope.unused_volumes) {
+                    $scope.unused_volumes = response.data;
+                    return;
+                }
+                for ( var key in response.data) {
+                    for (var i=0; i<response.data[key].length ; i++) {
+                    $scope.unused_volumes[key].push(response.data[key][i]);
+                    }
+                }
+                window.scrollTo(0, document.body.scrollHeight);
             });
         }
+        $scope.remove_selected = function() {
+        }
+        $scope.more = function() {
+            start += limit;
+            $scope.list_unused_volumes();
+        };
     }
 
     function newNodeCtrl($scope, $http, $timeout) {

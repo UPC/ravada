@@ -159,6 +159,7 @@ our %VALID_ARG = (
     }
     ,update_iso_urls => { uid => 1 }
     ,list_unused_volumes => {uid => 1 }
+    ,remove_file => { uid => 1, vm => 1, file => 1 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }

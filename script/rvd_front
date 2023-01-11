@@ -2363,8 +2363,19 @@ get '/booking/(#template).html' => sub($c) {
     return $c->render( template => '/booking/'.$c->stash('template'));
 };
 
-get '/storage/list_unused_volumes' => sub($c) {
-    return $c->render( json => ['b'] );
+get '/storage/list_unused_volumes/(:start)/(:limit)' => sub($c) {
+    warn $c->stash('start');
+    my $req = Ravada::Request->list_unused_volumes(
+        uid => $USER->id
+        ,start => $c->stash('start')
+        ,limit => $c->stash('limit')
+    );
+    $RAVADA->wait_request($req,180);
+    my $output = [];
+    if ($req->output) {
+        $output = decode_json($req->output);
+    }
+    return $c->render( json => $output );
 };
 
 ###################################################
