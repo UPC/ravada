@@ -145,7 +145,8 @@ our %VALID_ARG = (
     ,import_domain => { uid => 1, vm => 1, id_owner => 1, name => 1
         ,spinoff_disks => 2
     }
-    ,list_unused_volumes => {uid => 1 }
+    ,list_unused_volumes => {uid => 1, start => 2, limit => 2 }
+    ,remove_file => { uid => 1, vm => 1, file => 1 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }

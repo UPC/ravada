@@ -177,6 +177,11 @@ sub open {
         confess "ERROR: Don't set the id and the type "
             if $args{id} && $args{type};
         return _open_type($proto,@_) if $args{type};
+
+        $args{id} = _search_id($args{name}) if $args{name};
+
+        confess "I don't know how to open ".Dumper(\%args)
+        if !$args{id};
     } else {
         $args{id} = shift;
     }
@@ -210,6 +215,15 @@ sub open {
     $VM{$args{id}} = $vm unless $args{readonly};
     return $vm;
 
+}
+
+sub _search_id($name) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms WHERE name=?"
+    );
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    return $id;
 }
 
 sub _refresh_version($self) {
@@ -1554,6 +1568,9 @@ Removes a file from the storage of the virtual manager
 =cut
 
 sub remove_file( $self, $file ) {
+    die "Error: unsecure filename '$file'"
+    if $file =~ m{[`'\(\)\[]};
+
     unlink $file if $self->is_local;
     return $self->run_command("/bin/rm", $file);
 }

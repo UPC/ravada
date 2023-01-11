@@ -361,13 +361,18 @@ sub _list_volumes($self) {
 
 }
 
-sub list_unused_volumes($self) {
+sub list_unused_volumes($self,$start=0, $limit=10) {
     die "Error: TODO remote!" if !$self->is_local;
     my %used = map { $_ => 1 } $self->_list_used_volumes();
     my @unused;
+    my $n_found=0;
     for my $vol ( sort $self->_list_volumes ) {
         next if ! -f $vol;
+
+        next if $n_found++ < $start;
+
         push @unused,($vol) unless $used{$vol};
+        last if scalar(@unused)>=$limit;
     }
     return @unused;
 }

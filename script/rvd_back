@@ -123,6 +123,7 @@ my $USAGE = "$0 "
         ." --clean-db-leftovers: properly clean database unreferenced entries\n"
         ." --log: saves STDOUT and STDERR app traces to the specified filename\n"
         ." --list-unused-volumes\n"
+        ." --show-volume\n"
         ."\n"
     ;
 
