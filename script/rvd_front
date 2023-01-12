@@ -2209,12 +2209,13 @@ get '/booking/(#template).html' => sub($c) {
     return $c->render( template => '/booking/'.$c->stash('template'));
 };
 
-get '/storage/list_unused_volumes/(:start)/(:limit)' => sub($c) {
-    warn $c->stash('start');
+get '/storage/list_unused_volumes' => sub($c) {
+    my $query = $c->req->query_params;
     my $req = Ravada::Request->list_unused_volumes(
         uid => $USER->id
-        ,start => $c->stash('start')
-        ,limit => $c->stash('limit')
+        ,start => $query->param('start')
+        ,limit => $query->param('limit')
+        ,id_vm => $query->param('id_vm')
     );
     $RAVADA->wait_request($req,180);
     my $output = [];
@@ -2537,8 +2538,18 @@ sub admin {
         my $host = $c->req->url->to_abs->host;
         $c->stash(url_login => "/login");
     }
+    if ($page eq 'storage') {
+        _select_vm($c);
+    }
     $c->render( template => 'main/admin_'.$page);
 };
+
+sub _select_vm($c) {
+    my $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms ");
+    $sth->execute();
+    my ($id, $name) = $sth->fetchrow;
+    $c->stash('id_vm' => $id, vm_name => $name);
+}
 
 sub _count_nodes($c) {
     my $sth = $RAVADA->_dbh->prepare(

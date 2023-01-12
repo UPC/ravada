@@ -869,26 +869,45 @@ ravadaApp.directive("solShowMachine", swMach)
     function manage_storage_pools($scope, $http, $interval, $timeout) {
         var start=0;
         var limit=10;
-        $scope.init=function() {
+        $scope.init=function(id_vm) {
+            $scope.id_vm = id_vm;
             $scope.list_unused_volumes();
         };
 
         $scope.list_unused_volumes=function() {
-            $http.get('/storage/list_unused_volumes/'+start+'/'+limit)
+            $http.get('/storage/list_unused_volumes?id_vm='+$scope.id_vm
+                +'&start='+start+'&limit='+limit)
                     .then(function(response) {
+                $scope.list_more = response.data.more;
                 if (!$scope.unused_volumes) {
-                    $scope.unused_volumes = response.data;
+                    $scope.unused_volumes = response.data.list;
                     return;
                 }
-                for ( var key in response.data) {
-                    for (var i=0; i<response.data[key].length ; i++) {
-                    $scope.unused_volumes[key].push(response.data[key][i]);
-                    }
+                for (var i=0; i<response.data.list.length ; i++) {
+                    $scope.unused_volumes.push(response.data.list[i]);
                 }
                 window.scrollTo(0, document.body.scrollHeight);
             });
         }
         $scope.remove_selected = function() {
+            var remove = [];
+            var files = $scope.unused_volumes;
+            var keep = [];
+            for (var i=0; i<files.length; i++ ) {
+                if (files[i].remove) {
+                    remove.push(files[i].file);
+                } else {
+                    keep.push(files[i]);
+                }
+            }
+            $scope.unused_volumes = keep;
+            $http.post('/request/remove_files'
+                ,JSON.stringify({'id_vm': $scope.id_vm , 'files': remove })
+            ).then(function(response) {
+                start=0;
+                $scope.unused_volumes=undefined;
+                $scope.list_unused_volumes();
+            });
         }
         $scope.more = function() {
             start += limit;
