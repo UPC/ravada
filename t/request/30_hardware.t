@@ -1233,7 +1233,15 @@ sub _test_cpu_features_topology($domain) {
 
 }
 
+sub _test_cpu_topology_old_cpu($domain) {
+
+    my $doc = XML::LibXML->load_xml( string => $domain->xml_description());
+    my ($vcpu) = $doc->findnodes("/domain/vcpu")
+}
+
 sub _test_change_cpu($vm, $domain) {
+
+    _test_cpu_topology_old_cpu($domain);
 
     _test_cpu_features_topology($domain);
 
