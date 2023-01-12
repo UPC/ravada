@@ -1509,6 +1509,31 @@ sub is_in_maintenance($self) {
     return 0;
 }
 
+=head2 update_host_device
+
+Update the host device information, then it requests a list of the current available devices
+
+    $rvd_front->update_host_device( field => 'value' );
+
+=cut
+
+sub update_host_device($self, $args) {
+    my $id = delete $args->{id} or die "Error: missing id ".Dumper($args);
+    Ravada::Utils::check_sql_valid_params(keys %$args);
+    $args->{devices} = undef;
+    my $query = "UPDATE host_devices SET ".join(" , ", map { "$_=?" } sort keys %$args);
+    $query .= " WHERE id=?";
+    my $sth = $self->_dbh->prepare($query);
+    my @values = map { $args->{$_} } sort keys %$args;
+    $sth->execute(@values, $id);
+    Ravada::Request->list_host_devices(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_host_device => $id
+        ,_force => 1
+    );
+    return 1;
+}
+
 =head2 list_machine_types
 
 Returns a reference to a list of the architectures and its machine types
@@ -1567,8 +1592,6 @@ sub list_cpu_models($self, $uid, $id_domain) {
 
     return $models;
 }
-
-
 
 =head2 version
 

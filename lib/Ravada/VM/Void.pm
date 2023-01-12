@@ -135,7 +135,7 @@ sub create_domain {
         my $base_hw = $domain_base->_value('hardware');
         my $clone_hw = $domain->_value('hardware');
         for my $hardware( keys %{$base_hw} ) {
-            next if $hardware eq 'device';
+            next if $hardware eq 'device' || $hardware eq 'host_devices';
             $clone_hw->{$hardware} = $base_hw->{$hardware};
             next if $hardware ne 'display';
             for my $entry ( @{$clone_hw->{$hardware}} ) {

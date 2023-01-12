@@ -68,7 +68,7 @@ sub test_defaults {
     my %grants_info = $user->grants_info();
     for my $key ( keys %grants ) {
         is($grants_info{$key}->[0],$grants{$key}, $key);
-        if ($key eq 'start_limit') {
+        if ($key eq 'start_limit' || $key =~ /^quota/) {
             is($grants_info{$key}->[1],"int" , $key);
         } else {
             is($grants_info{$key}->[1],"boolean" , $key);

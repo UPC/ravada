@@ -1088,6 +1088,118 @@ sub copy_config($self, $domain) {
     }
 }
 
+sub add_config_node($self, $path, $content, $data) {
+    my $content_hash;
+    eval { $content_hash = Load($content) };
+    confess $@."\n$content" if $@;
+
+    $data->{hardware}->{host_devices} = []
+    if $path eq "/hardware/host_devices" && !exists $data->{hardware}->{host_devices};
+
+    my $found = $data;
+    for my $item (split m{/}, $path ) {
+        next if !$item;
+
+        confess "Error, no $item in ".Dumper($found)
+        if !exists $found->{$item};
+
+        $found = $found->{$item};
+    }
+    if (ref($found) eq 'ARRAY') {
+        push @$found, ( $content_hash );
+    } else {
+        my ($item) = keys %$content_hash;
+        $found->{$item} = $content_hash->{$item};
+    }
+}
+
+sub remove_config_node($self, $path, $content, $data) {
+    my $content_hash;
+    eval { $content_hash = Load($content) };
+    confess $@."\n$content" if $@;
+
+    my $found = $data;
+    my $found_parent;
+    my $found_item;
+    for my $item (split m{/}, $path ) {
+        next if !$item;
+
+        return if !exists $found->{$item};
+
+        $found_parent = $found;
+        $found_item = $item;
+        $found = $found->{$item};
+    }
+    return if !$found;
+    if (ref($found) eq 'ARRAY') {
+        my @new_list;
+        for my $item (@$found) {
+            push @new_list,($item) unless _equal_hash($content_hash, $item);
+        }
+        $found_parent->{$found_item} = [@new_list];
+        delete $found_parent->{$found_item} if (scalar(@new_list) == 0 );
+    } else {
+        my ($item) = keys %$content_hash;
+        delete $found->{$item};
+    }
+
+}
+
+sub _equal_hash($a,$b) {
+    return 0 if scalar(keys(%$a)) != scalar(keys %$b);
+    for my $key ( keys %$a) {
+        return 0 if !exists $b->{$key} || $b->{$key} ne $a->{$key};
+    }
+    return 1;
+}
+
+sub add_config_unique_node($self, $path, $content, $data) {
+    my $content_hash;
+    eval { $content_hash = Load($content) };
+    confess $@."\n$content" if $@;
+
+    $data->{hardware}->{host_devices} = []
+    if $path eq "/hardware/host_devices" && !exists $data->{hardware}->{host_devices};
+
+    my $found = $data;
+    for my $item (split m{/}, $path ) {
+        next if !$item;
+
+        confess "Error, no $item in ".Dumper($found)
+        if !exists $found->{$item};
+
+        $found = $found->{$item};
+    }
+    if (ref($found) eq 'ARRAY') {
+        push @$found, ( $content_hash );
+    } else {
+        my ($item) = keys %$content_hash;
+        $found->{$item} = $content_hash->{$item};
+    }
+}
+
+
+sub can_host_devices { return 1 }
+
+sub remove_host_devices($self) {
+    my $data = $self->_load();
+    my $hardware = $data->{hardware};
+
+    my @devices2;
+    my $changed = delete $hardware->{host_devices};
+    return if !$changed;
+    $self->_store( hardware => $hardware );
+}
+
+sub get_config($self) {
+    return $self->_load();
+}
+
+sub reload_config($self, $data) {
+    eval { DumpFile($self->_config_file(), $data) };
+    confess $@ if $@;
+}
+
 sub has_nat_interfaces($self) {
     my $config = $self->_load();
     for my $if (@{$config->{hardware}->{network}}) {

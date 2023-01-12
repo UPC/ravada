@@ -45,6 +45,13 @@
                 <li><b><%=l 'Max Memory' %>:</b> {{domain.max_mem}}</li>
                 <li><b><%=l 'Memory' %>:</b> {{domain.memory}}</li>
                 <li><b><%=l 'CPUs' %>:</b> {{domain.nrVirtCpu}}</li>
+                <li ng-show="domain.host_devices && domain.host_devices.length"><b>Host Devices</b>
+                    <ul>
+                        <li ng-repeat="device in domain.host_devices">
+                            {{device.name}}
+                        </li>
+                    </ul>
+                </li>
             </ul>
             <div class="list-group list-group-horizontal-md"
                 ng-show="domain.ports.length">
@@ -93,11 +100,13 @@
             <div class="panel-body">
                 <div ng-show="request && request.error && (!domain || !domain.is_active)">{{request.error}}</div>
                 <div ng-show="domain && request.status == 'done' && (!domain || domain.is_active == 0) && count_start>2"><%=l 'The machine is down.' %>
-                 <button type="submit" class="btn btn-primary" onclick="location.reload('forceGet')"><%=l 'Start again' %></button>
+                 <a class="btn btn-primary" href="?enable_host_devices=1"><%=l 'Start again' %></a>
+                 <a ng-show="domain.host_devices.length > 0" class="btn btn-secondary" href="?enable_host_devices=0"><%=l 'Start without host devices' %></a>
                 </div>
             </div>
         </div>
         </div> <! -- show=domain -->
+        <div ng-show="request.status == 'done' && request.error">{{request.error}}</div>
 
     </div><!-- jumbotron -->
 </div><!-- container -->

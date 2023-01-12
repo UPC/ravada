@@ -877,6 +877,8 @@ sub test_change_disk_nothing($vm, $domain) {
         my $domain2 = Ravada::Front::Domain->open($domain->id);
         my $info2 = $domain_f->info(user_admin);
         my $data2= $info2->{hardware}->{$hardware}->[$count];
+        delete $data2->{backing} if !exists $data->{backind}
+        && $data2->{backing} eq '<backingStore/>';
         is_deeply($data2, $data)
             or die Dumper([$domain->name, $data2, $data]);
     }
@@ -1144,7 +1146,7 @@ sub test_change_filesystem($vm,$domain) {
         ,id_domain => $domain->id
     );
     my $req = Ravada::Request->change_hardware(%args);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my $domain2 = Ravada::Domain->open($domain->id);
     my $list_hw_fs2 = $domain2->info(user_admin)->{hardware}->{filesystem};
@@ -1331,9 +1333,7 @@ sub _test_change_memory($vm, $domain) {
     for ( 1 .. 3 ) {
         my $info = $domain->info(user_admin);
         my $hw_mem = $info->{hardware}->{memory}->[0];
-        warn Dumper([$domain->type,$hw_mem]);
         my $new_mem = int($hw_mem->{memory}*1.5);
-        $new_mem = 1024*1024 if $new_mem < 1024*1024;
         my $req = Ravada::Request->change_hardware(
             uid => user_admin->id
             ,id_domain => $domain->id
@@ -1341,7 +1341,7 @@ sub _test_change_memory($vm, $domain) {
             ,data => { memory => $new_mem*1024,max_mem => ($new_mem+1)*1024 }
             ,index => 0
         );
-        wait_request(debug => 1);
+        wait_request(debug => 0);
         is($req->error, '');
         is($req->status,'done');
 

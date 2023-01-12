@@ -118,6 +118,9 @@ sub test_drivers_type($type, $vm, $node) {
         my $value = $driver_type->get_value();
         ok($value,"Expecting value for driver type: $type ".ref($driver_type)."->get_value")
             or exit;
+
+Change max memory first just in case fixes when increasing both at once
+
     }
 
     my @options = $driver_type->get_options();
