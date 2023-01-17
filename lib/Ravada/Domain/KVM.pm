@@ -2429,7 +2429,10 @@ sub _set_controller_network($self, $number, $data) {
 
     my $pci_slot = $self->_new_pci_slot();
 
-    my $device = "<interface type='network'>
+    my $itype = 'network';
+    $itype = 'bridge' if $bridge;
+
+    my $device = "<interface type='$itype'>
         <mac address='".$self->_vm->_new_mac()."'/>";
     if ($type eq 'NAT') {
         $device .= "<source network='$network'/>"
