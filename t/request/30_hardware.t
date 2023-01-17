@@ -877,8 +877,10 @@ sub test_change_disk_nothing($vm, $domain) {
         my $domain2 = Ravada::Front::Domain->open($domain->id);
         my $info2 = $domain_f->info(user_admin);
         my $data2= $info2->{hardware}->{$hardware}->[$count];
-        delete $data2->{backing} if !exists $data->{backind}
-        && $data2->{backing} eq '<backingStore/>';
+
+        delete $data2->{backing} if $data2->{backing} eq '<backingStore/>'
+        && !exists $data->{backing};
+
         is_deeply($data2, $data)
             or die Dumper([$domain->name, $data2, $data]);
     }
@@ -1236,12 +1238,68 @@ sub _test_cpu_features_topology($domain) {
 sub _test_cpu_topology_old_cpu($domain) {
 
     my $doc = XML::LibXML->load_xml( string => $domain->xml_description());
-    my ($vcpu) = $doc->findnodes("/domain/vcpu")
+    my ($cpu) = $doc->findnodes("/domain/cpu");
+    $cpu->setAttribute('mode' => 'host-model');
+    $cpu->setAttribute('check' => 'partial');
+    $cpu->removeAttribute('match');
+
+    my ($model) = $cpu->findnodes('model');
+
+    my $model_exp = 'kvm64';
+
+    my %args = (
+        uid => user_admin->id
+        ,hardware => 'cpu'
+        ,id_domain => $domain->id
+        ,data => {
+            'cpu' => {
+                'topology' => {
+                    'cores' => 1,
+                    'dies' => 1,
+                    'threads' => 2,
+                    'sockets' => 1
+                },
+                'feature' => [],
+                'model' => {
+                    'fallback' => 'allow',
+                    '#text' => $model_exp
+                },
+                'mode' => 'custom',
+                'check' => 'none'
+            },
+            'vcpu' => {
+                'placement' => 'static',
+                '#text' => 24
+            },
+            '_can_edit' => 1,
+            '_cat_remove' => 0,
+            '_order' => 0
+        },
+    );
+    my $req = Ravada::Request->change_hardware(%args);
+    wait_request(debug => 0);
+
+    $doc = XML::LibXML->load_xml( string => $domain->xml_description());
+    my ($model2) = $doc->findnodes("/domain/cpu/model/text()");
+    is($model2,$model_exp) or exit;
+
+    $model_exp = 'qemu64';
+
+    $args{data}->{cpu}->{model}->{'#text'} = $model_exp;
+
+    my $req2 = Ravada::Request->change_hardware(%args);
+    wait_request(debug => 0);
+
+    $doc = XML::LibXML->load_xml( string => $domain->xml_description());
+
+    my ($model3) = $doc->findnodes("/domain/cpu/model/text()");
+    is($model3,$model_exp) or exit;
+
+    my ($cpu3) = $doc->findnodes("/domain/cpu");
+    is($cpu3->getAttribute('mode'),'custom');
 }
 
 sub _test_change_cpu($vm, $domain) {
-
-    _test_cpu_topology_old_cpu($domain);
 
     _test_cpu_features_topology($domain);
 
@@ -1249,6 +1307,8 @@ sub _test_change_cpu($vm, $domain) {
     _test_cpu_topology_empty($domain);
     _test_change_cpu_topology($domain);
     _test_change_defaults($domain,'cpu');
+
+    _test_cpu_topology_old_cpu($domain);
 }
 
 sub _test_change_cpu_topology($domain) {
