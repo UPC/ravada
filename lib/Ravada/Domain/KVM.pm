@@ -3332,7 +3332,12 @@ sub _change_xml($xml, $name, $data) {
         if ($field eq '#text') {
             my $text = $data->{$field};
             if ($node->textContent ne $text) {
-                $node->setText($text);
+                my ($n_text) = $node->findnodes("text()");
+                eval {
+                    $n_text->setData($text);
+                };
+                confess $@."\n".Dumper($node->toString,$name,$data)
+                if $@;
             }
             next;
         }
