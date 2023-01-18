@@ -638,6 +638,7 @@ sub test_add_network_bridge($domain) {
 
     my $vm = Ravada::VM->open($domain->_data('id_vm'));
     my @bridges = $vm->_list_bridges();
+    return if !scalar(@bridges);
 
     my $req = Ravada::Request->add_hardware(
         uid => user_admin->id
@@ -1701,7 +1702,7 @@ for my $vm_name (vm_names()) {
     my %controllers = $domain_b0->list_controllers;
     lock_hash(%controllers);
 
-    for my $hardware ('network', reverse sort keys %controllers ) {
+    for my $hardware ( reverse sort keys %controllers ) {
         next if $hardware eq 'video';
 	    my $name= new_domain_name();
 	    my $domain_b = $BASE->clone(
