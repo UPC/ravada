@@ -634,6 +634,44 @@ sub test_add_filesystem($domain) {
     test_add_filesystem_fail($domain);
 }
 
+sub test_add_network_bridge($domain) {
+
+    my $vm = Ravada::VM->open($domain->_data('id_vm'));
+    my @bridges = $vm->_list_bridges();
+
+    my $req = Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,name => 'network'
+        ,id_domain => $domain->id
+        ,data => {
+            driver => 'virtio'
+            ,type => 'bridge'
+            ,bridge => $bridges[0]
+        }
+    );
+    wait_request();
+    is($req->error,'');
+}
+
+sub test_add_network_nat($domain) {
+    my $req = Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,name => 'network'
+        ,id_domain => $domain->id
+        ,data => {
+            driver => 'virtio'
+            ,type => 'NAT'
+            ,network => 'default'
+        }
+    );
+    wait_request();
+    is($req->error,'');
+}
+
+sub test_add_network($domain) {
+    test_add_network_bridge($domain);
+    test_add_network_nat($domain);
+}
 
 sub test_add_hardware_custom($domain, $hardware) {
     return if $hardware =~ /cpu|features/i;
@@ -643,7 +681,7 @@ sub test_add_hardware_custom($domain, $hardware) {
         ,filesystem => \&test_add_filesystem
         ,usb => sub {}
         ,mock => sub {}
-        ,network => sub {}
+        ,network => \&test_add_network
         ,video => \&test_add_video
         ,sound => sub {}
         ,'usb controller' => sub {}
