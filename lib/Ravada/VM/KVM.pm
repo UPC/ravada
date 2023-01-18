@@ -1840,7 +1840,7 @@ sub _xml_add_uefi($self, $doc, $name) {
     }
     $loader->setAttribute('readonly' => 'yes');
     $loader->setAttribute('type' => 'pflash');
-    $loader->appendText('/usr/share/OVMF/OVMF_CODE.fd');
+    $loader->appendText('/usr/share/OVMF/OVMF_CODE_4M.fd');
 
     my ($nvram) =$doc->findnodes("/domain/os/nvram");
     if (!$nvram) {
