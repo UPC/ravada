@@ -638,6 +638,7 @@ sub test_add_network_bridge($domain) {
 
     my $vm = Ravada::VM->open($domain->_data('id_vm'));
     my @bridges = $vm->_list_bridges();
+    return if !scalar(@bridges);
 
     my $req = Ravada::Request->add_hardware(
         uid => user_admin->id
