@@ -51,6 +51,24 @@ Packages for RPM based distributions are likely to appear and
 the installation should be possible with dnf.
 `Please report <https://ravada.upc.edu/#help>`_.
 
+Troubleshooting
+---------------
+
+Virtual machine may fail to launch. It should generate a log file at
+/var/log/swtpm/libvirt/qemu/
+
+Need read/write rights on statedir
+==================================
+
+Need read/write rights on statedir /var/lib/swtpm-localca for user tss
+
+Fix it with granting the rights it requests:
+
+.. prompt:: bash $
+
+    sudo chgrp tss /var/lib/swtpm-localca
+    sudo chmod g+w /var/lib/swtpm-localca
+
 References
 ----------
 
