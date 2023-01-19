@@ -358,7 +358,7 @@ sub _around_start($orig, $self, @arg) {
         eval { $self->$orig(%arg) };
         $error = $@;
         last if !$error;
-        warn "WARNING: $error ".$self->_vm->name." ".$self->_vm->enabled if $error;
+        warn "WARNING: $error ".$self->name." in ".$self->_vm->name." ".$self->_vm->enabled if $error;
 
         ;# pool has asynchronous jobs running.
         next if $error && ref($error) && $error->code == 1

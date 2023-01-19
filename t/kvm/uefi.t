@@ -64,6 +64,8 @@ sub test_machine_types($vm) {
     my $doc = XML::LibXML->load_xml(string => $xml);
     my @node_emulator = $doc->findnodes("/capabilities/guest/arch/emulator");
     die $doc->toString if !$node_emulator[0];
+
+    my ($found_q35, $found_4m)=(0,0);
     for my $node_emulator (@node_emulator) {
         my $emulator = $node_emulator->textContent;
         for my $node_arch ($doc->findnodes("/capabilities/guest/arch")) {
@@ -100,12 +102,21 @@ sub test_machine_types($vm) {
 
                 is($node_type->getAttribute('arch'), $iso->{arch});
 
+                if($node_type->getAttribute('machine') =~ /q35/) {
+                    $found_q35++;
+                    my ($loader) = $doc->findnodes('/domain/os/loader');
+                    is($loader->getText,'OVMF_CODE_4M.fd');
+                    $found_4m++;
+                }
+
                 $domain->start(user_admin);
                 $domain->shutdown_now(user_admin);
                 $domain->remove(user_admin) if $domain;
             }
         }
     }
+    ok($found_q35);
+    ok($found_4m);
 }
 
 sub test_req_machine_types($vm) {
@@ -176,6 +187,7 @@ sub test_isos($vm) {
 
     my @skip = ('Android');
     my $device_iso = _search_iso_alpine($vm);
+    my ($found_q35, $found_4m) = (0,0);
     for my $iso_frontend ( @$isos ) {
         my $iso;
         eval { $iso = $vm->_search_iso($iso_frontend->{id}, $device_iso) };
@@ -183,12 +195,21 @@ sub test_isos($vm) {
         die $@ if $@;
         next if !$iso->{arch} || $iso->{arch} !~ /^(i686|x86_64)$/;
         next if grep {$iso->{name} =~ /$_/} @skip;
+
         _mock_device($vm,$iso, $device_iso);
         die Dumper($iso) if !$iso->{device} || !-e $iso->{device};
         for my $machine (@{$machine_types->{$iso->{arch}}}) {
             next if $machine eq 'ubuntu';
             for my $uefi ( 0,1 ) {
                 next if $machine =~ /^pc-q35/ && $iso->{arch} !~ /x86_64/ && !$uefi;
+                next if $iso->{name} =~ /Windows 11/
+                && (!$uefi || $machine !~ /q35/);
+
+                next if !$ENV{TEST_LONG} &&
+                ( $iso->{description} =~ /Debian \d /
+                    || $iso->{description} =~ /Mint (18|20)/
+                    || $iso->{description} =~ /Ubuntu (18|20)/
+                );
                 diag($iso->{arch}." ".$iso->{name}." ".$machine
                 ." uefi=$uefi");
                 my $name = new_domain_name();
@@ -219,6 +240,15 @@ sub test_isos($vm) {
 
                 is($node_type->getAttribute('arch'), $iso->{arch});
 
+                if( $uefi
+                        && $iso->{arch} =~ /x86_64/
+                        && $node_type->getAttribute('machine') =~ /q35/
+                    ) {
+                    $found_q35++;
+                    my ($loader) = $doc->findnodes('/domain/os/loader/text()');
+                    like($loader,qr/OVMF_CODE_4M.fd$/) or die $domain->name;
+                    $found_4m++;
+                }
 
                 $domain->start(user_admin);
                 test_drives($doc);
@@ -227,6 +257,8 @@ sub test_isos($vm) {
             }
         }
     }
+    ok($found_q35, "Expecting some q35 machines tested");
+    ok($found_4m,"Expected some 4M ovmf found");
 }
 
 sub test_drives($doc) {

@@ -1695,17 +1695,16 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     $uefi = 1 if $bios && $bios =~ /uefi/i;
 
     confess "Arguments unknown ".Dumper($options)  if keys %$options;
-
-    if ( $uefi ) {
-        #        $self->_xml_add_libosinfo_win2k16($doc);
-        my ($xml_name) = $doc->findnodes('/domain/name');
-        $self->_xml_add_uefi($doc, $xml_name->textContent);
+    if ($machine) {
+        $self->_xml_set_machine($doc, $machine);
     }
     if ($arch) {
         $self->_xml_set_arch($doc, $arch);
     }
-    if ($machine) {
-        $self->_xml_set_machine($doc, $machine);
+    if ( $uefi ) {
+        #        $self->_xml_add_libosinfo_win2k16($doc);
+        my ($xml_name) = $doc->findnodes('/domain/name');
+        $self->_xml_add_uefi($doc, $xml_name->textContent);
     }
     my ($type) = $doc->findnodes('/domain/os/type');
 
@@ -1839,7 +1838,20 @@ sub _xml_add_uefi($self, $doc, $name) {
     }
     $loader->setAttribute('readonly' => 'yes');
     $loader->setAttribute('type' => 'pflash');
-    $loader->appendText('/usr/share/OVMF/OVMF_CODE_4M.fd');
+
+    my $ovmf = '/usr/share/OVMF/OVMF_CODE.fd';
+
+    my ($type) = $doc->findnodes('/domain/os/type');
+    if ($type->getAttribute('arch') =~ /x86_64/
+            && $type->getAttribute('machine') =~ /pc-q35/) {
+        $ovmf = '/usr/share/OVMF/OVMF_CODE_4M.fd';
+    }
+    my ($text) = $loader->findnodes("text()");
+    if ($text) {
+        $text->setData($ovmf);
+    } else {
+        $loader->appendText($ovmf);
+    }
 
     my ($nvram) =$doc->findnodes("/domain/os/nvram");
     if (!$nvram) {
