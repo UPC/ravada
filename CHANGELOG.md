@@ -19,3 +19,4 @@
 - Change max memory first
 - UEFI Windows11: Can't install KB5012170 in ed2k-ovmf in Qemu [\#1903]
 - Change virtual CPU topology [\#1837]
+- Add network bridge [\#1905]
