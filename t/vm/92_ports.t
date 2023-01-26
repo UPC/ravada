@@ -1166,7 +1166,10 @@ sub test_open_port_duplicated($vm) {
     for ( 1 .. 5 ) {
         @out3 = split /\n/, `iptables-save -t nat`;
         @open3 = (grep /--dport $public_port/, @out3);
-        last if scalar(@open3);
+        last if scalar(@open3)==1;
+        if (scalar(@open3)>1) {
+            Ravada::Request->refresh_vms(_force =>1, uid => Ravada::Utils::user_daemon->id)
+        }
         Ravada::Request->open_exposed_ports(
             uid => user_admin->id
             ,id_domain => $clone->id

@@ -184,6 +184,7 @@ qw(
     list_host_devices
     refresh_machine
     refresh_machine_ports
+    refresh_vms
     set_time
     open_exposed_ports
     manage_pools
@@ -763,6 +764,8 @@ sub _new_request {
         my $id_recent;
         $id_recent = $self->done_recently()
         if $args{command} !~ /^(clone|migrate|set_base_vm)$/;
+
+        warn Dumper([$id_recent, $id_dupe]);
 
         my $id = ( $id_dupe or $id_recent );
         return Ravada::Request->open($id) if $id;
@@ -1531,7 +1534,7 @@ sub enforce_limits {
         , args => $args
     );
 
-    if (!$args->{at} && (my $id_request = $req->done_recently(30))) {
+    if (!$args->{at} && !$args->{_force} && (my $id_request = $req->done_recently(30))) {
         $req->status("done",$req->command." run recently by id_request: $id_request");
     }
     return $req;
@@ -1624,12 +1627,15 @@ sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
         ."         AND ( error IS NULL OR error = '' ) "
         ."         AND id <> ? ";
 
+        warn $command;
     my $sth = $$CONNECTOR->dbh->prepare( $query );
     my $date= Time::Piece->localtime(time - $seconds);
     $sth->execute($date->ymd." ".$date->hms, $command, $id_req);
+    warn Dumper([$date->ymd." ".$date->hms, $command, $id_req]);
     while (my ($id,$args_found) = $sth->fetchrow) {
         next if $self && $self->id == $id;
 
+        warn $id;
         return Ravada::Request->open($id) if !defined $args;
 
         my $args_found_d = decode_json($args_found);
@@ -1639,6 +1645,7 @@ sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
         next if join(".",sort keys %$args_d) ne join(".",sort keys %$args_found_d);
         my $args_d_s = join(".",map { $args_d->{$_} } sort keys %$args_d);
         my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
+        warn Dumper([$args,$args_d_s,$args_found_s]);
         next if defined $args && $args_d_s ne $args_found_s;
 
         return Ravada::Request->open($id);

@@ -303,12 +303,31 @@ sub test_req_many_clones {
     is(scalar $base->clones , 0, Dumper([$base->clones]));
 }
 
+sub test_force() {
+    my $req = Ravada::Request->refresh_vms();
+    ok($req);
+    wait_request( debug => 1);
+
+    my $req3 = Ravada::Request->refresh_vms();
+    ok($req3);
+    is($req3->id,$req->id) or exit;
+    wait_request( debug => 1);
+
+    my $req2 = Ravada::Request->refresh_vms(_force => 1);
+    ok($req2);
+    isnt($req2->id,$req->id);
+    wait_request( debug => 1);
+
+}
+
 ################################################
 eval { $ravada = rvd_back () };
 
 ok($ravada,"I can't launch a new Ravada");# or exit;
 remove_old_domains();
 remove_old_disks();
+
+test_force();
 
 for my $vm_name ( vm_names() ) {
     my $vm;

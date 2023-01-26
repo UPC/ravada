@@ -5195,10 +5195,6 @@ sub _cmd_domain_autostart($self, $request ) {
 
 sub _cmd_refresh_vms($self, $request=undef) {
 
-    if ($request && !$request->defined_arg('_force') && (my $recent = $request->done_recently(30))) {
-        die "Command ".$request->command." run recently by ".$recent->id."\n";
-    }
-
     $self->_refresh_disabled_nodes( $request );
     $self->_refresh_down_nodes( $request );
 
