@@ -278,7 +278,6 @@
             var load_balance_options = function() {
                 $http.get("/balance_options.json")
                     .then(function(response) {
-                        console.log($scope.showmachine.balance_policy);
                         $scope.balance_options = response.data;
                     });
             };
@@ -462,6 +461,8 @@
                                 $scope.new_shutdown_disconnected
                                     = $scope.showmachine.shutdown_disconnected;
                                 $scope.new_balance_policy=$scope.showmachine.balance_policy;
+                                $scope.new_auto_compact
+                                    = $scope.showmachine.auto_compact;
                                 load_balance_options();
                             }
                             if (is_admin) {

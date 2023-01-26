@@ -70,11 +70,86 @@ sub test_compact($vm) {
         is(scalar(@found),0) or die Dumper($vol,\@found);
     }
 
+    test_auto_compact($domain);
+
     $domain->remove(user_admin);
 
 }
 
+sub test_auto_compact($domain) {
+    rvd_back->setting("/backend/auto_compact",1);
+    is(rvd_back->setting("/backend/auto_compact"),1);
+    like(rvd_back->setting("/backend/auto_compact/time"),qr/:00/);
+    $domain->start(user_admin);
+    $domain->shutdown_now(user_admin);
+    my @requests = $domain->list_requests(1);
+    my @compact = grep {$_->command eq 'compact' } @requests;
+    # it still must be enabled in the machine
+    is(scalar @compact,0);
+
+    $domain->_data('auto_compact' => 1);
+    $domain->start(user_admin);
+    $domain->shutdown_now(user_admin);
+    @requests = $domain->list_requests(1);
+    @compact = grep {$_->command eq 'compact' } @requests;
+    is(scalar @compact,1);
+
+    rvd_back->setting("/backend/auto_compact",0);
+}
+
+sub test_settings() {
+    my $settings = rvd_front->settings_global();
+    for my $item (keys %$settings) {
+        next if $item eq 'id';
+        ok(ref($settings->{$item}),$item) or exit;
+        ok(exists $settings->{$item}->{id}
+            || exists $settings->{$item}->{_id}
+            ,Dumper([$item,$settings->{$item}]))
+                or exit;
+    }
+    ok(rvd_front->settings_global()->{backend}->{time_zone}->{value})
+        or exit;
+
+    $settings->{backend}->{auto_compact}->{time}->{value}="22:00";
+
+
+    my $reload = 0;
+    rvd_front->update_settings_global($settings, user_admin,\$reload);
+
+    my $settings2 = rvd_front->_get_settings();
+    is($settings2->{backend}->{auto_compact}->{time}->{value},"22:00");
+}
+
+sub test_compact_clone($vm) {
+
+    my $base1 = create_domain($vm);
+    $base1->prepare_base(user_admin);
+
+    my $base2=$base1->clone(name => new_domain_name,user=>user_admin);
+    $base2->prepare_base(user_admin);
+
+    my $clone =$base2->clone(name => new_domain_name,user=>user_admin);
+
+    is($clone->auto_compact,undef);
+
+    $base1->auto_compact(1);
+
+    is($base2->auto_compact(),1);
+    is($clone->auto_compact(),1);
+
+    $base2->auto_compact(0);
+    is($clone->auto_compact(),0) or exit;
+
+    $clone->auto_compact(1);
+    is($clone->auto_compact(),1) or exit;
+
+}
+
 #######################################################
+
+clean();
+
+test_settings();
 if ($>)  {
     my $msg = "SKIPPED: Test must run as root";
     diag($msg);
@@ -84,8 +159,6 @@ if ($>)  {
     done_testing();
     exit;
 }
-
-clean();
 
 for my $vm_name (vm_names() ) {
     ok($vm_name);
@@ -100,6 +173,7 @@ for my $vm_name (vm_names() ) {
         skip($msg,10)   if !$vm;
 
         diag("test compact on $vm_name");
+        test_compact_clone($vm);
         test_compact($vm);
     }
 }
