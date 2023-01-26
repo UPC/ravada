@@ -494,7 +494,7 @@ msgstr "Выключение…"
 msgid "It may take a couple of minutes."
 msgstr "Это может занять пару минут."
 
-msgid "Hybernating ..."
+msgid "Hibernating ..."
 msgstr "Приостановка…"
 
 msgid "Description"
@@ -1634,9 +1634,6 @@ msgstr "драйвер"
 
 msgid "Type the name of the volume disk to confirm:"
 msgstr "Введите имя жёсткого диска, чтобы подтвердить удаление:"
-
-msgid "No hardware found for"
-msgstr "Не найдено оборудование для"
 
 msgid "This machine is running and can't be modified."
 msgstr "Эта виртуальная машина запущена и не может быть изменена."

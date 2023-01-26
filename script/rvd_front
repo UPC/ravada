@@ -146,6 +146,11 @@ sub _time() {
 
 hook before_routes => sub {
   my $c = shift;
+  $c ->res->headers->content_security_policy (
+   "object-src 'auto';"
+  ."media-src 'self';"
+  ." frame-src 'self';"
+  ." connect-src 'self'; ");
 
   $USER = undef;
 
@@ -771,6 +776,15 @@ any '/(:item)/settings/(:id).html' => sub($c) {
     return $c->render( template => '/main/settings_generic' );
 };
 
+get '/node/info/(:id).json' => sub($c) {
+    my $sth = $RAVADA->_dbh->prepare("SELECT id,name,version FROM vms "
+        ." WHERE id=?"
+    );
+    $sth->execute($c->stash('id'));
+    my $row = $sth->fetchrow_hashref;
+    return $c->render(json => $row);
+};
+
 get '/node/list_bases/(:id)' => sub($c) {
     return $c->render( json => $RAVADA->_list_bases_vm_all($c->stash('id')));
 };
@@ -845,6 +859,12 @@ get '/machine/reboot/(:id).(:type)' => sub {
 
         return reboot_machine($c);
 };
+
+get '/machine/stop_start/(:id).(:type)' => sub($c) {
+    return access_denied($c)        if !$USER ->can_reboot($c->stash('id'));
+    return stop_start($c);
+};
+
 
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
@@ -2091,33 +2111,45 @@ any '/user_settings' => sub {
     user_settings($c);
 };
 
-sub _translations($c) {
+sub _languages() {
     my %lang_name=(
         ar => 'Arab'
         ,en => 'English'
         ,ca => 'Catalan'
         ,es => 'Spanish'
-        ,zh_CN => 'Chinese'
+        ,eu => 'Euskara'
         ,gl => 'Galician'
+        ,fa => 'Persian'
         ,fr => 'French'
         ,de => 'German'
         ,hi => 'Hindi'
         ,id => 'Indonesian'
         ,it => 'Italian'
-        ,fa => 'Persian'
-        ,pt => 'Portuguese'
+        ,ja => 'Japanese'
+        ,my => 'Melayu'
+        ,nb_NO => 'Norwegian'
         ,pt => 'Portuguese'
         ,tr => 'Turkish'
-        ,ja => 'Japanese'
         ,'cat@valencia' => 'Valencian'
         ,'ru' => 'Russian'
         ,vi => 'Vietnamese'
+        ,zh_CN => 'Chinese'
     );
-    $c->stash(lang_name => \%lang_name);
+    return \%lang_name;
+}
+
+get '/translations' => sub($c) {
+    my $lang_name = _languages();
+    return $c->render(json => $lang_name);
+};
+
+sub _translations($c) {
+    my $lang_name = _languages();
+    $c->stash(lang_name => $lang_name);
     my $language = $USER->language;
     if (!$language) {
         for my $detected_lang (_detect_languages($c)) {
-            if ( $lang_name{$detected_lang}) {
+            if ( exists $lang_name->{$detected_lang}) {
                 $language = $detected_lang;
                 last;
             }
@@ -2633,7 +2665,7 @@ sub new_machine {
         push @error,("Name is mandatory")   if !$c->param('name');
         push @error,("Invalid name '".$c->param('name')."'"
                 .".It can only contain alphabetic, numbers, undercores and dashes.")
-            if $c->param('name') && $c->param('name') !~ /^[а-яА-Яa-zA-Z0-9àèìòùáéíóúäëïöüçñ€_\$\-]+$/i;
+            if $c->param('name') && $c->param('name') !~ /^[а-яА-Яa-zA-Z0-9àèìòùáéíóúäëïöüçñ€_\$\-\.]+$/i;
         if (!@error) {
             req_new_domain($c);
             $c->redirect_to("/admin/machines");
@@ -2816,7 +2848,7 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
                     uid => $USER->id
                 , id_domain => $domain->id
                 , retry => 20
-                );
+                ) if $domain->list_ports();
             }
 
             app->log->info($USER->name." start_domain ".$domain->name." from "._remote_ip($c))
@@ -2828,7 +2860,6 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
                 , remote_ip => _remote_ip($c)
             )
         }
-        $name = _new_domain_name($name);
     }
 
     app->log->info($USER->name." requesting create_domain ".$name." from "._remote_ip($c))
@@ -2843,17 +2874,6 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
        ,@create_args
     );
 
-}
-
-sub _new_domain_name {
-    confess;
-    my $name = shift;
-    my $count = 1;
-    my $name2;
-    for ( ;; ) {
-        $name2 = "$name-".++$count;
-        return $name2 if !$RAVADA->domain_exists($name2);
-    }
 }
 
 sub run_request($c, $request, $anonymous = 0) {
@@ -3216,6 +3236,22 @@ sub reboot_machine {
 
     return $c->redirect_to('/machines') if $type eq 'html';
     return $c->render(json => { req => $req->id });
+}
+
+sub stop_start($c) {
+    return login($c) if !_logged_in($c);
+
+    my ($domain, $type) = _search_requested_machine($c);
+
+    my $req = Ravada::Request->shutdown_domain(name => $domain->name
+        ,uid => $USER->id
+    );
+    my $req2 = Ravada::Request->start_domain(id_domain => $domain->id
+        ,uid => $USER->id
+        ,after_request => $req->id
+    );
+
+    return $c->render(json => { req => $req2->id });
 }
 
 sub force_shutdown_machine {

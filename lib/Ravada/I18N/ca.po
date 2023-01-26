@@ -41,13 +41,13 @@ msgid "View"
 msgstr "Veure"
 
 msgid "Prepare base"
-msgstr "Preparar base"
+msgstr "Preparar la base"
 
 msgid "Clone"
 msgstr "Clonar"
 
 msgid "Clone/s"
-msgstr "clon/s"
+msgstr "Clon/s"
 
 msgid "Users List"
 msgstr "Llista d'usuaris"
@@ -122,7 +122,7 @@ msgid "New Password:"
 msgstr "Nova Contrasenya:"
 
 msgid "Confirm Password:"
-msgstr "Confirma Contrasenya:"
+msgstr "Confirma la Contrasenya:"
 
 msgid "Submit"
 msgstr "Envia"
@@ -221,7 +221,7 @@ msgid "Admin tools"
 msgstr "Eines d'administrador"
 
 msgid "Remove base"
-msgstr "Esborra base"
+msgstr "Esborra la base"
 
 msgid "Restore"
 msgstr "Restaura"
@@ -248,7 +248,7 @@ msgid "Cannot remove base, machine has clones"
 msgstr "No es pot esborrar la base, la màquina té clons"
 
 msgid "show clones"
-msgstr "veure clons"
+msgstr "veure els clons"
 
 msgid "hide clones"
 msgstr "amaga els clons"
@@ -499,13 +499,13 @@ msgid "Show All"
 msgstr "Mostra tot"
 
 msgid "Shutting down ..."
-msgstr "Apagant …"
+msgstr "Apagant..."
 
 msgid "It may take a couple of minutes."
 msgstr "Pot trigar un parell de minuts."
 
-msgid "Hybernating ..."
-msgstr "Hivernant …"
+msgid "Hibernating ..."
+msgstr "Hivernant..."
 
 msgid "Description"
 msgstr "Descripció"
@@ -1321,13 +1321,13 @@ msgid "This machine is running and can't be renamed."
 msgstr "Aquesta màquina està en marxa i no pot ser canviada de nom."
 
 msgid "Remove group"
-msgstr "Esborrar grup"
+msgstr "Esborrar el grup"
 
 msgid "Group"
 msgstr "Grup"
 
 msgid "New group member"
-msgstr "Nou membre de grup"
+msgstr "Nou membre del grup"
 
 msgid "This group has been removed."
 msgstr "Aquest grup ha estat esborrat."
@@ -1452,7 +1452,7 @@ msgid "Minimum port number to expose virtual machine services."
 msgstr "Número de port mínim per exposar els serveis de la màquina virtual."
 
 msgid "cancel"
-msgstr "cancel · lar"
+msgstr "cancel·lar"
 
 msgid "New user"
 msgstr "Nou usuari"
@@ -1805,9 +1805,6 @@ msgstr "Màxima memòria (MB)"
 msgid "Current memory (MB)"
 msgstr "Memòria actual (MB)"
 
-msgid "No hardware found for"
-msgstr "No s'ha trobat maquinari per a"
-
 msgid "Any remote client can access this port"
 msgstr "Qualsevol client pot accedir a aquest port"
 
@@ -2097,7 +2094,7 @@ msgid "dn:"
 msgstr "dn:"
 
 msgid "Frontend"
-msgstr "Aplicació frontal"
+msgstr "Interfície gràfica d'usuari"
 
 msgid "fallback"
 msgstr "sistema alternatiu"
@@ -2329,3 +2326,6 @@ msgstr ""
 "Són necessaris grups LDAP per configurar les reserves. S'han trobat alguns "
 "grups, però cap membre hi pertany.<a href='/admin/groups'>Afegeix noves "
 "entrades aquí. </a>"
+
+msgid "For Spice client setup follow this "
+msgstr "Per a la configuració del client Spice, seguiu aquest "

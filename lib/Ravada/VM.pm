@@ -408,7 +408,7 @@ sub _around_create_domain {
 
     my $config = delete $args{config};
 
-    if ($name !~ /^[a-zA-Z0-9_-]+$/) {
+    if ($name !~ /^[a-zA-Z0-9_\-]+$/) {
         $alias = $self->_set_alias_unique($alias or $name);
         $name = $self->_set_ascii_name($name);
         $args_create{name} = $name;
@@ -477,6 +477,7 @@ sub _around_create_domain {
     $domain->add_volume_swap( size => $swap )   if $swap;
     $domain->_data('is_compacted' => 1);
     $domain->_data('alias' => $alias) if $alias;
+    $domain->_data('date_status_change', Ravada::Utils::now());
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
@@ -488,6 +489,7 @@ sub _around_create_domain {
             $domain->expose(%port);
         }
         $base->_copy_host_devices($domain);
+        $domain->_clone_filesystems();
         my @displays = $base->_get_controller_display();
         for my $display (@displays) {
             delete $display->{id};
@@ -521,9 +523,9 @@ sub _around_create_domain {
 
 sub _set_ascii_name($self, $name) {
     my $length = length($name);
-    $name =~ tr/áéíóúàèìòùäëïöüçñ€$/aeiouaeiouaeioucnes/;
-    $name =~ tr/ÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÇÑ€$/AEIOUAEIOUAEIOUCNES/;
-    $name =~ tr/A-Za-z0-9_\-/\-/c;
+    $name =~ tr/.âêîôûáéíóúàèìòùäëïöüçñ'/-aeiouaeiouaeiouaeioucn_/;
+    $name =~ tr/ÂÊÎÔÛÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÇÑ€$/AEIOUAEIOUAEIOUAEIOUCNES/;
+    $name =~ tr/A-Za-z0-9_\.\-/\-/c;
     $name =~ s/^\-*//;
     $name =~ s/\-*$//;
     $name =~ s/\-\-+/\-/g;
@@ -889,13 +891,13 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports manage_pools);
     my @requests;
     for my $req ( $base->list_requests ) {
         push @requests,($req) if !$ignore_requests{$req->command};
     }
     if (@requests) {
-        confess "ERROR: Domain ".$base->name." has ".$base->list_requests
+        confess "ERROR: Domain ".$base->name." has ".scalar(@requests)
                             ." requests.\n"
                             .Dumper(\@requests)
             unless scalar @requests == 1 && $request
@@ -1545,7 +1547,7 @@ sub read_file( $self, $file ) {
 
 sub _read_file_local( $self, $file ) {
     confess "Error: file undefined" if !defined $file;
-    CORE::open my $in,'<',$file or die "$! $file";
+    CORE::open my $in,'<',$file or croak "$! $file";
     return join('',<$in>);
 }
 

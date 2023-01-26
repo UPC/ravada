@@ -749,11 +749,14 @@ sub list_domains {
     my @list;
     while ( my ($id) = $sth->fetchrow) {
         my $domain;
-        if ($read_only) {
-            $domain = Ravada::Front::Domain->open( $id );
-        } else {
-            $domain = Ravada::Domain->open( id => $id, vm => $self);
-        }
+        eval{
+            if ($read_only) {
+                $domain = Ravada::Front::Domain->open( $id );
+            } else {
+                $domain = Ravada::Domain->open( id => $id, vm => $self);
+            }
+        };
+        die $@ if $@ && $@ !~ /Unkown domain/i;
         push @list,($domain) if $domain;
     }
     return @list;
@@ -1195,7 +1198,7 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
 
     my $device = ($iso->{device} or $self->dir_img."/$iso_name");
 
-    confess "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
+    warn "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
         if $VERIFY_ISO && $iso->{url} && !$iso->{md5} && !$iso->{sha256};
 
     my $downloaded = 0;
@@ -1637,9 +1640,11 @@ sub _fetch_this($self, $row, $type, $file = $row->{filename}){
         }
     }
 
-    confess "No $type for $file in ".$row->{"${type}_url"}."\n"
+    warn "No $type for $file in ".$row->{"${type}_url"}."\n"
         .$url_orig."\n"
         .$content;
+
+    return;
 }
 
 sub _fetch_md5($self,$row) {
@@ -1653,7 +1658,7 @@ sub _fetch_md5($self,$row) {
 sub _fetch_sha256($self,$row) {
     my $signature = $self->_fetch_this($row,'sha256');
     confess "ERROR: Wrong signature '$signature'"
-         if $signature !~ /^[0-9a-f]{9}/;
+         if defined $signature && $signature !~ /^[0-9a-f]{9}/;
     return $signature;
 }
 
@@ -1691,17 +1696,16 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     $uefi = 1 if $bios && $bios =~ /uefi/i;
 
     confess "Arguments unknown ".Dumper($options)  if keys %$options;
-
-    if ( $uefi ) {
-        #        $self->_xml_add_libosinfo_win2k16($doc);
-        my ($xml_name) = $doc->findnodes('/domain/name');
-        $self->_xml_add_uefi($doc, $xml_name->textContent);
+    if ($machine) {
+        $self->_xml_set_machine($doc, $machine);
     }
     if ($arch) {
         $self->_xml_set_arch($doc, $arch);
     }
-    if ($machine) {
-        $self->_xml_set_machine($doc, $machine);
+    if ( $uefi ) {
+        #        $self->_xml_add_libosinfo_win2k16($doc);
+        my ($xml_name) = $doc->findnodes('/domain/name');
+        $self->_xml_add_uefi($doc, $xml_name->textContent);
     }
     my ($type) = $doc->findnodes('/domain/os/type');
 
@@ -1835,7 +1839,20 @@ sub _xml_add_uefi($self, $doc, $name) {
     }
     $loader->setAttribute('readonly' => 'yes');
     $loader->setAttribute('type' => 'pflash');
-    $loader->appendText('/usr/share/OVMF/OVMF_CODE.fd');
+
+    my $ovmf = '/usr/share/OVMF/OVMF_CODE.fd';
+
+    my ($type) = $doc->findnodes('/domain/os/type');
+    if ($type->getAttribute('arch') =~ /x86_64/
+            && $type->getAttribute('machine') =~ /pc-q35/) {
+        $ovmf = '/usr/share/OVMF/OVMF_CODE_4M.fd';
+    }
+    my ($text) = $loader->findnodes("text()");
+    if ($text) {
+        $text->setData($ovmf);
+    } else {
+        $loader->appendText($ovmf);
+    }
 
     my ($nvram) =$doc->findnodes("/domain/os/nvram");
     if (!$nvram) {
@@ -2073,11 +2090,7 @@ sub _xml_remove_usb {
     }
 }
 
-sub _xml_add_usb_xhci {
-    my $self = shift;
-    my $devices = shift;
-
-    my $model = 'nec-xhci';
+sub _xml_add_usb_xhci($self, $devices, $model='qemu-xhci') {
     my $ctrl = _search_xml(
                            xml => $devices
                          ,name => 'controller'
@@ -2631,6 +2644,7 @@ sub _free_memory_available($self) {
 }
 
 sub _fetch_dir_cert($self) {
+    return '' if $<;
     my $in = $self->read_file($FILE_CONFIG_QEMU);
     for my $line (split /\n/,$in) {
         chomp $line;

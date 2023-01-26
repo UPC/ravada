@@ -26,6 +26,9 @@ my $SCRIPT = path(__FILE__)->dirname->sibling('../script/rvd_front');
 my %FILES;
 my %HREFS;
 
+my %MISSING_LANG = map {$_ => 1 }
+    qw(ca-valencia he ko);
+
 sub _remove_nodes($vm_name) {
     my @list_nodes = rvd_front->list_vms();
 
@@ -292,6 +295,21 @@ sub test_missing_routes() {
     mojo_login($t, $USERNAME, $PASSWORD);
 }
 
+sub test_languages() {
+    mojo_check_login($t);
+    $t->get_ok("/translations");
+    is($t->tx->res->code(),200) or die $t->tx->res->body;
+
+    my $lang = decode_json($t->tx->res->body);
+
+    opendir my $ls,"lib/Ravada/I18N" or die $!;
+    while (my $file = readdir $ls) {
+        next if $file !~ /(.*)\.po$/;
+        next if $MISSING_LANG{$1};
+        ok($lang->{$1},"Expecting $1 in select");
+    }
+}
+
 sub clean_clones() {
     wait_request( check_error => 0, background => 1);
     for my $domain (@{rvd_front->list_domains}) {
@@ -326,6 +344,7 @@ mojo_login($t, $USERNAME, $PASSWORD);
 remove_old_domains_req(0); # 0=do not wait for them
 clean_clones();
 
+test_languages();
 test_missing_routes();
 
 for my $vm_name (@{rvd_front->list_vm_types} ) {
