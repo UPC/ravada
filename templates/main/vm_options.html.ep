@@ -209,7 +209,13 @@
                     </small>
                     <small class="text-secondary"
                         ng-show="showmachine.is_base">
-                    <%=l 'Clones will inherit this value unless defined in their options' %>
+                    <%=l 'Clones will inherit this value unless defined in their options.' %>
+                    </small>
+
+                    <small ng-show="<%= !$auto_compact %>">
+                        <a href="/admin/settings">
+                            <%=l 'This must be enabled in global settings too.' %>
+                        </a>
                     </small>
                 </div>
             </div>

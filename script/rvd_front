@@ -3135,6 +3135,8 @@ sub manage_machine {
     my $displays = $domain->info($USER)->{hardware}->{display};
     my $has_graphics_spice = grep { $_->{driver} eq 'spice' } @$displays;
     $c->stash(has_graphics_spice => $has_graphics_spice);
+
+    $c->stash( auto_compact => $RAVADA->settings_global()->{'backend'}->{'auto_compact'}->{'value'} );
     return $c->render(template => 'main/settings_machine'
         , nodes => [$RAVADA->list_vms($domain->type)]
         , FEATURE => $RAVADA->feature()
@@ -3562,7 +3564,7 @@ sub machine_set_value($c, $id, $field, $value, $value_text=$value) {
 
     $USER->send_message("Setting $field_text to $value_text in "
         .$domain->name)
-        if $domain->_data($field) ne $value;
+        if !defined $domain->_data($field) || $domain->_data($field) ne $value;
     return $c->render(json => { $field => $domain->_data($field, $value)});
 
 }
