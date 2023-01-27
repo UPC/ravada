@@ -2487,6 +2487,17 @@ sub _sql_insert_defaults($self){
                 ,value => '10'
 
             }
+            ,{
+                id_parent => $id_backend
+                ,name => 'auto_compact'
+                ,value => '0'
+            }
+            ,{
+                id_parent => '/backend/auto_compact'
+                ,name => 'time'
+                ,value => '21:00'
+            }
+
         ]
     );
     my %field = ( settings => 'name' );
@@ -2502,6 +2513,13 @@ sub _sql_insert_defaults($self){
             warn "INFO: adding default $table ".Dumper($entry)
             if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
+            if ($entry->{id_parent} !~ /^\d+$/) {
+                my $parent = $self->_setting_data($entry->{id_parent});
+                die "Error not found setting $entry->{id_parent}"
+                if !$parent;
+
+                $entry->{id_parent} = $parent->{id};
+            }
             $self->_sql_insert_values($table, $entry);
         }
     }
@@ -2673,6 +2691,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','post_hibernated','int not null default 0');
     $self->_upgrade_table('domains','is_compacted','int not null default 0');
     $self->_upgrade_table('domains','has_backups','int not null default 0');
+    $self->_upgrade_table('domains','auto_compact','int default NULL');
     $self->_upgrade_table('domains','date_status_change' , 'datetime');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
@@ -6339,6 +6358,11 @@ Returns the value of a configuration setting
 sub setting {
     return Ravada::Front::setting(@_);
 }
+
+sub _setting_data {
+    return Ravada::Front::_setting_data(@_);
+}
+
 
 =head2 restore_backup
 

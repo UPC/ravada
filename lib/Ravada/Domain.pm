@@ -2032,6 +2032,7 @@ sub info($self, $user) {
         ,autostart => $self->autostart
         ,volatile_clones => $self->volatile_clones
         ,id_vm => $self->_data('id_vm')
+        ,auto_compact => $self->auto_compact
         ,date_changed => $self->_data('date_changed')
     };
 
@@ -3097,9 +3098,34 @@ sub _post_shutdown {
         );
     }
 
+    $self->_schedule_compact();
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
                                 && !$is_active;
+}
+
+sub _schedule_compact($self) {
+
+    return if !Ravada::Front::setting(undef,"/backend/auto_compact");
+    return if !$self->auto_compact;
+
+    my ($req_compact) = grep {$_->command eq 'compact' } $self->list_requests(1);
+    return if $req_compact;
+
+    my $time_compact = Ravada::Front::setting(undef,"/backend/auto_compact/time");
+    my ($hours_c,$min_c) = split /:/, $time_compact;
+    my @now = localtime(time);
+    my $hours = $hours_c - $now[2];
+    my $min = $min_c - $now[1];
+
+    my $at = time+$hours*3600 + $min*60;
+
+    Ravada::Request->compact(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $self->id
+            ,at => time+$hours*3600 + $min*60
+            ,keep_backup => 0
+    );
 }
 
 sub _set_displays_builtin_active($self, $is_active=1) {
@@ -5594,6 +5620,17 @@ hardware change can be applied.
 
 sub needs_restart($self, $value=undef) {
     return $self->_data('needs_restart',$value);
+}
+
+sub auto_compact($self, $value=undef) {
+    return $self->_data('auto_compact', $value) if defined $value;
+
+    $value = $self->_data('auto_compact');
+    if (!defined $value && $self->id_base) {
+        my $base = Ravada::Front::Domain->open($self->id_base);
+        return $base->auto_compact;
+    }
+    return $value;
 }
 
 sub _post_change_hardware($self, $hardware, $index, $data=undef) {

@@ -1346,6 +1346,8 @@ sub _get_settings($self, $id_parent=0) {
         my $setting_sons = $self->_get_settings($id);
         if ($setting_sons) {
             $ret->{$name} = $setting_sons;
+            $ret->{$name}->{id} = $id;
+            $ret->{$name}->{value} = $value;
         } else {
             $ret->{$name} = { id => $id, value => $value};
         }
@@ -1407,6 +1409,27 @@ sub setting($self, $name, $new_value=undef) {
     return $value;
 }
 
+sub _setting_data($self, $name) {
+
+    my $sth = _dbh->prepare(
+        "SELECT * "
+        ." FROM settings "
+        ." WHERE id_parent=? AND name=?"
+    );
+    my $row;
+    my $id_parent = 0;
+    for my $item (split m{/},$name) {
+        next if !$item;
+        $sth->execute($id_parent, $item);
+        $row = $sth->fetchrow_hashref;
+        confess "Error: I can't find setting $item inside id_parent: $id_parent"
+        if !defined $row->{id};
+
+        $id_parent = $row->{id};
+    }
+    return $row;
+}
+
 sub _check_features($self, $name, $new_value) {
     confess "Error: LDAP required for bookings."
     if $name eq '/backend/bookings' && $new_value && !$self->feature('ldap');
@@ -1459,17 +1482,18 @@ sub update_settings_global($self, $arg, $user, $reload, $orig_settings = $self->
         delete $arg->{frontend}->{maintenance_start};
     }
     for my $field (sort keys %$arg) {
-        if ( !exists $arg->{$field}->{id} ) {
+        next if $field =~ /^(id|value)$/;
+        confess Dumper([$field,$arg->{$field}]) if !ref($arg->{$field});
+        if ( scalar(keys %{$arg->{$field}})>2 ) {
             confess if !keys %{$arg->{$field}};
             $self->update_settings_global($arg->{$field}, $user, $reload, $orig_settings);
-            next;
         }
         confess "Error: invalid field $field" if $field !~ /^\w+$/;
         my ( $value, $id )
                    = ($arg->{$field}->{value}
                     , $arg->{$field}->{id}
         );
-        next if $orig_settings->{$id} eq $value;
+        next if !defined $value || $orig_settings->{$id} eq $value;
         $$reload++ if $field eq 'bookings';
         my $sth = $self->_dbh->prepare(
             "UPDATE settings set value=?"
