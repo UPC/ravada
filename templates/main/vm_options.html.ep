@@ -198,7 +198,7 @@
                 </div>
                 <div class="col-lg-2">
                     <input type="checkbox" ng-model="new_auto_compact" name="auto_compact"
-                    ng-disabled="<%= !$USER->is_admin %>"
+                    ng-disabled="<%= !$USER->is_admin || !$auto_compact %>"
                     ng-true-value="1" ng-false-value="0"
                     ng-change="set_bool('auto_compact',new_auto_compact)"
                     >
