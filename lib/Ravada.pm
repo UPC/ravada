@@ -2618,6 +2618,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
     $self->_upgrade_table('requests','retry','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','args','TEXT');
+    $self->_upgrade_table('domains','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 
     $self->_upgrade_table('users','language','char(40) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
@@ -6124,9 +6125,6 @@ sub _user_is_admin($self, $id_user) {
 
 sub _enforce_limits_active($self, $request) {
     confess if !$request;
-    if (my $recent = $request->done_recently(30)) {
-        die "Command ".$request->command." run recently by ".$recent->id."\n";
-    }
     my $timeout = ($request->defined_arg('timeout') or 10);
     my $start_limit_default = $self->setting('/backend/start_limit');
 

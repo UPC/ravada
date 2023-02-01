@@ -869,7 +869,7 @@ sub test_port_prerouting_already_open_clones($vm) {
         ,id_domain => $clone1->id
         ,remote_ip => $remote_ip1
     );
-    wait_request();
+    wait_request(debug => 0);
     my $ip1 = _wait_ip2($vm, $clone1);
     ok($ip1) or die "No ip for ".$clone1->name;
 
@@ -878,12 +878,12 @@ sub test_port_prerouting_already_open_clones($vm) {
         ,id_domain => $clone2->id
         ,remote_ip => $remote_ip2
     );
-    wait_request();
+    wait_request(debug => 0);
 
     my $ip2 = _wait_ip2($vm, $clone2);
     ok($ip2) or die "No ip for ".$clone2->name;;
 
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my @out = split /\n/, `iptables-save`;
 
@@ -946,26 +946,29 @@ sub test_port_prerouting_already_open_clones_no_restricted($vm) {
     $sth->execute();
     my $remote_ip1 = '198.18.0.1';
     my $remote_ip2 = '198.18.0.2';
-    Ravada::Request->start_domain(
+    my $req_s1=Ravada::Request->start_domain(
         uid => user_admin->id
         ,id_domain => $clone1->id
         ,remote_ip => $remote_ip1
     );
-    wait_request();
+    ok($req_s1);
+    wait_request(debug=>0);
     my $ip1 = _wait_ip2($vm, $clone1);
     ok($ip1) or die "No ip for ".$clone1->name;
 
-    Ravada::Request->start_domain(
+    my $req_s2 = Ravada::Request->start_domain(
         uid => user_admin->id
         ,id_domain => $clone2->id
         ,remote_ip => $remote_ip2
     );
-    wait_request( debug => 1);
+    ok($req_s2);
+    isnt($req_s2->id, $req_s1->id);
+    wait_request( debug => 0);
 
     my $ip2 = _wait_ip2($vm, $clone2);
     ok($ip2) or die "No ip for ".$clone2->name;;
 
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my @out = split /\n/, `iptables-save`;
 
@@ -973,7 +976,7 @@ sub test_port_prerouting_already_open_clones_no_restricted($vm) {
     is(scalar(@port1),1,"Expecting -d $ip1 --dport $internal_port -j ACCEPT ".$clone2->name) or die Dumper(\@port1);
 
     my @port2 = (grep /-A FORWARD -d $ip2.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
-    is(scalar(@port2),1,"Expecting -s $remote_ip2 --dport $internal_port") or die Dumper(\@port2);
+    is(scalar(@port2),1,"Expecting -d $ip2 ... --dport $internal_port") or die Dumper(\@port2);
 
     my @port_drop = (grep /--dport $internal_port -j DROP/, @out);
     is(scalar(@port_drop),0) or die Dumper(\@port_drop);
@@ -1057,7 +1060,7 @@ sub test_redirect_ip_duplicated($vm) {
 
     @out = split /\n/, `iptables-save -t nat`;
     @open = (grep /--to-destination $ip/, @out);
-    is(scalar(@open),1) or die Dumper(\@open);
+    is(scalar(@open),1,"expecting --to-destination $ip") or die Dumper(\@open);
 
     $domain->remove(user_admin);
     _clean_iptables($vm, @rule);

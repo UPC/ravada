@@ -45,6 +45,7 @@ sub test_request() {
 
 sub test_clones($domain, $n_clones) {
     wait_request();
+    delete_request('prepare_base');
     $domain->pool_clones($n_clones);
     is($domain->pool_clones, $n_clones);
     wait_request(debug => 0);

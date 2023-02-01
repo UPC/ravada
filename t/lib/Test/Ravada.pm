@@ -1171,7 +1171,11 @@ sub delete_request {
 
     my $sth = $CONNECTOR->dbh->prepare("DELETE FROM requests WHERE command=?");
     for my $command (@_) {
-        $sth->execute($command);
+        if (ref($command)) {
+            $command->_delete();
+        } else {
+            $sth->execute($command);
+        }
     }
 }
 

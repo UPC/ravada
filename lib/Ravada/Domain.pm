@@ -3639,6 +3639,7 @@ sub _open_iptables_state($self) {
 sub _open_exposed_port_client($self, $internal_port, $restricted) {
 
     my $internal_ip = $self->ip;
+    return if !$internal_ip;
 
     my $remote_ip = '0.0.0.0/0';
     $remote_ip = $self->remote_ip if $restricted;
@@ -4009,6 +4010,7 @@ sub _post_start {
             uid => Ravada::Utils::user_daemon->id
             ,id_domain => $self->id
             ,retry => 20
+            ,remote_ip => $remote_ip
     ) if $is_active && $remote_ip && $self->list_ports();
 
     if ($self->run_timeout) {
