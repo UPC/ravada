@@ -1551,7 +1551,7 @@ sub _execute_request($self, $field, $value) {
 
     Ravada::Request->_new_request(
         command => $exec
-        ,args => { id_domain => $self->id , uid => Ravada::Utils::user_daemon->id }
+        ,args => { id_domain => $self->id , uid => Ravada::Utils::user_daemon->id , _force => 1 }
     );
 }
 
@@ -2665,6 +2665,7 @@ sub _cascade_remove_base_in_nodes($self) {
             id_vm => $vm->id
             ,id_domain => $self->id
             ,uid => Ravada::Utils::user_daemon->id
+            ,_force => 1
             ,@after
         );
     }
@@ -2675,6 +2676,7 @@ sub _cascade_remove_base_in_nodes($self) {
             ,id_domain => $self->id
             ,uid => Ravada::Utils::user_daemon->id
             ,after_request => $req_nodes->id
+            ,_force => 1
         );
         $self->is_base(0);
     }
@@ -2684,7 +2686,7 @@ sub _cascade_remove_base_in_nodes($self) {
 sub _do_remove_base($self, $user) {
     return
         if $self->is_base && $self->is_local
-        && $self->_cascade_remove_base_in_nodes ();
+        && $self->_cascade_remove_base_in_nodes();
 
     $self->is_base(0) if $self->is_local;
     my $vm_local = $self->_vm->new( host => 'localhost' );
