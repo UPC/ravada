@@ -1283,6 +1283,9 @@ sub _test_cpu_topology_old_cpu($domain) {
     $cpu->removeAttribute('match');
 
     my ($model) = $cpu->findnodes('model');
+    $cpu->removeChild($model);
+
+    $domain->reload_config($doc);
 
     my $model_exp = 'kvm64';
 
