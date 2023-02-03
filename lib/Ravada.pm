@@ -71,6 +71,7 @@ our %VALID_CONFIG = (
         ,server => undef
         ,port => undef
         ,size_limit => undef
+        ,secure => undef
     }
     ,log => undef
 );
