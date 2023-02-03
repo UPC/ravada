@@ -165,7 +165,7 @@ my @FLUSH_RULES=(
 
 $Ravada::CAN_FORK = 0;
 
-sub config_host_devices($type) {
+sub config_host_devices($type, $die=1) {
     my $config;
     if (!-e $FILE_CONFIG_HOST_DEVICES) {
         warn "Missing host devices config file '$FILE_CONFIG_HOST_DEVICES'";
@@ -180,7 +180,7 @@ sub config_host_devices($type) {
     die "Error loading $FILE_CONFIG_HOST_DEVICES $@" if $@;
 
     die "Error: no host devices config in $FILE_CONFIG_HOST_DEVICES for $type"
-    if !exists $config->{$type} || !$config->{$type};
+    if ( !exists $config->{$type} || !$config->{$type} ) && $die;
     return $config->{$type};
 }
 
