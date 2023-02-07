@@ -32,10 +32,30 @@ sub create_pool {
     my $capacity = 1 * 1024 * 1024;
 
     my $pool_name = new_pool_name();
-    my $dir = "/var/tmp/$pool_name";
+    my $dir = "/run/user";
+    $dir .= "/$<" if $<;
+    $dir .= "/$pool_name";
 
     mkdir $dir if ! -e $dir;
 
+    _create_pool($vm, $pool_name, $dir, $capacity);
+    test_req_list_sp($vm);
+    return $pool_name;
+}
+
+sub _create_pool($vm,@args) {
+    if ($vm->type eq 'KVM') {
+        _create_pool_kvm($vm,@args);
+    } elsif($vm->type eq 'Void') {
+        _create_pool_void($vm,@args);
+    }
+}
+
+sub _create_pool_void($vm,$pool_name, $dir, $capacity) {
+    $vm->create_storage_pool($pool_name, $dir);
+}
+
+sub _create_pool_kvm($vm,$pool_name, $dir, $capacity) {
     my $pool;
     for ( ;; ) {
         my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
@@ -63,10 +83,8 @@ sub create_pool {
     };
     ok(!$@,"Expecting \$@='', got '".($@ or '')."'") or return;
     ok($pool,"Expecting a pool , got ".($pool or ''));
-
-    test_req_list_sp($vm);
-    return $pool_name;
 }
+
 
 sub test_req_list_sp($vm) {
     my $req = Ravada::Request->list_storage_pools(id_vm => $vm->id , uid => user_admin->id);
@@ -106,7 +124,7 @@ sub test_create_domain {
         ." for VM $vm_name"
     );
     for my $volume ( $domain->list_volumes(device => 'disk')) {
-        like($volume,qr{^/var/tmp});
+        like($volume,qr{^/run/user});
     }
 
     return $domain;
@@ -177,6 +195,8 @@ sub test_volumes_in_two_pools {
     ok($domain,"No domain $name created with ".ref($vm)." ".($@ or '')) or return;
     my $pool_name2 = create_pool($vm_name);
     $vm->default_storage_pool_name($pool_name2);
+    is($vm->default_storage_pool_name(), $pool_name2);
+    like($vm->dir_img, qr{^/run/user}) or exit;
 
     $domain->add_volume(name => $name.'_volb' , size => 1024*1024 );
 
@@ -187,7 +207,7 @@ sub test_volumes_in_two_pools {
         )) or exit;
     for my $file (@volumes) {
         ok(-e $file,"Expecting volume $file exists, got : ".(-e $file or 0));
-        like($file,qr(^/var/tmp));
+        like($file,qr(^/run/user)) or exit;
     }
 
     my ($path0) = $volumes[0] =~ m{(.*)/};
@@ -223,7 +243,7 @@ sub test_base_pool {
     my $pool_name = shift;
 
     my %pool = (
-        default => '/var/lib/libvirt'
+        default => $vm->_storage_path('default')
         ,$pool_name => $vm->_storage_path($pool_name)
     );
     for my $name1 (keys %pool ) {
@@ -235,7 +255,7 @@ sub test_base_pool {
 
         for my $volume ($domain->list_volumes(device => 'disk') ) {
             my ($path ) = $volume =~ m{(.*)/.*};
-            like($path, qr{$dir_pool1}, $volume);
+            like($path, qr{$dir_pool1}, $volume) or exit;
         }
         for my $name2 ( $pool_name, 'default' ) {
             my $dir_pool2 = $pool{$name2};
@@ -277,7 +297,7 @@ sub test_clone_pool {
 
     $vm->base_storage_pool('');
     my %pool = (
-        default => '/var/lib/libvirt'
+        default => $vm->_storage_path('default')
         ,$pool_name => $vm->_storage_path($pool_name)
     );
     for my $name1 (keys %pool ) {
@@ -328,7 +348,7 @@ sub test_base_clone_pool {
 
     $vm->base_storage_pool('');
     my %pool = (
-        default => '/var/lib/libvirt'
+        default => $vm->_storage_path('default')
         ,$pool_name1 => $vm->_storage_path($pool_name1)
         ,$pool_name2 => $vm->_storage_path($pool_name2)
     );
@@ -397,7 +417,7 @@ sub test_default_pool_base {
     my $pool_name = shift;
 
     my %pool = (
-        default => '/var/lib/libvirt'
+        default => $vm->_storage_path('default')
         ,$pool_name => $vm->_storage_path($pool_name)
     );
     $vm->base_storage_pool('');
@@ -473,6 +493,8 @@ sub _create_pool_linked($vm) {
 }
 
 sub _create_pool_linked_reverse($vm) {
+    return if $vm->type ne 'KVM';
+
     my $capacity = 1 * 1024 * 1024;
 
     my $pool_name = new_pool_name();
@@ -517,6 +539,7 @@ sub _create_pool_linked_reverse($vm) {
 
 
 sub test_pool_linked($vm) {
+    return if $vm->type ne 'KVM';
     my ($pool_name, $dir, $dir_link) = _create_pool_linked($vm);
 
     $vm->default_storage_pool_name($pool_name);
@@ -550,6 +573,7 @@ sub test_pool_linked_reverse($vm) {
 
 
 sub test_pool_linked2($vm) {
+    return if $vm->type ne 'KVM';
     my ($pool_name, $dir, $dir_link) = _create_pool_linked($vm);
 
     $vm->default_storage_pool_name($pool_name);
@@ -582,6 +606,8 @@ sub test_pool_linked2($vm) {
 }
 
 sub test_pool_linked2_reverse($vm) {
+    return if $vm->type ne 'KVM';
+
     my ($pool_name, $dir, $dir_link) = _create_pool_linked_reverse($vm);
 
     $vm->default_storage_pool_name($pool_name);
@@ -613,14 +639,28 @@ sub test_pool_linked2_reverse($vm) {
     $domain1->remove(user_admin);
 }
 
+sub test_pool_info($vm) {
+    my $req = Ravada::Request->list_storage_pools(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,info => 1
+    );
+    wait_request();
+    my $out = $req->output;
+    my $pools = decode_json($out);
+
+    my $pool = $pools->[0];
+    isa_ok($pool,'HASH');
+    ok(exists $pool->{path},"expecting pool path") or die Dumper($pool);
+}
 
 #########################################################################
 
 clean();
 
-my $vm_name = 'KVM';
+for my $vm_name ('Void','KVM') {
 my $vm;
-eval { $vm = rvd_back->search_vm($vm_name) } if !$<;
+eval { $vm = rvd_back->search_vm($vm_name) } if !$< || $vm_name eq 'Void';
 
 SKIP: {
 
@@ -639,6 +679,8 @@ SKIP: {
 
     my $pool_name = create_pool($vm_name);
 
+    test_pool_info($vm);
+
     my $domain = test_create_domain($vm_name, $pool_name);
     test_remove_domain($vm_name, $domain);
     test_default_pool($vm_name,$pool_name);
@@ -655,6 +697,8 @@ SKIP: {
     $domain->remove(user_admin);
 
     test_pool_linked($vm);
+
+}
 
 }
 

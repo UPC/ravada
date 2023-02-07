@@ -85,7 +85,7 @@ our %VALID_ARG = (
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2, uid => 2 }
-    ,list_storage_pools => { id_vm => 1 , uid => 1 }
+    ,list_storage_pools => { id_vm => 1 , uid => 1, info => 2 }
     ,check_storage => { uid => 1 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
     ,cleanup => { timeout => 2 }

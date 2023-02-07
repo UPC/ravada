@@ -5294,7 +5294,8 @@ sub _cmd_list_network_interfaces($self, $request) {
 sub _cmd_list_storage_pools($self, $request) {
     my $id_vm = $request->args('id_vm');
     my $vm = Ravada::VM->open( $id_vm );
-    $request->output(encode_json([ $vm->list_storage_pools ]));
+    my $info = $request->defined_arg('info');
+    $request->output(encode_json([ $vm->list_storage_pools($info) ]));
 }
 
 sub _cmd_list_isos($self, $request){

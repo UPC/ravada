@@ -529,39 +529,6 @@ sub dir_img {
     return $dir;
 }
 
-=head2 dir_base
-
-Returns the directory where base images are stored in this Virtual Manager
-
-=cut
-
-
-sub dir_base($self, $volume_size) {
-    my $pool_base = $self->default_storage_pool_name;
-    $pool_base = $self->base_storage_pool()    if $self->base_storage_pool();
-    $pool_base = $self->storage_pool()         if !$pool_base;
-
-    $self->_check_free_disk($volume_size * 2, $pool_base);
-    return $self->_storage_path($pool_base);
-
-}
-
-=head2 dir_clone
-
-Returns the directory where clone images are stored in this Virtual Manager
-
-=cut
-
-
-sub dir_clone($self) {
-
-    my $dir_img  = $self->dir_img;
-    my $clone_pool = $self->clone_storage_pool();
-    $dir_img = $self->_storage_path($clone_pool) if $clone_pool;
-
-    return $dir_img;
-}
-
 sub _storage_path($self, $storage) {
     if (!ref($storage)) {
         $storage = $self->vm->get_storage_pool_by_name($storage);
@@ -2584,12 +2551,34 @@ sub is_alive($self) {
     return 0;
 }
 
-sub list_storage_pools($self) {
+sub list_storage_pools($self, $info=0) {
     confess "No VM " if !$self->vm;
+
+    my @pools = _list_storage_pools($self->vm);
+
+    if ($info) {
+        my @ret;
+        for my $pool (@pools) {
+            my $xml = $pool->get_xml_description();
+            my $doc = XML::LibXML->load_xml(string => $xml);
+            my ($path) = $doc->findnodes("/pool/target/path/text()");
+            my $info = $pool->get_info();
+            push @ret,{
+                      name => $pool->get_name
+                     ,path => $path
+                ,is_active => $pool->is_active
+                 ,capacity => $info->{capacity}
+               ,allocation => $info->{allocation}
+                ,available => $info->{available}
+            };
+        }
+        return @ret;
+    }
+
     return
         map { $_->get_name }
         grep { $_-> is_active }
-        _list_storage_pools($self->vm);
+        @pools;
 }
 
 sub free_memory($self) {

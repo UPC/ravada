@@ -367,6 +367,10 @@ get '/list_vm_types.json' => sub {
     $c->render(json => $RAVADA->list_vm_types);
 };
 
+get '/list_storage_pools/(:id_vm)' => sub($c) {
+    $c->render(json => $RAVADA->list_storage_pools($USER->id, $c->stash('id_vm')));
+};
+
 get '/list_nodes.json' => sub {
     my $c = shift;
     $c->render(json => [$RAVADA->list_vms]);

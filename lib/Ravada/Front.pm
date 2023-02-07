@@ -1593,6 +1593,42 @@ sub list_cpu_models($self, $uid, $id_domain) {
     return $models;
 }
 
+sub _search_id_vm($self, $backend) {
+    return $backend if $backend =~ /^\d+$/;
+    my $sth = $self->_dbh->prepare("SELECT id FROM vms WHERE vm_type=? "
+        ." AND ( hostname='localhost' OR hostname ='127.0.0.1') "
+    );
+    $sth->execute($backend);
+    my ($id) = $sth->fetchrow;
+    return $id;
+}
+
+sub list_storage_pools($self, $uid, $backend) {
+
+    my $id_vm = $self->_search_id_vm($backend);
+    my $key="list_storage_pools_$id_vm";
+
+    my $cache = $self->_cache_get($key);
+    return $cache if $cache;
+
+    my $req = Ravada::Request->list_storage_pools(
+        id_vm => $id_vm
+        ,uid => $uid
+        ,info => 1
+    );
+    return {} if !$req;
+    $self->wait_request($req);
+    return {} if $req->status ne 'done';
+
+    my $sp = {};
+    $sp = decode_json($req->output()) if $req->output;
+
+    $self->_cache_store($key,$sp);
+
+    return $sp;
+
+}
+
 =head2 version
 
 Returns the version of the main module
