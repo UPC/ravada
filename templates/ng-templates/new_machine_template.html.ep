@@ -13,7 +13,7 @@
                 <div class="col-lg-9">
                     <label for="backend" class="col-xl-3 col-form-label" ng-show="backends.length === 1">{{backends[0]}}</label>
                     <select class= "form-control" ng-show="backends.length > 1"
-                        ng-change="loadTemplate()"
+                        ng-change="loadTemplates()"
                         name="backend"
                         ng-model="backend"
                         ng-options="item for item in backends track by item "
@@ -115,6 +115,7 @@
                     <font color="orange"><%=l 'The Minimum Disk Size needed for this ISO is' %> {{min_size}}GB.</font>
                 </div>
             </div>
+
             <div class="from-group row">
                 <div class="col-xl-3" align="right">
                 <label for="_advanced_options">
@@ -128,6 +129,27 @@
             </div>
 
             <div ng-show="_advanced_options">
+
+            <div class="form-group row" >
+                <div class="col-xl-3" align="right">
+                <label for="sp"><%=l 'Storage Pool' %></label>
+                </div>
+                <div class="col-lg-3">
+                    <i class="fas fa-sync-alt fa-spin"
+                       ng-show="typeof(storage_pools[backend])=='undefined'
+                       || !storage_pools[backend]"
+                    ></i>
+                    <select name="storage_pool" ng-model="storage_pool"
+                    ng-show="storage_pools[backend]"
+                    ng-options="sp.name for sp in storage_pools[backend]">
+                    </select>
+                </div>
+                <div class="col-lg-6" ng-show="storage_pool">
+                <b>{{storage_pool.path}}</b>
+                {{(storage_pool.available/1024/1024/1024).toFixed(2)}} GB available
+                </div>
+            </div>
+            <div>{{storage_pool}}</div>
 
             <div class="form-group row" ng-show="backend == 'KVM' || backend=='Void'">
                 <div class="col-xl-3" align="right">

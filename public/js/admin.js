@@ -76,13 +76,15 @@ ravadaApp.directive("solShowMachine", swMach)
           $scope.url = url;
           $scope.images = [];
           subscribe_list_isos(url);
-          subscribe_list_images(url);
           subscribe_list_machines(url);
+          console.log("get types");
           $http.get('/list_vm_types.json').then(function(response) {
               $scope.backends = response.data;
               $scope.backend = response.data[0];
-              $scope.loadTemplates(url);
+              $scope.loadTemplates();
+              console.log(response.data);
           });
+          console.log("get types done");
       }
 
       $scope.list_machine_types = function(backend) {
@@ -91,9 +93,24 @@ ravadaApp.directive("solShowMachine", swMach)
           });
 
       };
+      $scope.list_storage_pools = function(backend) {
+          $http.get('/list_storage_pools/'+backend).then(function(response) {
+              $scope.storage_pools[backend] = response.data;
+
+              $scope.storage_pool=response.data[0];
+              for(var i=0; i<response.data.length;i++) {
+                  if (response.data[i].is_active) {
+                      $scope.storage_pool=response.data[i];
+                  }
+              }
+          });
+
+      };
+
 
       $scope.loadTemplates = function() {
           $scope.list_machine_types($scope.backend);
+          $scope.list_storage_pools($scope.backend);
           subscribe_list_images($scope.backend);
       }
 
@@ -128,6 +145,7 @@ ravadaApp.directive("solShowMachine", swMach)
 
 
       subscribe_list_images = function(backend) {
+          $scope.images = [];
           var ws = new WebSocket($scope.url);
           ws.onopen = function(event) { ws.send('list_iso_images/'+backend) };
           ws.onmessage = function(event) {
@@ -161,6 +179,7 @@ ravadaApp.directive("solShowMachine", swMach)
 
       $scope.iso = { arch: 'unknown' };
       $scope.machine_types = { };
+      $scope.storage_pools = { };
 
       $scope.change_iso = function(iso) {
           $scope.id_iso_id = iso.id;

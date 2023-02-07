@@ -1480,6 +1480,27 @@ sub _remove_old_entries($table) {
 
 }
 
+sub remove_old_storage_pools_void() {
+    my $dir = Ravada::VM::Void->dir_img();
+    my $file_sp = $dir."/.storage_pools.yml";
+    return if !-e $file_sp;
+
+    my $list = LoadFile($file_sp);
+    my $name = base_domain_name();
+
+    my @list2 = grep /^$name/, @$list;
+
+    DumpFile($file_sp,\@list2);
+}
+
+sub remove_old_storage_pools_kvm() {
+}
+
+sub remove_old_storage_pools() {
+    remove_old_storage_pools_kvm();
+    remove_old_storage_pools_void();
+}
+
 sub clean($ldap=undef) {
     my $file_remote_config = shift;
     remove_old_domains();
@@ -1489,6 +1510,7 @@ sub clean($ldap=undef) {
     _remove_old_entries('networks');
     _remove_old_groups_ldap();
     remove_old_user_ldap();
+    remove_old_storage_pools();
 
     if ($file_remote_config) {
         my $config;
