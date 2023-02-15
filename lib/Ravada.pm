@@ -474,6 +474,20 @@ sub _update_isos {
             ,sha256_url => '$url/Fedora-Workstation-28-.*-x86_64-CHECKSUM'
             ,min_disk_size => '10'
         }
+	      ,kubuntu_64_jammy => {
+            name => 'Kubuntu Jammy Jellyfish'
+            ,description => 'Kubuntu 22.04 Jammy Jellyfish 64 bits'
+            ,arch => 'x86_64'
+            ,xml => 'focal_fossa-amd64.xml'
+            ,xml_volume => 'focal_fossa64-volume.xml'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/22.04.*/release/'
+            ,file_re => 'kubuntu-22.04.*-desktop-amd64.iso'
+            ,rename_file => 'kubuntu_jammy.iso'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+            ,min_ram => 3
+            ,min_disk_size => 11
+        }
 	      ,kubuntu_64_focal_fossa => {
             name => 'Kubuntu Focal Fossa 64 bits'
             ,description => 'Kubuntu 20.04 Focal Fossa 64 bits'
