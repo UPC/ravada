@@ -87,6 +87,9 @@ my $CONFIG_FRONT = plugin Config => { default => {
                                       ,file => $FILE_CONFIG
 };
 
+$CONFIG_FRONT->{login_bg_file} = '/'.$CONFIG_FRONT->{login_bg_file}
+if $CONFIG_FRONT->{login_bg_file} !~ m{^/};
+
 delete $CONFIG_FRONT->{login_custom} if $ENV{MOJO_MODE} && $ENV{MOJO_MODE} eq 'development';
 #####
 #####
@@ -798,8 +801,6 @@ get '/machine/view/(:id).(:type)' => sub {
     my $c = shift;
     my $id = $c->stash('id');
     my $type = $c->stash('type');
-
-#    return $c->redirect_to('/login') if !_logged_in($c);
 
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
@@ -2797,6 +2798,9 @@ sub access_denied_json($c, $msg='Access denied') {
 sub access_denied {
     my $c = shift;
     my $msg = shift;
+
+    return login($c) if !$USER;
+
     if (!$msg) {
         $msg = 'Access denied to '.$c->req->url->to_abs->path;
         $msg .= ' for user '.$USER->name if $USER && !$USER->is_temporary;
