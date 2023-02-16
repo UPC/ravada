@@ -195,14 +195,16 @@ hook before_routes => sub {
     return if $url =~ m{^/(css|font|img|js)}
 	   || $url =~ m{^/fallback/.*\.(css|js|map)$};
 
-    return if $url =~ m{^/(login|logout|requirements|robots.txt|favicon.ico)};
+    return if $url =~ m{^/(anonymous_logout|login|logout|requirements|robots.txt|favicon.ico)};
+
+
+    my $bases_anonymous = $RAVADA->list_bases_anonymous(_remote_ip($c));
+    return access_denied($c) if $url =~ m{^/anonymous} && !@$bases_anonymous;
 
     if ( $RAVADA->is_in_maintenance ) {
         return login($c) if !$USER && $url =~ m{^/$};
         return maintenance($c) if !$USER || !$USER->is_operator;
     }
-
-    return if $url =~ m{^/anonymous};
 
     if ((defined $USER) && (_logged_in($c)) && (! $USER->is_temporary) && (! $USER->is_external) && ($USER->password_will_be_changed())) {
         return change_password($c, 1);        
@@ -212,6 +214,7 @@ hook before_routes => sub {
         || $url =~ m{^/(list_bases_anonymous|request/)}i
         || $url =~ m{^/ws/subscribe}
         || $url =~ m{^/execution_machines_limit$}
+        || $url =~ m{^/anonymous}
         ) && !_logged_in($c)) {
         $USER = _anonymous_user($c);
         return if (! $USER) || ($USER->is_temporary);
@@ -284,6 +287,7 @@ get '/anonymous' => sub {
 #    $c->render(template => 'bases', base => list_bases());
     $USER = _anonymous_user($c);
     return list_bases_anonymous($c) if ($USER);
+    return access_denied($c);
 };
 
 get '/anonymous_logout.html' => sub {
@@ -2798,8 +2802,6 @@ sub access_denied_json($c, $msg='Access denied') {
 sub access_denied {
     my $c = shift;
     my $msg = shift;
-
-    return login($c) if !$USER;
 
     if (!$msg) {
         $msg = 'Access denied to '.$c->req->url->to_abs->path;

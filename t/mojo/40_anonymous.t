@@ -40,7 +40,7 @@ my $n_anonymous = list_anonymous_users();
 
 $t->get_ok("/anonymous");
 
-is($t->tx->res->code(), 403 );
+is($t->tx->res->code(), 403 ) or exit;
 is(list_anonymous_users(), $n_anonymous);
 
 $t->get_ok("/logout");
@@ -50,7 +50,7 @@ for my $action ( qw(clone display info view ) ) {
     $n_anonymous = list_anonymous_users();
     $t->reset_session;
     $t->get_ok($url);
-    is($t->tx->res->code(), 403 );
+    is($t->tx->res->code(), 403,$url);
     is(list_anonymous_users(), $n_anonymous, $url);
 }
 
@@ -59,7 +59,8 @@ for my $route ( qw( list_bases_anonymous request/1.json ws/subscribe anonymous_l
     $n_anonymous = list_anonymous_users();
     $t->reset_session;
     $t->get_ok($url);
-    is($t->tx->res->code(), $route eq "anonymous_logout.html" ? 302 : 403 );
+    is($t->tx->res->code(), $route eq "anonymous_logout.html" ? 302 : 403
+    ,$url);
     is(list_anonymous_users(), $n_anonymous, $url);
 }
 
