@@ -6,11 +6,11 @@ Virt-Viewer
 
 .. note:: We fork the `lunixbochs <https://github.com/lunixbochs/homebrew-virt-manager>`_ repo. It's outdated.  We update versions and fix some issues.
 
-1. Install a working (and compiled) version of `virt-viewer <https://www.spice-space.org/osx-client.html>`_. You may view the homebrew package's upstream source on `GitHub <https://github.com/fv3rdugo/homebrew-virt-manager>`_.
+1. Install a working (and compiled) version of `virt-viewer <https://www.spice-space.org/osx-client.html>`_. You may view the homebrew package's upstream source on `GitHub <https://github.com/UPC/homebrew-virt-manager>`_.
 
 ::
 
-	brew tap fv3rdugo/homebrew-virt-manager
+	brew tap UPC/homebrew-virt-manager
 	brew install virt-viewer
 
 2. Once that's installed should be able make a call **remote-viewer** with a spice file, for example 405.vv file downloaded from Ravada.
