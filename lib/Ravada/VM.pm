@@ -12,6 +12,7 @@ Ravada::VM - Virtual Managers library for Ravada
 use utf8;
 use Carp qw( carp confess croak cluck);
 use Data::Dumper;
+use Fcntl ':mode';
 use File::Path qw(make_path);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
@@ -144,6 +145,8 @@ around 'import_domain' => \&_around_import_domain;
 around 'ping' => \&_around_ping;
 around 'connect' => \&_around_connect;
 after 'disconnect' => \&_post_disconnect;
+
+around '_list_used_volumes' => \&_around_list_used_volumes;
 
 #############################################################
 #
@@ -2325,6 +2328,33 @@ sub dir_backup($self) {
         }
     }
     return $dir_backup;
+}
+
+sub _is_link($self,$vol) {
+    die "Error: ".$self->vm." is not local" if !$self->is_local;
+    my $link = readlink($vol);
+    return $link if $link;
+
+    my $path = "";
+    my $path_link;
+    for my $dir ( split m{/},$vol ) {
+        next if !$dir;
+        $path_link .= "/$dir" if $path_link && $dir;
+        $path.="/$dir";
+        my $dir_link = readlink($path);
+        $path_link = $dir_link if $dir_link;
+    }
+    return $path_link if $path_link;
+}
+
+sub _around_list_used_volumes($orig, $self) {
+    my @vols = $self->$orig();
+    my @links;
+    for my $vol ( @vols ) {
+        my $link = $self->_is_link($vol);
+        push @links,($link) if $link;
+    }
+    return @vols;
 }
 
 1;

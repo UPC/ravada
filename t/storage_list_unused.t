@@ -3,6 +3,7 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use File::Copy;
 use IPC::Run3;
 use JSON::XS;
 use Test::More;
@@ -25,6 +26,100 @@ sub _new_file($vm) {
     $vm->write_file($file,'');
     return $file;
 }
+
+sub test_links($vm, $machine) {
+    my $dir = $vm->dir_img();
+
+    my ($vol) = $machine->list_volumes();
+    my ($file) = $vol =~ m{.*/(.*)};
+    my $dst = "/var/tmp/$file";
+    unlink $dst or die "$! $dst" if -e $dst;
+    push @FILES,($dst);
+
+    copy($vol,$dst) or die "$! $vol -> $dst";
+    unlink $vol or die "$! $vol";
+
+    symlink($dst,$vol) or die "$dst -> $vol";
+
+    my $link = $vm->_is_link($vol);
+    ok($link) or exit;
+    is($link, $dst) or exit;
+
+    my $req2 = Ravada::Request->list_unused_volumes(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,start => 0
+        ,limit => 1000
+    );
+    wait_request();
+    my $out_json = $req2->output;
+    $out_json = '[]' if !defined $out_json;
+    my $output = decode_json($out_json);
+    my $found = _search_file($output, $vol);
+
+    ok(!$found,"Expecting $vol not found") or die Dumper([$machine->list_volumes]);
+
+}
+
+sub test_links_dir($vm, $machine) {
+    my $dir = $vm->dir_img();
+
+    my ($vol) = $machine->list_volumes();
+    my ($file) = $vol =~ m{.*/(.*)};
+    my $dir_dst = "/var/tmp/".new_domain_name();
+    mkdir $dir_dst if ! -e $dir_dst;
+
+    push @FILES,($dir_dst);
+
+    my $dir_link = "/var/tmp/".new_domain_name();
+    my $file_link = "$dir_link/$file";
+    push @FILES,($file_link);
+
+    unlink($dir_link) or die "$! $dir_link"
+    if -e $dir_link;
+
+    symlink($dir_dst, $dir_link) or die "$! $dir_dst -> $dir_link";
+    push @FILES,($dir_link);
+
+    my $dst = "$dir_dst/$file";
+    copy($vol,$dst) or die "$vol -> $dst";
+    unlink $vol or die "$! $vol";
+
+
+    my $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $machine->id
+        ,hardware => 'disk'
+        ,data => { file => $file_link }
+        ,index => 0
+    );
+    wait_request();
+
+    my $link = $vm->_is_link($file_link);
+    ok($link) or exit;
+    is($link, $dst) or exit;
+
+    my $link_no = $vm->_is_link($dir_dst);
+    ok(!$link_no) or exit;
+
+    my $req2 = Ravada::Request->list_unused_volumes(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,start => 0
+        ,limit => 1000
+    );
+    wait_request();
+    my $out_json = $req2->output;
+    $out_json = '[]' if !defined $out_json;
+    my $output = decode_json($out_json);
+    for my $exp ($file_link, "$dir_dst/$file" ) {
+        my $found = _search_file($output, $exp);
+
+        ok(!$found,"Expecting $exp not found") or die Dumper([$machine->list_volumes]);
+    }
+
+}
+
 
 sub test_list_unused($vm, $machine, $hidden_vols) {
     my $dir = $vm->dir_img();
@@ -134,13 +229,20 @@ sub _used_volumes($machine) {
 }
 
 sub _clean_files() {
+    my @dirs;
     for my $file (@FILES) {
-        if (-d $file) {
-            rmdir $file or warn "$! $file";
-        } else {
+        if (-f $file || -l $file) {
             unlink $file or warn "$! $file";
+        } elsif (-d $file) {
+            push @dirs,($file);
         }
+
     }
+
+    for my $file (@dirs) {
+        rmdir($file) or warn "$! $file";
+    }
+
 }
 
 sub _create_clone($vm) {
@@ -275,7 +377,11 @@ for my $vm_name ( vm_names() ) {
 
         my $clone = _create_clone($vm);
         my @hidden_bs = _create_clone_hide_bs($clone);
+
         test_list_unused($vm, $clone, \@hidden_bs);
+
+        test_links_dir($vm, $clone);
+        test_links($vm, $clone);
 
         test_page($vm);
 
