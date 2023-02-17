@@ -1,37 +1,16 @@
 SPICE client setup for MacOS
 ============================
 
-RemoteViewer
-============
-
-Best option, 
-
-::
-
-	brew install --cask remoteviewer
-
-Usage:
- remote-viewer console.vv
-
-Binary path in my env is /opt/homebrew/bin/remote-viewer.
-
-Remember to allow this application in Settings -> Privacy & Security
-
-You can see this message: 
- "RemoteViewer.app" was blocked from use because it is not from an identified developer
-Enable the button: Open Anyway
-
 Virt-Viewer
 ===========
 
-.. Warning:: We have error reports in the brew package due to changes in source URLs.
+.. Info:: We fork the jeffreywildman repo. It's outdated.  We update versions and fix some issues.
 
-
-1. Install a working (and compiled) version of `virt-viewer <https://www.spice-space.org/osx-client.html>`_. You may view the homebrew package's upstream source on `GitHub <https://github.com/jeffreywildman/homebrew-virt-manager>`_.
+1. Install a working (and compiled) version of `virt-viewer <https://www.spice-space.org/osx-client.html>`_. You may view the homebrew package's upstream source on `GitHub <https://github.com/fv3rdugo/homebrew-virt-manager>`_.
 
 ::
 
-	brew tap jeffreywildman/homebrew-virt-manager
+	brew tap fv3rdugo/homebrew-virt-manager
 	brew install virt-viewer
 
 2. Once that's installed should be able make a call **remote-viewer** with a spice file, for example 405.vv file downloaded from Ravada.
@@ -39,6 +18,7 @@ Virt-Viewer
 ::
 
 	remote-viewer 405.vv
+	
 
 Associate SPICE files with remove viewer
 ========================================
@@ -61,10 +41,32 @@ In Chrome, click on the small arrow on the list of downloads at the bottom, and 
 
 If everything is set up correctly you should be able to double-click on the VM and remote-viewer should start up and take care of the rest.
 
+Another workaround is install only RemoteViewer.
+
+RemoteViewer
+============
+
+::
+
+	brew install --cask remoteviewer
+
+Usage:
+ remote-viewer console.vv
+
+Binary path in my env is /opt/homebrew/bin/remote-viewer.
+
+Remember to allow this application in Settings -> Privacy & Security
+
+You can see this message: 
+ "RemoteViewer.app" was blocked from use because it is not from an identified developer
+Enable the button: Open Anyway
+
+
+
 Problems
 ========
 
-If you have some trouble, check your remote-viewer path. Maybe it is different from /usr/local/bin. 
+1. If you have some trouble, check your remote-viewer path. Maybe it is different from /usr/local/bin. 
 
 ::
  
@@ -72,3 +74,15 @@ If you have some trouble, check your remote-viewer path. Maybe it is different f
 
 Other path can be: /opt/homebrew/bin/remote-viewer
 
+
+2. You have a similar repo installed. 
+
+::  
+
+	Error: Formulae found in multiple taps:
+
+Fix with:
+ 
+ ::
+ 	
+	brew untap jeffreywildman/virt-manager
