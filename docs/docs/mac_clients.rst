@@ -1,6 +1,27 @@
 SPICE client setup for MacOS
 ============================
 
+RemoteViewer
+============
+
+Best option, 
+
+::
+
+	brew install --cask remoteviewer
+
+Usage:
+ remote-viewer console.vv
+
+Binary path in my env is /opt/homebrew/bin/remote-viewer.
+
+
+Virt-Viewer
+===========
+
+.. Warning:: We have error reports in the brew package due to changes in source URLs.
+
+
 1. Install a working (and compiled) version of `virt-viewer <https://www.spice-space.org/osx-client.html>`_. You may view the homebrew package's upstream source on `GitHub <https://github.com/jeffreywildman/homebrew-virt-manager>`_.
 
 ::
