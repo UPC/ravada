@@ -11,7 +11,7 @@ Virt-Viewer
 ::
 
 	brew tap UPC/homebrew-virt-manager
-	brew install virt-viewer
+	brew install virt-manager virt-viewer
 
 2. Once that's installed should be able make a call **remote-viewer** with a spice file, for example 405.vv file downloaded from Ravada.
     
