@@ -4,8 +4,7 @@ SPICE client setup for MacOS
 Virt-Viewer
 ===========
 
-.. Info:: We fork the jeffreywildman repo. It's outdated.  We update versions and fix some issues.
-
+.. note:: We fork the jeffreywildman repo. It's outdated.  We update versions and fix some issues.
 
 1. Install a working (and compiled) version of `virt-viewer <https://www.spice-space.org/osx-client.html>`_. You may view the homebrew package's upstream source on `GitHub <https://github.com/fv3rdugo/homebrew-virt-manager>`_.
 
