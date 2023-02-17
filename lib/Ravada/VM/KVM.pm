@@ -444,8 +444,12 @@ sub list_unused_volumes($self, $start=0, $limit=10) {
 
         next if $used{$file};
 
-        my $info = $vol->get_info();
-        next if $info->{type} eq 2;
+        my $info;
+        eval { $info = $vol->get_info() };
+        die "$file $@" if $@
+        && ( ref($@) =~ /Sys::Virt:Error/ && $@->cod ne 50); #storage volume not found
+
+        next if !$info || $info->{type} eq 2;
 
         next if $n_found++ < $start;
 
