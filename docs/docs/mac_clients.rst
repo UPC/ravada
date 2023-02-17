@@ -42,8 +42,10 @@ In Chrome, click on the small arrow on the list of downloads at the bottom, and 
 
 If everything is set up correctly you should be able to double-click on the VM and remote-viewer should start up and take care of the rest.
 
-Another workaround is install only RemoteViewer.
+That's all. Enjoy Ravada.
 
+
+There is another way to do it if you have some troubles, install only RemoteViewer.
 RemoteViewer
 ============
 
