@@ -193,10 +193,11 @@ hook before_routes => sub {
     if $CONFIG_FRONT->{log}->{log};
 
     return if $url =~ m{^/(css|font|img|js)}
-	   || $url =~ m{^/fallback/.*\.(css|js|map)$};
+        || $url =~ m{^/fallback/.*\.(css|js|map)$}
+        || $url =~ m{^/fallback/font}
+       ;
 
     return if $url =~ m{^/(anonymous_logout|login|logout|requirements|robots.txt|favicon.ico)};
-
 
     my $bases_anonymous = $RAVADA->list_bases_anonymous(_remote_ip($c));
     return access_denied($c) if $url =~ m{^/anonymous} && !@$bases_anonymous;
