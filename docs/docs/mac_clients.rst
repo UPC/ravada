@@ -21,7 +21,7 @@ Follow this steps:
 	remote-viewer 405.vv
 	
 
-Associate SPICE files with remove viewer
+Associate SPICE files with remote viewer
 ========================================
 
 We want remote-viewer to automatically start and open the session when we double click the VM entry in Ravada. To do that we need to first create a small helper application.
