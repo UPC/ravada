@@ -322,7 +322,6 @@ for my $vm_name ( vm_names() ) {
         clean_remote_node($node1);
         clean_remote_node($node2)   if $node2;
 
-
         test_change_hardware($vm);
 
         test_drivers($vm, $node1);
