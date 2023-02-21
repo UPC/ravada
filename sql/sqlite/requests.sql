@@ -3,7 +3,7 @@ CREATE TABLE `requests` (
 ,  `command` char(32) DEFAULT NULL
 ,  `args` char(255) DEFAULT NULL
 ,  `date_req` datetime DEFAULT NULL
-,  `date_changed` timestamp 
+,  `date_changed` timestamp DEFAULT CURRENT_TIMESTAMP
 ,  `status` char(64) DEFAULT NULL
 ,  `error` text DEFAULT NULL
 ,  `id_domain` integer DEFAULT NULL

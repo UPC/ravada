@@ -60,6 +60,7 @@ sub test_storage_pools_fail($vm) {
 
     create_storage_pool($vm, $dir);
 
+    delete_request('cleanup');
     my $req = Ravada::Request->check_storage(
         uid => user_admin->id
         ,retry => 2

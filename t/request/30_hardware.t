@@ -917,7 +917,10 @@ sub test_change_disk_nothing($vm, $domain) {
         my $info2 = $domain_f->info(user_admin);
         my $data2= $info2->{hardware}->{$hardware}->[$count];
 
-        delete $data2->{backing} if $data2->{backing} eq '<backingStore/>'
+        delete $data2->{backing} if
+        exists $data2->{backing}
+        && $data2->{backing}
+        && $data2->{backing} eq '<backingStore/>'
         && !exists $data->{backing};
 
         is_deeply($data2, $data)

@@ -233,10 +233,10 @@ sub test_one_port($vm) {
             , chain => 'PREROUTING'
             , node => $vm
             , jump => 'DNAT'
-            , 'to-destination' => $domain->ip.":".$internal_port
+            , 'to-destination' => $domain_ip.":".$internal_port
     );
 
-    ok($n_rule,"Expecting rule for -> $local_ip:$public_port") or exit;
+    ok($n_rule,"Expecting rule for $local_ip:$public_port -> $domain_ip:internal_port") or exit;
 
 
     #################################################################
@@ -623,7 +623,9 @@ sub test_routing_already_used($vm, $source=0, $restricted=0) {
     my $public_port1 = $base_ports1[0]->{public_port};
 
     isnt($public_port1, $public_port0,$base->name." ".Dumper(\@base_ports1)) or exit;
-    my @iptables1 = _iptables_save($vm,'nat' ,'PREROUTING');
+    my @iptables1 = _iptables_save($vm,'nat' ,'PREROUTING',['1.2.3.4',$internal_ip]);
+
+    ok(scalar(@iptables1)>=2) or die "Expecting at least 2 preroutings ".Dumper(\@iptables1);
     #is(scalar(@iptables1),scalar(@iptables0)+1,"Expecting 1 chain more "
     #.Dumper(\@iptables0,\@iptables1)) or exit;
 
@@ -651,7 +653,7 @@ sub test_routing_already_used($vm, $source=0, $restricted=0) {
         isnt($public_port2, $public_port0) or exit;
         is($public_port2, $public_port1) or exit;
 
-        my @iptables2 = _iptables_save($vm,'nat' ,'PREROUTING');
+        my @iptables2 = _iptables_save($vm,'nat' ,'PREROUTING',['1.2.3.4',$internal_ip]);
         is(scalar(@iptables1),scalar(@iptables2)) or die Dumper(\@iptables1,\@iptables2);
 
         my ($out, $err) = $vm->run_command("iptables-save");
@@ -707,7 +709,10 @@ sub test_routing_already_used($vm, $source=0, $restricted=0) {
     _clean_iptables($vm, @rule );
 }
 
-sub _iptables_save($vm,$table=undef,$chain=undef) {
+sub _iptables_save($vm,$table=undef,$chain=undef, $ips=undef) {
+    if (defined $ips && !ref($ips)) {
+        $ips = [$ips];
+    }
     my @cmd = ("iptables-save");
     push @cmd,("-t",$table) if $table;
 
@@ -716,6 +721,15 @@ sub _iptables_save($vm,$table=undef,$chain=undef) {
     my @out;
     for my $line (split /\n/,$out) {
         next if $chain && $line !~ /^-A $chain/;
+        if ($ips) {
+            my $found = 0;
+            my ($to) = $line =~ /--to-destination (\d+\.\d+\.\d+\.\d+)/;
+            next if !$to;
+            for my $ip (@$ips) {
+                $found++ if $to eq $ip;
+            }
+            next if !$found;
+        }
         push @out,($line);
     }
     return @out;
@@ -869,7 +883,7 @@ sub test_port_prerouting_already_open_clones($vm) {
         ,id_domain => $clone1->id
         ,remote_ip => $remote_ip1
     );
-    wait_request();
+    wait_request(debug => 0);
     my $ip1 = _wait_ip2($vm, $clone1);
     ok($ip1) or die "No ip for ".$clone1->name;
 
@@ -878,12 +892,12 @@ sub test_port_prerouting_already_open_clones($vm) {
         ,id_domain => $clone2->id
         ,remote_ip => $remote_ip2
     );
-    wait_request();
+    wait_request(debug => 0);
 
     my $ip2 = _wait_ip2($vm, $clone2);
     ok($ip2) or die "No ip for ".$clone2->name;;
 
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my @out = split /\n/, `iptables-save`;
 
@@ -946,26 +960,29 @@ sub test_port_prerouting_already_open_clones_no_restricted($vm) {
     $sth->execute();
     my $remote_ip1 = '198.18.0.1';
     my $remote_ip2 = '198.18.0.2';
-    Ravada::Request->start_domain(
+    my $req_s1=Ravada::Request->start_domain(
         uid => user_admin->id
         ,id_domain => $clone1->id
         ,remote_ip => $remote_ip1
     );
-    wait_request();
+    ok($req_s1);
+    wait_request(debug=>0);
     my $ip1 = _wait_ip2($vm, $clone1);
     ok($ip1) or die "No ip for ".$clone1->name;
 
-    Ravada::Request->start_domain(
+    my $req_s2 = Ravada::Request->start_domain(
         uid => user_admin->id
         ,id_domain => $clone2->id
         ,remote_ip => $remote_ip2
     );
-    wait_request( debug => 1);
+    ok($req_s2);
+    isnt($req_s2->id, $req_s1->id);
+    wait_request( debug => 0);
 
     my $ip2 = _wait_ip2($vm, $clone2);
     ok($ip2) or die "No ip for ".$clone2->name;;
 
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my @out = split /\n/, `iptables-save`;
 
@@ -973,7 +990,7 @@ sub test_port_prerouting_already_open_clones_no_restricted($vm) {
     is(scalar(@port1),1,"Expecting -d $ip1 --dport $internal_port -j ACCEPT ".$clone2->name) or die Dumper(\@port1);
 
     my @port2 = (grep /-A FORWARD -d $ip2.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
-    is(scalar(@port2),1,"Expecting -s $remote_ip2 --dport $internal_port") or die Dumper(\@port2);
+    is(scalar(@port2),1,"Expecting -d $ip2 ... --dport $internal_port") or die Dumper(\@port2);
 
     my @port_drop = (grep /--dport $internal_port -j DROP/, @out);
     is(scalar(@port_drop),0) or die Dumper(\@port_drop);
@@ -1057,7 +1074,7 @@ sub test_redirect_ip_duplicated($vm) {
 
     @out = split /\n/, `iptables-save -t nat`;
     @open = (grep /--to-destination $ip/, @out);
-    is(scalar(@open),1) or die Dumper(\@open);
+    is(scalar(@open),1,"expecting --to-destination $ip") or die Dumper(\@open);
 
     $domain->remove(user_admin);
     _clean_iptables($vm, @rule);
@@ -1166,7 +1183,10 @@ sub test_open_port_duplicated($vm) {
     for ( 1 .. 5 ) {
         @out3 = split /\n/, `iptables-save -t nat`;
         @open3 = (grep /--dport $public_port/, @out3);
-        last if scalar(@open3);
+        last if scalar(@open3)==1;
+        if (scalar(@open3)>1) {
+            Ravada::Request->refresh_vms(_force =>1, uid => Ravada::Utils::user_daemon->id)
+        }
         Ravada::Request->open_exposed_ports(
             uid => user_admin->id
             ,id_domain => $clone->id
