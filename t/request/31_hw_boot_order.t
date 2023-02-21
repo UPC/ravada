@@ -235,7 +235,7 @@ sub test_change_capacity($vm, $new_boot_order = undef) {
             ,id_domain => $domain->id
             ,index => $index-1
             ,hardware => 'disk'
-            ,data => { driver => $driver , boot => $boot, file => $file
+            ,data => { bus => $driver , boot => $boot, file => $file
                 , capacity => $new_capacity }
         );
         wait_request( debug => 0 );

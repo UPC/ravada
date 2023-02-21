@@ -1281,6 +1281,8 @@ sub wait_request {
                             like($error,qr{^($|.*No ip in domain|.*duplicated port|.*I can't get the internal IP)});
                         } elsif($req->command eq 'compact') {
                             like($error,qr{^($|.*compacted)});
+                        } elsif($req->command eq 'refresh_machine') {
+                            like($error,qr{^($|.*port.*already used)});
                         } else {
                             like($error,qr/^$|libvirt error code:38,|run recently/)
                                 or confess $req->id." ".$req->command;
@@ -2785,7 +2787,7 @@ sub test_volume_format(@volume) {
             qcow2 => \&_check_qcow2
             ,void => \&_check_yaml
         );
-        is($volume->info->{driver_type}, $extension) or confess Dumper($volume->file, $volume->info);
+        is($volume->info->{driver}->{type}, $extension) or confess Dumper($volume->file, $volume->info);
         my $exec = $sub{$extension} or confess "Error: I don't know how to check "
             .$volume->file." [$extension]";
         $exec->($volume);

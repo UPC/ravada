@@ -157,11 +157,12 @@ sub _add_iso_to_clone($domain) {
 
     my $file = '/var/lib/libvirt/images/alpine-standard-3.8.1-x86.iso';
     $file = "/var/tmp/alpine-standard-3.8.1-x86.iso" if $<;
+
     my $req = Ravada::Request->add_hardware(
         id_domain => $domain->id
         ,uid => user_admin->id
         ,'data' => {
-            'driver' => 'ide',
+            'bus' => 'ide',
             'type' => 'sys',
             'allocation' => '0.1G',
             'device' => 'cdrom',
@@ -246,8 +247,8 @@ sub test_add_cd($vm, $data) {
         $new_dev = $dev;
         last;
     }
-    is($new_dev->{driver_type}, 'raw');
-    is($new_dev->{driver}, 'ide');
+    is($new_dev->{driver}->{type}, 'raw');
+    is($new_dev->{bus}, 'sata');
     is($new_dev->{file},$data->{file});
     if ($data->{device} eq 'cdrom' && exists $data->{file} && $data->{file} =~ /tmp/) {
         unlink $data->{file} or die "$! $data->{file}";

@@ -1198,7 +1198,7 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
 
     my $device = ($iso->{device} or $self->dir_img."/$iso_name");
 
-    confess "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
+    warn "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
         if $VERIFY_ISO && $iso->{url} && !$iso->{md5} && !$iso->{sha256};
 
     my $downloaded = 0;
@@ -1640,9 +1640,11 @@ sub _fetch_this($self, $row, $type, $file = $row->{filename}){
         }
     }
 
-    confess "No $type for $file in ".$row->{"${type}_url"}."\n"
+    warn "No $type for $file in ".$row->{"${type}_url"}."\n"
         .$url_orig."\n"
         .$content;
+
+    return;
 }
 
 sub _fetch_md5($self,$row) {
@@ -1656,7 +1658,7 @@ sub _fetch_md5($self,$row) {
 sub _fetch_sha256($self,$row) {
     my $signature = $self->_fetch_this($row,'sha256');
     confess "ERROR: Wrong signature '$signature'"
-         if $signature !~ /^[0-9a-f]{9}/;
+         if defined $signature && $signature !~ /^[0-9a-f]{9}/;
     return $signature;
 }
 

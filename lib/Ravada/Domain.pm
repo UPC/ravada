@@ -11,7 +11,7 @@ Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
 
 use utf8;
 
-use Carp qw(carp confess croak);
+use Carp qw(carp confess croak cluck);
 use Data::Dumper;
 use DateTime;
 use DateTime::Format::DateParse;
@@ -4466,7 +4466,16 @@ sub _around_rename($orig, $self, %args) {
 
     $self->id();
 
-    $self->_vm->_check_duplicate_name($name, 1);
+    return if $name eq $self->_data('name')
+            && $name eq $self->_data('alias');
+
+    $self->_vm->_check_duplicate_name($name, 1)
+    if $name ne $self->_data('name');
+
+    if ($name eq $self->_data('name') && $name ne $self->_data('alias')) {
+        $self->_data('alias' => $name);
+        return;
+    }
 
     $self->shutdown(user => $user)  if $self->is_active;
 
@@ -5596,7 +5605,8 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     }
     $self->info(Ravada::Utils->user_daemon) if $self->is_known();
 
-    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
+    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active' && $hardware ne 'memory';
+    $self->post_prepare_base() if $self->is_base();
 }
 
 sub _fix_hw_booleans($data) {
@@ -5618,14 +5628,21 @@ sub _fix_hw_booleans($data) {
 }
 
 sub _fix_hw_ignore_fields($data) {
+    unlock_hash(%$data);
     for my $key (keys %$data) {
         delete $data->{$key} if $key =~ /^_/;
     }
+    lock_hash(%$data);
 }
 
 sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) {
 
     _fix_hw_booleans($data);
+
+    if ($hardware eq 'filesystem') {
+        $self->_change_info_filesystem($data);
+    }
+
     _fix_hw_ignore_fields($data);
 
     my $real_id_vm;
@@ -5636,6 +5653,7 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
     }
 
     my $is_display_builtin;
+
     if ($hardware eq 'display') {
 
         my @display = Ravada::Front::Domain::_get_controller_display($self);
@@ -5655,6 +5673,7 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
 
     }
     if ( $hardware ne 'display' || $is_display_builtin) {
+        unlock_hash(%$data);
         $orig->($self, $hardware, $index,$data);
         $self->_redefine_instances() if $self->is_known();
     }
@@ -5676,18 +5695,84 @@ sub _add_info_filesystem($self, $data) {
     if exists $data->{source} && !defined $data->{source}
     || (ref($data->{source}) && !keys %{$data->{source}});
 
-    my %data2 = %$data;
-    $data2{id_domain} = $self->id;
-    $data2{source} = $data2{source}->{dir} if ref($data2{source});
+    my $data2 = dclone($data);
+    $data2->{id_domain} = $self->id;
+    $data2->{source} = $data2->{source}->{dir} if ref($data2->{source});
 
     my $sql = "INSERT INTO domain_filesystems ("
-    .join(",",sort keys %data2)
+    .join(",",sort keys %$data2)
     .") VALUES ("
-    .join(",",map { '?' } keys %data2)
+    .join(",",map { '?' } keys %$data2)
     .")";
 
     my $sth = $$CONNECTOR->dbh->prepare($sql);
-    $sth->execute(map {$data2{$_} } sort keys %data2);
+    $sth->execute(map {$data2->{$_} } sort keys %$data2);
+}
+
+sub _remove_info_filesystem($self, $id_filesystem) {
+
+    my $sth = $self->_dbh->prepare("DELETE FROM domain_filesystems "
+        ." WHERE id_domain=? AND id=?"
+    );
+    $sth->execute($self->id, $id_filesystem);
+}
+
+sub _change_info_filesystem($self, $data) {
+    return if !keys %$data;
+
+    my $data2 = dclone($data);
+    unlock_hash(%$data);
+    my $chroot = delete $data->{chroot};
+    my $subdir_uid = delete $data->{subdir_uid};
+    lock_hash(%$data);
+
+    unlock_hash(%$data2);# it is local to this sub, so we may change it
+    $data2->{source} = $data2->{source}->{dir} if ref($data2->{source});
+    delete $data2->{target};
+
+    my $id = delete $data2->{_id};
+    confess "Missing _id in data2 ".Dumper($data2) if !defined $id;
+    for my $key (keys %$data2) {
+        delete $data2->{$key} if $key =~ /^_/;
+    }
+
+    my $sql = "UPDATE domain_filesystems SET "
+        .join(",", map { "$_=?" } sort keys %$data2)
+        ;
+
+    my @values = map { $data2->{$_} } sort keys %$data2;
+    my $sth = $self->_dbh->prepare("$sql WHERE id=?");
+    $sth->execute(@values,$id);
+}
+
+sub _load_info_filesystem($self, $list) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT * FROM domain_filesystems "
+        ." WHERE id_domain=? AND source=?"
+    );
+    for my $item (@$list) {
+        unlock_hash(%$item);
+
+        my $source = $item->{source};
+        $source = $item->{source}->{dir} if ref($item->{source});
+
+        $sth->execute($self->id,$source);
+        my $info = $sth->fetchrow_hashref();
+
+        if ( !$info->{id} ) {
+            my $data = {
+                source => $source
+            };
+            $self->_add_info_filesystem($data);
+            $sth->execute($self->id,$source);
+            $info = $sth->fetchrow_hashref();
+        }
+
+        $item->{chroot} = delete $info->{chroot};
+        $item->{subdir_uid} = delete $info->{subdir_uid};
+        $item->{_id} = $info->{id};
+        lock_hash(%$item);
+    }
 }
 
 sub _create_filesystem($self, $source, $uid, $gid=0) {
@@ -5707,6 +5792,19 @@ sub _create_filesystem($self, $source, $uid, $gid=0) {
 
 }
 
+sub _clone_filesystems($self) {
+    my $id_base = $self->id_base() or return;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_filesystems "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($id_base);
+    while ( my $row = $sth->fetchrow_hashref ) {
+        delete $row->{id};
+        $self->_add_info_filesystem($row);
+    }
+}
+
 sub _chroot_filesystems($self) {
     my $id_base = $self->id_base() or return;
 
@@ -5717,14 +5815,14 @@ sub _chroot_filesystems($self) {
     while ( my $row = $sth->fetchrow_hashref ) {
         next if !$row->{chroot};
         confess Dumper($row) if $row->{source} !~ m{^/};
+        my $data = $self->_search_filesystem_index($row->{source});
+        unlock_hash(%$data);
         my $source = $row->{source}."/".$self->name;
-        my $index = $self->_search_filesystem_index($row->{source});
+        $data->{source}->{dir} = $source;
+        my $index = delete $data->{_index};
+        lock_hash(%$data);
 
-        $self->change_hardware('filesystem',$index
-            ,{source => $source
-            , keep_target => 1
-        })
-        if defined $index;
+        $self->change_hardware('filesystem',$index, $data);
 
         $self->_create_filesystem($source,$row->{subdir_uid});
     }
@@ -5734,7 +5832,11 @@ sub _chroot_filesystems($self) {
 sub _search_filesystem_index($self, $source) {
     my $hw = $self->get_controllers();
     for my $n ( 0 .. scalar(@{$hw->{filesystem}}) ) {
-        return $n if $hw->{filesystem}->[$n]->{source}->{dir} eq $source;
+        my $fs = $hw->{filesystem}->[$n];
+        unlock_hash(%$fs);
+        $fs->{_index} = $n;
+        lock_hash(%$fs);
+        return $fs if $fs->{source}->{dir} eq $source;
     }
     return;
 }
@@ -5802,6 +5904,10 @@ sub _check_duplicated_volume_name($self, $file) {
 }
 
 sub _add_hardware_disk($orig, $self, $index, $data) {
+
+    die "Error: new disk volumes can not be added to bases\n"
+    if $self->is_base;
+
     my $real_id_vm;
     if (!$self->_vm->is_local) {
         $real_id_vm = $self->_vm->id;
@@ -5861,6 +5967,16 @@ sub _delete_db_display_by_driver($self, $driver) {
 
 sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=undef) {
     confess "Error: supply either index or options when removing hardware " if !defined $index && !defined $options;
+
+    my $id_filesystem;
+    if ( $hardware eq 'filesystem') {
+        my @fs = $self->get_controller('filesystem');
+        $id_filesystem = $fs[$index]->{_id};
+    }
+
+    die "Error: disk volumes can not be removed from bases\n"
+    if $hardware eq 'disk' && $self->is_base;
+
     my $display;
     if ( $hardware eq 'display' ) {
         $display = $self->_get_display_by_index($index);
@@ -5891,6 +6007,9 @@ sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=unde
     } else {
         $orig->($self, $hardware, $index, %$options)
     }
+
+    $self->_remove_info_filesystem($id_filesystem)
+    if $hardware eq 'filesystem';
 
     if ( $self->is_known() && !$self->is_base ) {
         $self->_redefine_instances();

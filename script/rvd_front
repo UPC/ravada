@@ -860,6 +860,12 @@ get '/machine/reboot/(:id).(:type)' => sub {
         return reboot_machine($c);
 };
 
+get '/machine/stop_start/(:id).(:type)' => sub($c) {
+    return access_denied($c)        if !$USER ->can_reboot($c->stash('id'));
+    return stop_start($c);
+};
+
+
 any '/machine/remove/(:id).(:type)' => sub {
         my $c = shift;
     return access_denied($c)       if !$USER->can_remove_machine($c->stash('id'));
@@ -3219,6 +3225,22 @@ sub reboot_machine {
 
     return $c->redirect_to('/machines') if $type eq 'html';
     return $c->render(json => { req => $req->id });
+}
+
+sub stop_start($c) {
+    return login($c) if !_logged_in($c);
+
+    my ($domain, $type) = _search_requested_machine($c);
+
+    my $req = Ravada::Request->shutdown_domain(name => $domain->name
+        ,uid => $USER->id
+    );
+    my $req2 = Ravada::Request->start_domain(id_domain => $domain->id
+        ,uid => $USER->id
+        ,after_request => $req->id
+    );
+
+    return $c->render(json => { req => $req2->id });
 }
 
 sub force_shutdown_machine {

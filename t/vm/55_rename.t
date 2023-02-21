@@ -337,6 +337,26 @@ sub test_rename_and_base($vm) {
 
 }
 
+sub test_req_rename_base_failed($vm) {
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+
+    my $old_name = $base->_data('name');
+
+    my $sth = connector->dbh->prepare(
+        "UPDATE domains set alias=? WHERE id=?"
+    );
+    $sth->execute(new_domain_name, $base->id);
+
+    my $req = Ravada::Request->rename_domain(
+        id_domain => $base->id
+        ,uid => user_admin->id
+        ,name => $old_name
+
+    );
+    wait_request();
+}
+
 #######################################################################
 
 clean();
@@ -361,6 +381,8 @@ for my $vm_name ( vm_names()) {
 
         diag("Testing rename domains with $vm_name");
     
+        test_req_rename_base_failed($vm_name);
+
         test_req_rename_utf_ca($vm_name);
         test_req_rename_utf_ru($vm_name);
         test_req_rename_utf_ar($vm_name);

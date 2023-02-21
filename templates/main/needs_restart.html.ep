@@ -1,6 +1,9 @@
-    <div class="panel panel-warning" ng-show="showmachine.needs_restart">
+    <div class="alert alert-primary" ng-show="showmachine.needs_restart">
         <div class="panel-heading">
             <%=l 'The changes will apply on next restart' %>
+            <button
+                ng-click="reboot()"
+            ><%=l 'reboot now' %></button>
         </div>
     </div>
 

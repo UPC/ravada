@@ -5,6 +5,7 @@ use Carp qw(carp confess cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use POSIX qw(WNOHANG);
+use Storable qw(dclone);
 use Sys::Virt;
 use Test::More;
 use YAML qw(Dump);
@@ -48,6 +49,7 @@ sub _driver_field($hardware) {
     $driver_field = 'model' if $hardware =~ /^(sound|usb controller)$/;
     $driver_field = 'mode'  if $hardware eq 'cpu';
     $driver_field = '_name' if $hardware eq 'filesystem';
+    $driver_field = 'bus'   if $hardware eq 'disk';
     return $driver_field;
 }
 
@@ -645,6 +647,7 @@ sub test_add_hardware_custom($domain, $hardware) {
         ,video => \&test_add_video
         ,sound => sub {}
         ,'usb controller' => sub {}
+        ,'memory' => sub {}
     );
 
     my $exec = $sub{$hardware} or die "No custom add $hardware";
@@ -661,7 +664,7 @@ sub _set_three_devices($domain, $hardware) {
 
     for my $item (@$items) {
         next if !ref($item);
-        confess Dumper($item) if !exists $item->{$driver_field};
+        confess "Missing field $driver_field in ". Dumper($item) if !exists $item->{$driver_field};
         delete $drivers{$item->{$driver_field}} if ref($item);
     }
     for my $n (1 .. 3-scalar(@$items)) {
@@ -855,6 +858,70 @@ sub test_front_hardware {
         is_deeply($info->{hardware}->{$hardware},[@controllers]);
 }
 
+sub test_change_disk_nothing($vm, $domain) {
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $info = $domain_f->info(user_admin);
+
+    my $hardware = 'disk';
+
+    for my $count ( 0 .. scalar(@{$info->{hardware}->{$hardware}}) -1 ) {
+        my $data= $info->{hardware}->{$hardware}->[$count];
+        my $req = Ravada::Request->change_hardware(
+            id_domain => $domain_f->id
+            ,uid => user_admin->id
+            ,hardware => $hardware
+            ,index => $count
+            ,data => $data
+        );
+        wait_request($req);
+        my $domain2 = Ravada::Front::Domain->open($domain->id);
+        my $info2 = $domain_f->info(user_admin);
+        my $data2= $info2->{hardware}->{$hardware}->[$count];
+        is_deeply($data2, $data)
+            or die Dumper([$domain->name, $data2, $data]);
+    }
+
+}
+
+sub test_change_disk_settings($vm, $domain) {
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $info = $domain_f->info(user_admin);
+
+    my $hardware = 'disk';
+
+    my $index;
+    my $item;
+
+    for my $count ( 0 .. scalar(@{$info->{hardware}->{$hardware}}) -1 ) {
+        $item = $info->{hardware}->{$hardware}->[$count];
+        next if $item->{device} ne 'disk';
+
+        $index = $count;
+        last;
+    }
+    confess "Device disk not found ".$domain->name
+    ."\n".Dumper($info->{hardware}->{$hardware})
+    if !defined $index;
+
+    my $item2 = dclone($item);
+    $item2->{driver}->{'$$hashKey'} = 'object:105';
+
+    for my $cache (qw(default none writethrough writeback directsync
+            unsafe)) {
+            my $item3 = dclone($item2);
+            $item3->{driver}->{cache}=$cache;
+            my $req = Ravada::Request->change_hardware(
+                id_domain => $domain_f->id
+                ,uid => user_admin->id
+                ,hardware => $hardware
+                ,index => $index
+                ,data => $item3
+            );
+            wait_request(debug => 0);
+    }
+
+}
+
 sub test_change_disk_field($vm, $domain, $field='capacity') {
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my $info = $domain_f->info(user_admin);
@@ -945,7 +1012,7 @@ sub test_cdrom($domain, $index, $file_new) {
 }
 sub test_change_disk_cdrom($vm, $domain) {
     my ($index,$cdrom) = _search_cdrom($domain);
-    ok($cdrom) or exit;
+    ok($cdrom) or confess "No cdrom in ".$domain->name;
     ok(defined $cdrom->{file},"Expecting file field in ".Dumper($cdrom));
 
     my $file_old = $cdrom->{file};
@@ -979,6 +1046,8 @@ sub _search_disk($domain) {
 
 
 sub test_change_disk($vm, $domain) {
+    test_change_disk_settings($vm, $domain);
+    test_change_disk_nothing($vm, $domain);
     test_change_disk_field($vm, $domain, 'capacity');
     test_change_disk_cdrom($vm, $domain);
 }
@@ -1057,16 +1126,33 @@ sub test_change_network($vm, $domain) {
 }
 
 sub test_change_filesystem($vm,$domain) {
+
+    my $list_hw_fs = $domain->info(user_admin)->{hardware}->{filesystem};
+
+    my $hw_fs0 = $list_hw_fs->[0];
+
     my $new_source = "/var/tmp/".new_domain_name();
     mkdir $new_source if ! -e $new_source;
-    my $req = Ravada::Request->change_hardware(
+    my $data = dclone($hw_fs0);
+    $data->{source}->{dir} = $new_source;
+
+    my %args = (
         hardware => 'filesystem'
         ,index => 0
-        ,data => { source => { dir => $new_source } }
+        ,data => $data
         ,uid => user_admin->id
         ,id_domain => $domain->id
     );
-    wait_request(debug => 0);
+    my $req = Ravada::Request->change_hardware(%args);
+    wait_request(debug => 1);
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    my $list_hw_fs2 = $domain2->info(user_admin)->{hardware}->{filesystem};
+    my ($hw_fs2) = grep { $_->{_id} == $data->{_id} } @$list_hw_fs2;
+    ok($hw_fs2) or die Dumper($list_hw_fs2);
+    is($hw_fs2->{source}->{dir}, $new_source);
+    ok($hw_fs2->{_id}) or die Dumper($hw_fs2);
+    is($hw_fs2->{_id},$hw_fs0->{_id});
 }
 
 sub _test_change_defaults($domain,$hardware) {
@@ -1253,6 +1339,7 @@ sub test_change_hardware($vm, $domain, $hardware) {
          ,cpu => \&_test_change_cpu
          ,features => \&_test_change_features
          ,'usb controller' => sub {}
+         ,'memory' => sub {}
     );
     my $exec = $sub{$hardware} or die "I don't know how to test $hardware";
     $exec->($vm, $domain);
@@ -1278,7 +1365,6 @@ sub _remove_usbs($domain, $hardware) {
 }
 
 sub test_change_drivers($domain, $hardware) {
-    return if $domain->type eq 'KVM' && $hardware eq 'usb controller';
 
     _remove_usbs($domain, $hardware);
 
@@ -1493,7 +1579,7 @@ for my $vm_name (vm_names()) {
         );
 
         diag("Testing $hardware controllers for VM $vm_name");
-        if ($hardware !~ /cpu|features/) {
+        if ($hardware !~ /cpu|features|memory/) {
             test_remove_hardware_by_index($vm, $hardware);
             test_remove_hardware_by_index_network_kvm($vm, $hardware);
             test_add_hardware_request($vm, $domain_b, $hardware);
@@ -1504,14 +1590,15 @@ for my $vm_name (vm_names()) {
             test_add_hardware_request($vm, $domain_b, $hardware);
         }
 
+
         test_front_hardware($vm, $domain_b, $hardware);
 
         test_add_hardware_custom($domain_b, $hardware);
         test_change_hardware($vm, $domain_b, $hardware);
 
         # change driver is not possible for displays
-        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|filesystem|usb|mock|features|cpu)$/;
-        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(display|filesystem|usb|mock|features)$/;
+        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|filesystem|usb|mock|features|cpu|usb controller|memory)$/;
+        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(display|filesystem|usb|mock|features|memory)$/;
 
         # try to add with the machine started
         $domain_b->start(user_admin) if !$domain_b->is_active;
@@ -1521,7 +1608,7 @@ for my $vm_name (vm_names()) {
         $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
         is($domain_b->is_active,0) or next;
 
-        if ( $hardware !~ /cpu|features|usb/ ) {
+        if ( $hardware !~ /memory|cpu|features|usb/ ) {
             for (1 .. 3 ) {
                 test_add_hardware_request($vm, $domain_b, $hardware);
             }

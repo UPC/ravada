@@ -1,0 +1,8 @@
+<div ng-show="showmachine.is_base && showmachine.has_clones"
+            class="row mt-2">
+    <div class="col-sm-1"></div>
+    <div class="col-md-10 alert alert-warning border border-danger">
+    <%=l 'This machine is base and all changes will be applied to its clones.' %>
+    </div>
+</div>
+
