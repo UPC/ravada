@@ -5,14 +5,16 @@ msgstr ""
 "Project-Id-Version: ravada\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2017-10-02 20:02+0700\n"
-"Last-Translator: Mahyuddin <yudi.al@gmail.com>\n"
-"Language-Team: Indonesian <yudi.al@gmail.com>\n"
+"PO-Revision-Date: 2023-02-08 03:37+0000\n"
+"Last-Translator: Rayark <akhmadhabibie@gmail.com>\n"
+"Language-Team: Indonesian <https://hosted.weblate.org/projects/ravada/"
+"translation/id/>\n"
 "Language: id\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 1.8.11\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Weblate 4.16-dev\n"
 
 msgid "Ravada broker"
 msgstr "Ravada pialang"
@@ -129,7 +131,7 @@ msgid "Admin"
 msgstr "Admin"
 
 msgid "Show/Hide clones"
-msgstr "Tampilkan/Sembunyikan klone"
+msgstr "Tampilkan/Sembunyikan klon"
 
 msgid "I want to change my password"
 msgstr "Saya ingin mengganti kata sandi saya"
@@ -471,7 +473,9 @@ msgid "Select Template"
 msgstr "Pilih Contoh"
 
 msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
-msgstr "ISO ini belum diunduh. Butuh beberapa menit, atau beberapa jam sampai dijemput dari Internet"
+msgstr ""
+"ISO file ini belum diunduh. Mungkin perlu beberapa menit bahkan jam hingga "
+"file berhasil diunduh dari internet."
 
 msgid "Download now"
 msgstr "Unduh sekarang"
@@ -480,10 +484,10 @@ msgid "Select ISO"
 msgstr "Pilih ISO"
 
 msgid "Template"
-msgstr "Contoh"
+msgstr "Template"
 
 msgid "Disk Size: (GB)"
-msgstr "Ukuran disk (GB)"
+msgstr "Ukuran disk: (GB)"
 
 msgid "Swap Size: (GB)"
 msgstr "Ukuran Swap (GB)"
@@ -498,7 +502,7 @@ msgid "Machine name can't exceed 20 characters."
 msgstr "Nama mesin tidak boleh lebih dari 20 karakter."
 
 msgid "Backend selection is required."
-msgstr "Pilihan Backend dibutuhkan."
+msgstr "Pemilihan Backend dibutuhkan."
 
 msgid "ISO image selection is required."
 msgstr "Pilihan ISO dibutuhkan."
@@ -571,7 +575,7 @@ msgid "It may take a couple of minutes."
 msgstr "Mungkin butuh beberapa menit."
 
 msgid "Hibernating ..."
-msgstr "Hibernasi ..."
+msgstr "Hibernasi…"
 
 msgid "Description"
 msgstr "Deskripsi"
@@ -604,7 +608,7 @@ msgid "Danger"
 msgstr "Bahaya"
 
 msgid "This will remove all the contents of the machine"
-msgstr "Ini akan menghapush semua konten dari mesin"
+msgstr "Ini akan menghapus semua konten dari mesin"
 
 msgid "This action can't be undone"
 msgstr "Aksi ini tidak bisa dikembalikan"
@@ -628,7 +632,7 @@ msgid "clones of the machine"
 msgstr "klon dari mesin"
 
 msgid "Yes, remove all the clones"
-msgstr "Ya, hapush semua klon"
+msgstr "Ya, hapus semua klon"
 
 msgid "This virtual machine can't be removed because it has"
 msgstr "Mesin virtual ini tidak bisa dihapus karena"
@@ -676,7 +680,7 @@ msgid "Below are listed the technologies used in this project:"
 msgstr "Dibawah ini adalah teknologi yang dipakai untuk proyek:"
 
 msgid "The code is available on "
-msgstr "Kode tersedia di "
+msgstr "Kode ini tersedia di"
 
 msgid "The code is "
 msgstr "Kodenya adalah"
@@ -799,7 +803,7 @@ msgid "If you can not see the machine screen in a few seconds check for a file c
 msgstr "Jika anda tidak dapat melihat layar mesin dalam beberapa saat cek file"
 
 msgid "in your downloads folder."
-msgstr "di dalam folder unduhan"
+msgstr "di folder unduhan anda."
 
 msgid "copied to clipboard"
 msgstr "Tersalin ke papan klip"
@@ -820,13 +824,13 @@ msgid "Start again"
 msgstr "Mulai lagi"
 
 msgid "The machine is down."
-msgstr "Mesin mati"
+msgstr "Mesin mati."
 
 msgid "Remove"
 msgstr "Hapus"
 
 msgid "The machine must be started to take the screenshot."
-msgstr "Mesin harus dinyalakan untuk mengambil tangkapan layar"
+msgstr "Mesin harus dihidupkan untuk mengambil tangkapan layar."
 
 msgid "Take screenshot"
 msgstr "Ambil tangkapan layar"
@@ -838,13 +842,13 @@ msgid "Saving the screenshot, please wait a moment..."
 msgstr "Menyimpan tangkapan layar, tolong tunggu beberapa saat..."
 
 msgid "You need to run the machine in order to take a screenshot."
-msgstr "Anda harus menjalankan mesin untuk mengambil tangkapan layar"
+msgstr "Anda perlu menjalankan mesin untuk mengambil tangkapan layar."
 
 msgid "Copying the screenshot, please wait a moment..."
 msgstr "Menyalin tangkapan layar, tolong tunggu beberapa saat..."
 
 msgid "You need a screenshot in order to copy it to the base machine."
-msgstr "Anda butuh tangkapan layar untuk menyalin ke basis mesin"
+msgstr "Anda memerlukan tangkapan layar untuk menyalinnya ke mesin dasar."
 
 msgid "Add"
 msgstr "Tambah"
@@ -861,4 +865,395 @@ msgstr "Terima kasih kepada:"
 msgid "licensed."
 msgstr "berlisensi."
 
+msgid "Mark as read"
+msgstr "Tandai sudah dibaca"
 
+msgid "Mark as unread"
+msgstr "Tandai belum dibaca"
+
+msgid "Process"
+msgstr "Proses"
+
+msgid "Backend"
+msgstr "Backend"
+
+msgid "Mark all as read"
+msgstr "Tandai Semua Sudah Dibaca"
+
+msgid "Hindi"
+msgstr "Hindi"
+
+msgid "Waiting for machine to start"
+msgstr "Menunggu mesin untuk menyala"
+
+msgid "This machine will shut down"
+msgstr "Mesin ini akan dimatikan"
+
+msgid "Waiting for network to come up"
+msgstr "Menunggu jaringan terghubung kembali"
+
+msgid "Hardware address"
+msgstr "Alamat perangkat keras"
+
+msgid "Open ports"
+msgstr "Port yang terbuka"
+
+msgid "Update password"
+msgstr "Ubah password"
+
+msgid "This machine has a CD-ROM"
+msgstr "Mesin ini memeliki CD-ROM"
+
+msgid "type"
+msgstr "tipe"
+
+msgid "Content will be cleaned on restore and shutdown"
+msgstr "Konten akan dibersihkan saat dipulihkan dan dimatikan"
+
+msgid "The machine will turn off after this time"
+msgstr "Mesin akan dimatikan setelah ini"
+
+msgid "Show active"
+msgstr "Tampilkan yang aktif"
+
+msgid "Show clones"
+msgstr "Tampilkan klon"
+
+msgid "cdrom"
+msgstr "cdrom"
+
+msgid "system"
+msgstr "sistem"
+
+msgid "temporary"
+msgstr "sementara"
+
+msgid "data"
+msgstr "data"
+
+msgid "Content will be cleaned on restore"
+msgstr "Konten akan dibersihkan saat pemulihan"
+
+msgid "All machines"
+msgstr "Semua mesin"
+
+msgid "Hide clones"
+msgstr "Sembunyikan klon"
+
+msgid "can remove any virtual machine owned by the user."
+msgstr "dapat menghapus vitual mesin apapun yang dimiliki oleh pengguna."
+
+msgid "Are you sure you want to remove the base of"
+msgstr "Apakah anda yakin ingin menghapus basis dari"
+
+msgid "This machine is running and can't be renamed."
+msgstr "Mesin sedang berjalan dan namanya tidak bisa diganti."
+
+msgid "Clones"
+msgstr "Klon"
+
+msgid "Confirm password must be at least 5 characters"
+msgstr "Konfirmasi password paling tidak 5 karakter"
+
+msgid "Confirm password can only contain words and numbers"
+msgstr "Konfirmasi password hanya boleh terdiri dari kata dan angka"
+
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Tekan SHIFT+F12 untuk keluar mesin virtual"
+
+msgid "Confirm"
+msgstr "Mengonfirmasi"
+
+msgid "Warning: anonymous machines won't show up unless you enable allowed."
+msgstr ""
+"Peringatan: mesin anonim tidak akan muncul kecuali Anda mengaktifkan yang "
+"diizinkan."
+
+msgid "Assign this virtual machine to the pre-started pool"
+msgstr "Tetapkan mesin virtual ini ke kumpulan pre-dimulai"
+
+msgid "Are you sure you want to remove this group ?"
+msgstr "Apakah Anda yakin ingin menghapus grup ini?"
+
+msgid "Remove Base"
+msgstr "Hapus basis"
+
+msgid "To make this possible, copy the content of"
+msgstr "Untuk membuat ini berhasil, salin konten dari"
+
+msgid "to an ASCII file and save it with a .reg extension, then execute the file."
+msgstr ""
+"ke file ASCII dan simpan dengan ekstensi .reg, lalu jalankan file tersebut."
+
+msgid "Please, make sure you have the right path and release, according to your PC configuration."
+msgstr ""
+"Pastikan anda memiliki jalur  dan rilis, berdasarkan konfigurasi PC anda"
+
+msgid "SSO/CAS Login"
+msgstr "SSO/CAS Login"
+
+msgid "User"
+msgstr "Pengguna"
+
+msgid "Password"
+msgstr "Password"
+
+msgid "can change the settings of any virtual machine."
+msgstr "Dapat mengganti pengaturan virtual mesin apa saja"
+
+msgid "can change the settings of any virtual machine "
+msgstr "Dapat mengganti pengaturan virtual mesin apa saja "
+
+msgid "Template selection is required"
+msgstr "Pemiliihan template diperlukan"
+
+msgid "Are you sure you want to prepare the base of"
+msgstr "Apakah anda yakin ingin menyiapkan basis dari"
+
+msgid "Address"
+msgstr "Alamat"
+
+msgid "Change password"
+msgstr "Ganti passowrd"
+
+msgid "Start all clones"
+msgstr "Mulai semua klon"
+
+msgid "Access denied"
+msgstr "Akses ditolak"
+
+msgid "Empty login name"
+msgstr "Nama login kosong"
+
+msgid "Empty password"
+msgstr "Password Kosong"
+
+msgid "Session timeout"
+msgstr "Batas waktu sesi"
+
+msgid "Vietnamese"
+msgstr "Vietnamese"
+
+msgid "Italian"
+msgstr "Italian"
+
+msgid "Type a typical LDAP user name to fetch the attribute list"
+msgstr "Ketik nama pengguna LDAP biasa untuk mengambil daftar atribut"
+
+msgid "Confirm password is required"
+msgstr "Konfirmasi password diperlukan"
+
+msgid "Confirm password can not exceed 20 characters"
+msgstr "Konfirmasi password tidak boleh melebihi 20 karakter"
+
+msgid "New Node"
+msgstr "Node Baru"
+
+msgid "A node with that name already exists."
+msgstr "Node dengan nama yang sama sudah tersedia."
+
+msgid "Setting your default language"
+msgstr "Atur bahasa bawaan anda"
+
+msgid "User name"
+msgstr "Username"
+
+msgid "not found in LDAP server"
+msgstr "tidak ditemukan di server LDAP"
+
+msgid "Attribute"
+msgstr "Atribut"
+
+msgid "Value"
+msgstr "Nilai"
+
+msgid "Allowed"
+msgstr "Diizinkan"
+
+msgid "Last"
+msgstr "Terakhir"
+
+msgid "Default"
+msgstr "Bawaan"
+
+msgid "If none of the previous match, access is allowed."
+msgstr "Jika tidak ada yang cocok sebelumnya, akses diperbolehkan"
+
+msgid "If none of the previous match, access is denied."
+msgstr "Jika tidak ada yang cocok sebelumnya, akses diperbolehkan"
+
+msgid "verify"
+msgstr "Memeriksa"
+
+msgid "save"
+msgstr "Menyimpan"
+
+msgid "Verifying"
+msgstr "Memverifikasi"
+
+msgid "No entries found"
+msgstr "Tidak ada entri yang ditemukan"
+
+msgid "has at least"
+msgstr "mempunyai paling tidak"
+
+msgid "entries."
+msgstr "entri"
+
+msgid "Enable last for not allowed restrictions."
+msgstr "Aktifkan yang terakhir untuk batasan yang tidak diizinkan."
+
+msgid "Add description"
+msgstr "Tambahkan deskripsi"
+
+msgid "These actions affect all the clones on the machine"
+msgstr "Tindakan ini memengaruhi semua klon di mesin"
+
+msgid "Shutdown all clones"
+msgstr "Matikan semua klon"
+
+msgid "Keep in mind that there may be users using a clone"
+msgstr "Perlu diingat bahwa mungkin ada pengguna yang menggunakan klon"
+
+msgid "Yes, shutwdown all the clones"
+msgstr "Ya, Matikan semua klon"
+
+msgid "No members found"
+msgstr "Tidak ada member ditemukan"
+
+msgid "No groups found"
+msgstr "Tidak ada grup ditemukanap"
+
+msgid "Keep the CD for the clones"
+msgstr "Simpan CD untuk klon"
+
+msgid "Accept"
+msgstr "Setuju"
+
+msgid "Close"
+msgstr "Tutup"
+
+msgid "Apply"
+msgstr "Terapkan"
+
+msgid "Fail"
+msgstr "Gagal"
+
+msgid "This Virtual Machine has no display hardware attached"
+msgstr "Mesin Virtual ini tidak memiliki perangkat keras layar yang terpasang"
+
+msgid "NAT"
+msgstr "NAT"
+
+msgid "Bridge"
+msgstr "Bridge"
+
+msgid "No bridges found"
+msgstr "Tidak ada bridges ditemukan"
+
+msgid "disk"
+msgstr "Disk"
+
+msgid "Content will be kept on restore"
+msgstr "Konten akan disimpan pada pemulihan"
+
+msgid "Users from this network can run all virtual machines"
+msgstr "Pengguna dari jaringan ini bisa menjalankan semua mesin virtual"
+
+msgid "No machines"
+msgstr "Tidak ada mesin"
+
+msgid "Users from this network can run no virtual machines"
+msgstr "Pengguna dari jaringan ini tidak dapat menjalankan mesin virtual"
+
+msgid "Anonymous"
+msgstr "Anonim"
+
+msgid "Network name is required"
+msgstr "Nama network diperlukan"
+
+msgid "This name is duplicated"
+msgstr "Nama ini adalah duplikat"
+
+msgid "host"
+msgstr "host"
+
+msgid "base storage"
+msgstr "penyimpanan dasar"
+
+msgid "clone storage"
+msgstr "penyimpanan klon"
+
+msgid "default storage"
+msgstr "penyimpanan bawaan"
+
+msgid "This virtual machine has no backups to purge"
+msgstr "Mesin virtual ini tidak memiliki cadangan untuk dibersihkan"
+
+msgid "End"
+msgstr "Akhir"
+
+msgid "Time"
+msgstr "Waktu"
+
+msgid "Virtual machines pre-started"
+msgstr "Mesin virtual pra-dimulai"
+
+msgid "Warning: this virtual machine will be prepared as a base. This may take long."
+msgstr ""
+"Peringatan: mesin virtual ini akan disiapkan sebagai basis. Ini mungkin "
+"memakan waktu lama."
+
+msgid "Virtual machines in the pool."
+msgstr "Mesin Virtual di kelompok."
+
+msgid "Pool"
+msgstr "Kelompok"
+
+msgid "Prepare this machine as a base to create clones from it."
+msgstr "Persiapkan mesin ini sebagai dasar untuk membuat klon darinya."
+
+msgid "There are no active virtual machines"
+msgstr "Tidak ada mesin virtual yang aktif"
+
+msgid "reload list"
+msgstr "Memuat ulang daftar"
+
+msgid "Group"
+msgstr "Grup"
+
+msgid "New group member"
+msgstr "Anggota grup baru"
+
+msgid "This group has been removed."
+msgstr "Grup ini telah dihapus."
+
+msgid "Remove group"
+msgstr "Hapus grup"
+
+msgid "object class:"
+msgstr "kelas objek:"
+
+msgid "dn:"
+msgstr "dn:"
+
+msgid "Groups require a LDAP server configured."
+msgstr "Grup memerlukan server LDAP yang sudah dikonfigurasi."
+
+msgid "See documentation about:"
+msgstr "Lihat dokumentasi tentang:"
+
+msgid "Configure LDAP Authentication"
+msgstr "Konfigurasi Otentikasi LDAP"
+
+msgid "Setup a LDAP Server"
+msgstr "Siapkan Server LDAP"
+
+msgid "Groups"
+msgstr "Grup"
+
+msgid "New Group"
+msgstr "Grup Baru"
+
+msgid "Loading ..."
+msgstr "Memuat ..."

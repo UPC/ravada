@@ -156,7 +156,7 @@ sub test_volatile_clone {
         eval { rvd_back->_process_all_requests_dont_fork() };
         is($@,'');
         is($req->status,'done');
-        is($req->error, undef);
+        is($req->error, '');
     };
 
     $clone->remove(user_admin)  if !$clone->is_removed;

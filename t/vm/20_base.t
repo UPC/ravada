@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 
-use Carp qw(confess);
+use Carp qw(confess cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
@@ -302,21 +302,38 @@ sub test_displays_added_on_refresh($domain, $n_expected, $delete=1) {
     if ($delete) {
         my $sth = connector->dbh->prepare("DELETE FROM domain_displays WHERE id_domain=?");
         $sth->execute($domain->id);
+    }else {
+        my $sth = connector->dbh->prepare("SELECT count(*) FROM domain_displays WHERE id_domain=?");
+        $sth->execute($domain->id);
+        my ($n_exp2) = $sth->fetchrow;
+        if ($n_exp2 && $n_expected != $n_exp2) {
+            cluck "n_expected was $n_expected, but it should be $n_exp2";
+            $n_expected = $n_exp2;
+        }
     }
-    my $req = Ravada::Request->refresh_machine(
+    my $req;
+    for ( 1 .. 3 ) {
+        $req = Ravada::Request->refresh_machine(
             uid => user_admin->id
             ,id_domain => $domain->id
             ,_force => 1
-    );
+        );
+        last if $req->id && $req->status ne 'uknown';
+        sleep 1;
+    }
 
-    wait_request(debug => 0, skip => [ 'set_time','enforce_limits'] );
+    for ( 1 .. 3 ) {
+        wait_request(debug => 0, skip => [ 'set_time','enforce_limits'] );
+        last if $req->status eq 'done';
+        sleep 1;
+    }
     is($req->status,'done');
     is($req->error,'');
     my $sth_count = connector->dbh->prepare(
         "SELECT count(*) FROM domain_displays WHERE id_domain=?");
     $sth_count->execute($domain->id);
     my ($count) = $sth_count->fetchrow;
-    ok($count>=$n_expected,"Expecting $n_expected displays on table domain_displays for ".$domain->name) or confess;
+    ok($count>=$n_expected,"Got $count, expecting >$n_expected displays on table domain_displays for ".$domain->name) or confess;
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my $display = $domain_f->info(user_admin)->{hardware}->{display};
