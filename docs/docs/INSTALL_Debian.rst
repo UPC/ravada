@@ -17,15 +17,15 @@ repository <http://infoteleco.upc.edu/img/debian/>`__.
 
 Install the ravada package. It is called *debian-10* but works fine in *debian-11* also.
 
-- ravada_2.0.2_debian-10_all.deb
+- ravada_2.0.3_debian-10_all.deb
 
 When you run dpkg now it may show some errors, it is ok, keep reading.
 
 .. prompt:: bash $
 
-     wget http://infoteleco.upc.edu/img/debian/ravada_2.0.2_debian-10_all.deb
+     wget http://infoteleco.upc.edu/img/debian/ravada_2.0.3_debian-10_all.deb
      sudo apt update
-     sudo apt install ./ravada_2.0.2_debian-10_all.deb
+     sudo apt install ./ravada_2.0.3_debian-10_all.deb
 
 Debian KVM
 ~~~~~~~~~~

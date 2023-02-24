@@ -325,6 +325,15 @@ If it works nvidia smi will show the detected hardware:
 Common Problems
 ---------------
 
+Error: enable unsafe interrupts
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Add to /etc/default/grub  vfio_iommu_type1.allow_unsafe_interrupts=1
+
+::
+
+    GRUB_CMDLINE_LINUX_DEFAULT="vfio_iommu_type1.allow_unsafe_interrupts=1"
+
 Error: iommu group is not viable
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
