@@ -976,13 +976,29 @@ sub _list_domains($rvd_back
     return @domains;
 }
 
-sub list_unused_vols($rvd_back) {
-    my $vols = $rvd_back->_cmd_list_unused_volumes(undef);
-    for my $vm (sort keys %$vols) {
-        next if !scalar(@{$vols->{$vm}});
+sub _vms($rvd_back) {
+    my $sth = $rvd_back->connector->dbh->prepare(
+        "SELECT id,name FROM vms "
+    );
+    $sth->execute;
+    my @ids;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @ids,($row);
+    }
+    return @ids;
+}
 
-        for my $vol (sort @{$vols->{$vm}} ) {
-            print "$vol\n";
+sub list_unused_vols($rvd_back) {
+    for my $vm (_vms($rvd_back) ) {
+        print "$vm->{name}\n";
+        my $req = Ravada::Request->list_unused_volumes(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_vm => $vm->{id}
+            ,at => time + 30
+        );
+        $req->status('done');
+        for my $vol ( $rvd_back->_cmd_list_unused_volumes($req)) {
+            print $vol->{file}."\n";
         }
     }
     exit;

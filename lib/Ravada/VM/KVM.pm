@@ -455,7 +455,7 @@ sub list_unused_volumes($self, $start=0, $limit=10) {
 
         push @unused,($file);
 
-        last if scalar(@unused)>=$limit;
+        last if defined $limit && scalar(@unused)>=$limit;
     }
     return @unused;
 }
