@@ -373,7 +373,7 @@ sub list_unused_volumes($self,$start=0, $limit=10) {
         next if $n_found++ < $start;
 
         push @unused,($vol) unless $used{$vol};
-        last if scalar(@unused)>=$limit;
+        last if $limit && scalar(@unused)>=$limit;
     }
     return @unused;
 }

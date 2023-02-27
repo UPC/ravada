@@ -228,9 +228,9 @@ sub _used_volumes($machine) {
     return @used;
 }
 
-sub _clean_files() {
+sub _clean_files($files=\@FILES) {
     my @dirs;
-    for my $file (@FILES) {
+    for my $file (@$files) {
         if (-f $file || -l $file) {
             unlink $file or warn "$! $file";
         } elsif (-d $file) {
@@ -240,6 +240,13 @@ sub _clean_files() {
     }
 
     for my $file (@dirs) {
+        my @files;
+        my $pattern = base_domain_name();
+        opendir my $ls,$file or die "$! $file";
+        while (my $in = readdir $ls) {
+            push @files,("$file/$in") if $in =~ /^$pattern/;
+        }
+        _clean_files(\@files);
         rmdir($file) or warn "$! $file";
     }
 
