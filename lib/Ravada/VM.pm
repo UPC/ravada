@@ -2414,8 +2414,33 @@ sub dir_backup($self) {
     return $dir_backup;
 }
 
+sub _is_link_remote($self, $vol) {
+
+    my ($out,$err) = $self->run_command("stat",$vol);
+    chomp $out;
+    $out =~ m{ -> (/.*)};
+    return $1 if $1;
+
+    my $path = "";
+    my $path_link;
+    for my $dir ( split m{/},$vol ) {
+        next if !$dir;
+        $path_link .= "/$dir" if $path_link && $dir;
+        $path.="/$dir";
+
+        ($out,$err) = $self->run_command("stat",$path);
+        chomp $out;
+        my ($dir_link) = $out =~ m{ -> (/.*)};
+
+        $path_link = $dir_link if $dir_link;
+    }
+    return $path_link if $path_link;
+
+}
+
 sub _is_link($self,$vol) {
-    die "Error: ".$self->vm." is not local" if !$self->is_local;
+    return $self->_is_link_remote($vol) if !$self->is_local;
+
     my $link = readlink($vol);
     return $link if $link;
 
