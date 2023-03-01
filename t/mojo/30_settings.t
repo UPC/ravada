@@ -26,14 +26,20 @@ my $SCRIPT = path(__FILE__)->dirname->sibling('../script/rvd_front');
 my %FILES;
 my %HREFS;
 
-sub _remove_node($vm_name, $name) {
+my %MISSING_LANG = map {$_ => 1 }
+    qw(ca-valencia he ko);
+
+sub _remove_nodes($vm_name) {
     my @list_nodes = rvd_front->list_vms();
 
-    my ($found) = grep { $_->{name} eq $name} @list_nodes;
-    return if !$found;
+    my $name = base_domain_name();
+    my @found = grep { $_->{name} =~ /^$name/} @list_nodes;
 
-    $t->get_ok("/v1/node/remove/".$found->{id});
-    is($t->tx->res->code(),200) or die $t->tx->res->body;
+    for my $found (@found) {
+
+        $t->get_ok("/v1/node/remove/".$found->{id});
+        is($t->tx->res->code(),200) or die $t->tx->res->body;
+    }
 
 }
 
@@ -41,7 +47,7 @@ sub test_nodes($vm_name) {
     mojo_check_login($t);
     my $name = new_domain_name();
 
-    _remove_node($vm_name, $name);
+    _remove_nodes($vm_name);
 
     $t->post_ok('/v1/node/new' => form => {
         vm_type => $vm_name
@@ -225,6 +231,7 @@ sub _hrefs($file) {
     for my $line ( <$in> ) {
         chomp $line;
         my ($found) = $line =~ /href=["'](.*?)["']/;
+        next if $found && $found =~ /^\?/;
         push @href,($found) if $found;
     }
     close $in;
@@ -288,6 +295,21 @@ sub test_missing_routes() {
     mojo_login($t, $USERNAME, $PASSWORD);
 }
 
+sub test_languages() {
+    mojo_check_login($t);
+    $t->get_ok("/translations");
+    is($t->tx->res->code(),200) or die $t->tx->res->body;
+
+    my $lang = decode_json($t->tx->res->body);
+
+    opendir my $ls,"lib/Ravada/I18N" or die $!;
+    while (my $file = readdir $ls) {
+        next if $file !~ /(.*)\.po$/;
+        next if $MISSING_LANG{$1};
+        ok($lang->{$1},"Expecting $1 in select");
+    }
+}
+
 sub clean_clones() {
     wait_request( check_error => 0, background => 1);
     for my $domain (@{rvd_front->list_domains}) {
@@ -322,6 +344,7 @@ mojo_login($t, $USERNAME, $PASSWORD);
 remove_old_domains_req(0); # 0=do not wait for them
 clean_clones();
 
+test_languages();
 test_missing_routes();
 
 for my $vm_name (@{rvd_front->list_vm_types} ) {

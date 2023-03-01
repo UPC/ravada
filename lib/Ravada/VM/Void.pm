@@ -135,7 +135,7 @@ sub create_domain {
         my $base_hw = $domain_base->_value('hardware');
         my $clone_hw = $domain->_value('hardware');
         for my $hardware( keys %{$base_hw} ) {
-            next if $hardware eq 'device';
+            next if $hardware eq 'device' || $hardware eq 'host_devices';
             $clone_hw->{$hardware} = $base_hw->{$hardware};
             next if $hardware ne 'display';
             for my $entry ( @{$clone_hw->{$hardware}} ) {
@@ -145,6 +145,15 @@ sub create_domain {
             }
         }
         $domain->_store(hardware => $clone_hw);
+
+        my $base_info = $domain_base->_value('info');
+        my $clone_info = $domain->_value('info');
+        for my $item ( keys %$base_info) {
+            $clone_info->{$item} = $base_info->{$item}
+            if $item !~ /^(mac|state)$/;
+        }
+        $domain->_store(info => $clone_info);
+
         my $drivers = {};
         $drivers = $domain_base->_value('drivers');
         $domain->_store( drivers => $drivers );

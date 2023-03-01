@@ -99,13 +99,11 @@ sub test_rename_ascii($t, $vm_name, $base_name) {
     is($domain2->_data('name'), $new_name);
     is($domain2->_data('alias'), $new_name);
 
-    _test_discover($vm_name);
-
     Ravada::Request->remove_domain(
         uid => user_admin->id
         ,name => $domain2->name
     );
-
+    _test_discover($vm_name);
 }
 
 sub test_clone_utf8_domain($t, $vm_name, $base_name) {
@@ -116,6 +114,8 @@ sub _new_machine($vm_name, $user, $base_name) {
 
     my $iso_name = 'Alpine%64 bits';
     my $id_iso = search_id_iso($iso_name);
+
+    _test_discover($vm_name);
 
     $t->post_ok("/new_machine.html",
         form => {
@@ -135,6 +135,7 @@ sub _new_machine($vm_name, $user, $base_name) {
 
     my ($created) = rvd_front->search_domain($base_name);
     ok($created, "Expecting $base_name created") or exit;
+    _test_discover($vm_name);
     return $created;
 }
 
@@ -174,6 +175,7 @@ sub test_clone_utf8_user($t, $vm_name, $name, $utf8_base=0) {
 
     _test_discover($vm_name);
 
+    mojo_login($t, $user_name, $$);
     $t->post_ok("/request/prepare_base/", json => {
             id_domain => $domain->id
         });
@@ -181,6 +183,8 @@ sub test_clone_utf8_user($t, $vm_name, $name, $utf8_base=0) {
     wait_request(debug => 0);
     _test_list_machines_user($base_name, $user);
     my ($clone) = _test_clone($domain, $base_name, $user);
+
+    mojo_check_login($t);
 
     _test_copy($domain, $base_name);
 

@@ -154,13 +154,13 @@ sub list_volumes($self, $attribute=undef, $value=undef)
         && ( !exists $row->{$attribute}
                 || $row->{$attribute} != $value);
         $row->{info}->{file} = $row->{file} if $row->{file};
+        if($self->readonly) {
+            $row->{info}->{_can_edit} = 1;
+            $row->{info}->{_can_remove} = 1;
+        }
         push @volumes, (Ravada::Volume->new(file => $row->{file}, info => $row->{info}));
     }
     $sth->finish;
-    for (@volumes) {
-        $_->{_can_edit} = 1;
-        $_->{_can_remove} = 1;
-    }
     return @volumes;
 }
 

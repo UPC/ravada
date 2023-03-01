@@ -332,9 +332,15 @@ sub list_domains($self, %args) {
         $row->{remote_ip} = undef;
         if ( $domain ) {
             $row->{is_locked} = $domain->is_locked;
-            $row->{is_hibernated} = ( $domain->is_hibernated or 0);
-            $row->{is_paused} = 1 if $domain->is_paused;
-            $row->{is_active} = 1 if $row->{status} =~ /active|starting/;
+            if ($row->{status} =~ /active|starting/) {
+                $row->{is_active} = 1;
+                $row->{is_hibernated} = 0;
+                $row->{is_paused} = 0;
+            } else {
+                $row->{is_active} = 0;
+                $row->{is_hibernated} = ( $domain->is_hibernated or 0);
+                $row->{is_paused} = 1 if $domain->is_paused;
+            }
             $row->{has_clones} = $domain->has_clones;
 #            $row->{disk_size} = ( $domain->disk_size or 0);
 #            $row->{disk_size} /= (1024*1024*1024);
@@ -356,6 +362,7 @@ sub list_domains($self, %args) {
                     $row->{status} = 'down';
                 }
             }
+            $row->{date_status_change} = $domain->_date_status_change();
         }
         delete $row->{spice_password};
         push @domains, ($row);
@@ -1339,6 +1346,8 @@ sub _get_settings($self, $id_parent=0) {
         my $setting_sons = $self->_get_settings($id);
         if ($setting_sons) {
             $ret->{$name} = $setting_sons;
+            $ret->{$name}->{id} = $id;
+            $ret->{$name}->{value} = $value;
         } else {
             $ret->{$name} = { id => $id, value => $value};
         }
@@ -1400,6 +1409,27 @@ sub setting($self, $name, $new_value=undef) {
     return $value;
 }
 
+sub _setting_data($self, $name) {
+
+    my $sth = _dbh->prepare(
+        "SELECT * "
+        ." FROM settings "
+        ." WHERE id_parent=? AND name=?"
+    );
+    my $row;
+    my $id_parent = 0;
+    for my $item (split m{/},$name) {
+        next if !$item;
+        $sth->execute($id_parent, $item);
+        $row = $sth->fetchrow_hashref;
+        confess "Error: I can't find setting $item inside id_parent: $id_parent"
+        if !defined $row->{id};
+
+        $id_parent = $row->{id};
+    }
+    return $row;
+}
+
 sub _check_features($self, $name, $new_value) {
     confess "Error: LDAP required for bookings."
     if $name eq '/backend/bookings' && $new_value && !$self->feature('ldap');
@@ -1452,17 +1482,18 @@ sub update_settings_global($self, $arg, $user, $reload, $orig_settings = $self->
         delete $arg->{frontend}->{maintenance_start};
     }
     for my $field (sort keys %$arg) {
-        if ( !exists $arg->{$field}->{id} ) {
+        next if $field =~ /^(id|value)$/;
+        confess Dumper([$field,$arg->{$field}]) if !ref($arg->{$field});
+        if ( scalar(keys %{$arg->{$field}})>2 ) {
             confess if !keys %{$arg->{$field}};
             $self->update_settings_global($arg->{$field}, $user, $reload, $orig_settings);
-            next;
         }
         confess "Error: invalid field $field" if $field !~ /^\w+$/;
         my ( $value, $id )
                    = ($arg->{$field}->{value}
                     , $arg->{$field}->{id}
         );
-        next if $orig_settings->{$id} eq $value;
+        next if !defined $value || $orig_settings->{$id} eq $value;
         $$reload++ if $field eq 'bookings';
         my $sth = $self->_dbh->prepare(
             "UPDATE settings set value=?"
@@ -1500,6 +1531,31 @@ sub is_in_maintenance($self) {
     $sth->execute($settings->{frontend}->{maintenance}->{id});
 
     return 0;
+}
+
+=head2 update_host_device
+
+Update the host device information, then it requests a list of the current available devices
+
+    $rvd_front->update_host_device( field => 'value' );
+
+=cut
+
+sub update_host_device($self, $args) {
+    my $id = delete $args->{id} or die "Error: missing id ".Dumper($args);
+    Ravada::Utils::check_sql_valid_params(keys %$args);
+    $args->{devices} = undef;
+    my $query = "UPDATE host_devices SET ".join(" , ", map { "$_=?" } sort keys %$args);
+    $query .= " WHERE id=?";
+    my $sth = $self->_dbh->prepare($query);
+    my @values = map { $args->{$_} } sort keys %$args;
+    $sth->execute(@values, $id);
+    Ravada::Request->list_host_devices(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_host_device => $id
+        ,_force => 1
+    );
+    return 1;
 }
 
 =head2 list_machine_types
@@ -1560,8 +1616,6 @@ sub list_cpu_models($self, $uid, $id_domain) {
 
     return $models;
 }
-
-
 
 =head2 version
 

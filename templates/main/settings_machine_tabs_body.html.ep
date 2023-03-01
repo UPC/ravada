@@ -55,7 +55,7 @@
         %= include 'main/vm_clones'
     </div>
 % }
-% if ( $USER->can_expose_ports() ) {
+% if ( $USER->can_expose_ports($domain->id) ) {
     <div class="tab-pane fade" id="v-pills-ports" role="tabpanel" aria-labelledby="v-pills-ports-tab">
         %= include 'main/vm_ports'
     </div>
@@ -90,5 +90,11 @@
         %= include 'main/vm_pool'
     </div>
 % }
+%if ($USER->is_admin) {
+    <div class="tab-pane fade" id="v-pills-hostdev" role="tabpanel" aria-labelledby="v-pills-hostdev-tab">
+        %= include 'main/vm_hostdev'
+    </div>
+% }
+
 
 </div><!-- from tab content -->

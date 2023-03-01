@@ -453,3 +453,18 @@ span.info {
     color: darkgray;
     font-style: italic;
 }
+
+.title {
+    padding-top: 4px;
+    padding-bottom: 0px;
+    color: black;
+    font-weight: bold;
+    font-size: 1.5em;
+    display: block;
+}
+
+.disabled {
+    color: darkgray;
+    cursor: not-allowed;
+}
+
