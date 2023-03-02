@@ -26,6 +26,7 @@ use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
 
+use Ravada::HostDevice;
 use Ravada::Utils;
 
 no warnings "experimental::signatures";
@@ -495,6 +496,7 @@ sub _around_create_domain {
     $domain->add_volume_swap( size => $swap )   if $swap;
     $domain->_data('is_compacted' => 1);
     $domain->_data('alias' => $alias) if $alias;
+    $domain->_data('date_status_change', Ravada::Utils::now());
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
@@ -505,6 +507,8 @@ sub _around_create_domain {
             delete @port{'id','id_domain','public_port','id_vm', 'is_secondary'};
             $domain->expose(%port);
         }
+        $base->_copy_host_devices($domain);
+        $domain->_clone_filesystems();
         my @displays = $base->_get_controller_display();
         for my $display (@displays) {
             delete $display->{id};
@@ -906,13 +910,13 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports manage_pools);
     my @requests;
     for my $req ( $base->list_requests ) {
         push @requests,($req) if !$ignore_requests{$req->command};
     }
     if (@requests) {
-        confess "ERROR: Domain ".$base->name." has ".$base->list_requests
+        confess "ERROR: Domain ".$base->name." has ".scalar(@requests)
                             ." requests.\n"
                             .Dumper(\@requests)
             unless scalar @requests == 1 && $request
@@ -1606,7 +1610,7 @@ sub iptables($self, @args) {
 
     }
     my ($out, $err) = $self->run_command(@cmd);
-    confess "@cmd $err" if $err && $err !~ /does a matching rule exist in that chain/;
+    confess "@cmd $err" if $err && $err !~ /does a matching rule exist in that chain/ && $err !~ /RULE_DELETE failed/;
     warn $err if $err;
 }
 
@@ -2253,7 +2257,9 @@ sub _list_bridges($self) {
 
     my %qemu_bridge = map { $_ => 1 } $self->_list_qemu_bridges();
 
-    my @cmd = ( $self->_which('brctl'),'show');
+    my $brctl = 'brctl';
+    my @cmd = ( $self->_which($brctl),'show');
+    die "Error: missing $brctl" if !$cmd[0];
     my ($out,$err) = $self->run_command(@cmd);
 
     die $err if $err;
@@ -2294,6 +2300,84 @@ sub _check_equal_storage_pools($vm1, $vm2) {
     return 1;
 }
 
+sub _max_hd($self, $name) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT MAX(name) FROM host_devices "
+        ." WHERE name like ? AND id_vm = ?"
+    );
+    $sth->execute("$name%", $self->id);
+
+    my ($found ) =$sth->fetchrow;
+
+    return 0 if !$found;
+
+    my ($max) = $found =~ /.*?(\d+)$/;
+    return ($max or 0);
+
+}
+
+=head2 add_host_device
+
+Add a new host device configuration to this Virtual Machines Manager from a previous template
+
+   $vm->add_host_device(template => 'name');
+
+=cut
+
+sub add_host_device($self, %args) {
+    _init_connector();
+
+    my $template = delete $args{template} or confess "Error: template required";
+    my $info = Ravada::HostDevice::Templates::template($self->type, $template);
+    my $template_list = delete $info->{templates};
+    $info->{id_vm} = $self->id;
+
+    $info->{name}.= " ".($self->_max_hd($info->{name})+1);
+
+    my $query = "INSERT INTO host_devices "
+    ."( ".join(", ",sort keys %$info)." ) "
+    ." VALUES ( ".join(", ",map { '?' } keys %$info)." ) "
+    ;
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+    $sth->execute(map { $info->{$_} } sort keys %$info );
+
+    my $id = Ravada::Request->_last_insert_id( $$CONNECTOR );
+
+    for my $template( @$template_list ) {
+        $template->{id_host_device} = $id;
+        $template->{type} = 'node' if !exists $template->{type};
+        $query = "INSERT INTO host_device_templates "
+        ."( ".join(", ",sort keys %$template)." ) "
+        ." VALUES ( ".join(", ",map { '?' } keys %$template)." ) "
+        ;
+
+        my $sth2= $$CONNECTOR->dbh->prepare($query);
+        $sth2->execute(map { $template->{$_} } sort keys %$template);
+
+    }
+
+    return $id;
+}
+
+=head2 list_host_devices
+
+List all the configured host devices in this node
+
+=cut
+
+sub list_host_devices($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM host_devices WHERE id_vm=?");
+    $sth->execute($self->id);
+
+    my @found;
+    while (my $row = $sth->fetchrow_hashref) {
+	    $row->{devices} = '' if !defined $row->{devices};
+        push @found,(Ravada::HostDevice->new(%$row));
+    }
+
+    return @found;
+}
+
 =head2 list_machine_types
 
 Placeholder for list machine types that returns an empty list by default.
@@ -2330,8 +2414,33 @@ sub dir_backup($self) {
     return $dir_backup;
 }
 
+sub _is_link_remote($self, $vol) {
+
+    my ($out,$err) = $self->run_command("stat",$vol);
+    chomp $out;
+    $out =~ m{ -> (/.*)};
+    return $1 if $1;
+
+    my $path = "";
+    my $path_link;
+    for my $dir ( split m{/},$vol ) {
+        next if !$dir;
+        $path_link .= "/$dir" if $path_link && $dir;
+        $path.="/$dir";
+
+        ($out,$err) = $self->run_command("stat",$path);
+        chomp $out;
+        my ($dir_link) = $out =~ m{ -> (/.*)};
+
+        $path_link = $dir_link if $dir_link;
+    }
+    return $path_link if $path_link;
+
+}
+
 sub _is_link($self,$vol) {
-    die "Error: ".$self->vm." is not local" if !$self->is_local;
+    return $self->_is_link_remote($vol) if !$self->is_local;
+
     my $link = readlink($vol);
     return $link if $link;
 

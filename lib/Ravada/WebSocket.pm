@@ -5,7 +5,10 @@ use strict;
 
 use Data::Dumper;
 use Hash::Util qw( lock_hash unlock_hash);
+use Mojo::JSON qw(decode_json);
 use Moose;
+use Ravada::Front::Log;
+
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
@@ -30,6 +33,7 @@ my %SUB = (
                   ,list_isos  => \&_list_isos
                   ,list_iso_images  => \&_list_iso_images
                   ,list_nodes => \&_list_nodes
+           ,list_host_devices => \&_list_host_devices
                ,list_machines => \&_list_machines
           ,list_machines_tree => \&_list_machines_tree
           ,list_machines_user => \&_list_machines_user
@@ -43,6 +47,8 @@ my %SUB = (
 
 # bookings
                  ,list_next_bookings_today => \&_list_next_bookings_today
+
+                 ,log_active_domains => \&_log_active_domains
 );
 
 our %TABLE_CHANNEL = (
@@ -53,9 +59,11 @@ our %TABLE_CHANNEL = (
         ,'booking_entry_ldap_groups', 'booking_entry_users','booking_entry_bases']
     ,list_requests => 'requests'
     ,machine_info => 'domains'
+    ,log_active_domains => 'log_active_domains'
 );
 
 my $A_WHILE;
+my %A_WHILE;
 my $LIST_MACHINES_FIRST_TIME = 1;
 my $TZ;
 my %TIME0;
@@ -72,7 +80,8 @@ sub _list_alerts($rvd, $args) {
     my @ret2;
     for my $alert (@$ret_old) {
         push @ret2,($alert) if time - $alert->{time} < 10
-        && ! grep { $_->{id_request} == $alert->{id_request} } @ret;
+         && ! grep {defined $_->{id_request} && defined $alert->{id_request}
+         && $_->{id_request} == $alert->{id_request} } @ret;
     }
 
     return [@ret2,@ret];
@@ -213,6 +222,44 @@ sub _list_bases_anonymous($rvd, $args) {
     return $rvd->list_bases_anonymous($remote_ip);
 }
 
+sub _list_host_devices($rvd, $args) {
+    my ($id_vm) = $args->{channel} =~ m{/(\d+)};
+
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login)
+        or die "Error: uknown user $login";
+
+    my $sth = $rvd->_dbh->prepare( "SELECT id,name,list_command,list_filter,devices,date_changed "
+        ." FROM host_devices WHERE id_vm=?");
+
+    $sth->execute($id_vm);
+
+    my @found;
+    while (my $row = $sth->fetchrow_hashref) {
+        $row->{devices} = decode_json($row->{devices}) if $row->{devices};
+        $row->{_domains} = _list_domains_with_device($rvd, $row->{id});
+        push @found, $row;
+        next unless _its_been_a_while_channel($args->{channel});
+        my $req = Ravada::Request->list_host_devices(
+            uid => $user->id
+            ,id_host_device => $row->{id}
+        );
+    }
+    return \@found;
+}
+
+sub _list_domains_with_device($rvd,$id_hd) {
+    my $sth=$rvd->_dbh->prepare("SELECT d.name FROM domains d,host_devices_domain hdd"
+        ." WHERE  d.id= hdd.id_domain "
+        ."  AND hdd.id_host_device=?"
+    );
+    $sth->execute($id_hd);
+    my @domains;
+    while ( my ($name) = $sth->fetchrow ) {
+        push @domains,($name);
+    }
+    return \@domains;
+}
 
 sub _list_requests($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
@@ -327,6 +374,22 @@ sub _list_next_bookings_today($rvd, $args) {
     return \@ret;
 }
 
+sub _log_active_domains($rvd, $args) {
+
+    my ($unit, $time) = $args->{channel} =~ m{/(\w+)/(\d+)};
+
+    return Ravada::Front::Log::list_active_recent($unit,$time);
+}
+
+sub _its_been_a_while_channel($channel) {
+    if (!$A_WHILE{$channel} || time -$A_WHILE{$channel} > 5) {
+        $A_WHILE{$channel} = time;
+        return 1;
+    }
+    return 0;
+}
+
+
 sub _its_been_a_while($reset=0) {
     if ($reset) {
         $A_WHILE = 0;
@@ -369,6 +432,9 @@ sub _different($var1, $var2) {
     return 1 if ref($var1) ne ref($var2);
     return _different_list($var1, $var2) if ref($var1) eq 'ARRAY';
     return _different_hash($var1, $var2) if ref($var1) eq 'HASH';
+    return 1 if !defined $var1 && defined $var2
+                || defined $var1 && !defined $var2;
+    return 0 if !defined $var1 && !defined $var2;
     return $var1 ne $var2;
 }
 

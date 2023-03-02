@@ -151,6 +151,12 @@ sub max_id($dbh, $table) {
     return ($max or 0);
 }
 
+sub check_sql_valid_params(@params) {
+    for my $param (@params) {
+        die "Error: invalid param '$param'" unless $param =~ /^[a-z][a-z_]+$/i;
+    }
+}
+
 sub search_user_name($dbh, $id_user) {
     my $sth = $dbh->prepare("SELECT name FROM users WHERE id=? ");
     $sth->execute($id_user);
@@ -166,7 +172,6 @@ sub search_user_id($dbh, $user) {
     $sth->execute($user);
     my ($id) = $sth->fetchrow;
     return $id;
-
 }
 
 1;

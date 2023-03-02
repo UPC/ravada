@@ -55,7 +55,7 @@ jobs:
       - name: Install test packages
         run: sudo apt install libsys-statistics-linux-perl libtest-moose-more-perl
       - name: Test Auth
-        run: prove -lr t/40_auth_sql.t t/60_user_sql.t t/65_user_ldap.t t/66_group_ldap.t t/front/60_ldap.t t/front/70_ldap_access.t t/front/80_access.t t/user
+        run: prove -j4  -lr t/40_auth_sql.t t/60_user_sql.t t/65_user_ldap.t t/66_group_ldap.t t/front/60_ldap.t t/front/70_ldap_access.t t/front/80_access.t t/user
       - name: Test Templates
         run: prove -lr t/17_templates.t
       - name: Test mock VM

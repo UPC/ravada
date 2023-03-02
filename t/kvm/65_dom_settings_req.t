@@ -63,6 +63,22 @@ sub test_driver_id_64bits_options($vm_name, $type) {
 
 }
 
+sub _keep_only_two_usb_ports($domain) {
+
+    my $usb = $domain->info(user_admin)->{hardware}->{usb};
+    if (scalar(@$usb)>2) {
+        for my $index (reverse 2 .. scalar(@$usb)-1) {
+            Ravada::Request->remove_hardware(
+                name => 'usb'
+                ,id_domain => $domain->id
+                ,uid => user_admin->id
+                ,index => $index
+            );
+        }
+        wait_request();
+    }
+}
+
 sub test_drivers_id($vm_name, $type, $domain=undef) {
 
     my $vm =rvd_back->search_vm($vm_name);
@@ -74,6 +90,9 @@ sub test_drivers_id($vm_name, $type, $domain=undef) {
 
     my $driver_type = $domain->drivers($type);
 
+    if ($driver_type eq 'usb controller') {
+    }
+
     if (!$SKIP_DEFAULT_VALUE{$type}) {
         my $value = $driver_type->get_value();
         ok($value,"[$vm_name] Expecting a value for driver $type");
@@ -83,15 +102,26 @@ sub test_drivers_id($vm_name, $type, $domain=undef) {
     isa_ok(\@options,'ARRAY');
     ok(scalar @options > 1,"Expecting more than 1 options , got ".scalar(@options));
 
-    my $req_add_usb = Ravada::Request->add_hardware(
-        id_domain => $domain->id
-        , uid => $USER->id
-        , name => 'usb'
-        , number => 3
-    );
-    wait_request(debug => 0);
+    my $usb = $domain->info(user_admin)->{hardware}->{usb};
+
+    if ($type eq 'usb controller') {
+        _keep_only_two_usb_ports($domain);
+    } else {
+        my $req_add_usb = Ravada::Request->add_hardware(
+            id_domain => $domain->id
+            , uid => $USER->id
+            , name => 'usb'
+            , number => 3
+        );
+        wait_request(debug => 0);
+    }
 
     for my $option (@options) {
+
+        # this drivers implies changes to the VM and can't be tested easily
+        next if $type eq 'usb controller'
+        && $option->{value} eq 'piix3-uhci';
+
         _domain_shutdown($domain);
 
         my $req = Ravada::Request->set_driver( 
@@ -140,7 +170,7 @@ sub _domain_shutdown {
 sub test_settings {
     my $vm_name = shift;
 
-    for my $driver ( Ravada::Domain::drivers(undef,undef,$vm_name) ) {
+    for my $driver (reverse Ravada::Domain::drivers(undef,undef,$vm_name) ) {
         next if $driver->name =~ /features|display/;
         diag("Testing drivers for $vm_name ".$driver->name);
         test_driver_id_64bits_options($vm_name, $driver->name);

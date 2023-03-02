@@ -489,7 +489,7 @@ msgstr "シャットダウン.."
 msgid "It may take a couple of minutes."
 msgstr "数分かかることがあります。"
 
-msgid "Hybernating ..."
+msgid "Hibernating ..."
 msgstr "冬眠中の.."
 
 msgid "Description"

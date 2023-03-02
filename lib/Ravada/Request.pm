@@ -14,6 +14,7 @@ use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Hash::Util;
+use Storable qw(dclone);
 use Time::Piece;
 use Ravada;
 use Ravada::Front;
@@ -34,7 +35,7 @@ my $COUNT = 0;
 our %FIELD = map { $_ => 1 } qw(error output);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
-our $args_manage = { name => 1 , uid => 1 };
+our $args_manage = { name => 1 , uid => 1, after_request => 2 };
 our $args_prepare = { id_domain => 1 , uid => 1, with_cd => 2 };
 our $args_remove_base = { id_domain => 1 , uid => 1 };
 our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
@@ -75,7 +76,7 @@ our %VALID_ARG = (
     ,screenshot => { id_domain => 1 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1 }
-    ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2 }
+    ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2, enable_host_devices => 2 }
     ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1, sequential => 2 }
     ,shutdown_clones => { id_domain => 1, uid => 1, timeout => 2 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
@@ -101,7 +102,7 @@ our %VALID_ARG = (
     }
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }
-    ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 2, option => 2}
+    ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 2, option => 2 }
     ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 2, data => 1 }
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
@@ -112,10 +113,10 @@ our %VALID_ARG = (
     # ports
     ,expose => { uid => 1, id_domain => 1, port => 1, name => 2, restricted => 2, id_port => 2}
     ,remove_expose => { uid => 1, id_domain => 1, port => 1}
-    ,open_exposed_ports => {uid => 1, id_domain => 1 }
+    ,open_exposed_ports => {uid => 1, id_domain => 1, remote_ip => 2 }
     ,close_exposed_ports => { uid => 1, id_domain => 1, port => 2, clean => 2 }
     # Virtual Managers or Nodes
-    ,refresh_vms => { _force => 2, timeout_shutdown => 2 }
+    ,refresh_vms => { _force => 2, timeout_shutdown => 2, uid => 2 }
 
     ,shutdown_node => { id_node => 1, at => 2 }
     ,start_node => { id_node => 1, at => 2 }
@@ -141,12 +142,24 @@ our %VALID_ARG = (
     ,manage_pools => { uid => 2, id_domain => 2 }
     ,ping_backend => {}
 
+    ,list_host_devices => {
+        uid => 1
+        ,id_host_device => 1
+        ,_force => 2
+    }
+    ,remove_host_device => {
+        uid => 1
+        ,id_host_device => 1
+        ,id_domain => 2
+    }
+
     ,discover => { uid => 1, id_vm => 1 }
     ,import_domain => { uid => 1, vm => 1, id_owner => 1, name => 1
         ,spinoff_disks => 2
     }
     ,list_unused_volumes => {uid => 1, id_vm => 1, start => 2, limit => 2 }
     ,remove_files => { uid => 1, id_vm => 1, files => 1 }
+    ,update_iso_urls => { uid => 1 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -170,8 +183,10 @@ qw(
     remove_base_vm
     rsync_back
     cleanup
+    list_host_devices
     refresh_machine
     refresh_machine_ports
+    refresh_vms
     set_time
     open_exposed_ports
     manage_pools
@@ -692,7 +707,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
 
         next if $args_d_s ne $args_found_s;
 
-        return Ravada::Request->open($id);
+        return $id;
     }
     return 0;
 }
@@ -715,13 +730,11 @@ sub _new_request {
         delete $args{name};
     }
     my $no_duplicate = delete $args{_no_duplicate};
-    my $force = delete $args{_force};
-
-    confess "Error: do not supply both _force & _no_duplicate"
-    if $force && !$no_duplicate;
+    my $force;
 
     my $uid;
     if ( ref $args{args} ) {
+        $force = delete $args{args}->{_force};
         $args{args}->{uid} = $args{args}->{id_owner}
             if !exists $args{args}->{uid};
         $uid = $args{args}->{uid} if exists $args{args}->{uid};
@@ -748,17 +761,22 @@ sub _new_request {
         $CMD_NO_DUPLICATE{$args{command}}
         || ($no_duplicate && $args{command} =~ /^(screenshot)$/))
         ){
-        my $dupe = $self->_duplicated_request();
+        my $id_dupe = $self->_duplicated_request();
 
-        return $dupe if $dupe;
-
-        my $recent;
-        $recent = $self->done_recently()
+        my $req_recent;
+        $req_recent = $self->done_recently()
         if $args{command} !~ /^(clone|migrate|set_base_vm)$/;
-        return if $recent;
+
+        my $id_recent;
+        $id_recent = $req_recent->id if $req_recent;
+
+        my $id = ( $id_dupe or $id_recent );
+        return Ravada::Request->open($id) if $id;
 
     }
 
+    $args{date_changed} = Ravada::Utils::date_now();
+    $args{error} = '';
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO requests (".join(",",sort keys %args).")"
         ."  VALUES ( "
@@ -978,6 +996,7 @@ sub _validate_clone($self
 }
 
 sub _last_insert_id {
+    _init_connector();
     return Ravada::Utils::last_insert_id($$CONNECTOR->dbh);
 }
 
@@ -1218,11 +1237,21 @@ Returns the arguments of a request or the value of one argument field
 sub args {
     my $self = shift;
     my $name = shift;
-    return $self->{args}    if !$name;
+
+    if ( !$name ) {
+        my $args = $self->{args};
+        $args = dclone($self->{args}) if ref($args);
+        return $args;
+    }
 
     confess "Unknown argument $name ".Dumper($self->{args})
         if !exists $self->{args}->{$name};
-    return $self->{args}->{$name};
+
+    my $ret = $self->{args}->{$name};
+    if (ref($ret)) {
+        return dclone($ret);
+    }
+    return $ret;
 }
 
 =head2 arg
@@ -1265,7 +1294,10 @@ sub defined_arg {
     my $self = shift;
     my $name = shift;
     confess "ERROR: missing arg name" if !defined $name;
-    return $self->{args}->{$name};
+
+    my $ret = $self->{args}->{$name};
+    $ret = dclone($ret) if ref($ret);
+    return $ret;
 }
 
 =head2 copy_screenshot
@@ -1288,33 +1320,6 @@ sub copy_screenshot {
       ,id_domain => $args->{id_domain}
       ,args => $args
       );
-
-}
-
-=head2 refresh_vms
-
-Refreshes the Virtual Mangers
-
-=cut
-
-sub refresh_vms {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('refresh_vms', @_ );
-    if  (!$args->{_force} ) {
-          return if done_recently(undef,60,'refresh_vms') || _requested('refresh_vms');
-    }
-
-    my $self = {};
-    bless($self,$class);
-
-    _init_connector();
-    return $self->_new_request(
-        command => 'refresh_vms'
-        , args => $args
-    );
-
 
 }
 
@@ -1507,7 +1512,7 @@ sub enforce_limits {
         , args => $args
     );
 
-    if (!$args->{at} && (my $id_request = $req->done_recently(30))) {
+    if (!$args->{at} && !$args->{_force} && (my $id_request = $req->done_recently(30))) {
         $req->status("done",$req->command." run recently by id_request: $id_request");
     }
     return $req;
@@ -1582,7 +1587,7 @@ sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
     my $id_req = 0;
     my $args_d= {};
     if ($self) {
-        $id_req = $self->id;
+        $id_req = ( $self->id or 0 );
         confess "Error: do not supply args if you supply request" if $args;
         confess "Error: do not supply command if you supply request" if $command;
         $args_d = $self->args;
@@ -1602,11 +1607,12 @@ sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
 
     my $sth = $$CONNECTOR->dbh->prepare( $query );
     my $date= Time::Piece->localtime(time - $seconds);
-    $sth->execute($date->ymd." ".$date->hms, $command, $id_req);
-    while (my ($id,$args_found) = $sth->fetchrow) {
-        next if $self && $self->id == $id;
+    my $date_before = $date->ymd." ".$date->hms;
+    $sth->execute($date_before, $command, $id_req);
+    while (my ($id,$args_found, $date) = $sth->fetchrow) {
+        next if $self && defined $self->id && $self->id == $id;
 
-        return Ravada::Request->open($id) if !defined $args;
+        return Ravada::Request->open($id) if !keys %$args_d;
 
         my $args_found_d = decode_json($args_found);
         delete $args_found_d->{uid};
@@ -1615,7 +1621,7 @@ sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
         next if join(".",sort keys %$args_d) ne join(".",sort keys %$args_found_d);
         my $args_d_s = join(".",map { $args_d->{$_} } sort keys %$args_d);
         my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
-        next if defined $args && $args_d_s ne $args_found_s;
+        next if $args_d_s ne $args_found_s;
 
         return Ravada::Request->open($id);
     }
@@ -1764,6 +1770,7 @@ sub AUTOLOAD {
     confess "Error: $name can't be a ref ".Dumper($value) if ref($value);
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
             ." WHERE id=?");
+    confess if $name eq 'error' && !defined $value;
     eval {
         $sth->execute($value, $self->{id});
         $sth->finish;
