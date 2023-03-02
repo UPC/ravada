@@ -431,7 +431,7 @@ sub _list_used_volumes($self) {
     return @used;
 }
 
-sub list_unused_volumes($self, $start=0, $limit=10) {
+sub list_unused_volumes($self) {
     my %used = map { $_ => 1 } $self->_list_used_volumes();
     my @unused;
     my $file;
@@ -451,11 +451,8 @@ sub list_unused_volumes($self, $start=0, $limit=10) {
 
         next if !$info || $info->{type} eq 2;
 
-        next if $n_found++ < $start;
-
         push @unused,($file);
 
-        last if defined $limit && scalar(@unused)>=$limit;
     }
     return @unused;
 }

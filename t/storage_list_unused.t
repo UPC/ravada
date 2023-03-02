@@ -151,7 +151,7 @@ sub test_list_unused($vm, $machine, $hidden_vols) {
     my $output = decode_json($out_json);
     my $found = _search_file($output, $file);
 
-    ok($found,"Expecting $file found ") or exit;
+    ok($found,"Expecting $file found ") or die Dumper($output);
 
     my @used_vols = _used_volumes($machine);
     for my $vol (@used_vols, @$hidden_vols) {
