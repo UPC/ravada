@@ -887,6 +887,7 @@ ravadaApp.directive("solShowMachine", swMach)
                 for (var i=0; i<response.data.list.length ; i++) {
                     $scope.unused_volumes.push(response.data.list[i]);
                 }
+                $scope.req_more = false;
                 window.scrollTo(0, document.body.scrollHeight);
             });
         }
@@ -912,6 +913,7 @@ ravadaApp.directive("solShowMachine", swMach)
         }
         $scope.more = function() {
             start += limit;
+            $scope.req_more = true;
             $scope.list_unused_volumes();
         };
     }

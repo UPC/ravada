@@ -6370,7 +6370,7 @@ sub _cmd_list_unused_volumes($self, $request) {
     my @files;
     my $count = 0;
     for my $file ( sort @files0 ) {
-        next if $start && $start>$count;
+        next if $start && $start>$count++;
         push @files,($file);
     }
     if ( defined $limit && $limit && scalar(@files)>$limit) {
