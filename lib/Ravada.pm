@@ -6121,7 +6121,13 @@ sub _cmd_list_unused_volumes($self, $request) {
     my $start = ($request->defined_arg('start') or 0 );
     my $n_items = 0;
     my $more = 0;
-    my @files = $vm->list_unused_volumes($start, $limit);
+    my @files0 = $vm->list_unused_volumes();
+    my @files;
+    my $count = 0;
+    for my $file ( sort @files0 ) {
+        next if $start && $start>$count;
+        push @files,($file);
+    }
     if ( defined $limit && $limit && scalar(@files)>$limit) {
             $#files = $limit;
             $more=1;
