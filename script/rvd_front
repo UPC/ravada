@@ -149,11 +149,20 @@ sub _time() {
 
 hook before_routes => sub {
   my $c = shift;
-  $c ->res->headers->content_security_policy (
-   "object-src 'auto';"
-  ."media-src 'self';"
-  ." frame-src 'self';"
-  ." connect-src 'self'; ");
+  my $sec = "default-src 'self' sha256- sha384 http: https:;"
+   ." style-src 'self' cdnjs.cloudflare.com stackpath.bootstrapcdn.com cdn.ckeditor.com cdn.jsdelivr.net use.fontawesome.com 'unsafe-inline';"
+   ." script-src 'self' code.jquery.com cdn.ckeditor.com cdnjs.cloudflare.com stackpath.bootstrapcdn.com ajax.googleapis.com cdn.jsdelivr.net 'unsafe-inline' 'unsafe-eval';"
+   ." object-src 'self';"
+   ." media-src 'self';"
+   ." frame-src 'self';"
+   ." font-src 'self' data: use.fontawesome.com;"
+   ." connect-src 'self';";
+
+  $sec .= "frame-src: '$CONFIG_FRONT->{frame_src}';"
+  if exists $CONFIG_FRONT->{frame_src}
+      && $CONFIG_FRONT->{frame_src};
+
+  $c ->res->headers->content_security_policy ($sec);
 
   $USER = undef;
 
