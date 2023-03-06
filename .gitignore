@@ -8,6 +8,7 @@ t/.db
 t/etc/remote_vm*.conf
 t/etc/front_ldap*.conf
 t/etc/usb_device.conf
+t/etc/host_devices.conf
 hypnotoad.pid
 log
 rvd_front.conf

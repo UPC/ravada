@@ -7,6 +7,8 @@ use Data::Dumper;
 use Hash::Util qw( lock_hash unlock_hash);
 use Mojo::JSON qw(decode_json);
 use Moose;
+use Ravada::Front::Log;
+
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
@@ -29,6 +31,7 @@ my %SUB = (
                   list_alerts => \&_list_alerts
                   ,list_bases => \&_list_bases
                   ,list_isos  => \&_list_isos
+                  ,list_iso_images  => \&_list_iso_images
                   ,list_nodes => \&_list_nodes
            ,list_host_devices => \&_list_host_devices
                ,list_machines => \&_list_machines
@@ -44,6 +47,8 @@ my %SUB = (
 
 # bookings
                  ,list_next_bookings_today => \&_list_next_bookings_today
+
+                 ,log_active_domains => \&_log_active_domains
 );
 
 our %TABLE_CHANNEL = (
@@ -53,12 +58,15 @@ our %TABLE_CHANNEL = (
     ,list_machines_user_including_privates => ['domains','bookings','booking_entries'
         ,'booking_entry_ldap_groups', 'booking_entry_users','booking_entry_bases']
     ,list_requests => 'requests'
+    ,machine_info => 'domains'
+    ,log_active_domains => 'log_active_domains'
 );
 
 my $A_WHILE;
 my %A_WHILE;
 my $LIST_MACHINES_FIRST_TIME = 1;
 my $TZ;
+my %TIME0;
 ######################################################################
 
 
@@ -69,20 +77,11 @@ sub _list_alerts($rvd, $args) {
     my $ret_old = $args->{ret};
     my @ret = map { $_->{time} = time; $_ } $user->unshown_messages();
 
-    my @ret2=();
-
-    my %new;
-    for my $alert (@ret) {
-        my $cmd_machine = $alert->{subject};
-        $cmd_machine =~ s{(.*?\s.*?)\s+.*}{$1};
-        $new{$cmd_machine}++;
-    }
-
+    my @ret2;
     for my $alert (@$ret_old) {
-        my $cmd_machine = $alert->{subject};
-        $cmd_machine =~ s{(.*?\s.*?)\s+.*}{$1};
         push @ret2,($alert) if time - $alert->{time} < 10
-            && $cmd_machine && !$new{$cmd_machine};
+         && ! grep {defined $_->{id_request} && defined $alert->{id_request}
+         && $_->{id_request} == $alert->{id_request} } @ret;
     }
 
     return [@ret2,@ret];
@@ -109,10 +108,28 @@ sub _list_isos($rvd, $args) {
     return $rvd->iso_file($type);
 }
 
+sub _list_iso_images($rvd, $args) {
+    my ($type) = $args->{channel} =~ m{/(.*)};
+    $type = 'KVM' if !defined $type;
+
+    my $images=$rvd->list_iso_images($type);
+    return $images;
+}
+
 sub _list_nodes($rvd, $args) {
     my ($type) = $args->{channel} =~ m{/(.*)};
     my @nodes = $rvd->list_vms($type);
     return \@nodes;
+}
+
+sub _request_exists($rvd, $id_request) {
+
+    my $sth = $rvd->_dbh->prepare(
+        "SELECT id FROM requests WHERE id=?"
+    );
+    $sth->execute($id_request);
+    my ($id_found) = $sth->fetchrow;
+    return $id_found;
 }
 
 sub _request($rvd, $args) {
@@ -120,6 +137,7 @@ sub _request($rvd, $args) {
     my $user = Ravada::Auth::SQL->new(name => $login);
 
     my ($id_request) = $args->{channel} =~ m{/(.*)};
+    return if ! _request_exists($rvd, $id_request);
     my $req = Ravada::Request->open($id_request);
     my $command_text = $req->command;
     $command_text =~ s/_/ /g;
@@ -254,7 +272,7 @@ sub _get_machine_info($rvd, $args) {
     my ($id_domain) = $args->{channel} =~ m{/(\d+)};
     my $domain = $rvd->search_domain_by_id($id_domain) or do {
         warn "Error: domain $id_domain not found.";
-        return {};
+        return;
     };
 
 
@@ -265,7 +283,9 @@ sub _get_machine_info($rvd, $args) {
     if ($info->{is_active} && ( !exists $info->{ip} || !$info->{ip})) {
        Ravada::Request->refresh_machine(id_domain => $info->{id}, uid => $user->id);
     }
-
+    unlock_hash(%$info);
+    $info->{_date_changed} = $domain->_data('date_changed');
+    lock_hash(%$info);
     return $info;
 }
 
@@ -308,7 +328,7 @@ sub _list_recent_requests($rvd, $seconds) {
 }
 
 sub _ping_backend($rvd, $args) {
-    my @reqs = _list_recent_requests($rvd, 20);
+    my @reqs = _list_recent_requests($rvd, 120);
 
     my $requested = scalar( grep { $_->{status} eq 'requested' } @reqs );
 
@@ -354,6 +374,13 @@ sub _list_next_bookings_today($rvd, $args) {
     return \@ret;
 }
 
+sub _log_active_domains($rvd, $args) {
+
+    my ($unit, $time) = $args->{channel} =~ m{/(\w+)/(\d+)};
+
+    return Ravada::Front::Log::list_active_recent($unit,$time);
+}
+
 sub _its_been_a_while_channel($channel) {
     if (!$A_WHILE{$channel} || time -$A_WHILE{$channel} > 5) {
         $A_WHILE{$channel} = time;
@@ -361,7 +388,6 @@ sub _its_been_a_while_channel($channel) {
     }
     return 0;
 }
-
 
 sub _its_been_a_while($reset=0) {
     if ($reset) {
@@ -405,6 +431,9 @@ sub _different($var1, $var2) {
     return 1 if ref($var1) ne ref($var2);
     return _different_list($var1, $var2) if ref($var1) eq 'ARRAY';
     return _different_hash($var1, $var2) if ref($var1) eq 'HASH';
+    return 1 if !defined $var1 && defined $var2
+                || defined $var1 && !defined $var2;
+    return 0 if !defined $var1 && !defined $var2;
     return $var1 ne $var2;
 }
 
@@ -415,7 +444,7 @@ sub BUILD {
         ->{backend}->{time_zone}->{value})
     if !defined $TZ;
 
-    Mojo::IOLoop->recurring(1 => sub {
+    Mojo::IOLoop->recurring(3 => sub {
             for my $key ( keys %{$self->clients} ) {
                 my $ws_client = $self->clients->{$key}->{ws};
                 my $channel = $self->clients->{$key}->{channel};
@@ -437,10 +466,17 @@ sub _old_info($self, $key, $new_count=undef, $new_changed=undef) {
     return ($old_count, $old_changed);
 }
 
-sub _date_changed_table($self, $table) {
+sub _date_changed_table($self, $table, $id) {
     my $rvd = $self->ravada;
-    my $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM $table");
-    $sth->execute;
+    my $sth;
+    if (defined $id) {
+        $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM $table "
+            ." WHERE id=?");
+        $sth->execute($id);
+    } else {
+        $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM $table");
+        $sth->execute;
+    }
     my ($date) = $sth->fetchrow;
     return ($date or '');
 }
@@ -456,7 +492,9 @@ sub _count_table($self, $table) {
 
 sub _new_info($self, $key) {
     my $channel = $self->clients->{$key}->{channel};
-    $channel =~ s{/.*}{};
+    $channel =~ s{/(.*)}{};
+    my $id;
+    $id = $1 if defined $1;
 
     my $table0 = $TABLE_CHANNEL{$channel} or return;
     if (!ref($table0)) {
@@ -471,7 +509,7 @@ sub _new_info($self, $key) {
         $count .= $self->_count_table($table);
 
         $date .= ":" if $date;
-        $date .= $self->_date_changed_table($table)
+        $date .= $self->_date_changed_table($table, $id);
     }
     return ($count, $date);
 
@@ -481,25 +519,36 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
     $channel =~ s{/.*}{};
     my $exec = $SUB{$channel} or die "Error: unknown channel $channel";
 
-    my $old_ret = $self->clients->{$key}->{ret};
-    my ($old_count, $old_changed) = $self->_old_info($key);
-    my ($new_count, $new_changed) = $self->_new_info($key);
+    my $old_ret;
+    if (defined $TIME0{$channel} && time < $TIME0{$channel}+60) {
+        my ($old_count, $old_changed) = $self->_old_info($key);
+        my ($new_count, $new_changed) = $self->_new_info($key);
 
-    return $old_ret if defined $new_count && defined $new_changed
-    && $old_count eq $new_count && $old_changed eq $new_changed;
+        $old_ret = $self->clients->{$key}->{ret};
 
-    $self->_old_info($key, $new_count, $new_changed)
-    unless $channel =~ /list_machines/ && $LIST_MACHINES_FIRST_TIME;
+        return $old_ret if defined $new_count && defined $new_changed
+        && $old_count eq $new_count && $old_changed eq $new_changed;
 
-    my $ret = $exec->($self->ravada, $self->clients->{$key});
+        $self->_old_info($key, $new_count, $new_changed);
 
-    if ( _different($ret, $old_ret )) {
+    }
 
-        warn "WS: send $channel" if $DEBUG;
-        $ws_client->send( { json => $ret } );
+    $TIME0{$channel} = time;
+
+    my $ret;
+    eval { $ret = $exec->($self->ravada, $self->clients->{$key}) };
+    warn $@ if $@;
+
+    if ( defined $ret && _different($ret, $old_ret )) {
+
+        warn localtime(time)." WS: send $channel " if $DEBUG;
+        $ws_client->send( {json => $ret} );
         $self->clients->{$key}->{ret} = $ret;
     }
     $self->unsubscribe($key) if $channel eq 'ping_backend' && $ret eq 2;
+    if (!$ret) {
+        $self->unsubscribe($key);
+    }
 }
 
 sub subscribe($self, %args) {
@@ -516,6 +565,9 @@ sub subscribe($self, %args) {
         $LIST_MACHINES_FIRST_TIME = 1 ;
     }
     $self->_send_answer($ws,$args{channel});
+    my $channel = $args{channel};
+    $channel =~ s{/.*}{};
+    $TIME0{$channel} = 0 if $channel =~ /list_machines/i;
 }
 
 sub unsubscribe($self, $ws) {

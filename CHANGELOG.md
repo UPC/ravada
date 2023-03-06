@@ -2,21 +2,23 @@
 
 **Implemented enhancements:**
 
-- Machine schedule reservation [\#1337]
-- Manage nodes and networks settings [\#1305]
-- User management part in ravada [\#1500]
-- Manage LDAP groups
-- Limit to start virtual machines [\#1490]
-- Add access filter to a machine with LDAP groups [\#1488]
-- Debian 11 (Bullesye) ISO support [\#1580]
+- GPU Host Device Support [\#1706]
+- International characters in machine name [\#1804], [\#1824]
+- Grant Open Ports [\#1858]
+- Grant permission to create volumes [\#1871]
+- Name conflict when creating a clone [\#1879]
+- Language updates: Catalan, Chinese, Euskara, French, Hindi, Italian, Spanish, Turkish, Vietnamese
+- New languages : Norwegian, Melayu
+- Active machines chart [\#1878]
+- Queue volatiles clones [\#1853]
 
-**Refactor**
-
-- Confusing button placement in ports form [\#1469]
-- Clones number sequence coherency [\#1454]
-- Responsive grants form
 
 **Bugfixes**
 
-- Linux Mint ISO Download fails [\#1576]
-- Machine in a node returns to KVMlocalhost when a machine option is modified [\#1440]
+- Rename base [\#1896]
+- Clones disk volume changed [\#1901]
+
+**Refactors**
+
+- update ISO URLs in background [\#1889]
+- New hardware form [\#1886]

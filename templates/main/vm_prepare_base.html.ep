@@ -5,14 +5,14 @@
     </div>
     <div class="col-sm-8">
     <p>
-       Prepare this machine as a base to create clones from it.
+      <%=l 'Prepare this machine as a base to create clones from it.' %>
     </p>
     </div>
 </div>
 <div class="row">
     <div ng-show="confirm_prepare_base" class="alert alert-warning">
          <div ng-show="showmachine.info.cdrom">
-            <p>This machine has a CD-ROM</p>
+            <p><%=l 'This machine has a CD-ROM' %></p>
             <ul>
                 <li ng-repeat="cdrom in machine.info.cdrom">{{cdrom}}</li>
             </ul>

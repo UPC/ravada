@@ -30,8 +30,8 @@ our @TEMPLATES_KVM  = (
         ,template_args =>  encode_json ({
                 vendor_id => 'ID ([a-f0-9]+)'
                 ,product_id => 'ID .*?:([a-f0-9]+)'
-                ,bus => 'Bus (\d+)'
-                ,device => 'Device (\d+)'
+                ,bus => 'Bus ([a-f0-9]+)'
+                ,device => 'Device ([a-f0-9]+)'
             })
         ,templates => [
             {
@@ -131,7 +131,7 @@ our @TEMPLATES_KVM  = (
 #        ]
 #    }
 #
-
+ 
     ,
     { name => "GPU Mediated Device"
         ,list_command => "mdevctl list"

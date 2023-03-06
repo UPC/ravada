@@ -7,7 +7,7 @@
 % );
 
     <div class="row" ng-hide="pending_requests > 0">
-        <div class="col-md-6"></div><div class="col-md-2"><span class="badge badge-info">recommended</span></div>
+        <div class="col-md-6"></div><div class="col-md-2"><span class="badge badge-info"><%=l 'recommended' %></span></div>
     </div>
 
     <div ng-hide="pending_requests > 0" class="form-group">
@@ -15,7 +15,7 @@
 %       for my $driver_name (qw(network sound video)) {
 %           my $driver = $domain->drivers($driver_name);
 %           if (!$driver) {
-                <b>I can't find <%= $driver_name %> driver</b>
+                <b><%=l 'I can\'t find' %> <%= $driver_name %> <%=l 'driver' %></b>
 %               next;
 %           }
         <div class="row">

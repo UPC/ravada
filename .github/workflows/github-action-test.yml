@@ -1,0 +1,64 @@
+name: PR Workflow
+on: pull_request
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: tmpfs run user
+        run: sudo mkdir -p /run/user/$(id -u) ; sudo chown $(id -u) /run/user/$(id -u)
+      - uses: mirromutth/mysql-action@v1.1
+        with:
+          character set server: 'utf8' # Optional, default value is 'utf8mb4'. The '--character-set-server' option for mysqld
+          collation server: 'utf8_general_ci' # Optional, default value is 'utf8mb4_general_ci'. The '--collation-server' option for mysqld
+          mysql database: 'ravada' # Optional, default value is "test". The specified database which will be create
+          mysql root password: root
+          mysql user: 'rvd_user' # Required if "mysql root password" is empty, default is empty. The superuser for the specified database. Can use secrets, too
+          mysql password: Pword12345*
+      - name: Update packages
+        run: sudo apt update
+      - name: Install auth packages
+        run: |
+          sudo apt-get -y install perl libtest-perl-critic-perl liblist-moreutils-perl libyaml-perl libipc-run3-perl libmojolicious-perl libmojolicious-plugin-i18n-perl libxml-libxml-perl libdbix-connector-perl libmoose-perl libproc-pid-file-perl libimage-magick-perl libdatetime-perl libdatetime-format-dateparse-perl libjson-xs-perl libauthen-passphrase-perl libpbkdf2-tiny-perl libfile-rsync-perl libmoosex-types-netaddr-ip-perl libnet-dns-perl libnet-openssh-perl libio-interface-perl libsys-virt-perl libdbd-sqlite3-perl liblocale-maketext-lexicon-perl qemu-utils make cpanminus libnet-ldap-perl
+      - name: Install LDAP server
+        run: sudo apt-get install 389-ds-base
+      - name: Configure LDAP server
+        run: sudo dscreate from-file t/etc/ds389.conf
+      - name: Install iptables
+        run: sudo apt install iptables iptstate
+      - name: Create ravada.conf
+        run: sudo touch /etc/ravada.conf ; sudo chown $(id -u) /etc/ravada.conf
+      - name: Install ravada conf
+        run: cat etc/ravada.conf t/etc/ravada_ldap_basic.conf t/etc/ravada.conf | sed -e 's/localhost/127.0.0.1/' | grep -v -- "---" > /etc/ravada.conf
+      - name: show ravada.conf
+        run: cat /etc/ravada.conf
+      - name: Install mysql perl
+        run: sudo apt install libdbd-mysql-perl libhtml-lint-perl
+      - name: create mysql user
+        run: sudo mysql -u root --password=root --protocol=tcp -h localhost -e "create user 'rvd_user'@'%' IDENTIFIED WITH mysql_native_password BY 'Pword12345*'"
+      - name: allow mysql user
+        run: sudo mysql -u root --password=root --protocol=tcp -h localhost -e "grant all on ravada.* to 'rvd_user'@'%'"
+      - name: Test mojo grants
+        run: prove -l t/mojo/30_grants.t
+      - name: Test critic
+        run: prove -l t/critic.t
+      - name: Install localization and doc packages
+        run: sudo apt install gettext libtest-pod-coverage-perl
+      - name: Test localization
+        run: prove -l t/90_pos.t
+      - name: Install cpanm
+        run: sudo cpanm  --force Authen::ModAuthPubTkt
+      - name: Test libs
+        run: prove -l t/00_libs.t
+      - name: Test pod coverage
+        run: prove -l t/pod_coverage.t
+      - name: Install test packages
+        run: sudo apt install libsys-statistics-linux-perl libtest-moose-more-perl
+      - name: Test Auth
+        run: prove -j4  -lr t/40_auth_sql.t t/60_user_sql.t t/65_user_ldap.t t/66_group_ldap.t t/front/60_ldap.t t/front/70_ldap_access.t t/front/80_access.t t/user
+      - name: Test Templates
+        run: prove -lr t/17_templates.t
+      - name: Test mock VM
+        run: prove -lr t/vm/60_new_args.t t/30_request.t
+      - name: Test create from ISO
+        run: prove -lr t/request/25_create_from_iso.t t/vm/d10_not_download.t

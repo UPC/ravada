@@ -472,7 +472,7 @@ msgstr ""
 msgid "It may take a couple of minutes."
 msgstr ""
 
-msgid "Hybernating ..."
+msgid "Hibernating ..."
 msgstr ""
 
 msgid "Description"

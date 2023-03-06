@@ -67,8 +67,8 @@ sub clone($self, $file_clone) {
         sleep 1;
         die "Error: ".$self->file." looks active" if $n-- <0;
     }
-    confess if $self->file =~ /ISO/i;
-    confess if $file_clone =~ /ISO/i;
+    confess if $self->file =~ /ISO$/i;
+    confess if $file_clone =~ /ISO$/i;
 
     my $base_format = lc(Ravada::Volume::_type_from_file($self->file, $self->vm));
     my ($out, $err);

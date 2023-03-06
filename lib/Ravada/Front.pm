@@ -130,14 +130,14 @@ Returns: listref of machines
 
 sub list_machines_user($self, $user, $access_data={}) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,is_public, description, screenshot, id_owner"
+        "SELECT id,name,alias,is_public, description, screenshot, id_owner"
         ." FROM domains "
         ." WHERE is_base=1"
         ." ORDER BY name "
     );
-    my ($id, $name, $is_public, $description, $screenshot, $id_owner);
+    my ($id, $name, $alias, $is_public, $description, $screenshot, $id_owner);
     $sth->execute;
-    $sth->bind_columns(\($id, $name, $is_public, $description, $screenshot, $id_owner));
+    $sth->bind_columns(\($id, $name, $alias, $is_public, $description, $screenshot, $id_owner));
 
     my $bookings_enabled = $self->setting('/backend/bookings');
     my @list;
@@ -153,7 +153,8 @@ sub list_machines_user($self, $user, $access_data={}) {
             ,id_base => $id
         );
         next unless $clone || $user->is_admin || ($is_public && $user->allowed_access($id));
-        my %base = ( id => $id, name => $name
+        $name = $alias if defined $alias;
+        my %base = ( id => $id, name => Encode::decode_utf8($name)
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
             , description => ($description or '')
@@ -284,7 +285,7 @@ Returns a list of the domains as a listref
 
 sub list_domains($self, %args) {
 
-    my $query = "SELECT d.name, d.id, id_base, is_base, id_vm, status, is_public "
+    my $query = "SELECT d.name,d.alias, d.id, id_base, is_base, id_vm, status, is_public "
         ."      ,vms.name as node , is_volatile, client_status, id_owner "
         ."      ,comment, is_pool"
         ."      ,d.date_changed"
@@ -321,15 +322,25 @@ sub list_domains($self, %args) {
             $self->_remove_domain_db($row->{id});
             next;
         }
+
+        $row->{name}=Encode::decode_utf8($row->{alias})
+        if defined $row->{alias} && length($row->{alias});
+
         $row->{has_clones} = 0 if !exists $row->{has_clones};
         $row->{is_locked} = 0 if !exists $row->{is_locked};
         $row->{is_active} = 0;
         $row->{remote_ip} = undef;
         if ( $domain ) {
             $row->{is_locked} = $domain->is_locked;
-            $row->{is_hibernated} = ( $domain->is_hibernated or 0);
-            $row->{is_paused} = 1 if $domain->is_paused;
-            $row->{is_active} = 1 if $row->{status} =~ /active|starting/;
+            if ($row->{status} =~ /active|starting/) {
+                $row->{is_active} = 1;
+                $row->{is_hibernated} = 0;
+                $row->{is_paused} = 0;
+            } else {
+                $row->{is_active} = 0;
+                $row->{is_hibernated} = ( $domain->is_hibernated or 0);
+                $row->{is_paused} = 1 if $domain->is_paused;
+            }
             $row->{has_clones} = $domain->has_clones;
 #            $row->{disk_size} = ( $domain->disk_size or 0);
 #            $row->{disk_size} /= (1024*1024*1024);
@@ -351,6 +362,7 @@ sub list_domains($self, %args) {
                     $row->{status} = 'down';
                 }
             }
+            $row->{date_status_change} = $domain->_date_status_change();
         }
         delete $row->{spice_password};
         push @domains, ($row);
@@ -470,20 +482,19 @@ sub domain_exists {
     my $self = shift;
     my $name = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare(
+    my $sth = $self->_dbh->prepare(
         "SELECT id FROM domains "
-        ." WHERE name=? "
+        ." WHERE (name=? OR alias=?) "
         ."    AND ( is_volatile = 0 "
         ."          OR is_volatile=1 AND status = 'active' "
         ."         ) "
     );
-    $sth->execute($name);
+    $sth->execute($name,$name);
     my ($id) = $sth->fetchrow;
     $sth->finish;
     return 0 if !defined $id;
     return 1;
 }
-
 
 =head2 node_exists
 
@@ -521,7 +532,7 @@ sub list_vm_types {
 
     return $self->{cache}->{vm_types} if $self->{cache}->{vm_types};
 
-    my $result = [@VM_TYPES];
+    my $result = [sort @VM_TYPES];
 
     $self->{cache}->{vm_types} = $result if $result->[0];
 
@@ -659,6 +670,9 @@ sub list_iso_images {
     );
     $sth->execute;
     while (my $row = $sth->fetchrow_hashref) {
+        $row->{options} = decode_json($row->{options})
+            if $row->{options};
+        $row->{min_ram} = 0.2 if !$row->{min_ram};
         push @iso,($row);
     }
     $sth->finish;
@@ -971,8 +985,8 @@ sub search_domain {
 
     my $name = shift;
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id, vm FROM domains WHERE name=?");
-    $sth->execute($name);
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id, vm FROM domains WHERE name=? OR alias=?");
+    $sth->execute($name, $name);
     my ($id, $tipo) = $sth->fetchrow or return;
 
     return Ravada::Front::Domain->open($id);
@@ -980,7 +994,7 @@ sub search_domain {
 
 =head2 list_requests
 
-Returns a list of ruquests : ( id , domain_name, status, error )
+Returns a list of requests : ( id , domain_name, status, error )
 
 =cut
 
@@ -996,6 +1010,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT requests.id, command, args, requests.date_changed, requests.status"
             ." ,requests.error, id_domain ,domains.name as domain"
+            ." ,domains.alias as domain_alias"
         ." FROM requests left join domains "
         ."  ON requests.id_domain = domains.id"
         ." WHERE "
@@ -1006,9 +1021,9 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
     $sth->execute($time_recent);
     my @reqs;
     my ($id_request, $command, $j_args, $date_changed, $status
-        , $error, $id_domain, $domain);
+        , $error, $id_domain, $domain, $alias);
     $sth->bind_columns(\($id_request, $command, $j_args, $date_changed, $status
-        , $error, $id_domain, $domain));
+        , $error, $id_domain, $domain, $alias));
 
     while ( $sth->fetch) {
         my $epoch_date_changed = time;
@@ -1047,6 +1062,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
         my $args;
         $args = decode_json($j_args) if $j_args;
 
+        $domain = Encode::decode_utf8($alias) if defined $alias;
         if (!$domain && $args->{id_domain}) {
             $domain = $args->{id_domain};
         }
@@ -1058,8 +1074,8 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
         push @reqs,{ id => $id_request,  command => $command, date_changed => $date_changed, status => $status, name => $args->{name}
             ,domain => $domain
             ,date => $date_changed
-            ,message => $message
-            ,error => $error
+            ,message => Encode::decode_utf8($message)
+            ,error => Encode::decode_utf8($error)
         };
     }
     $sth->finish;
@@ -1168,7 +1184,7 @@ sub list_bases_anonymous {
     my @bases;
     while ( $sth->fetch) {
         next if !$net->allowed_anonymous($id);
-        my %base = ( id => $id, name => $name
+        my %base = ( id => $id, name => Encode::decode_utf8($name)
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
             , is_active => 0
@@ -1250,6 +1266,10 @@ sub add_node($self,%arg) {
     return $req->id;
 }
 
+sub _cache_delete($self, $key) {
+    delete $self->{cache}->{$key};
+}
+
 sub _cache_store($self, $key, $value, $timeout=60) {
     $self->{cache}->{$key} = [ $value, time+$timeout ];
 }
@@ -1326,6 +1346,8 @@ sub _get_settings($self, $id_parent=0) {
         my $setting_sons = $self->_get_settings($id);
         if ($setting_sons) {
             $ret->{$name} = $setting_sons;
+            $ret->{$name}->{id} = $id;
+            $ret->{$name}->{value} = $value;
         } else {
             $ret->{$name} = { id => $id, value => $value};
         }
@@ -1342,6 +1364,16 @@ Returns the list of global settings as a hash
 sub settings_global($self) {
     return $self->_get_settings();
 }
+
+=head2 setting
+
+Sets or gets a global setting parameter
+
+    $rvd_front->('debug')
+
+Settings are defined and stored in the table settings in the database.
+
+=cut
 
 sub setting($self, $name, $new_value=undef) {
 
@@ -1377,6 +1409,27 @@ sub setting($self, $name, $new_value=undef) {
     return $value;
 }
 
+sub _setting_data($self, $name) {
+
+    my $sth = _dbh->prepare(
+        "SELECT * "
+        ." FROM settings "
+        ." WHERE id_parent=? AND name=?"
+    );
+    my $row;
+    my $id_parent = 0;
+    for my $item (split m{/},$name) {
+        next if !$item;
+        $sth->execute($id_parent, $item);
+        $row = $sth->fetchrow_hashref;
+        confess "Error: I can't find setting $item inside id_parent: $id_parent"
+        if !defined $row->{id};
+
+        $id_parent = $row->{id};
+    }
+    return $row;
+}
+
 sub _check_features($self, $name, $new_value) {
     confess "Error: LDAP required for bookings."
     if $name eq '/backend/bookings' && $new_value && !$self->feature('ldap');
@@ -1392,6 +1445,15 @@ sub _settings_by_id($self) {
     }
     return $orig_settings;
 }
+
+=head2 feature
+
+Returns if a feature is available
+
+  if ($rvd_front->$feature('ldap')) {
+     ....
+
+=cut
 
 sub feature($self,$name=undef) {
     if (!defined $name) {
@@ -1420,17 +1482,18 @@ sub update_settings_global($self, $arg, $user, $reload, $orig_settings = $self->
         delete $arg->{frontend}->{maintenance_start};
     }
     for my $field (sort keys %$arg) {
-        if ( !exists $arg->{$field}->{id} ) {
+        next if $field =~ /^(id|value)$/;
+        confess Dumper([$field,$arg->{$field}]) if !ref($arg->{$field});
+        if ( scalar(keys %{$arg->{$field}})>2 ) {
             confess if !keys %{$arg->{$field}};
             $self->update_settings_global($arg->{$field}, $user, $reload, $orig_settings);
-            next;
         }
         confess "Error: invalid field $field" if $field !~ /^\w+$/;
         my ( $value, $id )
                    = ($arg->{$field}->{value}
                     , $arg->{$field}->{id}
         );
-        next if $orig_settings->{$id} eq $value;
+        next if !defined $value || $orig_settings->{$id} eq $value;
         $$reload++ if $field eq 'bookings';
         my $sth = $self->_dbh->prepare(
             "UPDATE settings set value=?"
@@ -1470,8 +1533,17 @@ sub is_in_maintenance($self) {
     return 0;
 }
 
+=head2 update_host_device
+
+Update the host device information, then it requests a list of the current available devices
+
+    $rvd_front->update_host_device( field => 'value' );
+
+=cut
+
 sub update_host_device($self, $args) {
     my $id = delete $args->{id} or die "Error: missing id ".Dumper($args);
+    Ravada::Utils::check_sql_valid_params(keys %$args);
     $args->{devices} = undef;
     my $query = "UPDATE host_devices SET ".join(" , ", map { "$_=?" } sort keys %$args);
     $query .= " WHERE id=?";
@@ -1484,6 +1556,65 @@ sub update_host_device($self, $args) {
         ,_force => 1
     );
     return 1;
+}
+
+=head2 list_machine_types
+
+Returns a reference to a list of the architectures and its machine types
+
+=cut
+
+sub list_machine_types($self, $uid, $vm_type) {
+
+    my $key="list_machine_types";
+    my $cache = $self->_cache_get($key);
+    return $cache if $cache;
+
+    my $req = Ravada::Request->list_machine_types(
+        vm_type => $vm_type
+        ,uid => $uid
+    );
+    return {} if !$req;
+    $self->wait_request($req);
+    return {} if $req->status ne 'done';
+
+    my $types = {};
+    $types = decode_json($req->output()) if $req->output;
+
+    $self->_cache_store($key,$types);
+
+    return $types;
+}
+
+=head2 list_cpu_models
+
+Returns a reference to a list of the CPU models
+
+=cut
+
+sub list_cpu_models($self, $uid, $id_domain) {
+
+    my $key="list_cpu_models";
+    my $dom = Ravada::Front::Domain->open($id_domain);
+    $key.='#'.$dom->type;
+
+    my $cache = $self->_cache_get($key);
+    return $cache if $cache;
+
+    my $req = Ravada::Request->list_cpu_models(
+        id_domain => $id_domain
+        ,uid => $uid
+    );
+    return {} if !$req;
+    $self->wait_request($req);
+    return {} if $req->status ne 'done';
+
+    my $models= {};
+    $models = decode_json($req->output()) if $req->output;
+
+    $self->_cache_store($key,$models);
+
+    return $models;
 }
 
 =head2 version

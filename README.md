@@ -1,19 +1,12 @@
 # ravada 
 
-[![GitHub version](https://img.shields.io/badge/version-0.11.0-brightgreen.svg)](https://github.com/UPC/ravada/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/UPC/ravada/blob/master/LICENSE)
+[![GitHub version](https://img.shields.io/badge/version-1.8.0-brightgreen.svg)](https://github.com/UPC/ravada/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/UPC/ravada/blob/master/LICENSE)
 [![Documentation Status](https://readthedocs.org/projects/ravada/badge/?version=latest)](http://ravada.readthedocs.io/en/latest/?badge=latest)
 [![Follow twitter](https://img.shields.io/twitter/follow/ravada_vdi.svg?style=social&label=Twitter&style=flat-square)](https://twitter.com/ravada_vdi)
 [![Telegram Group](https://img.shields.io/badge/Telegram-Group-blue.svg)](https://t.me/ravadavdi)
 [![Project Status: Active - The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
 [![Translation status](https://hosted.weblate.org/widgets/ravada/-/svg-badge.svg)](https://hosted.weblate.org/engage/ravada/)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
-
-<sup>**Frontend:**</sup><!-- [![Docker Stars](https://img.shields.io/docker/stars/ravada/front.svg?style=flat)](https://hub.docker.com/r/ravada/front/) -->
-[![Docker Pulls](https://img.shields.io/docker/pulls/ravada/front.svg?style=flat)](https://hub.docker.com/r/ravada/front/)
-[![](https://images.microbadger.com/badges/image/ravada/front.svg)](https://microbadger.com/images/ravada/front "Get your own image badge on microbadger.com")
-<sup>**Backend:**</sup><!-- [![Docker Stars](https://img.shields.io/docker/stars/ravada/back.svg?style=flat)](https://hub.docker.com/r/ravada/back/)-->
-[![Docker Pulls](https://img.shields.io/docker/pulls/ravada/back.svg?style=flat)](https://hub.docker.com/r/ravada/back/)
-[![](https://images.microbadger.com/badges/image/ravada/back.svg)](https://microbadger.com/images/ravada/back "Get your own image badge on microbadger.com")
 
 ## Remote Virtual Desktops Manager
 

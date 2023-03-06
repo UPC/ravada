@@ -1,0 +1,50 @@
+<!-- Modal -->
+<div class="modal fade" id="removeModal" tabindex="-1" role="dialog" aria-labelledby="removeModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+                <h5 class="modal-title" id="removeModalLabel"><%=l 'Remove'%> {{remove_item.hardware}}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+        </div>
+        <div class="modal-body">
+            <div>
+            <%=l 'Are you sure you want to remove this hardware?' %>
+            </div>
+            {{remove_item.name || remove_item._name}}
+            <div ng-show="remove_item.hardware=='disk'"
+                class='border border-danger p-4 m-4'
+                >
+                <p>
+                    <%=l 'Danger: This will destroy all the disk data permantently.' %>
+                </p>
+                <label for="confirm_remove">
+                    <%=l 'Type the name of the volume disk to confirm:' %>
+                </label>
+                <input name="confirm_remove" ng-model="confirm_remove"
+                    size="40" type="text" ng-value=""
+                    />
+            </div>
+
+%=          include '/main/manage_machine_apply_clones'
+
+        </div>
+
+        <div class="modal-footer">
+
+            <button type="button" class="btn btn-secondary"
+                ng-click="remove_item=undefined"
+                data-dismiss="modal"><%=l 'Cancel' %></button>
+            <button type="button" class="btn btn-primary"
+                ng-disabled="remove_item.hardware == 'disk'
+                    && confirm_remove != remove_item.name"
+                data-dismiss="modal"
+                ng-click="remove_hardware(remove_item.hardware,remove_item.index)"
+            >
+                <%=l 'yes' %>
+            </button>
+        </div>
+    </div>
+  </div>
+</div>

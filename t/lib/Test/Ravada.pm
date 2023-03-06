@@ -2,7 +2,7 @@ package Test::Ravada;
 use strict;
 use warnings;
 
-use  Carp qw(carp confess);
+use  Carp qw(carp confess croak);
 use Data::Dumper;
 use Fcntl qw(:flock SEEK_END);
 use File::Path qw(make_path remove_tree);
@@ -33,13 +33,13 @@ require Exporter;
 
 @EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin rvd_front init init_vm clean new_pool_name new_volume_name
 create_domain
+    create_domain_v2
     import_domain
     test_chain_prerouting
     find_ip_rule
     search_id_iso
     flush_rules_node
     flush_rules
-    arg_create_dom
     vm_names
 
     remote_config
@@ -51,6 +51,7 @@ create_domain
     start_node shutdown_node remove_node hibernate_node
     start_domain_internal   shutdown_domain_internal
     hibernate_domain_internal
+    remove_domain_internal
     remote_node
     remote_node_2
     remote_node_shared
@@ -80,6 +81,8 @@ create_domain
     mojo_request_url_post
 
     remove_old_user
+    remove_old_users
+    remove_old_users_ldap
 
     mangle_volume
     test_volume_contents
@@ -88,13 +91,18 @@ create_domain
 
     check_libvirt_tls
 
+    search_latest_machine
+
     ping_backend
+
+    config_host_devices
 
     end
 );
 
 our $DEFAULT_CONFIG = "t/etc/ravada.conf";
 our $FILE_CONFIG_REMOTE = "t/etc/remote_vm.conf";
+our $FILE_CONFIG_HOST_DEVICES = "t/etc/host_devices.conf";
 
 $Ravada::Front::Domain::Void = "/var/tmp/test/rvd_void/".getpwuid($>);
 
@@ -119,8 +127,11 @@ my $RAVADA_POSIX_GROUP = "rvd_posix_group";
 my ($LDAP_USER , $LDAP_PASS) = ("cn=Directory Manager","saysomething");
 
 our %ARG_CREATE_DOM = (
-    KVM => []
-    ,Void => []
+    KVM => {}
+    ,Void => {}
+);
+our %ARG_CREATE_DOM_OPTIONS = (
+    KVM  => { machine => 'pc', uefi => 0}
 );
 
 our %VM_VALID = ( KVM => 1
@@ -154,6 +165,25 @@ my @FLUSH_RULES=(
 
 $Ravada::CAN_FORK = 0;
 
+sub config_host_devices($type, $die=1) {
+    my $config;
+    if (!-e $FILE_CONFIG_HOST_DEVICES) {
+        warn "Missing host devices config file '$FILE_CONFIG_HOST_DEVICES'";
+        my $config = {
+            'usb' => '(disk|flash|audio|camera|bluetoo)'
+            ,'pci' => ''
+        };
+        DumpFile($FILE_CONFIG_HOST_DEVICES, $config);
+    }
+    eval { $config = LoadFile($FILE_CONFIG_HOST_DEVICES) };
+
+    die "Error loading $FILE_CONFIG_HOST_DEVICES $@" if $@;
+
+    die "Error: no host devices config in $FILE_CONFIG_HOST_DEVICES for $type"
+    if ( !exists $config->{$type} || !$config->{$type} ) && $die;
+    return $config->{$type};
+}
+
 sub user_admin {
 
     return $USER_ADMIN if $USER_ADMIN;
@@ -182,7 +212,15 @@ sub arg_create_dom {
     my $vm_name = shift;
     confess "Unknown vm $vm_name"
         if !$ARG_CREATE_DOM{$vm_name};
-    return @{$ARG_CREATE_DOM{$vm_name}};
+    my %ret = %{$ARG_CREATE_DOM{$vm_name}};
+
+    my %options = ();
+    %options = %{$ARG_CREATE_DOM_OPTIONS{$vm_name}}
+    if $ARG_CREATE_DOM_OPTIONS{$vm_name};
+
+    $ret{options} = \%options;
+
+    return %ret;
 }
 
 sub add_ubuntu_minimal_iso {
@@ -193,7 +231,7 @@ sub add_ubuntu_minimal_iso {
         ,xml => 'bionic-i386.xml'
         ,xml_volume => 'bionic32-volume.xml'
         ,rename_file => 'ubuntu_bionic_mini.iso'
-        ,arch => 'i386'
+        ,arch => 'i686'
         ,md5 => 'c7b21dea4d2ea037c3d97d5dac19af99'
     });
     my $device = "/var/lib/libvirt/images/".$info{$distro}->{rename_file};
@@ -223,11 +261,97 @@ sub import_domain($vm, $name=$BASE_NAME, $import_base=1) {
     return $domain;
 }
 
-sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine', $swap=undef) {
+sub create_domain_v2(%args) {
+    my %args0 = %args;
+    my $vm_name = delete $args{vm_name};
+    my $vm = delete $args{vm};
+    croak "Error: vm or vm_name necessary ".Dumper(\%args0)
+    if !$vm && !$vm_name;
+
+    my $user = (delete $args{user} or $USER_ADMIN);
+    my $iso_name = delete $args{iso_name};
+    my $id_iso = delete $args{id_iso};
+    croak "Error: supply either iso_name or id_iso ".Dumper(\%args)
+    if $iso_name && $id_iso;
+
+    if (!$iso_name && !$id_iso) {
+        $iso_name = 'Alpine%64';
+    }
+    if ($iso_name) {
+        my $id_iso2 = search_id_iso($iso_name)
+            or confess "Error: iso '$iso_name' not found";
+        croak "Error: id_iso '$id_iso' && iso '$iso_name' not match"
+        if $id_iso && $id_iso != $id_iso2;
+
+        $id_iso = $id_iso2;
+    }
+
+    $vm = rvd_back()->search_vm($vm_name) if !$vm;
+    my $swap = delete $args{swap};
+    my $data = delete $args{data};
+    my $options = delete $args{options};
+    my $name = (delete $args{name} or new_domain_name());
+
+    croak "Error: unknown arguments ".Dumper(\%args)
+    if keys %args;
+
+    my $iso;
+    my $disk;
+    if ($vm->type eq 'KVM' && (!$iso_name || $iso_name !~ /Alpine/i)) {
+        $iso = $vm->_search_iso($id_iso);
+        $disk = ($iso->{min_disk_size} or 2 );
+        diag("Creating [$id_iso] $iso->{name}");
+    } else {
+        $disk = 2;
+    }
+
+    if ($vm->type eq 'KVM' && !$options ) {
+        $iso = $vm->_search_iso($id_iso) if !$iso;
+        $options = $iso->{options};
+        $options->{machine}
+            = search_latest_machine($vm,$iso->{arch}, $options->{machine}, )
+            if exists $options->{machine}
+    }
+
+    my %arg_create = (
+        id_iso => $id_iso
+        ,name => $name
+        ,options => $options
+        ,id_owner => $user->id
+        ,active => 0
+        ,memory => 512*1024
+        ,disk => $disk*1024*1024
+    );
+
+    $arg_create{swap} = 1024 * 1024 if $swap;
+
+    my $domain;
+    eval { $domain = $vm->create_domain(%arg_create) };
+    is(''.$@, '',Dumper(\%arg_create)) or exit;
+
+    Ravada::Request->add_hardware(
+        uid => $user->id
+        ,id_domain => $domain->id
+        ,name => 'disk'
+        ,data => { size => $data*1024*1024, type => 'data' }
+    ) if $domain && $data;
+    delete_request( 'enforce_limits', 'set_time' );
+    wait_request(debug => 0);
+    return $domain;
+}
+
+sub search_latest_machine($vm, $arch, $machine) {
+    my %machine_types =$vm->list_machine_types();
+    for my $type (@{$machine_types{$arch}}) {
+        return $type if $type =~ /^$machine/;
+    }
+}
+
+sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine%64', $swap=undef) {
     confess if !defined $vm_name;
     $vm_name = 'KVM' if $vm_name eq 'qemu';
 
-    $id_iso = 'Alpine' if !defined $id_iso;
+    $id_iso = 'Alpine%64' if !defined $id_iso;
     $user = $USER_ADMIN if !defined $user;
 
     if ( $id_iso && $id_iso !~ /^\d+$/) {
@@ -246,6 +370,18 @@ sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine', $swap=undef) {
 
     confess "ERROR: Domains can only be created at localhost"
         if $vm->host ne 'localhost';
+
+=pod
+    // TODO: use create v2 from now on
+
+    return create_domain_v2(
+        vm => $vm
+        ,user => $user
+        ,id_iso => $id_iso
+        ,swap => $swap
+    );
+
+=cut
 
     my $name = new_domain_name();
 
@@ -324,18 +460,20 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
 
     my @connector;
     @connector = ( connector => connector() ) if $sqlite;
+    my $pid_name = "ravada_install".base_domain_name();
     my $rvd = Ravada->new(
             @connector
                 , config => ( $config or $DEFAULT_CONFIG)
                 , warn_error => 1
+                , pid_name => $pid_name
     );
     $rvd->_install();
     $CONNECTOR = $rvd->connector if !$sqlite;
 
     user_admin();
     $RVD_BACK = $rvd;
-    $ARG_CREATE_DOM{KVM} = [ id_iso => search_id_iso('Alpine') , disk => 1024 * 1024 ];
-    $ARG_CREATE_DOM{Void} = [ id_iso => search_id_iso('Alpine') ];
+    $ARG_CREATE_DOM{KVM} = { id_iso => search_id_iso('Alpine') , disk => 1024 * 1024 };
+    $ARG_CREATE_DOM{Void} = { id_iso => search_id_iso('Alpine') };
 
     delete $ARG_CREATE_DOM{KVM} if $<;
 
@@ -490,23 +628,71 @@ sub _leftovers {
     return @machines;
 }
 
+sub _discover() {
+    my $sth = connector()->dbh->prepare("SELECT id,vm_type,hostname FROM vms");
+    $sth->execute();
+
+    my $name = base_domain_name();
+
+    while ( my ($id_vm, $vm_type, $hostname) = $sth->fetchrow ) {
+        next if $hostname ne 'localhost';
+        my $req=Ravada::Request->discover(
+            uid => user_admin->id
+            ,id_vm => $id_vm
+        );
+        wait_request();
+        my $out = $req->output;
+        warn $req->error if $req->error;
+        return if !$out;
+        my $discover = decode_json($out);
+        my @list = grep { $_ =~ /^$name/ } @$discover;
+        for my $name (@list) {
+            diag("Importing $name");
+
+            #            $name = Encode::decode_utf8($name)
+            # if utf8::valid($name);
+
+            $req = Ravada::Request->import_domain(
+                name => $name
+                ,id_owner => user_admin->id
+                ,vm => $vm_type
+                ,uid => user_admin->id
+                ,spinoff_disks => 0
+            );
+        }
+    }
+    wait_request(debug => 0);
+}
+
 sub remove_old_domains_req($wait=1, $run_request=0) {
     my $base_name = base_domain_name();
+    _discover();
     my $machines = rvd_front->list_machines(user_admin);
     my @machines2 = _leftovers();
     my @reqs;
     for my $machine ( @$machines, @machines2) {
-        next if $machine->{name} !~ /^$base_name/;
-        remove_domain_and_clones_req($machine,$wait, $run_request);
+        next unless $machine->{name} =~ /$base_name/;
+        remove_domain_and_clones_req($machine,$wait);
     }
+    wait_request(debug => 0);
+
 }
 
 sub remove_domain(@bases) {
 
     for my $base (@bases) {
+        confess if !defined $base;
         for my $clone ($base->clones) {
             my $d_clone = Ravada::Domain->open($clone->{id});
-            remove_domain($d_clone);
+            if ( $d_clone ) {
+                remove_domain($d_clone);
+            } else {
+                Ravada::Request->remove_domain(
+                    uid => user_admin->id
+                    ,name => $clone->{name}
+                );
+                wait_request();
+            }
         }
         $base->remove(user_admin);
     }
@@ -522,8 +708,9 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
         return if $@ && $@ =~ /Unknown domain/;
         die $@ if $@;
     }
+    my $req_clone;
     for my $clone ($domain->clones) {
-        remove_domain_and_clones_req($clone, $wait, $run_request);
+        $req_clone = remove_domain_and_clones_req($clone, $wait, $run_request);
     }
     if ( $wait || $domain->clones ) {
         my $n_clones = scalar($domain->clones);
@@ -538,13 +725,20 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
             }
         }
     }
-    Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id)
+    my $req_rm;
+    $req_rm = Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id)
     if $domain->is_base;
+
+    my @after_req;
+    @after_req = ( after_request => $req_clone->id ) if $req_clone;
+    @after_req = ( after_request => $req_rm->id ) if $req_rm;
     my $req= Ravada::Request->remove_domain(
         name => $domain->name
         ,uid => user_admin->id
+        ,@after_req
     );
     wait_request(debug => 0) if $wait;
+    return $req;
 }
 
 sub _remove_old_domains_vm($vm_name) {
@@ -575,6 +769,8 @@ sub _remove_old_domains_vm($vm_name) {
 
     my @domains;
     eval { @domains = $vm->list_domains() };
+    warn $@ if $@;
+    return if $@;
     for my $domain ( sort { $b->name cmp $a->name }  @domains) {
         next if $domain->name !~ /^$base_name/i;
 
@@ -585,7 +781,7 @@ sub _remove_old_domains_vm($vm_name) {
         eval {$domain->remove( $USER_ADMIN ) }  if $domain;
         warn $@ if $@;
         if ( $@ && $@ =~ /No DB info/i ) {
-            eval { $domain->domain->undefine() if $domain->domain };
+            eval { $domain->domain->undefine($Sys::Virt::Domain::UNDEFINE_NVRAM) if $domain->domain };
         }
 
     }
@@ -628,12 +824,14 @@ sub _remove_old_domains_kvm {
     my $vm = shift;
 
     if (!$vm) {
+        my $vm_internal;
         eval {
             my $rvd_back = rvd_back();
             $vm = $rvd_back->search_vm('KVM');
+            $vm_internal = $vm->vm;
         };
         diag($@) if $@;
-        return if !$vm;
+        return if !$vm || !$vm_internal;
     }
     return if !$vm->vm;
     _activate_storage_pools($vm);
@@ -667,7 +865,7 @@ sub _remove_old_domains_kvm {
         };
         warn $@ if $@ && $@ !~ /error code: 42,/;
 
-        eval { $domain->undefine };
+        eval { $domain->undefine(Sys::Virt::Domain::UNDEFINE_NVRAM) };
         warn $@ if $@ && $@ !~ /error code: 42,/;
     }
 }
@@ -679,6 +877,7 @@ sub remove_old_domains {
 }
 
 sub mojo_init() {
+    $ENV{MOJO_MODE} = 'development';
     my $script = path(__FILE__)->dirname->sibling('../../script/rvd_front');
 
     my $t = Test::Mojo->new($script);
@@ -714,7 +913,7 @@ sub mojo_login( $t, $user, $pass ) {
     $t->post_ok('/login' => form => {login => $user, password => $pass});
     like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body;
     #    ->status_is(302);
-$MOJO_USER = $user;
+    $MOJO_USER = $user;
     $MOJO_PASSWORD = $pass;
 
     return $t->success;
@@ -733,6 +932,7 @@ sub mojo_create_domain($t, $vm_name) {
             ,submit => 1
         }
     )->status_is(302);
+    die $t->tx->res->body if !$t->success;
 
     wait_request(debug => 0, background => 1);
     my $domain = rvd_front->search_domain($name);
@@ -748,6 +948,7 @@ sub mojo_request($t, $req_name, $args) {
     my $response = $t->tx->res->json();
     ok(exists $response->{request}) or return;
     wait_request(background => 1);
+    return $response->{request};
 }
 
 sub mojo_request_url_post($t,$url, $json) {
@@ -815,7 +1016,7 @@ sub _remove_old_disks_kvm {
 #    ok($vm,"I can't find a KVM virtual manager") or return;
 
     eval { $vm->_refresh_storage_pools() };
-    return if $@ && $@ =~ /Cannot recv data/;
+    return if $@ && $@ =~ /Cannot recv data|client_loop: send disconnect/;
 
     ok(!$@,"Expecting error = '' , got '".($@ or '')."'"
         ." after refresh storage pool") or return;
@@ -887,10 +1088,7 @@ sub remove_old_disks {
     _remove_old_disks_kvm() if !$>;
 }
 
-sub create_user {
-    my ($name, $pass, $is_admin) = @_;
-    $is_admin = 1 if $is_admin;
-
+sub create_user($name=new_domain_name(), $pass=$$, $is_admin=0) {
     my $login;
     eval { $login = Ravada::Auth::SQL->new(name => $name, password => $pass ) };
     return $login if $login;
@@ -907,13 +1105,26 @@ sub create_user {
 
 sub create_ldap_user($name, $password, $keep=0) {
 
-    if ( Ravada::Auth::LDAP::search_user($name) ) {
-        return if $keep;
-                diag("Removing $name");
-        Ravada::Auth::LDAP::remove_user($name)  
+    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    for my $field (qw(cn uid)) {
+        if (my $user = Ravada::Auth::LDAP::search_user(field => $field, name => $name) ) {
+            return if $keep;
+            my $mesg;
+            for ( 1 .. 2 ) {
+                $mesg = $user->delete()->update($ldap);
+                if ($mesg->code == 81 ) {
+                    Ravada::Auth::LDAP::init();
+                    $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+                }
+            }
+            die $mesg->code." ".$mesg->error if $mesg->code && $mesg->code != 32;
+        }
     }
 
-    my $user = Ravada::Auth::LDAP::search_user($name);
+    my $user;
+    eval { $user = Ravada::Auth::LDAP::search_user($name) };
+    die $@ if $@ && $@ !~ /No such object/;
+
     ok(!$user,"I shouldn't find user $name in the LDAP server") or return;
 
     my $user_db = Ravada::Auth::SQL->new( name => $name);
@@ -933,7 +1144,7 @@ sub create_ldap_user($name, $password, $keep=0) {
 
     my @user = Ravada::Auth::LDAP::search_user(name => $name, filter => '');
     #    diag("Adding $name to ldap");
-    my $user_ldap = $user[0];
+    my $user_ldap = $user[0] or die "Error: ldap user '$name' not found";
     my $user_sql
     = Ravada::Auth::SQL::add_user(name => $name, is_external => 1, external_auth => 'ldap');
 
@@ -960,7 +1171,11 @@ sub delete_request {
 
     my $sth = $CONNECTOR->dbh->prepare("DELETE FROM requests WHERE command=?");
     for my $command (@_) {
-        $sth->execute($command);
+        if (ref($command)) {
+            $command->_delete();
+        } else {
+            $sth->execute($command);
+        }
     }
 }
 
@@ -1036,6 +1251,12 @@ sub wait_request {
                     $run_at = 'now' if !$run_at;
                     $run_at = " $run_at";
                 }
+                if ($req->command eq 'refresh_machine_ports'
+                    && defined $req->error
+                    && $req->error =~ /has ports .*up/) {
+                    $req->status('done');
+                    next;
+                }
                 if ($debug && (time%5 == 0)) {
                     diag("Waiting for request ".$req->id." ".$req->command." ".$req->status
                         .$run_at." bg=$background"
@@ -1047,9 +1268,9 @@ sub wait_request {
             } elsif (!$done{$req->id}) {
                 $t0 = time;
                 $done{$req->{id}}++;
-                if ($check_error) {
+                if ($check_error && $req->command ne 'set_time') {
                     if ($req->command =~ /remove/) {
-                        like($req->error,qr(^$|Unknown domain));
+                        like($req->error,qr(^$|Unknown domain|Domain not found));
                     } elsif($req->command eq 'set_time') {
                         like($req->error,qr(^$|libvirt error code));
                     } else {
@@ -1059,12 +1280,15 @@ sub wait_request {
                             like($error,qr{^($|.*port \d+ already used|rsync done)}) or confess $req->command;
                         } elsif($req->command eq 'refresh_machine_ports') {
                             like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
+                            $req->status('done');
                         } elsif($req->command eq 'open_exposed_ports') {
-                            like($error,qr{^($|.*No ip in domain|.*duplicated port)});
+                            like($error,qr{^($|.*No ip in domain|.*duplicated port|.*I can't get the internal IP)});
                         } elsif($req->command eq 'compact') {
                             like($error,qr{^($|.*compacted)});
+                        } elsif($req->command eq 'refresh_machine') {
+                            like($error,qr{^($|.*port.*already used)});
                         } else {
-                            like($error,qr/^$|run recently/)
+                            like($error,qr/^$|libvirt error code:38,|run recently/)
                                 or confess $req->id." ".$req->command;
                         }
                     }
@@ -1076,7 +1300,7 @@ sub wait_request {
         if ( $done_all ) {
             for my $req (@$request) {
                 $req = Ravada::Request->open($req) if !ref($req);
-                next if $skip{$req->command};
+                next if !$req->id || $skip{$req->command};
                 if ($req->status ne 'done') {
                     $done_all = 0;
                     if ( $debug && (time%5 == 0) ) {
@@ -1253,6 +1477,7 @@ sub clean($ldap=undef) {
     _remove_old_entries('vms');
     _remove_old_entries('networks');
     _remove_old_groups_ldap();
+    remove_old_user_ldap();
 
     if ($file_remote_config) {
         my $config;
@@ -1362,11 +1587,37 @@ sub remove_old_user($user_name=undef) {
     $sth->execute($user_name);
 }
 
-sub remove_old_user_ldap {
-    for my $name (@USERS_LDAP ) {
+sub remove_old_user_ldap(@users) {
+    @users = @USERS_LDAP if !@users;
+    for my $name (@users) {
         if ( Ravada::Auth::LDAP::search_user($name) ) {
             Ravada::Auth::LDAP::remove_user($name)  
         }
+    }
+}
+
+sub remove_old_users() {
+    my $users =  rvd_front->list_users();
+
+    my $base_name = base_domain_name();
+    for my $user (@$users) {
+        next unless $user->{name} =~ /^$base_name/;
+        remove_old_user($user->{name});
+    }
+
+}
+
+sub remove_old_users_ldap() {
+
+    my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
+    return if !$ldap;
+    my @users;
+    eval { @users = Ravada::Auth::LDAP::search_user(name => '*', escape_username => 0) };
+    warn $@ if $@;
+    my $base_name = base_domain_name();
+    for my $user (@users) {
+        next if $user->get_value('cn') !~ /^$base_name/;
+        $user->delete()->update($ldap);
     }
 }
 
@@ -1387,7 +1638,6 @@ sub _remove_old_groups_ldap() {
     die $@ if $@;
     for my $group ( @groups ) {
         next if !$group;
-        warn $group->dn;
         for my $n ( 1 .. 3 ) {
             my $mesg = $ldap->delete($group);
             last if !$mesg->code;
@@ -1559,7 +1809,7 @@ sub flush_rules_node($node) {
     is($err,'') or die `iptables-save`;
     for my $rule (@FLUSH_RULES) {
         ($out, $err) = $node->run_command("iptables",@$rule,"-w");
-        like($err,qr(^$|chain/target/match by that name));
+        like($err,qr(^$|chain/target/match by that name|does not exist));
     }
 
     _flush_forward($node);
@@ -1631,8 +1881,8 @@ sub hibernate_node($node) {
         my $domain_node = _domain_node($node);
         eval { $domain_node->hibernate( user_admin ) };
         my $error = $@;
-        warn $error if $error;
-        last if !$error || $error =~ /is not active/;
+        last if !$error || $error =~ /is not active|not valid/;
+        confess $error if $error;
     }
 
     my $max_wait = 30;
@@ -1871,13 +2121,30 @@ sub local_ips($vm) {
     return @ips;
 }
 
-sub shutdown_domain_internal($domain) {
+sub shutdown_domain_internal($domain, $nice=0) {
     if ($domain->type eq 'KVM') {
+        if ($nice) {
+            $domain->domain->shutdown();
+            for ( 1 .. 60 ) {
+                return if !$domain->domain->is_active;
+                sleep 1;
+            }
+        }
         $domain->domain->destroy();
     } elsif ($domain->type eq 'Void') {
         $domain->_store(is_active => 0 );
     } else {
         confess "ERROR: I don't know how to shutdown internal domain of type ".$domain->type;
+    }
+}
+
+sub remove_domain_internal($domain) {
+    if ( $domain->type eq 'KVM') {
+        $domain->domain->undefine();
+    } elsif ($domain->type eq 'Void') {
+        unlink $domain->_config_file();
+    } else {
+        confess "I don't know how to remove ".$domain->name;
     }
 }
 
@@ -2089,6 +2356,7 @@ sub connector {
 sub DESTROY {
     shutdown_nodes();
     remove_old_user_ldap() if $CONNECTOR;
+    remove_old_users()      if $CONNECTOR;
     _unlock_all();
 }
 
@@ -2179,11 +2447,6 @@ sub _check_iptables() {
         ,"-A LIBVIRT_PRT -s 192.168.122.0/24 ! -d 192.168.122.0/24 -p tcp -j MASQUERADE --to-ports 1024-65535"
         ,"-A LIBVIRT_PRT -s 192.168.122.0/24 ! -d 192.168.122.0/24 -p udp -j MASQUERADE --to-ports 1024-65535"
         ,"-A LIBVIRT_PRT -s 192.168.122.0/24 ! -d 192.168.122.0/24 -j MASQUERADE"
-        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 -d 224.0.0.0/24 -j RETURN"
-        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 -d 255.255.255.255/32 -j RETURN"
-        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 ! -d 192.168.130.0/24 -p tcp -j MASQUERADE --to-ports 1024-65535"
-        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 ! -d 192.168.130.0/24 -p udp -j MASQUERADE --to-ports 1024-65535"
-        ,"-A LIBVIRT_PRT -s 192.168.130.0/24 ! -d 192.168.130.0/24 -j MASQUERADE"
     ) {
         my @found = grep /^$rule$/ , split (/\n/, $out);
         die "$rule not found in @cmd \n$err\n" if !@found;
@@ -2205,6 +2468,7 @@ sub end($ldap=undef) {
     _check_leftovers();
     _check_iptables();
     clean($ldap);
+    remove_old_users()      if $CONNECTOR;
     _unlock_all();
     _file_db();
     rmdir _dir_db();
@@ -2212,7 +2476,10 @@ sub end($ldap=undef) {
 
 sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
                     , $with_admin=0
-                    , $with_posix_group=0) {
+                    , $with_posix_group=0
+                    , $extra=undef) {
+
+    $file_config = 't/etc/ravada_ldap.conf' if !defined $file_config;
 
     if ( ! -e $file_config) {
         my $config = {
@@ -2240,6 +2507,12 @@ sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
 
     $config->{vm}=['KVM','Void'];
     delete $config->{ldap}->{ravada_posix_group}   if !$with_posix_group;
+
+    if(defined $extra) {
+        for my $field (keys %$extra) {
+            $config->{ldap}->{$field} = $extra->{$field};
+        }
+    }
 
     my $fly_config = "/var/tmp/ravada_".base_domain_name().".$$.conf";
     DumpFile($fly_config, $config);
@@ -2344,6 +2617,7 @@ sub unload_nbd() {
 }
 
 sub _unload_nbd() {
+    return if $<;
     my @cmd = ($QEMU_NBD,"-d", $DEV_NBD);
     my ($in, $out, $err);
     run3(\@cmd,\$in,\$out,\$err);
@@ -2517,7 +2791,7 @@ sub test_volume_format(@volume) {
             qcow2 => \&_check_qcow2
             ,void => \&_check_yaml
         );
-        is($volume->info->{driver_type}, $extension) or confess Dumper($volume->file, $volume->info);
+        is($volume->info->{driver}->{type}, $extension) or confess Dumper($volume->file, $volume->info);
         my $exec = $sub{$extension} or confess "Error: I don't know how to check "
             .$volume->file." [$extension]";
         $exec->($volume);

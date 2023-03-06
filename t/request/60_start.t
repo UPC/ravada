@@ -63,7 +63,7 @@ sub test_request_create_start($vm_name) {
         ,start => 1
         ,name => $domain_name
     );
-    rvd_back->_process_all_requests_dont_fork();
+    wait_request();
     is($req->status, 'done');
     is($req->error,'');
 

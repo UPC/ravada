@@ -15,13 +15,13 @@
 
             <div class="row" ng-show="!nodes && (showmachine && !showmachine.is_base)">
                 <div class="col-lg-3 mt-2">
-                    Loading nodes <i class="fas fa-sync-alt fa-spin"></i>
+                    <%=l 'Loading nodes' %> <i class="fas fa-sync-alt fa-spin"></i>
                 </div>
             </div>
 
             <div class="row" ng-show="!showmachine.is_base && nodes.length>1">
                 <div class="col-lg-3 mt-2">
-                    Node
+                    <%=l 'Node' %>
                 </div>
                 <div class="col-lg-3 mt-2">
                     <select ng-model="new_node"
@@ -43,12 +43,11 @@
                         <label for="start"><%=l 'Start after migration' %></label>
                     </div>
                     <div ng-show="showmachine.is_active">
-                        This virtual machine is running. It must be shut down before
-                        migrate.
+                        <%=l 'This virtual machine is running. It must be shut down before migrate.' %>
                     </div>
                     <div>
-                        Are you sure you want to migrate {{showmachine.name}}
-                        to {{new_node.name}} ?
+                        <%=l 'Are you sure you want to migrate' %> {{showmachine.name}}
+                        <%=l 'to.' %> {{new_node.name}} ?
                     </div>
                     <div>
                     <button type="button" class="btn btn-primary"
@@ -162,7 +161,7 @@
             </div>
             <div class="row" ng-hide="showmachine.is_base">
                 <div class="col-lg-3 mt-2">
-                    <label class="control-label" for="autostart"><%=l 'Auto Start' %></label>
+                    <label class="control-label" for="autostart"><%=l 'Autostart' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input type="checkbox" ng-model="new_autostart" name="autostart"
@@ -190,9 +189,37 @@
                     >
                 </div>
                 <div class="col-md-7"><small class="text-secondary">
-                    <%=l 'Virtual Machine will be shut down when user disconnects.' %></small>
+                    <%=l 'Virtual Machine will be shutdown when user disconnects.' %></small>
                 </div>
             </div>
+            <div class="row">
+                <div class="col-lg-3 mt-2">
+                    <label class="control-label" for="auto_compact"><%=l 'Auto Compact' %></label>
+                </div>
+                <div class="col-lg-2">
+                    <input type="checkbox" ng-model="new_auto_compact" name="auto_compact"
+                    ng-disabled="<%= !$USER->is_admin || !$auto_compact %>"
+                    ng-true-value="1" ng-false-value="0"
+                    ng-change="set_bool('auto_compact',new_auto_compact)"
+                    >
+                </div>
+                <div class="col-md-7">
+                    <small class="text-secondary">
+                        <%=l 'Compact data volumes daily.' %>
+                    </small>
+                    <small class="text-secondary"
+                        ng-show="showmachine.is_base">
+                    <%=l 'Clones will inherit this value unless defined in their options.' %>
+                    </small>
+
+                    <small ng-show="<%= !$auto_compact %>">
+                        <a href="/admin/settings">
+                            <%=l 'This must be enabled in global settings too.' %>
+                        </a>
+                    </small>
+                </div>
+            </div>
+
 
 
 %   }
@@ -213,12 +240,5 @@
 %   }
         </div><!-- of form-group -->
     </form>
-
-            <div ng-show="pending_request"
-                class="alert alert-warning">
-                {{pending_request.command_text}} {{showmachine.name}} {{pending_request.status}}.
-                <br/>
-                {{pending_request.error}}
-            </div>
 
 </div><!-- of card-body options -->

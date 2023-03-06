@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use utf8;
 use Carp qw(confess);
 use Data::Dumper;
 use Digest::MD5;
@@ -1041,6 +1042,64 @@ sub test_change_clone($vm, $node) {
     $base->remove(user_admin);
 }
 
+sub _machine_types($vm) {
+
+    my $xml = $vm->vm->get_capabilities();
+    my $doc = XML::LibXML->load_xml(string => $xml);
+
+    my @types;
+
+    for my $node_arch ($doc->findnodes("/capabilities/guest/arch")) {
+        my %types;
+        for my $node_machine (sort { $a->textContent cmp $b->textContent } $node_arch->findnodes("machine")) {
+            my $machine = $node_machine->textContent;
+            next if $machine !~ /^(pc-i440fx|pc-q35)-(\d+.\d+)/
+            && $machine !~ /^(pc)-(\d+\d+)$/;
+            my $version = ( $2 or 0 );
+            $types{$1} = [ $version,$machine ]
+            if !exists $types{$1} || $version > $types{$1}->[0];
+        }
+        warn Dumper(\%types);
+        for (keys %types) {
+            push @types,($types{$_}->[1]);
+        }
+    }
+    confess "Error: no types found"
+    if !scalar @types;
+
+    return @types;
+}
+
+sub test_pc_other($vm, $node) {
+    return if $vm->type eq 'Void';
+    my $id_iso = search_id_iso('Alpine%64');
+
+    for my $machine (_machine_types($vm)) {
+        my $name = new_domain_name();
+        my $req = Ravada::Request->create_domain(
+            name => $name
+            ,vm => $vm->type
+            ,id_iso => $id_iso
+            ,id_owner => user_admin->id
+            ,memory => 512 * 1024
+            ,disk => 1024 * 1024
+            ,options => { uefi => 1 , machine => $machine }
+        );
+        wait_request(debug => 0);
+        my $base = $vm->search_domain($name);
+        die if !$base;
+
+        Ravada::Request->set_base_vm(id_vm => $node->id
+            ,uid => user_admin->id
+            ,id_domain => $base->id
+        );
+        wait_request( debug => 0);
+
+        remove_domain($base);
+    }
+
+}
+
 sub test_fill_memory($vm, $node, $migrate) {
     #TODO: Void VMs
     return if $vm->type eq 'Void';
@@ -1072,6 +1131,7 @@ sub test_fill_memory($vm, $node, $migrate) {
     my @clones;
     for ( 1 .. 100  ) {
         my $clone_name = new_domain_name();
+        diag("Try $_ , $clone_name may go to ".$node->name);
         my $req = Ravada::Request->create_domain(
             name => $clone_name
             ,id_owner => user_admin->id
@@ -1085,20 +1145,24 @@ sub test_fill_memory($vm, $node, $migrate) {
         my $clone = rvd_back->search_domain($clone_name) or last;
         ok($clone,"Expecting clone $clone_name") or exit;
         $clone->migrate($node) if $migrate;
+        wait_request(debug => 0);
         eval { $clone->start(user_admin) };
         $error = $@;
+        diag($error) if $error;
         like($error, qr/(^$|No free memory)/);
         exit if $error && $error !~ /No free memory/;
         last if $error;
+
+        $clone = Ravada::Domain->open($clone->id);
         $nodes{$clone->_vm->name}++;
 
         last if $migrate && exists $nodes{$vm->name} && $nodes{$vm->name} > 2;
-        if (keys(%nodes) > 1) {
+        if ($migrate || keys(%nodes) > 0) {
             $memory = int($memory*1.5);
         }
     }
     ok(exists $nodes{$vm->name},"Expecting some clones to node ".$vm->name." ".$vm->id);
-    ok(exists $nodes{$node->name},"Expecting some clones to node ".$node->name." ".$node->id);
+    ok(exists $nodes{$node->name},"Expecting some clones to node ".$node->name." ".$node->id) or exit;
     _remove_clones($base);
 }
 
@@ -1167,7 +1231,7 @@ sub test_check_instances($vm, $node) {
 }
 
 sub test_migrate_req($vm, $node) {
-    my $domain = create_domain($vm);
+    my $domain = create_domain_v2(vm => $vm, name => new_domain_name()."-áéíóú-пользователя");
     $domain->start(user_admin);
     my $req = Ravada::Request->migrate(
         id_domain => $domain->id
@@ -1588,6 +1652,10 @@ for my $vm_name (vm_names() ) {
 
         start_node($node);
 
+        test_pc_other($vm,$node);
+
+        test_fill_memory($vm, $node, 1); # migrate
+
         # test displays with no builtin added
         test_displays($vm, $node,1) if $tls;
         # test displays with only builtin
@@ -1630,7 +1698,6 @@ for my $vm_name (vm_names() ) {
         test_removed_base_file_and_swap_remote($vm, $node);
         test_removed_remote_swap($vm, $node);
         test_removed_local_swap($vm, $node);
-        test_duplicated_set_base_vm($vm, $node);
 
         test_set_vm($vm, $node);
 

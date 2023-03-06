@@ -220,7 +220,7 @@ sub test_new_ip {
     my $remote_ip = '192.0.2.6';
 
     $domain->start( user => user_admin, remote_ip => $remote_ip);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my ($local_port) = $domain->display(user_admin) =~ m{\d+\.\d+\.\d+\.\d+\:(\d+)};
 #    test_chain($vm->type, $vm->ip, $local_port, $remote_ip,1);

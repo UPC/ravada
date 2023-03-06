@@ -1,41 +1,47 @@
-<div class="panel-body" ng-show="showmachine.is_active || showmachine.is_base">
-    <div ng-show="showmachine.is_active" class="alert alert-danger" role="alert">
-        This machine is running and can't be modified.
-    </div>
-    <div ng-show="showmachine.is_base" class="alert alert-danger" role="alert">
-        This machine is base and can't be modified.
-    </div>
+<div ng-hide="edit || remove_item || new_hardware">
+%= include '/main/manage_machine_apply_clones'
 </div>
-<div class="panel-body">
-%=   include "main/needs_restart"
-    <div ng-repeat="(name,value) in showmachine.hardware" ng-hide="show_new_disk||show_new_display">
-        <h2>{{name}}</h2>
-        <div ng-show="value">
-            <div ng-repeat="item in value track by $index"
-                ng-class='{"border rounded border-primary mb-4 p-4": item.edit}'
+<div>
+%=  include "/main/vm_hardware_new"
+    <div ng-show="!showmachine || !showmachine.hardware">
+        <i ng-show="!display.is_active" class="fas fa-sync-alt fa-spin"></i>
+    </div>
+    <div ng-repeat="name in hardware" ng-hide="show_new_disk||show_new_display||show_new_filesystem || showmachine.hardware[name].length == 0 || new_hardware">
+        <span class="title" ng-hide="name=='cpu' || name=='features' || name=='cpu' || name == 'memory' || edit">{{name}}</span>
+        <span ng-show="showmachine.hardware[name][0]._is_locked && showmachine.is_active" class="info">
+            <%=l 'This machine is running and can\'t be modified.' %>
+        </span>
+        <div ng-show="showmachine.hardware[name]">
+            <div ng-repeat="item in showmachine.hardware[name] track by $index"
+                ng-class='{"border rounded border-primary mb-4 p-4": item._edit}'
+                ng-hide="edit && edit !=name+$index"
             >
                 <button title="edit {{name}} {{$index+1}}"
-                    ng-show="(name == 'network' ||name == 'disk') && !item.edit && !item.remove"
-                    ng-disabled="pending_requests > 0"
-                    ng-click="item.edit=!item.edit"
-                            ><i class="fa fa-sticky-note"></i>
+                    ng-show="item._can_edit && !item.remove && !edit"
+                    ng-disabled="showmachine.requests > 0 || item._is_locked || edit"
+                    ng-click="toggle_edit(name,$index)"
+                            ><i class="fas fa-pencil-alt"></i>
                 </button>
                 <button title="remove {{name}} {{$index+1}}"
-                    ng-hide="item.edit"
-                    ng-disabled="pending_requests > 0 || item.is_secondary"
-                    ng-click="confirm_remove='';remove_hardware(name,$index,item)"><i class="fa fa-times"></i>
+                    ng-show="item._can_remove && !item._edit"
+                    ng-disabled="showmachine.requests > 0 || item.is_secondary || item._is_locked || edit"
+                     ng-click="$parent.$parent.remove_item={'hardware': name, 'index': $index, 'name': (item.name || item._name || item.driver || item.type ) }"
+                    data-toggle="modal" data-target="#removeModal"
+                    ><i class="fa fa-times"></i>
                 </button>
-                <span ng-class='{"h5": item.edit }'>
-                    {{item.name || item.driver || item}}
+                <span ng-class='{"h5": item._edit, "disabled": item._is_locked }'
+                    ng-hide="edit"
+                    >
+                    {{item.name || item._name || item.driver || item.type || item.model}}
                 </span>
                 <div ng-show="name == 'disk' && item.remove"
                     ng-class='{"border border-danger p-4 m-4": item.device == "disk"}'
                 >
                         <p class="h4" ng-show="item.device == 'disk'">
-                            Danger: This will destroy all the disk data permantently.
+                            <%=l 'Danger: This will destroy all the disk data permantently.' %>
                         </p>
                     <label for="confirm_remove">
-                        Type the name of the volume disk to confirm:
+                        <%=l 'Type the name of the volume disk to confirm:' %>
                     </label>
                     <input name="confirm_remove" ng-model="confirm_remove" type="text"
                         ng-value=""
@@ -50,88 +56,9 @@
                     ><%=l 'Cancel' %></button>
                     </p>
                 </div>
-                %= include 'main/manage_machine_edit_net'
-                <div ng-show="name == 'disk' && item.edit" class="form-group mt-4">
-                    <div class="row" ng-show="item.device == 'disk'">
-                        <div class="col-lg-2">
-                            <p class="text-right"><%=l 'bus' %></p>
-                        </div>
-                        <div class="col-lg-2">
-                            <select ng-model="item.driver"
-                            ng-options="model for model in showmachine.drivers['disk']"
-                            >
-                            </select>
-                        </div>
-                    </div>
-                    <div class="row" ng-show="item.device == 'disk'">
-                        <div class="col-lg-2">
-                            <p class="text-right"><%=l 'capacity' %></p>
-                        </div>
-                        <div class="col-lg-2">
-                            <input type="text"
-                            name="capacity"
-                            ng-model="item.capacity"
-                            >
-                        </div>
-                    </div>
-                    <div class="row" ng-show="item.device == 'cdrom'">
-                        <div class="col-lg-2">
-                            <p class="text-right"><%=l 'ISO file' %></p>
-                        </div>
-                        <div class="col-lg-2">
-                            <select name="file" ng-model="item.file"
-                                ng-options="iso for iso in list_isos"
-                            >
-                            </select>
-                        </div>
-                    </div>
-                   <div class="row">
-                        <div class="col-lg-2">
-                            <p class="text-right"><%=l 'boot order' %></p>
-                        </div>
-                        <div class="col-lg-2">
-                            <input type="text" name="boot" ng-model="item.boot">
-                        </div>
-                    </div>
-                   <div class="row">
-                        <div class="col-lg-2">
-                        </div>
-                        <div class="col-md-12">
-                            <button ng-click="item.edit=false;change_disk(showmachine.id, $index)"
-                                class="btn btn-primary"
-                            ><%=l 'Submit' %></button>
-                            <button ng-click="item.edit=false"
-                                class="btn btn-outline-secondary"
-                            ><%=l 'Cancel' %></button>
-                        </div>
-                    </div>
-                </div><!-- element ( former li ) -->
+                %= include "main/manage_machine_edit"
             </div>
         </div>
-        <div ng-show="value.length == 0">
-            No {{name}} hardware found.
-        </div>
     </div>
-
-    <div ng-hide="show_new_disk||show_new_display" class="input-group mt-3" style="max-width: 18rem;">
-        <div class="input-group-prepend">
-            <i ng-show="showmachine.requests>0" class="fas fa-sync-alt fa-spin"></i>
-            <button class="btn btn-primary"
-                ng-disabled="showmachine.requests > 0 || showmachine.is_base || showmachine.is_active"
-                ng-click="add_hardware(new_hardware)"
-                type="button">
-            <%=l 'Add'%></button>
-        </div>
-        <div class="custom-file">
-            <select class="custom-select" ng-model="new_hardware"
-                ng-options="type for type in hardware_types"
-            >
-            <option value=""><%=l '-- choose hardware --' %></option>
-            </select>
-        </div>
-    </div>
-
-%= include 'main/manage_machine_new_disk'
-%= include 'main/manage_machine_new_display'
-%= include "/main/pending_request"
+%= include 'main/vm_hardware_modal_remove'
 </div>

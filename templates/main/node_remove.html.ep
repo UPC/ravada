@@ -1,19 +1,19 @@
 <div ng-show="node.is_local">
-    This is a main node and can't be removed.
+    <%=l 'This is a main node and can\'t be removed.' %>
 </div>
 
 <div ng-hide="!node.id || node.is_local">
 
     <div class="row">
         <div class="col-md-8">
-        Are you sure you want to remove the node {{node.name}} ?
+        <%=l 'Are you sure you want to remove the node' %> {{node.name}} ?
         </div>
     </div>
 
     <div class="row" ng-show="node.has_bases">
         <div class="col-md-8">
-        This node has {{node.has_bases}} bases.<br/>
-        <input type="checkbox" ng-model="remove_bases"> Remove bases in node
+        <%=l 'This node has' %> {{node.has_bases}} <%=l 'bases.' %><br/>
+        <input type="checkbox" ng-model="remove_bases"> <%=l 'Remove bases in node' %>
         </div>
     </div>
 
@@ -22,13 +22,12 @@
         <div class="col-md-8">
         <button ng-disabled="node.has_bases && !remove_bases"
             ng-click="remove_node(node.id)"
-        >Yes</button>
+        ><%=l 'Yes' %></button>
 
-        <button onclick="location='/admin/nodes'">Cancel</button>
+        <button onclick="location='/admin/nodes'"><%=l 'Cancel' %></button>
         </div>
     </div>
 
 </div>
 
 <div ng-show="message">{{message}}</div>
-

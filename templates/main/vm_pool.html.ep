@@ -3,7 +3,7 @@
     <div class="panel-body" ng-show="showmachine.is_base">
         <div class="row">
             <div class="col-md-2">
-                Pool
+              <%=l 'Pool' %>
             </div>
             <div class="col-md-2">
                 <input type="checkbox" ng-checked="showmachine.pools==1"
@@ -15,7 +15,7 @@
         </div>
         <div class="row">
             <div class="col-md-2">
-                Clones
+              <%=l 'Clones' %>
             </div>
             <div class="col-md-2">
                 <input type="number" size="2" ng-model="showmachine.pool_clones"
@@ -25,20 +25,15 @@
                     style="width: 5em"
                 >
             </div>
-            <div class="col-mg-4">
-                <small class="text-secondary">Virtual machines in the pool.</small>
+            <div class="col-mg-6">
+                <small class="text-secondary"><%=l 'Virtual machines in the pool.' %></small>
             </div>
         </div>
         <div class="row">
-            <div class="col-md-2" ng-hide="showmachine.volatile_clones">
-                Start
+            <div class="col-md-2">
+                <%=l 'Start' %>
             </div>
-            <div class="col-md-6" ng-show="showmachine.volatile_clones">
-                <small class="text-secondary">
-                    <%=l 'Clones are volatile, so all the pool will be started.' %>
-                </small>
-            </div>
-            <div class="col-md-2" ng-hide="showmachine.volatile_clones">
+            <div class="col-md-2">
                 <input type="number" size="2" ng-model="showmachine.pool_start"
                     ng-disabled="showmachine.pools==0"
                     ng-change="set('pool_start')"
@@ -46,21 +41,27 @@
                     style="width: 5em"
                 >
             </div>
-            <div class="col-mg-4" ng-hide="showmachine.volatile_clones">
-                <small class="text-secondary">
-                Virtual machines pre-started
+            <div class="col-mg-6">
+                <small class="text-secondary"
+                    ng-hide="showmachine.volatile_clones">
+                  <%=l 'Virtual machines pre-started' %>
+                </small>
+                <small class="text-secondary"
+                    ng-show="showmachine.volatile_clones">
+                    <%=l 'Clones are volatile, so only started clones will be created.' %>
                 </small>
             </div>
         </div>
 
         <div class="row">
             <div class="col-md-12">
-                <div ng-show="showmachine.pools && showmachine.pool_clones >0 && showmachine.is_base==0">Warning: this virtual machine will be prepared as a base. This may take long.
+                <div ng-show="showmachine.pools && showmachine.pool_clones >0 && showmachine.is_base==0">
+                  <%=l 'Warning: this virtual machine will be prepared as a base. This may take long.' %>
                 </div>
                 <div ng-show="showmachine.pool_start > showmachine.pool_clones"
                     class="alert alert-danger"
-                >Error: you want to have {{showmachine.pool_start}} but there are
-                    only {{showmachine.pool_clones}} clones defined.
+                ><%=l 'Error: you want to have' %> {{showmachine.pool_start}} <%=l 'but there are
+                    only' %> {{showmachine.pool_clones}} <%=l 'clones defined.' %>
                 </div>
              </div>
          </div>
@@ -68,7 +69,7 @@
     <div class="panel-body" ng-show="!showmachine.is_base && showmachine.id_base">
         <div class="row">
             <div class="col-md-2">
-               Pool
+               <%=l 'Pool' %>
             </div>
             <div class="col-md-2">
                 <input type="checkbox" ng-checked="showmachine.is_pool==1"
@@ -77,10 +78,9 @@
             </div>
             <div class="col-mg-4">
                 <small class="text-secondary">
-                    Assign this virtual machine to the pre-started pool
+                  <%=l 'Assign this virtual machine to the pre-started pool' %>
                 </small>
             </div>
         </div>
     </div>
 </div>
-

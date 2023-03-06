@@ -20,27 +20,18 @@ use_ok('Ravada::HostDevice');
 use_ok('Ravada::HostDevice::Templates');
 
 my $N_DEVICE = 0;
-my $USB_DEVICE;
-load_usb_device();
 #########################################################
 
-# we will try to find an unused bluetooth usb dongle
-
-sub load_usb_device() {
-    open my $in,"<","t/etc/usb_device.conf" or return;
-    $USB_DEVICE = <$in>;
-    chomp $USB_DEVICE;
-}
-
 sub _search_unused_device {
+
+    my $usb_filter = config_host_devices('usb');
     my @cmd =("lsusb");
     my ($in, $out, $err);
     run3(["lsusb"], \$in, \$out, \$err);
     for my $line ( split /\n/, $out ) {
-        next unless (defined $USB_DEVICE && $line =~ $USB_DEVICE) 
-        || $line =~ /Bluetooth|flash|disk|cam/i;
+        next unless $line =~ qr($usb_filter)i;
 
-        my ($filter) = $line =~ /(ID [a-f0-9]+):/;
+        my ($filter) = $line =~ /(ID [a-f0-9]+:[a-f0-9]+)/;
         die "ID \\d+ not found in $line" if !$filter;
         return ("lsusb",$filter);
     }
@@ -273,10 +264,6 @@ sub test_devices($host_device, $expected_available, $match = undef) {
 
     return if !$match;
 
-    for (@devices) {
-        next if defined $USB_DEVICE && $_ =~ qr($USB_DEVICE);
-        like($_,qr($match));
-    }
 }
 
 sub test_host_device_usb($vm) {
@@ -355,11 +342,11 @@ sub test_host_device_usb($vm) {
 
 sub test_kvm_usb_template_args($device_usb, $hostdev) {
     my ($bus, $device, $vendor_id, $product_id)
-    = $device_usb =~ /Bus 0*(\d+) Device 0*(\d+).*ID (.*?):(.*?) /;
+    = $device_usb =~ /Bus 0*([0-9a-f]+) Device 0*([0-9a-f]+).*ID 0*([0-9a-f]+):0*([0-9a-f]+) /;
     my $args = $hostdev->_fetch_template_args($device_usb);
-    is($args->{device}, $device);
+    is($args->{device}, $device, $device_usb) or exit;
     is($args->{bus}, $bus);
-    is($args->{vendor_id}, $vendor_id);
+    is($args->{vendor_id}, $vendor_id) or exit;
     is($args->{product_id}, $product_id);
 }
 
@@ -581,7 +568,7 @@ sub test_xmlns($vm) {
     my $base = create_domain($vm);
     $base->add_host_device($list_hostdev[0]);
     eval { $base->start(user_admin) };
-    like ($@,qr{^($|.*Unable to stat|.*device not found.*mediated|.*there is no device "hostdev)} , $base->name) or exit;
+    like ($@,qr{^($|.*Unable to stat|.*device not found.*mediated|.*there is no device "hostdev)}m , $base->name) or exit;
 
     my $doc = XML::LibXML->load_xml( string => $base->domain->get_xml_description);
     my ($domain_xml) = $doc->findnodes("/domain");
@@ -622,11 +609,44 @@ sub test_check_list_command($vm) {
     $hdev->remove();
 }
 
+sub test_invalid_param {
+    eval {
+        rvd_front->update_host_device({ id => 1, 'list_command' => 'a' });
+    };
+    is($@,'');
+    for my $wrong ( qr(` ' % ; ) ) {
+        eval {
+            rvd_front->update_host_device({id => 1, 'list_command'.$wrong => 'a'});
+        };
+        like($@,qr/invalid/);
+    }
+    wait_request(check_error => 0);
+}
+
+sub test_template_args($vm) {
+    return if $vm->type ne 'KVM';
+
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+
+    my ($t_usb) = grep{ $_->{name} =~ /usb/i } @$templates;
+    $vm->add_host_device(template => $t_usb->{name});
+    my ($hostdev) = $vm->list_host_devices();
+    test_kvm_usb_template_args("Bus 001 Device 003: ID 04f2:b6be Chicony Electronics Co., Ltd Integrated Camera", $hostdev);
+    test_kvm_usb_template_args("Bus 001 Device 003: ID 04f2:06be Chicony Electronics Co., Ltd Integrated Camera", $hostdev);
+    test_kvm_usb_template_args("Bus 011 Device 013: ID 04f2:b6be Chicony Electronics Co., Ltd Integrated Camera", $hostdev);
+    test_kvm_usb_template_args("Bus 01a Device 01b: ID 04f2:0bbe Chicony Electronics Co., Ltd Integrated Camera", $hostdev);
+    test_kvm_usb_template_args("Bus 000 Device 000: ID 0000:0000 Chicony Electronics Co., Ltd Integrated Camera", $hostdev);
+    $hostdev->remove();
+
+}
+
 #########################################################
 
+init();
 clean();
 
-for my $vm_name (reverse vm_names()) {
+test_invalid_param();
+for my $vm_name (vm_names()) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -639,12 +659,13 @@ for my $vm_name (reverse vm_names()) {
 
         diag("Testing host devices in $vm_name");
 
+        test_template_args($vm);
         test_check_list_command($vm);
+
+        test_host_device_usb($vm);
 
         test_xmlns($vm);
         test_host_device_gpu($vm);
-
-        test_host_device_usb($vm);
 
         test_host_device_usb_mock($vm);
         test_host_device_usb_mock($vm,2);

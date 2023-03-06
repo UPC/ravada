@@ -12,6 +12,7 @@ use feature qw(signatures);
 use lib 't/lib';
 use Test::Ravada;
 
+my $DIR = "/var/tmp";
 
 ###########################################################
 
@@ -22,7 +23,7 @@ sub test_storage_pools($vm) {
     my $req_cleanup = Ravada::Request->cleanup(
         after_request_ok => $req->id
     );
-    wait_request( debug => 1);
+    wait_request( debug => 0);
     is($req->status,'done');
     is($req->error, '');
 
@@ -31,7 +32,7 @@ sub test_storage_pools($vm) {
 }
 
 sub _add_fstab($vm) {
-    my $dir = "/mnt/".base_domain_name();
+    my $dir = "$DIR/".base_domain_name();
     if (!-e $dir) {
         mkdir $dir;
     }
@@ -59,6 +60,7 @@ sub test_storage_pools_fail($vm) {
 
     create_storage_pool($vm, $dir);
 
+    delete_request('cleanup');
     my $req = Ravada::Request->check_storage(
         uid => user_admin->id
         ,retry => 2
@@ -67,7 +69,7 @@ sub test_storage_pools_fail($vm) {
         after_request_ok => $req->id
     );
     is($req_cleanup->after_request_ok,$req->id);
-    wait_request( debug => 1, check_error => 0);
+    wait_request( debug => 0, check_error => 0);
     is($req->status,'done');
     like($req->error, qr/not mounted/);
 
@@ -79,7 +81,7 @@ sub test_storage_pools_fail($vm) {
 }
 
 sub _clean_local {
-    my $dir = "/mnt/".base_domain_name();
+    my $dir = "$DIR/".base_domain_name();
     my $file = "$dir/check_storage";# or die "$!";
     unlink $file or die "$! $file" if -e $file;
 }

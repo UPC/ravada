@@ -1,18 +1,18 @@
 <div class="card-body">
      <div class="row">
         <div class="col-lg-2 mt-2">
-             Port
+             <%=l 'Port' %>
         </div>
         <div class="col-lg-2 mt-2">
-             Restricted
+             <%=l 'Restricted' %>
         </div>
         <div class="col-lg-4 mt-2">
-            Name
+            <%=l 'Name' %>
         </div>
         <div class="col-lg-2 mt-2">
-             Public Port
+             <%=l 'Public Port' %>
         </div>
-        <div class="col-lg-2 mt-2">Action</div>
+        <div class="col-lg-2 mt-2"><%=l 'Action' %></div>
      </div>
 
      <div class="row">
@@ -21,7 +21,7 @@
         </div>
         <div class="col-lg-2 mt-2">
             <input type="checkbox" ng-model="new_port_restricted"
-                title="Only remote client can access this port if restricted"
+                title="<%=l 'Only remote client can access this port if restricted' %>"
             >
         </div>
         <div class="col-lg-4 mt-2">
@@ -39,18 +39,18 @@
          <div class="col-lg-2 mt-2">
             {{port.internal_port}}
             <span ng-show="showmachine.is_active && !port.is_active"
-                class="badge badge-danger">down</span>
+                class="badge badge-danger"><%=l 'down' %></span>
             <span ng-show="showmachine.is_active && port.is_active"
-                class="badge badge-info">up</span>
+                class="badge badge-info"><%=l 'up' %></span>
          </div>
         <div class="col-lg-2 mt-2">
             <input type="checkbox" ng-show="port.restricted == 1" checked
                 ng-click="expose(port.internal_port, port.name, 0, port.id)"
-                title="Only remote client can access this port"
+                title="<%=l 'Only remote client can access this port' %>"
             >
             <input type="checkbox" ng-show="port.restricted != 1"
                 ng-click="expose(port.internal_port, port.name, 1, port.id)"
-                title="Any remote client can access this port"
+                title="<%=l 'Any remote client can access this port' %>"
             >
         </div>
          <div class="col-lg-4 mt-2">
@@ -66,8 +66,7 @@
 
     <button ng-show="showmachine.is_active"
         ng-click="request('refresh_machine_ports',{ id_domain: showmachine.id , retry: 10 } )"
-        >Refresh ports</button>
+        ><%=l 'Refresh ports' %></button>
     <br/>
-    %= include "/main/pending_request"
 
 </div>

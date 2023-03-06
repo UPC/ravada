@@ -7,6 +7,9 @@ use IPC::Run3;
 use JSON::XS;
 use Test::More;
 
+use feature qw(signatures);
+no warnings "experimental::signatures";
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -46,6 +49,13 @@ sub test_create_domain {
     }
 }
 
+sub test_which($vm) {
+    my $ls = $vm->_which("ls");
+    ok($ls);
+}
+
+###############################################################
+
 clean();
 my $id = 10;
 
@@ -75,6 +85,7 @@ for my $vm_type( vm_names() ) {
 
     if (!$< || $vm_type ne 'KVM') {
         init_vm($vm);
+        test_which($vm);
         test_create_domain($vm, $vm_type) if rvd_back->search_vm($vm_type);
     }
 

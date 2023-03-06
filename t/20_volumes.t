@@ -346,7 +346,7 @@ sub test_defaults($vm, $volume_type=undef) {
     my $disk_f = $info_f->{hardware}->{disk};
 
     is(scalar(@$disk), scalar(@$disk_f));
-    for my $field ( qw(name driver capacity device type target)) {
+    for my $field ( qw(name bus capacity device type target)) {
         for my $n ( 0 .. @$disk ) {
             my $dev = $disk->[0];
             my $dev_f = $disk_f->[0];
@@ -379,6 +379,7 @@ sub test_qcow_format($vm) {
         next if $vol->file && $vol->file =~ /iso$/;
         my @cmd = ($QEMU_IMG,'create'
             ,'-f','qcow2'
+            ,'-F','qcow2'
             ,"-b", $vol->backing_file
             ,$vol->file
         );
@@ -386,7 +387,7 @@ sub test_qcow_format($vm) {
         my @cmd_info = ($QEMU_IMG , 'info', $vol->file);
         my ($out, $err) = $clone->_vm->run_command(@cmd_info);
         my ($bff) = $out =~ /^backing file format: (.*)/m;
-        is($bff, undef);
+        is($bff, 'qcow2');
     }
     eval { $clone->start(user_admin) };
     is(''.$@,'');

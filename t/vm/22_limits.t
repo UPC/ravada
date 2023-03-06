@@ -84,13 +84,14 @@ sub test_domain_limit_noadmin {
     $domain2->shutdown_now( $user )   if $domain2->is_active;
     is(rvd_back->list_domains(user => $user, active => 1),1);
 
-    $domain2->start( $user );
+    Ravada::Request->start_domain( uid => $user->id,
+        id_domain => $domain2->id);
+    wait_request();
     my $req = Ravada::Request->enforce_limits(timeout => 1, _force => 1);
-    rvd_back->_process_all_requests_dont_fork();
-    sleep 1;
-    rvd_back->_process_all_requests_dont_fork();
+    ok($req);
+    wait_request(debug => 0);
     my @list = rvd_back->list_domains(user => $user, active => 1);
-    is(scalar @list,1) or die Dumper(\@list);
+    is(scalar @list,1) or die Dumper([map { $_->name } @list]);
     is($list[0]->name, $domain2->name) if $list[0];
 
     $domain->remove(user_admin);
@@ -139,13 +140,11 @@ sub test_domain_limit_allowed {
     is($user->can_start_many,0) or exit;
 
     $req = Ravada::Request->enforce_limits(timeout => 1,_force => 1);
-    rvd_back->_process_all_requests_dont_fork();
-    sleep 1;
-    rvd_back->_process_all_requests_dont_fork();
+    wait_request(debug => 0);
     @list = rvd_back->list_domains(user => $user, active => 1);
     is(scalar @list,1,"[$vm_name] expecting 1 active domain")
         or die Dumper([ map { $_->name } @list]);
- 
+
     $domain->remove(user_admin);
     $domain2->remove(user_admin);
 }
@@ -185,7 +184,7 @@ sub test_domain_limit_already_requested {
 
     is(rvd_back->list_domains(user => $user, active => 1),2);
     my $req = Ravada::Request->enforce_limits(timeout => 1, _force => 1);
-    rvd_back->_process_all_requests_dont_fork();
+    wait_request(debug => 0);
 
     is($req->status,'done');
     is($req->error, '');
@@ -258,13 +257,13 @@ sub test_limit_change($vm, $limit) {
 
     @list = rvd_back->list_domains(user => $user, active => 1);
     is(scalar @list,3) or warn Dumper([map { $_->name } @list]);
-    wait_request( debug => 1);
+    wait_request( debug => 0);
 
     @list = rvd_back->list_domains(user => $user, active => 1);
 
     $req = Ravada::Request->enforce_limits(timeout => 1, _force => 1);
     delete_request('set_time');
-    wait_request( debug => 1);
+    wait_request( debug => 0);
     is($req->status,'done');
     is($req->error,'');
 

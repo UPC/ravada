@@ -6,7 +6,7 @@
                     <div class="form-group">
                         <strong><label for="description"><%=l 'This information will be available to the users' %>.</label></strong>
                         <br/>
-                        <textarea id="editor" name="description" style="width: 100%;" placeholder="Description"><%= $domain->description %></textarea>
+                        <textarea id="editor" name="description" style="width: 100%;" placeholder="<%=l 'Description' %>"><%= $domain->description %></textarea>
                         <script>
                             CKEDITOR.replace( 'editor', {height: 200} );
                         </script>

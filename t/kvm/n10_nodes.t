@@ -41,6 +41,7 @@ sub test_node_renamed {
     my $rvd_back2 = Ravada->new(
         connector => connector
         ,config => "t/etc/ravada.conf"
+        ,pid_name => "ravada_install".base_domain_name()
     );
     $rvd_back2->_install();
     is(scalar(@{rvd_back->vm}), scalar(@{$rvd_back2->vm}),Dumper(rvd_back->vm)) or return;

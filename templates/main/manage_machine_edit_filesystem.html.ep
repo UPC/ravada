@@ -1,0 +1,47 @@
+<div ng-show="new_hardware=='filesystem' || name == 'filesystem'" class="form-group mt-4">
+    <div class="row">
+        <div class="col-lg-2" align="right">
+            <%=l 'Source' %>
+        </div>
+        <div class="col-lg-2">
+            <input type="text" ng-model="item.source.dir"/>
+        </div>
+    </div>
+    <div class="row" ng-show="name=='filesystem'">
+        <div class="col-lg-2" align="right">
+            <label for="target"><%=l 'Target' %></label>
+        </div>
+        <div class="col-lg-4">
+            <input type="text" ng-model="item.target.dir"/>
+            <a href="https://ravada.readthedocs.io/en/latest/docs/Virtiofs.html">?</a>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-2">
+            <label for="chroot"><%=l 'Subdirectory' %></label>
+        </div>
+        <div class="col-lg-8">
+            <input type="checkbox" name="chroot"
+                ng-true-value="1" ng-false-value="0"
+                ng-model="item.chroot"/>
+            <span class="info">
+                <%=l 'Creates a new subdirectory for each clone'%>
+            </span>
+        </div>
+    </div>
+
+    <div class="row" ng-show="item.chroot">
+        <div class="col-lg-2">
+            <label for="uid"><%=l 'User id' %></label>
+        </div>
+        <div class="col-lg-8">
+            <input type="text" name="uid"
+                ng-model="item.subdir_uid"
+                placeholder="500"
+                />
+            <span class="info">
+                <%=l 'User ID for the subdirectory'%>
+            </span>
+        </div>
+    </div>
+</div>

@@ -1,6 +1,6 @@
 <div class="row">
     <div class="col">
-        <button ng-click="today()">today</button>
+        <button ng-click="today()"><%=l 'today' %></button>
 
         <button ng-click="previous()">
             <i class="fa fa-arrow-left" aria-hidden="true"></i>
@@ -13,7 +13,7 @@
         <big>{{booking_monday.getMonth()+1}} {{booking_monday.getFullYear() }}</big>
     </div>
     <div class="col" align="right">
-        <a type ="button" class="btn btn-success" href="/booking/new.html">Crea</a>
+        <a type ="button" class="btn btn-success" href="/booking/new.html"><%=l 'Create' %></a>
     </div>
 </div>
 
@@ -21,7 +21,7 @@
 <div class="containter" ng-cloak="1">
 
 <div class="row">
-    <div class="col col-xl-1">time</div>
+    <div class="col col-xl-1"><%=l 'Time' %></div>
     <div class="col col-xl-1" ng-repeat="day in week">
         <small ng-class='{"today1": day.is_today }'>{{day.dow}}</small><br/>
         <span  ng-class='{"today2": day.is_today }'>{{day.day}}</span>

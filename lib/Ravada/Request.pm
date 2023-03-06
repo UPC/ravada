@@ -14,6 +14,7 @@ use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
 use Hash::Util;
+use Storable qw(dclone);
 use Time::Piece;
 use Ravada;
 use Ravada::Front;
@@ -34,7 +35,7 @@ my $COUNT = 0;
 our %FIELD = map { $_ => 1 } qw(error output);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
-our $args_manage = { name => 1 , uid => 1 };
+our $args_manage = { name => 1 , uid => 1, after_request => 2 };
 our $args_prepare = { id_domain => 1 , uid => 1, with_cd => 2 };
 our $args_remove_base = { id_domain => 1 , uid => 1 };
 our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
@@ -55,6 +56,7 @@ our %VALID_ARG = (
       ,remote_ip => 2
           ,start => 2
            ,data => 2
+           ,options => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
@@ -74,15 +76,15 @@ our %VALID_ARG = (
     ,screenshot => { id_domain => 1 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1 }
-    ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2 }
+    ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2, enable_host_devices => 2 }
     ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1, sequential => 2 }
     ,shutdown_clones => { id_domain => 1, uid => 1, timeout => 2 }
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,dettach => { uid => 1, id_domain => 1 }
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
-    ,download => {uid => 2, id_iso => 1, id_vm => 2, verbose => 2, delay => 2, test => 2}
-    ,refresh_storage => { id_vm => 2 }
+    ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
+    ,refresh_storage => { id_vm => 2, uid => 2 }
     ,list_storage_pools => { id_vm => 1 , uid => 1 }
     ,check_storage => { uid => 1 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
@@ -100,7 +102,7 @@ our %VALID_ARG = (
     }
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }
-    ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 1}
+    ,remove_hardware => {uid => 1, id_domain => 1, name => 1, index => 2, option => 2 }
     ,change_hardware => {uid => 1, id_domain => 1, hardware => 1, index => 2, data => 1 }
     ,enforce_limits => { timeout => 2, _force => 2 }
     ,refresh_machine => { id_domain => 1, uid => 1 }
@@ -111,10 +113,10 @@ our %VALID_ARG = (
     # ports
     ,expose => { uid => 1, id_domain => 1, port => 1, name => 2, restricted => 2, id_port => 2}
     ,remove_expose => { uid => 1, id_domain => 1, port => 1}
-    ,open_exposed_ports => {uid => 1, id_domain => 1 }
+    ,open_exposed_ports => {uid => 1, id_domain => 1, remote_ip => 2 }
     ,close_exposed_ports => { uid => 1, id_domain => 1, port => 2, clean => 2 }
     # Virtual Managers or Nodes
-    ,refresh_vms => { _force => 2, timeout_shutdown => 2 }
+    ,refresh_vms => { _force => 2, timeout_shutdown => 2, uid => 2 }
 
     ,shutdown_node => { id_node => 1, at => 2 }
     ,start_node => { id_node => 1, at => 2 }
@@ -124,6 +126,9 @@ our %VALID_ARG = (
     }
     ,compact => { uid => 1, id_domain => 1 , keep_backup => 2 }
       ,purge => { uid => 1, id_domain => 1 }
+
+    ,list_machine_types => { uid => 1, id_vm => 2, vm_type => 2}
+    ,list_cpu_models => { uid => 1, id_domain => 1}
 
     #users
     ,post_login => { user => 1, locale => 2 }
@@ -148,6 +153,11 @@ our %VALID_ARG = (
         ,id_domain => 2
     }
 
+    ,discover => { uid => 1, id_vm => 1 }
+    ,import_domain => { uid => 1, vm => 1, id_owner => 1, name => 1
+        ,spinoff_disks => 2
+    }
+    ,update_iso_urls => { uid => 1 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
@@ -160,17 +170,24 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             expose remove_expose
             rebase rebase_volumes
             shutdown_node reboot_node start_node
+            compact purge
+            start_domain
     );
 
 our %CMD_NO_DUPLICATE = map { $_ => 1 }
 qw(
+    clone
     set_base_vm
     remove_base_vm
     rsync_back
     cleanup
     list_host_devices
+    refresh_machine
     refresh_machine_ports
+    refresh_vms
     set_time
+    open_exposed_ports
+    manage_pools
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -217,10 +234,28 @@ our %COMMAND = (
     ,important=> {
         limit => 20
         ,priority => 1
-        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine','open_exposed_ports']
+        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine']
+    }
+
+    ,iptables => {
+        limit => 4
+        ,priority => 2
+        ,commands => ['open_exposed_ports']
     }
 );
 lock_hash %COMMAND;
+
+our %CMD_VALIDATE = (
+    clone => \&_validate_clone
+    ,create => \&_validate_create_domain
+    ,create_domain => \&_validate_create_domain
+    ,remove_hardware => \&_validate_remove_hardware
+    ,start_domain => \&_validate_start_domain
+    ,start => \&_validate_start_domain
+    ,add_hardware=> \&_validate_change_hardware
+    ,change_hardware=> \&_validate_change_hardware
+    ,remove_hardware=> \&_validate_change_hardware
+);
 
 sub _init_connector {
     $CONNECTOR = \$Ravada::CONNECTOR;
@@ -512,7 +547,7 @@ sub _check_args {
 
     for (keys %{$VALID_ARG{$sub}}) {
         next if $VALID_ARG{$sub}->{$_} == 2; # optional arg
-        confess "Missing argument $_"   if !exists $args->{$_};
+        confess "Missing argument $_"   if !exists $args->{$_} || !defined $args->{$_};
     }
 
     return $args;
@@ -643,23 +678,31 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
     } else {
         $args_d = decode_json($args);
     }
+    confess "Error: missing command " if !$command;
     delete $args_d->{uid};
     delete $args_d->{at};
+    delete $args_d->{status};
+    delete $args_d->{timeout};
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id,args FROM requests WHERE (status <> 'done')"
         ." AND command=?"
+        ." AND ( error = '' OR error is NULL)"
     );
     $sth->execute($command);
     while (my ($id,$args_found) = $sth->fetchrow) {
-        next if $self && $self->id == $id;
+        next if $self && $self->id && $self->id == $id;
 
         my $args_found_d = decode_json($args_found);
         delete $args_found_d->{uid};
         delete $args_found_d->{at};
+        delete $args_found_d->{status};
+        delete $args_found_d->{timeout};
 
         next if join(".",sort keys %$args_d) ne join(".",sort keys %$args_found_d);
         my $args_d_s = join(".",map { $args_d->{$_} } sort keys %$args_d);
         my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
+
         next if $args_d_s ne $args_found_s;
 
         return $id;
@@ -678,6 +721,7 @@ sub _new_request {
     my %args = @_;
 
     $args{status} = 'requested';
+    $self->{command} = $args{command};
 
     if ($args{name}) {
         $args{domain_name} = $args{name};
@@ -685,7 +729,6 @@ sub _new_request {
     }
     my $no_duplicate = delete $args{_no_duplicate};
     my $force;
-
 
     my $uid;
     if ( ref $args{args} ) {
@@ -709,26 +752,29 @@ sub _new_request {
 
         $args{args} = encode_json($args{args});
     }
-
-    confess "Error: Pass either _force or _no_duplicate"
-    if $force && $no_duplicate;
-
+    $self->{args} = decode_json($args{args});
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
-    if (!$force && ($args{command} =~ /^(clone|manage_pools)$/
-        || $CMD_NO_DUPLICATE{$args{command}}
-        || ($no_duplicate && $args{command} =~ /^(screenshot)$/))) {
+    if (!$force
+        && (
+        $CMD_NO_DUPLICATE{$args{command}}
+        || ($no_duplicate && $args{command} =~ /^(screenshot)$/))
+        ){
+        my $id_dupe = $self->_duplicated_request();
 
-        my $id_dupe = _duplicated_request(undef, $args{command}, $args{args});
+        my $req_recent;
+        $req_recent = $self->done_recently()
+        if $args{command} !~ /^(clone|migrate|set_base_vm)$/;
 
         my $id_recent;
-        $id_recent = done_recently(undef, 60, $args{command})
-        if $args{command} !~ /^(clone|migrate|set_base_vm)$/;
+        $id_recent = $req_recent->id if $req_recent;
 
         my $id = ( $id_dupe or $id_recent );
         return Ravada::Request->open($id) if $id;
 
     }
 
+    $args{date_changed} = Ravada::Utils::date_now();
+    $args{error} = '';
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO requests (".join(",",sort keys %args).")"
         ."  VALUES ( "
@@ -747,9 +793,204 @@ sub _new_request {
 
 
     my $request = $self->open($self->{id});
-    $request->status('requested');
+    $request->_validate();
+    $request->status('requested') if $request->status ne'done';
 
     return $request;
+}
+
+sub _validate($self) {
+    return if !exists $CMD_VALIDATE{$self->command};
+    my $method = $CMD_VALIDATE{$self->command};
+    return if !$method;
+    $method->($self);
+}
+
+sub _validate_remove_hardware($self) {
+    my $name = $self->args('name');
+
+    my $args = $self->args();
+
+    die "Error: you must pass option or index"
+    if !exists $args->{option} && !exists $args->{index}
+    && !defined $args->{option} && !defined $args->{index};
+
+    die "Error: attribute value must be defined ".
+        join(" ", map { $_ or '<UNDEF>' } %{$args->{option}})
+    if $args->{option} && grep { !defined } values %{$args->{option}};
+
+}
+
+sub _validate_start_domain($self) {
+
+    my $id_domain = $self->defined_arg('id_domain');
+    if (!$id_domain) {
+        my $domain_name = $self->defined_arg('name');
+        $id_domain = _search_domain_id(undef,$domain_name);
+    }
+    return if !$id_domain;
+    for my $command ('start','%_hardware') {
+        my $req=$self->_search_request($command, id_domain => $id_domain);
+        next if !$req;
+        next if $req->at_time;
+        next if $command eq 'start' && !$req->after_request();
+        $self->after_request($req->id) if $req && $req->id < $self->id;
+    }
+}
+
+sub _validate_change_hardware($self) {
+
+    return if $self->after_request();
+
+    my $id_domain = $self->defined_arg('id_domain');
+    if (!$id_domain) {
+        my $domain_name = $self->defined_arg('name');
+        $id_domain = _search_domain_id(undef,$domain_name);
+    }
+    return if !$id_domain;
+    my $req = $self->_search_request('%_hardware', id_domain => $id_domain);
+
+    $self->after_request($req->id) if $req && $req->id < $self->id;
+}
+
+sub _validate_create_domain($self) {
+
+    my $base;
+    my $id_base = $self->defined_arg('id_base');
+
+    my $id_owner = $self->defined_arg('id_owner') or confess "ERROR: Missing id_owner";
+    my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Unknown user id: $id_owner";
+
+    $self->_validate_clone($id_base, $id_owner) if $id_base;
+
+    unless ( $owner->is_admin
+            || $owner->can_create_machine()
+            || ($id_base && $owner->can_clone)) {
+
+        return $self->_status_error("done","Error: access denied to user ".$owner->name);
+    }
+
+    $self->_check_downloading();
+}
+
+sub _check_downloading($self) {
+    my $id_iso = $self->defined_arg('id_iso');
+    my $iso_file = $self->defined_arg('iso_file');
+
+    $iso_file = '' if $iso_file && $iso_file eq '<NONE>';
+
+    return if !$id_iso && !$iso_file;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id,downloading,device,has_cd,name,url "
+        ." FROM iso_images "
+        ." WHERE (id=? or device=?) "
+    );
+    $sth->execute($id_iso,$iso_file);
+    my ($id_iso2,$downloading, $device, $has_cd, $iso_name, $iso_url)
+        = $sth->fetchrow;
+
+    return if !$downloading && $device;
+
+    my $req_download = $self->_search_request('download', id_iso => $id_iso2);
+
+    return $self->_status_error("done"
+        ,"Error: ISO file required for $iso_name")
+    if $has_cd && !$device && !$iso_file && !$iso_url && !$device;
+
+    if ($has_cd && !$device && !$iso_file && !$req_download) {
+        $req_download = Ravada::Request->download(
+            id_iso => $id_iso2
+            ,uid => Ravada::Utils::user_daemon->id
+            ,vm => $self->defined_arg('vm')
+        );
+    }
+    if (! $req_download) {
+        _mark_iso_downloaded($id_iso2);
+    } else {
+        $self->after_request($req_download->id);
+    }
+    $sth = $$CONNECTOR->dbh->prepare("SELECT args FROM requests"
+            ." WHERE id=?"
+    );
+    $sth->execute($self->id);
+    my $args_json = $sth->fetchrow();
+    my $args = decode_json($args_json);
+
+    if (exists $args->{iso_file} && !$args->{iso_file}) {
+        delete $args->{iso_file};
+        $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set args=?"
+            ." WHERE id=?"
+        );
+        $sth->execute(encode_json($args), $self->id);
+    }
+
+}
+
+sub _mark_iso_downloaded($id_iso) {
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE iso_images "
+        ." set downloading=0 "
+        ." WHERE id=?"
+    );
+    $sth->execute($id_iso);
+}
+
+sub _search_request($self,$command,%fields) {
+    my $query =
+        "SELECT id, args FROM requests WHERE command like ?"
+        ." AND status <> 'done' ";
+    $query .= "AND id <> ".$self->id if $self;
+    $query .= " ORDER BY date_req,id DESC ";
+    my $sth= $$CONNECTOR->dbh->prepare($query);
+    $sth->execute($command);
+
+    my @reqs;
+    while ( my ($id, $args_json) = $sth->fetchrow ) {
+        return Ravada::Request->open($id) if !keys %fields;
+
+        my $args = decode_json($args_json);
+        my $found=1;
+        for my $key (keys %fields) {
+            if (!exists $args->{$key} || !defined $args->{$key}
+                || $args->{$key} ne $fields{$key} ) {
+                $found = 0;
+                last;
+            }
+        }
+        next if !$found;
+        my $req = Ravada::Request->open($id);
+        return $req if !wantarray;
+        push @reqs,($req);
+    }
+    return @reqs;
+}
+
+sub _validate_clone($self
+                , $id_base= $self->args('id_domain')
+                , $uid=$self->args('uid')) {
+
+    my $base = Ravada::Front::Domain->open($id_base);
+
+    if ( !$uid ) {
+        $self->status('done');
+        $self->error("Error: missing uid");
+        return;
+    }
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+    if ( !$user ) {
+        $self->status('done');
+        $self->error("Error: user id='$uid' does not exist");
+        return;
+    }
+    return if $user->is_admin;
+    return if $user->can_clone_all;
+    return $self->_status_error('done'
+        ,"Error: user ".$user->name." can not clone.")
+        if !$user->can_clone();
+
+    return $self->_status_error('done'
+        ,"Error: ".$base->name." is not public.")
+        if !$base->is_public;
 }
 
 sub _last_insert_id {
@@ -802,6 +1043,11 @@ sub status {
     return $status;
 }
 
+sub _status_error($self, $status, $error) {
+    $self->status($status);
+    return $self->error($error);
+}
+
 =head2 at
 
 Sets the time when the request will be scheduled
@@ -818,14 +1064,23 @@ sub _search_domain_name {
     my $self = shift;
     my $domain_id = shift;
 
+    _init_connector();
+
     my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM domains where id=?");
     $sth->execute($domain_id);
     return $sth->fetchrow;
 }
 
+sub _dbh($self=undef) {
+
+    _init_connector();
+    return $$CONNECTOR->dbh;
+
+}
+
 sub _search_domain_id($self,$domain_name) {
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM domains where name=?");
+    my $sth = _dbh($self)->prepare("SELECT id FROM domains where name=?");
     $sth->execute($domain_name);
     return $sth->fetchrow;
 }
@@ -870,6 +1125,7 @@ sub _send_message {
         "INSERT INTO messages ( id_user, id_request, subject, message, date_shown ) "
         ." VALUES ( ?,?,?,?, NULL)"
     );
+    $subject = substr($subject,0,60) if length($subject)>60;
     $sth->execute($uid, $self->id,$subject, $message);
     $sth->finish;
 }
@@ -979,11 +1235,21 @@ Returns the arguments of a request or the value of one argument field
 sub args {
     my $self = shift;
     my $name = shift;
-    return $self->{args}    if !$name;
+
+    if ( !$name ) {
+        my $args = $self->{args};
+        $args = dclone($self->{args}) if ref($args);
+        return $args;
+    }
 
     confess "Unknown argument $name ".Dumper($self->{args})
         if !exists $self->{args}->{$name};
-    return $self->{args}->{$name};
+
+    my $ret = $self->{args}->{$name};
+    if (ref($ret)) {
+        return dclone($ret);
+    }
+    return $ret;
 }
 
 =head2 arg
@@ -992,12 +1258,26 @@ Sets or gets de value of an argument of a Request
 
 =cut
 
-sub arg($self, $name, $value) {
+sub arg($self, $name, $value=undef) {
 
     confess "Unknown argument $name ".Dumper($self->{args})
         if !exists $self->{args}->{$name} && !defined $value;
 
-    $self->{args}->{$name} = $value if defined $value;
+    if (defined $value) {
+        $self->{args}->{$name} = $value;
+
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT args FROM requests"
+            ." WHERE id=?"
+        );
+        $sth->execute($self->id);
+        my $args_json = $sth->fetchrow();
+        my $args = decode_json($args_json);
+        $args->{$name} = $value;
+        $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set args=?"
+            ." WHERE id=?"
+        );
+        $sth->execute(encode_json($args),$self->id);
+    }
     return $self->{args}->{$name};
 }
 
@@ -1012,7 +1292,10 @@ sub defined_arg {
     my $self = shift;
     my $name = shift;
     confess "ERROR: missing arg name" if !defined $name;
-    return $self->{args}->{$name};
+
+    my $ret = $self->{args}->{$name};
+    $ret = dclone($ret) if ref($ret);
+    return $ret;
 }
 
 =head2 copy_screenshot
@@ -1035,33 +1318,6 @@ sub copy_screenshot {
       ,id_domain => $args->{id_domain}
       ,args => $args
       );
-
-}
-
-=head2 refresh_vms
-
-Refreshes the Virtual Mangers
-
-=cut
-
-sub refresh_vms {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('refresh_vms', @_ );
-    if  (!$args->{_force} ) {
-          return if done_recently(undef,60,'refresh_vms') || _requested('refresh_vms');
-    }
-
-    my $self = {};
-    bless($self,$class);
-
-    _init_connector();
-    return $self->_new_request(
-        command => 'refresh_vms'
-        , args => $args
-    );
-
 
 }
 
@@ -1254,7 +1510,7 @@ sub enforce_limits {
         , args => $args
     );
 
-    if (!$args->{at} && (my $id_request = $req->done_recently(30))) {
+    if (!$args->{at} && !$args->{_force} && (my $id_request = $req->done_recently(30))) {
         $req->status("done",$req->command." run recently by id_request: $id_request");
     }
     return $req;
@@ -1280,7 +1536,7 @@ sub refresh_machine {
     my $id_requested = _requested('refresh_machine',id_domain => $id_domain);
     return Ravada::Request->open($id_requested) if $id_requested;
 
-    return if done_recently(undef,60,'refresh_machine');
+    return if $self->done_recently();
 
     my $req = _new_request($self
         , command => 'refresh_machine'
@@ -1324,26 +1580,51 @@ This method is used for commands that take long to run as garbage collection.
 
 =cut
 
-sub done_recently($self, $seconds=60,$command=undef) {
+sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
     _init_connector();
     my $id_req = 0;
+    my $args_d= {};
     if ($self) {
-        $id_req = $self->id;
+        $id_req = ( $self->id or 0 );
+        confess "Error: do not supply args if you supply request" if $args;
+        confess "Error: do not supply command if you supply request" if $command;
+        $args_d = $self->args;
         $command = $self->command;
+    } else {
+        $args_d = decode_json($args) if $args;
     }
-    my $query = "SELECT id FROM requests"
-        ." WHERE date_changed > ? "
+    delete $args_d->{uid};
+    delete $args_d->{at};
+
+    my $query = "SELECT id,args FROM requests"
+        ." WHERE date_changed >= ? "
         ."        AND command = ? "
-        ."         AND ( status = 'done' OR status ='working') "
-        ."         AND  error = '' "
+        ."         AND ( status = 'done' OR status ='working' OR status = 'requested') "
+        ."         AND ( error IS NULL OR error = '' ) "
         ."         AND id <> ? ";
 
     my $sth = $$CONNECTOR->dbh->prepare( $query );
     my $date= Time::Piece->localtime(time - $seconds);
-    $sth->execute($date->ymd." ".$date->hms, $command, $id_req);
-    my ($id) = $sth->fetchrow;
-    return if !defined $id;
-    return $id;
+    my $date_before = $date->ymd." ".$date->hms;
+    $sth->execute($date_before, $command, $id_req);
+    while (my ($id,$args_found, $date) = $sth->fetchrow) {
+        next if $self && defined $self->id && $self->id == $id;
+
+        return Ravada::Request->open($id) if !keys %$args_d;
+
+        my $args_found_d = decode_json($args_found);
+        delete $args_found_d->{uid};
+        delete $args_found_d->{at};
+
+        next if join(".",sort keys %$args_d) ne join(".",sort keys %$args_found_d);
+        my $args_d_s = join(".",map { $args_d->{$_} } sort keys %$args_d);
+        my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
+        next if $args_d_s ne $args_found_s;
+
+        return Ravada::Request->open($id);
+    }
+
+    return;
 }
 
 sub _requested($command, %fields) {
@@ -1419,8 +1700,10 @@ sub requirements_done($self) {
     my $ok = 0;
     if ($after_request) {
         $ok = 0;
-        my $req = Ravada::Request->open($self->after_request);
-        $ok = 1 if $req->status eq 'done';
+        my $req;
+        eval { $req = Ravada::Request->open($self->after_request) };
+        die $@ if $@ && $@!~ /I can't find|not found/i;
+        $ok = 1 if !$req || $req->status eq 'done';
     }
     if ($after_request_ok) {
         $ok = 0;
@@ -1432,6 +1715,20 @@ sub requirements_done($self) {
         $ok = 1 if $req->status eq 'done' && ( !defined $req->error || $req->error eq '' );
     }
     return $ok;
+}
+
+=head2 redo
+
+    Set the request to be executed again
+
+=cut
+
+sub redo($self) {
+    my $sth = $self->_dbh->prepare(
+        "UPDATE requests SET status='requested',start_time=NULL "
+        ." WHERE id=?"
+    );
+    $sth->execute($self->id);
 }
 
 sub AUTOLOAD {
@@ -1471,6 +1768,7 @@ sub AUTOLOAD {
     confess "Error: $name can't be a ref ".Dumper($value) if ref($value);
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
             ." WHERE id=?");
+    confess if $name eq 'error' && !defined $value;
     eval {
         $sth->execute($value, $self->{id});
         $sth->finish;

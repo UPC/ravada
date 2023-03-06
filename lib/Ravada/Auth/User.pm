@@ -9,8 +9,11 @@ Ravada::Auth::User - User management and tools library for Ravada
 
 =cut
 
+use utf8;
 use Carp qw(confess croak);
 use Data::Dumper;
+use Encode;
+use Mojo::JSON qw(decode_json);
 use Moose::Role;
 
 no warnings "experimental::signatures";
@@ -21,7 +24,7 @@ requires 'is_admin';
 requires 'is_external';
 
 has 'name' => (
-           is => 'ro'
+           is => 'rw'
          ,isa => 'Str'
     ,required =>1
 );
@@ -143,7 +146,7 @@ sub unshown_messages {
     my $count = shift;
     $count = 50 if !defined $count;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject, message FROM messages "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id, subject, message, id_request FROM messages "
         ." WHERE id_user=? AND date_shown IS NULL"
         ."    ORDER BY date_send DESC "
         ." LIMIT ?,?");
@@ -152,6 +155,8 @@ sub unshown_messages {
     my @rows;
 
     while (my $row = $sth->fetchrow_hashref ) {
+        $row->{subject} = Encode::decode_utf8($row->{subject});
+        $row->{message} = Encode::decode_utf8($row->{message});
         push @rows,($row);
         $self->mark_message_shown($row->{id})   if $row->{id};
     }
@@ -337,6 +342,7 @@ sub allowed_access($self,$id_domain) {
 
 sub _list_domains_access($self) {
 
+    _init_connector();
     my @domains;
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT distinct(id_domain) FROM access_ldap_attribute"
@@ -386,7 +392,7 @@ sub _load_allowed {
                     if !exists $self->{_allowed}->{$id_domain};
                 last;
             } elsif ( $ldap_entry && defined $ldap_entry->get_value($attribute)
-                    && $ldap_entry->get_value($attribute) eq $value ) {
+                    && grep { $value eq $_ } $ldap_entry->get_value($attribute) ) {
 
                 $self->{_allowed}->{$id_domain} = $allowed;
 
@@ -422,9 +428,46 @@ sub _load_allowed_groups($self) {
 
         next unless $self->is_external && $self->external_auth eq 'ldap';
 
+        if (!Ravada::Auth::LDAP::search_group(name => $name)) {
+            next;
+        }
+
         $self->{_allowed}->{$id_domain} = 1
         if Ravada::Auth::LDAP::is_member($self->ldap_entry, $name);
     }
+}
+
+=head2 list_requests
+
+List the requests for this user. It returns requests from the last hour
+by default.
+
+Arguments: optionally pass the date to start search for requests.
+
+
+=cut
+
+sub list_requests($self, $date_req=Ravada::Utils::date_now(3600)) {
+    my $sth = $$CONNECTOR->dbh
+    ->prepare("SELECT id,args FROM requests WHERE date_req > ?"
+    ." ORDER BY date_req DESC");
+
+    my ($id, $args_json);
+
+    $sth->execute($date_req);
+    $sth->bind_columns(\($id, $args_json));
+
+    my @req;
+    while ( $sth->fetch ) {
+        my $args = decode_json($args_json);
+        next if !length $args;
+        my $uid = ($args->{uid} or $args->{id_owner}) or next;
+        next if $uid != $self->id;
+
+        my $req = Ravada::Request->open($id);
+        push @req, ( $req );
+    }
+    return @req;
 }
 
 1;

@@ -31,7 +31,7 @@
                             <tbody>
     %                         for my $user (@$list_users) {
                                 <tr>
-                                    <td><a href="/admin/user/<%= $user->{id} %>.html"><%= $user->{name} %></a></td>
+                                    <td><a href="/admin/user/<%= $user->{id} %>.html"><%= Encode::decode_utf8($user->{name}) %></a></td>
                                 </tr>
     %                         }
                             </tbody>

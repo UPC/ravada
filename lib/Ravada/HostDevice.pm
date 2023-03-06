@@ -77,6 +77,7 @@ sub search_by_id($self, $id) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM host_devices WHERE id=?");
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
+    die "Error: device id='$id' not found" if !exists $row->{id};
     $row->{devices} = '' if !defined $row->{devices};
 
     return Ravada::HostDevice->new(%$row);
@@ -101,6 +102,15 @@ sub list_devices($self) {
     my $encoded = encode_json(\@device);
     $self->_data( devices => $encoded );
     return @device;
+}
+
+sub is_device($self, $device) {
+    return if !defined $device;
+    for my $dev ( $self->list_devices ) {
+       return 1 if $dev eq $device;
+    }
+    return 0;
+
 }
 
 sub _device_locked($self, $name) {
@@ -150,7 +160,9 @@ sub _fetch_template_args($self, $device) {
         } else {
             my ($value) = $device =~ qr($re);
             confess "Error: $re not found in '$device'" if !defined $value;
-            $value =~ s/^0+// if $value =~ /^[0-9]+$/;
+            # we do have to remove leading 0 or those numbers
+            # will be converted from Octal !
+            $value =~ s/^0+([0-9a-f]+)/$1/ if $value =~ /^0*[0-9a-f]*$/;
             $ret->{$name} = ''.$value;
         }
     }
@@ -195,11 +207,16 @@ sub _data($self, $field, $value=undef) {
             || $value !~ /^(ls|find)/);
 
         $value = encode_json($value) if ref($value);
+
+        my $old_value = $self->_data($field);
+        return if defined $old_value && $old_value eq $value;
+
         my $sth = $$CONNECTOR->dbh->prepare("UPDATE host_devices SET $field=?"
             ." WHERE id=? "
         );
         $sth->execute($value, $self->id);
         $self->meta->get_attribute($field)->set_value($self, $value);
+        $self->_dettach_in_domains() if $field =~ /^(devices|list_)/;
         return $value;
     } else {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM host_devices"
@@ -209,6 +226,24 @@ sub _data($self, $field, $value=undef) {
         my $row = $sth->fetchrow_hashref();
         die "Error: No field '$field' in host_devices" if !exists $row->{$field};
         return $row->{$field};
+    }
+}
+
+sub list_domains_with_device($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_domain FROM host_devices_domain "
+        ." WHERE id_host_device=?");
+    $sth->execute($self->id);
+    my @domains;
+    while (my ($id_domain) = $sth->fetchrow ) {
+        push @domains,($id_domain);
+    }
+    return @domains;
+}
+
+sub _dettach_in_domains($self) {
+    for my $id_domain ( $self->list_domains_with_device() ) {
+        my $domain = Ravada::Domain->open($id_domain);
+        $domain->_dettach_host_device($self) if !$domain->is_active();
     }
 }
 

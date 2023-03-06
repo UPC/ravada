@@ -3,25 +3,29 @@
 </div>
 
 <div class="row">
-    <div class="col-md-3" align="right">All machines</div>
+    <div class="col-md-3" align="right"><%=l 'All machines' %></div>
     <div class="col-md-1" align="left">
         <input type="checkbox" name="address" ng-model="network.all_domains"
             ng-true-value="1" ng-false-value="0"
             ng-change="check_all_domains(); update_network()"
         >
     </div>
-    <div class="col-md-8">Users from this network can run all virtual machines</div>
+    <div class="col-md-8">
+      <%=l 'Users from this network can run all virtual machines' %>
+    </div>
 </div>
 
 <div class="row">
-    <div class="col-md-3" align="right">No machines</div>
+    <div class="col-md-3" align="right"><%=l 'No machines' %></div>
     <div class="col-md-1" align="left">
         <input type="checkbox" name="address" ng-model="network.no_domains"
             ng-true-value="1" ng-false-value="0"
             ng-change="check_no_domains(); update_network()"
         >
     </div>
-    <div class="col-md-8">Users from this network can run no virtual machines</div>
+    <div class="col-md-8">
+      <%=l 'Users from this network can run no virtual machines' %>
+    </div>
 </div>
 <hr/>
 
@@ -29,11 +33,10 @@
 <div ng-show="network.no_domains == 0">
 <div class="row">
     <div class="col-md-2">
-        Public
+      <%=l 'Public' %>
     </div>
-
     <div class="col-md-2">
-        Anonymous
+      <%=l 'Anonymous' %>
     </div>
 </div>
 
@@ -60,12 +63,12 @@
 
         <div ng-show="machine.anonymous == 1 && machine.allowed== 0"
             class="alert alert-warning">
-                Warning: anonymous machines won't show up unless you enable allowed.
+            <%=l 'Warning: anonymous machines won\'t show up unless you enable allowed.' %>
         </div>
 
         <div ng-show="machine.anonymous == 1 && machine.is_public == 0"
             class="alert alert-warning">
-                Warning: anonymous machines won't show up unless you set them public.
+            <%=l 'Warning: anonymous machines won\'t show up unless you set them public.' %>
         </div>
 
     </div>

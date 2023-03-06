@@ -1,21 +1,21 @@
 <div class="container-fluid">
 <form name="formNode">
 <div class="row">
-    <div class="col-md-3" align="right">name</div>
+    <div class="col-md-3" align="right"><%=l 'name' %></div>
     <div class="col-md-8">
         <input type="text" ng-model="node.name">
     </div>
 </div>
 
 <div class="row">
-    <div class="col-md-3" align="right">host</div>
+    <div class="col-md-3" align="right"><%=l 'host' %></div>
     <div class="col-md-8" align="left">
         <input type="text" ng-model="node.hostname">
     </div>
 </div>
 
 <div class="row">
-    <div class="col-md-3" align="right">base storage</div>
+    <div class="col-md-3" align="right"><%=l 'base storage' %></div>
     <div class="col-md-8">
         <input type="text" ng-model="node.base_storage" ng-hide="storage_pools"
         />
@@ -27,7 +27,7 @@
 </div>
 
 <div class="row">
-    <div class="col-md-3" align="right">clone storage</div>
+    <div class="col-md-3" align="right"><%=l 'clone storage' %></div>
     <div class="col-md-8">
         <input type="text" ng-model="node.clone_storage" ng-hide="storage_pools"
         />
@@ -39,7 +39,7 @@
 </div>
 
 <div class="row">
-    <div class="col-md-3" align="right">default storage</div>
+    <div class="col-md-3" align="right"><%=l 'default storage' %></div>
     <div class="col-md-8">
         <input type="text" ng-model="node.default_storage" ng-hide="storage_pools"
         />
@@ -49,17 +49,25 @@
         </select>
     </div>
 </div>
+
+<div class="row">
+    <div class="col-md-3" align="right"><%=l 'backup directory' %></div>
+    <div class="col-md-8">
+        <input type="text" size="60" ng-model="node.dir_backup"/>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-md-3" align="right"></div>
     <div class="col-md-4" align="left">
         <button ng-show="node.id" class="btn btn-outline-secondary"
-            ng-click="load_node()">cancel</button>
+            ng-click="load_node()"><%=l 'Cancel' %></button>
         <button class="btn btn-primary"
             ng-click="update_node()"
             ng-disabled="!formNode.$valid || formNode.$pristine
             || node._duplicated_name
             || node._duplicated_address
-            ">save</button>
+            "><%=l 'Save' %></button>
     </div>
 </div>
 
@@ -67,7 +75,7 @@
 
 <div class="row">
     <div class="col-md-8 alert alert-info" ng-show="saved && formNode.$pristine">
-        Node {{node.name}} saved.
+        <%=l 'Node' %> {{node.name}} <%=l 'saved.' %>
     </div>
     <div class="col-md-8 alert alert-danger" ng-show="error">
         {{error}}

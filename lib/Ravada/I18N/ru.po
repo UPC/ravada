@@ -1,0 +1,2241 @@
+# Translation for Ravada project
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
+msgid ""
+msgstr ""
+"PO-Revision-Date: 2022-09-05 20:20+0000\n"
+"Last-Translator: Elena Mishina <lepata@basealt.ru>\n"
+"Language-Team: Russian <https://hosted.weblate.org/projects/ravada/"
+"translation/ru/>\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;\n"
+"X-Generator: Weblate 4.14.1-dev\n"
+
+msgid "Ravada broker"
+msgstr "Брокер Ravada"
+
+msgid "Machine Name"
+msgstr "Имя машины"
+
+msgid "Tools"
+msgstr "Инструменты"
+
+msgid "Choose a Machine to Start"
+msgstr "Выберите машину для запуска"
+
+msgid "Start"
+msgstr "Запустить"
+
+msgid "Stop"
+msgstr "Остановить"
+
+msgid "View"
+msgstr "Просмотр"
+
+msgid "Prepare base"
+msgstr "Подготовить базу"
+
+msgid "Clone"
+msgstr "Клонировать"
+
+msgid "Clone/s"
+msgstr "Клон/ы"
+
+msgid "Users List"
+msgstr "Список пользователей"
+
+msgid "Name"
+msgstr "Имя"
+
+msgid "Log Out"
+msgstr "Выйти"
+
+msgid "Available Machines"
+msgstr "Доступные машины"
+
+msgid "Help"
+msgstr "Справка"
+
+msgid "Requirements"
+msgstr "Требования"
+
+msgid "About"
+msgstr "О программе"
+
+msgid "Mark all as read"
+msgstr "Отметить всё как прочитанное"
+
+msgid "Settings"
+msgstr "Настройки"
+
+msgid "New Machine"
+msgstr "Новая машина"
+
+msgid "I want to change my password"
+msgstr "Я хочу изменить свой пароль"
+
+msgid "I want to change my language"
+msgstr "Я хочу изменить язык"
+
+msgid "Language:"
+msgstr "Язык:"
+
+msgid "English"
+msgstr "Английский"
+
+msgid "Spanish"
+msgstr "Испанский"
+
+msgid "Catalan"
+msgstr "Каталонский"
+
+msgid "Galician"
+msgstr "Галисийский"
+
+msgid "French"
+msgstr "Французский"
+
+msgid "Hindi"
+msgstr "Хинди"
+
+msgid "Indonesian"
+msgstr "Индонезийский"
+
+msgid "Persian"
+msgstr "Персидский"
+
+msgid "Japanese"
+msgstr "Японский"
+
+msgid "German"
+msgstr "Немецкий"
+
+msgid "New Password:"
+msgstr "Новый пароль:"
+
+msgid "Confirm Password:"
+msgstr "Подтверждение пароля:"
+
+msgid "Submit"
+msgstr "Применить"
+
+msgid "Your language has been changed successfully"
+msgstr "Язык изменён"
+
+msgid "Your password has been changed successfully"
+msgstr "Пароль изменён"
+
+msgid "Password is too short"
+msgstr "Пароль слишком короткий"
+
+msgid "Password fields do not match"
+msgstr "Пароли не совпадают"
+
+msgid "Some of the password fields are empty"
+msgstr "Некоторые поля пароля пусты"
+
+msgid "Status"
+msgstr "Статус"
+
+msgid "Actions"
+msgstr "Действия"
+
+msgid "Down"
+msgstr "Выключена"
+
+msgid "Running"
+msgstr "Работает"
+
+msgid "Shutdown"
+msgstr "Выключить"
+
+msgid "Screenshot"
+msgstr "Снимок экрана"
+
+msgid "Paused"
+msgstr "Пауза"
+
+msgid "Machine locked by request"
+msgstr "Машина заблокирована по запросу"
+
+msgid "Process"
+msgstr "Процесс"
+
+msgid "Copy"
+msgstr "Копировать"
+
+msgid "Error!"
+msgstr "Ошибка!"
+
+msgid "Error"
+msgstr "Ошибка"
+
+msgid "Backend not available!"
+msgstr "Backend недоступен!"
+
+msgid "Subject"
+msgstr "Тема"
+
+msgid "Date"
+msgstr "Дата"
+
+msgid "Mark as read"
+msgstr "Пометить прочитанным"
+
+msgid "Mark as unread"
+msgstr "Пометить непрочитанным"
+
+msgid "No messages to show"
+msgstr "Нет сообщений"
+
+msgid "Admin"
+msgstr "Администратор"
+
+msgid "Machines"
+msgstr "Машины"
+
+msgid "machines"
+msgstr "машины"
+
+msgid "Users"
+msgstr "Пользователи"
+
+msgid "users"
+msgstr "пользователи"
+
+msgid "Messages"
+msgstr "Сообщения"
+
+msgid "messages"
+msgstr "сообщения"
+
+msgid "Admin tools"
+msgstr "Инструменты администратора"
+
+msgid "Remove base"
+msgstr "Удалить базу"
+
+msgid "Restore"
+msgstr "Восстановить"
+
+msgid "Hibernate"
+msgstr "Приостановить"
+
+msgid "Are you sure?"
+msgstr "Вы уверены?"
+
+msgid "Yes"
+msgstr "Да"
+
+msgid "No"
+msgstr "Нет"
+
+msgid "Make public"
+msgstr "Опубликовать"
+
+msgid "Machine settings"
+msgstr "Настройки машины"
+
+msgid "Cannot remove base, machine has clones"
+msgstr "Не удаётся удалить базу, у машины есть клоны"
+
+msgid "show clones"
+msgstr "показать клоны"
+
+msgid "hide clones"
+msgstr "скрыть клоны"
+
+msgid "For Spice redirection you will need to install"
+msgstr "Для получения доступа по протоколу Spice необходимо установить"
+
+msgid "in your computer."
+msgstr "на компьютер."
+
+msgid "Search in your distro, e.g. in Debian/Ubuntu with"
+msgstr ""
+"Найдите пакет в своем дистрибутиве, например, команда установки для Debian/"
+"Ubuntu"
+
+msgid "You will need to install"
+msgstr "Необходимо установить"
+
+msgid "and USB drivers ("
+msgstr "и USB -драйверы ("
+
+msgid ""
+"Be aware that in Windows, Spice redirection is not automatic. It is "
+"necessary to associate protocol with the app."
+msgstr ""
+"В Windows перенаправление Spice не выполняется автоматически. Необходимо "
+"зарегистрировать протокол."
+
+msgid "To make this possible, download"
+msgstr "Чтобы это стало возможным, скачайте"
+
+msgid ""
+"or copy the following lines in an ASCII file and save with extension .reg, "
+"then execute the file."
+msgstr ""
+"или скопируйте следующие строки в кодировке ASCII в файл, сохраните его с "
+"расширением .reg и запустите файл."
+
+msgid "Login"
+msgstr "Войти"
+
+msgid "Welcome"
+msgstr "Добро пожаловать"
+
+msgid "A viewer is required to run the virtual machines."
+msgstr "Для запуска виртуальных машин требуется средство просмотра."
+
+msgid "It is required a viewer to run the virtual machines."
+msgstr "Для запуска виртуальных машин требуется средство просмотра."
+
+msgid "Virtual Machines"
+msgstr "Виртуальные машины"
+
+msgid "User"
+msgstr "Пользователь"
+
+msgid "Password"
+msgstr "Пароль"
+
+msgid "Start session"
+msgstr "Начать сеанс"
+
+msgid "bits) in your computer."
+msgstr "бит) на компьютер."
+
+msgid "Permissions"
+msgstr "Разрешения"
+
+msgid "can change the settings of owned virtual machines."
+msgstr "может изменять настройки собственных виртуальных машин."
+
+msgid "can change the settings of any virtual machines."
+msgstr "может изменять настройки любых виртуальных машин."
+
+msgid "can change the settings of any virtual machines "
+msgstr "может изменять настройки любых виртуальных машин"
+
+msgid "cloned from one base owned by the user."
+msgstr "клонированной из базы, принадлежащей пользователю."
+
+msgid "can clone public virtual machines."
+msgstr "может клонировать общедоступные виртуальные машины."
+
+msgid "can clone any virtual machine."
+msgstr "может клонировать любую виртуальную машину."
+
+msgid "can create bases."
+msgstr "может создавать базы."
+
+msgid "can create virtual machines."
+msgstr "может создавать виртуальные машины."
+
+msgid "can grant permissions to other users"
+msgstr "может предоставлять разрешения другим пользователям"
+
+msgid "can hibernate any virtual machine."
+msgstr "может приостанавливать любую виртуальную машину."
+
+msgid "can hibernate clones from virtual machines owned by the user."
+msgstr ""
+"может приостанавливать клоны виртуальных машин, принадлежащих пользователю."
+
+msgid "can hibernate any clone."
+msgstr "может приостанавливать любой клон."
+
+msgid "can remove any virtual machines owned by the user."
+msgstr "может удалить любые виртуальные машины, принадлежащие пользователю."
+
+msgid "can remove any virtual machine."
+msgstr "может удалять любые виртуальные машины."
+
+msgid "can remove clones from virtual machines owned by the user."
+msgstr "может удалять клоны виртуальных машин, принадлежащих пользователю."
+
+msgid "can remove any clone."
+msgstr "может удалять любые клоны."
+
+msgid "can take a screenshot of any virtual machine owned by the user."
+msgstr ""
+"может делать снимки экрана любой виртуальной машины, принадлежащей "
+"пользователю."
+
+msgid "can take a screenshot of any virtual machine."
+msgstr "может делать снимки экрана любой виртуальной машины."
+
+msgid "can shutdown any virtual machine."
+msgstr "может выключать любую виртуальную машину."
+
+msgid "can shutdown clones from virtual machines owned by the user."
+msgstr "может выключать клоны виртуальных машин, принадлежащих пользователю."
+
+msgid "Submit Query"
+msgstr "Отправить запрос"
+
+msgid "From Template"
+msgstr "Из шаблона"
+
+msgid "From Machine"
+msgstr "Из машины"
+
+msgid "Backend"
+msgstr "Backend"
+
+msgid "Select Template"
+msgstr "Выберите шаблон"
+
+msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
+msgstr ""
+"Этот ISO образ еще не загружен. Загрузка файла из Интернета может занять "
+"продолжительное время."
+
+msgid "Download now"
+msgstr "Загрузить сейчас"
+
+msgid "Select ISO"
+msgstr "Выбрать ISO"
+
+msgid "Template"
+msgstr "Шаблон"
+
+msgid "Disk Size: (GB)"
+msgstr "Размер диска: (ГБ)"
+
+msgid "Swap Size: (GB)"
+msgstr "Размер Swap: (ГБ)"
+
+msgid "Ram: (GB)"
+msgstr "ОЗУ: (ГБ)"
+
+msgid "Machine name is required."
+msgstr "Имя машины обязательно."
+
+msgid "Machine name can't exceed 20 characters."
+msgstr "Имя виртуальной машины не может превышать 20 символов."
+
+msgid "Backend selection is required."
+msgstr "Необходимо выбрать Backend."
+
+msgid "ISO image selection is required."
+msgstr "Необходимо выбрать ISO образ."
+
+msgid "Template selection is required."
+msgstr "Необходимо выбрать шаблон."
+
+msgid "A machine with that name already exists."
+msgstr "Виртуальная машина с таким именем уже существует."
+
+msgid "The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points."
+msgstr ""
+"Имя виртуальной машины может состоять только из букв латинского алфавита, "
+"цифр, дефисов и точек."
+
+msgid "Create"
+msgstr "Создать"
+
+msgid ""
+"can change the settings of all virtual machines "
+"cloned from one base owned by the user."
+msgstr ""
+"может изменять настройки всех виртуальных машин, клонированных из базы, "
+"принадлежащей пользователю."
+
+msgid "monitoring"
+msgstr "мониторинг"
+
+msgid "Are you sure you want to remove the Base of"
+msgstr "Вы уверены, что хотите удалить Базу"
+
+msgid "Are you sure you want to prepare the Base of"
+msgstr "Вы уверены, что хотите подготовить Базу"
+
+msgid "Are you sure you want to change the Public state of"
+msgstr "Вы уверены, что хотите изменить общедоступное состояние"
+
+msgid "Search"
+msgstr "Поиск"
+
+msgid "There are no public bases available in this system."
+msgstr "В этой системе нет общедоступных баз."
+
+msgid "There are no machines available in this system."
+msgstr "В этой системе нет доступных машин."
+
+msgid "Create one."
+msgstr "Создать."
+
+msgid "not public"
+msgstr "не опубликовано"
+
+msgid "User Settings"
+msgstr "Настройки пользователя"
+
+msgid "Create a new account"
+msgstr "Создать новую учётную запись"
+
+msgid "Username"
+msgstr "Имя пользователя"
+
+msgid "Hide Private"
+msgstr "Скрыть неопубликованные"
+
+msgid "Show All"
+msgstr "Показать все"
+
+msgid "Shutting down ..."
+msgstr "Выключение…"
+
+msgid "It may take a couple of minutes."
+msgstr "Это может занять пару минут."
+
+msgid "Hibernating ..."
+msgstr "Приостановка…"
+
+msgid "Description"
+msgstr "Описание"
+
+msgid "Rename"
+msgstr "Переименовать"
+
+msgid "Options"
+msgstr "Параметры"
+
+msgid "Drivers"
+msgstr "Драйверы"
+
+msgid "Graphics"
+msgstr "Графика"
+
+msgid "Remove Machine"
+msgstr "Удалить машину"
+
+msgid "System overview"
+msgstr "Обзор системы"
+
+msgid "Danger Zone"
+msgstr "Опасная зона"
+
+msgid "Once you delete the machine, there is no going back. Please be certain."
+msgstr ""
+"Отменить удаление машины невозможно. Пожалуйста, убедитесь, что вы знаете, "
+"что делаете."
+
+msgid "Danger"
+msgstr "Опасность"
+
+msgid "This will remove all the contents of the machine"
+msgstr "Будет удалено всё содержимое машины"
+
+msgid "This action can't be undone"
+msgstr "Это действие нельзя отменить"
+
+msgid "Are you sure ?"
+msgstr "Вы уверены?"
+
+msgid "Yes, remove"
+msgstr "Да, удалить"
+
+msgid "Virtual Machine"
+msgstr "Виртуальная машина"
+
+msgid "removed"
+msgstr "удалена"
+
+msgid "This will remove all the"
+msgstr "Будут удалены"
+
+msgid "clones of the machine"
+msgstr "клона(ов) виртуальной машины"
+
+msgid "Yes, remove all the clones"
+msgstr "Да, удалить все клоны"
+
+msgid "This virtual machine can't be removed because it has"
+msgstr "Эту виртуальную машину нельзя удалить, так как у неё есть"
+
+msgid "clones"
+msgstr "клон(а/ов)"
+
+msgid "Clones"
+msgstr "Клоны"
+
+msgid "This machine has not Graphics parameters!"
+msgstr "У этой машины нет графических параметров!"
+
+msgid "recommended"
+msgstr "рекомендуется"
+
+msgid "to"
+msgstr "на"
+
+msgid "Changing Public State"
+msgstr "Изменение общедоступного состояния"
+
+msgid "Changing Base State"
+msgstr "Изменение базового состояния"
+
+msgid "action"
+msgstr "действие"
+
+msgid "Grants"
+msgstr "Права"
+
+msgid "public"
+msgstr "опубликовано"
+
+msgid "New Base"
+msgstr "Новая база"
+
+msgid "Version"
+msgstr "Версия"
+
+msgid "Authors"
+msgstr "Авторы"
+
+msgid "Development"
+msgstr "Разработка"
+
+msgid "Below are listed the technologies used in this project:"
+msgstr "Ниже перечислены технологии, используемые в этом проекте:"
+
+msgid "The code is available on "
+msgstr "Код доступен на"
+
+msgid "The code is "
+msgstr "Код находится под"
+
+msgid "License"
+msgstr "Лицензия"
+
+msgid "Machine locked by"
+msgstr "Машина заблокирована"
+
+msgid "This Machine is a base"
+msgstr "Эта машина является базой"
+
+msgid "Cloned"
+msgstr "Клонированный"
+
+msgid "is admin"
+msgstr "администратор"
+
+msgid "Add new user"
+msgstr "Добавить нового пользователя"
+
+msgid "Register"
+msgstr "Зарегистрироваться"
+
+msgid "Current Password:"
+msgstr "Текущий пароль:"
+
+msgid "For more information, check"
+msgstr "Для получения дополнительной информации обратитесь к"
+
+msgid "the Windows Clients documentation"
+msgstr "документации по клиентам Windows"
+
+msgid "It is programmed in"
+msgstr "язык программирования"
+
+msgid "with perl framework"
+msgstr "Perl фреймворк"
+
+msgid "and"
+msgstr "и"
+
+msgid "Memory"
+msgstr "Память"
+
+msgid "MB available"
+msgstr "МБ доступно"
+
+msgid "The machine will shutdown after these minutes"
+msgstr "Машина будет выключена, по истечении этого количества минут"
+
+msgid "Cancel"
+msgstr "Отменить"
+
+msgid "Please enter the following information to create the account"
+msgstr "Укажите следующие данные для создания учётной записи"
+
+msgid "Enter Username"
+msgstr "Имя пользователя"
+
+msgid "Enter Password"
+msgstr "Пароль"
+
+msgid "Confirm Password"
+msgstr "Подтверждение пароля"
+
+msgid "Username is required"
+msgstr "Имя пользователя обязательно"
+
+msgid "Username can not exceed 20 characters"
+msgstr "Длина имени пользователя не может превышать 20 символов"
+
+msgid "Username must be at least 5 characters"
+msgstr "Длина имени пользователя должна быть не менее 5 символов"
+
+msgid "Username can only contain words, numbers, dashes, dots and underscores"
+msgstr ""
+"Имя пользователя может состоять только из букв латинского алфавита, цифр, "
+"дефисов, точек и символов подчеркивания"
+
+msgid "Password is required"
+msgstr "Пароль обязателен"
+
+msgid "Password can not exceed 20 characters"
+msgstr "Длина пароля не может превышать 20 символов"
+
+msgid "Password must be at least 5 characters"
+msgstr "Длина пароля должна быть не менее 5 символов"
+
+msgid "Password can only contain words and numbers"
+msgstr "Пароль может содержать только буквы латинского алфавита и цифры"
+
+msgid "Confirm Password is required"
+msgstr "Требуется подтверждение пароля"
+
+msgid "Confirm Password can not exceed 20 characters"
+msgstr "Подтверждение пароля не может превышать 20 символов"
+
+msgid "Confirm Password must be at least 5 characters"
+msgstr "Подтверждение пароля должно быть не менее 5 символов"
+
+msgid "Confirm Password can only contain words and numbers"
+msgstr "Подтверждение пароля может содержать только слова и цифры"
+
+msgid "This information will be available to the users"
+msgstr "Эта информация будет доступна пользователям"
+
+msgid "Volatile Clones"
+msgstr "Непостоянные клоны"
+
+msgid "Owner"
+msgstr "Владелец"
+
+msgid "Change the owner of the machine"
+msgstr "Изменить владельца машины"
+
+msgid "Press SHIFT + F12 to exit"
+msgstr "Для выхода нажмите SHIFT + F12"
+
+msgid "If you can not see the machine screen in a few seconds check for a file called"
+msgstr ""
+"Если вы не увидите экран виртуальной машины через несколько секунд, "
+"проверьте наличие файла"
+
+msgid "in your downloads folder."
+msgstr "в каталоге загрузки."
+
+msgid "copied to clipboard"
+msgstr "скопировано в буфер обмена"
+
+msgid "Portuguese"
+msgstr "Португальский"
+
+msgid "Read more."
+msgstr "Читать далее."
+
+msgid "The password for this virtual machine connection is :"
+msgstr "Пароль для подключения к этой виртуальной машине:"
+
+msgid "view"
+msgstr "просмотр"
+
+msgid "Start again"
+msgstr "Запустить снова"
+
+msgid "The machine is down."
+msgstr "Машина выключена."
+
+msgid "Remove"
+msgstr "Удалить"
+
+msgid "The machine must be started to take the screenshot."
+msgstr "Для возможности получения снимка экрана, машина должна быть запущена."
+
+msgid "Take screenshot"
+msgstr "Сделать снимок экрана"
+
+msgid "Set base picture"
+msgstr "Установить базовое изображение"
+
+msgid "Saving the screenshot, please wait a moment..."
+msgstr "Сохранение снимка экрана, пожалуйста, подождите немного…"
+
+msgid "You need to run the machine in order to take a screenshot."
+msgstr "Чтобы сделать снимок экрана необходимо запустить машину."
+
+msgid "Copying the screenshot, please wait a moment..."
+msgstr "Копирование снимка экрана, пожалуйста, подождите немного…"
+
+msgid "You need a screenshot in order to copy it to the base machine."
+msgstr "Снимок экрана нужен для того, чтобы скопировать его на базовую машину."
+
+msgid "Add"
+msgstr "Добавить"
+
+msgid "The changes will apply on next restart"
+msgstr "Изменения будут применены при следующем перезапуске"
+
+msgid "This VM is running and can't be renamed."
+msgstr "Эта ВМ работает и не может быть переименована."
+
+msgid "Thanks to:"
+msgstr "Благодарность:"
+
+msgid "licensed."
+msgstr "лицензией."
+
+msgid "New Node"
+msgstr "Новый узел"
+
+msgid "Address"
+msgstr "Адрес"
+
+msgid "A node with that name already exists."
+msgstr "Узел с таким именем уже существует."
+
+msgid "Setting your default language"
+msgstr "Установка языка по умолчанию"
+
+msgid "Change password"
+msgstr "Изменить пароль"
+
+msgid "Update password"
+msgstr "Обновить пароль"
+
+msgid "Start all clones"
+msgstr "Запустить все клоны"
+
+msgid "Access denied"
+msgstr "Доступ запрещён"
+
+msgid "Empty login name"
+msgstr "Пустое имя для входа"
+
+msgid "Empty password"
+msgstr "Пустой пароль"
+
+msgid "Session timeout"
+msgstr "Время жизни сеанса"
+
+msgid "Vietnamese"
+msgstr "Вьетнамский"
+
+msgid "Italian"
+msgstr "Итальянский"
+
+msgid "Type a typical LDAP user name to fetch the attribute list"
+msgstr "Введите имя пользователя LDAP, чтобы получить список атрибутов"
+
+msgid "User name"
+msgstr "Пользователь"
+
+msgid "not found in LDAP server"
+msgstr "не найден на сервере LDAP"
+
+msgid "Attribute"
+msgstr "Атрибут"
+
+msgid "Value"
+msgstr "Значение"
+
+msgid "Allowed"
+msgstr "Разрешено"
+
+msgid "Last"
+msgstr "Последний"
+
+msgid "Default"
+msgstr "По умолчанию"
+
+msgid "If none of the previous match, access is allowed."
+msgstr "Если ни одно из предыдущих совпадений, доступ разрешен."
+
+msgid "If none of the previous match, access is denied."
+msgstr "Если ни одно из предыдущих совпадений, доступ запрещён."
+
+msgid "verify"
+msgstr "проверить"
+
+msgid "save"
+msgstr "сохранить"
+
+msgid "Verifying"
+msgstr "Проверка"
+
+msgid "No entries found"
+msgstr "Записи не найдены"
+
+msgid "has at least"
+msgstr "имеет по крайней мере"
+
+msgid "entries."
+msgstr "запись(и/ей)."
+
+msgid "Enable last for not allowed restrictions."
+msgstr "Включить последний для недопустимых ограничений."
+
+msgid "Add description"
+msgstr "Добавить описание"
+
+msgid "These actions affect all the clones on the machine"
+msgstr "Эти действия влияют на все клоны машины"
+
+msgid "Shutdown all clones"
+msgstr "Выключить все клоны"
+
+msgid "Keep in mind that there may be users using a clone"
+msgstr "Имейте в виду, клон может использоваться пользователями"
+
+msgid "Yes, shutwdown all the clones"
+msgstr "Да, выключить все клоны"
+
+msgid "temporary"
+msgstr "временный"
+
+msgid "cdrom"
+msgstr "cdrom"
+
+msgid "End"
+msgstr "Конец"
+
+msgid "Open ports"
+msgstr "Открытые порты"
+
+msgid "No groups found"
+msgstr "Группы не найдены"
+
+msgid "This machine has a CD-ROM"
+msgstr "У этой машины есть CD-ROM"
+
+msgid "type"
+msgstr "тип"
+
+msgid "Time"
+msgstr "Время"
+
+msgid "clone storage"
+msgstr "хранилище клонов"
+
+msgid "There are no active virtual machines"
+msgstr "Нет активных виртуальных машин"
+
+msgid "Prepare this machine as a base to create clones from it."
+msgstr ""
+"Подготовьте эту машину в качестве базы, чтобы иметь возможность создавать из "
+"нее клоны."
+
+msgid "This virtual machine has no backups to purge"
+msgstr "У этой виртуальной машины нет резервных копий для очистки"
+
+msgid "Warning: anonymous machines won't show up unless you enable allowed."
+msgstr ""
+"Предупреждение: анонимные машины не будут отображаться, если вы не разрешите."
+
+msgid "Users from this network can run no virtual machines"
+msgstr "Пользователи из этой сети не могут запускать виртуальные машины"
+
+msgid "All machines"
+msgstr "Все машины"
+
+msgid "Content will be kept on restore"
+msgstr "Содержимое будет сохранено при восстановлении"
+
+msgid "Content will be cleaned on restore"
+msgstr "Содержимое будет очищено при восстановлении"
+
+msgid "data"
+msgstr "данные"
+
+msgid "disk"
+msgstr "диск"
+
+msgid "default storage"
+msgstr "хранилище по умолчанию"
+
+msgid "Show clones"
+msgstr "Показать клоны"
+
+msgid "SSO/CAS Login"
+msgstr "Войти с помощью SSO/CAS"
+
+msgid "The machine will turn off after this time"
+msgstr "Машина будет выключена через это время"
+
+msgid "Waiting for machine to start"
+msgstr "Ожидание запуска машины"
+
+msgid "This machine will shut down"
+msgstr "Эта машина будет выключена"
+
+msgid "Hardware address"
+msgstr "Аппаратный адрес"
+
+msgid "NAT"
+msgstr "NAT"
+
+msgid "Bridge"
+msgstr "Мост"
+
+msgid "reload list"
+msgstr "перезагрузить список"
+
+msgid "This name is duplicated"
+msgstr "Это имя уже существует"
+
+msgid "No machines"
+msgstr "Нет машин"
+
+msgid "base storage"
+msgstr "хранилище баз"
+
+msgid "Network name is required"
+msgstr "Укажите имя сети"
+
+msgid "Show active"
+msgstr "Показать активные"
+
+msgid "Hide clones"
+msgstr "Скрыть клоны"
+
+msgid "Keep the CD for the clones"
+msgstr "Оставить CD-диск для клонов"
+
+msgid "Accept"
+msgstr "Принять"
+
+msgid "No bridges found"
+msgstr "Мосты не найдены"
+
+msgid "system"
+msgstr "система"
+
+msgid "No members found"
+msgstr "Участники не найдены"
+
+msgid "Anonymous"
+msgstr "Анонимный"
+
+msgid "Users from this network can run all virtual machines"
+msgstr "Пользователи из этой сети могут запускать все виртуальные машины"
+
+msgid "Warning: this virtual machine will be prepared as a base. This may take long."
+msgstr ""
+"Предупреждение: эта виртуальная машина будет подготовлена в качестве базы. "
+"Это может занять продолжительное время."
+
+msgid "Waiting for network to come up"
+msgstr "Ждем, пока появится сеть"
+
+msgid "Content will be cleaned on restore and shutdown"
+msgstr "Содержимое будет очищено при восстановлении и завершении работы"
+
+msgid "up"
+msgstr "включён"
+
+msgid "Fail"
+msgstr "Ошибка"
+
+msgid "This Virtual Machine has no display hardware attached"
+msgstr "К этой виртуальной машине не подключен дисплей"
+
+msgid "host"
+msgstr "хост"
+
+msgid "Virtual machines pre-started"
+msgstr "Предварительно запущенные виртуальные машины"
+
+msgid "Assign this virtual machine to the pre-started pool"
+msgstr "Назначить эту виртуальную машину предварительно запущенному пулу"
+
+msgid "Virtual machines in the pool."
+msgstr "Виртуальные машины в пуле."
+
+msgid "to an ASCII file and save it with a .reg extension, then execute the file."
+msgstr ""
+"в ASCII файл и сохранить его с расширением .reg, и затем запустить этот файл."
+
+msgid "can change the settings of any virtual machine."
+msgstr "может изменять настройки любой виртуальной машины."
+
+msgid "This group has been removed."
+msgstr "Группа удалена."
+
+msgid "Groups"
+msgstr "Группы"
+
+msgid "object class:"
+msgstr "object class:"
+
+msgid "requires password"
+msgstr "пароль обязателен"
+
+msgid "Disabling this node will shut all the"
+msgstr "Отключение этого узла приведет к выключению всех"
+
+msgid "Enables display password when available"
+msgstr ""
+"Требовать пароль для доступа к удалённому рабочему столу (если применимо)"
+
+msgid "Ravada Apache documentation"
+msgstr "документацию по настройке Apache для Ravada"
+
+msgid "Server in maintenance until"
+msgstr "Сервер на обслуживании до"
+
+msgid "Error: the LDAP entry for this user has been removed."
+msgstr "Ошибка: LDAP запись для этого пользователя была удалена."
+
+msgid "Warning: anonymous machines won't show up unless you set them public."
+msgstr ""
+"Предупреждение: анонимные машины не будут отображаться, если вы не сделаете "
+"их общедоступными."
+
+msgid "Can expose virtual machine ports."
+msgstr "Может пробрасывать порты в виртуальную машину."
+
+msgid "can have their own limit on started machines."
+msgstr "может запускать заданное количество виртуальных машин."
+
+msgid "Attachment"
+msgstr "Вложение"
+
+msgid "Phone Number"
+msgstr "Номер телефона"
+
+msgid "Select the .iso file the machine will utilize when installing the OS."
+msgstr "Выберите файл .iso, который машина будет использовать при установке ОС."
+
+msgid "The source machine is not a base. It must be prepared before it can be copied. This process may take some minutes."
+msgstr ""
+"Исходная машина не является базой. Перед копированием её необходимо "
+"подготовить. Этот процесс может занять несколько минут."
+
+msgid "New Password is required"
+msgstr "Введите новый пароль"
+
+msgid "Repeated New Password is required"
+msgstr "Введите подтверждение нового пароля"
+
+msgid "Primary can not be unset, enable it in another video device"
+msgstr ""
+"Основное (primary) видеоустройство нельзя отключить, включите его на другом "
+"устройстве"
+
+msgid "This virtual machine has already been compacted"
+msgstr "Эта виртуальная машина уже сжата"
+
+msgid "Display"
+msgstr "Дисплей"
+
+msgid "Machine Information"
+msgstr "Информация о машине"
+
+msgid "Base"
+msgstr "База"
+
+msgid "Ports"
+msgstr "Порты"
+
+msgid "Hardware"
+msgstr "Оборудование"
+
+msgid "Access"
+msgstr "Доступ"
+
+msgid "This base can't be removed because the domain has clones."
+msgstr "Эта база не может быть удалена, так как у неё есть клоны."
+
+msgid "waiting for requests"
+msgstr "ожидание запроса"
+
+msgid "Danger: This will destroy all the disk data permantently."
+msgstr "Опасно: будут навсегда уничтожены навсегда все данные на диске."
+
+msgid "-- choose hardware --"
+msgstr "-- выбрать оборудование --"
+
+msgid "stopped"
+msgstr "выключена"
+
+msgid "Nothing to monitoring"
+msgstr "Нечего мониторить"
+
+msgid "Rebase all the clones to a new base"
+msgstr "Перебазировать все клоны на новую базу"
+
+msgid "Changing the base of a virtual machine is potentially dangerous and can't be undone."
+msgstr ""
+"Изменение базы виртуальной машины потенциально опасно и не может быть "
+"отменено."
+
+msgid "Remove the base prepared from this machine"
+msgstr "Удалить базу, подготовленную с этой машины"
+
+msgid "Pool"
+msgstr "Пул"
+
+msgid "To make this possible, copy the content of"
+msgstr "Для этого следует скопировать содержимое файла"
+
+msgid "Please, make sure you have the right path and release, according to your PC configuration."
+msgstr ""
+"Убедитесь, что вы указали путь и версию программы в соответствии с "
+"конфигурацией вашего ПК."
+
+msgid "can change the settings of any virtual machine "
+msgstr "может изменять настройки любой виртуальной машины, "
+
+msgid "Are you sure you want to remove the base of"
+msgstr "Вы уверены, что хотите удалить базу"
+
+msgid "Are you sure you want to prepare the base of"
+msgstr "Вы уверены, что хотите подготовить базу"
+
+msgid "Template selection is required"
+msgstr "Необходимо выбрать шаблон"
+
+msgid "Confirm password is required"
+msgstr "Подтверждение пароля обязательно"
+
+msgid "Confirm password must be at least 5 characters"
+msgstr "Длина подтверждения пароля должна быть не менее 5 символов"
+
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Нажмите SHIFT + F12 для выхода из виртуальной машины"
+
+msgid "Close"
+msgstr "Закрыть"
+
+msgid "Apply"
+msgstr "Применить"
+
+msgid "Group"
+msgstr "Группа"
+
+msgid "dn:"
+msgstr "dn:"
+
+msgid "See documentation about:"
+msgstr "Документация:"
+
+msgid "Configure LDAP Authentication"
+msgstr "Настройка LDAP аутентификации"
+
+msgid "Remove group"
+msgstr "Удалить группу"
+
+msgid "New Group"
+msgstr "Новая группа"
+
+msgid "Loading ..."
+msgstr "Загрузка ..."
+
+msgid "Show/Hide clones"
+msgstr "Показать/Скрыть клоны"
+
+msgid "Autostart"
+msgstr "Автозапуск"
+
+msgid "Confirm password can only contain words and numbers"
+msgstr ""
+"Подтверждение пароля может содержать только буквы латинского алфавита и цифры"
+
+msgid "Setup a LDAP Server"
+msgstr "Настройка LDAP-сервера"
+
+msgid "Groups require a LDAP server configured."
+msgstr "Для групп требуется настроенный сервер LDAP."
+
+msgid "Public"
+msgstr "Опубликовано"
+
+msgid "New group member"
+msgstr "Новый участник группы"
+
+msgid "Manage machine"
+msgstr "Редактировать виртуальную машину"
+
+msgid "Volatile"
+msgstr "Непостоянная"
+
+msgid "Hibernated"
+msgstr "Приостановлено"
+
+msgid "ShutDown"
+msgstr "Выключить"
+
+msgid "No message to show!"
+msgstr "Нет сообщений!"
+
+msgid "Type"
+msgstr "Тип"
+
+msgid "Bases"
+msgstr "Базы"
+
+msgid "Action"
+msgstr "Действие"
+
+msgid "Active"
+msgstr "Активные"
+
+msgid "Disabled"
+msgstr "Отключён"
+
+msgid "This node is local"
+msgstr "Это локальный узел"
+
+msgid "Refresh"
+msgstr "Обновить"
+
+msgid "Enable"
+msgstr "Включить"
+
+msgid "Disable"
+msgstr "Отключить"
+
+msgid "Confirm disable node"
+msgstr "Подтвердите отключение узла"
+
+msgid "machines down."
+msgstr "виртуальных машин."
+
+msgid "Maintenance Start"
+msgstr "Начало обслуживания"
+
+msgid "Maintenance End"
+msgstr "Конец обслуживания"
+
+msgid "Networks"
+msgstr "Сети"
+
+msgid "Global Settings"
+msgstr "Глобальные настройки"
+
+msgid "Frontend"
+msgstr "Интерфейс"
+
+msgid "Maintenance"
+msgstr "Обслуживание"
+
+msgid "Admin users can still log in from"
+msgstr "Администраторы могут войти в систему, используя"
+
+msgid "Bookings"
+msgstr "Резервирование"
+
+msgid "Start Limit"
+msgstr "Ограничение запуска"
+
+msgid "cancel"
+msgstr "отменить"
+
+msgid "New user"
+msgstr "Новый пользователь"
+
+msgid "Error:"
+msgstr "Ошибка:"
+
+msgid "Client"
+msgstr "Клиент"
+
+msgid "LDAP"
+msgstr "LDAP"
+
+msgid "Sorry"
+msgstr "Извините"
+
+msgid "Debug"
+msgstr "Отладка"
+
+msgid "Debug Ports"
+msgstr "Порты отладки"
+
+msgid "Debug Ports Exposed"
+msgstr "Открытые порты отладки"
+
+msgid "Display Password"
+msgstr "Пароль SPICE-соединения"
+
+msgid "Port expose"
+msgstr "Порт"
+
+msgid "Minimum port number to expose virtual machine services."
+msgstr "Минимальный номер порта для предоставления услуг виртуальной машины."
+
+msgid "Web Service connection failed."
+msgstr "Не удалось подключиться к веб-службе."
+
+msgid "Check"
+msgstr "Смотри"
+
+msgid "Display URL :"
+msgstr "URL дисплея:"
+
+msgid "Display IP :"
+msgstr "IP дисплея:"
+
+msgid "Display Port :"
+msgstr "Порт дисплея:"
+
+msgid "Display Port secure :"
+msgstr "Безопасный порт дисплея:"
+
+msgid "This user has never logged in the Ravada server."
+msgstr "Этот пользователь никогда не заходил на сервер Ravada."
+
+msgid "No machines found"
+msgstr "Машины не найдены"
+
+msgid "Network address is required."
+msgstr "Укажите адрес сети."
+
+msgid "Oops!"
+msgstr "Ой!"
+
+msgid "Add to group"
+msgstr "Добавить в группу"
+
+msgid "capacity"
+msgstr "объём"
+
+msgid "Primary video devices will move to first"
+msgstr "Основное (primary) видеоустройство переместится на первое место"
+
+msgid "Set defaults"
+msgstr "Сбросить настройки"
+
+msgid "device"
+msgstr "устройство"
+
+msgid "Add new Display"
+msgstr "Добавить новый Дисплей"
+
+msgid "PrepareBase"
+msgstr "Подготовить базу"
+
+msgid "No LDAP groups created."
+msgstr "Группы LDAP не созданы."
+
+msgid "Add groups"
+msgstr "Создать группы"
+
+msgid "User is not member of any group."
+msgstr "Пользователь не является членом какой-либо группы."
+
+msgid "Requires viewer password when implemented"
+msgstr ""
+"Требовать пароль для доступа к удалённому рабочему столу (если применимо)"
+
+msgid "Set either"
+msgstr "Установите или"
+
+msgid "model"
+msgstr "модель"
+
+msgid "add"
+msgstr "добавить"
+
+msgid "boot order"
+msgstr "порядок загрузки"
+
+msgid "bridge"
+msgstr "мост"
+
+msgid "nat"
+msgstr "nat"
+
+msgid "Add new disk"
+msgstr "Добавить новый диск"
+
+msgid "size"
+msgstr "размер"
+
+msgid "New password"
+msgstr "Новый пароль"
+
+msgid "Force change password on first access"
+msgstr "Пользователь должен изменить пароль при первом входе"
+
+msgid "Set New Password"
+msgstr "Установить новый пароль"
+
+msgid "Import"
+msgstr "Импорт"
+
+msgid "New network"
+msgstr "Новая сеть"
+
+msgid "Invalid IP network address. Expecting a.b.c.d/e"
+msgstr "Неверный IP-адрес сети. Ожидается a.b.c.d/e"
+
+msgid "This address is duplicated"
+msgstr "Этот адрес уже существует"
+
+msgid "password"
+msgstr "пароль"
+
+msgid "Compact"
+msgstr "Сжать"
+
+msgid "Compact disk volumes"
+msgstr "Сжать жёсткие диски"
+
+msgid "for users in this network"
+msgstr "для пользователей в этой сети"
+
+msgid "saved."
+msgstr "сохранены."
+
+msgid "Choose the virtualization type of the Node."
+msgstr "Выберите тип виртуализации для узла."
+
+msgid "Check connection to"
+msgstr "Проверить соединение с"
+
+msgid "No bases found"
+msgstr "Базы не найдены"
+
+msgid "This base has"
+msgstr "У этой базы есть"
+
+msgid "backup directory"
+msgstr "каталог резервных копий"
+
+msgid "This node has"
+msgstr "На этом узле есть"
+
+msgid "bases."
+msgstr "баз(а/ы)."
+
+msgid "Remove bases in node"
+msgstr "Удалить базы с узла"
+
+msgid "Request"
+msgstr "Запрос"
+
+msgid "Removing Virtual Machine"
+msgstr "Удаление виртуальной машины"
+
+msgid "Please insert"
+msgstr "Введите"
+
+msgid "to apply."
+msgstr "чтобы применить."
+
+msgid "waiting for network to come up"
+msgstr "ожидание подключения сети"
+
+msgid "Max Memory"
+msgstr "Максимальное выделение памяти"
+
+msgid "CPUs"
+msgstr "Процессоры"
+
+msgid "no machines"
+msgstr "никакие виртуальные машины"
+
+msgid "Network"
+msgstr "Сеть"
+
+msgid "yes"
+msgstr "да"
+
+msgid "A node with that address already exists."
+msgstr "Узел с таким адресом уже существует."
+
+msgid "Save"
+msgstr "Сохранить"
+
+msgid "This is a main node and can't be removed."
+msgstr "Это основной узел и он не может быть удалён."
+
+msgid "and will remove all the disk and information of this virtual machine."
+msgstr "и удалит весь диск и всю информацию об этой виртуальной машине."
+
+msgid "Internal IP"
+msgstr "Внутренний IP"
+
+msgid "Reboot"
+msgstr "Перезагрузить"
+
+msgid "process"
+msgstr "процесс"
+
+msgid "This machine is locked by process"
+msgstr "Эта машина заблокирована процессом"
+
+msgid "Force ShutDown"
+msgstr "Выключить принудительно"
+
+msgid "Force Reboot"
+msgstr "Перезагрузить принудительно"
+
+msgid "down"
+msgstr "отключён"
+
+msgid "I don't know settings tabs for:"
+msgstr "Не существует настроек для:"
+
+msgid "Waiting for requests to complete"
+msgstr "Ожидание выполнения запроса"
+
+msgid "Recent requests"
+msgstr "Последние запросы"
+
+msgid "Max memory (MB)"
+msgstr "Максимальное выделение памяти (МБ)"
+
+msgid "Loading machine"
+msgstr "Загрузка машины"
+
+msgid "Loading nodes"
+msgstr "Загрузка узлов"
+
+msgid "Node down"
+msgstr "Узел не активен"
+
+msgid "Node disabled"
+msgstr "Узел отключён"
+
+msgid "This base has clones"
+msgstr "У этой базы есть клоны"
+
+msgid "today"
+msgstr "сегодня"
+
+msgid "New Booking"
+msgstr "Новый заказ"
+
+msgid "Exec. time"
+msgstr "Время выполнения"
+
+msgid "Exec clones sequentially"
+msgstr "Выполнять на клонах последовательно"
+
+msgid "RAM (Gb)"
+msgstr "ОЗУ (ГБ)"
+
+msgid "I can't find"
+msgstr "Невозможно найти"
+
+msgid "driver"
+msgstr "драйвер"
+
+msgid "Type the name of the volume disk to confirm:"
+msgstr "Введите имя жёсткого диска, чтобы подтвердить удаление:"
+
+msgid "This machine is running and can't be modified."
+msgstr "Эта виртуальная машина запущена и не может быть изменена."
+
+msgid "This machine is base and can't be modified."
+msgstr "Эта машина является базой и не может быть изменена."
+
+msgid "Start after migration"
+msgstr "Запустить ВМ после миграции"
+
+msgid "Are you sure you want to migrate"
+msgstr "Вы уверены, что хотите мигрировать"
+
+msgid "The VM is"
+msgstr "ВМ"
+
+msgid "Shutdown Timeout"
+msgstr "Тайм-аут выключения"
+
+msgid "Run Timeout"
+msgstr "Тайм-аут работы"
+
+msgid "The machine will power off after this minutes after shutdown."
+msgstr ""
+"Машина будет обесточена, по истечении этого количества минут после "
+"выключения."
+
+msgid "Virtual Machine will start on host start."
+msgstr "Виртуальная машина будет запущена после запуска хоста."
+
+msgid "Virtual Machine will be shutdown when user disconnects."
+msgstr "Виртуальная машина будет выключена при отключении пользователя."
+
+msgid "Shutdown disconnected"
+msgstr "Выключить при отключении"
+
+msgid "Port"
+msgstr "Порт"
+
+msgid "Current memory (MB)"
+msgstr "Фактическое выделение памяти (МБ)"
+
+msgid "Clones are volatile, so all the pool will be started."
+msgstr "Клоны непостоянные, поэтому будет запущен весь пул."
+
+msgid "Restricted"
+msgstr "Ограниченный"
+
+msgid "Public Port"
+msgstr "Публичный порт"
+
+msgid "This ISO is being downloaded. The virtual machine will be created after."
+msgstr ""
+"ISO образ загружается. Виртуальная машина будет создана после загрузки "
+"образа."
+
+msgid "Type the ISO pathname"
+msgstr "Путь к ISO образу"
+
+msgid "Type the template name"
+msgstr "Имя шаблона"
+
+msgid "Choose the virtualization type of the Virtual Machine."
+msgstr "Выберите тип виртуализации для виртуальной машины."
+
+msgid "Group name is required"
+msgstr "Укажите имя группы"
+
+msgid "Today Schedule"
+msgstr "Расписание на сегодня"
+
+msgid "This server has reservations for today. Machines from users out of the booking list will be shutdown."
+msgstr ""
+"На этом сервере есть зарезервированные машины на сегодня. Машины "
+"пользователей, не включенных в список резервирования, будут отключены."
+
+msgid "Old Password is required"
+msgstr "Введите старый пароль"
+
+msgid "Enter Old Password"
+msgstr "Старый пароль"
+
+msgid "This virtual machine has clones that are bases and won't be removed"
+msgstr ""
+"У виртуальной машины есть клоны, которые являются базами и не будут удалены"
+
+msgid "This machine is hibernated and can't be renamed."
+msgstr ""
+"Виртуальная машина находится в спящем режиме и не может быть переименована."
+
+msgid "Group name"
+msgstr "Группа"
+
+msgid "added"
+msgstr "создана"
+
+msgid "Prepare Base"
+msgstr "Подготовить базу"
+
+msgid "Change"
+msgstr "Изменить"
+
+msgid "Rebase this machine to another virtual machine"
+msgstr "Перебазировать эту машину на другую виртуальную машину"
+
+msgid "New name"
+msgstr "Новое имя"
+
+msgid "Spinoff clone"
+msgstr "Отделить клон"
+
+msgid "Are you sure you want to spinoff from the base ?"
+msgstr "Вы уверены, что хотите отделить клон от базы?"
+
+msgid "Re-Enter New Password"
+msgstr "Повторите новый пароль"
+
+msgid "Old Password can only contain words and numbers"
+msgstr "Старый пароль может содержать только буквы латинского алфавита и цифры"
+
+msgid "Old and New Passwords match!"
+msgstr "Старый и новый пароль совпадают!"
+
+msgid "Password and their confirmation do not match!"
+msgstr "Пароль и его подтверждение не совпадают!"
+
+msgid "Enter group name"
+msgstr "Введите имя группы"
+
+msgid "Warning"
+msgstr "Предупреждение"
+
+msgid "Yes, rebase"
+msgstr "Да, перебазировать"
+
+msgid "Rebase"
+msgstr "Перебазировать"
+
+msgid "allowed"
+msgstr "разрешено"
+
+msgid "not allowed"
+msgstr "запрещено"
+
+msgid "Machines Notifications"
+msgstr "Уведомления о машинах"
+
+msgid "Machine"
+msgstr "Машина"
+
+msgid "System Disk: (GB)"
+msgstr "Системный диск: (ГБ)"
+
+msgid "Will be destroyed on shutdown"
+msgstr "Будет удалена после выключения"
+
+msgid "Fill required camps with valid data"
+msgstr "Заполните обязательные поля действительными данными"
+
+msgid "disabled"
+msgstr "отключено"
+
+msgid "Legacy"
+msgstr "Legacy"
+
+msgid "Advanced options"
+msgstr "Дополнительные параметры"
+
+msgid "Swap"
+msgstr "Swap"
+
+msgid "Data"
+msgstr "Данные"
+
+msgid "BIOS"
+msgstr "BIOS"
+
+msgid "UEFI"
+msgstr "UEFI"
+
+msgid "Start after create the virtual machine"
+msgstr "Запустить после создания виртуальной машины"
+
+msgid "Invalid Template"
+msgstr "Недопустимый шаблон"
+
+msgid "Please select an ISO file"
+msgstr "Выберите ISO-файл"
+
+msgid "Support Contact"
+msgstr "Связаться с поддержкой"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "Contact Method"
+msgstr "Способ связи"
+
+msgid "Phone"
+msgstr "Телефон"
+
+msgid "volatile"
+msgstr "непостоянный"
+
+msgid "hide"
+msgstr "скрыть"
+
+msgid "Hide active"
+msgstr "Скрыть активные"
+
+msgid "filter"
+msgstr "фильтр"
+
+msgid "Reload"
+msgstr "Обновить"
+
+msgid "Congrats"
+msgstr "Поздравляем"
+
+msgid "The new user"
+msgstr "Новый пользователь"
+
+msgid "has been added successfully!"
+msgstr "был успешно добавлен!"
+
+msgid "What do you want to do now?"
+msgstr "Что бы хотите сделать сейчас?"
+
+msgid "Add another user"
+msgstr "Добавить другого пользователя"
+
+msgid "Create a new group"
+msgstr "Создать новую группу"
+
+msgid "Schedule"
+msgstr "Расписание"
+
+msgid "groups"
+msgstr "группы"
+
+msgid "nodes"
+msgstr "узлы"
+
+msgid "settings"
+msgstr "настройки"
+
+msgid "can manage users."
+msgstr "может управлять пользователями."
+
+msgid "Can rename any virtual machine owned by the user."
+msgstr ""
+"Может переименовать любую виртуальную машину, принадлежащую пользователю."
+
+msgid "Can rename any virtual machine."
+msgstr "Может переименовать любую виртуальную машину."
+
+msgid "Can reboot own virtual machines."
+msgstr "Может перезагружать собственные виртуальные машины."
+
+msgid "Can reboot clones own virtual machines."
+msgstr "Может перезагружать клоны собственных виртуальных машин."
+
+msgid "Can get a screenshot of own virtual machines."
+msgstr "Может делать снимки экранов собственных виртуальных машин."
+
+msgid "Can have an unlimited amount of machines started."
+msgstr "Может запустить неограниченное количество виртуальных машин."
+
+msgid "Can view groups."
+msgstr "Может просматривать группы."
+
+msgid "No Results Found"
+msgstr "Группы не найдены"
+
+msgid "Search group"
+msgstr "Найти группу"
+
+msgid "locked"
+msgstr "заблокирована"
+
+msgid "This machine is running and can't be renamed."
+msgstr "Эта машина запущена и не может быть переименована."
+
+msgid "Are you sure you want to remove this group ?"
+msgstr "Вы уверены, что хотите удалить эту группу?"
+
+msgid "Node"
+msgstr "Узел"
+
+msgid "New Network"
+msgstr "Новая сеть"
+
+msgid "Nodes"
+msgstr "Узлы"
+
+msgid "bus"
+msgstr "шина"
+
+msgid "Bookings require LDAP authentication."
+msgstr "Для резервирования необходима LDAP аутентификация."
+
+msgid "Number of virtual machines that normal users can have running at the same time"
+msgstr ""
+"Количество виртуальных машин, которые одновременно могут быть запущены "
+"пользователем"
+
+msgid "check"
+msgstr ""
+
+msgid "ISO file"
+msgstr "ISO-файл"
+
+msgid "or"
+msgstr "или"
+
+msgid "New Password must be at least 6 characters"
+msgstr "Новый пароль должен содержать не менее 6 символов"
+
+msgid "name"
+msgstr "имя"
+
+msgid "address"
+msgstr "адрес"
+
+msgid "all machines"
+msgstr "все виртуальные машины"
+
+msgid "Testing connection to"
+msgstr "Проверка соединения с"
+
+msgid "Are you sure you want to remove the"
+msgstr "Вы уверены, что хотите удалить"
+
+msgid "This can't be undone"
+msgstr "Это действие не может быть отменено"
+
+msgid "This name is invalid. It can only contain alphabetic, numbers, undercores and dashes and must start by a letter."
+msgstr ""
+"Недопустимое имя. Имя может содержать только буквы латинского алфавита, "
+"цифры, символы подчёркивания и дефисы, и должно начинаться с буквы."
+
+msgid "Are you sure you want to remove the node"
+msgstr "Вы уверены, что хотите удалить узел"
+
+msgid "This machine is base and it can't be modified."
+msgstr "Эта машина является базой и не может быть изменена."
+
+msgid "This virtual machine is running. It must be shut down before migrate."
+msgstr ""
+"Эта виртуальная машина запущена. Она должна быть выключена перед "
+"мигрированием."
+
+msgid "Clones created from this machine will be removed on shutdown."
+msgstr "Клоны, созданные с этой машины, будут удалены после выключения."
+
+msgid "No, cancel"
+msgstr "Нет, отменить"
+
+msgid "Enter New Password"
+msgstr "Новый пароль"
+
+msgid "Remove Clones"
+msgstr "Удалить клоны"
+
+msgid "Spinoff this clone from its base."
+msgstr "Отделить (spinoff) этот клон от его базы."
+
+msgid "New Password can only contain words and numbers"
+msgstr "Новый пароль может содержать только буквы латинского алфавита и цифры"
+
+msgid "Group name can not exceed 80 characters"
+msgstr "Длина имени группы не может превышать 80 символов"
+
+msgid "The Minimum Disk Size needed for this ISO is"
+msgstr "Минимальный размер диска, необходимый для этого ISO"
+
+msgid "Passwords do not match!"
+msgstr "Пароли не совпадают!"
+
+msgid "The Minimum Swap Disk Size needed for this ISO is"
+msgstr "Минимальный размер файла подкачки (swap), необходимый для этого ISO"
+
+msgid "If you have any issue, you can contact the Suport crew and we will try to help you. Please, only contact Support Center if it is strictly necessary."
+msgstr ""
+"Если у вас есть какие-либо проблемы, вы можете связаться с командой "
+"поддержки, и мы постараемся помочь вам. Пожалуйста, обращайтесь в поддержку "
+"только в случае крайней необходимости."
+
+msgid "networks"
+msgstr "сети"
+
+msgid "Remove Base"
+msgstr "Удалить базу"
+
+msgid "Can rename clones from virtual machines owned by the user."
+msgstr ""
+"Может переименовать клоны виртуальных машин, принадлежащих пользователю."
+
+msgid "Can reboot all virtual machines."
+msgstr "Может перезагружать все виртуальные машины."
+
+msgid "Confirm password can not exceed 20 characters"
+msgstr "Длина подтверждения пароля не может превышать 20 символов"
+
+msgid "can remove any virtual machine owned by the user."
+msgstr "может удалять любые виртуальные машины, принадлежащие пользователю."
+
+msgid "Can shutdown own virtual machines."
+msgstr "Может выключать собственные виртуальные машины."
+
+msgid "Can manage groups."
+msgstr "Может управлять группами."
+
+msgid "Purge"
+msgstr "Очистить"
+
+msgid "Purge disk volumes"
+msgstr "Очистить разделы диска"
+
+msgid "Error: you want to have"
+msgstr "Ошибка: вы хотите запустить"
+
+msgid "but there are only"
+msgstr "но только"
+
+msgid "clones defined."
+msgstr "клона определено."
+
+msgid "Only remote client can access this port if restricted"
+msgstr ""
+"Если отмечено, только удаленный клиент может получить доступ к этому порту"
+
+msgid "Only remote client can access this port"
+msgstr "Только удаленный клиент может получить доступ к этому порту"
+
+msgid "Any remote client can access this port"
+msgstr "Любой удаленный клиент может получить доступ к этому порту"
+
+msgid "Refresh ports"
+msgstr "Обновить порты"
+
+msgid "Client headers"
+msgstr "Заголовки клиента"
+
+msgid ""
+"This server has reservations for today. Machines from users out of\n"
+"    the booking list will be shutdown."
+msgstr ""
+"На этом сервере есть зарезервированные машины на сегодня. Машины "
+"пользователей,\n"
+"    не включенных в список резервирования, будут отключены."
+
+msgid "Requests"
+msgstr "Запросы"
+
+msgid "There are no LDAP groups defined."
+msgstr "Группы LDAP не определены."
+
+msgid "Only users from these groups will be allowed to execute this machine"
+msgstr "Только пользователям из этих групп будет разрешено запускать эту машину"
+
+msgid "Event properties"
+msgstr "Свойства события"
+
+msgid "This field is required"
+msgstr "Это поле необходимо заполнить"
+
+msgid "Title"
+msgstr "Название"
+
+msgid "Color"
+msgstr "Цвет"
+
+msgid "Repeat"
+msgstr "Повторять"
+
+msgid "Weekly"
+msgstr "Еженедельно"
+
+msgid "Until"
+msgstr "До"
+
+msgid "Save changes"
+msgstr "Сохранить изменения"
+
+msgid "This booking overlaps already scheduled reservations"
+msgstr "Это бронирование пересекается с уже запланированными бронированиями"
+
+msgid "Groups with permissions"
+msgstr "Группы с разрешениями"
+
+msgid "Delete"
+msgstr "Удалить"
+
+msgid "options"
+msgstr "параметры"
+
+msgid "bases"
+msgstr "базы"
+
+msgid "remove"
+msgstr "удалить"
+
+msgid "can change the settings of any virtual machine cloned from one base owned by the user."
+msgstr ""
+"может изменять настройки любой виртуальной машины, клонированной из одной "
+"базы, принадлежащей пользователю."
+
+msgid "This virtual machine has no group restrictions."
+msgstr "Эта виртуальная машина не имеет групповых ограничений."
+
+msgid "Poweroff"
+msgstr "Выключить принудительно"
+
+msgid "Node with machines from the same user"
+msgstr "Узел с машинами от одного пользователя"
+
+msgid "Node with more free memory"
+msgstr "Узел, где больше свободной памяти"
+
+msgid "Permission revoked from user"
+msgstr "Разрешение, отозванное у пользователя"
+
+msgid "Permission granted to user"
+msgstr "Разрешение, предоставленное пользователю"
+
+msgid "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+msgstr ""
+"Для настройки резервирования необходимы настроенные группы LDAP. Группы "
+"найдены, но в них нет пользователей. <a href='/admin/groups'>Создать.</a>"
+
+msgid "Fallback"
+msgstr "Резерв"
+
+msgid "swap"
+msgstr "swap"
+
+msgid "fallback"
+msgstr "резерв"
+
+msgid "New feature"
+msgstr "Новые характеристики"
+
+msgid "ram"
+msgstr "ram"
+
+msgid "vram"
+msgstr "vram"
+
+msgid "sys"
+msgstr "sys"
+
+msgid "CPU Features"
+msgstr "Характеристики ЦПУ"
+
+msgid "reopen"
+msgstr "переоткрыть"
+
+msgid "User not found"
+msgstr "Пользователь не найден"
+
+msgid "Event saved successfully"
+msgstr "Событие успешно сохранено"
+
+msgid "Edit the event"
+msgstr "Редактировать событие"
+
+msgid "Delete the event"
+msgstr "Удалить событие"
+
+msgid "This event"
+msgstr "Это событие"
+
+msgid "This event and the following"
+msgstr "Это событие и последующие"
+
+msgid "This event and the following with same day of week"
+msgstr "Это и последующие события в один и тот же день недели"
+
+msgid "All events"
+msgstr "Все события"
+
+msgid "Confirm"
+msgstr "Подтвердить"
+
+msgid "This feature requires a LDAP server configured."
+msgstr "Для этой функции требуется настроенный сервер LDAP."
+
+msgid "Source Machine"
+msgstr "Исходная машина"
+
+msgid "Monitoring"
+msgstr "Мониторинг"
+
+msgid "To"
+msgstr "По"
+
+msgid "From"
+msgstr "С"
+
+msgid "Are you sure you want to spinoff from the base?"
+msgstr "Вы уверены, что хотите отделить клон от базы?"
+
+msgid "Balance"
+msgstr "Баланс"

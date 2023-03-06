@@ -25,7 +25,7 @@
   <div ng-show="!showmachine || showmachine.can_hibernate">
     <button type="button" class="btn btn-warning btn-sm"
      ng-click="action('machine','hibernate',showmachine.id)"
-     ng-disabled="showmachine || !showmachine.is_active"
+     ng-disabled="showmachine && !showmachine.is_active"
      title="<%=l 'Hibernate' %>">
       <i class="fa fa-pause"></i>
    </button>
@@ -93,7 +93,7 @@
     <div class="col-md-7">
         <div><%=l 'Compact disk volumes' %></div>
         <div ng-show="showmachine.is_compacted">
-            This virtual machine has already been compacted
+            <%=l 'This virtual machine has already been compacted' %>
         </div>
     </div>
   </div>
@@ -108,13 +108,9 @@
     <div class="col-md-7">
         <span><%=l 'Purge disk volumes' %></span>
         <div ng-hide="showmachine.has_backups">
-            This virtual machine has no backups to purge
+          <%=l 'This virtual machine has no backups to purge' %>
         </div>
     </div>
   </div>
 
 </div>
-
-  <div ng-show="pending_request">
-    %= include "/main/pending_request"
-  </div>
