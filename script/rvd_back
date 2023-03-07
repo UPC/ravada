@@ -754,6 +754,32 @@ sub _verify_connection {
     return 0;
 }
 
+sub _dump_ldap_entry($ldap_entry) {
+    print $ldap_entry->dn."\n";
+    for my $attrib (sort $ldap_entry->attributes ) {
+        my @value = $ldap_entry->get_value($attrib);
+        print "$attrib: ";
+
+        $value[0] =~ tr/./*/c
+        if defined $value[0] && $attrib eq 'unicodePwd';
+
+        if (scalar(@value)<2) {
+            if (!defined $value[0]) {
+                print "<UNDEF>";
+            } else {
+                print $value[0];
+            }
+            print "\n";
+        } else {
+            print "\n";
+            for (@value) {
+                print "  - $_\n";
+            }
+        }
+    }
+}
+
+
 sub test_ldap {
     my $rvd_back = Ravada->new(%CONFIG);
     eval { Ravada::Auth::LDAP::_init_ldap_admin() };
@@ -762,7 +788,27 @@ sub test_ldap {
     print "login: ";
     my $name=<STDIN>;
     chomp $name;
-    print "password: ";
+    my $user = Ravada::Auth::LDAP::search_user($name);
+    if (!$user) {
+        my $config = \$Ravada::CONFIG;
+
+        my $field = ($$config->{ldap}->{field} or 'cn');
+
+        my $filter = '';
+
+        $filter = $$config->{ldap}->{filter}
+        if exists $$config->{ldap}->{filter};
+
+        $filter= "filter=$filter " if $filter;
+
+        my $base = $$config->{ldap}->{base};
+
+        warn "Error: $field=$name not found. base=$base $filter. Either ".$$config->{ldap}->{admin_user}->{dn}." not allowed, or entry does not exist.\n";
+    } else {
+        _dump_ldap_entry($user);
+    }
+
+    print "\nType the password if you want to check the user connection or CTRL-C to stop\npassword: ";
     my $password = <STDIN>;
     chomp $password;
     my $ok= Ravada::Auth::LDAP->new(name => $name, password => $password);
@@ -771,14 +817,7 @@ sub test_ldap {
             warn "No LDAP data found ".Dumper($ok->{_data});
         } else {
             print "LOGIN OK $ok->{_auth}\n";
-            print $ok->{_ldap_entry}->dn."\n";
-            for my $attrib (sort $ok->{_ldap_entry}->attributes ) {
-                my @value = $ok->{_ldap_entry}->get_value($attrib);
-                print "$attrib: ";
-                print join(",",@value);
-                print "\n";
-            }
-
+            _dump_ldap_entry($ok->{_ldap_entry});
         }
     } else {
         print "LOGIN FAILED\n";
