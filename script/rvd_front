@@ -1414,7 +1414,7 @@ get '/list_ldap_attributes/(#cn)' => sub {
         $return = {
             dn_found => $user->dn
             , name => $user_name
-            , attributes => [sort $user->attributes]
+            , attributes => [sort { uc($a) cmp uc($b) } $user->attributes]
             , values => $values
         };
     }
