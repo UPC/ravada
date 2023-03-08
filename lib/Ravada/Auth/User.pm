@@ -369,7 +369,6 @@ sub _load_allowed {
     my $ldap_entry;
     $ldap_entry = $self->ldap_entry if $self->external_auth && $self->external_auth eq 'ldap';
 
-
     my @domains = $self->_list_domains_access();
 
     for my $id_domain ( @domains ) {

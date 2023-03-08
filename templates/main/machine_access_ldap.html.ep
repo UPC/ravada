@@ -1,14 +1,39 @@
 <div class="card">
     <div class="card-body">
         <%=l 'Type a typical LDAP user name to fetch the attribute list' %>
-        <input type="text" ng-model="cn" ng-change="list_ldap_attributes()"
+        <input type="text" ng-model="cn" ng-change="dn_found=''"
         ng-init="cn='<%= $ldap_attributes_cn %>'">
-        <div class="alert alert-danger" role="alert" ng-hide="ldap_attributes || !cn">
+        <button ng-enabled="cn"
+            ng-click="list_ldap_attributes()">fetch</button>
+        <div class="alert alert-danger" role="alert" ng-hide="ldap_attributes || !cn || searching_ldap_attributes || dn_found">
             <div>
             <%=l 'User name' %>&nbsp;<b>{{cn}}</b>&nbsp;<%=l 'not found in LDAP server' %>
             </div>
             <div>
             {{ldap_error}}
+            </div>
+        </div>
+        <div ng-show="searching_ldap_attributes"><i class="fas fa-sync-alt fa-spin"></i></div>
+        <div ng-show="dn_found">
+            <span
+            ng-class="{'info': !show_values, 'text-primary':show_values}"
+            >{{dn_found}}</span>
+
+            <span ng-show="check_allowed==1" class="bg-success text-white"><%=l 'access granted' %></span>
+            <span ng-show="check_allowed==0" class="bg-danger text-white"><%=l 'access denied' %></span>
+            <button ng-click="show_values=true" ng-show="!show_values"
+                tittle="<%=l 'show attributes'%>"
+            >+</button>
+            <button ng-click="show_values=false" ng-show="show_values"
+                tittle="<%=l 'hide attributes'%>"
+            >-</button>
+            <div ng-show="show_values" class="container m-8 border border-secondary">
+                <div ng-repeat="name in ldap_attributes" class="row">
+                    <div class="col ml-4">
+                        <span class="text-secondary">{{name}} :</span>
+                        {{values[name]}}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
