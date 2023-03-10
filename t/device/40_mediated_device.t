@@ -26,7 +26,7 @@ sub _prepare_dir_mdev() {
 
     for (1 .. 2 ) {
         open my $out, ">","$dir/$uuid$_$_ " or die $!;
-        print $out;
+        print $out "\n";
         close $out;
     }
     return $dir;
@@ -52,9 +52,28 @@ sub test_mdev($vm) {
     );
     $domain->add_host_device($id);
 
+    $domain->_add_host_devices();
+
     my $xml = $domain->xml_description();
-    my @spice = grep /spice/,split/\n/,$xml;
-    warn Dumper(\@spice);
+
+    my $doc = XML::LibXML->load_xml(string => $xml);
+
+    my $hd_path = "/domain/devices/hostdev";
+    my ($hostdev) = $doc->findnodes($hd_path);
+    ok($hostdev,"Expecting $hd_path") or exit;
+
+    my ($video) = $doc->findnodes("/domain/devices/video/model");
+    my $v_type = $video ->getAttribute('type');
+    isnt($v_type,'none') or exit;
+
+    my ($graphics) = $doc->findnodes("/domain/devices/graphics");
+    my $g_type = $graphics->getAttribute('type');
+    is($g_type,'vnc') or exit;
+
+    my $kvm_path = "/domain/features/kvm/hidden";
+    my ($kvm) = $doc->findnodes($kvm_path);
+    ok($kvm,"Expecting $kvm_path") or return;
+    is($kvm->getAttribute('state'),'on')
 }
 
 ####################################################################
