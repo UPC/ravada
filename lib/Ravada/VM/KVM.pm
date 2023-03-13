@@ -973,7 +973,11 @@ sub _domain_create_common {
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
     $self->_xml_modify_mac($xml);
     my $uuid = $self->_xml_modify_uuid($xml);
-    $self->_xml_modify_spice_port($xml, $spice_password, $listen_ip);
+
+    my ($graphics) = $xml->findnodes("/domain/devices/graphics");
+    $self->_xml_modify_spice_port($xml, $spice_password, $listen_ip)
+    if $graphics && ($spice_password || $listen_ip);
+
     $self->_fix_pci_slots($xml);
     $self->_xml_add_guest_agent($xml);
     $self->_xml_clean_machine_type($xml) if !$self->is_local;
@@ -1908,7 +1912,7 @@ sub _xml_modify_spice_port($self, $doc, $password=undef, $listen_ip=$self->liste
 
     $listen_ip = $self->listen_ip if !defined $listen_ip;
     my ($graph) = $doc->findnodes('/domain/devices/graphics')
-        or die "ERROR: I can't find graphic";
+        or confess "ERROR: I can't find graphics in ".$self->name;
     $graph->setAttribute(type => 'spice');
     $graph->setAttribute(autoport => 'yes');
     $graph->setAttribute(listen=> $listen_ip );

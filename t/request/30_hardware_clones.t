@@ -5,6 +5,7 @@ use Test::More;
 
 use Carp qw(carp confess cluck);
 use Data::Dumper;
+use Hash::Util qw(lock_hash unlock_hash);
 use Storable qw(dclone);
 
 no warnings "experimental::signatures";
@@ -23,6 +24,8 @@ sub test_add_hw($hardware, $base, $clone) {
     my $data = _data($base->_vm, $hardware);
     my @args;
     push @args, ( data => $data ) if $data;
+
+    diag("Adding $hardware ".Dumper($data));
 
     my $req = Ravada::Request->add_hardware(
         name => $hardware
@@ -45,13 +48,51 @@ sub test_add_hw($hardware, $base, $clone) {
     my $add = 1;
     $add=0 if $hardware eq 'disk';
 
-    is(scalar(@$after),scalar(@$before)+$add);
+    is(scalar(@$after),scalar(@$before)+$add,Dumper([$after,$before]));
     is(scalar(@$after_c),scalar(@$before_c)+$add);
 
     my $clone2 = $base->clone(name => new_domain_name, user => user_admin);
     my $after_c2 = $clone2->info(user_admin)->{hardware}->{$hardware};
     is(scalar(@$after_c2),scalar(@$after_c));
 
+    test_clone_req($base, $hardware, $after_c);
+
+}
+
+sub test_clone_req($base, $hardware,$base_hw0) {
+    my $base_hw = dclone($base_hw0);
+    my $name = new_domain_name();
+    Ravada::Request->clone(
+        id_domain => $base->id
+        ,uid => user_admin->id
+        ,remote_ip => '1.2.3.4'
+        ,name => $name
+    );
+    wait_request();
+    my ($clone_data) =grep { $_->{name} eq $name } $base->clones();
+    my $clone = Ravada::Domain->open($clone_data->{id});
+
+    my $clone_hw = $clone->info(user_admin)->{hardware}->{$hardware};
+    is(scalar(@$clone_hw),scalar(@$base_hw));
+
+    _clean_hw($hardware, $base_hw, $clone_hw);
+    is_deeply($clone_hw, $base_hw,"Expecting hw $hardware identical");
+};
+
+sub _clean_hw($name, @hw) {
+    for my $hw (@hw) {
+        for my $item (@$hw) {
+            next if !ref($item);
+            unlock_hash(%$item);
+            if ($name eq 'disk') {
+                $item->{name} = '';
+                $item->{file} = '';
+            } elsif ($name eq 'filesystem') {
+                $item->{_id} = '';
+            }
+            lock_hash(%$item);
+        }
+    }
 }
 
 sub _test_change_disk($base, $clone) {
@@ -80,9 +121,26 @@ sub _test_change_disk($base, $clone) {
     is($data_clone2->{file}, $data_clone->{file}) or exit;
 }
 
+sub _test_change_display($base, $clone) {
+    for my $driver ('vnc','spice') {
+        diag($driver);
+        my $req = Ravada::Request->change_hardware(
+            uid => user_admin->id
+            ,hardware => 'display'
+            ,id_domain => $base->id
+            ,index => 0
+            ,data => {driver => $driver }
+        );
+        wait_request();
+        my $hw = $base->info(user_admin)->{hardware}->{display};
+        #die Dumper($hw->[0]);
+    }
+}
+
 sub test_change_hw($hardware, $base, $clone) {
     my %tests = (
         'disk.KVM' => \&_test_change_disk
+        ,'display.KVM' => \&_test_change_display
     );
     my $cmd = $tests{$hardware.".".$base->type};
     return if !$cmd;
@@ -96,10 +154,11 @@ sub test_add_rm_change_hw($base) {
     my %controllers = $base->list_controllers;
 
     for my $hardware (sort keys %controllers ) {
-        next if $hardware eq 'display' || $hardware eq 'memory';
+        next if $hardware eq 'memory';
         next if $base->type eq 'KVM' && $hardware =~ /^(cpu|features)$/;
+        diag($hardware);
 
-        test_add_hw($hardware, $base, $clone);
+        test_add_hw($hardware, $base, $clone) if $hardware ne 'display';
         test_change_hw($hardware, $base, $clone);
         test_rm_hw($hardware, $base, $clone);
     }
@@ -159,6 +218,7 @@ sub test_rm_hw($hardware, $base, $clone) {
 clean();
 
 for my $vm_name (vm_names()) {
+    diag($vm_name);
     my $vm;
     $vm = rvd_back->search_vm($vm_name)  if rvd_back();
 	if ( !$vm || ($vm_name eq 'KVM' && $>)) {

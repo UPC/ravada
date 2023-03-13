@@ -5899,12 +5899,15 @@ sub _get_display_port($self, $display) {
 }
 
 sub _add_hardware_display($orig, $self, $index, $data) {
-    confess "Error: missing driver ".Dumper($data) if !exists $data->{driver};
 
-    die "Error: display ".$data->{driver}." duplicated.\n"
-    if $self->_get_display($data->{driver});
+    my $is_builtin = 1;
 
-    my $is_builtin = $self->_is_display_builtin($data->{driver});
+    if ( $data->{driver} ) {
+        die "Error: display ".$data->{driver}." duplicated.\n"
+        if $self->_get_display($data->{driver});
+
+        $is_builtin = $self->_is_display_builtin($data->{driver});
+    }
 
     $self->_get_display_port($data)
     if exists $data->{driver}
@@ -5925,9 +5928,9 @@ sub _add_hardware_display($orig, $self, $index, $data) {
         $data->{port} = $public_port;
         $data->{id_domain_port} = $port->{id};
     }
-    $self->_store_display($data);
 
     $orig->($self, 'display', $index, $data) if $is_builtin;
+    $self->_store_display($data);
 }
 
 sub _check_duplicated_volume_name($self, $file) {

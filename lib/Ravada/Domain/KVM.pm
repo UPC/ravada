@@ -2452,12 +2452,17 @@ sub _set_controller_network($self, $number, $data) {
 
 sub _set_controller_display_spice($self, $number, $data) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
-    for my $graphic ( $doc->findnodes("/domain/devices/graphics")) {
-        next if $graphic->getAttribute('type') ne 'spice';
-        die "Changing ".$graphic->toString()." ".Dumper($data);
+
+    my $count = 0;
+    my $graphic;
+    for $graphic ( $doc->findnodes("/domain/devices/graphics")) {
+        last if !defined $number || $count++ >= $number;
     }
-    my ($devices) = $doc->findnodes("/domain/devices");
-    my $graphic = $devices->addNewChild(undef,'graphics');
+    if (!$graphic) {
+        my ($devices) = $doc->findnodes("/domain/devices");
+        $graphic = $devices->addNewChild(undef,'graphics');
+    }
+
     $graphic->setAttribute(type => 'spice');
 
     my $port = ( delete $data->{port} or 'auto');
@@ -2523,6 +2528,8 @@ sub _set_controller_display_vnc($self, $number, $data) {
 
 sub _set_controller_display($self, $number, $data) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
+
+    $data->{driver} = 'spice' if !$data->{driver};
 
     return $self->_set_controller_display_spice($number, $data)
     if defined $data && $data->{driver} eq 'spice';
@@ -2930,9 +2937,24 @@ sub _change_hardware_display($self, $index, $data) {
     $type =~ s/-tls$//;
     my $port = delete $data->{port};
     confess if $port;
-    for my $item (keys %$data) {
-        $self->_set_driver_generic_simple("/domain/devices/graphics\[\@type='$type']/$item",$data->{$item});
+
+    $index = 0 if !defined $index;
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my @graphics = $doc->findnodes("/domain/devices/graphics");
+
+    my $graphics=$graphics[$index];
+    my $old_type = $graphics->getAttribute('type');
+    my $changed = 0;
+    if ($old_type ne $type ) {
+        $graphics->setAttribute(type => $type);
+        for my $node ($graphics->findnodes('*')) {
+            $graphics->removeChild($node);
+        }
+        $changed++;
     }
+
+    $self->reload_config($doc) if $changed;
 }
 
 
