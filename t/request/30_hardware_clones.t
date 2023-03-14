@@ -16,6 +16,61 @@ use Test::Ravada;
 
 ################################################################
 
+sub test_add_hw_all($hardware, $base, $clone) {
+    my $before = $base->info(user_admin)->{hardware}->{$hardware};
+    my $before_c = $clone->info(user_admin)->{hardware}->{$hardware};
+
+    my $drivers = $base->info(user_admin)->{drivers}->{$hardware};
+
+    for my $reverse ( 1,0 ) {
+        my @drivers = sort @$drivers;
+        @drivers = reverse(@drivers) if $reverse;
+
+        for my $driver (@drivers) {
+            my $req = Ravada::Request->add_hardware(
+                name => $hardware
+                ,uid => user_admin->id
+                ,id_domain => $base->id
+                ,data => { driver => $driver }
+            );
+            wait_request(debug => 0);
+        }
+        my $after = $base->info(user_admin)->{hardware}->{$hardware};
+        my $after_c = $clone->info(user_admin)->{hardware}->{$hardware};
+        is(scalar(@$after),scalar(@$before)+scalar(@drivers)) or die
+        Dumper([[sort map {$_->{driver}} @$after],[sort @drivers]]);
+        is(scalar(@$after_c),scalar(@$before_c)+scalar(@drivers)) or exit;
+
+        test_clean_hw($hardware, $base, $clone);
+    }
+
+    my $req = Ravada::Request->add_hardware(
+        name => $hardware
+        ,uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    wait_request(debug => 0);
+
+}
+
+sub test_clean_hw($hardware, $base, $clone) {
+    my $before = $base->info(user_admin)->{hardware}->{$hardware};
+    for my $index ( 0 .. scalar(@$before)-1) {
+        next if $before->[$index]->{is_secondary};
+        my $req = Ravada::Request->remove_hardware(
+            name => $hardware
+            ,uid => user_admin->id
+            ,id_domain => $base->id
+            ,index => 0
+        );
+    }
+    wait_request();
+    my $after = $base->info(user_admin)->{hardware}->{$hardware};
+    is(scalar(@$after),0) or exit;
+    my $after_c = $clone->info(user_admin)->{hardware}->{$hardware};
+    is(scalar(@$after_c),0) or exit;
+}
+
 sub test_add_hw($hardware, $base, $clone) {
 
     my $before = $base->info(user_admin)->{hardware}->{$hardware};
@@ -24,8 +79,6 @@ sub test_add_hw($hardware, $base, $clone) {
     my $data = _data($base->_vm, $hardware);
     my @args;
     push @args, ( data => $data ) if $data;
-
-    diag("Adding $hardware ".Dumper($data));
 
     my $req = Ravada::Request->add_hardware(
         name => $hardware
@@ -123,7 +176,6 @@ sub _test_change_disk($base, $clone) {
 
 sub _test_change_display($base, $clone) {
     for my $driver ('vnc','spice') {
-        diag($driver);
         my $req = Ravada::Request->change_hardware(
             uid => user_admin->id
             ,hardware => 'display'
@@ -133,7 +185,37 @@ sub _test_change_display($base, $clone) {
         );
         wait_request();
         my $hw = $base->info(user_admin)->{hardware}->{display};
-        #die Dumper($hw->[0]);
+        is($hw->[0]->{driver},$driver);
+
+        $clone = Ravada::Domain->open($clone->id);
+
+        my $hwc = $clone->info(user_admin)->{hardware}->{display};
+        is($hwc->[0]->{driver},$driver);
+
+        my $name = new_domain_name();
+        Ravada::Request->clone(
+            id_domain => $base->id
+            ,uid => user_admin->id
+            ,remote_ip => '1.2.3.4'
+            ,name => $name
+        );
+        wait_request();
+        my ($clone_data) =grep { $_->{name} eq $name } $base->clones();
+        my $clone2 = Ravada::Domain->open($clone_data->{id});
+
+        my $hwc2 = $clone2->info(user_admin)->{hardware}->{display};
+        is($hwc2->[0]->{driver},$driver) or die Dumper([$base->name, $clone2->name, $name]);
+
+        Ravada::Request->start_domain(
+            id_domain => $clone2->id
+            ,remote_ip => '192.2.3.4'
+            ,uid => user_admin->id
+        );
+        my $clone3 = Ravada::Domain->open($clone_data->{id});
+
+        my $hwc3 = $clone3->info(user_admin)->{hardware}->{display};
+        is($hwc3->[0]->{driver},$driver);
+
     }
 }
 
@@ -156,9 +238,13 @@ sub test_add_rm_change_hw($base) {
     for my $hardware (sort keys %controllers ) {
         next if $hardware eq 'memory';
         next if $base->type eq 'KVM' && $hardware =~ /^(cpu|features)$/;
-        diag($hardware);
 
-        test_add_hw($hardware, $base, $clone) if $hardware ne 'display';
+        if ( $hardware ne 'display' ) {
+            test_add_hw($hardware, $base, $clone);
+        } else {
+            test_clean_hw($hardware, $base, $clone);
+            test_add_hw_all($hardware, $base, $clone);
+        }
         test_change_hw($hardware, $base, $clone);
         test_rm_hw($hardware, $base, $clone);
     }
@@ -190,6 +276,7 @@ sub test_rm_hw($hardware, $base, $clone) {
     my $check_error = 1;
     $check_error=0 if $hardware eq 'disk';
     wait_request(debug => 0, check_error => $check_error);
+    die $req->error if $hardware eq 'display' && $req->error;
 
     if ($hardware eq 'disk') {
         like($req->error, qr/Error.*base/);
@@ -218,7 +305,6 @@ sub test_rm_hw($hardware, $base, $clone) {
 clean();
 
 for my $vm_name (vm_names()) {
-    diag($vm_name);
     my $vm;
     $vm = rvd_back->search_vm($vm_name)  if rvd_back();
 	if ( !$vm || ($vm_name eq 'KVM' && $>)) {

@@ -1913,7 +1913,7 @@ sub _xml_modify_spice_port($self, $doc, $password=undef, $listen_ip=$self->liste
     $listen_ip = $self->listen_ip if !defined $listen_ip;
     my ($graph) = $doc->findnodes('/domain/devices/graphics')
         or confess "ERROR: I can't find graphics in ".$self->name;
-    $graph->setAttribute(type => 'spice');
+    #$graph->setAttribute(type => 'spice');
     $graph->setAttribute(autoport => 'yes');
     $graph->setAttribute(listen=> $listen_ip );
     $graph->setAttribute(passwd => $password)    if $password;
