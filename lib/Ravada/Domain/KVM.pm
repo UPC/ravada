@@ -2958,6 +2958,17 @@ sub _change_hardware_display($self, $index, $data) {
         }
         $changed++;
     }
+    for my $item (keys %$data) {
+        my ($node) = $graphics->findnodes($item);
+        $node = $graphics->addNewChild(undef,$item) if !$node;
+        my ($attrib,$value) = $data->{$item} =~ /(.*?)=(.*)/;
+        $value =~ s/^"(.*)"$/$1/;
+
+        if ( $node->getAttribute($attrib) ne $value ) {
+            $node->setAttribute($attrib => $value);
+            $changed++;
+        }
+    }
 
     $self->reload_config($doc) if $changed;
 }

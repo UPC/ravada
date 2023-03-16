@@ -1353,13 +1353,14 @@ sub test_change_display_settings($vm) {
 
 sub test_change_display_settings_kvm($domain) {
     $domain->start(user_admin);
-    my $display = $domain->info(user_admin)->{display};
     $domain->shutdown_now(user_admin);
 
-    my @display = $domain->_get_controller_display();
-    isa_ok($display[0]->{extra},'HASH') or exit;
-    ok($display[0]->{driver}) or die Dumper($display[0]);
-    ok($domain->_is_display_builtin($display[0]->{driver})) or exit;
+    my @displays = $domain->_get_controller_display();
+    my ($display) = grep { $_->{is_builtin} && !$_->{is_secondary}} @displays;
+    isa_ok($display->{extra},'HASH') or exit;
+    ok($display->{driver}) or die Dumper($display);
+    ok($domain->_is_display_builtin($display->{driver})) or exit;
+    ok(!$display->{is_secondary}) or die Dumper($display);
 
     for my $driver_name (qw(image jpeg zlib playback streaming)) {
         my $driver = $domain->drivers($driver_name);
@@ -1372,7 +1373,7 @@ sub test_change_display_settings_kvm($domain) {
                 ,id_domain => $domain->id
                 ,hardware => 'display'
                 ,data => { $driver_name => $option->{value} , driver => $display->{driver} }
-                ,index => 0
+                ,index => $display->{_index}
             );
             for ( 1 .. 10 ) {
                 wait_request(debug => 0);
@@ -1381,9 +1382,12 @@ sub test_change_display_settings_kvm($domain) {
             }
             is($req->status, 'done');
             is($req->error,'') or exit;
-            my @display = $domain->_get_controller_display();
-            is($display[0]->{extra}->{$driver_name}, $option->{value}, $driver_name)
-                or die Dumper( $domain->name , $display[0]);
+
+            my ($display2) = grep { $_->{driver} eq $display->{driver} }
+                $domain->_get_controller_display();
+
+            is($display2->{extra}->{$driver_name}, $option->{value}, $driver_name)
+                or die Dumper( $domain->name , $display2);
         }
     }
 }
