@@ -42,6 +42,14 @@ It may take a few minutes if it is the first Windows virtual machine
 that is installed in this system. Ravada will download the additional
 drivers ISO volume.
 
+When the machine is created start it from *Admin Tools menu*, click on
+*Virtual Machines* to see a list. At the right there is a bunch of buttons.
+Click on *view* to start and access the virtual machine console.
+
+.. figure:: images/create_win10_view.png
+
+   Start and View Virtual Machine
+
 Install The Operative System
 ----------------------------
 
@@ -78,17 +86,7 @@ Install Windows 11
 Follow the usual procedure to install Windows 11. Select your keyboard,
 language and other settings.
 
-Load Drivers
-~~~~~~~~~~~~
-
-The installer may not see the virtual machine disk drive.
-Choosing "Load Drivers" in this screen and select the one for
-the operative system you are installing:
-
-*Red Hat VirtIO SCSI controller (E:\amd64\w11\viostor.inf)*
-
-.. figure:: images/load_windows_drivers.jpg
-    :alt: VirtIO Windows Drivers
+.. include:: _windows_drivers.rst
 
 Choose Destination Drive
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -104,15 +102,8 @@ Follow the usual procedure to install Windows11.
 
 When the installations it's finished, you need to install:
 
-* qemu-guest agent, see the instructions here: https://pve.proxmox.com/wiki/Qemu-guest-agent#Windows
-* Windows guest tools - `spice-guest-tools <https://www.spice-space.org/download/windows/spice-guest-tools/spice-guest-tools-latest.exe>`_ .
-* make sure that acpi service it's activated.
+.. include:: _windows_post_install.rst
 
-If you experience slow response from the mouse or other glitches you may try installing
-`VirtIO Drivers <https://pve.proxmox.com/wiki/Windows_VirtIO_Drivers>`_ .
-
-The drivers CDROM should have been automatically located in the
-secondary cd drive in your system.
 
 Use a swap partition for pagefiles
 ----------------------------------

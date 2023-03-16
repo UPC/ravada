@@ -4,19 +4,37 @@ Install Windows 10
 These are guidelines to install Windows 10 inside a  Ravada KVM Guest.
 
 
-Base Guest
-----------
+Requirements
+------------
 
-The guest should have more than 3 GB of RAM. If you are planning to run
-many services you should create the virtual machine with more memory.
+Installation sources
+~~~~~~~~~~~~~~~~~~~~
+
+The Windows 10 ISO image file is required:
+
+Download it and copy them in the Ravada host server
+at the directory */var/lib/libvirt/images* .
+
+Virtual Machine features
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The guest should have more than 3 GB of RAM
 You can increase it later if you want to keep it slim.
 
 At least 30GB disk drive is required. A swap partition should also be
 added when creating the virtual machine.
 
-.. figure:: images/create_win10.png
- 
+Create the Virtual Machine
+--------------------------
 
+From the web management tools, go to "New Machine" and create
+select the Windows 10 Template and the ISO image you just downloaded.
+
+It may take a few minutes if it is the first Windows virtual machine
+that is installed in this system. Ravada will download the additional
+drivers ISO volume.
+
+.. figure:: images/create_win10.png
 
 When the machine is created start it from *Admin Tools menu*, click on
 *Virtual Machines* to see a list. At the right there is a bunch of buttons.
@@ -27,21 +45,14 @@ Click on *view* to start and access the virtual machine console.
    Start and View Virtual Machine
 
 
-
 Setup
 -----
 
+.. include:: _windows_drivers.rst
+
 Follow the usual procedure to install Windows10.         
 
-When the installations it's finished, you need to install:
-
-* qemu-guest agent, see the instructions here: https://pve.proxmox.com/wiki/Qemu-guest-agent#Windows
-* Windows guest tools - `spice-guest-tools <https://www.spice-space.org/download/windows/spice-guest-tools/spice-guest-tools-latest.exe>`_ .
-* make sure that acpi service it's activated.
-
-If you experience slow response from the mouse or other glitches you may try installing
-`VirtIO Drivers <https://pve.proxmox.com/wiki/Windows_VirtIO_Drivers>`_ .
-
+.. include:: _windows_post_install.rst
 
 Use a swap partition for pagefiles
 ----------------------------------
