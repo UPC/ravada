@@ -5699,12 +5699,18 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
 
         my @display = Ravada::Front::Domain::_get_controller_display($self);
         my $current_data;
-        $current_data = $self->_get_display($data->{driver}) if $data->{driver};
-        if (!$current_data && defined $index) {
+        if (defined $index) {
             $current_data = $display[$index];
             if ($current_data->{is_secondary}) {
                 my ($driver) = $current_data->{driver} =~ /(.*)-\w+/;
                 $current_data = $self->_get_display($driver);
+            }
+            if($current_data->{driver} && $data->{driver}
+                && $current_data->{driver} ne $data->{driver}) {
+                unlock_hash(%$data);
+                $data->{port}='';
+                lock_hash(%$data);
+                $self->_update_display($data, $current_data);
             }
         } else {
             $current_data = $self->_get_display($data->{driver});
@@ -5899,12 +5905,15 @@ sub _get_display_port($self, $display) {
 }
 
 sub _add_hardware_display($orig, $self, $index, $data) {
-    confess "Error: missing driver ".Dumper($data) if !exists $data->{driver};
 
-    die "Error: display ".$data->{driver}." duplicated.\n"
-    if $self->_get_display($data->{driver});
+    my $is_builtin = 1;
 
-    my $is_builtin = $self->_is_display_builtin($data->{driver});
+    if ( $data->{driver} ) {
+        die "Error: display ".$data->{driver}." duplicated.\n"
+        if $self->_get_display($data->{driver});
+
+        $is_builtin = $self->_is_display_builtin($data->{driver});
+    }
 
     $self->_get_display_port($data)
     if exists $data->{driver}
@@ -5913,9 +5922,15 @@ sub _add_hardware_display($orig, $self, $index, $data) {
 
     if ( !$is_builtin && exists $data->{port}
         && defined $data->{port} && $data->{port} ne 'auto') {
-        die "Error: display $data->{driver} can not be used because port $data->{port} "
+
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT *"
+        ." FROM domain_ports WHERE id_domain=? AND internal_port=?");
+        $sth->execute($self->id, $data->{port});
+        my ($exposed) = $sth->fetchrow;
+
+        confess "Error: ".$self->name."[".$self->id."] display $data->{driver} can not be used because port $data->{port} "
         ." is already exported. Remove it from hardware / ports\n"
-        if $self->exposed_port($data->{port});
+        if $exposed;
 
         my $public_port = $self->expose( port => $data->{port}
             , name => $data->{driver}
@@ -5925,9 +5940,9 @@ sub _add_hardware_display($orig, $self, $index, $data) {
         $data->{port} = $public_port;
         $data->{id_domain_port} = $port->{id};
     }
-    $self->_store_display($data);
 
     $orig->($self, 'display', $index, $data) if $is_builtin;
+    $self->_store_display($data);
 }
 
 sub _check_duplicated_volume_name($self, $file) {
@@ -6024,24 +6039,30 @@ sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=unde
         confess "Error: display index $index not found in ".$self->name
         if !$display || !$display->{driver};
 
+        my $driver = $display->{driver};
         if ($display->{is_secondary}) {
-            my ($driver) = $display->{driver} =~ /(.*)-\w+/;
+            my ($cur_driver) = $display->{driver} =~ /(.*)-\w+/;
             confess "I can't guess primary driver for $display->{driver}"
             if !$driver;
 
             $display=$self->_get_display($driver);
             confess "Error: display $driver not found in ".$self->name
             if !$display || !$display->{driver};
-            $index = $display->{n_order};
+
+            $index = undef;
+            $driver=$cur_driver;
         }
         if ( !$display->{is_builtin} ) {
             my $port = $self->exposed_port($display->{driver});
             $self->remove_expose($port->{internal_port}) if $port;
         }
-        my $driver = $display->{driver};
         $self->_delete_db_display_by_driver($driver);
         if ($display->{is_builtin}) {
-            $orig->($self, $hardware, $index, type => $driver);
+            if (defined $index) {
+                $orig->($self, $hardware, $index);
+            } else {
+                $orig->($self, $hardware, $index, type => $driver);
+            }
             $driver .= "-tls";
             $self->_delete_db_display_by_driver($driver);
         }

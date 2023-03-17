@@ -2452,12 +2452,19 @@ sub _set_controller_network($self, $number, $data) {
 
 sub _set_controller_display_spice($self, $number, $data) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
-    for my $graphic ( $doc->findnodes("/domain/devices/graphics")) {
-        next if $graphic->getAttribute('type') ne 'spice';
-        die "Changing ".$graphic->toString()." ".Dumper($data);
+
+    my $count = 0;
+    my $graphic;
+    for my $g0 ( $doc->findnodes("/domain/devices/graphics")) {
+        if (!defined $number || $count++ >= $number ) {
+            $graphic = $g0;
+        }
     }
-    my ($devices) = $doc->findnodes("/domain/devices");
-    my $graphic = $devices->addNewChild(undef,'graphics');
+    if (!$graphic) {
+        my ($devices) = $doc->findnodes("/domain/devices");
+        $graphic = $devices->addNewChild(undef,'graphics');
+    }
+
     $graphic->setAttribute(type => 'spice');
 
     my $port = ( delete $data->{port} or 'auto');
@@ -2524,13 +2531,17 @@ sub _set_controller_display_vnc($self, $number, $data) {
 sub _set_controller_display($self, $number, $data) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
 
+    $data->{driver} = 'spice' if !$data->{driver};
+
+    my @graphics = $doc->findnodes("/domain/devices/graphics");
+    $number = scalar(@graphics) if !defined $number;
+
     return $self->_set_controller_display_spice($number, $data)
     if defined $data && $data->{driver} eq 'spice';
 
     return $self->_set_controller_display_vnc($number, $data)
     if defined $data && $data->{driver} eq 'vnc';
 
-    my @graphics = $doc->findnodes("/domain/devices/graphics");
     return $self->_set_controller_display_spice($number, $data)
     if exists $graphics[$number] && $graphics[$number]->getAttribute('type') eq 'spice';
 
@@ -2549,7 +2560,7 @@ sub remove_controller($self, $name, $index=0,$attribute_name=undef, $attribute_v
     my $ret;
 
     #some hardware can be removed searching by attribute
-    if($name eq 'display' || defined $attribute_name ) {
+    if(defined $attribute_name ) {
         $ret = $sub->($self, undef, $attribute_name, $attribute_value);
     } else {
         $ret = $sub->($self, $index);
@@ -2576,9 +2587,9 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
     if defined $attribute_name0 && !defined $attribute_value;
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
-    my ($devices) = $doc->findnodes('/domain/devices');
     my $ind=0;
     my @found;
+    my ($devices) = $doc->findnodes("/domain/devices");
     for my $controller ($devices->findnodes($device)) {
         my ($item, $attr_name)= _find_child($controller, $attribute_name0);
 
@@ -2930,9 +2941,36 @@ sub _change_hardware_display($self, $index, $data) {
     $type =~ s/-tls$//;
     my $port = delete $data->{port};
     confess if $port;
-    for my $item (keys %$data) {
-        $self->_set_driver_generic_simple("/domain/devices/graphics\[\@type='$type']/$item",$data->{$item});
+
+    $index = 0 if !defined $index;
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my @graphics = $doc->findnodes("/domain/devices/graphics");
+
+    my $graphics=$graphics[$index];
+    my $old_type = $graphics->getAttribute('type');
+    my $changed = 0;
+    if ($old_type ne $type ) {
+        $graphics->removeAttribute('port');
+        $graphics->setAttribute(type => $type);
+        for my $node ($graphics->findnodes('*')) {
+            $graphics->removeChild($node);
+        }
+        $changed++;
     }
+    for my $item (keys %$data) {
+        my ($node) = $graphics->findnodes($item);
+        $node = $graphics->addNewChild(undef,$item) if !$node;
+        my ($attrib,$value) = $data->{$item} =~ /(.*?)=(.*)/;
+        $value =~ s/^"(.*)"$/$1/;
+
+        if ( $node->getAttribute($attrib) ne $value ) {
+            $node->setAttribute($attrib => $value);
+            $changed++;
+        }
+    }
+
+    $self->reload_config($doc) if $changed;
 }
 
 
