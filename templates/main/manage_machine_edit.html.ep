@@ -45,7 +45,7 @@
 
 
         </div>
-        <div class="col-md-3 mt-3 mb-1" ng-show="name=='cpu' || name == 'features' || name=='network' || name == 'video'">
+        <div class="col-md-3 mt-3 mb-1" ng-show="name=='cpu' || name == 'features' || name=='network' || name == 'video' || name == 'display'">
             <button class="btn btn-outline-primary"
                 ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) "
                 ng-click="set_defaults(name, $index)"
