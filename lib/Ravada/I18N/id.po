@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: ravada\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2023-02-24 03:38+0000\n"
+"PO-Revision-Date: 2023-03-04 08:37+0000\n"
 "Last-Translator: Rayark <akhmadhabibie@gmail.com>\n"
 "Language-Team: Indonesian <https://hosted.weblate.org/projects/ravada/"
 "translation/id/>\n"
@@ -14,10 +14,10 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Weblate 4.16-dev\n"
+"X-Generator: Weblate 4.16.2-dev\n"
 
 msgid "Ravada broker"
-msgstr "Ravada pialang"
+msgstr "Ravada broker"
 
 msgid "Restore"
 msgstr "Mengembalikan"
@@ -423,7 +423,7 @@ msgid "For Spice redirection you will need to install"
 msgstr "Untuk pengalihan Spice anda butuh untuk memasang"
 
 msgid "in your computer."
-msgstr "dikomputer anda"
+msgstr "dikomputer anda."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr "Cari di distro anda, contoh di Debian/Ubuntu dengan"
@@ -878,7 +878,7 @@ msgid "Backend"
 msgstr "Backend"
 
 msgid "Mark all as read"
-msgstr "Tandai Semua Sudah Dibaca"
+msgstr "Tandai semua telah dibaca"
 
 msgid "Hindi"
 msgstr "Hindi"
@@ -962,7 +962,7 @@ msgid "Press SHIFT + F12 to exit the virtual machine"
 msgstr "Tekan SHIFT+F12 untuk keluar mesin virtual"
 
 msgid "Confirm"
-msgstr "Mengonfirmasi"
+msgstr "Konfirmasi"
 
 msgid "Warning: anonymous machines won't show up unless you enable allowed."
 msgstr ""
@@ -987,10 +987,11 @@ msgstr ""
 
 msgid "Please, make sure you have the right path and release, according to your PC configuration."
 msgstr ""
-"Pastikan anda memiliki jalur  dan rilis, berdasarkan konfigurasi PC anda"
+"Pastikan Anda memiliki path dan release yang benar, sesuai dengan "
+"konfigurasi PC Anda."
 
 msgid "SSO/CAS Login"
-msgstr "SSO/CAS Login"
+msgstr "Login SSO/CAS"
 
 msgid "User"
 msgstr "Pengguna"
@@ -999,7 +1000,7 @@ msgid "Password"
 msgstr "Password"
 
 msgid "can change the settings of any virtual machine."
-msgstr "Dapat mengganti pengaturan virtual mesin apa saja"
+msgstr "dapat mengubah pengaturan mesin virtual apa pun."
 
 msgid "can change the settings of any virtual machine "
 msgstr "Dapat mengganti pengaturan virtual mesin apa saja "
@@ -1077,10 +1078,10 @@ msgid "Default"
 msgstr "Bawaan"
 
 msgid "If none of the previous match, access is allowed."
-msgstr "Jika tidak ada yang cocok sebelumnya, akses diperbolehkan"
+msgstr "Jika tidak ada yang cocok sebelumnya, akses diperbolehkan."
 
 msgid "If none of the previous match, access is denied."
-msgstr "Jika tidak ada yang cocok sebelumnya, akses diperbolehkan"
+msgstr "Jika tidak ada yang cocok sebelumnya, akses ditolak."
 
 msgid "verify"
 msgstr "Memeriksa"
@@ -1098,7 +1099,7 @@ msgid "has at least"
 msgstr "mempunyai paling tidak"
 
 msgid "entries."
-msgstr "entri"
+msgstr "entri."
 
 msgid "Enable last for not allowed restrictions."
 msgstr "Aktifkan yang terakhir untuk batasan yang tidak diizinkan."
@@ -1265,7 +1266,7 @@ msgid "Hibernated"
 msgstr "Hibernasi"
 
 msgid "machines down."
-msgstr "mesin mati"
+msgstr "mesin mati."
 
 msgid "Disabling this node will shut all the"
 msgstr "Menonaktifkan node ini akan menutup semua"
@@ -1412,3 +1413,923 @@ msgstr "File ISO"
 
 msgid "state"
 msgstr "Keadaan"
+
+msgid "Poweroff"
+msgstr "Matikan"
+
+msgid "Requests"
+msgstr "Permintaan"
+
+msgid "remove"
+msgstr "menghapus"
+
+msgid "This machine is base and it can't be modified."
+msgstr "Mesin ini adalah basis dan tidak dapat dimodifikasi."
+
+msgid "The VM is"
+msgstr "VM adalah"
+
+msgid "stopped"
+msgstr "berhenti"
+
+msgid "Nothing to monitoring"
+msgstr "Tidak ada yang perlu dipantau"
+
+msgid "Start after migration"
+msgstr "Mulai setelah migrasi"
+
+msgid "This virtual machine is running. It must be shut down before migrate."
+msgstr ""
+"Mesin virtual ini sedang berjalan. Mesin harus dimatikan sebelum migrasi."
+
+msgid "Are you sure you want to migrate"
+msgstr "Anda yakin ingin migrasi"
+
+msgid "Max memory (MB)"
+msgstr "Max Memori (MB)"
+
+msgid "Current memory (MB)"
+msgstr "Memori Sekarang (MB)"
+
+msgid "Run Timeout"
+msgstr "Jalankan Batas Waktu"
+
+msgid "Shutdown Timeout"
+msgstr "Batas Waktu Matikan"
+
+msgid "Port"
+msgstr "Port"
+
+msgid "The machine will power off after this minutes after shutdown."
+msgstr "Mesin akan dimatikan setelah beberapa menit setelah dimatikan."
+
+msgid "Clones created from this machine will be removed on shutdown."
+msgstr "Klon yang dibuat dari mesin ini akan dihapus saat dimatikan."
+
+msgid "Virtual Machine will start on host start."
+msgstr "Mesin Virtual akan dijalankan saat host dimulai."
+
+msgid "Virtual Machine will be shutdown when user disconnects."
+msgstr "Mesin Virtual akan dimatikan saat pengguna terputus."
+
+msgid "Restricted"
+msgstr "Terbatas"
+
+msgid "Public Port"
+msgstr "Port Publik"
+
+msgid "Only remote client can access this port if restricted"
+msgstr "Hanya klien remote yang dapat mengakses port ini jika dibatasi"
+
+msgid "Shutdown disconnected"
+msgstr "Matikan yang terputus"
+
+msgid "Clones are volatile, so all the pool will be started."
+msgstr "Klon tidak stabil, jadi semua pool akan dimulai."
+
+msgid "Error: you want to have"
+msgstr "Error: kamu ingin mempunyai"
+
+msgid "Only remote client can access this port"
+msgstr "Hanya klien remote yang dapat mengakses port ini"
+
+msgid "Any remote client can access this port"
+msgstr "Setiap klien remote dapat mengakses port ini"
+
+msgid "Refresh ports"
+msgstr "Refresh ports"
+
+msgid "Change"
+msgstr "Mengubah"
+
+msgid "Rebase all the clones to a new base"
+msgstr "Rebase semua klon ke basis baru"
+
+msgid "Rebase this machine to another virtual machine"
+msgstr "Rebase mesin ini ke mesin virtual lain"
+
+msgid "Warning"
+msgstr "Peringatan"
+
+msgid "Changing the base of a virtual machine is potentially dangerous and can't be undone."
+msgstr ""
+"Mengubah basis mesin virtual berpotensi bahaya dan tidak dapat dibatalkan."
+
+msgid "No, cancel"
+msgstr "Tidak, batalkan"
+
+msgid "Yes, rebase"
+msgstr "Ya, rebase"
+
+msgid "Rebase"
+msgstr "Rebase"
+
+msgid "Remove the base prepared from this machine"
+msgstr "Hapus base yang disiapkan dari mesin ini"
+
+msgid "Remove Clones"
+msgstr "Hapus Klon-klon"
+
+msgid "This virtual machine has clones that are bases and won't be removed"
+msgstr ""
+"Mesin virtual ini memiliki klon yang merupakan basis dan tidak akan dihapus"
+
+msgid "This machine is hibernated and can't be renamed."
+msgstr "Mesin ini dalam mode hibernasi dan namanya tidak dapat diganti."
+
+msgid "New name"
+msgstr "Nama baru"
+
+msgid "Spinoff clone"
+msgstr "Spinoff klon"
+
+msgid "Spinoff this clone from its base."
+msgstr "Spinoff klon ini dari basenya."
+
+msgid "Enter Old Password"
+msgstr "Masukkan Kata Sandi Lama"
+
+msgid "Enter New Password"
+msgstr "Masukkan Kata Sandi Baru"
+
+msgid "Re-Enter New Password"
+msgstr "Masukkan Kembali Kata Sandi Baru"
+
+msgid "Old Password is required"
+msgstr "Kata Sandi Lama diperlukan"
+
+msgid "Old Password can only contain words and numbers"
+msgstr "Kata Sandi Lama hanya boleh berisi kata dan angka"
+
+msgid "Are you sure you want to spinoff from the base?"
+msgstr "Apakah anda yakin ingin spinoff dari basis?"
+
+msgid "Old and New Passwords match!"
+msgstr "Kata Sandi Lama dan Baru cocok!"
+
+msgid "New Password is required"
+msgstr "Kata Sandi baru diperlukan"
+
+msgid "New Password can only contain words and numbers"
+msgstr "Kata Sandi Baru hanya boleh berisi kata dan angka"
+
+msgid "Repeated New Password is required"
+msgstr "Kata Sandi Baru berulang diperlukan"
+
+msgid "Password and their confirmation do not match!"
+msgstr "Kata sandi dan konfirmasinya tidak cocok!"
+
+msgid "Today Schedule"
+msgstr "Jadwal Hari ini"
+
+msgid "not allowed"
+msgstr "tidak diizinkan"
+
+msgid "Machines Notifications"
+msgstr "Notifikasi Mesin-mesin"
+
+msgid "Machine"
+msgstr "Mesin"
+
+msgid "Group name is required"
+msgstr "Nama grup diperlukan"
+
+msgid "Enter group name"
+msgstr "Masukkan nama grup"
+
+msgid "Group name"
+msgstr "Nama grup"
+
+msgid "Group name can not exceed 80 characters"
+msgstr "Nama grup tidak boleh melebihi dari 60 karakter"
+
+msgid "added"
+msgstr "ditambahkan"
+
+msgid "Choose the virtualization type of the Virtual Machine."
+msgstr "Pilih jenis virtualisasi Mesin Virtual."
+
+msgid "Type the template name"
+msgstr "Ketikkan nama template"
+
+msgid "Select the .iso file the machine will utilize when installing the OS."
+msgstr "Pilih file .iso yang akan digunakan mesin saat menginstal OS."
+
+msgid "Type the ISO pathname"
+msgstr "Ketikkan pathname ISO"
+
+msgid "This ISO is being downloaded. The virtual machine will be created after."
+msgstr "File ISO sedang diunduh. Mesin virtual akan dibuat setelahnya."
+
+msgid "System Disk: (GB)"
+msgstr "Disk Sistem: (GB)"
+
+msgid "The Minimum Disk Size needed for this ISO is"
+msgstr "Ukuran Disk Minimum yang diperlukan untuk ISO ini adalah"
+
+msgid "Advanced options"
+msgstr "Opsi lanjutan"
+
+msgid "Swap"
+msgstr "Swap"
+
+msgid "disabled"
+msgstr "nonaktifkan"
+
+msgid "The Minimum Swap Disk Size needed for this ISO is"
+msgstr "Ukuran Swap Disk Minimum yang diperlukan untuk ISO ini adalah"
+
+msgid "Data"
+msgstr "Data"
+
+msgid "BIOS"
+msgstr "BIOS"
+
+msgid "Legacy"
+msgstr "Legacy"
+
+msgid "UEFI"
+msgstr "UEFI"
+
+msgid "Start after create the virtual machine"
+msgstr "Mulai setelah membuat mesin virtual"
+
+msgid "Invalid Template"
+msgstr "Templat Tidak Valid"
+
+msgid "Please select an ISO file"
+msgstr "Silakan pilih file ISO"
+
+msgid "Passwords do not match!"
+msgstr "Kata Sandi tidak cocok!"
+
+msgid "Support Contact"
+msgstr "Kontak Dukungan"
+
+msgid "If you have any issue, you can contact the Suport crew and we will try to help you. Please, only contact Support Center if it is strictly necessary."
+msgstr ""
+"Jika Anda memiliki masalah, Anda dapat menghubungi kru Dukungan dan kami "
+"akan mencoba membantu Anda. Harap hubungi Pusat Dukungan hanya jika benar-"
+"benar diperlukan."
+
+msgid "Phone Number"
+msgstr "Nomor Telepon"
+
+msgid "Attachment"
+msgstr "Lampiran"
+
+msgid "Contact Method"
+msgstr "Metode Kontak"
+
+msgid "Phone"
+msgstr "Telepon"
+
+msgid "Will be destroyed on shutdown"
+msgstr "Akan dihancurkan saat dimatikan"
+
+msgid "hide"
+msgstr "sembunyikan"
+
+msgid "Hide active"
+msgstr "Sembunyikan yang aktif"
+
+msgid "filter"
+msgstr "filter"
+
+msgid "Reload"
+msgstr "Muat ulang"
+
+msgid "Congrats"
+msgstr "Selamat"
+
+msgid "The new user"
+msgstr "Pengguna baru"
+
+msgid "has been added successfully!"
+msgstr "telah berhasil ditambahkan!"
+
+msgid "What do you want to do now?"
+msgstr "Apa yang ingin kamu lakukan sekarang?"
+
+msgid "Add another user"
+msgstr "Tambahkan pengguna lain"
+
+msgid "Create a new group"
+msgstr "Buat grup baru"
+
+msgid "groups"
+msgstr "grup-grup"
+
+msgid "nodes"
+msgstr "nodes"
+
+msgid "settings"
+msgstr "pengaturan"
+
+msgid "can manage users."
+msgstr "dapat mengelola pengguna."
+
+msgid "Can expose virtual machine ports."
+msgstr "Dapat mengekspos port mesin virtual."
+
+msgid "Can rename any virtual machine owned by the user."
+msgstr "Dapat mengganti nama mesin virtual apapun yang dimiliki oleh pengguna."
+
+msgid "Can rename any virtual machine."
+msgstr "Dapat mengganti nama mesin virtual apa pun."
+
+msgid "Fill required camps with valid data"
+msgstr "Isi camps yang diperlukan dengan data yang valid"
+
+msgid "Can rename clones from virtual machines owned by the user."
+msgstr "Dapat mengganti nama klon dari mesin virtual yang dimiliki pengguna."
+
+msgid "Can shutdown own virtual machines."
+msgstr "Dapat mematikan mesin virtual sendiri."
+
+msgid "Can reboot own virtual machines."
+msgstr "Dapat me-reboot mesin virtual sendiri."
+
+msgid "Can reboot all virtual machines."
+msgstr "Dapat me-reboot semua mesin virtual."
+
+msgid "Can reboot clones own virtual machines."
+msgstr "Dapat mem-boot ulang klon mesin virtual sendiri."
+
+msgid "Can get a screenshot of own virtual machines."
+msgstr "Bisa mendapatkan screenshot dari mesin virtual sendiri."
+
+msgid "Can have an unlimited amount of machines started."
+msgstr "Dapat memulai jumlah mesin yang tidak terbatas."
+
+msgid "Can view groups."
+msgstr "Dapat melihat grup."
+
+msgid "can have their own limit on started machines."
+msgstr "dapat memiliki batasan sendiri untuk mesin yang dihidupkan."
+
+msgid "Search group"
+msgstr "Cari grup"
+
+msgid "No Results Found"
+msgstr "Hasil tidak ditemukan"
+
+msgid "Client headers"
+msgstr "Header klien"
+
+msgid "locked"
+msgstr "terkunci"
+
+msgid "This virtual machine has no group restrictions."
+msgstr "Mesin virtual ini tidak memiliki batasan grup."
+
+msgid "There are no LDAP groups defined."
+msgstr "Tidak ada grup LDAP yang ditentukan."
+
+msgid "Only users from these groups will be allowed to execute this machine"
+msgstr ""
+"Hanya pengguna dari grup ini yang akan diizinkan untuk menjalankan mesin ini"
+
+msgid "This field is required"
+msgstr "Bagian ini diperlukan"
+
+msgid "Title"
+msgstr "Judul"
+
+msgid "Color"
+msgstr "Warna"
+
+msgid "Weekly"
+msgstr "Mingguan"
+
+msgid "Until"
+msgstr "Sampai"
+
+msgid "Groups with permissions"
+msgstr "Grup dengan izin"
+
+msgid "Delete"
+msgstr "Hapus"
+
+msgid "Save changes"
+msgstr "Simpan perubahan"
+
+msgid "Event properties"
+msgstr "Pengaturan Event"
+
+msgid "Balance"
+msgstr "Seimbang"
+
+msgid "Node with more free memory"
+msgstr "Node dengan lebih banyak memori bebas"
+
+msgid "This booking overlaps already scheduled reservations"
+msgstr "Pemesanan ini tumpang tindih dengan pemesanan yang sudah dijadwalkan"
+
+msgid "options"
+msgstr "pilihan"
+
+msgid "can change the settings of any virtual machine cloned from one base owned by the user."
+msgstr ""
+"dapat mengubah pengaturan mesin virtual apa pun yang dikloning dari satu "
+"basis yang dimiliki oleh pengguna."
+
+msgid "Node with machines from the same user"
+msgstr "Node dengan mesin dari pengguna yang sama"
+
+msgid "Permission granted to user"
+msgstr "Izin diberikan kepada pengguna"
+
+msgid "Permission revoked from user"
+msgstr "Izin dicabut dari pengguna"
+
+msgid "User not found"
+msgstr "Pengguna tidak ditemukan"
+
+msgid "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+msgstr ""
+"Grup LDAP diperlukan untuk menyiapkan bookings. Beberapa grup ditemukan "
+"tetapi tidak ada anggota yang menjadi anggota mereka. <a href='/admin/"
+"groups'>Tambahkan entri baru di sini.</a>"
+
+msgid "From"
+msgstr "Dari"
+
+msgid "To"
+msgstr "Ke"
+
+msgid "Edit the event"
+msgstr "Edit event"
+
+msgid "This event"
+msgstr "Event ini"
+
+msgid "This event and the following"
+msgstr "Event ini dan selanjutnya"
+
+msgid "This event and the following with same day of week"
+msgstr "Event ini dan selanjutnya dengan hari yang sama dalam seminggu"
+
+msgid "All events"
+msgstr "Semua acara"
+
+msgid "Delete the event"
+msgstr "Hapus event"
+
+msgid "Source Machine"
+msgstr "Sumber Mesin"
+
+msgid "This feature requires a LDAP server configured."
+msgstr "Fitur ini memerlukan konfigurasi LDAP Server."
+
+msgid "Monitoring"
+msgstr "Monitoring"
+
+msgid "For Spice client setup follow this "
+msgstr "Untuk pengaturan klien Spice, ikuti ini "
+
+msgid "Node"
+msgstr "Node"
+
+msgid "Manage machine"
+msgstr "Kelola Mesin"
+
+msgid "Volatile"
+msgstr "Tidak Stabil"
+
+msgid "Type"
+msgstr "Type"
+
+msgid "Bases"
+msgstr "Basis"
+
+msgid "Action"
+msgstr "Aksi"
+
+msgid "Active"
+msgstr "Aktif"
+
+msgid "Disabled"
+msgstr "Nonaktfikan"
+
+msgid "This node is local"
+msgstr "Node ini bersifat lokal"
+
+msgid "Refresh"
+msgstr "Refresh"
+
+msgid "Enable"
+msgstr "Aktifkan"
+
+msgid "Disable"
+msgstr "Nonaktifkan"
+
+msgid "Confirm disable node"
+msgstr "Konfirmasi nonaktifkan node"
+
+msgid "Web Service connection failed."
+msgstr "Koneksi Web Service gagal."
+
+msgid "boot order"
+msgstr "Urutan boot"
+
+msgid "on"
+msgstr "Hidupkan"
+
+msgid "off"
+msgstr "Matikan"
+
+msgid "hidden"
+msgstr "Tersembunyi"
+
+msgid "nat"
+msgstr "nat"
+
+msgid "bridge"
+msgstr "bridge"
+
+msgid "primary"
+msgstr "Utama"
+
+msgid "Primary video devices will move to first"
+msgstr "Perangkat video utama akan dipindahkan ke yang pertama"
+
+msgid "ram"
+msgstr "ram"
+
+msgid "vram"
+msgstr "vram"
+
+msgid "heads"
+msgstr "heads"
+
+msgid "Set defaults"
+msgstr "Atur Default"
+
+msgid "Add new disk"
+msgstr "Tambahkan disk baru"
+
+msgid "device"
+msgstr "perangkat"
+
+msgid "sys"
+msgstr "sys"
+
+msgid "swap"
+msgstr "swap"
+
+msgid "size"
+msgstr "ukuran"
+
+msgid "allocation"
+msgstr "alokasi"
+
+msgid "Add new Display"
+msgstr "Tambahkan Display baru"
+
+msgid "PrepareBase"
+msgstr "SiapkanBase"
+
+msgid "Add to group"
+msgstr "Tambahkan ke grup"
+
+msgid "No LDAP groups created."
+msgstr "Tidak ada group LDAP yang dibuat."
+
+msgid "Add groups"
+msgstr "Tambahkan grup"
+
+msgid "User is not member of any group."
+msgstr "Pengguna bukan member dari grup apapun."
+
+msgid "Force change password on first access"
+msgstr "Paksa ubah kata sandi saat akses pertama kali"
+
+msgid "Set New Password"
+msgstr "Atur kata sandi baru"
+
+msgid "New Password must be at least 6 characters"
+msgstr "Kata sandi baru paling tidak harus 6 karakter"
+
+msgid "New password"
+msgstr "Kata sandi baru"
+
+msgid "This user has never logged in the Ravada server."
+msgstr "Pengguna ini tidak pernah login ke Ravada server."
+
+msgid "Import"
+msgstr "Import"
+
+msgid "No machines found"
+msgstr "Tidak ada mesin ditemukan"
+
+msgid "Warning: anonymous machines won't show up unless you set them public."
+msgstr ""
+"Peringatan: mesin anonim tidak akan muncul kecuali Anda menyetelnya ke "
+"publik."
+
+msgid "New network"
+msgstr "Jaringan baru"
+
+msgid "address"
+msgstr "alamat"
+
+msgid "Invalid IP network address. Expecting a.b.c.d/e"
+msgstr "Alamat jaringan IP tidak valid. Diharapkan a.b.c.d/e"
+
+msgid "This address is duplicated"
+msgstr "Alamat ini terduplikasi"
+
+msgid "Set either"
+msgstr "Tetapkan juga"
+
+msgid "all machines"
+msgstr "Semua mesin"
+
+msgid "or"
+msgstr "atau"
+
+msgid "no machines"
+msgstr "tidak ada mesin"
+
+msgid "for users in this network"
+msgstr "untuk pengguna pada jaringan ini"
+
+msgid "Network"
+msgstr "Jaringan"
+
+msgid "saved."
+msgstr "disimpan."
+
+msgid "Are you sure you want to remove the"
+msgstr "Apakah anda yakin ingin menghapus"
+
+msgid "yes"
+msgstr "ya"
+
+msgid "Choose the virtualization type of the Node."
+msgstr "Pilih jenis virtualisasi Node."
+
+msgid "Check connection to"
+msgstr "Periksa koneksi ke"
+
+msgid "Save"
+msgstr "Simpan"
+
+msgid "Testing connection to"
+msgstr "Uji koneksi ke"
+
+msgid "No bases found"
+msgstr "Tidak ada bases ditemukan"
+
+msgid "This base has"
+msgstr "Base ini memiliki"
+
+msgid "backup directory"
+msgstr "direktori cadangan"
+
+msgid "This is a main node and can't be removed."
+msgstr "Ini adalah node utama dan tidak dapat dihapus."
+
+msgid "Are you sure you want to remove the node"
+msgstr "Anda yakin ingin menghapus node"
+
+msgid "This node has"
+msgstr "Node ini memiliki"
+
+msgid "bases."
+msgstr "basis."
+
+msgid "Remove bases in node"
+msgstr "Hapus basis di node"
+
+msgid "Request"
+msgstr "Permintaan"
+
+msgid "This can't be undone"
+msgstr "Ini tidak dapat dibatalkan"
+
+msgid "Please insert"
+msgstr "Silakan masukkan"
+
+msgid "not"
+msgstr "bukan"
+
+msgid "to apply."
+msgstr "untuk menerapkan."
+
+msgid "Display"
+msgstr "Tampilan"
+
+msgid "Machine Information"
+msgstr "Informasi Mesin"
+
+msgid "Internal IP"
+msgstr "IP internal"
+
+msgid "waiting for network to come up"
+msgstr "menunggu jaringan muncul"
+
+msgid "Max Memory"
+msgstr "Memori Maksimal"
+
+msgid "CPUs"
+msgstr "CPUs"
+
+msgid "reopen"
+msgstr "buka kembali"
+
+msgid "I don't know settings tabs for:"
+msgstr "Saya tidak tahu tab pengaturan untuk:"
+
+msgid "Hardware"
+msgstr "Perangkat Keras"
+
+msgid "Base"
+msgstr "Basis"
+
+msgid "Ports"
+msgstr "Ports"
+
+msgid "Access"
+msgstr "Akses"
+
+msgid "Waiting for requests to complete"
+msgstr "Menunggu permintaan selesai"
+
+msgid "down"
+msgstr "down"
+
+msgid "Force ShutDown"
+msgstr "Matikan Paksa"
+
+msgid "Reboot"
+msgstr "Menyalakan Ulang"
+
+msgid "Compact"
+msgstr "Padatkan"
+
+msgid "Purge"
+msgstr "Membersihkan"
+
+msgid "Purge disk volumes"
+msgstr "Bersihkan disk volumes"
+
+msgid "This machine is locked by process"
+msgstr "Mesin ini dikunci oleh proses"
+
+msgid "This base can't be removed because the domain has clones."
+msgstr "Basis ini tidak dapat dihapus karena domain memiliki klon."
+
+msgid "Loading machine"
+msgstr "Memuat mesin"
+
+msgid "waiting for requests"
+msgstr "menunggu permintaan"
+
+msgid "Loading nodes"
+msgstr "Memuat node"
+
+msgid "This base has clones"
+msgstr "Basis ini memiliki klon"
+
+msgid "today"
+msgstr "hari ini"
+
+msgid "New Booking"
+msgstr "Pemesanan Baru"
+
+msgid "driver"
+msgstr "driver"
+
+msgid "Exec. time"
+msgstr "Lama eksekusi"
+
+msgid "Exec clones sequentially"
+msgstr "Eksekusi klon secara berurutan"
+
+msgid "RAM (Gb)"
+msgstr "RAM (Gb)"
+
+msgid "I can't find"
+msgstr "Saya tidak dapat menemukan"
+
+msgid "This machine is running and can't be modified."
+msgstr "Mesin ini sedang berjalan dan tidak dapat dimodifikasi."
+
+msgid "This machine is base and can't be modified."
+msgstr "Mesin ini adalah basis dan tidak dapat dimodifikasi."
+
+msgid "Danger: This will destroy all the disk data permantently."
+msgstr "Bahaya: Ini akan menghancurkan semua data disk secara permanen."
+
+msgid "Type the name of the volume disk to confirm:"
+msgstr "Ketik nama dari volume disk untuk mengonfirmasi:"
+
+msgid "-- choose hardware --"
+msgstr "-- pilih perangkat keras --"
+
+msgid "but there are only"
+msgstr "tetapi hanya ada"
+
+msgid "clones defined."
+msgstr "klon ditentukan."
+
+msgid "allowed"
+msgstr "diizinkan"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "Event saved successfully"
+msgstr "Event sukses disimpan"
+
+msgid "Nodes"
+msgstr "Nodes"
+
+msgid "Oops!"
+msgstr "Oops!"
+
+msgid "Autostart"
+msgstr "Mulai Otomatis"
+
+msgid "Primary can not be unset, enable it in another video device"
+msgstr "Utama tidak dapat dibatalkan, aktifkan di perangkat video lain"
+
+msgid "Error: the LDAP entry for this user has been removed."
+msgstr "Error: entri LDAP untuk pengguna ini telah dihapus."
+
+msgid "name"
+msgstr "nama"
+
+msgid "and will remove all the disk and information of this virtual machine."
+msgstr "dan akan menghapus semua disk dan informasi dari mesin virtual ini."
+
+msgid "Network address is required."
+msgstr "Alamat jaringan diperlukan."
+
+msgid "Requires viewer password when implemented"
+msgstr "Membutuhkan kata sandi viewer saat diterapkan"
+
+msgid "A node with that address already exists."
+msgstr "Node dengan alamat tersebut sudah ada."
+
+msgid "Removing Virtual Machine"
+msgstr "Menghapus Mesin Virtual"
+
+msgid "Force Reboot"
+msgstr "Paksa nyalakan ulang"
+
+msgid "Node disabled"
+msgstr "Node dinonaktifkan"
+
+msgid "Recent requests"
+msgstr "Permintaan terbaru"
+
+msgid "This virtual machine has already been compacted"
+msgstr "Mesin virtual ini telah dipadatkan"
+
+msgid "Node down"
+msgstr "Node down"
+
+msgid "Compact disk volumes"
+msgstr "Padatkan disk volumes"
+
+msgid "This name is invalid. It can only contain alphabetic, numbers, undercores and dashes and must start by a letter."
+msgstr ""
+"Nama tidak valid. Nama hanya dapat berisi alfabet, angka, garis bawah dan "
+"tanda hubung dan harus dimulai dengan huruf."
+
+msgid "Prepare Base"
+msgstr "Siapkan base"
+
+msgid ""
+"This server has reservations for today. Machines from users out of\n"
+"    the booking list will be shutdown."
+msgstr ""
+"Server ini memiliki reservasi untuk hari ini. Mesin pengguna yang bukan "
+"dari\n"
+"     daftar pemesanan akan dimatikan."
+
+msgid "The source machine is not a base. It must be prepared before it can be copied. This process may take some minutes."
+msgstr ""
+"Sumber mesin bukanlah base. Harus disiapkan sebelum dapat disalin. Proses "
+"ini mungkin memakan waktu beberapa menit."
+
+msgid "Schedule"
+msgstr "Jadwal"
+
+msgid "bases"
+msgstr "basis"
+
+msgid "networks"
+msgstr "jaringan"
+
+msgid "Can manage groups."
+msgstr "Dapat mengelola grup."
+
+msgid "Repeat"
+msgstr "Ulangi"
+
+msgid "volatile"
+msgstr "volatile"
