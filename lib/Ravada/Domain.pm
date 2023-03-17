@@ -5700,12 +5700,13 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
         my @display = Ravada::Front::Domain::_get_controller_display($self);
         my $current_data;
         if (defined $index) {
-            $current_data = $display[$index];
+            $current_data = $display[$index] or confess "Error: missing graphics $index , only ".scalar(@display)." found";
             if ($current_data->{is_secondary}) {
                 my ($driver) = $current_data->{driver} =~ /(.*)-\w+/;
                 $current_data = $self->_get_display($driver);
             }
-            if($current_data->{driver} && $data->{driver}
+            if($current_data->{driver} && exists $data->{driver}
+                && $data->{driver}
                 && $current_data->{driver} ne $data->{driver}) {
                 unlock_hash(%$data);
                 $data->{port}='';
