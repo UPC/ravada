@@ -4908,8 +4908,18 @@ sub _apply_clones($self, $request) {
     return if !$domain->is_base;
 
     my $args = $request->args;
-    delete $args->{data}->{file}
-    if $request->command eq 'change_hardware' && $args->{'hardware'} eq 'disk';
+    if ($request->command eq 'change_hardware') {
+        my %fields = ('disk' => 'file'
+            ,'display' => ['id','id_domain','id_domain_port']
+        );
+        my $field = $fields{$args->{hardware}};
+        if ($field) {
+            $field = [$field] if !ref($field);
+            for my $curr_field (@$field) {
+                delete $args->{data}->{$curr_field};
+            }
+        }
+    }
 
     for my $clone ($domain->clones) {
         Ravada::Request->new_request(
