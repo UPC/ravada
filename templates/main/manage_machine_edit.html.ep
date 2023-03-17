@@ -13,6 +13,7 @@
                 %= include 'main/manage_machine_edit_features'
                 %= include 'main/manage_machine_edit_memory'
                 %= include 'main/manage_machine_edit_disk'
+                %= include 'main/manage_machine_edit_display'
                 %= include 'main/manage_machine_edit_filesystem'
                 %= include 'main/manage_machine_edit_net'
                 %= include 'main/manage_machine_edit_video'

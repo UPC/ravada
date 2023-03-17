@@ -784,9 +784,7 @@ sub _display_info_spice($graph) {
     for my $item ( $graph->findnodes("*")) {
         next if $item->getName eq 'listen';
         for my $attr ( $item->getAttributes()) {
-            my $value = $attr->toString();
-            $value =~ s/^\s+//;
-            $display{$item->getName()} = $value;
+            $display{$item->getName()}->{$attr->getName} = $attr->getValue();
         }
     }
 
@@ -2958,15 +2956,26 @@ sub _change_hardware_display($self, $index, $data) {
         }
         $changed++;
     }
-    for my $item (keys %$data) {
+    my $extra = $data->{extra};
+    for my $item (keys %$extra) {
         my ($node) = $graphics->findnodes($item);
         $node = $graphics->addNewChild(undef,$item) if !$node;
-        my ($attrib,$value) = $data->{$item} =~ /(.*?)=(.*)/;
-        $value =~ s/^"(.*)"$/$1/;
+        if (ref($extra->{$item})) {
+            for my $attr (keys %{$extra->{$item}}) {
+                my $value = $extra->{$item}->{$attr};
+                if ( $node->getAttribute($attr) ne $value ) {
+                    $node->setAttribute($attr => $value);
+                    $changed++;
+                }
+            }
+        } else {
+            my ($attrib,$value) = $extra->{$item} =~ /(.*?)=(.*)/;
+            $value =~ s/^"(.*)"$/$1/;
 
-        if ( $node->getAttribute($attrib) ne $value ) {
-            $node->setAttribute($attrib => $value);
-            $changed++;
+            if ( $node->getAttribute($attrib) ne $value ) {
+                $node->setAttribute($attrib => $value);
+                $changed++;
+            }
         }
     }
 
