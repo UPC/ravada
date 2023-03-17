@@ -905,6 +905,7 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
     return $self->_set_controller_disk($data) if $name eq 'disk';
 
     $data->{listen_ip} = $self->_vm->listen_ip if $name eq 'display'&& !$data->{listen_ip};
+    $data->{driver} = 'spice' if $name eq 'display'&& !$data->{driver};
 
     my $list = ( $hardware->{$name} or [] );
 

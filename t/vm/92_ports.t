@@ -1175,7 +1175,10 @@ sub test_open_port_duplicated($vm) {
     is(scalar(@open2),2) or die Dumper(\@open2);
 
     my $req = Ravada::Request->refresh_vms(_force => 1);
-    wait_request(request => $req, debug => 0);
+    for ( 1 .. 5 ) {
+        wait_request(request => $req, debug => 0);
+        last if $req->status eq 'done';
+    }
     is($req->status,'done');
     is($req->error, '') or exit;
 
