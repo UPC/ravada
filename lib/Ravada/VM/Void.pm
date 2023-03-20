@@ -86,6 +86,8 @@ sub create_domain {
     my $description = delete $args{description};
     confess if $args{name} eq 'tst_vm_v20_volatile_clones_02' && !$listen_ip;
     my $remote_ip = delete $args{remote_ip};
+    my $id = delete $args{id};
+
     my $domain = Ravada::Domain::Void->new(
                                            %args
                                            , domain => $args{name}
@@ -94,6 +96,9 @@ sub create_domain {
     my ($out, $err) = $self->run_command("/usr/bin/test",
          "-e ".$domain->_config_file." && echo 1" );
     chomp $out;
+
+    return $domain if $out && exists $args{config};
+
     die "Error: Domain $args{name} already exists " if $out;
     $domain->_set_default_info($listen_ip);
     $domain->_store( autostart => 0 );
@@ -101,6 +106,7 @@ sub create_domain {
     $domain->set_memory($args{memory}) if $args{memory};
 
     $domain->_insert_db(name => $args{name} , id_owner => $user->id
+        , id => $id
         , id_vm => $self->id
         , id_base => $args{id_base} 
         , description => $description
@@ -129,7 +135,7 @@ sub create_domain {
         my $base_hw = $domain_base->_value('hardware');
         my $clone_hw = $domain->_value('hardware');
         for my $hardware( keys %{$base_hw} ) {
-            next if $hardware eq 'device';
+            next if $hardware eq 'device' || $hardware eq 'host_devices';
             $clone_hw->{$hardware} = $base_hw->{$hardware};
             next if $hardware ne 'display';
             for my $entry ( @{$clone_hw->{$hardware}} ) {
@@ -139,10 +145,19 @@ sub create_domain {
             }
         }
         $domain->_store(hardware => $clone_hw);
+
+        my $base_info = $domain_base->_value('info');
+        my $clone_info = $domain->_value('info');
+        for my $item ( keys %$base_info) {
+            $clone_info->{$item} = $base_info->{$item}
+            if $item !~ /^(mac|state)$/;
+        }
+        $domain->_store(info => $clone_info);
+
         my $drivers = {};
         $drivers = $domain_base->_value('drivers');
         $domain->_store( drivers => $drivers );
-    } else {
+    } elsif (!exists $args{config}) {
         my ($file_img) = $domain->disk_device();
         my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".void";
         $file_img =~ m{.*/(.*)} if $file_img;
@@ -176,6 +191,7 @@ sub _add_cdrom($self, $domain, %args) {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE id=?");
         $sth->execute($id_iso);
         my $row = $sth->fetchrow_hashref();
+        return if !$row->{has_cd};
         $iso_file = $row->{device};
         if (!$iso_file) {
             $iso_file = $row->{name};
@@ -235,7 +251,7 @@ sub _is_a_domain($self, $file) {
     chomp $file;
 
     return if $file !~ /\.yml$/;
-    $file =~ s/\.\w+//;
+    $file =~ s/\.\w+$//;
     $file =~ s/(.*)\.qcow.*$/$1/;
     return if $file !~ /\w/;
 
@@ -270,6 +286,23 @@ sub _list_domains_remote($self, %args) {
 sub list_domains($self, %args) {
     return $self->_list_domains_local(%args) if $self->is_local();
     return $self->_list_domains_remote(%args);
+}
+
+sub discover($self) {
+    opendir my $ls,dir_img or return;
+
+    my %known = map { $_->name => 1 } $self->list_domains();
+
+    my @list;
+    while (my $file = readdir $ls ) {
+        next if $file !~ /\.yml$/;
+        $file =~ s/\.\w+//;
+        $file =~ s/(.*)\.qcow.*$/$1/;
+        return if $file !~ /\w/;
+        next if $known{$file};
+        push @list,($file);
+    }
+    return @list;
 }
 
 sub search_domain {
@@ -347,6 +380,8 @@ sub search_volume_path_re {
 sub import_domain($self, $name, $user, $backing_file) {
 
     my $file = $self->dir_img."/$name.yml";
+    $file = $self->dir_img."/".Encode::decode_utf8($name).".yml"
+    if ! -e $file;
 
     die "Error: domain $name not found in ".$self->dir_img if !-e $file;
 
@@ -421,6 +456,66 @@ sub file_exists( $self, $file ) {
     return 1 if !$err;
     return 0;
 }
+
+sub _is_ip_nat($self, $ip) {
+    return 1;
+}
+
+sub _search_iso($self, $id, $device = undef) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images "
+        ." WHERE id=?"
+    );
+    $sth->execute($id);
+    my $row = $sth->fetchrow_hashref;
+    $row->{device} = $device if defined $device;
+    return $row;
+}
+
+sub _iso_name($self, $iso, $request=undef, $verbose=0) {
+
+    return '' if !$iso->{has_cd};
+
+    my $name = ($iso->{device} or $iso->{rename_file} or $iso->{file_re});
+    confess Dumper($iso) if !$name;
+    $name =~ s/(.*)\.\*(.*)/$1$2/;
+    $name =~ s/(.*)\.\+(.*)/$1.$2/;
+    $name =~ s/(.*)\[\\d.*?\]\+(.*)/${1}1$2/;
+    confess $name if $name =~ m{[*+\\]};
+
+    $name = $self->dir_img."/".$name unless $name =~ m{^/};
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE iso_images "
+        ." SET device=? WHERE id=?"
+    );
+    $sth->execute($name, $iso->{id});
+    return $name;
+}
+
+sub _search_url_file($self, $url) {
+    my ($url0,$file) = $url =~ m{(.*)/(.*)};
+    confess "Undefined file in url=$url" if !$file;
+    my $file0 = $file;
+    $file =~ s/(.*)\.\*(.*)/$1$2/;
+    $file =~ s/(.*)\.\+(.*)/$1.$2/;
+    $file =~ s/(.*)\[\\d.*?\]\+(.*)/${1}1$2/;
+    $file =~ s/(.*)\\d\+(.*)/${1}1$2/;
+    confess Dumper($url, $file0,$file) if $file =~ m{[*+\\]}
+    || $file !~ /\.iso$/;
+
+    return "$url0/$file";
+}
+
+sub _download_file_external($self, $url, $device) {
+}
+
+sub get_library_version($self) {
+    my ($n1,$n2,$n3) = $Ravada::VERSION =~ /(\d+)\.(\d+)\.(\d+)/;
+    return $n1*1000000
+    +$n2*1000
+    +$n3;
+}
+
 
 #########################################################################3
 

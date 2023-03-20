@@ -12,13 +12,16 @@
     >
     <div class="jumbotron" ng-cloak="">
 
-        <h2><%=l 'Running' %> {{domain.name}}</h2>
-
+        <h2><%=l 'Running' %> {{domain.alias}}</h2>
             <div class="alert alert-warning">
                 <%=l 'A viewer is required to run the virtual machines.' %>
                 <a href="/requirements"><%=l 'Read more.' %></a>
             </div>
-        <div ng-hide="request.status == 'done'"><%=l 'Waiting for machine to start' %> <i class="fas fa-sync-alt fa-spin"></i></div>
+
+        <div ng-show="request.status != 'done' 
+            || (domain && domain.is_base )
+            || (domain && domain.is_active==0 && count_start<=2)"
+            ><%=l 'Waiting for machine to start' %> <i class="fas fa-sync-alt fa-spin"></i></div>
         <div ng-show="domain">
             <div ng-show="domain.description ||(domain.is_active && domain.msg_timeout)">
                 <span ng-bind-html="domain.description"
@@ -41,23 +44,53 @@
                 <li ng-show="domain.interfaces"><b><%=l 'Hardware address' %></b> {{domain.interfaces[0].hwaddr}} </li>
                 <li><b><%=l 'Max Memory' %>:</b> {{domain.max_mem}}</li>
                 <li><b><%=l 'Memory' %>:</b> {{domain.memory}}</li>
-                <li><b>CPUs:</b> {{domain.nrVirtCpu}}</li>
+                <li><b><%=l 'CPUs' %>:</b> {{domain.nrVirtCpu}}</li>
+                <li ng-show="domain.host_devices && domain.host_devices.length"><b>Host Devices</b>
+                    <ul>
+                        <li ng-repeat="device in domain.host_devices">
+                            {{device.name}}
+                        </li>
+                    </ul>
+                </li>
             </ul>
-            <h3 ng-show="domain.ports.length">Open ports</h3>
-            <div class="container pl-5">
+            <div class="list-group list-group-horizontal-md"
+                ng-show="domain.ports.length">
+                <h3 ng-show="domain.ports.length"><%=l 'Open ports' %>
+                </h3>
+                <div>
+                <button
+                     ng-show="request_open_ports && domain.requests==0"
+                     ng-click="reload_ports()"
+                     ><%=l 'reopen' %></button>
+                <small>
+                <i ng-hide="domain.requests==0"
+                   class="fas fa-sync-alt fa-spin"></i>
+                </small>
+                </div>
+            </div>
+
+            <div class="container pl-5"
+                ng-show="request_open_ports"
+                >
+
             <table border="0">
                 <tr ng-repeat="port in domain.ports">
                     <td align="right">
-                    <span ng-show="!port.is_active" class="badge badge-danger">down</span>
-                    <span ng-show="port.is_active" class="badge badge-info">up</span>
+                    <span ng-show="!port.is_active" class="badge badge-danger"><%=l 'down' %></span>
+                    <span ng-show="port.is_active" class="badge badge-info"><%=l 'up' %>
+                    </span>
                     </td>
                     <td align="left">
                     <b>{{port.name}}</b>
                     </td>
                     <td>
-                    {{domain.display.ip}}:{{port.public_port}}
-                    <i class="fa fa-arrow-right"></i>
+                        <span ng-class='{"loading": !request_open_ports_done || !domain.ip }'>
+                        {{domain.display.ip}}:{{port.public_port}}
+                        </span>
+                        <i class="fa fa-arrow-right"></i>
+                        <span>
                     {{port.internal_port}}
+                        </span>
                     </td>
                 </tr>
             </table>
@@ -65,13 +98,15 @@
             </div><!-- domain is active -->
         <div>
             <div class="panel-body">
-                <div ng-show="request.error && !domain.is_active">{{request.error}}</div>
-                <div ng-show="domain && request.status == 'done' && domain.is_active == 0"><%=l 'The machine is down.' %>
-                 <button type="submit" class="btn btn-primary" onclick="location.reload('forceGet')"><%=l 'Start again' %></button>
+                <div ng-show="request && request.error && (!domain || !domain.is_active)">{{request.error}}</div>
+                <div ng-show="domain && request.status == 'done' && (!domain || domain.is_active == 0) && count_start>2"><%=l 'The machine is down.' %>
+                 <a class="btn btn-primary" href="?enable_host_devices=1"><%=l 'Start again' %></a>
+                 <a ng-show="domain.host_devices.length > 0" class="btn btn-secondary" href="?enable_host_devices=0"><%=l 'Start without host devices' %></a>
                 </div>
             </div>
         </div>
         </div> <! -- show=domain -->
+        <div ng-show="request.status == 'done' && request.error">{{request.error}}</div>
 
     </div><!-- jumbotron -->
 </div><!-- container -->

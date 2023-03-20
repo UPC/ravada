@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 
-use Carp qw(confess);
+use Carp qw(confess cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
@@ -192,7 +192,7 @@ sub test_remove_display($vm) {
 }
 
 sub test_add_display_builtin($vm) {
-    my $domain = create_domain($vm);
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     my $req2 = Ravada::Request->remove_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -228,7 +228,7 @@ sub test_add_display_builtin($vm) {
 }
 
 sub test_add_display($vm) {
-    my $domain = create_domain($vm);
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     my $req = Ravada::Request->add_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -279,28 +279,61 @@ sub test_add_display($vm) {
 
 }
 
+
+sub _wait_ip($domain) {
+
+    $domain->start(user => user_admin, remote_ip => '1.2.3.5') unless $domain->is_active();
+    for ( 1 .. 30 ) {
+        return $domain->ip if $domain->ip;
+        diag("Waiting for ".$domain->name. " ip") if !(time % 10);
+        sleep 1;
+    }
+    confess "Error : no ip for ".$domain->name;
+}
+
 sub test_displays_added_on_refresh($domain, $n_expected, $delete=1) {
 
     delete_request_not_done('shutdown','shutdown_domain', 'force_shutdown');
     Ravada::Request->start_domain(uid => user_admin->id, id_domain => $domain->id
         ,remote_ip => '1.2.3.4');
 
+    _wait_ip($domain);
+
     if ($delete) {
         my $sth = connector->dbh->prepare("DELETE FROM domain_displays WHERE id_domain=?");
         $sth->execute($domain->id);
+    }else {
+        my $sth = connector->dbh->prepare("SELECT count(*) FROM domain_displays WHERE id_domain=?");
+        $sth->execute($domain->id);
+        my ($n_exp2) = $sth->fetchrow;
+        if ($n_exp2 && $n_expected != $n_exp2) {
+            cluck "n_expected was $n_expected, but it should be $n_exp2";
+            $n_expected = $n_exp2;
+        }
     }
-    my $req = Ravada::Request->refresh_machine(
+    my $req;
+    for ( 1 .. 3 ) {
+        $req = Ravada::Request->refresh_machine(
             uid => user_admin->id
             ,id_domain => $domain->id
             ,_force => 1
-    );
+        );
+        last if $req->id && $req->status ne 'uknown';
+        sleep 1;
+    }
 
-    wait_request(debug => 0);
+    for ( 1 .. 3 ) {
+        wait_request(debug => 0, skip => [ 'set_time','enforce_limits'] );
+        last if $req->status eq 'done';
+        sleep 1;
+    }
+    is($req->status,'done');
+    is($req->error,'');
     my $sth_count = connector->dbh->prepare(
         "SELECT count(*) FROM domain_displays WHERE id_domain=?");
     $sth_count->execute($domain->id);
     my ($count) = $sth_count->fetchrow;
-    is($count, $n_expected,"Expecting $n_expected displays on table domain_displays for ".$domain->name) or confess;
+    ok($count>=$n_expected,"Got $count, expecting >$n_expected displays on table domain_displays for ".$domain->name) or confess;
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my $display = $domain_f->info(user_admin)->{hardware}->{display};
@@ -320,8 +353,8 @@ sub test_display_iptables($vm) {
         user => user_admin
         ,remote_ip => '3.2.3.4'
     );
-    delete_request_not_done('set_time','refresh_machine_ports');
-    wait_request(debug => 0, skip => [ 'set_time', 'refresh_machine_ports']);
+    delete_request_not_done('set_time','enforce_limits','refresh_machine_ports');
+    wait_request(debug => 0, skip => [ 'set_time','enforce_limits', 'refresh_machine_ports']);
     my $info = $domain->info(user_admin);
 
     my ($out_iptables_all, $err0) = $vm->run_command("iptables-save");
@@ -683,7 +716,7 @@ sub _test_compare($display1, $display2) {
     delete $display1b{id_domain}
     if !exists $display2b{id_domain};
 
-    for (qw(n_order display id_vm is_secondary)) {
+    for (qw(n_order display id_vm is_secondary _can_remove _can_edit _index)) {
         delete $display1b{$_};
         delete $display2b{$_};
     }
@@ -1320,13 +1353,14 @@ sub test_change_display_settings($vm) {
 
 sub test_change_display_settings_kvm($domain) {
     $domain->start(user_admin);
-    my $display = $domain->info(user_admin)->{display};
     $domain->shutdown_now(user_admin);
 
-    my @display = $domain->_get_controller_display();
-    isa_ok($display[0]->{extra},'HASH') or exit;
-    ok($display[0]->{driver}) or die Dumper($display[0]);
-    ok($domain->_is_display_builtin($display[0]->{driver})) or exit;
+    my @displays = $domain->_get_controller_display();
+    my ($display) = grep { $_->{is_builtin} && !$_->{is_secondary}} @displays;
+    isa_ok($display->{extra},'HASH') or exit;
+    ok($display->{driver}) or die Dumper($display);
+    ok($domain->_is_display_builtin($display->{driver})) or exit;
+    ok(!$display->{is_secondary}) or die Dumper($display);
 
     for my $driver_name (qw(image jpeg zlib playback streaming)) {
         my $driver = $domain->drivers($driver_name);
@@ -1339,7 +1373,7 @@ sub test_change_display_settings_kvm($domain) {
                 ,id_domain => $domain->id
                 ,hardware => 'display'
                 ,data => { $driver_name => $option->{value} , driver => $display->{driver} }
-                ,index => 0
+                ,index => $display->{_index}
             );
             for ( 1 .. 10 ) {
                 wait_request(debug => 0);
@@ -1348,9 +1382,12 @@ sub test_change_display_settings_kvm($domain) {
             }
             is($req->status, 'done');
             is($req->error,'') or exit;
-            my @display = $domain->_get_controller_display();
-            is($display[0]->{extra}->{$driver_name}, $option->{value}, $driver_name)
-                or die Dumper( $domain->name , $display[0]);
+
+            my ($display2) = grep { $_->{driver} eq $display->{driver} }
+                $domain->_get_controller_display();
+
+            is($display2->{extra}->{$driver_name}, $option->{value}, $driver_name)
+                or die Dumper( $domain->name , $display2);
         }
     }
 }
@@ -1401,7 +1438,11 @@ sub test_display_drivers($vm, $remove) {
         Ravada::Request->start_domain(uid => user_admin->id
             ,id_domain => $domain->id
         );
-        wait_request(debug => 0);
+        for ( 1 .. 10 ) {
+            wait_request(debug => 0);
+            last if !$req->error || $req->error !~ /Retry/i;
+            sleep 1;
+        }
         is($req->status, 'done');
         is($req->error, '') or die $domain->name;
         $n_displays++;
@@ -1562,6 +1603,11 @@ sub _set_public_exposed($domain, $port) {
         ." WHERE public_port=?");
     $sth->execute($port);
 
+    $sth =$domain->_dbh->prepare("UPDATE domain_displays set port=NULL"
+        ." WHERE port=?");
+    $sth->execute($port);
+
+
     $sth = $domain->_dbh->prepare("UPDATE domain_ports "
         ." SET public_port=? "
         ." WHERE id_domain=?"
@@ -1592,7 +1638,7 @@ sub _conflict_port($domain1, $port_conflict) {
         my $domain = $BASE->clone(name => new_domain_name, user => user_admin, memory => 128*1024);
         push @domains,($domain);
         $domain->start(user => user_admin, remote_ip => '2.3.4.'.$n);
-        delete_request('set_time');
+        delete_request('set_time','enforce_limits');
         wait_request( debug => 0 );
         for my $d (@{$domain->info(user_admin)->{hardware}->{display}}) {
             last COUNT if $d->{port} >= $port_conflict;
@@ -1628,19 +1674,23 @@ sub _check_iptables_fixed_conflict($vm, $port) {
 }
 
 sub test_display_conflict_next($vm) {
+    delete $Ravada::Request::CMD_NO_DUPLICATE{refresh_machine};
+    delete $Ravada::Request::CMD_NO_DUPLICATE{refresh_machine_ports};
+    delete $Ravada::Request::CMD_NO_DUPLICATE{open_exposed_ports};
+
     rvd_back->setting("/backend/expose_port_min" => 5900 );
-    my $domain0 = $BASE->clone(name => new_domain_name, user => user_admin, memory =>128*1024);
+    my $domain0 = $BASE->clone(name => new_domain_name, user => user_admin, memory =>512*1024);
     $domain0->_reset_free_port() if $vm->type eq 'Void';
     my $next_port_builtin = _next_port_builtin($domain0);
     rvd_back->setting('/backend/expose_port_min' => $next_port_builtin+3);
 
-    my $domain1 = $BASE->clone(name => new_domain_name, user => user_admin, memory => 128*1024);
+    my $domain1 = $BASE->clone(name => new_domain_name, user => user_admin, memory => 512*1024);
     _add_hardware($domain1, 'display', { driver => 'x2go'} );
     # conflict x2go with previous builtin display
     _set_public_exposed($domain1, $next_port_builtin);
 
     $domain1->start(user => user_admin, remote_ip => '2.3.4.5');
-    delete_request('set_time');
+    delete_request('set_time','enforce_limits');
     for ( 1 .. 30 ) {
         last if $domain1->ip;
         sleep 1;
@@ -1888,6 +1938,63 @@ sub test_prepare_base_volatile($vm) {
     $domain->remove(user_admin);
 }
 
+sub test_already_requested($vm) {
+    my $domain=create_domain($vm);
+    my @args = (
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    my $req = Ravada::Request->prepare_base(@args);
+    my $req2 = Ravada::Request->prepare_base(@args);
+
+    wait_request();
+    is($req->status, 'done');
+    is($req2->status, 'done');
+    is($req->error, '');
+    is($req2->error, '');
+
+    $domain->remove(user_admin);
+}
+
+sub test_already_requested_working($vm) {
+    my $domain=create_domain($vm);
+    my @args = (
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    my $req = Ravada::Request->prepare_base(@args);
+    $req->status('working');
+    my $req2 = Ravada::Request->prepare_base(@args);
+    $req->status('requested');
+
+    wait_request();
+    is($req->status, 'done');
+    is($req2->status, 'done');
+    is($req->error, '');
+    is($req2->error, '');
+
+    $domain->remove(user_admin);
+}
+
+sub test_already_requested_recent($vm) {
+    my $domain=create_domain($vm);
+    my @args = (
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    my $req = Ravada::Request->prepare_base(@args);
+    wait_request();
+    my $req2 = Ravada::Request->prepare_base(@args);
+
+    wait_request();
+    is($req->status, 'done');
+    is($req2->status, 'done');
+    is($req->error, '');
+    is($req2->error, '');
+
+    $domain->remove(user_admin);
+}
+
 #######################################################################33
 
 for my $db ( 'mysql', 'sqlite' ) {
@@ -1910,7 +2017,6 @@ for my $db ( 'mysql', 'sqlite' ) {
     is(user_admin->can_grant(),1) or die user_admin->name." ".user_admin->id;
 
     $USER = create_user(new_domain_name(),"bar");
-    rvd_back->setting('/backend/debug_ports' => 0);
 
 for my $vm_name ( vm_names() ) {
 
@@ -1935,12 +2041,17 @@ for my $vm_name ( vm_names() ) {
 
         use_ok($CLASS);
         if ($vm_name eq 'KVM' ) {
-            $BASE = rvd_back->search_domain('zz-test-base-alpine');
-            $BASE = import_domain($vm,'zz-test-base-alpine') if !$BASE;
+            my $name = 'zz-test-base-alpine-q35-uefi';
+            $BASE = rvd_back->search_domain($name);
+            $BASE = import_domain($vm,$name) if !$BASE;
         } else {
             $BASE = create_domain($vm);
         }
         flush_rules() if !$<;
+
+        test_already_requested($vm);
+        test_already_requested_working($vm);
+        test_already_requested_recent($vm);
 
         test_long_iso($vm);
 

@@ -31,9 +31,11 @@ WriteMakefile(
     ,'File::Rsync' => 0
     ,'DateTime::Format::DateParse'=> 0
     ,'PBKDF2::Tiny' => 0
+    ,'HTML::Lint' => 0
   },
   BUILD_REQUIRES => {
     'Test::Perl::Critic' => 0
+    ,'Test::Moose::More' => 0
   },
 
   test      => {TESTS => 't/*.t t/*/*.t'},

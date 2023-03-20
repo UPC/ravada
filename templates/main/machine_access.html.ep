@@ -6,7 +6,7 @@
              ,'btn': tab_access !== 'group'
     }"
     ng-model="tab_access_group"
-    ng-click="tab_access='group'">Group</button>
+    ng-click="tab_access='group'"><%=l 'Group' %></button>
 
 
 <button
@@ -16,7 +16,7 @@
              ,'btn': tab_access !== 'client'
     }"
     ng-model="tab_access_client"
-    ng-click="tab_access='client'">Client</button>
+    ng-click="tab_access='client'"><%=l 'Client' %></button>
 
 <button
     class="btn"
@@ -25,15 +25,23 @@
              ,'btn': tab_access !== 'ldap'
     }"
     ng-model="tab_access_ldap"
-    ng-click="tab_access='ldap'">LDAP</button>
+    ng-click="tab_access='ldap'"><%=l 'LDAP' %></button>
 </div>
 
 <div ng-show="tab_access=='group'">
+% if ($FEATURE->{ldap}) {
     %= include "main/machine_access_group"
+% } else {
+    %= include "/error/no_ldap"
+% }
 </div>
 
 <div ng-show="tab_access=='ldap'">
+% if ($FEATURE->{ldap}) {
     %= include "main/machine_access_ldap"
+% } else {
+    %= include "/error/no_ldap"
+% }
 </div>
 <div ng-show="tab_access=='client'">
     %= include "main/machine_access_client"

@@ -7,6 +7,9 @@ use POSIX qw(WNOHANG);
 use Test::Moose::More;
 use Test::More;# tests => 82;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use_ok('Ravada');
 use_ok('Ravada::Request');
 
@@ -119,10 +122,7 @@ sub test_req_create_domain_iso {
     ok($req->status eq 'requested'
         ,"$$ Status of request is ".$req->status." it should be requested");
 
-    $ravada->process_requests();
-
-    $ravada->_wait_pids();
-    wait_request($req);
+    wait_request(request => $req, debug => 0);
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done") or return ;
@@ -162,7 +162,7 @@ sub test_req_create_base {
     ok($req->status eq 'requested'
         ,"Status of request is ".$req->status." it should be requested");
 
-    $ravada->_process_requests_dont_fork();
+    wait_request();
 
     ok($req->status eq 'done'
         ,"Status of request is ".$req->status." it should be done");
@@ -219,7 +219,7 @@ sub test_unread_messages {
     my @messages = $user->unread_messages();
 
     ok(scalar @messages == $n_unread,"$test: Expecting $n_unread unread messages , got "
-        .scalar@messages." ".Dumper(\@messages));
+        .scalar@messages." ".Dumper(\@messages)) or confess;
 
     $user->mark_all_messages_read();
 }
@@ -232,7 +232,7 @@ sub test_requests_by_domain {
     ok($domain,"Expecting new domain created") or exit;
 
     my $req1 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
-    ok($domain->list_requests == 1);
+    is($domain->list_requests,1) or die Dumper([$domain->list_requests]);
 
     my $req2 = Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id);
     ok($domain->list_requests == 2);
@@ -306,12 +306,49 @@ sub test_req_many_clones {
     is(scalar $base->clones , 0, Dumper([$base->clones]));
 }
 
+sub test_force() {
+    my $req = Ravada::Request->refresh_vms(uid => user_admin->id);
+    ok($req);
+    wait_request( debug => 0);
+
+    my $req3 = Ravada::Request->refresh_vms(uid => user_admin->id);
+    ok($req3);
+    is($req3->id,$req->id) or exit;
+    wait_request( debug => 0);
+
+    my $req2 = Ravada::Request->refresh_vms(uid => user_admin->id, _force => 1);
+    ok($req2);
+    isnt($req2->id,$req->id);
+    wait_request( debug => 0);
+
+}
+
+sub test_dupe_open_exposed($vm) {
+    my $req1 = Ravada::Request->open_exposed_ports(
+        id_domain => 1
+        ,uid => user_admin->id
+    );
+    ok($req1);
+
+    my $req2 = Ravada::Request->open_exposed_ports(
+        id_domain =>2
+        ,uid => user_admin->id
+    );
+    ok($req2);
+    isnt($req2->id, $req1->id) or exit;
+
+    delete_request($req1,$req2);
+
+}
+
 ################################################
 eval { $ravada = rvd_back () };
 
 ok($ravada,"I can't launch a new Ravada");# or exit;
 remove_old_domains();
 remove_old_disks();
+
+test_force();
 
 for my $vm_name ( vm_names() ) {
     my $vm;
@@ -331,6 +368,7 @@ for my $vm_name ( vm_names() ) {
     
         diag("Testing $vm_name requests with ".(ref $vm or '<UNDEF>'));
     
+        test_dupe_open_exposed($vm);
         test_requests_by_domain($vm_name);
         my $domain_iso0 = test_req_create_domain_iso($vm_name);
         test_req_remove_domain_obj($vm, $domain_iso0)         if $domain_iso0;

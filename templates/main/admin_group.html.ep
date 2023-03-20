@@ -12,7 +12,9 @@
               <div class="card" id="admin-content">
                 <div class="card-header">
                     <h2 class="display-5"><%=l 'Group' %> <%= $name %></h2>
-                    <%= join(" - ",sort @$object_class) %>
+                    <%=l 'object class:' %> <b><%= join(" - ",sort @$object_class) %></b>
+                    <br/>
+                    <%=l 'dn:' %> <b><%= $group->dn %></b>
                 </div>
               </div>
             </div>
@@ -21,7 +23,7 @@
                     <%=l 'New group member' %>
                     <input type="text" ng-model="username_filter"
                                        ng-change="list_users()"
-                                       placeholder="search"
+                                       placeholder="<%=l 'Search' %>"
                     />
                     <span ng-show="loading_users"><i class="fas fa-sync-alt fa-spin"></i></span>
                     <select
@@ -67,13 +69,13 @@
                                      ng-show="group_members && group_members.length==0
                                                && !removed && !confirm_remove"
                                      ng-click="confirm_remove=true"
-                                     value="Remove group"/>
+                                     value="<%=l 'Remove group' %>"/>
                 <div ng-show="confirm_remove" class="card">
                 <div ng-show="confirm_remove" class="card-body">
                     <span><%=l 'Are you sure you want to remove this group ?'%></span><br/>
-                    <input type="button" class="btn btn-primary" value="Yes"
+                    <input type="button" class="btn btn-primary" value="<%=l 'Yes' %>"
                     ng-click="remove_group()"/>
-                    <input type="button" class="btn btn-danger" value="No"
+                    <input type="button" class="btn btn-danger" value="<%=l 'No' %>"
                     ng-click="confirm_remove=false"/>
 
                 </div>

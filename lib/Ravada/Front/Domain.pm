@@ -154,6 +154,10 @@ sub list_volumes($self, $attribute=undef, $value=undef)
         && ( !exists $row->{$attribute}
                 || $row->{$attribute} != $value);
         $row->{info}->{file} = $row->{file} if $row->{file};
+        if($self->readonly) {
+            $row->{info}->{_can_edit} = 1;
+            $row->{info}->{_can_remove} = 1;
+        }
         push @volumes, (Ravada::Volume->new(file => $row->{file}, info => $row->{info}));
     }
     $sth->finish;
@@ -222,6 +226,7 @@ sub _get_controller_display($self) {
     );
     $sth->execute($self->id);
     my @displays;
+    my $index=0;
     while (my $row = $sth->fetchrow_hashref) {
         $row->{extra} = decode_json($row->{extra})
         if exists $row->{extra} && defined $row->{extra};
@@ -241,6 +246,8 @@ sub _get_controller_display($self) {
 
         }
 
+        $row->{_can_remove} = 1;
+        $row->{_index}=$index++ if !$row->{is_secondary};
         push @displays, ($row);
     }
     #    $self->_fix_ports_duplicated(\@displays) if $self->is_active();

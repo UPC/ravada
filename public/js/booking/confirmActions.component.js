@@ -1,7 +1,7 @@
 'use strict';
 
 export default {
-    templateUrl: '/js/booking/confirmActions.component.html',
+    templateUrl: '/booking/confirmActions.component.html',
     controller: actCtrl,
     bindings: {
         modalInstance: "<",

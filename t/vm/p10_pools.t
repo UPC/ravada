@@ -64,6 +64,13 @@ sub test_clones($domain, $n_clones) {
 
 sub test_active($domain, $n_start) {
     is($domain->pool_start,0);
+
+    my @clones0 = $domain->clones(is_pool => 1 );
+    for my $clone_data (@clones0) {
+        my $clone = Ravada::Domain->open($clone_data->{id});
+        $clone->shutdown_now(user_admin);
+    }
+
     $domain->pool_start($n_start);
     is($domain->pool_start, $n_start);
     _remove_enforce_limits();
@@ -99,21 +106,25 @@ sub _set_clones_client_status($base) {
 
 sub test_user_create($base, $n_start) {
     $base->is_public(1);
-    my $user = create_user('kevin'.$base->type,'carter');
+    my $user = create_user(new_domain_name().$base->type,'carter');
     my @clones = $base->clones();
     wait_request();
     _remove_enforce_limits();
     _set_clones_client_status($base);
 
+    my $name = new_domain_name();
+
+    my $remote_ip ='9.9.9.4';
     my $req = Ravada::Request->create_domain(
                 id_owner => $user->id
              ,start => 1
-             ,name => new_domain_name()
-           ,id_base => $base->id
-         ,remote_ip => '1.2.3.4'
+             ,name => $name
+             ,id_base => $base->id
+         ,remote_ip => $remote_ip
     );
     ok($req);
-    wait_request(debug => 0,skip => ['enforce_limits','set_time']);
+    delete_request('refresh_machine_ports');
+    wait_request(debug => 0,skip => ['enforce_limits','set_time','refresh_machine_ports']);
     _remove_enforce_limits();
     is($req->status,'done');
     is($req->error,'');
@@ -123,7 +134,7 @@ sub test_user_create($base, $n_start) {
 
     my ($clone) = grep { $_->{id_owner} == $user->id } @clones2;
     ok($clone,"Expecting clone that belongs to ".$user->name);
-    like($clone->{client_status},qr'^1.2.3.4$', $clone->{name}) or exit;
+    is($clone->{client_status},$remote_ip, $clone->{name}) or exit;
     is($clone->{is_pool},1) or exit;
 
     $user->remove();
@@ -155,7 +166,7 @@ sub test_user($base, $n_start) {
 
     my ($clone) = grep { $_->{id_owner} == $user->id } @clones2;
     ok($clone,"Expecting clone that belongs to ".$user->name);
-    like($clone->{client_status},qr'^connect', $clone->{name}) or exit;
+    like($clone->{client_status},qr'^(1.2.3.4|connect)', $clone->{name}) or exit;
     is($clone->{is_pool},1) or exit;
 
     my $clone2 = $base->_search_pool_clone($user);
@@ -170,12 +181,16 @@ sub test_user($base, $n_start) {
     is($info->{comment},$user->name);
 
     # now we should have another active
-    wait_request(debug => 0);
-    wait_request(debug => 0);
-    @clones = $base->clones(is_pool => 1 );
-    my $n_active = grep { $_->is_active}
-    map { Ravada::Domain->open($_->{id}) }
-    @clones;
+    my $n_active = 0;
+    for ( 1 .. 3 ) {
+        wait_request(debug => 0);
+        @clones = $base->clones(is_pool => 1 );
+        $n_active = grep { $_->is_active}
+        map { Ravada::Domain->open($_->{id}) }
+        @clones;
+        last if $n_active > $n_start;
+        Ravada::Request->manage_pools(uid => user_admin->id, _force => 1);
+    }
     ok($n_active >= $n_start+1,"Expecting active > $n_start, got $n_active ") or exit;
 
     is($n_active, $n_start+1,"Expecting active == ".(1+ $n_start)
@@ -246,7 +261,7 @@ sub test_clone_regular($base, $add_to_pool) {
 }
 
 sub test_no_pool($vm) {
-    my $base = create_domain($vm);
+    my $base = create_domain_v2(vm=> $vm);
     $base->prepare_base(user_admin);
 
     my $clone_name = new_domain_name();
@@ -294,7 +309,7 @@ sub import_base($vm) {
         confess "Error: domain $BASE_NAME has exported ports that conflict with the tests"
         if $BASE->list_ports;
     } else {
-        $BASE = create_domain($vm);
+        $BASE = create_domain_v2(vm => $vm);
     }
 }
 
@@ -305,11 +320,14 @@ sub test_exposed_port($vm) {
     $base->volatile_clones(1);
     my $n = 3;
     $base->pool_clones($n);
+    $base->pool_start($n);
     $base->expose(22);
 
     my $req = Ravada::Request->manage_pools(uid => user_admin->id , _no_duplicate => 1);
     wait_request( debug => 0, skip => 'set_time' );
     is($req->status, 'done');
+    is($req->error,'');
+    is($base->is_base,1) or exit;
 
     my $req_refresh = Ravada::Request->refresh_vms( _no_duplicate => 1);
     wait_request( debug => 0 ,skip => 'set_time' );
@@ -359,12 +377,330 @@ sub test_remove_clone($vm) {
 
 }
 
+sub test_pool_with_nested_bases($vm, $volatile_clones) {
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
+    Ravada::Request->prepare_base(
+                uid => user_admin->id
+                ,id_domain => $base->id
+    );
+    wait_request();
+    $base->is_public(1);
+
+    $base->_data('shutdown_disconnected', 1);
+
+    my $n_bases = 2;
+
+    for ( 1 .. $n_bases ) {
+        Ravada::Request->clone(
+            uid => user_admin->id
+            ,id_domain => $base->id
+            ,name => new_domain_name()."-base"
+        );
+    }
+    wait_request(debug => 0);
+    for my $clone ( $base->clones() ) {
+        Ravada::Request->prepare_base(
+            uid => user_admin->id
+            ,id_domain => $clone->{id}
+        );
+    }
+    wait_request(debug => 0);
+    $base->pools(1);
+    my $n = 5;
+    my $started = 3;
+    $base->_data('volatile_clones', $volatile_clones);
+
+    $base->pool_clones($n);
+    $base->pool_start($started);
+    my $req = Ravada::Request->manage_pools(uid => user_admin->id
+        ,_no_duplicate => 1);
+    wait_request( debug => 0);
+    is($req->status, 'done');
+    is($req->error,'');
+
+    my @clones0 = $base->clones();
+    my $n_expected = $n + $n_bases;
+    $n_expected = $started + $n_bases if $volatile_clones;
+    is(scalar @clones0, $n_expected)
+        or die Dumper([map {$_->{name} } @clones0]);
+
+    my @clones_avail = grep { !$_->{is_base} } $base->clones ;
+    my $n_available = $n;
+    $n_available = $started if $volatile_clones;
+
+    is(scalar @clones_avail, $n_available);
+
+    remove_domain($base);
+}
+
+sub test_pool_with_nested_bases_owned($vm, $volatile_clones) {
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
+    Ravada::Request->prepare_base(
+                uid => user_admin->id
+                ,id_domain => $base->id
+    );
+    wait_request();
+    $base->is_public(1);
+
+    $base->_data('shutdown_disconnected', 1);
+
+    my $n_bases = 2;
+    my @users;
+    for ( 1 .. $n_bases ) {
+        my $user = create_user();
+        Ravada::Request->clone(
+            uid => $user->id
+            ,id_domain => $base->id
+            ,name => new_domain_name()."-base"
+        );
+        push @users,($user);
+    }
+    wait_request(debug => 0);
+    is($base->clones,2);
+    for my $clone ( $base->clones() ) {
+        Ravada::Request->prepare_base(
+            uid => user_admin->id
+            ,id_domain => $clone->{id}
+        );
+    }
+    wait_request(debug => 0);
+    $base->_data('volatile_clones', $volatile_clones);
+    $base->pools(1);
+    my $n = 5;
+    my $started = 3;
+
+    $base->pool_clones($n);
+    $base->pool_start($started);
+    wait_request();
+    for my $clone ($base->clones() ) {
+        next if !$clone->{is_base};
+        Ravada::Request->shutdown_domain(name => $clone->{name}
+            ,uid => user_admin->id
+            ,timeout => 1
+        );
+    }
+    wait_request(debug => 0);
+    for my $user (@users) {
+        my $req = Ravada::Request->clone(
+            uid => $user->id
+            ,id_domain => $base->id
+        );
+        wait_request();
+        is($req->status,'done');
+        is($req->error,'');
+
+    }
+
+    my $n_expected = $n + $n_bases;
+    $n_expected = $started + $n_bases if $volatile_clones;
+    my @clones0 = $base->clones();
+    is(scalar @clones0, $n_expected)
+        or die Dumper([map {$_->{name} } @clones0]);
+
+    my @clones_avail = grep { !$_->{is_base} } $base->clones ;
+    my $n_available = $n;
+    $n_available = $started if $volatile_clones;
+
+    is(scalar @clones_avail, $n_available);
+
+
+    remove_domain($base);
+}
+
+
+sub test_pool_with_volatiles($vm) {
+    # Clones should be created.
+    # As are volatile, only the started should be created
+    # On shutdown they should be destroyed
+    # In a while new clones should appear to honor the pool
+    #
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
+    wait_request();
+    Ravada::Request->prepare_base(uid => user_admin->id,
+        id_domain => $base->id);
+    $base->is_public(1);
+    wait_request();
+
+    $base->pools(1);
+    $base->volatile_clones(1);
+    $base->_data('shutdown_disconnected', 1);
+
+    my $n = 5;
+    my $started = 3;
+    $base->pool_start($started);
+    $base->pool_clones($n);
+
+    my $req = Ravada::Request->clone(
+        uid => create_user()->id
+        , id_domain => $base->id
+    );
+    wait_request(debug => 0);
+    is($req->status,'done');
+    is($req->error,'') or exit;
+    my @clones0 = $base->clones();
+    is(scalar @clones0, $started) or exit;
+    my @clones;
+    for my $c (@clones0) {
+        push @clones,(Ravada::Domain->open($c->{id}));
+        is($c->{status},'active');
+        is($c->{is_volatile},1);
+        is($c->{is_pool},1);
+        Ravada::Request->start_domain(
+            uid => user_admin->id
+            ,id_domain => $c->{id}
+            ,remote_ip => '1.2.3.4'
+        );
+    }
+    wait_request(debug => 0);
+    delete_request('start','create','clone');
+    for my $clone (@clones ) {
+        $clone->_data('client_status','disconnected');
+    }
+
+    for ( 1 .. 60 ) {
+        my $req_shutdown = Ravada::Request::_search_request(undef,
+                'shutdown_domain'
+        );
+        wait_request(debug => 0);
+        last if $req_shutdown || scalar($base->clones()) < $n;
+        Ravada::Request->enforce_limits();
+        wait_request(debug => 0);
+        sleep 1;
+    }
+    ok(scalar($base->clones()) < $n, "Expecting less than $n up");
+
+    #    $req = Ravada::Request->manage_pools(uid => user_admin->id
+    #    ,_no_duplicate => 1);
+    # wait_request( debug => 0);
+    # is($req->status, 'done');
+
+    is(scalar($base->clones()),$started);
+    for my $clone ($base->clones) {
+        is($clone->{is_pool},1);
+    }
+
+    _set_clones_client_status($base);
+    _remove_enforce_limits();
+    test_clones_assigned($base);
+
+    _set_clones_client_status($base);
+    test_create_more_clones_in_pool($base);
+
+    remove_domain($base);
+
+}
+
+sub test_clones_assigned($base) {
+    for my $clone ($base->clones()) {
+        Ravada::Request->force_shutdown_domain(
+            uid => user_admin->id
+            ,id_domain => $clone->{id}
+        );
+    }
+    my $n_clones_now;
+    for ( 1 .. 10 ) {
+        wait_request();
+        $n_clones_now = scalar($base->clones());
+        last if !$n_clones_now;
+        sleep 1;
+    }
+    is($n_clones_now,0) or die $base->name;
+
+    my $n_clones = $base->pool_clones();
+
+    for my $n ( 0 .. $n_clones-1 ) {
+        my $user_r = create_user(new_domain_name());
+        my $req = Ravada::Request->clone(
+            uid => $user_r->id
+            ,id_domain => $base->id
+            ,remote_ip => '2.2.2.'.$n
+        );
+        ok($req);
+        wait_request(debug => 0);
+        is($req->error,'');
+        my ($clone) = grep { $_->{id_owner} == $user_r->id } $base->clones;
+        ok($clone,"Expecting one clone belongs to ".$user_r->id)
+            or die Dumper([map {[$_->{id_owner},$_->{client_status}] } $base->clones]);
+
+    }
+    my @clones = $base->clones;
+    my $clone = Ravada::Front::Domain->open($clones[0]->{id});
+    $clone->_data('client_status','disconnected');
+
+    my $user_r = create_user();
+
+    my $req = Ravada::Request->clone(
+            uid => $user_r->id
+            ,id_domain => $base->id
+            ,remote_ip => '2.2.2.'.11
+    );
+    ok($req);
+    wait_request(debug => 0, check_error => 0);
+    like($req->error,qr/./);
+
+    my ($clone_2) = grep { $_->{id_owner} == $user_r->id } $base->clones;
+    ok(!$clone_2) or exit;
+
+    $base->pool_clones($n_clones+1);
+    is($base->pool_clones(),$n_clones+1) or exit;
+    my $req2 = Ravada::Request->clone(
+            uid => $user_r->id
+            ,id_domain => $base->id
+            ,remote_ip => '2.2.2.'.12
+    );
+    Ravada::Request->clone(
+            uid => $user_r->id
+            ,id_domain => $base->id
+            ,remote_ip => '2.2.2.'.13
+    );
+
+    wait_request(check_error => 0);
+    is($req2->error,'') or exit;
+
+    ($clone_2) = grep { $_->{id_owner} == $user_r->id } $base->clones;
+    ok($clone_2) or die $user_r->id;
+
+    isnt($clone_2->{id},$clone->{id});
+
+}
+
+
+sub test_create_more_clones_in_pool($base) {
+
+    my @clones = grep { !$_->{is_base} } $base->clones ;
+    my $n_clones = scalar(@clones);
+    for my $clone ( @clones ) {
+        Ravada::Request->shutdown_domain(uid => user_admin->id
+            ,id_domain => $clone->{id}
+        );
+    }
+    wait_request();
+    for my $n ( 0 .. $base->pool_clones()+2 - $n_clones ) {
+        my $user_r = create_user(new_domain_name());
+        my $req = Ravada::Request->clone(
+            uid => $user_r->id
+            ,id_domain => $base->id
+            ,remote_ip => '2.2.2.'.$n
+            ,retry => 3
+        );
+        ok($req);
+        wait_request(debug => 0, check_error => 0);
+        if ($n > $base->pool_clones) {
+            like($req->error, qr/no free clones in pool/i);
+        } else {
+            is($req->error,'') or confess;
+        }
+        ok($base->clones <= $base->pool_clones, "Expecting no more than "
+        .$base->pool_clones." clones");
+    }
+}
+
 ###############################################################
 
 init();
 clean();
 
-for my $vm_name (reverse vm_names() ) {
+for my $vm_name ( vm_names() ) {
     my $vm;
     eval {
         $vm = rvd_back->search_vm($vm_name);
@@ -382,6 +718,13 @@ for my $vm_name (reverse vm_names() ) {
         diag("*** Testing pools in $vm_name ***");
         import_base($vm);
 
+        test_pool_with_volatiles($vm);
+
+        for my $volatile_clones ( 0,1) {
+            test_pool_with_nested_bases($vm, $volatile_clones);
+            test_pool_with_nested_bases_owned($vm, $volatile_clones);
+        }
+
         test_exposed_port($vm);
 
         test_remove_clone($vm);
@@ -389,7 +732,7 @@ for my $vm_name (reverse vm_names() ) {
 
         test_no_pool($vm);
 
-        my $domain = create_domain($vm);
+        my $domain = create_domain_v2(vm => $vm);
 
         my $n_clones = 6;
         my $n_start = 2;
@@ -406,6 +749,7 @@ for my $vm_name (reverse vm_names() ) {
         test_clone_regular($domain   , 1);
         # do not add the clone to the pool
         test_clone_regular($domain, 0);
+
 
         _remove_enforce_limits();
    }

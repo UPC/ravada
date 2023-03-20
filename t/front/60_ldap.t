@@ -19,7 +19,7 @@ init( $CONFIG_FILE);
 rvd_back();
 
 my $RVD_FRONT;
-my $USER_DATA = { name => 'jimmy', password => 'jameson' };
+my $USER_DATA = { name => new_domain_name.'.jimmy', password => 'jameson' };
 
 #########################################################################
 
@@ -106,6 +106,7 @@ sub test_ldap_search_space {
 
 SKIP: {
     my $ravada = Ravada->new(config => $CONFIG_FILE
+                        , pid_name => "ravada_install".base_domain_name()
                         , connector => connector());
     $ravada->_install();
     my $ldap;

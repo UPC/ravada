@@ -22,7 +22,7 @@
         <input type="button" class="btn btn-primary"
             ng-show="access_attribute['client'] && access_value['client']"
             ng-click="add_access('client')"
-            value="<%=l 'add' %>">
+            value="<%=l 'Add' %>">
     </div>
 </div>
 <ul>

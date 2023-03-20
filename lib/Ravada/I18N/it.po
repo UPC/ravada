@@ -503,7 +503,7 @@ msgstr "Chiudere ..."
 msgid "It may take a couple of minutes."
 msgstr "Potrebbero volerci un paio di minuti."
 
-msgid "Hybernating ..."
+msgid "Hibernating ..."
 msgstr "Ibernazione ..."
 
 msgid "Description"
@@ -797,7 +797,7 @@ msgstr "Inserisci"
 msgid "The changes will apply on next restart"
 msgstr "Le modifiche verranno applicate al prossimo riavvio"
 
-msgid "This VM is running and can't be renamed."
+msgid "This machine is running and can't be renamed."
 msgstr "Questa macchina virtuale è in esecuzione e non può essere rinominata."
 
 msgid "Thanks to:"
@@ -839,75 +839,240 @@ msgstr "Password vuota"
 msgid "Session timeout"
 msgstr "Timeout della sessione"
 
-msgid "Enable last for not allowed restrictions."
-msgstr "Abilita l'ultimo per restrizioni non consentite."
+msgid "Vietnamese"
+msgstr "vietnamita"
 
-msgid "Keep in mind that there may be users using a clone"
-msgstr "Tieni presente che potrebbero esserci utenti che utilizzano un clone"
-
-msgid "Shutdown all clones"
-msgstr "Spegni tutti i cloni"
-
-msgid "These actions affect all the clones on the machine"
-msgstr "Queste azioni influenzano tutti i cloni sulla macchina"
-
-msgid "Add description"
-msgstr "Aggiungi una descrizione"
-
-msgid "If none of the previous match, access is denied."
-msgstr "Se nessuna delle precedenti corrispondenze, l'accesso viene negato."
-
-msgid "If none of the previous match, access is allowed."
-msgstr "Se nessuna delle precedenti corrisponde, l'accesso è consentito."
+msgid "Italian"
+msgstr "italiano"
 
 msgid "Type a typical LDAP user name to fetch the attribute list"
 msgstr ""
 "Digitare un tipico nome utente LDAP per recuperare l'elenco degli attributi"
 
-msgid "Yes, shutwdown all the clones"
-msgstr "Sì, spegni tutti i cloni"
-
-msgid "entries."
-msgstr "voci."
-
-msgid "has at least"
-msgstr "ha almeno"
-
-msgid "No entries found"
-msgstr "Nessuna voce trovata"
-
-msgid "Verifying"
-msgstr "Verifica in corso"
-
-msgid "save"
-msgstr "salva"
-
-msgid "verify"
-msgstr "verifica"
-
-msgid "Default"
-msgstr "Predefinito"
-
-msgid "Last"
-msgstr "Ultimo"
-
-msgid "Allowed"
-msgstr "Consentito"
-
-msgid "Value"
-msgstr "Valore"
-
-msgid "Attribute"
-msgstr "Attributo"
+msgid "User name"
+msgstr "Nome utente"
 
 msgid "not found in LDAP server"
 msgstr "non trovato nel server LDAP"
 
-msgid "User name"
-msgstr "Nome utente"
+msgid "Attribute"
+msgstr "Attributo"
 
-msgid "Italian"
-msgstr "italiano"
+msgid "Value"
+msgstr "Valore"
 
-msgid "Vietnamese"
-msgstr "vietnamita"
+msgid "Allowed"
+msgstr "Consentito"
+
+msgid "Last"
+msgstr "Ultimo"
+
+msgid "Default"
+msgstr "Predefinito"
+
+msgid "If none of the previous match, access is allowed."
+msgstr "Se nessuna delle precedenti corrisponde, l'accesso è consentito."
+
+msgid "If none of the previous match, access is denied."
+msgstr "Se nessuna delle precedenti corrispondenze, l'accesso viene negato."
+
+msgid "verify"
+msgstr "verifica"
+
+msgid "save"
+msgstr "salva"
+
+msgid "Verifying"
+msgstr "Verifica in corso"
+
+msgid "No entries found"
+msgstr "Nessuna voce trovata"
+
+msgid "has at least"
+msgstr "ha almeno"
+
+msgid "entries."
+msgstr "voci."
+
+msgid "Enable last for not allowed restrictions."
+msgstr "Abilita l'ultimo per restrizioni non consentite."
+
+msgid "Add description"
+msgstr "Aggiungi una descrizione"
+
+msgid "These actions affect all the clones on the machine"
+msgstr "Queste azioni influenzano tutti i cloni sulla macchina"
+
+msgid "Shutdown all clones"
+msgstr "Spegni tutti i cloni"
+
+msgid "Keep in mind that there may be users using a clone"
+msgstr "Tieni presente che potrebbero esserci utenti che utilizzano un clone"
+
+msgid "Yes, shutwdown all the clones"
+msgstr "Sì, spegni tutti i cloni"
+
+msgid "Waiting for machine to start"
+msgstr "In attesa dell'avvio della macchina"
+
+msgid "This machine will shut down"
+msgstr "Questa macchina verrà spenta"
+
+msgid "Waiting for network to come up"
+msgstr "In attesa che la rete sia disponibile"
+
+msgid "Hardware address"
+msgstr "Indirizzo hardware"
+
+msgid "Open ports"
+msgstr "Porte aperte"
+
+msgid "up"
+msgstr "su"
+
+msgid "No members found"
+msgstr "Nessun membro trovato"
+
+msgid "No groups found"
+msgstr "Nessun gruppo trovatro"
+
+msgid "This machine has a CD-ROM"
+msgstr "Questa macchina ha un CD-ROM"
+
+msgid "Keep the CD for the clones"
+msgstr "Mantieni il CD per i cloni"
+
+msgid "Accept"
+msgstr "Accetta"
+
+msgid "Close"
+msgstr "Chiudi"
+
+msgid "Apply"
+msgstr "Applica"
+
+msgid "Fail"
+msgstr "Fallimento"
+
+msgid "This Virtual Machine has no display hardware attached"
+msgstr "Questa Virtual Machine non ha un display hardware collegato"
+
+msgid "NAT"
+msgstr "NAT"
+
+msgid "Bridge"
+msgstr "Bridge"
+
+msgid "No bridges found"
+msgstr "Nessun bridge  trovato"
+
+msgid "disk"
+msgstr "disco"
+
+msgid "cdrom"
+msgstr "cdrom"
+
+msgid "system"
+msgstr "sistema"
+
+msgid "temporary"
+msgstr "temporaneo"
+
+msgid "data"
+msgstr "dati"
+
+msgid "Content will be cleaned on restore"
+msgstr "Il contenuto verrà ripulito in caso di ripristino"
+
+msgid "Content will be cleaned on restore and shutdown"
+msgstr "Il contenuto verrà ripulito nei casi di ripristino e spegnimento"
+
+msgid "Content will be kept on restore"
+msgstr "Il contenuto verrà mantenuto in caso di ripristino"
+
+msgid "type"
+msgstr "tipo"
+
+msgid "All machines"
+msgstr "Tutte le macchine"
+
+msgid "Users from this network can run all virtual machines"
+msgstr "Utenti da questa rete possono lanciare tutte le macchine virtuali"
+
+msgid "No machines"
+msgstr "Nessuna macchina"
+
+msgid "Users from this network can run no virtual machines"
+msgstr "Utenti da questa rete non possono lanciare nessuna macchina virtuale"
+
+msgid "Anonymous"
+msgstr "Anonimo"
+
+msgid "Warning: anonymous machines won't show up unless you enable allowed."
+msgstr "Attenzione: macchine anonime non verranno mostrate a meno che non lo abiliti."
+
+msgid "Network name is required"
+msgstr "Il nome della rete è richiesto"
+
+msgid "This name is duplicated"
+msgstr "Questo nome è duplicato"
+
+msgid "host"
+msgstr "host"
+
+msgid "base storage"
+msgstr "archivio di base"
+
+msgid "clone storage"
+msgstr "clone dell'archivio"
+
+msgid "default storage"
+msgstr "archivio di default"
+
+msgid "This virtual machine has no backups to purge"
+msgstr "Questa macchina virtuale non ha nessun backup da ripulire"
+
+msgid "End"
+msgstr "Fine"
+
+msgid "Time"
+msgstr "Tempo"
+
+msgid "Virtual machines pre-started"
+msgstr "Macchina virtuale pre-avviata"
+
+msgid "Warning: this virtual machine will be prepared as a base. This may take long."
+msgstr "Attenzione: questa macchina virtuale  verrà preparata come base. Questa operazione può essere lunga."
+
+msgid "Assign this virtual machine to the pre-started pool"
+msgstr "Assegna questa virtual machine a un pool pre-avviato"
+
+msgid "Virtual machines in the pool."
+msgstr "Macchine virtuali nel pool."
+
+msgid "Pool"
+msgstr "Pool"
+
+msgid "Prepare this machine as a base to create clones from it."
+msgstr "Prepara questa macchina come unas base da cui creare cloni."
+
+msgid "There are no active virtual machines"
+msgstr "Non ci sono macchine virtuali"
+
+msgid "reload list"
+msgstr "ricarica lista"
+
+msgid "Group"
+msgstr "Gruppo"
+
+msgid "New group member"
+msgstr "Nuovo membro del gruppo"
+
+msgid "This group has been removed."
+msgstr "Questo gruppo è stato rimosso."
+
+msgid "Remove group"
+msgstr "Rimuovi gruppo"
+
+msgid "Are you sure you want to remove this group ?"
+msgstr "Sei sicuro di voler rimuovere questo gruppo ?"

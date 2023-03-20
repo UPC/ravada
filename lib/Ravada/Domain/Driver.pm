@@ -88,8 +88,14 @@ sub get_options {
     my $sth = $$CONNECTOR->dbh->prepare($query);
     $sth->execute($self->id);
 
+    my $machine = 'unknown';
+    $machine = $self->domain->_os_type_machine()
+    if defined $self->domain && $self->domain->type eq 'KVM';
+
     my @ret;
     while (my $row = $sth->fetchrow_hashref) {
+        next if $machine =~ /^pc-q35/ && $self->name eq 'disk'
+        && $row->{name} =~ /^IDE$/i;
         push @ret,($row);
     }
     return @ret;

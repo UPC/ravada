@@ -1,0 +1,53 @@
+<div ng-hide="show_new_disk||show_new_display||show_new_filesystem||edit || !showmachine || !hardware_add || !hardware_add.length"
+            class="border border-secondary mb-4">
+   <div class="input-group m-3" style="max-width: 18rem;">
+        <div class="custom-file">
+            <span class="mr-2"><%=l 'Add' %></span>
+            <select class="custom-select" ng-model="new_hardware"
+                ng-change="pre_add_hw()"
+                ng-options="type for type in hardware_add"
+            >
+            <option value=""><%=l '-- choose hardware --' %></option>
+            </select>
+        </div>
+
+    </div>
+
+    <div ng-show="new_hardware"
+            class="m-3"
+    >
+        <div class="ml-3">
+        %= include 'main/manage_machine_new_display'
+        %= include 'main/manage_machine_edit_net'
+        %= include 'main/manage_machine_edit_disk'
+        %= include 'main/manage_machine_edit_filesystem'
+        %= include 'main/manage_machine_edit_sound'
+        %= include 'main/manage_machine_edit_video'
+
+        </div>
+
+%=      include '/main/manage_machine_apply_clones'
+
+        <div>
+        <button class="btn btn-secondary"
+            ng-click="new_hardware=undefined">cancel</button>
+        <button class="btn btn-primary"
+            ng-disabled="
+            (new_hardware=='filesystem' && !item.source)
+            ||
+            (new_hardware=='network' && item.type=='NAT' && !item.network)
+            ||
+            (new_hardware=='network' && item.type=='bridge' && !item.bridge)
+            ||
+            (new_hardware=='display' && !item.driver)
+            ||
+            (new_hardware=='filesystem' && (!item.source || !item.source.dir))
+            ||
+            (new_hardware=='sound' && !item.model)
+            ||
+            (new_hardware=='video' && !item.type)
+            "
+            ng-click="add_hardware(new_hardware)">ok</button>
+        </div>
+    </div>
+</div>

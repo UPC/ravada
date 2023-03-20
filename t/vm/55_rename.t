@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use utf8;
 use Carp qw(confess);
 use Data::Dumper;
 use JSON::XS;
@@ -148,6 +149,146 @@ sub test_rename_clone {
         if $clone1_name;
 }
 
+sub test_req_rename_utf_ca($vm_name) {
+
+    my $domain = create_domain_v2(
+        vm_name => $vm_name
+        ,name => new_domain_name()
+    );
+
+    my $name = new_domain_name();
+    my $new_name = $name."-ç";
+
+    my $req = Ravada::Request->rename_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => $new_name
+    );
+    wait_request();
+
+    my $dom2 =Ravada::Front::Domain->open($domain->id);
+    is($dom2->name,$name."-c");
+    is($dom2->_data('name'),$name."-c");
+    is($dom2->alias(),$new_name);
+
+}
+
+sub test_req_rename_utf_from_ca($vm_name) {
+
+    my $domain = create_domain_v2(
+        vm_name => $vm_name
+        ,name => new_domain_name()."-ç"
+    );
+
+    my $new_name = new_domain_name();
+
+    my $req = Ravada::Request->rename_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => $new_name
+    );
+    wait_request();
+
+    my $dom2 =Ravada::Front::Domain->open($domain->id);
+    is($dom2->name,$new_name);
+    is($dom2->_data('name'),$new_name);
+    is($dom2->alias(),$new_name);
+}
+
+sub test_req_rename_utf_ru($vm_name) {
+
+    my $domain = create_domain_v2(
+        vm_name => $vm_name
+        ,name => new_domain_name()
+    );
+
+    my $name = new_domain_name();
+    my $new_name = $name."-Саша";
+
+    my $req = Ravada::Request->rename_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => $new_name
+    );
+    wait_request();
+
+    my $dom2 =Ravada::Front::Domain->open($domain->id);
+    like($dom2->name,qr/^[a-z0-9_\-]+$/);
+    like($dom2->_data('name'), qr/^[a-z0-9_\-]+$/);
+    is($dom2->alias(),$new_name);
+
+}
+
+sub test_req_rename_utf_from_ru($vm_name) {
+
+    my $domain = create_domain_v2(
+        vm_name => $vm_name
+        ,name => new_domain_name()."-Саша"
+    );
+
+    my $new_name = new_domain_name();
+
+    my $req = Ravada::Request->rename_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => $new_name
+    );
+    wait_request();
+
+    my $dom2 =Ravada::Front::Domain->open($domain->id);
+    is($dom2->name,$new_name);
+    is($dom2->_data('name'),$new_name);
+    is($dom2->alias(),$new_name);
+}
+
+sub test_req_rename_utf_ar($vm_name) {
+
+    my $domain = create_domain_v2(
+        vm_name => $vm_name
+        ,name => new_domain_name()
+    );
+
+    my $name = new_domain_name();
+    my $new_name = $name ."-جميل";
+
+    my $req = Ravada::Request->rename_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => $new_name
+    );
+    wait_request();
+
+    my $dom2 =Ravada::Front::Domain->open($domain->id);
+
+    like($dom2->name,qr/^[a-z0-9_\-]+$/);
+    like($dom2->_data('name'), qr/^[a-z0-9_\-]+$/);
+    is($dom2->alias(),$new_name);
+
+}
+
+sub test_req_rename_utf_from_ar($vm_name) {
+
+    my $domain = create_domain_v2(
+        vm_name => $vm_name
+        ,name => new_domain_name()."-جميل"
+    );
+
+    my $new_name = new_domain_name();
+
+    my $req = Ravada::Request->rename_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => $new_name
+    );
+    wait_request();
+
+    my $dom2 =Ravada::Front::Domain->open($domain->id);
+    is($dom2->name,$new_name);
+    is($dom2->_data('name'),$new_name);
+    is($dom2->alias(),$new_name);
+}
+
+
 sub test_req_rename_clone {
 
     # TODO : this makes the test loose STDOUT or STDERR and ends with
@@ -196,6 +337,26 @@ sub test_rename_and_base($vm) {
 
 }
 
+sub test_req_rename_base_failed($vm) {
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+
+    my $old_name = $base->_data('name');
+
+    my $sth = connector->dbh->prepare(
+        "UPDATE domains set alias=? WHERE id=?"
+    );
+    $sth->execute(new_domain_name, $base->id);
+
+    my $req = Ravada::Request->rename_domain(
+        id_domain => $base->id
+        ,uid => user_admin->id
+        ,name => $old_name
+
+    );
+    wait_request();
+}
+
 #######################################################################
 
 clean();
@@ -220,6 +381,16 @@ for my $vm_name ( vm_names()) {
 
         diag("Testing rename domains with $vm_name");
     
+        test_req_rename_base_failed($vm_name);
+
+        test_req_rename_utf_ca($vm_name);
+        test_req_rename_utf_ru($vm_name);
+        test_req_rename_utf_ar($vm_name);
+
+        test_req_rename_utf_from_ca($vm_name);
+        test_req_rename_utf_from_ru($vm_name);
+        test_req_rename_utf_from_ar($vm_name);
+
         test_rename_and_base($vm_ok);
         test_rename_twice($vm_name);
 

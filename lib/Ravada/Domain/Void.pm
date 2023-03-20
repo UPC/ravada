@@ -9,7 +9,7 @@ use Fcntl qw(:flock SEEK_END);
 use File::Copy;
 use File::Path qw(make_path);
 use File::Rsync;
-use Hash::Util qw(lock_keys);
+use Hash::Util qw(lock_keys lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json);
 use Moose;
@@ -398,9 +398,27 @@ sub start($self, @args) {
     $listen_ip = $self->_vm->listen_ip($remote_ip) if !$listen_ip;
 
     $self->_store(is_active => 1);
+    $self->_store(is_hibernated => 0);
     my $password;
     $password = Ravada::Utils::random_name() if $set_password;
     $self->_set_displays_ip( $password, $listen_ip );
+    $self->_set_ip_address();
+
+}
+
+sub _set_ip_address($self) {
+    return if !$self->is_active;
+
+    my $hardware = $self->_value('hardware');
+    my $changed = 0;
+    for my $net (@{$hardware->{network}}) {
+        next if !ref($net);
+        next if exists $net->{address} && $net->{address};
+        next if $net->{type} ne 'nat';
+        $net->{address} = '198.51.100.'.int(rand(253)+2);
+        $changed++;
+    }
+    $self->_store('hardware' => $hardware) if $changed;
 
 }
 
@@ -490,7 +508,7 @@ sub add_volume {
     $args{capacity} = 1024 if !exists $args{capacity};
 
     my %valid_arg = map { $_ => 1 } ( qw( name capacity file vm type swap target allocation
-        driver boot
+        bus boot
     ));
 
     for my $arg_name (keys %args) {
@@ -503,7 +521,7 @@ sub add_volume {
 
     my $data = $self->_load();
     $args{target} = $self->_new_target() if !$args{target};
-    $args{driver} = 'foo' if !exists $args{driver};
+    $args{bus} = 'foo' if !exists $args{bus};
 
     my $hardware = $data->{hardware};
     my $device_list = $hardware->{device};
@@ -513,7 +531,7 @@ sub add_volume {
         ,file => $file
         ,type => $args{type}
         ,target => $args{target}
-        ,driver => $args{driver}
+        ,bus => $args{bus}
         ,device => $device
     };
     $data_new->{boot} = $args{boot} if $args{boot};
@@ -521,13 +539,14 @@ sub add_volume {
     $hardware->{device} = $device_list;
     $self->_store(hardware => $hardware);
 
-    delete @args{'name', 'target', 'driver'};
+    delete @args{'name', 'target', 'bus'};
     $self->_create_volume($file, $format, \%args) if ! -e $file;
 
     return $file;
 }
 
 sub _create_volume($self, $file, $format, $data=undef) {
+    confess "Undefined format" if !defined $format;
     if ($format =~ /iso|raw|void/) {
         $data->{format} = $format;
         $self->_vm->write_file($file, Dump($data)),
@@ -546,14 +565,15 @@ sub remove_volume($self, $file) {
     $self->_vol_remove($file);
 }
 
-sub _remove_controller_disk($self,$file) {
+sub _remove_controller_disk($self,$index) {
     return if ! $self->_vm->file_exists($self->_config_file);
     my $data = $self->_load();
     my $hardware = $data->{hardware};
 
     my @devices_new;
+    my $n = 0;
     for my $info (@{$hardware->{device}}) {
-        next if $info->{file} eq $file;
+        next if $n++ == $index;
         push @devices_new,($info);
     }
     $hardware->{device} = \@devices_new;
@@ -650,7 +670,7 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
                 && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);
         }
         $dev->{n_order} = $n_order++;
-        $dev->{driver_type} = 'void';
+        $dev->{driver}->{type} = 'void';
         my $vol = Ravada::Volume->new(
             file => $dev->{file}
             ,info => $dev
@@ -685,6 +705,7 @@ sub get_info {
     if (!$info->{memory}) {
         $info = $self->_set_default_info();
     }
+    $info->{ip} = $self->ip;
     lock_keys(%$info);
     return $info;
 }
@@ -703,19 +724,21 @@ sub _set_default_info($self, $listen_ip=undef) {
             ,cpu_time => 1
             ,n_virt_cpu => 1
             ,state => 'UNKNOWN'
-            ,ip =>'1.1.1.'.int(rand(254)+1)
             ,mac => _new_mac()
             ,time => time
-    };
-
-    $info->{interfaces}->[0] = {
-        hwaddr => $info->{mac}
-        ,address => $info->{ip}
     };
 
     $self->_store(info => $info);
     $self->_set_display($listen_ip);
     my $hardware = $self->_value('hardware');
+
+    $hardware->{network}->[0] = {
+        hwaddr => $info->{mac}
+        ,address => $info->{ip}
+        ,type => 'nat'
+    };
+    $self->_store(hardware => $hardware );
+
     my %controllers = $self->list_controllers;
     for my $name ( sort keys %controllers) {
         next if $name eq 'disk' || $name eq 'display';
@@ -770,6 +793,7 @@ sub _set_info {
     my $info = $self->get_info();
     confess "Unknown field $field" if !exists $info->{$field};
 
+    unlock_hash(%$info);
     $info->{$field} = $value;
     $self->_store(info => $info);
 }
@@ -802,8 +826,18 @@ sub disk_size {
 
 sub ip {
     my $self = shift;
-    my $info = $self->_value('info');
-    return $info->{ip};
+    my $hardware = $self->_value('hardware');
+    return if !exists $hardware->{network};
+    for ( 1 .. 2 ) {
+        for my $network(@{$hardware->{network}}) {
+            return $network->{address}
+            if ref($network) && $network->{address};
+        }
+
+        $self->_set_ip_address();
+    }
+
+    return;
 }
 
 sub clean_disk($self, $file) {
@@ -871,22 +905,23 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
     return $self->_set_controller_disk($data) if $name eq 'disk';
 
     $data->{listen_ip} = $self->_vm->listen_ip if $name eq 'display'&& !$data->{listen_ip};
+    $data->{driver} = 'spice' if $name eq 'display'&& !$data->{driver};
 
     my $list = ( $hardware->{$name} or [] );
 
     confess "Error: hardware $number already added ".Dumper($list)
     if defined $number && $number < scalar(@$list);
 
-    $#$list = $number if defined $number && scalar @$list <= $number;
+    $#$list = $number-1 if defined $number && scalar @$list < $number;
 
     my @list2;
     if (!defined $number) {
         @list2 = @$list;
         push @list2,($data or " $name z 1");
     } else {
-        $number = $#$list if !defined $number;
         my $count = 0;
         for my $item ( @$list ) {
+            $count++;
             if ($number == $count) {
                 my $data2 = ( $data or " $name a ".($count+1));
                 $data2 = " $name b ".($count+1) if defined $data2 && ref($data2) && !keys %$data2;
@@ -897,7 +932,6 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
             $item = { driver => 'spice' , port => 'auto' , listen_ip => $self->_vm->listen_ip }
             if $name eq 'display' && !defined $item;
             push @list2,($item or " $name b ".($count+1));
-            $count++;
         }
     }
     $hardware->{$name} = \@list2;
@@ -912,8 +946,9 @@ sub _remove_disk {
     my ($self, $index) = @_;
     confess "Index is '$index' not number" if !defined $index || $index !~ /^\d+$/;
     my @volumes = $self->list_volumes();
-    $self->remove_volume($volumes[$index]);
-    $self->_remove_controller_disk($volumes[$index]);
+    $self->remove_volume($volumes[$index])
+        if $volumes[$index] && $volumes[$index] !~ /\.iso$/;
+    $self->_remove_controller_disk($index);
 }
 
 sub remove_controller {
@@ -940,7 +975,7 @@ sub remove_controller {
 
 sub _change_driver_disk($self, $index, $driver) {
     my $hardware = $self->_value('hardware');
-    $hardware->{device}->[$index]->{driver} = $driver;
+    $hardware->{device}->[$index]->{bus} = $driver;
 
     $self->_store(hardware => $hardware);
 }
@@ -959,14 +994,18 @@ sub _change_disk_data($self, $index, $field, $value) {
 sub _change_hardware_disk($self, $index, $data_new) {
     my @volumes = $self->list_volumes_info();
 
-    my $driver = delete $data_new->{driver};
+    unlock_hash(%$data_new);
+    my $driver;
+    $driver = delete $data_new->{bus} if exists $data_new->{bus};
+    lock_hash(%$data_new);
     return $self->_change_driver_disk($index, $driver) if $driver;
 
     die "Error: volume $index not found, only ".scalar(@volumes)." found."
         if $index >= scalar(@volumes);
 
     my $file = $volumes[$index]->{file};
-    my $new_file = $data_new->{file};
+    my $new_file;
+    $new_file = $data_new->{file} if exists $data_new->{file};
     return $self->_change_disk_data($index, file => $new_file) if defined $new_file;
 
     return if !$file;
@@ -995,13 +1034,20 @@ sub _change_hardware_vcpus($self, $index, $data) {
 }
 
 sub _change_hardware_memory($self, $index, $data) {
+    unlock_hash(%$data);
     my $memory = delete $data->{memory};
     my $max_mem = delete $data->{max_mem};
     confess "Error: unknown args ".Dumper($data) if keys %$data;
 
     my $info = $self->_value('info');
-    $info->{memory} = $memory       if defined $memory;
-    $info->{max_mem} = $max_mem     if defined $max_mem;
+    if (defined $memory && $info->{memory} != $memory) {
+        $info->{memory} = $memory;
+    }
+
+    if (defined $max_mem && $info->{max_mem} != $max_mem) {
+        $info->{max_mem} = $max_mem;
+        $self->needs_restart(1);
+    }
 
     $self->_store(info => $info);
 }
@@ -1041,6 +1087,130 @@ sub copy_config($self, $domain) {
         $value = 0 if $field eq 'is_active';
         $self->_store($field, $value);
     }
+}
+
+sub add_config_node($self, $path, $content, $data) {
+    my $content_hash;
+    eval { $content_hash = Load($content) };
+    confess $@."\n$content" if $@;
+
+    $data->{hardware}->{host_devices} = []
+    if $path eq "/hardware/host_devices" && !exists $data->{hardware}->{host_devices};
+
+    my $found = $data;
+    for my $item (split m{/}, $path ) {
+        next if !$item;
+
+        confess "Error, no $item in ".Dumper($found)
+        if !exists $found->{$item};
+
+        $found = $found->{$item};
+    }
+    if (ref($found) eq 'ARRAY') {
+        push @$found, ( $content_hash );
+    } else {
+        my ($item) = keys %$content_hash;
+        $found->{$item} = $content_hash->{$item};
+    }
+}
+
+sub remove_config_node($self, $path, $content, $data) {
+    my $content_hash;
+    eval { $content_hash = Load($content) };
+    confess $@."\n$content" if $@;
+
+    my $found = $data;
+    my $found_parent;
+    my $found_item;
+    for my $item (split m{/}, $path ) {
+        next if !$item;
+
+        return if !exists $found->{$item};
+
+        $found_parent = $found;
+        $found_item = $item;
+        $found = $found->{$item};
+    }
+    return if !$found;
+    if (ref($found) eq 'ARRAY') {
+        my @new_list;
+        for my $item (@$found) {
+            push @new_list,($item) unless _equal_hash($content_hash, $item);
+        }
+        $found_parent->{$found_item} = [@new_list];
+        delete $found_parent->{$found_item} if (scalar(@new_list) == 0 );
+    } else {
+        my ($item) = keys %$content_hash;
+        delete $found->{$item};
+    }
+
+}
+
+sub _equal_hash($a,$b) {
+    return 0 if scalar(keys(%$a)) != scalar(keys %$b);
+    for my $key ( keys %$a) {
+        return 0 if !exists $b->{$key} || $b->{$key} ne $a->{$key};
+    }
+    return 1;
+}
+
+sub add_config_unique_node($self, $path, $content, $data) {
+    my $content_hash;
+    eval { $content_hash = Load($content) };
+    confess $@."\n$content" if $@;
+
+    $data->{hardware}->{host_devices} = []
+    if $path eq "/hardware/host_devices" && !exists $data->{hardware}->{host_devices};
+
+    my $found = $data;
+    for my $item (split m{/}, $path ) {
+        next if !$item;
+
+        confess "Error, no $item in ".Dumper($found)
+        if !exists $found->{$item};
+
+        $found = $found->{$item};
+    }
+    if (ref($found) eq 'ARRAY') {
+        push @$found, ( $content_hash );
+    } else {
+        my ($item) = keys %$content_hash;
+        $found->{$item} = $content_hash->{$item};
+    }
+}
+
+
+sub can_host_devices { return 1 }
+
+sub remove_host_devices($self) {
+    my $data = $self->_load();
+    my $hardware = $data->{hardware};
+
+    my @devices2;
+    my $changed = delete $hardware->{host_devices};
+    return if !$changed;
+    $self->_store( hardware => $hardware );
+}
+
+sub get_config($self) {
+    return $self->_load();
+}
+
+sub reload_config($self, $data) {
+    eval { DumpFile($self->_config_file(), $data) };
+    confess $@ if $@;
+}
+
+sub has_nat_interfaces($self) {
+    my $config = $self->_load();
+    for my $if (@{$config->{hardware}->{network}}) {
+        return 1 if exists $if->{type} && $if->{type} eq 'nat';
+    }
+    return 0;
+}
+
+sub config_files($self) {
+    return $self->_config_file();
 }
 
 1;

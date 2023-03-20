@@ -459,14 +459,15 @@ sub file_exists($self, $file) {
 }
 
 sub _file_exists_remote($self, $file) {
-    $file = $self->_follow_link($file);
+    $file = $self->_follow_link($file) unless $file =~ /which$/;
     for my $pool ($self->vm->list_all_storage_pools ) {
         $self->_wait_storage( sub { $pool->refresh() } );
         my @volumes = $self->_wait_storage( sub { $pool->list_all_volumes });
         for my $vol ( @volumes ) {
             my $found;
             eval {
-                my $path = $self->_follow_link($vol->get_path);
+                my $path = $vol->get_path;
+                $self->_follow_link($vol->get_path) unless $file =~ /which$/;
                 $found = 1 if $path eq $file;
             };
             # volume was removed in the nick of time
@@ -474,7 +475,12 @@ sub _file_exists_remote($self, $file) {
             return 1 if $found;
         }
     }
-    return 0;
+
+    die "Error: invalid file '$file'" if $file =~ /[`;(\[" ]/;
+    my ($out,$err) = $self->_ssh->capture2("ls $file");
+    my @ls = split /\n/,$out;
+    for (@ls) { chomp };
+    return scalar(@ls);
 }
 
 sub _follow_link($self, $file) {
@@ -631,14 +637,16 @@ sub create_domain {
 
     croak "argument name required"       if !$args{name};
     croak "argument id_owner required"   if !$args{id_owner};
-    confess "argument id_iso or id_base required ".Dumper(\%args)
-        if !$args{id_iso} && !$args{id_base};
+    confess "argument id_iso or id_base or config required ".Dumper(\%args)
+        if !$args{id_iso} && !$args{id_base} && !$args{config};
 
     my $domain;
     if ($args{id_iso}) {
         $domain = $self->_domain_create_from_iso(@_);
     } elsif($args{id_base}) {
         $domain = $self->_domain_create_from_base(@_);
+    } elsif($args{config}) {
+        $domain = $self->_domain_create_from_config(@_);
     } else {
         confess "TODO";
     }
@@ -741,12 +749,27 @@ sub list_domains {
     my @list;
     while ( my ($id) = $sth->fetchrow) {
         my $domain;
-        if ($read_only) {
-            $domain = Ravada::Front::Domain->open( $id );
-        } else {
-            $domain = Ravada::Domain->open( id => $id, vm => $self);
-        }
+        eval{
+            if ($read_only) {
+                $domain = Ravada::Front::Domain->open( $id );
+            } else {
+                $domain = Ravada::Domain->open( id => $id, vm => $self);
+            }
+        };
+        die $@ if $@ && $@ !~ /Unkown domain/i;
         push @list,($domain) if $domain;
+    }
+    return @list;
+}
+
+sub discover($self) {
+    my @known = $self->list_domains(read_only => 1);
+    my %known = map { $_->name => 1 } @known;
+
+    my @list;
+    for my $dom ($self->vm->list_all_domains) {
+        my $name = Encode::decode_utf8($dom->get_name);
+        push @list,($name) if !$known{$name};
     }
     return @list;
 }
@@ -862,6 +885,7 @@ sub _domain_create_from_iso {
             if !$args{$_};
     }
     my $remove_cpu = delete $args2{remove_cpu};
+    my $options = delete $args2{options};
     for (qw(disk swap active request vm memory iso_file id_template volatile spice_password
             listen_ip)) {
         delete $args2{$_};
@@ -882,17 +906,18 @@ sub _domain_create_from_iso {
         
     my $device_cdrom;
 
-    confess "Template ".$iso->{name}." has no URL, iso_file argument required."
-        if !$iso->{url} && !$iso_file && !$iso->{device};
 
-    if ($iso_file) {
-        if ( $iso_file ne "<NONE>") {
+    confess "Template ".$iso->{name}." has no URL, iso_file argument required."
+        if $iso->{has_cd} && !$iso->{url} && !$iso_file && !$iso->{device};
+
+    if (defined $iso_file) {
+        if ( $iso_file ne "<NONE>" || $iso_file ) {
             $device_cdrom = $iso_file;
         }
     }
-    else {
-      $device_cdrom = $self->_iso_name($iso, $args{request});
-    }
+
+    $device_cdrom  =$self->_iso_name($iso, $args{request})
+    if !$device_cdrom && $iso->{has_cd};
     
     #if ((not exists $args{iso_file}) || ((exists $args{iso_file}) && ($args{iso_file} eq "<NONE>"))) {
     #    $device_cdrom = $self->_iso_name($iso, $args{request});
@@ -906,22 +931,11 @@ sub _domain_create_from_iso {
 
     my $file_xml =  $DIR_XML."/".$iso->{xml_volume};
 
-    my $device_disk = $self->create_volume(
-          name => "$args{name}-vda-".Ravada::Utils::random_name(4)
-         , xml => $file_xml
-        , size => $disk_size
-        ,target => 'vda'
-    );
+    my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}", $options);
 
-    my $xml = $self->_define_xml($args{name} , "$DIR_XML/$iso->{xml}");
-
-    if ($device_cdrom) {
-        _xml_modify_cdrom($xml, $device_cdrom);
-    } else {
-        _xml_remove_cdrom($xml);
-    }
+    _xml_remove_cdrom_device($xml);
     _xml_remove_cpu($xml)                     if $remove_cpu;
-    _xml_modify_disk($xml, [$device_disk])    if $device_disk;
+    _xml_remove_disk($xml);
     $self->_xml_modify_usb($xml);
     _xml_modify_video($xml);
 
@@ -930,6 +944,11 @@ sub _domain_create_from_iso {
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner}
         , id_vm => $self->id
     );
+    $domain->add_volume( boot => 1, target => 'vda', size => $disk_size );
+    $domain->add_volume( boot => 2, target => 'hda'
+        ,device => 'cdrom'
+        ,file => $device_cdrom
+    ) if $device_cdrom && $device_cdrom ne '<NONE>';
 
     $domain->_set_spice_password($spice_password)
         if $spice_password;
@@ -954,7 +973,11 @@ sub _domain_create_common {
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
     $self->_xml_modify_mac($xml);
     my $uuid = $self->_xml_modify_uuid($xml);
-    $self->_xml_modify_spice_port($xml, $spice_password, $listen_ip);
+
+    my ($graphics) = $xml->findnodes("/domain/devices/graphics");
+    $self->_xml_modify_spice_port($xml, $spice_password, $listen_ip)
+    if $graphics && ($spice_password || $listen_ip);
+
     $self->_fix_pci_slots($xml);
     $self->_xml_add_guest_agent($xml);
     $self->_xml_clean_machine_type($xml) if !$self->is_local;
@@ -1044,6 +1067,28 @@ sub _search_domain_by_id {
     return $self->search_domain($row->{name});
 }
 
+sub _domain_create_from_config($self, %args) {
+    my $config = delete $args{config};
+    my $id = delete $args{id};
+    my $xml = XML::LibXML->load_xml(string => $config);
+
+    my $dom = $self->vm->define_domain($xml->toString());
+    my $domain = Ravada::Domain::KVM->new(
+              _vm => $self
+         , domain => $dom
+       , id_owner => $args{id_owner}
+    );
+
+    $domain->_insert_db(name=> $args{name}
+        , id => $id
+        , id_owner => $args{id_owner}
+        , id_vm => $self->id
+    );
+    $domain->xml_description();
+    return $domain;
+
+}
+
 sub _domain_create_from_base {
     my $self = shift;
     my %args = @_;
@@ -1069,11 +1114,11 @@ sub _domain_create_from_base {
 
 
     my @device_disk = $self->_create_disk($base, $args{name});
-#    _xml_modify_cdrom($xml);
     if ( !defined $with_cd ) {
         $with_cd = grep (/\.iso$/ ,@device_disk);
     }
     _xml_remove_cdrom($xml) if !$with_cd;
+    _xml_remove_hostdev($xml);
     my ($node_name) = $xml->findnodes('/domain/name/text()');
     $node_name->setData($args{name});
 
@@ -1134,8 +1179,17 @@ sub _fix_pci_slots {
 
 }
 
-sub _iso_name($self, $iso, $req, $verbose=1) {
+sub _set_iso_downloading($self, $iso,$value) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE iso_images SET downloading=?"
+        ." WHERE id=?"
+    );
+    $sth->execute($value,$iso->{id});
+}
 
+sub _iso_name($self, $iso, $req=undef, $verbose=1) {
+
+    return '' if !$iso->{has_cd};
     my $iso_name;
     if ($iso->{rename_file}) {
         $iso_name = $iso->{rename_file};
@@ -1148,19 +1202,24 @@ sub _iso_name($self, $iso, $req, $verbose=1) {
 
     my $device = ($iso->{device} or $self->dir_img."/$iso_name");
 
-    confess "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
+    warn "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
         if $VERIFY_ISO && $iso->{url} && !$iso->{md5} && !$iso->{sha256};
 
     my $downloaded = 0;
-    if (! -e $device || ! -s $device) {
+    my $test = 0;
+    $test = 1 if $req && $req->defined_arg('test');
+
+    if ($test || ! -e $device || ! -s $device) {
         $req->status("downloading $iso_name file"
                 ,"Downloading ISO file for $iso_name "
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _fill_url($iso);
-        my $test = 0;
-        $test = 1 if $req && $req->defined_arg('test');
+
+        $self->_set_iso_downloading($iso,1);
         my $url = $self->_download_file_external($iso->{url}, $device, $verbose, $test);
+        $self->_set_iso_downloading($iso,0);
+        $req->output($url) if $req;
         $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
             if !$test && ! -e $device;
@@ -1269,9 +1328,10 @@ sub _download_file_external_headers($self,$url) {
     run3(\@cmd,\$in,\$out,\$err);
     my ($status) = $err =~ /^\s*(HTTP.*\d+.*)/m;
 
-    return $url if $status =~ /(200|301|302) ([\w\s]+)$/;
+    return $url if $status =~ /(200|301|302|307) ([\w\s]+)$/;
     # 200: OK
     # 302: redirect
+    # 307: temporary redirect
     die "Error: $url not found $status";
 }
 
@@ -1279,7 +1339,7 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
     $url .= "/" if $url !~ m{/$} && $url !~ m{.*/([^/]+\.[^/]+)$};
     if ($url =~ m{[^*]}) {
         my @found = $self->_search_url_file($url);
-        confess "No match for $url" if !scalar @found;
+        die "Error: URL not found '$url'" if !scalar @found;
         $url = $found[-1];
     }
     if ( $url =~ m{/$} ) {
@@ -1289,6 +1349,7 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
     confess "ERROR: wget missing"   if !$WGET;
 
     return $self->_download_file_external_headers($url)    if $test;
+    return $url if -e $device;
 
     my @cmd = ($WGET,'-nv',$url,'-O',$device);
     my ($in,$out,$err) = @_;
@@ -1317,6 +1378,8 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM iso_images WHERE id = ?");
     $sth->execute($id_iso);
     my $row = $sth->fetchrow_hashref;
+    $row->{options} = decode_json($row->{options})
+    if $row->{options} && !ref($row->{options});
     die "Missing iso_image id=$id_iso" if !keys %$row;
 
     return $row if $file_iso && -e $file_iso;
@@ -1348,7 +1411,7 @@ sub _download($self, $url) {
     $url =~ s{(http://.*)//(.*)}{$1/$2};
     if ($url =~ m{[^*]}) {
         my @found = $self->_search_url_file($url);
-        confess "No match for $url" if !scalar @found;
+        die "Error: URL not found '$url'" if !scalar @found;
         $url = $found[-1];
     }
 
@@ -1376,13 +1439,9 @@ sub _match_url($self,$url) {
     $url2 = '' if !$url2;
 
     confess "No url1 from $url" if !defined $url1;
-    my $ua = Mojo::UserAgent->new;
-    my $res = $ua->get(($url1 or '/'))->res;
-    confess "ERROR ".$res->code." ".$res->message." : $url1"
-        unless $res->code == 200 || $res->code == 301;
-
+    my $dom = $self->_ua_get($url1);
     my @found;
-    my $links = $res->dom->find('a')->map( attr => 'href');
+    my $links = $dom->find('a')->map( attr => 'href');
     for my $link (@$links) {
         next if !defined $link;
         $link =~ s{/$}{};
@@ -1393,19 +1452,39 @@ sub _match_url($self,$url) {
     return @found;
 }
 
+sub _ua_get($self, $url) {
+    my $cache = $self->_cache_get($url);
+    if ( $cache ) {
+        my $dom = Mojo::DOM->new($cache);
+        return $dom;
+    }
+    my ($ip) = $url =~ m{://(.*?)[:/]};
+    sleep 1 if !$ip || $self->{_url_get}->{$ip};
+    my $ua = $self->_web_user_agent();
+    my $res;
+    for my $try ( 1 .. 3 ) {
+        $res = $ua->get($url)->res;
+        last if $res && defined $res->code;
+        sleep 1+$try;
+    }
+    confess "Error getting '$url'" if !$res;
+    return unless $res->code == 200 || $res->code == 301;
+
+    $self->_cache_store($url,$res->body);
+    return $res->dom;
+
+}
+
 sub _cache_get($self, $url) {
     my $file = _cache_filename($url);
 
     my @stat = stat($file)  or return;
-    return if time-$stat[9] > 300;
+    return if time-$stat[9] > 600;
     open my $in ,'<' , $file or return;
     return join("",<$in>);
 }
 
-sub _cache_store {
-    my $self = shift;
-    my $url = shift;
-    my $content = shift;
+sub _cache_store($self, $url, $content) {
 
     my $file = _cache_filename($url);
     open my $out ,'>' , $file or die "$! $file";
@@ -1462,6 +1541,11 @@ sub _fetch_filename {
     if (@found) {
         $row->{device} = $found[0]->get_path;
         ($row->{filename}) = $found[0]->get_path =~ m{.*/(.*)};
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE iso_images SET device=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($row->{device}, $row->{id});
         return;
     } else {
         @found = $self->_search_url_file($row->{url}, $row->{file_re}) if !@found;
@@ -1485,13 +1569,16 @@ sub _search_url_file($self, $url_re, $file_re=undef) {
         ($url_re, $file_re) = $old_url_re =~ m{(.*)/(.*)};
         confess "ERROR: Missing file part in $old_url_re"
             if !$file_re;
+        if ($url_re =~ /\.\.$/) {
+            $url_re =~ s{(.*)/.*/\.\.$}{$1};
+        }
     }
 
     $file_re .= '$' if $file_re !~ m{\$$};
     my @found;
     for my $url ($self->_match_url($url_re)) {
-        push @found,
-        $self->_match_file($url, $file_re);
+        my @file = $self->_match_file($url, $file_re);
+        push @found, @file if scalar @file;
     }
     return (sort @found);
 }
@@ -1509,17 +1596,8 @@ sub _match_file($self, $url, $file_re) {
 
     $url .= '/' if $url !~ m{/$};
 
-    my $res;
-    for ( 1 .. 10 ) {
-        eval { $res = $self->_web_user_agent->get($url)->res(); };
-        last if !$@ && $res && defined $res->code;
-        next if $@ && $@ =~ /timeout/i;
-        confess $@ if $@;
-    }
-
-    return unless defined $res->code && ( $res->code == 200 || $res->code == 301);
-
-    my $dom= $res->dom;
+    my $dom = $self->_ua_get($url);
+    return if !$dom;
 
     my @found;
 
@@ -1566,9 +1644,11 @@ sub _fetch_this($self, $row, $type, $file = $row->{filename}){
         }
     }
 
-    confess "No $type for $file in ".$row->{"${type}_url"}."\n"
+    warn "No $type for $file in ".$row->{"${type}_url"}."\n"
         .$url_orig."\n"
         .$content;
+
+    return;
 }
 
 sub _fetch_md5($self,$row) {
@@ -1582,7 +1662,7 @@ sub _fetch_md5($self,$row) {
 sub _fetch_sha256($self,$row) {
     my $signature = $self->_fetch_this($row,'sha256');
     confess "ERROR: Wrong signature '$signature'"
-         if $signature !~ /^[0-9a-f]{9}/;
+         if defined $signature && $signature !~ /^[0-9a-f]{9}/;
     return $signature;
 }
 
@@ -1591,9 +1671,7 @@ sub _fetch_sha256($self,$row) {
 # XML methods
 #
 
-sub _define_xml {
-    my $self = shift;
-    my ($name, $xml_source) = @_;
+sub _define_xml($self, $name, $xml_source, $options=undef) {
     my $doc = $XML->parse_file($xml_source) or die "ERROR: $! $xml_source\n";
 
         my ($node_name) = $doc->findnodes('/domain/name/text()');
@@ -1603,9 +1681,188 @@ sub _define_xml {
     $self->_xml_modify_uuid($doc);
     $self->_xml_modify_spice_port($doc);
     _xml_modify_video($doc);
+    $self->_xml_modify_options($doc, $options);
 
     return $doc;
 
+}
+
+sub _xml_modify_options($self, $doc, $options=undef) {
+    return if !$options || !scalar(keys (%$options));
+    my $uefi = delete $options->{uefi};
+    my $machine = delete $options->{machine};
+    my $arch = delete $options->{arch};
+    my $bios = delete $options->{'bios'};
+    confess "Error: bios=$bios and uefi=$uefi clash"
+    if defined $uefi && defined $bios
+        && ($bios !~/uefi/i && $uefi || $bios =~/uefi/i && !$uefi);
+
+    $uefi = 1 if $bios && $bios =~ /uefi/i;
+
+    confess "Arguments unknown ".Dumper($options)  if keys %$options;
+    if ($machine) {
+        $self->_xml_set_machine($doc, $machine);
+    }
+    if ($arch) {
+        $self->_xml_set_arch($doc, $arch);
+    }
+    if ( $uefi ) {
+        #        $self->_xml_add_libosinfo_win2k16($doc);
+        my ($xml_name) = $doc->findnodes('/domain/name');
+        $self->_xml_add_uefi($doc, $xml_name->textContent);
+    }
+    my ($type) = $doc->findnodes('/domain/os/type');
+
+    my $machine_found = $type->getAttribute('machine');
+    if ($machine_found =~ /pc-i440fx/ && !$uefi) {
+        $self->_xml_remove_vmport($doc);
+        $self->_xml_remove_ide($doc);
+    }
+    if ($machine_found =~ /q35/ ) {
+        $self->_xml_set_pcie($doc);
+        $self->_xml_remove_ide($doc);
+        $self->_xml_remove_vmport($doc);
+    } else {
+        $self->_xml_set_pci_noe($doc);
+    }
+
+}
+
+sub _xml_set_arch($self, $doc, $arch) {
+    my ($type) = $doc->findnodes('/domain/os/type');
+    $type->setAttribute(arch => $arch);
+}
+
+
+
+sub _xml_set_machine($self, $doc, $machine) {
+    my ($type) = $doc->findnodes('/domain/os/type');
+    $type->setAttribute(machine => $machine);
+}
+
+sub _xml_remove_ide($self, $doc) {
+    my ($devices) = $doc->findnodes("/domain/devices");
+    for my $controller ($doc->findnodes("/domain/devices/controller")) {
+        next if $controller->getAttribute('type') ne 'ide';
+        $devices->removeChild($controller);
+    }
+    for my $disk ($doc->findnodes("/domain/devices/disk")) {
+        my ($target) = $disk->findnodes("target");
+        $target->setAttribute('bus' => 'sata') if $target->getAttribute('bus') eq 'ide';
+
+        my ($address) = $disk->findnodes("address");
+        $disk->removeChild($address);
+    }
+
+}
+
+sub _xml_remove_vmport($self, $doc) {
+    my ($features) = $doc->findnodes("/domain/features");
+    my ($vmport) = $features->findnodes("vmport");
+    return if !$vmport;
+    $features->removeChild($vmport);
+}
+
+
+sub _xml_set_pcie($self, $doc) {
+    for my $controller ($doc->findnodes("/domain/devices/controller")) {
+        next if $controller->getAttribute('type') ne 'pci';
+        $controller->setAttribute('model' => 'pcie-root');
+    }
+}
+
+sub _xml_set_pci_noe($self, $doc) {
+    my $changed = 0;
+    for my $controller ($doc->findnodes("/domain/devices/controller")) {
+        next if $controller->getAttribute('type') ne 'pci';
+
+        $controller->setAttribute('model' => 'pci-root')
+        if $controller->getAttribute('model') eq 'pcie-root';
+
+        $changed++;
+    }
+
+    return if !$changed;
+    my %slot;
+    for my $address ($doc->findnodes("/domain/devices/*/address")) {
+        next if $address->getAttribute('type') ne'pci';
+        my ($n) = $address->getAttribute('slot') =~ /0x0*(\d+)/;
+        $slot{$n}++;
+    }
+
+    my $n = 2;
+    for my $address ($doc->findnodes("/domain/devices/*/address")) {
+        next if $address->getAttribute('type') ne'pci';
+        next if $address->getAttribute('slot') !~ /^0x00+$/;
+
+        my $new_slot = "0x0$n";
+        for (;;) {
+            $new_slot = "0x0$n";
+            last if !$slot{$n}++;
+            $n++;
+        }
+        $address->setAttribute('slot' => $new_slot);
+    }
+
+    # video can't be 0x00 nor 0x01
+    for my $address ($doc->findnodes("/domain/devices/video/address")) {
+        next if $address->getAttribute('type') ne'pci';
+        next if $address->getAttribute('slot') !~ /^0x0*(0|1)$/;
+        my $new_slot = "0x0$n";
+        for (;;) {
+            $new_slot = "0x0$n";
+            last if !$slot{$n}++;
+            $n++;
+        }
+        $address->setAttribute('slot' => $new_slot);
+    }
+
+}
+
+
+sub _xml_add_libosinfo_win2k16($self, $doc) {
+    my ($domain) = $doc->findnodes('/domain');
+    my ($metadata) = $domain->findnodes('metadata');
+    if (!$metadata) {
+        $metadata = $domain->addNewChild(undef,"metadata");
+    }
+    my $libosinfo = $metadata->addNewChild(undef,'libosinfo:libosinfo');
+    $libosinfo->setAttribute('xmlns:libosinfo' =>
+        "http://libosinfo.org/xmlns/libvirt/domain/1.0"
+    );
+    my $os = $libosinfo->addNewChild(undef, 'libosinfo:os');
+    $os->setAttribute('id' => "http://microsoft.com/win/2k16" );
+
+}
+
+sub _xml_add_uefi($self, $doc, $name) {
+    my ($os) = $doc->findnodes('/domain/os');
+    my ($loader) = $doc->findnodes('/domain/os/loader');
+    if (!$loader) {
+        $loader= $os->addNewChild(undef,"loader");
+    }
+    $loader->setAttribute('readonly' => 'yes');
+    $loader->setAttribute('type' => 'pflash');
+
+    my $ovmf = '/usr/share/OVMF/OVMF_CODE.fd';
+
+    my ($type) = $doc->findnodes('/domain/os/type');
+    if ($type->getAttribute('arch') =~ /x86_64/
+            && $type->getAttribute('machine') =~ /pc-q35/) {
+        $ovmf = '/usr/share/OVMF/OVMF_CODE_4M.fd';
+    }
+    my ($text) = $loader->findnodes("text()");
+    if ($text) {
+        $text->setData($ovmf);
+    } else {
+        $loader->appendText($ovmf);
+    }
+
+    my ($nvram) =$doc->findnodes("/domain/os/nvram");
+    if (!$nvram) {
+        $nvram = $os->addNewChild(undef,"nvram");
+    }
+    $nvram->appendText("/var/lib/libvirt/qemu/nvram/$name.fd");
 }
 
 sub _xml_remove_cpu {
@@ -1614,6 +1871,16 @@ sub _xml_remove_cpu {
     my ($cpu) = $domain->findnodes('cpu');
     $domain->removeChild($cpu)  if $cpu;
 }
+
+sub _xml_remove_disk($doc){
+    my ($dev) = $doc->findnodes('/domain/devices')
+        or confess "Missing node domain/devices";
+    for my $disk ( $dev->findnodes('disk') ) {
+        $dev->removeChild($disk)
+            if $disk && $disk->getAttribute('device') eq 'disk';
+    }
+}
+
 
 sub _xml_modify_video {
     my $doc = shift;
@@ -1627,6 +1894,9 @@ sub _xml_modify_video {
                      ,map { $_->toString() } $doc->findnodes('/domain/devices/video'))
 
         if !$video;
+
+    return if $video->getAttribute('type') eq 'qxl';
+
     $video->setAttribute(type => 'qxl');
     $video->setAttribute( ram => 65536 );
     $video->setAttribute( vram => 65536 );
@@ -1642,8 +1912,8 @@ sub _xml_modify_spice_port($self, $doc, $password=undef, $listen_ip=$self->liste
 
     $listen_ip = $self->listen_ip if !defined $listen_ip;
     my ($graph) = $doc->findnodes('/domain/devices/graphics')
-        or die "ERROR: I can't find graphic";
-    $graph->setAttribute(type => 'spice');
+        or confess "ERROR: I can't find graphics in ".$self->name;
+    #$graph->setAttribute(type => 'spice');
     $graph->setAttribute(autoport => 'yes');
     $graph->setAttribute(listen=> $listen_ip );
     $graph->setAttribute(passwd => $password)    if $password;
@@ -1703,23 +1973,6 @@ sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
         return $new_uuid if !grep /^$new_uuid$/,@uuids;
     }
     confess "I can't find a new unique uuid";
-}
-
-sub _xml_modify_cdrom {
-    my ($doc, $iso) = @_;
-
-    my @nodes = $doc->findnodes('/domain/devices/disk');
-    for my $disk (@nodes) {
-        next if $disk->getAttribute('device') ne 'cdrom';
-        for my $child ($disk->childNodes) {
-            if ($child->nodeName eq 'source') {
-                $child->setAttribute(file => $iso);
-                return;
-            }
-        }
-
-    }
-    die "I can't find CDROM on ". join("\n",map { $_->toString() } @nodes);
 }
 
 sub _xml_modify_memory {
@@ -1841,11 +2094,7 @@ sub _xml_remove_usb {
     }
 }
 
-sub _xml_add_usb_xhci {
-    my $self = shift;
-    my $devices = shift;
-
-    my $model = 'nec-xhci';
+sub _xml_add_usb_xhci($self, $devices, $model='qemu-xhci') {
     my $ctrl = _search_xml(
                            xml => $devices
                          ,name => 'controller'
@@ -2043,6 +2292,28 @@ sub _xml_add_sysinfo_entry($self, $doc, $field, $value) {
     ($hostname) = $oemstrings->addNewChild(undef,'entry');
     $hostname->appendText("$field: $value");
 }
+sub _xml_remove_hostdev {
+    my $doc = shift;
+
+    for my $devices ( $doc->findnodes('/domain/devices') ) {
+        for my $node_hostdev ( $devices->findnodes('hostdev') ) {
+            $devices->removeChild($node_hostdev);
+        }
+    }
+}
+
+sub _xml_remove_cdrom_device {
+    my $doc = shift;
+
+    my ($devices) = $doc->findnodes('/domain/devices');
+    for my $disk ($devices->findnodes('disk')) {
+        if ( $disk->nodeName eq 'disk'
+            && $disk->getAttribute('device') eq 'cdrom') {
+            $devices->removeChild($disk);
+        }
+    }
+}
+
 
 sub _xml_remove_cdrom {
     my $doc = shift;
@@ -2059,7 +2330,7 @@ sub _xml_remove_cdrom {
                 if ($source) {
 #                    warn "\n\t->removing ".$source->nodeName." ".$source->getAttribute('file')
 #                        ."\n";
-                    $disk->removeChild($source);
+                    $context->removeChild($disk);
                 }
             }
         }
@@ -2377,6 +2648,7 @@ sub _free_memory_available($self) {
 }
 
 sub _fetch_dir_cert($self) {
+    return '' if $<;
     my $in = $self->read_file($FILE_CONFIG_QEMU);
     for my $line (split /\n/,$in) {
         chomp $line;
@@ -2404,6 +2676,56 @@ sub free_disk($self, $pool_name = undef ) {
         sleep 1;
     }
     return $info->{available};
+}
+
+sub list_machine_types($self) {
+
+    my %todo = map { $_ => 1 }
+    ('isapc', 'microvm', 'xenfv','xenpv');
+
+    my %ret_types;
+    my $xml = $self->vm->get_capabilities();
+    my $doc = XML::LibXML->load_xml(string => $xml);
+    for my $node_arch ($doc->findnodes("/capabilities/guest/arch")) {
+        my $arch = $node_arch->getAttribute('name');
+        my %types;
+        for my $node_machine (sort { $a->textContent cmp $b->textContent } $node_arch->findnodes("machine")) {
+            my $machine = $node_machine->textContent;
+            next if $machine !~ /^(pc-i440fx|pc-q35)-(\d+.\d+)/
+            && $machine !~ /^(pc)-(\d+\d+)$/
+            && $machine !~ /^([a-z]+)$/;
+
+            next if $todo{$machine};
+            my $version = ( $2 or 0 );
+            $types{$1} = [ $version,$machine ]
+            if !exists $types{$1} || $version > $types{$1}->[0];
+        }
+        my @types;
+        for (keys %types) {
+            push @types,($types{$_}->[1]);
+        }
+        $ret_types{$arch} = [sort @types];
+    }
+    return %ret_types;
+}
+
+sub _is_ip_nat($self, $ip0) {
+    my $ip = NetAddr::IP->new($ip0);
+    for my $net ( $self->vm->list_networks ) {
+        my $xml = XML::LibXML->load_xml(string
+            => $net->get_xml_description());
+        my ($xml_ip) = $xml->findnodes("/network/ip");
+        next if !$xml_ip;
+        my $address = $xml_ip->getAttribute('address');
+        my $netmask = $xml_ip->getAttribute('netmask');
+        my $net = NetAddr::IP->new($address,$netmask);
+        return 1 if $ip->within($net);
+    }
+    return 0;
+}
+
+sub get_library_version($self) {
+    return $self->vm->get_library_version();
 }
 
 1;

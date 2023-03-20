@@ -26,7 +26,7 @@ my $xml =<<EOT;
       <libosinfo:os id="http://microsoft.com/win/10"/>
     </libosinfo:libosinfo>
   </metadata>
-  <memory unit='KiB'>4194304</memory>
+  <memory unit='KiB'>3194304</memory>
   <currentMemory unit='KiB'>4194304</currentMemory>
   <vcpu placement='static'>2</vcpu>
   <sysinfo type='smbios'/>
@@ -235,7 +235,7 @@ sub test_change_capacity($vm, $new_boot_order = undef) {
             ,id_domain => $domain->id
             ,index => $index-1
             ,hardware => 'disk'
-            ,data => { driver => $driver , boot => $boot, file => $file
+            ,data => { bus => $driver , boot => $boot, file => $file
                 , capacity => $new_capacity }
         );
         wait_request( debug => 0 );

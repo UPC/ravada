@@ -25,6 +25,8 @@ mkdir $DIR_FALLBACK or die "Error: $! $DIR_FALLBACK"
 
 sub download($url, $dst = $DIR_FALLBACK) {
 
+    die "Error: no dst for '$url'" if !defined $dst;
+
     $dst = "$DIR_FALLBACK/$dst" if $dst !~ m{^/};
 
     my ($path) = $dst =~ m{(.*)/};
@@ -32,11 +34,12 @@ sub download($url, $dst = $DIR_FALLBACK) {
 
     if ( -d $dst ) {
         my ($filename) = $url =~ m{.*/(.*)};
+        die "Error: no filename found in '$url'" if !$filename;
         $dst .= "/" if $dst !~ m{/$};
         $dst .= $filename;
     }
 
-    return $dst if -e $dst;
+    return if -e $dst;
 
     print "get $url\n";
     my $res = $ua->get($url)->result;
@@ -89,6 +92,6 @@ while (<$in>) {
     next if /^#/;
     my ($url, $dst) = split;
     my $file = download($url, $dst);
-    uncompress($file) if $file =~ /\.zip$/;
+    uncompress($file) if $file && $file =~ /\.zip$/;
 }
 close $in;

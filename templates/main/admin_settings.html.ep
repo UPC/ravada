@@ -11,7 +11,7 @@
     <div class="page-header">
         <div class="card">
             <div class="card-header">
-                <h2>Global Settings</h2>
+                <h2><%=l 'Global Settings' %></h2>
             </div>
         </div>
     </div>
@@ -19,8 +19,8 @@
         <form name="formSettings">
         <div class="row">
             <div class="col-md-1"></div>
-            <div class="col-md-1">
-            <h3>Frontend</h3>
+            <div class="col-md-4">
+            <h3><%=l 'Frontend' %></h3>
             </div>
         </div>
         <div class="row" ng-hide="true">
@@ -87,8 +87,8 @@
         </div>
         <div class="row">
             <div class="col-md-1"></div>
-            <div class="col-md-1">
-            <h3>Backend</h3>
+            <div class="col-md-4">
+            <h3><%=l 'Backend' %></h3>
             </div>
         </div>
 		<div class="row">
@@ -135,7 +135,7 @@
         <div class="row">
             <div class="col-md-1"></div>
             <div class="col-md-2">
-            <label for="bookings">Bookings</label>
+            <label for="bookings"><%= l 'Bookings' %></label>
             </div>
             <div class="col-md-2">
                 <input name="bookings" ng-model="settings.backend.bookings.value"
@@ -144,7 +144,7 @@
                 >
             </div>
             <div class="col-md-6">
-                Bookings require LDAP authentication. <a href="https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html"><i class="fa fa-info"></i></a>
+                <%=l 'Bookings require LDAP authentication.' %> <a href="https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html"><i class="fa fa-info"></i></a>
             </div>
         </div>
 
@@ -167,7 +167,7 @@
         <div class="row">
             <div class="col-md-1"></div>
             <div class="col-md-2">
-            <label for="debug">Port expose</label>
+            <label for="debug"><%= l 'Port expose' %></label>
             </div>
             <div class="col-md-2">
             <input name="debug" ng-model="settings.backend.expose_port_min.value"
@@ -179,17 +179,49 @@
             </div>
         </div>
 
+        <hr ng-show="settings.backend.auto_compact.value">
+
+        <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-2">
+            <label for="debug"><%= l 'Auto Compact' %></label>
+            </div>
+            <div class="col-md-2">
+            <input name="debug" ng-model="settings.backend.auto_compact.value"
+                ng-true-value="1" ng-false-value="0"
+                type="checkbox">
+            </div>
+            <div class="col-md-6">
+                <%= l 'Auto compact virtual machines.' %>
+            </div>
+        </div>
+
+        <div class="row" ng-show="settings.backend.auto_compact.value">
+            <div class="col-md-1"></div>
+            <div class="col-md-2">
+            <label for="debug"><%= l 'Time' %></label>
+            </div>
+            <div class="col-md-2">
+            <input name="debug" ng-model="settings.backend.auto_compact.time.value"
+                type="text" size="5" ng-pattern="/^\d\d:\d\d$/">
+            </div>
+            <div class="col-md-6">
+                <%=l 'Time when compact will be scheduled.' %>
+                <%=l 'HH:MM' %>
+            </div>
+        </div>
+
         <hr>
 
         <div class="row">
-            <div class="col-md-2">
+            <div class="col-md-6">
                 <button ng-click="update_settings()"
                     ng-disabled="!formSettings.$valid || formSettings.$pristine">
-                    save
+                   <%=l 'Save' %>
                 </button>
                 <button ng-click="load_settings()"
                         ng-disabled="formSettings.$pristine">
-                  <%=l 'cancel' %>
+                  <%=l 'Cancel' %>
                 </button>
             </div>
         </div>

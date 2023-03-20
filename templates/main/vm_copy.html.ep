@@ -2,7 +2,7 @@
         <div class="form-group">
             <div class="form-group row">
                 <div class="col-md-2 mt-2">
-                    <label class="control-label" for="clone_number">Clones</label>
+                    <label class="control-label" for="clone_number"><%=l 'Clones' %></label>
                 </div>
                 <div class="col-md-2">
                     <input class="form-control"
@@ -27,7 +27,7 @@
             </div>
             <div class="form-group row">
                 <div class="col-md-2 mt-2">
-                    <label class="control-label" for="copy_ram">RAM (Gb)</label>
+                    <label class="control-label" for="copy_ram"><%=l 'RAM (Gb)' %></label>
                 </div>
                 <div class="col-md-2">
                     <input class="form-control" ng-model="copy_ram" type="text" size="3">
@@ -57,11 +57,6 @@
                 </div>
             </div>
 %   }
-            <div ng-show="copy_request" class="alert alert-warning">
-                Copy {{showmachine.name}} {{copy_request.status}}.
-                <br/>
-                {{copy_request.error}}
-            </div>
 
             <div ng-hide="copy_request && copy_request.status !== 'done'">
             <button type="reset" class="btn btn-outline-secondary mr-2"><%=l 'Cancel' %></button>
@@ -74,12 +69,11 @@
     <div class="form-group has-error">
         <label ng-show="copy_number==1 && new_name_duplicated"
                class="alert alert-danger col-form-label" for="new_name">
-               This name is duplicated
+               <%=l 'This name is duplicated' %>
         </label>
         <label ng-show="copy_number==1 && new_name_invalid"
                class="alert alert-danger col-form-label" for="new_name">
-               This name is invalid. It can only contain alphabetic, numbers, undercores and dashes
-               and must start by a letter.
+               <%=l 'This name is invalid. It can only contain alphabetic, numbers, undercores and dashes and must start by a letter.' %>
         </label>
     </div>
 </div>

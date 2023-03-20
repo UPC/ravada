@@ -1,0 +1,22 @@
+<volume type='file'>
+  <name>Windows11.img</name>
+  <key>/var/lib/libvirt/images/Windows11.img</key>
+  <source>
+  </source>
+  <capacity unit='bytes'>64179869696</capacity>
+  <allocation unit='bytes'>63525151744</allocation>
+  <target>
+    <path>/var/lib/libvirt/images/Windows11.img</path>
+    <format type='qcow2'/>
+    <permissions>
+      <mode>0644</mode>
+      <owner>0</owner>
+      <group>0</group>
+    </permissions>
+    <timestamps>
+      <atime>1498839828.853774877</atime>
+      <mtime>1497405600.641821227</mtime>
+      <ctime>1497405628.097957375</ctime>
+    </timestamps>
+  </target>
+</volume>

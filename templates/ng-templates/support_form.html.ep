@@ -1,47 +1,47 @@
 <div ng-show="0" class="panel panel-primary">
     <div class="panel-heading">
-        <h2>Support Contact</h2>
-        <p>If you have any issue, you can contact the Suport crew and we will try to help you. Please, only contact Support Center if it is strictly necessary.</p>
+        <h2><%=l 'Support Contact' %></h2>
+        <p><%=l 'If you have any issue, you can contact the Suport crew and we will try to help you. Please, only contact Support Center if it is strictly necessary.' %></p>
     </div>
 
     <div class="panel-footer">
         <form name="contactForm" role="form" ng-submit="contactForm.$valid" novalidate>
             <div class="form-group">
-                <label>Name</label>
+                <label><%=l 'Name' %></label>
                 <input type="text" class="form-control" ng-model="user.name" placeholder="John Doe" required>
             </div>
             <div class="form-group">
-                <label>Email</label>
+                <label><%=l 'Email' %></label>
                 <input type="email" ng-model="user.email" class="form-control" placeholder="john.doe@example.com" required>
             </div>
             <div class="form-group">
-                <label>Phone Number</label>
+                <label><%=l 'Phone Number' %></label>
                 <input type="number" ng-model="user.phone" class="form-control" placeholder="+34666666666">
             </div>
             <div class="form-group">
-                <label>Description:</label>
+                <label><%=l 'Description' %>:</label>
                 <textarea ng-model="user.message" class="form-control" rows="5" required></textarea>
             </div>
             <div class="form-group">
-                <label>Attachment</label>
+                <label><%=l 'Attachment' %></label>
                 <input type="file" ng-model="user.attach">
             </div>
             <div class="form-group">
-                <label>Contact Method:</label>
+                <label><%=l 'Contact Method' %>:</label>
                 <div class="checkbox">
                     <label>
-                        <input type="checkbox" ng-model="user.contactPh" value="">Phone
+                        <input type="checkbox" ng-model="user.contactPh" value=""><%=l 'Phone' %>
                     </label>
 
                     <label>
-                        <input type="checkbox" ng-model="user.contactEm" value="">Email
+                        <input type="checkbox" ng-model="user.contactEm" value=""><%=l 'Email' %>
                     </label>
                 </div>
             </div>
             <div ng-show="showErr" class="alert alert-danger">
-                <strong>Error</strong>  Fill required camps with valid data.
+                <strong><%=l 'Error' %></strong>  <%=l 'Fill required camps with valid data' %>.
             </div>
-            <button type="submit" ng-click="isOkey()" class="btn btn-default">Submit</button>
+            <button type="submit" ng-click="isOkey()" class="btn btn-default"><%=l 'Submit' %></button>
         </form>
 
     </div>

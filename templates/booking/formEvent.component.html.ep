@@ -1,18 +1,18 @@
 <script type="text/ng-template" id="error-messages">
-    <div ng-message="required" class="help-inline text-danger">This field is required</div>
+    <div ng-message="required" class="help-inline text-danger"><%=l 'This field is required' %></div>
 </script>
 <form name="form_booking" class="floating-labels was-validated container-fluid" novalidate>
     <fieldset ng-disabled="!$ctrl.entry.editable">
         <div class="row justify-content-start">
             <div class="form-group col-9" ng-class="{error: form_booking.title.$invalid}">
-                <label for="title">Title<sup>*</sup></label>
+                <label for="title"><%=l 'Title' %><sup>*</sup></label>
                 <input type="text" class="form-control" id="title" name="title" ng-model="$ctrl.entry.title" required>
                 <div ng-messages="form_booking.title.$error" role="alert">
                     <div ng-messages-include="error-messages"></div>
                 </div>
             </div>
             <div class="form-group col-3">
-                <label for="bgcolor">Color</label>
+                <label for="bgcolor"><%=l 'Color' %></label>
                 <input type="color"
                        style="height: 35px;"
                        ng-model="$ctrl.entry.background_color" id="bgcolor" name="bgcolor"
@@ -21,20 +21,20 @@
         </div>
 
         <div class="form-group">
-            <label for="description">Description</label>
+            <label for="description"><%=l 'Description' %></label>
             <textarea class="form-control" id="description"
                       ng-model="$ctrl.entry.description" rows="3"></textarea>
         </div>
         <div class="form-group" ng-if="$ctrl.isNew">
-            <label for="repat">Repeat</label>
+            <label for="repat"><%=l 'Repeat' %></label>
             <select class="custom-select" ng-model="$ctrl.entry.repeat" id="repat">
-                <option value="">No</option>
-                <option value="weekly">Weekly</option>
+                <option value=""><%=l 'No' %></option>
+                <option value="weekly"><%=l 'Weekly' %></option>
             </select>
         </div>
         <div class="row justify-content-start">
             <div class="form-group col-sm-6 col-md-12">
-                <label for="date_ini">Date</label>
+                <label for="date_ini"><%=l 'Date' %></label>
                 <div class="input-group">
                     <div class="input-group-prepend">
                         <div class="input-group-text"><i class="far fa-calendar"></i></div>
@@ -50,7 +50,7 @@
             </div>
             <!-- repeat until date -->
             <div class="form-group col-sm-6 col-md-12" ng-show="$ctrl.entry.repeat">
-                <label for="date_until">Until</label>
+                <label for="date_until"><%=l 'Until' %></label>
                 <div class="input-group">
                     <div class="input-group-prepend">
                         <div class="input-group-text"><i class="far fa-calendar"></i></div>
@@ -67,11 +67,11 @@
             </div>
             <!-- end repear -->
             <div class="form-group col-sm">
-                <rvd-time-picker label="From"
+                <rvd-time-picker label="<%=l 'From' %>"
                                  ng-model="$ctrl.entry.time_start"></rvd-time-picker>
             </div>
             <div class="form-group col-sm">
-                <rvd-time-picker label="To"
+                <rvd-time-picker label="<%=l 'To' %>"
                                  ng-model="$ctrl.entry.time_end"></rvd-time-picker>
             </div>
         </div>
@@ -90,7 +90,7 @@
             </div>
         </div>
         <div class="form-group" ng-class="{ 'is-invalid' : form_booking.groups.$error }">
-            <label for="date_until">Groups with permissions<sup>*</sup></label>
+            <label for="date_until"><%=l 'Groups with permissions' %><sup>*</sup></label>
             <ldap-groups name="groups" ng-model="$ctrl.entry.ldap_groups" editable="$ctrl.entry.editable"
                          required></ldap-groups>
             <div ng-messages="form_booking.groups.$error" role="alert">
@@ -102,22 +102,22 @@
                 <button type="button" class="btn btn-danger"
                         ng-click="$ctrl.remove()"
                         ng-if="!$ctrl.isNew"
-                >Delete
+                ><%=l 'Delete' %>
                 </button>
             </div>
             <button type="button" class="btn btn-secondary" ng-click="$ctrl.onCancel()"
                     data-dismiss="modal"
-            >Cancel
+            ><%=l 'Cancel' %>
             </button>
             <button type="button" class="btn btn-primary ml-2"
                     ng-disabled="form_booking.$invalid || form_booking.$pristine || $ctrl.hasConflicts()"
                     ng-click="$ctrl.save()"
-            >Save changes
+            ><%=l 'Save changes' %>
             </button>
         </div>
 
         <div class="alert alert-danger" role="alert" ng-show="$ctrl.hasConflicts()">
-            This booking overlaps already scheduled reservations
+            <%=l 'This booking overlaps already scheduled reservations' %>
             <div ng-repeat="conflict in $ctrl.conflicts">
                 <h5>{{conflict.title}}</h5>
                 <div><i class="fas fa-clock"></i>

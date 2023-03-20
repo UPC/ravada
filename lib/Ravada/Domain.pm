@@ -9,16 +9,22 @@ Ravada::Domain - Domains ( Virtual Machines ) library for Ravada
 
 =cut
 
+use utf8;
+
 use Carp qw(carp confess croak cluck);
 use Data::Dumper;
+use DateTime;
+use DateTime::Format::DateParse;
 use File::Copy qw(copy move);
 use File::Rsync;
+use Fcntl ':mode';
 use Hash::Util qw(lock_hash unlock_hash);
 use Image::Magick;
 use JSON::XS;
 use Moose::Role;
 use NetAddr::IP;
 use IPC::Run3 qw(run3);
+use Storable qw(dclone);
 use Time::Piece;
 
 no warnings "experimental::signatures";
@@ -200,8 +206,7 @@ before 'remove_base' => \&_pre_remove_base;
 after 'remove_base' => \&_post_remove_base;
 after 'spinoff' => \&_post_spinoff;
 
-before 'rename' => \&_pre_rename;
-after 'rename' => \&_post_rename;
+around 'rename' => \&_around_rename;
 
 after 'dettach' => \&_post_dettach;
 
@@ -316,6 +321,9 @@ sub _around_start($orig, $self, @arg) {
     my $request = delete $arg{request};
     my $listen_ip = delete $arg{listen_ip};
     my $remote_ip = $arg{remote_ip};
+    my $enable_host_devices;
+    $enable_host_devices = $request->defined_arg('enable_host_devices') if $request;
+    $enable_host_devices = 1 if !defined $enable_host_devices;
 
     for (;;) {
         eval { $self->_start_checks(@arg) };
@@ -349,16 +357,30 @@ sub _around_start($orig, $self, @arg) {
             }
             $arg{listen_ip} = $display_ip;
         }
+        if ($enable_host_devices) {
+            $self->_add_host_devices(@arg);
+        } else {
+            $self->_dettach_host_devices();
+        }
         $$CONNECTOR->disconnect;
         eval { $self->$orig(%arg) };
         $error = $@;
         last if !$error;
+
+        die "Error: starting ".$self->name." on ".$self->_vm->name." $error"
+        if $error =~ /there is no device|Did not find .*device/;
+
+        die $error if $error =~ /No DRM render nodes/;
+
         warn "WARNING: $error ".$self->_vm->name." ".$self->_vm->enabled if $error;
 
         ;# pool has asynchronous jobs running.
         next if $error && ref($error) && $error->code == 1
         && $error !~ /internal error.*unexpected address/
-        && $error !~ /process exited while connecting to monitor/;
+        && $error !~ /process exited while connecting to monitor/
+        && $error !~ /Could not run .*swtpm/i
+        && $error !~ /virtiofs/
+        ;
 
         if ($error && $self->id_base && !$self->is_local && $self->_vm->enabled) {
             $self->_request_set_base();
@@ -480,16 +502,18 @@ sub _start_checks($self, @args) {
             $self->_balance_vm($request);
         }
         if ( !$self->is_volatile && !$self->_vm->is_local() ) {
-            my $args = {
-                uid => Ravada::Utils::user_daemon->id
-                ,id_domain => $self->id_base
-                ,id_vm => $self->_vm->id
-            };
+            if (!base_in_vm($self->id_base, $self->_vm->id)) {
+                my $args = {
+                    uid => Ravada::Utils::user_daemon->id
+                    ,id_domain => $self->id_base
+                    ,id_vm => $self->_vm->id
+                };
 
-            my $req;
-            $req = Ravada::Request->set_base_vm(%$args)
-            unless Ravada::Request::_duplicated_request(undef
-                ,'set_base_vm', encode_json($args));
+                my $req;
+                $req = Ravada::Request->set_base_vm(%$args)
+                unless Ravada::Request::_duplicated_request(undef
+                    ,'set_base_vm', encode_json($args));
+            }
 
             $self->rsync(request => $request);
         }
@@ -536,6 +560,7 @@ sub _search_already_started($self, $fast = 0) {
 
             my $status = 'shutdown';
             $status = 'active'  if $domain->is_active;
+            $status = 'hibernated' if $domain->is_hibernated;
             $domain->_data(status => $status);
         }
     }
@@ -560,7 +585,7 @@ sub _balance_vm($self, $request=undef) {
 
     my $vm_free;
     for (;;) {
-        $vm_free = $self->_vm->balance_vm($base);
+        $vm_free = $self->_vm->balance_vm($self->_data('id_owner'),$base, $self->id);
         return if !$vm_free;
 
         last if $vm_free->id == $self->_vm->id;
@@ -700,7 +725,7 @@ sub _around_add_volume {
     confess "Error creating volume, out of space $size . Disk free: "
             .Ravada::Utils::number_to_size($free_out)
             ."\n"
-        if exists $args{size} && $args{size} >= $free;
+        if exists $args{size} && $args{size} && $args{size} >= $free;
 
     if ($name) {
         confess "Error: volume $name already exists"
@@ -993,7 +1018,7 @@ sub _check_free_vm_memory {
 
     return if $vm_free_mem > $min_free_memory;
 
-    $self->_data(status => 'down');
+    $self->_data(status => 'shutdown');
 
     my $msg = "Error: No free memory in ".$self->_vm->name.". Only "._gb($vm_free_mem)." out of "
         ._gb($min_free_memory)." GB required.\n";
@@ -1304,6 +1329,9 @@ sub _insert_display( $self, $display ) {
                 $used_port->{$display->{port}}++;
                 $display->{port} = $self->_vm->_new_free_port($used_port);
             }
+        } elsif ($field =~ /id_domain_driver/) {
+            warn "Warning: Already added ".Dumper($display);
+            return;
         } else {
             confess "Error: I don't know how to deal with duplicated $field on ".$self->name
             .Dumper($display);
@@ -1322,7 +1350,11 @@ sub _clean_display_order($self, $n_order) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE domain_displays set n_order=? WHERE n_order=? AND id_domain=?"
     );
-    $sth->execute($max_n_order+1,$n_order, $self->id);
+    for ( 1 .. 10 ) {
+        $max_n_order++;
+        eval { $sth->execute($max_n_order,$n_order, $self->id) };
+        last if !$@;
+    }
 }
 
 sub _update_display( $self, $new_display_orig, $old_display ) {
@@ -1386,6 +1418,11 @@ sub _fix_duplicate_display_port($self, $port) {
     if($is_builtin ) {
         my $domain_conflict = Ravada::Domain->open($id_domain);
         if ($domain_conflict && $domain_conflict->is_active) {
+            Ravada::Request->refresh_machine(
+                id_domain=> $domain_conflict->id
+                ,uid => Ravada::Utils::user_daemon->id
+                ,_force => 1
+            );
             my $req = Ravada::Request->shutdown_domain(
                 id_domain => $self->id
                 ,uid => Ravada::Utils::user_daemon->id
@@ -1408,7 +1445,6 @@ sub _fix_duplicate_display_port($self, $port) {
         }
     }
 
-    warn "clear ".$self->name." $port";
     my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE domain_displays set port=NULL "
         ." WHERE id=?"
     );
@@ -1422,6 +1458,8 @@ sub _fix_duplicate_display_port($self, $port) {
     Ravada::Request->open_exposed_ports(
         uid => Ravada::Utils::user_daemon->id
         ,id_domain => $id_domain
+        ,retry => 20
+        ,_force => 1
     ) if $is_active;
 }
 
@@ -1444,7 +1482,12 @@ sub _set_display_ip($self, $display) {
 sub _around_get_info($orig, $self) {
     my $info = $self->$orig();
     if (ref($self) =~ /^Ravada::Domain/ && $self->is_known()) {
-        $info->{ip} = $self->ip() if $self->is_active;
+        if ( $self->is_active
+        && (!exists $info->{ip} || !defined $info->{ip} || !$info->{ip})) {
+            unlock_hash(%$info);
+            $info->{ip} = $self->ip();
+            lock_hash(%$info);
+        }
         $self->_data(info => encode_json($info));
     }
     return $info;
@@ -1508,8 +1551,24 @@ sub _execute_request($self, $field, $value) {
 
     Ravada::Request->_new_request(
         command => $exec
-        ,args => { id_domain => $self->id , uid => Ravada::Utils::user_daemon->id }
+        ,args => { id_domain => $self->id , uid => Ravada::Utils::user_daemon->id , _force => 1 }
     );
+}
+
+sub _log_active_domains($self) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT count(*) FROM domains "
+        ." WHERE status='active'"
+    );
+    $sth->execute();
+    my ($active) = $sth->fetchrow;
+    my $sth2 = $self->_dbh->prepare(
+        "INSERT INTO log_active_domains "
+        ." ( active) "
+        ." values(?)"
+    );
+    $sth2->execute(scalar($active));
+
 }
 
 sub _data($self, $field, $value=undef, $table='domains') {
@@ -1539,12 +1598,24 @@ sub _data($self, $field, $value=undef, $table='domains') {
         confess "ERROR: Invalid field '$field'"
             if $field !~ /^[a-z]+[a-z0-9_]*$/;
 
+        return if $field eq 'status'
+        && $self->{$data}->{$field} eq 'active'
+        && $value eq 'starting';
+
         $self->_assert_update($table, $field => $value);
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE $table set $field=? WHERE $field_id=?"
         );
         $sth->execute($value, $self->id);
         $sth->finish;
+
+        if ($data eq '_data' && $field eq 'status'
+            && $value ne $self->{$data}->{$field}
+        ) {
+            $self->_data('date_status_change'=>Ravada::Utils::now());
+
+            $self->_log_active_domains();
+        }
         $self->{$data}->{$field} = $value;
         $self->_propagate_data($field,$value) if $PROPAGATE_FIELD{$field};
         $self->_execute_request($field,$value);
@@ -1755,7 +1826,11 @@ sub _select_domain_db {
     $data = "_data_$table" if $table ne 'domains';
     $self->{$data} = $row;
 
+    $row->{alias} = Encode::decode_utf8($row->{alias})
+    if exists $row->{alias} && defined $row->{alias};
+
     return $row if $row->{id};
+    return;
 }
 
 sub _post_select_domain_db {
@@ -1851,7 +1926,7 @@ sub display($self, $user) {
 
     my ($display_info) = grep { $_->{driver} !~ /-tls$/ } @display_info;
 
-    confess "Error: I can't find builtin display info for ".$self->name." ".ref($self)
+    confess "Error: I can't find builtin display info for ".$self->name." ".ref($self)."\n".Dumper($display_info)
     if !exists $display_info->{port};
 
     return '' if !$display_info->{driver} || !$display_info->{ip}
@@ -1895,7 +1970,7 @@ sub _display_file_spice($self,$display, $tls = 0) {
 
     $ret .=
         "fullscreen=1\n"
-        ."title=".$self->name." - Press SHIFT+F12 to exit\n"
+        ."title=".$self->alias." - Press SHIFT+F12 to exit\n"
         ."enable-smartcard=0\n"
         ."enable-usbredir=1\n"
         ."enable-usb-autoshare=1\n"
@@ -1957,8 +2032,12 @@ sub info($self, $user) {
         ,autostart => $self->autostart
         ,volatile_clones => $self->volatile_clones
         ,id_vm => $self->_data('id_vm')
+        ,auto_compact => $self->auto_compact
+        ,date_changed => $self->_data('date_changed')
     };
-    for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups)) {
+
+    $info->{alias} = ( $self->_data('alias') or $info->{name} );
+    for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups balance_policy)) {
         $info->{$_} = $self->_data($_);
     }
     if ($self->is_known() ) {
@@ -1999,11 +2078,46 @@ sub info($self, $user) {
     }
     $info->{cdrom} = \@cdrom;
     $info->{requests} = $self->list_requests();
+    $info->{host_devices} = [ $self->list_host_devices_attached() ];
+    $info->{date_status_change} = $self->_date_status_change();
 
     Ravada::Front::_init_available_actions($user, $info);
 
     lock_hash(%$info);
     return $info;
+}
+
+sub _date_status_change($self) {
+    my $date = $self->_data('date_status_change');
+    if (!$date) {
+        return {
+            date => ''
+            ,date_txt => ''
+            ,duration => ''
+        }
+    }
+    my $date_txt = $date;
+    my $dt = DateTime::Format::DateParse->parse_datetime($date);
+    if ($dt->day == DateTime->now()->day) {
+        $date_txt =~ s/.*?(\d\d*:\d\d):\d\d$/$1/;
+    }
+    my $dur= DateTime->now() - $dt;
+    my @units = ('years','months','weeks','days','hours','minutes');
+    my @units_one = ('year','month','week','day','hour','minute');
+    my @dur = $dur->in_units(@units);
+    my $duration = ['now',''];
+    for my $n (0 .. scalar(@units)-1) {
+        my $value = $dur[$n];
+        next if $value == 0;
+        $duration = [$value,$units[$n]];
+        $duration->[1]=$units_one[$n] if $value == 1;
+        last;
+    }
+    return {
+        date => $date
+        ,date_txt => $date_txt
+        ,duration => $duration
+    };
 }
 
 sub _load_drivers($self) {
@@ -2191,6 +2305,9 @@ sub _after_remove_domain {
         #        $self->_do_remove_base($user);
         $self->_remove_files_base();
     }
+    for my $backup ( $self->list_backups ) {
+        $self->remove_backup($backup);
+    }
     $self->_remove_all_volumes();
     return if !$self->{_data};
     return if $cascade;
@@ -2246,6 +2363,7 @@ sub _remove_domain_data_db($id, $type=undef) {
     _finish_requests_db($id);
     for my $table (
         'access_ldap_attribute','domain_access'
+        ,'host_devices_domain'
         ,'domain_displays' , 'domain_ports', 'volumes', 'domains_void', 'domains_kvm', 'domain_instances', 'bases_vm', 'domain_access', 'base_xml', 'file_base_images', 'iptables', 'domains_network') {
         my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM $table WHERE id_domain=?");
         $sth->execute($id);
@@ -2268,7 +2386,7 @@ sub _redefine_instances($self) {
         $@ = '';
         eval { $domain = $vm->search_domain($domain_name) } if $vm;
         warn $@ if $@;
-        $domain->copy_config($self);
+        $domain->copy_config($self) if $domain;
     }
 }
 
@@ -2432,7 +2550,7 @@ sub clones($self, %filter) {
     _init_connector();
 
     my $query =
-        "SELECT id, id_vm, name, id_owner, status, client_status, is_pool, is_base"
+        "SELECT id, id_vm, name,alias, id_owner, status, client_status, is_pool, is_base"
             ." ,is_volatile "
             ." FROM domains "
             ." WHERE id_base = ? ";
@@ -2446,6 +2564,7 @@ sub clones($self, %filter) {
     my @clones;
     while (my $row = $sth->fetchrow_hashref) {
         # TODO: open the domain, now it returns only the id
+        $row->{alias} = Encode::decode_utf8($row->{alias});
         lock_hash(%$row);
         push @clones , $row;
     }
@@ -2547,6 +2666,7 @@ sub _cascade_remove_base_in_nodes($self) {
             id_vm => $vm->id
             ,id_domain => $self->id
             ,uid => Ravada::Utils::user_daemon->id
+            ,_force => 1
             ,@after
         );
     }
@@ -2557,6 +2677,7 @@ sub _cascade_remove_base_in_nodes($self) {
             ,id_domain => $self->id
             ,uid => Ravada::Utils::user_daemon->id
             ,after_request => $req_nodes->id
+            ,_force => 1
         );
         $self->is_base(0);
     }
@@ -2566,7 +2687,7 @@ sub _cascade_remove_base_in_nodes($self) {
 sub _do_remove_base($self, $user) {
     return
         if $self->is_base && $self->is_local
-        && $self->_cascade_remove_base_in_nodes ();
+        && $self->_cascade_remove_base_in_nodes();
 
     $self->is_base(0) if $self->is_local;
     my $vm_local = $self->_vm->new( host => 'localhost' );
@@ -2694,6 +2815,7 @@ sub clone {
     my $with_cd = delete $args{with_cd};
     my $volatile = delete $args{volatile};
     my $id_owner = delete $args{id_owner};
+    my $alias = delete $args{alias};
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
@@ -2720,6 +2842,7 @@ sub clone {
     }
 
     my @args_copy = ();
+    push @args_copy, ( alias => $alias )        if $alias;
     push @args_copy, ( start => $start )        if $start;
     push @args_copy, ( memory => $memory )      if $memory;
     push @args_copy, ( request => $request )    if $request;
@@ -2730,7 +2853,7 @@ sub clone {
 
     my $vm = $self->_vm;
     if ($self->volatile_clones ) {
-        $vm = $vm->balance_vm($self);
+        $vm = $vm->balance_vm($uid, $self);
     } elsif( !$vm->is_local ) {
         for my $node ($self->_vm->list_nodes) {
             $vm = $node if $node->is_local;
@@ -2771,6 +2894,7 @@ sub _copy_clone($self, %args) {
     my $volatile = delete $args{volatile};
     my $id_owner = delete $args{id_owner};
     $id_owner = $user->id if (! $id_owner);
+    my $alias = delete $args{alias};
 
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)
         if keys %args;
@@ -2778,6 +2902,7 @@ sub _copy_clone($self, %args) {
     my $base = Ravada::Domain->open($self->id_base);
 
     my @copy_arg;
+    push @copy_arg, ( alias => $alias )   if $alias;
     push @copy_arg, ( memory => $memory ) if $memory;
     push @copy_arg, ( volatile => $volatile ) if $volatile;
 
@@ -2794,6 +2919,7 @@ sub _copy_clone($self, %args) {
 
     _copy_volumes($self, $copy);
     _copy_ports($self, $copy);
+    _copy_host_devices($self, $copy);
     $copy->is_pool(1) if $add_to_pool;
     return $copy;
 }
@@ -2824,6 +2950,13 @@ sub _copy_ports($base, $copy) {
     }
 
 }
+
+sub _copy_host_devices($base, $copy) {
+    for my $host_device ( $base->list_host_devices() ) {
+        $copy->add_host_device($host_device);
+    }
+}
+
 
 sub _post_pause {
     my $self = shift;
@@ -2870,8 +3003,9 @@ sub _pre_shutdown {
 
     $self->_pre_shutdown_domain();
 
-    if ($self->is_paused) {
+    if ($self->is_paused || $self->is_hibernated) {
         $self->resume(user => Ravada::Utils::user_daemon, set_time => 0);
+        $self->_data('status' => 'active');
     }
     $self->list_disks;
     $self->_remove_start_requests();
@@ -2903,7 +3037,12 @@ sub _post_shutdown {
     my $is_active = $self->is_active;
 
     if ( $self->is_known && !$self->is_volatile && !$is_active ) {
-        $self->_data(status => 'shutdown');
+        $self->_unlock_host_devices();
+        if ($self->is_hibernated) {
+            $self->_data(status => 'hibernated');
+        } else {
+            $self->_data(status => 'shutdown');
+        }
         $self->_data(post_shutdown => 1);
     }
 
@@ -2961,9 +3100,34 @@ sub _post_shutdown {
         );
     }
 
+    $self->_schedule_compact();
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
                                 && !$is_active;
+}
+
+sub _schedule_compact($self) {
+
+    return if !Ravada::Front::setting(undef,"/backend/auto_compact");
+    return if !$self->auto_compact;
+
+    my ($req_compact) = grep {$_->command eq 'compact' } $self->list_requests(1);
+    return if $req_compact;
+
+    my $time_compact = Ravada::Front::setting(undef,"/backend/auto_compact/time");
+    my ($hours_c,$min_c) = split /:/, $time_compact;
+    my @now = localtime(time);
+    my $hours = $hours_c - $now[2];
+    my $min = $min_c - $now[1];
+
+    my $at = time+$hours*3600 + $min*60;
+
+    Ravada::Request->compact(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $self->id
+            ,at => time+$hours*3600 + $min*60
+            ,keep_backup => 0
+    );
 }
 
 sub _set_displays_builtin_active($self, $is_active=1) {
@@ -3073,6 +3237,8 @@ sub _around_name($orig,$self) {
 
     return $self->{_name};
 }
+
+sub alias($self){ return ($self->_data('alias') or $self->_data('name')) }
 
 =head2 can_hybernate
 
@@ -3347,9 +3513,17 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     $sth->execute($self->id, $internal_port);
     my ($id_port, $public_port) = $sth->fetchrow();
 
-    my $internal_ip = $self->ip;
-    confess "Error: I can't get the internal IP of ".$self->name
+    my $internal_ip;
+    for ( 1 .. 5 ) {
+        $internal_ip = $self->ip;
+        last if $internal_ip;
+        sleep 1;
+    }
+    die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry."
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
+
+    die "Error: No NAT ip in domain ".$self->name." found. Retry.\n"
+    if !$self->_vm->_is_ip_nat($internal_ip);
 
     if ($public_port
         && ( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port")
@@ -3371,18 +3545,9 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     $self->_update_display_port_exposed($name, $local_ip, $public_port, $internal_port);
 
     if ( !$> && $public_port ) {
-        my ($out, $err) = $self->_vm->run_command("iptables-save","-t","nat");
-        my @open1 = (grep /--dport $public_port/, split/\n/,$out );
-        my @open2 = (grep /--to-destination $internal_ip:$internal_port/, split/\n/,$out );
-        my %removed;
-        for my $line ( @open1, @open2 ) {
-            next if $removed{$line}++;
-            warn $self->name." clean $line\n" if $debug_ports;
-            $line =~ s/^-A/-t nat -D/;
-            my ($out,$err) = $self->_vm->run_command("iptables",split(/ /,$line),"-w");
-            warn $out if$out;
-            warn $err if $err;
-        }
+        $self->_delete_iptables_nat($public_port, $internal_ip
+            , $internal_port, $debug_ports);
+        $self->_delete_iptables_forward($internal_ip, $internal_port);
 
         warn $self->name." open $public_port ->"
         ." $internal_ip:$internal_port\n"
@@ -3400,6 +3565,34 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
 
         $self->_open_iptables_state();
         $self->_open_exposed_port_client($internal_port, $restricted);
+    }
+}
+
+sub _delete_iptables_forward($self,$internal_ip, $internal_port) {
+    my ($out, $err) = $self->_vm->run_command("iptables-save");
+    my @open1 = (grep /-A FORWARD.* -d $internal_ip\/32 .*--dport $internal_port -j ACCEPT/, split/\n/,$out );
+    for my $line (@open1) {
+        $line =~ s/^-A/-D/;
+        my ($out,$err) = $self->_vm->run_command("iptables",split(/ /,$line),"-w");
+        warn $out if$out;
+        warn $err if $err;
+    }
+
+}
+
+sub _delete_iptables_nat($self, $public_port, $internal_ip, $internal_port
+                            , $debug_ports) {
+    my ($out, $err) = $self->_vm->run_command("iptables-save","-t","nat");
+    my @open1 = (grep /--dport $public_port/, split/\n/,$out );
+    my @open2 = (grep /--to-destination $internal_ip:$internal_port/, split/\n/,$out );
+    my %removed;
+    for my $line ( @open1, @open2 ) {
+        next if $removed{$line}++;
+        warn $self->name." clean $line\n" if $debug_ports;
+        $line =~ s/^-A/-t nat -D/;
+        my ($out,$err) = $self->_vm->run_command("iptables",split(/ /,$line),"-w");
+        warn $out if$out;
+        warn $err if $err;
     }
 }
 
@@ -3474,6 +3667,7 @@ sub _open_iptables_state($self) {
 sub _open_exposed_port_client($self, $internal_port, $restricted) {
 
     my $internal_ip = $self->ip;
+    return if !$internal_ip;
 
     my $remote_ip = '0.0.0.0/0';
     $remote_ip = $self->remote_ip if $restricted;
@@ -3512,7 +3706,13 @@ sub open_exposed_ports($self) {
     return if !@ports;
     return if !$self->is_active;
 
-    if ( ! $self->ip ) {
+    if (!$self->has_nat_interfaces) {
+        $self->_set_ports_direct();
+        return;
+    }
+
+    my $ip = $self->ip;
+    if ( ! $ip ) {
         die "Error: No ip in domain ".$self->name.". Retry.\n";
     }
 
@@ -3521,17 +3721,25 @@ sub open_exposed_ports($self) {
     my $sth_update = $$CONNECTOR->dbh->prepare(
         "UPDATE domain_ports SET public_port=? WHERE id_domain=?"
     );
+
     $self->display_info(Ravada::Utils::user_daemon);
     for my $expose ( @ports ) {
-        warn Dumper($expose);
         if ( $info->{hardware}->{network}->[0]->{bridge} ) {
-            warn Dumper([$expose->{internal_port}, $self->id]);
             $sth_update->execute($expose->{internal_port}, $self->id);
             next;
         }
         $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
             ,$expose->{restricted});
     }
+}
+
+sub _set_ports_direct($self) {
+    my $sth_update = $$CONNECTOR->dbh->prepare(
+        "UPDATE domain_ports set public_port=NULL "
+        ." WHERE id_domain=?"
+    );
+    $sth_update->execute($self->id);
+
 }
 
 sub _close_exposed_port($self,$internal_port_req=undef) {
@@ -3661,7 +3869,8 @@ sub list_ports($self) {
     while (my $data = $sth->fetchrow_hashref) {
         lock_hash(%$data);
         push @list,($data);
-        $clone_port{$data->{internal_port}}++;
+        $clone_port{$data->{internal_port}}++
+        if $data->{internal_port};
     }
 
     if ($self->is_known() && !$self->is_base && $self->id_base) {
@@ -3735,6 +3944,25 @@ sub _remove_iptables {
             $sth->execute($id);
         }
     }
+
+    $self->_clean_iptables($port) if $port;
+}
+
+sub _clean_iptables($self, $port) {
+    my ($out, $err) = $self->_vm->run_command("iptables-save");
+    my @open1 = (grep /--dport $port/, split/\n/,$out );
+
+    my $debug_ports = Ravada::setting(undef,'/backend/debug_ports');
+    for my $line ( @open1 ) {
+        next if $line !~ /^-A RAVADA/;
+        warn $self->name." clean $line\n" if $debug_ports;
+        $line =~ s/^-A/-D/;
+        my ($out,$err) = $self->_vm->run_command("iptables",split(/ /,$line),"-w");
+        warn $out if$out;
+        warn $err if $err;
+    }
+
+
 }
 
 sub _test_iptables_jump {
@@ -3816,6 +4044,7 @@ sub _post_start {
             uid => Ravada::Utils::user_daemon->id
             ,id_domain => $self->id
             ,retry => 20
+            ,remote_ip => $remote_ip
     ) if $is_active && $remote_ip && $self->list_ports();
 
     if ($self->run_timeout) {
@@ -3878,6 +4107,8 @@ sub _check_port_conflicts($self) {
                            uid => Ravada::Utils::user_daemon->id
                     ,id_domain => $id_domain
                 ,after_request => $req_close->id
+                ,retry => 20
+                ,_force => 1
                 );
             }
         }
@@ -4144,23 +4375,6 @@ sub _active_iptables {
     return @iptables;
 }
 
-sub _check_duplicate_domain_name {
-    my $self = shift;
-# TODO
-#   check name not in current domain in db
-#   check name not in other VM domain
-    $self->id();
-}
-
-sub _rename_domain_db {
-    my $self = shift;
-    my %args = @_;
-
-    my $new_name = $args{name} or confess "Missing new name";
-
-    $self->_data(name => $new_name);
-}
-
 =head2 is_public
 
 Sets or get the domain public
@@ -4282,29 +4496,44 @@ sub clean_swap_volumes {
 }
 
 
-sub _pre_rename {
-    my $self = shift;
+sub _around_rename($orig, $self, %args) {
+    my $name = delete $args{name};
+    my $user = delete $args{user};
 
-    confess "Error: odd number of arguments" if scalar(@_) % 2;
+    $self->id();
 
-    my %args = @_;
-    my $name = $args{name};
-    my $user = $args{user};
+    return if $name eq $self->_data('name')
+            && $name eq $self->_data('alias');
 
-    $self->_check_duplicate_domain_name(@_);
+    $self->_vm->_check_duplicate_name($name, 1)
+    if $name ne $self->_data('name');
+
+    if ($name eq $self->_data('name') && $name ne $self->_data('alias')) {
+        $self->_data('alias' => $name);
+        return;
+    }
 
     $self->shutdown(user => $user)  if $self->is_active;
-}
 
-sub _post_rename {
-    my $self = shift;
-    my %args = @_;
+    my $alias = $name;
+    if ($name !~ /^[a-zA-Z0-9_-]+$/) {
+        $alias = $self->_vm->_set_alias_unique($alias or $name);
+        $name = $self->_vm->_set_ascii_name($name);
+    }
 
-    my $new_name = $args{new_name};
+    confess if !defined $name || !length($name);
 
-    $self->_rename_domain_db(@_);
+    $self->$orig(name => $name);
 
-    $self->{_name} = $new_name;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE domains set name=?,alias=? WHERE id=?"
+    );
+    $sth->execute($name, $alias, $self->id);
+
+    $self->{_name} = $name;
+    $self->{_data}->{name} = $name;
+    $self->{_data}->{alias} = $alias;
+
 }
 
 sub _post_dettach($self, @) {
@@ -4359,29 +4588,14 @@ Returns a hashref of the hardware controllers for this virtual machine
 
 =cut
 
-
 sub get_controllers($self) {
     my $info;
     my %controllers = $self->list_controllers();
     for my $name ( sort keys %controllers ) {
         $info->{$name} = [$self->get_controller($name)];
     }
-    my %sub = (
-    );
-
-    for my $name ( sort $self->_list_hardware_common ) {
-        confess "Error: hardware $name already parsed in ".$self->name
-        if $info->{$name};
-
-        my $sub = $sub{$name} or confess "Error: no sub for $name ".Dumper(\%sub);
-        $info->{$name} = $sub->($self);
-    }
 
     return $info;
-}
-
-sub _list_hardware_common($self) {
-    #    return ('display');
 }
 
 =head2 drivers
@@ -4398,6 +4612,10 @@ sub drivers($self, $name=undef, $type=undef, $list=0) {
     $type = $self->_vm->type    if $self && !$type;
 
     _init_connector();
+
+    my $machine = 'unknown';
+    $machine = $self->_os_type_machine()
+    if defined $self && $self->type eq 'KVM';
 
     my $query = "SELECT id from domain_drivers_types ";
 
@@ -4429,7 +4647,10 @@ sub drivers($self, $name=undef, $type=undef, $list=0) {
         if ($list) {
             my @options;
             for my $option ( $cur_driver->get_options ) {
-                push @options,($option->{name});
+                next if $machine =~ /^pc-q35/
+                    && $name eq 'disk'
+                    && $option->{name} =~ /^IDE$/i;
+                push @options,lc($option->{name});
             }
             push @drivers, \@options;
         } else {
@@ -4996,11 +5217,10 @@ sub _pre_clone($self,%args) {
     delete $args{remote_ip};
 
     confess "ERROR: Missing clone name "    if !$name;
-    confess "ERROR: Invalid name '$name'"   if $name !~ /^[a-z0-9_-]+$/i;
 
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
-    for (qw(is_pool start add_to_pool from_pool with_cd volatile id_owner)) {
+    for (qw(is_pool start add_to_pool from_pool with_cd volatile id_owner alias)) {
         delete $args{$_};
     }
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;
@@ -5170,7 +5390,10 @@ sub _search_pool_clone($self, $user) {
 
     my ($clone_down, $clone_free_up, $clone_free_down);
     my ($clones_in_pool, $clones_used) = (0,0);
+    my $id_daemon = Ravada::Utils::user_daemon->id;
     for my $current ( sort { $a->{name} cmp $b->{name} } $self->clones) {
+        next if $current->{is_base} ||
+            ( $current->{is_volatile} && $current->{id_owner} != $id_daemon);
         if ( $current->{id_owner} == $user->id
                 && $current->{status} =~ /^(active|hibernated)$/) {
             my $clone = Ravada::Domain->open($current->{id});
@@ -5182,7 +5405,10 @@ sub _search_pool_clone($self, $user) {
         } elsif ($current->{is_pool}) {
             $clones_in_pool++;
             my $clone = Ravada::Domain->open($current->{id});
-            if(!$clone->client_status || $clone->client_status eq 'disconnected') {
+            next if !$clone; #it may be removed on shutdown
+
+            if(!$clone->client_status
+                || lc($clone->client_status) eq lc('disconnected')) {
                 if ( $clone->status =~ /^(active|hibernated)$/ ) {
                     $clone_free_up = $current;
                 } else {
@@ -5194,16 +5420,35 @@ sub _search_pool_clone($self, $user) {
         }
     }
 
-
     my $clone_data = ($clone_down or $clone_free_up or $clone_free_down);
-    die "Error: no free clones in pool for ".$self->name
-        .". Usage: $clones_used used from $clones_in_pool virtual machines created.\n"
+    my @clones = grep {!$_->{is_base} && $_->{is_pool} } $self->clones ;
+    if (!$clone_data && scalar(@clones)<$self->pool_clones) {
+        $clone_data = $self->_create_clone_in_pool();
+    }
+    die "Error: no free clones in pool for ".$self->name."\n"
         if !$clone_data;
 
     my $clone = Ravada::Domain->open($clone_data->{id});
     $clone->id_owner($user->id);
     $clone->_data( comment => $user->name );
     return $clone;
+}
+
+sub _create_clone_in_pool($self) {
+
+    my $owner = Ravada::Auth::SQL->search_by_id($self->_data('id_owner'));
+
+    my $n = scalar $self->clones()+1;
+    my $clone = $self->clone(
+        user => $owner
+        ,name => $self->name."-".$n."-".Ravada::Utils::random_name(2)
+        ,add_to_pool => 1
+        ,from_pool => 0
+        ,start => 1
+    );
+    my $clone_data = { id => $clone->id };
+    return $clone_data;
+
 }
 
 =head2 internal_id
@@ -5387,6 +5632,17 @@ sub needs_restart($self, $value=undef) {
     return $self->_data('needs_restart',$value);
 }
 
+sub auto_compact($self, $value=undef) {
+    return $self->_data('auto_compact', $value) if defined $value;
+
+    $value = $self->_data('auto_compact');
+    if (!defined $value && $self->id_base) {
+        my $base = Ravada::Front::Domain->open($self->id_base);
+        return $base->auto_compact;
+    }
+    return $value;
+}
+
 sub _post_change_hardware($self, $hardware, $index, $data=undef) {
 
     if ($hardware eq 'disk' && ( defined $index || $data ) && $self->is_known() ) {
@@ -5396,10 +5652,46 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     }
     $self->info(Ravada::Utils->user_daemon) if $self->is_known();
 
-    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active';
+    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active' && $hardware ne 'memory';
+    $self->post_prepare_base() if $self->is_base();
+}
+
+sub _fix_hw_booleans($data) {
+    for my $key (keys %$data) {
+        next if !ref($data->{$key});
+        if (ref($data->{$key}) eq 'HASH') {
+                _fix_hw_booleans($data->{$key});
+        } elsif(ref($data->{$key}) eq 'ARRAY') {
+            for my $item (@{$data->{$key}}) {
+                _fix_hw_booleans($item);
+            }
+        } elsif(ref($data->{$key}) eq 'JSON::PP::Boolean') {
+                $data->{$key} = ''.$data->{$key};
+        } else {
+            confess "Error: expecting scalar or hash or boolean "
+                .Dumper(ref($data->{$key}) ,$data->{$key});
+        }
+    }
+}
+
+sub _fix_hw_ignore_fields($data) {
+    unlock_hash(%$data);
+    for my $key (keys %$data) {
+        delete $data->{$key} if $key =~ /^_/;
+    }
+    lock_hash(%$data);
 }
 
 sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) {
+
+    _fix_hw_booleans($data);
+
+    if ($hardware eq 'filesystem') {
+        $self->_change_info_filesystem($data);
+    }
+
+    _fix_hw_ignore_fields($data);
+
     my $real_id_vm;
     if ($hardware eq 'disk' && !$self->_vm->is_local) {
         $real_id_vm = $self->_vm->id;
@@ -5408,16 +5700,23 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
     }
 
     my $is_display_builtin;
+
     if ($hardware eq 'display') {
 
         my @display = Ravada::Front::Domain::_get_controller_display($self);
         my $current_data;
-        $current_data = $self->_get_display($data->{driver}) if $data->{driver};
-        if (!$current_data && defined $index) {
+        if (defined $index) {
             $current_data = $display[$index];
             if ($current_data->{is_secondary}) {
                 my ($driver) = $current_data->{driver} =~ /(.*)-\w+/;
                 $current_data = $self->_get_display($driver);
+            }
+            if($current_data->{driver} && $data->{driver}
+                && $current_data->{driver} ne $data->{driver}) {
+                unlock_hash(%$data);
+                $data->{port}='';
+                lock_hash(%$data);
+                $self->_update_display($data, $current_data);
             }
         } else {
             $current_data = $self->_get_display($data->{driver});
@@ -5427,6 +5726,7 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
 
     }
     if ( $hardware ne 'display' || $is_display_builtin) {
+        unlock_hash(%$data);
         $orig->($self, $hardware, $index,$data);
         $self->_redefine_instances() if $self->is_known();
     }
@@ -5439,14 +5739,169 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
     $self->_post_change_hardware($hardware, $index, $data);
 }
 
+
+
+sub _add_info_filesystem($self, $data) {
+    return if !keys %$data;
+
+    confess "Error: undefined source ".Dumper($data)
+    if exists $data->{source} && !defined $data->{source}
+    || (ref($data->{source}) && !keys %{$data->{source}});
+
+    my $data2 = dclone($data);
+    $data2->{id_domain} = $self->id;
+    $data2->{source} = $data2->{source}->{dir} if ref($data2->{source});
+
+    my $sql = "INSERT INTO domain_filesystems ("
+    .join(",",sort keys %$data2)
+    .") VALUES ("
+    .join(",",map { '?' } keys %$data2)
+    .")";
+
+    my $sth = $$CONNECTOR->dbh->prepare($sql);
+    $sth->execute(map {$data2->{$_} } sort keys %$data2);
+}
+
+sub _remove_info_filesystem($self, $id_filesystem) {
+
+    my $sth = $self->_dbh->prepare("DELETE FROM domain_filesystems "
+        ." WHERE id_domain=? AND id=?"
+    );
+    $sth->execute($self->id, $id_filesystem);
+}
+
+sub _change_info_filesystem($self, $data) {
+    return if !keys %$data;
+
+    my $data2 = dclone($data);
+    unlock_hash(%$data);
+    my $chroot = delete $data->{chroot};
+    my $subdir_uid = delete $data->{subdir_uid};
+    lock_hash(%$data);
+
+    unlock_hash(%$data2);# it is local to this sub, so we may change it
+    $data2->{source} = $data2->{source}->{dir} if ref($data2->{source});
+    delete $data2->{target};
+
+    my $id = delete $data2->{_id};
+    confess "Missing _id in data2 ".Dumper($data2) if !defined $id;
+    for my $key (keys %$data2) {
+        delete $data2->{$key} if $key =~ /^_/;
+    }
+
+    my $sql = "UPDATE domain_filesystems SET "
+        .join(",", map { "$_=?" } sort keys %$data2)
+        ;
+
+    my @values = map { $data2->{$_} } sort keys %$data2;
+    my $sth = $self->_dbh->prepare("$sql WHERE id=?");
+    $sth->execute(@values,$id);
+}
+
+sub _load_info_filesystem($self, $list) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT * FROM domain_filesystems "
+        ." WHERE id_domain=? AND source=?"
+    );
+    for my $item (@$list) {
+        unlock_hash(%$item);
+
+        my $source = $item->{source};
+        $source = $item->{source}->{dir} if ref($item->{source});
+
+        $sth->execute($self->id,$source);
+        my $info = $sth->fetchrow_hashref();
+
+        if ( !$info->{id} ) {
+            my $data = {
+                source => $source
+            };
+            $self->_add_info_filesystem($data);
+            $sth->execute($self->id,$source);
+            $info = $sth->fetchrow_hashref();
+        }
+
+        $item->{chroot} = delete $info->{chroot};
+        $item->{subdir_uid} = delete $info->{subdir_uid};
+        $item->{_id} = $info->{id};
+        lock_hash(%$item);
+    }
+}
+
+sub _create_filesystem($self, $source, $uid, $gid=0) {
+    return if !defined $source;
+
+    my @stat = stat($source);
+    if (!@stat) {
+        mkdir($source) or confess "$! mkdir $source";
+    } else {
+        my $mode = $stat[2];
+        die "Error: $source already exists and is not a directory"
+        if !S_ISDIR($mode) && !S_ISLNK($mode);
+    }
+    if (defined $uid &&( !@stat || $stat[4] != $uid)) {
+        chown $uid,undef,$source or die "$! chown $uid, $gid, $source";
+    }
+
+}
+
+sub _clone_filesystems($self) {
+    my $id_base = $self->id_base() or return;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_filesystems "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($id_base);
+    while ( my $row = $sth->fetchrow_hashref ) {
+        delete $row->{id};
+        $self->_add_info_filesystem($row);
+    }
+}
+
+sub _chroot_filesystems($self) {
+    my $id_base = $self->id_base() or return;
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_filesystems "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($id_base);
+    while ( my $row = $sth->fetchrow_hashref ) {
+        next if !$row->{chroot};
+        confess Dumper($row) if $row->{source} !~ m{^/};
+        my $data = $self->_search_filesystem_index($row->{source});
+        unlock_hash(%$data);
+        my $source = $row->{source}."/".$self->name;
+        $data->{source}->{dir} = $source;
+        my $index = delete $data->{_index};
+        lock_hash(%$data);
+
+        $self->change_hardware('filesystem',$index, $data);
+
+        $self->_create_filesystem($source,$row->{subdir_uid});
+    }
+    $sth->finish;
+}
+
+sub _search_filesystem_index($self, $source) {
+    my $hw = $self->get_controllers();
+    for my $n ( 0 .. scalar(@{$hw->{filesystem}}) ) {
+        my $fs = $hw->{filesystem}->[$n];
+        unlock_hash(%$fs);
+        $fs->{_index} = $n;
+        lock_hash(%$fs);
+        return $fs if $fs->{source}->{dir} eq $source;
+    }
+    return;
+}
+
 sub _get_display_port($self, $display) {
     my $driver = $self->drivers('display');
 
     my ($selected)
-    = grep { $_->{name} eq $display->{driver}|| $_->{value} eq $display->{driver}}
+    = grep { lc($_->{name}) eq lc($display->{driver}) || lc($_->{value}) eq lc($display->{driver})}
     $driver->get_options;
 
-    confess "Error: unknown display driver $display->{driver}" if !$selected;
+    confess "Error: unknown display driver $display->{driver} ".Dumper([$driver->get_options]) if !$selected;
 
     die "Error: display driver port not defined ".Dumper($selected)
     unless defined $selected->{data};
@@ -5456,12 +5911,15 @@ sub _get_display_port($self, $display) {
 }
 
 sub _add_hardware_display($orig, $self, $index, $data) {
-    confess "Error: missing driver ".Dumper($data) if !exists $data->{driver};
 
-    die "Error: display ".$data->{driver}." duplicated.\n"
-    if $self->_get_display($data->{driver});
+    my $is_builtin = 1;
 
-    my $is_builtin = $self->_is_display_builtin($data->{driver});
+    if ( $data->{driver} ) {
+        die "Error: display ".$data->{driver}." duplicated.\n"
+        if $self->_get_display($data->{driver});
+
+        $is_builtin = $self->_is_display_builtin($data->{driver});
+    }
 
     $self->_get_display_port($data)
     if exists $data->{driver}
@@ -5470,9 +5928,15 @@ sub _add_hardware_display($orig, $self, $index, $data) {
 
     if ( !$is_builtin && exists $data->{port}
         && defined $data->{port} && $data->{port} ne 'auto') {
-        die "Error: display $data->{driver} can not be used because port $data->{port} "
+
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT *"
+        ." FROM domain_ports WHERE id_domain=? AND internal_port=?");
+        $sth->execute($self->id, $data->{port});
+        my ($exposed) = $sth->fetchrow;
+
+        confess "Error: ".$self->name."[".$self->id."] display $data->{driver} can not be used because port $data->{port} "
         ." is already exported. Remove it from hardware / ports\n"
-        if $self->exposed_port($data->{port});
+        if $exposed;
 
         my $public_port = $self->expose( port => $data->{port}
             , name => $data->{driver}
@@ -5482,12 +5946,30 @@ sub _add_hardware_display($orig, $self, $index, $data) {
         $data->{port} = $public_port;
         $data->{id_domain_port} = $port->{id};
     }
-    $self->_store_display($data);
 
     $orig->($self, 'display', $index, $data) if $is_builtin;
+    $self->_store_display($data);
+}
+
+sub _check_duplicated_volume_name($self, $file) {
+    return if !$file;
+
+    my ($name) = $file =~ m{.*/(.*)};
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id,name FROM volumes WHERE id_domain=? "
+        ." AND (name=? or file=?)"
+    );
+    $sth->execute($self->id, $name, $file);
+    my ($id_found) = $sth->fetchrow;
+    die "Error: volume '$name' already exists in ".$self->name."\n"
+    if $id_found;
 }
 
 sub _add_hardware_disk($orig, $self, $index, $data) {
+
+    die "Error: new disk volumes can not be added to bases\n"
+    if $self->is_base;
+
     my $real_id_vm;
     if (!$self->_vm->is_local) {
         $real_id_vm = $self->_vm->id;
@@ -5495,6 +5977,7 @@ sub _add_hardware_disk($orig, $self, $index, $data) {
         $self->_set_vm($vm_local, 1);
     }
 
+    $self->_check_duplicated_volume_name($data->{file});
     $orig->($self, 'disk', $index, $data);
 
     if (( defined $index || $data ) && $self->is_known() ) {
@@ -5514,12 +5997,18 @@ sub _add_hardware_disk($orig, $self, $index, $data) {
 sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
     confess "Error: minimal add hardware index>=0 , got '$index'" if defined $index && $index <0;
 
+    my $data_orig = undef;
+    $data_orig = dclone($data ) if ref($data);
+
     if ($hardware eq 'display' ) {
         _add_hardware_display($orig, $self, $index, $data);
     } elsif ($hardware eq 'disk') {
         _add_hardware_disk($orig, $self, $index, $data);
     } else {
         $orig->($self, $hardware, $index, $data);
+        if ( $hardware eq 'filesystem' ) {
+            $self->_add_info_filesystem($data_orig);
+        }
     }
     if (!$hardware eq 'disk' && $self->is_known() && !$self->is_base ) {
         # disk is changed in main node, then redefined already
@@ -5538,37 +6027,57 @@ sub _delete_db_display_by_driver($self, $driver) {
     $sth->execute($self->id, $driver);
 }
 
-sub _around_remove_hardware($orig, $self, $hardware, $index) {
+sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=undef) {
+    confess "Error: supply either index or options when removing hardware " if !defined $index && !defined $options;
+
+    my $id_filesystem;
+    if ( $hardware eq 'filesystem') {
+        my @fs = $self->get_controller('filesystem');
+        $id_filesystem = $fs[$index]->{_id};
+    }
+
+    die "Error: disk volumes can not be removed from bases\n"
+    if $hardware eq 'disk' && $self->is_base;
+
     my $display;
     if ( $hardware eq 'display' ) {
         $display = $self->_get_display_by_index($index);
         confess "Error: display index $index not found in ".$self->name
         if !$display || !$display->{driver};
 
+        my $driver = $display->{driver};
         if ($display->{is_secondary}) {
-            my ($driver) = $display->{driver} =~ /(.*)-\w+/;
+            my ($cur_driver) = $display->{driver} =~ /(.*)-\w+/;
             confess "I can't guess primary driver for $display->{driver}"
             if !$driver;
 
             $display=$self->_get_display($driver);
             confess "Error: display $driver not found in ".$self->name
             if !$display || !$display->{driver};
-            $index = $display->{n_order};
+
+            $index = undef;
+            $driver=$cur_driver;
         }
         if ( !$display->{is_builtin} ) {
             my $port = $self->exposed_port($display->{driver});
             $self->remove_expose($port->{internal_port}) if $port;
         }
-        my $driver = $display->{driver};
         $self->_delete_db_display_by_driver($driver);
         if ($display->{is_builtin}) {
-            $orig->($self, $hardware, $index, type => $driver);
+            if (defined $index) {
+                $orig->($self, $hardware, $index);
+            } else {
+                $orig->($self, $hardware, $index, type => $driver);
+            }
             $driver .= "-tls";
             $self->_delete_db_display_by_driver($driver);
         }
     } else {
-        $orig->($self, $hardware, $index)
+        $orig->($self, $hardware, $index, %$options)
     }
+
+    $self->_remove_info_filesystem($id_filesystem)
+    if $hardware eq 'filesystem';
 
     if ( $self->is_known() && !$self->is_base ) {
         $self->_redefine_instances();
@@ -6306,6 +6815,10 @@ sub has_non_shared_storage($self, $node=$self->_vm->new(host => 'localhost')) {
     return $has_non_shared;
 }
 
+sub has_nat_interfaces($self) {
+    return 0;
+}
+
 sub _base_in_nodes($self) {
     my $base = Ravada::Front::Domain->open($self->id_base);
     confess "Error: no id_base ".($self->id_base or '<NULL>')
@@ -6454,6 +6967,622 @@ sub refresh_ports($self, $request=undef) {
     die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
     die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"
     if $port_down;
+
+    if (($msg) && ($request))
+    {
+        my $uid = $request->args("uid");
+        my $user;
+        $user = Ravada::Auth::SQL->search_by_id($uid) if ($uid);
+        $user->send_message($msg) if ($user);
+    }
+}
+
+sub can_host_devices { return 0 }
+
+sub add_host_device($self, $host_device) {
+    my $id_hd = $host_device;
+    $id_hd = $host_device->id if ref($host_device);
+
+    my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO host_devices_domain "
+        ."(id_host_device, id_domain) "
+        ." VALUES ( ?, ? ) "
+    );
+    $sth->execute($id_hd, $self->id);
+}
+
+sub remove_host_device($self, $host_device) {
+    confess if !ref($host_device);
+
+    confess if $self->readonly;
+    $self->_dettach_host_device($host_device);
+
+    my $id_hd = $host_device->id;
+
+    $self->_dettach_host_device($host_device);
+
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain "
+        ." WHERE id_domain=? AND id_host_device=?"
+    );
+    $sth->execute($self->id, $id_hd);
+    if ($self->is_base) {
+        for my $clone_data ( $self->clones ) {
+            my $clone = Ravada::Domain->open($clone_data->{id});
+            $clone->remove_host_device($host_device);
+        }
+    }
+}
+
+sub list_host_devices($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM host_devices WHERE id IN (SELECT id_host_device FROM  host_devices hd, host_devices_domain hdd "
+        ." WHERE hdd.id_domain=?"
+        ."    AND hdd.id_host_device = hd.id )"
+        ."    AND enabled=1"
+    );
+    $sth->execute($self->id);
+
+    my @found;
+    while (my $row = $sth->fetchrow_hashref) {
+        $row->{devices} = '' if !defined $row->{devices};
+        push @found,(Ravada::HostDevice->new(%$row));
+    }
+
+    return @found;
+}
+
+sub list_host_devices_attached($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT hdd.*, hd.name as host_device_name "
+        ." FROM host_devices_domain hdd , host_devices hd "
+        ." WHERE hdd.id_domain=? "
+        ."   AND hdd.id_host_device = hd.id "
+        ."   AND hd.enabled=1"
+    );
+    $sth->execute($self->id);
+
+    my $sth_locked = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM host_devices_domain_locked "
+        ." WHERE id_domain=? AND name=?"
+    );
+
+    my @found;
+    while (my $row = $sth->fetchrow_hashref) {
+        $row->{is_locked} = 0;
+        if ($row->{name}) {
+            $sth_locked->execute($self->id, $row->{name});
+            my ($is_locked) = $sth_locked->fetchrow();
+            $row->{is_locked} = 1 if $is_locked;
+        }
+        push @found,($row);
+    }
+
+    return @found;
+}
+
+# adds host devices to domain instance
+# usually run right before startup
+sub _add_host_devices($self, @args) {
+    my @host_devices = $self->list_host_devices();
+    return if !@host_devices;
+    return if $self->is_active();
+
+    my $vm_local = $self->_vm->new( host => 'localhost' );
+    my $vm = $vm_local;
+
+    my ($id_vm, $request);
+    if (!(scalar(@args) % 2)) {
+        my %args = @args;
+        $request = delete $args{request} if exists $args{request};
+    }
+
+    my $doc = $self->get_config();
+    for my $host_device ( @host_devices ) {
+        my $device_configured = $self->_device_already_configured($host_device);
+
+        if ( $device_configured ) {
+            if ( $host_device->enabled() && $host_device->is_device($device_configured) && $self->_lock_host_device($host_device) ) {
+                next;
+            } else {
+                $self->_dettach_host_device($host_device, $doc, $device_configured);
+            }
+        }
+        next if !$host_device->enabled();
+
+        my ($device) = $host_device->list_available_devices();
+        if ( !$device ) {
+            $device = _refresh_domains_with_locked_devices($host_device);
+            if (!$device) {
+                $self->_data(status => 'down');
+                $self->_unlock_host_devices();
+                die "Error: No available devices in ".$host_device->name."\n";
+            }
+        }
+
+        $self->_lock_host_device($host_device, $device);
+
+        for my $entry( $host_device->render_template($device) ) {
+            if ($entry->{type} eq 'node') {
+                $self->add_config_node($entry->{path}, $entry->{content}, $doc);
+            } elsif ($entry->{type} eq 'unique_node') {
+                $self->add_config_unique_node($entry->{path}, $entry->{content}, $doc);
+            } elsif($entry->{type} eq 'attribute') {
+                $self->change_config_attribute($entry->{path}, $entry->{content}, $doc);
+            } elsif($entry->{type} eq 'namespace') {
+                $self->change_namespace($entry->{path}, $entry->{content}, $doc);
+            } else {
+                die "Error in host_device ".$host_device->name
+                ." template: ".$entry->{path}
+                ." Unknown type ".($entry->{type} or '<UNDEF>');
+            }
+        }
+    }
+    $self->reload_config($doc);
+
+}
+
+sub _dettach_host_devices($self) {
+    my @host_devices = $self->list_host_devices();
+    for my $host_device ( @host_devices ) {
+        $self->_dettach_host_device($host_device);
+    }
+    $self->remove_host_devices();
+}
+
+sub _dettach_host_device($self, $host_device, $doc=$self->get_config
+    ,$device = $self->_device_already_configured($host_device)
+) {
+
+    return if !defined $device or !length($device);
+
+    for my $entry( $host_device->render_template($device) ) {
+        if ($entry->{type} eq 'node') {
+            $self->remove_config_node($entry->{path}, $entry->{content}, $doc);
+        } elsif ($entry->{type} eq 'unique_node') {
+            $self->remove_config_node($entry->{path}, $entry->{content}, $doc);
+        } elsif($entry->{type} eq 'attribute') {
+            $self->remove_config_attribute($entry->{path}, $entry->{content}, $doc);
+        } elsif($entry->{type} eq 'namespace') {
+            $self->remove_namespace($entry->{path}, $entry->{content}, $doc);
+        } else {
+            die "Error in host_device ".$host_device->name
+            ." template: ".$entry->{path}
+            ." Unknown type ".($entry->{type} or '<UNDEF>');
+        }
+    }
+    $self->reload_config($doc);
+
+    $self->_unlock_host_device($device);
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE host_devices_domain SET name=NULL "
+        ." WHERE id_domain=? AND id_host_device=?"
+    );
+    $sth->execute($self->id, $host_device->id);
+
+}
+
+# marks a host device as being used by a domain
+sub _lock_host_device($self, $host_device, $device=undef) {
+    if (!defined $device) {
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM host_devices_domain "
+            ." WHERE id_domain=? AND id_host_device=?"
+        );
+        $sth->execute($self->id, $host_device->id);
+        ($device) = $sth->fetchrow;
+        confess "Error: no device name defined for id_domain=".$self->id
+        ." and id_host_device=".$host_device->id
+        if !defined $device || !length($device);
+    }
+
+    my $id_domain_locked = $self->_check_host_device_already_used($device);
+    return 1 if defined $id_domain_locked &&  $self->id == $id_domain_locked;
+
+    return 0 if defined $id_domain_locked;
+
+    my $query = "INSERT INTO host_devices_domain_locked (id_domain,id_vm,name) VALUES(?,?,?)";
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+    eval { $sth->execute($self->id,$self->_vm->id, $device) };
+    if ($@) {
+        warn $@;
+        $self->_data(status => 'shutdown');
+        die "Error: device $device already in use $@\n";
+    }
+
+    $sth=$$CONNECTOR->dbh->prepare("UPDATE host_devices_domain SET name=?"
+        ." WHERE id_domain=? AND id_host_device=?"
+    );
+    $sth->execute($device, $self->id, $host_device->id);
+
+    return 1;
+}
+
+sub _unlock_host_devices($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+}
+
+sub _unlock_host_device($self, $name) {
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
+        ." WHERE id_domain=? AND name=?"
+    );
+    $sth->execute($self->id, $name);
+}
+
+
+sub _check_host_device_already_used($self, $device) {
+
+    my $query = "SELECT id_domain FROM host_devices_domain_locked "
+    ." WHERE id_vm=? AND name=?"
+    ;
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+    $sth->execute($self->_vm->id, $device);
+    my ($id_domain) = $sth->fetchrow;
+    #    warn "\n".($id_domain or '<UNDEF>')." [".$self->id."] had locked $device\n";
+
+    return if !defined $id_domain;
+    return $id_domain if $id_domain == $self->id;
+
+    my $domain = Ravada::Domain->open($id_domain);
+
+    return $id_domain if $domain->is_active;
+
+    $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
+        ." WHERE id_domain=?");
+    $sth->execute($id_domain);
+    return;
+}
+
+sub _device_already_configured($self, $host_device) {
+    my $query = "SELECT name FROM host_devices_domain WHERE id_domain=? AND id_host_device=?";
+
+    confess if !ref($host_device);
+    my @args = ($self->id, $host_device->id);
+
+    my $sth = $$CONNECTOR->dbh->prepare($query);
+    $sth->execute(@args);
+
+    my ($name) = $sth->fetchrow;
+    return $name;
+}
+
+sub _refresh_domains_with_locked_devices($host_device) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT hdd.id_domain,hdd_locked.name "
+        ." FROM host_devices_domain hdd, host_devices_domain_locked hdd_locked"
+        ." WHERE hdd.id_host_device=?"
+        ."   AND hdd.id_domain=hdd_locked.id_domain"
+    );
+    my $sth_delete = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
+        ." WHERE id_domain=?");
+    $sth->execute($host_device->id);
+
+    my $free_device;
+    while ( my ($id_domain, $device) = $sth->fetchrow ) {
+        my $domain = Ravada::Domain->open($id_domain);
+        next if $domain->is_active();
+        $sth_delete->execute($id_domain);
+        Ravada::Request->refresh_machine(
+            id_domain => $id_domain
+            ,uid => Ravada::Utils::user_daemon->id
+        );
+        $free_device = $device;
+    }
+    return $free_device;
+}
+
+sub list_backups($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM domain_backups "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($self->id);
+    my @ret;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @ret, ( $row );
+    }
+    return @ret;
+}
+
+sub config_files($self) {
+}
+
+sub _backup_owner($self) {
+    my $owner = Ravada::Auth::SQL->search_by_id($self->_data('id_owner'));
+    my $filename = $self->_vm->dir_backup()."/".$self->name."_owner.json";
+    CORE::open my $out,">",$filename or die "$! $filename";
+    print $out encode_json($owner->{_data});
+    close $filename;
+
+    return $filename;
+}
+
+sub _list_parent_volumes($self) {
+    die "Error: ".$self->name." has no parent" if !$self->_data('id_base');
+    my $base = Ravada::Domain->open($self->_data('id_base'));
+
+    return [$base->list_files_base()];
+}
+
+sub _expand_backup_metadata($self, $data) {
+    $data->{owner} = Ravada::Utils::search_user_name($$CONNECTOR->dbh
+        ,$data->{id_owner});
+
+    delete $data->{screenshot};
+    delete $data->{info};
+    delete $data->{spice_password};
+
+    if($data->{id_base}) {
+        $data->{base} = Ravada::Request::_search_domain_name(undef
+            ,delete $data->{id_base});
+        $data->{parent_volumes} = $self->_list_parent_volumes();
+    }
+    if ($data->{is_base}) {
+        $data->{base_volumes} = [$self->list_files_base(1)];
+    }
+}
+
+
+
+sub backup($self) {
+    my @files_data = $self->config_files();
+    #read data extra just in case it wasn't already read
+    $self->_data_extra('id_domain');
+    for my $field ( keys %$self) {
+        next if $field !~ /^_data/;
+        my $filename = $self->_vm->dir_backup()."/".$self->name.$field.".json";
+        CORE::open my $out,">",$filename or die "$! $filename";
+
+        my %data = %{$self->{$field}};
+        $self->_expand_backup_metadata(\%data) if $field eq '_data';
+
+        print $out encode_json(\%data);
+        close $filename;
+        push @files_data,($filename);
+    }
+    push @files_data,($self->_backup_owner);
+
+    push @files_data,($self->list_files_base()) if $self->is_base();
+
+    my $now = Ravada::Utils::date_now();
+    $now =~ tr/ :/_-/;
+    my $file_backup = $self->_vm->dir_backup()."/".$self->name.".$now.tgz";
+    my @cmd = ("tar","czvf",$file_backup,@files_data
+    ,$self->list_volumes);
+    $self->_vm->run_command(@cmd);
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO domain_backups (id_domain, file, date_created) "
+        ." VALUES (?,?,?)"
+    );
+    $sth->execute($self->id, $file_backup, Ravada::Utils::date_now());
+    return $file_backup;
+}
+
+sub _confirm_restore($self) {
+    if ($ENV{TERM}) {
+            print "Virtual Machine ".$self->name." already exists."
+            ." All the data will be overwritten."
+            ." Are you sure you want to restore a backup ?";
+            my $answer = <STDIN>;
+            return 0 unless $answer =~ /^y/i;
+    }
+    return 1;
+}
+
+sub _parse_file($file) {
+    CORE::open my $f,"<",$file or confess "$! $file";
+    my $json = join "",<$f>;
+    close $f;
+
+    return decode_json($json);
+}
+
+sub _search_domain_to_restore($data, $file_extra) {
+    my $data_extra = _parse_file($file_extra);
+
+    my $id = $data->{id};
+    my $name = $data->{name};
+    my $vm = Ravada::VM->open($data->{id_vm});
+
+    my $sth = _dbh->prepare("SELECT * FROM domains "
+        ."WHERE id=? OR name=?"
+    );
+    $sth->execute($id,$name);
+    my $domain_old = $sth->fetchrow_hashref;
+    if ($domain_old && $domain_old->{name} ne $name) {
+        die "Domain id='$id' already exists, it is called "
+            .$domain_old->{name};
+    }
+    if (!$domain_old) {
+        my $domain = $vm->create_domain(
+            name => $name
+            ,config => $data_extra->{xml}
+            ,id_owner => Ravada::Utils::user_daemon->id
+            ,id => $id
+        );
+        $domain_old = $domain;
+    } else {
+        $domain_old = Ravada::Domain->open($domain_old->{id});
+    }
+}
+
+sub _extract_metadata($file, $name) {
+    my $dir = "/var/tmp";
+    my @cmd = ("tar","tzvf",$file,"-C",$dir);
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+
+    my ($file_data) = $out =~ m{^.*\d{4}-\d\d-\d\d [0-9:]+ (.*_data.json)$}m;
+    @cmd = ("tar","xzvf",$file,"-C",$dir,$file_data);
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+
+    my $data = _parse_file("$dir/$file_data");
+    unlink "$dir/$file_data";
+    lock_hash(%$data);
+    return $data;
+}
+
+sub _check_metadata_before_restore($data) {
+    return if !exists $data->{base};
+    unlock_hash(%$data);
+    my $base = delete $data->{base};
+    if ($base) {
+        my $id = Ravada::Request::_search_domain_id(undef,$base);
+        if (!$id) {
+            die "Error: base $base not found.\n";
+        }
+        $data->{id_base} = $id;
+    }
+    lock_hash(%$data);
+}
+
+sub _check_parent_base_volumes($data, $file) {
+    return if !$data->{id_base};
+
+    if (!exists $data->{parent_volumes}
+        || ! scalar(@{$data->{parent_volumes}})) {
+            warn "Warning: this machine is clone but I can't see the parent volumes list ".Dumper($data);
+            return;
+    }
+    my $vm = Ravada::VM->open(type => $data->{vm});
+    my %fail = ();
+    for my $vol (@{$data->{parent_volumes}}) {
+        next if $vm->file_exists($vol);
+        $fail{$vol}++;
+    }
+    die "Error: base files not found : ".join(" ",sort keys %fail)
+    ."\n" if keys %fail;
+
+    unlock_hash(%$data);
+    delete $data->{parent_volumes};
+    lock_hash(%$data);
+
+}
+
+sub restore_backup($self, $backup, $interactive, $rvd_back=undef) {
+    my $file = $backup;
+    $file = $backup->{file} if ref($backup);
+
+    die "Error: missing file  '$file'" if ! -e $file;
+
+    my ($name) = $file =~ m{.*/(.*?).\d{4}-\d\d-\d\d_\d\d-\d\d-};
+    if (!$self) {
+        $self = $rvd_back->search_domain($name);
+    }
+    die "Error: ".$self->name." is active, shut it down to restore.\n"
+    if $self && $self->is_active;
+
+    return if $self && $interactive && !$self->_confirm_restore();
+
+    my $data = _extract_metadata($file,$name);
+    _check_metadata_before_restore($data);
+    _check_parent_base_volumes($data, $file) if $data->{id_base};
+
+    my $vm = Ravada::VM->open(type => $data->{vm});
+
+    my @cmd = ("tar","xzvf",$file,"-C","/");
+    my ($out,$err) = $vm->run_command(@cmd);
+    warn $err if $err;
+
+    my ($file_data_extra) = $out =~ m{^(.*_data_domains.*.json)$}m;
+    my ($file_data_owner) = $out =~ m{^(.*owner.json)$}m;
+
+    $self = _search_domain_to_restore($data,"/$file_data_extra") if !$self;
+
+    _restore_backup_metadata($self
+        ,$data
+        ,"/$file_data_owner"
+    );
+
+    return $self;
+}
+
+sub _restore_owner($self, $data, $file_data_owner) {
+    my $id_owner = Ravada::Utils::search_user_id($$CONNECTOR->dbh
+        ,delete $data->{owner});
+    if ($id_owner) {
+        $data->{id_owner} = $id_owner;
+        return;
+    }
+
+    CORE::open my $f,"<",$file_data_owner or confess "$! $file_data_owner";
+    my $json = join "",<$f>;
+    close $f;
+
+    my $data_owner = decode_json($json);
+
+    my $id = $data_owner->{id};
+    my $clashed_user = Ravada::Auth::SQL->search_by_id($id);
+
+    if ($clashed_user) {
+        die "Error: Owner id $id clashes with user ".$clashed_user->name
+        ." here.";
+    }
+
+    my $sql = "INSERT INTO users (".join(",",sort keys %$data_owner).")"
+    ." VALUES(".join(",",map {'?'} keys %$data_owner)." )";
+
+    my $sth = $$CONNECTOR->dbh->prepare($sql);
+    $sth->execute(map { $data_owner->{$_}} sort keys %$data_owner );
+}
+
+sub _restore_base_volumes_metadata($self, $data) {
+    return if !exists $data->{base_volumes};
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO file_base_images "
+        ." (id_domain , file_base_img, target )"
+        ." VALUES(?,?,?)"
+    );
+
+    for my $vol ( @{$data->{base_volumes}}) {
+        $sth->execute($self->id, $vol->[0], $vol->[1]);
+    }
+    unlock_hash(%$data);
+    delete $data->{base_volumes};
+    lock_hash(%$data);
+}
+
+sub _restore_backup_metadata($self, $data, $file_data_owner) {
+    unlock_hash(%$data);
+    delete $data->{id};
+    delete $data->{internal_id};
+    delete $data->{info};
+    delete $data->{date_changed};
+
+    _restore_owner($self,$data,$file_data_owner);
+    _restore_base_volumes_metadata($self, $data);
+
+    for my $field (keys %$data) {
+        next if( !exists $self->{_data}->{$field} || !defined $self->{_data}->{$field})
+        && !defined $data->{$field};
+
+        next if exists $self->{_data}->{$field}
+        && defined $self->{_data}->{$field}
+        && defined $data->{$field}
+        && $self->{_data}->{$field} eq $data->{$field};
+
+        $self->_data($field => $data->{$field});
+    }
+    lock_hash(%$data);
+
+}
+
+sub remove_backup($self, $backup, $remove_file=0) {
+    if ($remove_file) {
+        my ($file) = $backup->{file};
+        if ( $self->_vm->file_exists($file) ) {
+            $self->_vm->remove_file($file) or die "$! $file";
+        }
+    }
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM domain_backups WHERE id=?"
+    );
+    $sth->execute($backup->{id});
 }
 
 1;

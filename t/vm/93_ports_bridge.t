@@ -44,7 +44,6 @@ sub _wait_ip($domain) {
 }
 
 sub _set_bridge($vm, $domain) {
-    return if $vm->type eq 'Void';
     my @bridges = $vm->_list_bridges();
     return if !@bridges;
     my $req = Ravada::Request->change_hardware(
@@ -58,7 +57,7 @@ sub _set_bridge($vm, $domain) {
             ,'driver' => 'virtio'
         }
     );
-    wait_request();
+    wait_request(debug => 1);
     return $bridges[0];
 }
 

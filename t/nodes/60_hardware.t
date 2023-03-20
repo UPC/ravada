@@ -105,6 +105,13 @@ sub test_driver_migrate($vm, $node, $domain, $driver_name) {
 sub test_drivers_type($type, $vm, $node) {
 
     my $domain = create_domain($vm->type);
+
+    my $req = Ravada::Request->add_hardware(uid => user_admin->id
+                , id_domain => $domain->id
+                , name => 'usb'
+                , number => 3
+    );
+    wait_request(debug => 0);
     my $driver_type = $domain->drivers($type);
 
     if (!$HAS_NOT_VALUE{$type}) {
@@ -138,8 +145,14 @@ sub test_drivers_type($type, $vm, $node) {
 
         $clone->remove(user_admin);
         my @vols = $domain->list_files_base();
-        $domain->remove_base(user_admin);
+        Ravada::Request->remove_base(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
         wait_request(debug => 0);
+        my $domainb = Ravada::Domain->open($domain->id);
+        is($domainb->is_base,0);
+
         for my $vol (@vols) {
             ok (! -e $vol ) or die "$vol";
         }
@@ -151,15 +164,40 @@ sub test_drivers_type($type, $vm, $node) {
 sub test_drivers($vm, $node) {
     my @drivers = $vm->list_drivers();
      for my $driver ( @drivers ) {
-         next if $driver->name eq 'display';
+         next if $driver->name =~ /display|features|usb controller/;
          test_drivers_type($driver->name, $vm, $node);
      }
 
 }
 
+sub _add_hardware($domain) {
+    return unless $domain->type eq 'KVM';
+
+    my $dir = "/var/tmp/".new_domain_name();
+    mkdir $dir or die $! unless -e $dir;
+
+    my $req = Ravada::Request->add_hardware(
+        name => 'filesystem'
+        ,uid => user_admin->id
+        ,id_domain => $domain->id
+        ,data => {
+            source => { dir => $dir }
+        }
+    );
+    Ravada::Request->add_hardware(
+        name => 'usb controller'
+        ,uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request(debug => 0);
+}
+
 sub test_change_hardware($vm, @nodes) {
     diag("[".$vm->type."] testing remove with ".scalar(@nodes)." node ".join(",",map { $_->name } @nodes));
     my $domain = create_domain($vm);
+
+    _add_hardware($domain);
+
     my $clone = $domain->clone(name => new_domain_name, user => user_admin);
     $clone->add_volume(size => 128*1024 , type => 'data');
     my @volumes = $clone->list_volumes();
@@ -188,6 +226,7 @@ sub test_change_hardware($vm, @nodes) {
     my @hardware = grep (!/^disk$/, sort keys %{$info->{hardware}});
     push @hardware,("disk");
     for my $hardware ( @hardware) {
+        next if $hardware =~ /cpu|features|memory/;
         my $tls = 0;
         $tls = grep {$_->{driver} =~ /-tls/} @{$info->{hardware}->{$hardware}}
         if $hardware eq 'display';
@@ -198,7 +237,11 @@ sub test_change_hardware($vm, @nodes) {
         diag("Testing remove $hardware");
 
         my $current_vm = $clone->_vm;
-        $clone->remove_controller($hardware,0);
+        my $n = 0;
+        $n = scalar(@{$info->{hardware}->{$hardware}})-1
+        if $hardware eq 'usb controller';
+
+        $clone->remove_controller($hardware,$n);
         is (scalar($clone->list_instances()), $n_instances);
 
         my $n_expected = scalar(@{$info->{hardware}->{$hardware}})-1;
@@ -279,8 +322,10 @@ for my $vm_name ( vm_names() ) {
         clean_remote_node($node1);
         clean_remote_node($node2)   if $node2;
 
-        test_graphics($vm, $node1);
+        test_change_hardware($vm);
+
         test_drivers($vm, $node1);
+        test_graphics($vm, $node1);
 
         test_change_hardware($vm);
         test_change_hardware($vm, $node1);

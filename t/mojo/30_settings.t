@@ -26,9 +26,28 @@ my $SCRIPT = path(__FILE__)->dirname->sibling('../script/rvd_front');
 my %FILES;
 my %HREFS;
 
+my %MISSING_LANG = map {$_ => 1 }
+    qw(ca-valencia he ko);
+
+sub _remove_nodes($vm_name) {
+    my @list_nodes = rvd_front->list_vms();
+
+    my $name = base_domain_name();
+    my @found = grep { $_->{name} =~ /^$name/} @list_nodes;
+
+    for my $found (@found) {
+
+        $t->get_ok("/v1/node/remove/".$found->{id});
+        is($t->tx->res->code(),200) or die $t->tx->res->body;
+    }
+
+}
+
 sub test_nodes($vm_name) {
     mojo_check_login($t);
     my $name = new_domain_name();
+
+    _remove_nodes($vm_name);
 
     $t->post_ok('/v1/node/new' => form => {
         vm_type => $vm_name
@@ -126,11 +145,23 @@ sub test_exists_network($id_network, $field, $name) {
     is($result_exists->{id}, $id_network);
 }
 
+sub _remove_network($address) {
+    my @list_networks = Ravada::Network::list_networks();
+
+    my ($found) = grep { $_->{address} eq $address} @list_networks;
+    return if !$found;
+
+    $t->get_ok("/v1/network/remove/".$found->{id});
+    is($t->tx->res->code(),200) or die $t->tx->res->body;
+
+}
 
 sub test_networks($vm_name) {
     mojo_check_login($t);
     my $name = new_domain_name();
     my $address = '1.2.3.0/24';
+
+    _remove_network($address);
 
     $t->post_ok('/v1/network/set' => json => {
         name => $name
@@ -200,6 +231,7 @@ sub _hrefs($file) {
     for my $line ( <$in> ) {
         chomp $line;
         my ($found) = $line =~ /href=["'](.*?)["']/;
+        next if $found && $found =~ /^\?/;
         push @href,($found) if $found;
     }
     close $in;
@@ -255,11 +287,27 @@ sub test_missing_routes() {
             next if $href =~ /anonymous/;
 
             my $href2 = _fill_href($href);
+            mojo_check_login($t);
             $t->get_ok($href2, "file: $file href='$href'");
             like($t->tx->res->code(),qr/200|302|40\d+|500/) or die $t->tx->res->to_string();
         }
     }
     mojo_login($t, $USERNAME, $PASSWORD);
+}
+
+sub test_languages() {
+    mojo_check_login($t);
+    $t->get_ok("/translations");
+    is($t->tx->res->code(),200) or die $t->tx->res->body;
+
+    my $lang = decode_json($t->tx->res->body);
+
+    opendir my $ls,"lib/Ravada/I18N" or die $!;
+    while (my $file = readdir $ls) {
+        next if $file !~ /(.*)\.po$/;
+        next if $MISSING_LANG{$1};
+        ok($lang->{$1},"Expecting $1 in select");
+    }
 }
 
 sub clean_clones() {
@@ -296,6 +344,7 @@ mojo_login($t, $USERNAME, $PASSWORD);
 remove_old_domains_req(0); # 0=do not wait for them
 clean_clones();
 
+test_languages();
 test_missing_routes();
 
 for my $vm_name (@{rvd_front->list_vm_types} ) {

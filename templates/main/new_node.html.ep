@@ -15,7 +15,7 @@
                     action="/v1/node/new">
                 <div class="form-group row">
                 <label for="vm_type" class="col-lg-2 control-label"><%=l 'Backend' %> <a
-                  title="Choose the virtualization type of the Node."><i class="fa fa-info-circle"></i></a></label>
+                  title="<%=l 'Choose the virtualization type of the Node.' %>"><i class="fa fa-info-circle"></i></a></label>
                     <div class="col-lg-3">
                         <select class= "form-control"
                         name="vm_type"
@@ -44,7 +44,7 @@
 
                     <a type="button" class="btn btn-warning" ng-show="vm_type && hostname"
                                                      ng-click="connect_node(vm_type,hostname)">
-                        Check connection to {{hostname}}
+                        <%=l 'Check connection to' %> {{hostname}}
                     </a>
                     <!--<small class="form-text text-muted">Format: 192.168.0.1/32</small> -->
                 </div>
@@ -76,7 +76,7 @@
             </div>
             <div ng-show="request || id_req" class=" form-group row border border-primary">
             <div class="d-flex p-2 bd-highlight bg-light text-dark">
-                <div ng-show="id_req && !request">Testing connection to ̣{{hostname}}</div>
+                <div ng-show="id_req && !request"><%=l 'Testing connection to' %> ̣{{hostname}}</div>
                 <div ng-show="request">{{request.error || "Waiting ... "}}</div>
             </div>
             </div>

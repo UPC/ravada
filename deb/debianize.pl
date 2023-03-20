@@ -123,7 +123,7 @@ sub create_deb {
 
     mkdir "ravada_release" if !-e "ravada_release";
     my $deb = "ravada_release/ravada_${VERSION}_${dist}_all.deb";
-    my @cmd = ('dpkg','-b',"$DIR_DST/",$deb);
+    my @cmd = ('dpkg-deb','-b','-Zgzip',"$DIR_DST/",$deb);
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
     die $err if $err;
@@ -304,7 +304,7 @@ sub list_dists {
     die "Error: no dists control files found in 'debian' dir"
         if !@dists;
 
-    return @dists;
+    return reverse @dists;
 }
 
 sub set_control_file {

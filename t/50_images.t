@@ -10,8 +10,10 @@ use Test::Ravada;
 
 use_ok('Ravada');
 
-my $ravada = Ravada->new( connector => connector(), config => 't/etc/ravada.conf');
-
+my $ravada = Ravada->new( connector => connector()
+    ,config => 't/etc/ravada.conf'
+    ,pid_name => "ravada_install".base_domain_name());
+$ravada->_install();
 my @images = $ravada->list_images();
 
 ok(scalar @images,"No images ".Dumper(\@images));
