@@ -414,7 +414,7 @@ sub _set_ip_address($self) {
     for my $net (@{$hardware->{network}}) {
         next if !ref($net);
         next if exists $net->{address} && $net->{address};
-        next if $net->{type} ne 'nat';
+        #        next if $net->{type} ne 'nat';
         $net->{address} = '198.51.100.'.int(rand(253)+2);
         $changed++;
     }
