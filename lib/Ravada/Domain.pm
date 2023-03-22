@@ -3538,10 +3538,10 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
     if !$public_port;
 
     my $local_ip = $self->_vm->ip;
-    $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set internal_ip=?"
+    $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set internal_ip=?,public_ip=?"
             ." WHERE id_domain=? AND internal_port=?"
     );
-    $sth->execute($internal_ip, $self->id, $internal_port);
+    $sth->execute($internal_ip, $local_ip, $self->id, $internal_port);
     $self->_update_display_port_exposed($name, $local_ip, $public_port, $internal_port);
 
     if ( !$> && $public_port ) {
@@ -3706,11 +3706,6 @@ sub open_exposed_ports($self) {
     return if !@ports;
     return if !$self->is_active;
 
-    if (!$self->has_nat_interfaces) {
-        $self->_set_ports_direct();
-        return;
-    }
-
     my $ip = $self->ip;
     if ( ! $ip ) {
         die "Error: No ip in domain ".$self->name.". Retry.\n";
@@ -3719,27 +3714,18 @@ sub open_exposed_ports($self) {
     my $info = $self->info(Ravada::Utils::user_daemon);
 
     my $sth_update = $$CONNECTOR->dbh->prepare(
-        "UPDATE domain_ports SET public_port=? WHERE id_domain=?"
+        "UPDATE domain_ports SET public_ip=?, public_port=? WHERE id_domain=? AND internal_port=?"
     );
 
     $self->display_info(Ravada::Utils::user_daemon);
     for my $expose ( @ports ) {
         if ( $info->{hardware}->{network}->[0]->{bridge} ) {
-            $sth_update->execute($expose->{internal_port}, $self->id);
-            next;
+            $sth_update->execute($ip, $expose->{internal_port}, $self->id, $expose->{internal_port});
+        } else {
+            $self->_open_exposed_port($expose->{internal_port}
+                , $expose->{name}, $expose->{restricted});
         }
-        $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
-            ,$expose->{restricted});
     }
-}
-
-sub _set_ports_direct($self) {
-    my $sth_update = $$CONNECTOR->dbh->prepare(
-        "UPDATE domain_ports set public_port=NULL "
-        ." WHERE id_domain=?"
-    );
-    $sth_update->execute($self->id);
-
 }
 
 sub _close_exposed_port($self,$internal_port_req=undef) {

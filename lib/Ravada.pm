@@ -1475,7 +1475,7 @@ sub _add_indexes_generic($self) {
         ,domain_ports => [
             "unique (id_domain,internal_port):domain_port"
             ,"unique (id_domain,name):name"
-            ,"unique(id_vm,public_port)"
+            ,"unique(id_vm,public_ip,public_port)"
         ]
         ,domains_kvm => [
             "unique (id_domain)"
@@ -2087,6 +2087,7 @@ sub _sql_create_tables($self) {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
             ,'id_domain' => 'int(11) NOT NULL'
+            ,'public_ip' => 'char(200) DEFAULT NULL'
             ,'public_port' => 'int(11) DEFAULT NULL'
             ,'internal_port' => 'int(11) DEFAULT NULL'
             ,'name' => 'varchar(32) DEFAULT NULL'

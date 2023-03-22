@@ -85,7 +85,7 @@
                     </td>
                     <td>
                         <span ng-class='{"loading": !request_open_ports_done || !domain.ip }'>
-                        {{domain.display.ip}}:{{port.public_port}}
+                        {{port.public_ip}}:{{port.public_port}}
                         </span>
                         <i class="fa fa-arrow-right"></i>
                         <span>
