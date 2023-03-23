@@ -15,18 +15,23 @@
         </div>
         <div ng-show="searching_ldap_attributes"><i class="fas fa-sync-alt fa-spin"></i></div>
         <div ng-show="dn_found">
+            <div class="container">
+            <button ng-click="show_values=true" ng-show="!show_values"
+                type="button" class="badge btn-light"
+                title="<%=l 'show attributes'%>"
+            >+</button>
+            <button ng-click="show_values=false" ng-show="show_values"
+                type="button" class="badge"
+                title="<%=l 'hide attributes'%>"
+            >-</button>
+
             <span
-            ng-class="{'info': !show_values, 'text-primary':show_values}"
+            ng-class="{'text-secondary': !show_values, 'text-dark':show_values}"
             >{{dn_found}}</span>
 
             <span ng-show="check_allowed==1" class="bg-success text-white"><%=l 'access granted' %></span>
             <span ng-show="check_allowed==0" class="bg-danger text-white"><%=l 'access denied' %></span>
-            <button ng-click="show_values=true" ng-show="!show_values"
-                tittle="<%=l 'show attributes'%>"
-            >+</button>
-            <button ng-click="show_values=false" ng-show="show_values"
-                tittle="<%=l 'hide attributes'%>"
-            >-</button>
+            </div>
             <div ng-show="show_values" class="container m-8 border border-secondary">
                 <div ng-repeat="name in ldap_attributes" class="row">
                     <div class="col ml-4">
