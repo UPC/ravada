@@ -529,9 +529,9 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
-            ,url => 'https://download.opensuse.org/distribution/leap/15.0/iso/'
-            ,sha256_url => '$url/openSUSE-Leap-15.\d+-NET-x86_64.iso.sha256'
-            ,file_re => 'openSUSE-Leap-15.\d+-NET-x86_64.iso'
+            ,url => 'https://download.opensuse.org/distribution/leap/15.4/iso/'
+            ,sha256_url => '$url/openSUSE-Leap-15.4-NET-x86_64-Current.iso.sha256'
+            ,file_re => 'openSUSE-Leap-15.\d-NET-x86_64-Current.iso'
 
         }
         ,xubuntu_beaver_64 => {
