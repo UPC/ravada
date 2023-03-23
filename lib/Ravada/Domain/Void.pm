@@ -671,7 +671,7 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
         }
         $dev->{n_order} = $n_order++;
         if (!ref($dev->{driver})) {
-            $dev->{driver} = { type => $dev->{driver} };
+            $dev->{driver} = { type => ($dev->{driver} or 'void') };
         } else {
             $dev->{driver}->{type} = 'void';
         }
