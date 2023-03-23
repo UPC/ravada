@@ -6318,7 +6318,9 @@ sub _cmd_open_exposed_ports($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain) or return;
     return if !$domain->list_ports();
 
-    $domain->open_exposed_ports();
+    my $remote_ip = $request->defined_arg('remote_ip');
+
+    $domain->open_exposed_ports($remote_ip);
 
     Ravada::Request->refresh_machine_ports(
         uid => $request->args('uid'),

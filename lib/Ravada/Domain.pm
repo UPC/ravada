@@ -3505,7 +3505,7 @@ sub _used_port_displays($self, $port, $skip_id_port) {
     return 0;
 }
 
-sub _open_exposed_port($self, $internal_port, $name, $restricted) {
+sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=undef) {
     my $debug_ports = Ravada::setting(undef,'/backend/debug_ports');
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,public_port FROM domain_ports"
         ." WHERE id_domain=? AND internal_port=?"
@@ -3564,7 +3564,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted) {
         ) if !$>;
 
         $self->_open_iptables_state();
-        $self->_open_exposed_port_client($internal_port, $restricted);
+        $self->_open_exposed_port_client($internal_port, $restricted, $remote_ip);
     }
 }
 
@@ -3664,13 +3664,15 @@ sub _open_iptables_state($self) {
     );
 }
 
-sub _open_exposed_port_client($self, $internal_port, $restricted) {
+sub _open_exposed_port_client($self, $internal_port, $restricted, $remote_ip=undef) {
 
     my $internal_ip = $self->ip;
     return if !$internal_ip;
 
-    my $remote_ip = '0.0.0.0/0';
-    $remote_ip = $self->remote_ip if $restricted;
+    if (!defined $remote_ip) {
+        $remote_ip = '0.0.0.0/0';
+        $remote_ip = $self->remote_ip if $restricted;
+    }
     return if !$remote_ip;
     if ( $restricted ) {
         $self->_vm->iptables_unique(
@@ -3701,7 +3703,7 @@ Performs an iptables open of all the exposed ports of the domain
 
 =cut
 
-sub open_exposed_ports($self) {
+sub open_exposed_ports($self, $remote_ip=undef) {
     my @ports = $self->list_ports();
     return if !@ports;
     return if !$self->is_active;
@@ -3723,7 +3725,7 @@ sub open_exposed_ports($self) {
     $self->display_info(Ravada::Utils::user_daemon);
     for my $expose ( @ports ) {
         $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
-            ,$expose->{restricted});
+            ,$expose->{restricted}, $remote_ip);
     }
 }
 
@@ -4035,7 +4037,7 @@ sub _post_start {
     $self->_add_iptable(@_) if $self->_has_builtin_display();
     $self->_update_id_vm();
     Ravada::Request->open_exposed_ports(
-            uid => Ravada::Utils::user_daemon->id
+            uid => $arg{user}->id
             ,id_domain => $self->id
             ,retry => 20
             ,remote_ip => $remote_ip
