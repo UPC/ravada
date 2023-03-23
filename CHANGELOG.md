@@ -2,10 +2,10 @@
 
 **Implemented enhancements:**
 
+- LDAP checks [\#1927]
+- purge nodes CLI [\#1926]
 
 **Refactors**
 
 **Bugfixes**
 
-- CPU topology when empty model
-- Link for Windows virt viewer download wrong [\#1911]
