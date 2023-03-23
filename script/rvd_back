@@ -65,6 +65,7 @@ my $REMOVE_DOMAIN;
 my $REBASE;
 my $RUN_REQUEST;
 my $MIGRATE;
+my $PURGE_NODES;
 
 my $IMPORT_DOMAIN_OWNER;
 
@@ -166,6 +167,8 @@ GetOptions (       help => \$help
         ,"backup" => \$BACKUP
         ,"restore" => \$RESTORE
         ,"log=s"              => \$LOG_FILENAME
+
+        ,"purge-nodes"      => \$PURGE_NODES
 
         ,"time-connection=s" => \$TIME_CONNECTION
 ) or exit;
@@ -971,6 +974,53 @@ sub _list_domains($rvd_back
     return @domains;
 }
 
+sub purge_nodes($rvd_back) {
+    my $sth = $rvd_back->_dbh->prepare(
+        "SELECT id,name FROM domains WHERE is_base=1"
+        ." ORDER BY name "
+    );
+    my $sth_ins = $rvd_back->_dbh->prepare(
+            "SELECT di.id,di.id_domain, di.id_vm, d.name, vms.name "
+            ." FROM domain_instances di,domains d, vms"
+            ." WHERE di.id_domain = d.id "
+            ."    AND d.id_base=?"
+            ."    AND d.id_vm <> di.id_vm "
+            ."    AND vms.id=di.id_vm "
+            ."    AND vms.hostname <> 'localhost'"
+            ."    AND vms.hostname <> '127.0.0.1'"
+            ." ORDER by d.name "
+    );
+    my $sth_delete = $rvd_back->_dbh->prepare(
+        "DELETE FROM domain_instances WHERE id=?"
+    );
+    $sth->execute();
+    while ( my ($id_base,$name) = $sth->fetchrow ) {
+        $sth_ins->execute($id_base);
+        while (my @row = $sth_ins->fetchrow()) {
+            next if !@row;
+            my ($id, $id_domain, $id_vm, $name , $vm_name) = @row;
+            my $domain =  Ravada::Domain->open($id_domain);
+            my $vm = Ravada::VM->open($id_vm);
+            if ( !$vm->_connect) {
+                warn "Node $vm_name unavailable\n";
+                next;
+            }
+            for my $vol ( $domain->list_volumes ) {
+                next if !$vm->file_exists($vol);
+            print "Found $name [$id_domain] unused in $vm_name.\n";
+            print "Remove $vol\n";
+            print "[y/N] ? ";
+            my $ok= <stdin>;
+            next if $ok !~ /y/i;
+
+                $vm->remove_file($vol);
+            }
+            $sth_delete->execute($id);
+        }
+
+    }
+}
+
 sub DESTROY {
 }
 
@@ -1018,6 +1068,8 @@ clean_db_leftovers($rvd_back)       if $CLEAN_DB_LEFTOVERS;
 
 backup($rvd_back)                   if $BACKUP;
 restore($rvd_back)                  if $RESTORE;
+
+purge_nodes($rvd_back)              if $PURGE_NODES;
 }
 
 
