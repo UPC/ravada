@@ -432,7 +432,8 @@ sub _load_allowed_groups($self) {
         }
 
         $self->{_allowed}->{$id_domain} = 1
-        if Ravada::Auth::LDAP::is_member($self->ldap_entry, $name);
+            if $self->ldap_entry
+            && Ravada::Auth::LDAP::is_member($self->ldap_entry, $name);
     }
 }
 

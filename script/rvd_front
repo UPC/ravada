@@ -1402,7 +1402,7 @@ get '/list_ldap_attributes/(#cn)' => sub {
         my $values;
         for my $attribute ( sort $user->attributes ) {
             my @values = $user->get_value($attribute);
-            if  ($attribute =~/Password/i) {
+            if  ($attribute =~/Password|unicodePwd/i) {
                 for (@values) {
                     s/./*/g;
                     $_='********' if length($_)>8;
