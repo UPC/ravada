@@ -1348,6 +1348,7 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
     }
     confess "ERROR: wget missing"   if !$WGET;
 
+    $url =~ s{/./}{/}g;
     return $self->_download_file_external_headers($url)    if $test;
     return $url if -e $device;
 

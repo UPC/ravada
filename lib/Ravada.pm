@@ -530,7 +530,6 @@ sub _update_isos {
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,url => 'https://download.opensuse.org/distribution/leap/15.4/iso/'
-            ,sha256_url => '$url/openSUSE-Leap-15.4-NET-x86_64-Current.iso.sha256'
             ,file_re => 'openSUSE-Leap-15.\d-NET-x86_64-Current.iso'
 
         }
