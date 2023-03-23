@@ -756,7 +756,6 @@
           $scope.check_access = function() {
                       $http.get('/machine/check_access/'+$scope.showmachine.id+"/"+$scope.user_name).then(function(response) {
                           $scope.check_allowed=response.data.ok;
-                          console.log($scope.showmachine.id+" / "+$scope.user_name+" = "+response.data.ok);
                       });
           };
 
