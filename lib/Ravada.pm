@@ -1139,6 +1139,13 @@ sub _update_domain_drivers_options($self) {
             ,name => 'VGA'
            ,value => 'vga'
         },
+        none => {
+            id => 5
+            ,id_driver_type => 1,
+            ,name => 'None'
+           ,value => 'none'
+        },
+
         ich6 => {
             id => 6,
             ,id_driver_type => 2,
