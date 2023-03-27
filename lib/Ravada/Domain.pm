@@ -3506,6 +3506,7 @@ sub _used_port_displays($self, $port, $skip_id_port) {
 }
 
 sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=undef) {
+    warn Dumper([$restricted, $remote_ip]);
     my $debug_ports = Ravada::setting(undef,'/backend/debug_ports');
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id,public_port FROM domain_ports"
         ." WHERE id_domain=? AND internal_port=?"

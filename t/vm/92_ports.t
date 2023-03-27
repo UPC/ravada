@@ -987,9 +987,9 @@ sub test_port_prerouting_already_open_clones_no_restricted($vm) {
     my @out = split /\n/, `iptables-save`;
 
     my @port1 = (grep /-A FORWARD -d $ip1.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
-    is(scalar(@port1),1,"Expecting -d $ip1 --dport $internal_port -j ACCEPT ".$clone2->name) or die Dumper(\@port1);
+    is(scalar(@port1),1,"Expecting -A FORWARD.* -d $ip1.32 -p tcp -m tcp --dport $internal_port -j ACCEPT ".$clone2->name) or die Dumper(\@port1);
 
-    my @port2 = (grep /-A FORWARD -d $ip2.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
+    my @port2 = (grep /-A FORWARD.* -d $ip2.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
     is(scalar(@port2),1,"Expecting -d $ip2 ... --dport $internal_port") or die Dumper(\@port2);
 
     my @port_drop = (grep /--dport $internal_port -j DROP/, @out);
@@ -1008,7 +1008,7 @@ sub test_port_prerouting_already_open_clones_no_restricted($vm) {
     @port1 = (grep /-A FORWARD -d $ip1.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
     is(scalar(@port1),0,"Expecting -d $ip1 --dport $internal_port -j ACCEPT") or die Dumper(\@port1);
 
-    @port2 = (grep /-A FORWARD -d $ip2.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
+    @port2 = (grep /-A FORWARD.* -d $ip2.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
     is(scalar(@port2),1,"Expecting -s $remote_ip2 --dport $internal_port") or die Dumper(\@port2);
 
     remove_domain($clone1);
