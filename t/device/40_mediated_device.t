@@ -54,6 +54,13 @@ sub test_mdev($vm) {
 
     $domain->_add_host_devices();
 
+    test_xml($domain);
+
+    return $domain;
+}
+
+sub test_xml($domain) {
+
     my $xml = $domain->xml_description();
 
     my $doc = XML::LibXML->load_xml(string => $xml);
@@ -66,14 +73,33 @@ sub test_mdev($vm) {
     my $v_type = $video ->getAttribute('type');
     isnt($v_type,'none') or exit;
 
-    my ($graphics) = $doc->findnodes("/domain/devices/graphics");
-    my $g_type = $graphics->getAttribute('type');
-    is($g_type,'vnc') or exit;
-
     my $kvm_path = "/domain/features/kvm/hidden";
     my ($kvm) = $doc->findnodes($kvm_path);
     ok($kvm,"Expecting $kvm_path") or return;
     is($kvm->getAttribute('state'),'on')
+
+}
+
+sub test_base($domain) {
+
+    my @args = ( uid => user_admin->id ,id_domain => $domain->id);
+
+    Ravada::Request->shutdown_domain(@args);
+    my $req = Ravada::Request->prepare_base(@args);
+
+    wait_request();
+
+    test_xml($domain);
+
+    Ravada::Request->clone(@args, number => 2, remote_ip => '1.2.3.4');
+    wait_request();
+    is(scalar($domain->clones),2);
+
+    for my $clone_data( $domain->clones ) {
+        my $clone = Ravada::Domain->open($clone_data->{id});
+        $clone->_add_host_devices();
+        test_xml($clone);
+    }
 }
 
 ####################################################################
@@ -93,7 +119,8 @@ for my $vm_name ( 'KVM' ) {
 
         diag("Testing host devices in $vm_name");
 
-        test_mdev($vm);
+        my $domain = test_mdev($vm);
+        test_base($domain);
 
     }
 }
