@@ -816,6 +816,28 @@ sub test_hd_remove($vm, $host_device) {
     ok(!$found);
 }
 
+sub test_templates_dupe_device($vm) {
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+    ok(@$templates);
+
+    my ($first) = (@$templates);
+
+    diag("Testing $first->{name} Hostdev on ".$vm->type);
+    $vm->add_host_device(template => $first->{name});
+    my @list_hostdev = $vm->list_host_devices();
+    my ($hd) = $list_hostdev[-1];
+
+    _fix_host_device($hd) if $vm->type eq 'KVM';
+
+    next if !$hd->list_devices;
+
+    my $domain = _create_domain_hd($vm, $hd);
+    _fix_usb_ports($domain) if $first->{name} =~ /USB/i;
+    $domain->_add_host_devices();
+
+    is(scalar($hd->list_domains_with_device()),1);
+}
+
 ####################################################################
 
 clean();
@@ -832,6 +854,8 @@ for my $vm_name ( vm_names()) {
         skip($msg,10)   if !$vm;
 
         diag("Testing host devices in $vm_name");
+
+        test_templates_dupe_device($vm);
 
         test_templates_gone_usb_2($vm);
         test_templates_gone_usb($vm);
