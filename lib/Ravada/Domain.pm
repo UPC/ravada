@@ -3672,6 +3672,8 @@ sub _open_exposed_port_client($self, $internal_port, $restricted, $remote_ip=und
     if (!defined $remote_ip) {
         $remote_ip = '0.0.0.0/0';
         $remote_ip = $self->remote_ip if $restricted;
+    } else {
+        $remote_ip = '0.0.0.0/0' if !$restricted;
     }
     return if !$remote_ip;
     if ( $restricted ) {
