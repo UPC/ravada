@@ -114,7 +114,10 @@ Add the modules so they are loaded on boot in /etc/modules
 
 ::
 
-    vfio vfio_iommu_type1 vfio_pci ids=10de:2204,10de:1aef
+    vfio
+    vfio_iommu_type1 allow_unsafe_interrupts=1
+    vfio_pci ids=10de:2204,10de:1aef
+    vfio_virqfd
 
 Pass the device identifiers to vfio-pci in /etc/modprobe.d/vfio.conf. This is duplicated
 from the previous step, it may be removed eventually from this doc if we find it
