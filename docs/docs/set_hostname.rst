@@ -56,13 +56,11 @@ as the hostname on startup. Put the service file in */lib/systemd/system/sethost
 
 
 .. literalinclude:: sethostname.service
-   :linenos:
 
 This is the script that is launched by the service, it should be
 in */usr/local/bin/set_hostname.sh* as specified in the previous file.
 
 .. literalinclude:: set_hostname.sh
-   :linenos:
 
 Type this so the script is executed on startup:
 
