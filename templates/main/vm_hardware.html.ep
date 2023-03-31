@@ -23,7 +23,7 @@
                             ><i class="fas fa-pencil-alt"></i>
                 </button>
                 <button title="remove {{name}} {{$index+1}}"
-                    ng-show="item._can_remove && !item._edit"
+                    ng-show="item._can_remove && !item._edit && !edit"
                     ng-disabled="showmachine.requests > 0 || item.is_secondary || item._is_locked || edit"
                      ng-click="$parent.$parent.remove_item={'hardware': name, 'index': $index, 'name': (item.name || item._name || item.driver || item.type ) }"
                     data-toggle="modal" data-target="#removeModal"

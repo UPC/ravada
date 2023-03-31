@@ -1730,7 +1730,7 @@ post '/request/(:name)/' => sub {
         confess "Error: $_ should not be provided".Dumper($args)
         if exists $args->{$_};
     }
-    if (($name eq 'start_clones') || ($name eq 'start_clones_sequentially')) {
+    if ($name =~ /^(start_clones|open_exposed_ports)/) {
         $args->{remote_ip} = _remote_ip($c);
     }
     app->log->info($USER->name." requesting $name ".encode_json($args)) if $CONFIG_FRONT->{log}->{log};
@@ -2903,6 +2903,7 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
                     uid => $USER->id
                 , id_domain => $domain->id
                 , retry => 20
+                , remote_ip => _remote_ip($c)
                 ) if $domain->list_ports();
             }
 

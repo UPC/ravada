@@ -1138,6 +1138,13 @@ sub _update_domain_drivers_options($self) {
             ,name => 'VGA'
            ,value => 'vga'
         },
+        none => {
+            id => 5
+            ,id_driver_type => 1,
+            ,name => 'None'
+           ,value => 'none'
+        },
+
         ich6 => {
             id => 6,
             ,id_driver_type => 2,
@@ -4907,8 +4914,18 @@ sub _apply_clones($self, $request) {
     return if !$domain->is_base;
 
     my $args = $request->args;
-    delete $args->{data}->{file}
-    if $request->command eq 'change_hardware' && $args->{'hardware'} eq 'disk';
+    if ($request->command eq 'change_hardware') {
+        my %fields = ('disk' => 'file'
+            ,'display' => ['id','id_domain','id_domain_port']
+        );
+        my $field = $fields{$args->{hardware}};
+        if ($field) {
+            $field = [$field] if !ref($field);
+            for my $curr_field (@$field) {
+                delete $args->{data}->{$curr_field};
+            }
+        }
+    }
 
     for my $clone ($domain->clones) {
         Ravada::Request->new_request(
@@ -6300,7 +6317,9 @@ sub _cmd_open_exposed_ports($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain) or return;
     return if !$domain->list_ports();
 
-    $domain->open_exposed_ports();
+    my $remote_ip = $request->defined_arg('remote_ip');
+
+    $domain->open_exposed_ports($remote_ip);
 
     Ravada::Request->refresh_machine_ports(
         uid => $request->args('uid'),

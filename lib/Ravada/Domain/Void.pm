@@ -670,7 +670,11 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
                 && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);
         }
         $dev->{n_order} = $n_order++;
-        $dev->{driver}->{type} = 'void';
+        if (!ref($dev->{driver})) {
+            $dev->{driver} = { type => ($dev->{driver} or 'void') };
+        } else {
+            $dev->{driver}->{type} = 'void';
+        }
         my $vol = Ravada::Volume->new(
             file => $dev->{file}
             ,info => $dev
