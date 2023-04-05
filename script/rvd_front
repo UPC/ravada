@@ -3492,7 +3492,7 @@ sub copy_machine {
 
     my $new_name = delete $arg->{new_name};
     my $owner = delete $arg->{new_owner};
-    my $volatile = delete $arg->{copy_is_volatile};
+    my $volatile = ( delete $arg->{copy_is_volatile} or 0);
 
     warn "Error: unknown args ".Dumper($arg) if keys %$arg;
 

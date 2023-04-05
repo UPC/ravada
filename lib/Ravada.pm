@@ -4577,6 +4577,7 @@ sub _req_clone_many($self, $request) {
         }
         $args->{name} = $name;
         my $req2 = Ravada::Request->clone( %$args );
+        $args->{after_request} = $req2->id if $req2;
         push @reqs, ( $req2 );
     }
     return @reqs;
