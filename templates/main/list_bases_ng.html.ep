@@ -34,10 +34,6 @@
                     </select>
                 </div>
                 <div class="container">
-                    <small>
-                        {{machine.clone.id}} {{machine.clone.date_changed}}
-                        <b>{{machine.is_active}} {{machine.date_changed}}</b>
-                    </small>
                    <a ng-show="machine.screenshot" ng-click="action(machine, 'start')"><img
                     ng-src="data:image/png;base64,{{machine.screenshot}}" alt="{{machine.name}}" class="img-thumbnail" width="260"
                     ></a>

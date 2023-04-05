@@ -215,6 +215,10 @@
 
                 var copy_machine_data = function(machine,data) {
                     var reload=false;
+                    if (data.list_clones.length < machine.list_clones.length) {
+                        machine.list_clones = data.list_clones;
+                        reload=true;
+                    }
                     for (var i = 0; i < data.list_clones.length; i++) {
                         if (!machine.list_clones[i]
                             ||machine.list_clones[i].id != data.list_clones[i].id
