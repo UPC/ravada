@@ -3492,6 +3492,7 @@ sub copy_machine {
 
     my $new_name = delete $arg->{new_name};
     my $owner = delete $arg->{new_owner};
+    my $volatile = delete $arg->{copy_is_volatile};
 
     warn "Error: unknown args ".Dumper($arg) if keys %$arg;
 
@@ -3507,7 +3508,7 @@ sub copy_machine {
     push @create_args, ( name => $name ) if !defined $number || $number == 1;
     push @create_args, ( name => $name ) if !$number || $number == 1;
     push @create_args, ( id_owner => $owner ) if ($owner);
-    push @create_args, ( volatile => $arg->{copy_is_volatile} ? 1 : 0 );
+    push @create_args, ( volatile => $volatile);
     push @create_args, ( add_to_pool => $arg->{copy_is_pool} && $base->is_pool() ? 1 : 0 );
 
     my $req2 = Ravada::Request->clone(
