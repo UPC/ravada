@@ -125,21 +125,33 @@
                 });
             };
 
+            $scope.change_clone = function(machine) {
+                if (typeof(machine.clone) != 'undefined'
+                && machine.clone) {
+                    machine.is_active = machine.clone.is_active;
+                    machine.screenshot= machine.clone.screenshot;
+                }
+            };
+
             $scope.action = function(machine, action, confirmed) {
                 machine.action = false;
                 if (action == 'start') {
                     if ((! confirmed) && (! machine.is_active)) {
                         $scope.checkMaxMachines(action, machine); 
                     } else {
+                        if (machine.clone) {
+                            window.location.assign('/machine/view/' + machine.clone.id + '.html');
+                        } else {
                         window.location.assign('/machine/clone/' + machine.id + '.html');
+                        }
                     }                    
                 } else if ( action == 'restore' ) {
-                    $scope.host_restore = machine.id_clone;
+                    $scope.host_restore = machine.clone.id;
                     $scope.host_shutdown = 0;
                     $scope.host_force_shutdown = 0;
                 } else if (action == 'shutdown' || action == 'hibernate' || action == 'force_shutdown') {
                     $scope.host_restore = 0;
-                    $http.get( '/machine/'+action+'/'+machine.id_clone+'.json');
+                    $http.get( '/machine/'+action+'/'+machine.clone.id+'.json');
                 } else {
                     alert("unknown action "+action);
                 }
@@ -177,17 +189,20 @@
                             if ( !$scope.machines[i] || $scope.machines[i].id != data[i].id ) {
                                 $scope.machines[i] = data[i];
                                 $scope.machines[i].description = data[i].description;
+                                $scope.machines[i].clone = $scope.machines[i].list_clones[0];
+                                $scope.machines[i].screenshot = data[i].screenshot;
+                                set_one_clone($scope.machines[i]);
                             } else {
                                 $scope.machines[i].can_hibernate = data[i].can_hibernate;
                                 $scope.machines[i].id= data[i].id;
                                 $scope.machines[i].id_clone = data[i].id_clone;
-                                $scope.machines[i].is_active = data[i].is_active;
                                 $scope.machines[i].is_locked = data[i].is_locked;
                                 $scope.machines[i].is_public = data[i].is_public;
                                 $scope.machines[i].name = data[i].name;
                                 $scope.machines[i].name_clone = data[i].name_clone;
-                                $scope.machines[i].screenshot = data[i].screenshot;
                                 $scope.machines[i].description = data[i].description;
+                                copy_machine_data($scope.machines[i],data[i]);
+
                             }
                             if ( data[i].is_public == 1) {
                                 $scope.public_bases++;
@@ -197,6 +212,38 @@
                         }
                     });
                 }
+
+                var copy_machine_data = function(machine,data) {
+                    var reload=false;
+                    for (var i = 0; i < data.list_clones.length; i++) {
+                        if (!machine.list_clones[i]
+                            ||machine.list_clones[i].id != data.list_clones[i].id
+                        ) {
+                            machine.list_clones[i] = data.list_clones[i];
+                            reload=true;
+                        } else {
+                            machine.list_clones[i].is_active = data.list_clones[i].is_active;
+                            machine.list_clones[i].screenshot = data.list_clones[i].screenshot;
+                            if (machine.clone.id == machine.list_clones[i].id) {
+                                machine.screenshot = machine.list_clones[i].screenshot;
+                            }
+
+                        }
+                    }
+                    if (reload) {
+                        set_one_clone(machine);
+                    }
+                };
+
+                var set_one_clone = function(machine) {
+                    machine.clone=machine.list_clones[0];
+                    for (var i=machine.list_clones.length-1; i>=0; i--) {
+                        if(machine.list_clones[i].is_active) {
+                            machine.clone=machine.list_clones[i];
+                        }
+                    }
+                    $scope.change_clone(machine);
+                };
             };
 
             var subscribe_ping_backend= function(url) {

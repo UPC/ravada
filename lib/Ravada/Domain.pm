@@ -1612,6 +1612,7 @@ sub _data($self, $field, $value=undef, $table='domains') {
         if ($data eq '_data' && $field eq 'status'
             && $value ne $self->{$data}->{$field}
         ) {
+            warn $self->id." ".$self->name." $field=$value";
             $self->_data('date_status_change'=>Ravada::Utils::now());
 
             $self->_log_active_domains();

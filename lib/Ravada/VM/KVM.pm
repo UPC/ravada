@@ -1468,7 +1468,8 @@ sub _ua_get($self, $url) {
         sleep 1+$try;
     }
     confess "Error getting '$url'" if !$res;
-    return unless $res->code == 200 || $res->code == 301;
+    warn $url if !defined $res->code;
+    return unless defined $res->code && ( $res->code == 200 || $res->code == 301);
 
     $self->_cache_store($url,$res->body);
     return $res->dom;
