@@ -339,7 +339,7 @@ sub search_user {
     }
 
     die "ERROR: ".$mesg->code." : ".$mesg->error
-        if $mesg->code;
+        if $mesg->code && $mesg->code != 4 && $mesg->count;
 
     return if !$mesg->count();
 

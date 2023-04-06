@@ -1025,6 +1025,27 @@ get '/machine/check_access/(#id_domain)' => sub {
     return $c->render( json => { ok => $domain->access_allowed(client => \%client)});
 };
 
+get '/machine/check_access/(#id_domain)/(#user)' => sub {
+    my $c = shift;
+
+    return _access_denied($c) if !$USER->is_admin;
+
+    my $user_name = $c->stash('user');
+    my $user = Ravada::Auth::SQL->new(name => $user_name);
+
+    if (!$user->id && Ravada::Auth::LDAP::search_user($user_name)) {
+        Ravada::Auth::SQL::add_user(
+            name => $user_name
+            ,is_external => 1
+            ,external_auth => 'ldap'
+        );
+        $user = Ravada::Auth::SQL->new(name => $user_name);
+    }
+
+    return $c->render( json => { ok => $user->allowed_access($c->stash('id_domain'))});
+};
+
+
 get '/machine/delete_access/(#id_domain)/(#id_access)' => sub {
     my $c = shift;
 
@@ -1442,7 +1463,11 @@ get '/list_ldap_attributes/(#cn)' => sub {
 
     my $user;
     eval {
-        ($user) = Ravada::Auth::LDAP::search_user($cn);
+        if ($cn =~ /^[a-z0-9\.-_]+/i) {
+            ($user) = Ravada::Auth::LDAP::search_user(name => $cn.'*', escape_username => 0 , sizelimit => 2);
+        } else {
+            ($user) = Ravada::Auth::LDAP::search_user($cn);
+        }
     };
     my $return;
     if ( $@ ) {
@@ -1452,7 +1477,30 @@ get '/list_ldap_attributes/(#cn)' => sub {
     } elsif (!$user) {
         $return = { error => "User not found" };
     } else {
-        $return = {attributes => [sort $user->attributes]};
+        my $values;
+        for my $attribute ( sort $user->attributes ) {
+            my @values = $user->get_value($attribute);
+            if  ($attribute =~/Password|unicodePwd/i) {
+                for (@values) {
+                    s/./*/g;
+                    $_='********' if length($_)>8;
+                }
+            }
+            if (scalar(@values)<2) {
+                $values->{$attribute} = $values[0];
+            } else {
+                $values->{$attribute} = \@values;
+            }
+        }
+        my $field = $Ravada::CONFIG->{ldap}->{field};
+        $field = 'cn' if !defined $field;
+        my $user_name = $user->get_value($field);
+        $return = {
+            dn_found => $user->dn
+            , name => $user_name
+            , attributes => [sort { uc($a) cmp uc($b) } $user->attributes]
+            , values => $values
+        };
     }
 
     $c->session(ldap_attributes_cn => $cn) if $user;
@@ -1684,7 +1732,7 @@ post '/request/(:name)/' => sub {
         confess "Error: $_ should not be provided".Dumper($args)
         if exists $args->{$_};
     }
-    if (($name eq 'start_clones') || ($name eq 'start_clones_sequentially')) {
+    if ($name =~ /^(start_clones|open_exposed_ports)/) {
         $args->{remote_ip} = _remote_ip($c);
     }
     app->log->info($USER->name." requesting $name ".encode_json($args)) if $CONFIG_FRONT->{log}->{log};
@@ -2857,6 +2905,7 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
                     uid => $USER->id
                 , id_domain => $domain->id
                 , retry => 20
+                , remote_ip => _remote_ip($c)
                 ) if $domain->list_ports();
             }
 
@@ -3445,6 +3494,7 @@ sub copy_machine {
 
     my $new_name = delete $arg->{new_name};
     my $owner = delete $arg->{new_owner};
+    my $volatile = ( delete $arg->{copy_is_volatile} or 0);
 
     warn "Error: unknown args ".Dumper($arg) if keys %$arg;
 
@@ -3460,7 +3510,7 @@ sub copy_machine {
     push @create_args, ( name => $name ) if !defined $number || $number == 1;
     push @create_args, ( name => $name ) if !$number || $number == 1;
     push @create_args, ( id_owner => $owner ) if ($owner);
-    push @create_args, ( volatile => $arg->{copy_is_volatile} ? 1 : 0 );
+    push @create_args, ( volatile => $volatile);
     push @create_args, ( add_to_pool => $arg->{copy_is_pool} && $base->is_pool() ? 1 : 0 );
 
     my $req2 = Ravada::Request->clone(

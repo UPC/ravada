@@ -1368,11 +1368,17 @@ sub test_change_display_settings_kvm($domain) {
         my @options = $driver->get_options;
         die "Error: no options for driver $driver_name" if !scalar(@options);
         for my $option ( @options ) {
+            my ($field,$value) = $option->{value} =~ /(.*)=(.*)/;
+            $value =~ s/^"(.*)"$/$1/;
+            die Dumper([$driver_name, $option]) if !$field || !$value;
+            my $option2 = { $field => $value };
             my $req = Ravada::Request->change_hardware(
                 uid => user_admin->id
                 ,id_domain => $domain->id
                 ,hardware => 'display'
-                ,data => { $driver_name => $option->{value} , driver => $display->{driver} }
+                ,data => { extra => { $driver_name => $option2 }
+                        ,driver => $display->{driver}
+                }
                 ,index => $display->{_index}
             );
             for ( 1 .. 10 ) {
@@ -1386,8 +1392,8 @@ sub test_change_display_settings_kvm($domain) {
             my ($display2) = grep { $_->{driver} eq $display->{driver} }
                 $domain->_get_controller_display();
 
-            is($display2->{extra}->{$driver_name}, $option->{value}, $driver_name)
-                or die Dumper( $domain->name , $display2);
+            is_deeply($display2->{extra}->{$driver_name}, $option2, $driver_name)
+                or die Dumper( $domain->name , $display2->{extra});
         }
     }
 }

@@ -175,6 +175,30 @@ sub _test_change_disk($base, $clone) {
 }
 
 sub _test_change_display($base, $clone) {
+
+    _test_change_display_settings($base, $clone);
+    _test_change_display_driver($base, $clone);
+}
+
+sub _test_change_display_settings($base, $clone) {
+
+    my $display = $base->info(user_admin)->{hardware}->{display}->[0];
+    my ($key) = sort keys %{$display->{extra}};
+    delete $display->{extra}->{$key};
+
+    my $req = Ravada::Request->change_hardware(
+            uid => user_admin->id
+            ,hardware => 'display'
+            ,id_domain => $base->id
+            ,index => 0
+            ,data => $display
+    );
+
+    wait_request(debug => 0);
+    wait_request(debug => 0);
+}
+
+sub _test_change_display_driver($base, $clone) {
     for my $driver ('vnc','spice') {
         my $req = Ravada::Request->change_hardware(
             uid => user_admin->id

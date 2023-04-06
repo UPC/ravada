@@ -231,6 +231,8 @@ sub _get_controller_display($self) {
         $row->{extra} = decode_json($row->{extra})
         if exists $row->{extra} && defined $row->{extra};
 
+        delete $row->{extra} if ref($row->{extra}) && !keys %{$row->{extra}};
+
         $row->{file_extension} = ($file_extension{$row->{driver}} or '');
 
         if ( $is_active && $row->{id_domain_port} ) {
@@ -248,6 +250,7 @@ sub _get_controller_display($self) {
 
         $row->{_can_remove} = 1;
         $row->{_index}=$index++ if !$row->{is_secondary};
+        $row->{_can_edit}=1 if $row->{is_builtin} && !$row->{is_secondary} && $row->{extra};
         push @displays, ($row);
     }
     #    $self->_fix_ports_duplicated(\@displays) if $self->is_active();

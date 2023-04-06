@@ -784,9 +784,7 @@ sub _display_info_spice($graph) {
     for my $item ( $graph->findnodes("*")) {
         next if $item->getName eq 'listen';
         for my $attr ( $item->getAttributes()) {
-            my $value = $attr->toString();
-            $value =~ s/^\s+//;
-            $display{$item->getName()} = $value;
+            $display{$item->getName()}->{$attr->getName} = $attr->getValue();
         }
     }
 
@@ -2936,9 +2934,24 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
     $self->reload_config($doc);
 }
 
+sub _default_hw_display() {
+    return {
+        type => 'spice'
+        ,extra => {
+            'image' => { 'compression' => 'auto_glz' }
+            ,'jpeg' => { 'compression' => 'auto' }
+            ,'playback' => { 'compression' => 'on' }
+            ,'streaming' => { 'mode' => 'filter' }
+            ,'zlib' => { 'compression' => 'auto' }
+        }
+    }
+};
 sub _change_hardware_display($self, $index, $data) {
+    $data = _default_hw_display()
+    if defined $data && ! keys %$data;
+
     my $type = delete $data->{driver};
-    $type =~ s/-tls$//;
+    $type =~ s/-tls$// if $type;
     my $port = delete $data->{port};
     confess if $port;
 
@@ -2948,9 +2961,12 @@ sub _change_hardware_display($self, $index, $data) {
     my @graphics = $doc->findnodes("/domain/devices/graphics");
 
     my $graphics=$graphics[$index];
+
+    die "Error: I can't find graphics #$index. Only ".scalar(@$graphics)." found" if !$graphics;
+
     my $old_type = $graphics->getAttribute('type');
     my $changed = 0;
-    if ($old_type ne $type ) {
+    if (defined $type && $old_type ne $type ) {
         $graphics->removeAttribute('port');
         $graphics->setAttribute(type => $type);
         for my $node ($graphics->findnodes('*')) {
@@ -2958,16 +2974,9 @@ sub _change_hardware_display($self, $index, $data) {
         }
         $changed++;
     }
-    for my $item (keys %$data) {
-        my ($node) = $graphics->findnodes($item);
-        $node = $graphics->addNewChild(undef,$item) if !$node;
-        my ($attrib,$value) = $data->{$item} =~ /(.*?)=(.*)/;
-        $value =~ s/^"(.*)"$/$1/;
-
-        if ( $node->getAttribute($attrib) ne $value ) {
-            $node->setAttribute($attrib => $value);
-            $changed++;
-        }
+    my $extra = $data->{extra};
+    for my $item (keys %$extra) {
+        $changed += _change_xml($graphics,$item,$extra->{$item});
     }
 
     $self->reload_config($doc) if $changed;
