@@ -159,20 +159,11 @@ sub list_machines_user($self, $user, $access_data={}) {
             , description => ($description or '')
             , id_clone => undef
             , name_clone => undef
-            , is_locked => undef
-            , can_hibernate => 0
-            , list_clones => [ map { {id => $_->id
-                        ,name => $_->name
-                        ,is_active => $_->is_active
-                        ,screenshot => $_->_data('screenshot')
-                        ,date_changed => $_->_data('date_changed')
-                    }} @clones ]
         );
 
-        _copy_clone_info($user, \%base, \@clones) if @clones;
+        _copy_clone_info($user, \%base, \@clones);
 
         next if !$self->_access_allowed($id, $base{id_clone}, $access_data);
-        $base{screenshot} =~ s{^/var/www}{};
         lock_hash(%base);
         push @list,(\%base);
     }
@@ -181,28 +172,36 @@ sub list_machines_user($self, $user, $access_data={}) {
 }
 
 sub _copy_clone_info($user, $base, $clones) {
-    return if !@$clones;
 
-    my ($clone) =$clones->[0];
-
-    $base->{is_locked} = $clone->is_locked;
-    $base->{description} = ( $clone->_data('description')
-            or $base->{description});
-    $base->{can_remove} = 0;
-    $base->{can_remove} = 1 if $user->can_remove && $clone->id_owner == $user->id;
-    $base->{can_hibernate} = 1 if $clone->is_active && !$clone->is_volatile;
+    my @list;
     for my $clone (@$clones) {
+        my $c = {id => $clone->id
+                        ,name => $clone->name
+                        ,is_active => $clone->is_active
+                        ,screenshot => $clone->_data('screenshot')
+                        ,date_changed => $clone->_data('date_changed')
+        };
+
+        $c->{can_hibernate} = 1 if $clone->is_active && !$clone->is_volatile;
+        $c->{can_shutdown} = 1 if $clone->is_active;
+        $c->{is_locked} = $clone->is_locked;
+        $c->{description} = ( $clone->_data('description')
+                or $base->{description});
+        $c->{can_remove} = 0;
+
+        $c->{can_remove} = 1
+        if $user->can_remove() && $user->id == $clone->_data('id_owner');
+
         if ($clone->is_active && !$clone->is_locked
             && $user->can_screenshot) {
             my $req = Ravada::Request->screenshot(
                 id_domain => $clone->id
             );
         }
+        push @list,($c);
 
-        #    my $date_changed = $clone->_data('date_changed');
-        # $base->{date_changed} = $date_changed
-        # if !$base->{date_changed} || $date_changed gt $base->{date_changed};
     }
+    $base->{list_clones} = \@list;
 }
 
 sub _access_allowed($self, $id_base, $id_clone, $access_data) {

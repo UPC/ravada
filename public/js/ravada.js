@@ -130,6 +130,12 @@
                 && machine.clone) {
                     machine.is_active = machine.clone.is_active;
                     machine.screenshot= machine.clone.screenshot;
+                    if (machine.clone.description
+                            && machine.clone.description.length) {
+                        machine.description2 = machine.clone.description;
+                    } else {
+                        machine.description2 = machine.description;
+                    }
                 }
             };
 
@@ -149,7 +155,7 @@
                     $scope.host_restore = machine.clone.id;
                     $scope.host_shutdown = 0;
                     $scope.host_force_shutdown = 0;
-                } else if (action == 'shutdown' || action == 'hibernate' || action == 'force_shutdown') {
+                } else if (action == 'shutdown' || action == 'hibernate' || action == 'force_shutdown' || action == 'reboot') {
                     $scope.host_restore = 0;
                     $http.get( '/machine/'+action+'/'+machine.clone.id+'.json');
                 } else {
@@ -192,6 +198,7 @@
                                 $scope.machines[i].clone = $scope.machines[i].list_clones[0];
                                 $scope.machines[i].screenshot = data[i].screenshot;
                                 set_one_clone($scope.machines[i]);
+                                $scope.machines[i].description2 = $scope.machines[i].description;
                             } else {
                                 $scope.machines[i].can_hibernate = data[i].can_hibernate;
                                 $scope.machines[i].id= data[i].id;
@@ -199,8 +206,6 @@
                                 $scope.machines[i].is_locked = data[i].is_locked;
                                 $scope.machines[i].is_public = data[i].is_public;
                                 $scope.machines[i].name = data[i].name;
-                                $scope.machines[i].name_clone = data[i].name_clone;
-                                $scope.machines[i].description = data[i].description;
                                 copy_machine_data($scope.machines[i],data[i]);
 
                             }
