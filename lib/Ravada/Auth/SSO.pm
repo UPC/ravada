@@ -17,13 +17,14 @@ Ravada::Auth::SSO - SSO library for Ravada
 use Moose;
 
 no warnings "experimental::signatures";
-use feature qw(signatures);
+use feature qw(signatures state);
 
 use Ravada::Auth::SQL;
 
 with 'Ravada::Auth::User';
 
 our $CONFIG = \$Ravada::CONFIG;
+our $ERR;
 
 sub BUILD {
     my $self = shift;
@@ -112,6 +113,35 @@ sub is_admin { }
 
 sub is_external { }
 
-sub init { }
+sub init {
+    state $warn = 0;
+    if ( $$CONFIG->{sso} ) {
+        for my $field (qw(url service cookie)) {
+            if ( !exists $$CONFIG->{sso}->{$field} ) {
+                $ERR = "Error: Missing sso / $field in config file\n";
+                warn $ERR unless $warn++;
+                return 0;
+            }
+        }
+        for my $field (qw(priv_key pub_key)) {
+            if ( !exists $$CONFIG->{sso}->{cookie}->{$field}
+            || ! $$CONFIG->{sso}->{cookie}->{$field}) {
+                $ERR = "Error: Missing sso / cookie / $field in config file\n";
+                warn $ERR unless $warn++;
+                return 0;
+            }
+            my $file = $$CONFIG->{sso}->{cookie}->{$field};
+            if (! -e $file) {
+                $ERR = "Error: Missing or unreadable file $file\n";
+                warn $ERR unless $warn++;
+                return 0;
+
+            }
+
+        }
+        return 1;
+    }
+    return 0;
+}
 
 1;
