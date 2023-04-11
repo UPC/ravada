@@ -73,6 +73,17 @@ our %VALID_CONFIG = (
         ,size_limit => undef
         ,secure => undef
     }
+    ,sso => {
+        service => undef
+        ,logout => undef
+        ,url => undef
+        ,cookie => {
+            pub_key => undef
+            ,priv_key => undef
+            ,type => undef
+            ,timeout => undef
+        }
+    }
     ,log => undef
 );
 

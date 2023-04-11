@@ -498,10 +498,12 @@ sub init($config=undef, $sqlite = 1 , $flush=0) {
         $config = { vm => [ $config ] };
     }
 
+    my $config_file;
     if ($config && ref($config) ) {
         $FILE_CONFIG_TMP = "/tmp/ravada_".base_domain_name()."_$$.conf";
         DumpFile($FILE_CONFIG_TMP, $config);
         $CONFIG = $FILE_CONFIG_TMP;
+        $config_file = $FILE_CONFIG_TMP;
     } else {
         $CONFIG = $config;
     }
@@ -524,7 +526,14 @@ sub init($config=undef, $sqlite = 1 , $flush=0) {
         $USER_ADMIN = undef;
     }
 
-    rvd_back($config, 0 ,$sqlite)  if !$RVD_BACK || $flush;
+    if ( !$RVD_BACK || $flush ) {
+        if ($config_file) {
+            rvd_back($config_file, 0 ,$sqlite);
+            rvd_front($config_file);
+        } else {
+            rvd_back($config, 0 ,$sqlite);
+        }
+    }
     if (!$sqlite) {
         $CONNECTOR = $RVD_BACK->connector;
     } else {
