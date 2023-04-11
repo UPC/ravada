@@ -826,6 +826,9 @@ sub _update_isos {
           ,has_cd => 0
         }
     );
+    $self->_update_table($table, $field, \%data);
+    $self->_update_table_isos_url(\%data);
+
     $self->_scheduled_fedora_releases(\%data) if $0 !~ /\.t$/;
     $self->_update_table($table, $field, \%data);
 
@@ -1418,7 +1421,6 @@ sub _update_data {
     my $self = shift;
 
     $self->_remove_old_isos();
-    $self->_update_isos();
 
     $self->_install_grants();
     $self->_remove_old_indexes();
