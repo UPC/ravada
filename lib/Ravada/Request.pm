@@ -36,7 +36,7 @@ our %FIELD = map { $_ => 1 } qw(error output);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
 our $args_manage = { name => 1 , uid => 1, after_request => 2 };
-our $args_prepare = { id_domain => 1 , uid => 1, with_cd => 2 };
+our $args_prepare = { id_domain => 1 , uid => 1, with_cd => 2, publish => 2 };
 our $args_remove_base = { id_domain => 1 , uid => 1 };
 our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
 

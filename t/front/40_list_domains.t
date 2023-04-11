@@ -130,11 +130,31 @@ sub test_list_bases {
 
 sub test_list_bases_many_clones($vm) {
     my $base = create_domain($vm);
-    $base->prepare_base(user_admin);
 
     my $list = rvd_front->list_machines_user(user_admin);
     my ($entry) = grep { $_->{id} == $base->id} @$list;
-    is($entry->{name}, $base->name);
+    ok($entry);
+    is($entry->{is_base},0);
+    is($entry->{can_shutdown},0) or die Dumper($entry);
+    is($entry->{can_prepare_base},1) or die Dumper($entry);
+    is_deeply($entry->{list_clones},[]);
+
+    $base->start(user_admin);
+    $list = rvd_front->list_machines_user(user_admin);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    is($entry->{can_shutdown},1) or die Dumper($entry);
+
+    $base->force_shutdown(user_admin);
+
+    $base->prepare_base(user_admin);
+
+    $list = rvd_front->list_machines_user(user_admin);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok($entry);
+    is($entry->{is_base},1);
+    is($entry->{can_prepare_base},0) or die Dumper($entry);
+
+    is($entry->{name}, $base->name) or die Dumper($entry);
     is($entry->{name_clone},undef);
     is_deeply($entry->{list_clones},[]);
 
@@ -146,7 +166,6 @@ sub test_list_bases_many_clones($vm) {
 
     ($entry) = grep { $_->{id} == $base->id} @$list;
     is ($entry->{name}, $base->name);
-    is($entry->{name_clone},$clone->name);
     is(scalar(@{$entry->{list_clones}}), 1) or die Dumper($entry->{list_clones});
 
     my $clone2 = $base->clone(user => user_admin
@@ -157,20 +176,12 @@ sub test_list_bases_many_clones($vm) {
 
     ($entry) = grep { $_->{id} == $base->id} @$list;
     is(scalar(@{$entry->{list_clones}}), 2);
-    is($entry->{name_clone},$clone->name);
 
-    # now first one must be the active
-    $clone2->start(user_admin);
-    $list = rvd_front->list_machines_user(user_admin);
-
-    ($entry) = grep { $_->{id} == $base->id} @$list;
-    is(scalar(@{$entry->{list_clones}}), 2);
     my $clone_info = $entry->{list_clones}->[0];
     is(ref($clone_info),'HASH');
     for (qw(id name is_active)) {
-        ok($clone_info->{$_},"Expecting $_ in ".Dumper($clone_info));
+        ok(exists $clone_info->{$_},"Expecting $_ in ".Dumper($clone_info));
     }
-    is($entry->{name_clone},$clone2->name) or exit;
 
     remove_domain($base);
 

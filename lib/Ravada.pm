@@ -4742,6 +4742,7 @@ sub _cmd_prepare_base {
     return if $domain->is_base();
 
     $domain->prepare_base(user => $user, with_cd => $with_cd);
+    $domain->is_public(1) if $request->defined_arg('publish');
 
 }
 
