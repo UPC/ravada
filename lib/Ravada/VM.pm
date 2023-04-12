@@ -12,7 +12,6 @@ Ravada::VM - Virtual Managers library for Ravada
 use utf8;
 use Carp qw( carp confess croak cluck);
 use Data::Dumper;
-use Fcntl ':mode';
 use File::Path qw(make_path);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
