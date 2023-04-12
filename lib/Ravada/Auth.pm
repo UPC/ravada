@@ -6,6 +6,7 @@ use strict;
 our $LDAP_OK;
 our $SSO_OK;
 
+use Data::Dumper;
 use Ravada::Auth::SQL;
 
 =head1 NAME
