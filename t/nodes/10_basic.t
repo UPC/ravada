@@ -664,8 +664,7 @@ sub test_volatile_req_clone($vm, $node) {
             ,number => 3
             ,uid => user_admin->id
         );
-        rvd_back->_process_all_requests_dont_fork();
-        rvd_back->_process_all_requests_dont_fork();
+        wait_request();
         is($req->status, 'done');
         is($req->error,'');
 
