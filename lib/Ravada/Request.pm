@@ -36,7 +36,7 @@ our %FIELD = map { $_ => 1 } qw(error output);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
 our $args_manage = { name => 1 , uid => 1, after_request => 2 };
-our $args_prepare = { id_domain => 1 , uid => 1, with_cd => 2 };
+our $args_prepare = { id_domain => 1 , uid => 1, with_cd => 2, publish => 2 };
 our $args_remove_base = { id_domain => 1 , uid => 1 };
 our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
 
@@ -188,6 +188,7 @@ qw(
     set_time
     open_exposed_ports
     manage_pools
+    screenshot
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -755,9 +756,7 @@ sub _new_request {
     $self->{args} = decode_json($args{args});
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
     if (!$force
-        && (
-        $CMD_NO_DUPLICATE{$args{command}}
-        || ($no_duplicate && $args{command} =~ /^(screenshot)$/))
+        && ( $CMD_NO_DUPLICATE{$args{command}} || $no_duplicate)
         ){
         my $id_dupe = $self->_duplicated_request();
 

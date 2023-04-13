@@ -151,6 +151,29 @@ sub test_clone_default_name($vm) {
 
 }
 
+sub test_many_clones($vm) {
+    my $base = create_domain($vm);
+    my $user = create_user(new_domain_name(),$$);
+    Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    $base->is_public(1);
+    my $req = Ravada::Request->clone(
+        uid => $user->id
+        ,id_domain => $base->id
+        ,number => 2
+    );
+    wait_request( debug => 0);
+
+    my $bases = rvd_front->list_machines_user($user);
+    my ($base_user) = grep { $_->{name} eq $base->name } @$bases;
+    ok($base_user);
+    is(scalar(@{$base_user->{list_clones}}),2);
+
+    remove_domain($base);
+}
+
 sub test_clone_private($vm) {
     my $base = create_domain($vm);
     my $user = create_user(new_domain_name(),$$);
@@ -196,7 +219,7 @@ sub test_clone_private($vm) {
     my $bases2 = rvd_front->list_machines_user($user);
     my ($base_user) = grep { $_->{name} eq $base->name } @$bases2;
     ok($base_user);
-    is($base_user->{name_clone},$name);
+    is($base_user->{list_clones}->[0]->{name},$name);
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
@@ -226,6 +249,7 @@ for my $vm_name (reverse sort @VMS) {
         test_description($vm_name);
         test_clone_private($vm);
         test_clone_default_name($vm);
+        test_many_clones($vm);
 
         my $domain = test_create_domain($vm_name);
 
