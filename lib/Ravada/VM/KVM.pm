@@ -386,14 +386,17 @@ sub _list_volumes($self) {
 
 sub _list_used_volumes_known($self) {
     my $sth = $self->_dbh->prepare(
-        "SELECT id FROM domains WHERE id_vm=?"
+        "SELECT id,name FROM domains WHERE id_vm=?"
     );
     $sth->execute($self->id);
     my @used;
-    while ( my ($id) = $sth->fetchrow) {
+    while ( my ($id, $name) = $sth->fetchrow) {
         my $dom = Ravada::Front::Domain->open($id);
         my $xml = $dom->xml_description();
-        push @used,($self->_find_all_volumes($xml));
+        my @vols = $self->_find_all_volumes($xml);
+        die $xml if !@vols;
+        warn Dumper(\@vols) if $name =~ /2023/;
+        push @used,@vols;
     }
     return @used;
 }
@@ -455,6 +458,7 @@ sub list_unused_volumes($self) {
 
         next if !$info || $info->{type} eq 2;
 
+        #        cluck Dumper([ $file, [sort grep /2023/,keys %used]]) if $file =~/2023/;
         push @unused,($file);
 
     }
