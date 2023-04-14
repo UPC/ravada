@@ -468,3 +468,34 @@ span.info {
     cursor: not-allowed;
 }
 
+th.list {
+    padding: 0.5em;
+    align: center;
+    border: 1px solid black;
+}
+
+td.list {
+    padding: 0.5em;
+    text-align: right;
+    border: 1px solid lightgray;
+}
+
+td.name {
+    padding: 0.5em;
+    text-align: left;
+    border: 1px solid lightgray;
+}
+
+td.bold {
+    padding: 0.5em;
+    text-align: left;
+    font-weight: bold;
+    border: 1px solid lightgray;
+}
+
+
+td.box{
+    padding: 0.5em;
+    text-align: center;
+    border: 1px solid lightgray;
+}

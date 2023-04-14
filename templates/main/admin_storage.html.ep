@@ -6,34 +6,72 @@
     %= include 'bootstrap/navigation'
     <div id="page-wrapper" ng-controller="manage_storage_pools"
                            ng-init="init(<%= $id_vm %>)"
-        >
-        <h2>Storage in <%= $vm_name %></h2>
-    <div class="row">
-        <div class="col"><h5><%=l 'Unused volumes' %></h5></div>
-    </div>
-    <i ng-show="!unused_volumes" class="fas fa-sync-alt fa-spin"></i>
-    <div ng-show="unused_volumes" class="ml-4">
-        <div>
-        <button type="button" ng-click="remove_selected()">
-            <%=l 'Remove Selected' %>
-        </button>
-        </div>
-
-        <div ng-repeat="volume in unused_volumes">
-                    <input type="checkbox"
-                        ng-model="volume.remove"/>
-                    <label>{{volume.file}}</label>
+    >
+    <div id="admin-content">
+        <div class="row">
+            <div class="col-md-8"><h2><%=l 'Storage' %></h2></div>
+            <div class="col-md-4" align="right" ng-show="false">
+                  <h2><a type="button"
+                          class="btn btn-success" href="/storage/new">
+                            <b><%=l 'New Storage' %></b></a>
+                  </h2>
+            </div>
         </div>
 
 
-        <i ng-show="req_more" class="fas fa-sync-alt fa-spin"></i>
-        <a href="#" ng-click="more()" ng-show="list_more && ! req_more">
-            <%=l 'more' %>
-        </a>
-    </div>
+        <div ng-show="!pools">
+            <i class="fas fa-sync-alt fa-spin"></i>
+        </div>
 
+
+        <table class="admin-cont-body" ng-show="pools && !unused_volumes && !loading_unused">
+
+            <thead>
+                <tr>
+                    <th></th>
+                    <th class="list">Enabled</th>
+                    <th class="list">Size</th>
+                    <th class="list">Used</th>
+                    <th class="list">Available</th>
+                    <th class="list">Used %</th>
+                    <th class="list">Path</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr ng-repeat="pool in pools| orderObjectBy:'name'"
+                    class="bg-light"
+                    ng-cloak
+                >
+                    <td class="bold">
+                        {{pool.name}}
+                    </td>
+                    <td class="box">
+                        <input type="checkbox" ng-disabled="true"
+                       ng-model="pool.is_active"
+                       ng-true-value="1"
+                       ng-false-value="0"
+                       />
+                    </td>
+                    <td class="list">{{pool.size}}</td>
+                    <td class="list">{{pool.used}}</td>
+                    <td class="list">{{pool.available}}</td>
+                    <td class="list">{{pool.pc_used}}</td>
+                    <td class="name">{{pool.path}}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <br/>
+        <input type="submit" value="<%=l 'List unused volumes' %>"
+            ng-click="list_unused_volumes()"
+            ng-hide="unused_volumes || loading_unused"
+        />
+        %= include '/main/storage_unused'
+    </div>
     </div>
 </div>
+
 %= include $footer
 %= include 'bootstrap/scripts'
 </body>

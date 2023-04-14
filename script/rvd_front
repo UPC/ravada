@@ -786,6 +786,15 @@ any '/(:item)/settings/(:id).html' => sub($c) {
     return $c->render( template => '/main/settings_generic' );
 };
 
+any '/(:item)/settings/' => sub($c) {
+
+    _add_admin_libs($c);
+    $c->stash(tab => ($c->param('tab') or ''));
+    my $item = $c->stash('item');
+
+    return $c->render( template => '/main/settings_generic' );
+};
+
 get '/node/info/(:id).json' => sub($c) {
     my $sth = $RAVADA->_dbh->prepare("SELECT id,name,version FROM vms "
         ." WHERE id=?"
@@ -2361,6 +2370,12 @@ sub _headers($c) {
 
 get '/booking/(#template).html' => sub($c) {
     return $c->render( template => '/booking/'.$c->stash('template'));
+};
+
+get '/storage/list_pools/(:id_vm)' => sub($c) {
+    my $query = $c->req->query_params;
+    my $pools = $RAVADA->list_storage_pools($USER->id, $c->stash('id_vm'));
+    return $c->render( json => $pools );
 };
 
 get '/storage/list_unused_volumes' => sub($c) {

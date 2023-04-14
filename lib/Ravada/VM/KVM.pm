@@ -131,7 +131,7 @@ sub _list_storage_pools($vm) {
     confess if !defined $vm || !ref($vm);
    for ( ;; ) {
        my @pools;
-       eval { @pools = $vm->list_storage_pools };
+       eval { @pools = $vm->list_all_storage_pools };
        return @pools if !$@;
        die $@ if $@ && $@ !~ /libvirt error code: 1,/;
        sleep 1;
@@ -208,6 +208,7 @@ sub _load_storage_pool {
     }
 
     for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
         my $info = _get_pool_info($pool);
         next if defined $available
                 && $info->{available} <= $available;
@@ -262,6 +263,7 @@ sub search_volume($self,$file,$refresh=0) {
 
     my $vol;
     for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
         if ($refresh) {
             for ( 1 .. 10 ) {
                eval { $pool->refresh() };
@@ -327,6 +329,7 @@ sub search_volume_re($self,$pattern,$refresh=0) {
 
     my @volume;
     for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
        my @vols;
        for ( 1 .. 10) {
            eval { @vols = $pool->list_all_volumes() };
@@ -368,6 +371,7 @@ sub remove_file($self,@files) {
 sub _list_volumes($self) {
     my @volumes;
     for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
        my @vols;
        for ( 1 .. 10) {
            eval { @vols = $pool->list_all_volumes() };
@@ -463,6 +467,7 @@ sub refresh_storage_pools($self) {
 
 sub _refresh_storage_pools($self) {
     for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
         for ( 1 .. 10 ) {
             eval { $pool->refresh() };
             last if !$@;
@@ -2709,12 +2714,58 @@ sub is_alive($self) {
     return 0;
 }
 
-sub list_storage_pools($self) {
+sub list_storage_pools($self, $data=undef) {
     confess "No VM " if !$self->vm;
+
+    my @pools = _list_storage_pools($self->vm);
+    if ($data) {
+        my @ret;
+        for my $pool (@pools) {
+            push @ret,(_storage_data($pool));
+        }
+        return @ret;
+    }
+
     return
         map { $_->get_name }
         grep { $_-> is_active }
-        _list_storage_pools($self->vm);
+        @pools;
+}
+
+sub _storage_data($pool) {
+    my $p = {
+        name => $pool->get_name
+        ,is_active => $pool->is_active
+    };
+    my $xml = XML::LibXML->load_xml(
+        string => $pool->get_xml_description()
+    );
+    my ($capacity) = $xml->findnodes("/pool/capacity");
+    $p->{size} = $capacity->textContent / 1024 / 1024 / 1024;
+    my ($available) = $xml->findnodes("/pool/available");
+    $p->{available} = int($available->textContent/1024/1024/1024);
+
+    my ($allocation) = $xml->findnodes("/pool/allocation");
+    $p->{used} = int($allocation->textContent/1024/1024/1024);
+
+    if ($p->{size}) {
+        $p->{pc_used} = int($p->{used}/$p->{size}*100);
+    }
+
+    my ($path) = $xml->findnodes("/pool/target/path");
+    $p->{path} = $path->textContent();
+
+    $p->{size} = int($p->{size});
+
+    return $p;
+}
+
+sub storage_info($self, $name) {
+    my $pool = $self->vm->get_storage_pool_by_name($name)
+        or die "Error: no storage pool '$name'\n";
+
+    return _storage_data($pool);
+
 }
 
 sub free_memory($self) {
