@@ -121,6 +121,78 @@ sub test_links_dir($vm, $machine) {
 }
 
 
+sub test_list_unused_discover($vm, $machine) {
+    $vm->refresh_storage();
+
+    my @volumes = $machine->list_volumes;
+
+    my $sth = connector->dbh->prepare(
+        "DELETE FROM volumes WHERE id_domain=?"
+    );
+    $sth->execute($machine->id);
+
+    my $req = Ravada::Request->list_unused_volumes(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,start => 0
+        ,limit => 1000
+    );
+    wait_request();
+    my $out_json = $req->output;
+    $out_json = '[]' if !defined $out_json;
+    my $output = decode_json($out_json);
+
+    for my $vol (@volumes) {
+        my $found = _search_file($output, $vol);
+        ok(!$found,"Expecting $vol not found");
+    }
+
+}
+
+sub test_list_unused_discover2($vm) {
+
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+
+    my $base2 = $base->clone(name => new_domain_name
+        ,user => user_admin
+    );
+    $base2->prepare_base(user_admin);
+
+    my $machine = $base2->clone(name => new_domain_name
+        ,user => user_admin
+    );
+
+    my @volumes;
+
+    for my $d ($base, $base2, $machine) {
+        push @volumes, ( $d->list_volumes, $d->list_files_base );
+        my $sth = connector->dbh->prepare(
+            "DELETE FROM volumes WHERE id_domain=?"
+        );
+        $sth->execute($d->id);
+    }
+    $vm->refresh_storage();
+
+    my $req = Ravada::Request->list_unused_volumes(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,start => 0
+        ,limit => 1000
+    );
+    wait_request();
+    my $out_json = $req->output;
+    $out_json = '[]' if !defined $out_json;
+    my $output = decode_json($out_json);
+
+    for my $vol (@volumes) {
+        my $found = _search_file($output, $vol);
+        ok(!$found,"Expecting $vol not found");
+    }
+
+}
+
+
 sub test_list_unused($vm, $machine, $hidden_vols) {
     my $dir = $vm->dir_img();
 
@@ -154,7 +226,7 @@ sub test_list_unused($vm, $machine, $hidden_vols) {
     ok($found,"Expecting $file found ") or die Dumper($output);
 
     my @used_vols = _used_volumes($machine);
-    for my $vol (@used_vols, @$hidden_vols) {
+    for my $vol (@used_vols, @$hidden_vols, $machine->list_volumes) {
         my $found = _search_file($output, $vol);
         ok(!$found,"Expecting $vol not found");
     }
@@ -385,7 +457,11 @@ for my $vm_name ( vm_names() ) {
         my $clone = _create_clone($vm);
         my @hidden_bs = _create_clone_hide_bs($clone);
 
+        test_list_unused_discover($vm, $clone);
+        test_list_unused_discover2($vm);
+
         test_list_unused($vm, $clone, \@hidden_bs);
+
 
         test_links_dir($vm, $clone);
         test_links($vm, $clone);
