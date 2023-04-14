@@ -355,6 +355,86 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     return @volume;
 }
 
+sub _list_volumes($self) {
+    my @volumes;
+    for my $pool (_list_storage_pools($self->vm)) {
+       my @vols;
+       for ( 1 .. 10) {
+           eval { @vols = $pool->list_all_volumes() };
+           last if !$@ || $@ =~ / no storage pool with matching uuid/;
+           warn "WARNING: on search volume_re: $@";
+           sleep 1;
+       }
+       for my $vol ( @vols ) {
+           my $file;
+           eval { ($file) = $vol->get_path };
+           confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
+           push @volumes,($file);
+       }
+    }
+    return @volumes;
+}
+
+sub _list_used_volumes_known($self) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT id FROM domains WHERE id_vm=?"
+    );
+    $sth->execute($self->id);
+    my @used;
+    while ( my ($id) = $sth->fetchrow) {
+        my $dom = Ravada::Front::Domain->open($id);
+        my $xml = $dom->xml_description();
+        push @used,($self->_find_all_volumes($xml));
+    }
+    return @used;
+}
+
+sub _find_all_volumes_bs($self, $disk) {
+    my @volumes;
+    for my $bs ($disk->findnodes("backingStore")) {
+        my ($source) = $bs->findnodes("source");
+        if ($source) {
+            my $file = $source->getAttribute('file');
+            push @volumes,($file) if $file;
+        }
+        my @bs = $self->_find_all_volumes_bs($bs);
+        push @volumes,@bs if scalar(@bs);
+    }
+    return @volumes;
+}
+
+sub _find_all_volumes($self, $xml) {
+    my @used;
+    my $doc = XML::LibXML->load_xml(string => $xml);
+    for my $disk ($doc->findnodes("/domain/devices/disk")) {
+        my ($source) = $disk->findnodes("source");
+        next if !$source;
+        my $file = $source->getAttribute('file');
+        push @used,($file) if $file;
+        my @used_bs = $self->_find_all_volumes_bs($disk);
+        push @used,@used_bs if scalar(@used_bs);
+    }
+    return @used;
+}
+
+sub _list_used_volumes($self) {
+    my @used =$self->_list_used_volumes_known();
+    for my $name ( $self->discover ) {
+        my $dom = $self->vm->get_domain_by_name($name);
+        push @used,$self->_find_all_volumes($dom->get_xml_description());
+    }
+    return @used;
+}
+
+sub list_unused_volumes($self) {
+    my %used = map { $_ => 1 } $self->_list_used_volumes();
+    my @unused;
+    for my $vol ( sort $self->_list_volumes ) {
+        push @unused,($vol) unless $used{$vol};
+    }
+    return @unused;
+}
+
 sub refresh_storage_pools($self) {
     $self->_refresh_storage_pools();
 }

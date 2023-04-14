@@ -6030,6 +6030,7 @@ sub _req_method {
     ,import_domain => \&_cmd_import
     ,update_iso_urls => \&_cmd_update_iso_urls
 
+    ,list_unused_volumes => \&_cmd_list_unused_volumes
     );
     return $methods{$cmd};
 }
@@ -6380,6 +6381,23 @@ sub _cmd_import($self, $request) {
         ,vm => $request->args('vm')
         ,spinoff_disks => $request->defined_arg('spinoff_disks')
     );
+}
+
+sub _cmd_list_unused_volumes($self, $request) {
+    my %found = ();
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms "
+    );
+    $sth->execute();
+    while ( my ($id) = $sth->fetchrow()) {
+        my $vm;
+        eval { $vm = Ravada::VM->open($id) };
+        warn $@ if $@;
+        $found{$vm->name} = [$vm->list_unused_volumes];
+    }
+
+    $request->output(encode_json(\%found)) if $request;
+    return \%found;
 }
 
 =head2 set_debug_value

@@ -158,6 +158,7 @@ our %VALID_ARG = (
         ,spinoff_disks => 2
     }
     ,update_iso_urls => { uid => 1 }
+    ,list_unused_volumes => {uid => 1 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
