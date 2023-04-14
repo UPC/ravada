@@ -1,12 +1,16 @@
 <div ng-show="unused_volumes || loading_unused">
-    <h4><%=l 'Unused storage volumes' %></h4>
-        <div>
-        <button type="button" ng-click="remove_selected()">
+    <h4><%=l 'Unused volumes' %></h4>
+        <div ng-show="unused_volumes.length>0">
+        <button type="button" ng-click="remove_selected()"
+            ng-enabled="n_selected"
+        >
             <%=l 'Remove Selected' %>
         </button>
         </div>
 
-        <div ng-repeat="volume in unused_volumes">
+        <div ng-repeat="volume in unused_volumes"
+            class="ml-4"
+        >
                     <input type="checkbox"
                         ng-model="volume.remove"/>
                     <label>{{volume.file}}</label>

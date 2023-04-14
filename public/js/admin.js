@@ -869,6 +869,7 @@ ravadaApp.directive("solShowMachine", swMach)
     function manage_storage_pools($scope, $http, $interval, $timeout) {
         var start=0;
         var limit=10;
+        $scope.n_selected = 0;
         $scope.init=function(id_vm) {
             $scope.id_vm = id_vm;
             list_storage_pools(id_vm);
@@ -902,13 +903,18 @@ ravadaApp.directive("solShowMachine", swMach)
             var remove = [];
             var files = $scope.unused_volumes;
             var keep = [];
+            var count = 0;
             for (var i=0; i<files.length; i++ ) {
                 if (files[i].remove) {
                     remove.push(files[i].file);
+                    count++;
                 } else {
                     keep.push(files[i]);
                 }
             }
+            if (!count) {
+                return;
+            };
             $scope.unused_volumes = keep;
             $http.post('/request/remove_files'
                 ,JSON.stringify({'id_vm': $scope.id_vm , 'files': remove })
