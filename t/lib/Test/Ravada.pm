@@ -993,6 +993,7 @@ sub _activate_storage_pools($vm) {
     my @sp = $vm->vm->list_all_storage_pools();
     for my $sp (@sp) {
         next if $sp->is_active;
+        next unless $sp->get_name =~ /^tst_/;
         diag("Activating sp ".$sp->get_name." on ".$vm->name);
         $sp->build() unless $sp->is_active;
         $sp->create() unless $sp->is_active;

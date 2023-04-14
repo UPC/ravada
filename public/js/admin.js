@@ -11,7 +11,6 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("manage_storage_pools",manage_storage_pools)
         .controller("settings_node",settings_node)
         .controller("settings_network",settings_network)
-        .controller("settings_storage",settings_storage)
         .controller("new_node", newNodeCtrl)
         .controller("settings_global", settings_global_ctrl)
         .controller("admin_groups", admin_groups_ctrl)
@@ -872,13 +871,21 @@ ravadaApp.directive("solShowMachine", swMach)
         var limit=10;
         $scope.init=function(id_vm) {
             $scope.id_vm = id_vm;
-            $scope.list_unused_volumes();
+            list_storage_pools(id_vm);
         };
 
+        list_storage_pools= function(id_vm) {
+            $http.get('/storage/list_pools/'+id_vm).then(function(response) {
+                $scope.pools = response.data;
+            });
+        }
+
         $scope.list_unused_volumes=function() {
+            $scope.loading_unused=true;
             $http.get('/storage/list_unused_volumes?id_vm='+$scope.id_vm
                 +'&start='+start+'&limit='+limit)
                     .then(function(response) {
+                $scope.loading_unused=false;
                 $scope.list_more = response.data.more;
                 if (!$scope.unused_volumes) {
                     $scope.unused_volumes = response.data.list;
@@ -1241,12 +1248,6 @@ ravadaApp.directive("solShowMachine", swMach)
         };
         $scope.show_hdev = { 1: true};
 
-    };
-
-    function settings_storage($scope, $http, $timeout) {
-        var url_ws;
-        $scope.init = function() {
-        };
     };
 
     function admin_groups_ctrl($scope, $http) {

@@ -1617,6 +1617,66 @@ sub list_cpu_models($self, $uid, $id_domain) {
     return $models;
 }
 
+=head2 list_storage_pools
+
+Returns a reference to a list of the storage pools
+
+=cut
+
+sub list_storage_pools($self, $uid, $id_vm) {
+
+    my $key="list_storage_pools_$id_vm";
+
+    my $cache = $self->_cache_get($key);
+    return $cache if $cache;
+
+    my $req = Ravada::Request->list_storage_pools(
+        id_vm => $id_vm
+        ,uid => $uid
+        ,data => 1
+    );
+    return [] if !$req;
+    $self->wait_request($req);
+    return [] if $req->status ne 'done';
+
+    my $pools = [];
+    $pools = decode_json($req->output()) if $req->output;
+
+    $self->_cache_store($key,$pools) if scalar(@$pools);
+
+    return $pools;
+}
+
+=head2 storage_info
+
+Returns information about a storage pool
+
+=cut
+
+sub storage_info($self, $uid, $id_vm, $name) {
+    my $key = "storage_info_${id_vm}_${name}";
+
+    my $cache = $self->_cache_get($key);
+    return $cache if $cache;
+
+    my $req = Ravada::Request->storage_info(
+        id_vm => $id_vm
+        ,uid => $uid
+        ,name => $name
+    );
+    return [] if !$req;
+    $self->wait_request($req);
+    return [] if $req->status ne 'done';
+
+    my $info = {};
+    $info = decode_json($req->output()) if $req->output;
+
+    $self->_cache_store($key,$info) if keys %$info;
+
+    return $info;
+
+}
+
 =head2 version
 
 Returns the version of the main module
