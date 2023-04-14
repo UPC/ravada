@@ -6031,7 +6031,7 @@ sub _req_method {
     ,update_iso_urls => \&_cmd_update_iso_urls
 
     ,list_unused_volumes => \&_cmd_list_unused_volumes
-    ,remove_file => \&_cmd_remove_file
+    ,remove_files => \&_cmd_remove_files
     );
     return $methods{$cmd};
 }
@@ -6389,29 +6389,25 @@ sub _cmd_list_unused_volumes($self, $request) {
     die "Error: ".$user->name." not authorized to dettach domain"
         if !$user->is_admin;
 
-    my %found = ();
-    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id FROM vms WHERE is_active=1"
-    );
-    $sth->execute();
+    my $vm;
+    eval { $vm = Ravada::VM->open($request->args('id_vm')) };
+    die "Error: I can't find VM ".$request->args('id_vm')." ".($@ or '')
+    if $@ || !$vm;
+
     my $limit = ($request->defined_arg('limit') or 10);
     my $start = ($request->defined_arg('start') or 0 );
     my $n_items = 0;
-    while ( my ($id) = $sth->fetchrow()) {
-        my $vm;
-        eval { $vm = Ravada::VM->open($id) };
-        my @list = $vm->list_unused_volumes($start, $limit);
-        if ( defined $limit && scalar(@list)>$limit) {
-            $#list = $limit;
-        }
-        $found{$vm->name} = [map { {file => $_} } @list ];
-        $n_items+=scalar(@list);
-        last if $n_items >= $limit;
-
+    my $more = 0;
+    my @files = $vm->list_unused_volumes($start, $limit+1);
+    if ( defined $limit && scalar(@files)>$limit) {
+            $#files = $limit;
+            $more=1;
     }
+    my @list = map { {file => $_} } @files;
 
-    $request->output(encode_json(\%found)) if $request;
-    return \%found;
+    $request->output(encode_json({list => \@list, more => $more}))
+        if $request;
+    return @list;
 }
 
 sub _search_domain_volume($self, $file) {
@@ -6426,19 +6422,24 @@ sub _search_domain_volume($self, $file) {
     return @dom;
 }
 
-sub _cmd_remove_file($self, $request) {
+sub _cmd_remove_files($self, $request) {
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
     die "Error: ".$user->name." not authorized to remove files"
         if !$user->is_admin;
 
-    my $file = $request->args('file');
+    my $file = $request->args('files');
+    my @file =($file);
+    if (ref($file)) {
+        @file = @$file;
+    }
     my @dom = $self->_search_domain_volume($file);
 
     die "Error: file $file belongs is in use by ".join(",", @dom)
     if @dom;
 
-    my $vm = Ravada::VM->open(name => $request->args('vm'));
-    $vm->remove_file($file);
+    my $vm = Ravada::VM->open($request->args('id_vm')) ;
+
+    $vm->remove_file(@file);
 }
 
 =head2 set_debug_value

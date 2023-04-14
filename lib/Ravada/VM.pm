@@ -73,6 +73,8 @@ requires 'free_disk';
 
 requires '_fetch_dir_cert';
 
+requires 'remove_file';
+
 ############################################################
 
 has 'host' => (
@@ -1563,20 +1565,6 @@ sub _read_file_local( $self, $file ) {
     confess "Error: file undefined" if !defined $file;
     CORE::open my $in,'<',$file or croak "$! $file";
     return join('',<$in>);
-}
-
-=head2 remove_file
-
-Removes a file from the storage of the virtual manager
-
-=cut
-
-sub remove_file( $self, $file ) {
-    die "Error: unsecure filename '$file'"
-    if $file =~ m{[`'\(\)\[]};
-
-    unlink $file if $self->is_local;
-    return $self->run_command("/bin/rm", $file);
 }
 
 =head2 create_iptables_chain

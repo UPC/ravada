@@ -355,6 +355,16 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     return @volume;
 }
 
+sub remove_file($self,@files) {
+    for my $file (@files) {
+        my $vol = $self->search_volume($file);
+        if (!$vol) {
+            warn "Warning: '$file' not found\n";
+        }
+        $vol->delete if $vol;
+    }
+}
+
 sub _list_volumes($self) {
     my @volumes;
     for my $pool (_list_storage_pools($self->vm)) {

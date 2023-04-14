@@ -160,6 +160,8 @@ our %VALID_ARG = (
     ,update_iso_urls => { uid => 1 }
     ,list_unused_volumes => {uid => 1 }
     ,remove_file => { uid => 1, vm => 1, file => 1 }
+    ,list_unused_volumes => {uid => 1, id_vm => 1, start => 2, limit => 2 }
+    ,remove_files => { uid => 1, id_vm => 1, files => 1 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }

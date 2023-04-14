@@ -377,6 +377,7 @@ sub list_unused_volumes($self,$start=0, $limit=10) {
     my $n_found=0;
     for my $vol ( sort $self->_list_volumes ) {
         next if ! -f $vol;
+        next if $vol =~ m{/\..*yml$};
 
         next if $n_found++ < $start;
 
@@ -417,6 +418,21 @@ sub search_volume_path_re {
     closedir $ls;
     return;
 
+}
+
+sub remove_file($self, @files) {
+    for my $file (@files) {
+
+        die "Error: unsecure filename '$file'"
+        if $file =~ m{[`'\(\)\[]};
+
+        if ($self->is_local) {
+            unlink $file;
+        } else {
+            $self->run_command("/bin/rm", $file);
+        }
+
+    }
 }
 
 sub import_domain($self, $name, $user, $backing_file) {

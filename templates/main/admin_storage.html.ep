@@ -5,28 +5,27 @@
 <div id="wrapper">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper" ng-controller="manage_storage_pools"
-                           ng-init="init()"
+                           ng-init="init(<%= $id_vm %>)"
         >
-    <h2>Storage</h2>
+        <h2>Storage in <%= $vm_name %></h2>
     <div class="row">
         <div class="col"><h5><%=l 'Unused volumes' %></h5></div>
     </div>
     <i ng-show="!unused_volumes" class="fas fa-sync-alt fa-spin"></i>
     <div ng-show="unused_volumes" class="ml-4">
+        <div>
         <button type="button" ng-click="remove_selected()">
             <%=l 'Remove Selected' %>
         </button>
-
-        <div ng-repeat="(vm,volumes) in unused_volumes">
-                <b>{{vm}}</b>
-                <div ng-repeat="volume in volumes">
-                    <input type="checkbox"
-                        ng-model="volume.checked"/>
-                    <label>{{volume.file}}</label>
-                </div>
         </div>
 
-        <a href="#" ng-click="more()">
+        <div ng-repeat="volume in unused_volumes">
+                    <input type="checkbox"
+                        ng-model="volume.remove"/>
+                    <label>{{volume.file}}</label>
+        </div>
+
+        <a href="#" ng-click="more()" ng-show="list_more">
             <%=l 'more' %>
         </a>
     </div>

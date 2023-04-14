@@ -22,6 +22,7 @@ sub _new_file($vm) {
         $file = $vm->dir_img."/00_".new_domain_name()."-".Ravada::Utils::random_name().".txt";
         last if !$vm->file_exists($file);
     }
+    $vm->write_file($file,'');
     return $file;
 }
 
@@ -45,6 +46,7 @@ sub test_list_unused($vm, $machine, $hidden_vols) {
 
     my $req = Ravada::Request->list_unused_volumes(
         uid => user_admin->id
+        ,id_vm => $vm->id
         ,start => 0
         ,limit => 1000
     );
@@ -71,6 +73,7 @@ sub test_list_unused($vm, $machine, $hidden_vols) {
 sub test_page($vm) {
     my $req = Ravada::Request->list_unused_volumes(
         uid => user_admin->id
+        ,id_vm => $vm->id
         ,start => 0
         ,limit => 10
     );
@@ -81,6 +84,7 @@ sub test_page($vm) {
 
     my $req2 = Ravada::Request->list_unused_volumes(
         uid => user_admin->id
+        ,id_vm => $vm->id
         ,start => 10
         ,limit => 20
     );
@@ -108,12 +112,11 @@ sub _test_vm($vm, $domain, $output) {
 
 sub _search_file($output, $file) {
     my $found;
-    for my $id_vm ( sort keys %$output ) {
-        my $list = $output->{$id_vm};
-        ($found) = grep( {$file eq $_->{file}} @$list);
-        return $found if $found;
-    }
-    return;
+    die "Missing list item" unless exists $output->{list};
+
+    my $list = $output->{list};
+    ($found) = grep( {$file eq $_->{file}} @$list);
+    return $found;
 }
 
 sub _used_volumes($machine) {
@@ -179,11 +182,12 @@ sub _create_clone_hide_bs($clone) {
 
 sub test_remove($vm, $clone) {
     my $file = _new_file($vm);
+    ok(-e $file) or exit;
     my $user = create_user(new_domain_name(),"bar");
-    my $req_fail = Ravada::Request->remove_file(
+    my $req_fail = Ravada::Request->remove_files(
         uid => $user->id
-        ,vm => $vm->name
-        ,file => $file
+        ,id_vm => $vm->id
+        ,files => $file
     );
 
     wait_request(check_error => 0);
@@ -191,20 +195,20 @@ sub test_remove($vm, $clone) {
 
     my ($file_clone) = $clone->list_volumes();
 
-    my $req_fail2 = Ravada::Request->remove_file(
+    my $req_fail2 = Ravada::Request->remove_files(
         uid => user_admin->id
-        ,vm => $vm->name
-        ,file => $file_clone
+        ,id_vm => $vm->id
+        ,files => $file_clone
     );
 
     wait_request(check_error => 0);
     like($req_fail2->error,qr/in use by/);
     ok( -e $file_clone, "Expecting file $file_clone not removed");
 
-    my $req = Ravada::Request->remove_file(
+    my $req = Ravada::Request->remove_files(
         uid => user_admin->id
-        ,vm => $vm->name
-        ,file => $file
+        ,id_vm => $vm->id
+        ,files => $file
     );
 
     wait_request();
@@ -215,14 +219,39 @@ sub test_remove_many($vm) {
     my $file1 = _new_file($vm);
     my $file2 = _new_file($vm);
     my $user = create_user(new_domain_name(),"bar");
-    my $req= Ravada::Request->remove_file(
+    $vm->refresh_storage_pools();
+    my $req= Ravada::Request->remove_files(
         uid => user_admin->id
-        ,vm => $vm->name
-        ,file => encode_json([$file1, $file2])
+        ,id_vm => $vm->id
+        ,files => [$file1, $file2]
     );
     wait_request();
     ok(!-e $file1);
     ok(!-e $file2);
+}
+
+sub test_more($vm) {
+    my $out_old = '';
+    my $more;
+
+    my $start = 0;
+    for ( 1 .. 100 ) {
+        my $req = Ravada::Request->list_unused_volumes(
+            uid => user_admin->id
+            ,start => $start
+            ,id_vm => $vm->id
+        );
+        wait_request();
+        my $out_json = $req->output;
+        $out_json = '{}' if !defined $out_json;
+        my $output = decode_json($out_json);
+
+        my $list = $output->{list};
+        $more = $output->{more};
+        last if !$more;
+        $start+=10;
+    }
+    ok(!$more);
 }
 
 ########################################################################
@@ -252,6 +281,8 @@ for my $vm_name ( vm_names() ) {
 
         test_remove($vm, $clone);
         test_remove_many($vm);
+
+        test_more($vm);
     }
 }
 
