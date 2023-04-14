@@ -25,7 +25,9 @@
                     <label>{{volume.file}}</label>
         </div>
 
-        <a href="#" ng-click="more()" ng-show="list_more">
+
+        <i ng-show="req_more" class="fas fa-sync-alt fa-spin"></i>
+        <a href="#" ng-click="more()" ng-show="list_more && ! req_more">
             <%=l 'more' %>
         </a>
     </div>
