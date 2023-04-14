@@ -6394,16 +6394,17 @@ sub _cmd_list_unused_volumes($self, $request) {
     die "Error: I can't find VM ".$request->args('id_vm')." ".($@ or '')
     if $@ || !$vm;
 
-    my $limit = ($request->defined_arg('limit') or 10);
+    my $limit = $request->defined_arg('limit');
+
     my $start = ($request->defined_arg('start') or 0 );
     my $n_items = 0;
     my $more = 0;
-    my @files = $vm->list_unused_volumes($start, $limit+1);
-    if ( defined $limit && scalar(@files)>$limit) {
+    my @files = $vm->list_unused_volumes($start, $limit);
+    if ( defined $limit && $limit && scalar(@files)>$limit) {
             $#files = $limit;
             $more=1;
     }
-    my @list = map { {file => $_} } @files;
+    my @list = map { {file => $_} } sort @files;
 
     $request->output(encode_json({list => \@list, more => $more}))
         if $request;
