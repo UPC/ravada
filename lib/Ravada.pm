@@ -6030,6 +6030,8 @@ sub _req_method {
 
     ,discover => \&_cmd_discover
     ,import_domain => \&_cmd_import
+    ,list_unused_volumes => \&_cmd_list_unused_volumes
+    ,remove_files => \&_cmd_remove_files
     ,update_iso_urls => \&_cmd_update_iso_urls
 
     ,list_unused_volumes => \&_cmd_list_unused_volumes

@@ -157,6 +157,8 @@ our %VALID_ARG = (
     ,import_domain => { uid => 1, vm => 1, id_owner => 1, name => 1
         ,spinoff_disks => 2
     }
+    ,list_unused_volumes => {uid => 1, id_vm => 1, start => 2, limit => 2 }
+    ,remove_files => { uid => 1, id_vm => 1, files => 1 }
     ,update_iso_urls => { uid => 1 }
     ,list_unused_volumes => {uid => 1 }
     ,remove_file => { uid => 1, vm => 1, file => 1 }
