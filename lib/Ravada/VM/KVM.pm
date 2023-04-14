@@ -391,11 +391,9 @@ sub _list_used_volumes_known($self) {
     $sth->execute($self->id);
     my @used;
     while ( my ($id, $name) = $sth->fetchrow) {
-        my $dom = Ravada::Front::Domain->open($id);
+        my $dom = $self->search_domain($name);
         my $xml = $dom->xml_description();
         my @vols = $self->_find_all_volumes($xml);
-        die $xml if !@vols;
-        warn Dumper(\@vols) if $name =~ /2023/;
         push @used,@vols;
     }
     return @used;
