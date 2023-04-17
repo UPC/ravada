@@ -12,6 +12,7 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("settings_node",settings_node)
         .controller("settings_network",settings_network)
         .controller("new_node", newNodeCtrl)
+        .controller("new_storage", new_storage)
         .controller("settings_global", settings_global_ctrl)
         .controller("admin_groups", admin_groups_ctrl)
         .controller('admin_charts', admin_charts_ctrl)
@@ -875,6 +876,23 @@ ravadaApp.directive("solShowMachine", swMach)
             list_storage_pools(id_vm);
         };
 
+        $scope.toggle_active = function(pool) {
+            if (pool.is_active) {
+                pool.is_active=0;
+            } else {
+                pool.is_active=1;
+            }
+            $http.post('/request/active_storage_pool'
+                ,JSON.stringify({'id_vm': $scope.id_vm
+                    , 'value': pool.is_active
+                    , 'name': pool.name})
+            ).then(function(response) {
+                console.log(response.data);
+                $scope.error = response.data.error;
+            });
+
+        };
+
         list_storage_pools= function(id_vm) {
             $http.get('/storage/list_pools/'+id_vm).then(function(response) {
                 $scope.pools = response.data;
@@ -990,6 +1008,53 @@ ravadaApp.directive("solShowMachine", swMach)
                 }
             });
         };
+    };
+
+    function new_storage($scope, $http, $timeout) {
+        var url_ws;
+        $scope.name_valid=true;
+        $scope.directory_valid=true;
+
+        $scope.init=function(id_vm, url) {
+            $scope.id_vm = id_vm;
+            url_ws = url;
+        };
+        $scope.check_name = function(name) {
+            const re = /^[a-zA-Z]+[a-zA-Z0-9_\.\-]*$/;
+            $scope.name_valid = re.test(name);
+        };
+        $scope.check_directory = function(name) {
+            const re = /^\/[a-zA-Z]+[a-zA-Z0-9_\.\-\/]*$/;
+            $scope.directory_valid = re.test(name);
+        };
+
+        $scope.name_duplicated=false;
+        $scope.add_storage = function() {
+            if (!$scope.name_valid) {
+                return;
+            }
+            $http.post('/request/create_storage_pool/'
+                ,JSON.stringify({
+                    'id_vm': $scope.id_vm
+                    ,'name': $scope.name
+                    ,'directory': $scope.directory})
+            ).then(function(response) {
+                if (response.data.ok == 1 ) {
+                    console.log(response.data);
+                    subscribe_request(response.data.request);
+                }
+            });
+        }
+        subscribe_request = function(id_request) {
+            console.log(url_ws);
+            var ws = new WebSocket(url_ws);
+            ws.onopen = function(event) { ws.send('request/'+id_request) };
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                $scope.request=data;
+            }
+        };
+
     };
 
    function settings_network($scope, $http, $timeout) {

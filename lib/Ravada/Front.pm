@@ -1303,6 +1303,10 @@ sub _cache_store($self, $key, $value, $timeout=60) {
     $self->{cache}->{$key} = [ $value, time+$timeout ];
 }
 
+sub _cache_clean($self) {
+    delete $self->{cache};
+}
+
 sub _cache_get($self, $key) {
 
     delete $self->{cache}->{$key}

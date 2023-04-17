@@ -685,19 +685,14 @@ sub _storage_path($self, $storage) {
 
 }
 
-sub _create_default_pool {
-    my $self = shift;
-    my $vm = shift;
-    $vm = $self->vm if !$vm;
+sub create_storage_pool($self, $name, $dir, $vm=$self->vm) {
 
     my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
 
-    my $dir = "/var/lib/libvirt/images";
-    mkdir $dir if ! -e $dir;
 
     my $xml =
 "<pool type='dir'>
-  <name>default</name>
+  <name>$name</name>
   <uuid>$uuid</uuid>
   <capacity unit='bytes'></capacity>
   <allocation unit='bytes'></allocation>
@@ -720,8 +715,20 @@ sub _create_default_pool {
         $pool->create();
         $pool->set_autostart(1);
     };
-    warn $@ if $@;
+    die "$@\n" if $@;
 
+}
+
+sub _create_default_pool($self, $vm=$self->vm) {
+    my $dir = "/var/lib/libvirt/images";
+    mkdir $dir if ! -e $dir;
+
+    my $name = 'default';
+
+    eval {
+    $self->_create_storage_pool($name, $dir, $vm);
+    };
+    warn $@ if $@;
 }
 
 =head2 create_domain
@@ -2768,6 +2775,17 @@ sub storage_info($self, $name) {
 
     return _storage_data($pool);
 
+}
+
+sub active_storage_pool($self, $name, $value=1) {
+    my $pool = $self->vm->get_storage_pool_by_name($name)
+        or die "Error: no storage pool '$name'\n";
+
+    if ( $value ) {
+        $pool->create();
+    } else {
+        $pool->destroy();
+    }
 }
 
 sub free_memory($self) {

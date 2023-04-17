@@ -10,9 +10,9 @@
     <div id="admin-content">
         <div class="row">
             <div class="col-md-8"><h2><%=l 'Storage' %></h2></div>
-            <div class="col-md-4" align="right" ng-show="false">
+            <div class="col-md-4" align="right">
                   <h2><a type="button"
-                          class="btn btn-success" href="/storage/new">
+                         class="btn btn-success" href="/storage/new/<%= $id_vm %>">
                             <b><%=l 'New Storage' %></b></a>
                   </h2>
             </div>
@@ -23,6 +23,7 @@
             <i class="fas fa-sync-alt fa-spin"></i>
         </div>
 
+        <div class="alert alert-danger" ng-show="error">{{error}}</div>
 
         <table class="admin-cont-body" ng-show="pools && !unused_volumes && !loading_unused">
 
@@ -47,7 +48,8 @@
                         {{pool.name}}
                     </td>
                     <td class="box">
-                        <input type="checkbox" ng-disabled="true"
+                        <input type="checkbox"
+                       ng-click="toggle_active(pool)"
                        ng-model="pool.is_active"
                        ng-true-value="1"
                        ng-false-value="0"
@@ -74,5 +76,6 @@
 
 %= include $footer
 %= include 'bootstrap/scripts'
+%= include 'bootstrap/messages'
 </body>
 </html>

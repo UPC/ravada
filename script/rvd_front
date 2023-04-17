@@ -1778,6 +1778,9 @@ post '/request/(:name)/' => sub {
         };
         warn $@ if $@;
     }
+
+    $RAVADA->_cache_clean();
+
     return $c->render(json => { ok => 0, error => $@ }) if !$req;
     return $c->render(json => { ok => 1, request => $req->id });
 };
@@ -2392,6 +2395,12 @@ get '/storage/list_unused_volumes' => sub($c) {
         $output = decode_json($req->output);
     }
     return $c->render( json => $output );
+};
+
+any '/storage/new/(:id_vm)' => sub($c) {
+    _add_admin_libs($c);
+
+    return $c->render(template => "/main/storage_new");
 };
 
 ###################################################
