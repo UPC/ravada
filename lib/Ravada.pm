@@ -6036,8 +6036,6 @@ sub _req_method {
     ,remove_files => \&_cmd_remove_files
     ,update_iso_urls => \&_cmd_update_iso_urls
 
-    ,list_unused_volumes => \&_cmd_list_unused_volumes
-    ,remove_files => \&_cmd_remove_files
     );
     return $methods{$cmd};
 }

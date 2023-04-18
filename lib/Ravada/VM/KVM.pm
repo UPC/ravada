@@ -687,7 +687,7 @@ sub _storage_path($self, $storage) {
 
 sub create_storage_pool($self, $name, $dir, $vm=$self->vm) {
 
-    my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+    my $uuid = $self->_unique_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
 
 
     my $xml =
@@ -2062,6 +2062,14 @@ sub _xml_modify_uuid {
     return $new_uuid;
 }
 
+sub _list_sp_uuids($self) {
+    my @uuids;
+    for my $sp ($self->list_storage_pools(1)) {
+        push @uuids,($sp->{uuid});
+    }
+    return @uuids;
+}
+
 sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
     my @uuids = @_;
     if (!scalar @uuids) {
@@ -2077,6 +2085,8 @@ sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
         eval { push @uuids,($domain->get_uuid_string) };
         confess $@ if $@ && $@ !~ /^libvirt error code: 42,/;
     }
+
+    push @uuids,($self->_list_sp_uuids);
 
     for (1..100) {
         my $new_pre = '';
@@ -2766,15 +2776,10 @@ sub _storage_data($pool) {
 
     $p->{size} = int($p->{size});
 
+    my ($uuid) = $xml->findnodes("/pool/uuid");
+    $p->{uuid} = $uuid->textContent();
+
     return $p;
-}
-
-sub storage_info($self, $name) {
-    my $pool = $self->vm->get_storage_pool_by_name($name)
-        or die "Error: no storage pool '$name'\n";
-
-    return _storage_data($pool);
-
 }
 
 sub active_storage_pool($self, $name, $value=1) {

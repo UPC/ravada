@@ -1012,6 +1012,7 @@ ravadaApp.directive("solShowMachine", swMach)
 
     function new_storage($scope, $http, $timeout) {
         var url_ws;
+        var ws;
         $scope.name_valid=true;
         $scope.directory_valid=true;
 
@@ -1030,7 +1031,8 @@ ravadaApp.directive("solShowMachine", swMach)
 
         $scope.name_duplicated=false;
         $scope.add_storage = function() {
-            if (!$scope.name_valid) {
+            $scope.request=undefined;
+            if (!$scope.name_valid || ! $scope.directory_valid) {
                 return;
             }
             $http.post('/request/create_storage_pool/'
@@ -1041,17 +1043,27 @@ ravadaApp.directive("solShowMachine", swMach)
             ).then(function(response) {
                 if (response.data.ok == 1 ) {
                     console.log(response.data);
+                    $scope.request = {
+                        'id': response.data.request
+                    };
                     subscribe_request(response.data.request);
                 }
             });
         }
         subscribe_request = function(id_request) {
-            console.log(url_ws);
-            var ws = new WebSocket(url_ws);
+            if(typeof(ws) === 'undefined') {
+                ws = new WebSocket(url_ws);
+            } else {
+                console.log("closing ws");
+                ws.close();
+                ws = new WebSocket(url_ws);
+            }
             ws.onopen = function(event) { ws.send('request/'+id_request) };
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);
-                $scope.request=data;
+                $scope.$apply(function () {
+                    $scope.request = data;
+                });
             }
         };
 

@@ -159,11 +159,7 @@ our %VALID_ARG = (
     ,import_domain => { uid => 1, vm => 1, id_owner => 1, name => 1
         ,spinoff_disks => 2
     }
-    ,list_unused_volumes => {uid => 1, id_vm => 1, start => 2, limit => 2 }
-    ,remove_files => { uid => 1, id_vm => 1, files => 1 }
     ,update_iso_urls => { uid => 1 }
-    ,list_unused_volumes => {uid => 1 }
-    ,remove_file => { uid => 1, vm => 1, file => 1 }
     ,list_unused_volumes => {uid => 1, id_vm => 1, start => 2, limit => 2 }
     ,remove_files => { uid => 1, id_vm => 1, files => 1 }
 );
@@ -1031,10 +1027,11 @@ sub status {
         return ($row->{status} or 'unknown');
     }
 
+    my $date_changed = $self->date_changed;
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
+                ." WHERE id=?");
     for ( 1 .. 10 ) {
         eval {
-            my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
-                ." WHERE id=?");
 
             $status = substr($status,0,64);
 
@@ -1048,6 +1045,14 @@ sub status {
 
     $self->_send_message($status, $message)
         if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
+
+    if ($status eq 'done' && $date_changed eq $self->date_changed) {
+        sleep 1;
+        my $sth2=$$CONNECTOR->dbh->prepare(
+            "UPDATE requests set date_changed=?"
+        );
+        $sth2->execute(Ravada::Utils::date_now);
+    }
     return $status;
 }
 
