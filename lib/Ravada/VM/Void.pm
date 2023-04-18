@@ -423,7 +423,7 @@ sub remove_file($self, @files) {
         if $file =~ m{[`'\(\)\[]};
 
         if ($self->is_local) {
-            unlink $file;
+            unlink $file or die "$! $file";
         } else {
             $self->run_command("/bin/rm", $file);
         }
