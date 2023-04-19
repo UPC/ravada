@@ -242,6 +242,7 @@
             $scope.edit = "";
             $scope.lock_info = false;
             $scope.topology = false;
+            $scope.searching_ldap_attributes = true;
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -739,16 +740,28 @@
                      ,'index': index
             });
           };
-          $scope.list_ldap_attributes= function() {
+          $scope.list_ldap_attributes = function() {
               $scope.ldap_entries = 0;
               $scope.ldap_verified = 0;
+              $scope.searching_ldap_attributes = true;
               if ($scope.cn) {
                   $http.get('/list_ldap_attributes/'+$scope.cn).then(function(response) {
                       $scope.ldap_error = response.data.error;
                       $scope.ldap_attributes = response.data.attributes;
+                      $scope.dn_found = response.data.dn_found;
+                      $scope.values = response.data.values;
+                      $scope.searching_ldap_attributes = false;
+                      $scope.user_name = response.data.name;
+                      $scope.check_access();
                   });
               }
           };
+          $scope.check_access = function() {
+                      $http.get('/machine/check_access/'+$scope.showmachine.id+"/"+$scope.user_name).then(function(response) {
+                          $scope.check_allowed=response.data.ok;
+                      });
+          };
+
           $scope.count_ldap_entries = function() {
               $scope.ldap_verifying = true;
               $http.get('/count_ldap_entries/'+$scope.ldap_attribute+'/'+$scope.ldap_attribute_value)
@@ -856,6 +869,7 @@
                   $scope.ldap_attributes_domain  = response.data.list;
                   $scope.ldap_attributes_default = response.data.default;
               });
+              $scope.check_access();
           };
           $scope.init_domain_access = function() {
               $http.get('/machine/list_access/'+$scope.showmachine.id).then(function(response) {
@@ -1029,6 +1043,7 @@
             $scope.access_last = [ ];
 
             $scope.new_base = undefined;
+            $scope.cn ='';
             $scope.list_ldap_attributes();
             $scope.list_caches = ['default','none','writethrough'
                 ,'writeback','directsync','unsafe'];
