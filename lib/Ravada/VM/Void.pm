@@ -417,13 +417,16 @@ sub search_volume_path_re {
 }
 
 sub remove_file($self, @files) {
+    my %done;
     for my $file (@files) {
+        next if $done{$file};
 
         die "Error: unsecure filename '$file'"
         if $file =~ m{[`'\(\)\[]};
 
         if ($self->is_local) {
-            unlink $file;
+            next if ! -e $file;
+            unlink $file or die "$! $file";
         } else {
             $self->run_command("/bin/rm", $file);
         }

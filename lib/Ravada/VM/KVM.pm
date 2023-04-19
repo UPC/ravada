@@ -360,7 +360,16 @@ sub search_volume_re($self,$pattern,$refresh=0) {
 
 sub remove_file($self,@files) {
     for my $file (@files) {
+        if ($self->is_local) {
+            next if ! -e $file;
+            unlink $file or die "$! $file";
+            next;
+        }
         my $vol = $self->search_volume($file);
+        if (!$vol) {
+            $self->_refresh_storage_pools();
+            $vol = $self->search_volume($file);
+        }
         if (!$vol) {
             warn "Warning: '$file' not found\n";
         }

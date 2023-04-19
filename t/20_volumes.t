@@ -255,7 +255,7 @@ sub test_qcow2($vm, $swap = 0, $link=undef) {
     }
 
     _do_test_file("QCOW2", $vm, $file);
-    $vm->remove_file($file);
+    $vm->remove_file($file) if $vm->file_exists($file);
 }
 
 sub test_raw($vm, $swap = 0) {
@@ -272,7 +272,7 @@ sub test_raw($vm, $swap = 0) {
     is($err,'') or return;
 
     _do_test_file("RAW", $vm, $file);
-    $vm->remove_file($file);
+    $vm->remove_file($file) if $vm->file_exists($file);
 }
 
 
@@ -299,7 +299,7 @@ sub test_void($vm, $swap=0) {
     $vm->write_file($file, Dump($data));
     _do_test_file("Void", $vm, $file);
 
-    $vm->remove_file($file);
+    $vm->remove_file($file) if $vm->file_exists($file);
 }
 
 sub test_void_swap($vm) {

@@ -7575,7 +7575,7 @@ sub remove_backup($self, $backup, $remove_file=0) {
     if ($remove_file) {
         my ($file) = $backup->{file};
         if ( $self->_vm->file_exists($file) ) {
-            $self->_vm->remove_file($file) or die "$! $file";
+            $self->_vm->remove_file($file);
         }
     }
     my $sth = $$CONNECTOR->dbh->prepare(
