@@ -2519,15 +2519,6 @@ sub _unique_mac {
     return 1;
 }
 
-sub _new_uuid {
-    my $uuid = shift;
-
-    my ($principi, $f1,$f2) = $uuid =~ /(.*)(.)(.)/;
-
-    return $principi.int(rand(10)).int(rand(10));
-
-}
-
 sub _read_used_macs($self) {
     return if keys %USED_MAC;
     for my $dom ($self->vm->list_all_domains) {

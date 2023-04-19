@@ -1054,7 +1054,6 @@ ravadaApp.directive("solShowMachine", swMach)
             if(typeof(ws) === 'undefined') {
                 ws = new WebSocket(url_ws);
             } else {
-                console.log("closing ws");
                 ws.close();
                 ws = new WebSocket(url_ws);
             }
