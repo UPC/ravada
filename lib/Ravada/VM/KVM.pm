@@ -1103,6 +1103,9 @@ sub _domain_create_from_base {
     $base = $vm_local->_search_domain_by_id($args{id_base}) if $args{id_base};
     confess "Unknown base id: $args{id_base}" if !$base;
 
+    my $volatile = $base->volatile_clones;
+    $volatile = delete $args{volatile} if exists $args{volatile} && defined $args{volatile};
+
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
 
@@ -1120,7 +1123,7 @@ sub _domain_create_from_base {
     _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
 
     my ($domain, $spice_password)
-        = $self->_domain_create_common($xml,%args, is_volatile => $base->volatile_clones);
+        = $self->_domain_create_common($xml,%args, is_volatile=>$volatile);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner}
         , id_vm => $self->id
     );

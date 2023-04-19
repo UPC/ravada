@@ -2815,10 +2815,14 @@ sub clone {
     push @args_copy, ( remote_ip => $remote_ip) if $remote_ip;
     push @args_copy, ( from_pool => $from_pool) if defined $from_pool;
     push @args_copy, ( add_to_pool => $add_to_pool) if defined $add_to_pool;
+    if ( $self->volatile_clones && !defined $volatile ) {
+        $volatile = 1;
+    }
+
     push @args_copy, ( volatile => $volatile )  if defined $volatile;
 
     my $vm = $self->_vm;
-    if ($self->volatile_clones ) {
+    if ($volatile) {
         $vm = $vm->balance_vm($uid, $self);
     } elsif( !$vm->is_local ) {
         for my $node ($self->_vm->list_nodes) {

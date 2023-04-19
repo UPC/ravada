@@ -339,6 +339,9 @@
                             }
                         }
                         $scope.copy_is_volatile = $scope.showmachine.is_volatile;
+                        if ($scope.showmachine.is_base) {
+                            $scope.copy_is_volatile = $scope.showmachine.volatile_clones;
+                        }
                         if (!subscribed_extra) {
                             subscribed_extra = true;
                             subscribe_nodes(url,data.type);

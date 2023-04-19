@@ -34,9 +34,15 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-12 mt-12">
-                    <input type="checkbox" name="copy_is_volatile" ng-model="copy_is_volatile">
+                <div class="col-md-2 mt-2">
                     <label class="control-label" for="copy_is_volatile"><%=l 'Volatile' %></label>
+                </div>
+
+                <div class="col-md-2 mt-2">
+                    <input type="checkbox" name="copy_is_volatile"
+                        ng-true-value="1"
+                        ng-false-value="0"
+                        ng-model="copy_is_volatile">
                 </div>
             </div>
             <div class="row" ng-show="showmachine.is_pool">
@@ -76,4 +82,5 @@
                <%=l 'This name is invalid. It can only contain alphabetic, numbers, undercores and dashes and must start by a letter.' %>
         </label>
     </div>
+
 </div>
