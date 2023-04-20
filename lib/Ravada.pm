@@ -6002,6 +6002,8 @@ sub _req_method {
 ,purge => \&_cmd_purge
 
 ,list_storage_pools => \&_cmd_list_storage_pools
+,active_storage_pool => \&_cmd_active_storage_pool
+,create_storage_pool => \&_cmd_create_storage_pool
 
 # Domain ports
 ,expose => \&_cmd_expose
@@ -6449,6 +6451,25 @@ sub _cmd_remove_files($self, $request) {
     my $vm = Ravada::VM->open($request->args('id_vm')) ;
 
     $vm->remove_file(@file);
+}
+
+sub _cmd_active_storage_pool($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to manage storage pools"
+        if !$user->is_admin;
+
+    my $vm = Ravada::VM->open($request->args('id_vm'));
+    $vm->active_storage_pool($request->arg('name'), $request->arg('value'));
+}
+
+sub _cmd_create_storage_pool($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to manage storage pools"
+        if !$user->is_admin;
+
+    my $vm = Ravada::VM->open($request->args('id_vm'));
+    $vm->create_storage_pool($request->arg('name'), $request->arg('directory'));
+
 }
 
 =head2 set_debug_value
