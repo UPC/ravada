@@ -888,21 +888,22 @@ ravadaApp.directive("solShowMachine", swMach)
             });
         };
 
-        $scope.update_node = function() {
+        $scope.update_node = function(node) {
             $scope.error = '';
             var data = {
+                'id': node.id
+                ,'base_storage': node.base_storage
+                ,'default_storage': node.default_storage
+                ,'clone_storage': node.clone_storage
             };
             $http.post('/v1/node/set/'
                 , JSON.stringify(data))
-            //                    , JSON.stringify({ value: $scope.network[field]}))
                 .then(function(response) {
                     if (response.data.ok == 1){
                         $scope.saved = true;
                     }
                     $scope.error = response.data.error;
-                    console.log($scope.error);
                 });
-            $scope.formoptions_.$setPristine();
         };
 
         $scope.toggle_active = function(pool) {
@@ -923,8 +924,12 @@ ravadaApp.directive("solShowMachine", swMach)
         };
 
         list_storage_pools= function(id_vm) {
+            $scope.pools=[];
             $http.get('/storage/list_pools/'+id_vm).then(function(response) {
                 $scope.storage_pools = response.data;
+                for (var i=0;i<response.data.length;i++) {
+                    $scope.pools[i]=response.data[i].name;
+                }
             });
         }
 
