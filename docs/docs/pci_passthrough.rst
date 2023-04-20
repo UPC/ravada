@@ -135,7 +135,7 @@ Add id of the deviced used by nvidia at /etc/initramfs-tools/modules. This must 
 
 ::
 
-   vfio vfio_iommu_type1 vfio_virqfd vfio_pci ids=10de:2204,10de:1aef,10de:1ad8
+   vfio vfio_iommu_type1 vfio_virqfd vfio_pci ids=10de:2204,10de:1aef,10de:1ad8 allow_unsafe_interrupts=1
 
 Update the grub and initram configuration and reboot.
 
