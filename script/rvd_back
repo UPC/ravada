@@ -49,6 +49,8 @@ my $START = 1;
 my $TEST_LDAP;
 my $CLEAN_DB_LEFTOVERS;
 my $LOG_FILENAME;
+my $LIST_UNUSED_VOLS;
+my $SHOW_VOLUME;
 
 my $URL_ISOS;
 my $ALL;
@@ -121,6 +123,8 @@ my $USAGE = "$0 "
         ."Maintenance operations:\n"
         ." --clean-db-leftovers: properly clean database unreferenced entries\n"
         ." --log: saves STDOUT and STDERR app traces to the specified filename\n"
+        ." --list-unused-volumes\n"
+        ." --show-volume\n"
         ."\n"
     ;
 
@@ -167,6 +171,8 @@ GetOptions (       help => \$help
         ,"backup" => \$BACKUP
         ,"restore" => \$RESTORE
         ,"log=s"              => \$LOG_FILENAME
+        ,'list-unused-volumes' => \$LIST_UNUSED_VOLS
+        ,'show-volume' => \$SHOW_VOLUME
 
         ,"purge-nodes"      => \$PURGE_NODES
 
@@ -1060,6 +1066,68 @@ sub purge_nodes($rvd_back) {
     }
 }
 
+sub _vms($rvd_back) {
+    my $sth = $rvd_back->connector->dbh->prepare(
+        "SELECT id,name FROM vms "
+    );
+    $sth->execute;
+    my @ids;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @ids,($row);
+    }
+    return @ids;
+}
+
+sub list_unused_vols($rvd_back) {
+    for my $vm (_vms($rvd_back) ) {
+        print "$vm->{name}\n";
+        my $req = Ravada::Request->list_unused_volumes(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_vm => $vm->{id}
+            ,at => time + 30
+        );
+        $req->status('done');
+        for my $vol ( $rvd_back->_cmd_list_unused_volumes($req)) {
+            print $vol->{file}."\n";
+        }
+    }
+    exit;
+}
+
+sub _show_volume_cached($rvd_back, $file) {
+
+    my $sth = $rvd_back->connector->dbh->prepare(
+        "SELECT d.name FROM volumes v,domains d "
+        ." WHERE d.id=v.id_domain AND v.file=?");
+    $sth->execute($file);
+    my @dom;
+    while (my $row = $sth->fetchrow_hashref()) {
+        push @dom,($row->{name})
+    }
+    return @dom;
+}
+
+sub show_volume($rvd_back) {
+    die "Error: $0 --show-volume file1 file2 ... filen\n"
+    unless @ARGV;
+
+    for my $file (@ARGV) {
+        print "$file\n";
+        if ($file !~ m{^/}) {
+            print "Error: '$file' is not absolute path\n";
+            next;
+        }
+        my @dom = _show_volume_cached($rvd_back, $file);
+        if (scalar(@dom)) {
+            for (@dom) {
+                print "  - $_\n";
+            }
+        } else {
+            print "  - <UNUSED>\n";
+        }
+    }
+}
+
 sub DESTROY {
 }
 
@@ -1109,6 +1177,9 @@ backup($rvd_back)                   if $BACKUP;
 restore($rvd_back)                  if $RESTORE;
 
 purge_nodes($rvd_back)              if $PURGE_NODES;
+
+list_unused_vols($rvd_back)         if $LIST_UNUSED_VOLS;
+show_volume($rvd_back)              if $SHOW_VOLUME;
 }
 
 

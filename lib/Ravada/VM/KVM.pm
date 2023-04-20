@@ -131,7 +131,7 @@ sub _list_storage_pools($vm) {
     confess if !defined $vm || !ref($vm);
    for ( ;; ) {
        my @pools;
-       eval { @pools = $vm->list_storage_pools };
+       eval { @pools = $vm->list_all_storage_pools };
        return @pools if !$@;
        die $@ if $@ && $@ !~ /libvirt error code: 1,/;
        sleep 1;
@@ -208,6 +208,7 @@ sub _load_storage_pool {
     }
 
     for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
         my $info = _get_pool_info($pool);
         next if defined $available
                 && $info->{available} <= $available;
@@ -262,6 +263,7 @@ sub search_volume($self,$file,$refresh=0) {
 
     my $vol;
     for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
         if ($refresh) {
             for ( 1 .. 10 ) {
                eval { $pool->refresh() };
@@ -327,6 +329,7 @@ sub search_volume_re($self,$pattern,$refresh=0) {
 
     my @volume;
     for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
        my @vols;
        for ( 1 .. 10) {
            eval { @vols = $pool->list_all_volumes() };
@@ -355,12 +358,127 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     return @volume;
 }
 
+sub remove_file($self,@files) {
+    for my $file (@files) {
+        if ($self->is_local) {
+            next if ! -e $file;
+            unlink $file or die "$! $file";
+            next;
+        }
+        my $vol = $self->search_volume($file);
+        if (!$vol) {
+            $self->_refresh_storage_pools();
+            $vol = $self->search_volume($file);
+        }
+        if (!$vol) {
+            warn "Warning: '$file' not found\n";
+        }
+        $vol->delete if $vol;
+    }
+}
+
+sub _list_volumes($self) {
+    my @volumes;
+    for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
+       my @vols;
+       for ( 1 .. 10) {
+           eval { @vols = $pool->list_all_volumes() };
+           last if !$@ || $@ =~ / no storage pool with matching uuid/;
+           warn "WARNING: on search volume_re: $@";
+           sleep 1;
+       }
+       push @volumes,@vols;
+    }
+    return @volumes;
+}
+
+sub _list_used_volumes_known($self) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT id,name FROM domains WHERE id_vm=?"
+    );
+    $sth->execute($self->id);
+    my @used;
+    while ( my ($id, $name) = $sth->fetchrow) {
+        my $dom = $self->search_domain($name);
+        my $xml = $dom->xml_description();
+        my @vols = $self->_find_all_volumes($xml);
+        push @used,@vols;
+    }
+    return @used;
+}
+
+sub _find_all_volumes_bs($self, $disk) {
+    my @volumes;
+    for my $bs ($disk->findnodes("backingStore")) {
+        my ($source) = $bs->findnodes("source");
+        if ($source) {
+            my $file = $source->getAttribute('file');
+            push @volumes,($file) if $file;
+        }
+        my @bs = $self->_find_all_volumes_bs($bs);
+        push @volumes,@bs if scalar(@bs);
+    }
+    return @volumes;
+}
+
+sub _find_all_volumes($self, $xml) {
+    my @used;
+    my $doc = XML::LibXML->load_xml(string => $xml);
+    for my $disk ($doc->findnodes("/domain/devices/disk")) {
+        my ($source) = $disk->findnodes("source");
+        next if !$source;
+        my $file = $source->getAttribute('file');
+        push @used,($file) if $file;
+        my @used_bs = $self->_find_all_volumes_bs($disk);
+        push @used,@used_bs if scalar(@used_bs);
+    }
+    return @used;
+}
+
+sub _list_used_volumes($self) {
+    my @used =$self->_list_used_volumes_known();
+    for my $name ( $self->discover ) {
+        my $dom = $self->vm->get_domain_by_name($name);
+        push @used,$self->_find_all_volumes($dom->get_xml_description());
+    }
+    return @used;
+}
+
+sub list_unused_volumes($self) {
+    my %used = map { $_ => 1 } $self->_list_used_volumes();
+    my @unused;
+    my $file;
+
+    my $n_found=0;
+    for my $vol ( $self->_list_volumes ) {
+
+        eval { ($file) = $vol->get_path };
+        confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
+
+        next if $used{$file};
+
+        my $info;
+        eval { $info = $vol->get_info() };
+        die "$file $@" if $@
+        && ( ref($@) =~ /Sys::Virt:Error/ && $@->cod ne 50); #storage volume not found
+
+        next if !$info || $info->{type} eq 2;
+
+        #        cluck Dumper([ $file, [sort grep /2023/,keys %used]]) if $file =~/2023/;
+        push @unused,($file);
+
+    }
+    return @unused;
+}
+
 sub refresh_storage_pools($self) {
     $self->_refresh_storage_pools();
 }
 
 sub _refresh_storage_pools($self) {
     for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
         for ( 1 .. 10 ) {
             eval { $pool->refresh() };
             last if !$@;
@@ -2607,12 +2725,58 @@ sub is_alive($self) {
     return 0;
 }
 
-sub list_storage_pools($self) {
+sub list_storage_pools($self, $data=undef) {
     confess "No VM " if !$self->vm;
+
+    my @pools = _list_storage_pools($self->vm);
+    if ($data) {
+        my @ret;
+        for my $pool (@pools) {
+            push @ret,(_storage_data($pool));
+        }
+        return @ret;
+    }
+
     return
         map { $_->get_name }
         grep { $_-> is_active }
-        _list_storage_pools($self->vm);
+        @pools;
+}
+
+sub _storage_data($pool) {
+    my $p = {
+        name => $pool->get_name
+        ,is_active => $pool->is_active
+    };
+    my $xml = XML::LibXML->load_xml(
+        string => $pool->get_xml_description()
+    );
+    my ($capacity) = $xml->findnodes("/pool/capacity");
+    $p->{size} = $capacity->textContent / 1024 / 1024 / 1024;
+    my ($available) = $xml->findnodes("/pool/available");
+    $p->{available} = int($available->textContent/1024/1024/1024);
+
+    my ($allocation) = $xml->findnodes("/pool/allocation");
+    $p->{used} = int($allocation->textContent/1024/1024/1024);
+
+    if ($p->{size}) {
+        $p->{pc_used} = int($p->{used}/$p->{size}*100);
+    }
+
+    my ($path) = $xml->findnodes("/pool/target/path");
+    $p->{path} = $path->textContent();
+
+    $p->{size} = int($p->{size});
+
+    return $p;
+}
+
+sub storage_info($self, $name) {
+    my $pool = $self->vm->get_storage_pool_by_name($name)
+        or die "Error: no storage pool '$name'\n";
+
+    return _storage_data($pool);
+
 }
 
 sub free_memory($self) {

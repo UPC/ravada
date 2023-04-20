@@ -431,6 +431,9 @@ sub _pool_refresh($pool) {
     for ( ;; ) {
         eval { $pool->refresh };
         return if !$@;
+
+        return if ref($@) && $@->code == 1;
+
         warn "WARNING: on vol remove , pool refresh $@" if $@;
         sleep 1;
     }

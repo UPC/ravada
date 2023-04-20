@@ -1646,6 +1646,35 @@ sub list_cpu_models($self, $uid, $id_domain) {
     return $models;
 }
 
+=head2 list_storage_pools
+
+Returns a reference to a list of the storage pools
+
+=cut
+
+sub list_storage_pools($self, $uid, $id_vm) {
+
+    my $key="list_storage_pools_$id_vm";
+
+    my $cache = ($self->_cache_get($key) or []);
+
+    my $req = Ravada::Request->list_storage_pools(
+        id_vm => $id_vm
+        ,uid => $uid
+        ,data => 1
+    );
+    return $cache if !$req;
+    $self->wait_request($req);
+    return $cache if $req->status ne 'done';
+
+    my $pools = [];
+    $pools = decode_json($req->output()) if $req->output;
+
+    $self->_cache_store($key,$pools) if scalar(@$pools);
+
+    return $pools;
+}
+
 =head2 version
 
 Returns the version of the main module

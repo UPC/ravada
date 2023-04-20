@@ -85,7 +85,7 @@ our %VALID_ARG = (
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2, uid => 2 }
-    ,list_storage_pools => { id_vm => 1 , uid => 1 }
+    ,list_storage_pools => { id_vm => 1 , uid => 1, data => 2 }
     ,check_storage => { uid => 1 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
     ,cleanup => { timeout => 2 }
@@ -158,6 +158,8 @@ our %VALID_ARG = (
         ,spinoff_disks => 2
     }
     ,update_iso_urls => { uid => 1 }
+    ,list_unused_volumes => {uid => 1, id_vm => 1, start => 2, limit => 2 }
+    ,remove_files => { uid => 1, id_vm => 1, files => 1 }
 );
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }

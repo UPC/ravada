@@ -8,6 +8,7 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("messagesPage", messagesPageC)
         .controller("manage_nodes",manage_nodes)
         .controller("manage_networks",manage_networks)
+        .controller("manage_storage_pools",manage_storage_pools)
         .controller("settings_node",settings_node)
         .controller("settings_network",settings_network)
         .controller("new_node", newNodeCtrl)
@@ -862,6 +863,72 @@ ravadaApp.directive("solShowMachine", swMach)
 
         $scope.networks={};
         list_networks();
+    }
+
+
+    function manage_storage_pools($scope, $http, $interval, $timeout) {
+        var start=0;
+        var limit=10;
+        $scope.n_selected = 0;
+        $scope.init=function(id_vm) {
+            $scope.id_vm = id_vm;
+            list_storage_pools(id_vm);
+        };
+
+        list_storage_pools= function(id_vm) {
+            $http.get('/storage/list_pools/'+id_vm).then(function(response) {
+                $scope.pools = response.data;
+            });
+        }
+
+        $scope.list_unused_volumes=function() {
+            $scope.loading_unused=true;
+            $http.get('/storage/list_unused_volumes?id_vm='+$scope.id_vm
+                +'&start='+start+'&limit='+limit)
+                    .then(function(response) {
+                $scope.loading_unused=false;
+                $scope.list_more = response.data.more;
+                if (!$scope.unused_volumes) {
+                    $scope.unused_volumes = response.data.list;
+                    return;
+                }
+                for (var i=0; i<response.data.list.length ; i++) {
+                    $scope.unused_volumes.push(response.data.list[i]);
+                }
+                $scope.req_more = false;
+                window.scrollTo(0, document.body.scrollHeight);
+            });
+        }
+        $scope.remove_selected = function() {
+            var remove = [];
+            var files = $scope.unused_volumes;
+            var keep = [];
+            var count = 0;
+            for (var i=0; i<files.length; i++ ) {
+                if (files[i].remove) {
+                    remove.push(files[i].file);
+                    count++;
+                } else {
+                    keep.push(files[i]);
+                }
+            }
+            if (!count) {
+                return;
+            };
+            $scope.unused_volumes = keep;
+            $http.post('/request/remove_files'
+                ,JSON.stringify({'id_vm': $scope.id_vm , 'files': remove })
+            ).then(function(response) {
+                start=0;
+                $scope.unused_volumes=undefined;
+                $scope.list_unused_volumes();
+            });
+        }
+        $scope.more = function() {
+            start += limit;
+            $scope.req_more = true;
+            $scope.list_unused_volumes();
+        };
     }
 
     function newNodeCtrl($scope, $http, $timeout) {

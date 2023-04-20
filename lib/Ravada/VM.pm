@@ -73,6 +73,8 @@ requires 'free_disk';
 
 requires '_fetch_dir_cert';
 
+requires 'remove_file';
+
 ############################################################
 
 has 'host' => (
@@ -144,6 +146,8 @@ around 'ping' => \&_around_ping;
 around 'connect' => \&_around_connect;
 after 'disconnect' => \&_post_disconnect;
 
+around '_list_used_volumes' => \&_around_list_used_volumes;
+
 #############################################################
 #
 # method modifiers
@@ -178,6 +182,11 @@ sub open {
         confess "ERROR: Don't set the id and the type "
             if $args{id} && $args{type};
         return _open_type($proto,@_) if $args{type};
+
+        $args{id} = _search_id($args{name}) if $args{name};
+
+        confess "I don't know how to open ".Dumper(\%args)
+        if !$args{id};
     } else {
         $args{id} = shift;
     }
@@ -211,6 +220,15 @@ sub open {
     $VM{$args{id}} = $vm unless $args{readonly};
     return $vm;
 
+}
+
+sub _search_id($name) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms WHERE name=?"
+    );
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    return $id;
 }
 
 sub _refresh_version($self) {
@@ -1551,17 +1569,6 @@ sub _read_file_local( $self, $file ) {
     return join('',<$in>);
 }
 
-=head2 remove_file
-
-Removes a file from the storage of the virtual manager
-
-=cut
-
-sub remove_file( $self, $file ) {
-    unlink $file if $self->is_local;
-    return $self->run_command("/bin/rm", $file);
-}
-
 =head2 create_iptables_chain
 
 Creates a new chain in the system iptables
@@ -2404,6 +2411,58 @@ sub dir_backup($self) {
         }
     }
     return $dir_backup;
+}
+
+sub _is_link_remote($self, $vol) {
+
+    my ($out,$err) = $self->run_command("stat",$vol);
+    chomp $out;
+    $out =~ m{ -> (/.*)};
+    return $1 if $1;
+
+    my $path = "";
+    my $path_link;
+    for my $dir ( split m{/},$vol ) {
+        next if !$dir;
+        $path_link .= "/$dir" if $path_link && $dir;
+        $path.="/$dir";
+
+        ($out,$err) = $self->run_command("stat",$path);
+        chomp $out;
+        my ($dir_link) = $out =~ m{ -> (/.*)};
+
+        $path_link = $dir_link if $dir_link;
+    }
+    return $path_link if $path_link;
+
+}
+
+sub _is_link($self,$vol) {
+    return $self->_is_link_remote($vol) if !$self->is_local;
+
+    my $link = readlink($vol);
+    return $link if $link;
+
+    my $path = "";
+    my $path_link;
+    for my $dir ( split m{/},$vol ) {
+        next if !$dir;
+        $path_link .= "/$dir" if $path_link && $dir;
+        $path.="/$dir";
+        my $dir_link = readlink($path);
+        $path_link = $dir_link if $dir_link;
+    }
+    return $path_link if $path_link;
+}
+
+sub _around_list_used_volumes($orig, $self) {
+    my @vols = $self->$orig();
+    my @links;
+    for my $vol ( @vols ) {
+        my $link = $self->_is_link($vol);
+        push @links,($link) if $link;
+    }
+    return @vols;
 }
 
 1;

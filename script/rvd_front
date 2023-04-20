@@ -786,6 +786,15 @@ any '/(:item)/settings/(:id).html' => sub($c) {
     return $c->render( template => '/main/settings_generic' );
 };
 
+any '/(:item)/settings/' => sub($c) {
+
+    _add_admin_libs($c);
+    $c->stash(tab => ($c->param('tab') or ''));
+    my $item = $c->stash('item');
+
+    return $c->render( template => '/main/settings_generic' );
+};
+
 get '/node/info/(:id).json' => sub($c) {
     my $sth = $RAVADA->_dbh->prepare("SELECT id,name,version FROM vms "
         ." WHERE id=?"
@@ -2363,6 +2372,28 @@ get '/booking/(#template).html' => sub($c) {
     return $c->render( template => '/booking/'.$c->stash('template'));
 };
 
+get '/storage/list_pools/(:id_vm)' => sub($c) {
+    my $query = $c->req->query_params;
+    my $pools = $RAVADA->list_storage_pools($USER->id, $c->stash('id_vm'));
+    return $c->render( json => $pools );
+};
+
+get '/storage/list_unused_volumes' => sub($c) {
+    my $query = $c->req->query_params;
+    my $req = Ravada::Request->list_unused_volumes(
+        uid => $USER->id
+        ,start => $query->param('start')
+        ,limit => $query->param('limit')
+        ,id_vm => $query->param('id_vm')
+    );
+    $RAVADA->wait_request($req,180);
+    my $output = [];
+    if ($req->output) {
+        $output = decode_json($req->output);
+    }
+    return $c->render( json => $output );
+};
+
 ###################################################
 #
 # session settings
@@ -2690,8 +2721,18 @@ sub admin {
         my $host = $c->req->url->to_abs->host;
         $c->stash(url_login => "/login");
     }
+    if ($page eq 'storage') {
+        _select_vm($c);
+    }
     $c->render( template => 'main/admin_'.$page);
 };
+
+sub _select_vm($c) {
+    my $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms ");
+    $sth->execute();
+    my ($id, $name) = $sth->fetchrow;
+    $c->stash('id_vm' => $id, vm_name => $name);
+}
 
 sub _count_nodes($c) {
     my $sth = $RAVADA->_dbh->prepare(

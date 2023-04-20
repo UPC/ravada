@@ -5356,7 +5356,9 @@ sub _cmd_list_network_interfaces($self, $request) {
 sub _cmd_list_storage_pools($self, $request) {
     my $id_vm = $request->args('id_vm');
     my $vm = Ravada::VM->open( $id_vm );
-    $request->output(encode_json([ $vm->list_storage_pools ]));
+    my $data = $request->defined_arg('data');
+
+    $request->output(encode_json([ $vm->list_storage_pools($data) ]));
 }
 
 sub _cmd_list_isos($self, $request){
@@ -6028,6 +6030,8 @@ sub _req_method {
 
     ,discover => \&_cmd_discover
     ,import_domain => \&_cmd_import
+    ,list_unused_volumes => \&_cmd_list_unused_volumes
+    ,remove_files => \&_cmd_remove_files
     ,update_iso_urls => \&_cmd_update_iso_urls
 
     );
@@ -6380,6 +6384,71 @@ sub _cmd_import($self, $request) {
         ,vm => $request->args('vm')
         ,spinoff_disks => $request->defined_arg('spinoff_disks')
     );
+}
+
+sub _cmd_list_unused_volumes($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to dettach domain"
+        if !$user->is_admin;
+
+    my $vm;
+    eval { $vm = Ravada::VM->open($request->args('id_vm')) };
+    die "Error: I can't find VM ".$request->args('id_vm')." ".($@ or '')
+    if $@ || !$vm;
+
+    my $limit = $request->defined_arg('limit');
+
+    my $start = ($request->defined_arg('start') or 0 );
+    my $n_items = 0;
+    my $more = 0;
+    my @files0 = $vm->list_unused_volumes();
+    my @files;
+    my $count = 0;
+    for my $file ( sort @files0 ) {
+        next if $start && $start>$count++;
+        push @files,($file);
+    }
+    if ( defined $limit && $limit && scalar(@files)>$limit) {
+            $#files = $limit;
+            $more=1;
+    }
+    my @list = map { {file => $_} } sort @files;
+
+    $request->output(encode_json({list => \@list, more => $more}))
+        if $request;
+    return @list;
+}
+
+sub _search_domain_volume($self, $file) {
+    my $sth = $self->connector->dbh->prepare(
+        "SELECT d.name FROM volumes v,domains d "
+        ." WHERE d.id=v.id_domain AND v.file=?");
+    $sth->execute($file);
+    my @dom;
+    while (my $row = $sth->fetchrow_hashref()) {
+        push @dom,($row->{name})
+    }
+    return @dom;
+}
+
+sub _cmd_remove_files($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to remove files"
+        if !$user->is_admin;
+
+    my $file = $request->args('files');
+    my @file =($file);
+    if (ref($file)) {
+        @file = @$file;
+    }
+    my @dom = $self->_search_domain_volume($file);
+
+    die "Error: file $file belongs is in use by ".join(",", @dom)
+    if @dom;
+
+    my $vm = Ravada::VM->open($request->args('id_vm')) ;
+
+    $vm->remove_file(@file);
 }
 
 =head2 set_debug_value
