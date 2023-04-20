@@ -341,6 +341,19 @@ get '/admin/group/#name' => sub($c) {
     );
 };
 
+get '/admin/storage' => sub($c) {
+
+    _add_admin_libs($c);
+    _select_vm($c);
+
+    $c->stash(tab => ($c->param('tab') or ''));
+    $c->stash('item' => 'storage');
+    $c->stash('id' => $c->stash('id_vm'));
+
+    return $c->render( template => '/main/settings_generic' );
+
+};
+
 any '/admin/#type' => sub {
   my $c = shift;
 
@@ -796,11 +809,12 @@ any '/(:item)/settings/' => sub($c) {
 };
 
 get '/node/info/(:id).json' => sub($c) {
-    my $sth = $RAVADA->_dbh->prepare("SELECT id,name,version FROM vms "
+    my $sth = $RAVADA->_dbh->prepare("SELECT * FROM vms "
         ." WHERE id=?"
     );
     $sth->execute($c->stash('id'));
     my $row = $sth->fetchrow_hashref;
+    delete $row->{tls};
     return $c->render(json => $row);
 };
 
@@ -1778,6 +1792,9 @@ post '/request/(:name)/' => sub {
         };
         warn $@ if $@;
     }
+
+    $RAVADA->_cache_clean();
+
     return $c->render(json => { ok => 0, error => $@ }) if !$req;
     return $c->render(json => { ok => 1, request => $req->id });
 };
@@ -2392,6 +2409,12 @@ get '/storage/list_unused_volumes' => sub($c) {
         $output = decode_json($req->output);
     }
     return $c->render( json => $output );
+};
+
+any '/storage/new/(:id_vm)' => sub($c) {
+    _add_admin_libs($c);
+
+    return $c->render(template => "/main/storage_new");
 };
 
 ###################################################

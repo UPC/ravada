@@ -499,3 +499,7 @@ td.box{
     text-align: center;
     border: 1px solid lightgray;
 }
+
+.error {
+    color: orange
+}

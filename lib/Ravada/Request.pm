@@ -86,7 +86,9 @@ our %VALID_ARG = (
     ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2, uid => 2 }
     ,list_storage_pools => { id_vm => 1 , uid => 1, data => 2 }
+    ,active_storage_pool => { uid => 1, id_vm => 1, name => 1, value => 1}
     ,check_storage => { uid => 1 }
+    ,create_storage_pool => { uid => 1, id_vm => 1, name => 1, directory => 1 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
     ,cleanup => { timeout => 2 }
     ,clone => { uid => 1, id_domain => 1, name => 2, memory => 2, number => 2, volatile => 2, id_owner => 2
@@ -340,6 +342,7 @@ sub info {
         ,error => $self->error
         ,id_domain => $self->id_domain
         ,output => $self->output
+        ,date_changed => $self->date_changed
     }
 }
 
@@ -1024,10 +1027,11 @@ sub status {
         return ($row->{status} or 'unknown');
     }
 
+    my $date_changed = $self->date_changed;
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
+                ." WHERE id=?");
     for ( 1 .. 10 ) {
         eval {
-            my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
-                ." WHERE id=?");
 
             $status = substr($status,0,64);
 
@@ -1041,6 +1045,14 @@ sub status {
 
     $self->_send_message($status, $message)
         if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
+
+    if ($status eq 'done' && $date_changed eq $self->date_changed) {
+        sleep 1;
+        my $sth2=$$CONNECTOR->dbh->prepare(
+            "UPDATE requests set date_changed=?"
+        );
+        $sth2->execute(Ravada::Utils::date_now);
+    }
     return $status;
 }
 
