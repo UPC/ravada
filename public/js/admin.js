@@ -8,8 +8,8 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("messagesPage", messagesPageC)
         .controller("manage_nodes",manage_nodes)
         .controller("manage_networks",manage_networks)
-        .controller("manage_storage_pools",manage_storage_pools)
         .controller("settings_node",settings_node)
+        .controller("settings_storage",settings_storage)
         .controller("settings_network",settings_network)
         .controller("new_node", newNodeCtrl)
         .controller("new_storage", new_storage)
@@ -867,13 +867,42 @@ ravadaApp.directive("solShowMachine", swMach)
     }
 
 
-    function manage_storage_pools($scope, $http, $interval, $timeout) {
+    function settings_storage($scope, $http, $interval, $timeout) {
         var start=0;
         var limit=10;
         $scope.n_selected = 0;
         $scope.init=function(id_vm) {
             $scope.id_vm = id_vm;
             list_storage_pools(id_vm);
+            $scope.storage = {
+                'id': id_vm
+            };
+            $scope.load_node(id_vm);
+            $scope.list_unused_volumes();
+        };
+
+        $scope.load_node= function() {
+            $http.get('/node/info/'+$scope.id_vm+'.json')
+                .then(function(response) {
+                $scope.node = response.data;
+            });
+        };
+
+        $scope.update_node = function() {
+            $scope.error = '';
+            var data = {
+            };
+            $http.post('/v1/node/set/'
+                , JSON.stringify(data))
+            //                    , JSON.stringify({ value: $scope.network[field]}))
+                .then(function(response) {
+                    if (response.data.ok == 1){
+                        $scope.saved = true;
+                    }
+                    $scope.error = response.data.error;
+                    console.log($scope.error);
+                });
+            $scope.formoptions_.$setPristine();
         };
 
         $scope.toggle_active = function(pool) {
@@ -895,7 +924,7 @@ ravadaApp.directive("solShowMachine", swMach)
 
         list_storage_pools= function(id_vm) {
             $http.get('/storage/list_pools/'+id_vm).then(function(response) {
-                $scope.pools = response.data;
+                $scope.storage_pools = response.data;
             });
         }
 
