@@ -1372,7 +1372,7 @@ sub _qemu_storage_pool {
 
     if (! _exists_storage_pool($vm, $pool_name)) {
 
-        my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+        my $uuid = Ravada::VM::KVM::_unique_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
 
         my $dir = "/var/tmp/$pool_name";
         mkdir $dir if ! -e $dir;
@@ -2545,7 +2545,7 @@ sub create_storage_pool($vm, $dir=undef, $pool_name=new_pool_name()) {
     if (!ref($vm)) {
         $vm = rvd_back->search_vm($vm);
     }
-    my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c2609'
+    my $uuid = $vm->_unique_uuid('68663afc-aaf4-4f1f-9fff-93684c2609'
         .int(rand(10)).int(rand(10)));
 
     my $capacity = 1 * 1024 * 1024;
