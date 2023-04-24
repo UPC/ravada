@@ -238,3 +238,21 @@ Reboot the server and the virtual machines shutdown will work again.
 
 *Thanks to Jim Fehlig from Suse.com*
 
+
+internal error: cannot load AppArmor profile libvirt
+----------------------------------------------------
+
+
+Set security_driver = "none" in /etc/libvirt/qemu.conf
+
+::
+
+  #       security_driver = [ "selinux", "apparmor" ]
+  #security_driver = "selinux"
+  security_driver = "none"
+
+Then restart libvirt service
+
+.. prompt:: bash
+
+  sudo systemctl restart libvirtd
