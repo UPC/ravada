@@ -1131,6 +1131,40 @@ sub clone_storage_pool {
     return $self->_data('clone_storage');
 }
 
+=head2 dir_clone
+
+Returns the directory where clone images are stored in this Virtual Manager
+
+=cut
+
+
+sub dir_clone($self) {
+
+    my $dir_img  = $self->dir_img;
+    my $clone_pool = $self->clone_storage_pool();
+    $dir_img = $self->_storage_path($clone_pool) if $clone_pool;
+
+    return $dir_img;
+}
+
+=head2 dir_base
+
+Returns the directory where base images are stored in this Virtual Manager
+
+=cut
+
+
+sub dir_base($self, $volume_size) {
+    my $pool_base = $self->default_storage_pool_name;
+    $pool_base = $self->base_storage_pool()    if $self->base_storage_pool();
+    $pool_base = $self->storage_pool()         if !$pool_base;
+
+    $self->_check_free_disk($volume_size * 2, $pool_base);
+    return $self->_storage_path($pool_base);
+
+}
+
+
 =head2 min_free_memory
 
 Returns the minimun free memory necessary to start a new virtual machine

@@ -495,7 +495,7 @@ sub add_volume {
 
     if ( !$args{file} ) {
         my $vol_name = ($args{name} or Ravada::Utils::random_name(4) );
-        $args{file} = $self->_config_dir."/$vol_name";
+        $args{file} = $self->_vm->dir_img."/$vol_name";
         $args{file} .= ".$type$suffix" if $args{file} !~ /\.\w+$/;
     }
 
