@@ -403,7 +403,13 @@ sub test_copy_without_prepare($clone) {
 
     mojo_check_login($t);
 
-    my @clones = $clone->clones();
+    my @clones;
+    for ( 1 .. 10 ) {
+        @clones = $clone->clones();
+        last if scalar(@clones)>= $n_clones_clone+$n_clones;
+        sleep 1;
+        wait_request();
+    }
     is(scalar @clones, $n_clones_clone+$n_clones,"Expecting clones from ".$clone->name) or exit;
 
     mojo_request($t, "spinoff", { id_domain => $clone->id  });
@@ -893,18 +899,23 @@ sub test_network_case($t) {
 
 sub test_clone_same_name($t, $base) {
     mojo_check_login($t);
+    wait_request();
 
     my @clones = $base->clones();
     my @clones2;
-    for ( 1 .. 3 ) {
-        $t->get_ok("/machine/clone/".$base->id.".html")
+    $t->get_ok("/machine/clone/".$base->id.".html")
         ->status_is(200);
 
-        wait_request();
-
+    wait_request();
+    for ( 1 .. 10 ) {
+        diag("try $_");
+        wait_request(debug => 1);
         @clones2 = $base->clones();
-        last if scalar(@clones2) > scalar(@clones);
+        last if scalar(@clones2)>scalar(@clones);
+        sleep 1;
     }
+
+    @clones2 = $base->clones();
     my $clone = $clones2[-1];
     is(scalar(@clones2) , scalar(@clones)+1, "Expecting a clone from ".$base->name);
 
@@ -912,13 +923,22 @@ sub test_clone_same_name($t, $base) {
 
     mojo_request($t,"prepare_base", {id_domain => $clone->{id} });
 
+    diag("clone again with /machine/clone/".$base->id.".html");
     $t->get_ok("/machine/clone/".$base->id.".html")
     ->status_is(200);
 
     wait_request();
 
-    my @clones3 = $base->clones();
-    is(scalar(@clones3) , scalar(@clones2)+1);
+    my @clones3;
+    for ( 1 .. 20 ) {
+        diag("try $_");
+        @clones3 = $base->clones;
+        last if scalar(@clones3)>scalar(@clones2);
+        sleep 1;
+        wait_request( background=>1);
+    }
+    @clones3 = $base->clones();
+    is(scalar(@clones3) , scalar(@clones2)+1) or exit;
 
     for my $c ($base->clones) {
         mojo_request($t,"remove_domain", {name => $c->{name} });
