@@ -391,6 +391,11 @@ sub test_copy_without_prepare($clone) {
     mojo_request($t,"remove_base", {id_domain => $clone->id })
     if $clone->is_base;
 
+    if ($clone->id_base) {
+        mojo_request($t,"spinoff",{ id_domain => $clone->id });
+        wait_request();
+    }
+
     is ($clone->is_base,0) or die "Clone ".$clone->name." is supposed to be non-base";
 
     my $base = Ravada::Front::Domain->open($clone->_data('id_base'));
@@ -398,6 +403,8 @@ sub test_copy_without_prepare($clone) {
 
     my $n_clones = 3;
     delete_request('set_time','screenshot','refresh_machine_ports');
+
+    diag("mojo clone");
     mojo_request($t, "clone", { id_domain => $clone->id, number => $n_clones });
     wait_request(debug => 0, check_error => 1, background => 1, timeout => 120);
 
@@ -908,7 +915,6 @@ sub test_clone_same_name($t, $base) {
 
     wait_request();
     for ( 1 .. 10 ) {
-        diag("try $_");
         wait_request(debug => 1);
         @clones2 = $base->clones();
         last if scalar(@clones2)>scalar(@clones);
@@ -922,6 +928,13 @@ sub test_clone_same_name($t, $base) {
     die Dumper(\@clones2) if !$clone;
 
     mojo_request($t,"prepare_base", {id_domain => $clone->{id} });
+    sleep 1;
+    wait_request();
+    for ( 1 .. 10 ) {
+        my $cloneb = Ravada::Front::Domain->open($clone->{id});
+        last if $cloneb->is_base;
+        sleep 1;
+    }
 
     diag("clone again with /machine/clone/".$base->id.".html");
     $t->get_ok("/machine/clone/".$base->id.".html")
@@ -931,7 +944,6 @@ sub test_clone_same_name($t, $base) {
 
     my @clones3;
     for ( 1 .. 20 ) {
-        diag("try $_");
         @clones3 = $base->clones;
         last if scalar(@clones3)>scalar(@clones2);
         sleep 1;

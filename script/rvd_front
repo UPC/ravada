@@ -2995,6 +2995,7 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
         ,uid => $USER->id
        ,@create_args
     );
+    return $req;
 
 }
 

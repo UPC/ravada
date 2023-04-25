@@ -773,7 +773,6 @@ sub _new_request {
         $id_recent = $req_recent->id if $req_recent;
 
         my $id = ( $id_dupe or $id_recent );
-        warn "Dupe req $id" if $id;
         return Ravada::Request->open($id) if $id;
 
     }
