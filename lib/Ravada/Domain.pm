@@ -944,6 +944,8 @@ sub _post_prepare_base {
 
     $self->_set_base_vm_db($self->_vm->id,1);
     $self->autostart(0,$user);
+
+    $self->_vm->_refresh_storage_pools();
 };
 
 =pod

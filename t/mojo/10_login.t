@@ -52,7 +52,8 @@ sub login( $user=$USERNAME, $pass=$PASSWORD ) {
     confess "Error: missing user" if !defined $user;
 
     $t->post_ok('/login' => form => {login => $user, password => $pass});
-    like($t->tx->res->code(),qr/^(200|302)$/);
+    like($t->tx->res->code(),qr/^(200|302)$/)
+    or die $t->tx->res->body;
     #    ->status_is(302);
 
     exit if !$t->success;
@@ -362,7 +363,7 @@ sub test_login_non_admin_req($t, $base, $clone){
 
     $t->get_ok("/machine/clone/".$base->id.".html")
     ->status_is(200);
-    exit if $t->tx->res->code() != 200;
+    die "Error cloning ".$base->id if $t->tx->res->code() != 200;
 }
 
 
@@ -392,6 +393,7 @@ sub test_copy_without_prepare($clone) {
     if $clone->is_base;
 
     if ($clone->id_base) {
+        mojo_request($t,"shutdown",{ id_domain => $clone->id });
         mojo_request($t,"spinoff",{ id_domain => $clone->id });
         wait_request();
     }
@@ -909,20 +911,23 @@ sub test_clone_same_name($t, $base) {
 
     my @clones = $base->clones();
     my @clones2;
-    $t->get_ok("/machine/clone/".$base->id.".html")
+    for ( 1 .. 2 ) {
+        $t->get_ok("/machine/clone/".$base->id.".html")
         ->status_is(200);
 
-    wait_request();
-    for ( 1 .. 10 ) {
-        wait_request(debug => 1);
-        @clones2 = $base->clones();
+        wait_request();
+        for ( 1 .. 10 ) {
+            wait_request(debug => 1);
+            @clones2 = $base->clones();
+            last if scalar(@clones2)>scalar(@clones);
+            sleep 1;
+        }
         last if scalar(@clones2)>scalar(@clones);
-        sleep 1;
     }
 
     @clones2 = $base->clones();
     my $clone = $clones2[-1];
-    is(scalar(@clones2) , scalar(@clones)+1, "Expecting a clone from ".$base->name);
+    is(scalar(@clones2) , scalar(@clones)+1, "Expecting a clone from ".$base->name." ".$base->id);
 
     die Dumper(\@clones2) if !$clone;
 
