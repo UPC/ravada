@@ -398,7 +398,6 @@ sub test_copy_without_prepare($clone) {
 
     is ($clone->is_base,0) or die "Clone ".$clone->name." is supposed to be non-base";
 
-    my $base = Ravada::Front::Domain->open($clone->_data('id_base'));
     my $n_clones_clone= scalar($clone->clones());
 
     my $n_clones = 3;
