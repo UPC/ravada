@@ -1050,8 +1050,9 @@ sub status {
         sleep 1;
         my $sth2=$$CONNECTOR->dbh->prepare(
             "UPDATE requests set date_changed=?"
+            ." WHERE id=?"
         );
-        $sth2->execute(Ravada::Utils::date_now);
+        $sth2->execute(Ravada::Utils::date_now, $self->{id});
     }
     return $status;
 }
