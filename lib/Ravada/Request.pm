@@ -1046,12 +1046,23 @@ sub status {
     $self->_send_message($status, $message)
         if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
 
-    if ($status eq 'done' && $date_changed eq $self->date_changed) {
+    if ($status eq 'done' && $date_changed && $date_changed eq $self->date_changed) {
         sleep 1;
-        my $sth2=$$CONNECTOR->dbh->prepare(
-            "UPDATE requests set date_changed=?"
-        );
-        $sth2->execute(Ravada::Utils::date_now);
+        for ( 1 .. 10 ) {
+            eval {
+                my $sth2=$$CONNECTOR->dbh->prepare(
+                    "UPDATE requests set date_changed=?"
+                );
+                $sth2->execute(Ravada::Utils::date_now);
+            };
+            if ($@) {
+                warn "Warning: $@";
+                sleep 1;
+            } else {
+                last;
+            }
+        }
+
     }
     return $status;
 }

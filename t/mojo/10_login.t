@@ -895,14 +895,20 @@ sub test_clone_same_name($t, $base) {
     mojo_check_login($t);
 
     my @clones = $base->clones();
-    $t->get_ok("/machine/clone/".$base->id.".html")
-    ->status_is(200);
+    my @clones2;
+    for ( 1 .. 3 ) {
+        $t->get_ok("/machine/clone/".$base->id.".html")
+        ->status_is(200);
 
-    wait_request();
+        wait_request();
 
-    my @clones2 = $base->clones();
+        @clones2 = $base->clones();
+        last if scalar(@clones2) > scalar(@clones);
+    }
     my $clone = $clones2[-1];
-    is(scalar(@clones2) , scalar(@clones)+1);
+    is(scalar(@clones2) , scalar(@clones)+1, "Expecting a clone from ".$base->name);
+
+    die Dumper(\@clones2) if !$clone;
 
     mojo_request($t,"prepare_base", {id_domain => $clone->{id} });
 

@@ -253,8 +253,6 @@ sub do_start {
 
     #    Ravada::Request->enforce_limits();
     #Ravada::Request->refresh_vms();
-    Ravada::Request->refresh_storage();
-    Ravada::Request->update_iso_urls(uid =>Ravada::Utils::user_daemon->id);
     for (;;) {
         my $t0 = time;
         $ravada->process_requests();
@@ -315,11 +313,22 @@ sub start {
 		$ravada->set_debug_value();
         $ravada->_wait_pids();
         autostart_machines($ravada);
+        Ravada::Request->update_iso_urls(uid =>Ravada::Utils::user_daemon->id);
+        Ravada::Request->refresh_storage();
     }
     clean_old_requests();
     for (;;) {
-        eval { do_start() };
-        warn $@ if $@;
+        my $pid;
+        unless ($NOFORK || $RUN_REQUEST) {
+            $pid = fork();
+            if ($pid) {
+                warn "waiting for pid $pid";
+                my $child = waitpid($pid,0);
+                warn "dead $child";
+            }
+        }
+        do_start() if !$pid;
+        exit if $pid;
         exit if done_request();
     }
 }
