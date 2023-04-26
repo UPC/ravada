@@ -6575,7 +6575,7 @@ sub _restore_backup_data($self, $file_data, $file_data_extra
 }
 
 sub DESTROY($self) {
-    $self->_wait_pids();
+    $self->_wait_pids() unless $0 =~ /\.t$/;
 }
 
 =head2 version
