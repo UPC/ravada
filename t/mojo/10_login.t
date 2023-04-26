@@ -303,6 +303,8 @@ sub test_login_non_admin_req($t, $base, $clone){
     for ( 1 .. 3 ) {
         my $clone2;
         if (!$clone->is_base) {
+
+            mojo_request($t,"shutdown", {id_domain => $clone->id, timeout => 1 });
             $t->get_ok("/machine/prepare/".$clone->id.".json")->status_is(200);
             die "Error preparing username='$USERNAME'\n"
             .$t->tx->res->body()
