@@ -111,6 +111,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/new_documentation
    docs/auth_ldap
    docs/auth_active_directory
+   docs/sso_login
    docs/access_restrictions
    devel-docs/test_ad
    docs/tuning
