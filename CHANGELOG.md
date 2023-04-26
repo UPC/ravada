@@ -2,10 +2,8 @@
 
 **Implemented enhancements:**
 
-- LDAP checks [\#1927]
-- purge nodes CLI [\#1926]
-
 **Refactors**
 
 **Bugfixes**
 
+- Create non volatile clone fails [\#1934]
