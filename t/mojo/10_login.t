@@ -300,19 +300,23 @@ sub test_list_ldap_attributes($t, $expected_code=200) {
 
 sub test_login_non_admin_req($t, $base, $clone){
     mojo_check_login($t, $USERNAME, $PASSWORD);
-    if (!$clone->is_base) {
-        $t->get_ok("/machine/prepare/".$clone->id.".json")->status_is(200);
-        die "Error preparing username='$USERNAME'\n"
+    for ( 1 .. 3 ) {
+        my $clone2;
+        if (!$clone->is_base) {
+            $t->get_ok("/machine/prepare/".$clone->id.".json")->status_is(200);
+            die "Error preparing username='$USERNAME'\n"
             .$t->tx->res->body()
-        if $t->tx->res->code() != 200;
+            if $t->tx->res->code() != 200;
 
-        for ( 1 .. 10 ) {
-            my $clone2 = rvd_front->search_domain($clone->name);
-            last if $clone2->is_base || !$clone2->list_requests;
-            _wait_request(debug => 1, background => 1, check_error => 1);
-            mojo_check_login($t, $USERNAME, $PASSWORD);
+            for ( 1 .. 10 ) {
+                $clone2 = rvd_front->search_domain($clone->name);
+                last if $clone2->is_base || !$clone2->list_requests;
+                _wait_request(debug => 1, background => 1, check_error => 1);
+                mojo_check_login($t, $USERNAME, $PASSWORD);
+            }
+            last if $clone2->is_base;
         }
-        is($clone->is_base,1) or next;
+        is($clone2->is_base,1) or exit;
     }
     $clone->is_public(1);
 
@@ -1000,7 +1004,7 @@ test_frontend_admin($t);
 test_username_case($t);
 test_network_case($t);
 
-for my $vm_name ( @{rvd_front->list_vm_types} ) {
+for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 
     diag("Testing new machine in $vm_name");
 
@@ -1062,7 +1066,7 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     test_login_non_admin($t, $base1, $base2);
     delete_request('set_time','screenshot','refresh_machine_ports');
     remove_machines(reverse @bases);
-    remove_old_domains_req(0); # 0=do not wait for them
+    remove_old_domains_req(1); # 0=do not wait for them
 }
 ok(@bases,"Expecting some machines created");
 delete_request('set_time','screenshot','refresh_machine_ports');
