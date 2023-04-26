@@ -164,6 +164,8 @@ our %VALID_ARG = (
     ,remove_files => { uid => 1, id_vm => 1, files => 1 }
 );
 
+$VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};
+
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
     qw( create start shutdown force_shutdown reboot prepare_base remove remove_base rename_domain screenshot download
             clone
