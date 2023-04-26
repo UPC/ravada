@@ -467,9 +467,12 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
                 , warn_error => 1
                 , pid_name => $pid_name
     );
-    $rvd->_install();
-    $rvd->_update_isos();
-    $CONNECTOR = $rvd->connector if !$sqlite;
+    if ($sqlite) {
+        $rvd->_install();
+        $rvd->_update_isos();
+    } else {
+        $CONNECTOR = $rvd->connector;
+    }
 
     user_admin();
     $RVD_BACK = $rvd;
