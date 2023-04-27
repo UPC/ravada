@@ -318,17 +318,7 @@ sub start {
     }
     clean_old_requests();
     for (;;) {
-        my $pid;
-        unless ($NOFORK || $RUN_REQUEST) {
-            $pid = fork();
-            if ($pid) {
-                warn "waiting for pid $pid";
-                my $child = waitpid($pid,0);
-                warn "dead $child";
-            }
-        }
-        do_start() if !$pid;
-        exit if $pid;
+        do_start();
         exit if done_request();
     }
 }
