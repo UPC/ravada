@@ -583,6 +583,12 @@ sub _clone_and_base($vm_name, $t, $base0) {
     _add_displays($t, $base1);
     mojo_check_login($t);
     mojo_request_url($t , "/machine/prepare/".$base1->id.".json");
+    for ( 1 .. 5 ) {
+        my $base2 = Ravada::Front::Domain->open($base1->id);
+        last if $base2->is_base;
+        sleep 1;
+        wait_request();
+    }
     return $base1;
 }
 
