@@ -89,12 +89,21 @@ sub test_bases($t, $bases) {
     my $n_bases = 0;
     my $n_machines = scalar(@$bases);
     for my $base ( @$bases ) {
-        $t->get_ok("/machine/prepare/".$base->id.".json")->status_is(200);
+        my $url = "/machine/prepare/".$base->id.".json";
+        $t->get_ok($url)->status_is(200);
+        wait_mojo_request($t, $url);
         wait_request(debug => 0, background => 1);
         mojo_check_login($t);
         $n_bases++;
-        my @machines_user = grep {$_->{is_base}} list_machines_user($t);
-        is(@machines_user, $n_bases, Dumper(\@machines_user)) or exit;
+        my @machines_user0 = list_machines_user($t);
+        my @machines_user;
+        for ( 1 .. 5 ) {
+            @machines_user = grep {$_->{is_base}} list_machines_user($t);
+            last if scalar(@machines_user)==$n_bases;
+            sleep 1;
+            wait_request();
+        }
+        is(@machines_user, $n_bases, Dumper(\@machines_user)) or die Dumper(\@machines_user0);
         my $n_clones = 2;
         mojo_request($t, "clone", { id_domain => $base->id, number => $n_clones });
         $n_machines += $n_clones;
@@ -149,15 +158,20 @@ sub test_list_machines_non_admin($t, $bases) {
     my @list_machines = list_machines($t);
     is(scalar(@list_machines),0) or die Dumper([map {[$_->{id_base},$_->{name}]} @list_machines]);
 
-    Ravada::Request->prepare_base(
+    my $req = Ravada::Request->prepare_base(
         uid => user_admin->id
         ,id_domain => $clone->{id}
     );
     wait_request(background => 1);
     user_admin->grant($USER,'shutdown_clones');
 
-    @list_machines = list_machines($t);
-    is(scalar(@list_machines),1) or exit;
+    for ( 1 .. 5 ) {
+        @list_machines = list_machines($t);
+        last if scalar(@list_machines)==1;
+        sleep 1;
+        wait_request($req->id);
+    }
+    is(scalar(@list_machines),1,$USER->name." / $$ should see one machine") or exit;
     user_admin->revoke($USER,'shutdown_clones');
 }
 

@@ -64,6 +64,8 @@ create_domain
     local_ips
 
     wait_request
+    wait_mojo_request
+
     delete_request
     delete_request_not_done
     fast_forward_requests
@@ -1000,6 +1002,10 @@ sub _wait_mojo_request($t, $url) {
     }
     is($req->status,'done');
     is($req->error, '');
+}
+
+sub wait_mojo_request($t, $url) {
+    _wait_mojo_request($t, $url);
 }
 
 sub _activate_storage_pools($vm) {
