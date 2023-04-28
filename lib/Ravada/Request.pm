@@ -775,7 +775,11 @@ sub _new_request {
         $id_recent = $req_recent->id if $req_recent;
 
         my $id = ( $id_dupe or $id_recent );
-        return Ravada::Request->open($id) if $id;
+        if ($id ) {
+            my $req = Ravada::Request->open($id);
+            $req->{_duplicated} = 1;
+            return $req;
+        }
 
     }
 
