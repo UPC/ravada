@@ -28,7 +28,7 @@ Format it with large files tunning:
 
 .. prompt:: bash $
 
-    sudo mkfs.ext4 -m 0.001 -T largefiles /dev/sdX1
+    sudo mkfs.ext4 -m 0.001 -T largefile /dev/sdX1
 
 Mount the new partition
 -----------------------
