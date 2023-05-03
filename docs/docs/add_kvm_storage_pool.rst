@@ -33,13 +33,25 @@ Format it with large files tunning:
 Mount the new partition
 -----------------------
 
+First find out the UUID.
+Copy the UUID value, use it for the next step.
+
+.. prompt:: bash $
+
+    blkid | grep sdX1
+
+
 Add this new partition to the filesystem table:
 
-.. prompt:: bash $,$,(env)...$ auto
+
+.. prompt:: bash $
 
     sudo mkdir /var/lib/libvirt/images.2
     sudo vim /etc/fstab
-    /dev/sdb1   /var/lib/libvirt/images.2 ext4  auto    0   3
+
+::
+
+    UUID=e5ff57d7-cde6-4117-ac5d-1b14ac5b218f  /var/lib/libvirt/images.2 ext4  auto    0   3
 
 It will mount it next time you boot, but it can be used without
 rebooting issuing:
