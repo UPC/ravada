@@ -4354,8 +4354,7 @@ sub _can_fork {
 sub _wait_child_pids() {
     for (;;) {
         my $pid = waitpid(0, WNOHANG);
-       last if $pid<1;
-       warn "dead pid $pid";
+        last if $pid<1;
     }
 }
 
