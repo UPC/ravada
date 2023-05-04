@@ -1600,8 +1600,14 @@ Example:
 
 sub iptables($self, @args) {
     my @cmd = ('iptables','-w');
+    my $delete=0;
     for ( ;; ) {
         my $key = shift @args or last;
+
+        return if $key =~ /state|established/i && $delete;
+
+        $delete++ if $key eq 'D';
+
         my $field = "-$key";
         $field = "-$field" if length($key)>1;
         push @cmd,($field);
@@ -1629,6 +1635,8 @@ sub iptables_unique($self,@rule) {
 }
 
 sub _search_iptables($self, %rule) {
+    delete $rule{s} if exists $rule{s} && $rule{s} eq '0.0.0.0/0';
+
     my $table = 'filter';
     $table = delete $rule{t} if exists $rule{t};
     my $iptables = $self->iptables_list();
@@ -1643,7 +1651,7 @@ sub _search_iptables($self, %rule) {
     for my $line (@{$iptables->{$table}}) {
 
         my %args = @$line;
-        $args{s} = "0.0.0.0/0" if !exists $args{s};
+        delete $args{s} if exists $args{s} && $args{s} eq '0.0.0.0/0';
         my $match = 1;
         for my $key (keys %rule) {
             $match = 0 if !exists $args{$key} || !exists $rule{$key}

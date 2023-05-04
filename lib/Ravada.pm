@@ -5681,7 +5681,6 @@ sub _check_duplicated_iptable($self, $request = undef ) {
             my %already_open;
             for my $line (@{$iptables->{'filter'}}) {
                 my %args = @$line;
-                next if $args{A} ne 'RAVADA';
                 my $rule = join(" ", map { $_." ".$args{$_} }  sort keys %args);
 
                 if ($dupe{$rule}) {
@@ -5718,17 +5717,8 @@ sub _reopen_ports($self, $port) {
 sub _delete_iptables_rule($self, $vm, $table, $rule) {
     my %delete = %$rule;
     my $chain = delete $delete{A};
-    my $to_destination = delete $delete{'to-destination'};
-    my $dport = delete $delete{dport};
-    my $m = delete $delete{m};
-    my $p = delete $delete{p};
-    my $j = delete $delete{j};
-    my @delete = ( t => $table, 'D' => $chain
-        , m => $m, p => $p, dport => $dport);
-    push @delete,("j" => $j) if $j;
-    push @delete,( 'to-destination' => $to_destination) if $to_destination;
-    push @delete, %delete;
-    $vm->iptables(@delete);
+
+    $vm->iptables("t" => $table, "D" => $chain , %delete);
 
 }
 

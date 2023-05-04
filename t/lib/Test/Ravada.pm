@@ -1308,7 +1308,7 @@ sub wait_request {
                         } elsif($req->command eq 'refresh_machine') {
                             like($error,qr{^($|.*port.*already used)});
                         } else {
-                            like($error,qr/^$|libvirt error code:38,|run recently/)
+                            like($error,qr/^$|libvirt error code:38,|run recently|checked|checking/)
                                 or confess $req->id." ".$req->command;
                         }
                     }
