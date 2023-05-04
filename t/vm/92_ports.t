@@ -421,7 +421,7 @@ sub test_crash_domain($vm_name) {
     my $client_ip = $domain->remote_ip();
     is($client_ip, $remote_ip);
 
-    _wait_ip($vm, $domain);
+    _wait_ip($vm, $domain, $remote_ip);
 
     my $domain_ip = $domain->ip or do {
         diag("[$vm_name] Expecting an IP for domain ".$domain->name);
@@ -430,6 +430,7 @@ sub test_crash_domain($vm_name) {
 
     my $internal_port = 22;
     my $public_port = $domain->expose($internal_port);
+    wait_request();
 
     is(scalar $domain->list_ports,1);
     my ($n_rule)
@@ -849,10 +850,16 @@ sub test_port_prerouting_already_open($vm) {
             ,_force => 1
         );
         wait_request();
+
+        my $domain_ip  =$domain->ip;
         my @out = split /\n/, `iptables-save`;
 
         @port = (grep /-s $remote_ip.32.*--dport $internal_port -j ACCEPT/, @out);
-        last if scalar(@port)==1;
+
+        my @port_prerouting = (grep /-A PREROUTING.*--to-destination .*$domain_ip:$internal_port$/, @out);
+        last if scalar(@port)==1 && scalar(@port_prerouting)==1;
+        rvd_back->_check_duplicated_prerouting() if scalar(@port_prerouting)>1;
+
         sleep 1;
     }
     if(scalar(@port)>1) {
@@ -1101,15 +1108,16 @@ sub test_redirect_ip_duplicated($vm) {
     my $internal_port = 22;
     my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     $domain->expose(port => $internal_port, name => "ssh");
+    my $remote_ip = '10.1.1.2';
     for ( 1 .. 3 ) {
         Ravada::Request->start_domain(
             uid => user_admin->id
             ,id_domain => $domain->id
-            ,remote_ip => '10.1.1.2'
+            ,remote_ip => $remote_ip
             ,_force => 1
         );
         wait_request(debug => 0);
-        my $ip = _wait_ip2($vm, $domain);
+        my $ip = _wait_ip2($vm, $domain, $remote_ip);
         my @out0 = split /\n/, `iptables-save -t nat`;
         my @open0 = (grep /--to-destination $ip/, @out0);
         last if scalar(@open0) == 1;

@@ -5716,8 +5716,18 @@ sub _reopen_ports($self, $port) {
 sub _delete_iptables_rule($self, $vm, $table, $rule) {
     my %delete = %$rule;
     my $chain = delete $delete{A};
+    my $to_destination = delete $delete{'to-destination'};
+    my $j = delete $delete{j};
+    my @delete = ( t => $table, 'D' => $chain);
 
-    $vm->iptables("t" => $table, "D" => $chain , %delete);
+    for my $key ( qw(m p dport)) {
+        push @delete ,($key => delete $delete{$key}) if $delete{$key};
+    }
+    push @delete,("j" => $j) if $j;
+    push @delete,( 'to-destination' => $to_destination) if $to_destination;
+    push @delete, %delete;
+
+    $vm->iptables(@delete);
 
 }
 
