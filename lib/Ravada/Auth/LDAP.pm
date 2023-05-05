@@ -280,6 +280,7 @@ sub search_user {
     } else {
         $args{name} = $_[0];
     }
+    die "Error: LDAP not configured" if !exists $$CONFIG->{ldap};
 
     my $username = delete $args{name} or confess "Missing user name";
     my $retry = (delete $args{retry} or 0);

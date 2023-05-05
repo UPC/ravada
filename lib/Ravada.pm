@@ -2878,6 +2878,8 @@ sub _init_config {
 #    $CONNECTOR = ( $connector or _connect_dbh());
 
     _init_config_vm();
+
+    lock_hash(%$CONFIG);
 }
 
 sub _init_config_vm {
