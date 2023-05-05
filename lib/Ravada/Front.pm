@@ -1496,7 +1496,6 @@ sub feature($self,$name=undef) {
         }
         return $feature;
     }
-    lock_hash(%$Ravada::CONFIG);
     return 1 if exists $Ravada::CONFIG->{$name} && $Ravada::CONFIG->{$name};
     return 0;
 }
