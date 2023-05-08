@@ -43,7 +43,7 @@ for my $vm_name ( reverse vm_names() ) {
         my $domain = $BASE->clone(name => new_domain_name()
         ,user=> user_admin);
         $domain->start(user_admin);
-        for ( 1 .. 10 ) {
+        for ( 1 .. 30 ) {
             last if $domain->ip;
             sleep 1;
         }
