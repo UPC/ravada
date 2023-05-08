@@ -1603,6 +1603,13 @@ sub _search_id_vm($self, $backend) {
     return $id;
 }
 
+=head2 list_storage_pools
+
+Returns a reference to a list of storage pools in a backend
+
+=cut
+
+
 sub list_storage_pools($self, $uid, $backend) {
 
     my $id_vm = $self->_search_id_vm($backend);
