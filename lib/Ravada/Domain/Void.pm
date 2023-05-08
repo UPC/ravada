@@ -31,12 +31,6 @@ has 'domain' => (
     ,required => 1
 );
 
-has 'storage' => (
-    is => 'rw'
-    ,isa => 'Str'
-    ,required => 0
-);
-
 our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
     ,vcpus => \&_change_hardware_vcpus
@@ -500,8 +494,9 @@ sub add_volume {
     my $suffix = $format;
 
     if ( !$args{file} ) {
+        my $path = ( delete $args{path} or $self->_vm->dir_img);
         my $vol_name = ($args{name} or Ravada::Utils::random_name(4) );
-        $args{file} = $self->_vm->dir_img."/$vol_name";
+        $args{file} = "$path/$vol_name";
         $args{file} .= ".$type$suffix" if $args{file} !~ /\.\w+$/;
     }
 

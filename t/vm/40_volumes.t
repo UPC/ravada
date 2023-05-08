@@ -778,7 +778,7 @@ for my $vm_name (reverse sort @VMS) {
 
         my $old_pool = $vm->default_storage_pool_name();
         if ($old_pool) {
-            $vm->default_storage_pool_name('');
+            $vm->default_storage_pool_name('default');
             test_too_big_prepare($vm);
             $vm->default_storage_pool_name($old_pool);
         }

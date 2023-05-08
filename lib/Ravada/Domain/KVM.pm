@@ -1190,6 +1190,7 @@ sub add_volume {
     my $type = delete $args{type};
     my $format = delete $args{format};
     my $cache = (delete $args{cache} or 'unsafe');
+    my $storage = delete $args{storage};
     my %valid_arg = map { $_ => 1 } ( qw( driver name size vm xml swap target file allocation));
 
     for my $arg_name (keys %args) {
@@ -1224,6 +1225,7 @@ sub add_volume {
         ,format => $format
         ,allocation => ($args{allocation} or undef)
         ,target => $target_dev
+        ,storage => $storage
     )   if !$path && $device ne 'cdrom';
     ($name) = $path =~ m{.*/(.*)} if !$name;
 
@@ -1585,18 +1587,6 @@ sub can_screenshot {
     return 1 if $self->_vm();
 }
 
-=head2 storage_refresh
-
-Refreshes the internal storage. Used after removing files such as base images.
-
-=cut
-
-sub storage_refresh {
-    my $self = shift;
-    $self->storage->refresh();
-}
-
-
 =head2 get_info
 
 This is taken directly from Sys::Virt::Domain.
@@ -1889,7 +1879,6 @@ sub rename_volumes {
         copy($volume, $new_volume) or die "$! $volume -> $new_volume";
         $source->setAttribute(file => $new_volume);
         unlink $volume or warn "$! removing $volume";
-        $self->storage->refresh();
         $self->domain->attach_device($disk);
     }
 }

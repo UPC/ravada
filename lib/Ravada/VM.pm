@@ -1043,9 +1043,8 @@ Set the default storage pool name for this Virtual Machine Manager
 
 =cut
 
-sub default_storage_pool_name {
-    my $self = shift;
-    my $value = shift;
+sub default_storage_pool_name($self, $value=undef) {
+    confess if defined $value && $value eq '';
 
     #TODO check pool exists
     if (defined $value) {
