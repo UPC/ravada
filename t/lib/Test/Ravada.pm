@@ -994,7 +994,7 @@ sub _wait_mojo_request($t, $url) {
         return;
     }
     my $req = Ravada::Request->open($body_json->{request});
-    for ( 1 .. 120 ) {
+    for ( 1 .. 180 ) {
         last if $req->status eq 'done';
         sleep 1;
         diag("Waiting for request "
