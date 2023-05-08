@@ -979,9 +979,10 @@ sub _domain_create_from_iso {
     my $remove_cpu = delete $args2{remove_cpu};
     my $options = delete $args2{options};
     for (qw(disk swap active request vm memory iso_file id_template volatile spice_password
-            listen_ip)) {
+            listen_ip storage)) {
         delete $args2{$_};
     }
+    #    my $storage = delete $args{storage};
 
     my $iso_file = delete $args{iso_file};
     confess "Unknown parameters : ".join(" , ",sort keys %args2)

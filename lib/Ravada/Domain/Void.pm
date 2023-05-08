@@ -31,6 +31,12 @@ has 'domain' => (
     ,required => 1
 );
 
+has 'storage' => (
+    is => 'rw'
+    ,isa => 'Str'
+    ,required => 0
+);
+
 our %CHANGE_HARDWARE_SUB = (
     disk => \&_change_hardware_disk
     ,vcpus => \&_change_hardware_vcpus

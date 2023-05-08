@@ -94,7 +94,7 @@ sub test_req_list_sp($vm) {
     my $json_out = $req->output;
     my $pools = decode_json($json_out);
     for my $pool ( @$pools ) {
-        like($pool,qr{^[a-z][a-z0-9]+});
+        like($pool,qr{^[a-z][a-z0-9]+}) or die Dumper($pools);
     }
     ok(scalar @$pools);
 }
@@ -105,7 +105,7 @@ sub test_create_domain {
 
     my $vm = rvd_back->search_vm($vm_name);
     ok($vm,"I can't find VM $vm_name") or return;
-    $vm->default_storage_pool_name($pool_name);
+    my $old_sp = $vm->default_storage_pool_name($pool_name);
     is($vm->default_storage_pool_name($pool_name), $pool_name) or exit;
 
     my $name = new_domain_name();
@@ -126,6 +126,7 @@ sub test_create_domain {
     for my $volume ( $domain->list_volumes(device => 'disk')) {
         like($volume,qr{^/run/user});
     }
+    $vm->default_storage_pool_name($old_sp);
 
     return $domain;
 
@@ -642,8 +643,8 @@ sub test_pool_linked2_reverse($vm) {
 sub test_pool_info($vm) {
     my $req = Ravada::Request->list_storage_pools(
         uid => user_admin->id
-        ,id_vm => $vm->id
         ,info => 1
+        ,id_vm => $vm->id
     );
     wait_request();
     my $out = $req->output;
@@ -654,11 +655,31 @@ sub test_pool_info($vm) {
     ok(exists $pool->{path},"expecting pool path") or die Dumper($pool);
 }
 
+sub create_machine($vm, $pool_name) {
+
+    warn $vm->default_storage_pool_name('default');
+    my $name = new_domain_name();
+    my $req = Ravada::Request->create_domain(
+        name => $name
+        ,id_owner => user_admin->id
+        ,storage => $pool_name
+        ,vm => $vm->type
+        ,id_iso => search_id_iso('%Alpine%64')
+    );
+    wait_request();
+    is($req->error,'');
+    my $domain = $vm->search_domain($name);
+    for my $vol ($domain->list_volumes) {
+        next if $vol =~ /iso$/;
+        like($vol,qr{$pool_name.*/}) or exit;
+    }
+}
+
 #########################################################################
 
 clean();
 
-for my $vm_name ('Void','KVM') {
+for my $vm_name ( vm_names() ) {
 my $vm;
 eval { $vm = rvd_back->search_vm($vm_name) } if !$< || $vm_name eq 'Void';
 
@@ -680,6 +701,8 @@ SKIP: {
     my $pool_name = create_pool($vm_name);
 
     test_pool_info($vm);
+
+    create_machine($vm, $pool_name);
 
     my $domain = test_create_domain($vm_name, $pool_name);
     test_remove_domain($vm_name, $domain);
