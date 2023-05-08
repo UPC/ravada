@@ -223,7 +223,7 @@ sub dir_img($self=undef) {
     return $self->_storage_path($self->default_storage_pool_name);
 }
 
-sub _storage_path($self, $storage) {
+sub _storage_path($self, $storage=$self->default_storage_pool_name) {
     confess if !defined $storage;
     my @list = $self->list_storage_pools(1);
     my ($sp) = grep { $_->{name} eq $storage } @list;
@@ -413,7 +413,7 @@ sub _init_storage_pool_default($self) {
 
     return if -e $file_sp;
 
-    my @list = [{ name => 'default', path => $config_dir }];
+    my @list = ({ name => 'default', path => $config_dir });
 
     $self->write_file($file_sp, Dump( \@list));
 
@@ -422,6 +422,8 @@ sub _init_storage_pool_default($self) {
 sub list_storage_pools($self, $info=0) {
     my @list;
     my $config_dir = Ravada::Front::Domain::Void::_config_dir();
+
+    $self->_init_storage_pool_default();
     my $file_sp = "$config_dir/.storage_pools.yml";
     my $extra= LoadFile($file_sp);
     push @list,(@$extra);
