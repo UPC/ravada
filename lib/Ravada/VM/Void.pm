@@ -89,11 +89,13 @@ sub create_domain {
     confess if $args{name} eq 'tst_vm_v20_volatile_clones_02' && !$listen_ip;
     my $remote_ip = delete $args{remote_ip};
     my $id = delete $args{id};
+    my $storage = delete $args{storage};
 
     my $domain = Ravada::Domain::Void->new(
                                            %args
                                            , domain => $args{name}
                                            , _vm => $self
+                                           ,storage => $storage
     );
     my ($out, $err) = $self->run_command("/usr/bin/test",
          "-e ".$domain->_config_file." && echo 1" );
@@ -160,14 +162,13 @@ sub create_domain {
         $drivers = $domain_base->_value('drivers');
         $domain->_store( drivers => $drivers );
     } elsif (!exists $args{config}) {
-        my ($file_img) = $domain->disk_device();
+        $storage = $self->default_storage_pool_name() if !$storage;
         my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".void";
-        $file_img =~ m{.*/(.*)} if $file_img;
         $domain->add_volume(name => $vda_name
                         , capacity => ( $args{disk} or 1024)
-                        , file => $file_img
                         , type => 'file'
                         , target => 'vda'
+                        , path => $self->_storage_path($storage)
         );
 
         $self->_add_cdrom($domain, %args);

@@ -891,6 +891,7 @@ sub create_volume {
     my $target      = delete $args{target};
     my $capacity    = delete $args{capacity};
     my $allocation  = delete $args{allocation};
+    my $storage_pool = (delete $args{storage} or $self->storage_pool());
 
     confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
     confess "Error: type $type can't have swap flag" if $args{swap} && $type ne 'swap';
@@ -913,7 +914,6 @@ sub create_volume {
     eval { $doc = $XML->load_xml(IO => $fh) };
     die "ERROR reading $file_xml $@"    if $@;
 
-    my $storage_pool = $self->storage_pool();
 
     confess $name if $name =~ /-\w{4}-vd[a-z]-\w{4}\./
         || $name =~ /\d-vd[a-z]\./;
@@ -982,7 +982,7 @@ sub _domain_create_from_iso {
             listen_ip storage)) {
         delete $args2{$_};
     }
-    #    my $storage = delete $args{storage};
+    my $storage = delete $args{storage};
 
     my $iso_file = delete $args{iso_file};
     confess "Unknown parameters : ".join(" , ",sort keys %args2)
@@ -1037,7 +1037,8 @@ sub _domain_create_from_iso {
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner}
         , id_vm => $self->id
     );
-    $domain->add_volume( boot => 1, target => 'vda', size => $disk_size );
+    $domain->add_volume( boot => 1, target => 'vda', size => $disk_size
+        ,storage => $storage);
     $domain->add_volume( boot => 2, target => 'hda'
         ,device => 'cdrom'
         ,file => $device_cdrom

@@ -815,6 +815,7 @@ sub test_create_base($t, $vm_name, $name) {
             ,submit => 1
         }
     )->status_is(302);
+    die $t->tx->res->body if $t->tx->res->code() != 302;
 
     my $user = Ravada::Auth::SQL->new(name => $USERNAME);
     my @requests = $user->list_requests();
