@@ -224,7 +224,7 @@ my $RVD_BACK;
 #
 
 sub _do_start_logging {
-    $LOG_FILENAME = $Ravada::CONFIG->{"log"} if (! $LOG_FILENAME);
+    $LOG_FILENAME = $Ravada::CONFIG->{"log"} if (! $LOG_FILENAME && exists $Ravada::CONFIG->{"log"});
     if ($LOG_FILENAME)
     {
         File::Path::make_path(File::Basename::dirname($LOG_FILENAME));

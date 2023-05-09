@@ -428,6 +428,8 @@ sub remove_group {
 sub search_group {
     my %args = @_;
 
+    return if !exists $$CONFIG->{ldap} || !$$CONFIG->{ldap};
+
     my $name = delete $args{name} or confess "Error: missing name";
     my $base = ( delete $args{base} or $$CONFIG->{ldap}->{groups_base} or "ou=groups,"._dc_base() );
     my $ldap = ( delete $args{ldap} or _init_ldap_admin());
