@@ -2829,7 +2829,9 @@ sub display_ip($self=undef, $new_ip=undef) {
         if (!length $new_ip) {
             delete $CONFIG->{display_ip};
         } else {
+            unlock_hash(%$CONFIG);
             $CONFIG->{display_ip} = $new_ip;
+            lock_hash(%$CONFIG);
         }
     }
     my $ip;
@@ -2848,7 +2850,9 @@ sub nat_ip($self=undef, $new_ip=undef) {
         if (!length $new_ip) {
             delete $CONFIG->{nat_ip};
         } else {
+            unlock_hash(%$CONFIG);
             $CONFIG->{nat_ip} = $new_ip;
+            lock_hash(%$CONFIG);
         }
     }
 
