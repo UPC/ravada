@@ -3166,7 +3166,10 @@ sub create_domain {
 sub _req_add_disk($uid, $id_domain, $type, $size, $request) {
     return if !$size;
     my @after_req;
-    @after_req = (after_request => $request->id ) if $request;
+    if ($request) {
+        @after_req = (after_request => $request->id
+            ,storage => $request->defined_arg('storage'));
+    }
     return Ravada::Request->add_hardware(
         uid => $uid
         ,id_domain => $id_domain
