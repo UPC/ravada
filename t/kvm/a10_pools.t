@@ -665,6 +665,8 @@ sub create_machine($vm, $pool_name) {
         ,storage => $pool_name
         ,vm => $vm->type
         ,id_iso => search_id_iso('%Alpine%64')
+        ,swap => 10 * 1024
+        ,data => 10 * 1024
     );
     wait_request();
     is($req->error,'');
