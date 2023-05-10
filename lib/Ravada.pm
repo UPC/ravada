@@ -2826,13 +2826,13 @@ Returns the default display IP read from the config file
 
 sub display_ip($self=undef, $new_ip=undef) {
     if (defined $new_ip) {
+        unlock_hash(%$CONFIG);
         if (!length $new_ip) {
             delete $CONFIG->{display_ip};
         } else {
-            unlock_hash(%$CONFIG);
             $CONFIG->{display_ip} = $new_ip;
-            lock_hash(%$CONFIG);
         }
+        lock_hash(%$CONFIG);
     }
     my $ip;
     $ip = $CONFIG->{display_ip} if exists $CONFIG->{display_ip};
@@ -2847,13 +2847,13 @@ Returns the IP for NATed environments
 
 sub nat_ip($self=undef, $new_ip=undef) {
     if (defined $new_ip) {
+        unlock_hash(%$CONFIG);
         if (!length $new_ip) {
             delete $CONFIG->{nat_ip};
         } else {
-            unlock_hash(%$CONFIG);
             $CONFIG->{nat_ip} = $new_ip;
-            lock_hash(%$CONFIG);
         }
+        lock_hash(%$CONFIG);
     }
 
     return $CONFIG->{nat_ip} if exists $CONFIG->{nat_ip};
