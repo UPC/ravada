@@ -218,8 +218,9 @@ sub _test_clone($domain, $base_name, $user) {
 }
 
 sub _test_copy($domain, $base_name) {
+    my ($copy, $copy_name);
     for (1 .. 5 ) {
-        my $copy_name = $base_name."-copy-".$base_name;
+        $copy_name = $base_name."-copy-".$base_name;
         $t->post_ok("/machine/copy/" => json => {
             id_base=> $domain->id
             ,new_name => $copy_name
