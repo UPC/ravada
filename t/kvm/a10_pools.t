@@ -657,7 +657,7 @@ sub test_pool_info($vm) {
 
 sub create_machine($vm, $pool_name) {
 
-    warn $vm->default_storage_pool_name('default');
+    is($vm->default_storage_pool_name('default'), 'default');
     my $name = new_domain_name();
     my $req = Ravada::Request->create_domain(
         name => $name

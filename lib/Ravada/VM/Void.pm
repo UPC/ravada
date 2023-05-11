@@ -168,7 +168,7 @@ sub create_domain {
                         , capacity => ( $args{disk} or 1024)
                         , type => 'file'
                         , target => 'vda'
-                        , path => $self->_storage_path($storage)
+                        , storage => $storage
         );
 
         $self->_add_cdrom($domain, %args);
