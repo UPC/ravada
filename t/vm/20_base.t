@@ -95,6 +95,7 @@ sub test_display {
     # only test this for Void, it will fail on real VMs
     return if $vm_name ne 'Void';
 
+    unlock_hash(%$Ravada::CONFIG);
     $Ravada::CONFIG->{display_ip} = $DISPLAY_IP;
     eval { $display = $domain->display( user_admin ) };
     is($@,'');
