@@ -3088,9 +3088,9 @@ sub create_domain {
     }
     return if !$domain;
     my $req_add_swap = _req_add_disk($args{id_owner}, $domain->id,
-        ,'swap', $swap ,$request);
+        ,'swap', $swap ,$request, $args{storage});
     my $req_add_data = _req_add_disk($args{id_owner}, $domain->id
-        ,'data', $data, ($req_add_swap or $request ));
+        ,'data', $data, ($req_add_swap or $request ), $args{storage});
 
     my $previous_req = ($req_add_data or $req_add_swap or $request);
 
@@ -3103,18 +3103,21 @@ sub create_domain {
     return $domain;
 }
 
-sub _req_add_disk($uid, $id_domain, $type, $size, $request) {
+sub _req_add_disk($uid, $id_domain, $type, $size, $request, $storage=undef) {
     return if !$size;
+
+    my $data = { size => $size, type => $type };
+    $data->{storage}= $storage if $storage;
+
     my @after_req;
     if ($request) {
-        @after_req = (after_request => $request->id
-            ,storage => $request->defined_arg('storage'));
+        @after_req = (after_request => $request->id);
     }
     return Ravada::Request->add_hardware(
         uid => $uid
         ,id_domain => $id_domain
         ,name => 'disk'
-        ,data => { size => $size, type => $type }
+        ,data => $data
         ,@after_req
     );
 }
