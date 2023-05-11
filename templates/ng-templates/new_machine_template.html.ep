@@ -148,7 +148,7 @@
                 <b>{{storage_pool.path}}</b>
                 {{(storage_pool.available/1024/1024/1024).toFixed(2)}} GB available
                 </div>
-                <input type="hidden" name="storage" ng-model="storage_pool.name"/>
+                <input type="text" ng-show="false" name="storage" ng-model="storage_pool.name"/>
             </div>
 
             <div class="form-group row" ng-show="backend == 'KVM' || backend=='Void'">
