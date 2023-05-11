@@ -11,7 +11,7 @@ use Moose;
 use Socket qw( inet_aton inet_ntoa );
 use Sys::Hostname;
 use URI;
-use YAML qw(Dump);
+use YAML qw(Dump LoadFile);
 
 use Ravada::Domain::Void;
 use Ravada::NetInterface::Void;
@@ -216,7 +216,7 @@ sub _add_cdrom($self, $domain, %args) {
 sub create_volume {
 }
 
-sub dir_img {
+sub dir_img($self=undef) {
     return Ravada::Front::Domain::Void::_config_dir()
     if !defined($self) || !ref($self);
 
@@ -485,7 +485,7 @@ sub list_storage_pools($self, $info=0) {
 
     my ($default) = grep { $_->{name} eq 'default'} @list;
     if (!$default) {
-        push @list,({name =>'default',path => dir_img()});
+        push @list,({name =>'default',path => Ravada::VM::Void::dir_img()});
     }
 
     if($info) {
