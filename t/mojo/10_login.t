@@ -411,7 +411,6 @@ sub test_copy_without_prepare($clone) {
     my $n_clones = 3;
     delete_request('set_time','screenshot','refresh_machine_ports');
 
-    diag("mojo clone");
     mojo_request($t, "clone", { id_domain => $clone->id, number => $n_clones });
     wait_request(debug => 0, check_error => 1, background => 1, timeout => 120);
 
@@ -952,7 +951,6 @@ sub test_clone_same_name($t, $base) {
         sleep 1;
     }
 
-    diag("clone again with /machine/clone/".$base->id.".html");
     $t->get_ok("/machine/clone/".$base->id.".html")
     ->status_is(200);
 
