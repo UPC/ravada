@@ -318,7 +318,7 @@ sub test_login_non_admin_req($t, $base, $clone){
             }
             last if $clone2->is_base;
         }
-        is($clone2->is_base,1) or exit;
+        is($clone2->is_base,1,"Expecting ".$clone2->name." is base") or exit;
     }
     $clone->is_public(1);
 

@@ -97,10 +97,11 @@ sub test_bases($t, $bases) {
         $n_bases++;
         my @machines_user0 = list_machines_user($t);
         my @machines_user;
-        for ( 1 .. 5 ) {
+        for ( 1 .. 20 ) {
             @machines_user = grep {$_->{is_base}} list_machines_user($t);
             last if scalar(@machines_user)==$n_bases;
             sleep 1;
+            $t->get_ok($url)->status_is(200);
             wait_request();
         }
         is(@machines_user, $n_bases, Dumper(\@machines_user)) or die Dumper(\@machines_user0);
