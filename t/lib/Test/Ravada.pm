@@ -474,6 +474,13 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
         $rvd->_update_isos();
     } else {
         $CONNECTOR = $rvd->connector;
+        my $sth = $CONNECTOR->dbh->table_info('%',undef,'users','TABLE');
+        my $info = $sth->fetchrow_hashref();
+        $sth->finish;
+        if (!$info) {
+            $rvd->_install();
+            $rvd->_update_isos();
+        }
     }
 
     user_admin();
