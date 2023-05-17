@@ -145,6 +145,15 @@ sub create_domain {
             }
         }
         $domain->_store(hardware => $clone_hw);
+
+        my $base_info = $domain_base->_value('info');
+        my $clone_info = $domain->_value('info');
+        for my $item ( keys %$base_info) {
+            $clone_info->{$item} = $base_info->{$item}
+            if $item !~ /^(mac|state)$/;
+        }
+        $domain->_store(info => $clone_info);
+
         my $drivers = {};
         $drivers = $domain_base->_value('drivers');
         $domain->_store( drivers => $drivers );
@@ -242,7 +251,7 @@ sub _is_a_domain($self, $file) {
     chomp $file;
 
     return if $file !~ /\.yml$/;
-    $file =~ s/\.\w+//;
+    $file =~ s/\.\w+$//;
     $file =~ s/(.*)\.qcow.*$/$1/;
     return if $file !~ /\w/;
 
@@ -335,6 +344,45 @@ sub search_volume($self, $pattern) {
     return;
 }
 
+sub _list_used_volumes($self) {
+    my @disk;
+    for my $domain ($self->list_domains) {
+        push @disk,($domain->list_disks());
+        push @disk,($domain->list_files_base()) if $domain->is_base;
+        push @disk,($domain->_config_file());
+        push @disk,($domain->_config_file().".lock");
+    }
+    return @disk
+}
+
+sub _list_volumes($self) {
+    die "Error: TODO remote!" if !$self->is_local;
+
+    my @vol;
+    opendir my $ls,$self->dir_img or die $!;
+    my $dir = $self->dir_img;
+
+    while (my $file = readdir $ls) {
+        push @vol,("$dir/$file");
+    }
+    closedir $ls;
+    return @vol;
+
+}
+
+sub list_unused_volumes($self) {
+    die "Error: TODO remote!" if !$self->is_local;
+    my %used = map { $_ => 1 } $self->_list_used_volumes();
+    my @unused;
+    for my $vol ( sort $self->_list_volumes ) {
+        next if ! -f $vol;
+        next if $vol =~ m{/\..*yml$};
+
+        push @unused,($vol) unless $used{$vol};
+    }
+    return @unused;
+}
+
 sub _search_volume_remote($self, $pattern) {
 
     my ($out, $err) = $self->run_command("ls -1 ".$self->dir_img);
@@ -366,6 +414,24 @@ sub search_volume_path_re {
     closedir $ls;
     return;
 
+}
+
+sub remove_file($self, @files) {
+    my %done;
+    for my $file (@files) {
+        next if $done{$file};
+
+        die "Error: unsecure filename '$file'"
+        if $file =~ m{[`'\(\)\[]};
+
+        if ($self->is_local) {
+            next if ! -e $file;
+            unlink $file or die "$! $file";
+        } else {
+            $self->run_command("/bin/rm", $file);
+        }
+
+    }
 }
 
 sub import_domain($self, $name, $user, $backing_file) {

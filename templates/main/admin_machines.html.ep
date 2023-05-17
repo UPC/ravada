@@ -251,6 +251,17 @@
                         <span style="float:right;" ng-show="!machine.is_active && !machine.is_hibernated" class="badge badge-danger" ng-cloak><%=l 'Down' %></span>
                         <span style="float:right;" ng-show="machine.is_hibernated" class="badge badge-warning" ng-cloak><%=l 'Hibernated' %></span>
                         <br><span style="float:right;" ng-show="machine.is_active" class="badge badge-secondary">{{machine.remote_ip}}</span>
+                        <button style="float:right;"
+                                title="{{machine.date_status_change.date_txt}}"
+                            ng-hide="machine.is_active || machine.is_base || !machine.date_status_change.date_txt"
+                            class="badge badge-light border border-secondary info"
+                            >
+                            <span class="info">
+                            {{machine.date_status_change.duration[0]}}
+                            {{machine.date_status_change.duration[1]}}
+                            </span>
+                        </button>
+
                     </td>
                     <td class="lgMachToggle" style="white-space:nowrap">
                       <div ng-hide="machine.is_locked||machine.is_base">

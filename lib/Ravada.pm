@@ -71,6 +71,18 @@ our %VALID_CONFIG = (
         ,server => undef
         ,port => undef
         ,size_limit => undef
+        ,secure => undef
+    }
+    ,sso => {
+        service => undef
+        ,logout => undef
+        ,url => undef
+        ,cookie => {
+            pub_key => undef
+            ,priv_key => undef
+            ,type => undef
+            ,timeout => undef
+        }
     }
     ,log => undef
 );
@@ -128,6 +140,12 @@ has 'warn_error' => (
     ,default => sub { 1 }
 );
 
+has 'pid_name' => (
+    is => 'ro'
+    ,isa => 'Str'
+    , default => sub { 'ravada_install' }
+);
+
 =head2 BUILD
 
 Internal constructor
@@ -165,7 +183,7 @@ sub _set_first_time_run($self) {
 }
 
 sub _install($self) {
-    my $pid = Proc::PID::File->new(name => "ravada_install");
+    my $pid = Proc::PID::File->new(name => $self->pid_name);
     $pid->file({dir => "/run/user/$>"}) if $>;
     if ( $pid->alive ) {
         print "Waiting for install process to finish" if $ENV{TERM};
@@ -467,6 +485,20 @@ sub _update_isos {
             ,sha256_url => '$url/Fedora-Workstation-28-.*-x86_64-CHECKSUM'
             ,min_disk_size => '10'
         }
+	      ,kubuntu_64_jammy => {
+            name => 'Kubuntu Jammy Jellyfish'
+            ,description => 'Kubuntu 22.04 Jammy Jellyfish 64 bits'
+            ,arch => 'x86_64'
+            ,xml => 'focal_fossa-amd64.xml'
+            ,xml_volume => 'focal_fossa64-volume.xml'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/22.04.*/release/'
+            ,file_re => 'kubuntu-22.04.*-desktop-amd64.iso'
+            ,rename_file => 'kubuntu_jammy.iso'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+            ,min_ram => 3
+            ,min_disk_size => 11
+        }
 	      ,kubuntu_64_focal_fossa => {
             name => 'Kubuntu Focal Fossa 64 bits'
             ,description => 'Kubuntu 20.04 Focal Fossa 64 bits'
@@ -508,9 +540,8 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
-            ,url => 'https://download.opensuse.org/distribution/leap/15.0/iso/'
-            ,sha256_url => '$url/openSUSE-Leap-15.\d+-NET-x86_64.iso.sha256'
-            ,file_re => 'openSUSE-Leap-15.\d+-NET-x86_64.iso'
+            ,url => 'https://download.opensuse.org/distribution/leap/15.4/iso/'
+            ,file_re => 'openSUSE-Leap-15.\d-NET-x86_64-Current.iso'
 
         }
         ,xubuntu_beaver_64 => {
@@ -690,30 +721,30 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://download.parrot.sh/parrot/iso/5.0.1/'
-            ,file_re => 'Parrot-home-5.0.1_amd64.iso'
+            ,url => 'https://download.parrot.sh/parrot/iso/5.1.\d+/'
+            ,file_re => 'Parrot-home-5.1.\d+_amd64.iso'
             ,sha256_url => '$url/signed-hashes.txt'
             ,min_disk_size => '10'
         }
         ,kali_64 => {
-            name => 'Kali Linux 2021'
-            ,description => 'Kali Linux 2021 64 Bits'
+            name => 'Kali Linux 2022'
+            ,description => 'Kali Linux 2022 64 Bits'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2021.\d+/'
-            ,file_re => 'kali-linux-2021.\d+-installer-amd64.iso'
+            ,url => 'https://cdimage.kali.org/kali-2022.\d+/'
+            ,file_re => 'kali-linux-202\d.\d+-installer-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
         ,kali_64_netinst => {
-            name => 'Kali Linux 2021 (NetInstaller)'
-            ,description => 'Kali Linux 2021 64 Bits (light NetInstall)'
+            name => 'Kali Linux 2022 (NetInstaller)'
+            ,description => 'Kali Linux 2022 64 Bits (light NetInstall)'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2021.\d+/'
-            ,file_re => 'kali-linux-2021.\d+-installer-netinst-amd64.iso'
+            ,url => 'https://cdimage.kali.org/kali-2022.\d+/'
+            ,file_re => 'kali-linux-202\d.\d+-installer-netinst-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
@@ -795,6 +826,9 @@ sub _update_isos {
           ,has_cd => 0
         }
     );
+    $self->_update_table($table, $field, \%data);
+    $self->_update_table_isos_url(\%data);
+
     $self->_scheduled_fedora_releases(\%data) if $0 !~ /\.t$/;
     $self->_update_table($table, $field, \%data);
 
@@ -804,6 +838,17 @@ sub _update_isos {
     };
     $self->_update_table_isos_url(\%data);
 
+}
+
+sub _cmd_update_iso_urls($self, $request) {
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    die "Error: ".$user->name." not authorized\n"
+    unless $user->is_admin;
+
+    $self->_update_isos();
 }
 
 sub _update_table_isos_url($self, $data) {
@@ -945,28 +990,15 @@ sub _add_domain_drivers_display($self) {
     }
 }
 
-sub _add_domain_drivers_cpu($self) {
-    my %data = (
-        'KVM' => [
-            'custom'
-            ,'host-model'
-            ,'host-passthrough'
-        ]
-    );
-
+sub _add_domain_drivers_generic($self, $type, $data) {
     my $id_type = Ravada::Utils::max_id($CONNECTOR->dbh, 'domain_drivers_types')+1;
     my $id_option = Ravada::Utils::max_id($CONNECTOR->dbh, 'domain_drivers_options');
-    for my $vm ( keys %data) {
-        my $type = {
-            id => $id_type
-            ,name => 'cpu'
-            ,description => 'CPU'
-            ,vm => $vm
-        };
-
+    for my $vm ( keys %$data) {
+        $type->{id} = $id_type;
+        $type->{vm} = $vm;
         $self->_update_table('domain_drivers_types','name,vm',$type)
             and do {
-            for my $option ( @{$data{$vm}} ) {
+            for my $option ( @{$data->{$vm}} ) {
                 if (!ref($option)) {
                     $option = { name => $option
                         ,value => $option
@@ -980,6 +1012,38 @@ sub _add_domain_drivers_cpu($self) {
             $id_type++;
         };
     }
+
+}
+
+sub _add_domain_drivers_cpu($self) {
+    my %data = (
+        'KVM' => [
+            'custom'
+            ,'host-model'
+            ,'host-passthrough'
+        ]
+    );
+    my $type = {
+        name => 'cpu'
+        ,description => 'CPU'
+    };
+    $self->_add_domain_drivers_generic($type, \%data);
+}
+
+sub _add_domain_drivers_usb_controller($self) {
+    my %data = (
+        'KVM' => [
+            'nec-xhci'
+            ,'piix3-uhci'
+            ,'qemu-xhci'
+        ]
+    );
+    my $type = {
+        name => 'usb controller'
+        ,description => 'USB Controller'
+    };
+    $self->_add_domain_drivers_generic($type, \%data);
+
 }
 
 sub _update_domain_drivers_types($self) {
@@ -1088,6 +1152,13 @@ sub _update_domain_drivers_options($self) {
             ,name => 'VGA'
            ,value => 'vga'
         },
+        none => {
+            id => 5
+            ,id_driver_type => 1,
+            ,name => 'None'
+           ,value => 'none'
+        },
+
         ich6 => {
             id => 6,
             ,id_driver_type => 2,
@@ -1335,7 +1406,7 @@ sub _remove_old_isos {
             ."  AND ( file_re like '%20.04.1%' OR file_re like '%20.04.%d+%')"
         ,"DELETE FROM iso_images "
             ." WHERE name like 'Astra Linux 2%'"
-            ." AND url like '%current%'"
+            ." AND ( url like '%current%' OR url like '%orel%')"
 
         ,"DELETE FROM iso_images "
             ." WHERE name like 'Alpine%3.8%'"
@@ -1350,7 +1421,6 @@ sub _update_data {
     my $self = shift;
 
     $self->_remove_old_isos();
-    $self->_update_isos();
 
     $self->_install_grants();
     $self->_remove_old_indexes();
@@ -1362,6 +1432,7 @@ sub _update_data {
 
     $self->_add_domain_drivers_display();
     $self->_add_domain_drivers_cpu();
+    $self->_add_domain_drivers_usb_controller();
 
     $self->_add_indexes();
 }
@@ -1656,20 +1727,24 @@ sub _alias_grants($self) {
 }
 
 sub _add_grants($self) {
-    $self->_add_grant('rename', 0,"Can rename any virtual machine owned by the user.");
-    $self->_add_grant('rename_all', 0,"Can rename any virtual machine.");
-    $self->_add_grant('rename_clones', 0,"Can rename clones from virtual machines owned by the user.");
-    $self->_add_grant('shutdown', 1,"Can shutdown own virtual machines.");
-    $self->_add_grant('reboot', 1,"Can reboot own virtual machines.");
-    $self->_add_grant('reboot_all', 0,"Can reboot all virtual machines.");
-    $self->_add_grant('reboot_clones', 0,"Can reboot clones own virtual machines.");
-    $self->_add_grant('screenshot', 1,"Can get a screenshot of own virtual machines.");
-    $self->_add_grant('start_many',0,"Can have an unlimited amount of machines started.");
-    $self->_add_grant('expose_ports',0,"Can expose virtual machine ports.");
-    $self->_add_grant('view_groups',0,'Can view groups.');
-    $self->_add_grant('manage_groups',0,'Can manage groups.');
+    $self->_add_grant('rename', 0,"can rename any virtual machine owned by the user.");
+    $self->_add_grant('rename_all', 0,"can rename any virtual machine.");
+    $self->_add_grant('rename_clones', 0,"can rename clones from virtual machines owned by the user.");
+    $self->_add_grant('shutdown', 1,"can shutdown own virtual machines.");
+    $self->_add_grant('reboot', 1,"can reboot own virtual machines.");
+    $self->_add_grant('reboot_all', 0,"can reboot all virtual machines.");
+    $self->_add_grant('reboot_clones', 0,"can reboot clones own virtual machines.");
+    $self->_add_grant('screenshot', 1,"can get a screenshot of own virtual machines.");
+    $self->_add_grant('start_many',0,"can have an unlimited amount of machines started.");
+    $self->_add_grant('expose_ports',0,"can expose virtual machine ports.");
+    $self->_add_grant('expose_ports_clones',0,"Can expose ports from clones of own virtual machines.");
+    $self->_add_grant('expose_ports_all',0,"Can expose ports from any virtual machine.");
+    $self->_add_grant('view_groups',0,'can view groups.');
+    $self->_add_grant('manage_groups',0,'can manage groups.');
     $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1, 0);
     $self->_add_grant('view_all',0,"The user can start and access the screen of any virtual machine");
+    $self->_add_grant('create_disk',0,'can create disk volumes');
+    $self->_add_grant('quota_disk',0,'disk space limit',1);
 }
 
 sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
@@ -1733,7 +1808,7 @@ sub _enable_grants($self) {
     my @grants = (
         'change_settings',  'change_settings_all',  'change_settings_clones'
         ,'clone',           'clone_all',            'create_base', 'create_machine'
-        ,'expose_ports'
+        ,'expose_ports','expose_ports_clones','expose_ports_all'
         ,'grant'
         ,'manage_users'
         ,'rename', 'rename_all', 'rename_clones'
@@ -1746,6 +1821,7 @@ sub _enable_grants($self) {
         ,'view_groups',     'manage_groups'
         ,'start_limit',     'start_many'
         ,'view_all'
+        ,'create_disk', 'quota_disk'
     );
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
@@ -2099,6 +2175,15 @@ sub _sql_create_tables($self) {
             }
         ]
         ,[
+            log_active_domains => {
+            'id' => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+            ,'active','integer not null default 0'
+            ,'date_changed'
+                    => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+
+            }
+        ]
+        ,[
             iso_images => {
             'id' => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,'file_re' => 'char(64) DEFAULT NULL'
@@ -2438,6 +2523,17 @@ sub _sql_insert_defaults($self){
                 ,value => '10'
 
             }
+            ,{
+                id_parent => $id_backend
+                ,name => 'auto_compact'
+                ,value => '0'
+            }
+            ,{
+                id_parent => '/backend/auto_compact'
+                ,name => 'time'
+                ,value => '21:00'
+            }
+
         ]
     );
     my %field = ( settings => 'name' );
@@ -2453,6 +2549,13 @@ sub _sql_insert_defaults($self){
             warn "INFO: adding default $table ".Dumper($entry)
             if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
+            if ($entry->{id_parent} !~ /^\d+$/) {
+                my $parent = $self->_setting_data($entry->{id_parent});
+                die "Error not found setting $entry->{id_parent}"
+                if !$parent;
+
+                $entry->{id_parent} = $parent->{id};
+            }
             $self->_sql_insert_values($table, $entry);
         }
     }
@@ -2569,6 +2672,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('requests','run_time','float DEFAULT NULL');
     $self->_upgrade_table('requests','retry','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','args','TEXT');
+    $self->_upgrade_table('domains','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 
     $self->_upgrade_table('users','language','char(40) DEFAULT NULL');
     if ( $self->_upgrade_table('users','is_external','int(11) DEFAULT 0')) {
@@ -2624,6 +2728,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','post_hibernated','int not null default 0');
     $self->_upgrade_table('domains','is_compacted','int not null default 0');
     $self->_upgrade_table('domains','has_backups','int not null default 0');
+    $self->_upgrade_table('domains','auto_compact','int default NULL');
+    $self->_upgrade_table('domains','date_status_change' , 'datetime');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -4024,7 +4130,12 @@ sub _cmd_manage_pools($self, $request) {
     for my $domain ( @domains ) {
         next if !$domain->pools();
         my @clone_pool = $domain->clones(is_pool => 1);
-        my $number = $domain->pool_clones() - scalar(@clone_pool);
+        my @reqs = grep {$_->command eq 'clone' } $domain->list_requests();
+        my $n_clones = scalar(@clone_pool)+ scalar(@reqs);
+        my $number = $domain->pool_clones() - $n_clones;
+        if ($domain->_data('volatile_clones')) {
+            $number = $domain->pool_start() - $n_clones;
+        }
         if ($number > 0 ) {
             $self->_pool_create_clones($domain, $number, $request);
         }
@@ -4068,12 +4179,14 @@ sub _pool_create_clones($self, $domain, $number, $request) {
         );
         push @arg_clone, ( after_request => $req_base->id ) if $req_base;
     }
+    my $start = 0;
+    $start = 1 if $domain->volatile_clones();
     Ravada::Request->clone(
         uid => $request->args('uid')
         ,id_domain => $domain->id
         ,number => $number
         ,add_to_pool => 1
-        ,start => 1
+        ,start => $start
         ,@arg_clone
     );
 }
@@ -4410,12 +4523,15 @@ sub _new_clone_name($self, $base,$user) {
     my $name;
     my $alias = $base->name;
     $alias = $base->_data('alias') if $base->_data('alias');
-    if ($user->name =~ /^[a-z0-9_\-]+$/i) {
-        $name = $base->name."-".$user->name;
-        $alias .= "-".$user->name;
+    my $user_name = Encode::decode_utf8($user->name);
+    if ($user_name =~ /^[a-zA-Z0-9âêîôûáéíóúàèìòùäëïöüçñ'_\.\-€\$]+$/i) {
+        $user_name = $base->_vm->_set_ascii_name(Encode::decode_utf8($user->name));
+        $name = $base->name."-".$user_name;
+        $alias .= "-".Encode::decode_utf8($user->name);
     } else {
         my $length = length($user->id);
-        my $n = "0" x (4-$length);
+        my $n =  '';
+        $n = "0" x (4-$length) if $length < 4;
         $name = $base->name."-".$n.$user->id;
         $alias .= "-".Encode::decode_utf8($user->name);
     }
@@ -4476,6 +4592,7 @@ sub _req_clone_many($self, $request) {
         }
         $args->{name} = $name;
         my $req2 = Ravada::Request->clone( %$args );
+        $args->{after_request} = $req2->id if $req2;
         push @reqs, ( $req2 );
     }
     return @reqs;
@@ -4640,6 +4757,7 @@ sub _cmd_prepare_base {
     return if $domain->is_base();
 
     $domain->prepare_base(user => $user, with_cd => $with_cd);
+    $domain->is_public(1) if $request->defined_arg('publish');
 
 }
 
@@ -4734,9 +4852,30 @@ sub _cmd_add_hardware {
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
     die "Error: User ".$user->name." not allowed to add hardware to machine ".$domain->name
-        if !$user->is_admin;
+        unless $user->is_admin
+            || ($hardware eq 'disk' && $user->can_create_disk )
+        ;
+    $self->_check_quota_disk($user,$request);
 
     $domain->set_controller($hardware, $request->defined_arg('number'), $request->defined_arg('data'));
+
+    $self->_apply_clones($request);
+}
+
+sub _check_quota_disk($self, $user, $request) {
+    return 1 if !$user->quota_disk();
+    return 1 if $user->is_admin();
+
+    my $quota
+    = int(Ravada::Utils::size_to_number($user->quota_disk().'G')/1024/1024/1024);
+    my $used = int($user->disk_used() / 1024 / 1024 / 1024 );
+    my $size = ($request->args('data')->{size} or $request->args('data')->{capacity} or '10G');
+    my $new = int(Ravada::Utils::size_to_number($size)/1024/1024/1024);
+    die "Error: User ".$user->name." out of disk quota."
+    ." Using: $used Gb"
+    ." requested: $new Gb"
+    ." Quota: $quota Gb"."\n"
+    if $quota < ($used+$new);
 }
 
 sub _cmd_remove_hardware {
@@ -4757,6 +4896,8 @@ sub _cmd_remove_hardware {
         if !$user->is_admin;
 
     $domain->remove_controller($hardware, $index, $option);
+
+    $self->_apply_clones($request);
 }
 
 sub _cmd_change_hardware {
@@ -4767,6 +4908,7 @@ sub _cmd_change_hardware {
     my $hardware = $request->args('hardware') or confess "Missing argument hardware";
     my $id_domain = $request->args('id_domain') or confess "Missing argument id_domain";
 
+    my $data = $request->defined_arg('data');
     my $domain = $self->search_domain_by_id($id_domain);
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
@@ -4777,8 +4919,38 @@ sub _cmd_change_hardware {
     $domain->change_hardware(
          $request->args('hardware')
         ,$request->defined_arg('index')
-        ,$request->args('data')
+        ,$data
     );
+    $self->_apply_clones($request);
+}
+
+sub _apply_clones($self, $request) {
+
+    my $id_domain = $request->args('id_domain') or confess "Missing argument id_domain";
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    return if !$domain->is_base;
+
+    my $args = $request->args;
+    if ($request->command eq 'change_hardware') {
+        my %fields = ('disk' => 'file'
+            ,'display' => ['id','id_domain','id_domain_port']
+        );
+        my $field = $fields{$args->{hardware}};
+        if ($field) {
+            $field = [$field] if !ref($field);
+            for my $curr_field (@$field) {
+                delete $args->{data}->{$curr_field};
+            }
+        }
+    }
+
+    for my $clone ($domain->clones) {
+        Ravada::Request->new_request(
+            $request->command
+            ,%$args
+            ,id_domain => $clone->{id}
+        );
+    }
 }
 
 sub _cmd_shutdown {
@@ -5034,7 +5206,10 @@ sub _cmd_refresh_machine($self, $request) {
 
     my $id_domain = $request->args('id_domain');
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
-    my $domain = Ravada::Domain->open($id_domain) or confess "Error: domain $id_domain not found";
+
+    # it may have been removed on shutdown when volatile
+    my $domain = Ravada::Domain->open($id_domain) or return;
+
     $domain->check_status();
     $domain->list_volumes_info();
     my $is_active = $domain->is_active;
@@ -5045,7 +5220,7 @@ sub _cmd_refresh_machine($self, $request) {
 
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id
         ,timeout => 60, retry => 10)
-    if $is_active && $domain->ip;
+    if $is_active && $domain->ip && $domain->list_ports;
 
     $domain->_unlock_host_devices() if !$is_active;
 }
@@ -5088,15 +5263,12 @@ sub _cmd_domain_autostart($self, $request ) {
 
 sub _cmd_refresh_vms($self, $request=undef) {
 
-    if ($request && !$request->defined_arg('_force') && (my $recent = $request->done_recently(30))) {
-        die "Command ".$request->command." run recently by ".$recent->id."\n";
-    }
-
     $self->_refresh_disabled_nodes( $request );
     $self->_refresh_down_nodes( $request );
 
     my $active_vm = $self->_refresh_active_vms();
     my $active_domain = $self->_refresh_active_domains($request);
+    $self->_log_active_domains($active_domain);
     $self->_refresh_down_domains($active_domain, $active_vm);
 
     $self->_clean_requests('refresh_vms', $request);
@@ -5105,6 +5277,20 @@ sub _cmd_refresh_vms($self, $request=undef) {
     $self->_check_duplicated_prerouting();
     $self->_check_duplicated_iptable();
     $request->error('')                             if $request;
+}
+
+sub _log_active_domains($self, $list) {
+    my $active = 0;
+    for my $key (keys %$list) {
+            $active++ if $list->{$key}==1;
+    }
+
+    my $sth2 = $CONNECTOR->dbh->prepare(
+        "INSERT INTO log_active_domains "
+        ." (active,date_changed) "
+        ." values(?,?)"
+    );
+    $sth2->execute(scalar($active),Ravada::Utils::date_now());
 }
 
 sub _cmd_shutdown_node($self, $request) {
@@ -5172,7 +5358,9 @@ sub _cmd_list_network_interfaces($self, $request) {
 sub _cmd_list_storage_pools($self, $request) {
     my $id_vm = $request->args('id_vm');
     my $vm = Ravada::VM->open( $id_vm );
-    $request->output(encode_json([ $vm->list_storage_pools ]));
+    my $data = $request->defined_arg('data');
+
+    $request->output(encode_json([ $vm->list_storage_pools($data) ]));
 }
 
 sub _cmd_list_isos($self, $request){
@@ -5427,7 +5615,12 @@ sub _check_duplicated_prerouting($self, $request = undef ) {
         eval { $vm = Ravada::VM->open($id) };
         warn $@ if $@;
         if ($vm) {
-            my $iptables = $vm->iptables_list();
+            my $iptables;
+            eval { $vm = $vm->iptables_list() };
+            if ($@ ) {
+                warn $@;
+                next;
+            }
             my %prerouting;
             my %already_open;
             my %already_clean;
@@ -5463,7 +5656,9 @@ sub _check_duplicated_iptable($self, $request = undef ) {
         eval { $vm = Ravada::VM->open($id) };
         warn $@ if $@;
         if ($vm) {
-            my $iptables = $vm->iptables_list();
+            my $iptables;
+            eval { $iptables = $vm->iptables_list() };
+            next if $@;
             my %dupe;
             my %already_open;
             for my $line (@{$iptables->{'filter'}}) {
@@ -5809,6 +6004,8 @@ sub _req_method {
 ,purge => \&_cmd_purge
 
 ,list_storage_pools => \&_cmd_list_storage_pools
+,active_storage_pool => \&_cmd_active_storage_pool
+,create_storage_pool => \&_cmd_create_storage_pool
 
 # Domain ports
 ,expose => \&_cmd_expose
@@ -5837,6 +6034,10 @@ sub _req_method {
 
     ,discover => \&_cmd_discover
     ,import_domain => \&_cmd_import
+    ,list_unused_volumes => \&_cmd_list_unused_volumes
+    ,remove_files => \&_cmd_remove_files
+    ,update_iso_urls => \&_cmd_update_iso_urls
+
     );
     return $methods{$cmd};
 }
@@ -5997,9 +6198,6 @@ sub _user_is_admin($self, $id_user) {
 
 sub _enforce_limits_active($self, $request) {
     confess if !$request;
-    if (my $recent = $request->done_recently(30)) {
-        die "Command ".$request->command." run recently by ".$recent->id."\n";
-    }
     my $timeout = ($request->defined_arg('timeout') or 10);
     my $start_limit_default = $self->setting('/backend/start_limit');
 
@@ -6119,6 +6317,11 @@ sub _post_login_locale($self, $request) {
 }
 
 sub _cmd_expose($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+
+    die "Error: access denied to expose ports for ".$user->name
+    if !$user->can_expose_ports($request->id_domain);
+
     my $domain = Ravada::Domain->open($request->id_domain);
     $domain->expose(
                port => $request->args('port')
@@ -6135,7 +6338,11 @@ sub _cmd_remove_expose($self, $request) {
 
 sub _cmd_open_exposed_ports($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain) or return;
-    $domain->open_exposed_ports();
+    return if !$domain->list_ports();
+
+    my $remote_ip = $request->defined_arg('remote_ip');
+
+    $domain->open_exposed_ports($remote_ip);
 
     Ravada::Request->refresh_machine_ports(
         uid => $request->args('uid'),
@@ -6183,6 +6390,90 @@ sub _cmd_import($self, $request) {
     );
 }
 
+sub _cmd_list_unused_volumes($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to dettach domain"
+        if !$user->is_admin;
+
+    my $vm;
+    eval { $vm = Ravada::VM->open($request->args('id_vm')) };
+    die "Error: I can't find VM ".$request->args('id_vm')." ".($@ or '')
+    if $@ || !$vm;
+
+    my $limit = $request->defined_arg('limit');
+
+    my $start = ($request->defined_arg('start') or 0 );
+    my $n_items = 0;
+    my $more = 0;
+    my @files0 = $vm->list_unused_volumes();
+    my @files;
+    my $count = 0;
+    for my $file ( sort @files0 ) {
+        next if $start && $start>$count++;
+        push @files,($file);
+    }
+    if ( defined $limit && $limit && scalar(@files)>$limit) {
+            $#files = $limit;
+            $more=1;
+    }
+    my @list = map { {file => $_} } sort @files;
+
+    $request->output(encode_json({list => \@list, more => $more}))
+        if $request;
+    return @list;
+}
+
+sub _search_domain_volume($self, $file) {
+    my $sth = $self->connector->dbh->prepare(
+        "SELECT d.name FROM volumes v,domains d "
+        ." WHERE d.id=v.id_domain AND v.file=?");
+    $sth->execute($file);
+    my @dom;
+    while (my $row = $sth->fetchrow_hashref()) {
+        push @dom,($row->{name})
+    }
+    return @dom;
+}
+
+sub _cmd_remove_files($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to remove files"
+        if !$user->is_admin;
+
+    my $file = $request->args('files');
+    my @file =($file);
+    if (ref($file)) {
+        @file = @$file;
+    }
+    my @dom = $self->_search_domain_volume($file);
+
+    die "Error: file $file belongs is in use by ".join(",", @dom)
+    if @dom;
+
+    my $vm = Ravada::VM->open($request->args('id_vm')) ;
+
+    $vm->remove_file(@file);
+}
+
+sub _cmd_active_storage_pool($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to manage storage pools"
+        if !$user->is_admin;
+
+    my $vm = Ravada::VM->open($request->args('id_vm'));
+    $vm->active_storage_pool($request->arg('name'), $request->arg('value'));
+}
+
+sub _cmd_create_storage_pool($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to manage storage pools"
+        if !$user->is_admin;
+
+    my $vm = Ravada::VM->open($request->args('id_vm'));
+    $vm->create_storage_pool($request->arg('name'), $request->arg('directory'));
+
+}
+
 =head2 set_debug_value
 
 Sets debug global variable from setting
@@ -6201,6 +6492,11 @@ Returns the value of a configuration setting
 sub setting {
     return Ravada::Front::setting(@_);
 }
+
+sub _setting_data {
+    return Ravada::Front::_setting_data(@_);
+}
+
 
 =head2 restore_backup
 

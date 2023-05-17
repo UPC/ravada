@@ -165,7 +165,7 @@ my @FLUSH_RULES=(
 
 $Ravada::CAN_FORK = 0;
 
-sub config_host_devices($type) {
+sub config_host_devices($type, $die=1) {
     my $config;
     if (!-e $FILE_CONFIG_HOST_DEVICES) {
         warn "Missing host devices config file '$FILE_CONFIG_HOST_DEVICES'";
@@ -180,7 +180,7 @@ sub config_host_devices($type) {
     die "Error loading $FILE_CONFIG_HOST_DEVICES $@" if $@;
 
     die "Error: no host devices config in $FILE_CONFIG_HOST_DEVICES for $type"
-    if !exists $config->{$type} || !$config->{$type};
+    if ( !exists $config->{$type} || !$config->{$type} ) && $die;
     return $config->{$type};
 }
 
@@ -460,12 +460,15 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
 
     my @connector;
     @connector = ( connector => connector() ) if $sqlite;
+    my $pid_name = "ravada_install".base_domain_name();
     my $rvd = Ravada->new(
             @connector
                 , config => ( $config or $DEFAULT_CONFIG)
                 , warn_error => 1
+                , pid_name => $pid_name
     );
     $rvd->_install();
+    $rvd->_update_isos();
     $CONNECTOR = $rvd->connector if !$sqlite;
 
     user_admin();
@@ -496,10 +499,12 @@ sub init($config=undef, $sqlite = 1 , $flush=0) {
         $config = { vm => [ $config ] };
     }
 
+    my $config_file;
     if ($config && ref($config) ) {
         $FILE_CONFIG_TMP = "/tmp/ravada_".base_domain_name()."_$$.conf";
         DumpFile($FILE_CONFIG_TMP, $config);
         $CONFIG = $FILE_CONFIG_TMP;
+        $config_file = $FILE_CONFIG_TMP;
     } else {
         $CONFIG = $config;
     }
@@ -522,7 +527,14 @@ sub init($config=undef, $sqlite = 1 , $flush=0) {
         $USER_ADMIN = undef;
     }
 
-    rvd_back($config, 0 ,$sqlite)  if !$RVD_BACK || $flush;
+    if ( !$RVD_BACK || $flush ) {
+        if ($config_file) {
+            rvd_back($config_file, 0 ,$sqlite);
+            rvd_front($config_file);
+        } else {
+            rvd_back($config, 0 ,$sqlite);
+        }
+    }
     if (!$sqlite) {
         $CONNECTOR = $RVD_BACK->connector;
     } else {
@@ -679,9 +691,18 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
 sub remove_domain(@bases) {
 
     for my $base (@bases) {
+        confess if !defined $base;
         for my $clone ($base->clones) {
             my $d_clone = Ravada::Domain->open($clone->{id});
-            remove_domain($d_clone);
+            if ( $d_clone ) {
+                remove_domain($d_clone);
+            } else {
+                Ravada::Request->remove_domain(
+                    uid => user_admin->id
+                    ,name => $clone->{name}
+                );
+                wait_request();
+            }
         }
         $base->remove(user_admin);
     }
@@ -697,8 +718,9 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
         return if $@ && $@ =~ /Unknown domain/;
         die $@ if $@;
     }
+    my $req_clone;
     for my $clone ($domain->clones) {
-        remove_domain_and_clones_req($clone, $wait, $run_request);
+        $req_clone = remove_domain_and_clones_req($clone, $wait, $run_request);
     }
     if ( $wait || $domain->clones ) {
         my $n_clones = scalar($domain->clones);
@@ -713,13 +735,20 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
             }
         }
     }
-    Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id)
+    my $req_rm;
+    $req_rm = Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id)
     if $domain->is_base;
+
+    my @after_req;
+    @after_req = ( after_request => $req_clone->id ) if $req_clone;
+    @after_req = ( after_request => $req_rm->id ) if $req_rm;
     my $req= Ravada::Request->remove_domain(
         name => $domain->name
         ,uid => user_admin->id
+        ,@after_req
     );
     wait_request(debug => 0) if $wait;
+    return $req;
 }
 
 sub _remove_old_domains_vm($vm_name) {
@@ -974,6 +1003,7 @@ sub _activate_storage_pools($vm) {
     my @sp = $vm->vm->list_all_storage_pools();
     for my $sp (@sp) {
         next if $sp->is_active;
+        next unless $sp->get_name =~ /^tst_/;
         diag("Activating sp ".$sp->get_name." on ".$vm->name);
         $sp->build() unless $sp->is_active;
         $sp->create() unless $sp->is_active;
@@ -1152,7 +1182,11 @@ sub delete_request {
 
     my $sth = $CONNECTOR->dbh->prepare("DELETE FROM requests WHERE command=?");
     for my $command (@_) {
-        $sth->execute($command);
+        if (ref($command)) {
+            $command->_delete();
+        } else {
+            $sth->execute($command);
+        }
     }
 }
 
@@ -1245,7 +1279,7 @@ sub wait_request {
             } elsif (!$done{$req->id}) {
                 $t0 = time;
                 $done{$req->{id}}++;
-                if ($check_error) {
+                if ($check_error && $req->command ne 'set_time') {
                     if ($req->command =~ /remove/) {
                         like($req->error,qr(^$|Unknown domain|Domain not found));
                     } elsif($req->command eq 'set_time') {
@@ -1262,6 +1296,8 @@ sub wait_request {
                             like($error,qr{^($|.*No ip in domain|.*duplicated port|.*I can't get the internal IP)});
                         } elsif($req->command eq 'compact') {
                             like($error,qr{^($|.*compacted)});
+                        } elsif($req->command eq 'refresh_machine') {
+                            like($error,qr{^($|.*port.*already used)});
                         } else {
                             like($error,qr/^$|libvirt error code:38,|run recently/)
                                 or confess $req->id." ".$req->command;
@@ -1336,7 +1372,7 @@ sub _qemu_storage_pool {
 
     if (! _exists_storage_pool($vm, $pool_name)) {
 
-        my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+        my $uuid = Ravada::VM::KVM::_unique_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
 
         my $dir = "/var/tmp/$pool_name";
         mkdir $dir if ! -e $dir;
@@ -2509,7 +2545,7 @@ sub create_storage_pool($vm, $dir=undef, $pool_name=new_pool_name()) {
     if (!ref($vm)) {
         $vm = rvd_back->search_vm($vm);
     }
-    my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c2609'
+    my $uuid = $vm->_unique_uuid('68663afc-aaf4-4f1f-9fff-93684c2609'
         .int(rand(10)).int(rand(10)));
 
     my $capacity = 1 * 1024 * 1024;
@@ -2766,7 +2802,7 @@ sub test_volume_format(@volume) {
             qcow2 => \&_check_qcow2
             ,void => \&_check_yaml
         );
-        is($volume->info->{driver_type}, $extension) or confess Dumper($volume->file, $volume->info);
+        is($volume->info->{driver}->{type}, $extension) or confess Dumper($volume->file, $volume->info);
         my $exec = $sub{$extension} or confess "Error: I don't know how to check "
             .$volume->file." [$extension]";
         $exec->($volume);

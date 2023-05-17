@@ -1175,7 +1175,7 @@ sub test_list_machines_user($vm) {
     my $list = rvd_front->list_machines_user(user_admin);
 
     # admin can see all the bases
-    is(scalar(@$list),2) or confess Dumper($list);
+    is(scalar(@$list),3) or confess Dumper($list);
 
     # user allowed can see booked base
     $list= rvd_front->list_machines_user($USER_YES_1);

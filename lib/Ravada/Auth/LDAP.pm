@@ -325,7 +325,7 @@ sub search_user {
          warn "LDAP error ".$mesg->code." ".$mesg->error."."
             ."Retrying ! [$retry]"  if $retry;
          $LDAP_ADMIN = undef;
-         sleep ($retry + 1);
+         sleep ($retry + 1) if $mesg->code != 1;
          _init_ldap_admin();
          return search_user(
                 name => $username
@@ -339,7 +339,7 @@ sub search_user {
     }
 
     die "ERROR: ".$mesg->code." : ".$mesg->error
-        if $mesg->code;
+        if $mesg->code && $mesg->code != 4 && $mesg->count;
 
     return if !$mesg->count();
 

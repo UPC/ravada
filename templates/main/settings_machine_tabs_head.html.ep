@@ -11,14 +11,11 @@
     %   if ($USER->can_change_settings($domain->id) ) {
         <a class="nav-link" id="v-pills-options-tab" ng-click="refresh_machine()" href="#v-pills-options" data-toggle="pill" role="tab" aria-controls="v-pills-options" aria-selected="false"><%=l 'Options' %></a>
     %   }
-    %	if ($USER->can_change_settings($domain->id) && $USER->is_admin){
+    %	if ($USER->can_change_settings($domain->id) || $USER->can_create_disk || $USER->is_admin){
         <a class="nav-link" id="v-pills-hardware-tab" ng-click="refresh_machine()" href="#v-pills-hardware" data-toggle="pill" role="tab" aria-controls="v-pills-hardware" aria-selected="false"><%=l 'Hardware' %></a>
     %	}
     %   if ($USER->can_change_settings($domain->id) && !$domain->is_base) {
         <a class="nav-link" id="v-pills-screenshot-tab" ng-click="refresh_machine()" href="#v-pills-screenshot" data-toggle="pill" role="tab" aria-controls="v-pills-screenshot" aria-selected="false"><%=l 'Screenshot' %></a>
-    %   }
-    %   if ($domain->drivers && $USER->can_change_settings($domain->id) && $has_graphics_spice) {
-        <a class="nav-link" id="v-pills-graphics-tab" ng-click="refresh_machine()" href="#v-pills-graphics" data-toggle="pill" role="tab" aria-controls="v-pills-graphics" aria-selected="false"><%=l 'Graphics' %></a>
     %   }
     %   if ($USER->is_admin && !$domain->is_volatile) {
         <a class="nav-link" id="v-pills-base-tab" href="#v-pills-base" data-toggle="pill" role="tab" aria-controls="v-pills-base" aria-selected="false"><%=l 'Base' %></a>
@@ -26,7 +23,7 @@
     %   if ($USER->is_admin || $USER->can_clone_all ){
         <a class="nav-link" id="v-pills-copy-tab" ng-click="refresh_machine()" href="#v-pills-copy" data-toggle="pill" role="tab" aria-controls="v-pills-copy" aria-selected="false"><%=l 'Copy' %></a>
     %   }
-    %   if ( $USER->can_expose_ports()) {
+    %   if ( $USER->can_expose_ports($domain->id)) {
         <a class="nav-link ports" id="v-pills-remove-tab" href="#v-pills-ports" data-toggle="pill" role="tab" aria-controls="v-pills-ports" aria-selected="false"><%=l 'Ports' %></a>
     %   }
     %   if ( $USER->is_admin()) {

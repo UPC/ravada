@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2022-09-16 06:42+0000\n"
+"PO-Revision-Date: 2022-10-28 16:01+0000\n"
 "Last-Translator: Maite Guix <maite.guix@gmail.com>\n"
 "Language-Team: Catalan <https://hosted.weblate.org/projects/ravada/"
 "translation/ca/>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.14.1-dev\n"
+"X-Generator: Weblate 4.14.2-dev\n"
 
 msgid "Ravada broker"
 msgstr "Broker Ravada"
@@ -41,13 +41,13 @@ msgid "View"
 msgstr "Veure"
 
 msgid "Prepare base"
-msgstr "Preparar base"
+msgstr "Preparar la base"
 
 msgid "Clone"
 msgstr "Clonar"
 
 msgid "Clone/s"
-msgstr "clon/s"
+msgstr "Clon/s"
 
 msgid "Users List"
 msgstr "Llista d'usuaris"
@@ -122,7 +122,7 @@ msgid "New Password:"
 msgstr "Nova Contrasenya:"
 
 msgid "Confirm Password:"
-msgstr "Confirma Contrasenya:"
+msgstr "Confirma la Contrasenya:"
 
 msgid "Submit"
 msgstr "Envia"
@@ -221,7 +221,7 @@ msgid "Admin tools"
 msgstr "Eines d'administrador"
 
 msgid "Remove base"
-msgstr "Esborra base"
+msgstr "Esborra la base"
 
 msgid "Restore"
 msgstr "Restaura"
@@ -248,7 +248,7 @@ msgid "Cannot remove base, machine has clones"
 msgstr "No es pot esborrar la base, la màquina té clons"
 
 msgid "show clones"
-msgstr "veure clons"
+msgstr "veure els clons"
 
 msgid "hide clones"
 msgstr "amaga els clons"
@@ -499,7 +499,7 @@ msgid "Show All"
 msgstr "Mostra tot"
 
 msgid "Shutting down ..."
-msgstr "Apagant …"
+msgstr "Apagant..."
 
 msgid "It may take a couple of minutes."
 msgstr "Pot trigar un parell de minuts."
@@ -1321,13 +1321,13 @@ msgid "This machine is running and can't be renamed."
 msgstr "Aquesta màquina està en marxa i no pot ser canviada de nom."
 
 msgid "Remove group"
-msgstr "Esborrar grup"
+msgstr "Esborrar el grup"
 
 msgid "Group"
 msgstr "Grup"
 
 msgid "New group member"
-msgstr "Nou membre de grup"
+msgstr "Nou membre del grup"
 
 msgid "This group has been removed."
 msgstr "Aquest grup ha estat esborrat."
@@ -1452,7 +1452,7 @@ msgid "Minimum port number to expose virtual machine services."
 msgstr "Número de port mínim per exposar els serveis de la màquina virtual."
 
 msgid "cancel"
-msgstr "cancel · lar"
+msgstr "cancel·lar"
 
 msgid "New user"
 msgstr "Nou usuari"
@@ -2097,7 +2097,7 @@ msgid "dn:"
 msgstr "dn:"
 
 msgid "Frontend"
-msgstr "Aplicació frontal"
+msgstr "Interfície gràfica d'usuari"
 
 msgid "fallback"
 msgstr "sistema alternatiu"
@@ -2329,3 +2329,6 @@ msgstr ""
 "Són necessaris grups LDAP per configurar les reserves. S'han trobat alguns "
 "grups, però cap membre hi pertany.<a href='/admin/groups'>Afegeix noves "
 "entrades aquí. </a>"
+
+msgid "For Spice client setup follow this "
+msgstr "Per a la configuració del client Spice, seguiu aquest "

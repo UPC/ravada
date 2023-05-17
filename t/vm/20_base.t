@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 
-use Carp qw(confess);
+use Carp qw(confess cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
@@ -302,21 +302,38 @@ sub test_displays_added_on_refresh($domain, $n_expected, $delete=1) {
     if ($delete) {
         my $sth = connector->dbh->prepare("DELETE FROM domain_displays WHERE id_domain=?");
         $sth->execute($domain->id);
+    }else {
+        my $sth = connector->dbh->prepare("SELECT count(*) FROM domain_displays WHERE id_domain=?");
+        $sth->execute($domain->id);
+        my ($n_exp2) = $sth->fetchrow;
+        if ($n_exp2 && $n_expected != $n_exp2) {
+            cluck "n_expected was $n_expected, but it should be $n_exp2";
+            $n_expected = $n_exp2;
+        }
     }
-    my $req = Ravada::Request->refresh_machine(
+    my $req;
+    for ( 1 .. 3 ) {
+        $req = Ravada::Request->refresh_machine(
             uid => user_admin->id
             ,id_domain => $domain->id
             ,_force => 1
-    );
+        );
+        last if $req->id && $req->status ne 'uknown';
+        sleep 1;
+    }
 
-    wait_request(debug => 0, skip => [ 'set_time','enforce_limits'] );
+    for ( 1 .. 3 ) {
+        wait_request(debug => 0, skip => [ 'set_time','enforce_limits'] );
+        last if $req->status eq 'done';
+        sleep 1;
+    }
     is($req->status,'done');
     is($req->error,'');
     my $sth_count = connector->dbh->prepare(
         "SELECT count(*) FROM domain_displays WHERE id_domain=?");
     $sth_count->execute($domain->id);
     my ($count) = $sth_count->fetchrow;
-    ok($count>=$n_expected,"Expecting $n_expected displays on table domain_displays for ".$domain->name) or confess;
+    ok($count>=$n_expected,"Got $count, expecting >$n_expected displays on table domain_displays for ".$domain->name) or confess;
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my $display = $domain_f->info(user_admin)->{hardware}->{display};
@@ -699,7 +716,7 @@ sub _test_compare($display1, $display2) {
     delete $display1b{id_domain}
     if !exists $display2b{id_domain};
 
-    for (qw(n_order display id_vm is_secondary)) {
+    for (qw(n_order display id_vm is_secondary _can_remove _can_edit _index)) {
         delete $display1b{$_};
         delete $display2b{$_};
     }
@@ -1336,13 +1353,14 @@ sub test_change_display_settings($vm) {
 
 sub test_change_display_settings_kvm($domain) {
     $domain->start(user_admin);
-    my $display = $domain->info(user_admin)->{display};
     $domain->shutdown_now(user_admin);
 
-    my @display = $domain->_get_controller_display();
-    isa_ok($display[0]->{extra},'HASH') or exit;
-    ok($display[0]->{driver}) or die Dumper($display[0]);
-    ok($domain->_is_display_builtin($display[0]->{driver})) or exit;
+    my @displays = $domain->_get_controller_display();
+    my ($display) = grep { $_->{is_builtin} && !$_->{is_secondary}} @displays;
+    isa_ok($display->{extra},'HASH') or exit;
+    ok($display->{driver}) or die Dumper($display);
+    ok($domain->_is_display_builtin($display->{driver})) or exit;
+    ok(!$display->{is_secondary}) or die Dumper($display);
 
     for my $driver_name (qw(image jpeg zlib playback streaming)) {
         my $driver = $domain->drivers($driver_name);
@@ -1350,12 +1368,18 @@ sub test_change_display_settings_kvm($domain) {
         my @options = $driver->get_options;
         die "Error: no options for driver $driver_name" if !scalar(@options);
         for my $option ( @options ) {
+            my ($field,$value) = $option->{value} =~ /(.*)=(.*)/;
+            $value =~ s/^"(.*)"$/$1/;
+            die Dumper([$driver_name, $option]) if !$field || !$value;
+            my $option2 = { $field => $value };
             my $req = Ravada::Request->change_hardware(
                 uid => user_admin->id
                 ,id_domain => $domain->id
                 ,hardware => 'display'
-                ,data => { $driver_name => $option->{value} , driver => $display->{driver} }
-                ,index => 0
+                ,data => { extra => { $driver_name => $option2 }
+                        ,driver => $display->{driver}
+                }
+                ,index => $display->{_index}
             );
             for ( 1 .. 10 ) {
                 wait_request(debug => 0);
@@ -1364,9 +1388,12 @@ sub test_change_display_settings_kvm($domain) {
             }
             is($req->status, 'done');
             is($req->error,'') or exit;
-            my @display = $domain->_get_controller_display();
-            is($display[0]->{extra}->{$driver_name}, $option->{value}, $driver_name)
-                or die Dumper( $domain->name , $display[0]);
+
+            my ($display2) = grep { $_->{driver} eq $display->{driver} }
+                $domain->_get_controller_display();
+
+            is_deeply($display2->{extra}->{$driver_name}, $option2, $driver_name)
+                or die Dumper( $domain->name , $display2->{extra});
         }
     }
 }

@@ -70,6 +70,7 @@ sub allow_anonymous {
 }
 
 sub _cleanup_info($user_id) {
+    delete_request('cleanup');
     my $req = Ravada::Request->cleanup( );
     wait_request(debug => 0);
     my $sth = connector->dbh->prepare("SELECT name,date_created FROM users where id=?");

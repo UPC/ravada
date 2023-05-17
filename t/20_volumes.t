@@ -255,7 +255,7 @@ sub test_qcow2($vm, $swap = 0, $link=undef) {
     }
 
     _do_test_file("QCOW2", $vm, $file);
-    $vm->remove_file($file);
+    $vm->remove_file($file) if $vm->file_exists($file);
 }
 
 sub test_raw($vm, $swap = 0) {
@@ -272,7 +272,7 @@ sub test_raw($vm, $swap = 0) {
     is($err,'') or return;
 
     _do_test_file("RAW", $vm, $file);
-    $vm->remove_file($file);
+    $vm->remove_file($file) if $vm->file_exists($file);
 }
 
 
@@ -299,7 +299,7 @@ sub test_void($vm, $swap=0) {
     $vm->write_file($file, Dump($data));
     _do_test_file("Void", $vm, $file);
 
-    $vm->remove_file($file);
+    $vm->remove_file($file) if $vm->file_exists($file);
 }
 
 sub test_void_swap($vm) {
@@ -346,7 +346,7 @@ sub test_defaults($vm, $volume_type=undef) {
     my $disk_f = $info_f->{hardware}->{disk};
 
     is(scalar(@$disk), scalar(@$disk_f));
-    for my $field ( qw(name driver capacity device type target)) {
+    for my $field ( qw(name bus capacity device type target)) {
         for my $n ( 0 .. @$disk ) {
             my $dev = $disk->[0];
             my $dev_f = $disk_f->[0];

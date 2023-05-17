@@ -73,6 +73,8 @@ requires 'free_disk';
 
 requires '_fetch_dir_cert';
 
+requires 'remove_file';
+
 ############################################################
 
 has 'host' => (
@@ -144,6 +146,8 @@ around 'ping' => \&_around_ping;
 around 'connect' => \&_around_connect;
 after 'disconnect' => \&_post_disconnect;
 
+around '_list_used_volumes' => \&_around_list_used_volumes;
+
 #############################################################
 #
 # method modifiers
@@ -178,6 +182,11 @@ sub open {
         confess "ERROR: Don't set the id and the type "
             if $args{id} && $args{type};
         return _open_type($proto,@_) if $args{type};
+
+        $args{id} = _search_id($args{name}) if $args{name};
+
+        confess "I don't know how to open ".Dumper(\%args)
+        if !$args{id};
     } else {
         $args{id} = shift;
     }
@@ -211,6 +220,15 @@ sub open {
     $VM{$args{id}} = $vm unless $args{readonly};
     return $vm;
 
+}
+
+sub _search_id($name) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms WHERE name=?"
+    );
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    return $id;
 }
 
 sub _refresh_version($self) {
@@ -408,7 +426,7 @@ sub _around_create_domain {
 
     my $config = delete $args{config};
 
-    if ($name !~ /^[a-zA-Z0-9_-]+$/) {
+    if ($name !~ /^[a-zA-Z0-9_\-]+$/) {
         $alias = $self->_set_alias_unique($alias or $name);
         $name = $self->_set_ascii_name($name);
         $args_create{name} = $name;
@@ -464,7 +482,7 @@ sub _around_create_domain {
     return $base->_search_pool_clone($owner) if $from_pool;
 
     if ($self->is_local && $base && $base->is_base
-            && ( $base->volatile_clones || $owner->is_temporary )) {
+            && ( $volatile || $owner->is_temporary )) {
         $request->status("balancing")                       if $request;
         my $vm = $self->balance_vm($owner->id, $base) or die "Error: No free nodes available.";
         $request->status("creating machine on ".$vm->name)  if $request;
@@ -477,6 +495,7 @@ sub _around_create_domain {
     $domain->add_volume_swap( size => $swap )   if $swap;
     $domain->_data('is_compacted' => 1);
     $domain->_data('alias' => $alias) if $alias;
+    $domain->_data('date_status_change', Ravada::Utils::now());
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
@@ -488,6 +507,7 @@ sub _around_create_domain {
             $domain->expose(%port);
         }
         $base->_copy_host_devices($domain);
+        $domain->_clone_filesystems();
         my @displays = $base->_get_controller_display();
         for my $display (@displays) {
             delete $display->{id};
@@ -521,9 +541,9 @@ sub _around_create_domain {
 
 sub _set_ascii_name($self, $name) {
     my $length = length($name);
-    $name =~ tr/áéíóúàèìòùäëïöüçñ€$/aeiouaeiouaeioucnes/;
-    $name =~ tr/ÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÇÑ€$/AEIOUAEIOUAEIOUCNES/;
-    $name =~ tr/A-Za-z0-9_\-/\-/c;
+    $name =~ tr/.âêîôûáéíóúàèìòùäëïöüçñ'/-aeiouaeiouaeiouaeioucn_/;
+    $name =~ tr/ÂÊÎÔÛÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÇÑ€$/AEIOUAEIOUAEIOUAEIOUCNES/;
+    $name =~ tr/A-Za-z0-9_\.\-/\-/c;
     $name =~ s/^\-*//;
     $name =~ s/\-*$//;
     $name =~ s/\-\-+/\-/g;
@@ -889,13 +909,13 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports manage_pools screenshot);
     my @requests;
     for my $req ( $base->list_requests ) {
         push @requests,($req) if !$ignore_requests{$req->command};
     }
     if (@requests) {
-        confess "ERROR: Domain ".$base->name." has ".$base->list_requests
+        confess "ERROR: Domain ".$base->name." has ".scalar(@requests)
                             ." requests.\n"
                             .Dumper(\@requests)
             unless scalar @requests == 1 && $request
@@ -1545,19 +1565,8 @@ sub read_file( $self, $file ) {
 
 sub _read_file_local( $self, $file ) {
     confess "Error: file undefined" if !defined $file;
-    CORE::open my $in,'<',$file or die "$! $file";
+    CORE::open my $in,'<',$file or croak "$! $file";
     return join('',<$in>);
-}
-
-=head2 remove_file
-
-Removes a file from the storage of the virtual manager
-
-=cut
-
-sub remove_file( $self, $file ) {
-    unlink $file if $self->is_local;
-    return $self->run_command("/bin/rm", $file);
 }
 
 =head2 create_iptables_chain
@@ -1600,7 +1609,7 @@ sub iptables($self, @args) {
 
     }
     my ($out, $err) = $self->run_command(@cmd);
-    confess "@cmd $err" if $err && $err !~ /does a matching rule exist in that chain/;
+    confess "@cmd $err" if $err && $err !~ /does a matching rule exist in that chain/ && $err !~ /RULE_DELETE failed/;
     warn $err if $err;
 }
 
@@ -2402,6 +2411,58 @@ sub dir_backup($self) {
         }
     }
     return $dir_backup;
+}
+
+sub _is_link_remote($self, $vol) {
+
+    my ($out,$err) = $self->run_command("stat",$vol);
+    chomp $out;
+    $out =~ m{ -> (/.*)};
+    return $1 if $1;
+
+    my $path = "";
+    my $path_link;
+    for my $dir ( split m{/},$vol ) {
+        next if !$dir;
+        $path_link .= "/$dir" if $path_link && $dir;
+        $path.="/$dir";
+
+        ($out,$err) = $self->run_command("stat",$path);
+        chomp $out;
+        my ($dir_link) = $out =~ m{ -> (/.*)};
+
+        $path_link = $dir_link if $dir_link;
+    }
+    return $path_link if $path_link;
+
+}
+
+sub _is_link($self,$vol) {
+    return $self->_is_link_remote($vol) if !$self->is_local;
+
+    my $link = readlink($vol);
+    return $link if $link;
+
+    my $path = "";
+    my $path_link;
+    for my $dir ( split m{/},$vol ) {
+        next if !$dir;
+        $path_link .= "/$dir" if $path_link && $dir;
+        $path.="/$dir";
+        my $dir_link = readlink($path);
+        $path_link = $dir_link if $dir_link;
+    }
+    return $path_link if $path_link;
+}
+
+sub _around_list_used_volumes($orig, $self) {
+    my @vols = $self->$orig();
+    my @links;
+    for my $vol ( @vols ) {
+        my $link = $self->_is_link($vol);
+        push @links,($link) if $link;
+    }
+    return @vols;
 }
 
 1;

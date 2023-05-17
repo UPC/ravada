@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+<div id="wrapper">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper" ng-controller="manage_storage_pools"
+                           ng-init="init(<%= $id_vm %>)"
+    >
+    <div id="admin-content">
+        <div class="row">
+            <div class="col-md-8"><h2><%=l 'Storage' %></h2></div>
+            <div class="col-md-4" align="right">
+                  <h2><a type="button"
+                         class="btn btn-success" href="/storage/new/<%= $id_vm %>">
+                            <b><%=l 'New Storage' %></b></a>
+                  </h2>
+            </div>
+        </div>
+
+
+        <div ng-show="!pools">
+            <i class="fas fa-sync-alt fa-spin"></i>
+        </div>
+
+        <div class="alert alert-danger" ng-show="error">{{error}}</div>
+
+        <table class="admin-cont-body" ng-show="pools && !unused_volumes && !loading_unused">
+
+            <thead>
+                <tr>
+                    <th></th>
+                    <th class="list">Enabled</th>
+                    <th class="list">Size</th>
+                    <th class="list">Used</th>
+                    <th class="list">Available</th>
+                    <th class="list">Used %</th>
+                    <th class="list">Path</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr ng-repeat="pool in pools| orderObjectBy:'name'"
+                    class="bg-light"
+                    ng-cloak
+                >
+                    <td class="bold">
+                        {{pool.name}}
+                    </td>
+                    <td class="box">
+                        <input type="checkbox"
+                       ng-click="toggle_active(pool)"
+                       ng-model="pool.is_active"
+                       ng-true-value="1"
+                       ng-false-value="0"
+                       />
+                    </td>
+                    <td class="list">{{pool.size}}</td>
+                    <td class="list">{{pool.used}}</td>
+                    <td class="list">{{pool.available}}</td>
+                    <td class="list">{{pool.pc_used}}</td>
+                    <td class="name">{{pool.path}}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <br/>
+        <input type="submit" value="<%=l 'List unused volumes' %>"
+            ng-click="list_unused_volumes()"
+            ng-hide="unused_volumes || loading_unused"
+        />
+        %= include '/main/storage_unused'
+    </div>
+    </div>
+</div>
+
+%= include $footer
+%= include 'bootstrap/scripts'
+%= include 'bootstrap/messages'
+</body>
+</html>

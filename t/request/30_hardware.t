@@ -5,6 +5,7 @@ use Carp qw(carp confess cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use POSIX qw(WNOHANG);
+use Storable qw(dclone);
 use Sys::Virt;
 use Test::More;
 use YAML qw(Dump);
@@ -44,10 +45,11 @@ sub _download_alpine64 {
 
 sub _driver_field($hardware) {
     my $driver_field = 'driver';
-    $driver_field = 'type'  if $hardware eq 'video';
-    $driver_field = 'model' if $hardware =~ /sound/;
+    $driver_field = 'type'  if $hardware =~ /^video$/;
+    $driver_field = 'model' if $hardware =~ /^(sound|usb controller)$/;
     $driver_field = 'mode'  if $hardware eq 'cpu';
     $driver_field = '_name' if $hardware eq 'filesystem';
+    $driver_field = 'bus'   if $hardware eq 'disk';
     return $driver_field;
 }
 
@@ -632,6 +634,45 @@ sub test_add_filesystem($domain) {
     test_add_filesystem_fail($domain);
 }
 
+sub test_add_network_bridge($domain) {
+
+    my $vm = Ravada::VM->open($domain->_data('id_vm'));
+    my @bridges = $vm->_list_bridges();
+    return if !scalar(@bridges);
+
+    my $req = Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,name => 'network'
+        ,id_domain => $domain->id
+        ,data => {
+            driver => 'virtio'
+            ,type => 'bridge'
+            ,bridge => $bridges[0]
+        }
+    );
+    wait_request();
+    is($req->error,'');
+}
+
+sub test_add_network_nat($domain) {
+    my $req = Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,name => 'network'
+        ,id_domain => $domain->id
+        ,data => {
+            driver => 'virtio'
+            ,type => 'NAT'
+            ,network => 'default'
+        }
+    );
+    wait_request();
+    is($req->error,'');
+}
+
+sub test_add_network($domain) {
+    test_add_network_bridge($domain);
+    test_add_network_nat($domain);
+}
 
 sub test_add_hardware_custom($domain, $hardware) {
     return if $hardware =~ /cpu|features/i;
@@ -641,9 +682,11 @@ sub test_add_hardware_custom($domain, $hardware) {
         ,filesystem => \&test_add_filesystem
         ,usb => sub {}
         ,mock => sub {}
-        ,network => sub {}
+        ,network => \&test_add_network
         ,video => \&test_add_video
         ,sound => sub {}
+        ,'usb controller' => sub {}
+        ,'memory' => sub {}
     );
 
     my $exec = $sub{$hardware} or die "No custom add $hardware";
@@ -660,7 +703,7 @@ sub _set_three_devices($domain, $hardware) {
 
     for my $item (@$items) {
         next if !ref($item);
-        confess Dumper($item) if !exists $item->{$driver_field};
+        confess "Missing field $driver_field in ". Dumper($item) if !exists $item->{$driver_field};
         delete $drivers{$item->{$driver_field}} if ref($item);
     }
     for my $n (1 .. 3-scalar(@$items)) {
@@ -732,7 +775,7 @@ sub test_remove_hardware_by_index($vm, $hardware) {
     if (!ref($items2->[0])) {
         is($items2->[0], $items1->[0]);
         is($items2->[1], $items1->[2]);
-    } elsif ($hardware ne 'video') {
+    } elsif ($hardware !~ /^(usb controller|video)$/) {
         die "Error: no $name_field in ".Dumper($items2) if !exists $items2->[0]->{$name_field};
 
         is($items2->[0]->{$name_field},$items1->[0]->{$name_field});
@@ -753,6 +796,10 @@ sub test_remove_hardware($vm, $domain, $hardware, $index) {
         .Dumper(\@list_hardware1)
             if $index > scalar @list_hardware1;
 
+    $index = scalar(@list_hardware1)-1 if $index ==-1;
+    confess "Error: I can't remove index $index for $hardware"
+    if $hardware eq 'usb controller' && $index<1;
+
 	my $req;
 	{
 		$req = Ravada::Request->remove_hardware(uid => $USER->id
@@ -766,6 +813,7 @@ sub test_remove_hardware($vm, $domain, $hardware, $index) {
     wait_request(debug => 0);
 	is($req->status(), 'done');
 	is($req->error(), '') or exit;
+
 
     # there is no poing in checking if removed because
     # a new video device will be created when there is none
@@ -819,7 +867,8 @@ sub test_remove_almost_all_hardware {
     $n_keep = 0 if $hardware eq 'display' || $hardware eq 'disk';
 
     #TODO test remove hardware out of bounds
-    my $total_hardware = scalar($domain->get_controller($hardware));
+    my @hw = $domain->get_controller($hardware);
+    my $total_hardware = scalar(@hw);
     return if !defined $total_hardware || $total_hardware <= $n_keep;
     for my $index ( reverse 0 .. $total_hardware-1) {
         diag("removing $hardware $index");
@@ -846,6 +895,77 @@ sub test_front_hardware {
         ok(exists $info->{hardware},"Expecting \$info->{hardware}") or next;
         ok(exists $info->{hardware}->{$hardware},"Expecting \$info->{hardware}->{$hardware}");
         is_deeply($info->{hardware}->{$hardware},[@controllers]);
+}
+
+sub test_change_disk_nothing($vm, $domain) {
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $info = $domain_f->info(user_admin);
+
+    my $hardware = 'disk';
+
+    for my $count ( 0 .. scalar(@{$info->{hardware}->{$hardware}}) -1 ) {
+        my $data= $info->{hardware}->{$hardware}->[$count];
+        my $req = Ravada::Request->change_hardware(
+            id_domain => $domain_f->id
+            ,uid => user_admin->id
+            ,hardware => $hardware
+            ,index => $count
+            ,data => $data
+        );
+        wait_request($req);
+        my $domain2 = Ravada::Front::Domain->open($domain->id);
+        my $info2 = $domain_f->info(user_admin);
+        my $data2= $info2->{hardware}->{$hardware}->[$count];
+
+        delete $data2->{backing} if
+        exists $data2->{backing}
+        && $data2->{backing}
+        && $data2->{backing} eq '<backingStore/>'
+        && !exists $data->{backing};
+
+        is_deeply($data2, $data)
+            or die Dumper([$domain->name, $data2, $data]);
+    }
+
+}
+
+sub test_change_disk_settings($vm, $domain) {
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $info = $domain_f->info(user_admin);
+
+    my $hardware = 'disk';
+
+    my $index;
+    my $item;
+
+    for my $count ( 0 .. scalar(@{$info->{hardware}->{$hardware}}) -1 ) {
+        $item = $info->{hardware}->{$hardware}->[$count];
+        next if $item->{device} ne 'disk';
+
+        $index = $count;
+        last;
+    }
+    confess "Device disk not found ".$domain->name
+    ."\n".Dumper($info->{hardware}->{$hardware})
+    if !defined $index;
+
+    my $item2 = dclone($item);
+    $item2->{driver}->{'$$hashKey'} = 'object:105';
+
+    for my $cache (qw(default none writethrough writeback directsync
+            unsafe)) {
+            my $item3 = dclone($item2);
+            $item3->{driver}->{cache}=$cache;
+            my $req = Ravada::Request->change_hardware(
+                id_domain => $domain_f->id
+                ,uid => user_admin->id
+                ,hardware => $hardware
+                ,index => $index
+                ,data => $item3
+            );
+            wait_request(debug => 0);
+    }
+
 }
 
 sub test_change_disk_field($vm, $domain, $field='capacity') {
@@ -938,7 +1058,7 @@ sub test_cdrom($domain, $index, $file_new) {
 }
 sub test_change_disk_cdrom($vm, $domain) {
     my ($index,$cdrom) = _search_cdrom($domain);
-    ok($cdrom) or exit;
+    ok($cdrom) or confess "No cdrom in ".$domain->name;
     ok(defined $cdrom->{file},"Expecting file field in ".Dumper($cdrom));
 
     my $file_old = $cdrom->{file};
@@ -972,6 +1092,8 @@ sub _search_disk($domain) {
 
 
 sub test_change_disk($vm, $domain) {
+    test_change_disk_settings($vm, $domain);
+    test_change_disk_nothing($vm, $domain);
     test_change_disk_field($vm, $domain, 'capacity');
     test_change_disk_cdrom($vm, $domain);
 }
@@ -1050,16 +1172,33 @@ sub test_change_network($vm, $domain) {
 }
 
 sub test_change_filesystem($vm,$domain) {
+
+    my $list_hw_fs = $domain->info(user_admin)->{hardware}->{filesystem};
+
+    my $hw_fs0 = $list_hw_fs->[0];
+
     my $new_source = "/var/tmp/".new_domain_name();
     mkdir $new_source if ! -e $new_source;
-    my $req = Ravada::Request->change_hardware(
+    my $data = dclone($hw_fs0);
+    $data->{source}->{dir} = $new_source;
+
+    my %args = (
         hardware => 'filesystem'
         ,index => 0
-        ,data => { source => { dir => $new_source } }
+        ,data => $data
         ,uid => user_admin->id
         ,id_domain => $domain->id
     );
+    my $req = Ravada::Request->change_hardware(%args);
     wait_request(debug => 0);
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    my $list_hw_fs2 = $domain2->info(user_admin)->{hardware}->{filesystem};
+    my ($hw_fs2) = grep { $_->{_id} == $data->{_id} } @$list_hw_fs2;
+    ok($hw_fs2) or die Dumper($list_hw_fs2);
+    is($hw_fs2->{source}->{dir}, $new_source);
+    ok($hw_fs2->{_id}) or die Dumper($hw_fs2);
+    is($hw_fs2->{_id},$hw_fs0->{_id});
 }
 
 sub _test_change_defaults($domain,$hardware) {
@@ -1077,12 +1216,257 @@ sub _test_change_defaults($domain,$hardware) {
 
 }
 
+sub _test_cpu_features_topology($domain) {
+
+    $domain->shutdown_now() if $domain->is_active;
+
+    my $doc = XML::LibXML->load_xml(string => $domain->xml_description);
+
+    my ($type) = $doc->findnodes("/domain/os/type");
+    my ($cpu) = $doc->findnodes("/domain/cpu");
+
+    my ($model ) = $cpu->findnodes("model");
+    $model = $cpu->addNewChild(undef,'model') if !$model;
+    $model->setAttribute('fallback'=>'forbid');
+
+    $domain->reload_config($doc);
+
+    my @feature;
+    for my $name ('x2apic', 'hypervisor', 'lahf_lm') {
+        push @feature, { name => $name, policy => 'require'}
+    }
+    my $req = Ravada::Request->change_hardware(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,hardware =>'cpu'
+            ,data => { cpu => { feature => \@feature } }
+        );
+        wait_request($req);
+        is($req->error,'');
+    $domain = Ravada::Domain->open($domain->id);
+    my $doc2 = XML::LibXML->load_xml(string => $domain->xml_description);
+    my ($cpu2) = $doc2->findnodes("/domain/cpu");
+
+    my $topology = { sockets => 1
+                        ,dies => 1
+                        ,cores => 1
+                        , threads => 2
+    };
+
+    $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware =>'cpu'
+        ,data => {
+            cpu => { 'topology'=> $topology, feature => \@feature }
+        }
+    );
+    wait_request($req);
+    is($req->error, '');
+
+    $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware =>'cpu'
+        ,data => {
+            cpu => { 'topology'=> $topology, feature => [] }
+        }
+    );
+    wait_request($req);
+    is($req->error, '');
+
+}
+
+sub _test_cpu_topology_old_cpu($domain) {
+
+    my $doc = XML::LibXML->load_xml( string => $domain->xml_description());
+    my ($cpu) = $doc->findnodes("/domain/cpu");
+    $cpu->setAttribute('mode' => 'host-model');
+    $cpu->setAttribute('check' => 'partial');
+    $cpu->removeAttribute('match');
+
+    my ($model) = $cpu->findnodes('model');
+    $cpu->removeChild($model);
+
+    $domain->reload_config($doc);
+
+    my $model_exp = 'kvm64';
+
+    my %args = (
+        uid => user_admin->id
+        ,hardware => 'cpu'
+        ,id_domain => $domain->id
+        ,data => {
+            'cpu' => {
+                'topology' => {
+                    'cores' => 1,
+                    'dies' => 1,
+                    'threads' => 2,
+                    'sockets' => 1
+                },
+                'feature' => [],
+                'model' => {
+                    'fallback' => 'allow',
+                    '#text' => $model_exp
+                },
+                'mode' => 'custom',
+                'check' => 'none'
+            },
+            'vcpu' => {
+                'placement' => 'static',
+                '#text' => 24
+            },
+            '_can_edit' => 1,
+            '_cat_remove' => 0,
+            '_order' => 0
+        },
+    );
+    my $req = Ravada::Request->change_hardware(%args);
+    wait_request(debug => 0);
+
+    $doc = XML::LibXML->load_xml( string => $domain->xml_description());
+    my ($model2) = $doc->findnodes("/domain/cpu/model/text()");
+    is($model2,$model_exp) or exit;
+
+    $model_exp = 'qemu64';
+
+    $args{data}->{cpu}->{model}->{'#text'} = $model_exp;
+
+    my $req2 = Ravada::Request->change_hardware(%args);
+    wait_request(debug => 0);
+
+    $doc = XML::LibXML->load_xml( string => $domain->xml_description());
+
+    my ($model3) = $doc->findnodes("/domain/cpu/model/text()");
+    is($model3,$model_exp) or exit;
+
+    my ($cpu3) = $doc->findnodes("/domain/cpu");
+    is($cpu3->getAttribute('mode'),'custom');
+}
+
 sub _test_change_cpu($vm, $domain) {
+
+    _test_cpu_features_topology($domain);
+
+    _test_cpu_features($domain);
+    _test_cpu_topology_empty($domain);
+    _test_change_cpu_topology($domain);
     _test_change_defaults($domain,'cpu');
+
+    _test_cpu_topology_old_cpu($domain);
+}
+
+sub _test_change_cpu_topology($domain) {
+    diag("testing cpu topology");
+    for my $dies ( reverse 1 .. 3 ) {
+        for my $sockets ( reverse 1 .. 3 ) {
+            for my $cores ( reverse 1 .. 3 ) {
+                for my $threads ( reverse 1 .. 3 ) {
+
+                    my $topology = { sockets => $sockets
+                        ,dies => $dies
+                        ,cores => $cores
+                        , threads => $threads
+                    };
+
+                    my $req = Ravada::Request->change_hardware(
+                        uid => user_admin->id
+                        ,id_domain => $domain->id
+                        ,hardware =>'cpu'
+                        ,data => {
+                              cpu => { 'topology'=> $topology}
+                        }
+                    );
+                    wait_request($req);
+                    is($req->error, '');
+                    is($req->status,'done');
+
+                    my $doc = XML::LibXML->load_xml( string => $domain->xml_description());
+                    my ($xml_topology) = $doc->findnodes("/domain/cpu/topology");
+                    ok($xml_topology) or exit;
+                    for my $field ( keys %$topology ) {
+                        is($xml_topology->getAttribute($field)
+                            ,$topology->{$field},$field) or exit;
+                    }
+                }
+            }
+        }
+    }
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware =>'cpu'
+        ,data => { }
+    );
+    wait_request($req);
+    is($req->error, '');
+    is($req->status,'done');
+
+    my $doc = XML::LibXML->load_xml( string => $domain->xml_description());
+    my ($xml_cpu) = $doc->findnodes("/domain/cpu");
+    my ($xml_topology) = $doc->findnodes("/domain/cpu/topology");
+    ok(!$xml_topology) or die $xml_cpu->toString();
+
+}
+
+sub _test_cpu_features($domain) {
+    my $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware =>'cpu'
+        ,data => { cpu => { feature => [
+                        {name => 'acpi' ,policy => 'require'}
+                ] } }
+    );
+    wait_request($req);
+    is($req->error, '');
+    is($req->status,'done');
+
+}
+
+sub _test_cpu_topology_empty($domain) {
+    my $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware =>'cpu'
+        ,data => { cpu => { 'topology'=> undef } }
+    );
+    wait_request($req);
+    is($req->error, '');
+    is($req->status,'done');
 }
 
 sub _test_change_features($vm, $domain) {
     _test_change_defaults($domain,'cpu');
+}
+
+sub test_change_display($vm, $domain) {
+    _test_change_defaults($domain,'display');
+}
+
+sub _test_change_memory($vm, $domain) {
+
+    for ( 1 .. 3 ) {
+        my $info = $domain->info(user_admin);
+        my $hw_mem = $info->{hardware}->{memory}->[0];
+        my $new_mem = int($hw_mem->{memory}*1.5);
+        my $req = Ravada::Request->change_hardware(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,hardware =>'memory'
+            ,data => { memory => $new_mem*1024,max_mem => ($new_mem+1)*1024 }
+            ,index => 0
+        );
+        wait_request(debug => 0);
+        is($req->error, '');
+        is($req->status,'done');
+
+        my $info2 = $domain->info(user_admin);
+        my $hw_mem2 = $info2->{hardware}->{memory}->[0];
+        is($hw_mem2->{memory}, $new_mem);
+        is($hw_mem2->{max_mem}, $new_mem+1);
+    }
 }
 
 sub test_change_hardware($vm, $domain, $hardware) {
@@ -1092,11 +1476,13 @@ sub test_change_hardware($vm, $domain, $hardware) {
         ,filesystem => \&test_change_filesystem
         ,mock => sub {}
          ,usb => sub {}
-         ,display => sub {}
+         ,display => \&test_change_display
          ,video => sub {}
          ,sound => sub {}
          ,cpu => \&_test_change_cpu
          ,features => \&_test_change_features
+         ,'usb controller' => sub {}
+         ,'memory' => \&_test_change_memory
     );
     my $exec = $sub{$hardware} or die "I don't know how to test $hardware";
     $exec->($vm, $domain);
@@ -1137,6 +1523,10 @@ sub test_change_drivers($domain, $hardware) {
     for my $option (@$options) {
         my $index = 0;
         $index = _search_disk($domain) if $hardware eq 'disk';
+
+        $index = scalar(@{$info->{hardware}->{"usb controller"}}) -1
+        if $hardware eq 'usb controller';
+
         diag("Testing $hardware type $option in $hardware $index");
         $option = lc($option);
         my $req = Ravada::Request->change_hardware(
@@ -1198,6 +1588,10 @@ sub test_all_drivers($domain, $hardware) {
     for my $option1 (@$options) {
         for my $option2 (@$options) {
             # diag("Testing $hardware type from $option1 to $option2");
+            next if $hardware eq 'usb controller'
+            && $option1 eq 'nec-xhci' &&
+            ( $option2 eq 'nec-xhci' || $option2 eq 'pixx3-uhci');
+
             my $req = Ravada::Request->change_hardware(
                 id_domain => $domain->id
                 ,hardware => $hardware
@@ -1318,7 +1712,8 @@ for my $vm_name (vm_names()) {
     my %controllers = $domain_b0->list_controllers;
     lock_hash(%controllers);
 
-    for my $hardware (sort keys %controllers ) {
+    for my $hardware ('display', sort keys %controllers ) {
+        next if $hardware eq 'video';
 	    my $name= new_domain_name();
 	    my $domain_b = $BASE->clone(
             name => $name
@@ -1327,14 +1722,17 @@ for my $vm_name (vm_names()) {
         );
 
         diag("Testing $hardware controllers for VM $vm_name");
-        if ($hardware !~ /cpu|features/) {
+        if ($hardware !~ /cpu|features|memory/) {
             test_remove_hardware_by_index($vm, $hardware);
             test_remove_hardware_by_index_network_kvm($vm, $hardware);
             test_add_hardware_request($vm, $domain_b, $hardware);
-            test_remove_hardware($vm, $domain_b, $hardware, 0);
+            my $n = 0;
+            $n = -1 if $hardware eq 'usb controller';
+            test_remove_hardware($vm, $domain_b, $hardware, $n);
             test_add_hardware_request_drivers($vm, $domain_b, $hardware);
             test_add_hardware_request($vm, $domain_b, $hardware);
         }
+
 
         test_front_hardware($vm, $domain_b, $hardware);
 
@@ -1342,8 +1740,8 @@ for my $vm_name (vm_names()) {
         test_change_hardware($vm, $domain_b, $hardware);
 
         # change driver is not possible for displays
-        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|filesystem|usb|mock|features|cpu)$/;
-        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(display|filesystem|usb|mock|features)$/;
+        test_change_drivers($domain_b, $hardware)   if $hardware !~ /^(display|filesystem|usb|mock|features|cpu|usb controller|memory)$/;
+        test_all_drivers($domain_b, $hardware)   if $hardware !~ /^(display|filesystem|usb|mock|features|memory)$/;
 
         # try to add with the machine started
         $domain_b->start(user_admin) if !$domain_b->is_active;
@@ -1353,7 +1751,7 @@ for my $vm_name (vm_names()) {
         $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
         is($domain_b->is_active,0) or next;
 
-        if ( $hardware !~ /cpu|features|usb/ ) {
+        if ( $hardware !~ /memory|cpu|features|usb/ ) {
             for (1 .. 3 ) {
                 test_add_hardware_request($vm, $domain_b, $hardware);
             }

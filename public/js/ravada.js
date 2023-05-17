@@ -92,6 +92,16 @@
             $scope.set_restore=function(machineId) {
                 $scope.host_restore = machineId;
             };
+            $scope.prepare_base = function(machine){
+                machine.action=false;
+                machine.is_base=1;
+                $http.post('/request/prepare_base/'
+                      , JSON.stringify({ 'id_domain': machine.id
+                          ,publish: true
+                      })
+                );
+
+            };
             $scope.restore= function(machineId){
               $http.post('/request/restore_domain/'
                       , JSON.stringify({ 'id_domain': machineId
@@ -125,21 +135,47 @@
                 });
             };
 
+            $scope.change_clone = function(machine) {
+                if (typeof(machine.clone) != 'undefined'
+                && machine.clone) {
+                    machine.is_active = machine.clone.is_active;
+                    machine.screenshot= machine.clone.screenshot;
+                    if (machine.clone.description
+                            && machine.clone.description.length) {
+                        machine.description2 = machine.clone.description;
+                    } else {
+                        machine.description2 = machine.description;
+                    }
+                }
+            };
+
             $scope.action = function(machine, action, confirmed) {
                 machine.action = false;
                 if (action == 'start') {
                     if ((! confirmed) && (! machine.is_active)) {
                         $scope.checkMaxMachines(action, machine); 
                     } else {
+                        if (machine.clone || !machine.is_base) {
+                            var id = machine.id;
+                            if (machine.clone) {
+                                id=machine.clone.id;
+                            }
+                            window.location.assign('/machine/view/' + id + '.html');
+                        } else {
                         window.location.assign('/machine/clone/' + machine.id + '.html');
+                        }
                     }                    
                 } else if ( action == 'restore' ) {
-                    $scope.host_restore = machine.id_clone;
+                    $scope.host_restore = machine.clone.id;
                     $scope.host_shutdown = 0;
                     $scope.host_force_shutdown = 0;
-                } else if (action == 'shutdown' || action == 'hibernate' || action == 'force_shutdown') {
+                } else if (action == 'shutdown' || action == 'hibernate' || action == 'force_shutdown' || action == 'reboot') {
                     $scope.host_restore = 0;
-                    $http.get( '/machine/'+action+'/'+machine.id_clone+'.json');
+                    var id=machine.id;
+                    if (machine.clone) {
+                        id=machine.clone.id;
+                    }
+                    $http.get( '/machine/'+action+'/'+id+'.json');
                 } else {
                     alert("unknown action "+action);
                 }
@@ -165,9 +201,6 @@
                     ws_connected = true;
                     ws.send(channel);
                 };
-                ws.onclose = function() {
-                    ws = new WebSocket(url);
-                };
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
@@ -180,17 +213,22 @@
                             if ( !$scope.machines[i] || $scope.machines[i].id != data[i].id ) {
                                 $scope.machines[i] = data[i];
                                 $scope.machines[i].description = data[i].description;
+                                $scope.machines[i].clone = $scope.machines[i].list_clones[0];
+                                $scope.machines[i].screenshot = data[i].screenshot;
+                                set_one_clone($scope.machines[i]);
+                                $scope.machines[i].description2 = $scope.machines[i].description;
                             } else {
                                 $scope.machines[i].can_hibernate = data[i].can_hibernate;
                                 $scope.machines[i].id= data[i].id;
                                 $scope.machines[i].id_clone = data[i].id_clone;
-                                $scope.machines[i].is_active = data[i].is_active;
                                 $scope.machines[i].is_locked = data[i].is_locked;
                                 $scope.machines[i].is_public = data[i].is_public;
-                                $scope.machines[i].name = data[i].name;
-                                $scope.machines[i].name_clone = data[i].name_clone;
-                                $scope.machines[i].screenshot = data[i].screenshot;
-                                $scope.machines[i].description = data[i].description;
+                                $scope.machines[i].alias= data[i].alias;
+                                $scope.machines[i].date_changed = data[i].date_changed;
+                                $scope.machines[i].is_active = data[i].is_active;
+                                $scope.machines[i].is_base = data[i].is_base;
+                                copy_machine_data($scope.machines[i],data[i]);
+
                             }
                             if ( data[i].is_public == 1) {
                                 $scope.public_bases++;
@@ -200,6 +238,42 @@
                         }
                     });
                 }
+
+                var copy_machine_data = function(machine,data) {
+                    var reload=false;
+                    if (data.list_clones.length < machine.list_clones.length) {
+                        machine.list_clones = data.list_clones;
+                        reload=true;
+                    }
+                    for (var i = 0; i < data.list_clones.length; i++) {
+                        if (!machine.list_clones[i]
+                            ||machine.list_clones[i].id != data.list_clones[i].id
+                        ) {
+                            machine.list_clones[i] = data.list_clones[i];
+                            reload=true;
+                        } else {
+                            machine.list_clones[i].is_active = data.list_clones[i].is_active;
+                            machine.list_clones[i].screenshot = data.list_clones[i].screenshot;
+                            if (machine.clone.id == machine.list_clones[i].id) {
+                                machine.screenshot = machine.list_clones[i].screenshot;
+                            }
+
+                        }
+                    }
+                    if (reload) {
+                        set_one_clone(machine);
+                    }
+                };
+
+                var set_one_clone = function(machine) {
+                    machine.clone=machine.list_clones[0];
+                    for (var i=machine.list_clones.length-1; i>=0; i--) {
+                        if(machine.list_clones[i].is_active) {
+                            machine.clone=machine.list_clones[i];
+                        }
+                    }
+                    $scope.change_clone(machine);
+                };
             };
 
             var subscribe_ping_backend= function(url) {
@@ -244,6 +318,8 @@
             $scope.exec_time = new Date();
             $scope.edit = "";
             $scope.lock_info = false;
+            $scope.topology = false;
+            $scope.searching_ldap_attributes = true;
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -275,11 +351,32 @@
                 return $scope.edit == name+index;
             };
 
+            $scope.topology_changed = function() {
+                var cpu = $scope.showmachine.hardware.cpu[0];
+                var item = cpu.cpu.topology;
+                if(typeof(item) == undefined || !item) {
+                    $scope.topology = false;
+                    return;
+                }
+                cpu.vcpu['#text'] = item.dies
+                    * item.sockets
+                    * item.cores
+                    * item.threads;
+
+                $scope.topology = true;
+            };
+
             var load_balance_options = function() {
                 $http.get("/balance_options.json")
                     .then(function(response) {
-                        console.log($scope.showmachine.balance_policy);
                         $scope.balance_options = response.data;
+                    });
+            };
+
+            var get_node_info = function(id) {
+                $http.get("/node/info/"+id+".json")
+                    .then(function(response) {
+                        $scope.node = response.data;
                     });
             };
 
@@ -303,16 +400,33 @@
                         $scope.hardware.sort(function(a,b) {
                             if( a == 'features' && b != 'cpu') return -1;
                             if( b == 'features' && b != 'cpu') return 1;
+                            if( a == 'memory' && b != 'cpu') return -1;
+                            if( b == 'memory' && b != 'cpu') return 1;
                             return a >b;
                         });
                         $scope.showmachine = data;
+                        $scope.hardware_add = [];
+                        for ( var n_key=0 ; n_key< $scope.hardware.length; n_key++) {
+
+                            var item = $scope.hardware[n_key];
+                            if (item != 'cpu' && item != 'features'
+                                && item != 'memory'
+                        && !($scope.showmachine.is_base && item == 'disk')
+                            ) {
+                                $scope.hardware_add.push(item);
+                            }
+                        }
                         $scope.copy_is_volatile = $scope.showmachine.is_volatile;
+                        if ($scope.showmachine.is_base) {
+                            $scope.copy_is_volatile = $scope.showmachine.volatile_clones;
+                        }
                         if (!subscribed_extra) {
                             subscribed_extra = true;
                             subscribe_nodes(url,data.type);
                             //subscribe_bases(url);
                         }
                         if ($scope.edit) { $scope.lock_info = true }
+                        $scope.topology_changed();
                     });
                     _select_new_base();
                 }
@@ -350,9 +464,6 @@
             var subscribe_requests = function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_requests') };
-                ws.onclose = function() {
-                    ws = new WebSocket(url);
-                };
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
@@ -462,7 +573,10 @@
                                 $scope.new_shutdown_disconnected
                                     = $scope.showmachine.shutdown_disconnected;
                                 $scope.new_balance_policy=$scope.showmachine.balance_policy;
+                                $scope.new_auto_compact
+                                    = $scope.showmachine.auto_compact;
                                 load_balance_options();
+                                get_node_info($scope.showmachine.id_vm);
                             }
                             if (is_admin) {
                                 $scope.init_domain_access();
@@ -473,7 +587,6 @@
                                 list_host_devices();
                                 list_access_groups();
                             }
-                            $scope.hardware_types = Object.keys(response.data.hardware);
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
                 });
                 if (is_admin ) {
@@ -651,41 +764,44 @@
 
           //On load code
 //          $scope.showmachineId = window.location.pathname.split("/")[3].split(".")[0] || -1 ;
-          $scope.add_hardware = function(hardware, extra) {
-              if (hardware == 'disk' && ! extra) {
-                  $scope.show_new_disk = true;
-                  return;
-              }
+            var new_hw={
+                'network': {'driver': 'virtio', 'type': 'NAT' }
+                ,'disk': {
+                    'device': 'disk'
+                    ,'bus': 'virtio'
+                    ,'type': 'sys'
+                    ,'capacity': '20G'
+                    ,'allocation': '1G'
+                    ,'driver': { 'cache': 'writeback' }
+                }
+            };
+            $scope.pre_add_hw=function() {
+                if (typeof(new_hw[$scope.new_hardware]) == 'undefined') {
+                    new_hw[$scope.new_hardware] = {};
+                }
+                $scope.item = new_hw[$scope.new_hardware];
+            }
+            $scope.add_hardware = function(hardware) {
+                var extra=new_hw[hardware];
+                if ( hardware == 'disk') {
+                    if ( extra.device == 'cdrom') {
+                        extra.bus = 'sata';
+                    } else {
+                        extra.file= '';
+                    }
+                }
 
-              if ( hardware == 'disk' && extra.device == 'cdrom') {
-                  extra.driver = 'sata';
-              }
-              if ( hardware == 'disk' && extra.device != 'cdrom') {
-                  extra.file= '';
-              }
+                $scope.new_hardware = undefined;
 
-              if (hardware == 'display' && ! extra) {
-                  $scope.show_new_display = true;
-                  return;
-              }
-
-              if (hardware == 'filesystem' && ! extra) {
-                  $scope.show_new_filesystem= true;
-                  return;
-              }
-
-              $scope.request('add_hardware'
+                $scope.request('add_hardware'
                       , { 'id_domain': $scope.showmachine.id
                             ,'name': hardware
                             ,'data': extra
                       })
-          };
-          $scope.remove_hardware = function(hardware, index, item, confirmation) {
+            };
+          $scope.remove_hardware = function(hardware, index ) {
+            $scope.remove_item=undefined;
             if (hardware == 'disk') {
-                if (!confirmation) {
-                    item.remove = !item.remove;
-                    return;
-                }
                 var file = $scope.showmachine.hardware.disk[index].file;
                 if (typeof(file) != 'undefined' && file) {
                     $scope.request('remove_hardware'
@@ -694,13 +810,9 @@
                             ,'name': 'disk'
                             ,'option': { 'source/file': file }
                     });
-                    item.remove = false;
                     return;
                 }
 
-            }
-            if(typeof(item) == 'object') {
-                item.remove = false;
             }
             $scope.request('remove_hardware',{
                     'id_domain': $scope.showmachine.id
@@ -708,16 +820,28 @@
                      ,'index': index
             });
           };
-          $scope.list_ldap_attributes= function() {
+          $scope.list_ldap_attributes = function() {
               $scope.ldap_entries = 0;
               $scope.ldap_verified = 0;
+              $scope.searching_ldap_attributes = true;
               if ($scope.cn) {
                   $http.get('/list_ldap_attributes/'+$scope.cn).then(function(response) {
                       $scope.ldap_error = response.data.error;
                       $scope.ldap_attributes = response.data.attributes;
+                      $scope.dn_found = response.data.dn_found;
+                      $scope.values = response.data.values;
+                      $scope.searching_ldap_attributes = false;
+                      $scope.user_name = response.data.name;
+                      $scope.check_access();
                   });
               }
           };
+          $scope.check_access = function() {
+                      $http.get('/machine/check_access/'+$scope.showmachine.id+"/"+$scope.user_name).then(function(response) {
+                          $scope.check_allowed=response.data.ok;
+                      });
+          };
+
           $scope.count_ldap_entries = function() {
               $scope.ldap_verifying = true;
               $http.get('/count_ldap_entries/'+$scope.ldap_attribute+'/'+$scope.ldap_attribute_value)
@@ -825,6 +949,7 @@
                   $scope.ldap_attributes_domain  = response.data.list;
                   $scope.ldap_attributes_default = response.data.default;
               });
+              $scope.check_access();
           };
           $scope.init_domain_access = function() {
               $http.get('/machine/list_access/'+$scope.showmachine.id).then(function(response) {
@@ -862,17 +987,23 @@
 
             };
             $scope.change_hardware= function(item,hardware,index) {
-                var new_settings = $scope.showmachine.hardware[hardware][index];
-                var hw2 = hardware.replace(/\d+(.*)/,'$1');
+                var new_settings = JSON.parse(JSON.stringify($scope.showmachine.hardware[hardware][index]));
+                if($scope.showmachine.is_base) {
+                    new_settings.capacity=undefined;
+                }
+                if (hardware=='memory') {
+                    new_settings.memory *= 1024;
+                    new_settings.max_mem *= 1024;
+                }
                 $scope.request('change_hardware',
                     {'id_domain': $scope.showmachine.id
-                        ,'hardware': hw2
+                        ,'hardware': hardware
                         ,'index': index
                         ,'data': new_settings
                     }
                 );
                 $scope.lock_info = false;
-                if (hw2 == 'video') $scope.edit=false;
+                if (hardware == 'video') $scope.edit=false;
             }
             $scope.list_bases = function() {
                 $http.get('/list_bases.json')
@@ -962,14 +1093,6 @@
                 });
             };
 
-            $scope.add_disk = {
-                device: 'disk',
-                type: 'sys',
-                driver: 'virtio',
-                capacity: '1G',
-                allocation: '0.1G'
-            };
-
             $scope.request = function(request, args) {
                 $scope.showmachine.requests++;
                 $scope.pending_request = undefined;
@@ -1021,6 +1144,12 @@
                 });
             };
 
+            $scope.reboot = function() {
+                $http.get("/machine/stop_start/"+$scope.showmachine.id+".json")
+                .then(function(response) {
+                });
+            };
+
             $scope.message = [];
             $scope.disk_remove = [];
             $scope.pending_before = 10;
@@ -1032,7 +1161,12 @@
             $scope.access_last = [ ];
 
             $scope.new_base = undefined;
+            $scope.cn ='';
             $scope.list_ldap_attributes();
+            $scope.list_caches = ['default','none','writethrough'
+                ,'writeback','directsync','unsafe'];
+            $scope.list_ios = ['default', 'native', 'threads'];
+
         };
 
     function swListMach() {
@@ -1084,6 +1218,7 @@
     function run_domain_req_ctrl($scope, $http, $timeout, request ) {
         var redirected_display = false;
         var already_subscribed_to_domain = false;
+        var already_refreshed_ports = false;
         $scope.count_start = 0;
         $scope.copy_password= function(driver) {
             $scope.view_password=1;
@@ -1118,9 +1253,6 @@
             already_subscribed_to_domain = false;
             var ws = new WebSocket(url);
             ws.onopen = function(event) { ws.send('request/'+id_request) };
-            ws.onclose = function() {
-                $scope.subscribe_request(url, id_request);
-            };
 
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);
@@ -1131,11 +1263,11 @@
                     already_subscribed_to_domain = true;
                     $scope.id_domain=data.id_domain;
                     $scope.subscribe_domain_info(url, data.id_domain);
-                    $scope.refresh_ports(url, data.id_domain, id_request);
                 }
             }
         }
-        $scope.refresh_ports = function(url, id_domain, id_request) {
+        $scope.refresh_ports = function(url, id_domain ) {
+            var id_request = $scope.request.id;
             $http.post('/request/open_exposed_ports/'
                 ,JSON.stringify(
                     { 'id_domain': id_domain
@@ -1161,10 +1293,6 @@
             already_subscribed_to_domain = true;
             var ws = new WebSocket(url);
             ws.onopen = function(event) { ws.send('machine_info/'+id_domain) };
-            ws.onclose = function() {
-                $scope.subscribe_domain_info(url, id_domain);
-            };
-
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);
                 $scope.$apply(function () {
@@ -1175,6 +1303,11 @@
                         already_subscribed_to_domain = false;
                         $scope.count_start = 0;
                         return;
+                    } else if(!already_refreshed_ports) {
+                        if(data.ports && data.ports.length) {
+                            $scope.refresh_ports(url, data.id);
+                        }
+                        already_refreshed_ports = true;
                     }
                     $scope.count_start++;
                     $scope.domain = data;
@@ -1197,25 +1330,28 @@
                         }
                     }
                 });
-                if ($scope.domain && $scope.domain.is_active && $scope.request.status == 'done') {
+                if ($scope.request_open_ports && $scope.domain && $scope.domain.ip && $scope.domain.requests == 0) {
+                    $scope.request_open_ports_done = true;
+                }
+
+                if ($scope.domain && $scope.domain.is_active && $scope.request.status == 'done' && $scope.domain.requests == 0 && (!$scope.open_ports || $scope.request_open_ports_done) && $scope.redirect_time--<0) {
                     $scope.redirect();
                     if ($scope.auto_view && !redirected_display && $scope.domain_display[0]
                         && $scope.domain_display[0].file_extension
+                        && $scope.domain.ports.length==0
                         && !$scope.domain_display[0].password) {
                         location.href='/machine/display/'+$scope.domain_display[0].driver+"/"
                             +$scope.domain.id+"."+$scope.domain_display[0].file_extension;
                         redirected_display=true;
                     }
                 }
-                if ($scope.request_open_ports && $scope.domain && $scope.domain.ip && $scope.domain.requests == 0) {
-                    $scope.request_open_ports_done = true;
-                }
-
             }
         }
 
         $scope.reload_ports = function() {
             $scope.request_open_ports_done = false;
+            $scope.redirect_time=2;
+            $scope.domain.requests=-1;
             $http.post('/request/close_exposed_ports/'
                 ,JSON.stringify(
                     { 'id_domain': $scope.domain.id})
@@ -1242,6 +1378,7 @@
         $scope.redirect_done = false;
         //$scope.wait_request();
         $scope.view_clicked=false;
+        $scope.redirect_time = 1;
     };
 // list users
     function usersCrtl($scope, $http, request, listUsers) {
@@ -1304,9 +1441,6 @@
       $scope.subscribe_alerts = function(url) {
           var ws = new WebSocket(url);
           ws.onopen = function(event) { ws.send('list_alerts') };
-          ws.onclose = function() {
-                ws = new WebSocket(url);
-          };
 
           ws.onmessage = function(event) {
               var data = JSON.parse(event.data);

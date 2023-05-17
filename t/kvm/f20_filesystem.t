@@ -41,15 +41,90 @@ sub test_fs_bare($vm) {
     is($fs_source_clone, $fs_source_base);
     is($fs_target_clone, $fs_target_base);
 
+    test_remove_fs($domain);
+
+    my @id = ( $clone->id, $domain->id );
+
     $clone->remove(user_admin);
     $domain->remove(user_admin);
 
+    my $sth = connector->dbh->prepare(
+        "SELECT count(*) "
+        ." FROM domain_filesystems "
+        ." WHERE id_domain=?"
+    );
+    for my $id (@id) {
+        $sth->execute($id);
+        my ($count) = $sth->fetchrow;
+        is($count,0);
+    }
+}
+
+sub test_fs_added($vm) {
+    my $domain = create_domain($vm);
+    my $source = _new_source();
+    my $req = Ravada::Request->add_hardware(
+        name => 'filesystem'
+        ,uid => user_admin->id
+        ,id_domain => $domain->id
+        ,data => { source => {dir => $source }}
+    );
+    wait_request();
+
+    my $sth = connector->dbh->prepare(
+        "DELETE FROM domain_filesystems WHERE id_domain=?"
+    );
+    $sth->execute($domain->id);
+
+    $req = Ravada::Request->refresh_machine(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+
+    $sth = connector->dbh->prepare(
+        "DELETE FROM domain_filesystems WHERE id_domain=?"
+    );
+    $sth->execute($domain->id);
+
+    $req = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+
+}
+
+sub test_remove_fs($domain) {
+    my $req = Ravada::Request->remove_hardware(
+        name => 'filesystem'
+        ,uid => user_admin->id
+        ,id_domain => $domain->id
+        ,index => 0
+    );
+    wait_request();
+
+    my ($fs_source, $fs_target) = _get_fs_xml($domain);
+    ok(!$fs_source);
+    ok(!$fs_target);
+
+    my $fs = $domain->info(user_admin)->{hardware}->{filesystem};
+    is(scalar(@$fs),0) or die Dumper($fs);
+
+    my $sth = connector->dbh->prepare(
+        "SELECT * FROM domain_filesystems "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($domain->id);
+    my $found = $sth->fetchrow_hashref;
+    is(scalar(keys %$found),0) or die Dumper($found);
 }
 
 sub _get_fs_xml($domain) {
     my $xml = XML::LibXML->load_xml(string => $domain->xml_description);
 
     my ($fs) = $xml->findnodes("/domain/devices/filesystem");
+    return(undef,undef) if !$fs;
 
     my ($fs_source) = $fs->findnodes("source");
     my ($fs_target) = $fs->findnodes("target");
@@ -72,12 +147,15 @@ sub test_fs_change($vm) {
     my $target2 = $source2;
     $target2 =~ s{^/}{};
     $target2 =~ tr{/}{_};
+    my $hw_fs = $domain->info(user_admin)->{hardware}->{filesystem};
     my $req2 = Ravada::Request->change_hardware(
         uid => user_admin->id
         ,hardware => 'filesystem'
         ,id_domain => $domain->id
         ,index => 0
-        ,data => { source => { dir => $source2 }}
+        ,data => { source => { dir => $source2}
+                , _id => $hw_fs->[0]->{_id}
+        }
     );
     wait_request();
     is($req2->status,'done');
@@ -126,7 +204,7 @@ sub test_fs_table($id_domain, @data) {
     for my $data (@data) {
         my $row = $sth->fetchrow_hashref();
         if (!defined $data ) {
-            ok(!$row);
+            ok(!$row) or confess Dumper([\@data,$row]);
             return;
         }
         delete $row->{id};
@@ -181,8 +259,6 @@ sub test_fs_chrooted($vm) {
 
     like($fs_source_dir,qr{^/var/tmp/tst_kvm_f20_filesystem_\d+/tst_kvm_f20_filesystem_\d+$});
     like($fs_target_dir,qr/^var_tmp_tst_kvm_f20_filesystem_\d+$/);
-
-    test_fs_table($clone->id,undef);
 
     $clone->remove(user_admin);
     $domain->remove(user_admin);
@@ -265,6 +341,8 @@ for my $vm_name ( 'KVM' ) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        test_fs_added($vm);
 
         test_fs_bare($vm);
         test_fs_change($vm);

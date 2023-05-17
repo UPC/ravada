@@ -9,7 +9,7 @@ use Fcntl qw(:flock SEEK_END);
 use File::Copy;
 use File::Path qw(make_path);
 use File::Rsync;
-use Hash::Util qw(lock_keys);
+use Hash::Util qw(lock_keys lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json);
 use Moose;
@@ -398,9 +398,27 @@ sub start($self, @args) {
     $listen_ip = $self->_vm->listen_ip($remote_ip) if !$listen_ip;
 
     $self->_store(is_active => 1);
+    $self->_store(is_hibernated => 0);
     my $password;
     $password = Ravada::Utils::random_name() if $set_password;
     $self->_set_displays_ip( $password, $listen_ip );
+    $self->_set_ip_address();
+
+}
+
+sub _set_ip_address($self) {
+    return if !$self->is_active;
+
+    my $hardware = $self->_value('hardware');
+    my $changed = 0;
+    for my $net (@{$hardware->{network}}) {
+        next if !ref($net);
+        next if exists $net->{address} && $net->{address};
+        next if $net->{type} ne 'nat';
+        $net->{address} = '198.51.100.'.int(rand(253)+2);
+        $changed++;
+    }
+    $self->_store('hardware' => $hardware) if $changed;
 
 }
 
@@ -490,7 +508,7 @@ sub add_volume {
     $args{capacity} = 1024 if !exists $args{capacity};
 
     my %valid_arg = map { $_ => 1 } ( qw( name capacity file vm type swap target allocation
-        driver boot
+        bus boot
     ));
 
     for my $arg_name (keys %args) {
@@ -503,7 +521,7 @@ sub add_volume {
 
     my $data = $self->_load();
     $args{target} = $self->_new_target() if !$args{target};
-    $args{driver} = 'foo' if !exists $args{driver};
+    $args{bus} = 'foo' if !exists $args{bus};
 
     my $hardware = $data->{hardware};
     my $device_list = $hardware->{device};
@@ -513,7 +531,7 @@ sub add_volume {
         ,file => $file
         ,type => $args{type}
         ,target => $args{target}
-        ,driver => $args{driver}
+        ,bus => $args{bus}
         ,device => $device
     };
     $data_new->{boot} = $args{boot} if $args{boot};
@@ -521,7 +539,7 @@ sub add_volume {
     $hardware->{device} = $device_list;
     $self->_store(hardware => $hardware);
 
-    delete @args{'name', 'target', 'driver'};
+    delete @args{'name', 'target', 'bus'};
     $self->_create_volume($file, $format, \%args) if ! -e $file;
 
     return $file;
@@ -652,7 +670,11 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
                 && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);
         }
         $dev->{n_order} = $n_order++;
-        $dev->{driver_type} = 'void';
+        if (!ref($dev->{driver})) {
+            $dev->{driver} = { type => ($dev->{driver} or 'void') };
+        } else {
+            $dev->{driver}->{type} = 'void';
+        }
         my $vol = Ravada::Volume->new(
             file => $dev->{file}
             ,info => $dev
@@ -687,6 +709,7 @@ sub get_info {
     if (!$info->{memory}) {
         $info = $self->_set_default_info();
     }
+    $info->{ip} = $self->ip;
     lock_keys(%$info);
     return $info;
 }
@@ -705,7 +728,6 @@ sub _set_default_info($self, $listen_ip=undef) {
             ,cpu_time => 1
             ,n_virt_cpu => 1
             ,state => 'UNKNOWN'
-            ,ip =>'1.1.1.'.int(rand(254)+1)
             ,mac => _new_mac()
             ,time => time
     };
@@ -775,6 +797,7 @@ sub _set_info {
     my $info = $self->get_info();
     confess "Unknown field $field" if !exists $info->{$field};
 
+    unlock_hash(%$info);
     $info->{$field} = $value;
     $self->_store(info => $info);
 }
@@ -807,16 +830,18 @@ sub disk_size {
 
 sub ip {
     my $self = shift;
-    my $info = $self->_value('info');
-    my $ip = $info->{ip};
-    return $ip if $ip;
+    my $hardware = $self->_value('hardware');
+    return if !exists $hardware->{network};
+    for ( 1 .. 2 ) {
+        for my $network(@{$hardware->{network}}) {
+            return $network->{address}
+            if ref($network) && $network->{address};
+        }
 
-    $self->_set_default_info();
-    $info = $self->_value('info');
-    $ip = $info->{ip};
-    confess if !$ip;
+        $self->_set_ip_address();
+    }
 
-    return $ip;
+    return;
 }
 
 sub clean_disk($self, $file) {
@@ -884,6 +909,7 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
     return $self->_set_controller_disk($data) if $name eq 'disk';
 
     $data->{listen_ip} = $self->_vm->listen_ip if $name eq 'display'&& !$data->{listen_ip};
+    $data->{driver} = 'spice' if $name eq 'display'&& !$data->{driver};
 
     my $list = ( $hardware->{$name} or [] );
 
@@ -953,7 +979,7 @@ sub remove_controller {
 
 sub _change_driver_disk($self, $index, $driver) {
     my $hardware = $self->_value('hardware');
-    $hardware->{device}->[$index]->{driver} = $driver;
+    $hardware->{device}->[$index]->{bus} = $driver;
 
     $self->_store(hardware => $hardware);
 }
@@ -972,14 +998,18 @@ sub _change_disk_data($self, $index, $field, $value) {
 sub _change_hardware_disk($self, $index, $data_new) {
     my @volumes = $self->list_volumes_info();
 
-    my $driver = delete $data_new->{driver};
+    unlock_hash(%$data_new);
+    my $driver;
+    $driver = delete $data_new->{bus} if exists $data_new->{bus};
+    lock_hash(%$data_new);
     return $self->_change_driver_disk($index, $driver) if $driver;
 
     die "Error: volume $index not found, only ".scalar(@volumes)." found."
         if $index >= scalar(@volumes);
 
     my $file = $volumes[$index]->{file};
-    my $new_file = $data_new->{file};
+    my $new_file;
+    $new_file = $data_new->{file} if exists $data_new->{file};
     return $self->_change_disk_data($index, file => $new_file) if defined $new_file;
 
     return if !$file;
@@ -1008,13 +1038,20 @@ sub _change_hardware_vcpus($self, $index, $data) {
 }
 
 sub _change_hardware_memory($self, $index, $data) {
+    unlock_hash(%$data);
     my $memory = delete $data->{memory};
     my $max_mem = delete $data->{max_mem};
     confess "Error: unknown args ".Dumper($data) if keys %$data;
 
     my $info = $self->_value('info');
-    $info->{memory} = $memory       if defined $memory;
-    $info->{max_mem} = $max_mem     if defined $max_mem;
+    if (defined $memory && $info->{memory} != $memory) {
+        $info->{memory} = $memory;
+    }
+
+    if (defined $max_mem && $info->{max_mem} != $max_mem) {
+        $info->{max_mem} = $max_mem;
+        $self->needs_restart(1);
+    }
 
     $self->_store(info => $info);
 }

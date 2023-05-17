@@ -1,4 +1,4 @@
-<div ng-show="name == 'sound'" class="form-group mt-4">
+<div ng-show="new_hardware=='sound' || name == 'sound'" class="form-group mt-4">
     <ul class="list-group list-group-horizontal-md">
         <li class="list-group-item list-group-item-primary"><%=l 'model' %></li>
         <li class="list-group-item">

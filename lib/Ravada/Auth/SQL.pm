@@ -16,6 +16,7 @@ use Ravada::Utils;
 use Ravada::Front;
 use Digest::SHA qw(sha1_hex);
 use Hash::Util qw(lock_hash);
+use Mojo::JSON qw(decode_json);
 use Moose;
 
 use feature qw(signatures);
@@ -678,7 +679,7 @@ Returns if the user is allowed to perform a privileged action in a virtual machi
 =cut
 
 sub can_do_domain($self, $grant, $domain) {
-    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown reboot rename);
+    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown reboot rename expose_ports);
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
     return 0 if !$self->can_do($grant) && !$self->_domain_id_base($domain);
@@ -957,12 +958,18 @@ sub list_all_permissions($self) {
         lock_hash(%$row);
         push @list,($row);
     }
-    my @list2 = sort {
-        return -1 if $a->{name} eq 'start_many' && $b->{name} eq 'start_limit';
-        return +1 if $b->{name} eq 'start_many' && $a->{name} eq 'start_limit';
-        $a->{name} cmp $b->{name};
-    } @list;
-    return @list2;
+    my @list2 = sort { $a->{name} cmp $b->{name} } @list;
+
+    my ($quota_disk) = grep {$_->{name} eq 'quota_disk'} @list2;
+    my ($start_limit) = grep {$_->{name} eq 'start_limit'} @list2;
+
+    my @list3;
+    for (@list2) {
+        push @list3 ,($_) unless $_->{name} =~ /^(quota|start_limit)/;
+        push @list3,$quota_disk if $_->{name} eq 'create_disk';
+        push @list3,$start_limit if $_->{name} eq 'start_many';
+    }
+    return @list3;
 }
 
 =head2 grant_type
@@ -972,7 +979,24 @@ Returns the type of a grant type, currently it can be 'boolaean' or 'int'
 =cut
 
 sub grant_type($self, $permission) {
-    return 'boolean' if !exists $self->{_grant_type}->{$permission};
+    if (!exists $self->{_grant_type}
+        || !exists $self->{_grant_type}->{$permission}
+        || !defined $self->{_grant_type}->{$permission}
+    ) {
+        $self->_load_grants() if !exists $self->{_grant};
+        if (!defined $self->{_grant_type}->{$permission}) {
+            my $sth = $$CON->dbh->prepare(
+                "SELECT is_int FROM grant_types WHERE name=?"
+            );
+            $sth->execute($permission);
+            my ($is_int) = $sth->fetchrow;
+            if ($is_int) {
+                $self->{_grant_type}->{$permission} = 'int';
+            } else {
+                $self->{_grant_type}->{$permission} = 'boolean';
+            }
+        }
+    }
     return $self->{_grant_type}->{$permission};
 }
 
@@ -1189,15 +1213,38 @@ sub groups($self) {
 
 }
 
+=head2 disk_used
+
+Returns the amount of disk space used by this user in MB
+
+=cut
+
+sub disk_used($self) {
+    my $sth = $$CON->dbh->prepare(
+        "SELECT v.* FROM volumes v,domains d "
+        ." WHERE v.id_domain=d.id"
+        ."   AND d.id_owner=?"
+    );
+    $sth->execute($self->id);
+    my $used = 0;
+    while (my $row = $sth->fetchrow_hashref) {
+        my $info = decode_json($row->{info});
+        my $size = ($info->{capacity} or 0);
+        $used += $size;
+    }
+    return $used;
+}
+
 sub AUTOLOAD($self, $domain=undef) {
 
     my $name = $AUTOLOAD;
     $name =~ s/.*://;
 
     confess "Can't locate object method $name via package $self"
-        if !ref($self) || $name !~ /^can_(.*)/;
+        if !ref($self) || $name !~ /^(can|quota)_(.*)/;
 
     my ($permission) = $name =~ /^can_([a-z_]+)/;
+    ($permission) = $name =~ /^(quota_[a-z_]+)/ if !defined $permission;
     return $self->can_do($permission)   if !$domain;
 
     return $self->can_do_domain($permission,$domain);

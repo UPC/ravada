@@ -9,10 +9,13 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("manage_nodes",manage_nodes)
         .controller("manage_networks",manage_networks)
         .controller("settings_node",settings_node)
+        .controller("settings_storage",settings_storage)
         .controller("settings_network",settings_network)
         .controller("new_node", newNodeCtrl)
+        .controller("new_storage", new_storage)
         .controller("settings_global", settings_global_ctrl)
         .controller("admin_groups", admin_groups_ctrl)
+        .controller('admin_charts', admin_charts_ctrl)
     ;
 
     ravadaApp.directive('ipaddress', function() {
@@ -863,6 +866,122 @@ ravadaApp.directive("solShowMachine", swMach)
         list_networks();
     }
 
+
+    function settings_storage($scope, $http, $interval, $timeout) {
+        var start=0;
+        var limit=10;
+        $scope.n_selected = 0;
+        $scope.init=function(id_vm) {
+            $scope.id_vm = id_vm;
+            list_storage_pools(id_vm);
+            $scope.storage = {
+                'id': id_vm
+            };
+            $scope.load_node(id_vm);
+            $scope.list_unused_volumes();
+        };
+
+        $scope.load_node= function() {
+            $http.get('/node/info/'+$scope.id_vm+'.json')
+                .then(function(response) {
+                $scope.node = response.data;
+            });
+        };
+
+        $scope.update_node = function(node) {
+            $scope.error = '';
+            var data = {
+                'id': node.id
+                ,'base_storage': node.base_storage
+                ,'default_storage': node.default_storage
+                ,'clone_storage': node.clone_storage
+            };
+            $http.post('/v1/node/set/'
+                , JSON.stringify(data))
+                .then(function(response) {
+                    if (response.data.ok == 1){
+                        $scope.saved = true;
+                    }
+                    $scope.error = response.data.error;
+                });
+        };
+
+        $scope.toggle_active = function(pool) {
+            if (pool.is_active) {
+                pool.is_active=0;
+            } else {
+                pool.is_active=1;
+            }
+            $http.post('/request/active_storage_pool'
+                ,JSON.stringify({'id_vm': $scope.id_vm
+                    , 'value': pool.is_active
+                    , 'name': pool.name})
+            ).then(function(response) {
+                $scope.error = response.data.error;
+            });
+
+        };
+
+        list_storage_pools= function(id_vm) {
+            $scope.pools=[];
+            $http.get('/storage/list_pools/'+id_vm).then(function(response) {
+                $scope.storage_pools = response.data;
+                for (var i=0;i<response.data.length;i++) {
+                    $scope.pools[i]=response.data[i].name;
+                }
+            });
+        }
+
+        $scope.list_unused_volumes=function() {
+            $scope.loading_unused=true;
+            $http.get('/storage/list_unused_volumes?id_vm='+$scope.id_vm
+                +'&start='+start+'&limit='+limit)
+                    .then(function(response) {
+                $scope.loading_unused=false;
+                $scope.list_more = response.data.more;
+                if (!$scope.unused_volumes) {
+                    $scope.unused_volumes = response.data.list;
+                    return;
+                }
+                for (var i=0; i<response.data.list.length ; i++) {
+                    $scope.unused_volumes.push(response.data.list[i]);
+                }
+                $scope.req_more = false;
+                window.scrollTo(0, document.body.scrollHeight);
+            });
+        }
+        $scope.remove_selected = function() {
+            var remove = [];
+            var files = $scope.unused_volumes;
+            var keep = [];
+            var count = 0;
+            for (var i=0; i<files.length; i++ ) {
+                if (files[i].remove) {
+                    remove.push(files[i].file);
+                    count++;
+                } else {
+                    keep.push(files[i]);
+                }
+            }
+            if (!count) {
+                return;
+            };
+            $scope.unused_volumes = keep;
+            $http.post('/request/remove_files'
+                ,JSON.stringify({'id_vm': $scope.id_vm , 'files': remove })
+            ).then(function(response) {
+                start=0;
+                $scope.unused_volumes=undefined;
+                $scope.list_unused_volumes();
+            });
+        }
+        $scope.more = function() {
+            start += limit;
+            $scope.req_more = true;
+            $scope.list_unused_volumes();
+        };
+    }
+
     function newNodeCtrl($scope, $http, $timeout) {
         $http.get('/list_vm_types.json').then(function(response) {
             $scope.backends = response.data;
@@ -922,6 +1041,64 @@ ravadaApp.directive("solShowMachine", swMach)
                 }
             });
         };
+    };
+
+    function new_storage($scope, $http, $timeout) {
+        var url_ws;
+        var ws;
+        $scope.name_valid=true;
+        $scope.directory_valid=true;
+
+        $scope.init=function(id_vm, url) {
+            $scope.id_vm = id_vm;
+            url_ws = url;
+        };
+        $scope.check_name = function(name) {
+            const re = /^[a-zA-Z]+[a-zA-Z0-9_\.\-]*$/;
+            $scope.name_valid = re.test(name);
+        };
+        $scope.check_directory = function(name) {
+            const re = /^\/[a-zA-Z]+[a-zA-Z0-9_\.\-\/]*$/;
+            $scope.directory_valid = re.test(name);
+        };
+
+        $scope.name_duplicated=false;
+        $scope.add_storage = function() {
+            $scope.request=undefined;
+            if (!$scope.name_valid || ! $scope.directory_valid) {
+                return;
+            }
+            $http.post('/request/create_storage_pool/'
+                ,JSON.stringify({
+                    'id_vm': $scope.id_vm
+                    ,'name': $scope.name
+                    ,'directory': $scope.directory})
+            ).then(function(response) {
+                if (response.data.ok == 1 ) {
+                    console.log(response.data);
+                    $scope.request = {
+                        'id': response.data.request
+                    };
+                    subscribe_request(response.data.request);
+                }
+            });
+        }
+        subscribe_request = function(id_request) {
+            if(typeof(ws) === 'undefined') {
+                ws = new WebSocket(url_ws);
+            } else {
+                ws.close();
+                ws = new WebSocket(url_ws);
+            }
+            ws.onopen = function(event) { ws.send('request/'+id_request) };
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                $scope.$apply(function () {
+                    $scope.request = data;
+                });
+            }
+        };
+
     };
 
    function settings_network($scope, $http, $timeout) {
@@ -1284,5 +1461,141 @@ ravadaApp.directive("solShowMachine", swMach)
                 }
             });
         };
+    };
+
+
+    function admin_charts_ctrl($scope, $http) {
+        $scope.data = [];
+        $scope.labels = [];
+        var my_chart;
+
+        $scope.hour = 1;
+        $scope.day = 0;
+        $scope.week = 0;
+        $scope.month = 0;
+        $scope.year = 0;
+
+        var max_y = 10;
+        $scope.options_h = [
+            {id:0, title: 'hours'}
+            ,{id:1 , title: '1 hour'}
+            ,{id:2 , title: '2 hours'}
+            ,{id:3 , title: '3 hours'}
+            ,{id:6 , title: '6 hours'}
+            ,{id:8 , title: '8 hours'}
+        ];
+        $scope.options_d = [
+            {id:0 , title: 'days'}
+            ,{id:1 , title: '1 day'}
+            ,{id:2 , title: '2 days'}
+            ,{id:3 , title: '3 days'}
+            ,{id:6 , title: '6 days'}
+        ];
+        $scope.options_w = [
+            {id:0 , title: 'weeks'}
+            ,{id:1 , title: '1 week'}
+            ,{id:2 , title: '2 weeks'}
+            ,{id:3 , title: '3 weeks'}
+            ,{id:4 , title: '4 weeks'}
+        ];
+        $scope.options_m = [
+            {id:0 , title: 'months'}
+            ,{id:1 , title: '1 month'}
+            ,{id:2 , title: '2 months'}
+            ,{id:3 , title: '3 months'}
+            ,{id:6 , title: '6 months'}
+            ,{id:9 , title: '9 months'}
+        ];
+        $scope.options_y = [
+            {id:0 , title: 'years'}
+            ,{id:1 , title: '1 year'}
+            ,{id:2 , title: '2 years'}
+            ,{id:3 , title: '3 years'}
+            ,{id:6 , title: '6 years'}
+            ,{id:9 , title: '9 years'}
+        ];
+
+        var url;
+
+        $scope.init = function(url0) {
+            subscribe_log_active_domains(url0,'hours',1);
+            url = url0;
+        }
+
+        $scope.load_chart = function(type) {
+            my_chart.destroy();
+            if (type == 'hour') {
+                $scope.day=0;$scope.week=0;$scope.month=0;$scope.year=0;
+                subscribe_log_active_domains(url,'hours',$scope.hour);
+            } else if( type =='day') {
+                $scope.hour=0;$scope.week=0;$scope.month=0;$scope.year=0;
+                subscribe_log_active_domains(url,'days',$scope.day);
+            } else if ( type == 'week') {
+                $scope.hour=0; $scope.day=0;$scope.month=0;$scope.year=0;
+                subscribe_log_active_domains(url,'weeks',$scope.week);
+            } else if ( type == 'month') {
+                $scope.hour=0; $scope.day=0;$scope.week=0;$scope.year=0;
+                subscribe_log_active_domains(url,'months',$scope.month);
+            } else if ( type == 'year') {
+                $scope.hour=0; $scope.day=0;$scope.week=0;$scope.month=0;
+                subscribe_log_active_domains(url,'years',$scope.year);
+            }
+        };
+
+        subscribe_log_active_domains = function(url,unit,time) {
+            var chart_data = {
+                labels: [],
+                datasets: [{
+                    label: 'Active',
+                    backgroundColor: 'rgb(0, 199, 132)',
+                    borderColor: 'rgb(0, 99, 132)',
+                    data: [],
+                    tension: 0.2
+                }]
+            };
+            var chart_config ={
+                type: 'line',
+                data: chart_data,
+                options: {
+                    scales : {
+                        y : {
+                            min: 0,
+                            max: max_y
+                        }
+                    }
+                    ,borderColor: 'black'
+                }
+            };
+            my_chart = new Chart(
+                            document.getElementById('myChart'),
+                            chart_config
+                        );
+
+            var ws = new WebSocket(url);
+            ws.onopen = function(event) {
+                ws.send('log_active_domains/'+unit+'/'+time);
+            };
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                $scope.$apply(function () {
+                    $scope.data = data.data;
+                    $scope.labels = data.labels;
+
+                    chart_config.data.datasets[0].data = data.data;
+                    chart_config.data.labels = data.labels;
+                    var new_max = Math.max(...data.data);
+                    var div = 5;
+                    if (new_max>30) { div = 10 };
+                    new_max = Math.round(new_max/div+1)*div;
+                    if (new_max > chart_config.options.scales.y.max) {
+                        chart_config.options.scales.y.max = new_max;
+                    }
+                    my_chart.update();
+
+                });
+            }
+        };
+
+
     };
 }());

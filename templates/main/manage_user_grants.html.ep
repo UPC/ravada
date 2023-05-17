@@ -9,7 +9,7 @@
                 >
         %     }
         %     if ($perm->{is_int}) {
-                  <input type="number" name="perm_<%= $perm->{name} %>" min="1" ng-model="perm['<%= $perm->{name} %>']" max="999" style="margin-left: 15px; margin-bottom: 10px"
+                  <input type="number" name="perm_<%= $perm->{name} %>" min="0" ng-model="perm['<%= $perm->{name} %>']" max="999" style="margin-left: 15px; margin-bottom: 10px"
                     size="4"
                     ng-hide="<%= $perm->{name} eq 'start_limit' %> && perm['start_many']"
                     ng-change="update_grant('<%= $perm->{name} %>')"

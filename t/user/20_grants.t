@@ -68,7 +68,7 @@ sub test_defaults {
     my %grants_info = $user->grants_info();
     for my $key ( keys %grants ) {
         is($grants_info{$key}->[0],$grants{$key}, $key);
-        if ($key eq 'start_limit') {
+        if ($key eq 'start_limit' || $key =~ /^quota/) {
             is($grants_info{$key}->[1],"int" , $key);
         } else {
             is($grants_info{$key}->[1],"boolean" , $key);
@@ -694,6 +694,64 @@ sub test_create_domain2 {
     $usera->remove();
 }
 
+sub test_expose_ports($vm_name) {
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $user = create_user("oper_cs$$","bar");
+    my $usera = create_user("admin_cs$$","bar",1);
+
+    is($user->can_expose_ports(), undef);
+    is($usera->can_expose_ports(), 1);
+
+    is($user->can_expose_ports_clones(), undef);
+    is($usera->can_expose_ports_clones(), 1);
+
+
+    my $base = create_domain($vm_name, $usera);
+    $base->prepare_base(user_admin);
+    $base->is_public(1);
+    my $req =Ravada::Request->clone( id_domain => $base->id
+        ,uid => $user->id
+    );
+    wait_request();
+    my ($domain_d) = $base->clones;
+    my $domain = Ravada::Domain->open($domain_d->{id});
+
+    is($user->can_expose_ports($domain->id), 0);
+    is($usera->can_expose_ports($domain->id), 1);
+
+    my %args = (
+                        'id_domain' => $domain->id
+                        ,'port' => 22
+                        ,'name' => 'ssh'
+    );
+    $req = Ravada::Request->expose(%args, uid => $user->id);
+    wait_request(check_error => 0);
+    like($req->error,qr'access denied'i);
+
+    $req = Ravada::Request->expose(%args, uid => $usera->id);
+    wait_request($req);
+    is($req->error,'');
+
+    Ravada::Request->clone(id_domain => $base->id
+        ,uid => $usera->id
+    );
+    wait_request();
+    my ($domain_da) = grep { $_->{id_owner} == $usera->id } $base->clones;
+    $req = Ravada::Request->expose(id_domain=> $domain_da->{id}
+        ,uid => $user->id
+        ,port => 22
+    );
+    wait_request(check_error => 0);
+    like($req->error,qr'access denied'i);
+
+    remove_domain($base);
+    $user->remove();
+    $usera->remove();
+
+
+}
+
 sub test_change_settings($vm_name) {
     my $vm = rvd_back->search_vm($vm_name);
 
@@ -933,6 +991,7 @@ for my $vm_name (vm_names()) {
 
     diag("Testing VM $vm_name");
     test_view_all($vm);
+    test_expose_ports($vm_name);
     test_change_settings($vm_name);
 
     test_shutdown_clone($vm_name);
