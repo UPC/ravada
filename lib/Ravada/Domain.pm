@@ -307,9 +307,10 @@ sub _around_start($orig, $self, @arg) {
 
     $self->_post_hibernate() if $self->is_hibernated && !$self->_data('post_hibernated');
 
+    $self->_start_preconditions(@arg);
+
     $self->_data( 'post_shutdown' => 0);
     $self->_data( 'post_hibernated' => 0);
-    $self->_start_preconditions(@arg);
 
     my %arg;
     if (!(scalar(@arg) % 2) ) {
@@ -427,7 +428,7 @@ sub _start_preconditions{
     } else {
         ($user) = $_[1];
     }
-    $self->_allow_manage($user);
+    $self->_allowed_start($user);
     if ( Ravada->setting('/backend/bookings') && !$self->allowed_booking( $user ) ) {
         my @bookings = Ravada::Booking::bookings(date => DateTime->now()->ymd
             ,time => DateTime->now()->hms);
@@ -1124,20 +1125,35 @@ sub _allowed {
         if !ref $user || ref($user) !~ /Ravada::Auth/;
 
     return if $user->is_admin;
-    my $id_owner;
-    eval { $id_owner = $self->id_owner };
+    $self->_access_denied_error($user);
+}
+
+sub _access_denied_error($self,$user) {
+    my ($id_owner,$owner_name);
+    eval {
+        $id_owner = $self->id_owner;
+
+        my $owner= Ravada::Auth::SQL->search_by_id($id_owner);
+        $owner_name = $owner->name if $owner;
+    };
     my $err = $@;
 
     confess "User ".$user->name." [".$user->id."] not allowed to access ".$self->name
-        ." owned by ".($id_owner or '<UNDEF>')
+        ." owned by ".($owner_name or '<UNDEF>')." [".($id_owner or '<UNDEF>')."]"
             if (defined $id_owner && $id_owner != $user->id );
 
     confess $err if $err;
 
 }
 
+sub _allowed_start($self, $user) {
+    return if $user->is_admin || $user->can_view_all;
+
+    $self->_access_denied_error($user);
+}
+
 sub _around_display_info($orig,$self,$user ) {
-    $self->_allowed($user);
+    $self->_allowed_start($user);
     my @display_current_all = Ravada::Front::Domain::_get_controller_display($self);
     my @display_current = grep {$_->{is_builtin}} @display_current_all;
     my @display = $self->$orig($user);

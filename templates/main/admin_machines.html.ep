@@ -118,7 +118,7 @@
                        title="<%=l 'Show/Hide clones' %>">
                        <%=l 'Base' %></span></th>
                     <th class="lgMachToggle"><%=l 'Public'%></th>
-%                   if ($autostart) {
+%                   if ($USER->can_create_base && $autostart) {
                         <th class="lgMachToggle"><%=l 'Autostart'%></th>
 %                   }
                     <th class="lgMachToggle machine-button">
@@ -263,7 +263,7 @@
                         </button>
 
                     </td>
-                    <td class="lgMachToggle">
+                    <td class="lgMachToggle" style="white-space:nowrap">
                       <div ng-hide="machine.is_locked||machine.is_base">
                         <button type="button" class="btn btn-success btn-sm"
                          ng-click="action('machine','start',machine.id)"
@@ -272,14 +272,16 @@
                          title="<%=l 'Start' %>">
                          <i class="fa fa-play"></i>
                         </button>
-                        <button type="button" class="btn btn-warning btn-sm"
+                        <button
+                            type="button" class="btn btn-warning btn-sm"
                          ng-click="action('machine','hibernate',machine.id)"
                          ng-disabled="!machine.is_active"
                          ng-show="machine.can_hibernate"
                          title="<%=l 'Hibernate' %>">
                           <i class="fa fa-pause"></i>
                        </button>
-                        <button type="button" class="btn btn-danger btn-sm"
+                       <button
+                            type="button" class="btn btn-danger btn-sm"
                          ng-click="action('machine','shutdown',machine.id)"
                          ng-disabled="!machine.is_active"
                          ng-show="machine.can_shutdown"

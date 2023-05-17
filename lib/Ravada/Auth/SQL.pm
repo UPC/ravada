@@ -377,6 +377,7 @@ sub is_operator {
             || $self->is_user_manager()
             || $self->can_view_groups()
             || $self->can_manage_groups()
+            || $self->can_view_all()
     ;
     return 0;
 }
@@ -444,7 +445,9 @@ sub can_list_machines {
             || $self->can_clone_all()
             || $self->can_remove_all()
             || $self->can_rename_all()
-            || $self->can_shutdown_all();
+            || $self->can_shutdown_all()
+            || $self->can_view_all()
+            ;
     return 0;
 }
 

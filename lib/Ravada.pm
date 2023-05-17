@@ -1742,6 +1742,7 @@ sub _add_grants($self) {
     $self->_add_grant('view_groups',0,'can view groups.');
     $self->_add_grant('manage_groups',0,'can manage groups.');
     $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1, 0);
+    $self->_add_grant('view_all',0,"The user can start and access the screen of any virtual machine");
     $self->_add_grant('create_disk',0,'can create disk volumes');
     $self->_add_grant('quota_disk',0,'disk space limit',1);
 }
@@ -1819,6 +1820,7 @@ sub _enable_grants($self) {
         ,'start_many'
         ,'view_groups',     'manage_groups'
         ,'start_limit',     'start_many'
+        ,'view_all'
         ,'create_disk', 'quota_disk'
     );
 
