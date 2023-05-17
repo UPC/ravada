@@ -897,7 +897,13 @@ sub test_start_many_upgrade{
 }
 
 sub test_view_all($vm) {
-    my $domain = create_domain($vm);
+    my $domain;
+    if ($vm->type eq 'KVM') {
+        my $base = import_domain($vm);
+        $domain = $base->clone(name => new_domain_name, user => user_admin);
+    } else {
+        $domain = create_domain($vm);
+    }
     $domain->expose(22);
     my $user = create_user();
     user_admin->grant($user,'view_all');
