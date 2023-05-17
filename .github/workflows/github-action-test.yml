@@ -38,8 +38,6 @@ jobs:
         run: sudo mysql -u root --password=root --protocol=tcp -h localhost -e "create user 'rvd_user'@'%' IDENTIFIED WITH mysql_native_password BY 'Pword12345*'"
       - name: allow mysql user
         run: sudo mysql -u root --password=root --protocol=tcp -h localhost -e "grant all on ravada.* to 'rvd_user'@'%'"
-      - name: install rvd
-        run: sudo /usr/sbin/rvd_back --list
       - name: Test mojo grants
         run: prove -l t/mojo/30_grants.t
       - name: Test critic
