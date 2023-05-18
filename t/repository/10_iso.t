@@ -56,23 +56,24 @@ sub test_insert_request {
 
  }
 
-sub test_download {
-    my $iso_name = 'linkat';
+sub test_download($iso_name) {
     my $id_iso = search_id_iso($iso_name);
     ok($id_iso) or return;
 
-    my $vm = rvd_back->search_vm('KVM');
+    my $vm = Ravada::VM->open( type => 'KVM');
 
-    my $iso = $vm->_search_iso($id_iso);
-    if ($iso->{device} && -e $iso->{device}) {
-        #        warn("$iso->{device} already downloaded");
-    }
-    my $device_cdrom = $vm->_iso_name($iso, undef, 1);
-    ok($device_cdrom);
+    my $req1 = Ravada::Request->download(
+             id_iso => $id_iso
+            , id_vm => $vm->id
+            #            , delay => 4
+            , test => 1
+    );
+    is($req1->status, 'requested');
 
-    my $md5 = $vm->_fetch_md5($iso);
-    ok($md5);
-
+    rvd_back->_process_all_requests_dont_fork();
+    is($req1->status, 'done');
+    is($req1->error,'');
+    like($req1->output,qr/^http.*/);
 }
 
 sub check_entries_added($vm, $dir) {
