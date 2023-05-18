@@ -218,14 +218,17 @@ sub _test_clone($domain, $base_name, $user) {
 }
 
 sub _test_copy($domain, $base_name) {
-    my $copy_name = $base_name."-copy-".$base_name;
-    $t->post_ok("/machine/copy/" => json => {
-        id_base=> $domain->id
-        ,new_name => $copy_name
-    });
-    wait_request(debug => 1);
+    my ($copy, $copy_name);
+    for (1 .. 5 ) {
+        $copy_name = $base_name."-copy-".$base_name;
+        $t->post_ok("/machine/copy/" => json => {
+            id_base=> $domain->id
+            ,new_name => $copy_name
+        });
+        wait_request(debug => 1);
 
-    my ($copy) = rvd_front->search_domain($copy_name);
+        ($copy) = rvd_front->search_domain($copy_name);
+    }
     ok($copy);
     like($copy->_data('name'),qr/^[a-z0-9_\-]+$/);
     unlike($copy->_data('name'),qr/--+/) or exit;

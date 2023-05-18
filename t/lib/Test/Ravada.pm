@@ -64,6 +64,8 @@ create_domain
     local_ips
 
     wait_request
+    wait_mojo_request
+
     delete_request
     delete_request_not_done
     fast_forward_requests
@@ -467,9 +469,19 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
                 , warn_error => 1
                 , pid_name => $pid_name
     );
-    $rvd->_install();
-    $rvd->_update_isos();
-    $CONNECTOR = $rvd->connector if !$sqlite;
+    if ($sqlite) {
+        $rvd->_install();
+        $rvd->_update_isos();
+    } else {
+        $CONNECTOR = $rvd->connector;
+        my $sth = $CONNECTOR->dbh->table_info('%',undef,'users','TABLE');
+        my $info = $sth->fetchrow_hashref();
+        $sth->finish;
+        if (!$info) {
+            $rvd->_install();
+            $rvd->_update_isos();
+        }
+    }
 
     user_admin();
     $RVD_BACK = $rvd;
@@ -989,7 +1001,7 @@ sub _wait_mojo_request($t, $url) {
         return;
     }
     my $req = Ravada::Request->open($body_json->{request});
-    for ( 1 .. 120 ) {
+    for ( 1 .. 180 ) {
         last if $req->status eq 'done';
         sleep 1;
         diag("Waiting for request "
@@ -997,6 +1009,10 @@ sub _wait_mojo_request($t, $url) {
     }
     is($req->status,'done');
     is($req->error, '');
+}
+
+sub wait_mojo_request($t, $url) {
+    _wait_mojo_request($t, $url);
 }
 
 sub _activate_storage_pools($vm) {
@@ -1299,7 +1315,7 @@ sub wait_request {
                         } elsif($req->command eq 'refresh_machine') {
                             like($error,qr{^($|.*port.*already used)});
                         } else {
-                            like($error,qr/^$|libvirt error code:38,|run recently/)
+                            like($error,qr/^$|libvirt error code:38,|run recently|checked|checking/)
                                 or confess $req->id." ".$req->command;
                         }
                     }

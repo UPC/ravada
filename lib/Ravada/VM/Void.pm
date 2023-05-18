@@ -456,6 +456,8 @@ sub refresh_storage_pools {
 
 }
 
+sub _refresh_storage_pools {}
+
 sub list_storage_pools {
     return 'default';
 }

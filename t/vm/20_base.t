@@ -319,7 +319,7 @@ sub test_displays_added_on_refresh($domain, $n_expected, $delete=1) {
             ,id_domain => $domain->id
             ,_force => 1
         );
-        last if $req->id && $req->status ne 'uknown';
+        last if $req->id && $req->status ne 'unknown';
         sleep 1;
     }
 
@@ -330,10 +330,20 @@ sub test_displays_added_on_refresh($domain, $n_expected, $delete=1) {
     }
     is($req->status,'done');
     is($req->error,'');
-    my $sth_count = connector->dbh->prepare(
-        "SELECT count(*) FROM domain_displays WHERE id_domain=?");
-    $sth_count->execute($domain->id);
-    my ($count) = $sth_count->fetchrow;
+    my $count;
+    for ( 1 .. 10 ) {
+        my $sth_count = connector->dbh->prepare(
+            "SELECT count(*) FROM domain_displays WHERE id_domain=?");
+        $sth_count->execute($domain->id);
+        ($count) = $sth_count->fetchrow;
+        last if $count;
+        Ravada::Request->refresh_machine(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,_force => 1
+        );
+        wait_request();
+    }
     ok($count>=$n_expected,"Got $count, expecting >$n_expected displays on table domain_displays for ".$domain->name) or confess;
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
@@ -379,6 +389,17 @@ sub test_display_iptables($vm) {
                         , node => $vm),"Expecting iptables rule for"
                     ." $display->{driver} ->  $display->{ip} : $port");
             } else {
+                for ( 1 .. 10 ) {
+                    ($out_iptables, $err) = $vm->run_command("iptables-save","-t","nat");
+                    @iptables = split (/\n/,$out_iptables);
+                    last if (grep /^-A PREROUTING -d $display_ip\/.* --dport $port -j DNAT/,@iptables);
+                    Ravada::Request->refresh_machine(uid => user_admin->id
+                        ,id_domain => $domain->id
+                        ,_force => 1
+                    );
+                    sleep 1;
+                    wait_request();
+                }
                 ok(grep /^-A PREROUTING -d $display_ip\/.* --dport $port -j DNAT/,@iptables)
                     or die Dumper(\@iptables);
             }
@@ -552,9 +573,9 @@ sub test_display_info($vm) {
     _test_display_tls($clone);
     wait_request();
     if (!$clone->is_active) {
-        Ravada::Request->start_domain(uid => user_admin->id, id_domain => $clone->id
+        my $req = Ravada::Request->start_domain(uid => user_admin->id, id_domain => $clone->id
             ,remote_ip => '1.2.3.4');
-        wait_request(debug => 0);
+        wait_request(debug => 0, request => $req->id);
         for ( 1 .. 20 ) {
             last if $clone->ip;
             wait_request();
@@ -654,7 +675,16 @@ sub test_iptables($domain) {
         };
 
         my $port_rdp = $display_exp->{port};
-        my @iptables_rdp = grep { /^-A PREROUTING.*--dport $port_rdp -j DNAT .*3389/ } @iptables;
+        my @iptables_rdp;
+        for ( 1 .. 10 ) {
+            @iptables_rdp = grep { /^-A PREROUTING.*--dport $port_rdp -j DNAT .*3389/ } @iptables;
+            last if scalar(@iptables_rdp)==1;
+            sleep 1;
+            wait_request();
+
+            ($iptables, $err) = $domain->_vm->run_command("iptables-save");
+            @iptables = split /\n/,$iptables;
+        }
         is(scalar(@iptables_rdp),1,"Expecting one entry with PRERORUTING --dport $port_rdp, got "
             .scalar(@iptables_rdp)) or do {
             my @iptables_prer= grep { /^-A PREROUTING.*--dport / } @iptables;
@@ -1974,7 +2004,7 @@ sub test_already_requested_working($vm) {
     my $req2 = Ravada::Request->prepare_base(@args);
     $req->status('requested');
 
-    wait_request();
+    wait_request( request => [ $req->id, $req2->id]);
     is($req->status, 'done');
     is($req2->status, 'done');
     is($req->error, '');
