@@ -1448,12 +1448,14 @@ get '/user/grant/(:id_user)/(:grant)/(:value)' => sub($c) {
         $USER->send_message($error);
     } else {
         my $grant = $c->stash('grant');
+        my $grant_type = $USER->grant_type($grant);
         $grant =~ s/_/ /g;
         if ( $value ) {
             $info = "Permission granted to user"
         } else {
             $info = "Permission revoked from user";
         }
+        $grant .= " $value" if $grant_type eq 'int';
         $info = $c->stash->{i18n}->localize($info);
 
         $USER->send_message($info." ".Encode::decode_utf8($user->name)
