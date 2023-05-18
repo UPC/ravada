@@ -1598,6 +1598,7 @@ sub _ua_get($self, $url) {
     }
     confess "Error getting '$url'" if !$res;
 
+    return if $url =~ m{/$} && $res->code && $res->code == 404;
     if (!defined $res->code || !($res->code == 200 || $res->code == 301)) {
         my $msg = "Error getting '$url'";
         $msg .= " ".$res->code if defined $res->code;
