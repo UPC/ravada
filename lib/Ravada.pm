@@ -2784,7 +2784,8 @@ sub _upgrade_timestamp($self, $table, $field) {
     $sth->execute();
 }
 
-sub _connect_dbh {
+sub _connect_dbh($self=undef) {
+    _wait_pids($self);
     my $driver= ($CONFIG->{db}->{driver} or 'mysql');;
     my $db_user = ($CONFIG->{db}->{user} or getpwnam($>));;
     my $db_pass = ($CONFIG->{db}->{password} or undef);
@@ -2807,9 +2808,15 @@ sub _connect_dbh {
                         , PrintError=> 0 });
             $con->dbh();
         };
+        my $err = $@;
         $con->dbh->do("PRAGMA foreign_keys = ON") if $driver =~ /sqlite/i;
 
-        return $con if $con && !$@;
+        if ($@ && $@ =~ /Too many connections/) {
+            _wait_child_pids();
+            sleep 10;
+        }
+
+        return $con if $con && !$err;
         sleep 1;
         warn "Try $try $@\n";
     }
@@ -2828,11 +2835,13 @@ Returns the default display IP read from the config file
 
 sub display_ip($self=undef, $new_ip=undef) {
     if (defined $new_ip) {
+        unlock_hash(%$CONFIG);
         if (!length $new_ip) {
             delete $CONFIG->{display_ip};
         } else {
             $CONFIG->{display_ip} = $new_ip;
         }
+        lock_hash(%$CONFIG);
     }
     my $ip;
     $ip = $CONFIG->{display_ip} if exists $CONFIG->{display_ip};
@@ -2847,11 +2856,13 @@ Returns the IP for NATed environments
 
 sub nat_ip($self=undef, $new_ip=undef) {
     if (defined $new_ip) {
+        unlock_hash(%$CONFIG);
         if (!length $new_ip) {
             delete $CONFIG->{nat_ip};
         } else {
             $CONFIG->{nat_ip} = $new_ip;
         }
+        lock_hash(%$CONFIG);
     }
 
     return $CONFIG->{nat_ip} if exists $CONFIG->{nat_ip};
@@ -2880,6 +2891,8 @@ sub _init_config {
 #    $CONNECTOR = ( $connector or _connect_dbh());
 
     _init_config_vm();
+
+    lock_hash(%$CONFIG);
 }
 
 sub _init_config_vm {
@@ -4012,9 +4025,10 @@ sub _execute {
     if ( $pid == 0 ) {
         srand();
         $self->_do_execute_command($sub, $request);
+        $CONNECTOR->disconnect();
         exit;
     }
-    warn "forked $pid\n" if $DEBUG;
+    warn "$$ forked $pid\n" if $DEBUG;
     $self->_add_pid($pid, $request);
     $request->pid($pid);
 }
@@ -4324,7 +4338,9 @@ sub _can_fork {
     for my $pid (keys %reqs) {
         my $id_req = $reqs{$pid};
         my $request;
-        $request = Ravada::Request->open($id_req)   if defined $id_req;
+        eval {
+            $request = Ravada::Request->open($id_req)   if defined $id_req;
+        };
         delete $reqs{$pid} if !$request || $request->status eq 'done';
     }
     my $n_pids = scalar(keys %reqs);
@@ -4343,6 +4359,13 @@ sub _can_fork {
     return 0;
 }
 
+sub _wait_child_pids() {
+    for (;;) {
+        my $pid = waitpid(0, WNOHANG);
+        last if $pid<1;
+    }
+}
+
 sub _wait_pids($self) {
 
     my @done;
@@ -4352,6 +4375,8 @@ sub _wait_pids($self) {
             push @done, ($pid) if $kid == $pid || $kid == -1;
         }
     }
+    _wait_child_pids();
+    return if !$CONNECTOR;
     return if !@done;
     for my $pid (@done) {
         my $id_req;
@@ -5663,7 +5688,6 @@ sub _check_duplicated_iptable($self, $request = undef ) {
             my %already_open;
             for my $line (@{$iptables->{'filter'}}) {
                 my %args = @$line;
-                next if $args{A} ne 'RAVADA';
                 my $rule = join(" ", map { $_." ".$args{$_} }  sort keys %args);
 
                 if ($dupe{$rule}) {
@@ -5701,15 +5725,16 @@ sub _delete_iptables_rule($self, $vm, $table, $rule) {
     my %delete = %$rule;
     my $chain = delete $delete{A};
     my $to_destination = delete $delete{'to-destination'};
-    my $dport = delete $delete{dport};
-    my $m = delete $delete{m};
-    my $p = delete $delete{p};
     my $j = delete $delete{j};
-    my @delete = ( t => $table, 'D' => $chain
-        , m => $m, p => $p, dport => $dport);
+    my @delete = ( t => $table, 'D' => $chain);
+
+    for my $key ( qw(m p dport)) {
+        push @delete ,($key => delete $delete{$key}) if $delete{$key};
+    }
     push @delete,("j" => $j) if $j;
     push @delete,( 'to-destination' => $to_destination) if $to_destination;
     push @delete, %delete;
+
     $vm->iptables(@delete);
 
 }
@@ -6557,6 +6582,7 @@ sub _restore_backup_data($self, $file_data, $file_data_extra
 }
 
 sub DESTROY($self) {
+    $self->_wait_pids() unless $0 =~ /\.t$/;
 }
 
 =head2 version

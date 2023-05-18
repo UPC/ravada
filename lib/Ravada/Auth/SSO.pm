@@ -115,7 +115,7 @@ sub is_external { }
 
 sub init {
     state $warn = 0;
-    if ( $$CONFIG->{sso} ) {
+    if (exists $$CONFIG->{sso} && $$CONFIG->{sso} ) {
         for my $field (qw(url service cookie)) {
             if ( !exists $$CONFIG->{sso}->{$field} ) {
                 $ERR = "Error: Missing sso / $field in config file\n";

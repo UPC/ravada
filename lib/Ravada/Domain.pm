@@ -945,6 +945,8 @@ sub _post_prepare_base {
 
     $self->_set_base_vm_db($self->_vm->id,1);
     $self->autostart(0,$user);
+
+    $self->_vm->_refresh_storage_pools();
 };
 
 =pod
@@ -3030,6 +3032,9 @@ sub _pre_shutdown {
     $self->list_disks;
     $self->_remove_start_requests();
 
+    my $ip = $self->ip;
+    $self->_delete_ip_rule ([undef,$ip,'nat' ]) if $ip;
+
 }
 
 sub _remove_start_requests($self) {
@@ -4194,33 +4199,49 @@ sub _add_iptable {
 
 sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
 
+    confess if !ref($vm);
     return if !$vm->is_active;
 
     my ($s, $d, $filter, $chain, $jump, $extra) = @$iptables;
     lock_hash %$extra;
 
-    $s = undef if $s =~ m{^0\.0\.0\.0};
-    $s .= "/32" if defined $s && $s !~ m{/};
+    $filter = 'filter' if !$filter;
+
+    if ($s) {
+        $s = undef if $s =~ m{^0\.0\.0\.0};
+        $s .= "/32" if defined $s && $s !~ m{/};
+    }
     $d .= "/32" if defined $d && $d !~ m{/};
 
     my $iptables_list = $vm->iptables_list();
 
     my $removed = 0;
-    my $count = 0;
     for my $line (@{$iptables_list->{$filter}}) {
         my %args = @$line;
-        next if $args{A} ne $chain;
-        $count++;
+        next if defined $chain && $args{A} ne $chain;
+        next if $args{A} =~ /LIBVIRT_/;
         if((!defined $jump || ( exists $args{j} && $args{j} eq $jump ))
            && ( !defined $s || (exists $args{s} && $args{s} eq $s))
            && ( !defined $d || ( exists $args{d} && $args{d} eq $d))
-           && ( $args{dport} eq $extra->{d_port}))
+           && (exists $extra->{d_port} && $args{dport} eq $extra->{d_port}))
         {
 
-           $vm->run_command("iptables", "-t", $filter, "-D", $chain, $count,"-w")
-                if $vm->is_active;
+           my $curr_chain = delete $args{A};
+           if ($vm->is_active) {
+                my @cmd = ("iptables", "-t", $filter, "-D", $curr_chain);
+                my $m = delete $args{m};
+                my $p = delete $args{p};
+                push @cmd,("-m" => $m) if $m;
+                push @cmd,("-p" => $m) if $p;
+                for my $key ( sort keys  %args) {
+                    my $dash = '-';
+                    $dash = '--' if length($key)>1;
+                    push @cmd, ("$dash$key" => $args{$key});
+                }
+                my ($out, $err) = $vm->run_command(@cmd);
+                warn $err if $err;
+           }
            $removed++;
-           $count--;
         }
 
     }

@@ -1055,6 +1055,7 @@ get '/machine/check_access/(#id_domain)/(#user)' => sub {
     return _access_denied($c) if !$USER->is_admin;
 
     my $user_name = $c->stash('user');
+    return if !$user_name || $user_name eq 'undefined';
     my $user = Ravada::Auth::SQL->new(name => $user_name);
 
     if (!$user->id && Ravada::Auth::LDAP::search_user($user_name)) {
@@ -2998,6 +2999,7 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
         ,uid => $USER->id
        ,@create_args
     );
+    return $req;
 
 }
 
