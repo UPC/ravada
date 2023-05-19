@@ -118,11 +118,6 @@ sub _connect {
          };
          confess $@ if $@;
     }
-    if ( ! _list_storage_pools($vm) && !$_CREATED_DEFAULT_STORAGE{$self->host}) {
-	    warn "WARNING: No storage pools creating default\n";
-    	$self->_create_default_pool($vm);
-        $_CREATED_DEFAULT_STORAGE{$self->host}++;
-    }
     $self->_check_networks($vm);
     return $vm;
 }
@@ -138,6 +133,14 @@ sub _list_storage_pools($vm) {
    }
 }
 
+sub _check_default_storage($self) {
+    my $vm = $self->vm;
+    if ( ! _list_storage_pools($vm) && !$_CREATED_DEFAULT_STORAGE{$self->host}) {
+	    warn "WARNING: No storage pools creating default\n";
+        $_CREATED_DEFAULT_STORAGE{$self->host}++;
+        $self->_create_default_pool($vm);
+    }
+}
 
 sub _check_networks {
     my $self = shift;
@@ -495,6 +498,7 @@ Refreshes all the storage pools
 =cut
 
 sub refresh_storage($self) {
+    $self->_check_default_storage();
     $self->_refresh_storage_pools();
     $self->_refresh_isos();
 }
@@ -735,7 +739,7 @@ sub _create_default_pool($self, $vm=$self->vm) {
     my $name = 'default';
 
     eval {
-    $self->_create_storage_pool($name, $dir, $vm);
+    $self->create_storage_pool($name, $dir, $vm);
     };
     warn $@ if $@;
 }
