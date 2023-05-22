@@ -77,14 +77,11 @@ ravadaApp.directive("solShowMachine", swMach)
           $scope.images = [];
           subscribe_list_isos(url);
           subscribe_list_machines(url);
-          console.log("get types");
           $http.get('/list_vm_types.json').then(function(response) {
               $scope.backends = response.data;
               $scope.backend = response.data[0];
               $scope.loadTemplates();
-              console.log(response.data);
           });
-          console.log("get types done");
       }
 
       $scope.list_machine_types = function(backend) {
@@ -103,6 +100,12 @@ ravadaApp.directive("solShowMachine", swMach)
                       $scope.storage_pool=response.data[i];
                   }
               }
+              for(var i=0; i<response.data.length;i++) {
+                  if (response.data[i].is_active && response.data[i].name == 'default') {
+                      $scope.storage_pool=response.data[i];
+                  }
+              }
+
           });
 
       };

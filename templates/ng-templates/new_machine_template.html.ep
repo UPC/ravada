@@ -146,7 +146,7 @@
                 </div>
                 <div class="col-lg-6" ng-show="storage_pool">
                 <b>{{storage_pool.path}}</b>
-                {{(storage_pool.available/1024/1024/1024).toFixed(2)}} GB available
+                {{storage_pool.available}} GB available
                 </div>
                 <input type="text" ng-show="false" name="storage" ng-model="storage_pool.name"/>
             </div>

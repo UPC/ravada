@@ -643,7 +643,7 @@ sub test_pool_linked2_reverse($vm) {
 sub test_pool_info($vm) {
     my $req = Ravada::Request->list_storage_pools(
         uid => user_admin->id
-        ,info => 1
+        ,data => 1
         ,id_vm => $vm->id
     );
     wait_request();
