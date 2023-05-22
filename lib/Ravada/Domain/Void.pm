@@ -544,8 +544,6 @@ sub add_volume {
 
     delete @args{'name', 'target', 'bus'};
 
-    confess $file if $file =~/pools_02/ && !$file =~ m{/var/tmp};
-    confess $file if $file =~ /rvd_void.*tst_kvm_a10_pools_02/;
     $self->_create_volume($file, $format, \%args) if ! -e $file;
 
     return $file;

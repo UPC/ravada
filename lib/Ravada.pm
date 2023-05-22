@@ -3131,10 +3131,11 @@ sub create_domain {
 
     unlock_hash(%args);
     my $swap = delete $args{swap};
+    my $storage = delete $args{storage};
     lock_hash(%args);
 
     my $domain;
-    eval { $domain = $vm->create_domain(%args)};
+    eval { $domain = $vm->create_domain(%args, storage => $storage)};
 
     my $error = $@;
     if ( $request ) {
@@ -3148,9 +3149,9 @@ sub create_domain {
     }
     return if !$domain;
     my $req_add_swap = _req_add_disk($args{id_owner}, $domain->id,
-        ,'swap', $swap ,$request, $args{storage});
+        ,'swap', $swap ,$request, $storage);
     my $req_add_data = _req_add_disk($args{id_owner}, $domain->id
-        ,'data', $data, ($req_add_swap or $request ), $args{storage});
+        ,'data', $data, ($req_add_swap or $request ), $storage);
 
     my $previous_req = ($req_add_data or $req_add_swap or $request);
 
@@ -5367,7 +5368,14 @@ sub _cmd_list_network_interfaces($self, $request) {
 
 sub _cmd_list_storage_pools($self, $request) {
     my $id_vm = $request->args('id_vm');
-    my $vm = Ravada::VM->open( $id_vm );
+    my $vm;
+    if ($id_vm =~ /^\d+$/) {
+        $vm = Ravada::VM->open( $id_vm );
+    } else {
+        $vm = Ravada::VM->open( type => $id_vm );
+    }
+    die "Error: vm '$id_vm' not found" if !$vm;
+
     my $data = $request->defined_arg('data');
 
     $request->output(encode_json([ $vm->list_storage_pools($data) ]));
