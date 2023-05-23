@@ -117,7 +117,7 @@ our $CAN_LXC = 0;
 our $SECONDS_WAIT_CHILDREN = 5;
 
 our $DIR_SQL = "sql/mysql";
-$DIR_SQL = "/usr/share/doc/ravada/sql/mysql" if ! -e $DIR_SQL;
+$DIR_SQL = "/usr/share/ravada/sql/mysql" if ! -e $DIR_SQL;
 
 our $USER_DAEMON;
 our $USER_DAEMON_NAME = 'daemon';
