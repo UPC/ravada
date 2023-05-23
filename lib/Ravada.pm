@@ -406,8 +406,8 @@ sub _update_isos {
                     ,url => 'http://releases.ubuntu.com/22.04/'
                 ,file_re => '^ubuntu-22.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
-          ,min_disk_size => '12'
-          ,min_ram => 1
+          ,min_disk_size => '14'
+          ,min_ram => 4
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
                    ,arch => 'x86_64'
 
