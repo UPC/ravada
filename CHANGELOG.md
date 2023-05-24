@@ -2,17 +2,10 @@
 
 **Implemented enhancements:**
 
-- Auto Compact [\#1907]
-- Improved Indonesian translation [\#1918]
-- Kubuntu 22.04
-
 **Bugfixes**
 
-- Correctly change topology when no previous model [\#1909]
-- Link for Windows virt viewer download wrong [\#1911]
+- Ubuntu Server installer [\#1944]
+- Ubuntu Desktop requires 4 GB RAM
 
 **Refactors**
 
-- Removed warning for secure ldap config
-- Access denied message [\#1917]
-- Duplicated requests [\#1913]
