@@ -1461,7 +1461,7 @@ sub remove($self) {
 
 Run a command on the node
 
-    my @ls = $self->run_command("ls");
+    my ($out,$err) = $self->run_command_cache("ls");
 
 =cut
 
@@ -1491,6 +1491,15 @@ sub run_command($self, @command) {
 
     return ($out, $err);
 }
+
+=head2 run_command_cache
+
+Run a command on the node
+
+    my ($out,$err) = $self->run_command_cache("ls");
+
+=cut
+
 
 sub run_command_cache($self, @command) {
     my $key = join(" ",@command);
