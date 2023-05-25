@@ -792,6 +792,16 @@ sub _list_ip_address($self) {
     return %address;
 }
 
+sub _ip_a($self, $dev) {
+    my ($out, $err) = $self->run_command_cache("/sbin/ip","-o","a");
+    die $err if $err;
+    for my $line ( split /\n/,$out) {
+        my ($ip) = $line =~ m{^\d+:\s+$dev.*inet (.*?)/};
+        return $ip if $ip;
+    }
+    warn "Warning $dev not found in active interfaces";
+}
+
 sub _interface_ip($self, $remote_ip=undef) {
     return '127.0.0.1' if $remote_ip && $remote_ip =~ /^127\./;
     my ($out, $err) = $self->run_command_cache("/sbin/ip","route");
@@ -805,18 +815,36 @@ sub _interface_ip($self, $remote_ip=undef) {
         if ( $line =~ m{^default via ([\d\.]+)} ) {
             $default_gw = NetAddr::IP->new($1);
         }
+        if ($line =~ m{^default via.*dev (.*?)(\s|$)}) {
+            my $dev = $1;
+            $default_ip = $self->_ip_a($dev) if !$default_ip;
+        }
         if ( $line =~ m{^([\d\.\/]+).*src ([\d\.\/]+)} ) {
             my ($network, $ip) = ($1, $2);
-            $route{$network} = $ip;
+            if ($ip) {
+                $route{$network} = $ip;
 
-            return $ip if $remote_ip && $remote_ip eq $ip;
+                return $ip if $remote_ip && $remote_ip eq $ip;
 
-            my $netaddr = NetAddr::IP->new($network)
-                or confess "I can't find netaddr for $network";
-            return $ip if $remote_ip_addr->within($netaddr);
+                my $netaddr = NetAddr::IP->new($network)
+                    or confess "I can't find netaddr for $network";
+                return $ip if $remote_ip_addr->within($netaddr);
 
-            $default_ip = $ip if !defined $default_ip && $ip !~ /^127\./;
-            $default_ip = $ip if defined $default_gw && $default_gw->within($netaddr);
+                $default_ip = $ip if defined $default_gw && $default_gw->within($netaddr);
+            }
+        }
+        if ( $line =~ m{^([\d\.\/]+).*dev (.+?) } ) {
+            my ($network, $dev) = ($1, $2);
+            my $ip = $self->_ip_a($dev);
+            if ($ip) {
+                $route{$network} = $ip;
+
+                return $ip if $remote_ip && $remote_ip eq $ip;
+
+                my $netaddr = NetAddr::IP->new($network)
+                    or confess "I can't find netaddr for $network";
+                return $ip if $remote_ip_addr->within($netaddr);
+            }
         }
     }
     return $default_ip;
