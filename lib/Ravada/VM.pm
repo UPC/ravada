@@ -794,7 +794,7 @@ sub _list_ip_address($self) {
 
 sub _interface_ip($self, $remote_ip=undef) {
     return '127.0.0.1' if $remote_ip && $remote_ip =~ /^127\./;
-    my ($out, $err) = $self->run_command("/sbin/ip","route");
+    my ($out, $err) = $self->run_command_cache("/sbin/ip","route");
     my %route;
     my ($default_gw , $default_ip);
 
@@ -1461,6 +1461,15 @@ sub run_command($self, @command) {
     if $ssh->error && $ssh->error !~ /^child exited with code/;
 
 
+    return ($out, $err);
+}
+
+sub run_command_cache($self, @command) {
+    my $key = join(" ",@command);
+    return @{$self->{_run}->{$key}} if exists $self->{_run}->{$key};
+
+    my ($out, $err) = $self->run_command(@command);
+    $self->{_run}->{$key}=[$out,$err];
     return ($out, $err);
 }
 
