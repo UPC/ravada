@@ -406,7 +406,12 @@ sub _list_used_volumes_known($self) {
         my $dom = $self->search_domain($name);
         my $xml = $dom->xml_description();
         my @vols = $self->_find_all_volumes($xml);
-        push @used,@vols;
+        my @links;
+        for my $vol (@vols) {
+            my $link = $self->_follow_link($vol);
+            push @links,($link) if $link;
+        }
+        push @used, (@vols,@links);
     }
     return @used;
 }

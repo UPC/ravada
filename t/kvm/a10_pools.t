@@ -23,8 +23,7 @@ my $USER = create_user("foo","bar", 1);
 
 #########################################################################
 
-sub create_pool {
-    my $vm_name = shift;
+sub create_pool($vm_name, $dir) {
 
     my $vm = rvd_back->search_vm($vm_name) or return;
 
@@ -32,7 +31,7 @@ sub create_pool {
     my $capacity = 1 * 1024 * 1024;
 
     my $pool_name = new_pool_name();
-    my $dir = "/var/tmp/$pool_name";
+    $dir = "/var/tmp/$pool_name" if !$dir;
 
     mkdir $dir if ! -e $dir;
 
@@ -613,6 +612,62 @@ sub test_pool_linked2_reverse($vm) {
     $domain1->remove(user_admin);
 }
 
+sub _search_file($output, $file) {
+    my $found;
+    die "Missing list item" unless exists $output->{list};
+
+    my $list = $output->{list};
+    ($found) = grep( {$file eq $_->{file}} @$list);
+    return $found;
+}
+
+sub test_pool_dupe($vm) {
+
+    my ($pool_name, $dir, $dir_link) = _create_pool_linked($vm);
+
+    my $pool2 = create_pool($vm->type,$dir);
+
+    my @domains;
+    for my $pool ( $pool_name, $pool2) {
+        $vm->default_storage_pool_name($pool);
+        my $domain=create_domain($vm);
+        push @domains,($domain);
+    }
+    $vm->refresh_storage();
+
+    my $req2 = Ravada::Request->list_unused_volumes(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,start => 0
+        ,limit => 1000
+    );
+    wait_request();
+    my $out_json = $req2->output;
+    $out_json = '[]' if !defined $out_json;
+    my $output0 = decode_json($out_json);
+    my @files;
+    for my $file (@{$output0->{list}}) {
+        next if $file =~ m{/var/lib/libvirt/images};
+        next if $file =~ m{/var/tmp/[^/]+$};
+        push @files,($file);
+    }
+    my $output = {list => \@files};
+
+    for my $dir ($dir, $dir_link) {
+        my @found = grep( {$_->{file} =~ m{^$dir/} } @{$output->{list}});
+        ok(!@found,"Expecting $dir not found") or die Dumper(\@found);
+    }
+    $vm->default_storage_pool_name('default');
+}
+
+sub _check_linked($domain) {
+    my $vm = $domain->_vm;
+    for my $vol ( $domain->list_volumes ) {
+        next if $vol =~ /iso$/;
+        my $link = $vm->_follow_link($vol);
+        ok($link,"Expecting link of $vol") or exit;
+    }
+}
 
 #########################################################################
 
@@ -631,6 +686,8 @@ SKIP: {
     }
 
     skip($msg,10)   if !$vm;
+
+    test_pool_dupe($vm);
 
     test_pool_linked($vm);
     test_pool_linked2($vm);
@@ -653,8 +710,6 @@ SKIP: {
     my $pool_name2 = create_pool($vm_name);
     test_base_clone_pool($vm, $pool_name, $pool_name2);
     $domain->remove(user_admin);
-
-    test_pool_linked($vm);
 
 }
 
