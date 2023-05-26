@@ -438,6 +438,7 @@ sub _find_all_volumes($self, $xml) {
         next if !$source;
         my $file = $source->getAttribute('file');
         push @used,($file) if $file;
+
         my @used_bs = $self->_find_all_volumes_bs($disk);
         push @used,@used_bs if scalar(@used_bs);
     }
@@ -463,8 +464,10 @@ sub list_unused_volumes($self) {
 
         eval { ($file) = $vol->get_path };
         confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
-
         next if $used{$file};
+
+        my $link = $self->_is_link($file);
+        next if $link && $used{$link};
 
         my $info;
         eval { $info = $vol->get_info() };

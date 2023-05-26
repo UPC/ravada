@@ -23,15 +23,13 @@ my $USER = create_user("foo","bar", 1);
 
 #########################################################################
 
-sub create_pool($vm_name, $dir) {
+sub create_pool($vm_name, $dir="/var/tmp/".new_pool_name()) {
 
     my $vm = rvd_back->search_vm($vm_name) or return;
-
 
     my $capacity = 1 * 1024 * 1024;
 
     my $pool_name = new_pool_name();
-    $dir = "/var/tmp/$pool_name" if !$dir;
 
     mkdir $dir if ! -e $dir;
 
@@ -634,6 +632,8 @@ sub test_pool_dupe($vm) {
         push @domains,($domain);
     }
     $vm->refresh_storage();
+    _check_linked($domains[0]);
+    _check_linked_in_dir($dir_link,$domains[1]);
 
     my $req2 = Ravada::Request->list_unused_volumes(
         uid => user_admin->id
@@ -658,6 +658,17 @@ sub test_pool_dupe($vm) {
         ok(!@found,"Expecting $dir not found") or die Dumper(\@found);
     }
     $vm->default_storage_pool_name('default');
+}
+
+sub _check_linked_in_dir($dir, $domain) {
+    my $vm = $domain->_vm;
+    for my $vol ( $domain->list_volumes ) {
+        next if $vol =~ /iso$/;
+        my ($name) = $vol =~ m{.*/(.*)};
+        my $file = "$dir/$name";
+        my $link = $vm->_is_link($file);
+        ok($link,"Expecting $file is link") or exit;
+    }
 }
 
 sub _check_linked($domain) {
