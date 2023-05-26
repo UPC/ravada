@@ -266,11 +266,46 @@ sub test_conflict_allowed {
     };
 }
 
+sub test_initial_networks($vm) {
+    my $sth = connector->dbh->prepare("SELECT * FROM networks");
+    $sth->execute();
+
+    my ($localhost, $internal, $default);
+    while (my $row = $sth->fetchrow_hashref) {
+        $localhost = $row if $row->{address} =~ /^127.0.0/;
+        $default = $row if $row->{address} =~ /^0.0.0.0/;
+        $internal = $row if $row->{name} =~ /^internal/;
+    }
+    ok($localhost);
+    like($localhost->{address},qr/^127.0.0/);
+    ok($default);
+    like($default->{address},qr/^0.0.0.0/);
+
+    ok($internal);
+    unlike($internal->{address},qr/^127.0.0/);
+    unlike($internal->{address},qr/^0.0.0.0/);
+
+    my $sth_del=connector->dbh->prepare("DELETE FROM networks WHERE name like 'internal%'");
+    $sth_del->execute;
+
+    create_domain($vm);
+
+    rvd_back->_add_internal_network();
+
+    $sth=connector->dbh->prepare("SELECT * FROM networks WHERE name like 'internal%'");
+    $sth->execute;
+    my $found = $sth->fetchrow_hashref;
+    ok(!$found) or die Dumper($found);
+
+}
+
 ########################################################################3
 #
 #
 remove_old_domains();
 remove_old_disks();
+
+test_initial_networks($vm);
 
 my $domain_name = new_domain_name();
 my $domain = $vm->create_domain( name => $domain_name

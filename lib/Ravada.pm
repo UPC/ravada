@@ -206,11 +206,44 @@ sub _install($self) {
     $self->_sql_insert_defaults();
 
     $self->_do_create_constraints();
+    $self->_add_internal_network();
 
     $pid->release();
 
     print "\n" if $FIRST_TIME_RUN;
 
+}
+
+sub _add_internal_network($self) {
+
+    my $sth = $CONNECTOR->dbh->prepare("SELECT count(*) FROM domains");
+    $sth->execute();
+    my ($found) = $sth->fetchrow;
+    return if $found;
+
+    $sth = $CONNECTOR->dbh->prepare("SELECT * FROM networks WHERE name='internal'");
+    $sth->execute();
+    ($found) = $sth->fetchrow;
+    return if $found;
+
+    my @cmd = ("ip","route");
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+
+    warn $err if $err;
+
+    $sth = $CONNECTOR->dbh->prepare("INSERT INTO networks "
+        ."(name, address, n_order, all_domains, requires_password)"
+        ." VALUES(?,?,?,1,0)"
+    );
+    my $n=0;
+    for my $net (split /\n/,$out) {
+        next if $net =~ /dev virbr/;
+        my ($address) = $net =~ m{(^[\d\.]+/\d+)};
+        next if !$address;
+        $sth->execute("internal$n",$address, ++$n+1);
+
+    }
 }
 
 sub _do_create_constraints($self) {
