@@ -58,8 +58,6 @@ It is required a database for internal use. In this examples we call it *ravada*
 We also need an user and a password to connect to the database. It is customary to call it *rvd_user*.
 In this stage the system wants you to set a password for the sql connection.
 
-.. Warning:: When installing MySQL you wont be asked for a password, you can set a password for the root user in MySQL via *mysql_secure_installation* or type your user's password when it ask's you for a password.
-
 Create the database:
 
 .. prompt:: bash $
