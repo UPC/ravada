@@ -285,6 +285,8 @@ sub test_initial_networks($vm) {
     unlike($internal->{address},qr/^127.0.0/);
     unlike($internal->{address},qr/^0.0.0.0/);
 
+    rvd_back->_add_internal_network();
+
     my $sth_del=connector->dbh->prepare("DELETE FROM networks WHERE name like 'internal%'");
     $sth_del->execute;
 

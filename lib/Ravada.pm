@@ -221,7 +221,7 @@ sub _add_internal_network($self) {
     my ($found) = $sth->fetchrow;
     return if $found;
 
-    $sth = $CONNECTOR->dbh->prepare("SELECT * FROM networks WHERE name='internal'");
+    $sth = $CONNECTOR->dbh->prepare("SELECT * FROM networks WHERE name like 'internal%'");
     $sth->execute();
     ($found) = $sth->fetchrow;
     return if $found;
