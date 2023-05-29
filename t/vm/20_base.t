@@ -95,6 +95,7 @@ sub test_display {
     # only test this for Void, it will fail on real VMs
     return if $vm_name ne 'Void';
 
+    unlock_hash(%$Ravada::CONFIG);
     $Ravada::CONFIG->{display_ip} = $DISPLAY_IP;
     eval { $display = $domain->display( user_admin ) };
     is($@,'');
@@ -318,7 +319,7 @@ sub test_displays_added_on_refresh($domain, $n_expected, $delete=1) {
             ,id_domain => $domain->id
             ,_force => 1
         );
-        last if $req->id && $req->status ne 'uknown';
+        last if $req->id && $req->status ne 'unknown';
         sleep 1;
     }
 
@@ -329,10 +330,20 @@ sub test_displays_added_on_refresh($domain, $n_expected, $delete=1) {
     }
     is($req->status,'done');
     is($req->error,'');
-    my $sth_count = connector->dbh->prepare(
-        "SELECT count(*) FROM domain_displays WHERE id_domain=?");
-    $sth_count->execute($domain->id);
-    my ($count) = $sth_count->fetchrow;
+    my $count;
+    for ( 1 .. 10 ) {
+        my $sth_count = connector->dbh->prepare(
+            "SELECT count(*) FROM domain_displays WHERE id_domain=?");
+        $sth_count->execute($domain->id);
+        ($count) = $sth_count->fetchrow;
+        last if $count;
+        Ravada::Request->refresh_machine(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,_force => 1
+        );
+        wait_request();
+    }
     ok($count>=$n_expected,"Got $count, expecting >$n_expected displays on table domain_displays for ".$domain->name) or confess;
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
@@ -378,6 +389,17 @@ sub test_display_iptables($vm) {
                         , node => $vm),"Expecting iptables rule for"
                     ." $display->{driver} ->  $display->{ip} : $port");
             } else {
+                for ( 1 .. 10 ) {
+                    ($out_iptables, $err) = $vm->run_command("iptables-save","-t","nat");
+                    @iptables = split (/\n/,$out_iptables);
+                    last if (grep /^-A PREROUTING -d $display_ip\/.* --dport $port -j DNAT/,@iptables);
+                    Ravada::Request->refresh_machine(uid => user_admin->id
+                        ,id_domain => $domain->id
+                        ,_force => 1
+                    );
+                    sleep 1;
+                    wait_request();
+                }
                 ok(grep /^-A PREROUTING -d $display_ip\/.* --dport $port -j DNAT/,@iptables)
                     or die Dumper(\@iptables);
             }
@@ -551,9 +573,9 @@ sub test_display_info($vm) {
     _test_display_tls($clone);
     wait_request();
     if (!$clone->is_active) {
-        Ravada::Request->start_domain(uid => user_admin->id, id_domain => $clone->id
+        my $req = Ravada::Request->start_domain(uid => user_admin->id, id_domain => $clone->id
             ,remote_ip => '1.2.3.4');
-        wait_request(debug => 0);
+        wait_request(debug => 0, request => $req->id);
         for ( 1 .. 20 ) {
             last if $clone->ip;
             wait_request();
@@ -653,7 +675,16 @@ sub test_iptables($domain) {
         };
 
         my $port_rdp = $display_exp->{port};
-        my @iptables_rdp = grep { /^-A PREROUTING.*--dport $port_rdp -j DNAT .*3389/ } @iptables;
+        my @iptables_rdp;
+        for ( 1 .. 10 ) {
+            @iptables_rdp = grep { /^-A PREROUTING.*--dport $port_rdp -j DNAT .*3389/ } @iptables;
+            last if scalar(@iptables_rdp)==1;
+            sleep 1;
+            wait_request();
+
+            ($iptables, $err) = $domain->_vm->run_command("iptables-save");
+            @iptables = split /\n/,$iptables;
+        }
         is(scalar(@iptables_rdp),1,"Expecting one entry with PRERORUTING --dport $port_rdp, got "
             .scalar(@iptables_rdp)) or do {
             my @iptables_prer= grep { /^-A PREROUTING.*--dport / } @iptables;
@@ -716,7 +747,7 @@ sub _test_compare($display1, $display2) {
     delete $display1b{id_domain}
     if !exists $display2b{id_domain};
 
-    for (qw(n_order display id_vm is_secondary _can_remove _can_edit)) {
+    for (qw(n_order display id_vm is_secondary _can_remove _can_edit _index)) {
         delete $display1b{$_};
         delete $display2b{$_};
     }
@@ -1353,13 +1384,14 @@ sub test_change_display_settings($vm) {
 
 sub test_change_display_settings_kvm($domain) {
     $domain->start(user_admin);
-    my $display = $domain->info(user_admin)->{display};
     $domain->shutdown_now(user_admin);
 
-    my @display = $domain->_get_controller_display();
-    isa_ok($display[0]->{extra},'HASH') or exit;
-    ok($display[0]->{driver}) or die Dumper($display[0]);
-    ok($domain->_is_display_builtin($display[0]->{driver})) or exit;
+    my @displays = $domain->_get_controller_display();
+    my ($display) = grep { $_->{is_builtin} && !$_->{is_secondary}} @displays;
+    isa_ok($display->{extra},'HASH') or exit;
+    ok($display->{driver}) or die Dumper($display);
+    ok($domain->_is_display_builtin($display->{driver})) or exit;
+    ok(!$display->{is_secondary}) or die Dumper($display);
 
     for my $driver_name (qw(image jpeg zlib playback streaming)) {
         my $driver = $domain->drivers($driver_name);
@@ -1367,12 +1399,18 @@ sub test_change_display_settings_kvm($domain) {
         my @options = $driver->get_options;
         die "Error: no options for driver $driver_name" if !scalar(@options);
         for my $option ( @options ) {
+            my ($field,$value) = $option->{value} =~ /(.*)=(.*)/;
+            $value =~ s/^"(.*)"$/$1/;
+            die Dumper([$driver_name, $option]) if !$field || !$value;
+            my $option2 = { $field => $value };
             my $req = Ravada::Request->change_hardware(
                 uid => user_admin->id
                 ,id_domain => $domain->id
                 ,hardware => 'display'
-                ,data => { $driver_name => $option->{value} , driver => $display->{driver} }
-                ,index => 0
+                ,data => { extra => { $driver_name => $option2 }
+                        ,driver => $display->{driver}
+                }
+                ,index => $display->{_index}
             );
             for ( 1 .. 10 ) {
                 wait_request(debug => 0);
@@ -1381,9 +1419,12 @@ sub test_change_display_settings_kvm($domain) {
             }
             is($req->status, 'done');
             is($req->error,'') or exit;
-            my @display = $domain->_get_controller_display();
-            is($display[0]->{extra}->{$driver_name}, $option->{value}, $driver_name)
-                or die Dumper( $domain->name , $display[0]);
+
+            my ($display2) = grep { $_->{driver} eq $display->{driver} }
+                $domain->_get_controller_display();
+
+            is_deeply($display2->{extra}->{$driver_name}, $option2, $driver_name)
+                or die Dumper( $domain->name , $display2->{extra});
         }
     }
 }
@@ -1963,7 +2004,7 @@ sub test_already_requested_working($vm) {
     my $req2 = Ravada::Request->prepare_base(@args);
     $req->status('requested');
 
-    wait_request();
+    wait_request( request => [ $req->id, $req2->id]);
     is($req->status, 'done');
     is($req2->status, 'done');
     is($req->error, '');

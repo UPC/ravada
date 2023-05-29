@@ -8,16 +8,16 @@
                 ng-click="toggle_grant('<%= $perm->{name} %>')"
                 >
         %     }
+        %     my $hide = $perm->{name} eq 'start_limit';
+        %     $hide = 0 if !$hide;
         %     if ($perm->{is_int}) {
                   <input type="number" name="perm_<%= $perm->{name} %>" min="0" ng-model="perm['<%= $perm->{name} %>']" max="999" style="margin-left: 15px; margin-bottom: 10px"
                     size="4"
-                    ng-hide="<%= $perm->{name} eq 'start_limit' %> && perm['start_many']"
+                    ng-hide="<%= $hide %> && perm['start_many']"
                     ng-change="update_grant('<%= $perm->{name} %>')"
                   >
 
         %     }
-        %     my $hide = $perm->{name} eq 'start_limit';
-        %     $hide = 0 if !$hide;
               <label for="perm_<%= $perm->{name} %>"
                     ng-hide="<%= $hide %> && perm['start_many']"
               >

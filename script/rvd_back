@@ -49,6 +49,8 @@ my $START = 1;
 my $TEST_LDAP;
 my $CLEAN_DB_LEFTOVERS;
 my $LOG_FILENAME;
+my $LIST_UNUSED_VOLS;
+my $SHOW_VOLUME;
 
 my $URL_ISOS;
 my $ALL;
@@ -65,6 +67,7 @@ my $REMOVE_DOMAIN;
 my $REBASE;
 my $RUN_REQUEST;
 my $MIGRATE;
+my $PURGE_NODES;
 
 my $IMPORT_DOMAIN_OWNER;
 
@@ -120,6 +123,8 @@ my $USAGE = "$0 "
         ."Maintenance operations:\n"
         ." --clean-db-leftovers: properly clean database unreferenced entries\n"
         ." --log: saves STDOUT and STDERR app traces to the specified filename\n"
+        ." --list-unused-volumes\n"
+        ." --show-volume\n"
         ."\n"
     ;
 
@@ -166,6 +171,10 @@ GetOptions (       help => \$help
         ,"backup" => \$BACKUP
         ,"restore" => \$RESTORE
         ,"log=s"              => \$LOG_FILENAME
+        ,'list-unused-volumes' => \$LIST_UNUSED_VOLS
+        ,'show-volume' => \$SHOW_VOLUME
+
+        ,"purge-nodes"      => \$PURGE_NODES
 
         ,"time-connection=s" => \$TIME_CONNECTION
 ) or exit;
@@ -215,7 +224,7 @@ my $RVD_BACK;
 #
 
 sub _do_start_logging {
-    $LOG_FILENAME = $Ravada::CONFIG->{"log"} if (! $LOG_FILENAME);
+    $LOG_FILENAME = $Ravada::CONFIG->{"log"} if (! $LOG_FILENAME && exists $Ravada::CONFIG->{"log"});
     if ($LOG_FILENAME)
     {
         File::Path::make_path(File::Basename::dirname($LOG_FILENAME));
@@ -244,8 +253,6 @@ sub do_start {
 
     #    Ravada::Request->enforce_limits();
     #Ravada::Request->refresh_vms();
-    Ravada::Request->refresh_storage();
-    Ravada::Request->update_iso_urls(uid =>Ravada::Utils::user_daemon->id);
     for (;;) {
         my $t0 = time;
         $ravada->process_requests();
@@ -306,11 +313,12 @@ sub start {
 		$ravada->set_debug_value();
         $ravada->_wait_pids();
         autostart_machines($ravada);
+        Ravada::Request->update_iso_urls(uid =>Ravada::Utils::user_daemon->id);
+        Ravada::Request->refresh_storage();
     }
     clean_old_requests();
     for (;;) {
-        eval { do_start() };
-        warn $@ if $@;
+        do_start();
         exit if done_request();
     }
 }
@@ -754,6 +762,32 @@ sub _verify_connection {
     return 0;
 }
 
+sub _dump_ldap_entry($ldap_entry) {
+    print $ldap_entry->dn."\n";
+    for my $attrib (sort $ldap_entry->attributes ) {
+        my @value = $ldap_entry->get_value($attrib);
+        print "$attrib: ";
+
+        $value[0] =~ tr/./*/c
+        if defined $value[0] && $attrib eq 'unicodePwd';
+
+        if (scalar(@value)<2) {
+            if (!defined $value[0]) {
+                print "<UNDEF>";
+            } else {
+                print $value[0];
+            }
+            print "\n";
+        } else {
+            print "\n";
+            for (@value) {
+                print "  - $_\n";
+            }
+        }
+    }
+}
+
+
 sub test_ldap {
     my $rvd_back = Ravada->new(%CONFIG);
     eval { Ravada::Auth::LDAP::_init_ldap_admin() };
@@ -762,7 +796,27 @@ sub test_ldap {
     print "login: ";
     my $name=<STDIN>;
     chomp $name;
-    print "password: ";
+    my $user = Ravada::Auth::LDAP::search_user($name);
+    if (!$user) {
+        my $config = \$Ravada::CONFIG;
+
+        my $field = ($$config->{ldap}->{field} or 'cn');
+
+        my $filter = '';
+
+        $filter = $$config->{ldap}->{filter}
+        if exists $$config->{ldap}->{filter};
+
+        $filter= "filter=$filter " if $filter;
+
+        my $base = $$config->{ldap}->{base};
+
+        warn "Error: $field=$name not found. base=$base $filter. Either ".$$config->{ldap}->{admin_user}->{dn}." not allowed, or entry does not exist.\n";
+    } else {
+        _dump_ldap_entry($user);
+    }
+
+    print "\nType the password if you want to check the user connection or CTRL-C to stop\npassword: ";
     my $password = <STDIN>;
     chomp $password;
     my $ok= Ravada::Auth::LDAP->new(name => $name, password => $password);
@@ -771,14 +825,7 @@ sub test_ldap {
             warn "No LDAP data found ".Dumper($ok->{_data});
         } else {
             print "LOGIN OK $ok->{_auth}\n";
-            print $ok->{_ldap_entry}->dn."\n";
-            for my $attrib (sort $ok->{_ldap_entry}->attributes ) {
-                my @value = $ok->{_ldap_entry}->get_value($attrib);
-                print "$attrib: ";
-                print join(",",@value);
-                print "\n";
-            }
-
+            _dump_ldap_entry($ok->{_ldap_entry});
         }
     } else {
         print "LOGIN FAILED\n";
@@ -971,6 +1018,115 @@ sub _list_domains($rvd_back
     return @domains;
 }
 
+sub purge_nodes($rvd_back) {
+    my $sth = $rvd_back->_dbh->prepare(
+        "SELECT id,name FROM domains WHERE is_base=1"
+        ." ORDER BY name "
+    );
+    my $sth_ins = $rvd_back->_dbh->prepare(
+            "SELECT di.id,di.id_domain, di.id_vm, d.name, vms.name "
+            ." FROM domain_instances di,domains d, vms"
+            ." WHERE di.id_domain = d.id "
+            ."    AND d.id_base=?"
+            ."    AND d.id_vm <> di.id_vm "
+            ."    AND vms.id=di.id_vm "
+            ."    AND vms.hostname <> 'localhost'"
+            ."    AND vms.hostname <> '127.0.0.1'"
+            ." ORDER by d.name "
+    );
+    my $sth_delete = $rvd_back->_dbh->prepare(
+        "DELETE FROM domain_instances WHERE id=?"
+    );
+    $sth->execute();
+    while ( my ($id_base,$name) = $sth->fetchrow ) {
+        $sth_ins->execute($id_base);
+        while (my @row = $sth_ins->fetchrow()) {
+            next if !@row;
+            my ($id, $id_domain, $id_vm, $name , $vm_name) = @row;
+            my $domain =  Ravada::Domain->open($id_domain);
+            my $vm = Ravada::VM->open($id_vm);
+            if ( !$vm->_connect) {
+                warn "Node $vm_name unavailable\n";
+                next;
+            }
+            for my $vol ( $domain->list_volumes ) {
+                next if !$vm->file_exists($vol);
+            print "Found $name [$id_domain] unused in $vm_name.\n";
+            print "Remove $vol\n";
+            print "[y/N] ? ";
+            my $ok= <stdin>;
+            next if $ok !~ /y/i;
+
+                $vm->remove_file($vol);
+            }
+            $sth_delete->execute($id);
+        }
+
+    }
+}
+
+sub _vms($rvd_back) {
+    my $sth = $rvd_back->connector->dbh->prepare(
+        "SELECT id,name FROM vms "
+    );
+    $sth->execute;
+    my @ids;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @ids,($row);
+    }
+    return @ids;
+}
+
+sub list_unused_vols($rvd_back) {
+    for my $vm (_vms($rvd_back) ) {
+        print "$vm->{name}\n";
+        my $req = Ravada::Request->list_unused_volumes(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_vm => $vm->{id}
+            ,at => time + 30
+        );
+        $req->status('done');
+        for my $vol ( $rvd_back->_cmd_list_unused_volumes($req)) {
+            print $vol->{file}."\n";
+        }
+    }
+    exit;
+}
+
+sub _show_volume_cached($rvd_back, $file) {
+
+    my $sth = $rvd_back->connector->dbh->prepare(
+        "SELECT d.name FROM volumes v,domains d "
+        ." WHERE d.id=v.id_domain AND v.file=?");
+    $sth->execute($file);
+    my @dom;
+    while (my $row = $sth->fetchrow_hashref()) {
+        push @dom,($row->{name})
+    }
+    return @dom;
+}
+
+sub show_volume($rvd_back) {
+    die "Error: $0 --show-volume file1 file2 ... filen\n"
+    unless @ARGV;
+
+    for my $file (@ARGV) {
+        print "$file\n";
+        if ($file !~ m{^/}) {
+            print "Error: '$file' is not absolute path\n";
+            next;
+        }
+        my @dom = _show_volume_cached($rvd_back, $file);
+        if (scalar(@dom)) {
+            for (@dom) {
+                print "  - $_\n";
+            }
+        } else {
+            print "  - <UNUSED>\n";
+        }
+    }
+}
+
 sub DESTROY {
 }
 
@@ -1018,6 +1174,11 @@ clean_db_leftovers($rvd_back)       if $CLEAN_DB_LEFTOVERS;
 
 backup($rvd_back)                   if $BACKUP;
 restore($rvd_back)                  if $RESTORE;
+
+purge_nodes($rvd_back)              if $PURGE_NODES;
+
+list_unused_vols($rvd_back)         if $LIST_UNUSED_VOLS;
+show_volume($rvd_back)              if $SHOW_VOLUME;
 }
 
 

@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use JSON::XS;
 use Test::More;
@@ -119,7 +120,7 @@ sub test_chain {
               , jump => 'ACCEPT'
     );
 
-    is(scalar(@rule),$expected_count);
+    is(scalar(@rule),$expected_count) or confess;
     ok($rule[0],"[$vm_name] Expecting rule for $remote_ip -> $local_ip: $local_port") 
         if $expected_count;
 

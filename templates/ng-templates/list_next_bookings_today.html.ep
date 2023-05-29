@@ -1,4 +1,4 @@
-<div class="card-body" ng-show="1">
+<div class="card-body" ng-show="bookings_today.length">
 <div ng-show="bookings_today.length" class="col-sm-12 d-inline-block mb-2">
 <div class="card-header">
 <h4><%=l 'Today Schedule' %></h4>

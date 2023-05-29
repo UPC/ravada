@@ -1441,6 +1441,10 @@ sub _test_change_features($vm, $domain) {
     _test_change_defaults($domain,'cpu');
 }
 
+sub test_change_display($vm, $domain) {
+    _test_change_defaults($domain,'display');
+}
+
 sub _test_change_memory($vm, $domain) {
 
     for ( 1 .. 3 ) {
@@ -1472,7 +1476,7 @@ sub test_change_hardware($vm, $domain, $hardware) {
         ,filesystem => \&test_change_filesystem
         ,mock => sub {}
          ,usb => sub {}
-         ,display => sub {}
+         ,display => \&test_change_display
          ,video => sub {}
          ,sound => sub {}
          ,cpu => \&_test_change_cpu
@@ -1708,7 +1712,7 @@ for my $vm_name (vm_names()) {
     my %controllers = $domain_b0->list_controllers;
     lock_hash(%controllers);
 
-    for my $hardware (reverse sort keys %controllers ) {
+    for my $hardware ('display', sort keys %controllers ) {
         next if $hardware eq 'video';
 	    my $name= new_domain_name();
 	    my $domain_b = $BASE->clone(

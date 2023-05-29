@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="docu
+ment">
+<div id="wrapper">
+%=  include 'bootstrap/navigation'
+<div id="page-wrapper" ng-controller="new_storage"
+                       ng-init="init(<%= $id_vm %>,'<%= url_for('ws_subscribe')->to_abs %>')"
+>
+
+    <div class="card">
+        <div class="card-header">
+                <h2><%=l 'New Storage' %></h2>
+        </div>
+        <div class="card-body">
+
+        <form name="new_storage" role="form"
+            ng-hide="request && request.status == 'done' && !request.error"
+            >
+
+            <div class="form-group row">
+                <div class="col-xl-2" align="right">
+                    <label for="name"><%=l 'Name' %></label>
+                </div>
+
+                <div class="col-xl-6">
+                <input name="name" type="text"
+                    ng-change="check_name(name)"
+                    ng-model="name"
+                    required/>
+
+                <span class="error" ng-show="!name_valid">
+                    <%=l 'Invalid name' %>
+                </span>
+                </div>
+
+            </div>
+
+            <div class="row">
+                <div class="col-xl-2" align="right">
+                    <label for="directory"><%=l 'Directory' %></label>
+                </div>
+
+                <div class="col-xl-8">
+                <input name="directory" type="text" size="40"
+                    ng-change="check_directory(directory)"
+                    ng-model="directory"
+                    required/>
+                <span class="error ml-4" ng-show="!directory_valid">
+                    <%=l 'Invalid directory' %>
+                </span>
+                </div>
+
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-xl-2" align="right"></div>
+                <div class="col-xl-8">
+                    <button type="reset"
+                        class="btn btn-outline-secondary mr-2"
+                            onclick="location.href='/admin/storage'"
+                        ><%=l 'Cancel' %></button>
+
+                    <button type="submit" name="_submit"
+                        class="btn btn-outline-primary"
+                        ng-disabled="new_storage.$invalid
+                        || !name_valid || name_duplicated
+                        || !directory_valid
+                        || !name || !directory
+                        || request && request.status != 'done'"
+                        ng-click="add_storage()"
+                     >
+                        <%=l 'Save' %>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <div ng-show="request && request.command_text" class="alert alert-warning">
+            {{request.command_text}}
+            {{request.status}}
+            <br/>
+            {{request.error}}
+        </div>
+
+        <div ng-show="new_storage.$submitted && request
+            && request.status == 'done' && !request.error">
+            <button type="button" onclick="location.href='/admin/storage'"
+                class="btn btn-outline-secondary mr-2"
+                >
+                <%=l 'Manage Storage' %>
+            </button>
+        </div>
+        </div>
+
+    </div>
+
+</div><!-- page wrapper -->
+</div><!-- wrapper -->
+%=      include $footer
+%=      include 'bootstrap/scripts'
+%= include 'bootstrap/messages'
+</body>
+</html>
+

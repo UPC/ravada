@@ -670,7 +670,11 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
                 && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);
         }
         $dev->{n_order} = $n_order++;
-        $dev->{driver}->{type} = 'void';
+        if (!ref($dev->{driver})) {
+            $dev->{driver} = { type => ($dev->{driver} or 'void') };
+        } else {
+            $dev->{driver}->{type} = 'void';
+        }
         my $vol = Ravada::Volume->new(
             file => $dev->{file}
             ,info => $dev
@@ -905,6 +909,7 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
     return $self->_set_controller_disk($data) if $name eq 'disk';
 
     $data->{listen_ip} = $self->_vm->listen_ip if $name eq 'display'&& !$data->{listen_ip};
+    $data->{driver} = 'spice' if $name eq 'display'&& !$data->{driver};
 
     my $list = ( $hardware->{$name} or [] );
 
