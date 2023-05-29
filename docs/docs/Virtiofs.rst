@@ -142,7 +142,7 @@ Reboot and check it is mounted when booting:
 You must see something like this, with the name of the partition first,
 and the mount point.
 
-.. propmt:: code
+.. prompt:: code
 
     home_shared /mnt/shared virtiofs rw,relatime 0 0
 
