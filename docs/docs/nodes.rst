@@ -255,7 +255,7 @@ started at the same time, some may probably go to the same node. This
 is because a lot of work is done in parallel.
 
 Selection algorithm
-~~~~~~~~~~~~~~~~~~~
+===================
 
 Now you can choose to run virtual machines in the node where the user
 has other machines started. This may be usefull if you want to do

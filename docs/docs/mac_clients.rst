@@ -62,7 +62,7 @@ Binary path in my env is /opt/homebrew/bin/remote-viewer.
 Remember to allow this application in Settings -> Privacy & Security
 
 You can see this message: 
- "RemoteViewer.app" was blocked from use because it is not from an identified developer
+"RemoteViewer.app" was blocked from use because it is not from an identified developer
 Enable the button: Open Anyway
 
 

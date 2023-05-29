@@ -15,7 +15,7 @@ do want to start your `VDI`_ project as quickly as possible. Therefore, RAVADA V
 Ravada delivers
 ---------------
 
-By following the documentation `and editing some configuration files, you'll be able to deploy a VM within minutes.
+By following the documentation `_Read the Docs`_ and editing some configuration files, you'll be able to deploy a VM within minutes.
 
 Who is Ravada meant for?
 ------------------------
