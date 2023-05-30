@@ -60,6 +60,11 @@ Follow this steps:
    docker-compose pull
    docker-compose up -d
 
+If it's not the first time and you want to start from scratch it's better to make sure to rebuild everything with:
+
+.. prompt:: bash $
+
+   docker-compose up -d --build --force-recreate
 
 Ravada web user
 ---------------
