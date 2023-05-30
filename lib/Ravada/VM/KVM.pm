@@ -437,7 +437,11 @@ sub _find_all_volumes($self, $xml) {
         my ($source) = $disk->findnodes("source");
         next if !$source;
         my $file = $source->getAttribute('file');
-        push @used,($file) if $file;
+        if ($file) {
+            push @used,($file);
+            my $link = $self->_follow_link($file);
+            push @used,($link) if $link;
+        }
 
         my @used_bs = $self->_find_all_volumes_bs($disk);
         push @used,@used_bs if scalar(@used_bs);
