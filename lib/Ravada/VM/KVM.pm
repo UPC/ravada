@@ -892,6 +892,11 @@ sub create_volume {
     my $capacity    = delete $args{capacity};
     my $allocation  = delete $args{allocation};
     my $storage_pool = (delete $args{storage} or $self->storage_pool());
+    if (!ref($storage_pool)) {
+        my $sp_name = $storage_pool;
+        $storage_pool = $self->vm->get_storage_pool_by_name($sp_name) or die
+        "Error: Storage pool '$sp_name' not found ";
+    }
 
     confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
     confess "Error: type $type can't have swap flag" if $args{swap} && $type ne 'swap';
@@ -941,7 +946,7 @@ sub create_volume {
         $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($allocation));
         $doc->findnodes('/volume/capacity/text()')->[0]->setData($capacity);
     }
-    my $vol = $self->storage_pool->create_volume($doc->toString)
+    my $vol = $storage_pool->create_volume($doc->toString)
         or die "volume $img_file does not exists after creating volume on ".$self->name." "
             .$doc->toString();
 

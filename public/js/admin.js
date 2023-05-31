@@ -91,7 +91,9 @@ ravadaApp.directive("solShowMachine", swMach)
 
       };
       $scope.list_storage_pools = function(backend) {
+          $scope.storage_pools_loaded=false;
           $http.get('/list_storage_pools/'+backend).then(function(response) {
+            $scope.storage_pools_loaded=true;
               $scope.storage_pools[backend] = response.data;
 
               $scope.storage_pool=response.data[0];

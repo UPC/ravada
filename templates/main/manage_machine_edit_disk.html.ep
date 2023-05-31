@@ -109,5 +109,20 @@
         <div class="col-lg-8">
         </div>
     </div>
+    <div class="row" ng-show="new_hardware">
+        <div class="col-lg-2" align="right">
+            <label for="cache"><%=l 'storage' %></label>
+        </div>
+        <div class="col-lg-10">
+            <select name="storage" ng-model="item.storage"
+                                ng-options="storage.name for storage in list_storage"
+            >
+            </select>
+            <span class="info" ng-show="item.storage">
+                <b>{{item.storage.path}}</b>
+                {{item.storage.available}} <%=l 'GB' %> <%=l 'available' %>
+            </span>
+        </div>
+    </div>
 
 </div><!-- element ( former li ) -->

@@ -674,6 +674,7 @@ sub create_machine($vm, $pool_name) {
     for my $vol ($domain->list_volumes) {
         next if $vol =~ /iso$/;
         like($vol,qr{$pool_name.*/}) or exit;
+        ok(-e $vol,"Expecting $vol") or exit;
     }
 }
 

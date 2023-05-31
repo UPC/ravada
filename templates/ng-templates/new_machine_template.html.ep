@@ -143,10 +143,17 @@
                     ng-show="storage_pools[backend]"
                     ng-options="sp.name for sp in storage_pools[backend]">
                     </select>
+
+                    <button ng-show="storage_pools_loaded && storage_pools[backend].length==0"
+                        class="btn btn-outline-warning btn-sm"
+                        title="<%=l 'reload' %>"
+                        ng-click="loadTemplates()"
+                    ><i class="fa fa-sync-alt" aria-hidden="true"></i>
+                    </button>
                 </div>
                 <div class="col-lg-6" ng-show="storage_pool">
                 <b>{{storage_pool.path}}</b>
-                {{storage_pool.available}} GB available
+                {{storage_pool.available}} <%=l 'GB' %> <%=l 'available' %>
                 </div>
                 <input type="text" ng-show="false" name="storage" ng-model="storage_pool.name"/>
             </div>
