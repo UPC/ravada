@@ -211,6 +211,8 @@ sub _get_hw_memory($self) {
 
     my $info = $self->get_info();
     my ($memory, $current) = ($info->{max_mem}, $info->{memory});
+    $memory = 0 if !defined $memory;
+    $current = 0 if !defined $current;
 
     my $item = {
         max_mem => int($memory/1024)

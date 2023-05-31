@@ -151,7 +151,8 @@ sub spinoff($self) {
     if (! $self->vm->file_exists($volume_tmp) );
 
     $self->copy_file($volume_tmp,$file) or die "$! $volume_tmp -> $file";
-    $self->vm->remove_file($volume_tmp) or die "ERROR $! removing $volume_tmp";
+    $self->vm->refresh_storage_pools();
+    $self->vm->remove_file($volume_tmp);
 }
 
 sub block_commit($self) {

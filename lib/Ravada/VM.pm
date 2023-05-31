@@ -73,6 +73,8 @@ requires 'free_disk';
 
 requires '_fetch_dir_cert';
 
+requires 'remove_file';
+
 ############################################################
 
 has 'host' => (
@@ -144,6 +146,8 @@ around 'ping' => \&_around_ping;
 around 'connect' => \&_around_connect;
 after 'disconnect' => \&_post_disconnect;
 
+around '_list_used_volumes' => \&_around_list_used_volumes;
+
 #############################################################
 #
 # method modifiers
@@ -178,6 +182,11 @@ sub open {
         confess "ERROR: Don't set the id and the type "
             if $args{id} && $args{type};
         return _open_type($proto,@_) if $args{type};
+
+        $args{id} = _search_id($args{name}) if $args{name};
+
+        confess "I don't know how to open ".Dumper(\%args)
+        if !$args{id};
     } else {
         $args{id} = shift;
     }
@@ -211,6 +220,15 @@ sub open {
     $VM{$args{id}} = $vm unless $args{readonly};
     return $vm;
 
+}
+
+sub _search_id($name) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms WHERE name=?"
+    );
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    return $id;
 }
 
 sub _refresh_version($self) {
@@ -464,7 +482,7 @@ sub _around_create_domain {
     return $base->_search_pool_clone($owner) if $from_pool;
 
     if ($self->is_local && $base && $base->is_base
-            && ( $base->volatile_clones || $owner->is_temporary )) {
+            && ( $volatile || $owner->is_temporary )) {
         $request->status("balancing")                       if $request;
         my $vm = $self->balance_vm($owner->id, $base) or die "Error: No free nodes available.";
         $request->status("creating machine on ".$vm->name)  if $request;
@@ -792,9 +810,19 @@ sub _list_ip_address($self) {
     return %address;
 }
 
+sub _ip_a($self, $dev) {
+    my ($out, $err) = $self->run_command_cache("/sbin/ip","-o","a");
+    die $err if $err;
+    for my $line ( split /\n/,$out) {
+        my ($ip) = $line =~ m{^\d+:\s+$dev.*inet (.*?)/};
+        return $ip if $ip;
+    }
+    warn "Warning $dev not found in active interfaces";
+}
+
 sub _interface_ip($self, $remote_ip=undef) {
     return '127.0.0.1' if $remote_ip && $remote_ip =~ /^127\./;
-    my ($out, $err) = $self->run_command("/sbin/ip","route");
+    my ($out, $err) = $self->run_command_cache("/sbin/ip","route");
     my %route;
     my ($default_gw , $default_ip);
 
@@ -805,18 +833,36 @@ sub _interface_ip($self, $remote_ip=undef) {
         if ( $line =~ m{^default via ([\d\.]+)} ) {
             $default_gw = NetAddr::IP->new($1);
         }
+        if ($line =~ m{^default via.*dev (.*?)(\s|$)}) {
+            my $dev = $1;
+            $default_ip = $self->_ip_a($dev) if !$default_ip;
+        }
         if ( $line =~ m{^([\d\.\/]+).*src ([\d\.\/]+)} ) {
             my ($network, $ip) = ($1, $2);
-            $route{$network} = $ip;
+            if ($ip) {
+                $route{$network} = $ip;
 
-            return $ip if $remote_ip && $remote_ip eq $ip;
+                return $ip if $remote_ip && $remote_ip eq $ip;
 
-            my $netaddr = NetAddr::IP->new($network)
-                or confess "I can't find netaddr for $network";
-            return $ip if $remote_ip_addr->within($netaddr);
+                my $netaddr = NetAddr::IP->new($network)
+                    or confess "I can't find netaddr for $network";
+                return $ip if $remote_ip_addr->within($netaddr);
 
-            $default_ip = $ip if !defined $default_ip && $ip !~ /^127\./;
-            $default_ip = $ip if defined $default_gw && $default_gw->within($netaddr);
+                $default_ip = $ip if defined $default_gw && $default_gw->within($netaddr);
+            }
+        }
+        if ( $line =~ m{^([\d\.\/]+).*dev (.+?) } ) {
+            my ($network, $dev) = ($1, $2);
+            my $ip = $self->_ip_a($dev);
+            if ($ip) {
+                $route{$network} = $ip;
+
+                return $ip if $remote_ip && $remote_ip eq $ip;
+
+                my $netaddr = NetAddr::IP->new($network)
+                    or confess "I can't find netaddr for $network";
+                return $ip if $remote_ip_addr->within($netaddr);
+            }
         }
     }
     return $default_ip;
@@ -891,7 +937,7 @@ sub _check_require_base {
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports manage_pools);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports manage_pools screenshot);
     my @requests;
     for my $req ( $base->list_requests ) {
         push @requests,($req) if !$ignore_requests{$req->command};
@@ -1433,7 +1479,7 @@ sub remove($self) {
 
 Run a command on the node
 
-    my @ls = $self->run_command("ls");
+    my ($out,$err) = $self->run_command_cache("ls");
 
 =cut
 
@@ -1461,6 +1507,24 @@ sub run_command($self, @command) {
     if $ssh->error && $ssh->error !~ /^child exited with code/;
 
 
+    return ($out, $err);
+}
+
+=head2 run_command_cache
+
+Run a command on the node
+
+    my ($out,$err) = $self->run_command_cache("ls");
+
+=cut
+
+
+sub run_command_cache($self, @command) {
+    my $key = join(" ",@command);
+    return @{$self->{_run}->{$key}} if exists $self->{_run}->{$key};
+
+    my ($out, $err) = $self->run_command(@command);
+    $self->{_run}->{$key}=[$out,$err];
     return ($out, $err);
 }
 
@@ -1551,17 +1615,6 @@ sub _read_file_local( $self, $file ) {
     return join('',<$in>);
 }
 
-=head2 remove_file
-
-Removes a file from the storage of the virtual manager
-
-=cut
-
-sub remove_file( $self, $file ) {
-    unlink $file if $self->is_local;
-    return $self->run_command("/bin/rm", $file);
-}
-
 =head2 create_iptables_chain
 
 Creates a new chain in the system iptables
@@ -1593,8 +1646,14 @@ Example:
 
 sub iptables($self, @args) {
     my @cmd = ('iptables','-w');
+    my $delete=0;
     for ( ;; ) {
         my $key = shift @args or last;
+
+        return if $key =~ /state|established/i && $delete;
+
+        $delete++ if $key eq 'D';
+
         my $field = "-$key";
         $field = "-$field" if length($key)>1;
         push @cmd,($field);
@@ -1602,7 +1661,7 @@ sub iptables($self, @args) {
 
     }
     my ($out, $err) = $self->run_command(@cmd);
-    confess "@cmd $err" if $err && $err !~ /does a matching rule exist in that chain/;
+    confess "@cmd $err" if $err && $err !~ /does a matching rule exist in that chain/ && $err !~ /RULE_DELETE failed/;
     warn $err if $err;
 }
 
@@ -1622,6 +1681,8 @@ sub iptables_unique($self,@rule) {
 }
 
 sub _search_iptables($self, %rule) {
+    delete $rule{s} if exists $rule{s} && $rule{s} eq '0.0.0.0/0';
+
     my $table = 'filter';
     $table = delete $rule{t} if exists $rule{t};
     my $iptables = $self->iptables_list();
@@ -1636,7 +1697,7 @@ sub _search_iptables($self, %rule) {
     for my $line (@{$iptables->{$table}}) {
 
         my %args = @$line;
-        $args{s} = "0.0.0.0/0" if !exists $args{s};
+        delete $args{s} if exists $args{s} && $args{s} eq '0.0.0.0/0';
         my $match = 1;
         for my $key (keys %rule) {
             $match = 0 if !exists $args{$key} || !exists $rule{$key}
@@ -2404,6 +2465,58 @@ sub dir_backup($self) {
         }
     }
     return $dir_backup;
+}
+
+sub _is_link_remote($self, $vol) {
+
+    my ($out,$err) = $self->run_command("stat",$vol);
+    chomp $out;
+    $out =~ m{ -> (/.*)};
+    return $1 if $1;
+
+    my $path = "";
+    my $path_link;
+    for my $dir ( split m{/},$vol ) {
+        next if !$dir;
+        $path_link .= "/$dir" if $path_link && $dir;
+        $path.="/$dir";
+
+        ($out,$err) = $self->run_command("stat",$path);
+        chomp $out;
+        my ($dir_link) = $out =~ m{ -> (/.*)};
+
+        $path_link = $dir_link if $dir_link;
+    }
+    return $path_link if $path_link;
+
+}
+
+sub _is_link($self,$vol) {
+    return $self->_is_link_remote($vol) if !$self->is_local;
+
+    my $link = readlink($vol);
+    return $link if $link;
+
+    my $path = "";
+    my $path_link;
+    for my $dir ( split m{/},$vol ) {
+        next if !$dir;
+        $path_link .= "/$dir" if $path_link && $dir;
+        $path.="/$dir";
+        my $dir_link = readlink($path);
+        $path_link = $dir_link if $dir_link;
+    }
+    return $path_link if $path_link;
+}
+
+sub _around_list_used_volumes($orig, $self) {
+    my @vols = $self->$orig();
+    my @links;
+    for my $vol ( @vols ) {
+        my $link = $self->_is_link($vol);
+        push @links,($link) if $link;
+    }
+    return @vols;
 }
 
 1;

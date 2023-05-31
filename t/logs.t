@@ -38,7 +38,7 @@ sub test_log_inactive($vm) {
 sub test_log_active($vm, $dom) {
     $dom->start(user_admin);
     sleep 1;
-    my $req = Ravada::Request->refresh_vms();
+    my $req = Ravada::Request->refresh_vms(_force => 1);
     wait_request($req);
 
     my $sth = connector->dbh->prepare("SELECT * FROM log_active_domains"

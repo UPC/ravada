@@ -145,8 +145,14 @@ sub test_drivers_type($type, $vm, $node) {
 
         $clone->remove(user_admin);
         my @vols = $domain->list_files_base();
-        $domain->remove_base(user_admin);
+        Ravada::Request->remove_base(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
         wait_request(debug => 0);
+        my $domainb = Ravada::Domain->open($domain->id);
+        is($domainb->is_base,0);
+
         for my $vol (@vols) {
             ok (! -e $vol ) or die "$vol";
         }
@@ -220,7 +226,7 @@ sub test_change_hardware($vm, @nodes) {
     my @hardware = grep (!/^disk$/, sort keys %{$info->{hardware}});
     push @hardware,("disk");
     for my $hardware ( @hardware) {
-        next if $hardware =~ /memory|cpu|features/;
+        next if $hardware =~ /cpu|features|memory/;
         my $tls = 0;
         $tls = grep {$_->{driver} =~ /-tls/} @{$info->{hardware}->{$hardware}}
         if $hardware eq 'display';

@@ -1,0 +1,50 @@
+<div ng-show="!storage_pools">
+    <i class="fas fa-sync-alt fa-spin"></i>
+</div>
+
+<div class="alert alert-danger" ng-show="error">{{error}}</div>
+
+<table class="admin-cont-body" ng-show="storage_pools">
+
+    <thead>
+        <tr>
+            <th></th>
+            <th class="list">Enabled</th>
+            <th class="list">Size</th>
+            <th class="list">Used</th>
+            <th class="list">Available</th>
+            <th class="list">Used %</th>
+            <th class="list">Path</th>
+        </tr>
+    </thead>
+    <tbody>
+
+        <tr ng-repeat="pool in storage_pools| orderObjectBy:'name'"
+            class="bg-light"
+            ng-cloak
+        >
+            <td class="bold">
+                {{pool.name}}
+            </td>
+            <td class="box">
+                <input type="checkbox"
+               ng-click="toggle_active(pool)"
+               ng-model="pool.is_active"
+               ng-true-value="1"
+               ng-false-value="0"
+               />
+            </td>
+            <td class="list">{{pool.size}}</td>
+            <td class="list">{{pool.used}}</td>
+            <td class="list">{{pool.available}}</td>
+            <td class="list">{{pool.pc_used}}</td>
+            <td class="name">{{pool.path}}</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2><a type="button"
+    ng-show="storage_pools"
+    class="btn btn-success" href="/storage/new/<%= $id_vm %>">
+                            <b><%=l 'New Storage' %></b></a>
+</h2>

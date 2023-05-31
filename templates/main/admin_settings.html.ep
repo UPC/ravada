@@ -19,7 +19,7 @@
         <form name="formSettings">
         <div class="row">
             <div class="col-md-1"></div>
-            <div class="col-md-1">
+            <div class="col-md-4">
             <h3><%=l 'Frontend' %></h3>
             </div>
         </div>
@@ -87,7 +87,7 @@
         </div>
         <div class="row">
             <div class="col-md-1"></div>
-            <div class="col-md-1">
+            <div class="col-md-4">
             <h3><%=l 'Backend' %></h3>
             </div>
         </div>
@@ -179,10 +179,42 @@
             </div>
         </div>
 
+        <hr ng-show="settings.backend.auto_compact.value">
+
+        <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-2">
+            <label for="debug"><%= l 'Auto Compact' %></label>
+            </div>
+            <div class="col-md-2">
+            <input name="debug" ng-model="settings.backend.auto_compact.value"
+                ng-true-value="1" ng-false-value="0"
+                type="checkbox">
+            </div>
+            <div class="col-md-6">
+                <%= l 'Auto compact virtual machines.' %>
+            </div>
+        </div>
+
+        <div class="row" ng-show="settings.backend.auto_compact.value">
+            <div class="col-md-1"></div>
+            <div class="col-md-2">
+            <label for="debug"><%= l 'Time' %></label>
+            </div>
+            <div class="col-md-2">
+            <input name="debug" ng-model="settings.backend.auto_compact.time.value"
+                type="text" size="5" ng-pattern="/^\d\d:\d\d$/">
+            </div>
+            <div class="col-md-6">
+                <%=l 'Time when compact will be scheduled.' %>
+                <%=l 'HH:MM' %>
+            </div>
+        </div>
+
         <hr>
 
         <div class="row">
-            <div class="col-md-2">
+            <div class="col-md-6">
                 <button ng-click="update_settings()"
                     ng-disabled="!formSettings.$valid || formSettings.$pristine">
                    <%=l 'Save' %>

@@ -23,22 +23,19 @@ my $USER = create_user("foo","bar", 1);
 
 #########################################################################
 
-sub create_pool {
-    my $vm_name = shift;
+sub create_pool($vm_name, $dir="/var/tmp/".new_pool_name()) {
 
     my $vm = rvd_back->search_vm($vm_name) or return;
-
 
     my $capacity = 1 * 1024 * 1024;
 
     my $pool_name = new_pool_name();
-    my $dir = "/var/tmp/$pool_name";
 
     mkdir $dir if ! -e $dir;
 
     my $pool;
     for ( ;; ) {
-        my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+        my $uuid = $vm->_unique_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
         my $xml =
                     "<pool type='dir'>
                     <name>$pool_name</name>
@@ -429,11 +426,11 @@ sub test_default_pool_base {
     }
 }
 
-sub _create_pool_linked($vm) {
+sub _create_pool_linked($vm, $dir=undef) {
     my $capacity = 1 * 1024 * 1024;
 
     my $pool_name = new_pool_name();
-    my $dir = "/var/tmp/$pool_name";
+    $dir = "/var/tmp/$pool_name" if !$dir;
     my $dir_link = "$dir.link";
 
     mkdir $dir if ! -e $dir;
@@ -443,7 +440,7 @@ sub _create_pool_linked($vm) {
 
     my $pool;
     for ( ;; ) {
-        my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+        my $uuid = $vm->_unique_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
         my $xml =
                     "<pool type='dir'>
                     <name>$pool_name</name>
@@ -486,7 +483,7 @@ sub _create_pool_linked_reverse($vm) {
 
     my $pool;
     for ( ;; ) {
-        my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+        my $uuid = $vm->_unique_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
         my $xml =
                     "<pool type='dir'>
                     <name>$pool_name</name>
@@ -613,6 +610,160 @@ sub test_pool_linked2_reverse($vm) {
     $domain1->remove(user_admin);
 }
 
+sub _search_file($output, $file) {
+    my $found;
+    die "Missing list item" unless exists $output->{list};
+
+    my $list = $output->{list};
+    ($found) = grep( {$file eq $_->{file}} @$list);
+    return $found;
+}
+
+sub test_pool_dupe($vm) {
+
+    my ($pool_name, $dir, $dir_link) = _create_pool_linked($vm);
+
+    my $pool2 = create_pool($vm->type,$dir);
+
+    my @domains;
+    for my $pool ( $pool_name, $pool2) {
+        $vm->default_storage_pool_name($pool);
+        my $domain=create_domain($vm);
+        push @domains,($domain);
+    }
+    $vm->refresh_storage();
+    _check_linked($domains[0]);
+    _check_linked_in_dir($dir_link,$domains[1]);
+
+    my $req2 = Ravada::Request->list_unused_volumes(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,start => 0
+        ,limit => 1000
+    );
+    wait_request();
+    my $out_json = $req2->output;
+    $out_json = '[]' if !defined $out_json;
+    my $output = decode_json($out_json);
+
+    for my $dir ($dir, $dir_link) {
+        my @found = grep( {$_->{file} =~ m{^$dir/} } @{$output->{list}});
+        ok(!@found,"Expecting $dir not found") or die Dumper(\@found);
+    }
+    $vm->default_storage_pool_name('default');
+}
+
+sub _move_volumes_kvm($domain, $dir) {
+    my $doc = XML::LibXML->load_xml(string => $domain->domain->get_xml_description);
+    my $found = 0;
+    for my $vol ( $doc->findnodes("/domain/devices/disk/source")) {
+        $found++;
+        my $file = $vol->getAttribute('file');
+        my ($orig_dir,$filename) = $file =~ m{(.*)/(.*)};
+        die "Error: orig dir is the same as dst in $file"
+        if $orig_dir eq $dir;
+        $vol->setAttribute('file' => "$dir/$filename");
+    }
+    die "Error: no volumes found in ".$domain->name if !$found;
+    $domain->reload_config($doc);
+}
+
+sub _move_volumes($domain, $dir) {
+    if ($domain->type eq 'KVM') {
+        _move_volumes_kvm($domain,$dir);
+    } elsif ( $domain->type eq 'Void') {
+        diag("TODO ".$domain->type);
+    }
+}
+
+sub test_pool_dupe_linked_1($vm) {
+    return if $vm->type ne 'KVM';
+
+    my $dir0 = "/".new_pool_name();
+    my ($pool_name, $dir, $dir_link) = _create_pool_linked($vm, $dir0);
+
+    my $pool2 = create_pool($vm->type,$dir);
+
+    $vm->default_storage_pool_name($pool2);
+    my $domain=create_domain($vm);
+
+    _move_volumes($domain,$dir_link);
+
+    $vm->refresh_storage();
+
+    my $req2 = Ravada::Request->list_unused_volumes(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,start => 0
+        ,limit => 1000
+    );
+    wait_request();
+    my $out_json = $req2->output;
+    $out_json = '[]' if !defined $out_json;
+    my $output = decode_json($out_json);
+
+    for my $dir ($dir, $dir_link) {
+        my @found = grep( {$_->{file} =~ m{^$dir/} } @{$output->{list}});
+        ok(!@found,"Expecting $dir not found") or die Dumper(\@found);
+    }
+    $vm->default_storage_pool_name('default');
+}
+
+sub test_pool_dupe_linked($vm) {
+    return if $vm->type ne 'KVM';
+
+    my ($pool_name, $dir, $dir_link) = _create_pool_linked($vm);
+
+    my $pool2 = create_pool($vm->type,$dir);
+
+    my @domains;
+    for my $pool ( $pool_name, $pool2) {
+        $vm->default_storage_pool_name($pool);
+        my $domain=create_domain($vm);
+        push @domains,($domain);
+    }
+    _move_volumes($domains[0],$dir);
+    _move_volumes($domains[1],$dir_link);
+
+    $vm->refresh_storage();
+
+    my $req2 = Ravada::Request->list_unused_volumes(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,start => 0
+        ,limit => 1000
+    );
+    wait_request();
+    my $out_json = $req2->output;
+    $out_json = '[]' if !defined $out_json;
+    my $output = decode_json($out_json);
+
+    for my $dir ($dir, $dir_link) {
+        my @found = grep( {$_->{file} =~ m{^$dir/} } @{$output->{list}});
+        ok(!@found,"Expecting $dir not found") or die Dumper(\@found);
+    }
+    $vm->default_storage_pool_name('default');
+}
+
+sub _check_linked_in_dir($dir, $domain) {
+    my $vm = $domain->_vm;
+    for my $vol ( $domain->list_volumes ) {
+        next if $vol =~ /iso$/;
+        my ($name) = $vol =~ m{.*/(.*)};
+        my $file = "$dir/$name";
+        my $link = $vm->_is_link($file);
+        ok($link,"Expecting $file is link") or exit;
+    }
+}
+
+sub _check_linked($domain) {
+    my $vm = $domain->_vm;
+    for my $vol ( $domain->list_volumes ) {
+        next if $vol =~ /iso$/;
+        my $link = $vm->_follow_link($vol);
+        ok($link,"Expecting link of $vol") or exit;
+    }
+}
 
 #########################################################################
 
@@ -631,6 +782,10 @@ SKIP: {
     }
 
     skip($msg,10)   if !$vm;
+
+    test_pool_dupe_linked_1($vm);
+    test_pool_dupe_linked($vm);
+    test_pool_dupe($vm);
 
     test_pool_linked($vm);
     test_pool_linked2($vm);
@@ -653,8 +808,6 @@ SKIP: {
     my $pool_name2 = create_pool($vm_name);
     test_base_clone_pool($vm, $pool_name, $pool_name2);
     $domain->remove(user_admin);
-
-    test_pool_linked($vm);
 
 }
 

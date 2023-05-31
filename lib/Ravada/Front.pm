@@ -49,7 +49,6 @@ has 'fork' => (
 our $CONNECTOR;# = \$Ravada::CONNECTOR;
 our $TIMEOUT = 20;
 our @VM_TYPES = ('KVM');
-our $DIR_SCREENSHOTS = "/var/www/img/screenshots";
 
 our %VM;
 our %VM_ID;
@@ -130,14 +129,14 @@ Returns: listref of machines
 
 sub list_machines_user($self, $user, $access_data={}) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,alias,is_public, description, screenshot, id_owner"
+        "SELECT id,name,alias,is_public, description, screenshot, id_owner, is_base, date_changed"
         ." FROM domains "
-        ." WHERE is_base=1"
-        ." ORDER BY name "
+        ." WHERE ( is_base=1 OR ( id_base IS NULL AND id_owner=?))"
+        ." ORDER BY alias"
     );
-    my ($id, $name, $alias, $is_public, $description, $screenshot, $id_owner);
-    $sth->execute;
-    $sth->bind_columns(\($id, $name, $alias, $is_public, $description, $screenshot, $id_owner));
+    my ($id, $name, $alias, $is_public, $description, $screenshot, $id_owner, $is_base, $date_changed);
+    $sth->execute($user->id);
+    $sth->bind_columns(\($id, $name, $alias, $is_public, $description, $screenshot, $id_owner, $is_base, $date_changed));
 
     my $bookings_enabled = $self->setting('/backend/bookings');
     my @list;
@@ -147,52 +146,81 @@ sub list_machines_user($self, $user, $access_data={}) {
         # check if enabled settings and this user not allowed
         next if $bookings_enabled && !Ravada::Front::Domain->open($id)->allowed_booking($user);
 
-        my $is_active = 0;
-        my $clone = $self->search_clone(
+        my @clones = $self->search_clone(
             id_owner =>$user->id
             ,id_base => $id
         );
-        next unless $clone || $user->is_admin || ($is_public && $user->allowed_access($id));
+        my ($clone) = ($clones[0] or undef);
+        next unless $clone || $user->is_admin || ($is_public && $user->allowed_access($id)) || ($id_owner == $user->id);
         $name = $alias if defined $alias;
-        my %base = ( id => $id, name => Encode::decode_utf8($name)
+        my $base = { id => $id, name => Encode::decode_utf8($name)
+            , alias => Encode::decode_utf8($alias or $name)
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
             , description => ($description or '')
-            , is_active => 0
             , id_clone => undef
             , name_clone => undef
-            , is_locked => undef
-            , can_hibernate => 0
-        );
+            , is_base => $is_base
+            , can_prepare_base => 0
+        };
 
-        if ($clone) {
-            $base{is_locked} = $clone->is_locked;
-            if ($clone->is_active && !$clone->is_locked && $user->can_screenshot) {
-                if (!Ravada::Request::done_recently(undef,10,'screenshot')) {
-                    my $req = Ravada::Request->screenshot(
-                        id_domain => $clone->id
-                        ,_no_duplicate => 1
-                    );
-                }
-            }
-            $base{name_clone} = $clone->name;
-            $base{screenshot} = ( $clone->_data('screenshot')
-                                or $base{screenshot});
-            $base{description} = ( $clone->_data('description')
-                                or $base{description});
-            $base{is_active} = $clone->is_active;
-            $base{id_clone} = $clone->id;
-            $base{can_remove} = 0;
-            $base{can_remove} = 1 if $user->can_remove && $clone->id_owner == $user->id;
-            $base{can_hibernate} = 1 if $clone->is_active && !$clone->is_volatile;
+
+        next unless $self->_access_allowed($id, $base->{id_clone}, $access_data) || ($id_owner == $user->id);
+
+        _copy_clone_info($user, $base, \@clones);
+
+        if (!$is_base) {
+            $base = _get_clone_info($user, $base);
+            $base->{is_public} = 0;
+            $base->{is_base} = 0;
+            $base->{list_clones} = [];
+            $base->{can_prepare_base} = 1 if $user->can_create_base();
         }
-        next if !$self->_access_allowed($id, $base{id_clone}, $access_data);
-        $base{screenshot} =~ s{^/var/www}{};
-        lock_hash(%base);
-        push @list,(\%base);
+        lock_hash(%$base);
+
+        push @list,($base);
     }
     $sth->finish;
     return \@list;
+}
+
+sub _copy_clone_info($user, $base, $clones) {
+
+    my @list;
+    for my $clone (@$clones) {
+        my $c = _get_clone_info($user, $base, $clone);
+        push @list,($c);
+
+    }
+    $base->{list_clones} = \@list;
+}
+
+sub _get_clone_info($user, $base, $clone = Ravada::Front::Domain->open($base->{id})) {
+
+    my $c = {id => $clone->id
+                        ,name => $clone->name
+                        ,alias => $clone->alias
+                        ,is_active => $clone->is_active
+                        ,screenshot => $clone->_data('screenshot')
+                        ,date_changed => $clone->_data('date_changed')
+        };
+
+    $c->{can_hibernate} = ($clone->is_active && !$clone->is_volatile);
+    $c->{can_shutdown} = $clone->is_active;
+    $c->{is_locked} = $clone->is_locked;
+    $c->{description} = ( $clone->_data('description')
+            or $base->{description});
+    $c->{can_remove} = 0;
+
+    $c->{can_remove} = ( $user->can_remove() && $user->id == $clone->_data('id_owner'));
+
+    if ($clone->is_active && !$clone->is_locked
+        && $user->can_screenshot) {
+        my $req = Ravada::Request->screenshot(
+            id_domain => $clone->id
+        );
+    }
+    return $c;
 }
 
 sub _access_allowed($self, $id_base, $id_clone, $access_data) {
@@ -942,9 +970,7 @@ Returns the domain
 
 =cut
 
-sub search_clone {
-    my $self = shift;
-    my %args = @_;
+sub search_clone($self, %args) {
     confess "Missing id_owner " if !$args{id_owner};
     confess "Missing id_base" if !$args{id_base};
 
@@ -958,15 +984,18 @@ sub search_clone {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,name FROM domains "
         ." WHERE id_base=? AND id_owner=? AND (is_base=0 OR is_base=NULL)"
+        ." ORDER BY name"
     );
     $sth->execute($id_base, $id_owner);
 
-    my ($id_domain, $name) = $sth->fetchrow;
+    my @clones;
+    while ( my ($id_domain, $name) = $sth->fetchrow ) {
+        push @clones,($self->search_domain($name));
+    }
     $sth->finish;
 
-    return if !$id_domain;
-
-    return $self->search_domain($name);
+    return $clones[0] if !wantarray;
+    return @clones;
 
 }
 
@@ -1274,6 +1303,10 @@ sub _cache_store($self, $key, $value, $timeout=60) {
     $self->{cache}->{$key} = [ $value, time+$timeout ];
 }
 
+sub _cache_clean($self) {
+    delete $self->{cache};
+}
+
 sub _cache_get($self, $key) {
 
     delete $self->{cache}->{$key}
@@ -1346,6 +1379,8 @@ sub _get_settings($self, $id_parent=0) {
         my $setting_sons = $self->_get_settings($id);
         if ($setting_sons) {
             $ret->{$name} = $setting_sons;
+            $ret->{$name}->{id} = $id;
+            $ret->{$name}->{value} = $value;
         } else {
             $ret->{$name} = { id => $id, value => $value};
         }
@@ -1407,6 +1442,27 @@ sub setting($self, $name, $new_value=undef) {
     return $value;
 }
 
+sub _setting_data($self, $name) {
+
+    my $sth = _dbh->prepare(
+        "SELECT * "
+        ." FROM settings "
+        ." WHERE id_parent=? AND name=?"
+    );
+    my $row;
+    my $id_parent = 0;
+    for my $item (split m{/},$name) {
+        next if !$item;
+        $sth->execute($id_parent, $item);
+        $row = $sth->fetchrow_hashref;
+        confess "Error: I can't find setting $item inside id_parent: $id_parent"
+        if !defined $row->{id};
+
+        $id_parent = $row->{id};
+    }
+    return $row;
+}
+
 sub _check_features($self, $name, $new_value) {
     confess "Error: LDAP required for bookings."
     if $name eq '/backend/bookings' && $new_value && !$self->feature('ldap');
@@ -1459,17 +1515,18 @@ sub update_settings_global($self, $arg, $user, $reload, $orig_settings = $self->
         delete $arg->{frontend}->{maintenance_start};
     }
     for my $field (sort keys %$arg) {
-        if ( !exists $arg->{$field}->{id} ) {
+        next if $field =~ /^(id|value)$/;
+        confess Dumper([$field,$arg->{$field}]) if !ref($arg->{$field});
+        if ( scalar(keys %{$arg->{$field}})>2 ) {
             confess if !keys %{$arg->{$field}};
             $self->update_settings_global($arg->{$field}, $user, $reload, $orig_settings);
-            next;
         }
         confess "Error: invalid field $field" if $field !~ /^\w+$/;
         my ( $value, $id )
                    = ($arg->{$field}->{value}
                     , $arg->{$field}->{id}
         );
-        next if $orig_settings->{$id} eq $value;
+        next if !defined $value || $orig_settings->{$id} eq $value;
         $$reload++ if $field eq 'bookings';
         my $sth = $self->_dbh->prepare(
             "UPDATE settings set value=?"
@@ -1591,6 +1648,35 @@ sub list_cpu_models($self, $uid, $id_domain) {
     $self->_cache_store($key,$models);
 
     return $models;
+}
+
+=head2 list_storage_pools
+
+Returns a reference to a list of the storage pools
+
+=cut
+
+sub list_storage_pools($self, $uid, $id_vm) {
+
+    my $key="list_storage_pools_$id_vm";
+
+    my $cache = ($self->_cache_get($key) or []);
+
+    my $req = Ravada::Request->list_storage_pools(
+        id_vm => $id_vm
+        ,uid => $uid
+        ,data => 1
+    );
+    return $cache if !$req;
+    $self->wait_request($req);
+    return $cache if $req->status ne 'done';
+
+    my $pools = [];
+    $pools = decode_json($req->output()) if $req->output;
+
+    $self->_cache_store($key,$pools) if scalar(@$pools);
+
+    return $pools;
 }
 
 =head2 version
