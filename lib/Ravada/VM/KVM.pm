@@ -406,7 +406,12 @@ sub _list_used_volumes_known($self) {
         my $dom = $self->search_domain($name);
         my $xml = $dom->xml_description();
         my @vols = $self->_find_all_volumes($xml);
-        push @used,@vols;
+        my @links;
+        for my $vol (@vols) {
+            my $link = $self->_follow_link($vol);
+            push @links,($link) if $link;
+        }
+        push @used, (@vols,@links);
     }
     return @used;
 }
@@ -432,7 +437,12 @@ sub _find_all_volumes($self, $xml) {
         my ($source) = $disk->findnodes("source");
         next if !$source;
         my $file = $source->getAttribute('file');
-        push @used,($file) if $file;
+        if ($file) {
+            push @used,($file);
+            my $link = $self->_follow_link($file);
+            push @used,($link) if $link;
+        }
+
         my @used_bs = $self->_find_all_volumes_bs($disk);
         push @used,@used_bs if scalar(@used_bs);
     }
@@ -458,8 +468,10 @@ sub list_unused_volumes($self) {
 
         eval { ($file) = $vol->get_path };
         confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
-
         next if $used{$file};
+
+        my $link = $self->_is_link($file);
+        next if $link && $used{$link};
 
         my $info;
         eval { $info = $vol->get_info() };
