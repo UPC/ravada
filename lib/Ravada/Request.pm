@@ -36,7 +36,7 @@ our %FIELD = map { $_ => 1 } qw(error output);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
 our $args_manage = { name => 1 , uid => 1, after_request => 2 };
-our $args_prepare = { id_domain => 1 , uid => 1, with_cd => 2 };
+our $args_prepare = { id_domain => 1 , uid => 1, with_cd => 2, publish => 2 };
 our $args_remove_base = { id_domain => 1 , uid => 1 };
 our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
 
@@ -85,8 +85,10 @@ our %VALID_ARG = (
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2, uid => 2 }
-    ,list_storage_pools => { id_vm => 1 , uid => 1 }
+    ,list_storage_pools => { id_vm => 1 , uid => 1, data => 2 }
+    ,active_storage_pool => { uid => 1, id_vm => 1, name => 1, value => 1}
     ,check_storage => { uid => 1 }
+    ,create_storage_pool => { uid => 1, id_vm => 1, name => 1, directory => 1 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
     ,cleanup => { timeout => 2 }
     ,clone => { uid => 1, id_domain => 1, name => 2, memory => 2, number => 2, volatile => 2, id_owner => 2
@@ -113,10 +115,10 @@ our %VALID_ARG = (
     # ports
     ,expose => { uid => 1, id_domain => 1, port => 1, name => 2, restricted => 2, id_port => 2}
     ,remove_expose => { uid => 1, id_domain => 1, port => 1}
-    ,open_exposed_ports => {uid => 1, id_domain => 1 }
+    ,open_exposed_ports => {uid => 1, id_domain => 1, remote_ip => 2 }
     ,close_exposed_ports => { uid => 1, id_domain => 1, port => 2, clean => 2 }
     # Virtual Managers or Nodes
-    ,refresh_vms => { _force => 2, timeout_shutdown => 2 }
+    ,refresh_vms => { _force => 2, timeout_shutdown => 2, uid => 2 }
 
     ,shutdown_node => { id_node => 1, at => 2 }
     ,start_node => { id_node => 1, at => 2 }
@@ -158,7 +160,11 @@ our %VALID_ARG = (
         ,spinoff_disks => 2
     }
     ,update_iso_urls => { uid => 1 }
+    ,list_unused_volumes => {uid => 1, id_vm => 1, start => 2, limit => 2 }
+    ,remove_files => { uid => 1, id_vm => 1, files => 1 }
 );
+
+$VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
     qw( create start shutdown force_shutdown reboot prepare_base remove remove_base rename_domain screenshot download
@@ -184,9 +190,11 @@ qw(
     list_host_devices
     refresh_machine
     refresh_machine_ports
+    refresh_vms
     set_time
     open_exposed_ports
     manage_pools
+    screenshot
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -336,6 +344,7 @@ sub info {
         ,error => $self->error
         ,id_domain => $self->id_domain
         ,output => $self->output
+        ,date_changed => $self->date_changed
     }
 }
 
@@ -754,21 +763,28 @@ sub _new_request {
     $self->{args} = decode_json($args{args});
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
     if (!$force
-        && (
-        $CMD_NO_DUPLICATE{$args{command}}
-        || ($no_duplicate && $args{command} =~ /^(screenshot)$/))
+        && ( $CMD_NO_DUPLICATE{$args{command}} || $no_duplicate)
         ){
         my $id_dupe = $self->_duplicated_request();
 
-        my $id_recent;
-        $id_recent = $self->done_recently()
+        my $req_recent;
+        $req_recent = $self->done_recently()
         if $args{command} !~ /^(clone|migrate|set_base_vm)$/;
 
+        my $id_recent;
+        $id_recent = $req_recent->id if $req_recent;
+
         my $id = ( $id_dupe or $id_recent );
-        return Ravada::Request->open($id) if $id;
+        if ($id ) {
+            my $req = Ravada::Request->open($id);
+            $req->{_duplicated} = 1;
+            return $req;
+        }
 
     }
 
+    $args{date_changed} = Ravada::Utils::date_now();
+    $args{error} = '';
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO requests (".join(",",sort keys %args).")"
         ."  VALUES ( "
@@ -1017,10 +1033,11 @@ sub status {
         return ($row->{status} or 'unknown');
     }
 
+    my $date_changed = $self->date_changed;
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
+                ." WHERE id=?");
     for ( 1 .. 10 ) {
         eval {
-            my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
-                ." WHERE id=?");
 
             $status = substr($status,0,64);
 
@@ -1034,6 +1051,26 @@ sub status {
 
     $self->_send_message($status, $message)
         if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
+
+    if ($status eq 'done' && $date_changed && $date_changed eq $self->date_changed) {
+        sleep 1;
+        for ( 1 .. 10 ) {
+            eval {
+                my $sth2=$$CONNECTOR->dbh->prepare(
+                    "UPDATE requests set date_changed=?"
+                    ." WHERE id=?"
+                );
+                $sth2->execute(Ravada::Utils::date_now, $self->{id});
+            };
+            if ($@) {
+                warn "Warning: $@";
+                sleep 1;
+            } else {
+                last;
+            }
+        }
+
+    }
     return $status;
 }
 
@@ -1315,33 +1352,6 @@ sub copy_screenshot {
 
 }
 
-=head2 refresh_vms
-
-Refreshes the Virtual Mangers
-
-=cut
-
-sub refresh_vms {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
-    my $args = _check_args('refresh_vms', @_ );
-    if  (!$args->{_force} ) {
-          return if done_recently(undef,60,'refresh_vms') || _requested('refresh_vms');
-    }
-
-    my $self = {};
-    bless($self,$class);
-
-    _init_connector();
-    return $self->_new_request(
-        command => 'refresh_vms'
-        , args => $args
-    );
-
-
-}
-
 =head2 set_base_vm
 
 Enables a base in a Virtual Manager
@@ -1531,7 +1541,7 @@ sub enforce_limits {
         , args => $args
     );
 
-    if (!$args->{at} && (my $id_request = $req->done_recently(30))) {
+    if (!$args->{at} && !$args->{_force} && (my $id_request = $req->done_recently(30))) {
         $req->status("done",$req->command." run recently by id_request: $id_request");
     }
     return $req;
@@ -1606,7 +1616,7 @@ sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
     my $id_req = 0;
     my $args_d= {};
     if ($self) {
-        $id_req = $self->id;
+        $id_req = ( $self->id or 0 );
         confess "Error: do not supply args if you supply request" if $args;
         confess "Error: do not supply command if you supply request" if $command;
         $args_d = $self->args;
@@ -1626,11 +1636,12 @@ sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
 
     my $sth = $$CONNECTOR->dbh->prepare( $query );
     my $date= Time::Piece->localtime(time - $seconds);
-    $sth->execute($date->ymd." ".$date->hms, $command, $id_req);
-    while (my ($id,$args_found) = $sth->fetchrow) {
-        next if $self && $self->id == $id;
+    my $date_before = $date->ymd." ".$date->hms;
+    $sth->execute($date_before, $command, $id_req);
+    while (my ($id,$args_found, $date) = $sth->fetchrow) {
+        next if $self && defined $self->id && $self->id == $id;
 
-        return Ravada::Request->open($id) if !defined $args;
+        return Ravada::Request->open($id) if !keys %$args_d;
 
         my $args_found_d = decode_json($args_found);
         delete $args_found_d->{uid};
@@ -1639,7 +1650,7 @@ sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
         next if join(".",sort keys %$args_d) ne join(".",sort keys %$args_found_d);
         my $args_d_s = join(".",map { $args_d->{$_} } sort keys %$args_d);
         my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
-        next if defined $args && $args_d_s ne $args_found_s;
+        next if $args_d_s ne $args_found_s;
 
         return Ravada::Request->open($id);
     }
@@ -1788,6 +1799,7 @@ sub AUTOLOAD {
     confess "Error: $name can't be a ref ".Dumper($value) if ref($value);
     my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
             ." WHERE id=?");
+    confess if $name eq 'error' && !defined $value;
     eval {
         $sth->execute($value, $self->{id});
         $sth->finish;

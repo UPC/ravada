@@ -11,6 +11,8 @@ SyslogIdentifier=rvd_front
 ExecStart=/usr/bin/hypnotoad /usr/sbin/rvd_front -f
 ExecStop=/usr/bin/hypnotoad -s /usr/sbin/rvd_front
 ExecReload=/usr/bin/hypnotoad /usr/sbin/rvd_front
+Restart=on-failure
+RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target

@@ -181,12 +181,16 @@ sub test_user($base, $n_start) {
     is($info->{comment},$user->name);
 
     # now we should have another active
-    wait_request(debug => 0);
-    wait_request(debug => 0);
-    @clones = $base->clones(is_pool => 1 );
-    my $n_active = grep { $_->is_active}
-    map { Ravada::Domain->open($_->{id}) }
-    @clones;
+    my $n_active = 0;
+    for ( 1 .. 3 ) {
+        wait_request(debug => 0);
+        @clones = $base->clones(is_pool => 1 );
+        $n_active = grep { $_->is_active}
+        map { Ravada::Domain->open($_->{id}) }
+        @clones;
+        last if $n_active > $n_start;
+        Ravada::Request->manage_pools(uid => user_admin->id, _force => 1);
+    }
     ok($n_active >= $n_start+1,"Expecting active > $n_start, got $n_active ") or exit;
 
     is($n_active, $n_start+1,"Expecting active == ".(1+ $n_start)

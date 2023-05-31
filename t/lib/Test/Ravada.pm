@@ -64,6 +64,8 @@ create_domain
     local_ips
 
     wait_request
+    wait_mojo_request
+
     delete_request
     delete_request_not_done
     fast_forward_requests
@@ -165,7 +167,7 @@ my @FLUSH_RULES=(
 
 $Ravada::CAN_FORK = 0;
 
-sub config_host_devices($type) {
+sub config_host_devices($type, $die=1) {
     my $config;
     if (!-e $FILE_CONFIG_HOST_DEVICES) {
         warn "Missing host devices config file '$FILE_CONFIG_HOST_DEVICES'";
@@ -180,7 +182,7 @@ sub config_host_devices($type) {
     die "Error loading $FILE_CONFIG_HOST_DEVICES $@" if $@;
 
     die "Error: no host devices config in $FILE_CONFIG_HOST_DEVICES for $type"
-    if !exists $config->{$type} || !$config->{$type};
+    if ( !exists $config->{$type} || !$config->{$type} ) && $die;
     return $config->{$type};
 }
 
@@ -467,8 +469,19 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
                 , warn_error => 1
                 , pid_name => $pid_name
     );
-    $rvd->_install();
-    $CONNECTOR = $rvd->connector if !$sqlite;
+    if ($sqlite) {
+        $rvd->_install();
+        $rvd->_update_isos();
+    } else {
+        $CONNECTOR = $rvd->connector;
+        my $sth = $CONNECTOR->dbh->table_info('%',undef,'users','TABLE');
+        my $info = $sth->fetchrow_hashref();
+        $sth->finish;
+        if (!$info) {
+            $rvd->_install();
+            $rvd->_update_isos();
+        }
+    }
 
     user_admin();
     $RVD_BACK = $rvd;
@@ -498,10 +511,12 @@ sub init($config=undef, $sqlite = 1 , $flush=0) {
         $config = { vm => [ $config ] };
     }
 
+    my $config_file;
     if ($config && ref($config) ) {
         $FILE_CONFIG_TMP = "/tmp/ravada_".base_domain_name()."_$$.conf";
         DumpFile($FILE_CONFIG_TMP, $config);
         $CONFIG = $FILE_CONFIG_TMP;
+        $config_file = $FILE_CONFIG_TMP;
     } else {
         $CONFIG = $config;
     }
@@ -524,7 +539,14 @@ sub init($config=undef, $sqlite = 1 , $flush=0) {
         $USER_ADMIN = undef;
     }
 
-    rvd_back($config, 0 ,$sqlite)  if !$RVD_BACK || $flush;
+    if ( !$RVD_BACK || $flush ) {
+        if ($config_file) {
+            rvd_back($config_file, 0 ,$sqlite);
+            rvd_front($config_file);
+        } else {
+            rvd_back($config, 0 ,$sqlite);
+        }
+    }
     if (!$sqlite) {
         $CONNECTOR = $RVD_BACK->connector;
     } else {
@@ -979,7 +1001,7 @@ sub _wait_mojo_request($t, $url) {
         return;
     }
     my $req = Ravada::Request->open($body_json->{request});
-    for ( 1 .. 120 ) {
+    for ( 1 .. 180 ) {
         last if $req->status eq 'done';
         sleep 1;
         diag("Waiting for request "
@@ -989,10 +1011,15 @@ sub _wait_mojo_request($t, $url) {
     is($req->error, '');
 }
 
+sub wait_mojo_request($t, $url) {
+    _wait_mojo_request($t, $url);
+}
+
 sub _activate_storage_pools($vm) {
     my @sp = $vm->vm->list_all_storage_pools();
     for my $sp (@sp) {
         next if $sp->is_active;
+        next unless $sp->get_name =~ /^tst_/;
         diag("Activating sp ".$sp->get_name." on ".$vm->name);
         $sp->build() unless $sp->is_active;
         $sp->create() unless $sp->is_active;
@@ -1171,7 +1198,11 @@ sub delete_request {
 
     my $sth = $CONNECTOR->dbh->prepare("DELETE FROM requests WHERE command=?");
     for my $command (@_) {
-        $sth->execute($command);
+        if (ref($command)) {
+            $command->_delete();
+        } else {
+            $sth->execute($command);
+        }
     }
 }
 
@@ -1284,7 +1315,7 @@ sub wait_request {
                         } elsif($req->command eq 'refresh_machine') {
                             like($error,qr{^($|.*port.*already used)});
                         } else {
-                            like($error,qr/^$|libvirt error code:38,|run recently/)
+                            like($error,qr/^$|libvirt error code:38,|run recently|checked|checking/)
                                 or confess $req->id." ".$req->command;
                         }
                     }
@@ -1357,7 +1388,7 @@ sub _qemu_storage_pool {
 
     if (! _exists_storage_pool($vm, $pool_name)) {
 
-        my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+        my $uuid = Ravada::VM::KVM::_unique_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
 
         my $dir = "/var/tmp/$pool_name";
         mkdir $dir if ! -e $dir;
@@ -2530,7 +2561,7 @@ sub create_storage_pool($vm, $dir=undef, $pool_name=new_pool_name()) {
     if (!ref($vm)) {
         $vm = rvd_back->search_vm($vm);
     }
-    my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c2609'
+    my $uuid = $vm->_unique_uuid('68663afc-aaf4-4f1f-9fff-93684c2609'
         .int(rand(10)).int(rand(10)));
 
     my $capacity = 1 * 1024 * 1024;

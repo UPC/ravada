@@ -10,6 +10,8 @@ RemainAfterExit=yes
 SyslogIdentifier=rvd_back
 PIDFile=/var/run/rvd_back.pid
 ExecStart=/usr/sbin/rvd_back &
+Restart=on-failure
+RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target

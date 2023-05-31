@@ -92,6 +92,16 @@
             $scope.set_restore=function(machineId) {
                 $scope.host_restore = machineId;
             };
+            $scope.prepare_base = function(machine){
+                machine.action=false;
+                machine.is_base=1;
+                $http.post('/request/prepare_base/'
+                      , JSON.stringify({ 'id_domain': machine.id
+                          ,publish: true
+                      })
+                );
+
+            };
             $scope.restore= function(machineId){
               $http.post('/request/restore_domain/'
                       , JSON.stringify({ 'id_domain': machineId
@@ -125,21 +135,47 @@
                 });
             };
 
+            $scope.change_clone = function(machine) {
+                if (typeof(machine.clone) != 'undefined'
+                && machine.clone) {
+                    machine.is_active = machine.clone.is_active;
+                    machine.screenshot= machine.clone.screenshot;
+                    if (machine.clone.description
+                            && machine.clone.description.length) {
+                        machine.description2 = machine.clone.description;
+                    } else {
+                        machine.description2 = machine.description;
+                    }
+                }
+            };
+
             $scope.action = function(machine, action, confirmed) {
                 machine.action = false;
                 if (action == 'start') {
                     if ((! confirmed) && (! machine.is_active)) {
                         $scope.checkMaxMachines(action, machine); 
                     } else {
+                        if (machine.clone || !machine.is_base) {
+                            var id = machine.id;
+                            if (machine.clone) {
+                                id=machine.clone.id;
+                            }
+                            window.location.assign('/machine/view/' + id + '.html');
+                        } else {
                         window.location.assign('/machine/clone/' + machine.id + '.html');
+                        }
                     }                    
                 } else if ( action == 'restore' ) {
-                    $scope.host_restore = machine.id_clone;
+                    $scope.host_restore = machine.clone.id;
                     $scope.host_shutdown = 0;
                     $scope.host_force_shutdown = 0;
-                } else if (action == 'shutdown' || action == 'hibernate' || action == 'force_shutdown') {
+                } else if (action == 'shutdown' || action == 'hibernate' || action == 'force_shutdown' || action == 'reboot') {
                     $scope.host_restore = 0;
-                    $http.get( '/machine/'+action+'/'+machine.id_clone+'.json');
+                    var id=machine.id;
+                    if (machine.clone) {
+                        id=machine.clone.id;
+                    }
+                    $http.get( '/machine/'+action+'/'+id+'.json');
                 } else {
                     alert("unknown action "+action);
                 }
@@ -177,17 +213,22 @@
                             if ( !$scope.machines[i] || $scope.machines[i].id != data[i].id ) {
                                 $scope.machines[i] = data[i];
                                 $scope.machines[i].description = data[i].description;
+                                $scope.machines[i].clone = $scope.machines[i].list_clones[0];
+                                $scope.machines[i].screenshot = data[i].screenshot;
+                                set_one_clone($scope.machines[i]);
+                                $scope.machines[i].description2 = $scope.machines[i].description;
                             } else {
                                 $scope.machines[i].can_hibernate = data[i].can_hibernate;
                                 $scope.machines[i].id= data[i].id;
                                 $scope.machines[i].id_clone = data[i].id_clone;
-                                $scope.machines[i].is_active = data[i].is_active;
                                 $scope.machines[i].is_locked = data[i].is_locked;
                                 $scope.machines[i].is_public = data[i].is_public;
-                                $scope.machines[i].name = data[i].name;
-                                $scope.machines[i].name_clone = data[i].name_clone;
-                                $scope.machines[i].screenshot = data[i].screenshot;
-                                $scope.machines[i].description = data[i].description;
+                                $scope.machines[i].alias= data[i].alias;
+                                $scope.machines[i].date_changed = data[i].date_changed;
+                                $scope.machines[i].is_active = data[i].is_active;
+                                $scope.machines[i].is_base = data[i].is_base;
+                                copy_machine_data($scope.machines[i],data[i]);
+
                             }
                             if ( data[i].is_public == 1) {
                                 $scope.public_bases++;
@@ -197,6 +238,42 @@
                         }
                     });
                 }
+
+                var copy_machine_data = function(machine,data) {
+                    var reload=false;
+                    if (data.list_clones.length < machine.list_clones.length) {
+                        machine.list_clones = data.list_clones;
+                        reload=true;
+                    }
+                    for (var i = 0; i < data.list_clones.length; i++) {
+                        if (!machine.list_clones[i]
+                            ||machine.list_clones[i].id != data.list_clones[i].id
+                        ) {
+                            machine.list_clones[i] = data.list_clones[i];
+                            reload=true;
+                        } else {
+                            machine.list_clones[i].is_active = data.list_clones[i].is_active;
+                            machine.list_clones[i].screenshot = data.list_clones[i].screenshot;
+                            if (machine.clone.id == machine.list_clones[i].id) {
+                                machine.screenshot = machine.list_clones[i].screenshot;
+                            }
+
+                        }
+                    }
+                    if (reload) {
+                        set_one_clone(machine);
+                    }
+                };
+
+                var set_one_clone = function(machine) {
+                    machine.clone=machine.list_clones[0];
+                    for (var i=machine.list_clones.length-1; i>=0; i--) {
+                        if(machine.list_clones[i].is_active) {
+                            machine.clone=machine.list_clones[i];
+                        }
+                    }
+                    $scope.change_clone(machine);
+                };
             };
 
             var subscribe_ping_backend= function(url) {
@@ -242,6 +319,7 @@
             $scope.edit = "";
             $scope.lock_info = false;
             $scope.topology = false;
+            $scope.searching_ldap_attributes = true;
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -339,6 +417,9 @@
                             }
                         }
                         $scope.copy_is_volatile = $scope.showmachine.is_volatile;
+                        if ($scope.showmachine.is_base) {
+                            $scope.copy_is_volatile = $scope.showmachine.volatile_clones;
+                        }
                         if (!subscribed_extra) {
                             subscribed_extra = true;
                             subscribe_nodes(url,data.type);
@@ -492,6 +573,8 @@
                                 $scope.new_shutdown_disconnected
                                     = $scope.showmachine.shutdown_disconnected;
                                 $scope.new_balance_policy=$scope.showmachine.balance_policy;
+                                $scope.new_auto_compact
+                                    = $scope.showmachine.auto_compact;
                                 load_balance_options();
                                 get_node_info($scope.showmachine.id_vm);
                             }
@@ -737,16 +820,28 @@
                      ,'index': index
             });
           };
-          $scope.list_ldap_attributes= function() {
+          $scope.list_ldap_attributes = function() {
               $scope.ldap_entries = 0;
               $scope.ldap_verified = 0;
+              $scope.searching_ldap_attributes = true;
               if ($scope.cn) {
                   $http.get('/list_ldap_attributes/'+$scope.cn).then(function(response) {
                       $scope.ldap_error = response.data.error;
                       $scope.ldap_attributes = response.data.attributes;
+                      $scope.dn_found = response.data.dn_found;
+                      $scope.values = response.data.values;
+                      $scope.searching_ldap_attributes = false;
+                      $scope.user_name = response.data.name;
+                      $scope.check_access();
                   });
               }
           };
+          $scope.check_access = function() {
+                      $http.get('/machine/check_access/'+$scope.showmachine.id+"/"+$scope.user_name).then(function(response) {
+                          $scope.check_allowed=response.data.ok;
+                      });
+          };
+
           $scope.count_ldap_entries = function() {
               $scope.ldap_verifying = true;
               $http.get('/count_ldap_entries/'+$scope.ldap_attribute+'/'+$scope.ldap_attribute_value)
@@ -854,6 +949,7 @@
                   $scope.ldap_attributes_domain  = response.data.list;
                   $scope.ldap_attributes_default = response.data.default;
               });
+              $scope.check_access();
           };
           $scope.init_domain_access = function() {
               $http.get('/machine/list_access/'+$scope.showmachine.id).then(function(response) {
@@ -1065,6 +1161,7 @@
             $scope.access_last = [ ];
 
             $scope.new_base = undefined;
+            $scope.cn ='';
             $scope.list_ldap_attributes();
             $scope.list_caches = ['default','none','writethrough'
                 ,'writeback','directsync','unsafe'];

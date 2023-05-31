@@ -89,12 +89,22 @@ sub test_bases($t, $bases) {
     my $n_bases = 0;
     my $n_machines = scalar(@$bases);
     for my $base ( @$bases ) {
-        $t->get_ok("/machine/prepare/".$base->id.".json")->status_is(200);
+        my $url = "/machine/prepare/".$base->id.".json";
+        $t->get_ok($url)->status_is(200);
+        wait_mojo_request($t, $url);
         wait_request(debug => 0, background => 1);
         mojo_check_login($t);
         $n_bases++;
-        my @machines_user = list_machines_user($t);
-        is(@machines_user, $n_bases, Dumper(\@machines_user)) or exit;
+        my @machines_user0 = list_machines_user($t);
+        my @machines_user;
+        for ( 1 .. 20 ) {
+            @machines_user = grep {$_->{is_base}} list_machines_user($t);
+            last if scalar(@machines_user)==$n_bases;
+            sleep 1;
+            $t->get_ok($url)->status_is(200);
+            wait_request();
+        }
+        is(@machines_user, $n_bases, Dumper(\@machines_user)) or die Dumper(\@machines_user0);
         my $n_clones = 2;
         mojo_request($t, "clone", { id_domain => $base->id, number => $n_clones });
         $n_machines += $n_clones;
@@ -113,6 +123,13 @@ sub _login_non_admin($t) {
     mojo_login($t, $user_name,$$);
 }
 
+sub _new_login_non_admin($t) {
+    my $user_name = new_domain_name();
+    remove_old_user($user_name);
+    my $user = create_user($user_name, $$);
+    mojo_login($t, $user_name,$$);
+    return $user;
+}
 sub test_bases_non_admin($t,$bases) {
     my $n_public = 0;
     for my $base (@$bases) {
@@ -124,25 +141,38 @@ sub test_bases_non_admin($t,$bases) {
 }
 
 sub test_list_machines_non_admin($t, $bases) {
+    _login_non_admin($t);
     my $url = "/machine/clone/".$bases->[0]->id.".html";
     $t->get_ok($url)->status_is(200);
     wait_request(background => 1);
     my @list_bases = list_machines_user($t);
-    my ($clone) = grep { $_->{name_clone} } @list_bases;
-    ok($clone,Dumper(\@list_bases)) or exit;
+    my $clone;
+    for my $base (@list_bases) {
+        next if !$base->{list_clones};
+        for my $c2 (@{$base->{list_clones}}) {
+            $clone = $c2;
+            last;
+        }
+        last if $clone;
+    }
 
     my @list_machines = list_machines($t);
-    is(scalar(@list_machines),0);
+    is(scalar(@list_machines),0) or die Dumper([map {[$_->{id_base},$_->{name}]} @list_machines]);
 
-    Ravada::Request->prepare_base(
+    my $req = Ravada::Request->prepare_base(
         uid => user_admin->id
-        ,id_domain => $clone->{id_clone}
+        ,id_domain => $clone->{id}
     );
     wait_request(background => 1);
     user_admin->grant($USER,'shutdown_clones');
 
-    @list_machines = list_machines($t);
-    is(scalar(@list_machines),1) or exit;
+    for ( 1 .. 5 ) {
+        @list_machines = list_machines($t);
+        last if scalar(@list_machines)==1;
+        sleep 1;
+        wait_request($req->id);
+    }
+    is(scalar(@list_machines),1,$USER->name." / $$ should see one machine") or exit;
     user_admin->revoke($USER,'shutdown_clones');
 }
 
@@ -159,11 +189,12 @@ sub test_bases_access($t,$bases) {
             ,value => $value
     );
 
+    _new_login_non_admin($t);
     my @list_machines = list_machines_user($t);
     is(scalar(@list_machines),1,Dumper(\@list_machines));
 
     $t->tx->req->headers->add( $attribute => $value );
-    @list_machines = list_machines_user($t ,{ $attribute => $value });
+    @list_machines = grep { $_->{is_base} } list_machines_user($t ,{ $attribute => $value });
     is(scalar(@list_machines),2) or exit;
 
     my @access = $base0->list_access('client');
@@ -345,9 +376,13 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     test_bookings($t);
     my @bases = _create_bases($t, $vm_name);
 
-    is(list_machines_user($t), 0);
+    is(list_machines_user($t), scalar(@bases));
     is(list_machines($t), scalar(@bases)) or exit;
 
+    _login_non_admin($t);
+    is(list_machines_user($t), 0);
+
+    mojo_login($t, $USERNAME, $PASSWORD);
     test_bases($t,\@bases);
 
     _login_non_admin($t);

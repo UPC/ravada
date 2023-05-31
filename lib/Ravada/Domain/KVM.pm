@@ -431,6 +431,9 @@ sub _pool_refresh($pool) {
     for ( ;; ) {
         eval { $pool->refresh };
         return if !$@;
+
+        return if ref($@) && $@->code == 1;
+
         warn "WARNING: on vol remove , pool refresh $@" if $@;
         sleep 1;
     }
@@ -784,9 +787,7 @@ sub _display_info_spice($graph) {
     for my $item ( $graph->findnodes("*")) {
         next if $item->getName eq 'listen';
         for my $attr ( $item->getAttributes()) {
-            my $value = $attr->toString();
-            $value =~ s/^\s+//;
-            $display{$item->getName()} = $value;
+            $display{$item->getName()}->{$attr->getName} = $attr->getValue();
         }
     }
 
@@ -2429,7 +2430,10 @@ sub _set_controller_network($self, $number, $data) {
 
     my $pci_slot = $self->_new_pci_slot();
 
-    my $device = "<interface type='network'>
+    my $itype = 'network';
+    $itype = 'bridge' if $bridge;
+
+    my $device = "<interface type='$itype'>
         <mac address='".$self->_vm->_new_mac()."'/>";
     if ($type eq 'NAT') {
         $device .= "<source network='$network'/>"
@@ -2449,12 +2453,19 @@ sub _set_controller_network($self, $number, $data) {
 
 sub _set_controller_display_spice($self, $number, $data) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
-    for my $graphic ( $doc->findnodes("/domain/devices/graphics")) {
-        next if $graphic->getAttribute('type') ne 'spice';
-        die "Changing ".$graphic->toString()." ".Dumper($data);
+
+    my $count = 0;
+    my $graphic;
+    for my $g0 ( $doc->findnodes("/domain/devices/graphics")) {
+        if (!defined $number || $count++ >= $number ) {
+            $graphic = $g0;
+        }
     }
-    my ($devices) = $doc->findnodes("/domain/devices");
-    my $graphic = $devices->addNewChild(undef,'graphics');
+    if (!$graphic) {
+        my ($devices) = $doc->findnodes("/domain/devices");
+        $graphic = $devices->addNewChild(undef,'graphics');
+    }
+
     $graphic->setAttribute(type => 'spice');
 
     my $port = ( delete $data->{port} or 'auto');
@@ -2521,13 +2532,17 @@ sub _set_controller_display_vnc($self, $number, $data) {
 sub _set_controller_display($self, $number, $data) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
 
+    $data->{driver} = 'spice' if !$data->{driver};
+
+    my @graphics = $doc->findnodes("/domain/devices/graphics");
+    $number = scalar(@graphics) if !defined $number;
+
     return $self->_set_controller_display_spice($number, $data)
     if defined $data && $data->{driver} eq 'spice';
 
     return $self->_set_controller_display_vnc($number, $data)
     if defined $data && $data->{driver} eq 'vnc';
 
-    my @graphics = $doc->findnodes("/domain/devices/graphics");
     return $self->_set_controller_display_spice($number, $data)
     if exists $graphics[$number] && $graphics[$number]->getAttribute('type') eq 'spice';
 
@@ -2546,7 +2561,7 @@ sub remove_controller($self, $name, $index=0,$attribute_name=undef, $attribute_v
     my $ret;
 
     #some hardware can be removed searching by attribute
-    if($name eq 'display' || defined $attribute_name ) {
+    if(defined $attribute_name ) {
         $ret = $sub->($self, undef, $attribute_name, $attribute_value);
     } else {
         $ret = $sub->($self, $index);
@@ -2573,9 +2588,9 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
     if defined $attribute_name0 && !defined $attribute_value;
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
-    my ($devices) = $doc->findnodes('/domain/devices');
     my $ind=0;
     my @found;
+    my ($devices) = $doc->findnodes("/domain/devices");
     for my $controller ($devices->findnodes($device)) {
         my ($item, $attr_name)= _find_child($controller, $attribute_name0);
 
@@ -2835,6 +2850,8 @@ sub _change_hardware_disk($self, $index, $data) {
     }
 
     $self->_change_disk_settings($index, $data);
+
+    $self->_set_volumes_backing_store();
 }
 
 sub _change_disk_settings($self, $index, $data) {
@@ -2920,14 +2937,52 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
     $self->reload_config($doc);
 }
 
+sub _default_hw_display() {
+    return {
+        type => 'spice'
+        ,extra => {
+            'image' => { 'compression' => 'auto_glz' }
+            ,'jpeg' => { 'compression' => 'auto' }
+            ,'playback' => { 'compression' => 'on' }
+            ,'streaming' => { 'mode' => 'filter' }
+            ,'zlib' => { 'compression' => 'auto' }
+        }
+    }
+};
 sub _change_hardware_display($self, $index, $data) {
+    $data = _default_hw_display()
+    if defined $data && ! keys %$data;
+
     my $type = delete $data->{driver};
-    $type =~ s/-tls$//;
+    $type =~ s/-tls$// if $type;
     my $port = delete $data->{port};
     confess if $port;
-    for my $item (keys %$data) {
-        $self->_set_driver_generic_simple("/domain/devices/graphics\[\@type='$type']/$item",$data->{$item});
+
+    $index = 0 if !defined $index;
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my @graphics = $doc->findnodes("/domain/devices/graphics");
+
+    my $graphics=$graphics[$index];
+
+    die "Error: I can't find graphics #$index. Only ".scalar(@$graphics)." found" if !$graphics;
+
+    my $old_type = $graphics->getAttribute('type');
+    my $changed = 0;
+    if (defined $type && $old_type ne $type ) {
+        $graphics->removeAttribute('port');
+        $graphics->setAttribute(type => $type);
+        for my $node ($graphics->findnodes('*')) {
+            $graphics->removeChild($node);
+        }
+        $changed++;
     }
+    my $extra = $data->{extra};
+    for my $item (keys %$extra) {
+        $changed += _change_xml($graphics,$item,$extra->{$item});
+    }
+
+    $self->reload_config($doc) if $changed;
 }
 
 
@@ -2956,8 +3011,8 @@ sub _change_hardware_memory($self, $index, $data) {
     my $max_mem= delete $data->{max_mem};
     confess "Error: Unkown args ".Dumper($data) if keys %$data;
 
-    $self->set_memory($memory)      if defined $memory;
     $self->set_max_mem($max_mem)    if defined $max_mem;
+    $self->set_memory($memory)      if defined $memory;
 
 }
 
@@ -3341,7 +3396,16 @@ sub _change_xml($xml, $name, $data) {
         if ($field eq '#text') {
             my $text = $data->{$field};
             if ($node->textContent ne $text) {
-                $node->setText($text);
+                my ($n_text) = $node->findnodes("text()");
+                eval {
+                    if (!$n_text) {
+                        $node->appendText($text);
+                    } else {
+                        $n_text->setData($text);
+                    }
+                };
+                confess $@."\n".Dumper($node->toString,$name,$data)
+                if $@;
             }
             next;
         }

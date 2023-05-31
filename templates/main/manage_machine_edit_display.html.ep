@@ -1,0 +1,14 @@
+<div ng-show="name == 'display' && is_edit(name,$index)"
+class="form-group mt-4">
+    <div ng-repeat="(item,data) in item.extra" class="row">
+        <div class="col-2" align="right">
+            <b>{{item}}</b>
+        </div>
+        <div ng-repeat="(key,value) in data" class="col-6">
+            {{key}}
+            <select ng-model="data[key]">
+            <option ng-repeat="option in $parent.$parent.$parent.showmachine.drivers[item]">{{option}}</option>
+            </select>
+        </div>
+    </div>
+</div>

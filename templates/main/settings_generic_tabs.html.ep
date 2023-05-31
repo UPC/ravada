@@ -1,11 +1,12 @@
 % my %tabs_item = (
 %    node => ['options' , 'bases', 'remove' , 'hostdev']
 %   ,network => ['options', 'machines', 'remove']
+%   ,storage => ['list', 'options', 'purge']
 % );
 % my $tabs = $tabs_item{$item};
 
 % if (!$tabs) {
-    <b><%=l 'Error:' %></b> <%=l 'I don\'t know settings tabs for:' %> $item
+    <b><%=l 'Error:' %></b> <%=l 'I don\'t know settings tabs for:' %> <%= $item %>
 % }
 
 % my $active="active";
@@ -28,7 +29,7 @@
 %>
 <a class="nav-link <%= $active %>" id="v-pills-<%= $current %>-tab"
     href="#v-pills-<%= $current %>" data-toggle="pill" role="tab"
-    aria-controls="v-pills-bases" aria-selected="<%= $selected %>"><%=l $current %></a>
+        aria-controls="v-pills-bases" aria-selected="<%= $selected %>"><%=l $current %></a>
 % $active = '';
 % $selected = "false";
 % }

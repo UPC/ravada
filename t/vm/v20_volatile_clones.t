@@ -156,7 +156,7 @@ sub test_volatile_clone {
         eval { rvd_back->_process_all_requests_dont_fork() };
         is($@,'');
         is($req->status,'done');
-        is($req->error, undef);
+        is($req->error, '');
     };
 
     $clone->remove(user_admin)  if !$clone->is_removed;
@@ -262,9 +262,19 @@ sub test_internal_shutdown {
     my $domain2 = rvd_back->search_domain($clone_name);
     ok(!$domain2,"[".$vm->type."] expecting domain $clone_name removed");
 
+    test_auto_remove($clone);
+
     $domain2->remove(user_admin)    if $domain2;
 
     $user->remove();
+}
+
+sub test_auto_remove($clone) {
+    my $removed;
+    eval { $removed = Ravada::Domain->open($clone->id) };
+    like($@,qr/Domain not found/);
+    ok(!$removed);
+
 }
 
 sub test_old_machine {
@@ -466,6 +476,9 @@ sub test_req_volatile($vm) {
             for my $clone ( $base->clones ) {
                 is($clone->{is_volatile}, $volatile
                     , "Expecting ".$clone->{name}." base_volatile=$set_volatile volatile=$volatile") or exit;
+
+                _test_non_persistent($vm, $clone->{id}, $volatile);
+
                 Ravada::Request->remove_domain(name => $clone->{name}
                     ,uid => user_admin->id
                 );
@@ -473,6 +486,26 @@ sub test_req_volatile($vm) {
         }
     }
     remove_domain_and_clones_req($base,1,1);
+}
+
+sub _test_non_persistent($vm ,$id_domain, $volatile) {
+
+    return if $vm->type ne 'KVM';
+
+    my $clone = Ravada::Domain->open($id_domain);
+    if ($volatile) {
+        ok(!$clone->domain->is_persistent);
+    } else {
+        ok($clone->domain->is_persistent, "Expecting ".$clone->name
+            ." is persistent") or exit;
+    }
+
+    if ($volatile) {
+        $clone->domain->destroy if $clone->domain->is_active;
+
+        my $cloneb = Ravada::Domain->open($id_domain);
+        ok(!$cloneb);
+    }
 }
 
 ######################################################################3

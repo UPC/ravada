@@ -29,6 +29,7 @@ sub _around_prepare_base($orig, $self) {
 
     return $base_file if ! $self->clone_base_after_prepare;
 
+    $self->vm->refresh_storage_pools();
     $self->vm->remove_file($self->file);
 
     my @domain = ();
