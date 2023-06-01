@@ -2454,6 +2454,7 @@ sub _xml_add_sysinfo_entry($self, $doc, $field, $value) {
     ($hostname) = $oemstrings->addNewChild(undef,'entry');
     $hostname->appendText("$field: $value");
 }
+
 sub _xml_remove_hostdev {
     my $doc = shift;
 
@@ -2475,7 +2476,6 @@ sub _xml_remove_cdrom_device {
         }
     }
 }
-
 
 sub _xml_remove_cdrom {
     my $doc = shift;
