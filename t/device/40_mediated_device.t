@@ -13,11 +13,16 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
+my $BASE;
+
 ####################################################################
 
 sub _prepare_dir_mdev() {
 
-    my $dir = "/run/user/".new_domain_name();
+    my $dir = "/run/user/";
+
+    $dir .= "$</" if $<;
+    $dir .= new_domain_name();
 
     mkdir $dir or die "$! $dir"
     if ! -e $dir;
@@ -45,10 +50,9 @@ sub test_mdev($vm) {
 
     $hd->_data('list_command' => "ls $dir");
 
-    my $domain = create_domain_v2(
-        vm => $vm
-        ,options => { machine => 'q35' }
-        ,iso_name => '%bull%64%'
+    my $domain = $BASE->clone(
+        name =>new_domain_name
+        ,user => user_admin
     );
     $domain->add_host_device($id);
 
@@ -108,7 +112,10 @@ clean();
 
 for my $vm_name ( 'KVM' ) {
     my $vm;
-    eval { $vm = rvd_back->search_vm($vm_name) };
+    eval {
+        $vm = rvd_back->search_vm($vm_name)
+        unless $vm_name eq 'KVM' && $<;
+    };
 
     SKIP: {
 
@@ -119,6 +126,11 @@ for my $vm_name ( 'KVM' ) {
 
         diag("Testing host devices in $vm_name");
 
+        if ($vm_name eq 'Void') {
+            $BASE = create_domain($vm);
+        } else {
+            $BASE = import_domain($vm);
+        }
         my $domain = test_mdev($vm);
         test_base($domain);
 
