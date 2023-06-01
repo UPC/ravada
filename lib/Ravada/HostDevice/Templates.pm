@@ -150,11 +150,6 @@ our @TEMPLATES_KVM  = (
     </hostdev>"
             }
             ,{
-                path => '/domain/devices/graphics'
-                ,type => 'unique_node'
-                ,template => "<graphics type='vnc'></graphics>"
-            }
-            ,{
                 path => '/domain/features/kvm'
                 ,type => 'unique_node'
                 ,template => "<kvm><hidden state='on'/></kvm>"
