@@ -165,6 +165,8 @@ our %VALID_ARG = (
     ,remove_files => { uid => 1, id_vm => 1, files => 1 }
 );
 
+$VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};
+
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
     qw( create start shutdown force_shutdown reboot prepare_base remove remove_base rename_domain screenshot download
             clone
@@ -774,7 +776,11 @@ sub _new_request {
         $id_recent = $req_recent->id if $req_recent;
 
         my $id = ( $id_dupe or $id_recent );
-        return Ravada::Request->open($id) if $id;
+        if ($id ) {
+            my $req = Ravada::Request->open($id);
+            $req->{_duplicated} = 1;
+            return $req;
+        }
 
     }
 
@@ -1047,13 +1053,23 @@ sub status {
     $self->_send_message($status, $message)
         if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
 
-    if ($status eq 'done' && $date_changed eq $self->date_changed) {
+    if ($status eq 'done' && $date_changed && $date_changed eq $self->date_changed) {
         sleep 1;
-        my $sth2=$$CONNECTOR->dbh->prepare(
-            "UPDATE requests set date_changed=?"
-            ." WHERE id=?"
-        );
-        $sth2->execute(Ravada::Utils::date_now, $self->{id});
+        for ( 1 .. 10 ) {
+            eval {
+                my $sth2=$$CONNECTOR->dbh->prepare(
+                    "UPDATE requests set date_changed=?"
+                    ." WHERE id=?"
+                );
+                $sth2->execute(Ravada::Utils::date_now, $self->{id});
+            };
+            if ($@) {
+                warn "Warning: $@";
+                sleep 1;
+            } else {
+                last;
+            }
+        }
     }
     return $status;
 }

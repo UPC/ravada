@@ -118,11 +118,6 @@ sub _connect {
          };
          confess $@ if $@;
     }
-    if ( ! _list_storage_pools($vm) && !$_CREATED_DEFAULT_STORAGE{$self->host}) {
-	    warn "WARNING: No storage pools creating default\n";
-    	$self->_create_default_pool($vm);
-        $_CREATED_DEFAULT_STORAGE{$self->host}++;
-    }
     $self->_check_networks($vm);
     return $vm;
 }
@@ -138,6 +133,14 @@ sub _list_storage_pools($vm) {
    }
 }
 
+sub _check_default_storage($self) {
+    my $vm = $self->vm;
+    if ( ! _list_storage_pools($vm) && !$_CREATED_DEFAULT_STORAGE{$self->host}) {
+	    warn "WARNING: No storage pools creating default\n";
+        $_CREATED_DEFAULT_STORAGE{$self->host}++;
+        $self->_create_default_pool($vm);
+    }
+}
 
 sub _check_networks {
     my $self = shift;
@@ -403,7 +406,12 @@ sub _list_used_volumes_known($self) {
         my $dom = $self->search_domain($name);
         my $xml = $dom->xml_description();
         my @vols = $self->_find_all_volumes($xml);
-        push @used,@vols;
+        my @links;
+        for my $vol (@vols) {
+            my $link = $self->_follow_link($vol);
+            push @links,($link) if $link;
+        }
+        push @used, (@vols,@links);
     }
     return @used;
 }
@@ -429,7 +437,12 @@ sub _find_all_volumes($self, $xml) {
         my ($source) = $disk->findnodes("source");
         next if !$source;
         my $file = $source->getAttribute('file');
-        push @used,($file) if $file;
+        if ($file) {
+            push @used,($file);
+            my $link = $self->_follow_link($file);
+            push @used,($link) if $link;
+        }
+
         my @used_bs = $self->_find_all_volumes_bs($disk);
         push @used,@used_bs if scalar(@used_bs);
     }
@@ -455,8 +468,10 @@ sub list_unused_volumes($self) {
 
         eval { ($file) = $vol->get_path };
         confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
-
         next if $used{$file};
+
+        my $link = $self->_is_link($file);
+        next if $link && $used{$link};
 
         my $info;
         eval { $info = $vol->get_info() };
@@ -495,6 +510,7 @@ Refreshes all the storage pools
 =cut
 
 sub refresh_storage($self) {
+    $self->_check_default_storage();
     $self->_refresh_storage_pools();
     $self->_refresh_isos();
 }
@@ -711,7 +727,7 @@ sub _create_default_pool($self, $vm=$self->vm) {
     my $name = 'default';
 
     eval {
-    $self->_create_storage_pool($name, $dir, $vm);
+    $self->create_storage_pool($name, $dir, $vm);
     };
     warn $@ if $@;
 }
@@ -1581,6 +1597,7 @@ sub _ua_get($self, $url) {
     }
     confess "Error getting '$url'" if !$res;
 
+    return if $url =~ m{/$} && $res->code && $res->code == 404;
     if (!defined $res->code || !($res->code == 200 || $res->code == 301)) {
         my $msg = "Error getting '$url'";
         $msg .= " ".$res->code if defined $res->code;

@@ -301,9 +301,10 @@ sub _around_start($orig, $self, @arg) {
 
     $self->_post_hibernate() if $self->is_hibernated && !$self->_data('post_hibernated');
 
+    $self->_start_preconditions(@arg);
+
     $self->_data( 'post_shutdown' => 0);
     $self->_data( 'post_hibernated' => 0);
-    $self->_start_preconditions(@arg);
 
     my %arg;
     if (!(scalar(@arg) % 2) ) {
@@ -421,7 +422,7 @@ sub _start_preconditions{
     } else {
         ($user) = $_[1];
     }
-    $self->_allow_manage($user);
+    $self->_allowed_start($user);
     if ( Ravada->setting('/backend/bookings') && !$self->allowed_booking( $user ) ) {
         my @bookings = Ravada::Booking::bookings(date => DateTime->now()->ymd
             ,time => DateTime->now()->hms);
@@ -938,6 +939,8 @@ sub _post_prepare_base {
 
     $self->_set_base_vm_db($self->_vm->id,1);
     $self->autostart(0,$user);
+
+    $self->_vm->_refresh_storage_pools();
 };
 
 =pod
@@ -1118,20 +1121,35 @@ sub _allowed {
         if !ref $user || ref($user) !~ /Ravada::Auth/;
 
     return if $user->is_admin;
-    my $id_owner;
-    eval { $id_owner = $self->id_owner };
+    $self->_access_denied_error($user);
+}
+
+sub _access_denied_error($self,$user) {
+    my ($id_owner,$owner_name);
+    eval {
+        $id_owner = $self->id_owner;
+
+        my $owner= Ravada::Auth::SQL->search_by_id($id_owner);
+        $owner_name = $owner->name if $owner;
+    };
     my $err = $@;
 
     confess "User ".$user->name." [".$user->id."] not allowed to access ".$self->name
-        ." owned by ".($id_owner or '<UNDEF>')
+        ." owned by ".($owner_name or '<UNDEF>')." [".($id_owner or '<UNDEF>')."]"
             if (defined $id_owner && $id_owner != $user->id );
 
     confess $err if $err;
 
 }
 
+sub _allowed_start($self, $user) {
+    return if $user->is_admin || $user->can_view_all;
+
+    $self->_access_denied_error($user);
+}
+
 sub _around_display_info($orig,$self,$user ) {
-    $self->_allowed($user);
+    $self->_allowed_start($user);
     my @display_current_all = Ravada::Front::Domain::_get_controller_display($self);
     my @display_current = grep {$_->{is_builtin}} @display_current_all;
     my @display = $self->$orig($user);
@@ -3007,6 +3025,9 @@ sub _pre_shutdown {
     $self->list_disks;
     $self->_remove_start_requests();
 
+    my $ip = $self->ip;
+    $self->_delete_ip_rule ([undef,$ip,'nat' ]) if $ip;
+
 }
 
 sub _remove_start_requests($self) {
@@ -4171,33 +4192,49 @@ sub _add_iptable {
 
 sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
 
+    confess if !ref($vm);
     return if !$vm->is_active;
 
     my ($s, $d, $filter, $chain, $jump, $extra) = @$iptables;
     lock_hash %$extra;
 
-    $s = undef if $s =~ m{^0\.0\.0\.0};
-    $s .= "/32" if defined $s && $s !~ m{/};
+    $filter = 'filter' if !$filter;
+
+    if ($s) {
+        $s = undef if $s =~ m{^0\.0\.0\.0};
+        $s .= "/32" if defined $s && $s !~ m{/};
+    }
     $d .= "/32" if defined $d && $d !~ m{/};
 
     my $iptables_list = $vm->iptables_list();
 
     my $removed = 0;
-    my $count = 0;
     for my $line (@{$iptables_list->{$filter}}) {
         my %args = @$line;
-        next if $args{A} ne $chain;
-        $count++;
+        next if defined $chain && $args{A} ne $chain;
+        next if $args{A} =~ /LIBVIRT_/;
         if((!defined $jump || ( exists $args{j} && $args{j} eq $jump ))
            && ( !defined $s || (exists $args{s} && $args{s} eq $s))
            && ( !defined $d || ( exists $args{d} && $args{d} eq $d))
-           && ( $args{dport} eq $extra->{d_port}))
+           && (exists $extra->{d_port} && $args{dport} eq $extra->{d_port}))
         {
 
-           $vm->run_command("iptables", "-t", $filter, "-D", $chain, $count,"-w")
-                if $vm->is_active;
+           my $curr_chain = delete $args{A};
+           if ($vm->is_active) {
+                my @cmd = ("iptables", "-t", $filter, "-D", $curr_chain);
+                my $m = delete $args{m};
+                my $p = delete $args{p};
+                push @cmd,("-m" => $m) if $m;
+                push @cmd,("-p" => $m) if $p;
+                for my $key ( sort keys  %args) {
+                    my $dash = '-';
+                    $dash = '--' if length($key)>1;
+                    push @cmd, ("$dash$key" => $args{$key});
+                }
+                my ($out, $err) = $vm->run_command(@cmd);
+                warn $err if $err;
+           }
            $removed++;
-           $count--;
         }
 
     }

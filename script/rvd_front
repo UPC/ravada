@@ -842,7 +842,8 @@ get '/machine/view/(:id).(:type)' => sub {
     return access_denied($c)    if !$domain;
 
     return access_denied($c) unless $USER->is_admin
-                              || $domain->id_owner == $USER->id;
+                              || $domain->id_owner == $USER->id
+                              || $USER->can_view_all;
 
     return view_machine($c);
 };
@@ -1256,8 +1257,10 @@ get '/machine/display/(:driver)/(:id).(#extension)' => sub {
     if !$display;
 
     return access_denied($c)
-        if $USER->id ne $domain->id_owner
-        && !$USER->is_admin;
+        unless $USER->id eq $domain->id_owner
+        || $USER->is_admin
+        || $USER->can_view_all
+    ;
 
     $c->res->headers->content_type('application/x-virt-viewer');
         $c->res->headers->content_disposition(
@@ -1451,12 +1454,14 @@ get '/user/grant/(:id_user)/(:grant)/(:value)' => sub($c) {
         $USER->send_message($error);
     } else {
         my $grant = $c->stash('grant');
+        my $grant_type = $USER->grant_type($grant);
         $grant =~ s/_/ /g;
         if ( $value ) {
             $info = "Permission granted to user"
         } else {
             $info = "Permission revoked from user";
         }
+        $grant .= " $value" if $grant_type eq 'int';
         $info = $c->stash->{i18n}->localize($info);
 
         $USER->send_message($info." ".Encode::decode_utf8($user->name)
@@ -3003,6 +3008,7 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
         ,uid => $USER->id
        ,@create_args
     );
+    return $req;
 
 }
 

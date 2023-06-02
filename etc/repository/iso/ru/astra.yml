@@ -1,8 +1,7 @@
 name: Astra Linux 2.12
 description: Astra Linux Orel 2 64 bits
 url: https://mirrors.edge.kernel.org/astra/stable/2.12_x86-64/iso/
-file_re: orel-2..*\d.iso
-md5_url: $url/orel-2.*md5
+file_re: orel-current.iso
 arch: amd64
 xml: bionic-amd64.xml
 xml_volume: bionic64-volume.xml
