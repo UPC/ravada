@@ -1163,8 +1163,6 @@ sub dir_base($self, $volume_size) {
 
 }
 
-
-
 =head2 min_free_memory
 
 Returns the minimun free memory necessary to start a new virtual machine

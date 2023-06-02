@@ -227,7 +227,7 @@ sub test_volumes_in_two_pools {
         )) or exit;
     for my $file (@volumes) {
         ok(-e $file,"Expecting volume $file exists, got : ".(-e $file or 0));
-        like($file,qr(^/run/user)) or exit;
+        like($file,qr(^/run/user));
     }
 
     my ($path0) = $volumes[0] =~ m{(.*)/};
@@ -470,6 +470,8 @@ sub test_default_pool_base {
 }
 
 sub _create_pool_linked($vm) {
+    return if $vm->type ne 'KVM';
+
     my $capacity = 1 * 1024 * 1024;
 
     my $pool_name = new_pool_name();
@@ -664,6 +666,7 @@ sub test_pool_info($vm) {
         uid => user_admin->id
         ,data => 1
         ,id_vm => $vm->id
+
     );
     wait_request();
     my $out = $req->output;
@@ -702,6 +705,7 @@ sub create_machine($vm, $pool_name) {
 clean();
 
 for my $vm_name ( vm_names() ) {
+
 my $vm;
 eval { $vm = rvd_back->search_vm($vm_name) } if !$< || $vm_name eq 'Void';
 

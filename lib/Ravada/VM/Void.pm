@@ -56,8 +56,8 @@ sub _connect {
 }
 
 sub connect($self) {
-
     $self->_init_storage_pool_default();
+
     return 1 if $self->vm;
     return $self->vm($self->_connect);
 }
@@ -224,7 +224,7 @@ sub dir_img($self=undef) {
     return $self->_storage_path($self->default_storage_pool_name);
 }
 
-sub _storage_path($self, $storage=$self->default_storage_pool_name) {
+sub _storage_path($self, $storage) {
     confess if !defined $storage;
     my @list = $self->list_storage_pools(1);
     my ($sp) = grep { $_->{name} eq $storage } @list;
@@ -482,6 +482,7 @@ sub list_storage_pools($self, $info=0) {
     my $config_dir = Ravada::Front::Domain::Void::_config_dir();
 
     $self->_init_storage_pool_default();
+
     my $file_sp = "$config_dir/.storage_pools.yml";
     my $extra= LoadFile($file_sp);
     push @list,(@$extra);
@@ -500,6 +501,7 @@ sub list_storage_pools($self, $info=0) {
     my @names = map { $_->{name} } @list;
     return @names;
 }
+
 
 sub is_alive($self) {
     return 0 if !$self->vm;
@@ -615,7 +617,9 @@ sub get_library_version($self) {
 }
 
 sub create_storage_pool($self, $name, $dir) {
+
     die "Error: $dir does not exist\n" if ! -e $dir;
+
     my @list;
     my $file_sp = dir_img."/.storage_pools.yml";
     @list = $self->list_storage_pools(1) if -e $file_sp;

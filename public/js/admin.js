@@ -113,6 +113,20 @@ ravadaApp.directive("solShowMachine", swMach)
       };
 
 
+      $scope.list_storage_pools = function(backend) {
+          $http.get('/list_storage_pools/'+backend).then(function(response) {
+              $scope.storage_pools[backend] = response.data;
+
+              $scope.storage_pool=response.data[0];
+              for(var i=0; i<response.data.length;i++) {
+                  if (response.data[i].is_active) {
+                      $scope.storage_pool=response.data[i];
+                  }
+              }
+          });
+
+      };
+
       $scope.loadTemplates = function() {
           $scope.list_machine_types($scope.backend);
           $scope.list_storage_pools($scope.backend);
@@ -146,8 +160,6 @@ ravadaApp.directive("solShowMachine", swMach)
               });
           }
       };
-
-
 
       subscribe_list_images = function(backend) {
           $scope.images = [];
