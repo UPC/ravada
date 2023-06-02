@@ -577,7 +577,7 @@
                                     = $scope.showmachine.auto_compact;
                                 load_balance_options();
                                 get_node_info($scope.showmachine.id_vm);
-                                $http.get('/list_storage_pools/'+$scope.showmachine.type)
+                                $http.get('/list_storage_pools/'+$scope.showmachine.type+"?active=1")
                                     .then(function(response) {
                                         $scope.list_storage= response.data;
                                 });
