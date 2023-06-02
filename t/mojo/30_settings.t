@@ -319,6 +319,51 @@ sub clean_clones() {
     }
 }
 
+sub test_storage_pools($vm_name) {
+    $t->get_ok("/list_storage_pools/$vm_name");
+
+    is($t->tx->res->code(),200) or die $t->tx->res->body;
+
+    my $sp = decode_json($t->tx->res->body);
+    ok(scalar(@$sp));
+
+    my $sth = connector->dbh->prepare("SELECT id FROM vms where vm_type=?");
+    $sth->execute($vm_name);
+    my ($id_vm) = $sth->fetchrow;
+
+    $t->get_ok("/list_storage_pools/$id_vm");
+
+    is($t->tx->res->code(),200) or die $t->tx->res->body;
+
+    my $sp_id = decode_json($t->tx->res->body);
+    ok(scalar(@$sp_id));
+    is_deeply($sp_id, $sp);
+
+    my $name_inactive= $sp_id->[0]->{name};
+    die "Error, no name in ".Dumper($sp_id->[0]) if !$name_inactive;
+
+    mojo_request($t, "active_storage_pool"
+        ,{ id_vm => $id_vm, name => $name_inactive, value => 0 });
+
+    $t->get_ok("/list_storage_pools/$vm_name?active=1");
+
+    is($t->tx->res->code(),200) or die $t->tx->res->body;
+
+    my $sp_active = decode_json($t->tx->res->body);
+    my ($found) = grep { $_->{name} eq $name_inactive } @$sp_active ;
+    ok(!$found,"Expecting $name_inactive not found");
+
+    mojo_request($t, "active_storage_pool"
+        ,{ id_vm => $id_vm, name => $name_inactive, value => 1 });
+
+    $t->get_ok("/list_storage_pools/$vm_name?active=1");
+    $sp_active = decode_json($t->tx->res->body);
+    ok(scalar(@$sp_active));
+    ($found) = grep { $_->{name} eq $name_inactive } @$sp_active ;
+    ok($found,"Expecting $name_inactive found");
+
+}
+
 ########################################################################################
 
 $ENV{MOJO_MODE} = 'devel';
@@ -347,10 +392,11 @@ clean_clones();
 test_languages();
 test_missing_routes();
 
-for my $vm_name (@{rvd_front->list_vm_types} ) {
+for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 
     diag("Testing settings in $vm_name");
 
+    test_storage_pools($vm_name);
     test_nodes( $vm_name );
     test_networks( $vm_name );
 }

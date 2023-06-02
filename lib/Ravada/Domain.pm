@@ -132,12 +132,6 @@ has 'readonly' => (
     ,default => 0
 );
 
-has 'storage' => (
-    is => 'ro'
-    ,isa => 'Object'
-    ,required => 0
-);
-
 has '_vm' => (
     is => 'rw',
     ,isa => 'Object'
@@ -2728,7 +2722,6 @@ sub _do_remove_base($self, $user) {
         $self->_vm->remove_file($file);
     }
 
-    $self->storage_refresh()    if $self->storage();
 }
 
 sub _pre_remove_base {

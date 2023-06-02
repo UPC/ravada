@@ -89,11 +89,13 @@ sub create_domain {
     confess if $args{name} eq 'tst_vm_v20_volatile_clones_02' && !$listen_ip;
     my $remote_ip = delete $args{remote_ip};
     my $id = delete $args{id};
+    my $storage = delete $args{storage};
 
     my $domain = Ravada::Domain::Void->new(
                                            %args
                                            , domain => $args{name}
                                            , _vm => $self
+                                           ,storage => $storage
     );
     my ($out, $err) = $self->run_command("/usr/bin/test",
          "-e ".$domain->_config_file." && echo 1" );
@@ -160,14 +162,13 @@ sub create_domain {
         $drivers = $domain_base->_value('drivers');
         $domain->_store( drivers => $drivers );
     } elsif (!exists $args{config}) {
-        my ($file_img) = $domain->disk_device();
+        $storage = $self->default_storage_pool_name() if !$storage;
         my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".void";
-        $file_img =~ m{.*/(.*)} if $file_img;
         $domain->add_volume(name => $vda_name
                         , capacity => ( $args{disk} or 1024)
-                        , file => $file_img
                         , type => 'file'
                         , target => 'vda'
+                        , storage => $storage
         );
 
         $self->_add_cdrom($domain, %args);
@@ -470,7 +471,7 @@ sub _init_storage_pool_default($self) {
 
     return if -e $file_sp;
 
-    my @list = [{ name => 'default', path => $config_dir }];
+    my @list = ({ name => 'default', path => $config_dir, is_active => 1 });
 
     $self->write_file($file_sp, Dump( \@list));
 
@@ -479,16 +480,22 @@ sub _init_storage_pool_default($self) {
 sub list_storage_pools($self, $info=0) {
     my @list;
     my $config_dir = Ravada::Front::Domain::Void::_config_dir();
+
+    $self->_init_storage_pool_default();
+
     my $file_sp = "$config_dir/.storage_pools.yml";
     my $extra= LoadFile($file_sp);
     push @list,(@$extra);
 
     my ($default) = grep { $_->{name} eq 'default'} @list;
     if (!$default) {
-        push @list,({name =>'default',path => Ravada::VM::Void::dir_img()});
+        push @list,({name =>'default',path => dir_img(), is_active => 1});
     }
 
     if($info) {
+        for my $entry (@list) {
+            $entry->{is_active}=1 if !exists $entry->{is_active};
+        }
         return @list;
     }
     my @names = map { $_->{name} } @list;
@@ -575,7 +582,7 @@ sub _iso_name($self, $iso, $request=undef, $verbose=0) {
     $name =~ s/(.*)\[\\d.*?\]\+(.*)/${1}1$2/;
     confess $name if $name =~ m{[*+\\]};
 
-    $name = $self->_storage_path."/".$name unless $name =~ m{^/};
+    $name = $self->_storage_path($self->default_storage_pool_name)."/".$name unless $name =~ m{^/};
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE iso_images "
@@ -610,6 +617,9 @@ sub get_library_version($self) {
 }
 
 sub create_storage_pool($self, $name, $dir) {
+
+    die "Error: $dir does not exist\n" if ! -e $dir;
+
     my @list;
     my $file_sp = dir_img."/.storage_pools.yml";
     @list = $self->list_storage_pools(1) if -e $file_sp;
@@ -617,11 +627,25 @@ sub create_storage_pool($self, $name, $dir) {
     my ($already) = grep { $_->{name} eq $name } @list;
     die "Error: duplicated storage pool $name" if $already;
 
-    push @list,{ name => $name, path => $dir };
+    push @list,{ name => $name, path => $dir, is_active => 1 };
 
     $self->write_file($file_sp, Dump( \@list));
 
     return @list;
+}
+
+sub active_storage_pool($self, $name, $value) {
+
+    my @list = $self->list_storage_pools(1);
+
+    my $config_dir = Ravada::Front::Domain::Void::_config_dir();
+    my $file_sp = "$config_dir/.storage_pools.yml";
+
+    for my $entry (@list) {
+        $entry->{is_active} = $value;
+    }
+
+    $self->write_file($file_sp, Dump( \@list));
 }
 
 #########################################################################3

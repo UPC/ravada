@@ -42,6 +42,10 @@ sub check_db {
             }),1);
 }
 
+sub check_no_ldap {
+    is(rvd_front->feature('ldap'),0);
+}
+
 #########################################################################
 
 clean();
@@ -49,6 +53,8 @@ clean();
 check_empty();
 check_fail();
 check_db();
+
+check_no_ldap();
 
 end();
 

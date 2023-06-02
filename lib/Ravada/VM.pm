@@ -438,7 +438,7 @@ sub _around_create_domain {
      my $request = delete $args{request};
      delete $args{iso_file};
      delete $args{id_template};
-     delete @args{'description','remove_cpu','vm','start','options','id', 'alias'};
+     delete @args{'description','remove_cpu','vm','start','options','id', 'alias','storage'};
 
     confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
 
@@ -903,7 +903,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias','storage'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
@@ -1061,9 +1061,8 @@ Set the default storage pool name for this Virtual Machine Manager
 
 =cut
 
-sub default_storage_pool_name {
-    my $self = shift;
-    my $value = shift;
+sub default_storage_pool_name($self, $value=undef) {
+    confess if defined $value && $value eq '';
 
     #TODO check pool exists
     if (defined $value) {
@@ -1163,7 +1162,6 @@ sub dir_base($self, $volume_size) {
     return $self->_storage_path($pool_base);
 
 }
-
 
 =head2 min_free_memory
 

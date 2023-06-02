@@ -57,6 +57,7 @@ our %VALID_ARG = (
           ,start => 2
            ,data => 2
            ,options => 2
+           ,storage => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
@@ -1050,8 +1051,9 @@ sub status {
         sleep 1;
         my $sth2=$$CONNECTOR->dbh->prepare(
             "UPDATE requests set date_changed=?"
+            ." WHERE id=?"
         );
-        $sth2->execute(Ravada::Utils::date_now);
+        $sth2->execute(Ravada::Utils::date_now, $self->{id});
     }
     return $status;
 }

@@ -478,6 +478,7 @@ sub add_volume {
     my $device = ( delete $args{device} or 'disk' );
     my $type = ( delete $args{type} or '');
     my $format = delete $args{format};
+    my $storage = ( delete $args{storage} or $self->_vm->default_storage_pool_name);
 
     if (!$format) {
         if ( $args{file}) {
@@ -494,8 +495,10 @@ sub add_volume {
     my $suffix = $format;
 
     if ( !$args{file} ) {
+        my $path = delete $args{path};
+        $path = $self->_vm->_storage_path($storage) if $storage;
         my $vol_name = ($args{name} or Ravada::Utils::random_name(4) );
-        $args{file} = $self->_vm->dir_img."/$vol_name";
+        $args{file} = "$path/$vol_name";
         $args{file} .= ".$type$suffix" if $args{file} !~ /\.\w+$/;
     }
 
@@ -540,6 +543,7 @@ sub add_volume {
     $self->_store(hardware => $hardware);
 
     delete @args{'name', 'target', 'bus'};
+
     $self->_create_volume($file, $format, \%args) if ! -e $file;
 
     return $file;

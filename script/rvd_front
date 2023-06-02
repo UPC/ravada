@@ -390,6 +390,12 @@ get '/list_vm_types.json' => sub {
     $c->render(json => $RAVADA->list_vm_types);
 };
 
+get '/list_storage_pools/(:id_vm)' => sub($c) {
+
+    my $active = $c->param('active');
+    $c->render(json => $RAVADA->list_storage_pools($USER->id, $c->stash('id_vm'),$active));
+};
+
 get '/list_nodes.json' => sub {
     my $c = shift;
     $c->render(json => [$RAVADA->list_vms]);
@@ -1054,6 +1060,7 @@ get '/machine/check_access/(#id_domain)/(#user)' => sub {
     return _access_denied($c) if !$USER->is_admin;
 
     my $user_name = $c->stash('user');
+    return if !$user_name || $user_name eq 'undefined';
     my $user = Ravada::Auth::SQL->new(name => $user_name);
 
     if (!$user->id && Ravada::Auth::LDAP::search_user($user_name)) {
@@ -2857,6 +2864,7 @@ sub req_new_domain {
     $args{disk} = int($c->param('disk')*1024*1024*1024) if $c->param('disk');
     $args{id_template} = $c->param('id_template')   if $vm =~ /^LX/;
     $args{id_iso} = $c->param('id_iso')             if $vm eq 'KVM';
+    $args{storage} = $c->param('storage');
 
     return $RAVADA->create_domain(%args);
 }
