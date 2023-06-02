@@ -582,7 +582,7 @@ sub _iso_name($self, $iso, $request=undef, $verbose=0) {
     $name =~ s/(.*)\[\\d.*?\]\+(.*)/${1}1$2/;
     confess $name if $name =~ m{[*+\\]};
 
-    $name = $self->_storage_path."/".$name unless $name =~ m{^/};
+    $name = $self->_storage_path($self->default_storage_pool_name)."/".$name unless $name =~ m{^/};
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE iso_images "
