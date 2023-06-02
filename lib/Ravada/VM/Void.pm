@@ -615,6 +615,7 @@ sub get_library_version($self) {
 }
 
 sub create_storage_pool($self, $name, $dir) {
+    die "Error: $dir does not exist\n" if ! -e $dir;
     my @list;
     my $file_sp = dir_img."/.storage_pools.yml";
     @list = $self->list_storage_pools(1) if -e $file_sp;

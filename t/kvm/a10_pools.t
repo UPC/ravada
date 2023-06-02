@@ -28,7 +28,6 @@ sub create_pool {
 
     my $vm = rvd_back->search_vm($vm_name) or return;
 
-
     my $capacity = 1 * 1024 * 1024;
 
     my $pool_name = new_pool_name();
@@ -41,6 +40,26 @@ sub create_pool {
     _create_pool($vm, $pool_name, $dir, $capacity);
     test_req_list_sp($vm);
     return $pool_name;
+}
+
+sub test_create_pool_fail($vm) {
+    my $dir = "/var/tmp/$$/".new_pool_name();
+    unlink $dir or die "$! $dir" if -e $dir;
+
+    my $name = new_pool_name();
+
+    my $req = Ravada::Request->create_storage_pool(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,name => $name
+        ,directory => $dir
+    );
+    wait_request( check_error => 0);
+    like($req->error,qr/./);
+
+    my @list = $vm->list_storage_pools(1);
+    my ($found) = grep { $_->{name} eq $name } @list;
+    ok(!$found,"Expected storage pool $name not created");
 }
 
 sub _create_pool($vm,@args) {
@@ -94,7 +113,7 @@ sub test_req_list_sp($vm) {
     my $json_out = $req->output;
     my $pools = decode_json($json_out);
     for my $pool ( @$pools ) {
-        like($pool,qr{^[a-z][a-z0-9]+}) or die Dumper($pools);
+        like($pool,qr{^[a-z][a-z0-9]*}) or die Dumper($pools);
     }
     ok(scalar @$pools);
 }
@@ -695,6 +714,8 @@ SKIP: {
     }
 
     skip($msg,10)   if !$vm;
+
+    test_create_pool_fail($vm);
 
     test_pool_linked($vm);
     test_pool_linked2($vm);

@@ -691,7 +691,16 @@ sub create_storage_pool($self, $name, $dir, $vm=$self->vm) {
         $pool->create();
         $pool->set_autostart(1);
     };
-    die "$@\n" if $@;
+    my $error = $@;
+    if ($error) {
+        my $sp = $vm->get_storage_pool_by_name($name);
+        eval {
+        $sp->destroy if $sp && $sp->is_active;
+        $sp->undefine() if $sp;
+        };
+        die $@ if $@;
+        die "$error\n" if $error;
+    }
 
 }
 
