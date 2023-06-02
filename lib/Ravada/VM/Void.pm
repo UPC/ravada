@@ -471,7 +471,7 @@ sub _init_storage_pool_default($self) {
 
     return if -e $file_sp;
 
-    my @list = ({ name => 'default', path => $config_dir });
+    my @list = ({ name => 'default', path => $config_dir, is_active => 1 });
 
     $self->write_file($file_sp, Dump( \@list));
 
@@ -488,10 +488,13 @@ sub list_storage_pools($self, $info=0) {
 
     my ($default) = grep { $_->{name} eq 'default'} @list;
     if (!$default) {
-        push @list,({name =>'default',path => dir_img()});
+        push @list,({name =>'default',path => dir_img(), is_active => 1});
     }
 
     if($info) {
+        for my $entry (@list) {
+            $entry->{is_active}=1 if !exists $entry->{is_active};
+        }
         return @list;
     }
     my @names = map { $_->{name} } @list;
@@ -619,11 +622,25 @@ sub create_storage_pool($self, $name, $dir) {
     my ($already) = grep { $_->{name} eq $name } @list;
     die "Error: duplicated storage pool $name" if $already;
 
-    push @list,{ name => $name, path => $dir };
+    push @list,{ name => $name, path => $dir, is_active => 1 };
 
     $self->write_file($file_sp, Dump( \@list));
 
     return @list;
+}
+
+sub active_storage_pool($self, $name, $value) {
+
+    my @list = $self->list_storage_pools(1);
+
+    my $config_dir = Ravada::Front::Domain::Void::_config_dir();
+    my $file_sp = "$config_dir/.storage_pools.yml";
+
+    for my $entry (@list) {
+        $entry->{is_active} = $value;
+    }
+
+    $self->write_file($file_sp, Dump( \@list));
 }
 
 #########################################################################3
