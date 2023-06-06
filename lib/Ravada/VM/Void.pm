@@ -485,7 +485,7 @@ sub list_storage_pools($self, $info=0) {
 
     my $file_sp = "$config_dir/.storage_pools.yml";
     my $extra= LoadFile($file_sp);
-    push @list,(@$extra);
+    push @list,(@$extra) if $extra;
 
     my ($default) = grep { $_->{name} eq 'default'} @list;
     if (!$default) {
