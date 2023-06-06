@@ -390,6 +390,12 @@ get '/list_vm_types.json' => sub {
     $c->render(json => $RAVADA->list_vm_types);
 };
 
+get '/list_storage_pools/(:id_vm)' => sub($c) {
+
+    my $active = $c->param('active');
+    $c->render(json => $RAVADA->list_storage_pools($USER->id, $c->stash('id_vm'),$active));
+};
+
 get '/list_nodes.json' => sub {
     my $c = shift;
     $c->render(json => [$RAVADA->list_vms]);
@@ -2863,6 +2869,7 @@ sub req_new_domain {
     $args{disk} = int($c->param('disk')*1024*1024*1024) if $c->param('disk');
     $args{id_template} = $c->param('id_template')   if $vm =~ /^LX/;
     $args{id_iso} = $c->param('id_iso')             if $vm eq 'KVM';
+    $args{storage} = $c->param('storage');
 
     return $RAVADA->create_domain(%args);
 }

@@ -663,39 +663,6 @@ sub dir_img {
     return $dir;
 }
 
-=head2 dir_base
-
-Returns the directory where base images are stored in this Virtual Manager
-
-=cut
-
-
-sub dir_base($self, $volume_size) {
-    my $pool_base = $self->default_storage_pool_name;
-    $pool_base = $self->base_storage_pool()    if $self->base_storage_pool();
-    $pool_base = $self->storage_pool()         if !$pool_base;
-
-    $self->_check_free_disk($volume_size * 2, $pool_base);
-    return $self->_storage_path($pool_base);
-
-}
-
-=head2 dir_clone
-
-Returns the directory where clone images are stored in this Virtual Manager
-
-=cut
-
-
-sub dir_clone($self) {
-
-    my $dir_img  = $self->dir_img;
-    my $clone_pool = $self->clone_storage_pool();
-    $dir_img = $self->_storage_path($clone_pool) if $clone_pool;
-
-    return $dir_img;
-}
-
 sub _storage_path($self, $storage) {
     if (!ref($storage)) {
         $storage = $self->vm->get_storage_pool_by_name($storage);
@@ -740,7 +707,16 @@ sub create_storage_pool($self, $name, $dir, $vm=$self->vm) {
         $pool->create();
         $pool->set_autostart(1);
     };
-    die "$@\n" if $@;
+    my $error = $@;
+    if ($error) {
+        my $sp = $vm->get_storage_pool_by_name($name);
+        eval {
+        $sp->destroy if $sp && $sp->is_active;
+        $sp->undefine() if $sp;
+        };
+        die $@ if $@;
+        die "$error\n" if $error;
+    }
 
 }
 
@@ -940,6 +916,12 @@ sub create_volume {
     my $target      = delete $args{target};
     my $capacity    = delete $args{capacity};
     my $allocation  = delete $args{allocation};
+    my $storage_pool = (delete $args{storage} or $self->storage_pool());
+    if (!ref($storage_pool)) {
+        my $sp_name = $storage_pool;
+        $storage_pool = $self->vm->get_storage_pool_by_name($sp_name) or die
+        "Error: Storage pool '$sp_name' not found ";
+    }
 
     confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
     confess "Error: type $type can't have swap flag" if $args{swap} && $type ne 'swap';
@@ -962,7 +944,6 @@ sub create_volume {
     eval { $doc = $XML->load_xml(IO => $fh) };
     die "ERROR reading $file_xml $@"    if $@;
 
-    my $storage_pool = $self->storage_pool();
 
     confess $name if $name =~ /-\w{4}-vd[a-z]-\w{4}\./
         || $name =~ /\d-vd[a-z]\./;
@@ -990,7 +971,7 @@ sub create_volume {
         $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($allocation));
         $doc->findnodes('/volume/capacity/text()')->[0]->setData($capacity);
     }
-    my $vol = $self->storage_pool->create_volume($doc->toString)
+    my $vol = $storage_pool->create_volume($doc->toString)
         or die "volume $img_file does not exists after creating volume on ".$self->name." "
             .$doc->toString();
 
@@ -1028,9 +1009,10 @@ sub _domain_create_from_iso {
     my $remove_cpu = delete $args2{remove_cpu};
     my $options = delete $args2{options};
     for (qw(disk swap active request vm memory iso_file id_template volatile spice_password
-            listen_ip)) {
+            listen_ip storage)) {
         delete $args2{$_};
     }
+    my $storage = delete $args{storage};
 
     my $iso_file = delete $args{iso_file};
     confess "Unknown parameters : ".join(" , ",sort keys %args2)
@@ -1085,7 +1067,8 @@ sub _domain_create_from_iso {
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner}
         , id_vm => $self->id
     );
-    $domain->add_volume( boot => 1, target => 'vda', size => $disk_size );
+    $domain->add_volume( boot => 1, target => 'vda', size => $disk_size
+        ,storage => $storage);
     $domain->add_volume( boot => 2, target => 'hda'
         ,device => 'cdrom'
         ,file => $device_cdrom

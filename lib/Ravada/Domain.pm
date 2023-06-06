@@ -132,12 +132,6 @@ has 'readonly' => (
     ,default => 0
 );
 
-has 'storage' => (
-    is => 'ro'
-    ,isa => 'Object'
-    ,required => 0
-);
-
 has '_vm' => (
     is => 'rw',
     ,isa => 'Object'
@@ -946,7 +940,7 @@ sub _post_prepare_base {
     $self->_set_base_vm_db($self->_vm->id,1);
     $self->autostart(0,$user);
 
-    $self->_vm->_refresh_storage_pools();
+    $self->_vm->refresh_storage_pools();
 };
 
 =pod
@@ -2746,7 +2740,6 @@ sub _do_remove_base($self, $user) {
         $self->_vm->remove_file($file);
     }
 
-    $self->storage_refresh()    if $self->storage();
 }
 
 sub _pre_remove_base {
