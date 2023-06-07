@@ -2982,7 +2982,13 @@ sub _change_hardware_vcpus($self, $index, $data) {
     confess "Error: Unkown args ".Dumper($data) if keys %$data;
 
     if ($self->domain->is_active) {
-        $self->domain->set_vcpus($n_virt_cpu, Sys::Virt::Domain::VCPU_GUEST);
+        eval {
+            $self->domain->set_vcpus($n_virt_cpu, Sys::Virt::Domain::VCPU_GUEST);
+        };
+        if ($@) {
+            warn $@;
+            $self->_data('needs_restart' => 1);
+        }
     }
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
