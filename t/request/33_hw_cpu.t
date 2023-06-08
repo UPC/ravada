@@ -188,6 +188,14 @@ sub test_add_threads($domain) {
     is($n, 2) or die $domain->name;
 
     is($info->{n_virt_cpu},2) or die $domain->name;
+
+    my $req2 = Ravada::Request->change_hardware(
+        hardware => 'vcpus'
+        ,data => { n_virt_cpu => 3 }
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+    );
+    wait_request();
 }
 
 ###############################################################################
