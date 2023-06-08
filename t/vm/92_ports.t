@@ -852,6 +852,12 @@ sub test_port_prerouting_already_open($vm) {
         wait_request();
 
         my $domain_ip  =$domain->ip;
+        for ( 1 .. 60 ) {
+            last if $domain_ip;
+            sleep 1;
+            $domain_ip  =$domain->ip;
+        }
+
         my @out = split /\n/, `iptables-save`;
 
         @port = (grep /-s $remote_ip.32.*--dport $internal_port -j ACCEPT/, @out);
@@ -1253,7 +1259,7 @@ sub test_open_port_duplicated($vm) {
     is(scalar(@open2),2) or die Dumper(\@open2);
 
     my $req = Ravada::Request->refresh_vms(_force => 1);
-    for ( 1 .. 10 ) {
+    for ( 1 .. 30 ) {
         wait_request(request => $req, debug => 0);
         last if $req->status eq 'done';
         sleep 1;
