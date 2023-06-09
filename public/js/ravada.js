@@ -577,6 +577,10 @@
                                     = $scope.showmachine.auto_compact;
                                 load_balance_options();
                                 get_node_info($scope.showmachine.id_vm);
+                                $http.get('/list_storage_pools/'+$scope.showmachine.type+"?active=1")
+                                    .then(function(response) {
+                                        $scope.list_storage= response.data;
+                                });
                             }
                             if (is_admin) {
                                 $scope.init_domain_access();
@@ -788,6 +792,9 @@
                         extra.bus = 'sata';
                     } else {
                         extra.file= '';
+                    }
+                    if (typeof(extra.storage) != 'undefined') {
+                        extra.storage = extra.storage.name;
                     }
                 }
 

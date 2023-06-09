@@ -3151,7 +3151,7 @@ sub create_domain {
     my $id_base = $args{id_base};
     my $data = delete $args{data};
     my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
-    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool options));
+    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool options storage));
 
     confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
 
@@ -3173,10 +3173,11 @@ sub create_domain {
 
     unlock_hash(%args);
     my $swap = delete $args{swap};
+    my $storage = delete $args{storage};
     lock_hash(%args);
 
     my $domain;
-    eval { $domain = $vm->create_domain(%args)};
+    eval { $domain = $vm->create_domain(%args, storage => $storage)};
 
     my $error = $@;
     if ( $request ) {
@@ -3190,9 +3191,9 @@ sub create_domain {
     }
     return if !$domain;
     my $req_add_swap = _req_add_disk($args{id_owner}, $domain->id,
-        ,'swap', $swap ,$request);
+        ,'swap', $swap ,$request, $storage);
     my $req_add_data = _req_add_disk($args{id_owner}, $domain->id
-        ,'data', $data, ($req_add_swap or $request ));
+        ,'data', $data, ($req_add_swap or $request ), $storage);
 
     my $previous_req = ($req_add_data or $req_add_swap or $request);
 
@@ -3205,15 +3206,21 @@ sub create_domain {
     return $domain;
 }
 
-sub _req_add_disk($uid, $id_domain, $type, $size, $request) {
+sub _req_add_disk($uid, $id_domain, $type, $size, $request, $storage=undef) {
     return if !$size;
+
+    my $data = { size => $size, type => $type };
+    $data->{storage}= $storage if $storage;
+
     my @after_req;
-    @after_req = (after_request => $request->id ) if $request;
+    if ($request) {
+        @after_req = (after_request => $request->id);
+    }
     return Ravada::Request->add_hardware(
         uid => $uid
         ,id_domain => $id_domain
         ,name => 'disk'
-        ,data => { size => $size, type => $type }
+        ,data => $data
         ,@after_req
     );
 }
@@ -5415,7 +5422,14 @@ sub _cmd_list_network_interfaces($self, $request) {
 
 sub _cmd_list_storage_pools($self, $request) {
     my $id_vm = $request->args('id_vm');
-    my $vm = Ravada::VM->open( $id_vm );
+    my $vm;
+    if ($id_vm =~ /^\d+$/) {
+        $vm = Ravada::VM->open( $id_vm );
+    } else {
+        $vm = Ravada::VM->open( type => $id_vm );
+    }
+    die "Error: vm '$id_vm' not found" if !$vm;
+
     my $data = $request->defined_arg('data');
 
     $request->output(encode_json([ $vm->list_storage_pools($data) ]));

@@ -438,7 +438,7 @@ sub _around_create_domain {
      my $request = delete $args{request};
      delete $args{iso_file};
      delete $args{id_template};
-     delete @args{'description','remove_cpu','vm','start','options','id', 'alias'};
+     delete @args{'description','remove_cpu','vm','start','options','id', 'alias','storage'};
 
     confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
 
@@ -931,7 +931,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias','storage'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
@@ -1089,9 +1089,8 @@ Set the default storage pool name for this Virtual Machine Manager
 
 =cut
 
-sub default_storage_pool_name {
-    my $self = shift;
-    my $value = shift;
+sub default_storage_pool_name($self, $value=undef) {
+    confess if defined $value && $value eq '';
 
     #TODO check pool exists
     if (defined $value) {
@@ -1157,6 +1156,39 @@ sub clone_storage_pool {
     }
     $self->_select_vm_db();
     return $self->_data('clone_storage');
+}
+
+=head2 dir_clone
+
+Returns the directory where clone images are stored in this Virtual Manager
+
+=cut
+
+
+sub dir_clone($self) {
+
+    my $dir_img  = $self->dir_img;
+    my $clone_pool = $self->clone_storage_pool();
+    $dir_img = $self->_storage_path($clone_pool) if $clone_pool;
+
+    return $dir_img;
+}
+
+=head2 dir_base
+
+Returns the directory where base images are stored in this Virtual Manager
+
+=cut
+
+
+sub dir_base($self, $volume_size) {
+    my $pool_base = $self->default_storage_pool_name;
+    $pool_base = $self->base_storage_pool()    if $self->base_storage_pool();
+    $pool_base = $self->storage_pool()         if !$pool_base;
+
+    $self->_check_free_disk($volume_size * 2, $pool_base);
+    return $self->_storage_path($pool_base);
+
 }
 
 =head2 min_free_memory

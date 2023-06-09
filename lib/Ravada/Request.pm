@@ -57,6 +57,7 @@ our %VALID_ARG = (
           ,start => 2
            ,data => 2
            ,options => 2
+           ,storage => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
@@ -1069,7 +1070,6 @@ sub status {
                 last;
             }
         }
-
     }
     return $status;
 }
