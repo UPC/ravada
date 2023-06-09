@@ -34,7 +34,8 @@ sub create_pool($vm_name, $dir="/var/tmp/".new_pool_name()) {
 
     _create_pool($vm, $pool_name, $dir, $capacity);
     test_req_list_sp($vm);
-    return $pool_name;
+    return $pool_name if !wantarray;
+    return ($pool_name, $dir);
 }
 
 sub test_create_pool_fail($vm) {
@@ -138,7 +139,7 @@ sub test_create_domain {
         ." for VM $vm_name"
     );
     for my $volume ( $domain->list_volumes(device => 'disk')) {
-        like($volume,qr{^/run/user});
+        like($volume,qr{^/var/tmp});
     }
     $vm->default_storage_pool_name($old_sp);
 
@@ -198,7 +199,7 @@ sub test_volumes_in_two_pools {
 
     my $name = new_domain_name();
 
-    my $pool_name1 = create_pool($vm_name);
+    my ($pool_name1) = create_pool($vm_name);
     $vm->default_storage_pool_name($pool_name1);
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
@@ -211,7 +212,7 @@ sub test_volumes_in_two_pools {
     my $pool_name2 = create_pool($vm_name);
     $vm->default_storage_pool_name($pool_name2);
     is($vm->default_storage_pool_name(), $pool_name2);
-    like($vm->dir_img, qr{^/run/user}) or exit;
+    like($vm->dir_img, qr{^/var/tmp}) or exit;
 
     $domain->add_volume(name => $name.'_volb' , size => 1024*1024 );
 
@@ -222,7 +223,7 @@ sub test_volumes_in_two_pools {
         )) or exit;
     for my $file (@volumes) {
         ok(-e $file,"Expecting volume $file exists, got : ".(-e $file or 0));
-        like($file,qr(^/run/user));
+        like($file,qr(^/var/tmp));
     }
 
     my ($path0) = $volumes[0] =~ m{(.*)/};
@@ -572,6 +573,7 @@ sub test_pool_linked($vm) {
 }
 
 sub test_pool_linked_reverse($vm) {
+    return if $vm->type ne 'KVM';
     my ($pool_name, $dir, $dir_link) = _create_pool_linked_reverse($vm);
 
     $vm->default_storage_pool_name($pool_name);
@@ -671,7 +673,7 @@ sub test_pool_info($vm) {
     ok(exists $pool->{path},"expecting pool path") or die Dumper($pool);
 }
 
-sub create_machine($vm, $pool_name) {
+sub create_machine($vm, $pool_name, $dir) {
 
     is($vm->default_storage_pool_name('default'), 'default');
     my $name = new_domain_name();
@@ -689,7 +691,7 @@ sub create_machine($vm, $pool_name) {
     my $domain = $vm->search_domain($name);
     for my $vol ($domain->list_volumes) {
         next if $vol =~ /iso$/;
-        like($vol,qr{$pool_name.*/}) or exit;
+        like($vol,qr{$dir}) or exit;
         ok(-e $vol,"Expecting $vol") or exit;
     }
 }        
@@ -704,6 +706,7 @@ sub _search_file($output, $file) {
 }
 
 sub test_pool_dupe($vm) {
+    return if $vm->type ne 'KVM';
 
     my ($pool_name, $dir, $dir_link) = _create_pool_linked($vm);
 
@@ -881,11 +884,11 @@ SKIP: {
     test_pool_linked_reverse($vm);
     test_pool_linked2_reverse($vm);
 
-    my $pool_name = create_pool($vm_name);
+    my ($pool_name, $pool_dir) = create_pool($vm_name);
 
     test_pool_info($vm);
 
-    create_machine($vm, $pool_name);
+    create_machine($vm, $pool_name, $pool_dir);
 
     my $domain = test_create_domain($vm_name, $pool_name);
     test_remove_domain($vm_name, $domain);
@@ -898,7 +901,7 @@ SKIP: {
 
     test_default_pool_base($vm, $pool_name);
 
-    my $pool_name2 = create_pool($vm_name);
+    my ($pool_name2) = create_pool($vm_name);
     test_base_clone_pool($vm, $pool_name, $pool_name2);
     $domain->remove(user_admin);
 
