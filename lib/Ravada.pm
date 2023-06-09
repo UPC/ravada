@@ -5642,7 +5642,12 @@ sub _refresh_active_domains($self, $request=undef) {
     my %active_domain;
 
         if ($id_domain) {
-            my $domain = $self->search_domain_by_id($id_domain);
+            my $domain;
+            eval { $domain = $self->search_domain_by_id($id_domain) };
+            if ( $@ ) {
+                next if $@ =~ /not found/;
+                warn $@;
+            }
             $self->_refresh_active_domain($domain, \%active_domain) if $domain;
          } else {
             my @domains;
@@ -5653,7 +5658,12 @@ sub _refresh_active_domains($self, $request=undef) {
                                 @domains) {
                 $request->error("checking $domain_data->{name}") if $request;
                 next if $active_domain{$domain_data->{id}};
-                my $domain = Ravada::Domain->open($domain_data->{id});
+                my $domain;
+                eval { $domain = Ravada::Domain->open($domain_data->{id}) };
+                if ( $@ ) {
+                    next if $@ =~ /not found/;
+                    warn $@;
+                }
                 next if !$domain;
                 $self->_refresh_active_domain($domain, \%active_domain);
                 $self->_remove_unnecessary_downs($domain) if !$domain->is_active;

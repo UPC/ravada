@@ -320,7 +320,7 @@ sub _around_start($orig, $self, @arg) {
     $enable_host_devices = $request->defined_arg('enable_host_devices') if $request;
     $enable_host_devices = 1 if !defined $enable_host_devices;
 
-    for (;;) {
+    for (1 .. 5) {
         eval { $self->_start_checks(@arg) };
         my $error = $@;
         if ($error) {
@@ -375,6 +375,7 @@ sub _around_start($orig, $self, @arg) {
         && $error !~ /process exited while connecting to monitor/
         && $error !~ /Could not run .*swtpm/i
         && $error !~ /virtiofs/
+        && $error !~ /child process/i
         ;
 
         if ($error && $self->id_base && !$self->is_local && $self->_vm->enabled) {
