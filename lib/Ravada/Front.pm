@@ -1656,7 +1656,7 @@ Returns a reference to a list of the storage pools
 
 =cut
 
-sub list_storage_pools($self, $uid, $id_vm) {
+sub list_storage_pools($self, $uid, $id_vm, $active=undef) {
 
     my $key="list_storage_pools_$id_vm";
 
@@ -1667,16 +1667,29 @@ sub list_storage_pools($self, $uid, $id_vm) {
         ,uid => $uid
         ,data => 1
     );
-    return $cache if !$req;
+    return _filter_active($cache, $active) if !$req;
+
     $self->wait_request($req);
-    return $cache if $req->status ne 'done';
+    return _filter_active($cache, $active) if $req->status ne 'done';
 
     my $pools = [];
     $pools = decode_json($req->output()) if $req->output;
 
     $self->_cache_store($key,$pools) if scalar(@$pools);
 
-    return $pools;
+    return _filter_active($pools, $active);
+}
+
+sub _filter_active($pools, $active) {
+    return $pools if !defined $active;
+
+    my @pools2;
+    for my $entry (@$pools) {
+            next if $entry->{is_active} ne $active;
+            push @pools2,($entry);
+    }
+    return \@pools2;
+
 }
 
 =head2 version
