@@ -1308,12 +1308,18 @@ any '/group/new' => sub {
 };
 
 post '/admin/users/upload' => sub($c) {
+    return _access_denied_json($c) unless $USER->is_admin;
 
     my $type = ( $c->req->param('type') or 'sql');
+    my $create = ( $c->req->param('create') or 0);
 
     return $c->render(json => { error => "Unkonwn type $type" })
             if $type !~ /^(sql|ldap)/;
 
+    my @external;
+    if ($type ne 'sql') {
+        @external = ( is_external => 1, external_auth => $type );
+    }
     my $csv = $c->req->upload('users');
     if($csv->headers->content_type !~ m{text/csv}) {
         return $c->render(status => 400
@@ -1330,17 +1336,16 @@ post '/admin/users/upload' => sub($c) {
             push @error,("User $name already added");
             next;
         }
-        if ($type eq 'sql') {
-            eval {
-            Ravada::Auth::SQL::add_user(name => $name, password => $password);
-            };
-            if ($@) {
-                push @error,($@);
-                next;
+        if ($type ne 'sql' && $create) {
+            if ($type eq 'ldap') {
+                eval { $user = Ravada::Auth::LDAP::add_user($name,$password) };
+                push @error, ($@) if $@;
+            } else {
+                push @error,("$type users can't be created from Ravada");
             }
-        } else {
-            next;
         }
+        Ravada::Auth::SQL::add_user(name => $name, password => $password
+            ,@external);
         $count++;
     }
     return $c->render(json =>
@@ -2556,7 +2561,6 @@ sub login($c, $status=200) {
     my $ticket = $c->param('ticket');
     my $url = ($c->param('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
-
 
     my @error =();
 
