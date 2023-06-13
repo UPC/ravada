@@ -16,6 +16,7 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("settings_global", settings_global_ctrl)
         .controller("admin_groups", admin_groups_ctrl)
         .controller('admin_charts', admin_charts_ctrl)
+        .controller('upload_users', upload_users)
     ;
 
     ravadaApp.directive('ipaddress', function() {
@@ -1618,5 +1619,8 @@ ravadaApp.directive("solShowMachine", swMach)
         };
 
 
+    };
+
+    function upload_users($scope, $http) {
     };
 }());

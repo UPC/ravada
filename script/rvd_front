@@ -1307,24 +1307,29 @@ any '/group/new' => sub {
        return new_group($c);
 };
 
-post '/admin/users/upload' => sub($c) {
+any '/admin/users/upload.#req' => sub($c) {
     return _access_denied_json($c) unless $USER->is_admin;
 
-    my $type = ( $c->req->param('type') or 'sql');
+    _add_admin_libs($c);
+
+    my $type = $c->req->param('type');
+
+    return $c->render(template => "/main/upload_users", done => 0, count => 0) if !$type;
+
     my $create = ( $c->req->param('create') or 0);
 
     return $c->render(json => { error => "Unkonwn type $type" })
-            if $type !~ /^(sql|ldap)/;
+            if $type !~ /^(sql|ldap|sso)/;
 
     my @external;
     if ($type ne 'sql') {
         @external = ( is_external => 1, external_auth => $type );
     }
     my $csv = $c->req->upload('users');
-    if($csv->headers->content_type !~ m{text/csv}) {
+    if($csv->headers->content_type !~ m{text/(csv|plain)}) {
         return $c->render(status => 400
             ,text => "Wrong content type ".$csv->headers->content_type
-                    ." , it should be text/csv"
+                    ." , it should be text/csv or plain"
         );
     }
     my $count = 0;
@@ -1338,11 +1343,20 @@ post '/admin/users/upload' => sub($c) {
         }
         if ($type ne 'sql' && $create) {
             if ($type eq 'ldap') {
+                if (!$password) {
+                    push @error,("Error: user $name , password empty");
+                    next;
+                }
+                warn "Adding $name $password";
                 eval { $user = Ravada::Auth::LDAP::add_user($name,$password) };
                 push @error, ($@) if $@;
             } else {
                 push @error,("$type users can't be created from Ravada");
             }
+        }
+        if ($type eq 'sql' && !$password) {
+            push @error,("Error: user $name requires password");
+            next;
         }
         Ravada::Auth::SQL::add_user(name => $name, password => $password
             ,@external);
@@ -1351,7 +1365,13 @@ post '/admin/users/upload' => sub($c) {
     return $c->render(json =>
         { output => "$count users added"
         ,error => \@error
-    });
+    }) if $c->stash('req') eq 'json';
+
+    return $c->render(template => "/main/upload_users"
+        ,count => $count
+        ,error => \@error
+        ,done => 1
+    );
 };
 
 any '/admin/user/(#id).(:type)' => sub {
