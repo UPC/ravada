@@ -706,7 +706,7 @@ sub _update_isos {
             name =>'Debian Bullseye 64 bits'
             ,arch => 'x86_64'
             ,description => 'Debian 11 Bullseye 64 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/11.[\d\.]+/amd64/iso-cd/'
             ,file_re => 'debian-11.[\d\.]+-amd64-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -717,8 +717,8 @@ sub _update_isos {
         ,debian_bullseye_32=> {
             name =>'Debian Bullseye 32 bits'
             ,arch => 'i686'
-            ,description => 'Debian 10 Bullseye 32 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/i386/iso-cd/'
+            ,description => 'Debian 11 Bullseye 32 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/11[\d\.]+/i386/iso-cd/'
             ,file_re => 'debian-11.[\d\.]+-i386-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-i386.xml'
@@ -726,6 +726,33 @@ sub _update_isos {
             ,min_disk_size => '10'
             ,options => { machine => 'pc-i440fx' }
         }
+        ,debian_bookworm_64 => {
+            name =>'Debian Bookworm 64 bits'
+            ,arch => 'x86_64'
+            ,description => 'Debian 12 Bookworm 64 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/'
+            ,file_re => 'debian-12.[\d\.]+-amd64-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '11'
+            ,min_ram => 3
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+        }
+        ,debian_bookworm_32 => {
+            name =>'Debian Bookworm 32 bits'
+            ,arch => 'i686'
+            ,description => 'Debian 12 Bookworm 32 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/current/i386/iso-cd/'
+            ,file_re => 'debian-12.[\d\.]+-i386-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '11'
+            ,min_ram => 3
+            ,options => { machine => 'pc-i440fx'}
+        }
+
         ,devuan_beowulf_amd64=> {
             name =>'Devuan Beowulf 64 bits'
             ,description => 'Devuan Beowulf Desktop Live (amd64)'
