@@ -1546,7 +1546,7 @@ Returns the id of  the domain
 
 sub id($self) {
     return $self->{_id} if exists $self->{_id};
-    my $id = $_[0]->_data('id');
+    my $id = $self->_data('id');
     $self->{_id} = $id;
     return $id;
 }
