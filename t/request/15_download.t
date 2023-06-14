@@ -50,6 +50,20 @@ sub search_id_isos {
     return @id_iso;
 }
 
+sub test_debians() {
+    my $sth=connector->dbh->prepare(
+        "SELECT * FROM iso_images"
+        ." where name like '%Debian%'"
+    );
+    $sth->execute;
+    my $found = 0;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        $found++;
+        like($row->{url},qr/\*|\+/);
+    }
+    ok($found,"Expecting some debian entries found");
+}
+
 ##################################################################
 
 SKIP: {
@@ -67,6 +81,7 @@ for my $vm_name ('KVM') {
 
         skip($msg,10)   if !$vm;
 
+        test_debians();
         ################################################
         #
         # Request for Debian Streth ISO

@@ -730,7 +730,7 @@ sub _update_isos {
             name =>'Debian Bookworm 64 bits'
             ,arch => 'x86_64'
             ,description => 'Debian 12 Bookworm 64 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/amd64/iso-cd/'
             ,file_re => 'debian-12.[\d\.]+-amd64-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -743,7 +743,7 @@ sub _update_isos {
             name =>'Debian Bookworm 32 bits'
             ,arch => 'i686'
             ,description => 'Debian 12 Bookworm 32 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/current/i386/iso-cd/'
+            ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/i386/iso-cd/'
             ,file_re => 'debian-12.[\d\.]+-i386-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -939,7 +939,8 @@ sub _update_table_isos_url($self, $data) {
                 ." WHERE id=?"
             );
             $sth_update->execute($entry->{$field}, $row->{id});
-            warn("INFO: updating $release $field '".($row->{$field} or '')."' -> '$entry->{$field}'\n")
+            warn("INFO: updating $release $field ".Dumper($row->{$field})." -> "
+                .Dumper($entry->{$field})."\n")
             if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         }
     }
@@ -1422,7 +1423,7 @@ sub _update_table($self, $table, $field, $data, $verbose=0) {
             warn("INFO: $table : $row->{$field} already added.\n") if $verbose;
             next;
         }
-        warn("INFO: updating $table : ".Dumper($data->{$name})."\n")
+        warn("INFO: updating $table [ $name ] : ".Dumper($data->{$name})."\n")
         if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
         my $sql =
