@@ -3336,9 +3336,9 @@ sub _add_extra_iso($domain, $request, $previous_request) {
     return $req_add;
 }
 
-sub _check_args($args,@) {
+sub _check_args($args,@fields) {
     my %args_check = %$args;
-    for my $field (@_) {
+    for my $field (@fields) {
         delete $args_check{$field};
     }
     confess "ERROR: Unknown arguments ".Dumper(\%args_check) if keys %args_check;
