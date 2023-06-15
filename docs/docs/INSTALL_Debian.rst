@@ -12,6 +12,8 @@ Debian
 
 This is the guide to install Ravada in Debian Bullseye and Buster. It is reccomended you use Buster for better perfomance.
 
+.. warning:: This package does not work on Debian 12 Bookworm.
+
 We provide *deb* packages on the `UPC ETSETB
 repository <http://infoteleco.upc.edu/img/debian/>`__.
 
