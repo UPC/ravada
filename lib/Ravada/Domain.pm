@@ -5603,7 +5603,7 @@ sub _run_iptstate($self, $force=undef) {
         && ( time - $self->_vm->{_iptstate_time} < $TIME_CACHE_NETSTAT+1 ) ) {
         return $self->_vm->{_iptstate};
     }
-    my @cmd = ("iptstate", "-1");
+    my @cmd = ("iptstate", "-1","-L","--no-color","-o");
     my ( $out, $err) = $self->_vm->run_command(@cmd);
     $self->_vm->{_iptstate} = $out;
     $self->_vm->{_iptstate_time} = time;
