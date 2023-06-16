@@ -12,6 +12,16 @@
                 </div>
                 <div class="card-body" ng-controler="upload_users">
 %                   if (!$done) {
+
+                    <div class="alert alert-warning" ng-cloak>
+                        <span ng-show="!type || type=='sql' || (type=='ldap' && create)">
+                            <%=l 'Upload a text file with the user names and passwords separated by a colon :' %>
+                        </span>
+                        <span ng-show="type=='sso' || type=='ldap' && !create">
+                            <%=l 'Upload a text file with the user names' %>
+                        </span>
+
+                    </div>
                     <form method="post" enctype="multipart/form-data" name="form_upload"
                         role="form"
                         action="/admin/users/upload.html"
