@@ -1347,7 +1347,6 @@ any '/admin/users/upload.#req' => sub($c) {
                     push @error,("Error: user $name , password empty");
                     next;
                 }
-                warn "Adding $name $password";
                 eval { $user = Ravada::Auth::LDAP::add_user($name,$password) };
                 push @error, ($@) if $@;
             } else {
@@ -1371,6 +1370,23 @@ any '/admin/users/upload.#req' => sub($c) {
         ,count => $count
         ,error => \@error
         ,done => 1
+    );
+};
+
+get '/admin/user/remove/#id' => sub($c) {
+    return access_denied($c) unless $USER->is_admin;
+    my $id = $c->stash('id');
+    my $user = Ravada::Auth::SQL->search_by_id($id);
+    return $c->render(message => "User not found. id=$id."
+            , link => ['/admin/users','Users']
+        ,template => '/main/standard_message'
+        ,status => 404
+    ) if !$user;
+    $user->remove();
+
+    return $c->render(message => "User removed : ".$user->name
+            , link => ['/admin/users','Users']
+        ,template => '/main/standard_message'
     );
 };
 
