@@ -1434,6 +1434,7 @@ any '/admin/user/(#id).(:type)' => sub {
     }
 
     $c->stash(user => $user);
+    return $c->render(json => {name => $user->name}) if $c->stash('type') eq 'json';
     return $c->render(template => 'main/manage_user');
 };
 

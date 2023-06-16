@@ -94,6 +94,22 @@ sub test_upload_users( $type, $create=0 ) {
 
     test_users_added($type, $user1, $user2);
 
+    for my $name ($user1, $user2) {
+        my $user = Ravada::Auth::SQL->new(name => $name);
+
+        $t->get_ok('/admin/user/'.$user->id.".html")->status_is(200);
+        die $t->tx->res->body if $t->tx->res->code != 200;
+
+        $t->get_ok('/admin/user/'.$user->id.".json")->status_is(200);
+
+        my $body = $t->tx->res->body;
+        my $json;
+        eval { $json = decode_json($body) };
+        is($@, '') or die $body;
+
+        is($json->{name}, $user->name);
+    }
+
 }
 
 sub test_users_added($type, @name) {
@@ -142,5 +158,5 @@ for my $type ( 'ldap', 'sso' ) {
     test_upload_users( $type, 0 ); # do not create users in Ravada
 }
 
-
+end();
 done_testing();
