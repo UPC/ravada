@@ -706,7 +706,7 @@ sub _update_isos {
             name =>'Debian Bullseye 64 bits'
             ,arch => 'x86_64'
             ,description => 'Debian 11 Bullseye 64 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/11.[\d\.]+/amd64/iso-cd/'
             ,file_re => 'debian-11.[\d\.]+-amd64-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -717,8 +717,8 @@ sub _update_isos {
         ,debian_bullseye_32=> {
             name =>'Debian Bullseye 32 bits'
             ,arch => 'i686'
-            ,description => 'Debian 10 Bullseye 32 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/i386/iso-cd/'
+            ,description => 'Debian 11 Bullseye 32 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/11[\d\.]+/i386/iso-cd/'
             ,file_re => 'debian-11.[\d\.]+-i386-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-i386.xml'
@@ -726,6 +726,33 @@ sub _update_isos {
             ,min_disk_size => '10'
             ,options => { machine => 'pc-i440fx' }
         }
+        ,debian_bookworm_64 => {
+            name =>'Debian Bookworm 64 bits'
+            ,arch => 'x86_64'
+            ,description => 'Debian 12 Bookworm 64 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/amd64/iso-cd/'
+            ,file_re => 'debian-12.[\d\.]+-amd64-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '11'
+            ,min_ram => 3
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+        }
+        ,debian_bookworm_32 => {
+            name =>'Debian Bookworm 32 bits'
+            ,arch => 'i686'
+            ,description => 'Debian 12 Bookworm 32 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/i386/iso-cd/'
+            ,file_re => 'debian-12.[\d\.]+-i386-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '11'
+            ,min_ram => 3
+            ,options => { machine => 'pc-i440fx'}
+        }
+
         ,devuan_beowulf_amd64=> {
             name =>'Devuan Beowulf 64 bits'
             ,description => 'Devuan Beowulf Desktop Live (amd64)'
@@ -912,7 +939,8 @@ sub _update_table_isos_url($self, $data) {
                 ." WHERE id=?"
             );
             $sth_update->execute($entry->{$field}, $row->{id});
-            warn("INFO: updating $release $field '".($row->{$field} or '')."' -> '$entry->{$field}'\n")
+            warn("INFO: updating $release $field ".Dumper($row->{$field})." -> "
+                .Dumper($entry->{$field})."\n")
             if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         }
     }
@@ -1395,7 +1423,7 @@ sub _update_table($self, $table, $field, $data, $verbose=0) {
             warn("INFO: $table : $row->{$field} already added.\n") if $verbose;
             next;
         }
-        warn("INFO: updating $table : ".Dumper($data->{$name})."\n")
+        warn("INFO: updating $table [ $name ] : ".Dumper($data->{$name})."\n")
         if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
         my $sql =
@@ -3309,9 +3337,9 @@ sub _add_extra_iso($domain, $request, $previous_request) {
     return $req_add;
 }
 
-sub _check_args($args,@) {
+sub _check_args($args,@fields) {
     my %args_check = %$args;
-    for my $field (@_) {
+    for my $field (@fields) {
         delete $args_check{$field};
     }
     confess "ERROR: Unknown arguments ".Dumper(\%args_check) if keys %args_check;
@@ -5642,7 +5670,12 @@ sub _refresh_active_domains($self, $request=undef) {
     my %active_domain;
 
         if ($id_domain) {
-            my $domain = $self->search_domain_by_id($id_domain);
+            my $domain;
+            eval { $domain = $self->search_domain_by_id($id_domain) };
+            if ( $@ ) {
+                next if $@ =~ /not found/;
+                warn $@;
+            }
             $self->_refresh_active_domain($domain, \%active_domain) if $domain;
          } else {
             my @domains;
@@ -5653,7 +5686,12 @@ sub _refresh_active_domains($self, $request=undef) {
                                 @domains) {
                 $request->error("checking $domain_data->{name}") if $request;
                 next if $active_domain{$domain_data->{id}};
-                my $domain = Ravada::Domain->open($domain_data->{id});
+                my $domain;
+                eval { $domain = Ravada::Domain->open($domain_data->{id}) };
+                if ( $@ ) {
+                    next if $@ =~ /not found/;
+                    warn $@;
+                }
                 next if !$domain;
                 $self->_refresh_active_domain($domain, \%active_domain);
                 $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
