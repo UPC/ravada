@@ -869,6 +869,7 @@ sub start {
     eval { $is_active = $self->domain->is_active };
     warn $@ if $@;
     if (!$is_active && !$self->is_hibernated) {
+        $self->_update_old_config();
         $self->_check_qcow_format($request);
         $self->_set_volumes_backing_store();
         $self->_detect_disks_driver();
@@ -900,6 +901,28 @@ sub start {
     } else {
         die $error;
     }
+}
+
+sub _update_old_config($self) {
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
+
+    _update_emulator($doc)
+    && $self->reload_config($doc);
+}
+
+sub _update_emulator($doc) {
+
+    my ($devices) = $doc->findnodes('/domain/devices');
+    my ($emulator) = $devices->findnodes('emulator');
+
+    my $kvm_spice = "/usr/bin/kvm-spice";
+    my $qemu = '/usr/bin/qemu-system-x86_64';
+
+    my ($text) = $emulator->findnodes('text()');
+    return if $text eq $qemu || $text ne $kvm_spice;
+    $text->setData($qemu);
+    return $qemu;
 }
 
 sub _check_qcow_format($self, $request) {

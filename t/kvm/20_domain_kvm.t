@@ -5,6 +5,9 @@ use Data::Dumper;
 use IPC::Run3;
 use Test::More;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -16,7 +19,7 @@ my $RAVADA = rvd_back();
 my $USER = create_user('foo','bar', 1);
 
 sub test_vm_kvm {
-    my $vm = $RAVADA->search_vm('kvm');
+    my $vm = $RAVADA->search_vm($BACKEND);
     ok($vm,"No vm found") or exit;
     ok(ref($vm) =~ /KVM$/,"vm is no kvm ".ref($vm)) or exit;
 
@@ -106,7 +109,8 @@ sub test_new_domain {
         , disk => 1024 * 1024
     );
 
-    ok($domain,"Domain not created");
+    ok($domain,"Domain not created") or return;
+    test_emulator_domain($domain);
     my $exp_ref= 'Ravada::Domain::KVM';
     ok(ref $domain eq $exp_ref, "Expecting $exp_ref , got ".ref($domain))
         if $domain;
@@ -173,6 +177,7 @@ sub test_new_domain_iso {
 
 sub test_prepare_base {
     my $domain = shift;
+    $domain->shutdown_now(user_admin) if $domain->is_active;
     $domain->prepare_base(user_admin);
 
     my $sth = connector->dbh->prepare("SELECT is_base FROM domains WHERE name=? ");
@@ -194,11 +199,13 @@ sub test_domain{
     my $active = shift;
     $active = 1 if !defined $active;
 
-    my $vm = $RAVADA->search_vm('kvm');
+    my $vm = $RAVADA->search_vm($BACKEND);
     my $n_domains = scalar $vm->list_domains();
     my $domain = test_new_domain($active);
 
     if (ok($domain,"test domain not created")) {
+
+
         my @list = $vm->list_domains();
         ok(scalar(@list) == $n_domains + 1,"Found ".scalar(@list)." domains, expecting "
             .($n_domains+1)
@@ -212,7 +219,8 @@ sub test_domain{
         ok(@list_domains,"No domains in list");
         my $list_domains_data = $RAVADA->list_domains_data();
         ok($list_domains_data && $list_domains_data->[0],"No list domains data ");
-        my $is_base = $list_domains_data->[0]->{is_base} if $list_domains_data;
+        my $is_base;
+        $is_base = $list_domains_data->[0]->{is_base} if $list_domains_data;
         ok($is_base eq '0',"Mangled is base '$is_base', it should be 0 ");
 
         ok(!$domain->is_active  ,"domain should be inactive") if defined $active && $active==0;
@@ -228,13 +236,56 @@ sub test_domain{
         eval { $domain2 = $vm->vm->get_domain_by_name($domain->name)};
         ok($domain2,"Domain ".$domain->name." missing in VM") or exit;
 
+
         test_remove_domain($domain->name);
     }
 }
 
+sub test_emulator($vm) {
+
+    my $domain = create_domain($vm);
+    $domain->start(user_admin);
+
+    test_emulator_domain($domain);
+}
+
+sub test_emulator_upgrade($vm) {
+    my $domain = create_domain($vm);
+    my $doc = XML::LibXML->load_xml(string => $domain->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
+
+    my ($emulator) = $doc->findnodes('/domain/devices/emulator/text()');
+
+    my $kvm_spice = "/usr/bin/kvm-spice";
+    $emulator->setData($kvm_spice);
+    $domain->reload_config($doc);
+
+    $domain->prepare_base(user_admin);
+    my $clone = $domain->clone(name => new_domain_name, user => user_admin);
+
+    test_emulator_domain($clone);
+
+    my $doc2 = XML::LibXML->load_xml(string => $clone->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
+
+    my ($emulator2) = $doc->findnodes('/domain/devices/emulator/text()');
+
+    $emulator->setData($kvm_spice);
+    $clone->reload_config($doc);
+
+    $clone->start(user_admin);
+    test_emulator_domain($clone);
+
+}
+
+sub test_emulator_domain($domain) {
+    my $doc = XML::LibXML->load_xml(string => $domain->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
+
+    my ($emulator) = $doc->findnodes('/domain/devices/emulator/text()');
+    is($emulator,'/usr/bin/qemu-system-x86_64') or die $domain->name;
+}
+
 sub test_domain_in_virsh {
     my $name = shift;
-    my $vm = $RAVADA->search_vm('kvm');
+    my $vm = $RAVADA->search_vm($BACKEND);
 
     $vm->connect();
     for my $domain ($vm->vm->list_all_domains) {
@@ -262,10 +313,12 @@ sub test_domain_missing_in_db {
         my $sth = connector->dbh->prepare("DELETE FROM domains WHERE id=?");
         $sth->execute($domain->id);
 
+        rvd_back()->_clean_db_leftovers();
+
         my $domain2 = $RAVADA->search_domain($domain->name);
         ok(!$domain2,"This domain should not show up in Ravada, it's not in the DB");
 
-        my $vm = $RAVADA->search_vm('kvm');
+        my $vm = $RAVADA->search_vm($BACKEND);
         my $domain3;
         $vm->connect();
         eval { $domain3 = $vm->vm->get_domain_by_name($domain->name)};
@@ -312,9 +365,10 @@ sub test_prepare_import {
 ################################################################
 
 my $vm;
-clean();
+init();
 
-eval { $vm = $RAVADA->search_vm('kvm') } if $RAVADA;
+eval { $vm = $RAVADA->search_vm($BACKEND) } if $RAVADA;
+diag($@) if $@;
 SKIP: {
     my $msg = "SKIPPED test: No KVM backend found";
     if ($vm && $>) {
@@ -331,6 +385,10 @@ test_vm_kvm();
 
 remove_old_domains();
 remove_old_disks();
+
+test_emulator($vm);
+test_emulator_upgrade($vm);
+
 test_domain();
 test_remove_corrupt_clone($vm);
 test_domain_with_iso();

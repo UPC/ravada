@@ -1107,6 +1107,8 @@ sub _domain_create_common {
     $self->_xml_clean_machine_type($xml) if !$self->is_local;
     $self->_xml_add_sysinfo_entry($xml, hostname => $args{name});
 
+    Ravada::Domain::KVM::_update_emulator($xml);
+
     my $dom;
 
     for ( 1 .. 10 ) {
