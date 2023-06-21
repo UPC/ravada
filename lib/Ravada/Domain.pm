@@ -902,7 +902,8 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
             sleep 1;
         }
     }
-    $self->_post_shutdown() if !$self->is_active;
+    $self->_unlock_host_devices() if !$self->is_active;
+
     #    $self->_post_remove_base();
     if (!$self->is_local) {
         my $vm_local = Ravada::VM->open( type => $self->vm );
