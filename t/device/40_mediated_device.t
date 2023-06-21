@@ -50,6 +50,8 @@ sub test_mdev($vm) {
 
     $hd->_data('list_command' => "ls $dir");
 
+    is( $hd->list_available_devices() , 2);
+
     my $domain = $BASE->clone(
         name =>new_domain_name
         ,user => user_admin
@@ -60,7 +62,7 @@ sub test_mdev($vm) {
 
     test_xml($domain);
 
-    return $domain;
+    return ($domain, $hd);
 }
 
 sub test_xml($domain) {
@@ -86,14 +88,17 @@ sub test_xml($domain) {
 
 sub test_base($domain) {
 
+diag("test base");
     my @args = ( uid => user_admin->id ,id_domain => $domain->id);
 
     Ravada::Request->shutdown_domain(@args);
     my $req = Ravada::Request->prepare_base(@args);
 
-    wait_request();
+    wait_request(debug => 1);
 
     test_xml($domain);
+
+    wait_request( debug => 1);
 
     Ravada::Request->clone(@args, number => 2, remote_ip => '1.2.3.4');
     wait_request();
@@ -103,7 +108,41 @@ sub test_base($domain) {
         my $clone = Ravada::Domain->open($clone_data->{id});
         $clone->_add_host_devices();
         test_xml($clone);
+        $clone->remove(user_admin);
     }
+}
+
+sub test_volatile_clones($domain, $host_device) {
+    diag("test volatile clones");
+    my @args = ( uid => user_admin->id ,id_domain => $domain->id);
+
+    $domain->shutdown_now(user_admin) if $domain->is_active;
+    Ravada::Request->prepare_base(@args) if !$domain->is_base();
+
+    wait_request();
+
+    $domain->_data('volatile_clones' => 1);
+    my $n_clones = $domain->clones;
+
+    my $n=2;
+    my $exp_avail = $host_device->list_available_devices()- $n;
+
+    Ravada::Request->clone(@args, number => $n, remote_ip => '1.2.3.4');
+    wait_request(check_error => 0);
+    is(scalar($domain->clones), $n_clones+$n);
+
+    my $n_device = $host_device->list_available_devices();
+    is($n_device,$exp_avail);
+
+    for my $clone_data( $domain->clones ) {
+        my $clone = Ravada::Domain->open($clone_data->{id});
+        test_xml($clone);
+        $clone->remove(user_admin);
+
+        $n_device = $host_device->list_available_devices();
+        is($n_device,++$exp_avail) or exit;
+    }
+    $domain->_data('volatile_clones' => 0);
 }
 
 ####################################################################
@@ -131,7 +170,8 @@ for my $vm_name ( 'KVM' ) {
         } else {
             $BASE = import_domain($vm);
         }
-        my $domain = test_mdev($vm);
+        my ($domain, $host_device) = test_mdev($vm);
+        test_volatile_clones($domain, $host_device);
         test_base($domain);
 
     }
