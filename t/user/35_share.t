@@ -43,18 +43,35 @@ sub test_share($vm) {
 
     $clone->share($user2);
 
-    $list_bases_u2 = rvd_front->list_machines_user($user2);
-    ($clone_user2) = grep { $_->{name } eq $base->name } @$list_bases_u2;
-    is(scalar(@{$clone_user2->{list_clones}}),1);
-
-    is($user2->can_view_all,undef);
-    is($user2->can_start_machine($clone->id),1) or exit;
+    is($user2->can_shutdown($clone),1);
 
     my $req2 = Ravada::Request->start_domain(
         uid => $user2->id
         ,id_domain => $clone->id
     );
     wait_request();
+    is($req2->status,'done');
+    is($req2->error,'');
+
+
+    $list_bases_u2 = rvd_front->list_machines_user($user2);
+    ($clone_user2) = grep { $_->{name } eq $base->name } @$list_bases_u2;
+    is(scalar(@{$clone_user2->{list_clones}}),1);
+    is($clone_user2->{list_clones}->[0]->{can_remove},0);
+    is($clone_user2->{list_clones}->[0]->{can_shutdown},1);
+
+    is($user2->can_view_all,undef);
+    is($user2->can_start_machine($clone->id),1) or exit;
+
+    my $req3 = Ravada::Request->start_domain(
+        uid => $user2->id
+        ,id_domain => $clone->id
+    );
+    wait_request();
+    is($req3->status,'done');
+    is($req3->error,'');
+
+
 }
 
 ##############################################################

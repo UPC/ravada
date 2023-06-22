@@ -973,6 +973,55 @@ sub test_clone_same_name($t, $base) {
 
 }
 
+sub _create_clone($t, $base) {
+    mojo_check_login($t);
+    wait_request();
+
+    $base->is_public(1);
+
+    my ($name, $pass) = (new_domain_name(),"$$ $$");
+    my $user = _create_user($name, $pass);
+    login($name, $pass);
+
+    $t->get_ok("/machine/clone/".$base->id.".html")
+    ->status_is(200);
+    like($t->tx->res->code(),qr/^(200|302)$/)
+    or die $t->tx->res->body;
+
+    wait_request(debug => 1, check_error => 1, background => 1, timeout => 120);
+    mojo_check_login($t, $name, $pass);
+
+    my ($clone) = grep { $_->{id_owner} == $user->id } $base->clones;
+
+    return $clone;
+
+}
+
+sub _create_user($name, $pass) {
+    my $user = Ravada::Auth::SQL->new(name => $name);
+    $user->remove();
+    return create_user($name, $pass);
+}
+
+sub test_grant_access($t, $base) {
+    my $clone0 = _create_clone($t, $base);
+
+    my ($name, $pass) = (new_domain_name(),"$$ $$");
+    my $user2 = _create_user($name, $pass);
+
+    my $clone = Ravada::Front::Domain->open($clone0->{id});
+    $clone->share($user2);
+    login($name, $pass);
+
+    $t->get_ok("/machine/view/".$clone->id.".html")->status_is(200);
+
+    like($t->tx->res->code(),qr/^(200|302)$/)
+    or die $t->tx->res->body;
+
+    $t->get_ok("/machine/shutdown/".$clone->id.".json")->status_is(200);
+
+}
+
 ########################################################################################
 
 $ENV{MOJO_MODE} = 'development';
@@ -1027,6 +1076,8 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
     push @bases,($base0->name);
 
     test_clone_same_name($t, $base0);
+
+    test_grant_access($t, $base0);
 
     if ($vm_name eq 'KVM') {
         test_new_machine_default($t, $vm_name);

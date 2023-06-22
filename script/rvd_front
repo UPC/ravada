@@ -843,7 +843,9 @@ get '/machine/view/(:id).(:type)' => sub {
 
     return access_denied($c) unless $USER->is_admin
                               || $domain->id_owner == $USER->id
-                              || $USER->can_view_all;
+                              || $USER->can_view_all
+                              || $USER->can_start_machine($domain)
+                              ;
 
     return view_machine($c);
 };

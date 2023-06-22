@@ -682,6 +682,8 @@ sub can_do_domain($self, $grant, $domain) {
     my %valid_grant = map { $_ => 1 } qw(change_settings shutdown reboot rename expose_ports);
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
+    return 1 if $grant eq 'shutdown' && $self->can_shutdown_machine($domain);
+
     return 0 if !$self->can_do($grant) && !$self->_domain_id_base($domain);
 
     return 1 if $self->can_do("${grant}_all");
@@ -1142,6 +1144,8 @@ sub can_shutdown_machine($self, $domain) {
     $domain = Ravada::Front::Domain->open($domain)   if !ref $domain;
 
     return 1 if $self->id == $domain->id_owner;
+
+    return 1 if $self->_machine_shared($domain->id);
 
     if ($domain->id_base && $self->can_shutdown_clone()) {
         my $base = Ravada::Front::Domain->open($domain->id_base);

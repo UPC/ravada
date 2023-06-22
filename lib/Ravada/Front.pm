@@ -212,9 +212,9 @@ sub _get_clone_info($user, $base, $clone = Ravada::Front::Domain->open($base->{i
     $c->{is_locked} = $clone->is_locked;
     $c->{description} = ( $clone->_data('description')
             or $base->{description});
-    $c->{can_remove} = 0;
 
     $c->{can_remove} = ( $user->can_remove() && $user->id == $clone->_data('id_owner'));
+    $c->{can_remove} = 0 if !$c->{can_remove};
 
     if ($clone->is_active && !$clone->is_locked
         && $user->can_screenshot) {
