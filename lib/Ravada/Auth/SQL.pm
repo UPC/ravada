@@ -682,7 +682,8 @@ sub can_do_domain($self, $grant, $domain) {
     my %valid_grant = map { $_ => 1 } qw(change_settings shutdown reboot rename expose_ports);
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
-    return 1 if $grant eq 'shutdown' && $self->can_shutdown_machine($domain);
+    return 1 if ( $grant eq 'shutdown' || $grant eq 'reboot' )
+    && $self->can_shutdown_machine($domain);
 
     return 0 if !$self->can_do($grant) && !$self->_domain_id_base($domain);
 

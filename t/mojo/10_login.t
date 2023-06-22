@@ -1018,6 +1018,7 @@ sub test_grant_access($t, $base) {
     like($t->tx->res->code(),qr/^(200|302)$/)
     or die $t->tx->res->body;
 
+    $t->get_ok("/machine/reboot/".$clone->id.".json")->status_is(200);
     $t->get_ok("/machine/shutdown/".$clone->id.".json")->status_is(200);
 
 }
