@@ -47,6 +47,9 @@ sub test_share($vm) {
     ($clone_user2) = grep { $_->{name } eq $base->name } @$list_bases_u2;
     is(scalar(@{$clone_user2->{list_clones}}),1);
 
+    is($user2->can_view_all,undef);
+    is($user2->can_start_machine($clone->id),1) or exit;
+
     my $req2 = Ravada::Request->start_domain(
         uid => $user2->id
         ,id_domain => $clone->id

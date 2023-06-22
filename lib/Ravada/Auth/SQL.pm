@@ -1151,6 +1151,53 @@ sub can_shutdown_machine($self, $domain) {
     return 0;
 }
 
+=head2 can_start_machine
+
+Return true if the user can shutdown this machine
+
+Arguments:
+
+=over
+
+=item * domain
+
+=back
+
+=cut
+
+sub can_start_machine($self, $domain) {
+
+    return 1 if $self->can_view_all();
+
+    $domain = Ravada::Front::Domain->open($domain)   if !ref $domain;
+
+    return 1 if $self->id == $domain->id_owner;
+
+=pod
+    #TODO missing can_start_clones
+    if ($domain->id_base && $self->can_start_clone()) {
+        my $base = Ravada::Front::Domain->open($domain->id_base);
+        return 1 if $base->id_owner == $self->id;
+    }
+=cut
+
+    return 1 if $self->_machine_shared($domain->id);
+
+    return 0;
+}
+
+sub _machine_shared($self, $id_domain) {
+    my $sth = $$CON->dbh->prepare(
+        "SELECT id FROM domain_share "
+        ." WHERE id_domain=? AND id_user=?"
+    );
+    $sth->execute($id_domain, $self->id);
+    my ($id) = $sth->fetchrow;
+    return 1 if $id;
+    return 0;
+}
+
+
 =head2 grants
 
 Returns a list of permissions granted to the user in a hash
