@@ -150,6 +150,8 @@ sub list_machines_user($self, $user, $access_data={}) {
             id_owner =>$user->id
             ,id_base => $id
         );
+        push @clones,$self->_search_shared($id, $user->id);
+
         my ($clone) = ($clones[0] or undef);
         next unless $clone || $user->is_admin || ($is_public && $user->allowed_access($id)) || ($id_owner == $user->id);
         $name = $alias if defined $alias;
@@ -995,6 +997,25 @@ sub search_clone($self, %args) {
     $sth->finish;
 
     return $clones[0] if !wantarray;
+    return @clones;
+
+}
+
+sub _search_shared($self, $id_base, $id_user) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT d.id, d.name FROM domains d, domain_share ds"
+        ." WHERE id_base=? "
+        ."   AND ds.id_user=? "
+        ."   AND ds.id_domain=d.id "
+    );
+    $sth->execute($id_base, $id_user);
+
+    my @clones;
+    while ( my ($id_domain, $name) = $sth->fetchrow ) {
+        push @clones,($self->search_domain($name));
+    }
+    $sth->finish;
+
     return @clones;
 
 }

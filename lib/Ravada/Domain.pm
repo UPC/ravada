@@ -7619,4 +7619,13 @@ sub remove_backup($self, $backup, $remove_file=0) {
     $sth->execute($backup->{id});
 }
 
+sub share($self, $user) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO domain_share "
+        ."(id_domain, id_user)"
+        ." VALUES(?,?)"
+    );
+    $sth->execute($self->id, $user->id);
+}
+
 1;

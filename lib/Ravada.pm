@@ -1635,6 +1635,10 @@ sub _add_indexes_generic($self) {
             ,"UNIQUE (name)"
 
         ]
+        ,domain_share => [
+            "index(id_domain)"
+            ,"unique(id_user, id_domain)"
+        ]
     );
     my $if_not_exists = '';
     $if_not_exists = ' IF NOT EXISTS ' if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite|mariadb/i;
@@ -2278,6 +2282,12 @@ sub _sql_create_tables($self) {
         }
         ]
         ,
+        [ domain_share => {
+            id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE',
+            ,id_user => 'int not null references `users` (`id`) ON DELETE CASCADE'
+            }
+        ],
         [
         bookings => {
             id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
