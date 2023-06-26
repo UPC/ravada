@@ -1174,7 +1174,6 @@
                 $http.get("/machine/share/"+$scope.showmachine.id+"/"
                     +$scope.shared_user_found)
                 .then(function(response) {
-                    console.log('shared');
                     console.log(response.data);
                 });
             };

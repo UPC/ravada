@@ -1717,6 +1717,24 @@ sub _filter_active($pools, $active) {
 
 }
 
+sub list_users_share($self, $name=undef,@skip) {
+    my $users = $self->list_users();
+    my @found = @$users;
+    if ($name) {
+        @found = grep { $_->{name} =~ /$name/ } @$users;
+    }
+    if (@skip) {
+        my %skip = map { $_->id => 1} @skip;
+        my @pre=@found;
+        @found = ();
+        for my $user (@pre) {
+            next if $skip{$user->{id}};
+            push @found,($user);
+        }
+    }
+    return \@found;
+}
+
 =head2 version
 
 Returns the version of the main module

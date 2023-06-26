@@ -799,6 +799,25 @@ any '/machine/manage/(:id).(:type)' => sub {
 get '/machine/share/#id/#name' => sub($c) {
     my $id = $c->stash('id');
     my $name = $c->stash('name');
+
+    my $machine = Ravada::Front::Domain->open($id);
+
+    return json_error($c, "Unknown machine id=$id" ) if !$machine;
+
+    return access_denied_json($c) unless $machine->id_owner == $USER->id
+    || $USER->is_admin;
+
+    my $user_share = Ravada::Auth::SQL->new(name => $name);
+
+    return json_error($c,"Unknown user name=$name" )
+    if !$user_share || !$user_share->id;
+
+    return json_error($c,"User $name already added" )
+        if $user_share->_machine_shared($id);
+
+    $machine->share($user_share);
+
+    $USER->send_message($c,"Machine shared with user $name");
     return $c->render(json => {id => $id, name => $name});
 };
 
@@ -1990,16 +2009,15 @@ get '/list_users.json' => sub($c) {
 get '/search_user/#name'=> sub($c) {
     my $name = $c->stash('name');
 
-    my $list = $RAVADA->list_users();
-    my @found = grep { $_->{name} =~ /$name/ } @$list ;
+    my $list_found = $RAVADA->list_users_share($name,$USER);
     my $found;
-    if (scalar(@found) == 1 ) {
-        ($found) = @found ;
+    if (scalar(@$list_found) == 1 ) {
+        ($found) = @$list_found ;
     } else {
-        ($found) = grep { $_->{name} eq $name } @found;
+        ($found) = grep { $_->{name} eq $name } @$list_found;
     }
     $found = $found->{name} if $found;
-    return $c->render(json => {found => $found , count => scalar(@found) } );
+    return $c->render(json => {found => $found , count => scalar(@$list_found) } );
 };
 
 get '/list_ldap_groups' => sub($c) {
@@ -2978,6 +2996,11 @@ sub access_denied {
 }
 
 sub _access_denied { return access_denied(@_) }
+
+sub json_error($c, $error) {
+    $USER->send_message($error);
+    $c->render(json => {error => $error } );
+}
 
 sub base_id {
     my $name = shift;

@@ -41,7 +41,9 @@ sub test_share($vm) {
     my ($clone_user2) = grep { $_->{name } eq $base->name } @$list_bases_u2;
     is(scalar(@{$clone_user2->{list_clones}}),0);
 
+    test_users_share($clone);
     $clone->share($user2);
+    test_users_share($clone,$user2);
 
     is($user2->can_shutdown($clone),1);
 
@@ -69,6 +71,21 @@ sub test_share($vm) {
     test_machine_info_shared($user2,$clone);
 
     test_requests_shared($user2, $clone);
+
+}
+
+sub test_users_share($clone, @users) {
+    my $all_users = rvd_front->list_users();
+    my @expected;
+    for my $user (@$all_users) {
+        next if grep { $_->id == $user->{id} } @users;
+        next if $user->{id} == $clone->id_owner;
+
+        push @expected,($user);
+    }
+    my $owner = Ravada::Auth::SQL->search_by_id($clone->id_owner);
+    my $users_share = rvd_front->list_users_share('',$owner,@users);
+    is_deeply($users_share,\@expected) or die Dumper($users_share,\@expected);
 
 }
 
