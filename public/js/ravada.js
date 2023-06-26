@@ -320,6 +320,7 @@
             $scope.lock_info = false;
             $scope.topology = false;
             $scope.searching_ldap_attributes = true;
+            $scope.shared_user_found=false;
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -1154,6 +1155,27 @@
             $scope.reboot = function() {
                 $http.get("/machine/stop_start/"+$scope.showmachine.id+".json")
                 .then(function(response) {
+                });
+            };
+
+            $scope.search_shared_user = function() {
+                $scope.searching_shared_user = true;
+                $scope.shared_user_found = '';
+                $http.get("/search_user/"+$scope.user_share)
+                .then(function(response) {
+                    console.log(response.data);
+                    $scope.shared_user_found = response.data.found;
+                    $scope.shared_user_count = response.data.count;
+                    $scope.searching_shared_user=false;
+                });
+            };
+
+            $scope.share_machine = function() {
+                $http.get("/machine/share/"+$scope.showmachine.id+"/"
+                    +$scope.shared_user_found)
+                .then(function(response) {
+                    console.log('shared');
+                    console.log(response.data);
                 });
             };
 

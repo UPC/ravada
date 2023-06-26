@@ -718,9 +718,18 @@ sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
     mojo_check_login($t);
     $t->post_ok('/new_machine.html' => form => $args)->status_is(302);
 
+    like($t->tx->res->code(),qr/^(200|302)$/)
+    or die $t->tx->res->body;
+
     wait_request();
 
-    my $domain = rvd_front->search_domain($name);
+    my $domain;
+    for ( 1 .. 10 ) {
+        $domain = rvd_front->search_domain($name);
+        last if $domain;
+        sleep 1;
+        wait_request();
+    }
 
     my $disks = $domain->info(user_admin)->{hardware}->{disk};
 

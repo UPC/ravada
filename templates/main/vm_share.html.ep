@@ -1,0 +1,26 @@
+<div class="card-body">
+
+        <div class="row">
+            <div class="col-md-2 mt-2">
+              <%=l 'User name' %>
+            </div>
+            <div class="col-md-8 mt-2" align="left">
+                <input type="text" ng-model="user_share"
+                ng-change="search_shared_user()">
+                <span ng-show="user_share && !searching_shared_user">
+                {{shared_user_count}} <%=l 'found' %>
+                </span>
+                <i class="fas fa-sync-alt fa-spin"
+                    ng-show="searching_shared_user"></i>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2 mt-2"></div>
+            <div class="col-mg-2 mt-2" >
+                <button ng-disabled="!shared_user_found"
+                ng-click="share_machine()">
+                <%=l 'share' %></button>
+            </div>
+        </div>
+
+</div>

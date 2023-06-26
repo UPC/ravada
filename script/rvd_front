@@ -796,6 +796,12 @@ any '/machine/manage/(:id).(:type)' => sub {
      return manage_machine($c);
 };
 
+get '/machine/share/#id/#name' => sub($c) {
+    my $id = $c->stash('id');
+    my $name = $c->stash('name');
+    return $c->render(json => {id => $id, name => $name});
+};
+
 any '/(:item)/settings/(:id).html' => sub($c) {
 
     _add_admin_libs($c);
@@ -1981,6 +1987,20 @@ get '/list_users.json' => sub($c) {
     return $c->render(json => $RAVADA->list_users );
 };
 
+get '/search_user/#name'=> sub($c) {
+    my $name = $c->stash('name');
+
+    my $list = $RAVADA->list_users();
+    my @found = grep { $_->{name} =~ /$name/ } @$list ;
+    my $found;
+    if (scalar(@found) == 1 ) {
+        ($found) = @found ;
+    } else {
+        ($found) = grep { $_->{name} eq $name } @found;
+    }
+    $found = $found->{name} if $found;
+    return $c->render(json => {found => $found , count => scalar(@found) } );
+};
 
 get '/list_ldap_groups' => sub($c) {
     return access_denied($c) unless $USER->can_view_groups || $USER->can_manage_groups;
