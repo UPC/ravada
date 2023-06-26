@@ -2915,4 +2915,8 @@ sub get_library_version($self) {
     return $self->vm->get_library_version();
 }
 
+sub can_list_cpu_models($self) {
+    return 1;
+}
+
 1;

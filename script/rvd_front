@@ -712,8 +712,7 @@ get '/list_machine_types.json' => sub {
 get '/list_cpu_models.json' => sub {
     my $c = shift;
 
-    return access_denied($c) unless _logged_in($c)
-        && $USER->can_create_machine();
+    return access_denied($c) unless _logged_in($c);
 
     my $id_domain = $c->param('id_domain');
     my $models = $RAVADA->list_cpu_models($USER->id, $id_domain);

@@ -690,6 +690,9 @@ sub can_do_domain($self, $grant, $domain) {
     return 1 if $self->can_do("${grant}_all");
     return 1 if $self->_domain_id_owner($domain) == $self->id && $self->can_do($grant);
 
+    return 1 if $grant eq 'change_settings'
+    && $self->_machine_shared($domain);
+
     if ($self->can_do("${grant}_clones") && $self->_domain_id_base($domain)) {
         my $base;
         my $id_base = $self->_domain_id_base($domain);
@@ -1053,6 +1056,7 @@ sub can_manage_machine($self, $domain) {
 
     return 1 if $self->can_clone_all
                 || $self->can_change_settings($domain)
+                || $self->_machine_shared($domain)
                 || $self->can_rename_all
                 || $self->can_remove_all
                 || ($self->can_remove_clone_all && $domain->id_base)
@@ -1192,6 +1196,7 @@ sub can_start_machine($self, $domain) {
 }
 
 sub _machine_shared($self, $id_domain) {
+    $id_domain = $id_domain->id if ref($id_domain);
     my $sth = $$CON->dbh->prepare(
         "SELECT id FROM domain_share "
         ." WHERE id_domain=? AND id_user=?"

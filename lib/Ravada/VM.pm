@@ -2552,6 +2552,10 @@ sub _around_list_used_volumes($orig, $self) {
     return @vols;
 }
 
+sub can_list_cpu_models($self) {
+    return 0;
+}
+
 1;
 
 

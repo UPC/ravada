@@ -5500,6 +5500,8 @@ sub _cmd_list_cpu_models($self, $request) {
     my $id_domain = $request->args('id_domain');
 
     my $domain = Ravada::Domain->open($id_domain);
+    return [] if !$domain->_vm->can_list_cpu_models();
+
     my $info = $domain->get_info();
     my $vm = $domain->_vm->vm;
 

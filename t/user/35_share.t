@@ -63,15 +63,38 @@ sub test_share($vm) {
     is($user2->can_view_all,undef);
     is($user2->can_start_machine($clone->id),1) or exit;
 
+    is($user2->can_manage_machine($clone->id),1,"should manager machine");
+    is($user2->can_change_settings($clone->id),1);
+
+    test_machine_info_shared($user2,$clone);
+
+    test_requests_shared($user2, $clone);
+
+}
+
+sub test_requests_shared($user, $clone) {
     my $req3 = Ravada::Request->start_domain(
-        uid => $user2->id
+        uid => $user->id
         ,id_domain => $clone->id
     );
     wait_request();
     is($req3->status,'done');
     is($req3->error,'');
 
+    my $req4 = Ravada::Request->list_cpu_models(
+        uid => $user->id
+        ,id_domain => $clone->id
+    );
+    wait_request();
+    is($req4->status,'done');
+    is($req4->error,'');
 
+}
+
+sub test_machine_info_shared($user, $clone) {
+    my $info = $clone->info($user);
+    is($info->{can_start},1);
+    is($info->{can_view},1);
 }
 
 ##############################################################
