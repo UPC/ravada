@@ -198,6 +198,92 @@ sub test_add_threads($domain) {
     wait_request();
 }
 
+sub _custom_cpu_susana($domain) {
+
+    my $xml = XML::LibXML->load_xml(string => $domain->domain->get_xml_description);
+    my ($vcpu) = $xml->findnodes("/domain/vcpu");
+    $vcpu->setAttribute('placement' => 'static');
+    $vcpu->setAttribute('current' => '2');
+
+    my ($vcpu_max) = $xml->findnodes("/domain/vcpu/text()");
+    $vcpu_max->setData('4');
+
+    my ($cpu) = $xml->findnodes("/domain/cpu");
+    my %data = ( mode => 'custom' , match => 'exact', check => 'partial');
+    for my $field( keys %data) {
+        $cpu->setAttribute( $field => $data{$field});
+    }
+    $cpu->removeChildNodes();
+    my $model = $cpu->addNewChild(undef,'model');
+    $model->setAttribute('fallback' => 'allow');
+    $model->appendText('qemu64');
+
+    $domain->reload_config($xml);
+
+}
+
+sub test_change_vcpu_topo($vm) {
+    return if $vm->type ne 'KVM';
+
+    my $domain = create_domain($vm);
+    _custom_cpu_susana($domain);
+
+    my %data = (
+         'hardware' => 'cpu',
+          'id_domain' => $domain->id,
+          'uid' => user_admin->id,
+          'index' => 0,
+          'data' => {
+                      '_can_edit' => 1,
+                      'vcpu' => {
+                                  'placement' => 'static',
+                                  '#text' =>undef
+                                },
+                      '_cat_remove' => 0,
+                      '_order' => 0,
+                      'cpu' => {
+                                 'model' => {
+                                              '#text' => 'qemu64',
+                                              'fallback' => 'allow'
+                                            },
+                                 'check' => 'partial',
+                                 'match' => 'exact',
+                                 'mode' => 'custom',
+                                 'topology' => {
+                                                 'sockets' => 2
+                                               },
+                                 'feature' => [
+                                                {
+                                                  'name' => 'svm',
+                                                  '$$hashKey' => 'object:64',
+                                                  'policy' => 'optional'
+                                                }
+                                              ]
+                               }
+                    }
+                );
+    my $req = Ravada::Request->change_hardware(%data);
+    wait_request();
+
+    my $domain2 = Ravada::Front::Domain->open($domain->id);
+    my $info = $domain2->info(user_admin);
+    is($info->{n_virt_cpu},2);
+    is($info->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},2);
+
+    delete $data{data}->{cpu}->{topology};
+    $data{data}->{vcpu}->{'#text'}=3;
+
+    Ravada::Request->change_hardware(%data);
+    wait_request();
+
+    my $domain3 = Ravada::Front::Domain->open($domain->id);
+    my $info3 = $domain3->info(user_admin);
+    is($info3->{n_virt_cpu},3);
+    is($info3->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},3);
+
+    $domain->remove(user_admin);
+}
+
 ###############################################################################
 
 clean();
@@ -217,6 +303,9 @@ for my $vm_name ( vm_names() ) {
         }
 
         skip($msg,10)   if !$vm;
+
+        test_change_vcpu_topo($vm);
+
         my $domain = create_domain($vm);
         test_add_vcpu($domain);
         test_less_vcpu_down($domain);
