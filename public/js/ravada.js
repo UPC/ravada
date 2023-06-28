@@ -427,6 +427,7 @@
                         }
                         if ($scope.edit) { $scope.lock_info = true }
                         $scope.topology_changed();
+                        update_info_settings();
                     });
                     _select_new_base();
                 }
@@ -545,6 +546,13 @@
             };
 
           var url_ws;
+
+          var update_info_settings = function() {
+            $scope.new_n_virt_cpu= $scope.showmachine.n_virt_cpu;
+            $scope.new_memory = ($scope.showmachine.memory / 1024);
+            $scope.new_max_mem = ($scope.showmachine.max_mem / 1024);
+          };
+
           $scope.init = function(id, url,is_admin) {
                 url_ws = url;
                 $scope.showmachineId=id;
@@ -561,10 +569,7 @@
                             if (typeof $scope.new_name == 'undefined' ) {
                                 $scope.new_name=$scope.showmachine.alias+"-2";
                                 $scope.validate_new_name($scope.showmachine.alias);
-                                $scope.new_n_virt_cpu= $scope.showmachine.n_virt_cpu;
-                                $scope.new_memory = ($scope.showmachine.memory / 1024);
-                                $scope.new_max_mem = ($scope.showmachine.max_mem / 1024);
-
+                                update_info_settings();
                                 $scope.new_run_timeout = ($scope.showmachine.run_timeout / 60);
                                 if (!$scope.new_run_timeout) $scope.new_run_timeout = undefined;
 
@@ -1103,6 +1108,8 @@
             $scope.request = function(request, args) {
                 $scope.showmachine.requests++;
                 $scope.pending_request = undefined;
+                $scope.lock_info = false;
+                $scope.edit = '';
                 $http.post('/request/'+request+'/'
                     ,JSON.stringify(args)
                 ).then(function(response) {
