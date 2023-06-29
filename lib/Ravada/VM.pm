@@ -1522,6 +1522,7 @@ sub run_command($self, @command) {
         my ($exec_command,$args) = $exec =~ /(.*?) (.*)/;
         $exec_command = $exec if !defined $exec_command;
         $exec = $self->_which($exec_command);
+        confess "Error: $exec_command not found" if !$exec;
         $command[0] = $exec;
         $command[0] .= " $args" if $args;
     }
