@@ -1109,9 +1109,11 @@ sub _domain_create_common {
 
     my $dom;
 
+    my $host_devices = $self->list_host_devices();
+
     for ( 1 .. 10 ) {
         eval {
-            if ($user->is_temporary || $is_volatile ) {
+            if ($user->is_temporary || $is_volatile && !$host_devices ) {
                 $dom = $self->vm->create_domain($xml->toString());
             } else {
                 $dom = $self->vm->define_domain($xml->toString());
@@ -1146,6 +1148,7 @@ sub _domain_create_common {
          , domain => $dom
         , storage => $self->storage_pool
        , id_owner => $id_owner
+       , active => ($user->is_temporary || $is_volatile || $host_devices)
     );
     return ($domain, $spice_password);
 }
@@ -1252,7 +1255,7 @@ sub _domain_create_from_base {
     _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
 
     my ($domain, $spice_password)
-        = $self->_domain_create_common($xml,%args, is_volatile=>$volatile);
+        = $self->_domain_create_common($xml,%args, is_volatile=>$volatile, base => $base);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner}
         , id_vm => $self->id
     );
