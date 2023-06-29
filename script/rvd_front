@@ -796,6 +796,14 @@ any '/machine/manage/(:id).(:type)' => sub {
      return manage_machine($c);
 };
 
+get '/machine/list_shares/#id' => sub($c) {
+    my $machine = Ravada::Front::Domain->open($id);
+
+    return json_error($c, "Unknown machine id=$id" ) if !$machine;
+
+    return $c->render(json => [$machine->list_shares]);
+};
+
 get '/machine/share/#id/#name' => sub($c) {
     my $id = $c->stash('id');
     my $name = $c->stash('name');

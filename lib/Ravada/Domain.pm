@@ -7629,4 +7629,18 @@ sub share($self, $user) {
     $sth->execute($self->id, $user->id);
 }
 
+sub list_shares($self, $user) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT u.name FROM users u,domain_share ds "
+        ." WHERE u.id==ds.id_user "
+        ."   AND ds.id_domain=?"
+    );
+    $sth->execute($self->id);
+    my @shares;
+    while (my ($name) = $sth->fetchrow) {
+        push @shares,($name);
+    }
+    return @shares;
+}
+
 1;

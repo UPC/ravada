@@ -599,6 +599,7 @@
                     list_ldap_groups();
                 }
                 $scope.list_cpu_models();
+                $scope.list_shares();
           };
 
           var list_interfaces = function() {
@@ -1175,6 +1176,13 @@
                     +$scope.shared_user_found)
                 .then(function(response) {
                     console.log(response.data);
+                });
+            };
+
+            $scope.list_shared = function() {
+                $http.get("/machine/list_shares/"+$scope.shomachine.id)
+                .then(function(response) {
+                    $scope.shares = response.data;
                 });
             };
 
