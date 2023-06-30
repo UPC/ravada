@@ -1308,7 +1308,7 @@ any '/group/new' => sub {
 };
 
 any '/admin/users/upload.#req' => sub($c) {
-    return _access_denied_json($c) unless $USER->is_admin;
+    return access_denied_json($c) unless $USER->is_admin;
 
     _add_admin_libs($c);
 

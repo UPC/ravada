@@ -140,6 +140,29 @@ sub _login($t) {
     mojo_login($t, $user_name, $$);
 }
 
+sub test_upload_no_admin($t) {
+    my $user_name = new_domain_name();
+
+    my $user_db = Ravada::Auth::SQL->new( name => $user_name);
+    $user_db->remove();
+
+    my $user = create_user($user_name, $$);
+    die "Error, it shouldn't be admin" if $user->is_admin;
+
+    mojo_login($t,$user_name, $$);
+    my $users = join(":",('a','b' ));
+
+    for my $type ( ('json','html', 'foo')) {
+        $t->post_ok("/admin/users/upload.$type" => form => {
+                type => 'sql'
+                ,users => { content => $users, filename => 'users.txt', 'Content-Type' => 'text/csv' },
+            })->status_is(403);
+
+        die $t->tx->res->body if $t->tx->res->code != 403;
+    }
+
+}
+
 ################################################################################
 
 $ENV{MOJO_MODE} = 'development';
@@ -150,6 +173,8 @@ like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
 $t = Test::Mojo->new($SCRIPT);
 $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
+
+test_upload_no_admin($t);
 
 _login($t);
 test_upload_users( 'sql' );
