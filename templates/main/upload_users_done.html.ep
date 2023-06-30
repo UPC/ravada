@@ -1,7 +1,0 @@
-<%= $count %> uploaded
-
-<ul>
-% for my $line (@$error ) {
-    <li><%= $line %></li>
-% }
-</ul>
