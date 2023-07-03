@@ -2996,8 +2996,11 @@ sub _change_hardware_vcpus($self, $index, $data) {
     my ($topology) = $cpu->findnodes('topology');
     $cpu->removeChild($topology) if $topology;
 
-    my ($vcpus) = ($doc->findnodes('/domain/vcpu/text()'));
-    $vcpus->setData($n_virt_cpu);
+    my ($vcpus_max) = ($doc->findnodes('/domain/vcpu/text()'));
+    $vcpus_max->setData($n_virt_cpu);
+
+    my ($vcpus) = ($doc->findnodes('/domain/vcpu'));
+    $vcpus->setAttribute('current' => $n_virt_cpu);
     $self->reload_config($doc);
 
 }
@@ -3203,11 +3206,19 @@ sub _change_hardware_cpu($self, $index, $data) {
     if (exists $data->{vcpu} && $n_vcpu ne $data->{vcpu}->{'#text'}) {
         $vcpu->removeChildNodes();
         $vcpu->appendText($data->{vcpu}->{'#text'});
+        $changed++;
+    }
+
+    if (exists $data->{vcpu} && defined $vcpu->getAttribute('current')
+        && $vcpu->getAttribute('current') ne $data->{vcpu}->{'#text'}) {
+            $vcpu->setAttribute('current' => $data->{vcpu}->{'#text'});
+            $changed++;
     }
     my ($domain) = $doc->findnodes('/domain');
     my ($cpu) = $doc->findnodes('/domain/cpu');
     if (!$cpu) {
         $cpu = $domain->addNewChild(undef,'cpu');
+        $changed++;
     }
     my $feature = delete $data->{cpu}->{feature};
 

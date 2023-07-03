@@ -270,16 +270,36 @@ sub test_change_vcpu_topo($vm) {
     is($info->{n_virt_cpu},2);
     is($info->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},2);
 
+    _custom_cpu_susana($domain);
     delete $data{data}->{cpu}->{topology};
     $data{data}->{vcpu}->{'#text'}=3;
 
     Ravada::Request->change_hardware(%data);
-    wait_request();
+    wait_request(debug => 0);
 
     my $domain3 = Ravada::Front::Domain->open($domain->id);
     my $info3 = $domain3->info(user_admin);
-    is($info3->{n_virt_cpu},3);
+    is($info3->{n_virt_cpu},3) or die $domain3->name;
+
     is($info3->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},3);
+
+    _custom_cpu_susana($domain);
+
+    $data{data}->{n_virt_cpu} = 5;
+    $data{hardware} = 'vcpus';
+    delete $data{data}->{vcpu};
+    delete $data{data}->{cpu};
+
+    my $req3 = Ravada::Request->change_hardware(%data);
+    wait_request(debug => 0);
+
+    my $domain4 = Ravada::Front::Domain->open($domain->id);
+    my $info4 = $domain4->info(user_admin);
+    is($info4->{n_virt_cpu},5);
+    is($info4->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},5);
+
+    my $xml = XML::LibXML->load_xml(string => $domain->domain->get_xml_description);
+    my ($cpu) = $xml->findnodes("/domain/vcpu");
 
     $domain->remove(user_admin);
 }
