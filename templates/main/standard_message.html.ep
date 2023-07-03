@@ -16,8 +16,6 @@
 %           }
         </div>
     </div>
-        </div>
-    </div>
 </div><!-- page wrapper -->
 </div><!-- wrapper -->
 %=      include $footer
