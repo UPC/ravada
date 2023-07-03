@@ -6,8 +6,11 @@
             </div>
             <div class="col-md-8 mt-2" align="left">
                 <input type="text" ng-model="user_share"
-                ng-change="search_shared_user()">
-                <span ng-show="user_share && !searching_shared_user">
+                ng-disabled="searching_shared_user">
+                <i class="fa fa-search" aria-hidden="true"
+                ng-click="search_shared_user()"
+                ></i>
+                <span ng-show="shared_user_found && !searching_shared_user">
                 {{shared_user_count}} <%=l 'found' %>
                 </span>
                 <i class="fas fa-sync-alt fa-spin"
@@ -22,5 +25,17 @@
                 <%=l 'share' %></button>
             </div>
         </div>
+
+</div>
+<div class="card-body" ng-show="shares && shares.length">
+    <h3><%=l 'These users have access to this virtual machine' %></h3>
+    <div class="row" ng-repeat="user in shares">
+        <div class="col-md-6 mt-2">
+            <button title="remove {{name}}"
+                ng-click="remove_share_machine(user)"
+                class="badge badge-light text-blue">x</button>
+            {{user}}
+        </div>
+    </div>
 
 </div>

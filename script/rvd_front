@@ -797,14 +797,26 @@ any '/machine/manage/(:id).(:type)' => sub {
 };
 
 get '/machine/list_shares/#id' => sub($c) {
-    my $machine = Ravada::Front::Domain->open($id);
+    my $id = $c->stash('id');
 
+    my $machine = Ravada::Front::Domain->open($id);
     return json_error($c, "Unknown machine id=$id" ) if !$machine;
+
+    return access_denied($c) unless $USER->id == $machine->id_owner
+    || $USER->is_admin;
 
     return $c->render(json => [$machine->list_shares]);
 };
 
 get '/machine/share/#id/#name' => sub($c) {
+    _add_share($c);
+};
+
+get '/machine/remove_share/#id/#name' => sub($c) {
+    _add_share($c,1);
+};
+
+sub _add_share($c, $remove=0) {
     my $id = $c->stash('id');
     my $name = $c->stash('name');
 
@@ -820,12 +832,23 @@ get '/machine/share/#id/#name' => sub($c) {
     return json_error($c,"Unknown user name=$name" )
     if !$user_share || !$user_share->id;
 
-    return json_error($c,"User $name already added" )
-        if $user_share->_machine_shared($id);
+    if ($remove) {
+        return json_error($c,"Machine not shared with user $name" )
+            if !$user_share->_machine_shared($id);
+    } else {
+        return json_error($c,"Machine already shared with user $name" )
+            if $user_share->_machine_shared($id);
 
-    $machine->share($user_share);
+    }
 
-    $USER->send_message($c,"Machine shared with user $name");
+    if ($remove) {
+        $machine->remove_share($user_share);
+        $USER->send_message("Removed shared access from user $name");
+    } else {
+        $machine->share($user_share);
+        $USER->send_message("Machine shared with user $name");
+    }
+
     return $c->render(json => {id => $id, name => $name});
 };
 
@@ -2016,6 +2039,16 @@ get '/list_users.json' => sub($c) {
 
 get '/search_user/#name'=> sub($c) {
     my $name = $c->stash('name');
+    return _search_user($c, $name);
+};
+
+get '/search_user/'=> sub($c) {
+
+    return _search_user($c);
+};
+
+
+sub _search_user($c,$name='') {
 
     my $list_found = $RAVADA->list_users_share($name,$USER);
     my $found;

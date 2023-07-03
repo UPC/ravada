@@ -582,6 +582,8 @@
                                     .then(function(response) {
                                         $scope.list_storage= response.data;
                                 });
+
+                                $scope.list_shares();
                             }
                             if (is_admin) {
                                 $scope.init_domain_access();
@@ -599,7 +601,6 @@
                     list_ldap_groups();
                 }
                 $scope.list_cpu_models();
-                $scope.list_shares();
           };
 
           var list_interfaces = function() {
@@ -1164,10 +1165,12 @@
                 $scope.shared_user_found = '';
                 $http.get("/search_user/"+$scope.user_share)
                 .then(function(response) {
-                    console.log(response.data);
                     $scope.shared_user_found = response.data.found;
                     $scope.shared_user_count = response.data.count;
                     $scope.searching_shared_user=false;
+                    if ($scope.shared_user_count == 1) {
+                        $scope.user_share = response.data.found;
+                    }
                 });
             };
 
@@ -1175,12 +1178,20 @@
                 $http.get("/machine/share/"+$scope.showmachine.id+"/"
                     +$scope.shared_user_found)
                 .then(function(response) {
-                    console.log(response.data);
+                    $scope.list_shares();
                 });
             };
 
-            $scope.list_shared = function() {
-                $http.get("/machine/list_shares/"+$scope.shomachine.id)
+            $scope.remove_share_machine = function(user) {
+                $http.get("/machine/remove_share/"+$scope.showmachine.id+"/"
+                    +user)
+                .then(function(response) {
+                    $scope.list_shares();
+                });
+            };
+
+            $scope.list_shares = function() {
+                $http.get("/machine/list_shares/"+$scope.showmachine.id)
                 .then(function(response) {
                     $scope.shares = response.data;
                 });

@@ -72,6 +72,9 @@ sub test_share($vm) {
 
     test_requests_shared($user2, $clone);
 
+    $clone->remove_share($user2);
+
+    is($user2->can_shutdown($clone),0);
 }
 
 sub test_users_share($clone, @users) {

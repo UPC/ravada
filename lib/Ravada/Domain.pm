@@ -7629,10 +7629,19 @@ sub share($self, $user) {
     $sth->execute($self->id, $user->id);
 }
 
-sub list_shares($self, $user) {
+sub remove_share($self, $user) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM domain_share "
+        ." WHERE id_domain=? AND id_user=?"
+    );
+    $sth->execute($self->id, $user->id);
+}
+
+
+sub list_shares($self) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT u.name FROM users u,domain_share ds "
-        ." WHERE u.id==ds.id_user "
+        ." WHERE u.id=ds.id_user "
         ."   AND ds.id_domain=?"
     );
     $sth->execute($self->id);
