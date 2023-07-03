@@ -60,6 +60,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/INSTALL_Ubuntu
    docs/INSTALL_Debian
    docs/INSTALL_Fedora
+   docs/INSTALL_Rocky9
    docs/INSTALL_ubuntu_xenial.rst
    docs/INSTALLfromDockers.rst
    docs/production
