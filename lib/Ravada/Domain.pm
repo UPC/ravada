@@ -5685,7 +5685,7 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     }
     $self->info(Ravada::Utils->user_daemon) if $self->is_known();
 
-    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active' && $hardware ne 'memory';
+    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active' && $hardware ne 'memory' && $hardware !~ /vcpus/;
     $self->post_prepare_base() if $self->is_base();
 }
 
