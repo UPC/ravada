@@ -59,11 +59,11 @@
                 </h3>
                 <div>
                 <button
-                     ng-show="request_open_ports && domain.requests==0"
+                     ng-show="(request_open_ports && domain.requests==0) || redirect_done"
                      ng-click="reload_ports()"
-                     ><%=l 'reopen' %></button>
+                     ><%=l 'reload' %></button>
                 <small>
-                <i ng-hide="domain.requests==0"
+                <i ng-hide="domain.requests==0 || redirect_done"
                    class="fas fa-sync-alt fa-spin"></i>
                 </small>
                 </div>

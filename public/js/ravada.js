@@ -1377,6 +1377,7 @@
                     ).then(function(response) {
                         $scope.request_open_ports = true;
                         $scope.request_open_ports_done = false;
+                        window.location.reload();
                     });
             });
         }
