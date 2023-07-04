@@ -5157,6 +5157,51 @@ sub _cmd_reboot {
 
 }
 
+sub _cmd_shutdown_start($self, $request) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain');
+    my $id_vm = $request->defined_arg('id_vm');
+
+    my $domain;
+    if ($id_vm) {
+        my $vm = Ravada::VM->open($id_vm);
+        $domain = $vm->search_domain_by_id($id_domain);
+    } else {
+        $domain = $self->search_domain_by_id($id_domain);
+    }
+    die "Unknown domain '$id_domain'\n" if !$domain;
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    die "USER $uid not authorized to restart machine ".$domain->name
+    unless $domain->_data('id_owner') ==  $user->id || $user->is_operator;
+
+    my $timeout = ($request->defined_arg('timeout') or $domain->_timeout_shutdown() or 60);
+
+    for my $try ( 0 .. 1 ) {
+        $domain->shutdown(timeout => $timeout, user => $user
+                    , request => $request);
+
+        for ( 0 .. $timeout+1 ) {
+            last if !$domain->is_active;
+            sleep 1;
+        }
+        last if !$domain->is_active;
+    }
+
+    my $req_shutdown = Ravada::Request->force_shutdown_domain(
+        uid => $user->id
+        ,id_domain => $domain->id
+        ,after_request => $request->id
+    );
+
+    Ravada::Request->start_domain(
+        uid => $user->id
+        ,id_domain => $domain->id
+        ,after_request => $req_shutdown->id
+    );
+}
+
 sub _cmd_force_reboot {
     my $self = shift;
     my $request = shift;
@@ -6098,6 +6143,7 @@ sub _req_method {
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
 ,force_reboot   => \&_cmd_force_reboot
+,shutdown_start => \&_cmd_shutdown_start
         ,rebase => \&_cmd_rebase
 
 ,refresh_storage => \&_cmd_refresh_storage

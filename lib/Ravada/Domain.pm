@@ -4018,7 +4018,7 @@ sub _post_resume {
     return $self->_post_start(@_);
 }
 
-sub _timeout_shutdown($self, $value) {
+sub _timeout_shutdown($self, $value=undef) {
     $TIMEOUT_SHUTDOWN = $value if defined $value;
     return $TIMEOUT_SHUTDOWN;
 }
@@ -5662,6 +5662,7 @@ hardware change can be applied.
 =cut
 
 sub needs_restart($self, $value=undef) {
+    return $self->_data('needs_restart') if !defined $value;
     return $self->_data('needs_restart',$value);
 }
 

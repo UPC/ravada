@@ -1158,8 +1158,8 @@
                 });
             };
 
-            $scope.reboot = function() {
-                $http.get("/machine/stop_start/"+$scope.showmachine.id+".json")
+            $scope.shutdown_start = function() {
+                $http.get("/machine/shutdown_start/"+$scope.showmachine.id+".json")
                 .then(function(response) {
                 });
             };
