@@ -192,6 +192,9 @@ sub _get_controller_cpu($self) {
     my ($xml_vcpu) = $doc->findnodes("/domain/vcpu");
     _xml_elements($xml_vcpu, $item->{vcpu});
 
+    $item->{vcpu}->{current} = $item->{vcpu}->{'#text'}
+    if ! exists $item->{vcpu}->{'#text'} || ! $item->{vcpu}->{'current'};
+
     if (exists $item->{cpu}->{feature} && ref($item->{cpu}->{feature}) ne 'ARRAY') {
         $item->{cpu}->{feature} = [ $item->{cpu}->{feature} ];
     }

@@ -1109,7 +1109,6 @@
                 $scope.showmachine.requests++;
                 $scope.pending_request = undefined;
                 $scope.lock_info = false;
-                $scope.edit = '';
                 $http.post('/request/'+request+'/'
                     ,JSON.stringify(args)
                 ).then(function(response) {

@@ -221,6 +221,34 @@ sub _custom_cpu_susana($domain) {
     $domain->reload_config($xml);
 
 }
+sub test_current_max($vm) {
+    return if $vm->type ne 'KVM';
+
+    my $domain = create_domain($vm);
+
+    Ravada::Request->change_hardware(
+        hardware => 'cpu'
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+        ,'data' => {
+                      '_can_edit' => 1,
+                      'vcpu' => {
+                                  'placement' => 'static',
+                                  '#text' => 3,
+                                  current => 2
+                                },
+                            }
+    );
+    wait_request();
+    my $domain2 = Ravada::Front::Domain->open($domain->id);
+    my $info = $domain2->info(user_admin);
+    is($info->{n_virt_cpu},2) or exit;
+
+    is($info->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},3);
+    is($info->{hardware}->{cpu}->[0]->{vcpu}->{'placement'},'static');
+    is($info->{hardware}->{cpu}->[0]->{vcpu}->{'current'},2) or exit;
+
+}
 
 sub test_change_vcpu_topo($vm) {
     return if $vm->type ne 'KVM';
@@ -323,6 +351,8 @@ for my $vm_name ( vm_names() ) {
         }
 
         skip($msg,10)   if !$vm;
+
+        test_current_max($vm);
 
         test_change_vcpu_topo($vm);
 

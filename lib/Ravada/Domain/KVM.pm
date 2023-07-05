@@ -3202,18 +3202,29 @@ sub _change_hardware_cpu($self, $index, $data) {
     $self->_fix_vcpu_from_topology($data);
     lock_hash(%$data);
 
+    my $data_n_cpus = delete $data->{vcpu}->{'#text'};
+
     my ($vcpu) = $doc->findnodes('/domain/vcpu');
-    if (exists $data->{vcpu} && $n_vcpu ne $data->{vcpu}->{'#text'}) {
+    if (exists $data->{vcpu} && $n_vcpu ne $data_n_cpus) {
         $vcpu->removeChildNodes();
-        $vcpu->appendText($data->{vcpu}->{'#text'});
+        $vcpu->appendText($data_n_cpus);
+        $changed++;
+    }
+    for my $key ( keys %{$data->{vcpu}} ) {
+        next if $vcpu->getAttribute($key)
+        && exists $data->{vcpu}->{$key}
+        && defined $data->{vcpu}->{$key}
+        && $vcpu->getAttribute($key) eq $data->{vcpu}->{$key};
+
+        $vcpu->setAttribute($key => $data->{vcpu}->{$key});
+        $changed++;
+    }
+    for my $attrib ($vcpu->attributes) {
+        next if exists $data->{vcpu}->{$attrib->name};
+        $vcpu->removeAttribute($attrib->name);
         $changed++;
     }
 
-    if (exists $data->{vcpu} && defined $vcpu->getAttribute('current')
-        && $vcpu->getAttribute('current') ne $data->{vcpu}->{'#text'}) {
-            $vcpu->setAttribute('current' => $data->{vcpu}->{'#text'});
-            $changed++;
-    }
     my ($domain) = $doc->findnodes('/domain');
     my ($cpu) = $doc->findnodes('/domain/cpu');
     if (!$cpu) {

@@ -1039,6 +1039,8 @@ sub _change_hardware_vcpus($self, $index, $data) {
     my $info = $self->_value('info');
     $info->{n_virt_cpu} = $n;
     $self->_store(info => $info);
+
+    $self->needs_restart(1);
 }
 
 sub _change_hardware_memory($self, $index, $data) {
