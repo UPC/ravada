@@ -3013,17 +3013,18 @@ sub _change_hardware_vcpus($self, $index, $data) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
     my $changed =0;
 
-    if ($self->domain->is_active && $req_current) {
+    if ($req_current) {
         eval {
-            $self->domain->set_vcpus($req_current, Sys::Virt::Domain::VCPU_GUEST) if $req_current;
+            $self->domain->set_vcpus($req_current, Sys::Virt::Domain::VCPU_GUEST) if $self->is_active;
 
         };
         if ($@) {
             warn $@;
-            $self->_data('needs_restart' => 1);
+            $self->_data('needs_restart' => 1) if $self->is_active;
         }
         my ($vcpus) = $doc->findnodes('/domain/vcpu');
-        if ($vcpus->getAttribute('current') != $req_current) {
+        if (!defined $vcpus->getAttribute('current')
+            || $vcpus->getAttribute('current') != $req_current) {
             $vcpus->setAttribute(current => $req_current);
             $changed++;
         }
@@ -3252,6 +3253,7 @@ sub _change_hardware_cpu($self, $index, $data) {
     if (defined $data_n_cpus && exists $data->{vcpu} && $n_vcpu ne $data_n_cpus) {
         $vcpu->removeChildNodes();
         $vcpu->appendText($data_n_cpus);
+        $changed++;
     }
     for my $key ( keys %{$data->{vcpu}} ) {
         next if $vcpu->getAttribute($key)
@@ -3260,10 +3262,13 @@ sub _change_hardware_cpu($self, $index, $data) {
         && $vcpu->getAttribute($key) eq $data->{vcpu}->{$key};
 
         $vcpu->setAttribute($key => $data->{vcpu}->{$key});
+        warn "$key => ".$data->{vcpu}->{$key};
+        $changed++ if $key ne 'current';
     }
     for my $attrib ($vcpu->attributes) {
         next if exists $data->{vcpu}->{$attrib->name};
         $vcpu->removeAttribute($attrib->name);
+        $changed++;
     }
 
     my ($domain) = $doc->findnodes('/domain');
@@ -3285,7 +3290,8 @@ sub _change_hardware_cpu($self, $index, $data) {
     my $cpu_string2 = join("",grep(/./,split(/\n/,$cpu->toString)));
     $cpu_string2 =~ s/\s\s+/ /g;
 
-    if ( $cpu_string ne $cpu->toString() ) {
+    if ( $cpu_string ne $cpu_string2 || $changed ) {
+        warn Dumper([$changed, $cpu_string, $cpu_string2]);
         $self->needs_restart(1) if $self->is_active;
         $self->reload_config($doc);
     }

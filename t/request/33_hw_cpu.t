@@ -85,10 +85,14 @@ sub test_less_vcpu_down($domain) {
 }
 
 sub test_less_vcpu_up($domain) {
-    $domain->start(user_admin);
+    $domain->shutdown(user => user_admin) if $domain->is_active;
+    wait_request();
+
     my $info = $domain->info(user_admin);
     my $cpu = $info->{hardware}->{cpu};
-    my $n = $info->{n_virt_cpu};
+    my $n = $info->{max_virt_cpu};
+
+    $domain->start(user_admin);
 
     my $req = Ravada::Request->change_hardware(
         uid => user_admin->id
@@ -105,9 +109,9 @@ sub test_less_vcpu_up($domain) {
     if $domain->type eq 'KVM';
 
     if ( $domain->type eq 'Void') {
-        is($info2->{n_virt_cpu},$n);
+        is($info2->{n_virt_cpu},$n-1);
     } elsif ($domain->type eq 'KVM') {
-        is($info2->{n_virt_cpu},$n);
+        is($info2->{n_virt_cpu},$n-1) or die $domain->name;
     }
 
     is($domain2->_data('needs_restart'),1) or exit;
@@ -118,10 +122,11 @@ sub test_less_vcpu_up($domain) {
     my $domain3 = Ravada::Domain->open($domain->id);
     my $info3 = $domain3->info(user_admin);
 
-    is($info3->{hardware}->{cpu}->[0]->{vcpu}->{'current'},$n-1)
+    is($info3->{hardware}->{cpu}->[0]->{vcpu}->{'current'}
+        ,$info3->{hardware}->{cpu}->[0]->{vcpu}->{'#text'})
     if $domain->type eq 'KVM';
 
-    is($info3->{n_virt_cpu},$n-1) or die $domain->name;
+    is($info3->{n_virt_cpu},$n) if $domain->type eq 'KVM';
     $domain->shutdown_now(user_admin);
 }
 
@@ -227,6 +232,29 @@ sub _custom_cpu_susana($domain) {
 
 }
 
+sub test_change_vcpu_feature($vm) {
+    return if $vm->type ne 'KVM';
+
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+    $domain->start(user_admin);
+    _wait_ip($domain);
+    my $info0 = $domain->info(user_admin);
+    my $cpu = $info0->{hardware}->{cpu}->[0];
+    $cpu->{vcpu}->{current}=1;
+    warn Dumper($cpu);
+    my $req = Ravada::Request->change_hardware(
+        hardware => 'cpu'
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+        ,data => $cpu
+    );
+    wait_request();
+    my $domain2=Ravada::Front::Domain->open($domain->id);
+    is($domain2->needs_restart(),0) or exit;
+
+    $domain->remove(user_admin);
+}
+
 sub test_current_max_live($vm) {
     return if $vm->type ne 'KVM';
 
@@ -241,6 +269,8 @@ sub test_current_max_live($vm) {
     );
     wait_request();
     _wait_ip($domain);
+    is($domain->needs_restart,0);
+    $domain->remove(user_admin);
 }
 
 sub test_current_max($vm) {
@@ -263,7 +293,7 @@ sub test_current_max($vm) {
                         'cpu'=> $info0->{hardware}->{cpu}->[0]->{cpu}
          },
     );
-    wait_request();
+    wait_request(debug => 1);
     my $domain2 = Ravada::Front::Domain->open($domain->id);
     my $info = $domain2->info(user_admin);
     is($info->{n_virt_cpu},2) or exit;
@@ -288,14 +318,14 @@ sub test_current_max($vm) {
                       '_can_edit' => 1,
                       'vcpu' => {
                                   'placement' => 'static',
-                                  '#text' => undef,
-                                  current => 2
+                                  '#text' => 5,
                                 },
                         'cpu'=> $info0->{hardware}->{cpu}->[0]->{cpu}
          },
     );
     wait_request();
 
+    is($domain->needs_restart,1) or exit;
     $domain->remove(user_admin);
 }
 
@@ -423,7 +453,7 @@ sub test_change_vcpu_topo($vm) {
 
     my $domain4 = Ravada::Front::Domain->open($domain->id);
     my $info4 = $domain4->info(user_admin);
-    is($info4->{n_virt_cpu},5);
+    is($info4->{n_virt_cpu},5) or die $domain->name;
     is($info4->{max_virt_cpu},6);
     is($info4->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},6);
     is($info4->{hardware}->{cpu}->[0]->{vcpu}->{'current'},5);
@@ -458,12 +488,14 @@ for my $vm_name ( vm_names() ) {
             $BASE = import_domain($vm, $BASE_NAME, 1);
         }
 
+        test_current_max($vm);
+
+        test_change_vcpu_feature($vm);
         test_change_vcpu_topo($vm);
 
         test_current_max_live($vm);
 
         test_needs_restart($vm);
-        test_current_max($vm);
 
         my $domain = create_domain($vm);
         test_add_vcpu($domain);
