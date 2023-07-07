@@ -268,7 +268,7 @@ To resolve this issue, edit the file ``/etc/netplan/<configuration-file>.yaml`` 
 
 Add the following lines to the network configuration for each cloned machine:
 
-.. highlight:: yaml
+.. code-block:: yaml
 
     dhcp4: yes
     dhcp-identifier: mac
@@ -276,6 +276,7 @@ Add the following lines to the network configuration for each cloned machine:
 Apply the updated Netplan configuration:
 
 .. prompt:: bash
+
     sudo netplan apply
 
 With these steps, each cloned virtual machine will be assigned a unique IP address based on its MAC address, resolving the issue of both machines receiving the same IP.
