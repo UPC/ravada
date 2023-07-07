@@ -1644,8 +1644,16 @@ sub get_info {
     $info->{max_mem} = $mem_xml if $mem_xml ne $info->{max_mem};
 
     $info->{cpu_time} = $info->{cpuTime};
-    $info->{n_virt_cpu} = $info->{nrVirtCpu};
-    confess Dumper($info) if !$info->{n_virt_cpu};
+
+    my ($cpu_text) = $doc->findnodes('/domain/vcpu/text()');
+    $info->{max_virt_cpu} = 0+$cpu_text->getData();
+    my ($cpu_node) = $doc->findnodes('/domain/vcpu');
+
+    if ($cpu_node->getAttribute('current')) {
+        $info->{n_virt_cpu} = 0+$cpu_node->getAttribute('current')
+    } else {
+        $info->{n_virt_cpu} = $info->{max_virt_cpu};
+    }
 
     if ( $self->is_active() ) {
         $info->{ip} = $self->ip();
@@ -2976,14 +2984,18 @@ sub _change_hardware_display($self, $index, $data) {
 
 
 sub _change_hardware_vcpus($self, $index, $data) {
+
     confess "Error: I don't understand vcpus index = '$index' , only 0"
     if defined $index && $index != 0;
-    my $n_virt_cpu = delete $data->{n_virt_cpu};
+    my $req_max = delete $data->{max_virt_cpu};
+    my $req_current = delete $data->{n_virt_cpu};
+
     confess "Error: Unkown args ".Dumper($data) if keys %$data;
 
     if ($self->domain->is_active) {
         eval {
-            $self->domain->set_vcpus($n_virt_cpu, Sys::Virt::Domain::VCPU_GUEST);
+            $self->domain->set_vcpus($req_current, Sys::Virt::Domain::VCPU_GUEST) if $req_current;
+
         };
         if ($@) {
             warn $@;
@@ -2996,11 +3008,17 @@ sub _change_hardware_vcpus($self, $index, $data) {
     my ($topology) = $cpu->findnodes('topology');
     $cpu->removeChild($topology) if $topology;
 
-    my ($vcpus_max) = ($doc->findnodes('/domain/vcpu/text()'));
-    $vcpus_max->setData($n_virt_cpu);
+    if ($req_max) {
+        my ($vcpus_max) = ($doc->findnodes('/domain/vcpu/text()'));
+        if ( $vcpus_max ne $req_max ) {
+            $vcpus_max->setData($req_max);
+            $self->needs_restart(1) if $self->is_active;
+        }
+    }
 
     my ($vcpus) = ($doc->findnodes('/domain/vcpu'));
-    $vcpus->setAttribute('current' => $n_virt_cpu);
+    $vcpus->removeAttribute('current');
+
     $self->reload_config($doc);
 
 }
@@ -3185,6 +3203,7 @@ sub _fix_vcpu_from_topology($self, $data) {
 }
 
 sub _change_hardware_cpu($self, $index, $data) {
+
     $data = $self->_default_cpu()
     if !keys %$data;
 
@@ -3203,12 +3222,13 @@ sub _change_hardware_cpu($self, $index, $data) {
     lock_hash(%$data);
 
     my $data_n_cpus = delete $data->{vcpu}->{'#text'};
+    my $data_current_cpus = $data->{vcpu}->{'current'};
+    $data_n_cpus = $data_current_cpus if !defined $data_n_cpus && defined $data_current_cpus;
 
     my ($vcpu) = $doc->findnodes('/domain/vcpu');
-    if (exists $data->{vcpu} && $n_vcpu ne $data_n_cpus) {
+    if (defined $data_n_cpus && exists $data->{vcpu} && $n_vcpu ne $data_n_cpus) {
         $vcpu->removeChildNodes();
         $vcpu->appendText($data_n_cpus);
-        $changed++;
     }
     for my $key ( keys %{$data->{vcpu}} ) {
         next if $vcpu->getAttribute($key)
@@ -3217,30 +3237,35 @@ sub _change_hardware_cpu($self, $index, $data) {
         && $vcpu->getAttribute($key) eq $data->{vcpu}->{$key};
 
         $vcpu->setAttribute($key => $data->{vcpu}->{$key});
-        $changed++;
     }
     for my $attrib ($vcpu->attributes) {
         next if exists $data->{vcpu}->{$attrib->name};
         $vcpu->removeAttribute($attrib->name);
-        $changed++;
     }
 
     my ($domain) = $doc->findnodes('/domain');
     my ($cpu) = $doc->findnodes('/domain/cpu');
+    my $cpu_string = '';
+    $cpu_string = $cpu->toString();
+    $cpu_string = join("",split(/\n/,$cpu->toString)) if $cpu;
     if (!$cpu) {
         $cpu = $domain->addNewChild(undef,'cpu');
-        $changed++;
     }
-    my $feature = delete $data->{cpu}->{feature};
+    my $feature = $data->{cpu}->{feature};
 
-    $changed += _change_xml($domain, 'cpu', $data->{cpu});
+    _change_xml($domain, 'cpu', $data->{cpu});
 
     if ( $feature ) {
         _change_xml_list($cpu, 'feature', $feature, 'name');
-        $changed++;
     }
+    $cpu_string =~ s/\s\s+/ /g;
+    my $cpu_string2 = join("",grep(/./,split(/\n/,$cpu->toString)));
+    $cpu_string2 =~ s/\s\s+/ /g;
 
-    $self->reload_config($doc) if $changed;
+    if ( $cpu_string ne $cpu->toString() ) {
+        $self->needs_restart(1) if $self->is_active;
+        $self->reload_config($doc);
+    }
 }
 
 
@@ -3388,9 +3413,10 @@ sub _change_xml_list($xml,$name, $data, $field='name') {
             $node = $curr if $curr->getAttribute($field) eq $entry->{$field};
         }
         $node = $xml->addNewChild(undef, $name) if !$node;
-        for my $field (keys %$entry) {
-            next if $field eq '$$hashKey';
-            $node->setAttribute($field, $entry->{$field});
+        $node->setAttribute($field, $entry->{$field});
+        for my $field2 (keys %$entry) {
+            next if $field2 eq '$$hashKey' || $field2 eq $field;
+            $node->setAttribute($field2, $entry->{$field2});
         }
     }
 
@@ -3401,8 +3427,10 @@ sub _change_xml_list($xml,$name, $data, $field='name') {
 }
 
 sub _change_xml($xml, $name, $data) {
+    return 0 if ref($data) eq 'ARRAY';
+
     confess Dumper([$name, $data])
-    if !ref($data) || ( ref($data) ne 'HASH' && ref($data) ne 'ARRAY');
+    if !ref($data) || ( ref($data) ne 'HASH' );
 
     my $changed = 0;
 
@@ -3442,12 +3470,13 @@ sub _change_xml($xml, $name, $data) {
             && $node->getAttribute($field) eq $data->{$field};
 
             $node->setAttribute($field, $data->{$field});
+
             $changed++;
         }
     }
     for my $child ( $node->childNodes() ) {
         my $name = $child->nodeName();
-        if (!exists $data->{$name} || !defined $data->{$name} ) {
+        if ($name ne '#text' && (!exists $data->{$name} || !defined $data->{$name}) ) {
             $node->removeChild($child);
             $changed++;
         }

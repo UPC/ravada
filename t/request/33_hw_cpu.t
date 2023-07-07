@@ -11,6 +11,9 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
+my $BASE_NAME = "zz-test-base-ubuntu";
+my $BASE;
+
 ###############################################################################
 sub test_add_vcpu($domain) {
     my $info = $domain->info(user_admin);
@@ -20,7 +23,7 @@ sub test_add_vcpu($domain) {
     my $req = Ravada::Request->change_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
-        ,data => { n_virt_cpu => $n+2 }
+        ,data => { n_virt_cpu => $n+2, max_virt_cpu => $n+3 }
         ,hardware => 'vcpus'
     );
     wait_request();
@@ -31,7 +34,9 @@ sub test_add_vcpu($domain) {
 
     return if ($domain->type eq 'Void');
 
-    is($info2->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},$n+2)
+    is($info2->{hardware}->{cpu}->[0]->{vcpu}->{'current'},$n+2);
+
+    is($info2->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},$n+3)
             or die $domain->name."\n".Dumper($info2->{hardware}->{cpu});
 
     $domain->start(user_admin);
@@ -40,7 +45,7 @@ sub test_add_vcpu($domain) {
     my $req2 = Ravada::Request->change_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
-        ,data => { n_virt_cpu => $n+2 }
+        ,data => { n_virt_cpu => $n+2 , max_virt_cpu => $n+3 }
         ,hardware => 'vcpus'
     );
     wait_request();
@@ -49,7 +54,7 @@ sub test_add_vcpu($domain) {
     is($domain2->_data('needs_restart'),1) or exit;
 
     my $info3 = $domain->info(user_admin);
-    is($info3->{n_virt_cpu},$n);
+    is($info3->{n_virt_cpu},$n+2);
 
 }
 
@@ -70,7 +75,7 @@ sub test_less_vcpu_down($domain) {
     my $domain2 = Ravada::Domain->open($domain->id);
     my $info2 = $domain2->info(user_admin);
     if ($domain->type eq 'KVM') {
-        is($info2->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},$n-1)
+        is($info2->{hardware}->{cpu}->[0]->{vcpu}->{'current'},$n-1)
             or die Dumper($info2->{hardware}->{cpu});
     }
     is($info2->{n_virt_cpu},$n-1) or die $domain->name."\n"
@@ -96,11 +101,11 @@ sub test_less_vcpu_up($domain) {
     my $domain2 = Ravada::Domain->open($domain->id);
     my $info2 = $domain2->info(user_admin);
 
-    is($info2->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},$n-1)
+    is($info2->{hardware}->{cpu}->[0]->{vcpu}->{'current'},$n-1)
     if $domain->type eq 'KVM';
 
     if ( $domain->type eq 'Void') {
-        is($info2->{n_virt_cpu},$n-1);
+        is($info2->{n_virt_cpu},$n);
     } elsif ($domain->type eq 'KVM') {
         is($info2->{n_virt_cpu},$n);
     }
@@ -113,7 +118,7 @@ sub test_less_vcpu_up($domain) {
     my $domain3 = Ravada::Domain->open($domain->id);
     my $info3 = $domain3->info(user_admin);
 
-    is($info3->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},$n-1)
+    is($info3->{hardware}->{cpu}->[0]->{vcpu}->{'current'},$n-1)
     if $domain->type eq 'KVM';
 
     is($info3->{n_virt_cpu},$n-1) or die $domain->name;
@@ -191,7 +196,7 @@ sub test_add_threads($domain) {
 
     my $req2 = Ravada::Request->change_hardware(
         hardware => 'vcpus'
-        ,data => { n_virt_cpu => 3 }
+        ,data => { n_virt_cpu => 1 }
         ,id_domain => $domain->id
         ,uid => user_admin->id
     );
@@ -221,12 +226,30 @@ sub _custom_cpu_susana($domain) {
     $domain->reload_config($xml);
 
 }
+
+sub test_current_max_live($vm) {
+    return if $vm->type ne 'KVM';
+
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+    my $info0 = $domain->info(user_admin);
+
+    my $req = Ravada::Request->change_hardware(
+        hardware => 'vcpus'
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+        ,data => { n_virt_cpu => 2 , max_virt_cpu => 5 }
+    );
+    wait_request();
+    _wait_ip($domain);
+}
+
 sub test_current_max($vm) {
     return if $vm->type ne 'KVM';
 
-    my $domain = create_domain($vm);
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+    my $info0 = $domain->info(user_admin);
 
-    Ravada::Request->change_hardware(
+    my $req = Ravada::Request->change_hardware(
         hardware => 'cpu'
         ,id_domain => $domain->id
         ,uid => user_admin->id
@@ -237,7 +260,8 @@ sub test_current_max($vm) {
                                   '#text' => 3,
                                   current => 2
                                 },
-                            }
+                        'cpu'=> $info0->{hardware}->{cpu}->[0]->{cpu}
+         },
     );
     wait_request();
     my $domain2 = Ravada::Front::Domain->open($domain->id);
@@ -248,6 +272,81 @@ sub test_current_max($vm) {
     is($info->{hardware}->{cpu}->[0]->{vcpu}->{'placement'},'static');
     is($info->{hardware}->{cpu}->[0]->{vcpu}->{'current'},2) or exit;
 
+    $domain->start(user_admin);
+
+    _wait_ip($domain);
+
+    $req->status('requested');
+    wait_request();
+    is($domain->needs_restart,0);
+
+    my $req2 = Ravada::Request->change_hardware(
+        hardware => 'cpu'
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+        ,'data' => {
+                      '_can_edit' => 1,
+                      'vcpu' => {
+                                  'placement' => 'static',
+                                  '#text' => undef,
+                                  current => 2
+                                },
+                        'cpu'=> $info0->{hardware}->{cpu}->[0]->{cpu}
+         },
+    );
+    wait_request();
+
+    $domain->remove(user_admin);
+}
+
+sub test_needs_restart($vm) {
+    return if $vm->type ne 'KVM';
+
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+    my $info = $domain->info(user_admin);
+    my $cpu = $info->{hardware}->{cpu}->[0];
+    $cpu->{vcpu}->{'#text'} = 6;
+    $cpu->{vcpu}->{'current'} = 4;
+
+    my $req0 = Ravada::Request->change_hardware(
+        hardware => 'cpu'
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+        ,'data' => $cpu
+    );
+
+    _wait_ip($domain);
+    is($domain->needs_restart(),0);
+    my $req = Ravada::Request->change_hardware(
+        hardware => 'cpu'
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+        ,'data' => $cpu
+    );
+    wait_request(debug => 0);
+    is($domain->needs_restart(),0);
+
+    $cpu->{vcpu}->{current} = 1;
+
+    my $req2 = Ravada::Request->change_hardware(
+        hardware => 'cpu'
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+        ,'data' => $cpu
+    );
+    wait_request(debug => 0);
+    is($domain->needs_restart(),0);
+
+    $domain->remove(user_admin);
+}
+
+sub _wait_ip($domain) {
+    $domain->start(user_admin) if !$domain->is_active;
+    for my $n ( 1 .. 120 ) {
+        return if $domain->ip;
+        sleep 1;
+        diag("Waiting for ip in ".$domain->name) if ! $n%10;
+    }
 }
 
 sub test_change_vcpu_topo($vm) {
@@ -313,6 +412,7 @@ sub test_change_vcpu_topo($vm) {
 
     _custom_cpu_susana($domain);
 
+    $data{data}->{max_virt_cpu} = 6;
     $data{data}->{n_virt_cpu} = 5;
     $data{hardware} = 'vcpus';
     delete $data{data}->{vcpu};
@@ -324,7 +424,9 @@ sub test_change_vcpu_topo($vm) {
     my $domain4 = Ravada::Front::Domain->open($domain->id);
     my $info4 = $domain4->info(user_admin);
     is($info4->{n_virt_cpu},5);
-    is($info4->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},5);
+    is($info4->{max_virt_cpu},6);
+    is($info4->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},6);
+    is($info4->{hardware}->{cpu}->[0]->{vcpu}->{'current'},5);
 
     my $xml = XML::LibXML->load_xml(string => $domain->domain->get_xml_description);
     my ($cpu) = $xml->findnodes("/domain/vcpu");
@@ -352,9 +454,16 @@ for my $vm_name ( vm_names() ) {
 
         skip($msg,10)   if !$vm;
 
-        test_current_max($vm);
+        if ($vm_name eq 'KVM') {
+            $BASE = import_domain($vm, $BASE_NAME, 1);
+        }
 
         test_change_vcpu_topo($vm);
+
+        test_current_max_live($vm);
+
+        test_needs_restart($vm);
+        test_current_max($vm);
 
         my $domain = create_domain($vm);
         test_add_vcpu($domain);

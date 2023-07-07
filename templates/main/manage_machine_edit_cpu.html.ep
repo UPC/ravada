@@ -9,7 +9,7 @@
             ng-class='{"disabled": topology}'
             ng-disabled="topology"
          />
-         <span ng-show="!topology">
+         <span ng-show="!topology && showmachine.is_active">
             <br/>
             current
             <input type="number" size="3" min="1" max="{{item.vcpu['#text']}}"

@@ -548,7 +548,8 @@
           var url_ws;
 
           var update_info_settings = function() {
-            $scope.new_n_virt_cpu= $scope.showmachine.n_virt_cpu;
+            $scope.new_n_virt_cpu= 0+$scope.showmachine.n_virt_cpu;
+            $scope.new_max_virt_cpu= 0+$scope.showmachine.max_virt_cpu;
             $scope.new_memory = ($scope.showmachine.memory / 1024);
             $scope.new_max_mem = ($scope.showmachine.max_mem / 1024);
           };
@@ -1112,6 +1113,7 @@
                 $http.post('/request/'+request+'/'
                     ,JSON.stringify(args)
                 ).then(function(response) {
+                    console.log(response.status);
                     if (typeof(response) == null || response.status == 401 || response.status == 403 ) {
                         window.location.href="/logout";
                     }

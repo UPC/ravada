@@ -102,10 +102,28 @@
            </div>
            <div class="row">
                 <div class="col-lg-3 mt-2">
-                    <label class="control-label" for="cpus"><%=l 'CPUs' %></label>
+                    <label class="control-label" for="max_cpus"><%=l 'Max CPUs' %></label>
                 </div>
                 <div class="col-lg-2">
-                    <input class="form-control" type="text" name="cpus" size="5"
+                    <input class="form-control" type="number" name="max_cpus" size="5"
+                    min="1"
+                    ng-disabled="<%= !$USER->is_admin %>"
+                    ng-change="request('change_hardware',{
+                        'id_domain': showmachine.id
+                        ,'hardware': 'vcpus'
+                        ,'data': { 'max_virt_cpu': new_max_virt_cpu }
+                        })"
+                    ng-model="new_max_virt_cpu">
+                </div>
+           </div>
+
+           <div class="row" ng-show="showmachine.is_active">
+                <div class="col-lg-3 mt-2">
+                    <label class="control-label" for="cpus"><%=l 'Current CPUs' %></label>
+                </div>
+                <div class="col-lg-2">
+                    <input class="form-control" type="number" name="cpus" size="5"
+                    min="1" max="{{max_virt_cpu}}"
                     ng-disabled="<%= !$USER->is_admin %>"
                     ng-change="request('change_hardware',{
                         'id_domain': showmachine.id
