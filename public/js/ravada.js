@@ -363,6 +363,7 @@
                     * item.cores
                     * item.threads;
 
+                cpu.vcpu['current']=undefined;
                 $scope.topology = true;
             };
 

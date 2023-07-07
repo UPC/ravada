@@ -46,6 +46,10 @@ has readonly => (
     ,default => 0
 );
 
+after 'shutdown' => \&_post_shutdown;
+after 'shutdown_now' => \&_post_shutdown;
+after 'force_shutdown' => \&_post_shutdown;
+
 ##################################################
 #
 our $TIMEOUT_SHUTDOWN = 60;
@@ -969,6 +973,20 @@ sub shutdown {
     return $self->_do_shutdown();
 
 }
+
+sub _post_shutdown($self,@args) {
+    # remove current CPU after shutdown because we want max cpu the next start
+    $self->_remove_current_cpu();
+}
+
+sub _remove_current_cpu($self) {
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
+    my ($cpu_node) = $doc->findnodes('/domain/vcpu');
+    $cpu_node->removeAttribute('current');
+
+    $self->reload_config($doc);
+}
+
 
 sub _do_shutdown {
     my $self = shift;
@@ -2992,7 +3010,10 @@ sub _change_hardware_vcpus($self, $index, $data) {
 
     confess "Error: Unkown args ".Dumper($data) if keys %$data;
 
-    if ($self->domain->is_active) {
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my $changed =0;
+
+    if ($self->domain->is_active && $req_current) {
         eval {
             $self->domain->set_vcpus($req_current, Sys::Virt::Domain::VCPU_GUEST) if $req_current;
 
@@ -3001,9 +3022,13 @@ sub _change_hardware_vcpus($self, $index, $data) {
             warn $@;
             $self->_data('needs_restart' => 1);
         }
+        my ($vcpus) = $doc->findnodes('/domain/vcpu');
+        if ($vcpus->getAttribute('current') != $req_current) {
+            $vcpus->setAttribute(current => $req_current);
+            $changed++;
+        }
     }
 
-    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
     my ($cpu) = $doc->findnodes('/domain/cpu');
     my ($topology) = $cpu->findnodes('topology');
     $cpu->removeChild($topology) if $topology;
@@ -3013,13 +3038,11 @@ sub _change_hardware_vcpus($self, $index, $data) {
         if ( $vcpus_max ne $req_max ) {
             $vcpus_max->setData($req_max);
             $self->needs_restart(1) if $self->is_active;
+            $changed++;
         }
     }
 
-    my ($vcpus) = ($doc->findnodes('/domain/vcpu'));
-    $vcpus->removeAttribute('current');
-
-    $self->reload_config($doc);
+    $self->reload_config($doc) if $changed;
 
 }
 

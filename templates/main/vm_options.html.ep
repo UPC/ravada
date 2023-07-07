@@ -73,7 +73,7 @@
                 </div>
                 <div class="col-lg-2">
                     <input class="form-control" type="text" name="ram" size="5"
-                    ng-disabled="<%= !$USER->is_admin %>"
+                    ng-disabled="<%= (!$USER->is_admin or 0 ) %> || topology"
                     ng-blur="request('change_hardware',{
                         'id_domain': showmachine.id
                         ,'hardware': 'memory'

@@ -13,8 +13,14 @@
             <br/>
             current
             <input type="number" size="3" min="1" max="{{item.vcpu['#text']}}"
-                ng-model="item.vcpu['current']" name="vcpu_current"
+                ng-model="new_n_virt_cpu"
+                name="vcpu_current"
                 ng-class='{"disabled": topology}'
+                ng-change="request('change_hardware',{
+                        'id_domain': showmachine.id
+                        ,'hardware': 'vcpus'
+                        ,'data': { 'n_virt_cpu': new_n_virt_cpu }
+                })"
             />
 
          </span>

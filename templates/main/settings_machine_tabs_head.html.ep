@@ -1,6 +1,6 @@
     <div class="nav flex-column nav-pills bg-light" id="v-pills-tab" role="tablist" aria-orientation="vertical">
     %   if (($USER->can_change_settings($domain->id)) && !$domain->is_base) {
-        <a class="nav-link <%= $active_actions %>" id="v-pills-actions-tab" href="#v-pills-actions" data-toggle="pill" role="tab" aria-controls="v-pills-actions" aria-selected="true"><%=l 'Actions' %></a>
+        <a class="nav-link <%= $active_actions %>" id="v-pills-actions-tab" href="#v-pills-actions" data-toggle="pill" role="tab" aria-controls="v-pills-actions" aria-selected="true" ng-disabled="edit"><%=l 'Actions' %></a>
     %   }
     %   if ($USER->can_change_settings($domain->id)) {
         <a class="nav-link <%= $active_description %>" id="v-pills-description-tab" href="#v-pills-description" data-toggle="pill" role="tab" aria-controls="v-pills-description" aria-selected="false"><%=l 'Description' %></a>
