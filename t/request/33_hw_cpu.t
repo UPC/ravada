@@ -279,6 +279,8 @@ sub test_current_max($vm) {
     my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     my $info0 = $domain->info(user_admin);
 
+    my $max_cpu = 8;
+
     my $req = Ravada::Request->change_hardware(
         hardware => 'cpu'
         ,id_domain => $domain->id
@@ -287,8 +289,7 @@ sub test_current_max($vm) {
                       '_can_edit' => 1,
                       'vcpu' => {
                                   'placement' => 'static',
-                                  '#text' => 3,
-                                  current => 2
+                                  '#text' => $max_cpu,
                                 },
                         'cpu'=> $info0->{hardware}->{cpu}->[0]->{cpu}
          },
@@ -296,11 +297,9 @@ sub test_current_max($vm) {
     wait_request(debug => 1);
     my $domain2 = Ravada::Front::Domain->open($domain->id);
     my $info = $domain2->info(user_admin);
-    is($info->{n_virt_cpu},2) or exit;
 
-    is($info->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},3);
+    is($info->{hardware}->{cpu}->[0]->{vcpu}->{'#text'},$max_cpu);
     is($info->{hardware}->{cpu}->[0]->{vcpu}->{'placement'},'static');
-    is($info->{hardware}->{cpu}->[0]->{vcpu}->{'current'},2) or exit;
 
     $domain->start(user_admin);
 
@@ -318,14 +317,15 @@ sub test_current_max($vm) {
                       '_can_edit' => 1,
                       'vcpu' => {
                                   'placement' => 'static',
-                                  '#text' => 5,
+                                  '#text' => $max_cpu,
+                                  ,'current' => 1
                                 },
                         'cpu'=> $info0->{hardware}->{cpu}->[0]->{cpu}
          },
     );
     wait_request();
 
-    is($domain->needs_restart,1) or exit;
+    is($domain->needs_restart,0) or exit;
     $domain->remove(user_admin);
 }
 

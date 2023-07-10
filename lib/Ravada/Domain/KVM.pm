@@ -50,6 +50,8 @@ after 'shutdown' => \&_post_shutdown;
 after 'shutdown_now' => \&_post_shutdown;
 after 'force_shutdown' => \&_post_shutdown;
 
+before 'start' => \&_pre_start;
+
 ##################################################
 #
 our $TIMEOUT_SHUTDOWN = 60;
@@ -972,6 +974,11 @@ sub shutdown {
     return $self->_do_force_shutdown() if $args{force};
     return $self->_do_shutdown();
 
+}
+
+sub _pre_start($self,@args) {
+    # remove current CPU before start because we want max cpu the next start
+    $self->_remove_current_cpu();
 }
 
 sub _post_shutdown($self,@args) {
@@ -3262,13 +3269,12 @@ sub _change_hardware_cpu($self, $index, $data) {
         && $vcpu->getAttribute($key) eq $data->{vcpu}->{$key};
 
         $vcpu->setAttribute($key => $data->{vcpu}->{$key});
-        warn "$key => ".$data->{vcpu}->{$key};
         $changed++ if $key ne 'current';
     }
     for my $attrib ($vcpu->attributes) {
         next if exists $data->{vcpu}->{$attrib->name};
         $vcpu->removeAttribute($attrib->name);
-        $changed++;
+        $changed++ if $attrib->name ne 'current';
     }
 
     my ($domain) = $doc->findnodes('/domain');
@@ -3291,7 +3297,6 @@ sub _change_hardware_cpu($self, $index, $data) {
     $cpu_string2 =~ s/\s\s+/ /g;
 
     if ( $cpu_string ne $cpu_string2 || $changed ) {
-        warn Dumper([$changed, $cpu_string, $cpu_string2]);
         $self->needs_restart(1) if $self->is_active;
         $self->reload_config($doc);
     }

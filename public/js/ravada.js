@@ -394,7 +394,9 @@
                     }
                     $scope.$apply(function () {
                         if ($scope.lock_info) {
-                            $scope.showmachine.requests = data.requests;
+                            if(data.requests) {
+                                $scope.showmachine.requests = data.requests;
+                            }
                             return;
                         }
                         $scope.hardware = Object.keys(data.hardware);
@@ -851,6 +853,9 @@
               }
           };
           $scope.check_access = function() {
+              if (!$scope.user_name) {
+                  return;
+              }
                       $http.get('/machine/check_access/'+$scope.showmachine.id+"/"+$scope.user_name).then(function(response) {
                           $scope.check_allowed=response.data.ok;
                       });
@@ -1106,7 +1111,15 @@
                     });
                 });
             };
-
+            $scope.req_change_current = function(n_cpu) {
+                if (!$scope.topology && $scope.showmachine.is_active) {
+                    request('change_hardware',{
+                        'id_domain': $scope.showmachine.id
+                        ,'hardware': 'vcpus'
+                        ,'data': { 'n_virt_cpu': n_cpu}
+                    })
+                }
+            };
             $scope.request = function(request, args) {
                 $scope.showmachine.requests++;
                 $scope.pending_request = undefined;
