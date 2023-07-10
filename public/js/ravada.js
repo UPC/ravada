@@ -1072,7 +1072,6 @@
             var _host_device_in_machine = function(id_hd) {
                 for ( var i=0;i<$scope.showmachine.host_devices.length; i++ ) {
                     var hd = $scope.showmachine.host_devices[i];
-                    console.log(hd.id+ " "+id_hd);
                     if (hd.id_host_device == id_hd) {
                         return true;
                     }
@@ -1127,7 +1126,6 @@
                 $http.post('/request/'+request+'/'
                     ,JSON.stringify(args)
                 ).then(function(response) {
-                    console.log(response.status);
                     if (typeof(response) == null || response.status == 401 || response.status == 403 ) {
                         window.location.href="/logout";
                     }
@@ -1257,10 +1255,8 @@
                     try {
                         var successful = document.execCommand('copy');
                         var msg = successful ? 'successful' : 'unsuccessful';
-                        console.log('Copying text command was ' + msg);
                         $scope.password_clipboard=successful;
                     } catch (err) {
-                        console.log('Oops, unable to copy');
                     }
 
             }

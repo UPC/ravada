@@ -3300,6 +3300,8 @@ sub _change_hardware_cpu($self, $index, $data) {
         $self->needs_restart(1) if $self->is_active;
         $self->reload_config($doc);
     }
+    $self->_change_hardware_vcpus(0,{n_virt_cpu => $data_current_cpus})
+    if $data_current_cpus && $self->is_active;
 }
 
 

@@ -294,7 +294,7 @@ sub test_current_max($vm) {
                         'cpu'=> $info0->{hardware}->{cpu}->[0]->{cpu}
          },
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     my $domain2 = Ravada::Front::Domain->open($domain->id);
     my $info = $domain2->info(user_admin);
 
