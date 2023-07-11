@@ -58,7 +58,7 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
 % if ( !$_anonymous ) {
                     <li class="nav-item dropdown">
                         <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-question"></i>&nbsp;<%=l 'Help' %><span class="caret"></span></a>
-                        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                        <div class="dropdown-menu" style="left:-60%;" aria-labelledby="navbarDropdownMenuLink">
                             <a class="dropdown-item" href="/requirements"><i class="fa fa-cogs"></i>&nbsp;<%=l 'Requirements' %></a>
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item" href="/about"><i class="fa fa-info-circle"></i>&nbsp;<%=l 'About' %></a>
@@ -69,7 +69,7 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
 % if ( !$_anonymous ) {
                     <li class="nav-item dropdown">
                         <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-user"></i>&nbsp;<%= $_logged_in %><span class="caret"></span></a>
-                        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                        <div class="dropdown-menu" style="left:-60%;" aria-labelledby="navbarDropdownMenuLink">
                             <a class="dropdown-item" href="/user_settings"><i class="fa fa-cog" aria-hidden="true"></i><%=l 'Settings' %></a>
                             <a class="dropdown-item" href="/logout"><i class="fa fa-fw fa-power-off"></i><%=l 'Log Out' %></a>
                         </div>
