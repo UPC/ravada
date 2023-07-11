@@ -2,6 +2,7 @@ use warnings;
 use strict;
 
 use Data::Dumper;
+use IPC::Run3 qw(run3);
 use Test::More;
 
 use lib 't/lib';
@@ -151,11 +152,25 @@ sub test_import_spinoff {
 
 }
 
+sub _create_vol($vm, $name) {
+my @cmd = ("qemu-img",'create','-f','qcow2', $vm->dir_img."/".$name,'512M');
+my ($in, $out, $err);
+run3(\@cmd , \$in, \$out, \$err);
+die $err if $err;
+diag($out) if $out;
+}
+
 sub test_volume($vm) {
+
+    my $dom_name = new_domain_name();
+    my $vol_name = new_domain_name();
+    _create_vol($vm, $vol_name);
+    $vm->refresh_storage_pools();
+    return if $vm->type ne 'KVM';
 my $xml =<<EOT;
 <domain type='kvm'>
-  <name>Metasploitable3-win2k8</name>
-  <uuid>6f6c9b78-3ce4-4a4e-a025-b1c7ae1965e5</uuid>
+  <name>$dom_name</name>
+  <uuid>6f6c9b78-3ce4-4a4e-a025-b1c7ae1965e0</uuid>
   <metadata>
     <libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
       <libosinfo:os id="http://microsoft.com/win/2k8r2"/>
@@ -183,7 +198,7 @@ my $xml =<<EOT;
     <emulator>/usr/bin/qemu-system-x86_64</emulator>
     <disk type='volume' device='disk'>
       <driver name='qemu' type='qcow2'/>
-      <source pool='default' volume='Metasploitable3-win2k8-sda'/>
+      <source pool='default' volume='$vol_name'/>
       <target dev='sda' bus='sata'/>
       <address type='drive' controller='0' bus='0' target='0' unit='0'/>
     </disk>
@@ -244,6 +259,21 @@ my $xml =<<EOT;
   </devices>
 </domain>
 EOT
+
+    $vm->vm->define_domain($xml);
+
+    my $domain;
+    eval {
+        $domain = $RVD_BACK->import_domain(
+                                        vm => $vm->type
+                                     ,name => $dom_name
+                                     ,user => $USER->name
+        );
+    };
+    diag($@) if $@;
+    is(''.$@,'') or exit;
+    ok($domain,"Importing domain $dom_name") or exit;
+
 
 }
 
