@@ -46,12 +46,6 @@ has readonly => (
     ,default => 0
 );
 
-after 'shutdown' => \&_post_shutdown;
-after 'shutdown_now' => \&_post_shutdown;
-after 'force_shutdown' => \&_post_shutdown;
-
-before 'start' => \&_pre_start;
-
 ##################################################
 #
 our $TIMEOUT_SHUTDOWN = 60;
@@ -976,12 +970,12 @@ sub shutdown {
 
 }
 
-sub _pre_start($self,@args) {
+sub _pre_start_internal($self,@args) {
     # remove current CPU before start because we want max cpu the next start
     $self->_remove_current_cpu();
 }
 
-sub _post_shutdown($self,@args) {
+sub _post_shutdown_internal($self,@args) {
     # remove current CPU after shutdown because we want max cpu the next start
     $self->_remove_current_cpu();
 }

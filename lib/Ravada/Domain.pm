@@ -303,6 +303,8 @@ sub _around_start($orig, $self, @arg) {
 
     $self->_start_preconditions(@arg);
 
+    $self->_pre_start_internal();
+
     $self->_data( 'post_shutdown' => 0);
     $self->_data( 'post_hibernated' => 0);
 
@@ -3037,8 +3039,16 @@ sub _remove_start_requests($self) {
     }
 }
 
+# it may be superceeded in child class
+sub _post_shutdown_internal {}
+
+# it may be superceeded in child class
+sub _pre_start_internal {}
+
 sub _post_shutdown {
     my $self = shift;
+
+    $self->_post_shutdown_internal();
 
     my %arg = @_;
     my $timeout = delete $arg{timeout};
