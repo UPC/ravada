@@ -3203,6 +3203,9 @@ sub _default_cpu($self) {
 }
 
 sub _fix_vcpu_from_topology($self, $data) {
+
+    $data->{vcpu} = {} if !exists $data->{vcpu};
+
     if (!exists $data->{cpu}->{topology}
         || !defined($data->{cpu}->{topology})) {
 
@@ -3244,10 +3247,13 @@ sub _change_hardware_cpu($self, $index, $data) {
     my ($n_vcpu) = $doc->findnodes('/domain/vcpu/text()');
 
     $self->_fix_vcpu_from_topology($data);
+
     lock_hash(%$data);
 
-    my $data_n_cpus = delete $data->{vcpu}->{'#text'};
-    my $data_current_cpus = $data->{vcpu}->{'current'};
+    my ($data_n_cpus, $data_current_cpus);
+    $data_n_cpus = delete $data->{vcpu}->{'#text'} if exists $data->{vcpu}->{'#text'};
+
+    $data_current_cpus = $data->{vcpu}->{'current'} if exists $data->{vcpu}->{'current'};
     $data_n_cpus = $data_current_cpus if !defined $data_n_cpus && defined $data_current_cpus;
 
     my ($vcpu) = $doc->findnodes('/domain/vcpu');
