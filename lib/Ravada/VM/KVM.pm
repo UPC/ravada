@@ -1078,6 +1078,8 @@ sub _domain_create_from_iso {
         if $spice_password;
     $domain->xml_description();
 
+    $self->_change_hardware_install($domain,$iso->{options}->{hardware});
+
     return $domain;
 }
 

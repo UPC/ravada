@@ -497,7 +497,7 @@ sub _around_create_domain {
     $domain->_data('is_compacted' => 1);
     $domain->_data('alias' => $alias) if $alias;
     $domain->_data('date_status_change', Ravada::Utils::now());
-    _change_hardware_install($domain,$hardware) if $hardware;
+    $self->_change_hardware_install($domain,$hardware) if $hardware;
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
@@ -541,7 +541,7 @@ sub _around_create_domain {
     return $domain;
 }
 
-sub _change_hardware_install($domain, $hardware) {
+sub _change_hardware_install($self, $domain, $hardware) {
 
     for my $item (sort keys %$hardware) {
         Ravada::Request->change_hardware(

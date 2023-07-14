@@ -2837,6 +2837,7 @@ sub req_new_domain {
     my $vm = ( $c->param('backend') or 'KVM');
     $swap = int($swap * 1024*1024*1024);
     my $bios = $c->param('bios');
+    my $hardware = $c->param('hardware');
     my $machine = ($c->param('machine') or '');
     $machine =~ s/^string://;
     $machine = '' if $machine eq '?';

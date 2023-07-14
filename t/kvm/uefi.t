@@ -20,6 +20,7 @@ sub test_threads($vm) {
     my $name = new_domain_name();
     my $id_iso = search_id_iso('Alpine');
 
+    my $n_threads = 4;
     my $req = Ravada::Request->create_domain(
         name => $name
         ,vm => $vm->type
@@ -27,17 +28,17 @@ sub test_threads($vm) {
         ,id_owner => user_admin->id
         ,memory => 512 * 1024
         ,disk => 1024 * 1024
-        ,options => { hardware => { cpu => { topology => { threads => 4 } }} }
+        ,options => { hardware => { cpu => { cpu => { topology => { threads => $n_threads }}}} }
     );
-    wait_request( debug => 1);
+    wait_request( debug => 0);
     my $domain = $vm->search_domain($name);
     ok($domain);
     my $config = $domain->xml_description();
 
     my $doc = XML::LibXML->load_xml(string => $config);
-    my ($topology) = $doc->findnodes("/domain/vcpu/topology");
+    my ($topology) = $doc->findnodes("/domain/cpu/topology");
     ok($topology) or die $domain->name;
-    die $topology->toString;
+    is($topology->getAttribute('threads'), $n_threads);
 
 }
 
