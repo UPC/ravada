@@ -1635,6 +1635,10 @@ sub _add_indexes_generic($self) {
             ,"UNIQUE (name)"
 
         ]
+        ,virtual_networks => [
+            "unique(id_vm,internal_id)"
+            ,"index(date_changed)"
+        ]
     );
     my $if_not_exists = '';
     $if_not_exists = ' IF NOT EXISTS ' if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite|mariadb/i;
@@ -1806,6 +1810,7 @@ sub _add_grants($self) {
     $self->_add_grant('view_all',0,"The user can start and access the screen of any virtual machine");
     $self->_add_grant('create_disk',0,'can create disk volumes');
     $self->_add_grant('quota_disk',0,'disk space limit',1);
+    $self->_add_grant('create_networks',0,'can create virtual networks',1);
 }
 
 sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
@@ -1883,6 +1888,7 @@ sub _enable_grants($self) {
         ,'start_limit',     'start_many'
         ,'view_all'
         ,'create_disk', 'quota_disk'
+        ,'create_networks'
     );
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
@@ -2354,6 +2360,23 @@ sub _sql_create_tables($self) {
                 n_order => 'integer NOT NULL',
                 info => 'TEXT',
 
+            }
+        ]
+        ,
+        [virtual_networks => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                ,id_vm => 'integer NOT NULL references `vms` (`id`) ON DELETE CASCADE',
+                ,name => 'varchar(200)'
+                ,id_owner => 'integer NOT NULL references `users` (`id`) ON DELETE CASCADE',
+                ,is_active => 'integer not null'
+                ,internal_id => 'char(80) not null'
+                ,autostart => 'integer not null'
+                ,bridge => 'char(80)'
+                ,'ip_address' => 'char(20)'
+                ,'ip_netmask' => 'char(20)'
+                ,'dhcp_start' => 'integer'
+                ,'dhcp_end' => 'integer'
+                ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
             }
         ]
 
@@ -5660,6 +5683,7 @@ sub _refresh_active_vms ($self) {
             next;
         }
         $active_vm{$vm->id} = 1;
+        $vm->list_virtual_networks();
     }
     return \%active_vm;
 }
@@ -6148,6 +6172,9 @@ sub _req_method {
     ,remove_files => \&_cmd_remove_files
     ,update_iso_urls => \&_cmd_update_iso_urls
 
+    ,create_network => \&_cmd_create_network
+    ,remove_network => \&_cmd_remove_network
+
     );
     return $methods{$cmd};
 }
@@ -6564,6 +6591,27 @@ sub _cmd_remove_files($self, $request) {
 
     $vm->remove_file(@file);
 }
+
+sub _cmd_create_network($self, $request) {
+    my $user=Ravada::Auth::SQL->search_by_id($request->args('id_owner'));
+    die "Error: ".$user->name." not authorized\n"
+    unless $user->can_create_networks;
+
+    my $id = $request->args('id_vm');
+    my $vm = Ravada::VM->open($id);
+    $vm->create_network($request->args('data'),$request->args('uid'));
+}
+
+sub _cmd_remove_network($self, $request) {
+    my $user=Ravada::Auth::SQL->search_by_id($request->args('id_owner'));
+    die "Error: ".$user->name." not authorized\n"
+    unless $user->can_create_networks;
+
+    my $id = $request->args('id_vm');
+    my $vm = Ravada::VM->open($id);
+    $vm->remove_network($id,$request->args('uid'));
+}
+
 
 sub _cmd_active_storage_pool($self, $request) {
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));

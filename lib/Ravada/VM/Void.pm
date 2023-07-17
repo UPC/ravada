@@ -336,9 +336,27 @@ sub search_domain {
     return;
 }
 
-sub list_networks {
+sub list_routes {
     return Ravada::NetInterface::Void->new();
 }
+
+sub list_virtual_networks {
+    return ();
+}
+
+sub create_network($self, $data) {
+    my $file_out = $self->dir_img."/networks/".$data->{name}."yml";
+    die "Error: network $data->{name} already created"
+    if $self->file_exists($file_out);
+    open my $out,">",$file_out or die "$! $file_out";
+    close $out;
+}
+
+sub remove_network($self, $name) {
+    my $file_out = $self->dir_img."/networks/$name.yml";
+    unlink $file_out or die "$! $file_out" if $self->file_exists($file_out);
+}
+
 
 sub search_volume($self, $pattern) {
 

@@ -20,7 +20,7 @@ use Ravada;
 use Ravada::Auth::LDAP;
 use Ravada::Front::Domain;
 use Ravada::Front::Domain::KVM;
-use Ravada::Network;
+use Ravada::Route;
 
 use feature qw(signatures);
 no warnings "experimental::signatures";
@@ -1200,7 +1200,7 @@ sub list_bases_anonymous {
     my $self = shift;
     my $ip = shift or confess "Missing remote IP";
 
-    my $net = Ravada::Network->new(address => $ip);
+    my $net = Ravada::Route->new(address => $ip);
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id, name, id_base, is_public, file_screenshot "

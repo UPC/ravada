@@ -146,7 +146,7 @@ sub test_exists_network($id_network, $field, $name) {
 }
 
 sub _remove_network($address) {
-    my @list_networks = Ravada::Network::list_networks();
+    my @list_networks = Ravada::Route::list_networks();
 
     my ($found) = grep { $_->{address} eq $address} @list_networks;
     return if !$found;
@@ -170,7 +170,7 @@ sub test_networks($vm_name) {
 
     exit if !$t->success;
 
-    my @list_networks = Ravada::Network::list_networks();
+    my @list_networks = Ravada::Route::list_networks();
     my ($found) = grep { $_->{name} eq $name } @list_networks;
     ok($found,"Expecting $name in list vms ".Dumper(\@list_networks)) or return;
     my $id_network = $found->{id};
@@ -183,7 +183,7 @@ sub test_networks($vm_name) {
     );
     is($t->tx->res->code(),200) or die $t->tx->res->body;
 
-    @list_networks = Ravada::Network::list_networks();
+    @list_networks = Ravada::Route::list_networks();
     ($found) = grep { $_->{id} == $id_network } @list_networks;
     is($found->{name}, $name2) or die Dumper($found);
 
@@ -194,7 +194,7 @@ sub test_networks($vm_name) {
         }
     );
 
-    @list_networks = Ravada::Network::list_networks();
+    @list_networks = Ravada::Route::list_networks();
 
     ($found) = grep { $_->{id} == $id_network } @list_networks;
     is($found->{name}, $new_name) or die Dumper(\@list_networks);
@@ -207,7 +207,7 @@ sub test_networks($vm_name) {
     $t->get_ok("/v1/network/remove/".$found->{id});
     is($t->tx->res->code(),200) or die $t->tx->res->body;
 
-    ok(! grep { $_->{id} == $found->{id} } Ravada::Network::list_networks());
+    ok(! grep { $_->{id} == $found->{id} } Ravada::Route::list_networks());
 
 }
 

@@ -128,6 +128,13 @@ has 'netssh' => (
     , lazy => 1
     , clearer => 'clear_netssh'
 );
+
+has 'has_networking' => (
+    isa => 'Bool'
+    , is => 'ro'
+    , default => 0
+);
+
 ############################################################
 #
 # Method Modifiers definition
@@ -147,6 +154,10 @@ around 'connect' => \&_around_connect;
 after 'disconnect' => \&_post_disconnect;
 
 around '_list_used_volumes' => \&_around_list_used_volumes;
+
+around 'create_network' => \&_around_create_network;
+around 'remove_network' => \&_around_remove_network;
+around 'list_virtual_networks' => \&_around_list_networks;
 
 #############################################################
 #
@@ -590,7 +601,7 @@ sub _add_instance_db($self, $id_domain) {
 sub _define_spice_password($self, $remote_ip) {
     my $spice_password = Ravada::Utils::random_name(4);
     if ($remote_ip) {
-        my $network = Ravada::Network->new(address => $remote_ip);
+        my $network = Ravada::Route->new(address => $remote_ip);
         $spice_password = undef if !$network->requires_password;
     }
     return $spice_password;
@@ -1414,6 +1425,66 @@ sub _around_ping($orig, $self, $option=undef, $cache=1) {
     }
 
     return $ping;
+}
+
+sub _insert_network($self, $net) {
+    $net->{id_owner} = Ravada::Utils::user_daemon->id
+    if !exists $net->{id_owner};
+
+    my $sql = "INSERT INTO virtual_networks ("
+    .join(",",sort keys %$net).")"
+    ." VALUES(".join(",",map { '?' } keys %$net).")";
+    my $sth = $self->_dbh->prepare($sql);
+    $sth->execute(map { $net->{$_} } sort keys %$net);
+}
+
+sub _update_network($self, $net) {
+    my $sth = $self->_dbh->prepare("SELECT * FROM virtual_networks "
+        ." WHERE id_vm=? AND internal_id=?"
+    );
+    $sth->execute($self->id,$net->{internal_id});
+    my $db_net = $sth->fetchrow_hashref();
+    if (!$db_net) {
+        return $self->_insert_network($net);
+    }
+    delete $db_net->{date_changed};
+    delete $db_net->{id};
+}
+
+sub _around_create_network($orig, $self,$data, $id_owner) {
+    my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Unknown user id: $id_owner";
+    die "Error: Access denied: ".$owner->name." can not create networks"
+    unless $owner->can_create_networks();
+
+    $data->{is_active}=1 if !exists $data->{is_active};
+    $data->{autostart}=1 if !exists $data->{autostart};
+    my $ip = $data->{ip_address};
+    $ip =~ s/(.*)\..*/$1/;
+    $data->{dhcp_start}="$ip.2" if !exists $data->{dhcp_start};
+    $data->{dhcp_end}="$ip.254" if !exists $data->{dhcp_end};
+    $self->$orig($data);
+    $data->{id_owner} = $id_owner;
+    $self->_insert_network($data);
+}
+
+sub _around_remove_network($orig, $self, $user, $id_net) {
+    die "Error: Access denied: ".$user->name." can not remove networks"
+    unless $user->can_create_networks();
+
+    my ($net) = grep { $_->{id} == $id_net } $self->list_networks();
+
+    die "Error: network id $id_net not found" if !$net;
+
+    $self->$orig($net->{name});
+}
+
+
+sub _around_list_networks($orig, $self) {
+    my @list = $orig->($self);
+    for my $net ( @list ) {
+        $self->_update_network($net);
+    }
+    return @list;
 }
 
 =head2 is_active

@@ -1423,6 +1423,30 @@ sub _qemu_storage_pool {
     return $pool_name;
 }
 
+sub remove_qemu_networks($vm=undef) {
+    return if !$VM_VALID{'KVM'} || $>;
+    if (!defined $vm) {
+        eval { $vm = rvd_back->search_vm('KVM') };
+        if ($@ && $@ !~ /Missing qemu-img/) {
+            warn $@;
+        }
+        if  ( !$vm ) {
+            $VM_VALID{'KVM'} = 0;
+            return;
+        }
+    }
+
+    my $base = base_domain_name();
+    $vm->connect();
+    for my $network ( $vm->vm->list_all_networks) {
+        my $name = $network->get_name;
+        next if $name !~ /^$base/;
+        $network->destroy() if $network->is_active;
+        $network->undefine();
+    }
+
+}
+
 sub remove_qemu_pools($vm=undef) {
     return if !$VM_VALID{'KVM'} || $>;
     return if defined $vm && $vm->type eq 'Void';
@@ -1488,6 +1512,10 @@ sub remove_old_pools {
     remove_qemu_pools();
 }
 
+sub remove_old_networks {
+    remove_qemu_networks();
+}
+
 sub _remove_old_entries($table) {
     my $sth = connector()->dbh->prepare("DELETE FROM $table"
     ." WHERE name like ? "
@@ -1522,6 +1550,7 @@ sub clean($ldap=undef) {
     remove_old_domains();
     remove_old_disks();
     remove_old_pools();
+    remove_old_networks();
     _remove_old_entries('vms');
     _remove_old_entries('networks');
     _remove_old_groups_ldap();

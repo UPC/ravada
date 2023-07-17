@@ -7,6 +7,7 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("usersPage", usersPageC)
         .controller("messagesPage", messagesPageC)
         .controller("manage_nodes",manage_nodes)
+        .controller("manage_routes",manage_routes)
         .controller("manage_networks",manage_networks)
         .controller("settings_node",settings_node)
         .controller("settings_storage",settings_storage)
@@ -863,17 +864,17 @@ ravadaApp.directive("solShowMachine", swMach)
         $interval($scope.list_nodes,30 * 1000);
     };
 
-    function manage_networks($scope, $http, $interval, $timeout) {
-        list_networks= function() {
-            $http.get('/list_networks.json').then(function(response) {
+    function manage_routes($scope, $http, $interval, $timeout) {
+        list_routes = function() {
+            $http.get('/list_routes.json').then(function(response) {
                     for (var i=0; i<response.data.length; i++) {
                         var item = response.data[i];
-                        $scope.networks[item.id] = item;
+                        $scope.routes[item.id] = item;
                     }
                 });
         }
         $scope.update_network= function(id, field) {
-            var value = $scope.networks[id][field];
+            var value = $scope.routes[id][field];
             var args = { 'id': id };
             args[field] = value;
             $http.post('/v1/network/set'
@@ -883,8 +884,21 @@ ravadaApp.directive("solShowMachine", swMach)
         };
 
 
-        $scope.networks={};
-        list_networks();
+        $scope.routes={};
+        list_routes();
+    }
+
+    function manage_networks($scope, $http, $interval, $timeout) {
+        $scope.subscribe = function(url) {
+            var ws = new WebSocket(url);
+            ws.onopen = function(event) { ws.send('list_networks') };
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                $scope.$apply(function () {
+                    $scope.networks = data;
+                 });
+            }
+        };
     }
 
 

@@ -54,6 +54,12 @@ has type => (
     ,default => 'KVM'
 );
 
+has has_networking => (
+    isa => 'Bool'
+    , is => 'ro'
+    , default => 1
+);
+
 #########################################################################3
 #
 
@@ -2660,13 +2666,13 @@ sub _xml_add_graphics_streaming {
     $listen->setAttribute(mode => 'filter');
 }
 
-=head2 list_networks
+=head2 list_routes
 
 Returns a list of networks known to this VM. Each element is a Ravada::NetInterface object
 
 =cut
 
-sub list_networks {
+sub list_routes {
     my $self = shift;
 
     $self->connect() if !$self->vm;
@@ -2914,5 +2920,70 @@ sub _is_ip_nat($self, $ip0) {
 sub get_library_version($self) {
     return $self->vm->get_library_version();
 }
+
+sub list_virtual_networks($self) {
+    my @networks;
+    for my $net ($self->vm->list_all_networks()) {
+        my $doc = XML::LibXML->load_xml(string => $net->get_xml_description);
+        my ($ip_doc) = $doc->findnodes("/network/ip");
+        my $ip = $ip_doc->getAttribute('address');
+        my $netmask = $ip_doc->getAttribute('netmask');
+        my $data= {
+            is_active => $net->is_active()
+            ,autostart => $net->get_autostart()
+            ,bridge => $net->get_bridge_name()
+            ,id_vm => $self->id
+            ,name => $net->get_name
+            ,ip_address => $ip
+            ,ip_netmask => $netmask
+            ,internal_id => ''.$net->get_uuid_string
+        };
+        my ($dhcp_range) = $ip_doc->findnodes("dhcp/range");
+        my ($start,$end);
+        if ($dhcp_range) {
+            ($start) = $dhcp_range->getAttribute('start') =~ /.*\.(\d+)/;
+            ($end) = $dhcp_range->getAttribute('end')=~ /.*\.(\d+)/;
+            $data->{dhcp_start} = $start if defined $start;
+            $data->{dhcp_end} = $end if defined $end;
+        }
+        push @networks,($data);
+    }
+    return @networks;
+}
+
+sub create_network($self, $data) {
+
+    my $xml = XML::LibXML->load_xml(string =>
+        "<network><name>$data->{name}</name></network>"
+    );
+    my ($xml_net) = $xml->findnodes("/network");
+
+    my $forward = $xml_net->addNewChild(undef,'forward');
+    $forward->setAttribute('mode' => 'nat');
+
+    my $ip = $xml_net->addNewChild(undef,'ip');
+    $ip->setAttribute('address' => $data->{ip_address});
+    $ip->setAttribute('netmask' => $data->{ip_netmask});
+
+    if ($data->{dhcp_start} || $data->{dhcp_end}) {
+        my $dhcp = $ip->addNewChild(undef, 'dhcp');
+        my $range = $dhcp->addNewChild(undef,'range');
+        $range->setAttribute('start' => $data->{dhcp_start});
+        $range->setAttribute('end' => $data->{dhcp_end});
+    }
+
+    $self->vm->define_network($xml->toString());
+
+    my $new_network=$self->vm->get_network_by_name($data->{name});
+    my $xml2=XML::LibXML->load_xml(string =>$new_network->get_xml_description());
+    my ($uuid) = $xml2->findnodes("/network/uuid/text()");
+    $data->{internal_id} = $uuid;
+}
+
+sub remove_network($self, $name) {
+}
+
+
+
 
 1;

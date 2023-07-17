@@ -31,7 +31,7 @@ use Ravada::Booking;
 use Ravada::Front;
 use Ravada::Front::Domain;
 use Ravada::HostDevice::Templates;
-use Ravada::Network;
+use Ravada::Route;
 use Ravada::WebSocket;
 use POSIX qw(locale_h strftime);
 
@@ -465,9 +465,9 @@ get '/node/host_device/remove/(:id)' => sub($c) {
 };
 
 
-get '/list_networks.json' => sub {
+get '/list_routes.json' => sub {
     my $c = shift;
-    $c->render(json => [ Ravada::Network->list_networks ]);
+    $c->render(json => [ Ravada::Route->list_networks ]);
 };
 
 get '/network/info/#id' => sub($c) {
@@ -492,9 +492,9 @@ sub _add_admin_libs($c) {
     push @{$c->stash->{css}}, '/css/admin.css';
 }
 
-any '/network/new' => sub($c) {
+any '/route/new' => sub($c) {
     _add_admin_libs($c);
-    return $c->render(template => "/main/network_new");
+    return $c->render(template => "/main/route_new");
 };
 
 post '/v1/network/set' => sub($c) {
