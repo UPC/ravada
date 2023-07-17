@@ -11,7 +11,7 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("manage_networks",manage_networks)
         .controller("settings_node",settings_node)
         .controller("settings_storage",settings_storage)
-        .controller("settings_network",settings_network)
+        .controller("settings_route",settings_route)
         .controller("new_node", newNodeCtrl)
         .controller("new_storage", new_storage)
         .controller("settings_global", settings_global_ctrl)
@@ -877,7 +877,7 @@ ravadaApp.directive("solShowMachine", swMach)
             var value = $scope.routes[id][field];
             var args = { 'id': id };
             args[field] = value;
-            $http.post('/v1/network/set'
+            $http.post('/v2/route/set'
                 , JSON.stringify( args ))
             .then(function(response) {
             });
@@ -1136,11 +1136,11 @@ ravadaApp.directive("solShowMachine", swMach)
 
     };
 
-   function settings_network($scope, $http, $timeout) {
+   function settings_route($scope, $http, $timeout) {
         var url_ws;
         $scope.init = function(id_network) {
             if (typeof id_network == 'undefined') {
-                $scope.network = {
+                $scope.route= {
                     'name': ''
                     ,'all_domains': 1
                 };
@@ -1150,30 +1150,30 @@ ravadaApp.directive("solShowMachine", swMach)
             }
         }
         $scope.check_no_domains = function() {
-            if ( $scope.network.no_domains == 1 ){
-                $scope.network.all_domains = 0;
+            if ( $scope.route.no_domains == 1 ){
+                $scope.route.all_domains = 0;
             }
         };
         $scope.check_all_domains = function() {
-            if ( $scope.network.all_domains == 1 ){
-                $scope.network.no_domains = 0;
+            if ( $scope.route.all_domains == 1 ){
+                $scope.route.no_domains = 0;
             }
         };
         $scope.update_network= function(field) {
-            var data = $scope.network;
+            var data = $scope.route;
             if (typeof field != 'undefined') {
                 var data = {};
-                data[field] = $scope.network[field];
+                data[field] = $scope.route[field];
             }
             $scope.saved = false;
             $scope.error = '';
-            $http.post('/v1/network/set/'
+            $http.post('/v2/route/set/'
                 , JSON.stringify(data))
             //                    , JSON.stringify({ value: $scope.network[field]}))
                 .then(function(response) {
                     if (response.data.ok == 1){
                         $scope.saved = true;
-                        if (!$scope.network.id) {
+                        if (!$scope.route.id) {
                             $scope.new_saved = true;
                         }
                     }
@@ -1185,19 +1185,19 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.load_network = function(id_network) {
                 $scope.error = '';
                 $scope.saved = false;
-                $http.get('/network/info/'+id_network+'.json').then(function(response) {
-                    $scope.network = response.data;
+                $http.get('/route/info/'+id_network).then(function(response) {
+                    $scope.route = response.data;
                     $scope.formNetwork.$setPristine();
-                    $scope.network._old_name = $scope.network.name;
+                    $scope.route._old_name = $scope.route.name;
                 });
         };
         $scope.list_domains_network = function(id_network) {
-                $http.get('/network/list_domains/'+id_network).then(function(response) {
+                $http.get('/route/list_domains/'+id_network).then(function(response) {
                     $scope.machines = response.data;
                 });
         };
         $scope.set_network_domain= function(id_domain, field, allowed) {
-            $http.get("/network/set/"+$scope.network.id+ "/" + field+ "/" +id_domain+"/"
+            $http.get("/route/set/"+$scope.route.id+ "/" + field+ "/" +id_domain+"/"
                     +allowed)
                 .then(function(response) {
                 });
@@ -1208,26 +1208,26 @@ ravadaApp.directive("solShowMachine", swMach)
             });
         };
 
-        $scope.remove_network = function(id_network) {
-            if ($scope.network.name == 'default') {
-                $scope.error = $scope.network.name + " network can't be removed";
+        $scope.remove_route = function(id_network) {
+            if ($scope.route.name == 'default') {
+                $scope.error = $scope.route.name + " network can't be removed";
                 return;
             }
-            $http.get('/v1/network/remove/'+id_network).then(function(response) {
-                $scope.message = "Network "+$scope.network.name+" removed";
-                $scope.network ={};
+            console.log(id_network);
+            $http.get('/v2/route/remove/'+id_network).then(function(response) {
+                window.location.assign('/admin/routes');
             });
         };
         $scope.check_duplicate = function(field) {
             var args = {};
-            if (typeof ($scope.network['id']) != 'undefined') {
-                args['id'] = $scope.network['id'];
+            if (typeof ($scope.route['id']) != 'undefined') {
+                args['id'] = $scope.route['id'];
             }
-            args[field] = $scope.network[field];
+            args[field] = $scope.route[field];
 
             $http.post("/v1/exists/networks",JSON.stringify(args))
                 .then(function(response) {
-                    $scope.network["_duplicated_"+field]=response.data.id;
+                    $scope.route["_duplicated_"+field]=response.data.id;
             });
         };
         $scope.new_saved = false;

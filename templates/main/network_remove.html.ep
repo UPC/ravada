@@ -1,8 +1,0 @@
-<div ng-show="network && network.id">
-    <%=l 'Are you sure you want to remove the' %> <%= $item %> {{network.name}}
-
-    <button ng-click="remove_network(network.id)"><%=l 'Yes' %></button>
-    <button onclick="location='/admin/networks'"><%=l 'Cancel' %></button>
-</div>
-
-<div ng-show="message">{{message}}</div>

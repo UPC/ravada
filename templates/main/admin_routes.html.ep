@@ -26,7 +26,7 @@
             class="row"
         >
             <div class="col-md-2">
-                <a href="/network/settings/{{network.id}}.html">{{network.name}}</a>
+                <a href="/route/settings/{{network.id}}.html">{{network.name}}</a>
             </div>
             <div class="col-md-2">{{network.address}}</div>
             <!--

@@ -1,6 +1,6 @@
 % my %tabs_item = (
 %    node => ['options' , 'bases', 'remove' , 'hostdev']
-%   ,network => ['options', 'machines', 'remove']
+%   ,route => ['options', 'machines', 'remove']
 %   ,storage => ['list', 'options', 'purge']
 % );
 % my $tabs = $tabs_item{$item};

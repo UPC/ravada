@@ -3,13 +3,13 @@
 <div class="row">
     <div class="col-md-3" align="right"><%=l 'name' %></div>
     <div class="col-md-8">
-        <input type="text" name="name" ng-model="network.name" required
+        <input type="text" name="name" ng-model="route.name" required
             ng-change='check_duplicate("name")'
         >
         <span ng-show="formNetwork.name.$error.required">
           <%=l 'Network name is required' %>
         </span>
-        <span ng-show="network._duplicated_name">
+        <span ng-show="route._duplicated_name">
           <%=l 'This name is duplicated' %>
         </span>
     </div>
@@ -18,19 +18,19 @@
 <div class="row">
     <div class="col-md-3" align="right"><%=l 'address' %></div>
     <div class="col-md-8" align="left">
-        <input type="text" name="address" ng-model="network.address" required ipaddress
+        <input type="text" name="address" ng-model="route.address" required ipaddress
             ng-change='check_duplicate("address")'
         >
         <span ng-show="formNetwork.address.$error.required"><%=l 'Network address is required.' %></span>
         <span ng-show="formNetwork.$error.ipformat"><%=l 'Invalid IP network address. Expecting a.b.c.d/e' %></span>
-        <span ng-show="network._duplicated_address"><%=l 'This address is duplicated' %></span>
+        <span ng-show="route._duplicated_address"><%=l 'This address is duplicated' %></span>
     </div>
 </div>
 
 <div class="row">
     <div class="col-md-3" align="right"><%=l 'password' %></div>
     <div class="col-md-1" align="left">
-        <input type="checkbox" name="address" ng-model="network.requires_password"
+        <input type="checkbox" name="address" ng-model="route.requires_password"
             ng-true-value="1" ng-false-value="0"
         >
     </div>
@@ -42,7 +42,7 @@
     <%=l 'All machines' %>
   </div>
     <div class="col-md-1" align="left">
-        <input type="checkbox" name="address" ng-model="network.all_domains"
+        <input type="checkbox" name="address" ng-model="route.all_domains"
             ng-true-value="1" ng-false-value="0"
             ng-change="check_all_domains()"
         >
@@ -53,7 +53,7 @@
 <div class="row">
     <div class="col-md-3" align="right"><%=l 'No machines' %></div>
     <div class="col-md-1" align="left">
-        <input type="checkbox" name="address" ng-model="network.no_domains"
+        <input type="checkbox" name="address" ng-model="route.no_domains"
             ng-true-value="1" ng-false-value="0"
             ng-change="check_no_domains()"
         >
@@ -65,19 +65,19 @@
 <div class="row">
     <div class="col-md-3" align="right"></div>
     <div class="col-md-4" align="left">
-        <button ng-show="network.id" class="btn btn-outline-secondary"
+        <button ng-show="route.id" class="btn btn-outline-secondary"
             ng-disabled="formNetwork.$pristine"
-        ng-click="load_network(network.id)"><%=l 'Cancel' %></button>
+        ng-click="load_network(route.id)"><%=l 'Cancel' %></button>
         <button
             class="btn btn-primary"
             ng-click="update_network()"
             ng-disabled="!formNetwork.$valid || formNetwork.$pristine
-            || (!network.all_domains && !network.no_domains)
-            || network._duplicated_name
-            || network._duplicated_address
+            || (!route.all_domains && !route.no_domains)
+            || route._duplicated_name
+            || route._duplicated_address
             "><%=l 'Save' %></button>
     </div>
-    <div ng-show="!network.all_domains && !network.no_domains">
+    <div ng-show="!route.all_domains && !route.no_domains">
         <%=l 'Set either' %> <i><%=l 'all machines' %></i> <%=l 'or' %> <i><%=l 'no machines' %></i> <%=l 'for users in this network' %>
     </div>
 </div>
@@ -87,6 +87,6 @@
 
 <div class="row">
     <div class="col-md-8 alert alert-info" ng-show="saved && formNetwork.$pristine">
-        <%=l 'Network' %> {{network.name}} <%=l 'saved.' %>
+        <%=l 'Network' %> {{route.name}} <%=l 'saved.' %>
     </div>
 </div>
