@@ -376,7 +376,9 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
         my ($source_node) = $disk->findnodes('source');
         my $file;
-        $file = $source_node->getAttribute('file')  if $source_node;
+        if ( $source_node ) {
+            $file = $self->_get_volume_file($source_node);
+        }
 
         my ($target_node) = $disk->findnodes('target');
         my ($driver_node) = $disk->findnodes('driver');
@@ -571,7 +573,7 @@ sub _set_volumes_backing_store($self) {
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
         next if $disk->getAttribute('device') ne 'disk';
         for my $source( $disk->findnodes('source')) {
-            my $file = $source->getAttribute('file');
+            my $file = $self->_get_volume_file($source);
             my $backing_file = $vol{$file}->backing_file();
 
             $self->_set_backing_store($disk, $backing_file);
@@ -579,6 +581,18 @@ sub _set_volumes_backing_store($self) {
         }
     }
     $self->reload_config($doc);
+}
+
+sub _get_volume_file($self, $source) {
+    return $source->getAttribute('file') if $source->getAttribute('file');
+
+                my $pool_name = $source->getAttribute('pool') or die "Error: I need pool or file in ".$source->toString();
+                my $volume = $source->getAttribute('volume') or die "Error: I need pool or file in ".$source->toString();
+                my $pool = $self->_vm->vm->get_storage_pool_by_name($pool_name)
+                    or die "Error: no pool $pool_name";
+                my $vol = $pool->get_volume_by_name($volume);
+     return $vol->get_path;
+
 }
 
 
