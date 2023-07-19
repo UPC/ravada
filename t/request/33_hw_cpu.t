@@ -326,6 +326,32 @@ sub test_current_max($vm) {
     wait_request();
 
     is($domain->needs_restart,0) or exit;
+
+    # now we req increase up , it should need restart and info increases too
+    my $req3 = Ravada::Request->change_hardware(
+        hardware => 'cpu'
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+        ,'data' => {
+                      '_can_edit' => 1,
+                      'vcpu' => {
+                                  'placement' => 'static',
+                                  '#text' => $max_cpu+1,
+                                  ,'current' => 2
+                                },
+                        'cpu'=> $info0->{hardware}->{cpu}->[0]->{cpu}
+         },
+    );
+    wait_request(debug => 1);
+
+    my $domain3 = Ravada::Front::Domain->open($domain->id);
+    is($domain3->needs_restart,1) or exit;
+
+    my $info3 = $domain3->info(user_admin);
+    is($info3->{hardware}->{cpu}->[0]->{vcpu}->{current},2);
+    is($info3->{hardware}->{cpu}->[0]->{vcpu}->{'#text'}, $max_cpu+1);
+    die Dumper($info3->{hardware}->{cpu}->[0]);
+
     $domain->remove(user_admin);
 }
 
