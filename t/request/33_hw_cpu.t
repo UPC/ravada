@@ -342,15 +342,14 @@ sub test_current_max($vm) {
                         'cpu'=> $info0->{hardware}->{cpu}->[0]->{cpu}
          },
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my $domain3 = Ravada::Front::Domain->open($domain->id);
     is($domain3->needs_restart,1) or exit;
 
     my $info3 = $domain3->info(user_admin);
-    is($info3->{hardware}->{cpu}->[0]->{vcpu}->{current},2);
-    is($info3->{hardware}->{cpu}->[0]->{vcpu}->{'#text'}, $max_cpu+1);
-    die Dumper($info3->{hardware}->{cpu}->[0]);
+    is($info3->{hardware}->{cpu}->[0]->{vcpu}->{current},2) or die $domain3->name;
+    is($info3->{hardware}->{cpu}->[0]->{vcpu}->{'#text'}, $max_cpu+1) or die $domain3->name;
 
     $domain->remove(user_admin);
 }
