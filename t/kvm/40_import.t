@@ -228,9 +228,9 @@ my $xml =<<EOT;
       <target chassis='4' port='0x12'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x2'/>
     </controller>
-    <interface type='bridge'>
+    <interface type='network'>
       <mac address='52:54:00:71:50:60'/>
-      <source bridge='HostOnly'/>
+      <source network='default'/>
       <model type='rtl8139'/>
       <address type='pci' domain='0x0000' bus='0x02' slot='0x01' function='0x0'/>
     </interface>
@@ -274,6 +274,17 @@ EOT
     is(''.$@,'') or exit;
     ok($domain,"Importing domain $dom_name") or exit;
 
+    my $req = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+
+    );
+    wait_request();
+
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    $domain_f->info(user_admin);
+
+    $domain->remove(user_admin);
 
 }
 
