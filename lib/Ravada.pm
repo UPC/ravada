@@ -495,7 +495,6 @@ sub _update_isos {
         ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
             ,min_disk_size => '2'
             ,options => { machine => 'pc-q35', bios => 'UEFI'
-                ,hardware => { cpu => { cpu => { topology => { threads => 2, cores => 2}}}}
             }
         }
         ,alpine381_32 => {
