@@ -423,13 +423,13 @@
                         if ($scope.showmachine.is_base) {
                             $scope.copy_is_volatile = $scope.showmachine.volatile_clones;
                         }
+                        $scope.topology_changed();
                         if (!subscribed_extra) {
                             subscribed_extra = true;
                             subscribe_nodes(url,data.type);
                             //subscribe_bases(url);
                         }
                         if ($scope.edit) { $scope.lock_info = true }
-                        $scope.topology_changed();
                         update_info_settings();
                     });
                     _select_new_base();

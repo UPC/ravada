@@ -73,7 +73,6 @@
                 </div>
                 <div class="col-lg-2">
                     <input class="form-control" type="text" name="ram" size="5"
-                    ng-disabled="<%= (!$USER->is_admin or 0 ) %> || topology"
                     ng-blur="request('change_hardware',{
                         'id_domain': showmachine.id
                         ,'hardware': 'memory'
@@ -107,13 +106,19 @@
                 <div class="col-lg-2">
                     <input class="form-control" type="number" name="max_cpus" size="5"
                     min="1"
-                    ng-disabled="<%= !$USER->is_admin %>"
+                    ng-disabled="<%= (!$USER->is_admin or 0) %> || topology"
                     ng-change="request('change_hardware',{
                         'id_domain': showmachine.id
                         ,'hardware': 'vcpus'
                         ,'data': { 'max_virt_cpu': new_max_virt_cpu }
                         })"
                     ng-model="new_max_virt_cpu">
+                </div>
+                <div class="col-lg-7" ng-show="topology">
+                    <small class="text-secondary">
+                    This virtual machine has CPU topology defined.
+                    Change it in the hardware settings.
+                    </small>
                 </div>
            </div>
 
@@ -124,7 +129,7 @@
                 <div class="col-lg-2">
                     <input class="form-control" type="number" name="cpus" size="5"
                     min="1" max="{{max_virt_cpu}}"
-                    ng-disabled="<%= !$USER->is_admin %>"
+                    ng-disabled="<%= (!$USER->is_admin or 0) %> || topology"
                     ng-change="request('change_hardware',{
                         'id_domain': showmachine.id
                         ,'hardware': 'vcpus'
