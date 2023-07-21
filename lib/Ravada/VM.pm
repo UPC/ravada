@@ -1436,6 +1436,8 @@ sub _insert_network($self, $net) {
     ." VALUES(".join(",",map { '?' } keys %$net).")";
     my $sth = $self->_dbh->prepare($sql);
     $sth->execute(map { $net->{$_} } sort keys %$net);
+
+    $net->{id} = Ravada::Utils::last_insert_id($$CONNECTOR->dbh);
 }
 
 sub _update_network($self, $net) {
@@ -1445,10 +1447,12 @@ sub _update_network($self, $net) {
     $sth->execute($self->id,$net->{internal_id});
     my $db_net = $sth->fetchrow_hashref();
     if (!$db_net) {
-        return $self->_insert_network($net);
+        $self->_insert_network($net);
+    } else {
+        $net->{id}  = $db_net->{id};
     }
     delete $db_net->{date_changed};
-    delete $db_net->{id};
+    #    delete $db_net->{id};
 }
 
 sub _around_create_network($orig, $self,$data, $id_owner) {
@@ -1471,7 +1475,7 @@ sub _around_remove_network($orig, $self, $user, $id_net) {
     die "Error: Access denied: ".$user->name." can not remove networks"
     unless $user->can_create_networks();
 
-    my ($net) = grep { $_->{id} == $id_net } $self->list_networks();
+    my ($net) = grep { $_->{id} eq $id_net } $self->list_virtual_networks();
 
     die "Error: network id $id_net not found" if !$net;
 

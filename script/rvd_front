@@ -354,6 +354,19 @@ get '/admin/storage' => sub($c) {
 
 };
 
+get '/admin/networks' => sub($c) {
+
+    _add_admin_libs($c);
+    _select_vm($c);
+
+    $c->stash(tab => ($c->param('tab') or ''));
+    $c->stash('item' => 'network');
+    $c->stash('id' => $c->stash('id_vm'));
+
+    return $c->render( template => '/main/settings_generic' );
+
+};
+
 any '/admin/#type' => sub {
   my $c = shift;
 

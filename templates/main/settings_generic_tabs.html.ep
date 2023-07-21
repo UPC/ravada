@@ -2,6 +2,7 @@
 %    node => ['options' , 'bases', 'remove' , 'hostdev']
 %   ,route => ['options', 'machines', 'remove']
 %   ,storage => ['list', 'options', 'purge']
+%   ,network => ['list', 'options', 'remove']
 % );
 % my $tabs = $tabs_item{$item};
 

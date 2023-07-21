@@ -44,6 +44,10 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
                             <a class="dropdown-item" href="/admin/routes"><i class="fa fa-sitemap" aria-hidden="true"></i>&nbsp;<%=l 'Routes' %></a>
                             <a class="dropdown-item" href="/admin/storage"><i class="fa fa-hdd" aria-hidden="true"></i>&nbsp;<%=l 'Storage' %></a>
 % }
+
+% if ($_user->can_create_networks) {
+                            <a class="dropdown-item" href="/admin/networks"><i class="fa fa-sitemap" aria-hidden="true"></i>&nbsp;<%=l 'Networks' %></a>
+% }
                             <a class="dropdown-item" href="/admin/messages"><i class="fa fa-envelope" aria-hidden="true"></i>&nbsp;<%=l 'Messages' %></a>
 % if ($monitoring) {
                             <a class="dropdown-item" href="/admin/monitoring"><i class="fas fa-tachometer-alt" aria-hidden="true"></i>&nbsp;<%=l 'Monitoring' %></a>

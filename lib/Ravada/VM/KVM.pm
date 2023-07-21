@@ -2981,6 +2981,12 @@ sub create_network($self, $data) {
 }
 
 sub remove_network($self, $name) {
+    my $net = $self->vm->get_network_by_name($name);
+    die "Error: This network can not be removed ".$net->get_name
+    if $net->get_name eq 'default';
+
+    $net->destroy() if $net->is_active;
+    $net->undefine();
 }
 
 

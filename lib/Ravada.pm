@@ -1638,6 +1638,7 @@ sub _add_indexes_generic($self) {
         ,virtual_networks => [
             "unique(id_vm,internal_id)"
             ,"index(date_changed)"
+            ,"index(id_owner)"
         ]
     );
     my $if_not_exists = '';
@@ -6593,7 +6594,7 @@ sub _cmd_remove_files($self, $request) {
 }
 
 sub _cmd_create_network($self, $request) {
-    my $user=Ravada::Auth::SQL->search_by_id($request->args('id_owner'));
+    my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
     die "Error: ".$user->name." not authorized\n"
     unless $user->can_create_networks;
 
@@ -6603,13 +6604,13 @@ sub _cmd_create_network($self, $request) {
 }
 
 sub _cmd_remove_network($self, $request) {
-    my $user=Ravada::Auth::SQL->search_by_id($request->args('id_owner'));
+    my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
     die "Error: ".$user->name." not authorized\n"
     unless $user->can_create_networks;
 
     my $id = $request->args('id_vm');
     my $vm = Ravada::VM->open($id);
-    $vm->remove_network($id,$request->args('uid'));
+    $vm->remove_network($user, $request->args('id'));
 }
 
 

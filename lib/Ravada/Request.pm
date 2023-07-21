@@ -163,6 +163,9 @@ our %VALID_ARG = (
     ,update_iso_urls => { uid => 1 }
     ,list_unused_volumes => {uid => 1, id_vm => 1, start => 2, limit => 2 }
     ,remove_files => { uid => 1, id_vm => 1, files => 1 }
+
+    ,create_network => { uid => 1, id_vm => 1, data => 1 }
+    ,remove_network => { uid => 1, id_vm => 1, id => 1 }
 );
 
 $VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};
