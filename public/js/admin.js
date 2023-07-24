@@ -905,13 +905,28 @@ ravadaApp.directive("solShowMachine", swMach)
 
     function settings_network($scope, $http, $interval, $timeout) {
         $scope.init = function(id) {
-            console.log($scope.network);
+            $scope.load_network(id);
         };
-        $scope.network = {
-            'id': 1
-            ,'name': 'default'
-            ,'_old_name': 'default'
+        $scope.load_network = function(id) {
+            $http.get('/v2/network/info/'+id)
+                .then(function(response) {
+                $scope.network = response.data;
+                $scope.network._old_name = $scope.network.name;
+            });
+
         };
+
+        $scope.update_network = function() {
+            $http.post('/v2/network/set/'
+                , JSON.stringify($scope.network))
+                .then(function(response) {
+                    if (response.data.ok == 1){
+                        $scope.saved = true;
+                    }
+                    $scope.error = response.data.error;
+                });
+        };
+
     }
 
 

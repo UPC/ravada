@@ -502,6 +502,24 @@ get '/route/list_domains/#id' => sub($c) {
     return $c->render( json => $RAVADA->list_bases_network($c->stash('id')));
 };
 
+get '/v2/network/info/#id' => sub($c) {
+    my $sth = $RAVADA->_dbh->prepare("SELECT * from virtual_networks WHERE id=?");
+    $sth->execute($c->stash('id'));
+    my $row = $sth->fetchrow_hashref;
+    return $c->render(json => $row);
+};
+
+post '/v2/network/set' => sub($c) {
+    return access_denied($c) if !$USER->is_admin;
+
+    my $arg = decode_json($c->req->body);
+    Ravada::Request->change_network(
+        uid => $USER->id
+        ,data => $arg
+    );
+    return $c->render(json => { ok => 1 });
+};
+
 sub _add_admin_libs($c) {
     push @{$c->stash->{js}}, '/js/admin.js?v='.$RAVADA->version;
     push @{$c->stash->{css}}, '/css/admin.css';
