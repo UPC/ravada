@@ -165,7 +165,8 @@ our %VALID_ARG = (
     ,remove_files => { uid => 1, id_vm => 1, files => 1 }
 
     ,create_network => { uid => 1, id_vm => 1, data => 1 }
-    ,remove_network => { uid => 1, id_vm => 1, id => 1 }
+    ,remove_network => { uid => 1, id => 1 }
+    ,change_network => { uid => 1, data => 1 }
 );
 
 $VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};

@@ -6176,6 +6176,7 @@ sub _req_method {
 
     ,create_network => \&_cmd_create_network
     ,remove_network => \&_cmd_remove_network
+    ,change_network => \&_cmd_change_network
 
     );
     return $methods{$cmd};
@@ -6609,11 +6610,18 @@ sub _cmd_remove_network($self, $request) {
     die "Error: ".$user->name." not authorized\n"
     unless $user->can_create_networks;
 
-    my $id = $request->args('id_vm');
-    my $vm = Ravada::VM->open($id);
-    $vm->remove_network($user, $request->args('id'));
+    my $id = $request->args('id');
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id_vm FROM virtual_networks WHERE id=?")
+    $sth->execute($id);
+    my ($id_vm) = $sth->fetchrow;
+
+    my $vm = Ravada::VM->open($id_vm);
+    $vm->remove_network($user, $id);
 }
 
+sub _cmd_change_network($self, $request) {
+}
 
 sub _cmd_active_storage_pool($self, $request) {
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));

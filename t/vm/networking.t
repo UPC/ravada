@@ -85,6 +85,20 @@ sub test_remove_network($vm, $net) {
     ok(!$new,"Expecting removed network $net->{name}") or exit;
 }
 
+sub test_change_network($net) {
+    my %net2 = %$net;
+    $net2{dhcp_end} = 100;
+    my $req = Ravada::Request->change_network(
+        uid => user_admin->id
+        ,data => \%net2
+    );
+    wait_request();
+    my $vm = Ravada::VM->open($net->{id_vm});
+
+    my($new) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks();
+    is($new->{dhcp_end},$net2{dhcp_end});
+}
+
 ########################################################################
 
 init();
@@ -111,6 +125,8 @@ for my $vm_name ( vm_names() ) {
 
         test_list_networks($vm);
         my $net = test_add_network($vm);
+
+        test_change_network($net);
 
         test_remove_network($vm,$net);
     }
