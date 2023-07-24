@@ -1637,6 +1637,7 @@ sub _add_indexes_generic($self) {
         ]
         ,virtual_networks => [
             "unique(id_vm,internal_id)"
+            ,"unique(id_vm,name)"
             ,"index(date_changed)"
             ,"index(id_owner)"
         ]

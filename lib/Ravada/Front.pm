@@ -1680,6 +1680,20 @@ sub list_storage_pools($self, $uid, $id_vm, $active=undef) {
     return _filter_active($pools, $active);
 }
 
+sub list_networks($self, $id_vm) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM virtual_networks "
+        ." WHERE id_vm=?"
+        ." ORDER BY name"
+    );
+    $sth->execute($id_vm);
+    my @networks;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @networks,($row);
+    }
+    return \@networks;
+}
+
 sub _filter_active($pools, $active) {
     return $pools if !defined $active;
 

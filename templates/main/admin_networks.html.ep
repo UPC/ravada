@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+<div id="wrapper">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper" ng-controller='manage_networks'
+        ng-init="init('<%= $id_vm %>')">
+    <div id="admin-content">
+        <div class="row">
+            <div class="col-md-8"><h2><%=l 'Networks' %></h2></div>
+            <div class="col-md-4" align="right">
+                  <h2><a type="button"
+                          class="btn btn-success" href="/network/new">
+                            <b><%=l 'New Network' %></b></a>
+                  </h2>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4"></div>
+            <!-- <div class="col-md-2">enabled</div> -->
+        </div>
+        <div ng-repeat="network in networks | orderObjectBy:'n_order'"
+            class="row"
+        >
+            <div class="col-md-2">
+                <a href="/network/settings/{{network.id}}.html">{{network.name}}</a>
+            </div>
+            <div class="col-md-2">{{network.address}}</div>
+            <!--
+            <div class="col-md-2">
+                <input type="checkbox" ng-model="network.no_domains"
+                    ng-true-value="0" ng-false-value="1"
+                    ng-change
+                    ="update_network(network.id,'no_domains')"
+                >
+            </div>
+            -->
+        </div>
+    </div>
+    </div>
+</div>
+
+%= include $footer
+%= include 'bootstrap/scripts'
+</body>
+</html>

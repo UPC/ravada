@@ -9,6 +9,7 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("manage_nodes",manage_nodes)
         .controller("manage_routes",manage_routes)
         .controller("manage_networks",manage_networks)
+        .controller("settings_network",settings_network)
         .controller("settings_node",settings_node)
         .controller("settings_storage",settings_storage)
         .controller("settings_route",settings_route)
@@ -863,6 +864,20 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.list_nodes();
         $interval($scope.list_nodes,30 * 1000);
     };
+    function manage_networks($scope, $http, $interval, $timeout) {
+        $scope.init = function(id_vm) {
+            $scope.list_networks(id_vm);
+        }
+        $scope.list_networks = function(id_vm) {
+            $http.get('/vm/list_networks/'+id_vm).then(function(response) {
+                    for (var i=0; i<response.data.length; i++) {
+                        var item = response.data[i];
+                        $scope.networks[item.id] = item;
+                    }
+                });
+        }
+        $scope.networks = {};
+    }
 
     function manage_routes($scope, $http, $interval, $timeout) {
         list_routes = function() {
@@ -888,16 +903,14 @@ ravadaApp.directive("solShowMachine", swMach)
         list_routes();
     }
 
-    function manage_networks($scope, $http, $interval, $timeout) {
-        $scope.subscribe = function(url) {
-            var ws = new WebSocket(url);
-            ws.onopen = function(event) { ws.send('list_networks') };
-            ws.onmessage = function(event) {
-                var data = JSON.parse(event.data);
-                $scope.$apply(function () {
-                    $scope.networks = data;
-                 });
-            }
+    function settings_network($scope, $http, $interval, $timeout) {
+        $scope.init = function(id) {
+            console.log($scope.network);
+        };
+        $scope.network = {
+            'id': 1
+            ,'name': 'default'
+            ,'_old_name': 'default'
         };
     }
 
