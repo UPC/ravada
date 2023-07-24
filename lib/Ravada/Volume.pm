@@ -111,6 +111,10 @@ sub BUILD($self, $arg) {
     } elsif (exists $arg->{info}) {
         if (exists $arg->{info}->{device} && $arg->{info}->{device} eq 'cdrom') {
             $class = "Ravada::Volume::ISO";
+        } elsif(exists $arg->{info}->{driver} && exists $arg->{info}->{driver}->{type}) {
+            my $name = 'unknown';
+            $name = $arg->{info}->{name} if exists $arg->{info}->{name};
+            $class = "Ravada::Volume::"._type_from_extension("$name.".$arg->{info}->{driver}->{type});
         } else {
             confess "I can't guess class from ".Dumper($arg);
         }
