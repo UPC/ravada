@@ -920,10 +920,6 @@ ravadaApp.directive("solShowMachine", swMach)
             $http.post('/v2/network/set/'
                 , JSON.stringify($scope.network))
                 .then(function(response) {
-                    if (response.data.ok == 1){
-                        $scope.saved = true;
-                    }
-                    $scope.error = response.data.error;
                 });
         };
 

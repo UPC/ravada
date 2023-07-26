@@ -2941,8 +2941,8 @@ sub list_virtual_networks($self) {
         my ($dhcp_range) = $ip_doc->findnodes("dhcp/range");
         my ($start,$end);
         if ($dhcp_range) {
-            ($start) = $dhcp_range->getAttribute('start') =~ /.*\.(\d+)/;
-            ($end) = $dhcp_range->getAttribute('end')=~ /.*\.(\d+)/;
+            $start = $dhcp_range->getAttribute('start');
+            $end = $dhcp_range->getAttribute('end');
             $data->{dhcp_start} = $start if defined $start;
             $data->{dhcp_end} = $end if defined $end;
         }
@@ -2978,6 +2978,9 @@ sub create_network($self, $data) {
     my $xml2=XML::LibXML->load_xml(string =>$new_network->get_xml_description());
     my ($uuid) = $xml2->findnodes("/network/uuid/text()");
     $data->{internal_id} = $uuid;
+
+    $new_network->create();
+    $new_network->set_autostart(1);
 }
 
 sub remove_network($self, $name) {
@@ -2989,7 +2992,82 @@ sub remove_network($self, $name) {
     $net->undefine();
 }
 
+sub change_network($self, $data) {
+    my $network = $self->vm->get_network_by_uuid($data->{internal_id});
+    die "Error: Unknown network $data->{name}" if !$network;
 
+    my $doc = XML::LibXML->load_xml(string => $network->get_xml_description);
+    my $changed = 0;
+    my $bridge = delete $data->{bridge};
+    my ($bridge_xml) = $doc->findnodes("/network/bridge");
+    if ($bridge_xml->getAttribute('name') ne $bridge) {
+        $bridge_xml->setAttribute(name => $bridge);
+        $changed++;
+    }
+    my $dhcp_start = delete $data->{dhcp_start};
+    my $dhcp_end = delete $data->{dhcp_end};
+    my ($dhcp_xml) = $doc->findnodes("/network/ip/dhcp/range");
+    if ($dhcp_xml->getAttribute('start') ne $dhcp_start) {
+        $dhcp_xml->setAttribute('start' => $dhcp_start);
+        $changed++;
+    }
+    if ($dhcp_xml->getAttribute('end') ne $dhcp_end) {
+        $dhcp_xml->setAttribute('end' => $dhcp_end);
+        $changed++;
+    }
+    my $ip_address = delete $data->{ip_address};
+    my ($ip_xml) = $doc->findnodes("/network/ip");
+    if ($ip_address ne $ip_xml->getAttribute('address')) {
+        $ip_xml->setAttribute('address' => $ip_address);
+        $changed++;
+    }
+    my $ip_netmask = delete $data->{ip_netmask};
+    if ($ip_netmask ne $ip_xml->getAttribute('netmask')) {
+        $ip_xml->setAttribute('netmask' => $ip_netmask);
+        $changed++;
+    }
+    my $name = delete $data->{name};
+    my ($name_xml) = $doc->findnodes("/network/name/text()");
+    if (''.$name_xml ne $name) {
+        die "Error: networks can not be renamed";
+    }
 
+    if ($changed) {
+        $network->destroy();
+        $network= $self->vm->define_network($doc->toString);
+        $network->create();
+    }
+
+    my $is_active = delete $data->{is_active};
+    if (defined $is_active) {
+        if ($is_active && ! $network->is_active) {
+            $network->create();
+            $changed++;
+        }
+        if (!$is_active && $network->is_active) {
+            $network->destroy;
+            $changed++;
+        }
+    }
+
+    my $autostart = delete $data->{autostart};
+    if (defined $autostart) {
+        if ($autostart && ! $network->get_autostart) {
+            $network->set_autostart(1);
+            $changed++;
+        }
+        if (!$autostart && $network->get_autostart) {
+            $network->set_autostart(0);
+            $changed++;
+        }
+    }
+
+    for ('id_vm','internal_id','id' ,'_old_name', 'date_changed') {
+        delete $data->{$_};
+    }
+    die "Error: unexpected args ".Dumper($data) if keys %$data;
+
+    return $changed;
+}
 
 1;

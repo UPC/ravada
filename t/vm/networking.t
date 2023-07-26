@@ -61,9 +61,11 @@ sub test_add_network($vm) {
     my($new) = grep { $_->{name} eq $name } $vm->list_virtual_networks();
     ok($new,"Expecting new network $name created") or return;
 
-    is($new->{dhcp_start},2);
-    is($new->{dhcp_end},254);
+    like($new->{dhcp_start},qr/.*\.2$/);
+    like($new->{dhcp_end},qr/.*\.254$/);
     ok($new->{internal_id});
+    is($new->{is_active},1);
+    is($new->{autostart},1);
     return $new;
 }
 
@@ -72,22 +74,30 @@ sub test_remove_network($vm, $net) {
     my $req = Ravada::Request->remove_network(
         uid => $user->id
         ,id => $net->{id}
-        ,id_vm => $vm->id
     );
     wait_request(check_error => 0);
     like($req->error,qr/not authorized/);
     user_admin->make_admin($user->id);
     $req->status('requested');
 
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my($new) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks();
     ok(!$new,"Expecting removed network $net->{name}") or exit;
 }
 
+sub _check_network_changed($net, $field) {
+    my $sth = connector->dbh->prepare(
+        "SELECT * FROM virtual_networks WHERE id=?"
+    );
+    $sth->execute($net->{id});
+    my $row = $sth->fetchrow_hashref;
+    is($row->{$field},$net->{$field}, $field) or exit;
+}
+
 sub test_change_network($net) {
     my %net2 = %$net;
-    $net2{dhcp_end} = 100;
+    $net2{dhcp_end} =~ s/(.*)\.\d+$/$1.100/;
     my $req = Ravada::Request->change_network(
         uid => user_admin->id
         ,data => \%net2
@@ -96,7 +106,107 @@ sub test_change_network($net) {
     my $vm = Ravada::VM->open($net->{id_vm});
 
     my($new) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks();
-    is($new->{dhcp_end},$net2{dhcp_end});
+    is($new->{dhcp_end},$net2{dhcp_end}) or die $net->{name};
+
+    _check_network_changed($new,'dhcp_end');
+
+    for my $is (0, 1) {
+        $net2{is_active} = $is;
+        $req = Ravada::Request->change_network(
+            uid => user_admin->id
+            ,data => \%net2
+        );
+        wait_request(debug => 0);
+
+        ($new) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks();
+        is($new->{is_active},$is);
+        _check_network_changed($new,'is_active');
+    }
+
+    $net2{autostart} = 0;
+    $req = Ravada::Request->change_network(
+        uid => user_admin->id
+        ,data => \%net2
+    );
+    wait_request();
+
+    ($new) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks();
+    is($new->{autostart},0);
+    _check_network_changed($new,'autostart');
+
+    my ($default) = grep { $_->{name} eq 'default' } $vm->list_virtual_networks();
+    $net2{bridge} = $default->{bridge};
+    $req = Ravada::Request->change_network(
+        uid => user_admin->id
+        ,data => \%net2
+    );
+    wait_request(check_error => 0);
+
+    ($new) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks();
+    isnt($new->{bridge},$default->{bridge});
+    _check_network_changed($new,'bridge') or exit;
+
+    $net2{name} = new_domain_name();
+    $req = Ravada::Request->change_network(
+        uid => user_admin->id
+        ,data => \%net2
+    );
+    wait_request(check_error => 0 );
+
+    like($req->error,qr/can not be renamed/);
+
+}
+
+sub test_change_network_internal($vm, $net) {
+    return if $vm->type ne 'KVM';
+
+    my $network = $vm->vm->get_network_by_name($net->{name});
+    die "Error: I can't find network $net->{name}" if !$network;
+
+    my $doc = XML::LibXML->load_xml( string => $network->get_xml_description );
+    my ($range) = $doc->findnodes("/network/ip/dhcp/range");
+    my $start_new = $range->getAttribute('start');
+    my ($n) = $start_new =~ /.*\.(\d+)/;
+    $n++;
+    $start_new =~ s/(.*)\.(\d+)/$1.$n/;
+    $range->setAttribute('start' , $start_new);
+
+    $network->destroy();
+    $network= $vm->vm->define_network($doc->toString);
+    $network->create();
+
+    my $network2 = $vm->vm->get_network_by_name($net->{name});
+    my ($range2) = $doc->findnodes("/network/ip/dhcp/range");
+    is($range2->getAttribute('start'), $start_new) or exit;
+
+    my ($net2) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks();
+    is($net2->{dhcp_start},$start_new) or exit;
+
+}
+
+sub test_disapeared_network($vm) {
+    return if $vm->type ne 'KVM';
+    my $net = test_add_network($vm);
+
+    my $network = $vm->vm->get_network_by_name($net->{name});
+    $network->destroy() if $network->is_active;
+    $network->undefine();
+
+    my ($net2) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks();
+    ok(!$net2, "Expecting $net->{name} removed");
+
+    my $sth = connector->dbh->prepare("SELECT * FROM virtual_networks WHERE name=?");
+    $sth->execute($net->{name});
+    my $row = $sth->fetchrow_hashref;
+    ok(!$row,"Expected $net->{name} removed from db".Dumper($row)) or exit;
+
+    my ($default) = grep { $_->{name} eq 'default' } $vm->list_virtual_networks();
+    ok($default) or exit;
+
+    $sth->execute('default');
+    $row = $sth->fetchrow_hashref;
+    (!$row,"Expected $net->{name} removed from db".Dumper($row)) or exit;
+
 }
 
 ########################################################################
@@ -123,8 +233,12 @@ for my $vm_name ( vm_names() ) {
         is($vm->has_networking,1) if $vm_name eq 'KVM';
         next if !$vm->has_networking();
 
+        test_disapeared_network($vm);
+
         test_list_networks($vm);
         my $net = test_add_network($vm);
+
+        test_change_network_internal($vm, $net);
 
         test_change_network($net);
 

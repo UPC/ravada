@@ -666,6 +666,8 @@ sub active_storage_pool($self, $name, $value) {
     $self->write_file($file_sp, Dump( \@list));
 }
 
+sub change_network {}
+
 #########################################################################3
 
 1;

@@ -2376,8 +2376,8 @@ sub _sql_create_tables($self) {
                 ,bridge => 'char(80)'
                 ,'ip_address' => 'char(20)'
                 ,'ip_netmask' => 'char(20)'
-                ,'dhcp_start' => 'integer'
-                ,'dhcp_end' => 'integer'
+                ,'dhcp_start' => 'char(15)'
+                ,'dhcp_end' => 'char(15)'
                 ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
             }
         ]
@@ -6612,7 +6612,7 @@ sub _cmd_remove_network($self, $request) {
 
     my $id = $request->args('id');
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id_vm FROM virtual_networks WHERE id=?")
+        "SELECT id_vm FROM virtual_networks WHERE id=?");
     $sth->execute($id);
     my ($id_vm) = $sth->fetchrow;
 
@@ -6621,6 +6621,21 @@ sub _cmd_remove_network($self, $request) {
 }
 
 sub _cmd_change_network($self, $request) {
+    my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    my $data = $request->args('data');
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM virtual_networks WHERE id=?"
+    );
+    $sth->execute($data->{id});
+    my $network = $sth->fetchrow_hashref;
+
+    die "Error: ".$user->name." not authorized\n"
+    unless $user->is_admin
+    || ( $user->can_create_networks && $network->{id_owner} == $user->id);
+
+    my $vm = Ravada::VM->open($data->{id_vm});
+    $vm->change_network($data);
 }
 
 sub _cmd_active_storage_pool($self, $request) {

@@ -158,6 +158,7 @@ around '_list_used_volumes' => \&_around_list_used_volumes;
 around 'create_network' => \&_around_create_network;
 around 'remove_network' => \&_around_remove_network;
 around 'list_virtual_networks' => \&_around_list_networks;
+around 'change_network' => \&_around_change_network;
 
 #############################################################
 #
@@ -1480,13 +1481,44 @@ sub _around_remove_network($orig, $self, $user, $id_net) {
     die "Error: network id $id_net not found" if !$net;
 
     $self->$orig($net->{name});
+
+    my $sth = $self->_dbh->prepare("DELETE FROM virtual_networks WHERE id=?");
+    $sth->execute($id_net);
 }
 
+sub _around_change_network($orig, $self, $data) {
+    delete $data->{_old_name};
+    delete $data->{date_changed};
+    my %data2 = %$data;
+    delete $data->{id_owner};
+
+    my $changed = $orig->($self, $data);
+    return if !$changed;
+
+    my $id = delete $data2{id};
+    my $sql = "";
+    for my $field (sort keys %data2) {
+        $sql .= ", " if $sql;
+        $sql .=" $field=? "
+    }
+    $sql = "UPDATE virtual_networks set $sql WHERE id=?";
+    my $sth = $self->_dbh->prepare($sql);
+    my @values = map { $data2{$_} } sort keys %data2;
+    $sth->execute(@values, $id);
+}
 
 sub _around_list_networks($orig, $self) {
     my @list = $orig->($self);
     for my $net ( @list ) {
         $self->_update_network($net);
+    }
+    my $sth = $self->_dbh->prepare("SELECT id,name FROM virtual_networks");
+    my $sth_delete = $self->_dbh->prepare("DELETE FROM virtual_networks where id=?");
+    $sth->execute;
+    while (my ($id,$name) = $sth->fetchrow) {
+        my ($found) = grep {$_->{name} eq $name } @list;
+        next if $found;
+        $sth_delete->execute($id);
     }
     return @list;
 }

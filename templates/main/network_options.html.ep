@@ -4,7 +4,7 @@
 <div class="form-group row">
     <div class="col-md-3" align="right"><%=l 'Name' %></div>
     <div class="col-md-8">
-        <input type="text" ng-model="network.name"/>
+        <input type="text" ng-model="network.name" disabled/>
     </div>
 </div>
 
@@ -18,16 +18,15 @@
 <div class="form-group row">
     <div class="col-md-3" align="right"><%=l 'DHCP start' %></div>
     <div class="col-md-2">
-        <input type="number" min="2" max="{{network.dhcp_end-1}}"
+        <input type="text"
             ng-model="network.dhcp_start"/>
     </div>
 </div>
 
 <div class="form-group row">
-    <div class="col-md-3" align="right"><%=l 'DHCP start' %></div>
+    <div class="col-md-3" align="right"><%=l 'DHCP end' %></div>
     <div class="col-md-3">
-        <input type="number" min="{{network.dhcp_start+1}}"
-            max="254" ng-model="network.dhcp_end"/>
+        <input type="text" ng-model="network.dhcp_end"/>
     </div>
 </div>
 
@@ -49,7 +48,7 @@
     <div class="col-md-3" align="right"><%=l 'Auto Start' %></div>
     <div class="col-md-3">
         <input type="checkbox" ng-model="network.autostart"
-            ng-true-value="1" ng-true-value="0"
+            ng-true-value="1" ng-false-value="0"
         />
     </div>
 </div>
@@ -58,7 +57,7 @@
     <div class="col-md-3" align="right"><%=l 'Active' %></div>
     <div class="col-md-3">
         <input type="checkbox" ng-model="network.is_active"
-            ng-true-value="1" ng-true-value="0"
+            ng-true-value="1" ng-false-value="0"
         />
     </div>
 </div>
@@ -70,11 +69,10 @@
             ng-click="load_network(network.id)"><%=l 'Cancel' %></button>
         <button class="btn btn-primary"
             ng-click="update_network(); form_options.$pristine=true"
-            ng-disabled="!form_options.$valid || form_options.$pristine
-            "><%=l 'Save' %></button>
+            ng-disabled="!form_options.$valid"
+            ><%=l 'Save' %></button>
     </div>
 </div>
-
 
 </form>
 </div>
