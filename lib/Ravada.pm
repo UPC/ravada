@@ -787,24 +787,24 @@ sub _update_isos {
             ,min_disk_size => '10'
         }
         ,kali_64 => {
-            name => 'Kali Linux 2022'
-            ,description => 'Kali Linux 2022 64 Bits'
+            name => 'Kali Linux 2023'
+            ,description => 'Kali Linux 2023 64 Bits'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2022.\d+/'
-            ,file_re => 'kali-linux-202\d.\d+-installer-amd64.iso'
+            ,url => 'https://cdimage.kali.org/kali-2023.2/'
+            ,file_re => 'kali-linux-2023.2a-installer-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
         ,kali_64_netinst => {
-            name => 'Kali Linux 2022 (NetInstaller)'
-            ,description => 'Kali Linux 2022 64 Bits (light NetInstall)'
+            name => 'Kali Linux 2023 (NetInstaller)'
+            ,description => 'Kali Linux 2023 64 Bits (light NetInstall)'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2022.\d+/'
-            ,file_re => 'kali-linux-202\d.\d+-installer-netinst-amd64.iso'
+            ,url => 'https://cdimage.kali.org/kali-2023.2/'
+            ,file_re => 'kali-linux-2023.2a-installer-netinst-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
