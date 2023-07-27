@@ -183,7 +183,8 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             shutdown_node reboot_node start_node
             compact purge
             start_domain
-            change_network
+
+            create_network change_network remove_network
     );
 
 our %CMD_NO_DUPLICATE = map { $_ => 1 }

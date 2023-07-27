@@ -4,22 +4,36 @@
 <div class="form-group row">
     <div class="col-md-3" align="right"><%=l 'Name' %></div>
     <div class="col-md-8">
-        <input type="text" ng-model="network.name" disabled/>
+        <input type="text" ng-model="network.name" required
+        ng-disabled="network.id"/>
     </div>
 </div>
 
 <div class="form-group row">
     <div class="col-md-3" align="right"><%=l 'Bridge' %></div>
     <div class="col-md-8">
-        <input type="text" ng-model="network.bridge"/>
+        <input type="text" ng-model="network.bridge" required/>
+    </div>
+</div>
+
+<div class="form-group row">
+    <div class="col-md-3" align="right"><%=l 'IP address' %></div>
+    <div class="col-md-3">
+        <input type="text" required ng-model="network.ip_address"/>
+    </div>
+</div>
+
+<div class="form-group row">
+    <div class="col-md-3" align="right"><%=l 'Netmask' %></div>
+    <div class="col-md-3">
+        <input type="text" required ng-model="network.ip_netmask"/>
     </div>
 </div>
 
 <div class="form-group row">
     <div class="col-md-3" align="right"><%=l 'DHCP start' %></div>
     <div class="col-md-2">
-        <input type="text"
-            ng-model="network.dhcp_start"/>
+        <input type="text" ng-model="network.dhcp_start"/>
     </div>
 </div>
 
@@ -27,20 +41,6 @@
     <div class="col-md-3" align="right"><%=l 'DHCP end' %></div>
     <div class="col-md-3">
         <input type="text" ng-model="network.dhcp_end"/>
-    </div>
-</div>
-
-<div class="form-group row">
-    <div class="col-md-3" align="right"><%=l 'IP address' %></div>
-    <div class="col-md-3">
-        <input type="text" ng-model="network.ip_address"/>
-    </div>
-</div>
-
-<div class="form-group row">
-    <div class="col-md-3" align="right"><%=l 'Netmask' %></div>
-    <div class="col-md-3">
-        <input type="text" ng-model="network.ip_netmask"/>
     </div>
 </div>
 

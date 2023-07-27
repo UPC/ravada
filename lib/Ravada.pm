@@ -6600,7 +6600,7 @@ sub _cmd_create_network($self, $request) {
     die "Error: ".$user->name." not authorized\n"
     unless $user->can_create_networks;
 
-    my $id = $request->args('id_vm');
+    my $id = $request->args('id_vm') or die "Error: missing id_vm";
     my $vm = Ravada::VM->open($id);
     $vm->create_network($request->args('data'),$request->args('uid'));
 }

@@ -1463,7 +1463,7 @@ sub _around_create_network($orig, $self,$data, $id_owner) {
 
     $data->{is_active}=1 if !exists $data->{is_active};
     $data->{autostart}=1 if !exists $data->{autostart};
-    my $ip = $data->{ip_address};
+    my $ip = delete $data->{ip_address} or die "Error: missing ip address";
     $ip =~ s/(.*)\..*/$1/;
     $data->{dhcp_start}="$ip.2" if !exists $data->{dhcp_start};
     $data->{dhcp_end}="$ip.254" if !exists $data->{dhcp_end};
@@ -1512,9 +1512,11 @@ sub _around_list_networks($orig, $self) {
     for my $net ( @list ) {
         $self->_update_network($net);
     }
-    my $sth = $self->_dbh->prepare("SELECT id,name FROM virtual_networks");
+    my $sth = $self->_dbh->prepare(
+        "SELECT id,name FROM virtual_networks "
+        ." WHERE id_vm=?");
     my $sth_delete = $self->_dbh->prepare("DELETE FROM virtual_networks where id=?");
-    $sth->execute;
+    $sth->execute($self->id);
     while (my ($id,$name) = $sth->fetchrow) {
         my ($found) = grep {$_->{name} eq $name } @list;
         next if $found;

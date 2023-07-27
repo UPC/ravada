@@ -905,8 +905,19 @@ ravadaApp.directive("solShowMachine", swMach)
 
     function settings_network($scope, $http, $interval, $timeout) {
         $scope.init = function(id) {
-            $scope.load_network(id);
+            if ( id ) {
+                $scope.load_network(id);
+            }
         };
+        $scope.new_network = function(id_vm) {
+            $scope.network = {
+                'id_vm': id_vm
+                ,'bridge': 'virbr2'
+                ,'ip_address': '10.10.0.0'
+                ,'ip_netmask': '255.255.255.0'
+            };
+        };
+
         $scope.load_network = function(id) {
             $http.get('/v2/network/info/'+id)
                 .then(function(response) {

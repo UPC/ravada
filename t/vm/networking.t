@@ -205,7 +205,7 @@ sub test_disapeared_network($vm) {
 
     $sth->execute('default');
     $row = $sth->fetchrow_hashref;
-    (!$row,"Expected $net->{name} removed from db".Dumper($row)) or exit;
+    ok($row,"Expected default not removed from db".Dumper($row)) or exit;
 
 }
 

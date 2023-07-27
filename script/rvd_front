@@ -502,6 +502,14 @@ get '/route/list_domains/#id' => sub($c) {
     return $c->render( json => $RAVADA->list_bases_network($c->stash('id')));
 };
 
+get '/network/new' => sub($c) {
+    return access_denied($c) unless $USER->can_create_networks();
+
+    _add_admin_libs($c);
+    _select_vm($c);
+    return $c->render(template => "/main/network_new");
+};
+
 get '/v2/network/info/#id' => sub($c) {
     my $sth = $RAVADA->_dbh->prepare("SELECT * from virtual_networks WHERE id=?");
     $sth->execute($c->stash('id'));
@@ -513,10 +521,20 @@ post '/v2/network/set' => sub($c) {
     return access_denied($c) if !$USER->is_admin;
 
     my $arg = decode_json($c->req->body);
-    Ravada::Request->change_network(
-        uid => $USER->id
-        ,data => $arg
-    );
+    if ($arg->{id}) {
+        Ravada::Request->change_network(
+            uid => $USER->id
+            ,data => $arg
+        );
+    } else {
+        my $id_vm = delete $arg->{id_vm};
+        Ravada::Request->create_network(
+            uid => $USER->id
+            ,id_vm => $id_vm
+            ,data => $arg
+        );
+
+    }
     return $c->render(json => { ok => 1 });
 };
 
