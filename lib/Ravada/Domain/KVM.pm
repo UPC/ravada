@@ -1682,6 +1682,13 @@ sub get_info {
         eval { @interfaces2 = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_AGENT) };
         @interfaces = @interfaces2 if !scalar(@interfaces);
         $info->{interfaces} = \@interfaces;
+
+        eval {
+        $info->{n_virt_cpu}
+        = $self->domain->get_vcpus(Sys::Virt::Domain::VCPU_GUEST);
+        };
+        # warn error unless it is agent not responding
+        warn $@ if $@ && $@ !~ / error code: 86, /
     }
 
     lock_keys(%$info);
@@ -3253,7 +3260,7 @@ sub _change_hardware_cpu($self, $index, $data) {
     my ($data_n_cpus, $data_current_cpus);
     $data_n_cpus = delete $data->{vcpu}->{'#text'} if exists $data->{vcpu}->{'#text'};
 
-    $data_current_cpus = $data->{vcpu}->{'current'} if exists $data->{vcpu}->{'current'};
+    $data_current_cpus = delete $data->{vcpu}->{'current'} if exists $data->{vcpu}->{'current'};
     $data_n_cpus = $data_current_cpus if !defined $data_n_cpus && defined $data_current_cpus;
 
     my ($vcpu) = $doc->findnodes('/domain/vcpu');

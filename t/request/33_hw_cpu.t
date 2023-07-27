@@ -241,7 +241,6 @@ sub test_change_vcpu_feature($vm) {
     my $info0 = $domain->info(user_admin);
     my $cpu = $info0->{hardware}->{cpu}->[0];
     $cpu->{vcpu}->{current}=1;
-    warn Dumper($cpu);
     my $req = Ravada::Request->change_hardware(
         hardware => 'cpu'
         ,id_domain => $domain->id
@@ -309,6 +308,7 @@ sub test_current_max($vm) {
     wait_request();
     is($domain->needs_restart,0);
 
+    # change current cpu to 2
     my $req2 = Ravada::Request->change_hardware(
         hardware => 'cpu'
         ,id_domain => $domain->id
@@ -318,14 +318,24 @@ sub test_current_max($vm) {
                       'vcpu' => {
                                   'placement' => 'static',
                                   '#text' => $max_cpu,
-                                  ,'current' => 1
+                                  ,'current' => 2
                                 },
                         'cpu'=> $info0->{hardware}->{cpu}->[0]->{cpu}
          },
     );
-    wait_request();
+    wait_request( debug => 0 );
 
-    is($domain->needs_restart,0) or exit;
+    my $domain22 = Ravada::Domain->open($domain->id);
+    is($domain22->needs_restart,0) or exit;
+    my $info22 = $domain22->info(user_admin);
+    is($info22->{hardware}->{cpu}->[0]->{vcpu}->{'current'},2)
+    or die $domain->name;
+
+    my $domain22_f = Ravada::Domain->open($domain->id);
+    is($domain22_f->needs_restart,0) or exit;
+    my $info22_f = $domain22_f->info(user_admin);
+    is($info22_f->{hardware}->{cpu}->[0]->{vcpu}->{'current'},2)
+    or die $domain->name;
 
     # now we req increase up , it should need restart and info increases too
     my $req3 = Ravada::Request->change_hardware(
