@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target="fixed-top" role="document">
+<div id="wrapper">
+    %= include 'bootstrap/navigation'
+<div id="page-wrapper">
+        <!--BASES AND DOMAINS LIST-->
+    <div class="page-header">
+        <div class="card"
+             ng-controller="settings_network"
+             ng-init="new_network(<%= $id_vm %>)"
+        >
+        <div class="card-header">
+            <h2><%=l 'New network' %></h2>
+        </div>
+        <div class="card-body">
+%=          include '/main/network_options'
+        </div>
+        </div><!-- card -->
+    </div> <!-- page-header -->
+
+</div><!-- page-wrapper -->
+</div><!-- wrapper -->
+%= include $footer
+%= include 'bootstrap/scripts'
+</body>
+</html>
