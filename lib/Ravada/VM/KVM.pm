@@ -2953,6 +2953,8 @@ sub list_virtual_networks($self) {
 
 sub create_network($self, $data) {
 
+    confess if !$data->{name} || !$data->{ip_address};
+
     my $xml = XML::LibXML->load_xml(string =>
         "<network><name>$data->{name}</name></network>"
     );

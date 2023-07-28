@@ -10,6 +10,8 @@ use feature qw(signatures);
 
 use lib 't/lib';
 use Test::Ravada;
+
+my $N = 100;
 ########################################################################
 
 sub test_list_networks($vm) {
@@ -40,7 +42,7 @@ sub test_add_network($vm) {
     my $net = {
         name => $name
         ,id_vm => $vm->id
-        ,ip_address => '203.0.113.1'
+        ,ip_address => '192.0.'.$N++.'.1'
         ,ip_netmask => '255.255.255.0'
     };
     my $user = create_user();
@@ -57,7 +59,7 @@ sub test_add_network($vm) {
         ,id_vm => $vm->id
         ,data => $net
     );
-    wait_request();
+    wait_request( debug => 0);
     my($new) = grep { $_->{name} eq $name } $vm->list_virtual_networks();
     ok($new,"Expecting new network $name created") or return;
 
@@ -184,6 +186,36 @@ sub test_change_network_internal($vm, $net) {
 
 }
 
+sub test_changed_uuid($vm) {
+    return if $vm->type ne 'KVM';
+    my $net = test_add_network($vm);
+
+    my $network = $vm->vm->get_network_by_name($net->{name});
+    my $doc = XML::LibXML->load_xml(string => $network->get_xml_description());
+
+    $network->destroy() if $network->is_active;
+    $network->undefine();
+
+    my ($uuid_xml) = $doc->findnodes("/network/uuid");
+    $uuid_xml->removeChildNodes();
+    my $new_uuid = $vm->_unique_uuid();
+    $uuid_xml->appendText($new_uuid);
+
+    $vm->vm->define_network($doc->toString());
+
+    my ($net2) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks();
+    ok($net2,"Expecting $net->{name} found");
+    is($net2->{internal_id},$new_uuid) or die Dumper($net2);
+
+    my $sth = connector->dbh->prepare("SELECT * FROM virtual_networks "
+        ." WHERE name=?"
+    );
+    $sth->execute($net->{name});
+    my $row = $sth->fetchrow_hashref;
+    is($row->{internal_id},$new_uuid) or exit;
+
+}
+
 sub test_disapeared_network($vm) {
     return if $vm->type ne 'KVM';
     my $net = test_add_network($vm);
@@ -207,6 +239,26 @@ sub test_disapeared_network($vm) {
     $row = $sth->fetchrow_hashref;
     ok($row,"Expected default not removed from db".Dumper($row)) or exit;
 
+}
+
+sub test_add_down_network($vm) {
+    return if $vm->type ne 'KVM';
+
+    my $test = test_add_network($vm);
+    $test->{is_active} = 0;
+    my $req = Ravada::Request->change_network(
+        uid => user_admin->id
+        ,data => $test
+    );
+    wait_request();
+
+    my $sth = connector->dbh->prepare("DELETE FROM virtual_networks "
+        ." WHERE name=? "
+    );
+    $sth->execute($test->{name});
+
+    my ($net2) = grep { $_->{name} eq $test->{name} } $vm->list_virtual_networks();
+    ok($net2,"Expecting $test->{name} network listed") or exit;
 }
 
 ########################################################################
@@ -233,7 +285,10 @@ for my $vm_name ( vm_names() ) {
         is($vm->has_networking,1) if $vm_name eq 'KVM';
         next if !$vm->has_networking();
 
+        test_changed_uuid($vm);
+
         test_disapeared_network($vm);
+        test_add_down_network($vm);
 
         test_list_networks($vm);
         my $net = test_add_network($vm);

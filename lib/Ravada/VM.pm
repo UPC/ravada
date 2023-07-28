@@ -1432,6 +1432,8 @@ sub _insert_network($self, $net) {
     $net->{id_owner} = Ravada::Utils::user_daemon->id
     if !exists $net->{id_owner};
 
+    $net->{id_vm} = $self->id;
+
     my $sql = "INSERT INTO virtual_networks ("
     .join(",",sort keys %$net).")"
     ." VALUES(".join(",",map { '?' } keys %$net).")";
@@ -1443,13 +1445,25 @@ sub _insert_network($self, $net) {
 
 sub _update_network($self, $net) {
     my $sth = $self->_dbh->prepare("SELECT * FROM virtual_networks "
-        ." WHERE id_vm=? AND internal_id=?"
+        ." WHERE id_vm=? AND ( internal_id=? OR name = ?)"
     );
-    $sth->execute($self->id,$net->{internal_id});
+    $sth->execute($self->id,$net->{internal_id}, $net->{name});
     my $db_net = $sth->fetchrow_hashref();
     if (!$db_net) {
         $self->_insert_network($net);
     } else {
+        for my $field ( keys %$net ) {
+            die "Wrong field in virtual_networks table : '$field'"
+            if $field !~ /^[a-z]+[a-z0-9_]+$/;
+
+            next if !defined $net->{đield} && !defined $db_net->{$field};
+            next if defined $net->{field} && $net->{$field} eq $db_net->{$field};
+            my $sth = $self->_dbh->prepare(
+                "UPDATE virtual_networks set $field=?"
+                ." WHERE id=?"
+            );
+            $sth->execute($net->{$field}, $db_net->{id});
+        }
         $net->{id}  = $db_net->{id};
     }
     delete $db_net->{date_changed};
@@ -1463,7 +1477,7 @@ sub _around_create_network($orig, $self,$data, $id_owner) {
 
     $data->{is_active}=1 if !exists $data->{is_active};
     $data->{autostart}=1 if !exists $data->{autostart};
-    my $ip = delete $data->{ip_address} or die "Error: missing ip address";
+    my $ip = $data->{ip_address} or die "Error: missing ip address";
     $ip =~ s/(.*)\..*/$1/;
     $data->{dhcp_start}="$ip.2" if !exists $data->{dhcp_start};
     $data->{dhcp_end}="$ip.254" if !exists $data->{dhcp_end};
