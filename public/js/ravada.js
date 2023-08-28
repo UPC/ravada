@@ -1172,6 +1172,9 @@
             };
 
             $scope.shutdown_start = function() {
+                $scope.set_edit();
+                $scope.lock_info=false;
+                $scope.showmachine.needs_restart = 0;
                 $http.get("/machine/shutdown_start/"+$scope.showmachine.id+".json")
                 .then(function(response) {
                 });
