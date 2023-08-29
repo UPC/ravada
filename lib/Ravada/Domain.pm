@@ -702,7 +702,9 @@ sub _around_add_volume {
         ($name) = $file =~ m{.*/(.*)} if !$name && $file;
         $name = $self->name if !$name;
 
-        $name .= "-".$args{target}."-".Ravada::Utils::random_name(4);
+        $name .= "-".$args{target}."-".Ravada::Utils::random_name(4)
+        if $name !~ /\.iso$/;
+
         $args{name} = $name;
     }
 
@@ -715,10 +717,12 @@ sub _around_add_volume {
     $args{allocation} = Ravada::Utils::size_to_number($args{allocation})
         if exists $args{allocation} && defined $args{allocation};
 
-    my $free = $self->_vm->free_disk();
+    my $storage = $args{storage};
+
+    my $free = $self->_vm->free_disk($storage);
     my $free_out = int($free / 1024 / 1024 / 1024 ) * 1024 *1024 *1024;
 
-    confess "Error creating volume, out of space $size . Disk free: "
+    die "Error creating volume, out of space $size . Disk free: "
             .Ravada::Utils::number_to_size($free_out)
             ."\n"
         if exists $args{size} && $args{size} && $args{size} >= $free;
