@@ -1661,6 +1661,10 @@ sub _data($self, $field, $value=undef, $table='domains') {
 
 sub _data_extra($self, $field, $value=undef) {
     $self->_insert_db_extra()   if !$self->is_known_extra();
+    if (defined $value) {
+        my $old = $self->_data_extra($field);
+        return if defined $old && $old eq $value;
+    }
     return $self->_data($field, $value, "domains_".lc($self->type));
 }
 

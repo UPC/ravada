@@ -326,7 +326,7 @@ sub test_current_max($vm) {
                         'cpu'=> $info3->{hardware}->{cpu}->[0]->{cpu}
          },
     );
-    wait_request( debug => 1 );
+    wait_request( debug => 0 );
 
     my $domain22 = Ravada::Domain->open($domain->id);
     is($domain22->needs_restart,0, $domain22->name) or exit;
@@ -360,7 +360,7 @@ sub test_current_max($vm) {
     my $domain4 = Ravada::Front::Domain->open($domain->id);
     is($domain4->needs_restart,1) or exit;
 
-    my $info4 = $domain3->info(user_admin);
+    my $info4 = $domain4->info(user_admin);
     is($info4->{hardware}->{cpu}->[0]->{vcpu}->{current},2) or die $domain4->name;
     is($info4->{hardware}->{cpu}->[0]->{vcpu}->{'#text'}, $max_cpu+1) or die $domain3->name;
 
