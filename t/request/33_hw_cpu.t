@@ -308,6 +308,9 @@ sub test_current_max($vm) {
     wait_request();
     is($domain->needs_restart,0);
 
+    my $domain3 = Ravada::Front::Domain->open($domain->id);
+    my $info3 = $domain3->info(user_admin);
+
     # change current cpu to 2
     my $req2 = Ravada::Request->change_hardware(
         hardware => 'cpu'
@@ -320,13 +323,13 @@ sub test_current_max($vm) {
                                   '#text' => $max_cpu,
                                   ,'current' => 2
                                 },
-                        'cpu'=> $info0->{hardware}->{cpu}->[0]->{cpu}
+                        'cpu'=> $info3->{hardware}->{cpu}->[0]->{cpu}
          },
     );
-    wait_request( debug => 0 );
+    wait_request( debug => 1 );
 
     my $domain22 = Ravada::Domain->open($domain->id);
-    is($domain22->needs_restart,0) or exit;
+    is($domain22->needs_restart,0, $domain22->name) or exit;
     my $info22 = $domain22->info(user_admin);
     is($info22->{hardware}->{cpu}->[0]->{vcpu}->{'current'},2)
     or die $domain->name;
@@ -354,12 +357,12 @@ sub test_current_max($vm) {
     );
     wait_request(debug => 0);
 
-    my $domain3 = Ravada::Front::Domain->open($domain->id);
-    is($domain3->needs_restart,1) or exit;
+    my $domain4 = Ravada::Front::Domain->open($domain->id);
+    is($domain4->needs_restart,1) or exit;
 
-    my $info3 = $domain3->info(user_admin);
-    is($info3->{hardware}->{cpu}->[0]->{vcpu}->{current},2) or die $domain3->name;
-    is($info3->{hardware}->{cpu}->[0]->{vcpu}->{'#text'}, $max_cpu+1) or die $domain3->name;
+    my $info4 = $domain3->info(user_admin);
+    is($info4->{hardware}->{cpu}->[0]->{vcpu}->{current},2) or die $domain4->name;
+    is($info4->{hardware}->{cpu}->[0]->{vcpu}->{'#text'}, $max_cpu+1) or die $domain3->name;
 
     $domain->remove(user_admin);
 }

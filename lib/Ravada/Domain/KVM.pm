@@ -3246,12 +3246,13 @@ sub _change_hardware_cpu($self, $index, $data) {
     if !$data->{cpu}->{'model'}->{'#text'};
 
     delete $data->{cpu}->{model}->{'$$hashKey'};
-
-    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my @flags = (Sys::Virt::Domain::XML_INACTIVE);
+    my $doc = XML::LibXML->load_xml( string => $self->domain->get_xml_description( @flags ));
     my $count = 0;
     my $changed = 0;
 
     my ($n_vcpu) = $doc->findnodes('/domain/vcpu/text()');
+    my ($cpu0) = $doc->findnodes('/domain/cpu');
 
     $self->_fix_vcpu_from_topology($data);
 
@@ -3622,6 +3623,9 @@ sub reload_config($self, $doc) {
     $self->_validate_xml($doc) if $self->_vm->vm->get_major_version >= 4;
     my $new_domain = $self->_vm->vm->define_domain($doc->toString);
     $self->domain($new_domain);
+
+    $self->_data_extra('xml', $doc->toString) if $self->is_known
+
 }
 
 sub _save_xml_tmp($self,$doc) {
