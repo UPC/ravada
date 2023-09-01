@@ -878,7 +878,7 @@ sub start {
     $self->status('starting');
 
     my $error;
-    for ( ;; ) {
+    for ( 1 .. 60 ) {
         eval { $self->domain->create() };
         $error = $@;
         next if $error && $error =~ /libvirt error code: 1, .* pool .* asynchronous/;
@@ -981,6 +981,9 @@ sub _post_shutdown_internal($self,@args) {
 }
 
 sub _remove_current_cpu($self) {
+
+    return if $self->is_active;
+
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
     my ($cpu_node) = $doc->findnodes('/domain/vcpu');
     $cpu_node->removeAttribute('current');
@@ -3621,10 +3624,18 @@ sub _validate_xml($self, $doc) {
 
 sub reload_config($self, $doc) {
     $self->_validate_xml($doc) if $self->_vm->vm->get_major_version >= 4;
-    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+
+    my $new_domain;
+
+    eval {
+        $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    };
+
+    cluck ''.$@ if $@;
+
     $self->domain($new_domain);
 
-    $self->_data_extra('xml', $doc->toString) if $self->is_known
+    $self->_data_extra('xml', $doc->toString) if $self->is_known && $self->is_local;
 
 }
 
