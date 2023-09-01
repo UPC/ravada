@@ -982,6 +982,7 @@ sub _post_shutdown_internal($self,@args) {
 
 sub _remove_current_cpu($self) {
 
+    return if !$self->domain;
     return if $self->is_active;
 
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
