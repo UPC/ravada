@@ -981,11 +981,15 @@ sub _post_shutdown_internal($self,@args) {
 }
 
 sub _remove_current_cpu($self) {
+    my ($is_active,$doc);
+    eval {
+       $is_active = $self->is_active if $self->domain;
+       $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE)) if $self->domain;
+    };
+    warn $@ if $@;
+    return if $is_active || !$doc;
 
-    return if !$self->domain;
-    return if $self->is_active;
-
-    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
+    $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
     my ($cpu_node) = $doc->findnodes('/domain/vcpu');
     $cpu_node->removeAttribute('current');
 
