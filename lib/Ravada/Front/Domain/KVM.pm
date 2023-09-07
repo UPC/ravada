@@ -176,7 +176,9 @@ sub _get_controller_generic($self,$type) {
 }
 
 sub _get_controller_cpu($self) {
-    my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
+    my $xml = $self->_data_extra('xml');
+    return if !$xml;
+    my $doc = XML::LibXML->load_xml(string => $xml);
     my $item = {
         _name => 'cpu'
         ,_order => 0
