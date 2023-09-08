@@ -76,6 +76,7 @@ sub _type_from_file($file, $vm) {
 
     my ($out, $err) = $vm->run_command("file","-L",$file);
     return 'QCOW2'  if $out =~ /QEMU QCOW/;
+    return 'Void'   if $out =~ /ASCII text/;
     return 'RAW';
 }
 
