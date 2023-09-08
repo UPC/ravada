@@ -6517,6 +6517,8 @@ sub _cmd_close_exposed_ports($self, $request) {
     my $user = Ravada::Auth::SQL->search_by_id( $uid ) or die "Error: user $uid not found";
 
     my $domain = Ravada::Domain->open($request->id_domain);
+    return if !$domain;
+
     die "Error: user ".$user->name." not authorized to delete iptables rule"
     unless $user->is_admin || $domain->_data('id_owner') == $uid;
 
