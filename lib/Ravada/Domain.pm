@@ -4514,6 +4514,7 @@ Check if the domain has swap volumes defined, and clean them
 
 sub clean_swap_volumes {
     my $self = shift;
+    return if $self->is_active();
     for my $vol ( $self->list_volumes_info) {
         confess if !$vol->domain;
         if ($vol->file && $vol->file =~ /\.SWAP\.\w+$/) {
