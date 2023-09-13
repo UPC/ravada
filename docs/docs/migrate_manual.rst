@@ -4,7 +4,7 @@ Virtual Machine Manual Migration
 If you have several Ravada servers you may want to copy a virtual
 machine from one to another.
 
-.. warning:: The easiest way to migrte Virtual Machines is using the new :ref:`Backup` tool added in release 1.5.
+.. warning:: The easiest way to migrate Virtual Machines is using the new :ref:`Backup` tool added in release 1.5.
 
 In this example we use the old manual procedure to copy the base for a virtual machine called *Lubuntu-1704*.
 
@@ -58,19 +58,6 @@ We have to rebase the volumes. The easiest way would be to create a
 clone, spin off the volumes from the web frontend administration and
 migrate it then.
 
-Temporary space in destination
-------------------------------
-
-At the destination server, create a temporary directory so you can store
-the volumes when you copy them. This directory must belong to a user that
-can do ssh from origin to destination:
-
-::
-
-    root@destination:~# mkdir /var/lib/libvirt/images/tmp
-    root@destination:~# chown frankie /var/lib/libvirt/images/tmp
-
-
 Import the Base
 ---------------
 
@@ -83,7 +70,7 @@ in the destination machine and ssh connection from each other.
 ::
 
     root@origin:~# virsh dumpxml Lubuntu1704 > Lubuntu1704.xml
-    root@origin:~# scp Lubuntu1704.xml frankie@dst.domain:
+    root@origin:~# scp Lubuntu1704.xml root@dst.domain:
 
 Copy the volumes
 ~~~~~~~~~~~~~~~~
@@ -97,22 +84,9 @@ to destination.
     <source file='/var/lib/libvirt/images/Lubuntu1704-vda-X18J.img'/>
     root@origin:~# qemu-img info /var/lib/libvirt/images/base-vda-X18J.img | grep -i backing
     backing file: /var/lib/libvirt/images/Lubuntu1704-vda-X18J.ro.qcow2
-    root@origin:~# rsync -avPS /var/lib/libvirt/images/base-vda-X18J.ro.qcow2 frankie@dst.domain:/var/lib/libvirt/images/tmp
-    root@origin:~# rsync -avPS /var/lib/libvirt/images/Lubuntu1704-vda-X18J.img frankie@dst.domain:/var/lib/libvirt/images/tmp
+    root@origin:~# rsync -avPS /var/lib/libvirt/images/base-vda-X18J.ro.qcow2 root@dst.domain:/var/lib/libvirt/images
+    root@origin:~# rsync -avPS /var/lib/libvirt/images/Lubuntu1704-vda-X18J.img root@dst.domain:/var/lib/libvirt/images
 
-
-Move the volumes on destination
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-You just copied the data on a temporary directory available to the user. That must be copied
-to the actual storage pool as root. Make sure you don't have similar volumes there because
-that procedure will overwrite them:
-
-::
-
-    root@dst:/home/frankie# cd /var/lib/libvirt/images/tmp
-    root@dst:/var/lib/libvirt/images/tmp# mv Lubuntu1704-* ../
-    root@dst:/var/lib/libvirt/images/tmp# chown root ../Lubuntu1704-*
 
 Define the base on destination
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -122,8 +96,7 @@ config you copied before
 
 ::
 
-    root@dst:~# cd ~frankie/
-    root@dst:/home/frankie# virsh define Lubuntu1704.xml
+    root@dst:~# virsh define Lubuntu1704.xml
     Domain base defined from Lubuntu1704.xml
 
 Import the base to Ravada on destination
@@ -171,24 +144,68 @@ in destination:
 
     root@origin:~# virsh dumpxml Lubuntu1704-juan-ramon | grep "source file" | grep -v ".ro."
     <source file='/var/lib/libvirt/images/Lubuntu1704-juan-ramon-vda-kg.qcow2'/>
-    root@origin:~# rsync -av /var/lib/libvirt/images/Lubuntu1704-juan-ramon-vda-kg.qcow2 frankie@dst:/var/lib/libvirt/images/tmp/
+    root@origin:~# rsync -av /var/lib/libvirt/images/Lubuntu1704-juan-ramon-vda-kg.qcow2 root@dst:/var/lib/libvirt/images
 
 Start the clone on destination
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 First move the volumes to the right place, notice in destination the volumes
-have different names.
-
-
-
-::
-
-    root@dst:~# virsh dumpxml Lubuntu1704-juan-ramon | grep source
-    <source file='/var/lib/libvirt/images.2/Lubuntu1704-juan-ramon-vda-nz.qcow2'/>
-    root@dst:~# cd /var/lib/libvirt/images/tmp/
-    root@dst:/var/lib/libvirt/images/tmp# mv Lubuntu1704-juan-ramon-vda-jz.qcow2 ../Lubuntu1704-juan-ramon-vda-nz.qcow2
-    root@dst:~# chown root /var/lib/libvirt/images/Lubuntu1704-juan-ramon-*
+have different names. Check the XML configuration matches the place where you
+stored the qcow files.
 
 Hopefully then you can start the clone. It is a delicate procedure that must be
 followed carefully, please consider helping with this document if you have any
 suggestions.
+
+Importing Standalone Machine
+----------------------------
+
+Dumping data
+~~~~~~~~~~~~
+
+To export the necessary data you need the XML file and the volume files.
+
+XML file
+~~~~~~~~
+
+::
+
+    root@src:# virsh dumpxml Lubuntu1704 > Lubuntu1704.xml
+
+Volume Files
+~~~~~~~~~~~~
+
+Find out the volume files searching for "source file" in the XML. Copy these
+files to the destination server.
+
+::
+
+    root@origin:~# virsh dumpxml Lubuntu1704 | grep "source file" | grep -v ".ro."
+    <source file='/var/lib/libvirt/images/Lubuntu1704-vda-kg.qcow2'/>
+    root@origin:~# rsync -av /var/lib/libvirt/images/Lubuntu1704-vda-kg.qcow2 root@dst:/var/lib/libvirt/images/
+
+Importing data
+~~~~~~~~~~~~~~
+
+First of all you need to check the storage directory in the destination server matches
+the source. Check for "source file" lines in the XML and change it if you will place
+the qcow files elsewhere.
+
+Then define the virtual machine base with that XML config file.
+
+::
+
+    root@dst:~# virsh define Lubuntu1704.xml
+    Domain base defined from Lubuntu1704.xml
+
+Then try to start the virtual machine:
+
+::
+
+    root@dst~# virsh start Lubuntu1704
+
+Once you have verified the machine is running, import it into Ravada:
+
+::
+
+    root@dst~# rvd_back --import-domain Lubuntu1704
