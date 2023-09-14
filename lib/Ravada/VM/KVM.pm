@@ -1078,6 +1078,8 @@ sub _domain_create_from_iso {
         if $spice_password;
     $domain->xml_description();
 
+    $self->_change_hardware_install($domain,$iso->{options}->{hardware});
+
     return $domain;
 }
 
@@ -1828,11 +1830,13 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     my $machine = delete $options->{machine};
     my $arch = delete $options->{arch};
     my $bios = delete $options->{'bios'};
+
     confess "Error: bios=$bios and uefi=$uefi clash"
     if defined $uefi && defined $bios
         && ($bios !~/uefi/i && $uefi || $bios =~/uefi/i && !$uefi);
 
     $uefi = 1 if $bios && $bios =~ /uefi/i;
+
 
     confess "Arguments unknown ".Dumper($options)  if keys %$options;
     if ($machine) {

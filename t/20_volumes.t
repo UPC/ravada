@@ -439,6 +439,7 @@ sub test_qcow_format($vm) {
     my $base = create_domain($vm);
     $base->add_volume(type => 'swap', size => 1024*1024);
     $base->add_volume(type => 'data', size => 1024*1024);
+    wait_request();
 
     my $clone = $base->clone(
          name => new_domain_name

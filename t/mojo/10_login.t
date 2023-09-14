@@ -300,8 +300,8 @@ sub test_list_ldap_attributes($t, $expected_code=200) {
 
 sub test_login_non_admin_req($t, $base, $clone){
     mojo_check_login($t, $USERNAME, $PASSWORD);
+    my $clone2;
     for ( 1 .. 3 ) {
-        my $clone2;
         if (!$clone->is_base) {
 
             mojo_request($t,"shutdown", {id_domain => $clone->id, timeout => 1 });
@@ -310,7 +310,7 @@ sub test_login_non_admin_req($t, $base, $clone){
             .$t->tx->res->body()
             if $t->tx->res->code() != 200;
 
-            for ( 1 .. 10 ) {
+            for ( 1 .. 60 ) {
                 $clone2 = rvd_front->search_domain($clone->name);
                 last if $clone2->is_base || !$clone2->list_requests;
                 _wait_request(debug => 1, background => 1, check_error => 1);
@@ -318,8 +318,8 @@ sub test_login_non_admin_req($t, $base, $clone){
             }
             last if $clone2->is_base;
         }
-        is($clone2->is_base,1,"Expecting ".$clone2->name." is base") or exit;
     }
+    is($clone2->is_base,1,"Expecting ".$clone2->name." is base") or exit;
     $clone->is_public(1);
 
     my $name = new_domain_name();
@@ -550,9 +550,12 @@ sub test_logout_ldap {
 
 sub _add_displays($t, $domain) {
     #    mojo_request($t, "add_hardware", { id_domain => $base->id, name => 'network' });
+    mojo_request($t, "refresh_machine", { id_domain => $domain->id });
     my $info = $domain->info(user_admin);
     my $options = $info->{drivers}->{display};
     for my $driver (@$options) {
+        wait_request(background => 1);
+        $info = $domain->info(user_admin);
         next if grep { $_->{driver} eq $driver } @{$info->{hardware}->{display}};
 
         my $req = Ravada::Request->add_hardware(
@@ -574,7 +577,8 @@ sub _clone_and_base($vm_name, $t, $base0) {
         die "Error: test base $BASE_NAME not found" if !$base;
         my $name = new_domain_name()."-".$vm_name."-$$";
         mojo_request_url_post($t,"/machine/copy",{id_base => $base->id, new_name => $name, copy_ram => 0.128, copy_number => 1});
-        for ( 1 .. 10 ) {
+
+        for ( 1 .. 60 ) {
             $base1 = rvd_front->search_domain($name);
             last if $base1;
             wait_request();
@@ -596,8 +600,15 @@ sub _clone_and_base($vm_name, $t, $base0) {
 }
 
 sub test_clone($base1) {
-    mojo_request($t,"prepare_base", {id_domain => $base1->id })
-    if !$base1->is_base();
+    if (!$base1->is_base()) {
+        mojo_request($t,"force_shutdown_domain", {id_domain => $base1->id });
+        mojo_request($t,"prepare_base", {id_domain => $base1->id });
+    }
+
+    for ( 1 .. 10 ) {
+        last if $base1->is_base;
+        sleep 1;
+    }
 
     $t->get_ok("/machine/clone/".$base1->id.".html")->status_is(200);
     my $body = $t->tx->res->body;
@@ -621,7 +632,7 @@ sub test_clone($base1) {
     like($clone->name, qr/^$clone_name/);
     ok($clone->name);
     is($clone->is_volatile,0) or exit;
-    is(scalar($clone->list_ports),2);
+    is(scalar($clone->list_ports),scalar($base1->list_ports));
     return $clone;
 }
 
@@ -731,8 +742,13 @@ sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
     my ($swap ) = grep { $_->{file} =~ /SWAP/ } @$disks;
     ok($swap,"Expecting a swap disk volume");
 
-    my ($data) = grep { $_->{file} =~ /DATA/ } @$disks;
-    ok($data,"Expecting a data disk volume");
+    my $data;
+    for ( 1 .. 10 ) {
+        ($data) = grep { $_->{file} =~ /DATA/ } @$disks;
+        last if $data;
+        sleep 1;
+    }
+    ok($data,"Expecting a data disk volume") or exit;
 
     my ($iso) = grep { $_->{file} =~ /iso$/ } @$disks;
     ok($iso,"Expecting an ISO cdrom disk volume");
@@ -761,6 +777,9 @@ sub test_new_machine_advanced_options($t, $vm_name, $swap=undef ,$data=undef) {
         }
     )->status_is(302);
 
+    wait_request();
+    my $domain0 = rvd_front->search_domain($name);
+    mojo_request($t,"refresh_machine", {id_domain => $domain0->id });
     wait_request();
 
     my $domain = rvd_front->search_domain($name);

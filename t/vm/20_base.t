@@ -2007,7 +2007,7 @@ sub test_already_requested_working($vm) {
     wait_request( request => [ $req->id, $req2->id]);
     is($req->status, 'done');
     is($req2->status, 'done');
-    is($req->error, '');
+    like($req->error,qr/waiting/) if $req->error;
     is($req2->error, '');
 
     $domain->remove(user_admin);

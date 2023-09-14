@@ -303,6 +303,8 @@ sub _around_start($orig, $self, @arg) {
 
     $self->_start_preconditions(@arg);
 
+    $self->_pre_start_internal();
+
     $self->_data( 'post_shutdown' => 0);
     $self->_data( 'post_hibernated' => 0);
 
@@ -1659,6 +1661,10 @@ sub _data($self, $field, $value=undef, $table='domains') {
 
 sub _data_extra($self, $field, $value=undef) {
     $self->_insert_db_extra()   if !$self->is_known_extra();
+    if (defined $value) {
+        my $old = $self->_data_extra($field);
+        return if defined $old && $old eq $value;
+    }
     return $self->_data($field, $value, "domains_".lc($self->type));
 }
 
@@ -3037,8 +3043,16 @@ sub _remove_start_requests($self) {
     }
 }
 
+# it may be superceeded in child class
+sub _post_shutdown_internal {}
+
+# it may be superceeded in child class
+sub _pre_start_internal {}
+
 sub _post_shutdown {
     my $self = shift;
+
+    $self->_post_shutdown_internal();
 
     my %arg = @_;
     my $timeout = delete $arg{timeout};
@@ -4018,7 +4032,7 @@ sub _post_resume {
     return $self->_post_start(@_);
 }
 
-sub _timeout_shutdown($self, $value) {
+sub _timeout_shutdown($self, $value=undef) {
     $TIMEOUT_SHUTDOWN = $value if defined $value;
     return $TIMEOUT_SHUTDOWN;
 }
@@ -5663,6 +5677,7 @@ hardware change can be applied.
 =cut
 
 sub needs_restart($self, $value=undef) {
+    return $self->_data('needs_restart') if !defined $value;
     return $self->_data('needs_restart',$value);
 }
 
@@ -5686,7 +5701,7 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     }
     $self->info(Ravada::Utils->user_daemon) if $self->is_known();
 
-    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active' && $hardware ne 'memory';
+    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active' && $hardware ne 'memory' && $hardware !~ /cpu/;
     $self->post_prepare_base() if $self->is_base();
 }
 
