@@ -577,12 +577,13 @@ sub _clone_and_base($vm_name, $t, $base0) {
         die "Error: test base $BASE_NAME not found" if !$base;
         my $name = new_domain_name()."-".$vm_name."-$$";
         mojo_request_url_post($t,"/machine/copy",{id_base => $base->id, new_name => $name, copy_ram => 0.128, copy_number => 1});
+
         for ( 1 .. 60 ) {
             $base1 = rvd_front->search_domain($name);
             last if $base1;
             wait_request();
         }
-        ok($base1, "Expecting domain $name create") or exit;
+        ok($base1, "Expecting domain $name created") or exit;
     }
 
     mojo_check_login($t);

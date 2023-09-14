@@ -76,12 +76,13 @@ sub _type_from_file($file, $vm) {
 
     my ($out, $err) = $vm->run_command("file","-L",$file);
     return 'QCOW2'  if $out =~ /QEMU QCOW/;
+    return 'Void'   if $out =~ /ASCII text/;
     return 'RAW';
 }
 
 sub _type_from_extension($file) {
     my ($ext) = $file =~ m{.*\.(.*)};
-    confess if !defined $ext;
+    return if !defined $ext;
     confess if $ext =~ /-/;
     my %type = (
         void => 'Void'
@@ -95,7 +96,7 @@ sub _type_from_extension($file) {
 
 sub _type($file,$vm = undef) {
     return _type_from_file($file,$vm)   if $vm;
-    return _type_from_extension($file);
+    return (_type_from_extension($file) or 'QCOW2');
 }
 
 sub BUILD($self, $arg) {

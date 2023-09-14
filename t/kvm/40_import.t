@@ -153,15 +153,45 @@ sub test_import_spinoff {
 }
 
 sub _create_vol($vm, $name) {
-my @cmd = ("qemu-img",'create','-f','qcow2', $vm->dir_img."/".$name,'512M');
-my ($in, $out, $err);
-run3(\@cmd , \$in, \$out, \$err);
-die $err if $err;
-diag($out) if $out;
+    my $sp = $vm->vm->get_storage_pool_by_name('default');
+
+    my $old_vol = $sp->get_volume_by_name($name);
+    $old_vol->delete() if $old_vol;
+
+    my $xml = <<EOT;
+<volume type='file'>
+  <name>$name</name>
+  <key>/var/lib/libvirt/images/$name</key>
+  <capacity unit='bytes'>21474836480</capacity>
+  <allocation unit='bytes'>3485696</allocation>
+  <physical unit='bytes'>21478375424</physical>
+  <target>
+    <path>/var/lib/libvirt/images/$name</path>
+    <format type='qcow2'/>
+    <permissions>
+      <mode>0644</mode>
+      <owner>0</owner>
+      <group>0</group>
+    </permissions>
+    <timestamps>
+      <atime>1538407038.168298505</atime>
+      <mtime>1538406915.308849295</mtime>
+      <ctime>1538407050.036621775</ctime>
+    </timestamps>
+    <compat>1.1</compat>
+    <features>
+      <lazy_refcounts/>
+    </features>
+  </target>
+</volume>
+EOT
+
+    $sp->create_volume($xml);
 }
 
 sub test_volume($vm) {
 
+    return if $vm->type ne 'KVM';
     my $dom_name = new_domain_name();
     my $vol_name = new_domain_name();
     _create_vol($vm, $vol_name);
@@ -228,9 +258,9 @@ my $xml =<<EOT;
       <target chassis='4' port='0x12'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x2'/>
     </controller>
-    <interface type='bridge'>
+    <interface type='network'>
       <mac address='52:54:00:71:50:60'/>
-      <source bridge='HostOnly'/>
+      <source network='default'/>
       <model type='rtl8139'/>
       <address type='pci' domain='0x0000' bus='0x02' slot='0x01' function='0x0'/>
     </interface>
@@ -274,6 +304,10 @@ EOT
     is(''.$@,'') or exit;
     ok($domain,"Importing domain $dom_name") or exit;
 
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    $domain_f->info(user_admin);
+
+    $domain->remove(user_admin);
 
 }
 

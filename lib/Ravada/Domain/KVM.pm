@@ -153,7 +153,10 @@ sub list_disks {
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'source') {
                 my $file = $child->getAttribute('file');
-                next if $file =~ /\.iso$/;
+                if (!$file) {
+                    $file = $child->getAttribute('name');
+                }
+                next if !$file || $file =~ /\.iso$/;
                 push @disks,($file);
             }
         }
@@ -660,6 +663,7 @@ sub _detect_disks_driver($self) {
         my ( $source ) = $disk->findnodes('source');
 
         my $file = $source->getAttribute('file');
+        next if !$file;
         next if $file =~ /iso$/;
         next unless $self->_vm->file_exists($file);
 
