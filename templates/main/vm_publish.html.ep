@@ -1,0 +1,22 @@
+<div ng-show="showmachine.is_base">
+
+<div ng-show="bases" class="row">
+        <div class="col-md-2">
+            <label><b><%=l 'Availability' %></b></label>
+        </div>
+
+    <div class="col-md-7" ng-hide="showmachine.is_public">
+        This base is not public. It is only available to the administrators.
+        <input type="button" class="btn btn-outline-primary" value="Publish"/>
+    </div>
+</div>
+
+<div>
+    <div ng-show="showmachine.is_public">
+        This base is public.
+        <input type="button" class="btn btn-primary">Make private</input>
+    </div>
+
+</div>
+
+</div>

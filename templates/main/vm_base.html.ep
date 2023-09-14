@@ -18,6 +18,8 @@
 
 <div ng-hide="!showmachine || (pending_request && pending_request.status != 'done')">
 
+    %= include "/main/vm_publish"
+
     %= include "/main/vm_rebase"
 
     %= include "/main/vm_spinoff"
