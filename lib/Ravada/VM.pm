@@ -155,6 +155,7 @@ after 'disconnect' => \&_post_disconnect;
 
 around '_list_used_volumes' => \&_around_list_used_volumes;
 
+around 'new_network' => \&_around_new_network;
 around 'create_network' => \&_around_create_network;
 around 'remove_network' => \&_around_remove_network;
 around 'list_virtual_networks' => \&_around_list_networks;
@@ -202,6 +203,8 @@ sub open {
     } else {
         $args{id} = shift;
     }
+    confess "Error: undefind id in ".Dumper(\%args) if !$args{id};
+
     my $class=ref($proto) || $proto;
 
     my $self = {};
@@ -1434,11 +1437,13 @@ sub _insert_network($self, $net) {
 
     $net->{id_vm} = $self->id;
 
+    my @fields = grep !/^_/, sort keys %$net;
+
     my $sql = "INSERT INTO virtual_networks ("
-    .join(",",sort keys %$net).")"
-    ." VALUES(".join(",",map { '?' } keys %$net).")";
+    .join(",",@fields).")"
+    ." VALUES(".join(",",map { '?' } @fields).")";
     my $sth = $self->_dbh->prepare($sql);
-    $sth->execute(map { $net->{$_} } sort keys %$net);
+    $sth->execute(map { $net->{$_} } @fields);
 
     $net->{id} = Ravada::Utils::last_insert_id($$CONNECTOR->dbh);
 }
@@ -1449,7 +1454,7 @@ sub _update_network($self, $net) {
     );
     $sth->execute($self->id,$net->{internal_id}, $net->{name});
     my $db_net = $sth->fetchrow_hashref();
-    if (!$db_net) {
+    if (!$db_net || !$db_net->{id}) {
         $self->_insert_network($net);
     } else {
         for my $field ( keys %$net ) {
@@ -1470,10 +1475,25 @@ sub _update_network($self, $net) {
     #    delete $db_net->{id};
 }
 
-sub _around_create_network($orig, $self,$data, $id_owner) {
+sub _around_new_network($orig, $self) {
+    my $data = $self->$orig();
+    $data->{id_vm} = $self->id;
+    return $data;
+}
+
+sub _around_create_network($orig, $self,$data, $id_owner, $request=undef) {
     my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Unknown user id: $id_owner";
     die "Error: Access denied: ".$owner->name." can not create networks"
     unless $owner->can_create_networks();
+
+    for my $field (qw(name bridge)) {
+        next if !$data->{$field};
+        my ($found) = grep { $_->{$field} eq $data->{$field} }
+        $self->list_virtual_networks();
+
+        die "Error: network $field=$data->{$field} already exists\n"
+        if $found;
+    }
 
     $data->{is_active}=1 if !exists $data->{is_active};
     $data->{autostart}=1 if !exists $data->{autostart};
@@ -1481,7 +1501,10 @@ sub _around_create_network($orig, $self,$data, $id_owner) {
     $ip =~ s/(.*)\..*/$1/;
     $data->{dhcp_start}="$ip.2" if !exists $data->{dhcp_start};
     $data->{dhcp_end}="$ip.254" if !exists $data->{dhcp_end};
-    $self->$orig($data);
+    delete $data->{_update};
+    delete $data->{internal_id} if exists $data->{internal_id};
+    eval { $self->$orig($data) };
+    $request->error(''.$@) if $@ && $request;
     $data->{id_owner} = $id_owner;
     $self->_insert_network($data);
 }
@@ -1507,7 +1530,6 @@ sub _around_change_network($orig, $self, $data) {
     delete $data->{id_owner};
 
     my $changed = $orig->($self, $data);
-    return if !$changed;
 
     my $id = delete $data2{id};
     my $sql = "";
@@ -1521,9 +1543,20 @@ sub _around_change_network($orig, $self, $data) {
     $sth->execute(@values, $id);
 }
 
+sub _check_networks($self) { }
+
 sub _around_list_networks($orig, $self) {
+    my $sth_previous = $self->_dbh->prepare(
+        "SELECT count(*) FROM virtual_networks "
+        ." WHERE id_vm=?"
+    );
+    $sth_previous->execute($self->id);
+    my ($count) = $sth_previous->fetchrow;
+    my $first_time = !$count;
+
     my @list = $orig->($self);
     for my $net ( @list ) {
+        $net->{id_vm}=$self->id;
         $self->_update_network($net);
     }
     my $sth = $self->_dbh->prepare(
@@ -1536,6 +1569,9 @@ sub _around_list_networks($orig, $self) {
         next if $found;
         $sth_delete->execute($id);
     }
+
+    $self->_check_networks() if $first_time;
+
     return @list;
 }
 
