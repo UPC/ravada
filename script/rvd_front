@@ -507,7 +507,9 @@ get '/network/new' => sub($c) {
 
     _add_admin_libs($c);
     _select_vm($c);
-    return $c->render(template => "/main/network_new");
+    $c->stash(item => 'network', id => undef, tab => undef);
+
+    return $c->render( template => '/main/network_new' );
 };
 
 get '/v2/network/info/#id' => sub($c) {
@@ -521,21 +523,28 @@ post '/v2/network/set' => sub($c) {
     return access_denied($c) if !$USER->is_admin;
 
     my $arg = decode_json($c->req->body);
+    my $req;
+    my %data;
     if ($arg->{id}) {
-        Ravada::Request->change_network(
+        $req = Ravada::Request->change_network(
             uid => $USER->id
             ,data => $arg
         );
     } else {
         my $id_vm = delete $arg->{id_vm};
-        Ravada::Request->create_network(
+        $req = Ravada::Request->create_network(
             uid => $USER->id
             ,id_vm => $id_vm
             ,data => $arg
         );
-
+        $RAVADA->wait_request($req);
+        my $out = {};
+        eval { $out = decode_json($req->output) if $req->output };
+        warn $@ if $@;
+        %data = %$out if $out && keys %$out;
     }
-    return $c->render(json => { ok => 1 });
+    $data{error} = $req->error;
+    return $c->render(json => \%data);
 };
 
 sub _add_admin_libs($c) {
@@ -855,6 +864,19 @@ any '/(:item)/settings/(:id).html' => sub($c) {
 
     _add_admin_libs($c);
     $c->stash(tab => ($c->param('tab') or ''));
+    my $table = $c->stash('item')."s";
+    $table = 'virtual_networks' if $table eq 'networks';
+
+    return access_denied($c) if $table !~ /^[a-z][a-z_]+$/i;
+
+    my $sth = $RAVADA->_dbh->prepare(
+        "SELECT id,id_vm FROM $table WHERE id=?"
+    );
+    $sth->execute($c->stash('id'));
+    my ($id2, $id_vm) = $sth->fetchrow;
+    return not_found($c) if !$id2;
+
+    $c->stash('id_vm' => $id_vm);
 
     return $c->render( template => '/main/settings_generic' );
 };
@@ -2979,6 +3001,28 @@ sub error_access_denied_json(@args) {
 sub access_denied_json($c, $msg='Access denied') {
     $c->stash( type => 'json');
     return access_denied($c, $msg);
+}
+
+sub not_found($c,$code=404, $msg="Not found") {
+    if (defined $c->stash('type') && $c->stash('type') eq 'json') {
+        return $c->render(json => { error => $msg }, status => $code);
+    }
+    my @css_snippets = ["\t.intro {\n\t\tbackground:"
+                    ." url($CONFIG_FRONT->{login_bg_file})"
+                    ." no-repeat bottom center scroll;\n\t}"];
+
+    return $c->render(
+                    template => ($CONFIG_FRONT->{not_found} or '/main/not_found')
+                    ,css => ['/css/main.css']
+                    ,csssnippets => @css_snippets
+                    ,js => ['/js/main.js?v='.$RAVADA->version]
+                    ,navbar_custom => 1
+                    ,error => $msg
+                    ,can_login => ((! $USER) || ($USER->is_temporary))
+                    ,guide => $CONFIG_FRONT->{guide}
+                    ,status => $code
+    );
+
 }
 
 sub access_denied {
