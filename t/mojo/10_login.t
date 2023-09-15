@@ -974,6 +974,7 @@ sub test_clone_same_name($t, $base) {
         last if $cloneb->is_base;
         sleep 1;
     }
+    mojo_check_login($t);
 
     $t->get_ok("/machine/clone/".$base->id.".html")
     ->status_is(200);
