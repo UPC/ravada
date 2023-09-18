@@ -117,9 +117,12 @@ sub test_storage_full($vm) {
         ,storage => 'default'
         ,id_iso => search_id_iso('Alpine%64')
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
-    die $name if $vm->type eq 'KVM';
+    my $domain = $vm->search_domain($name);
+    for my $vol ($domain->list_volumes) {
+        unlike($vol,qr{^/run});
+    }
 
 }
 
