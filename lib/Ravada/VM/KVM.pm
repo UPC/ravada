@@ -124,7 +124,6 @@ sub _connect {
          };
          confess $@ if $@;
     }
-    $self->_check_networks($vm);
     return $vm;
 }
 
@@ -148,17 +147,21 @@ sub _check_default_storage($self) {
     }
 }
 
-sub _check_networks {
-    my $self = shift;
-    my $vm = shift;
+sub _check_networks($self, $vm=$self->vm) {
 
+    my @found;
     for my $net ($vm->list_all_networks) {
-        next if $net->is_active;
-
-        warn "INFO: Activating KVM network ".$net->get_name."\n";
-        $net->create;
-        $net->set_autostart(1);
+        return if $net->is_active;
+        push @found,($net);
     }
+
+    my ($net) = grep {$_->get_name eq 'default' } @found;
+
+    $net = $found[0] if !$net;
+
+    warn "INFO: Activating KVM network ".$net->get_name."\n";
+    $net->create;
+    $net->set_autostart(1);
 }
 
 =head2 disconnect
@@ -2951,6 +2954,37 @@ sub list_virtual_networks($self) {
     return @networks;
 }
 
+sub new_network($self) {
+    my @networks = $self->list_virtual_networks();
+
+    my %base = (
+        name => 'net'
+        ,ip_address => ['192.168.',122,'.0']
+        ,bridge => 'virbr'
+    );
+    my $new = {ip_netmask => '255.255.255.0'};
+    for my $field ( keys %base) {
+        my %old = map { $_->{$field} => 1 } @networks;
+        my $n = 0;
+        my $base = ($base{$field} or $field);
+        if (ref($base)) {
+            $n=$base->[1];
+        }
+        my $value;
+        for ( 0 .. 255 ) {
+            if (ref($base)) {
+                $value = $base->[0].$n.$base->[2]
+            } else {
+                $value = $base.$n;
+            }
+            last if !$old{$value};
+            $n++;
+        }
+        $new->{$field} = $value;
+    }
+    return $new;
+}
+
 sub create_network($self, $data) {
 
     confess if !$data->{name} || !$data->{ip_address};
@@ -2974,21 +3008,28 @@ sub create_network($self, $data) {
         $range->setAttribute('end' => $data->{dhcp_end});
     }
 
+    if ($data->{bridge}) {
+        my ($bridge) = $xml_net->addNewChild(undef,'bridge');
+        $bridge->setAttribute(name => $data->{bridge});
+    }
+
     $self->vm->define_network($xml->toString());
 
     my $new_network=$self->vm->get_network_by_name($data->{name});
     my $xml2=XML::LibXML->load_xml(string =>$new_network->get_xml_description());
     my ($uuid) = $xml2->findnodes("/network/uuid/text()");
-    $data->{internal_id} = $uuid;
+    $data->{internal_id} = ''.$uuid;
 
-    $new_network->create();
-    $new_network->set_autostart(1);
+    $new_network->create() if $data->{is_active};
+
+    $new_network->set_autostart($data->{autostart});
+
+    $data->{is_active} = $new_network->is_active;
+
 }
 
 sub remove_network($self, $name) {
     my $net = $self->vm->get_network_by_name($name);
-    die "Error: This network can not be removed ".$net->get_name
-    if $net->get_name eq 'default';
 
     $net->destroy() if $net->is_active;
     $net->undefine();
@@ -3001,10 +3042,13 @@ sub change_network($self, $data) {
     my $doc = XML::LibXML->load_xml(string => $network->get_xml_description);
     my $changed = 0;
     my $bridge = delete $data->{bridge};
-    my ($bridge_xml) = $doc->findnodes("/network/bridge");
-    if ($bridge_xml->getAttribute('name') ne $bridge) {
-        $bridge_xml->setAttribute(name => $bridge);
-        $changed++;
+    if (defined $bridge) {
+        my ($bridge_xml) = $doc->findnodes("/network/bridge");
+        if (!defined $bridge_xml->getAttribute('name')
+            || $bridge_xml->getAttribute('name') ne $bridge) {
+            $bridge_xml->setAttribute(name => $bridge);
+            $changed++;
+        }
     }
     my $dhcp_start = delete $data->{dhcp_start};
     my $dhcp_end = delete $data->{dhcp_end};
@@ -3035,9 +3079,8 @@ sub change_network($self, $data) {
     }
 
     if ($changed) {
-        $network->destroy();
+        $network->destroy() if $network->is_active;
         $network= $self->vm->define_network($doc->toString);
-        $network->create();
     }
 
     my $is_active = delete $data->{is_active};

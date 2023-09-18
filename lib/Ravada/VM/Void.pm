@@ -11,7 +11,7 @@ use Moose;
 use Socket qw( inet_aton inet_ntoa );
 use Sys::Hostname;
 use URI;
-use YAML qw(Dump LoadFile);
+use YAML qw(Dump LoadFile DumpFile);
 
 use Ravada::Domain::Void;
 use Ravada::NetInterface::Void;
@@ -32,6 +32,12 @@ has 'vm' => (
     ,isa => 'Any'
     ,builder => '_connect'
     ,lazy => 1
+);
+
+has has_networking => (
+    isa => 'Bool'
+    , is => 'ro'
+    , default => 1
 );
 
 our $CONNECTOR = \$Ravada::CONNECTOR;
@@ -340,16 +346,111 @@ sub list_routes {
     return Ravada::NetInterface::Void->new();
 }
 
-sub list_virtual_networks {
-    return ();
+sub list_virtual_networks($self) {
+
+    my $dir_net = $self->dir_img."/networks/";
+    my $dir;
+    opendir ($dir, $dir_net) or do {
+        mkdir $dir_net or die "$! $dir_net";
+        opendir($dir, $dir_net) or confess;
+    };
+    my @list;
+    while (my $file = readdir $dir) {
+        next if ! -f $file && $file !~ /\.yml$/;
+        my $net;
+        eval { $net = LoadFile("$dir_net/$file") };
+        confess $@ if $@;
+
+        $net->{id_vm} = $self->id if !$net->{id_vm};
+        $net->{is_active}=0 if !defined $net->{is_active};
+        push @list,($net);
+    }
+    if (!@list) {
+        my $net = {name => 'default'
+            , autostart => 1
+            , internal_id => 1
+            , bridge => 'voidbr0'
+            ,ip_address => '192.51.100.1'
+            ,is_active => 1
+        };
+
+        my $file_out = $self->dir_img."/networks/".$net->{name}.".yml";
+        DumpFile($file_out,$net);
+        push @list,($net);
+    }
+    return @list;
 }
 
-sub create_network($self, $data) {
-    my $file_out = $self->dir_img."/networks/".$data->{name}."yml";
+sub _new_net_id($self) {
+    my %id;
+    for my $net ( $self->list_virtual_networks() ) {
+        $id{$net->{internal_id}}++;
+    }
+    my $new_id = 0;
+    for (;;) {
+        return $new_id if !exists $id{++$new_id};
+    }
+}
+
+sub _new_net_bridge ($self) {
+    my %bridge;
+    my $n = 0;
+    for my $net ( $self->list_virtual_networks() ) {
+        $bridge{$net->{bridge}}++;
+    }
+    my $new_id = 0;
+    for (;;) {
+        my $new_bridge = 'voidbr'.$new_id;
+        return $new_bridge if !exists $bridge{$new_bridge};
+        $new_id++;
+    }
+}
+
+sub new_network($self) {
+
+    my @networks = $self->list_virtual_networks();
+
+    my %base = (
+        name => 'net'
+        ,ip_address => ['192.168.','.0']
+        ,bridge => 'voidbr'
+    );
+    my $new = {ip_netmask => '255.255.255.0'};
+    for my $field ( keys %base) {
+        my %old = map { $_->{$field} => 1 } @networks;
+        my $n = 0;
+        my $base = ($base{$field} or $field);
+        my $value;
+        for ( 0 .. 255 ) {
+            if (ref($base)) {
+                $value = $base->[0].$n.$base->[1]
+            } else {
+                $value = $base.$n;
+            }
+            last if !$old{$value};
+            $n++;
+        }
+        $new->{$field} = $value;
+    }
+    return $new;
+}
+
+sub create_network($self, $data, $id_owner=undef, $request=undef) {
+
+    $data->{internal_id} = $self->_new_net_id();
+    my $file_out = $self->dir_img."/networks/".$data->{name}.".yml";
     die "Error: network $data->{name} already created"
     if $self->file_exists($file_out);
-    open my $out,">",$file_out or die "$! $file_out";
-    close $out;
+
+    $data->{bridge} = $self->_new_net_bridge()
+    if !exists $data->{bridge} || ! defined $data->{bridge};
+
+    for my $field ('bridge','ip_address') {
+        $self->_check_duplicated_network($field,$data);
+    }
+    DumpFile($file_out,$data);
+
+    return $data;
 }
 
 sub remove_network($self, $name) {
@@ -666,7 +767,50 @@ sub active_storage_pool($self, $name, $value) {
     $self->write_file($file_sp, Dump( \@list));
 }
 
-sub change_network {}
+sub has_networking { return 1 };
+
+sub _check_duplicated_network($self, $field, $data) {
+    my @networks = $self->list_virtual_networks();
+    my ($found) = grep {$data->{name} ne $_->{name}
+        && $_->{$field} eq $data->{$field} } @networks;
+    return if !$found;
+
+    $field = 'Network' if $field eq 'ip_address';
+    die "Error: $field is already in use in $found->{name}";
+}
+
+sub change_network($self,$data) {
+    my $id = delete $data->{internal_id} or confess "Missing internal_id ".Dumper($data);
+    my @networks = $self->list_virtual_networks();
+    my ($net) = grep { $_->{internal_id} eq $id } @networks;
+
+    my $changed = 0;
+    for my $field ('name', sort keys %$data) {
+        if (!exists $net->{$field}) {
+            $net->{$field} = $data->{$field};
+            $changed++;
+            next;
+        }
+        next if exists $data->{$field} && exists $net->{$field}
+        && defined $data->{$field} && defined $net->{$field}
+        && $data->{$field} eq $net->{$field};
+
+        if ($field eq 'name') {
+            die "Error: network can not be renamed";
+        }
+
+        if ($field eq 'bridge' || $field eq 'ip_address') {
+            $self->_check_duplicated_network($field,$data);
+        }
+        $net->{$field} = $data->{$field};
+        $changed++;
+    }
+    return if !$changed;
+
+    my $file_out = $self->dir_img."/networks/".$net->{name}.".yml";
+
+    DumpFile($file_out,$net);
+}
 
 #########################################################################3
 
