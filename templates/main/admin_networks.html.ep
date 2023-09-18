@@ -20,8 +20,8 @@
             <div class="col-md-4"></div>
             <!-- <div class="col-md-2">enabled</div> -->
         </div>
-        <div ng-repeat="network in networks | orderObjectBy:'n_order'"
-            class="row"
+        <div ng-repeat="network in networks | orderObjectBy:'name'"
+             class="row" ng-cloak
         >
             <div class="col-md-2">
                 <a href="/network/settings/{{network.id}}.html">{{network.name}}</a>

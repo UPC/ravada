@@ -1,5 +1,12 @@
-<div class="container-fluid">
-<form name="form_options">
+<div class="container-fluid" ng-cloak>
+
+<div class="col-md-8 alert alert-warning" ng-show="error">
+{{error}}
+</div>
+
+<i class="fas fa-sync-alt fa-spin" ng-hide="network.id_vm"></i>
+
+<form name="form_options" ng-hide="network._removed || !network.id_vm">
 
 <div class="form-group row">
     <div class="col-md-3" align="right"><%=l 'Name' %></div>
@@ -12,7 +19,7 @@
 <div class="form-group row">
     <div class="col-md-3" align="right"><%=l 'Bridge' %></div>
     <div class="col-md-8">
-        <input type="text" ng-model="network.bridge" required/>
+        <input type="text" ng-model="network.bridge"/>
     </div>
 </div>
 

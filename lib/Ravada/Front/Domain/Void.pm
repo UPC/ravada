@@ -15,6 +15,7 @@ our %GET_CONTROLLER_SUB = (
     'mock' => \&_get_controller_mock
     ,'disk' => \&_get_controller_disk
     ,'display' => \&_get_controller_display
+    ,'network' => \&_get_controller_network
 
 );
 
@@ -86,6 +87,16 @@ sub _get_controller_disk {
 
 sub _get_controller_display(@args) {
     return Ravada::Front::Domain::_get_controller_display(@args);
+}
+
+sub _get_controller_generic($self, $item) {
+    my $hardware = $self->_value('hardware');
+    return () if !exists $hardware->{$item};
+    return @{$hardware->{$item}};
+}
+
+sub _get_controller_network($self) {
+    return $self->_get_controller_generic('network');
 }
 
 1;

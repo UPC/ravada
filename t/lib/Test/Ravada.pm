@@ -1423,6 +1423,21 @@ sub _qemu_storage_pool {
     return $pool_name;
 }
 
+sub remove_void_networks($vm=undef) {
+    if (!defined $vm) {
+        eval { $vm = rvd_back->search_vm('Void') };
+    }
+    my $dir_net = $vm->dir_img()."/networks";
+    return if ! -e $dir_net;
+
+    opendir my $dir, $dir_net or die "$! $dir_net";
+    while(my $filename = readdir $dir) {
+        my $file = "$dir_net/$filename";
+        unlink $file if -f $file && $file =~ /\.yml/;
+    }
+
+}
+
 sub remove_qemu_networks($vm=undef) {
     return if !$VM_VALID{'KVM'} || $>;
     if (!defined $vm) {
@@ -1514,6 +1529,7 @@ sub remove_old_pools {
 
 sub remove_old_networks {
     remove_qemu_networks();
+    remove_void_networks();
 }
 
 sub _remove_old_entries($table) {

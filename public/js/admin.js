@@ -904,18 +904,20 @@ ravadaApp.directive("solShowMachine", swMach)
     }
 
     function settings_network($scope, $http, $interval, $timeout) {
-        $scope.init = function(id) {
+        $scope.init = function(id,url, id_vm) {
             if ( id ) {
                 $scope.load_network(id);
+            } else {
+                $scope.new_network(id_vm);
             }
         };
         $scope.new_network = function(id_vm) {
-            $scope.network = {
-                'id_vm': id_vm
-                ,'bridge': 'virbr2'
-                ,'ip_address': '10.10.0.0'
-                ,'ip_netmask': '255.255.255.0'
-            };
+            $scope.network = { };
+            $http.get('/v2/network/new/'+id_vm)
+                .then(function(response) {
+                    $scope.network=response.data;
+                    console.log(response.data);
+            });
         };
 
         $scope.load_network = function(id) {
@@ -928,11 +930,28 @@ ravadaApp.directive("solShowMachine", swMach)
         };
 
         $scope.update_network = function() {
+
+            var update = $scope.network['id'];
             $http.post('/v2/network/set/'
                 , JSON.stringify($scope.network))
                 .then(function(response) {
+                    $scope.error=response.data.error;
+                    if (!update) {
+                        if (response.data['id_network']) {
+                            window.location.assign('/network/settings/'
+                                +response.data['id_network']+'.html');
+                        }
+                    }
                 });
         };
+        $scope.remove_network = function() {
+            $http.post('/request/remove_network'
+                ,JSON.stringify({'id': $scope.network.id }))
+                .then(function(response) {
+                    $scope.network._removed = true;
+                });
+        };
+
 
     }
 

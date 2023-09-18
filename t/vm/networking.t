@@ -3,7 +3,11 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use Mojo::JSON qw(decode_json);
+use Storable qw(dclone);
 use Test::More;
+
+use YAML qw(Dump LoadFile DumpFile);
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -16,14 +20,18 @@ my $N = 100;
 
 sub test_list_networks($vm) {
     my @list = $vm->list_virtual_networks();
-    my ($default)= grep { $_->{name} eq 'default' } @list;
-    ok($default);
+    my ($default)= @list;
+    ok($default) or exit;
 
     for my $net ( @list ) {
+        ok($net->{id_vm}) or die "Error: network missing id_vm ".Dumper($net);
         my ($found) = _search_network(internal_id=>$net->{internal_id});
         is($found->{name}, $net->{name});
+        is($found->{id_vm}, $net->{id_vm});
         ($found) = _search_network(id_vm => $net->{id_vm}, name => $net->{name});
-        is($found->{internal_id}, $net->{internal_id});
+        die "Error: network not found id_vm= $net->{id_vm}, name=$net->{name}"
+        if !$found;
+        is($found->{internal_id}, $net->{internal_id}) or die Dumper($found);
     }
 
 }
@@ -37,6 +45,95 @@ sub _search_network(%args) {
     return $found;
 }
 
+sub _get_active_network($vm) {
+    my($active) = grep { $_->{is_active} } $vm->list_virtual_networks();
+    return $active if $active;
+
+    my @networks = $vm->list_virtual_networks();
+    for my $old (@networks) {
+        Ravada::Request->change_network(
+            uid => user_admin->id
+            ,data => { %$old, is_active => 1 }
+        );
+        wait_request();
+        my ($net) = grep {$_->{id} == $old->{id}} $vm->list_virtual_networks();
+        return $net if $net->{is_active};
+    }
+    die "Error: No network could be activated ".Dumper(\@networks);
+}
+sub test_create_fail ($vm) {
+
+    my @networks = $vm->list_virtual_networks();
+
+    my $net0 = _get_active_network($vm);
+    my $name = new_domain_name;
+    my $net = {
+        name => $name
+        ,id_vm => $vm->id
+        ,ip_address => $net0->{ip_address}
+        ,ip_netmask => '255.255.255.0'
+        ,is_active => 1
+    };
+    my $req = Ravada::Request->create_network(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,data => $net
+    );
+    wait_request(check_error => 0, debug => 0);
+    like($req->error,qr/Network is already in use/) or die $name;
+    my $out = decode_json($req->output);
+    like($out->{id_network},qr/^\d+$/) or exit;
+
+    my ($old) = grep { $_->{id} eq $out->{id_network} } @networks;
+    ok(!$old,"Expecting new network is created");
+}
+
+sub test_duplicate_add($vm, $net) {
+    my $net2 = dclone($net);
+    delete $net2->{id};
+    delete $net2->{internal_id};
+    my $req = Ravada::Request->create_network(
+        data => $net2
+        ,uid => user_admin->id
+        ,id_vm => $vm->id
+    );
+    wait_request( check_error => 0, debug => 0);
+    like($req->error,qr/already exist/);
+}
+
+sub test_duplicate_bridge_add($vm, $net) {
+    my ($net0) = grep { $_->{name} eq $net->{name}} $vm->list_virtual_networks();
+    my $net2 = dclone($net);
+    delete $net2->{id};
+    delete $net2->{internal_id};
+    delete $net2->{dhcp_start};
+    delete $net2->{dhcp_end};
+    $net2->{bridge} = $net0->{bridge};
+    $net2->{name} = new_domain_name();
+    $net2->{ip_address} = '192.51.200.1';
+
+    diag("Replicating bridge ".$net2->{bridge}." from ".$net0->{name}
+        ." on network ".$net2->{name});
+    my $req = Ravada::Request->create_network(
+        data => $net2
+        ,uid => user_admin->id
+        ,id_vm => $vm->id
+    );
+    wait_request( check_error => 0, debug => 0);
+    is($req->output,'{}');
+    like($req->error,qr/already exists/) or exit;
+
+    my ($net_created) = grep {$net2->{name} eq $_->{name} }
+        $vm->list_virtual_networks();
+
+    ok(!$net_created) or die "Expecting $net2->{name} not created";
+
+    Ravada::Request->remove_network(
+        uid => user_admin->id
+        ,id => $net_created->{id}
+    ) if $net_created;
+}
+
 sub test_add_network($vm) {
     my $name = new_domain_name;
     my $net = {
@@ -44,6 +141,8 @@ sub test_add_network($vm) {
         ,id_vm => $vm->id
         ,ip_address => '192.0.'.$N++.'.1'
         ,ip_netmask => '255.255.255.0'
+        ,is_active => 1
+        ,autostart => 1
     };
     my $user = create_user();
     my $req = Ravada::Request->create_network(
@@ -60,8 +159,12 @@ sub test_add_network($vm) {
         ,data => $net
     );
     wait_request( debug => 0);
+
+    my $out = decode_json($req->output);
     my($new) = grep { $_->{name} eq $name } $vm->list_virtual_networks();
     ok($new,"Expecting new network $name created") or return;
+    isa_ok($out,'HASH')
+    && is($out->{id_network},$new->{id});
 
     like($new->{dhcp_start},qr/.*\.2$/);
     like($new->{dhcp_end},qr/.*\.254$/);
@@ -136,19 +239,26 @@ sub test_change_network($net) {
     is($new->{autostart},0);
     _check_network_changed($new,'autostart');
 
+    $net2{is_active} = 1;
+    $req = Ravada::Request->change_network(
+        uid => user_admin->id
+        ,data => \%net2
+    );
+    wait_request();
+    ($new) = grep { $_->{name} eq $net2{name} } $vm->list_virtual_networks();
+    is($new->{is_active},1);
+
     my ($default) = grep { $_->{name} eq 'default' } $vm->list_virtual_networks();
     $net2{bridge} = $default->{bridge};
     $req = Ravada::Request->change_network(
         uid => user_admin->id
         ,data => \%net2
     );
-    wait_request(check_error => 0);
-
-    ($new) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks();
-    isnt($new->{bridge},$default->{bridge});
-    _check_network_changed($new,'bridge') or exit;
+    wait_request(check_error => 0, debug => 0);
+    like($req->error,qr/already in use/);
 
     $net2{name} = new_domain_name();
+    $net2{bridge}='virbr99';
     $req = Ravada::Request->change_network(
         uid => user_admin->id
         ,data => \%net2
@@ -160,8 +270,29 @@ sub test_change_network($net) {
 }
 
 sub test_change_network_internal($vm, $net) {
-    return if $vm->type ne 'KVM';
+    if ($vm->type eq 'KVM') {
+        test_change_network_internal_kvm($vm, $net);
+    } elsif ($vm->type eq 'Void') {
+        test_change_network_internal_void($vm, $net);
+    }
+}
 
+sub test_change_network_internal_void($vm, $net) {
+    my $file_out = $vm->dir_img."/networks/".$net->{name}.".yml";
+
+    my $start_new = $net->{dhcp_start};
+    my ($n) = $start_new =~ /.*\.(\d+)/;
+    $n++;
+    $start_new =~ s/(.*)\.(\d+)/$1.$n/;
+    $net->{dhcp_start}=$start_new;
+
+    DumpFile($file_out,$net);
+
+    my ($net2) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks();
+    is($net2->{dhcp_start},$start_new) or die Dumper($net2);
+}
+
+sub test_change_network_internal_kvm($vm, $net) {
     my $network = $vm->vm->get_network_by_name($net->{name});
     die "Error: I can't find network $net->{name}" if !$network;
 
@@ -187,7 +318,12 @@ sub test_change_network_internal($vm, $net) {
 }
 
 sub test_changed_uuid($vm) {
-    return if $vm->type ne 'KVM';
+    if($vm->type eq 'KVM') {
+        test_changed_uuid_kvm($vm);
+    }
+}
+
+sub test_changed_uuid_kvm($vm) {
     my $net = test_add_network($vm);
 
     my $network = $vm->vm->get_network_by_name($net->{name});
@@ -216,13 +352,32 @@ sub test_changed_uuid($vm) {
 
 }
 
-sub test_disapeared_network($vm) {
-    return if $vm->type ne 'KVM';
-    my $net = test_add_network($vm);
+sub _remove_network_internal($vm,$name) {
+    if ($vm->type eq 'KVM') {
+        _remove_network_internal_kvm($vm, $name);
+    } elsif ($vm->type eq 'Void') {
+        _remove_network_internal_void($vm, $name);
+    } else {
+        die $vm->type;
+    }
+}
 
-    my $network = $vm->vm->get_network_by_name($net->{name});
+sub _remove_network_internal_kvm($vm, $name) {
+    my $network = $vm->vm->get_network_by_name($name);
     $network->destroy() if $network->is_active;
     $network->undefine();
+}
+
+sub _remove_network_internal_void($vm, $name) {
+    my $file_out = $vm->dir_img."/networks/$name.yml";
+    unlink $file_out or die "$! $file_out" if $vm->file_exists($file_out);
+}
+
+sub test_disapeared_network($vm) {
+    my ($default0) = $vm->list_virtual_networks();
+
+    my $net = test_add_network($vm);
+    _remove_network_internal($vm, $net->{name});
 
     my ($net2) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks();
     ok(!$net2, "Expecting $net->{name} removed");
@@ -232,17 +387,16 @@ sub test_disapeared_network($vm) {
     my $row = $sth->fetchrow_hashref;
     ok(!$row,"Expected $net->{name} removed from db".Dumper($row)) or exit;
 
-    my ($default) = grep { $_->{name} eq 'default' } $vm->list_virtual_networks();
+    my ($default) = grep { $_->{name} eq $default0->{name} } $vm->list_virtual_networks();
     ok($default) or exit;
 
-    $sth->execute('default');
+    $sth->execute($default0->{name});
     $row = $sth->fetchrow_hashref;
     ok($row,"Expected default not removed from db".Dumper($row)) or exit;
 
 }
 
 sub test_add_down_network($vm) {
-    return if $vm->type ne 'KVM';
 
     my $test = test_add_network($vm);
     $test->{is_active} = 0;
@@ -259,6 +413,103 @@ sub test_add_down_network($vm) {
 
     my ($net2) = grep { $_->{name} eq $test->{name} } $vm->list_virtual_networks();
     ok($net2,"Expecting $test->{name} network listed") or exit;
+}
+
+sub test_public_network($vm, $net) {
+
+    my $domain = create_domain($vm);
+    $domain->is_public(1);
+    $domain->prepare_base(user_admin);
+
+    my $user2 = create_user();
+    user_admin->grant($user2,'change_settings');
+    user_admin->grant($user2,'create_networks');
+
+
+    my $clone = $domain->clone(user => $user2,name => new_domain_name);
+
+    my $hw_net = $clone->info(user_admin)->{hardware}->{network}->[0];
+    ok($hw_net) or die $clone->name;
+    my %hw_net2 = %$hw_net;
+    $hw_net2{network} = $net->{name};
+
+    is($user2->can_change_network($domain, \%hw_net2),0) or exit;
+    my $req = Ravada::Request->change_hardware(
+        uid => $user2->id
+        ,id_domain => $clone->id
+        ,hardware => 'network'
+        ,index => 0
+        ,data => \%hw_net2
+    );
+    wait_request(check_error => 0);
+    like($req->error,qr/not allowed/);
+
+    my $req_change = Ravada::Request->change_network(
+        uid => $user2->id
+        ,data => {%$net, id_owner => $user2->id }
+    );
+
+    wait_request(check_error => 0);
+    like($req_change->error,qr/not authorized/);
+
+    my $req_change2 = Ravada::Request->change_network(
+        uid => user_admin->id
+        ,data => {%$net, id_owner => $user2->id }
+    );
+
+    wait_request(check_error => 0, debug => 0);
+    is($req_change2->error,'');
+
+    my $net3 = _search_network(id => $net->{id});
+    is($net3->{id_owner}, $user2->id) or exit;
+
+    is($user2->can_change_network($clone, {network => $net3->{name}}),1) or exit;
+
+    $req->status('requested');
+    wait_request(check_error => 0);
+    is($req->error, '');
+
+    my $clone4 = Ravada::Front::Domain->open($clone->id);
+    my $hw_net4 = $clone4->info(user_admin)->{hardware}->{network}->[0];
+
+    is($hw_net2{network}, $net->{name});
+}
+
+sub test_new_network($vm) {
+    my $req = Ravada::Request->new_network(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+    );
+    wait_request();
+    my $data = decode_json($req->output);
+    is($data->{id_vm},$vm->id);
+    $data->{name} = new_domain_name();
+
+    my $req_create = Ravada::Request->create_network(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,data => $data
+    );
+
+    my $req2 = Ravada::Request->new_network(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+    );
+    wait_request();
+    my $new_net = decode_json($req_create->output);
+
+    my $data2 = decode_json($req2->output);
+    for my $field( keys %$data) {
+        next if $field =~ /^(id_vm|ip_netmask|is_active|autostart)/;
+
+        isnt($data2->{$field}, $data->{$field},$field);
+    }
+    Ravada::Request->remove_network(
+        uid => user_admin->id
+        ,id => $new_net->{id_network}
+    );
+    wait_request();
+
 }
 
 ########################################################################
@@ -282,20 +533,31 @@ for my $vm_name ( vm_names() ) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
-        is($vm->has_networking,1) if $vm_name eq 'KVM';
+        is($vm->has_networking,1) if $vm_name eq 'KVM'
+        || $vm_name eq 'Void';
         next if !$vm->has_networking();
+
+        test_create_fail($vm);
+
+        test_list_networks($vm);
+
+        my ($net,$user) = test_add_network($vm);
+
+        test_new_network($vm);
+
+        test_duplicate_add($vm, $net);
+
+        test_duplicate_bridge_add($vm, $net);
+
+        test_public_network($vm, $net);
+
+        test_change_network_internal($vm, $net);
+        test_change_network($net);
 
         test_changed_uuid($vm);
 
         test_disapeared_network($vm);
         test_add_down_network($vm);
-
-        test_list_networks($vm);
-        my $net = test_add_network($vm);
-
-        test_change_network_internal($vm, $net);
-
-        test_change_network($net);
 
         test_remove_network($vm,$net);
     }

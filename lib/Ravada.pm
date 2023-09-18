@@ -2378,6 +2378,7 @@ sub _sql_create_tables($self) {
                 ,'ip_netmask' => 'char(20)'
                 ,'dhcp_start' => 'char(15)'
                 ,'dhcp_end' => 'char(15)'
+                ,'is_active' => 'integer not null default 1'
                 ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
             }
         ]
@@ -5032,7 +5033,12 @@ sub _cmd_change_hardware {
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
     die "Error: User ".$user->name." not allowed\n"
-        if $hardware ne 'memory' && !$user->is_admin;
+    unless $user->is_admin
+    || $hardware eq 'memory'
+    || ($hardware eq 'network'
+        && $user->can_change_network($domain, $data)
+       )
+    ;
 
     $domain->change_hardware(
          $request->args('hardware')
@@ -6174,6 +6180,7 @@ sub _req_method {
     ,remove_files => \&_cmd_remove_files
     ,update_iso_urls => \&_cmd_update_iso_urls
 
+    ,new_network => \&_cmd_new_network
     ,create_network => \&_cmd_create_network
     ,remove_network => \&_cmd_remove_network
     ,change_network => \&_cmd_change_network
@@ -6595,6 +6602,22 @@ sub _cmd_remove_files($self, $request) {
     $vm->remove_file(@file);
 }
 
+sub _cmd_new_network($self, $request) {
+    my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized\n"
+    unless $user->can_create_networks;
+
+    $request->output(encode_json({}));
+
+    my $id = $request->args('id_vm') or die "Error: missing id_vm";
+    my $vm = Ravada::VM->open($id);
+
+    my $new = $vm->new_network();
+    $new = {} if !$new;
+
+    $request->output(encode_json( $new));
+}
+
 sub _cmd_create_network($self, $request) {
     my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
     die "Error: ".$user->name." not authorized\n"
@@ -6602,7 +6625,10 @@ sub _cmd_create_network($self, $request) {
 
     my $id = $request->args('id_vm') or die "Error: missing id_vm";
     my $vm = Ravada::VM->open($id);
-    $vm->create_network($request->args('data'),$request->args('uid'));
+    $request->output(encode_json({}));
+    my $id_net = $vm->create_network($request->args('data'),$request->args('uid')
+                    , $request);
+    $request->output(encode_json({id_network => $id_net}));
 }
 
 sub _cmd_remove_network($self, $request) {
@@ -6624,17 +6650,24 @@ sub _cmd_change_network($self, $request) {
     my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
     my $data = $request->args('data');
 
+    die "Error: network.id required" if !exists $data->{id} || !$data->{id};
+
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT * FROM virtual_networks WHERE id=?"
     );
     $sth->execute($data->{id});
     my $network = $sth->fetchrow_hashref;
 
+    die "Error: network $data->{id} not found" if !$network->{id};
+    die "Error: id_vm not defined in ".Dumper($data)
+    if !$network->{id_vm};
+
     die "Error: ".$user->name." not authorized\n"
     unless $user->is_admin
     || ( $user->can_create_networks && $network->{id_owner} == $user->id);
 
-    my $vm = Ravada::VM->open($data->{id_vm});
+    $data->{internal_id} = $network->{internal_id} if !$data->{internal_id};
+    my $vm = Ravada::VM->open($network->{id_vm});
     $vm->change_network($data);
 }
 

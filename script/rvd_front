@@ -512,6 +512,23 @@ get '/network/new' => sub($c) {
     return $c->render( template => '/main/network_new' );
 };
 
+get '/v2/network/new/#id_vm' => sub($c) {
+    my $req = Ravada::Request->new_network(
+        uid => $USER->id
+        ,id_vm => $c->stash('id_vm')
+    );
+    $RAVADA->wait_request($req);
+    my $data = {};
+    warn Dumper([$req->status,$req->output]);
+    if ($req->status eq 'done' && $req->output =~ /^\{/) {
+        eval {
+            $data = decode_json($req->output);
+        };
+        warn $@ if $@;
+    }
+    $c->render(json => $data);
+};
+
 get '/v2/network/info/#id' => sub($c) {
     my $sth = $RAVADA->_dbh->prepare("SELECT * from virtual_networks WHERE id=?");
     $sth->execute($c->stash('id'));

@@ -164,6 +164,7 @@ our %VALID_ARG = (
     ,list_unused_volumes => {uid => 1, id_vm => 1, start => 2, limit => 2 }
     ,remove_files => { uid => 1, id_vm => 1, files => 1 }
 
+    ,new_network => { uid => 1, id_vm => 1 }
     ,create_network => { uid => 1, id_vm => 1, data => 1 }
     ,remove_network => { uid => 1, id => 1 }
     ,change_network => { uid => 1, data => 1 }

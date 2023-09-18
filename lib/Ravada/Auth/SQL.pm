@@ -1235,6 +1235,36 @@ sub disk_used($self) {
     return $used;
 }
 
+sub _load_network($network) {
+    confess "Error: undefined network"
+    if !defined $network;
+
+    my $sth = $$CON->dbh->prepare(
+        "SELECT * FROM virtual_networks where name=?"
+    );
+    $sth->execute($network);
+    my $row = $sth->fetchrow_hashref;
+
+    die "Error: network '$network' not found"
+    if !$row->{id};
+
+    lock_hash(%$row);
+    return $row;
+}
+
+sub can_change_network($user, $domain, $data) {
+    return 1 if $user->is_admin;
+
+    confess "Error: undefined network ".Dumper($data)
+    if !exists $data->{network} || !defined $data->{network};
+
+    my $net = _load_network($data->{network});
+
+    return 1 if $user->id == $domain->id_owner
+        && $user->id == $net->{id_owner};
+    return 0;
+}
+
 sub AUTOLOAD($self, $domain=undef) {
 
     my $name = $AUTOLOAD;
