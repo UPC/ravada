@@ -99,8 +99,10 @@ sub test_nodes($vm_name) {
 }
 
 sub test_settings_item($id, $item) {
-    $t->get_ok('/'.$item.'/settings/'.$id.'.html');
-    is($t->tx->res->code(),200) or die $t->tx->res->body;
+    $item = 'route' if $item eq 'network';
+    my $url = '/'.$item.'/settings/'.$id.'.html';
+    $t->get_ok($url);
+    is($t->tx->res->code(),200, "Expecting $url") or die $t->tx->res->body;
 }
 
 sub test_exists_node($id_node, $name) {
@@ -151,19 +153,19 @@ sub _remove_network($address) {
     my ($found) = grep { $_->{address} eq $address} @list_networks;
     return if !$found;
 
-    $t->get_ok("/v1/network/remove/".$found->{id});
+    $t->get_ok("/v2/route/remove/".$found->{id});
     is($t->tx->res->code(),200) or die $t->tx->res->body;
 
 }
 
-sub test_networks($vm_name) {
+sub test_routes($vm_name) {
     mojo_check_login($t);
     my $name = new_domain_name();
     my $address = '1.2.3.0/24';
 
     _remove_network($address);
 
-    $t->post_ok('/v1/network/set' => json => {
+    $t->post_ok('/v2/route/set' => json => {
         name => $name
         , address =>  $address    });
     is($t->tx->res->code(),200) or die $t->tx->res->to_string();
@@ -176,7 +178,7 @@ sub test_networks($vm_name) {
     my $id_network = $found->{id};
 
     my $name2 = new_domain_name();
-    $t->post_ok("/v1/network/set", json => {
+    $t->post_ok("/v2/route/set", json => {
             id => $found->{id}
             , name => $name2
         }
@@ -188,7 +190,7 @@ sub test_networks($vm_name) {
     is($found->{name}, $name2) or die Dumper($found);
 
     my $new_name = new_domain_name();
-    $t->post_ok("/v1/network/set", json => {
+    $t->post_ok("/v2/route/set", json => {
             id => $id_network
             , name => $new_name
         }
@@ -204,7 +206,7 @@ sub test_networks($vm_name) {
 
     test_settings_item( $id_network, 'network' );
 
-    $t->get_ok("/v1/network/remove/".$found->{id});
+    $t->get_ok("/v2/route/remove/".$found->{id});
     is($t->tx->res->code(),200) or die $t->tx->res->body;
 
     ok(! grep { $_->{id} == $found->{id} } Ravada::Route::list_networks());
@@ -398,7 +400,7 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 
     test_storage_pools($vm_name);
     test_nodes( $vm_name );
-    test_networks( $vm_name );
+    test_routes( $vm_name );
 }
 
 clean_clones();

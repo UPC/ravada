@@ -654,8 +654,6 @@ post '/v1/exists/:item' => sub($c) {
     my $row = $sth->fetchrow_hashref;
     $row->{id} = undef if !exists $row->{id};
 
-    warn Dumper([$query, \@fields, $arg, $row]);
-
     return $c->render(json => $row );
 
 };
@@ -883,16 +881,24 @@ any '/(:item)/settings/(:id).html' => sub($c) {
     $c->stash(tab => ($c->param('tab') or ''));
     my $table = $c->stash('item')."s";
     $table = 'virtual_networks' if $table eq 'networks';
+    $table = 'networks'         if $table eq 'routes';
 
     return access_denied($c) if $table !~ /^[a-z][a-z_]+$/i;
 
-    my $sth = $RAVADA->_dbh->prepare(
-        "SELECT id,id_vm FROM $table WHERE id=?"
-    );
-    $sth->execute($c->stash('id'));
-    my ($id2, $id_vm) = $sth->fetchrow;
-    return not_found($c) if !$id2;
+    my $id_vm;
+    if ($table eq 'nodes') {
+        $id_vm = $c->stash('id');
+    } elsif ($table ne 'networks') {
+        my $sth = $RAVADA->_dbh->prepare(
+            "SELECT id,id_vm FROM $table WHERE id=?"
+        );
+        $sth->execute($c->stash('id'));
+        my $id2;
+        ($id2, $id_vm) = $sth->fetchrow;
+        return not_found($c, 404, $c->stash('item')." ".$c->stash('id')
+        ." not found in $table") if !$id2;
 
+    }
     $c->stash('id_vm' => $id_vm);
 
     return $c->render( template => '/main/settings_generic' );
@@ -3022,6 +3028,10 @@ sub access_denied_json($c, $msg='Access denied') {
 }
 
 sub not_found($c,$code=404, $msg="Not found") {
+    my $agent = $c->req->headers->user_agent;
+    if ($agent =~ /Mojolicious/) {
+        return $c->render( text => $msg , status => $code );
+    }
     if (defined $c->stash('type') && $c->stash('type') eq 'json') {
         return $c->render(json => { error => $msg }, status => $code);
     }
