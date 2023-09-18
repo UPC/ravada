@@ -494,7 +494,8 @@ sub _update_isos {
         ,file_re => 'alpine-standard-3.16.*-x86_64.iso'
         ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
             ,min_disk_size => '2'
-            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+            ,options => { machine => 'pc-q35', bios => 'UEFI'
+            }
         }
         ,alpine381_32 => {
             name => 'Alpine 3.16 32 bits'
@@ -866,7 +867,9 @@ sub _update_isos {
           ,min_ram => 4
           ,arch => 'x86_64'
           ,extra_iso => 'https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.2\d+-\d+/virtio-win-0.1.2\d+.iso'
-            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+            ,options => { machine => 'pc-q35', bios => 'UEFI'
+                ,hardware => { cpu => { cpu => { topology => { threads => 2, cores => 2}}}}
+            }
         }
        ,empty_32bits => {
           name => 'Empty Machine 32 bits'
@@ -5188,6 +5191,51 @@ sub _cmd_reboot {
 
 }
 
+sub _cmd_shutdown_start($self, $request) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain');
+    my $id_vm = $request->defined_arg('id_vm');
+
+    my $domain;
+    if ($id_vm) {
+        my $vm = Ravada::VM->open($id_vm);
+        $domain = $vm->search_domain_by_id($id_domain);
+    } else {
+        $domain = $self->search_domain_by_id($id_domain);
+    }
+    die "Unknown domain '$id_domain'\n" if !$domain;
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    die "USER $uid not authorized to restart machine ".$domain->name
+    unless $domain->_data('id_owner') ==  $user->id || $user->is_operator;
+
+    my $timeout = ($request->defined_arg('timeout') or $domain->_timeout_shutdown() or 60);
+
+    for my $try ( 0 .. 1 ) {
+        $domain->shutdown(timeout => $timeout, user => $user
+                    , request => $request);
+
+        for ( 0 .. $timeout+1 ) {
+            last if !$domain->is_active;
+            sleep 1;
+        }
+        last if !$domain->is_active;
+    }
+
+    my $req_shutdown = Ravada::Request->force_shutdown_domain(
+        uid => $user->id
+        ,id_domain => $domain->id
+        ,after_request => $request->id
+    );
+
+    Ravada::Request->start_domain(
+        uid => $user->id
+        ,id_domain => $domain->id
+        ,after_request => $req_shutdown->id
+    );
+}
+
 sub _cmd_force_reboot {
     my $self = shift;
     my $request = shift;
@@ -6130,6 +6178,7 @@ sub _req_method {
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
 ,force_reboot   => \&_cmd_force_reboot
+,shutdown_start => \&_cmd_shutdown_start
         ,rebase => \&_cmd_rebase
 
 ,refresh_storage => \&_cmd_refresh_storage
@@ -6505,6 +6554,8 @@ sub _cmd_close_exposed_ports($self, $request) {
     my $user = Ravada::Auth::SQL->search_by_id( $uid ) or die "Error: user $uid not found";
 
     my $domain = Ravada::Domain->open($request->id_domain);
+    return if !$domain;
+
     die "Error: user ".$user->name." not authorized to delete iptables rule"
     unless $user->is_admin || $domain->_data('id_owner') == $uid;
 

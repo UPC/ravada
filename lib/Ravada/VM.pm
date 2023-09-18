@@ -425,6 +425,7 @@ sub _around_create_domain {
     my %args = @_;
     my $remote_ip = delete $args{remote_ip};
     my $add_to_pool = delete $args{add_to_pool};
+    my $hardware = delete $args{options}->{hardware};
     my %args_create = %args;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
@@ -511,6 +512,7 @@ sub _around_create_domain {
     $domain->_data('is_compacted' => 1);
     $domain->_data('alias' => $alias) if $alias;
     $domain->_data('date_status_change', Ravada::Utils::now());
+    $self->_change_hardware_install($domain,$hardware) if $hardware;
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
@@ -552,6 +554,19 @@ sub _around_create_domain {
 
     $domain->is_pool(1) if $add_to_pool;
     return $domain;
+}
+
+sub _change_hardware_install($self, $domain, $hardware) {
+
+    for my $item (sort keys %$hardware) {
+        Ravada::Request->change_hardware(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain=> $domain->id
+            ,hardware => $item
+            ,data => $hardware->{$item}
+        );
+    }
+
 }
 
 sub _set_ascii_name($self, $name) {
@@ -946,7 +961,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias','storage'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias','storage', 'options'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;

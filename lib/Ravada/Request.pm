@@ -74,6 +74,8 @@ our %VALID_ARG = (
     ,reboot_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
                        , id_vm => 2 }
     ,force_reboot_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
+    ,shutdown_start =>{ name => 2, id_domain => 2, uid => 1, timeout => 2
+        , at => 2 , id_vm => 2 }
     ,screenshot => { id_domain => 1 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1 }
