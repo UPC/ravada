@@ -1478,6 +1478,8 @@ sub _update_network($self, $net) {
 sub _around_new_network($orig, $self) {
     my $data = $self->$orig();
     $data->{id_vm} = $self->id;
+    $data->{is_active}=1;
+    $data->{autostart}=1;
     return $data;
 }
 
@@ -1495,8 +1497,8 @@ sub _around_create_network($orig, $self,$data, $id_owner, $request=undef) {
         if $found;
     }
 
-    $data->{is_active}=1 if !exists $data->{is_active};
-    $data->{autostart}=1 if !exists $data->{autostart};
+    $data->{is_active}=0 if !exists $data->{is_active};
+    $data->{autostart}=0 if !exists $data->{autostart};
     my $ip = $data->{ip_address} or die "Error: missing ip address";
     $ip =~ s/(.*)\..*/$1/;
     $data->{dhcp_start}="$ip.2" if !exists $data->{dhcp_start};
