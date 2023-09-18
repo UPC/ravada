@@ -66,7 +66,10 @@ our %VALID_CONFIG = (
         ,auth => undef
         ,admin_group => undef
         ,ravada_posix_group => undef
-        ,groups_base => undef
+        ,groups_base => 1
+        ,group_base => undef
+        ,group_field => undef
+        ,group_filter => undef
         ,field => undef
         ,server => undef
         ,port => undef
@@ -3005,6 +3008,9 @@ sub _create_vm_kvm {
 
 sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG, $quiet = $0=~/\.t$/ ) {
     return 1 if !defined $config_orig;
+
+    $valid_config = \%VALID_CONFIG if !$valid_config;
+
     my %config = %$config_orig;
 
     for my $key (sort keys %$valid_config) {
@@ -3023,6 +3029,17 @@ sub _check_config($config_orig = {} , $valid_config = \%VALID_CONFIG, $quiet = $
         && exists $config_orig->{ldap}->{auth}
         && $config_orig->{ldap}->{auth} =~ /match/
         && $0 !~ /\.t$/;
+
+    warn "Warning: LDAP groups_base is deprecated, use group_base.\n"
+        if exists $config_orig->{ldap}
+        && exists $config_orig->{ldap}->{groups_base};
+
+    if ( exists $config_orig->{ldap}
+        && exists $config_orig->{ldap}->{groups_base}
+        && exists $config_orig->{ldap}->{group_base} ) {
+            warn "Error: Use either LDAP groups_base or group_base.\n";
+            return 0;
+    }
 
     return 1;
 }

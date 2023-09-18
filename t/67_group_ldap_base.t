@@ -94,6 +94,9 @@ _init_base($BASE_USERS);
     $group = Ravada::Auth::LDAP::search_group(name => $group->get_value('cn'));
     ok($group,"Expecting group ".$group->dn." exists") or next;
 
+    my @found_member = grep /^member/i,$group->attributes();
+    ok(@found_member,"Expecting a member attribute") or exit;
+
     my @members = Ravada::Auth::LDAP::group_members($group);
     is(scalar(@members),1);
     @members = Ravada::Auth::LDAP::group_members($group->get_value('cn'));

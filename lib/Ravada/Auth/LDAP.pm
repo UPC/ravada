@@ -356,7 +356,7 @@ Add a group to the LDAP
 =cut
 
 sub add_group($name, $base=undef, $class=['groupOfUniqueNames','nsMemberOf','posixGroup','top' ]) {
-    $base = ($$CONFIG->{ldap}->{groups_base} or "ou=groups,"._dc_base()) if !defined $base;
+    $base = ($$CONFIG->{ldap}->{group_base} or $$CONFIG->{ldap}->{groups_base} or "ou=groups,"._dc_base()) if !defined $base;
 
     my $ldap = _init_ldap_admin();
 
@@ -364,15 +364,18 @@ sub add_group($name, $base=undef, $class=['groupOfUniqueNames','nsMemberOf','pos
     my $oc_posix_group;
     $oc_posix_group = grep { /^posixGroup$/ } @$class;
 
-    my @attrs =( cn=>$name
+    my $field = ( $$CONFIG->{ldap}->{group_field} or 'cn');
+
+    my @attrs =( $field =>$name
                     ,objectClass => $class
                     ,description => "Group for $name"
     );
     push @attrs, (gidNumber => _search_new_gid()) if $oc_posix_group;
 
+    my $dn = "$field=$name,$base";
     my @data = (
-        dn => "cn=$name,$base"
-        , cn => $name
+        dn => $dn
+        , $field => $name
         , attrs => \@attrs
       );
     my $mesg = $ldap->add(@data);
@@ -431,13 +434,19 @@ sub search_group {
     return if !exists $$CONFIG->{ldap} || !$$CONFIG->{ldap};
 
     my $name = delete $args{name} or confess "Error: missing name";
-    my $base = ( delete $args{base} or $$CONFIG->{ldap}->{groups_base} or "ou=groups,"._dc_base() );
+    my $base = ( delete $args{base} or $$CONFIG->{ldap}->{group_base} or $$CONFIG->{ldap}->{groups_base} or "ou=groups,"._dc_base() );
     my $ldap = ( delete $args{ldap} or _init_ldap_admin());
     my $retry =( delete $args{retry} or 0);
 
+    my $field = ( $$CONFIG->{ldap}->{group_field} or 'cn');
+
     confess "ERROR: Unknown fields ".Dumper(\%args) if keys %args;
     confess "ERROR: I can't connect to LDAP " if!$ldap;
-    my $filter = "cn=$name";
+    my $filter = "$field=$name";
+    my $group_filter = $$CONFIG->{ldap}->{group_filter};
+    if ($group_filter) {
+        $filter = "(\&($group_filter)($field=$name))";
+    }
     my $mesg = $ldap ->search (
         filter => $filter
          ,base => $base
@@ -483,7 +492,7 @@ sub search_group {
 =cut
 
 sub search_group_members($cn, $retry = 0) {
-    my $base = ($$CONFIG->{ldap}->{groups_base} or "ou=groups,"._dc_base());
+    my $base = ($$CONFIG->{ldap}->{group_base} or $$CONFIG->{ldap}->{groups_base} or "ou=groups,"._dc_base());
 
     my $ldap = _init_ldap_admin();
     my $sizelimit = ($$CONFIG->{ldap}->{size_limit} or 1000);
@@ -540,10 +549,11 @@ sub add_to_group {
         die "Error: I can't find cn in $dn" if !$cn;
         my @attributes = $group->attributes;
         my $attribute;
-        for (qw(uniqueMember memberUid)) {
-            $attribute = $_ if grep /^$_$/,@attributes;
+        for my $name (qw(uniqueMember memberUid)) {
+            $attribute = $name if grep /^$name$/,@attributes;
         }
         ($attribute) = grep /member/i,@attributes if !$attribute;
+        $attribute = 'memberUid' if !$attribute;
         if ($attribute eq 'memberUid') {
             $group->add($attribute => $cn);
         } else {
@@ -639,13 +649,18 @@ sub _group_members($group_name = $$CONFIG->{ldap}->{group}) {
         }
     }
     confess "Error: invalid object ".ref($group) if ref($group)!~ /^Net::LDAP/;
-    my @oc = $group->get_value('objectClass');
 
     my @members;
+    my $found=0;
     for my $attribute ($group->attributes) {
         next if $attribute !~ /member/i;
-        push @members, $group->get_value($attribute);
+        $found++;
+        my @list = $group->get_value($attribute);
+        push @members, @list if scalar(@list);
     }
+    warn "Warning: no member attributes found for ".$group->dn
+        ."\n".join(",", sort $group->attributes)
+            if !$found;
     my %members = map { $_ => 1 } @members;
     @members = sort keys %members;
     return @members;
