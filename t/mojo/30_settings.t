@@ -147,7 +147,7 @@ sub test_exists_network($id_network, $field, $name) {
     is($result_exists->{id}, $id_network);
 }
 
-sub _remove_network($address) {
+sub _remove_route($address) {
     my @list_networks = Ravada::Route::list_networks();
 
     my ($found) = grep { $_->{address} eq $address} @list_networks;
@@ -158,12 +158,47 @@ sub _remove_network($address) {
 
 }
 
+sub _remove_network($id_vm, $name) {
+    my $sth = connector->dbh->prepare("SELECT * FROM virtual_networks vn, vms v"
+        ." WHERE vn.id_vm=v.id "
+        ."   AND v.id=?"
+    );
+    $sth->execute($id_vm);
+
+    my $row = $sth->fetchrow_hashref;
+    warn Dumper($row);
+    return if !$row->{id};
+
+    my $req = mojo_request($t, "remove_network"
+        ,{ id => $row->{id}});
+
+}
+
+
+sub test_networks($vm_name) {
+    mojo_check_login($t);
+    my $name = new_domain_name();
+
+    my $sth = connector->dbh->prepare("SELECT id FROM vms "
+        ." WHERE vm_type=?");
+    $sth->execute($vm_name);
+    my ($id_vm) = $sth->fetchrow;
+    die "Error: I can't find if for vm type = $vm_name" if !$id_vm;
+
+    _remove_network($id_vm , $name);
+
+    my $id_req = mojo_request($t, "new_network"
+        ,{ id_vm => $id_vm });
+    my $req = Ravada::Request->open($id_req);
+    die$req->output;
+}
+
 sub test_routes($vm_name) {
     mojo_check_login($t);
     my $name = new_domain_name();
     my $address = '1.2.3.0/24';
 
-    _remove_network($address);
+    _remove_route($address);
 
     $t->post_ok('/v2/route/set' => json => {
         name => $name
@@ -398,6 +433,7 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 
     diag("Testing settings in $vm_name");
 
+    test_networks( $vm_name );
     test_storage_pools($vm_name);
     test_nodes( $vm_name );
     test_routes( $vm_name );
