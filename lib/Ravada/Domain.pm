@@ -1943,9 +1943,6 @@ sub display($self, $user) {
 
     my ($display_info) = grep { $_->{driver} !~ /-tls$/ } @display_info;
 
-    confess "Error: I can't find builtin display info for ".$self->name." ".ref($self)."\n".Dumper($display_info)
-    if !exists $display_info->{port};
-
     return '' if !$display_info->{driver} || !$display_info->{ip}
     || !$display_info->{port};
 
