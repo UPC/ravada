@@ -479,21 +479,23 @@ sub test_new_network($vm) {
     my $req = Ravada::Request->new_network(
         uid => user_admin->id
         ,id_vm => $vm->id
+        ,name => base_domain_name()."_"
     );
     wait_request();
     my $data = decode_json($req->output);
     is($data->{id_vm},$vm->id);
-    $data->{name} = new_domain_name();
 
     my $req_create = Ravada::Request->create_network(
         uid => user_admin->id
         ,id_vm => $vm->id
         ,data => $data
     );
+    wait_request(debug => 0);
 
     my $req2 = Ravada::Request->new_network(
         uid => user_admin->id
         ,id_vm => $vm->id
+        ,name => base_domain_name()."_"
     );
     wait_request();
     my $new_net = decode_json($req_create->output);

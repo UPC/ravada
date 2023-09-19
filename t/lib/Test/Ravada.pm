@@ -1456,6 +1456,7 @@ sub remove_qemu_networks($vm=undef) {
     for my $network ( $vm->vm->list_all_networks) {
         my $name = $network->get_name;
         next if $name !~ /^$base/;
+        diag("removing network $name");
         $network->destroy() if $network->is_active;
         $network->undefine();
     }

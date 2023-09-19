@@ -1490,8 +1490,8 @@ sub _update_network($self, $net) {
     #    delete $db_net->{id};
 }
 
-sub _around_new_network($orig, $self) {
-    my $data = $self->$orig();
+sub _around_new_network($orig, $self, $name) {
+    my $data = $self->$orig($name);
     $data->{id_vm} = $self->id;
     $data->{is_active}=1;
     $data->{autostart}=1;

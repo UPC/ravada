@@ -6662,8 +6662,9 @@ sub _cmd_new_network($self, $request) {
 
     my $id = $request->args('id_vm') or die "Error: missing id_vm";
     my $vm = Ravada::VM->open($id);
+    my $name = ($request->defined_arg('name') or 'net');
 
-    my $new = $vm->new_network();
+    my $new = $vm->new_network($name);
     $new = {} if !$new;
 
     $request->output(encode_json( $new));

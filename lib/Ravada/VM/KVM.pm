@@ -2958,30 +2958,34 @@ sub list_virtual_networks($self) {
     return @networks;
 }
 
-sub new_network($self) {
+sub new_network($self, $name='net') {
     my @networks = $self->list_virtual_networks();
 
     my %base = (
-        name => 'net'
-        ,ip_address => ['192.168.',122,'.0']
+        name => $name
+        ,ip_address => ['192.168.',122,'.1']
         ,bridge => 'virbr'
     );
     my $new = {ip_netmask => '255.255.255.0'};
     for my $field ( keys %base) {
         my %old = map { $_->{$field} => 1 } @networks;
-        my $n = 0;
-        my $base = ($base{$field} or $field);
-        if (ref($base)) {
-            $n=$base->[1];
+        my ($last) = reverse sort keys %old;
+        my ($z,$n) = $last =~ /.*?(0*)(\d+)/;
+        $n++;
+        $n = "$z$n";
+
+        my $template = $base{$field};
+        if (ref($template)) {
+            $n=$template->[1];
         }
         my $value;
         for ( 0 .. 255 ) {
-            if (ref($base)) {
-                $value = $base->[0].$n.$base->[2]
+            if (ref($template)) {
+                $value = $template->[0].$n.$template->[2]
             } else {
-                $value = $base.$n;
+                $value = $template.$n;
             }
-            last if !$old{$value};
+            last if !exists $old{$value};
             $n++;
         }
         $new->{$field} = $value;

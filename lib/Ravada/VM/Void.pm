@@ -406,12 +406,12 @@ sub _new_net_bridge ($self) {
     }
 }
 
-sub new_network($self) {
+sub new_network($self, $name='net') {
 
     my @networks = $self->list_virtual_networks();
 
     my %base = (
-        name => 'net'
+        name => $name
         ,ip_address => ['192.168.','.0']
         ,bridge => 'voidbr'
     );
