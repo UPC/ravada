@@ -20,22 +20,36 @@
             <div class="col-md-4"></div>
             <!-- <div class="col-md-2">enabled</div> -->
         </div>
+
+        <div class="row">
+            <div class="col-md-2"><b><%=l 'Name' %></b></div>
+            <div class="col-md-2"><b><%=l 'Bridge' %></b></div>
+            <div class="col-md-2"><b><%=l 'Address' %></b></div>
+            <div class="col-md-1"><b><%=l 'Active' %></b></div>
+            <div class="col-md-2"><b><%=l 'Auto Start' %></b></div>
+        </div>
+
         <div ng-repeat="network in networks | orderObjectBy:'name'"
              class="row" ng-cloak
         >
             <div class="col-md-2">
                 <a href="/network/settings/{{network.id}}.html">{{network.name}}</a>
             </div>
-            <div class="col-md-2">{{network.address}}</div>
-            <!--
-            <div class="col-md-2">
-                <input type="checkbox" ng-model="network.no_domains"
-                    ng-true-value="0" ng-false-value="1"
-                    ng-change
-                    ="update_network(network.id,'no_domains')"
-                >
+            <div class="col-md-2">{{network.bridge}}</div>
+            <div class="col-md-2">{{network.ip_address}}</div>
+            <div class="col-md-1">
+                <span ng-show="network.is_active"
+                      >&#10004;</span>
+                <span ng-show="!network.is_active"
+                      >&#10005;</span>
             </div>
-            -->
+            <div class="col-md-2">
+                <span ng-show="network.autostart"
+                      >&#10004;</span>
+                <span ng-show="!network.autostart"
+                      >&#10005;</span>
+            </div>
+
         </div>
     </div>
     </div>

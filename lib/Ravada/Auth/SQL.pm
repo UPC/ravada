@@ -378,6 +378,7 @@ sub is_operator {
             || $self->can_view_groups()
             || $self->can_manage_groups()
             || $self->can_view_all()
+            || $self->can_create_networks()
     ;
     return 0;
 }

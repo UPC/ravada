@@ -1680,13 +1680,23 @@ sub list_storage_pools($self, $uid, $id_vm, $active=undef) {
     return _filter_active($pools, $active);
 }
 
-sub list_networks($self, $id_vm) {
-    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT * FROM virtual_networks "
-        ." WHERE id_vm=?"
-        ." ORDER BY name"
-    );
-    $sth->execute($id_vm);
+sub list_networks($self, $id_vm ,$id_user) {
+    my $query = "SELECT * FROM virtual_networks "
+        ." WHERE id_vm=?";
+
+    my $user = Ravada::Auth::SQL->search_by_id($id_user);
+    my $all = 0;
+    unless ($user->is_admin || $user->can_manage_all_networks) {
+        $query .= " AND id_owner=? ";
+        $all = 1;
+    }
+    $query .= " ORDER BY name";
+    my $sth = $CONNECTOR->dbh->prepare($query);
+    if ($all) {
+        $sth->execute($id_vm);
+    } else {
+        $sth->execute($id_vm, $id_user);
+    }
     my @networks;
     while ( my $row = $sth->fetchrow_hashref ) {
         push @networks,($row);

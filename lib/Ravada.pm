@@ -1815,7 +1815,8 @@ sub _add_grants($self) {
     $self->_add_grant('view_all',0,"The user can start and access the screen of any virtual machine");
     $self->_add_grant('create_disk',0,'can create disk volumes');
     $self->_add_grant('quota_disk',0,'disk space limit',1);
-    $self->_add_grant('create_networks',0,'can create virtual networks',1);
+    $self->_add_grant('create_networks',0,'can create virtual networks.');
+    $self->_add_grant('manage_all_networks',0,'can manage all the virtual networks.');
 }
 
 sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
@@ -5739,6 +5740,7 @@ sub _refresh_active_vms ($self) {
             next;
         }
         $active_vm{$vm->id} = 1;
+        warn $vm->name;
         $vm->list_virtual_networks();
     }
     return \%active_vm;
