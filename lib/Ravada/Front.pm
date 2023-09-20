@@ -1685,17 +1685,17 @@ sub list_networks($self, $id_vm ,$id_user) {
         ." WHERE id_vm=?";
 
     my $user = Ravada::Auth::SQL->search_by_id($id_user);
-    my $all = 0;
+    my $owned = 0;
     unless ($user->is_admin || $user->can_manage_all_networks) {
         $query .= " AND id_owner=? ";
-        $all = 1;
+        $owned = 1;
     }
     $query .= " ORDER BY name";
     my $sth = $CONNECTOR->dbh->prepare($query);
-    if ($all) {
-        $sth->execute($id_vm);
-    } else {
+    if ($owned) {
         $sth->execute($id_vm, $id_user);
+    } else {
+        $sth->execute($id_vm);
     }
     my @networks;
     while ( my $row = $sth->fetchrow_hashref ) {

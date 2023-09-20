@@ -358,6 +358,10 @@ get '/admin/networks' => sub($c) {
 
     _add_admin_libs($c);
     _select_vm($c);
+    Ravada::Request->list_networks(
+        uid => $USER->id
+        ,id_vm => $c->stash('id_vm')
+    );
 
     return $c->render( template => '/main/admin_networks' );
 
@@ -481,7 +485,7 @@ get '/list_routes.json' => sub {
 
 get '/vm/list_networks/(:id_vm)' => sub {
     my $c = shift;
-    $c->render(json => Ravada::Front->list_networks($c->stash('id_vm')) );
+    $c->render(json => Ravada::Front->list_networks($c->stash('id_vm'), $USER->id) );
 };
 
 get '/route/info/#id' => sub($c) {
