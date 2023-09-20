@@ -704,7 +704,9 @@ sub _around_add_volume {
         ($name) = $file =~ m{.*/(.*)} if !$name && $file;
         $name = $self->name if !$name;
 
-        $name .= "-".$args{target}."-".Ravada::Utils::random_name(4);
+        $name .= "-".$args{target}."-".Ravada::Utils::random_name(4)
+        if $name !~ /\.iso$/;
+
         $args{name} = $name;
     }
 
@@ -717,10 +719,12 @@ sub _around_add_volume {
     $args{allocation} = Ravada::Utils::size_to_number($args{allocation})
         if exists $args{allocation} && defined $args{allocation};
 
-    my $free = $self->_vm->free_disk();
+    my $storage = $args{storage};
+
+    my $free = $self->_vm->free_disk($storage);
     my $free_out = int($free / 1024 / 1024 / 1024 ) * 1024 *1024 *1024;
 
-    confess "Error creating volume, out of space $size . Disk free: "
+    die "Error creating volume, out of space $size . Disk free: "
             .Ravada::Utils::number_to_size($free_out)
             ."\n"
         if exists $args{size} && $args{size} && $args{size} >= $free;
@@ -1944,9 +1948,6 @@ sub display($self, $user) {
     my @display_info = $self->display_info($user);
 
     my ($display_info) = grep { $_->{driver} !~ /-tls$/ } @display_info;
-
-    confess "Error: I can't find builtin display info for ".$self->name." ".ref($self)."\n".Dumper($display_info)
-    if !exists $display_info->{port};
 
     return '' if !$display_info->{driver} || !$display_info->{ip}
     || !$display_info->{port};

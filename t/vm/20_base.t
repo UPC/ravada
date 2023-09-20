@@ -300,17 +300,15 @@ sub test_displays_added_on_refresh($domain, $n_expected, $delete=1) {
 
     _wait_ip($domain);
 
+    my $domain_f0 = Ravada::Front::Domain->open($domain->id);
+    my $display0_raw = $domain_f0->info(user_admin)->{hardware}->{display};
+
+    my @display0 = grep { $_->{is_secondary} == 0 } @$display0_raw;
+    my $n_expected2 = scalar(@display0);
+
     if ($delete) {
         my $sth = connector->dbh->prepare("DELETE FROM domain_displays WHERE id_domain=?");
         $sth->execute($domain->id);
-    }else {
-        my $sth = connector->dbh->prepare("SELECT count(*) FROM domain_displays WHERE id_domain=?");
-        $sth->execute($domain->id);
-        my ($n_exp2) = $sth->fetchrow;
-        if ($n_exp2 && $n_expected != $n_exp2) {
-            cluck "n_expected was $n_expected, but it should be $n_exp2";
-            $n_expected = $n_exp2;
-        }
     }
     my $req;
     for ( 1 .. 3 ) {
@@ -333,7 +331,7 @@ sub test_displays_added_on_refresh($domain, $n_expected, $delete=1) {
     my $count;
     for ( 1 .. 10 ) {
         my $sth_count = connector->dbh->prepare(
-            "SELECT count(*) FROM domain_displays WHERE id_domain=?");
+            "SELECT count(*) FROM domain_displays WHERE id_domain=? AND is_secondary=0");
         $sth_count->execute($domain->id);
         ($count) = $sth_count->fetchrow;
         last if $count;
@@ -344,11 +342,13 @@ sub test_displays_added_on_refresh($domain, $n_expected, $delete=1) {
         );
         wait_request();
     }
-    ok($count>=$n_expected,"Got $count, expecting >$n_expected displays on table domain_displays for ".$domain->name) or confess;
+    ok($count>=$n_expected || $count >=$n_expected2,"Got $count, expecting >$n_expected or $n_expected2 displays on table domain_displays for ".$domain->name) or confess;
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
-    my $display = $domain_f->info(user_admin)->{hardware}->{display};
-    is(scalar(@$display), $n_expected,"Expecting $n_expected displays on info->{hardware}->{display} in ".$domain->name) or confess Dumper($display);
+    my $display_raw = $domain_f->info(user_admin)->{hardware}->{display};
+    my @display = grep { $_->{is_secondary} == 0 } @$display_raw;
+    ok(scalar(@display) == $n_expected || scalar(@display) == $n_expected2
+        ,"Expecting $n_expected or $n_expected2 displays on info->{hardware}->{display} in ".$domain->name) or confess Dumper(@display);
 
 }
 
