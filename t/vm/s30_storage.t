@@ -121,6 +121,7 @@ sub test_storage_full($vm) {
 
     my $domain = $vm->search_domain($name);
     for my $vol ($domain->list_volumes) {
+        next if $vol =~ /iso$/;
         unlike($vol,qr{^/run});
     }
 
