@@ -169,7 +169,7 @@ our %VALID_ARG = (
     ,list_networks => { uid => 1, id_vm => 1}
     ,new_network => { uid => 1, id_vm => 1, name => 2 }
     ,create_network => { uid => 1, id_vm => 1, data => 1 }
-    ,remove_network => { uid => 1, id => 1 }
+    ,remove_network => { uid => 1, id => 1, id_vm => 2, name => 2 }
     ,change_network => { uid => 1, data => 1 }
 );
 

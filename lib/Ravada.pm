@@ -6701,16 +6701,25 @@ sub _cmd_create_network($self, $request) {
 sub _cmd_remove_network($self, $request) {
 
     my $id = $request->args('id');
-    _check_user_authorized_network($request, $id);
+    my $name = $request->defined_arg('name');
+    my $sth_net = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM virtual_networks WHERE id=?"
+    );
+    $sth_net->execute($id);
+    my $network = $sth_net->fetchrow_hashref;
+    if  ($network && $network->{id} ) {
+        _check_user_authorized_network($request, $id);
+    }
+    my $id_vm = ( $network->{id_vm} or $request->defined_arg('id_vm') );
+    die "Error: unknown id_vm ".Dumper([$network,$request]) if !$id_vm;
+
+    die "Error: unkonwn network , id=$id, name='".($name or '')."' "
+    .Dumper($network) if ! $network->{id} && !$name;
 
     my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
-    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id_vm FROM virtual_networks WHERE id=?");
-    $sth->execute($id);
-    my ($id_vm) = $sth->fetchrow;
 
     my $vm = Ravada::VM->open($id_vm);
-    $vm->remove_network($user, $id);
+    $vm->remove_network($user, ($network->{id} or $name));
 }
 
 sub _check_user_authorized_network($request, $id_network) {
@@ -6724,7 +6733,7 @@ sub _check_user_authorized_network($request, $id_network) {
     $sth->execute($id_network);
     my $network = $sth->fetchrow_hashref;
 
-    die "Error: network $id_network not found" if !$network->{id};
+    confess "Error: network $id_network not found" if !$network->{id};
 
     die "Error: ".$user->name." not authorized\n"
     unless $user->is_admin

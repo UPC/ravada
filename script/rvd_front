@@ -356,6 +356,9 @@ get '/admin/storage' => sub($c) {
 
 get '/admin/networks' => sub($c) {
 
+    return access_denied($c) unless $USER->is_admin
+    || $USER->can_create_networks || $USER->can_manage_all_networks;
+
     _add_admin_libs($c);
     _select_vm($c);
     Ravada::Request->list_networks(
@@ -485,6 +488,10 @@ get '/list_routes.json' => sub {
 
 get '/v2/vm/list_networks/(:id_vm)' => sub {
     my $c = shift;
+
+    return access_denied($c) unless $USER->is_admin
+    || $USER->can_create_networks || $USER->can_manage_all_networks;
+
     $c->render(json => Ravada::Front->list_networks($c->stash('id_vm'), $USER->id) );
 };
 
@@ -507,7 +514,8 @@ get '/route/list_domains/#id' => sub($c) {
 };
 
 get '/network/new' => sub($c) {
-    return access_denied($c) unless $USER->can_create_networks();
+    return access_denied($c) unless $USER->is_admin
+    || $USER->can_create_networks || $USER->can_manage_all_networks;
 
     _add_admin_libs($c);
     _select_vm($c);
@@ -517,13 +525,17 @@ get '/network/new' => sub($c) {
 };
 
 get '/v2/network/new/#id_vm' => sub($c) {
+
+    return access_denied($c) unless $USER->is_admin
+    || $USER->can_create_networks || $USER->can_manage_all_networks;
+
     my $req = Ravada::Request->new_network(
         uid => $USER->id
         ,id_vm => $c->stash('id_vm')
     );
     $RAVADA->wait_request($req);
     my $data = {};
-    if ($req->status eq 'done' && $req->output =~ /^\{/) {
+    if ($req->status eq 'done' && $req->output && $req->output =~ /^\{/) {
         eval {
             $data = decode_json($req->output);
         };
@@ -541,6 +553,7 @@ get '/v2/network/info/#id' => sub($c) {
 
 post '/v2/network/set' => sub($c) {
     my $arg = decode_json($c->req->body);
+    delete $arg->{owner};
     my $req;
     my %data;
     if ($arg->{id}) {
@@ -3066,10 +3079,16 @@ sub access_denied {
     if (defined $c->stash('type') && $c->stash('type') eq 'json') {
         return $c->render(json => { error => $msg }, status => 403);
     }
+
+    my $agent = $c->req->headers->user_agent;
+    if ($agent =~ /Mojolicious/) {
+        return $c->render(text => $msg, status => 403);
+    }
     my @css_snippets = ["\t.intro {\n\t\tbackground:"
                     ." url($CONFIG_FRONT->{login_bg_file})"
                     ." no-repeat bottom center scroll;\n\t}"];
 
+                warn 1;
     return $c->render(
                     template => ($CONFIG_FRONT->{access_denied} or '/main/access_denied')
                     ,css => ['/css/main.css']

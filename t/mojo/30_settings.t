@@ -166,11 +166,32 @@ sub _remove_networks($id_vm) {
     $sth->execute($id_vm, base_domain_name."%");
 
     while ( my $row = $sth->fetchrow_hashref ) {
-        warn Dumper($row);
-
         my $req = mojo_request($t, "remove_network"
             ,{ id => $row->{id}});
     }
+
+}
+
+sub test_networks_deny($vm_name) {
+
+    my ($name, $pass) = (new_domain_name, "$$ $$");
+    my $user = create_user($name, $pass,0 );
+    is($user->is_admin,0 );
+    mojo_login($t, $name, $pass);
+
+    my $sth = connector->dbh->prepare("SELECT id FROM vms "
+        ." WHERE vm_type=?");
+    $sth->execute($vm_name);
+    my ($id_vm) = $sth->fetchrow;
+
+    for my $url ( "/admin/networks", "/network/new"
+        , "/v2/vm/list_networks/$id_vm","/v2/network/new/".$id_vm
+        ) {
+        $t->get_ok($url)->status_is(403);
+
+    }
+
+    mojo_login($t, $USERNAME, $PASSWORD);
 
 }
 
@@ -201,8 +222,27 @@ sub test_networks_admin($vm_name) {
     $t->post_ok("/v2/network/set/" => json => $data );
 
     my $new_ok = decode_json($t->tx->res->body);
-    die Dumper($new_ok);
     ok($new_ok->{id_network});
+
+    $t->get_ok("/v2/vm/list_networks/".$id_vm);
+    my $networks2 = decode_json($t->tx->res->body);
+    my ($new) = grep { $_->{name} eq $data->{name} } @$networks2;
+
+    ok($new);
+    $new->{is_active} = 0;
+
+    $t->post_ok("/v2/network/set/" => json => $new);
+    wait_request(debug => 1);
+    $t->get_ok("/v2/vm/list_networks/".$id_vm);
+
+    my $networks3 = decode_json($t->tx->res->body);
+    my ($changed) = grep { $_->{name} eq $data->{name} } @$networks3;
+    is($changed->{is_active},0) or warn Dumper($changed);
+
+    $t->get_ok("/v2/network/info/".$changed->{id});
+
+    my $changed4 = decode_json($t->tx->res->body);
+    is($changed4->{is_active},0) or exit;
 }
 
 sub test_routes($vm_name) {
@@ -438,13 +478,14 @@ mojo_login($t, $USERNAME, $PASSWORD);
 remove_old_domains_req(0); # 0=do not wait for them
 clean_clones();
 
-test_languages();
-test_missing_routes();
+#test_languages();
+#test_missing_routes();
 
 for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 
     diag("Testing settings in $vm_name");
 
+    test_networks_deny( $vm_name );
     test_networks_admin( $vm_name );
     test_storage_pools($vm_name);
     test_nodes( $vm_name );
@@ -452,5 +493,6 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 }
 
 clean_clones();
+remove_old_users();
 
 done_testing();

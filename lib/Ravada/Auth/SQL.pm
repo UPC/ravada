@@ -636,9 +636,25 @@ sub remove($self) {
     my $sth = $$CON->dbh->prepare("DELETE FROM grants_user where id_user=?");
     $sth->execute($self->id);
 
+    $self->_remove_networks();
+
     $sth = $$CON->dbh->prepare("DELETE FROM users where id=?");
     $sth->execute($self->id);
     $sth->finish;
+
+}
+
+sub _remove_networks($self) {
+    my $sth = $$CON->dbh->prepare("SELECT id,id_vm,name FROM virtual_networks WHERE id_owner=?");
+    $sth->execute($self->id);
+    while (my ($id, $id_vm, $name) = $sth->fetchrow) {
+        Ravada::Request->remove_network(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_vm => $id_vm
+            ,id => $id
+            ,name => $name
+        );
+    }
 }
 
 =head2 can_do

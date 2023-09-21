@@ -174,6 +174,35 @@ sub test_add_network($vm) {
     return $new;
 }
 
+sub test_remove_user($vm) {
+    my $user = create_user();
+    user_admin->make_admin($user->id);
+    my $req = Ravada::Request->new_network(
+        uid => $user->id
+        ,id_vm => $vm->id
+        ,name => base_domain_name()
+    );
+    wait_request(debug => 0);
+
+    my $data = decode_json($req->output);
+    is($data->{id_vm},$vm->id);
+
+    my $req_create = Ravada::Request->create_network(
+        uid => $user->id
+        ,id_vm => $vm->id
+        ,data => $data
+    );
+    wait_request(debug => 0);
+
+    my($new0) = grep { $_->{name} eq $data->{name} } $vm->list_virtual_networks();
+    is($new0->{id_owner}, $user->id) or exit;
+
+    $user->remove();
+    wait_request(debug => 0);
+
+    my($new) = grep { $_->{name} eq $data->{name} } $vm->list_virtual_networks();
+    ok(!$new,"Expecting removed network $new0->{id} $data->{name}") or exit;
+}
 sub test_remove_network($vm, $net) {
     my $user = create_user();
     my $req = Ravada::Request->remove_network(
@@ -538,6 +567,8 @@ for my $vm_name ( vm_names() ) {
         is($vm->has_networking,1) if $vm_name eq 'KVM'
         || $vm_name eq 'Void';
         next if !$vm->has_networking();
+
+        test_remove_user($vm);
 
         test_create_fail($vm);
 

@@ -1530,11 +1530,17 @@ sub _around_remove_network($orig, $self, $user, $id_net) {
     die "Error: Access denied: ".$user->name." can not remove networks"
     unless $user->can_create_networks();
 
-    my ($net) = grep { $_->{id} eq $id_net } $self->list_virtual_networks();
+    confess "Error: undefined network" if !defined $id_net;
 
-    die "Error: network id $id_net not found" if !$net;
+    my $name = $id_net;
+    if ($id_net =~ /^\d+$/) {
+        my ($net) = grep { $_->{id} eq $id_net } $self->list_virtual_networks();
+        die "Error: network id $id_net not found" if !$net;
+        $name = $net->{name};
+    }
 
-    $self->$orig($net->{name});
+
+    $self->$orig($name);
 
     my $sth = $self->_dbh->prepare("DELETE FROM virtual_networks WHERE id=?");
     $sth->execute($id_net);
@@ -1577,13 +1583,17 @@ sub _around_list_networks($orig, $self) {
         $self->_update_network($net);
     }
     my $sth = $self->_dbh->prepare(
-        "SELECT id,name FROM virtual_networks "
+        "SELECT id,name,id_owner FROM virtual_networks "
         ." WHERE id_vm=?");
     my $sth_delete = $self->_dbh->prepare("DELETE FROM virtual_networks where id=?");
     $sth->execute($self->id);
-    while (my ($id,$name) = $sth->fetchrow) {
+    while (my ($id, $name, $id_owner) = $sth->fetchrow) {
         my ($found) = grep {$_->{name} eq $name } @list;
-        next if $found;
+        if ( $found ) {
+            $found->{id_owner} = $id_owner;
+            $found->{id} = $id;
+            next;
+        }
         $sth_delete->execute($id);
     }
 

@@ -1120,6 +1120,9 @@ sub create_user($name=new_domain_name(), $pass=$$, $is_admin=0) {
     eval { $login = Ravada::Auth::SQL->new(name => $name, password => $pass ) };
     return $login if $login;
 
+    $login = Ravada::Auth::SQL->new(name => $name);
+    $login->remove if $login->id;
+
     Ravada::Auth::SQL::add_user(name => $name, password => $pass, is_admin => $is_admin);
 
     my $user;
