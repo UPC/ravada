@@ -1698,10 +1698,23 @@ sub list_networks($self, $id_vm ,$id_user) {
         $sth->execute($id_vm);
     }
     my @networks;
+    my %owner;
     while ( my $row = $sth->fetchrow_hashref ) {
+        $self->_search_user($row->{id_owner},\%owner);
+        $row->{owner} = $owner{$row->{id_owner}};
         push @networks,($row);
     }
     return \@networks;
+}
+
+sub _search_user($self,$id, $users) {
+    return if $users->{$id};
+
+    my $sth = $self->_dbh->prepare(
+        "SELECT * FROM users WHERE id=?"
+    );
+    $sth->execute($id);
+    $users->{$id}=$sth->fetchrow_hashref();
 }
 
 sub _filter_active($pools, $active) {

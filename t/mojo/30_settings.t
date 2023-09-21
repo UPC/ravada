@@ -158,26 +158,30 @@ sub _remove_route($address) {
 
 }
 
-sub _remove_network($id_vm, $name) {
+sub _remove_networks($id_vm) {
     my $sth = connector->dbh->prepare("SELECT * FROM virtual_networks vn, vms v"
         ." WHERE vn.id_vm=v.id "
-        ."   AND v.id=?"
+        ."   AND v.id=? AND vn.name like ?"
     );
-    $sth->execute($id_vm);
+    $sth->execute($id_vm, base_domain_name."%");
 
-    my $row = $sth->fetchrow_hashref;
-    warn Dumper($row);
-    return if !$row->{id};
+    while ( my $row = $sth->fetchrow_hashref ) {
+        warn Dumper($row);
 
-    my $req = mojo_request($t, "remove_network"
-        ,{ id => $row->{id}});
+        my $req = mojo_request($t, "remove_network"
+            ,{ id => $row->{id}});
+    }
 
 }
 
 
-sub test_networks($vm_name) {
+sub test_networks_admin($vm_name) {
     mojo_check_login($t);
-    my $name = new_domain_name();
+
+    for my $url (qw( /admin/networks/ /network/new) ) {
+        $t->get_ok($url);
+        is($t->tx->res->code(),200, "Expecting access to $url");
+    }
 
     my $sth = connector->dbh->prepare("SELECT id FROM vms "
         ." WHERE vm_type=?");
@@ -185,12 +189,20 @@ sub test_networks($vm_name) {
     my ($id_vm) = $sth->fetchrow;
     die "Error: I can't find if for vm type = $vm_name" if !$id_vm;
 
-    _remove_network($id_vm , $name);
+    _remove_networks($id_vm);
 
-    my $id_req = mojo_request($t, "new_network"
-        ,{ id_vm => $id_vm });
-    my $req = Ravada::Request->open($id_req);
-    die$req->output;
+    $t->get_ok("/v2/vm/list_networks/".$id_vm);
+    my $networks = decode_json($t->tx->res->body);
+    ok(scalar(@$networks));
+
+    $t->get_ok("/v2/network/new/".$id_vm);
+    my $data = decode_json($t->tx->res->body);
+
+    $t->post_ok("/v2/network/set/" => json => $data );
+
+    my $new_ok = decode_json($t->tx->res->body);
+    die Dumper($new_ok);
+    ok($new_ok->{id_network});
 }
 
 sub test_routes($vm_name) {
@@ -433,7 +445,7 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 
     diag("Testing settings in $vm_name");
 
-    test_networks( $vm_name );
+    test_networks_admin( $vm_name );
     test_storage_pools($vm_name);
     test_nodes( $vm_name );
     test_routes( $vm_name );

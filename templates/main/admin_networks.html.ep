@@ -16,17 +16,24 @@
                   </h2>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-4"></div>
-            <!-- <div class="col-md-2">enabled</div> -->
-        </div>
 
         <div class="row">
             <div class="col-md-2"><b><%=l 'Name' %></b></div>
+            <div class="col-md-2"
+                 ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
+                ><b><%=l 'Owner' %></b></div>
             <div class="col-md-2"><b><%=l 'Bridge' %></b></div>
             <div class="col-md-2"><b><%=l 'Address' %></b></div>
             <div class="col-md-1"><b><%=l 'Active' %></b></div>
             <div class="col-md-2"><b><%=l 'Auto Start' %></b></div>
+        </div>
+
+        <div class="row" ng-show="loaded_networks && networks.length==0">
+            <div class="col-md-12">
+                <div class="alert alert-warning">
+                <%=l 'No networks found' %>
+                </div>
+            </div>
         </div>
 
         <div ng-repeat="network in networks | orderObjectBy:'name'"
@@ -35,6 +42,9 @@
             <div class="col-md-2">
                 <a href="/network/settings/{{network.id}}.html">{{network.name}}</a>
             </div>
+            <div class="col-md-2"
+                 ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
+                >{{network.owner.name}}</div>
             <div class="col-md-2">{{network.bridge}}</div>
             <div class="col-md-2">{{network.ip_address}}</div>
             <div class="col-md-1">

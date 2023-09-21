@@ -6658,7 +6658,7 @@ sub _cmd_remove_files($self, $request) {
 sub _cmd_list_virtual_networks($self, $request) {
     my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
     die "Error: ".$user->name." not authorized\n"
-    unless $user->is_admin || $user->can_manage_all_neworks;
+    unless $user->is_admin || $user->can_manage_all_networks || $user->can_create_networks;
 
     my $id = $request->args('id_vm') or die "Error: missing id_vm";
     my $vm = Ravada::VM->open($id);
@@ -6688,7 +6688,7 @@ sub _cmd_new_network($self, $request) {
 sub _cmd_create_network($self, $request) {
     my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
     die "Error: ".$user->name." not authorized\n"
-    unless $user->can_create_networks;
+    unless $user->can_create_networks || $user->can_manage_all_networks;
 
     my $id = $request->args('id_vm') or die "Error: missing id_vm";
     my $vm = Ravada::VM->open($id);

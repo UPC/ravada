@@ -872,16 +872,14 @@ ravadaApp.directive("solShowMachine", swMach)
     function manage_networks($scope, $http, $interval, $timeout) {
         $scope.init = function(id_vm) {
             $scope.list_networks(id_vm);
+            $scope.loaded_networks=false;
         }
         $scope.list_networks = function(id_vm) {
-            $http.get('/vm/list_networks/'+id_vm).then(function(response) {
-                    for (var i=0; i<response.data.length; i++) {
-                        var item = response.data[i];
-                        $scope.networks[item.id] = item;
-                    }
+            $http.get('/v2/vm/list_networks/'+id_vm).then(function(response) {
+                $scope.networks=response.data;
+                $scope.loaded_networks=true;
                 });
         }
-        $scope.networks = {};
     }
 
     function manage_routes($scope, $http, $interval, $timeout) {

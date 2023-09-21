@@ -483,7 +483,7 @@ get '/list_routes.json' => sub {
     $c->render(json => [ Ravada::Route->list_networks ]);
 };
 
-get '/vm/list_networks/(:id_vm)' => sub {
+get '/v2/vm/list_networks/(:id_vm)' => sub {
     my $c = shift;
     $c->render(json => Ravada::Front->list_networks($c->stash('id_vm'), $USER->id) );
 };
@@ -540,8 +540,6 @@ get '/v2/network/info/#id' => sub($c) {
 };
 
 post '/v2/network/set' => sub($c) {
-    return access_denied($c) if !$USER->is_admin;
-
     my $arg = decode_json($c->req->body);
     my $req;
     my %data;
