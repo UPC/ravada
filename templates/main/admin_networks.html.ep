@@ -44,7 +44,9 @@
              class="row" ng-cloak
         >
             <div class="col-md-2">
-                <a href="/network/settings/{{network.id}}.html">{{network.name}}</a>
+                <a href="/network/settings/{{network.id}}.html"
+                    ng-show="network.can_change">{{network.name}}</a>
+                <span ng-show="!network.can_change">{{network.name}}</span>
             </div>
             <div class="col-md-1"
                  ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"

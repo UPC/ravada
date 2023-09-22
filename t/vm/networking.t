@@ -137,14 +137,6 @@ sub test_duplicate_bridge_add($vm, $net) {
     ) if $net_created;
 }
 
-sub test_use_network($network) {
-    my $user = create_user();
-    die "Expecting plain user " if $user->is_admin || $user->can_create_networks
-        || $user->can_manage_all_networks;
-
-    warn "TODO test use network";
-}
-
 # only admins or users that can manage all networks can do this
 sub test_change_owner($vm) {
     my $user = create_user();
@@ -649,7 +641,6 @@ for my $vm_name ( vm_names() ) {
 
         my $net = test_add_network($vm);
         test_public_network($vm, $net);
-        test_use_network($vm);
 
         test_change_owner($vm);
 

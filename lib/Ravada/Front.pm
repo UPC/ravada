@@ -1702,6 +1702,12 @@ sub list_networks($self, $id_vm ,$id_user) {
     while ( my $row = $sth->fetchrow_hashref ) {
         $self->_search_user($row->{id_owner},\%owner);
         $row->{owner} = $owner{$row->{id_owner}};
+        $row->{can_change}=0;
+
+        $row->{can_change}=1
+        if $user->is_admin || $user->can_manage_all_networks
+        || ($user->can_create_networks && $user->id == $row->{id_owner});
+
         push @networks,($row);
     }
     return \@networks;
