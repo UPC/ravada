@@ -591,11 +591,11 @@
                                         $scope.list_storage= response.data;
                                 });
                             }
+                            list_interfaces();
                             if (is_admin) {
                                 $scope.init_domain_access();
                                 $scope.init_ldap_access();
                                 $scope.list_ldap_attributes();
-                                list_interfaces();
                                 list_users();
                                 list_host_devices();
                                 list_access_groups();
@@ -611,9 +611,12 @@
 
           var list_interfaces = function() {
             if (! $scope.network_nats) {
-                $http.get('/network/interfaces/'+$scope.showmachine.type+'/nat')
+                $http.get('/v2/vm/list_networks/'+$scope.showmachine.id_vm)
                     .then(function(response) {
-                        $scope.network_nats = response.data;
+                        $scope.network_nats= [];
+                        for (var i=0; i<response.data.length; i++ ) {
+                            $scope.network_nats.push(response.data[i].bridge);
+                        }
                 });
             }
             if (! $scope.network_bridges ) {

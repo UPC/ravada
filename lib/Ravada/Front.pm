@@ -1687,7 +1687,7 @@ sub list_networks($self, $id_vm ,$id_user) {
     my $user = Ravada::Auth::SQL->search_by_id($id_user);
     my $owned = 0;
     unless ($user->is_admin || $user->can_manage_all_networks) {
-        $query .= " AND id_owner=? ";
+        $query .= " AND ( id_owner=? or is_public=1) ";
         $owned = 1;
     }
     $query .= " ORDER BY name";
@@ -1714,7 +1714,11 @@ sub _search_user($self,$id, $users) {
         "SELECT * FROM users WHERE id=?"
     );
     $sth->execute($id);
-    $users->{$id}=$sth->fetchrow_hashref();
+    my $row = $sth->fetchrow_hashref();
+    for my $field (keys %$row) {
+        delete $row->{$field} if $field =~ /passw/;
+    }
+    $users->{$id}=$row;
 }
 
 sub _filter_active($pools, $active) {

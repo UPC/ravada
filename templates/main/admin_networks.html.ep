@@ -19,6 +19,10 @@
 
         <div class="row">
             <div class="col-md-2"><b><%=l 'Name' %></b></div>
+            <div class="col-md-1"
+                 ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
+                ><b><%=l 'Public' %></b></div>
+
             <div class="col-md-2"
                  ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
                 ><b><%=l 'Owner' %></b></div>
@@ -42,6 +46,16 @@
             <div class="col-md-2">
                 <a href="/network/settings/{{network.id}}.html">{{network.name}}</a>
             </div>
+            <div class="col-md-1"
+                 ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
+                >
+
+                <span ng-show="network.is_public"
+                      >&#10004;</span>
+                <span ng-show="!network.is_public"
+                      >&#10005;</span>
+            </div>
+
             <div class="col-md-2"
                  ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
                 >{{network.owner.name}}</div>

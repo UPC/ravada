@@ -24,6 +24,7 @@ use Net::OpenSSH;
 use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
+use Storable qw(dclone);
 
 use Ravada::HostDevice;
 use Ravada::Utils;
@@ -1451,6 +1452,7 @@ sub _insert_network($self, $net) {
     if !exists $net->{id_owner};
 
     $net->{id_vm} = $self->id;
+    $net->{is_public}=1 if !exists $net->{is_public};
 
     my @fields = grep !/^_/, sort keys %$net;
 
@@ -1523,6 +1525,7 @@ sub _around_create_network($orig, $self,$data, $id_owner, $request=undef) {
     eval { $self->$orig($data) };
     $request->error(''.$@) if $@ && $request;
     $data->{id_owner} = $id_owner;
+    $data->{is_public} = 0 if !$data->{is_public};
     $self->_insert_network($data);
 }
 
@@ -1546,24 +1549,43 @@ sub _around_remove_network($orig, $self, $user, $id_net) {
     $sth->execute($id_net);
 }
 
-sub _around_change_network($orig, $self, $data) {
+sub _around_change_network($orig, $self, $data, $uid) {
     delete $data->{_old_name};
     delete $data->{date_changed};
-    my %data2 = %$data;
-    delete $data->{id_owner};
+    my $data2 = dclone($data);
 
+    delete $data->{id_owner};
+    delete $data->{is_public};
     my $changed = $orig->($self, $data);
 
-    my $id = delete $data2{id};
+    my $id = delete $data2->{id};
+    my $sth0 = $self->_dbh->prepare("SELECT * FROM virtual_networks WHERE id=?");
+    $sth0->execute($id);
+    my $old = $sth0->fetchrow_hashref;
+
+    my $user=Ravada::Auth::SQL->search_by_id($uid);
+
     my $sql = "";
-    for my $field (sort keys %data2) {
+    for my $field (sort keys %$data2) {
+        if (    exists $old->{$field} && defined $old->{$field}
+            &&  exists $data2->{$field} && defined $data2->{$field}
+            && $data2->{$field} eq $old->{$field}) {
+            delete $data2->{$field};
+            next;
+        }
+        if ($field eq 'is_public' && $old->{$field} ne $data2->{$field}) {
+            die "Error: user ".$user->name." not authorized to change $field.\n"
+            unless $user->is_admin() ||$user->can_manage_all_networks();
+        }
         $sql .= ", " if $sql;
         $sql .=" $field=? "
     }
-    $sql = "UPDATE virtual_networks set $sql WHERE id=?";
-    my $sth = $self->_dbh->prepare($sql);
-    my @values = map { $data2{$_} } sort keys %data2;
-    $sth->execute(@values, $id);
+    if ($sql) {
+        $sql = "UPDATE virtual_networks set $sql WHERE id=?";
+        my $sth = $self->_dbh->prepare($sql);
+        my @values = map { $data2->{$_} } sort keys %$data2;
+        $sth->execute(@values, $id);
+    }
 }
 
 sub _check_networks($self) { }
@@ -1583,15 +1605,16 @@ sub _around_list_networks($orig, $self) {
         $self->_update_network($net);
     }
     my $sth = $self->_dbh->prepare(
-        "SELECT id,name,id_owner FROM virtual_networks "
+        "SELECT id,name,id_owner,is_public FROM virtual_networks "
         ." WHERE id_vm=?");
     my $sth_delete = $self->_dbh->prepare("DELETE FROM virtual_networks where id=?");
     $sth->execute($self->id);
-    while (my ($id, $name, $id_owner) = $sth->fetchrow) {
+    while (my ($id, $name, $id_owner, $is_public) = $sth->fetchrow) {
         my ($found) = grep {$_->{name} eq $name } @list;
         if ( $found ) {
             $found->{id_owner} = $id_owner;
             $found->{id} = $id;
+            $found->{is_public} = $is_public;
             next;
         }
         $sth_delete->execute($id);

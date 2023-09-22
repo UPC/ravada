@@ -216,7 +216,7 @@ sub test_networks_admin($vm_name) {
     my $networks = decode_json($t->tx->res->body);
     ok(scalar(@$networks));
 
-    $t->get_ok("/v2/network/new/".$id_vm);
+    $t->post_ok("/v2/network/new/".$id_vm => json => { name => base_domain_name() });
     my $data = decode_json($t->tx->res->body);
 
     $t->post_ok("/v2/network/set/" => json => $data );
@@ -237,12 +237,22 @@ sub test_networks_admin($vm_name) {
 
     my $networks3 = decode_json($t->tx->res->body);
     my ($changed) = grep { $_->{name} eq $data->{name} } @$networks3;
-    is($changed->{is_active},0) or warn Dumper($changed);
+    is($changed->{is_active},0) or die $changed->{name};
 
     $t->get_ok("/v2/network/info/".$changed->{id});
 
     my $changed4 = decode_json($t->tx->res->body);
     is($changed4->{is_active},0) or exit;
+
+    $new->{is_public}=1;
+    $t->post_ok("/v2/network/set/" => json => $new);
+    wait_request(debug => 1);
+    $t->get_ok("/v2/vm/list_networks/".$id_vm);
+
+    my $networks5 = decode_json($t->tx->res->body);
+    my ($changed5) = grep { $_->{name} eq $data->{name} } @$networks5;
+    is($changed5->{is_public},1) or warn Dumper($changed5);
+
 }
 
 sub test_routes($vm_name) {

@@ -23,16 +23,19 @@ sub test_list_networks($vm) {
     my ($default)= @list;
     ok($default) or exit;
 
+    my $public=0;
     for my $net ( @list ) {
         ok($net->{id_vm}) or die "Error: network missing id_vm ".Dumper($net);
         my ($found) = _search_network(internal_id=>$net->{internal_id});
         is($found->{name}, $net->{name});
         is($found->{id_vm}, $net->{id_vm});
+        $public++ if $found->{is_public};
         ($found) = _search_network(id_vm => $net->{id_vm}, name => $net->{name});
         die "Error: network not found id_vm= $net->{id_vm}, name=$net->{name}"
         if !$found;
         is($found->{internal_id}, $net->{internal_id}) or die Dumper($found);
     }
+    ok($public,"Expecting at least one public network discovered, got $public") or exit;
 
 }
 
@@ -134,6 +137,71 @@ sub test_duplicate_bridge_add($vm, $net) {
     ) if $net_created;
 }
 
+sub test_use_network($network) {
+    my $user = create_user();
+    die "Expecting plain user " if $user->is_admin || $user->can_create_networks
+        || $user->can_manage_all_networks;
+
+    warn "TODO test use network";
+}
+
+# only admins or users that can manage all networks can do this
+sub test_change_owner($vm) {
+    my $user = create_user();
+    my $new = $vm->new_network(new_domain_name);
+    my $req = Ravada::Request->create_network(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,data => $new
+    );
+    wait_request();
+
+    my($new2) = grep { $_->{name} eq $new->{name} } $vm->list_virtual_networks();
+    ok($new2) or return;
+    $new2->{id_owner} = $user->id;
+    my $req_change = Ravada::Request->change_network(
+        uid => $user->id
+        ,data => $new2
+    );
+
+    wait_request(check_error => 0, debug => 0);
+
+    my($new2b) = grep { $_->{name} eq $new->{name} } $vm->list_virtual_networks();
+    is($new2b->{id_owner}, user_admin->id);
+
+    like($req_change->error,qr/not authorized/) or exit;
+
+    user_admin->grant($user, 'create_networks');
+    $req_change->status('requested');
+
+    wait_request(check_error => 0);
+    like($req_change->error,qr/not authorized/);
+    my($new2c) = grep { $_->{name} eq $new->{name} } $vm->list_virtual_networks();
+    is($new2c->{id_owner}, user_admin->id);
+
+    user_admin->grant($user, 'manage_all_networks');
+    $req_change->status('requested');
+    wait_request(check_error => 0);
+    is($req_change->error, '');
+
+    my($new3) = grep { $_->{name} eq $new->{name} } $vm->list_virtual_networks();
+    is($new3->{id_owner}, $user->id);
+
+    $new2->{id_owner} = user_admin->id;
+    my $req_change2 = Ravada::Request->change_network(
+        uid => $user->id
+        ,data => $new2
+    );
+
+    wait_request(check_error => 0);
+
+    is($req_change2->error, '');
+
+    my($new4) = grep { $_->{name} eq $new->{name} } $vm->list_virtual_networks();
+    is($new4->{id_owner}, user_admin->id);
+
+}
+
 sub test_add_network($vm) {
     my $name = new_domain_name;
     my $net = {
@@ -171,6 +239,7 @@ sub test_add_network($vm) {
     ok($new->{internal_id});
     is($new->{is_active},1);
     is($new->{autostart},1);
+    is($new->{is_public},0);
     return $new;
 }
 
@@ -454,7 +523,6 @@ sub test_public_network($vm, $net) {
     user_admin->grant($user2,'change_settings');
     user_admin->grant($user2,'create_networks');
 
-
     my $clone = $domain->clone(user => $user2,name => new_domain_name);
 
     my $hw_net = $clone->info(user_admin)->{hardware}->{network}->[0];
@@ -463,6 +531,11 @@ sub test_public_network($vm, $net) {
     $hw_net2{network} = $net->{name};
 
     is($user2->can_change_network($domain, \%hw_net2),0) or exit;
+
+    my $list_nets = rvd_front->list_networks($vm->id,$user2->id);
+    ok(scalar(@$list_nets) >= 1,"Expecting at least 1 network allowed, got "
+        .scalar(@$list_nets)) or exit;
+
     my $req = Ravada::Request->change_hardware(
         uid => $user2->id
         ,id_domain => $clone->id
@@ -574,7 +647,11 @@ for my $vm_name ( vm_names() ) {
 
         test_list_networks($vm);
 
-        my ($net,$user) = test_add_network($vm);
+        my $net = test_add_network($vm);
+        test_public_network($vm, $net);
+        test_use_network($vm);
+
+        test_change_owner($vm);
 
         test_new_network($vm);
 
@@ -582,7 +659,6 @@ for my $vm_name ( vm_names() ) {
 
         test_duplicate_bridge_add($vm, $net);
 
-        test_public_network($vm, $net);
 
         test_change_network_internal($vm, $net);
         test_change_network($net);

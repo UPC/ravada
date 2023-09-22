@@ -2374,7 +2374,6 @@ sub _sql_create_tables($self) {
                 ,id_vm => 'integer NOT NULL references `vms` (`id`) ON DELETE CASCADE',
                 ,name => 'varchar(200)'
                 ,id_owner => 'integer NOT NULL references `users` (`id`) ON DELETE CASCADE',
-                ,is_active => 'integer not null'
                 ,internal_id => 'char(80) not null'
                 ,autostart => 'integer not null'
                 ,bridge => 'char(80)'
@@ -2383,6 +2382,7 @@ sub _sql_create_tables($self) {
                 ,'dhcp_start' => 'char(15)'
                 ,'dhcp_end' => 'char(15)'
                 ,'is_active' => 'integer not null default 1'
+                ,'is_public' => 'integer not null default 0'
                 ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
             }
         ]
@@ -6724,7 +6724,6 @@ sub _cmd_remove_network($self, $request) {
 
 sub _check_user_authorized_network($request, $id_network) {
 
-
     my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
 
     my $sth = $CONNECTOR->dbh->prepare(
@@ -6737,6 +6736,7 @@ sub _check_user_authorized_network($request, $id_network) {
 
     die "Error: ".$user->name." not authorized\n"
     unless $user->is_admin
+    || $user->can_manage_all_networks
     || ( $user->can_create_networks && $network->{id_owner} == $user->id);
 
     return $network;
@@ -6751,7 +6751,8 @@ sub _cmd_change_network($self, $request) {
 
     $data->{internal_id} = $network->{internal_id} if !$data->{internal_id};
     my $vm = Ravada::VM->open($network->{id_vm});
-    $vm->change_network($data);
+
+    $vm->change_network($data, $request->args('uid'));
 }
 
 sub _cmd_active_storage_pool($self, $request) {

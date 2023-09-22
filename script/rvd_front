@@ -513,7 +513,7 @@ get '/route/list_domains/#id' => sub($c) {
     return $c->render( json => $RAVADA->list_bases_network($c->stash('id')));
 };
 
-get '/network/new' => sub($c) {
+any '/network/new' => sub($c) {
     return access_denied($c) unless $USER->is_admin
     || $USER->can_create_networks || $USER->can_manage_all_networks;
 
@@ -524,14 +524,21 @@ get '/network/new' => sub($c) {
     return $c->render( template => '/main/network_new' );
 };
 
-get '/v2/network/new/#id_vm' => sub($c) {
+any '/v2/network/new/#id_vm' => sub($c) {
 
     return access_denied($c) unless $USER->is_admin
     || $USER->can_create_networks || $USER->can_manage_all_networks;
 
+    my $name = 'net';
+    if ( $c->req->method eq 'POST') {
+        my $arg = decode_json($c->req->body);
+        $name = $arg->{name} if $arg->{name};
+    }
+
     my $req = Ravada::Request->new_network(
         uid => $USER->id
         ,id_vm => $c->stash('id_vm')
+        ,name => $name
     );
     $RAVADA->wait_request($req);
     my $data = {};
@@ -804,7 +811,7 @@ get '/list_machine_types.json' => sub {
 get '/list_cpu_models.json' => sub {
     my $c = shift;
 
-    return access_denied($c) unless _logged_in($c)
+    return $c->render(json => []) unless _logged_in($c)
         && $USER->can_create_machine();
 
     my $id_domain = $c->param('id_domain');
