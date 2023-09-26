@@ -445,6 +445,8 @@ sub create_network($self, $data, $id_owner=undef, $request=undef) {
     $data->{bridge} = $self->_new_net_bridge()
     if !exists $data->{bridge} || ! defined $data->{bridge};
 
+    delete $data->{is_public};
+
     for my $field ('bridge','ip_address') {
         $self->_check_duplicated_network($field,$data);
     }
@@ -781,6 +783,7 @@ sub _check_duplicated_network($self, $field, $data) {
 
 sub change_network($self,$data) {
     my $id = delete $data->{internal_id} or confess "Missing internal_id ".Dumper($data);
+
     my @networks = $self->list_virtual_networks();
     my ($net) = grep { $_->{internal_id} eq $id } @networks;
 

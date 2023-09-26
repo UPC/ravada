@@ -159,15 +159,18 @@ sub _remove_route($address) {
 }
 
 sub _remove_networks($id_vm) {
-    my $sth = connector->dbh->prepare("SELECT * FROM virtual_networks vn, vms v"
+    my $sth = connector->dbh->prepare("SELECT vn.id FROM virtual_networks vn, vms v"
         ." WHERE vn.id_vm=v.id "
         ."   AND v.id=? AND vn.name like ?"
     );
     $sth->execute($id_vm, base_domain_name."%");
 
-    while ( my $row = $sth->fetchrow_hashref ) {
-        my $req = mojo_request($t, "remove_network"
-            ,{ id => $row->{id}});
+    while ( my ($id) = $sth->fetchrow) {
+        my $id_req = mojo_request($t, "remove_network", { id => $id});
+        if ($id_req) {
+            my $req = Ravada::Request->open($id_req);
+            die "Error in ".$req->command." id=$id" if $req->error;
+        }
     }
 
 }
@@ -216,12 +219,65 @@ sub test_networks_access_grant($vm_name) {
 
     my ($name, $pass) = (new_domain_name, "$$ $$");
     my $user = create_user($name, $pass,0 );
-    is($user->is_admin,0 );
+    user_admin->grant($user,"create_networks");
     mojo_login($t, $name, $pass);
 
     my $id_vm = _id_vm($vm_name);
 
-    die "TODO: create network, access changes, do changes, deny to other networks";
+    $t->post_ok("/v2/network/new/".$id_vm => json => { name => base_domain_name() });
+    my $data = decode_json($t->tx->res->body);
+    ok(keys %$data) or die Dumper($data);
+
+    $t->post_ok("/v2/network/set/" => json => $data );
+    my $new_ok = decode_json($t->tx->res->body);
+    ok($new_ok->{id_network}) or return;
+
+    $t->get_ok("/settings/network".$new_ok->{id_network}.".html");
+
+    $t->get_ok("/v2/vm/list_networks/".$id_vm);
+    my $networks2 = decode_json($t->tx->res->body);
+    my ($old) = grep { $_->{name} ne $data->{name} } @$networks2;
+    ok($old,"Expecting more networks for VM $vm_name [ $id_vm ]")
+        or die Dumper([map {$_->{name} } @$networks2]);
+
+    is($old->{_can_change},0) or exit;
+
+    $t->get_ok("/network/settings/".$old->{id}.".html")->status_is(403);
+    $old->{autostart}=0;
+
+    $t->post_ok("/v2/network/set/" => json => $old)->status_is(403);
+
+    my ($new) = grep { $_->{name} eq $data->{name} } @$networks2;
+    ok($new,"Expecting new network $data->{name}")
+        or die Dumper([map {$_->{name} } @$networks2]);
+    is($new->{_owner}->{id},$user->id);
+    is($new->{_can_change},1) or exit;
+
+    $new->{is_active} = (!$new->{is_active} or 0);
+    $t->post_ok("/v2/network/set/" => json => $new)->status_is(200);
+    wait_request();
+
+    $t->get_ok("/v2/vm/list_networks/".$id_vm);
+    {
+        my $networks3 = decode_json($t->tx->res->body);
+        my ($net3) = grep { $_->{name} eq $new->{name}} @$networks3;
+        is($net3->{is_active}, $new->{is_active}) or exit;
+    }
+
+    $new->{is_public} = (!$new->{is_public} or 0);
+    $t->post_ok("/v2/network/set/" => json => $new)->status_is(200);
+    wait_request();
+
+    $t->get_ok("/v2/vm/list_networks/".$id_vm);
+    {
+        my $networks4 = decode_json($t->tx->res->body);
+        my ($net4) = grep { $_->{name} eq $new->{name}} @$networks4;
+        is($net4->{is_public}, $new->{is_public}) or exit;
+    }
+
+
+    mojo_login($t, $USERNAME, $PASSWORD);
+
 }
 
 sub test_networks_admin($vm_name) {
@@ -250,14 +306,15 @@ sub test_networks_admin($vm_name) {
     $t->post_ok("/v2/network/set/" => json => $data );
 
     my $new_ok = decode_json($t->tx->res->body);
-    ok($new_ok->{id_network});
+    ok($new_ok->{id_network}) or die Dumper([$t->tx->res->body, $new_ok]);
 
     $t->get_ok("/v2/vm/list_networks/".$id_vm);
     my $networks2 = decode_json($t->tx->res->body);
     my ($new) = grep { $_->{name} eq $data->{name} } @$networks2;
 
     ok($new);
-    is($new->{can_change},1) or exit;
+    is($new->{_can_change},1) or exit;
+    is($new->{_owner}->{id},user_admin->id) or exit;
     $new->{is_active} = 0;
 
     $t->post_ok("/v2/network/set/" => json => $new);

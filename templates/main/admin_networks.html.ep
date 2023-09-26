@@ -45,8 +45,8 @@
         >
             <div class="col-md-2">
                 <a href="/network/settings/{{network.id}}.html"
-                    ng-show="network.can_change">{{network.name}}</a>
-                <span ng-show="!network.can_change">{{network.name}}</span>
+                    ng-show="network._can_change">{{network.name}}</a>
+                <span ng-show="!network._can_change">{{network.name}}</span>
             </div>
             <div class="col-md-1"
                  ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
@@ -60,7 +60,7 @@
 
             <div class="col-md-2"
                  ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
-                >{{network.owner.name}}</div>
+                >{{network._owner.name}}</div>
             <div class="col-md-2">{{network.bridge}}</div>
             <div class="col-md-2">{{network.ip_address}}</div>
             <div class="col-md-1">

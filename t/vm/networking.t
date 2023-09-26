@@ -115,8 +115,6 @@ sub test_duplicate_bridge_add($vm, $net) {
     $net2->{name} = new_domain_name();
     $net2->{ip_address} = '192.51.200.1';
 
-    diag("Replicating bridge ".$net2->{bridge}." from ".$net0->{name}
-        ." on network ".$net2->{name});
     my $req = Ravada::Request->create_network(
         data => $net2
         ,uid => user_admin->id

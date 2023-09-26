@@ -354,13 +354,15 @@ get '/admin/storage' => sub($c) {
 
 };
 
-get '/admin/networks' => sub($c) {
+get '/admin/networks/*id_vm' => { id_vm => undef} => sub($c) {
 
     return access_denied($c) unless $USER->is_admin
     || $USER->can_create_networks || $USER->can_manage_all_networks;
 
     _add_admin_libs($c);
-    _select_vm($c);
+
+    _select_vm($c) if !defined $c->stash('id_vm');
+
     Ravada::Request->list_networks(
         uid => $USER->id
         ,id_vm => $c->stash('id_vm')
@@ -558,9 +560,31 @@ get '/v2/network/info/#id' => sub($c) {
     return $c->render(json => $row);
 };
 
+sub _network_id_owner($id_network) {
+
+    confess "Error: undefined id_network "if !defined $id_network;
+    my $sth = $RAVADA->_dbh->prepare("SELECT * FROM virtual_networks "
+        ." WHERE id=?");
+    $sth->execute($id_network);
+    my $row = $sth->fetchrow_hashref;
+    warn "Error: network id=$id_network not found " if !$row->{id};
+
+    warn Dumper($row);
+    return ($row->{id_owner} or 0 );
+}
+
 post '/v2/network/set' => sub($c) {
     my $arg = decode_json($c->req->body);
-    delete $arg->{owner};
+    delete $arg->{_owner};
+
+    warn Dumper($arg);
+
+    return access_denied_json($c)
+    unless $USER->is_admin || $USER->can_manage_all_networks
+    ||  ($USER->can_create_networks
+            && ( !$arg->{id} || $USER->id == _network_id_owner($arg->{id}))
+        );
+
     my $req;
     my %data;
     if ($arg->{id}) {
@@ -905,6 +929,14 @@ any '/(:item)/settings/(:id).html' => sub($c) {
     $table = 'networks'         if $table eq 'routes';
 
     return access_denied($c) if $table !~ /^[a-z][a-z_]+$/i;
+
+    if ($table eq 'virtual_networks') {
+        my $id = $c->stash('id'); # get id network
+        return access_denied_json($c)
+            unless $USER->is_admin || $USER->can_manage_all_networks
+        ||  ($USER->can_create_networks && $USER->id == _network_id_owner($id))
+        ;
+    }
 
     my $id_vm;
     if ($table eq 'nodes') {

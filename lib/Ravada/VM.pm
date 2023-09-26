@@ -1475,11 +1475,18 @@ sub _update_network($self, $net) {
         $self->_insert_network($net);
     } else {
         for my $field ( keys %$net ) {
+            next if $field =~ /^_/;
             die "Wrong field in virtual_networks table : '$field'"
             if $field !~ /^[a-z]+[a-z0-9_]+$/;
 
-            next if !defined $net->{đield} && !defined $db_net->{$field};
-            next if defined $net->{field} && $net->{$field} eq $db_net->{$field};
+            confess "Error: field $field missing from ".Dumper($db_net)
+            if !exists $db_net->{$field};
+
+            next if !defined $net->{$field} && !defined $db_net->{$field};
+            next if defined $net->{$field}
+            && defined $db_net->{$field}
+            && $net->{$field} eq $db_net->{$field};
+
             my $sth = $self->_dbh->prepare(
                 "UPDATE virtual_networks set $field=?"
                 ." WHERE id=?"
@@ -1550,8 +1557,12 @@ sub _around_remove_network($orig, $self, $user, $id_net) {
 }
 
 sub _around_change_network($orig, $self, $data, $uid) {
-    delete $data->{_old_name};
     delete $data->{date_changed};
+
+    for my $field (keys %$data) {
+        delete $data->{$field} if $field =~ /^_/;
+    }
+
     my $data2 = dclone($data);
 
     delete $data->{id_owner};
@@ -1575,7 +1586,8 @@ sub _around_change_network($orig, $self, $data, $uid) {
         }
         if ($field eq 'is_public' && $old->{$field} ne $data2->{$field}) {
             die "Error: user ".$user->name." not authorized to change $field.\n"
-            unless $user->is_admin() ||$user->can_manage_all_networks();
+            unless $user->is_admin() ||$user->can_manage_all_networks()
+            || ($user->can_create_networks && $user->id == $data->{id_owner});
         }
         $sql .= ", " if $sql;
         $sql .=" $field=? "
