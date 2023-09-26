@@ -159,6 +159,7 @@ sub _check_networks($self, $vm=$self->vm) {
 
     $net = $found[0] if !$net;
 
+    return if !$net;
     warn "INFO: Activating KVM network ".$net->get_name."\n";
     $net->create;
     $net->set_autostart(1);
