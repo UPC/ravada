@@ -5040,7 +5040,7 @@ sub _cmd_change_hardware {
     unless $user->is_admin
     || $hardware eq 'memory'
     || ($hardware eq 'network'
-        && $user->can_change_network($domain, $data)
+        && $user->can_change_hardware_network($domain, $data)
        )
     ;
 

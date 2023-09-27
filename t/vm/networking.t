@@ -519,36 +519,8 @@ sub test_add_down_network($vm) {
 
 sub test_public_network($vm, $net) {
 
-    my $domain = create_domain($vm);
-    $domain->is_public(1);
-    $domain->prepare_base(user_admin);
-
+    my $net2 = dclone($net);
     my $user2 = create_user();
-    user_admin->grant($user2,'change_settings');
-    user_admin->grant($user2,'create_networks');
-
-    my $clone = $domain->clone(user => $user2,name => new_domain_name);
-
-    my $hw_net = $clone->info(user_admin)->{hardware}->{network}->[0];
-    ok($hw_net) or die $clone->name;
-    my %hw_net2 = %$hw_net;
-    $hw_net2{network} = $net->{name};
-
-    is($user2->can_change_network($domain, \%hw_net2),0) or exit;
-
-    my $list_nets = rvd_front->list_networks($vm->id,$user2->id);
-    ok(scalar(@$list_nets) >= 1,"Expecting at least 1 network allowed, got "
-        .scalar(@$list_nets)) or exit;
-
-    my $req = Ravada::Request->change_hardware(
-        uid => $user2->id
-        ,id_domain => $clone->id
-        ,hardware => 'network'
-        ,index => 0
-        ,data => \%hw_net2
-    );
-    wait_request(check_error => 0);
-    like($req->error,qr/not allowed/);
 
     my $req_change = Ravada::Request->change_network(
         uid => $user2->id
@@ -560,11 +532,42 @@ sub test_public_network($vm, $net) {
 
     my $req_change2 = Ravada::Request->change_network(
         uid => user_admin->id
-        ,data => {%$net, id_owner => $user2->id }
+        ,data => {%$net, id_owner => $user2->id, is_public=>1 }
     );
 
     wait_request(check_error => 0, debug => 0);
     is($req_change2->error,'');
+
+    my $domain = create_domain($vm);
+    $domain->is_public(1);
+    $domain->prepare_base(user_admin);
+
+    user_admin->grant($user2,'change_settings');
+    user_admin->grant($user2,'create_networks');
+
+    my $clone = $domain->clone(user => $user2,name => new_domain_name);
+
+    my $hw_net = $clone->info(user_admin)->{hardware}->{network}->[0];
+    ok($hw_net) or die $clone->name;
+    my %hw_net2 = %$hw_net;
+
+    my $list_nets = rvd_front->list_networks($vm->id,$user2->id);
+    ok(scalar(@$list_nets) >= 1,"Expecting at least 1 network allowed, got "
+        .scalar(@$list_nets)) or exit;
+
+    $hw_net2{network}=$net->{name};
+    is($user2->can_change_hardware_network($clone, \%hw_net2),1) or exit;
+
+    my $req = Ravada::Request->change_hardware(
+        uid => $user2->id
+        ,id_domain => $clone->id
+        ,hardware => 'network'
+        ,index => 0
+        ,data => \%hw_net2
+    );
+    wait_request(check_error => 0, debug => 0);
+    is($req->error,'');
+
 
     my $net3 = _search_network(id => $net->{id});
     is($net3->{id_owner}, $user2->id) or exit;
@@ -661,7 +664,6 @@ for my $vm_name ( vm_names() ) {
         test_duplicate_add($vm, $net);
 
         test_duplicate_bridge_add($vm, $net);
-
 
         test_change_network_internal($vm, $net);
         test_change_network($net);

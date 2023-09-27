@@ -615,7 +615,7 @@
                     .then(function(response) {
                         $scope.network_nats= [];
                         for (var i=0; i<response.data.length; i++ ) {
-                            $scope.network_nats.push(response.data[i].bridge);
+                            $scope.network_nats.push(response.data[i].name);
                         }
                 });
             }
