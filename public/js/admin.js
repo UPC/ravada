@@ -1254,7 +1254,7 @@ ravadaApp.directive("solShowMachine", swMach)
                 });
         };
         $scope.set_network_domain= function(id_domain, field, allowed) {
-            $http.get("/route/set/"+$scope.route.id+ "/" + field+ "/" +id_domain+"/"
+            $http.get("/v2/route/set/"+$scope.route.id+ "/" + field+ "/" +id_domain+"/"
                     +allowed)
                 .then(function(response) {
                 });
