@@ -72,14 +72,17 @@ sub test_grant_access($vm) {
 
     my $networks = rvd_front->list_networks($vm->id , $user->id);
     my ($network_f) = grep {$_->{name} eq $data->{name}} @$networks;
-    is($network_f->{owner}->{id}, $user->id);
-    is($network_f->{owner}->{name}, $user->name);
+
+    ok($network_f) or die "Network $data->{name} not found ";
+
+    is($network_f->{_owner}->{id}, $user->id);
+    is($network_f->{_owner}->{name}, $user->name);
 }
 
 sub test_deny_access($vm) {
     my $user = create_user();
     my $networks = rvd_front->list_networks($vm->id , $user->id);
-    is(scalar(@$networks),0);
+    ok(scalar(@$networks));
 
     $networks = rvd_front->list_networks($vm->id , user_admin->id);
     ok(scalar(@$networks));
