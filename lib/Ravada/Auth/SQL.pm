@@ -1284,6 +1284,8 @@ sub can_change_network($user, $domain, $data) {
 
 sub can_change_hardware_network($user, $domain, $data) {
     return 1 if $user->is_admin;
+    return 1 if $user->can_manage_all_networks()
+                && $domain->id_owner == $user->id;
 
     confess "Error: undefined network ".Dumper($data)
     if !exists $data->{network} || !defined $data->{network};

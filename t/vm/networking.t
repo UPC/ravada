@@ -584,6 +584,51 @@ sub test_public_network($vm, $net) {
     is($hw_net2{network}, $net->{name});
 }
 
+sub test_manage_all_networks($vm, $net) {
+
+    my $net2 = dclone($net);
+    my $user2 = create_user();
+
+    my $req_change2 = Ravada::Request->change_network(
+        uid => user_admin->id
+        ,data => {%$net, is_public=>0 }
+    );
+
+    wait_request(check_error => 0, debug => 0);
+    is($req_change2->error,'');
+
+    my $domain = create_domain($vm);
+    $domain->is_public(1);
+    $domain->prepare_base(user_admin);
+
+    user_admin->grant($user2,'change_settings');
+    user_admin->grant($user2,'manage_all_networks');
+
+    my $clone = $domain->clone(user => $user2,name => new_domain_name);
+
+    my $hw_net = $clone->info(user_admin)->{hardware}->{network}->[0];
+    ok($hw_net) or die $clone->name;
+    my %hw_net2 = %$hw_net;
+
+    $hw_net2{network}=$net->{name};
+    is($user2->can_change_hardware_network($clone, \%hw_net2),1) or exit;
+
+    my $req = Ravada::Request->change_hardware(
+        uid => $user2->id
+        ,id_domain => $clone->id
+        ,hardware => 'network'
+        ,index => 0
+        ,data => \%hw_net2
+    );
+    wait_request(check_error => 0, debug => 0);
+    is($req->error,'');
+
+    my $clone4 = Ravada::Front::Domain->open($clone->id);
+    my $hw_net4 = $clone4->info(user_admin)->{hardware}->{network}->[0];
+
+    is($hw_net2{network}, $net->{name});
+}
+
 sub test_new_network($vm) {
     my $req = Ravada::Request->new_network(
         uid => user_admin->id
@@ -655,6 +700,7 @@ for my $vm_name ( vm_names() ) {
         test_list_networks($vm);
 
         my $net = test_add_network($vm);
+        test_manage_all_networks($vm,$ net);
         test_public_network($vm, $net);
 
         test_change_owner($vm);
