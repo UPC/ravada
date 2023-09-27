@@ -783,12 +783,19 @@ sub _check_duplicated_network($self, $field, $data) {
 
 sub change_network($self,$data) {
     my $id = delete $data->{internal_id} or confess "Missing internal_id ".Dumper($data);
+    confess if exists $data->{is_public};
 
     my @networks = $self->list_virtual_networks();
-    my ($net) = grep { $_->{internal_id} eq $id } @networks;
+    my ($net0) = grep { $_->{internal_id} eq $id } @networks;
+
+    my $file_out = $self->dir_img."/networks/".$net0->{name}.".yml";
+    my $net= {};
+    eval { $net = LoadFile($file_out) };
+    confess $@ if $@;
 
     my $changed = 0;
     for my $field ('name', sort keys %$data) {
+        next if $field =~ /^_/ || $field eq 'is_public';
         if (!exists $net->{$field}) {
             $net->{$field} = $data->{$field};
             $changed++;
@@ -810,8 +817,7 @@ sub change_network($self,$data) {
     }
     return if !$changed;
 
-    my $file_out = $self->dir_img."/networks/".$net->{name}.".yml";
-
+    delete $net->{is_public};
     DumpFile($file_out,$net);
 }
 

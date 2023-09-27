@@ -1436,7 +1436,8 @@ sub remove_void_networks($vm=undef) {
     opendir my $dir, $dir_net or die "$! $dir_net";
     while(my $filename = readdir $dir) {
         my $file = "$dir_net/$filename";
-        unlink $file if -f $file && $file =~ /\.yml/;
+        next unless $file =~ /\.yml$/;
+        unlink $file or warn "$! $file";
     }
 
 }

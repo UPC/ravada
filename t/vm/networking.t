@@ -327,14 +327,28 @@ sub test_change_network($net) {
     is($new->{autostart},0);
     _check_network_changed($new,'autostart');
 
-    $net2{is_active} = 1;
-    $req = Ravada::Request->change_network(
-        uid => user_admin->id
-        ,data => \%net2
-    );
-    wait_request();
-    ($new) = grep { $_->{name} eq $net2{name} } $vm->list_virtual_networks();
-    is($new->{is_active},1);
+    for ( 1 .. 2 ) {
+        $net2{is_active} = (!$net2{is_active} or 0);
+        $req = Ravada::Request->change_network(
+            uid => user_admin->id
+            ,data => \%net2
+        );
+        wait_request();
+        my ($new2) = grep { $_->{name} eq $net2{name} } $vm->list_virtual_networks();
+        is($new2->{is_active},$net2{is_active});
+    }
+
+    for ( 1 .. 2 ) {
+        $net2{is_public} = (!$net2{is_public} or 0);
+        $req = Ravada::Request->change_network(
+            uid => user_admin->id
+            ,data => \%net2
+        );
+        wait_request(debug => 0);
+        my ($new2) = grep { $_->{name} eq $net2{name} } $vm->list_virtual_networks();
+        is($new2->{is_public}, $net2{is_public},"Expecting is_public=$net2{is_public}")
+            or die $net2{name};
+    }
 
     my ($default) = grep { $_->{name} eq 'default' } $vm->list_virtual_networks();
     $net2{bridge} = $default->{bridge};

@@ -1474,29 +1474,33 @@ sub _update_network($self, $net) {
     if (!$db_net || !$db_net->{id}) {
         $self->_insert_network($net);
     } else {
-        for my $field ( keys %$net ) {
-            next if $field =~ /^_/;
-            die "Wrong field in virtual_networks table : '$field'"
-            if $field !~ /^[a-z]+[a-z0-9_]+$/;
-
-            confess "Error: field $field missing from ".Dumper($db_net)
-            if !exists $db_net->{$field};
-
-            next if !defined $net->{$field} && !defined $db_net->{$field};
-            next if defined $net->{$field}
-            && defined $db_net->{$field}
-            && $net->{$field} eq $db_net->{$field};
-
-            my $sth = $self->_dbh->prepare(
-                "UPDATE virtual_networks set $field=?"
-                ." WHERE id=?"
-            );
-            $sth->execute($net->{$field}, $db_net->{id});
-        }
+        $self->_update_network_db($db_net, $net);
         $net->{id}  = $db_net->{id};
     }
     delete $db_net->{date_changed};
     #    delete $db_net->{id};
+}
+
+sub _update_network_db($self, $old, $new0) {
+    my $new = dclone($new0);
+    my $id = $old->{id} or confess "Missing id";
+    my $sql = "";
+    for my $field (sort keys %$new) {
+        if (    exists $old->{$field} && defined $old->{$field}
+            &&  exists $new->{$field} && defined $new->{$field}
+            && $new->{$field} eq $old->{$field}) {
+            delete $new->{$field};
+            next;
+        }
+        $sql .= ", " if $sql;
+        $sql .=" $field=? "
+    }
+    if ($sql) {
+        $sql = "UPDATE virtual_networks set $sql WHERE id=?";
+        my $sth = $self->_dbh->prepare($sql);
+        my @values = map { $new->{$_} } sort keys %$new;
+        $sth->execute(@values, $id);
+    }
 }
 
 sub _around_new_network($orig, $self, $name) {
@@ -1565,39 +1569,21 @@ sub _around_change_network($orig, $self, $data, $uid) {
 
     my $data2 = dclone($data);
 
-    delete $data->{id_owner};
-    delete $data->{is_public};
-    my $changed = $orig->($self, $data);
+    my $id_owner = delete $data->{id_owner};
 
     my $id = delete $data2->{id};
     my $sth0 = $self->_dbh->prepare("SELECT * FROM virtual_networks WHERE id=?");
     $sth0->execute($id);
     my $old = $sth0->fetchrow_hashref;
 
+    # this field is only in DB
+    delete $data->{is_public};
+    my $changed = $orig->($self, $data);
+
     my $user=Ravada::Auth::SQL->search_by_id($uid);
 
-    my $sql = "";
-    for my $field (sort keys %$data2) {
-        if (    exists $old->{$field} && defined $old->{$field}
-            &&  exists $data2->{$field} && defined $data2->{$field}
-            && $data2->{$field} eq $old->{$field}) {
-            delete $data2->{$field};
-            next;
-        }
-        if ($field eq 'is_public' && $old->{$field} ne $data2->{$field}) {
-            die "Error: user ".$user->name." not authorized to change $field.\n"
-            unless $user->is_admin() ||$user->can_manage_all_networks()
-            || ($user->can_create_networks && $user->id == $data->{id_owner});
-        }
-        $sql .= ", " if $sql;
-        $sql .=" $field=? "
-    }
-    if ($sql) {
-        $sql = "UPDATE virtual_networks set $sql WHERE id=?";
-        my $sth = $self->_dbh->prepare($sql);
-        my @values = map { $data2->{$_} } sort keys %$data2;
-        $sth->execute(@values, $id);
-    }
+    $self->_update_network_db($old, $data2);
+
 }
 
 sub _check_networks($self) { }

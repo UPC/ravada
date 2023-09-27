@@ -253,28 +253,28 @@ sub test_networks_access_grant($vm_name) {
     is($new->{_owner}->{id},$user->id);
     is($new->{_can_change},1) or exit;
 
-    $new->{is_active} = (!$new->{is_active} or 0);
-    $t->post_ok("/v2/network/set/" => json => $new)->status_is(200);
-    wait_request();
+    for ( 1 .. 2 ) {
+        $new->{is_active} = (!$new->{is_active} or 0);
+        $t->post_ok("/v2/network/set/" => json => $new)->status_is(200);
+        wait_request();
 
-    $t->get_ok("/v2/vm/list_networks/".$id_vm);
-    {
+        $t->get_ok("/v2/vm/list_networks/".$id_vm);
+
         my $networks3 = decode_json($t->tx->res->body);
         my ($net3) = grep { $_->{name} eq $new->{name}} @$networks3;
         is($net3->{is_active}, $new->{is_active}) or exit;
     }
 
-    $new->{is_public} = (!$new->{is_public} or 0);
-    $t->post_ok("/v2/network/set/" => json => $new)->status_is(200);
-    wait_request();
+    for ( 1 .. 2 ) {
+        $new->{is_public} = (!$new->{is_public} or 0);
+        $t->post_ok("/v2/network/set/" => json => $new)->status_is(200);
+        wait_request();
 
-    $t->get_ok("/v2/vm/list_networks/".$id_vm);
-    {
+        $t->get_ok("/v2/vm/list_networks/".$id_vm);
         my $networks4 = decode_json($t->tx->res->body);
         my ($net4) = grep { $_->{name} eq $new->{name}} @$networks4;
         is($net4->{is_public}, $new->{is_public}) or exit;
     }
-
 
     mojo_login($t, $USERNAME, $PASSWORD);
 
