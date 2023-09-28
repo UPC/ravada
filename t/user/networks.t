@@ -31,9 +31,11 @@ sub test_create_network($vm) {
         ,id_vm => $vm->id
         ,data => $data
     );
-    wait_request(debug => 0);
-    my ($network) = grep {$_->{name} eq $data->{name} }
-        $vm->list_virtual_networks();
+    wait_request(debug => 1);
+    my @networks = $vm->list_virtual_networks();
+    my ($network) = grep {$_->{name} eq $data->{name} } @networks;
+    ok($network) or die "Error, network $data->{name} not created "
+        .Dumper(\@networks);
 
     return $network;
 }

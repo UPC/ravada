@@ -1432,11 +1432,12 @@ sub remove_void_networks($vm=undef) {
     }
     my $dir_net = $vm->dir_img()."/networks";
     return if ! -e $dir_net;
+    my $base = base_domain_name();
 
     opendir my $dir, $dir_net or die "$! $dir_net";
     while(my $filename = readdir $dir) {
         my $file = "$dir_net/$filename";
-        next unless $file =~ /\.yml$/;
+        next unless $file =~ /^$base.*\.yml$/;
         unlink $file or warn "$! $file";
     }
 
