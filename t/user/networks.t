@@ -110,8 +110,11 @@ sub test_deny_access($vm) {
         uid => $user->id
         ,id => $network->{id}
     );
-    wait_request(check_error => 0);
+    wait_request(check_error => 0, debug => 1);
     like($req_delete->error,qr/not authorized/);
+    my $networks2 = rvd_front->list_networks($vm->id , user_admin->id);
+    my ($found2) = grep { $_->{name} eq $network->{name} } @$networks2;
+    ok($found2,"Expecting network $network->{name} $network->{id} not removed ".Dumper($networks2)) or return;
 
     my $req_create = Ravada::Request->create_network(
         uid => $user->id

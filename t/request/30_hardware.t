@@ -1104,7 +1104,17 @@ sub test_change_network_bridge($vm, $domain, $index) {
 
     skip("No bridges found in this system",6) if !scalar @bridges;
     my $info = $domain->info(user_admin);
-    is ($info->{hardware}->{network}->[$index]->{type}, 'NAT') or exit;
+    if ($info->{hardware}->{network}->[$index]->{type} eq 'bridge') {
+        my $req = Ravada::Request->change_hardware(
+            id_domain => $domain->id
+            ,hardware => 'network'
+            ,index => $index
+            ,data => { type => 'NAT', network => 'default'}
+            ,uid => user_admin->id
+        );
+        wait_request();
+
+    }
 
     ok(scalar @bridges,"No network bridges defined in this host") or return;
 
@@ -1717,7 +1727,7 @@ for my $vm_name (vm_names()) {
     my %controllers = $domain_b0->list_controllers;
     lock_hash(%controllers);
 
-    for my $hardware ('network','display', sort keys %controllers ) {
+    for my $hardware ( sort keys %controllers ) {
         next if $hardware eq 'video';
 	    my $name= new_domain_name();
 	    my $domain_b = $BASE->clone(
