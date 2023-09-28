@@ -4,9 +4,6 @@
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top">
 <div id="wrapper">
 %= include 'bootstrap/navigation'
-<script>
-    $_anonymous=<%= ($_anonymous or 0) %>;
-</script>
 
 <div id="page-wrapper" ng-controller="bases" ng-init="is_admin=<%= $user->is_admin %>;anonymous=<%= $_anonymous or 0 %>;subscribe_ws('<%= url_for('ws_subscribe')->to_abs %>', <%= $bookings %> )">
 %= include 'main/list_bases_ng_head'
@@ -116,7 +113,7 @@
                             ng-click="restore(machine.clone.id);host_restore=0;machine.action=false"
                             ><%=l 'Yes' %></button>
                     </div>
-%			        if ($user
+%			        if ($user && !$_anonymous
 %                       && ( $user->can_change_settings || $user->can_change_settings_all)){
                         <a ng-show="machine.clone && !host_prepare && host_restore != machine.clone.id"
                             align="right" href="/machine/manage/{{machine.clone.id}}.html"><i class="fa fa-fw fa-cog" title="<%=l 'Settings' %>"></i></a>

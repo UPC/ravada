@@ -1203,17 +1203,18 @@ sub list_bases_anonymous {
     my $net = Ravada::Route->new(address => $ip);
 
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, id_base, is_public, file_screenshot "
+        "SELECT id, alias, name, id_base, is_public, file_screenshot "
         ."FROM domains where is_base=1 "
         ."AND is_public=1");
     $sth->execute();
-    my ($id, $name, $id_base, $is_public, $screenshot);
-    $sth->bind_columns(\($id, $name, $id_base, $is_public, $screenshot));
+    my ($id, $alias, $name, $id_base, $is_public, $screenshot);
+    $sth->bind_columns(\($id, $alias, $name, $id_base, $is_public, $screenshot));
 
     my @bases;
     while ( $sth->fetch) {
         next if !$net->allowed_anonymous($id);
         my %base = ( id => $id, name => Encode::decode_utf8($name)
+            , alias => Encode::decode_utf8($alias or $name)
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
             , is_active => 0
@@ -1221,8 +1222,9 @@ sub list_bases_anonymous {
             , name_clone => undef
             , is_locked => undef
             , can_hibernate => 0
+
         );
-        $base{screenshot} =~ s{^/var/www}{};
+        $base{list_clones} = [];
         lock_hash(%base);
         push @bases, (\%base);
     }
