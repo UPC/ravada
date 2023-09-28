@@ -1509,6 +1509,8 @@ sub _remove_usbs($domain, $hardware) {
 
 sub test_change_drivers($domain, $hardware) {
 
+    return if $domain->type eq 'Void' && $hardware eq 'network';
+
     _remove_usbs($domain, $hardware);
 
     my $info = $domain->info(user_admin);
@@ -1566,6 +1568,9 @@ sub test_change_drivers($domain, $hardware) {
 }
 
 sub test_all_drivers($domain, $hardware) {
+
+    return if $domain->type eq 'Void' && $hardware eq 'network';
+
     my $info = $domain->info(user_admin);
     my $options = $info->{drivers}->{$hardware};
     ok(scalar @$options,"No driver options for $hardware") or exit;
@@ -1712,7 +1717,7 @@ for my $vm_name (vm_names()) {
     my %controllers = $domain_b0->list_controllers;
     lock_hash(%controllers);
 
-    for my $hardware ('display', sort keys %controllers ) {
+    for my $hardware ('network','display', sort keys %controllers ) {
         next if $hardware eq 'video';
 	    my $name= new_domain_name();
 	    my $domain_b = $BASE->clone(
