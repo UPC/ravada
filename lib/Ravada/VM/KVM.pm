@@ -2972,6 +2972,8 @@ sub new_network($self, $name='net') {
         my %old = map { $_->{$field} => 1 } @networks;
         my ($last) = reverse sort keys %old;
         my ($z,$n) = $last =~ /.*?(0*)(\d+)/;
+        $z=$last if !defined $z;
+        $n=0 if !defined $n;
         $n++;
         $n = "$z$n";
 
