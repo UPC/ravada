@@ -572,7 +572,7 @@ sub test_public_network($vm, $net) {
     my $net3 = _search_network(id => $net->{id});
     is($net3->{id_owner}, $user2->id) or exit;
 
-    is($user2->can_change_network($clone, {network => $net3->{name}}),1) or exit;
+    is($user2->can_change_hardware_network($clone, {network => $net3->{name}}),1) or exit;
 
     $req->status('requested');
     wait_request(check_error => 0);

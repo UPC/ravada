@@ -1269,18 +1269,12 @@ sub _load_network($network) {
     return $row;
 }
 
-sub can_change_network($user, $domain, $data) {
-    return 1 if $user->is_admin;
+=head2  can_change_hardware_network
 
-    confess "Error: undefined network ".Dumper($data)
-    if !exists $data->{network} || !defined $data->{network};
+Returns true if the user can change the network in a virtual machine,
+false elsewhere
 
-    my $net = _load_network($data->{network});
-
-    return 1 if $user->id == $domain->id_owner
-        && $user->id == $net->{id_owner};
-    return 0;
-}
+=cut
 
 sub can_change_hardware_network($user, $domain, $data) {
     return 1 if $user->is_admin;
