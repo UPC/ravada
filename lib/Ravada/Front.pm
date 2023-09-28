@@ -1682,6 +1682,16 @@ sub list_storage_pools($self, $uid, $id_vm, $active=undef) {
     return _filter_active($pools, $active);
 }
 
+=head2 list_networks
+
+List the virtual networks for a Virtual Machine Manager
+
+Arguments: id vm , id user
+
+Returns: list ref of networks
+
+=cut
+
 sub list_networks($self, $id_vm ,$id_user) {
     my $query = "SELECT * FROM virtual_networks "
         ." WHERE id_vm=?";
