@@ -131,15 +131,17 @@ sub test_deny_access($vm) {
     user_admin->grant($user,'create_networks');
     $req_new->status('requested');
     $req_change->status('requested');
-    $req_delete->status('requested');
     $req_list->status('requested');
 
     wait_request(check_error => 0);
     is($req_new->error,'');
     like($req_change->error,qr/not authorized/);
-    like($req_delete->error,qr/not authorized/);
     is($req_change->status(),'done');
     is($req_list->error,'');
+
+    $req_delete->status('requested');
+    wait_request(check_error => 0);
+    like($req_delete->error,qr/not authorized/);
 
     $req_create->status('requested');
     my $new_data = decode_json($req_new->output);
