@@ -215,9 +215,14 @@ ravadaApp.directive("solShowMachine", swMach)
                 }
             }
         }
-        if ($scope.id_iso && $scope.id_iso.options
-                          && $scope.id_iso.options['bios']) {
-            $scope.bios = $scope.id_iso.options['bios'];
+        if ($scope.id_iso && $scope.id_iso.options) {
+            if( $scope.id_iso.options['bios']) {
+                $scope.bios = $scope.id_iso.options['bios'];
+            }
+            if( $scope.id_iso.options['hardware']) {
+                $scope.hardware = $scope.id_iso.options['hardware'];
+            }
+
         }
 
       };

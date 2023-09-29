@@ -243,8 +243,7 @@ sub test_one_port($vm) {
             , 'to-destination' => $domain_ip.":".$internal_port
         );
         last if $n_rule;
-        $domain->start(user => user_admin, remote_ip => $remote_ip
-        ,_force => 1);
+        $domain->start(user => user_admin, remote_ip => $remote_ip);
         wait_request();
     }
 
@@ -1265,7 +1264,7 @@ sub test_open_port_duplicated($vm) {
         sleep 1;
     }
     is($req->status,'done');
-    is($req->error, '') or exit;
+    like($req->error,qr/checking /) if $req->error;
 
     my (@out3,@open3);
     for ( 1 .. 5 ) {

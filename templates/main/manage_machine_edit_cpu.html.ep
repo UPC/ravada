@@ -9,6 +9,17 @@
             ng-class='{"disabled": topology}'
             ng-disabled="topology"
          />
+         <span ng-show="!topology && showmachine.is_active">
+            <br/>
+            current
+            <input type="number" size="3" min="1" max="{{item.vcpu['#text']}}"
+                ng-model="item.vcpu['current']"
+                name="vcpu_current"
+                ng-class='{"disabled": topology}'
+                ng-change="req_change_current(item.vcpu['current'])"
+            />
+
+         </span>
          </div>
 
         <div class="col-8">

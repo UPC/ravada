@@ -86,6 +86,8 @@ create_domain
     remove_old_users
     remove_old_users_ldap
 
+    remove_qemu_pools
+
     mangle_volume
     test_volume_contents
     test_volume_format
@@ -273,6 +275,7 @@ sub create_domain_v2(%args) {
     my $user = (delete $args{user} or $USER_ADMIN);
     my $iso_name = delete $args{iso_name};
     my $id_iso = delete $args{id_iso};
+    my $disk = delete $args{disk};
     croak "Error: supply either iso_name or id_iso ".Dumper(\%args)
     if $iso_name && $id_iso;
 
@@ -298,13 +301,12 @@ sub create_domain_v2(%args) {
     if keys %args;
 
     my $iso;
-    my $disk;
     if ($vm->type eq 'KVM' && (!$iso_name || $iso_name !~ /Alpine/i)) {
         $iso = $vm->_search_iso($id_iso);
-        $disk = ($iso->{min_disk_size} or 2 );
+        $disk = ($iso->{min_disk_size} or 2 ) if !$disk;
         diag("Creating [$id_iso] $iso->{name}");
     } else {
-        $disk = 2;
+        $disk = 2 if !$disk;
     }
 
     if ($vm->type eq 'KVM' && !$options ) {
@@ -1510,6 +1512,7 @@ sub remove_old_storage_pools_void() {
 }
 
 sub remove_old_storage_pools_kvm() {
+    remove_qemu_pools();
 }
 
 sub remove_old_storage_pools() {
