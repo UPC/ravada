@@ -2490,36 +2490,20 @@ sub list_network_interfaces($self, $type) {
 
 sub _list_nat_interfaces($self) {
 
-    my @cmd = ( '/usr/bin/virsh','net-list');
-    my ($out,$err) = $self->run_command(@cmd);
-
-    my @lines = split /\n/,$out;
-    shift @lines;
-    shift @lines;
-
+    my @nets = $self->list_virtual_networks();
     my @networks;
-    for (@lines) {
-        /\s*(.*?)\s+.*/;
-        push @networks,($1) if $1;
+    for my $net (@nets) {
+        push @networks,($net->{name}) if $net->{name};
     }
     return @networks;
 }
 
-sub _get_nat_bridge($self, $net) {
-    my @cmd = ( '/usr/bin/virsh','net-info', $net);
-    my ($out,$err) = $self->run_command(@cmd);
-
-    for my $line (split /\n/, $out) {
-        my ($bridge) = $line =~ /^Bridge:\s+(.*)/;
-        return $bridge if $bridge;
-    }
-}
-
 sub _list_qemu_bridges($self) {
     my %bridge;
-    my @networks = $self->_list_nat_interfaces();
+    my @networks = $self->list_virtual_networks();
     for my $net (@networks) {
-        my $nat_bridge = $self->_get_nat_bridge($net);
+        next if !$net->{bridge};
+        my $nat_bridge = $net->{bridge};
         $bridge{$nat_bridge}++;
     }
     return keys %bridge;

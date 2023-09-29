@@ -193,15 +193,16 @@ sub test_change_owner($vm) {
 }
 
 sub test_add_network($vm) {
-    my $name = new_domain_name;
-    my $net = {
-        name => $name
+    my $req_new = Ravada::Request->new_network(
+        uid => user_admin->id
         ,id_vm => $vm->id
-        ,ip_address => '192.0.'.$N++.'.1'
-        ,ip_netmask => '255.255.255.0'
-        ,is_active => 1
-        ,autostart => 1
-    };
+        ,name => base_domain_name()
+    );
+    wait_request(debug => 0);
+
+    my $net = decode_json($req_new->output);
+    my $name = $net->{name};
+
     my $user = create_user();
     my $req = Ravada::Request->create_network(
         uid => $user->id
@@ -210,6 +211,8 @@ sub test_add_network($vm) {
     );
     wait_request(check_error => 0);
     like($req->error,qr/not authorized/);
+    my($new0) = grep { $_->{name} eq $name } $vm->list_virtual_networks();
+    ok(!$new0,"Expecting no new network $name created") or return;
 
     $req = Ravada::Request->create_network(
         uid => user_admin->id
@@ -220,7 +223,7 @@ sub test_add_network($vm) {
 
     my $out = decode_json($req->output);
     my($new) = grep { $_->{name} eq $name } $vm->list_virtual_networks();
-    ok($new,"Expecting new network $name created") or return;
+    ok($new,"Expecting new network $name created") or die Dumper([$vm->list_virtual_networks]);
     isa_ok($out,'HASH')
     && is($out->{id_network},$new->{id});
 
