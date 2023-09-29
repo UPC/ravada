@@ -79,3 +79,12 @@ If everything went fine now when you type `ip a` you will see
 the former interface without any IP assigned, and the new
 bridge *br0* configured properly. Reboot the server to make
 sure everything starts correctly.
+
+Assign the bridge to the virtual machine
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Edit the virtual machine hardware network. Set the type to *bridge* and
+choose the bridge name.
+
+.. figure:: images/machine_bridge.png
+    :alt: Set network type to bridge
