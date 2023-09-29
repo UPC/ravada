@@ -1078,6 +1078,8 @@ sub _domain_create_from_iso {
         if $spice_password;
     $domain->xml_description();
 
+    $self->_change_hardware_install($domain,$iso->{options}->{hardware});
+
     return $domain;
 }
 
@@ -1454,7 +1456,7 @@ sub _check_signature($file, $type, $expected) {
 sub _download_file_external_headers($self,$url) {
     my @cmd = ($WGET,"-S","--spider",$url);
 
-    my ($in,$out,$err) = @_;
+    my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     my ($status) = $err =~ /^\s*(HTTP.*\d+.*)/m;
 
@@ -1483,7 +1485,7 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
     return $url if -e $device;
 
     my @cmd = ($WGET,'-nv',$url,'-O',$device);
-    my ($in,$out,$err) = @_;
+    my ($in,$out,$err);
     warn join(" ",@cmd)."\n"    if $verbose;
     run3(\@cmd,\$in,\$out,\$err);
     warn "out=$out" if $out && $verbose;
@@ -1831,11 +1833,13 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     my $machine = delete $options->{machine};
     my $arch = delete $options->{arch};
     my $bios = delete $options->{'bios'};
+
     confess "Error: bios=$bios and uefi=$uefi clash"
     if defined $uefi && defined $bios
         && ($bios !~/uefi/i && $uefi || $bios =~/uefi/i && !$uefi);
 
     $uefi = 1 if $bios && $bios =~ /uefi/i;
+
 
     confess "Arguments unknown ".Dumper($options)  if keys %$options;
     if ($machine) {
@@ -2085,8 +2089,7 @@ sub _list_sp_uuids($self) {
     return @uuids;
 }
 
-sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
-    my @uuids = @_;
+sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@uuids) {
     if (!scalar @uuids) {
         for my $dom ($self->vm->list_all_domains) {
             eval { push @uuids,($dom->get_uuid_string) };

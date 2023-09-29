@@ -494,7 +494,8 @@ sub _update_isos {
         ,file_re => 'alpine-standard-3.16.*-x86_64.iso'
         ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
             ,min_disk_size => '2'
-            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+            ,options => { machine => 'pc-q35', bios => 'UEFI'
+            }
         }
         ,alpine381_32 => {
             name => 'Alpine 3.16 32 bits'
@@ -706,7 +707,7 @@ sub _update_isos {
             name =>'Debian Bullseye 64 bits'
             ,arch => 'x86_64'
             ,description => 'Debian 11 Bullseye 64 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/11.[\d\.]+/amd64/iso-cd/'
             ,file_re => 'debian-11.[\d\.]+-amd64-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -717,8 +718,8 @@ sub _update_isos {
         ,debian_bullseye_32=> {
             name =>'Debian Bullseye 32 bits'
             ,arch => 'i686'
-            ,description => 'Debian 10 Bullseye 32 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/^11\..*\d$/i386/iso-cd/'
+            ,description => 'Debian 11 Bullseye 32 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/11[\d\.]+/i386/iso-cd/'
             ,file_re => 'debian-11.[\d\.]+-i386-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-i386.xml'
@@ -726,6 +727,33 @@ sub _update_isos {
             ,min_disk_size => '10'
             ,options => { machine => 'pc-i440fx' }
         }
+        ,debian_bookworm_64 => {
+            name =>'Debian Bookworm 64 bits'
+            ,arch => 'x86_64'
+            ,description => 'Debian 12 Bookworm 64 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/amd64/iso-cd/'
+            ,file_re => 'debian-12.[\d\.]+-amd64-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '11'
+            ,min_ram => 3
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+        }
+        ,debian_bookworm_32 => {
+            name =>'Debian Bookworm 32 bits'
+            ,arch => 'i686'
+            ,description => 'Debian 12 Bookworm 32 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/i386/iso-cd/'
+            ,file_re => 'debian-12.[\d\.]+-i386-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '11'
+            ,min_ram => 3
+            ,options => { machine => 'pc-i440fx'}
+        }
+
         ,devuan_beowulf_amd64=> {
             name =>'Devuan Beowulf 64 bits'
             ,description => 'Devuan Beowulf Desktop Live (amd64)'
@@ -839,7 +867,9 @@ sub _update_isos {
           ,min_ram => 4
           ,arch => 'x86_64'
           ,extra_iso => 'https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.2\d+-\d+/virtio-win-0.1.2\d+.iso'
-            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+            ,options => { machine => 'pc-q35', bios => 'UEFI'
+                ,hardware => { cpu => { cpu => { topology => { threads => 2, cores => 2}}}}
+            }
         }
        ,empty_32bits => {
           name => 'Empty Machine 32 bits'
@@ -912,7 +942,8 @@ sub _update_table_isos_url($self, $data) {
                 ." WHERE id=?"
             );
             $sth_update->execute($entry->{$field}, $row->{id});
-            warn("INFO: updating $release $field '".($row->{$field} or '')."' -> '$entry->{$field}'\n")
+            warn("INFO: updating $release $field ".Dumper($row->{$field})." -> "
+                .Dumper($entry->{$field})."\n")
             if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         }
     }
@@ -1395,7 +1426,7 @@ sub _update_table($self, $table, $field, $data, $verbose=0) {
             warn("INFO: $table : $row->{$field} already added.\n") if $verbose;
             next;
         }
-        warn("INFO: updating $table : ".Dumper($data->{$name})."\n")
+        warn("INFO: updating $table [ $name ] : ".Dumper($data->{$name})."\n")
         if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
         my $sql =
@@ -3309,9 +3340,9 @@ sub _add_extra_iso($domain, $request, $previous_request) {
     return $req_add;
 }
 
-sub _check_args($args,@) {
+sub _check_args($args,@fields) {
     my %args_check = %$args;
-    for my $field (@_) {
+    for my $field (@fields) {
         delete $args_check{$field};
     }
     confess "ERROR: Unknown arguments ".Dumper(\%args_check) if keys %args_check;
@@ -5129,6 +5160,51 @@ sub _cmd_reboot {
 
 }
 
+sub _cmd_shutdown_start($self, $request) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain');
+    my $id_vm = $request->defined_arg('id_vm');
+
+    my $domain;
+    if ($id_vm) {
+        my $vm = Ravada::VM->open($id_vm);
+        $domain = $vm->search_domain_by_id($id_domain);
+    } else {
+        $domain = $self->search_domain_by_id($id_domain);
+    }
+    die "Unknown domain '$id_domain'\n" if !$domain;
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    die "USER $uid not authorized to restart machine ".$domain->name
+    unless $domain->_data('id_owner') ==  $user->id || $user->is_operator;
+
+    my $timeout = ($request->defined_arg('timeout') or $domain->_timeout_shutdown() or 60);
+
+    for my $try ( 0 .. 1 ) {
+        $domain->shutdown(timeout => $timeout, user => $user
+                    , request => $request);
+
+        for ( 0 .. $timeout+1 ) {
+            last if !$domain->is_active;
+            sleep 1;
+        }
+        last if !$domain->is_active;
+    }
+
+    my $req_shutdown = Ravada::Request->force_shutdown_domain(
+        uid => $user->id
+        ,id_domain => $domain->id
+        ,after_request => $request->id
+    );
+
+    Ravada::Request->start_domain(
+        uid => $user->id
+        ,id_domain => $domain->id
+        ,after_request => $req_shutdown->id
+    );
+}
+
 sub _cmd_force_reboot {
     my $self = shift;
     my $request = shift;
@@ -5642,7 +5718,12 @@ sub _refresh_active_domains($self, $request=undef) {
     my %active_domain;
 
         if ($id_domain) {
-            my $domain = $self->search_domain_by_id($id_domain);
+            my $domain;
+            eval { $domain = $self->search_domain_by_id($id_domain) };
+            if ( $@ ) {
+                next if $@ =~ /not found/;
+                warn $@;
+            }
             $self->_refresh_active_domain($domain, \%active_domain) if $domain;
          } else {
             my @domains;
@@ -5653,7 +5734,12 @@ sub _refresh_active_domains($self, $request=undef) {
                                 @domains) {
                 $request->error("checking $domain_data->{name}") if $request;
                 next if $active_domain{$domain_data->{id}};
-                my $domain = Ravada::Domain->open($domain_data->{id});
+                my $domain;
+                eval { $domain = Ravada::Domain->open($domain_data->{id}) };
+                if ( $@ ) {
+                    next if $@ =~ /not found/;
+                    warn $@;
+                }
                 next if !$domain;
                 $self->_refresh_active_domain($domain, \%active_domain);
                 $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
@@ -6060,6 +6146,7 @@ sub _req_method {
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
 ,force_reboot   => \&_cmd_force_reboot
+,shutdown_start => \&_cmd_shutdown_start
         ,rebase => \&_cmd_rebase
 
 ,refresh_storage => \&_cmd_refresh_storage
@@ -6430,6 +6517,8 @@ sub _cmd_close_exposed_ports($self, $request) {
     my $user = Ravada::Auth::SQL->search_by_id( $uid ) or die "Error: user $uid not found";
 
     my $domain = Ravada::Domain->open($request->id_domain);
+    return if !$domain;
+
     die "Error: user ".$user->name." not authorized to delete iptables rule"
     unless $user->is_admin || $domain->_data('id_owner') == $uid;
 

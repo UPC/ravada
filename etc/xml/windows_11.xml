@@ -23,7 +23,7 @@
     <vmport state='off'/>
     <smm state='on'/>
   </features>
-  <cpu mode='host-model' check='partial'>
+  <cpu mode='custom' check='partial'>
     <topology sockets='1' cores='2' threads='2'/>
   </cpu>
   <clock offset='localtime'>

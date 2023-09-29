@@ -303,6 +303,8 @@ sub _around_start($orig, $self, @arg) {
 
     $self->_start_preconditions(@arg);
 
+    $self->_pre_start_internal();
+
     $self->_data( 'post_shutdown' => 0);
     $self->_data( 'post_hibernated' => 0);
 
@@ -320,7 +322,7 @@ sub _around_start($orig, $self, @arg) {
     $enable_host_devices = $request->defined_arg('enable_host_devices') if $request;
     $enable_host_devices = 1 if !defined $enable_host_devices;
 
-    for (;;) {
+    for (1 .. 5) {
         eval { $self->_start_checks(@arg) };
         my $error = $@;
         if ($error) {
@@ -375,6 +377,7 @@ sub _around_start($orig, $self, @arg) {
         && $error !~ /process exited while connecting to monitor/
         && $error !~ /Could not run .*swtpm/i
         && $error !~ /virtiofs/
+        && $error !~ /child process/i
         ;
 
         if ($error && $self->id_base && !$self->is_local && $self->_vm->enabled) {
@@ -701,7 +704,9 @@ sub _around_add_volume {
         ($name) = $file =~ m{.*/(.*)} if !$name && $file;
         $name = $self->name if !$name;
 
-        $name .= "-".$args{target}."-".Ravada::Utils::random_name(4);
+        $name .= "-".$args{target}."-".Ravada::Utils::random_name(4)
+        if $name !~ /\.iso$/;
+
         $args{name} = $name;
     }
 
@@ -714,10 +719,12 @@ sub _around_add_volume {
     $args{allocation} = Ravada::Utils::size_to_number($args{allocation})
         if exists $args{allocation} && defined $args{allocation};
 
-    my $free = $self->_vm->free_disk();
+    my $storage = $args{storage};
+
+    my $free = $self->_vm->free_disk($storage);
     my $free_out = int($free / 1024 / 1024 / 1024 ) * 1024 *1024 *1024;
 
-    confess "Error creating volume, out of space $size . Disk free: "
+    die "Error creating volume, out of space $size . Disk free: "
             .Ravada::Utils::number_to_size($free_out)
             ."\n"
         if exists $args{size} && $args{size} && $args{size} >= $free;
@@ -1547,7 +1554,7 @@ Returns the id of  the domain
 
 sub id($self) {
     return $self->{_id} if exists $self->{_id};
-    my $id = $_[0]->_data('id');
+    my $id = $self->_data('id');
     $self->{_id} = $id;
     return $id;
 }
@@ -1660,6 +1667,10 @@ sub _data($self, $field, $value=undef, $table='domains') {
 
 sub _data_extra($self, $field, $value=undef) {
     $self->_insert_db_extra()   if !$self->is_known_extra();
+    if (defined $value) {
+        my $old = $self->_data_extra($field);
+        return if defined $old && $old eq $value;
+    }
     return $self->_data($field, $value, "domains_".lc($self->type));
 }
 
@@ -1939,9 +1950,6 @@ sub display($self, $user) {
     my @display_info = $self->display_info($user);
 
     my ($display_info) = grep { $_->{driver} !~ /-tls$/ } @display_info;
-
-    confess "Error: I can't find builtin display info for ".$self->name." ".ref($self)."\n".Dumper($display_info)
-    if !exists $display_info->{port};
 
     return '' if !$display_info->{driver} || !$display_info->{ip}
     || !$display_info->{port};
@@ -3041,8 +3049,16 @@ sub _remove_start_requests($self) {
     }
 }
 
+# it may be superceeded in child class
+sub _post_shutdown_internal {}
+
+# it may be superceeded in child class
+sub _pre_start_internal {}
+
 sub _post_shutdown {
     my $self = shift;
+
+    $self->_post_shutdown_internal();
 
     my %arg = @_;
     my $timeout = delete $arg{timeout};
@@ -4022,7 +4038,7 @@ sub _post_resume {
     return $self->_post_start(@_);
 }
 
-sub _timeout_shutdown($self, $value) {
+sub _timeout_shutdown($self, $value=undef) {
     $TIMEOUT_SHUTDOWN = $value if defined $value;
     return $TIMEOUT_SHUTDOWN;
 }
@@ -4518,6 +4534,7 @@ Check if the domain has swap volumes defined, and clean them
 
 sub clean_swap_volumes {
     my $self = shift;
+    return if $self->is_active();
     for my $vol ( $self->list_volumes_info) {
         confess if !$vol->domain;
         if ($vol->file && $vol->file =~ /\.SWAP\.\w+$/) {
@@ -5607,7 +5624,7 @@ sub _run_iptstate($self, $force=undef) {
         && ( time - $self->_vm->{_iptstate_time} < $TIME_CACHE_NETSTAT+1 ) ) {
         return $self->_vm->{_iptstate};
     }
-    my @cmd = ("iptstate", "-1");
+    my @cmd = ("iptstate", "-1","-L","--no-color","-o");
     my ( $out, $err) = $self->_vm->run_command(@cmd);
     $self->_vm->{_iptstate} = $out;
     $self->_vm->{_iptstate_time} = time;
@@ -5666,6 +5683,7 @@ hardware change can be applied.
 =cut
 
 sub needs_restart($self, $value=undef) {
+    return $self->_data('needs_restart') if !defined $value;
     return $self->_data('needs_restart',$value);
 }
 
@@ -5689,7 +5707,7 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     }
     $self->info(Ravada::Utils->user_daemon) if $self->is_known();
 
-    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active' && $hardware ne 'memory';
+    $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active' && $hardware ne 'memory' && $hardware !~ /cpu/;
     $self->post_prepare_base() if $self->is_base();
 }
 
