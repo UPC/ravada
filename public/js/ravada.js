@@ -139,7 +139,6 @@
                 if (typeof(machine.clone) != 'undefined'
                 && machine.clone) {
                     machine.is_active = machine.clone.is_active;
-                    machine.screenshot= machine.clone.screenshot;
                     if (machine.clone.description
                             && machine.clone.description.length) {
                         machine.description2 = machine.clone.description;
@@ -258,9 +257,6 @@
                         } else {
                             machine.list_clones[i].is_active = data.list_clones[i].is_active;
                             machine.list_clones[i].screenshot = data.list_clones[i].screenshot;
-                            if (machine.clone.id == machine.list_clones[i].id) {
-                                machine.screenshot = machine.list_clones[i].screenshot;
-                            }
 
                         }
                     }
