@@ -344,6 +344,8 @@ sub _update_isos {
     my $self = shift;
     my $table = 'iso_images';
     my $field = 'name';
+    my @now = localtime(time);
+    my $year = $now[5]+1900;
     my %data = (
 	    androidx86 => {
                     name => 'Android 8.1 x86'
@@ -788,24 +790,24 @@ sub _update_isos {
             ,min_disk_size => '10'
         }
         ,kali_64 => {
-            name => 'Kali Linux 2022'
-            ,description => 'Kali Linux 2022 64 Bits'
+            name => "Kali Linux $year"
+            ,description => "Kali Linux $year 64 Bits"
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2022.\d+/'
-            ,file_re => 'kali-linux-202\d.\d+-installer-amd64.iso'
+            ,url => "https://cdimage.kali.org/kali-$year".'.\d+/'
+            ,file_re => "kali-linux-$year.".'\d+-installer-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
         ,kali_64_netinst => {
-            name => 'Kali Linux 2022 (NetInstaller)'
-            ,description => 'Kali Linux 2022 64 Bits (light NetInstall)'
+            name => "Kali Linux $year (NetInstaller)"
+            ,description => "Kali Linux $year 64 Bits (light NetInstall)"
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2022.\d+/'
-            ,file_re => 'kali-linux-202\d.\d+-installer-netinst-amd64.iso'
+            ,url => "https://cdimage.kali.org/kali-$year".'.\d+/'
+            ,file_re => "kali-linux-$year.".'\d+-installer-netinst-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
