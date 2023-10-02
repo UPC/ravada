@@ -172,6 +172,24 @@ sub test_req_create_domain {
     return $name;
 }
 
+sub test_req_prepare_base_active($vm) {
+    my $domain;
+    if ($vm->type ne 'Void') {
+        my $base = import_domain($vm);
+        $domain = $base->clone(user => user_admin, name => new_domain_name);
+    } else {
+        $domain = create_domain($vm);
+    }
+    $domain->start(user_admin);
+    my $req = Ravada::Request->prepare_base(uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request(debug => 0);
+    is($domain->is_active,0);
+    is($domain->is_base,1);
+}
+
+
 sub test_req_prepare_base {
     my $vm_name = shift;
     my $name = shift;
@@ -196,6 +214,10 @@ sub test_req_prepare_base {
         ok($req->status);
 
         ok($domain->is_locked,"Domain $name should be locked when preparing base");
+        $req->status('working');
+        ok($domain->is_locked,"Domain $name should be locked when preparing base");
+        $req->status('requested');
+
     }
 
     wait_request(background => 0);
@@ -665,6 +687,8 @@ for my $vm_name ( vm_names ) {
             my $iso = $vm_connected->_search_iso($ID_ISO);
             $vm_connected->_iso_name($iso, undef);
         }
+        test_req_prepare_base_active($vm_connected);
+
         test_domain_name_iso($vm_connected);
         test_swap($vm_name);
 

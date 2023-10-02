@@ -4848,6 +4848,25 @@ sub _cmd_prepare_base {
 
     die "Unknown domain id '$id_domain'\n" if !$domain;
 
+    if ($domain->is_active) {
+        my $req_shutdown = Ravada::Request->shutdown_domain(
+            uid => $user->id
+            ,id_domain => $domain->id
+            ,timeout => 0
+        );
+        $request->after_request($req_shutdown->id);
+        $request->at(time + 10);
+        if ( !defined $request->retry() ) {
+            $request->retry(5);
+            $request->status("retry");
+        } elsif($request->retry>0) {
+            $request->retry($request->retry-1);
+            $request->status("retry");
+        }
+        $request->error("Machine must be shut down");
+        return;
+    }
+
     $self->_remove_unnecessary_request($domain);
     $self->_remove_unnecessary_downs($domain);
     return if $domain->is_base();
