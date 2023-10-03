@@ -8,8 +8,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-11-29 22:29+0000\n"
-"Last-Translator: J. Lavoie <j.lavoie@net-c.ca>\n"
+"PO-Revision-Date: 2023-10-05 00:10+0000\n"
+"Last-Translator: Claire Charles <charlesclaire101@gmail.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/ravada/"
 "translation/it/>\n"
 "Language: it\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.4-dev\n"
+"X-Generator: Weblate 5.1-dev\n"
 
 msgid "Ravada broker"
 msgstr "Broker Ravada"
@@ -1076,3 +1076,353 @@ msgstr "Rimuovi gruppo"
 
 msgid "Are you sure you want to remove this group ?"
 msgstr "Sei sicuro di voler rimuovere questo gruppo ?"
+
+msgid "Admin users can still log in from"
+msgstr "Gli utenti amministratori possono comunque accedere da"
+
+msgid "model"
+msgstr "modello"
+
+msgid "Display Port :"
+msgstr "Porta di visualizzazione :"
+
+msgid "This node is local"
+msgstr "Questo nodo è locale"
+
+msgid "Disabled"
+msgstr "Disabile"
+
+msgid "Are you sure you want to remove the base of"
+msgstr "Sei sicuro di voler rimuovere la base di"
+
+msgid "can change the settings of any virtual machine."
+msgstr "può modificare le impostazioni di qualsiasi macchina virtuale."
+
+msgid "Template selection is required"
+msgstr "La selezione del modello è necessaria"
+
+msgid "Autostart"
+msgstr "Avvio automatico"
+
+msgid "Display URL :"
+msgstr "URL di visualizzazione:"
+
+msgid "vram"
+msgstr "vram"
+
+msgid "Action"
+msgstr "Azione"
+
+msgid "to an ASCII file and save it with a .reg extension, then execute the file."
+msgstr ""
+"in un file ASCII e salvarlo con estensione .reg, quindi eseguire il file."
+
+msgid "Volatile"
+msgstr "Volatili"
+
+msgid "This machine is running and can't be modified."
+msgstr "Questa macchina è in funzione e non può essere modificata."
+
+msgid "Fallback"
+msgstr "ripiego"
+
+msgid "Are you sure you want to prepare the base of"
+msgstr "Siete sicuri di voler preparare la base di"
+
+msgid "Nodes"
+msgstr "Nodi"
+
+msgid "Show active"
+msgstr "Mostra attivo"
+
+msgid "Refresh"
+msgstr "Aggiornare"
+
+msgid "can remove any virtual machine owned by the user."
+msgstr "può rimuovere qualsiasi macchina virtuale di proprietà dell'utente."
+
+msgid "machines down."
+msgstr "macchine inattivo."
+
+msgid "Primary video devices will move to first"
+msgstr "I dispositivi video primari si sposteranno al primo"
+
+msgid "Display Port secure :"
+msgstr "Porta display sicura :"
+
+msgid "Type"
+msgstr "Tipo"
+
+msgid "Bookings require LDAP authentication."
+msgstr "Le prenotazioni richiedono l'autenticazione LDAP."
+
+msgid "Public"
+msgstr "Pubblico"
+
+msgid "Enables display password when available"
+msgstr "Abilita la password di visualizzazione quando è disponibile"
+
+msgid "bus"
+msgstr "autobus"
+
+msgid "Minimum port number to expose virtual machine services."
+msgstr "Numero di porta minimo per esporre i servizi della macchina virtuale."
+
+msgid "on"
+msgstr "ni"
+
+msgid "Debug Ports Exposed"
+msgstr "Porte di debug esposte"
+
+msgid "Setup a LDAP Server"
+msgstr "Configurare un server LDAP"
+
+msgid "Configure LDAP Authentication"
+msgstr "Configurare l'autenticazione LDAP"
+
+msgid "Display IP :"
+msgstr "Visualizzazione IP :"
+
+msgid "ram"
+msgstr "ram"
+
+msgid "Bookings"
+msgstr "Prenotazioni"
+
+msgid "The machine will turn off after this time"
+msgstr "La macchina si spegne dopo questo tempo"
+
+msgid "Debug"
+msgstr "debug"
+
+msgid "off"
+msgstr "spento"
+
+msgid "Confirm password is required"
+msgstr "Confermare la password è necessaria"
+
+msgid "match"
+msgstr "abbinare"
+
+msgid "Error:"
+msgstr "Errore:"
+
+msgid "Start Limit"
+msgstr "Limite iniziale"
+
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Premere SHIFT + F12 per uscire dalla macchina virtuale"
+
+msgid "primary"
+msgstr "primario"
+
+msgid "Show clones"
+msgstr "Mostra cloni"
+
+msgid "hidden"
+msgstr "nascosto"
+
+msgid "Server in maintenance until"
+msgstr "Server in manutenzione fino a"
+
+msgid "Hibernated"
+msgstr "Ibernato"
+
+msgid "vCPU allocation"
+msgstr "Allocazione vCPU"
+
+msgid "Number of virtual machines that normal users can have running at the same time"
+msgstr ""
+"Numero di macchine virtuali che gli utenti normali possono avere in "
+"esecuzione contemporaneamente"
+
+msgid "Check"
+msgstr "controllare"
+
+msgid "Manage machine"
+msgstr "Gestire la macchina"
+
+msgid "heads"
+msgstr "teste"
+
+msgid "Remove Base"
+msgstr "Rimuovi la base"
+
+msgid "requires password"
+msgstr "richiede password"
+
+msgid "ISO file"
+msgstr "File ISO"
+
+msgid "Loading ..."
+msgstr "Caricamento ..."
+
+msgid "LDAP"
+msgstr "LDAP"
+
+msgid "Maintenance End"
+msgstr "Fine manutenzione"
+
+msgid "SSO/CAS Login"
+msgstr "Accesso SSO/CAS"
+
+msgid "Networks"
+msgstr "Reti"
+
+msgid "boot order"
+msgstr "Ordine di avvio"
+
+msgid "Web Service connection failed."
+msgstr "Connessione al servizio Web non riuscita."
+
+msgid "bridge"
+msgstr "ponte"
+
+msgid "ShutDown"
+msgstr "Spegnimento"
+
+msgid "dn:"
+msgstr "dn:"
+
+msgid "Confirm disable node"
+msgstr "Confermare la disabilitazione del nodo"
+
+msgid "Sorry"
+msgstr "Mi dispiace"
+
+msgid "nat"
+msgstr "nat"
+
+msgid "CPU Features"
+msgstr "Caratteristiche della CPU"
+
+msgid "No message to show!"
+msgstr "Nessun messaggio da mostrare!"
+
+msgid "fallback"
+msgstr "ripiego"
+
+msgid "Danger: This will destroy all the disk data permantently."
+msgstr ""
+"Pericolo: In questo modo tutti i dati del disco vengono distrutti in modo "
+"permanente."
+
+msgid "can change the settings of any virtual machine "
+msgstr "può modificare le impostazioni di qualsiasi macchina virtuale "
+
+msgid "Bases"
+msgstr "Basi"
+
+msgid "Active"
+msgstr "Attivo"
+
+msgid "Display Password"
+msgstr "Visualizza password"
+
+msgid "cancel"
+msgstr "disdire"
+
+msgid "To make this possible, copy the content of"
+msgstr "Per rendere ciò possibile, copiare il contenuto di"
+
+msgid "Primary can not be unset, enable it in another video device"
+msgstr ""
+"Primario non può essere disattivato, abilitarlo in un altro dispositivo video"
+
+msgid "Show/Hide clones"
+msgstr "Mostra/Nascondi cloni"
+
+msgid "New user"
+msgstr "Nuovo utente"
+
+msgid "capacity"
+msgstr "capacità"
+
+msgid "Disabling this node will shut all the"
+msgstr "Disabilitando questo nodo, tutti i nodi"
+
+msgid "This machine is base and can't be modified."
+msgstr "Questa macchina è di base e non può essere modificata."
+
+msgid "Hide clones"
+msgstr "nascondere i cloni"
+
+msgid "Debug Ports"
+msgstr "Porte di debug"
+
+msgid "state"
+msgstr "Stato"
+
+msgid "Maintenance"
+msgstr "Manutenzione"
+
+msgid "New feature"
+msgstr "Nuova funzione"
+
+msgid "check"
+msgstr "controllare"
+
+msgid "mode"
+msgstr "modalità"
+
+msgid "Ravada Apache documentation"
+msgstr "Documentazione Ravada Apache"
+
+msgid "Confirm password must be at least 5 characters"
+msgstr "Conferma che la password deve contenere almeno 5 caratteri"
+
+msgid "New Group"
+msgstr "Nuovo Gruppo"
+
+msgid "Groups"
+msgstr "Gruppo"
+
+msgid "Please, make sure you have the right path and release, according to your PC configuration."
+msgstr ""
+"Per favore, assicurati di avere il percorso giusto e il rilascio, in base "
+"alla configurazione del tuo PC."
+
+msgid "Maintenance Start"
+msgstr "Avvio manutenzione"
+
+msgid "object class:"
+msgstr "classe oggetto:"
+
+msgid "Node"
+msgstr "Nodo"
+
+msgid "Confirm password can only contain words and numbers"
+msgstr "Conferma password può contenere solo parole e numeri"
+
+msgid "Disable"
+msgstr "Disabilitare"
+
+msgid "See documentation about:"
+msgstr "Consultare la documentazione su:"
+
+msgid "Port expose"
+msgstr "Esposizione porta"
+
+msgid "Groups require a LDAP server configured."
+msgstr "I gruppi richiedono la configurazione di un server LDAP."
+
+msgid "New Network"
+msgstr "Nuova rete"
+
+msgid "add"
+msgstr "aggiungere"
+
+msgid "Enable"
+msgstr "Abilitare"
+
+msgid "Global Settings"
+msgstr "Impostazioni globali"
+
+msgid "Confirm password can not exceed 20 characters"
+msgstr "Conferma che la password non può superare i 20 caratteri"
+
+msgid "Frontend"
+msgstr "Front-end"
+
+msgid "Client"
+msgstr "Cliente"
