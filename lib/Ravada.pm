@@ -4853,7 +4853,6 @@ sub _cmd_prepare_base {
 
     my $with_cd = $request->defined_arg('with_cd');
 
-
     if ($domain->is_active) {
         my $req_shutdown = Ravada::Request->shutdown_domain(
             uid => $user->id
