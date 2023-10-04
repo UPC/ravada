@@ -3253,6 +3253,7 @@ sub _req_add_disk($uid, $id_domain, $type, $size, $request, $storage=undef) {
         ,name => 'disk'
         ,data => $data
         ,@after_req
+        ,at => time + 1
     );
 }
 sub _start_domain_after_create($domain, $request, $uid,$previous_request) {
@@ -3807,7 +3808,7 @@ sub process_requests {
         "pid=".($req->pid or '')." ".$req->status()
             ."$txt_retry "
             .$req->command
-            ." ".Dumper($req->args) if $DEBUG || $debug;
+            ." ".Dumper($req->args) if ( $DEBUG || $debug ) && $req->command ne 'set_time';
 
         my ($n_retry) = $req->status() =~ /retry (\d+)/;
         $n_retry = 0 if !$n_retry;
@@ -3817,14 +3818,16 @@ sub process_requests {
         next if !$DEBUG && !$debug;
 
         warn ''.localtime." req ".$req->id." , cmd: ".$req->command." ".$req->status()
-            ." , err: '".($req->error or '')."'\n"  if $DEBUG || $VERBOSE;
+            ." , err: '".($req->error or '')."'\n"  if ($DEBUG || $VERBOSE )
+            && $req->command ne 'set_time';
             #        sleep 1 if $DEBUG;
 
     }
 
+    my @reqs2 = grep { $_->command ne 'set_time' } @reqs;
     warn Dumper([map { $_->id." ".($_->pid or '')." ".$_->command." ".$_->status }
-            grep { $_->id } @reqs ])
-        if ($DEBUG || $debug ) && @reqs;
+            grep { $_->id } @reqs2 ])
+        if ($DEBUG || $debug ) && @reqs2;
 
     return scalar(@reqs);
 }
@@ -4465,7 +4468,7 @@ sub _wait_pids($self) {
             $request->status('done') if $request->status =~ /working/i;
         };
         warn("$$ request id=$id_req ".$request->command." ".$request->status()
-            .", error='".($request->error or '')."'\n") if $DEBUG && $request;
+            .", error='".($request->error or '')."'\n") if $DEBUG && $request && $request->command ne 'set_time';
     }
 }
 
@@ -4868,7 +4871,7 @@ sub _cmd_prepare_base {
             $request->retry($request->retry-1);
             $request->status("retry");
         }
-        $request->error("Machine must be shut down");
+        $request->error("Machine must be shut down ".$domain->name." [".$domain->id."]");
         return;
     }
 
@@ -6169,6 +6172,7 @@ sub _req_method {
  ,list_cpu_models => \&_cmd_list_cpu_models
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
+,force_shutdown_domain => \&_cmd_force_shutdown
 ,force_reboot   => \&_cmd_force_reboot
 ,shutdown_start => \&_cmd_shutdown_start
         ,rebase => \&_cmd_rebase
