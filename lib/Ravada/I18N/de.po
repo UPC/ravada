@@ -912,3 +912,1060 @@ msgstr "Denken Sie dran, dass Nutzer den Klone verwenden könnten"
 
 msgid "Yes, shutwdown all the clones"
 msgstr "Ja, alle Klone herunterfahren"
+
+msgid "-- choose hardware --"
+msgstr ""
+
+msgid "A node with that address already exists."
+msgstr ""
+
+msgid "Accept"
+msgstr ""
+
+msgid "Access"
+msgstr ""
+
+msgid "Action"
+msgstr ""
+
+msgid "Active"
+msgstr ""
+
+msgid "Add another user"
+msgstr ""
+
+msgid "Add groups"
+msgstr ""
+
+msgid "Add new Display"
+msgstr ""
+
+msgid "Add new disk"
+msgstr ""
+
+msgid "Add to group"
+msgstr ""
+
+msgid "Admin users can still log in from"
+msgstr ""
+
+msgid "Advanced options"
+msgstr ""
+
+msgid "All events"
+msgstr ""
+
+msgid "All machines"
+msgstr ""
+
+msgid "Anonymous"
+msgstr ""
+
+msgid "Any remote client can access this port"
+msgstr ""
+
+msgid "Apply"
+msgstr ""
+
+msgid "Are you sure you want to migrate"
+msgstr ""
+
+msgid "Are you sure you want to prepare the base of"
+msgstr ""
+
+msgid "Are you sure you want to remove the"
+msgstr ""
+
+msgid "Are you sure you want to remove the base of"
+msgstr ""
+
+msgid "Are you sure you want to remove the node"
+msgstr ""
+
+msgid "Are you sure you want to remove this group ?"
+msgstr ""
+
+msgid "Are you sure you want to spinoff from the base?"
+msgstr ""
+
+msgid "Assign this virtual machine to the pre-started pool"
+msgstr ""
+
+msgid "Attachment"
+msgstr ""
+
+msgid "Autostart"
+msgstr ""
+
+msgid "BIOS"
+msgstr ""
+
+msgid "Balance"
+msgstr ""
+
+msgid "Base"
+msgstr ""
+
+msgid "Bases"
+msgstr ""
+
+msgid "Bookings"
+msgstr ""
+
+msgid "Bookings require LDAP authentication."
+msgstr ""
+
+msgid "Bridge"
+msgstr ""
+
+msgid "CPU Features"
+msgstr ""
+
+msgid "CPUs"
+msgstr ""
+
+msgid "Can expose virtual machine ports."
+msgstr ""
+
+msgid "Can get a screenshot of own virtual machines."
+msgstr ""
+
+msgid "Can have an unlimited amount of machines started."
+msgstr ""
+
+msgid "Can manage groups."
+msgstr ""
+
+msgid "Can reboot all virtual machines."
+msgstr ""
+
+msgid "Can reboot clones own virtual machines."
+msgstr ""
+
+msgid "Can reboot own virtual machines."
+msgstr ""
+
+msgid "Can rename any virtual machine owned by the user."
+msgstr ""
+
+msgid "Can rename any virtual machine."
+msgstr ""
+
+msgid "Can rename clones from virtual machines owned by the user."
+msgstr ""
+
+msgid "Can shutdown own virtual machines."
+msgstr ""
+
+msgid "Can view groups."
+msgstr ""
+
+msgid "Change"
+msgstr ""
+
+msgid "Changing the base of a virtual machine is potentially dangerous and can't be undone."
+msgstr ""
+
+msgid "Check"
+msgstr ""
+
+msgid "Check connection to"
+msgstr ""
+
+msgid "Choose the virtualization type of the Node."
+msgstr ""
+
+msgid "Choose the virtualization type of the Virtual Machine."
+msgstr ""
+
+msgid "Client"
+msgstr ""
+
+msgid "Client headers"
+msgstr ""
+
+msgid "Clones are volatile, so all the pool will be started."
+msgstr ""
+
+msgid "Clones created from this machine will be removed on shutdown."
+msgstr ""
+
+msgid "Close"
+msgstr ""
+
+msgid "Color"
+msgstr ""
+
+msgid "Compact"
+msgstr ""
+
+msgid "Compact disk volumes"
+msgstr ""
+
+msgid "Configure LDAP Authentication"
+msgstr ""
+
+msgid "Confirm"
+msgstr ""
+
+msgid "Confirm disable node"
+msgstr ""
+
+msgid "Confirm password can not exceed 20 characters"
+msgstr ""
+
+msgid "Confirm password can only contain words and numbers"
+msgstr ""
+
+msgid "Confirm password is required"
+msgstr ""
+
+msgid "Confirm password must be at least 5 characters"
+msgstr ""
+
+msgid "Congrats"
+msgstr ""
+
+msgid "Contact Method"
+msgstr ""
+
+msgid "Content will be cleaned on restore"
+msgstr ""
+
+msgid "Content will be cleaned on restore and shutdown"
+msgstr ""
+
+msgid "Content will be kept on restore"
+msgstr ""
+
+msgid "Create a new group"
+msgstr ""
+
+msgid "Current memory (MB)"
+msgstr ""
+
+msgid "Danger: This will destroy all the disk data permantently."
+msgstr ""
+
+msgid "Data"
+msgstr ""
+
+msgid "Debug"
+msgstr ""
+
+msgid "Debug Ports"
+msgstr ""
+
+msgid "Debug Ports Exposed"
+msgstr ""
+
+msgid "Delete"
+msgstr ""
+
+msgid "Delete the event"
+msgstr ""
+
+msgid "Disable"
+msgstr ""
+
+msgid "Disabled"
+msgstr ""
+
+msgid "Disabling this node will shut all the"
+msgstr ""
+
+msgid "Display"
+msgstr ""
+
+msgid "Display IP :"
+msgstr ""
+
+msgid "Display Password"
+msgstr ""
+
+msgid "Display Port :"
+msgstr ""
+
+msgid "Display Port secure :"
+msgstr ""
+
+msgid "Display URL :"
+msgstr ""
+
+msgid "Edit the event"
+msgstr ""
+
+msgid "Email"
+msgstr ""
+
+msgid "Enable"
+msgstr ""
+
+msgid "Enables display password when available"
+msgstr ""
+
+msgid "End"
+msgstr ""
+
+msgid "Enter New Password"
+msgstr ""
+
+msgid "Enter Old Password"
+msgstr ""
+
+msgid "Enter group name"
+msgstr ""
+
+msgid "Error:"
+msgstr ""
+
+msgid "Error: the LDAP entry for this user has been removed."
+msgstr ""
+
+msgid "Error: you want to have"
+msgstr ""
+
+msgid "Event properties"
+msgstr ""
+
+msgid "Event saved successfully"
+msgstr ""
+
+msgid "Exec clones sequentially"
+msgstr ""
+
+msgid "Exec. time"
+msgstr ""
+
+msgid "Fail"
+msgstr ""
+
+msgid "Fallback"
+msgstr ""
+
+msgid "Fill required camps with valid data"
+msgstr ""
+
+msgid "For Spice client setup follow this "
+msgstr ""
+
+msgid "Force Reboot"
+msgstr ""
+
+msgid "Force ShutDown"
+msgstr ""
+
+msgid "Force change password on first access"
+msgstr ""
+
+msgid "From"
+msgstr ""
+
+msgid "Frontend"
+msgstr ""
+
+msgid "Global Settings"
+msgstr ""
+
+msgid "Group"
+msgstr ""
+
+msgid "Group name"
+msgstr ""
+
+msgid "Group name can not exceed 80 characters"
+msgstr ""
+
+msgid "Group name is required"
+msgstr ""
+
+msgid "Groups"
+msgstr ""
+
+msgid "Groups require a LDAP server configured."
+msgstr ""
+
+msgid "Groups with permissions"
+msgstr ""
+
+msgid "Hardware"
+msgstr ""
+
+msgid "Hardware address"
+msgstr ""
+
+msgid "Hibernated"
+msgstr ""
+
+msgid "Hide active"
+msgstr ""
+
+msgid "Hide clones"
+msgstr ""
+
+msgid "I can't find"
+msgstr ""
+
+msgid "I don't know settings tabs for:"
+msgstr ""
+
+msgid "ISO file"
+msgstr ""
+
+msgid "If you have any issue, you can contact the Suport crew and we will try to help you. Please, only contact Support Center if it is strictly necessary."
+msgstr ""
+
+msgid "Import"
+msgstr ""
+
+msgid "Internal IP"
+msgstr ""
+
+msgid "Invalid IP network address. Expecting a.b.c.d/e"
+msgstr ""
+
+msgid "Invalid Template"
+msgstr ""
+
+msgid "Keep the CD for the clones"
+msgstr ""
+
+msgid "LDAP"
+msgstr ""
+
+msgid "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+msgstr ""
+
+msgid "Legacy"
+msgstr ""
+
+msgid "Loading ..."
+msgstr ""
+
+msgid "Loading machine"
+msgstr ""
+
+msgid "Loading nodes"
+msgstr ""
+
+msgid "Machine"
+msgstr ""
+
+msgid "Machine Information"
+msgstr ""
+
+msgid "Machines Notifications"
+msgstr ""
+
+msgid "Maintenance"
+msgstr ""
+
+msgid "Maintenance End"
+msgstr ""
+
+msgid "Maintenance Start"
+msgstr ""
+
+msgid "Manage machine"
+msgstr ""
+
+msgid "Max Memory"
+msgstr ""
+
+msgid "Max memory (MB)"
+msgstr ""
+
+msgid "Minimum port number to expose virtual machine services."
+msgstr ""
+
+msgid "Monitoring"
+msgstr ""
+
+msgid "NAT"
+msgstr ""
+
+msgid "Network"
+msgstr ""
+
+msgid "Network address is required."
+msgstr ""
+
+msgid "Network name is required"
+msgstr ""
+
+msgid "Networks"
+msgstr ""
+
+msgid "New Booking"
+msgstr ""
+
+msgid "New Group"
+msgstr ""
+
+msgid "New Network"
+msgstr ""
+
+msgid "New Password can only contain words and numbers"
+msgstr ""
+
+msgid "New Password is required"
+msgstr ""
+
+msgid "New Password must be at least 6 characters"
+msgstr ""
+
+msgid "New feature"
+msgstr ""
+
+msgid "New group member"
+msgstr ""
+
+msgid "New name"
+msgstr ""
+
+msgid "New network"
+msgstr ""
+
+msgid "New password"
+msgstr ""
+
+msgid "New user"
+msgstr ""
+
+msgid "No LDAP groups created."
+msgstr ""
+
+msgid "No Results Found"
+msgstr ""
+
+msgid "No bases found"
+msgstr ""
+
+msgid "No bridges found"
+msgstr ""
+
+msgid "No groups found"
+msgstr ""
+
+msgid "No machines"
+msgstr ""
+
+msgid "No machines found"
+msgstr ""
+
+msgid "No members found"
+msgstr ""
+
+msgid "No message to show!"
+msgstr ""
+
+msgid "No, cancel"
+msgstr ""
+
+msgid "Node"
+msgstr ""
+
+msgid "Node disabled"
+msgstr ""
+
+msgid "Node down"
+msgstr ""
+
+msgid "Node with machines from the same user"
+msgstr ""
+
+msgid "Node with more free memory"
+msgstr ""
+
+msgid "Nodes"
+msgstr ""
+
+msgid "Nothing to monitoring"
+msgstr ""
+
+msgid "Number of virtual machines that normal users can have running at the same time"
+msgstr ""
+
+msgid "Old Password can only contain words and numbers"
+msgstr ""
+
+msgid "Old Password is required"
+msgstr ""
+
+msgid "Old and New Passwords match!"
+msgstr ""
+
+msgid "Only remote client can access this port"
+msgstr ""
+
+msgid "Only remote client can access this port if restricted"
+msgstr ""
+
+msgid "Only users from these groups will be allowed to execute this machine"
+msgstr ""
+
+msgid "Oops!"
+msgstr ""
+
+msgid "Open ports"
+msgstr ""
+
+msgid "Password and their confirmation do not match!"
+msgstr ""
+
+msgid "Passwords do not match!"
+msgstr ""
+
+msgid "Permission granted to user"
+msgstr ""
+
+msgid "Permission revoked from user"
+msgstr ""
+
+msgid "Phone"
+msgstr ""
+
+msgid "Phone Number"
+msgstr ""
+
+msgid "Please insert"
+msgstr ""
+
+msgid "Please select an ISO file"
+msgstr ""
+
+msgid "Please, make sure you have the right path and release, according to your PC configuration."
+msgstr ""
+
+msgid "Pool"
+msgstr ""
+
+msgid "Port"
+msgstr ""
+
+msgid "Port expose"
+msgstr ""
+
+msgid "Ports"
+msgstr ""
+
+msgid "Poweroff"
+msgstr ""
+
+msgid "Prepare Base"
+msgstr ""
+
+msgid "Prepare this machine as a base to create clones from it."
+msgstr ""
+
+msgid "PrepareBase"
+msgstr ""
+
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr ""
+
+msgid "Primary can not be unset, enable it in another video device"
+msgstr ""
+
+msgid "Primary video devices will move to first"
+msgstr ""
+
+msgid "Public"
+msgstr ""
+
+msgid "Public Port"
+msgstr ""
+
+msgid "Purge"
+msgstr ""
+
+msgid "Purge disk volumes"
+msgstr ""
+
+msgid "RAM (Gb)"
+msgstr ""
+
+msgid "Ravada Apache documentation"
+msgstr ""
+
+msgid "Re-Enter New Password"
+msgstr ""
+
+msgid "Rebase"
+msgstr ""
+
+msgid "Rebase all the clones to a new base"
+msgstr ""
+
+msgid "Rebase this machine to another virtual machine"
+msgstr ""
+
+msgid "Reboot"
+msgstr ""
+
+msgid "Recent requests"
+msgstr ""
+
+msgid "Refresh"
+msgstr ""
+
+msgid "Refresh ports"
+msgstr ""
+
+msgid "Reload"
+msgstr ""
+
+msgid "Remove Base"
+msgstr ""
+
+msgid "Remove Clones"
+msgstr ""
+
+msgid "Remove bases in node"
+msgstr ""
+
+msgid "Remove group"
+msgstr ""
+
+msgid "Remove the base prepared from this machine"
+msgstr ""
+
+msgid "Removing Virtual Machine"
+msgstr ""
+
+msgid "Repeat"
+msgstr ""
+
+msgid "Repeated New Password is required"
+msgstr ""
+
+msgid "Request"
+msgstr ""
+
+msgid "Requests"
+msgstr ""
+
+msgid "Requires viewer password when implemented"
+msgstr ""
+
+msgid "Restricted"
+msgstr ""
+
+msgid "Run Timeout"
+msgstr ""
+
+msgid "SSO/CAS Login"
+msgstr ""
+
+msgid "Save"
+msgstr ""
+
+msgid "Save changes"
+msgstr ""
+
+msgid "Schedule"
+msgstr ""
+
+msgid "Search group"
+msgstr ""
+
+msgid "See documentation about:"
+msgstr ""
+
+msgid "Select the .iso file the machine will utilize when installing the OS."
+msgstr ""
+
+msgid "Server in maintenance until"
+msgstr ""
+
+msgid "Set New Password"
+msgstr ""
+
+msgid "Set defaults"
+msgstr ""
+
+msgid "Set either"
+msgstr ""
+
+msgid "Setup a LDAP Server"
+msgstr ""
+
+msgid "Show active"
+msgstr ""
+
+msgid "Show clones"
+msgstr ""
+
+msgid "Show/Hide clones"
+msgstr ""
+
+msgid "ShutDown"
+msgstr ""
+
+msgid "Shutdown Timeout"
+msgstr ""
+
+msgid "Shutdown disconnected"
+msgstr ""
+
+msgid "Sorry"
+msgstr ""
+
+msgid "Source Machine"
+msgstr ""
+
+msgid "Spinoff clone"
+msgstr ""
+
+msgid "Spinoff this clone from its base."
+msgstr ""
+
+msgid "Start Limit"
+msgstr ""
+
+msgid "Start after create the virtual machine"
+msgstr ""
+
+msgid "Start after migration"
+msgstr ""
+
+msgid "Support Contact"
+msgstr ""
+
+msgid "Swap"
+msgstr ""
+
+msgid "System Disk: (GB)"
+msgstr ""
+
+msgid "Template selection is required"
+msgstr ""
+
+msgid "Testing connection to"
+msgstr ""
+
+msgid "The Minimum Disk Size needed for this ISO is"
+msgstr ""
+
+msgid "The Minimum Swap Disk Size needed for this ISO is"
+msgstr ""
+
+msgid "The VM is"
+msgstr ""
+
+msgid "The machine will power off after this minutes after shutdown."
+msgstr ""
+
+msgid "The machine will turn off after this time"
+msgstr ""
+
+msgid "The new user"
+msgstr ""
+
+msgid "The source machine is not a base. It must be prepared before it can be copied. This process may take some minutes."
+msgstr ""
+
+msgid "There are no LDAP groups defined."
+msgstr ""
+
+msgid "There are no active virtual machines"
+msgstr ""
+
+msgid "This ISO is being downloaded. The virtual machine will be created after."
+msgstr ""
+
+msgid "This Virtual Machine has no display hardware attached"
+msgstr ""
+
+msgid "This address is duplicated"
+msgstr ""
+
+msgid "This base can't be removed because the domain has clones."
+msgstr ""
+
+msgid "This base has"
+msgstr ""
+
+msgid "This base has clones"
+msgstr ""
+
+msgid "This booking overlaps already scheduled reservations"
+msgstr ""
+
+msgid "This can't be undone"
+msgstr ""
+
+msgid "This event"
+msgstr ""
+
+msgid "This event and the following"
+msgstr ""
+
+msgid "This event and the following with same day of week"
+msgstr ""
+
+msgid "This feature requires a LDAP server configured."
+msgstr ""
+
+msgid "This field is required"
+msgstr ""
+
+msgid "This group has been removed."
+msgstr ""
+
+msgid "This is a main node and can't be removed."
+msgstr ""
+
+msgid "This machine has a CD-ROM"
+msgstr ""
+
+msgid "This machine is base and can't be modified."
+msgstr ""
+
+msgid "This machine is base and it can't be modified."
+msgstr ""
+
+msgid "This machine is hibernated and can't be renamed."
+msgstr ""
+
+msgid "This machine is locked by process"
+msgstr ""
+
+msgid "This machine is running and can't be modified."
+msgstr ""
+
+msgid "This machine is running and can't be renamed."
+msgstr ""
+
+msgid "This machine will shut down"
+msgstr ""
+
+msgid "This name is duplicated"
+msgstr ""
+
+msgid "This name is invalid. It can only contain alphabetic, numbers, undercores and dashes and must start by a letter."
+msgstr ""
+
+msgid "This node has"
+msgstr ""
+
+msgid "This node is local"
+msgstr ""
+
+msgid "This server has reservations for today. Machines from users out of\n    the booking list will be shutdown."
+msgstr ""
+
+msgid "This user has never logged in the Ravada server."
+msgstr ""
+
+msgid "This virtual machine has already been compacted"
+msgstr ""
+
+msgid "This virtual machine has clones that are bases and won't be removed"
+msgstr ""
+
+msgid "This virtual machine has no backups to purge"
+msgstr ""
+
+msgid "This virtual machine has no group restrictions."
+msgstr ""
+
+msgid "This virtual machine is running. It must be shut down before migrate."
+msgstr ""
+
+msgid "Time"
+msgstr ""
+
+msgid "Title"
+msgstr ""
+
+msgid "To"
+msgstr ""
+
+msgid "To make this possible, copy the content of"
+msgstr ""
+
+msgid "Today Schedule"
+msgstr ""
+
+msgid "Type"
+msgstr ""
+
+msgid "Type the ISO pathname"
+msgstr ""
+
+msgid "Type the name of the volume disk to confirm:"
+msgstr ""
+
+msgid "Type the template name"
+msgstr ""
+
+msgid "UEFI"
+msgstr ""
+
+msgid "Until"
+msgstr ""
+
+msgid "User is not member of any group."
+msgstr ""
+
+msgid "User not found"
+msgstr ""
+
+msgid "Users from this network can run all virtual machines"
+msgstr ""
+
+msgid "Users from this network can run no virtual machines"
+msgstr ""
+
+msgid "Virtual Machine will be shutdown when user disconnects."
+msgstr ""
+
+msgid "Virtual Machine will start on host start."
+msgstr ""
+
+msgid "Virtual machines in the pool."
+msgstr ""
+
+msgid "Virtual machines pre-started"
+msgstr ""
+
+msgid "Volatile"
+msgstr ""
+
+msgid "Waiting for machine to start"
+msgstr ""
+
+msgid "Waiting for network to come up"
+msgstr ""
+
+msgid "Waiting for requests to complete"
+msgstr ""
+
+msgid "Warning"
+msgstr ""
+
+msgid "Warning: anonymous machines won't show up unless you enable allowed."
+msgstr ""
+
+msgid "Warning: anonymous machines won't show up unless you set them public."
+msgstr ""
+
+msgid "Warning: this virtual machine will be prepared as a base. This may take long."
+msgstr ""
+
+msgid "Web Service connection failed."
+msgstr ""
+
+msgid "Weekly"
+msgstr ""
+
+msgid "What do you want to do now?"
+msgstr ""
+
+msgid "Will be destroyed on shutdown"
+msgstr ""
+
+msgid "Yes, rebase"
+msgstr ""
+
