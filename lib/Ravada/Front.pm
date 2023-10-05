@@ -1692,10 +1692,25 @@ sub _filter_active($pools, $active) {
 
 }
 
-sub upload_users($self, %args) {
-    my $type = delete $args{type};
-    my $create = delete $args{create};
-    my $users = delete $args{users};
+=head2 upload_users
+
+Upload a list of users to the database
+
+=head3 Arguments
+
+=over
+
+=item * string with users and passwords in each line
+
+=item * type: it can be SQL, LDAP or SSO
+
+=item * create: optionally create the entries in LDAP
+
+=back
+
+=cut
+
+sub upload_users($self, $users, $type, $create=0) {
 
     my @external;
     if ($type ne 'sql') {

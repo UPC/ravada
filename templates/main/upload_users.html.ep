@@ -30,7 +30,7 @@
                         <div class="form-group">
                             <label for="type" required>Type</label>
                             <select name="type" ng-model="type" required>
-                                <option value="sql">plain</option>
+                                <option value="sql" selected>plain</option>
                                 <option value="ldap">LDAP</option>
                                 <option value="sso">SSO</option>
                             </select>

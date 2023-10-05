@@ -1627,5 +1627,6 @@ ravadaApp.directive("solShowMachine", swMach)
     };
 
     function upload_users($scope, $http) {
+        $scope.type = 'sql';
     };
 }());

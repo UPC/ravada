@@ -72,7 +72,7 @@ sub test_upload_users( $type, $create=0, $mojo=0 ) {
         like($response->{output}, qr/2 users added/);
         is_deeply($response->{error},[]);
     } else {
-        rvd_front->upload_users(type => $type, create => $create, users => $users);
+        rvd_front->upload_users($users, $type, $create);
     }
     if ($type ne 'sso') {
         $t->post_ok('/login' => form => {login => $user1, password => $pass1})

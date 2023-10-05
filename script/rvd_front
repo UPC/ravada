@@ -1314,7 +1314,7 @@ any '/admin/users/upload.#req' => sub($c) {
 
     my $type = $c->req->param('type');
 
-    return $c->render(template => "/main/upload_users", done => 0, count => 0, found => 0) if !$type;
+    return $c->render(template => "/main/upload_users", done => 0, count => 0, found => 0, type => 'sql') if !$type;
 
     my $create = ( $c->req->param('create') or 0);
 
@@ -1330,7 +1330,7 @@ any '/admin/users/upload.#req' => sub($c) {
     }
 
     my ($found, $count, $error) = $RAVADA->upload_users(
-        type => $type, create => $create, users => $csv->slurp
+        $csv->slurp, $type, $create
     );
 
     return $c->render(json =>
