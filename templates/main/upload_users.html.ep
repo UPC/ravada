@@ -59,12 +59,16 @@
                         </div>
                     </form>
 %                   } else {
-                        <%= $count %> <%=l 'users uploaded' %>
-                        <ul>
-%                       for my $line (@$error ) {
-                            <li><%= $line %></li>
-%                       }
-                        </ul>
+                        <%= $found %> <%=l 'users found in uploaded file' %>,
+                        <%= $count %> <%=l 'created' %>.
+                        <div ng-show="<%= scalar(@$error) %>">
+                            <%=l 'Errors found' %>: <%= scalar(@$error) %>
+                            <ul>
+%                           for my $line (sort @$error ) {
+                                <li><%= $line %></li>
+%                           }
+                            </ul>
+                        </div>
                         <a type="button" class="btn btn-outline-secondary"
                            href="/users/register"><%=l 'Add more users' %></a>
 

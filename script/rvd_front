@@ -1314,17 +1314,13 @@ any '/admin/users/upload.#req' => sub($c) {
 
     my $type = $c->req->param('type');
 
-    return $c->render(template => "/main/upload_users", done => 0, count => 0) if !$type;
+    return $c->render(template => "/main/upload_users", done => 0, count => 0, found => 0) if !$type;
 
     my $create = ( $c->req->param('create') or 0);
 
-    return $c->render(json => { error => "Unkonwn type $type" })
+    return $c->render(json => { error => "Unknown type $type" })
             if $type !~ /^(sql|ldap|sso)/;
 
-    my @external;
-    if ($type ne 'sql') {
-        @external = ( is_external => 1, external_auth => $type );
-    }
     my $csv = $c->req->upload('users');
     if($csv->headers->content_type !~ m{text/(csv|plain)}) {
         return $c->render(status => 400
@@ -1332,43 +1328,20 @@ any '/admin/users/upload.#req' => sub($c) {
                     ." , it should be text/csv or plain"
         );
     }
-    my $count = 0;
-    my @error;
-    for my $line (split /\n/,$csv->slurp) {
-        my ($name, $password) = split(/:/,$line);
-        my $user = Ravada::Auth::SQL->new(name => $name);
-        if ($user && $user->id) {
-            push @error,("User $name already added");
-            next;
-        }
-        if ($type ne 'sql' && $create) {
-            if ($type eq 'ldap') {
-                if (!$password) {
-                    push @error,("Error: user $name , password empty");
-                    next;
-                }
-                eval { $user = Ravada::Auth::LDAP::add_user($name,$password) };
-                push @error, ($@) if $@;
-            } else {
-                push @error,("$type users can't be created from Ravada");
-            }
-        }
-        if ($type eq 'sql' && !$password) {
-            push @error,("Error: user $name requires password");
-            next;
-        }
-        Ravada::Auth::SQL::add_user(name => $name, password => $password
-            ,@external);
-        $count++;
-    }
+
+    my ($found, $count, $error) = $RAVADA->upload_users(
+        type => $type, create => $create, users => $csv->slurp
+    );
+
     return $c->render(json =>
         { output => "$count users added"
-        ,error => \@error
+        ,error => $error
     }) if $c->stash('req') eq 'json';
 
     return $c->render(template => "/main/upload_users"
         ,count => $count
-        ,error => \@error
+        ,found => $found
+        ,error => $error
         ,done => 1
     );
 };

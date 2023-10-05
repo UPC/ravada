@@ -47,7 +47,7 @@ sub _create($type, %users) {
     }
 }
 
-sub test_upload_users( $type, $create=0 ) {
+sub test_upload_users( $type, $create=0, $mojo=0 ) {
 
     my ($user1, $pass1) = ( new_domain_name(), $$.1);
     my ($user2, $pass2) = ( new_domain_name(), $$.2);
@@ -59,17 +59,21 @@ sub test_upload_users( $type, $create=0 ) {
     my $users = join(":",($user1, $pass1)) ."\n"
                 .join(":",($user2, $pass2)) ."\n"
     ;
-    $t->post_ok('/admin/users/upload.json' => form => {
-            type => $type
-            ,create => $create
-            ,users => { content => $users, filename => 'users.txt', 'Content-Type' => 'text/csv' },
-    })->status_is(200);
-    die $t->tx->res->body if $t->tx->res->code != 200;
 
-    my $response = $t->tx->res->json();
-    like($response->{output}, qr/2 users added/);
-    is_deeply($response->{error},[]);
+    if ($mojo) {
+        $t->post_ok('/admin/users/upload.json' => form => {
+                type => $type
+                ,create => $create
+                ,users => { content => $users, filename => 'users.txt', 'Content-Type' => 'text/csv' },
+            })->status_is(200);
+        die $t->tx->res->body if $t->tx->res->code != 200;
 
+        my $response = $t->tx->res->json();
+        like($response->{output}, qr/2 users added/);
+        is_deeply($response->{error},[]);
+    } else {
+        rvd_front->upload_users(type => $type, create => $create, users => $users);
+    }
     if ($type ne 'sso') {
         $t->post_ok('/login' => form => {login => $user1, password => $pass1})
         ->status_is(302);
@@ -88,7 +92,7 @@ sub test_upload_users( $type, $create=0 ) {
     exit if $t->tx->res->code == 401;
     die $t->tx->res->body if $t->tx->res->code != 200;
 
-    $response = $t->tx->res->json();
+    my $response = $t->tx->res->json();
     like($response->{output}, qr/0 users added/);
     is(scalar(@{$response->{error}}),2);
 
@@ -177,10 +181,13 @@ $t->ua->connect_timeout(60);
 test_upload_no_admin($t);
 
 _login($t);
-test_upload_users( 'sql' );
+test_upload_users( 'sql',0,1 ); #test with mojo
+test_upload_users( 'sql' ); # test without mojo
+
 test_upload_users( 'ldap', 1 ); # create users in Ravada
+test_upload_users( 'ldap', 1, 1 ); # create users in Ravada
 for my $type ( 'ldap', 'sso' ) {
-    test_upload_users( $type, 0 ); # do not create users in Ravada
+    test_upload_users( $type, 0 ,1 ); # do not create users in Ravada
 }
 
 end();

@@ -1692,6 +1692,49 @@ sub _filter_active($pools, $active) {
 
 }
 
+sub upload_users($self, %args) {
+    my $type = delete $args{type};
+    my $create = delete $args{create};
+    my $users = delete $args{users};
+
+    my @external;
+    if ($type ne 'sql') {
+        @external = ( is_external => 1, external_auth => $type );
+    }
+
+    my ($found,$count) = (0,0);
+    my @error;
+    for my $line (split /\n/,$users) {
+        my ($name, $password) = split(/:/,$line);
+        $found++;
+        my $user = Ravada::Auth::SQL->new(name => $name);
+        if ($user && $user->id) {
+            push @error,("User $name already added");
+            next;
+        }
+        if ($type ne 'sql' && $create) {
+            if ($type eq 'ldap') {
+                if (!$password) {
+                    push @error,("Error: user $name , password empty");
+                    next;
+                }
+                eval { $user = Ravada::Auth::LDAP::add_user($name,$password) };
+                push @error, ($@) if $@;
+            } else {
+                push @error,("$type users can't be created from Ravada");
+            }
+        }
+        if ($type eq 'sql' && !$password) {
+            push @error,("Error: user $name requires password");
+            next;
+        }
+        Ravada::Auth::SQL::add_user(name => $name, password => $password
+            ,@external);
+        $count++;
+    }
+    return ($found, $count, \@error);
+}
+
 =head2 version
 
 Returns the version of the main module
