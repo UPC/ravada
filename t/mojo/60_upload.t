@@ -47,6 +47,36 @@ sub _create($type, %users) {
     }
 }
 
+sub test_upload_users_nopassword( $type, $mojo=0 ) {
+
+    my $user1 = new_domain_name();
+    my $user2 =  new_domain_name();
+
+    _clean_ldap($user1, $user2);
+    _clean($user1, $user2);
+
+    my $users = $user1."\n"
+                .$user2."\n"
+    ;
+
+    if ($mojo) {
+        $t->post_ok('/admin/users/upload.json' => form => {
+                type => $type
+                ,create => 0
+                ,users => { content => $users, filename => 'users.txt', 'Content-Type' => 'text/csv' },
+            })->status_is(200);
+        die $t->tx->res->body if $t->tx->res->code != 200;
+
+        my $response = $t->tx->res->json();
+        like($response->{output}, qr/2 users added/);
+        is_deeply($response->{error},[]);
+    } else {
+        rvd_front->upload_users($users, $type);
+    }
+
+    test_users_added($type, $user1,$user2);
+}
+
 sub test_upload_users( $type, $create=0, $mojo=0 ) {
 
     my ($user1, $pass1) = ( new_domain_name(), $$.1);
@@ -181,6 +211,12 @@ $t->ua->connect_timeout(60);
 test_upload_no_admin($t);
 
 _login($t);
+
+for my $type ('ldap','sso') {
+    test_upload_users_nopassword( $type );
+    test_upload_users_nopassword( $type, 1 );
+}
+
 test_upload_users( 'sql',0,1 ); #test with mojo
 test_upload_users( 'sql' ); # test without mojo
 
