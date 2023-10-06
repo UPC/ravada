@@ -303,8 +303,8 @@ msgstr "Welcome"
 msgid "A viewer is required to run the virtual machines."
 msgstr "A viewer is required to run the virtual machines."
 
-msgid "It is required a viewer to run the virtual machines."
-msgstr "It is required a viewer to run the virtual machines."
+msgid "It is required to have a viewer to run the virtual machines."
+msgstr "Having a viewer is required to run the virtual machines."
 
 msgid "Virtual Machines"
 msgstr "Virtual Machines"
@@ -1638,50 +1638,50 @@ msgstr "Exec clones sequentially"
 msgid "RAM (Gb)"
 msgstr "RAM (Gb)"
 
-msgid "This name is invalid. It can only contain alphabetic, numbers, undercores and dashes and must start by a letter."
-msgstr "This name is invalid. It can only contain alphabetic, numbers, undercores and dashes and must start by a letter."
-
-msgid "I can't find"
-msgstr "I can't find"
-
-msgid "driver"
-msgstr "driver"
-
-msgid "This machine is running and can't be modified."
-msgstr "This machine is running and can't be modified."
-
-msgid "This machine is base and can't be modified."
-msgstr "This machine is base and can't be modified."
-
-msgid "Danger: This will destroy all the disk data permantently."
-msgstr "Danger: This will destroy all the disk data permantently."
-
-msgid "Type the name of the volume disk to confirm:"
-msgstr "Type the name of the volume disk to confirm:"
-
-msgid "-- choose hardware --"
-msgstr "-- choose hardware --"
-
-msgid "This machine is base and it can't be modified."
-msgstr "This machine is base and it can't be modified."
-
-msgid "The VM is"
-msgstr "The VM is"
-
-msgid "stopped"
-msgstr "stopped"
-
-msgid "Nothing to monitoring"
-msgstr "Nothing to monitoring"
-
-msgid "Start after migration"
-msgstr "Start after migration"
-
-msgid "This virtual machine is running. It must be shut down before migrate."
-msgstr "This virtual machine is running. It must be shut down before migrate."
-
-msgid "Are you sure you want to migrate"
-msgstr "Are you sure you want to migrate"
+  msgid "This name is invalid. It can only contain alphabetic, numbers, undercores and dashes and must start by a letter."
+  msgstr "This name is invalid. It can only contain alphabetic, numbers, undercores and dashes and must start by a letter."
+  
+  msgid "I can't find"
+  msgstr "I can't find"
+  
+  msgid "driver"
+  msgstr "driver"
+  
+  msgid "This machine is running and can't be modified."
+  msgstr "This machine is running and can't be modified."
+  
+  msgid "This machine is base and can't be modified."
+  msgstr "This machine is base and can't be modified."
+  
+  msgid "Danger: This will destroy all the disk data permantently."
+  msgstr "Danger: This will destroy all the disk data permantently."
+  
+  msgid "Type the name of the volume disk to confirm:"
+  msgstr "Type the name of the volume disk to confirm:"
+  
+  msgid "-- choose hardware --"
+  msgstr "-- choose hardware --"
+  
+  msgid "This machine is base and it can't be modified."
+  msgstr "This machine is base and it can't be modified."
+  
+  msgid "The VM is"
+  msgstr "The VM is"
+  
+  msgid "stopped"
+  msgstr "stopped"
+  
+  msgid "Nothing to monitoring"
+  msgstr "Nothing to monitoring"
+  
+  msgid "Start after migration"
+  msgstr "Start after migration"
+  
+  msgid "This virtual machine is running. It must be shut down before migrate."
+  msgstr "This virtual machine is running. It must be shut down before migrate."
+  
+  msgid "Are you sure you want to migrate"
+  msgstr "Are you sure you want to migrate"
 
 msgid "Max memory (MB)"
 msgstr "Max memory (MB)"
@@ -2170,5 +2170,5 @@ msgstr "Source Machine"
 msgid "Monitoring"
 msgstr "Monitoring"
 
-msgid "For Spice client setup follow this "
-msgstr "For Spice client setup follow this "
+msgid "Follow these steps for Spice client setup:"
+msgstr "Follow these steps for Spice client setup:"
