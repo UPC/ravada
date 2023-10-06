@@ -914,61 +914,61 @@ msgid "Yes, shutwdown all the clones"
 msgstr "Ja, alle Klone herunterfahren"
 
 msgid "-- choose hardware --"
-msgstr ""
+msgstr "-- Hardware auswählen --"
 
 msgid "A node with that address already exists."
-msgstr ""
+msgstr "Es existiert bereits ein Knoten mit dieser Adresse."
 
 msgid "Accept"
-msgstr ""
+msgstr "Akzeptieren"
 
 msgid "Access"
-msgstr ""
+msgstr "Zugreifen"
 
 msgid "Action"
-msgstr ""
+msgstr "Aktion"
 
 msgid "Active"
-msgstr ""
+msgstr "Aktiv"
 
 msgid "Add another user"
-msgstr ""
+msgstr "Weiteren Nutzer anlegen"
 
 msgid "Add groups"
-msgstr ""
+msgstr "Gruppe hinzufügen"
 
 msgid "Add new Display"
-msgstr ""
+msgstr "Neuen Bildschirm hinzufügen"
 
 msgid "Add new disk"
-msgstr ""
+msgstr "Neue Festplatte hinzufügen"
 
 msgid "Add to group"
-msgstr ""
+msgstr "Zur Gruppe hinzufügen"
 
 msgid "Admin users can still log in from"
-msgstr ""
+msgstr "Administratoren können sich weiterhin einloggen"
 
 msgid "Advanced options"
-msgstr ""
+msgstr "Erweiterte Optionen"
 
 msgid "All events"
-msgstr ""
+msgstr "Alle Ereignisse"
 
 msgid "All machines"
-msgstr ""
+msgstr "Alle Maschinen"
 
 msgid "Anonymous"
-msgstr ""
+msgstr "Anonym"
 
 msgid "Any remote client can access this port"
-msgstr ""
+msgstr "Jeder verbundene Client kann auf diesen Port zugreifen"
 
 msgid "Apply"
-msgstr ""
+msgstr "Anwenden"
 
 msgid "Are you sure you want to migrate"
-msgstr ""
+msgstr "Möchten Sie wirklich migrieren"
 
 msgid "Are you sure you want to prepare the base of"
 msgstr ""
@@ -980,103 +980,103 @@ msgid "Are you sure you want to remove the base of"
 msgstr ""
 
 msgid "Are you sure you want to remove the node"
-msgstr ""
+msgstr "Möchten Sie diesen Knoten wirlich entfernen"
 
 msgid "Are you sure you want to remove this group ?"
-msgstr ""
+msgstr "Möchten Sie diese Gruppe wirklich entfernen?"
 
 msgid "Are you sure you want to spinoff from the base?"
 msgstr ""
 
 msgid "Assign this virtual machine to the pre-started pool"
-msgstr ""
+msgstr "Diese virtuelle Maschine einem bereits gestartetem pool zuweisen"
 
 msgid "Attachment"
-msgstr ""
+msgstr "Anhang"
 
 msgid "Autostart"
-msgstr ""
+msgstr "Autostart"
 
 msgid "BIOS"
-msgstr ""
+msgstr "BIOS"
 
 msgid "Balance"
-msgstr ""
+msgstr "Balance"
 
 msgid "Base"
-msgstr ""
+msgstr "Basis"
 
 msgid "Bases"
 msgstr ""
 
 msgid "Bookings"
-msgstr ""
+msgstr "Buchungen"
 
 msgid "Bookings require LDAP authentication."
-msgstr ""
+msgstr "Buchungen benötigen LDAP authentifizierung"
 
 msgid "Bridge"
-msgstr ""
+msgstr "Brücke"
 
 msgid "CPU Features"
-msgstr ""
+msgstr "CPU Features"
 
 msgid "CPUs"
-msgstr ""
+msgstr "CPUs"
 
 msgid "Can expose virtual machine ports."
-msgstr ""
+msgstr "Kann Ports der virtuellen Maschine freigeben"
 
 msgid "Can get a screenshot of own virtual machines."
-msgstr ""
+msgstr "Kann Bildschirmaufnahmen von eigenen virtuellen Maschinen erstellen"
 
 msgid "Can have an unlimited amount of machines started."
-msgstr ""
+msgstr "Kann eine unbegrenzte Anzahl von Maschinen starten"
 
 msgid "Can manage groups."
-msgstr ""
+msgstr "Kann Gruppen verwalten"
 
 msgid "Can reboot all virtual machines."
-msgstr ""
+msgstr "Kann alle virtuellen Maschinen neu starten"
 
 msgid "Can reboot clones own virtual machines."
 msgstr ""
 
 msgid "Can reboot own virtual machines."
-msgstr ""
+msgstr "Kann eigene virtuelle Maschinen neu starten"
 
 msgid "Can rename any virtual machine owned by the user."
-msgstr ""
+msgstr "Kann jede viruelle Maschine dieses Nutzers umbenennen"
 
 msgid "Can rename any virtual machine."
-msgstr ""
+msgstr "Kann jede virtuelle Maschine umbenennen"
 
 msgid "Can rename clones from virtual machines owned by the user."
-msgstr ""
+msgstr "Kann Klone von virtuellen Maschinen dieses Nutzers umbenennen"
 
 msgid "Can shutdown own virtual machines."
-msgstr ""
+msgstr "Kann eigene virtuelle Maschinen umbenennen"
 
 msgid "Can view groups."
-msgstr ""
+msgstr "Kann Gruppen anzeigen"
 
 msgid "Change"
-msgstr ""
+msgstr "Ändern"
 
 msgid "Changing the base of a virtual machine is potentially dangerous and can't be undone."
-msgstr ""
+msgstr "Das ändern der Grundlage einer virtuellen maschine ist potentiell gefährlich und kann nicht rückgängig gemacht werden."
 
 msgid "Check"
-msgstr ""
+msgstr "Kontrollieren"
 
 msgid "Check connection to"
-msgstr ""
+msgstr "Kontrolliere die Verbindung zu"
 
 msgid "Choose the virtualization type of the Node."
-msgstr ""
+msgstr "Virtualisierungstyp des Knoten wählen."
 
 msgid "Choose the virtualization type of the Virtual Machine."
-msgstr ""
+msgstr "Virtualisierungstyp der virtuellen Maschine wählen."
 
 msgid "Client"
 msgstr ""
@@ -1088,94 +1088,94 @@ msgid "Clones are volatile, so all the pool will be started."
 msgstr ""
 
 msgid "Clones created from this machine will be removed on shutdown."
-msgstr ""
+msgstr "Klone die auf dieser Maschine erstellt wurden, werden beim herunterfahren gelöscht."
 
 msgid "Close"
-msgstr ""
+msgstr "Schließen"
 
 msgid "Color"
-msgstr ""
+msgstr "Farbe"
 
 msgid "Compact"
-msgstr ""
+msgstr "Kompakt"
 
 msgid "Compact disk volumes"
 msgstr ""
 
 msgid "Configure LDAP Authentication"
-msgstr ""
+msgstr "LDAP Authentifizierung einrichten"
 
 msgid "Confirm"
-msgstr ""
+msgstr "Bestätigen"
 
 msgid "Confirm disable node"
-msgstr ""
+msgstr "Deaktivieren des Knoten bestätigen"
 
 msgid "Confirm password can not exceed 20 characters"
-msgstr ""
+msgstr "Passwort bestätigen darf nicht länger sein als 20 Zeichen"
 
 msgid "Confirm password can only contain words and numbers"
-msgstr ""
+msgstr "Passwort bestätigen darf nur aus zahlen und wörtern bestehen"
 
 msgid "Confirm password is required"
-msgstr ""
+msgstr "Passwort bestätigen wird benötigt"
 
 msgid "Confirm password must be at least 5 characters"
-msgstr ""
+msgstr "Passwort bestätigen muss mindestend 5 Zeichen lang sein"
 
 msgid "Congrats"
-msgstr ""
+msgstr "Glückwunsch"
 
 msgid "Contact Method"
-msgstr ""
+msgstr "Kontaktmethode"
 
 msgid "Content will be cleaned on restore"
-msgstr ""
+msgstr "Inhalt wird beim wiederherstellen gelöscht"
 
 msgid "Content will be cleaned on restore and shutdown"
-msgstr ""
+msgstr "Inhalt wird beim wiederherstellen und herunterfahren gelöscht"
 
 msgid "Content will be kept on restore"
-msgstr ""
+msgstr "Inhalt wird beim wiederherstellen behalten"
 
 msgid "Create a new group"
-msgstr ""
+msgstr "Neue Gruppe erstellen"
 
 msgid "Current memory (MB)"
-msgstr ""
+msgstr "Aktueller Speicher (MB)"
 
 msgid "Danger: This will destroy all the disk data permantently."
-msgstr ""
+msgstr "Achtung: Alle daten werden dieser Festplatte werden permanent gelöscht."
 
 msgid "Data"
-msgstr ""
+msgstr "Daten"
 
 msgid "Debug"
 msgstr ""
 
 msgid "Debug Ports"
-msgstr ""
+msgstr "Debug Ports"
 
 msgid "Debug Ports Exposed"
-msgstr ""
+msgstr "Debug Ports öffentlich"
 
 msgid "Delete"
-msgstr ""
+msgstr "Löschen"
 
 msgid "Delete the event"
-msgstr ""
+msgstr "Das Ereignis löschen"
 
 msgid "Disable"
-msgstr ""
+msgstr "Deaktivieren"
 
 msgid "Disabled"
-msgstr ""
+msgstr "Deaktiviert"
 
 msgid "Disabling this node will shut all the"
 msgstr ""
 
 msgid "Display"
-msgstr ""
+msgstr "Anzeige"
 
 msgid "Display IP :"
 msgstr ""
@@ -1196,40 +1196,40 @@ msgid "Edit the event"
 msgstr ""
 
 msgid "Email"
-msgstr ""
+msgstr "E-Mail"
 
 msgid "Enable"
-msgstr ""
+msgstr "Aktivieren"
 
 msgid "Enables display password when available"
 msgstr ""
 
 msgid "End"
-msgstr ""
+msgstr "Ende"
 
 msgid "Enter New Password"
-msgstr ""
+msgstr "Neues Passwort eigeben"
 
 msgid "Enter Old Password"
-msgstr ""
+msgstr "Alten Passwort eingeben"
 
 msgid "Enter group name"
-msgstr ""
+msgstr "Gruppenname eingeben"
 
 msgid "Error:"
-msgstr ""
+msgstr "Fehler:"
 
 msgid "Error: the LDAP entry for this user has been removed."
-msgstr ""
+msgstr "Fehler: Der LDAP Eintrag für diesen Benutzer wurde gelöscht."
 
 msgid "Error: you want to have"
 msgstr ""
 
 msgid "Event properties"
-msgstr ""
+msgstr "Ereigniseigenschaften"
 
 msgid "Event saved successfully"
-msgstr ""
+msgstr "Ereignis erfolgreich gespeichert"
 
 msgid "Exec clones sequentially"
 msgstr ""
@@ -1238,10 +1238,10 @@ msgid "Exec. time"
 msgstr ""
 
 msgid "Fail"
-msgstr ""
+msgstr "Fehlgeschlagen"
 
 msgid "Fallback"
-msgstr ""
+msgstr "Fallback"
 
 msgid "Fill required camps with valid data"
 msgstr ""
