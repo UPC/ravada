@@ -435,6 +435,42 @@ sub test_more($vm) {
     ok(!$more);
 }
 
+sub test_linked_sp($vm) {
+    my $dir = $vm->dir_img();
+    my $new_name=new_domain_name();
+
+    my $new_dir = "/var/tmp/".$new_name;
+    unlink $new_dir or die "$! $new_dir" if -e $new_dir;
+
+    symlink($dir,$new_dir) or die "$dir -> $new_dir";
+
+    $vm->create_storage_pool($new_name, $new_dir)
+    if !grep { $_ eq $new_name} $vm->list_storage_pools;
+
+    if ($vm->type eq 'KVM') {
+        my $pool = $vm->vm->get_storage_pool_by_name($new_name);
+        $pool->create() if !$pool->is_active;
+        $pool->refresh();
+        my @vols = $pool->list_volumes;
+        warn Dumper(scalar(@vols));
+    }
+
+    my $req = Ravada::Request->list_unused_volumes(
+            uid => user_admin->id
+            ,id_vm => $vm->id
+            ,limit => 0
+    );
+    wait_request();
+    my $out_json = $req->output;
+    $out_json = '{}' if !defined $out_json;
+    my $output = decode_json($out_json);
+
+    my $list = $output->{list};
+    my @found = grep ($_->{file} =~ /^$new_dir/, @$list);
+    is( scalar(@found),0);
+    exit;
+}
+
 ########################################################################
 
 init();
@@ -456,6 +492,8 @@ for my $vm_name ( vm_names() ) {
 
         my $clone = _create_clone($vm);
         my @hidden_bs = _create_clone_hide_bs($clone);
+
+        test_linked_sp($vm);
 
         test_list_unused_discover($vm, $clone);
         test_list_unused_discover2($vm);
