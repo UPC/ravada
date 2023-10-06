@@ -382,8 +382,20 @@ sub remove_file($self,@files) {
 
 sub _list_volumes($self) {
     my @volumes;
+    my @pools;
+    my %duplicated_path;
     for my $pool (_list_storage_pools($self->vm)) {
         next if !$pool->is_active;
+
+        my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
+
+        my $path = $xml->findnodes('/pool/target/path/text()');
+        push @pools,($pool) if !$duplicated_path{$path}++;
+
+        warn $pool->get_name." $path ".$self->_follow_link($path)."\n";
+    }
+    for my $pool (@pools) {
+        warn $pool->get_name;
        my @vols;
        for ( 1 .. 10) {
            eval { @vols = $pool->list_all_volumes() };
