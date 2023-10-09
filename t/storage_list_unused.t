@@ -451,8 +451,6 @@ sub test_linked_sp($vm) {
         my $pool = $vm->vm->get_storage_pool_by_name($new_name);
         $pool->create() if !$pool->is_active;
         $pool->refresh();
-        my @vols = $pool->list_volumes;
-        warn Dumper(scalar(@vols));
     }
 
     my $req = Ravada::Request->list_unused_volumes(
@@ -468,7 +466,13 @@ sub test_linked_sp($vm) {
     my $list = $output->{list};
     my @found = grep ($_->{file} =~ /^$new_dir/, @$list);
     is( scalar(@found),0);
-    exit;
+
+    if ($vm->type eq 'KVM') {
+        my $pool = $vm->vm->get_storage_pool_by_name($new_name);
+        $pool->destroy();
+        $pool->undefine;
+    }
+    unlink $new_dir;
 }
 
 ########################################################################
