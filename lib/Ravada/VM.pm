@@ -2515,6 +2515,25 @@ sub dir_backup($self) {
     return $dir_backup;
 }
 
+
+sub _follow_link($self, $file) {
+    my ($dir, $name) = $file =~ m{(.*)/(.*)};
+    my $file2 = $file;
+    if ($dir) {
+        my $dir2 = $self->_follow_link($dir);
+        $file2 = "$dir2/$name";
+    }
+
+    if (!defined $self->{_is_link}->{$file2} ) {
+        my ($out,$err) = $self->run_command("stat", $file2);
+        chomp $out;
+        $out =~ m{ -> (/.*)};
+        $self->{_is_link}->{$file2} = $1;
+    }
+    my $path = $self->{_is_link}->{$file2};
+    return ($path or $file2);
+}
+
 sub _is_link_remote($self, $vol) {
 
     my ($out,$err) = $self->run_command("stat",$vol);
