@@ -390,7 +390,7 @@ sub _list_volumes($self) {
         my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
 
         my $path = $xml->findnodes('/pool/target/path/text()');
-        $path = $self->_follow_link($path."/.");
+        $path = $self->_follow_link($path);
         push @pools,($pool) if !$duplicated_path{$path}++;
 
     }
@@ -626,20 +626,6 @@ sub _file_exists_remote($self, $file) {
     my @ls = split /\n/,$out;
     for (@ls) { chomp };
     return scalar(@ls);
-}
-
-sub _follow_link($self, $file) {
-    my ($dir, $name) = $file =~ m{(.*)/(.*)};
-    if (!defined $self->{_is_link}->{$dir} ) {
-        my ($out,$err) = $self->run_command("stat", $dir );
-        chomp $out;
-        $out =~ m{ -> (/.*)};
-        $self->{_is_link}->{$dir} = $1;
-    }
-    my $path = $self->{_is_link}->{$dir};
-    return $file if !$path;
-    return "$path/$name";
-
 }
 
 sub _wait_storage($self, $sub) {
