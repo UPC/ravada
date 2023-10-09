@@ -15,6 +15,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 my @FILES;
+my @DIRS;
 ########################################################################
 
 sub _new_file($vm) {
@@ -322,6 +323,10 @@ sub _clean_files($files=\@FILES) {
         rmdir($file) or warn "$! $file";
     }
 
+    for my $dir (@DIRS) {
+        remove_dir($dir);
+    }
+
 }
 
 sub _create_clone($vm) {
@@ -440,7 +445,7 @@ sub test_linked_sp($vm) {
     my $new_name=new_domain_name();
 
     my $new_dir = "/var/tmp/".$new_name;
-    unlink $new_dir or die "$! $new_dir" if -e $new_dir;
+    remove_dir($new_dir);
 
     symlink($dir,$new_dir) or die "$dir -> $new_dir";
 
@@ -475,6 +480,126 @@ sub test_linked_sp($vm) {
     unlink $new_dir;
 }
 
+sub remove_dir($dir) {
+    return if !-e $dir;
+    unlink $dir if -l $dir;
+    my $base = base_domain_name;
+    if (-d $dir) {
+        opendir my $in,$dir or die "$! $dir";
+        while (my $file = readdir $in) {
+            next if $file =~ /^\.+$/;
+            die "I will not delete $file" if $file !~ /^$base/;
+            my $path = "$dir/$file";
+            remove_dir($path);
+        }
+        rmdir $dir or die "$! $dir";
+    }
+}
+
+sub test_linked_sp_level2($vm) {
+    my $dir = $vm->dir_img();
+    my $new_name=new_domain_name();
+
+    my $new_dir = "/var/tmp/".$new_name;
+
+    push @DIRS,($new_dir);
+
+    remove_dir($new_dir);
+    mkdir $new_dir or die "$! $new_dir";
+
+    my $new_link = "/run/user";
+    $new_link .= "/$<" if $<;
+    $new_link .= "/".new_domain_name();
+
+    remove_dir($new_link);
+    symlink($new_dir,$new_link) or die "$new_dir -> $new_link";
+
+    $new_link .="/".new_domain_name();
+    symlink($dir, $new_link) or die "$! $dir -> $new_link";
+
+    my $followed = $vm->_follow_link($new_link);
+    is($followed,$dir) or die "Expecting followed link matches";
+
+    $vm->create_storage_pool($new_name, $new_link)
+    if !grep { $_ eq $new_name} $vm->list_storage_pools;
+
+    if ($vm->type eq 'KVM') {
+        my $pool = $vm->vm->get_storage_pool_by_name($new_name);
+        $pool->create() if !$pool->is_active;
+        $pool->refresh();
+    }
+
+    my $req = Ravada::Request->list_unused_volumes(
+            uid => user_admin->id
+            ,id_vm => $vm->id
+            ,limit => 0
+    );
+    wait_request();
+    my $out_json = $req->output;
+    $out_json = '{}' if !defined $out_json;
+    my $output = decode_json($out_json);
+
+    my $list = $output->{list};
+    my @found = grep ($_->{file} =~ /^$new_dir/, @$list);
+    is( scalar(@found),0);
+
+    @found = grep ($_->{file} =~ /^$new_link/, @$list);
+    is( scalar(@found),0);
+
+
+    if ($vm->type eq 'KVM') {
+        my $pool = $vm->vm->get_storage_pool_by_name($new_name);
+        $pool->destroy();
+        $pool->undefine;
+    }
+    unlink $new_dir;
+}
+
+sub test_linked_sp_level0($vm) {
+    return if $<;
+
+    my $dir = $vm->dir_img();
+    my $new_name = new_domain_name();
+    my $new_link = "/".$new_name;
+    unlink $new_link if -e $new_link;
+
+    symlink($dir,$new_link) or die "$dir -> $new_link";
+
+    push @DIRS,($new_link);
+
+    my $followed = $vm->_follow_link($new_link);
+    is($followed,$dir) or die "Expecting followed link matches";
+
+    $vm->create_storage_pool($new_name, $new_link)
+    if !grep { $_ eq $new_name} $vm->list_storage_pools;
+
+    if ($vm->type eq 'KVM') {
+        my $pool = $vm->vm->get_storage_pool_by_name($new_name);
+        $pool->create() if !$pool->is_active;
+        $pool->refresh();
+    }
+
+    my $req = Ravada::Request->list_unused_volumes(
+            uid => user_admin->id
+            ,id_vm => $vm->id
+            ,limit => 0
+    );
+    wait_request();
+    my $out_json = $req->output;
+    $out_json = '{}' if !defined $out_json;
+    my $output = decode_json($out_json);
+
+    my $list = $output->{list};
+    my @found = grep ($_->{file} =~ /^$new_link/, @$list);
+    is( scalar(@found),0);
+
+    if ($vm->type eq 'KVM') {
+        my $pool = $vm->vm->get_storage_pool_by_name($new_name);
+        $pool->destroy();
+        $pool->undefine;
+    }
+    unlink $new_link;
+}
 ########################################################################
 
 init();
@@ -498,6 +623,8 @@ for my $vm_name ( vm_names() ) {
         my @hidden_bs = _create_clone_hide_bs($clone);
 
         test_linked_sp($vm);
+        test_linked_sp_level0($vm);
+        test_linked_sp_level2($vm);
 
         test_list_unused_discover($vm, $clone);
         test_list_unused_discover2($vm);
