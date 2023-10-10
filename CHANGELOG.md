@@ -4,10 +4,6 @@
 
 **Bugfixes**
 
-- Kali linux per year
-- SSO user management
-- Anonymous login
+- Wrong unused files from duplicated storage pools
 
 **Refactors**
-
-- Faster clone screenshot
