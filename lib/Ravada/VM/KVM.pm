@@ -382,27 +382,15 @@ sub remove_file($self,@files) {
 
 sub _list_volumes($self) {
     my @volumes;
-    my @pools;
-    my %duplicated_path;
     for my $pool (_list_storage_pools($self->vm)) {
-        next if !$pool->is_active;
-
-        my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
-
-        my $path = $xml->findnodes('/pool/target/path/text()');
-        $path = $self->_follow_link($path);
-        push @pools,($pool) if !$duplicated_path{$path}++;
-
-    }
-    for my $pool (@pools) {
-       my @vols;
-       for ( 1 .. 10) {
+        my @vols;
+        for ( 1 .. 10) {
            eval { @vols = $pool->list_all_volumes() };
            last if !$@ || $@ =~ / no storage pool with matching uuid/;
            warn "WARNING: on search volume_re: $@";
            sleep 1;
-       }
-       push @volumes,@vols;
+        }
+        push @volumes,@vols;
     }
     return @volumes;
 }
@@ -460,7 +448,7 @@ sub _find_all_volumes($self, $xml) {
     return @used;
 }
 
-sub _list_used_volumes($self) {
+sub list_used_volumes($self) {
     my @used =$self->_list_used_volumes_known();
     for my $name ( $self->discover ) {
         my $dom = $self->vm->get_domain_by_name($name);
@@ -469,20 +457,14 @@ sub _list_used_volumes($self) {
     return @used;
 }
 
-sub list_unused_volumes($self) {
-    my %used = map { $_ => 1 } $self->_list_used_volumes();
-    my @unused;
+sub list_volumes($self) {
     my $file;
+    my @volumes;
 
-    my $n_found=0;
     for my $vol ( $self->_list_volumes ) {
 
         eval { ($file) = $vol->get_path };
         confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
-        next if $used{$file};
-
-        my $link = $self->_is_link($file);
-        next if $link && $used{$link};
 
         my $info;
         eval { $info = $vol->get_info() };
@@ -491,11 +473,10 @@ sub list_unused_volumes($self) {
 
         next if !$info || $info->{type} eq 2;
 
-        #        cluck Dumper([ $file, [sort grep /2023/,keys %used]]) if $file =~/2023/;
-        push @unused,($file);
+        push @volumes,($file);
 
     }
-    return @unused;
+    return @volumes;
 }
 
 sub refresh_storage_pools($self) {

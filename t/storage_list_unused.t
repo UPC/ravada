@@ -68,6 +68,7 @@ sub test_links_dir($vm, $machine) {
     my ($vol) = $machine->list_volumes();
     my ($file) = $vol =~ m{.*/(.*)};
     my $dir_dst = "/var/tmp/".new_domain_name();
+    remove_dir($dir_dst);
     mkdir $dir_dst if ! -e $dir_dst;
 
     push @FILES,($dir_dst);
@@ -132,11 +133,16 @@ sub test_list_unused_discover($vm, $machine) {
     );
     $sth->execute($machine->id);
 
+    my %used = map { $_ => 1 } $vm->list_used_volumes();
+    for my $vol (@volumes) {
+        ok($used{$vol}) or die Dumper([sort keys %used]);
+    }
+
     my $req = Ravada::Request->list_unused_volumes(
         uid => user_admin->id
         ,id_vm => $vm->id
         ,start => 0
-        ,limit => 1000
+        ,limit => 0
     );
     wait_request();
     my $out_json = $req->output;
@@ -440,6 +446,45 @@ sub test_more($vm) {
     ok(!$more);
 }
 
+sub test_linked_sp_here($vm) {
+    my $new_name1=new_domain_name();
+
+    my $new_dir = "/var/tmp/".$new_name1;
+    remove_dir($new_dir);
+    mkdir $new_dir or die "$! $new_dir";
+    $vm->create_storage_pool($new_name1, $new_dir)
+    if !grep { $_ eq $new_name1} $vm->list_storage_pools;
+
+    my $new_name2 = new_domain_name();
+    my $new_link2 = "/var/tmp/".$new_name2;
+    remove_dir($new_link2);
+    symlink($new_dir,$new_link2) or die "$new_dir -> $new_link2";
+
+    $vm->create_storage_pool($new_name2, $new_link2)
+    if !grep { $_ eq $new_name2} $vm->list_storage_pools;
+
+    my $file = "$new_dir/".new_domain_name().".qcow2";
+    open my $out,">",$file or die "$! $file";
+    close $out;
+
+    $vm->refresh_storage_pools();
+
+    my $req = Ravada::Request->list_unused_volumes(
+            uid => user_admin->id
+            ,id_vm => $vm->id
+            ,limit => 0
+    );
+    wait_request();
+    my $out_json = $req->output;
+    $out_json = '{}' if !defined $out_json;
+    my $output = decode_json($out_json);
+
+    my $list = $output->{list};
+    my @found = grep ($_->{file} =~ /^$new_dir/, @$list);
+    is( scalar(@found),1, "Found something ".Dumper(\@found));
+
+}
+
 sub test_linked_sp($vm) {
     my $dir = $vm->dir_img();
     my $new_name=new_domain_name();
@@ -451,6 +496,12 @@ sub test_linked_sp($vm) {
 
     $vm->create_storage_pool($new_name, $new_dir)
     if !grep { $_ eq $new_name} $vm->list_storage_pools;
+
+    my $new_filename = new_domain_name();
+    my $new_file ="$dir/$new_filename";
+    open my $out,">",$new_file or die "$! $new_file";
+    close $out;
+    $vm->refresh_storage_pools();
 
     if ($vm->type eq 'KVM') {
         my $pool = $vm->vm->get_storage_pool_by_name($new_name);
@@ -469,8 +520,8 @@ sub test_linked_sp($vm) {
     my $output = decode_json($out_json);
 
     my $list = $output->{list};
-    my @found = grep ($_->{file} =~ /^$new_dir/, @$list);
-    is( scalar(@found),0);
+    my @found = grep ($_->{file} =~ /$new_filename/, @$list);
+    is( scalar(@found),1) or die Dumper(\@found);
 
     if ($vm->type eq 'KVM') {
         my $pool = $vm->vm->get_storage_pool_by_name($new_name);
@@ -481,8 +532,10 @@ sub test_linked_sp($vm) {
 }
 
 sub remove_dir($dir) {
-    return if !-e $dir;
-    unlink $dir if -l $dir;
+    if ( -l $dir || -f $dir ) {
+        unlink $dir or die "$! $dir";
+        return;
+    }
     my $base = base_domain_name;
     if (-d $dir) {
         opendir my $in,$dir or die "$! $dir";
@@ -492,8 +545,20 @@ sub remove_dir($dir) {
             my $path = "$dir/$file";
             remove_dir($path);
         }
+        closedir $in;
         rmdir $dir or die "$! $dir";
+    } else {
+        die "I don't know what is $dir" if -e $dir;
     }
+}
+sub _touch_file($vm, $dir) {
+    my $new_filename = new_domain_name();
+    my $new_file ="$dir/$new_filename";
+    open my $out,">",$new_file or die "$! $new_file";
+    close $out;
+    $vm->refresh_storage_pools();
+
+    return $new_filename;
 }
 
 sub test_linked_sp_level2($vm) {
@@ -523,6 +588,8 @@ sub test_linked_sp_level2($vm) {
     $vm->create_storage_pool($new_name, $new_link)
     if !grep { $_ eq $new_name} $vm->list_storage_pools;
 
+    my $new_filename = _touch_file($vm, $new_link);
+
     if ($vm->type eq 'KVM') {
         my $pool = $vm->vm->get_storage_pool_by_name($new_name);
         $pool->create() if !$pool->is_active;
@@ -540,12 +607,8 @@ sub test_linked_sp_level2($vm) {
     my $output = decode_json($out_json);
 
     my $list = $output->{list};
-    my @found = grep ($_->{file} =~ /^$new_dir/, @$list);
-    is( scalar(@found),0);
-
-    @found = grep ($_->{file} =~ /^$new_link/, @$list);
-    is( scalar(@found),0);
-
+    my @found = grep ($_->{file} =~ /$new_filename$/, @$list);
+    is( scalar(@found),1);
 
     if ($vm->type eq 'KVM') {
         my $pool = $vm->vm->get_storage_pool_by_name($new_name);
@@ -573,6 +636,8 @@ sub test_linked_sp_level0($vm) {
     $vm->create_storage_pool($new_name, $new_link)
     if !grep { $_ eq $new_name} $vm->list_storage_pools;
 
+    my $new_filename = _touch_file($vm, $dir);
+
     if ($vm->type eq 'KVM') {
         my $pool = $vm->vm->get_storage_pool_by_name($new_name);
         $pool->create() if !$pool->is_active;
@@ -590,8 +655,8 @@ sub test_linked_sp_level0($vm) {
     my $output = decode_json($out_json);
 
     my $list = $output->{list};
-    my @found = grep ($_->{file} =~ /^$new_link/, @$list);
-    is( scalar(@found),0);
+    my @found = grep ($_->{file} =~ /$new_filename$/, @$list);
+    is( scalar(@found),1) or die "Expecting 1 $new_filename on $dir or $new_link";
 
     if ($vm->type eq 'KVM') {
         my $pool = $vm->vm->get_storage_pool_by_name($new_name);
@@ -623,6 +688,7 @@ for my $vm_name ( vm_names() ) {
         my @hidden_bs = _create_clone_hide_bs($clone);
 
         test_linked_sp($vm);
+        test_linked_sp_here($vm);
         test_linked_sp_level0($vm);
         test_linked_sp_level2($vm);
 

@@ -146,8 +146,6 @@ around 'ping' => \&_around_ping;
 around 'connect' => \&_around_connect;
 after 'disconnect' => \&_post_disconnect;
 
-around '_list_used_volumes' => \&_around_list_used_volumes;
-
 #############################################################
 #
 # method modifiers
@@ -2525,13 +2523,20 @@ sub _follow_link($self, $file) {
     }
 
     if (!defined $self->{_is_link}->{$file2} ) {
-        my ($out,$err) = $self->run_command("stat", $file2);
+        my ($out,$err) = $self->run_command("stat","-c",'"%N"', $file2);
         chomp $out;
-        $out =~ m{ -> (/.*)};
-        $self->{_is_link}->{$file2} = $1;
+        my ($link) = $out =~ m{ -> '(.+)'};
+        if ($link) {
+            if ($link !~ m{^/}) {
+                my ($path) = $file2 =~ m{(.*/)};
+                $path = "/" if !$path;
+                $link = "$path$link";
+            }
+            $self->{_is_link}->{$file2} = $link;
+        }
     }
-    my $path = $self->{_is_link}->{$file2};
-    return ($path or $file2);
+    return $file2 if !exists $self->{_is_link}->{$file2} || !$self->{_is_link}->{$file2};
+    return $self->{_is_link}->{$file2};
 }
 
 sub _is_link_remote($self, $vol) {
@@ -2576,12 +2581,27 @@ sub _is_link($self,$vol) {
     return $path_link if $path_link;
 }
 
-sub _around_list_used_volumes($orig, $self) {
-    my @vols = $self->$orig();
-    my @links;
-    for my $vol ( @vols ) {
-        my $link = $self->_is_link($vol);
-        push @links,($link) if $link;
+sub list_unused_volumes($self) {
+    my @all_vols = $self->list_volumes();
+
+    my @used = $self->list_used_volumes();
+    my %used;
+    for my $vol (@used) {
+        $used{$vol}++;
+        my $link = $self->_follow_link($vol);
+        $used{$link}++ if $link;
+    }
+
+    my @vols;
+    my %duplicated;
+    for my $vol ( @all_vols ) {
+        next if $used{$vol};
+
+        my $link = $self->_follow_link($vol);
+        next if $used{$link};
+        next if $duplicated{$link}++;
+
+        push @vols,($link);
     }
     return @vols;
 }
