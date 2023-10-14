@@ -282,7 +282,7 @@ msgstr ""
 msgstr "관리 도구"
 
 msgid "Remove base"
-msgstr ""
+msgstr "베이스 제거"
 
 msgid "Restore"
 msgstr ""
@@ -351,9 +351,7 @@ msgstr ""
 msgstr "Windows에서 Spice 리디렉션은 자동이 아닙니다. 프로토콜을 연결해야합니다"
 
 msgid "To make this possible, download"
-msgstr ""
-@@ -270,31 +276,31 @@ msgid ""
-msgstr ""
+msgstr "이를 가능하게 하려면 다운로드하십시오"
 
 msgid "Login"
 msgstr ""
@@ -392,9 +390,10 @@ msgstr ""
 msgstr "bits)를 컴퓨터에 저장합니다."
 
 msgid "Permissions"
-msgstr ""
-@@ -599,79 +605,79 @@ msgid "Cloned"
-msgstr ""
+msgstr "권한을"
+
+msgid "Cloned"
+msgstr "복제"
 
 msgid "is admin"
 msgstr ""
@@ -497,9 +496,10 @@ msgstr ""
 msgstr "비밀번호는 단어와 숫자만 포함할 수 있습니다"
 
 msgid "Confirm Password is required"
-msgstr ""
-@@ -686,49 +692,49 @@ msgid "Confirm Password can only contain words and numbers"
-msgstr ""
+msgstr "비밀번호 확인이 필요합니다"
+
+msgid "Confirm Password can only contain words and numbers"
+msgstr "비밀번호 확인은 단어와 숫자만 포함할 수 있습니다."
 
 msgid "This information will be available to the users"
 msgstr ""
@@ -561,11 +561,11 @@ msgstr ""
 msgstr "제거하다"
 
 msgid "The machine must be started to take the screenshot."
-msgstr ""
-@@ -870,3 +876,45 @@ msgstr ""
+msgstr "스크린샷을 찍으려면 기기를 시작해야 합니다."
+
 
 msgid "Yes, shutwdown all the clones"
-msgstr ""
+msgstr "예, 모든 클론을 종료합니다"
 
 msgid "to an ASCII file and save it with a .reg extension, then execute the file."
 msgstr "ASCII 파일에 저장하고 .reg 확장자로 저장한 다음 파일을 실행합니다."
