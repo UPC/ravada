@@ -40,7 +40,7 @@ msgstr "베이스 준비"
 msgid "Clone"
 msgstr "클론"
 
-msgid "Clone/s"
+msgid "Clones"
 msgstr "클론"
 
 msgid "Users List"
