@@ -2,10 +2,16 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
+"PO-Revision-Date: 2023-10-13 20:02+0000\n"
+"Last-Translator: Claire Charles <charlesclaire101@gmail.com>\n"
+"Language-Team: Korean <https://hosted.weblate.org/projects/ravada/"
+"translation/ko/>\n"
 "Language: ko\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Weblate 5.1-dev\n"
 
 msgid "Ravada broker"
 msgstr "라바다 브로커"
