@@ -2581,6 +2581,12 @@ sub _is_link($self,$vol) {
     return $path_link if $path_link;
 }
 
+=head2 list_unused_volumes
+
+Returns a list of unused volume files
+
+=cut
+
 sub list_unused_volumes($self) {
     my @all_vols = $self->list_volumes();
 
