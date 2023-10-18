@@ -49,7 +49,7 @@ sub _add_fstab($vm) {
 }
 
 sub remove_fstab($vm, $dir) {
-    my $file = "$dir/check_storage";# or die "$!";
+    my $file = "$dir/".base_domain_name()."check_storage";# or die "$!";
     unlink $file or die "$! $file" if -e $file;
     copy("/etc/fstab.tst_rvd_backup","/etc/fstab")
 }
@@ -82,7 +82,7 @@ sub test_storage_pools_fail($vm) {
 
 sub _clean_local {
     my $dir = "$DIR/".base_domain_name();
-    my $file = "$dir/check_storage";# or die "$!";
+    my $file = "$dir/".base_domain_name()."_check_storage";# or die "$!";
     unlink $file or die "$! $file" if -e $file;
 }
 
