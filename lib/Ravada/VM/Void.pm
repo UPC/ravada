@@ -649,6 +649,19 @@ sub active_storage_pool($self, $name, $value) {
     $self->write_file($file_sp, Dump( \@list));
 }
 
+sub remove_storage_pool($self, $name) {
+    die "TODO remote VM" unless $self->is_local;
+
+    my $file_sp = $self->dir_img."/.storage_pools.yml";
+    my $sp_list = LoadFile($file_sp);
+    my @sp2;
+    for my $sp (@$sp_list) {
+        push @sp2,($sp) if $sp->{name} ne $name;
+    }
+
+    $self->write_file($file_sp, Dump( \@sp2));
+}
+
 #########################################################################3
 
 1;

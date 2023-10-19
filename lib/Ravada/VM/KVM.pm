@@ -336,6 +336,8 @@ sub search_volume_re($self,$pattern,$refresh=0) {
        my @vols;
        for ( 1 .. 10) {
            eval { @vols = $pool->list_all_volumes() };
+           last if $@ && ref($@) && $@->code == 55;
+           last if $@ && $@ =~ /code: (55|38),/;
            last if !$@ || $@ =~ / no storage pool with matching uuid/;
            warn "WARNING: on search volume_re: $@";
            sleep 1;
@@ -385,7 +387,9 @@ sub _list_volumes($self) {
     for my $pool (_list_storage_pools($self->vm)) {
         my @vols;
         for ( 1 .. 10) {
+            next if !$pool->is_active;
            eval { @vols = $pool->list_all_volumes() };
+           last if $@ && ref($@) && $@->code == 55;
            last if !$@ || $@ =~ / no storage pool with matching uuid/;
            warn "WARNING: on search volume_re: $@";
            sleep 1;
@@ -587,6 +591,7 @@ sub file_exists($self, $file) {
 sub _file_exists_remote($self, $file) {
     $file = $self->_follow_link($file) unless $file =~ /which$/;
     for my $pool ($self->vm->list_all_storage_pools ) {
+        next if !$pool->is_active;
         $self->_wait_storage( sub { $pool->refresh() } );
         my @volumes = $self->_wait_storage( sub { $pool->list_all_volumes });
         for my $vol ( @volumes ) {
@@ -696,6 +701,14 @@ sub create_storage_pool($self, $name, $dir, $vm=$self->vm) {
         die "$error\n" if $error;
     }
 
+}
+
+sub remove_storage_pool($self, $name) {
+    my $sp = $self->vm->get_storage_pool_by_name($name);
+    return if !$sp;
+
+    $sp->destroy if $sp->is_active;
+    $sp->undefine();
 }
 
 sub _create_default_pool($self, $vm=$self->vm) {
