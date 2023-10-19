@@ -506,7 +506,7 @@ sub remove_dir($dir) {
         opendir my $in,$dir or die "$! $dir";
         while (my $file = readdir $in) {
             next if $file =~ /^\.+$/;
-            die "I will not delete $file" if $file !~ /^$base/;
+            die "I will not delete $dir/$file" if $file !~ /^$base/;
             my $path = "$dir/$file";
             remove_dir($path);
         }
