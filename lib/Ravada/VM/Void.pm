@@ -477,6 +477,25 @@ sub _init_storage_pool_default($self) {
 
 }
 
+sub _find_storage_pool($self, $file) {
+
+    my ($path) = $file =~ m{(.*)/};
+
+    return $self->{_storage_pool_path}->{$path}
+    if $self->{_storage_pool_path} && exists $self->{_storage_pool_path}->{$path};
+
+    my $found;
+    for my $sp ($self->list_storage_pools(1)) {
+        if ($sp->{path} eq $path) {
+            $found = $sp->{name};
+            last;
+        }
+    }
+    die "Error: path $path in no storage_pools\n".Dumper([map {$_->{path}} $self->list_storage_pools(1)]) if !$found;
+    $self->{_storage_pool_path}->{$path} = $found;
+    return $found;
+}
+
 sub list_storage_pools($self, $info=0) {
     my @list;
     my $config_dir = Ravada::Front::Domain::Void::_config_dir();

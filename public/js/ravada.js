@@ -316,6 +316,7 @@
             $scope.lock_info = false;
             $scope.topology = false;
             $scope.searching_ldap_attributes = true;
+            $scope.storage_pools=['default'];
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -585,6 +586,10 @@
                                 $http.get('/list_storage_pools/'+$scope.showmachine.type+"?active=1")
                                     .then(function(response) {
                                         $scope.list_storage= response.data;
+
+                                    for (var i = 0; i < response.data.length; i++) {
+                                        $scope.storage_pools[i]=response.data[i].name;
+                                    }
                                 });
                             }
                             if (is_admin) {

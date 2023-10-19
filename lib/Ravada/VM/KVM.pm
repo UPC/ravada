@@ -2915,6 +2915,23 @@ sub _is_ip_nat($self, $ip0) {
     return 0;
 }
 
+sub copy_file_storage($self, $file, $storage) {
+    my $vol = $self->search_volume($file);
+    die "Error: volume $file not found" if !$vol;
+
+    my $sp = $self->vm->get_storage_pool_by_name($storage);
+    die "Error: storage pool $storage not found" if !$sp;
+
+    my ($name) = $vol->get_name();
+    my $vol_dst;
+    eval { $vol_dst= $sp->get_volume_by_name($name) };
+    die $@ if $@ && !(ref($@) && $@->code == 50);
+
+    $vol_dst= $sp->clone_volume($vol->get_xml_description);
+
+    return $vol_dst->get_path();
+}
+
 sub get_library_version($self) {
     return $self->vm->get_library_version();
 }

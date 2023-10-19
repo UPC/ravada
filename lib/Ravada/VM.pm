@@ -12,6 +12,7 @@ Ravada::VM - Virtual Managers library for Ravada
 use utf8;
 use Carp qw( carp confess croak cluck);
 use Data::Dumper;
+use File::Copy qw(copy);
 use File::Path qw(make_path);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
@@ -147,6 +148,8 @@ around 'connect' => \&_around_connect;
 after 'disconnect' => \&_post_disconnect;
 
 around '_list_used_volumes' => \&_around_list_used_volumes;
+
+around 'copy_file_storage' => \&_around_copy_file_storage;
 
 #############################################################
 #
@@ -2057,6 +2060,26 @@ sub shared_storage($self, $node, $dir) {
 
     return $shared;
 }
+
+sub copy_file_storage($self, $file, $storage) {
+    die "Error: file '$file' does not exist" if !$self->file_exists($file);
+
+    my ($pool) = grep { $_->{name} eq $storage } $self->list_storage_pools(1);
+    die "Error: storage pool $storage does not exist" if !$pool;
+
+    my $path = $pool->{path};
+
+    die "TODO remote" if !$self->is_local;
+
+    copy($file, $path) or die "$! $file -> $path";
+
+    my ($filename) = $file =~ m{.*/(.*)};
+    die "Error: file '$file' not copied to '$path'" if ! -e "$path/$filename";
+
+    return "$path/$filename";
+
+}
+
 sub _fetch_tls_host_subject($self) {
     return '' if !$self->dir_cert();
 
@@ -2565,6 +2588,28 @@ sub _around_list_used_volumes($orig, $self) {
         push @links,($link) if $link;
     }
     return @vols;
+}
+
+sub _around_copy_file_storage($orig, $self, $file, $storage) {
+    my $sth = $self->_dbh->prepare("SELECT id,info FROM volumes"
+        ." WHERE file=? "
+    );
+    $sth->execute($file);
+    my ($id,$infoj) = $sth->fetchrow;
+
+    my $new_file = $self->$orig($file, $storage);
+
+    if ($id) {
+        my $info = decode_json($infoj);
+        $info->{file} = $new_file;
+        my $sth_update = $self->_dbh->prepare(
+            "UPDATE volumes set info=?,file=?"
+            ." WHERE id=?"
+        );
+        $sth_update->execute(encode_json($info), $new_file, $id);
+    }
+
+    return $new_file;
 }
 
 1;

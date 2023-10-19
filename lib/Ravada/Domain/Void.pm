@@ -679,6 +679,7 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
         } else {
             $dev->{driver}->{type} = 'void';
         }
+        $dev->{storage_pool} = $self->_vm->_find_storage_pool($dev->{file});
         my $vol = Ravada::Volume->new(
             file => $dev->{file}
             ,info => $dev

@@ -6197,6 +6197,7 @@ sub _req_method {
     ,import_domain => \&_cmd_import
     ,list_unused_volumes => \&_cmd_list_unused_volumes
     ,remove_files => \&_cmd_remove_files
+    ,move_volume => \&_cmd_move_volume
     ,update_iso_urls => \&_cmd_update_iso_urls
 
     );
@@ -6635,6 +6636,35 @@ sub _cmd_create_storage_pool($self, $request) {
     my $vm = Ravada::VM->open($request->args('id_vm'));
     $vm->create_storage_pool($request->arg('name'), $request->arg('directory'));
 
+}
+
+sub _cmd_move_volume($self, $request) {
+
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to move volumes"
+        if !$user->is_admin;
+
+    my $domain = Ravada::Domain->open($request->args('id_domain'));
+    my $volume = $request->args('volume');
+    my @volumes = $domain->list_volumes_info();
+    my $found;
+    my $n_found = 0;
+    for my $vol (@volumes) {
+        if ($vol->file eq $volume ) {
+            $found = $vol;
+            last;
+        }
+        $n_found++;
+    }
+    die "Volume $volume not found in ".$domain->name."\n".Dumper([map { $_->file } @volumes]) if !$found;
+
+    my $vm = $domain->_vm;
+    my $new_file = $vm->copy_file_storage($volume, $request->args('storage'));
+
+    $domain->change_hardware('disk', $n_found, { file => $new_file });
+    if ($volume !~ /\.iso$/) {
+        $vm->remove_file($volume);
+    }
 }
 
 =head2 set_debug_value
