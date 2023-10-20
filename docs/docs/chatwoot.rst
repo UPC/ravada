@@ -26,7 +26,7 @@ Do not copy the *\<script\>* tags, only the javascript code.
   :linenos:
 
 	(function(d,t) {
-	  var BASE_URL = "https://chatwoot_server";
+	  var BASE_URL = "https://chatwoot.server.example.org";
 	        var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
 	        g.src= BASE_URL + "/packs/js/sdk.js";
 	        s.parentNode.insertBefore(g,s);
@@ -48,7 +48,25 @@ Do not copy the *\<script\>* tags, only the javascript code.
 
 .. image:: images/chat_inside.png
 
-And restart rvd_front service:
+
+Security Policy
+~~~~~~~~~~~~~~~
+
+You need to allow third party content inside HTML, edit the /etc/rvd_front.conf
+config file and add this line.
+
+::
+
+      ,security_policy => 'foo.bar.com'
+
+This will allow the server *foo.bar.com* to all the content, see this
+`guide <http://ravada.readthedocs.io/en/latest/docs/frontend_security_policy.html>`_
+if you want to add different security policies.
+
+Apply
+~~~~~
+
+Restart rvd_front service to apply changes:
 
 .. prompt:: bash #
 

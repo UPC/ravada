@@ -34,8 +34,11 @@ Add your template in ``/etc/rvd_front.conf``
 Path for CSS, js and images
 ---------------------------
 
+The custom files must be placed in  ``/usr/share/ravada/templates/main/custom``
+
 If CSS, js or images are needed save in: ``public/css/custom``,
-``public/js/custom`` or ``public/img/custom`` respectively.
+``public/js/custom`` or ``public/img/custom`` respectively. These files must be
+located inside ``/usr/share/ravada/templates/public``.
 
 .. note ::
     Make sure your CSS, JS or images in custom template refers to those paths.
