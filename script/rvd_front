@@ -149,8 +149,8 @@ sub _time() {
 
 sub _security_policy() {
 
-    my $config={};
-    $config = $CONFIG_FRONT->{security_policy} if exists $CONFIG_FRONT->{security_policy};
+    my $config=$RAVADA->_settings_by_parent("/frontend/content_security_policy");
+    my $all = ($config->{all} or '');
     my %src = (
     "default-src" => "'self' sha256- sha384 http: https: data:"
     ,"style-src" => "'self' cdnjs.cloudflare.com stackpath.bootstrapcdn.com cdn.ckeditor.com cdn.jsdelivr.net use.fontawesome.com 'unsafe-inline'"
@@ -165,16 +165,13 @@ sub _security_policy() {
     for my $field (sort keys %src) {
         $sec .= " " if $sec;
         $sec .= $field." ".$src{$field};
-        if (ref($config)) {
-            if ( exists $config->{$field} ) {
+        $sec .= " $all" if $all;
+        if ( exists $config->{$field} ) {
                 $sec .= " ".${config}->{$field};
-            }
-            $field =~ s/-/_/g;
-            if ( exists $config->{$field} ) {
+        }
+        $field =~ s/-/_/g;
+        if ( exists $config->{$field} ) {
                 $sec .= " ".$config->{$field};
-            }
-        } else {
-            $sec .= " $config";
         }
 
         $sec .= ";";
@@ -194,6 +191,9 @@ hook before_routes => sub {
   $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
   my $host = $c->req->url->to_abs->host;
+
+  my $widget=( $CONFIG_FRONT->{widget} or $RAVADA->setting('/frontend/widget'));
+
   $c->stash(css=>['/css/sb-admin.css']
             ,js_mod=>[ ## angular modules
                   '/js/booking/booking.module.js?v='.$RAVADA->version
@@ -216,7 +216,7 @@ hook before_routes => sub {
             ,host => $host
             ,bookings => $RAVADA->setting('/backend/bookings')
             ,FEATURE => {}
-            ,widget => $CONFIG_FRONT->{widget}
+            ,widget => $widget
             );
 
     $USER = _logged_in($c);
@@ -2672,6 +2672,7 @@ sub admin {
         return access_denied($c) unless $USER->is_admin;
         my $url = $c->req->url->to_abs->path;
         my $host = $c->req->url->to_abs->host;
+        $c->stash(csp => $RAVADA->_settings_by_parent("/frontend/content_security_policy"));
         $c->stash(url_login => "/login");
     }
     $c->render( template => 'main/admin_'.$page);
