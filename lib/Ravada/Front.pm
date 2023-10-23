@@ -16,6 +16,7 @@ use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
+use Storable qw(dclone);
 use Ravada;
 use Ravada::Auth::LDAP;
 use Ravada::Front::Domain;
@@ -1481,6 +1482,19 @@ sub _settings_by_id($self) {
     return $orig_settings;
 }
 
+sub _settings_by_parent($self,$parent) {
+    my $data = $self->_setting_data($parent);
+    my $sth = $self->_dbh->prepare("SELECT name,value FROM settings "
+        ." WHERE id_parent = ? ");
+    $sth->execute($data->{id});
+    my $ret;
+    while (my ($name, $value) = $sth->fetchrow) {
+        $value = '' if !defined $value;
+        $ret->{$name} = $value;
+    }
+    return $ret;
+}
+
 =head2 feature
 
 Returns if a feature is available
@@ -1521,9 +1535,10 @@ sub update_settings_global($self, $arg, $user, $reload, $orig_settings = $self->
         confess Dumper([$field,$arg->{$field}]) if !ref($arg->{$field});
         if ( scalar(keys %{$arg->{$field}})>2 ) {
             confess if !keys %{$arg->{$field}};
-            $self->update_settings_global($arg->{$field}, $user, $reload, $orig_settings);
+            my $field2 = dclone($arg->{$field});
+            $self->update_settings_global($field2, $user, $reload, $orig_settings);
         }
-        confess "Error: invalid field $field" if $field !~ /^\w+$/;
+        confess "Error: invalid field $field" if $field !~ /^\w[\w\-]+$/;
         my ( $value, $id )
                    = ($arg->{$field}->{value}
                     , $arg->{$field}->{id}

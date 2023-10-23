@@ -2543,7 +2543,7 @@ sub _sql_insert_defaults($self){
                 ,name => 'auto_view'
                 ,value => $conf->{auto_view}
             }
-            ,{  id_parent => $id_front
+            ,{  id_parent => $id_frontend
                 ,name => "widget"
             }
             ,{
