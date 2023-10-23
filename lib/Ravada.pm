@@ -2456,6 +2456,59 @@ sub _sql_insert_defaults($self){
                 ,name => 'auto_view'
                 ,value => $conf->{auto_view}
             }
+            ,{  id_parent => $id_front
+                ,name => "widget"
+            }
+            ,{
+                id_parent => $id_frontend
+                ,name => 'content_security_policy'
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "all"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "default-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "style-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "script-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "object-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "frame-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "font-src"
+                ,value => ''
+            }
+
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "connect-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "media-src"
+                ,value => ''
+            }
             ,{
                 id_parent => $id_backend
                 ,name => 'start_limit'
