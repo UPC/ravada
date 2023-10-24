@@ -14,7 +14,6 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my @FILES;
 ########################################################################
 
 sub _new_file($vm) {
@@ -27,14 +26,14 @@ sub _new_file($vm) {
     return $file;
 }
 
-sub test_links($vm, $machine) {
+sub test_links($vm) {
+    my $machine = _create_clone($vm);
     my $dir = $vm->dir_img();
 
     my ($vol) = $machine->list_volumes();
     my ($file) = $vol =~ m{.*/(.*)};
     my $dst = "/var/tmp/$file";
     unlink $dst or die "$! $dst" if -e $dst;
-    push @FILES,($dst);
 
     copy($vol,$dst) or die "$! $vol -> $dst";
     unlink $vol or die "$! $vol";
@@ -59,6 +58,7 @@ sub test_links($vm, $machine) {
 
     ok(!$found,"Expecting $vol not found") or die Dumper([$machine->list_volumes]);
 
+    remove_domain($machine);
 }
 
 sub test_links_dir($vm, $machine) {
@@ -67,19 +67,16 @@ sub test_links_dir($vm, $machine) {
     my ($vol) = $machine->list_volumes();
     my ($file) = $vol =~ m{.*/(.*)};
     my $dir_dst = "/var/tmp/".new_domain_name();
+    remove_dir($dir_dst);
     mkdir $dir_dst if ! -e $dir_dst;
-
-    push @FILES,($dir_dst);
 
     my $dir_link = "/var/tmp/".new_domain_name();
     my $file_link = "$dir_link/$file";
-    push @FILES,($file_link);
 
     unlink($dir_link) or die "$! $dir_link"
     if -e $dir_link;
 
     symlink($dir_dst, $dir_link) or die "$! $dir_dst -> $dir_link";
-    push @FILES,($dir_link);
 
     my $dst = "$dir_dst/$file";
     copy($vol,$dst) or die "$vol -> $dst";
@@ -118,6 +115,8 @@ sub test_links_dir($vm, $machine) {
         ok(!$found,"Expecting $exp not found") or die Dumper([$machine->list_volumes]);
     }
 
+    remove_dir($dir_dst);
+    remove_dir($dir_link);
 }
 
 
@@ -131,11 +130,16 @@ sub test_list_unused_discover($vm, $machine) {
     );
     $sth->execute($machine->id);
 
+    my %used = map { $_ => 1 } $vm->list_used_volumes();
+    for my $vol (@volumes) {
+        ok($used{$vol}) or die Dumper([sort keys %used]);
+    }
+
     my $req = Ravada::Request->list_unused_volumes(
         uid => user_admin->id
         ,id_vm => $vm->id
         ,start => 0
-        ,limit => 1000
+        ,limit => 0
     );
     wait_request();
     my $out_json = $req->output;
@@ -197,18 +201,12 @@ sub test_list_unused($vm, $machine, $hidden_vols) {
     my $dir = $vm->dir_img();
 
     my $file = _new_file($vm);
-    push @FILES,($file);
-
     my $new_dir = $dir."/".new_domain_name();
-    push @FILES,($new_dir);
 
     if (! -e $new_dir) {
         mkdir $new_dir or die "$! $new_dir";
     }
 
-    open my $out,">",$file or die "$! $file";
-    print $out "hi\n";
-    close $out;
     $vm->refresh_storage();
 
     my $req = Ravada::Request->list_unused_volumes(
@@ -235,6 +233,8 @@ sub test_list_unused($vm, $machine, $hidden_vols) {
     ok(!$found_dir,"Expecting not found $new_dir");
 
     _test_vm($vm, $machine, $output);
+    unlink $file;
+    remove_dir($new_dir);
 }
 
 sub test_page($vm) {
@@ -300,30 +300,6 @@ sub _used_volumes($machine) {
     return @used;
 }
 
-sub _clean_files($files=\@FILES) {
-    my @dirs;
-    for my $file (@$files) {
-        if (-f $file || -l $file) {
-            unlink $file or warn "$! $file";
-        } elsif (-d $file) {
-            push @dirs,($file);
-        }
-
-    }
-
-    for my $file (@dirs) {
-        my @files;
-        my $pattern = base_domain_name();
-        opendir my $ls,$file or die "$! $file";
-        while (my $in = readdir $ls) {
-            push @files,("$file/$in") if $in =~ /^$pattern/;
-        }
-        _clean_files(\@files);
-        rmdir($file) or warn "$! $file";
-    }
-
-}
-
 sub _create_clone($vm) {
     my $base0 = create_domain($vm);
     $base0->prepare_base(user_admin);
@@ -361,7 +337,9 @@ sub _create_clone_hide_bs($clone) {
     return $clone2;
 }
 
-sub test_remove($vm, $clone) {
+sub test_remove($vm) {
+    my $clone = _create_clone($vm);
+
     my $file = _new_file($vm);
     ok(-e $file) or exit;
     my $user = create_user(new_domain_name(),"bar");
@@ -435,6 +413,247 @@ sub test_more($vm) {
     ok(!$more);
 }
 
+sub test_linked_sp_here($vm) {
+    diag("test_linked_sp_heare");
+    my $new_name1=new_domain_name();
+
+    my $new_dir = "/var/tmp/".$new_name1;
+    remove_dir($new_dir);
+    mkdir $new_dir or die "$! $new_dir";
+    $vm->create_storage_pool($new_name1, $new_dir)
+    if !grep { $_->{name} eq $new_name1} $vm->list_storage_pools(1);
+
+    my $new_name2 = new_domain_name();
+    my $new_link2 = "/var/tmp/".$new_name2;
+    remove_dir($new_link2);
+    symlink($new_dir,$new_link2) or die "$new_dir -> $new_link2";
+
+    $vm->create_storage_pool($new_name2, $new_link2)
+    if !grep { $_ eq $new_name2} $vm->list_storage_pools;
+
+    my $file = _touch_file($vm, $new_dir);
+
+    $vm->refresh_storage_pools();
+
+    my $req = Ravada::Request->list_unused_volumes(
+            uid => user_admin->id
+            ,id_vm => $vm->id
+            ,limit => 0
+    );
+    wait_request();
+    my $out_json = $req->output;
+    $out_json = '{}' if !defined $out_json;
+    my $output = decode_json($out_json);
+
+    my $list = $output->{list};
+    my @found = grep ($_->{file} =~ /^$new_dir/, @$list);
+    is( scalar(@found),1, "Found something ".Dumper(\@found));
+
+    remove_dir($new_dir);
+    remove_dir($new_link2);
+    $vm->remove_storage_pool($new_name1);
+    $vm->remove_storage_pool($new_name2);
+}
+
+sub test_linked_sp($vm) {
+    diag("test linked sp");
+
+    my $dir = $vm->dir_img();
+    my $new_name=new_domain_name();
+
+    my $new_dir = "/var/tmp/".$new_name;
+    remove_dir($new_dir);
+
+    symlink($dir,$new_dir) or die "$dir -> $new_dir";
+
+    $vm->create_storage_pool($new_name, $new_dir)
+    if !grep { $_ eq $new_name} $vm->list_storage_pools;
+
+    my $new_filename = _touch_file($vm, $dir);
+
+    if ($vm->type eq 'KVM') {
+        my $pool = $vm->vm->get_storage_pool_by_name($new_name);
+        $pool->create() if !$pool->is_active;
+        $pool->refresh();
+    }
+
+    my $req = Ravada::Request->list_unused_volumes(
+            uid => user_admin->id
+            ,id_vm => $vm->id
+            ,limit => 0
+    );
+    wait_request();
+    my $out_json = $req->output;
+    $out_json = '{}' if !defined $out_json;
+    my $output = decode_json($out_json);
+
+    my $list = $output->{list};
+    my @found = grep ($_->{file} =~ /$new_filename/, @$list);
+    is( scalar(@found),1) or die Dumper(\@found);
+
+    $vm->remove_storage_pool($new_name);
+    unlink $new_dir;
+    unlink "$dir/$new_filename" or die $!;
+}
+
+sub remove_dir($dir) {
+    if ( -l $dir || -f $dir ) {
+        unlink $dir or die "$! $dir";
+        return;
+    }
+    my $base = base_domain_name;
+    if (-d $dir) {
+        opendir my $in,$dir or die "$! $dir";
+        while (my $file = readdir $in) {
+            next if $file =~ /^\.+$/;
+            die "I will not delete $dir/$file" if $file !~ /^$base/;
+            my $path = "$dir/$file";
+            remove_dir($path);
+        }
+        closedir $in;
+        rmdir $dir or die "$! $dir";
+    } else {
+        die "I don't know what is $dir" if -e $dir;
+    }
+}
+sub _touch_file($vm, $dir) {
+    my $new_filename = new_domain_name();
+    my $new_file ="$dir/$new_filename";
+    open my $out,">",$new_file or die "$! $new_file";
+    close $out;
+    $vm->refresh_storage_pools();
+
+    return $new_filename;
+}
+
+sub test_linked_sp_level2($vm) {
+    my $dir = $vm->dir_img();
+    my $new_name=new_domain_name();
+
+    my $new_dir = "/var/tmp/".$new_name;
+
+    remove_dir($new_dir);
+    mkdir $new_dir or die "$! $new_dir";
+
+    my $new_link = "/run/user";
+    $new_link .= "/$<" if $<;
+    $new_link .= "/".new_domain_name();
+
+    remove_dir($new_link);
+    symlink($new_dir,$new_link) or die "$new_dir -> $new_link";
+    my $new_link0 = $new_link;
+
+    $new_link .="/".new_domain_name();
+    symlink($dir, $new_link) or die "$! $dir -> $new_link";
+
+    my $followed = $vm->_follow_link($new_link);
+    is($followed,$dir) or die "Expecting followed link matches";
+
+    $vm->create_storage_pool($new_name, $new_link)
+    if !grep { $_ eq $new_name} $vm->list_storage_pools;
+
+    my $new_filename = _touch_file($vm, $new_link);
+
+    my $req = Ravada::Request->list_unused_volumes(
+            uid => user_admin->id
+            ,id_vm => $vm->id
+            ,limit => 0
+    );
+    wait_request();
+    my $out_json = $req->output;
+    $out_json = '{}' if !defined $out_json;
+    my $output = decode_json($out_json);
+
+    my $list = $output->{list};
+    my @found = grep ($_->{file} =~ /$new_filename$/, @$list);
+    is( scalar(@found),1);
+
+    $vm->remove_storage_pool($new_name);
+    unlink "$dir/$new_filename" or die $!;
+    unlink "$new_link/$new_filename" or warn $!if -e "$new_link/$new_filename";
+    remove_dir($new_dir);
+    remove_dir($new_link0);
+    remove_dir($new_link);
+}
+
+sub test_linked_sp_level0($vm) {
+    return if $<;
+
+    my $dir = $vm->dir_img();
+    my $new_name = new_domain_name();
+    my $new_link = "/".$new_name;
+    unlink $new_link if -e $new_link;
+
+    symlink($dir,$new_link) or die "$dir -> $new_link";
+
+    my $followed = $vm->_follow_link($new_link);
+    is($followed,$dir) or die "Expecting followed link matches";
+
+    $vm->create_storage_pool($new_name, $new_link)
+    if !grep { $_ eq $new_name} $vm->list_storage_pools;
+
+    my $new_filename = _touch_file($vm, $dir);
+
+    if ($vm->type eq 'KVM') {
+        my $pool = $vm->vm->get_storage_pool_by_name($new_name);
+        $pool->create() if !$pool->is_active;
+        $pool->refresh();
+    }
+
+    my $req = Ravada::Request->list_unused_volumes(
+            uid => user_admin->id
+            ,id_vm => $vm->id
+            ,limit => 0
+    );
+    wait_request();
+    my $out_json = $req->output;
+    $out_json = '{}' if !defined $out_json;
+    my $output = decode_json($out_json);
+
+    my $list = $output->{list};
+    my @found = grep ($_->{file} =~ /$new_filename$/, @$list);
+    is( scalar(@found),1) or die "Expecting 1 $new_filename on $dir or $new_link";
+
+    $vm->remove_storage_pool($new_name);
+    unlink($new_link) or die $!;
+    unlink("$dir/$new_filename") or die $!;
+}
+
+sub _check_leftovers($vm, $delete=0) {
+    my $dir_run = "/run/user";
+    $dir_run .= "/$<" if $<;
+
+    my $base = base_domain_name();
+    for my $dir ($vm->dir_img, "/var/tmp",$dir_run) {
+        opendir my $ls,$dir or die "$! $dir";
+        while (my $file=readdir $ls) {
+            next if $file =~ /.(yml|void|lock|pid|qcow2)$/;
+            if ( $file =~ /$base/ ) {
+                if ($delete) {
+                    remove_dir("$dir/$file");
+                } else {
+                    confess "$dir/$file";
+                }
+            }
+        }
+    }
+    for my $sp ( $vm->list_storage_pools(1)) {
+        confess "SP found ".$sp->{name} if $sp->{name} =~ /$base/;
+    }
+}
+
+sub _clean_old_sps($vm) {
+    remove_qemu_pools($vm) if $vm->type eq 'KVM';
+    if ($vm->type eq 'KVM') {
+        my $base = base_domain_name();
+        for my $pool ( $vm->vm->list_all_storage_pools()) {
+            next if $pool->get_name !~ /^$base/;
+            $pool->destroy if $pool->is_active;
+            $pool->undefine;
+        }
+    }
+}
+
 ########################################################################
 
 init();
@@ -454,28 +673,48 @@ for my $vm_name ( vm_names() ) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        _clean_old_sps($vm);
+
+        _check_leftovers($vm,1);
+
         my $clone = _create_clone($vm);
         my @hidden_bs = _create_clone_hide_bs($clone);
+        _check_leftovers($vm);
+
+        test_linked_sp($vm);
+        _check_leftovers($vm);
+        test_linked_sp_here($vm);
+        _check_leftovers($vm);
+        test_linked_sp_level0($vm);
+        _check_leftovers($vm);
+
+        test_linked_sp_level2($vm);
+        _check_leftovers($vm);
 
         test_list_unused_discover($vm, $clone);
         test_list_unused_discover2($vm);
+        _check_leftovers($vm);
 
         test_list_unused($vm, $clone, \@hidden_bs);
-
+        _check_leftovers($vm);
 
         test_links_dir($vm, $clone);
-        test_links($vm, $clone);
+        _check_leftovers($vm);
+        test_links($vm);
+        _check_leftovers($vm);
 
         test_page($vm);
 
-        test_remove($vm, $clone);
+        test_remove($vm);
         test_remove_many($vm);
 
         test_more($vm);
+        remove_domain($clone);
+
+        _check_leftovers($vm);
     }
 }
 
-_clean_files();
 end();
 
 done_testing();

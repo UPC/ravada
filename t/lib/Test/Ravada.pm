@@ -1023,7 +1023,12 @@ sub _activate_storage_pools($vm) {
         next if $sp->is_active;
         next unless $sp->get_name =~ /^tst_/;
         diag("Activating sp ".$sp->get_name." on ".$vm->name);
-        $sp->build() unless $sp->is_active;
+        my $xml = XML::LibXML->load_xml(string => $sp->get_xml_description());
+        my ($path) = $xml->findnodes('/pool/target/path');
+        my $dir = $path->textContent();
+        mkdir $dir or die "$! $dir" if ! -e $dir;
+
+        $sp->build();
         $sp->create() unless $sp->is_active;
     }
 }
@@ -1426,7 +1431,7 @@ sub _qemu_storage_pool {
 }
 
 sub remove_qemu_pools($vm=undef) {
-    return if !$VM_VALID{'KVM'} || $>;
+    return if !$vm && (!$VM_VALID{'KVM'} || $>);
     return if defined $vm && $vm->type eq 'Void';
     if (!defined $vm) {
         eval { $vm = rvd_back->search_vm('KVM') };
@@ -1441,18 +1446,22 @@ sub remove_qemu_pools($vm=undef) {
 
     my $base = base_pool_name();
     $vm->connect();
-    for my $pool  ( Ravada::VM::KVM::_list_storage_pools($vm->vm)) {
+    for my $pool  ( $vm->vm->list_all_storage_pools) {
         my $name = $pool->get_name;
+        next if $name !~ qr/^$base/;
+        diag($name);
+
         eval {$pool->build(Sys::Virt::StoragePool::BUILD_NEW); $pool->create() };
         warn $@ if $@ && $@ !~ /already active/;
-        next if $name !~ qr/^$base/;
-        diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
-        for my $vol ( $pool->list_volumes ) {
-            diag("Removing ".$pool->get_name." vol ".$vol->get_name);
-            $vol->delete();
+        if ($pool->is_active) {
+            diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
+            for my $vol ( $pool->list_volumes ) {
+                diag("Removing ".$pool->get_name." vol ".$vol->get_name);
+                $vol->delete();
+            }
         }
         _delete_qemu_pool($pool);
-        $pool->destroy();
+        $pool->destroy() if $pool->is_active;
         eval { $pool->undefine() };
         warn $@ if $@;
         warn $@ if$@ && $@ !~ /libvirt error code: 49,/;
