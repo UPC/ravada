@@ -35,8 +35,8 @@
                     ng-src="data:image/png;base64,{{machine.screenshot}}" alt="{{machine.alias}}" class="img-thumbnail" width="260"
                     ></a>
                    <a ng-show="machine.clone && machine.clone.screenshot" ng-click="action(machine, 'start')"><img
-+                    ng-src="data:image/png;base64,{{machine.clone.screenshot}}" alt="{{machine.alias}}" class="img-thumbnail" width="260"
-+                    ></a>
+                    ng-src="data:image/png;base64,{{machine.clone.screenshot}}" alt="{{machine.alias}}" class="img-thumbnail" width="260"
+                    ></a>
                    <a ng-show="!machine.screenshot && !machine.clone.screenshot" ng-click="action(machine, 'start')"><img
                     src="/img/default_screenshot.png" class="screenshot-default img-thumbnail"
                     alt="{{machine.alias}}" width="260"
