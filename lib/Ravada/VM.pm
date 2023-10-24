@@ -2535,7 +2535,7 @@ sub _follow_link($self, $file) {
             $self->{_is_link}->{$file2} = $link;
         }
     }
-    return $file2 if !exists $self->{_is_link}->{$file2} || !$self->{_is_link}->{$file2};
+    $self->{_is_link}->{$file2} = $file2 if !exists $self->{_is_link}->{$file2};
     return $self->{_is_link}->{$file2};
 }
 
