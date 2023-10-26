@@ -1307,6 +1307,62 @@ any '/group/new' => sub {
        return new_group($c);
 };
 
+any '/admin/users/upload.#req' => sub($c) {
+    return access_denied_json($c) unless $USER->is_admin;
+
+    _add_admin_libs($c);
+
+    my $type = $c->req->param('type');
+
+    return $c->render(template => "/main/upload_users", done => 0, count => 0, found => 0, type => 'sql') if !$type;
+
+    my $create = ( $c->req->param('create') or 0);
+
+    return $c->render(json => { error => "Unknown type $type" })
+            if $type !~ /^(sql|ldap|sso)/;
+
+    my $csv = $c->req->upload('users');
+    if($csv->headers->content_type !~ m{text/(csv|plain)}) {
+        return $c->render(status => 400
+            ,text => "Wrong content type ".$csv->headers->content_type
+                    ." , it should be text/csv or plain"
+        );
+    }
+
+    my ($found, $count, $error) = $RAVADA->upload_users(
+        $csv->slurp, $type, $create
+    );
+
+    return $c->render(json =>
+        { output => "$count users added"
+        ,error => $error
+    }) if $c->stash('req') eq 'json';
+
+    return $c->render(template => "/main/upload_users"
+        ,count => $count
+        ,found => $found
+        ,error => $error
+        ,done => 1
+    );
+};
+
+get '/admin/user/remove/#id' => sub($c) {
+    return access_denied($c) unless $USER->is_admin;
+    my $id = $c->stash('id');
+    my $user = Ravada::Auth::SQL->search_by_id($id);
+    return $c->render(message => "User not found. id=$id."
+            , link => ['/admin/users','Users']
+        ,template => '/main/standard_message'
+        ,status => 404
+    ) if !$user;
+    $user->remove();
+
+    return $c->render(message => "User removed : ".$user->name
+            , link => ['/admin/users','Users']
+        ,template => '/main/standard_message'
+    );
+};
+
 any '/admin/user/(#id).(:type)' => sub {
     my $c = shift;
 
@@ -1351,6 +1407,7 @@ any '/admin/user/(#id).(:type)' => sub {
     }
 
     $c->stash(user => $user);
+    return $c->render(json => {name => $user->name}) if $c->stash('type') eq 'json';
     return $c->render(template => 'main/manage_user');
 };
 
@@ -2514,7 +2571,6 @@ sub login($c, $status=200) {
     my $ticket = $c->param('ticket');
     my $url = ($c->param('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
-
 
     my @error =();
 
