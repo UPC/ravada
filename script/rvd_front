@@ -2672,7 +2672,11 @@ sub admin {
         return access_denied($c) unless $USER->is_admin;
         my $url = $c->req->url->to_abs->path;
         my $host = $c->req->url->to_abs->host;
-        $c->stash(csp => $RAVADA->_settings_by_parent("/frontend/content_security_policy"));
+        my $csp = $RAVADA->_settings_by_parent("/frontend/content_security_policy");
+        my $csp_advanced = 0;
+        $csp_advanced = grep $csp->{$_}, grep /-/,keys %$csp;
+
+        $c->stash( csp => $csp , csp_advanced => $csp_advanced);
         $c->stash(url_login => "/login");
     }
     $c->render( template => 'main/admin_'.$page);
