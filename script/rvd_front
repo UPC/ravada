@@ -192,9 +192,7 @@ hook before_routes => sub {
   $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
   my $host = $c->req->url->to_abs->host;
-
   my $widget=( $CONFIG_FRONT->{widget} or $RAVADA->setting('/frontend/widget'));
-
   $c->stash(css=>['/css/sb-admin.css']
             ,js_mod=>[ ## angular modules
                   '/js/booking/booking.module.js?v='.$RAVADA->version
