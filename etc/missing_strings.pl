@@ -27,13 +27,23 @@ sub load_strings {
     my $msgid;
     my %found;
     my $string;
+    my $comment='';
+    my %dupe;
     while (my $line = <$in>) {
         my ($msgstr) = $line =~ /^msgstr/;
         if ($msgstr && $string) {
-            $found{$string}++;
+            my $string_lc = lc($string);
+            if ($dupe{$string_lc}) {
+                warn("Warning: '$string' duplicated in line ".$dupe{$string_lc}." and $.\n");
+            } else {
+                $dupe{$string_lc} = $.;
+            }
+            $found{$string}=[$.,$comment];
+            $comment= '';
             $string = undef;
             next;
         }
+        $comment = $line if $line =~ /^#/;
         my ($string1) = $line =~ /^msgid "(.*)"/;
         if (defined $string1) {
             $string = $string1;
@@ -49,6 +59,7 @@ sub load_strings {
         next if !$string;
     }
     close $in;
+    die Dumper($found{"Schedule"});
     return \%found;
 }
 
