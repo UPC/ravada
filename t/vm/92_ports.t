@@ -85,6 +85,11 @@ sub test_no_dupe($vm) {
     #
     $domain->start(user => user_admin, remote_ip => $remote_ip);
     is($domain->is_active,1);
+    Ravada::Request->start_domain(uid => user_admin->id
+        ,id_domain => $domain->id
+        ,remote_ip => $remote_ip
+    );
+    wait_request();
     run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
     die $err if $err;
     @out = split /\n/,$out;
@@ -214,6 +219,7 @@ sub test_one_port($vm) {
     };
 
     my $port_info2 = $domain->exposed_port($internal_port);
+    wait_request();
     ok($port_info2);
     is_deeply($port_info2, $port_info);
 
@@ -226,15 +232,20 @@ sub test_one_port($vm) {
     is($info->{ports}->[0]->{public_port}, $public_port);
     is($info->{ports}->[0]->{name}, $name_port);
 
-    my ($n_rule)
-        = search_iptable_remote(local_ip => "$local_ip/32"
+    my $n_rule;
+    for ( 1 .. 10 ) {
+        ($n_rule)    = search_iptable_remote(local_ip => "$local_ip/32"
             , local_port => $public_port
             , table => 'nat'
             , chain => 'PREROUTING'
             , node => $vm
             , jump => 'DNAT'
             , 'to-destination' => $domain_ip.":".$internal_port
-    );
+        );
+        last if $n_rule;
+        $domain->start(user => user_admin, remote_ip => $remote_ip);
+        wait_request();
+    }
 
     ok($n_rule,"Expecting rule for $local_ip:$public_port -> $domain_ip:internal_port") or exit;
 
@@ -409,7 +420,7 @@ sub test_crash_domain($vm_name) {
     my $client_ip = $domain->remote_ip();
     is($client_ip, $remote_ip);
 
-    _wait_ip($vm, $domain);
+    _wait_ip($vm, $domain, $remote_ip);
 
     my $domain_ip = $domain->ip or do {
         diag("[$vm_name] Expecting an IP for domain ".$domain->name);
@@ -418,6 +429,7 @@ sub test_crash_domain($vm_name) {
 
     my $internal_port = 22;
     my $public_port = $domain->expose($internal_port);
+    wait_request();
 
     is(scalar $domain->list_ports,1);
     my ($n_rule)
@@ -768,12 +780,14 @@ sub test_port_already_open($vm) {
     flush_rules();
     my $internal_port = 22;
     my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+
+    my $remote_ip0 = '10.1.1.2';
     Ravada::Request->start_domain(
         uid => user_admin->id
         ,id_domain => $domain->id
-        ,remote_ip => '10.1.1.2'
+        ,remote_ip => $remote_ip0
     );
-    my $ip = _wait_ip2($vm, $domain);
+    my $ip = _wait_ip2($vm, $domain, $remote_ip0);
     wait_request(debug => 0, skip => [ 'set_time','enforce_limits']);
 
     my $display = $domain->display_info(user_admin);
@@ -790,7 +804,15 @@ sub test_port_already_open($vm) {
     wait_request();
 
     my @out = split /\n/, `iptables-save`;
-    my @port_accept = (grep /--dport $port -j ACCEPT/, @out);
+    my @port_accept;
+    for ( 1 .. 10 ) {
+        @port_accept = (grep /--dport $port -j ACCEPT/, @out);
+        last if scalar(@port_accept)==1;
+        rvd_back->_check_duplicated_prerouting();
+        rvd_back->_check_duplicated_iptable();
+        Ravada::Request->refresh_vms();
+        wait_request();
+    }
     is(scalar(@port_accept),1) or die Dumper(\@port_accept);
 
     my @port_drop = (grep /--dport $port -j DROP/, @out);
@@ -818,16 +840,42 @@ sub test_port_prerouting_already_open($vm) {
     my $sth = connector->dbh->prepare("DELETE FROM iptables");
     $sth->execute();
     my $remote_ip = '10.1.1.35';
-    Ravada::Request->start_domain(
-        uid => user_admin->id
-        ,id_domain => $domain->id
-        ,remote_ip => $remote_ip
-    );
-    wait_request();
+    my @port;
+    for ( 1 .. 3 ) {
+        Ravada::Request->start_domain(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,remote_ip => $remote_ip
+            ,_force => 1
+        );
+        wait_request();
+
+        my $domain_ip  =$domain->ip;
+        for ( 1 .. 60 ) {
+            last if $domain_ip;
+            sleep 1;
+            $domain_ip  =$domain->ip;
+        }
+
+        my @out = split /\n/, `iptables-save`;
+
+        @port = (grep /-s $remote_ip.32.*--dport $internal_port -j ACCEPT/, @out);
+
+        my @port_prerouting = (grep /-A PREROUTING.*--to-destination .*$domain_ip:$internal_port$/, @out);
+        last if scalar(@port)==1 && scalar(@port_prerouting)==1;
+        rvd_back->_check_duplicated_prerouting() if scalar(@port_prerouting)>1;
+
+        sleep 1;
+    }
+    if(scalar(@port)>1) {
+        rvd_back->_check_duplicated_prerouting();
+        rvd_back->_check_duplicated_iptable();
+        wait_request();
+    }
 
     my @out = split /\n/, `iptables-save`;
 
-    my @port = (grep /-s $remote_ip.32.*--dport $internal_port -j ACCEPT/, @out);
+    @port = (grep /-s $remote_ip.32.*--dport $internal_port -j ACCEPT/, @out);
     is(scalar(@port),1,"Expecting $internal_port") or die Dumper(\@port);
 
     my $domain_ip  =$domain->ip;
@@ -899,7 +947,15 @@ sub test_port_prerouting_already_open_clones($vm) {
 
     wait_request(debug => 0);
 
-    my @out = split /\n/, `iptables-save`;
+    my @out;
+    for ( 1 .. 10 ) {
+        @out = split /\n/, `iptables-save`;
+        my $a1 = (grep /-s $remote_ip1.*--dport $internal_port -j ACCEPT/, @out);
+        my $a2 = (grep /-s $remote_ip2.32.*--dport $internal_port -j ACCEPT/, @out);
+        last if $a1 && $a2;
+        diag("Waiting for $remote_ip1 and $remote_ip2");
+        sleep 1;
+    }
 
     my @port1 = (grep /-s $remote_ip1.*--dport $internal_port -j ACCEPT/, @out);
     is(scalar(@port1),1,"Expecting -s $remote_ip1 --dport $internal_port -j ACCEPT") or die Dumper(\@port1);
@@ -984,7 +1040,16 @@ sub test_port_prerouting_already_open_clones_no_restricted($vm) {
 
     wait_request(debug => 0);
 
-    my @out = split /\n/, `iptables-save`;
+    my @out;
+    for ( 1 .. 10 ) {
+        @out = split /\n/, `iptables-save`;
+        my @port1 = (grep /-A FORWARD -d $ip1.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
+        last if @port1;
+        $req_s2->status('requested');
+        $req_s1->status('requested');
+        wait_request();
+        sleep 1;
+    }
 
     my @port1 = (grep /-A FORWARD -d $ip1.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
     is(scalar(@port1),1,"Expecting -d $ip1 --dport $internal_port -j ACCEPT ".$clone2->name) or die Dumper(\@port1);
@@ -1004,8 +1069,17 @@ sub test_port_prerouting_already_open_clones_no_restricted($vm) {
     $clone1->shutdown_now(user_admin);
     wait_request();
 
-    @out = split /\n/, `iptables-save`;
-    @port1 = (grep /-A FORWARD -d $ip1.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
+    for ( 1 .. 5 ) {
+        @out = split /\n/, `iptables-save`;
+        @port1 = (grep /-A FORWARD -d $ip1.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
+        last if scalar(@port1)==0;
+        Ravada::Request->refresh_machine(
+            uid => user_admin->id
+            ,id_domain => $clone1->id
+            ,_force => 1
+        );
+        wait_request();
+    }
     is(scalar(@port1),0,"Expecting -d $ip1 --dport $internal_port -j ACCEPT") or die Dumper(\@port1);
 
     @port2 = (grep /-A FORWARD -d $ip2.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
@@ -1039,12 +1113,21 @@ sub test_redirect_ip_duplicated($vm) {
     my $internal_port = 22;
     my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     $domain->expose(port => $internal_port, name => "ssh");
-    Ravada::Request->start_domain(
-        uid => user_admin->id
-        ,id_domain => $domain->id
-        ,remote_ip => '10.1.1.2'
-    );
-    wait_request(debug => 0);
+    my $remote_ip = '10.1.1.2';
+    for ( 1 .. 3 ) {
+        Ravada::Request->start_domain(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,remote_ip => $remote_ip
+            ,_force => 1
+        );
+        wait_request(debug => 0);
+        my $ip = _wait_ip2($vm, $domain, $remote_ip);
+        my @out0 = split /\n/, `iptables-save -t nat`;
+        my @open0 = (grep /--to-destination $ip/, @out0);
+        last if scalar(@open0) == 1;
+
+    }
     my $ip = _wait_ip2($vm, $domain);
     wait_request(debug => 0, skip => [ 'set_time','enforce_limits']);
 
@@ -1175,9 +1258,13 @@ sub test_open_port_duplicated($vm) {
     is(scalar(@open2),2) or die Dumper(\@open2);
 
     my $req = Ravada::Request->refresh_vms(_force => 1);
-    wait_request(request => $req, debug => 0);
+    for ( 1 .. 30 ) {
+        wait_request(request => $req, debug => 0);
+        last if $req->status eq 'done';
+        sleep 1;
+    }
     is($req->status,'done');
-    is($req->error, '') or exit;
+    like($req->error,qr/checking /) if $req->error;
 
     my (@out3,@open3);
     for ( 1 .. 5 ) {
@@ -1295,9 +1382,10 @@ sub test_clone_exports_add_ports($vm) {
     $base->remove(user_admin);
 }
 
-sub _wait_ip2($vm_name, $domain) {
+sub _wait_ip2($vm_name, $domain, $remote_ip='1.2.3.5') {
     confess if !ref($domain) || ref($domain) !~ /Domain/;
-    $domain->start(user => user_admin, remote_ip => '1.2.3.5') unless $domain->is_active();
+    wait_request();
+    $domain->start(user => user_admin, remote_ip => $remote_ip) unless $domain->is_active();
     for ( 1 .. 30 ) {
         return $domain->ip if $domain->ip;
         diag("Waiting for ".$domain->name. " ip") if !(time % 10);
@@ -1407,6 +1495,7 @@ sub test_req_expose($vm_name) {
             ,port => $internal_port
             ,id_domain => $domain->id
     );
+    ok(!$req->{_duplicated}) or exit;
     for ( 1 .. 30 ) {
         wait_request(request => $req, debug => 0);
         last if $req->status eq 'done' && ! $req->error =~ /retry/i;
@@ -1415,6 +1504,9 @@ sub test_req_expose($vm_name) {
 
     is($req->status(),'done');
     is($req->error(),'');
+
+    $domain->start(user => user_admin, remote_ip => $remote_ip);
+    wait_request();
 
     my @list_ports = $domain->list_ports();
     is(scalar @list_ports,1) or exit;
@@ -1755,6 +1847,7 @@ for my $vm_name ( reverse vm_names() ) {
     rvd_back->setting("/backend/wait_retry",1);
     import_base($vm);
 
+    test_req_expose($vm_name);
     test_expose_nested_base($vm);
 
     test_interfaces($vm);

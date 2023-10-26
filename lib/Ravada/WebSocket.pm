@@ -467,6 +467,10 @@ sub _old_info($self, $key, $new_count=undef, $new_changed=undef) {
     return ($old_count, $old_changed);
 }
 
+sub _clean_info($self, $key) {
+    $self->_old_info($key,0,0);
+}
+
 sub _date_changed_table($self, $table, $id) {
     my $rvd = $self->ravada;
     my $sth;
@@ -565,6 +569,7 @@ sub subscribe($self, %args) {
     if ($args{channel} =~ /list_machines/) {
         $LIST_MACHINES_FIRST_TIME = 1 ;
     }
+    $self->_clean_info($ws);
     $self->_send_answer($ws,$args{channel});
     my $channel = $args{channel};
     $channel =~ s{/.*}{};

@@ -13,6 +13,7 @@
                 %= include 'main/manage_machine_edit_features'
                 %= include 'main/manage_machine_edit_memory'
                 %= include 'main/manage_machine_edit_disk'
+                %= include 'main/manage_machine_edit_display'
                 %= include 'main/manage_machine_edit_filesystem'
                 %= include 'main/manage_machine_edit_net'
                 %= include 'main/manage_machine_edit_video'
@@ -27,7 +28,6 @@
         <div class="col-md-8 mt-1 mb-1">
 
             <button class="btn btn-primary"
-                ng-hide="name=='video'"
                 ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || form_edit.$pristine"
                 ng-click="change_hardware(item,name,$index)">
                     <%=l 'Apply' %>
@@ -44,7 +44,7 @@
 
 
         </div>
-        <div class="col-md-3 mt-3 mb-1" ng-show="name=='cpu' || name == 'features' || name=='network' || name == 'video'">
+        <div class="col-md-3 mt-3 mb-1" ng-show="name=='cpu' || name == 'features' || name=='network' || name == 'video' || name == 'display'">
             <button class="btn btn-outline-primary"
                 ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) "
                 ng-click="set_defaults(name, $index)"

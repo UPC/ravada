@@ -9,11 +9,14 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("manage_nodes",manage_nodes)
         .controller("manage_networks",manage_networks)
         .controller("settings_node",settings_node)
+        .controller("settings_storage",settings_storage)
         .controller("settings_network",settings_network)
         .controller("new_node", newNodeCtrl)
+        .controller("new_storage", new_storage)
         .controller("settings_global", settings_global_ctrl)
         .controller("admin_groups", admin_groups_ctrl)
         .controller('admin_charts', admin_charts_ctrl)
+        .controller('upload_users', upload_users)
     ;
 
     ravadaApp.directive('ipaddress', function() {
@@ -74,12 +77,11 @@ ravadaApp.directive("solShowMachine", swMach)
           $scope.url = url;
           $scope.images = [];
           subscribe_list_isos(url);
-          subscribe_list_images(url);
           subscribe_list_machines(url);
           $http.get('/list_vm_types.json').then(function(response) {
               $scope.backends = response.data;
               $scope.backend = response.data[0];
-              $scope.loadTemplates(url);
+              $scope.loadTemplates();
           });
       }
 
@@ -89,9 +91,31 @@ ravadaApp.directive("solShowMachine", swMach)
           });
 
       };
+      $scope.list_storage_pools = function(backend) {
+          $scope.storage_pools_loaded=false;
+          $http.get('/list_storage_pools/'+backend+"?active=1").then(function(response) {
+            $scope.storage_pools_loaded=true;
+              $scope.storage_pools[backend] = response.data;
+
+              $scope.storage_pool=response.data[0];
+              for(var i=0; i<response.data.length;i++) {
+                  if (response.data[i].is_active) {
+                      $scope.storage_pool=response.data[i];
+                  }
+              }
+              for(var i=0; i<response.data.length;i++) {
+                  if (response.data[i].is_active && response.data[i].name == 'default') {
+                      $scope.storage_pool=response.data[i];
+                  }
+              }
+
+          });
+
+      };
 
       $scope.loadTemplates = function() {
           $scope.list_machine_types($scope.backend);
+          $scope.list_storage_pools($scope.backend);
           subscribe_list_images($scope.backend);
       }
 
@@ -123,9 +147,8 @@ ravadaApp.directive("solShowMachine", swMach)
           }
       };
 
-
-
       subscribe_list_images = function(backend) {
+          $scope.images = [];
           var ws = new WebSocket($scope.url);
           ws.onopen = function(event) { ws.send('list_iso_images/'+backend) };
           ws.onmessage = function(event) {
@@ -159,6 +182,7 @@ ravadaApp.directive("solShowMachine", swMach)
 
       $scope.iso = { arch: 'unknown' };
       $scope.machine_types = { };
+      $scope.storage_pools = { };
 
       $scope.change_iso = function(iso) {
           $scope.id_iso_id = iso.id;
@@ -192,9 +216,14 @@ ravadaApp.directive("solShowMachine", swMach)
                 }
             }
         }
-        if ($scope.id_iso && $scope.id_iso.options
-                          && $scope.id_iso.options['bios']) {
-            $scope.bios = $scope.id_iso.options['bios'];
+        if ($scope.id_iso && $scope.id_iso.options) {
+            if( $scope.id_iso.options['bios']) {
+                $scope.bios = $scope.id_iso.options['bios'];
+            }
+            if( $scope.id_iso.options['hardware']) {
+                $scope.hardware = $scope.id_iso.options['hardware'];
+            }
+
         }
 
       };
@@ -864,6 +893,122 @@ ravadaApp.directive("solShowMachine", swMach)
         list_networks();
     }
 
+
+    function settings_storage($scope, $http, $interval, $timeout) {
+        var start=0;
+        var limit=10;
+        $scope.n_selected = 0;
+        $scope.init=function(id_vm) {
+            $scope.id_vm = id_vm;
+            list_storage_pools(id_vm);
+            $scope.storage = {
+                'id': id_vm
+            };
+            $scope.load_node(id_vm);
+            $scope.list_unused_volumes();
+        };
+
+        $scope.load_node= function() {
+            $http.get('/node/info/'+$scope.id_vm+'.json')
+                .then(function(response) {
+                $scope.node = response.data;
+            });
+        };
+
+        $scope.update_node = function(node) {
+            $scope.error = '';
+            var data = {
+                'id': node.id
+                ,'base_storage': node.base_storage
+                ,'default_storage': node.default_storage
+                ,'clone_storage': node.clone_storage
+            };
+            $http.post('/v1/node/set/'
+                , JSON.stringify(data))
+                .then(function(response) {
+                    if (response.data.ok == 1){
+                        $scope.saved = true;
+                    }
+                    $scope.error = response.data.error;
+                });
+        };
+
+        $scope.toggle_active = function(pool) {
+            if (pool.is_active) {
+                pool.is_active=0;
+            } else {
+                pool.is_active=1;
+            }
+            $http.post('/request/active_storage_pool'
+                ,JSON.stringify({'id_vm': $scope.id_vm
+                    , 'value': pool.is_active
+                    , 'name': pool.name})
+            ).then(function(response) {
+                $scope.error = response.data.error;
+            });
+
+        };
+
+        list_storage_pools= function(id_vm) {
+            $scope.pools=[];
+            $http.get('/storage/list_pools/'+id_vm).then(function(response) {
+                $scope.storage_pools = response.data;
+                for (var i=0;i<response.data.length;i++) {
+                    $scope.pools[i]=response.data[i].name;
+                }
+            });
+        }
+
+        $scope.list_unused_volumes=function() {
+            $scope.loading_unused=true;
+            $http.get('/storage/list_unused_volumes?id_vm='+$scope.id_vm
+                +'&start='+start+'&limit='+limit)
+                    .then(function(response) {
+                $scope.loading_unused=false;
+                $scope.list_more = response.data.more;
+                if (!$scope.unused_volumes) {
+                    $scope.unused_volumes = response.data.list;
+                    return;
+                }
+                for (var i=0; i<response.data.list.length ; i++) {
+                    $scope.unused_volumes.push(response.data.list[i]);
+                }
+                $scope.req_more = false;
+                window.scrollTo(0, document.body.scrollHeight);
+            });
+        }
+        $scope.remove_selected = function() {
+            var remove = [];
+            var files = $scope.unused_volumes;
+            var keep = [];
+            var count = 0;
+            for (var i=0; i<files.length; i++ ) {
+                if (files[i].remove) {
+                    remove.push(files[i].file);
+                    count++;
+                } else {
+                    keep.push(files[i]);
+                }
+            }
+            if (!count) {
+                return;
+            };
+            $scope.unused_volumes = keep;
+            $http.post('/request/remove_files'
+                ,JSON.stringify({'id_vm': $scope.id_vm , 'files': remove })
+            ).then(function(response) {
+                start=0;
+                $scope.unused_volumes=undefined;
+                $scope.list_unused_volumes();
+            });
+        }
+        $scope.more = function() {
+            start += limit;
+            $scope.req_more = true;
+            $scope.list_unused_volumes();
+        };
+    }
+
     function newNodeCtrl($scope, $http, $timeout) {
         $http.get('/list_vm_types.json').then(function(response) {
             $scope.backends = response.data;
@@ -923,6 +1068,64 @@ ravadaApp.directive("solShowMachine", swMach)
                 }
             });
         };
+    };
+
+    function new_storage($scope, $http, $timeout) {
+        var url_ws;
+        var ws;
+        $scope.name_valid=true;
+        $scope.directory_valid=true;
+
+        $scope.init=function(id_vm, url) {
+            $scope.id_vm = id_vm;
+            url_ws = url;
+        };
+        $scope.check_name = function(name) {
+            const re = /^[a-zA-Z]+[a-zA-Z0-9_\.\-]*$/;
+            $scope.name_valid = re.test(name);
+        };
+        $scope.check_directory = function(name) {
+            const re = /^\/[a-zA-Z]+[a-zA-Z0-9_\.\-\/]*$/;
+            $scope.directory_valid = re.test(name);
+        };
+
+        $scope.name_duplicated=false;
+        $scope.add_storage = function() {
+            $scope.request=undefined;
+            if (!$scope.name_valid || ! $scope.directory_valid) {
+                return;
+            }
+            $http.post('/request/create_storage_pool/'
+                ,JSON.stringify({
+                    'id_vm': $scope.id_vm
+                    ,'name': $scope.name
+                    ,'directory': $scope.directory})
+            ).then(function(response) {
+                if (response.data.ok == 1 ) {
+                    console.log(response.data);
+                    $scope.request = {
+                        'id': response.data.request
+                    };
+                    subscribe_request(response.data.request);
+                }
+            });
+        }
+        subscribe_request = function(id_request) {
+            if(typeof(ws) === 'undefined') {
+                ws = new WebSocket(url_ws);
+            } else {
+                ws.close();
+                ws = new WebSocket(url_ws);
+            }
+            ws.onopen = function(event) { ws.send('request/'+id_request) };
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                $scope.$apply(function () {
+                    $scope.request = data;
+                });
+            }
+        };
+
     };
 
    function settings_network($scope, $http, $timeout) {
@@ -1421,5 +1624,9 @@ ravadaApp.directive("solShowMachine", swMach)
         };
 
 
+    };
+
+    function upload_users($scope, $http) {
+        $scope.type = 'sql';
     };
 }());

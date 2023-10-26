@@ -79,6 +79,22 @@
                 type="datetime-local">
             </div>
         </div>
+
+        <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-4">Content Security Policy</div>
+        </div>
+        % for my $item (sort keys %$csp) {
+        <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-2" align="right"><%= $item %></div>
+            <div class="col-md-4">
+                <input name="csp_<%= $item %>" type="text" ng-model="settings.frontend.content_security_policy['<%= $item %>'].value"/>
+            </div>
+        </div>
+        % }
+        {{settings.frontend.content_security_policy}}
+
         <div class="row">
             <div class="col-md-1"></div>
             <div class="col-md-6">

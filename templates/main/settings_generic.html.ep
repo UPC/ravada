@@ -10,7 +10,7 @@
         <div class="card"
              ng-cloak="1"
              ng-controller="settings_<%= $item %>"
-             ng-init="init(<%= $id %>, '<%= url_for('ws_subscribe')->to_abs %>')"
+             ng-init="init('<%= $id %>', '<%= url_for('ws_subscribe')->to_abs %>')"
         >
             <div class="card-header"><h2><%= $item  %> {{<%= $item %>._old_name}}</h2></div>
             <div class="card-body">

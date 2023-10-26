@@ -17,13 +17,14 @@ Ravada::Auth::SSO - SSO library for Ravada
 use Moose;
 
 no warnings "experimental::signatures";
-use feature qw(signatures);
+use feature qw(signatures state);
 
 use Ravada::Auth::SQL;
 
 with 'Ravada::Auth::User';
 
 our $CONFIG = \$Ravada::CONFIG;
+our $ERR;
 
 sub BUILD {
     my $self = shift;
@@ -71,6 +72,7 @@ sub _get_session_userid_by_ticket
     my ($cookie) = @_;
     my $result;
     die 'Can\'t read pubkey file (sso->cookie->pub_key value at ravada.conf file)' if (! -r $$CONFIG->{sso}->{cookie}->{pub_key});
+
     eval { $result = Authen::ModAuthPubTkt::pubtkt_verify(publickey => $$CONFIG->{sso}->{cookie}->{pub_key}, keytype => $$CONFIG->{sso}->{cookie}->{type}, ticket => $cookie); };
     die $@ ? $@ : 'Cannot validate ticket' if ((! $result) || ($@));
     my %data = Authen::ModAuthPubTkt::pubtkt_parse($cookie);
@@ -112,6 +114,40 @@ sub is_admin { }
 
 sub is_external { }
 
-sub init { }
+sub init {
+    state $warn = 0;
+    if (exists $$CONFIG->{sso} && $$CONFIG->{sso} ) {
+        for my $field (qw(url service cookie)) {
+            if ( !exists $$CONFIG->{sso}->{$field} ) {
+                $ERR = "Error: Missing sso / $field in config file\n";
+                warn $ERR unless $warn++;
+                return 0;
+            }
+        }
+        if (!$$CONFIG->{sso}->{cookie}->{type}) {
+            $ERR = "Error: missing sso / cookie / type in config file\n";
+            warn $ERR unless $warn++;
+            return 0;
+        }
+        for my $field (qw(priv_key pub_key)) {
+            if ( !exists $$CONFIG->{sso}->{cookie}->{$field}
+            || ! $$CONFIG->{sso}->{cookie}->{$field}) {
+                $ERR = "Error: Missing sso / cookie / $field in config file\n";
+                warn $ERR unless $warn++;
+                return 0;
+            }
+            my $file = $$CONFIG->{sso}->{cookie}->{$field};
+            if (! -e $file) {
+                $ERR = "Error: Missing or unreadable file $file\n";
+                warn $ERR unless $warn++;
+                return 0;
+
+            }
+
+        }
+        return 1;
+    }
+    return 0;
+}
 
 1;

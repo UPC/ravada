@@ -226,9 +226,12 @@ sub _get_controller_display($self) {
     );
     $sth->execute($self->id);
     my @displays;
+    my $index=0;
     while (my $row = $sth->fetchrow_hashref) {
         $row->{extra} = decode_json($row->{extra})
         if exists $row->{extra} && defined $row->{extra};
+
+        delete $row->{extra} if ref($row->{extra}) && !keys %{$row->{extra}};
 
         $row->{file_extension} = ($file_extension{$row->{driver}} or '');
 
@@ -246,6 +249,8 @@ sub _get_controller_display($self) {
         }
 
         $row->{_can_remove} = 1;
+        $row->{_index}=$index++ if !$row->{is_secondary};
+        $row->{_can_edit}=1 if $row->{is_builtin} && !$row->{is_secondary} && $row->{extra};
         push @displays, ($row);
     }
     #    $self->_fix_ports_duplicated(\@displays) if $self->is_active();

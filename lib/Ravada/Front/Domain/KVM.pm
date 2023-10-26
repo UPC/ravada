@@ -176,7 +176,9 @@ sub _get_controller_generic($self,$type) {
 }
 
 sub _get_controller_cpu($self) {
-    my $doc = XML::LibXML->load_xml(string => $self->_data_extra('xml'));
+    my $xml = $self->_data_extra('xml');
+    return if !$xml;
+    my $doc = XML::LibXML->load_xml(string => $xml);
     my $item = {
         _name => 'cpu'
         ,_order => 0
@@ -192,6 +194,15 @@ sub _get_controller_cpu($self) {
     my ($xml_vcpu) = $doc->findnodes("/domain/vcpu");
     _xml_elements($xml_vcpu, $item->{vcpu});
 
+    $item->{vcpu}->{current} = $item->{vcpu}->{'#text'}
+    if exists $item->{vcpu}->{'#text'} && ! defined $item->{vcpu}->{'current'};
+
+    if ($self->is_active) {
+        my $info = $self->get_info();
+        $item->{vcpu}->{current} = $info->{n_virt_cpu}
+        if exists $info->{n_virt_cpu};
+
+    }
     if (exists $item->{cpu}->{feature} && ref($item->{cpu}->{feature}) ne 'ARRAY') {
         $item->{cpu}->{feature} = [ $item->{cpu}->{feature} ];
     }
@@ -211,6 +222,8 @@ sub _get_hw_memory($self) {
 
     my $info = $self->get_info();
     my ($memory, $current) = ($info->{max_mem}, $info->{memory});
+    $memory = 0 if !defined $memory;
+    $current = 0 if !defined $current;
 
     my $item = {
         max_mem => int($memory/1024)

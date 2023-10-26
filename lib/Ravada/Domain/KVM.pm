@@ -153,7 +153,10 @@ sub list_disks {
         for my $child ($disk->childNodes) {
             if ($child->nodeName eq 'source') {
                 my $file = $child->getAttribute('file');
-                next if $file =~ /\.iso$/;
+                if (!$file) {
+                    $file = $child->getAttribute('name');
+                }
+                next if !$file || $file =~ /\.iso$/;
                 push @disks,($file);
             }
         }
@@ -376,7 +379,9 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
         my ($source_node) = $disk->findnodes('source');
         my $file;
-        $file = $source_node->getAttribute('file')  if $source_node;
+        if ( $source_node ) {
+            $file = $self->_get_volume_file($source_node);
+        }
 
         my ($target_node) = $disk->findnodes('target');
         my ($driver_node) = $disk->findnodes('driver');
@@ -431,6 +436,9 @@ sub _pool_refresh($pool) {
     for ( ;; ) {
         eval { $pool->refresh };
         return if !$@;
+
+        return if ref($@) && $@->code == 1;
+
         warn "WARNING: on vol remove , pool refresh $@" if $@;
         sleep 1;
     }
@@ -568,7 +576,7 @@ sub _set_volumes_backing_store($self) {
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
         next if $disk->getAttribute('device') ne 'disk';
         for my $source( $disk->findnodes('source')) {
-            my $file = $source->getAttribute('file');
+            my $file = $self->_get_volume_file($source);
             my $backing_file = $vol{$file}->backing_file();
 
             $self->_set_backing_store($disk, $backing_file);
@@ -576,6 +584,18 @@ sub _set_volumes_backing_store($self) {
         }
     }
     $self->reload_config($doc);
+}
+
+sub _get_volume_file($self, $source) {
+    return $source->getAttribute('file') if $source->getAttribute('file');
+
+                my $pool_name = $source->getAttribute('pool') or die "Error: I need pool or file in ".$source->toString();
+                my $volume = $source->getAttribute('volume') or die "Error: I need pool or file in ".$source->toString();
+                my $pool = $self->_vm->vm->get_storage_pool_by_name($pool_name)
+                    or die "Error: no pool $pool_name";
+                my $vol = $pool->get_volume_by_name($volume);
+     return $vol->get_path;
+
 }
 
 
@@ -643,6 +663,7 @@ sub _detect_disks_driver($self) {
         my ( $source ) = $disk->findnodes('source');
 
         my $file = $source->getAttribute('file');
+        next if !$file;
         next if $file =~ /iso$/;
         next unless $self->_vm->file_exists($file);
 
@@ -784,9 +805,7 @@ sub _display_info_spice($graph) {
     for my $item ( $graph->findnodes("*")) {
         next if $item->getName eq 'listen';
         for my $attr ( $item->getAttributes()) {
-            my $value = $attr->toString();
-            $value =~ s/^\s+//;
-            $display{$item->getName()} = $value;
+            $display{$item->getName()}->{$attr->getName} = $attr->getValue();
         }
     }
 
@@ -877,7 +896,7 @@ sub start {
     $self->status('starting');
 
     my $error;
-    for ( ;; ) {
+    for ( 1 .. 60 ) {
         eval { $self->domain->create() };
         $error = $@;
         next if $error && $error =~ /libvirt error code: 1, .* pool .* asynchronous/;
@@ -968,6 +987,33 @@ sub shutdown {
     return $self->_do_shutdown();
 
 }
+
+sub _pre_start_internal($self,@args) {
+    # remove current CPU before start because we want max cpu the next start
+    $self->_remove_current_cpu();
+}
+
+sub _post_shutdown_internal($self,@args) {
+    # remove current CPU after shutdown because we want max cpu the next start
+    $self->_remove_current_cpu();
+}
+
+sub _remove_current_cpu($self) {
+    my ($is_active,$doc);
+    eval {
+       $is_active = $self->is_active if $self->domain;
+       $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE)) if $self->domain;
+    };
+    warn $@ if $@;
+    return if $is_active || !$doc;
+
+    $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE));
+    my ($cpu_node) = $doc->findnodes('/domain/vcpu');
+    $cpu_node->removeAttribute('current');
+
+    $self->reload_config($doc);
+}
+
 
 sub _do_shutdown {
     my $self = shift;
@@ -1190,6 +1236,7 @@ sub add_volume {
     my $type = delete $args{type};
     my $format = delete $args{format};
     my $cache = (delete $args{cache} or 'unsafe');
+    my $storage = delete $args{storage};
     my %valid_arg = map { $_ => 1 } ( qw( driver name size vm xml swap target file allocation));
 
     for my $arg_name (keys %args) {
@@ -1224,6 +1271,7 @@ sub add_volume {
         ,format => $format
         ,allocation => ($args{allocation} or undef)
         ,target => $target_dev
+        ,storage => $storage
     )   if !$path && $device ne 'cdrom';
     ($name) = $path =~ m{.*/(.*)} if !$name;
 
@@ -1585,18 +1633,6 @@ sub can_screenshot {
     return 1 if $self->_vm();
 }
 
-=head2 storage_refresh
-
-Refreshes the internal storage. Used after removing files such as base images.
-
-=cut
-
-sub storage_refresh {
-    my $self = shift;
-    $self->storage->refresh();
-}
-
-
 =head2 get_info
 
 This is taken directly from Sys::Virt::Domain.
@@ -1653,8 +1689,16 @@ sub get_info {
     $info->{max_mem} = $mem_xml if $mem_xml ne $info->{max_mem};
 
     $info->{cpu_time} = $info->{cpuTime};
-    $info->{n_virt_cpu} = $info->{nrVirtCpu};
-    confess Dumper($info) if !$info->{n_virt_cpu};
+
+    my ($cpu_text) = $doc->findnodes('/domain/vcpu/text()');
+    $info->{max_virt_cpu} = 0+$cpu_text->getData();
+    my ($cpu_node) = $doc->findnodes('/domain/vcpu');
+
+    if ($cpu_node->getAttribute('current')) {
+        $info->{n_virt_cpu} = 0+$cpu_node->getAttribute('current')
+    } else {
+        $info->{n_virt_cpu} = $info->{max_virt_cpu};
+    }
 
     if ( $self->is_active() ) {
         $info->{ip} = $self->ip();
@@ -1664,6 +1708,13 @@ sub get_info {
         eval { @interfaces2 = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_AGENT) };
         @interfaces = @interfaces2 if !scalar(@interfaces);
         $info->{interfaces} = \@interfaces;
+
+        eval {
+        $info->{n_virt_cpu}
+        = $self->domain->get_vcpus(Sys::Virt::Domain::VCPU_GUEST);
+        };
+        # warn error unless it is agent not responding
+        warn $@ if $@ && $@ !~ / error code: 86, /
     }
 
     lock_keys(%$info);
@@ -1889,7 +1940,6 @@ sub rename_volumes {
         copy($volume, $new_volume) or die "$! $volume -> $new_volume";
         $source->setAttribute(file => $new_volume);
         unlink $volume or warn "$! removing $volume";
-        $self->storage->refresh();
         $self->domain->attach_device($disk);
     }
 }
@@ -2452,12 +2502,19 @@ sub _set_controller_network($self, $number, $data) {
 
 sub _set_controller_display_spice($self, $number, $data) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
-    for my $graphic ( $doc->findnodes("/domain/devices/graphics")) {
-        next if $graphic->getAttribute('type') ne 'spice';
-        die "Changing ".$graphic->toString()." ".Dumper($data);
+
+    my $count = 0;
+    my $graphic;
+    for my $g0 ( $doc->findnodes("/domain/devices/graphics")) {
+        if (!defined $number || $count++ >= $number ) {
+            $graphic = $g0;
+        }
     }
-    my ($devices) = $doc->findnodes("/domain/devices");
-    my $graphic = $devices->addNewChild(undef,'graphics');
+    if (!$graphic) {
+        my ($devices) = $doc->findnodes("/domain/devices");
+        $graphic = $devices->addNewChild(undef,'graphics');
+    }
+
     $graphic->setAttribute(type => 'spice');
 
     my $port = ( delete $data->{port} or 'auto');
@@ -2524,13 +2581,17 @@ sub _set_controller_display_vnc($self, $number, $data) {
 sub _set_controller_display($self, $number, $data) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
 
+    $data->{driver} = 'spice' if !$data->{driver};
+
+    my @graphics = $doc->findnodes("/domain/devices/graphics");
+    $number = scalar(@graphics) if !defined $number;
+
     return $self->_set_controller_display_spice($number, $data)
     if defined $data && $data->{driver} eq 'spice';
 
     return $self->_set_controller_display_vnc($number, $data)
     if defined $data && $data->{driver} eq 'vnc';
 
-    my @graphics = $doc->findnodes("/domain/devices/graphics");
     return $self->_set_controller_display_spice($number, $data)
     if exists $graphics[$number] && $graphics[$number]->getAttribute('type') eq 'spice';
 
@@ -2549,7 +2610,7 @@ sub remove_controller($self, $name, $index=0,$attribute_name=undef, $attribute_v
     my $ret;
 
     #some hardware can be removed searching by attribute
-    if($name eq 'display' || defined $attribute_name ) {
+    if(defined $attribute_name ) {
         $ret = $sub->($self, undef, $attribute_name, $attribute_value);
     } else {
         $ret = $sub->($self, $index);
@@ -2576,9 +2637,9 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
     if defined $attribute_name0 && !defined $attribute_value;
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
-    my ($devices) = $doc->findnodes('/domain/devices');
     my $ind=0;
     my @found;
+    my ($devices) = $doc->findnodes("/domain/devices");
     for my $controller ($devices->findnodes($device)) {
         my ($item, $attr_name)= _find_child($controller, $attribute_name0);
 
@@ -2925,31 +2986,98 @@ sub _change_hardware_disk_bus($self, $index, $bus) {
     $self->reload_config($doc);
 }
 
+sub _default_hw_display() {
+    return {
+        type => 'spice'
+        ,extra => {
+            'image' => { 'compression' => 'auto_glz' }
+            ,'jpeg' => { 'compression' => 'auto' }
+            ,'playback' => { 'compression' => 'on' }
+            ,'streaming' => { 'mode' => 'filter' }
+            ,'zlib' => { 'compression' => 'auto' }
+        }
+    }
+};
 sub _change_hardware_display($self, $index, $data) {
+    $data = _default_hw_display()
+    if defined $data && ! keys %$data;
+
     my $type = delete $data->{driver};
-    $type =~ s/-tls$//;
+    $type =~ s/-tls$// if $type;
     my $port = delete $data->{port};
     confess if $port;
-    for my $item (keys %$data) {
-        $self->_set_driver_generic_simple("/domain/devices/graphics\[\@type='$type']/$item",$data->{$item});
+
+    $index = 0 if !defined $index;
+
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my @graphics = $doc->findnodes("/domain/devices/graphics");
+
+    my $graphics=$graphics[$index];
+
+    die "Error: I can't find graphics #$index. Only ".scalar(@$graphics)." found" if !$graphics;
+
+    my $old_type = $graphics->getAttribute('type');
+    my $changed = 0;
+    if (defined $type && $old_type ne $type ) {
+        $graphics->removeAttribute('port');
+        $graphics->setAttribute(type => $type);
+        for my $node ($graphics->findnodes('*')) {
+            $graphics->removeChild($node);
+        }
+        $changed++;
     }
+    my $extra = $data->{extra};
+    for my $item (keys %$extra) {
+        $changed += _change_xml($graphics,$item,$extra->{$item});
+    }
+
+    $self->reload_config($doc) if $changed;
 }
 
 
 sub _change_hardware_vcpus($self, $index, $data) {
+
     confess "Error: I don't understand vcpus index = '$index' , only 0"
     if defined $index && $index != 0;
-    my $n_virt_cpu = delete $data->{n_virt_cpu};
+    my $req_max = delete $data->{max_virt_cpu};
+    my $req_current = delete $data->{n_virt_cpu};
+
     confess "Error: Unkown args ".Dumper($data) if keys %$data;
 
-    if ($self->domain->is_active) {
-        $self->domain->set_vcpus($n_virt_cpu, Sys::Virt::Domain::VCPU_GUEST);
+    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my $changed =0;
+
+    if ($req_current) {
+        eval {
+            $self->domain->set_vcpus($req_current, Sys::Virt::Domain::VCPU_GUEST) if $self->is_active;
+
+        };
+        if ($@) {
+            warn $@;
+            $self->_data('needs_restart' => 1) if $self->is_active;
+        }
+        my ($vcpus) = $doc->findnodes('/domain/vcpu');
+        if (!defined $vcpus->getAttribute('current')
+            || $vcpus->getAttribute('current') != $req_current) {
+            $vcpus->setAttribute(current => $req_current);
+            $changed++;
+        }
     }
 
-    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
-    my ($vcpus) = ($doc->findnodes('/domain/vcpu/text()'));
-    $vcpus->setData($n_virt_cpu);
-    $self->reload_config($doc);
+    my ($cpu) = $doc->findnodes('/domain/cpu');
+    my ($topology) = $cpu->findnodes('topology');
+    $cpu->removeChild($topology) if $topology;
+
+    if ($req_max) {
+        my ($vcpus_max) = ($doc->findnodes('/domain/vcpu/text()'));
+        if ( $vcpus_max ne $req_max ) {
+            $vcpus_max->setData($req_max);
+            $self->needs_restart(1) if $self->is_active;
+            $changed++;
+        }
+    }
+
+    $self->reload_config($doc) if $changed;
 
 }
 
@@ -3108,6 +3236,9 @@ sub _default_cpu($self) {
 }
 
 sub _fix_vcpu_from_topology($self, $data) {
+
+    $data->{vcpu} = {} if !exists $data->{vcpu};
+
     if (!exists $data->{cpu}->{topology}
         || !defined($data->{cpu}->{topology})) {
 
@@ -3133,6 +3264,7 @@ sub _fix_vcpu_from_topology($self, $data) {
 }
 
 sub _change_hardware_cpu($self, $index, $data) {
+
     $data = $self->_default_cpu()
     if !keys %$data;
 
@@ -3140,36 +3272,76 @@ sub _change_hardware_cpu($self, $index, $data) {
     if !$data->{cpu}->{'model'}->{'#text'};
 
     delete $data->{cpu}->{model}->{'$$hashKey'};
-
-    my $doc = XML::LibXML->load_xml(string => $self->xml_description);
+    my @flags = (Sys::Virt::Domain::XML_INACTIVE);
+    my $doc = XML::LibXML->load_xml( string => $self->domain->get_xml_description( @flags ));
     my $count = 0;
     my $changed = 0;
 
     my ($n_vcpu) = $doc->findnodes('/domain/vcpu/text()');
+    my ($cpu0) = $doc->findnodes('/domain/cpu');
 
     $self->_fix_vcpu_from_topology($data);
+
     lock_hash(%$data);
 
+    my ($data_n_cpus, $data_current_cpus);
+    $data_n_cpus = delete $data->{vcpu}->{'#text'} if exists $data->{vcpu}->{'#text'};
+
+    $data_current_cpus = delete $data->{vcpu}->{'current'} if exists $data->{vcpu}->{'current'};
+    $data_n_cpus = $data_current_cpus if !defined $data_n_cpus && defined $data_current_cpus;
+
     my ($vcpu) = $doc->findnodes('/domain/vcpu');
-    if (exists $data->{vcpu} && $n_vcpu ne $data->{vcpu}->{'#text'}) {
+    if (defined $data_n_cpus && exists $data->{vcpu} && $n_vcpu ne $data_n_cpus) {
         $vcpu->removeChildNodes();
-        $vcpu->appendText($data->{vcpu}->{'#text'});
+        $vcpu->appendText($data_n_cpus);
+        $changed++;
     }
+    for my $key ( keys %{$data->{vcpu}} ) {
+        next if $vcpu->getAttribute($key)
+        && exists $data->{vcpu}->{$key}
+        && defined $data->{vcpu}->{$key}
+        && $vcpu->getAttribute($key) eq $data->{vcpu}->{$key};
+
+        $vcpu->setAttribute($key => $data->{vcpu}->{$key});
+        $changed++ if $key ne 'current';
+    }
+    for my $attrib ($vcpu->attributes) {
+        next if exists $data->{vcpu}->{$attrib->name};
+        $vcpu->removeAttribute($attrib->name);
+        $changed++ if $attrib->name ne 'current';
+    }
+
     my ($domain) = $doc->findnodes('/domain');
     my ($cpu) = $doc->findnodes('/domain/cpu');
+    my $cpu_string = '';
+    $cpu_string = $cpu->toString();
+    $cpu_string = join("",split(/\n/,$cpu->toString)) if $cpu;
     if (!$cpu) {
         $cpu = $domain->addNewChild(undef,'cpu');
     }
-    my $feature = delete $data->{cpu}->{feature};
+    my $feature = $data->{cpu}->{feature};
 
-    $changed += _change_xml($domain, 'cpu', $data->{cpu});
+    _change_xml($domain, 'cpu', $data->{cpu});
 
     if ( $feature ) {
         _change_xml_list($cpu, 'feature', $feature, 'name');
-        $changed++;
+    }
+    $cpu_string =~ s/\s\s+/ /g;
+    my $cpu_string2 = join("",grep(/./,split(/\n/,$cpu->toString)));
+    $cpu_string2 =~ s/\s\s+/ /g;
+
+    if ( $cpu_string ne $cpu_string2 || $changed ) {
+        $self->needs_restart(1) if $self->is_active;
+        $self->reload_config($doc);
+    }
+    if ($self->is_active && $data_current_cpus) {
+        eval {
+            $self->domain->set_vcpus($data_current_cpus
+                , Sys::Virt::Domain::VCPU_GUEST);
+        };
+        warn $@ if $@;
     }
 
-    $self->reload_config($doc) if $changed;
 }
 
 
@@ -3317,9 +3489,10 @@ sub _change_xml_list($xml,$name, $data, $field='name') {
             $node = $curr if $curr->getAttribute($field) eq $entry->{$field};
         }
         $node = $xml->addNewChild(undef, $name) if !$node;
-        for my $field (keys %$entry) {
-            next if $field eq '$$hashKey';
-            $node->setAttribute($field, $entry->{$field});
+        $node->setAttribute($field, $entry->{$field});
+        for my $field2 (keys %$entry) {
+            next if $field2 eq '$$hashKey' || $field2 eq $field;
+            $node->setAttribute($field2, $entry->{$field2});
         }
     }
 
@@ -3330,8 +3503,10 @@ sub _change_xml_list($xml,$name, $data, $field='name') {
 }
 
 sub _change_xml($xml, $name, $data) {
+    return 0 if ref($data) eq 'ARRAY';
+
     confess Dumper([$name, $data])
-    if !ref($data) || ( ref($data) ne 'HASH' && ref($data) ne 'ARRAY');
+    if !ref($data) || ( ref($data) ne 'HASH' );
 
     my $changed = 0;
 
@@ -3371,12 +3546,13 @@ sub _change_xml($xml, $name, $data) {
             && $node->getAttribute($field) eq $data->{$field};
 
             $node->setAttribute($field, $data->{$field});
+
             $changed++;
         }
     }
     for my $child ( $node->childNodes() ) {
         my $name = $child->nodeName();
-        if (!exists $data->{$name} || !defined $data->{$name} ) {
+        if ($name ne '#text' && (!exists $data->{$name} || !defined $data->{$name}) ) {
             $node->removeChild($child);
             $changed++;
         }
@@ -3471,8 +3647,19 @@ sub _validate_xml($self, $doc) {
 
 sub reload_config($self, $doc) {
     $self->_validate_xml($doc) if $self->_vm->vm->get_major_version >= 4;
-    my $new_domain = $self->_vm->vm->define_domain($doc->toString);
+
+    my $new_domain;
+
+    eval {
+        $new_domain = $self->_vm->vm->define_domain($doc->toString);
+    };
+
+    cluck ''.$@ if $@;
+
     $self->domain($new_domain);
+
+    $self->_data_extra('xml', $doc->toString) if $self->is_known && $self->is_local;
+
 }
 
 sub _save_xml_tmp($self,$doc) {

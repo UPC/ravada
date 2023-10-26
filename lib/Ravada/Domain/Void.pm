@@ -478,6 +478,7 @@ sub add_volume {
     my $device = ( delete $args{device} or 'disk' );
     my $type = ( delete $args{type} or '');
     my $format = delete $args{format};
+    my $storage = ( delete $args{storage} or $self->_vm->default_storage_pool_name);
 
     if (!$format) {
         if ( $args{file}) {
@@ -494,8 +495,10 @@ sub add_volume {
     my $suffix = $format;
 
     if ( !$args{file} ) {
+        my $path = delete $args{path};
+        $path = $self->_vm->_storage_path($storage) if $storage;
         my $vol_name = ($args{name} or Ravada::Utils::random_name(4) );
-        $args{file} = $self->_config_dir."/$vol_name";
+        $args{file} = "$path/$vol_name";
         $args{file} .= ".$type$suffix" if $args{file} !~ /\.\w+$/;
     }
 
@@ -540,6 +543,7 @@ sub add_volume {
     $self->_store(hardware => $hardware);
 
     delete @args{'name', 'target', 'bus'};
+
     $self->_create_volume($file, $format, \%args) if ! -e $file;
 
     return $file;
@@ -670,7 +674,11 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
                 && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);
         }
         $dev->{n_order} = $n_order++;
-        $dev->{driver}->{type} = 'void';
+        if (!ref($dev->{driver})) {
+            $dev->{driver} = { type => ($dev->{driver} or 'void') };
+        } else {
+            $dev->{driver}->{type} = 'void';
+        }
         my $vol = Ravada::Volume->new(
             file => $dev->{file}
             ,info => $dev
@@ -905,6 +913,7 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
     return $self->_set_controller_disk($data) if $name eq 'disk';
 
     $data->{listen_ip} = $self->_vm->listen_ip if $name eq 'display'&& !$data->{listen_ip};
+    $data->{driver} = 'spice' if $name eq 'display'&& !$data->{driver};
 
     my $list = ( $hardware->{$name} or [] );
 
@@ -1025,11 +1034,15 @@ sub _change_hardware_disk($self, $index, $data_new) {
 
 sub _change_hardware_vcpus($self, $index, $data) {
     my $n = delete $data->{n_virt_cpu};
+    my $max = delete $data->{max_virt_cpu};
     confess "Error: unknown args ".Dumper($data) if keys %$data;
 
     my $info = $self->_value('info');
-    $info->{n_virt_cpu} = $n;
+    $info->{n_virt_cpu} = $n if defined $n;
+    $info->{max_virt_cpu} = $max if defined $max;
     $self->_store(info => $info);
+
+    $self->needs_restart(1);
 }
 
 sub _change_hardware_memory($self, $index, $data) {

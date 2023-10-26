@@ -36,7 +36,7 @@ our %FIELD = map { $_ => 1 } qw(error output);
 our %FIELD_RO = map { $_ => 1 } qw(id name);
 
 our $args_manage = { name => 1 , uid => 1, after_request => 2 };
-our $args_prepare = { id_domain => 1 , uid => 1, with_cd => 2 };
+our $args_prepare = { id_domain => 1 , uid => 1, with_cd => 2, publish => 2 };
 our $args_remove_base = { id_domain => 1 , uid => 1 };
 our $args_manage_iptables = {uid => 1, id_domain => 1, remote_ip => 1};
 
@@ -57,6 +57,7 @@ our %VALID_ARG = (
           ,start => 2
            ,data => 2
            ,options => 2
+           ,storage => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
@@ -73,6 +74,8 @@ our %VALID_ARG = (
     ,reboot_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
                        , id_vm => 2 }
     ,force_reboot_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
+    ,shutdown_start =>{ name => 2, id_domain => 2, uid => 1, timeout => 2
+        , at => 2 , id_vm => 2 }
     ,screenshot => { id_domain => 1 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1 }
@@ -85,8 +88,10 @@ our %VALID_ARG = (
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2, uid => 2 }
-    ,list_storage_pools => { id_vm => 1 , uid => 1 }
+    ,list_storage_pools => { id_vm => 1 , uid => 1, data => 2 }
+    ,active_storage_pool => { uid => 1, id_vm => 1, name => 1, value => 1}
     ,check_storage => { uid => 1 }
+    ,create_storage_pool => { uid => 1, id_vm => 1, name => 1, directory => 1 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
     ,cleanup => { timeout => 2 }
     ,clone => { uid => 1, id_domain => 1, name => 2, memory => 2, number => 2, volatile => 2, id_owner => 2
@@ -158,7 +163,11 @@ our %VALID_ARG = (
         ,spinoff_disks => 2
     }
     ,update_iso_urls => { uid => 1 }
+    ,list_unused_volumes => {uid => 1, id_vm => 1, start => 2, limit => 2 }
+    ,remove_files => { uid => 1, id_vm => 1, files => 1 }
 );
+
+$VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
     qw( create start shutdown force_shutdown reboot prepare_base remove remove_base rename_domain screenshot download
@@ -188,6 +197,7 @@ qw(
     set_time
     open_exposed_ports
     manage_pools
+    screenshot
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -337,6 +347,7 @@ sub info {
         ,error => $self->error
         ,id_domain => $self->id_domain
         ,output => $self->output
+        ,date_changed => $self->date_changed
     }
 }
 
@@ -755,9 +766,7 @@ sub _new_request {
     $self->{args} = decode_json($args{args});
     _init_connector()   if !$CONNECTOR || !$$CONNECTOR;
     if (!$force
-        && (
-        $CMD_NO_DUPLICATE{$args{command}}
-        || ($no_duplicate && $args{command} =~ /^(screenshot)$/))
+        && ( $CMD_NO_DUPLICATE{$args{command}} || $no_duplicate)
         ){
         my $id_dupe = $self->_duplicated_request();
 
@@ -769,7 +778,11 @@ sub _new_request {
         $id_recent = $req_recent->id if $req_recent;
 
         my $id = ( $id_dupe or $id_recent );
-        return Ravada::Request->open($id) if $id;
+        if ($id ) {
+            my $req = Ravada::Request->open($id);
+            $req->{_duplicated} = 1;
+            return $req;
+        }
 
     }
 
@@ -1023,10 +1036,11 @@ sub status {
         return ($row->{status} or 'unknown');
     }
 
+    my $date_changed = $self->date_changed;
+    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
+                ." WHERE id=?");
     for ( 1 .. 10 ) {
         eval {
-            my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set status=? "
-                ." WHERE id=?");
 
             $status = substr($status,0,64);
 
@@ -1040,6 +1054,25 @@ sub status {
 
     $self->_send_message($status, $message)
         if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
+
+    if ($status eq 'done' && $date_changed && $date_changed eq $self->date_changed) {
+        sleep 1;
+        for ( 1 .. 10 ) {
+            eval {
+                my $sth2=$$CONNECTOR->dbh->prepare(
+                    "UPDATE requests set date_changed=?"
+                    ." WHERE id=?"
+                );
+                $sth2->execute(Ravada::Utils::date_now, $self->{id});
+            };
+            if ($@) {
+                warn "Warning: $@";
+                sleep 1;
+            } else {
+                last;
+            }
+        }
+    }
     return $status;
 }
 
