@@ -20,3 +20,12 @@ Install previous version
 .. prompt:: bash
 
    sudo dpkg -i ravada_version.deb
+
+Restart the services
+--------------------
+
+.. prompt:: bash
+
+    sudo systemctl restart rvd_back
+    sudo systemctl restart rvd_front
+
