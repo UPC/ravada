@@ -81,6 +81,8 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/swap_partition
    docs/troubleshooting
    docs/update
+   docs/update_safe
+   docs/update_rollback
    docs/windows_clients
    docs/mac_clients
    docs/change_windows_driver_to_virtio
