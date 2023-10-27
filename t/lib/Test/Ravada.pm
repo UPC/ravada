@@ -86,6 +86,8 @@ create_domain
     remove_old_users
     remove_old_users_ldap
 
+    remove_qemu_pools
+
     mangle_volume
     test_volume_contents
     test_volume_format
@@ -273,6 +275,7 @@ sub create_domain_v2(%args) {
     my $user = (delete $args{user} or $USER_ADMIN);
     my $iso_name = delete $args{iso_name};
     my $id_iso = delete $args{id_iso};
+    my $disk = delete $args{disk};
     croak "Error: supply either iso_name or id_iso ".Dumper(\%args)
     if $iso_name && $id_iso;
 
@@ -298,13 +301,12 @@ sub create_domain_v2(%args) {
     if keys %args;
 
     my $iso;
-    my $disk;
     if ($vm->type eq 'KVM' && (!$iso_name || $iso_name !~ /Alpine/i)) {
         $iso = $vm->_search_iso($id_iso);
-        $disk = ($iso->{min_disk_size} or 2 );
+        $disk = ($iso->{min_disk_size} or 2 ) if !$disk;
         diag("Creating [$id_iso] $iso->{name}");
     } else {
-        $disk = 2;
+        $disk = 2 if !$disk;
     }
 
     if ($vm->type eq 'KVM' && !$options ) {
@@ -1021,7 +1023,12 @@ sub _activate_storage_pools($vm) {
         next if $sp->is_active;
         next unless $sp->get_name =~ /^tst_/;
         diag("Activating sp ".$sp->get_name." on ".$vm->name);
-        $sp->build() unless $sp->is_active;
+        my $xml = XML::LibXML->load_xml(string => $sp->get_xml_description());
+        my ($path) = $xml->findnodes('/pool/target/path');
+        my $dir = $path->textContent();
+        mkdir $dir or die "$! $dir" if ! -e $dir;
+
+        $sp->build();
         $sp->create() unless $sp->is_active;
     }
 }
@@ -1469,7 +1476,7 @@ sub remove_qemu_networks($vm=undef) {
 }
 
 sub remove_qemu_pools($vm=undef) {
-    return if !$VM_VALID{'KVM'} || $>;
+    return if !$vm && (!$VM_VALID{'KVM'} || $>);
     return if defined $vm && $vm->type eq 'Void';
     if (!defined $vm) {
         eval { $vm = rvd_back->search_vm('KVM') };
@@ -1484,18 +1491,22 @@ sub remove_qemu_pools($vm=undef) {
 
     my $base = base_pool_name();
     $vm->connect();
-    for my $pool  ( Ravada::VM::KVM::_list_storage_pools($vm->vm)) {
+    for my $pool  ( $vm->vm->list_all_storage_pools) {
         my $name = $pool->get_name;
+        next if $name !~ qr/^$base/;
+        diag($name);
+
         eval {$pool->build(Sys::Virt::StoragePool::BUILD_NEW); $pool->create() };
         warn $@ if $@ && $@ !~ /already active/;
-        next if $name !~ qr/^$base/;
-        diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
-        for my $vol ( $pool->list_volumes ) {
-            diag("Removing ".$pool->get_name." vol ".$vol->get_name);
-            $vol->delete();
+        if ($pool->is_active) {
+            diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
+            for my $vol ( $pool->list_volumes ) {
+                diag("Removing ".$pool->get_name." vol ".$vol->get_name);
+                $vol->delete();
+            }
         }
         _delete_qemu_pool($pool);
-        $pool->destroy();
+        $pool->destroy() if $pool->is_active;
         eval { $pool->undefine() };
         warn $@ if $@;
         warn $@ if$@ && $@ !~ /libvirt error code: 49,/;
@@ -1560,6 +1571,7 @@ sub remove_old_storage_pools_void() {
 }
 
 sub remove_old_storage_pools_kvm() {
+    remove_qemu_pools();
 }
 
 sub remove_old_storage_pools() {

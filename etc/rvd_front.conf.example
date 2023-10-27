@@ -40,4 +40,7 @@
 # Insert widget in /js/custom/insert_here_widget.js
 # this widget embed js in templates/bootstrap/scripts.html.ep
   ,widget => ''
+# Content-Security-Policy HTTP response header helps you reduce XSS risks
+# define custom directives. More info https://content-security-policy.com/
+  ,security_policy => 'foo.bar.com'
 };

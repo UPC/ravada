@@ -159,6 +159,7 @@ sub test_many_clones($vm) {
         ,id_domain => $base->id
     );
     $base->is_public(1);
+    wait_request();
     my $req = Ravada::Request->clone(
         uid => $user->id
         ,id_domain => $base->id

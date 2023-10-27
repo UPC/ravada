@@ -141,7 +141,7 @@ sub add_user {
             ." VALUES(?,?,?,?,?,?)");
     };
     confess $@ if $@;
-    if ($password) {
+    if ($password && !$external_auth) {
         $password = sha1_hex($password);
     } else {
         $password = '*LK* no pss';

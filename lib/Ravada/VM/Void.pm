@@ -473,7 +473,7 @@ sub search_volume($self, $pattern) {
     return;
 }
 
-sub _list_used_volumes($self) {
+sub list_used_volumes($self) {
     my @disk;
     for my $domain ($self->list_domains) {
         push @disk,($domain->list_disks());
@@ -484,32 +484,33 @@ sub _list_used_volumes($self) {
     return @disk
 }
 
-sub _list_volumes($self) {
+sub _list_volumes_sp($self, $sp) {
     die "Error: TODO remote!" if !$self->is_local;
 
-    my @vol;
-    opendir my $ls,$self->dir_img or die $!;
-    my $dir = $self->dir_img;
+    confess if !defined $sp;
+    my $dir = $sp->{path} or die "Error: unknown path ".Dumper($sp);
+    return if ! -e $dir;
 
+    my @vol;
+
+    opendir my $ls,$dir or die "$! $dir";
     while (my $file = readdir $ls) {
-        push @vol,("$dir/$file");
+        push @vol,("$dir/$file") if -f "$dir/$file";
     }
     closedir $ls;
+
     return @vol;
 
 }
 
-sub list_unused_volumes($self) {
-    die "Error: TODO remote!" if !$self->is_local;
-    my %used = map { $_ => 1 } $self->_list_used_volumes();
-    my @unused;
-    for my $vol ( sort $self->_list_volumes ) {
-        next if ! -f $vol;
-        next if $vol =~ m{/\..*yml$};
-
-        push @unused,($vol) unless $used{$vol};
+sub list_volumes($self) {
+    my @volumes;
+    for my $sp ($self->list_storage_pools(1)) {
+        for my $vol ( $self->_list_volumes_sp($sp) ) {
+            push @volumes,($vol);
+        }
     }
-    return @unused;
+    return @volumes;
 }
 
 sub _search_volume_remote($self, $pattern) {
@@ -819,6 +820,19 @@ sub change_network($self,$data) {
 
     delete $net->{is_public};
     DumpFile($file_out,$net);
+}
+
+sub remove_storage_pool($self, $name) {
+    die "TODO remote VM" unless $self->is_local;
+
+    my $file_sp = $self->dir_img."/.storage_pools.yml";
+    my $sp_list = LoadFile($file_sp);
+    my @sp2;
+    for my $sp (@$sp_list) {
+        push @sp2,($sp) if $sp->{name} ne $name;
+    }
+
+    $self->write_file($file_sp, Dump( \@sp2));
 }
 
 #########################################################################3

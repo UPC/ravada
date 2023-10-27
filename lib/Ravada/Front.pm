@@ -16,6 +16,7 @@ use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
+use Storable qw(dclone);
 use Ravada;
 use Ravada::Auth::LDAP;
 use Ravada::Front::Domain;
@@ -1481,6 +1482,19 @@ sub _settings_by_id($self) {
     return $orig_settings;
 }
 
+sub _settings_by_parent($self,$parent) {
+    my $data = $self->_setting_data($parent);
+    my $sth = $self->_dbh->prepare("SELECT name,value FROM settings "
+        ." WHERE id_parent = ? ");
+    $sth->execute($data->{id});
+    my $ret;
+    while (my ($name, $value) = $sth->fetchrow) {
+        $value = '' if !defined $value;
+        $ret->{$name} = $value;
+    }
+    return $ret;
+}
+
 =head2 feature
 
 Returns if a feature is available
@@ -1521,9 +1535,10 @@ sub update_settings_global($self, $arg, $user, $reload, $orig_settings = $self->
         confess Dumper([$field,$arg->{$field}]) if !ref($arg->{$field});
         if ( scalar(keys %{$arg->{$field}})>2 ) {
             confess if !keys %{$arg->{$field}};
-            $self->update_settings_global($arg->{$field}, $user, $reload, $orig_settings);
+            my $field2 = dclone($arg->{$field});
+            $self->update_settings_global($field2, $user, $reload, $orig_settings);
         }
-        confess "Error: invalid field $field" if $field !~ /^\w+$/;
+        confess "Error: invalid field $field" if $field !~ /^\w[\w\-]+$/;
         my ( $value, $id )
                    = ($arg->{$field}->{value}
                     , $arg->{$field}->{id}
@@ -1749,6 +1764,64 @@ sub _filter_active($pools, $active) {
     }
     return \@pools2;
 
+}
+
+=head2 upload_users
+
+Upload a list of users to the database
+
+=head3 Arguments
+
+=over
+
+=item * string with users and passwords in each line
+
+=item * type: it can be SQL, LDAP or SSO
+
+=item * create: optionally create the entries in LDAP
+
+=back
+
+=cut
+
+sub upload_users($self, $users, $type, $create=0) {
+
+    my @external;
+    if ($type ne 'sql') {
+        @external = ( is_external => 1, external_auth => $type );
+    }
+
+    my ($found,$count) = (0,0);
+    my @error;
+    for my $line (split /\n/,$users) {
+        my ($name, $password) = split(/:/,$line);
+        $found++;
+        my $user = Ravada::Auth::SQL->new(name => $name);
+        if ($user && $user->id) {
+            push @error,("User $name already added");
+            next;
+        }
+        if ($type ne 'sql' && $create) {
+            if ($type eq 'ldap') {
+                if (!$password) {
+                    push @error,("Error: user $name , password empty");
+                    next;
+                }
+                eval { $user = Ravada::Auth::LDAP::add_user($name,$password) };
+                push @error, ($@) if $@;
+            } else {
+                push @error,("$type users can't be created from Ravada");
+            }
+        }
+        if ($type eq 'sql' && !$password) {
+            push @error,("Error: user $name requires password");
+            next;
+        }
+        Ravada::Auth::SQL::add_user(name => $name, password => $password
+            ,@external);
+        $count++;
+    }
+    return ($found, $count, \@error);
 }
 
 =head2 version
