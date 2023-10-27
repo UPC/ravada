@@ -68,8 +68,13 @@ to display more options.
 Apply
 ~~~~~
 
-Restart rvd_front service to apply changes:
+There is no need to restart the server. It is applied right after saving.
 
-.. prompt:: bash #
+Check headers
+~~~~~~~~~~~~~
 
-    systemctl restart rvd_front
+Use curl to check the content security policy headers
+
+.. prompt:: bash
+
+   curl --head https://server.example.org
