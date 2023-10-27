@@ -89,6 +89,9 @@ sub test_bases($t, $bases) {
     my $n_bases = 0;
     my $n_machines = scalar(@$bases);
     for my $base ( @$bases ) {
+
+        mojo_request($t, "force_shutdown", { id_domain => $base->id });
+
         my $url = "/machine/prepare/".$base->id.".json";
         $t->get_ok($url)->status_is(200);
         wait_mojo_request($t, $url);
@@ -159,6 +162,10 @@ sub test_list_machines_non_admin($t, $bases) {
     my @list_machines = list_machines($t);
     is(scalar(@list_machines),0) or die Dumper([map {[$_->{id_base},$_->{name}]} @list_machines]);
 
+    Ravada::Request->force_shutdown(
+        uid => user_admin->id
+        ,id_domain => $clone->{id}
+    );
     my $req = Ravada::Request->prepare_base(
         uid => user_admin->id
         ,id_domain => $clone->{id}

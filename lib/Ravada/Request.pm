@@ -71,6 +71,7 @@ our %VALID_ARG = (
                        , check => 2
                        , id_vm => 2 }
     ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
+    ,force_shutdown => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
     ,reboot_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
                        , id_vm => 2 }
     ,force_reboot_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
