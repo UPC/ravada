@@ -4,6 +4,6 @@
 
 **Bugfixes**
 
-- Wrong unused files from duplicated storage pools
+- Establish more accurate CSP headers [\#1920]
 
 **Refactors**
