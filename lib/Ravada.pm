@@ -2545,6 +2545,7 @@ sub _sql_insert_defaults($self){
             }
             ,{  id_parent => $id_frontend
                 ,name => "widget"
+                ,value => $conf->{widget}
             }
             ,{
                 id_parent => $id_frontend
