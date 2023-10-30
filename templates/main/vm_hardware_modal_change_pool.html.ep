@@ -12,9 +12,10 @@
             <div>
             <%=l 'Move volume to another Storage Pool?' %>
             </div>
+            {{sp_move}}
 
             <select
-                name="storage" ng-model="new_storage_pool"
+                name="storage" ng-model="sp_move.storage_pool"
                 ng-options="storage for storage in storage_pools"
             >
             </select>
@@ -24,11 +25,10 @@
         <div class="modal-footer">
 
             <button type="button" class="btn btn-secondary"
-                ng-click="item.storage_pool=item._storage_pool"
                 data-dismiss="modal"><%=l 'Cancel' %></button>
             <button type="button" class="btn btn-primary"
                 data-dismiss="modal"
-                ng-click="move_file_storage(item.file,item.storage_pool)"
+                ng-click="move_file_storage(sp_move.file,sp_move.storage_pool)"
             >
                 <%=l 'yes' %>
             </button>

@@ -754,6 +754,17 @@
               .then(function(response) {
               });
           };
+          $scope.move_file_storage = function() {
+              $http.post('/request/move_volume/'
+                      , JSON.stringify({ 'id_domain': $scope.showmachine.id
+                          ,'volume': $scope.sp_move.file
+                          ,'storage': $scope.sp_move.storage_pool
+                      })
+              ).then(function(response) {
+                  console.log(response.data);
+              });
+
+          }
           $scope.copy_machine = function() {
               $scope.copy_request= { 'status': 'requested' };
               $http.post('/machine/copy/'

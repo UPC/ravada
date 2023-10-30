@@ -11,12 +11,14 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
+my $DIR_TMP = "/var/tmp/$$";
+mkdir $DIR_TMP if ! -e $DIR_TMP;
 
 ########################################################################
 
 sub _create_storage_pool($vm) {
-    my $name = new_domain_name();
-    my $dir = "/var/tmp/$name";
+    my $name = new_pool_name();
+    my $dir = "$DIR_TMP/$name";
     mkdir $dir if ! -e $dir;
 
     my ($old) = grep {$_ eq $name } $vm->list_storage_pools();
@@ -38,10 +40,37 @@ sub test_fail_nonvol($domain, $sp) {
         uid => user_admin->id
         ,id_domain => $domain->id
         ,volume => 'missing'
-        ,storage => 'poolwrong'
+        ,storage => $sp
     );
     wait_request( check_error => 0);
     like($req->error, qr/Volume .*not found in/);
+}
+
+sub test_do_not_overwrite($vm) {
+    my $domain = create_domain_v2(vm => $vm, data => 1, swap => 1 );
+    my ($sp, $dir) = _create_storage_pool($vm);
+
+    my ($vol) = ( $domain->list_volumes );
+
+    my ($filename)= $vol =~ m{.*/(.*)};
+    die "Unknown filename from volume $vol" if !$filename;
+
+    open my $out,">","$dir/$filename" or die "$! $dir/$filename";
+    print $out "\n";
+    close $out;
+
+    my $req = Ravada::Request->move_volume(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,volume => $vol
+            ,storage => $sp
+    );
+    wait_request( debug => 0, check_error => 0);
+    is($req->status,'done');
+    like($req->error, qr/already exist/);
+
+    unlink "$dir/$filename" or die "$! $dir/$filename";
+    rmdir($dir) or die "$! $dir";
 }
 
 sub test_move_volume($vm) {
@@ -61,6 +90,7 @@ sub test_move_volume($vm) {
         my ($filename)= $vol =~ m{.*/(.*)};
 
         if ( -e "$dir/$filename" ) {
+            diag("removing previously copied $dir/$filename");
             unlink("$dir/$filename") or die "$! $dir/$filename";
             $vm->refresh_storage();
         }
@@ -84,6 +114,7 @@ sub test_move_volume($vm) {
         ok(-e "$dir/$filename", "Expecting $dir/$filename") or exit;
     }
     for my $vol ($domain->list_volumes_info ) {
+
         is($vol->info->{storage_pool},$sp, $vol->file) or exit;
         like($vol->file, qr/^$dir/);
         my $file = $vol->file;
@@ -94,7 +125,11 @@ sub test_move_volume($vm) {
         unlink $file or die "$! $file"
         if $file =~ /\.iso$/ && -e $file;
     }
+    my @volumes = $domain->list_volumes();
     $domain->remove(user_admin);
+    for my $vol (@volumes) {
+        ok(!-e $vol);
+    }
 
     rmdir($dir) or die "$! $dir";
 }
@@ -120,6 +155,7 @@ for my $vm_name ( vm_names() ) {
 
         diag("test $vm_name");
         test_move_volume($vm);
+        test_do_not_overwrite($vm);
     }
 }
 

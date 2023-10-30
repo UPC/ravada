@@ -118,7 +118,7 @@
         <div class="col-lg-10">
             <button title="<%=l 'change storage pool' %>"
                 class="badge badge-light"
-                ng-click="item._storage_pool=item.storage_pool"
+                ng-click="$parent.$parent.$parent.sp_move.file=item.file;$parent.$parent.$parent.sp_move.storage_pool=item.storage_pool"
                     data-toggle="modal" data-target="#changePoolModal"
                             ><i class="fas fa-pencil-alt"></i>
             </button>

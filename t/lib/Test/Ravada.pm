@@ -1439,13 +1439,14 @@ sub remove_qemu_pools($vm=undef) {
         }
     }
 
-    my $base = base_pool_name();
+    my $base_pool = base_pool_name();
+    my $base = base_domain_name();
     $vm->connect();
-    for my $pool  ( Ravada::VM::KVM::_list_storage_pools($vm->vm)) {
+    for my $pool  ( $vm->vm->list_all_storage_pools) {
         my $name = $pool->get_name;
+        next if $name !~ /^($base_pool|$base)/;
         eval {$pool->build(Sys::Virt::StoragePool::BUILD_NEW); $pool->create() };
         warn $@ if $@ && $@ !~ /already active/;
-        next if $name !~ qr/^$base/;
         diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
         for my $vol ( $pool->list_volumes ) {
             diag("Removing ".$pool->get_name." vol ".$vol->get_name);

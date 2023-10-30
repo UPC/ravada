@@ -491,7 +491,7 @@ sub _find_storage_pool($self, $file) {
             last;
         }
     }
-    die "Error: path $path in no storage_pools\n".Dumper([map {$_->{path}} $self->list_storage_pools(1)]) if !$found;
+    return '' if !$found;
     $self->{_storage_pool_path}->{$path} = $found;
     return $found;
 }

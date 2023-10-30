@@ -15,6 +15,7 @@ use Data::Dumper;
 use Digest::MD5;
 use Encode;
 use Encode::Locale;
+use File::Copy qw(copy);
 use File::Path qw(make_path);
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
 use Hash::Util qw(lock_hash);
@@ -2923,11 +2924,26 @@ sub copy_file_storage($self, $file, $storage) {
     die "Error: storage pool $storage not found" if !$sp;
 
     my ($name) = $vol->get_name();
+    my $xml = $vol->get_xml_description();
+    my $doc = XML::LibXML->load_xml(string => $xml);
+    my ($format) = $doc->findnodes("/volume/target/format");
+    if ($format ne 'qcow2') {
+        die "Error: I can't copy $format on remote nodes"
+        unless $self->is_local;
+
+        my $dst_file = $self->_storage_path($storage)."/".$name;
+        copy($file,$dst_file);
+        $self->refresh_storage();
+        return $dst_file;
+    }
+
     my $vol_dst;
     eval { $vol_dst= $sp->get_volume_by_name($name) };
     die $@ if $@ && !(ref($@) && $@->code == 50);
 
+    warn 1;
     $vol_dst= $sp->clone_volume($vol->get_xml_description);
+    warn 2;
 
     return $vol_dst->get_path();
 }

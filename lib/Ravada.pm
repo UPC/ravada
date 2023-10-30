@@ -3849,6 +3849,7 @@ sub _timeout_requests($self) {
         ." FROM requests "
         ." WHERE ( status = 'working' or status = 'stopping' )"
         ."  AND date_changed >= ? "
+        ."  AND command <> 'move_volume'"
         ." ORDER BY date_req "
     );
     $sth->execute(_date_now(-30));
@@ -3984,6 +3985,7 @@ sub _kill_dead_process($self) {
         ." AND ( status like 'working%' OR status like 'downloading%'"
         ."      OR status like 'start%' ) "
         ." AND pid IS NOT NULL "
+        ." AND command <> 'move_volume'"
     );
     $sth->execute(time - 2);
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
@@ -6659,8 +6661,17 @@ sub _cmd_move_volume($self, $request) {
     die "Volume $volume not found in ".$domain->name."\n".Dumper([map { $_->file } @volumes]) if !$found;
 
     my $vm = $domain->_vm;
-    my $new_file = $vm->copy_file_storage($volume, $request->args('storage'));
+    my $storage = $request->args('storage');
+    my $dst_path = $vm->_storage_path($storage);
+    my ($filename) = $volume =~ m{.*/(.*)};
+    my $dst_vol = "$dst_path/$filename";
 
+    die "Error: file '$dst_vol' already exists in ".$vm->name."\n" if $vm->file_exists($dst_vol);
+
+    warn "$$ copying file $volume to $storage";
+    my $new_file = $vm->copy_file_storage($volume, $storage);
+
+    warn "changing $n_found $new_file";
     $domain->change_hardware('disk', $n_found, { file => $new_file });
     if ($volume !~ /\.iso$/) {
         $vm->remove_file($volume);
