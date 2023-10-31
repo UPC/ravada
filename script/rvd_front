@@ -147,21 +147,50 @@ sub _time() {
     return strftime('%Y/%m/%d:%H:%M:%S %z',localtime);
 }
 
+sub _security_policy() {
+
+    my $config=$RAVADA->_settings_by_parent("/frontend/content_security_policy");
+    my $all = ($config->{all} or '');
+    my %src = (
+    "default-src" => "'self' sha256- sha384 http: https: data:"
+    ,"style-src" => "'self' cdnjs.cloudflare.com stackpath.bootstrapcdn.com cdn.ckeditor.com cdn.jsdelivr.net use.fontawesome.com 'unsafe-inline'"
+    ,"script-src" => "'self' code.jquery.com cdn.ckeditor.com cdnjs.cloudflare.com stackpath.bootstrapcdn.com ajax.googleapis.com cdn.jsdelivr.net 'unsafe-inline' 'unsafe-eval'"
+    ,"object-src" => " 'self'"
+    ,"media-src" => "'self'"
+    ,"frame-src" => "'self'"
+    ,"font-src" => "'self' data: use.fontawesome.com"
+    ,"connect-src" => "'self'"
+    );
+    my $sec = '';
+    for my $field (sort keys %src) {
+        $sec .= " " if $sec;
+        $sec .= $field." ".$src{$field};
+        $sec .= " $all" if $all;
+        if ( exists $config->{$field} ) {
+                $sec .= " ".${config}->{$field};
+        }
+        $field =~ s/-/_/g;
+        if ( exists $config->{$field} ) {
+                $sec .= " ".$config->{$field};
+        }
+
+        $sec .= ";";
+    }
+    return $sec;
+}
+
 hook before_routes => sub {
   my $c = shift;
 
-  $c ->res->headers->content_security_policy (
-   "object-src 'auto';"
-  ."media-src 'self';"
-  ." frame-src 'self';"
-  ." connect-src 'self'; ");
-
+  my $sec = _security_policy();
+  $c ->res->headers->content_security_policy($sec);
 
   $USER = undef;
 
   $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
   my $host = $c->req->url->to_abs->host;
+  my $widget=( $CONFIG_FRONT->{widget} or $RAVADA->setting('/frontend/widget'));
   $c->stash(css=>['/css/sb-admin.css']
             ,js_mod=>[ ## angular modules
                   '/js/booking/booking.module.js?v='.$RAVADA->version
@@ -184,7 +213,7 @@ hook before_routes => sub {
             ,host => $host
             ,bookings => $RAVADA->setting('/backend/bookings')
             ,FEATURE => {}
-            ,widget => $CONFIG_FRONT->{widget}
+            ,widget => $widget
             );
 
     $USER = _logged_in($c);
@@ -1307,6 +1336,62 @@ any '/group/new' => sub {
        return new_group($c);
 };
 
+any '/admin/users/upload.#req' => sub($c) {
+    return access_denied_json($c) unless $USER->is_admin;
+
+    _add_admin_libs($c);
+
+    my $type = $c->req->param('type');
+
+    return $c->render(template => "/main/upload_users", done => 0, count => 0, found => 0, type => 'sql') if !$type;
+
+    my $create = ( $c->req->param('create') or 0);
+
+    return $c->render(json => { error => "Unknown type $type" })
+            if $type !~ /^(sql|ldap|sso)/;
+
+    my $csv = $c->req->upload('users');
+    if($csv->headers->content_type !~ m{text/(csv|plain)}) {
+        return $c->render(status => 400
+            ,text => "Wrong content type ".$csv->headers->content_type
+                    ." , it should be text/csv or plain"
+        );
+    }
+
+    my ($found, $count, $error) = $RAVADA->upload_users(
+        $csv->slurp, $type, $create
+    );
+
+    return $c->render(json =>
+        { output => "$count users added"
+        ,error => $error
+    }) if $c->stash('req') eq 'json';
+
+    return $c->render(template => "/main/upload_users"
+        ,count => $count
+        ,found => $found
+        ,error => $error
+        ,done => 1
+    );
+};
+
+get '/admin/user/remove/#id' => sub($c) {
+    return access_denied($c) unless $USER->is_admin;
+    my $id = $c->stash('id');
+    my $user = Ravada::Auth::SQL->search_by_id($id);
+    return $c->render(message => "User not found. id=$id."
+            , link => ['/admin/users','Users']
+        ,template => '/main/standard_message'
+        ,status => 404
+    ) if !$user;
+    $user->remove();
+
+    return $c->render(message => "User removed : ".$user->name
+            , link => ['/admin/users','Users']
+        ,template => '/main/standard_message'
+    );
+};
+
 any '/admin/user/(#id).(:type)' => sub {
     my $c = shift;
 
@@ -1351,6 +1436,7 @@ any '/admin/user/(#id).(:type)' => sub {
     }
 
     $c->stash(user => $user);
+    return $c->render(json => {name => $user->name}) if $c->stash('type') eq 'json';
     return $c->render(template => 'main/manage_user');
 };
 
@@ -2515,7 +2601,6 @@ sub login($c, $status=200) {
     my $url = ($c->param('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
 
-
     my @error =();
 
     if (((defined $login) || (defined $password) || ((defined $c->param('submit')) && ($c->param('submit') ne 'sso'))) && (! $ticket)) {
@@ -2754,6 +2839,11 @@ sub admin {
         return access_denied($c) unless $USER->is_admin;
         my $url = $c->req->url->to_abs->path;
         my $host = $c->req->url->to_abs->host;
+        my $csp = $RAVADA->_settings_by_parent("/frontend/content_security_policy");
+        my $csp_advanced = 0;
+        $csp_advanced = grep $csp->{$_}, grep /-/,keys %$csp;
+
+        $c->stash( csp => $csp , csp_advanced => $csp_advanced);
         $c->stash(url_login => "/login");
     }
     if ($page eq 'storage') {
