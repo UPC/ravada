@@ -4091,7 +4091,7 @@ sub _execute {
         return;
     }
 
-    $self->_wait_pids;
+    $self->_wait_pids();
     return if !$self->_can_fork($request);
 
     my $pid = fork();
@@ -4446,6 +4446,7 @@ sub _wait_pids($self) {
     my @done;
     for my $type ( keys %{$self->{pids}} ) {
         for my $pid ( keys %{$self->{pids}->{$type}}) {
+            next if kill(0,$pid);
             my $kid = waitpid($pid , WNOHANG);
             push @done, ($pid) if $kid == $pid || $kid == -1;
         }
@@ -6647,6 +6648,9 @@ sub _cmd_move_volume($self, $request) {
         if !$user->is_admin;
 
     my $domain = Ravada::Domain->open($request->args('id_domain'));
+    die "Error: I can not move volume while machine running ".$domain->name."\n"
+    if $domain->is_active;
+
     my $volume = $request->args('volume');
     my @volumes = $domain->list_volumes_info();
     my $found;
@@ -6668,10 +6672,8 @@ sub _cmd_move_volume($self, $request) {
 
     die "Error: file '$dst_vol' already exists in ".$vm->name."\n" if $vm->file_exists($dst_vol);
 
-    warn "$$ copying file $volume to $storage";
     my $new_file = $vm->copy_file_storage($volume, $storage);
 
-    warn "changing $n_found $new_file";
     $domain->change_hardware('disk', $n_found, { file => $new_file });
     if ($volume !~ /\.iso$/) {
         $vm->remove_file($volume);

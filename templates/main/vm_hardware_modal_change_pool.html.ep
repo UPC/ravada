@@ -12,7 +12,6 @@
             <div>
             <%=l 'Move volume to another Storage Pool?' %>
             </div>
-            {{sp_move}}
 
             <select
                 name="storage" ng-model="sp_move.storage_pool"
