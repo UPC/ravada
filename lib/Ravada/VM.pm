@@ -2059,6 +2059,22 @@ sub shared_storage($self, $node, $dir) {
     return $shared;
 }
 
+=head2 copy_file_storage
+
+Copies a volume file to another storage
+
+Args:
+
+=over
+
+=item * file
+
+=item * storage
+
+=back
+
+=cut
+
 sub copy_file_storage($self, $file, $storage) {
     die "Error: file '$file' does not exist" if !$self->file_exists($file);
 
