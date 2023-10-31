@@ -2543,6 +2543,60 @@ sub _sql_insert_defaults($self){
                 ,name => 'auto_view'
                 ,value => $conf->{auto_view}
             }
+            ,{  id_parent => $id_frontend
+                ,name => "widget"
+                ,value => $conf->{widget}
+            }
+            ,{
+                id_parent => $id_frontend
+                ,name => 'content_security_policy'
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "all"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "default-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "style-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "script-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "object-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "frame-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "font-src"
+                ,value => ''
+            }
+
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "connect-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "media-src"
+                ,value => ''
+            }
             ,{
                 id_parent => $id_backend
                 ,name => 'start_limit'
@@ -3255,6 +3309,7 @@ sub _req_add_disk($uid, $id_domain, $type, $size, $request, $storage=undef) {
         ,name => 'disk'
         ,data => $data
         ,@after_req
+        ,at => time + 1
     );
 }
 sub _start_domain_after_create($domain, $request, $uid,$previous_request) {
@@ -3809,7 +3864,7 @@ sub process_requests {
         "pid=".($req->pid or '')." ".$req->status()
             ."$txt_retry "
             .$req->command
-            ." ".Dumper($req->args) if $DEBUG || $debug;
+            ." ".Dumper($req->args) if ( $DEBUG || $debug ) && $req->command ne 'set_time';
 
         my ($n_retry) = $req->status() =~ /retry (\d+)/;
         $n_retry = 0 if !$n_retry;
@@ -3819,14 +3874,16 @@ sub process_requests {
         next if !$DEBUG && !$debug;
 
         warn ''.localtime." req ".$req->id." , cmd: ".$req->command." ".$req->status()
-            ." , err: '".($req->error or '')."'\n"  if $DEBUG || $VERBOSE;
+            ." , err: '".($req->error or '')."'\n"  if ($DEBUG || $VERBOSE )
+            && $req->command ne 'set_time';
             #        sleep 1 if $DEBUG;
 
     }
 
+    my @reqs2 = grep { $_->command ne 'set_time' } @reqs;
     warn Dumper([map { $_->id." ".($_->pid or '')." ".$_->command." ".$_->status }
-            grep { $_->id } @reqs ])
-        if ($DEBUG || $debug ) && @reqs;
+            grep { $_->id } @reqs2 ])
+        if ($DEBUG || $debug ) && @reqs2;
 
     return scalar(@reqs);
 }
@@ -4470,7 +4527,7 @@ sub _wait_pids($self) {
             $request->status('done') if $request->status =~ /working/i;
         };
         warn("$$ request id=$id_req ".$request->command." ".$request->status()
-            .", error='".($request->error or '')."'\n") if $DEBUG && $request;
+            .", error='".($request->error or '')."'\n") if $DEBUG && $request && $request->command ne 'set_time';
     }
 }
 
@@ -4844,14 +4901,38 @@ sub _cmd_prepare_base {
     my $id_domain = $request->id_domain   or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
+    my $domain = $self->search_domain_by_id($id_domain);
+    die "Unknown domain id '$id_domain'\n" if !$domain;
+
     my $user = Ravada::Auth::SQL->search_by_id( $uid)
         or confess "Error: Unknown user id $uid in request ".Dumper($request);
 
+    die "User ".$user->name." [".$user->id."] not allowed to prepare base "
+                .$domain->name."\n"
+            unless $user->is_admin || (
+                $domain->id_owner == $user->id && $user->can_create_base());
+
+
     my $with_cd = $request->defined_arg('with_cd');
 
-    my $domain = $self->search_domain_by_id($id_domain);
-
-    die "Unknown domain id '$id_domain'\n" if !$domain;
+    if ($domain->is_active) {
+        my $req_shutdown = Ravada::Request->shutdown_domain(
+            uid => $user->id
+            ,id_domain => $domain->id
+            ,timeout => 0
+        );
+        $request->after_request($req_shutdown->id);
+        $request->at(time + 10);
+        if ( !defined $request->retry() ) {
+            $request->retry(5);
+            $request->status("retry");
+        } elsif($request->retry>0) {
+            $request->retry($request->retry-1);
+            $request->status("retry");
+        }
+        $request->error("Machine must be shut down ".$domain->name." [".$domain->id."]");
+        return;
+    }
 
     $self->_remove_unnecessary_request($domain);
     $self->_remove_unnecessary_downs($domain);
@@ -6150,6 +6231,7 @@ sub _req_method {
  ,list_cpu_models => \&_cmd_list_cpu_models
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
+,force_shutdown_domain => \&_cmd_force_shutdown
 ,force_reboot   => \&_cmd_force_reboot
 ,shutdown_start => \&_cmd_shutdown_start
         ,rebase => \&_cmd_rebase

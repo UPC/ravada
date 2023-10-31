@@ -159,7 +159,11 @@
                             if (machine.clone) {
                                 id=machine.clone.id;
                             }
-                            window.location.assign('/machine/view/' + id + '.html');
+                            var url_view = '/machine/view/' + id + '.html';
+                            if ($scope.anonymous) {
+                                url_view = "/anonymous/"+id+".html";
+                            }
+                            window.location.assign(url_view);
                         } else {
                         window.location.assign('/machine/clone/' + machine.id + '.html');
                         }

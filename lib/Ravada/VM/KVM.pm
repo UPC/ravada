@@ -337,6 +337,8 @@ sub search_volume_re($self,$pattern,$refresh=0) {
        my @vols;
        for ( 1 .. 10) {
            eval { @vols = $pool->list_all_volumes() };
+           last if $@ && ref($@) && $@->code == 55;
+           last if $@ && $@ =~ /code: (55|38),/;
            last if !$@ || $@ =~ / no storage pool with matching uuid/;
            warn "WARNING: on search volume_re: $@";
            sleep 1;
@@ -384,15 +386,16 @@ sub remove_file($self,@files) {
 sub _list_volumes($self) {
     my @volumes;
     for my $pool (_list_storage_pools($self->vm)) {
-        next if !$pool->is_active;
-       my @vols;
-       for ( 1 .. 10) {
+        my @vols;
+        for ( 1 .. 10) {
+            next if !$pool->is_active;
            eval { @vols = $pool->list_all_volumes() };
+           last if $@ && ref($@) && $@->code == 55;
            last if !$@ || $@ =~ / no storage pool with matching uuid/;
            warn "WARNING: on search volume_re: $@";
            sleep 1;
-       }
-       push @volumes,@vols;
+        }
+        push @volumes,@vols;
     }
     return @volumes;
 }
@@ -450,7 +453,7 @@ sub _find_all_volumes($self, $xml) {
     return @used;
 }
 
-sub _list_used_volumes($self) {
+sub list_used_volumes($self) {
     my @used =$self->_list_used_volumes_known();
     for my $name ( $self->discover ) {
         my $dom = $self->vm->get_domain_by_name($name);
@@ -459,20 +462,14 @@ sub _list_used_volumes($self) {
     return @used;
 }
 
-sub list_unused_volumes($self) {
-    my %used = map { $_ => 1 } $self->_list_used_volumes();
-    my @unused;
+sub list_volumes($self) {
     my $file;
+    my @volumes;
 
-    my $n_found=0;
     for my $vol ( $self->_list_volumes ) {
 
         eval { ($file) = $vol->get_path };
         confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
-        next if $used{$file};
-
-        my $link = $self->_is_link($file);
-        next if $link && $used{$link};
 
         my $info;
         eval { $info = $vol->get_info() };
@@ -481,11 +478,10 @@ sub list_unused_volumes($self) {
 
         next if !$info || $info->{type} eq 2;
 
-        #        cluck Dumper([ $file, [sort grep /2023/,keys %used]]) if $file =~/2023/;
-        push @unused,($file);
+        push @volumes,($file);
 
     }
-    return @unused;
+    return @volumes;
 }
 
 sub refresh_storage_pools($self) {
@@ -596,6 +592,7 @@ sub file_exists($self, $file) {
 sub _file_exists_remote($self, $file) {
     $file = $self->_follow_link($file) unless $file =~ /which$/;
     for my $pool ($self->vm->list_all_storage_pools ) {
+        next if !$pool->is_active;
         $self->_wait_storage( sub { $pool->refresh() } );
         my @volumes = $self->_wait_storage( sub { $pool->list_all_volumes });
         for my $vol ( @volumes ) {
@@ -616,20 +613,6 @@ sub _file_exists_remote($self, $file) {
     my @ls = split /\n/,$out;
     for (@ls) { chomp };
     return scalar(@ls);
-}
-
-sub _follow_link($self, $file) {
-    my ($dir, $name) = $file =~ m{(.*)/(.*)};
-    if (!defined $self->{_is_link}->{$dir} ) {
-        my ($out,$err) = $self->run_command("stat", $dir );
-        chomp $out;
-        $out =~ m{ -> (/.*)};
-        $self->{_is_link}->{$dir} = $1;
-    }
-    my $path = $self->{_is_link}->{$dir};
-    return $file if !$path;
-    return "$path/$name";
-
 }
 
 sub _wait_storage($self, $sub) {
@@ -719,6 +702,14 @@ sub create_storage_pool($self, $name, $dir, $vm=$self->vm) {
         die "$error\n" if $error;
     }
 
+}
+
+sub remove_storage_pool($self, $name) {
+    my $sp = $self->vm->get_storage_pool_by_name($name);
+    return if !$sp;
+
+    $sp->destroy if $sp->is_active;
+    $sp->undefine();
 }
 
 sub _create_default_pool($self, $vm=$self->vm) {

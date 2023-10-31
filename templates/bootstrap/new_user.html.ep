@@ -10,8 +10,12 @@
                <div class="page-title">
                     <div class="card">
                         <div class="card-header">
+                            <div>
                             <h2><%=l 'Create a new account' %>
                             </h2>
+                            <a type="button" class="btn btn-outline-secondary"
+href="/admin/users/upload.html"><%=l 'Batch upload' %></a>
+                            </div>
                         </div>
                         %= include '/ng-templates/new_user'
                     </div>
