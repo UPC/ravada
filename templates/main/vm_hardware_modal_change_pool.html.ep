@@ -8,7 +8,10 @@
                 <span aria-hidden="true">&times;</span>
                 </button>
         </div>
+
         <div class="modal-body">
+
+            %= include "/main/needs_shutdown"
             <div>
             <%=l 'Move volume to another Storage Pool?' %>
             </div>
@@ -16,6 +19,7 @@
             <select
                 name="storage" ng-model="sp_move.storage_pool"
                 ng-options="storage for storage in storage_pools"
+                ng-disabled="showmachine.is_active"
             >
             </select>
 
@@ -27,6 +31,7 @@
                 data-dismiss="modal"><%=l 'Cancel' %></button>
             <button type="button" class="btn btn-primary"
                 data-dismiss="modal"
+                ng-disabled="$parent.$parent.showmachine.is_active"
                 ng-click="move_file_storage(sp_move.file,sp_move.storage_pool)"
             >
                 <%=l 'yes' %>
