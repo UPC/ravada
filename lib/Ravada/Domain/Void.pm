@@ -553,7 +553,20 @@ sub _create_volume($self, $file, $format, $data=undef) {
     confess "Undefined format" if !defined $format;
     if ($format =~ /iso|raw|void/) {
         $data->{format} = $format;
-        $self->_vm->write_file($file, Dump($data)),
+        if ( $format eq 'raw' && $data->{capacity} && $self->is_local) {
+            my $capacity = Ravada::Utils::number_to_size($data->{capacity});
+            my ($count,$unit) = $capacity =~ /^(\d+)(\w)$/;
+            die "Error, I can't find count and unit from $capacity"
+            if !$count || !$unit;
+
+            my @cmd = ("dd","if=/dev/zero","of=$file","count=$count","bs=1$unit"
+            ,"status=none");
+            my ($in, $out, $err);
+            run3(\@cmd, \$in, \$out, \$err);
+            warn "@cmd $err" if $err;
+        } else {
+            $self->_vm->write_file($file, Dump($data)),
+        }
     } elsif ($format eq 'qcow2') {
         my @cmd = ('qemu-img','create','-f','qcow2', $file, $data->{capacity});
         my ($out, $err) = $self->_vm->run_command(@cmd);

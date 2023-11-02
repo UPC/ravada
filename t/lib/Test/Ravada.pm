@@ -60,6 +60,7 @@ create_domain
     connector
     init_ldap_config
 
+    create_ram_fs
     create_storage_pool
     local_ips
 
@@ -1538,6 +1539,7 @@ sub clean($ldap=undef) {
     _remove_old_groups_ldap();
     remove_old_user_ldap();
     remove_old_storage_pools();
+    remove_old_ram_fs();
 
     if ($file_remote_config) {
         my $config;
@@ -2919,6 +2921,85 @@ sub ping_backend() {
     }
 
     return rvd_front->ping_backend();
+}
+
+sub _dir_findmnt($dir) {
+    my @cmd = ("findmnt");
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+
+    for my $line ( split /\n/,$out) {
+        next if $line !~ /var.tmp/;
+        return 1 if $line =~ /$dir/;
+    }
+}
+
+sub _dir_mounted($dir) {
+    open my $in,"<","/proc/mounts" or die $!;
+    while (my $line = <$in>) {
+        chomp $line;
+        my ($type,$dir_m) = split /\s+/,$line;
+        return 1 if $dir eq $dir_m;
+    }
+    close $in;
+    return _dir_findmnt($dir);
+}
+
+sub _umount_old_ram_fs() {
+    my $base_pool = base_pool_name();
+    open my $in,"<","/proc/mounts" or die $!;
+    while (my $line = <$in>) {
+        my ($dev,$dir) = split /\s+/,$line;
+        if ($dir =~ m{/$base_pool}) {
+            `umount $dir`;
+        }
+    }
+}
+
+sub _remove_old_ram_fs_dev() {
+    my $base_pool = base_pool_name();
+
+    opendir my $ls,"/dev" or die $!;
+    while (my $file = readdir $ls) {
+        unlink "/dev/$file" or die "$! /dev/$file"
+        if $file =~ /^$base_pool/;
+    }
+    closedir $ls;
+}
+
+sub remove_old_ram_fs() {
+    _umount_old_ram_fs();
+    _remove_old_ram_fs_dev();
+}
+
+sub create_ram_fs($dir=undef,$size=1024*1024) {
+    if (!$dir ) {
+        $dir = "/var/tmp/$</";
+        mkdir $dir if ! -e $dir;
+
+        $dir .= new_pool_name();
+    }
+    mkdir $dir if ! -e $dir;
+
+    if (_dir_mounted($dir)) {
+        my @cmd =("umount",$dir);
+        my ($in, $out, $err);
+        run3(\@cmd, \$in, \$out, \$err);
+        die $err if $err;
+    }
+
+    my ($name) = $dir =~ m{.*/(.*)};
+    my $dev = "/dev/$name";
+    my @cmd = ("mkfs","-q", $dev, $size);
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+
+    @cmd = ("mount",$dev,$dir);
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+
+    return ($dir,$size, $dev);
 }
 
 1;

@@ -2917,6 +2917,14 @@ sub copy_file_storage($self, $file, $storage) {
     my ($name) = $vol->get_name();
     my $xml = $vol->get_xml_description();
     my $doc = XML::LibXML->load_xml(string => $xml);
+
+    my $vol_capacity = $vol->get_info()->{capacity};
+
+    my $pool_capacity = $sp->get_info()->{capacity};
+
+    die "Error: '$file' too big to fit in $storage ".Ravada::Utils::number_to_size($vol_capacity)." > ".Ravada::Utils::number_to_size($pool_capacity)."\n"
+    if $vol_capacity>$pool_capacity;
+
     my ($format) = $doc->findnodes("/volume/target/format");
     if ($format ne 'qcow2') {
         die "Error: I can't copy $format on remote nodes"

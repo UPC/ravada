@@ -3,6 +3,7 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use IPC::Run3 qw(run3);
 use Test::More;
 
 use lib 't/lib';
@@ -16,9 +17,15 @@ mkdir $DIR_TMP if ! -e $DIR_TMP;
 
 ########################################################################
 
-sub _create_storage_pool($vm) {
-    my $name = new_pool_name();
-    my $dir = "$DIR_TMP/$name";
+sub _create_storage_pool($vm, $dir=undef) {
+
+    my $name;
+    if (!defined $dir) {
+        $name = new_pool_name();
+        $dir = "$DIR_TMP/$name";
+    } else {
+        ($name) = $dir =~ m{.*/(.*)};
+    }
     mkdir $dir if ! -e $dir;
 
     my ($old) = grep {$_ eq $name } $vm->list_storage_pools();
@@ -71,6 +78,75 @@ sub test_do_not_overwrite($vm) {
 
     unlink "$dir/$filename" or die "$! $dir/$filename";
     rmdir($dir) or die "$! $dir";
+}
+
+sub _search_free_space($dir) {
+    diag($dir);
+    open my $mounts,"<","/proc/mounts" or die $!;
+    my $found;
+    while (my $line = <$mounts>) {
+        my ($type,$partition) = split /\s+/, $line;
+        if ($partition eq $dir) {
+            $found = $partition;
+            last;
+        }
+    }
+    close $mounts;
+    if ( $found ) {
+        my @cmd = ("stat","-f","-c",'%a',$found);
+        my ($in, $out, $err);
+        run3(\@cmd,\$in,\$out,\$err);
+        die $err if $err;
+        chomp $out;
+        my $blocks = $out;
+        @cmd=("stat","-f","-c",'%S',$found);
+        run3(\@cmd,\$in,\$out,\$err);
+        die $err if $err;
+        chomp $out;
+        my $size = $out;
+        return $size * $blocks / (1024*1024*1024);
+
+    }
+
+    my ($dir2) = $dir =~ m{(/.*)/.*};
+    return if !$dir2;
+
+    return _find_mount($dir2);
+}
+
+sub test_fail($vm) {
+    return if $< || $vm->type eq 'Void';
+
+    my ($dir,$size, $dev) = create_ram_fs();
+
+    $dir .= "/".new_pool_name();
+
+    my ($sp) = _create_storage_pool($vm, $dir);
+
+    my $domain = create_domain_v2(vm => $vm, data => 1, swap => 1 );
+
+    my $vol = $domain->add_volume( name => new_domain_name()
+        ,size => $size
+        ,allocation => $size*1024
+        ,format => 'raw'
+    );
+
+    my $req = Ravada::Request->move_volume(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,volume => $vol
+            ,storage => $sp
+    );
+
+    wait_request( check_error => 0, debug => 0);
+    like($req->error,qr/./,"Expecting $vol failed to copy to $sp")
+    or exit;
+
+    $domain->remove(user_admin);
+    `umount $dir`;
+    rmdir $dir  or die "$! $dir";
+    unlink $dev or die "$! $dev";
+
 }
 
 sub test_move_volume($vm) {
@@ -154,6 +230,7 @@ for my $vm_name ( vm_names() ) {
         skip $msg,10    if !$vm;
 
         diag("test $vm_name");
+        test_fail($vm);
         test_move_volume($vm);
         test_do_not_overwrite($vm);
     }
