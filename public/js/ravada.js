@@ -1187,6 +1187,15 @@
                 });
             };
 
+            $scope.shutdown= function() {
+                $scope.set_edit();
+                $scope.lock_info=false;
+                $http.get("/machine/shutdown/"+$scope.showmachine.id+".json")
+                .then(function(response) {
+                });
+            };
+
+
             $scope.shutdown_start = function() {
                 $scope.set_edit();
                 $scope.lock_info=false;
