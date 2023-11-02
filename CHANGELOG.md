@@ -4,6 +4,6 @@
 
 **Bugfixes**
 
-- Establish more accurate CSP headers [\#1920]
+-  Properly check if process has finished
 
 **Refactors**
