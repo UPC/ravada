@@ -16,6 +16,32 @@ use feature qw(signatures);
 
 ########################################################################
 
+sub test_threads($vm) {
+    my $name = new_domain_name();
+    my $id_iso = search_id_iso('Alpine');
+
+    my $n_threads = 4;
+    my $req = Ravada::Request->create_domain(
+        name => $name
+        ,vm => $vm->type
+        ,id_iso => $id_iso
+        ,id_owner => user_admin->id
+        ,memory => 512 * 1024
+        ,disk => 1024 * 1024
+        ,options => { hardware => { cpu => { cpu => { topology => { threads => $n_threads }}}} }
+    );
+    wait_request( debug => 0);
+    my $domain = $vm->search_domain($name);
+    ok($domain);
+    my $config = $domain->xml_description();
+
+    my $doc = XML::LibXML->load_xml(string => $config);
+    my ($topology) = $doc->findnodes("/domain/cpu/topology");
+    ok($topology) or die $domain->name;
+    is($topology->getAttribute('threads'), $n_threads);
+
+}
+
 sub test_uefi($vm) {
     my $name = new_domain_name();
     my $id_iso = search_id_iso('Alpine');
@@ -321,6 +347,8 @@ for my $vm_name ( 'KVM' ) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        test_threads($vm);
 
         test_isos($vm);
         test_req_machine_types($vm);

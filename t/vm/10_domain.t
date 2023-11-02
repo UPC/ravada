@@ -223,6 +223,23 @@ sub test_open {
     is($domain2->vm, $domain->vm);
 }
 
+sub test_shutdown_start($domain) {
+    $domain->start(user_admin);
+    $domain->needs_restart(1);
+    is($domain->needs_restart,1);
+    my $req = Ravada::Request->shutdown_start(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,timeout => 10
+    );
+    wait_request(debug => 0);
+    wait_request(debug => 0);
+    my $domain2 = Ravada::Front::Domain->open($domain->id);
+    is($domain2->needs_restart,0);
+    is($domain2->is_active,1);
+    $domain->shutdown_now(user_admin);
+}
+
 sub test_manage_domain {
     my $vm_name = shift;
     my $domain = shift;
@@ -605,8 +622,8 @@ sub test_permissions {
     my ($stat) = @_;
     for my $vol ( keys %$stat ) {
         my @stat_new = stat($vol);
-        my $mode = sprintf('%o',$stat_new[2] & 07777);
-        my $mode_expected = sprintf('%o',$stat->{$vol}->[2] & 07777);
+        my $mode = sprintf('%o',$stat_new[2] & oct(7777));
+        my $mode_expected = sprintf('%o',$stat->{$vol}->[2] & oct(7777));
         is($mode, $mode_expected);
         is($stat_new[4],$stat->{$vol}->[4]);
         is($stat_new[5],$stat->{$vol}->[5]);
@@ -671,6 +688,8 @@ for my $vm_name ( vm_names() ) {
 
         my $domain = test_create_domain($vm_name, $host);
         test_open($vm_name, $domain);
+
+        test_shutdown_start($domain);
 
         test_description($vm_name, $domain);
         test_change_interface($vm_name,$domain);

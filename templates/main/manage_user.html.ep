@@ -13,7 +13,7 @@
                     (<%= ($user->external_auth or $origin) %>)
 %               }
                 </h2>
-%               if ($user->external_auth && $user->ldap_entry ) {
+%               if ($user->external_auth && $user->external_auth eq 'ldap' && $user->ldap_entry ) {
                     <%= $user->ldap_entry->dn %>
 %               }
              </div> <!-- del panel heading-->

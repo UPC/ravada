@@ -5,6 +5,7 @@ use Carp qw(confess croak);
 use Data::Dumper;
 use File::Copy;
 use Test::More;
+use YAML qw(DumpFile);
 
 use v5.22; use feature qw(signatures);
 no warnings "experimental::signatures";
@@ -300,9 +301,7 @@ sub test_add_volume_path {
 
     my $file_path = $vm->dir_img."/mock.img";
 
-    open my $out,'>',$file_path or die "$! $file_path";
-    print $out "hi\n";
-    close $out;
+    DumpFile($file_path, {capacity => 100, data => 'hi'});
 
     $domain->add_volume(file => $file_path);
 

@@ -72,6 +72,7 @@ sub _get_session_userid_by_ticket
     my ($cookie) = @_;
     my $result;
     die 'Can\'t read pubkey file (sso->cookie->pub_key value at ravada.conf file)' if (! -r $$CONFIG->{sso}->{cookie}->{pub_key});
+
     eval { $result = Authen::ModAuthPubTkt::pubtkt_verify(publickey => $$CONFIG->{sso}->{cookie}->{pub_key}, keytype => $$CONFIG->{sso}->{cookie}->{type}, ticket => $cookie); };
     die $@ ? $@ : 'Cannot validate ticket' if ((! $result) || ($@));
     my %data = Authen::ModAuthPubTkt::pubtkt_parse($cookie);
@@ -122,6 +123,11 @@ sub init {
                 warn $ERR unless $warn++;
                 return 0;
             }
+        }
+        if (!$$CONFIG->{sso}->{cookie}->{type}) {
+            $ERR = "Error: missing sso / cookie / type in config file\n";
+            warn $ERR unless $warn++;
+            return 0;
         }
         for my $field (qw(priv_key pub_key)) {
             if ( !exists $$CONFIG->{sso}->{cookie}->{$field}

@@ -2,7 +2,7 @@
         <div class="panel-heading">
             <%=l 'The changes will apply on next restart' %>
             <button
-                ng-click="reboot()"
+                ng-click="shutdown_start()"
             ><%=l 'reboot now' %></button>
         </div>
     </div>

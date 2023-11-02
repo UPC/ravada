@@ -1034,11 +1034,15 @@ sub _change_hardware_disk($self, $index, $data_new) {
 
 sub _change_hardware_vcpus($self, $index, $data) {
     my $n = delete $data->{n_virt_cpu};
+    my $max = delete $data->{max_virt_cpu};
     confess "Error: unknown args ".Dumper($data) if keys %$data;
 
     my $info = $self->_value('info');
-    $info->{n_virt_cpu} = $n;
+    $info->{n_virt_cpu} = $n if defined $n;
+    $info->{max_virt_cpu} = $max if defined $max;
     $self->_store(info => $info);
+
+    $self->needs_restart(1);
 }
 
 sub _change_hardware_memory($self, $index, $data) {
