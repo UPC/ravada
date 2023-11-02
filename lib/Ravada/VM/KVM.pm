@@ -15,6 +15,7 @@ use Data::Dumper;
 use Digest::MD5;
 use Encode;
 use Encode::Locale;
+use File::Copy qw(copy);
 use File::Path qw(make_path);
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
 use Hash::Util qw(lock_hash);
@@ -2904,6 +2905,46 @@ sub _is_ip_nat($self, $ip0) {
         return 1 if $ip->within($net);
     }
     return 0;
+}
+
+sub copy_file_storage($self, $file, $storage) {
+    my $vol = $self->search_volume($file);
+    die "Error: volume $file not found" if !$vol;
+
+    my $sp = $self->vm->get_storage_pool_by_name($storage);
+    die "Error: storage pool $storage not found" if !$sp;
+
+    my ($name) = $vol->get_name();
+    my $xml = $vol->get_xml_description();
+    my $doc = XML::LibXML->load_xml(string => $xml);
+
+    my $vol_capacity = $vol->get_info()->{capacity};
+
+    my $pool_capacity = $sp->get_info()->{capacity};
+
+    die "Error: '$file' too big to fit in $storage ".Ravada::Utils::number_to_size($vol_capacity)." > ".Ravada::Utils::number_to_size($pool_capacity)."\n"
+    if $vol_capacity>$pool_capacity;
+
+    my ($format) = $doc->findnodes("/volume/target/format");
+    if ($format ne 'qcow2') {
+        die "Error: I can't copy $format on remote nodes"
+        unless $self->is_local;
+
+        my $dst_file = $self->_storage_path($storage)."/".$name;
+        copy($file,$dst_file);
+        $self->refresh_storage();
+        return $dst_file;
+    }
+
+    my $vol_dst;
+    eval { $vol_dst= $sp->get_volume_by_name($name) };
+    die $@ if $@ && !(ref($@) && $@->code == 50);
+
+    warn 1;
+    $vol_dst= $sp->clone_volume($vol->get_xml_description);
+    warn 2;
+
+    return $vol_dst->get_path();
 }
 
 sub get_library_version($self) {

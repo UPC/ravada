@@ -1,0 +1,37 @@
+<!-- Modal -->
+<div class="modal fade" id="changePoolModal" tabindex="-1" role="dialog" aria-labelledby="changePoolModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+                <h5 class="modal-title" id="changePoolModalLabel"><%=l 'Move Volume'%></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+        </div>
+        <div class="modal-body">
+            <div>
+            <%=l 'Move volume to another Storage Pool?' %>
+            </div>
+
+            <select
+                name="storage" ng-model="sp_move.storage_pool"
+                ng-options="storage for storage in storage_pools"
+            >
+            </select>
+
+        </div>
+
+        <div class="modal-footer">
+
+            <button type="button" class="btn btn-secondary"
+                data-dismiss="modal"><%=l 'Cancel' %></button>
+            <button type="button" class="btn btn-primary"
+                data-dismiss="modal"
+                ng-click="move_file_storage(sp_move.file,sp_move.storage_pool)"
+            >
+                <%=l 'yes' %>
+            </button>
+        </div>
+    </div>
+  </div>
+</div>
