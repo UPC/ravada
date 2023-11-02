@@ -216,7 +216,7 @@ our %COMMAND = (
     # list from low to high priority
     ,disk_low_priority => {
         limit => 2
-        ,commands => ['rsync_back','check_storage', 'refresh_vms']
+        ,commands => ['rsync_back','check_storage', 'refresh_vms','move_volume']
         ,priority => 30
     }
     ,disk => {
