@@ -166,6 +166,7 @@ our %VALID_ARG = (
     ,update_iso_urls => { uid => 1 }
     ,list_unused_volumes => {uid => 1, id_vm => 1, start => 2, limit => 2 }
     ,remove_files => { uid => 1, id_vm => 1, files => 1 }
+    ,move_volume => { uid => 1, id_domain => 1, volume => 1, storage => 1 }
 );
 
 $VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};
@@ -215,7 +216,7 @@ our %COMMAND = (
     # list from low to high priority
     ,disk_low_priority => {
         limit => 2
-        ,commands => ['rsync_back','check_storage', 'refresh_vms']
+        ,commands => ['rsync_back','check_storage', 'refresh_vms','move_volume']
         ,priority => 30
     }
     ,disk => {

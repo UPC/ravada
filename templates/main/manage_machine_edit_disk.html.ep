@@ -1,4 +1,5 @@
 <div ng-show="new_hardware=='disk' || (name == 'disk' && is_edit(name,$index))" class="form-group mt-4">
+
     <div class="row" ng-show="new_hardware=='disk'">
         <div class="col-lg-2" align="right">
             <label for="device"><%=l 'device' %></label>
@@ -109,9 +110,25 @@
         <div class="col-lg-8">
         </div>
     </div>
+% if ($USER->is_admin) {
+    <div class="row" ng-show="item.device == 'disk' && item.storage_pool">
+        <div class="col-lg-2" align="right">
+            <label for="storage"><%=l 'storage pool' %></label>
+        </div>
+        <div class="col-lg-10">
+            <button title="<%=l 'change storage pool' %>"
+                class="badge badge-light"
+                ng-click="$parent.$parent.$parent.sp_move.file=item.file;$parent.$parent.$parent.sp_move.storage_pool=item.storage_pool"
+                    data-toggle="modal" data-target="#changePoolModal"
+                            ><i class="fas fa-pencil-alt"></i>
+            </button>
+            <span>{{item.storage_pool}}</span>
+        </div>
+    </div>
+% }
     <div class="row" ng-show="new_hardware && item.device == 'disk'">
         <div class="col-lg-2" align="right">
-            <label for="cache"><%=l 'storage' %></label>
+            <label for="storage"><%=l 'storage' %></label>
         </div>
         <div class="col-lg-10">
             <select name="storage" ng-model="item.storage"
