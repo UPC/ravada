@@ -155,8 +155,6 @@ around 'ping' => \&_around_ping;
 around 'connect' => \&_around_connect;
 after 'disconnect' => \&_post_disconnect;
 
-around '_list_used_volumes' => \&_around_list_used_volumes;
-
 around 'new_network' => \&_around_new_network;
 around 'create_network' => \&_around_create_network;
 around 'remove_network' => \&_around_remove_network;
