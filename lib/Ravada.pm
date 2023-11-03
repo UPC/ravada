@@ -2572,6 +2572,7 @@ sub _sql_insert_defaults($self){
             }
             ,{  id_parent => $id_frontend
                 ,name => "widget"
+                ,value => $conf->{widget}
             }
             ,{
                 id_parent => $id_frontend
@@ -3932,6 +3933,7 @@ sub _timeout_requests($self) {
         ." FROM requests "
         ." WHERE ( status = 'working' or status = 'stopping' )"
         ."  AND date_changed >= ? "
+        ."  AND command <> 'move_volume'"
         ." ORDER BY date_req "
     );
     $sth->execute(_date_now(-30));
@@ -4067,6 +4069,7 @@ sub _kill_dead_process($self) {
         ." AND ( status like 'working%' OR status like 'downloading%'"
         ."      OR status like 'start%' ) "
         ." AND pid IS NOT NULL "
+        ." AND command <> 'move_volume'"
     );
     $sth->execute(time - 2);
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
@@ -4172,7 +4175,7 @@ sub _execute {
         return;
     }
 
-    $self->_wait_pids;
+    $self->_wait_pids();
     return if !$self->_can_fork($request);
 
     my $pid = fork();
@@ -4527,7 +4530,9 @@ sub _wait_pids($self) {
     my @done;
     for my $type ( keys %{$self->{pids}} ) {
         for my $pid ( keys %{$self->{pids}->{$type}}) {
+            next if kill(0,$pid);
             my $kid = waitpid($pid , WNOHANG);
+            next if kill(0,$pid);
             push @done, ($pid) if $kid == $pid || $kid == -1;
         }
     }
@@ -6311,6 +6316,7 @@ sub _req_method {
     ,import_domain => \&_cmd_import
     ,list_unused_volumes => \&_cmd_list_unused_volumes
     ,remove_files => \&_cmd_remove_files
+    ,move_volume => \&_cmd_move_volume
     ,update_iso_urls => \&_cmd_update_iso_urls
 
     ,list_networks => \&_cmd_list_virtual_networks
@@ -6855,6 +6861,45 @@ sub _cmd_create_storage_pool($self, $request) {
     my $vm = Ravada::VM->open($request->args('id_vm'));
     $vm->create_storage_pool($request->arg('name'), $request->arg('directory'));
 
+}
+
+sub _cmd_move_volume($self, $request) {
+
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to move volumes"
+        if !$user->is_admin;
+
+    my $domain = Ravada::Domain->open($request->args('id_domain'));
+    die "Error: I can not move volume while machine running ".$domain->name."\n"
+    if $domain->is_active;
+
+    my $volume = $request->args('volume');
+    my @volumes = $domain->list_volumes_info();
+    my $found;
+    my $n_found = 0;
+    for my $vol (@volumes) {
+        if ($vol->file eq $volume ) {
+            $found = $vol;
+            last;
+        }
+        $n_found++;
+    }
+    die "Volume $volume not found in ".$domain->name."\n".Dumper([map { $_->file } @volumes]) if !$found;
+
+    my $vm = $domain->_vm;
+    my $storage = $request->args('storage');
+    my $dst_path = $vm->_storage_path($storage);
+    my ($filename) = $volume =~ m{.*/(.*)};
+    my $dst_vol = "$dst_path/$filename";
+
+    die "Error: file '$dst_vol' already exists in ".$vm->name."\n" if $vm->file_exists($dst_vol);
+
+    my $new_file = $vm->copy_file_storage($volume, $storage);
+
+    $domain->change_hardware('disk', $n_found, { file => $new_file });
+    if ($volume !~ /\.iso$/) {
+        $vm->remove_file($volume);
+    }
 }
 
 =head2 set_debug_value

@@ -320,6 +320,7 @@
             $scope.lock_info = false;
             $scope.topology = false;
             $scope.searching_ldap_attributes = true;
+            $scope.storage_pools=['default'];
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -589,6 +590,10 @@
                                 $http.get('/list_storage_pools/'+$scope.showmachine.type+"?active=1")
                                     .then(function(response) {
                                         $scope.list_storage= response.data;
+
+                                    for (var i = 0; i < response.data.length; i++) {
+                                        $scope.storage_pools[i]=response.data[i].name;
+                                    }
                                 });
                             }
                             list_interfaces();
@@ -756,6 +761,17 @@
               .then(function(response) {
               });
           };
+          $scope.move_file_storage = function() {
+              $http.post('/request/move_volume/'
+                      , JSON.stringify({ 'id_domain': $scope.showmachine.id
+                          ,'volume': $scope.sp_move.file
+                          ,'storage': $scope.sp_move.storage_pool
+                      })
+              ).then(function(response) {
+                  console.log(response.data);
+              });
+
+          }
           $scope.copy_machine = function() {
               $scope.copy_request= { 'status': 'requested' };
               $http.post('/machine/copy/'
@@ -1173,6 +1189,15 @@
                     $scope.cpu_models=response.data;
                 });
             };
+
+            $scope.shutdown= function() {
+                $scope.set_edit();
+                $scope.lock_info=false;
+                $http.get("/machine/shutdown/"+$scope.showmachine.id+".json")
+                .then(function(response) {
+                });
+            };
+
 
             $scope.shutdown_start = function() {
                 $scope.set_edit();
