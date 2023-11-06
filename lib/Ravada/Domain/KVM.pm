@@ -393,7 +393,7 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
         my ($boot_node) = $disk->findnodes('boot');
         my $info = {};
         eval { $info = $self->_volume_info($file)
-            if $file && $device eq 'disk' or $device eq 'cdrom' };
+            if $file && ( $device eq 'disk' or $device eq 'cdrom') };
         die $@ if $@ && $@ !~ /not found/i;
         $info->{device} = $device;
         if (!$info->{name} ) {
