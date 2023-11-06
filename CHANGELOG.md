@@ -4,6 +4,6 @@
 
 **Bugfixes**
 
--  Properly check if process has finished
+- Do not insert network twice [\#2005]
 
 **Refactors**
