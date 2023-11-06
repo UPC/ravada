@@ -4505,6 +4505,7 @@ sub _wait_pids($self) {
         for my $pid ( keys %{$self->{pids}->{$type}}) {
             next if kill(0,$pid);
             my $kid = waitpid($pid , WNOHANG);
+            next if kill(0,$pid);
             push @done, ($pid) if $kid == $pid || $kid == -1;
         }
     }
