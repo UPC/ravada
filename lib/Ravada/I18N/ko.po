@@ -2,7 +2,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2023-10-13 20:02+0000\n"
+"PO-Revision-Date: 2023-11-07 20:36+0000\n"
 "Last-Translator: Claire Charles <charlesclaire101@gmail.com>\n"
 "Language-Team: Korean <https://hosted.weblate.org/projects/ravada/"
 "translation/ko/>\n"
@@ -11,7 +11,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Weblate 5.1-dev\n"
+"X-Generator: Weblate 5.2-dev\n"
 
 msgid "Ravada broker"
 msgstr "라바다 브로커"
@@ -303,10 +303,10 @@ msgid "bits) in your computer."
 msgstr "bits)를 컴퓨터에 저장합니다."
 
 msgid "Permissions"
-msgstr ""
+msgstr "허가"
 
 msgid "can change the settings of owned virtual machines."
-msgstr ""
+msgstr "소유된 가상 머신의 설정을 변경할 수 있습니다."
 
 msgid "can change the settings of any virtual machines."
 msgstr ""
@@ -315,82 +315,83 @@ msgid "can change the settings of any virtual machines "
 msgstr ""
 
 msgid "cloned from one base owned by the user."
-msgstr ""
+msgstr "사용자가 소유한 하나의 기지에서 복제됩니다."
 
 msgid "can clone public virtual machines."
-msgstr ""
+msgstr "사용자가 소유한 하나의 베이스에서 복제됩니다."
 
 msgid "can clone any virtual machine."
-msgstr ""
+msgstr "모든 가상 머신을 복제할 수 있습니다."
 
 msgid "can create bases."
-msgstr ""
+msgstr "기지를 만들 수 있습니다."
 
 msgid "can create virtual machines."
-msgstr ""
+msgstr "가상 머신을 만들 수 있습니다."
 
 msgid "can grant permissions to other users"
-msgstr ""
+msgstr "다른 사용자에게 권한을 부여할 수 있습니다"
 
 msgid "can hibernate any virtual machine."
-msgstr ""
+msgstr "모든 가상 머신을 최대 절전 모드로 전환할 수 있습니다."
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr ""
+msgstr "사용자가 소유한 가상 시스템에서 클론을 최대 절전 모드로 전환할 수 있습니다."
 
 msgid "can hibernate any clone."
-msgstr ""
+msgstr "모든 클론을 최대 절전 모드로 만들 수 있습니다."
 
 msgid "can remove any virtual machines owned by the user."
 msgstr ""
 
 msgid "can remove any virtual machine."
-msgstr ""
+msgstr "모든 가상 머신을 제거할 수 있습니다."
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr ""
+msgstr "사용자가 소유한 가상 시스템에서 클론을 제거할 수 있습니다."
 
 msgid "can remove any clone."
-msgstr ""
+msgstr "모든 클론을 제거할 수 있습니다."
 
 msgid "can take a screenshot of any virtual machine owned by the user."
-msgstr ""
+msgstr "사용자가 소유한 가상 머신의 스크린샷을 찍을 수 있습니다."
 
 msgid "can take a screenshot of any virtual machine."
-msgstr ""
+msgstr "모든 가상 머신의 스크린샷을 찍을 수 있습니다."
 
 msgid "can shutdown any virtual machine."
-msgstr ""
+msgstr "모든 가상 머신을 종료할 수 있습니다."
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr ""
+msgstr "사용자가 소유한 가상 시스템에서 클론을 종료할 수 있습니다."
 
 msgid "Submit Query"
-msgstr ""
+msgstr "쿼리 제출"
 
 msgid "From Template"
-msgstr ""
+msgstr "템플릿에서"
 
 msgid "From Machine"
-msgstr ""
+msgstr "기계에서"
 
 msgid "Backend"
-msgstr ""
+msgstr "백엔드"
 
 msgid "Select Template"
-msgstr ""
+msgstr "템플릿 선택"
 
 msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
-msgstr ""
+msgstr "이 ISO 이미지는 아직 다운로드되지 않았습니다. 인터넷에서 파일을 가져올 "
+"때까지 몇 분, 심지어 몇 시간이 걸릴 수 있습니다."
 
 msgid "Download now"
-msgstr ""
+msgstr "지금 다운로드"
 
 msgid "Select ISO"
-msgstr ""
+msgstr "ISO를 선택합니다"
 
 msgid "Template"
-msgstr ""
+msgstr "템플렛"
 
 msgid "Disk Size: (GB)"
 msgstr ""
@@ -918,3 +919,12 @@ msgstr "비밀번호 확인은 단어와 숫자만 포함할 수 있습니다"
 
 msgid "Confirm password can not exceed 20 characters"
 msgstr "비밀번호 확인은 20자를 초과할 수 없습니다"
+
+msgid "can change the settings of any virtual machine."
+msgstr "모든 가상 머신의 설정을 변경할 수 있습니다."
+
+msgid "can remove any virtual machine owned by the user."
+msgstr "사용자가 소유한 모든 가상 머신을 제거할 수 있습니다."
+
+msgid "can change the settings of any virtual machine "
+msgstr "모든 가상 머신의 설정을 변경할 수 있습니다 "
