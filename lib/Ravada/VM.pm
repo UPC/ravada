@@ -1449,6 +1449,7 @@ sub _around_ping($orig, $self, $option=undef, $cache=1) {
 }
 
 sub _insert_network($self, $net) {
+    confess if $net->{id};
     $net->{id_owner} = Ravada::Utils::user_daemon->id
     if !exists $net->{id_owner};
 
@@ -2847,6 +2848,31 @@ sub _around_copy_file_storage($orig, $self, $file, $storage) {
     }
 
     return $new_file;
+}
+
+sub _list_files_local($self, $dir, $pattern) {
+    opendir my $ls,$dir or die "$! $dir";
+    my @list;
+    while (my $file = readdir $ls) {
+        next if defined $pattern && $file !~ $pattern;
+        push @list,($file);
+    }
+    return @list;
+}
+
+sub _list_files_remote($self, $dir, $pattern) {
+    my @cmd=("ls",$dir);
+    my ($out, $err) = $self->run_command(@cmd);
+    my @list;
+    for my $file (split /\n/,$out) {
+        push @list,($file) if !defined $pattern || $file =~ $pattern;
+    }
+    return @list;
+}
+
+sub list_files($self, $dir, $pattern=undef) {
+    return $self->_list_files_local($dir, $pattern) if $self->is_local;
+    return $self->_list_files_remote($dir, $pattern);
 }
 
 1;

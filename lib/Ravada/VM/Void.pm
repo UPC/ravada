@@ -11,7 +11,7 @@ use Moose;
 use Socket qw( inet_aton inet_ntoa );
 use Sys::Hostname;
 use URI;
-use YAML qw(Dump LoadFile DumpFile);
+use YAML qw(Dump Load);
 
 use Ravada::Domain::Void;
 use Ravada::NetInterface::Void;
@@ -349,16 +349,11 @@ sub list_routes {
 sub list_virtual_networks($self) {
 
     my $dir_net = $self->dir_img."/networks/";
-    my $dir;
-    opendir ($dir, $dir_net) or do {
-        mkdir $dir_net or die "$! $dir_net";
-        opendir($dir, $dir_net) or confess;
-    };
+    my @files = $self->list_files($dir_net,qr/.yml$/);
     my @list;
-    while (my $file = readdir $dir) {
-        next if ! -f $file && $file !~ /\.yml$/;
+    for my $file(@files) {
         my $net;
-        eval { $net = LoadFile("$dir_net/$file") };
+        eval { $net = Load($self->read_file("$dir_net/$file")) };
         confess $@ if $@;
 
         $net->{id_vm} = $self->id if !$net->{id_vm};
@@ -375,7 +370,7 @@ sub list_virtual_networks($self) {
         };
 
         my $file_out = $self->dir_img."/networks/".$net->{name}.".yml";
-        DumpFile($file_out,$net);
+        $self->write_file($file_out,Dump($net));
         push @list,($net);
     }
     return @list;
@@ -450,7 +445,7 @@ sub create_network($self, $data, $id_owner=undef, $request=undef) {
     for my $field ('bridge','ip_address') {
         $self->_check_duplicated_network($field,$data);
     }
-    DumpFile($file_out,$data);
+    $self->write_file($file_out,Dump($data));
 
     return $data;
 }
@@ -591,7 +586,7 @@ sub _init_storage_pool_default($self) {
     my $config_dir = Ravada::Front::Domain::Void::_config_dir();
     my $file_sp = "$config_dir/.storage_pools.yml";
 
-    return if -e $file_sp;
+    return if $self->file_exists($file_sp);
 
     my @list = ({ name => 'default', path => $config_dir, is_active => 1 });
 
@@ -625,7 +620,7 @@ sub list_storage_pools($self, $info=0) {
     $self->_init_storage_pool_default();
 
     my $file_sp = "$config_dir/.storage_pools.yml";
-    my $extra= LoadFile($file_sp);
+    my $extra= Load($self->read_file($file_sp));
     push @list,(@$extra) if $extra;
 
     my ($default) = grep { $_->{name} eq 'default'} @list;
@@ -810,7 +805,7 @@ sub change_network($self,$data) {
 
     my $file_out = $self->dir_img."/networks/".$net0->{name}.".yml";
     my $net= {};
-    eval { $net = LoadFile($file_out) };
+    eval { $net = Load($self->read_file($file_out)) };
     confess $@ if $@;
 
     my $changed = 0;
@@ -838,14 +833,13 @@ sub change_network($self,$data) {
     return if !$changed;
 
     delete $net->{is_public};
-    DumpFile($file_out,$net);
+    $self->write_file($file_out,Dump($net));
 }
 
 sub remove_storage_pool($self, $name) {
-    die "TODO remote VM" unless $self->is_local;
 
     my $file_sp = $self->dir_img."/.storage_pools.yml";
-    my $sp_list = LoadFile($file_sp);
+    my $sp_list = Load($self->read_file($file_sp));
     my @sp2;
     for my $sp (@$sp_list) {
         push @sp2,($sp) if $sp->{name} ne $name;

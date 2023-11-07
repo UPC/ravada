@@ -1602,6 +1602,11 @@ sub test_displays($vm, $node, $no_builtin=0) {
     $domain->remove(user_admin);
 }
 
+sub test_network($vm, $node) {
+    my @vm_nets= $vm->list_virtual_networks();
+    my $node_nets = $node->list_virtual_networks();
+}
+
 ##################################################################################
 
 if ($>)  {
@@ -1615,7 +1620,7 @@ clean();
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 my $tls;
 
-for my $vm_name (vm_names() ) {
+for my $vm_name (reverse vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -1642,6 +1647,7 @@ for my $vm_name (vm_names() ) {
         $tls = 1 if check_libvirt_tls() && $vm_name eq 'KVM';
         my $node = remote_node($vm_name)  or next;
         clean_remote_node($node);
+        test_network($vm,$node);
 
         ok($node->vm,"[$vm_name] expecting a VM inside the node") or do {
             remove_node($node);
