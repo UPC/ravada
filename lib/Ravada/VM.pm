@@ -1449,7 +1449,7 @@ sub _around_ping($orig, $self, $option=undef, $cache=1) {
 }
 
 sub _insert_network($self, $net) {
-    confess if $net->{id};
+    delete $net->{id};
     $net->{id_owner} = Ravada::Utils::user_daemon->id
     if !exists $net->{id_owner};
 
