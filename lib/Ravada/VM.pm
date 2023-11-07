@@ -2870,6 +2870,14 @@ sub _list_files_remote($self, $dir, $pattern) {
     return @list;
 }
 
+=head2 list_files
+
+List files in a Virtual Manager
+
+Arguments: dir , optional regexp pattern
+
+=cut
+
 sub list_files($self, $dir, $pattern=undef) {
     return $self->_list_files_local($dir, $pattern) if $self->is_local;
     return $self->_list_files_remote($dir, $pattern);
