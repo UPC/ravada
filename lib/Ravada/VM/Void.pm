@@ -445,6 +445,11 @@ sub create_network($self, $data, $id_owner=undef, $request=undef) {
     for my $field ('bridge','ip_address') {
         $self->_check_duplicated_network($field,$data);
     }
+
+    delete $data->{is_public};
+    delete $data->{id};
+    delete $data->{id_vm};
+
     $self->write_file($file_out,Dump($data));
 
     return $data;
@@ -833,6 +838,9 @@ sub change_network($self,$data) {
     return if !$changed;
 
     delete $net->{is_public};
+    delete $net->{id};
+    delete $net->{id_vm};
+
     $self->write_file($file_out,Dump($net));
 }
 
