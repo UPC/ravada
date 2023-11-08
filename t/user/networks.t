@@ -31,7 +31,7 @@ sub test_create_network($vm) {
         ,id_vm => $vm->id
         ,data => $data
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     my @networks = $vm->list_virtual_networks();
     my ($network) = grep {$_->{name} eq $data->{name} } @networks;
     ok($network) or die "Error, network $data->{name} not created "
@@ -112,7 +112,7 @@ sub test_deny_access($vm) {
         uid => $user->id
         ,id => $network->{id}
     );
-    wait_request(check_error => 0, debug => 1);
+    wait_request(check_error => 0, debug => 0);
     like($req_delete->error,qr/not authorized/);
     my $networks2 = rvd_front->list_networks($vm->id , user_admin->id);
     my ($found2) = grep { $_->{name} eq $network->{name} } @$networks2;
