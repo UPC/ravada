@@ -237,10 +237,11 @@ sub _add_internal_network($self) {
         ." VALUES(?,?,?,1,0)"
     );
     my $n=0;
+    my %done;
     for my $net (split /\n/,$out) {
         next if $net =~ /dev virbr/;
         my ($address) = $net =~ m{(^[\d\.]+/\d+)};
-        next if !$address;
+        next if !$address || $done{address}++;
         $sth->execute("internal$n",$address, ++$n+1);
 
     }
