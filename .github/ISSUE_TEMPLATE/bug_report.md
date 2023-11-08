@@ -1,44 +1,56 @@
----
-name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
-assignees: ''
-
----
-
-**Describe the bug**
-A clear and concise description of what the bug is.
-
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
-
-**Expected behavior**
-A clear and concise description of what you expected to happen.
-
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
-
-**Server (please complete the following information):**
- - OS: [e.g. Ubuntu Server X]
- - Browser [e.g. chrome, safari]
- - Ravada Version [e.g. 0.6]
-
-**Client (please complete the following information):**
- - Browser: [e.g. Firefox]
- - OS: [e.g. Windows]
- - Spice client version [e.g. 1.8]
-
-**Additional context**
-Add any other context about the problem here.
-
-Remember that courtesy and proper grammar go a long way.
-Please take the time to craft a precise, polite issue.
-We will do our best to help, but remember that this is an open source project - none of us are getting paid a salary to develop this project, or act as your personal support hotline ;-)
-
-Carefully search the [existing issues](https://github.com/UPC/ravada/issues), both opened and closed. Your question may have already been asked and answered before!
-
+name:⚠️  Bug Report
+description: Report a reproducible bug in the current release of NetBox
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+  - type: input
+    attributes:
+      label: NetBox version
+      description: What version of NetBox are you currently running?
+      placeholder: v3.6.4
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Python version
+      description: What version of Python are you currently running?
+      options:
+        - "3.8"
+        - "3.9"
+        - "3.10"
+        - "3.11"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps to Reproduce
+      description: >
+        Describe in detail the exact steps that someone else can take to
+        reproduce this bug using the current stable release of NetBox. Begin with the
+        creation of any necessary database objects and call out every operation being
+        performed explicitly. If reporting a bug in the REST API, be sure to reconstruct
+        the raw HTTP request(s) being made: Don't rely on a client library such as
+        pynetbox. Additionally, **do not rely on the demo instance** for reproducing
+        suspected bugs, as its data is prone to modification or deletion at any time.
+      placeholder: |   
+	1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to
+	4. See error
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: A new widget should have been created with the specified attributes
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Observed Behavior
+      description: What happened instead?
+      placeholder: A TypeError exception was raised
+    validations:
+      required: true
