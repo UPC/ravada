@@ -1,6 +1,8 @@
+---
 name: 📖 Documentation Change
 description: Suggest an addition or modification to the Ravada documentation
 labels: ["documentation"]
+---
 body:
   - type: dropdown
     attributes:
@@ -16,12 +18,12 @@ body:
   - type: dropdown
     attributes:
       label: Area
-      description: To what section of the documentation does this change primarily pertain?
+      description: Which section of the documentation is this change to?
       options:
         - Features
-	- Administrator
-	- Guest VM
-	- Development
+	      - Administrator
+	      - Guest VM
+	      - Development
         - Other
     validations:
       required: true
