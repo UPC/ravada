@@ -1,6 +1,6 @@
 ---
 name: 📖 Documentation Change
-description: Suggest an addition or modification to the Ravada documentation
+about: Suggest an addition or modification to the Ravada documentation
 labels: ["documentation"]
 ---
 body:
