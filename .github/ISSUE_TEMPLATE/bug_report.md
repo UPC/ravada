@@ -1,5 +1,5 @@
 ---
-name:⚠️  Bug Report
+name: ⚠️  Bug Report
 description: Report a reproducible bug in the current release of Ravda
 labels: ["bug"]
 ---
