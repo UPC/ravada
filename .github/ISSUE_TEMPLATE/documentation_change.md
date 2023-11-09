@@ -1,5 +1,5 @@
 name: 📖 Documentation Change
-description: Suggest an addition or modification to the NetBox documentation
+description: Suggest an addition or modification to the Ravada documentation
 labels: ["documentation"]
 body:
   - type: dropdown
