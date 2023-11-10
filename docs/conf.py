@@ -1,3 +1,14 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0
+# Configuration file for the Sphinx documentation builder.
+#
+# This file only contains a selection of the most common options. For a full
+# list see the documentation:
+# https://www.sphinx-doc.org/en/master/usage/configuration.html
+
+import os
+import subprocess
+
 extensions = [
     'sphinx-prompt'
 ]
@@ -23,6 +34,8 @@ author = u'Ravada Team'
 #   'da', 'de', 'en', 'es', 'fi', 'fr', 'hu', 'it', 'ja'
 #   'nl', 'no', 'pt', 'ro', 'ru', 'sv', 'tr'
 html_search_language = 'en'
+
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options
 html_theme_options = {
