@@ -1,2 +1,2 @@
-Sphinx~=6.2.1
-sphinx-prompt
+breathe
+sphinx_rtd_theme
