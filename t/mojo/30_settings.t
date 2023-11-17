@@ -29,6 +29,8 @@ my %HREFS;
 my %MISSING_LANG = map {$_ => 1 }
     qw(ca-valencia he ko);
 
+my $ID_DOMAIN;
+
 sub _remove_nodes($vm_name) {
     my @list_nodes = rvd_front->list_vms();
 
@@ -270,7 +272,7 @@ sub test_unused_routes() {
 }
 
 sub _fill_href($href) {
-    $href=~ s/(.*)\{\{machine.id}}(.*)/${1}1$2/;
+    $href=~ s/(.*)\{\{machine.id}}(.*)/${1}$ID_DOMAIN$2/;
     return $href;
 }
 
@@ -364,6 +366,16 @@ sub test_storage_pools($vm_name) {
 
 }
 
+sub  _search_public_base() {
+    my $sth = connector->dbh->prepare(
+        "SELECT id FROM domains WHERE is_public=1 "
+        ." AND name <> 'ztest'"
+    );
+    $sth->execute();
+    my ($id) = ($sth->fetchrow or '999');
+    return $id;
+}
+
 ########################################################################################
 
 $ENV{MOJO_MODE} = 'devel';
@@ -388,6 +400,8 @@ mojo_login($t, $USERNAME, $PASSWORD);
 
 remove_old_domains_req(0); # 0=do not wait for them
 clean_clones();
+
+$ID_DOMAIN = _search_public_base();
 
 test_languages();
 test_missing_routes();
