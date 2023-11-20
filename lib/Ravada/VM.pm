@@ -362,8 +362,8 @@ sub _connect_ssh($self) {
     confess "Don't connect to local ssh"
         if $self->is_local;
 
-    if ( $self->readonly || $> ) {
-        confess $self->name." readonly or not root, don't do ssh";
+    if ( $self->readonly ) {
+        confess $self->name." readonly, don't do ssh";
         return;
     }
 
@@ -1626,7 +1626,12 @@ sub write_file( $self, $file, $contents ) {
     return $self->_write_file_local($file, $contents )  if $self->is_local;
 
     my $ssh = $self->_ssh or confess "Error: no ssh connection";
-    my ($rin, $pid) = $self->_ssh->pipe_in("cat > $file")
+    unless ( $file =~ /^[a-z0-9 \/_:\-\.]+$/i ) {
+        my $file2=$file;
+        $file2 =~ tr/[a-z0-9 \/_:\-\.]/*/c;
+        die "Error: insecure character in '$file': '$file2'";
+    }
+    my ($rin, $pid) = $self->_ssh->pipe_in("cat > '$file'")
         or die "pipe_in method failed ".$self->_ssh->error;
 
     print $rin $contents;

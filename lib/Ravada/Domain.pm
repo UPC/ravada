@@ -5178,6 +5178,7 @@ sub set_base_vm($self, %args) {
             die $err;
         }
         $self->_set_clones_autostart(0);
+        $self->_set_base_vm_hd($vm);
     } else {
         $self->_set_vm($vm,1); # force set vm on domain
         $self->_do_remove_base($user);
@@ -5189,6 +5190,13 @@ sub set_base_vm($self, %args) {
     }
     $vm->_add_instance_db($self->id);
     return $self->_set_base_vm_db($vm->id, $value);
+}
+
+sub _set_base_vm_hd($self, $node) {
+    my @node_hds = $node->list_host_devices();
+    for my $hd ($self->list_host_devices) {
+        die Dumper($hd);
+    }
 }
 
 sub _check_all_parents_in_node($self, $vm) {

@@ -83,8 +83,29 @@ sub search_by_id($self, $id) {
     return Ravada::HostDevice->new(%$row);
 }
 
-sub list_devices($self) {
+sub list_devices_nodes($self) {
     my $vm = Ravada::VM->open($self->id_vm);
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms WHERE id <> ? AND vm_type=?");
+    $sth->execute($vm->id, $vm->type);
+
+    my @nodes = ($vm);
+
+    while ( my ($id) = $sth->fetchrow) {
+        my $node = Ravada::VM->open($id);
+        push @nodes,($node);
+    }
+
+    my @devices;
+
+    for my $node (@nodes) {
+       push @devices, $self->list_devices($node);
+    }
+
+    return @devices;
+}
+
+sub list_devices($self, $vm = Ravada::VM->open($self->id_vm)) {
 
     die "Error: No list_command in host_device ".$self->id_vm
     if !$self->list_command;
