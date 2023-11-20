@@ -5194,8 +5194,13 @@ sub set_base_vm($self, %args) {
 
 sub _set_base_vm_hd($self, $node) {
     my @node_hds = $node->list_host_devices();
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO host_devices_nodes (id_hd,id_vm) "
+        ." VALUES( ?,? )"
+    );
     for my $hd ($self->list_host_devices) {
-        die Dumper($hd);
+        warn Dumper([$hd->{id}, $node->id]);
+        $sth->execute($hd->{id}, $node->id);
     }
 }
 

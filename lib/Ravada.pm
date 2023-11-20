@@ -1589,6 +1589,9 @@ sub _add_indexes_generic($self) {
             "unique(name, id_vm)"
             ,"index(id_vm)"
         ]
+        ,host_devices_nodes => [
+            "unique(id_vm, id_hd)"
+        ]
         ,host_device_templates => [
             "unique(id_host_device,path)"
         ]
@@ -2209,6 +2212,13 @@ sub _sql_create_tables($self) {
                 ,enabled => "integer NOT NULL default 1"
                 ,'date_changed'
                     => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+            }
+        ]
+        ,[
+            host_devices_nodes => {
+                id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
+                ,id_hd => 'integer not null references `host_devices`(`id`) ON DELETE CASCADE'
+                ,id_vm => 'integer NOT NULL references `vms`(`id`) ON DELETE CASCADE'
             }
         ]
         ,

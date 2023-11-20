@@ -30,7 +30,6 @@ sub _create_mock_devices($vm, $n_devices, $type, $value="fff:fff") {
     for my $n ( 1 .. $n_devices ) {
         my $file= "$PATH/${name} $N_DEVICE$value${n} Foobar "
             .$vm->name;
-        diag($file);
         $vm->write_file($file,"fff6f017-3417-4ad3-b05e-17ae3e1a461".int(rand(10)));
     }
     $N_DEVICE ++;
@@ -72,6 +71,11 @@ sub test_assign($vm, $node, $hd) {
     $base->prepare_base(user_admin);
     $base->set_base_vm(id_vm => $node->id, user => user_admin);
     is($node->list_host_devices,$vm->list_host_devices) or exit;
+
+    my $base2 = create_domain($vm);
+    $base2->add_host_device($hd);
+    $base2->prepare_base(user_admin);
+    $base2->set_base_vm(id_vm => $node->id, user => user_admin);
 
     my $req = Ravada::Request->clone(
             uid => user_admin->id
