@@ -99,15 +99,15 @@ sub list_devices_nodes($self) {
     my @devices;
 
     for my $node (@nodes) {
-       push @devices, $self->list_devices($node);
+       push @devices, $self->list_devices($node->id);
     }
 
     return @devices;
 }
 
-sub list_devices($self, $vm = Ravada::VM->open($self->id_vm)) {
-
-    die "Error: No list_command in host_device ".$self->id_vm
+sub list_devices($self, $id_vm=$self->id_vm) {
+    my $vm = Ravada::VM->open($id_vm);
+    die "Error: No list_command in host_device ".$self->id
     if !$self->list_command;
 
     my @command = split /\s+/, $self->list_command;
@@ -144,9 +144,9 @@ sub _device_locked($self, $name) {
     return 1 if $is_locked;
 }
 
-sub list_available_devices($self) {
+sub list_available_devices($self, $id_vm=undef) {
     my @device;
-    for my $dev_entry ( $self->list_devices ) {
+    for my $dev_entry ( $self->list_devices($id_vm) ) {
         next if $self->_device_locked($dev_entry);
         push @device, ($dev_entry);
     }

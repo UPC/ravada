@@ -5178,7 +5178,6 @@ sub set_base_vm($self, %args) {
             die $err;
         }
         $self->_set_clones_autostart(0);
-        $self->_set_base_vm_hd($vm);
     } else {
         $self->_set_vm($vm,1); # force set vm on domain
         $self->_do_remove_base($user);
@@ -5190,18 +5189,6 @@ sub set_base_vm($self, %args) {
     }
     $vm->_add_instance_db($self->id);
     return $self->_set_base_vm_db($vm->id, $value);
-}
-
-sub _set_base_vm_hd($self, $node) {
-    my @node_hds = $node->list_host_devices();
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "INSERT INTO host_devices_nodes (id_hd,id_vm) "
-        ." VALUES( ?,? )"
-    );
-    for my $hd ($self->list_host_devices) {
-        warn Dumper([$hd->{id}, $node->id]);
-        $sth->execute($hd->{id}, $node->id);
-    }
 }
 
 sub _check_all_parents_in_node($self, $vm) {
@@ -7135,10 +7122,7 @@ sub _add_host_devices($self, @args) {
     return if !@host_devices;
     return if $self->is_active();
 
-    my $vm_local = $self->_vm->new( host => 'localhost' );
-    my $vm = $vm_local;
-
-    my ($id_vm, $request);
+    my ($request);
     if (!(scalar(@args) % 2)) {
         my %args = @args;
         $request = delete $args{request} if exists $args{request};
@@ -7157,7 +7141,8 @@ sub _add_host_devices($self, @args) {
         }
         next if !$host_device->enabled();
 
-        my ($device) = $host_device->list_available_devices();
+        my ($device) = $host_device->list_available_devices($self->_data('id_vm'));
+        warn $device;
         if ( !$device ) {
             $device = _refresh_domains_with_locked_devices($host_device);
             if (!$device) {
@@ -7247,10 +7232,10 @@ sub _lock_host_device($self, $host_device, $device=undef) {
 
     return 0 if defined $id_domain_locked;
 
-    my $query = "INSERT INTO host_devices_domain_locked (id_domain,id_vm,name) VALUES(?,?,?)";
+    my $query = "INSERT INTO host_devices_domain_locked (id_domain,id_vm,name,time_changed) VALUES(?,?,?,?)";
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
-    eval { $sth->execute($self->id,$self->_vm->id, $device) };
+    eval { $sth->execute($self->id,$self->_vm->id, $device,time) };
     if ($@) {
         warn $@;
         $self->_data(status => 'shutdown');
@@ -7266,13 +7251,15 @@ sub _lock_host_device($self, $host_device, $device=undef) {
 }
 
 sub _unlock_host_devices($self) {
+    warn "Unlocking all host devices";
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
-        ." WHERE id_domain=?"
+        ." WHERE id_domain=? AND time_changed<?"
     );
-    $sth->execute($self->id);
+    $sth->execute($self->id, time-5);
 }
 
 sub _unlock_host_device($self, $name) {
+    warn "Unlocking host device $name";
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
         ." WHERE id_domain=? AND name=?"
     );
@@ -7282,12 +7269,12 @@ sub _unlock_host_device($self, $name) {
 
 sub _check_host_device_already_used($self, $device) {
 
-    my $query = "SELECT id_domain FROM host_devices_domain_locked "
+    my $query = "SELECT id_domain,time_changed FROM host_devices_domain_locked "
     ." WHERE id_vm=? AND name=?"
     ;
     my $sth = $$CONNECTOR->dbh->prepare($query);
     $sth->execute($self->_vm->id, $device);
-    my ($id_domain) = $sth->fetchrow;
+    my ($id_domain,$time_changed) = $sth->fetchrow;
     #    warn "\n".($id_domain or '<UNDEF>')." [".$self->id."] had locked $device\n";
 
     return if !defined $id_domain;
@@ -7295,8 +7282,10 @@ sub _check_host_device_already_used($self, $device) {
 
     my $domain = Ravada::Domain->open($id_domain);
 
-    return $id_domain if $domain->is_active;
+    return $id_domain if time-$time_changed < 10 || $domain->is_active;
 
+    warn "delete really not used ".(time - $time_changed);
+    confess if $id_domain==4;
     $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
         ." WHERE id_domain=?");
     $sth->execute($id_domain);

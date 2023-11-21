@@ -1209,8 +1209,7 @@ sub get_config($self) {
 }
 
 sub reload_config($self, $data) {
-    eval { DumpFile($self->_config_file(), $data) };
-    confess $@ if $@;
+    $self->_vm->write_file($self->_config_file(), Dump($data));
 }
 
 sub has_nat_interfaces($self) {
