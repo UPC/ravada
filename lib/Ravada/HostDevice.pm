@@ -141,7 +141,8 @@ sub _device_locked($self, $name) {
     $sth->execute($self->id_vm, $name);
     my ($is_locked) = $sth->fetchrow;
     $is_locked = 0 if !defined $is_locked;
-    return 1 if $is_locked;
+    warn "$is_locked : $name\n";
+    return $is_locked;
 }
 
 sub list_available_devices($self, $id_vm=undef) {
