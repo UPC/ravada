@@ -7141,7 +7141,7 @@ sub _add_host_devices($self, @args) {
         }
         next if !$host_device->enabled();
 
-        my ($device) = $host_device->list_available_devices($self->_data('id_vm'));
+        my ($device) = $host_device->list_available_devices($self->_vm->id);
         warn $device;
         if ( !$device ) {
             $device = _refresh_domains_with_locked_devices($host_device);

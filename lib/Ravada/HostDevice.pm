@@ -134,21 +134,21 @@ sub is_device($self, $device) {
 
 }
 
-sub _device_locked($self, $name) {
+sub _device_locked($self, $name, $id_vm=$self->id_vm) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM host_devices_domain_locked "
         ." WHERE id_vm=? AND name=? "
     );
-    $sth->execute($self->id_vm, $name);
+    $sth->execute($id_vm, $name);
     my ($is_locked) = $sth->fetchrow;
     $is_locked = 0 if !defined $is_locked;
-    warn "$is_locked : $name\n";
+    warn "$is_locked $id_vm: $name\n";
     return $is_locked;
 }
 
 sub list_available_devices($self, $id_vm=undef) {
     my @device;
     for my $dev_entry ( $self->list_devices($id_vm) ) {
-        next if $self->_device_locked($dev_entry);
+        next if $self->_device_locked($dev_entry, $id_vm);
         push @device, ($dev_entry);
     }
     return @device;
