@@ -323,7 +323,7 @@ sub _around_start($orig, $self, @arg) {
     $enable_host_devices = 1 if !defined $enable_host_devices;
 
     for (1 .. 5) {
-        eval { $self->_start_checks(@arg) };
+        eval { $self->_start_checks(@arg, enable_host_devices => $enable_host_devices) };
         my $error = $@;
         if ($error) {
             if ( $error =~/base file not found/ && !$self->_vm->is_local) {
@@ -458,13 +458,14 @@ sub _start_checks($self, @args) {
     my $vm_local = $self->_vm->new( host => 'localhost' );
     my $vm = $vm_local;
 
-    my ($id_vm, $request);
+    my ($id_vm, $request, $enable_host_devices);
     if (!(scalar(@args) % 2)) {
         my %args = @args;
 
         # We may be asked to start the machine in a specific id_vmanager
         $id_vm = delete $args{id_vm};
         $request = delete $args{request} if exists $args{request};
+        $enable_host_devices = delete $args{enable_host_devices};
     }
     # If not specific id_manager we go to the last id_vmanager unless it was localhost
     # If the last VManager was localhost it will try to balance here.
@@ -497,7 +498,7 @@ sub _start_checks($self, @args) {
         if ($id_vm) {
             $self->_set_vm($vm);
         } else {
-            $self->_balance_vm($request);
+            $self->_balance_vm($request, $enable_host_devices);
         }
         if ( !$self->is_volatile && !$self->_vm->is_local() ) {
             if (!base_in_vm($self->id_base, $self->_vm->id)) {
@@ -575,7 +576,25 @@ sub _search_already_started($self, $fast = 0) {
     return keys %started;
 }
 
-sub _balance_vm($self, $request=undef) {
+sub _search_vm_available_hd($self) {
+    my $vm_free = $self->_vm;
+
+    for my $vm ( $self->list_vms ) {
+        warn "Trying ".$vm->name;
+        my @host_devices = $self->list_host_devices();
+        my $available=1;
+        for my $hd (@host_devices) {
+            if  ( !$hd->list_devices_available ) {
+                $available=0;
+                last;
+            }
+        }
+        return $vm if $available;
+    }
+    die "No host devices available in any node.\n";
+}
+
+sub _balance_vm($self, $request=undef, $host_devices=undef) {
     return if $self->{_migrated};
 
     my $base;
@@ -583,7 +602,12 @@ sub _balance_vm($self, $request=undef) {
 
     my $vm_free;
     for (;;) {
-        $vm_free = $self->_vm->balance_vm($self->_data('id_owner'),$base, $self->id);
+        if ($host_devices) {
+            $vm_free = $self->_search_vm_available_hd();
+        } else {
+            $vm_free = $self->_vm->balance_vm($self->_data('id_owner'),$base
+                                            , $self->id);
+        }
         return if !$vm_free;
 
         last if $vm_free->id == $self->_vm->id;
@@ -7142,8 +7166,8 @@ sub _add_host_devices($self, @args) {
         next if !$host_device->enabled();
 
         my ($device) = $host_device->list_available_devices($self->_vm->id);
-        warn $device;
         if ( !$device ) {
+            warn "No device found\n";
             $device = _refresh_domains_with_locked_devices($host_device);
             if (!$device) {
                 $self->_data(status => 'down');
@@ -7251,7 +7275,6 @@ sub _lock_host_device($self, $host_device, $device=undef) {
 }
 
 sub _unlock_host_devices($self) {
-    warn "Unlocking all host devices";
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
         ." WHERE id_domain=? AND time_changed<?"
     );
