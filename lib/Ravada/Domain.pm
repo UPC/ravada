@@ -576,22 +576,28 @@ sub _search_already_started($self, $fast = 0) {
     return keys %started;
 }
 
-sub _search_vm_available_hd($self) {
-    my $vm_free = $self->_vm;
+sub _filter_vm_available_hd($self, @vms) {
 
-    for my $vm ( $self->list_vms ) {
-        warn "Trying ".$vm->name;
-        my @host_devices = $self->list_host_devices();
-        my $available=1;
+    my @host_devices = $self->list_host_devices();
+
+    return @vms if !@host_devices;
+
+    my @vms_ret;
+
+    for my $vm ( @vms ) {
+        my $available = 1;
         for my $hd (@host_devices) {
-            if  ( !$hd->list_devices_available ) {
+            if  (! $hd->list_available_devices($vm->id) ) {
                 $available=0;
                 last;
             }
         }
-        return $vm if $available;
+        push @vms_ret,($vm) if $available;
     }
-    die "No host devices available in any node.\n";
+
+    die "No host devices available in any node.\n" if !@vms_ret;
+
+    return @vms_ret;
 }
 
 sub _balance_vm($self, $request=undef, $host_devices=undef) {
@@ -602,12 +608,8 @@ sub _balance_vm($self, $request=undef, $host_devices=undef) {
 
     my $vm_free;
     for (;;) {
-        if ($host_devices) {
-            $vm_free = $self->_search_vm_available_hd();
-        } else {
-            $vm_free = $self->_vm->balance_vm($self->_data('id_owner'),$base
-                                            , $self->id);
-        }
+        $vm_free = $self->_vm->balance_vm($self->_data('id_owner'),$base
+                                            , $self->id, $host_devices);
         return if !$vm_free;
 
         last if $vm_free->id == $self->_vm->id;
@@ -5310,7 +5312,7 @@ Returns a list for virtual machine managers where this domain is base
 
 =cut
 
-sub list_vms($self) {
+sub list_vms($self, $check_host_devices=0) {
     confess "Domain is not base" if !$self->is_base;
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm FROM bases_vm WHERE id_domain=? AND enabled = 1");
@@ -5327,7 +5329,9 @@ sub list_vms($self) {
         push @vms,($vm_local);
         $self->set_base_vm(vm => $vm_local, user => Ravada::Utils::user_daemon);
     }
-    return @vms;
+    return @vms if !$check_host_devices;
+
+    return $self->_filter_vm_available_hd(@vms);
 }
 
 =head2 base_in_vm
@@ -7278,15 +7282,14 @@ sub _unlock_host_devices($self) {
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
         ." WHERE id_domain=? AND time_changed<?"
     );
-    $sth->execute($self->id, time-5);
+    $sth->execute($self->id, time-60);
 }
 
 sub _unlock_host_device($self, $name) {
-    warn "Unlocking host device $name";
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
-        ." WHERE id_domain=? AND name=?"
+        ." WHERE id_domain=? AND name=? AND time_changed<?"
     );
-    $sth->execute($self->id, $name);
+    $sth->execute($self->id, $name,time-60);
 }
 
 
@@ -7307,8 +7310,6 @@ sub _check_host_device_already_used($self, $device) {
 
     return $id_domain if time-$time_changed < 10 || $domain->is_active;
 
-    warn "delete really not used ".(time - $time_changed);
-    confess if $id_domain==4;
     $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
         ." WHERE id_domain=?");
     $sth->execute($id_domain);

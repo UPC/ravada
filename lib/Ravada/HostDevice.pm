@@ -9,6 +9,7 @@ Ravada::HostDevice - Host Device basic library for Ravada
 
 =cut
 
+use Carp qw(cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
@@ -66,6 +67,12 @@ has 'devices' => (
     ,default => ''
 );
 
+has 'devices_node' => (
+    isa => 'Str'
+    ,is => 'rw'
+    ,default => ''
+);
+
 sub _init_connector {
     return if $CONNECTOR && $$CONNECTOR;
     $CONNECTOR = \$Ravada::CONNECTOR if $Ravada::CONNECTOR;
@@ -79,6 +86,7 @@ sub search_by_id($self, $id) {
     my $row = $sth->fetchrow_hashref;
     die "Error: device id='$id' not found" if !exists $row->{id};
     $row->{devices} = '' if !defined $row->{devices};
+    $row->{devices_node} = encode_json({}) if !defined $row->{devices_node};
 
     return Ravada::HostDevice->new(%$row);
 }
@@ -93,16 +101,20 @@ sub list_devices_nodes($self) {
 
     while ( my ($id) = $sth->fetchrow) {
         my $node = Ravada::VM->open($id);
-        push @nodes,($node);
+        push @nodes,($node) if $node->is_active;
     }
 
-    my @devices;
-
+    my %devices;
     for my $node (@nodes) {
-       push @devices, $self->list_devices($node->id);
+        my @current_devs;
+        eval { @current_devs = $self->list_devices($node->id) };
+        warn $@ if $@;
+        #        push @devices, @current_devs;
+        $devices{$node->name}=\@current_devs;
     }
 
-    return @devices;
+    $self->_data( devices_node => \%devices );
+    return %devices;
 }
 
 sub list_devices($self, $id_vm=$self->id_vm) {
@@ -120,8 +132,6 @@ sub list_devices($self, $id_vm=$self->id_vm) {
     for my $line (split /\n/, $out ) {
         push @device,($line) if !defined $filter || $line =~ qr($filter)i;
     }
-    my $encoded = encode_json(\@device);
-    $self->_data( devices => $encoded );
     return @device;
 }
 
@@ -226,6 +236,9 @@ sub _data($self, $field, $value=undef) {
         if $field eq 'list_command' &&(
             $value =~ m{["'`$()\[\];]}
             || $value !~ /^(ls|find)/);
+
+        cluck if $field eq 'devices_node' && !ref($value);
+        warn Dumper([ref($value),$value]) if $field eq 'devices_node';
 
         $value = encode_json($value) if ref($value);
 

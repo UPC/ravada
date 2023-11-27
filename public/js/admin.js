@@ -1371,6 +1371,9 @@ ravadaApp.directive("solShowMachine", swMach)
         };
 
         $scope.update_host_device = function(hdev) {
+            hdev._loading=true;
+            hdev.devices_node=[];
+            hdev._nodes = [];
             $http.post('/node/host_device/update'
                 ,JSON.stringify(hdev))
             .then(function(response) {

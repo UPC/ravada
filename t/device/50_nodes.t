@@ -65,7 +65,6 @@ sub _create_mock_devices_kvm($vm, $n_devices, $type, $value="fff:fff") {
         my $file= "$PATH/${name} ".$vm->name
         ." Bus $bus Device $dev: ID $vendor:$id";
 
-        diag($file);
         $vm->write_file($file,"fff6f017-3417-4ad3-b05e-17ae3e1a461".int(rand(10)));
     }
     $N_DEVICE ++;
@@ -105,12 +104,12 @@ sub test_devices($vm, $node, $n_local=3, $n_node=3) {
     ok(grep /$vm_name/,@devices);
     ok(!grep /$node_name/,@devices);
 
-    test_assign($vm, $node, $hd);
+    test_assign($vm, $node, $hd, $n_local, $n_node);
 
     _clean_devices($vm, $node);
 }
 
-sub test_assign($vm, $node, $hd) {
+sub test_assign($vm, $node, $hd, $n_expected_in_vm, $n_expected_in_node) {
     my $base = create_domain($vm);
     $base->add_host_device($hd);
     Ravada::Request->add_hardware(
@@ -126,29 +125,24 @@ sub test_assign($vm, $node, $hd) {
     $base2->prepare_base(user_admin);
     $base2->set_base_vm(id_vm => $node->id, user => user_admin);
 
-    my $req = Ravada::Request->clone(
-            uid => user_admin->id
-            ,id_domain => $base->id
-            ,number => scalar($hd->list_devices_nodes)
-    );
     wait_request();
-    is(scalar($base->clones),scalar($hd->list_devices_nodes));
     my $found_in_node=0;
     my $found_in_vm=0;
     my %dupe;
-    for my $clone0 ($base->clones) {
-        diag($clone0->{id}." ".$clone0->{name});
-        my $req = Ravada::Request->start_domain(
+    for ($hd->list_devices_nodes) {
+        my $name = new_domain_name;
+        my $req = Ravada::Request->clone(
             uid => user_admin->id
-            ,id_domain => $clone0->{id}
+            ,id_domain => $base->id
+            ,name => $name
+            ,start => 1
         );
         wait_request( check_error => 0);
-        my $domain = Ravada::Domain->open($clone0->{id});
+        my $domain = rvd_back->search_domain($name);
         $domain->_data('status','active');
-        diag($req->error);
         is($domain->is_active,1) if $vm->type eq 'Void';
         my $hd = check_host_device($domain);
-        push(@{$dupe{$hd}},($clone0->{name}." ".$clone0->{id}));
+        push(@{$dupe{$hd}},($base->name." ".$base->id));
         is(scalar(@{$dupe{$hd}}),1) or die Dumper(\%dupe);
         $found_in_node++ if $domain->_data('id_vm')==$node->id;
         $found_in_vm++ if $domain->_data('id_vm')==$vm->id;
@@ -156,8 +150,47 @@ sub test_assign($vm, $node, $hd) {
     ok($found_in_node,"Expecting in node, found $found_in_node");
     ok($found_in_vm,"Expecting in node, found $found_in_vm");
     diag("In node: $found_in_node, in vm: $found_in_vm");
+    is($found_in_node, $n_expected_in_node);
+    is($found_in_vm, $n_expected_in_vm);
+
+    test_clone_nohd($base);
 
     remove_domain($base2, $base);
+}
+
+sub test_clone_nohd($base) {
+    my $name = new_domain_name();
+    my $req0 = Ravada::Request->clone(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,name => $name
+        ,start => 0
+    );
+    wait_request();
+    my $domain0 = rvd_back->search_domain($name);
+    my $req = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain0->id
+    );
+
+    wait_request( check_error => 0);
+    like($req->error,qr/host devices/i) or exit;
+    Ravada::Request->refresh_machine(uid => user_admin->id, id_domain => $domain0->id);
+
+    my $domain = rvd_back->search_domain($name);
+    is($domain->is_active,0);
+
+    my $req2 = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain0->id
+        ,enable_host_devices => 0
+    );
+
+    wait_request( check_error => 0);
+
+    my $domain2 = rvd_back->search_domain($name);
+    is($domain2->is_active,1);
+
 }
 
 sub check_host_device($domain) {
@@ -188,7 +221,11 @@ sub check_host_device_void($domain) {
         my $vm = Ravada::VM->open($domain->_data('id_vm'));
         die $domain->name." ".$vm->name;
     };
-    return ($hostdev[1] or undef);
+    my $ret='';
+    for my $key (sort keys %{$hostdev[0]}) {
+        $ret .= "$key: ".$hostdev[0]->{$key};
+    }
+    return $ret;
 }
 
 sub check_host_device_kvm($domain) {
@@ -215,7 +252,6 @@ sub _clean_devices(@nodes) {
         my ($out, $err) = $vm->run_command("ls",$PATH);
         for my $line ( split /\n/,$out ) {
             next if $line !~ /$base/;
-            diag($line);
             if ($vm->is_local) {
                 unlink "$PATH/$line" or die "$! $PATH/$line";
                 next;
@@ -230,7 +266,7 @@ sub _clean_devices(@nodes) {
 init();
 clean();
 
-for my $vm_name ( vm_names() ) {
+for my $vm_name (reverse vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -250,10 +286,12 @@ for my $vm_name ( vm_names() ) {
         my $node = remote_node($vm_name)  or next;
         clean_remote_node($node);
 
-        test_devices($vm, $node);
-        test_devices($vm, $node, 5,1);
-        test_devices($vm, $node, 1,5);
-        exit;
+        test_devices($vm, $node,2,2);
+        test_devices($vm, $node,3,1);
+        test_devices($vm, $node,1,3);
+
+        clean_remote_node($node);
+
     }
 }
 

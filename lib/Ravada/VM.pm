@@ -1830,14 +1830,14 @@ Arguments
 
 =cut
 
-sub balance_vm($self, $uid, $base=undef, $id_domain=undef) {
+sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=undef) {
 
     my @vms;
     if ($base) {
         confess "Error: base is not an object ".Dumper($base)
         if !ref($base);
 
-        @vms = $base->list_vms();
+        @vms = $base->list_vms($host_devices);
     } else {
         @vms = $self->list_nodes();
     }
@@ -2478,6 +2478,7 @@ sub list_host_devices($self) {
     my @found;
     while (my $row = $sth->fetchrow_hashref) {
 	    $row->{devices} = '' if !defined $row->{devices};
+	    $row->{devices_node} = '' if !defined $row->{devices_node};
         push @found,(Ravada::HostDevice->new(%$row));
     }
 

@@ -229,15 +229,30 @@ sub _list_host_devices($rvd, $args) {
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
 
-    my $sth = $rvd->_dbh->prepare( "SELECT id,name,list_command,list_filter,devices,date_changed "
+    my $sth = $rvd->_dbh->prepare( "SELECT id,name,list_command,list_filter,devices,devices_node,date_changed "
         ." FROM host_devices WHERE id_vm=?");
 
     $sth->execute($id_vm);
 
     my @found;
     while (my $row = $sth->fetchrow_hashref) {
+        warn Dumper($row->{devices_node});
         $row->{devices} = decode_json($row->{devices}) if $row->{devices};
+        eval {
+            $row->{devices_node} = decode_json($row->{devices_node}) if $row->{devices_node};
+        };
+        warn $@ if $@;
         $row->{_domains} = _list_domains_with_device($rvd, $row->{id});
+        $row->{_n_devices}=0;
+        if (ref($row->{devices_node})) {
+            $row->{_nodes} = [sort keys %{$row->{devices_node}}];
+            for (@{$row->{_nodes}}) {
+                $row->{_n_devices} += scalar(@{$row->{devices_node}->{$_}});
+            }
+            $row->{_loading} = 0;
+        } else {
+            $row->{_nodes} = [];
+        }
         push @found, $row;
         next unless _its_been_a_while_channel($args->{channel});
         my $req = Ravada::Request->list_host_devices(

@@ -16,6 +16,14 @@
                 {{device}}
             </li>
         </ul>
+        nodes
+       <ul>
+            <li ng-repeat="node in hdev.nodes">
+                {{node}}
+            </li>
+        </ul>
+        {{hdev}}
+
 </div>
 
 

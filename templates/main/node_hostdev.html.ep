@@ -40,14 +40,29 @@
         <button type="button" ng-click="hdev._edit=false;hdev.name=hdev._name"><%=l 'cancel' %></button>
     </span>
     <div ng-show = "show_hdev[hdev.id]" class="border rounded border-primary mb-4 p-4">
-        list command: <input type="text" ng-model = "hdev.list_command" ng-change="update_host_device(hdev)">
-        filter: <input type="text" ng-model = "hdev.list_filter" ng-change="update_host_device(hdev)">
-        <div class="alert alert-danger" ng-show="hdev.devices.length==0">No devices found</div>
-        <div ng-show="!hdev.devices"><i class="fa fa-sync-alt fa-spin"></i></div>
-        <ul>
-            <li ng-repeat="device in hdev.devices">
+        list command: <input type="text" ng-model = "hdev.list_command">
+        filter: <input type="text" ng-model = "hdev.list_filter" >
+        <button type="btn" ng-click="update_host_device(hdev)">apply</button>
+        <div class="alert alert-danger" ng-show="hdev._n_devices==0">No devices found</div>
+        <div ng-show="hdev._loading"><i class="fa fa-sync-alt fa-spin"></i></div>
+        <ul ng-show="hdev._nodes.length==1">
+            <li ng-repeat="device in hdev.devices_node[hdev._nodes[0]]">
                 {{device}}
             </li>
         </ul>
+        <ul ng-hide="hdev._nodes.length<2">
+            <li ng-repeat="node in hdev._nodes" >
+                <span>{{node}}</span>
+                <ul>
+                <li ng-show="hdev.devices_node[node].length==0"><%=l 'none found' %></li>
+                    <li ng-repeat="dev in hdev.devices_node[node]">
+                    {{dev}}
+                    </li>
+                </ul>
+            </li>
+        </ul>
+
+        {{hdev}}
+
     </div>
 </div>

@@ -7,6 +7,4 @@ create table vms (
     `security` varchar(20) default null,
     `is_active` int default 0,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `name` (`name`),
-    UNIQUE KEY `hostname_type` (`hostname`,`vm_type`)
 );

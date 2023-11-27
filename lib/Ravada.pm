@@ -1635,7 +1635,7 @@ sub _add_indexes_generic($self) {
 
         ,vms=> [
             "unique(hostname, vm_type): hostname_type"
-            ,"UNIQUE (name)"
+            ,"UNIQUE (name,vm_type)"
 
         ]
     );
@@ -2206,6 +2206,7 @@ sub _sql_create_tables($self) {
                 ,list_filter => 'varchar(128) not null'
                 ,template_args => 'varchar(255) not null'
                 ,devices => 'TEXT'
+                ,devices_node => 'TEXT'
                 ,enabled => "integer NOT NULL default 1"
                 ,'date_changed'
                     => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
@@ -4377,7 +4378,8 @@ sub _cmd_list_host_devices($self, $request) {
         $id_host_device
     );
 
-    $hd->list_devices;
+    my %list= $hd->list_devices_nodes;
+    warn Dumper(\%list);
 
 }
 
