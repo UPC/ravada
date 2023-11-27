@@ -352,6 +352,7 @@
             };
 
             $scope.topology_changed = function() {
+                if ($scope.showmachine.hardware.cpu) {
                 var cpu = $scope.showmachine.hardware.cpu[0];
                 var item = cpu.cpu.topology;
                 if(typeof(item) == undefined || !item) {
@@ -365,6 +366,9 @@
 
                 cpu.vcpu['current']=undefined;
                 $scope.topology = true;
+                } else {
+                    $scope.topology = true;
+                }
             };
 
             var load_balance_options = function() {

@@ -238,7 +238,6 @@ sub _data($self, $field, $value=undef) {
             || $value !~ /^(ls|find)/);
 
         cluck if $field eq 'devices_node' && !ref($value);
-        warn Dumper([ref($value),$value]) if $field eq 'devices_node';
 
         $value = encode_json($value) if ref($value);
 

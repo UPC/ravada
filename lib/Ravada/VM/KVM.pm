@@ -2922,4 +2922,9 @@ sub get_library_version($self) {
     return $self->vm->get_library_version();
 }
 
+sub get_cpu_model_names($self,$arch='x86_64') {
+    return $self->vm->get_cpu_model_names($arch);
+}
+
+
 1;

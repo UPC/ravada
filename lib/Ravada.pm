@@ -5541,10 +5541,8 @@ sub _cmd_list_cpu_models($self, $request) {
     my $id_domain = $request->args('id_domain');
 
     my $domain = Ravada::Domain->open($id_domain);
-    my $info = $domain->get_info();
-    my $vm = $domain->_vm->vm;
 
-    my @out = $vm->get_cpu_model_names('x86_64');
+    my @out = $domain->_vm->get_cpu_model_names('x86_64');
     $request->output(encode_json(\@out));
 }
 

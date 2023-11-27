@@ -207,11 +207,13 @@ ravadaApp.directive("solShowMachine", swMach)
             && $scope.id_iso.options['machine']) {
             var types = $scope.machine_types[$scope.backend][$scope.id_iso.arch];
             var option = $scope.id_iso.options['machine'];
-            for (var i=0; i<types.length
-            ;i++) {
-                var current = types[i];
-                if (current.substring(0,option.length) == option) {
-                    $scope.machine=current;
+            if (typeof(types) != undefined) {
+                for (var i=0; i<types.length
+                    ;i++) {
+                    var current = types[i];
+                    if (current.substring(0,option.length) == option) {
+                        $scope.machine=current;
+                    }
                 }
             }
         }
