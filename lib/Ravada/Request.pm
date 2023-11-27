@@ -267,6 +267,7 @@ our %CMD_VALIDATE = (
     ,add_hardware=> \&_validate_change_hardware
     ,change_hardware=> \&_validate_change_hardware
     ,remove_hardware=> \&_validate_change_hardware
+    ,move_volume => \&_validate_change_hardware
 );
 
 sub _init_connector {
@@ -864,8 +865,18 @@ sub _validate_change_hardware($self) {
     }
     return if !$id_domain;
     my $req = $self->_search_request('%_hardware', id_domain => $id_domain);
+    my $req_move = $self->_search_request('move_volume', id_domain => $id_domain);
 
-    $self->after_request($req->id) if $req && $req->id < $self->id;
+    return if !$req && ! $req_move;
+
+    my $id;
+    $id = $req->id if $req;
+
+    if ( !$id || ( $req_move && $req_move->id > $id) ) {
+        $id = $req_move->id;
+    }
+
+    $self->after_request($id);
 }
 
 sub _validate_create_domain($self) {
