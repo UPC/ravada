@@ -7146,6 +7146,7 @@ sub list_host_devices_attached($self) {
 # adds host devices to domain instance
 # usually run right before startup
 sub _add_host_devices($self, @args) {
+warn 1;
     my @host_devices = $self->list_host_devices();
     return if !@host_devices;
     return if $self->is_active();

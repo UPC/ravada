@@ -11,21 +11,20 @@
     ng-disabled="showmachine.is_active"
     ng-model="hdev.is_attached"
     ng-click="toggle_host_device(hdev.id)"/> <b>{{hdev.name}}</b>
-       <ul>
-            <li ng-repeat="device in hdev.devices">
-                {{device}}
-            </li>
-        </ul>
-        nodes
-       <ul>
-            <li ng-repeat="node in hdev.nodes">
+        <ul>
+            <li ng-repeat="node in hdev._nodes">
                 {{node}}
+                <ul>
+                    <li ng-show="hdev.devices_node[node].length==0">
+                        <%=l 'No devices found'%></li>
+                    <li ng-repeat="dev in hdev.devices_node[node]">
+                    {{dev}}
+                    </li>
+                </ul>
+
             </li>
         </ul>
-        {{hdev}}
-
 </div>
-
 
 <a ng-show="host_devices" type="button" class="btn btn-outline-secondary"
     href="/node/settings/{{showmachine.id_vm}}.html?tab=hostdev"><b>Manage Host Devices</b></a>

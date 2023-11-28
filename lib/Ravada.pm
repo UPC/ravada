@@ -4379,7 +4379,6 @@ sub _cmd_list_host_devices($self, $request) {
     );
 
     my %list= $hd->list_devices_nodes;
-    warn Dumper(\%list);
 
 }
 
