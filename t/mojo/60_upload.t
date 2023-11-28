@@ -200,11 +200,11 @@ sub test_upload_no_admin($t) {
 ################################################################################
 
 $ENV{MOJO_MODE} = 'development';
+$t = Test::Mojo->new($SCRIPT);
 init('/etc/ravada.conf',0);
 my $connector = rvd_back->connector;
 like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
 
-$t = Test::Mojo->new($SCRIPT);
 $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
 

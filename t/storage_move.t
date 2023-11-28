@@ -149,6 +149,80 @@ sub test_fail($vm) {
 
 }
 
+sub test_queue_move($vm) {
+    my $domain = create_domain_v2(vm => $vm, data => 1, swap => 1 );
+    my $vol = $domain->add_volume( name => new_domain_name().".raw"
+        ,type => "raw"
+    );
+    my ($sp, $dir) = _create_storage_pool($vm);
+
+    my @args = (
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware => 'memory'
+        ,data => {
+            max_mem => '1000'
+        }
+    );
+
+    my $req1 = Ravada::Request->move_volume(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,volume => $vol
+            ,storage => $sp
+    );
+    my $req2 = Ravada::Request->move_volume(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,volume => $vol
+            ,storage => $sp
+    );
+
+    is($req2->after_request, $req1->id);
+
+    remove_domain($domain);
+
+}
+
+sub test_queue_change_hw($vm) {
+    my $domain = create_domain_v2(vm => $vm, data => 1, swap => 1 );
+    my $vol = $domain->add_volume( name => new_domain_name().".raw"
+        ,type => "raw"
+    );
+    my ($sp, $dir) = _create_storage_pool($vm);
+
+    my @args = (
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware => 'memory'
+        ,data => {
+            max_mem => '1000'
+        }
+    );
+
+    my $req0 = Ravada::Request->change_hardware(@args);
+    my $req = Ravada::Request->move_volume(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,volume => $vol
+            ,storage => $sp
+    );
+    is($req->after_request, $req0->id);
+
+    my $req1 = Ravada::Request->change_hardware(@args);
+    is($req1->after_request, $req->id);
+
+    my $req2 = Ravada::Request->change_hardware(@args);
+    is($req2->after_request,$req1->id);
+
+    wait_request(debug => 0);
+
+    $domain->remove(user_admin);
+
+    rmdir($dir) or die "$! $dir";
+
+}
+
 sub test_move_volume($vm) {
     my $domain = create_domain_v2(vm => $vm, data => 1, swap => 1 );
     $domain->add_volume( name => new_domain_name().".raw"
@@ -230,6 +304,8 @@ for my $vm_name ( vm_names() ) {
         skip $msg,10    if !$vm;
 
         diag("test $vm_name");
+        test_queue_move($vm);
+        test_queue_change_hw($vm);
         test_fail($vm);
         test_move_volume($vm);
         test_do_not_overwrite($vm);
