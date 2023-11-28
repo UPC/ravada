@@ -176,10 +176,19 @@ sub _remove_networks($id_vm) {
 }
 
 sub _id_vm($vm_name) {
-    my $sth = connector->dbh->prepare("SELECT id FROM vms "
-        ." WHERE vm_type=?");
+    my $sth = connector->dbh->prepare("SELECT id,hostname FROM vms "
+        ." WHERE vm_type=? AND is_active=1");
     $sth->execute($vm_name);
-    my ($id_vm) = $sth->fetchrow;
+    my @vm;
+    while (my $row = $sth->fetchrow_hashref ) {
+        push @vm,($row);
+    }
+    my ($vm) = grep { $_->{hostname} eq 'localhost' } @vm;
+
+    my $id_vm;
+    $id_vm = $vm->{id}      if $vm;
+    $id_vm = $vm[0]->{id}   if !$id_vm;
+
     return $id_vm;
 }
 
@@ -288,10 +297,7 @@ sub test_networks_admin($vm_name) {
         is($t->tx->res->code(),200, "Expecting access to $url");
     }
 
-    my $sth = connector->dbh->prepare("SELECT id FROM vms "
-        ." WHERE vm_type=?");
-    $sth->execute($vm_name);
-    my ($id_vm) = $sth->fetchrow;
+    my $id_vm = _id_vm($vm_name);
     die "Error: I can't find if for vm type = $vm_name" if !$id_vm;
 
     _remove_networks($id_vm);
@@ -512,9 +518,7 @@ sub test_storage_pools($vm_name) {
     my $sp = decode_json($t->tx->res->body);
     ok(scalar(@$sp));
 
-    my $sth = connector->dbh->prepare("SELECT id FROM vms where vm_type=?");
-    $sth->execute($vm_name);
-    my ($id_vm) = $sth->fetchrow;
+    my $id_vm = _id_vm($vm_name);
 
     $t->get_ok("/list_storage_pools/$id_vm");
 
@@ -574,8 +578,8 @@ mojo_login($t, $USERNAME, $PASSWORD);
 remove_old_domains_req(0); # 0=do not wait for them
 clean_clones();
 
-#test_languages();
-#test_missing_routes();
+test_languages();
+test_missing_routes();
 
 for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 
