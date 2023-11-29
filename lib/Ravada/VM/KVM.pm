@@ -1102,6 +1102,7 @@ sub _domain_create_common {
     Ravada::Domain::KVM::_check_machine(undef, $xml, $self) if !$self->is_local;
 
     $self->_xml_add_sysinfo_entry($xml, hostname => $args{name});
+    $self->_xml_fix_nvram($xml, $args{name});
 
     my $dom;
 
@@ -1996,6 +1997,12 @@ sub _xml_add_uefi($self, $doc, $name) {
         $nvram = $os->addNewChild(undef,"nvram");
     }
     $nvram->appendText("/var/lib/libvirt/qemu/nvram/$name.fd");
+}
+
+sub _xml_fix_nvram($self, $xml, $name) {
+    my ($nvram) =$xml->findnodes("/domain/os/nvram/text()");
+    return if !$nvram;
+    $nvram->setData("/var/lib/libvirt/qemu/nvram/$name.fd");
 }
 
 sub _xml_remove_cpu {
