@@ -7108,6 +7108,7 @@ sub list_host_devices($self) {
     my @found;
     while (my $row = $sth->fetchrow_hashref) {
         $row->{devices} = '' if !defined $row->{devices};
+        $row->{devices_node} = '{}' if !defined $row->{devices_node};
         push @found,(Ravada::HostDevice->new(%$row));
     }
 
@@ -7146,7 +7147,6 @@ sub list_host_devices_attached($self) {
 # adds host devices to domain instance
 # usually run right before startup
 sub _add_host_devices($self, @args) {
-warn 1;
     my @host_devices = $self->list_host_devices();
     return if !@host_devices;
     return if $self->is_active();
@@ -7172,7 +7172,6 @@ warn 1;
 
         my ($device) = $host_device->list_available_devices($self->_vm->id);
         if ( !$device ) {
-            warn "No device found\n";
             $device = _refresh_domains_with_locked_devices($host_device);
             if (!$device) {
                 $self->_data(status => 'down');
@@ -7283,7 +7282,7 @@ sub _unlock_host_devices($self) {
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
         ." WHERE id_domain=? AND time_changed<?"
     );
-    $sth->execute($self->id, time-60);
+    $sth->execute($self->id, time-2);
 }
 
 sub _unlock_host_device($self, $name) {

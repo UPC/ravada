@@ -236,9 +236,8 @@ sub _list_host_devices($rvd, $args) {
 
     my @found;
     while (my $row = $sth->fetchrow_hashref) {
-        warn Dumper($row->{devices_node});
-        $row->{devices} = decode_json($row->{devices}) if $row->{devices};
         eval {
+            $row->{devices} = decode_json($row->{devices}) if $row->{devices};
             $row->{devices_node} = decode_json($row->{devices_node}) if $row->{devices_node};
         };
         warn $@ if $@;

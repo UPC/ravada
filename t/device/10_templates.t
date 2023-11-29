@@ -138,6 +138,7 @@ sub test_hd_in_domain($vm , $hd) {
         _compare_hds($domain, $clone);
 
         test_device_unlocked($clone);
+        my $t0 = time;
         if ($hd->list_devices) {
             eval { $clone->start(user_admin) };
             if (!$count) {
@@ -149,6 +150,7 @@ sub test_hd_in_domain($vm , $hd) {
             test_device_locked($clone);
             test_hostdev_in_domain_config($clone, ($hd->name =~ /PCI/ && $vm->type eq 'KVM'));
         }
+        sleep(3) if time-$t0<3;
 
         $clone->shutdown_now(user_admin);
         test_device_unlocked($clone);
@@ -431,21 +433,29 @@ sub test_templates_gone_usb_2($vm) {
 
         my $domain = _create_domain_hd($vm, $hd);
         _fix_usb_ports($domain);
+        my $t0=time;
         $domain->start(user_admin);
 
         my $dev_config = $domain->_device_already_configured($hd);
         ok($dev_config) or exit;
 
         is(scalar($hd->list_domains_with_device()),1);
+        sleep(3) if time-$t0<3;
+
         $domain->shutdown_now(user_admin);
         $hd->_data('list_filter',"no match");
+        Ravada::Request->list_host_devices(
+            uid => user_admin->id
+            ,id_host_device => $hd->id
+        );
+        wait_request();
         diag("try to start again, it should fail");
         my $req = Ravada::Request->start_domain(uid => user_admin->id
             ,id_domain => $domain->id
         );
         wait_request(check_error => 0, debug => 0);
         my $req2 = Ravada::Request->open($req->id);
-        like($req2->error,qr/No available devices/);
+        like($req2->error,qr/No available devices/) or exit;
 
         my $req_no_hd = Ravada::Request->start_domain(uid => user_admin->id
             ,id_domain => $domain->id
@@ -489,6 +499,7 @@ sub test_templates_gone_usb($vm) {
         ok($dev_config) or exit;
 
         is(scalar($hd->list_domains_with_device()),1);
+        sleep 3;
         $domain->shutdown_now(user_admin);
         is($domain->_device_already_configured($hd), $dev_config) or exit;
 
@@ -820,7 +831,7 @@ sub test_hd_remove($vm, $host_device) {
 
 clean();
 
-for my $vm_name ( vm_names()) {
+for my $vm_name (reverse vm_names()) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 

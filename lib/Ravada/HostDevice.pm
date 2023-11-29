@@ -132,6 +132,7 @@ sub list_devices($self, $id_vm=$self->id_vm) {
     for my $line (split /\n/, $out ) {
         push @device,($line) if !defined $filter || $line =~ qr($filter)i;
     }
+    $self->_data( 'devices' => \@device) if $id_vm == $self->id_vm;
     return @device;
 }
 
@@ -154,7 +155,7 @@ sub _device_locked($self, $name, $id_vm=$self->id_vm) {
     return $is_locked;
 }
 
-sub list_available_devices($self, $id_vm=undef) {
+sub list_available_devices($self, $id_vm=$self->id_vm) {
     my @device;
     for my $dev_entry ( $self->list_devices($id_vm) ) {
         next if $self->_device_locked($dev_entry, $id_vm);
@@ -236,8 +237,6 @@ sub _data($self, $field, $value=undef) {
         if $field eq 'list_command' &&(
             $value =~ m{["'`$()\[\];]}
             || $value !~ /^(ls|find)/);
-
-        cluck if $field eq 'devices_node' && !ref($value);
 
         $value = encode_json($value) if ref($value);
 

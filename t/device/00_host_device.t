@@ -421,6 +421,7 @@ sub test_host_device_usb_mock($vm, $n_hd=1) {
         is(scalar($clone->list_host_devices_attached()), $n_hd, $clone->name);
         push @clones,($clone);
     }
+    sleep 2;
     $clones[0]->shutdown_now(user_admin);
     _check_hostdev($clones[0], $n_hd);
     my @devs_attached = $clones[0]->list_host_devices_attached();
