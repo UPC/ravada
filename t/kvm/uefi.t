@@ -329,6 +329,39 @@ sub test_drives($doc) {
     }
 }
 
+sub test_nvram($vm) {
+    my $name = new_domain_name();
+    my $id_iso = search_id_iso('Alpine');
+
+    my $req = Ravada::Request->create_domain(
+        name => $name
+        ,vm => $vm->type
+        ,id_iso => $id_iso
+        ,id_owner => user_admin->id
+        ,memory => 512 * 1024
+        ,disk => 1024 * 1024
+        ,options => { uefi => 1, machine => 'q35' }
+    );
+    wait_request();
+    my $domain = $vm->search_domain($name);
+    ok($domain);
+    my $config = $domain->xml_description();
+    my $doc = XML::LibXML->load_xml(string => $config);
+    my ($nvram) = $doc->findnodes("/domain/os/nvram");
+    ok($nvram,"Expecting /domain/os/nvram");
+
+    $domain->prepare_base(user_admin);
+
+    my $clone = $domain->clone(user => user_admin, name => new_domain_name);
+    my $config_clone = $clone->xml_description();
+    my $doc_clone = XML::LibXML->load_xml(string => $config_clone);
+    my ($nvram_clone) = $doc_clone->findnodes("/domain/os/nvram");
+    ok($nvram_clone,"Expecting /domain/os/nvram");
+    isnt($nvram_clone->toString, $nvram->toString);
+
+    remove_domain($domain);
+}
+
 ########################################################################
 
 init();
@@ -348,6 +381,8 @@ for my $vm_name ( 'KVM' ) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        test_nvram($vm);
+
         test_threads($vm);
 
         test_isos($vm);
@@ -355,6 +390,7 @@ for my $vm_name ( 'KVM' ) {
         test_req_machine_types2($vm);
         test_machine_types($vm);
         test_uefi($vm);
+
     }
 }
 
