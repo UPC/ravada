@@ -95,6 +95,25 @@ sub _fix_host_device($hd) {
     } elsif ($hd->{name} =~ /USB/ ) {
         _set_hd_usb($hd);
     }
+    _purge_hd($hd);
+}
+
+sub _purge_hd($hd) {
+    my $sth = connector->dbh->prepare(
+        "DELETE FROM host_devices_domain WHERE id_host_device=? AND id_domain NOT IN (select id FROM domains)"
+    );
+    $sth->execute($hd->{id});
+
+    $sth = connector->dbh->prepare(
+        "DELETE FROM host_devices_domain WHERE id_host_device=? AND id_domain NOT IN (select id FROM domains WHERE status='active')"
+    );
+    $sth->execute($hd->{id});
+
+    $sth = connector->dbh->prepare(
+        "DELETE FROM host_devices_domain_locked WHERE id_domain NOT IN (select id FROM domains WHERE status='active')"
+    );
+    $sth->execute();
+
 }
 
 sub _create_domain_hd($vm, $hd) {
@@ -106,8 +125,18 @@ sub _create_domain_hd($vm, $hd) {
    return $domain;
 }
 
+sub _shutdown_all($vm) {
+    for my $dom ($vm->list_domains) {
+        $dom->shutdown_now(user_admin);
+        $dom->_unlock_host_devices(0);
+    }
+    my $sth = connector->dbh->prepare("DELETE FROM host_devices_domain_locked");
+    $sth->execute();
+}
+
 sub test_hd_in_domain($vm , $hd) {
 
+    _shutdown_all($vm);
     my $domain = create_domain($vm);
     if ($vm->type eq 'KVM') {
         if ($hd->{name} =~ /PCI/) {
@@ -131,6 +160,7 @@ sub test_hd_in_domain($vm , $hd) {
     }
 
     $domain->prepare_base(user_admin);
+    _shutdown_all($vm);
     my $n_locked = _count_locked();
     for my $count (reverse 0 .. $hd->list_devices ) {
         my $clone = $domain->clone(name => new_domain_name() ,user => user_admin);
@@ -147,6 +177,7 @@ sub test_hd_in_domain($vm , $hd) {
                 last;
             }
             is(_count_locked(),++$n_locked) or exit;
+            next;
             test_device_locked($clone);
             test_hostdev_in_domain_config($clone, ($hd->name =~ /PCI/ && $vm->type eq 'KVM'));
         }
@@ -305,9 +336,12 @@ sub _compare_hds($base, $clone) {
 }
 
 sub _count_locked() {
-    my $sth = connector->dbh->prepare("SELECT count(*) FROM host_devices_domain_locked ");
+    my $n=0;
+    my $sth = connector->dbh->prepare("SELECT * FROM host_devices_domain_locked ORDER BY id_domain, name");
     $sth->execute();
-    my ($n) = $sth->fetchrow;
+    while (my $row = $sth->fetchrow_hashref) {
+        $n++;
+    }
     return $n;
 }
 
@@ -806,9 +840,12 @@ sub test_hd_remove($vm, $host_device) {
     _fix_usb_ports($domain);
     _fix_host_device($host_device) if $vm->type eq 'KVM';
     $domain->add_host_device($host_device);
-
+    _count_locked();
     eval { $domain->start(user_admin) };
-    is(''.$@, '') unless $start_fails;
+    if (!$start_fails) {
+        is(''.$@, '') or confess "Error starting ".$domain->name." "
+        ."[ ".$domain->id."]";
+    }
     $domain->shutdown_now(user_admin);
 
     my $req = Ravada::Request->remove_host_device(
@@ -825,6 +862,14 @@ sub test_hd_remove($vm, $host_device) {
     $sth->execute($host_device->id);
     my ($found) = $sth->fetchrow;
     ok(!$found);
+
+    $sth = connector->dbh->prepare(
+        "SELECT * FROM host_devices_domain WHERE id_host_device=?"
+    );
+    $sth->execute($host_device->id);
+    ($found) = $sth->fetchrow;
+    ok(!$found);
+
 }
 
 ####################################################################

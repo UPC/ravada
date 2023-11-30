@@ -7278,11 +7278,11 @@ sub _lock_host_device($self, $host_device, $device=undef) {
     return 1;
 }
 
-sub _unlock_host_devices($self) {
+sub _unlock_host_devices($self, $time_changed=3) {
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
-        ." WHERE id_domain=? AND time_changed<?"
+        ." WHERE id_domain=? AND time_changed<=?"
     );
-    $sth->execute($self->id, time-2);
+    $sth->execute($self->id, time-$time_changed);
 }
 
 sub _unlock_host_device($self, $name) {
