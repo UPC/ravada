@@ -6031,10 +6031,10 @@ sub _remove_unnecessary_downs($self, $domain) {
 
 sub _refresh_volatile_domains($self) {
    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, id_vm, id_owner FROM domains WHERE is_volatile=1"
+        "SELECT id, name, id_vm, id_owner, vm FROM domains WHERE is_volatile=1"
     );
     $sth->execute();
-    while ( my ($id_domain, $name, $id_vm, $id_owner) = $sth->fetchrow ) {
+    while ( my ($id_domain, $name, $id_vm, $id_owner, $type) = $sth->fetchrow ) {
         my $domain;
         eval { $domain = Ravada::Domain->open(id => $id_domain, _force => 1) } ;
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
@@ -6042,11 +6042,13 @@ sub _refresh_volatile_domains($self) {
                 $domain->_post_shutdown(user => $USER_DAEMON);
                 $domain->remove($USER_DAEMON);
             } else {
-                cluck "Warning: temporary user id=$id_owner should already be removed";
                 my $user;
                 eval { $user = Ravada::Auth::SQL->search_by_id($id_owner) };
                 warn $@ if $@;
-                $user->remove() if $user;
+                if ($user && $user->is_temporary) {
+                    cluck "Warning: temporary user id=$id_owner should already be removed";
+                    $user->remove();
+                }
             }
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
             $sth_del->execute($id_domain);
@@ -6055,6 +6057,7 @@ sub _refresh_volatile_domains($self) {
             $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM requests where id_domain=?");
             $sth_del->execute($id_domain);
             $sth_del->finish;
+            Ravada::Domain::_remove_domain_data_db($id_domain, $type);
         }
     }
 }
