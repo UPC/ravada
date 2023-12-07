@@ -547,7 +547,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request after_request_ok retry _no_duplicate _force)) {
+    for (qw(at after_request after_request_ok retry _no_duplicate _force uid)) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
@@ -691,7 +691,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
         $args_d = decode_json($args);
     }
     confess "Error: missing command " if !$command;
-    delete $args_d->{uid};
+    #    delete $args_d->{uid} unless $command eq 'clone';
     delete $args_d->{at};
     delete $args_d->{status};
     delete $args_d->{timeout};
