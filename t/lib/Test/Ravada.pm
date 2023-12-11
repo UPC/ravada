@@ -1127,6 +1127,9 @@ sub create_user($name=new_domain_name(), $pass=$$, $is_admin=0) {
     eval { $login = Ravada::Auth::SQL->new(name => $name, password => $pass ) };
     return $login if $login;
 
+    $login = Ravada::Auth::SQL->new(name => $name);
+    $login->remove() if $login && $login->id;
+
     Ravada::Auth::SQL::add_user(name => $name, password => $pass, is_admin => $is_admin);
 
     my $user;
@@ -1320,7 +1323,9 @@ sub wait_request {
                         } elsif($req->command eq 'compact') {
                             like($error,qr{^($|.*compacted)});
                         } elsif($req->command eq 'refresh_machine') {
-                            like($error,qr{^($|.*port.*already used)});
+                            like($error,qr{^($|.*port.*already used|.*Domain not found)});
+                        } elsif($req->command eq 'force_shutdown') {
+                            like($error,qr{^($|.*Unknown domain)});
                         } else {
                             like($error,qr/^$|libvirt error code:38,|run recently|checked|checking/)
                                 or confess $req->id." ".$req->command;

@@ -360,6 +360,7 @@ sub _around_start($orig, $self, @arg) {
             $self->_dettach_host_devices();
         }
         $$CONNECTOR->disconnect;
+        $self->status('starting') if $self->is_known();
         eval { $self->$orig(%arg) };
         $error = $@;
         last if !$error;
@@ -4020,7 +4021,8 @@ sub _remove_temporary_machine($self) {
     $owner= Ravada::Auth::SQL->search_by_id($self->id_owner)    if $self->is_known();
 
         if ($self->is_removed) {
-            $self->remove_disks();
+            eval { $self->remove_disks(); };
+            die $@ if $@ && $@ !~ /domain not available/;
             $self->_after_remove_domain();
         }
     $self->remove(Ravada::Utils::user_daemon);
@@ -5213,6 +5215,7 @@ sub _check_all_parents_in_node($self, $vm) {
 
 sub _set_clones_autostart($self, $value) {
     for my $clone_data ($self->clones) {
+        next if $clone_data->{is_volatile};
         my $clone = Ravada::Domain->open($clone_data->{id}) or next;
         $clone->_internal_autostart(0);
     }
