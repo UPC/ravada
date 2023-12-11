@@ -650,6 +650,24 @@ sub test_volatile_req($vm, $node) {
     _remove_domain($base);
 }
 
+sub test_domain_gone($vm, $node) {
+    my $sth = connector->dbh->prepare("INSERT INTO domains (name, id_vm,status, vm) "
+        ." VALUES (?,?,?,?)"
+    );
+    my $name = new_domain_name();
+    $sth->execute($name, $node->id, 'starting', $vm->type);
+    my $req = Ravada::Request->remove_domain(
+        uid => user_admin->id
+        ,name => $name
+    );
+    wait_request();
+    is($req->error,'');
+
+    my $domain = rvd_back->search_domain($name);
+    ok(!$domain);
+
+}
+
 sub test_volatile_req_clone($vm, $node, $machine='pc-i440fx') {
     if ($vm->type eq 'KVM') {
         my $id_iso = search_id_iso('Alpine%64');
@@ -1656,6 +1674,8 @@ for my $vm_name (vm_names() ) {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+
+        test_domain_gone($vm, $node);
 
         if ($vm_name eq 'KVM') {
             test_volatile_req_clone($vm, $node, 'pc-q35');
