@@ -23,6 +23,7 @@ $Test::Ravada::BACKGROUND=1;
 my $t;
 
 my $BASE_NAME = "zz-test-base-alpine";
+my $RAM = 0.5;
 
 my ($USERNAME, $PASSWORD);
 ###############################################################
@@ -63,7 +64,7 @@ sub base($vm_name) {
     if ($vm_name eq 'KVM') {
         my $base0 = rvd_front->search_domain($BASE_NAME);
         die "Error: test base $BASE_NAME not found" if !$base0;
-        mojo_request_url_post($t,"/machine/copy",{id_base => $base0->id, new_name => $name, copy_ram => 0.428, copy_number => 1});
+        mojo_request_url_post($t,"/machine/copy",{id_base => $base0->id, new_name => $name, copy_ram => $RAM, copy_number => 1});
 
     } else {
 
@@ -100,6 +101,10 @@ sub _set_base_vms($vm_name, $id_base) {
     $sth->execute($vm_name);
     while ( my ($id_vm) = $sth->fetchrow) {
         mojo_request($t,"start_node" , { id_node => $id_vm });
+    }
+
+    $sth->execute($vm_name);
+    while ( my ($id_vm) = $sth->fetchrow) {
         $t->post_ok("/node/enable/$id_vm.json");
         mojo_request($t,"set_base_vm", { id_vm => $id_vm, id_domain => $id_base, value => 1 });
     }
@@ -109,6 +114,7 @@ sub _set_base_vms($vm_name, $id_base) {
 sub test_clone($vm_name, $n=10) {
     my $base = base($vm_name);
 
+    mojo_request($t,"compact", {id_domain => $base->id, keep_backup => 0 });
     mojo_request($t,"prepare_base", {id_domain => $base->id });
     $base->is_public(1);
     _set_base_vms($vm_name, $base->id);
@@ -142,7 +148,7 @@ sub test_clone($vm_name, $n=10) {
         }
         wait_request();
     }
-    mojo_request($t,'remove_domain',{ name => $base->name });
+    remove_old_domains_req(0); # 0=do not wait for them
 }
 
 sub login( $user=$USERNAME, $pass=$PASSWORD ) {
