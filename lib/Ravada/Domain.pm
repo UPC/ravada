@@ -2714,6 +2714,8 @@ sub _do_remove_base($self, $user) {
     my $vm_local = $self->_vm->new( host => 'localhost' );
     for my $vol ($self->list_volumes_info) {
         next if !$vol->file || $vol->file =~ /\.iso$/;
+        next if !$self->_vm->file_exists($vol->file);
+
         my ($dir) = $vol->file =~ m{(.*)/};
 
         next if !$self->is_local && $self->_vm->shared_storage($vm_local, $dir);
