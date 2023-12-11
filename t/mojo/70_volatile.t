@@ -111,7 +111,17 @@ sub _set_base_vms($vm_name, $id_base) {
 
 }
 
+sub _id_vm($vm_name) {
+    my $sth = connector->dbh->prepare("SELECT id FROM vms WHERE vm_type=?");
+    $sth->execute($vm_name);
+    my ($id) = $sth->fetchrow;
+    die "Error: vm_type=$vm_name not found in VMS" if !$id;
+    return $id;
+}
+
 sub test_clone($vm_name, $n=10) {
+    my $id_vm = _id_vm($vm_name);
+
     my $base = base($vm_name);
 
     mojo_request($t,"compact", {id_domain => $base->id, keep_backup => 0 });
@@ -122,6 +132,7 @@ sub test_clone($vm_name, $n=10) {
 
     for my $count0 ( 0 .. 20 ) {
         _set_base_vms($vm_name, $base->id);
+        is($base->_data('id_vm'), $id_vm) or exit;
 
         for my $count1 ( 0 .. $n ) {
             my $user = create_user(new_domain_name(),$$);
