@@ -1099,7 +1099,8 @@ sub _domain_create_common {
 
     $self->_fix_pci_slots($xml);
     $self->_xml_add_guest_agent($xml);
-    $self->_xml_clean_machine_type($xml) if !$self->is_local;
+    Ravada::Domain::KVM::_check_machine(undef, $xml, $self) if !$self->is_local;
+
     $self->_xml_add_sysinfo_entry($xml, hostname => $args{name});
 
     my $dom;
@@ -2396,11 +2397,6 @@ sub _xml_add_guest_agent {
     $target->setAttribute(type => 'virtio');
     $target->setAttribute(name => 'org.qemu.guest_agent.0');
     
-}
-
-sub _xml_clean_machine_type($self, $doc) {
-    my ($os_type) = $doc->findnodes('/domain/os/type');
-    $os_type->setAttribute( machine => 'pc');
 }
 
 sub _xml_add_sysinfo($self,$doc) {
