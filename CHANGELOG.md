@@ -4,6 +4,7 @@
 
 **Bugfixes**
 
-- Do not insert network twice [\#2005]
+- Move volume processes must queue
+- EFI Virtual Machine fails to boot [\#2009]
 
 **Refactors**
