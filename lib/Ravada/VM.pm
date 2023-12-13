@@ -994,6 +994,7 @@ sub _data($self, $field, $value=undef) {
           || $value ne $self->{_data}->{$field}
         )
     ) {
+        confess if $field eq 'id_vm' && $self->is_base;
         $self->{_data}->{$field} = $value;
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE vms set $field=?"

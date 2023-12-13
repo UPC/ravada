@@ -1326,6 +1326,8 @@ sub wait_request {
                             like($error,qr{^($|.*port.*already used|.*Domain not found)});
                         } elsif($req->command eq 'force_shutdown') {
                             like($error,qr{^($|.*Unknown domain)});
+                        } elsif($req->command eq 'connect_node') {
+                            like($error,qr{^($|Connection OK)});
                         } else {
                             like($error,qr/^$|libvirt error code:38,|run recently|checked|checking/)
                                 or confess $req->id." ".$req->command;

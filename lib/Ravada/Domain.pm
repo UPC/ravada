@@ -4993,13 +4993,12 @@ sub rsync($self, @args) {
         $msg = "Domain::rsync ".(time - $t0)." seconds $file";
         warn $msg if $DEBUG_RSYNC;
         $request->error($msg) if $request;
-    }
-    if ($rsync->err) {
-        $request->status("done")                    if $request;
-        $request->error(join(" ",@{$rsync->err}))   if $request;
-        confess "error syncing to ".$node->host."\n"
-            .Dumper($files)."\n"
+        if ($rsync->err) {
+            $request->status("done")                    if $request;
+            $request->error(join(" ",@{$rsync->err}))   if $request;
+            confess "error syncing from $src to $dst \n"
             .join(' ',@{$rsync->err});
+        }
     }
     $request->error("rsync done ".(time - $time_rsync)." seconds")  if $request;
     $node->refresh_storage_pools();

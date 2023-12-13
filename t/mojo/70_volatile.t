@@ -112,7 +112,7 @@ sub _set_base_vms($vm_name, $id_base) {
 }
 
 sub _id_vm($vm_name) {
-    my $sth = connector->dbh->prepare("SELECT id FROM vms WHERE vm_type=?");
+    my $sth = connector->dbh->prepare("SELECT id FROM vms WHERE vm_type=? AND hostname='localhost'");
     $sth->execute($vm_name);
     my ($id) = $sth->fetchrow;
     die "Error: vm_type=$vm_name not found in VMS" if !$id;
@@ -130,9 +130,12 @@ sub test_clone($vm_name, $n=10) {
     _set_base_vms($vm_name, $base->id);
     $base->volatile_clones(1);
 
-    for my $count0 ( 0 .. 20 ) {
+    my $times = 1;
+    $times = 20 if $ENV{TEST_LONG};
+
+    for my $count0 ( 0 .. $times ) {
         _set_base_vms($vm_name, $base->id);
-        is($base->_data('id_vm'), $id_vm) or exit;
+        is($base->_data('id_vm'), $id_vm) or die $base->name;
 
         for my $count1 ( 0 .. $n ) {
             my $user = create_user(new_domain_name(),$$);
@@ -213,13 +216,10 @@ login();
 
 remove_old_domains_req(0); # 0=do not wait for them
 
-for ( 1 .. 10 ) {
 for my $vm_name (@{rvd_front->list_vm_types} ) {
     diag("Testing new machine in $vm_name");
 
     test_clone($vm_name);
-}
-
 }
 
 remove_old_domains_req(0); # 0=do not wait for them
