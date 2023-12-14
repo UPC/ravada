@@ -72,11 +72,11 @@ sub bases($vm_name) {
             my $new_name = new_domain_name()."-".$vm_name."-$name-$$";
             diag($new_name);
             my $info = $base0->info(user_admin)->{hardware};
-            my $ram = int($info->{memory}->[0]->{memory} / 2);
+            my $ram = int($info->{memory}->[0]->{memory} / 2/1024);
 
             mojo_request_url_post($t,"/machine/copy"
                 ,{id_base => $base0->id, new_name => $new_name
-                    , copy_ram => $ram, copy_number => 1});
+                    , copy_ram => $ram, copy_number => 1}, 0);
 
             push @names,($new_name);
         }
@@ -107,10 +107,12 @@ sub bases($vm_name) {
             wait_request();
         }
         ok($base, "Expecting domain $name created") or exit;
-        if ($base->id_base) {
-            mojo_request($t,"spinoff",{id_domain => $base->id});
-        }
         push @bases,($base);
+    }
+    for my $base (@bases) {
+        if ($base->id_base) {
+            mojo_request($t,"spinoff",{id_domain => $base->id}, 0);
+        }
     }
 
     return @bases;
@@ -120,13 +122,13 @@ sub _set_base_vms($vm_name, $id_base) {
     my $sth = connector->dbh->prepare("SELECT id FROM vms WHERE vm_type=?");
     $sth->execute($vm_name);
     while ( my ($id_vm) = $sth->fetchrow) {
-        mojo_request($t,"start_node" , { id_node => $id_vm });
+        mojo_request($t,"start_node" , { id_node => $id_vm }, 0);
     }
 
     $sth->execute($vm_name);
     while ( my ($id_vm) = $sth->fetchrow) {
         $t->post_ok("/node/enable/$id_vm.json");
-        mojo_request($t,"set_base_vm", { id_vm => $id_vm, id_domain => $id_base, value => 1 });
+        mojo_request($t,"set_base_vm", { id_vm => $id_vm, id_domain => $id_base, value => 1 }, 0);
     }
 
 }
@@ -148,9 +150,12 @@ sub test_clone($vm_name, $n=10) {
         mojo_request($t,"compact", {id_domain => $base->id, keep_backup => 0 });
         mojo_request($t,"prepare_base", {id_domain => $base->id });
         $base->is_public(1);
-        _set_base_vms($vm_name, $base->id);
         $base->volatile_clones(1);
 
+        is($base->_data('id_vm'), $id_vm) or die $base->name;
+    }
+
+    for my $base (@bases) {
         _set_base_vms($vm_name, $base->id);
         is($base->_data('id_vm'), $id_vm) or die $base->name;
     }
@@ -161,14 +166,15 @@ sub test_clone($vm_name, $n=10) {
     for my $count0 ( 0 .. $times ) {
         for my $count1 ( 0 .. $n ) {
             for my $base ( @bases ) {
+                next if !$base->is_base || $base->is_locked;
                 my $user = create_user(new_domain_name(),$$);
                 my $ip = (0+$count0.$count1) % 255;
 
                 Ravada::Request->clone(
                     uid => $user->id
                     ,id_domain => $base->id
-                    ,start => 1
                     ,remote_ip => "192.168.122.$ip"
+                    ,start => 1
                 );
                 delete_request('set_time','force_shutdown');
             }
@@ -220,6 +226,14 @@ sub _download_iso($iso_name) {
     is($req->error, '') or exit;
 
 }
+
+sub _init() {
+    my $sth = connector->dbh->prepare("DELETE FROM requests WHERE "
+        ." status = 'requested'"
+    );
+    $sth->execute();
+}
+
 #########################################################
 $ENV{MOJO_MODE} = 'development';
 init('/etc/ravada.conf',0);
@@ -237,6 +251,7 @@ $t = Test::Mojo->new($SCRIPT);
 $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
 
+_init();
 _init_mojo_client();
 login();
 

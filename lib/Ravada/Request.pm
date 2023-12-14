@@ -218,7 +218,7 @@ our %COMMAND = (
         ,priority => 30
     }
     ,disk => {
-        limit => 1
+        limit => 2
         ,commands => ['prepare_base','remove_base','set_base_vm','rebase_volumes'
                     , 'remove_base_vm'
                     , 'screenshot'

@@ -965,21 +965,21 @@ sub mojo_create_domain($t, $vm_name) {
 
 }
 
-sub mojo_request($t, $req_name, $args) {
+sub mojo_request($t, $req_name, $args, $wait=1) {
     $t->post_ok("/request/$req_name/" => json => $args);
     like($t->tx->res->code(),qr/^(200|302)$/);
 
     my $response = $t->tx->res->json();
     ok(exists $response->{request}) or return;
-    wait_request(background => 1);
+    wait_request(background => 1) if $wait;
     return $response->{request};
 }
 
-sub mojo_request_url_post($t,$url, $json) {
+sub mojo_request_url_post($t,$url, $json, $wait=1) {
     $t->post_ok($url, json => $json);
     like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body."\n".Dumper($url,$json);
 
-    _wait_mojo_request($t, $url);
+    _wait_mojo_request($t, $url) if $wait;
 }
 
 sub mojo_request_url($t, $url) {
