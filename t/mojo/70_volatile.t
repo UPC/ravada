@@ -229,7 +229,7 @@ sub _download_iso($iso_name) {
 
 sub _init() {
     my $sth = connector->dbh->prepare("DELETE FROM requests WHERE "
-        ." status = 'requested'"
+        ." status = 'requested' OR status ='waiting'"
     );
     $sth->execute();
 }
