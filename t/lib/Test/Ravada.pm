@@ -1266,6 +1266,7 @@ sub wait_request {
     my %done;
     for ( ;; ) {
         fast_forward_requests();
+        _clean_removed_domains();
         my $done_all = 1;
         my $prev = join(".",_list_requests);
         my $done_count = scalar keys %done;
@@ -1356,6 +1357,25 @@ sub wait_request {
         return if defined $timeout && time - $t0 >= $timeout;
         sleep 1 if $background;
     }
+}
+
+sub _clean_removed_domains() {
+    my $sth = connector()->dbh->prepare("SELECT id,command,id_domain,args FROM requests WHERE status = 'requested'");
+    my $sth_del = connector()->dbh->prepare("DELETE FROM requests where id=?");
+    my $sth_domain = connector()->dbh->prepare("SELECT id FROM domains WHERE id=? OR name=?");
+    $sth->execute;
+
+    while ( my ($id, $command, $id_domain, $args)= $sth->fetchrow) {
+        my $args_h = decode_json($args);
+        my $name = delete $args_h->{name};
+        next if !$id_domain || !$name;
+        $sth_domain->execute($id_domain, $name);
+        my ($id_found) = $sth_domain->fetchrow;
+        next if $id_found;
+        $sth_del->execute($id);
+        diag("removing $command $args");
+    }
+
 }
 
 =head2 fast_forward_requests

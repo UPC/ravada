@@ -55,22 +55,37 @@ sub _init_mojo_client {
     $t->get_ok('/')->status_is(200)->content_like(qr/choose a machine/i);
 }
 
-sub base($vm_name) {
+sub bases($vm_name) {
     mojo_check_login($t);
 
-    my $name = new_domain_name()."-".$vm_name."-$$";
-
-    my $base;
+    my @names;
     if ($vm_name eq 'KVM') {
-        my $base0 = rvd_front->search_domain($BASE_NAME);
-        die "Error: test base $BASE_NAME not found" if !$base0;
-        mojo_request_url_post($t,"/machine/copy",{id_base => $base0->id, new_name => $name, copy_ram => $RAM, copy_number => 1});
+        my $sth = connector->dbh->prepare("SELECT name FROM domains "
+            ." WHERE is_base=1 AND (id_base IS NULL or id_base=0)"
+            ." AND name like 'zz-test%'"
+        );
+        $sth->execute();
+        while (my ($name) = $sth->fetchrow) {
+            my $base0 = rvd_front->search_domain($name);
+            die "Error: test base $name not found" if !$base0;
 
+            my $new_name = new_domain_name()."-".$vm_name."-$name-$$";
+            diag($new_name);
+            my $info = $base0->info(user_admin)->{hardware};
+            my $ram = int($info->{memory}->[0]->{memory} / 2);
+
+            mojo_request_url_post($t,"/machine/copy"
+                ,{id_base => $base0->id, new_name => $new_name
+                    , copy_ram => $ram, copy_number => 1});
+
+            push @names,($new_name);
+        }
     } else {
 
         my $iso_name = 'Alpine%';
         _download_iso($iso_name);
         mojo_check_login($t);
+        my $name = new_domain_name()."-".$vm_name."-$$";
         $t->post_ok('/new_machine.html' => form => {
                 backend => $vm_name
                 ,id_iso => search_id_iso($iso_name)
@@ -83,17 +98,22 @@ sub base($vm_name) {
         )->status_is(302);
         die $t->tx->res->body if $t->tx->res->code() != 302;
     }
-    for ( 1 .. 60 ) {
+    my @bases;
+    for my $name (@names) {
+        my $base;
+        for ( 1 .. 60 ) {
             $base = rvd_front->search_domain($name);
             last if $base;
             wait_request();
-    }
-    ok($base, "Expecting domain $name created") or exit;
-    if ($base->id_base) {
-        mojo_request($t,"spinoff",{id_domain => $base->id});
+        }
+        ok($base, "Expecting domain $name created") or exit;
+        if ($base->id_base) {
+            mojo_request($t,"spinoff",{id_domain => $base->id});
+        }
+        push @bases,($base);
     }
 
-    return $base;
+    return @bases;
 }
 
 sub _set_base_vms($vm_name, $id_base) {
@@ -122,43 +142,49 @@ sub _id_vm($vm_name) {
 sub test_clone($vm_name, $n=10) {
     my $id_vm = _id_vm($vm_name);
 
-    my $base = base($vm_name);
+    my @bases = bases($vm_name);
 
-    mojo_request($t,"compact", {id_domain => $base->id, keep_backup => 0 });
-    mojo_request($t,"prepare_base", {id_domain => $base->id });
-    $base->is_public(1);
-    _set_base_vms($vm_name, $base->id);
-    $base->volatile_clones(1);
+    for my $base ( @bases ) {
+        mojo_request($t,"compact", {id_domain => $base->id, keep_backup => 0 });
+        mojo_request($t,"prepare_base", {id_domain => $base->id });
+        $base->is_public(1);
+        _set_base_vms($vm_name, $base->id);
+        $base->volatile_clones(1);
+
+        _set_base_vms($vm_name, $base->id);
+        is($base->_data('id_vm'), $id_vm) or die $base->name;
+    }
 
     my $times = 1;
     $times = 20 if $ENV{TEST_LONG};
 
     for my $count0 ( 0 .. $times ) {
-        _set_base_vms($vm_name, $base->id);
-        is($base->_data('id_vm'), $id_vm) or die $base->name;
-
         for my $count1 ( 0 .. $n ) {
-            my $user = create_user(new_domain_name(),$$);
-            my $ip = (0+$count0.$count1) % 255;
+            for my $base ( @bases ) {
+                my $user = create_user(new_domain_name(),$$);
+                my $ip = (0+$count0.$count1) % 255;
 
-            Ravada::Request->clone(
-                uid => $user->id
-                ,id_domain => $base->id
-                ,start => 1
-                ,remote_ip => "192.168.122.$ip"
-            );
-            delete_request('set_time','force_shutdown');
+                Ravada::Request->clone(
+                    uid => $user->id
+                    ,id_domain => $base->id
+                    ,start => 1
+                    ,remote_ip => "192.168.122.$ip"
+                );
+                delete_request('set_time','force_shutdown');
+            }
         }
-        for ( 1 .. 10 ) {
-            wait_request();
-            last if $base->clones >= $n;
-            diag(scalar($base->clones));
-            sleep 1;
-        }
-        mojo_login($t, $USERNAME, $PASSWORD);
-        for my $clone ( $base->clones ) {
-            $t->get_ok("/machine/shutdown/".$clone->{id}.".json")->status_is(200);
-            delete_request('set_time','force_shutdown');
+        for my $base ( @bases ) {
+            for ( 1 .. 10 ) {
+                wait_request();
+                last if $base->clones >= $n;
+                diag(scalar($base->clones));
+                sleep 1;
+            }
+            mojo_login($t, $USERNAME, $PASSWORD);
+            for my $clone ( $base->clones ) {
+                $t->get_ok("/machine/shutdown/".$clone->{id}.".json")->status_is(200);
+                delete_request('set_time','force_shutdown');
+            }
         }
         wait_request();
     }
