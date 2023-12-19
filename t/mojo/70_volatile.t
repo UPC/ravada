@@ -164,7 +164,7 @@ sub test_clone($vm_name, $n=10) {
     $times = 20 if $ENV{TEST_LONG};
 
     for my $count0 ( 0 .. $times ) {
-        for my $count1 ( 0 .. $n ) {
+        for my $count1 ( 0 .. $n*scalar(@bases) ) {
             for my $base ( @bases ) {
                 next if !$base->is_base || $base->is_locked;
                 my $user = create_user(new_domain_name(),$$);
@@ -226,6 +226,34 @@ sub _download_iso($iso_name) {
     is($req->error, '') or exit;
 
 }
+sub _remove_unused_volumes() {
+    my $sth = connector->dbh->prepare("SELECT id FROM vms WHERE hostname='localhost'");
+    $sth->execute;
+    my $base = base_domain_name();
+    while ( my ($id) = $sth->fetchrow ) {
+        my $req = Ravada::Request->list_unused_volumes(uid => user_admin->id
+            , id_vm => $id
+        );
+        wait_request();
+        next if !$req->output;
+        my $list = decode_json($req->output);
+        my @remove;
+        for my $entry ( @{$list->{list}} ) {
+            warn Dumper($entry);
+            my $file = $entry->{file};
+            next if !$file || $file !~ m{/$base};
+            push @remove,($file);
+        }
+        warn Dumper(\@remove);
+        if (@remove) {
+            my $req = Ravada::Request->remove_files(
+                files => \@remove
+                ,uid => user_admin->id
+                ,id_vm => $id
+            );
+        }
+    }
+}
 
 sub _init() {
     my $sth = connector->dbh->prepare("DELETE FROM requests WHERE "
@@ -256,6 +284,7 @@ _init_mojo_client();
 login();
 
 remove_old_domains_req(0); # 0=do not wait for them
+_remove_unused_volumes();
 
 for my $vm_name (@{rvd_front->list_vm_types} ) {
     diag("Testing new machine in $vm_name");

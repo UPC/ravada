@@ -5099,6 +5099,7 @@ sub _set_base_vm_db($self, $id_vm, $value) {
 
     my $id_is_base = $self->_id_base_in_vm($id_vm);
     if (!defined $id_is_base) {
+        return if !$value && !$self->is_known;
         my $sth = $$CONNECTOR->dbh->prepare(
             "INSERT INTO bases_vm (id_domain, id_vm, enabled) "
             ." VALUES(?, ?, ?)"
