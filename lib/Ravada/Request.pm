@@ -268,6 +268,7 @@ our %CMD_VALIDATE = (
     ,move_volume => \&_validate_change_hardware
     ,compact => \&_validate_compact
     ,spinoff => \&_validate_compact
+    ,prepare_base => \&_validate_compact
 );
 
 sub _init_connector {
