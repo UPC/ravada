@@ -148,7 +148,6 @@ sub test_clone($vm_name, $n=10) {
     my @bases = bases($vm_name);
 
     for my $base ( @bases ) {
-        mojo_request($t,"compact", {id_domain => $base->id, keep_backup => 0 });
         mojo_request($t,"prepare_base", {id_domain => $base->id });
         $base->is_public(1);
         $base->volatile_clones(1);
