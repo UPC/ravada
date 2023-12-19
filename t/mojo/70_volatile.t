@@ -128,7 +128,8 @@ sub _set_base_vms($vm_name, $id_base) {
     $sth->execute($vm_name);
     while ( my ($id_vm) = $sth->fetchrow) {
         $t->post_ok("/node/enable/$id_vm.json");
-        mojo_request($t,"set_base_vm", { id_vm => $id_vm, id_domain => $id_base, value => 1 }, 0);
+        my $id_req = mojo_request($t,"set_base_vm", { id_vm => $id_vm, id_domain => $id_base, value => 1 }, 0);
+        mojo_request($t,"clone", { id_domain => $id_base , after_request => $id_req, number => 2 });
     }
 
 }
@@ -160,7 +161,7 @@ sub test_clone($vm_name, $n=10) {
         is($base->_data('id_vm'), $id_vm) or die $base->name;
     }
 
-    my $times = 1;
+    my $times = 2;
     $times = 20 if $ENV{TEST_LONG};
 
     for my $count0 ( 0 .. $times ) {
