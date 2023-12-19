@@ -223,7 +223,7 @@ our %COMMAND = (
                     , 'remove_base_vm'
                     , 'screenshot'
                     , 'cleanup'
-                    , 'compact'
+                    , 'compact','spinoff'
                 ]
         ,priority => 20
     }
