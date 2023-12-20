@@ -270,22 +270,24 @@ sub _clean_old_known($vm_name) {
             ." WHERE is_base=1 AND (id_base IS NULL or id_base=0)"
             ." AND name like 'zz-test%'"
     );
-    $sth->execute();
-    my $sth_clones = connector->dbh->prepare("SELECT name FROM domains "
+    my $sth_clones = connector->dbh->prepare("SELECT id,name FROM domains "
         ." WHERE id_base=?"
     );
+    $sth->execute();
     while (my ($name) = $sth->fetchrow) {
         my $base0 = rvd_front->search_domain($name);
         die "Error: test base $name not found" if !$base0;
 
         my $new_name = new_domain_name()."-".$vm_name."-$name";
         my $base = rvd_front->search_domain($new_name);
-        next if $base && $base->id;
+        next if !$base;
 
         $sth_clones->execute($base->id);
-        while (my ($name)=$sth->fetchrow) {
+        while (my ($id, $name)=$sth_clones->fetchrow) {
+            next if !$name;
             diag("remove $name");
-            remove_domain($name);
+            my $clone = Ravada::Front::Domain->open($id);
+            remove_domain($clone);
         }
     }
     wait_request();
@@ -293,6 +295,7 @@ sub _clean_old_known($vm_name) {
 
 sub _clean_old($vm_name) {
     _clean_old_known($vm_name);
+    _remove_unused_volumes();
 }
 
 #########################################################
