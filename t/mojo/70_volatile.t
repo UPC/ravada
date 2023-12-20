@@ -197,7 +197,6 @@ sub test_clone($vm_name, $n=10) {
         }
         wait_request();
     }
-    remove_old_domains_req(0); # 0=do not wait for them
 }
 
 sub login( $user=$USERNAME, $pass=$PASSWORD ) {
