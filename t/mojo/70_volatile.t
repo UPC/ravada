@@ -69,8 +69,12 @@ sub bases($vm_name) {
             my $base0 = rvd_front->search_domain($name);
             die "Error: test base $name not found" if !$base0;
 
-            my $new_name = new_domain_name()."-".$vm_name."-$name-$$";
+            my $new_name = new_domain_name()."-".$vm_name."-$name";
             diag($new_name);
+            push @names,($new_name);
+            my $base = rvd_front->search_domain($new_name);
+            next if $base && $base->id;
+            diag("creating");
             my $info = $base0->info(user_admin)->{hardware};
             my $ram = int($info->{memory}->[0]->{memory} / 2/1024);
 
@@ -78,7 +82,6 @@ sub bases($vm_name) {
                 ,{id_base => $base0->id, new_name => $new_name
                     , copy_ram => $ram, copy_number => 1}, 0);
 
-            push @names,($new_name);
         }
     } else {
 
@@ -129,7 +132,7 @@ sub _set_base_vms($vm_name, $id_base) {
     while ( my ($id_vm) = $sth->fetchrow) {
         $t->post_ok("/node/enable/$id_vm.json");
         my $id_req = mojo_request($t,"set_base_vm", { id_vm => $id_vm, id_domain => $id_base, value => 1 }, 0);
-        mojo_request($t,"clone", { id_domain => $id_base , after_request => $id_req, number => 2 });
+        mojo_request($t,"clone", { id_domain => $id_base , after_request => $id_req, name => new_domain_name() });
     }
 
 }
@@ -262,6 +265,36 @@ sub _init() {
     $sth->execute();
 }
 
+sub _clean_old_known($vm_name) {
+    my $sth = connector->dbh->prepare("SELECT name FROM domains "
+            ." WHERE is_base=1 AND (id_base IS NULL or id_base=0)"
+            ." AND name like 'zz-test%'"
+    );
+    $sth->execute();
+    my $sth_clones = connector->dbh->prepare("SELECT name FROM domains "
+        ." WHERE id_base=?"
+    );
+    while (my ($name) = $sth->fetchrow) {
+        my $base0 = rvd_front->search_domain($name);
+        die "Error: test base $name not found" if !$base0;
+
+        my $new_name = new_domain_name()."-".$vm_name."-$name";
+        my $base = rvd_front->search_domain($new_name);
+        next if $base && $base->id;
+
+        $sth_clones->execute($base->id);
+        while (my ($name)=$sth->fetchrow) {
+            diag("remove $name");
+            remove_domain($name);
+        }
+    }
+    wait_request();
+}
+
+sub _clean_old($vm_name) {
+    _clean_old_known($vm_name);
+}
+
 #########################################################
 $ENV{MOJO_MODE} = 'development';
 init('/etc/ravada.conf',0);
@@ -280,19 +313,17 @@ $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
 
 _init();
+
 _init_mojo_client();
 login();
-
-remove_old_domains_req(0); # 0=do not wait for them
-_remove_unused_volumes();
 
 for my $vm_name (@{rvd_front->list_vm_types} ) {
     diag("Testing new machine in $vm_name");
 
+    _clean_old($vm_name);
+
     test_clone($vm_name);
 }
-
-remove_old_domains_req(0); # 0=do not wait for them
 
 end();
 done_testing();
