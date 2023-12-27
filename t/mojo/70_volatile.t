@@ -69,7 +69,7 @@ sub bases($vm_name) {
             my $base0 = rvd_front->search_domain($name);
             die "Error: test base $name not found" if !$base0;
 
-            my $new_name = new_domain_name()."-".$vm_name."-$name";
+            my $new_name = base_domain_name()."-".$vm_name."-$name";
             diag($new_name);
             push @names,($new_name);
             my $base = rvd_front->search_domain($new_name);
@@ -169,7 +169,7 @@ sub test_clone($vm_name, $n=10) {
     for my $count0 ( 0 .. $times ) {
         for my $count1 ( 0 .. $n*scalar(@bases) ) {
             for my $base ( @bases ) {
-                next if !$base->is_base || $base->is_locked;
+                next if !$base->is_base;
                 my $user = create_user(new_domain_name(),$$);
                 my $ip = (0+$count0.$count1) % 255;
 
@@ -277,7 +277,7 @@ sub _clean_old_known($vm_name) {
         my $base0 = rvd_front->search_domain($name);
         die "Error: test base $name not found" if !$base0;
 
-        my $new_name = new_domain_name()."-".$vm_name."-$name";
+        my $new_name = base_domain_name()."-".$vm_name."-$name";
         my $base = rvd_front->search_domain($new_name);
         next if !$base;
 
