@@ -2799,10 +2799,24 @@ sub admin {
 };
 
 sub _select_vm($c) {
-    my $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms ");
-    $sth->execute();
-    my ($id, $name) = $sth->fetchrow;
-    $c->stash('id_vm' => $id, vm_name => $name);
+    my $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms WHERE hostname='localhost' AND vm_type=?");
+    my $types = Ravada::Front::list_vm_types();
+    for my $type ('KVM',@$types) {
+        $sth->execute($type);
+        my ($id, $name) = $sth->fetchrow;
+        next if !$id;
+        $c->stash('id_vm' => $id, vm_name => $name);
+        return;
+    }
+    $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms WHERE vm_type=?");
+    for my $type ('KVM',@$types) {
+        $sth->execute($type);
+        my ($id, $name) = $sth->fetchrow;
+        next if !$id;
+        $c->stash('id_vm' => $id, vm_name => $name);
+        return;
+    }
+    die "Error: No VM found in @$types";
 }
 
 sub _count_nodes($c) {

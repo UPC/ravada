@@ -69,8 +69,12 @@ sub bases($vm_name) {
             my $base0 = rvd_front->search_domain($name);
             die "Error: test base $name not found" if !$base0;
 
-            my $new_name = new_domain_name()."-".$vm_name."-$name-$$";
+            my $new_name = new_domain_name()."-".$vm_name."-$name";
             diag($new_name);
+            push @names,($new_name);
+            my $base = rvd_front->search_domain($new_name);
+            next if $base && $base->id;
+            diag("creating");
             my $info = $base0->info(user_admin)->{hardware};
             my $ram = int($info->{memory}->[0]->{memory} / 2/1024);
 
@@ -78,7 +82,6 @@ sub bases($vm_name) {
                 ,{id_base => $base0->id, new_name => $new_name
                     , copy_ram => $ram, copy_number => 1}, 0);
 
-            push @names,($new_name);
         }
     } else {
 
@@ -128,7 +131,8 @@ sub _set_base_vms($vm_name, $id_base) {
     $sth->execute($vm_name);
     while ( my ($id_vm) = $sth->fetchrow) {
         $t->post_ok("/node/enable/$id_vm.json");
-        mojo_request($t,"set_base_vm", { id_vm => $id_vm, id_domain => $id_base, value => 1 }, 0);
+        my $id_req = mojo_request($t,"set_base_vm", { id_vm => $id_vm, id_domain => $id_base, value => 1 }, 0);
+        mojo_request($t,"clone", { id_domain => $id_base , after_request => $id_req, name => new_domain_name() });
     }
 
 }
@@ -147,7 +151,6 @@ sub test_clone($vm_name, $n=10) {
     my @bases = bases($vm_name);
 
     for my $base ( @bases ) {
-        mojo_request($t,"compact", {id_domain => $base->id, keep_backup => 0 });
         mojo_request($t,"prepare_base", {id_domain => $base->id });
         $base->is_public(1);
         $base->volatile_clones(1);
@@ -160,11 +163,11 @@ sub test_clone($vm_name, $n=10) {
         is($base->_data('id_vm'), $id_vm) or die $base->name;
     }
 
-    my $times = 1;
+    my $times = 2;
     $times = 20 if $ENV{TEST_LONG};
 
     for my $count0 ( 0 .. $times ) {
-        for my $count1 ( 0 .. $n ) {
+        for my $count1 ( 0 .. $n*scalar(@bases) ) {
             for my $base ( @bases ) {
                 next if !$base->is_base || $base->is_locked;
                 my $user = create_user(new_domain_name(),$$);
@@ -194,7 +197,6 @@ sub test_clone($vm_name, $n=10) {
         }
         wait_request();
     }
-    remove_old_domains_req(0); # 0=do not wait for them
 }
 
 sub login( $user=$USERNAME, $pass=$PASSWORD ) {
@@ -226,12 +228,73 @@ sub _download_iso($iso_name) {
     is($req->error, '') or exit;
 
 }
+sub _remove_unused_volumes() {
+    my $sth = connector->dbh->prepare("SELECT id FROM vms WHERE hostname='localhost'");
+    $sth->execute;
+    my $base = base_domain_name();
+    while ( my ($id) = $sth->fetchrow ) {
+        my $req = Ravada::Request->list_unused_volumes(uid => user_admin->id
+            , id_vm => $id
+        );
+        wait_request();
+        next if !$req->output;
+        my $list = decode_json($req->output);
+        my @remove;
+        for my $entry ( @{$list->{list}} ) {
+            warn Dumper($entry);
+            my $file = $entry->{file};
+            next if !$file || $file !~ m{/$base};
+            push @remove,($file);
+        }
+        warn Dumper(\@remove);
+        if (@remove) {
+            my $req = Ravada::Request->remove_files(
+                files => \@remove
+                ,uid => user_admin->id
+                ,id_vm => $id
+            );
+        }
+    }
+}
 
 sub _init() {
     my $sth = connector->dbh->prepare("DELETE FROM requests WHERE "
         ." status = 'requested' OR status ='waiting'"
     );
     $sth->execute();
+}
+
+sub _clean_old_known($vm_name) {
+    my $sth = connector->dbh->prepare("SELECT name FROM domains "
+            ." WHERE is_base=1 AND (id_base IS NULL or id_base=0)"
+            ." AND name like 'zz-test%'"
+    );
+    my $sth_clones = connector->dbh->prepare("SELECT id,name FROM domains "
+        ." WHERE id_base=?"
+    );
+    $sth->execute();
+    while (my ($name) = $sth->fetchrow) {
+        my $base0 = rvd_front->search_domain($name);
+        die "Error: test base $name not found" if !$base0;
+
+        my $new_name = new_domain_name()."-".$vm_name."-$name";
+        my $base = rvd_front->search_domain($new_name);
+        next if !$base;
+
+        $sth_clones->execute($base->id);
+        while (my ($id, $name)=$sth_clones->fetchrow) {
+            next if !$name;
+            diag("remove $name");
+            my $clone = Ravada::Front::Domain->open($id);
+            remove_domain($clone);
+        }
+    }
+    wait_request();
+}
+
+sub _clean_old($vm_name) {
+    _clean_old_known($vm_name);
+    _remove_unused_volumes();
 }
 
 #########################################################
@@ -252,18 +315,17 @@ $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
 
 _init();
+
 _init_mojo_client();
 login();
-
-remove_old_domains_req(0); # 0=do not wait for them
 
 for my $vm_name (@{rvd_front->list_vm_types} ) {
     diag("Testing new machine in $vm_name");
 
+    _clean_old($vm_name);
+
     test_clone($vm_name);
 }
-
-remove_old_domains_req(0); # 0=do not wait for them
 
 end();
 done_testing();

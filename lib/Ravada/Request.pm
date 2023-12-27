@@ -223,7 +223,7 @@ our %COMMAND = (
                     , 'remove_base_vm'
                     , 'screenshot'
                     , 'cleanup'
-                    , 'compact'
+                    , 'compact','spinoff'
                 ]
         ,priority => 20
     }
@@ -266,6 +266,9 @@ our %CMD_VALIDATE = (
     ,change_hardware=> \&_validate_change_hardware
     ,remove_hardware=> \&_validate_change_hardware
     ,move_volume => \&_validate_change_hardware
+    ,compact => \&_validate_compact
+    ,spinoff => \&_validate_compact
+    ,prepare_base => \&_validate_compact
 );
 
 sub _init_connector {
@@ -850,6 +853,27 @@ sub _validate_start_domain($self) {
         next if $command eq 'start' && !$req->after_request();
         $self->after_request($req->id) if $req && $req->id < $self->id;
     }
+}
+
+sub _validate_compact($self) {
+    return if $self->after_request();
+
+    my $id_domain = $self->defined_arg('id_domain');
+
+    my $req_compact = $self->_search_request('compact', id_domain => $id_domain);
+    my $req_spinoff = $self->_search_request('spinoff', id_domain => $id_domain);
+
+    return if !$req_compact && !$req_spinoff;
+
+    my $id;
+    $id = $req_compact->id if $req_compact;
+
+    if ( !$id || ( $req_spinoff && $req_spinoff->id > $id) ) {
+        $id = $req_spinoff->id;
+    }
+
+    $self->after_request($id) if $id;
+
 }
 
 sub _validate_change_hardware($self) {
