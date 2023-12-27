@@ -1885,11 +1885,10 @@ sub _balance_free_memory($self , $base, $vms) {
         eval { $active = $vm->is_active() };
         my $error = $@;
         if ($error && !$vm->is_local) {
-            warn "[balance] disabling ".$vm->name." ".$vm->enabled()." $error";
-            $vm->enabled(0);
+            warn "[balancing] ".$vm->name." $error";
+            next;
         }
 
-        next if !$vm->enabled();
         next if !$active;
         next if $base && !$vm->is_local && !$base->base_in_vm($vm->id);
         next if $vm->is_locked();
