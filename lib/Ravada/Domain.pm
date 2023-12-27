@@ -2842,6 +2842,8 @@ sub clone {
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
 
+    $self->_check_free_vm_memory() if $volatile;
+
     confess "Error: This base has no pools"
         if $add_to_pool && !$self->pools;
 
