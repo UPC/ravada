@@ -5614,6 +5614,7 @@ sub _cmd_set_time($self, $request) {
         };
     return if !$domain->is_active;
     eval { $domain->set_time() };
+    return if $@ =~ /Guest agent is not responding/ && $domain->get_info()->{ip};
     die "$@ , retry.\n" if $@;
 }
 
