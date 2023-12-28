@@ -2187,6 +2187,7 @@ Starts the node
 
 sub start($self) {
     $self->_wake_on_lan();
+    $self->_data('is_active' => 1);
 }
 
 =head2 shutdown

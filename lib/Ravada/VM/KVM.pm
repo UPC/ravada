@@ -1217,7 +1217,7 @@ sub _domain_create_from_base {
     confess "argument id_base or base required ".Dumper(\%args)
         if !$args{id_base} && !$args{base};
 
-    confess "Domain $args{name} already exists"
+    confess "Domain $args{name} already exists in ".$self->name
         if $self->search_domain($args{name});
 
     my $base = $args{base};
