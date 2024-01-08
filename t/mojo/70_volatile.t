@@ -170,6 +170,7 @@ sub test_clone($vm_name, $n=10) {
         for my $count1 ( 0 .. $n*scalar(@bases) ) {
             for my $base ( @bases ) {
                 next if !$base->is_base;
+                next if $base->list_requests > 10;
                 my $user = create_user(new_domain_name(),$$);
                 my $ip = (0+$count0.$count1) % 255;
 
@@ -182,6 +183,7 @@ sub test_clone($vm_name, $n=10) {
                 delete_request('set_time','force_shutdown');
             }
         }
+        login($USERNAME, $PASSWORD);
         for my $base ( @bases ) {
             for ( 1 .. 10 ) {
                 wait_request();
@@ -189,9 +191,8 @@ sub test_clone($vm_name, $n=10) {
                 diag(scalar($base->clones));
                 sleep 1;
             }
-            mojo_login($t, $USERNAME, $PASSWORD);
             for my $clone ( $base->clones ) {
-                $t->get_ok("/machine/shutdown/".$clone->{id}.".json")->status_is(200);
+                $t->get_ok("/machine/remove/".$clone->{id}.".json")->status_is(200);
                 delete_request('set_time','force_shutdown');
             }
         }
@@ -266,6 +267,26 @@ sub _init() {
 
 sub _clean_old_known($vm_name) {
     my $sth = connector->dbh->prepare("SELECT name FROM domains "
+            ." WHERE vm=?"
+            ." AND name like 'tst_%'"
+            ." AND is_base=0"
+    );
+    $sth->execute($vm_name);
+
+    diag($vm_name);
+    my $base_name = base_domain_name();
+    while (my ($name) = $sth->fetchrow) {
+        diag($name);
+        next if $name !~ /^$base_name/;
+        diag("remove $name");
+        Ravada::Request->remove_domain(uid => user_admin->id
+            ,name => $name
+        );
+    }
+}
+
+sub _clean_old_bases($vm_name) {
+    my $sth = connector->dbh->prepare("SELECT name FROM domains "
             ." WHERE is_base=1 AND (id_base IS NULL or id_base=0)"
             ." AND name like 'zz-test%'"
     );
@@ -285,14 +306,16 @@ sub _clean_old_known($vm_name) {
         while (my ($id, $name)=$sth_clones->fetchrow) {
             next if !$name;
             diag("remove $name");
-            my $clone = Ravada::Front::Domain->open($id);
-            remove_domain($clone);
+            Ravada::Request->remove_domain(name => $name
+                   ,uid => user_admin->id
+           );
         }
     }
     wait_request();
 }
 
 sub _clean_old($vm_name) {
+    _clean_old_bases($vm_name);
     _clean_old_known($vm_name);
     _remove_unused_volumes();
 }
@@ -315,6 +338,7 @@ $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
 
 _init();
+Test::Ravada::_discover();
 
 _init_mojo_client();
 login();

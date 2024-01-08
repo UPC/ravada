@@ -548,7 +548,6 @@ sub _search_already_started($self, $fast = 0) {
         eval { $domain = $vm->search_domain($self->name) };
         if ( $@ ) {
             warn $@;
-            $vm->enabled(0) if !$vm->is_local;
             next;
         }
         next if !$domain;
@@ -601,6 +600,7 @@ sub _balance_vm($self, $request=undef) {
         }
         die $@;
     }
+    return if !$vm_free;
     return $vm_free->id;
 }
 
@@ -660,8 +660,10 @@ sub _allow_remove($self, $user) {
         && $self->id_base
         && ($user->can_remove_clones() || $user->can_remove_clone_all())
     ) {
-        my $base = $self->open(id => $self->id_base, id_vm => $self->_vm->id);
-        return if ($user->can_remove_clone_all() || ($base->id_owner == $user->id));
+        my $base = $self->open($self->id_base);
+
+        die "ERROR: remove not allowed for user ".$user->name
+        unless ($user->can_remove_clone_all() || ($base->id_owner == $user->id));
     }
 
 }
@@ -983,6 +985,8 @@ sub _around_autostart($orig, $self, @arg) {
     $self->_allowed($user) if defined $value;
     confess "ERROR: Autostart can't be activated on base ".$self->name
         if $value && $self->is_base;
+
+    confess "Error: autostart can't be set on volatile domains" if $self->is_volatile && defined $value;
 
     confess "ERROR: You can't set autostart on readonly domains"
         if defined $value && $self->readonly;
@@ -1729,11 +1733,16 @@ sub open($class, @args) {
             $vm = Ravada::VM->open(id => ( $id_vm or $row->{id_vm} )
                 , readonly => $readonly);
         };
-        warn $@ if $@;
-        if ($@ && $@ =~ /I can't find VM id=/) {
-            $vm = Ravada::VM->open( type => $self->type );
-            $vm_changed = $vm;
-        }
+        warn "Error connecting to $id_vm ".$@ if $@;
+        if (!$vm) {
+            Ravada::VM::_clean_cache();
+         }
+        eval {
+            $vm = Ravada::VM->open(id => ( $id_vm or $row->{id_vm} )
+                , readonly => $readonly);
+        };
+        warn "Error connecting to $id_vm [retried]".$@ if $@;
+        return if !$vm;
     }
     my $vm_local;
     if ( !$vm || !$vm->is_active ) {
@@ -2299,7 +2308,8 @@ sub restore($self,$user){
 # check the node is active
 # search the domain in another node if it is not
 sub _check_active_node($self) {
-    return $self->_vm if $self->_vm->is_active(1);
+    return 0 if !$self->_vm;
+    return $self->_vm if $self->_vm && $self->_vm->is_active(1);
 
     for my $node ($self->_vm->list_nodes) {
         next if !$node->is_local;
@@ -2314,9 +2324,7 @@ sub _check_active_node($self) {
 
 }
 
-sub _after_remove_domain {
-    my $self = shift;
-    my ($user, $cascade) = @_;
+sub _after_remove_domain($self, $user, $cascade=undef) {
 
     $self->_remove_iptables( );
     $self->remove_expose();
@@ -2841,8 +2849,6 @@ sub clone {
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
-
-    $self->_check_free_vm_memory() if $volatile;
 
     confess "Error: This base has no pools"
         if $add_to_pool && !$self->pools;
@@ -4027,7 +4033,8 @@ sub _remove_temporary_machine($self) {
         if ($self->is_removed) {
             eval { $self->remove_disks(); };
             die $@ if $@ && $@ !~ /domain not available/;
-            $self->_after_remove_domain();
+            $owner = Ravada::Utils::user_daemon() if !$owner;
+            $self->_after_remove_domain($owner);
         }
     $self->remove(Ravada::Utils::user_daemon);
 

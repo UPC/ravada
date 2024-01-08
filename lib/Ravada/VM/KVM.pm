@@ -409,6 +409,7 @@ sub _list_used_volumes_known($self) {
     my @used;
     while ( my ($id, $name) = $sth->fetchrow) {
         my $dom = $self->search_domain($name);
+        next if !$dom;
         my $xml = $dom->xml_description();
         my @vols = $self->_find_all_volumes($xml);
         my @links;
@@ -610,7 +611,9 @@ sub _file_exists_remote($self, $file) {
     }
 
     die "Error: invalid file '$file'" if $file =~ /[`;(\[" ]/;
-    my ($out,$err) = $self->_ssh->capture2("ls $file");
+    my $ssh = $self->_ssh;
+    confess "Error: no _ssh ".$self->name if !$ssh;
+    my ($out,$err) = $ssh->capture2("ls $file");
     my @ls = split /\n/,$out;
     for (@ls) { chomp };
     return scalar(@ls);
@@ -779,10 +782,6 @@ sub search_domain($self, $name, $force=undef) {
     };
     if ($@ && $@ =~ /libvirt error code: 38,/) {
         warn $@;
-        if (!$self->is_local) {
-            warn "DISABLING NODE ".$self->name;
-            $self->enabled(0);
-        }
         return;
     }
 
@@ -850,8 +849,9 @@ sub list_domains {
 
     confess "Arguments unknown ".Dumper(\%args)  if keys %args;
 
-    my $query = "SELECT id, name FROM domains WHERE id_vm = ? ";
-    $query .= " AND status = 'active' " if $active;
+    my $query = "SELECT d.id, d.name FROM domains d ,domain_instances di "
+        ."WHERE d.id=di.id_domain AND di.id_vm = ? ";
+    $query .= " AND d.status = 'active' " if $active;
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
 

@@ -653,13 +653,16 @@ sub _leftovers {
 }
 
 sub _discover() {
-    my $sth = connector()->dbh->prepare("SELECT id,vm_type,hostname FROM vms");
+    my $sth = connector()->dbh->prepare("SELECT id,vm_type,hostname,name FROM vms");
     $sth->execute();
+
+    my $sth_instances = connector()->dbh->prepare("INSERT INTO domain_instances "
+        ."( id_domain, id_vm ) VALUES (?,?)"
+    );
 
     my $name = base_domain_name();
 
-    while ( my ($id_vm, $vm_type, $hostname) = $sth->fetchrow ) {
-        next if $hostname ne 'localhost';
+    while ( my ($id_vm, $vm_type, $hostname, $vm_name) = $sth->fetchrow ) {
         my $req=Ravada::Request->discover(
             uid => user_admin->id
             ,id_vm => $id_vm
@@ -667,15 +670,37 @@ sub _discover() {
         wait_request();
         my $out = $req->output;
         warn $req->error if $req->error;
-        return if !$out;
+        next if !$out;
         my $discover = decode_json($out);
         my @list = grep { $_ =~ /^$name/ } @$discover;
         for my $name (@list) {
-            diag("Importing $name");
+            diag("Importing $name in ".$vm_name);
 
-            #            $name = Encode::decode_utf8($name)
-            # if utf8::valid($name);
-
+            if ($hostname ne 'localhost') {
+                my $domain = rvd_front->search_domain($name);
+                if (!$domain) {
+                    confess if $name !~ /\d+$/;
+                    Ravada::Request->create_domain(
+                        id_owner => user_admin->id
+                        ,vm => $vm_type
+                        ,name => $name
+                        ,id_iso => search_id_iso('Alpine%64')
+                    );
+                    wait_request();
+                }
+                for ( 1 .. 10 ) {
+                    $domain = rvd_front->search_domain($name);
+                    last if $domain;
+                    sleep 1;
+                    wait_request(debug => 1);
+                }
+                eval {
+                    $sth_instances->execute($domain->id, $id_vm);
+                };
+                die $@ if $@ && $@ !~ /Duplicate entry/;
+                next;
+            }
+            warn "importing $name in $vm_type";
             $req = Ravada::Request->import_domain(
                 name => $name
                 ,id_owner => user_admin->id
@@ -683,6 +708,7 @@ sub _discover() {
                 ,uid => user_admin->id
                 ,spinoff_disks => 0
             );
+            wait_request();
         }
     }
     wait_request(debug => 0);
@@ -1329,6 +1355,8 @@ sub wait_request {
                             like($error,qr{^($|.*Unknown domain)});
                         } elsif($req->command eq 'connect_node') {
                             like($error,qr{^($|Connection OK)});
+                        } elsif($req->command eq 'clone') {
+                            like($error,qr{^($|.*No free nodes)});
                         } else {
                             like($error,qr/^$|libvirt error code:38,|run recently|checked|checking/)
                                 or confess $req->id." ".$req->command;

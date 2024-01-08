@@ -778,6 +778,7 @@ sub _new_request {
         $req_recent = $self->done_recently()
         if $args{command} !~ /^(clone|migrate|set_base_vm)$/;
 
+
         my $id_recent;
         $id_recent = $req_recent->id if $req_recent;
 
@@ -802,6 +803,8 @@ sub _new_request {
     $sth->finish;
 
     $self->{id} = $self->_last_insert_id();
+
+    warn $self->{id} if $args{command} =~ /cleanup|refresh_vms/;
 
     $sth = $$CONNECTOR->dbh->prepare(
     "UPDATE requests set date_req=date_changed"

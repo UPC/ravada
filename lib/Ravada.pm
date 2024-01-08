@@ -3429,7 +3429,10 @@ sub remove_domain {
     $sth->execute($name);
 
     my ($id,$vm_type)= $sth->fetchrow;
-    confess "Error: Unknown domain $name"   if !$id;
+    if (!$id) {
+        warn "Error: Unknown domain $name, maybe already removed.\n";
+        return;
+    }
 
     my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
     die "Error: user ".$user->name." can't remove domain $id"
@@ -3447,7 +3450,7 @@ sub remove_domain {
     eval { $domain = Ravada::Domain->open(id => $id, _force => 1, id_vm => $vm->id) };
     warn $@ if $@;
     if (!$domain) {
-            warn "Warning: I can't find domain '$id', maybe already removed.\n";
+            warn "Warning: I can't find domain [$id ] '$name' in ".$vm->name.", maybe already removed.\n";
             Ravada::Domain::_remove_domain_data_db($id);
             return;
     };
