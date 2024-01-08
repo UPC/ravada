@@ -1729,9 +1729,9 @@ sub open($class, @args) {
 
     my $vm_changed;
     if (!$vm && ( $id_vm || defined $row->{id_vm} ) ) {
+        $id_vm = $row->{id_vm};
         eval {
-            $vm = Ravada::VM->open(id => ( $id_vm or $row->{id_vm} )
-                , readonly => $readonly);
+            $vm = Ravada::VM->open(id => $id_vm, readonly => $readonly);
         };
         warn "Error connecting to $id_vm ".$@ if $@;
         if (!$vm) {
