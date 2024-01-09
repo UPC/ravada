@@ -70,11 +70,9 @@ sub bases($vm_name) {
             die "Error: test base $name not found" if !$base0;
 
             my $new_name = base_domain_name()."-".$vm_name."-$name";
-            diag($new_name);
             push @names,($new_name);
             my $base = rvd_front->search_domain($new_name);
             next if $base && $base->id;
-            diag("creating");
             my $info = $base0->info(user_admin)->{hardware};
             my $ram = int($info->{memory}->[0]->{memory} / 2/1024);
 
@@ -187,8 +185,7 @@ sub test_clone($vm_name, $n=10) {
         for my $base ( @bases ) {
             for ( 1 .. 10 ) {
                 wait_request();
-                last if $base->clones >= $n;
-                diag(scalar($base->clones));
+                last if $base->clones >= $n || !$base->list_requests;
                 sleep 1;
             }
             for my $clone ( $base->clones ) {
@@ -242,12 +239,10 @@ sub _remove_unused_volumes() {
         my $list = decode_json($req->output);
         my @remove;
         for my $entry ( @{$list->{list}} ) {
-            warn Dumper($entry);
             my $file = $entry->{file};
             next if !$file || $file !~ m{/$base};
             push @remove,($file);
         }
-        warn Dumper(\@remove);
         if (@remove) {
             my $req = Ravada::Request->remove_files(
                 files => \@remove

@@ -700,7 +700,6 @@ sub _discover() {
                 die $@ if $@ && $@ !~ /Duplicate entry/;
                 next;
             }
-            warn "importing $name in $vm_type";
             $req = Ravada::Request->import_domain(
                 name => $name
                 ,id_owner => user_admin->id

@@ -804,8 +804,6 @@ sub _new_request {
 
     $self->{id} = $self->_last_insert_id();
 
-    warn $self->{id} if $args{command} =~ /cleanup|refresh_vms/;
-
     $sth = $$CONNECTOR->dbh->prepare(
     "UPDATE requests set date_req=date_changed"
     ." WHERE id=?");
