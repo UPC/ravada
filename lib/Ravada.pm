@@ -3818,7 +3818,7 @@ sub process_requests {
         $self->_timeout_requests();
     }
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain,command FROM requests "
         ." WHERE "
         ."    ( status='requested' OR status like 'retry%' OR status='waiting')"
         ."   AND ( at_time IS NULL  OR at_time = 0 OR at_time<=?) "
@@ -3828,7 +3828,7 @@ sub process_requests {
 
     my @reqs;
     my %duplicated;
-    while (my ($id_request,$id_domain)= $sth->fetchrow) {
+    while (my ($id_request, $id_domain, $command)= $sth->fetchrow) {
         my $req;
         eval { $req = Ravada::Request->open($id_request) };
 
@@ -3836,17 +3836,27 @@ sub process_requests {
         warn $@ if $@;
         next if !$req;
 
+        if ($req->command eq 'ping_backend') {
+            $req->status("done");
+            next;
+        }
         next if !$req->requirements_done;
 
         next if $request_type ne 'all' && $req->type ne $request_type;
 
         next if $duplicated{"id_req.$id_request"}++;
+
+        $id_domain = $req->defined_arg('id_domain') if !defined $id_domain && $req->defined_arg('id_domain');
+
+        next if defined $id_domain && $duplicated{$id_domain.".$command"}++;
+
         next if $req->command !~ /shutdown/i
             && $self->_domain_working($id_domain, $req);
 
         my $domain = '';
         $domain = $id_domain if $id_domain;
         $domain .= ($req->defined_arg('name') or '');
+
         next if $domain && $duplicated{$domain};
         my $id_base = $req->defined_arg('id_base');
         next if $id_base && $duplicated{$id_base};

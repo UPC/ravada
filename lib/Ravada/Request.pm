@@ -198,6 +198,7 @@ qw(
     open_exposed_ports
     manage_pools
     screenshot
+    prepare_base
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -777,7 +778,6 @@ sub _new_request {
         my $req_recent;
         $req_recent = $self->done_recently()
         if $args{command} !~ /^(clone|migrate|set_base_vm)$/;
-
 
         my $id_recent;
         $id_recent = $req_recent->id if $req_recent;
