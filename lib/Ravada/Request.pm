@@ -784,9 +784,11 @@ sub _new_request {
 
         my $id = ( $id_dupe or $id_recent );
         if ($id ) {
-            my $req = Ravada::Request->open($id);
-            $req->{_duplicated} = 1;
-            return $req;
+            unless ($args{command} eq 'prepare_base' && done_recently(undef,60,'remove_base')) {
+                my $req = Ravada::Request->open($id);
+                $req->{_duplicated} = 1;
+                return $req;
+            }
         }
 
     }
