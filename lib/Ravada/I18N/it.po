@@ -8,8 +8,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2020-11-29 22:29+0000\n"
-"Last-Translator: J. Lavoie <j.lavoie@net-c.ca>\n"
+"PO-Revision-Date: 2023-10-08 23:02+0000\n"
+"Last-Translator: Claire Charles <charlesclaire101@gmail.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/ravada/"
 "translation/it/>\n"
 "Language: it\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.4-dev\n"
+"X-Generator: Weblate 5.1-dev\n"
 
 msgid "Ravada broker"
 msgstr "Broker Ravada"
@@ -1076,3 +1076,871 @@ msgstr "Rimuovi gruppo"
 
 msgid "Are you sure you want to remove this group ?"
 msgstr "Sei sicuro di voler rimuovere questo gruppo ?"
+
+msgid "Admin users can still log in from"
+msgstr "Gli utenti amministratori possono comunque accedere da"
+
+msgid "model"
+msgstr "modello"
+
+msgid "Display Port :"
+msgstr "Porta di visualizzazione :"
+
+msgid "This node is local"
+msgstr "Questo nodo è locale"
+
+msgid "Disabled"
+msgstr "Disabile"
+
+msgid "Are you sure you want to remove the base of"
+msgstr "Sei sicuro di voler rimuovere la base di"
+
+msgid "can change the settings of any virtual machine."
+msgstr "può modificare le impostazioni di qualsiasi macchina virtuale."
+
+msgid "Template selection is required"
+msgstr "La selezione del modello è necessaria"
+
+msgid "Autostart"
+msgstr "Avvio automatico"
+
+msgid "Display URL :"
+msgstr "URL di visualizzazione:"
+
+msgid "vram"
+msgstr "vram"
+
+msgid "Action"
+msgstr "Azione"
+
+msgid "to an ASCII file and save it with a .reg extension, then execute the file."
+msgstr ""
+"in un file ASCII e salvarlo con estensione .reg, quindi eseguire il file."
+
+msgid "Volatile"
+msgstr "Volatili"
+
+msgid "This machine is running and can't be modified."
+msgstr "Questa macchina è in funzione e non può essere modificata."
+
+msgid "Fallback"
+msgstr "ripiego"
+
+msgid "Are you sure you want to prepare the base of"
+msgstr "Siete sicuri di voler preparare la base di"
+
+msgid "Nodes"
+msgstr "Nodi"
+
+msgid "Show active"
+msgstr "Mostra attivo"
+
+msgid "Refresh"
+msgstr "Aggiornare"
+
+msgid "can remove any virtual machine owned by the user."
+msgstr "può rimuovere qualsiasi macchina virtuale di proprietà dell'utente."
+
+msgid "machines down."
+msgstr "macchine inattivo."
+
+msgid "Primary video devices will move to first"
+msgstr "I dispositivi video primari si sposteranno al primo"
+
+msgid "Display Port secure :"
+msgstr "Porta display sicura :"
+
+msgid "Type"
+msgstr "Tipo"
+
+msgid "Bookings require LDAP authentication."
+msgstr "Le prenotazioni richiedono l'autenticazione LDAP."
+
+msgid "Public"
+msgstr "Pubblico"
+
+msgid "Enables display password when available"
+msgstr "Abilita la password di visualizzazione quando è disponibile"
+
+msgid "bus"
+msgstr "autobus"
+
+msgid "Minimum port number to expose virtual machine services."
+msgstr "Numero di porta minimo per esporre i servizi della macchina virtuale."
+
+msgid "on"
+msgstr "ni"
+
+msgid "Debug Ports Exposed"
+msgstr "Porte di debug esposte"
+
+msgid "Setup a LDAP Server"
+msgstr "Configurare un server LDAP"
+
+msgid "Configure LDAP Authentication"
+msgstr "Configurare l'autenticazione LDAP"
+
+msgid "Display IP :"
+msgstr "Visualizzazione IP :"
+
+msgid "ram"
+msgstr "ram"
+
+msgid "Bookings"
+msgstr "Prenotazioni"
+
+msgid "The machine will turn off after this time"
+msgstr "La macchina si spegne dopo questo tempo"
+
+msgid "Debug"
+msgstr "debug"
+
+msgid "off"
+msgstr "spento"
+
+msgid "Confirm password is required"
+msgstr "Confermare la password è necessaria"
+
+msgid "match"
+msgstr "abbinare"
+
+msgid "Error:"
+msgstr "Errore:"
+
+msgid "Start Limit"
+msgstr "Limite iniziale"
+
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Premere SHIFT + F12 per uscire dalla macchina virtuale"
+
+msgid "primary"
+msgstr "primario"
+
+msgid "Show clones"
+msgstr "Mostra cloni"
+
+msgid "hidden"
+msgstr "nascosto"
+
+msgid "Server in maintenance until"
+msgstr "Server in manutenzione fino a"
+
+msgid "Hibernated"
+msgstr "Ibernato"
+
+msgid "vCPU allocation"
+msgstr "Allocazione vCPU"
+
+msgid "Number of virtual machines that normal users can have running at the same time"
+msgstr ""
+"Numero di macchine virtuali che gli utenti normali possono avere in "
+"esecuzione contemporaneamente"
+
+msgid "Check"
+msgstr "controllare"
+
+msgid "Manage machine"
+msgstr "Gestire la macchina"
+
+msgid "heads"
+msgstr "teste"
+
+msgid "Remove Base"
+msgstr "Rimuovi la base"
+
+msgid "requires password"
+msgstr "richiede password"
+
+msgid "ISO file"
+msgstr "File ISO"
+
+msgid "Loading ..."
+msgstr "Caricamento ..."
+
+msgid "LDAP"
+msgstr "LDAP"
+
+msgid "Maintenance End"
+msgstr "Fine manutenzione"
+
+msgid "SSO/CAS Login"
+msgstr "Accesso SSO/CAS"
+
+msgid "Networks"
+msgstr "Reti"
+
+msgid "boot order"
+msgstr "Ordine di avvio"
+
+msgid "Web Service connection failed."
+msgstr "Connessione al servizio Web non riuscita."
+
+msgid "bridge"
+msgstr "ponte"
+
+msgid "ShutDown"
+msgstr "Spegnimento"
+
+msgid "dn:"
+msgstr "dn:"
+
+msgid "Confirm disable node"
+msgstr "Confermare la disabilitazione del nodo"
+
+msgid "Sorry"
+msgstr "Mi dispiace"
+
+msgid "nat"
+msgstr "nat"
+
+msgid "CPU Features"
+msgstr "Caratteristiche della CPU"
+
+msgid "No message to show!"
+msgstr "Nessun messaggio da mostrare!"
+
+msgid "fallback"
+msgstr "ripiego"
+
+msgid "Danger: This will destroy all the disk data permantently."
+msgstr ""
+"Pericolo: In questo modo tutti i dati del disco vengono distrutti in modo "
+"permanente."
+
+msgid "can change the settings of any virtual machine "
+msgstr "può modificare le impostazioni di qualsiasi macchina virtuale "
+
+msgid "Bases"
+msgstr "Basi"
+
+msgid "Active"
+msgstr "Attivo"
+
+msgid "Display Password"
+msgstr "Visualizza password"
+
+msgid "cancel"
+msgstr "disdire"
+
+msgid "To make this possible, copy the content of"
+msgstr "Per rendere ciò possibile, copiare il contenuto di"
+
+msgid "Primary can not be unset, enable it in another video device"
+msgstr ""
+"Primario non può essere disattivato, abilitarlo in un altro dispositivo video"
+
+msgid "Show/Hide clones"
+msgstr "Mostra/Nascondi cloni"
+
+msgid "New user"
+msgstr "Nuovo utente"
+
+msgid "capacity"
+msgstr "capacità"
+
+msgid "Disabling this node will shut all the"
+msgstr "Disabilitando questo nodo, tutti i nodi"
+
+msgid "This machine is base and can't be modified."
+msgstr "Questa macchina è di base e non può essere modificata."
+
+msgid "Hide clones"
+msgstr "nascondere i cloni"
+
+msgid "Debug Ports"
+msgstr "Porte di debug"
+
+msgid "state"
+msgstr "Stato"
+
+msgid "Maintenance"
+msgstr "Manutenzione"
+
+msgid "New feature"
+msgstr "Nuova funzione"
+
+msgid "check"
+msgstr "controllare"
+
+msgid "mode"
+msgstr "modalità"
+
+msgid "Ravada Apache documentation"
+msgstr "Documentazione Ravada Apache"
+
+msgid "Confirm password must be at least 5 characters"
+msgstr "Conferma che la password deve contenere almeno 5 caratteri"
+
+msgid "New Group"
+msgstr "Nuovo Gruppo"
+
+msgid "Groups"
+msgstr "Gruppo"
+
+msgid "Please, make sure you have the right path and release, according to your PC configuration."
+msgstr ""
+"Per favore, assicurati di avere il percorso giusto e il rilascio, in base "
+"alla configurazione del tuo PC."
+
+msgid "Maintenance Start"
+msgstr "Avvio manutenzione"
+
+msgid "object class:"
+msgstr "classe oggetto:"
+
+msgid "Node"
+msgstr "Nodo"
+
+msgid "Confirm password can only contain words and numbers"
+msgstr "Conferma password può contenere solo parole e numeri"
+
+msgid "Disable"
+msgstr "Disabilitare"
+
+msgid "See documentation about:"
+msgstr "Consultare la documentazione su:"
+
+msgid "Port expose"
+msgstr "Esposizione porta"
+
+msgid "Groups require a LDAP server configured."
+msgstr "I gruppi richiedono la configurazione di un server LDAP."
+
+msgid "New Network"
+msgstr "Nuova rete"
+
+msgid "add"
+msgstr "aggiungere"
+
+msgid "Enable"
+msgstr "Abilitare"
+
+msgid "Global Settings"
+msgstr "Impostazioni globali"
+
+msgid "Confirm password can not exceed 20 characters"
+msgstr "Conferma che la password non può superare i 20 caratteri"
+
+msgid "Frontend"
+msgstr "Front-end"
+
+msgid "Client"
+msgstr "Cliente"
+
+msgid "Schedule"
+msgstr "Programma"
+
+msgid "Confirm"
+msgstr "Confermare"
+
+msgid "Data"
+msgstr "Dati"
+
+msgid "Node with more free memory"
+msgstr "Nodo con più memoria libera"
+
+msgid "locked"
+msgstr "bloccato"
+
+msgid "Can rename any virtual machine."
+msgstr "Può rinominare qualsiasi macchina virtuale."
+
+msgid "Error: you want to have"
+msgstr "Errore: si vuole avere"
+
+msgid "Remove Clones"
+msgstr "Rimuovere i cloni"
+
+msgid "The new user"
+msgstr "Il nuovo utente"
+
+msgid "has been added successfully!"
+msgstr "è stato aggiunto con successo!"
+
+msgid "Set defaults"
+msgstr "Imposta valori predefiniti"
+
+msgid "What do you want to do now?"
+msgstr "Cosa vuoi fare ora?"
+
+msgid "Shutdown Timeout"
+msgstr "Timeout spegnimento"
+
+msgid ""
+"This server has reservations for today. Machines from users out of\n"
+"    the booking list will be shutdown."
+msgstr ""
+"Questo server ha prenotazioni per oggi. Macchine da utenti fuori\n"
+"    la lista delle prenotazioni sarà chiusa."
+
+msgid "filter"
+msgstr "filtro"
+
+msgid "Invalid Template"
+msgstr "Modello non valido"
+
+msgid "Start after create the virtual machine"
+msgstr "Avvio dopo la creazione della macchina virtuale"
+
+msgid "Advanced options"
+msgstr "Opzioni avanzate"
+
+msgid "The Minimum Disk Size needed for this ISO is"
+msgstr "La dimensione minima del disco necessaria per questa ISO è"
+
+msgid "Requests"
+msgstr "Richieste"
+
+msgid "There are no LDAP groups defined."
+msgstr "Non sono definiti gruppi LDAP."
+
+msgid "This virtual machine has no group restrictions."
+msgstr "Questa macchina virtuale non ha restrizioni di gruppo."
+
+msgid "Can reboot all virtual machines."
+msgstr "Può riavviare tutte le macchine virtuali."
+
+msgid "The source machine is not a base. It must be prepared before it can be copied. This process may take some minutes."
+msgstr ""
+"La macchina sorgente non è una base. Deve essere preparata prima di poter "
+"essere copiata. Questo processo può richiedere alcuni minuti."
+
+msgid "Can shutdown own virtual machines."
+msgstr "Può spegnere le proprie macchine virtuali."
+
+msgid "Restricted"
+msgstr "Limitato"
+
+msgid "remove"
+msgstr "rimuovere"
+
+msgid "Machines Notifications"
+msgstr "Notifiche delle macchine"
+
+msgid "Change"
+msgstr "Cambiamento"
+
+msgid "Warning"
+msgstr "Avvertenze"
+
+msgid "Old and New Passwords match!"
+msgstr "Le vecchie e le nuove password coincidono!"
+
+msgid "bases"
+msgstr "basi"
+
+msgid "Clones created from this machine will be removed on shutdown."
+msgstr "I cloni creati da questa macchina verranno rimossi allo spegnimento."
+
+msgid "Event properties"
+msgstr "Proprietà dell'evento"
+
+msgid "New name"
+msgstr "Nuovo nome"
+
+msgid "Add another user"
+msgstr "Aggiungere un altro utente"
+
+msgid "The machine will power off after this minutes after shutdown."
+msgstr "La macchina si spegnerà dopo questi minuti dallo spegnimento."
+
+msgid "Re-Enter New Password"
+msgstr "Reinserire la nuova password"
+
+msgid "allowed"
+msgstr "consentito"
+
+msgid "Can have an unlimited amount of machines started."
+msgstr "È possibile avviare un numero illimitato di macchine."
+
+msgid "Monitoring"
+msgstr "Monitoraggio"
+
+msgid "Any remote client can access this port"
+msgstr "Qualsiasi client remoto può accedere a questa porta"
+
+msgid "New Password can only contain words and numbers"
+msgstr "La nuova password può contenere solo parole e numeri"
+
+msgid "To"
+msgstr "A"
+
+msgid "Can view groups."
+msgstr "Può visualizzare gruppi."
+
+msgid "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+msgstr ""
+"I gruppi LDAP sono necessari per impostare le prenotazioni. Alcuni gruppi "
+"sono stati trovati ma nessun membro vi appartiene. <a href='/admin/"
+"groups'>Aggiungi nuove voci qui.</a>"
+
+msgid "Swap"
+msgstr "Scambio"
+
+msgid "Nothing to monitoring"
+msgstr "Niente da monitorare"
+
+msgid "Can reboot own virtual machines."
+msgstr "Può riavviare le macchine virtuali."
+
+msgid "Phone"
+msgstr "Telefono"
+
+msgid "Can expose virtual machine ports."
+msgstr "Può esporre le porte delle macchine virtuali."
+
+msgid "Enter Old Password"
+msgstr "Inserire la vecchia password"
+
+msgid "All events"
+msgstr "Tutti gli eventi"
+
+msgid "added"
+msgstr "aggiunto"
+
+msgid "This field is required"
+msgstr "Questo campo è obbligatorio"
+
+msgid "Type the ISO pathname"
+msgstr "Digitare il percorso ISO"
+
+msgid "can change the settings of any virtual machine cloned from one base owned by the user."
+msgstr ""
+"può modificare le impostazioni di qualsiasi macchina virtuale clonata da una "
+"base di proprietà dell'utente."
+
+msgid "Public Port"
+msgstr "Porto pubblico"
+
+msgid "Support Contact"
+msgstr "Contatto di supporto"
+
+msgid "This machine is hibernated and can't be renamed."
+msgstr "Questa macchina è ibernata e non può essere rinominata."
+
+msgid "Rebase"
+msgstr "rebase"
+
+msgid "Port"
+msgstr "Porto"
+
+msgid "Can rename any virtual machine owned by the user."
+msgstr "Può rinominare qualsiasi macchina virtuale di proprietà dell'utente."
+
+msgid "Spinoff this clone from its base."
+msgstr "Spinoff di questo clone dalla sua base."
+
+msgid "stopped"
+msgstr "fermato"
+
+msgid "but there are only"
+msgstr "ma ci sono solo"
+
+msgid "Can rename clones from virtual machines owned by the user."
+msgstr ""
+"Può rinominare i cloni delle macchine virtuali di proprietà dell'utente."
+
+msgid "Create a new group"
+msgstr "Creare un nuovo gruppo"
+
+msgid "System Disk: (GB)"
+msgstr "Disco di sistema: (GB)"
+
+msgid "This feature requires a LDAP server configured."
+msgstr "Questa funzione richiede la configurazione di un server LDAP."
+
+msgid "User not found"
+msgstr "Utente non trovato"
+
+msgid "Save changes"
+msgstr "Salva le modifiche"
+
+msgid "Only remote client can access this port"
+msgstr "Solo il client remoto può accedere a questa porta"
+
+msgid "Type the template name"
+msgstr "Digitare il nome del modello"
+
+msgid "Password and their confirmation do not match!"
+msgstr "La password e la sua conferma non corrispondono!"
+
+msgid "Reload"
+msgstr "Ricaricare"
+
+msgid "Source Machine"
+msgstr "Fonte Macchina"
+
+msgid "UEFI"
+msgstr "UEFI"
+
+msgid "Select the .iso file the machine will utilize when installing the OS."
+msgstr ""
+"Selezionare il file .iso che la macchina utilizzerà per l'installazione del "
+"sistema operativo."
+
+msgid "Poweroff"
+msgstr "Spegnimento"
+
+msgid "Hide active"
+msgstr "Nascondi attivo"
+
+msgid "Group name is required"
+msgstr "Il nome del gruppo è richiesto"
+
+msgid "BIOS"
+msgstr "BIOS"
+
+msgid "No, cancel"
+msgstr "No, annullare"
+
+msgid "Group name"
+msgstr "Nome del gruppo"
+
+msgid "Permission granted to user"
+msgstr "Autorizzazione concessa all'utente"
+
+msgid "Remove the base prepared from this machine"
+msgstr "Rimuovere la base preparata dalla macchina"
+
+msgid "The Minimum Swap Disk Size needed for this ISO is"
+msgstr "La dimensione minima del disco di swap necessaria per questa ISO è"
+
+msgid "Max memory (MB)"
+msgstr "Memoria massima (MB)"
+
+msgid "Title"
+msgstr "Titolo"
+
+msgid "Only users from these groups will be allowed to execute this machine"
+msgstr "Solo gli utenti di questi gruppi potranno eseguire questa macchina"
+
+msgid "Spinoff clone"
+msgstr "Clone spinoff"
+
+msgid "Fill required camps with valid data"
+msgstr "Riempire i campi richiesti con dati validi"
+
+msgid "This virtual machine has clones that are bases and won't be removed"
+msgstr ""
+"Questa macchina virtuale ha dei cloni che sono basi e non verranno rimossi"
+
+msgid "Until"
+msgstr "Fino a"
+
+msgid "options"
+msgstr "opzioni"
+
+msgid "Repeated New Password is required"
+msgstr "È necessario ripetere la nuova password"
+
+msgid "Congrats"
+msgstr "Congratulazioni"
+
+msgid "Only remote client can access this port if restricted"
+msgstr "Solo il client remoto può accedere a questa porta, se limitata"
+
+msgid "Changing the base of a virtual machine is potentially dangerous and can't be undone."
+msgstr ""
+"La modifica della base di una macchina virtuale è potenzialmente pericolosa "
+"e non può essere annullata."
+
+msgid "This event and the following"
+msgstr "Questo evento e i seguenti"
+
+msgid "From"
+msgstr "Da"
+
+msgid "For Spice client setup follow this "
+msgstr "Per la configurazione del client Spice segui questo ' "
+
+msgid "Refresh ports"
+msgstr "Aggiorna le porte"
+
+msgid "Edit the event"
+msgstr "Modificare l'evento"
+
+msgid "Prepare Base"
+msgstr "Preparare la base"
+
+msgid "Groups with permissions"
+msgstr "Gruppi con autorizzazioni"
+
+msgid "Enter group name"
+msgstr "Inserire il nome del gruppo"
+
+msgid "Current memory (MB)"
+msgstr "Memoria attuale (MB)"
+
+msgid "Node with machines from the same user"
+msgstr "Nodo con macchine dello stesso utente"
+
+msgid "Phone Number"
+msgstr "Numero di telefono"
+
+msgid "hide"
+msgstr "nascondersi"
+
+msgid "Can reboot clones own virtual machines."
+msgstr "Può riavviare i cloni delle proprie macchine virtuali."
+
+msgid "Machine"
+msgstr "Macchina"
+
+msgid "This booking overlaps already scheduled reservations"
+msgstr "Questa prenotazione si sovrappone a prenotazioni già programmate"
+
+msgid "Are you sure you want to spinoff from the base?"
+msgstr "Sei sicura di voler fare uno spin-off dalla base?"
+
+msgid "not allowed"
+msgstr "non consentito"
+
+msgid "This ISO is being downloaded. The virtual machine will be created after."
+msgstr "Questa ISO viene scaricata. La macchina virtuale verrà creata dopo."
+
+msgid "This event"
+msgstr "Questo evento"
+
+msgid "Balance"
+msgstr "Equilibrio"
+
+msgid "Run Timeout"
+msgstr "Timeout esecuzione"
+
+msgid "Old Password can only contain words and numbers"
+msgstr "La vecchia password può contenere solo parole e numeri"
+
+msgid "New Password is required"
+msgstr "È richiesta una nuova password"
+
+msgid "Old Password is required"
+msgstr "È richiesta la vecchia password"
+
+msgid "Contact Method"
+msgstr "Metodo di contatto"
+
+msgid "Yes, rebase"
+msgstr "Sì, ribasare"
+
+msgid "disabled"
+msgstr "disabilitato"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "groups"
+msgstr "gruppi"
+
+msgid "Virtual Machine will be shutdown when user disconnects."
+msgstr "La macchina virtuale verrà spenta quando l'utente si disconnette."
+
+msgid "Please select an ISO file"
+msgstr "Selezionare un file ISO"
+
+msgid "Delete the event"
+msgstr "Cancellare l'evento"
+
+msgid "Passwords do not match!"
+msgstr "Le password non corrispondono!"
+
+msgid "Can manage groups."
+msgstr "Può gestire gruppi."
+
+msgid "volatile"
+msgstr "volatili"
+
+msgid "Rebase this machine to another virtual machine"
+msgstr "Reimpostare questa macchina su un'altra macchina virtuale"
+
+msgid "Clones are volatile, so all the pool will be started."
+msgstr "I cloni sono volatili, quindi tutto il pool verrà avviato."
+
+msgid "Delete"
+msgstr "Cancellare"
+
+msgid "settings"
+msgstr "impostazioni"
+
+msgid "Color"
+msgstr "Colore"
+
+msgid "Permission revoked from user"
+msgstr "Autorizzazione revocata all'utente"
+
+msgid "If you have any issue, you can contact the Suport crew and we will try to help you. Please, only contact Support Center if it is strictly necessary."
+msgstr ""
+"In caso di problemi, è possibile contattare il gruppo di supporto e "
+"cercheremo di aiutarvi. Contattare il Centro di assistenza solo se è "
+"strettamente necessario."
+
+msgid "can manage users."
+msgstr "può gestire gli utenti."
+
+msgid "Will be destroyed on shutdown"
+msgstr "Verrà distrutto al momento dello spegnimento"
+
+msgid "Can get a screenshot of own virtual machines."
+msgstr "È possibile ottenere uno screenshot delle proprie macchine virtuali."
+
+msgid "No Results Found"
+msgstr "Nessun risultato trovato"
+
+msgid "Search group"
+msgstr "Gruppo di ricerca"
+
+msgid "Group name can not exceed 80 characters"
+msgstr "Il nome del gruppo non può superare gli 80 caratteri"
+
+msgid "Event saved successfully"
+msgstr "Evento salvato con successo"
+
+msgid "clones defined."
+msgstr "cloni definiti."
+
+msgid "Repeat"
+msgstr "Ripetere"
+
+msgid "Virtual Machine will start on host start."
+msgstr "La macchina virtuale si avvia all'avvio dell'host."
+
+msgid "Legacy"
+msgstr "Eredità"
+
+msgid "can have their own limit on started machines."
+msgstr "possono avere un proprio limite di macchine avviate."
+
+msgid "networks"
+msgstr "reti"
+
+msgid "Rebase all the clones to a new base"
+msgstr "Reimpostare tutti i cloni su una nuova base"
+
+msgid "Client headers"
+msgstr "Intestazioni del client"
+
+msgid "nodes"
+msgstr "nodi"
+
+msgid "Enter New Password"
+msgstr "Inserire la nuova password"
+
+msgid "Attachment"
+msgstr "Allegato"
+
+msgid "The VM is"
+msgstr "La macchina virtuale è"
+
+msgid "Choose the virtualization type of the Virtual Machine."
+msgstr "Scegliere il tipo di virtualizzazione della macchina virtuale."
+
+msgid "This event and the following with same day of week"
+msgstr "Questo evento e il successivo con lo stesso giorno della settimana"
+
+msgid "Weekly"
+msgstr "Settimanale"
+
+msgid "Today Schedule"
+msgstr "Programma di oggi"
+
+msgid "Shutdown disconnected"
+msgstr "Spegnimento scollegato"
