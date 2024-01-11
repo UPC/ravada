@@ -230,14 +230,14 @@ our %COMMAND = (
     }
     ,huge => {
         limit => 1
-        ,commands => ['download']
+        ,commands => ['download','manage_pools']
         ,priority => 15
     }
 
     ,secondary => {
         limit => 50
         ,priority => 4
-        ,commands => ['shutdown','shutdown_now', 'manage_pools','enforce_limits', 'set_time'
+        ,commands => ['shutdown','shutdown_now', 'enforce_limits', 'set_time'
             ,'remove_domain','refresh_machine_ports'
         ]
     }
