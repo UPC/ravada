@@ -1730,16 +1730,16 @@ sub open($class, @args) {
     my $vm_changed;
     if (!$vm && ( $id_vm || defined $row->{id_vm} ) ) {
         $id_vm = $row->{id_vm};
+        $self->_check_proper_id_vm($id, \$id_vm);
         eval {
             $vm = Ravada::VM->open(id => $id_vm, readonly => $readonly);
         };
         warn "Error connecting to $id_vm ".$@ if $@;
         if (!$vm) {
             Ravada::VM::_clean_cache();
-         }
+        }
         eval {
-            $vm = Ravada::VM->open(id => ( $id_vm or $row->{id_vm} )
-                , readonly => $readonly);
+            $vm = Ravada::VM->open(id => $id_vm, readonly => $readonly);
         };
         warn "Error connecting to $id_vm [retried]".$@ if $@;
         return if !$vm;
@@ -1769,6 +1769,27 @@ sub open($class, @args) {
     $domain->_insert_db_extra() if $domain && !$domain->is_known_extra();
     $domain->_data('id_vm' => $vm_changed->id) if $vm_changed;
     return $domain;
+}
+
+sub _check_proper_id_vm($self, $id, $id_vm) {
+    my @instances = ({ id_vm => $$id_vm } , $self->list_instances($id) );
+    for my $instance ( @instances ) {
+        my $vm;
+        eval {
+            $vm = Ravada::VM->open($instance->{id_vm});
+        };
+        warn $@ if $@ && $@ !~ /I can't find VM/;
+        next if !$vm;
+
+        return if $$id_vm == $instance->{id_vm};
+
+        $$id_vm = $instance->{id_vm};
+        my $sth = $$CONNECTOR->dbh->prepare("UPDATE domains set id_vm=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($$id_vm, $id);
+        return;
+    }
 }
 
 =head2 check_status
@@ -6828,12 +6849,15 @@ Returns a list of instances of the virtual machine in all the physical nodes
 
 =cut
 
-sub list_instances($self) {
-    return () if !$self->is_known();
+sub list_instances($self, $id=undef) {
+    return () if !$id && !$self->is_known();
+
+    $id = $self->id if !defined $id;
+
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_instances "
         ." WHERE id_domain=?"
     );
-    $sth->execute($self->id);
+    $sth->execute($id);
 
     my @instances;
     while (my $row = $sth->fetchrow_hashref) {
