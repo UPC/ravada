@@ -1729,7 +1729,7 @@ sub open($class, @args) {
 
     my $vm_changed;
     if (!$vm && ( $id_vm || defined $row->{id_vm} ) ) {
-        $id_vm = $row->{id_vm};
+        $id_vm = $row->{id_vm} if !defined $id_vm;
         $self->_check_proper_id_vm($id, \$id_vm);
         eval {
             $vm = Ravada::VM->open(id => $id_vm, readonly => $readonly);
