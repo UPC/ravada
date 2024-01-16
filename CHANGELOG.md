@@ -4,6 +4,7 @@
 
 **Bugfixes**
 
-- Do not insert network twice [\#2005]
+- Do not remove owner of volatile machines
+- Volatile machines in nodes improved
 
 **Refactors**
