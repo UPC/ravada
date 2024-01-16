@@ -327,7 +327,8 @@ sub test_storage_pools($vm_name) {
     my $sp = decode_json($t->tx->res->body);
     ok(scalar(@$sp));
 
-    my $sth = connector->dbh->prepare("SELECT id FROM vms where vm_type=?");
+    my $sth = connector->dbh->prepare("SELECT id FROM vms where vm_type=?"
+        ." AND hostname='localhost'");
     $sth->execute($vm_name);
     my ($id_vm) = $sth->fetchrow;
 
