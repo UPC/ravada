@@ -517,6 +517,7 @@ get '/network/list_domains/#id' => sub($c) {
 };
 
 sub _add_admin_libs($c) {
+    warn "admin";
     push @{$c->stash->{js}}, '/js/admin.js?v='.$RAVADA->version;
     push @{$c->stash->{css}}, '/css/admin.css';
 }

@@ -237,7 +237,7 @@ sub _list_host_devices($rvd, $args) {
     my @found;
     while (my $row = $sth->fetchrow_hashref) {
         $row->{devices} = decode_json($row->{devices}) if $row->{devices};
-        $row->{_domains} = _list_domains_with_device($rvd, $row->{id});
+        ($row->{_domains}, $row->{_bases} ) = _list_domains_with_device($rvd, $row->{id});
         push @found, $row;
         next unless _its_been_a_while_channel($args->{channel});
         my $req = Ravada::Request->list_host_devices(
@@ -249,16 +249,29 @@ sub _list_host_devices($rvd, $args) {
 }
 
 sub _list_domains_with_device($rvd,$id_hd) {
-    my $sth=$rvd->_dbh->prepare("SELECT d.name FROM domains d,host_devices_domain hdd"
+    my $sth=$rvd->_dbh->prepare("SELECT d.id,d.name,d.is_base, l.id, l.name "
+        ." FROM host_devices_domain hdd, domains d"
+        ." LEFT JOIN host_devices_domain_locked l"
+        ."    ON d.id=l.id_domain "
         ." WHERE  d.id= hdd.id_domain "
         ."  AND hdd.id_host_device=?"
+        ."  ORDER BY d.name"
     );
     $sth->execute($id_hd);
-    my @domains;
-    while ( my ($name) = $sth->fetchrow ) {
-        push @domains,($name);
+    my ( @domains, @bases);
+    while ( my ($id,$name,$is_base, $is_locked, $device) = $sth->fetchrow ) {
+        $is_locked = 0 if !$is_locked;
+        $device = '' if !$device;
+        my $domain = {id => $id, name => $name, is_locked => $is_locked
+                ,device => $device
+        };
+        if ($is_base) {
+            push @bases, ($domain);
+        } else {
+            push @domains, ($domain);
+        }
     }
-    return \@domains;
+    return (\@domains, \@bases);
 }
 
 sub _list_requests($rvd, $args) {

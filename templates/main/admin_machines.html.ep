@@ -145,7 +145,7 @@
                               ,active_machine: machine.status == 'active'
                               }"
                         title ="<%=l 'Manage machine' %>">{{machine.name}}</a> {{machine.comment}}
-                   <span class="comment" ng-show="machine.is_volatile"><%=l 'Volatile' %></span>
+                   <span class="comme497461nt" ng-show="machine.is_volatile"><%=l 'Volatile' %></span>
                         <button ng-show="machine.has_clones && !filter"
                                          type="button"
                         class="badge badge-light text-blue"
