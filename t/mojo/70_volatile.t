@@ -22,9 +22,7 @@ my $URL_LOGOUT = '/logout';
 $Test::Ravada::BACKGROUND=1;
 my $t;
 
-my $BASE_NAME = "zz-test-base-alpine";
-my $RAM = 0.5;
-
+my $MAX_LOAD = 20;
 my ($USERNAME, $PASSWORD);
 ###############################################################
 
@@ -179,6 +177,7 @@ sub test_clone($vm_name, $n=10) {
                     ,start => 1
                 );
                 delete_request('set_time','force_shutdown');
+                last if _too_loaded();
             }
         }
         login($USERNAME, $PASSWORD);
@@ -195,6 +194,16 @@ sub test_clone($vm_name, $n=10) {
         }
         wait_request();
     }
+}
+
+sub _too_loaded() {
+    open my $in,"<","/proc/loadavg" or die $!;
+    my ($load) = <$in>;
+    close $in;
+    chomp $load;
+    $load =~ s/\s.*//;
+    diag("$load / $MAX_LOAD");
+    return $load>$MAX_LOAD;
 }
 
 sub login( $user=$USERNAME, $pass=$PASSWORD ) {
@@ -268,12 +277,9 @@ sub _clean_old_known($vm_name) {
     );
     $sth->execute($vm_name);
 
-    diag($vm_name);
     my $base_name = base_domain_name();
     while (my ($name) = $sth->fetchrow) {
-        diag($name);
         next if $name !~ /^$base_name/;
-        diag("remove $name");
         Ravada::Request->remove_domain(uid => user_admin->id
             ,name => $name
         );
@@ -300,7 +306,6 @@ sub _clean_old_bases($vm_name) {
         $sth_clones->execute($base->id);
         while (my ($id, $name)=$sth_clones->fetchrow) {
             next if !$name;
-            diag("remove $name");
             Ravada::Request->remove_domain(name => $name
                    ,uid => user_admin->id
            );
