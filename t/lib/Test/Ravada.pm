@@ -654,13 +654,16 @@ sub _leftovers {
 }
 
 sub _discover() {
-    my $sth = connector()->dbh->prepare("SELECT id,vm_type,hostname FROM vms");
+    my $sth = connector()->dbh->prepare("SELECT id,vm_type,hostname,name FROM vms");
     $sth->execute();
+
+    my $sth_instances = connector()->dbh->prepare("INSERT INTO domain_instances "
+        ."( id_domain, id_vm ) VALUES (?,?)"
+    );
 
     my $name = base_domain_name();
 
-    while ( my ($id_vm, $vm_type, $hostname) = $sth->fetchrow ) {
-        next if $hostname ne 'localhost';
+    while ( my ($id_vm, $vm_type, $hostname, $vm_name) = $sth->fetchrow ) {
         my $req=Ravada::Request->discover(
             uid => user_admin->id
             ,id_vm => $id_vm
@@ -668,15 +671,36 @@ sub _discover() {
         wait_request();
         my $out = $req->output;
         warn $req->error if $req->error;
-        return if !$out;
+        next if !$out;
         my $discover = decode_json($out);
         my @list = grep { $_ =~ /^$name/ } @$discover;
         for my $name (@list) {
-            diag("Importing $name");
+            diag("Importing $name in ".$vm_name);
 
-            #            $name = Encode::decode_utf8($name)
-            # if utf8::valid($name);
-
+            if ($hostname ne 'localhost') {
+                my $domain = rvd_front->search_domain($name);
+                if (!$domain) {
+                    confess if $name !~ /\d+$/;
+                    Ravada::Request->create_domain(
+                        id_owner => user_admin->id
+                        ,vm => $vm_type
+                        ,name => $name
+                        ,id_iso => search_id_iso('Alpine%64')
+                    );
+                    wait_request();
+                }
+                for ( 1 .. 10 ) {
+                    $domain = rvd_front->search_domain($name);
+                    last if $domain;
+                    sleep 1;
+                    wait_request(debug => 1);
+                }
+                eval {
+                    $sth_instances->execute($domain->id, $id_vm);
+                };
+                die $@ if $@ && $@ !~ /Duplicate entry/;
+                next;
+            }
             $req = Ravada::Request->import_domain(
                 name => $name
                 ,id_owner => user_admin->id
@@ -684,6 +708,7 @@ sub _discover() {
                 ,uid => user_admin->id
                 ,spinoff_disks => 0
             );
+            wait_request();
         }
     }
     wait_request(debug => 0);
@@ -966,21 +991,21 @@ sub mojo_create_domain($t, $vm_name) {
 
 }
 
-sub mojo_request($t, $req_name, $args) {
+sub mojo_request($t, $req_name, $args, $wait=1) {
     $t->post_ok("/request/$req_name/" => json => $args);
     like($t->tx->res->code(),qr/^(200|302)$/);
 
     my $response = $t->tx->res->json();
     ok(exists $response->{request}) or return;
-    wait_request(background => 1);
+    wait_request(background => 1) if $wait;
     return $response->{request};
 }
 
-sub mojo_request_url_post($t,$url, $json) {
+sub mojo_request_url_post($t,$url, $json, $wait=1) {
     $t->post_ok($url, json => $json);
     like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body."\n".Dumper($url,$json);
 
-    _wait_mojo_request($t, $url);
+    _wait_mojo_request($t, $url) if $wait;
 }
 
 sub mojo_request_url($t, $url) {
@@ -1128,6 +1153,9 @@ sub create_user($name=new_domain_name(), $pass=$$, $is_admin=0) {
     eval { $login = Ravada::Auth::SQL->new(name => $name, password => $pass ) };
     return $login if $login;
 
+    $login = Ravada::Auth::SQL->new(name => $name);
+    $login->remove() if $login && $login->id;
+
     Ravada::Auth::SQL::add_user(name => $name, password => $pass, is_admin => $is_admin);
 
     my $user;
@@ -1264,6 +1292,7 @@ sub wait_request {
     my %done;
     for ( ;; ) {
         fast_forward_requests();
+        _clean_removed_domains();
         my $done_all = 1;
         my $prev = join(".",_list_requests);
         my $done_count = scalar keys %done;
@@ -1321,7 +1350,13 @@ sub wait_request {
                         } elsif($req->command eq 'compact') {
                             like($error,qr{^($|.*compacted)});
                         } elsif($req->command eq 'refresh_machine') {
-                            like($error,qr{^($|.*port.*already used)});
+                            like($error,qr{^($|.*port.*already used|.*Domain not found)});
+                        } elsif($req->command eq 'force_shutdown') {
+                            like($error,qr{^($|.*Unknown domain)});
+                        } elsif($req->command eq 'connect_node') {
+                            like($error,qr{^($|Connection OK)});
+                        } elsif($req->command eq 'clone') {
+                            like($error,qr{^($|.*No free nodes)});
                         } else {
                             like($error,qr/^$|libvirt error code:38,|run recently|checked|checking/)
                                 or confess $req->id." ".$req->command;
@@ -1350,6 +1385,25 @@ sub wait_request {
         return if defined $timeout && time - $t0 >= $timeout;
         sleep 1 if $background;
     }
+}
+
+sub _clean_removed_domains() {
+    my $sth = connector()->dbh->prepare("SELECT id,command,id_domain,args FROM requests WHERE status = 'requested'");
+    my $sth_del = connector()->dbh->prepare("DELETE FROM requests where id=?");
+    my $sth_domain = connector()->dbh->prepare("SELECT id FROM domains WHERE id=? OR name=?");
+    $sth->execute;
+
+    while ( my ($id, $command, $id_domain, $args)= $sth->fetchrow) {
+        my $args_h = decode_json($args);
+        my $name = delete $args_h->{name};
+        next if !$id_domain || !$name;
+        $sth_domain->execute($id_domain, $name);
+        my ($id_found) = $sth_domain->fetchrow;
+        next if $id_found;
+        $sth_del->execute($id);
+        diag("removing $command $args");
+    }
+
 }
 
 =head2 fast_forward_requests

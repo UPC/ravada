@@ -650,8 +650,32 @@ sub test_volatile_req($vm, $node) {
     _remove_domain($base);
 }
 
-sub test_volatile_req_clone($vm, $node) {
-    my $base = create_domain($vm);
+sub test_domain_gone($vm, $node) {
+    my $sth = connector->dbh->prepare("INSERT INTO domains (name, id_vm,status, vm) "
+        ." VALUES (?,?,?,?)"
+    );
+    my $name = new_domain_name();
+    $sth->execute($name, $node->id, 'starting', $vm->type);
+    my $req = Ravada::Request->remove_domain(
+        uid => user_admin->id
+        ,name => $name
+    );
+    wait_request();
+    is($req->error,'');
+
+    my $domain = rvd_back->search_domain($name);
+    ok(!$domain);
+
+}
+
+sub test_volatile_req_clone($vm, $node, $machine='pc-i440fx') {
+    if ($vm->type eq 'KVM') {
+        my $id_iso = search_id_iso('Alpine%64');
+        my $iso = $vm->_search_iso($id_iso);
+        $machine = search_latest_machine($vm,$iso->{arch}, $machine);
+    }
+
+    my $base = create_domain_v2(vm => $vm, options => { machine => $machine });
     $base->prepare_base(user_admin);
     $base->set_base_vm(user => user_admin, node => $node);
     $base->volatile_clones(1);
@@ -1651,6 +1675,14 @@ for my $vm_name (vm_names() ) {
 
         start_node($node);
 
+        test_domain_gone($vm, $node);
+
+        if ($vm_name eq 'KVM') {
+            test_volatile_req_clone($vm, $node, 'pc-q35');
+        }
+
+        test_volatile_req_clone($vm, $node);
+
         test_pc_other($vm,$node);
 
         test_fill_memory($vm, $node, 1); # migrate
@@ -1684,7 +1716,6 @@ for my $vm_name (vm_names() ) {
         test_display_ip($vm, $node, 2); # also set localhost ip
 
         test_set_vm_fail($vm, $node);
-        test_volatile_req_clone($vm, $node);
 
         test_change_base($vm, $node);
         test_change_clone($vm, $node);

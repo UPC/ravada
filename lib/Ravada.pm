@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '2.1.0';
+our $VERSION = '2.1.6';
 
 use utf8;
 
@@ -3430,7 +3430,10 @@ sub remove_domain {
     $sth->execute($name);
 
     my ($id,$vm_type)= $sth->fetchrow;
-    confess "Error: Unknown domain $name"   if !$id;
+    if (!$id) {
+        warn "Error: Unknown domain $name, maybe already removed.\n";
+        return;
+    }
 
     my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
     die "Error: user ".$user->name." can't remove domain $id"
@@ -3448,7 +3451,7 @@ sub remove_domain {
     eval { $domain = Ravada::Domain->open(id => $id, _force => 1, id_vm => $vm->id) };
     warn $@ if $@;
     if (!$domain) {
-            warn "Warning: I can't find domain '$id', maybe already removed.\n";
+            warn "Warning: I can't find domain [$id ] '$name' in ".$vm->name.", maybe already removed.\n";
             Ravada::Domain::_remove_domain_data_db($id);
             return;
     };
@@ -3816,7 +3819,7 @@ sub process_requests {
         $self->_timeout_requests();
     }
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain,command FROM requests "
         ." WHERE "
         ."    ( status='requested' OR status like 'retry%' OR status='waiting')"
         ."   AND ( at_time IS NULL  OR at_time = 0 OR at_time<=?) "
@@ -3826,7 +3829,7 @@ sub process_requests {
 
     my @reqs;
     my %duplicated;
-    while (my ($id_request,$id_domain)= $sth->fetchrow) {
+    while (my ($id_request, $id_domain, $command)= $sth->fetchrow) {
         my $req;
         eval { $req = Ravada::Request->open($id_request) };
 
@@ -3834,17 +3837,27 @@ sub process_requests {
         warn $@ if $@;
         next if !$req;
 
+        if ($req->command eq 'ping_backend') {
+            $req->status("done");
+            next;
+        }
         next if !$req->requirements_done;
 
         next if $request_type ne 'all' && $req->type ne $request_type;
 
         next if $duplicated{"id_req.$id_request"}++;
+
+        $id_domain = $req->defined_arg('id_domain') if !defined $id_domain && $req->defined_arg('id_domain');
+
+        next if defined $id_domain && $duplicated{$id_domain.".$command"}++;
+
         next if $req->command !~ /shutdown/i
             && $self->_domain_working($id_domain, $req);
 
         my $domain = '';
         $domain = $id_domain if $id_domain;
         $domain .= ($req->defined_arg('name') or '');
+
         next if $domain && $duplicated{$domain};
         my $id_base = $req->defined_arg('id_base');
         next if $id_base && $duplicated{$id_base};
@@ -5644,6 +5657,7 @@ sub _cmd_set_time($self, $request) {
         };
     return if !$domain->is_active;
     eval { $domain->set_time() };
+    return if $@ =~ /Guest agent is not responding/ && $domain->get_info()->{ip};
     die "$@ , retry.\n" if $@;
 }
 
@@ -6061,10 +6075,10 @@ sub _remove_unnecessary_downs($self, $domain) {
 
 sub _refresh_volatile_domains($self) {
    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, id_vm, id_owner FROM domains WHERE is_volatile=1"
+        "SELECT id, name, id_vm, id_owner, vm FROM domains WHERE is_volatile=1"
     );
     $sth->execute();
-    while ( my ($id_domain, $name, $id_vm, $id_owner) = $sth->fetchrow ) {
+    while ( my ($id_domain, $name, $id_vm, $id_owner, $type) = $sth->fetchrow ) {
         my $domain;
         eval { $domain = Ravada::Domain->open(id => $id_domain, _force => 1) } ;
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
@@ -6072,11 +6086,13 @@ sub _refresh_volatile_domains($self) {
                 $domain->_post_shutdown(user => $USER_DAEMON);
                 $domain->remove($USER_DAEMON);
             } else {
-                cluck "Warning: temporary user id=$id_owner should already be removed";
                 my $user;
                 eval { $user = Ravada::Auth::SQL->search_by_id($id_owner) };
                 warn $@ if $@;
-                $user->remove() if $user;
+                if ($user && $user->is_temporary) {
+                    cluck "Warning: temporary user id=$id_owner should already be removed";
+                    $user->remove();
+                }
             }
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
             $sth_del->execute($id_domain);
@@ -6085,6 +6101,7 @@ sub _refresh_volatile_domains($self) {
             $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM requests where id_domain=?");
             $sth_del->execute($id_domain);
             $sth_del->finish;
+            Ravada::Domain::_remove_domain_data_db($id_domain, $type);
         }
     }
 }

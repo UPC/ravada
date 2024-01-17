@@ -413,13 +413,13 @@ sub test_already_started_twice($vm_name, $node) {
             last if !$clone->is_active
             && !$clone_local->is_active;
             sleep 1;
-            rvd_back->_process_all_requests_dont_fork();
+            wait_request(debug => 0);
         }
     }
     rvd_back->_process_all_requests_dont_fork();
 
     is($clone->is_active, 0,"[".$node->type."] expecting remote clone ".$clone->name." down") or exit;
-    is($clone_local->is_active, 0,"[".$node->type."] expecting local clone down") or exit;
+    is($clone_local->is_active, 0,"[".$node->type."] expecting local clone ".$clone->name." down") or exit;
 
     $clone->remove(user_admin);
     $base->remove(user_admin);

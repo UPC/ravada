@@ -385,10 +385,12 @@ sub remove_file($self,@files) {
 
 sub _list_volumes($self) {
     my @volumes;
+    my @pools;
+    my %duplicated_path;
     for my $pool (_list_storage_pools($self->vm)) {
         my @vols;
         for ( 1 .. 10) {
-            next if !$pool->is_active;
+           next if !$pool->is_active;
            eval { @vols = $pool->list_all_volumes() };
            last if $@ && ref($@) && $@->code == 55;
            last if !$@ || $@ =~ / no storage pool with matching uuid/;
@@ -408,6 +410,7 @@ sub _list_used_volumes_known($self) {
     my @used;
     while ( my ($id, $name) = $sth->fetchrow) {
         my $dom = $self->search_domain($name);
+        next if !$dom;
         my $xml = $dom->xml_description();
         my @vols = $self->_find_all_volumes($xml);
         my @links;
@@ -609,7 +612,9 @@ sub _file_exists_remote($self, $file) {
     }
 
     die "Error: invalid file '$file'" if $file =~ /[`;(\[" ]/;
-    my ($out,$err) = $self->_ssh->capture2("ls $file");
+    my $ssh = $self->_ssh;
+    confess "Error: no _ssh ".$self->name if !$ssh;
+    my ($out,$err) = $ssh->capture2("ls $file");
     my @ls = split /\n/,$out;
     for (@ls) { chomp };
     return scalar(@ls);
@@ -778,10 +783,6 @@ sub search_domain($self, $name, $force=undef) {
     };
     if ($@ && $@ =~ /libvirt error code: 38,/) {
         warn $@;
-        if (!$self->is_local) {
-            warn "DISABLING NODE ".$self->name;
-            $self->enabled(0);
-        }
         return;
     }
 
@@ -849,8 +850,9 @@ sub list_domains {
 
     confess "Arguments unknown ".Dumper(\%args)  if keys %args;
 
-    my $query = "SELECT id, name FROM domains WHERE id_vm = ? ";
-    $query .= " AND status = 'active' " if $active;
+    my $query = "SELECT d.id, d.name FROM domains d ,domain_instances di "
+        ."WHERE d.id=di.id_domain AND di.id_vm = ? ";
+    $query .= " AND d.status = 'active' " if $active;
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
 
@@ -1098,7 +1100,8 @@ sub _domain_create_common {
 
     $self->_fix_pci_slots($xml);
     $self->_xml_add_guest_agent($xml);
-    $self->_xml_clean_machine_type($xml) if !$self->is_local;
+    Ravada::Domain::KVM::_check_machine(undef, $xml, $self) if !$self->is_local;
+
     $self->_xml_add_sysinfo_entry($xml, hostname => $args{name});
     $self->_xml_fix_nvram($xml, $args{name});
 
@@ -1215,7 +1218,7 @@ sub _domain_create_from_base {
     confess "argument id_base or base required ".Dumper(\%args)
         if !$args{id_base} && !$args{base};
 
-    confess "Domain $args{name} already exists"
+    confess "Domain $args{name} already exists in ".$self->name
         if $self->search_domain($args{name});
 
     my $base = $args{base};
@@ -2402,11 +2405,6 @@ sub _xml_add_guest_agent {
     $target->setAttribute(type => 'virtio');
     $target->setAttribute(name => 'org.qemu.guest_agent.0');
     
-}
-
-sub _xml_clean_machine_type($self, $doc) {
-    my ($os_type) = $doc->findnodes('/domain/os/type');
-    $os_type->setAttribute( machine => 'pc');
 }
 
 sub _xml_add_sysinfo($self,$doc) {

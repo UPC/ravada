@@ -997,6 +997,7 @@ sub _data($self, $field, $value=undef) {
           || $value ne $self->{_data}->{$field}
         )
     ) {
+        confess if $field eq 'id_vm' && $self->is_base;
         $self->{_data}->{$field} = $value;
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE vms set $field=?"
@@ -1839,11 +1840,18 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef) {
     }
 
     return $vms[0] if scalar(@vms)<=1;
+
+    my @vms_active;
+    for my $vm (@vms) {
+        push @vms_active,($vm) if $vm->is_active && $vm->enabled;
+    }
     if ($base && $base->_data('balance_policy') == 1 ) {
-        my $vm = $self->_balance_already_started($uid, $id_domain, \@vms);
+        my $vm = $self->_balance_already_started($uid, $id_domain, \@vms_active);
         return $vm if $vm;
     }
-    return $self->_balance_free_memory($base, \@vms);
+    my $vm = $self->_balance_free_memory($base, \@vms_active);
+    return $vm if $vm;
+    die "Error: No free nodes available.\n" if !$vm;
 }
 
 sub _balance_already_started($self, $uid, $id_domain, $vms) {
@@ -1887,11 +1895,10 @@ sub _balance_free_memory($self , $base, $vms) {
         eval { $active = $vm->is_active() };
         my $error = $@;
         if ($error && !$vm->is_local) {
-            warn "[balance] disabling ".$vm->name." ".$vm->enabled()." $error";
-            $vm->enabled(0);
+            warn "[balancing] ".$vm->name." $error";
+            next;
         }
 
-        next if !$vm->enabled();
         next if !$active;
         next if $base && !$vm->is_local && !$base->base_in_vm($vm->id);
         next if $vm->is_locked();
@@ -1919,7 +1926,7 @@ sub _balance_free_memory($self , $base, $vms) {
     for my $vm (@sorted_vm) {
         return $vm;
     }
-    return $self;
+    return;
 }
 
 sub _sort_vms($vm_list) {
@@ -2226,6 +2233,7 @@ Starts the node
 
 sub start($self) {
     $self->_wake_on_lan();
+    $self->_data('is_active' => 1);
 }
 
 =head2 shutdown
@@ -2551,7 +2559,6 @@ sub dir_backup($self) {
     }
     return $dir_backup;
 }
-
 
 sub _follow_link($self, $file) {
     my ($dir, $name) = $file =~ m{(.*)/(.*)};
