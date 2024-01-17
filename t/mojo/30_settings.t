@@ -327,7 +327,8 @@ sub test_storage_pools($vm_name) {
     my $sp = decode_json($t->tx->res->body);
     ok(scalar(@$sp));
 
-    my $sth = connector->dbh->prepare("SELECT id FROM vms where vm_type=?");
+    my $sth = connector->dbh->prepare("SELECT id FROM vms where vm_type=?"
+        ." AND hostname='localhost'");
     $sth->execute($vm_name);
     my ($id_vm) = $sth->fetchrow;
 
@@ -339,8 +340,15 @@ sub test_storage_pools($vm_name) {
     ok(scalar(@$sp_id));
     is_deeply($sp_id, $sp);
 
-    my $name_inactive= $sp_id->[0]->{name};
-    die "Error, no name in ".Dumper($sp_id->[0]) if !$name_inactive;
+    my ($sp_inactive) = grep { $_->{name} ne 'default' } @$sp_id;
+
+    if ( !$sp_inactive ) {
+#        warn "Warning: no sp in addition to 'default' in ".Dumper($sp_id);
+        $sp_inactive = $sp_id->[0];
+    }
+
+    my $name_inactive= $sp_inactive->{name};
+    die "Error, no name in ".Dumper($sp_inactive) if !$name_inactive;
 
     mojo_request($t, "active_storage_pool"
         ,{ id_vm => $id_vm, name => $name_inactive, value => 0 });
