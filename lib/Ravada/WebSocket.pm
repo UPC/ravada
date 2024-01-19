@@ -236,8 +236,7 @@ sub _list_host_devices($rvd, $args) {
 
     my @found;
     while (my $row = $sth->fetchrow_hashref) {
-        $row->{devices} = decode_json($row->{devices}) if $row->{devices};
-        ($row->{_domains}, $row->{_bases} ) = _list_domains_with_device($rvd, $row->{id});
+        _list_domains_with_device($rvd, $row);
         push @found, $row;
         next unless _its_been_a_while_channel($args->{channel});
         my $req = Ravada::Request->list_host_devices(
@@ -248,8 +247,15 @@ sub _list_host_devices($rvd, $args) {
     return \@found;
 }
 
-sub _list_domains_with_device($rvd,$id_hd) {
-    my $sth=$rvd->_dbh->prepare("SELECT d.id,d.name,d.is_base, l.id, l.name "
+sub _list_domains_with_device($rvd,$row) {
+    my $id_hd = $row->{id};
+
+    my %devices;
+    eval {
+        my $devices = decode_json($row->{devices});
+        %devices = map { $_ => { name => $_ } } @$devices;
+    } if $row->{devices};
+    my $sth=$rvd->_dbh->prepare("SELECT d.id,d.name,d.is_base, d.status, l.id, l.name "
         ." FROM host_devices_domain hdd, domains d"
         ." LEFT JOIN host_devices_domain_locked l"
         ."    ON d.id=l.id_domain "
@@ -259,19 +265,22 @@ sub _list_domains_with_device($rvd,$id_hd) {
     );
     $sth->execute($id_hd);
     my ( @domains, @bases);
-    while ( my ($id,$name,$is_base, $is_locked, $device) = $sth->fetchrow ) {
-        $is_locked = 0 if !$is_locked;
+    while ( my ($id,$name,$is_base, $status, $is_locked, $device) = $sth->fetchrow ) {
+        $is_locked = 0 if !$is_locked || $status ne 'active';
         $device = '' if !$device;
-        my $domain = {id => $id, name => $name, is_locked => $is_locked
-                ,device => $device
+        my $domain = {     id => $id       ,name => $name, is_locked => $is_locked
+                      ,is_base => $is_base ,device => $device
         };
+        $devices{$device}->{domain} = $domain if exists $devices{$device} && $is_locked;
         if ($is_base) {
             push @bases, ($domain);
         } else {
             push @domains, ($domain);
         }
     }
-    return (\@domains, \@bases);
+    $row->{_domains} = \@domains;
+    $row->{_bases} = \@bases;
+    $row->{devices} = [values %devices];
 }
 
 sub _list_requests($rvd, $args) {
