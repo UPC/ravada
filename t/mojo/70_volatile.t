@@ -22,15 +22,21 @@ my $URL_LOGOUT = '/logout';
 $Test::Ravada::BACKGROUND=1;
 my $t;
 
-my $BASE_NAME = "zz-test-base-alpine";
-my $RAM = 0.5;
-
+my $MAX_LOAD = 10;
 my ($USERNAME, $PASSWORD);
 ###############################################################
 
-sub _wait_ip($id_domain) {
+sub _wait_ip($id_domain0, $seconds=60) {
+
     my $domain;
-    for ( 1 .. 60 ) {
+    for ( 1 .. $seconds ) {
+        my $id_domain = $id_domain0;
+
+        if ($id_domain0 !~ /^\d+$/) {
+            $id_domain = _search_domain_by_name($id_domain);
+            next if !$id_domain;
+        }
+
         Ravada::Request->refresh_machine(
             id_domain => $id_domain
             ,uid => user_admin->id
@@ -164,26 +170,36 @@ sub test_clone($vm_name, $n=10) {
     my $times = 2;
     $times = 20 if $ENV{TEST_LONG};
 
-    for my $count0 ( 0 .. $times ) {
+    my $seconds = 2;
+    LOOP: for my $count0 ( 0 .. $times ) {
         for my $count1 ( 0 .. $n*scalar(@bases) ) {
             for my $base ( @bases ) {
                 next if !$base->is_base;
                 next if $base->list_requests > 10;
+                last LOOP if _too_loaded("clone");
                 my $user = create_user(new_domain_name(),$$);
                 my $ip = (0+$count0.$count1) % 255;
 
+                my $name = new_domain_name();
+                my $info = $base->info(user_admin);
+                my $mem = $info->{max_mem};
                 Ravada::Request->clone(
                     uid => $user->id
                     ,id_domain => $base->id
                     ,remote_ip => "192.168.122.$ip"
                     ,start => 1
+                    ,name => $name
                 );
                 delete_request('set_time','force_shutdown');
+                next if $vm_name eq 'Void';
+                wait_request(debug => 1);
+                _wait_ip($name,$seconds++);
             }
         }
         login($USERNAME, $PASSWORD);
         for my $base ( @bases ) {
             for ( 1 .. 10 ) {
+                last if _too_loaded("waiting");
                 wait_request();
                 last if $base->clones >= $n || !$base->list_requests;
                 sleep 1;
@@ -192,9 +208,31 @@ sub test_clone($vm_name, $n=10) {
                 $t->get_ok("/machine/remove/".$clone->{id}.".json")->status_is(200);
                 delete_request('set_time','force_shutdown');
             }
+            $t->get_ok('/machine/remove_clones/'.$base->id.".json");
         }
         wait_request();
     }
+    for my $base ( @bases ) {
+        $t->get_ok('/machine/remove_clones/'.$base->id.".json");
+    }
+}
+
+sub _search_domain_by_name($name) {
+    my $sth = connector->dbh->prepare("SELECT id FROM domains "
+        ." WHERE name=?"
+    );
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    return $id;
+}
+
+sub _too_loaded($msg) {
+    open my $in,"<","/proc/loadavg" or die $!;
+    my ($load) = <$in>;
+    close $in;
+    chomp $load;
+    $load =~ s/\s.*//;
+    return $load>$MAX_LOAD;
 }
 
 sub login( $user=$USERNAME, $pass=$PASSWORD ) {
@@ -268,12 +306,9 @@ sub _clean_old_known($vm_name) {
     );
     $sth->execute($vm_name);
 
-    diag($vm_name);
     my $base_name = base_domain_name();
     while (my ($name) = $sth->fetchrow) {
-        diag($name);
         next if $name !~ /^$base_name/;
-        diag("remove $name");
         Ravada::Request->remove_domain(uid => user_admin->id
             ,name => $name
         );
@@ -300,7 +335,6 @@ sub _clean_old_bases($vm_name) {
         $sth_clones->execute($base->id);
         while (my ($id, $name)=$sth_clones->fetchrow) {
             next if !$name;
-            diag("remove $name");
             Ravada::Request->remove_domain(name => $name
                    ,uid => user_admin->id
            );
@@ -345,6 +379,8 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
 
     test_clone($vm_name);
 }
+
+remove_old_domains_req(0); # 0=do not wait for them
 
 end();
 done_testing();
