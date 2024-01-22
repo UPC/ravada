@@ -4978,8 +4978,13 @@ sub _cmd_remove_base {
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
     my $domain = $self->search_domain_by_id($id_domain);
-
     die "Unknown domain id '$id_domain'\n" if !$domain;
+
+    die "User ".$user->name." [".$user->id."] not allowed to remove base "
+                .$domain->name."\n"
+            unless $user->is_admin || (
+                $domain->id_owner == $user->id && $user->can_create_base());
+
 
     $domain->remove_base($user);
 
