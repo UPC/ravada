@@ -199,7 +199,7 @@ sub test_add_network($vm) {
         ,name => base_domain_name()
     );
     wait_request(debug => 0);
-    like($req->output , qr/\d+/) or exit;
+    like($req_new->output , qr/\d+/) or exit;
 
     my $net = decode_json($req_new->output);
     my $name = $net->{name};
@@ -373,6 +373,78 @@ sub test_change_network($net) {
 
     like($req->error,qr/can not be renamed/);
 
+}
+
+sub test_assign_network($vm, $net) {
+    my $id_iso = search_id_iso('Alpine%');
+    my $name = new_domain_name();
+
+    my $req = Ravada::Request->create_domain(
+        id_iso => $id_iso
+        ,vm => $vm->type
+        ,name => $name
+        ,id_owner => user_admin->id
+        ,options => {
+            network => $net->{name}
+        }
+    );
+    wait_request(debug => 1);
+
+    my $domain = rvd_back->search_domain($name);
+    ok($domain);
+
+    _check_domain_network($domain, $net->{name});
+}
+
+sub test_assign_network_clone($vm, $net, $volatile) {
+    my $id_iso = search_id_iso('Alpine%');
+    my $name = new_domain_name();
+
+    my $req = Ravada::Request->create_domain(
+        id_iso => $id_iso
+        ,vm => $vm->type
+        ,name => $name
+        ,id_owner => user_admin->id
+    );
+    wait_request(debug => 0);
+
+    my $domain = rvd_back->search_domain($name);
+    $domain->prepare_base(user_admin);
+    $domain->volatile_clones(1);
+
+    my $name_clone = new_domain_name();
+    my $req2 = Ravada::Request->create_domain(
+        id_base => $domain->id
+        ,id_owner => user_admin->id
+        ,options => { network => $net->{name}}
+        ,name => $name_clone
+    );
+    wait_request(debug => 1);
+    my $clone = rvd_back->search_domain($name_clone);
+    ok($clone);
+
+    _check_domain_network($clone, $net->{name});
+}
+
+sub _check_domain_network_kvm($domain, $net_name) {
+
+    my $doc = XML::LibXML->load_xml(string => $domain->xml_description());
+
+    my ($net_source) = $doc->findnodes("/domain/devices/interface/source");
+    is($net_source->getAttribute('network'),$net_name);
+}
+
+sub _check_domain_network_void($domain, $net_name) {
+    my $config = $domain->get_config();
+    ok($config->{hardware}->{network}->[0]->{name}, $net_name);
+}
+
+sub _check_domain_network($domain, $net_name) {
+    if ($domain->type eq 'KVM') {
+        _check_domain_network_kvm($domain, $net_name);
+    } else {
+        _check_domain_network_void($domain, $net_name);
+    }
 }
 
 sub test_change_network_internal($vm, $net) {
@@ -704,6 +776,10 @@ for my $vm_name ( vm_names() ) {
         test_list_networks($vm);
 
         my $net = test_add_network($vm);
+        test_assign_network($vm, $net);
+        test_assign_network_clone($vm, $net, 0);
+        test_assign_network_clone($vm, $net, 1); # volatile clone
+
         test_manage_all_networks($vm,$ net);
         test_public_network($vm, $net);
 
