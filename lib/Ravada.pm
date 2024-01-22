@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '2.1.0';
+our $VERSION = '2.2.0';
 
 use utf8;
 
@@ -237,10 +237,11 @@ sub _add_internal_network($self) {
         ." VALUES(?,?,?,1,0)"
     );
     my $n=0;
+    my %done;
     for my $net (split /\n/,$out) {
         next if $net =~ /dev virbr/;
         my ($address) = $net =~ m{(^[\d\.]+/\d+)};
-        next if !$address;
+        next if !$address || $done{address}++;
         $sth->execute("internal$n",$address, ++$n+1);
 
     }
@@ -344,6 +345,8 @@ sub _update_isos {
     my $self = shift;
     my $table = 'iso_images';
     my $field = 'name';
+    my @now = localtime(time);
+    my $year = $now[5]+1900;
     my %data = (
 	    androidx86 => {
                     name => 'Android 8.1 x86'
@@ -494,7 +497,8 @@ sub _update_isos {
         ,file_re => 'alpine-standard-3.16.*-x86_64.iso'
         ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
             ,min_disk_size => '2'
-            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+            ,options => { machine => 'pc-q35', bios => 'UEFI'
+            }
         }
         ,alpine381_32 => {
             name => 'Alpine 3.16 32 bits'
@@ -787,24 +791,24 @@ sub _update_isos {
             ,min_disk_size => '10'
         }
         ,kali_64 => {
-            name => 'Kali Linux 2022'
-            ,description => 'Kali Linux 2022 64 Bits'
+            name => "Kali Linux $year"
+            ,description => "Kali Linux $year 64 Bits"
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2022.\d+/'
-            ,file_re => 'kali-linux-202\d.\d+-installer-amd64.iso'
+            ,url => "https://cdimage.kali.org/kali-$year".'.\d+/'
+            ,file_re => "kali-linux-$year.".'\d+-installer-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
         ,kali_64_netinst => {
-            name => 'Kali Linux 2022 (NetInstaller)'
-            ,description => 'Kali Linux 2022 64 Bits (light NetInstall)'
+            name => "Kali Linux $year (NetInstaller)"
+            ,description => "Kali Linux $year 64 Bits (light NetInstall)"
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2022.\d+/'
-            ,file_re => 'kali-linux-202\d.\d+-installer-netinst-amd64.iso'
+            ,url => "https://cdimage.kali.org/kali-$year".'.\d+/'
+            ,file_re => "kali-linux-$year.".'\d+-installer-netinst-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
@@ -866,7 +870,9 @@ sub _update_isos {
           ,min_ram => 4
           ,arch => 'x86_64'
           ,extra_iso => 'https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.2\d+-\d+/virtio-win-0.1.2\d+.iso'
-            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+            ,options => { machine => 'pc-q35', bios => 'UEFI'
+                ,hardware => { cpu => { cpu => { topology => { threads => 2, cores => 2}}}}
+            }
         }
        ,empty_32bits => {
           name => 'Empty Machine 32 bits'
@@ -2548,6 +2554,60 @@ sub _sql_insert_defaults($self){
                 ,name => 'auto_view'
                 ,value => $conf->{auto_view}
             }
+            ,{  id_parent => $id_frontend
+                ,name => "widget"
+                ,value => $conf->{widget}
+            }
+            ,{
+                id_parent => $id_frontend
+                ,name => 'content_security_policy'
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "all"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "default-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "style-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "script-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "object-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "frame-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "font-src"
+                ,value => ''
+            }
+
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "connect-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "media-src"
+                ,value => ''
+            }
             ,{
                 id_parent => $id_backend
                 ,name => 'start_limit'
@@ -3260,6 +3320,7 @@ sub _req_add_disk($uid, $id_domain, $type, $size, $request, $storage=undef) {
         ,name => 'disk'
         ,data => $data
         ,@after_req
+        ,at => time + 1
     );
 }
 sub _start_domain_after_create($domain, $request, $uid,$previous_request) {
@@ -3379,7 +3440,10 @@ sub remove_domain {
     $sth->execute($name);
 
     my ($id,$vm_type)= $sth->fetchrow;
-    confess "Error: Unknown domain $name"   if !$id;
+    if (!$id) {
+        warn "Error: Unknown domain $name, maybe already removed.\n";
+        return;
+    }
 
     my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
     die "Error: user ".$user->name." can't remove domain $id"
@@ -3397,7 +3461,7 @@ sub remove_domain {
     eval { $domain = Ravada::Domain->open(id => $id, _force => 1, id_vm => $vm->id) };
     warn $@ if $@;
     if (!$domain) {
-            warn "Warning: I can't find domain '$id', maybe already removed.\n";
+            warn "Warning: I can't find domain [$id ] '$name' in ".$vm->name.", maybe already removed.\n";
             Ravada::Domain::_remove_domain_data_db($id);
             return;
     };
@@ -3765,7 +3829,7 @@ sub process_requests {
         $self->_timeout_requests();
     }
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain,command FROM requests "
         ." WHERE "
         ."    ( status='requested' OR status like 'retry%' OR status='waiting')"
         ."   AND ( at_time IS NULL  OR at_time = 0 OR at_time<=?) "
@@ -3775,7 +3839,7 @@ sub process_requests {
 
     my @reqs;
     my %duplicated;
-    while (my ($id_request,$id_domain)= $sth->fetchrow) {
+    while (my ($id_request, $id_domain, $command)= $sth->fetchrow) {
         my $req;
         eval { $req = Ravada::Request->open($id_request) };
 
@@ -3783,17 +3847,27 @@ sub process_requests {
         warn $@ if $@;
         next if !$req;
 
+        if ($req->command eq 'ping_backend') {
+            $req->status("done");
+            next;
+        }
         next if !$req->requirements_done;
 
         next if $request_type ne 'all' && $req->type ne $request_type;
 
         next if $duplicated{"id_req.$id_request"}++;
+
+        $id_domain = $req->defined_arg('id_domain') if !defined $id_domain && $req->defined_arg('id_domain');
+
+        next if defined $id_domain && $duplicated{$id_domain.".$command"}++;
+
         next if $req->command !~ /shutdown/i
             && $self->_domain_working($id_domain, $req);
 
         my $domain = '';
         $domain = $id_domain if $id_domain;
         $domain .= ($req->defined_arg('name') or '');
+
         next if $domain && $duplicated{$domain};
         my $id_base = $req->defined_arg('id_base');
         next if $id_base && $duplicated{$id_base};
@@ -3814,7 +3888,7 @@ sub process_requests {
         "pid=".($req->pid or '')." ".$req->status()
             ."$txt_retry "
             .$req->command
-            ." ".Dumper($req->args) if $DEBUG || $debug;
+            ." ".Dumper($req->args) if ( $DEBUG || $debug ) && $req->command ne 'set_time';
 
         my ($n_retry) = $req->status() =~ /retry (\d+)/;
         $n_retry = 0 if !$n_retry;
@@ -3824,14 +3898,16 @@ sub process_requests {
         next if !$DEBUG && !$debug;
 
         warn ''.localtime." req ".$req->id." , cmd: ".$req->command." ".$req->status()
-            ." , err: '".($req->error or '')."'\n"  if $DEBUG || $VERBOSE;
+            ." , err: '".($req->error or '')."'\n"  if ($DEBUG || $VERBOSE )
+            && $req->command ne 'set_time';
             #        sleep 1 if $DEBUG;
 
     }
 
+    my @reqs2 = grep { $_->command ne 'set_time' } @reqs;
     warn Dumper([map { $_->id." ".($_->pid or '')." ".$_->command." ".$_->status }
-            grep { $_->id } @reqs ])
-        if ($DEBUG || $debug ) && @reqs;
+            grep { $_->id } @reqs2 ])
+        if ($DEBUG || $debug ) && @reqs2;
 
     return scalar(@reqs);
 }
@@ -3854,6 +3930,7 @@ sub _timeout_requests($self) {
         ." FROM requests "
         ." WHERE ( status = 'working' or status = 'stopping' )"
         ."  AND date_changed >= ? "
+        ."  AND command <> 'move_volume'"
         ." ORDER BY date_req "
     );
     $sth->execute(_date_now(-30));
@@ -3989,6 +4066,7 @@ sub _kill_dead_process($self) {
         ." AND ( status like 'working%' OR status like 'downloading%'"
         ."      OR status like 'start%' ) "
         ." AND pid IS NOT NULL "
+        ." AND command <> 'move_volume'"
     );
     $sth->execute(time - 2);
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
@@ -4094,7 +4172,7 @@ sub _execute {
         return;
     }
 
-    $self->_wait_pids;
+    $self->_wait_pids();
     return if !$self->_can_fork($request);
 
     my $pid = fork();
@@ -4449,7 +4527,9 @@ sub _wait_pids($self) {
     my @done;
     for my $type ( keys %{$self->{pids}} ) {
         for my $pid ( keys %{$self->{pids}->{$type}}) {
+            next if kill(0,$pid);
             my $kid = waitpid($pid , WNOHANG);
+            next if kill(0,$pid);
             push @done, ($pid) if $kid == $pid || $kid == -1;
         }
     }
@@ -4472,7 +4552,7 @@ sub _wait_pids($self) {
             $request->status('done') if $request->status =~ /working/i;
         };
         warn("$$ request id=$id_req ".$request->command." ".$request->status()
-            .", error='".($request->error or '')."'\n") if $DEBUG && $request;
+            .", error='".($request->error or '')."'\n") if $DEBUG && $request && $request->command ne 'set_time';
     }
 }
 
@@ -4846,14 +4926,38 @@ sub _cmd_prepare_base {
     my $id_domain = $request->id_domain   or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
+    my $domain = $self->search_domain_by_id($id_domain);
+    die "Unknown domain id '$id_domain'\n" if !$domain;
+
     my $user = Ravada::Auth::SQL->search_by_id( $uid)
         or confess "Error: Unknown user id $uid in request ".Dumper($request);
 
+    die "User ".$user->name." [".$user->id."] not allowed to prepare base "
+                .$domain->name."\n"
+            unless $user->is_admin || (
+                $domain->id_owner == $user->id && $user->can_create_base());
+
+
     my $with_cd = $request->defined_arg('with_cd');
 
-    my $domain = $self->search_domain_by_id($id_domain);
-
-    die "Unknown domain id '$id_domain'\n" if !$domain;
+    if ($domain->is_active) {
+        my $req_shutdown = Ravada::Request->shutdown_domain(
+            uid => $user->id
+            ,id_domain => $domain->id
+            ,timeout => 0
+        );
+        $request->after_request($req_shutdown->id);
+        $request->at(time + 10);
+        if ( !defined $request->retry() ) {
+            $request->retry(5);
+            $request->status("retry");
+        } elsif($request->retry>0) {
+            $request->retry($request->retry-1);
+            $request->status("retry");
+        }
+        $request->error("Machine must be shut down ".$domain->name." [".$domain->id."]");
+        return;
+    }
 
     $self->_remove_unnecessary_request($domain);
     $self->_remove_unnecessary_downs($domain);
@@ -5165,6 +5269,51 @@ sub _cmd_reboot {
     $domain->reboot(timeout => $timeout, user => $user
                     , request => $request);
 
+}
+
+sub _cmd_shutdown_start($self, $request) {
+    my $uid = $request->args('uid');
+    my $id_domain = $request->args('id_domain');
+    my $id_vm = $request->defined_arg('id_vm');
+
+    my $domain;
+    if ($id_vm) {
+        my $vm = Ravada::VM->open($id_vm);
+        $domain = $vm->search_domain_by_id($id_domain);
+    } else {
+        $domain = $self->search_domain_by_id($id_domain);
+    }
+    die "Unknown domain '$id_domain'\n" if !$domain;
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid);
+
+    die "USER $uid not authorized to restart machine ".$domain->name
+    unless $domain->_data('id_owner') ==  $user->id || $user->is_operator;
+
+    my $timeout = ($request->defined_arg('timeout') or $domain->_timeout_shutdown() or 60);
+
+    for my $try ( 0 .. 1 ) {
+        $domain->shutdown(timeout => $timeout, user => $user
+                    , request => $request);
+
+        for ( 0 .. $timeout+1 ) {
+            last if !$domain->is_active;
+            sleep 1;
+        }
+        last if !$domain->is_active;
+    }
+
+    my $req_shutdown = Ravada::Request->force_shutdown_domain(
+        uid => $user->id
+        ,id_domain => $domain->id
+        ,after_request => $request->id
+    );
+
+    Ravada::Request->start_domain(
+        uid => $user->id
+        ,id_domain => $domain->id
+        ,after_request => $req_shutdown->id
+    );
 }
 
 sub _cmd_force_reboot {
@@ -5520,6 +5669,7 @@ sub _cmd_set_time($self, $request) {
         };
     return if !$domain->is_active;
     eval { $domain->set_time() };
+    return if $@ =~ /Guest agent is not responding/ && $domain->get_info()->{ip};
     die "$@ , retry.\n" if $@;
 }
 
@@ -5937,10 +6087,10 @@ sub _remove_unnecessary_downs($self, $domain) {
 
 sub _refresh_volatile_domains($self) {
    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, id_vm, id_owner FROM domains WHERE is_volatile=1"
+        "SELECT id, name, id_vm, id_owner, vm FROM domains WHERE is_volatile=1"
     );
     $sth->execute();
-    while ( my ($id_domain, $name, $id_vm, $id_owner) = $sth->fetchrow ) {
+    while ( my ($id_domain, $name, $id_vm, $id_owner, $type) = $sth->fetchrow ) {
         my $domain;
         eval { $domain = Ravada::Domain->open(id => $id_domain, _force => 1) } ;
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
@@ -5948,11 +6098,13 @@ sub _refresh_volatile_domains($self) {
                 $domain->_post_shutdown(user => $USER_DAEMON);
                 $domain->remove($USER_DAEMON);
             } else {
-                cluck "Warning: temporary user id=$id_owner should already be removed";
                 my $user;
                 eval { $user = Ravada::Auth::SQL->search_by_id($id_owner) };
                 warn $@ if $@;
-                $user->remove() if $user;
+                if ($user && $user->is_temporary) {
+                    cluck "Warning: temporary user id=$id_owner should already be removed";
+                    $user->remove();
+                }
             }
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
             $sth_del->execute($id_domain);
@@ -5961,6 +6113,7 @@ sub _refresh_volatile_domains($self) {
             $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM requests where id_domain=?");
             $sth_del->execute($id_domain);
             $sth_del->finish;
+            Ravada::Domain::_remove_domain_data_db($id_domain, $type);
         }
     }
 }
@@ -6109,7 +6262,9 @@ sub _req_method {
  ,list_cpu_models => \&_cmd_list_cpu_models
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
+,force_shutdown_domain => \&_cmd_force_shutdown
 ,force_reboot   => \&_cmd_force_reboot
+,shutdown_start => \&_cmd_shutdown_start
         ,rebase => \&_cmd_rebase
 
 ,refresh_storage => \&_cmd_refresh_storage
@@ -6158,6 +6313,7 @@ sub _req_method {
     ,import_domain => \&_cmd_import
     ,list_unused_volumes => \&_cmd_list_unused_volumes
     ,remove_files => \&_cmd_remove_files
+    ,move_volume => \&_cmd_move_volume
     ,update_iso_urls => \&_cmd_update_iso_urls
 
     );
@@ -6480,6 +6636,8 @@ sub _cmd_close_exposed_ports($self, $request) {
     my $user = Ravada::Auth::SQL->search_by_id( $uid ) or die "Error: user $uid not found";
 
     my $domain = Ravada::Domain->open($request->id_domain);
+    return if !$domain;
+
     die "Error: user ".$user->name." not authorized to delete iptables rule"
     unless $user->is_admin || $domain->_data('id_owner') == $uid;
 
@@ -6594,6 +6752,45 @@ sub _cmd_create_storage_pool($self, $request) {
     my $vm = Ravada::VM->open($request->args('id_vm'));
     $vm->create_storage_pool($request->arg('name'), $request->arg('directory'));
 
+}
+
+sub _cmd_move_volume($self, $request) {
+
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to move volumes"
+        if !$user->is_admin;
+
+    my $domain = Ravada::Domain->open($request->args('id_domain'));
+    die "Error: I can not move volume while machine running ".$domain->name."\n"
+    if $domain->is_active;
+
+    my $volume = $request->args('volume');
+    my @volumes = $domain->list_volumes_info();
+    my $found;
+    my $n_found = 0;
+    for my $vol (@volumes) {
+        if ($vol->file eq $volume ) {
+            $found = $vol;
+            last;
+        }
+        $n_found++;
+    }
+    die "Volume $volume not found in ".$domain->name."\n".Dumper([map { $_->file } @volumes]) if !$found;
+
+    my $vm = $domain->_vm;
+    my $storage = $request->args('storage');
+    my $dst_path = $vm->_storage_path($storage);
+    my ($filename) = $volume =~ m{.*/(.*)};
+    my $dst_vol = "$dst_path/$filename";
+
+    die "Error: file '$dst_vol' already exists in ".$vm->name."\n" if $vm->file_exists($dst_vol);
+
+    my $new_file = $vm->copy_file_storage($volume, $storage);
+
+    $domain->change_hardware('disk', $n_found, { file => $new_file });
+    if ($volume !~ /\.iso$/) {
+        $vm->remove_file($volume);
+    }
 }
 
 =head2 set_debug_value

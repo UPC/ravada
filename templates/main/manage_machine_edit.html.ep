@@ -28,7 +28,6 @@
         <div class="col-md-8 mt-1 mb-1">
 
             <button class="btn btn-primary"
-                ng-hide="name=='video'"
                 ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || form_edit.$pristine"
                 ng-click="change_hardware(item,name,$index)">
                     <%=l 'Apply' %>

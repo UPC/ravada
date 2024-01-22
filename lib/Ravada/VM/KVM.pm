@@ -15,6 +15,7 @@ use Data::Dumper;
 use Digest::MD5;
 use Encode;
 use Encode::Locale;
+use File::Copy qw(copy);
 use File::Path qw(make_path);
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
 use Hash::Util qw(lock_hash);
@@ -336,6 +337,8 @@ sub search_volume_re($self,$pattern,$refresh=0) {
        my @vols;
        for ( 1 .. 10) {
            eval { @vols = $pool->list_all_volumes() };
+           last if $@ && ref($@) && $@->code == 55;
+           last if $@ && $@ =~ /code: (55|38),/;
            last if !$@ || $@ =~ / no storage pool with matching uuid/;
            warn "WARNING: on search volume_re: $@";
            sleep 1;
@@ -382,16 +385,19 @@ sub remove_file($self,@files) {
 
 sub _list_volumes($self) {
     my @volumes;
+    my @pools;
+    my %duplicated_path;
     for my $pool (_list_storage_pools($self->vm)) {
-        next if !$pool->is_active;
-       my @vols;
-       for ( 1 .. 10) {
+        my @vols;
+        for ( 1 .. 10) {
+           next if !$pool->is_active;
            eval { @vols = $pool->list_all_volumes() };
+           last if $@ && ref($@) && $@->code == 55;
            last if !$@ || $@ =~ / no storage pool with matching uuid/;
            warn "WARNING: on search volume_re: $@";
            sleep 1;
-       }
-       push @volumes,@vols;
+        }
+        push @volumes,@vols;
     }
     return @volumes;
 }
@@ -404,6 +410,7 @@ sub _list_used_volumes_known($self) {
     my @used;
     while ( my ($id, $name) = $sth->fetchrow) {
         my $dom = $self->search_domain($name);
+        next if !$dom;
         my $xml = $dom->xml_description();
         my @vols = $self->_find_all_volumes($xml);
         my @links;
@@ -449,7 +456,7 @@ sub _find_all_volumes($self, $xml) {
     return @used;
 }
 
-sub _list_used_volumes($self) {
+sub list_used_volumes($self) {
     my @used =$self->_list_used_volumes_known();
     for my $name ( $self->discover ) {
         my $dom = $self->vm->get_domain_by_name($name);
@@ -458,20 +465,14 @@ sub _list_used_volumes($self) {
     return @used;
 }
 
-sub list_unused_volumes($self) {
-    my %used = map { $_ => 1 } $self->_list_used_volumes();
-    my @unused;
+sub list_volumes($self) {
     my $file;
+    my @volumes;
 
-    my $n_found=0;
     for my $vol ( $self->_list_volumes ) {
 
         eval { ($file) = $vol->get_path };
         confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
-        next if $used{$file};
-
-        my $link = $self->_is_link($file);
-        next if $link && $used{$link};
 
         my $info;
         eval { $info = $vol->get_info() };
@@ -480,11 +481,10 @@ sub list_unused_volumes($self) {
 
         next if !$info || $info->{type} eq 2;
 
-        #        cluck Dumper([ $file, [sort grep /2023/,keys %used]]) if $file =~/2023/;
-        push @unused,($file);
+        push @volumes,($file);
 
     }
-    return @unused;
+    return @volumes;
 }
 
 sub refresh_storage_pools($self) {
@@ -595,6 +595,7 @@ sub file_exists($self, $file) {
 sub _file_exists_remote($self, $file) {
     $file = $self->_follow_link($file) unless $file =~ /which$/;
     for my $pool ($self->vm->list_all_storage_pools ) {
+        next if !$pool->is_active;
         $self->_wait_storage( sub { $pool->refresh() } );
         my @volumes = $self->_wait_storage( sub { $pool->list_all_volumes });
         for my $vol ( @volumes ) {
@@ -611,24 +612,12 @@ sub _file_exists_remote($self, $file) {
     }
 
     die "Error: invalid file '$file'" if $file =~ /[`;(\[" ]/;
-    my ($out,$err) = $self->_ssh->capture2("ls $file");
+    my $ssh = $self->_ssh;
+    confess "Error: no _ssh ".$self->name if !$ssh;
+    my ($out,$err) = $ssh->capture2("ls $file");
     my @ls = split /\n/,$out;
     for (@ls) { chomp };
     return scalar(@ls);
-}
-
-sub _follow_link($self, $file) {
-    my ($dir, $name) = $file =~ m{(.*)/(.*)};
-    if (!defined $self->{_is_link}->{$dir} ) {
-        my ($out,$err) = $self->run_command("stat", $dir );
-        chomp $out;
-        $out =~ m{ -> (/.*)};
-        $self->{_is_link}->{$dir} = $1;
-    }
-    my $path = $self->{_is_link}->{$dir};
-    return $file if !$path;
-    return "$path/$name";
-
 }
 
 sub _wait_storage($self, $sub) {
@@ -720,6 +709,14 @@ sub create_storage_pool($self, $name, $dir, $vm=$self->vm) {
 
 }
 
+sub remove_storage_pool($self, $name) {
+    my $sp = $self->vm->get_storage_pool_by_name($name);
+    return if !$sp;
+
+    $sp->destroy if $sp->is_active;
+    $sp->undefine();
+}
+
 sub _create_default_pool($self, $vm=$self->vm) {
     my $dir = "/var/lib/libvirt/images";
     mkdir $dir if ! -e $dir;
@@ -786,10 +783,6 @@ sub search_domain($self, $name, $force=undef) {
     };
     if ($@ && $@ =~ /libvirt error code: 38,/) {
         warn $@;
-        if (!$self->is_local) {
-            warn "DISABLING NODE ".$self->name;
-            $self->enabled(0);
-        }
         return;
     }
 
@@ -857,8 +850,9 @@ sub list_domains {
 
     confess "Arguments unknown ".Dumper(\%args)  if keys %args;
 
-    my $query = "SELECT id, name FROM domains WHERE id_vm = ? ";
-    $query .= " AND status = 'active' " if $active;
+    my $query = "SELECT d.id, d.name FROM domains d ,domain_instances di "
+        ."WHERE d.id=di.id_domain AND di.id_vm = ? ";
+    $query .= " AND d.status = 'active' " if $active;
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
 
@@ -1078,6 +1072,8 @@ sub _domain_create_from_iso {
         if $spice_password;
     $domain->xml_description();
 
+    $self->_change_hardware_install($domain,$iso->{options}->{hardware});
+
     return $domain;
 }
 
@@ -1104,14 +1100,18 @@ sub _domain_create_common {
 
     $self->_fix_pci_slots($xml);
     $self->_xml_add_guest_agent($xml);
-    $self->_xml_clean_machine_type($xml) if !$self->is_local;
+    Ravada::Domain::KVM::_check_machine(undef, $xml, $self) if !$self->is_local;
+
     $self->_xml_add_sysinfo_entry($xml, hostname => $args{name});
+    $self->_xml_fix_nvram($xml, $args{name});
 
     my $dom;
 
+    my $host_devices = $self->list_host_devices();
+
     for ( 1 .. 10 ) {
         eval {
-            if ($user->is_temporary || $is_volatile ) {
+            if ($user->is_temporary || $is_volatile && !$host_devices ) {
                 $dom = $self->vm->create_domain($xml->toString());
             } else {
                 $dom = $self->vm->define_domain($xml->toString());
@@ -1146,6 +1146,7 @@ sub _domain_create_common {
          , domain => $dom
         , storage => $self->storage_pool
        , id_owner => $id_owner
+       , active => ($user->is_temporary || $is_volatile || $host_devices)
     );
     return ($domain, $spice_password);
 }
@@ -1220,7 +1221,7 @@ sub _domain_create_from_base {
     confess "argument id_base or base required ".Dumper(\%args)
         if !$args{id_base} && !$args{base};
 
-    confess "Domain $args{name} already exists"
+    confess "Domain $args{name} already exists in ".$self->name
         if $self->search_domain($args{name});
 
     my $base = $args{base};
@@ -1252,7 +1253,7 @@ sub _domain_create_from_base {
     _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
 
     my ($domain, $spice_password)
-        = $self->_domain_create_common($xml,%args, is_volatile=>$volatile);
+        = $self->_domain_create_common($xml,%args, is_volatile=>$volatile, base => $base);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner}
         , id_vm => $self->id
     );
@@ -1828,11 +1829,13 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     my $machine = delete $options->{machine};
     my $arch = delete $options->{arch};
     my $bios = delete $options->{'bios'};
+
     confess "Error: bios=$bios and uefi=$uefi clash"
     if defined $uefi && defined $bios
         && ($bios !~/uefi/i && $uefi || $bios =~/uefi/i && !$uefi);
 
     $uefi = 1 if $bios && $bios =~ /uefi/i;
+
 
     confess "Arguments unknown ".Dumper($options)  if keys %$options;
     if ($machine) {
@@ -1998,6 +2001,12 @@ sub _xml_add_uefi($self, $doc, $name) {
         $nvram = $os->addNewChild(undef,"nvram");
     }
     $nvram->appendText("/var/lib/libvirt/qemu/nvram/$name.fd");
+}
+
+sub _xml_fix_nvram($self, $xml, $name) {
+    my ($nvram) =$xml->findnodes("/domain/os/nvram/text()");
+    return if !$nvram;
+    $nvram->setData("/var/lib/libvirt/qemu/nvram/$name.fd");
 }
 
 sub _xml_remove_cpu {
@@ -2401,11 +2410,6 @@ sub _xml_add_guest_agent {
     
 }
 
-sub _xml_clean_machine_type($self, $doc) {
-    my ($os_type) = $doc->findnodes('/domain/os/type');
-    $os_type->setAttribute( machine => 'pc');
-}
-
 sub _xml_add_sysinfo($self,$doc) {
     my ($smbios) = $doc->findnodes('/domain/os/smbios');
     if (!$smbios) {
@@ -2436,6 +2440,7 @@ sub _xml_add_sysinfo_entry($self, $doc, $field, $value) {
     ($hostname) = $oemstrings->addNewChild(undef,'entry');
     $hostname->appendText("$field: $value");
 }
+
 sub _xml_remove_hostdev {
     my $doc = shift;
 
@@ -2457,7 +2462,6 @@ sub _xml_remove_cdrom_device {
         }
     }
 }
-
 
 sub _xml_remove_cdrom {
     my $doc = shift;
@@ -2909,6 +2913,46 @@ sub _is_ip_nat($self, $ip0) {
         return 1 if $ip->within($net);
     }
     return 0;
+}
+
+sub copy_file_storage($self, $file, $storage) {
+    my $vol = $self->search_volume($file);
+    die "Error: volume $file not found" if !$vol;
+
+    my $sp = $self->vm->get_storage_pool_by_name($storage);
+    die "Error: storage pool $storage not found" if !$sp;
+
+    my ($name) = $vol->get_name();
+    my $xml = $vol->get_xml_description();
+    my $doc = XML::LibXML->load_xml(string => $xml);
+
+    my $vol_capacity = $vol->get_info()->{capacity};
+
+    my $pool_capacity = $sp->get_info()->{capacity};
+
+    die "Error: '$file' too big to fit in $storage ".Ravada::Utils::number_to_size($vol_capacity)." > ".Ravada::Utils::number_to_size($pool_capacity)."\n"
+    if $vol_capacity>$pool_capacity;
+
+    my ($format) = $doc->findnodes("/volume/target/format");
+    if ($format ne 'qcow2') {
+        die "Error: I can't copy $format on remote nodes"
+        unless $self->is_local;
+
+        my $dst_file = $self->_storage_path($storage)."/".$name;
+        copy($file,$dst_file);
+        $self->refresh_storage();
+        return $dst_file;
+    }
+
+    my $vol_dst;
+    eval { $vol_dst= $sp->get_volume_by_name($name) };
+    die $@ if $@ && !(ref($@) && $@->code == 50);
+
+    warn 1;
+    $vol_dst= $sp->clone_volume($vol->get_xml_description);
+    warn 2;
+
+    return $vol_dst->get_path();
 }
 
 sub get_library_version($self) {

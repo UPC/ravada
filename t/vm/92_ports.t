@@ -243,8 +243,7 @@ sub test_one_port($vm) {
             , 'to-destination' => $domain_ip.":".$internal_port
         );
         last if $n_rule;
-        $domain->start(user => user_admin, remote_ip => $remote_ip
-        ,_force => 1);
+        $domain->start(user => user_admin, remote_ip => $remote_ip);
         wait_request();
     }
 
@@ -1265,7 +1264,7 @@ sub test_open_port_duplicated($vm) {
         sleep 1;
     }
     is($req->status,'done');
-    is($req->error, '') or exit;
+    like($req->error,qr/checking /) if $req->error;
 
     my (@out3,@open3);
     for ( 1 .. 5 ) {
@@ -1320,10 +1319,10 @@ sub test_close_port($vm) {
     my @out2 = split /\n/, `iptables-save -t nat`;
     my @open2 = (grep /--dport $public_port/, @out2);
     is(scalar(@open2),2) or die Dumper(\@open);
+    my $clone_ip = _wait_ip($vm,$clone);
     $clone->shutdown_now(user_admin);
     wait_request();
 
-    my $clone_ip = _wait_ip($vm,$clone);
     my @out3 = split /\n/, `iptables-save -t nat`;
     my @open3 = (grep /--to-destination $clone_ip:22/, @out3);
     is(scalar(@open3),0, Dumper(\@open3));

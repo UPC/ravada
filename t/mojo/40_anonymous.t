@@ -99,6 +99,12 @@ $t->get_ok("/anonymous");
 is($t->tx->res->code(), 200 ) or exit;
 is(list_anonymous_users(), $n_anonymous + 1);
 
+my $bases = rvd_front->list_bases_anonymous('127.0.0.1');
+ok($bases->[0]->{alias});
+ok($bases->[0]->{list_clones});
+my $url_view = "/anonymous/".$bases->[0]->{id}.".html";
+$t->get_ok($url_view) or exit;
+
 _deny_anonymous_base();
 
 $t->get_ok("/logout");

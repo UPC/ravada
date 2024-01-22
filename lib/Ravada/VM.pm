@@ -12,6 +12,7 @@ Ravada::VM - Virtual Managers library for Ravada
 use utf8;
 use Carp qw( carp confess croak cluck);
 use Data::Dumper;
+use File::Copy qw(copy);
 use File::Path qw(make_path);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
@@ -146,7 +147,7 @@ around 'ping' => \&_around_ping;
 around 'connect' => \&_around_connect;
 after 'disconnect' => \&_post_disconnect;
 
-around '_list_used_volumes' => \&_around_list_used_volumes;
+around 'copy_file_storage' => \&_around_copy_file_storage;
 
 #############################################################
 #
@@ -410,6 +411,7 @@ sub _around_create_domain {
     my %args = @_;
     my $remote_ip = delete $args{remote_ip};
     my $add_to_pool = delete $args{add_to_pool};
+    my $hardware = delete $args{options}->{hardware};
     my %args_create = %args;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
@@ -496,6 +498,7 @@ sub _around_create_domain {
     $domain->_data('is_compacted' => 1);
     $domain->_data('alias' => $alias) if $alias;
     $domain->_data('date_status_change', Ravada::Utils::now());
+    $self->_change_hardware_install($domain,$hardware) if $hardware;
 
     if ($id_base) {
         $domain->run_timeout($base->run_timeout)
@@ -537,6 +540,19 @@ sub _around_create_domain {
 
     $domain->is_pool(1) if $add_to_pool;
     return $domain;
+}
+
+sub _change_hardware_install($self, $domain, $hardware) {
+
+    for my $item (sort keys %$hardware) {
+        Ravada::Request->change_hardware(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain=> $domain->id
+            ,hardware => $item
+            ,data => $hardware->{$item}
+        );
+    }
+
 }
 
 sub _set_ascii_name($self, $name) {
@@ -931,7 +947,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias','storage'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias','storage', 'options'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
@@ -981,6 +997,7 @@ sub _data($self, $field, $value=undef) {
           || $value ne $self->{_data}->{$field}
         )
     ) {
+        confess if $field eq 'id_vm' && $self->is_base;
         $self->{_data}->{$field} = $value;
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE vms set $field=?"
@@ -1823,11 +1840,18 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef) {
     }
 
     return $vms[0] if scalar(@vms)<=1;
+
+    my @vms_active;
+    for my $vm (@vms) {
+        push @vms_active,($vm) if $vm->is_active && $vm->enabled;
+    }
     if ($base && $base->_data('balance_policy') == 1 ) {
-        my $vm = $self->_balance_already_started($uid, $id_domain, \@vms);
+        my $vm = $self->_balance_already_started($uid, $id_domain, \@vms_active);
         return $vm if $vm;
     }
-    return $self->_balance_free_memory($base, \@vms);
+    my $vm = $self->_balance_free_memory($base, \@vms_active);
+    return $vm if $vm;
+    die "Error: No free nodes available.\n" if !$vm;
 }
 
 sub _balance_already_started($self, $uid, $id_domain, $vms) {
@@ -1871,11 +1895,10 @@ sub _balance_free_memory($self , $base, $vms) {
         eval { $active = $vm->is_active() };
         my $error = $@;
         if ($error && !$vm->is_local) {
-            warn "[balance] disabling ".$vm->name." ".$vm->enabled()." $error";
-            $vm->enabled(0);
+            warn "[balancing] ".$vm->name." $error";
+            next;
         }
 
-        next if !$vm->enabled();
         next if !$active;
         next if $base && !$vm->is_local && !$base->base_in_vm($vm->id);
         next if $vm->is_locked();
@@ -1903,7 +1926,7 @@ sub _balance_free_memory($self , $base, $vms) {
     for my $vm (@sorted_vm) {
         return $vm;
     }
-    return $self;
+    return;
 }
 
 sub _sort_vms($vm_list) {
@@ -2042,6 +2065,42 @@ sub shared_storage($self, $node, $dir) {
 
     return $shared;
 }
+
+=head2 copy_file_storage
+
+Copies a volume file to another storage
+
+Args:
+
+=over
+
+=item * file
+
+=item * storage
+
+=back
+
+=cut
+
+sub copy_file_storage($self, $file, $storage) {
+    die "Error: file '$file' does not exist" if !$self->file_exists($file);
+
+    my ($pool) = grep { $_->{name} eq $storage } $self->list_storage_pools(1);
+    die "Error: storage pool $storage does not exist" if !$pool;
+
+    my $path = $pool->{path};
+
+    die "TODO remote" if !$self->is_local;
+
+    copy($file, $path) or die "$! $file -> $path";
+
+    my ($filename) = $file =~ m{.*/(.*)};
+    die "Error: file '$file' not copied to '$path'" if ! -e "$path/$filename";
+
+    return "$path/$filename";
+
+}
+
 sub _fetch_tls_host_subject($self) {
     return '' if !$self->dir_cert();
 
@@ -2174,6 +2233,7 @@ Starts the node
 
 sub start($self) {
     $self->_wake_on_lan();
+    $self->_data('is_active' => 1);
 }
 
 =head2 shutdown
@@ -2500,6 +2560,31 @@ sub dir_backup($self) {
     return $dir_backup;
 }
 
+sub _follow_link($self, $file) {
+    my ($dir, $name) = $file =~ m{(.*)/(.*)};
+    my $file2 = $file;
+    if ($dir) {
+        my $dir2 = $self->_follow_link($dir);
+        $file2 = "$dir2/$name";
+    }
+
+    if (!defined $self->{_is_link}->{$file2} ) {
+        my ($out,$err) = $self->run_command("stat","-c",'"%N"', $file2);
+        chomp $out;
+        my ($link) = $out =~ m{ -> '(.+)'};
+        if ($link) {
+            if ($link !~ m{^/}) {
+                my ($path) = $file2 =~ m{(.*/)};
+                $path = "/" if !$path;
+                $link = "$path$link";
+            }
+            $self->{_is_link}->{$file2} = $link;
+        }
+    }
+    $self->{_is_link}->{$file2} = $file2 if !exists $self->{_is_link}->{$file2};
+    return $self->{_is_link}->{$file2};
+}
+
 sub _is_link_remote($self, $vol) {
 
     my ($out,$err) = $self->run_command("stat",$vol);
@@ -2542,18 +2627,61 @@ sub _is_link($self,$vol) {
     return $path_link if $path_link;
 }
 
-sub _around_list_used_volumes($orig, $self) {
-    my @vols = $self->$orig();
-    my @links;
-    for my $vol ( @vols ) {
-        my $link = $self->_is_link($vol);
-        push @links,($link) if $link;
+=head2 list_unused_volumes
+
+Returns a list of unused volume files
+
+=cut
+
+sub list_unused_volumes($self) {
+    my @all_vols = $self->list_volumes();
+
+    my @used = $self->list_used_volumes();
+    my %used;
+    for my $vol (@used) {
+        $used{$vol}++;
+        my $link = $self->_follow_link($vol);
+        $used{$link}++ if $link;
+    }
+
+    my @vols;
+    my %duplicated;
+    for my $vol ( @all_vols ) {
+        next if $used{$vol};
+
+        my $link = $self->_follow_link($vol);
+        next if $used{$link};
+        next if $duplicated{$link}++;
+
+        push @vols,($link);
     }
     return @vols;
 }
 
 sub can_list_cpu_models($self) {
     return 0;
+}
+
+sub _around_copy_file_storage($orig, $self, $file, $storage) {
+    my $sth = $self->_dbh->prepare("SELECT id,info FROM volumes"
+        ." WHERE file=? "
+    );
+    $sth->execute($file);
+    my ($id,$infoj) = $sth->fetchrow;
+
+    my $new_file = $self->$orig($file, $storage);
+
+    if ($id) {
+        my $info = decode_json($infoj);
+        $info->{file} = $new_file;
+        my $sth_update = $self->_dbh->prepare(
+            "UPDATE volumes set info=?,file=?"
+            ." WHERE id=?"
+        );
+        $sth_update->execute(encode_json($info), $new_file, $id);
+    }
+
+    return $new_file;
 }
 
 1;

@@ -363,11 +363,83 @@ sub test_defaults($vm, $volume_type=undef) {
     $domain->remove(user_admin);
 }
 
+sub remove_extension($domain, $vol) {
+    if ($domain->type eq 'KVM') {
+        _remove_extension_kvm($domain,$vol);
+    } elsif ($domain->type eq 'Void') {
+        _remove_extension_void($domain,$vol);
+    } else {
+        die "I don't know how to rename ".$domain->type;
+    }
+
+}
+
+sub _remove_extension_void($domain, $vol) {
+    my $yml = $domain->_load();
+    my $hw = $yml->{hardware};
+    for my $dev ( @{$yml->{hardware}->{device}}) {
+        if ($dev->{file} eq $vol) {
+            $dev->{file} =~ s/(.*)\.\w+/$1/;
+            $dev->{file} =~ s/\./_/g;
+            $dev->{name} =~ s/(.*)\.\w+/$1/;
+            $domain->_store(hardware => $yml->{hardware});
+            rename($vol, $dev->{file})
+                or die "$! $vol -> $dev->{file}";
+        }
+    }
+}
+
+sub _remove_extension_kvm($domain, $vol) {
+    my $doc = XML::LibXML->load_xml(string => $domain->domain->get_xml_description);
+    for my $disk ($doc->findnodes('/domain/devices/disk')) {
+        my ($source_node) = $disk->findnodes('source');
+        my $file;
+        if ( $source_node ) {
+            my $file = $source_node->getAttribute('file');
+            if ($file && $file eq $vol) {
+                $file =~ s/(.*)\.\w+/$1/;
+                $file =~ s/\./_/g;
+
+                $source_node->setAttribute('file' => $file);
+                rename($vol, $file)
+                    or die "$! $vol -> $file";
+            }
+        }
+    }
+    $domain->reload_config($doc);
+}
+
+sub test_no_extension($vm) {
+    my $base = create_domain($vm);
+    $base->add_volume(type => 'swap', size => 1024*1024);
+    $base->add_volume(type => 'data', size => 1024*1024);
+
+    my @vols = $base->list_volumes();
+
+    for my $vol ( @vols ) {
+        next if $vol =~ /\.iso$/;
+        remove_extension($base, $vol);
+    }
+    my $sth = connector->dbh->prepare(
+        "DELETE FROM volumes WHERE id_domain=?"
+    );
+    $sth->execute($base->id);
+
+    my $info = $base->info(user_admin);
+    my @vols2 = $base->list_volumes_info();
+
+    for my $vol (@vols2) {
+        my $ref = ref($vol);
+        unlike($ref,qr/HASH|RAW$/);
+    }
+}
+
 sub test_qcow_format($vm) {
     return if $vm->type ne 'KVM';
     my $base = create_domain($vm);
     $base->add_volume(type => 'swap', size => 1024*1024);
     $base->add_volume(type => 'data', size => 1024*1024);
+    wait_request();
 
     my $clone = $base->clone(
          name => new_domain_name
@@ -439,6 +511,8 @@ for my $vm_name (reverse vm_names() ) {
 
         diag("Testing volumes in $vm_name");
         init_vm($vm);
+
+        test_no_extension($vm);
 
         test_qcow_format($vm);
 

@@ -139,7 +139,6 @@
                 if (typeof(machine.clone) != 'undefined'
                 && machine.clone) {
                     machine.is_active = machine.clone.is_active;
-                    machine.screenshot= machine.clone.screenshot;
                     if (machine.clone.description
                             && machine.clone.description.length) {
                         machine.description2 = machine.clone.description;
@@ -160,7 +159,11 @@
                             if (machine.clone) {
                                 id=machine.clone.id;
                             }
-                            window.location.assign('/machine/view/' + id + '.html');
+                            var url_view = '/machine/view/' + id + '.html';
+                            if ($scope.anonymous) {
+                                url_view = "/anonymous/"+id+".html";
+                            }
+                            window.location.assign(url_view);
                         } else {
                         window.location.assign('/machine/clone/' + machine.id + '.html');
                         }
@@ -254,9 +257,6 @@
                         } else {
                             machine.list_clones[i].is_active = data.list_clones[i].is_active;
                             machine.list_clones[i].screenshot = data.list_clones[i].screenshot;
-                            if (machine.clone.id == machine.list_clones[i].id) {
-                                machine.screenshot = machine.list_clones[i].screenshot;
-                            }
 
                         }
                     }
@@ -321,6 +321,7 @@
             $scope.topology = false;
             $scope.searching_ldap_attributes = true;
             $scope.shared_user_found=false;
+            $scope.storage_pools=['default'];
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -364,6 +365,7 @@
                     * item.cores
                     * item.threads;
 
+                cpu.vcpu['current']=undefined;
                 $scope.topology = true;
             };
 
@@ -394,7 +396,9 @@
                     }
                     $scope.$apply(function () {
                         if ($scope.lock_info) {
-                            $scope.showmachine.requests = data.requests;
+                            if(data.requests) {
+                                $scope.showmachine.requests = data.requests;
+                            }
                             return;
                         }
                         $scope.hardware = Object.keys(data.hardware);
@@ -421,13 +425,14 @@
                         if ($scope.showmachine.is_base) {
                             $scope.copy_is_volatile = $scope.showmachine.volatile_clones;
                         }
+                        $scope.topology_changed();
                         if (!subscribed_extra) {
                             subscribed_extra = true;
                             subscribe_nodes(url,data.type);
                             //subscribe_bases(url);
                         }
                         if ($scope.edit) { $scope.lock_info = true }
-                        $scope.topology_changed();
+                        update_info_settings();
                     });
                     _select_new_base();
                 }
@@ -546,6 +551,14 @@
             };
 
           var url_ws;
+
+          var update_info_settings = function() {
+            $scope.new_n_virt_cpu= 0+$scope.showmachine.n_virt_cpu;
+            $scope.new_max_virt_cpu= 0+$scope.showmachine.max_virt_cpu;
+            $scope.new_memory = ($scope.showmachine.memory / 1024);
+            $scope.new_max_mem = ($scope.showmachine.max_mem / 1024);
+          };
+
           $scope.init = function(id, url,is_admin) {
                 url_ws = url;
                 $scope.showmachineId=id;
@@ -562,10 +575,7 @@
                             if (typeof $scope.new_name == 'undefined' ) {
                                 $scope.new_name=$scope.showmachine.alias+"-2";
                                 $scope.validate_new_name($scope.showmachine.alias);
-                                $scope.new_n_virt_cpu= $scope.showmachine.n_virt_cpu;
-                                $scope.new_memory = ($scope.showmachine.memory / 1024);
-                                $scope.new_max_mem = ($scope.showmachine.max_mem / 1024);
-
+                                update_info_settings();
                                 $scope.new_run_timeout = ($scope.showmachine.run_timeout / 60);
                                 if (!$scope.new_run_timeout) $scope.new_run_timeout = undefined;
 
@@ -581,6 +591,10 @@
                                 $http.get('/list_storage_pools/'+$scope.showmachine.type+"?active=1")
                                     .then(function(response) {
                                         $scope.list_storage= response.data;
+
+                                    for (var i = 0; i < response.data.length; i++) {
+                                        $scope.storage_pools[i]=response.data[i].name;
+                                    }
                                 });
 
                                 $scope.list_shares();
@@ -747,6 +761,17 @@
               .then(function(response) {
               });
           };
+          $scope.move_file_storage = function() {
+              $http.post('/request/move_volume/'
+                      , JSON.stringify({ 'id_domain': $scope.showmachine.id
+                          ,'volume': $scope.sp_move.file
+                          ,'storage': $scope.sp_move.storage_pool
+                      })
+              ).then(function(response) {
+                  console.log(response.data);
+              });
+
+          }
           $scope.copy_machine = function() {
               $scope.copy_request= { 'status': 'requested' };
               $http.post('/machine/copy/'
@@ -847,6 +872,9 @@
               }
           };
           $scope.check_access = function() {
+              if (!$scope.user_name) {
+                  return;
+              }
                       $http.get('/machine/check_access/'+$scope.showmachine.id+"/"+$scope.user_name).then(function(response) {
                           $scope.check_allowed=response.data.ok;
                       });
@@ -1063,7 +1091,6 @@
             var _host_device_in_machine = function(id_hd) {
                 for ( var i=0;i<$scope.showmachine.host_devices.length; i++ ) {
                     var hd = $scope.showmachine.host_devices[i];
-                    console.log(hd.id+ " "+id_hd);
                     if (hd.id_host_device == id_hd) {
                         return true;
                     }
@@ -1102,10 +1129,19 @@
                     });
                 });
             };
-
+            $scope.req_change_current = function(n_cpu) {
+                if (!$scope.topology && $scope.showmachine.is_active) {
+                    request('change_hardware',{
+                        'id_domain': $scope.showmachine.id
+                        ,'hardware': 'vcpus'
+                        ,'data': { 'n_virt_cpu': n_cpu}
+                    })
+                }
+            };
             $scope.request = function(request, args) {
                 $scope.showmachine.requests++;
                 $scope.pending_request = undefined;
+                $scope.lock_info = false;
                 $http.post('/request/'+request+'/'
                     ,JSON.stringify(args)
                 ).then(function(response) {
@@ -1154,8 +1190,20 @@
                 });
             };
 
-            $scope.reboot = function() {
-                $http.get("/machine/stop_start/"+$scope.showmachine.id+".json")
+            $scope.shutdown= function() {
+                $scope.set_edit();
+                $scope.lock_info=false;
+                $http.get("/machine/shutdown/"+$scope.showmachine.id+".json")
+                .then(function(response) {
+                });
+            };
+
+
+            $scope.shutdown_start = function() {
+                $scope.set_edit();
+                $scope.lock_info=false;
+                $scope.showmachine.needs_restart = 0;
+                $http.get("/machine/shutdown_start/"+$scope.showmachine.id+".json")
                 .then(function(response) {
                 });
             };
@@ -1275,10 +1323,8 @@
                     try {
                         var successful = document.execCommand('copy');
                         var msg = successful ? 'successful' : 'unsuccessful';
-                        console.log('Copying text command was ' + msg);
                         $scope.password_clipboard=successful;
                     } catch (err) {
-                        console.log('Oops, unable to copy');
                     }
 
             }

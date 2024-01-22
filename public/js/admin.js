@@ -16,6 +16,7 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("settings_global", settings_global_ctrl)
         .controller("admin_groups", admin_groups_ctrl)
         .controller('admin_charts', admin_charts_ctrl)
+        .controller('upload_users', upload_users)
     ;
 
     ravadaApp.directive('ipaddress', function() {
@@ -215,9 +216,14 @@ ravadaApp.directive("solShowMachine", swMach)
                 }
             }
         }
-        if ($scope.id_iso && $scope.id_iso.options
-                          && $scope.id_iso.options['bios']) {
-            $scope.bios = $scope.id_iso.options['bios'];
+        if ($scope.id_iso && $scope.id_iso.options) {
+            if( $scope.id_iso.options['bios']) {
+                $scope.bios = $scope.id_iso.options['bios'];
+            }
+            if( $scope.id_iso.options['hardware']) {
+                $scope.hardware = $scope.id_iso.options['hardware'];
+            }
+
         }
 
       };
@@ -1447,7 +1453,27 @@ ravadaApp.directive("solShowMachine", swMach)
 
     function settings_global_ctrl($scope, $http) {
         $scope.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        $scope.init = function() {
+        $scope.csp_locked = false;
+        $scope.set_csp_locked=function() {
+            var keys = Object.keys($scope.settings.frontend.content_security_policy);
+            var found = 0;
+            for ( var n_key=0 ; n_key<keys.length ; n_key++) {
+                var field=keys[n_key];
+                if ( field != 'all' && field != 'id' && field != 'value'
+                    && $scope.settings.frontend.content_security_policy[field].value) {
+                    found++;
+                }
+            }
+            $scope.csp_locked = found>0;
+            if ($scope.csp_locked && !$scope.csp_advanced) {
+                $scope.csp_advanced = true;
+            }
+        };
+        $scope.init = function(url, csp_advanced) {
+            $scope.csp_advanced=false;
+            if (csp_advanced) {
+                $scope.csp_advanced=true;
+            }
             $http.get('/settings_global.json').then(function(response) {
                 $scope.settings = response.data;
                 var now = new Date();
@@ -1466,10 +1492,12 @@ ravadaApp.directive("solShowMachine", swMach)
                     $scope.settings.frontend.maintenance_end.value
                     =new Date($scope.settings.frontend.maintenance_end.value);
                 }
+                $scope.set_csp_locked();
             });
         };
         $scope.load_settings = function() {
             $scope.init();
+            $scope.set_csp_locked();
             $scope.formSettings.$setPristine();
         };
         $scope.update_settings = function() {
@@ -1477,6 +1505,7 @@ ravadaApp.directive("solShowMachine", swMach)
             $http.post('/settings_global'
                 ,JSON.stringify($scope.settings)
             ).then(function(response) {
+                $scope.set_csp_locked();
                 if (response.data.reload) {
                     window.location.reload();
                 }
@@ -1618,5 +1647,9 @@ ravadaApp.directive("solShowMachine", swMach)
         };
 
 
+    };
+
+    function upload_users($scope, $http) {
+        $scope.type = 'sql';
     };
 }());

@@ -37,7 +37,4 @@
       ,file => '/var/log/ravada/rvd_front.log'
       ,level => 'debug'
   }
-# Insert widget in /js/custom/insert_here_widget.js
-# this widget embed js in templates/bootstrap/scripts.html.ep
-  ,widget => ''
 };

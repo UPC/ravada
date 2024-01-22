@@ -71,9 +71,12 @@ our %VALID_ARG = (
                        , check => 2
                        , id_vm => 2 }
     ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
+    ,force_shutdown => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
     ,reboot_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
                        , id_vm => 2 }
     ,force_reboot_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
+    ,shutdown_start =>{ name => 2, id_domain => 2, uid => 1, timeout => 2
+        , at => 2 , id_vm => 2 }
     ,screenshot => { id_domain => 1 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
     ,copy_screenshot => { id_domain => 1 }
@@ -163,6 +166,7 @@ our %VALID_ARG = (
     ,update_iso_urls => { uid => 1 }
     ,list_unused_volumes => {uid => 1, id_vm => 1, start => 2, limit => 2 }
     ,remove_files => { uid => 1, id_vm => 1, files => 1 }
+    ,move_volume => { uid => 1, id_domain => 1, volume => 1, storage => 1 }
 );
 
 $VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};
@@ -196,6 +200,7 @@ qw(
     open_exposed_ports
     manage_pools
     screenshot
+    prepare_base
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -212,29 +217,29 @@ our %COMMAND = (
     # list from low to high priority
     ,disk_low_priority => {
         limit => 2
-        ,commands => ['rsync_back','check_storage', 'refresh_vms']
+        ,commands => ['rsync_back','check_storage', 'refresh_vms','move_volume']
         ,priority => 30
     }
     ,disk => {
-        limit => 1
+        limit => 2
         ,commands => ['prepare_base','remove_base','set_base_vm','rebase_volumes'
                     , 'remove_base_vm'
                     , 'screenshot'
                     , 'cleanup'
-                    , 'compact'
+                    , 'compact','spinoff'
                 ]
         ,priority => 20
     }
     ,huge => {
         limit => 1
-        ,commands => ['download']
+        ,commands => ['download','manage_pools']
         ,priority => 15
     }
 
     ,secondary => {
         limit => 50
         ,priority => 4
-        ,commands => ['shutdown','shutdown_now', 'manage_pools','enforce_limits', 'set_time'
+        ,commands => ['shutdown','shutdown_now', 'enforce_limits', 'set_time'
             ,'remove_domain','refresh_machine_ports'
         ]
     }
@@ -263,6 +268,10 @@ our %CMD_VALIDATE = (
     ,add_hardware=> \&_validate_change_hardware
     ,change_hardware=> \&_validate_change_hardware
     ,remove_hardware=> \&_validate_change_hardware
+    ,move_volume => \&_validate_change_hardware
+    ,compact => \&_validate_compact
+    ,spinoff => \&_validate_compact
+    ,prepare_base => \&_validate_compact
 );
 
 sub _init_connector {
@@ -544,7 +553,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request after_request_ok retry _no_duplicate _force)) {
+    for (qw(at after_request after_request_ok retry _no_duplicate _force uid)) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
@@ -688,7 +697,8 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
         $args_d = decode_json($args);
     }
     confess "Error: missing command " if !$command;
-    delete $args_d->{uid};
+    #    delete $args_d->{uid} unless $command eq 'clone';
+    delete $args_d->{uid} if $command eq 'set_base_vm';
     delete $args_d->{at};
     delete $args_d->{status};
     delete $args_d->{timeout};
@@ -777,9 +787,11 @@ sub _new_request {
 
         my $id = ( $id_dupe or $id_recent );
         if ($id ) {
-            my $req = Ravada::Request->open($id);
-            $req->{_duplicated} = 1;
-            return $req;
+            unless ($args{command} eq 'prepare_base' && done_recently(undef,60,'remove_base')) {
+                my $req = Ravada::Request->open($id);
+                $req->{_duplicated} = 1;
+                return $req;
+            }
         }
 
     }
@@ -849,6 +861,27 @@ sub _validate_start_domain($self) {
     }
 }
 
+sub _validate_compact($self) {
+    return if $self->after_request();
+
+    my $id_domain = $self->defined_arg('id_domain');
+
+    my $req_compact = $self->_search_request('compact', id_domain => $id_domain);
+    my $req_spinoff = $self->_search_request('spinoff', id_domain => $id_domain);
+
+    return if !$req_compact && !$req_spinoff;
+
+    my $id;
+    $id = $req_compact->id if $req_compact;
+
+    if ( !$id || ( $req_spinoff && $req_spinoff->id > $id) ) {
+        $id = $req_spinoff->id;
+    }
+
+    $self->after_request($id) if $id;
+
+}
+
 sub _validate_change_hardware($self) {
 
     return if $self->after_request();
@@ -860,8 +893,18 @@ sub _validate_change_hardware($self) {
     }
     return if !$id_domain;
     my $req = $self->_search_request('%_hardware', id_domain => $id_domain);
+    my $req_move = $self->_search_request('move_volume', id_domain => $id_domain);
 
-    $self->after_request($req->id) if $req && $req->id < $self->id;
+    return if !$req && ! $req_move;
+
+    my $id;
+    $id = $req->id if $req;
+
+    if ( !$id || ( $req_move && $req_move->id > $id) ) {
+        $id = $req_move->id;
+    }
+
+    $self->after_request($id);
 }
 
 sub _validate_create_domain($self) {

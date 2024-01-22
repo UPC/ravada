@@ -553,7 +553,20 @@ sub _create_volume($self, $file, $format, $data=undef) {
     confess "Undefined format" if !defined $format;
     if ($format =~ /iso|raw|void/) {
         $data->{format} = $format;
-        $self->_vm->write_file($file, Dump($data)),
+        if ( $format eq 'raw' && $data->{capacity} && $self->is_local) {
+            my $capacity = Ravada::Utils::number_to_size($data->{capacity});
+            my ($count,$unit) = $capacity =~ /^(\d+)(\w)$/;
+            die "Error, I can't find count and unit from $capacity"
+            if !$count || !$unit;
+
+            my @cmd = ("dd","if=/dev/zero","of=$file","count=$count","bs=1$unit"
+            ,"status=none");
+            my ($in, $out, $err);
+            run3(\@cmd, \$in, \$out, \$err);
+            warn "@cmd $err" if $err;
+        } else {
+            $self->_vm->write_file($file, Dump($data)),
+        }
     } elsif ($format eq 'qcow2') {
         my @cmd = ('qemu-img','create','-f','qcow2', $file, $data->{capacity});
         my ($out, $err) = $self->_vm->run_command(@cmd);
@@ -679,6 +692,7 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
         } else {
             $dev->{driver}->{type} = 'void';
         }
+        $dev->{storage_pool} = $self->_vm->_find_storage_pool($dev->{file});
         my $vol = Ravada::Volume->new(
             file => $dev->{file}
             ,info => $dev
@@ -1034,11 +1048,15 @@ sub _change_hardware_disk($self, $index, $data_new) {
 
 sub _change_hardware_vcpus($self, $index, $data) {
     my $n = delete $data->{n_virt_cpu};
+    my $max = delete $data->{max_virt_cpu};
     confess "Error: unknown args ".Dumper($data) if keys %$data;
 
     my $info = $self->_value('info');
-    $info->{n_virt_cpu} = $n;
+    $info->{n_virt_cpu} = $n if defined $n;
+    $info->{max_virt_cpu} = $max if defined $max;
     $self->_store(info => $info);
+
+    $self->needs_restart(1);
 }
 
 sub _change_hardware_memory($self, $index, $data) {

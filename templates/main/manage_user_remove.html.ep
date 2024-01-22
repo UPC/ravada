@@ -1,0 +1,20 @@
+<div class="card-body">
+    <div>
+    <%=l 'Are you sure you want to remove this user ?' %>
+    <b><%= $user->name %></b>
+    </div>
+
+    <div ng-show="<%= $user->external_auth && $user->external_auth eq 'ldap' %>">
+        <label for="external">
+            <%=l 'The external LDAP entry will not be removed' %>
+        </label>
+    </div>
+
+    <a type="button" class="btn btn-outline-secondary"
+        href="/admin/users"><%=l 'Cancel' %></a>
+    <a type="button" class="btn btn-outline-secondary"
+        href="/admin/user/remove/<%= $user->id %>"
+    >
+        <%=l 'Remove' %></a>
+
+</div>

@@ -147,21 +147,50 @@ sub _time() {
     return strftime('%Y/%m/%d:%H:%M:%S %z',localtime);
 }
 
+sub _security_policy() {
+
+    my $config=$RAVADA->_settings_by_parent("/frontend/content_security_policy");
+    my $all = ($config->{all} or '');
+    my %src = (
+    "default-src" => "'self' sha256- sha384 http: https: data:"
+    ,"style-src" => "'self' cdnjs.cloudflare.com stackpath.bootstrapcdn.com cdn.ckeditor.com cdn.jsdelivr.net use.fontawesome.com 'unsafe-inline'"
+    ,"script-src" => "'self' code.jquery.com cdn.ckeditor.com cdnjs.cloudflare.com stackpath.bootstrapcdn.com ajax.googleapis.com cdn.jsdelivr.net 'unsafe-inline' 'unsafe-eval'"
+    ,"object-src" => " 'self'"
+    ,"media-src" => "'self'"
+    ,"frame-src" => "'self'"
+    ,"font-src" => "'self' data: use.fontawesome.com"
+    ,"connect-src" => "'self'"
+    );
+    my $sec = '';
+    for my $field (sort keys %src) {
+        $sec .= " " if $sec;
+        $sec .= $field." ".$src{$field};
+        $sec .= " $all" if $all;
+        if ( exists $config->{$field} ) {
+                $sec .= " ".${config}->{$field};
+        }
+        $field =~ s/-/_/g;
+        if ( exists $config->{$field} ) {
+                $sec .= " ".$config->{$field};
+        }
+
+        $sec .= ";";
+    }
+    return $sec;
+}
+
 hook before_routes => sub {
   my $c = shift;
 
-  $c ->res->headers->content_security_policy (
-   "object-src 'auto';"
-  ."media-src 'self';"
-  ." frame-src 'self';"
-  ." connect-src 'self'; ");
-
+  my $sec = _security_policy();
+  $c ->res->headers->content_security_policy($sec);
 
   $USER = undef;
 
   $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
   my $host = $c->req->url->to_abs->host;
+  my $widget=( $CONFIG_FRONT->{widget} or $RAVADA->setting('/frontend/widget'));
   $c->stash(css=>['/css/sb-admin.css']
             ,js_mod=>[ ## angular modules
                   '/js/booking/booking.module.js?v='.$RAVADA->version
@@ -184,7 +213,7 @@ hook before_routes => sub {
             ,host => $host
             ,bookings => $RAVADA->setting('/backend/bookings')
             ,FEATURE => {}
-            ,widget => $CONFIG_FRONT->{widget}
+            ,widget => $widget
             );
 
     $USER = _logged_in($c);
@@ -463,7 +492,6 @@ get '/node/host_device/remove/(:id)' => sub($c) {
     );
     return $c->render(json => { ok => 1 });
 };
-
 
 get '/list_networks.json' => sub {
     my $c = shift;
@@ -955,9 +983,9 @@ get '/machine/reboot/(:id).(:type)' => sub {
         return reboot_machine($c);
 };
 
-get '/machine/stop_start/(:id).(:type)' => sub($c) {
+get '/machine/shutdown_start/(:id).(:type)' => sub($c) {
     return access_denied($c)        if !$USER ->can_reboot($c->stash('id'));
-    return stop_start($c);
+    return shutdown_start($c);
 };
 
 
@@ -1364,6 +1392,62 @@ any '/group/new' => sub {
        return new_group($c);
 };
 
+any '/admin/users/upload.#req' => sub($c) {
+    return access_denied_json($c) unless $USER->is_admin;
+
+    _add_admin_libs($c);
+
+    my $type = $c->req->param('type');
+
+    return $c->render(template => "/main/upload_users", done => 0, count => 0, found => 0, type => 'sql') if !$type;
+
+    my $create = ( $c->req->param('create') or 0);
+
+    return $c->render(json => { error => "Unknown type $type" })
+            if $type !~ /^(sql|ldap|sso)/;
+
+    my $csv = $c->req->upload('users');
+    if($csv->headers->content_type !~ m{text/(csv|plain)}) {
+        return $c->render(status => 400
+            ,text => "Wrong content type ".$csv->headers->content_type
+                    ." , it should be text/csv or plain"
+        );
+    }
+
+    my ($found, $count, $error) = $RAVADA->upload_users(
+        $csv->slurp, $type, $create
+    );
+
+    return $c->render(json =>
+        { output => "$count users added"
+        ,error => $error
+    }) if $c->stash('req') eq 'json';
+
+    return $c->render(template => "/main/upload_users"
+        ,count => $count
+        ,found => $found
+        ,error => $error
+        ,done => 1
+    );
+};
+
+get '/admin/user/remove/#id' => sub($c) {
+    return access_denied($c) unless $USER->is_admin;
+    my $id = $c->stash('id');
+    my $user = Ravada::Auth::SQL->search_by_id($id);
+    return $c->render(message => "User not found. id=$id."
+            , link => ['/admin/users','Users']
+        ,template => '/main/standard_message'
+        ,status => 404
+    ) if !$user;
+    $user->remove();
+
+    return $c->render(message => "User removed : ".$user->name
+            , link => ['/admin/users','Users']
+        ,template => '/main/standard_message'
+    );
+};
+
 any '/admin/user/(#id).(:type)' => sub {
     my $c = shift;
 
@@ -1408,6 +1492,7 @@ any '/admin/user/(#id).(:type)' => sub {
     }
 
     $c->stash(user => $user);
+    return $c->render(json => {name => $user->name}) if $c->stash('type') eq 'json';
     return $c->render(template => 'main/manage_user');
 };
 
@@ -2595,7 +2680,6 @@ sub login($c, $status=200) {
     my $url = ($c->param('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
 
-
     my @error =();
 
     if (((defined $login) || (defined $password) || ((defined $c->param('submit')) && ($c->param('submit') ne 'sso'))) && (! $ticket)) {
@@ -2834,6 +2918,11 @@ sub admin {
         return access_denied($c) unless $USER->is_admin;
         my $url = $c->req->url->to_abs->path;
         my $host = $c->req->url->to_abs->host;
+        my $csp = $RAVADA->_settings_by_parent("/frontend/content_security_policy");
+        my $csp_advanced = 0;
+        $csp_advanced = grep $csp->{$_}, grep /-/,keys %$csp;
+
+        $c->stash( csp => $csp , csp_advanced => $csp_advanced);
         $c->stash(url_login => "/login");
     }
     if ($page eq 'storage') {
@@ -2843,10 +2932,24 @@ sub admin {
 };
 
 sub _select_vm($c) {
-    my $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms ");
-    $sth->execute();
-    my ($id, $name) = $sth->fetchrow;
-    $c->stash('id_vm' => $id, vm_name => $name);
+    my $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms WHERE hostname='localhost' AND vm_type=?");
+    my $types = Ravada::Front::list_vm_types();
+    for my $type ('KVM',@$types) {
+        $sth->execute($type);
+        my ($id, $name) = $sth->fetchrow;
+        next if !$id;
+        $c->stash('id_vm' => $id, vm_name => $name);
+        return;
+    }
+    $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms WHERE vm_type=?");
+    for my $type ('KVM',@$types) {
+        $sth->execute($type);
+        my ($id, $name) = $sth->fetchrow;
+        next if !$id;
+        $c->stash('id_vm' => $id, vm_name => $name);
+        return;
+    }
+    die "Error: No VM found in @$types";
 }
 
 sub _count_nodes($c) {
@@ -2917,6 +3020,7 @@ sub req_new_domain {
     my $vm = ( $c->param('backend') or 'KVM');
     $swap = int($swap * 1024*1024*1024);
     my $bios = $c->param('bios');
+    my $hardware = $c->param('hardware');
     my $machine = ($c->param('machine') or '');
     $machine =~ s/^string://;
     $machine = '' if $machine eq '?';
@@ -3461,20 +3565,15 @@ sub reboot_machine {
     return $c->render(json => { req => $req->id });
 }
 
-sub stop_start($c) {
+sub shutdown_start($c) {
     return login($c) if !_logged_in($c);
 
     my ($domain, $type) = _search_requested_machine($c);
 
-    my $req = Ravada::Request->shutdown_domain(name => $domain->name
+    my $req = Ravada::Request->shutdown_start(id_domain => $domain->id
         ,uid => $USER->id
     );
-    my $req2 = Ravada::Request->start_domain(id_domain => $domain->id
-        ,uid => $USER->id
-        ,after_request => $req->id
-    );
-
-    return $c->render(json => { req => $req2->id });
+    return $c->render(json => { req => $req->id });
 }
 
 sub force_shutdown_machine {
