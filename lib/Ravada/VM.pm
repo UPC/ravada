@@ -2658,6 +2658,12 @@ sub list_unused_volumes($self) {
     return @vols;
 }
 
+=head2 can_list_cpu_models
+
+Default for Virtual Managers that can list cpu models is 0
+
+=cut
+
 sub can_list_cpu_models($self) {
     return 0;
 }

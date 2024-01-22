@@ -1734,6 +1734,12 @@ sub _filter_active($pools, $active) {
 
 }
 
+=head2 list_users_share
+
+Returns a list of users to share
+
+=cut
+
 sub list_users_share($self, $name=undef,@skip) {
     my $users = $self->list_users();
     my @found = @$users;
