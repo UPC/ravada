@@ -493,7 +493,6 @@ get '/node/host_device/remove/(:id)' => sub($c) {
     return $c->render(json => { ok => 1 });
 };
 
-
 get '/list_networks.json' => sub {
     my $c = shift;
     $c->render(json => [ Ravada::Network->list_networks ]);

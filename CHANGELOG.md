@@ -4,6 +4,4 @@
 
 **Bugfixes**
 
-- Do not insert network twice [\#2005]
-
 **Refactors**
