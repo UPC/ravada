@@ -961,7 +961,6 @@ sub test_view_all($vm) {
     }
     for my $req ( $req_start_admin, $req_prepare_admin, $req_start
     ,$req_refresh, $req_refresh_ports) {
-        diag($req->command);
         is($req->status,'done');
         next if $req->command =~ /refresh_machine_ports/i;
         is($req->error,'', $req->command) or exit;

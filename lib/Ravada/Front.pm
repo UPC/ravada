@@ -21,7 +21,7 @@ use Ravada;
 use Ravada::Auth::LDAP;
 use Ravada::Front::Domain;
 use Ravada::Front::Domain::KVM;
-use Ravada::Network;
+use Ravada::Route;
 
 use feature qw(signatures);
 no warnings "experimental::signatures";
@@ -1201,7 +1201,7 @@ sub list_bases_anonymous {
     my $self = shift;
     my $ip = shift or confess "Missing remote IP";
 
-    my $net = Ravada::Network->new(address => $ip);
+    my $net = Ravada::Route->new(address => $ip);
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id, alias, name, id_base, is_public, file_screenshot "
@@ -1695,6 +1695,63 @@ sub list_storage_pools($self, $uid, $id_vm, $active=undef) {
     $self->_cache_store($key,$pools) if scalar(@$pools);
 
     return _filter_active($pools, $active);
+}
+
+=head2 list_networks
+
+List the virtual networks for a Virtual Machine Manager
+
+Arguments: id vm , id user
+
+Returns: list ref of networks
+
+=cut
+
+sub list_networks($self, $id_vm ,$id_user) {
+    my $query = "SELECT * FROM virtual_networks "
+        ." WHERE id_vm=?";
+
+    my $user = Ravada::Auth::SQL->search_by_id($id_user);
+    my $owned = 0;
+    unless ($user->is_admin || $user->can_manage_all_networks) {
+        $query .= " AND ( id_owner=? or is_public=1) ";
+        $owned = 1;
+    }
+    $query .= " ORDER BY name";
+    my $sth = $CONNECTOR->dbh->prepare($query);
+    if ($owned) {
+        $sth->execute($id_vm, $id_user);
+    } else {
+        $sth->execute($id_vm);
+    }
+    my @networks;
+    my %owner;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        $self->_search_user($row->{id_owner},\%owner);
+        $row->{_owner} = $owner{$row->{id_owner}};
+        $row->{_can_change}=0;
+
+        $row->{_can_change}=1
+        if $user->is_admin || $user->can_manage_all_networks
+        || ($user->can_create_networks && $user->id == $row->{id_owner});
+
+        push @networks,($row);
+    }
+    return \@networks;
+}
+
+sub _search_user($self,$id, $users) {
+    return if $users->{$id};
+
+    my $sth = $self->_dbh->prepare(
+        "SELECT * FROM users WHERE id=?"
+    );
+    $sth->execute($id);
+    my $row = $sth->fetchrow_hashref();
+    for my $field (keys %$row) {
+        delete $row->{$field} if $field =~ /passw/;
+    }
+    $users->{$id}=$row;
 }
 
 sub _filter_active($pools, $active) {
