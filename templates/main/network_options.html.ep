@@ -6,12 +6,13 @@
 
 <i class="fas fa-sync-alt fa-spin" ng-hide="network.id_vm"></i>
 
-<form name="form_options" ng-hide="network._removed || !network.id_vm">
+<form name="form_network" ng-hide="network._removed || !network.id_vm">
 
 <div class="form-group row">
     <div class="col-md-3" align="right"><%=l 'Name' %></div>
     <div class="col-md-8">
         <input type="text" ng-model="network.name" required
+            name="name"
         ng-disabled="network.id"/>
     </div>
 </div>
@@ -19,7 +20,9 @@
 <div class="form-group row">
     <div class="col-md-3" align="right"><%=l 'Bridge' %></div>
     <div class="col-md-8">
-        <input type="text" ng-model="network.bridge"/>
+        <input type="text" ng-model="network.bridge" required
+            name="bridge"
+        />
     </div>
 </div>
 
@@ -85,7 +88,6 @@
             ng-click="load_network(network.id)"><%=l 'Cancel' %></button>
         <button class="btn btn-primary"
             ng-click="update_network(); form_options.$pristine=true"
-            ng-disabled="!form_options.$valid"
             ><%=l 'Save' %></button>
     </div>
 </div>

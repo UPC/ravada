@@ -625,14 +625,14 @@ post '/v2/network/set' => sub($c) {
             ,id_vm => $id_vm
             ,data => $arg
         );
-        $RAVADA->wait_request($req);
+        $RAVADA->wait_request($req, 120);
         my $out = {};
         eval { $out = decode_json($req->output) if $req->output };
         warn $@ if $@;
         %data = %$out if $out && keys %$out;
     }
     $data{error} = $req->error;
-    return $c->render(json => \%data);
+    return $c->render(json => \%data, output => $req->output , error => $req->error);
 };
 
 sub _add_admin_libs($c) {
@@ -1997,6 +1997,7 @@ post '/request/(:name)/' => sub {
     my $name = $c->stash('name');
 
     my $args = decode_json($c->req->body);
+    my $wait = delete $args->{_wait};
 
     for (qw(remote_ip uid)) {
         confess "Error: $_ should not be provided".Dumper($args)
@@ -2039,11 +2040,19 @@ post '/request/(:name)/' => sub {
         };
         warn $@ if $@;
     }
+    my $error = ( $@ or '');
+    my $output = '';
 
+    if ($wait) {
+        $RAVADA->wait_request($req, 60);
+        $error => $req->error if !$error;
+        $output = $req->output if $req->output;
+    }
     $RAVADA->_cache_clean();
 
     return $c->render(json => { ok => 0, error => $@ }) if !$req;
-    return $c->render(json => { ok => 1, request => $req->id });
+    return $c->render(json => { ok => 1, request => $req->id
+                                ,error => $error, output => $output });
 };
 
 get '/request/(:id).(:type)' => sub {

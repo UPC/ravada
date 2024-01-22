@@ -199,6 +199,7 @@ sub test_add_network($vm) {
         ,name => base_domain_name()
     );
     wait_request(debug => 0);
+    like($req->output , qr/\d+/) or exit;
 
     my $net = decode_json($req_new->output);
     my $name = $net->{name};

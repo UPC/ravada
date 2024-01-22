@@ -1832,6 +1832,7 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     my $machine = delete $options->{machine};
     my $arch = delete $options->{arch};
     my $bios = delete $options->{'bios'};
+    my $network = delete $options->{'network'};
 
     confess "Error: bios=$bios and uefi=$uefi clash"
     if defined $uefi && defined $bios
@@ -1866,7 +1867,12 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     } else {
         $self->_xml_set_pci_noe($doc);
     }
+    $self->_xml_set_network($doc, $network) if $network;
+}
 
+sub _xml_set_network($self, $doc, $network) {
+    my ($net_source) = $doc->findnodes('/domain/devices/interface/source');
+    $net_source->setAttribute('network' => $network);
 }
 
 sub _xml_set_arch($self, $doc, $arch) {
@@ -3069,6 +3075,7 @@ sub create_network($self, $data) {
 
     $data->{is_active} = $new_network->is_active;
 
+    return { internal_uid => ''.$uuid };
 }
 
 sub remove_network($self, $name) {
