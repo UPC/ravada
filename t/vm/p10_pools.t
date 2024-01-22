@@ -413,6 +413,7 @@ sub test_pool_with_nested_bases($vm, $volatile_clones) {
     $base->pool_clones($n);
     $base->pool_start($started);
     my $req = Ravada::Request->manage_pools(uid => user_admin->id
+        ,id_domain => $base->id
         ,_no_duplicate => 1);
     wait_request( debug => 0);
     is($req->status, 'done');

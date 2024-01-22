@@ -1319,10 +1319,10 @@ sub test_close_port($vm) {
     my @out2 = split /\n/, `iptables-save -t nat`;
     my @open2 = (grep /--dport $public_port/, @out2);
     is(scalar(@open2),2) or die Dumper(\@open);
+    my $clone_ip = _wait_ip($vm,$clone);
     $clone->shutdown_now(user_admin);
     wait_request();
 
-    my $clone_ip = _wait_ip($vm,$clone);
     my @out3 = split /\n/, `iptables-save -t nat`;
     my @open3 = (grep /--to-destination $clone_ip:22/, @out3);
     is(scalar(@open3),0, Dumper(\@open3));

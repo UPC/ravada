@@ -403,7 +403,6 @@ sub _its_been_a_while_channel($channel) {
     return 0;
 }
 
-
 sub _its_been_a_while($reset=0) {
     if ($reset) {
         $A_WHILE = 0;
