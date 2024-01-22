@@ -378,6 +378,7 @@ sub is_operator {
             || $self->can_view_groups()
             || $self->can_manage_groups()
             || $self->can_view_all()
+            || $self->can_create_networks()
     ;
     return 0;
 }
@@ -635,9 +636,25 @@ sub remove($self) {
     my $sth = $$CON->dbh->prepare("DELETE FROM grants_user where id_user=?");
     $sth->execute($self->id);
 
+    $self->_remove_networks();
+
     $sth = $$CON->dbh->prepare("DELETE FROM users where id=?");
     $sth->execute($self->id);
     $sth->finish;
+
+}
+
+sub _remove_networks($self) {
+    my $sth = $$CON->dbh->prepare("SELECT id,id_vm,name FROM virtual_networks WHERE id_owner=?");
+    $sth->execute($self->id);
+    while (my ($id, $id_vm, $name) = $sth->fetchrow) {
+        Ravada::Request->remove_network(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_vm => $id_vm
+            ,id => $id
+            ,name => $name
+        );
+    }
 }
 
 =head2 can_do
@@ -1291,6 +1308,46 @@ sub disk_used($self) {
     }
     return $used;
 }
+
+sub _load_network($network) {
+    confess "Error: undefined network"
+    if !defined $network;
+
+    my $sth = $$CON->dbh->prepare(
+        "SELECT * FROM virtual_networks where name=?"
+    );
+    $sth->execute($network);
+    my $row = $sth->fetchrow_hashref;
+
+    die "Error: network '$network' not found"
+    if !$row->{id};
+
+    lock_hash(%$row);
+    return $row;
+}
+
+=head2  can_change_hardware_network
+
+Returns true if the user can change the network in a virtual machine,
+false elsewhere
+
+=cut
+
+sub can_change_hardware_network($user, $domain, $data) {
+    return 1 if $user->is_admin;
+    return 1 if $user->can_manage_all_networks()
+                && $domain->id_owner == $user->id;
+
+    confess "Error: undefined network ".Dumper($data)
+    if !exists $data->{network} || !defined $data->{network};
+
+    my $net = _load_network($data->{network});
+
+    return 1 if $user->id == $domain->id_owner
+        && ( $net->{is_public} || $user->id == $net->{id_owner});
+    return 0;
+}
+
 
 sub AUTOLOAD($self, $domain=undef) {
 

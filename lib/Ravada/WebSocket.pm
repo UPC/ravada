@@ -49,6 +49,7 @@ my %SUB = (
                  ,list_next_bookings_today => \&_list_next_bookings_today
 
                  ,log_active_domains => \&_log_active_domains
+                 ,list_networks => \&_list_networks
 );
 
 our %TABLE_CHANNEL = (
@@ -60,6 +61,7 @@ our %TABLE_CHANNEL = (
     ,list_requests => 'requests'
     ,machine_info => 'domains'
     ,log_active_domains => 'log_active_domains'
+    ,list_networks => 'virtual_networks'
 );
 
 my $A_WHILE;
@@ -379,6 +381,18 @@ sub _log_active_domains($rvd, $args) {
     my ($unit, $time) = $args->{channel} =~ m{/(\w+)/(\d+)};
 
     return Ravada::Front::Log::list_active_recent($unit,$time);
+}
+
+sub _list_networks($rvd, $args) {
+    my @networks;
+    my $sth = $rvd->_dbh->prepare(
+        "SELECT * FROM virtual_networks ORDER BY name "
+    );
+    $sth->execute();
+    while (my $row = $sth->fetchrow_hashref) {
+        push @networks,($row);
+    }
+    return \@networks;
 }
 
 sub _its_been_a_while_channel($channel) {

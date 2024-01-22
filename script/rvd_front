@@ -31,7 +31,7 @@ use Ravada::Booking;
 use Ravada::Front;
 use Ravada::Front::Domain;
 use Ravada::HostDevice::Templates;
-use Ravada::Network;
+use Ravada::Route;
 use Ravada::WebSocket;
 use POSIX qw(locale_h strftime);
 
@@ -383,6 +383,24 @@ get '/admin/storage' => sub($c) {
 
 };
 
+get '/admin/networks/*id_vm' => { id_vm => undef} => sub($c) {
+
+    return access_denied($c) unless $USER->is_admin
+    || $USER->can_create_networks || $USER->can_manage_all_networks;
+
+    _add_admin_libs($c);
+
+    _select_vm($c) if !defined $c->stash('id_vm');
+
+    Ravada::Request->list_networks(
+        uid => $USER->id
+        ,id_vm => $c->stash('id_vm')
+    );
+
+    return $c->render( template => '/main/admin_networks' );
+
+};
+
 any '/admin/#type' => sub {
   my $c = shift;
 
@@ -493,26 +511,127 @@ get '/node/host_device/remove/(:id)' => sub($c) {
     return $c->render(json => { ok => 1 });
 };
 
-get '/list_networks.json' => sub {
+get '/list_routes.json' => sub {
     my $c = shift;
-    $c->render(json => [ Ravada::Network->list_networks ]);
+    $c->render(json => [ Ravada::Route->list_networks ]);
 };
 
-get '/network/info/#id' => sub($c) {
+get '/v2/vm/list_networks/(:id_vm)' => sub {
+    my $c = shift;
+
+    return access_denied($c) unless $USER->is_admin
+    || $USER->can_create_networks || $USER->can_manage_all_networks;
+
+    $c->render(json => Ravada::Front->list_networks($c->stash('id_vm'), $USER->id) );
+};
+
+get '/route/info/#id' => sub($c) {
     my $sth = $RAVADA->_dbh->prepare("SELECT * from networks WHERE id=?");
     $sth->execute($c->stash('id'));
     my $row = $sth->fetchrow_hashref;
     return $c->render(json => $row);
 };
 
-get '/v1/network/remove/#id' => sub($c) {
+get '/v2/route/remove/#id' => sub($c) {
     my $sth = $RAVADA->_dbh->prepare("DELETE from networks WHERE id=?");
     $sth->execute($c->stash('id'));
+    $USER->send_message("Network ".$c->stash('id')." removed");
     return $c->render(json => { ok => 1 });
 };
 
-get '/network/list_domains/#id' => sub($c) {
+get '/route/list_domains/#id' => sub($c) {
     return $c->render( json => $RAVADA->list_bases_network($c->stash('id')));
+};
+
+any '/network/new' => sub($c) {
+    return access_denied($c) unless $USER->is_admin
+    || $USER->can_create_networks || $USER->can_manage_all_networks;
+
+    _add_admin_libs($c);
+    _select_vm($c);
+    $c->stash(item => 'network', id => undef, tab => undef);
+
+    return $c->render( template => '/main/network_new' );
+};
+
+any '/v2/network/new/#id_vm' => sub($c) {
+
+    return access_denied($c) unless $USER->is_admin
+    || $USER->can_create_networks || $USER->can_manage_all_networks;
+
+    my $name = 'net';
+    if ( $c->req->method eq 'POST') {
+        my $arg = decode_json($c->req->body);
+        $name = $arg->{name} if $arg->{name};
+    }
+
+    my $req = Ravada::Request->new_network(
+        uid => $USER->id
+        ,id_vm => $c->stash('id_vm')
+        ,name => $name
+    );
+    $RAVADA->wait_request($req);
+    my $data = {};
+    if ($req->status eq 'done' && $req->output && $req->output =~ /^\{/) {
+        eval {
+            $data = decode_json($req->output);
+        };
+        warn $@ if $@;
+    }
+    $c->render(json => $data);
+};
+
+get '/v2/network/info/#id' => sub($c) {
+    my $sth = $RAVADA->_dbh->prepare("SELECT * from virtual_networks WHERE id=?");
+    $sth->execute($c->stash('id'));
+    my $row = $sth->fetchrow_hashref;
+    return $c->render(json => $row);
+};
+
+sub _network_id_owner($id_network) {
+
+    confess "Error: undefined id_network "if !defined $id_network;
+    my $sth = $RAVADA->_dbh->prepare("SELECT * FROM virtual_networks "
+        ." WHERE id=?");
+    $sth->execute($id_network);
+    my $row = $sth->fetchrow_hashref;
+    warn "Error: network id=$id_network not found " if !$row->{id};
+
+    return ($row->{id_owner} or 0 );
+}
+
+post '/v2/network/set' => sub($c) {
+    my $arg = decode_json($c->req->body);
+    delete $arg->{_owner};
+
+    return access_denied_json($c)
+    unless $USER->is_admin || $USER->can_manage_all_networks
+    ||  ($USER->can_create_networks
+            && ( !$arg->{id} || $USER->id == _network_id_owner($arg->{id}))
+        );
+
+    my $req;
+    my %data;
+    if ($arg->{id}) {
+        $req = Ravada::Request->change_network(
+            uid => $USER->id
+            ,data => $arg
+        );
+    } else {
+        my $id_vm = delete $arg->{id_vm};
+        $req = Ravada::Request->create_network(
+            uid => $USER->id
+            ,id_vm => $id_vm
+            ,data => $arg
+        );
+        $RAVADA->wait_request($req, 120);
+        my $out = {};
+        eval { $out = decode_json($req->output) if $req->output };
+        warn $@ if $@;
+        %data = %$out if $out && keys %$out;
+    }
+    $data{error} = $req->error;
+    return $c->render(json => \%data, output => $req->output , error => $req->error);
 };
 
 sub _add_admin_libs($c) {
@@ -520,19 +639,19 @@ sub _add_admin_libs($c) {
     push @{$c->stash->{css}}, '/css/admin.css';
 }
 
-any '/network/new' => sub($c) {
+any '/route/new' => sub($c) {
     _add_admin_libs($c);
-    return $c->render(template => "/main/network_new");
+    return $c->render(template => "/main/route_new");
 };
 
-post '/v1/network/set' => sub($c) {
+post '/v2/route/set' => sub($c) {
     return access_denied($c) if !$USER->is_admin;
 
     my $arg = decode_json($c->req->body);
     return _update_fields($c, "networks", $arg);
 };
 
-get '/network/set/#id/#field/#id_domain/#value' => sub ($c) {
+get '/v2/route/set/#id/#field/#id_domain/#value' => sub ($c) {
     my $id_network = $c->stash('id');
     my $field = $c->stash('field');
     my $id_domain = $c->stash('id_domain');
@@ -597,6 +716,7 @@ post '/v1/exists/:item' => sub($c) {
     return if !@fields;
 
     $query .= " AND id <> $id " if defined $id;
+
 
     my $sth = $RAVADA->_dbh->prepare("SELECT id FROM $table WHERE $query ");
     $sth->execute(map { $arg->{$_} } @fields );
@@ -740,7 +860,8 @@ get '/list_machine_types.json' => sub {
 get '/list_cpu_models.json' => sub {
     my $c = shift;
 
-    return access_denied($c) unless _logged_in($c);
+    return $c->render(json => []) unless _logged_in($c)
+        && $USER->can_create_machine();
 
     my $id_domain = $c->param('id_domain');
     my $models = $RAVADA->list_cpu_models($USER->id, $id_domain);
@@ -884,6 +1005,35 @@ any '/(:item)/settings/(:id).html' => sub($c) {
 
     _add_admin_libs($c);
     $c->stash(tab => ($c->param('tab') or ''));
+    my $table = $c->stash('item')."s";
+    $table = 'virtual_networks' if $table eq 'networks';
+    $table = 'networks'         if $table eq 'routes';
+
+    return access_denied($c) if $table !~ /^[a-z][a-z_]+$/i;
+
+    if ($table eq 'virtual_networks') {
+        my $id = $c->stash('id'); # get id network
+        return access_denied_json($c)
+            unless $USER->is_admin || $USER->can_manage_all_networks
+        ||  ($USER->can_create_networks && $USER->id == _network_id_owner($id))
+        ;
+    }
+
+    my $id_vm;
+    if ($table eq 'nodes') {
+        $id_vm = $c->stash('id');
+    } elsif ($table ne 'networks') {
+        my $sth = $RAVADA->_dbh->prepare(
+            "SELECT id,id_vm FROM $table WHERE id=?"
+        );
+        $sth->execute($c->stash('id'));
+        my $id2;
+        ($id2, $id_vm) = $sth->fetchrow;
+        return not_found($c, 404, $c->stash('item')." ".$c->stash('id')
+        ." not found in $table") if !$id2;
+
+    }
+    $c->stash('id_vm' => $id_vm);
 
     return $c->render( template => '/main/settings_generic' );
 };
@@ -1904,6 +2054,7 @@ post '/request/(:name)/' => sub {
     my $name = $c->stash('name');
 
     my $args = decode_json($c->req->body);
+    my $wait = delete $args->{_wait};
 
     for (qw(remote_ip uid)) {
         confess "Error: $_ should not be provided".Dumper($args)
@@ -1946,11 +2097,19 @@ post '/request/(:name)/' => sub {
         };
         warn $@ if $@;
     }
+    my $error = ( $@ or '');
+    my $output = '';
 
+    if ($wait) {
+        $RAVADA->wait_request($req, 60);
+        $error => $req->error if !$error;
+        $output = $req->output if $req->output;
+    }
     $RAVADA->_cache_clean();
 
     return $c->render(json => { ok => 0, error => $@ }) if !$req;
-    return $c->render(json => { ok => 1, request => $req->id });
+    return $c->render(json => { ok => 1, request => $req->id
+                                ,error => $error, output => $output });
 };
 
 get '/request/(:id).(:type)' => sub {
@@ -3111,6 +3270,32 @@ sub access_denied_json($c, $msg='Access denied') {
     return access_denied($c, $msg);
 }
 
+sub not_found($c,$code=404, $msg="Not found") {
+    my $agent = $c->req->headers->user_agent;
+    if ($agent =~ /Mojolicious/) {
+        return $c->render( text => $msg , status => $code );
+    }
+    if (defined $c->stash('type') && $c->stash('type') eq 'json') {
+        return $c->render(json => { error => $msg }, status => $code);
+    }
+    my @css_snippets = ["\t.intro {\n\t\tbackground:"
+                    ." url($CONFIG_FRONT->{login_bg_file})"
+                    ." no-repeat bottom center scroll;\n\t}"];
+
+    return $c->render(
+                    template => ($CONFIG_FRONT->{not_found} or '/main/not_found')
+                    ,css => ['/css/main.css']
+                    ,csssnippets => @css_snippets
+                    ,js => ['/js/main.js?v='.$RAVADA->version]
+                    ,navbar_custom => 1
+                    ,error => $msg
+                    ,can_login => ((! $USER) || ($USER->is_temporary))
+                    ,guide => $CONFIG_FRONT->{guide}
+                    ,status => $code
+    );
+
+}
+
 sub access_denied {
     my $c = shift;
     my $msg = shift;
@@ -3122,6 +3307,11 @@ sub access_denied {
 
     if (defined $c->stash('type') && $c->stash('type') eq 'json') {
         return $c->render(json => { error => $msg }, status => 403);
+    }
+
+    my $agent = $c->req->headers->user_agent;
+    if ($agent =~ /Mojolicious/) {
+        return $c->render(text => $msg, status => 403);
     }
     my @css_snippets = ["\t.intro {\n\t\tbackground:"
                     ." url($CONFIG_FRONT->{login_bg_file})"
