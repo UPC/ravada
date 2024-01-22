@@ -29,6 +29,8 @@ my %HREFS;
 my %MISSING_LANG = map {$_ => 1 }
     qw(ca-valencia he ko);
 
+my $ID_DOMAIN;
+
 sub _remove_nodes($vm_name) {
     my @list_nodes = rvd_front->list_vms();
 
@@ -461,7 +463,7 @@ sub test_unused_routes() {
 }
 
 sub _fill_href($href) {
-    $href=~ s/(.*)\{\{machine.id}}(.*)/${1}1$2/;
+    $href=~ s/(.*)\{\{machine.id}}(.*)/${1}$ID_DOMAIN$2/;
     return $href;
 }
 
@@ -528,8 +530,15 @@ sub test_storage_pools($vm_name) {
     ok(scalar(@$sp_id));
     is_deeply($sp_id, $sp);
 
-    my $name_inactive= $sp_id->[0]->{name};
-    die "Error, no name in ".Dumper($sp_id->[0]) if !$name_inactive;
+    my ($sp_inactive) = grep { $_->{name} ne 'default' } @$sp_id;
+
+    if ( !$sp_inactive ) {
+#        warn "Warning: no sp in addition to 'default' in ".Dumper($sp_id);
+        $sp_inactive = $sp_id->[0];
+    }
+
+    my $name_inactive= $sp_inactive->{name};
+    die "Error, no name in ".Dumper($sp_inactive) if !$name_inactive;
 
     mojo_request($t, "active_storage_pool"
         ,{ id_vm => $id_vm, name => $name_inactive, value => 0 });
@@ -551,6 +560,16 @@ sub test_storage_pools($vm_name) {
     ($found) = grep { $_->{name} eq $name_inactive } @$sp_active ;
     ok($found,"Expecting $name_inactive found");
 
+}
+
+sub  _search_public_base() {
+    my $sth = connector->dbh->prepare(
+        "SELECT id FROM domains WHERE is_public=1 "
+        ." AND name <> 'ztest'"
+    );
+    $sth->execute();
+    my ($id) = ($sth->fetchrow or '999');
+    return $id;
 }
 
 ########################################################################################
@@ -577,6 +596,8 @@ mojo_login($t, $USERNAME, $PASSWORD);
 
 remove_old_domains_req(0); # 0=do not wait for them
 clean_clones();
+
+$ID_DOMAIN = _search_public_base();
 
 test_languages();
 test_missing_routes();
