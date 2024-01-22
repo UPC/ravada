@@ -151,6 +151,8 @@ sub list_machines_user($self, $user, $access_data={}) {
             id_owner =>$user->id
             ,id_base => $id
         );
+        push @clones,$self->_search_shared($id, $user->id);
+
         my ($clone) = ($clones[0] or undef);
         next unless $clone || $user->is_admin || ($is_public && $user->allowed_access($id)) || ($id_owner == $user->id);
         $name = $alias if defined $alias;
@@ -211,9 +213,9 @@ sub _get_clone_info($user, $base, $clone = Ravada::Front::Domain->open($base->{i
     $c->{is_locked} = $clone->is_locked;
     $c->{description} = ( $clone->_data('description')
             or $base->{description});
-    $c->{can_remove} = 0;
 
     $c->{can_remove} = ( $user->can_remove() && $user->id == $clone->_data('id_owner'));
+    $c->{can_remove} = 0 if !$c->{can_remove};
 
     if ($clone->is_active && !$clone->is_locked
         && $user->can_screenshot) {
@@ -256,12 +258,16 @@ sub _init_available_actions($user, $m) {
   eval { $m->{can_shutdown} = $user->can_shutdown($m->{id}) };
 
         $m->{can_start} = 0;
-        $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+        $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin
+        || $user->_machine_shared($m->{id})
+        ;
 
         $m->{can_reboot} = $m->{can_shutdown} && $m->{can_start};
 
         $m->{can_view} = 0;
-        $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+        $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin
+        || $user->_machine_shared($m->{id})
+        ;
 
         $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
         eval {
@@ -996,6 +1002,25 @@ sub search_clone($self, %args) {
     $sth->finish;
 
     return $clones[0] if !wantarray;
+    return @clones;
+
+}
+
+sub _search_shared($self, $id_base, $id_user) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT d.id, d.name FROM domains d, domain_share ds"
+        ." WHERE id_base=? "
+        ."   AND ds.id_user=? "
+        ."   AND ds.id_domain=d.id "
+    );
+    $sth->execute($id_base, $id_user);
+
+    my @clones;
+    while ( my ($id_domain, $name) = $sth->fetchrow ) {
+        push @clones,($self->search_domain($name));
+    }
+    $sth->finish;
+
     return @clones;
 
 }
@@ -1764,6 +1789,30 @@ sub _filter_active($pools, $active) {
     }
     return \@pools2;
 
+}
+
+=head2 list_users_share
+
+Returns a list of users to share
+
+=cut
+
+sub list_users_share($self, $name=undef,@skip) {
+    my $users = $self->list_users();
+    my @found = @$users;
+    if ($name) {
+        @found = grep { $_->{name} =~ /$name/ } @$users;
+    }
+    if (@skip) {
+        my %skip = map { $_->id => 1} @skip;
+        my @pre=@found;
+        @found = ();
+        for my $user (@pre) {
+            next if $skip{$user->{id}};
+            push @found,($user);
+        }
+    }
+    return \@found;
 }
 
 =head2 upload_users

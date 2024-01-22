@@ -320,6 +320,7 @@
             $scope.lock_info = false;
             $scope.topology = false;
             $scope.searching_ldap_attributes = true;
+            $scope.shared_user_found=false;
             $scope.storage_pools=['default'];
 
             $scope.getUnixTimeFromDate = function(date) {
@@ -595,6 +596,8 @@
                                         $scope.storage_pools[i]=response.data[i].name;
                                     }
                                 });
+
+                                $scope.list_shares();
                             }
                             list_interfaces();
                             if (is_admin) {
@@ -1205,6 +1208,43 @@
                 $scope.showmachine.needs_restart = 0;
                 $http.get("/machine/shutdown_start/"+$scope.showmachine.id+".json")
                 .then(function(response) {
+                });
+            };
+
+            $scope.search_shared_user = function() {
+                $scope.searching_shared_user = true;
+                $scope.shared_user_found = '';
+                $http.get("/search_user/"+$scope.user_share)
+                .then(function(response) {
+                    $scope.shared_user_found = response.data.found;
+                    $scope.shared_user_count = response.data.count;
+                    $scope.searching_shared_user=false;
+                    if ($scope.shared_user_count == 1) {
+                        $scope.user_share = response.data.found;
+                    }
+                });
+            };
+
+            $scope.share_machine = function() {
+                $http.get("/machine/share/"+$scope.showmachine.id+"/"
+                    +$scope.shared_user_found)
+                .then(function(response) {
+                    $scope.list_shares();
+                });
+            };
+
+            $scope.remove_share_machine = function(user) {
+                $http.get("/machine/remove_share/"+$scope.showmachine.id+"/"
+                    +user)
+                .then(function(response) {
+                    $scope.list_shares();
+                });
+            };
+
+            $scope.list_shares = function() {
+                $http.get("/machine/list_shares/"+$scope.showmachine.id)
+                .then(function(response) {
+                    $scope.shares = response.data;
                 });
             };
 

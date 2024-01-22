@@ -2975,6 +2975,10 @@ sub get_library_version($self) {
     return $self->vm->get_library_version();
 }
 
+sub can_list_cpu_models($self) {
+    return 1;
+}
+
 sub list_virtual_networks($self) {
     my @networks;
     for my $net ($self->vm->list_all_networks()) {

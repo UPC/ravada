@@ -1641,6 +1641,10 @@ sub _add_indexes_generic($self) {
             ,"UNIQUE (name)"
 
         ]
+        ,domain_share => [
+            "index(id_domain)"
+            ,"unique(id_user, id_domain)"
+        ]
         ,virtual_networks => [
             "unique(id_vm,internal_id)"
             ,"unique(id_vm,name)"
@@ -2293,6 +2297,12 @@ sub _sql_create_tables($self) {
         }
         ]
         ,
+        [ domain_share => {
+            id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE',
+            ,id_user => 'int not null references `users` (`id`) ON DELETE CASCADE'
+            }
+        ],
         [
         bookings => {
             id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
@@ -4995,8 +5005,13 @@ sub _cmd_remove_base {
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
     my $domain = $self->search_domain_by_id($id_domain);
-
     die "Unknown domain id '$id_domain'\n" if !$domain;
+
+    die "User ".$user->name." [".$user->id."] not allowed to remove base "
+                .$domain->name."\n"
+            unless $user->is_admin || (
+                $domain->id_owner == $user->id && $user->can_create_base());
+
 
     $domain->remove_base($user);
 
@@ -5671,6 +5686,8 @@ sub _cmd_list_cpu_models($self, $request) {
     my $id_domain = $request->args('id_domain');
 
     my $domain = Ravada::Domain->open($id_domain);
+    return [] if !$domain->_vm->can_list_cpu_models();
+
     my $info = $domain->get_info();
     my $vm = $domain->_vm->vm;
 

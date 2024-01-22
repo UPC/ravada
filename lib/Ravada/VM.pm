@@ -2835,6 +2835,16 @@ sub list_unused_volumes($self) {
     return @vols;
 }
 
+=head2 can_list_cpu_models
+
+Default for Virtual Managers that can list cpu models is 0
+
+=cut
+
+sub can_list_cpu_models($self) {
+    return 0;
+}
+
 sub _around_copy_file_storage($orig, $self, $file, $storage) {
     my $sth = $self->_dbh->prepare("SELECT id,info FROM volumes"
         ." WHERE file=? "

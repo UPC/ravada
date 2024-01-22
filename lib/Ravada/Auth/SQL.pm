@@ -699,10 +699,16 @@ sub can_do_domain($self, $grant, $domain) {
     my %valid_grant = map { $_ => 1 } qw(change_settings shutdown reboot rename expose_ports);
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
+    return 1 if ( $grant eq 'shutdown' || $grant eq 'reboot' )
+    && $self->can_shutdown_machine($domain);
+
     return 0 if !$self->can_do($grant) && !$self->_domain_id_base($domain);
 
     return 1 if $self->can_do("${grant}_all");
     return 1 if $self->_domain_id_owner($domain) == $self->id && $self->can_do($grant);
+
+    return 1 if $grant eq 'change_settings'
+    && $self->_machine_shared($domain);
 
     if ($self->can_do("${grant}_clones") && $self->_domain_id_base($domain)) {
         my $base;
@@ -1067,6 +1073,7 @@ sub can_manage_machine($self, $domain) {
 
     return 1 if $self->can_clone_all
                 || $self->can_change_settings($domain)
+                || $self->_machine_shared($domain)
                 || $self->can_rename_all
                 || $self->can_remove_all
                 || ($self->can_remove_clone_all && $domain->id_base)
@@ -1160,6 +1167,8 @@ sub can_shutdown_machine($self, $domain) {
 
     return 1 if $self->id == $domain->id_owner;
 
+    return 1 if $self->_machine_shared($domain->id);
+
     if ($domain->id_base && $self->can_shutdown_clone()) {
         my $base = Ravada::Front::Domain->open($domain->id_base);
         return 1 if $base->id_owner == $self->id;
@@ -1167,6 +1176,54 @@ sub can_shutdown_machine($self, $domain) {
 
     return 0;
 }
+
+=head2 can_start_machine
+
+Return true if the user can shutdown this machine
+
+Arguments:
+
+=over
+
+=item * domain
+
+=back
+
+=cut
+
+sub can_start_machine($self, $domain) {
+
+    return 1 if $self->can_view_all();
+
+    $domain = Ravada::Front::Domain->open($domain)   if !ref $domain;
+
+    return 1 if $self->id == $domain->id_owner;
+
+=pod
+    #TODO missing can_start_clones
+    if ($domain->id_base && $self->can_start_clone()) {
+        my $base = Ravada::Front::Domain->open($domain->id_base);
+        return 1 if $base->id_owner == $self->id;
+    }
+=cut
+
+    return 1 if $self->_machine_shared($domain->id);
+
+    return 0;
+}
+
+sub _machine_shared($self, $id_domain) {
+    $id_domain = $id_domain->id if ref($id_domain);
+    my $sth = $$CON->dbh->prepare(
+        "SELECT id FROM domain_share "
+        ." WHERE id_domain=? AND id_user=?"
+    );
+    $sth->execute($id_domain, $self->id);
+    my ($id) = $sth->fetchrow;
+    return 1 if $id;
+    return 0;
+}
+
 
 =head2 grants
 

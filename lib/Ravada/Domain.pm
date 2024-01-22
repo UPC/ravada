@@ -1150,7 +1150,8 @@ sub _access_denied_error($self,$user) {
 
     confess "User ".$user->name." [".$user->id."] not allowed to access ".$self->name
         ." owned by ".($owner_name or '<UNDEF>')." [".($id_owner or '<UNDEF>')."]"
-            if (defined $id_owner && $id_owner != $user->id );
+            unless (defined $id_owner && $id_owner == $user->id )
+                || $user->can_start_machine($self);
 
     confess $err if $err;
 
@@ -7677,6 +7678,38 @@ sub remove_backup($self, $backup, $remove_file=0) {
         "DELETE FROM domain_backups WHERE id=?"
     );
     $sth->execute($backup->{id});
+}
+
+sub share($self, $user) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO domain_share "
+        ."(id_domain, id_user)"
+        ." VALUES(?,?)"
+    );
+    $sth->execute($self->id, $user->id);
+}
+
+sub remove_share($self, $user) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM domain_share "
+        ." WHERE id_domain=? AND id_user=?"
+    );
+    $sth->execute($self->id, $user->id);
+}
+
+
+sub list_shares($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT u.name FROM users u,domain_share ds "
+        ." WHERE u.id=ds.id_user "
+        ."   AND ds.id_domain=?"
+    );
+    $sth->execute($self->id);
+    my @shares;
+    while (my ($name) = $sth->fetchrow) {
+        push @shares,($name);
+    }
+    return @shares;
 }
 
 1;
