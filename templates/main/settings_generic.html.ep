@@ -14,13 +14,13 @@
                       ,'<%= $id_vm %>')"
         >
             <div class="card-header">
-                <div class="row" width="100%">
+                <div class="row">
                     <div class="col">
                         <span class="title">
                             <%= $item  %> {{<%= $item %>._old_name}}
                         </span>
                     </div>
-                    <div class="col" width="100%" align="right">
+                    <div class="col" align="right">
                         <a type="button" class="btn btn-outline-secondary" align="right"
                             href="/admin/<%= $item %>s">back</a>
                     </div>
