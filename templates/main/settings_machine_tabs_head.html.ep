@@ -46,4 +46,6 @@
     % if ( $monitoring && $USER->is_admin && $domain->is_active ) {
         <a class="nav-link" id="v-pills-monitoring-tab" href="#v-pills-monitoring" data-toggle="pill" role="tab" aria-controls="v-pills-monitoring" aria-selected="false"><%=l 'System overview' %></a>
     %   }
+
+        <a class="nav-link" id="v-pills-share-tab" ng-click="refresh_machine()" href="#v-pills-share" data-toggle="pill" role="tab" aria-controls="v-pills-share" aria-selected="false"><%=l 'Share' %></a>
 	</div>

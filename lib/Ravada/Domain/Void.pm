@@ -758,6 +758,8 @@ sub _set_default_info($self, $listen_ip=undef) {
         hwaddr => $info->{mac}
         ,address => $info->{ip}
         ,type => 'nat'
+        ,driver => 'virtio'
+        ,name => "net1"
     };
     $self->_store(hardware => $hardware );
 
@@ -921,6 +923,18 @@ sub _internal_autostart {
     return $self->_value('autostart');
 }
 
+sub _new_network($self) {
+    my $hardware = $self->_value('hardware');
+    my $list = ( $hardware->{'network'} or [] );
+    my $data = {
+        hwaddr => _new_mac()
+        ,address => ''
+        ,type => 'nat'
+        ,driver => 'virtio'
+        ,name => "net".(scalar(@$list)+1)
+    };
+}
+
 sub set_controller($self, $name, $number=undef, $data=undef) {
     my $hardware = $self->_value('hardware');
 
@@ -939,12 +953,16 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
     my @list2;
     if (!defined $number) {
         @list2 = @$list;
-        push @list2,($data or " $name z 1");
+        $data = $self->_new_network() if $name eq 'network' && !$data;
+        push @list2,($data or "$name z 1");
     } else {
         my $count = 0;
         for my $item ( @$list ) {
             $count++;
             if ($number == $count) {
+                $data = $self->_new_network()
+                if $name eq 'network' && (!$data || ! keys %$data);
+
                 my $data2 = ( $data or " $name a ".($count+1));
                 $data2 = " $name b ".($count+1) if defined $data2 && ref($data2) && !keys %$data2;
 
@@ -953,7 +971,7 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
             }
             $item = { driver => 'spice' , port => 'auto' , listen_ip => $self->_vm->listen_ip }
             if $name eq 'display' && !defined $item;
-            push @list2,($item or " $name b ".($count+1));
+            push @list2,($item or " $name c ".($count+1));
         }
     }
     $hardware->{$name} = \@list2;

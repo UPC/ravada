@@ -57,7 +57,7 @@ sub _allow_anonymous_base() {
     my $id_domain = _id_domain('zz-test-base-alpine');
 
     mojo_login($t, user_admin->name,"$$ $$");
-    $t->get_ok("/network/set/$id_net/anonymous/$id_domain/1");
+    $t->get_ok("/v2/route/set/$id_net/anonymous/$id_domain/1");
 
     my $sth = connector->dbh->prepare("UPDATE domains set is_public=1"
         ." WHERE id=?");
@@ -97,6 +97,7 @@ _allow_anonymous_base();
 $t->get_ok("/anonymous");
 
 is($t->tx->res->code(), 200 ) or exit;
+
 is(list_anonymous_users(), $n_anonymous + 1);
 
 my $bases = rvd_front->list_bases_anonymous('127.0.0.1');

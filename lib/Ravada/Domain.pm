@@ -344,7 +344,7 @@ sub _around_start($orig, $self, @arg) {
                 if ( Ravada::setting(undef,"/backend/display_password") ) {
                     # We'll see if we set it from the network, defaults to 0 meanwhile
                     my $set_password = 0;
-                    my $network = Ravada::Network->new(address => $remote_ip);
+                    my $network = Ravada::Route->new(address => $remote_ip);
                     $set_password = 1 if $network->requires_password();
                     $arg{set_password} = $set_password;
                 }
@@ -912,6 +912,8 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
             sleep 1;
         }
     }
+    $self->_unlock_host_devices() if !$self->is_active;
+
     #    $self->_post_remove_base();
     if (!$self->is_local) {
         my $vm_local = Ravada::VM->open( type => $self->vm );
@@ -1148,7 +1150,8 @@ sub _access_denied_error($self,$user) {
 
     confess "User ".$user->name." [".$user->id."] not allowed to access ".$self->name
         ." owned by ".($owner_name or '<UNDEF>')." [".($id_owner or '<UNDEF>')."]"
-            if (defined $id_owner && $id_owner != $user->id );
+            unless (defined $id_owner && $id_owner == $user->id )
+                || $user->can_start_machine($self);
 
     confess $err if $err;
 
@@ -2275,7 +2278,10 @@ sub _pre_remove_domain($self, $user, @) {
         warn "Warning: $@" if $@;
     }
     $self->pre_remove();
-    $self->_remove_iptables()   if $self->is_known();
+    if ($self->is_known) {
+        $self->_remove_iptables();
+        $self->_unlock_host_devices();
+    }
     eval { $self->shutdown_now($user)  if $self->is_active };
     warn "Warning: $@" if $@;
 
@@ -7672,6 +7678,38 @@ sub remove_backup($self, $backup, $remove_file=0) {
         "DELETE FROM domain_backups WHERE id=?"
     );
     $sth->execute($backup->{id});
+}
+
+sub share($self, $user) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "INSERT INTO domain_share "
+        ."(id_domain, id_user)"
+        ." VALUES(?,?)"
+    );
+    $sth->execute($self->id, $user->id);
+}
+
+sub remove_share($self, $user) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM domain_share "
+        ." WHERE id_domain=? AND id_user=?"
+    );
+    $sth->execute($self->id, $user->id);
+}
+
+
+sub list_shares($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT u.name FROM users u,domain_share ds "
+        ." WHERE u.id=ds.id_user "
+        ."   AND ds.id_domain=?"
+    );
+    $sth->execute($self->id);
+    my @shares;
+    while (my ($name) = $sth->fetchrow) {
+        push @shares,($name);
+    }
+    return @shares;
 }
 
 1;

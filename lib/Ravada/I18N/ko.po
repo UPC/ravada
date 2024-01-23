@@ -2,7 +2,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2023-10-13 20:02+0000\n"
+"PO-Revision-Date: 2023-11-07 20:36+0000\n"
 "Last-Translator: Claire Charles <charlesclaire101@gmail.com>\n"
 "Language-Team: Korean <https://hosted.weblate.org/projects/ravada/"
 "translation/ko/>\n"
@@ -304,10 +304,10 @@ msgid "bits) in your computer."
 msgstr "bits)를 컴퓨터에 저장합니다."
 
 msgid "Permissions"
-msgstr "권한을"
+msgstr "허가"
 
 msgid "can change the settings of owned virtual machines."
-msgstr "소유한 가상 컴퓨터의 설정을 변경할 수 있습니다."
+msgstr "소유된 가상 머신의 설정을 변경할 수 있습니다."
 
 msgid "can change the settings of any virtual machines."
 msgstr "모든 가상 컴퓨터의 설정을 변경할 수 있습니다."
@@ -316,31 +316,31 @@ msgid "can change the settings of any virtual machines "
 msgstr "모든 가상 컴퓨터의 설정을 변경할 수 있음"
 
 msgid "cloned from one base owned by the user."
-msgstr "사용자가 소유한 하나의 베이스에서 복제됩니다."
+msgstr "사용자가 소유한 하나의 기지에서 복제됩니다."
 
 msgid "can clone public virtual machines."
-msgstr "공용 가상 머신을 복제할 수 있습니다."
+msgstr "사용자가 소유한 하나의 베이스에서 복제됩니다."
 
 msgid "can clone any virtual machine."
 msgstr "모든 가상 머신을 복제할 수 있습니다."
 
 msgid "can create bases."
-msgstr "기초를 만들 수 있습니다."
+msgstr "기지를 만들 수 있습니다."
 
 msgid "can create virtual machines."
-msgstr "가상 시스템을 생성할 수 있습니다."
+msgstr "가상 머신을 만들 수 있습니다."
 
 msgid "can grant permissions to other users"
 msgstr "다른 사용자에게 권한을 부여할 수 있습니다."
 
 msgid "can hibernate any virtual machine."
-msgstr "모든 가상 컴퓨터를 최대 절전 모드로 전환할 수 있습니다."
+msgstr "모든 가상 머신을 최대 절전 모드로 전환할 수 있습니다."
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr "사용자가 소유한 가상 시스템의 클론을 최대 절전 모드로 생성할 수 있습니다."
+msgstr "사용자가 소유한 가상 시스템에서 클론을 최대 절전 모드로 전환할 수 있습니다."
 
 msgid "can hibernate any clone."
-msgstr "모든 클론을 최대 절전 모드로 전환할 수 있습니다."
+msgstr "모든 클론을 최대 절전 모드로 만들 수 있습니다."
 
 msgid "can remove any virtual machines owned by the user."
 msgstr "사용자가 소유한 모든 가상 머신을 제거할 수 있습니다."
@@ -382,16 +382,17 @@ msgid "Select Template"
 msgstr "템플릿 선택"
 
 msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
-msgstr "이 ISO 이미지는 아직 다운로드되지 않았습니다. 인터넷에서 파일을 가져올 때까지 몇 분, 심지어 몇 시간이 걸릴 수 있습니다."
+msgstr "이 ISO 이미지는 아직 다운로드되지 않았습니다. 인터넷에서 파일을 가져올 "
+"때까지 몇 분, 심지어 몇 시간이 걸릴 수 있습니다."
 
 msgid "Download now"
 msgstr "지금 다운로드"
 
 msgid "Select ISO"
-msgstr "ISO 선택"
+msgstr "ISO를 선택합니다"
 
 msgid "Template"
-msgstr "템플릿"
+msgstr "템플렛"
 
 msgid "Disk Size: (GB)"
 msgstr "디스크 크기: (GB)"
@@ -645,7 +646,7 @@ msgid "Cancel"
 msgstr "취소"
 
 msgid "Please enter the following information to create the account"
-msgstr "계정을 만들려면 다음 정보를 입력하십시오."
+msgstr "계정을 만들려면 다음 정보를 입력하십시오"
 
 msgid "Enter Username"
 msgstr "사용자 이름 입력"
@@ -657,28 +658,28 @@ msgid "Confirm Password"
 msgstr "비밀번호 확인"
 
 msgid "Username is required"
-msgstr "사용자 이름은 필수입니다."
+msgstr "사용자 이름은 필수입니다"
 
 msgid "Username can not exceed 20 characters"
-msgstr "사용자 이름은 20자를 초과할 수 없습니다."
+msgstr "사용자 이름은 20자를 초과할 수 없습니다"
 
 msgid "Username must be at least 5 characters"
-msgstr "사용자 이름은 5자 이상이어야 합니다."
+msgstr "사용자 이름은 5자 이상이어야 합니다"
 
 msgid "Username can only contain words, numbers, dashes, dots and underscores"
-msgstr "사용자 이름에는 단어, 숫자, 대시, 점 및 밑줄만 포함될 수 있습니다."
+msgstr "사용자 이름에는 단어, 숫자, 대시, 점 및 밑줄만 사용할 수 있습니다"
 
 msgid "Password is required"
 msgstr "비밀번호가 필요합니다"
 
 msgid "Password can not exceed 20 characters"
-msgstr "비밀번호는 20자를 초과할 수 없습니다."
+msgstr "비밀번호는 20자를 초과할 수 없습니다"
 
 msgid "Password must be at least 5 characters"
-msgstr "비밀번호는 5자 이상이어야 합니다."
+msgstr "비밀번호는 5자 이상이어야 합니다"
 
 msgid "Password can only contain words and numbers"
-msgstr "비밀번호는 단어와 숫자만 포함할 수 있습니다."
+msgstr "비밀번호는 단어와 숫자만 포함할 수 있습니다"
 
 msgid "Confirm Password is required"
 msgstr "비밀번호 확인이 필요합니다"
@@ -702,19 +703,19 @@ msgid "Owner"
 msgstr "소유자"
 
 msgid "Change the owner of the machine"
-msgstr "컴퓨터 소유자 변경"
+msgstr "기기 소유자 변경"
 
 msgid "Press SHIFT + F12 to exit"
 msgstr "종료하려면 SHIFT + F12를 누릅니다."
 
 msgid "If you can not see the machine screen in a few seconds check for a file called"
-msgstr "몇 초 안에 기계 화면을 볼 수 없다면 다음 파일을 확인하십시오"
+msgstr "몇 초 안에 기기 화면이 보이지 않으면"
 
 msgid "in your downloads folder."
-msgstr "다운로드 폴더에서."
+msgstr "다운로드 폴더에 있습니다."
 
 msgid "copied to clipboard"
-msgstr "클립보아에 복사됨"
+msgstr "클립보드에 복사되었습니다"
 
 msgid "Portuguese"
 msgstr "포르투갈어"
@@ -723,10 +724,10 @@ msgid "Read more."
 msgstr "자세히 보기."
 
 msgid "The password for this virtual machine connection is :"
-msgstr "이 가상 컴퓨터 연결의 암호는 다음과 같습니다."
+msgstr "이 가상 컴퓨터 연결의 암호는 다음과 같습니다 :"
 
 msgid "view"
-msgstr "보기"
+msgstr "뷰"
 
 msgid "Start again"
 msgstr "다시 시작"
@@ -735,7 +736,7 @@ msgid "The machine is down."
 msgstr "기계가 다운되었습니다."
 
 msgid "Remove"
-msgstr "Remove"
+msgstr "제거하다"
 
 msgid "The machine must be started to take the screenshot."
 msgstr "스크린샷을 찍으려면 컴퓨터를 시동해야 합니다."
@@ -877,3 +878,54 @@ msgstr "클론을 사용하는 사용자가 있을 수 있습니다."
 
 msgid "Yes, shutwdown all the clones"
 msgstr "예, 모든 클론을 종료합니다."
+
+msgid "to an ASCII file and save it with a .reg extension, then execute the file."
+msgstr "ASCII 파일에 저장하고 .reg 확장자로 저장한 다음 파일을 실행합니다."
+
+msgid "Show active"
+msgstr "활성 표시"
+
+msgid "The machine will turn off after this time"
+msgstr "이 시간이 지나면 기기가 꺼집니다"
+
+msgid "Confirm password is required"
+msgstr "비밀번호가 필요한지 확인"
+
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Shift + F12를 눌러 가상 컴퓨터를 종료합니다"
+
+msgid "Show clones"
+msgstr "클론 표시"
+
+msgid "Remove Base"
+msgstr "베이스 제거"
+
+msgid "SSO/CAS Login"
+msgstr "SSO/CAS 로그인"
+
+msgid "To make this possible, copy the content of"
+msgstr "이를 가능하게 하려면"
+
+msgid "Hide clones"
+msgstr "클론 숨기기"
+
+msgid "Confirm password must be at least 5 characters"
+msgstr "확인 암호는 5자 이상이어야 합니다"
+
+msgid "Please, make sure you have the right path and release, according to your PC configuration."
+msgstr "PC 구성에 따라 올바른 경로와 릴리스가 있는지 확인하십시오."
+
+msgid "Confirm password can only contain words and numbers"
+msgstr "비밀번호 확인은 단어와 숫자만 포함할 수 있습니다"
+
+msgid "Confirm password can not exceed 20 characters"
+msgstr "비밀번호 확인은 20자를 초과할 수 없습니다"
+
+msgid "can change the settings of any virtual machine."
+msgstr "모든 가상 머신의 설정을 변경할 수 있습니다."
+
+msgid "can remove any virtual machine owned by the user."
+msgstr "사용자가 소유한 모든 가상 머신을 제거할 수 있습니다."
+
+msgid "can change the settings of any virtual machine "
+msgstr "모든 가상 머신의 설정을 변경할 수 있습니다 "

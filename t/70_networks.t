@@ -10,7 +10,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 use_ok('Ravada');
-use_ok('Ravada::Network');
+use_ok('Ravada::Route');
 
 use lib 't/lib';
 use Test::Ravada;
@@ -28,7 +28,7 @@ sub test_allow_all {
     my $domain = shift;
 
     my $ip = '192.168.1.2/32';
-    my $net = Ravada::Network->new(address => $ip);
+    my $net = Ravada::Route->new(address => $ip);
     ok(!$net->allowed($domain->id),"Expecting not allowed from unknown network");
 
     #check list bases, default allowed
@@ -53,7 +53,7 @@ sub test_allow_all {
     ok(!$net->allowed_anonymous($domain->id),"Expecting denied anonymous from known network");
     ok($net->allowed($domain->id),"Expecting allowed from known network");
 
-    my $net2 = Ravada::Network->new(address => '192.168.1.22/32');
+    my $net2 = Ravada::Route->new(address => '192.168.1.22/32');
     ok($net2->allowed($domain->id),"Expecting allowed from known network");
     ok(!$net2->allowed_anonymous($domain->id),"Expecting denied anonymous from known network");
     { # test list bases anonymous
@@ -68,7 +68,7 @@ sub test_allow_domain {
     my $domain = shift;
 
     my $ip = '10.1.1.1/32';
-    my $net = Ravada::Network->new(address => $ip);
+    my $net = Ravada::Route->new(address => $ip);
     ok(!$net->allowed($domain->id),"Expecting not allowed from unknown network");
 
     { # test list bases anonymous
@@ -197,7 +197,7 @@ sub test_deny_all {
 
     my $ip = '10.0.0.2/32';
 
-    my $net = Ravada::Network->new(address => $ip);
+    my $net = Ravada::Route->new(address => $ip);
     ok(!$net->allowed($domain->id),"Expecting not allowed from unknown network");
 
     { # test list bases anonymous
@@ -318,11 +318,11 @@ $domain->is_public(1);
 
 test_conflict_allowed();
 
-my $net = Ravada::Network->new(address => '127.0.0.1/32');
+my $net = Ravada::Route->new(address => '127.0.0.1/32');
 ok($net->allowed($domain->id));
 
 deny_everything_any();
-my $net2 = Ravada::Network->new(address => '10.0.0.0/32');
+my $net2 = Ravada::Route->new(address => '10.0.0.0/32');
 ok(!$net2->allowed($domain->id), "Address unknown should not be allowed to anything");
 
 test_allow_all($domain);
