@@ -2102,7 +2102,7 @@ post '/request/(:name)/' => sub {
 
     if ($wait) {
         $RAVADA->wait_request($req, 60);
-        $error => $req->error if !$error;
+        $error = $req->error if !$error;
         $output = $req->output if $req->output;
     }
     $RAVADA->_cache_clean();
