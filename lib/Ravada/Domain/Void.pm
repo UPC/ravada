@@ -754,12 +754,14 @@ sub _set_default_info($self, $listen_ip=undef) {
     $self->_set_display($listen_ip);
     my $hardware = $self->_value('hardware');
 
+    my @nets = $self->_vm->list_virtual_networks();
+
     $hardware->{network}->[0] = {
         hwaddr => $info->{mac}
         ,address => $info->{ip}
         ,type => 'nat'
         ,driver => 'virtio'
-        ,name => "net1"
+        ,name => $nets[0]->{name}
     };
     $self->_store(hardware => $hardware );
 

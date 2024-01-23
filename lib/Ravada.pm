@@ -4728,6 +4728,9 @@ sub _cmd_clone($self, $request) {
 
     $args->{alias} = $alias if $alias;
 
+    my $net_bundle = $self->_prepare_bundle($domain, $user);
+    #    $args->{network} = $net_bundle->{name} if $net_bundle;
+
     my $clone = $domain->clone(
         name => $name
         ,%$args
@@ -4741,6 +4744,37 @@ sub _cmd_clone($self, $request) {
         ,remote_ip => $request->defined_arg('remote_ip')
         ,after_request => $request->id
     ) if $request->defined_arg('start');
+
+}
+
+sub _prepare_bundle($self, $domain, $user) {
+    if ($domain->bundle() && $domain->bundle()->{private_network}) {
+
+        my ($net) = grep { $_->{id_owner} == $user->id }
+        $domain->_vm->list_virtual_networks();
+
+        return $net if $net;
+
+        my $req_new_net = Ravada::Request->new_network(
+            uid => $user->id
+            ,id_vm => $domain->_vm->id
+            ,name => $user->name
+        );
+        $self->_cmd_new_network($req_new_net);
+        my $data = decode_json($req_new_net->output);
+
+        my $req_network = Ravada::Request->create_network(
+            uid => $user->id
+            ,id_vm => $domain->_vm->id
+            ,data => $data
+        );
+        $self->_cmd_create_network($req_network);
+
+        ($net) = grep { $_->{id_owner} == $user->id }
+        $domain->_vm->list_virtual_networks();
+
+        return $net;
+    }
 
 }
 

@@ -30,6 +30,9 @@ sub test_bundle($vm) {
     rvd_front->add_to_bundle($id_bundle, $base2->id);
 
     my $user = create_user();
+    user_admin->grant($user, 'create_networks');
+
+    my @networks0 = $vm->list_virtual_networks();
 
     my $req_clone1 = Ravada::Request->clone(
         uid => $user->id
@@ -42,6 +45,12 @@ sub test_bundle($vm) {
     my @clone2 = grep { $_->{id_owner} == $user->id } $base2->clones();
     is(scalar(@clone1),1);
     is(scalar(@clone2),1);
+
+    my @networks1 = $vm->list_virtual_networks();
+    is(scalar(@networks1), scalar(@networks0)+1);
+
+    my $net = _check_net_private($clone1[0]);
+    _check_net_private($clone2[0], $net);
 
     remove_domain(@clone1);
     remove_domain(@clone2);
@@ -62,6 +71,44 @@ sub test_bundle($vm) {
     remove_domain($base2);
 }
 
+sub _check_net_private($domain, $net=undef) {
+    my $net_found = _get_net($domain);
+    is ($domain->{id_owner}, $net_found->{id_owner}) or exit;
+
+    if (defined $net) {
+        is($net_found->{name}, $net->{name});
+    }
+    return $net_found;
+}
+
+sub _get_net($domain0) {
+    my $domain = $domain0;
+    if (ref($domain) !~ /^Ravada::/) {
+        $domain = Ravada::Domain->open($domain0->{id});
+    }
+
+    my $net_name;
+    if ($domain->type eq 'KVM') {
+        $net_name = _get_net_kvm($domain);
+    } elsif ($domain->type eq 'Void') {
+        $net_name = _get_net_void($domain);
+    }
+
+    die "Error: no net found in ".$domain->name if !$net_name;
+
+    my ($net) = grep { $_->{name} eq $net_name }
+        $domain->_vm->list_virtual_networks;
+
+    return $net;
+}
+
+sub _get_net_kvm($domain) {
+}
+
+sub _get_net_void($domain) {
+    my $config = $domain->get_config();
+    return ($config->{hardware}->{network}->[0]->{name});
+}
 #################################################################
 
 init();

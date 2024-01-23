@@ -571,7 +571,17 @@ sub _process_bundle($self,%args) {
     );
     $sth->execute($args{id_base});
     my $bundle = $sth->fetchrow_hashref;
+    lock_hash(%$bundle);
     return if !$bundle;
+
+    my $network;
+    if ($bundle->{private_network}) {
+        my ($network) = grep { $_->{id_owner} == $args{id_owner} }
+        $self->list_virtual_networks();
+
+        die "Error: no network owner by ".$args{id_owner}
+        if !$network;
+    }
 
     $sth = $self->_dbh->prepare("SELECT * FROM domains_bundle "
         ." WHERE id_bundle=? "

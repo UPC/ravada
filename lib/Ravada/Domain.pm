@@ -7712,4 +7712,16 @@ sub list_shares($self) {
     return @shares;
 }
 
+sub bundle($self) {
+    my $sth = $self->_dbh->prepare("SELECT * FROM bundles "
+        ." WHERE id IN (SELECT id_bundle FROM domains_bundle "
+        ."              WHERE id_domain=?)"
+    );
+    $sth->execute($self->id);
+    my $bundle = $sth->fetchrow_hashref;
+    lock_hash(%$bundle);
+    return $bundle;
+
+}
+
 1;

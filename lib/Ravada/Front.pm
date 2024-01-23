@@ -1886,7 +1886,11 @@ sub create_bundle($self,$name) {
     my ($id)= $sth->fetchrow;
     return $id;
 }
-sub bundle_private_network{}
+sub bundle_private_network($self, $id_bundle, $value=1){
+    my $sth = $self->_dbh->prepare(
+        "UPDATE bundles set private_network=? WHERE id=?");
+    $sth->execute($value, $id_bundle);
+}
 
 sub add_to_bundle ($self, $id_bundle, $id_domain){
     my $sth = $self->_dbh->prepare(
