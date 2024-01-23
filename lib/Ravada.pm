@@ -2362,6 +2362,21 @@ sub _sql_create_tables($self) {
 
             }
         ]
+        ,
+        [
+            bundles => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                name => 'char(255) NOT NULL',
+                private_network => 'integer NOT NULL default 0'
+            }
+        ],
+        [
+            domains_bundle => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                id_bundle => 'integer NOT NULL references `bundles` (`id`) ON DELETE CASCADE',
+                id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE',
+            }
+        ]
 
     );
     for my $new_table (@tables ) {

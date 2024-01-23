@@ -539,7 +539,46 @@ sub _around_create_domain {
     $domain->display($owner)    if $domain->is_active;
 
     $domain->is_pool(1) if $add_to_pool;
+
+    $self->_process_bundle(%args_create, volatile => $volatile, uid => $user->id)
+    if $id_base;
+
     return $domain;
+}
+
+sub _process_bundle($self,%args) {
+
+
+    my $sth = $self->_dbh->prepare("SELECT * FROM bundles "
+        ." WHERE id IN (SELECT id_bundle FROM domains_bundle "
+        ."              WHERE id_domain=?)"
+    );
+    $sth->execute($args{id_base});
+    my $bundle = $sth->fetchrow_hashref;
+    return if !$bundle;
+
+    $sth = $self->_dbh->prepare("SELECT * FROM domains_bundle "
+        ." WHERE id_bundle=? "
+        ."   AND id_domain <> ? "
+        ."   AND id_domain NOT IN ("
+        ."      SELECT id_base FROM domains WHERE id_owner =? "
+        ."  )"
+    );
+    $sth->execute($bundle->{id}, $args{id_base}, $args{uid});
+    delete $args{name};
+    delete $args{alias};
+    delete $args{options};
+    delete $args{listen_ip};
+    delete $args{id_base};
+    delete $args{request};
+    delete $args{spice_password};
+    while (my $row= $sth->fetchrow_hashref) {
+        Ravada::Request->clone(
+            %args
+            ,id_domain=> $row->{id_domain}
+        );
+    }
+
 }
 
 sub _change_hardware_install($self, $domain, $hardware) {

@@ -730,8 +730,16 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
 
 sub remove_domain(@bases) {
 
-    for my $base (@bases) {
-        confess if !defined $base;
+    for my $base0 (@bases) {
+        confess if !defined $base0;
+        my $base = $base0;
+
+        my $id = $base0->{id};
+        $id = $base0->id if !defined $id;
+
+        $base = Ravada::Domain->open($id)
+        unless ref($base) =~ /^Ravada::/;
+
         for my $clone ($base->clones) {
             my $d_clone = Ravada::Domain->open($clone->{id});
             if ( $d_clone ) {

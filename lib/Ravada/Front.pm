@@ -1767,6 +1767,29 @@ sub upload_users($self, $users, $type, $create=0) {
     return ($found, $count, \@error);
 }
 
+sub create_bundle($self,$name) {
+    my $sth = $self->_dbh->prepare(
+        "INSERT INTO bundles (name) values (?)"
+    );
+    $sth->execute($name);
+
+    $sth = $self->_dbh->prepare(
+        "SELECT id FROM bundles WHERE name=?"
+    );
+    $sth->execute($name);
+    my ($id)= $sth->fetchrow;
+    return $id;
+}
+sub bundle_private_network{}
+
+sub add_to_bundle ($self, $id_bundle, $id_domain){
+    my $sth = $self->_dbh->prepare(
+        "INSERT INTO domains_bundle (id_bundle, id_domain ) VALUES(?,?)"
+    );
+    $sth->execute($id_bundle, $id_domain);
+
+}
+
 =head2 version
 
 Returns the version of the main module
