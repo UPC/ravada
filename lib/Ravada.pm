@@ -3305,6 +3305,13 @@ sub create_domain {
         $base = Ravada::Domain->open($id_base)
             or confess "Unknown base id: $id_base";
         $vm = $base->_vm;
+
+        my $net_bundle = $self->_net_bundle($base, $id_owner);
+        if ($net_bundle) {
+            unlock_hash(%args);
+            $args{options}->{network} = $net_bundle->{name};
+            lock_hash(%args);
+        }
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner)
         or confess "Error: Unkown user '$id_owner'";
@@ -4750,11 +4757,14 @@ sub _cmd_clone($self, $request) {
 
 }
 
-sub _net_bundle($self, $domain, $user) {
+sub _net_bundle($self, $domain, $user0) {
     my $bundle = $domain->bundle();
 
     return unless $bundle && exists $bundle->{private_network}
     && $bundle->{private_network};
+
+    my $user = $user0;
+    $user = Ravada::Auth::SQL->search_by_id($user0) if !ref($user);
 
     my ($net) = grep { $_->{id_owner} == $user->id }
         $domain->_vm->list_virtual_networks();

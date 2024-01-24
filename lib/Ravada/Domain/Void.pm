@@ -755,7 +755,8 @@ sub _set_default_info($self, $listen_ip=undef, $network=undef) {
     my $hardware = $self->_value('hardware');
 
     my @nets = $self->_vm->list_virtual_networks();
-    my ($net) = $nets[0];
+    my ($net) = grep { $_->{name} eq 'default'} @nets;
+    $net = $nets[0] if !$net;
     if ($network) {
         ($net) = grep { $_->{name} eq $network } @nets;
 

@@ -28,7 +28,7 @@ sub _req_create($user, $base) {
         ,id_base => $base->id
         ,name => new_domain_name
     );
-    wait_request( debug => 1);
+    wait_request( debug => 0);
 }
 
 
@@ -94,7 +94,7 @@ sub _check_net_private($domain, $net=undef) {
     my $net_found = _get_net($domain);
     isnt($net_found->{name}, 'default', "Expecting another net in ".$domain->{name}) or exit;
     my $base = base_domain_name();
-    like($net_found->{name},qr/^$base/) or die $domain->name;
+    like($net_found->{name},qr/^$base/) or die $domain->{name};
     is ( $net_found->{id_owner}, $domain->{id_owner})
         or confess "Expecting net $net_found->{name} owned by $domain->{id_owner}";
 
