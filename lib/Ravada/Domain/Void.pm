@@ -739,7 +739,7 @@ sub _new_mac($mac='ff:54:00:a7:49:71') {
     return join(":",@macparts);
 }
 
-sub _set_default_info($self, $listen_ip=undef) {
+sub _set_default_info($self, $listen_ip=undef, $network=undef) {
     my $info = {
             max_mem => 512*1024
             ,memory => 512*1024,
@@ -755,13 +755,20 @@ sub _set_default_info($self, $listen_ip=undef) {
     my $hardware = $self->_value('hardware');
 
     my @nets = $self->_vm->list_virtual_networks();
+    my ($net) = $nets[0];
+    if ($network) {
+        ($net) = grep { $_->{name} eq $network } @nets;
+
+        die "Error: network $network not found ".join(" , ",@nets)
+        if !$net;
+    }
 
     $hardware->{network}->[0] = {
         hwaddr => $info->{mac}
         ,address => $info->{ip}
         ,type => 'nat'
         ,driver => 'virtio'
-        ,name => $nets[0]->{name}
+        ,name => $net->{name}
     };
     $self->_store(hardware => $hardware );
 

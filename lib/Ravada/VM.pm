@@ -441,6 +441,7 @@ sub _around_create_domain {
        my $swap = delete $args{swap};
        my $from_pool = delete $args{from_pool};
        my $alias = delete $args{alias};
+     my $network = delete $args{network};
 
     my $config = delete $args{config};
 
@@ -579,7 +580,7 @@ sub _process_bundle($self,%args) {
         my ($network) = grep { $_->{id_owner} == $args{id_owner} }
         $self->list_virtual_networks();
 
-        die "Error: no network owner by ".$args{id_owner}
+        die "Error: no network owned by ".$args{id_owner}
         if !$network;
     }
 
@@ -1012,7 +1013,7 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias','storage', 'options'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias','storage', 'options', 'network'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
@@ -1551,6 +1552,7 @@ sub _update_network_db($self, $old, $new0) {
         $sql = "UPDATE virtual_networks set $sql WHERE id=?";
         my $sth = $self->_dbh->prepare($sql);
         my @values = map { $new->{$_} } sort keys %$new;
+
         $sth->execute(@values, $id);
     }
 }

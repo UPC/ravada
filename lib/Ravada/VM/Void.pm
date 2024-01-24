@@ -110,7 +110,7 @@ sub create_domain {
     return $domain if $out && exists $args{config};
 
     die "Error: Domain $args{name} already exists " if $out;
-    $domain->_set_default_info($listen_ip);
+    $domain->_set_default_info($listen_ip, $args{network});
     $domain->_store( autostart => 0 );
     $domain->_store( is_active => $active );
     $domain->set_memory($args{memory}) if $args{memory};

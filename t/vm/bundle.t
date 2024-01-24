@@ -30,7 +30,6 @@ sub test_bundle($vm) {
     rvd_front->add_to_bundle($id_bundle, $base2->id);
 
     my $user = create_user();
-    user_admin->grant($user, 'create_networks');
 
     my @networks0 = $vm->list_virtual_networks();
 
@@ -39,7 +38,8 @@ sub test_bundle($vm) {
         ,id_domain => $base1->id
         ,name => new_domain_name
     );
-    wait_request();
+    wait_request( debug => 1);
+    wait_request( debug => 1);
 
     my @clone1 = grep { $_->{id_owner} == $user->id } $base1->clones();
     my @clone2 = grep { $_->{id_owner} == $user->id } $base2->clones();
@@ -73,7 +73,9 @@ sub test_bundle($vm) {
 
 sub _check_net_private($domain, $net=undef) {
     my $net_found = _get_net($domain);
-    is ($domain->{id_owner}, $net_found->{id_owner}) or exit;
+    isnt($net_found->{name}, 'default') or exit;
+    is ( $net_found->{id_owner}, $domain->{id_owner})
+        or die "Expecting net $net_found->{name} owned by $domain->{id_owner}";
 
     if (defined $net) {
         is($net_found->{name}, $net->{name});

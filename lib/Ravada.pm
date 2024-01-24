@@ -4728,8 +4728,12 @@ sub _cmd_clone($self, $request) {
 
     $args->{alias} = $alias if $alias;
 
-    my $net_bundle = $self->_prepare_bundle($domain, $user);
-    #    $args->{network} = $net_bundle->{name} if $net_bundle;
+    my $net_bundle = $self->_net_bundle($domain, $user);
+    $net_bundle = {} if !$net_bundle;
+
+    warn "Assigning net to ".($net_bundle->{name} or 'undef');
+
+    $args->{network} = $net_bundle->{name} if $net_bundle;
 
     my $clone = $domain->clone(
         name => $name
@@ -4737,45 +4741,49 @@ sub _cmd_clone($self, $request) {
     );
 
     $request->id_domain($clone->id) if $clone;
+    my $req_next = $request;
 
     Ravada::Request->start_domain(
         uid => $user->id
         ,id_domain => $clone->id
         ,remote_ip => $request->defined_arg('remote_ip')
-        ,after_request => $request->id
+        ,after_request => $req_next->id
     ) if $request->defined_arg('start');
 
 }
 
-sub _prepare_bundle($self, $domain, $user) {
-    if ($domain->bundle() && $domain->bundle()->{private_network}) {
+sub _net_bundle($self, $domain, $user) {
+    return unless $domain->bundle()
+        && $domain->bundle()->{private_network};
 
-        my ($net) = grep { $_->{id_owner} == $user->id }
+    my ($net) = grep { $_->{id_owner} == $user->id }
         $domain->_vm->list_virtual_networks();
 
-        return $net if $net;
+    return $net if $net;
 
-        my $req_new_net = Ravada::Request->new_network(
-            uid => $user->id
-            ,id_vm => $domain->_vm->id
-            ,name => $user->name
-        );
-        $self->_cmd_new_network($req_new_net);
-        my $data = decode_json($req_new_net->output);
+    my $req_new_net = Ravada::Request->new_network(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_vm => $domain->_vm->id
+        ,name => $user->name
+    );
+    $self->_cmd_new_network($req_new_net);
+    my $data = decode_json($req_new_net->output);
+    $req_new_net->status('done');
 
-        my $req_network = Ravada::Request->create_network(
-            uid => $user->id
-            ,id_vm => $domain->_vm->id
-            ,data => $data
-        );
-        $self->_cmd_create_network($req_network);
+    my $req_network = Ravada::Request->create_network(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_vm => $domain->_vm->id
+        ,data => $data
+    );
+    $self->_cmd_create_network($req_network);
+    $req_network->status('done');
 
-        ($net) = grep { $_->{id_owner} == $user->id }
+    ($net) = grep { $_->{name} eq $data->{name} }
         $domain->_vm->list_virtual_networks();
 
-        return $net;
-    }
+    $domain->_vm->_update_network_db($net, {id_owner => $user->id });
 
+    return $net;
 }
 
 sub _new_clone_name($self, $base,$user) {
