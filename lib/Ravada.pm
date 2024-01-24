@@ -4751,8 +4751,10 @@ sub _cmd_clone($self, $request) {
 }
 
 sub _net_bundle($self, $domain, $user) {
-    return unless $domain->bundle()
-        && $domain->bundle()->{private_network};
+    my $bundle = $domain->bundle();
+
+    return unless $bundle && exists $bundle->{private_network}
+    && $bundle->{private_network};
 
     my ($net) = grep { $_->{id_owner} == $user->id }
         $domain->_vm->list_virtual_networks();
