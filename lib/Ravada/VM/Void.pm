@@ -97,6 +97,10 @@ sub create_domain {
     my $id = delete $args{id};
     my $storage = delete $args{storage};
 
+    my $options = delete $args{options};
+    my $network;
+    $network = $options->{network} if $options && exists $options->{network};
+
     my $domain = Ravada::Domain::Void->new(
                                            %args
                                            , domain => $args{name}
@@ -110,7 +114,8 @@ sub create_domain {
     return $domain if $out && exists $args{config};
 
     die "Error: Domain $args{name} already exists " if $out;
-    $domain->_set_default_info($listen_ip, $args{network});
+
+    $domain->_set_default_info($listen_ip, $network);
     $domain->_store( autostart => 0 );
     $domain->_store( is_active => $active );
     $domain->set_memory($args{memory}) if $args{memory};
@@ -167,6 +172,8 @@ sub create_domain {
         my $drivers = {};
         $drivers = $domain_base->_value('drivers');
         $domain->_store( drivers => $drivers );
+        $domain->change_hardware('network',0,{name => $network})
+        if $network;
     } elsif (!exists $args{config}) {
         $storage = $self->default_storage_pool_name() if !$storage;
         my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".void";

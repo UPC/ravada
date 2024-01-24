@@ -441,7 +441,6 @@ sub _around_create_domain {
        my $swap = delete $args{swap};
        my $from_pool = delete $args{from_pool};
        my $alias = delete $args{alias};
-     my $network = delete $args{network};
 
     my $config = delete $args{config};
 
@@ -572,11 +571,11 @@ sub _process_bundle($self,%args) {
     );
     $sth->execute($args{id_base});
     my $bundle = $sth->fetchrow_hashref;
+    return if !$bundle || !keys %$bundle;
     lock_hash(%$bundle);
-    return if !$bundle;
 
     my $network;
-    if ($bundle->{private_network}) {
+    if ( exists $bundle->{privatge_network} && $bundle->{private_network}) {
         my ($network) = grep { $_->{id_owner} == $args{id_owner} }
         $self->list_virtual_networks();
 
@@ -896,7 +895,7 @@ sub _ip_a($self, $dev) {
     my ($out, $err) = $self->run_command_cache("/sbin/ip","-o","a");
     die $err if $err;
     for my $line ( split /\n/,$out) {
-        my ($ip) = $line =~ m{^\d+:\s+$dev.*inet (.*?)/};
+        my ($ip) = $line =~ m{^\d+:\s+$dev.*inet\d* (.*?)/};
         return $ip if $ip;
     }
     warn "Warning $dev not found in active interfaces";

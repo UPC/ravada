@@ -2873,7 +2873,7 @@ sub clone {
     my $volatile = delete $args{volatile};
     my $id_owner = delete $args{id_owner};
     my $alias = delete $args{alias};
-    my $network = delete $args{network};
+    my $options = delete $args{options};
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
@@ -2907,7 +2907,7 @@ sub clone {
     push @args_copy, ( remote_ip => $remote_ip) if $remote_ip;
     push @args_copy, ( from_pool => $from_pool) if defined $from_pool;
     push @args_copy, ( add_to_pool => $add_to_pool) if defined $add_to_pool;
-    push @args_copy, ( network => $network)     if $network;
+    push @args_copy, ( options => $options)     if $options;
     if ( $self->volatile_clones && !defined $volatile ) {
         $volatile = 1;
     }
@@ -5313,7 +5313,7 @@ sub _pre_clone($self,%args) {
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
     for (qw(is_pool start add_to_pool from_pool with_cd volatile id_owner
-        alias network)) {
+        alias options)) {
         delete $args{$_};
     }
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;

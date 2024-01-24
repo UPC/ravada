@@ -388,7 +388,7 @@ sub test_assign_network($vm, $net) {
             network => $net->{name}
         }
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my $domain = rvd_back->search_domain($name);
     ok($domain);
@@ -419,7 +419,7 @@ sub test_assign_network_clone($vm, $net, $volatile) {
         ,options => { network => $net->{name}}
         ,name => $name_clone
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     my $clone = rvd_back->search_domain($name_clone);
     ok($clone);
 

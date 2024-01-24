@@ -4731,9 +4731,7 @@ sub _cmd_clone($self, $request) {
     my $net_bundle = $self->_net_bundle($domain, $user);
     $net_bundle = {} if !$net_bundle;
 
-    warn "Assigning net to ".($net_bundle->{name} or 'undef');
-
-    $args->{network} = $net_bundle->{name} if $net_bundle;
+    $args->{options}->{network} = $net_bundle->{name} if $net_bundle;
 
     my $clone = $domain->clone(
         name => $name

@@ -38,8 +38,7 @@ sub test_bundle($vm) {
         ,id_domain => $base1->id
         ,name => new_domain_name
     );
-    wait_request( debug => 1);
-    wait_request( debug => 1);
+    wait_request( debug => 0);
 
     my @clone1 = grep { $_->{id_owner} == $user->id } $base1->clones();
     my @clone2 = grep { $_->{id_owner} == $user->id } $base2->clones();
@@ -60,7 +59,7 @@ sub test_bundle($vm) {
         ,id_domain => $base2->id
         ,name => new_domain_name
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     @clone1 = grep { $_->{id_owner} == $user->id } $base1->clones();
     @clone2 = grep { $_->{id_owner} == $user->id } $base2->clones();
@@ -73,9 +72,11 @@ sub test_bundle($vm) {
 
 sub _check_net_private($domain, $net=undef) {
     my $net_found = _get_net($domain);
-    isnt($net_found->{name}, 'default') or exit;
+    isnt($net_found->{name}, 'default', "Expecting another net in ".$domain->{name}) or exit;
+    my $base = base_domain_name();
+    like($net_found->{name},qr/^$base/) or exit;
     is ( $net_found->{id_owner}, $domain->{id_owner})
-        or die "Expecting net $net_found->{name} owned by $domain->{id_owner}";
+        or confess "Expecting net $net_found->{name} owned by $domain->{id_owner}";
 
     if (defined $net) {
         is($net_found->{name}, $net->{name});
@@ -105,6 +106,11 @@ sub _get_net($domain0) {
 }
 
 sub _get_net_kvm($domain) {
+    my $doc = XML::LibXML->load_xml(string => $domain->xml_description());
+
+    my ($net_source) = $doc->findnodes("/domain/devices/interface/source");
+    return $net_source->getAttribute('network');
+
 }
 
 sub _get_net_void($domain) {
