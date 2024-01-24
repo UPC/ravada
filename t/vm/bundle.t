@@ -14,13 +14,23 @@ use feature qw(signatures);
 #################################################################
 
 sub _req_clone($user, $base) {
-    my $req_clone1 = Ravada::Request->clone(
+    my $req = Ravada::Request->clone(
         uid => $user->id
         ,id_domain => $base->id
         ,name => new_domain_name
     );
     wait_request( debug => 0);
 }
+
+sub _req_create($user, $base) {
+    my $req = Ravada::Request->create_domain(
+        id_owner => $user->id
+        ,id_base => $base->id
+        ,name => new_domain_name
+    );
+    wait_request( debug => 1);
+}
+
 
 sub test_bundle($vm, $do_clone=0) {
 
@@ -84,7 +94,7 @@ sub _check_net_private($domain, $net=undef) {
     my $net_found = _get_net($domain);
     isnt($net_found->{name}, 'default', "Expecting another net in ".$domain->{name}) or exit;
     my $base = base_domain_name();
-    like($net_found->{name},qr/^$base/) or exit;
+    like($net_found->{name},qr/^$base/) or die $domain->name;
     is ( $net_found->{id_owner}, $domain->{id_owner})
         or confess "Expecting net $net_found->{name} owned by $domain->{id_owner}";
 
