@@ -12,7 +12,17 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 #################################################################
-sub test_bundle($vm) {
+
+sub _req_clone($user, $base) {
+    my $req_clone1 = Ravada::Request->clone(
+        uid => $user->id
+        ,id_domain => $base->id
+        ,name => new_domain_name
+    );
+    wait_request( debug => 0);
+}
+
+sub test_bundle($vm, $do_clone=0) {
 
     my $base1 = create_domain_v2(vm => $vm);
     $base1->prepare_base(user_admin);
@@ -33,12 +43,11 @@ sub test_bundle($vm) {
 
     my @networks0 = $vm->list_virtual_networks();
 
-    my $req_clone1 = Ravada::Request->clone(
-        uid => $user->id
-        ,id_domain => $base1->id
-        ,name => new_domain_name
-    );
-    wait_request( debug => 0);
+    if ($do_clone) {
+        _req_clone($user, $base1);
+    } else {
+        _req_create($user, $base1);
+    }
 
     my @clone1 = grep { $_->{id_owner} == $user->id } $base1->clones();
     my @clone2 = grep { $_->{id_owner} == $user->id } $base2->clones();
@@ -54,11 +63,12 @@ sub test_bundle($vm) {
     remove_domain(@clone1);
     remove_domain(@clone2);
 
-    my $req_clone2 = Ravada::Request->clone(
-        uid => $user->id
-        ,id_domain => $base2->id
-        ,name => new_domain_name
-    );
+    if ($do_clone) {
+        _req_clone($user, $base2);
+    } else {
+        _req_create($user, $base2);
+    }
+
     wait_request(debug => 0);
 
     @clone1 = grep { $_->{id_owner} == $user->id } $base1->clones();
@@ -137,7 +147,8 @@ for my $vm_name ( vm_names() ) {
 
     diag("Testing $vm_name bundle");
 
-    test_bundle($vm);
+    test_bundle($vm,0); # create
+    test_bundle($vm,1); # with clone
     }
 }
 
