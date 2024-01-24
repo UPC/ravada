@@ -824,8 +824,10 @@ sub _new_request {
     ." WHERE id=?");
     $sth->execute($self->{id});
 
-
-    my $request = $self->open($self->{id});
+    my $request;
+    eval { $request = $self->open($self->{id}) };
+    warn $@ if $@ && $@ !~ /I can't find id=/;
+    return if !$request;
     $request->_validate();
     $request->status('requested') if $request->status ne'done';
 
