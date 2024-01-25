@@ -4774,7 +4774,7 @@ sub _net_bundle($self, $domain, $user0) {
     my $req_new_net = Ravada::Request->new_network(
         uid => Ravada::Utils::user_daemon->id
         ,id_vm => $domain->_vm->id
-        ,name => $user->name
+        ,name => $bundle->{name}."-".$user->name
     );
     $self->_cmd_new_network($req_new_net);
     my $data = decode_json($req_new_net->output);

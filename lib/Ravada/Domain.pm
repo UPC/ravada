@@ -2960,6 +2960,7 @@ sub _copy_clone($self, %args) {
     my $id_owner = delete $args{id_owner};
     $id_owner = $user->id if (! $id_owner);
     my $alias = delete $args{alias};
+    my $options = delete $args{options};
 
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)
         if keys %args;
@@ -2970,6 +2971,7 @@ sub _copy_clone($self, %args) {
     push @copy_arg, ( alias => $alias )   if $alias;
     push @copy_arg, ( memory => $memory ) if $memory;
     push @copy_arg, ( volatile => $volatile ) if $volatile;
+    push @copy_arg, ( options => $options ) if $options;
 
     $request->status("working","Copying domain ".$self->name
         ." to $name")   if $request;

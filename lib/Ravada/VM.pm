@@ -564,18 +564,18 @@ sub _around_create_domain {
 
 sub _process_bundle($self,%args) {
 
-
     my $sth = $self->_dbh->prepare("SELECT * FROM bundles "
         ." WHERE id IN (SELECT id_bundle FROM domains_bundle "
         ."              WHERE id_domain=?)"
     );
     $sth->execute($args{id_base});
     my $bundle = $sth->fetchrow_hashref;
+
     return if !$bundle || !keys %$bundle;
     lock_hash(%$bundle);
 
     my $network;
-    if ( exists $bundle->{privatge_network} && $bundle->{private_network}) {
+    if ( exists $bundle->{private_network} && $bundle->{private_network}) {
         my ($network) = grep { $_->{id_owner} == $args{id_owner} }
         $self->list_virtual_networks();
 
@@ -588,6 +588,7 @@ sub _process_bundle($self,%args) {
         ."   AND id_domain <> ? "
         ."   AND id_domain NOT IN ("
         ."      SELECT id_base FROM domains WHERE id_owner =? "
+        ."          AND id_base IS NOT NULL "
         ."  )"
     );
     $sth->execute($bundle->{id}, $args{id_base}, $args{uid});
@@ -598,6 +599,7 @@ sub _process_bundle($self,%args) {
     delete $args{id_base};
     delete $args{request};
     delete $args{spice_password};
+    delete $args{start};
     while (my $row= $sth->fetchrow_hashref) {
         Ravada::Request->clone(
             %args
