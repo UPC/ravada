@@ -1246,6 +1246,9 @@ sub _domain_create_from_base {
     $volatile = delete $args{volatile} if exists $args{volatile} && defined $args{volatile};
 
     my $options = delete $args{options};
+    my $network = delete $options->{network};
+
+    die "Error: I can't set more options ".Dumper($options) if keys %$options;
 
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
@@ -1264,7 +1267,8 @@ sub _domain_create_from_base {
 
     _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
 
-    $self->_xml_modify_options($xml, $options);
+    $self->_xml_set_network($xml, $network) if $network;
+
     my ($domain, $spice_password)
         = $self->_domain_create_common($xml,%args, is_volatile=>$volatile, base => $base);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner}
@@ -1877,7 +1881,6 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     } else {
         $self->_xml_set_pci_noe($doc);
     }
-    $self->_xml_set_network($doc, $network) if $network;
 }
 
 sub _xml_set_network($self, $doc, $network) {
