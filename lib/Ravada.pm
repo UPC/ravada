@@ -1651,6 +1651,12 @@ sub _add_indexes_generic($self) {
             ,"index(date_changed)"
             ,"index(id_owner)"
         ]
+        ,bundles => [
+            "unique (name)"
+        ]
+        ,domains_bundle => [
+            "unique (id_bundle, id_domain)"
+        ]
     );
     my $if_not_exists = '';
     $if_not_exists = ' IF NOT EXISTS ' if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite|mariadb/i;

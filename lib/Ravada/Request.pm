@@ -709,7 +709,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
     }
     confess "Error: missing command " if !$command;
     #    delete $args_d->{uid} unless $command eq 'clone';
-    delete $args_d->{uid} if $command eq 'set_base_vm';
+    delete $args_d->{uid} if $command =~ /(cleanup|refresh_vms|set_base_vm)/;
     delete $args_d->{at};
     delete $args_d->{status};
     delete $args_d->{timeout};

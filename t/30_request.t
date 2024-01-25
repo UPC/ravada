@@ -324,6 +324,22 @@ sub test_force() {
 
 }
 
+sub test_refresh_vms() {
+    my $req = Ravada::Request->refresh_vms();
+    ok($req);
+    wait_request( debug => 0);
+    is($req->error, '') or exit;
+
+    $req->status('waiting');
+
+    my $req1 = Ravada::Request->refresh_vms();
+    ok($req1);
+    is($req1->id, $req->id) or exit;
+    wait_request( debug => 0);
+    is($req1->error, '') or exit;
+
+}
+
 sub test_dupe_open_exposed($vm) {
     my $req1 = Ravada::Request->open_exposed_ports(
         id_domain => 1
@@ -350,6 +366,8 @@ remove_old_domains();
 remove_old_disks();
 
 test_force();
+
+test_refresh_vms();
 
 for my $vm_name ( vm_names() ) {
     my $vm;
