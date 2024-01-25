@@ -1123,6 +1123,7 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
     test_grant_access($t, $base0);
 
     if ($vm_name eq 'KVM') {
+        _init_mojo_client();
         test_new_machine_default($t, $vm_name);
         test_new_machine_default($t, $vm_name, 1); # with empty iso file
         test_new_machine_advanced_options($t, $vm_name);
