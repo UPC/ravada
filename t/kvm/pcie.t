@@ -154,16 +154,13 @@ sub test_pcie_2($vm) {
     <input type='keyboard' bus='ps2'>
       <alias name='input1'/>
     </input>
-    <graphics type='spice' port='5901' autoport='yes' listen='192.168.1.106'>
-      <listen type='address' address='192.168.1.106'/>
+    <graphics type='spice' port='5901' autoport='yes'>
+      <listen type='address'/>
       <image compression='auto_glz'/>
       <jpeg compression='auto'/>
       <zlib compression='auto'/>
       <playback compression='on'/>
       <streaming mode='filter'/>
-    </graphics>
-    <graphics type='vnc' port='5902' autoport='yes' listen='192.168.1.106'>
-      <listen type='address' address='192.168.1.106'/>
     </graphics>
     <sound model='ich6'>
       <alias name='sound0'/>
