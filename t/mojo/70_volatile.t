@@ -149,6 +149,16 @@ sub _id_vm($vm_name) {
     return $id;
 }
 
+sub _count_nodes($vm_name) {
+    my $sth = connector->dbh->prepare(
+        "SELECT count(*) FROM vms WHERE vm_type=?"
+    );
+    $sth->execute($vm_name);
+    my ($count) = $sth->fetchrow;
+    warn "No nodes found for vm_type=$vm_name" if !$count;
+    return ($count or 1);
+}
+
 sub test_clone($vm_name, $n=10) {
     my $id_vm = _id_vm($vm_name);
 
@@ -172,7 +182,7 @@ sub test_clone($vm_name, $n=10) {
 
     my $seconds = 2;
     LOOP: for my $count0 ( 0 .. $times ) {
-        for my $count1 ( 0 .. $n*scalar(@bases) ) {
+        for my $count1 ( 0 .. $n*_count_nodes($vm_name) ) {
             for my $base ( @bases ) {
                 next if !$base->is_base;
                 next if $base->list_requests > 10;
