@@ -74,6 +74,7 @@ create_domain
     remove_old_domains_req
     remove_domain_and_clones_req
     remove_domain
+    remove_volatile_clones
     mojo_init
     mojo_clean
     mojo_create_domain
@@ -726,6 +727,29 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
     }
     wait_request(debug => 0);
 
+}
+
+sub remove_volatile_clones(@bases) {
+
+    for my $base0 (@bases) {
+        confess if !defined $base0;
+        my $base = $base0;
+
+        my $id = $base0->{id};
+        $id = $base0->id if !defined $id;
+
+        $base = Ravada::Front::Domain->open($id)
+        unless ref($base) =~ /^Ravada::/;
+
+        next if !$base;
+        for my $clone ($base->clones) {
+            next unless $clone->{is_volatile};
+            Ravada::Request->remove_domain(
+                    uid => user_admin->id
+                    ,name => $clone->{name}
+            );
+        }
+    }
 }
 
 sub remove_domain(@bases) {
