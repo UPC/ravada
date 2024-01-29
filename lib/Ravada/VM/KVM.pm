@@ -1262,6 +1262,9 @@ sub _domain_create_from_base {
 
     _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
 
+    my $network = $args{options}->{network};
+    $self->_xml_set_network($xml, $network) if $network;
+
     my ($domain, $spice_password)
         = $self->_domain_create_common($xml,%args, is_volatile=>$volatile, base => $base);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner}
