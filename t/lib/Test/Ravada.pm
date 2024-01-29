@@ -1062,7 +1062,7 @@ sub _wait_mojo_request($t, $url) {
     }
     my $req = Ravada::Request->open($body_json->{request});
     for ( 1 .. 180 ) {
-        last if $req->status eq 'done';
+        last if $req->status eq 'done' || $req->at_time;
         sleep 1;
         diag("Waiting for request "
             .$req->id." ".$req->command." ".$req->status." ".$req->error) if !($_ % 10);
@@ -1339,6 +1339,7 @@ sub wait_request {
             next if $@ && $@ =~ /I can't find id=$req_id/;
             die $@ if $@;
             next if $skip{$req->command};
+            next if $req->at_time && $req->status eq 'requested';
             if ( $req->status ne 'done' ) {
                 my $run_at = '';
                 if ($req->status eq 'requested') {
@@ -1403,7 +1404,7 @@ sub wait_request {
             for my $req (@$request) {
                 $req = Ravada::Request->open($req) if !ref($req);
                 next if !$req->id || $skip{$req->command};
-                if ($req->status ne 'done') {
+                if ($req->status ne 'done' && !$req->at_time) {
                     $done_all = 0;
                     if ( $debug && (time%5 == 0) ) {
                         diag("Waiting for request ".$req->id." ".$req->command);

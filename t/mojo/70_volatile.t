@@ -29,7 +29,7 @@ my ($USERNAME, $PASSWORD);
 sub _wait_ip($id_domain0, $seconds=60) {
 
     my $domain;
-    for ( 1 .. $seconds ) {
+    for my $count ( 0 .. $seconds ) {
         my $id_domain = $id_domain0;
 
         if ($id_domain0 !~ /^\d+$/) {
@@ -42,8 +42,13 @@ sub _wait_ip($id_domain0, $seconds=60) {
             ,uid => user_admin->id
         );
 
+        my $info;
+        eval {
         $domain = Ravada::Front::Domain->open($id_domain);
-        my $info = $domain->info(user_admin);
+        $info = $domain->info(user_admin);
+        };
+        warn $@ if $@;
+        return if $@ || ($count && !$domain->is_active);
         return $info->{ip} if exists $info->{ip} && $info->{ip};
         diag("Waiting for ".$domain->name. " ip") if !(time % 10);
         sleep 1;
