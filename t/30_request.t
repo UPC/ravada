@@ -397,6 +397,11 @@ for my $vm_name ( vm_names() ) {
     
         my $domain_base = test_req_create_base($vm);
         if ($domain_base) {
+            my $req_rm = Ravada::Request->remove_clones(
+                uid => user_admin->id
+                ,id_domain => $domain_base->id
+                ,at => time + 300
+            );
             $domain_base->is_public(1);
             is ($domain_base->_vm->readonly, 0) or next;
 
@@ -410,6 +415,9 @@ for my $vm_name ( vm_names() ) {
             is(scalar @{rvd_front->list_domains( id => $domain_clone->id)}, 0) or exit;
 
             test_req_many_clones($vm, $domain_base);
+            is($req_rm->status,'requested');
+            $req_rm->at(time + 1);
+            wait_request(debug => 1);
             test_req_remove_domain_name($vm, $domain_base->name);
         }
 

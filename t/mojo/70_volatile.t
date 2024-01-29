@@ -185,6 +185,13 @@ sub test_clone($vm_name, $n=10) {
         for my $count1 ( 0 .. $n*_count_nodes($vm_name) ) {
             for my $base ( @bases ) {
                 next if !$base->is_base;
+
+                Ravada::Request->remove_clones(
+                    uid => user_admin->id
+                    ,id_domain => $base->id
+                    ,at => time + 300
+                );
+
                 next if $base->list_requests > 10;
                 last LOOP if _too_loaded("clone");
                 my $user = create_user(new_domain_name(),$$);

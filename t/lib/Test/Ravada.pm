@@ -1448,6 +1448,7 @@ sub fast_forward_requests() {
     my $sth = $CONNECTOR->dbh->prepare("UPDATE requests "
         ." SET at_time=0 WHERE status = 'requested' AND at_time>0 "
         ."    AND command <> 'open_exposed_ports'"
+        ."    AND command <> 'remove_clones'"
     );
     eval {
     $sth->execute();

@@ -4651,6 +4651,25 @@ sub _cmd_remove {
     $self->remove_domain(name => $request->args('name'), uid => $request->args('uid'));
 }
 
+sub _cmd_remove_clones($self, $request) {
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    my $id_domain = $request->args('id_domain');
+
+    die "Error: user ".$user->name." not authorized to remove clones"
+    unless $user->is_admin();
+
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    for my $clone ( $domain->clones ) {
+        Ravada::Request->remove_domain(
+            uid => $uid
+            ,name => $clone->{name}
+        );
+    }
+}
+
 sub _cmd_restore_domain($self,$request) {
     my $domain = Ravada::Domain->open($request->args('id_domain'));
     return $domain->restore(Ravada::Auth::SQL->search_by_id($request->args('uid')));
@@ -6344,6 +6363,7 @@ sub _req_method {
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
+        ,remove_clones => \&_cmd_remove_clones
         ,restore_domain => \&_cmd_restore_domain
         ,resume => \&_cmd_resume
        ,dettach => \&_cmd_dettach
