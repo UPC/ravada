@@ -5951,7 +5951,10 @@ sub _refresh_active_vms ($self) {
             next;
         }
         $active_vm{$vm->id} = 1;
-        $vm->list_virtual_networks();
+        eval {
+            $vm->list_virtual_networks();
+        };
+        warn $@ if $@;
     }
     return \%active_vm;
 }
@@ -6003,6 +6006,7 @@ sub _refresh_down_nodes($self, $request = undef ) {
         my $vm;
         eval { $vm = Ravada::VM->open($id) };
         warn $@ if $@;
+        $vm->is_active() if $vm;
     }
 }
 
