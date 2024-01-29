@@ -424,6 +424,21 @@ sub test_assign_network_clone($vm, $net, $volatile) {
     ok($clone);
 
     _check_domain_network($clone, $net->{name});
+
+    my $name_clone3 = new_domain_name();
+    my $req3 = Ravada::Request->clone(
+        id_domain => $domain->id
+        ,uid => user_admin->id
+        ,options => { network => $net->{name}}
+        ,name => $name_clone3
+    );
+    wait_request(debug => 0);
+    my $clone3 = rvd_back->search_domain($name_clone3);
+    ok($clone3);
+
+    _check_domain_network($clone, $net->{name});
+
+    remove_domain($domain);
 }
 
 sub _check_domain_network_kvm($domain, $net_name) {
