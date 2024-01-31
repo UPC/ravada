@@ -1881,6 +1881,7 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     } else {
         $self->_xml_set_pci_noe($doc);
     }
+    $self->_xml_set_network($doc, $network) if $network;
 }
 
 sub _xml_set_network($self, $doc, $network) {

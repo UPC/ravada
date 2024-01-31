@@ -32,15 +32,17 @@ sub _req_create($user, $base) {
 }
 
 
-sub test_bundle($vm, $do_clone=0) {
+sub test_bundle($vm, $do_clone=0, $volatile=0) {
 
     my $base1 = create_domain_v2(vm => $vm);
     $base1->prepare_base(user_admin);
     $base1->is_public(1);
+    $base1->volatile_clones(1) if $volatile;
 
     my $base2 = create_domain($vm);
     $base2->prepare_base(user_admin);
     $base2->is_public(1);
+    $base2->volatile_clones(1) if $volatile;
 
     my $name = new_domain_name();
     my $id_bundle = rvd_front->create_bundle($name);
@@ -69,6 +71,8 @@ sub test_bundle($vm, $do_clone=0) {
 
     my $net = _check_net_private($clone1[0]);
     _check_net_private($clone2[0], $net);
+    is($clone1[0]->{is_volatile} , $volatile);
+    is($clone2[0]->{is_volatile} , $volatile);
 
     remove_domain(@clone1);
     remove_domain(@clone2);
@@ -86,6 +90,25 @@ sub test_bundle($vm, $do_clone=0) {
     is(scalar(@clone1),1);
     is(scalar(@clone2),1);
 
+    is($clone1[0]->{is_volatile} , $volatile);
+    is($clone2[0]->{is_volatile} , $volatile);
+
+    for my $clone (@clone1, @clone2) {
+        Ravada::Request->start_domain( uid => $user->id 
+            , id_domain => $clone->{id}
+        );
+    }
+    Ravada::Request->enforce_limits();
+    wait_request();
+
+    for my $clone0 ( @clone1, @clone2 ) {
+        my $clone = Ravada::Front::Domain->open($clone0->{id} );
+        is($clone->is_active,1);
+        Ravada::Request->force_shutdown(
+            uid => user_admin->id
+            ,id_domain => $clone->id
+        );
+    }
     remove_domain($base1);
     remove_domain($base2);
 }
@@ -156,6 +179,8 @@ for my $vm_name ( vm_names() ) {
     skip $msg,10    if !$vm;
 
     diag("Testing $vm_name bundle");
+
+    test_bundle($vm,1); # with clone and volatile
 
     test_bundle($vm,0); # create
     test_bundle($vm,1); # with clone
