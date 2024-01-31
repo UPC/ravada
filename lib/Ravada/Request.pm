@@ -176,6 +176,7 @@ our %VALID_ARG = (
     ,remove_network => { uid => 1, id => 1, id_vm => 2, name => 2 }
     ,change_network => { uid => 1, data => 1 }
 
+    ,remove_clones => { uid => 1, id_domain => 1 }
 );
 
 $VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};

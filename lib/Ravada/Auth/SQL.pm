@@ -1106,7 +1106,7 @@ sub can_remove_clones($self, $id_domain=undef) {
     return $self->can_do('remove_clones') if !$id_domain;
 
     my $domain = Ravada::Front::Domain->open($id_domain);
-    confess "ERROR: domain is not a base "  if !$domain->id_base;
+    confess "ERROR: domain ".$domain->name." is not a base "  if !$domain->id_base;
 
     return 1 if $self->can_remove_clone_all();
 

@@ -129,5 +129,8 @@ for my $route ( qw( list_bases_anonymous request/1.json ws/subscribe anonymous_l
     is(list_anonymous_users(), $n_anonymous, $url);
 }
 
+wait_request();
+remove_volatile_clones(@$bases);
+
 remove_old_domains_req(0);
 done_testing();

@@ -3255,7 +3255,10 @@ sub _around_is_active($orig, $self) {
         }
     }
     my $is_active = 0;
+    eval {
     $is_active = $self->$orig();
+    };
+    warn $@ if $@;
 
     return $is_active if $self->readonly
         || !$self->is_known

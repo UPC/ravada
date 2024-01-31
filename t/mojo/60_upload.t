@@ -226,5 +226,4 @@ for my $type ( 'ldap', 'sso' ) {
     test_upload_users( $type, 0 ,1 ); # do not create users in Ravada
 }
 
-end();
 done_testing();
