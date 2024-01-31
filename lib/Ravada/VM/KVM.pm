@@ -2990,8 +2990,11 @@ sub list_virtual_networks($self) {
     for my $net ($self->vm->list_all_networks()) {
         my $doc = XML::LibXML->load_xml(string => $net->get_xml_description);
         my ($ip_doc) = $doc->findnodes("/network/ip");
-        my $ip = $ip_doc->getAttribute('address');
-        my $netmask = $ip_doc->getAttribute('netmask');
+        my ($ip, $netmask) = ('','');
+        if ($ip_doc) {
+            $ip_doc->getAttribute('address');
+            $netmask = $ip_doc->getAttribute('netmask');
+        }
         my $data= {
             is_active => $net->is_active()
             ,autostart => $net->get_autostart()
@@ -3002,13 +3005,15 @@ sub list_virtual_networks($self) {
             ,ip_netmask => $netmask
             ,internal_id => ''.$net->get_uuid_string
         };
-        my ($dhcp_range) = $ip_doc->findnodes("dhcp/range");
-        my ($start,$end);
-        if ($dhcp_range) {
-            $start = $dhcp_range->getAttribute('start');
-            $end = $dhcp_range->getAttribute('end');
-            $data->{dhcp_start} = $start if defined $start;
-            $data->{dhcp_end} = $end if defined $end;
+        if ($ip_doc) {
+            my ($dhcp_range) = $ip_doc->findnodes("dhcp/range");
+            my ($start,$end);
+            if ($dhcp_range) {
+                $start = $dhcp_range->getAttribute('start');
+                $end = $dhcp_range->getAttribute('end');
+                $data->{dhcp_start} = $start if defined $start;
+                $data->{dhcp_end} = $end if defined $end;
+            }
         }
         push @networks,($data);
     }
