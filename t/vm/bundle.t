@@ -13,24 +13,71 @@ use feature qw(signatures);
 
 #################################################################
 
-sub _req_clone($user, $base) {
-    my $req = Ravada::Request->clone(
+sub _req_clone($user, @base) {
+    for my $base (@base) {
+        my $req = Ravada::Request->clone(
         uid => $user->id
         ,id_domain => $base->id
         ,name => new_domain_name
-    );
+        );
+    }
     wait_request( debug => 0);
 }
 
-sub _req_create($user, $base) {
-    my $req = Ravada::Request->create_domain(
+sub _req_create($user, @base) {
+    for my $base (@base) {
+        my $req = Ravada::Request->create_domain(
         id_owner => $user->id
         ,id_base => $base->id
         ,name => new_domain_name
-    );
+        );
+    }
     wait_request( debug => 0);
 }
 
+
+sub test_bundle_2($vm, $n, $do_clone=0, $volatile=0) {
+    my $name = new_domain_name();
+    my $id_bundle = rvd_front->create_bundle($name);
+    rvd_front->bundle_private_network($id_bundle,1);
+
+    my @bases;
+    for my $count ( 1 .. $n ) {
+        my $base1 = create_domain_v2(vm => $vm);
+        $base1->prepare_base(user_admin);
+        $base1->is_public(1);
+        $base1->volatile_clones(1) if $volatile;
+
+        rvd_front->add_to_bundle($id_bundle, $base1->id);
+
+        push @bases,($base1);
+    }
+
+    my $user = create_user();
+    if ($do_clone) {
+        _req_clone($user, @bases);
+    } else {
+        _req_create($user, @bases);
+    }
+
+    my $net;
+    for my $base ( @bases ) {
+
+        my @clone1 = grep { $_->{id_owner} == $user->id }
+            $base->clones();
+
+        is(scalar(@clone1),1) or exit;
+
+        if($net) {
+            $net = _check_net_private($clone1[0], $net);
+        } else {
+            $net = _check_net_private($clone1[0]);
+        }
+
+        Ravada::Request->enforce_limits();
+        wait_request();
+    }
+}
 
 sub test_bundle($vm, $do_clone=0, $volatile=0) {
 
@@ -39,7 +86,14 @@ sub test_bundle($vm, $do_clone=0, $volatile=0) {
     $base1->is_public(1);
     $base1->volatile_clones(1) if $volatile;
 
-    my $base2 = create_domain($vm);
+    my $base2a = create_domain($vm);
+    Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,name => 'network'
+        ,id_domain => $base2a->id
+    );
+    wait_request( debug => 0);
+    my $base2 = Ravada::Domain->open($base2a->id);
     $base2->prepare_base(user_admin);
     $base2->is_public(1);
     $base2->volatile_clones(1) if $volatile;
@@ -56,9 +110,9 @@ sub test_bundle($vm, $do_clone=0, $volatile=0) {
     my @networks0 = $vm->list_virtual_networks();
 
     if ($do_clone) {
-        _req_clone($user, $base1);
+        _req_clone($user, $base1, $base2);
     } else {
-        _req_create($user, $base1);
+        _req_create($user, $base1, $base2);
     }
 
     my @clone1 = grep { $_->{id_owner} == $user->id } $base1->clones();
@@ -74,13 +128,16 @@ sub test_bundle($vm, $do_clone=0, $volatile=0) {
     is($clone1[0]->{is_volatile} , $volatile);
     is($clone2[0]->{is_volatile} , $volatile);
 
+    my @nets_2 = _get_net($clone2[0]);
+    is(scalar(@nets_2),2) or die $clone2[0]->{name};
+
     remove_domain(@clone1);
     remove_domain(@clone2);
 
     if ($do_clone) {
-        _req_clone($user, $base2);
+        _req_clone($user, $base2, $base1);
     } else {
-        _req_create($user, $base2);
+        _req_create($user, $base2, $base1);
     }
 
     wait_request(debug => 0);
@@ -94,7 +151,7 @@ sub test_bundle($vm, $do_clone=0, $volatile=0) {
     is($clone2[0]->{is_volatile} , $volatile);
 
     for my $clone (@clone1, @clone2) {
-        Ravada::Request->start_domain( uid => $user->id 
+        Ravada::Request->start_domain( uid => $user->id
             , id_domain => $clone->{id}
         );
     }
@@ -114,17 +171,21 @@ sub test_bundle($vm, $do_clone=0, $volatile=0) {
 }
 
 sub _check_net_private($domain, $net=undef) {
-    my $net_found = _get_net($domain);
-    isnt($net_found->{name}, 'default', "Expecting another net in ".$domain->{name}) or exit;
-    my $base = base_domain_name();
-    like($net_found->{name},qr/^$base/) or die $domain->{name};
-    is ( $net_found->{id_owner}, $domain->{id_owner})
-        or confess "Expecting net $net_found->{name} owned by $domain->{id_owner}";
+    my $found;
+    for my $net_found ( _get_net($domain) ) {
+        isnt($net_found->{name}, 'default', "Expecting another net in ".$domain->{name}) or exit;
+        my $base = base_domain_name();
+        like($net_found->{name},qr/^$base/) or die $domain->{name};
+        is ( $net_found->{id_owner}, $domain->{id_owner})
+            or confess "Expecting net $net_found->{name} owned by $domain->{id_owner}";
 
-    if (defined $net) {
-        is($net_found->{name}, $net->{name});
+        if (defined $net) {
+            is($net_found->{name}, $net->{name});
+        }
+
+        $found = $net_found if $net_found->{name} ne 'default';
     }
-    return $net_found;
+    return $found;
 }
 
 sub _get_net($domain0) {
@@ -133,32 +194,42 @@ sub _get_net($domain0) {
         $domain = Ravada::Domain->open($domain0->{id});
     }
 
-    my $net_name;
+    my @net_name;
     if ($domain->type eq 'KVM') {
-        $net_name = _get_net_kvm($domain);
+        @net_name = _get_net_kvm($domain);
     } elsif ($domain->type eq 'Void') {
-        $net_name = _get_net_void($domain);
+        @net_name = _get_net_void($domain);
     }
 
-    die "Error: no net found in ".$domain->name if !$net_name;
+    die "Error: no net found in ".$domain->name if !@net_name;
 
-    my ($net) = grep { $_->{name} eq $net_name }
+    my @net;
+    for my $name (@net_name) {
+        push @net, grep { $_->{name} eq $name }
         $domain->_vm->list_virtual_networks;
-
-    return $net;
+    }
+    return @net;
 }
 
 sub _get_net_kvm($domain) {
     my $doc = XML::LibXML->load_xml(string => $domain->xml_description());
 
-    my ($net_source) = $doc->findnodes("/domain/devices/interface/source");
-    return $net_source->getAttribute('network');
+    my @net_source = $doc->findnodes("/domain/devices/interface/source");
+    my @names;
+    for my $net (@net_source) {
+        push @names, $net->getAttribute('network');
+    }
+    return @names;
 
 }
 
 sub _get_net_void($domain) {
     my $config = $domain->get_config();
-    return ($config->{hardware}->{network}->[0]->{name});
+    my @names;
+    for my $net ( @{$config->{hardware}->{network}} ) {
+        push @names,($net->{name});
+    }
+    return @names;
 }
 #################################################################
 
@@ -180,10 +251,17 @@ for my $vm_name ( vm_names() ) {
 
     diag("Testing $vm_name bundle");
 
+    test_bundle_2($vm,3,0);
+    test_bundle_2($vm,3,1);
+
+    test_bundle_2($vm,4,0);
+    test_bundle_2($vm,4,1);
+
     test_bundle($vm,1); # with clone and volatile
 
     test_bundle($vm,0); # create
     test_bundle($vm,1); # with clone
+
     }
 }
 
