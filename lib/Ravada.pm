@@ -6622,7 +6622,7 @@ sub _enforce_limits_active($self, $request) {
 
     my %domains;
     for my $domain ($self->list_domains( active => 1 )) {
-        next if $domain->bundle();
+        next if $domain->is_in_bundle();
         push @{$domains{$domain->id_owner}},$domain;
         $domain->client_status();
     }

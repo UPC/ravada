@@ -7729,8 +7729,21 @@ sub bundle($self) {
     );
     $sth->execute($self->id);
     my $bundle = $sth->fetchrow_hashref;
+    return if !keys %$bundle;
     lock_hash(%$bundle);
     return $bundle;
+
+}
+
+sub is_in_bundle($self) {
+    my $id=( $self->id_base or $self->id);
+    my $sth = $self->_dbh->prepare("SELECT id FROM bundles "
+        ." WHERE id IN (SELECT id_bundle FROM domains_bundle "
+        ."              WHERE id_domain=?)"
+    );
+    $sth->execute($id);
+    my ($id_bundle) = $sth->fetchrow;
+    return $id_bundle;
 
 }
 
