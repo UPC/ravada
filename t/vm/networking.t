@@ -426,20 +426,7 @@ sub test_assign_network_clone($vm, $net, $volatile) {
 
     my $domain = rvd_back->search_domain($name);
     $domain->prepare_base(user_admin);
-    $domain->volatile_clones(1);
-
-    my $name_clone = new_domain_name();
-    my $req2 = Ravada::Request->create_domain(
-        id_base => $domain->id
-        ,id_owner => user_admin->id
-        ,options => { network => $net->{name}}
-        ,name => $name_clone
-    );
-    wait_request(debug => 0);
-    my $clone = rvd_back->search_domain($name_clone);
-    ok($clone);
-
-    _check_domain_network($clone, $net->{name});
+    $domain->volatile_clones($volatile);
 
     my $name_clone3 = new_domain_name();
     my $req3 = Ravada::Request->clone(
@@ -451,6 +438,19 @@ sub test_assign_network_clone($vm, $net, $volatile) {
     wait_request(debug => 0);
     my $clone3 = rvd_back->search_domain($name_clone3);
     ok($clone3);
+
+    _check_domain_network($clone3, $net->{name});
+
+    my $name_clone = new_domain_name();
+    my $req2 = Ravada::Request->create_domain(
+        id_base => $domain->id
+        ,id_owner => user_admin->id
+        ,options => { network => $net->{name}}
+        ,name => $name_clone
+    );
+    wait_request(debug => 0);
+    my $clone = rvd_back->search_domain($name_clone);
+    ok($clone);
 
     _check_domain_network($clone, $net->{name});
 
@@ -836,6 +836,8 @@ for my $vm_name ( vm_names() ) {
         test_remove_network($vm,$net);
     }
 }
+
+remove_networks_req();
 
 end();
 

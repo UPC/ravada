@@ -4761,7 +4761,6 @@ sub _cmd_clone($self, $request) {
     $args->{alias} = $alias if $alias;
 
     my $net_bundle = $self->_net_bundle($domain, $user);
-    $net_bundle = {} if !$net_bundle;
 
     $args->{options}->{network} = $net_bundle->{name} if $net_bundle;
 

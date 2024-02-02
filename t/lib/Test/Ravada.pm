@@ -90,6 +90,8 @@ create_domain
 
     remove_qemu_pools
 
+    remove_networks_req
+
     mangle_volume
     test_volume_contents
     test_volume_format
@@ -1534,6 +1536,21 @@ sub remove_void_networks($vm=undef) {
         unlink $file or warn "$! $file";
     }
 
+}
+
+sub remove_networks_req() {
+    my $sth = connector()->dbh->prepare("SELECT id,id_vm,name FROM virtual_networks "
+        ." WHERE name like ? "
+    );
+    $sth->execute(base_domain_name."%");
+    while (my ($id, $id_vm, $name) = $sth->fetchrow) {
+        my $req = Ravada::Request->remove_network(
+            uid => user_admin()->id
+            ,id => $id
+            ,id_vm => $id_vm
+        );
+    }
+    wait_request();
 }
 
 sub remove_qemu_networks($vm=undef) {
