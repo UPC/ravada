@@ -5577,7 +5577,7 @@ sub _cmd_check_storage($self, $request) {
             my $path = ''.$vm->_storage_path($storage);
             _check_mounted($path,\%fstab,\%mtab);
             my ($ok,$err) = $vm->write_file("$path/check_storage",$contents);
-            die "Error on starage pool $storage : $err. Retry.\n" if $err;
+            die "Error on storage pool $storage : $err. Retry.\n" if $err;
         }
     }
 }
