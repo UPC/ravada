@@ -187,6 +187,75 @@ sub test_list_bases_many_clones($vm) {
 
 }
 
+sub test_list_bases_show_clones($vm) {
+    my $base = create_domain($vm);
+
+    my $list = rvd_front->list_machines_user(user_admin);
+
+    $base->prepare_base(user_admin);
+
+    my $clone1 = $base->clone(user => user_admin
+    , name => new_domain_name);
+
+    $list = rvd_front->list_machines_user(user_admin);
+    my ($entry) = grep { $_->{id} == $base->id} @$list;
+
+    ok($entry);
+
+    $base->is_public(0);
+    $base->show_clones(1);
+
+    $list = rvd_front->list_machines_user(user_admin);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok($entry);
+
+    $base->show_clones(0);
+
+    $list = rvd_front->list_machines_user(user_admin);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok($entry);
+
+    my $user = create_user();
+    $list = rvd_front->list_machines_user($user);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok(!$entry);
+
+    $base->is_public(1);
+    $list = rvd_front->list_machines_user($user);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok($entry);
+
+    is(scalar(@{$entry->{list_clones}}),0);
+
+    my $clone2 = $base->clone(user => $user
+    , name => new_domain_name);
+
+    $list = rvd_front->list_machines_user($user);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok($entry);
+    ok($entry->{list_clones}->[0]);
+    is($entry->{list_clones}->[0]->{name},$clone2->name) or die Dumper($entry);
+    is($entry->{list_clones}->[0]->{id},$clone2->id) or die Dumper($entry);
+
+    $base->is_public(0);
+    $base->show_clones(1);
+
+    $list = rvd_front->list_machines_user($user);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok($entry) or die Dumper($list);
+
+    ok($entry->{list_clones}->[0]);+    is($entry->{list_clones}->[0]->{name},$clone2->name) or die Dumper($entry);
+    is($entry->{list_clones}->[0]->{id},$clone2->id) or die Dumper($entry);
+
+    $base->show_clones(0);
+
+    $list = rvd_front->list_machines_user($user);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok(!$entry);
+
+    remove_domain($base);
+}
+
 #########################################################
 
 remove_old_domains();
@@ -218,6 +287,8 @@ for my $vm_name (reverse sort @VMS) {
         skip $msg,10    if !$vm;
 
         use_ok($CLASS);
+
+        test_list_bases_show_clones($vm);
 
         test_list_bases_many_clones($vm);
 
