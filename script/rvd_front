@@ -1074,13 +1074,20 @@ get '/machine/view/(:id).(:type)' => sub {
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
 
-    return access_denied($c) unless $USER->is_admin
-                              || $domain->id_owner == $USER->id
-                              || $USER->can_view_all
-                              || $USER->can_start_machine($domain)
-                              ;
+    return view_machine($c) if $USER->is_admin
+                              || $USER->can_view_all;
 
-    return view_machine($c);
+    if ( $domain->id_owner == $USER->id ) {
+        if ( $domain->id_base) {
+            my $base = Ravada::Front::Domain->open($domain->id_base);
+            if ($base->is_public || $base->show_clones()) {
+                return view_machine($c);
+            }
+        } else {
+                return view_machine($c);
+        }
+    }
+    return access_denied($c);
 };
 
 any '/machine/clone/(:id).(:type)' => sub {
@@ -1091,6 +1098,8 @@ any '/machine/clone/(:id).(:type)' => sub {
     if ( $USER && $USER->can_clone() && !$USER->is_temporary() ) {
         my $base = Ravada::Front::Domain->open($c->stash('id'));
         if (!$base->is_public) {
+            return access_denied($c) if !$base->show_clones;
+
             my @clones = $base->clones();
             my ($clone) = grep { $_->{id_owner} == $USER->id } @clones;
             return access_denied($c) if !$clone;

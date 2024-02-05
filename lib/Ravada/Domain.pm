@@ -2069,6 +2069,8 @@ sub info($self, $user) {
         id => $self->id
         ,name => $self->name
         ,is_base => $self->is_base
+        ,is_public => $self->is_public
+        ,show_clones => $self->show_clones
         ,id_base => $self->id_base
         ,is_active => $is_active
         ,is_hibernated => $self->is_hibernated
@@ -4488,6 +4490,10 @@ sub is_public {
         $self->{_data}->{is_public} = $value;
     }
     return $self->_data('is_public');
+}
+
+sub show_clones($self,$value=undef) {
+    return $self->_data('show_clones',$value);
 }
 
 =head2 is_volatile
