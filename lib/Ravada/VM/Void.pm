@@ -172,8 +172,11 @@ sub create_domain {
         my $drivers = {};
         $drivers = $domain_base->_value('drivers');
         $domain->_store( drivers => $drivers );
-        $domain->change_hardware('network',0,{name => $network})
-        if $network;
+        if ( $network ) {
+            for my $index ( 0 .. scalar(@{$clone_hw->{network}})-1) {
+                $domain->change_hardware('network', $index ,{name => $network})
+            }
+        }
     } elsif (!exists $args{config}) {
         $storage = $self->default_storage_pool_name() if !$storage;
         my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".void";

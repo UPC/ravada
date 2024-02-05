@@ -4761,7 +4761,6 @@ sub _cmd_clone($self, $request) {
     $args->{alias} = $alias if $alias;
 
     my $net_bundle = $self->_net_bundle($domain, $user);
-    $net_bundle = {} if !$net_bundle;
 
     $args->{options}->{network} = $net_bundle->{name} if $net_bundle;
 
@@ -5578,7 +5577,7 @@ sub _cmd_check_storage($self, $request) {
             my $path = ''.$vm->_storage_path($storage);
             _check_mounted($path,\%fstab,\%mtab);
             my ($ok,$err) = $vm->write_file("$path/check_storage",$contents);
-            die "Error on starage pool $storage : $err. Retry.\n" if $err;
+            die "Error on storage pool $storage : $err. Retry.\n" if $err;
         }
     }
 }
@@ -6622,6 +6621,7 @@ sub _enforce_limits_active($self, $request) {
 
     my %domains;
     for my $domain ($self->list_domains( active => 1 )) {
+        next if $domain->is_in_bundle();
         push @{$domains{$domain->id_owner}},$domain;
         $domain->client_status();
     }
