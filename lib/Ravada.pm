@@ -2909,6 +2909,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','has_backups','int not null default 0');
     $self->_upgrade_table('domains','auto_compact','int default NULL');
     $self->_upgrade_table('domains','date_status_change' , 'datetime');
+    $self->_upgrade_table('domains','show_clones' , 'int not null default 1');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 

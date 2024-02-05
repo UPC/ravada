@@ -130,14 +130,14 @@ Returns: listref of machines
 
 sub list_machines_user($self, $user, $access_data={}) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,alias,is_public, description, screenshot, id_owner, is_base, date_changed"
+        "SELECT id,name,alias,is_public, description, screenshot, id_owner, is_base, date_changed, show_clones"
         ." FROM domains "
         ." WHERE ( is_base=1 OR ( id_base IS NULL AND id_owner=?))"
         ." ORDER BY alias"
     );
-    my ($id, $name, $alias, $is_public, $description, $screenshot, $id_owner, $is_base, $date_changed);
+    my ($id, $name, $alias, $is_public, $description, $screenshot, $id_owner, $is_base, $date_changed, $show_clones);
     $sth->execute($user->id);
-    $sth->bind_columns(\($id, $name, $alias, $is_public, $description, $screenshot, $id_owner, $is_base, $date_changed));
+    $sth->bind_columns(\($id, $name, $alias, $is_public, $description, $screenshot, $id_owner, $is_base, $date_changed,$show_clones));
 
     my $bookings_enabled = $self->setting('/backend/bookings');
     my @list;
@@ -154,7 +154,13 @@ sub list_machines_user($self, $user, $access_data={}) {
         push @clones,$self->_search_shared($id, $user->id);
 
         my ($clone) = ($clones[0] or undef);
-        next unless $clone || $user->is_admin || ($is_public && $user->allowed_access($id)) || ($id_owner == $user->id);
+
+        next unless
+        $clone && $show_clones
+        || $user->is_admin
+        || ($is_public && $user->allowed_access($id))
+        || ($id_owner == $user->id);
+
         $name = $alias if defined $alias;
         my $base = { id => $id, name => Encode::decode_utf8($name)
             , alias => Encode::decode_utf8($alias or $name)
@@ -322,7 +328,7 @@ sub list_domains($self, %args) {
 
     my $query = "SELECT d.name,d.alias, d.id, id_base, is_base, id_vm, status, is_public "
         ."      ,vms.name as node , is_volatile, client_status, id_owner "
-        ."      ,comment, is_pool"
+        ."      ,comment, is_pool, show_clones"
         ."      ,d.date_changed"
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
