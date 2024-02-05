@@ -322,6 +322,7 @@
             $scope.searching_ldap_attributes = true;
             $scope.shared_user_found=false;
             $scope.storage_pools=['default'];
+            $scope.shared_user_count = -1
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
