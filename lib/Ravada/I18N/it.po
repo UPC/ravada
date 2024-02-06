@@ -8,8 +8,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2024-01-11 18:06+0000\n"
-"Last-Translator: amparorvd <amparorvd@gmail.com>\n"
+"PO-Revision-Date: 2024-02-06 16:45+0000\n"
+"Last-Translator: Dani Sanchez <dani@fib.upc.edu>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/ravada/"
 "translation/it/>\n"
 "Language: it\n"
@@ -1309,6 +1309,7 @@ msgstr ""
 "Pericolo: In questo modo tutti i dati del disco vengono distrutti in modo "
 "permanente."
 
+#, fuzzy
 msgid "can change the settings of any virtual machine "
 msgstr "può modificare le impostazioni di qualsiasi macchina virtuale "
 
