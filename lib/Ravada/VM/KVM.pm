@@ -1267,7 +1267,6 @@ sub _domain_create_from_base {
 
     _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
 
-    my $network = $args{options}->{network};
     $self->_xml_set_network($xml, $network) if $network;
 
     my ($domain, $spice_password)
