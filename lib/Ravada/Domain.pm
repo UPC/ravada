@@ -2069,6 +2069,8 @@ sub info($self, $user) {
         id => $self->id
         ,name => $self->name
         ,is_base => $self->is_base
+        ,is_public => $self->is_public
+        ,show_clones => $self->show_clones
         ,id_base => $self->id_base
         ,is_active => $is_active
         ,is_hibernated => $self->is_hibernated
@@ -2873,6 +2875,7 @@ sub clone {
     my $volatile = delete $args{volatile};
     my $id_owner = delete $args{id_owner};
     my $alias = delete $args{alias};
+    my $options = delete $args{options};
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
@@ -2906,6 +2909,7 @@ sub clone {
     push @args_copy, ( remote_ip => $remote_ip) if $remote_ip;
     push @args_copy, ( from_pool => $from_pool) if defined $from_pool;
     push @args_copy, ( add_to_pool => $add_to_pool) if defined $add_to_pool;
+    push @args_copy, ( options => $options ) if defined $options;
     if ( $self->volatile_clones && !defined $volatile ) {
         $volatile = 1;
     }
@@ -4490,6 +4494,10 @@ sub is_public {
     return $self->_data('is_public');
 }
 
+sub show_clones($self,$value=undef) {
+    return $self->_data('show_clones',$value);
+}
+
 =head2 is_volatile
 
 Returns if the domain is volatile, so it will be removed on shutdown
@@ -5310,7 +5318,7 @@ sub _pre_clone($self,%args) {
 
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
-    for (qw(is_pool start add_to_pool from_pool with_cd volatile id_owner alias)) {
+    for (qw(is_pool start add_to_pool from_pool with_cd volatile id_owner alias options)) {
         delete $args{$_};
     }
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;

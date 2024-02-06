@@ -105,6 +105,7 @@ our %VALID_ARG = (
                 ,start => 2,
                 ,remote_ip => 2
                 ,with_cd => 2
+                ,options => 2
     }
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }
