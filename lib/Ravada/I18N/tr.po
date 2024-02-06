@@ -7,8 +7,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2024-02-06 16:45+0000\n"
-"Last-Translator: Dani Sanchez <dani@fib.upc.edu>\n"
+"PO-Revision-Date: 2024-02-07 17:01+0000\n"
+"Last-Translator: Oğuz Ersen <oguz@ersen.moe>\n"
 "Language-Team: Turkish <https://hosted.weblate.org/projects/ravada/"
 "translation/tr/>\n"
 "Language: tr\n"
@@ -160,7 +160,7 @@ msgid "Screenshot"
 msgstr "Ekran Görüntüsü"
 
 msgid "Paused"
-msgstr "Durdur"
+msgstr "Duraklatıldı"
 
 msgid "Machine locked by request"
 msgstr "Makine istek üzerine kilitlendi"
@@ -331,7 +331,6 @@ msgstr "sahip olunan sanal makinelerin ayarlarını değiştirebilir."
 msgid "can change the settings of any virtual machine."
 msgstr "tüm sanal makinelerin ayarlarını değiştirebilir."
 
-#, fuzzy
 msgid "can change the settings of any virtual machine "
 msgstr "tüm sanal makinelerin ayarlarını değiştirebilir"
 
@@ -856,7 +855,7 @@ msgid "Value"
 msgstr "Değer"
 
 msgid "Allowed"
-msgstr "İzin"
+msgstr "İzin verildi"
 
 msgid "Last"
 msgstr "Son"
@@ -1081,7 +1080,7 @@ msgid "Groups require a LDAP server configured."
 msgstr "Gruplar yapılandırılmış bir LDAP sunucusu gerektirir."
 
 msgid "See documentation about:"
-msgstr ": hakkındaki dökümantasyonu inceleyin"
+msgstr "Hakkındaki belgeleri inceleyin:"
 
 msgid "Configure LDAP Authentication"
 msgstr "LDAP Kimlik Doğrulaması konfigürasyonu"
@@ -1168,10 +1167,10 @@ msgid "Confirm disable node"
 msgstr "Düğümü devre dışı bırakmayı onayla"
 
 msgid "Disabling this node will shut all the"
-msgstr "Bu düğümü devre dışı bırakmak tüm kapatır"
+msgstr "Bu düğümü devre dışı bırakmak tüm"
 
 msgid "machines down."
-msgstr "makineleri"
+msgstr "makineleri kapatır."
 
 msgid "Global Settings"
 msgstr "Genel Ayarlar"
@@ -1344,7 +1343,7 @@ msgid "vram"
 msgstr "vram"
 
 msgid "heads"
-msgstr "heads"
+msgstr "başlıklar"
 
 msgid "Set defaults"
 msgstr "Varsayılanları seç"
@@ -1392,7 +1391,7 @@ msgid "Force change password on first access"
 msgstr "İlk girişte parolayı değiştirmeye zorla"
 
 msgid "Oops!"
-msgstr "Oops!"
+msgstr "Tüh!"
 
 msgid "New Password must be at least 6 characters"
 msgstr "Yeni parola en az 6 karakterden oluşmalı"
@@ -1551,7 +1550,7 @@ msgid "down"
 msgstr "kapalı"
 
 msgid "I don't know settings tabs for:"
-msgstr ": için ayarlar penceresini bilmiyorum"
+msgstr "Şunun için ayarlar sekmesi bilinmiyor:"
 
 msgid "Hardware"
 msgstr "Donanım"
