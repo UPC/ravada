@@ -83,14 +83,14 @@
                 class="fa fa-caret-down"></i>
             <div ng-show="show_domains[hdev.id]">
                 <div class="row ml-0 pl-0" ng-repeat="domain in hdev._domains">
-                    <div class="col col-sm-1 ml-0 pl-0" align="right">
+                    <div class="col col-md-1 ml-0 pl-0" align="right">
                     <a ng-show="domain.is_locked"
                         align="right"
                         title="<%=l 'locked' %>"
                     ><i class="fa fa-arrow-right"></i>
                     </a>
                     </div>
-                    <div class="col col-sm-10 ml-0 pl-0">
+                    <div class="col col-md-11 ml-0 pl-0">
                     <a href="/machine/manage/{{domain.id}}.html"
                             class="machine"
                               ng-class="{
@@ -100,8 +100,8 @@
 
                     ><b ng-show="domain.is_locked">{{domain.name}}</b>
                     <span ng-class="disabled" ng-show="domain.is_locked==0">{{domain.name}}</span>
-                    </a><br/>
-                    <small>{{domain.device}}</small>
+                    </a>
+                    <span ng-show="domain.is_locked" class="ml-4"><small>{{domain.device}}</small></span>
                     </div>
                 </div>
             </div>
