@@ -508,6 +508,24 @@ sub _test_non_persistent($vm ,$id_domain, $volatile) {
     }
 }
 
+sub test_cleanup($vm) {
+    my $user = create_user();
+    user_admin->make_admin($user->id);
+    my $user_name = $user->name;
+
+    my $domain = create_domain_v2(vm => $vm, user => $user);
+    my $id_domain = $domain->id;
+
+    remove_domain_internal($domain);
+
+    my $sth = connector->dbh->prepare("UPDATE domains set is_volatile=1 WHERE id=?");
+    $sth->execute($id_domain);
+    rvd_back->_refresh_volatile_domains();
+
+    my $user2 = Ravada::Auth::SQL->new(name => $user_name);
+    ok($user2->id);
+}
+
 ######################################################################3
 clean();
 
@@ -523,6 +541,8 @@ for my $vm_name ( vm_names() ) {
 
         skip($msg,10)   if !$vm;
         diag("Testing volatile clones for $vm_name");
+
+        test_cleanup($vm);
 
         test_req_volatile($vm);
 

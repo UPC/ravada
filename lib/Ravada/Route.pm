@@ -1,11 +1,11 @@
-package Ravada::Network;
+package Ravada::Route;
 
 use strict;
 use warnings;
 
 =head1 NAME
 
-Ravada::Network - Networks management library for Ravada
+Ravada::Route - Routes management library for Ravada
 
 =cut
 
@@ -31,7 +31,7 @@ our $CONNECTOR;
 
 =head1 Description
 
-    my $net = Ravada::Network->new(address => '127.0.0.1/32');
+    my $net = Ravada::Route->new(address => '127.0.0.1/32');
     if ( $net->allowed( $domain->id ) ) {
 
 =cut

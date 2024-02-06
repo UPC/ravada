@@ -142,6 +142,8 @@ sub _clean_hw($name, @hw) {
                 $item->{file} = '';
             } elsif ($name eq 'filesystem') {
                 $item->{_id} = '';
+            } elsif ($name eq 'network') {
+                delete $item->{hwaddr};
             }
             lock_hash(%$item);
         }

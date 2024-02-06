@@ -31,7 +31,7 @@ use Ravada::Booking;
 use Ravada::Front;
 use Ravada::Front::Domain;
 use Ravada::HostDevice::Templates;
-use Ravada::Network;
+use Ravada::Route;
 use Ravada::WebSocket;
 use POSIX qw(locale_h strftime);
 
@@ -383,6 +383,24 @@ get '/admin/storage' => sub($c) {
 
 };
 
+get '/admin/networks/*id_vm' => { id_vm => undef} => sub($c) {
+
+    return access_denied($c) unless $USER->is_admin
+    || $USER->can_create_networks || $USER->can_manage_all_networks;
+
+    _add_admin_libs($c);
+
+    _select_vm($c) if !defined $c->stash('id_vm');
+
+    Ravada::Request->list_networks(
+        uid => $USER->id
+        ,id_vm => $c->stash('id_vm')
+    );
+
+    return $c->render( template => '/main/admin_networks' );
+
+};
+
 any '/admin/#type' => sub {
   my $c = shift;
 
@@ -493,27 +511,127 @@ get '/node/host_device/remove/(:id)' => sub($c) {
     return $c->render(json => { ok => 1 });
 };
 
-
-get '/list_networks.json' => sub {
+get '/list_routes.json' => sub {
     my $c = shift;
-    $c->render(json => [ Ravada::Network->list_networks ]);
+    $c->render(json => [ Ravada::Route->list_networks ]);
 };
 
-get '/network/info/#id' => sub($c) {
+get '/v2/vm/list_networks/(:id_vm)' => sub {
+    my $c = shift;
+
+    return access_denied($c) unless $USER->is_admin
+    || $USER->can_create_networks || $USER->can_manage_all_networks;
+
+    $c->render(json => Ravada::Front->list_networks($c->stash('id_vm'), $USER->id) );
+};
+
+get '/route/info/#id' => sub($c) {
     my $sth = $RAVADA->_dbh->prepare("SELECT * from networks WHERE id=?");
     $sth->execute($c->stash('id'));
     my $row = $sth->fetchrow_hashref;
     return $c->render(json => $row);
 };
 
-get '/v1/network/remove/#id' => sub($c) {
+get '/v2/route/remove/#id' => sub($c) {
     my $sth = $RAVADA->_dbh->prepare("DELETE from networks WHERE id=?");
     $sth->execute($c->stash('id'));
+    $USER->send_message("Network ".$c->stash('id')." removed");
     return $c->render(json => { ok => 1 });
 };
 
-get '/network/list_domains/#id' => sub($c) {
+get '/route/list_domains/#id' => sub($c) {
     return $c->render( json => $RAVADA->list_bases_network($c->stash('id')));
+};
+
+any '/network/new' => sub($c) {
+    return access_denied($c) unless $USER->is_admin
+    || $USER->can_create_networks || $USER->can_manage_all_networks;
+
+    _add_admin_libs($c);
+    _select_vm($c);
+    $c->stash(item => 'network', id => undef, tab => undef);
+
+    return $c->render( template => '/main/network_new' );
+};
+
+any '/v2/network/new/#id_vm' => sub($c) {
+
+    return access_denied($c) unless $USER->is_admin
+    || $USER->can_create_networks || $USER->can_manage_all_networks;
+
+    my $name = 'net';
+    if ( $c->req->method eq 'POST') {
+        my $arg = decode_json($c->req->body);
+        $name = $arg->{name} if $arg->{name};
+    }
+
+    my $req = Ravada::Request->new_network(
+        uid => $USER->id
+        ,id_vm => $c->stash('id_vm')
+        ,name => $name
+    );
+    $RAVADA->wait_request($req);
+    my $data = {};
+    if ($req->status eq 'done' && $req->output && $req->output =~ /^\{/) {
+        eval {
+            $data = decode_json($req->output);
+        };
+        warn $@ if $@;
+    }
+    $c->render(json => $data);
+};
+
+get '/v2/network/info/#id' => sub($c) {
+    my $sth = $RAVADA->_dbh->prepare("SELECT * from virtual_networks WHERE id=?");
+    $sth->execute($c->stash('id'));
+    my $row = $sth->fetchrow_hashref;
+    return $c->render(json => $row);
+};
+
+sub _network_id_owner($id_network) {
+
+    confess "Error: undefined id_network "if !defined $id_network;
+    my $sth = $RAVADA->_dbh->prepare("SELECT * FROM virtual_networks "
+        ." WHERE id=?");
+    $sth->execute($id_network);
+    my $row = $sth->fetchrow_hashref;
+    warn "Error: network id=$id_network not found " if !$row->{id};
+
+    return ($row->{id_owner} or 0 );
+}
+
+post '/v2/network/set' => sub($c) {
+    my $arg = decode_json($c->req->body);
+    delete $arg->{_owner};
+
+    return access_denied_json($c)
+    unless $USER->is_admin || $USER->can_manage_all_networks
+    ||  ($USER->can_create_networks
+            && ( !$arg->{id} || $USER->id == _network_id_owner($arg->{id}))
+        );
+
+    my $req;
+    my %data;
+    if ($arg->{id}) {
+        $req = Ravada::Request->change_network(
+            uid => $USER->id
+            ,data => $arg
+        );
+    } else {
+        my $id_vm = delete $arg->{id_vm};
+        $req = Ravada::Request->create_network(
+            uid => $USER->id
+            ,id_vm => $id_vm
+            ,data => $arg
+        );
+        $RAVADA->wait_request($req, 120);
+        my $out = {};
+        eval { $out = decode_json($req->output) if $req->output };
+        warn $@ if $@;
+        %data = %$out if $out && keys %$out;
+    }
+    $data{error} = $req->error;
+    return $c->render(json => \%data, output => $req->output , error => $req->error);
 };
 
 sub _add_admin_libs($c) {
@@ -521,19 +639,19 @@ sub _add_admin_libs($c) {
     push @{$c->stash->{css}}, '/css/admin.css';
 }
 
-any '/network/new' => sub($c) {
+any '/route/new' => sub($c) {
     _add_admin_libs($c);
-    return $c->render(template => "/main/network_new");
+    return $c->render(template => "/main/route_new");
 };
 
-post '/v1/network/set' => sub($c) {
+post '/v2/route/set' => sub($c) {
     return access_denied($c) if !$USER->is_admin;
 
     my $arg = decode_json($c->req->body);
     return _update_fields($c, "networks", $arg);
 };
 
-get '/network/set/#id/#field/#id_domain/#value' => sub ($c) {
+get '/v2/route/set/#id/#field/#id_domain/#value' => sub ($c) {
     my $id_network = $c->stash('id');
     my $field = $c->stash('field');
     my $id_domain = $c->stash('id_domain');
@@ -598,6 +716,7 @@ post '/v1/exists/:item' => sub($c) {
     return if !@fields;
 
     $query .= " AND id <> $id " if defined $id;
+
 
     my $sth = $RAVADA->_dbh->prepare("SELECT id FROM $table WHERE $query ");
     $sth->execute(map { $arg->{$_} } @fields );
@@ -741,7 +860,7 @@ get '/list_machine_types.json' => sub {
 get '/list_cpu_models.json' => sub {
     my $c = shift;
 
-    return access_denied($c) unless _logged_in($c)
+    return $c->render(json => []) unless _logged_in($c)
         && $USER->can_create_machine();
 
     my $id_domain = $c->param('id_domain');
@@ -826,10 +945,95 @@ any '/machine/manage/(:id).(:type)' => sub {
      return manage_machine($c);
 };
 
+get '/machine/list_shares/#id' => sub($c) {
+    my $id = $c->stash('id');
+
+    my $machine = Ravada::Front::Domain->open($id);
+    return json_error($c, "Unknown machine id=$id" ) if !$machine;
+
+    return access_denied($c) unless $USER->id == $machine->id_owner
+    || $USER->is_admin;
+
+    return $c->render(json => [$machine->list_shares]);
+};
+
+get '/machine/share/#id/#name' => sub($c) {
+    _add_share($c);
+};
+
+get '/machine/remove_share/#id/#name' => sub($c) {
+    _add_share($c,1);
+};
+
+sub _add_share($c, $remove=0) {
+    my $id = $c->stash('id');
+    my $name = $c->stash('name');
+
+    my $machine = Ravada::Front::Domain->open($id);
+
+    return json_error($c, "Unknown machine id=$id" ) if !$machine;
+
+    return access_denied_json($c) unless $machine->id_owner == $USER->id
+    || $USER->is_admin;
+
+    my $user_share = Ravada::Auth::SQL->new(name => $name);
+
+    return json_error($c,"Unknown user name=$name" )
+    if !$user_share || !$user_share->id;
+
+    if ($remove) {
+        return json_error($c,"Machine not shared with user $name" )
+            if !$user_share->_machine_shared($id);
+    } else {
+        return json_error($c,"Machine already shared with user $name" )
+            if $user_share->_machine_shared($id);
+
+    }
+
+    if ($remove) {
+        $machine->remove_share($user_share);
+        $USER->send_message("Removed shared access from user $name");
+    } else {
+        $machine->share($user_share);
+        $USER->send_message("Machine shared with user $name");
+    }
+
+    return $c->render(json => {id => $id, name => $name});
+};
+
 any '/(:item)/settings/(:id).html' => sub($c) {
 
     _add_admin_libs($c);
     $c->stash(tab => ($c->param('tab') or ''));
+    my $table = $c->stash('item')."s";
+    $table = 'virtual_networks' if $table eq 'networks';
+    $table = 'networks'         if $table eq 'routes';
+
+    return access_denied($c) if $table !~ /^[a-z][a-z_]+$/i;
+
+    if ($table eq 'virtual_networks') {
+        my $id = $c->stash('id'); # get id network
+        return access_denied_json($c)
+            unless $USER->is_admin || $USER->can_manage_all_networks
+        ||  ($USER->can_create_networks && $USER->id == _network_id_owner($id))
+        ;
+    }
+
+    my $id_vm;
+    if ($table eq 'nodes') {
+        $id_vm = $c->stash('id');
+    } elsif ($table ne 'networks') {
+        my $sth = $RAVADA->_dbh->prepare(
+            "SELECT id,id_vm FROM $table WHERE id=?"
+        );
+        $sth->execute($c->stash('id'));
+        my $id2;
+        ($id2, $id_vm) = $sth->fetchrow;
+        return not_found($c, 404, $c->stash('item')." ".$c->stash('id')
+        ." not found in $table") if !$id2;
+
+    }
+    $c->stash('id_vm' => $id_vm);
 
     return $c->render( template => '/main/settings_generic' );
 };
@@ -870,11 +1074,20 @@ get '/machine/view/(:id).(:type)' => sub {
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
 
-    return access_denied($c) unless $USER->is_admin
-                              || $domain->id_owner == $USER->id
+    return view_machine($c) if $USER->is_admin
                               || $USER->can_view_all;
 
-    return view_machine($c);
+    if ( $domain->id_owner == $USER->id || $USER->can_start_machine($domain) ) {
+        if ( $domain->id_base) {
+            my $base = Ravada::Front::Domain->open($domain->id_base);
+            if ($base->is_public || $base->show_clones()) {
+                return view_machine($c);
+            }
+        } else {
+                return view_machine($c);
+        }
+    }
+    return access_denied($c);
 };
 
 any '/machine/clone/(:id).(:type)' => sub {
@@ -885,6 +1098,8 @@ any '/machine/clone/(:id).(:type)' => sub {
     if ( $USER && $USER->can_clone() && !$USER->is_temporary() ) {
         my $base = Ravada::Front::Domain->open($c->stash('id'));
         if (!$base->is_public) {
+            return access_denied($c) if !$base->show_clones;
+
             my @clones = $base->clones();
             my ($clone) = grep { $_->{id_owner} == $USER->id } @clones;
             return access_denied($c) if !$clone;
@@ -1848,6 +2063,7 @@ post '/request/(:name)/' => sub {
     my $name = $c->stash('name');
 
     my $args = decode_json($c->req->body);
+    my $wait = delete $args->{_wait};
 
     for (qw(remote_ip uid)) {
         confess "Error: $_ should not be provided".Dumper($args)
@@ -1890,11 +2106,19 @@ post '/request/(:name)/' => sub {
         };
         warn $@ if $@;
     }
+    my $error = ( $@ or '');
+    my $output = '';
 
+    if ($wait) {
+        $RAVADA->wait_request($req, 60);
+        $error = $req->error if !$error;
+        $output = $req->output if $req->output;
+    }
     $RAVADA->_cache_clean();
 
     return $c->render(json => { ok => 0, error => $@ }) if !$req;
-    return $c->render(json => { ok => 1, request => $req->id });
+    return $c->render(json => { ok => 1, request => $req->id
+                                ,error => $error, output => $output });
 };
 
 get '/request/(:id).(:type)' => sub {
@@ -2066,6 +2290,29 @@ get '/list_users.json' => sub($c) {
     return $c->render(json => $RAVADA->list_users );
 };
 
+get '/search_user/#name'=> sub($c) {
+    my $name = $c->stash('name');
+    return _search_user($c, $name);
+};
+
+get '/search_user/'=> sub($c) {
+
+    return _search_user($c);
+};
+
+
+sub _search_user($c,$name='') {
+
+    my $list_found = $RAVADA->list_users_share($name,$USER);
+    my $found;
+    if (scalar(@$list_found) == 1 ) {
+        ($found) = @$list_found ;
+    } else {
+        ($found) = grep { $_->{name} eq $name } @$list_found;
+    }
+    $found = $found->{name} if $found;
+    return $c->render(json => {found => $found , count => scalar(@$list_found) } );
+};
 
 get '/list_ldap_groups' => sub($c) {
     return access_denied($c) unless $USER->can_view_groups || $USER->can_manage_groups;
@@ -2853,10 +3100,24 @@ sub admin {
 };
 
 sub _select_vm($c) {
-    my $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms ");
-    $sth->execute();
-    my ($id, $name) = $sth->fetchrow;
-    $c->stash('id_vm' => $id, vm_name => $name);
+    my $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms WHERE hostname='localhost' AND vm_type=?");
+    my $types = Ravada::Front::list_vm_types();
+    for my $type ('KVM',@$types) {
+        $sth->execute($type);
+        my ($id, $name) = $sth->fetchrow;
+        next if !$id;
+        $c->stash('id_vm' => $id, vm_name => $name);
+        return;
+    }
+    $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms WHERE vm_type=?");
+    for my $type ('KVM',@$types) {
+        $sth->execute($type);
+        my ($id, $name) = $sth->fetchrow;
+        next if !$id;
+        $c->stash('id_vm' => $id, vm_name => $name);
+        return;
+    }
+    die "Error: No VM found in @$types";
 }
 
 sub _count_nodes($c) {
@@ -3018,6 +3279,32 @@ sub access_denied_json($c, $msg='Access denied') {
     return access_denied($c, $msg);
 }
 
+sub not_found($c,$code=404, $msg="Not found") {
+    my $agent = $c->req->headers->user_agent;
+    if ($agent =~ /Mojolicious/) {
+        return $c->render( text => $msg , status => $code );
+    }
+    if (defined $c->stash('type') && $c->stash('type') eq 'json') {
+        return $c->render(json => { error => $msg }, status => $code);
+    }
+    my @css_snippets = ["\t.intro {\n\t\tbackground:"
+                    ." url($CONFIG_FRONT->{login_bg_file})"
+                    ." no-repeat bottom center scroll;\n\t}"];
+
+    return $c->render(
+                    template => ($CONFIG_FRONT->{not_found} or '/main/not_found')
+                    ,css => ['/css/main.css']
+                    ,csssnippets => @css_snippets
+                    ,js => ['/js/main.js?v='.$RAVADA->version]
+                    ,navbar_custom => 1
+                    ,error => $msg
+                    ,can_login => ((! $USER) || ($USER->is_temporary))
+                    ,guide => $CONFIG_FRONT->{guide}
+                    ,status => $code
+    );
+
+}
+
 sub access_denied {
     my $c = shift;
     my $msg = shift;
@@ -3029,6 +3316,11 @@ sub access_denied {
 
     if (defined $c->stash('type') && $c->stash('type') eq 'json') {
         return $c->render(json => { error => $msg }, status => 403);
+    }
+
+    my $agent = $c->req->headers->user_agent;
+    if ($agent =~ /Mojolicious/) {
+        return $c->render(text => $msg, status => 403);
     }
     my @css_snippets = ["\t.intro {\n\t\tbackground:"
                     ." url($CONFIG_FRONT->{login_bg_file})"
@@ -3048,6 +3340,11 @@ sub access_denied {
 }
 
 sub _access_denied { return access_denied(@_) }
+
+sub json_error($c, $error) {
+    $USER->send_message($error);
+    $c->render(json => {error => $error } );
+}
 
 sub base_id {
     my $name = shift;

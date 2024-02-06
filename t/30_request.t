@@ -310,6 +310,7 @@ sub test_force() {
     my $req = Ravada::Request->refresh_vms(uid => user_admin->id);
     ok($req);
     wait_request( debug => 0);
+    is($req->error, '') or exit;
 
     my $req3 = Ravada::Request->refresh_vms(uid => user_admin->id);
     ok($req3);

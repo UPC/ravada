@@ -900,8 +900,6 @@ sub start {
         $self->_set_displays_ip($set_password, $listen_ip);
     }
 
-    $self->status('starting');
-
     my $error;
     for ( 1 .. 60 ) {
         eval { $self->domain->create() };

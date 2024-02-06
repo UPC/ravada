@@ -55,6 +55,12 @@ has type => (
     ,default => 'KVM'
 );
 
+has has_networking => (
+    isa => 'Bool'
+    , is => 'ro'
+    , default => 1
+);
+
 #########################################################################3
 #
 
@@ -119,7 +125,6 @@ sub _connect {
          };
          confess $@ if $@;
     }
-    $self->_check_networks($vm);
     return $vm;
 }
 
@@ -143,17 +148,22 @@ sub _check_default_storage($self) {
     }
 }
 
-sub _check_networks {
-    my $self = shift;
-    my $vm = shift;
+sub _check_networks($self, $vm=$self->vm) {
 
+    my @found;
     for my $net ($vm->list_all_networks) {
-        next if $net->is_active;
-
-        warn "INFO: Activating KVM network ".$net->get_name."\n";
-        $net->create;
-        $net->set_autostart(1);
+        return if $net->is_active;
+        push @found,($net);
     }
+
+    my ($net) = grep {$_->get_name eq 'default' } @found;
+
+    $net = $found[0] if !$net;
+
+    return if !$net;
+    warn "INFO: Activating KVM network ".$net->get_name."\n";
+    $net->create;
+    $net->set_autostart(1);
 }
 
 =head2 disconnect
@@ -385,10 +395,12 @@ sub remove_file($self,@files) {
 
 sub _list_volumes($self) {
     my @volumes;
+    my @pools;
+    my %duplicated_path;
     for my $pool (_list_storage_pools($self->vm)) {
         my @vols;
         for ( 1 .. 10) {
-            next if !$pool->is_active;
+           next if !$pool->is_active;
            eval { @vols = $pool->list_all_volumes() };
            last if $@ && ref($@) && $@->code == 55;
            last if !$@ || $@ =~ / no storage pool with matching uuid/;
@@ -408,6 +420,7 @@ sub _list_used_volumes_known($self) {
     my @used;
     while ( my ($id, $name) = $sth->fetchrow) {
         my $dom = $self->search_domain($name);
+        next if !$dom;
         my $xml = $dom->xml_description();
         my @vols = $self->_find_all_volumes($xml);
         my @links;
@@ -609,7 +622,9 @@ sub _file_exists_remote($self, $file) {
     }
 
     die "Error: invalid file '$file'" if $file =~ /[`;(\[" ]/;
-    my ($out,$err) = $self->_ssh->capture2("ls $file");
+    my $ssh = $self->_ssh;
+    confess "Error: no _ssh ".$self->name if !$ssh;
+    my ($out,$err) = $ssh->capture2("ls $file");
     my @ls = split /\n/,$out;
     for (@ls) { chomp };
     return scalar(@ls);
@@ -778,10 +793,6 @@ sub search_domain($self, $name, $force=undef) {
     };
     if ($@ && $@ =~ /libvirt error code: 38,/) {
         warn $@;
-        if (!$self->is_local) {
-            warn "DISABLING NODE ".$self->name;
-            $self->enabled(0);
-        }
         return;
     }
 
@@ -849,8 +860,9 @@ sub list_domains {
 
     confess "Arguments unknown ".Dumper(\%args)  if keys %args;
 
-    my $query = "SELECT id, name FROM domains WHERE id_vm = ? ";
-    $query .= " AND status = 'active' " if $active;
+    my $query = "SELECT d.id, d.name FROM domains d ,domain_instances di "
+        ."WHERE d.id=di.id_domain AND di.id_vm = ? ";
+    $query .= " AND d.status = 'active' " if $active;
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
 
@@ -1098,15 +1110,18 @@ sub _domain_create_common {
 
     $self->_fix_pci_slots($xml);
     $self->_xml_add_guest_agent($xml);
-    $self->_xml_clean_machine_type($xml) if !$self->is_local;
+    Ravada::Domain::KVM::_check_machine(undef, $xml, $self) if !$self->is_local;
+
     $self->_xml_add_sysinfo_entry($xml, hostname => $args{name});
     $self->_xml_fix_nvram($xml, $args{name});
 
     my $dom;
 
+    my $host_devices = $self->list_host_devices();
+
     for ( 1 .. 10 ) {
         eval {
-            if ($user->is_temporary || $is_volatile ) {
+            if ($user->is_temporary || $is_volatile && !$host_devices ) {
                 $dom = $self->vm->create_domain($xml->toString());
             } else {
                 $dom = $self->vm->define_domain($xml->toString());
@@ -1141,6 +1156,7 @@ sub _domain_create_common {
          , domain => $dom
         , storage => $self->storage_pool
        , id_owner => $id_owner
+       , active => ($user->is_temporary || $is_volatile || $host_devices)
     );
     return ($domain, $spice_password);
 }
@@ -1215,7 +1231,7 @@ sub _domain_create_from_base {
     confess "argument id_base or base required ".Dumper(\%args)
         if !$args{id_base} && !$args{base};
 
-    confess "Domain $args{name} already exists"
+    confess "Domain $args{name} already exists in ".$self->name
         if $self->search_domain($args{name});
 
     my $base = $args{base};
@@ -1246,8 +1262,11 @@ sub _domain_create_from_base {
 
     _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
 
+    my $network = $args{options}->{network};
+    $self->_xml_set_network($xml, $network) if $network;
+
     my ($domain, $spice_password)
-        = $self->_domain_create_common($xml,%args, is_volatile=>$volatile);
+        = $self->_domain_create_common($xml,%args, is_volatile=>$volatile, base => $base);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner}
         , id_vm => $self->id
     );
@@ -1823,6 +1842,7 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     my $machine = delete $options->{machine};
     my $arch = delete $options->{arch};
     my $bios = delete $options->{'bios'};
+    my $network = delete $options->{'network'};
 
     confess "Error: bios=$bios and uefi=$uefi clash"
     if defined $uefi && defined $bios
@@ -1857,7 +1877,12 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     } else {
         $self->_xml_set_pci_noe($doc);
     }
+    $self->_xml_set_network($doc, $network) if $network;
+}
 
+sub _xml_set_network($self, $doc, $network) {
+    my ($net_source) = $doc->findnodes('/domain/devices/interface/source');
+    $net_source->setAttribute('network' => $network);
 }
 
 sub _xml_set_arch($self, $doc, $arch) {
@@ -2404,11 +2429,6 @@ sub _xml_add_guest_agent {
     
 }
 
-sub _xml_clean_machine_type($self, $doc) {
-    my ($os_type) = $doc->findnodes('/domain/os/type');
-    $os_type->setAttribute( machine => 'pc');
-}
-
 sub _xml_add_sysinfo($self,$doc) {
     my ($smbios) = $doc->findnodes('/domain/os/smbios');
     if (!$smbios) {
@@ -2439,6 +2459,7 @@ sub _xml_add_sysinfo_entry($self, $doc, $field, $value) {
     ($hostname) = $oemstrings->addNewChild(undef,'entry');
     $hostname->appendText("$field: $value");
 }
+
 sub _xml_remove_hostdev {
     my $doc = shift;
 
@@ -2460,7 +2481,6 @@ sub _xml_remove_cdrom_device {
         }
     }
 }
-
 
 sub _xml_remove_cdrom {
     my $doc = shift;
@@ -2663,13 +2683,13 @@ sub _xml_add_graphics_streaming {
     $listen->setAttribute(mode => 'filter');
 }
 
-=head2 list_networks
+=head2 list_routes
 
 Returns a list of networks known to this VM. Each element is a Ravada::NetInterface object
 
 =cut
 
-sub list_networks {
+sub list_routes {
     my $self = shift;
 
     $self->connect() if !$self->vm;
@@ -2956,6 +2976,208 @@ sub copy_file_storage($self, $file, $storage) {
 
 sub get_library_version($self) {
     return $self->vm->get_library_version();
+}
+
+sub can_list_cpu_models($self) {
+    return 1;
+}
+
+sub list_virtual_networks($self) {
+    my @networks;
+    for my $net ($self->vm->list_all_networks()) {
+        my $doc = XML::LibXML->load_xml(string => $net->get_xml_description);
+        my ($ip_doc) = $doc->findnodes("/network/ip");
+        my $ip = $ip_doc->getAttribute('address');
+        my $netmask = $ip_doc->getAttribute('netmask');
+        my $data= {
+            is_active => $net->is_active()
+            ,autostart => $net->get_autostart()
+            ,bridge => $net->get_bridge_name()
+            ,id_vm => $self->id
+            ,name => $net->get_name
+            ,ip_address => $ip
+            ,ip_netmask => $netmask
+            ,internal_id => ''.$net->get_uuid_string
+        };
+        my ($dhcp_range) = $ip_doc->findnodes("dhcp/range");
+        my ($start,$end);
+        if ($dhcp_range) {
+            $start = $dhcp_range->getAttribute('start');
+            $end = $dhcp_range->getAttribute('end');
+            $data->{dhcp_start} = $start if defined $start;
+            $data->{dhcp_end} = $end if defined $end;
+        }
+        push @networks,($data);
+    }
+    return @networks;
+}
+
+sub new_network($self, $name='net') {
+    my @networks = $self->list_virtual_networks();
+
+    my %base = (
+        name => $name
+        ,ip_address => ['192.168.',122,'.1']
+        ,bridge => 'virbr'
+    );
+    my $new = {ip_netmask => '255.255.255.0'};
+    for my $field ( keys %base) {
+        my %old = map { $_->{$field} => 1 } @networks;
+        my ($last) = reverse sort keys %old;
+        my ($z,$n) = $last =~ /.*?(0*)(\d+)/;
+        $z=$last if !defined $z;
+        $n=0 if !defined $n;
+        $n++;
+        $n = "$z$n";
+
+        my $template = $base{$field};
+        if (ref($template)) {
+            $n=$template->[1];
+        }
+        my $value;
+        for ( 0 .. 255 ) {
+            if (ref($template)) {
+                $value = $template->[0].$n.$template->[2]
+            } else {
+                $value = $template.$n;
+            }
+            last if !exists $old{$value};
+            $n++;
+        }
+        $new->{$field} = $value;
+    }
+    return $new;
+}
+
+sub create_network($self, $data) {
+
+    confess if !$data->{name} || !$data->{ip_address};
+
+    my $xml = XML::LibXML->load_xml(string =>
+        "<network><name>$data->{name}</name></network>"
+    );
+    my ($xml_net) = $xml->findnodes("/network");
+
+    my $forward = $xml_net->addNewChild(undef,'forward');
+    $forward->setAttribute('mode' => 'nat');
+
+    my $ip = $xml_net->addNewChild(undef,'ip');
+    $ip->setAttribute('address' => $data->{ip_address});
+    $ip->setAttribute('netmask' => $data->{ip_netmask});
+
+    if ($data->{dhcp_start} || $data->{dhcp_end}) {
+        my $dhcp = $ip->addNewChild(undef, 'dhcp');
+        my $range = $dhcp->addNewChild(undef,'range');
+        $range->setAttribute('start' => $data->{dhcp_start});
+        $range->setAttribute('end' => $data->{dhcp_end});
+    }
+
+    if ($data->{bridge}) {
+        my ($bridge) = $xml_net->addNewChild(undef,'bridge');
+        $bridge->setAttribute(name => $data->{bridge});
+    }
+
+    $self->vm->define_network($xml->toString());
+
+    my $new_network=$self->vm->get_network_by_name($data->{name});
+    my $xml2=XML::LibXML->load_xml(string =>$new_network->get_xml_description());
+    my ($uuid) = $xml2->findnodes("/network/uuid/text()");
+    $data->{internal_id} = ''.$uuid;
+
+    $new_network->create() if $data->{is_active};
+
+    $new_network->set_autostart($data->{autostart});
+
+    $data->{is_active} = $new_network->is_active;
+
+    return { internal_uid => ''.$uuid };
+}
+
+sub remove_network($self, $name) {
+    my $net = $self->vm->get_network_by_name($name);
+
+    $net->destroy() if $net->is_active;
+    $net->undefine();
+}
+
+sub change_network($self, $data) {
+    my $network = $self->vm->get_network_by_uuid($data->{internal_id});
+    die "Error: Unknown network $data->{name}" if !$network;
+
+    my $doc = XML::LibXML->load_xml(string => $network->get_xml_description);
+    my $changed = 0;
+    my $bridge = delete $data->{bridge};
+    if (defined $bridge) {
+        my ($bridge_xml) = $doc->findnodes("/network/bridge");
+        if (!defined $bridge_xml->getAttribute('name')
+            || $bridge_xml->getAttribute('name') ne $bridge) {
+            $bridge_xml->setAttribute(name => $bridge);
+            $changed++;
+        }
+    }
+    my $dhcp_start = delete $data->{dhcp_start};
+    my $dhcp_end = delete $data->{dhcp_end};
+    my ($dhcp_xml) = $doc->findnodes("/network/ip/dhcp/range");
+    if ($dhcp_xml->getAttribute('start') ne $dhcp_start) {
+        $dhcp_xml->setAttribute('start' => $dhcp_start);
+        $changed++;
+    }
+    if ($dhcp_xml->getAttribute('end') ne $dhcp_end) {
+        $dhcp_xml->setAttribute('end' => $dhcp_end);
+        $changed++;
+    }
+    my $ip_address = delete $data->{ip_address};
+    my ($ip_xml) = $doc->findnodes("/network/ip");
+    if ($ip_address ne $ip_xml->getAttribute('address')) {
+        $ip_xml->setAttribute('address' => $ip_address);
+        $changed++;
+    }
+    my $ip_netmask = delete $data->{ip_netmask};
+    if ($ip_netmask ne $ip_xml->getAttribute('netmask')) {
+        $ip_xml->setAttribute('netmask' => $ip_netmask);
+        $changed++;
+    }
+    my $name = delete $data->{name};
+    my ($name_xml) = $doc->findnodes("/network/name/text()");
+    if (''.$name_xml ne $name) {
+        die "Error: networks can not be renamed";
+    }
+
+    if ($changed) {
+        $network->destroy() if $network->is_active;
+        $network= $self->vm->define_network($doc->toString);
+    }
+
+    my $is_active = delete $data->{is_active};
+    if (defined $is_active) {
+        if ($is_active && ! $network->is_active) {
+            $network->create();
+            $changed++;
+        }
+        if (!$is_active && $network->is_active) {
+            $network->destroy;
+            $changed++;
+        }
+    }
+
+    my $autostart = delete $data->{autostart};
+    if (defined $autostart) {
+        if ($autostart && ! $network->get_autostart) {
+            $network->set_autostart(1);
+            $changed++;
+        }
+        if (!$autostart && $network->get_autostart) {
+            $network->set_autostart(0);
+            $changed++;
+        }
+    }
+
+    for ('id_vm','internal_id','id' ,'_old_name', 'date_changed') {
+        delete $data->{$_};
+    }
+    die "Error: unexpected args ".Dumper($data) if keys %$data;
+
+    return $changed;
 }
 
 1;
