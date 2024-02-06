@@ -1077,7 +1077,7 @@ get '/machine/view/(:id).(:type)' => sub {
     return view_machine($c) if $USER->is_admin
                               || $USER->can_view_all;
 
-    if ( $domain->id_owner == $USER->id ) {
+    if ( $domain->id_owner == $USER->id || $USER->can_start_machine($domain) ) {
         if ( $domain->id_base) {
             my $base = Ravada::Front::Domain->open($domain->id_base);
             if ($base->is_public || $base->show_clones()) {

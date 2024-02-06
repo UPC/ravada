@@ -953,7 +953,7 @@ sub mojo_clean($wait=1) {
 
 sub mojo_check_login( $t, $user=$MOJO_USER , $pass=$MOJO_PASSWORD ) {
     $t->ua->get("/user.json");
-    return if $t->tx->res->code =~ /^(101|200|302)$/;
+    return if $t->tx && $t->tx->res->code =~ /^(101|200|302)$/;
     mojo_login($t, $user,$pass);
 }
 
