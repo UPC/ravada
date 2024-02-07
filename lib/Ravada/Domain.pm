@@ -2407,13 +2407,15 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         next if $instance->{id_vm} == $self->_vm->id;
         my $vm;
         eval { $vm = Ravada::VM->open($instance->{id_vm}) };
-        die $@ if $@ && $@ !~ /I can't find VM/i;
-        next if !$vm || !$vm->is_active;
+        die $@ if $@ && $@ !~ /I can't find VM ||libvirt error code: 38,/i;
         my $domain;
         $@ = '';
         eval { $domain = $vm->search_domain($domain_name) } if $vm;
         warn $@ if $@;
-        $domain->remove($user, $cascade) if $domain;
+        eval {
+            $domain->remove($user, $cascade) if $domain;
+        };
+        warn $@ if $@;
         $sth_delete->execute($instance->{id});
     }
 }
