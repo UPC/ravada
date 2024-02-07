@@ -529,8 +529,9 @@ sub _search_already_started($self, $fast = 0) {
     $sth->execute($self->_vm->type);
     my %started;
     while (my ($id) = $sth->fetchrow) {
-        my $vm = Ravada::VM->open($id);
-        next if !$vm->enabled;
+        my $vm;
+        eval { $vm = Ravada::VM->open($id) };
+        next if !$vm || !$vm->enabled;
 
         my $vm_active;
         eval {
@@ -539,7 +540,7 @@ sub _search_already_started($self, $fast = 0) {
         my $error = $@;
         if ($error) {
             warn $error;
-            $vm->enabled(0) if !$vm->is_local;
+            $vm->enabled(0) if !$vm->is_local && !$vm->ping;
             next;
         }
         next if !$vm_active;
