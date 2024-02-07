@@ -6367,6 +6367,7 @@ sub _req_method {
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
+        ,remove_domain => \&_cmd_remove
         ,remove_clones => \&_cmd_remove_clones
         ,restore_domain => \&_cmd_restore_domain
         ,resume => \&_cmd_resume

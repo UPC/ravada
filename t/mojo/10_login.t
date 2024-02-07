@@ -365,10 +365,15 @@ sub test_login_non_admin_req($t, $base, $clone){
 
     mojo_check_login($t, $name, $pass);
     $base->is_public(0);
+    $base->show_clones(1);
 
     $t->get_ok("/machine/clone/".$base->id.".html")
     ->status_is(200);
     die "Error cloning ".$base->id if $t->tx->res->code() != 200;
+
+    $base->show_clones(0);
+    $t->get_ok("/machine/clone/".$base->id.".html")
+    ->status_is(403);
 }
 
 
