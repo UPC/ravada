@@ -2629,6 +2629,7 @@ sub _check_leftovers_users {
 
 sub _check_iptables() {
     return if $>;
+    return if !$VM_VALID{KVM};
     for my $table ( 'mangle', 'nat') {
         my @cmd = ("iptables" ,"-t", $table,"-L","POSTROUTING");
         my ($in, $out, $err);
