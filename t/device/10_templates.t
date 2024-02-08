@@ -583,14 +583,52 @@ sub _mangle_dom_hd_kvm($domain) {
     $domain->reload_config($xml);
 }
 
-sub test_templates_change_devices($vm) {
-    return if $vm->type ne 'Void';
+sub test_frontend_list($vm) {
+
+    my $path  = "/var/tmp/$</ravada/dev";
+    my $hd1 = _mock_hd($vm , $path);
+    my $hd2 = _mock_hd($vm , $path);
+
+    my $domain = _create_domain_hd($vm, $hd1);
+    $domain->start(user_admin);
+
+    my $ws_args = {
+            channel => '/'.$vm->id
+            ,login => user_admin->name
+    };
+    my $front_devices = Ravada::WebSocket::_list_host_devices(rvd_front(), $ws_args);
+
+    my ($dev_attached) = ($domain->list_host_devices_attached);
+
+    for my $fd ( @$front_devices ) {
+        for my $dev ( @{$fd->{devices}} ) {
+            if ($dev->{name} eq $dev_attached->{name}) {
+                ok($dev->{domain} , "Expecting domains listed in ".$dev->{name}) or next;
+                is($dev->{domain}->{id}, $domain->id,"Expecting ".$domain->name." attached in ".$dev->{name});
+            }
+        }
+    }
+}
+
+sub _mock_hd($vm, $path) {
+
+    my ($template, $name) = _mock_devices($vm , $path);
+
+    my $id_hd = $vm->add_host_device(template => $template->{name});
+    my $hd = Ravada::HostDevice->search_by_id($id_hd);
+
+    $hd->_data(list_command => "ls $path");
+    $hd->_data(list_filter => $name);
+
+    return $hd;
+}
+
+sub _mock_devices($vm, $path) {
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
     ok(@$templates);
 
     my ($template) = grep { $_->{list_command} eq 'lsusb' } @$templates;
 
-    my $path  = "/var/tmp/$</ravada/dev";
     make_path($path) if !-e $path;
 
     my $name = base_domain_name()." Mock_device ID";
@@ -609,6 +647,15 @@ sub test_templates_change_devices($vm) {
         print $out "fff6f017-3417-4ad3-b05e-17ae3e1a461".int(rand(10));
         close $out;
     }
+
+    return ($template, $name);
+}
+
+sub test_templates_change_devices($vm) {
+    return if $vm->type ne 'Void';
+
+    my $path  = "/var/tmp/$</ravada/dev";
+    my ($template, $name) = _mock_devices($vm, $path);
 
     $vm->add_host_device(template => $template->{name});
     my ($hostdev) = $vm->list_host_devices();
@@ -832,6 +879,8 @@ for my $vm_name ( vm_names()) {
         skip($msg,10)   if !$vm;
 
         diag("Testing host devices in $vm_name");
+
+        test_frontend_list($vm);
 
         test_templates_gone_usb_2($vm);
         test_templates_gone_usb($vm);
