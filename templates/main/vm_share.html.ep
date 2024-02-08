@@ -10,9 +10,10 @@
                 <i class="fa fa-search" aria-hidden="true"
                 ng-click="search_shared_user()"
                 ></i>
-                <span ng-show="shared_user_found && !searching_shared_user">
+                <span ng-show="!searching_shared_user && shared_user_count>=0 && !shared_user_found ">
                 {{shared_user_count}} <%=l 'found' %>
                 </span>
+                <span ng-show="shared_user_found"><%=l 'Exact match' %></span>
                 <i class="fas fa-sync-alt fa-spin"
                     ng-show="searching_shared_user"></i>
             </div>

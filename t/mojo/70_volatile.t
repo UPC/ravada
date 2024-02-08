@@ -29,7 +29,7 @@ my ($USERNAME, $PASSWORD);
 sub _wait_ip($id_domain0, $seconds=60) {
 
     my $domain;
-    for ( 1 .. $seconds ) {
+    for my $count ( 0 .. $seconds ) {
         my $id_domain = $id_domain0;
 
         if ($id_domain0 !~ /^\d+$/) {
@@ -42,8 +42,13 @@ sub _wait_ip($id_domain0, $seconds=60) {
             ,uid => user_admin->id
         );
 
+        my $info;
+        eval {
         $domain = Ravada::Front::Domain->open($id_domain);
-        my $info = $domain->info(user_admin);
+        $info = $domain->info(user_admin);
+        };
+        warn $@ if $@ && $@ !~ /Unknown domain/;
+        return if $@ || ($count && !$domain->is_active);
         return $info->{ip} if exists $info->{ip} && $info->{ip};
         diag("Waiting for ".$domain->name. " ip") if !(time % 10);
         sleep 1;
@@ -115,6 +120,7 @@ sub bases($vm_name) {
         }
         ok($base, "Expecting domain $name created") or exit;
         push @bases,($base);
+        last if scalar(@bases)>1 && !$ENV{TEST_LONG};
     }
     for my $base (@bases) {
         if ($base->id_base) {
@@ -125,7 +131,7 @@ sub bases($vm_name) {
     return @bases;
 }
 
-sub _set_base_vms($vm_name, $id_base) {
+sub _set_base_vms($vm_name, $id_base, $network) {
     my $sth = connector->dbh->prepare("SELECT id FROM vms WHERE vm_type=?");
     $sth->execute($vm_name);
     while ( my ($id_vm) = $sth->fetchrow) {
@@ -135,8 +141,18 @@ sub _set_base_vms($vm_name, $id_base) {
     $sth->execute($vm_name);
     while ( my ($id_vm) = $sth->fetchrow) {
         $t->post_ok("/node/enable/$id_vm.json");
+
+        my $req = Ravada::Request->create_network(
+        uid => user_admin->id
+        ,id_vm => $id_vm
+        ,data => $network
+        );
+        wait_request(check_error => 0);
+
         my $id_req = mojo_request($t,"set_base_vm", { id_vm => $id_vm, id_domain => $id_base, value => 1 }, 0);
-        mojo_request($t,"clone", { id_domain => $id_base , after_request => $id_req, name => new_domain_name() });
+        mojo_request($t,"clone", { id_domain => $id_base , after_request => $id_req, name => new_domain_name()
+                    ,options => { network => $network->{name} }
+            });
     }
 
 }
@@ -149,10 +165,50 @@ sub _id_vm($vm_name) {
     return $id;
 }
 
+sub _count_nodes($vm_name) {
+    my $sth = connector->dbh->prepare(
+        "SELECT count(*) FROM vms WHERE vm_type=?"
+        ."  AND is_active=1 AND enabled=1"
+    );
+    $sth->execute($vm_name);
+    my ($count) = $sth->fetchrow;
+    warn "No nodes found for vm_type=$vm_name" if !$count;
+    return ($count or 1);
+}
+
+sub _new_network($id_vm) {
+
+    my $req_new = Ravada::Request->new_network(
+        uid => user_admin->id
+        ,id_vm => $id_vm
+        ,name => base_domain_name()
+    );
+    wait_request(debug => 0);
+    like($req_new->output , qr/\d+/) or exit;
+
+    my $net = decode_json($req_new->output);
+    my $name = $net->{name};
+
+    my $user = create_user();
+    my $req = Ravada::Request->create_network(
+        uid => user_admin->id
+        ,id_vm => $id_vm
+        ,data => $net
+    );
+    wait_request(check_error => 0);
+
+    die $req->error if $req->error;
+
+    return $net;
+}
+
 sub test_clone($vm_name, $n=10) {
     my $id_vm = _id_vm($vm_name);
 
     my @bases = bases($vm_name);
+
+    my $network = _new_network($id_vm);
+    my $network_name = $network->{name};
 
     for my $base ( @bases ) {
         mojo_request($t,"prepare_base", {id_domain => $base->id });
@@ -160,21 +216,29 @@ sub test_clone($vm_name, $n=10) {
         $base->volatile_clones(1);
 
         is($base->_data('id_vm'), $id_vm) or die $base->name;
+
+        Ravada::Request->remove_clones(
+            uid => user_admin->id
+            ,id_domain => $base->id
+            ,at => time + 300+_count_nodes($vm_name)*2
+        );
+
     }
 
     for my $base (@bases) {
-        _set_base_vms($vm_name, $base->id);
+        _set_base_vms($vm_name, $base->id, $network);
         is($base->_data('id_vm'), $id_vm) or die $base->name;
     }
 
     my $times = 2;
     $times = 20 if $ENV{TEST_LONG};
 
-    my $seconds = 2;
+    my $seconds = 0;
     LOOP: for my $count0 ( 0 .. $times ) {
-        for my $count1 ( 0 .. $n*scalar(@bases) ) {
+        for my $count1 ( 0 .. $n*_count_nodes($vm_name) ) {
             for my $base ( @bases ) {
                 next if !$base->is_base;
+
                 next if $base->list_requests > 10;
                 last LOOP if _too_loaded("clone");
                 my $user = create_user(new_domain_name(),$$);
@@ -189,6 +253,7 @@ sub test_clone($vm_name, $n=10) {
                     ,remote_ip => "192.168.122.$ip"
                     ,start => 1
                     ,name => $name
+                    ,options => { network => $network_name }
                 );
                 delete_request('set_time','force_shutdown');
                 next if $vm_name eq 'Void';
@@ -362,6 +427,8 @@ if (!ping_backend()) {
 }
 $Test::Ravada::BACKGROUND=1;
 
+remove_networks_req();
+
 $t = Test::Mojo->new($SCRIPT);
 $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
@@ -381,6 +448,7 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
 }
 
 remove_old_domains_req(0); # 0=do not wait for them
+remove_networks_req();
 
 end();
 done_testing();

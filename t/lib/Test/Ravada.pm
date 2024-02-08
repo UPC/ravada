@@ -74,6 +74,7 @@ create_domain
     remove_old_domains_req
     remove_domain_and_clones_req
     remove_domain
+    remove_volatile_clones
     mojo_init
     mojo_clean
     mojo_create_domain
@@ -88,6 +89,8 @@ create_domain
     remove_old_users_ldap
 
     remove_qemu_pools
+
+    remove_networks_req
 
     mangle_volume
     test_volume_contents
@@ -728,10 +731,41 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
 
 }
 
+sub remove_volatile_clones(@bases) {
+
+    for my $base0 (@bases) {
+        confess if !defined $base0;
+        my $base = $base0;
+
+        my $id = $base0->{id};
+        $id = $base0->id if !defined $id;
+
+        $base = Ravada::Front::Domain->open($id)
+        unless ref($base) =~ /^Ravada::/;
+
+        next if !$base;
+        for my $clone ($base->clones) {
+            next unless $clone->{is_volatile};
+            Ravada::Request->remove_domain(
+                    uid => user_admin->id
+                    ,name => $clone->{name}
+            );
+        }
+    }
+}
+
 sub remove_domain(@bases) {
 
-    for my $base (@bases) {
-        confess if !defined $base;
+    for my $base0 (@bases) {
+        confess if !defined $base0;
+        my $base = $base0;
+
+        my $id = $base0->{id};
+        $id = $base0->id if !defined $id;
+
+        $base = Ravada::Domain->open($id)
+        unless ref($base) =~ /^Ravada::/;
+
         for my $clone ($base->clones) {
             my $d_clone = Ravada::Domain->open($clone->{id});
             if ( $d_clone ) {
@@ -1030,7 +1064,7 @@ sub _wait_mojo_request($t, $url) {
     }
     my $req = Ravada::Request->open($body_json->{request});
     for ( 1 .. 180 ) {
-        last if $req->status eq 'done';
+        last if $req->status eq 'done' || $req->at_time;
         sleep 1;
         diag("Waiting for request "
             .$req->id." ".$req->command." ".$req->status." ".$req->error) if !($_ % 10);
@@ -1307,6 +1341,7 @@ sub wait_request {
             next if $@ && $@ =~ /I can't find id=$req_id/;
             die $@ if $@;
             next if $skip{$req->command};
+            next if $req->at_time && $req->status eq 'requested';
             if ( $req->status ne 'done' ) {
                 my $run_at = '';
                 if ($req->status eq 'requested') {
@@ -1371,7 +1406,7 @@ sub wait_request {
             for my $req (@$request) {
                 $req = Ravada::Request->open($req) if !ref($req);
                 next if !$req->id || $skip{$req->command};
-                if ($req->status ne 'done') {
+                if ($req->status ne 'done' && !$req->at_time) {
                     $done_all = 0;
                     if ( $debug && (time%5 == 0) ) {
                         diag("Waiting for request ".$req->id." ".$req->command);
@@ -1416,6 +1451,7 @@ sub fast_forward_requests() {
     my $sth = $CONNECTOR->dbh->prepare("UPDATE requests "
         ." SET at_time=0 WHERE status = 'requested' AND at_time>0 "
         ."    AND command <> 'open_exposed_ports'"
+        ."    AND command <> 'remove_clones'"
     );
     eval {
     $sth->execute();
@@ -1495,11 +1531,26 @@ sub remove_void_networks($vm=undef) {
 
     opendir my $dir, $dir_net or die "$! $dir_net";
     while(my $filename = readdir $dir) {
+        next unless $filename =~ /^$base.*\.yml$/;
         my $file = "$dir_net/$filename";
-        next unless $file =~ /^$base.*\.yml$/;
         unlink $file or warn "$! $file";
     }
 
+}
+
+sub remove_networks_req() {
+    my $sth = connector()->dbh->prepare("SELECT id,id_vm,name FROM virtual_networks "
+        ." WHERE name like ? "
+    );
+    $sth->execute(base_domain_name."%");
+    while (my ($id, $id_vm, $name) = $sth->fetchrow) {
+        my $req = Ravada::Request->remove_network(
+            uid => user_admin()->id
+            ,id => $id
+            ,id_vm => $id_vm
+        );
+    }
+    wait_request();
 }
 
 sub remove_qemu_networks($vm=undef) {
@@ -2578,6 +2629,7 @@ sub _check_leftovers_users {
 
 sub _check_iptables() {
     return if $>;
+    return if !$VM_VALID{KVM};
     for my $table ( 'mangle', 'nat') {
         my @cmd = ("iptables" ,"-t", $table,"-L","POSTROUTING");
         my ($in, $out, $err);

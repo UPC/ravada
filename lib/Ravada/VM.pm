@@ -234,6 +234,7 @@ sub open {
     $args{security} = decode_json($row->{security}) if $row->{security};
 
     my $vm = $self->new(%args);
+    return if !$vm || !$vm->vm;
     $VM{$args{id}} = $vm unless $args{readonly};
     return $vm;
 
@@ -555,6 +556,7 @@ sub _around_create_domain {
     $domain->display($owner)    if $domain->is_active;
 
     $domain->is_pool(1) if $add_to_pool;
+
     return $domain;
 }
 
@@ -846,7 +848,7 @@ sub _ip_a($self, $dev) {
     my ($out, $err) = $self->run_command_cache("/sbin/ip","-o","a");
     die $err if $err;
     for my $line ( split /\n/,$out) {
-        my ($ip) = $line =~ m{^\d+:\s+$dev.*inet (.*?)/};
+        my ($ip) = $line =~ m{^\d+:\s+$dev.*inet\d* (.*?)/};
         return $ip if $ip;
     }
     warn "Warning $dev not found in active interfaces";
@@ -963,13 +965,13 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias','storage', 'options'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias','storage', 'options', 'network'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports manage_pools screenshot);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports manage_pools screenshot remove_clones);
     my @requests;
     for my $req ( $base->list_requests ) {
         push @requests,($req) if !$ignore_requests{$req->command};
@@ -1502,6 +1504,7 @@ sub _update_network_db($self, $old, $new0) {
         $sql = "UPDATE virtual_networks set $sql WHERE id=?";
         my $sth = $self->_dbh->prepare($sql);
         my @values = map { $new->{$_} } sort keys %$new;
+
         $sth->execute(@values, $id);
     }
 }

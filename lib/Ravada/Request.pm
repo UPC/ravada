@@ -105,6 +105,7 @@ our %VALID_ARG = (
                 ,start => 2,
                 ,remote_ip => 2
                 ,with_cd => 2
+                ,storage => 2
                 ,options => 2
     }
     ,change_owner => {uid => 1, id_domain => 1}
@@ -175,6 +176,7 @@ our %VALID_ARG = (
     ,remove_network => { uid => 1, id => 1, id_vm => 2, name => 2 }
     ,change_network => { uid => 1, data => 1 }
 
+    ,remove_clones => { uid => 1, id_domain => 1 }
 );
 
 $VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};
@@ -708,7 +710,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
     }
     confess "Error: missing command " if !$command;
     #    delete $args_d->{uid} unless $command eq 'clone';
-    delete $args_d->{uid} if $command eq 'set_base_vm';
+    delete $args_d->{uid} if $command =~ /(cleanup|refresh_vms|set_base_vm)/;
     delete $args_d->{at};
     delete $args_d->{status};
     delete $args_d->{timeout};
@@ -824,8 +826,10 @@ sub _new_request {
     ." WHERE id=?");
     $sth->execute($self->{id});
 
-
-    my $request = $self->open($self->{id});
+    my $request;
+    eval { $request = $self->open($self->{id}) };
+    warn $@ if $@ && $@ !~ /I can't find id=/;
+    return if !$request;
     $request->_validate();
     $request->status('requested') if $request->status ne'done';
 

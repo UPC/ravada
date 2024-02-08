@@ -282,6 +282,7 @@ sub test_login_non_admin($t, $base, $clone){
 
     mojo_check_login($t, $name, $pass);
     $base->is_public(0);
+    $base->show_clones(1);
 
     $t->get_ok("/machine/clone/".$base->id.".html")
     ->status_is(200);
@@ -365,10 +366,15 @@ sub test_login_non_admin_req($t, $base, $clone){
 
     mojo_check_login($t, $name, $pass);
     $base->is_public(0);
+    $base->show_clones(1);
 
     $t->get_ok("/machine/clone/".$base->id.".html")
     ->status_is(200);
     die "Error cloning ".$base->id if $t->tx->res->code() != 200;
+
+    $base->show_clones(0);
+    $t->get_ok("/machine/clone/".$base->id.".html")
+    ->status_is(403);
 }
 
 
@@ -1123,6 +1129,7 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
     test_grant_access($t, $base0);
 
     if ($vm_name eq 'KVM') {
+        _init_mojo_client();
         test_new_machine_default($t, $vm_name);
         test_new_machine_default($t, $vm_name, 1); # with empty iso file
         test_new_machine_advanced_options($t, $vm_name);

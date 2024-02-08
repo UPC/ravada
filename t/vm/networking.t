@@ -234,6 +234,18 @@ sub test_add_network($vm) {
     is($new->{is_active},1);
     is($new->{autostart},1);
     is($new->{is_public},0);
+
+    my @old = $vm->list_virtual_networks();
+    for my $old (@old) {
+        next if $old->{name} eq $new->{name};
+        my $old_ip = $old->{ip_address};
+        my $new_ip = $new->{ip_address};
+
+        $old_ip =~ s/(.*)\.\d+/$1/;
+        $new_ip =~ s/(.*)\.\d+/$1/;
+
+        isnt($new_ip, $old_ip, "ip $new_ip found in ".$old->{name}) or exit;
+    }
     return $new;
 }
 
@@ -295,11 +307,14 @@ sub _check_network_changed($net, $field) {
 sub test_change_network($net) {
     my %net2 = %$net;
     $net2{dhcp_end} =~ s/(.*)\.\d+$/$1.100/;
+    my $ip = $net2{ip_address};
+    $ip =~ s/\.\d+$/.0/;
+    $net2{ip_address} = $ip;
     my $req = Ravada::Request->change_network(
         uid => user_admin->id
         ,data => \%net2
     );
-    wait_request();
+    wait_request(debug => 0);
     my $vm = Ravada::VM->open($net->{id_vm});
 
     my($new) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks();
@@ -342,6 +357,7 @@ sub test_change_network($net) {
         is($new2->{is_active},$net2{is_active});
     }
 
+    $net2{is_active}=1;
     for ( 1 .. 2 ) {
         $net2{is_public} = (!$net2{is_public} or 0);
         $req = Ravada::Request->change_network(
@@ -410,7 +426,20 @@ sub test_assign_network_clone($vm, $net, $volatile) {
 
     my $domain = rvd_back->search_domain($name);
     $domain->prepare_base(user_admin);
-    $domain->volatile_clones(1);
+    $domain->volatile_clones($volatile);
+
+    my $name_clone3 = new_domain_name();
+    my $req3 = Ravada::Request->clone(
+        id_domain => $domain->id
+        ,uid => user_admin->id
+        ,options => { network => $net->{name}}
+        ,name => $name_clone3
+    );
+    wait_request(debug => 0);
+    my $clone3 = rvd_back->search_domain($name_clone3);
+    ok($clone3);
+
+    _check_domain_network($clone3, $net->{name});
 
     my $name_clone = new_domain_name();
     my $req2 = Ravada::Request->create_domain(
@@ -791,6 +820,7 @@ for my $vm_name ( vm_names() ) {
         test_list_networks($vm);
 
         my $net = test_add_network($vm);
+
         test_assign_network($vm, $net);
         test_assign_network_clone($vm, $net, 0);
         test_assign_network_clone($vm, $net, 1); # volatile clone
@@ -807,7 +837,9 @@ for my $vm_name ( vm_names() ) {
         test_duplicate_bridge_add($vm, $net);
 
         test_change_network_internal($vm, $net);
+
         test_change_network($net);
+        test_add_network($vm);
 
         test_changed_uuid($vm);
 
@@ -817,6 +849,8 @@ for my $vm_name ( vm_names() ) {
         test_remove_network($vm,$net);
     }
 }
+
+remove_networks_req();
 
 end();
 
