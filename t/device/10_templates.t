@@ -589,6 +589,10 @@ sub test_frontend_list($vm) {
     my $hd1 = _mock_hd($vm , $path);
     my $hd2 = _mock_hd($vm , $path);
 
+    if (scalar($hd1->list_devices) != scalar($hd2->list_devices)) {
+        die "Error: expecting the same count of devices in both mock hds";
+    }
+
     my $domain = _create_domain_hd($vm, $hd1);
     $domain->start(user_admin);
 
@@ -597,17 +601,21 @@ sub test_frontend_list($vm) {
             ,login => user_admin->name
     };
     my $front_devices = Ravada::WebSocket::_list_host_devices(rvd_front(), $ws_args);
+    is(scalar(@$front_devices),2) or exit;
 
     my ($dev_attached) = ($domain->list_host_devices_attached);
 
+    my $found=0;
     for my $fd ( @$front_devices ) {
         for my $dev ( @{$fd->{devices}} ) {
             if ($dev->{name} eq $dev_attached->{name}) {
                 ok($dev->{domain} , "Expecting domains listed in ".$dev->{name}) or next;
                 is($dev->{domain}->{id}, $domain->id,"Expecting ".$domain->name." attached in ".$dev->{name});
+                $found++ if $dev->{domain}->{id} == $domain->id;
             }
         }
     }
+    is($found,2) or exit;
 }
 
 sub _mock_hd($vm, $path) {
