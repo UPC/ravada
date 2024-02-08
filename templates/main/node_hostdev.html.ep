@@ -60,7 +60,6 @@
             <div ng-show="show_bases[hdev.id]">
                 <div class="row ml-0 pl-0" ng-repeat="domain in hdev._bases">
                     <div class="col col-sm-1 ml-0 pl-0" align="right">
-                    </span>
                     </div>
                     <div class="col col-sm-10 ml-0 pl-0">
                     <a href="/machine/manage/{{domain.id}}.html"
