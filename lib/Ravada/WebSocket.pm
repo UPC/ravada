@@ -280,9 +280,27 @@ sub _list_domains_with_device($rvd,$row) {
             push @domains, ($domain);
         }
     }
+    push @domains,( _list_domains_with_devices_locked($rvd, values %devices) );
+
     $row->{_domains} = \@domains;
     $row->{_bases} = \@bases;
     $row->{devices} = [values %devices];
+}
+
+sub _list_domains_with_devices_locked($rvd, @devices) {
+    my $sql =
+        "SELECT d.id, d.name, d.is_base, d.status "
+        ." FROM host_devices_domain_locked l, domains d "
+        ." WHERE l.id_domain = d.id "
+        ." AND ";
+
+    my $where = '';
+    for (@devices ) {
+        $where .= " OR " if $where;
+        $where .= " name = ? "
+    }
+    $sth = $rvd->_dbh->prepare($sql);
+    $sth->execute(@devices);
 }
 
 sub _list_requests($rvd, $args) {
