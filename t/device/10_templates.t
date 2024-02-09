@@ -615,7 +615,7 @@ sub test_frontend_list($vm) {
             }
         }
     }
-    is($found,2) or exit;
+    is($found,2) or die Dumper($front_devices);
 }
 
 sub _mock_hd($vm, $path) {

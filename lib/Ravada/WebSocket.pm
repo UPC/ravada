@@ -280,27 +280,34 @@ sub _list_domains_with_device($rvd,$row) {
             push @domains, ($domain);
         }
     }
-    push @domains,( _list_domains_with_devices_locked($rvd, values %devices) );
+    for my $dev ( values %devices ) {
+        _get_domain_with_device($rvd, $dev);
+    }
 
     $row->{_domains} = \@domains;
     $row->{_bases} = \@bases;
     $row->{devices} = [values %devices];
 }
 
-sub _list_domains_with_devices_locked($rvd, @devices) {
+sub _get_domain_with_device($rvd, $dev) {
     my $sql =
         "SELECT d.id, d.name, d.is_base, d.status "
         ." FROM host_devices_domain_locked l, domains d "
         ." WHERE l.id_domain = d.id "
-        ." AND ";
+        ."   AND l.name=?"
+        ;
 
-    my $where = '';
-    for (@devices ) {
-        $where .= " OR " if $where;
-        $where .= " name = ? "
+    my $sth = $rvd->_dbh->prepare($sql);
+    $sth->execute($dev->{name});
+    my @domains;
+    while ( my ($id,$name,$is_base, $status, $is_locked, $device) = $sth->fetchrow ) {
+        $is_locked = 0 if !$is_locked || $status ne 'active';
+        $device = '' if !$device;
+        my $domain = {     id => $id       ,name => $name, is_locked => $is_locked
+                      ,is_base => $is_base ,device => $device
+        };
+        $dev->{domain} = $domain;# if $is_locked;
     }
-    $sth = $rvd->_dbh->prepare($sql);
-    $sth->execute(@devices);
 }
 
 sub _list_requests($rvd, $args) {
