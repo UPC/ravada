@@ -392,7 +392,8 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
 
         my ($boot_node) = $disk->findnodes('boot');
         my $info = {};
-        eval { $info = $self->_volume_info($file) if $file && $device eq 'disk' };
+        eval { $info = $self->_volume_info($file)
+            if $file && ( $device eq 'disk' or $device eq 'cdrom') };
         die $@ if $@ && $@ !~ /not found/i;
         $info->{device} = $device;
         if (!$info->{name} ) {
@@ -437,7 +438,7 @@ sub _pool_refresh($pool) {
         eval { $pool->refresh };
         return if !$@;
 
-        return if ref($@) && $@->code == 1;
+        return if ref($@) && ($@->code == 1 || $@->code == 55 );#55: not active;
 
         warn "WARNING: on vol remove , pool refresh $@" if $@;
         sleep 1;
@@ -450,11 +451,16 @@ sub _volume_info($self, $file, $refresh=0) {
     my ($name) = $file =~ m{.*/(.*)};
 
     my $vol;
+    my $storage_pool;
     for my $pool ( $self->_vm->vm->list_storage_pools ) {
         _pool_refresh($pool) if $refresh;
         eval { $vol = $pool->get_volume_by_name($name) };
         warn $@ if $@ && $@ !~ /^libvirt error code: 50,/;
-        last if $vol;
+        if ( $vol ) {
+            next if $vol->get_path ne $file;
+            $storage_pool = $pool->get_name();
+            last;
+        }
     }
     if (!$vol && !$refresh) {
         return $self->_volume_info($file, ++$refresh);
@@ -470,6 +476,7 @@ sub _volume_info($self, $file, $refresh=0) {
     warn "WARNING: $@" if $@ && $@ !~ /^libvirt error code: 50,/;
     $info->{file} = $file;
     $info->{name} = $name;
+    $info->{storage_pool} = $storage_pool;
 
     return $info;
 }
@@ -892,8 +899,6 @@ sub start {
         $self->_detect_disks_driver();
         $self->_set_displays_ip($set_password, $listen_ip);
     }
-
-    $self->status('starting');
 
     my $error;
     for ( 1 .. 60 ) {

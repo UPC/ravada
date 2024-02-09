@@ -2,871 +2,930 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
+"PO-Revision-Date: 2023-11-07 20:36+0000\n"
+"Last-Translator: Claire Charles <charlesclaire101@gmail.com>\n"
+"Language-Team: Korean <https://hosted.weblate.org/projects/ravada/"
+"translation/ko/>\n"
 "Language: ko\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Weblate 5.1-dev\n"
 
 msgid "Ravada broker"
-msgstr ""
+msgstr "라바다 브로커"
 
 msgid "Machine Name"
-msgstr ""
+msgstr "시스템 이름"
 
 msgid "Tools"
-msgstr ""
+msgstr "도구"
 
 msgid "Choose a Machine to Start"
-msgstr ""
+msgstr "시동할 기계 선택"
 
 msgid "Start"
-msgstr ""
+msgstr "시작"
 
 msgid "Stop"
-msgstr ""
+msgstr "중지"
 
 msgid "View"
-msgstr ""
+msgstr "보기"
 
 msgid "Prepare base"
-msgstr ""
+msgstr "베이스 준비"
 
 msgid "Clone"
-msgstr ""
+msgstr "클론"
 
 msgid "Clone/s"
-msgstr ""
+msgstr "클론"
 
 msgid "Users List"
-msgstr ""
+msgstr "사용자 목록"
 
 msgid "Name"
-msgstr ""
+msgstr "이름"
 
 msgid "Log Out"
-msgstr ""
+msgstr "로그아웃"
 
 msgid "Available Machines"
-msgstr ""
+msgstr "사용 가능한 기계"
 
 msgid "Help"
-msgstr ""
+msgstr "도움말"
 
 msgid "Requirements"
-msgstr ""
+msgstr "요구 사항"
 
 msgid "About"
-msgstr ""
+msgstr "대해"
 
 msgid "Mark all as read"
-msgstr ""
+msgstr "모두 읽음으로 표시"
 
 msgid "Settings"
-msgstr ""
+msgstr "설정"
 
 msgid "New Machine"
-msgstr ""
+msgstr "새로운 기계"
 
 msgid "I want to change my password"
-msgstr ""
+msgstr "비밀번호를 변경하고 싶어요"
 
 msgid "I want to change my language"
-msgstr ""
+msgstr "언어를 변경하고 싶어요"
 
 msgid "Language:"
-msgstr ""
+msgstr "언어:"
 
 msgid "English"
-msgstr ""
+msgstr "영어"
 
 msgid "Spanish"
-msgstr ""
+msgstr "스페인어"
 
 msgid "Catalan"
-msgstr ""
+msgstr "카탈로니아어"
 
 msgid "Galician"
-msgstr ""
+msgstr "갈리시아어"
 
 msgid "French"
-msgstr ""
+msgstr "프랑스어"
 
 msgid "Hindi"
-msgstr ""
+msgstr "힌디어"
 
 msgid "Indonesian"
-msgstr ""
+msgstr "인도네시아어"
 
 msgid "Persian"
-msgstr ""
+msgstr "페르시아어"
 
 msgid "Japanese"
-msgstr ""
+msgstr "일본어"
 
 msgid "German"
-msgstr ""
+msgstr "독일어"
 
 msgid "New Password:"
-msgstr ""
+msgstr "새 비밀번호:"
 
 msgid "Confirm Password:"
-msgstr ""
+msgstr "비밀번호 확인:"
 
 msgid "Submit"
-msgstr ""
+msgstr "제출"
 
 msgid "Your language has been changed successfully"
-msgstr ""
+msgstr "언어가 성공적으로 변경되었습니다"
 
 msgid "Your password has been changed successfully"
-msgstr ""
+msgstr "비밀번호가 성공적으로 변경되었습니다"
 
 msgid "Password is too short"
-msgstr ""
+msgstr "암호가 너무 짧습니다"
 
 msgid "Password fields do not match"
-msgstr ""
+msgstr "암호 필드가 일치하지 않습니다"
 
 msgid "Some of the password fields are empty"
-msgstr ""
+msgstr "일부 암호 필드가 비어 있습니다"
 
 msgid "Status"
-msgstr ""
+msgstr "상태"
 
 msgid "Actions"
-msgstr ""
+msgstr "작업"
 
 msgid "Down"
-msgstr ""
+msgstr "아래로"
 
 msgid "Running"
-msgstr ""
+msgstr "실행 중"
 
 msgid "Shutdown"
-msgstr ""
+msgstr "종료"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "스크린샷"
 
 msgid "Paused"
-msgstr ""
+msgstr "일시 중지"
 
 msgid "Machine locked by request"
-msgstr ""
+msgstr "요청에 의해 기계가 잠김"
 
 msgid "Process"
-msgstr ""
+msgstr "프로세스"
 
 msgid "Copy"
-msgstr ""
+msgstr "복사"
 
 msgid "Error!"
-msgstr ""
+msgstr "오류!"
 
 msgid "Error"
-msgstr ""
+msgstr "오류"
 
 msgid "Backend not available!"
-msgstr ""
+msgstr "백엔드를 사용할 수 없습니다!"
 
 msgid "Subject"
-msgstr ""
+msgstr "제목"
 
 msgid "Date"
-msgstr ""
+msgstr "날짜"
 
 msgid "Mark as read"
-msgstr ""
+msgstr "읽은 상태로 표시"
 
 msgid "Mark as unread"
-msgstr ""
+msgstr "읽지 않은 상태로 표시"
 
 msgid "No messages to show"
-msgstr ""
+msgstr "표시할 메시지가 없습니다"
 
 msgid "Admin"
-msgstr ""
+msgstr "관리자"
 
 msgid "Machines"
-msgstr ""
+msgstr "기계"
 
 msgid "machines"
-msgstr ""
+msgstr "기계"
 
 msgid "Users"
-msgstr ""
+msgstr "사용자"
 
 msgid "users"
-msgstr ""
+msgstr "사용자"
 
 msgid "Messages"
-msgstr ""
+msgstr "메시지"
 
 msgid "messages"
-msgstr ""
+msgstr "메시지"
 
 msgid "Admin tools"
-msgstr ""
+msgstr "관리 도구"
 
 msgid "Remove base"
-msgstr ""
+msgstr "베이스 제거"
 
 msgid "Restore"
-msgstr ""
+msgstr "복원"
 
 msgid "Hibernate"
-msgstr ""
+msgstr "최대 절전 모드"
 
 msgid "Are you sure?"
-msgstr ""
+msgstr "확실한가요?"
 
 msgid "Yes"
-msgstr ""
+msgstr "네"
 
 msgid "No"
-msgstr ""
+msgstr "아니요"
 
 msgid "Make public"
-msgstr ""
+msgstr "공개하기"
 
 msgid "Machine settings"
-msgstr ""
+msgstr "기계 설정"
 
 msgid "Cannot remove base, machine has clones"
-msgstr ""
+msgstr "베이스를 제거할 수 없습니다. 시스템에 클론이 있습니다"
 
 msgid "show clones"
-msgstr ""
+msgstr "클론 표시"
 
 msgid "hide clones"
-msgstr ""
+msgstr "클론 숨기기"
 
 msgid "For Spice redirection you will need to install"
-msgstr ""
+msgstr "Spice 리디렉션을 위해서는 설치가 필요합니다"
 
 msgid "in your computer."
-msgstr ""
+msgstr "컴퓨터에서."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr ""
+msgstr "배포판에서 검색하십시오 (예 : Debian / Ubuntu에서"
 
 msgid "You will need to install"
-msgstr ""
+msgstr "다음을 설치해야 합니다"
 
 msgid "and USB drivers ("
-msgstr ""
+msgstr "및 USB 드라이버("
 
 msgid ""
 "Be aware that in Windows, Spice redirection is not automatic. It is "
 "necessary to associate protocol with the app."
-msgstr ""
+msgstr "Windows에서 Spice 리디렉션은 자동이 아닙니다. 프로토콜을 연결해야합니다"
 
 msgid "To make this possible, download"
-msgstr ""
+msgstr "이를 가능하게 하려면 다운로드하십시오."
 
 msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
-msgstr ""
+msgstr "또는 ASCII 파일에서 다음 줄을 복사하고 확장명 .reg로 저장합니다."
+"그런 다음 파일을 실행하십시오."
 
 msgid "Login"
-msgstr ""
+msgstr "로그인"
 
 msgid "Welcome"
-msgstr ""
+msgstr "환영합니다"
 
 msgid "A viewer is required to run the virtual machines."
-msgstr ""
+msgstr "뷰어는 가상 머신을 실행하는 데 필요합니다."
 
 msgid "It is required a viewer to run the virtual machines."
-msgstr ""
+msgstr "가상 머신을 실행하려면 뷰어가 필요합니다."
 
 msgid "Virtual Machines"
-msgstr ""
+msgstr "가상 머신"
 
 msgid "User"
-msgstr ""
+msgstr "사용자"
 
 msgid "Password"
-msgstr ""
+msgstr "암호"
 
 msgid "Start session"
-msgstr ""
+msgstr "세션 시작"
 
 msgid "bits) in your computer."
-msgstr ""
+msgstr "bits)를 컴퓨터에 저장합니다."
 
 msgid "Permissions"
-msgstr ""
+msgstr "허가"
 
 msgid "can change the settings of owned virtual machines."
-msgstr ""
+msgstr "소유된 가상 머신의 설정을 변경할 수 있습니다."
 
 msgid "can change the settings of any virtual machines."
-msgstr ""
+msgstr "모든 가상 컴퓨터의 설정을 변경할 수 있습니다."
 
 msgid "can change the settings of any virtual machines "
-msgstr ""
+msgstr "모든 가상 컴퓨터의 설정을 변경할 수 있음"
 
 msgid "cloned from one base owned by the user."
-msgstr ""
+msgstr "사용자가 소유한 하나의 기지에서 복제됩니다."
 
 msgid "can clone public virtual machines."
-msgstr ""
+msgstr "사용자가 소유한 하나의 베이스에서 복제됩니다."
 
 msgid "can clone any virtual machine."
-msgstr ""
+msgstr "모든 가상 머신을 복제할 수 있습니다."
 
 msgid "can create bases."
-msgstr ""
+msgstr "기지를 만들 수 있습니다."
 
 msgid "can create virtual machines."
-msgstr ""
+msgstr "가상 머신을 만들 수 있습니다."
 
 msgid "can grant permissions to other users"
-msgstr ""
+msgstr "다른 사용자에게 권한을 부여할 수 있습니다."
 
 msgid "can hibernate any virtual machine."
-msgstr ""
+msgstr "모든 가상 머신을 최대 절전 모드로 전환할 수 있습니다."
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr ""
+msgstr "사용자가 소유한 가상 시스템에서 클론을 최대 절전 모드로 전환할 수 있습니다."
 
 msgid "can hibernate any clone."
-msgstr ""
+msgstr "모든 클론을 최대 절전 모드로 만들 수 있습니다."
 
 msgid "can remove any virtual machines owned by the user."
-msgstr ""
+msgstr "사용자가 소유한 모든 가상 머신을 제거할 수 있습니다."
 
 msgid "can remove any virtual machine."
-msgstr ""
+msgstr "모든 가상 머신을 제거할 수 있습니다."
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr ""
+msgstr "사용자가 소유한 가상 시스템에서 클론을 제거할 수 있습니다."
 
 msgid "can remove any clone."
-msgstr ""
+msgstr "모든 클론을 제거할 수 있습니다."
 
 msgid "can take a screenshot of any virtual machine owned by the user."
-msgstr ""
+msgstr "사용자가 소유한 가상 머신의 스크린샷을 찍을 수 있습니다."
 
 msgid "can take a screenshot of any virtual machine."
-msgstr ""
+msgstr "모든 가상 머신의 스크린샷을 찍을 수 있습니다."
 
 msgid "can shutdown any virtual machine."
-msgstr ""
+msgstr "모든 가상 머신을 종료할 수 있습니다."
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr ""
+msgstr "사용자가 소유한 가상 시스템에서 클론을 종료할 수 있습니다."
 
 msgid "Submit Query"
-msgstr ""
+msgstr "쿼리 제출"
 
 msgid "From Template"
-msgstr ""
+msgstr "템플릿에서"
 
 msgid "From Machine"
-msgstr ""
+msgstr "기계에서"
 
 msgid "Backend"
-msgstr ""
+msgstr "백엔드"
 
 msgid "Select Template"
-msgstr ""
+msgstr "템플릿 선택"
 
 msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
-msgstr ""
+msgstr "이 ISO 이미지는 아직 다운로드되지 않았습니다. 인터넷에서 파일을 가져올 "
+"때까지 몇 분, 심지어 몇 시간이 걸릴 수 있습니다."
 
 msgid "Download now"
-msgstr ""
+msgstr "지금 다운로드"
 
 msgid "Select ISO"
-msgstr ""
+msgstr "ISO를 선택합니다"
 
 msgid "Template"
-msgstr ""
+msgstr "템플렛"
 
 msgid "Disk Size: (GB)"
-msgstr ""
+msgstr "디스크 크기: (GB)"
 
 msgid "Swap Size: (GB)"
-msgstr ""
+msgstr "스왑 크기: (GB)"
 
 msgid "Ram: (GB)"
-msgstr ""
+msgstr "RAM(GB):"
 
 msgid "Machine name is required."
-msgstr ""
+msgstr "시스템 이름이 필요합니다."
 
 msgid "Machine name can't exceed 20 characters."
-msgstr ""
+msgstr "컴퓨터 이름은 20자를 초과할 수 없습니다."
 
 msgid "Backend selection is required."
-msgstr ""
+msgstr "백엔드를 선택해야 합니다."
 
 msgid "ISO image selection is required."
-msgstr ""
+msgstr "ISO 이미지를 선택해야 합니다."
 
 msgid "Template selection is required."
-msgstr ""
+msgstr "템플릿을 선택해야 합니다."
 
 msgid "A machine with that name already exists."
-msgstr ""
+msgstr "해당 이름의 컴퓨터가 이미 있습니다."
 
 msgid "The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points."
-msgstr ""
+msgstr "컴퓨터 이름은 알파벳 문자, 숫자, 대시 및 점으로만 구성될 수 있습니다."
 
 msgid "Create"
-msgstr ""
+msgstr "생성"
 
 msgid ""
 "can change the settings of all virtual machines "
 "cloned from one base owned by the user."
-msgstr ""
+msgstr "모든 가상 컴퓨터의 설정을 변경할 수 있음 사용자가 소유한 하나의 베이스에서 복제됩니다."
 
 msgid "monitoring"
-msgstr ""
+msgstr "모니터링"
 
 msgid "Are you sure you want to remove the Base of"
-msgstr ""
+msgstr "베이스를 제거하시겠습니까?"
 
 msgid "Are you sure you want to prepare the Base of"
-msgstr ""
+msgstr "베이스를 준비하시겠습니까?"
 
 msgid "Are you sure you want to change the Public state of"
-msgstr ""
+msgstr "의 공개 상태를 변경하시겠습니까?"
 
 msgid "Search"
-msgstr ""
+msgstr "검색"
 
 msgid "There are no public bases available in this system."
-msgstr ""
+msgstr "이 시스템에 사용할 수 있는 공공 기지가 없습니다."
 
 msgid "There are no machines available in this system."
-msgstr ""
+msgstr "이 시스템에 사용할 수 있는 장비가 없습니다."
 
 msgid "Create one."
-msgstr ""
+msgstr "하나를 만듭니다."
 
 msgid "not public"
-msgstr ""
+msgstr "비공개"
 
 msgid "User Settings"
-msgstr ""
+msgstr "사용자 설정"
 
 msgid "Create a new account"
-msgstr ""
+msgstr "새 계정 만들기"
 
 msgid "Username"
-msgstr ""
+msgstr "사용자 이름"
 
 msgid "Hide Private"
-msgstr ""
+msgstr "비공개 숨기기"
 
 msgid "Show All"
-msgstr ""
+msgstr "모두 표시"
 
 msgid "Shutting down ..."
-msgstr ""
+msgstr "종료 중..."
 
 msgid "It may take a couple of minutes."
-msgstr ""
+msgstr "몇 분 정도 걸릴 수 있습니다."
 
 msgid "Hibernating ..."
-msgstr ""
+msgstr "최대 절전 모드..."
 
 msgid "Description"
-msgstr ""
+msgstr "설명"
 
 msgid "Rename"
-msgstr ""
+msgstr "이름 바꾸기"
 
 msgid "Options"
-msgstr ""
+msgstr "옵션"
 
 msgid "Drivers"
-msgstr ""
+msgstr "드라이버"
 
 msgid "Graphics"
-msgstr ""
+msgstr "그래픽"
 
 msgid "Remove Machine"
-msgstr ""
+msgstr "기계 제거"
 
 msgid "System overview"
-msgstr ""
+msgstr "시스템 개요"
 
 msgid "Danger Zone"
-msgstr ""
+msgstr "위험 구역"
 
 msgid "Once you delete the machine, there is no going back. Please be certain."
-msgstr ""
+msgstr "컴퓨터를 삭제하면 다시 돌아갈 수 없습니다. 확실하게 해 주십시오."
 
 msgid "Danger"
-msgstr ""
+msgstr "위험"
 
 msgid "This will remove all the contents of the machine"
-msgstr ""
+msgstr "이렇게 하면 기계의 모든 내용물이 제거됩니다"
 
 msgid "This action can't be undone"
-msgstr ""
+msgstr "이 작업은 실행 취소할 수 없습니다"
 
 msgid "Are you sure ?"
-msgstr ""
+msgstr "정말이야?"
 
 msgid "Yes, remove"
-msgstr ""
+msgstr "예, 삭제합니다."
 
 msgid "Virtual Machine"
-msgstr ""
+msgstr "가상 머신"
 
 msgid "removed"
-msgstr ""
+msgstr "제거됨"
 
 msgid "This will remove all the"
-msgstr ""
+msgstr "이렇게 하면 모든"
 
 msgid "clones of the machine"
-msgstr ""
+msgstr "시스템의 클론"
 
 msgid "Yes, remove all the clones"
-msgstr ""
+msgstr "예, 모든 클론을 제거합니다."
 
 msgid "This virtual machine can't be removed because it has"
-msgstr ""
+msgstr "이 가상 머신은 다음과 같은 이유로 제거할 수 없습니다."
 
 msgid "clones"
-msgstr ""
+msgstr "클론"
 
 msgid "Clones"
-msgstr ""
+msgstr "클론"
 
 msgid "This machine has not Graphics parameters!"
-msgstr ""
+msgstr "이 컴퓨터에 그래픽 매개변수가 없습니다!"
 
 msgid "recommended"
-msgstr ""
+msgstr "권장"
 
 msgid "to"
-msgstr ""
+msgstr "에"
 
 msgid "Changing Public State"
-msgstr ""
+msgstr "공용 상태 변경"
 
 msgid "Changing Base State"
-msgstr ""
+msgstr "기본 상태 변경"
 
 msgid "action"
-msgstr ""
+msgstr "조치"
 
 msgid "Grants"
-msgstr ""
+msgstr "보조금"
 
 msgid "public"
-msgstr ""
+msgstr "공공"
 
 msgid "New Base"
-msgstr ""
+msgstr "새로운 기지"
 
 msgid "Version"
-msgstr ""
+msgstr "버전"
 
 msgid "Authors"
-msgstr ""
+msgstr "저자"
 
 msgid "Development"
-msgstr ""
+msgstr "개발"
 
 msgid "Below are listed the technologies used in this project:"
-msgstr ""
+msgstr "이 프로젝트에 사용된 기술은 다음과 같습니다."
 
 msgid "The code is available on "
-msgstr ""
+msgstr "코드는 에서 사용할 수 있습니다."
 
 msgid "The code is "
-msgstr ""
+msgstr "코드는 다음과 같습니다 "
 
 msgid "License"
-msgstr ""
+msgstr "사용권"
 
 msgid "Machine locked by"
-msgstr ""
+msgstr "잠긴 기계"
 
 msgid "This Machine is a base"
-msgstr ""
+msgstr "이 기계는 기본입니다"
 
 msgid "Cloned"
-msgstr ""
+msgstr "복제됨"
 
 msgid "is admin"
-msgstr ""
+msgstr "관리자임"
 
 msgid "Add new user"
-msgstr ""
+msgstr "새 사용자 추가"
 
 msgid "Register"
-msgstr ""
+msgstr "등록"
 
 msgid "Current Password:"
-msgstr ""
+msgstr "현재 비밀번호:"
 
 msgid "For more information, check"
-msgstr ""
+msgstr "자세한 내용은 다음을 확인하십시오"
 
 msgid "the Windows Clients documentation"
-msgstr ""
+msgstr "Windows 클라이언트 설명서"
 
 msgid "It is programmed in"
-msgstr ""
+msgstr "에 프로그래밍되어 있습니다"
 
 msgid "with perl framework"
-msgstr ""
+msgstr "Perl 프레임워크 사용"
 
 msgid "and"
-msgstr ""
+msgstr "그리고"
 
 msgid "Memory"
-msgstr ""
+msgstr "메모리"
 
 msgid "MB available"
-msgstr ""
+msgstr "MB 사용 가능"
 
 msgid "The machine will shutdown after these minutes"
-msgstr ""
+msgstr "이 몇 분 후에 기계가 종료됩니다"
 
 msgid "Cancel"
-msgstr ""
+msgstr "취소"
 
 msgid "Please enter the following information to create the account"
-msgstr ""
+msgstr "계정을 만들려면 다음 정보를 입력하십시오"
 
 msgid "Enter Username"
-msgstr ""
+msgstr "사용자 이름 입력"
 
 msgid "Enter Password"
-msgstr ""
+msgstr "비밀번호 입력"
 
 msgid "Confirm Password"
-msgstr ""
+msgstr "비밀번호 확인"
 
 msgid "Username is required"
-msgstr ""
+msgstr "사용자 이름은 필수입니다"
 
 msgid "Username can not exceed 20 characters"
-msgstr ""
+msgstr "사용자 이름은 20자를 초과할 수 없습니다"
 
 msgid "Username must be at least 5 characters"
-msgstr ""
+msgstr "사용자 이름은 5자 이상이어야 합니다"
 
 msgid "Username can only contain words, numbers, dashes, dots and underscores"
-msgstr ""
+msgstr "사용자 이름에는 단어, 숫자, 대시, 점 및 밑줄만 사용할 수 있습니다"
 
 msgid "Password is required"
-msgstr ""
+msgstr "비밀번호가 필요합니다"
 
 msgid "Password can not exceed 20 characters"
-msgstr ""
+msgstr "비밀번호는 20자를 초과할 수 없습니다"
 
 msgid "Password must be at least 5 characters"
-msgstr ""
+msgstr "비밀번호는 5자 이상이어야 합니다"
 
 msgid "Password can only contain words and numbers"
-msgstr ""
+msgstr "비밀번호는 단어와 숫자만 포함할 수 있습니다"
 
 msgid "Confirm Password is required"
-msgstr ""
+msgstr "비밀번호 확인이 필요합니다"
 
 msgid "Confirm Password can not exceed 20 characters"
-msgstr ""
+msgstr "비밀번호 확인은 20자를 초과할 수 없습니다."
 
 msgid "Confirm Password must be at least 5 characters"
-msgstr ""
+msgstr "비밀번호 확인은 5자 이상이어야 합니다."
 
 msgid "Confirm Password can only contain words and numbers"
-msgstr ""
+msgstr "비밀번호 확인은 단어와 숫자만 포함할 수 있습니다."
 
 msgid "This information will be available to the users"
-msgstr ""
+msgstr "이 정보는 사용자가 사용할 수 있습니다"
 
 msgid "Volatile Clones"
-msgstr ""
+msgstr "휘발성 클론"
 
 msgid "Owner"
-msgstr ""
+msgstr "소유자"
 
 msgid "Change the owner of the machine"
-msgstr ""
+msgstr "기기 소유자 변경"
 
 msgid "Press SHIFT + F12 to exit"
-msgstr ""
+msgstr "종료하려면 SHIFT + F12를 누릅니다."
 
 msgid "If you can not see the machine screen in a few seconds check for a file called"
-msgstr ""
+msgstr "몇 초 안에 기기 화면이 보이지 않으면"
 
 msgid "in your downloads folder."
-msgstr ""
+msgstr "다운로드 폴더에 있습니다."
 
 msgid "copied to clipboard"
-msgstr ""
+msgstr "클립보드에 복사되었습니다"
 
 msgid "Portuguese"
-msgstr ""
+msgstr "포르투갈어"
 
 msgid "Read more."
-msgstr ""
+msgstr "자세히 보기."
 
 msgid "The password for this virtual machine connection is :"
-msgstr ""
+msgstr "이 가상 컴퓨터 연결의 암호는 다음과 같습니다 :"
 
 msgid "view"
-msgstr ""
+msgstr "뷰"
 
 msgid "Start again"
-msgstr ""
+msgstr "다시 시작"
 
 msgid "The machine is down."
-msgstr ""
+msgstr "기계가 다운되었습니다."
 
 msgid "Remove"
-msgstr ""
+msgstr "제거하다"
 
 msgid "The machine must be started to take the screenshot."
-msgstr ""
+msgstr "스크린샷을 찍으려면 컴퓨터를 시동해야 합니다."
 
 msgid "Take screenshot"
-msgstr ""
+msgstr "스크린샷 찍기"
 
 msgid "Set base picture"
-msgstr ""
+msgstr "기본 그림 설정"
 
 msgid "Saving the screenshot, please wait a moment..."
-msgstr ""
+msgstr "스크린샷을 저장하는 중입니다. 잠시 기다려 주십시오..."
 
 msgid "You need to run the machine in order to take a screenshot."
-msgstr ""
+msgstr "스크린샷을 찍으려면 기계를 실행해야합니다."
 
 msgid "Copying the screenshot, please wait a moment..."
-msgstr ""
+msgstr "스크린샷을 복사하는 중입니다. 잠시 기다려 주십시오..."
 
 msgid "You need a screenshot in order to copy it to the base machine."
-msgstr ""
+msgstr "기본 컴퓨터에 복사하려면 스크린샷이 필요합니다."
 
 msgid "Add"
-msgstr ""
+msgstr "추가"
 
 msgid "The changes will apply on next restart"
-msgstr ""
+msgstr "변경 사항은 다음에 다시 시작할 때 적용됩니다."
 
 msgid "This VM is running and can't be renamed."
-msgstr ""
+msgstr "이 VM이 실행 중이므로 이름을 바꿀 수 없습니다."
 
 msgid "Thanks to:"
-msgstr ""
+msgstr "감사:"
 
 msgid "licensed."
-msgstr ""
+msgstr "라이센스가 부여되었습니다."
 
 msgid "New Node"
-msgstr ""
+msgstr "새 노드"
 
 msgid "Address"
-msgstr ""
+msgstr "주소"
 
 msgid "A node with that name already exists."
-msgstr ""
+msgstr "해당 이름의 노드가 이미 있습니다."
 
 msgid "Setting your default language"
-msgstr ""
+msgstr "기본 언어 설정"
 
 msgid "Change password"
-msgstr ""
+msgstr "암호 변경"
 
 msgid "Update password"
-msgstr ""
+msgstr "비밀번호 업데이트"
 
 msgid "Start all clones"
-msgstr ""
+msgstr "모든 클론 시작"
 
 msgid "Access denied"
-msgstr ""
+msgstr "액세스 거부됨"
 
 msgid "Empty login name"
-msgstr ""
+msgstr "빈 로그인 이름"
 
 msgid "Empty password"
-msgstr ""
+msgstr "빈 암호"
 
 msgid "Session timeout"
-msgstr ""
+msgstr "세션 시간 초과"
 
 msgid "Vietnamese"
-msgstr ""
+msgstr "베트남어"
 
 msgid "Italian"
-msgstr ""
+msgstr "이탈리아어"
 
 msgid "Type a typical LDAP user name to fetch the attribute list"
-msgstr ""
+msgstr "일반적인 LDAP 사용자 이름을 입력하여 속성 목록을 가져옵니다"
 
 msgid "User name"
-msgstr ""
+msgstr "사용자 이름"
 
 msgid "not found in LDAP server"
-msgstr ""
+msgstr "LDAP 서버에서 찾을 수 없습니다."
 
 msgid "Attribute"
-msgstr ""
+msgstr "속성"
 
 msgid "Value"
-msgstr ""
+msgstr "값"
 
 msgid "Allowed"
-msgstr ""
+msgstr "허용"
 
 msgid "Last"
-msgstr ""
+msgstr "최근"
 
 msgid "Default"
-msgstr ""
+msgstr "Default"
 
 msgid "If none of the previous match, access is allowed."
-msgstr ""
+msgstr "이전에 일치하는 항목이 없으면 액세스가 허용됩니다."
 
 msgid "If none of the previous match, access is denied."
-msgstr ""
+msgstr "이전 일치 항목이 없으면 액세스가 거부됩니다."
 
 msgid "verify"
-msgstr ""
+msgstr "확인"
 
 msgid "save"
-msgstr ""
+msgstr "저장"
 
 msgid "Verifying"
-msgstr ""
+msgstr "검증"
 
 msgid "No entries found"
-msgstr ""
+msgstr "항목을 찾을 수 없습니다."
 
 msgid "has at least"
-msgstr ""
+msgstr "적어도"
 
 msgid "entries."
-msgstr ""
+msgstr "항목."
 
 msgid "Enable last for not allowed restrictions."
-msgstr ""
+msgstr "허용되지 않는 제한에 대해 last를 사용하도록 설정합니다."
 
 msgid "Add description"
-msgstr ""
+msgstr "설명 추가"
 
 msgid "These actions affect all the clones on the machine"
-msgstr ""
+msgstr "이러한 작업은 시스템의 모든 클론에 영향을 미칩니다."
 
 msgid "Shutdown all clones"
-msgstr ""
+msgstr "모든 클론을 종료합니다"
 
 msgid "Keep in mind that there may be users using a clone"
-msgstr ""
+msgstr "클론을 사용하는 사용자가 있을 수 있습니다."
 
 msgid "Yes, shutwdown all the clones"
-msgstr ""
+msgstr "예, 모든 클론을 종료합니다."
+
+msgid "to an ASCII file and save it with a .reg extension, then execute the file."
+msgstr "ASCII 파일에 저장하고 .reg 확장자로 저장한 다음 파일을 실행합니다."
+
+msgid "Show active"
+msgstr "활성 표시"
+
+msgid "The machine will turn off after this time"
+msgstr "이 시간이 지나면 기기가 꺼집니다"
+
+msgid "Confirm password is required"
+msgstr "비밀번호가 필요한지 확인"
+
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Shift + F12를 눌러 가상 컴퓨터를 종료합니다"
+
+msgid "Show clones"
+msgstr "클론 표시"
+
+msgid "Remove Base"
+msgstr "베이스 제거"
+
+msgid "SSO/CAS Login"
+msgstr "SSO/CAS 로그인"
+
+msgid "To make this possible, copy the content of"
+msgstr "이를 가능하게 하려면"
+
+msgid "Hide clones"
+msgstr "클론 숨기기"
+
+msgid "Confirm password must be at least 5 characters"
+msgstr "확인 암호는 5자 이상이어야 합니다"
+
+msgid "Please, make sure you have the right path and release, according to your PC configuration."
+msgstr "PC 구성에 따라 올바른 경로와 릴리스가 있는지 확인하십시오."
+
+msgid "Confirm password can only contain words and numbers"
+msgstr "비밀번호 확인은 단어와 숫자만 포함할 수 있습니다"
+
+msgid "Confirm password can not exceed 20 characters"
+msgstr "비밀번호 확인은 20자를 초과할 수 없습니다"
+
+msgid "can change the settings of any virtual machine."
+msgstr "모든 가상 머신의 설정을 변경할 수 있습니다."
+
+msgid "can remove any virtual machine owned by the user."
+msgstr "사용자가 소유한 모든 가상 머신을 제거할 수 있습니다."
+
+msgid "can change the settings of any virtual machine "
+msgstr "모든 가상 머신의 설정을 변경할 수 있습니다 "

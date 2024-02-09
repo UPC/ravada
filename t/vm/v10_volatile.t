@@ -13,7 +13,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 use_ok('Ravada');
-use_ok('Ravada::Network');
+use_ok('Ravada::Route');
 
 use lib 't/lib';
 use Test::Ravada;

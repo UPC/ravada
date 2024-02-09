@@ -139,7 +139,6 @@
                 if (typeof(machine.clone) != 'undefined'
                 && machine.clone) {
                     machine.is_active = machine.clone.is_active;
-                    machine.screenshot= machine.clone.screenshot;
                     if (machine.clone.description
                             && machine.clone.description.length) {
                         machine.description2 = machine.clone.description;
@@ -160,7 +159,11 @@
                             if (machine.clone) {
                                 id=machine.clone.id;
                             }
-                            window.location.assign('/machine/view/' + id + '.html');
+                            var url_view = '/machine/view/' + id + '.html';
+                            if ($scope.anonymous) {
+                                url_view = "/anonymous/"+id+".html";
+                            }
+                            window.location.assign(url_view);
                         } else {
                         window.location.assign('/machine/clone/' + machine.id + '.html');
                         }
@@ -254,9 +257,6 @@
                         } else {
                             machine.list_clones[i].is_active = data.list_clones[i].is_active;
                             machine.list_clones[i].screenshot = data.list_clones[i].screenshot;
-                            if (machine.clone.id == machine.list_clones[i].id) {
-                                machine.screenshot = machine.list_clones[i].screenshot;
-                            }
 
                         }
                     }
@@ -320,6 +320,9 @@
             $scope.lock_info = false;
             $scope.topology = false;
             $scope.searching_ldap_attributes = true;
+            $scope.shared_user_found=false;
+            $scope.storage_pools=['default'];
+            $scope.shared_user_count = -1
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -593,13 +596,19 @@
                                 $http.get('/list_storage_pools/'+$scope.showmachine.type+"?active=1")
                                     .then(function(response) {
                                         $scope.list_storage= response.data;
+
+                                    for (var i = 0; i < response.data.length; i++) {
+                                        $scope.storage_pools[i]=response.data[i].name;
+                                    }
                                 });
+
+                                $scope.list_shares();
                             }
+                            list_interfaces();
                             if (is_admin) {
                                 $scope.init_domain_access();
                                 $scope.init_ldap_access();
                                 $scope.list_ldap_attributes();
-                                list_interfaces();
                                 list_users();
                                 list_host_devices();
                                 list_access_groups();
@@ -615,9 +624,12 @@
 
           var list_interfaces = function() {
             if (! $scope.network_nats) {
-                $http.get('/network/interfaces/'+$scope.showmachine.type+'/nat')
+                $http.get('/v2/vm/list_networks/'+$scope.showmachine.id_vm)
                     .then(function(response) {
-                        $scope.network_nats = response.data;
+                        $scope.network_nats= [];
+                        for (var i=0; i<response.data.length; i++ ) {
+                            $scope.network_nats.push(response.data[i].name);
+                        }
                 });
             }
             if (! $scope.network_bridges ) {
@@ -757,6 +769,17 @@
               .then(function(response) {
               });
           };
+          $scope.move_file_storage = function() {
+              $http.post('/request/move_volume/'
+                      , JSON.stringify({ 'id_domain': $scope.showmachine.id
+                          ,'volume': $scope.sp_move.file
+                          ,'storage': $scope.sp_move.storage_pool
+                      })
+              ).then(function(response) {
+                  console.log(response.data);
+              });
+
+          }
           $scope.copy_machine = function() {
               $scope.copy_request= { 'status': 'requested' };
               $http.post('/machine/copy/'
@@ -1175,12 +1198,58 @@
                 });
             };
 
+            $scope.shutdown= function() {
+                $scope.set_edit();
+                $scope.lock_info=false;
+                $http.get("/machine/shutdown/"+$scope.showmachine.id+".json")
+                .then(function(response) {
+                });
+            };
+
+
             $scope.shutdown_start = function() {
                 $scope.set_edit();
                 $scope.lock_info=false;
                 $scope.showmachine.needs_restart = 0;
                 $http.get("/machine/shutdown_start/"+$scope.showmachine.id+".json")
                 .then(function(response) {
+                });
+            };
+
+            $scope.search_shared_user = function() {
+                $scope.searching_shared_user = true;
+                $scope.shared_user_found = '';
+                $http.get("/search_user/"+$scope.user_share)
+                .then(function(response) {
+                    $scope.shared_user_found = response.data.found;
+                    $scope.shared_user_count = response.data.count;
+                    $scope.searching_shared_user=false;
+                    if ($scope.shared_user_count == 1) {
+                        $scope.user_share = response.data.found;
+                    }
+                });
+            };
+
+            $scope.share_machine = function() {
+                $http.get("/machine/share/"+$scope.showmachine.id+"/"
+                    +$scope.shared_user_found)
+                .then(function(response) {
+                    $scope.list_shares();
+                });
+            };
+
+            $scope.remove_share_machine = function(user) {
+                $http.get("/machine/remove_share/"+$scope.showmachine.id+"/"
+                    +user)
+                .then(function(response) {
+                    $scope.list_shares();
+                });
+            };
+
+            $scope.list_shares = function() {
+                $http.get("/machine/list_shares/"+$scope.showmachine.id)
+                .then(function(response) {
+                    $scope.shares = response.data;
                 });
             };
 

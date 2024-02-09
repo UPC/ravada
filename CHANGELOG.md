@@ -2,7 +2,6 @@
 
 **Implemented enhancements:**
 
-**Refactors**
-
 **Bugfixes**
 
+**Refactors**

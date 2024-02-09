@@ -237,10 +237,11 @@ sub _add_internal_network($self) {
         ." VALUES(?,?,?,1,0)"
     );
     my $n=0;
+    my %done;
     for my $net (split /\n/,$out) {
         next if $net =~ /dev virbr/;
         my ($address) = $net =~ m{(^[\d\.]+/\d+)};
-        next if !$address;
+        next if !$address || $done{address}++;
         $sth->execute("internal$n",$address, ++$n+1);
 
     }
@@ -344,6 +345,8 @@ sub _update_isos {
     my $self = shift;
     my $table = 'iso_images';
     my $field = 'name';
+    my @now = localtime(time);
+    my $year = $now[5]+1900;
     my %data = (
 	    androidx86 => {
                     name => 'Android 8.1 x86'
@@ -788,24 +791,24 @@ sub _update_isos {
             ,min_disk_size => '10'
         }
         ,kali_64 => {
-            name => 'Kali Linux 2022'
-            ,description => 'Kali Linux 2022 64 Bits'
+            name => "Kali Linux $year"
+            ,description => "Kali Linux $year 64 Bits"
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2022.\d+/'
-            ,file_re => 'kali-linux-202\d.\d+-installer-amd64.iso'
+            ,url => "https://cdimage.kali.org/kali-$year".'.\d+/'
+            ,file_re => "kali-linux-$year.".'\d+-installer-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
         ,kali_64_netinst => {
-            name => 'Kali Linux 2022 (NetInstaller)'
-            ,description => 'Kali Linux 2022 64 Bits (light NetInstall)'
+            name => "Kali Linux $year (NetInstaller)"
+            ,description => "Kali Linux $year 64 Bits (light NetInstall)"
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://cdimage.kali.org/kali-2022.\d+/'
-            ,file_re => 'kali-linux-202\d.\d+-installer-netinst-amd64.iso'
+            ,url => "https://cdimage.kali.org/kali-$year".'.\d+/'
+            ,file_re => "kali-linux-$year.".'\d+-installer-netinst-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
@@ -1638,6 +1641,22 @@ sub _add_indexes_generic($self) {
             ,"UNIQUE (name,vm_type)"
 
         ]
+        ,domain_share => [
+            "index(id_domain)"
+            ,"unique(id_user, id_domain)"
+        ]
+        ,virtual_networks => [
+            "unique(id_vm,internal_id)"
+            ,"unique(id_vm,name)"
+            ,"index(date_changed)"
+            ,"index(id_owner)"
+        ]
+        ,bundles => [
+            "unique (name)"
+        ]
+        ,domains_bundle => [
+            "unique (id_bundle, id_domain)"
+        ]
     );
     my $if_not_exists = '';
     $if_not_exists = ' IF NOT EXISTS ' if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite|mariadb/i;
@@ -1809,6 +1828,8 @@ sub _add_grants($self) {
     $self->_add_grant('view_all',0,"The user can start and access the screen of any virtual machine");
     $self->_add_grant('create_disk',0,'can create disk volumes');
     $self->_add_grant('quota_disk',0,'disk space limit',1);
+    $self->_add_grant('create_networks',0,'can create virtual networks.');
+    $self->_add_grant('manage_all_networks',0,'can manage all the virtual networks.');
 }
 
 sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
@@ -1886,6 +1907,7 @@ sub _enable_grants($self) {
         ,'start_limit',     'start_many'
         ,'view_all'
         ,'create_disk', 'quota_disk'
+        ,'create_networks','manage_all_networks'
     );
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
@@ -2283,6 +2305,12 @@ sub _sql_create_tables($self) {
         }
         ]
         ,
+        [ domain_share => {
+            id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
+            ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE',
+            ,id_user => 'int not null references `users` (`id`) ON DELETE CASCADE'
+            }
+        ],
         [
         bookings => {
             id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
@@ -2359,6 +2387,39 @@ sub _sql_create_tables($self) {
                 n_order => 'integer NOT NULL',
                 info => 'TEXT',
 
+            }
+        ]
+        ,
+        [
+            bundles => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                name => 'char(255) NOT NULL',
+                private_network => 'integer NOT NULL default 0'
+            }
+        ],
+        [
+            domains_bundle => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                id_bundle => 'integer NOT NULL references `bundles` (`id`) ON DELETE CASCADE',
+                id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE',
+            }
+        ]
+        ,
+        [virtual_networks => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                ,id_vm => 'integer NOT NULL references `vms` (`id`) ON DELETE CASCADE',
+                ,name => 'varchar(200)'
+                ,id_owner => 'integer NOT NULL references `users` (`id`) ON DELETE CASCADE',
+                ,internal_id => 'char(80) not null'
+                ,autostart => 'integer not null'
+                ,bridge => 'char(80)'
+                ,'ip_address' => 'char(20)'
+                ,'ip_netmask' => 'char(20)'
+                ,'dhcp_start' => 'char(15)'
+                ,'dhcp_end' => 'char(15)'
+                ,'is_active' => 'integer not null default 1'
+                ,'is_public' => 'integer not null default 0'
+                ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
             }
         ]
 
@@ -2542,6 +2603,60 @@ sub _sql_insert_defaults($self){
                 id_parent => $id_frontend
                 ,name => 'auto_view'
                 ,value => $conf->{auto_view}
+            }
+            ,{  id_parent => $id_frontend
+                ,name => "widget"
+                ,value => $conf->{widget}
+            }
+            ,{
+                id_parent => $id_frontend
+                ,name => 'content_security_policy'
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "all"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "default-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "style-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "script-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "object-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "frame-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "font-src"
+                ,value => ''
+            }
+
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "connect-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/content_security_policy"
+                ,name => "media-src"
+                ,value => ''
             }
             ,{
                 id_parent => $id_backend
@@ -2796,6 +2911,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','has_backups','int not null default 0');
     $self->_upgrade_table('domains','auto_compact','int default NULL');
     $self->_upgrade_table('domains','date_status_change' , 'datetime');
+    $self->_upgrade_table('domains','show_clones' , 'int not null default 1');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -3198,6 +3314,13 @@ sub create_domain {
         $base = Ravada::Domain->open($id_base)
             or confess "Unknown base id: $id_base";
         $vm = $base->_vm;
+
+        my $net_bundle = $self->_net_bundle($base, $id_owner);
+        if ($net_bundle) {
+            unlock_hash(%args);
+            $args{options}->{network} = $net_bundle->{name};
+            lock_hash(%args);
+        }
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner)
         or confess "Error: Unkown user '$id_owner'";
@@ -3255,6 +3378,7 @@ sub _req_add_disk($uid, $id_domain, $type, $size, $request, $storage=undef) {
         ,name => 'disk'
         ,data => $data
         ,@after_req
+        ,at => time + 1
     );
 }
 sub _start_domain_after_create($domain, $request, $uid,$previous_request) {
@@ -3374,7 +3498,10 @@ sub remove_domain {
     $sth->execute($name);
 
     my ($id,$vm_type)= $sth->fetchrow;
-    confess "Error: Unknown domain $name"   if !$id;
+    if (!$id) {
+        warn "Error: Unknown domain $name, maybe already removed.\n";
+        return;
+    }
 
     my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
     die "Error: user ".$user->name." can't remove domain $id"
@@ -3392,7 +3519,7 @@ sub remove_domain {
     eval { $domain = Ravada::Domain->open(id => $id, _force => 1, id_vm => $vm->id) };
     warn $@ if $@;
     if (!$domain) {
-            warn "Warning: I can't find domain '$id', maybe already removed.\n";
+            warn "Warning: I can't find domain [$id ] '$name' in ".$vm->name.", maybe already removed.\n";
             Ravada::Domain::_remove_domain_data_db($id);
             return;
     };
@@ -3760,7 +3887,7 @@ sub process_requests {
         $self->_timeout_requests();
     }
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain FROM requests "
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain,command FROM requests "
         ." WHERE "
         ."    ( status='requested' OR status like 'retry%' OR status='waiting')"
         ."   AND ( at_time IS NULL  OR at_time = 0 OR at_time<=?) "
@@ -3770,7 +3897,7 @@ sub process_requests {
 
     my @reqs;
     my %duplicated;
-    while (my ($id_request,$id_domain)= $sth->fetchrow) {
+    while (my ($id_request, $id_domain, $command)= $sth->fetchrow) {
         my $req;
         eval { $req = Ravada::Request->open($id_request) };
 
@@ -3778,17 +3905,27 @@ sub process_requests {
         warn $@ if $@;
         next if !$req;
 
+        if ($req->command eq 'ping_backend') {
+            $req->status("done");
+            next;
+        }
         next if !$req->requirements_done;
 
         next if $request_type ne 'all' && $req->type ne $request_type;
 
         next if $duplicated{"id_req.$id_request"}++;
+
+        $id_domain = $req->defined_arg('id_domain') if !defined $id_domain && $req->defined_arg('id_domain');
+
+        next if defined $id_domain && $duplicated{$id_domain.".$command"}++;
+
         next if $req->command !~ /shutdown/i
             && $self->_domain_working($id_domain, $req);
 
         my $domain = '';
         $domain = $id_domain if $id_domain;
         $domain .= ($req->defined_arg('name') or '');
+
         next if $domain && $duplicated{$domain};
         my $id_base = $req->defined_arg('id_base');
         next if $id_base && $duplicated{$id_base};
@@ -3809,7 +3946,7 @@ sub process_requests {
         "pid=".($req->pid or '')." ".$req->status()
             ."$txt_retry "
             .$req->command
-            ." ".Dumper($req->args) if $DEBUG || $debug;
+            ." ".Dumper($req->args) if ( $DEBUG || $debug ) && $req->command ne 'set_time';
 
         my ($n_retry) = $req->status() =~ /retry (\d+)/;
         $n_retry = 0 if !$n_retry;
@@ -3819,14 +3956,16 @@ sub process_requests {
         next if !$DEBUG && !$debug;
 
         warn ''.localtime." req ".$req->id." , cmd: ".$req->command." ".$req->status()
-            ." , err: '".($req->error or '')."'\n"  if $DEBUG || $VERBOSE;
+            ." , err: '".($req->error or '')."'\n"  if ($DEBUG || $VERBOSE )
+            && $req->command ne 'set_time';
             #        sleep 1 if $DEBUG;
 
     }
 
+    my @reqs2 = grep { $_->command ne 'set_time' } @reqs;
     warn Dumper([map { $_->id." ".($_->pid or '')." ".$_->command." ".$_->status }
-            grep { $_->id } @reqs ])
-        if ($DEBUG || $debug ) && @reqs;
+            grep { $_->id } @reqs2 ])
+        if ($DEBUG || $debug ) && @reqs2;
 
     return scalar(@reqs);
 }
@@ -3849,6 +3988,7 @@ sub _timeout_requests($self) {
         ." FROM requests "
         ." WHERE ( status = 'working' or status = 'stopping' )"
         ."  AND date_changed >= ? "
+        ."  AND command <> 'move_volume'"
         ." ORDER BY date_req "
     );
     $sth->execute(_date_now(-30));
@@ -3984,6 +4124,7 @@ sub _kill_dead_process($self) {
         ." AND ( status like 'working%' OR status like 'downloading%'"
         ."      OR status like 'start%' ) "
         ." AND pid IS NOT NULL "
+        ." AND command <> 'move_volume'"
     );
     $sth->execute(time - 2);
     while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
@@ -4089,7 +4230,7 @@ sub _execute {
         return;
     }
 
-    $self->_wait_pids;
+    $self->_wait_pids();
     return if !$self->_can_fork($request);
 
     my $pid = fork();
@@ -4444,7 +4585,9 @@ sub _wait_pids($self) {
     my @done;
     for my $type ( keys %{$self->{pids}} ) {
         for my $pid ( keys %{$self->{pids}->{$type}}) {
+            next if kill(0,$pid);
             my $kid = waitpid($pid , WNOHANG);
+            next if kill(0,$pid);
             push @done, ($pid) if $kid == $pid || $kid == -1;
         }
     }
@@ -4467,7 +4610,7 @@ sub _wait_pids($self) {
             $request->status('done') if $request->status =~ /working/i;
         };
         warn("$$ request id=$id_req ".$request->command." ".$request->status()
-            .", error='".($request->error or '')."'\n") if $DEBUG && $request;
+            .", error='".($request->error or '')."'\n") if $DEBUG && $request && $request->command ne 'set_time';
     }
 }
 
@@ -4509,6 +4652,25 @@ sub _cmd_remove {
         if !defined $request->args->{uid};
 
     $self->remove_domain(name => $request->args('name'), uid => $request->args('uid'));
+}
+
+sub _cmd_remove_clones($self, $request) {
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    my $id_domain = $request->args('id_domain');
+
+    die "Error: user ".$user->name." not authorized to remove clones"
+    unless $user->is_admin();
+
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    for my $clone ( $domain->clones ) {
+        Ravada::Request->remove_domain(
+            uid => $uid
+            ,name => $clone->{name}
+        );
+    }
 }
 
 sub _cmd_restore_domain($self,$request) {
@@ -4601,20 +4763,64 @@ sub _cmd_clone($self, $request) {
 
     $args->{alias} = $alias if $alias;
 
+    my $net_bundle = $self->_net_bundle($domain, $user);
+
+    $args->{options}->{network} = $net_bundle->{name} if $net_bundle;
+
     my $clone = $domain->clone(
         name => $name
         ,%$args
     );
 
     $request->id_domain($clone->id) if $clone;
+    my $req_next = $request;
 
     Ravada::Request->start_domain(
         uid => $user->id
         ,id_domain => $clone->id
         ,remote_ip => $request->defined_arg('remote_ip')
-        ,after_request => $request->id
+        ,after_request => $req_next->id
     ) if $request->defined_arg('start');
 
+}
+
+sub _net_bundle($self, $domain, $user0) {
+    my $bundle = $domain->bundle();
+
+    return unless $bundle && exists $bundle->{private_network}
+    && $bundle->{private_network};
+
+    my $user = $user0;
+    $user = Ravada::Auth::SQL->search_by_id($user0) if !ref($user);
+
+    my ($net) = grep { $_->{id_owner} == $user->id }
+        $domain->_vm->list_virtual_networks();
+
+    return $net if $net;
+
+    my $req_new_net = Ravada::Request->new_network(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_vm => $domain->_vm->id
+        ,name => $bundle->{name}."-".$user->name
+    );
+    $self->_cmd_new_network($req_new_net);
+    my $data = decode_json($req_new_net->output);
+    $req_new_net->status('done');
+
+    my $req_network = Ravada::Request->create_network(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_vm => $domain->_vm->id
+        ,data => $data
+    );
+    $self->_cmd_create_network($req_network);
+    $req_network->status('done');
+
+    ($net) = grep { $_->{name} eq $data->{name} }
+        $domain->_vm->list_virtual_networks();
+
+    $domain->_vm->_update_network_db($net, {id_owner => $user->id });
+
+    return $net;
 }
 
 sub _new_clone_name($self, $base,$user) {
@@ -4841,14 +5047,38 @@ sub _cmd_prepare_base {
     my $id_domain = $request->id_domain   or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
+    my $domain = $self->search_domain_by_id($id_domain);
+    die "Unknown domain id '$id_domain'\n" if !$domain;
+
     my $user = Ravada::Auth::SQL->search_by_id( $uid)
         or confess "Error: Unknown user id $uid in request ".Dumper($request);
 
+    die "User ".$user->name." [".$user->id."] not allowed to prepare base "
+                .$domain->name."\n"
+            unless $user->is_admin || (
+                $domain->id_owner == $user->id && $user->can_create_base());
+
+
     my $with_cd = $request->defined_arg('with_cd');
 
-    my $domain = $self->search_domain_by_id($id_domain);
-
-    die "Unknown domain id '$id_domain'\n" if !$domain;
+    if ($domain->is_active) {
+        my $req_shutdown = Ravada::Request->shutdown_domain(
+            uid => $user->id
+            ,id_domain => $domain->id
+            ,timeout => 0
+        );
+        $request->after_request($req_shutdown->id);
+        $request->at(time + 10);
+        if ( !defined $request->retry() ) {
+            $request->retry(5);
+            $request->status("retry");
+        } elsif($request->retry>0) {
+            $request->retry($request->retry-1);
+            $request->status("retry");
+        }
+        $request->error("Machine must be shut down ".$domain->name." [".$domain->id."]");
+        return;
+    }
 
     $self->_remove_unnecessary_request($domain);
     $self->_remove_unnecessary_downs($domain);
@@ -4869,8 +5099,13 @@ sub _cmd_remove_base {
     my $user = Ravada::Auth::SQL->search_by_id( $uid);
 
     my $domain = $self->search_domain_by_id($id_domain);
-
     die "Unknown domain id '$id_domain'\n" if !$domain;
+
+    die "User ".$user->name." [".$user->id."] not allowed to remove base "
+                .$domain->name."\n"
+            unless $user->is_admin || (
+                $domain->id_owner == $user->id && $user->can_create_base());
+
 
     $domain->remove_base($user);
 
@@ -5012,7 +5247,12 @@ sub _cmd_change_hardware {
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
     die "Error: User ".$user->name." not allowed\n"
-        if $hardware ne 'memory' && !$user->is_admin;
+    unless $user->is_admin
+    || $hardware eq 'memory'
+    || ($hardware eq 'network'
+        && $user->can_change_hardware_network($domain, $data)
+       )
+    ;
 
     $domain->change_hardware(
          $request->args('hardware')
@@ -5340,7 +5580,7 @@ sub _cmd_check_storage($self, $request) {
             my $path = ''.$vm->_storage_path($storage);
             _check_mounted($path,\%fstab,\%mtab);
             my ($ok,$err) = $vm->write_file("$path/check_storage",$contents);
-            die "Error on starage pool $storage : $err. Retry.\n" if $err;
+            die "Error on storage pool $storage : $err. Retry.\n" if $err;
         }
     }
 }
@@ -5540,6 +5780,10 @@ sub _cmd_list_cpu_models($self, $request) {
     my $id_domain = $request->args('id_domain');
 
     my $domain = Ravada::Domain->open($id_domain);
+    return [] if !$domain->_vm->can_list_cpu_models();
+
+    my $info = $domain->get_info();
+    my $vm = $domain->_vm->vm;
 
     my @out = $domain->_vm->get_cpu_model_names('x86_64');
     $request->output(encode_json(\@out));
@@ -5556,6 +5800,7 @@ sub _cmd_set_time($self, $request) {
         };
     return if !$domain->is_active;
     eval { $domain->set_time() };
+    return if $@ =~ /Guest agent is not responding/ && $domain->get_info()->{ip};
     die "$@ , retry.\n" if $@;
 }
 
@@ -5708,6 +5953,10 @@ sub _refresh_active_vms ($self) {
             next;
         }
         $active_vm{$vm->id} = 1;
+        eval {
+            $vm->list_virtual_networks();
+        };
+        warn $@ if $@;
     }
     return \%active_vm;
 }
@@ -5759,6 +6008,7 @@ sub _refresh_down_nodes($self, $request = undef ) {
         my $vm;
         eval { $vm = Ravada::VM->open($id) };
         warn $@ if $@;
+        $vm->is_active() if $vm;
     }
 }
 
@@ -5973,10 +6223,10 @@ sub _remove_unnecessary_downs($self, $domain) {
 
 sub _refresh_volatile_domains($self) {
    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, id_vm, id_owner FROM domains WHERE is_volatile=1"
+        "SELECT id, name, id_vm, id_owner, vm FROM domains WHERE is_volatile=1"
     );
     $sth->execute();
-    while ( my ($id_domain, $name, $id_vm, $id_owner) = $sth->fetchrow ) {
+    while ( my ($id_domain, $name, $id_vm, $id_owner, $type) = $sth->fetchrow ) {
         my $domain;
         eval { $domain = Ravada::Domain->open(id => $id_domain, _force => 1) } ;
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
@@ -5984,11 +6234,13 @@ sub _refresh_volatile_domains($self) {
                 $domain->_post_shutdown(user => $USER_DAEMON);
                 $domain->remove($USER_DAEMON);
             } else {
-                cluck "Warning: temporary user id=$id_owner should already be removed";
                 my $user;
                 eval { $user = Ravada::Auth::SQL->search_by_id($id_owner) };
                 warn $@ if $@;
-                $user->remove() if $user;
+                if ($user && $user->is_temporary) {
+                    cluck "Warning: temporary user id=$id_owner should already be removed";
+                    $user->remove();
+                }
             }
             my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
             $sth_del->execute($id_domain);
@@ -5997,6 +6249,7 @@ sub _refresh_volatile_domains($self) {
             $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM requests where id_domain=?");
             $sth_del->execute($id_domain);
             $sth_del->finish;
+            Ravada::Domain::_remove_domain_data_db($id_domain, $type);
         }
     }
 }
@@ -6116,6 +6369,8 @@ sub _req_method {
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
+        ,remove_domain => \&_cmd_remove
+        ,remove_clones => \&_cmd_remove_clones
         ,restore_domain => \&_cmd_restore_domain
         ,resume => \&_cmd_resume
        ,dettach => \&_cmd_dettach
@@ -6145,6 +6400,7 @@ sub _req_method {
  ,list_cpu_models => \&_cmd_list_cpu_models
 ,enforce_limits => \&_cmd_enforce_limits
 ,force_shutdown => \&_cmd_force_shutdown
+,force_shutdown_domain => \&_cmd_force_shutdown
 ,force_reboot   => \&_cmd_force_reboot
 ,shutdown_start => \&_cmd_shutdown_start
         ,rebase => \&_cmd_rebase
@@ -6195,7 +6451,14 @@ sub _req_method {
     ,import_domain => \&_cmd_import
     ,list_unused_volumes => \&_cmd_list_unused_volumes
     ,remove_files => \&_cmd_remove_files
+    ,move_volume => \&_cmd_move_volume
     ,update_iso_urls => \&_cmd_update_iso_urls
+
+    ,list_networks => \&_cmd_list_virtual_networks
+    ,new_network => \&_cmd_new_network
+    ,create_network => \&_cmd_create_network
+    ,remove_network => \&_cmd_remove_network
+    ,change_network => \&_cmd_change_network
 
     );
     return $methods{$cmd};
@@ -6362,6 +6625,7 @@ sub _enforce_limits_active($self, $request) {
 
     my %domains;
     for my $domain ($self->list_domains( active => 1 )) {
+        next if $domain->is_in_bundle();
         push @{$domains{$domain->id_owner}},$domain;
         $domain->client_status();
     }
@@ -6616,6 +6880,106 @@ sub _cmd_remove_files($self, $request) {
     $vm->remove_file(@file);
 }
 
+sub _cmd_list_virtual_networks($self, $request) {
+    my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized\n"
+    unless $user->is_admin || $user->can_manage_all_networks || $user->can_create_networks;
+
+    my $id = $request->args('id_vm') or die "Error: missing id_vm";
+    my $vm = Ravada::VM->open($id);
+    my @list = $vm->list_virtual_networks();
+
+    $request->output(encode_json(\@list));
+}
+
+
+sub _cmd_new_network($self, $request) {
+    my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized\n"
+    unless $user->can_create_networks;
+
+    $request->output(encode_json({}));
+
+    my $id = $request->args('id_vm') or die "Error: missing id_vm";
+    my $vm = Ravada::VM->open($id);
+    my $name = ($request->defined_arg('name') or 'net');
+
+    my $new = $vm->new_network($name);
+    $new = {} if !$new;
+
+    $request->output(encode_json( $new));
+}
+
+sub _cmd_create_network($self, $request) {
+    my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized\n"
+    unless $user->can_create_networks || $user->can_manage_all_networks;
+
+    my $id = $request->args('id_vm') or die "Error: missing id_vm";
+    my $vm = Ravada::VM->open($id);
+    $request->output(encode_json({}));
+    my $id_net = $vm->create_network($request->args('data'),$request->args('uid')
+                    , $request);
+    $request->output(encode_json({id_network => $id_net}));
+}
+
+sub _cmd_remove_network($self, $request) {
+
+    my $id = $request->args('id');
+    my $name = $request->defined_arg('name');
+    my $sth_net = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM virtual_networks WHERE id=?"
+    );
+    $sth_net->execute($id);
+    my $network = $sth_net->fetchrow_hashref;
+    if  ($network && $network->{id} ) {
+        _check_user_authorized_network($request, $id);
+    }
+    my $id_vm = ( $network->{id_vm} or $request->defined_arg('id_vm') );
+    die "Error: unknown id_vm ".Dumper([$network,$request]) if !$id_vm;
+
+    die "Error: unkonwn network , id=$id, name='".($name or '')."' "
+    .Dumper($network) if ! $network->{id} && !$name;
+
+    my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
+
+    my $vm = Ravada::VM->open($id_vm);
+    $vm->remove_network($user, ($network->{id} or $name));
+}
+
+sub _check_user_authorized_network($request, $id_network) {
+
+    my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM virtual_networks WHERE id=?"
+    );
+    $sth->execute($id_network);
+    my $network = $sth->fetchrow_hashref;
+
+    confess "Error: network $id_network not found" if !$network->{id};
+
+    die "Error: ".$user->name." not authorized\n"
+    unless $user->is_admin
+    || $user->can_manage_all_networks
+    || ( $user->can_create_networks && $network->{id_owner} == $user->id);
+
+    return $network;
+}
+
+sub _cmd_change_network($self, $request) {
+
+    my $data = $request->args('data');
+    die "Error: network.id required" if !exists $data->{id} || !$data->{id};
+
+    my $network = _check_user_authorized_network($request, $data->{id});
+
+    $data->{internal_id} = $network->{internal_id} if !$data->{internal_id};
+    my $vm = Ravada::VM->open($network->{id_vm});
+
+    $vm->change_network($data, $request->args('uid'));
+}
+
 sub _cmd_active_storage_pool($self, $request) {
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
     die "Error: ".$user->name." not authorized to manage storage pools"
@@ -6633,6 +6997,45 @@ sub _cmd_create_storage_pool($self, $request) {
     my $vm = Ravada::VM->open($request->args('id_vm'));
     $vm->create_storage_pool($request->arg('name'), $request->arg('directory'));
 
+}
+
+sub _cmd_move_volume($self, $request) {
+
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to move volumes"
+        if !$user->is_admin;
+
+    my $domain = Ravada::Domain->open($request->args('id_domain'));
+    die "Error: I can not move volume while machine running ".$domain->name."\n"
+    if $domain->is_active;
+
+    my $volume = $request->args('volume');
+    my @volumes = $domain->list_volumes_info();
+    my $found;
+    my $n_found = 0;
+    for my $vol (@volumes) {
+        if ($vol->file eq $volume ) {
+            $found = $vol;
+            last;
+        }
+        $n_found++;
+    }
+    die "Volume $volume not found in ".$domain->name."\n".Dumper([map { $_->file } @volumes]) if !$found;
+
+    my $vm = $domain->_vm;
+    my $storage = $request->args('storage');
+    my $dst_path = $vm->_storage_path($storage);
+    my ($filename) = $volume =~ m{.*/(.*)};
+    my $dst_vol = "$dst_path/$filename";
+
+    die "Error: file '$dst_vol' already exists in ".$vm->name."\n" if $vm->file_exists($dst_vol);
+
+    my $new_file = $vm->copy_file_storage($volume, $storage);
+
+    $domain->change_hardware('disk', $n_found, { file => $new_file });
+    if ($volume !~ /\.iso$/) {
+        $vm->remove_file($volume);
+    }
 }
 
 =head2 set_debug_value

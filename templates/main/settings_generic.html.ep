@@ -10,9 +10,22 @@
         <div class="card"
              ng-cloak="1"
              ng-controller="settings_<%= $item %>"
-             ng-init="init('<%= $id %>', '<%= url_for('ws_subscribe')->to_abs %>')"
+             ng-init="init('<%= $id %>', '<%= url_for('ws_subscribe')->to_abs %>'
+                      ,'<%= $id_vm %>')"
         >
-            <div class="card-header"><h2><%= $item  %> {{<%= $item %>._old_name}}</h2></div>
+            <div class="card-header">
+                <div class="row">
+                    <div class="col">
+                        <span class="title">
+                            <%= $item  %> {{<%= $item %>._old_name}}
+                        </span>
+                    </div>
+                    <div class="col" align="right">
+                        <a type="button" class="btn btn-outline-secondary" align="right"
+                            href="/admin/<%= $item %>s">back</a>
+                    </div>
+                </div>
+            </div>
             <div class="card-body">
 				<div class="row">
                     %= include "main/settings_generic_tabs"

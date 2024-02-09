@@ -1,13 +1,11 @@
 <div ng-show="showmachine.is_base && !showmachine.has_clones" class="row"
         >
-    <div class="col-sm-3">
+    <div class="col-md-12" align="left">
     <button type="button" ng-click="confirm_remove_base=true"
         ng-model="btn_remove_base"
         ng-hide="confirm_remove_base"
     ><%= l 'Remove Base' %></button>
-    </div>
-    <div class="col-sm-8" ng-hide="confirm_remove_base">
-        <p><%=l 'Remove the base prepared from this machine' %></p>
+        <span class="info"><%=l 'Remove the base prepared from this machine' %></span>
     </div>
 </div>
 

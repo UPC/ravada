@@ -12,6 +12,7 @@ Ravada::VM - Virtual Managers library for Ravada
 use utf8;
 use Carp qw( carp confess croak cluck);
 use Data::Dumper;
+use File::Copy qw(copy);
 use File::Path qw(make_path);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
@@ -24,6 +25,7 @@ use Net::OpenSSH;
 use IO::Socket;
 use IO::Interface;
 use Net::Domain qw(hostfqdn);
+use Storable qw(dclone);
 
 use Ravada::HostDevice;
 use Ravada::Utils;
@@ -128,6 +130,13 @@ has 'netssh' => (
     , lazy => 1
     , clearer => 'clear_netssh'
 );
+
+has 'has_networking' => (
+    isa => 'Bool'
+    , is => 'ro'
+    , default => 0
+);
+
 ############################################################
 #
 # Method Modifiers definition
@@ -146,7 +155,13 @@ around 'ping' => \&_around_ping;
 around 'connect' => \&_around_connect;
 after 'disconnect' => \&_post_disconnect;
 
-around '_list_used_volumes' => \&_around_list_used_volumes;
+around 'new_network' => \&_around_new_network;
+around 'create_network' => \&_around_create_network;
+around 'remove_network' => \&_around_remove_network;
+around 'list_virtual_networks' => \&_around_list_networks;
+around 'change_network' => \&_around_change_network;
+
+around 'copy_file_storage' => \&_around_copy_file_storage;
 
 #############################################################
 #
@@ -190,6 +205,8 @@ sub open {
     } else {
         $args{id} = shift;
     }
+    confess "Error: undefind id in ".Dumper(\%args) if !$args{id};
+
     my $class=ref($proto) || $proto;
 
     my $self = {};
@@ -217,6 +234,7 @@ sub open {
     $args{security} = decode_json($row->{security}) if $row->{security};
 
     my $vm = $self->new(%args);
+    return if !$vm || !$vm->vm;
     $VM{$args{id}} = $vm unless $args{readonly};
     return $vm;
 
@@ -538,6 +556,7 @@ sub _around_create_domain {
     $domain->display($owner)    if $domain->is_active;
 
     $domain->is_pool(1) if $add_to_pool;
+
     return $domain;
 }
 
@@ -605,7 +624,7 @@ sub _add_instance_db($self, $id_domain) {
 sub _define_spice_password($self, $remote_ip) {
     my $spice_password = Ravada::Utils::random_name(4);
     if ($remote_ip) {
-        my $network = Ravada::Network->new(address => $remote_ip);
+        my $network = Ravada::Route->new(address => $remote_ip);
         $spice_password = undef if !$network->requires_password;
     }
     return $spice_password;
@@ -829,7 +848,7 @@ sub _ip_a($self, $dev) {
     my ($out, $err) = $self->run_command_cache("/sbin/ip","-o","a");
     die $err if $err;
     for my $line ( split /\n/,$out) {
-        my ($ip) = $line =~ m{^\d+:\s+$dev.*inet (.*?)/};
+        my ($ip) = $line =~ m{^\d+:\s+$dev.*inet\d* (.*?)/};
         return $ip if $ip;
     }
     warn "Warning $dev not found in active interfaces";
@@ -946,13 +965,13 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias','storage', 'options'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias','storage', 'options', 'network'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports manage_pools screenshot);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports manage_pools screenshot remove_clones);
     my @requests;
     for my $req ( $base->list_requests ) {
         push @requests,($req) if !$ignore_requests{$req->command};
@@ -996,6 +1015,7 @@ sub _data($self, $field, $value=undef) {
           || $value ne $self->{_data}->{$field}
         )
     ) {
+        confess if $field eq 'id_vm' && $self->is_base;
         $self->{_data}->{$field} = $value;
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE vms set $field=?"
@@ -1431,6 +1451,184 @@ sub _around_ping($orig, $self, $option=undef, $cache=1) {
     return $ping;
 }
 
+sub _insert_network($self, $net) {
+    delete $net->{id};
+    $net->{id_owner} = Ravada::Utils::user_daemon->id
+    if !exists $net->{id_owner};
+
+    $net->{id_vm} = $self->id;
+    $net->{is_public}=1 if !exists $net->{is_public};
+
+    my @fields = grep !/^_/, sort keys %$net;
+
+    my $sql = "INSERT INTO virtual_networks ("
+    .join(",",@fields).")"
+    ." VALUES(".join(",",map { '?' } @fields).")";
+    my $sth = $self->_dbh->prepare($sql);
+    $sth->execute(map { $net->{$_} } @fields);
+
+    $net->{id} = Ravada::Utils::last_insert_id($$CONNECTOR->dbh);
+}
+
+sub _update_network($self, $net) {
+    my $sth = $self->_dbh->prepare("SELECT * FROM virtual_networks "
+        ." WHERE id_vm=? AND ( internal_id=? OR name = ?)"
+    );
+    $sth->execute($self->id,$net->{internal_id}, $net->{name});
+    my $db_net = $sth->fetchrow_hashref();
+    if (!$db_net || !$db_net->{id}) {
+        $self->_insert_network($net);
+    } else {
+        $self->_update_network_db($db_net, $net);
+        $net->{id}  = $db_net->{id};
+    }
+    delete $db_net->{date_changed};
+    #    delete $db_net->{id};
+}
+
+sub _update_network_db($self, $old, $new0) {
+    my $new = dclone($new0);
+    my $id = $old->{id} or confess "Missing id";
+    my $sql = "";
+    for my $field (sort keys %$new) {
+        if (    exists $old->{$field} && defined $old->{$field}
+            &&  exists $new->{$field} && defined $new->{$field}
+            && $new->{$field} eq $old->{$field}) {
+            delete $new->{$field};
+            next;
+        }
+        $sql .= ", " if $sql;
+        $sql .=" $field=? "
+    }
+    if ($sql) {
+        $sql = "UPDATE virtual_networks set $sql WHERE id=?";
+        my $sth = $self->_dbh->prepare($sql);
+        my @values = map { $new->{$_} } sort keys %$new;
+
+        $sth->execute(@values, $id);
+    }
+}
+
+sub _around_new_network($orig, $self, $name) {
+    my $data = $self->$orig($name);
+    $data->{id_vm} = $self->id;
+    $data->{is_active}=1;
+    $data->{autostart}=1;
+    return $data;
+}
+
+sub _around_create_network($orig, $self,$data, $id_owner, $request=undef) {
+    my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Unknown user id: $id_owner";
+    die "Error: Access denied: ".$owner->name." can not create networks"
+    unless $owner->can_create_networks();
+
+    for my $field (qw(name bridge)) {
+        next if !$data->{$field};
+        my ($found) = grep { $_->{$field} eq $data->{$field} }
+        $self->list_virtual_networks();
+
+        die "Error: network $field=$data->{$field} already exists\n"
+        if $found;
+    }
+
+    $data->{is_active}=0 if !exists $data->{is_active};
+    $data->{autostart}=0 if !exists $data->{autostart};
+    my $ip = $data->{ip_address} or die "Error: missing ip address";
+    $ip =~ s/(.*)\..*/$1/;
+    $data->{dhcp_start}="$ip.2" if !exists $data->{dhcp_start};
+    $data->{dhcp_end}="$ip.254" if !exists $data->{dhcp_end};
+    delete $data->{_update};
+    delete $data->{internal_id} if exists $data->{internal_id};
+    eval { $self->$orig($data) };
+    $request->error(''.$@) if $@ && $request;
+    $data->{id_owner} = $id_owner;
+    $data->{is_public} = 0 if !$data->{is_public};
+    $self->_insert_network($data);
+}
+
+sub _around_remove_network($orig, $self, $user, $id_net) {
+    die "Error: Access denied: ".$user->name." can not remove networks"
+    unless $user->can_create_networks();
+
+    confess "Error: undefined network" if !defined $id_net;
+
+    my $name = $id_net;
+    if ($id_net =~ /^\d+$/) {
+        my ($net) = grep { $_->{id} eq $id_net } $self->list_virtual_networks();
+        die "Error: network id $id_net not found" if !$net;
+        $name = $net->{name};
+    }
+
+
+    $self->$orig($name);
+
+    my $sth = $self->_dbh->prepare("DELETE FROM virtual_networks WHERE id=?");
+    $sth->execute($id_net);
+}
+
+sub _around_change_network($orig, $self, $data, $uid) {
+    delete $data->{date_changed};
+
+    for my $field (keys %$data) {
+        delete $data->{$field} if $field =~ /^_/;
+    }
+
+    my $data2 = dclone($data);
+
+    my $id_owner = delete $data->{id_owner};
+
+    my $id = delete $data2->{id};
+    my $sth0 = $self->_dbh->prepare("SELECT * FROM virtual_networks WHERE id=?");
+    $sth0->execute($id);
+    my $old = $sth0->fetchrow_hashref;
+
+    # this field is only in DB
+    delete $data->{is_public};
+    my $changed = $orig->($self, $data);
+
+    my $user=Ravada::Auth::SQL->search_by_id($uid);
+
+    $self->_update_network_db($old, $data2);
+
+}
+
+sub _check_networks($self) { }
+
+sub _around_list_networks($orig, $self) {
+    my $sth_previous = $self->_dbh->prepare(
+        "SELECT count(*) FROM virtual_networks "
+        ." WHERE id_vm=?"
+    );
+    $sth_previous->execute($self->id);
+    my ($count) = $sth_previous->fetchrow;
+    my $first_time = !$count;
+
+    my @list = $orig->($self);
+    for my $net ( @list ) {
+        $net->{id_vm}=$self->id;
+        $self->_update_network($net);
+    }
+    my $sth = $self->_dbh->prepare(
+        "SELECT id,name,id_owner,is_public FROM virtual_networks "
+        ." WHERE id_vm=?");
+    my $sth_delete = $self->_dbh->prepare("DELETE FROM virtual_networks where id=?");
+    $sth->execute($self->id);
+    while (my ($id, $name, $id_owner, $is_public) = $sth->fetchrow) {
+        my ($found) = grep {$_->{name} eq $name } @list;
+        if ( $found ) {
+            $found->{id_owner} = $id_owner;
+            $found->{id} = $id;
+            $found->{is_public} = $is_public;
+            next;
+        }
+        $sth_delete->execute($id);
+    }
+
+    $self->_check_networks() if $first_time;
+
+    return @list;
+}
+
 =head2 is_active
 
 Returns if the domain is active. The active state is cached for some seconds.
@@ -1843,11 +2041,18 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=undef) 
     }
 
     return $vms[0] if scalar(@vms)<=1;
+
+    my @vms_active;
+    for my $vm (@vms) {
+        push @vms_active,($vm) if $vm->is_active && $vm->enabled;
+    }
     if ($base && $base->_data('balance_policy') == 1 ) {
-        my $vm = $self->_balance_already_started($uid, $id_domain, \@vms);
+        my $vm = $self->_balance_already_started($uid, $id_domain, \@vms_active);
         return $vm if $vm;
     }
-    return $self->_balance_free_memory($base, \@vms);
+    my $vm = $self->_balance_free_memory($base, \@vms_active);
+    return $vm if $vm;
+    die "Error: No free nodes available.\n" if !$vm;
 }
 
 sub _balance_already_started($self, $uid, $id_domain, $vms) {
@@ -1891,11 +2096,10 @@ sub _balance_free_memory($self , $base, $vms) {
         eval { $active = $vm->is_active() };
         my $error = $@;
         if ($error && !$vm->is_local) {
-            warn "[balance] disabling ".$vm->name." ".$vm->enabled()." $error";
-            $vm->enabled(0);
+            warn "[balancing] ".$vm->name." $error";
+            next;
         }
 
-        next if !$vm->enabled();
         next if !$active;
         next if $base && !$vm->is_local && !$base->base_in_vm($vm->id);
         next if $vm->is_locked();
@@ -1923,7 +2127,7 @@ sub _balance_free_memory($self , $base, $vms) {
     for my $vm (@sorted_vm) {
         return $vm;
     }
-    return $self;
+    return;
 }
 
 sub _sort_vms($vm_list) {
@@ -2062,6 +2266,42 @@ sub shared_storage($self, $node, $dir) {
 
     return $shared;
 }
+
+=head2 copy_file_storage
+
+Copies a volume file to another storage
+
+Args:
+
+=over
+
+=item * file
+
+=item * storage
+
+=back
+
+=cut
+
+sub copy_file_storage($self, $file, $storage) {
+    die "Error: file '$file' does not exist" if !$self->file_exists($file);
+
+    my ($pool) = grep { $_->{name} eq $storage } $self->list_storage_pools(1);
+    die "Error: storage pool $storage does not exist" if !$pool;
+
+    my $path = $pool->{path};
+
+    die "TODO remote" if !$self->is_local;
+
+    copy($file, $path) or die "$! $file -> $path";
+
+    my ($filename) = $file =~ m{.*/(.*)};
+    die "Error: file '$file' not copied to '$path'" if ! -e "$path/$filename";
+
+    return "$path/$filename";
+
+}
+
 sub _fetch_tls_host_subject($self) {
     return '' if !$self->dir_cert();
 
@@ -2194,6 +2434,7 @@ Starts the node
 
 sub start($self) {
     $self->_wake_on_lan();
+    $self->_data('is_active' => 1);
 }
 
 =head2 shutdown
@@ -2303,36 +2544,20 @@ sub list_network_interfaces($self, $type) {
 
 sub _list_nat_interfaces($self) {
 
-    my @cmd = ( '/usr/bin/virsh','net-list');
-    my ($out,$err) = $self->run_command(@cmd);
-
-    my @lines = split /\n/,$out;
-    shift @lines;
-    shift @lines;
-
+    my @nets = $self->list_virtual_networks();
     my @networks;
-    for (@lines) {
-        /\s*(.*?)\s+.*/;
-        push @networks,($1) if $1;
+    for my $net (@nets) {
+        push @networks,($net->{name}) if $net->{name};
     }
     return @networks;
 }
 
-sub _get_nat_bridge($self, $net) {
-    my @cmd = ( '/usr/bin/virsh','net-info', $net);
-    my ($out,$err) = $self->run_command(@cmd);
-
-    for my $line (split /\n/, $out) {
-        my ($bridge) = $line =~ /^Bridge:\s+(.*)/;
-        return $bridge if $bridge;
-    }
-}
-
 sub _list_qemu_bridges($self) {
     my %bridge;
-    my @networks = $self->_list_nat_interfaces();
+    my @networks = $self->list_virtual_networks();
     for my $net (@networks) {
-        my $nat_bridge = $self->_get_nat_bridge($net);
+        next if !$net->{bridge};
+        my $nat_bridge = $net->{bridge};
         $bridge{$nat_bridge}++;
     }
     return keys %bridge;
@@ -2521,6 +2746,31 @@ sub dir_backup($self) {
     return $dir_backup;
 }
 
+sub _follow_link($self, $file) {
+    my ($dir, $name) = $file =~ m{(.*)/(.*)};
+    my $file2 = $file;
+    if ($dir) {
+        my $dir2 = $self->_follow_link($dir);
+        $file2 = "$dir2/$name";
+    }
+
+    if (!defined $self->{_is_link}->{$file2} ) {
+        my ($out,$err) = $self->run_command("stat","-c",'"%N"', $file2);
+        chomp $out;
+        my ($link) = $out =~ m{ -> '(.+)'};
+        if ($link) {
+            if ($link !~ m{^/}) {
+                my ($path) = $file2 =~ m{(.*/)};
+                $path = "/" if !$path;
+                $link = "$path$link";
+            }
+            $self->{_is_link}->{$file2} = $link;
+        }
+    }
+    $self->{_is_link}->{$file2} = $file2 if !exists $self->{_is_link}->{$file2};
+    return $self->{_is_link}->{$file2};
+}
+
 sub _is_link_remote($self, $vol) {
 
     my ($out,$err) = $self->run_command("stat",$vol);
@@ -2563,14 +2813,100 @@ sub _is_link($self,$vol) {
     return $path_link if $path_link;
 }
 
-sub _around_list_used_volumes($orig, $self) {
-    my @vols = $self->$orig();
-    my @links;
-    for my $vol ( @vols ) {
-        my $link = $self->_is_link($vol);
-        push @links,($link) if $link;
+=head2 list_unused_volumes
+
+Returns a list of unused volume files
+
+=cut
+
+sub list_unused_volumes($self) {
+    my @all_vols = $self->list_volumes();
+
+    my @used = $self->list_used_volumes();
+    my %used;
+    for my $vol (@used) {
+        $used{$vol}++;
+        my $link = $self->_follow_link($vol);
+        $used{$link}++ if $link;
+    }
+
+    my @vols;
+    my %duplicated;
+    for my $vol ( @all_vols ) {
+        next if $used{$vol};
+
+        my $link = $self->_follow_link($vol);
+        next if $used{$link};
+        next if $duplicated{$link}++;
+
+        push @vols,($link);
     }
     return @vols;
+}
+
+=head2 can_list_cpu_models
+
+Default for Virtual Managers that can list cpu models is 0
+
+=cut
+
+sub can_list_cpu_models($self) {
+    return 0;
+}
+
+sub _around_copy_file_storage($orig, $self, $file, $storage) {
+    my $sth = $self->_dbh->prepare("SELECT id,info FROM volumes"
+        ." WHERE file=? "
+    );
+    $sth->execute($file);
+    my ($id,$infoj) = $sth->fetchrow;
+
+    my $new_file = $self->$orig($file, $storage);
+
+    if ($id) {
+        my $info = decode_json($infoj);
+        $info->{file} = $new_file;
+        my $sth_update = $self->_dbh->prepare(
+            "UPDATE volumes set info=?,file=?"
+            ." WHERE id=?"
+        );
+        $sth_update->execute(encode_json($info), $new_file, $id);
+    }
+
+    return $new_file;
+}
+
+sub _list_files_local($self, $dir, $pattern) {
+    opendir my $ls,$dir or die "$! $dir";
+    my @list;
+    while (my $file = readdir $ls) {
+        next if defined $pattern && $file !~ $pattern;
+        push @list,($file);
+    }
+    return @list;
+}
+
+sub _list_files_remote($self, $dir, $pattern) {
+    my @cmd=("ls",$dir);
+    my ($out, $err) = $self->run_command(@cmd);
+    my @list;
+    for my $file (split /\n/,$out) {
+        push @list,($file) if !defined $pattern || $file =~ $pattern;
+    }
+    return @list;
+}
+
+=head2 list_files
+
+List files in a Virtual Manager
+
+Arguments: dir , optional regexp pattern
+
+=cut
+
+sub list_files($self, $dir, $pattern=undef) {
+    return $self->_list_files_local($dir, $pattern) if $self->is_local;
+    return $self->_list_files_remote($dir, $pattern);
 }
 
 1;

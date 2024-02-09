@@ -11,7 +11,7 @@ use Moose;
 use Socket qw( inet_aton inet_ntoa );
 use Sys::Hostname;
 use URI;
-use YAML qw(Dump LoadFile);
+use YAML qw(Dump Load);
 
 use Ravada::Domain::Void;
 use Ravada::NetInterface::Void;
@@ -32,6 +32,12 @@ has 'vm' => (
     ,isa => 'Any'
     ,builder => '_connect'
     ,lazy => 1
+);
+
+has has_networking => (
+    isa => 'Bool'
+    , is => 'ro'
+    , default => 1
 );
 
 our $CONNECTOR = \$Ravada::CONNECTOR;
@@ -91,6 +97,10 @@ sub create_domain {
     my $id = delete $args{id};
     my $storage = delete $args{storage};
 
+    my $options = delete $args{options};
+    my $network;
+    $network = $options->{network} if $options && exists $options->{network};
+
     my $domain = Ravada::Domain::Void->new(
                                            %args
                                            , domain => $args{name}
@@ -104,7 +114,8 @@ sub create_domain {
     return $domain if $out && exists $args{config};
 
     die "Error: Domain $args{name} already exists " if $out;
-    $domain->_set_default_info($listen_ip);
+
+    $domain->_set_default_info($listen_ip, $network);
     $domain->_store( autostart => 0 );
     $domain->_store( is_active => $active );
     $domain->set_memory($args{memory}) if $args{memory};
@@ -161,6 +172,11 @@ sub create_domain {
         my $drivers = {};
         $drivers = $domain_base->_value('drivers');
         $domain->_store( drivers => $drivers );
+        if ( $network ) {
+            for my $index ( 0 .. scalar(@{$clone_hw->{network}})-1) {
+                $domain->change_hardware('network', $index ,{name => $network})
+            }
+        }
     } elsif (!exists $args{config}) {
         $storage = $self->default_storage_pool_name() if !$storage;
         my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".void";
@@ -336,9 +352,128 @@ sub search_domain {
     return;
 }
 
-sub list_networks {
+sub list_routes {
     return Ravada::NetInterface::Void->new();
 }
+
+sub list_virtual_networks($self) {
+
+    my $dir_net = $self->dir_img."/networks/";
+    if (!$self->file_exists($dir_net)) {
+        my ($out, $err) = $self->run_command("mkdir", $dir_net);
+        die $err if $err;
+    }
+    my @files = $self->list_files($dir_net,qr/.yml$/);
+    my @list;
+    for my $file(@files) {
+        my $net;
+        eval { $net = Load($self->read_file("$dir_net/$file")) };
+        confess $@ if $@;
+
+        $net->{id_vm} = $self->id if !$net->{id_vm};
+        $net->{is_active}=0 if !defined $net->{is_active};
+        push @list,($net);
+    }
+    if (!@list) {
+        my $net = {name => 'default'
+            , autostart => 1
+            , internal_id => 1
+            , bridge => 'voidbr0'
+            ,ip_address => '192.51.100.1'
+            ,is_active => 1
+        };
+
+        my $file_out = $self->dir_img."/networks/".$net->{name}.".yml";
+        $self->write_file($file_out,Dump($net));
+        push @list,($net);
+    }
+    return @list;
+}
+
+sub _new_net_id($self) {
+    my %id;
+    for my $net ( $self->list_virtual_networks() ) {
+        $id{$net->{internal_id}}++;
+    }
+    my $new_id = 0;
+    for (;;) {
+        return $new_id if !exists $id{++$new_id};
+    }
+}
+
+sub _new_net_bridge ($self) {
+    my %bridge;
+    my $n = 0;
+    for my $net ( $self->list_virtual_networks() ) {
+        $bridge{$net->{bridge}}++;
+    }
+    my $new_id = 0;
+    for (;;) {
+        my $new_bridge = 'voidbr'.$new_id;
+        return $new_bridge if !exists $bridge{$new_bridge};
+        $new_id++;
+    }
+}
+
+sub new_network($self, $name='net') {
+
+    my @networks = $self->list_virtual_networks();
+
+    my %base = (
+        name => $name
+        ,ip_address => ['192.168.','.0']
+        ,bridge => 'voidbr'
+    );
+    my $new = {ip_netmask => '255.255.255.0'};
+    for my $field ( keys %base) {
+        my %old = map { $_->{$field} => 1 } @networks;
+        my $n = 0;
+        my $base = ($base{$field} or $field);
+        my $value;
+        for ( 0 .. 255 ) {
+            if (ref($base)) {
+                $value = $base->[0].$n.$base->[1]
+            } else {
+                $value = $base.$n;
+            }
+            last if !$old{$value};
+            $n++;
+        }
+        $new->{$field} = $value;
+    }
+    return $new;
+}
+
+sub create_network($self, $data, $id_owner=undef, $request=undef) {
+
+    $data->{internal_id} = $self->_new_net_id();
+    my $file_out = $self->dir_img."/networks/".$data->{name}.".yml";
+    die "Error: network $data->{name} already created"
+    if $self->file_exists($file_out);
+
+    $data->{bridge} = $self->_new_net_bridge()
+    if !exists $data->{bridge} || ! defined $data->{bridge};
+
+    delete $data->{is_public};
+
+    for my $field ('bridge','ip_address') {
+        $self->_check_duplicated_network($field,$data);
+    }
+
+    delete $data->{is_public};
+    delete $data->{id};
+    delete $data->{id_vm};
+
+    $self->write_file($file_out,Dump($data));
+
+    return $data;
+}
+
+sub remove_network($self, $name) {
+    my $file_out = $self->dir_img."/networks/$name.yml";
+    unlink $file_out or die "$! $file_out" if $self->file_exists($file_out);
+}
+
 
 sub search_volume($self, $pattern) {
 
@@ -352,7 +487,7 @@ sub search_volume($self, $pattern) {
     return;
 }
 
-sub _list_used_volumes($self) {
+sub list_used_volumes($self) {
     my @disk;
     for my $domain ($self->list_domains) {
         push @disk,($domain->list_disks());
@@ -363,32 +498,33 @@ sub _list_used_volumes($self) {
     return @disk
 }
 
-sub _list_volumes($self) {
+sub _list_volumes_sp($self, $sp) {
     die "Error: TODO remote!" if !$self->is_local;
 
-    my @vol;
-    opendir my $ls,$self->dir_img or die $!;
-    my $dir = $self->dir_img;
+    confess if !defined $sp;
+    my $dir = $sp->{path} or die "Error: unknown path ".Dumper($sp);
+    return if ! -e $dir;
 
+    my @vol;
+
+    opendir my $ls,$dir or die "$! $dir";
     while (my $file = readdir $ls) {
-        push @vol,("$dir/$file");
+        push @vol,("$dir/$file") if -f "$dir/$file";
     }
     closedir $ls;
+
     return @vol;
 
 }
 
-sub list_unused_volumes($self) {
-    die "Error: TODO remote!" if !$self->is_local;
-    my %used = map { $_ => 1 } $self->_list_used_volumes();
-    my @unused;
-    for my $vol ( sort $self->_list_volumes ) {
-        next if ! -f $vol;
-        next if $vol =~ m{/\..*yml$};
-
-        push @unused,($vol) unless $used{$vol};
+sub list_volumes($self) {
+    my @volumes;
+    for my $sp ($self->list_storage_pools(1)) {
+        for my $vol ( $self->_list_volumes_sp($sp) ) {
+            push @volumes,($vol);
+        }
     }
-    return @unused;
+    return @volumes;
 }
 
 sub _search_volume_remote($self, $pattern) {
@@ -469,12 +605,31 @@ sub _init_storage_pool_default($self) {
     my $config_dir = Ravada::Front::Domain::Void::_config_dir();
     my $file_sp = "$config_dir/.storage_pools.yml";
 
-    return if -e $file_sp;
+    return if $self->file_exists($file_sp);
 
     my @list = ({ name => 'default', path => $config_dir, is_active => 1 });
 
     $self->write_file($file_sp, Dump( \@list));
 
+}
+
+sub _find_storage_pool($self, $file) {
+
+    my ($path) = $file =~ m{(.*)/};
+
+    return $self->{_storage_pool_path}->{$path}
+    if $self->{_storage_pool_path} && exists $self->{_storage_pool_path}->{$path};
+
+    my $found;
+    for my $sp ($self->list_storage_pools(1)) {
+        if ($sp->{path} eq $path) {
+            $found = $sp->{name};
+            last;
+        }
+    }
+    return '' if !$found;
+    $self->{_storage_pool_path}->{$path} = $found;
+    return $found;
 }
 
 sub list_storage_pools($self, $info=0) {
@@ -484,7 +639,7 @@ sub list_storage_pools($self, $info=0) {
     $self->_init_storage_pool_default();
 
     my $file_sp = "$config_dir/.storage_pools.yml";
-    my $extra= LoadFile($file_sp);
+    my $extra= Load($self->read_file($file_sp));
     push @list,(@$extra) if $extra;
 
     my ($default) = grep { $_->{name} eq 'default'} @list;
@@ -649,6 +804,73 @@ sub active_storage_pool($self, $name, $value) {
 }
 sub get_cpu_model_names($self,$arch='x86_64') {
     return qw(486 qemu32 qemu64);
+}
+
+sub has_networking { return 1 };
+
+sub _check_duplicated_network($self, $field, $data) {
+    my @networks = $self->list_virtual_networks();
+    my ($found) = grep {$data->{name} ne $_->{name}
+        && $_->{$field} eq $data->{$field} } @networks;
+    return if !$found;
+
+    $field = 'Network' if $field eq 'ip_address';
+    die "Error: $field is already in use in $found->{name}";
+}
+
+sub change_network($self,$data) {
+    my $id = delete $data->{internal_id} or confess "Missing internal_id ".Dumper($data);
+    confess if exists $data->{is_public};
+
+    my @networks = $self->list_virtual_networks();
+    my ($net0) = grep { $_->{internal_id} eq $id } @networks;
+
+    my $file_out = $self->dir_img."/networks/".$net0->{name}.".yml";
+    my $net= {};
+    eval { $net = Load($self->read_file($file_out)) };
+    confess $@ if $@;
+
+    my $changed = 0;
+    for my $field ('name', sort keys %$data) {
+        next if $field =~ /^_/ || $field eq 'is_public';
+        if (!exists $net->{$field}) {
+            $net->{$field} = $data->{$field};
+            $changed++;
+            next;
+        }
+        next if exists $data->{$field} && exists $net->{$field}
+        && defined $data->{$field} && defined $net->{$field}
+        && $data->{$field} eq $net->{$field};
+
+        if ($field eq 'name') {
+            die "Error: network can not be renamed";
+        }
+
+        if ($field eq 'bridge' || $field eq 'ip_address') {
+            $self->_check_duplicated_network($field,$data);
+        }
+        $net->{$field} = $data->{$field};
+        $changed++;
+    }
+    return if !$changed;
+
+    delete $net->{is_public};
+    delete $net->{id};
+    delete $net->{id_vm};
+
+    $self->write_file($file_out,Dump($net));
+}
+
+sub remove_storage_pool($self, $name) {
+
+    my $file_sp = $self->dir_img."/.storage_pools.yml";
+    my $sp_list = Load($self->read_file($file_sp));
+    my @sp2;
+    for my $sp (@$sp_list) {
+        push @sp2,($sp) if $sp->{name} ne $name;
+    }
+
+    $self->write_file($file_sp, Dump( \@sp2));
 }
 
 #########################################################################3

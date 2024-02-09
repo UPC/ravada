@@ -60,6 +60,7 @@ create_domain
     connector
     init_ldap_config
 
+    create_ram_fs
     create_storage_pool
     local_ips
 
@@ -73,6 +74,7 @@ create_domain
     remove_old_domains_req
     remove_domain_and_clones_req
     remove_domain
+    remove_volatile_clones
     mojo_init
     mojo_clean
     mojo_create_domain
@@ -87,6 +89,8 @@ create_domain
     remove_old_users_ldap
 
     remove_qemu_pools
+
+    remove_networks_req
 
     mangle_volume
     test_volume_contents
@@ -653,13 +657,16 @@ sub _leftovers {
 }
 
 sub _discover() {
-    my $sth = connector()->dbh->prepare("SELECT id,vm_type,hostname FROM vms");
+    my $sth = connector()->dbh->prepare("SELECT id,vm_type,hostname,name FROM vms");
     $sth->execute();
+
+    my $sth_instances = connector()->dbh->prepare("INSERT INTO domain_instances "
+        ."( id_domain, id_vm ) VALUES (?,?)"
+    );
 
     my $name = base_domain_name();
 
-    while ( my ($id_vm, $vm_type, $hostname) = $sth->fetchrow ) {
-        next if $hostname ne 'localhost';
+    while ( my ($id_vm, $vm_type, $hostname, $vm_name) = $sth->fetchrow ) {
         my $req=Ravada::Request->discover(
             uid => user_admin->id
             ,id_vm => $id_vm
@@ -667,15 +674,36 @@ sub _discover() {
         wait_request();
         my $out = $req->output;
         warn $req->error if $req->error;
-        return if !$out;
+        next if !$out;
         my $discover = decode_json($out);
         my @list = grep { $_ =~ /^$name/ } @$discover;
         for my $name (@list) {
-            diag("Importing $name");
+            diag("Importing $name in ".$vm_name);
 
-            #            $name = Encode::decode_utf8($name)
-            # if utf8::valid($name);
-
+            if ($hostname ne 'localhost') {
+                my $domain = rvd_front->search_domain($name);
+                if (!$domain) {
+                    confess if $name !~ /\d+$/;
+                    Ravada::Request->create_domain(
+                        id_owner => user_admin->id
+                        ,vm => $vm_type
+                        ,name => $name
+                        ,id_iso => search_id_iso('Alpine%64')
+                    );
+                    wait_request();
+                }
+                for ( 1 .. 10 ) {
+                    $domain = rvd_front->search_domain($name);
+                    last if $domain;
+                    sleep 1;
+                    wait_request(debug => 1);
+                }
+                eval {
+                    $sth_instances->execute($domain->id, $id_vm);
+                };
+                die $@ if $@ && $@ !~ /Duplicate entry/;
+                next;
+            }
             $req = Ravada::Request->import_domain(
                 name => $name
                 ,id_owner => user_admin->id
@@ -683,6 +711,7 @@ sub _discover() {
                 ,uid => user_admin->id
                 ,spinoff_disks => 0
             );
+            wait_request();
         }
     }
     wait_request(debug => 0);
@@ -702,10 +731,41 @@ sub remove_old_domains_req($wait=1, $run_request=0) {
 
 }
 
+sub remove_volatile_clones(@bases) {
+
+    for my $base0 (@bases) {
+        confess if !defined $base0;
+        my $base = $base0;
+
+        my $id = $base0->{id};
+        $id = $base0->id if !defined $id;
+
+        $base = Ravada::Front::Domain->open($id)
+        unless ref($base) =~ /^Ravada::/;
+
+        next if !$base;
+        for my $clone ($base->clones) {
+            next unless $clone->{is_volatile};
+            Ravada::Request->remove_domain(
+                    uid => user_admin->id
+                    ,name => $clone->{name}
+            );
+        }
+    }
+}
+
 sub remove_domain(@bases) {
 
-    for my $base (@bases) {
-        confess if !defined $base;
+    for my $base0 (@bases) {
+        confess if !defined $base0;
+        my $base = $base0;
+
+        my $id = $base0->{id};
+        $id = $base0->id if !defined $id;
+
+        $base = Ravada::Domain->open($id)
+        unless ref($base) =~ /^Ravada::/;
+
         for my $clone ($base->clones) {
             my $d_clone = Ravada::Domain->open($clone->{id});
             if ( $d_clone ) {
@@ -927,7 +987,7 @@ sub mojo_clean($wait=1) {
 
 sub mojo_check_login( $t, $user=$MOJO_USER , $pass=$MOJO_PASSWORD ) {
     $t->ua->get("/user.json");
-    return if $t->tx->res->code =~ /^(101|200|302)$/;
+    return if $t->tx && $t->tx->res->code =~ /^(101|200|302)$/;
     mojo_login($t, $user,$pass);
 }
 
@@ -965,21 +1025,21 @@ sub mojo_create_domain($t, $vm_name) {
 
 }
 
-sub mojo_request($t, $req_name, $args) {
+sub mojo_request($t, $req_name, $args, $wait=1) {
     $t->post_ok("/request/$req_name/" => json => $args);
     like($t->tx->res->code(),qr/^(200|302)$/);
 
     my $response = $t->tx->res->json();
     ok(exists $response->{request}) or return;
-    wait_request(background => 1);
+    wait_request(background => 1) if $wait;
     return $response->{request};
 }
 
-sub mojo_request_url_post($t,$url, $json) {
+sub mojo_request_url_post($t,$url, $json, $wait=1) {
     $t->post_ok($url, json => $json);
     like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body."\n".Dumper($url,$json);
 
-    _wait_mojo_request($t, $url);
+    _wait_mojo_request($t, $url) if $wait;
 }
 
 sub mojo_request_url($t, $url) {
@@ -1004,7 +1064,7 @@ sub _wait_mojo_request($t, $url) {
     }
     my $req = Ravada::Request->open($body_json->{request});
     for ( 1 .. 180 ) {
-        last if $req->status eq 'done';
+        last if $req->status eq 'done' || $req->at_time;
         sleep 1;
         diag("Waiting for request "
             .$req->id." ".$req->command." ".$req->status." ".$req->error) if !($_ % 10);
@@ -1023,7 +1083,12 @@ sub _activate_storage_pools($vm) {
         next if $sp->is_active;
         next unless $sp->get_name =~ /^tst_/;
         diag("Activating sp ".$sp->get_name." on ".$vm->name);
-        $sp->build() unless $sp->is_active;
+        my $xml = XML::LibXML->load_xml(string => $sp->get_xml_description());
+        my ($path) = $xml->findnodes('/pool/target/path');
+        my $dir = $path->textContent();
+        mkdir $dir or die "$! $dir" if ! -e $dir;
+
+        $sp->build();
         $sp->create() unless $sp->is_active;
     }
 }
@@ -1121,6 +1186,9 @@ sub create_user($name=new_domain_name(), $pass=$$, $is_admin=0) {
     my $login;
     eval { $login = Ravada::Auth::SQL->new(name => $name, password => $pass ) };
     return $login if $login;
+
+    $login = Ravada::Auth::SQL->new(name => $name);
+    $login->remove() if $login && $login->id;
 
     Ravada::Auth::SQL::add_user(name => $name, password => $pass, is_admin => $is_admin);
 
@@ -1258,6 +1326,7 @@ sub wait_request {
     my %done;
     for ( ;; ) {
         fast_forward_requests();
+        _clean_removed_domains();
         my $done_all = 1;
         my $prev = join(".",_list_requests);
         my $done_count = scalar keys %done;
@@ -1272,6 +1341,7 @@ sub wait_request {
             next if $@ && $@ =~ /I can't find id=$req_id/;
             die $@ if $@;
             next if $skip{$req->command};
+            next if $req->at_time && $req->status eq 'requested';
             if ( $req->status ne 'done' ) {
                 my $run_at = '';
                 if ($req->status eq 'requested') {
@@ -1315,7 +1385,13 @@ sub wait_request {
                         } elsif($req->command eq 'compact') {
                             like($error,qr{^($|.*compacted)});
                         } elsif($req->command eq 'refresh_machine') {
-                            like($error,qr{^($|.*port.*already used)});
+                            like($error,qr{^($|.*port.*already used|.*Domain not found)});
+                        } elsif($req->command eq 'force_shutdown') {
+                            like($error,qr{^($|.*Unknown domain)});
+                        } elsif($req->command eq 'connect_node') {
+                            like($error,qr{^($|Connection OK)});
+                        } elsif($req->command eq 'clone') {
+                            like($error,qr{^($|.*No free nodes)});
                         } else {
                             like($error,qr/^$|libvirt error code:38,|run recently|checked|checking/)
                                 or confess $req->id." ".$req->command;
@@ -1330,7 +1406,7 @@ sub wait_request {
             for my $req (@$request) {
                 $req = Ravada::Request->open($req) if !ref($req);
                 next if !$req->id || $skip{$req->command};
-                if ($req->status ne 'done') {
+                if ($req->status ne 'done' && !$req->at_time) {
                     $done_all = 0;
                     if ( $debug && (time%5 == 0) ) {
                         diag("Waiting for request ".$req->id." ".$req->command);
@@ -1346,6 +1422,25 @@ sub wait_request {
     }
 }
 
+sub _clean_removed_domains() {
+    my $sth = connector()->dbh->prepare("SELECT id,command,id_domain,args FROM requests WHERE status = 'requested'");
+    my $sth_del = connector()->dbh->prepare("DELETE FROM requests where id=?");
+    my $sth_domain = connector()->dbh->prepare("SELECT id FROM domains WHERE id=? OR name=?");
+    $sth->execute;
+
+    while ( my ($id, $command, $id_domain, $args)= $sth->fetchrow) {
+        my $args_h = decode_json($args);
+        my $name = delete $args_h->{name};
+        next if !$id_domain || !$name;
+        $sth_domain->execute($id_domain, $name);
+        my ($id_found) = $sth_domain->fetchrow;
+        next if $id_found;
+        $sth_del->execute($id);
+        diag("removing $command $args");
+    }
+
+}
+
 =head2 fast_forward_requests
 
 Sets scheduled requests time to now
@@ -1356,6 +1451,7 @@ sub fast_forward_requests() {
     my $sth = $CONNECTOR->dbh->prepare("UPDATE requests "
         ." SET at_time=0 WHERE status = 'requested' AND at_time>0 "
         ."    AND command <> 'open_exposed_ports'"
+        ."    AND command <> 'remove_clones'"
     );
     eval {
     $sth->execute();
@@ -1425,8 +1521,65 @@ sub _qemu_storage_pool {
     return $pool_name;
 }
 
-sub remove_qemu_pools($vm=undef) {
+sub remove_void_networks($vm=undef) {
+    if (!defined $vm) {
+        eval { $vm = rvd_back->search_vm('Void') };
+    }
+    my $dir_net = $vm->dir_img()."/networks";
+    return if ! -e $dir_net;
+    my $base = base_domain_name();
+
+    opendir my $dir, $dir_net or die "$! $dir_net";
+    while(my $filename = readdir $dir) {
+        next unless $filename =~ /^$base.*\.yml$/;
+        my $file = "$dir_net/$filename";
+        unlink $file or warn "$! $file";
+    }
+
+}
+
+sub remove_networks_req() {
+    my $sth = connector()->dbh->prepare("SELECT id,id_vm,name FROM virtual_networks "
+        ." WHERE name like ? "
+    );
+    $sth->execute(base_domain_name."%");
+    while (my ($id, $id_vm, $name) = $sth->fetchrow) {
+        my $req = Ravada::Request->remove_network(
+            uid => user_admin()->id
+            ,id => $id
+            ,id_vm => $id_vm
+        );
+    }
+    wait_request();
+}
+
+sub remove_qemu_networks($vm=undef) {
     return if !$VM_VALID{'KVM'} || $>;
+    if (!defined $vm) {
+        eval { $vm = rvd_back->search_vm('KVM') };
+        if ($@ && $@ !~ /Missing qemu-img/) {
+            warn $@;
+        }
+        if  ( !$vm ) {
+            $VM_VALID{'KVM'} = 0;
+            return;
+        }
+    }
+
+    my $base = base_domain_name();
+    $vm->connect();
+    for my $network ( $vm->vm->list_all_networks) {
+        my $name = $network->get_name;
+        next if $name !~ /^$base/;
+        diag("removing network $name");
+        $network->destroy() if $network->is_active;
+        $network->undefine();
+    }
+
+}
+
+sub remove_qemu_pools($vm=undef) {
+    return if !$vm && (!$VM_VALID{'KVM'} || $>);
     return if defined $vm && $vm->type eq 'Void';
     if (!defined $vm) {
         eval { $vm = rvd_back->search_vm('KVM') };
@@ -1439,20 +1592,23 @@ sub remove_qemu_pools($vm=undef) {
         }
     }
 
-    my $base = base_pool_name();
+    my $base_pool = base_pool_name();
+    my $base = base_domain_name();
     $vm->connect();
-    for my $pool  ( Ravada::VM::KVM::_list_storage_pools($vm->vm)) {
+    for my $pool  ( $vm->vm->list_all_storage_pools) {
         my $name = $pool->get_name;
+        next if $name !~ /^($base_pool|$base)/;
         eval {$pool->build(Sys::Virt::StoragePool::BUILD_NEW); $pool->create() };
         warn $@ if $@ && $@ !~ /already active/;
-        next if $name !~ qr/^$base/;
-        diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
-        for my $vol ( $pool->list_volumes ) {
-            diag("Removing ".$pool->get_name." vol ".$vol->get_name);
-            $vol->delete();
+        if ($pool->is_active) {
+            diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
+            for my $vol ( $pool->list_volumes ) {
+                diag("Removing ".$pool->get_name." vol ".$vol->get_name);
+                $vol->delete();
+            }
         }
         _delete_qemu_pool($pool);
-        $pool->destroy();
+        $pool->destroy() if $pool->is_active;
         eval { $pool->undefine() };
         warn $@ if $@;
         warn $@ if$@ && $@ !~ /libvirt error code: 49,/;
@@ -1490,6 +1646,11 @@ sub remove_old_pools {
     remove_qemu_pools();
 }
 
+sub remove_old_networks {
+    remove_qemu_networks();
+    remove_void_networks();
+}
+
 sub _remove_old_entries($table) {
     my $sth = connector()->dbh->prepare("DELETE FROM $table"
     ." WHERE name like ? "
@@ -1525,11 +1686,13 @@ sub clean($ldap=undef) {
     remove_old_domains();
     remove_old_disks();
     remove_old_pools();
+    remove_old_networks();
     _remove_old_entries('vms');
     _remove_old_entries('networks');
     _remove_old_groups_ldap();
     remove_old_user_ldap();
     remove_old_storage_pools();
+    remove_old_ram_fs();
 
     if ($file_remote_config) {
         my $config;
@@ -2466,6 +2629,7 @@ sub _check_leftovers_users {
 
 sub _check_iptables() {
     return if $>;
+    return if !$VM_VALID{KVM};
     for my $table ( 'mangle', 'nat') {
         my @cmd = ("iptables" ,"-t", $table,"-L","POSTROUTING");
         my ($in, $out, $err);
@@ -2911,6 +3075,85 @@ sub ping_backend() {
     }
 
     return rvd_front->ping_backend();
+}
+
+sub _dir_findmnt($dir) {
+    my @cmd = ("findmnt");
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+
+    for my $line ( split /\n/,$out) {
+        next if $line !~ /var.tmp/;
+        return 1 if $line =~ /$dir/;
+    }
+}
+
+sub _dir_mounted($dir) {
+    open my $in,"<","/proc/mounts" or die $!;
+    while (my $line = <$in>) {
+        chomp $line;
+        my ($type,$dir_m) = split /\s+/,$line;
+        return 1 if $dir eq $dir_m;
+    }
+    close $in;
+    return _dir_findmnt($dir);
+}
+
+sub _umount_old_ram_fs() {
+    my $base_pool = base_pool_name();
+    open my $in,"<","/proc/mounts" or die $!;
+    while (my $line = <$in>) {
+        my ($dev,$dir) = split /\s+/,$line;
+        if ($dir =~ m{/$base_pool}) {
+            `umount $dir`;
+        }
+    }
+}
+
+sub _remove_old_ram_fs_dev() {
+    my $base_pool = base_pool_name();
+
+    opendir my $ls,"/dev" or die $!;
+    while (my $file = readdir $ls) {
+        unlink "/dev/$file" or die "$! /dev/$file"
+        if $file =~ /^$base_pool/;
+    }
+    closedir $ls;
+}
+
+sub remove_old_ram_fs() {
+    _umount_old_ram_fs();
+    _remove_old_ram_fs_dev();
+}
+
+sub create_ram_fs($dir=undef,$size=1024*1024) {
+    if (!$dir ) {
+        $dir = "/var/tmp/$</";
+        mkdir $dir if ! -e $dir;
+
+        $dir .= new_pool_name();
+    }
+    mkdir $dir if ! -e $dir;
+
+    if (_dir_mounted($dir)) {
+        my @cmd =("umount",$dir);
+        my ($in, $out, $err);
+        run3(\@cmd, \$in, \$out, \$err);
+        die $err if $err;
+    }
+
+    my ($name) = $dir =~ m{.*/(.*)};
+    my $dev = "/dev/$name";
+    my @cmd = ("mkfs","-q", $dev, $size);
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+
+    @cmd = ("mount",$dev,$dir);
+    run3(\@cmd, \$in, \$out, \$err);
+    die $err if $err;
+
+    return ($dir,$size, $dev);
 }
 
 1;

@@ -86,6 +86,9 @@
         %= include 'main/vm_hostdev'
     </div>
 % }
+    <div class="tab-pane fade" id="v-pills-share" role="tabpanel" aria-labelledby="v-pills-share-tab">
+        %= include 'main/vm_share'
+    </div>
 
 
 </div><!-- from tab content -->

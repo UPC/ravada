@@ -553,7 +553,20 @@ sub _create_volume($self, $file, $format, $data=undef) {
     confess "Undefined format" if !defined $format;
     if ($format =~ /iso|raw|void/) {
         $data->{format} = $format;
-        $self->_vm->write_file($file, Dump($data)),
+        if ( $format eq 'raw' && $data->{capacity} && $self->is_local) {
+            my $capacity = Ravada::Utils::number_to_size($data->{capacity});
+            my ($count,$unit) = $capacity =~ /^(\d+)(\w)$/;
+            die "Error, I can't find count and unit from $capacity"
+            if !$count || !$unit;
+
+            my @cmd = ("dd","if=/dev/zero","of=$file","count=$count","bs=1$unit"
+            ,"status=none");
+            my ($in, $out, $err);
+            run3(\@cmd, \$in, \$out, \$err);
+            warn "@cmd $err" if $err;
+        } else {
+            $self->_vm->write_file($file, Dump($data)),
+        }
     } elsif ($format eq 'qcow2') {
         my @cmd = ('qemu-img','create','-f','qcow2', $file, $data->{capacity});
         my ($out, $err) = $self->_vm->run_command(@cmd);
@@ -679,6 +692,9 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
         } else {
             $dev->{driver}->{type} = 'void';
         }
+        $dev->{storage_pool} = $self->_vm->_find_storage_pool($dev->{file})
+        if $dev->{file};
+
         my $vol = Ravada::Volume->new(
             file => $dev->{file}
             ,info => $dev
@@ -725,7 +741,7 @@ sub _new_mac($mac='ff:54:00:a7:49:71') {
     return join(":",@macparts);
 }
 
-sub _set_default_info($self, $listen_ip=undef) {
+sub _set_default_info($self, $listen_ip=undef, $network=undef) {
     my $info = {
             max_mem => 512*1024
             ,memory => 512*1024,
@@ -740,10 +756,22 @@ sub _set_default_info($self, $listen_ip=undef) {
     $self->_set_display($listen_ip);
     my $hardware = $self->_value('hardware');
 
+    my @nets = $self->_vm->list_virtual_networks();
+    my ($net) = grep { $_->{name} eq 'default'} @nets;
+    $net = $nets[0] if !$net;
+    if ($network) {
+        ($net) = grep { $_->{name} eq $network } @nets;
+
+        die "Error: network $network not found ".join(" , ",@nets)
+        if !$net;
+    }
+
     $hardware->{network}->[0] = {
         hwaddr => $info->{mac}
         ,address => $info->{ip}
         ,type => 'nat'
+        ,driver => 'virtio'
+        ,name => $net->{name}
     };
     $self->_store(hardware => $hardware );
 
@@ -907,6 +935,18 @@ sub _internal_autostart {
     return $self->_value('autostart');
 }
 
+sub _new_network($self) {
+    my $hardware = $self->_value('hardware');
+    my $list = ( $hardware->{'network'} or [] );
+    my $data = {
+        hwaddr => _new_mac()
+        ,address => ''
+        ,type => 'nat'
+        ,driver => 'virtio'
+        ,name => "net".(scalar(@$list)+1)
+    };
+}
+
 sub set_controller($self, $name, $number=undef, $data=undef) {
     my $hardware = $self->_value('hardware');
 
@@ -925,12 +965,16 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
     my @list2;
     if (!defined $number) {
         @list2 = @$list;
-        push @list2,($data or " $name z 1");
+        $data = $self->_new_network() if $name eq 'network' && !$data;
+        push @list2,($data or "$name z 1");
     } else {
         my $count = 0;
         for my $item ( @$list ) {
             $count++;
             if ($number == $count) {
+                $data = $self->_new_network()
+                if $name eq 'network' && (!$data || ! keys %$data);
+
                 my $data2 = ( $data or " $name a ".($count+1));
                 $data2 = " $name b ".($count+1) if defined $data2 && ref($data2) && !keys %$data2;
 
@@ -939,7 +983,7 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
             }
             $item = { driver => 'spice' , port => 'auto' , listen_ip => $self->_vm->listen_ip }
             if $name eq 'display' && !defined $item;
-            push @list2,($item or " $name b ".($count+1));
+            push @list2,($item or " $name c ".($count+1));
         }
     }
     $hardware->{$name} = \@list2;
