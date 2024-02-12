@@ -1655,7 +1655,8 @@ sub _add_indexes_generic($self) {
             "unique (name)"
         ]
         ,domains_bundle => [
-            "unique (id_bundle, id_domain)"
+            "index(id_domain)"
+            ,"unique (id_bundle, id_domain)"
         ]
     );
     my $if_not_exists = '';
