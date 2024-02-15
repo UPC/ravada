@@ -12,13 +12,12 @@
 
 Ravada is an open-source project that provides a web-based user interface for managing and accessing virtual machines (VMs) based on the QEMU/KVM virtualization technology. Ravada aims to simplify the management of virtual machines by offering a user-friendly interface accessible through a web browser.Ravada is meant for sysadmins who have some background in GNU/Linux, and want to deploy a VDI project.
 
-Users can use Ravada to create, configure, and manage virtual machines without the need for a dedicated desktop client. It provides features such as remote console access, snapshot management, and the ability to manage multiple VMs from a central interface. Ravada's back-end has been designed and implemented in order to allow future hypervisors to be added to the framework. Currently, it supports KVM and LXC is in the works.
+Users can use Ravada to create, configure, and manage virtual machines without the need for a dedicated desktop client. It provides features such as remote console access, snapshot management, and the ability to manage multiple VMs from a central interface. Ravada's back-end has been designed and implemented in order to allow future hypervisors to be added to the framework.
 
 The client only requirements are: a web-browser and a remote viewer supporting the spice protocol.
 
 In the current release we use the
 KVM Hypervisors: [KVM](http://www.linux-kvm.org/) as the backend for the Virtual Machines.
-[LXC](https://linuxcontainers.org/) support is currently in development.
 
 ### Features
 
@@ -41,7 +40,6 @@ Install Ravada in [Debian](https://ravada.readthedocs.io/en/latest/docs/INSTALL_
 Install Ravada on [Fedora](https://ravada.readthedocs.io/en/latest/docs/INSTALL_Fedora.html)
 Install Ravada on [Rocky Linux 9 or RHEL9](https://ravada.readthedocs.io/en/latest/docs/INSTALL_Rocky9.html#install-ravada-on-rocky-linux-9-or-rhel9)
 Install Ravada - [Ubuntu Xenial](https://ravada.readthedocs.io/en/latest/docs/INSTALL_ubuntu_xenial.html)
-Install Ravada from [dockers](https://ravada.readthedocs.io/en/latest/docs/INSTALLfromDockers.html).
 
 ### Production
 
