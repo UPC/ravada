@@ -145,7 +145,7 @@
                               ,active_machine: machine.status == 'active'
                               }"
                         title ="<%=l 'Manage machine' %>">{{machine.name}}</a> {{machine.comment}}
-                   <span class="comment" ng-show="machine.is_volatile"><%=l 'Volatile' %></span>
+                   <span class="comme497461nt" ng-show="machine.is_volatile"><%=l 'Volatile' %></span>
                         <button ng-show="machine.has_clones && !filter"
                                          type="button"
                         class="badge badge-light text-blue"
@@ -228,6 +228,16 @@
                                </div>
                                <div class="modal-body">
                                  <p><%=l 'Are you sure you want to change the Public state of' %> {{machine.name}} <%=l 'to' %> {{!(machine.is_public==0)}}?</p>
+                                 <div ng-show="machine.is_public==0" class="ml-4">
+                                    <input type="checkbox" name="show_clones" ng-model="machine.show_clones"
+                                            ng-true-value="1" ng-false-value="0"
+                                    >
+                                    <label for="show_clones"><%=l 'Show already created clones' %></label>
+                                    <button type="button" class="badge" ng-click="help_show_clones=!help_show_clones">?</button>
+                                    <div ng-show="help_show_clones">
+                                        <span class="info"><%=l 'The user will be able to access the clone, even when the base is hidden.' %> <%=l 'But no new clones can be created.' %></span>
+                                    </div>
+                                 </div>
                                </div>
                                <div class="modal-footer">
                                  <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="cancel_modal(machine,'is_public')"><%=l 'No' %></button>

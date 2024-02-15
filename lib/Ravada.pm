@@ -1651,6 +1651,13 @@ sub _add_indexes_generic($self) {
             ,"index(date_changed)"
             ,"index(id_owner)"
         ]
+        ,bundles => [
+            "unique (name)"
+        ]
+        ,domains_bundle => [
+            "index(id_domain)"
+            ,"unique (id_bundle, id_domain)"
+        ]
     );
     my $if_not_exists = '';
     $if_not_exists = ' IF NOT EXISTS ' if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite|mariadb/i;
@@ -2382,6 +2389,21 @@ sub _sql_create_tables($self) {
             }
         ]
         ,
+        [
+            bundles => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                name => 'char(255) NOT NULL',
+                private_network => 'integer NOT NULL default 0'
+            }
+        ],
+        [
+            domains_bundle => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                id_bundle => 'integer NOT NULL references `bundles` (`id`) ON DELETE CASCADE',
+                id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE',
+            }
+        ]
+        ,
         [virtual_networks => {
                 id => 'integer PRIMARY KEY AUTO_INCREMENT',
                 ,id_vm => 'integer NOT NULL references `vms` (`id`) ON DELETE CASCADE',
@@ -2888,6 +2910,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','has_backups','int not null default 0');
     $self->_upgrade_table('domains','auto_compact','int default NULL');
     $self->_upgrade_table('domains','date_status_change' , 'datetime');
+    $self->_upgrade_table('domains','show_clones' , 'int not null default 1');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -3290,6 +3313,13 @@ sub create_domain {
         $base = Ravada::Domain->open($id_base)
             or confess "Unknown base id: $id_base";
         $vm = $base->_vm;
+
+        my $net_bundle = $self->_net_bundle($base, $id_owner);
+        if ($net_bundle) {
+            unlock_hash(%args);
+            $args{options}->{network} = $net_bundle->{name};
+            lock_hash(%args);
+        }
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner)
         or confess "Error: Unkown user '$id_owner'";
@@ -4623,6 +4653,25 @@ sub _cmd_remove {
     $self->remove_domain(name => $request->args('name'), uid => $request->args('uid'));
 }
 
+sub _cmd_remove_clones($self, $request) {
+
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    my $id_domain = $request->args('id_domain');
+
+    die "Error: user ".$user->name." not authorized to remove clones"
+    unless $user->is_admin();
+
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    for my $clone ( $domain->clones ) {
+        Ravada::Request->remove_domain(
+            uid => $uid
+            ,name => $clone->{name}
+        );
+    }
+}
+
 sub _cmd_restore_domain($self,$request) {
     my $domain = Ravada::Domain->open($request->args('id_domain'));
     return $domain->restore(Ravada::Auth::SQL->search_by_id($request->args('uid')));
@@ -4713,20 +4762,64 @@ sub _cmd_clone($self, $request) {
 
     $args->{alias} = $alias if $alias;
 
+    my $net_bundle = $self->_net_bundle($domain, $user);
+
+    $args->{options}->{network} = $net_bundle->{name} if $net_bundle;
+
     my $clone = $domain->clone(
         name => $name
         ,%$args
     );
 
     $request->id_domain($clone->id) if $clone;
+    my $req_next = $request;
 
     Ravada::Request->start_domain(
         uid => $user->id
         ,id_domain => $clone->id
         ,remote_ip => $request->defined_arg('remote_ip')
-        ,after_request => $request->id
+        ,after_request => $req_next->id
     ) if $request->defined_arg('start');
 
+}
+
+sub _net_bundle($self, $domain, $user0) {
+    my $bundle = $domain->bundle();
+
+    return unless $bundle && exists $bundle->{private_network}
+    && $bundle->{private_network};
+
+    my $user = $user0;
+    $user = Ravada::Auth::SQL->search_by_id($user0) if !ref($user);
+
+    my ($net) = grep { $_->{id_owner} == $user->id }
+        $domain->_vm->list_virtual_networks();
+
+    return $net if $net;
+
+    my $req_new_net = Ravada::Request->new_network(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_vm => $domain->_vm->id
+        ,name => $bundle->{name}."-".$user->name
+    );
+    $self->_cmd_new_network($req_new_net);
+    my $data = decode_json($req_new_net->output);
+    $req_new_net->status('done');
+
+    my $req_network = Ravada::Request->create_network(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_vm => $domain->_vm->id
+        ,data => $data
+    );
+    $self->_cmd_create_network($req_network);
+    $req_network->status('done');
+
+    ($net) = grep { $_->{name} eq $data->{name} }
+        $domain->_vm->list_virtual_networks();
+
+    $domain->_vm->_update_network_db($net, {id_owner => $user->id });
+
+    return $net;
 }
 
 sub _new_clone_name($self, $base,$user) {
@@ -5486,7 +5579,7 @@ sub _cmd_check_storage($self, $request) {
             my $path = ''.$vm->_storage_path($storage);
             _check_mounted($path,\%fstab,\%mtab);
             my ($ok,$err) = $vm->write_file("$path/check_storage",$contents);
-            die "Error on starage pool $storage : $err. Retry.\n" if $err;
+            die "Error on storage pool $storage : $err. Retry.\n" if $err;
         }
     }
 }
@@ -5859,7 +5952,10 @@ sub _refresh_active_vms ($self) {
             next;
         }
         $active_vm{$vm->id} = 1;
-        $vm->list_virtual_networks();
+        eval {
+            $vm->list_virtual_networks();
+        };
+        warn $@ if $@;
     }
     return \%active_vm;
 }
@@ -5911,6 +6007,7 @@ sub _refresh_down_nodes($self, $request = undef ) {
         my $vm;
         eval { $vm = Ravada::VM->open($id) };
         warn $@ if $@;
+        $vm->is_active() if $vm;
     }
 }
 
@@ -6271,6 +6368,8 @@ sub _req_method {
          ,pause => \&_cmd_pause
         ,create => \&_cmd_create
         ,remove => \&_cmd_remove
+        ,remove_domain => \&_cmd_remove
+        ,remove_clones => \&_cmd_remove_clones
         ,restore_domain => \&_cmd_restore_domain
         ,resume => \&_cmd_resume
        ,dettach => \&_cmd_dettach
@@ -6525,6 +6624,7 @@ sub _enforce_limits_active($self, $request) {
 
     my %domains;
     for my $domain ($self->list_domains( active => 1 )) {
+        next if $domain->is_in_bundle();
         push @{$domains{$domain->id_owner}},$domain;
         $domain->client_status();
     }

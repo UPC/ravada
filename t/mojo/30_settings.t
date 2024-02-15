@@ -512,15 +512,45 @@ sub clean_clones() {
     }
 }
 
+sub _create_storage_pool($id_vm , $vm_name) {
+    $t->get_ok("/list_storage_pools/$vm_name");
+    my $sp = decode_json($t->tx->res->body);
+    my $name = new_pool_name();
+    my ($found) = grep { $_->{name} eq $name } @$sp;
+    return $name if $found;
+
+    my $dir0 = "/var/tmp/$$/";
+
+    mkdir $dir0 if !-e $dir0;
+
+    my $dir = $dir0."/".new_pool_name();
+
+    mkdir $dir or die "$! $dir" if !-e $dir;
+
+
+    my $req = Ravada::Request->create_storage_pool(
+        uid => user_admin->id
+        ,id_vm => $id_vm
+        ,name => $name
+        ,directory => $dir
+    );
+    wait_request( );
+    is($req->error,'');
+
+    return $name;
+}
+
 sub test_storage_pools($vm_name) {
+
+    my $id_vm = _id_vm($vm_name);
+    my $sp_name = _create_storage_pool($id_vm, $vm_name);
+
     $t->get_ok("/list_storage_pools/$vm_name");
 
     is($t->tx->res->code(),200) or die $t->tx->res->body;
 
     my $sp = decode_json($t->tx->res->body);
     ok(scalar(@$sp));
-
-    my $id_vm = _id_vm($vm_name);
 
     $t->get_ok("/list_storage_pools/$id_vm");
 
@@ -531,11 +561,6 @@ sub test_storage_pools($vm_name) {
     is_deeply($sp_id, $sp);
 
     my ($sp_inactive) = grep { $_->{name} ne 'default' } @$sp_id;
-
-    if ( !$sp_inactive ) {
-#        warn "Warning: no sp in addition to 'default' in ".Dumper($sp_id);
-        $sp_inactive = $sp_id->[0];
-    }
 
     my $name_inactive= $sp_inactive->{name};
     die "Error, no name in ".Dumper($sp_inactive) if !$name_inactive;

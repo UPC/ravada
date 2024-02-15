@@ -1245,6 +1245,11 @@ sub _domain_create_from_base {
     my $volatile = $base->volatile_clones;
     $volatile = delete $args{volatile} if exists $args{volatile} && defined $args{volatile};
 
+    my $options = delete $args{options};
+    my $network = delete $options->{network};
+
+    die "Error: I can't set more options ".Dumper($options) if keys %$options;
+
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
 
@@ -1261,6 +1266,8 @@ sub _domain_create_from_base {
     $node_name->setData($args{name});
 
     _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
+
+    $self->_xml_set_network($xml, $network) if $network;
 
     my ($domain, $spice_password)
         = $self->_domain_create_common($xml,%args, is_volatile=>$volatile, base => $base);
@@ -1878,8 +1885,9 @@ sub _xml_modify_options($self, $doc, $options=undef) {
 }
 
 sub _xml_set_network($self, $doc, $network) {
-    my ($net_source) = $doc->findnodes('/domain/devices/interface/source');
-    $net_source->setAttribute('network' => $network);
+    for my $net_source ( $doc->findnodes('/domain/devices/interface/source')) {
+        $net_source->setAttribute('network' => $network);
+    }
 }
 
 sub _xml_set_arch($self, $doc, $arch) {
@@ -2984,8 +2992,11 @@ sub list_virtual_networks($self) {
     for my $net ($self->vm->list_all_networks()) {
         my $doc = XML::LibXML->load_xml(string => $net->get_xml_description);
         my ($ip_doc) = $doc->findnodes("/network/ip");
-        my $ip = $ip_doc->getAttribute('address');
-        my $netmask = $ip_doc->getAttribute('netmask');
+        my ($ip, $netmask) = ('','');
+        if ($ip_doc) {
+            $ip = $ip_doc->getAttribute('address');
+            $netmask = $ip_doc->getAttribute('netmask');
+        }
         my $data= {
             is_active => $net->is_active()
             ,autostart => $net->get_autostart()
@@ -2996,13 +3007,15 @@ sub list_virtual_networks($self) {
             ,ip_netmask => $netmask
             ,internal_id => ''.$net->get_uuid_string
         };
-        my ($dhcp_range) = $ip_doc->findnodes("dhcp/range");
-        my ($start,$end);
-        if ($dhcp_range) {
-            $start = $dhcp_range->getAttribute('start');
-            $end = $dhcp_range->getAttribute('end');
-            $data->{dhcp_start} = $start if defined $start;
-            $data->{dhcp_end} = $end if defined $end;
+        if ($ip_doc) {
+            my ($dhcp_range) = $ip_doc->findnodes("dhcp/range");
+            my ($start,$end);
+            if ($dhcp_range) {
+                $start = $dhcp_range->getAttribute('start');
+                $end = $dhcp_range->getAttribute('end');
+                $data->{dhcp_start} = $start if defined $start;
+                $data->{dhcp_end} = $end if defined $end;
+            }
         }
         push @networks,($data);
     }
@@ -3019,7 +3032,16 @@ sub new_network($self, $name='net') {
     );
     my $new = {ip_netmask => '255.255.255.0'};
     for my $field ( keys %base) {
-        my %old = map { $_->{$field} => 1 } @networks;
+        my %old;
+        for my $current (@networks ) {
+            my $value = $current->{$field};
+            $old{$value}=1;
+            if ($field eq 'ip_address') {
+                $value =~ s/(.*)\.\d+$/$1/;
+                $old{$value}=1;
+            }
+
+        }
         my ($last) = reverse sort keys %old;
         my ($z,$n) = $last =~ /.*?(0*)(\d+)/;
         $z=$last if !defined $z;
@@ -3033,12 +3055,17 @@ sub new_network($self, $name='net') {
         }
         my $value;
         for ( 0 .. 255 ) {
+            my $value_ip;
             if (ref($template)) {
-                $value = $template->[0].$n.$template->[2]
+                $value = $template->[0].$n.$template->[2];
+                if ($field eq 'ip_address') {
+                    $value_ip = $template->[0].$n;
+                }
             } else {
                 $value = $template.$n;
             }
-            last if !exists $old{$value};
+            last if !exists $old{$value}
+            && (!defined $value_ip || !exists $old{$value_ip});
             $n++;
         }
         $new->{$field} = $value;

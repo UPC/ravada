@@ -529,8 +529,9 @@ sub _search_already_started($self, $fast = 0) {
     $sth->execute($self->_vm->type);
     my %started;
     while (my ($id) = $sth->fetchrow) {
-        my $vm = Ravada::VM->open($id);
-        next if !$vm->enabled;
+        my $vm;
+        eval { $vm = Ravada::VM->open($id) };
+        next if !$vm || !$vm->enabled;
 
         my $vm_active;
         eval {
@@ -539,7 +540,7 @@ sub _search_already_started($self, $fast = 0) {
         my $error = $@;
         if ($error) {
             warn $error;
-            $vm->enabled(0) if !$vm->is_local;
+            $vm->enabled(0) if !$vm->is_local && !$vm->ping;
             next;
         }
         next if !$vm_active;
@@ -2069,6 +2070,8 @@ sub info($self, $user) {
         id => $self->id
         ,name => $self->name
         ,is_base => $self->is_base
+        ,is_public => $self->is_public
+        ,show_clones => $self->show_clones
         ,id_base => $self->id_base
         ,is_active => $is_active
         ,is_hibernated => $self->is_hibernated
@@ -2404,13 +2407,15 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         next if $instance->{id_vm} == $self->_vm->id;
         my $vm;
         eval { $vm = Ravada::VM->open($instance->{id_vm}) };
-        die $@ if $@ && $@ !~ /I can't find VM/i;
-        next if !$vm || !$vm->is_active;
+        die $@ if $@ && $@ !~ /I can't find VM ||libvirt error code: 38,/i;
         my $domain;
         $@ = '';
         eval { $domain = $vm->search_domain($domain_name) } if $vm;
         warn $@ if $@;
-        $domain->remove($user, $cascade) if $domain;
+        eval {
+            $domain->remove($user, $cascade) if $domain;
+        };
+        warn $@ if $@;
         $sth_delete->execute($instance->{id});
     }
 }
@@ -2873,6 +2878,8 @@ sub clone {
     my $volatile = delete $args{volatile};
     my $id_owner = delete $args{id_owner};
     my $alias = delete $args{alias};
+    my $options = delete $args{options};
+    my $storage = delete $args{storage};
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
@@ -2906,6 +2913,9 @@ sub clone {
     push @args_copy, ( remote_ip => $remote_ip) if $remote_ip;
     push @args_copy, ( from_pool => $from_pool) if defined $from_pool;
     push @args_copy, ( add_to_pool => $add_to_pool) if defined $add_to_pool;
+    push @args_copy, ( storage => $storage)     if $storage;
+    push @args_copy, ( options => $options)     if $options;
+
     if ( $self->volatile_clones && !defined $volatile ) {
         $volatile = 1;
     }
@@ -2956,6 +2966,7 @@ sub _copy_clone($self, %args) {
     my $id_owner = delete $args{id_owner};
     $id_owner = $user->id if (! $id_owner);
     my $alias = delete $args{alias};
+    my $options = delete $args{options};
 
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)
         if keys %args;
@@ -2966,6 +2977,7 @@ sub _copy_clone($self, %args) {
     push @copy_arg, ( alias => $alias )   if $alias;
     push @copy_arg, ( memory => $memory ) if $memory;
     push @copy_arg, ( volatile => $volatile ) if $volatile;
+    push @copy_arg, ( options => $options ) if $options;
 
     $request->status("working","Copying domain ".$self->name
         ." to $name")   if $request;
@@ -3249,7 +3261,10 @@ sub _around_is_active($orig, $self) {
         }
     }
     my $is_active = 0;
+    eval {
     $is_active = $self->$orig();
+    };
+    warn $@ if $@;
 
     return $is_active if $self->readonly
         || !$self->is_known
@@ -4490,6 +4505,10 @@ sub is_public {
     return $self->_data('is_public');
 }
 
+sub show_clones($self,$value=undef) {
+    return $self->_data('show_clones',$value);
+}
+
 =head2 is_volatile
 
 Returns if the domain is volatile, so it will be removed on shutdown
@@ -5310,7 +5329,8 @@ sub _pre_clone($self,%args) {
 
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
-    for (qw(is_pool start add_to_pool from_pool with_cd volatile id_owner alias)) {
+    for (qw(is_pool start add_to_pool from_pool with_cd volatile id_owner
+        alias storage options)) {
         delete $args{$_};
     }
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;
@@ -7710,6 +7730,31 @@ sub list_shares($self) {
         push @shares,($name);
     }
     return @shares;
+}
+
+sub bundle($self) {
+    my $sth = $self->_dbh->prepare("SELECT * FROM bundles "
+        ." WHERE id IN (SELECT id_bundle FROM domains_bundle "
+        ."              WHERE id_domain=?)"
+    );
+    $sth->execute($self->id);
+    my $bundle = $sth->fetchrow_hashref;
+    return if !keys %$bundle;
+    lock_hash(%$bundle);
+    return $bundle;
+
+}
+
+sub is_in_bundle($self) {
+    my $id=( $self->id_base or $self->id);
+    my $sth = $self->_dbh->prepare("SELECT id FROM bundles "
+        ." WHERE id IN (SELECT id_bundle FROM domains_bundle "
+        ."              WHERE id_domain=?)"
+    );
+    $sth->execute($id);
+    my ($id_bundle) = $sth->fetchrow;
+    return $id_bundle;
+
 }
 
 1;
