@@ -231,7 +231,7 @@ sub test_clone($vm_name, $n=10) {
         Ravada::Request->remove_clones(
             uid => user_admin->id
             ,id_domain => $base->id
-            ,at => time + 300+_count_nodes($vm_name)*2
+            ,at => time + 600+_count_nodes($vm_name)*2
         );
 
     }
@@ -245,8 +245,9 @@ sub test_clone($vm_name, $n=10) {
     $times = 20 if $ENV{TEST_LONG};
 
     my $seconds = 0;
+    my $n_nodes = _count_nodes($vm_name);
     LOOP: for my $count0 ( 0 .. $times ) {
-        for my $count1 ( 0 .. $n*_count_nodes($vm_name) ) {
+        for my $count1 ( 0 .. $n*$n_nodes ) {
             for my $base ( @bases ) {
                 next if !$base->is_base;
 
@@ -268,8 +269,10 @@ sub test_clone($vm_name, $n=10) {
                 );
                 delete_request('set_time','force_shutdown');
                 next if $vm_name eq 'Void';
+                $seconds++;
+                next if $seconds < 10*$n_nodes;
                 wait_request(debug => 1);
-                _wait_ip($name,$seconds++);
+                _wait_ip($name,$seconds);
             }
         }
         login($USERNAME, $PASSWORD);
@@ -280,16 +283,9 @@ sub test_clone($vm_name, $n=10) {
                 last if $base->clones >= $n || !$base->list_requests;
                 sleep 1;
             }
-            for my $clone ( $base->clones ) {
-                $t->get_ok("/machine/remove/".$clone->{id}.".json")->status_is(200);
-                delete_request('set_time','force_shutdown');
-            }
             $t->get_ok('/machine/remove_clones/'.$base->id.".json");
         }
         wait_request();
-    }
-    for my $base ( @bases ) {
-        $t->get_ok('/machine/remove_clones/'.$base->id.".json");
     }
 }
 
