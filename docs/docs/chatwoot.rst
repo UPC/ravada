@@ -9,24 +9,27 @@ You need a Chatwoot server, you have differents options. If you are interested i
 
 Here you will not find a `chatwoot manual <https://www.chatwoot.com/docs/channels/website>`_, only a few steps to embed your widget code.
 
+
+The Widget appears at the login script, main page and startup screens:
+
+.. image:: images/chat_login.png
+
+.. image:: images/chat_inside.png
+
 Once you have the widget you have to paste it in a *js* file, and add a config to Ravada.
 
-Define widget in rvd_front.conf
+Create a JS widget
 -------------------------------
-In ``/etc/rvd_front.conf`` configure the path to widget code. For example, ```chatwoot_widget.js```
-
-.. code-block:: perl
-
-    ,widget => '/js/custom/chatwoot_widget.js'
 
 Copy your code in the file: ``/usr/share/ravada/public/js/custom/chatwoot_widget.js``.
 Do not copy the *\<script\>* tags, only the javascript code.
+Set your chatwoot server at the second line.
 
 .. code-block:: javascript
   :linenos:
 
 	(function(d,t) {
-	  var BASE_URL = "https://chatwoot_server";
+	  var BASE_URL = "https://chatwoot.server.example.org";
 	        var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
 	        g.src= BASE_URL + "/packs/js/sdk.js";
 	        s.parentNode.insertBefore(g,s);
@@ -44,12 +47,34 @@ Do not copy the *\<script\>* tags, only the javascript code.
 	         }
 	 })(document,"script");
 
-.. image:: images/chat_login.png
 
-.. image:: images/chat_inside.png
+Configuration
+-------------
 
-And restart rvd_front service:
+Add the widget path in the frontend settings. Go to *Admin Tools* , *Settings*
+You also need to allow third party content inside HTML, set the server address
+in the *Content Security Policy*.
 
-.. prompt:: bash #
+.. image:: images/widget_settings.png
 
-    systemctl restart rvd_front
+Content Security Policy
+~~~~~~~~~~~~~~~~~~~~~~~
+
+If you want to fine-tune the Content Security Policy, check the *Advanced CSP*
+to display more options.
+
+.. image:: images/widget_settings_csp.png
+
+Apply
+~~~~~
+
+There is no need to restart the server. It is applied right after saving.
+
+Check headers
+~~~~~~~~~~~~~
+
+Use curl to check the content security policy headers
+
+.. prompt:: bash
+
+   curl --head https://server.example.org

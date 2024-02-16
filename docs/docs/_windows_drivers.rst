@@ -1,5 +1,5 @@
-
-~~~~~~~~~~~~
+Windows drivers
+~~~~~~~~~~~~~~~
 
 The installer may not see the virtual machine disk drive.
 Choosing "Load Drivers" in this screen and select

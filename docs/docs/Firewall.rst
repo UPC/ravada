@@ -6,7 +6,7 @@ to restart the firewall or change some rules you can save
 the Ravada entries and restore it later.
 
 Chains
------
+------
 
 Ravada has its own chain called *RAVADA* where all the permissions
 to access the virtual machines displays are stored. You can save

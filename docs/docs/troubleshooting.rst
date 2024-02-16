@@ -256,3 +256,27 @@ Then restart libvirt service
 .. prompt:: bash
 
   sudo systemctl restart libvirtd
+
+Cloned Ubuntu Server VMs assigned same IP
+-----------------------------------------
+
+When cloning a virtual machine with Ubuntu Server (possibly applicable to other distributions as well), it has been observed that the cloned machines are assigned the same machine ID in the /etc/machine-id file. As a result, the Netplan networking configuration attempts to resolve DHCP based on this ID instead of the MAC address, resulting in both machines being assigned the same IP address.
+
+To resolve this issue, edit the file ``/etc/netplan/<configuration-file>.yaml`` adding the next lines in the proper interface:
+
+
+
+Add the following lines to the network configuration for each cloned machine:
+
+.. code-block:: yaml
+
+    dhcp4: yes
+    dhcp-identifier: mac
+
+Apply the updated Netplan configuration:
+
+.. prompt:: bash
+
+    sudo netplan apply
+
+With these steps, each cloned virtual machine will be assigned a unique IP address based on its MAC address, resolving the issue of both machines receiving the same IP.

@@ -1,5 +1,8 @@
-Local JS and CSS files instead CDN
-==================================
+Offline libraries in frontend
+=============================
+
+Javascript and CSS libraries can be configured in the local server
+instead of using a CDN.
 
 Some users behind firewalls may experience rendering problems.
 By default we use CDN versions of the JavaScript and CSS libraries.

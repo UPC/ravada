@@ -43,7 +43,7 @@ disks images, so clones won't require many space.
 Install Ravada from dockers
 ---------------------------
 
-.. info:: Ravada source must be (locally) in: ``~/src/ravada``  
+.. note :: Ravada source must be (locally) in: ``~/src/ravada``  
 
 Follow this steps:
 
@@ -60,6 +60,11 @@ Follow this steps:
    docker-compose pull
    docker-compose up -d
 
+If it's not the first time and you want to start from scratch it's better to make sure to rebuild everything with:
+
+.. prompt:: bash $
+
+   docker-compose up -d --build --force-recreate
 
 Ravada web user
 ---------------

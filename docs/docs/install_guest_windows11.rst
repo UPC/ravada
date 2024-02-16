@@ -102,7 +102,7 @@ Follow the usual procedure to install Windows11.
 
 When the installations it's finished, you need to install:
 
-.. include:: _windows_post_install.rst
+.. include:: _windows_post.rst
 
 
 Use a swap partition for pagefiles

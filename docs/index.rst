@@ -15,7 +15,7 @@ do want to start your `VDI`_ project as quickly as possible. Therefore, RAVADA V
 Ravada delivers
 ---------------
 
-By following the documentation `and editing some configuration files, you'll be able to deploy a VM within minutes.
+By following the documentation `Read the Docs`_ and editing some configuration files, you'll be able to deploy a VM within minutes.
 
 Who is Ravada meant for?
 ------------------------
@@ -60,6 +60,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/INSTALL_Ubuntu
    docs/INSTALL_Debian
    docs/INSTALL_Fedora
+   docs/INSTALL_Rocky9
    docs/INSTALL_ubuntu_xenial.rst
    docs/INSTALLfromDockers.rst
    docs/production
@@ -80,8 +81,11 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/swap_partition
    docs/troubleshooting
    docs/update
+   docs/update_safe
+   docs/update_rollback
    docs/windows_clients
    docs/mac_clients
+   docs/macos_spice_client
    docs/change_windows_driver_to_virtio
    docs/Backup
    docs/migrate_manual

@@ -36,14 +36,14 @@ From Debian / Ubuntu guest
 You eithar have to enable the serial service or add it to grub.
 
 Option 1: Enable Serial Service
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. prompt:: bash
 
     sudo systemctl enable --now serial-getty@ttyS0.service
 
 Option 2: Add console to grub
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Search for the grub.cfg configuration file and add this to *GRUB_CMDLINE_LINUX_DEFAULT*:
 

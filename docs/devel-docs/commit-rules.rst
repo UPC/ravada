@@ -16,7 +16,7 @@ to call the branch with the number of the issue and a short text, ie:
 
 .. prompt:: bash $
 
-    git checkout -b 77_crashonstart
+   git checkout -b 77_crashonstart
 
 Commit Message
 --------------
@@ -89,16 +89,15 @@ tests require *root* access, so it must run with *sudo*.
 
 .. prompt:: bash $
 
-    perl Makefile.PL && make && sudo make test
+   perl Makefile.PL && make && sudo make test
     
 If you want to run only one test:
 
 .. prompt:: bash $
 
-    perl Makefile.PL && make && sudo prove -b t/dir/file.t
+   perl Makefile.PL && make && sudo prove -b t/dir/file.t
 
-Proper testing requires the Perl Module Test::SQL::Data , available
-here: https://github.com/frankiejol/Test-SQL-Data
+Proper testing requires the Perl Module Test::SQL::Data, available here: https://github.com/frankiejol/Test-SQL-Data
 
 Contribution Guide
 ------------------
@@ -106,4 +105,3 @@ Contribution Guide
 Check our contribution guide for more information about this topic.
 
 https://github.com/UPC/ravada/blob/master/CONTRIBUTING.md
-
