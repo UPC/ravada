@@ -132,15 +132,18 @@ sub bases($vm_name) {
 }
 
 sub _set_base_vms($vm_name, $id_base, $network) {
-    my $sth = connector->dbh->prepare("SELECT id FROM vms WHERE vm_type=?");
+    my $sth = connector->dbh->prepare("SELECT id,name FROM vms WHERE vm_type=?");
     $sth->execute($vm_name);
-    while ( my ($id_vm) = $sth->fetchrow) {
+    while ( my ($id_vm, $name) = $sth->fetchrow) {
         mojo_request($t,"start_node" , { id_node => $id_vm }, 0);
     }
 
     $sth->execute($vm_name);
-    while ( my ($id_vm) = $sth->fetchrow) {
+    while ( my ($id_vm, $name) = $sth->fetchrow) {
         $t->post_ok("/node/enable/$id_vm.json");
+
+        my $networks = Ravada::Front->list_networks($id_vm, user_admin->id);
+        next if grep { $_->{name} eq $network->{name} } @$networks;
 
         my $req = Ravada::Request->create_network(
         uid => user_admin->id
@@ -148,6 +151,7 @@ sub _set_base_vms($vm_name, $id_base, $network) {
         ,data => $network
         );
         wait_request(check_error => 0);
+        die $name." ".$req->error if $req->error;
 
         my $id_req = mojo_request($t,"set_base_vm", { id_vm => $id_vm, id_domain => $id_base, value => 1 }, 0);
         mojo_request($t,"clone", { id_domain => $id_base , after_request => $id_req, name => new_domain_name()
@@ -178,26 +182,32 @@ sub _count_nodes($vm_name) {
 
 sub _new_network($id_vm) {
 
-    my $req_new = Ravada::Request->new_network(
-        uid => user_admin->id
-        ,id_vm => $id_vm
-        ,name => base_domain_name()
-    );
-    wait_request(debug => 0);
-    like($req_new->output , qr/\d+/) or exit;
+    my $net;
 
-    my $net = decode_json($req_new->output);
-    my $name = $net->{name};
+    for my $count ( 1 .. 10 ) {
+        my $req_new = Ravada::Request->new_network(
+            uid => user_admin->id
+            ,id_vm => $id_vm
+            ,name => base_domain_name()
+        );
+        wait_request(debug => 0);
+        like($req_new->output , qr/\d+/) or exit;
 
-    my $user = create_user();
-    my $req = Ravada::Request->create_network(
-        uid => user_admin->id
-        ,id_vm => $id_vm
-        ,data => $net
-    );
-    wait_request(check_error => 0);
+        $net = decode_json($req_new->output);
+        my $name = $net->{name};
+        $net->{ip_address} = "192.168.14$count.1";
 
-    die $req->error if $req->error;
+        my $user = create_user();
+        my $req = Ravada::Request->create_network(
+            uid => user_admin->id
+            ,id_vm => $id_vm
+            ,data => $net
+        );
+        wait_request(check_error => 0);
+
+        return $net if !$req->error;
+
+    }
 
     return $net;
 }
@@ -214,6 +224,7 @@ sub test_clone($vm_name, $n=10) {
         mojo_request($t,"prepare_base", {id_domain => $base->id });
         $base->is_public(1);
         $base->volatile_clones(1);
+        $base->_data('shutdown_disconnected'=> 1);
 
         is($base->_data('id_vm'), $id_vm) or die $base->name;
 
