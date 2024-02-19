@@ -875,6 +875,8 @@ sub _validate_compact($self) {
     if ( !$id || ( $req_spinoff && $req_spinoff->id > $id) ) {
         $id = $req_spinoff->id;
     }
+    $req_compact->at(0) if $req_compact;
+    $req_spinoff->at(0) if $req_spinoff;
 
     $self->after_request($id) if $id;
 
