@@ -145,7 +145,6 @@
                               ,active_machine: machine.status == 'active'
                               }"
                         title ="<%=l 'Manage machine' %>">{{machine.name}}</a> {{machine.comment}}
-                   <span class="comment" ng-show="machine.is_volatile"><%=l 'Volatile' %></span>
                         <button ng-show="machine.has_clones && !filter"
                                          type="button"
                         class="badge badge-light text-blue"
@@ -164,7 +163,7 @@
                                ng-model="machine.is_base"
                                ng-true-value="1" ng-false-value="0"
                                ng-show="can_manage_base(machine)"
-                               ng-disabled="list_machines_time<2"
+                               ng-disabled="list_machines_time<2 || machine.is_volatile"
                                ng-click="open_modal('mb_',machine)"/>
                         <div class="modal fade" tabindex="-1" role="dialog" id="mb_{{machine.id}}">
                            <div class="modal-dialog" role="document">
@@ -247,7 +246,8 @@
 %                       }
                     <td class="lgMachActions">
                         <span style="float:right;" ng-show="machine.is_paused && machine.is_active" class="badge label-warning" ng-cloak><%=l 'Paused' %></span>
-                        <span style="float:right;" ng-show="!machine.is_paused && machine.is_active" class="badge badge-success" ng-cloak><%=l 'Running' %></span>
+                        <span style="float:right;" ng-show="!machine.is_paused && machine.is_active && !machine.is_volatile" class="badge badge-success" ng-cloak><%=l 'Running' %></span>
+                        <span style="float:right;" ng-show="!machine.is_paused && machine.is_active && machine.is_volatile" class="badge badge-success volatile" ng-cloak><%=l 'Volatile' %></span>
                         <span style="float:right;" ng-show="!machine.is_active && !machine.is_hibernated" class="badge badge-danger" ng-cloak><%=l 'Down' %></span>
                         <span style="float:right;" ng-show="machine.is_hibernated" class="badge badge-warning" ng-cloak><%=l 'Hibernated' %></span>
                         <br><span style="float:right;" ng-show="machine.is_active" class="badge badge-secondary">{{machine.remote_ip}}</span>
