@@ -349,14 +349,26 @@ sub test_maintenance() {
     my $reload = 0;
     rvd_front->update_settings_global($arg,user_admin, \$reload);
     is(rvd_front->is_in_maintenance(),1);
+    is(rvd_front->soon_in_maintenance(),0);
     $settings = rvd_front->settings_global();
     is($settings->{frontend}->{maintenance}->{value},1);
     is($reload, 0);
 
     #start tomorrow
+    my @now = localtime(time + 23*3600);
+    my $string = ($now[5]+1900)."-".($now[4]+1)."-".($now[3])
+        .' '.$now[2].":".$now[1];
+    diag($string);
+    $arg->{frontend}->{maintenance_start}->{value} = $string;
+    rvd_front->update_settings_global($arg,user_admin, \$reload);
+    is(rvd_front->is_in_maintenance(),0);
+    is(rvd_front->soon_in_maintenance(),1);
+
+    #start some day
     $arg->{frontend}->{maintenance_start}->{value} = '2090-02-14 13:30';
     rvd_front->update_settings_global($arg,user_admin, \$reload);
     is(rvd_front->is_in_maintenance(),0);
+    is(rvd_front->soon_in_maintenance(),0);
 
     $settings = rvd_front->settings_global();
     is($settings->{frontend}->{maintenance}->{value},1);
@@ -364,6 +376,8 @@ sub test_maintenance() {
 }
 
 ###########################################################################
+
+test_maintenance();
 
 for my $vm_name (reverse vm_names()) {
     my $vm = rvd_back->search_vm($vm_name);
@@ -397,7 +411,6 @@ for my $vm_name (reverse vm_names()) {
 
     }
 }
-test_maintenance();
 
 end();
 done_testing();

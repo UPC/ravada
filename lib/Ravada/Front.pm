@@ -1583,6 +1583,35 @@ sub is_in_maintenance($self) {
     return 0;
 }
 
+=head2 soon_in_maintenance
+
+Returns wether the service will be in maintenance mode in less than 24 hours
+
+=cut
+
+sub soon_in_maintenance($self) {
+    my $settings = $self->settings_global();
+    return 0 if ! $settings->{frontend}->{maintenance}->{value};
+
+    my $start = DateTime::Format::DateParse->parse_datetime(
+        $settings->{frontend}->{maintenance_start}->{value});
+    my $end= DateTime::Format::DateParse->parse_datetime(
+        $settings->{frontend}->{maintenance_end}->{value});
+    my $now = DateTime->now();
+
+    if ( $now >= $start && $now <= $end ) {
+        return 1;
+    }
+    return 0 if $now <= $start;
+    my $sth = $self->_dbh->prepare("UPDATE settings set value = 0 "
+        ." WHERE id=? "
+    );
+    $sth->execute($settings->{frontend}->{maintenance}->{id});
+
+    return 0;
+}
+
+
 =head2 update_host_device
 
 Update the host device information, then it requests a list of the current available devices
