@@ -259,6 +259,7 @@ sub test_clone($vm_name, $n=10) {
                 next if $vm_name eq 'Void';
                 wait_request(debug => 1);
                 _wait_ip($name,$seconds++);
+                last if _too_loaded();
             }
         }
         login($USERNAME, $PASSWORD);
@@ -297,6 +298,16 @@ sub _too_loaded($msg) {
     close $in;
     chomp $load;
     $load =~ s/\s.*//;
+    return $load>$MAX_LOAD;
+}
+
+sub _too_loaded() {
+    open my $in,"<","/proc/loadavg" or die $!;
+    my ($load) = <$in>;
+    close $in;
+    chomp $load;
+    $load =~ s/\s.*//;
+    diag("$load / $MAX_LOAD");
     return $load>$MAX_LOAD;
 }
 

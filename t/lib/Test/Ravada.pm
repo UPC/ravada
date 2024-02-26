@@ -1320,12 +1320,14 @@ sub wait_request {
 
     my $check_error = delete $args{check_error};
     $check_error = 1 if !defined $check_error;
+    my $fast_forward = delete $args{fast_forward};
+    $fast_forward = 1 if !defined $fast_forward;
 
     die "Error: uknown args ".Dumper(\%args) if keys %args;
     my $t0 = time;
     my %done;
     for ( ;; ) {
-        fast_forward_requests();
+        fast_forward_requests() if $fast_forward;
         _clean_removed_domains();
         my $done_all = 1;
         my $prev = join(".",_list_requests);
@@ -1347,6 +1349,7 @@ sub wait_request {
                 if ($req->status eq 'requested') {
                     $run_at = ($req->at_time or 0);
                     $run_at = $run_at-time if $run_at;
+                    next if $run_at && $run_at > 10;
                     $run_at = 'now' if !$run_at;
                     $run_at = " $run_at";
                 }
