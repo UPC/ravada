@@ -938,24 +938,15 @@ for my $vm_name ( vm_names()) {
 
         test_frontend_list($vm);
 
-        warn 1;
-
         test_templates_gone_usb_2($vm);
 
-        warn 2;
-
         test_templates_gone_usb($vm);
-        warn 3;
         test_templates_changed_usb($vm);
 
-        warn 4;
         test_templates_start_nohd($vm);
-        warn 5;
         test_templates_change_filter($vm);
 
-        warn 6;
         test_templates($vm);
-        warn 7;
         test_templates_change_devices($vm);
 
     }

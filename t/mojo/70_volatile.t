@@ -292,15 +292,6 @@ sub _search_domain_by_name($name) {
     return $id;
 }
 
-sub _too_loaded($msg) {
-    open my $in,"<","/proc/loadavg" or die $!;
-    my ($load) = <$in>;
-    close $in;
-    chomp $load;
-    $load =~ s/\s.*//;
-    return $load>$MAX_LOAD;
-}
-
 sub _too_loaded() {
     open my $in,"<","/proc/loadavg" or die $!;
     my ($load) = <$in>;
