@@ -5614,7 +5614,8 @@ sub _cmd_refresh_machine_ports($self, $request) {
     my $domain = Ravada::Domain->open($id_domain) or confess "Error: domain $id_domain not found";
 
     die "USER $uid not authorized to refresh machine ports for domain ".$domain->name
-    unless $domain->_data('id_owner') ==  $user->id || $user->is_operator;
+    unless $domain->_data('id_owner') ==  $user->id || $user->is_operator
+            || $user->can_start_machine($domain->id);
 
     return if !$domain->is_active;
 
@@ -6762,6 +6763,14 @@ sub _cmd_open_exposed_ports($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain) or return;
     return if !$domain->list_ports();
 
+    my $uid = $request->args('uid');
+    my $user = Ravada::Auth::SQL->search_by_id( $uid )
+        or die "Error: user $uid not found";
+
+    die "Error: user ".$user->name." not authorized to open ports"
+    unless $user->is_admin || $domain->_data('id_owner') == $uid
+        || $user->can_start_machine($domain);
+
     my $remote_ip = $request->defined_arg('remote_ip');
 
     $domain->open_exposed_ports($remote_ip);
@@ -6783,7 +6792,8 @@ sub _cmd_close_exposed_ports($self, $request) {
     return if !$domain;
 
     die "Error: user ".$user->name." not authorized to delete iptables rule"
-    unless $user->is_admin || $domain->_data('id_owner') == $uid;
+    unless $user->is_admin || $domain->_data('id_owner') == $uid
+        || $user->can_start_machine($domain);
 
     my $port = $request->defined_arg('port');
 
