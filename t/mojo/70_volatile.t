@@ -142,13 +142,6 @@ sub _set_base_vms($vm_name, $id_base, $network) {
     while ( my ($id_vm) = $sth->fetchrow) {
         $t->post_ok("/node/enable/$id_vm.json");
 
-        my $req = Ravada::Request->create_network(
-        uid => user_admin->id
-        ,id_vm => $id_vm
-        ,data => $network
-        );
-        wait_request(check_error => 0);
-
         my $id_req = mojo_request($t,"set_base_vm", { id_vm => $id_vm, id_domain => $id_base, value => 1 }, 0);
         mojo_request($t,"clone", { id_domain => $id_base , after_request => $id_req, name => new_domain_name()
                     ,options => { network => $network->{name} }
@@ -176,30 +169,55 @@ sub _count_nodes($vm_name) {
     return ($count or 1);
 }
 
-sub _new_network($id_vm) {
+sub _new_network($vm_name,$id_vm) {
 
-    my $req_new = Ravada::Request->new_network(
-        uid => user_admin->id
-        ,id_vm => $id_vm
-        ,name => base_domain_name()
-    );
-    wait_request(debug => 0);
-    like($req_new->output , qr/\d+/) or exit;
+    my ($req,$net);
 
-    my $net = decode_json($req_new->output);
-    my $name = $net->{name};
+    for my $cont ( 140 .. 150 ) {
+        my $req_new = Ravada::Request->new_network(
+            uid => user_admin->id
+            ,id_vm => $id_vm
+            ,name => base_domain_name()
+        );
+        wait_request(debug => 0);
+        like($req_new->output , qr/\d+/) or exit;
 
-    my $user = create_user();
-    my $req = Ravada::Request->create_network(
-        uid => user_admin->id
-        ,id_vm => $id_vm
-        ,data => $net
-    );
-    wait_request(check_error => 0);
+        $net = decode_json($req_new->output);
+        $net->{ip_address} =~ s/(\d+\.\d+\.)\d+(.*)/$1$cont$2/;
+        my $name = $net->{name};
 
+        my $user = create_user();
+        $req = Ravada::Request->create_network(
+            uid => user_admin->id
+            ,id_vm => $id_vm
+            ,data => $net
+        );
+        wait_request(check_error => 0);
+
+        last if !$req->error;
+    }
     die $req->error if $req->error;
 
+    _create_network_nodes($vm_name, $net);
+
     return $net;
+}
+
+sub _create_network_nodes($vm_name, $net) {
+    my $sth = connector->dbh->prepare(
+        "SELECT id FROM vms WHERE vm_type=?"
+        ."  AND is_active=1 AND enabled=1"
+    );
+    $sth->execute($vm_name);
+    while ( my ($id_vm) = $sth->fetchrow ) {
+        $net->{id_vm} = $id_vm;
+        Ravada::Request->create_network(
+            uid => user_admin->id
+            ,id_vm => $id_vm
+            ,data => $net
+        );
+
+    }
 }
 
 sub test_clone($vm_name, $n=10) {
@@ -207,7 +225,7 @@ sub test_clone($vm_name, $n=10) {
 
     my @bases = bases($vm_name);
 
-    my $network = _new_network($id_vm);
+    my $network = _new_network($vm_name, $id_vm);
     my $network_name = $network->{name};
 
     for my $base ( @bases ) {
@@ -257,8 +275,10 @@ sub test_clone($vm_name, $n=10) {
                 );
                 delete_request('set_time','force_shutdown');
                 next if $vm_name eq 'Void';
-                wait_request(debug => 1);
-                _wait_ip($name,$seconds++);
+                if (_slightly_loaded() ) {
+                    wait_request(debug => 1);
+                    _wait_ip($name,$seconds++);
+                }
                 last if _too_loaded();
             }
         }
@@ -292,13 +312,23 @@ sub _search_domain_by_name($name) {
     return $id;
 }
 
-sub _too_loaded() {
+sub _slightly_loaded($msg="") {
     open my $in,"<","/proc/loadavg" or die $!;
     my ($load) = <$in>;
     close $in;
     chomp $load;
     $load =~ s/\s.*//;
-    diag("$load / $MAX_LOAD");
+    return $load>$MAX_LOAD/2;
+}
+
+
+sub _too_loaded($msg="") {
+    open my $in,"<","/proc/loadavg" or die $!;
+    my ($load) = <$in>;
+    close $in;
+    chomp $load;
+    $load =~ s/\s.*//;
+    diag("$msg $load / $MAX_LOAD");
     return $load>$MAX_LOAD;
 }
 
