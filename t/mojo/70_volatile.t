@@ -318,7 +318,7 @@ sub _slightly_loaded($msg="") {
     close $in;
     chomp $load;
     $load =~ s/\s.*//;
-    return $load>$MAX_LOAD/2;
+    return $load>$MAX_LOAD/3;
 }
 
 
