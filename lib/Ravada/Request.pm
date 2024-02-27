@@ -252,7 +252,7 @@ our %COMMAND = (
         limit => 50
         ,priority => 4
         ,commands => ['shutdown','shutdown_now', 'enforce_limits', 'set_time'
-            ,'remove_domain','refresh_machine_ports'
+            ,'remove_domain', 'remove', 'refresh_machine_ports'
         ]
     }
 
