@@ -1,0 +1,31 @@
+<div ng-hide="showmachine.bundle">
+    <input type="text" placeholder="new bundle" ng-value="new_bundle"/>
+    <button>create</button>
+
+</div>
+
+<div ng-show="showmachine.bundle">
+    <h3>{{showmachine.bundle.name}}</h3>
+
+    <div ng-repeat="domain in showmachine.bundle.domains"
+        class="row">
+
+        <div class="col-sm-11">
+            <button class="badge">x</button>
+                <a href="/machine/manage/{{domain.id}}.html">
+                    {{domain.name}}
+                </a>
+        </div>
+    </div>
+
+    <div class="row mt-2"
+        ng-show="bases && bases.length"
+    >
+        <select ng-value="add_to_bundle">
+        <option ng-repeat="base in bases | orderBy :'name'">
+            {{base.name}}
+        </option>
+        </select>
+        <button class="button ml-2"><%=l 'Add' %></button>
+    </div>
+</div>
