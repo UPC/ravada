@@ -1249,6 +1249,59 @@
                 });
             };
 
+            $scope.create_bundle = function() {
+                $http.post('/v2/bundle/create'
+                    ,JSON.stringify({
+                        'name': $scope.new_bundle
+                        ,'id_domain': $scope.showmachine.id
+                    }))
+                    .then(function(response) {
+                });
+            };
+
+            $scope.add_to_bundle = function() {
+                var found;
+                for ( var i=0;i<$scope.showmachine.bundle.members.length; i++) {
+                    var member = $scope.showmachine.bundle.members[i];
+                    if (member.id == $scope.bundle_new_base.id) {
+                        found = true;
+                    }
+                }
+                if (!found) {
+                    $scope.showmachine.bundle.members.push($scope.bundle_new_base);
+                    $http.post('/v2/bundle/add_domain'
+                        ,JSON.stringify({
+                            'id_bundle': $scope.showmachine.bundle.id
+                            ,'id_domain': $scope.bundle_new_base.id
+                        }))
+                        .then(function(response) {
+                        }
+                    );
+                }
+
+            };
+
+            $scope.remove_from_bundle = function(domain) {
+                var members = [];
+                for ( var i=0;i<$scope.showmachine.bundle.members.length; i++) {
+                    var member = $scope.showmachine.bundle.members[i];
+                    if (member.id != domain.id) {
+                        members.push(member);
+                    }
+                }
+                $scope.showmachine.bundle.members=members;
+
+                $http.post('/v2/bundle/remove_domain'
+                    ,JSON.stringify({
+                        'id_bundle': $scope.showmachine.bundle.id
+                        ,'id_domain': domain.id
+                    }))
+                    .then(function(response) {
+                });
+
+            };
+
+
             $scope.message = [];
             $scope.disk_remove = [];
             $scope.pending_before = 10;

@@ -7740,21 +7740,20 @@ sub bundle($self) {
     );
     $sth->execute($self->id);
     my $bundle = $sth->fetchrow_hashref;
-    return if !keys %$bundle;
+    return undef if !keys %$bundle;
 
     $sth = $self->_dbh->prepare("SELECT d.id,d.alias,d.name "
         ." FROM domains_bundle db, domains d"
         ." WHERE db.id_domain=d.id "
         ."   AND db.id_bundle=?"
-        ."   AND db.id_domain <> ?"
     );
-    $sth->execute($bundle->{id} , $self->id);
+    $sth->execute($bundle->{id} );
 
     my @domains;
     while (my $domain = $sth->fetchrow_hashref ) {
         push @domains, ($domain);
     }
-    $bundle->{domains}=\@domains;
+    $bundle->{members}=\@domains;
 
     lock_hash(%$bundle);
     return $bundle;

@@ -2529,6 +2529,81 @@ del '/v1/booking_entry/:id/:mode' => sub($c) {
     my $error = ($@ or '');
     return $c->render(json => { error => $error } );
 };
+
+post '/v2/bundle/create' => sub($c) {
+
+    return access_denied_json($c) if !$USER->is_admin;
+
+    my $arg = decode_json($c->req->body);
+    my $name = delete $arg->{name};
+    my $id_domain = delete $arg->{id_domain};
+
+    my $error='';
+    $error = "Warning: Unknown args ".Dumper($arg)
+    if keys %$arg;
+
+    eval {
+        my $id_bundle = $RAVADA->create_bundle($name);
+        if ($id_bundle) {
+            $RAVADA->bundle_private_network($id_bundle, 1);
+            $RAVADA->add_to_bundle($id_bundle, $id_domain) if $id_domain;
+        }
+    };
+    my $error2 = ($@ or '');
+
+    $error .= " ".$error2 if $error2;
+    $USER->send_message($error or 'Bundle created '.$name);
+    return $c->render(json => { error => $error });
+
+};
+
+post '/v2/bundle/add_domain' => sub($c) {
+
+    return access_denied_json($c) if !$USER->is_admin;
+
+    my $arg = decode_json($c->req->body);
+    my $id_bundle = delete $arg->{id_bundle};
+    my $id_domain = delete $arg->{id_domain};
+
+    my $error='';
+    $error = "Warning: Unknown args ".Dumper($arg)
+    if keys %$arg;
+
+    eval {
+        $RAVADA->add_to_bundle($id_bundle, $id_domain);
+    };
+    my $error2 = ($@ or '');
+
+    $error .= " ".$error2 if $error2;
+    $USER->send_message($error) if $error;
+    return $c->render(json => { error => $error });
+
+};
+
+post '/v2/bundle/remove_domain' => sub($c) {
+
+    return access_denied_json($c) if !$USER->is_admin;
+
+    my $arg = decode_json($c->req->body);
+    my $id_bundle = delete $arg->{id_bundle};
+    my $id_domain = delete $arg->{id_domain};
+
+    my $error='';
+    $error = "Warning: Unknown args ".Dumper($arg)
+    if keys %$arg;
+
+    eval {
+        $RAVADA->remove_from_bundle($id_bundle, $id_domain);
+    };
+    my $error2 = ($@ or '');
+
+    $error .= " ".$error2 if $error2;
+    $USER->send_message($error) if $error;
+    return $c->render(json => { error => $error });
+
+};
+
+
 ###################################################
 
 ## user_settings

@@ -1931,6 +1931,24 @@ sub add_to_bundle ($self, $id_bundle, $id_domain){
 
 }
 
+=head2 remove_from_bundle
+
+Removes a domain from a bundle
+
+Arguments : id_bundle, id_domain
+
+=cut
+
+sub remove_from_bundle ($self, $id_bundle, $id_domain){
+    my $sth = $self->_dbh->prepare(
+        "DELETE FROM domains_bundle "
+        ." WHERE id_bundle=? AND id_domain=? "
+    );
+    $sth->execute($id_bundle, $id_domain);
+
+}
+
+
 =head2 version
 
 Returns the version of the main module
