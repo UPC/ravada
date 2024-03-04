@@ -3,9 +3,17 @@
 </div>
 
 <div ng-hide="showmachine.bundle">
-    <input type="text" placeholder="new bundle" ng-model="new_bundle"/>
-    <button ng-click="create_bundle()">create</button>
+    <div class="row">
+        <input type="text" placeholder="new bundle" ng-model="new_bundle"/>
+        <button ng-click="create_bundle()">create</button>
+    </div>
+    <div class="row" ng-hide="bundles.length<1">
+        <select ng-model="join_bundle_id" ng-options="bundle.id as bundle.name for bundle in bundles">
+        </select>
+        <button ng-click="join_bundle(join_bundle_id)"><%=l 'join bundle' %></button>
+    </div>
 </div>
+
 
 <div ng-show="showmachine.bundle">
     <h3><%=l 'Bundle' %> {{showmachine.bundle.name}}</h3>

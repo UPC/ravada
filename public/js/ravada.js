@@ -614,6 +614,7 @@
                 if (is_admin ) {
                     $scope.list_ldap_attributes();
                     list_ldap_groups();
+                    list_bundles();
                 }
                 $scope.list_cpu_models();
           };
@@ -1080,6 +1081,13 @@
                     });
             };
 
+            var list_bundles = function() {
+                $http.get('/v2/bundle/list')
+                    .then(function(response) {
+                        $scope.bundles=response.data;
+                    });
+            };
+
             /* Host Devices */
             var list_host_devices = function() {
                 $http.get('/list_host_devices/'+$scope.showmachine.id_vm)
@@ -1286,6 +1294,16 @@
                 $http.get('/v2/bundle/remove/'+id)
                     .then(function(response) {
                 });
+            };
+
+            $scope.join_bundle=function(id_bundle) {
+                $scope.showmachine.bundle = {
+                    'id': id_bundle
+                    ,'members': []
+                };
+                $scope.bundle_new_base={ 'id': $scope.showmachine.id };
+                $scope.add_to_bundle();
+                console.log($scope.showmachine.bundle);
             };
 
             $scope.add_to_bundle = function() {

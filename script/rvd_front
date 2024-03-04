@@ -2631,6 +2631,19 @@ post '/v2/bundle/remove_domain' => sub($c) {
 
 };
 
+get '/v2/bundle/list' => sub($c) {
+    return access_denied_json($c) if !$USER->is_admin;
+
+    my $sth = $RAVADA->_dbh->prepare(
+        "SELECT id,name FROM bundles ORDER by name"
+    );
+    $sth->execute;
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @list, ($row);
+    };
+    return $c->render(json => \@list);
+};
 
 ###################################################
 
