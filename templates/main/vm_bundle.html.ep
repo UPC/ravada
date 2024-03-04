@@ -3,8 +3,13 @@
     <button ng-click="create_bundle()">create</button>
 </div>
 
+<div class="alert alert-primary border border-primary mt-4 mb-4">
+        <%=l 'All the virtual machines in the bundle will share the same private virtual network' %>
+</div>
+
+
 <div ng-show="showmachine.bundle">
-    <h3>{{showmachine.bundle.name}}</h3>
+    <h3><%=l 'Bundle' %> {{showmachine.bundle.name}}</h3>
 
     <div class="row mt-2"
         ng-show="bases && bases.length"
@@ -16,7 +21,7 @@
                 </option>
             </select>
             <button class="button ml-2" ng-click="add_to_bundle()"
-                ng-disabled="!bundle_new_base"
+                ng-disabled="!bundle_new_base || bundle_new_base.id==showmachine.id"
             >
                 <%=l 'Add' %>
             </button>
@@ -36,5 +41,9 @@
                 </a>
         </div>
     </div>
-    <button ng-show="showmachine.bundle.members.length==1"><%=l 'Remove' %></button>
+
+    <hr/>
+    <button ng-disabled="showmachine.bundle.members.length>1"
+        ng-click="remove_bundle()"
+    ><%=l 'Remove' %></button>
 </div>

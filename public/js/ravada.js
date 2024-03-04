@@ -1256,6 +1256,22 @@
                         ,'id_domain': $scope.showmachine.id
                     }))
                     .then(function(response) {
+                        console.log(response.data);
+                        var bundle = response.data.bundle;
+                        bundle.members = [
+                            {   'id': $scope.showmachine.id
+                                ,'name': $scope.showmachine.name
+                            }
+                        ];
+                        $scope.showmachine.bundle = bundle;
+                });
+            };
+
+            $scope.remove_bundle = function() {
+                var id = $scope.showmachine.bundle.id;
+                $scope.showmachine.bundle=undefined;
+                $http.get('/v2/bundle/remove/'+id)
+                    .then(function(response) {
                 });
             };
 
