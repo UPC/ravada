@@ -21,10 +21,14 @@
                 </option>
             </select>
             <button class="button ml-2" ng-click="add_to_bundle()"
-                ng-disabled="!bundle_new_base || bundle_new_base.id==showmachine.id"
+                ng-disabled="!bundle_new_base || bundle_new_base.id==showmachine.id || domain_in_bundle(bundle_new_base.id)"
             >
                 <%=l 'Add' %>
             </button>
+            <span class="info" ng-show="bundle_new_base &&( bundle_new_base.id==showmachine.id || domain_in_bundle(bundle_new_base.id))"/>
+                <%=l 'Virtual machine already added to bundle:' %>
+                <b>{{bundle_new_base.name}}</b>
+            </span>
         </div>
     </div>
 
