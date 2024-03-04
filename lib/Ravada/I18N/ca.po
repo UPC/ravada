@@ -2332,3 +2332,6 @@ msgstr ""
 
 msgid "For Spice client setup follow this "
 msgstr "Per a la configuració del client Spice, seguiu aquest "
+
+msgid "Bundle"
+msgstr "Ramat"

@@ -7742,7 +7742,7 @@ sub bundle($self) {
     my $bundle = $sth->fetchrow_hashref;
     return undef if !keys %$bundle;
 
-    $sth = $self->_dbh->prepare("SELECT d.id,d.alias,d.name "
+    $sth = $self->_dbh->prepare("SELECT d.id, d.alias, d.name, d.is_base, d.is_public "
         ." FROM domains_bundle db, domains d"
         ." WHERE db.id_domain=d.id "
         ."   AND db.id_bundle=?"
