@@ -1030,8 +1030,24 @@ sub _check_free_vm_memory {
 
     return if $vm_free_mem > $min_free_memory;
 
+    my $overcommit = $self->_vm->_data('memory_overcommit');
+
+    if ($overcommit) {
+
+        my $total_mem = $self->_vm->memory;
+
+        return if ($vm_free_mem+$domain_memory) < $total_mem;
+
+        my $pc_mem = int(($vm_free_mem+$domain_memory)/$total_mem*100);
+        warn int($vm_free_mem/1024)." / ".int($total_mem/1024)
+        ." = $pc_mem [ $overcommit ]";
+
+        return if $pc_mem < $overcommit;
+    }
+
     $self->_data(status => 'shutdown');
 
+    $vm_free_mem = 0 if $vm_free_mem<0;
     my $msg = "Error: No free memory in ".$self->_vm->name.". Only "._gb($vm_free_mem)." out of "
         ._gb($min_free_memory)." GB required.\n";
 

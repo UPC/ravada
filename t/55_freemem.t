@@ -11,11 +11,16 @@ use lib 't/lib';
 use Test::Ravada;
 use Sys::Statistics::Linux;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use_ok('Ravada');
 
 my $RVD_BACK = rvd_back( );
 
 my $USER = create_user('foo','bar', 1);
+
+my $RAM_DOMAIN = 4*1024*1024;
 
 sub test_new_domain {
     my $vm = shift;
@@ -28,7 +33,7 @@ sub test_new_domain {
                                         , id_iso => search_id_iso('Alpine')
                                         ,vm => $vm->type
                                         ,id_owner => $USER->id
-                                        ,memory => 4*1024*1024
+                                        ,memory => $RAM_DOMAIN
                                         ,disk => 1 * 1024*1024
             ) 
     };
@@ -109,7 +114,27 @@ sub _check_free_memory{
     return $free;
 }
 
+sub test_overcommit($vm) {
 
+    $vm->_data('memory_overcommit' => 30 );
+
+    my $base = import_domain( $vm, 'zz-test-base-ubuntu');
+
+    my $req;
+    for ( 1 .. 10 ) {
+        $req = Ravada::Request->clone(
+            uid => user_admin->id
+            ,id_domain => $base->id
+            ,memory => $RAM_DOMAIN
+            ,start => 1
+        );
+        wait_request(debug => 1, check_error => 0);
+        diag($req->status." ".$req->error);
+    }
+
+
+    remove_domain($base);
+}
 
 ################################################################
 my $vm;
@@ -153,13 +178,17 @@ SKIP: {
         my $domain = test_new_domain($vm) or last;
         push @domains,($domain) if $domain;
     }
+    diag(scalar(@domains)." domains started");
+    ok(scalar(@domains) < $n_domains,"Expecting less than $n_domains, got ".scalar(@domains));
 
     test_new_domain_req($vm) if $vm_name ne 'Void';
+
+    push @domains, ( test_overcommit($vm) );
     for (@domains) {
-        $_->shutdown_now($USER);
+        $_->shutdown_now($USER) if $_;
     }
     for (@domains) {
-        $_->remove($USER);
+        $_->remove($USER) if $_;
     }
 };
 }

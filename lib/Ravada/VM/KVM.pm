@@ -2823,6 +2823,11 @@ sub active_storage_pool($self, $name, $value=1) {
     }
 }
 
+sub memory($self) {
+    my $info = $self->vm->get_node_memory_stats();
+    return $info->{total};
+}
+
 sub free_memory($self) {
     confess "ERROR: VM ".$self->name." inactive"
         if !$self->is_alive;
@@ -2855,9 +2860,6 @@ sub _free_memory_available($self) {
     }
     my $free_mem = $info->{total} - $used;
     $free_mem = 0 if $free_mem < 0;
-    my $free_real = $self->_free_memory_overcommit;
-
-    $free_mem = $free_real if $free_real < $free_mem;
 
     return $free_mem;
 }

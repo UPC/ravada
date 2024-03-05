@@ -2834,6 +2834,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','nat_ip',"varchar(128) DEFAULT NULL");
 
     $self->_upgrade_table('vms','min_free_memory',"int DEFAULT 600000");
+    $self->_upgrade_table('vms','memory_overcommit',"int DEFAULT 0");
     $self->_upgrade_table('vms', 'max_load', 'int not null default 10');
     $self->_upgrade_table('vms', 'active_limit','int DEFAULT NULL');
     $self->_upgrade_table('vms', 'base_storage','varchar(64) DEFAULT NULL');

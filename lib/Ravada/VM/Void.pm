@@ -252,6 +252,7 @@ sub _storage_path($self, $storage) {
 
 sub _list_domains_local($self, %args) {
     my $active = delete $args{active};
+    delete $args{read_only};
 
     confess "Wrong arguments ".Dumper(\%args)
         if keys %args;
@@ -677,6 +678,13 @@ sub free_memory {
         $memory -= $domain->get_info->{memory};
     }
     return $memory;
+}
+
+sub memory($self) {
+    my $data = $self->read_file("/proc/meminfo");
+    my ($total) = $data =~ /^MemTotal:\s+(\d+)/;
+
+    return $total;
 }
 
 sub _fetch_dir_cert {

@@ -1237,6 +1237,16 @@ sub min_free_memory {
     return ($self->_data('min_free_memory') or $Ravada::Domain::MIN_FREE_MEMORY);
 }
 
+sub memory_used($self) {
+    my $used = 0;
+    for my $domain ( $self->list_domains(active => 1, read_only => 1) ) {
+        my $info = $domain->get_info();
+        my $memory = ($info->{memory} or $info->{max_mem} or 0);
+        $used += $memory;
+    }
+    return $used;
+}
+
 =head2 max_load 
 
 Returns the maximum cpu load that the host can handle.
