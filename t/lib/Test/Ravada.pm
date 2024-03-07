@@ -2633,6 +2633,19 @@ sub _check_leftovers_users {
     ok(!@error , Dumper(\@error));
 }
 
+sub _get_default_virtual_network() {
+    my ($in, $out, $err);
+
+    my @command = ("virsh","net-dumpxml","default");
+
+    run3( \@command, \$in, \$out, \$err);
+
+    my ($ip_address) = $out =~ m{ip address='(\d+\.\d+\.\d+)\.};
+
+    die $out if !$ip_address;
+    return $ip_address;
+}
+
 sub _check_iptables() {
     return if $>;
     return if !$VM_VALID{KVM};
@@ -2662,13 +2675,14 @@ sub _check_iptables() {
     }
     @cmd = ("iptables-save","-t","nat");
     run3(\@cmd,\$in, \$out, \$err);
+    my $default_net = _get_default_virtual_network();
     for my $rule (":LIBVIRT_PRT.*"
         ,"-A POSTROUTING -j LIBVIRT_PRT"
-        ,"-A LIBVIRT_PRT -s 192.168.122.0/24 -d 224.0.0.0/24 -j RETURN"
-        ,"-A LIBVIRT_PRT -s 192.168.122.0/24 -d 255.255.255.255/32 -j RETURN"
-        ,"-A LIBVIRT_PRT -s 192.168.122.0/24 ! -d 192.168.122.0/24 -p tcp -j MASQUERADE --to-ports 1024-65535"
-        ,"-A LIBVIRT_PRT -s 192.168.122.0/24 ! -d 192.168.122.0/24 -p udp -j MASQUERADE --to-ports 1024-65535"
-        ,"-A LIBVIRT_PRT -s 192.168.122.0/24 ! -d 192.168.122.0/24 -j MASQUERADE"
+        ,"-A LIBVIRT_PRT -s $default_net.0/24 -d 224.0.0.0/24 -j RETURN"
+        ,"-A LIBVIRT_PRT -s $default_net.0/24 -d 255.255.255.255/32 -j RETURN"
+        ,"-A LIBVIRT_PRT -s $default_net.0/24 ! -d $default_net.0/24 -p tcp -j MASQUERADE --to-ports 1024-65535"
+        ,"-A LIBVIRT_PRT -s $default_net.0/24 ! -d $default_net.0/24 -p udp -j MASQUERADE --to-ports 1024-65535"
+        ,"-A LIBVIRT_PRT -s $default_net.0/24 ! -d $default_net.0/24 -j MASQUERADE"
     ) {
         my @found = grep /^$rule$/ , split (/\n/, $out);
         die "$rule not found in @cmd \n$err\n" if !@found;
@@ -2677,8 +2691,7 @@ sub _check_iptables() {
     run3(\@cmd,\$in, \$out, \$err);
     for my $rule (":LIBVIRT_PRT.*"
         ,"-A POSTROUTING -j LIBVIRT_PRT"
-        ,"-A LIBVIRT_PRT -o virbr0 -p udp -m udp --dport 68 -j CHECKSUM --checksum-fill"
-        ,"-A LIBVIRT_PRT -o virbr1 -p udp -m udp --dport 68 -j CHECKSUM --checksum-fill"
+        ,"-A LIBVIRT_PRT -o virbr\\d+ -p udp -m udp --dport 68 -j CHECKSUM --checksum-fill"
     ) {
         my @found = grep /^$rule$/ , split (/\n/, $out);
         die "$rule not found in @cmd \n$err\n" if !@found;

@@ -1034,13 +1034,12 @@ sub _check_free_vm_memory {
 
     if ($overcommit) {
 
-        my $total_mem = $self->_vm->memory;
+        return if $vm_free_mem > $domain_memory;
 
-        return if ($vm_free_mem+$domain_memory) < $total_mem;
+        my $vm_total_mem = $self->_vm->memory();
+        my $vm_used_mem = $vm_total_mem - $self->_vm->free_memory(0);
 
-        my $pc_mem = int(($vm_free_mem+$domain_memory)/$total_mem*100);
-        warn int($vm_free_mem/1024)." / ".int($total_mem/1024)
-        ." = $pc_mem [ $overcommit ]";
+        my $pc_mem = int(($vm_used_mem+$domain_memory-$vm_total_mem)/$vm_total_mem*100);
 
         return if $pc_mem < $overcommit;
     }

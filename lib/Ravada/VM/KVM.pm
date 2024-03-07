@@ -2828,14 +2828,14 @@ sub memory($self) {
     return $info->{total};
 }
 
-sub free_memory($self) {
+sub free_memory($self,$buffers=1) {
     confess "ERROR: VM ".$self->name." inactive"
         if !$self->is_alive;
 
     return $self->_free_memory_overcommit();
 
     my $free_available = $self->_free_memory_available();
-    my $free_stats = $self->_free_memory_overcommit();
+    my $free_stats = $self->_free_memory_overcommit($buffers);
 
     $free_available = $free_stats if $free_stats < $free_available;
 
@@ -2845,8 +2845,10 @@ sub free_memory($self) {
 # TODO: enable this check from free memory with a config flag
 #   though I don't think it would be suitable to use
 #   Insights welcome
-sub _free_memory_overcommit($self) {
+sub _free_memory_overcommit($self, $add_buffers) {
     my $info = $self->vm->get_node_memory_stats();
+
+    return $info->{free} if !$add_buffers;
     return ($info->{free} + $info->{buffers} + $info->{cached});
 }
 

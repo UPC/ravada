@@ -22,6 +22,8 @@ my $USER = create_user('foo','bar', 1);
 
 my $RAM_DOMAIN = 4*1024*1024;
 
+my $BASE;
+
 sub test_new_domain {
     my $vm = shift;
 
@@ -30,20 +32,19 @@ sub test_new_domain {
     my $freemem = _check_free_memory();
     my $domain;
     eval { $domain = $vm->create_domain(name => $name
-                                        , id_iso => search_id_iso('Alpine')
+                                        ,id_base => $BASE->id
                                         ,vm => $vm->type
                                         ,id_owner => $USER->id
                                         ,memory => $RAM_DOMAIN
-                                        ,disk => 1 * 1024*1024
             ) 
     };
     if ($freemem < 1 ) {
         ok($@,"Expecting failed because we ran out of free RAM");
         return;
     }
-    ok(!$@,"Domain $name not created: $@");
 
-    ok($domain,"Domain not created") or return;
+    die "Domain not created" if !$domain;
+
     eval { $domain->start($USER); sleep 1; };
 
     if ($freemem < 1 || $@ =~ /free memory/) {
@@ -116,26 +117,47 @@ sub _check_free_memory{
 
 sub test_overcommit($vm) {
 
-    $vm->_data('memory_overcommit' => 30 );
+    my $pc_overcommit= int($RAM_DOMAIN/$vm->memory*100);
 
-    my $base = import_domain( $vm, 'zz-test-base-ubuntu');
+    $pc_overcommit=100 if $pc_overcommit < 0;
+    $vm->_data('memory_overcommit' => ($pc_overcommit+1)*2 );
 
     my $req;
+    my $count_ok=0;
+    my @domains;
     for ( 1 .. 10 ) {
+        my $name = new_domain_name();
         $req = Ravada::Request->clone(
             uid => user_admin->id
-            ,id_domain => $base->id
+            ,id_domain => $BASE->id
             ,memory => $RAM_DOMAIN
-            ,start => 1
+            ,name => $name
         );
-        wait_request(debug => 1, check_error => 0);
+        wait_request();
+        my $domain = $vm->search_domain($name);
+        push @domains,($domain);
+        $req = Ravada::Request->start_domain(id_domain => $domain->id
+            ,uid => user_admin->id
+        );
+        wait_request(debug => 0, check_error => 0);
+        $count_ok++ if !$req->error;
         diag($req->status." ".$req->error);
+        last if $req->error || $count_ok;
     }
+    ok($count_ok);
+    return @domains;
 
-
-    remove_domain($base);
 }
 
+sub _import_base($vm) {
+    if ($vm->type eq 'KVM') {
+        $BASE = import_domain( $vm, 'zz-test-base-ubuntu');
+    } else {
+        $BASE = create_domain($vm);
+        $BASE->prepare_base(user_admin);
+    }
+    warn $BASE->type." ".$BASE->name;
+}
 ################################################################
 my $vm;
 
@@ -161,6 +183,7 @@ SKIP: {
     my $freemem = _check_free_memory();
     my $n_domains = int($freemem)*2+2;
 
+    _import_base($vm);
     if ($n_domains > 50 ) {
         my $msg = "Skipped freemem check, too many memory in this host";
         diag($msg);
@@ -170,7 +193,7 @@ SKIP: {
 
     $freemem =~ s/(\d+\.\d)\d+/$1/;
 
-    diag("Checking it won't start more than $n_domains domains with $freemem free memory");
+    diag("[$vm_name ] Checking it won't start more than $n_domains domains with $freemem free memory");
 
     my @domains;
     for ( 0 .. $n_domains ) {
