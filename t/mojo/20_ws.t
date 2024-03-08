@@ -346,6 +346,36 @@ sub test_remove_booking_entry_non_admin($t, $id) {
 
 }
 
+sub test_node_info($vm_name) {
+    my $sth = connector->dbh->prepare("SELECT * FROM vms WHERE vm_type=?");
+    $sth->execute($vm_name);
+
+    my $user = create_user(new_domain_name(), $$);
+
+    while ( my $node = $sth->fetchrow_hashref) {
+        my $ws_args = {
+            channel => '/'.$node->{id}
+            ,login => user_admin->name
+        };
+
+        my $node_info = Ravada::WebSocket::_get_node_info
+                            (rvd_front(), $ws_args);
+        if ($node->{hostname} =~ /localhost|127.0.0.1/) {
+            is($node_info->{is_local},1);
+        } else {
+            is($node_info->{is_local},0);
+        }
+
+        $ws_args->{login} = $user->name;
+
+        $node_info = Ravada::WebSocket::_get_node_info
+                            (rvd_front(), $ws_args);
+
+        is_deeply($node_info,{});
+    }
+
+}
+
 ########################################################################################
 
 init('/etc/ravada.conf',0);
@@ -378,6 +408,8 @@ my $t = mojo_init();
 for my $vm_name ( @{rvd_front->list_vm_types} ) {
 
     diag("Testing Web Services in $vm_name");
+
+    test_node_info($vm_name);
 
     mojo_login($t, $USERNAME, $PASSWORD);
     test_bookings($t);
