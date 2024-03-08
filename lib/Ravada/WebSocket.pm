@@ -345,11 +345,10 @@ sub _get_node_info($rvd, $args) {
 
     return {} if!$user->is_admin;
 
-    my $node = Ravada::VM->open(id => $id_node, readonly => 1);
-    $node->_data('hostname');
-    $node->{_data}->{is_local} = $node->is_local;
-    $node->{_data}->{has_bases} = scalar($node->list_bases);
-    return $node->{_data};
+    my $sth = $rvd->_dbh->prepare("SELECT * FROM vms WHERE id=?");
+    $sth->execute($id_node);
+    my $data = $sth->fetchrow_hashref;
+    return $data;
 
 }
 
