@@ -35,8 +35,8 @@ if [[ $OS = *"Ubuntu"* && $VER > '16.04' ]]; then
   echo "Downloading..."
   sudo apt-get install libmojolicious-plugin-renderfile-perl -y &> /dev/null
 
-  wget http://infoteleco.upc.edu/img/debian/ravada_2.1.9_ubuntu-18.04_all.deb
-  sudo dpkg -i ravada_2.1.9_ubuntu-18.04_all.deb &> /dev/null
+  wget http://infoteleco.upc.edu/img/debian/ravada_2.2.1_ubuntu-18.04_all.deb
+  sudo dpkg -i ravada_2.2.1_ubuntu-18.04_all.deb &> /dev/null
   echo "Installing Dependencies..."
   sudo apt-get update -y &> /dev/null
   sudo apt-get -f -y install &> /dev/null
@@ -136,8 +136,8 @@ elif [[ $OS = *"Ubuntu"* ]]; then
   wget http://infoteleco.upc.edu/img/debian/libmojolicious-plugin-renderfile-perl_0.10-1_all.deb &> /dev/null
 	sudo dpkg -i libmojolicious-plugin-renderfile-perl_0.10-1_all.deb &> /dev/null
 
-  wget http://infoteleco.upc.edu/img/debian/ravada_2.1.9_all.deb &> /dev/null
-  sudo dpkg -i ravada_2.1.9_all.deb &> /dev/null
+  wget http://infoteleco.upc.edu/img/debian/ravada_2.2.1_all.deb &> /dev/null
+  sudo dpkg -i ravada_2.2.1_all.deb &> /dev/null
   echo "Installing Dependencies..."
   sudo apt-get update -y &> /dev/null
   sudo apt-get -f -y install &> /dev/null
