@@ -49,7 +49,7 @@ sub _add_fstab($vm) {
 }
 
 sub remove_fstab($vm, $dir) {
-    my $file = "$dir/check_storage";# or die "$!";
+    my $file = "$dir/".base_domain_name()."check_storage";# or die "$!";
     unlink $file or die "$! $file" if -e $file;
     copy("/etc/fstab.tst_rvd_backup","/etc/fstab")
 }
@@ -60,6 +60,7 @@ sub test_storage_pools_fail($vm) {
 
     create_storage_pool($vm, $dir);
 
+    delete_request('cleanup', 'check_storage');
     my $req = Ravada::Request->check_storage(
         uid => user_admin->id
         ,retry => 2
@@ -69,7 +70,9 @@ sub test_storage_pools_fail($vm) {
     );
     is($req_cleanup->after_request_ok,$req->id);
     wait_request( debug => 0, check_error => 0);
-    is($req->status,'done');
+    wait_request( debug => 0, check_error => 0);
+    wait_request( debug => 0, check_error => 0);
+    is($req->status,'done',"Expecting done ".$req->id);
     like($req->error, qr/not mounted/);
 
     is($req_cleanup->status,'done');
@@ -81,9 +84,51 @@ sub test_storage_pools_fail($vm) {
 
 sub _clean_local {
     my $dir = "$DIR/".base_domain_name();
-    my $file = "$dir/check_storage";# or die "$!";
+    my $file = "$dir/".base_domain_name()."_check_storage";# or die "$!";
     unlink $file or die "$! $file" if -e $file;
 }
+
+sub test_storage_full($vm) {
+
+    my $dir = "/run";
+    $dir.="/user/".$< if $<;
+    my $storage_name = new_domain_name();
+
+    $dir.= "/".$storage_name;
+
+    mkdir $dir or die "$! $dir" if ! -e $dir;
+
+    if (! grep { $_ eq $storage_name} $vm->list_storage_pools) {
+        $vm->create_storage_pool($storage_name,$dir);
+    }
+
+    my($out,$err) = $vm->run_command("df");
+
+    my ($available) = $out =~ m{(\d+)\s+\d+\% /run}ms;
+
+    $available = $available*10;
+
+    $vm->default_storage_pool_name($storage_name);
+
+    my $name = new_domain_name;
+    my $req = Ravada::Request->create_domain(
+        vm => $vm->type
+        ,id_owner => user_admin->id
+        ,name => $name
+        ,disk => $available
+        ,storage => 'default'
+        ,id_iso => search_id_iso('Alpine%64')
+    );
+    wait_request(debug => 0);
+
+    my $domain = $vm->search_domain($name);
+    for my $vol ($domain->list_volumes) {
+        next if $vol =~ /iso$/;
+        unlike($vol,qr{^/run});
+    }
+
+}
+
 ###########################################################
 
 _clean_local();
@@ -100,6 +145,12 @@ for my $vm_name (vm_names() ) {
         }
 
         skip($msg,10)   if !$vm;
+
+        if ($vm->type eq 'KVM') {
+            remove_qemu_pools($vm);
+        }
+        test_storage_full($vm);
+
         test_storage_pools($vm);
         test_storage_pools_fail($vm);
     }

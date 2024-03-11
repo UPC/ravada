@@ -11,7 +11,7 @@ use Moose;
 use Socket qw( inet_aton inet_ntoa );
 use Sys::Hostname;
 use URI;
-use YAML qw(Dump);
+use YAML qw(Dump Load);
 
 use Ravada::Domain::Void;
 use Ravada::NetInterface::Void;
@@ -32,6 +32,12 @@ has 'vm' => (
     ,isa => 'Any'
     ,builder => '_connect'
     ,lazy => 1
+);
+
+has has_networking => (
+    isa => 'Bool'
+    , is => 'ro'
+    , default => 1
 );
 
 our $CONNECTOR = \$Ravada::CONNECTOR;
@@ -56,6 +62,8 @@ sub _connect {
 }
 
 sub connect($self) {
+    $self->_init_storage_pool_default();
+
     return 1 if $self->vm;
     return $self->vm($self->_connect);
 }
@@ -87,11 +95,17 @@ sub create_domain {
     confess if $args{name} eq 'tst_vm_v20_volatile_clones_02' && !$listen_ip;
     my $remote_ip = delete $args{remote_ip};
     my $id = delete $args{id};
+    my $storage = delete $args{storage};
+
+    my $options = delete $args{options};
+    my $network;
+    $network = $options->{network} if $options && exists $options->{network};
 
     my $domain = Ravada::Domain::Void->new(
                                            %args
                                            , domain => $args{name}
                                            , _vm => $self
+                                           ,storage => $storage
     );
     my ($out, $err) = $self->run_command("/usr/bin/test",
          "-e ".$domain->_config_file." && echo 1" );
@@ -100,7 +114,8 @@ sub create_domain {
     return $domain if $out && exists $args{config};
 
     die "Error: Domain $args{name} already exists " if $out;
-    $domain->_set_default_info($listen_ip);
+
+    $domain->_set_default_info($listen_ip, $network);
     $domain->_store( autostart => 0 );
     $domain->_store( is_active => $active );
     $domain->set_memory($args{memory}) if $args{memory};
@@ -145,18 +160,31 @@ sub create_domain {
             }
         }
         $domain->_store(hardware => $clone_hw);
+
+        my $base_info = $domain_base->_value('info');
+        my $clone_info = $domain->_value('info');
+        for my $item ( keys %$base_info) {
+            $clone_info->{$item} = $base_info->{$item}
+            if $item !~ /^(mac|state)$/;
+        }
+        $domain->_store(info => $clone_info);
+
         my $drivers = {};
         $drivers = $domain_base->_value('drivers');
         $domain->_store( drivers => $drivers );
+        if ( $network ) {
+            for my $index ( 0 .. scalar(@{$clone_hw->{network}})-1) {
+                $domain->change_hardware('network', $index ,{name => $network})
+            }
+        }
     } elsif (!exists $args{config}) {
-        my ($file_img) = $domain->disk_device();
+        $storage = $self->default_storage_pool_name() if !$storage;
         my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".void";
-        $file_img =~ m{.*/(.*)} if $file_img;
         $domain->add_volume(name => $vda_name
                         , capacity => ( $args{disk} or 1024)
-                        , file => $file_img
                         , type => 'file'
                         , target => 'vda'
+                        , storage => $storage
         );
 
         $self->_add_cdrom($domain, %args);
@@ -205,16 +233,21 @@ sub _add_cdrom($self, $domain, %args) {
 sub create_volume {
 }
 
-sub dir_img {
-    return Ravada::Front::Domain::Void::_config_dir();
+sub dir_img($self=undef) {
+    return Ravada::Front::Domain::Void::_config_dir()
+    if !defined($self) || !ref($self);
+
+    return $self->_storage_path($self->default_storage_pool_name);
 }
 
-sub dir_base  { return dir_img }
-sub dir_clone { return dir_img }
-
 sub _storage_path($self, $storage) {
-    confess "Error: unknown storage '$storage'" if $storage ne 'default';
-    return dir_img;
+    confess if !defined $storage;
+    my @list = $self->list_storage_pools(1);
+    my ($sp) = grep { $_->{name} eq $storage } @list;
+
+    confess "Error: unknown storage '$storage'" if !$sp;
+
+    return $sp->{path};
 }
 
 sub _list_domains_local($self, %args) {
@@ -242,7 +275,7 @@ sub _is_a_domain($self, $file) {
     chomp $file;
 
     return if $file !~ /\.yml$/;
-    $file =~ s/\.\w+//;
+    $file =~ s/\.\w+$//;
     $file =~ s/(.*)\.qcow.*$/$1/;
     return if $file !~ /\w/;
 
@@ -319,9 +352,128 @@ sub search_domain {
     return;
 }
 
-sub list_networks {
+sub list_routes {
     return Ravada::NetInterface::Void->new();
 }
+
+sub list_virtual_networks($self) {
+
+    my $dir_net = $self->dir_img."/networks/";
+    if (!$self->file_exists($dir_net)) {
+        my ($out, $err) = $self->run_command("mkdir", $dir_net);
+        die $err if $err;
+    }
+    my @files = $self->list_files($dir_net,qr/.yml$/);
+    my @list;
+    for my $file(@files) {
+        my $net;
+        eval { $net = Load($self->read_file("$dir_net/$file")) };
+        confess $@ if $@;
+
+        $net->{id_vm} = $self->id if !$net->{id_vm};
+        $net->{is_active}=0 if !defined $net->{is_active};
+        push @list,($net);
+    }
+    if (!@list) {
+        my $net = {name => 'default'
+            , autostart => 1
+            , internal_id => 1
+            , bridge => 'voidbr0'
+            ,ip_address => '192.51.100.1'
+            ,is_active => 1
+        };
+
+        my $file_out = $self->dir_img."/networks/".$net->{name}.".yml";
+        $self->write_file($file_out,Dump($net));
+        push @list,($net);
+    }
+    return @list;
+}
+
+sub _new_net_id($self) {
+    my %id;
+    for my $net ( $self->list_virtual_networks() ) {
+        $id{$net->{internal_id}}++;
+    }
+    my $new_id = 0;
+    for (;;) {
+        return $new_id if !exists $id{++$new_id};
+    }
+}
+
+sub _new_net_bridge ($self) {
+    my %bridge;
+    my $n = 0;
+    for my $net ( $self->list_virtual_networks() ) {
+        $bridge{$net->{bridge}}++;
+    }
+    my $new_id = 0;
+    for (;;) {
+        my $new_bridge = 'voidbr'.$new_id;
+        return $new_bridge if !exists $bridge{$new_bridge};
+        $new_id++;
+    }
+}
+
+sub new_network($self, $name='net') {
+
+    my @networks = $self->list_virtual_networks();
+
+    my %base = (
+        name => $name
+        ,ip_address => ['192.168.','.0']
+        ,bridge => 'voidbr'
+    );
+    my $new = {ip_netmask => '255.255.255.0'};
+    for my $field ( keys %base) {
+        my %old = map { $_->{$field} => 1 } @networks;
+        my $n = 0;
+        my $base = ($base{$field} or $field);
+        my $value;
+        for ( 0 .. 255 ) {
+            if (ref($base)) {
+                $value = $base->[0].$n.$base->[1]
+            } else {
+                $value = $base.$n;
+            }
+            last if !$old{$value};
+            $n++;
+        }
+        $new->{$field} = $value;
+    }
+    return $new;
+}
+
+sub create_network($self, $data, $id_owner=undef, $request=undef) {
+
+    $data->{internal_id} = $self->_new_net_id();
+    my $file_out = $self->dir_img."/networks/".$data->{name}.".yml";
+    die "Error: network $data->{name} already created"
+    if $self->file_exists($file_out);
+
+    $data->{bridge} = $self->_new_net_bridge()
+    if !exists $data->{bridge} || ! defined $data->{bridge};
+
+    delete $data->{is_public};
+
+    for my $field ('bridge','ip_address') {
+        $self->_check_duplicated_network($field,$data);
+    }
+
+    delete $data->{is_public};
+    delete $data->{id};
+    delete $data->{id_vm};
+
+    $self->write_file($file_out,Dump($data));
+
+    return $data;
+}
+
+sub remove_network($self, $name) {
+    my $file_out = $self->dir_img."/networks/$name.yml";
+    unlink $file_out or die "$! $file_out" if $self->file_exists($file_out);
+}
+
 
 sub search_volume($self, $pattern) {
 
@@ -333,6 +485,46 @@ sub search_volume($self, $pattern) {
     }
     closedir $ls;
     return;
+}
+
+sub list_used_volumes($self) {
+    my @disk;
+    for my $domain ($self->list_domains) {
+        push @disk,($domain->list_disks());
+        push @disk,($domain->list_files_base()) if $domain->is_base;
+        push @disk,($domain->_config_file());
+        push @disk,($domain->_config_file().".lock");
+    }
+    return @disk
+}
+
+sub _list_volumes_sp($self, $sp) {
+    die "Error: TODO remote!" if !$self->is_local;
+
+    confess if !defined $sp;
+    my $dir = $sp->{path} or die "Error: unknown path ".Dumper($sp);
+    return if ! -e $dir;
+
+    my @vol;
+
+    opendir my $ls,$dir or die "$! $dir";
+    while (my $file = readdir $ls) {
+        push @vol,("$dir/$file") if -f "$dir/$file";
+    }
+    closedir $ls;
+
+    return @vol;
+
+}
+
+sub list_volumes($self) {
+    my @volumes;
+    for my $sp ($self->list_storage_pools(1)) {
+        for my $vol ( $self->_list_volumes_sp($sp) ) {
+            push @volumes,($vol);
+        }
+    }
+    return @volumes;
 }
 
 sub _search_volume_remote($self, $pattern) {
@@ -368,6 +560,24 @@ sub search_volume_path_re {
 
 }
 
+sub remove_file($self, @files) {
+    my %done;
+    for my $file (@files) {
+        next if $done{$file};
+
+        die "Error: unsecure filename '$file'"
+        if $file =~ m{[`'\(\)\[]};
+
+        if ($self->is_local) {
+            next if ! -e $file;
+            unlink $file or die "$! $file";
+        } else {
+            $self->run_command("/bin/rm", $file);
+        }
+
+    }
+}
+
 sub import_domain($self, $name, $user, $backing_file) {
 
     my $file = $self->dir_img."/$name.yml";
@@ -390,9 +600,63 @@ sub refresh_storage_pools {
 
 }
 
-sub list_storage_pools {
-    return 'default';
+sub _init_storage_pool_default($self) {
+
+    my $config_dir = Ravada::Front::Domain::Void::_config_dir();
+    my $file_sp = "$config_dir/.storage_pools.yml";
+
+    return if $self->file_exists($file_sp);
+
+    my @list = ({ name => 'default', path => $config_dir, is_active => 1 });
+
+    $self->write_file($file_sp, Dump( \@list));
+
 }
+
+sub _find_storage_pool($self, $file) {
+
+    my ($path) = $file =~ m{(.*)/};
+
+    return $self->{_storage_pool_path}->{$path}
+    if $self->{_storage_pool_path} && exists $self->{_storage_pool_path}->{$path};
+
+    my $found;
+    for my $sp ($self->list_storage_pools(1)) {
+        if ($sp->{path} eq $path) {
+            $found = $sp->{name};
+            last;
+        }
+    }
+    return '' if !$found;
+    $self->{_storage_pool_path}->{$path} = $found;
+    return $found;
+}
+
+sub list_storage_pools($self, $info=0) {
+    my @list;
+    my $config_dir = Ravada::Front::Domain::Void::_config_dir();
+
+    $self->_init_storage_pool_default();
+
+    my $file_sp = "$config_dir/.storage_pools.yml";
+    my $extra= Load($self->read_file($file_sp));
+    push @list,(@$extra) if $extra;
+
+    my ($default) = grep { $_->{name} eq 'default'} @list;
+    if (!$default) {
+        push @list,({name =>'default',path => dir_img(), is_active => 1});
+    }
+
+    if($info) {
+        for my $entry (@list) {
+            $entry->{is_active}=1 if !exists $entry->{is_active};
+        }
+        return @list;
+    }
+    my @names = map { $_->{name} } @list;
+    return @names;
+}
+
 
 sub is_alive($self) {
     return 0 if !$self->vm;
@@ -473,7 +737,7 @@ sub _iso_name($self, $iso, $request=undef, $verbose=0) {
     $name =~ s/(.*)\[\\d.*?\]\+(.*)/${1}1$2/;
     confess $name if $name =~ m{[*+\\]};
 
-    $name = $self->dir_img."/".$name unless $name =~ m{^/};
+    $name = $self->_storage_path($self->default_storage_pool_name)."/".$name unless $name =~ m{^/};
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "UPDATE iso_images "
@@ -507,6 +771,104 @@ sub get_library_version($self) {
     +$n3;
 }
 
+sub create_storage_pool($self, $name, $dir) {
+
+    die "Error: $dir does not exist\n" if ! -e $dir;
+
+    my @list;
+    my $file_sp = dir_img."/.storage_pools.yml";
+    @list = $self->list_storage_pools(1) if -e $file_sp;
+
+    my ($already) = grep { $_->{name} eq $name } @list;
+    die "Error: duplicated storage pool $name" if $already;
+
+    push @list,{ name => $name, path => $dir, is_active => 1 };
+
+    $self->write_file($file_sp, Dump( \@list));
+
+    return @list;
+}
+
+sub active_storage_pool($self, $name, $value) {
+
+    my @list = $self->list_storage_pools(1);
+
+    my $config_dir = Ravada::Front::Domain::Void::_config_dir();
+    my $file_sp = "$config_dir/.storage_pools.yml";
+
+    for my $entry (@list) {
+        $entry->{is_active} = $value;
+    }
+
+    $self->write_file($file_sp, Dump( \@list));
+}
+
+sub has_networking { return 1 };
+
+sub _check_duplicated_network($self, $field, $data) {
+    my @networks = $self->list_virtual_networks();
+    my ($found) = grep {$data->{name} ne $_->{name}
+        && $_->{$field} eq $data->{$field} } @networks;
+    return if !$found;
+
+    $field = 'Network' if $field eq 'ip_address';
+    die "Error: $field is already in use in $found->{name}";
+}
+
+sub change_network($self,$data) {
+    my $id = delete $data->{internal_id} or confess "Missing internal_id ".Dumper($data);
+    confess if exists $data->{is_public};
+
+    my @networks = $self->list_virtual_networks();
+    my ($net0) = grep { $_->{internal_id} eq $id } @networks;
+
+    my $file_out = $self->dir_img."/networks/".$net0->{name}.".yml";
+    my $net= {};
+    eval { $net = Load($self->read_file($file_out)) };
+    confess $@ if $@;
+
+    my $changed = 0;
+    for my $field ('name', sort keys %$data) {
+        next if $field =~ /^_/ || $field eq 'is_public';
+        if (!exists $net->{$field}) {
+            $net->{$field} = $data->{$field};
+            $changed++;
+            next;
+        }
+        next if exists $data->{$field} && exists $net->{$field}
+        && defined $data->{$field} && defined $net->{$field}
+        && $data->{$field} eq $net->{$field};
+
+        if ($field eq 'name') {
+            die "Error: network can not be renamed";
+        }
+
+        if ($field eq 'bridge' || $field eq 'ip_address') {
+            $self->_check_duplicated_network($field,$data);
+        }
+        $net->{$field} = $data->{$field};
+        $changed++;
+    }
+    return if !$changed;
+
+    delete $net->{is_public};
+    delete $net->{id};
+    delete $net->{id_vm};
+
+    $self->write_file($file_out,Dump($net));
+}
+
+sub remove_storage_pool($self, $name) {
+
+    my $file_sp = $self->dir_img."/.storage_pools.yml";
+    my $sp_list = Load($self->read_file($file_sp));
+    my @sp2;
+    for my $sp (@$sp_list) {
+        push @sp2,($sp) if $sp->{name} ne $name;
+    }
+
+    $self->write_file($file_sp, Dump( \@sp2));
+}
 
 #########################################################################3
 

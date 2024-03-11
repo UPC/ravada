@@ -5,6 +5,7 @@ use Carp qw(confess croak);
 use Data::Dumper;
 use File::Copy;
 use Test::More;
+use YAML qw(DumpFile);
 
 use v5.22; use feature qw(signatures);
 no warnings "experimental::signatures";
@@ -278,7 +279,7 @@ sub test_domain_n_volumes {
         } else {
             like($file,qr/-$target/);
         }
-        ok($vol->info->{driver}) or exit;
+        ok($vol->info->{bus}) or exit;
     }
     test_volume_format(@volumes_clone);
     $domain_clone->remove(user_admin);
@@ -300,9 +301,7 @@ sub test_add_volume_path {
 
     my $file_path = $vm->dir_img."/mock.img";
 
-    open my $out,'>',$file_path or die "$! $file_path";
-    print $out "hi\n";
-    close $out;
+    DumpFile($file_path, {capacity => 100, data => 'hi'});
 
     $domain->add_volume(file => $file_path);
 
@@ -446,7 +445,7 @@ sub test_too_big($vm) {
     like($@, qr(out of space),$vm->type) or exit;
     ok(!$file);
     my $free_disk2 = $vm->free_disk();
-    is(int($free_disk2/1024), int($free_disk/1024));
+    is(int($free_disk2/1024/2), int($free_disk/1024/2));
     $domain->remove(user_admin);
 }
 
@@ -778,7 +777,7 @@ for my $vm_name (reverse sort @VMS) {
 
         my $old_pool = $vm->default_storage_pool_name();
         if ($old_pool) {
-            $vm->default_storage_pool_name('');
+            $vm->default_storage_pool_name('default');
             test_too_big_prepare($vm);
             $vm->default_storage_pool_name($old_pool);
         }

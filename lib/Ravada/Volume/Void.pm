@@ -33,7 +33,9 @@ sub prepare_base($self) {
 }
 
 sub capacity($self) {
-    my $info = $self->_load();
+    my $info = {};
+    eval { $info = $self->_load(); };
+    warn $@ if $@;
     confess "Unknown capacity for ".$self->file.Dumper($info)
         if !exists $info->{capacity};
 

@@ -25,20 +25,15 @@
                     style="width: 5em"
                 >
             </div>
-            <div class="col-mg-4">
+            <div class="col-mg-6">
                 <small class="text-secondary"><%=l 'Virtual machines in the pool.' %></small>
             </div>
         </div>
         <div class="row">
-            <div class="col-md-2" ng-hide="showmachine.volatile_clones">
+            <div class="col-md-2">
                 <%=l 'Start' %>
             </div>
-            <div class="col-md-6" ng-show="showmachine.volatile_clones">
-                <small class="text-secondary">
-                    <%=l 'Clones are volatile, so all the pool will be started.' %>
-                </small>
-            </div>
-            <div class="col-md-2" ng-hide="showmachine.volatile_clones">
+            <div class="col-md-2">
                 <input type="number" size="2" ng-model="showmachine.pool_start"
                     ng-disabled="showmachine.pools==0"
                     ng-change="set('pool_start')"
@@ -46,9 +41,14 @@
                     style="width: 5em"
                 >
             </div>
-            <div class="col-mg-4" ng-hide="showmachine.volatile_clones">
-                <small class="text-secondary">
+            <div class="col-mg-6">
+                <small class="text-secondary"
+                    ng-hide="showmachine.volatile_clones">
                   <%=l 'Virtual machines pre-started' %>
+                </small>
+                <small class="text-secondary"
+                    ng-show="showmachine.volatile_clones">
+                    <%=l 'Clones are volatile, so only started clones will be created.' %>
                 </small>
             </div>
         </div>

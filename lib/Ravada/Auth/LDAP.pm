@@ -280,6 +280,7 @@ sub search_user {
     } else {
         $args{name} = $_[0];
     }
+    die "Error: LDAP not configured" if !exists $$CONFIG->{ldap};
 
     my $username = delete $args{name} or confess "Missing user name";
     my $retry = (delete $args{retry} or 0);
@@ -325,7 +326,7 @@ sub search_user {
          warn "LDAP error ".$mesg->code." ".$mesg->error."."
             ."Retrying ! [$retry]"  if $retry;
          $LDAP_ADMIN = undef;
-         sleep ($retry + 1);
+         sleep ($retry + 1) if $mesg->code != 1;
          _init_ldap_admin();
          return search_user(
                 name => $username
@@ -339,7 +340,7 @@ sub search_user {
     }
 
     die "ERROR: ".$mesg->code." : ".$mesg->error
-        if $mesg->code;
+        if $mesg->code && $mesg->code != 4 && $mesg->count;
 
     return if !$mesg->count();
 
@@ -426,6 +427,8 @@ sub remove_group {
 
 sub search_group {
     my %args = @_;
+
+    return if !exists $$CONFIG->{ldap} || !$$CONFIG->{ldap};
 
     my $name = delete $args{name} or confess "Error: missing name";
     my $base = ( delete $args{base} or $$CONFIG->{ldap}->{groups_base} or "ou=groups,"._dc_base() );

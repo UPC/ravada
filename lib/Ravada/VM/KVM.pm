@@ -15,6 +15,7 @@ use Data::Dumper;
 use Digest::MD5;
 use Encode;
 use Encode::Locale;
+use File::Copy qw(copy);
 use File::Path qw(make_path);
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
 use Hash::Util qw(lock_hash);
@@ -52,6 +53,12 @@ has type => (
     isa => 'Str'
     ,is => 'ro'
     ,default => 'KVM'
+);
+
+has has_networking => (
+    isa => 'Bool'
+    , is => 'ro'
+    , default => 1
 );
 
 #########################################################################3
@@ -118,12 +125,6 @@ sub _connect {
          };
          confess $@ if $@;
     }
-    if ( ! _list_storage_pools($vm) && !$_CREATED_DEFAULT_STORAGE{$self->host}) {
-	    warn "WARNING: No storage pools creating default\n";
-    	$self->_create_default_pool($vm);
-        $_CREATED_DEFAULT_STORAGE{$self->host}++;
-    }
-    $self->_check_networks($vm);
     return $vm;
 }
 
@@ -131,25 +132,38 @@ sub _list_storage_pools($vm) {
     confess if !defined $vm || !ref($vm);
    for ( ;; ) {
        my @pools;
-       eval { @pools = $vm->list_storage_pools };
+       eval { @pools = $vm->list_all_storage_pools };
        return @pools if !$@;
        die $@ if $@ && $@ !~ /libvirt error code: 1,/;
        sleep 1;
    }
 }
 
-
-sub _check_networks {
-    my $self = shift;
-    my $vm = shift;
-
-    for my $net ($vm->list_all_networks) {
-        next if $net->is_active;
-
-        warn "INFO: Activating KVM network ".$net->get_name."\n";
-        $net->create;
-        $net->set_autostart(1);
+sub _check_default_storage($self) {
+    my $vm = $self->vm;
+    if ( ! _list_storage_pools($vm) && !$_CREATED_DEFAULT_STORAGE{$self->host}) {
+	    warn "WARNING: No storage pools creating default\n";
+        $_CREATED_DEFAULT_STORAGE{$self->host}++;
+        $self->_create_default_pool($vm);
     }
+}
+
+sub _check_networks($self, $vm=$self->vm) {
+
+    my @found;
+    for my $net ($vm->list_all_networks) {
+        return if $net->is_active;
+        push @found,($net);
+    }
+
+    my ($net) = grep {$_->get_name eq 'default' } @found;
+
+    $net = $found[0] if !$net;
+
+    return if !$net;
+    warn "INFO: Activating KVM network ".$net->get_name."\n";
+    $net->create;
+    $net->set_autostart(1);
 }
 
 =head2 disconnect
@@ -208,6 +222,7 @@ sub _load_storage_pool {
     }
 
     for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
         my $info = _get_pool_info($pool);
         next if defined $available
                 && $info->{available} <= $available;
@@ -262,6 +277,7 @@ sub search_volume($self,$file,$refresh=0) {
 
     my $vol;
     for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
         if ($refresh) {
             for ( 1 .. 10 ) {
                eval { $pool->refresh() };
@@ -327,9 +343,12 @@ sub search_volume_re($self,$pattern,$refresh=0) {
 
     my @volume;
     for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
        my @vols;
        for ( 1 .. 10) {
            eval { @vols = $pool->list_all_volumes() };
+           last if $@ && ref($@) && $@->code == 55;
+           last if $@ && $@ =~ /code: (55|38),/;
            last if !$@ || $@ =~ / no storage pool with matching uuid/;
            warn "WARNING: on search volume_re: $@";
            sleep 1;
@@ -355,12 +374,136 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     return @volume;
 }
 
+sub remove_file($self,@files) {
+    for my $file (@files) {
+        if ($self->is_local) {
+            next if ! -e $file;
+            unlink $file or die "$! $file";
+            next;
+        }
+        my $vol = $self->search_volume($file);
+        if (!$vol) {
+            $self->_refresh_storage_pools();
+            $vol = $self->search_volume($file);
+        }
+        if (!$vol) {
+            warn "Warning: '$file' not found\n";
+        }
+        $vol->delete if $vol;
+    }
+}
+
+sub _list_volumes($self) {
+    my @volumes;
+    my @pools;
+    my %duplicated_path;
+    for my $pool (_list_storage_pools($self->vm)) {
+        my @vols;
+        for ( 1 .. 10) {
+           next if !$pool->is_active;
+           eval { @vols = $pool->list_all_volumes() };
+           last if $@ && ref($@) && $@->code == 55;
+           last if !$@ || $@ =~ / no storage pool with matching uuid/;
+           warn "WARNING: on search volume_re: $@";
+           sleep 1;
+        }
+        push @volumes,@vols;
+    }
+    return @volumes;
+}
+
+sub _list_used_volumes_known($self) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT id,name FROM domains WHERE id_vm=?"
+    );
+    $sth->execute($self->id);
+    my @used;
+    while ( my ($id, $name) = $sth->fetchrow) {
+        my $dom = $self->search_domain($name);
+        next if !$dom;
+        my $xml = $dom->xml_description();
+        my @vols = $self->_find_all_volumes($xml);
+        my @links;
+        for my $vol (@vols) {
+            my $link = $self->_follow_link($vol);
+            push @links,($link) if $link;
+        }
+        push @used, (@vols,@links);
+    }
+    return @used;
+}
+
+sub _find_all_volumes_bs($self, $disk) {
+    my @volumes;
+    for my $bs ($disk->findnodes("backingStore")) {
+        my ($source) = $bs->findnodes("source");
+        if ($source) {
+            my $file = $source->getAttribute('file');
+            push @volumes,($file) if $file;
+        }
+        my @bs = $self->_find_all_volumes_bs($bs);
+        push @volumes,@bs if scalar(@bs);
+    }
+    return @volumes;
+}
+
+sub _find_all_volumes($self, $xml) {
+    my @used;
+    my $doc = XML::LibXML->load_xml(string => $xml);
+    for my $disk ($doc->findnodes("/domain/devices/disk")) {
+        my ($source) = $disk->findnodes("source");
+        next if !$source;
+        my $file = $source->getAttribute('file');
+        if ($file) {
+            push @used,($file);
+            my $link = $self->_follow_link($file);
+            push @used,($link) if $link;
+        }
+
+        my @used_bs = $self->_find_all_volumes_bs($disk);
+        push @used,@used_bs if scalar(@used_bs);
+    }
+    return @used;
+}
+
+sub list_used_volumes($self) {
+    my @used =$self->_list_used_volumes_known();
+    for my $name ( $self->discover ) {
+        my $dom = $self->vm->get_domain_by_name($name);
+        push @used,$self->_find_all_volumes($dom->get_xml_description());
+    }
+    return @used;
+}
+
+sub list_volumes($self) {
+    my $file;
+    my @volumes;
+
+    for my $vol ( $self->_list_volumes ) {
+
+        eval { ($file) = $vol->get_path };
+        confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
+
+        my $info;
+        eval { $info = $vol->get_info() };
+        die "$file $@" if $@
+        && ( ref($@) =~ /Sys::Virt:Error/ && $@->cod ne 50); #storage volume not found
+
+        next if !$info || $info->{type} eq 2;
+
+        push @volumes,($file);
+
+    }
+    return @volumes;
+}
+
 sub refresh_storage_pools($self) {
     $self->_refresh_storage_pools();
 }
 
 sub _refresh_storage_pools($self) {
     for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
         for ( 1 .. 10 ) {
             eval { $pool->refresh() };
             last if !$@;
@@ -377,6 +520,7 @@ Refreshes all the storage pools
 =cut
 
 sub refresh_storage($self) {
+    $self->_check_default_storage();
     $self->_refresh_storage_pools();
     $self->_refresh_isos();
 }
@@ -461,6 +605,7 @@ sub file_exists($self, $file) {
 sub _file_exists_remote($self, $file) {
     $file = $self->_follow_link($file) unless $file =~ /which$/;
     for my $pool ($self->vm->list_all_storage_pools ) {
+        next if !$pool->is_active;
         $self->_wait_storage( sub { $pool->refresh() } );
         my @volumes = $self->_wait_storage( sub { $pool->list_all_volumes });
         for my $vol ( @volumes ) {
@@ -477,24 +622,12 @@ sub _file_exists_remote($self, $file) {
     }
 
     die "Error: invalid file '$file'" if $file =~ /[`;(\[" ]/;
-    my ($out,$err) = $self->_ssh->capture2("ls $file");
+    my $ssh = $self->_ssh;
+    confess "Error: no _ssh ".$self->name if !$ssh;
+    my ($out,$err) = $ssh->capture2("ls $file");
     my @ls = split /\n/,$out;
     for (@ls) { chomp };
     return scalar(@ls);
-}
-
-sub _follow_link($self, $file) {
-    my ($dir, $name) = $file =~ m{(.*)/(.*)};
-    if (!defined $self->{_is_link}->{$dir} ) {
-        my ($out,$err) = $self->run_command("stat", $dir );
-        chomp $out;
-        $out =~ m{ -> (/.*)};
-        $self->{_is_link}->{$dir} = $1;
-    }
-    my $path = $self->{_is_link}->{$dir};
-    return $file if !$path;
-    return "$path/$name";
-
 }
 
 sub _wait_storage($self, $sub) {
@@ -529,39 +662,6 @@ sub dir_img {
     return $dir;
 }
 
-=head2 dir_base
-
-Returns the directory where base images are stored in this Virtual Manager
-
-=cut
-
-
-sub dir_base($self, $volume_size) {
-    my $pool_base = $self->default_storage_pool_name;
-    $pool_base = $self->base_storage_pool()    if $self->base_storage_pool();
-    $pool_base = $self->storage_pool()         if !$pool_base;
-
-    $self->_check_free_disk($volume_size * 2, $pool_base);
-    return $self->_storage_path($pool_base);
-
-}
-
-=head2 dir_clone
-
-Returns the directory where clone images are stored in this Virtual Manager
-
-=cut
-
-
-sub dir_clone($self) {
-
-    my $dir_img  = $self->dir_img;
-    my $clone_pool = $self->clone_storage_pool();
-    $dir_img = $self->_storage_path($clone_pool) if $clone_pool;
-
-    return $dir_img;
-}
-
 sub _storage_path($self, $storage) {
     if (!ref($storage)) {
         $storage = $self->vm->get_storage_pool_by_name($storage);
@@ -576,19 +676,14 @@ sub _storage_path($self, $storage) {
 
 }
 
-sub _create_default_pool {
-    my $self = shift;
-    my $vm = shift;
-    $vm = $self->vm if !$vm;
+sub create_storage_pool($self, $name, $dir, $vm=$self->vm) {
 
-    my $uuid = Ravada::VM::KVM::_new_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
+    my $uuid = $self->_unique_uuid('68663afc-aaf4-4f1f-9fff-93684c260942');
 
-    my $dir = "/var/lib/libvirt/images";
-    mkdir $dir if ! -e $dir;
 
     my $xml =
 "<pool type='dir'>
-  <name>default</name>
+  <name>$name</name>
   <uuid>$uuid</uuid>
   <capacity unit='bytes'></capacity>
   <allocation unit='bytes'></allocation>
@@ -611,8 +706,37 @@ sub _create_default_pool {
         $pool->create();
         $pool->set_autostart(1);
     };
-    warn $@ if $@;
+    my $error = $@;
+    if ($error) {
+        my $sp = $vm->get_storage_pool_by_name($name);
+        eval {
+        $sp->destroy if $sp && $sp->is_active;
+        $sp->undefine() if $sp;
+        };
+        die $@ if $@;
+        die "$error\n" if $error;
+    }
 
+}
+
+sub remove_storage_pool($self, $name) {
+    my $sp = $self->vm->get_storage_pool_by_name($name);
+    return if !$sp;
+
+    $sp->destroy if $sp->is_active;
+    $sp->undefine();
+}
+
+sub _create_default_pool($self, $vm=$self->vm) {
+    my $dir = "/var/lib/libvirt/images";
+    mkdir $dir if ! -e $dir;
+
+    my $name = 'default';
+
+    eval {
+    $self->create_storage_pool($name, $dir, $vm);
+    };
+    warn $@ if $@;
 }
 
 =head2 create_domain
@@ -669,10 +793,6 @@ sub search_domain($self, $name, $force=undef) {
     };
     if ($@ && $@ =~ /libvirt error code: 38,/) {
         warn $@;
-        if (!$self->is_local) {
-            warn "DISABLING NODE ".$self->name;
-            $self->enabled(0);
-        }
         return;
     }
 
@@ -740,8 +860,9 @@ sub list_domains {
 
     confess "Arguments unknown ".Dumper(\%args)  if keys %args;
 
-    my $query = "SELECT id, name FROM domains WHERE id_vm = ? ";
-    $query .= " AND status = 'active' " if $active;
+    my $query = "SELECT d.id, d.name FROM domains d ,domain_instances di "
+        ."WHERE d.id=di.id_domain AND di.id_vm = ? ";
+    $query .= " AND d.status = 'active' " if $active;
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
 
@@ -749,11 +870,14 @@ sub list_domains {
     my @list;
     while ( my ($id) = $sth->fetchrow) {
         my $domain;
-        if ($read_only) {
-            $domain = Ravada::Front::Domain->open( $id );
-        } else {
-            $domain = Ravada::Domain->open( id => $id, vm => $self);
-        }
+        eval{
+            if ($read_only) {
+                $domain = Ravada::Front::Domain->open( $id );
+            } else {
+                $domain = Ravada::Domain->open( id => $id, vm => $self);
+            }
+        };
+        die $@ if $@ && $@ !~ /Unkown domain/i;
         push @list,($domain) if $domain;
     }
     return @list;
@@ -796,6 +920,12 @@ sub create_volume {
     my $target      = delete $args{target};
     my $capacity    = delete $args{capacity};
     my $allocation  = delete $args{allocation};
+    my $storage_pool = (delete $args{storage} or $self->storage_pool());
+    if (!ref($storage_pool)) {
+        my $sp_name = $storage_pool;
+        $storage_pool = $self->vm->get_storage_pool_by_name($sp_name) or die
+        "Error: Storage pool '$sp_name' not found ";
+    }
 
     confess "ERROR: Unknown args ".Dumper(\%args)   if keys %args;
     confess "Error: type $type can't have swap flag" if $args{swap} && $type ne 'swap';
@@ -818,7 +948,6 @@ sub create_volume {
     eval { $doc = $XML->load_xml(IO => $fh) };
     die "ERROR reading $file_xml $@"    if $@;
 
-    my $storage_pool = $self->storage_pool();
 
     confess $name if $name =~ /-\w{4}-vd[a-z]-\w{4}\./
         || $name =~ /\d-vd[a-z]\./;
@@ -846,7 +975,7 @@ sub create_volume {
         $doc->findnodes('/volume/allocation/text()')->[0]->setData(int($allocation));
         $doc->findnodes('/volume/capacity/text()')->[0]->setData($capacity);
     }
-    my $vol = $self->storage_pool->create_volume($doc->toString)
+    my $vol = $storage_pool->create_volume($doc->toString)
         or die "volume $img_file does not exists after creating volume on ".$self->name." "
             .$doc->toString();
 
@@ -884,9 +1013,10 @@ sub _domain_create_from_iso {
     my $remove_cpu = delete $args2{remove_cpu};
     my $options = delete $args2{options};
     for (qw(disk swap active request vm memory iso_file id_template volatile spice_password
-            listen_ip)) {
+            listen_ip storage)) {
         delete $args2{$_};
     }
+    my $storage = delete $args{storage};
 
     my $iso_file = delete $args{iso_file};
     confess "Unknown parameters : ".join(" , ",sort keys %args2)
@@ -941,7 +1071,8 @@ sub _domain_create_from_iso {
     $domain->_insert_db(name=> $args{name}, id_owner => $args{id_owner}
         , id_vm => $self->id
     );
-    $domain->add_volume( boot => 1, target => 'vda', size => $disk_size );
+    $domain->add_volume( boot => 1, target => 'vda', size => $disk_size
+        ,storage => $storage);
     $domain->add_volume( boot => 2, target => 'hda'
         ,device => 'cdrom'
         ,file => $device_cdrom
@@ -950,6 +1081,8 @@ sub _domain_create_from_iso {
     $domain->_set_spice_password($spice_password)
         if $spice_password;
     $domain->xml_description();
+
+    $self->_change_hardware_install($domain,$iso->{options}->{hardware});
 
     return $domain;
 }
@@ -970,17 +1103,25 @@ sub _domain_create_common {
     $self->_xml_modify_network($xml , $args{network})   if $args{network};
     $self->_xml_modify_mac($xml);
     my $uuid = $self->_xml_modify_uuid($xml);
-    $self->_xml_modify_spice_port($xml, $spice_password, $listen_ip);
+
+    my ($graphics) = $xml->findnodes("/domain/devices/graphics");
+    $self->_xml_modify_spice_port($xml, $spice_password, $listen_ip)
+    if $graphics && ($spice_password || $listen_ip);
+
     $self->_fix_pci_slots($xml);
     $self->_xml_add_guest_agent($xml);
-    $self->_xml_clean_machine_type($xml) if !$self->is_local;
+    Ravada::Domain::KVM::_check_machine(undef, $xml, $self) if !$self->is_local;
+
     $self->_xml_add_sysinfo_entry($xml, hostname => $args{name});
+    $self->_xml_fix_nvram($xml, $args{name});
 
     my $dom;
 
+    my $host_devices = $self->list_host_devices();
+
     for ( 1 .. 10 ) {
         eval {
-            if ($user->is_temporary || $is_volatile ) {
+            if ($user->is_temporary || $is_volatile && !$host_devices ) {
                 $dom = $self->vm->create_domain($xml->toString());
             } else {
                 $dom = $self->vm->define_domain($xml->toString());
@@ -1015,6 +1156,7 @@ sub _domain_create_common {
          , domain => $dom
         , storage => $self->storage_pool
        , id_owner => $id_owner
+       , active => ($user->is_temporary || $is_volatile || $host_devices)
     );
     return ($domain, $spice_password);
 }
@@ -1089,7 +1231,7 @@ sub _domain_create_from_base {
     confess "argument id_base or base required ".Dumper(\%args)
         if !$args{id_base} && !$args{base};
 
-    confess "Domain $args{name} already exists"
+    confess "Domain $args{name} already exists in ".$self->name
         if $self->search_domain($args{name});
 
     my $base = $args{base};
@@ -1099,6 +1241,14 @@ sub _domain_create_from_base {
     $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
     $base = $vm_local->_search_domain_by_id($args{id_base}) if $args{id_base};
     confess "Unknown base id: $args{id_base}" if !$base;
+
+    my $volatile = $base->volatile_clones;
+    $volatile = delete $args{volatile} if exists $args{volatile} && defined $args{volatile};
+
+    my $options = delete $args{options};
+    my $network = delete $options->{network};
+
+    die "Error: I can't set more options ".Dumper($options) if keys %$options;
 
     my $vm = $self->vm;
     my $storage = $self->storage_pool;
@@ -1117,8 +1267,10 @@ sub _domain_create_from_base {
 
     _xml_modify_disk($xml, \@device_disk);#, \@swap_disk);
 
+    $self->_xml_set_network($xml, $network) if $network;
+
     my ($domain, $spice_password)
-        = $self->_domain_create_common($xml,%args, is_volatile => $base->volatile_clones);
+        = $self->_domain_create_common($xml,%args, is_volatile=>$volatile, base => $base);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner}
         , id_vm => $self->id
     );
@@ -1195,7 +1347,7 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
 
     my $device = ($iso->{device} or $self->dir_img."/$iso_name");
 
-    confess "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
+    warn "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
         if $VERIFY_ISO && $iso->{url} && !$iso->{md5} && !$iso->{sha256};
 
     my $downloaded = 0;
@@ -1317,7 +1469,7 @@ sub _check_signature($file, $type, $expected) {
 sub _download_file_external_headers($self,$url) {
     my @cmd = ($WGET,"-S","--spider",$url);
 
-    my ($in,$out,$err) = @_;
+    my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     my ($status) = $err =~ /^\s*(HTTP.*\d+.*)/m;
 
@@ -1341,11 +1493,12 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
     }
     confess "ERROR: wget missing"   if !$WGET;
 
+    $url =~ s{/./}{/}g;
     return $self->_download_file_external_headers($url)    if $test;
     return $url if -e $device;
 
     my @cmd = ($WGET,'-nv',$url,'-O',$device);
-    my ($in,$out,$err) = @_;
+    my ($in,$out,$err);
     warn join(" ",@cmd)."\n"    if $verbose;
     run3(\@cmd,\$in,\$out,\$err);
     warn "out=$out" if $out && $verbose;
@@ -1461,7 +1614,14 @@ sub _ua_get($self, $url) {
         sleep 1+$try;
     }
     confess "Error getting '$url'" if !$res;
-    return unless $res->code == 200 || $res->code == 301;
+
+    return if $url =~ m{/$} && $res->code && $res->code == 404;
+    if (!defined $res->code || !($res->code == 200 || $res->code == 301)) {
+        my $msg = "Error getting '$url'";
+        $msg .= " ".$res->code if defined $res->code;
+        $msg .= " ".$res->message if defined $res->message;
+        die "$msg\n";
+    }
 
     $self->_cache_store($url,$res->body);
     return $res->dom;
@@ -1637,9 +1797,11 @@ sub _fetch_this($self, $row, $type, $file = $row->{filename}){
         }
     }
 
-    confess "No $type for $file in ".$row->{"${type}_url"}."\n"
+    warn "No $type for $file in ".$row->{"${type}_url"}."\n"
         .$url_orig."\n"
         .$content;
+
+    return;
 }
 
 sub _fetch_md5($self,$row) {
@@ -1653,7 +1815,7 @@ sub _fetch_md5($self,$row) {
 sub _fetch_sha256($self,$row) {
     my $signature = $self->_fetch_this($row,'sha256');
     confess "ERROR: Wrong signature '$signature'"
-         if $signature !~ /^[0-9a-f]{9}/;
+         if defined $signature && $signature !~ /^[0-9a-f]{9}/;
     return $signature;
 }
 
@@ -1684,24 +1846,26 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     my $machine = delete $options->{machine};
     my $arch = delete $options->{arch};
     my $bios = delete $options->{'bios'};
+    my $network = delete $options->{'network'};
+
     confess "Error: bios=$bios and uefi=$uefi clash"
     if defined $uefi && defined $bios
         && ($bios !~/uefi/i && $uefi || $bios =~/uefi/i && !$uefi);
 
     $uefi = 1 if $bios && $bios =~ /uefi/i;
 
-    confess "Arguments unknown ".Dumper($options)  if keys %$options;
 
-    if ( $uefi ) {
-        #        $self->_xml_add_libosinfo_win2k16($doc);
-        my ($xml_name) = $doc->findnodes('/domain/name');
-        $self->_xml_add_uefi($doc, $xml_name->textContent);
+    confess "Arguments unknown ".Dumper($options)  if keys %$options;
+    if ($machine) {
+        $self->_xml_set_machine($doc, $machine);
     }
     if ($arch) {
         $self->_xml_set_arch($doc, $arch);
     }
-    if ($machine) {
-        $self->_xml_set_machine($doc, $machine);
+    if ( $uefi ) {
+        #        $self->_xml_add_libosinfo_win2k16($doc);
+        my ($xml_name) = $doc->findnodes('/domain/name');
+        $self->_xml_add_uefi($doc, $xml_name->textContent);
     }
     my ($type) = $doc->findnodes('/domain/os/type');
 
@@ -1717,7 +1881,13 @@ sub _xml_modify_options($self, $doc, $options=undef) {
     } else {
         $self->_xml_set_pci_noe($doc);
     }
+    $self->_xml_set_network($doc, $network) if $network;
+}
 
+sub _xml_set_network($self, $doc, $network) {
+    for my $net_source ( $doc->findnodes('/domain/devices/interface/source')) {
+        $net_source->setAttribute('network' => $network);
+    }
 }
 
 sub _xml_set_arch($self, $doc, $arch) {
@@ -1835,13 +2005,32 @@ sub _xml_add_uefi($self, $doc, $name) {
     }
     $loader->setAttribute('readonly' => 'yes');
     $loader->setAttribute('type' => 'pflash');
-    $loader->appendText('/usr/share/OVMF/OVMF_CODE.fd');
+
+    my $ovmf = '/usr/share/OVMF/OVMF_CODE.fd';
+
+    my ($type) = $doc->findnodes('/domain/os/type');
+    if ($type->getAttribute('arch') =~ /x86_64/
+            && $type->getAttribute('machine') =~ /pc-q35/) {
+        $ovmf = '/usr/share/OVMF/OVMF_CODE_4M.fd';
+    }
+    my ($text) = $loader->findnodes("text()");
+    if ($text) {
+        $text->setData($ovmf);
+    } else {
+        $loader->appendText($ovmf);
+    }
 
     my ($nvram) =$doc->findnodes("/domain/os/nvram");
     if (!$nvram) {
         $nvram = $os->addNewChild(undef,"nvram");
     }
     $nvram->appendText("/var/lib/libvirt/qemu/nvram/$name.fd");
+}
+
+sub _xml_fix_nvram($self, $xml, $name) {
+    my ($nvram) =$xml->findnodes("/domain/os/nvram/text()");
+    return if !$nvram;
+    $nvram->setData("/var/lib/libvirt/qemu/nvram/$name.fd");
 }
 
 sub _xml_remove_cpu {
@@ -1891,8 +2080,8 @@ sub _xml_modify_spice_port($self, $doc, $password=undef, $listen_ip=$self->liste
 
     $listen_ip = $self->listen_ip if !defined $listen_ip;
     my ($graph) = $doc->findnodes('/domain/devices/graphics')
-        or die "ERROR: I can't find graphic";
-    $graph->setAttribute(type => 'spice');
+        or confess "ERROR: I can't find graphics in ".$self->name;
+    #$graph->setAttribute(type => 'spice');
     $graph->setAttribute(autoport => 'yes');
     $graph->setAttribute(listen=> $listen_ip );
     $graph->setAttribute(passwd => $password)    if $password;
@@ -1918,8 +2107,15 @@ sub _xml_modify_uuid {
     return $new_uuid;
 }
 
-sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
-    my @uuids = @_;
+sub _list_sp_uuids($self) {
+    my @uuids;
+    for my $sp ($self->list_storage_pools(1)) {
+        push @uuids,($sp->{uuid});
+    }
+    return @uuids;
+}
+
+sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@uuids) {
     if (!scalar @uuids) {
         for my $dom ($self->vm->list_all_domains) {
             eval { push @uuids,($dom->get_uuid_string) };
@@ -1933,6 +2129,8 @@ sub _unique_uuid($self, $uuid='1805fb4f-ca45-aaaa-bbbb-94124e760434',@) {
         eval { push @uuids,($domain->get_uuid_string) };
         confess $@ if $@ && $@ !~ /^libvirt error code: 42,/;
     }
+
+    push @uuids,($self->_list_sp_uuids);
 
     for (1..100) {
         my $new_pre = '';
@@ -2073,11 +2271,7 @@ sub _xml_remove_usb {
     }
 }
 
-sub _xml_add_usb_xhci {
-    my $self = shift;
-    my $devices = shift;
-
-    my $model = 'nec-xhci';
+sub _xml_add_usb_xhci($self, $devices, $model='qemu-xhci') {
     my $ctrl = _search_xml(
                            xml => $devices
                          ,name => 'controller'
@@ -2240,11 +2434,6 @@ sub _xml_add_guest_agent {
     
 }
 
-sub _xml_clean_machine_type($self, $doc) {
-    my ($os_type) = $doc->findnodes('/domain/os/type');
-    $os_type->setAttribute( machine => 'pc');
-}
-
 sub _xml_add_sysinfo($self,$doc) {
     my ($smbios) = $doc->findnodes('/domain/os/smbios');
     if (!$smbios) {
@@ -2275,6 +2464,7 @@ sub _xml_add_sysinfo_entry($self, $doc, $field, $value) {
     ($hostname) = $oemstrings->addNewChild(undef,'entry');
     $hostname->appendText("$field: $value");
 }
+
 sub _xml_remove_hostdev {
     my $doc = shift;
 
@@ -2296,7 +2486,6 @@ sub _xml_remove_cdrom_device {
         }
     }
 }
-
 
 sub _xml_remove_cdrom {
     my $doc = shift;
@@ -2367,15 +2556,6 @@ sub _unique_mac {
         }
     }
     return 1;
-}
-
-sub _new_uuid {
-    my $uuid = shift;
-
-    my ($principi, $f1,$f2) = $uuid =~ /(.*)(.)(.)/;
-
-    return $principi.int(rand(10)).int(rand(10));
-
 }
 
 sub _read_used_macs($self) {
@@ -2508,13 +2688,13 @@ sub _xml_add_graphics_streaming {
     $listen->setAttribute(mode => 'filter');
 }
 
-=head2 list_networks
+=head2 list_routes
 
 Returns a list of networks known to this VM. Each element is a Ravada::NetInterface object
 
 =cut
 
-sub list_networks {
+sub list_routes {
     my $self = shift;
 
     $self->connect() if !$self->vm;
@@ -2583,12 +2763,64 @@ sub is_alive($self) {
     return 0;
 }
 
-sub list_storage_pools($self) {
+sub list_storage_pools($self, $data=undef) {
     confess "No VM " if !$self->vm;
+
+    my @pools = _list_storage_pools($self->vm);
+    if ($data) {
+        my @ret;
+        for my $pool (@pools) {
+            push @ret,(_storage_data($pool));
+        }
+        return @ret;
+    }
+
     return
         map { $_->get_name }
         grep { $_-> is_active }
-        _list_storage_pools($self->vm);
+        @pools;
+}
+
+sub _storage_data($pool) {
+    my $p = {
+        name => $pool->get_name
+        ,is_active => $pool->is_active
+    };
+    my $xml = XML::LibXML->load_xml(
+        string => $pool->get_xml_description()
+    );
+    my ($capacity) = $xml->findnodes("/pool/capacity");
+    $p->{size} = $capacity->textContent / 1024 / 1024 / 1024;
+    my ($available) = $xml->findnodes("/pool/available");
+    $p->{available} = int($available->textContent/1024/1024/1024);
+
+    my ($allocation) = $xml->findnodes("/pool/allocation");
+    $p->{used} = int($allocation->textContent/1024/1024/1024);
+
+    if ($p->{size}) {
+        $p->{pc_used} = int($p->{used}/$p->{size}*100);
+    }
+
+    my ($path) = $xml->findnodes("/pool/target/path");
+    $p->{path} = $path->textContent();
+
+    $p->{size} = int($p->{size});
+
+    my ($uuid) = $xml->findnodes("/pool/uuid");
+    $p->{uuid} = $uuid->textContent();
+
+    return $p;
+}
+
+sub active_storage_pool($self, $name, $value=1) {
+    my $pool = $self->vm->get_storage_pool_by_name($name)
+        or die "Error: no storage pool '$name'\n";
+
+    if ( $value ) {
+        $pool->create();
+    } else {
+        $pool->destroy();
+    }
 }
 
 sub free_memory($self) {
@@ -2631,6 +2863,7 @@ sub _free_memory_available($self) {
 }
 
 sub _fetch_dir_cert($self) {
+    return '' if $<;
     my $in = $self->read_file($FILE_CONFIG_QEMU);
     for my $line (split /\n/,$in) {
         chomp $line;
@@ -2706,8 +2939,269 @@ sub _is_ip_nat($self, $ip0) {
     return 0;
 }
 
+sub copy_file_storage($self, $file, $storage) {
+    my $vol = $self->search_volume($file);
+    die "Error: volume $file not found" if !$vol;
+
+    my $sp = $self->vm->get_storage_pool_by_name($storage);
+    die "Error: storage pool $storage not found" if !$sp;
+
+    my ($name) = $vol->get_name();
+    my $xml = $vol->get_xml_description();
+    my $doc = XML::LibXML->load_xml(string => $xml);
+
+    my $vol_capacity = $vol->get_info()->{capacity};
+
+    my $pool_capacity = $sp->get_info()->{capacity};
+
+    die "Error: '$file' too big to fit in $storage ".Ravada::Utils::number_to_size($vol_capacity)." > ".Ravada::Utils::number_to_size($pool_capacity)."\n"
+    if $vol_capacity>$pool_capacity;
+
+    my ($format) = $doc->findnodes("/volume/target/format");
+    if ($format ne 'qcow2') {
+        die "Error: I can't copy $format on remote nodes"
+        unless $self->is_local;
+
+        my $dst_file = $self->_storage_path($storage)."/".$name;
+        copy($file,$dst_file);
+        $self->refresh_storage();
+        return $dst_file;
+    }
+
+    my $vol_dst;
+    eval { $vol_dst= $sp->get_volume_by_name($name) };
+    die $@ if $@ && !(ref($@) && $@->code == 50);
+
+    warn 1;
+    $vol_dst= $sp->clone_volume($vol->get_xml_description);
+    warn 2;
+
+    return $vol_dst->get_path();
+}
+
 sub get_library_version($self) {
     return $self->vm->get_library_version();
+}
+
+sub can_list_cpu_models($self) {
+    return 1;
+}
+
+sub list_virtual_networks($self) {
+    my @networks;
+    for my $net ($self->vm->list_all_networks()) {
+        my $doc = XML::LibXML->load_xml(string => $net->get_xml_description);
+        my ($ip_doc) = $doc->findnodes("/network/ip");
+        my ($ip, $netmask) = ('','');
+        if ($ip_doc) {
+            $ip = $ip_doc->getAttribute('address');
+            $netmask = $ip_doc->getAttribute('netmask');
+        }
+        my $data= {
+            is_active => $net->is_active()
+            ,autostart => $net->get_autostart()
+            ,bridge => $net->get_bridge_name()
+            ,id_vm => $self->id
+            ,name => $net->get_name
+            ,ip_address => $ip
+            ,ip_netmask => $netmask
+            ,internal_id => ''.$net->get_uuid_string
+        };
+        if ($ip_doc) {
+            my ($dhcp_range) = $ip_doc->findnodes("dhcp/range");
+            my ($start,$end);
+            if ($dhcp_range) {
+                $start = $dhcp_range->getAttribute('start');
+                $end = $dhcp_range->getAttribute('end');
+                $data->{dhcp_start} = $start if defined $start;
+                $data->{dhcp_end} = $end if defined $end;
+            }
+        }
+        push @networks,($data);
+    }
+    return @networks;
+}
+
+sub new_network($self, $name='net') {
+    my @networks = $self->list_virtual_networks();
+
+    my %base = (
+        name => $name
+        ,ip_address => ['192.168.',122,'.1']
+        ,bridge => 'virbr'
+    );
+    my $new = {ip_netmask => '255.255.255.0'};
+    for my $field ( keys %base) {
+        my %old;
+        for my $current (@networks ) {
+            my $value = $current->{$field};
+            $old{$value}=1;
+            if ($field eq 'ip_address') {
+                $value =~ s/(.*)\.\d+$/$1/;
+                $old{$value}=1;
+            }
+
+        }
+        my ($last) = reverse sort keys %old;
+        my ($z,$n) = $last =~ /.*?(0*)(\d+)/;
+        $z=$last if !defined $z;
+        $n=0 if !defined $n;
+        $n++;
+        $n = "$z$n";
+
+        my $template = $base{$field};
+        if (ref($template)) {
+            $n=$template->[1];
+        }
+        my $value;
+        for ( 0 .. 255 ) {
+            my $value_ip;
+            if (ref($template)) {
+                $value = $template->[0].$n.$template->[2];
+                if ($field eq 'ip_address') {
+                    $value_ip = $template->[0].$n;
+                }
+            } else {
+                $value = $template.$n;
+            }
+            last if !exists $old{$value}
+            && (!defined $value_ip || !exists $old{$value_ip});
+            $n++;
+        }
+        $new->{$field} = $value;
+    }
+    return $new;
+}
+
+sub create_network($self, $data) {
+
+    confess if !$data->{name} || !$data->{ip_address};
+
+    my $xml = XML::LibXML->load_xml(string =>
+        "<network><name>$data->{name}</name></network>"
+    );
+    my ($xml_net) = $xml->findnodes("/network");
+
+    my $forward = $xml_net->addNewChild(undef,'forward');
+    $forward->setAttribute('mode' => 'nat');
+
+    my $ip = $xml_net->addNewChild(undef,'ip');
+    $ip->setAttribute('address' => $data->{ip_address});
+    $ip->setAttribute('netmask' => $data->{ip_netmask});
+
+    if ($data->{dhcp_start} || $data->{dhcp_end}) {
+        my $dhcp = $ip->addNewChild(undef, 'dhcp');
+        my $range = $dhcp->addNewChild(undef,'range');
+        $range->setAttribute('start' => $data->{dhcp_start});
+        $range->setAttribute('end' => $data->{dhcp_end});
+    }
+
+    if ($data->{bridge}) {
+        my ($bridge) = $xml_net->addNewChild(undef,'bridge');
+        $bridge->setAttribute(name => $data->{bridge});
+    }
+
+    $self->vm->define_network($xml->toString());
+
+    my $new_network=$self->vm->get_network_by_name($data->{name});
+    my $xml2=XML::LibXML->load_xml(string =>$new_network->get_xml_description());
+    my ($uuid) = $xml2->findnodes("/network/uuid/text()");
+    $data->{internal_id} = ''.$uuid;
+
+    $new_network->create() if $data->{is_active};
+
+    $new_network->set_autostart($data->{autostart});
+
+    $data->{is_active} = $new_network->is_active;
+
+    return { internal_uid => ''.$uuid };
+}
+
+sub remove_network($self, $name) {
+    my $net = $self->vm->get_network_by_name($name);
+
+    $net->destroy() if $net->is_active;
+    $net->undefine();
+}
+
+sub change_network($self, $data) {
+    my $network = $self->vm->get_network_by_uuid($data->{internal_id});
+    die "Error: Unknown network $data->{name}" if !$network;
+
+    my $doc = XML::LibXML->load_xml(string => $network->get_xml_description);
+    my $changed = 0;
+    my $bridge = delete $data->{bridge};
+    if (defined $bridge) {
+        my ($bridge_xml) = $doc->findnodes("/network/bridge");
+        if (!defined $bridge_xml->getAttribute('name')
+            || $bridge_xml->getAttribute('name') ne $bridge) {
+            $bridge_xml->setAttribute(name => $bridge);
+            $changed++;
+        }
+    }
+    my $dhcp_start = delete $data->{dhcp_start};
+    my $dhcp_end = delete $data->{dhcp_end};
+    my ($dhcp_xml) = $doc->findnodes("/network/ip/dhcp/range");
+    if ($dhcp_xml->getAttribute('start') ne $dhcp_start) {
+        $dhcp_xml->setAttribute('start' => $dhcp_start);
+        $changed++;
+    }
+    if ($dhcp_xml->getAttribute('end') ne $dhcp_end) {
+        $dhcp_xml->setAttribute('end' => $dhcp_end);
+        $changed++;
+    }
+    my $ip_address = delete $data->{ip_address};
+    my ($ip_xml) = $doc->findnodes("/network/ip");
+    if ($ip_address ne $ip_xml->getAttribute('address')) {
+        $ip_xml->setAttribute('address' => $ip_address);
+        $changed++;
+    }
+    my $ip_netmask = delete $data->{ip_netmask};
+    if ($ip_netmask ne $ip_xml->getAttribute('netmask')) {
+        $ip_xml->setAttribute('netmask' => $ip_netmask);
+        $changed++;
+    }
+    my $name = delete $data->{name};
+    my ($name_xml) = $doc->findnodes("/network/name/text()");
+    if (''.$name_xml ne $name) {
+        die "Error: networks can not be renamed";
+    }
+
+    if ($changed) {
+        $network->destroy() if $network->is_active;
+        $network= $self->vm->define_network($doc->toString);
+    }
+
+    my $is_active = delete $data->{is_active};
+    if (defined $is_active) {
+        if ($is_active && ! $network->is_active) {
+            $network->create();
+            $changed++;
+        }
+        if (!$is_active && $network->is_active) {
+            $network->destroy;
+            $changed++;
+        }
+    }
+
+    my $autostart = delete $data->{autostart};
+    if (defined $autostart) {
+        if ($autostart && ! $network->get_autostart) {
+            $network->set_autostart(1);
+            $changed++;
+        }
+        if (!$autostart && $network->get_autostart) {
+            $network->set_autostart(0);
+            $changed++;
+        }
+    }
+
+    for ('id_vm','internal_id','id' ,'_old_name', 'date_changed') {
+        delete $data->{$_};
+    }
+    die "Error: unexpected args ".Dumper($data) if keys %$data;
+
+    return $changed;
 }
 
 1;

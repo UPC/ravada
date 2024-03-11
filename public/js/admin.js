@@ -7,12 +7,18 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("usersPage", usersPageC)
         .controller("messagesPage", messagesPageC)
         .controller("manage_nodes",manage_nodes)
+        .controller("manage_routes",manage_routes)
         .controller("manage_networks",manage_networks)
-        .controller("settings_node",settings_node)
         .controller("settings_network",settings_network)
+        .controller("settings_node",settings_node)
+        .controller("settings_storage",settings_storage)
+        .controller("settings_route",settings_route)
         .controller("new_node", newNodeCtrl)
+        .controller("new_storage", new_storage)
         .controller("settings_global", settings_global_ctrl)
         .controller("admin_groups", admin_groups_ctrl)
+        .controller('admin_charts', admin_charts_ctrl)
+        .controller('upload_users', upload_users)
     ;
 
     ravadaApp.directive('ipaddress', function() {
@@ -73,12 +79,11 @@ ravadaApp.directive("solShowMachine", swMach)
           $scope.url = url;
           $scope.images = [];
           subscribe_list_isos(url);
-          subscribe_list_images(url);
           subscribe_list_machines(url);
           $http.get('/list_vm_types.json').then(function(response) {
               $scope.backends = response.data;
               $scope.backend = response.data[0];
-              $scope.loadTemplates(url);
+              $scope.loadTemplates();
           });
       }
 
@@ -88,9 +93,31 @@ ravadaApp.directive("solShowMachine", swMach)
           });
 
       };
+      $scope.list_storage_pools = function(backend) {
+          $scope.storage_pools_loaded=false;
+          $http.get('/list_storage_pools/'+backend+"?active=1").then(function(response) {
+            $scope.storage_pools_loaded=true;
+              $scope.storage_pools[backend] = response.data;
+
+              $scope.storage_pool=response.data[0];
+              for(var i=0; i<response.data.length;i++) {
+                  if (response.data[i].is_active) {
+                      $scope.storage_pool=response.data[i];
+                  }
+              }
+              for(var i=0; i<response.data.length;i++) {
+                  if (response.data[i].is_active && response.data[i].name == 'default') {
+                      $scope.storage_pool=response.data[i];
+                  }
+              }
+
+          });
+
+      };
 
       $scope.loadTemplates = function() {
           $scope.list_machine_types($scope.backend);
+          $scope.list_storage_pools($scope.backend);
           subscribe_list_images($scope.backend);
       }
 
@@ -122,9 +149,8 @@ ravadaApp.directive("solShowMachine", swMach)
           }
       };
 
-
-
       subscribe_list_images = function(backend) {
+          $scope.images = [];
           var ws = new WebSocket($scope.url);
           ws.onopen = function(event) { ws.send('list_iso_images/'+backend) };
           ws.onmessage = function(event) {
@@ -158,6 +184,7 @@ ravadaApp.directive("solShowMachine", swMach)
 
       $scope.iso = { arch: 'unknown' };
       $scope.machine_types = { };
+      $scope.storage_pools = { };
 
       $scope.change_iso = function(iso) {
           $scope.id_iso_id = iso.id;
@@ -191,9 +218,14 @@ ravadaApp.directive("solShowMachine", swMach)
                 }
             }
         }
-        if ($scope.id_iso && $scope.id_iso.options
-                          && $scope.id_iso.options['bios']) {
-            $scope.bios = $scope.id_iso.options['bios'];
+        if ($scope.id_iso && $scope.id_iso.options) {
+            if( $scope.id_iso.options['bios']) {
+                $scope.bios = $scope.id_iso.options['bios'];
+            }
+            if( $scope.id_iso.options['hardware']) {
+                $scope.hardware = $scope.id_iso.options['hardware'];
+            }
+
         }
 
       };
@@ -838,29 +870,209 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.list_nodes();
         $interval($scope.list_nodes,30 * 1000);
     };
-
     function manage_networks($scope, $http, $interval, $timeout) {
-        list_networks= function() {
-            $http.get('/list_networks.json').then(function(response) {
+        $scope.init = function(id_vm) {
+            $scope.list_networks(id_vm);
+            $scope.loaded_networks=false;
+        }
+        $scope.list_networks = function(id_vm) {
+            $http.get('/v2/vm/list_networks/'+id_vm).then(function(response) {
+                $scope.networks=response.data;
+                $scope.loaded_networks=true;
+                });
+        }
+    }
+
+    function manage_routes($scope, $http, $interval, $timeout) {
+        list_routes = function() {
+            $http.get('/list_routes.json').then(function(response) {
                     for (var i=0; i<response.data.length; i++) {
                         var item = response.data[i];
-                        $scope.networks[item.id] = item;
+                        $scope.routes[item.id] = item;
                     }
                 });
         }
         $scope.update_network= function(id, field) {
-            var value = $scope.networks[id][field];
+            var value = $scope.routes[id][field];
             var args = { 'id': id };
             args[field] = value;
-            $http.post('/v1/network/set'
+            $http.post('/v2/route/set'
                 , JSON.stringify( args ))
             .then(function(response) {
             });
         };
 
 
-        $scope.networks={};
-        list_networks();
+        $scope.routes={};
+        list_routes();
+    }
+
+    function settings_network($scope, $http, $interval, $timeout) {
+        $scope.init = function(id,url, id_vm) {
+            if ( id ) {
+                $scope.load_network(id);
+            } else {
+                $scope.new_network(id_vm);
+            }
+        };
+        $scope.new_network = function(id_vm) {
+            $scope.network = { };
+            $http.get('/v2/network/new/'+id_vm)
+                .then(function(response) {
+                    $scope.network=response.data;
+                    console.log(response.data);
+            });
+        };
+
+        $scope.load_network = function(id) {
+            $http.get('/v2/network/info/'+id)
+                .then(function(response) {
+                $scope.network = response.data;
+                $scope.network._old_name = $scope.network.name;
+            });
+
+        };
+
+        $scope.update_network = function() {
+
+            var update = $scope.network['id'];
+            $http.post('/v2/network/set/'
+                , JSON.stringify($scope.network))
+                .then(function(response) {
+                    $scope.error=response.data.error;
+                    if (!update) {
+                        if (response.data['id_network']) {
+                            window.location.assign('/network/settings/'
+                                +response.data['id_network']+'.html');
+                        }
+                    }
+                });
+        };
+        $scope.remove_network = function() {
+            $http.post('/request/remove_network'
+                ,JSON.stringify({'id': $scope.network.id }))
+                .then(function(response) {
+                    $scope.network._removed = true;
+                });
+        };
+
+
+    }
+
+
+    function settings_storage($scope, $http, $interval, $timeout) {
+        var start=0;
+        var limit=10;
+        $scope.n_selected = 0;
+        $scope.init=function(id_vm) {
+            $scope.id_vm = id_vm;
+            list_storage_pools(id_vm);
+            $scope.storage = {
+                'id': id_vm
+            };
+            $scope.load_node(id_vm);
+            $scope.list_unused_volumes();
+        };
+
+        $scope.load_node= function() {
+            $http.get('/node/info/'+$scope.id_vm+'.json')
+                .then(function(response) {
+                $scope.node = response.data;
+            });
+        };
+
+        $scope.update_node = function(node) {
+            $scope.error = '';
+            var data = {
+                'id': node.id
+                ,'base_storage': node.base_storage
+                ,'default_storage': node.default_storage
+                ,'clone_storage': node.clone_storage
+            };
+            $http.post('/v1/node/set/'
+                , JSON.stringify(data))
+                .then(function(response) {
+                    if (response.data.ok == 1){
+                        $scope.saved = true;
+                    }
+                    $scope.error = response.data.error;
+                });
+        };
+
+        $scope.toggle_active = function(pool) {
+            if (pool.is_active) {
+                pool.is_active=0;
+            } else {
+                pool.is_active=1;
+            }
+            $http.post('/request/active_storage_pool'
+                ,JSON.stringify({'id_vm': $scope.id_vm
+                    , 'value': pool.is_active
+                    , 'name': pool.name})
+            ).then(function(response) {
+                $scope.error = response.data.error;
+            });
+
+        };
+
+        list_storage_pools= function(id_vm) {
+            $scope.pools=[];
+            $http.get('/storage/list_pools/'+id_vm).then(function(response) {
+                $scope.storage_pools = response.data;
+                for (var i=0;i<response.data.length;i++) {
+                    $scope.pools[i]=response.data[i].name;
+                }
+            });
+        }
+
+        $scope.list_unused_volumes=function() {
+            $scope.loading_unused=true;
+            $http.get('/storage/list_unused_volumes?id_vm='+$scope.id_vm
+                +'&start='+start+'&limit='+limit)
+                    .then(function(response) {
+                $scope.loading_unused=false;
+                $scope.list_more = response.data.more;
+                if (!$scope.unused_volumes) {
+                    $scope.unused_volumes = response.data.list;
+                    return;
+                }
+                for (var i=0; i<response.data.list.length ; i++) {
+                    $scope.unused_volumes.push(response.data.list[i]);
+                }
+                $scope.req_more = false;
+                window.scrollTo(0, document.body.scrollHeight);
+            });
+        }
+        $scope.remove_selected = function() {
+            var remove = [];
+            var files = $scope.unused_volumes;
+            var keep = [];
+            var count = 0;
+            for (var i=0; i<files.length; i++ ) {
+                if (files[i].remove) {
+                    remove.push(files[i].file);
+                    count++;
+                } else {
+                    keep.push(files[i]);
+                }
+            }
+            if (!count) {
+                return;
+            };
+            $scope.unused_volumes = keep;
+            $http.post('/request/remove_files'
+                ,JSON.stringify({'id_vm': $scope.id_vm , 'files': remove })
+            ).then(function(response) {
+                start=0;
+                $scope.unused_volumes=undefined;
+                $scope.list_unused_volumes();
+            });
+        }
+        $scope.more = function() {
+            start += limit;
+            $scope.req_more = true;
+            $scope.list_unused_volumes();
+        };
     }
 
     function newNodeCtrl($scope, $http, $timeout) {
@@ -924,11 +1136,69 @@ ravadaApp.directive("solShowMachine", swMach)
         };
     };
 
-   function settings_network($scope, $http, $timeout) {
+    function new_storage($scope, $http, $timeout) {
+        var url_ws;
+        var ws;
+        $scope.name_valid=true;
+        $scope.directory_valid=true;
+
+        $scope.init=function(id_vm, url) {
+            $scope.id_vm = id_vm;
+            url_ws = url;
+        };
+        $scope.check_name = function(name) {
+            const re = /^[a-zA-Z]+[a-zA-Z0-9_\.\-]*$/;
+            $scope.name_valid = re.test(name);
+        };
+        $scope.check_directory = function(name) {
+            const re = /^\/[a-zA-Z]+[a-zA-Z0-9_\.\-\/]*$/;
+            $scope.directory_valid = re.test(name);
+        };
+
+        $scope.name_duplicated=false;
+        $scope.add_storage = function() {
+            $scope.request=undefined;
+            if (!$scope.name_valid || ! $scope.directory_valid) {
+                return;
+            }
+            $http.post('/request/create_storage_pool/'
+                ,JSON.stringify({
+                    'id_vm': $scope.id_vm
+                    ,'name': $scope.name
+                    ,'directory': $scope.directory})
+            ).then(function(response) {
+                if (response.data.ok == 1 ) {
+                    console.log(response.data);
+                    $scope.request = {
+                        'id': response.data.request
+                    };
+                    subscribe_request(response.data.request);
+                }
+            });
+        }
+        subscribe_request = function(id_request) {
+            if(typeof(ws) === 'undefined') {
+                ws = new WebSocket(url_ws);
+            } else {
+                ws.close();
+                ws = new WebSocket(url_ws);
+            }
+            ws.onopen = function(event) { ws.send('request/'+id_request) };
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                $scope.$apply(function () {
+                    $scope.request = data;
+                });
+            }
+        };
+
+    };
+
+   function settings_route($scope, $http, $timeout) {
         var url_ws;
         $scope.init = function(id_network) {
             if (typeof id_network == 'undefined') {
-                $scope.network = {
+                $scope.route= {
                     'name': ''
                     ,'all_domains': 1
                 };
@@ -938,30 +1208,30 @@ ravadaApp.directive("solShowMachine", swMach)
             }
         }
         $scope.check_no_domains = function() {
-            if ( $scope.network.no_domains == 1 ){
-                $scope.network.all_domains = 0;
+            if ( $scope.route.no_domains == 1 ){
+                $scope.route.all_domains = 0;
             }
         };
         $scope.check_all_domains = function() {
-            if ( $scope.network.all_domains == 1 ){
-                $scope.network.no_domains = 0;
+            if ( $scope.route.all_domains == 1 ){
+                $scope.route.no_domains = 0;
             }
         };
         $scope.update_network= function(field) {
-            var data = $scope.network;
+            var data = $scope.route;
             if (typeof field != 'undefined') {
                 var data = {};
-                data[field] = $scope.network[field];
+                data[field] = $scope.route[field];
             }
             $scope.saved = false;
             $scope.error = '';
-            $http.post('/v1/network/set/'
+            $http.post('/v2/route/set/'
                 , JSON.stringify(data))
             //                    , JSON.stringify({ value: $scope.network[field]}))
                 .then(function(response) {
                     if (response.data.ok == 1){
                         $scope.saved = true;
-                        if (!$scope.network.id) {
+                        if (!$scope.route.id) {
                             $scope.new_saved = true;
                         }
                     }
@@ -973,19 +1243,19 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.load_network = function(id_network) {
                 $scope.error = '';
                 $scope.saved = false;
-                $http.get('/network/info/'+id_network+'.json').then(function(response) {
-                    $scope.network = response.data;
+                $http.get('/route/info/'+id_network).then(function(response) {
+                    $scope.route = response.data;
                     $scope.formNetwork.$setPristine();
-                    $scope.network._old_name = $scope.network.name;
+                    $scope.route._old_name = $scope.route.name;
                 });
         };
         $scope.list_domains_network = function(id_network) {
-                $http.get('/network/list_domains/'+id_network).then(function(response) {
+                $http.get('/route/list_domains/'+id_network).then(function(response) {
                     $scope.machines = response.data;
                 });
         };
         $scope.set_network_domain= function(id_domain, field, allowed) {
-            $http.get("/network/set/"+$scope.network.id+ "/" + field+ "/" +id_domain+"/"
+            $http.get("/v2/route/set/"+$scope.route.id+ "/" + field+ "/" +id_domain+"/"
                     +allowed)
                 .then(function(response) {
                 });
@@ -996,26 +1266,26 @@ ravadaApp.directive("solShowMachine", swMach)
             });
         };
 
-        $scope.remove_network = function(id_network) {
-            if ($scope.network.name == 'default') {
-                $scope.error = $scope.network.name + " network can't be removed";
+        $scope.remove_route = function(id_network) {
+            if ($scope.route.name == 'default') {
+                $scope.error = $scope.route.name + " network can't be removed";
                 return;
             }
-            $http.get('/v1/network/remove/'+id_network).then(function(response) {
-                $scope.message = "Network "+$scope.network.name+" removed";
-                $scope.network ={};
+            console.log(id_network);
+            $http.get('/v2/route/remove/'+id_network).then(function(response) {
+                window.location.assign('/admin/routes');
             });
         };
         $scope.check_duplicate = function(field) {
             var args = {};
-            if (typeof ($scope.network['id']) != 'undefined') {
-                args['id'] = $scope.network['id'];
+            if (typeof ($scope.route['id']) != 'undefined') {
+                args['id'] = $scope.route['id'];
             }
-            args[field] = $scope.network[field];
+            args[field] = $scope.route[field];
 
             $http.post("/v1/exists/networks",JSON.stringify(args))
                 .then(function(response) {
-                    $scope.network["_duplicated_"+field]=response.data.id;
+                    $scope.route["_duplicated_"+field]=response.data.id;
             });
         };
         $scope.new_saved = false;
@@ -1270,7 +1540,27 @@ ravadaApp.directive("solShowMachine", swMach)
 
     function settings_global_ctrl($scope, $http) {
         $scope.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        $scope.init = function() {
+        $scope.csp_locked = false;
+        $scope.set_csp_locked=function() {
+            var keys = Object.keys($scope.settings.frontend.content_security_policy);
+            var found = 0;
+            for ( var n_key=0 ; n_key<keys.length ; n_key++) {
+                var field=keys[n_key];
+                if ( field != 'all' && field != 'id' && field != 'value'
+                    && $scope.settings.frontend.content_security_policy[field].value) {
+                    found++;
+                }
+            }
+            $scope.csp_locked = found>0;
+            if ($scope.csp_locked && !$scope.csp_advanced) {
+                $scope.csp_advanced = true;
+            }
+        };
+        $scope.init = function(url, csp_advanced) {
+            $scope.csp_advanced=false;
+            if (csp_advanced) {
+                $scope.csp_advanced=true;
+            }
             $http.get('/settings_global.json').then(function(response) {
                 $scope.settings = response.data;
                 var now = new Date();
@@ -1289,10 +1579,12 @@ ravadaApp.directive("solShowMachine", swMach)
                     $scope.settings.frontend.maintenance_end.value
                     =new Date($scope.settings.frontend.maintenance_end.value);
                 }
+                $scope.set_csp_locked();
             });
         };
         $scope.load_settings = function() {
             $scope.init();
+            $scope.set_csp_locked();
             $scope.formSettings.$setPristine();
         };
         $scope.update_settings = function() {
@@ -1300,10 +1592,151 @@ ravadaApp.directive("solShowMachine", swMach)
             $http.post('/settings_global'
                 ,JSON.stringify($scope.settings)
             ).then(function(response) {
+                $scope.set_csp_locked();
                 if (response.data.reload) {
                     window.location.reload();
                 }
             });
         };
+    };
+
+
+    function admin_charts_ctrl($scope, $http) {
+        $scope.data = [];
+        $scope.labels = [];
+        var my_chart;
+
+        $scope.hour = 1;
+        $scope.day = 0;
+        $scope.week = 0;
+        $scope.month = 0;
+        $scope.year = 0;
+
+        var max_y = 10;
+        $scope.options_h = [
+            {id:0, title: 'hours'}
+            ,{id:1 , title: '1 hour'}
+            ,{id:2 , title: '2 hours'}
+            ,{id:3 , title: '3 hours'}
+            ,{id:6 , title: '6 hours'}
+            ,{id:8 , title: '8 hours'}
+        ];
+        $scope.options_d = [
+            {id:0 , title: 'days'}
+            ,{id:1 , title: '1 day'}
+            ,{id:2 , title: '2 days'}
+            ,{id:3 , title: '3 days'}
+            ,{id:6 , title: '6 days'}
+        ];
+        $scope.options_w = [
+            {id:0 , title: 'weeks'}
+            ,{id:1 , title: '1 week'}
+            ,{id:2 , title: '2 weeks'}
+            ,{id:3 , title: '3 weeks'}
+            ,{id:4 , title: '4 weeks'}
+        ];
+        $scope.options_m = [
+            {id:0 , title: 'months'}
+            ,{id:1 , title: '1 month'}
+            ,{id:2 , title: '2 months'}
+            ,{id:3 , title: '3 months'}
+            ,{id:6 , title: '6 months'}
+            ,{id:9 , title: '9 months'}
+        ];
+        $scope.options_y = [
+            {id:0 , title: 'years'}
+            ,{id:1 , title: '1 year'}
+            ,{id:2 , title: '2 years'}
+            ,{id:3 , title: '3 years'}
+            ,{id:6 , title: '6 years'}
+            ,{id:9 , title: '9 years'}
+        ];
+
+        var url;
+
+        $scope.init = function(url0) {
+            subscribe_log_active_domains(url0,'hours',1);
+            url = url0;
+        }
+
+        $scope.load_chart = function(type) {
+            my_chart.destroy();
+            if (type == 'hour') {
+                $scope.day=0;$scope.week=0;$scope.month=0;$scope.year=0;
+                subscribe_log_active_domains(url,'hours',$scope.hour);
+            } else if( type =='day') {
+                $scope.hour=0;$scope.week=0;$scope.month=0;$scope.year=0;
+                subscribe_log_active_domains(url,'days',$scope.day);
+            } else if ( type == 'week') {
+                $scope.hour=0; $scope.day=0;$scope.month=0;$scope.year=0;
+                subscribe_log_active_domains(url,'weeks',$scope.week);
+            } else if ( type == 'month') {
+                $scope.hour=0; $scope.day=0;$scope.week=0;$scope.year=0;
+                subscribe_log_active_domains(url,'months',$scope.month);
+            } else if ( type == 'year') {
+                $scope.hour=0; $scope.day=0;$scope.week=0;$scope.month=0;
+                subscribe_log_active_domains(url,'years',$scope.year);
+            }
+        };
+
+        subscribe_log_active_domains = function(url,unit,time) {
+            var chart_data = {
+                labels: [],
+                datasets: [{
+                    label: 'Active',
+                    backgroundColor: 'rgb(0, 199, 132)',
+                    borderColor: 'rgb(0, 99, 132)',
+                    data: [],
+                    tension: 0.2
+                }]
+            };
+            var chart_config ={
+                type: 'line',
+                data: chart_data,
+                options: {
+                    scales : {
+                        y : {
+                            min: 0,
+                            max: max_y
+                        }
+                    }
+                    ,borderColor: 'black'
+                }
+            };
+            my_chart = new Chart(
+                            document.getElementById('myChart'),
+                            chart_config
+                        );
+
+            var ws = new WebSocket(url);
+            ws.onopen = function(event) {
+                ws.send('log_active_domains/'+unit+'/'+time);
+            };
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                $scope.$apply(function () {
+                    $scope.data = data.data;
+                    $scope.labels = data.labels;
+
+                    chart_config.data.datasets[0].data = data.data;
+                    chart_config.data.labels = data.labels;
+                    var new_max = Math.max(...data.data);
+                    var div = 5;
+                    if (new_max>30) { div = 10 };
+                    new_max = Math.round(new_max/div+1)*div;
+                    if (new_max > chart_config.options.scales.y.max) {
+                        chart_config.options.scales.y.max = new_max;
+                    }
+                    my_chart.update();
+
+                });
+            }
+        };
+
+
+    };
+
+    function upload_users($scope, $http) {
+        $scope.type = 'sql';
     };
 }());

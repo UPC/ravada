@@ -24,7 +24,7 @@ my %DIR = (
     templates => '/usr/share/ravada'
     ,'etc/ravada.conf' => 'etc'
     ,'etc/xml'  => 'var/lib/ravada'
-    ,sql => 'usr/share/doc/ravada'
+    ,'sql' => 'usr/share/ravada'
     ,'lib/' => 'usr/share/perl5'
     ,'blib/man3' => 'usr/share/man'
     ,"debian/" => "./DEBIAN"
@@ -40,7 +40,7 @@ my %FILE = (
     ,'script/rvd_back' => 'usr/sbin/rvd_back'
     ,'script/rvd_front' => 'usr/sbin/rvd_front'
     ,'CHANGELOG.md'   => 'usr/share/doc/ravada/changelog'
-    ,'copyright' => 'usr/share/doc/ravada'
+    ,'copyright' => 'usr/share/doc/ravada/copyright'
     ,'package.json' => 'usr/share/ravada'
 );
 
@@ -72,7 +72,7 @@ sub copy_dirs {
 }
 
 sub copy_files {
-    for my $src (keys %FILE) {
+    for my $src (sort keys %FILE) {
         my $dst = "$DIR_DST/$FILE{$src}";
 
         my ($dir) = $dst =~ m{(.*)/.*};
@@ -88,7 +88,7 @@ sub remove_not_needed {
         my $file2 = "$DIR_DST/$file";
         unlink $file2 or die "$! $file2";
     }
-    for my $dir ('usr/share/doc/ravada/sql/sqlite') {
+    for my $dir ('usr/share/ravada/sql/sqlite') {
         my $path = "$DIR_DST/$dir";
         die "Missing $path" if ! -e $path;
         remove_tree($path);

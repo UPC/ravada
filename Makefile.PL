@@ -32,6 +32,7 @@ WriteMakefile(
     ,'DateTime::Format::DateParse'=> 0
     ,'PBKDF2::Tiny' => 0
     ,'Text::Diff' => 0
+    ,'HTML::Lint' => 0
   },
   BUILD_REQUIRES => {
     'Test::Perl::Critic' => 0

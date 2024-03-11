@@ -88,6 +88,12 @@ span.info {
     text-width: italic;
 }
 
+span.volatile {
+    color: yellow;
+    text-width: italic;
+}
+
+
 input.ng-invalid {
   background-color: pink;
   border: 1px solid red;
@@ -97,3 +103,7 @@ input.ng-invalid.ng-touched {
     border: 1px solid red;
 }
 
+.dropdown-menu {
+    max-height: 280px;
+    overflow-y: auto;
+}

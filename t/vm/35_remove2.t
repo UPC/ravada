@@ -51,7 +51,7 @@ sub test_remove_domain_volumes_already_gone {
         next if $file =~ /iso/;
         unlink $file or die "$! $file";
     }
-    $domain->storage_refresh() if $vm->type ne 'Void';
+    $domain->_vm->refresh_storage();
     my @volumes = $domain->list_volumes_info();
     for my $vol (@volumes) {
         next if $vol->file =~ /\.iso$/;

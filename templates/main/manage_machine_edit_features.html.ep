@@ -12,19 +12,19 @@
                     && ( value != '1' && value != '0' )">
         <%=l 'state' %>
             <select ng-model="item[feat].state" >
-            <option><%=l 'on' %></option>
-            <option><%=l 'off' %></option>
+            <option value="on"><%=l 'on' %></option>
+            <option value="off"><%=l 'off' %></option>
             </select>
         </span>
         <span ng-show="feat == 'kvm' && value != '1' && value != '0'">
             <%=l 'hidden' %>
             <select ng-model="item[feat].hidden.state">
-                <option><%=l 'on' %></option>
-                <option><%=l 'off' %></option>
+                <option value="on"><%=l 'on' %></option>
+                <option value="off"><%=l 'off' %></option>
             </select>
         </span>
         <small>
-        <button type="badge"
+        <button type="button" class="badge"
             ng-show="(feat=='kvm' || feat=='hap' || feat=='vmport')
                 && value !='0' && value!='1'"
             ng-click="item[feat]=0;form_edit.$pristine=false"

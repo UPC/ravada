@@ -45,7 +45,7 @@ sub prepare_base($self) {
     if (! $self->vm->file_exists($base_img)) {
         chomp $err;
         chomp $out;
-        die "ERROR: Output file $base_img not created at "
+        die "ERROR: Output file $base_img from node ".$self->vm->name." not created at "
         ."\n"
         ."ERROR: '".($err or '')."'\n"
         ."  OUT: '".($out or '')."'\n"
@@ -151,7 +151,8 @@ sub spinoff($self) {
     if (! $self->vm->file_exists($volume_tmp) );
 
     $self->copy_file($volume_tmp,$file) or die "$! $volume_tmp -> $file";
-    $self->vm->remove_file($volume_tmp) or die "ERROR $! removing $volume_tmp";
+    $self->vm->refresh_storage_pools();
+    $self->vm->remove_file($volume_tmp);
 }
 
 sub block_commit($self) {

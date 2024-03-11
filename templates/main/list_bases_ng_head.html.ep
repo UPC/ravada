@@ -1,4 +1,4 @@
-<div class="card">
+<div class="card m-2">
     <div class="card-header">
     <h2 class="display-5"><%=l 'Choose a Machine to Start' %></h2>
 %   if ( $guide ) {

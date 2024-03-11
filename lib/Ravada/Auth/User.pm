@@ -369,7 +369,6 @@ sub _load_allowed {
     my $ldap_entry;
     $ldap_entry = $self->ldap_entry if $self->external_auth && $self->external_auth eq 'ldap';
 
-
     my @domains = $self->_list_domains_access();
 
     for my $id_domain ( @domains ) {
@@ -433,7 +432,8 @@ sub _load_allowed_groups($self) {
         }
 
         $self->{_allowed}->{$id_domain} = 1
-        if Ravada::Auth::LDAP::is_member($self->ldap_entry, $name);
+            if $self->ldap_entry
+            && Ravada::Auth::LDAP::is_member($self->ldap_entry, $name);
     }
 }
 

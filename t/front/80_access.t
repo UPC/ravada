@@ -14,6 +14,8 @@ use Test::Ravada;
 init('t/etc/ravada_ldap_basic.conf');
 clean();
 
+my $USER = create_user(new_domain_name(),$$);
+
 sub _remove_bases(@bases) {
     for my $base (@bases) {
         for my $clone_data ($base->clones) {
@@ -76,6 +78,7 @@ sub test_access_by_group($vm) {
 
 sub test_access_by_agent($vm, $do_clones=0) {
 
+
     my $base = create_domain($vm->type);
     $base->prepare_base(user_admin);
     $base->is_public(1);
@@ -85,7 +88,7 @@ sub test_access_by_agent($vm, $do_clones=0) {
         ,user => user_admin
     );
 
-    my $list_bases = rvd_front->list_machines_user(user_admin());
+    my $list_bases = rvd_front->list_machines_user($USER);
     is(scalar (@$list_bases), 1);
 
     is(scalar($base->list_access),0);
@@ -101,10 +104,10 @@ sub test_access_by_agent($vm, $do_clones=0) {
     is(scalar($base->list_access),2);
     is($base->access_allowed( $type => { $attribute => $value} ),1);
     is($base->access_allowed( $type => { $attribute => 'fail'} ),0) or exit;
-    $list_bases = rvd_front->list_machines_user(user_admin());
+    $list_bases = rvd_front->list_machines_user($USER);
     is(scalar (@$list_bases), 0) or exit;
 
-    $list_bases = rvd_front->list_machines_user(user_admin(), { $type =>{ $attribute => $value }});
+    $list_bases = rvd_front->list_machines_user($USER, { $type =>{ $attribute => $value }});
     is(scalar (@$list_bases), 1);
 
     _remove_bases($base);
@@ -122,7 +125,7 @@ sub test_access_by_lang($vm, $do_clones=0) {
         ,user => user_admin
     );
 
-    my $list_bases = rvd_front->list_machines_user(user_admin());
+    my $list_bases = rvd_front->list_machines_user($USER);
     is(scalar (@$list_bases), 1);
 
     is(scalar($base->list_access),0);
@@ -138,10 +141,10 @@ sub test_access_by_lang($vm, $do_clones=0) {
     is(scalar($base->list_access),2);
     is($base->access_allowed( $type => { $attribute => $value} ),1);
     is($base->access_allowed( $type => { $attribute => 'fail'} ),0) or exit;
-    $list_bases = rvd_front->list_machines_user(user_admin());
+    $list_bases = rvd_front->list_machines_user($USER);
     is(scalar (@$list_bases), 0) or exit;
 
-    $list_bases = rvd_front->list_machines_user(user_admin(), { $type =>{ $attribute => $value }});
+    $list_bases = rvd_front->list_machines_user($USER, { $type =>{ $attribute => $value }});
     is(scalar (@$list_bases), 1);
 
     is($base->access_allowed( $type => { $attribute => 'ca-ca,en-US;q=0.7,en;q=0.3'} ),1);
@@ -173,13 +176,13 @@ sub test_access_by_encoding($vm) {
     is($base->access_allowed( $type => { $attribute => $value} ),1);
     is($base->access_allowed( $type => { $attribute => $value2} ),1) or exit;
     is($base->access_allowed( $type => { $attribute => 'fail'} ),0) or exit;
-    my $list_bases = rvd_front->list_machines_user(user_admin());
+    my $list_bases = rvd_front->list_machines_user($USER);
     is(scalar (@$list_bases), 0) or exit;
 
-    $list_bases = rvd_front->list_machines_user(user_admin(), { $type =>{ $attribute => $value }});
+    $list_bases = rvd_front->list_machines_user($USER, { $type =>{ $attribute => $value }});
     is(scalar (@$list_bases), 1);
 
-    $list_bases = rvd_front->list_machines_user(user_admin(), { $type =>{ $attribute => $value2 }});
+    $list_bases = rvd_front->list_machines_user($USER, { $type =>{ $attribute => $value2 }});
     is(scalar (@$list_bases), 1);
 
     _remove_bases($base);
@@ -196,7 +199,7 @@ sub test_access_by_lang_2_entries($vm, $do_clones=0) {
         ,user => user_admin
     );
 
-    my $list_bases = rvd_front->list_machines_user(user_admin());
+    my $list_bases = rvd_front->list_machines_user($USER);
     is(scalar (@$list_bases), 1);
 
     my      $type = 'client';
@@ -212,10 +215,10 @@ sub test_access_by_lang_2_entries($vm, $do_clones=0) {
             ,value => $value
     );
     is($base->access_allowed( %access_data ),1) or exit;
-    $list_bases = rvd_front->list_machines_user(user_admin());
+    $list_bases = rvd_front->list_machines_user($USER);
     is(scalar (@$list_bases), 0) or exit;
 
-    $list_bases = rvd_front->list_machines_user(user_admin(), \%access_data );
+    $list_bases = rvd_front->list_machines_user($USER, \%access_data );
     is(scalar (@$list_bases), 1) or exit;
 
     _remove_bases($base);
@@ -232,7 +235,7 @@ sub test_access_by_lang_default($vm, $default, $do_clones=0) {
         ,user => user_admin
     );
 
-    my $list_bases = rvd_front->list_machines_user(user_admin());
+    my $list_bases = rvd_front->list_machines_user($USER);
     is(scalar (@$list_bases), 1);
 
     my      $type = 'client';
@@ -256,11 +259,11 @@ sub test_access_by_lang_default($vm, $default, $do_clones=0) {
     is($base->access_allowed( $type => { $attribute => $value} ),1) or exit;
     is($base->access_allowed( $type => { $attribute => "fail"} ),$default) or exit;
     is($base->access_allowed( ), $default) or exit;
-    $list_bases = rvd_front->list_machines_user(user_admin());
+    $list_bases = rvd_front->list_machines_user($USER);
 
     is(scalar (@$list_bases), $default, "Failed on default=$default") or exit;
 
-    $list_bases = rvd_front->list_machines_user(user_admin(), { $type =>{ $attribute => $value }});
+    $list_bases = rvd_front->list_machines_user($USER, { $type =>{ $attribute => $value }});
     is(scalar (@$list_bases), 1) or exit;
 
     my @access = $base->list_access();

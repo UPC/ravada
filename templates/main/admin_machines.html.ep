@@ -118,7 +118,7 @@
                        title="<%=l 'Show/Hide clones' %>">
                        <%=l 'Base' %></span></th>
                     <th class="lgMachToggle"><%=l 'Public'%></th>
-%                   if ($autostart) {
+%                   if ($USER->can_create_base && $autostart) {
                         <th class="lgMachToggle"><%=l 'Autostart'%></th>
 %                   }
                     <th class="lgMachToggle machine-button">
@@ -145,7 +145,6 @@
                               ,active_machine: machine.status == 'active'
                               }"
                         title ="<%=l 'Manage machine' %>">{{machine.name}}</a> {{machine.comment}}
-                   <span class="comment" ng-show="machine.is_volatile"><%=l 'Volatile' %></span>
                         <button ng-show="machine.has_clones && !filter"
                                          type="button"
                         class="badge badge-light text-blue"
@@ -164,7 +163,7 @@
                                ng-model="machine.is_base"
                                ng-true-value="1" ng-false-value="0"
                                ng-show="can_manage_base(machine)"
-                               ng-disabled="list_machines_time<2"
+                               ng-disabled="list_machines_time<2 || machine.is_volatile"
                                ng-click="open_modal('mb_',machine)"/>
                         <div class="modal fade" tabindex="-1" role="dialog" id="mb_{{machine.id}}">
                            <div class="modal-dialog" role="document">
@@ -228,6 +227,16 @@
                                </div>
                                <div class="modal-body">
                                  <p><%=l 'Are you sure you want to change the Public state of' %> {{machine.name}} <%=l 'to' %> {{!(machine.is_public==0)}}?</p>
+                                 <div ng-show="machine.is_public==0" class="ml-4">
+                                    <input type="checkbox" name="show_clones" ng-model="machine.show_clones"
+                                            ng-true-value="1" ng-false-value="0"
+                                    >
+                                    <label for="show_clones"><%=l 'Show already created clones' %></label>
+                                    <button type="button" class="badge" ng-click="help_show_clones=!help_show_clones">?</button>
+                                    <div ng-show="help_show_clones">
+                                        <span class="info"><%=l 'The user will be able to access the clone, even when the base is hidden.' %> <%=l 'But no new clones can be created.' %></span>
+                                    </div>
+                                 </div>
                                </div>
                                <div class="modal-footer">
                                  <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="cancel_modal(machine,'is_public')"><%=l 'No' %></button>
@@ -247,12 +256,24 @@
 %                       }
                     <td class="lgMachActions">
                         <span style="float:right;" ng-show="machine.is_paused && machine.is_active" class="badge label-warning" ng-cloak><%=l 'Paused' %></span>
-                        <span style="float:right;" ng-show="!machine.is_paused && machine.is_active" class="badge badge-success" ng-cloak><%=l 'Running' %></span>
+                        <span style="float:right;" ng-show="!machine.is_paused && machine.is_active && !machine.is_volatile" class="badge badge-success" ng-cloak><%=l 'Running' %></span>
+                        <span style="float:right;" ng-show="!machine.is_paused && machine.is_active && machine.is_volatile" class="badge badge-success volatile" ng-cloak><%=l 'Volatile' %></span>
                         <span style="float:right;" ng-show="!machine.is_active && !machine.is_hibernated" class="badge badge-danger" ng-cloak><%=l 'Down' %></span>
                         <span style="float:right;" ng-show="machine.is_hibernated" class="badge badge-warning" ng-cloak><%=l 'Hibernated' %></span>
                         <br><span style="float:right;" ng-show="machine.is_active" class="badge badge-secondary">{{machine.remote_ip}}</span>
+                        <button style="float:right;"
+                                title="{{machine.date_status_change.date_txt}}"
+                            ng-hide="machine.is_active || machine.is_base || !machine.date_status_change.date_txt"
+                            class="badge badge-light border border-secondary info"
+                            >
+                            <span class="info">
+                            {{machine.date_status_change.duration[0]}}
+                            {{machine.date_status_change.duration[1]}}
+                            </span>
+                        </button>
+
                     </td>
-                    <td class="lgMachToggle">
+                    <td class="lgMachToggle" style="white-space:nowrap">
                       <div ng-hide="machine.is_locked||machine.is_base">
                         <button type="button" class="btn btn-success btn-sm"
                          ng-click="action('machine','start',machine.id)"
@@ -261,14 +282,16 @@
                          title="<%=l 'Start' %>">
                          <i class="fa fa-play"></i>
                         </button>
-                        <button type="button" class="btn btn-warning btn-sm"
+                        <button
+                            type="button" class="btn btn-warning btn-sm"
                          ng-click="action('machine','hibernate',machine.id)"
                          ng-disabled="!machine.is_active"
                          ng-show="machine.can_hibernate"
                          title="<%=l 'Hibernate' %>">
                           <i class="fa fa-pause"></i>
                        </button>
-                        <button type="button" class="btn btn-danger btn-sm"
+                       <button
+                            type="button" class="btn btn-danger btn-sm"
                          ng-click="action('machine','shutdown',machine.id)"
                          ng-disabled="!machine.is_active"
                          ng-show="machine.can_shutdown"

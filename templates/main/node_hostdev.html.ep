@@ -68,8 +68,67 @@
         <div ng-show="!hdev.devices"><i class="fa fa-sync-alt fa-spin"></i></div>
         <ul>
             <li ng-repeat="device in hdev.devices">
-                {{device}}
+                {{device.name}}
+                <a class="badge badge-primary" href="/machine/manage/{{device.domain.id}}.html#!#v-pills-hostdev"
+                    ng-show="device.domain">{{device.domain.name}}</a>
             </li>
         </ul>
+        <div ng-show="hdev._bases.length" class="ml-0">
+            <b>Bases</b>
+            <i ng-click="show_bases[hdev.id]=true" ng-show="!show_bases[hdev.id]"
+                class="fa fa-caret-right"></i>
+            <i ng-click="show_bases[hdev.id]=false" ng-show="show_bases[hdev.id]"
+                class="fa fa-caret-down"></i>
+            <div ng-show="show_bases[hdev.id]">
+                <div class="row ml-0 pl-0" ng-repeat="domain in hdev._bases">
+                    <div class="col col-sm-1 ml-0 pl-0" align="right">
+                    </div>
+                    <div class="col col-sm-10 ml-0 pl-0">
+                    <a href="/machine/manage/{{domain.id}}.html"
+                            class="machine"
+                    >
+                    <span ng-class="disabled">{{domain.name}}</span>
+                    </a>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+
+        <div ng-show="hdev._domains.length" class="ml-0">
+            <b>Machines</b>
+            <i ng-click="show_domains[hdev.id]=true" ng-show="!show_domains[hdev.id]"
+                class="fa fa-caret-right"></i>
+            <i ng-click="show_domains[hdev.id]=false" ng-show="show_domains[hdev.id]"
+                class="fa fa-caret-down"></i>
+            <div ng-show="show_domains[hdev.id]">
+                <div class="row ml-0 pl-0" ng-repeat="domain in hdev._domains">
+                    <div class="col col-md-1 ml-0 pl-0" align="right">
+                    <a ng-show="domain.is_locked"
+                        align="right"
+                        title="<%=l 'locked' %>"
+                    ><i class="fa fa-arrow-right"></i>
+                    </a>
+                    </div>
+                    <div class="col col-md-11 ml-0 pl-0">
+                    <a href="/machine/manage/{{domain.id}}.html"
+                            class="machine"
+                              ng-class="{
+                              machine: domain.is_locked==0
+                              ,active_machine: domain.is_locked>0
+                              }"
+
+                    ><b ng-show="domain.is_locked">{{domain.name}}</b>
+                    <span ng-class="disabled" ng-show="domain.is_locked==0">{{domain.name}}</span>
+                    </a>
+                    <span ng-show="domain.is_locked" class="ml-4"><small>{{domain.device}}</small></span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+
     </div>
 </div>

@@ -13,7 +13,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 use_ok('Ravada');
-use_ok('Ravada::Network');
+use_ok('Ravada::Route');
 
 use lib 't/lib';
 use Test::Ravada;
@@ -70,6 +70,7 @@ sub allow_anonymous {
 }
 
 sub _cleanup_info($user_id) {
+    delete_request('cleanup');
     my $req = Ravada::Request->cleanup( );
     wait_request(debug => 0);
     my $sth = connector->dbh->prepare("SELECT name,date_created FROM users where id=?");

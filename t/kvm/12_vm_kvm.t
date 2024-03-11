@@ -15,6 +15,7 @@ init();
 my %CONFIG = (
         connector => connector
         ,config => 't/etc/ravada.conf'
+        ,pid_name => "ravada_install".base_domain_name()
 );
 
 use_ok('Ravada');

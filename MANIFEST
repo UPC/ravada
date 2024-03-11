@@ -55,6 +55,6 @@ lib/Ravada/I18N/ca.po
 lib/Ravada/NetInterface.pm
 lib/Ravada/Auth.pm
 lib/Ravada/Domain.pm
-lib/Ravada/Network.pm
+lib/Ravada/Routes.pm
 script/rvd_front
 script/rvd_back

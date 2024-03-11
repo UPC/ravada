@@ -76,12 +76,13 @@ sub _type_from_file($file, $vm) {
 
     my ($out, $err) = $vm->run_command("file","-L",$file);
     return 'QCOW2'  if $out =~ /QEMU QCOW/;
+    return 'Void'   if $out =~ /ASCII text/;
     return 'RAW';
 }
 
 sub _type_from_extension($file) {
     my ($ext) = $file =~ m{.*\.(.*)};
-    confess if !defined $ext;
+    return if !defined $ext;
     confess if $ext =~ /-/;
     my %type = (
         void => 'Void'
@@ -95,7 +96,7 @@ sub _type_from_extension($file) {
 
 sub _type($file,$vm = undef) {
     return _type_from_file($file,$vm)   if $vm;
-    return _type_from_extension($file);
+    return (_type_from_extension($file) or 'QCOW2');
 }
 
 sub BUILD($self, $arg) {
@@ -111,6 +112,10 @@ sub BUILD($self, $arg) {
     } elsif (exists $arg->{info}) {
         if (exists $arg->{info}->{device} && $arg->{info}->{device} eq 'cdrom') {
             $class = "Ravada::Volume::ISO";
+        } elsif(exists $arg->{info}->{driver} && exists $arg->{info}->{driver}->{type}) {
+            my $name = 'unknown';
+            $name = $arg->{info}->{name} if exists $arg->{info}->{name};
+            $class = "Ravada::Volume::"._type_from_extension("$name.".$arg->{info}->{driver}->{type});
         } else {
             confess "I can't guess class from ".Dumper($arg);
         }
@@ -128,7 +133,8 @@ sub BUILD($self, $arg) {
             && $self->vm
             && $self->vm->file_exists($arg->{file})
             ;
-        $self->_cache_volume_info() if $arg->{domain};
+        $self->_cache_volume_info()
+           if $arg->{domain} && $arg->{domain}->is_known();
     } else {
         $arg->{info} = $self->_get_cached_info();
     }
@@ -210,7 +216,7 @@ sub base_extension($self) {
 
 sub set_info($self, $name, $value) {
     $self->{info}->{$name} = $value;
-    $self->_cache_volume_info() if $self->domain();
+    $self->_cache_volume_info() if $self->domain() && $self->domain()->is_known();
 }
 
 sub delete($self) {
@@ -271,6 +277,7 @@ sub _cache_volume_info($self) {
             ,encode_json(\%info)
         );
         };
+        return if $@ && $@ =~ /foreign key constraint fails/i;
         confess "$name / $n_order \n".$@ if $@;
         return;
     }

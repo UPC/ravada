@@ -23,9 +23,7 @@ sub _base($vm) {
             name => new_domain_name()
             ,user => user_admin
         );
-        my $t0 = time;
         $BASE->spinoff();
-        warn time-$t0;
     } else {
         $BASE = create_domain($vm);
     }

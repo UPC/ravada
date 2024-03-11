@@ -1,4 +1,4 @@
-<div ng-show="name == 'network'" class="form-group mt-4">
+<div ng-show="new_hardware=='network' || name == 'network'" class="form-group mt-4">
     <ul class="list-group list-group-horizontal-md">
         <li class="list-group-item list-group-item-primary"><%=l 'bus' %></li>
         <li class="list-group-item">
@@ -9,17 +9,23 @@
         </li>
         <li class="list-group-item list-group-item-primary"><%=l 'type' %></li>
         <li class="list-group-item">
+
+%       if ($USER->is_admin || $USER->can_create_networks || $USER->can_manage_all_networks ) {
             <select ng-model="item.type"
                     ng-change="network_edit[$index]=true"
                     ng-options="type for type in ['bridge','NAT']"
                     >
                     </select>
+%       } else {
+            {{item.type}}
+%       }
         </li>
         <li class="list-group-item list-group-item-primary">
             <span ng-show="item.type == 'NAT'"><%=l 'nat' %></span>
             <span ng-show="item.type == 'bridge'"><%=l 'bridge' %></span>
         </li>
         <li class="list-group-item">
+%       if ($USER->is_admin || $USER->can_create_networks || $USER->can_manage_all_networks ) {
             <select ng-model="item.network"
                         ng-change="network_edit[$index]=true"
                         ng-show="item.type == 'NAT'"
@@ -35,6 +41,10 @@
             <span ng-hide="item.type == 'NAT' || network_bridges[0]">
               <%=l 'No bridges found' %>
             </span>
+%       } else {
+            <span ng-show="item.type=='NAT'">{{item.network}}</span>
+            <span ng-show="item.type=='bridge'">{{item.bridge}}</span>
+%       }
         </li>
     </ul>
 </div>

@@ -23,6 +23,9 @@ sub test_pci($vm) {
     ok($pci,"Expecting PCI template in ".$vm->name) or return;
 
     my $id = $vm->add_host_device(template => $pci->{name});
+    my $filter_pci = config_host_devices('pci',0);
+    my $hd = Ravada::HostDevice->search_by_id($id);
+    $hd->_data('list_filter' => $filter_pci) if $filter_pci;
 
     my $domain = create_domain_v2(
         vm => $vm
@@ -31,7 +34,7 @@ sub test_pci($vm) {
     );
     _check_there_is_address($domain, '0x0000:0x01:0x00.0x0');
     $domain->add_host_device($id);
-    $domain->start(user_admin);
+    $domain->start(user_admin) if $filter_pci;
 }
 
 sub _check_there_is_address($domain, $address) {

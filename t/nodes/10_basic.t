@@ -650,8 +650,32 @@ sub test_volatile_req($vm, $node) {
     _remove_domain($base);
 }
 
-sub test_volatile_req_clone($vm, $node) {
-    my $base = create_domain($vm);
+sub test_domain_gone($vm, $node) {
+    my $sth = connector->dbh->prepare("INSERT INTO domains (name, id_vm,status, vm) "
+        ." VALUES (?,?,?,?)"
+    );
+    my $name = new_domain_name();
+    $sth->execute($name, $node->id, 'starting', $vm->type);
+    my $req = Ravada::Request->remove_domain(
+        uid => user_admin->id
+        ,name => $name
+    );
+    wait_request();
+    is($req->error,'');
+
+    my $domain = rvd_back->search_domain($name);
+    ok(!$domain);
+
+}
+
+sub test_volatile_req_clone($vm, $node, $machine='pc-i440fx') {
+    if ($vm->type eq 'KVM') {
+        my $id_iso = search_id_iso('Alpine%64');
+        my $iso = $vm->_search_iso($id_iso);
+        $machine = search_latest_machine($vm,$iso->{arch}, $machine);
+    }
+
+    my $base = create_domain_v2(vm => $vm, options => { machine => $machine });
     $base->prepare_base(user_admin);
     $base->set_base_vm(user => user_admin, node => $node);
     $base->volatile_clones(1);
@@ -664,8 +688,7 @@ sub test_volatile_req_clone($vm, $node) {
             ,number => 3
             ,uid => user_admin->id
         );
-        rvd_back->_process_all_requests_dont_fork();
-        rvd_back->_process_all_requests_dont_fork();
+        wait_request();
         is($req->status, 'done');
         is($req->error,'');
 
@@ -1603,6 +1626,11 @@ sub test_displays($vm, $node, $no_builtin=0) {
     $domain->remove(user_admin);
 }
 
+sub test_network($vm, $node) {
+    my @vm_nets= $vm->list_virtual_networks();
+    my $node_nets = $node->list_virtual_networks();
+}
+
 ##################################################################################
 
 if ($>)  {
@@ -1616,7 +1644,7 @@ clean();
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 my $tls;
 
-for my $vm_name (vm_names() ) {
+for my $vm_name (reverse vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -1643,6 +1671,7 @@ for my $vm_name (vm_names() ) {
         $tls = 1 if check_libvirt_tls() && $vm_name eq 'KVM';
         my $node = remote_node($vm_name)  or next;
         clean_remote_node($node);
+        test_network($vm,$node);
 
         ok($node->vm,"[$vm_name] expecting a VM inside the node") or do {
             remove_node($node);
@@ -1651,6 +1680,14 @@ for my $vm_name (vm_names() ) {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+
+        test_domain_gone($vm, $node);
+
+        if ($vm_name eq 'KVM') {
+            test_volatile_req_clone($vm, $node, 'pc-q35');
+        }
+
+        test_volatile_req_clone($vm, $node);
 
         test_pc_other($vm,$node);
 
@@ -1685,7 +1722,6 @@ for my $vm_name (vm_names() ) {
         test_display_ip($vm, $node, 2); # also set localhost ip
 
         test_set_vm_fail($vm, $node);
-        test_volatile_req_clone($vm, $node);
 
         test_change_base($vm, $node);
         test_change_clone($vm, $node);

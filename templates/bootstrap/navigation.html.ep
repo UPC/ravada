@@ -5,7 +5,11 @@ navbar-custom \
 % }
 navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
             <!-- Brand and toggle get grouped for better mobile display -->
-            <a class="navbar-brand" href="/index.html">RAVADA VDI</a>
+%           if ($_user && $_anonymous ) {
+                <a class="navbar-brand" href="/anonymous">Ravada VDI</a>
+%           } else {
+                <a class="navbar-brand" href="/index.html">Ravada VDI</a>
+%           }
             <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -41,6 +45,11 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
 % }
 % if ($_user->is_admin) {
                             <a class="dropdown-item" href="/admin/nodes"><i class="fa fa-server" aria-hidden="true"></i>&nbsp;<%=l 'Nodes' %></a>
+                            <a class="dropdown-item" href="/admin/routes"><i class="fa fa-globe" aria-hidden="true"></i>&nbsp;<%=l 'Routes' %></a>
+                            <a class="dropdown-item" href="/admin/storage"><i class="fa fa-hdd" aria-hidden="true"></i>&nbsp;<%=l 'Storage' %></a>
+% }
+
+% if ($_user->can_create_networks) {
                             <a class="dropdown-item" href="/admin/networks"><i class="fa fa-sitemap" aria-hidden="true"></i>&nbsp;<%=l 'Networks' %></a>
 % }
                             <a class="dropdown-item" href="/admin/messages"><i class="fa fa-envelope" aria-hidden="true"></i>&nbsp;<%=l 'Messages' %></a>
@@ -49,6 +58,7 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
 % }
 % if ($_user->is_admin) {
                             <a class="dropdown-item" href="/admin/settings"><i class="fas fa-tachometer-alt" aria-hidden="true"></i>&nbsp;<%=l 'Settings' %></a>
+                            <a class="dropdown-item" href="/admin/charts"><i class="fas fa-chart-line" aria-hidden="true"></i>&nbsp;<%=l 'Charts' %></a>
 % }
                       </div>
                     </li>
@@ -56,7 +66,7 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
 % if ( !$_anonymous ) {
                     <li class="nav-item dropdown">
                         <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-question"></i>&nbsp;<%=l 'Help' %><span class="caret"></span></a>
-                        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                        <div class="dropdown-menu" style="left:-60%;" aria-labelledby="navbarDropdownMenuLink">
                             <a class="dropdown-item" href="/requirements"><i class="fa fa-cogs"></i>&nbsp;<%=l 'Requirements' %></a>
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item" href="/about"><i class="fa fa-info-circle"></i>&nbsp;<%=l 'About' %></a>
@@ -67,7 +77,7 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
 % if ( !$_anonymous ) {
                     <li class="nav-item dropdown">
                         <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-user"></i>&nbsp;<%= $_logged_in %><span class="caret"></span></a>
-                        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                        <div class="dropdown-menu" style="left:-60%;" aria-labelledby="navbarDropdownMenuLink">
                             <a class="dropdown-item" href="/user_settings"><i class="fa fa-cog" aria-hidden="true"></i><%=l 'Settings' %></a>
                             <a class="dropdown-item" href="/logout"><i class="fa fa-fw fa-power-off"></i><%=l 'Log Out' %></a>
                         </div>

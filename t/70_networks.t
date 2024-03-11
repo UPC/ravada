@@ -10,7 +10,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 use_ok('Ravada');
-use_ok('Ravada::Network');
+use_ok('Ravada::Route');
 
 use lib 't/lib';
 use Test::Ravada;
@@ -28,7 +28,7 @@ sub test_allow_all {
     my $domain = shift;
 
     my $ip = '192.168.1.2/32';
-    my $net = Ravada::Network->new(address => $ip);
+    my $net = Ravada::Route->new(address => $ip);
     ok(!$net->allowed($domain->id),"Expecting not allowed from unknown network");
 
     #check list bases, default allowed
@@ -53,7 +53,7 @@ sub test_allow_all {
     ok(!$net->allowed_anonymous($domain->id),"Expecting denied anonymous from known network");
     ok($net->allowed($domain->id),"Expecting allowed from known network");
 
-    my $net2 = Ravada::Network->new(address => '192.168.1.22/32');
+    my $net2 = Ravada::Route->new(address => '192.168.1.22/32');
     ok($net2->allowed($domain->id),"Expecting allowed from known network");
     ok(!$net2->allowed_anonymous($domain->id),"Expecting denied anonymous from known network");
     { # test list bases anonymous
@@ -68,7 +68,7 @@ sub test_allow_domain {
     my $domain = shift;
 
     my $ip = '10.1.1.1/32';
-    my $net = Ravada::Network->new(address => $ip);
+    my $net = Ravada::Route->new(address => $ip);
     ok(!$net->allowed($domain->id),"Expecting not allowed from unknown network");
 
     { # test list bases anonymous
@@ -197,7 +197,7 @@ sub test_deny_all {
 
     my $ip = '10.0.0.2/32';
 
-    my $net = Ravada::Network->new(address => $ip);
+    my $net = Ravada::Route->new(address => $ip);
     ok(!$net->allowed($domain->id),"Expecting not allowed from unknown network");
 
     { # test list bases anonymous
@@ -266,11 +266,48 @@ sub test_conflict_allowed {
     };
 }
 
+sub test_initial_networks($vm) {
+    my $sth = connector->dbh->prepare("SELECT * FROM networks");
+    $sth->execute();
+
+    my ($localhost, $internal, $default);
+    while (my $row = $sth->fetchrow_hashref) {
+        $localhost = $row if $row->{address} =~ /^127.0.0/;
+        $default = $row if $row->{address} =~ /^0.0.0.0/;
+        $internal = $row if $row->{name} =~ /^internal/;
+    }
+    ok($localhost);
+    like($localhost->{address},qr/^127.0.0/);
+    ok($default);
+    like($default->{address},qr/^0.0.0.0/);
+
+    ok($internal);
+    unlike($internal->{address},qr/^127.0.0/);
+    unlike($internal->{address},qr/^0.0.0.0/);
+
+    rvd_back->_add_internal_network();
+
+    my $sth_del=connector->dbh->prepare("DELETE FROM networks WHERE name like 'internal%'");
+    $sth_del->execute;
+
+    create_domain($vm);
+
+    rvd_back->_add_internal_network();
+
+    $sth=connector->dbh->prepare("SELECT * FROM networks WHERE name like 'internal%'");
+    $sth->execute;
+    my $found = $sth->fetchrow_hashref;
+    ok(!$found) or die Dumper($found);
+
+}
+
 ########################################################################3
 #
 #
 remove_old_domains();
 remove_old_disks();
+
+test_initial_networks($vm);
 
 my $domain_name = new_domain_name();
 my $domain = $vm->create_domain( name => $domain_name
@@ -281,11 +318,11 @@ $domain->is_public(1);
 
 test_conflict_allowed();
 
-my $net = Ravada::Network->new(address => '127.0.0.1/32');
+my $net = Ravada::Route->new(address => '127.0.0.1/32');
 ok($net->allowed($domain->id));
 
 deny_everything_any();
-my $net2 = Ravada::Network->new(address => '10.0.0.0/32');
+my $net2 = Ravada::Route->new(address => '10.0.0.0/32');
 ok(!$net2->allowed($domain->id), "Address unknown should not be allowed to anything");
 
 test_allow_all($domain);

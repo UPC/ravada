@@ -364,3 +364,7 @@ span.info {
     color: black;
     text-width: italic;
 }
+
+a.red {
+    color: red;
+}

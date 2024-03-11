@@ -28,15 +28,6 @@
         %= include 'main/vm_screenshot'
     </div>
 % }
-% if ($domain->type eq 'KVM') {
-    <div class="tab-pane fade" id="v-pills-graphics" role="tabpanel" aria-labelledby="v-pills-graphics-tab">
-% if ($domain->is_base) {
-        %= include 'main/vm_locked_is_base'
-% } else {
-        %= include 'main/vm_graphics'
-% }
-    </div>
-% }
 % if ($USER->can_change_settings($domain->id)) {
     <div class="tab-pane fade" id="v-pills-hardware" role="tabpanel" aria-labelledby="v-pills-hardware-tab" >
         %= include 'main/vm_hardware'
@@ -55,7 +46,7 @@
         %= include 'main/vm_clones'
     </div>
 % }
-% if ( $USER->can_expose_ports() ) {
+% if ( $USER->can_expose_ports($domain->id) ) {
     <div class="tab-pane fade" id="v-pills-ports" role="tabpanel" aria-labelledby="v-pills-ports-tab">
         %= include 'main/vm_ports'
     </div>
@@ -95,6 +86,9 @@
         %= include 'main/vm_hostdev'
     </div>
 % }
+    <div class="tab-pane fade" id="v-pills-share" role="tabpanel" aria-labelledby="v-pills-share-tab">
+        %= include 'main/vm_share'
+    </div>
 
 
 </div><!-- from tab content -->

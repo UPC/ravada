@@ -9,7 +9,7 @@ use Fcntl qw(:flock SEEK_END);
 use File::Copy;
 use File::Path qw(make_path);
 use File::Rsync;
-use Hash::Util qw(lock_keys);
+use Hash::Util qw(lock_keys lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json);
 use Moose;
@@ -398,9 +398,27 @@ sub start($self, @args) {
     $listen_ip = $self->_vm->listen_ip($remote_ip) if !$listen_ip;
 
     $self->_store(is_active => 1);
+    $self->_store(is_hibernated => 0);
     my $password;
     $password = Ravada::Utils::random_name() if $set_password;
     $self->_set_displays_ip( $password, $listen_ip );
+    $self->_set_ip_address();
+
+}
+
+sub _set_ip_address($self) {
+    return if !$self->is_active;
+
+    my $hardware = $self->_value('hardware');
+    my $changed = 0;
+    for my $net (@{$hardware->{network}}) {
+        next if !ref($net);
+        next if exists $net->{address} && $net->{address};
+        next if $net->{type} ne 'nat';
+        $net->{address} = '198.51.100.'.int(rand(253)+2);
+        $changed++;
+    }
+    $self->_store('hardware' => $hardware) if $changed;
 
 }
 
@@ -460,6 +478,7 @@ sub add_volume {
     my $device = ( delete $args{device} or 'disk' );
     my $type = ( delete $args{type} or '');
     my $format = delete $args{format};
+    my $storage = ( delete $args{storage} or $self->_vm->default_storage_pool_name);
 
     if (!$format) {
         if ( $args{file}) {
@@ -476,8 +495,10 @@ sub add_volume {
     my $suffix = $format;
 
     if ( !$args{file} ) {
+        my $path = delete $args{path};
+        $path = $self->_vm->_storage_path($storage) if $storage;
         my $vol_name = ($args{name} or Ravada::Utils::random_name(4) );
-        $args{file} = $self->_config_dir."/$vol_name";
+        $args{file} = "$path/$vol_name";
         $args{file} .= ".$type$suffix" if $args{file} !~ /\.\w+$/;
     }
 
@@ -490,7 +511,7 @@ sub add_volume {
     $args{capacity} = 1024 if !exists $args{capacity};
 
     my %valid_arg = map { $_ => 1 } ( qw( name capacity file vm type swap target allocation
-        driver boot
+        bus boot
     ));
 
     for my $arg_name (keys %args) {
@@ -503,7 +524,7 @@ sub add_volume {
 
     my $data = $self->_load();
     $args{target} = $self->_new_target() if !$args{target};
-    $args{driver} = 'foo' if !exists $args{driver};
+    $args{bus} = 'foo' if !exists $args{bus};
 
     my $hardware = $data->{hardware};
     my $device_list = $hardware->{device};
@@ -513,7 +534,7 @@ sub add_volume {
         ,file => $file
         ,type => $args{type}
         ,target => $args{target}
-        ,driver => $args{driver}
+        ,bus => $args{bus}
         ,device => $device
     };
     $data_new->{boot} = $args{boot} if $args{boot};
@@ -521,7 +542,8 @@ sub add_volume {
     $hardware->{device} = $device_list;
     $self->_store(hardware => $hardware);
 
-    delete @args{'name', 'target', 'driver'};
+    delete @args{'name', 'target', 'bus'};
+
     $self->_create_volume($file, $format, \%args) if ! -e $file;
 
     return $file;
@@ -531,7 +553,20 @@ sub _create_volume($self, $file, $format, $data=undef) {
     confess "Undefined format" if !defined $format;
     if ($format =~ /iso|raw|void/) {
         $data->{format} = $format;
-        $self->_vm->write_file($file, Dump($data)),
+        if ( $format eq 'raw' && $data->{capacity} && $self->is_local) {
+            my $capacity = Ravada::Utils::number_to_size($data->{capacity});
+            my ($count,$unit) = $capacity =~ /^(\d+)(\w)$/;
+            die "Error, I can't find count and unit from $capacity"
+            if !$count || !$unit;
+
+            my @cmd = ("dd","if=/dev/zero","of=$file","count=$count","bs=1$unit"
+            ,"status=none");
+            my ($in, $out, $err);
+            run3(\@cmd, \$in, \$out, \$err);
+            warn "@cmd $err" if $err;
+        } else {
+            $self->_vm->write_file($file, Dump($data)),
+        }
     } elsif ($format eq 'qcow2') {
         my @cmd = ('qemu-img','create','-f','qcow2', $file, $data->{capacity});
         my ($out, $err) = $self->_vm->run_command(@cmd);
@@ -652,7 +687,14 @@ sub list_volumes_info($self, $attribute=undef, $value=undef) {
                 && (!exists $dev->{$attribute} || $dev->{$attribute} ne $value);
         }
         $dev->{n_order} = $n_order++;
-        $dev->{driver_type} = 'void';
+        if (!ref($dev->{driver})) {
+            $dev->{driver} = { type => ($dev->{driver} or 'void') };
+        } else {
+            $dev->{driver}->{type} = 'void';
+        }
+        $dev->{storage_pool} = $self->_vm->_find_storage_pool($dev->{file})
+        if $dev->{file};
+
         my $vol = Ravada::Volume->new(
             file => $dev->{file}
             ,info => $dev
@@ -687,6 +729,7 @@ sub get_info {
     if (!$info->{memory}) {
         $info = $self->_set_default_info();
     }
+    $info->{ip} = $self->ip;
     lock_keys(%$info);
     return $info;
 }
@@ -698,14 +741,13 @@ sub _new_mac($mac='ff:54:00:a7:49:71') {
     return join(":",@macparts);
 }
 
-sub _set_default_info($self, $listen_ip=undef) {
+sub _set_default_info($self, $listen_ip=undef, $network=undef) {
     my $info = {
             max_mem => 512*1024
             ,memory => 512*1024,
             ,cpu_time => 1
             ,n_virt_cpu => 1
             ,state => 'UNKNOWN'
-            ,ip =>'1.1.1.'.int(rand(254)+1)
             ,mac => _new_mac()
             ,time => time
     };
@@ -714,10 +756,22 @@ sub _set_default_info($self, $listen_ip=undef) {
     $self->_set_display($listen_ip);
     my $hardware = $self->_value('hardware');
 
+    my @nets = $self->_vm->list_virtual_networks();
+    my ($net) = grep { $_->{name} eq 'default'} @nets;
+    $net = $nets[0] if !$net;
+    if ($network) {
+        ($net) = grep { $_->{name} eq $network } @nets;
+
+        die "Error: network $network not found ".join(" , ",@nets)
+        if !$net;
+    }
+
     $hardware->{network}->[0] = {
         hwaddr => $info->{mac}
         ,address => $info->{ip}
         ,type => 'nat'
+        ,driver => 'virtio'
+        ,name => $net->{name}
     };
     $self->_store(hardware => $hardware );
 
@@ -775,6 +829,7 @@ sub _set_info {
     my $info = $self->get_info();
     confess "Unknown field $field" if !exists $info->{$field};
 
+    unlock_hash(%$info);
     $info->{$field} = $value;
     $self->_store(info => $info);
 }
@@ -807,8 +862,18 @@ sub disk_size {
 
 sub ip {
     my $self = shift;
-    my $info = $self->_value('info');
-    return $info->{ip};
+    my $hardware = $self->_value('hardware');
+    return if !exists $hardware->{network};
+    for ( 1 .. 2 ) {
+        for my $network(@{$hardware->{network}}) {
+            return $network->{address}
+            if ref($network) && $network->{address};
+        }
+
+        $self->_set_ip_address();
+    }
+
+    return;
 }
 
 sub clean_disk($self, $file) {
@@ -870,12 +935,25 @@ sub _internal_autostart {
     return $self->_value('autostart');
 }
 
+sub _new_network($self) {
+    my $hardware = $self->_value('hardware');
+    my $list = ( $hardware->{'network'} or [] );
+    my $data = {
+        hwaddr => _new_mac()
+        ,address => ''
+        ,type => 'nat'
+        ,driver => 'virtio'
+        ,name => "net".(scalar(@$list)+1)
+    };
+}
+
 sub set_controller($self, $name, $number=undef, $data=undef) {
     my $hardware = $self->_value('hardware');
 
     return $self->_set_controller_disk($data) if $name eq 'disk';
 
     $data->{listen_ip} = $self->_vm->listen_ip if $name eq 'display'&& !$data->{listen_ip};
+    $data->{driver} = 'spice' if $name eq 'display'&& !$data->{driver};
 
     my $list = ( $hardware->{$name} or [] );
 
@@ -887,12 +965,16 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
     my @list2;
     if (!defined $number) {
         @list2 = @$list;
-        push @list2,($data or " $name z 1");
+        $data = $self->_new_network() if $name eq 'network' && !$data;
+        push @list2,($data or "$name z 1");
     } else {
         my $count = 0;
         for my $item ( @$list ) {
             $count++;
             if ($number == $count) {
+                $data = $self->_new_network()
+                if $name eq 'network' && (!$data || ! keys %$data);
+
                 my $data2 = ( $data or " $name a ".($count+1));
                 $data2 = " $name b ".($count+1) if defined $data2 && ref($data2) && !keys %$data2;
 
@@ -901,7 +983,7 @@ sub set_controller($self, $name, $number=undef, $data=undef) {
             }
             $item = { driver => 'spice' , port => 'auto' , listen_ip => $self->_vm->listen_ip }
             if $name eq 'display' && !defined $item;
-            push @list2,($item or " $name b ".($count+1));
+            push @list2,($item or " $name c ".($count+1));
         }
     }
     $hardware->{$name} = \@list2;
@@ -945,7 +1027,7 @@ sub remove_controller {
 
 sub _change_driver_disk($self, $index, $driver) {
     my $hardware = $self->_value('hardware');
-    $hardware->{device}->[$index]->{driver} = $driver;
+    $hardware->{device}->[$index]->{bus} = $driver;
 
     $self->_store(hardware => $hardware);
 }
@@ -964,14 +1046,18 @@ sub _change_disk_data($self, $index, $field, $value) {
 sub _change_hardware_disk($self, $index, $data_new) {
     my @volumes = $self->list_volumes_info();
 
-    my $driver = delete $data_new->{driver};
+    unlock_hash(%$data_new);
+    my $driver;
+    $driver = delete $data_new->{bus} if exists $data_new->{bus};
+    lock_hash(%$data_new);
     return $self->_change_driver_disk($index, $driver) if $driver;
 
     die "Error: volume $index not found, only ".scalar(@volumes)." found."
         if $index >= scalar(@volumes);
 
     my $file = $volumes[$index]->{file};
-    my $new_file = $data_new->{file};
+    my $new_file;
+    $new_file = $data_new->{file} if exists $data_new->{file};
     return $self->_change_disk_data($index, file => $new_file) if defined $new_file;
 
     return if !$file;
@@ -992,21 +1078,32 @@ sub _change_hardware_disk($self, $index, $data_new) {
 
 sub _change_hardware_vcpus($self, $index, $data) {
     my $n = delete $data->{n_virt_cpu};
+    my $max = delete $data->{max_virt_cpu};
     confess "Error: unknown args ".Dumper($data) if keys %$data;
 
     my $info = $self->_value('info');
-    $info->{n_virt_cpu} = $n;
+    $info->{n_virt_cpu} = $n if defined $n;
+    $info->{max_virt_cpu} = $max if defined $max;
     $self->_store(info => $info);
+
+    $self->needs_restart(1);
 }
 
 sub _change_hardware_memory($self, $index, $data) {
+    unlock_hash(%$data);
     my $memory = delete $data->{memory};
     my $max_mem = delete $data->{max_mem};
     confess "Error: unknown args ".Dumper($data) if keys %$data;
 
     my $info = $self->_value('info');
-    $info->{memory} = $memory       if defined $memory;
-    $info->{max_mem} = $max_mem     if defined $max_mem;
+    if (defined $memory && $info->{memory} != $memory) {
+        $info->{memory} = $memory;
+    }
+
+    if (defined $max_mem && $info->{max_mem} != $max_mem) {
+        $info->{max_mem} = $max_mem;
+        $self->needs_restart(1);
+    }
 
     $self->_store(info => $info);
 }

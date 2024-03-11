@@ -8,6 +8,9 @@ use Test::More;
 use lib 't/lib';
 use Test::Ravada;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use_ok('Ravada');
 
 my $FILE_CONFIG = 't/etc/ravada.conf';
@@ -124,6 +127,135 @@ sub test_list_bases {
     $base->remove(user_admin);
     $user2->remove();
 }
+
+sub test_list_bases_many_clones($vm) {
+    my $base = create_domain($vm);
+
+    my $list = rvd_front->list_machines_user(user_admin);
+    my ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok($entry);
+    is($entry->{is_base},0);
+    is($entry->{can_shutdown},0) or die Dumper($entry);
+    is($entry->{can_prepare_base},1) or die Dumper($entry);
+    is_deeply($entry->{list_clones},[]);
+
+    $base->start(user_admin);
+    $list = rvd_front->list_machines_user(user_admin);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    is($entry->{can_shutdown},1) or die Dumper($entry);
+
+    $base->force_shutdown(user_admin);
+
+    $base->prepare_base(user_admin);
+
+    $list = rvd_front->list_machines_user(user_admin);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok($entry);
+    is($entry->{is_base},1);
+    is($entry->{can_prepare_base},0) or die Dumper($entry);
+
+    is($entry->{name}, $base->name) or die Dumper($entry);
+    is($entry->{name_clone},undef);
+    is_deeply($entry->{list_clones},[]);
+
+    my $clone = $base->clone(user => user_admin
+    , name => new_domain_name);
+
+    $list = rvd_front->list_machines_user(user_admin);
+    is(scalar @$list, 1);
+
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    is ($entry->{name}, $base->name);
+    is(scalar(@{$entry->{list_clones}}), 1) or die Dumper($entry->{list_clones});
+
+    my $clone2 = $base->clone(user => user_admin
+    , name => new_domain_name);
+
+    $list = rvd_front->list_machines_user(user_admin);
+    is(scalar @$list, 1);
+
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    is(scalar(@{$entry->{list_clones}}), 2);
+
+    my $clone_info = $entry->{list_clones}->[0];
+    is(ref($clone_info),'HASH');
+    for (qw(id name is_active)) {
+        ok(exists $clone_info->{$_},"Expecting $_ in ".Dumper($clone_info));
+    }
+
+    remove_domain($base);
+
+}
+
+sub test_list_bases_show_clones($vm) {
+    my $base = create_domain($vm);
+
+    my $list = rvd_front->list_machines_user(user_admin);
+
+    $base->prepare_base(user_admin);
+
+    my $clone1 = $base->clone(user => user_admin
+    , name => new_domain_name);
+
+    $list = rvd_front->list_machines_user(user_admin);
+    my ($entry) = grep { $_->{id} == $base->id} @$list;
+
+    ok($entry);
+
+    $base->is_public(0);
+    $base->show_clones(1);
+
+    $list = rvd_front->list_machines_user(user_admin);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok($entry);
+
+    $base->show_clones(0);
+
+    $list = rvd_front->list_machines_user(user_admin);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok($entry);
+
+    my $user = create_user();
+    $list = rvd_front->list_machines_user($user);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok(!$entry);
+
+    $base->is_public(1);
+    $list = rvd_front->list_machines_user($user);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok($entry);
+
+    is(scalar(@{$entry->{list_clones}}),0);
+
+    my $clone2 = $base->clone(user => $user
+    , name => new_domain_name);
+
+    $list = rvd_front->list_machines_user($user);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok($entry);
+    ok($entry->{list_clones}->[0]);
+    is($entry->{list_clones}->[0]->{name},$clone2->name) or die Dumper($entry);
+    is($entry->{list_clones}->[0]->{id},$clone2->id) or die Dumper($entry);
+
+    $base->is_public(0);
+    $base->show_clones(1);
+
+    $list = rvd_front->list_machines_user($user);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok($entry) or die Dumper($list);
+
+    ok($entry->{list_clones}->[0]);+    is($entry->{list_clones}->[0]->{name},$clone2->name) or die Dumper($entry);
+    is($entry->{list_clones}->[0]->{id},$clone2->id) or die Dumper($entry);
+
+    $base->show_clones(0);
+
+    $list = rvd_front->list_machines_user($user);
+    ($entry) = grep { $_->{id} == $base->id} @$list;
+    ok(!$entry);
+
+    remove_domain($base);
+}
+
 #########################################################
 
 remove_old_domains();
@@ -155,6 +287,10 @@ for my $vm_name (reverse sort @VMS) {
         skip $msg,10    if !$vm;
 
         use_ok($CLASS);
+
+        test_list_bases_show_clones($vm);
+
+        test_list_bases_many_clones($vm);
 
         my $domain = test_create_domain($vm_name);
         test_list_domains($vm_name, $domain);

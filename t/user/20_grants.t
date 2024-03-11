@@ -68,7 +68,7 @@ sub test_defaults {
     my %grants_info = $user->grants_info();
     for my $key ( keys %grants ) {
         is($grants_info{$key}->[0],$grants{$key}, $key);
-        if ($key eq 'start_limit') {
+        if ($key eq 'start_limit' || $key =~ /^quota/) {
             is($grants_info{$key}->[1],"int" , $key);
         } else {
             is($grants_info{$key}->[1],"boolean" , $key);
@@ -694,6 +694,64 @@ sub test_create_domain2 {
     $usera->remove();
 }
 
+sub test_expose_ports($vm_name) {
+    my $vm = rvd_back->search_vm($vm_name);
+
+    my $user = create_user("oper_cs$$","bar");
+    my $usera = create_user("admin_cs$$","bar",1);
+
+    is($user->can_expose_ports(), undef);
+    is($usera->can_expose_ports(), 1);
+
+    is($user->can_expose_ports_clones(), undef);
+    is($usera->can_expose_ports_clones(), 1);
+
+
+    my $base = create_domain($vm_name, $usera);
+    $base->prepare_base(user_admin);
+    $base->is_public(1);
+    my $req =Ravada::Request->clone( id_domain => $base->id
+        ,uid => $user->id
+    );
+    wait_request();
+    my ($domain_d) = $base->clones;
+    my $domain = Ravada::Domain->open($domain_d->{id});
+
+    is($user->can_expose_ports($domain->id), 0);
+    is($usera->can_expose_ports($domain->id), 1);
+
+    my %args = (
+                        'id_domain' => $domain->id
+                        ,'port' => 22
+                        ,'name' => 'ssh'
+    );
+    $req = Ravada::Request->expose(%args, uid => $user->id);
+    wait_request(check_error => 0);
+    like($req->error,qr'access denied'i);
+
+    $req = Ravada::Request->expose(%args, uid => $usera->id);
+    wait_request($req);
+    is($req->error,'');
+
+    Ravada::Request->clone(id_domain => $base->id
+        ,uid => $usera->id
+    );
+    wait_request();
+    my ($domain_da) = grep { $_->{id_owner} == $usera->id } $base->clones;
+    $req = Ravada::Request->expose(id_domain=> $domain_da->{id}
+        ,uid => $user->id
+        ,port => 22
+    );
+    wait_request(check_error => 0);
+    like($req->error,qr'access denied'i);
+
+    remove_domain($base);
+    $user->remove();
+    $usera->remove();
+
+
+}
+
 sub test_change_settings($vm_name) {
     my $vm = rvd_back->search_vm($vm_name);
 
@@ -790,6 +848,29 @@ sub test_start_limit_upgrade{
     $usera->remove();
 }
 
+sub test_view_all_upgrade
+{
+    my $sth = connector->dbh->prepare("SELECT id FROM grant_types WHERE name='view_all'");
+    $sth->execute();
+    my ($id) = $sth->fetchrow;
+
+    $sth = connector->dbh->prepare("DELETE FROM grants_user WHERE id_grant=?");
+    $sth->execute($id);
+
+    $sth = connector->dbh->prepare("DELETE FROM grant_types WHERE id=?");
+    $sth->execute($id);
+
+    my $user = create_user("oper_start","bar");
+    my $usera = create_user("admin_start","bar",'is admin');
+    rvd_back->{_null_grants}=0;
+    rvd_back->_install();
+    is($user->can_view_all,0);
+    is($usera->can_view_all,1);
+
+    $user->remove();
+    $usera->remove();
+}
+
 sub test_start_many_upgrade{
     my $user = create_user("oper_startm","bar");
     my $usera = create_user("admin_startm","bar",1);
@@ -815,13 +896,87 @@ sub test_start_many_upgrade{
     $usera->remove();
 }
 
+sub test_view_all($vm) {
+    my $domain;
+    if ($vm->type eq 'KVM') {
+        my $base = import_domain($vm);
+        $domain = $base->clone(name => new_domain_name, user => user_admin);
+    } else {
+        $domain = create_domain($vm);
+    }
+    $domain->expose(22);
+    my $user = create_user();
+    user_admin->grant($user,'view_all');
+    my $req_start = Ravada::Request->start_domain(
+        uid => $user->id
+        ,id_domain => $domain->id
+        ,remote_ip => '192.0.2.1'
+    );
+    my $req_prepare = Ravada::Request->prepare_base(
+        uid => $user->id
+        ,id_domain => $domain->id
+    );
+    my $req_remove = Ravada::Request->remove_domain(
+        uid => $user->id
+        ,name => $domain->name
+    );
+    my $req_refresh = Ravada::Request->refresh_machine(
+        uid => $user->id
+        ,id_domain => $domain->id
+    );
+    wait_request( check_error => 0, debug => 0);
+    my $req_start_admin = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,remote_ip => '192.0.2.1'
+    );
+    wait_request();
 
+    my $req_refresh_ports = Ravada::Request->refresh_machine_ports(
+        uid => $user->id
+        ,id_domain => $domain->id
+        ,after_request => $req_start_admin->id
+    );
+
+    my $req_shutdown= Ravada::Request->shutdown_domain(
+        uid => $user->id
+        ,id_domain => $domain->id
+        ,after_request => $req_start_admin->id
+    );
+    wait_request(check_error => 0, debug => 0);
+
+    my $req_prepare_admin = Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    my $req_remove_base = Ravada::Request->remove_base(
+        uid => $user->id
+        ,id_domain => $domain->id
+    );
+
+    wait_request( check_error => 0, debug => 0);
+    for my $req ($req_prepare, $req_remove_base, $req_shutdown) {
+        is($req->status,'done');
+        like($req->error,qr'User.* (can.t |not allowed)', $req->command)
+            or exit;
+    }
+    for my $req ( $req_start_admin, $req_prepare_admin, $req_start
+    ,$req_refresh, $req_refresh_ports) {
+        is($req->status,'done');
+        next if $req->command =~ /refresh_machine_ports/i;
+        is($req->error,'', $req->command) or exit;
+    }
+
+    $domain->remove(user_admin);
+}
 
 ##########################################################
 
 test_start_many();
 test_start_limit_upgrade();
 test_start_many_upgrade();
+
+test_view_all_upgrade();
 
 test_defaults();
 test_admin();
@@ -844,6 +999,8 @@ for my $vm_name (vm_names()) {
     next if !$vm;
 
     diag("Testing VM $vm_name");
+    test_view_all($vm);
+    test_expose_ports($vm_name);
     test_change_settings($vm_name);
 
     test_shutdown_clone($vm_name);

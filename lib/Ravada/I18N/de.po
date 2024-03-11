@@ -1,34 +1,29 @@
-# Translators:
-# Pascal Scholz <doggeviper@gmail.com>, 2017
+# Translation for Ravada project
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
-"Project-Id-Version: 0.1.0-alpha\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-10-26 16:40+0200\n"
-"PO-Revision-Date: 2022-08-15 14:22+0000\n"
-"Last-Translator: Enno G. <matrixfueller@gmail.com>\n"
-"Language-Team: German <https://hosted.weblate.org/projects/ravada/"
-"translation/de/>\n"
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.14-dev\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.1.1\n"
 
 msgid "Ravada broker"
 msgstr "Ravada Vermittler"
 
-msgid "Name of the machine"
-msgstr "Name der Maschine"
+msgid "Machine Name"
+msgstr "Maschinen Name"
 
 msgid "Tools"
 msgstr "Werkzeuge"
 
-msgid "Machines list"
-msgstr "Maschinenliste"
-
-msgid "Choose a machine to start"
+msgid "Choose a Machine to Start"
 msgstr "Wähle eine Maschine zum starten aus"
 
 msgid "Start"
@@ -41,13 +36,10 @@ msgid "View"
 msgstr "Anzeigen"
 
 msgid "Prepare base"
-msgstr "Basis Vorbereiten"
+msgstr "Basis vorbereiten"
 
 msgid "Clone"
 msgstr "Klonen"
-
-msgid "Can't prepare base, remove base or delete. Machine has"
-msgstr "Basis kann nicht vorbereitet werden, entferne oder lösche die Basis"
 
 msgid "Clone/s"
 msgstr "Klone"
@@ -61,7 +53,7 @@ msgstr "Name"
 msgid "Log Out"
 msgstr "Abmelden"
 
-msgid "Available machines"
+msgid "Available Machines"
 msgstr "Verfügbare Maschinen"
 
 msgid "Help"
@@ -73,22 +65,19 @@ msgstr "Anforderungen"
 msgid "About"
 msgstr "Über"
 
-msgid "Messages"
-msgstr "Nachrichten"
-
 msgid "Mark all as read"
 msgstr "Alle als gelesen markieren"
 
 msgid "Settings"
 msgstr "Einstellungen"
 
-msgid "New machine"
+msgid "New Machine"
 msgstr "Neue Maschine"
 
 msgid "I want to change my password"
 msgstr "Ich möchte mein Passwort ändern"
 
-msgid "I want to change my Language"
+msgid "I want to change my language"
 msgstr "Ich will meine Sprache ändern"
 
 msgid "Language:"
@@ -103,6 +92,27 @@ msgstr "Spanisch"
 msgid "Catalan"
 msgstr "Katalanisch"
 
+msgid "Galician"
+msgstr "Galicisch"
+
+msgid "French"
+msgstr "Französisch"
+
+msgid "Hindi"
+msgstr "Hindi"
+
+msgid "Indonesian"
+msgstr "Indonesisch"
+
+msgid "Persian"
+msgstr "Persisch"
+
+msgid "Japanese"
+msgstr "Japanisch"
+
+msgid "German"
+msgstr "Deutsch"
+
 msgid "New Password:"
 msgstr "Neues Passwort:"
 
@@ -112,35 +122,35 @@ msgstr "Bestätige Passwort:"
 msgid "Submit"
 msgstr "Einreichen"
 
-msgid "Your language has been successfully changed"
-msgstr "Deine Sprache wurde erfolgreich geändert"
+msgid "Your language has been changed successfully"
+msgstr "Die Sprache wurde erfolgreich geändert"
 
-msgid "Your password has been successfully changed"
-msgstr "Dein Passwort wurde erfolgreich ge#ndert"
+msgid "Your password has been changed successfully"
+msgstr "Ihr Passwort wurde erfolgreich geändert"
 
 msgid "Password is too short"
 msgstr "Passwort ist zu kurz"
 
-msgid "Password fields are not matching"
+msgid "Password fields do not match"
 msgstr "Die Passwörter stimmen nicht überein"
 
 msgid "Some of the password fields are empty"
 msgstr "Einige der Passwortfelder sind leer"
 
-msgid "Public"
-msgstr "Öffentlich"
-
 msgid "Status"
 msgstr "Status"
 
 msgid "Actions"
-msgstr "Aktion"
+msgstr "Aktionen"
 
 msgid "Down"
 msgstr "Runter"
 
 msgid "Running"
 msgstr "Läuft"
+
+msgid "Shutdown"
+msgstr "Herunterfahren"
 
 msgid "Screenshot"
 msgstr "Bildschirmfoto"
@@ -187,8 +197,20 @@ msgstr "Administrator"
 msgid "Machines"
 msgstr "Maschinen"
 
+msgid "machines"
+msgstr "Maschinen"
+
 msgid "Users"
 msgstr "Benutzer"
+
+msgid "users"
+msgstr "Benutzer"
+
+msgid "Messages"
+msgstr "Nachrichten"
+
+msgid "messages"
+msgstr "Nachrichten"
 
 msgid "Admin tools"
 msgstr "Administratorwerkzeuge"
@@ -196,23 +218,11 @@ msgstr "Administratorwerkzeuge"
 msgid "Remove base"
 msgstr "Entferne Basis"
 
-msgid "New Base"
-msgstr "Neue Basis"
-
 msgid "Restore"
 msgstr "Wiederherstellen"
 
 msgid "Hibernate"
 msgstr "Ruhezustand"
-
-msgid "Shutdown"
-msgstr "Herunterfahren"
-
-msgid "Action"
-msgstr "Aktion"
-
-msgid "Will remove all the contents of the machine"
-msgstr "Entfernt den gesamten Inhalt der Maschine"
 
 msgid "Are you sure?"
 msgstr "Sind Sie sicher?"
@@ -232,30 +242,33 @@ msgstr "Maschineneinstellungen"
 msgid "Cannot remove base, machine has clones"
 msgstr "Basis kann nicht entfernt werden, Maschine hat Klone"
 
-msgid "Show/hide clones"
-msgstr "Zeige/Verstecke Klone"
+msgid "show clones"
+msgstr "Klone anzeigen"
 
-msgid "For Spice redirection you'll need to install"
-msgstr "Für die Spice-Umleitung müssen Sie installieren"
+msgid "hide clones"
+msgstr "Klonen ausblenden"
 
-msgid "on your computer."
-msgstr "auf deinem Computer"
+msgid "For Spice redirection you will need to install"
+msgstr "Für die Spice Weiterleitung müssen Sie folgendes installieren"
+
+msgid "in your computer."
+msgstr "in Ihrem Computer."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
 msgstr "Suche in deiner Distribution (Debian/Ubuntu)"
 
-msgid "You'll need to install"
-msgstr "Suchen Sie in Ihrer Distribution, z.B. in Debian / Ubuntu mit"
+msgid "You will need to install"
+msgstr "Sie müssen folgendes installieren"
 
 msgid "and USB drivers ("
 msgstr "und USB-Treiber ("
 
 msgid ""
-"Be aware that in Windows, Spice redirection is not automatic. It's "
+"Be aware that in Windows, Spice redirection is not automatic. It is "
 "necessary to associate protocol with the app."
 msgstr ""
-"Beachten Sie, dass die Spice-Umleitung in Windows nicht automatisch erfolgt. Es ist "
-"notwendig, um das Protokoll mit der App zu verknüpfen."
+"Beachten Sie, dass die Spice-Umleitung in Windows nicht automatisch erfolgt. "
+"Es ist notwendig, um das Protokoll mit der App zu verknüpfen."
 
 msgid "To make this possible, download"
 msgstr "Um dies zu ermöglichen, laden Sie"
@@ -264,8 +277,8 @@ msgid ""
 "or copy the following lines in an ASCII file and save with extension .reg, "
 "then execute the file."
 msgstr ""
-"oder kopieren Sie folgende zeilen in eine ASCII Datei und Speichern Sie "
-"diese mitder .reg Erweiterung."
+"oder kopieren Sie folgende Zeilen in eine ASCII Datei und Speichern Sie "
+"diese mit der .reg Erweiterung."
 
 msgid "Login"
 msgstr "Anmelden"
@@ -276,8 +289,11 @@ msgstr "Willkommen"
 msgid "A viewer is required to run the virtual machines."
 msgstr "Ein Viewer ist erforderlich, um die virtuellen Maschinen auszuführen."
 
+msgid "It is required a viewer to run the virtual machines."
+msgstr "Zum Ausführen der virtuellen Maschinen ist ein Viewer erforderlich."
+
 msgid "Virtual Machines"
-msgstr "virtuelle Maschine"
+msgstr "Virtuelle Maschinen"
 
 msgid "User"
 msgstr "Benutzer"
@@ -287,9 +303,6 @@ msgstr "Passwort"
 
 msgid "Start session"
 msgstr "Starte Sitzung"
-
-msgid "Login with Intranet UPC's username."
-msgstr "Melden Sie sich mit dem Benutzernamen des Intranets UPC an."
 
 msgid "bits) in your computer."
 msgstr "Bits) in Ihrem Computer."
@@ -301,7 +314,10 @@ msgid "can change the settings of owned virtual machines."
 msgstr "kann die Einstellungen von eigenen virtuellen Maschinen ändern."
 
 msgid "can change the settings of any virtual machines."
-msgstr "kann die Einstellungen aller virtuellen Maschinen ändern."
+msgstr "kann die Einstellungen jeglicher virtuellen Maschine ändern."
+
+msgid "can change the settings of any virtual machines "
+msgstr "kann die Einstellungen jeder virtuellen Maschine ändern "
 
 msgid "cloned from one base owned by the user."
 msgstr "von einer Basis geklont, die dem Benutzer gehört."
@@ -325,7 +341,9 @@ msgid "can hibernate any virtual machine."
 msgstr "kann jede virtuelle Maschine in den Ruhezustand versetzen."
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr "kann Klone von virtuellen Maschinen, die dem Benutzer gehören, in den Ruhezustand bringen."
+msgstr ""
+"kann Klone von virtuellen Maschinen, die dem Benutzer gehören, in den "
+"Ruhezustand bringen."
 
 msgid "can hibernate any clone."
 msgstr "kann jeden Klon in den Ruhezustand bringen."
@@ -337,13 +355,16 @@ msgid "can remove any virtual machine."
 msgstr "kann jede virtuelle Maschine entfernen."
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr "kann Klone von virtuellen Maschinen entfernen, die dem Benutzer gehören."
+msgstr ""
+"kann Klone von virtuellen Maschinen entfernen, die dem Benutzer gehören."
 
 msgid "can remove any clone."
 msgstr "kann jeden Klon entfernen."
 
 msgid "can take a screenshot of any virtual machine owned by the user."
-msgstr "kann einen Screenshot einer virtuellen Maschine erstellen, die dem Benutzer gehört"
+msgstr ""
+"kann einen Screenshot einer virtuellen Maschine erstellen, die dem Benutzer "
+"gehört."
 
 msgid "can take a screenshot of any virtual machine."
 msgstr "kann einen Screenshot einer virtuellen Maschine erstellen."
@@ -352,7 +373,8 @@ msgid "can shutdown any virtual machine."
 msgstr "kann jede virtuelle Maschine herunterfahren."
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr "kann Klone von virtuellen Maschinen herunterfahren, die dem Benutzer gehören."
+msgstr ""
+"kann Klone von virtuellen Maschinen herunterfahren, die dem Benutzer gehören."
 
 msgid "Submit Query"
 msgstr "Anfrage absenden"
@@ -369,8 +391,12 @@ msgstr "Server"
 msgid "Select Template"
 msgstr "Vorlage auswählen"
 
-msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
-msgstr "Dieses ISO-Image wurde noch nicht heruntergeladen. Es kann einige Minuten dauern, sogar Stunden, bis die Datei aus dem Internet geholt wird."
+msgid ""
+"This ISO image has not been downloaded yet. It may take some minutes, even "
+"hours until the file is fetched from the Internet."
+msgstr ""
+"Dieses ISO-Image wurde noch nicht heruntergeladen. Es kann einige Minuten "
+"dauern, sogar Stunden, bis die Datei aus dem Internet geholt wird."
 
 msgid "Download now"
 msgstr "Jetzt herunterladen"
@@ -385,7 +411,7 @@ msgid "Disk Size: (GB)"
 msgstr "Festplattengröße: (GB)"
 
 msgid "Swap Size: (GB)"
-msgstr "Größe tauschen:(GB)"
+msgstr "Swap Größe: (GB)"
 
 msgid "Ram: (GB)"
 msgstr "Arbeitsspeicher: (GB)"
@@ -403,445 +429,39 @@ msgid "ISO image selection is required."
 msgstr "ISO-Image ist erforderlich."
 
 msgid "Template selection is required."
-msgstr "Vorlagen auswahl ist erforderlich."
+msgstr "Eine Vorlagenauswahl ist erforderlich"
 
 msgid "A machine with that name already exists."
 msgstr "Eine Maschine mit diesem Namen existiert bereits."
 
-msgid "The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points."
-msgstr "Der Maschinenname darf nur aus Buchstaben, Zahlen, Bindestrichen und Punkten bestehen."
+msgid ""
+"The machine name is only allowed to consist of alphabetic characters, "
+"numbers, dashes and points."
+msgstr ""
+"Der Maschinenname darf nur aus Buchstaben, Zahlen, Bindestrichen und Punkten "
+"bestehen."
 
 msgid "Create"
 msgstr "Erstellen"
 
 msgid ""
-"can change the settings of all virtual machines "
-"cloned from one base owned by the user."
+"can change the settings of all virtual machines cloned from one base owned "
+"by the user."
 msgstr ""
-"kann die Einstellungen aller virtuellen Maschinen ändern "
-"geklont von einer Basis, die dem Benutzer gehört."
-
-msgid "You will need to install"
-msgstr "Sie müssen Folgendes installieren"
-
-msgid "in your computer."
-msgstr "in Ihrem Computer."
-
-msgid "hide clones"
-msgstr "Klonen ausblenden"
-
-msgid "show clones"
-msgstr "Klonen anzeigen"
-
-msgid "messages"
-msgstr "Nachrichten"
-
-msgid "users"
-msgstr "Benutzer"
-
-msgid "machines"
-msgstr "Maschinen"
-
-msgid "Password fields do not match"
-msgstr "Passwortfelder stimmen nicht überein"
-
-msgid "Your password has been changed successfully"
-msgstr "Ihr Passwort wurde erfolgreich geändert"
-
-msgid "Your language has been changed successfully"
-msgstr "Die Sprache wurde erfolgreich geändert"
-
-msgid "German"
-msgstr "Deutsch"
-
-msgid "Japanese"
-msgstr "Japanisch"
-
-msgid "Persian"
-msgstr "Persisch"
-
-msgid "Indonesian"
-msgstr "Indonesisch"
-
-msgid "Hindi"
-msgstr "Hindi"
-
-msgid "French"
-msgstr "Französisch"
-
-msgid "Galician"
-msgstr "Galicisch"
-
-msgid "I want to change my language"
-msgstr "Ich möchte die Sprache ändern"
-
-msgid "Verifying"
-msgstr "Verifizierung"
-
-msgid "save"
-msgstr "speichern"
-
-msgid "verify"
-msgstr "überprüfen"
-
-msgid "has at least"
-msgstr "hat mindestens"
-
-msgid "Add description"
-msgstr "Beschreibung hinzufügen"
-
-msgid "Yes, shutwdown all the clones"
-msgstr "Ja, alle Klone herunterfahren"
-
-msgid ""
-"Be aware that in Windows, Spice redirection is not automatic. It is "
-"necessary to associate protocol with the app."
-msgstr ""
-"Seien Sie sich bewusst das in Windows die Spice Weiterleitung nicht "
-"automatisch ist. Es ist notwendig ein Protokoll zu assoziieren"
-
-msgid "Once you delete the machine, there is no going back. Please be certain."
-msgstr ""
-"Wenn sie die Maschine löschen gibt es kein zurück. Bitte seinen Sie sich "
-"sicher."
-
-msgid "This will remove all the"
-msgstr "Das wird alle entfernen, die"
-
-msgid "This virtual machine can't be removed because it has"
-msgstr ""
-"Diese virtuelle Maschine kann nicht entfernt werden weil sie folgendes hat"
-
-msgid "Development"
-msgstr "Entwicklung"
-
-msgid "Machine locked by"
-msgstr "Maschine gesperrt von"
-
-msgid "For more information, check"
-msgstr "Für mehr Informationen, überprüfen Sie"
-
-msgid "The machine will shutdown after these minutes"
-msgstr "Die Maschine wird sich nach diesen Minuten herunterfahren"
-
-msgid "Update password"
-msgstr "Passwort aktualisieren"
-
-msgid "Start all clones"
-msgstr "Strate alle Klone"
-
-msgid "Available Machines"
-msgstr "Verfügbare Maschinen"
-
-msgid "is admin"
-msgstr "ist Administrator"
-
-msgid "Add new user"
-msgstr "Neuen Nutzer hinzufügen"
-
-msgid "Register"
-msgstr "Registrieren"
-
-msgid "This Machine is a base"
-msgstr "Die Maschine ist die Basis"
-
-msgid "Current Password:"
-msgstr "Aktuelles Passwort:"
-
-msgid "Cloned"
-msgstr "Kopiert"
-
-msgid "License"
-msgstr "Lizenz"
-
-msgid "Machine Name"
-msgstr "Maschinen Name"
-
-msgid "Choose a Machine to Start"
-msgstr "Wählen Sie eine Maschine zum Starten"
-
-msgid "New Machine"
-msgstr "Neue Maschine"
-
-msgid "This machine will shut down"
-msgstr "Diese Maschine wird herunterfahren"
-
-msgid "No entries found"
-msgstr "Keine Einträge gefunden"
-
-msgid "Username"
-msgstr "Benutzername"
-
-msgid "Hide Private"
-msgstr "Verstecke Private"
-
-msgid "Rename"
-msgstr "Umbenennen"
-
-msgid "Options"
-msgstr "Optionen"
-
-msgid "Drivers"
-msgstr "Treiber"
-
-msgid "Graphics"
-msgstr "Grafik"
-
-msgid "Remove Machine"
-msgstr "Maschine entfernen"
-
-msgid "System overview"
-msgstr "Systemübersicht"
-
-msgid "Danger Zone"
-msgstr "gefährlicher Bereich"
-
-msgid "Danger"
-msgstr "Gefahr"
-
-msgid "Yes, remove"
-msgstr "Ja, entferne"
-
-msgid "Virtual Machine"
-msgstr "Virtuelle Maschine"
-
-msgid "clones of the machine"
-msgstr "klone der Maschine"
-
-msgid "Yes, remove all the clones"
-msgstr "Ja, entferne alle Klone"
-
-msgid "Enter Username"
-msgstr "Benutzername eingeben"
-
-msgid "Portuguese"
-msgstr "Portugiesisch"
-
-msgid "in your downloads folder."
-msgstr "in Ihrem Download Ordner."
-
-msgid "copied to clipboard"
-msgstr "in die Zwischenablage kopiert"
-
-msgid "the Windows Clients documentation"
-msgstr "die Windows Endgeräte Dokumentation"
-
-msgid "It is programmed in"
-msgstr "Es ist programmiert in"
-
-msgid "with perl framework"
-msgstr "mit dem Perl Framework"
-
-msgid "Memory"
-msgstr "Arbeitsspeicher"
-
-msgid "MB available"
-msgstr "MB verfügbar"
-
-msgid "Cancel"
-msgstr "Abbrechen"
-
-msgid "Please enter the following information to create the account"
-msgstr ""
-"Bitte geben Sie die folgenden Informationen ein um ein Konto zu erstellen"
-
-msgid "Enter Password"
-msgstr "Passwort eingeben"
-
-msgid "Username is required"
-msgstr "Benutzername wird benötigt"
-
-msgid "Empty login name"
-msgstr "Leerer Benutzername"
-
-msgid "Empty password"
-msgstr "Leeres Passwort"
-
-msgid "Session timeout"
-msgstr "Sitzung abgelaufen"
-
-msgid "Vietnamese"
-msgstr "Vietnamesisch"
-
-msgid "Italian"
-msgstr "Italienisch"
-
-msgid "Attribute"
-msgstr "Attribut"
-
-msgid "User name"
-msgstr "Benutzername"
-
-msgid "NAT"
-msgstr "NAT"
-
-msgid "Bridge"
-msgstr "Brücke"
-
-msgid "Copying the screenshot, please wait a moment..."
-msgstr "Bildschirmfoto wird kopiert, bitte warten Sie einen Moment…"
-
-msgid "Hardware address"
-msgstr "Hardware Adresse"
-
-msgid "Open ports"
-msgstr "Offene Ports"
-
-msgid "Waiting for network to come up"
-msgstr "Warten auf die Verfügbarkeit des Netzwerkes"
-
-msgid "No machines"
-msgstr "Keine Maschinen"
-
-msgid "All machines"
-msgstr "Alle Maschinen"
-
-msgid "Users from this network can run all virtual machines"
-msgstr "Benutzer von diesem Netzwerk können alle virtuellen Maschinen ausführen"
-
-msgid "Description"
-msgstr "Beschreibung"
-
-msgid "Password must be at least 5 characters"
-msgstr "Passwort muss mindestens 5 Zeichen lang sein"
-
-msgid "Access denied"
-msgstr "Zugriff verweigert"
-
-msgid "It may take a couple of minutes."
-msgstr "Es kann ein paar Minuten dauern."
-
-msgid "For Spice redirection you will need to install"
-msgstr "Für die Spice Weiterleitung müssen Sie folgendes installieren"
-
-msgid "and"
-msgstr "und"
-
-msgid "No bridges found"
-msgstr "Keine Brücken gefunden"
-
-msgid "removed"
-msgstr "entfernt"
-
-msgid "SSO/CAS Login"
-msgstr "SSO/CAS Login"
-
-msgid "Password is required"
-msgstr "Passwort wird benötigt"
-
-msgid "not found in LDAP server"
-msgstr "nicht gefunden in LDAP Server"
-
-msgid "Confirm Password"
-msgstr "Passwort bestätigen"
-
-msgid "The machine will turn off after this time"
-msgstr "Die Maschine wird sich nach dieser Zeit ausschalten"
+"kann die Einstellungen aller virtuellen Maschinen ändern geklont von einer "
+"Basis, die dem Benutzer gehört."
 
 msgid "monitoring"
 msgstr "Überwachung"
 
-msgid "Authors"
-msgstr "Autoren"
+msgid "Are you sure you want to remove the Base of"
+msgstr "Sind Sie sicher, dass Sie die Grundlage entfernen wollen von "
 
-msgid "Username can only contain words, numbers, dashes, dots and underscores"
-msgstr ""
-"Der Nutzername kann nur Wörter, Zahlen, Bindestriche, Punkte und "
-"Unterstriche enthalten"
+msgid "Are you sure you want to prepare the Base of"
+msgstr "Sind Sie sicher, dass Sie die Grundlage anlegen wollen von "
 
-msgid "Change password"
-msgstr "Ändere Passwort"
-
-msgid "public"
-msgstr "öffentlich"
-
-msgid "It is required a viewer to run the virtual machines."
-msgstr "Zum Ausführen der virtuellen Maschinen ist ein Viewer erforderlich."
-
-msgid "Hybernating ..."
-msgstr "Ruhezustand …"
-
-msgid "This machine has not Graphics parameters!"
-msgstr "Diese Maschine hat keine Grafik-Parameter!"
-
-msgid "Add"
-msgstr "Hinzufügen"
-
-msgid "Show active"
-msgstr "Aktive anzeigen"
-
-msgid "Shutting down ..."
-msgstr "Fährt herunter …"
-
-msgid "Hide clones"
-msgstr "Klone verstecken"
-
-msgid "can change the settings of any virtual machine."
-msgstr "kann die Einstellungen jeglicher virtuellen Maschine ändern."
-
-msgid "Change the owner of the machine"
-msgstr "Ändere den Eigentümer der Maschine"
-
-msgid "to an ASCII file and save it with a .reg extension, then execute the file."
-msgstr ""
-"in eine ASCII Datei und speichere sie mit einer .reg Erweiterung und führe "
-"die Datei aus."
-
-msgid "Show clones"
-msgstr "Klone anzeigen"
-
-msgid "can remove any virtual machine owned by the user."
-msgstr "kann jede virtuelle Maschine entfernen, die dem Benutzer gehört."
-
-msgid "clones"
-msgstr "Klone"
-
-msgid "Changing Base State"
-msgstr "Basis Status ändern"
-
-msgid "Username must be at least 5 characters"
-msgstr "Der Nutzername muss mindestens 4 Buchstaben haben"
-
-msgid "Confirm password is required"
-msgstr "Das Passwort muss bestätigt werden"
-
-msgid "action"
-msgstr "Aktion"
-
-msgid "Start again"
-msgstr "Starte neu"
-
-msgid "The password for this virtual machine connection is :"
-msgstr "Das Passwort für die Verbindung zur virtuellen Maschine ist:"
-
-msgid "The machine is down."
-msgstr "Die Maschine ist ausgeschaltet."
-
-msgid "Remove"
-msgstr "Entferne"
-
-msgid "licensed."
-msgstr "lizenziert."
-
-msgid "Setting your default language"
-msgstr "Die Standardsprache einstellen"
-
-msgid "Remove Base"
-msgstr "Basis entfernen"
-
-msgid "To make this possible, copy the content of"
-msgstr "Um dies zu ermöglichen, kopiere den Inhalt von"
-
-msgid "Please, make sure you have the right path and release, according to your PC configuration."
-msgstr ""
-"Bitte stellen Sie sicher, dass Sie den richtigen Pfad und die richtige "
-"Version entsprechend Ihrer PC-Konfiguration haben."
-
-msgid "can change the settings of any virtual machine "
-msgstr "kann die Einstellungen jeder virtuellen Maschine ändern "
-
-msgid "Template selection is required"
-msgstr "Eine Vorlagenauswahl ist erforderlich"
+msgid "Are you sure you want to change the Public state of"
+msgstr "Sind Sie sicher, dass den Status ändern wollen von"
 
 msgid "Search"
 msgstr "Suche"
@@ -864,8 +484,55 @@ msgstr "Benutzereinstellungen"
 msgid "Create a new account"
 msgstr "Neues Konto erstellen"
 
+msgid "Username"
+msgstr "Benutzername"
+
+msgid "Hide Private"
+msgstr "Verstecke Private"
+
 msgid "Show All"
 msgstr "Alles anzeigen"
+
+msgid "Shutting down ..."
+msgstr "Fährt herunter …"
+
+msgid "It may take a couple of minutes."
+msgstr "Es kann ein paar Minuten dauern."
+
+msgid "Hybernating ..."
+msgstr "Ruhezustand …"
+
+msgid "Description"
+msgstr "Beschreibung"
+
+msgid "Rename"
+msgstr "Umbenennen"
+
+msgid "Options"
+msgstr "Optionen"
+
+msgid "Drivers"
+msgstr "Treiber"
+
+msgid "Graphics"
+msgstr "Grafik"
+
+msgid "Remove Machine"
+msgstr "Maschine entfernen"
+
+msgid "System overview"
+msgstr "Systemübersicht"
+
+msgid "Danger Zone"
+msgstr "gefährlicher Bereich"
+
+msgid "Once you delete the machine, there is no going back. Please be certain."
+msgstr ""
+"Wenn sie die Maschine löschen gibt es kein zurück. Bitte seinen Sie sich "
+"sicher."
+
+msgid "Danger"
+msgstr "Gefahr"
 
 msgid "This will remove all the contents of the machine"
 msgstr "Das wird den Inhalt der Maschine komplett entfernen"
@@ -876,8 +543,35 @@ msgstr "Diese Aktion kann nicht rückgängig gemacht werden"
 msgid "Are you sure ?"
 msgstr "Sind Sie sicher?"
 
+msgid "Yes, remove"
+msgstr "Ja, entferne"
+
+msgid "Virtual Machine"
+msgstr "Virtuelle Maschine"
+
+msgid "removed"
+msgstr "entfernt"
+
+msgid "This will remove all the"
+msgstr "Das wird alle entfernen, die"
+
+msgid "clones of the machine"
+msgstr "klone der Maschine"
+
+msgid "Yes, remove all the clones"
+msgstr "Ja, entferne alle Klone"
+
+msgid "This virtual machine can't be removed because it has"
+msgstr "Die virtuelle Maschine kann nicht gelöscht werden weil"
+
+msgid "clones"
+msgstr "Klone"
+
 msgid "Clones"
 msgstr "Klone"
+
+msgid "This machine has not Graphics parameters!"
+msgstr "Diese Maschine hat keine Grafik-Parameter!"
 
 msgid "recommended"
 msgstr "empfohlen"
@@ -888,8 +582,32 @@ msgstr "zu"
 msgid "Changing Public State"
 msgstr "Öffentlichen Status ändern"
 
+msgid "Changing Base State"
+msgstr "Basis Status ändern"
+
+msgid "action"
+msgstr "Aktion"
+
+msgid "Grants"
+msgstr "Erlauben"
+
+msgid "public"
+msgstr "Öffentlich"
+
+msgid "New Base"
+msgstr "Neue Basis"
+
+msgid "Version"
+msgstr "Version"
+
+msgid "Authors"
+msgstr "Autoren"
+
+msgid "Development"
+msgstr "Entwicklung"
+
 msgid "Below are listed the technologies used in this project:"
-msgstr "Untenstehend die Technologien die im Projekt verwendet werden:"
+msgstr "Folgende Technologien werden im Projekt verwendet:"
 
 msgid "The code is available on "
 msgstr "Der Quellcode ist verfügbar auf"
@@ -897,41 +615,160 @@ msgstr "Der Quellcode ist verfügbar auf"
 msgid "The code is "
 msgstr "Der Code ist"
 
+msgid "License"
+msgstr "Lizenz"
+
+msgid "Machine locked by"
+msgstr "Maschine gesperrt von"
+
+msgid "This Machine is a base"
+msgstr "Die Maschine ist die Basis"
+
+msgid "Cloned"
+msgstr "Kopiert"
+
+msgid "is admin"
+msgstr "ist Administrator"
+
+msgid "Add new user"
+msgstr "Neuen Nutzer hinzufügen"
+
+msgid "Register"
+msgstr "Registrieren"
+
+msgid "Current Password:"
+msgstr "Aktuelles Passwort:"
+
+msgid "For more information, check"
+msgstr "Für mehr Informationen, überprüfen Sie"
+
+msgid "the Windows Clients documentation"
+msgstr "die Windows Endgeräte Dokumentation"
+
+msgid "It is programmed in"
+msgstr "Es ist programmiert in"
+
+msgid "with perl framework"
+msgstr "mit dem Perl Framework"
+
+msgid "and"
+msgstr "und"
+
+msgid "Memory"
+msgstr "Arbeitsspeicher"
+
+msgid "MB available"
+msgstr "MB verfügbar"
+
+msgid "The machine will shutdown after these minutes"
+msgstr "Die Maschine wird sich nach diesen Minuten herunterfahren"
+
+msgid "Cancel"
+msgstr "Abbrechen"
+
+msgid "Please enter the following information to create the account"
+msgstr ""
+"Bitte geben Sie die folgenden Informationen ein um ein Konto zu erstellen"
+
+msgid "Enter Username"
+msgstr "Benutzername eingeben"
+
+msgid "Enter Password"
+msgstr "Passwort eingeben"
+
+msgid "Confirm Password"
+msgstr "Passwort bestätigen"
+
+msgid "Username is required"
+msgstr "Benutzername wird benötigt"
+
 msgid "Username can not exceed 20 characters"
 msgstr "Nutzername kann 20 Zeichen nicht überschreiten"
+
+msgid "Username must be at least 5 characters"
+msgstr "Der Nutzername muss mindestens 5 Buchstaben haben"
+
+msgid "Username can only contain words, numbers, dashes, dots and underscores"
+msgstr ""
+"Der Nutzername kann nur Wörter, Zahlen, Bindestriche, Punkte und "
+"Unterstriche enthalten"
+
+msgid "Password is required"
+msgstr "Passwort wird benötigt"
 
 msgid "Password can not exceed 20 characters"
 msgstr "Passwort kann nicht länger als 20 Zeichen sein"
 
+msgid "Password must be at least 5 characters"
+msgstr "Passwort muss mindestens 5 Zeichen lang sein"
+
+
 msgid "Password can only contain words and numbers"
 msgstr "Passwort kann nur Wörter und Zahlen enthalten"
 
-msgid "Confirm password can not exceed 20 characters"
+msgid "Hibernating ..."
+msgstr "Ruhezustand …"
+
+msgid "Confirm Password is required"
+msgstr "Das Passwort muss bestätigt werden"
+
+msgid "Confirm Password can not exceed 20 characters"
 msgstr "Bestätige dass das Passwort nicht mehr als 20 Zeichen hat"
 
-msgid "Confirm password must be at least 5 characters"
+msgid "Confirm Password must be at least 5 characters"
 msgstr "Bestätige dass das Passwort mindestens 5 Zeichen haben muss"
 
-msgid "Confirm password can only contain words and numbers"
+msgid "Confirm Password can only contain words and numbers"
 msgstr "Bestätige dass das Passwort nur Wörter und Ziffern enthalten kann"
 
 msgid "This information will be available to the users"
 msgstr "Diese Information wird den Nutzern verfügbar sein"
 
-msgid "Owner"
-msgstr "Eigentümer"
-
-msgid "Press SHIFT + F12 to exit the virtual machine"
-msgstr "Drücke SHIFT + F12 um die virtuelle Maschine zu verlassen"
-
-msgid "Version"
-msgstr "Version"
-
 msgid "Volatile Clones"
 msgstr "Flüchtige Klone"
 
+msgid "Owner"
+msgstr "Eigentümer"
+
+msgid "Change the owner of the machine"
+msgstr "Ändere den Eigentümer der Maschine"
+
+msgid "Press SHIFT + F12 to exit"
+msgstr "Drücke SHIFT + F12 um die virtuelle Maschine zu verlassen"
+
+msgid ""
+"If you can not see the machine screen in a few seconds check for a file "
+"called"
+msgstr ""
+"Wenn Sie den Bildschirm nicht in ein paar Sekunden sehen überprüfen Sie die "
+"Datei"
+
+msgid "in your downloads folder."
+msgstr "in Ihrem Download Ordner."
+
+msgid "copied to clipboard"
+msgstr "in die Zwischenablage kopiert"
+
+msgid "Portuguese"
+msgstr "Portugiesisch"
+
 msgid "Read more."
 msgstr "Lese mehr."
+
+msgid "The password for this virtual machine connection is :"
+msgstr "Das Passwort für die Verbindung zur virtuellen Maschine ist:"
+
+msgid "view"
+msgstr "anzeigen"
+
+msgid "Start again"
+msgstr "Starte neu"
+
+msgid "The machine is down."
+msgstr "Die Maschine ist ausgeschaltet."
+
+msgid "Remove"
+msgstr "Entferne"
 
 msgid "The machine must be started to take the screenshot."
 msgstr "Die Maschine muss angeschaltet sein um ein Bildschirmfoto aufzunehmen."
@@ -939,18 +776,39 @@ msgstr "Die Maschine muss angeschaltet sein um ein Bildschirmfoto aufzunehmen."
 msgid "Take screenshot"
 msgstr "Bildschirmfoto aufnehmen"
 
+msgid "Set base picture"
+msgstr "Basisbild setzen"
+
 msgid "Saving the screenshot, please wait a moment..."
 msgstr "Bildschirmfoto wird aufgenommen, bitte warte einen Moment…"
+
+msgid "You need to run the machine in order to take a screenshot."
+msgstr "Die Maschine muss laufen, um einen Screenshot zu erstellen."
+
+msgid "Copying the screenshot, please wait a moment..."
+msgstr "Bildschirmfoto wird kopiert, bitte warten Sie einen Moment…"
+
+msgid "You need a screenshot in order to copy it to the base machine."
+msgstr "Sie brauchen einen Screenshot um es auf die Basis Maschine zu kopieren"
+
+msgid "Add"
+msgstr "Hinzufügen"
 
 msgid "The changes will apply on next restart"
 msgstr "Die Änderungen werden beim nächsten Neustart aktiv"
 
-msgid "This machine is running and can't be renamed."
+msgid "This VM is running and can't be renamed."
 msgstr ""
 "Während die Maschine eingeschaltet ist, kann sie nicht umbenannt werden."
 
 msgid "Thanks to:"
 msgstr "Dank geht an:"
+
+msgid "licensed."
+msgstr "lizenziert."
+
+msgid "New Node"
+msgstr "Neuer Knoten"
 
 msgid "Address"
 msgstr "Adresse"
@@ -958,5 +816,1156 @@ msgstr "Adresse"
 msgid "A node with that name already exists."
 msgstr "Ein Knoten mit diesem Namen existiert bereits."
 
-msgid "New Node"
-msgstr "Neuer Knoten"
+msgid "Setting your default language"
+msgstr "Die Standardsprache einstellen"
+
+msgid "Change password"
+msgstr "Ändere Passwort"
+
+msgid "Update password"
+msgstr "Passwort aktualisieren"
+
+msgid "Start all clones"
+msgstr "Starte alle Klone"
+
+msgid "Access denied"
+msgstr "Zugriff verweigert"
+
+msgid "Empty login name"
+msgstr "Leerer Benutzername"
+
+msgid "Empty password"
+msgstr "Leeres Passwort"
+
+msgid "Session timeout"
+msgstr "Sitzung abgelaufen"
+
+msgid "Vietnamese"
+msgstr "Vietnamesisch"
+
+msgid "Italian"
+msgstr "Italienisch"
+
+msgid "Type a typical LDAP user name to fetch the attribute list"
+msgstr ""
+"Nutzen Sie einen typischen LDAP Nutzernamen um die Attribute zu erhalten"
+
+msgid "User name"
+msgstr "Benutzername"
+
+msgid "not found in LDAP server"
+msgstr "nicht gefunden in LDAP Server"
+
+msgid "Attribute"
+msgstr "Attribut"
+
+msgid "Value"
+msgstr "Wert"
+
+msgid "Allowed"
+msgstr "Erlaubt"
+
+msgid "Last"
+msgstr "Letzte"
+
+msgid "Default"
+msgstr "Vorauswahl"
+
+msgid "If none of the previous match, access is allowed."
+msgstr "Zugriff erlaubt, wenn keins der vorherigen zutrifft"
+
+msgid "If none of the previous match, access is denied."
+msgstr "Zugriff verweigert, wenn keins der vorherigen zutrifft"
+
+msgid "verify"
+msgstr "überprüfen"
+
+msgid "save"
+msgstr "speichern"
+
+msgid "Verifying"
+msgstr "Verifizierung"
+
+msgid "No entries found"
+msgstr "Keine Einträge gefunden"
+
+msgid "has at least"
+msgstr "hat mindestens"
+
+msgid "entries."
+msgstr "Einträge."
+
+msgid "Enable last for not allowed restrictions."
+msgstr "Als letztes aktivieren für erlaube Restriktionen."
+
+msgid "Add description"
+msgstr "Beschreibung hinzufügen"
+
+msgid "These actions affect all the clones on the machine"
+msgstr "Diese Aktion betrifft alle Klone dieser Maschine"
+
+msgid "Shutdown all clones"
+msgstr "Alle Klone herunterfahren"
+
+msgid "Keep in mind that there may be users using a clone"
+msgstr "Denken Sie dran, dass Nutzer den Klone verwenden könnten"
+
+msgid "Yes, shutwdown all the clones"
+msgstr "Ja, alle Klone herunterfahren"
+
+msgid "-- choose hardware --"
+msgstr "-- Hardware auswählen --"
+
+msgid "A node with that address already exists."
+msgstr "Es existiert bereits ein Knoten mit dieser Adresse."
+
+msgid "Accept"
+msgstr "Akzeptieren"
+
+msgid "Access"
+msgstr "Zugreifen"
+
+msgid "Action"
+msgstr "Aktion"
+
+msgid "Active"
+msgstr "Aktiv"
+
+msgid "Add another user"
+msgstr "Weiteren Nutzer anlegen"
+
+msgid "Add groups"
+msgstr "Gruppe hinzufügen"
+
+msgid "Add new Display"
+msgstr "Neuen Bildschirm hinzufügen"
+
+msgid "Add new disk"
+msgstr "Neue Festplatte hinzufügen"
+
+msgid "Add to group"
+msgstr "Zur Gruppe hinzufügen"
+
+msgid "Admin users can still log in from"
+msgstr "Administratoren können sich weiterhin einloggen"
+
+msgid "Advanced options"
+msgstr "Erweiterte Optionen"
+
+msgid "All events"
+msgstr "Alle Ereignisse"
+
+msgid "All machines"
+msgstr "Alle Maschinen"
+
+msgid "Anonymous"
+msgstr "Anonym"
+
+msgid "Any remote client can access this port"
+msgstr "Jeder verbundene Client kann auf diesen Port zugreifen"
+
+msgid "Apply"
+msgstr "Anwenden"
+
+msgid "Are you sure you want to migrate"
+msgstr "Möchten Sie wirklich migrieren"
+
+msgid "Are you sure you want to prepare the base of"
+msgstr ""
+
+msgid "Are you sure you want to remove the"
+msgstr ""
+
+msgid "Are you sure you want to remove the base of"
+msgstr ""
+
+msgid "Are you sure you want to remove the node"
+msgstr "Möchten Sie diesen Knoten wirlich entfernen"
+
+msgid "Are you sure you want to remove this group ?"
+msgstr "Möchten Sie diese Gruppe wirklich entfernen?"
+
+msgid "Are you sure you want to spinoff from the base?"
+msgstr ""
+
+msgid "Assign this virtual machine to the pre-started pool"
+msgstr "Diese virtuelle Maschine einem bereits gestartetem pool zuweisen"
+
+msgid "Attachment"
+msgstr "Anhang"
+
+msgid "Autostart"
+msgstr "Autostart"
+
+msgid "BIOS"
+msgstr "BIOS"
+
+msgid "Balance"
+msgstr "Balance"
+
+msgid "Base"
+msgstr "Basis"
+
+msgid "Bases"
+msgstr ""
+
+msgid "Bookings"
+msgstr "Buchungen"
+
+msgid "Bookings require LDAP authentication."
+msgstr "Buchungen benötigen LDAP authentifizierung"
+
+msgid "Bridge"
+msgstr "Brücke"
+
+msgid "CPU Features"
+msgstr "CPU Features"
+
+msgid "CPUs"
+msgstr "CPUs"
+
+msgid "Can expose virtual machine ports."
+msgstr "Kann Ports der virtuellen Maschine freigeben"
+
+msgid "Can get a screenshot of own virtual machines."
+msgstr "Kann Bildschirmaufnahmen von eigenen virtuellen Maschinen erstellen"
+
+msgid "Can have an unlimited amount of machines started."
+msgstr "Kann eine unbegrenzte Anzahl von Maschinen starten"
+
+msgid "Can manage groups."
+msgstr "Kann Gruppen verwalten"
+
+msgid "Can reboot all virtual machines."
+msgstr "Kann alle virtuellen Maschinen neu starten"
+
+msgid "Can reboot clones own virtual machines."
+msgstr ""
+
+msgid "Can reboot own virtual machines."
+msgstr "Kann eigene virtuelle Maschinen neu starten"
+
+msgid "Can rename any virtual machine owned by the user."
+msgstr "Kann jede viruelle Maschine dieses Nutzers umbenennen"
+
+msgid "Can rename any virtual machine."
+msgstr "Kann jede virtuelle Maschine umbenennen"
+
+msgid "Can rename clones from virtual machines owned by the user."
+msgstr "Kann Klone von virtuellen Maschinen dieses Nutzers umbenennen"
+
+msgid "Can shutdown own virtual machines."
+msgstr "Kann eigene virtuelle Maschinen umbenennen"
+
+msgid "Can view groups."
+msgstr "Kann Gruppen anzeigen"
+
+msgid "Change"
+msgstr "Ändern"
+
+msgid "Changing the base of a virtual machine is potentially dangerous and can't be undone."
+msgstr "Das ändern der Grundlage einer virtuellen maschine ist potentiell gefährlich und kann nicht rückgängig gemacht werden."
+
+msgid "Check"
+msgstr "Kontrollieren"
+
+msgid "Check connection to"
+msgstr "Kontrolliere die Verbindung zu"
+
+msgid "Choose the virtualization type of the Node."
+msgstr "Virtualisierungstyp des Knoten wählen."
+
+msgid "Choose the virtualization type of the Virtual Machine."
+msgstr "Virtualisierungstyp der virtuellen Maschine wählen."
+
+msgid "Client"
+msgstr ""
+
+msgid "Client headers"
+msgstr ""
+
+msgid "Clones are volatile, so all the pool will be started."
+msgstr ""
+
+msgid "Clones created from this machine will be removed on shutdown."
+msgstr "Klone die auf dieser Maschine erstellt wurden, werden beim herunterfahren gelöscht."
+
+msgid "Close"
+msgstr "Schließen"
+
+msgid "Color"
+msgstr "Farbe"
+
+msgid "Compact"
+msgstr "Kompakt"
+
+msgid "Compact disk volumes"
+msgstr ""
+
+msgid "Configure LDAP Authentication"
+msgstr "LDAP Authentifizierung einrichten"
+
+msgid "Confirm"
+msgstr "Bestätigen"
+
+msgid "Confirm disable node"
+msgstr "Deaktivieren des Knoten bestätigen"
+
+msgid "Confirm password can not exceed 20 characters"
+msgstr "Passwort bestätigen darf nicht länger sein als 20 Zeichen"
+
+msgid "Confirm password can only contain words and numbers"
+msgstr "Passwort bestätigen darf nur aus zahlen und wörtern bestehen"
+
+msgid "Confirm password is required"
+msgstr "Passwort bestätigen wird benötigt"
+
+msgid "Confirm password must be at least 5 characters"
+msgstr "Passwort bestätigen muss mindestend 5 Zeichen lang sein"
+
+msgid "Congrats"
+msgstr "Glückwunsch"
+
+msgid "Contact Method"
+msgstr "Kontaktmethode"
+
+msgid "Content will be cleaned on restore"
+msgstr "Inhalt wird beim wiederherstellen gelöscht"
+
+msgid "Content will be cleaned on restore and shutdown"
+msgstr "Inhalt wird beim wiederherstellen und herunterfahren gelöscht"
+
+msgid "Content will be kept on restore"
+msgstr "Inhalt wird beim wiederherstellen behalten"
+
+msgid "Create a new group"
+msgstr "Neue Gruppe erstellen"
+
+msgid "Current memory (MB)"
+msgstr "Aktueller Speicher (MB)"
+
+msgid "Danger: This will destroy all the disk data permantently."
+msgstr "Achtung: Alle daten werden dieser Festplatte werden permanent gelöscht."
+
+msgid "Data"
+msgstr "Daten"
+
+msgid "Debug"
+msgstr ""
+
+msgid "Debug Ports"
+msgstr "Debug Ports"
+
+msgid "Debug Ports Exposed"
+msgstr "Debug Ports öffentlich"
+
+msgid "Delete"
+msgstr "Löschen"
+
+msgid "Delete the event"
+msgstr "Das Ereignis löschen"
+
+msgid "Disable"
+msgstr "Deaktivieren"
+
+msgid "Disabled"
+msgstr "Deaktiviert"
+
+msgid "Disabling this node will shut all the"
+msgstr ""
+
+msgid "Display"
+msgstr "Anzeige"
+
+msgid "Display IP :"
+msgstr ""
+
+msgid "Display Password"
+msgstr ""
+
+msgid "Display Port :"
+msgstr ""
+
+msgid "Display Port secure :"
+msgstr ""
+
+msgid "Display URL :"
+msgstr ""
+
+msgid "Edit the event"
+msgstr ""
+
+msgid "Email"
+msgstr "E-Mail"
+
+msgid "Enable"
+msgstr "Aktivieren"
+
+msgid "Enables display password when available"
+msgstr ""
+
+msgid "End"
+msgstr "Ende"
+
+msgid "Enter New Password"
+msgstr "Neues Passwort eigeben"
+
+msgid "Enter Old Password"
+msgstr "Alten Passwort eingeben"
+
+msgid "Enter group name"
+msgstr "Gruppenname eingeben"
+
+msgid "Error:"
+msgstr "Fehler:"
+
+msgid "Error: the LDAP entry for this user has been removed."
+msgstr "Fehler: Der LDAP Eintrag für diesen Benutzer wurde gelöscht."
+
+msgid "Error: you want to have"
+msgstr ""
+
+msgid "Event properties"
+msgstr "Ereigniseigenschaften"
+
+msgid "Event saved successfully"
+msgstr "Ereignis erfolgreich gespeichert"
+
+msgid "Exec clones sequentially"
+msgstr ""
+
+msgid "Exec. time"
+msgstr "Ausführzeit"
+
+msgid "Fail"
+msgstr "Fehlgeschlagen"
+
+msgid "Fallback"
+msgstr "Fallback"
+
+msgid "Fill required camps with valid data"
+msgstr ""
+
+msgid "For Spice client setup follow this "
+msgstr ""
+
+msgid "Force Reboot"
+msgstr "Neustart erzwingen"
+
+msgid "Force ShutDown"
+msgstr "Herunterfahren erzwingen"
+
+msgid "Force change password on first access"
+msgstr "Erzwinge Passwortänderung beim ersten Zugriff"
+
+msgid "From"
+msgstr "Von"
+
+msgid "Frontend"
+msgstr "Frontend"
+
+msgid "Global Settings"
+msgstr "Globale Einstellungen"
+
+msgid "Group"
+msgstr "Gruppe"
+
+msgid "Group name"
+msgstr "Gruppenname"
+
+msgid "Group name can not exceed 80 characters"
+msgstr "Gruppenname darf nicht länger als 80 Zeichen sein"
+
+msgid "Group name is required"
+msgstr "Gruppenname erforderlich"
+
+msgid "Groups"
+msgstr "Gruppen"
+
+msgid "Groups require a LDAP server configured."
+msgstr "Gruppen erfordern einen konfigurierten LDAP Server"
+
+msgid "Groups with permissions"
+msgstr "Gruppen mit Rechten"
+
+msgid "Hardware"
+msgstr "Hardware"
+
+msgid "Hardware address"
+msgstr "Hardwareadresse"
+
+msgid "Hibernated"
+msgstr "Im Ruhezustand"
+
+msgid "Hide active"
+msgstr "Aktive ausblenden"
+
+msgid "Hide clones"
+msgstr "Klone ausblenden"
+
+msgid "I can't find"
+msgstr ""
+
+msgid "I don't know settings tabs for:"
+msgstr ""
+
+msgid "ISO file"
+msgstr "Datenträgeabbild"
+
+msgid "If you have any issue, you can contact the Suport crew and we will try to help you. Please, only contact Support Center if it is strictly necessary."
+msgstr "Bei Problemen, kontaktieren Sie bitte unseren Support. Wir bitten Sie von unnötigen Anfragen ab."
+
+msgid "Import"
+msgstr "Importieren"
+
+msgid "Internal IP"
+msgstr "Interne IP"
+
+msgid "Invalid IP network address. Expecting a.b.c.d/e"
+msgstr "Ungültige Netzwerkadresse. Erwartet: a.b.c.d/e"
+
+msgid "Invalid Template"
+msgstr "Ungültige Vorlage"
+
+msgid "Keep the CD for the clones"
+msgstr "CD für Klone behalten"
+
+msgid "LDAP"
+msgstr "LDAP"
+
+msgid "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+msgstr "LDAP Gruppen werden benötigt, um Reservierungen zu aktivieren. Es wurden Gruppen ohne Mitglieder gefunden. <a href='/admin/groups'>Neuer Eintrag.</a>"
+
+msgid "Legacy"
+msgstr "Legacy"
+
+msgid "Loading ..."
+msgstr "Lade ..."
+
+msgid "Loading machine"
+msgstr "Lade Maschine"
+
+msgid "Loading nodes"
+msgstr "Lade Knoten"
+
+msgid "Machine"
+msgstr "Maschine"
+
+msgid "Machine Information"
+msgstr "Maschineninformationen"
+
+msgid "Machines Notifications"
+msgstr "Maschinenbenachrichtigungen"
+
+msgid "Maintenance"
+msgstr "Wartung"
+
+msgid "Maintenance End"
+msgstr "Ende der Wartung"
+
+msgid "Maintenance Start"
+msgstr "Beginn der Wartung"
+
+msgid "Manage machine"
+msgstr "Maschine verwalten"
+
+msgid "Max Memory"
+msgstr "Max. Speicher"
+
+msgid "Max memory (MB)"
+msgstr "Max. Speicher (MB)"
+
+msgid "Minimum port number to expose virtual machine services."
+msgstr "Kleinste Port-Nummer zur Veröffentlichung von VM Diensten"
+
+msgid "Monitoring"
+msgstr "Überwachung"
+
+msgid "NAT"
+msgstr "NAT"
+
+msgid "Network"
+msgstr "Netzwerk"
+
+msgid "Network address is required."
+msgstr "Netzwerkadresse ist erforderlich"
+
+msgid "Network name is required"
+msgstr "Netzwerkname ist erforderlich"
+
+msgid "Networks"
+msgstr "Netzwerke"
+
+msgid "New Booking"
+msgstr "Neue Reservierung"
+
+msgid "New Group"
+msgstr "Neue Gruppe"
+
+msgid "New Network"
+msgstr "Neues Netzwerk"
+
+msgid "New Password can only contain words and numbers"
+msgstr "Neues Passwort darf nur aus Buchstaben und Zahlen bestehen"
+
+msgid "New Password is required"
+msgstr "Neues Passwort ist erforderlich"
+
+msgid "New Password must be at least 6 characters"
+msgstr "Neues Passwort muss mindestens 6 Zeichen lang sein"
+
+msgid "New feature"
+msgstr "Neues Feature"
+
+msgid "New group member"
+msgstr "Neues Gruppenmitglied"
+
+msgid "New name"
+msgstr "Neuer Name"
+
+msgid "New network"
+msgstr "Neues Netzwerk"
+
+msgid "New password"
+msgstr "Neues Passwort"
+
+msgid "New user"
+msgstr "Neuer Benutzer"
+
+msgid "No LDAP groups created."
+msgstr "Keine LDAP Gruppen erstellt."
+
+msgid "No Results Found"
+msgstr "Keine Ergebnisse gefunden"
+
+msgid "No bases found"
+msgstr ""
+
+msgid "No bridges found"
+msgstr "Keine Brücken gefunden"
+
+msgid "No groups found"
+msgstr "Keine Gruppen gefunden"
+
+msgid "No machines"
+msgstr "Keine Maschinen"
+
+msgid "No machines found"
+msgstr "Keine Maschinen gefunden"
+
+msgid "No members found"
+msgstr "Keine Mitglieder gefunden"
+
+msgid "No message to show!"
+msgstr "Keine Nachricht zum Anzeigen!"
+
+msgid "No, cancel"
+msgstr "Nein, Abbrechen"
+
+msgid "Node"
+msgstr "Knoten"
+
+msgid "Node disabled"
+msgstr "Knoten deaktiviert"
+
+msgid "Node down"
+msgstr "Knote offline"
+
+msgid "Node with machines from the same user"
+msgstr "Knoten mit Maschinen des selben Nutzers"
+
+msgid "Node with more free memory"
+msgstr "Knoten mit freiem Speicher"
+
+msgid "Nodes"
+msgstr "Knoten"
+
+msgid "Nothing to monitoring"
+msgstr "Nichts zu überwachen"
+
+msgid "Number of virtual machines that normal users can have running at the same time"
+msgstr "Max. Anzahl virtueller Maschinen, die ein Nutzer gleichzeitig starten kann"
+
+msgid "Old Password can only contain words and numbers"
+msgstr "Altes Passwort darf nur aus Buchstaben und Zahlen bestehen"
+
+msgid "Old Password is required"
+msgstr "Altes Passwort ist erforderlich"
+
+msgid "Old and New Passwords match!"
+msgstr "Altes und neues Passwort stimmen überein!"
+
+msgid "Only remote client can access this port"
+msgstr "Nur Remote Clients können diesen Port verwenden"
+
+msgid "Only remote client can access this port if restricted"
+msgstr "Nur Remote Clients können diesen Port verwenden, wenn eingeschränkt"
+
+msgid "Only users from these groups will be allowed to execute this machine"
+msgstr "Nur Mitglieder dieser Gruppe dürfen diese Maschine ausführen"
+
+msgid "Oops!"
+msgstr "Ups!"
+
+msgid "Open ports"
+msgstr "Offene Ports"
+
+msgid "Password and their confirmation do not match!"
+msgstr "Passwort und Passwortwiederholung stimmen nicht überein!"
+
+msgid "Passwords do not match!"
+msgstr "Passwörter stimmen nicht überein"
+
+msgid "Permission granted to user"
+msgstr "Rechte wurden Benutzer hinzugefügt"
+
+msgid "Permission revoked from user"
+msgstr "Rechte wurden Benutzer entzogen"
+
+msgid "Phone"
+msgstr "Telefon"
+
+msgid "Phone Number"
+msgstr "Telefonnummer"
+
+msgid "Please insert"
+msgstr "Bitte eingeben"
+
+msgid "Please select an ISO file"
+msgstr "Bitte ISO-Datei auswählen"
+
+msgid "Please, make sure you have the right path and release, according to your PC configuration."
+msgstr ""
+
+msgid "Pool"
+msgstr "Pool"
+
+msgid "Port"
+msgstr "Port"
+
+msgid "Port expose"
+msgstr "Öffentlicher Port"
+
+msgid "Ports"
+msgstr "Ports"
+
+msgid "Poweroff"
+msgstr "Ausschalten"
+
+msgid "Prepare Base"
+msgstr ""
+
+msgid "Prepare this machine as a base to create clones from it."
+msgstr "Diese Maschine als Vorlage vorbereiten, um Klone damit zu erstellen."
+
+msgid "PrepareBase"
+msgstr ""
+
+msgid "Press SHIFT + F12 to exit the virtual machine"
+msgstr "Umschalt + F12 drücken, um Maus und Tastatur freizugeben"
+
+msgid "Primary can not be unset, enable it in another video device"
+msgstr ""
+
+msgid "Primary video devices will move to first"
+msgstr "Primäres Videogerät wird an die erste Stelle verschoben"
+
+msgid "Public"
+msgstr "Öffentlich"
+
+msgid "Public Port"
+msgstr "Öffentlicher Port"
+
+msgid "Purge"
+msgstr "Löschen"
+
+msgid "Purge disk volumes"
+msgstr "Festplatte löschen"
+
+msgid "RAM (Gb)"
+msgstr "RAM (Gb)"
+
+msgid "Ravada Apache documentation"
+msgstr "Ravada Apache Dokumentation"
+
+msgid "Re-Enter New Password"
+msgstr "Neues Passwort erneut eigeben"
+
+msgid "Rebase"
+msgstr ""
+
+msgid "Rebase all the clones to a new base"
+msgstr ""
+
+msgid "Rebase this machine to another virtual machine"
+msgstr ""
+
+msgid "Reboot"
+msgstr "Neustart"
+
+msgid "Recent requests"
+msgstr "Letzte Anfragen"
+
+msgid "Refresh"
+msgstr "Aktualisieren"
+
+msgid "Refresh ports"
+msgstr "Ports aktualisieren"
+
+msgid "Reload"
+msgstr "Neu laden"
+
+msgid "Remove Base"
+msgstr ""
+
+msgid "Remove Clones"
+msgstr "Klone löschen"
+
+msgid "Remove bases in node"
+msgstr ""
+
+msgid "Remove group"
+msgstr "Gruppe entfernen"
+
+msgid "Remove the base prepared from this machine"
+msgstr ""
+
+msgid "Removing Virtual Machine"
+msgstr "Entferne virtuelle Maschine"
+
+msgid "Repeat"
+msgstr "Wiederholen"
+
+msgid "Repeated New Password is required"
+msgstr "Wiederholtes, neues Passwort ist erforderlich"
+
+msgid "Request"
+msgstr "Anfrage"
+
+msgid "Requests"
+msgstr "Anfragen"
+
+msgid "Requires viewer password when implemented"
+msgstr "Benötigt Anzeigepasswort, wenn implementiert"
+
+msgid "Restricted"
+msgstr "Eingeschränkt"
+
+msgid "Run Timeout"
+msgstr ""
+
+msgid "SSO/CAS Login"
+msgstr "SSO/CAS Login"
+
+msgid "Save"
+msgstr "Speichern"
+
+msgid "Save changes"
+msgstr "Änderungen speichern"
+
+msgid "Schedule"
+msgstr "Planen"
+
+msgid "Search group"
+msgstr "Gruppe suchen"
+
+msgid "See documentation about:"
+msgstr "Dokumentation prüfen für:"
+
+msgid "Select the .iso file the machine will utilize when installing the OS."
+msgstr "Wählen Sie eine ISO-Datei aus, welches das Betriebssystem enthält."
+
+msgid "Server in maintenance until"
+msgstr "Serverwartung bis"
+
+msgid "Set New Password"
+msgstr "Neues Passwort setzen"
+
+msgid "Set defaults"
+msgstr "Setze Standardwerte"
+
+msgid "Set either"
+msgstr ""
+
+msgid "Setup a LDAP Server"
+msgstr "LDAP Server einrichten"
+
+msgid "Show active"
+msgstr "Aktive anzeigen"
+
+msgid "Show clones"
+msgstr "Klone anzeigen"
+
+msgid "Show/Hide clones"
+msgstr "Klone anzeigen/verstecken"
+
+msgid "ShutDown"
+msgstr "Herunterfahren"
+
+msgid "Shutdown Timeout"
+msgstr "Herunterfahren Zeitüberschreitung"
+
+msgid "Shutdown disconnected"
+msgstr "Herunterfahren getrennt"
+
+msgid "Sorry"
+msgstr "Entschuldige"
+
+msgid "Source Machine"
+msgstr "Quellmaschine"
+
+msgid "Spinoff clone"
+msgstr ""
+
+msgid "Spinoff this clone from its base."
+msgstr ""
+
+msgid "Start Limit"
+msgstr "Startlimit"
+
+msgid "Start after create the virtual machine"
+msgstr "Nach erstellen starten"
+
+msgid "Start after migration"
+msgstr "Nach migration starten"
+
+msgid "Support Contact"
+msgstr "Supportkontakt"
+
+msgid "Swap"
+msgstr "Swap"
+
+msgid "System Disk: (GB)"
+msgstr "System Disk: (GB)"
+
+msgid "Template selection is required"
+msgstr "Auswahl einer Vorlage ist erforderlich"
+
+msgid "Testing connection to"
+msgstr "Teste verbindung zu"
+
+msgid "The Minimum Disk Size needed for this ISO is"
+msgstr "Minimale Festplattengröße für diese ISO beträgt"
+
+msgid "The Minimum Swap Disk Size needed for this ISO is"
+msgstr "Minimale Swap Größe für diese ISO beträgt"
+
+msgid "The VM is"
+msgstr "Die VM ist"
+
+msgid "The machine will power off after this minutes after shutdown."
+msgstr "Nach dem Herunterfahren wird die Maschine nach dieser Zeit ausgeschaltet"
+
+msgid "The machine will turn off after this time"
+msgstr "Die Maschine wird nach dieser Zeit ausgeschaltet"
+
+msgid "The new user"
+msgstr "Der neue Benutzer"
+
+msgid "The source machine is not a base. It must be prepared before it can be copied. This process may take some minutes."
+msgstr ""
+
+msgid "There are no LDAP groups defined."
+msgstr "Es wurden keine LDAP Gruppen definiert."
+
+msgid "There are no active virtual machines"
+msgstr "Es gibt keine aktiven virtuellen Maschinen"
+
+msgid "This ISO is being downloaded. The virtual machine will be created after."
+msgstr "Diese ISO wird gerade heruntergeladen. Die virtuelle Maschine wird danach gestartet."
+
+msgid "This Virtual Machine has no display hardware attached"
+msgstr "Diese virtuelle Maschine verfügt über kein angeschlossenes Display"
+
+msgid "This address is duplicated"
+msgstr ""
+
+msgid "This base can't be removed because the domain has clones."
+msgstr ""
+
+msgid "This base has"
+msgstr ""
+
+msgid "This base has clones"
+msgstr ""
+
+msgid "This booking overlaps already scheduled reservations"
+msgstr ""
+
+msgid "This can't be undone"
+msgstr ""
+
+msgid "This event"
+msgstr ""
+
+msgid "This event and the following"
+msgstr ""
+
+msgid "This event and the following with same day of week"
+msgstr ""
+
+msgid "This feature requires a LDAP server configured."
+msgstr ""
+
+msgid "This field is required"
+msgstr ""
+
+msgid "This group has been removed."
+msgstr ""
+
+msgid "This is a main node and can't be removed."
+msgstr ""
+
+msgid "This machine has a CD-ROM"
+msgstr ""
+
+msgid "This machine is base and can't be modified."
+msgstr ""
+
+msgid "This machine is base and it can't be modified."
+msgstr ""
+
+msgid "This machine is hibernated and can't be renamed."
+msgstr ""
+
+msgid "This machine is locked by process"
+msgstr ""
+
+msgid "This machine is running and can't be modified."
+msgstr ""
+
+msgid "This machine is running and can't be renamed."
+msgstr ""
+
+msgid "This machine will shut down"
+msgstr ""
+
+msgid "This name is duplicated"
+msgstr ""
+
+msgid "This name is invalid. It can only contain alphabetic, numbers, undercores and dashes and must start by a letter."
+msgstr ""
+
+msgid "This node has"
+msgstr ""
+
+msgid "This node is local"
+msgstr ""
+
+msgid "This server has reservations for today. Machines from users out of\n    the booking list will be shutdown."
+msgstr ""
+
+msgid "This user has never logged in the Ravada server."
+msgstr ""
+
+msgid "This virtual machine has already been compacted"
+msgstr ""
+
+msgid "This virtual machine has clones that are bases and won't be removed"
+msgstr ""
+
+msgid "This virtual machine has no backups to purge"
+msgstr ""
+
+msgid "This virtual machine has no group restrictions."
+msgstr ""
+
+msgid "This virtual machine is running. It must be shut down before migrate."
+msgstr ""
+
+msgid "Time"
+msgstr ""
+
+msgid "Title"
+msgstr ""
+
+msgid "To"
+msgstr ""
+
+msgid "To make this possible, copy the content of"
+msgstr ""
+
+msgid "Today Schedule"
+msgstr ""
+
+msgid "Type"
+msgstr ""
+
+msgid "Type the ISO pathname"
+msgstr ""
+
+msgid "Type the name of the volume disk to confirm:"
+msgstr ""
+
+msgid "Type the template name"
+msgstr ""
+
+msgid "UEFI"
+msgstr ""
+
+msgid "Until"
+msgstr ""
+
+msgid "User is not member of any group."
+msgstr ""
+
+msgid "User not found"
+msgstr ""
+
+msgid "Users from this network can run all virtual machines"
+msgstr ""
+
+msgid "Users from this network can run no virtual machines"
+msgstr ""
+
+msgid "Virtual Machine will be shutdown when user disconnects."
+msgstr ""
+
+msgid "Virtual Machine will start on host start."
+msgstr ""
+
+msgid "Virtual machines in the pool."
+msgstr ""
+
+msgid "Virtual machines pre-started"
+msgstr ""
+
+msgid "Volatile"
+msgstr ""
+
+msgid "Waiting for machine to start"
+msgstr ""
+
+msgid "Waiting for network to come up"
+msgstr ""
+
+msgid "Waiting for requests to complete"
+msgstr ""
+
+msgid "Warning"
+msgstr ""
+
+msgid "Warning: anonymous machines won't show up unless you enable allowed."
+msgstr ""
+
+msgid "Warning: anonymous machines won't show up unless you set them public."
+msgstr ""
+
+msgid "Warning: this virtual machine will be prepared as a base. This may take long."
+msgstr ""
+
+msgid "Web Service connection failed."
+msgstr ""
+
+msgid "Weekly"
+msgstr ""
+
+msgid "What do you want to do now?"
+msgstr ""
+
+msgid "Will be destroyed on shutdown"
+msgstr ""
+
+msgid "Yes, rebase"
+msgstr ""
+

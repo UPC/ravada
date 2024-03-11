@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2022-08-04 10:22+0000\n"
+"PO-Revision-Date: 2023-02-21 09:36+0000\n"
 "Last-Translator: Dani Sanchez <dani@fib.upc.edu>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/ravada/"
 "translation/es/>\n"
@@ -19,7 +19,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.14-dev\n"
+"X-Generator: Weblate 4.16-dev\n"
 
 msgid "Ravada broker"
 msgstr "Broker Ravada"
@@ -49,7 +49,7 @@ msgid "Clone"
 msgstr "Clonar"
 
 msgid "Clone/s"
-msgstr "clon/es"
+msgstr "Clon/es"
 
 msgid "Users List"
 msgstr "Lista de usuarios"
@@ -250,10 +250,10 @@ msgid "Cannot remove base, machine has clones"
 msgstr "No se puede borrar la base, la máquina tiene clones"
 
 msgid "show clones"
-msgstr "muestra clones"
+msgstr "muestra los clones"
 
 msgid "hide clones"
-msgstr "esconde clones"
+msgstr "esconde los clones"
 
 msgid "For Spice redirection you will need to install"
 msgstr "Para la redirección de spice, necesitarás instalar"
@@ -351,7 +351,7 @@ msgid "can hibernate any virtual machine."
 msgstr "puede hibernar cualquier máquina virtual."
 
 msgid "can hibernate clones from virtual machines owned by the user."
-msgstr "puede hibernar clones de máquinas virtuales en posesión del usuario."
+msgstr "puede hibernar los clones de máquinas virtuales en posesión del usuario."
 
 msgid "can hibernate any clone."
 msgstr "puede hibernar cualquier clon."
@@ -363,7 +363,7 @@ msgid "can remove any virtual machine."
 msgstr "puede quitar cualquier máquina virtual."
 
 msgid "can remove clones from virtual machines owned by the user."
-msgstr "puede quitar clones de máquinas virtuales en posesión del usuario."
+msgstr "puede quitar los clones de máquinas virtuales en posesión del usuario."
 
 msgid "can remove any clone."
 msgstr "puede quitar cualquier clon."
@@ -380,22 +380,22 @@ msgid "can shutdown any virtual machine."
 msgstr "puede apagar cualquier máquina virtual."
 
 msgid "can shutdown clones from virtual machines owned by the user."
-msgstr "puede apagar clones de máquinas virtuales en posesión del usuario."
+msgstr "puede apagar los clones de máquinas virtuales en posesión del usuario."
 
 msgid "Submit Query"
 msgstr "Enviar Consulta"
 
 msgid "From Template"
-msgstr "Desde Plantilla"
+msgstr "Desde la Plantilla"
 
 msgid "From Machine"
-msgstr "Desde Máquina"
+msgstr "Desde la Máquina"
 
 msgid "Backend"
 msgstr "Backend"
 
 msgid "Select Template"
-msgstr "Selecciona Plantilla"
+msgstr "Selecciona la Plantilla"
 
 msgid ""
 "This ISO image has not been downloaded yet. It may take some minutes, even "
@@ -500,12 +500,12 @@ msgid "Show All"
 msgstr "Mostrar Todo"
 
 msgid "Shutting down ..."
-msgstr "Apagando …"
+msgstr "Apagando..."
 
 msgid "It may take a couple of minutes."
 msgstr "Puede tardar un par de minutos."
 
-msgid "Hybernating ..."
+msgid "Hibernating ..."
 msgstr "Hibernando …"
 
 msgid "Description"
@@ -991,7 +991,7 @@ msgid "Add new Display"
 msgstr "Añadir nuevo Display"
 
 msgid "PrepareBase"
-msgstr "PrepararBase"
+msgstr "Preparar la Base"
 
 msgid "Add to group"
 msgstr "Añadir a grupo"
@@ -1000,7 +1000,7 @@ msgid "No LDAP groups created."
 msgstr "No se ha creado ningún grupo de LDAP."
 
 msgid "Add groups"
-msgstr "Añadir grupos"
+msgstr "Añadir los grupos"
 
 msgid "User is not member of any group."
 msgstr "El usuario no es miembro de ningún grupo."
@@ -1092,13 +1092,13 @@ msgid "locked"
 msgstr "bloqueado"
 
 msgid "Show active"
-msgstr "Mostrar activas"
+msgstr "Mostrar las activas"
 
 msgid "Show clones"
-msgstr "Muestra clones"
+msgstr "Muestra los clones"
 
 msgid "Hide clones"
-msgstr "Esconde clones"
+msgstr "Esconde los clones"
 
 msgid "Content will be cleaned on restore and shutdown"
 msgstr "El contenido será borrado al restaurar y al apagar"
@@ -1122,7 +1122,7 @@ msgid "Type the template name"
 msgstr "Indica el nombre de plantilla"
 
 msgid "Remove Base"
-msgstr "Eliminar base"
+msgstr "Eliminar la base"
 
 msgid "To make this possible, copy the content of"
 msgstr "Para hacer esto posible, copia el contenido de"
@@ -1211,7 +1211,7 @@ msgid "disk"
 msgstr "disco"
 
 msgid "system"
-msgstr "system"
+msgstr "sistema"
 
 msgid "temporary"
 msgstr "temporal"
@@ -1238,7 +1238,7 @@ msgid "Network name is required"
 msgstr "Es necesario un nombre de red"
 
 msgid "clone storage"
-msgstr "clonar almacenamiento"
+msgstr "clonar el almacenamiento"
 
 msgid "default storage"
 msgstr "almacenamiento por defecto"
@@ -1253,16 +1253,16 @@ msgid "This virtual machine has no backups to purge"
 msgstr "Esta máquina virtual no tiene copias de seguridad a purgar"
 
 msgid "reload list"
-msgstr "recargar lista"
+msgstr "recargar la lista"
 
 msgid "There are no active virtual machines"
 msgstr "No hay máquinas virtuales activas"
 
 msgid "Remove group"
-msgstr "Eliminar grupo"
+msgstr "Eliminar el grupo"
 
 msgid "New group member"
-msgstr "Nuevo miembro de grupo"
+msgstr "Nuevo miembro del grupo"
 
 msgid "End"
 msgstr "Fin"
@@ -1315,7 +1315,7 @@ msgid "Groups require a LDAP server configured."
 msgstr "Los grupos necesitan un servidor LDAP configurado."
 
 msgid "Loading ..."
-msgstr "Cargando ..."
+msgstr "Cargando..."
 
 msgid "Autostart"
 msgstr "Autoarranque"
@@ -1327,7 +1327,7 @@ msgid "New Group"
 msgstr "Nuevo grupo"
 
 msgid "Show/Hide clones"
-msgstr "Mostrar/esconder clones"
+msgstr "Mostrar/esconder los clones"
 
 msgid "Public"
 msgstr "Público"
@@ -1339,13 +1339,13 @@ msgid "Volatile"
 msgstr "Volátil"
 
 msgid "Manage machine"
-msgstr "Gestionar máquina"
+msgstr "Gestionar la máquina"
 
 msgid "Node"
 msgstr "Nodo"
 
 msgid "No message to show!"
-msgstr "¡No hay ningún mensaje a mostrar!"
+msgstr "¡No hay ningún mensaje para mostrar!"
 
 msgid "Hibernated"
 msgstr "Hibernado"
@@ -1420,10 +1420,10 @@ msgid "Disabling this node will shut all the"
 msgstr "Desactivar este nodo parará todas"
 
 msgid "Frontend"
-msgstr "Frontend"
+msgstr "Frontend/Interfaz gráfica"
 
 msgid "Fallback"
-msgstr "Fallback"
+msgstr "Sistema alternativo"
 
 msgid "Debug Ports Exposed"
 msgstr "Puerto de depuración expuesto"
@@ -1474,7 +1474,7 @@ msgid "LDAP"
 msgstr "LDAP"
 
 msgid "Display URL :"
-msgstr "Display URL :"
+msgstr "URL Visible :"
 
 msgid "mode"
 msgstr "modo"
@@ -1495,10 +1495,10 @@ msgid "Sorry"
 msgstr "Perdón"
 
 msgid "Display Port :"
-msgstr "Display Port :"
+msgstr "Puerto de interfaz de video :"
 
 msgid "Display Port secure :"
-msgstr "Display Port seguro :"
+msgstr "Puerto interfaz video seguro :"
 
 msgid "check"
 msgstr "comprobar"
@@ -1513,7 +1513,7 @@ msgid "CPU Features"
 msgstr "Características de CPU"
 
 msgid "fallback"
-msgstr "fallback"
+msgstr "sistema alternativo"
 
 msgid "add"
 msgstr "añadir"
@@ -1790,7 +1790,7 @@ msgid "New Booking"
 msgstr "Nueva reserva"
 
 msgid "driver"
-msgstr "driver"
+msgstr "controlador"
 
 msgid "This machine is base and it can't be modified."
 msgstr "Esta máquina es una base y no puede ser modificada."
@@ -1919,13 +1919,13 @@ msgid "New name"
 msgstr "Nuevo nombre"
 
 msgid "Spinoff clone"
-msgstr "Escindir clon"
+msgstr "Separar clon"
 
 msgid "Spinoff this clone from its base."
-msgstr "Escindir este clon de su base."
+msgstr "Separar este clon de su base."
 
 msgid "Are you sure you want to spinoff from the base ?"
-msgstr "¿Estas seguro que lo quieres escindir de su base?"
+msgstr "¿Estas seguro que lo quieres separar de su base?"
 
 msgid "Enter Old Password"
 msgstr "Introduce la contraseña anterior"
@@ -2051,7 +2051,7 @@ msgid "Data"
 msgstr "Data"
 
 msgid "Legacy"
-msgstr "Legacy"
+msgstr "Antiguo"
 
 msgid "If you have any issue, you can contact the Suport crew and we will try to help you. Please, only contact Support Center if it is strictly necessary."
 msgstr ""
@@ -2211,3 +2211,72 @@ msgstr ""
 
 msgid "options"
 msgstr "opciones"
+
+msgid "This event and the following"
+msgstr "Este evento y el siguiente"
+
+msgid "This event"
+msgstr "Este evento"
+
+msgid "Permission revoked from user"
+msgstr "Permiso revocado del usuario"
+
+msgid "Are you sure you want to spinoff from the base?"
+msgstr "¿Estás seguro que quieres escindirla de su base?"
+
+msgid "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+msgstr ""
+"Son necesarios grupos LDAP para crear reservas. Se han encontrado grupos, "
+"pero ningún miembro pertenece a él. <a href='/admin/groups'>Añade nuevas "
+"entradas aquí.</a>"
+
+msgid "Edit the event"
+msgstr "Editar el evento"
+
+msgid "Delete the event"
+msgstr "Eliminar el evento"
+
+msgid "Balance"
+msgstr "Balance"
+
+msgid "Node with more free memory"
+msgstr "Nodo con más memoria libre"
+
+msgid "Node with machines from the same user"
+msgstr "Nodo con máquinas del mismo usuario"
+
+msgid "Permission granted to user"
+msgstr "Permiso otorgado al usuario"
+
+msgid "User not found"
+msgstr "Usuario no encontrado"
+
+msgid "Event saved successfully"
+msgstr "Evento grabado correctamente"
+
+msgid "From"
+msgstr "Desde"
+
+msgid "To"
+msgstr "A"
+
+msgid "This event and the following with same day of week"
+msgstr "Este evento y los siguientes del mismo día de la semana"
+
+msgid "All events"
+msgstr "Todos los eventos"
+
+msgid "Confirm"
+msgstr "Confirmación"
+
+msgid "Source Machine"
+msgstr "Máquina Origen"
+
+msgid "This feature requires a LDAP server configured."
+msgstr "Esta característica necesita un servidor LDAP configurado."
+
+msgid "Monitoring"
+msgstr "Monitorización"
+
+msgid "For Spice client setup follow this "
+msgstr "Para configurar el cliente Spice, seguid este "

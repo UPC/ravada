@@ -303,9 +303,6 @@ msgstr "Welcome"
 msgid "A viewer is required to run the virtual machines."
 msgstr "A viewer is required to run the virtual machines."
 
-msgid "It is required a viewer to run the virtual machines."
-msgstr "It is required a viewer to run the virtual machines."
-
 msgid "Virtual Machines"
 msgstr "Virtual Machines"
 
@@ -503,8 +500,8 @@ msgstr "Shutting down …"
 msgid "It may take a couple of minutes."
 msgstr "It may take a couple of minutes."
 
-msgid "Hybernating ..."
-msgstr "Hybernating …"
+msgid "Hibernating ..."
+msgstr "Hibernating …"
 
 msgid "Description"
 msgstr "Description"
@@ -1659,9 +1656,6 @@ msgstr "Danger: This will destroy all the disk data permantently."
 msgid "Type the name of the volume disk to confirm:"
 msgstr "Type the name of the volume disk to confirm:"
 
-msgid "No hardware found for"
-msgstr "No hardware found for"
-
 msgid "-- choose hardware --"
 msgstr "-- choose hardware --"
 
@@ -2172,3 +2166,6 @@ msgstr "Source Machine"
 
 msgid "Monitoring"
 msgstr "Monitoring"
+
+msgid "Follow these steps for Spice client setup"
+msgstr "Follow these steps for Spice client setup"

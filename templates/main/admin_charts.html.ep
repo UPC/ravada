@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="docum
+ent">
+<div id="wrapper">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper" ng-controller="admin_charts"
+        ng-init="init('<%= url_for('ws_subscribe')->to_abs %>')"
+    >
+        <div id="admin-content" ng-cloak="1">
+          <h2><%=l 'Charts' %></h2>
+          <select ng-model="hour"
+                  ng-options="item.id as item.title for item in options_h"
+                  ng-change="load_chart('hour')"
+              >
+          </select>
+          <select ng-model="day"
+                  ng-options="item.id as item.title for item in options_d"
+                  ng-change="load_chart('day')"
+                  ></select>
+          <select ng-model="week"
+                  ng-options="item.id as item.title for item in options_w"
+                  ng-change="load_chart('week')"
+                  ></select>
+          <select ng-model="month"
+                  ng-options="item.id as item.title for item in options_m"
+                  ng-change="load_chart('month')"
+                  ></select>
+          <select ng-model="year"
+                  ng-options="item.id as item.title for item in options_y"
+                  ng-change="load_chart('year')"
+                  ></select>
+        <div>
+            <canvas id="myChart"></canvas>
+        </div>
+      </div>
+    </div>
+</div> <!-- wrapper -->
+%= include $footer
+%= include 'bootstrap/scripts'
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</body>
+</html>

@@ -34,6 +34,16 @@ sub check_db {
                     , foo => 3
                 }
             }) , 0);
+
+    is(Ravada::_check_config( {
+                ldap => {
+                    secure => 0
+                }
+            }),1);
+}
+
+sub check_no_ldap {
+    is(rvd_front->feature('ldap'),0);
 }
 
 #########################################################################
@@ -43,6 +53,8 @@ clean();
 check_empty();
 check_fail();
 check_db();
+
+check_no_ldap();
 
 end();
 

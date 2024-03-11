@@ -4,16 +4,25 @@ use Data::Dumper;
 use Moose;
 use YAML qw(LoadFile);
 
-extends 'Ravada::Front::Domain';
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
-my $DIR_TMP = "/var/tmp/rvd_void/".getpwuid($>);
+extends 'Ravada::Front::Domain';
 
 our %GET_CONTROLLER_SUB = (
     'mock' => \&_get_controller_mock
     ,'disk' => \&_get_controller_disk
     ,'display' => \&_get_controller_display
+    ,'network' => \&_get_controller_network
 
 );
+
+sub _driver_field($self, $hardware) {
+    my $field = 'driver';
+    $field = 'bus' if $hardware eq 'device';
+
+    return $field;
+}
 
 sub get_driver {
     my $self = shift;
@@ -25,7 +34,9 @@ sub get_driver {
     my $hardware = $self->_value('hardware');
 
     $name = 'device' if $name eq 'disk';
-    return $hardware->{$name}->[0]->{driver}
+    my $field = $self->_driver_field($name);
+
+    return $hardware->{$name}->[0]->{$field}
         if $hardware->{$name} && $hardware->{$name}->[0];
 }
 
@@ -45,11 +56,11 @@ sub _value{
 
 sub _config_file {
     my $self = shift;
-    return "$DIR_TMP/".$self->name.".yml";
+    return "/var/tmp/rvd_void/".getpwuid($>)."/".$self->name.".yml";
 }
 
 sub _config_dir {
-    return $DIR_TMP;
+    return "/var/tmp/rvd_void/".getpwuid($>);
 }
 
 sub list_controllers {
@@ -72,8 +83,18 @@ sub _get_controller_disk {
     return Ravada::Front::Domain::_get_controller_disk(@_);
 }
 
-sub _get_controller_display() {
-    return Ravada::Front::Domain::_get_controller_display(@_);
+sub _get_controller_display(@args) {
+    return Ravada::Front::Domain::_get_controller_display(@args);
+}
+
+sub _get_controller_generic($self, $item) {
+    my $hardware = $self->_value('hardware');
+    return () if !exists $hardware->{$item};
+    return @{$hardware->{$item}};
+}
+
+sub _get_controller_network($self) {
+    return $self->_get_controller_generic('network');
 }
 
 1;
