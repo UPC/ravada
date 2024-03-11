@@ -345,12 +345,34 @@ sub _get_node_info($rvd, $args) {
 
     return {} if!$user->is_admin;
 
-    my $node = Ravada::VM->open(id => $id_node, readonly => 1);
-    $node->_data('hostname');
-    $node->{_data}->{is_local} = $node->is_local;
-    $node->{_data}->{has_bases} = scalar($node->list_bases);
-    return $node->{_data};
+    my $sth = $rvd->_dbh->prepare("SELECT * FROM vms WHERE id=?");
+    $sth->execute($id_node);
+    my $data = $sth->fetchrow_hashref;
+    $data->{is_local}=0;
+    $data->{is_local}=1 if $data->{hostname} eq 'localhost'
+        || $data->{hostname} eq '127.0.0,1'
+        || !$data->{hostname};
 
+    $data->{bases}=_list_bases_node($rvd, $data->{id});
+
+    return $data;
+}
+
+sub _list_bases_node($rvd, $id_node) {
+    my $sth = $rvd->_dbh->prepare(
+        "SELECT d.id FROM domains d,bases_vm bv"
+        ." WHERE d.is_base=1"
+        ."  AND d.id = bv.id_domain "
+        ."  AND bv.id_vm=?"
+        ."  AND bv.enabled=1"
+    );
+    my @bases;
+    $sth->execute($id_node);
+    while ( my ($id_domain) = $sth->fetchrow ) {
+        push @bases,($id_domain);
+    }
+    $sth->finish;
+    return \@bases;
 }
 
 sub _list_recent_requests($rvd, $seconds) {
