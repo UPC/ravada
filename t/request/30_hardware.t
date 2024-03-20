@@ -69,6 +69,7 @@ sub test_add_hardware_request_drivers {
         test_remove_almost_all_hardware($vm, $domain, $hardware);
         for my $driver (@$options) {
             $driver = lc($driver);
+            next if $hardware eq 'video' && $driver eq 'none';
             diag("Testing new $hardware $driver remove=$remove");
 
             my $info0 = $domain->info(user_admin);
@@ -207,6 +208,9 @@ sub _remove_other_video_primary($domain) {
 }
 
 sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
+
+    return if $hardware eq 'video'
+        && exists $data->{type} && $data->{type} eq 'none';
 
     $domain = Ravada::Domain->open($domain->id);
 
@@ -501,12 +505,26 @@ sub _test_kvm_accel3d($domain,$value) {
 }
 
 sub test_add_video($domain) {
+    test_add_video_none($domain);
     my $data = { type => 'virtio', heads => 1 };
     test_video_vgamem($domain);
     test_video_virtio_3d_change_type($domain);
     test_video_virtio_3d($domain);
     test_add_hardware_request($domain->_vm,$domain,'video',$data);
     test_video_primary($domain);
+}
+
+sub test_add_video_none($domain) {
+    my $req = Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,name => 'video'
+        ,id_domain => $domain->id
+        ,data => {
+            type => 'none'
+        }
+    );
+    wait_request();
+    is($req->error,'');
 }
 
 sub test_add_cdrom($domain) {
@@ -1728,7 +1746,6 @@ for my $vm_name (vm_names()) {
     lock_hash(%controllers);
 
     for my $hardware ( sort keys %controllers ) {
-        next if $hardware eq 'video';
 	    my $name= new_domain_name();
 	    my $domain_b = $BASE->clone(
             name => $name

@@ -2442,13 +2442,19 @@ sub _set_controller_filesystem($self, $number, $data) {
 sub _set_controller_video($self, $number, $data={type => 'qxl'}) {
     $data->{type} = 'qxl' if !exists $data->{type};
     $data->{type} = lc(delete $data->{driver}) if exists $data->{driver};
-    my $pci_slot = $self->_new_pci_slot();
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
     my ($devices) = $doc->findnodes("/domain/devices");
+
     if (exists $data->{primary} && $data->{primary} =~ /yes/) {
         _remove_all_video_primary($devices);
     }
+
+    if ($data->{type} eq 'none') {
+        _remove_all_video($devices);
+    }
+    my $pci_slot = $self->_new_pci_slot();
+
     my $video = $devices->addNewChild(undef,'video');
     my $model = $video->addNewChild(undef,'model');
     for my $field (keys %$data) {
@@ -2473,6 +2479,11 @@ sub _remove_all_video_primary($devices) {
     }
 }
 
+sub _remove_all_video($devices) {
+    for my $video ($devices->findnodes("video")) {
+        $devices->removeChild($video);
+    }
+}
 sub _set_controller_network($self, $number, $data) {
 
     my $driver = (delete $data->{driver} or 'virtio');
