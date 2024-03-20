@@ -210,7 +210,8 @@ sub _remove_other_video_primary($domain) {
 sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
 
     return if $hardware eq 'video'
-        && exists $data->{type} && $data->{type} eq 'none';
+        && exists $data->{type} && defined $data->{type}
+        && $data->{type} eq 'none';
 
     $domain = Ravada::Domain->open($domain->id);
 
