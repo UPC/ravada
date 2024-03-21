@@ -257,6 +257,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     }
     _remove_usbs($domain,$hardware);
 	my $req;
+    diag("Adding $hardware ".($numero+1)."\n".Dumper($data));
 	eval {
 		$req = Ravada::Request->add_hardware(uid => $USER->id
                 , id_domain => $domain->id
@@ -269,7 +270,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     $USER->unread_messages();
 	ok($req, 'Request');
     sleep 1 if !$TEST_TIMESTAMP;
-    wait_request(debug => 0);
+    wait_request(debug => 1);
     is($req->status(),'done');
     is($req->error(),'') or exit;
     my $n = 1;
@@ -516,7 +517,7 @@ sub test_add_video($domain) {
 }
 
 sub test_add_video_none($domain) {
-    my $req = Ravada::Request->add_hardware(
+    my %args = (
         uid => user_admin->id
         ,name => 'video'
         ,id_domain => $domain->id
@@ -524,8 +525,16 @@ sub test_add_video_none($domain) {
             type => 'none'
         }
     );
+    my $req = Ravada::Request->add_hardware(%args);
     wait_request();
     is($req->error,'');
+
+    $args{data}->{type} = 'cirrus';
+    $req = Ravada::Request->add_hardware(%args);
+    wait_request();
+    is($req->error,'');
+
+
 }
 
 sub test_add_cdrom($domain) {
@@ -777,11 +786,13 @@ sub test_remove_hardware_by_index($vm, $hardware) {
     my $items1 = [];
     $items1 = $info_hw1->{$hardware};
 
+    my $index = scalar(@$items1)-1;
+
     Ravada::Request->remove_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
         ,name => $hardware
-        ,index => 1
+        ,index => $index
     );
     wait_request();
     my $info_hw2 = $domain->info(user_admin)->{hardware};
@@ -1746,7 +1757,7 @@ for my $vm_name (vm_names()) {
     my %controllers = $domain_b0->list_controllers;
     lock_hash(%controllers);
 
-    for my $hardware ( sort keys %controllers ) {
+    for my $hardware ('video', sort keys %controllers ) {
 	    my $name= new_domain_name();
 	    my $domain_b = $BASE->clone(
             name => $name

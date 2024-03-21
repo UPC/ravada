@@ -2452,6 +2452,8 @@ sub _set_controller_video($self, $number, $data={type => 'qxl'}) {
 
     if ($data->{type} eq 'none') {
         _remove_all_video($devices);
+    } else {
+        _remove_all_video($devices,'type'=>'none');
     }
     my $pci_slot = $self->_new_pci_slot();
 
@@ -2479,8 +2481,16 @@ sub _remove_all_video_primary($devices) {
     }
 }
 
-sub _remove_all_video($devices) {
+sub _remove_all_video($devices, $attribute=undef, $value=undef) {
+    confess "Error: attribute '$attribute' value search must be defined"
+    if defined $attribute && !defined $value;
+
+    warn "Removing all video ".($attribute or 'any').'='.($value = '*');
     for my $video ($devices->findnodes("video")) {
+        next if defined $attribute && $video->getAttribute($attribute)
+        && $video->getAttribute($attribute) ne $value;
+
+        warn "remove ".$video->toString();
         $devices->removeChild($video);
     }
 }
