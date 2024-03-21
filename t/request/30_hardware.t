@@ -257,7 +257,6 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     }
     _remove_usbs($domain,$hardware);
 	my $req;
-    diag("Adding $hardware ".($numero+1)."\n".Dumper($data));
 	eval {
 		$req = Ravada::Request->add_hardware(uid => $USER->id
                 , id_domain => $domain->id
@@ -270,7 +269,7 @@ sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
     $USER->unread_messages();
 	ok($req, 'Request');
     sleep 1 if !$TEST_TIMESTAMP;
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     is($req->status(),'done');
     is($req->error(),'') or exit;
     my $n = 1;

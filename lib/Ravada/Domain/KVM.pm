@@ -2485,12 +2485,12 @@ sub _remove_all_video($devices, $attribute=undef, $value=undef) {
     confess "Error: attribute '$attribute' value search must be defined"
     if defined $attribute && !defined $value;
 
-    warn "Removing all video ".($attribute or 'any').'='.($value = '*');
     for my $video ($devices->findnodes("video")) {
-        next if defined $attribute && $video->getAttribute($attribute)
-        && $video->getAttribute($attribute) ne $value;
+        my ($model) = $video->findnodes('model');
+        next if defined $attribute
+        && (!$model->getAttribute($attribute)
+            || $model->getAttribute($attribute) ne $value);
 
-        warn "remove ".$video->toString();
         $devices->removeChild($video);
     }
 }
