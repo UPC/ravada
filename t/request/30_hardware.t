@@ -785,7 +785,8 @@ sub test_remove_hardware_by_index($vm, $hardware) {
     my $items1 = [];
     $items1 = $info_hw1->{$hardware};
 
-    my $index = scalar(@$items1)-1;
+    my $index = 1;
+    $index = 0 if $items1 && scalar(@$items1)<=1;
 
     Ravada::Request->remove_hardware(
         uid => user_admin->id
@@ -1756,7 +1757,7 @@ for my $vm_name (vm_names()) {
     my %controllers = $domain_b0->list_controllers;
     lock_hash(%controllers);
 
-    for my $hardware ('video', sort keys %controllers ) {
+    for my $hardware ( sort keys %controllers ) {
 	    my $name= new_domain_name();
 	    my $domain_b = $BASE->clone(
             name => $name
