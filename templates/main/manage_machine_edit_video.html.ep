@@ -47,11 +47,12 @@
 
     <div class="row">
         <div class="col-lg-8 alert alert-warning"
-            ng-show="item.type=='cirrus' && !item.primary
+            ng-show="((item.type=='cirrus' || item.type=='vga')
+                    && !item.primary )
                 || item.type=='none'
             ">
-        <span ng-show="item.type=='cirrus' && !item.primary">
-            <%=l "Video type 'cirrus' is only valid as primary video device" %>
+        <span ng-show="item.type=='cirrus' || item.type =='vga' && !item.primary">
+            <%=l "This video type is only valid as primary video device" %>
         </span>
 
         <span ng-show="item.type=='none'" >
