@@ -8,7 +8,7 @@
             </select>
         </div>
     </div>
-    <div class="row">
+    <div class="row" ng-hide="item.type=='none'">
         <div class="col-lg-2" align="right"><%=l 'primary' %></div>
         <div class="col-lg-2">
             <input type="checkbox" ng-model="item.primary"
@@ -23,7 +23,7 @@
             <span class="info"><%=l 'Primary can not be unset, enable it in another video device' %></span>
         </div>
     </div>
-    <div class="row">
+    <div class="row" ng-hide="item.type=='none'">
 
         <div class="col-lg-2" align="right"><%=l 'vram' %></div>
         <div class="col-lg-1">
@@ -38,7 +38,7 @@
 
     </div>
 
-    <div class="row">
+    <div class="row" ng-hide="item.type=='none'">
         <div class="col-lg-2" align="right"><%=l 'heads' %></div>
         <div class="col-lg-2">
             <input type="text" size="2" ng-model="item.heads"/>
@@ -46,9 +46,18 @@
     </div>
 
     <div class="row">
-        <span class="info"
-            ng-show="item.type=='cirrus' && !item.primary">
-<%=l "video type 'cirrus' is only valid as primary video device" %>
+        <div class="col-lg-8 alert alert-warning"
+            ng-show="((item.type=='cirrus' || item.type=='vga')
+                    && !item.primary )
+                || item.type=='none'
+            ">
+        <span ng-show="item.type=='cirrus' || item.type =='vga' && !item.primary">
+            <%=l "This video type is only valid as primary video device" %>
         </span>
+
+        <span ng-show="item.type=='none'" >
+            <%=l "Setting video to 'none' removes all other video devices" %>
+        </span>
+        </div>
     </div>
 </div>
