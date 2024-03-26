@@ -23,6 +23,7 @@ use feature qw(signatures);
 
 use Ravada;
 use Ravada::Auth::SQL;
+use Ravada::Auth::Group;
 use Ravada::Domain::Void;
 
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
@@ -84,6 +85,7 @@ create_domain
     mojo_request_url
     mojo_request_url_post
 
+    create_group
     remove_old_user
     remove_old_users
     remove_old_users_ldap
@@ -1198,6 +1200,14 @@ sub create_user($name=new_domain_name(), $pass=$$, $is_admin=0) {
     };
     die $@ if !$user;
     return $user;
+}
+
+sub create_group($name = new_domain_name()) {
+    my $group = Ravada::Auth::Group->new(name => $name);
+    return $group if $group && $group->id;
+
+    $group = Ravada::Auth::Group::add_group(name => $name);
+    return $group;
 }
 
 sub create_ldap_user($name, $password, $keep=0) {
