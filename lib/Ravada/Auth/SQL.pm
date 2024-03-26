@@ -1309,6 +1309,17 @@ sub disk_used($self) {
     return $used;
 }
 
+=head2 add_to_group
+
+Adds the user to a group or list of groups
+
+Arguments: list of group names
+
+=cut
+
+sub add_to_group($self, @group) {
+}
+
 sub _load_network($network) {
     confess "Error: undefined network"
     if !defined $network;

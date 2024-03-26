@@ -2073,6 +2073,7 @@ sub info($self, $user) {
         ,is_public => $self->is_public
         ,show_clones => $self->show_clones
         ,id_base => $self->id_base
+        ,is_public => $self->is_public
         ,is_active => $is_active
         ,is_hibernated => $self->is_hibernated
         ,spice_password => $self->spice_password
@@ -4959,7 +4960,7 @@ sub type {
     if (!exists $self->{_data} || !exists $self->{_data}->{vm}) {
         my ($type) = ref($self) =~ /.*::([a-zA-Z][a-zA-Z0-9]*)/;
         confess "Unknown type from ".ref($self) if !$type;
-        return $type;
+        return $type if $type ne 'Domain';
     }
     confess "Unknown vm ".Dumper($self->{_data})
         if !$self->_data('vm');
@@ -6281,7 +6282,7 @@ Arguments is a named list
 sub grant_access($self, %args) {
     my $type      = delete $args{type}      or confess "Error: Missing type";
 
-    return $self->_allow_group_access(%args)    if $type eq 'group';
+    return $self->_allow_group_access(%args, type=> $type)    if $type =~ /^group/;
 
     my $attribute = delete $args{attribute} or confess "Error: Missing attribute";
     my $value     = delete $args{value}     or confess "Error: Missing value";
@@ -6320,13 +6321,18 @@ sub grant_access($self, %args) {
 
 sub _allow_group_access($self, %args) {
     my $group = delete $args{group} or confess "Error: group required";
+
+    my $type = delete $args{type};
+    $type =~ s/.*\.(.*)/$1/;
+    $type = 'ldap' if !$type || $type eq 'group';
+
     confess "Error: unknown args ".Dumper(\%args) if keys %args;
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO group_access "
-        ."( id_domain,name)"
-        ." VALUES(?,? )"
+        ."( id_domain,name, type)"
+        ." VALUES(?,?,? )"
     );
-    $sth->execute($self->id, $group);
+    $sth->execute($self->id, $group, $type);
 }
 
 =head2 list_access_groups
@@ -6335,11 +6341,12 @@ Returns the list of groups who can access this virtual machine
 
 =cut
 
-sub list_access_groups($self) {
+sub list_access_groups($self, $type) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT name from group_access "
         ." WHERE id_domain=?"
+        ."   AND type=?"
     );
-    $sth->execute($self->id);
+    $sth->execute($self->id, $type);
     my @groups;
     while ( my ($name) = $sth->fetchrow ) {
         push @groups,($name);

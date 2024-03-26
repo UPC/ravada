@@ -1629,6 +1629,12 @@ sub _add_indexes_generic($self) {
             ,"index(id_base)"
             ,"index(id_booking_entry)"
         ]
+        ,groups_local => [
+            'UNIQUE (name)'
+        ]
+        ,users_group => [
+            'UNIQUE(id_user, id_group)'
+        ]
 
         ,volumes => [
             "index(id_domain)"
@@ -2216,7 +2222,8 @@ sub _sql_create_tables($self) {
             group_access => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
-            ,name => 'char(80)'
+            ,name => 'char(80) NOT NULL'
+            ,type => 'char(40)'
             }
         ]
         ,
@@ -2377,6 +2384,19 @@ sub _sql_create_tables($self) {
             }
         ]
         ,
+        [   groups_local => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                ,name => 'char(255) NOT NULL'
+                ,is_external => 'int NOT NULL default(0)'
+                ,external_auth => 'varchar(64) default NULL'
+            }
+        ],
+        [   users_group => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                ,id_user => 'integer NOT NULL'
+                ,id_group =>'integer NOT NULL'
+            }
+        ],
         [
             volumes => {
                 id => 'integer PRIMARY KEY AUTO_INCREMENT',

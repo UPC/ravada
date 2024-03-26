@@ -470,4 +470,6 @@ sub list_requests($self, $date_req=Ravada::Utils::date_now(3600)) {
     return @req;
 }
 
+sub is_member {}
+
 1;

@@ -11,6 +11,8 @@ use feature qw(signatures);
 use lib 't/lib';
 use Test::Ravada;
 
+use_ok('Ravada::Auth::Group');
+
 init('t/etc/ravada_ldap_basic.conf');
 clean();
 
@@ -38,19 +40,24 @@ sub _remove_bases(@bases) {
     }
 }
 
-sub test_access_by_group($vm) {
-    my $base = create_domain($vm->type);
-    $base->prepare_base(user_admin);
-    $base->is_public(1);
-
+sub _create_group_ldap() {
     my $g_name = new_domain_name();
     my $group = Ravada::Auth::LDAP::search_group(name => $g_name);
     if (!$group) {
             Ravada::Auth::LDAP::add_group($g_name);
     }
+    return $g_name;
+}
+
+sub test_access_by_group_ldap($vm, $type='group') {
+    my $base = create_domain($vm->type);
+    $base->prepare_base(user_admin);
+    $base->is_public(1);
+
+    my $g_name = _create_group_ldap();
 
     $base->grant_access(
-        type => 'group'
+        type => $type
         ,group => $g_name
     );
     my $user = create_user(new_domain_name(),$$);
@@ -75,6 +82,70 @@ sub test_access_by_group($vm) {
 
     remove_domain($base);
 }
+
+sub test_access_by_group_sql($vm) {
+    my $base = create_domain($vm->type);
+    $base->prepare_base(user_admin);
+    $base->is_public(1);
+
+    my $g_name = new_domain_name();
+    my $group = Ravada::Auth::Group::add_group(name => $g_name);
+
+    $base->grant_access(
+        type => 'group.local'
+        ,group => $g_name
+    );
+
+    my $g_name_ldap = _create_group_ldap();
+    $base->grant_access(
+        type => 'group.ldap'
+        ,group => $g_name_ldap
+    );
+
+    my $user = create_user(new_domain_name(),$$);
+    is($user->is_admin, 0 );
+
+    my $list_bases = rvd_front->list_machines_user($user);
+    is(scalar(@$list_bases),0) or exit;
+
+    my $user_sql = create_user(new_domain_name(), $$);
+    $list_bases = rvd_front->list_machines_user($user_sql);
+    is(scalar(@$list_bases),0) or exit;
+
+    $user_sql->add_to_group($g_name);
+
+    is($user_sql->is_member($g_name),1);
+
+    $user_sql->_load_allowed(1);
+    is($user_sql->allowed_access($base->id),1);
+
+    $list_bases = rvd_front->list_machines_user($user_sql);
+    is(scalar(@$list_bases),1);
+
+    $list_bases = rvd_front->list_machines_user(user_admin);
+    is(scalar(@$list_bases),1);
+
+    my $user_ldap0 = create_ldap_user(new_domain_name(), $$);
+    my $user_ldap = Ravada::Auth::SQL->new(name => $user_ldap0->get_value('cn'));
+    $list_bases = rvd_front->list_machines_user($user_ldap);
+    is(scalar(@$list_bases),0) or exit;
+
+    $base->is_public(0);
+    $base->show_clones(0);
+
+    $list_bases = rvd_front->list_machines_user($user_sql);
+    is(scalar(@$list_bases),0) or exit;
+
+    $base->show_clones(1);
+
+    $list_bases = rvd_front->list_machines_user($user_sql);
+    is(scalar(@$list_bases),0) or exit;
+
+    remove_domain($base);
+
+    $group->remove() if $group;
+}
+
 
 sub test_access_by_agent($vm, $do_clones=0) {
 
@@ -378,7 +449,11 @@ for my $vm_name (reverse vm_names()) {
         skip($msg,10)   if !$vm;
         diag("Testing access restrictions in domain for $vm_name");
 
-        test_access_by_group($vm);
+        test_access_by_group_ldap($vm);
+        test_access_by_group_ldap($vm,'group.ldap');
+        test_access_by_group_sql($vm);
+
+        #        test_access_by_group_sql_or_ldap($vm);
 
         test_access_by_agent($vm);
 
