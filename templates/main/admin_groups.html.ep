@@ -6,29 +6,17 @@
         %= include 'bootstrap/navigation'
         <div id="page-wrapper"
              ng-controller="admin_groups"
-             ng-init="list_ldap_groups()"
+             ng-init="list_groups()"
             >
             <div class="page-header">
               <div class="card" id="admin-content">
-                  <div class="card-header" ng-show="!<%= $FEATURE->{ldap} %>">
-                    <h2 class="display-5"><%=l 'Groups' %></h2>
-                    <p>
-                      <%=l 'Groups require a LDAP server configured.' %>
-                      <%=l 'See documentation about:' %>
-                    </p>
-                    <ul>
-                        <li><a href="https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html"><%=l 'Configure LDAP Authentication' %></a></li>
-                        <li><a href="https://ravada.readthedocs.io/en/latest/docs/ldap_local.html"><%=l 'Setup a LDAP Server' %></a></li>
-                    </ul>
-                  </div>
-
-                  <div class="card-header" ng-show="<%= $FEATURE->{ldap} %>" ng-cloak="1">
+                  <div class="card-header" ng-cloak="1">
                     <h2 class="display-5"><%=l 'Groups' %></h2>
                     <div class="card-title">
                         <form method="post" action="/admin/groups">
                             <input type="text" name="name" placeholder="<%=l 'Group' %>"
                                                            ng-model="group_filter"
-                                                           ng-change="list_ldap_groups()"
+                                                           ng-change="list_ldap_groups(); filter_local_groups()"
                             >
                             <button ng-show="<%= $_user->is_admin %>"
                                 type="button" style="float: right; margin: 0 10px;"
@@ -38,22 +26,10 @@
                         </form>
                     </div>
                 </div>
-                <div class="card-body" ng-show="<%= $FEATURE->{ldap} %>" ng-cloak="1">
-                    <table class="table table-striped" ng-show="ldap_groups.length">
-                            <thead>
-                                <tr>
-                                <th><%=l 'Name' %></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr ng-repeat="group in ldap_groups">
-                                    <td><a href="/admin/group/{{group}}">{{group}}</a></td>
-                                </tr>
-                            </tbody>
-                    </table>
-                    <div ng-show="ldap_groups.length == 0">
-                      <%=l 'No groups found' %>
-                    </div>
+%=              include '/main/list_groups_tabs'
+                <div class="tab-content">
+%=                  include '/main/list_groups_local'
+%=                  include '/main/list_groups_ldap'
                 </div>
               </div>
             </div>

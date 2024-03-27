@@ -1,0 +1,17 @@
+<div class='tab-pane container fade in show active' id='local'>
+    <table class="table table-striped" ng-show="local_groups.length">
+        <thead>
+            <tr>
+                <th><%=l 'Name' %></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr ng-repeat="group in local_groups">
+                <td><a href="/admin/group/local/{{group}}">{{group}}</a></td>
+            </tr>
+        </tbody>
+    </table>
+    <div ng-show="local_groups.length == 0">
+%=      include "/main/warning_no_groups_found"
+    </div>
+</div>

@@ -1,0 +1,19 @@
+<div class='tab-pane container fade' id='ldap'
+        ng-show="<%= $FEATURE->{ldap} %>"
+>
+    <table class="table table-striped" ng-show="ldap_groups.length">
+        <thead>
+            <tr>
+                <th><%=l 'Name' %></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr ng-repeat="group in ldap_groups">
+                <td><a href="/admin/group/{{group}}">{{group}}</a></td>
+            </tr>
+        </tbody>
+    </table>
+    <div ng-show="ldap_groups.length == 0">
+%=      include "/main/warning_no_groups_found"
+    </div>
+</div>
