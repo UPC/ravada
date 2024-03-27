@@ -6,15 +6,19 @@
         %= include 'bootstrap/navigation'
         <div id="page-wrapper"
              ng-controller="admin_groups"
-             ng-init="list_group_members('<%= $name %>');list_users();"
+             ng-init="init('<%= $type %>', '<%= $name %>')"
             >
             <div class="page-header">
               <div class="card" id="admin-content">
                 <div class="card-header">
                     <h2 class="display-5"><%=l 'Group' %> <%= $name %></h2>
+%                  if ($type eq 'ldap') {
+LDAP
+
                     <%=l 'object class:' %> <b><%= join(" - ",sort @$object_class) %></b>
                     <br/>
                     <%=l 'dn:' %> <b><%= $group->dn %></b>
+% }
                 </div>
               </div>
             </div>
@@ -22,7 +26,7 @@
                 <div ng-show="<%= $_user->can_manage_groups %> && !removed">
                     <%=l 'New group member' %>
                     <input type="text" ng-model="username_filter"
-                                       ng-change="list_users()"
+                                       ng-change="list_users('<%= $type %>')"
                                        placeholder="<%=l 'Search' %>"
                     />
                     <span ng-show="loading_users"><i class="fas fa-sync-alt fa-spin"></i></span>
@@ -33,7 +37,7 @@
                     >
                     </select>
                     <button ng-show="new_member && new_member.name"
-                            ng-click="add_member(new_member.name)">
+                            ng-click="add_member(new_member.id, new_member.name)">
                       <%=l 'Add' %>
                     </button>
                 </div>
@@ -58,7 +62,7 @@
                                         <button ng-click="remove_member(user)"
                                             ng-show="<%= $_user->can_manage_groups %>"
                                             class="badge badge-light text-blue">x</button>
-                                        <a ng-bind-html="user" href="/admin/user/{{user}}.html?origin=ldap">{{user}}</a>
+                                        <a ng-bind-html="user.name" href="/admin/user/{{user.id}}.html?origin=ldap">{{user.name}}</a>
                                     </td>
                                 </tr>
                     </tbody>

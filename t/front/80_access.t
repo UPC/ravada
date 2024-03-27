@@ -112,6 +112,7 @@ sub test_access_by_group_sql($vm) {
     $list_bases = rvd_front->list_machines_user($user_sql);
     is(scalar(@$list_bases),0) or exit;
 
+    is($user_sql->is_member($g_name),0);
     $user_sql->add_to_group($g_name);
 
     is($user_sql->is_member($g_name),1);
@@ -144,6 +145,9 @@ sub test_access_by_group_sql($vm) {
     remove_domain($base);
 
     $group->remove() if $group;
+
+    my $group2 = Ravada::Auth::Group->new(name => $g_name);
+    is($group2->id,undef);
 }
 
 

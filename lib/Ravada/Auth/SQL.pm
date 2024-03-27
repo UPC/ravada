@@ -633,6 +633,11 @@ Removes the user
 =cut
 
 sub remove($self) {
+    return if !$self->id;
+
+    die "Error: user ".$self->name." can not be removed.\n"
+    if $self->id == Ravada::Utils::user_daemon->id;
+
     my $sth = $$CON->dbh->prepare("DELETE FROM grants_user where id_user=?");
     $sth->execute($self->id);
 
@@ -1287,6 +1292,26 @@ sub groups($self) {
 
 }
 
+=head2 groups_local
+
+Returns a list of the local groups this user belogs to
+
+=cut
+
+sub groups_local($self) {
+    my $sth = $$CON->dbh->prepare("SELECT g.name FROM groups_local g,users_group ug "
+        ." WHERE g.id = ug.id_group "
+        ."   AND ug.id_user = ?"
+        ." ORDER BY g.name "
+    );
+    $sth->execute($self->id);
+    my @groups;
+    while (my ($name) = $sth->fetchrow) {
+        push @groups,($name);
+    }
+    return @groups;
+}
+
 =head2 disk_used
 
 Returns the amount of disk space used by this user in MB
@@ -1318,7 +1343,34 @@ Arguments: list of group names
 =cut
 
 sub add_to_group($self, @group) {
+    my $sth = $$CON->dbh->prepare(
+        "INSERT INTO users_group (id_group, id_user) "
+        ." VALUES (?,?)"
+    );
+    for my $group (@group) {
+        if (!ref($group)) {
+            $group = Ravada::Auth::Group->new(name => $group);
+        }
+        confess "Error: unknown group ".$group->name
+        if !$group->id;
+
+        $sth->execute($group->id,$self->id);
+    }
 }
+
+sub remove_from_group($self, @group) {
+
+    my $sth = $$CON->dbh->prepare(
+        "DELETE FROM users_group WHERE id_group=? AND id_user=? "
+    );
+    for my $group (@group) {
+        if (!ref($group)) {
+            $group = Ravada::Auth::Group->new(name => $group);
+        }
+        $sth->execute($group->id,$self->id);
+    }
+}
+
 
 sub _load_network($network) {
     confess "Error: undefined network"

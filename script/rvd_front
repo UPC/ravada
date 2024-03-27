@@ -354,19 +354,34 @@ post '/settings_global' => sub($c) {
     return $c->render(json => { ok => 1, reload => $reload });
 };
 
-get '/admin/group/#name' => sub($c) {
+get '/admin/group/#type/#name' => sub($c) {
+    my $name = $c->stash('name');
+    my $type= $c->stash('type');
+    return _admin_group($c, $name, $type);
+};
+
+sub _admin_group($c,$name, $type) {
     return access_denied($c)    unless $USER->can_manage_groups
         || $USER->can_view_groups;
 
     _add_admin_libs($c);
 
-    my $group = Ravada::Auth::LDAP::search_group(name => $c->stash('name'));
-    return $c->render( text => "Error: group ".$c->stash('name')." not found."
-        ."<a href='/admin/groups/'>Groups</a>"
-        , status => 302) if !$group;
-    $c->stash(object_class => [ grep !/^top$/,$group->get_value('objectClass')]);
+    my $group;
+    if ($type eq 'ldap') {
+        $group = Ravada::Auth::LDAP::search_group(name => $name);
+        return not_found($c) if !$group;
+        $c->stash(object_class => [ grep !/^top$/,$group->get_value('objectClass')]);
+    } elsif ($type eq 'local') {
+        $group = Ravada::Auth::Group->new(name => $name);
+        return not_found($c) if !$group || !$group->id;
+        $c->stash(object_class => [ ]);
+    } else {
+        die "Error group type '$type' unknown for group $name";
+    }
+
     return $c->render( template => "/main/admin_group"
         ,group => $group
+        ,type => $type
     );
 };
 
@@ -1080,7 +1095,9 @@ get '/machine/view/(:id).(:type)' => sub {
     if ( $domain->id_owner == $USER->id || $USER->can_start_machine($domain) ) {
         if ( $domain->id_base) {
             my $base = Ravada::Front::Domain->open($domain->id_base);
-            if ($base->is_public || $base->show_clones()) {
+            if (($base->show_clones || $USER->allowed_access_group($base->id))
+                || ($base->is_public  && $USER->allowed_access($base->id))
+            ) {
                 return view_machine($c);
             }
         } else {
@@ -1353,34 +1370,37 @@ get '/machine/move_access/(#id_domain)/(#id_access)/(#position)' => sub {
     return $c->render(json => { ok => 1 });
 
 };
-get '/machine/list_access_groups/(#id_domain)' => sub {
+
+get '/machine/list_access_groups/#type/#id_domain' => sub {
     my $c = shift;
 
     return _access_denied($c) if !$USER->is_admin;
 
     my $domain_id = $c->stash('id_domain');
     my $domain = Ravada::Front::Domain->open($domain_id);
-    return $c->render( json => [ $domain->list_access_groups ] );
+    return $c->render( json => [ $domain->list_access_groups($c->stash('type')) ] );
 };
 
-get '/machine/add_access_group/(#id_domain)/(#group)' => sub($c) {
+get '/machine/add_access_group/#type/#group/#id_domain' => sub($c) {
+    my $type = $c->stash('type');
     my $id_domain = $c->stash('id_domain');
     my $group = $c->stash('group');
     my $ok = 0;
     eval {
         my $domain = Ravada::Front::Domain->open($id_domain);
-        $domain->grant_access(type => 'group' , group => $group);
+        $domain->grant_access(type => "group.$type" , group => $group);
         $ok =1;
     };
     return $c->render( json => { ok => $ok, error => $@ });
 };
 
-get '/machine/remove_access_group/(#id_domain)/(#group)' => sub($c) {
+get '/machine/remove_access_group/#type/#group/#id_domain' => sub($c) {
 
     my $sth = $RAVADA->_dbh->prepare("DELETE FROM group_access WHERE id_domain=? "
         ." AND name=?"
+        ." AND type=?"
     );
-    $sth->execute($c->stash('id_domain'), $c->stash('group'));
+    $sth->execute($c->stash('id_domain'), $c->stash('group'), $c->stash('type'));
     return $c->render(json => { ok => 1 } );
 };
 
@@ -1544,12 +1564,41 @@ any '/users/register' => sub {
        return register($c);
 };
 
-any '/group/new' => sub {
+get '/group/new' => sub($c) {
 
-       my $c = shift;
-       return access_denied($c) if !$USER->is_admin();
-       return new_group($c);
+    return access_denied($c) if !$USER->is_admin();
+
+    my $type = ( $c->req->param('type') or 'local');
+    $c->render(template => 'bootstrap/new_group', type => $type);
 };
+
+post '/group/new' => sub($c) {
+    return new_group($c);
+};
+
+get '/group/#type/list' => sub($c) {
+    return _group_list($c);
+};
+
+get '/group/#type/list/#filter' => sub($c) {
+    return _group_list($c);
+};
+
+sub _group_list($c) {
+    return access_denied($c) unless $USER->can_view_groups || $USER->can_manage_groups;
+
+    my $type = $c->stash('type');
+    my $filter = $c->stash('filter');
+
+    if ($type eq 'ldap') {
+        $filter = '*' if !defined $filter;
+        return _list_ldap_groups($c,$filter);
+    } elsif($type eq 'local') {
+        return _list_sql_groups($c, $filter);
+    } else {
+        return not_found($c);
+    }
+}
 
 any '/admin/users/upload.#req' => sub($c) {
     return access_denied_json($c) unless $USER->is_admin;
@@ -2320,6 +2369,16 @@ get '/list_ldap_groups' => sub($c) {
     return _list_ldap_groups($c,'*');
 };
 
+get '/group/#type/list_members/#name' => sub($c) {
+    return access_denied($c) if !$USER->can_view_groups;
+
+    my $name = $c->stash('name');
+    my $type = $c->stash('type');
+
+    return _list_group_members($c,$type,$name);
+
+};
+
 get '/list_ldap_users' => sub($c) {
     return access_denied($c) unless $USER->can_manage_users || $USER->can_manage_groups;
     return _list_ldap_users($c,'*');
@@ -2349,45 +2408,116 @@ get '/list_ldap_group_members/#name' => sub($c) {
     return _list_ldap_group_members($c,$name);
 };
 
-post '/ldap/group/add_member' => sub($c) {
+post '/group/#type/add_member' => sub($c) {
     return access_denied($c) if !$USER->can_manage_groups;
 
     my $arg = decode_json($c->req->body);
 
-    my $login = delete $arg->{cn};
+    my $login = delete $arg->{name};
+    my $id_user = delete $arg->{id_user};
     my $group = delete $arg->{group};
 
     return $c->render(json => { error => "Error: unknown args ".Dumper($arg)}) if keys %$arg;
 
-    eval {
-        Ravada::Auth::LDAP::add_to_group($login, $group);
-    };
-    my $error = $@;
+    my $type = $c->stash('type');
+    my $error = '';
+
+    my $user;
+    if ($id_user) {
+        $user = Ravada::Auth::SQL->search_by_id($id_user);
+        $login = $user->name if $user;
+    }
+
+    if ($type eq 'ldap') {
+        die "Error: missing login name" if !$login;
+        eval {
+            Ravada::Auth::LDAP::add_to_group($login, $group);
+        };
+        $error = $@;
+    } elsif ($type eq 'local') {
+        if ($user->is_member($group)) {
+            $error = "Error: user $login already added to $group";
+        } else {
+            $user->add_to_group($group);
+        }
+    } else { $error = "Error: unkonwn group type '$type" }
     $error =~ s/(.*) at lib.*/$1/ if $error;
     return $c->render(json => { error => $error } );
 
 };
-post '/ldap/group/remove_member' => sub($c) {
+
+post '/group/#type/remove_member' => sub($c) {
     return access_denied($c) if !$USER->can_manage_groups;
 
     my $arg = decode_json($c->req->body);
 
-    my $dn = delete $arg->{dn};
+    my $type = $c->stash('type');
     my $group = delete $arg->{group};
+    my $user_name = delete $arg->{name};
+    my $id_user = delete $arg->{id_user};
 
     return $c->render(json => { error => "Error: unknown args ".Dumper($arg)}) if keys %$arg;
+    if ($id_user && $id_user =~ /^\d+$/) {
+        my $user = Ravada::Auth::SQL->search_by_id($id_user);
+        $user_name = $user->name;
+    }
 
-    eval {
-        Ravada::Auth::LDAP::remove_from_group($dn, $group);
-    };
-    return $c->render(json => { error => ($@ or '') } );
+    my $error = '';
+    $error = "Error: unkonwn args ".Dumper($arg) if keys %$arg;
+    if ($type =~ /ldap/i) {
+        if (!defined $user_name) {
+            $error = "Error: missing user name";
+        } else {
+            eval {
+            Ravada::Auth::LDAP::remove_from_group($user_name, $group);
+            };
+            $error = ( $@ or '');
+        }
+    } elsif ($type eq 'local') {
+        if (!defined $id_user) {
+            $error = "Error: missing user name";
+        } else {
+            my $user = Ravada::Auth::SQL->search_by_id($id_user);
+            $user->remove_from_group($group);
+        }
+    }
+    return $c->render(json => { error => $error } );
 
 };
+
 
 get '/ldap/group/remove/(#group)' => sub($c) {
     return access_denied($c) if !$USER->can_manage_groups;
     eval {   Ravada::Auth::LDAP::remove_group($c->stash('group')) };
     return $c->render( json => { error => ($@ or '') });
+};
+
+get '/group/#type/remove/#group' => sub($c) {
+    return access_denied($c) if !$USER->can_manage_groups;
+    my $error = '';
+    my $type = $c->stash('type');
+
+    if ($type =~ /ldap/i) {
+        eval {
+            Ravada::Auth::LDAP::remove_group($c->stash('group'));
+            my $sth = $RAVADA->_dbh->prepare(
+                "DELETE FROM group_access WHERE type = 'ldap' "
+                ." AND name=?"
+            );
+            $sth->execute($c->stash('group'));
+        };
+
+        $error = $@;
+    } elsif ($type eq 'local') {
+        my $group = Ravada::Auth::Group->new(name => $c->stash('group'));
+        if ($group && $group->id) {
+            $group->remove;
+        } else {
+            $error = "Error: unknown group $group";
+        }
+    }
+    warn $error if $error;
+    return $c->render( json => { error => $error });
 };
 
 get '/booking' => sub($c) {
@@ -3501,33 +3631,37 @@ sub _search_requested_machine {
 
 sub new_group($c) {
     my @error = ();
+    my $arg = decode_json($c->req->body);
 
-    my $groupname = ($c->param('groupname') or '');
-    my $object_class = $c->every_param('object_class');
-
-    my $object_class_checkbox;
-    for (@$object_class) {
-        $object_class_checkbox->{$_} = 'checked';
+    my $type = delete $arg->{'type'};
+    my $groupname = delete $arg->{'group_name'};
+    my $h_object_class = delete $arg->{'object_class'};
+    if(!keys %$h_object_class) {
+         $h_object_class->{'posixGroup'}=1;
     }
-    $c->stash(object_class => $object_class_checkbox);
+    warn "Warning: extra arguments ignored ".Dumper($arg)
+    if keys %$arg;
 
-    $object_class = ['top',@$object_class];
+    my $object_class = ['top',keys %$h_object_class];
 
     if ($groupname) {
         if ($groupname =~ /^[0-9a-zA-Z._-]+$/) {
-            eval {
+            if ($type eq 'ldap') {
+                eval {
                 Ravada::Auth::LDAP::add_group($groupname,undef, $object_class);
-            };
-            push @error,($@) if $@;
+                };
+                push @error,($@) if $@;
+            } else {
+                Ravada::Auth::Group::add_group(name => $groupname);
+            }
         } else {
             push @error,("Error: group name '$groupname' invalid."
             ,"Group name can only contain words, numbers, dashes, dots and underscores" );
         }
     } else {
-        $c->stash(object_class => { posixGroup => 'checked' });
+        push @error,("Empty group name");
     }
-    $c->render(template => 'bootstrap/new_group', error => \@error
-    ,groupname => $groupname);
+    return $c->render(json => { error => \@error });
 }
 
 sub register {
@@ -4281,6 +4415,23 @@ sub maintenance($c) {
     );
 }
 
+sub _list_sql_groups($c, $filter=undef) {
+    my $sql = "SELECT name FROM groups_local ";
+    $sql .= " WHERE name like ? " if defined $filter;
+    $sql .= " ORDER BY name";
+    my $sth = $RAVADA->_dbh->prepare($sql);
+    if (defined $filter) {
+       $sth->execute('%'.$filter.'%');
+    } else {
+       $sth->execute();
+    }
+    my @groups;
+    while (my ($name) = $sth->fetchrow) {
+        push @groups,($name);
+    }
+    return $c->render(json => \@groups);
+}
+
 sub _list_ldap_groups($c, $name='*') {
     return $c->render(json => []) if !$RAVADA->feature('ldap');
 
@@ -4322,9 +4473,19 @@ sub _list_ldap_users($c, $filter='*' ) {
 }
 
 sub _list_ldap_group_members($c, $name) {
-    return $c->render(json => [ Ravada::Auth::LDAP::_group_members($name) ] );
+    return $c->render(json => [ map {  { id => $_, name => $_ } } Ravada::Auth::LDAP::_group_members($name) ] );
 }
 
+sub _list_group_members($c, $type, $name) {
+    if ($type eq 'ldap') {
+        return _list_ldap_group_members($c, $name);
+    } elsif ($type eq 'local') {
+        my $group = Ravada::Auth::Group->new(name => $name);
+        return $c->render(json => [ $group->members_info ]);
+    } else {
+        confess "Error: unkonwn group type $type";
+    }
+}
 
 #################################################################################
 my $routes = app->routes->children;

@@ -42,6 +42,7 @@ create_domain
     flush_rules_node
     flush_rules
     vm_names
+    user
 
     remote_config
     remote_config_nodes
@@ -125,6 +126,7 @@ our $CONT = 0;
 our $CONT_POOL= 0;
 our $CONT_VOL= 0;
 our $USER_ADMIN;
+our $USER;
 our @USERS_LDAP;
 our $CHAIN = 'RAVADA';
 
@@ -192,6 +194,30 @@ sub config_host_devices($type, $die=1) {
     die "Error: no host devices config in $FILE_CONFIG_HOST_DEVICES for $type"
     if ( !exists $config->{$type} || !$config->{$type} ) && $die;
     return $config->{$type};
+}
+
+sub user {
+
+    return $USER if $USER;
+
+    my $login;
+    my $name = new_domain_name()."-$$";
+    my $pass = "$$ $$";
+    eval {
+        $login = Ravada::Auth::SQL->new(name => $name, password => $pass );
+    };
+    if ($@ && $@ =~ /Login failed/ ) {
+        $login = Ravada::Auth::SQL->new(name => $name);
+        $login->remove() if $login->id;
+        $login = undef;
+    } elsif ($@) {
+        die $@;
+    }
+    $USER = $login if $login && $login->id;
+    $USER = create_user($name, $pass, 0)
+        if !$USER;
+
+    return $USER;
 }
 
 sub user_admin {

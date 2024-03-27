@@ -4962,8 +4962,7 @@ sub type {
         confess "Unknown type from ".ref($self) if !$type;
         return $type if $type ne 'Domain';
     }
-    confess "Unknown vm ".Dumper($self->{_data})
-        if !$self->_data('vm');
+    return 'Unknown' if !exists $self->{_data}->{vm};
     return $self->_data('vm');
 }
 

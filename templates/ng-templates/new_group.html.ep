@@ -1,27 +1,49 @@
 <div class="card-body">
-    <form name="new_userForm" role="form" method="post" action="/group/new"
-    ng-hide="<%= $groupname && !scalar(@$error) %>"
+    <div ng-repeat="item in error">
+        {{item}}
+    </div>
+    <form name="new_groupForm" role="form"
+        ng-hide="new_group_done"
     novalidate
     >
         <div class="from-group">
-            <label for="groupname"><%=l 'Group name' %></label><%= $groupname %>
-                <input class="form-control" ng-model-onblur  placeholder="<%=l 'Enter group name' %>" type="text" ng-maxlength="80" ng-minlength="5" name="groupname" ng-pattern="/^[a-zA-Z0-9_.-]*$/" id="groupname" required="true" value="<%= $groupname %>"><br/>
+            <label for="groupname"><%=l 'Group name' %></label>
+                <input class="form-control" ng-model-onblur
+                    placeholder="<%=l 'Enter group name' %>"
+                    type="text" ng-maxlength="80" ng-minlength="2" name="groupname"
+                    ng-pattern="/^[a-zA-Z0-9_.-]*$/" id="groupname"
+                    ng-model="group_name"
+                    required="true"
+                    ><br/>
         </div>
-        <div class="form-group">
-%       for (sort ('nsMemberOf','posixGroup','groupOfUniqueNames') ) {
-            <input type="checkbox" <%= ($object_class->{$_} or '') %> name="object_class" value="<%= $_ %>"> <%= $_ %><br/>
-%       }
+        <div class="from-group">
+            <label for="type"><%=l 'Type' %></label>
+            <select name="type" ng-model="type" ng-show="<%= $FEATURE->{ldap} %>">
+                <option value="local"><%=l 'local' %></option>
+                <option value="ldap"><%=l 'LDAP' %></option>
+            </select>
         </div>
-        <div class="card-text" ng-show="new_userForm.$submitted || (new_userForm.groupname.$touched && new_userForm.groupname.$dirty)">
-            <div ng-show="new_userForm.groupname.$error.required" class="alert alert-warning">
+
+        <div class="form-group" ng-show="type=='ldap'">
+            <div ng-repeat="item in list_object_class" class="ml-4">
+                <input type="checkbox" name="object_{{item}}"
+                ng-model="object_class[item]"/>
+                <label for="object_{{item}}">{{item}}</label>
+            </div>
+        </div>
+        <div class="card-text" ng-show="new_groupForm.$submitted || (new_groupForm.groupname.$touched && new_groupForm.groupname.$dirty)">
+            <div ng-show="new_groupForm.groupname.$error.required" class="alert alert-warning">
                     <strong><%=l 'Oops!' %></strong>&nbsp;<%=l 'Group name is required' %>.
             </div>
-            <div ng-show="new_userForm.groupname.$error.maxlength" class="alert alert-warning">
+            <div ng-show="new_groupForm.groupname.$error.maxlength" class="alert alert-warning">
                     <strong><%=l 'Oops!' %></strong>&nbsp;<%=l 'Group name can not exceed 80 characters' %>.
             </div>
         </div>
         <button type="reset" class="btn btn-outline-secondary" onclick = "location='/admin/groups'"><%=l 'Cancel' %></button>
-        <button type="submit" ng-disabled="new_userForm.$invalid" id="submitbutton" class="btn btn-primary"><%=l 'Submit' %></button>
+        <button type="button" ng-disabled="new_groupForm.$invalid" id="submitbutton"
+            class="btn btn-primary"
+            ng-click="add_group()"
+            ><%=l 'Submit' %></button>
         % if (scalar @$error) {
         %   for my $i (@$error) {
         <div class="alert alert-danger">
@@ -30,7 +52,7 @@
         %   }
         % }
     </form>
-    <div ng-show="<%= $groupname && !scalar(@$error) %>">
-        <%=l 'Group name' %> <a href="/admin/group/<%= $groupname %>"><%= $groupname %></a> <%=l 'added' %>.
+    <div ng-show="new_group_done">
+        <%=l 'Group' %> <a href="/admin/group/{{type}}/{{group_name}}">{{group_name}}</a> <%=l 'added' %>.
     </div>
 </div>

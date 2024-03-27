@@ -20,6 +20,7 @@
             .service("listMess", gtListMess)
             .controller("SupportForm", suppFormCtrl)
 	        .controller("AddUserForm",addUserFormCrtl)
+	        .controller("AddGroupForm",addGroupFormCrtl)
 	        .controller("ChangePasswordForm",changePasswordFormCrtl)
 //            .controller("machines", machinesCrtl)
 //            .controller("messages", messagesCrtl)
@@ -67,6 +68,31 @@
 
     };
 
+
+    function addGroupFormCrtl($scope, $http, request){
+        $scope.type = 'local';
+        $scope.group_name = '';
+        $scope.object_class = {
+            'posixGroup': true
+            ,'nsMemberOf': false
+            ,'groupOfUniqueNames': false
+        };
+        $scope.list_object_class=Object.keys($scope.object_class);
+
+        $scope.add_group = function() {
+            $scope.new_group_done = false;
+            $http.post('/group/new'
+                      , JSON.stringify({ 'type': $scope.type
+                          ,'group_name': $scope.group_name
+                          ,'object_class': $scope.object_class
+                      }
+                )
+              ).then(function(response) {
+                  $scope.error = response.data.error;
+                  $scope.new_group_done = $scope.error.length == 0;
+              });
+        };
+    };
 
     function addUserFormCrtl($scope, $http, request){
 

@@ -6,7 +6,8 @@
 %= include 'bootstrap/navigation'
         <div id="page-wrapper">
             <!--MANAGE USERS-->
-            <div ng-controller="AddUserForm">
+            <div ng-controller="AddGroupForm"
+                 ng-init="type='<%= $type %>'">
                <div class="page-title">
                     <div class="card">
                         <div class="card-header">
