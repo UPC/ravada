@@ -2339,6 +2339,31 @@ get '/list_users.json' => sub($c) {
     return $c->render(json => $RAVADA->list_users );
 };
 
+get '/user/#type/list' => sub($c) {
+    return _list_users($c);
+};
+
+get '/user/#type/list/#name' => sub($c) {
+    return _list_users($c);
+};
+
+
+sub _list_users($c) {
+    return access_denied($c) unless $USER->can_manage_users || $USER->can_manage_groups;
+
+    my $name = ($c->stash('name') or '');
+    my $type = $c->stash('type');
+    if ($type eq 'ldap') {
+        $name .= '*' unless $name =~ m{\*$};
+        return _list_ldap_users($c,$name);
+    } elsif ($type eq 'local') {
+        my  $users = $RAVADA->list_users($name);
+        return $c->render(json => { entries => $users});
+    } else {
+        return not_found($c);
+    }
+};
+
 get '/search_user/#name'=> sub($c) {
     my $name = $c->stash('name');
     return _search_user($c, $name);

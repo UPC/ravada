@@ -11,7 +11,10 @@
             </tr>
         </tbody>
     </table>
-    <div ng-show="local_groups.length == 0">
-%=      include "/main/warning_no_groups_found"
+    <div ng-show="!local_groups || local_groups.length == 0">
+        <i class="fas fa-sync-alt fa-spin" ng-show="!local_groups"></i>
+        <div ng-show="local_groups && !local_groups.length" class="alert alert-warning">
+        <%=l 'No groups found' %>
+        </div>
     </div>
 </div>

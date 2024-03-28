@@ -22,7 +22,7 @@ LDAP
                 </div>
               </div>
             </div>
-            <div class="card-body">
+            <div class="card-body" ng-cloak="1">
                 <div ng-show="<%= $_user->can_manage_groups %> && !removed">
                     <%=l 'New group member' %>
                     <input type="text" ng-model="username_filter"
@@ -36,6 +36,9 @@ LDAP
                         ng-options="user.name for user in users"
                     >
                     </select>
+                    <span class="error" ng-show="username_filter && !loading_users && users && !users.length">
+                        <%=l 'No users found' %>
+                    </span>
                     <button ng-show="new_member && new_member.name"
                             ng-click="add_member(new_member.id, new_member.name)">
                       <%=l 'Add' %>

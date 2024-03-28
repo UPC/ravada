@@ -9,11 +9,14 @@
         </thead>
         <tbody>
             <tr ng-repeat="group in ldap_groups">
-                <td><a href="/admin/group/{{group}}">{{group}}</a></td>
+                <td><a href="/admin/group/ldap/{{group}}">{{group}}</a></td>
             </tr>
         </tbody>
     </table>
-    <div ng-show="ldap_groups.length == 0">
-%=      include "/main/warning_no_groups_found"
+    <div ng-show="!ldap_groups || ldap_groups.length == 0">
+        <i class="fas fa-sync-alt fa-spin" ng-show="!ldap_groups"></i>
+        <div ng-show="ldap_groups && !ldap_groups.length" class="alert alert-warning">
+        <%=l 'No groups found' %>
+        </div>
     </div>
 </div>

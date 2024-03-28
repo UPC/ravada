@@ -55,6 +55,19 @@ sub test_group_created($type, $name) {
     }
 }
 
+sub test_list_users($type, $user_name) {
+
+    $t->get_ok("/user/$type/list")->status_is(200);
+    my $result = decode_json($t->tx->res->body);
+    my ($found) = grep { $_->{name} eq $user_name} @{$result->{entries}};
+
+    my ($filter) = $user_name =~ /(.)/;
+
+    $t->get_ok("/user/$type/list")->status_is(200);
+    $result = decode_json($t->tx->res->body);
+    ($found) = grep { $_->{name} eq $user_name} @{$result->{entries}};
+}
+
 ###################################################################
 sub test_group($type) {
     my $group_name = new_domain_name();
@@ -77,6 +90,8 @@ sub test_group($type) {
         my $user = create_user($user_name);
         push @args,( id_user => $user->id );
     }
+
+    test_list_users($type,$user_name);
 
     $t->post_ok("/group/$type/add_member", json => {@args})->status_is(200);
     my $result = decode_json($t->tx->res->body);
