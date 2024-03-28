@@ -1754,6 +1754,10 @@ sub _clean_remote_nodes {
             if !scalar @vms;
         delete $config->{$name}->{vm};
         $config->{$name}->{name} = $name;
+        my $mac;
+        $mac = $config->{mac} if exists $config->{mac};
+
+        _fetch_node($config->{$name});
         for my $type (@vms) {
             diag("Cleaning $name $type");
             my $node;
@@ -1768,8 +1772,7 @@ sub _clean_remote_nodes {
     }
 }
 
-sub clean_remote_node {
-    my $node = shift;
+sub clean_remote_node($node) {
 
     start_node($node) if !$node->is_local();
     _remove_old_domains_vm($node);
@@ -2156,6 +2159,8 @@ sub start_node($node) {
     confess "Undefined node"    if !defined $node;
     confess "Undefined node " if!$node;
 
+    my $config = _load_remote_config();
+    my $mac = $config->{$node->name}->{mac};
     $node->disconnect;
     $node->clear_netssh();
     if ( $node->_do_is_active(1) ) {
@@ -2164,12 +2169,16 @@ sub start_node($node) {
         return if $connect;
         warn "I can't connect";
     }
+    my $domain;
+    if ($mac) {
+        `wakeonlan $mac`;
+    } else {
+        $domain = _domain_node($node);
 
-    my $domain = _domain_node($node);
+        ok($domain->_vm->host eq 'localhost');
 
-    ok($domain->_vm->host eq 'localhost');
-
-    $domain->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain->is_active;
+        $domain->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain->is_active;
+    }
 
     for ( 1 .. 60 ) {
         last if $node->ping(undef,0); # no cache
@@ -2194,6 +2203,7 @@ sub start_node($node) {
             diag("Waiting for active node ".$node->name." $_") if !($_ % 10);
         }
         last if $is_active;
+        next if !$domain;
         if ($try == 1 ) {
             $domain->shutdown(user => user_admin);
             sleep 2;
@@ -2217,14 +2227,15 @@ sub start_node($node) {
     ok($connect
             ,"[".$node->type."] "
                 .$node->name." Expecting connection") or exit;
-    for ( 1 .. 60 ) {
-        $domain = _domain_node($node);
-        last if $domain->ip;
-        sleep 1;
-        diag("Waiting for domain from node ".$node->type." "
-            .$node->name." $_") if !($_ % 5);
+    if (!$mac) {
+        for ( 1 .. 60 ) {
+            last if $domain->ip;
+            sleep 1;
+            diag("Waiting for domain from node ".$node->type." "
+                        .$node->name." $_") if !($_ % 5);
+         }
+         ok($domain->ip,"Make sure the virtual machine ".$domain->name." has installed the qemu-guest-agent") or exit;
     }
-    ok($domain->ip,"Make sure the virtual machine ".$domain->name." has installed the qemu-guest-agent") or exit;
 
     my $node2;
     for ( reverse 1 .. 120 ) {
@@ -2429,13 +2440,30 @@ sub remote_node_shared($vm_name) {
     return _do_remote_node($vm_name, $remote_config);
 }
 
-sub _fetch_node_ips($remote_config) {
+sub _start_node_manual($config) {
+    my $name = $config->{name};
+    if (exists $config->{mac} && $config->{mac}) {
+        `wakeonlan $config->{mac}`
+    } else {
+        `virsh start $name`;
+    }
+}
+
+sub _fetch_node($remote_config) {
+    my $config2 = _load_remote_config();
     my $name = $remote_config->{name};
-    `virsh start $name`;
+    $config2->{$name}->{name} = $name;
+    _start_node_manual($config2->{$name});
+    if (exists $remote_config->{mac} && $remote_config->{mac} ) {
+        delete $remote_config->{mac};
+        return;
+    }
+    return if $config2->{$name}->{mac};
+    confess if $name eq 'prodesk';
     my ($in, $out, $err);
     my @ip;
     my @virsh =('virsh','domifaddr',$name);
-    my @agent =('source','agent');
+    my @agent =('--source','agent');
     LOOP:
     for ( 1 .. 60 ) {
         for my $source (1,0) {
@@ -2443,6 +2471,7 @@ sub _fetch_node_ips($remote_config) {
             push @cmd,@agent if $source;
             run3(\@cmd,\$in, \$out, \$err);
             for my $line ( split /\n/, $out) {
+                next if $line =~ /^\s*\w+br\d+/;
                 my ($ip) = $line =~ /\s+(\d+\.\d+\.\d+\.\d+)/;
                 next if !$ip || $ip =~ /^127/;
                 push @ip,($ip) if $ip;
@@ -2453,8 +2482,10 @@ sub _fetch_node_ips($remote_config) {
         sleep 1;
     }
     die "Error: no ips for $name ".Dumper(@ip) if scalar(@ip)<2;
-     $remote_config->{host}=$ip[0];
-     $remote_config->{public_ip}=$ip[1];
+    unlock_hash(%$remote_config);
+    $remote_config->{host}=$ip[0];
+    $remote_config->{public_ip}=($ip[1] or undef);
+    lock_hash(%$remote_config);
 }
 
 sub _do_remote_node($vm_name, $remote_config) {
@@ -2466,9 +2497,9 @@ sub _do_remote_node($vm_name, $remote_config) {
     if (! $remote_config->{public_ip}) {
         unlock_hash(%$remote_config);
         delete $remote_config->{public_ip};
-        _fetch_node_ips($remote_config);
         lock_hash(%$remote_config);
     }
+    _fetch_node($remote_config);
     eval { $node = $vm->new(%{$remote_config}) };
     ok(!$@,"Expecting no error connecting to $vm_name at ".Dumper($remote_config
         ).", got :'"
