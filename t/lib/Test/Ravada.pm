@@ -2434,13 +2434,21 @@ sub _fetch_node_ips($remote_config) {
     `virsh start $name`;
     my ($in, $out, $err);
     my @ip;
+    my @virsh =('virsh','domifaddr',$name);
+    my @agent =('source','agent');
+    LOOP:
     for ( 1 .. 60 ) {
-        run3(['virsh','domifaddr',$name],\$in, \$out, \$err);
-        for my $line ( split /\n/, $out) {
-            my ($ip) = $line =~ /\s+(\d+\.\d+\.\d+\.\d+)/;
-            push @ip,($ip) if $ip;
+        for my $source (1,0) {
+            my @cmd = @virsh;
+            push @cmd,@agent if $source;
+            run3(\@cmd,\$in, \$out, \$err);
+            for my $line ( split /\n/, $out) {
+                my ($ip) = $line =~ /\s+(\d+\.\d+\.\d+\.\d+)/;
+                next if !$ip || $ip =~ /^127/;
+                push @ip,($ip) if $ip;
+            }
+            last LOOP if scalar(@ip)>=2;
         }
-        last if scalar(@ip)>=2;
         diag("Waiting for ip in VM $name ".scalar(@ip).Dumper(\@ip));
         sleep 1;
     }
