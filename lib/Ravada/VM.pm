@@ -397,6 +397,7 @@ sub _connect_ssh($self) {
                 ,forward_X11 => 0
               ,forward_agent => 0
         ,kill_ssh_on_timeout => 1
+        ,master_opts => [ -o => "StrictHostKeyChecking=no"]
             );
             last if !$ssh->error;
             warn "RETRYING ssh ".$self->host." ".join(" ",$ssh->error);

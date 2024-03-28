@@ -2429,6 +2429,26 @@ sub remote_node_shared($vm_name) {
     return _do_remote_node($vm_name, $remote_config);
 }
 
+sub _fetch_node_ips($remote_config) {
+    my $name = $remote_config->{name};
+    `virsh start $name`;
+    my ($in, $out, $err);
+    my @ip;
+    for ( 1 .. 60 ) {
+        run3(['virsh','domifaddr',$name],\$in, \$out, \$err);
+        for my $line ( split /\n/, $out) {
+            my ($ip) = $line =~ /\s+(\d+\.\d+\.\d+\.\d+)/;
+            push @ip,($ip) if $ip;
+        }
+        last if scalar(@ip)>=2;
+        diag("Waiting for ip in VM $name ".scalar(@ip).Dumper(\@ip));
+        sleep 1;
+    }
+    die "Error: no ips for $name ".Dumper(@ip) if scalar(@ip)<2;
+     $remote_config->{host}=$ip[0];
+     $remote_config->{public_ip}=$ip[1];
+}
+
 sub _do_remote_node($vm_name, $remote_config) {
     my $vm = rvd_back->search_vm($vm_name);
 
@@ -2438,6 +2458,7 @@ sub _do_remote_node($vm_name, $remote_config) {
     if (! $remote_config->{public_ip}) {
         unlock_hash(%$remote_config);
         delete $remote_config->{public_ip};
+        _fetch_node_ips($remote_config);
         lock_hash(%$remote_config);
     }
     eval { $node = $vm->new(%{$remote_config}) };
