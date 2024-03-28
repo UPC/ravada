@@ -1,33 +1,73 @@
 <div class="card">
     <div class="card-body">
 
-        <div ng-show="ldap_groups && !access_groups">
+        <div ng-show="access_groups_loading>0">
             <i class="fas fa-sync-alt fa-spin"></i>
         </div>
 
+
+        <div ng-show="<%= $FEATURE->{ldap} %> && access_groups['ldap']">
+
+        <h4>LDAP groups</h4>
+
+        <div class="card-body ml-8 pl-8">
         <ldap-groups name="groups"
-                     ng-model="access_groups" editable="true"
-                     on-add="add_group_access(group)"
-                     on-delete="remove_group_access(group)"
+                     ng-model="access_groups['ldap']" editable="true"
+                     on-add="add_group_access('ldap', group)"
+                     on-delete="remove_group_access('ldap',group)"
         ></ldap-groups>
 
-        <div class="card-body">
-
-            <div class="alert alert-warning" ng-show="access_groups && access_groups.length === 0">
+            <div class="alert alert-warning" ng-show="(access_groups['ldap'] && access_groups['ldap'].length === 0) || (ldap_groups && ldap_groups.length===0)">
                 <div ng-show="ldap_groups && ldap_groups.length === 0 ">
                     <%=l 'There are no LDAP groups defined.' %>
 %       if ( $USER->is_admin ) {
-                        <a href="/admin/groups"><%=l 'Create one.' %></a>
+                        <a href="/group/new?type=ldap"><%=l 'Create a group.' %></a>
 %       }
                 </div>
-                <%=l 'This virtual machine has no group restrictions.' %>
-            </div>
 
-            <div ng-show="access_groups && access_groups.length > 0">
-                <b><%=l 'Only users from these groups will be allowed to execute this machine' %></b>
+                <div ng-show="ldap_groups && ldap_groups.length>0 && access_groups['ldap'] && access_groups['ldap'].length===0">
+                <%=l 'This virtual machine has no LDAP group restrictions.' %>
+                </div>
             </div>
 
         </div>
+            <hr>
 
+        </div>
+
+        <div>
+            <h4>Local groups</h4>
+            <div class="card-body ml-8 pl-8">
+            <local-groups name="local_groups"
+                     ng-model="access_groups['local']" editable="true"
+                     on-add="add_group_access('local',group)"
+                     on-delete="remove_group_access('local',group)"
+            ></local-groups>
+            <div class="alert alert-warning" ng-show="(access_groups['local'] && access_groups['local'].length === 0) || (local_groups && local_groups.length===0)">
+                <div ng-show="local_groups && local_groups.length === 0 ">
+                    <%=l 'There are no LDAP groups defined.' %>
+%       if ( $USER->is_admin ) {
+                        <a href="/group/new?type=local"><%=l 'Create a group.' %></a>
+%       }
+                </div>
+
+                <div ng-show="local_groups && local_groups.length>0 && access_groups['local'] && access_groups['local'].length===0">
+                <%=l 'This virtual machine has no local group restrictions.' %>
+                </div>
+            </div>
+
+            </div>
+        </div>
+
+        <div class="card-body">
+
+            <div ng-show="(access_groups['local'] && access_groups['local'].length > 0)
+            ||(access_groups['ldap'] && access_groups['ldap'].length > 0)"
+                class="alert alert-primary">
+
+                <%=l 'Only users from these groups will be allowed to execute this machine' %>
+
+            </div>
+        </div>
     </div>
 </div>

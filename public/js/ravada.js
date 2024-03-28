@@ -349,6 +349,7 @@
             $scope.shared_user_found=false;
             $scope.storage_pools=['default'];
             $scope.shared_user_count = -1
+            $scope.access_groups=[];
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -633,7 +634,8 @@
                                 $scope.list_ldap_attributes();
                                 list_users();
                                 list_host_devices();
-                                list_access_groups();
+                                list_access_groups('ldap');
+                                list_access_groups('local');
                             }
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
                 });
@@ -898,6 +900,7 @@
                       $scope.searching_ldap_attributes = false;
                       $scope.user_name = response.data.name;
                       $scope.check_access();
+                      list_access_groups('ldap');
                   });
               }
           };
@@ -1194,22 +1197,22 @@
                 });
             };
 
-            var list_access_groups = function() {
-                $http.get("/machine/list_access_groups/"+$scope.showmachine.id).then(function(response) {
-                    $scope.access_groups=response.data;
+            var list_access_groups = function(type) {
+                $http.get("/machine/list_access_groups/"+type+"/"+$scope.showmachine.id).then(function(response) {
+                    $scope.access_groups[type]=response.data;
                 });
             };
-            $scope.add_group_access = function(group) {
-                $http.get("/machine/add_access_group/"+$scope.showmachine.id+"/"+group)
+            $scope.add_group_access = function(type,group) {
+                $http.get("/machine/add_access_group/"+type+"/"+"/"+group+"/"+$scope.showmachine.id)
                     .then(function(response) {
-                        list_access_groups();
+                        list_access_groups(type);
                 });
             };
 
-            $scope.remove_group_access = function(group) {
+            $scope.remove_group_access = function(type,group) {
                 $http.get("/machine/remove_access_group/"+$scope.showmachine.id+"/"+group)
                     .then(function(response) {
-                        list_access_groups();
+                        list_access_groups(type);
                 });
             };
 
