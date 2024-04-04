@@ -1222,8 +1222,9 @@ sub add_config_unique_node($self, $path, $content, $data) {
     for my $item (split m{/}, $path ) {
         next if !$item;
 
-        confess "Error, no $item in ".Dumper($found)
-        if !exists $found->{$item};
+        if ( !exists $found->{$item} ) {
+            $found->{$item} ={};
+        }
 
         $found = $found->{$item};
     }

@@ -2678,7 +2678,6 @@ sub _check_iptables() {
     for my $rule (":LIBVIRT_PRT.*"
         ,"-A POSTROUTING -j LIBVIRT_PRT"
         ,"-A LIBVIRT_PRT -o virbr0 -p udp -m udp --dport 68 -j CHECKSUM --checksum-fill"
-        ,"-A LIBVIRT_PRT -o virbr1 -p udp -m udp --dport 68 -j CHECKSUM --checksum-fill"
     ) {
         my @found = grep /^$rule$/ , split (/\n/, $out);
         die "$rule not found in @cmd \n$err\n" if !@found;
