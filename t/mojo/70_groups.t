@@ -152,7 +152,7 @@ sub test_list_groups($type, $group_name) {
 
 sub test_add_access($type,$group_name, $user_name, $id_domain) {
 
-    $t->get_ok("/machine/add_access_group/$type/$group_name/$id_domain")
+    $t->get_ok("/machine/add_access_group/$type/$id_domain/$group_name")
     ->status_is(200);
     my $result = decode_json($t->tx->res->body);
     is($result->{error},'');
@@ -183,7 +183,7 @@ sub test_add_access($type,$group_name, $user_name, $id_domain) {
 }
 
 sub test_remove_access($type, $group_name, $user_name, $id_domain) {
-    $t->get_ok("/machine/remove_access_group/$type/$group_name/$id_domain")
+    $t->get_ok("/machine/remove_access_group/$type/$id_domain/$group_name")
     ->status_is(200);
     $t->get_ok("/machine/list_access_groups/$type/$id_domain")->status_is(200);
 
@@ -219,7 +219,7 @@ sub test_group_removed($type, $group_name, $user_name, $id_domain) {
 
     $t->post_ok("/group/$type/add_member", json => {id_user => $user->id, group => $group_name })->status_is(200);
 
-    $t->get_ok("/machine/add_access_group/$type/$group_name/$id_domain")
+    $t->get_ok("/machine/add_access_group/$type/$id_domain/$group_name")
     ->status_is(200);
 
     $t->get_ok("/group/$type/remove/$group_name")->status_is(200);

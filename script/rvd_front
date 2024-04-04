@@ -1381,7 +1381,7 @@ get '/machine/list_access_groups/#type/#id_domain' => sub {
     return $c->render( json => [ $domain->list_access_groups($c->stash('type')) ] );
 };
 
-get '/machine/add_access_group/#type/#group/#id_domain' => sub($c) {
+get '/machine/add_access_group/#type/#id_domain/#group' => sub($c) {
     my $type = $c->stash('type');
     my $id_domain = $c->stash('id_domain');
     my $group = $c->stash('group');
@@ -1394,7 +1394,7 @@ get '/machine/add_access_group/#type/#group/#id_domain' => sub($c) {
     return $c->render( json => { ok => $ok, error => $@ });
 };
 
-get '/machine/remove_access_group/#type/#group/#id_domain' => sub($c) {
+get '/machine/remove_access_group/#type/#id_domain/#group' => sub($c) {
 
     my $sth = $RAVADA->_dbh->prepare("DELETE FROM group_access WHERE id_domain=? "
         ." AND name=?"
@@ -2386,12 +2386,6 @@ sub _search_user($c,$name='') {
     }
     $found = $found->{name} if $found;
     return $c->render(json => {found => $found , count => scalar(@$list_found) } );
-};
-
-get '/list_ldap_groups' => sub($c) {
-    return access_denied($c) unless $USER->can_view_groups || $USER->can_manage_groups;
-
-    return _list_ldap_groups($c,'*');
 };
 
 get '/group/#type/list_members/#name' => sub($c) {
