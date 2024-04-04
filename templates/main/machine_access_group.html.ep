@@ -1,10 +1,6 @@
 <div class="card">
-    <div class="card-body">
 
-        <div ng-show="access_groups_loading>0">
-            <i class="fas fa-sync-alt fa-spin"></i>
-        </div>
-
+    <div class="card-body" ng-show="showmachine && showmachine.id">
 
         <div ng-show="<%= $FEATURE->{ldap} %> && access_groups['ldap']">
 
@@ -29,7 +25,6 @@
                 <%=l 'This virtual machine has no LDAP group restrictions.' %>
                 </div>
             </div>
-
         </div>
             <hr>
 
@@ -37,7 +32,8 @@
 
         <div>
             <h4>Local groups</h4>
-            <div class="card-body ml-8 pl-8">
+            <i class="fas fa-sync-alt fa-spin" ng-show="!access_groups['local']"></i>
+            <div class="card-body ml-8 pl-8" ng-show="access_groups['local']">
             <local-groups name="local_groups"
                      ng-model="access_groups['local']" editable="true"
                      on-add="add_group_access('local',group)"

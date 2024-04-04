@@ -641,7 +641,7 @@
                 });
                 if (is_admin ) {
                     $scope.list_ldap_attributes();
-                    list_ldap_groups();
+                    list_groups();
                 }
                 $scope.list_cpu_models();
           };
@@ -1102,10 +1102,14 @@
                         }
                     });
             }
-            var list_ldap_groups = function() {
-                $http.get('/list_ldap_groups')
+            var list_groups = function() {
+                $http.get('/group/ldap/list')
                     .then(function(response) {
                         $scope.ldap_groups=response.data;
+                    });
+                $http.get('/group/local/list')
+                    .then(function(response) {
+                        $scope.local_groups=response.data;
                     });
             };
 
@@ -1200,17 +1204,19 @@
             var list_access_groups = function(type) {
                 $http.get("/machine/list_access_groups/"+type+"/"+$scope.showmachine.id).then(function(response) {
                     $scope.access_groups[type]=response.data;
+                    console.log(response.data);
+                    console.log(type);
                 });
             };
             $scope.add_group_access = function(type,group) {
-                $http.get("/machine/add_access_group/"+type+"/"+"/"+group+"/"+$scope.showmachine.id)
+                $http.get("/machine/add_access_group/"+type+"/"+$scope.showmachine.id+"/"+group)
                     .then(function(response) {
                         list_access_groups(type);
                 });
             };
 
             $scope.remove_group_access = function(type,group) {
-                $http.get("/machine/remove_access_group/"+$scope.showmachine.id+"/"+group)
+                $http.get("/machine/remove_access_group/"+type+"/"+$scope.showmachine.id+"/"+group)
                     .then(function(response) {
                         list_access_groups(type);
                 });
@@ -1586,39 +1592,6 @@
             $scope.maintenance_end = new Date(end);
         };
     };
-
-/*
-  function requestsCrtlSingle($scope, $interval, $http, request){
-    $scope.getReqs= function() {
-      $http.get('/requests.json').then(function(response) {
-          $scope.requests=response.data;
-      });
-                ).then function(response) {
-                    $scope.conflicts = response.data
-            })
-        };
-
-        $http.get('/list_ldap_groups/')
-                    .then(function(response) {
-                        $scope.ldap_groups=response.data;
-        });
-        $http.get('/list_bases.json')
-                    .then(function(response) {
-                         $scope.bases=response.data;
-        });
-
-    };
-/*
-  function requestsCrtlSingle($scope, $interval, $http, request){
-    $scope.getReqs= function() {
-      $http.get('/requests.json').then(function(response) {
-          $scope.requests=response.data;
-      });
-    };
-//    $interval($scope.getReqs,5000);
-    $scope.getReqs();
-  };
-*/
 
 	function nameAvail($timeout, $q) {
     return {

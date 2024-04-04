@@ -3,7 +3,8 @@
 export {
     svcBookings,
     svcEntry,
-    svcLDAP
+    svcLDAP,
+    svcLocal
 }
 
 svcBookings.$inject = ["$resource"];
@@ -25,7 +26,19 @@ function svcLDAP($resource) {
         list_groups: {
             method: 'GET',
             isArray: true,
-            params: { action: 'list_ldap_groups'}
+            params: { action: 'group/ldap/list'}
+        }
+    });
+}
+
+svcLocal.$inject = ["$resource"];
+
+function svcLocal($resource) {
+    return $resource('/:action/:qry',{ qry: '@qry' }, {
+        list_groups: {
+            method: 'GET',
+            isArray: true,
+            params: { action: 'group/local/list'}
         }
     });
 }
