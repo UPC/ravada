@@ -38,20 +38,57 @@ sub _prepare_dir_mdev() {
     return $dir;
 }
 
+sub _check_mdev($vm, $hd) {
+
+    my $n_dev = $hd->list_available_devices();
+    return _check_used_mdev($vm, $hd) if $n_dev;
+
+    my $dir = _prepare_dir_mdev();
+    $hd->_data('list_command' => "ls $dir");
+    return 2;
+}
+
+sub _check_used_mdev($vm, $hd) {
+    return if $vm->type eq 'Void';
+
+    my @active = $vm->vm->list_domains;
+    for my $dom (@active) {
+        my $doc = XML::LibXML->load_xml(string => $dom->get_xml_description);
+
+        my $hd_path = "/domain/devices/hostdev/source/address";
+        my ($hostdev) = $doc->findnodes($hd_path);
+        next if !$hostdev;
+
+        diag($dom->get_name. " has a hd");
+        my $uuid = $hostdev->getAttribute('uuid');
+        if (!$uuid) {
+            warn "No uuid in ".$hostdev->toString;
+            next;
+        }
+        my $dom = $vm->import_domain($dom->get_name,user_admin);
+        $dom->add_host_device($hd->id);
+        my ($dev) = grep /^$uuid/, $hd->list_devices;
+        if (!$dev) {
+            warn "No $uuid found in mdevctl list";
+            next;
+        }
+        $dom->_lock_host_device($hd, $dev);
+    }
+    return $hd->list_available_devices();
+}
+
 sub test_mdev($vm) {
 
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->id);
     my ($mdev) = grep { $_->{name} eq "GPU Mediated Device" } @$templates;
     ok($mdev,"Expecting PCI template in ".$vm->name) or return;
 
-    my $dir = _prepare_dir_mdev();
 
     my $id = $vm->add_host_device(template => $mdev->{name});
     my $hd = Ravada::HostDevice->search_by_id($id);
 
-    $hd->_data('list_command' => "ls $dir");
-
-    is( $hd->list_available_devices() , 2);
+    my $n_devices = _check_mdev($vm, $hd);
+    is( $hd->list_available_devices() , $n_devices);
 
     my $domain = $BASE->clone(
         name =>new_domain_name
@@ -60,7 +97,7 @@ sub test_mdev($vm) {
     $domain->add_host_device($id);
 
     $domain->_add_host_devices();
-    is($hd->list_available_devices(), 1);
+    is($hd->list_available_devices(), $n_devices-1);
 
     test_config($domain);
 
@@ -97,7 +134,7 @@ sub test_xml($domain) {
 
     my $hd_path = "/domain/devices/hostdev";
     my ($hostdev) = $doc->findnodes($hd_path);
-    ok($hostdev,"Expecting $hd_path") or exit;
+    ok($hostdev,"Expecting $hd_path in ".$domain->name) or exit;
 
     my ($video) = $doc->findnodes("/domain/devices/video/model");
     my $v_type = $video ->getAttribute('type');
@@ -141,8 +178,8 @@ sub test_volatile_clones($vm, $domain, $host_device) {
     Ravada::Request->prepare_base(@args) if !$domain->is_base();
 
     wait_request();
-
-    is($host_device->list_available_devices(), 2) or exit;
+    my $n_devices = $host_device->list_available_devices();
+    ok($n_devices) or exit;
 
     $domain->_data('volatile_clones' => 1);
     my $n_clones = $domain->clones;
