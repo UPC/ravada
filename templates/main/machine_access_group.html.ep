@@ -31,17 +31,19 @@
         </div>
 
         <div>
-            <h4>Local groups</h4>
+            <h4 ng-show="<%= $FEATURE->{ldap} or 0 %>"><%=l 'Local groups' %></h4>
+            <h4 ng-hide="<%= $FEATURE->{ldap} or 0 %>"><%=l 'Groups' %></h4>
             <i class="fas fa-sync-alt fa-spin" ng-show="!access_groups['local']"></i>
             <div class="card-body ml-8 pl-8" ng-show="access_groups['local']">
             <local-groups name="local_groups"
                      ng-model="access_groups['local']" editable="true"
                      on-add="add_group_access('local',group)"
                      on-delete="remove_group_access('local',group)"
+                    ng-show="local_groups && local_groups.length>0"
             ></local-groups>
             <div class="alert alert-warning" ng-show="(access_groups['local'] && access_groups['local'].length === 0) || (local_groups && local_groups.length===0)">
                 <div ng-show="local_groups && local_groups.length === 0 ">
-                    <%=l 'There are no LDAP groups defined.' %>
+                    <%=l 'There are no groups defined.' %>
 %       if ( $USER->is_admin ) {
                         <a href="/group/new?type=local"><%=l 'Create a group.' %></a>
 %       }
