@@ -15,6 +15,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 my $BASE;
+my $MOCK_MDEV;
 
 ####################################################################
 
@@ -45,7 +46,9 @@ sub _check_mdev($vm, $hd) {
 
     my $dir = _prepare_dir_mdev();
     $hd->_data('list_command' => "ls $dir");
-    return 2;
+
+    $MOCK_MDEV=1 unless $vm->type eq 'Void';
+    return $hd->list_available_devices;;
 }
 
 sub _check_used_mdev($vm, $hd) {
@@ -188,7 +191,7 @@ sub test_volatile_clones($vm, $domain, $host_device) {
     my $exp_avail = $host_device->list_available_devices()- $n;
 
     Ravada::Request->clone(@args, number => $n, remote_ip => '1.2.3.4');
-    wait_request(check_error => 0);
+    wait_request(check_error => 0, debug => 0);
     is(scalar($domain->clones), $n_clones+$n);
 
     my $n_device = $host_device->list_available_devices();
@@ -196,8 +199,9 @@ sub test_volatile_clones($vm, $domain, $host_device) {
 
     for my $clone_data( $domain->clones ) {
         my $clone = Ravada::Domain->open($clone_data->{id});
-        test_config($clone);
+        is($clone->is_active,1) unless $MOCK_MDEV;
         is($clone->is_volatile,1);
+        test_config($clone);
         $clone->shutdown_now(user_admin);
 
         $n_device = $host_device->list_available_devices();

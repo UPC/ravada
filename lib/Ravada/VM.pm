@@ -510,7 +510,6 @@ sub _around_create_domain {
     }
 
     my $domain = $self->$orig(%args_create, volatile => $volatile);
-    die if $domain->name eq 'tst_device_40_mediated_device_00-1';
     $self->_add_instance_db($domain->id);
     $domain->add_volume_swap( size => $swap )   if $swap;
     $domain->_data('is_compacted' => 1);
