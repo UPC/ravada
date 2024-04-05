@@ -49,7 +49,7 @@ sub _check_mdev($vm, $hd) {
 }
 
 sub _check_used_mdev($vm, $hd) {
-    return if $vm->type eq 'Void';
+    return $hd->list_available_devices() if $vm->type eq 'Void';
 
     my @active = $vm->vm->list_domains;
     for my $dom (@active) {
@@ -59,7 +59,6 @@ sub _check_used_mdev($vm, $hd) {
         my ($hostdev) = $doc->findnodes($hd_path);
         next if !$hostdev;
 
-        diag($dom->get_name. " has a hd");
         my $uuid = $hostdev->getAttribute('uuid');
         if (!$uuid) {
             warn "No uuid in ".$hostdev->toString;
@@ -185,6 +184,7 @@ sub test_volatile_clones($vm, $domain, $host_device) {
     my $n_clones = $domain->clones;
 
     my $n=2;
+    my $max_n_device = $host_device->list_available_devices();
     my $exp_avail = $host_device->list_available_devices()- $n;
 
     Ravada::Request->clone(@args, number => $n, remote_ip => '1.2.3.4');
@@ -195,7 +195,6 @@ sub test_volatile_clones($vm, $domain, $host_device) {
     is($n_device,$exp_avail);
 
     for my $clone_data( $domain->clones ) {
-        diag($clone_data->{name});
         my $clone = Ravada::Domain->open($clone_data->{id});
         test_config($clone);
         is($clone->is_volatile,1);
@@ -215,7 +214,7 @@ sub test_volatile_clones($vm, $domain, $host_device) {
         ok(!$clone_gone3,"Expecting $clone_data->{name} removed on shutdown") or exit;
     }
     $domain->_data('volatile_clones' => 0);
-    is($host_device->list_available_devices(), 2) or exit;
+    is($host_device->list_available_devices(), $max_n_device) or exit;
 }
 
 ####################################################################
