@@ -1619,6 +1619,11 @@ sub _add_indexes_generic($self) {
             "index(id_booking_entry,ldap_group)"
             ,"index(id_booking_entry)"
         ]
+        ,booking_entry_local_groups => [
+            "unique(id_booking_entry,id_group)"
+            ,"index(id_booking_entry)"
+        ]
+
         ,booking_entry_users => [
             "index(id_booking_entry,id_user)"
             ,"index(id_booking_entry)"
@@ -2355,6 +2360,17 @@ sub _sql_create_tables($self) {
         }
         ]
         ,
+        [
+        booking_entry_local_groups => {
+            id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
+            ,id_booking_entry
+                => 'int not null references `booking_entries` (`id`) ON DELETE CASCADE'
+            ,id_group => 'int not null'
+            ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+        }
+        ]
+        ,
+
         [
         booking_entry_users => {
             id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'

@@ -18,6 +18,7 @@ sub BUILD($self, $args) {
     return $self->_open($args->{id}) if $args->{id};
 
     my $ldap_groups = delete $args->{ldap_groups};
+    my $local_groups = delete $args->{local_groups};
     my $users = delete $args->{users};
     my $bases = delete $args->{bases};
 
@@ -26,6 +27,7 @@ sub BUILD($self, $args) {
 
     $self->_insert_db($args);
     $self->_add_ldap_groups($ldap_groups);
+    $self->_add_local_groups($local_groups);
     $self->_add_users($users);
     $self->_add_bases($bases);
 
@@ -74,6 +76,29 @@ sub _change_ldap_groups($self, $ldap_groups) {
     $self->_purge_table('booking_entry_ldap_groups','ldap_group',$ldap_groups,[ $self->ldap_groups ]);
 }
 
+sub _add_local_groups($self, $local_groups) {
+    return if !$local_groups;
+    my $id = $self->_data('id');
+    my %already_added = map { $_ => 1 } $self->local_groups();
+    $local_groups = [ $local_groups ] if !ref($local_groups);
+
+    my $sth = $self->_dbh->prepare("INSERT INTO booking_entry_local_groups "
+            ."(  id_booking_entry, id_group )"
+            ."values( ?,? ) "
+    );
+    confess "Error: local_groups not an array ref".Dumper($local_groups)
+    if !ref($local_groups) || ref($local_groups) ne 'ARRAY';
+
+    warn Dumper($local_groups);
+    for my $current_group (@$local_groups) {
+        confess if $current_group !~ /^\d+$/;
+        next if $already_added{$current_group}++;
+        $sth->execute($id, $current_group);
+    }
+
+}
+
+
 sub _add_ldap_groups($self, $ldap_groups) {
     return if !$ldap_groups;
     my $id = $self->_data('id');
@@ -84,6 +109,9 @@ sub _add_ldap_groups($self, $ldap_groups) {
             ."(  id_booking_entry, ldap_group )"
             ."values( ?,? ) "
     );
+    die "Error: ldap_groups not an array ref".Dumper($ldap_groups)
+    if !ref($ldap_groups) || ref($ldap_groups) ne 'ARRAY';
+
     for my $current_group (@$ldap_groups) {
         next if $already_added{$current_group}++;
         $sth->execute($id, $current_group);
@@ -305,6 +333,18 @@ sub ldap_groups($self) {
     return @groups;
 }
 
+sub local_groups($self) {
+    my $sth = $self->_dbh->prepare("SELECT id_group FROM booking_entry_local_groups"
+        ." WHERE id_booking_entry=?");
+    $sth->execute($self->id);
+    my @groups;
+    while ( my ($group) = $sth->fetchrow ) {
+        push @groups,($group);
+    }
+    return @groups;
+}
+
+
 sub users ($self) {
     my $sth = $self->_dbh->prepare("SELECT id_user,u.name "
         ." FROM booking_entry_users b,users u"
@@ -363,8 +403,16 @@ sub user_allowed($entry, $user_name) {
     for my $allowed_user_name ( $entry->users ) {
         return 1 if $user_name eq $allowed_user_name;
     }
-    for my $group_name ($entry->ldap_groups) {
-        return 1 if Ravada::Auth::LDAP::is_member($user_name, $group_name);
+    my $user = Ravada::Auth::SQL->new(name => $user_name);
+    return 0 if !$user->id;
+    if ($user->external_auth() eq 'ldap') {
+        for my $group_name ($entry->ldap_groups) {
+            return 1 if Ravada::Auth::LDAP::is_member($user_name, $group_name);
+        }
+    }
+    for my $group_id ($entry->local_groups) {
+            my $group = Ravada::Auth::Group->new(id => $group_id);
+            return 1 if $user->is_member($group);
     }
     return 0;
 }

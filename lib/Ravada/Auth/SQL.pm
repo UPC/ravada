@@ -327,7 +327,7 @@ Sets or gets the external auth value of an user.
 
 sub external_auth($self, $value=undef) {
     if (!defined $value) {
-        return $self->{_data}->{external_auth};
+        return ($self->{_data}->{external_auth} or '');
     }
     my $sth = $$CON->dbh->prepare(
         "UPDATE users set external_auth=? WHERE id=?"

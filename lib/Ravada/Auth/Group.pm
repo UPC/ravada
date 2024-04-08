@@ -68,6 +68,17 @@ sub _load_data($self) {
 
 }
 
+sub open($self, $id) {
+    my $sth = $$CON->dbh->prepare(
+        "SELECT name FROM groups_local WHERE id=?"
+    );
+    $sth->execute($id);
+    my ($name) = $sth->fetchrow;
+    die "Error: unknown group id '$id'" if !$name;
+
+    return $self->new(name => $name);
+}
+
 sub id {
     my $self = shift;
     my $id;
@@ -96,9 +107,6 @@ sub add_group(%args) {
     };
     confess $@ if $@;
     return Ravada::Auth::Group->new(name => $name);
-}
-
-sub members($self) {
 }
 
 sub _remove_all_members($self) {
