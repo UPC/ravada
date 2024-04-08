@@ -53,5 +53,15 @@ an IP is detected or it fails.
 Settings
 --------
 
-Internal ports are shown in the host at a different port. It can be
-changed from the global settings page.
+Internal ports are shown in the host from a starting port number. It can be
+changed from the global settings page in the *Port Expose* section.
+
+TroubleShooting
+---------------
+
+*The port appears down when I start the virtual Machine*
+
+Solution: This port has a service in the virtual machine that is not up. Be sure the
+service has started, and that it is listening in the correct port. Check also if this
+virtual machine has an internal firewall that may block connections.
+
