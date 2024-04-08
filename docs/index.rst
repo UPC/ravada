@@ -85,6 +85,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/update_rollback
    docs/windows_clients
    docs/mac_clients
+   docs/macos_spice_client
    docs/change_windows_driver_to_virtio
    docs/Backup
    docs/migrate_manual
