@@ -4,6 +4,7 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use DateTime;
+use Hash::Util qw(lock_hash);
 use Test::More;
 use YAML qw(DumpFile);
 
@@ -16,7 +17,8 @@ use feature qw(signatures);
 use lib 't/lib';
 use Test::Ravada;
 
-my $GROUP = 'test_bookings';
+my $GROUP = 'test_bookings_ldap';
+my $GROUP_LOCAL = 'test_bookings_local';
 my ($USER_YES_NAME_1, $USER_YES_NAME_2, $USER_NO_NAME) = ( 'mcnulty','bunk','stringer');
 my ($USER_2_NAME,$USER_3_NAME)=('bubbles','walon');
 
@@ -134,39 +136,46 @@ sub _wait_end_of_hour($seconds=0) {
         my $now = DateTime->from_epoch( epoch => time() , time_zone => $TZ );
         last if $now->minute <59
         && ( $now->minute>0 || $now->second>$seconds);
-        diag("Waiting for end of hour to run booking tests "
+        diag("Waiting for hour:01 to run booking tests "
             .$now->hour.":".$now->minute.".".$now->second);
         sleep 1;
     }
 
 }
 
-sub test_booking_oneday_dow($vm) {
-    return test_booking_oneday($vm,1);
+sub test_booking_oneday_dow($vm, $mode) {
+    return test_booking_oneday($vm, $mode, 1);
 }
 
-sub test_booking_oneday_date_end($vm) {
-    return test_booking_oneday($vm,0,1);
+sub test_booking_oneday_date_end($vm, $mode) {
+    return test_booking_oneday($vm, $mode, 0,1);
 }
 
-sub test_booking_oneday_date_end_dow($vm) {
-    return test_booking_oneday($vm,1,1);
+sub test_booking_oneday_date_end_dow($vm, $mode) {
+    return test_booking_oneday($vm,$mode, 1,1);
 }
 
 
-sub test_booking_oneday($vm, $dow=0, $date_end=0) {
+sub test_booking_oneday($vm, $mode, $dow=0, $date_end=0) {
     my $base = create_domain($vm);
     $base->prepare_base(user_admin);
     $base->is_public(1);
+    confess if !ref($mode) || ref($mode) ne 'HASH';
+
+    for my $key (keys %$mode) {
+        next if $key =~ /^(local|ldap)$/;
+        die "Mode incorrect. It should be ldap,local or both ".Dumper($mode);
+    }
 
     my $today = DateTime->from_epoch( epoch => time(), time_zone => $TZ);
     my @args;
     push @args, ( day_of_week => $today->day_of_week)   if $dow;
     push @args, ( date_end => $today->ymd)              if $date_end;
+    push @args , ( ldap_groups => $GROUP )              if $mode->{'ldap'};
+    push @args , ( local_groups => $GROUP_LOCAL )       if $mode->{'local'};
 
     my $booking = Ravada::Booking->new(
         bases => $base->id
-        , ldap_groups => $GROUP
         , users => [$USER_2_NAME , $USER_3->id]
         , date_start => $today->ymd
         , time_start => "08:00"
@@ -1269,10 +1278,18 @@ for my $vm_name ( vm_names()) {
         test_conflict($vm);
         test_booking_datetime($vm);
 
-        test_booking_oneday($vm);
-        test_booking_oneday_dow($vm);
-        test_booking_oneday_date_end($vm);
-        test_booking_oneday_date_end_dow($vm);
+        for my $ldap (0, 1) {
+            for my $local ( 0, 1) {
+                my $mode = {};
+                $mode->{'ldap'} = $ldap;
+                $mode->{'local'} = $ldap;
+                lock_hash(%$mode);
+                test_booking_oneday($vm , $mode);
+                test_booking_oneday_dow($vm, $mode);
+                test_booking_oneday_date_end($vm, $mode);
+                test_booking_oneday_date_end_dow($vm, $mode);
+            }
+        }
 
         _check_no_bookings();
 
