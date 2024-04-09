@@ -664,6 +664,7 @@ sub test_change_entry($vm, $booking) {
     is($new_entry->_data('time_start'), $new_time);
 
     test_change_groups($entry);
+    test_change_local_groups($entry);
     test_change_users($entry);
     test_change_bases($vm,$entry);
 }
@@ -682,6 +683,24 @@ sub test_change_groups($entry) {
     @new_groups = sort $entry->ldap_groups;
     is_deeply( \@new_groups ,\@groups2) or die Dumper(\@new_groups,\@groups2);
 }
+
+sub test_change_local_groups($entry) {
+    my @groups = $entry->local_groups();
+    my $new_group_1 = create_group();
+    my @groups2 = sort (@groups, $new_group_1->id);
+
+    $entry->change( local_groups => \@groups2 );
+    my @new_groups = sort $entry->local_groups;
+    is_deeply( \@new_groups ,\@groups2) or die Dumper(\@new_groups,\@groups2);
+
+    #clear groups
+    my $new_group_2 = create_group();
+    @groups2 = $new_group_2->id;
+    $entry->change( local_groups => \@groups2 );
+    @new_groups = sort $entry->local_groups;
+    is_deeply( \@new_groups ,\@groups2) or die Dumper(\@new_groups,\@groups2);
+}
+
 
 sub test_change_users($entry) {
     test_change_users_with_name($entry);

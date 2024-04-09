@@ -90,13 +90,23 @@
             </div>
         </div>
         <div class="form-group" ng-class="{ 'is-invalid' : form_booking.groups.$error }">
-            <label for="date_until"><%=l 'Groups with permissions' %><sup>*</sup></label>
+            <label for="groups"><%=l 'LDAP groups allowed' %><sup>*</sup></label>
             <ldap-groups name="groups" ng-model="$ctrl.entry.ldap_groups" editable="$ctrl.entry.editable"
-                         required></ldap-groups>
+                         ></ldap-groups>
             <div ng-messages="form_booking.groups.$error" role="alert">
                 <div ng-messages-include="error-messages"></div>
             </div>
         </div>
+        <div class="form-group" ng-class="{ 'is-invalid' : form_booking.groups.$error }">
+            <label for="groups_local"><%=l 'Groups allowed' %><sup>*</sup></label>
+            <local-groups name="groups_local" ng-model="$ctrl.entry.local_groups" editable="$ctrl.entry.editable"
+                         ></local-groups>
+            <div ng-messages="form_booking.groups.$error" role="alert">
+                <div ng-messages-include="error-messages"></div>
+            </div>
+        </div>
+        {{$ctrl.entry.local_groups}}
+
         <div class="d-flex" ng-show="$ctrl.entry.editable">
             <div class="mr-auto">
                 <button type="button" class="btn btn-danger"

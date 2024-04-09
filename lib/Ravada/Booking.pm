@@ -390,7 +390,7 @@ sub bookings_range(%args) {
     $date_start = DateTime::Format::DateParse->parse_datetime($date_start) if !ref($date_start);
     $date_start->set( hour => 0, minute => 0, second => 0);
 
-    my $date_end = ( delete $args{date_end} or _today ) ;
+    my $date_end = ( delete $args{date_end} or $date_start->clone) ;
     $date_end = DateTime::Format::DateParse->parse_datetime($date_end) if !ref($date_end);
     $date_end->set( hour => 0, minute => 0, second => 0);
 
@@ -405,7 +405,7 @@ sub bookings_range(%args) {
     my %day_of_week = map { $_ => 1 } split //,$day_of_week;
 
     #todo check date_end > date_start
-    die "Error end must be after start ".$date_start." ".$date_end
+    confess "Error end must be after start ".$date_start." ".$date_end
     if DateTime->compare( $date_start, $date_end) > 0;
 
     my $show_user_allowed = delete $args{show_user_allowed};

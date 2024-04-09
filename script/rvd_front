@@ -2585,6 +2585,8 @@ post '/v1/bookings/' => sub($c) {
     my $arg = decode_json($c->req->body);
     delete $arg->{dow};
     delete $arg->{repeat};
+    delete $arg->{editable};
+    delete $arg->{background_color};
     $arg->{id_owner} = $USER->id;
     my $dow = '';
     for my $curr ( split//,$arg->{day_of_week} ) {

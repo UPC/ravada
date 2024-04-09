@@ -76,6 +76,12 @@ sub _change_ldap_groups($self, $ldap_groups) {
     $self->_purge_table('booking_entry_ldap_groups','ldap_group',$ldap_groups,[ $self->ldap_groups ]);
 }
 
+sub _change_local_groups($self, $local_groups) {
+    $self->_add_local_groups($local_groups);
+    $self->_purge_table('booking_entry_local_groups','id_group',$local_groups,[ $self->local_groups ]);
+}
+
+
 sub _add_local_groups($self, $local_groups) {
     return if !$local_groups;
     my $id = $self->_data('id');
@@ -89,7 +95,6 @@ sub _add_local_groups($self, $local_groups) {
     confess "Error: local_groups not an array ref".Dumper($local_groups)
     if !ref($local_groups) || ref($local_groups) ne 'ARRAY';
 
-    warn Dumper($local_groups);
     for my $current_group (@$local_groups) {
         confess if $current_group !~ /^\d+$/;
         next if $already_added{$current_group}++;
@@ -252,6 +257,9 @@ sub change($self, %fields) {
         if ($field eq 'ldap_groups') {
             $self->_change_ldap_groups($fields{$field});
             next;
+        } elsif ($field eq 'local_groups') {
+            $self->_change_local_groups($fields{$field});
+            next;
         } elsif ($field eq 'users') {
             $self->_change_users($fields{$field});
             next;
@@ -411,7 +419,7 @@ sub user_allowed($entry, $user_name) {
         }
     }
     for my $group_id ($entry->local_groups) {
-            my $group = Ravada::Auth::Group->new(id => $group_id);
+            my $group = Ravada::Auth::Group->open($group_id);
             return 1 if $user->is_member($group);
     }
     return 0;
