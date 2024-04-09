@@ -123,8 +123,6 @@
                     ng-click="$ctrl.save()"
             ><%=l 'Save changes' %>
             </button>
-            invalid: '{{form_booking.$invalid}}'<br/>
-            pristine: '{{form_booking.$pristine}}'
         </div>
 
         <div class="alert alert-danger" role="alert" ng-show="$ctrl.hasConflicts()">
