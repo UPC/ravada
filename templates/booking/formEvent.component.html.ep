@@ -119,7 +119,8 @@
             ><%=l 'Cancel' %>
             </button>
             <button type="button" class="btn btn-primary ml-2"
-                    ng-disabled="form_booking.$invalid || form_booking.$pristine || $ctrl.hasConflicts()"
+                    ng-disabled="form_booking.$invalid || form_booking.$pristine || $ctrl.hasConflicts()
+                    || ($ctrl.entry.ldap_groups==0 && $ctrl.entry.local_groups==0)"
                     ng-click="$ctrl.save()"
             ><%=l 'Save changes' %>
             </button>
