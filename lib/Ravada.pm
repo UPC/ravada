@@ -2706,7 +2706,7 @@ sub _sql_insert_defaults($self){
             ,{
                 id_parent => $id_backend
                 ,name => 'bookings'
-                ,value => 0
+                ,value => 1
             }
             ,{
                 id_parent => $id_backend

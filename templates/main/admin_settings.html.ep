@@ -224,6 +224,9 @@
                     ng-true-value="1" ng-false-value="0"
                 >
             </div>
+            <div class="col-md-6">
+                <%=l 'Enables schedule server bookings for exclusive use' %>
+            </div>
         </div>
 
 
