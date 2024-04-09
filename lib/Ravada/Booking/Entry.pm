@@ -77,8 +77,11 @@ sub _change_ldap_groups($self, $ldap_groups) {
 }
 
 sub _change_local_groups($self, $local_groups) {
+    my $sth = $self->_dbh->prepare("DELETE FROM booking_entry_local_groups "
+        ." WHERE id_booking_entry=?"
+    );
+    $sth->execute($self->_data('id'));
     $self->_add_local_groups($local_groups);
-    $self->_purge_table('booking_entry_local_groups','id_group',$local_groups,[ $self->local_groups ]);
 }
 
 
@@ -95,8 +98,16 @@ sub _add_local_groups($self, $local_groups) {
     confess "Error: local_groups not an array ref".Dumper($local_groups)
     if !ref($local_groups) || ref($local_groups) ne 'ARRAY';
 
-    for my $current_group (@$local_groups) {
-        confess if $current_group !~ /^\d+$/;
+    my $sth_gr = $self->_dbh->prepare("SELECT id FROM groups_local WHERE name=?");
+    my @local_groups2 = @$local_groups;
+    for my $current_group (@local_groups2) {
+        if ( $current_group !~ /^\d+$/) {
+            $sth_gr->execute($current_group);
+            my ($id_group) = $sth_gr->fetchrow;
+            die "Error: group '$current_group' not found" if !$id_group;
+            $current_group=$id_group;
+        }
+
         next if $already_added{$current_group}++;
         $sth->execute($id, $current_group);
     }
@@ -342,8 +353,11 @@ sub ldap_groups($self) {
 }
 
 sub local_groups($self) {
-    my $sth = $self->_dbh->prepare("SELECT id_group FROM booking_entry_local_groups"
-        ." WHERE id_booking_entry=?");
+    my $sth = $self->_dbh->prepare("SELECT g.name "
+        ." FROM booking_entry_local_groups be,groups_local g"
+        ." WHERE be.id_booking_entry=?"
+        ."   AND be.id_group=g.id "
+    );
     $sth->execute($self->id);
     my @groups;
     while ( my ($group) = $sth->fetchrow ) {
@@ -418,9 +432,8 @@ sub user_allowed($entry, $user_name) {
             return 1 if Ravada::Auth::LDAP::is_member($user_name, $group_name);
         }
     }
-    for my $group_id ($entry->local_groups) {
-            my $group = Ravada::Auth::Group->open($group_id);
-            return 1 if $user->is_member($group);
+    for my $group_name ($entry->local_groups) {
+            return 1 if $user->is_member($group_name);
     }
     return 0;
 }

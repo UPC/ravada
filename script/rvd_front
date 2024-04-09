@@ -2540,28 +2540,35 @@ get '/group/#type/remove/#group' => sub($c) {
 };
 
 get '/booking' => sub($c) {
-    return $c->render(template => '/ng-templates/error'
-            ,message => "LDAP is required to set up bookings. "
-            ."<a href='https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html'>"
-            ."See how to configure LDAP authentication.</a>"
-    )
-    if !$RAVADA->feature('ldap');
 
-    my @groups = Ravada::Auth::LDAP::search_group( name => '*' );
-    return $c->render(template => '/ng-templates/error'
-        ,message => "LDAP groups are required to set up bookings. No groups found. <a href='/group/new'>Add new entries here.</a>"
-    ) if !@groups;
+    my $sth = $RAVADA->_dbh->prepare("SELECT count(*) FROM groups_local");
+    $sth->execute();
+    my ($groups_local) = $sth->fetchrow;
 
-    my @members_found;
+    my @groups_ldap;
+    $sth = $RAVADA->_dbh->prepare("SELECT count(*) FROM users_group");
+    $sth->execute();
+    my ($members_found) = $sth->fetchrow;
 
-    for my $group (@groups) {
-        @members_found = $group->get_value('memberUid');
-        last if @members_found;
+    if (!$groups_local && $RAVADA->feature('ldap')) {
+        @groups_ldap = Ravada::Auth::LDAP::search_group( name => '*' );
+        if (!$members_found) {
+            for my $group (@groups_ldap) {
+                $members_found = $group->get_value('memberUid');
+                last if $members_found;
+            }
+        }
     }
 
-    if (!@members_found) {
+    if (!$groups_local && !@groups_ldap) {
         return $c->render(template => '/ng-templates/error'
-            ,message => "LDAP groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+        ,message => "Groups are required to set up bookings. No groups found. <a href='/group/new'>Add new entries here.</a>"
+    );
+    }
+
+    if (!$members_found) {
+        return $c->render(template => '/ng-templates/error'
+            ,message => "Groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
         )
 
     }
@@ -2606,6 +2613,7 @@ post '/v1/bookings/' => sub($c) {
 get '/v1/booking_entry/:id' => sub($c) {
     my $booking_entry = Ravada::Booking::Entry->new( id => $c->stash('id'));
     $booking_entry->{_data}->{ldap_groups} = [ $booking_entry->ldap_groups ];
+    $booking_entry->{_data}->{local_groups} = [ $booking_entry->local_groups ];
     $booking_entry->{_data}->{users} = [ $booking_entry->users ];
     return $c->render( json => $booking_entry->{_data} );
 };

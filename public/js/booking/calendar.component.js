@@ -114,7 +114,8 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
             dow : [0,0,0,0,0,0,0],
             editable: true,
             background_color: "#7ab2fa",
-            ldap_groups: []
+            ldap_groups: [],
+            local_groups: []
         };
         const today_dow = moment(selectionInfo.startStr).weekday();
         booking_entry.dow[today_dow]=today_dow+1;

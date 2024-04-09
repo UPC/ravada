@@ -224,9 +224,6 @@
                     ng-true-value="1" ng-false-value="0"
                 >
             </div>
-            <div class="col-md-6">
-                <%=l 'Bookings require LDAP authentication.' %> <a href="https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html"><i class="fa fa-info"></i></a>
-            </div>
         </div>
 
 

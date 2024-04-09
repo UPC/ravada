@@ -687,7 +687,7 @@ sub test_change_groups($entry) {
 sub test_change_local_groups($entry) {
     my @groups = $entry->local_groups();
     my $new_group_1 = create_group();
-    my @groups2 = sort (@groups, $new_group_1->id);
+    my @groups2 = sort (@groups, $new_group_1->name);
 
     $entry->change( local_groups => \@groups2 );
     my @new_groups = sort $entry->local_groups;
@@ -698,7 +698,9 @@ sub test_change_local_groups($entry) {
     @groups2 = $new_group_2->id;
     $entry->change( local_groups => \@groups2 );
     @new_groups = sort $entry->local_groups;
-    is_deeply( \@new_groups ,\@groups2) or die Dumper(\@new_groups,\@groups2);
+
+    my @groups3 = ($new_group_2->name);
+    is_deeply( \@new_groups ,\@groups3) or die Dumper(\@new_groups,\@groups3);
 }
 
 

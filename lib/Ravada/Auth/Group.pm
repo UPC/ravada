@@ -74,7 +74,7 @@ sub open($self, $id) {
     );
     $sth->execute($id);
     my ($name) = $sth->fetchrow;
-    die "Error: unknown group id '$id'" if !$name;
+    confess "Error: unknown group id '$id'" if !$name;
 
     return $self->new(name => $name);
 }

@@ -105,7 +105,6 @@
                 <div ng-messages-include="error-messages"></div>
             </div>
         </div>
-        {{$ctrl.entry.local_groups}}
 
         <div class="d-flex" ng-show="$ctrl.entry.editable">
             <div class="mr-auto">
@@ -124,6 +123,8 @@
                     ng-click="$ctrl.save()"
             ><%=l 'Save changes' %>
             </button>
+            invalid: '{{form_booking.$invalid}}'<br/>
+            pristine: '{{form_booking.$pristine}}'
         </div>
 
         <div class="alert alert-danger" role="alert" ng-show="$ctrl.hasConflicts()">
@@ -136,5 +137,4 @@
             </div>
         </div>
     </fieldset>
-    {{ form_booking.ldap_groups }}
 </form>

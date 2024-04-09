@@ -34,7 +34,7 @@ function grpCtrl(apiLocal, $scope, $timeout) {
     };
     self.getGroups = async qry => await apiLocal.list_groups({ qry }).$promise
 
-    self.add_ldap_group = () => {
+    self.add_local_group = () => {
         if (!self.group_selected) return;
         if (self.selected_groups.indexOf(self.group_selected) >= 0) {
             msgError(self.group_selected + ' already there');
@@ -44,7 +44,7 @@ function grpCtrl(apiLocal, $scope, $timeout) {
         self.onAdd({ group: self.group_selected})
         self.group_selected = null;
     };
-    self.remove_ldap_group =  group => {
+    self.remove_local_group =  group => {
         self.selected_groups = remove_array_element(self.selected_groups,group)
         self.onDelete({ group })
     }
