@@ -89,7 +89,9 @@
                 </label>
             </div>
         </div>
-        <div class="form-group" ng-class="{ 'is-invalid' : form_booking.groups.$error }">
+        <div class="form-group" ng-class="{ 'is-invalid' : form_booking.groups.$error }"
+            ng-show="<%= $FEATURE->{ldap} or 0 %>"
+        >
             <label for="groups"><%=l 'LDAP groups allowed' %><sup>*</sup></label>
             <ldap-groups name="groups" ng-model="$ctrl.entry.ldap_groups" editable="$ctrl.entry.editable"
                          ></ldap-groups>
