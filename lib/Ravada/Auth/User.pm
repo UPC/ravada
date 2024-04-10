@@ -512,6 +512,14 @@ sub list_requests($self, $date_req=Ravada::Utils::date_now(3600)) {
     return @req;
 }
 
+=head2 is_member
+
+Returns wether an user is member of a group
+
+Arguments: group name or object
+
+=cut
+
 sub is_member($self, $group) {
     $group = Ravada::Auth::Group->new(name => $group) if !ref($group);
     my $is_member = grep { $_ eq $group->name} $self->groups_local;

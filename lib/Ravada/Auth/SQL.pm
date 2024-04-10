@@ -1358,6 +1358,15 @@ sub add_to_group($self, @group) {
     }
 }
 
+=head2 remove_from_group
+
+Removes the user from a group or list of groups
+
+Arguments: list of group names
+
+=cut
+
+
 sub remove_from_group($self, @group) {
 
     my $sth = $$CON->dbh->prepare(
