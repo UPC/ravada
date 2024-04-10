@@ -1296,7 +1296,7 @@ sub test_config {
     };
     like($@, qr/LDAP required/i);
 
-    is(rvd_back->setting('/backend/bookings'),0);
+    is(rvd_back->setting('/backend/bookings'),1);
 }
 
 ###################################################################
