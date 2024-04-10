@@ -350,7 +350,6 @@ sub _volatiles_in_nodes($base) {
         next if !$clone->{is_volatile};
         $vms{$clone->{id_vm}}++;
     }
-    warn Dumper(\%vms);
     return scalar(keys(%vms));
 }
 
