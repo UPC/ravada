@@ -1527,7 +1527,8 @@ sub _around_create_network($orig, $self,$data, $id_owner, $request=undef) {
         my ($found) = grep { $_->{$field} eq $data->{$field} }
         $self->list_virtual_networks();
 
-        die "Error: network $field=$data->{$field} already exists\n"
+        die "Error: network $field=$data->{$field} already exists in "
+            .$self->name."\n"
         if $found;
     }
 
