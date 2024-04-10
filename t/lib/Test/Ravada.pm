@@ -1389,7 +1389,7 @@ sub wait_request {
                             like($error,qr{^($|.*compacted)});
                         } elsif($req->command eq 'refresh_machine') {
                             like($error,qr{^($|.*port.*already used|.*Domain not found)});
-                        } elsif($req->command eq 'force_shutdown') {
+                        } elsif($req->command =~ /shutdown/) {
                             like($error,qr{^($|.*Unknown domain)});
                         } elsif($req->command eq 'connect_node') {
                             like($error,qr{^($|Connection OK)});
