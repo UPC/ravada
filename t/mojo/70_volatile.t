@@ -290,12 +290,15 @@ sub test_clone($vm_name, $n=undef) {
 
     my $seconds = 0;
     LOOP: for my $count0 ( 0 .. $times ) {
+        my $count_created=0;
         for my $count1 ( 0 .. $n*_count_nodes($vm_name) ) {
             for my $base ( @bases ) {
                 next if !$base->is_base;
 
                 next if $base->list_requests > 10;
                 last LOOP if _too_loaded("clone");
+                last LOOP if !$ENV{TEST_LONG} && _volatiles_in_nodes($base);
+
                 my $user = create_user(new_domain_name(),$$);
                 my $ip = (0+$count0.$count1) % 255;
 
@@ -311,6 +314,7 @@ sub test_clone($vm_name, $n=undef) {
                     ,options => { network => $network_name }
                 );
                 delete_request('set_time','force_shutdown');
+                $count_created++;
                 next if $vm_name eq 'Void';
                 if (_slightly_loaded() ) {
                     wait_request(debug => 1);
@@ -338,6 +342,16 @@ sub test_clone($vm_name, $n=undef) {
     for my $base ( @bases ) {
         $t->get_ok('/machine/remove_clones/'.$base->id.".json");
     }
+}
+
+sub _volatiles_in_nodes($base) {
+    my %vms;
+    for my $clone ( $base->clones ) {
+        next if !$clone->{is_volatile};
+        $vms{$clone->{id_vm}}++;
+    }
+    warn Dumper(\%vms);
+    return scalar(keys(%vms));
 }
 
 sub _search_domain_by_name($name) {
