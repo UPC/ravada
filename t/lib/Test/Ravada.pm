@@ -671,7 +671,10 @@ sub _discover() {
             uid => user_admin->id
             ,id_vm => $id_vm
         );
-        wait_request();
+        for ( 1 .. 10 ) {
+            wait_request();
+            last if $req->status('done');
+        }
         my $out = $req->output;
         warn $req->error if $req->error;
         next if !$out;
