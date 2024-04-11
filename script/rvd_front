@@ -1576,6 +1576,34 @@ post '/group/new' => sub($c) {
     return new_group($c);
 };
 
+any '/admin/groups/upload_members.#req' => sub($c) {
+
+    return access_denied_json($c) unless $USER->is_admin;
+    _add_admin_libs($c);
+
+    my $csv = $c->req->upload('users');
+    if($csv->headers->content_type !~ m{text/(csv|plain)}) {
+        return $c->render(status => 400
+            ,text => "Wrong content type ".$csv->headers->content_type
+                    ." , it should be text/csv or plain"
+        );
+    }
+
+    my $strict = $c->req->param('strict');
+    my $group_name = $c->req->param('group');
+
+    my ($found, $count, $error) = $RAVADA->upload_group_members(
+        $group_name, $csv->slurp, $strict
+    );
+
+    return $c->render(json =>
+        { output => "$count users added"
+        ,error => $error
+    }) if $c->stash('req') eq 'json';
+
+};
+
+
 get '/group/#type/list' => sub($c) {
     return _group_list($c);
 };

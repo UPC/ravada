@@ -1931,6 +1931,51 @@ sub add_to_bundle ($self, $id_bundle, $id_domain){
 
 }
 
+=head2 upload_group_members
+
+Upload a list of users to be added to a group
+
+=head3 Arguments
+
+=over
+
+=item * string with users
+
+=item * exclusive: remove all other users not uploaded here
+
+=back
+
+=cut
+
+sub upload_group_members($self, $group_name, $users, $exclusive=0) {
+    my $group = Ravada::Auth::Group->new(name => $group_name);
+    $group = Ravada::Auth::Group::add_group(name => $group_name) if !$group->id;
+    my ($found,$count) = (0,0);
+    my @error;
+    my @external = ( is_external => 1, external_auth => 'sso');
+    my %members;
+    for my $line (split /\n/,$users) {
+        my ($name) = split(/:/,$line);
+        $found++;
+        my $user = Ravada::Auth::SQL->new(name => $name);
+        if (!$user || !$user->id) {
+            push @error,("User $name not found");
+            $user = Ravada::Auth::SQL::add_user(name => $name,
+            ,@external);
+        }
+        $members{$name}++;
+        if (!$user->is_member($group_name)) {
+            $user->add_to_group($group_name);
+        }
+    }
+    if ($exclusive) {
+        for my $name ($group->members) {
+            $group->remove_member($name) unless $members{$name};
+        }
+    }
+    return ($found, $count, \@error);
+}
+
 =head2 version
 
 Returns the version of the main module

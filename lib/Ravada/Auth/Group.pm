@@ -109,6 +109,18 @@ sub add_group(%args) {
     return Ravada::Auth::Group->new(name => $name);
 }
 
+sub remove_member($self, $name) {
+    my $sth = $$CON->dbh->prepare("SELECT id FROM users WHERE name=?");
+    $sth->execute($name);
+    my ($id_user) = $sth->fetchrow;
+
+    $sth = $$CON->dbh->prepare("DELETE FROM users_group "
+        ." WHERE id_user=?"
+    );
+    $sth->execute($id_user);
+}
+
+
 sub _remove_all_members($self) {
     my $sth = $$CON->dbh->prepare("DELETE FROM users_group "
         ." WHERE id_group=?"
@@ -124,6 +136,20 @@ sub _remove_access($self) {
     $sth->execute($self->name);
 }
 
+sub members($self) {
+    my $sth = $$CON->dbh->prepare(
+        "SELECT u.id,u.name FROM users u,users_group ug "
+        ." WHERE u.id = ug.id_user "
+        ."   AND ug.id_group=?"
+        ." ORDER BY name"
+    );
+    $sth->execute($self->id);
+    my @members;
+    while (my ($uid,$name) = $sth->fetchrow) {
+        push @members,($name);
+    }
+    return @members;
+}
 sub members_info($self) {
     my $sth = $$CON->dbh->prepare(
         "SELECT u.id,u.name FROM users u,users_group ug "
