@@ -1966,6 +1966,9 @@ sub upload_group_members($self, $group_name, $users, $exclusive=0) {
         $members{$name}++;
         if (!$user->is_member($group_name)) {
             $user->add_to_group($group_name);
+            $count++;
+        } else {
+            push @error,("User $name already a member");
         }
     }
     if ($exclusive) {

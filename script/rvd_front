@@ -354,17 +354,49 @@ post '/settings_global' => sub($c) {
     return $c->render(json => { ok => 1, reload => $reload });
 };
 
-get '/admin/group/#type/#name' => sub($c) {
+any '/admin/group/#type/#name' => sub($c) {
     my $name = $c->stash('name');
     my $type= $c->stash('type');
     return _admin_group($c, $name, $type);
 };
+
+sub _upload_members($c, $name) {
+    my $csv = $c->req->upload('members');
+    my $strict = $c->req->param('strict');
+
+    if($csv->headers->content_type !~ m{text/(csv|plain)}) {
+        if ($csv->headers->content_type =~ m{application/octet-stream}) {
+            $USER->send_message("Error processing batch file, probably empty file");
+            return;
+        }
+        $USER->send_message("Wrong content type ".$csv->headers->content_type
+                    ." , it should be text/csv or plain"
+        );
+        return;
+    }
+
+    my ($found, $count, $error) = $RAVADA->upload_group_members(
+        $name, $csv->slurp, $strict
+    );
+
+    $USER->send_message("$found entries found in file, $count users added to group $name");
+    my $n_msg=0;
+    for my $msg (@$error) {
+        $USER->send_message($msg);
+        last if $n_msg++>10;
+    }
+}
 
 sub _admin_group($c,$name, $type) {
     return access_denied($c)    unless $USER->can_manage_groups
         || $USER->can_view_groups;
 
     _add_admin_libs($c);
+
+    if ( $c->req->method eq 'POST') {
+        _upload_members($c, $name);
+    }
+
 
     my $group;
     if ($type eq 'ldap') {
@@ -1576,7 +1608,7 @@ post '/group/new' => sub($c) {
     return new_group($c);
 };
 
-any '/admin/groups/upload_members.#req' => sub($c) {
+any '/group/upload_members.#req' => sub($c) {
 
     return access_denied_json($c) unless $USER->is_admin;
     _add_admin_libs($c);
@@ -3702,7 +3734,7 @@ sub new_group($c) {
     my $object_class = ['top',keys %$h_object_class];
 
     if ($groupname) {
-        if ($groupname =~ /^[0-9a-zA-Z._-]+$/) {
+        if ($groupname !~ /\s/) {
             if ($type eq 'ldap') {
                 eval {
                 Ravada::Auth::LDAP::add_group($groupname,undef, $object_class);
@@ -3713,7 +3745,7 @@ sub new_group($c) {
             }
         } else {
             push @error,("Error: group name '$groupname' invalid."
-            ,"Group name can only contain words, numbers, dashes, dots and underscores" );
+            ,"Group name can not contain spaces");
         }
     } else {
         push @error,("Empty group name");

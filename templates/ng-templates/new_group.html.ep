@@ -11,7 +11,7 @@
                 <input class="form-control" ng-model-onblur
                     placeholder="<%=l 'Enter group name' %>"
                     type="text" ng-maxlength="80" ng-minlength="2" name="groupname"
-                    ng-pattern="/^[a-zA-Z0-9_.-]*$/" id="groupname"
+                    id="groupname"
                     ng-model="group_name"
                     required="true"
                     ><br/>

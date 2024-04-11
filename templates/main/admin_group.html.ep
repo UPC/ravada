@@ -23,8 +23,10 @@ LDAP
               </div>
             </div>
             <div class="card-body" ng-cloak="1">
-                <div ng-show="<%= $_user->can_manage_groups %> && !removed">
-                    <%=l 'New group member' %>
+                <div class="border border-secondary mb-4 p-4"
+                    ng-show="<%= $_user->can_manage_groups %> && !removed">
+                <div >
+                    <b><%=l 'New group member' %></b>
                     <input type="text" ng-model="username_filter"
                                        ng-change="list_users('<%= $type %>')"
                                        placeholder="<%=l 'Search' %>"
@@ -44,6 +46,17 @@ LDAP
                       <%=l 'Add' %>
                     </button>
                 </div>
+                    <hr>
+                    <b><%=l 'Batch upload' %></b>
+                    <form method="post" enctype="multipart/form-data" name="form_upload"
+                        role="form"
+                        action="<%= $url %>"
+                        novalidate
+                        ><%= $url%>
+                    <input name="members" type="file" required>
+                    <input type="submit" value="<%=l 'upload members' %>"/>
+                    </form>
+                </div>
 
                 <div ng-show="!removed">
                 <div class="alert alert-danger" ng-show="error">{{error}}</div>
@@ -53,7 +66,7 @@ LDAP
                 </div>
                 </div>
 
-                <table class="table table-striped" ng-show="group_members.length>0">
+                <table class="table table-striped" ng-show="group_members.length>0" border="1">
                     <thead>
                         <tr>
                             <th><%=l 'Name' %></th>
@@ -92,5 +105,6 @@ LDAP
     </div>
 %= include $footer
 %= include 'bootstrap/scripts'
+%= include 'bootstrap/messages'
 </body>
 </html>
