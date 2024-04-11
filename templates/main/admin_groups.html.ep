@@ -9,8 +9,8 @@
              ng-init="list_groups()"
             >
             <div class="page-header">
-              <div class="card" id="admin-content">
-                  <div class="card-header" ng-cloak="1">
+              <div class="card" id="admin-content" ng-cloak="1">
+                  <div class="card-header">
                     <h2 class="display-5"><%=l 'Groups' %></h2>
                     <div class="card-title">
                         <form method="post" action="/admin/groups">
@@ -27,7 +27,7 @@
                     </div>
                 </div>
 %=              include '/main/list_groups_tabs'
-                <div class="tab-content">
+                <div class="tab-content" ng-cloak="1">
 %=                  include '/main/list_groups_local'
 %=                  include '/main/list_groups_ldap'
                 </div>

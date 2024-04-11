@@ -9,7 +9,7 @@
             <div ng-controller="AddGroupForm"
                  ng-init="type='<%= $type %>'">
                <div class="page-title">
-                    <div class="card">
+                    <div class="card" ng-cloak="1">
                         <div class="card-header">
                             <h2><%=l 'Create a new group' %>
                             </h2>
