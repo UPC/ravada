@@ -4246,7 +4246,7 @@ sub _update_fields($c, $table, $arg) {
 
     my $error = '';
     for my $field ( keys %$arg ) {
-        next if $field =~ /^_/;
+        next if $field =~ /^_/ || $field =~ /^bases$/;
         next if
         !defined $old->{$field} && !defined $arg->{$field}
         || ( defined $old->{$field} && defined $arg->{$field}
