@@ -234,8 +234,10 @@ sub open {
     $args{security} = decode_json($row->{security}) if $row->{security};
 
     my $vm = $self->new(%args);
-    return if !$vm || !$vm->vm;
-    $VM{$args{id}} = $vm unless $args{readonly};
+
+    eval {
+        $VM{$args{id}} = $vm unless $args{readonly} || !$vm->vm;
+    };
     return $vm;
 
 }
@@ -2399,17 +2401,26 @@ sub _store_mac_address($self, $force=0 ) {
     }
 }
 
-sub _wake_on_lan( $self ) {
-    return if $self->is_local;
+sub _wake_on_lan( $self=undef ) {
+    return if $self && ref($self) && $self->is_local;
 
-    die "Error: I don't know the MAC address for node ".$self->name
-        if !$self->_data('mac');
+    my ($mac_addr, $id_node);
+    if (ref($self)) {
+        $mac_addr = $self->_data('mac');
+        $id_node = $self->id;
+    } else {
+        $id_node = $self;
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT mac FROM vms WHERE id=?");
+        $sth->execute($id_node);
+        $mac_addr = $sth->fetchrow();
+    }
+    die "Error: I don't know the MAC address for node $id_node"
+        if !$mac_addr;
 
     my $sock = new IO::Socket::INET(Proto=>'udp', Timeout => 60)
         or die "Error: I can't create an UDP socket";
     my $host = '255.255.255.255';
     my $port = 9;
-    my $mac_addr = $self->_data('mac');
 
     my $ip_addr = inet_aton($host);
     my $sock_addr = sockaddr_in($port, $ip_addr);

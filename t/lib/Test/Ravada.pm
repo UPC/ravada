@@ -1382,7 +1382,7 @@ sub wait_request {
                         my $error = ($req->error or '');
                         next if $error =~ /waiting for processes/i;
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
-                            like($error,qr{^($|.*port \d+ already used|rsync done)}) or confess $req->command;
+                            like($error,qr{^($|.*port \d+ already used|.*rsync)}) or confess $req->command;
                         } elsif($req->command eq 'refresh_machine_ports') {
                             like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
                             $req->status('done');

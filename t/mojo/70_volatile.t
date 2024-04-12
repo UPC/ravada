@@ -451,7 +451,7 @@ sub _clean_old_known($vm_name) {
     }
 }
 
-sub _clean_old_bases($vm_name) {
+sub _clean_old_bases($vm_name, $wait=1) {
     my $sth = connector->dbh->prepare("SELECT name FROM domains "
             ." WHERE is_base=1 AND (id_base IS NULL or id_base=0)"
             ." AND name like 'zz-test%'"
@@ -476,11 +476,11 @@ sub _clean_old_bases($vm_name) {
            );
         }
     }
-    wait_request();
+    wait_request() if$wait;
 }
 
-sub _clean_old($vm_name) {
-    _clean_old_bases($vm_name);
+sub _clean_old($vm_name, $wait=1) {
+    _clean_old_bases($vm_name, $wait);
     _clean_old_known($vm_name);
     _remove_unused_volumes();
 }
@@ -511,15 +511,15 @@ Test::Ravada::_discover();
 _init_mojo_client();
 login();
 
-for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
+for my $vm_name (@{rvd_front->list_vm_types} ) {
     diag("Testing volatile clones in $vm_name");
 
     _clean_old($vm_name);
 
     test_clone($vm_name);
+    _clean_old($vm_name);
 }
 
-remove_old_domains_req(0); # 0=do not wait for them
 remove_networks_req();
 
 end();
