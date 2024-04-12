@@ -1959,7 +1959,6 @@ sub upload_group_members($self, $group_name, $users, $exclusive=0) {
         $found++;
         my $user = Ravada::Auth::SQL->new(name => $name);
         if (!$user || !$user->id) {
-            push @error,("User $name not found");
             $user = Ravada::Auth::SQL::add_user(name => $name,
             ,@external);
         }
