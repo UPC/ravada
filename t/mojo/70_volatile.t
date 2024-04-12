@@ -201,7 +201,7 @@ sub _count_nodes($vm_name) {
 
 sub _new_network($vm_name,$id_vm) {
 
-    my ($req,$net);
+    my $net;
 
     for my $cont ( 140 .. 150 ) {
         my $req_new = Ravada::Request->new_network(
@@ -216,17 +216,7 @@ sub _new_network($vm_name,$id_vm) {
         $net->{ip_address} =~ s/(\d+\.\d+\.)\d+(.*)/$1$cont$2/;
         my $name = $net->{name};
 
-        my $user = create_user();
-        $req = Ravada::Request->create_network(
-            uid => user_admin->id
-            ,id_vm => $id_vm
-            ,data => $net
-        );
-        wait_request(check_error => 0);
-
-        last if !$req->error;
     }
-    die $req->error if $req->error;
 
     _create_network_nodes($vm_name, $net);
 
