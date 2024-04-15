@@ -1023,6 +1023,8 @@ sub _check_has_clones {
 sub _check_free_vm_memory {
     my $self = shift;
 
+    return if !Ravada::Front::setting(undef,"/backend/limits/startup_ram");
+
     my $vm_free_mem = $self->_vm->free_memory;
 
     my $domain_memory = $self->info(Ravada::Utils::user_daemon)->{memory};
@@ -2967,6 +2969,7 @@ sub _copy_clone($self, %args) {
     $id_owner = $user->id if (! $id_owner);
     my $alias = delete $args{alias};
     my $options = delete $args{options};
+    my $start = delete $args{start};
 
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)
         if keys %args;
@@ -2978,6 +2981,7 @@ sub _copy_clone($self, %args) {
     push @copy_arg, ( memory => $memory ) if $memory;
     push @copy_arg, ( volatile => $volatile ) if $volatile;
     push @copy_arg, ( options => $options ) if $options;
+    push @copy_arg, ( start => $start ) if $start;
 
     $request->status("working","Copying domain ".$self->name
         ." to $name")   if $request;
