@@ -446,10 +446,10 @@ sub _load_allowed {
 
 sub _load_allowed_groups($self) {
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_domain,name,type from group_access");
-    my ($id_domain, $name, $type);
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,id_domain,name,id_group,type from group_access");
+    my ($id, $id_domain, $name, $id_group, $type);
     $sth->execute();
-    $sth->bind_columns(\($id_domain, $name, $type));
+    $sth->bind_columns(\($id, $id_domain, $name, $id_group, $type));
     while ( $sth->fetch ) {
         $type = 'ldap' if !defined $type;
         next if $self->{_allowed}->{$id_domain};
@@ -465,7 +465,15 @@ sub _load_allowed_groups($self) {
                 if $self->ldap_entry
                 && Ravada::Auth::LDAP::is_member($self->ldap_entry, $name);
         } elsif ($type eq 'local') {
-            my $group = Ravada::Auth::Group->new(name => $name);
+            my $group;
+            if ($id_group) {
+                $group = Ravada::Auth::Group->open($id_group)
+            } elsif($name) {
+                $group = Ravada::Auth::Group->new(name => $name);
+            } else {
+                warn "Error: group access withouth id_group or group name id=$id";
+                next;
+            }
             if (!$group || !$group->id) {
                 warn "Error: unkonwon group '$name' for group access";
             } else {
@@ -521,7 +529,14 @@ Arguments: group name or object
 =cut
 
 sub is_member($self, $group) {
-    $group = Ravada::Auth::Group->new(name => $group) if !ref($group);
+
+    if (!ref($group)) {
+        if ($group =~ /^\d+$/) {
+            $group = Ravada::Auth::Group->open($group);
+        } else {
+            $group = Ravada::Auth::Group->new(name => $group);
+        }
+    }
     my $is_member = grep { $_ eq $group->name} $self->groups_local;
     return ($is_member or 0);
 }

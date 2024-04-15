@@ -78,17 +78,26 @@ sub test_group($type) {
     test_group_created($type, $group_name);
 
     my $user_name = new_domain_name();
-    my @args = ( group => $group_name );
+    my $id_group;
+    my @args;
+    my $url_list_members = "/group/$type/list_members/$group_name";
+    my $url_admin_group = "/admin/group/$type/$group_name";
     if ($type eq 'ldap') {
         create_ldap_user($user_name,$$);
         push @args,(name => $user_name);
-    } else {
+        push @args,(group => $group_name);
 
+    } else {
+        my $group = Ravada::Auth::Group->new(name => $group_name);
+        my $id_group = $group->id;
+        $url_list_members = "/group/$type/list_members/$id_group";
+        $url_admin_group = "/admin/group/$type/$id_group";
         my $login;
         eval { $login = Ravada::Auth::SQL->new(name => $user_name ) };
         $login->remove if $login && $login->id;
         my $user = create_user($user_name);
         push @args,( id_user => $user->id );
+        push @args,( id_group => $id_group);
     }
 
     test_list_users($type,$user_name);
@@ -97,28 +106,31 @@ sub test_group($type) {
     my $result = decode_json($t->tx->res->body);
     is($result->{error},'');
 
-    $t->get_ok("/group/$type/list_members/$group_name")->status_is(200);
+    diag($url_list_members);
+    $t->get_ok($url_list_members)->status_is(200);
     my $members = decode_json($t->tx->res->body);
-    ok(grep {$_->{name} eq $user_name } @$members) or warn "Expecting $user_name in ".Dumper($members);
+    my ($found) = grep {$_->{name} eq $user_name } @$members;
+    ok($found) or warn "Expecting $user_name in group $group_name ".Dumper($members);
+    die if !$found;
 
     my $id_domain = test_access($type, $group_name, $user_name);
 
     if ($type eq 'ldap') {
         my $entry = Ravada::Auth::LDAP::search_user(name => $user_name);
         my $dn = $entry->dn;
-        $t->post_ok("/group/$type/remove_member", json => {@args})->status_is(200);
-    } else {
-        $t->post_ok("/group/$type/remove_member", json => {@args})->status_is(200);
+        $url_list_members = "/group/$type/list_members/$group_name";
+        $url_admin_group = "/admin/group/$type/$group_name";
     }
+    $t->post_ok("/group/$type/remove_member", json => {@args})->status_is(200);
     die $t->tx->res->body if $t->tx->res->code != 200;
     my $result2 = decode_json($t->tx->res->body);
     is($result2->{error},'');
 
-    $t->get_ok("/group/$type/list_members/$group_name")->status_is(200);
+    $t->get_ok($url_list_members)->status_is(200);
     my $members2 = decode_json($t->tx->res->body);
     is_deeply($members2,[]);
 
-    $t->get_ok("/admin/group/$type/$group_name")->status_is(200);
+    $t->get_ok($url_admin_group)->status_is(200);
     die $t->tx->res->body if $t->tx->res->code != 200;
 
     test_list_groups($type, $group_name);
@@ -126,7 +138,7 @@ sub test_group($type) {
     test_group_removed($type, $group_name, $user_name, $id_domain);
 
     mojo_login($t, $USERNAME2, $PASSWORD2);
-    $t->get_ok("/admin/group/$type/$group_name")->status_is(403);
+    $t->get_ok($url_admin_group)->status_is(403);
 
     mojo_login($t, $USERNAME, $PASSWORD);
 
@@ -139,20 +151,25 @@ sub test_list_groups($type, $group_name) {
     my $list = decode_json($t->tx->res->body);
     return if ref($list) ne 'ARRAY';
 
-    ok(grep(/^$group_name$/, @$list), "Missing $type $group_name in ".Dumper($list));
+
+    ok(grep({$_->{name} eq $group_name } @$list), "Missing $type $group_name in ".Dumper($list));
 
     my ($first) = $group_name =~ /^(.)/;
     $t->get_ok("/group/$type/list/$first")->status_is(200);
     $list = decode_json($t->tx->res->body);
     return if ref($list) ne 'ARRAY';
 
-    ok(grep(/^$group_name$/, @$list), "Missing $type $group_name in ".Dumper($list));
+    ok(grep({$_->{name} eq $group_name } @$list), "Missing $type $group_name in ".Dumper($list));
 
 }
 
 sub test_add_access($type,$group_name, $user_name, $id_domain) {
-
-    $t->get_ok("/machine/add_access_group/$type/$id_domain/$group_name")
+    my $url_add_access = "/machine/add_access_group/$type/$id_domain/$group_name";
+    if ($type eq 'local') {
+        my $group = Ravada::Auth::Group->new(name => $group_name);
+        $url_add_access = "/machine/add_access_group/$type/$id_domain/".$group->id;
+    }
+    $t->get_ok($url_add_access)
     ->status_is(200);
     my $result = decode_json($t->tx->res->body);
     is($result->{error},'');
@@ -162,7 +179,7 @@ sub test_add_access($type,$group_name, $user_name, $id_domain) {
     );
     $sth->execute($group_name);
     my ($found) = $sth->fetchrow_hashref();
-    ok($found);
+    ok($found,"Expecting group access by name=$group_name") or exit;
     is($found->{type}, $type);
 
     my $user = Ravada::Auth::SQL->new(name => $user_name);
@@ -177,19 +194,24 @@ sub test_add_access($type,$group_name, $user_name, $id_domain) {
     my $list_groups = decode_json($t->tx->res->body);
     is($result->{error},'');
 
-    my ($found_groups) = grep (/^$group_name$/,@$list_groups);
-    is($found_groups, $group_name) or warn Dumper($list_groups);
+    my ($found_groups) = grep ({$_->{name} eq $group_name} @$list_groups);
+    is($found_groups->{name},$group_name) or warn Dumper($list_groups);
 
 }
 
 sub test_remove_access($type, $group_name, $user_name, $id_domain) {
-    $t->get_ok("/machine/remove_access_group/$type/$id_domain/$group_name")
+    my $url = "/machine/remove_access_group/$type/$id_domain/$group_name";
+    if ($type eq 'local') {
+        my $group = Ravada::Auth::Group->new(name => $group_name);
+        $url = "/machine/remove_access_group/$type/$id_domain/".$group->id;
+    }
+    $t->get_ok($url)
     ->status_is(200);
     $t->get_ok("/machine/list_access_groups/$type/$id_domain")->status_is(200);
 
     my $list_groups = decode_json($t->tx->res->body);
 
-    my ($found_groups) = grep (/^$group_name$/,@$list_groups);
+    my ($found_groups) = grep ({$_->{name} eq $group_name} @$list_groups);
     is($found_groups, undef) or die Dumper($list_groups);
 
 }
@@ -219,10 +241,16 @@ sub test_group_removed($type, $group_name, $user_name, $id_domain) {
 
     $t->post_ok("/group/$type/add_member", json => {id_user => $user->id, group => $group_name })->status_is(200);
 
-    $t->get_ok("/machine/add_access_group/$type/$id_domain/$group_name")
-    ->status_is(200);
+    if ($type eq 'ldap') {
+        $t->get_ok("/machine/add_access_group/$type/$id_domain/$group_name")
+        ->status_is(200);
+        $t->get_ok("/group/$type/remove/$group_name")->status_is(200);
+    } else {
+        $t->get_ok("/machine/add_access_group/$type/$id_domain/$id_group")
+        ->status_is(200);
+        $t->get_ok("/group/$type/remove/$id_group")->status_is(200);
+    }
 
-    $t->get_ok("/group/$type/remove/$group_name")->status_is(200);
     die $t->tx->res->body if $t->tx->res->code != 200;
 
     if ($type eq 'ldap') {
@@ -250,7 +278,11 @@ sub test_group_removed($type, $group_name, $user_name, $id_domain) {
     my ($found) = $sth2->fetchrow_hashref;
     is($found,undef);
 
-    $t->get_ok("/admin/group/$type/$group_name")->status_is(404);
+    if ($type eq'ldap') {
+        $t->get_ok("/admin/group/$type/$group_name")->status_is(404);
+    } else {
+        $t->get_ok("/admin/group/$type/$id_group")->status_is(404);
+    }
 
 }
 

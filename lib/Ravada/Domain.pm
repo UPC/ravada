@@ -6319,7 +6319,9 @@ sub grant_access($self, %args) {
 }
 
 sub _allow_group_access($self, %args) {
-    my $group = delete $args{group} or confess "Error: group required";
+    my $group = delete $args{group};
+    my $id_group = delete $args{id_group};
+    confess "Error: group name or id_group required" unless $group || $id_group;
 
     my $type = delete $args{type};
     $type =~ s/.*\.(.*)/$1/;
@@ -6328,10 +6330,10 @@ sub _allow_group_access($self, %args) {
     confess "Error: unknown args ".Dumper(\%args) if keys %args;
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO group_access "
-        ."( id_domain,name, type)"
-        ." VALUES(?,?,? )"
+        ."( id_domain, id_group, name, type)"
+        ." VALUES(?,?,?,? )"
     );
-    $sth->execute($self->id, $group, $type);
+    $sth->execute($self->id,$id_group, $group, $type);
 }
 
 =head2 list_access_groups
@@ -6341,14 +6343,14 @@ Returns the list of groups who can access this virtual machine
 =cut
 
 sub list_access_groups($self, $type) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT name from group_access "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,name from group_access "
         ." WHERE id_domain=?"
         ."   AND type=?"
     );
     $sth->execute($self->id, $type);
     my @groups;
-    while ( my ($name) = $sth->fetchrow ) {
-        push @groups,($name);
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @groups,($row);
     }
     return @groups;
 }

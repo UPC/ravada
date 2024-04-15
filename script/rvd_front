@@ -2492,8 +2492,10 @@ post '/group/#type/add_member' => sub($c) {
 
     my $arg = decode_json($c->req->body);
 
+    warn Dumper([$c->stash('type'),$arg]);
     my $login = delete $arg->{name};
     my $id_user = delete $arg->{id_user};
+    my $id_group = delete $arg->{id_group};
     my $group = delete $arg->{group};
 
     return $c->render(json => { error => "Error: unknown args ".Dumper($arg)}) if keys %$arg;
@@ -2509,15 +2511,16 @@ post '/group/#type/add_member' => sub($c) {
 
     if ($type eq 'ldap') {
         die "Error: missing login name" if !$login;
+        die "Error: missing group name" if !$group;
         eval {
             Ravada::Auth::LDAP::add_to_group($login, $group);
         };
         $error = $@;
     } elsif ($type eq 'local') {
-        if ($user->is_member($group)) {
+        if ($user->is_member($id_group)) {
             $error = "Error: user $login already added to $group";
         } else {
-            $user->add_to_group($group);
+            $user->add_to_group($id_group);
         }
     } else { $error = "Error: unkonwn group type '$type" }
     $error =~ s/(.*) at lib.*/$1/ if $error;
@@ -4505,7 +4508,7 @@ sub maintenance($c) {
 }
 
 sub _list_sql_groups($c, $filter=undef) {
-    my $sql = "SELECT name FROM groups_local ";
+    my $sql = "SELECT id,name FROM groups_local ";
     $sql .= " WHERE name like ? " if defined $filter;
     $sql .= " ORDER BY name";
     my $sth = $RAVADA->_dbh->prepare($sql);
@@ -4515,8 +4518,8 @@ sub _list_sql_groups($c, $filter=undef) {
        $sth->execute();
     }
     my @groups;
-    while (my ($name) = $sth->fetchrow) {
-        push @groups,($name);
+    while (my $row = $sth->fetchrow_hashref) {
+        push @groups,($row);
     }
     return $c->render(json => \@groups);
 }
@@ -4526,7 +4529,7 @@ sub _list_ldap_groups($c, $name='*') {
 
     $name = '*'.$name.'*' if $name !~ /\*/;
     my @groups = Ravada::Auth::LDAP::search_group( name => $name );
-    return $c->render(json => [ sort { $a cmp $b } map { $_->get_value('cn') } @groups ] );
+    return $c->render(json => [ sort { $a cmp $b } map { {name => $_->get_value('cn')} } @groups ] );
 };
 
 sub _list_ldap_users($c, $filter='*' ) {
@@ -4569,7 +4572,12 @@ sub _list_group_members($c, $type, $name) {
     if ($type eq 'ldap') {
         return _list_ldap_group_members($c, $name);
     } elsif ($type eq 'local') {
-        my $group = Ravada::Auth::Group->new(name => $name);
+        my $group;
+        if ($name =~ /^\d+$/) {
+            $group = Ravada::Auth::Group->open($name);
+        } else {
+            $group = Ravada::Auth::Group->new(name => $name);
+        }
         return $c->render(json => [ $group->members_info ]);
     } else {
         confess "Error: unkonwn group type $type";

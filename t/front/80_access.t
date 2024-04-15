@@ -83,7 +83,19 @@ sub test_access_by_group_ldap($vm, $type='group') {
     remove_domain($base);
 }
 
-sub test_access_by_group_sql($vm) {
+sub _check_grant_access($id_base, $gm_name) {
+    my $sth = connector->dbh->prepare("SELECT * FROM group_access"
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($id_base);
+    my $n_found = 0;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        $n_found++;
+    }
+    ok($n_found) or exit;
+}
+
+sub test_access_by_group_sql($vm, $by_name=0) {
     my $base = create_domain($vm->type);
     $base->prepare_base(user_admin);
     $base->is_public(1);
@@ -91,10 +103,13 @@ sub test_access_by_group_sql($vm) {
     my $g_name = new_domain_name();
     my $group = Ravada::Auth::Group::add_group(name => $g_name);
 
+    my @group_data = ( id_group => $group->id );
+    @group_data = ( group => $g_name ) if $by_name;
     $base->grant_access(
         type => 'group.local'
-        ,group => $g_name
+        ,@group_data
     );
+    _check_grant_access($base->id, $g_name);
 
     my $g_name_ldap = _create_group_ldap();
     $base->grant_access(
@@ -113,9 +128,11 @@ sub test_access_by_group_sql($vm) {
     is(scalar(@$list_bases),0) or exit;
 
     is($user_sql->is_member($g_name),0);
-    $user_sql->add_to_group($g_name);
+    is($user_sql->is_member($group->id),0);
+    $user_sql->add_to_group($group->id);
 
     is($user_sql->is_member($g_name),1);
+    is($user_sql->is_member($group->id),1);
 
     $user_sql->_load_allowed(1);
     is($user_sql->allowed_access($base->id),1);
@@ -456,6 +473,7 @@ for my $vm_name (reverse vm_names()) {
         test_access_by_group_ldap($vm);
         test_access_by_group_ldap($vm,'group.ldap');
         test_access_by_group_sql($vm);
+        test_access_by_group_sql($vm,1);
 
         #        test_access_by_group_sql_or_ldap($vm);
 

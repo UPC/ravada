@@ -1349,7 +1349,11 @@ sub add_to_group($self, @group) {
     );
     for my $group (@group) {
         if (!ref($group)) {
-            $group = Ravada::Auth::Group->new(name => $group);
+            if ($group =~ /^\d+$/) {
+                $group = Ravada::Auth::Group->open($group);
+            } else {
+                $group = Ravada::Auth::Group->new(name => $group);
+            }
         }
         confess "Error: unknown group ".$group->name
         if !$group->id;

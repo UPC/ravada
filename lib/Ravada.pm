@@ -1567,7 +1567,7 @@ sub _add_indexes_generic($self) {
             "unique (id_domain)"
         ]
         ,group_access => [
-            "unique (id_domain,name)"
+            "unique (id_domain,name,id_group)"
             ,"index(id_domain)"
         ]
         ,iso_images => [
@@ -2227,7 +2227,8 @@ sub _sql_create_tables($self) {
             group_access => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
-            ,name => 'char(80) NOT NULL'
+            ,id_group => 'integer references `groups_local` (`id`) DEFAULT NULL'
+            ,name => 'char(80) DEFAULT NULL'
             ,type => 'char(40)'
             }
         ]

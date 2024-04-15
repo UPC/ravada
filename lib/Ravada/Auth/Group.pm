@@ -120,7 +120,6 @@ sub remove_member($self, $name) {
     $sth->execute($id_user);
 }
 
-
 sub _remove_all_members($self) {
     my $sth = $$CON->dbh->prepare("DELETE FROM users_group "
         ." WHERE id_group=?"
@@ -175,6 +174,13 @@ sub remove($self) {
         "DELETE FROM groups_local WHERE id=?"
     );
     $sth->execute($id);
+}
+
+sub exists_id($id) {
+    my $sth = $$CON->dbh->prepare("SELECT id FROM groups_local WHERE id=?");
+    $sth->execute($id);
+    my ($found) = $sth->fetchrow;
+    return $found;
 }
 
 1;
