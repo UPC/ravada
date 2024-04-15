@@ -6322,6 +6322,7 @@ sub _allow_group_access($self, %args) {
     my $group = delete $args{group};
     my $id_group = delete $args{id_group};
     confess "Error: group name or id_group required" unless $group || $id_group;
+    confess "Error: wrong group name '$group'" if $group && $group =~ /^\d+$/;
 
     my $type = delete $args{type};
     $type =~ s/.*\.(.*)/$1/;
@@ -6343,13 +6344,18 @@ Returns the list of groups who can access this virtual machine
 =cut
 
 sub list_access_groups($self, $type) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,name from group_access "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,id_group,name from group_access "
         ." WHERE id_domain=?"
         ."   AND type=?"
     );
     $sth->execute($self->id, $type);
     my @groups;
+    my $sth_gname = $$CONNECTOR->dbh->prepare("SELECT name FROM groups_local WHERE id=?");
     while ( my $row = $sth->fetchrow_hashref ) {
+        if (!$row->{name} && $row->{id_group}) {
+            $sth_gname->execute($row->{id_group});
+            ($row->{name}) = $sth_gname->fetchrow;
+        }
         push @groups,($row);
     }
     return @groups;

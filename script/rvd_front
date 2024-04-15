@@ -1417,10 +1417,15 @@ get '/machine/add_access_group/#type/#id_domain/#group' => sub($c) {
     my $type = $c->stash('type');
     my $id_domain = $c->stash('id_domain');
     my $group = $c->stash('group');
+    my $id_group;
     my $ok = 0;
     eval {
         my $domain = Ravada::Front::Domain->open($id_domain);
-        $domain->grant_access(type => "group.$type" , group => $group);
+        if ($group =~ /^\d+$/) {
+            $id_group = $group;
+            $group=undef;
+        }
+        $domain->grant_access(type => "group.$type" , group => $group, id_group => $id_group);
         $ok =1;
     };
     return $c->render( json => { ok => $ok, error => $@ });
@@ -2492,7 +2497,6 @@ post '/group/#type/add_member' => sub($c) {
 
     my $arg = decode_json($c->req->body);
 
-    warn Dumper([$c->stash('type'),$arg]);
     my $login = delete $arg->{name};
     my $id_user = delete $arg->{id_user};
     my $id_group = delete $arg->{id_group};

@@ -2227,7 +2227,7 @@ sub _sql_create_tables($self) {
             group_access => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
-            ,id_group => 'integer references `groups_local` (`id`) DEFAULT NULL'
+            ,id_group => 'integer references `groups_local` (`id`) ON DELETE CASCADE'
             ,name => 'char(80) DEFAULT NULL'
             ,type => 'char(40)'
             }

@@ -450,7 +450,7 @@ sub _load_allowed_groups($self) {
     my ($id, $id_domain, $name, $id_group, $type);
     $sth->execute();
     $sth->bind_columns(\($id, $id_domain, $name, $id_group, $type));
-    while ( $sth->fetch ) {
+    while ( my $row = $sth->fetchrow_hashref ) {
         $type = 'ldap' if !defined $type;
         next if $self->{_allowed}->{$id_domain};
 
@@ -475,7 +475,7 @@ sub _load_allowed_groups($self) {
                 next;
             }
             if (!$group || !$group->id) {
-                warn "Error: unkonwon group '$name' for group access";
+                warn "Error: unknown group '$name' for group access ".Dumper($row);
             } else {
                 $self->{_allowed}->{$id_domain} = 1
                 if $self->is_member($group);

@@ -165,6 +165,7 @@ sub test_list_groups($type, $group_name) {
 
 sub test_add_access($type,$group_name, $user_name, $id_domain) {
     my $url_add_access = "/machine/add_access_group/$type/$id_domain/$group_name";
+    my $id_group = '';
     if ($type eq 'local') {
         my $group = Ravada::Auth::Group->new(name => $group_name);
         $url_add_access = "/machine/add_access_group/$type/$id_domain/".$group->id;
@@ -174,10 +175,16 @@ sub test_add_access($type,$group_name, $user_name, $id_domain) {
     my $result = decode_json($t->tx->res->body);
     is($result->{error},'');
 
-    my $sth = connector->dbh->prepare(
-        "SELECT * FROM group_access WHERE name=?"
-    );
-    $sth->execute($group_name);
+    my $sth;
+    if ($type eq 'ldap') {
+        $sth = connector->dbh->prepare( "SELECT * FROM group_access WHERE name=?");
+        $sth->execute($group_name);
+    } else {
+        my $group = Ravada::Auth::Group->new(name => $group_name);
+        $sth = connector->dbh->prepare( "SELECT * FROM group_access WHERE id_group=?");
+        $id_group = $group->id;
+        $sth->execute($id_group);
+    }
     my ($found) = $sth->fetchrow_hashref();
     ok($found,"Expecting group access by name=$group_name") or exit;
     is($found->{type}, $type);
@@ -194,8 +201,14 @@ sub test_add_access($type,$group_name, $user_name, $id_domain) {
     my $list_groups = decode_json($t->tx->res->body);
     is($result->{error},'');
 
-    my ($found_groups) = grep ({$_->{name} eq $group_name} @$list_groups);
-    is($found_groups->{name},$group_name) or warn Dumper($list_groups);
+    my ($found_groups) = grep (
+        { (defined $_->{name} && $_->{name} eq $group_name)
+        ||(defined $_->{id_group} && $_->{id_group} eq $id_group)
+    } @$list_groups);
+    if ($type eq 'local') {
+        is($found_groups->{id_group},$id_group) or die Dumper($list_groups) ;
+    }
+    is($found_groups->{name},$group_name) or die Dumper($list_groups) ;
 
 }
 
