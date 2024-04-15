@@ -1433,10 +1433,21 @@ get '/machine/add_access_group/#type/#id_domain/#group' => sub($c) {
 
 get '/machine/remove_access_group/#type/#id_domain/#group' => sub($c) {
 
-    my $sth = $RAVADA->_dbh->prepare("DELETE FROM group_access WHERE id_domain=? "
-        ." AND name=?"
+    my $sth;
+    if ($c->stash('type') eq 'ldap') {
+        $sth = $RAVADA->_dbh->prepare("DELETE FROM group_access WHERE id_domain=? "
+        ." AND name=? "
         ." AND type=?"
-    );
+        );
+
+    } else {
+
+        $sth = $RAVADA->_dbh->prepare("DELETE FROM group_access WHERE id_domain=? "
+        ." AND id_group=? "
+        ." AND type=?"
+        );
+
+    }
     $sth->execute($c->stash('id_domain'), $c->stash('group'), $c->stash('type'));
     return $c->render(json => { ok => 1 } );
 };
@@ -2539,6 +2550,7 @@ post '/group/#type/remove_member' => sub($c) {
 
     my $type = $c->stash('type');
     my $group = delete $arg->{group};
+    my $id_group = delete $arg->{id_group};
     my $user_name = delete $arg->{name};
     my $id_user = delete $arg->{id_user};
 
@@ -2561,10 +2573,10 @@ post '/group/#type/remove_member' => sub($c) {
         }
     } elsif ($type eq 'local') {
         if (!defined $id_user) {
-            $error = "Error: missing user name";
+            $error = "Error: missing user id";
         } else {
             my $user = Ravada::Auth::SQL->search_by_id($id_user);
-            $user->remove_from_group($group);
+            $user->remove_from_group($id_group);
         }
     }
     return $c->render(json => { error => $error } );

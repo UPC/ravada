@@ -128,8 +128,9 @@ sub test_group($type) {
 
     $t->get_ok($url_list_members)->status_is(200);
     my $members2 = decode_json($t->tx->res->body);
-    is_deeply($members2,[]);
+    is_deeply($members2,[]) or exit;
 
+    warn $url_admin_group;
     $t->get_ok($url_admin_group)->status_is(200);
     die $t->tx->res->body if $t->tx->res->code != 200;
 
@@ -214,17 +215,23 @@ sub test_add_access($type,$group_name, $user_name, $id_domain) {
 
 sub test_remove_access($type, $group_name, $user_name, $id_domain) {
     my $url = "/machine/remove_access_group/$type/$id_domain/$group_name";
+    my $id_group = -1;
     if ($type eq 'local') {
         my $group = Ravada::Auth::Group->new(name => $group_name);
         $url = "/machine/remove_access_group/$type/$id_domain/".$group->id;
+        $id_group = $group->id;
     }
+    diag($url);
     $t->get_ok($url)
     ->status_is(200);
     $t->get_ok("/machine/list_access_groups/$type/$id_domain")->status_is(200);
 
     my $list_groups = decode_json($t->tx->res->body);
 
-    my ($found_groups) = grep ({$_->{name} eq $group_name} @$list_groups);
+    my ($found_groups) = grep (
+        { (defined $_->{name} && $_->{name} eq $group_name)
+        ||(defined $_->{id_group} && $_->{id_group} eq $id_group)
+    } @$list_groups);
     is($found_groups, undef) or die Dumper($list_groups);
 
 }
