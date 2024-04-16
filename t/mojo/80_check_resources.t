@@ -110,6 +110,7 @@ sub test_ram($vm_name,$enable_check, $expected=undef) {
         $count++;
         last if defined $expected && $count > $expected;
         my $free2 = int(_free_memory()/1024/1024);
+        sleep $n if $vm_name eq 'KVM';
         redo if $vm_name eq 'KVM' && ($free2>=$free);
 
     }
@@ -139,6 +140,7 @@ remove_old_domains_req();
 
 $USERNAME = user_admin->name;
 $PASSWORD = "$$ $$";
+my $old_value = rvd_back->setting("/backend/limits/startup_ram");
 for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
     diag("Testing RAM limit in $vm_name");
 
@@ -150,6 +152,8 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
     my $started_no_limit =test_ram($vm_name,0, $started_limit);
     ok($started_no_limit > $started_limit);
 }
+
+rvd_back->setting("/backend/limits/startup_ram" => $old_value);
 
 remove_old_domains_req(0); # 0=do not wait for them
 
