@@ -7,7 +7,7 @@
         </thead>
         <tbody>
             <tr ng-repeat="group in local_groups">
-                <td><a href="/admin/group/local/{{group}}">{{group}}</a></td>
+                <td><a href="/admin/group/local/{{group.id}}">{{group.name}}</a></td>
             </tr>
         </tbody>
     </table>

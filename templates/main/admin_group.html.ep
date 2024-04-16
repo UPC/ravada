@@ -6,12 +6,12 @@
         %= include 'bootstrap/navigation'
         <div id="page-wrapper"
              ng-controller="admin_groups"
-             ng-init="init('<%= $type %>', '<%= $name %>')"
+             ng-init="init('<%= $type %>', '<%= $name %>', '<%= $group_id %>')"
             >
             <div class="page-header">
               <div class="card" id="admin-content">
                 <div class="card-header">
-                    <h2 class="display-5"><%=l 'Group' %> <%= $name %></h2>
+                    <h2 class="display-5"><%=l 'Group' %> <%= $group_name %></h2>
 %                  if ($type eq 'ldap') {
 LDAP
 

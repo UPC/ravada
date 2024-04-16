@@ -69,6 +69,7 @@ sub _load_data($self) {
 }
 
 sub open($self, $id) {
+   _init_connector();
     my $sth = $$CON->dbh->prepare(
         "SELECT name FROM groups_local WHERE id=?"
     );
@@ -177,6 +178,7 @@ sub remove($self) {
 }
 
 sub exists_id($id) {
+    _init_connector();
     my $sth = $$CON->dbh->prepare("SELECT id FROM groups_local WHERE id=?");
     $sth->execute($id);
     my ($found) = $sth->fetchrow;

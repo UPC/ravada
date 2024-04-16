@@ -1209,15 +1209,17 @@
                 });
             };
             $scope.add_group_access = function(type,group) {
-                $http.get("/machine/add_access_group/"+type+"/"+$scope.showmachine.id+"/"+group)
-                    .then(function(response) {
+                $http.post("/machine/add_access_group/"+type+"/"+$scope.showmachine.id
+                    ,JSON.stringify( { 'group': group })
+                ).then(function(response) {
                         list_access_groups(type);
                 });
             };
 
             $scope.remove_group_access = function(type,group) {
-                $http.get("/machine/remove_access_group/"+type+"/"+$scope.showmachine.id+"/"+group)
-                    .then(function(response) {
+                $http.post( "/machine/remove_access_group/"+type+"/"+$scope.showmachine.id
+                    ,JSON.stringify( { 'group':group })
+                ).then(function(response) {
                         list_access_groups(type);
                 });
             };

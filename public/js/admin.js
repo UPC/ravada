@@ -694,7 +694,7 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.list_groups= function() {
             $scope.loading_groups = true;
             $scope.error = '';
-            $http.get('/list_ldap_groups')
+            $http.get('/group/ldap/list')
                 .then(function(response) {
                     $scope.loading_groups = false;
                     $scope.groups = response.data;
@@ -1463,9 +1463,11 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.username_filter = '';
         var type;
         var group_name;
-        $scope.init = function(type0, group_name0) {
+        var group_id;
+        $scope.init = function(type0, group_name0, group_id0) {
             type = type0;
             group_name = group_name0;
+            group_id = group_id0;
             $scope.list_group_members();
         };
         $scope.list_ldap_groups = function() {
@@ -1475,7 +1477,7 @@ ravadaApp.directive("solShowMachine", swMach)
                 });
         };
         list_local_groups=function() {
-            $http.get('/group/local/list')
+            $http.get('/group/local/list_data')
                 .then(function(response) {
                     $scope.local_groups=response.data;
                     $scope.local_groups_all=response.data;
@@ -1517,6 +1519,7 @@ ravadaApp.directive("solShowMachine", swMach)
               ,JSON.stringify(
                   { 'group': group_name
                     ,'id_user': user_id
+                    ,'id_group': group_id
                     ,'name': user_name
                   })
               ).then(function(response) {

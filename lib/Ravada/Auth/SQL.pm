@@ -1378,6 +1378,10 @@ sub remove_from_group($self, @group) {
     );
     for my $group (@group) {
         if (!ref($group)) {
+            if ($group =~ /^\d+$/) {
+                $sth->execute($group,$self->id);
+                next;
+            }
             $group = Ravada::Auth::Group->new(name => $group);
         }
         $sth->execute($group->id,$self->id);

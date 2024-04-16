@@ -6356,7 +6356,7 @@ sub list_access_groups($self, $type) {
             $sth_gname->execute($row->{id_group});
             ($row->{name}) = $sth_gname->fetchrow;
         }
-        push @groups,($row);
+        push @groups,($row->{name});
     }
     return @groups;
 }

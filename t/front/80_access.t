@@ -161,6 +161,11 @@ sub test_access_by_group_sql($vm, $by_name=0) {
 
     remove_domain($base);
 
+    is($user_sql->is_member($group->id),1);
+    $user_sql->remove_from_group($group->id);
+    is($user_sql->is_member($g_name),0);
+    is($user_sql->is_member($group->id),0);
+
     $group->remove() if $group;
 
     my $group2 = Ravada::Auth::Group->new(name => $g_name);

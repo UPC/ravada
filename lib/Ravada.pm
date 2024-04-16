@@ -1569,6 +1569,7 @@ sub _add_indexes_generic($self) {
         ,group_access => [
             "unique (id_domain,name,id_group)"
             ,"index(id_domain)"
+            ,"index(id_group)"
         ]
         ,iso_images => [
             "unique (name)"
