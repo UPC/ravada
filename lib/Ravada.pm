@@ -6508,7 +6508,10 @@ sub search_vm {
     );
     $sth->execute($type, $host);
     my ($id) = $sth->fetchrow();
-    return Ravada::VM->open($id)    if $id;
+    my $vm;
+    $vm = Ravada::VM->open($id)    if $id;
+    return if $host eq 'localhost' && $vm && !$vm->vm;
+
     return if $host ne 'localhost';
 
     my $vms = $self->_create_vm($type);
