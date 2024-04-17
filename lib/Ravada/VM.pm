@@ -235,9 +235,12 @@ sub open {
 
     my $vm = $self->new(%args);
 
+    my $internal_vm;
     eval {
-        $VM{$args{id}} = $vm unless $args{readonly} || !$vm->vm;
+        $internal_vm = $vm->vm;
     };
+    $VM{$args{id}} = $vm unless $args{readonly} || !$internal_vm;
+    return if $self->is_local && !$internal_vm;
     return $vm;
 
 }
@@ -1285,9 +1288,10 @@ Returns wether this virtual manager is in the local host
 =cut
 
 sub is_local($self) {
-    return 1 if $self->host eq 'localhost'
+    return 1 if !$self->host
+        || $self->host eq 'localhost'
         || $self->host eq '127.0.0,1'
-        || !$self->host;
+        ;
     return 0;
 }
 
@@ -1658,7 +1662,9 @@ sub is_active($self, $force=0) {
 sub _do_is_active($self, $force=undef) {
     my $ret = 0;
     if ( $self->is_local ) {
+        eval {
         $ret = 1 if $self->vm;
+        };
     } else {
         my @ping_args = ();
         @ping_args = (undef,0) if $force; # no cache
