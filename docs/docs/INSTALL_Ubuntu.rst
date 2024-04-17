@@ -49,7 +49,7 @@ the same one as the ravada package.
 
 .. prompt:: bash $
 
-     sudo apt-get install mysql-server
+     sudo apt-get install mariadb-server
 
 MySQL database and user
 ~~~~~~~~~~~~~~~~~~~~~~~
