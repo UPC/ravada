@@ -2224,6 +2224,14 @@ sub _sql_create_tables($self) {
             ,xml => 'TEXT'
             }
         ]
+        ,
+        [   groups_local => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                ,name => 'char(255) NOT NULL'
+                ,is_external => 'int NOT NULL default(0)'
+                ,external_auth => 'varchar(64) default NULL'
+            }
+        ]
         ,[
             group_access => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
@@ -2402,13 +2410,6 @@ sub _sql_create_tables($self) {
             }
         ]
         ,
-        [   groups_local => {
-                id => 'integer PRIMARY KEY AUTO_INCREMENT',
-                ,name => 'char(255) NOT NULL'
-                ,is_external => 'int NOT NULL default(0)'
-                ,external_auth => 'varchar(64) default NULL'
-            }
-        ],
         [   users_group => {
                 id => 'integer PRIMARY KEY AUTO_INCREMENT',
                 ,id_user => 'integer NOT NULL'
