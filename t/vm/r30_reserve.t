@@ -1324,13 +1324,15 @@ sub test_booking_host_devices($vm) {
     my $booking = _create_booking(undef , { host_devices => 1 } );
 
     for my $entry ( $booking->entries ) {
+        $entry->change('time_end' => _now_seconds(120));
         ok($entry->_data('options')) or exit;
         is($entry->_data('options')->{host_devices},1) or die Dumper($entry->_data('options'));
     }
-    my $clone = $base->clone(name => new_domain_name, user => $USER_YES_1);
-    my $clone_hd = $base->clone(name => new_domain_name, user => $USER_NO);
+    my $clone_yes = $base->clone(name => new_domain_name, user => $USER_YES_1);
+    my $clone_hd_yes = $base->clone(name => new_domain_name, user => $USER_YES_1);
 
-    for my $c ( $clone, $clone_hd) {
+    # user allowed can start anything
+    for my $c ( $clone_yes, $clone_hd_yes) {
         my $req_start_clone = Ravada::Request->start_domain(
             uid => $c->id_owner
             ,id_domain => $c->id
@@ -1340,9 +1342,23 @@ sub test_booking_host_devices($vm) {
         is ($c->is_active,1);
     }
 
+    my $clone_no = $base->clone(name => new_domain_name, user => $USER_NO);
+    my $clone_hd_no = $base_hd->clone(name => new_domain_name, user => $USER_NO);
+
+    # user denied can not start hd
+    my $req_start_no = Ravada::Request->start_domain(uid => $clone_no->id_owner, id_domain => $clone_no->id);
+    my $req_start_hd_no = Ravada::Request->start_domain(uid => $clone_hd_no->id_owner, id_domain => $clone_hd_no->id);
+    wait_request(check_error => 0);
+    is($req_start_no->error,'');
+    like($req_start_hd_no->error,qr/./);
+
+    is($clone_no->is_active,1) or die $clone_no->name;
+    is($clone_hd_no->is_active,0);
+
     $booking->remove();
     remove_domain($base);
     remove_domain($base_hd);
+    exit;
 }
 
 ###################################################################
