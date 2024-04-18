@@ -78,7 +78,7 @@ sub _list_machines_user($base) {
     is($@, '') or return;
 
     my ($base_f) = grep { $_->{id} == $base->id } @$bases0;
-    ok($base_f) or die "Expecting ".$base->name." in listing";
+    ok($base_f) or croak "Expecting ".$base->name." in listing";
 
     return $base_f;
 }
@@ -140,11 +140,11 @@ sub test_list_machines_group($vm_name) {
     is ($user->allowed_access($base->id),0) or exit;
     is ($user->allowed_access_group($base->id),0) or exit;
 
-    test_list_match($base,0);
+    test_list_fail($base);
 
     # access previous clone
     $t->get_ok("/machine/view/".$id_clone.".html")
-        ->status_is(200);
+        ->status_is(403);
 
     # but will not be able to clone
     $t->get_ok("/machine/clone/".$base->id.".html")
