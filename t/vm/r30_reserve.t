@@ -8,6 +8,8 @@ use Hash::Util qw(lock_hash);
 use Test::More;
 use YAML qw(DumpFile);
 
+use Ravada::HostDevice::Templates;
+
 use 5.010;
 
 no warnings "experimental::signatures";
@@ -577,7 +579,7 @@ sub test_conflict_generic($vm, $base, $conflict_start, $conflict_end, $n_expecte
 }
 
 
-sub _create_booking( $base ) {
+sub _create_booking( $base , $options=undef ) {
     _wait_end_of_hour();
     my $date_start = _yesterday();
     my $date_end = _now_days(15);
@@ -586,8 +588,12 @@ sub _create_booking( $base ) {
 
     my $today = DateTime->from_epoch( epoch => time(), time_zone => $TZ);
     my $tomorrow = DateTime->from_epoch( epoch => time(), time_zone => $TZ)->add(days => 1);
+    my @args;
+    push @args,(bases => $base->id)     if $base;
+    push @args,(options => $options)    if $options;
+
     my $booking = Ravada::Booking->new(
-        bases => $base->id
+        @args
         , ldap_groups => $GROUP
         , users => $USER_YES_NAME_1
         , date_start => $date_start
@@ -1299,6 +1305,46 @@ sub test_config {
     is(rvd_back->setting('/backend/bookings'),1);
 }
 
+sub test_booking_host_devices($vm) {
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->id);
+    my ($usb_hd) = grep { $_->{name} =~ /USB/ } @$templates;
+
+    die "Error: no USB template found ".Dumper($templates) if !$usb_hd;
+
+    my $id = $vm->add_host_device(template => $usb_hd->{name});
+    my $hd = Ravada::HostDevice->search_by_id($id);
+
+    my $base = create_domain($vm);
+    $base->prepare_base(user_admin);
+
+    my $base_hd = create_domain($vm);
+    $base_hd->add_host_device($id);
+    $base_hd->prepare_base(user_admin);
+
+    my $booking = _create_booking(undef , { host_devices => 1 } );
+
+    for my $entry ( $booking->entries ) {
+        ok($entry->_data('options')) or exit;
+        is($entry->_data('options')->{host_devices},1) or die Dumper($entry->_data('options'));
+    }
+    my $clone = $base->clone(name => new_domain_name, user => $USER_YES_1);
+    my $clone_hd = $base->clone(name => new_domain_name, user => $USER_NO);
+
+    for my $c ( $clone, $clone_hd) {
+        my $req_start_clone = Ravada::Request->start_domain(
+            uid => $c->id_owner
+            ,id_domain => $c->id
+        );
+        wait_request(check_error => 0);
+        is($req_start_clone->error,'');
+        is ($c->is_active,1);
+    }
+
+    $booking->remove();
+    remove_domain($base);
+    remove_domain($base_hd);
+}
+
 ###################################################################
 
 test_config();
@@ -1323,6 +1369,10 @@ for my $vm_name ( vm_names()) {
         }
 
         skip($msg,10)   if !$vm;
+
+        diag("Testing booking in $vm_name");
+
+        test_booking_host_devices($vm);
 
         test_bookings_week_2days($vm);
         test_search_change_remove_booking($vm);

@@ -2357,6 +2357,7 @@ sub _sql_create_tables($self) {
             ,date_booking => 'date'
             ,visibility => "enum ('private','public') default 'public'"
             ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+            ,options => 'varchar(100)'
         }
         ]
         ,

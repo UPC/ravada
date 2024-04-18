@@ -36,13 +36,13 @@ sub BUILD($self, $args) {
     my $day_of_week = delete $args->{day_of_week};
 
     my %entry;
-    my @fields_entry = qw ( bases ldap_groups local_groups users time_start time_end );
+    my @fields_entry = qw ( bases ldap_groups local_groups users time_start time_end options);
     for (@fields_entry) {
         $entry{$_} = delete $args->{$_};
     }
 
     my %fields = map { $_ => 1 } keys %$args;
-    delete @fields{'title','id_owner','description','date_created','local_groups'};
+    delete @fields{'title','id_owner','description','date_created','local_groups','options'};
     die "Error: unknown arguments ".(join("," , keys %fields)) if keys %fields;
 
     $self->_insert_db(%$args

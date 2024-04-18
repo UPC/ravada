@@ -5,6 +5,8 @@ use strict;
 
 use Carp qw(carp croak);
 use Data::Dumper;
+use Mojo::JSON qw( encode_json decode_json );
+
 use Ravada::Utils;
 
 use Moose;
@@ -53,6 +55,9 @@ sub _dbh($self) {
 }
 
 sub _insert_db($self, $field) {
+
+    my $options = $field->{options};
+    $field->{options} = encode_json($options) if $options;
 
     my $query = "INSERT INTO booking_entries "
             ."(" . join(",",sort keys %$field )." )"
@@ -249,6 +254,11 @@ sub _open($self, $id) {
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
     confess "Error: Booking entry $id not found " if !keys %$row;
+    eval {
+    $row->{options} = decode_json($row->{options}) if $row->{options};
+    };
+    warn $@ if $@;
+
     $self->{_data} = $row;
 
     return $self;
