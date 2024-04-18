@@ -1686,6 +1686,17 @@ get '/group/#type/list/#filter' => sub($c) {
     return _group_list($c);
 };
 
+get '/group_local_list'=> sub($c) {
+    $c->stash(type => 'local');
+    return _group_list($c);
+};
+
+get '/group_ldap_list'=> sub($c) {
+    $c->stash(type => 'ldap');
+    return _group_list($c);
+};
+
+
 sub _group_list($c, $data=0) {
     return access_denied($c) unless $USER->can_view_groups || $USER->can_manage_groups;
 

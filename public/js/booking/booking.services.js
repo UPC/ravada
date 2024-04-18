@@ -26,7 +26,7 @@ function svcLDAP($resource) {
         list_groups: {
             method: 'GET',
             isArray: true,
-            params: { action: 'group/ldap/list'}
+            params: { action: 'group_ldap_list'}
         }
     });
 }
@@ -38,7 +38,7 @@ function svcLocal($resource) {
         list_groups: {
             method: 'GET',
             isArray: true,
-            params: { action: 'group/local/list'}
+            params: { action: 'group_local_list'}
         }
     });
 }
