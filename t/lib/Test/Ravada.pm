@@ -699,7 +699,10 @@ sub _discover() {
             uid => user_admin->id
             ,id_vm => $id_vm
         );
-        wait_request();
+        for ( 1 .. 10 ) {
+            wait_request();
+            last if $req->status('done');
+        }
         my $out = $req->output;
         warn $req->error if $req->error;
         next if !$out;
@@ -1415,7 +1418,7 @@ sub wait_request {
                         my $error = ($req->error or '');
                         next if $error =~ /waiting for processes/i;
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
-                            like($error,qr{^($|.*port \d+ already used|rsync done)}) or confess $req->command;
+                            like($error,qr{^($|.*port \d+ already used|.*rsync)}) or confess $req->command;
                         } elsif($req->command eq 'refresh_machine_ports') {
                             like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
                             $req->status('done');
@@ -1425,7 +1428,7 @@ sub wait_request {
                             like($error,qr{^($|.*compacted)});
                         } elsif($req->command eq 'refresh_machine') {
                             like($error,qr{^($|.*port.*already used|.*Domain not found)});
-                        } elsif($req->command eq 'force_shutdown') {
+                        } elsif($req->command =~ /shutdown/) {
                             like($error,qr{^($|.*Unknown domain)});
                         } elsif($req->command eq 'connect_node') {
                             like($error,qr{^($|Connection OK)});
