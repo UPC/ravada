@@ -139,6 +139,12 @@ sub test_access_by_group_sql($vm, $by_name=0) {
 
     $list_bases = rvd_front->list_machines_user($user_sql);
     is(scalar(@$list_bases),1);
+    Ravada::Request->create_domain(
+        id_owner => $user_sql->id
+        ,id_base => $list_bases->[0]->{id}
+        ,name => new_domain_name()
+    );
+    wait_request(debug => 0);
 
     $list_bases = rvd_front->list_machines_user(user_admin);
     is(scalar(@$list_bases),1);
@@ -157,14 +163,21 @@ sub test_access_by_group_sql($vm, $by_name=0) {
     $base->show_clones(1);
 
     $list_bases = rvd_front->list_machines_user($user_sql);
-    is(scalar(@$list_bases),0) or exit;
+    is(scalar(@$list_bases),1) or exit;
 
-    remove_domain($base);
 
     is($user_sql->is_member($group->id),1);
+    is($user_sql->allowed_access_group($base->id),1);
+
     $user_sql->remove_from_group($group->id);
+    $user_sql->_load_allowed(1);
+
     is($user_sql->is_member($g_name),0);
     is($user_sql->is_member($group->id),0);
+
+    is($user_sql->allowed_access_group($base->id),0) or die $base->id;
+
+    remove_domain($base);
 
     $group->remove() if $group;
 

@@ -803,7 +803,6 @@
                           ,'storage': $scope.sp_move.storage_pool
                       })
               ).then(function(response) {
-                  console.log(response.data);
               });
 
           }
@@ -1207,8 +1206,6 @@
             var list_access_groups = function(type) {
                 $http.get("/machine/list_access_groups/"+type+"/"+$scope.showmachine.id).then(function(response) {
                     $scope.access_groups[type]=response.data;
-                    console.log(response.data);
-                    console.log(type);
                 });
             };
             $scope.add_group_access = function(type,group) {

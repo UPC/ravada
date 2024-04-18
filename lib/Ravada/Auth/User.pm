@@ -346,6 +346,7 @@ sub allowed_access($self,$id_domain) {
 =head2 allowed_access_group
 
 Return true if the user belongs to a group that can access the base
+Also it returns true when there are no group restrictions for that VM.
 
 =cut
 
@@ -353,19 +354,22 @@ sub allowed_access_group($self,$id_domain) {
     return 1 if $self->is_admin;
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT name from group_access "
+        "SELECT id_group,name from group_access "
         ." WHERE id_domain=?"
         ."   AND type=?"
     );
-    $sth->execute($id_domain, 'group.sql');
+    $sth->execute($id_domain, 'local');
     my @groups;
-    while ( my ($name) = $sth->fetchrow ) {
-        push @groups,($name);
+    while ( my ($id_group,$name) = $sth->fetchrow ) {
+        if (!$id_group && $name) {
+            $id_group= $name;
+        }
+        push @groups,($id_group) if defined $id_group;
     }
-    return 0 if !@groups;
+    return 1 if !@groups;
 
-    for my $name ( @groups ) {
-        return 1 if $self->is_member($name);
+    for my $id_group ( @groups ) {
+        return 1 if $self->is_member($id_group);
     }
     return 0;
 }
@@ -529,7 +533,7 @@ Arguments: group name or object
 =cut
 
 sub is_member($self, $group) {
-
+    confess "Error: undefined group" if !defined $group;
     if (!ref($group)) {
         if ($group =~ /^\d+$/) {
             $group = Ravada::Auth::Group->open($group);

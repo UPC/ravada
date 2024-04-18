@@ -156,7 +156,7 @@ sub list_machines_user($self, $user, $access_data={}) {
         my ($clone) = ($clones[0] or undef);
 
         next unless
-        $clone && $show_clones
+        $clone && $show_clones && $user->allowed_access_group($id)
         || $user->is_admin
         || ($is_public && $user->allowed_access($id))
         || ($id_owner == $user->id);

@@ -106,7 +106,6 @@ sub test_group($type) {
     my $result = decode_json($t->tx->res->body);
     is($result->{error},'');
 
-    diag($url_list_members);
     $t->get_ok($url_list_members)->status_is(200);
     my $members = decode_json($t->tx->res->body);
     my ($found) = grep {$_->{name} eq $user_name } @$members;
@@ -146,11 +145,18 @@ sub test_group($type) {
 
 sub test_list_groups($type, $group_name) {
     $t->get_ok("/group/$type/list")->status_is(200);
-    return if $t->tx->res->code != 200; my $list = decode_json($t->tx->res->body);
+    return if $t->tx->res->code != 200;
+
+    my $list = decode_json($t->tx->res->body);
     return if ref($list) ne 'ARRAY';
 
-
     ok(grep({$_ eq $group_name } @$list), "Missing $type $group_name in ".Dumper($list));
+
+    $t->get_ok("/group_${type}_list")->status_is(200);
+    return if $t->tx->res->code != 200;
+
+    my $list_book = decode_json($t->tx->res->body);
+    is_deeply($list_book, $list);
 
     my ($first) = $group_name =~ /^(.)/;
     $t->get_ok("/group/$type/list/$first")->status_is(200);
