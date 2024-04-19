@@ -448,6 +448,20 @@ sub user_allowed($entry, $user_name) {
     return 0;
 }
 
+sub options_allowed($entry, $id_domain, $enable_host_devices=1) {
+    my $options = $entry->_data('options');
+    return 0 if !$options || !ref($options) || !keys %$options;
+
+    my $domain = Ravada::Front::Domain->open($id_domain);
+
+    if ($options->{host_devices}) {
+        return 0 if $enable_host_devices && $domain->list_host_devices();
+        return 1;
+    }
+
+    return 0;
+}
+
 sub _remove_users($self) {
     my $sth =$self->_dbh->prepare("DELETE FROM booking_entry_users WHERE id_booking_entry=? ");
     $sth->execute($self->id);

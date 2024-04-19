@@ -325,7 +325,7 @@ sub _search_user_name($id_user) {
     return $name;
 }
 
-sub user_allowed($user,$id_base) {
+sub user_allowed($user,$id_base, $enable_host_devices=1) {
     my $user_name = $user;
     if ( ref($user) ) {
         $user_name = $user->name;
@@ -348,6 +348,7 @@ sub user_allowed($user,$id_base) {
         next unless !scalar($entry->bases_id) || grep { $_ == $id_base } $entry->bases_id;
         # look no further if user is allowed
         return 1 if $entry->user_allowed($user_name);
+        return 1 if $entry->options_allowed($id_base, $enable_host_devices);
     }
     if (!$allowed && !ref($user)) {
         my $user0 = Ravada::Auth::SQL->new(name => $user_name);

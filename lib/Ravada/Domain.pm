@@ -427,10 +427,19 @@ sub _start_preconditions{
         ($user) = $_[1];
     }
     $self->_allowed_start($user);
-    if ( Ravada->setting('/backend/bookings') && !$self->allowed_booking( $user ) ) {
-        my @bookings = Ravada::Booking::bookings(date => DateTime->now()->ymd
-            ,time => DateTime->now()->hms);
-        confess "Error: resource booked ".Dumper(\@bookings);
+
+    my $enable_host_devices;
+    $enable_host_devices = $request->defined_arg('enable_host_devices') if $request;
+    $enable_host_devices = 1 if !defined $enable_host_devices;
+
+    if ( Ravada->setting('/backend/bookings')
+            && !$self->allowed_booking( $user, $enable_host_devices ) ) {
+        my $tz = Ravada::Booking::TZ();
+        my @bookings = Ravada::Booking::bookings(
+             date => DateTime->now(time_zone => $tz)->ymd
+            ,time => DateTime->now(time_zone => $tz)->hms);
+
+        confess "Error: resource booked for ".join(" , ",(map { $_->_data('title') } @bookings));
     }
     #_check_used_memory(@_);
     $self->status('starting');
@@ -446,12 +455,12 @@ or its base. Returns false otherwise.
 =cut
 
 
-sub allowed_booking($self, $user) {
+sub allowed_booking($self, $user, $enable_hd=1) {
     my $id_base = $self->id;
     if (!$self->is_base) {
         $id_base = $self->_data('id_base') or return 1;
     }
-    return Ravada::Booking::user_allowed($user, $id_base);
+    return Ravada::Booking::user_allowed($user, $id_base, $enable_hd);
 }
 
 sub _start_checks($self, @args) {

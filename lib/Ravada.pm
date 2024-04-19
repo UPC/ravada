@@ -3715,9 +3715,16 @@ sub list_domains_data($self, %args ) {
     $where = " WHERE $where " if $where;
     my $query = "SELECT * FROM domains $where ORDER BY name";
     my $sth = $CONNECTOR->dbh->prepare($query);
+
+    my $sth_hd = $CONNECTOR->dbh->prepare(
+        "SELECT count(*) FROM host_devices_domain_locked "
+        ." WHERE id_domain=?"
+    );
     $sth->execute(@values);
     while (my $row = $sth->fetchrow_hashref) {
         $row->{date_changed} = 0 if !defined $row->{date_changed};
+        $sth_hd->execute($row->{id});
+        ($row->{host_devices})=$sth_hd->fetchrow;
         lock_hash(%$row);
         push @domains,($row);
     }
@@ -6643,7 +6650,7 @@ sub _shutdown_bookings($self) {
         next if $dom->{autostart};
         next if $self->_user_is_admin($dom->{id_owner});
 
-        if ( Ravada::Booking::user_allowed($dom->{id_owner}, $dom->{id_base}) ) {
+        if ( Ravada::Booking::user_allowed($dom->{id_owner}, $dom->{id_base}, $dom->{host_devices}) ) {
             # warn "\tuser $dom->{id_owner} allowed to start clones from $dom->{id_base}";
             next;
         }
