@@ -1305,22 +1305,41 @@ sub test_config {
     is(rvd_back->setting('/backend/bookings'),1);
 }
 
+sub _create_base_hd($vm, $id_hd) {
+    my $base_hd = create_domain($vm);
+    Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,id_domain => $base_hd->id
+        ,name => 'usb'
+    );
+    wait_request(debug => 1);
+    $base_hd->add_host_device($id_hd);
+    $base_hd->prepare_base(user_admin);
+    return $base_hd;
+}
+
 sub test_booking_host_devices($vm) {
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->id);
     my ($usb_hd) = grep { $_->{name} =~ /USB/ } @$templates;
 
     die "Error: no USB template found ".Dumper($templates) if !$usb_hd;
 
-    my $id = $vm->add_host_device(template => $usb_hd->{name});
-    my $hd = Ravada::HostDevice->search_by_id($id);
+    my $id_hd = $vm->add_host_device(template => $usb_hd->{name});
+    my $hd = Ravada::HostDevice->search_by_id($id_hd);
+
+    if ($vm->type eq 'KVM') {
+        my $config = config_host_devices('usb');
+        if (!$config) {
+            diag("No USB config in t/etc/host_devices.conf");
+            return;
+        }
+        $hd->_data('list_filter' => $config);
+    }
 
     my $base = create_domain($vm);
     $base->prepare_base(user_admin);
 
-    my $base_hd = create_domain($vm);
-    $base_hd->add_host_device($id);
-    $base_hd->prepare_base(user_admin);
-
+    my $base_hd = _create_base_hd($vm, $id_hd);
     my $booking = _create_booking(undef , { host_devices => 1 } );
 
     for my $entry ( $booking->entries ) {
