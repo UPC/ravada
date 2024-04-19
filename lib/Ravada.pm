@@ -463,19 +463,7 @@ sub _update_isos {
             ,arch => 'x86_64'
         }
 
-        ,serena64 => {
-            name => 'Mint 18.1 Mate 64 bits'
-    ,description => 'Mint Serena 18.1 with Mate Desktop based on Ubuntu Xenial 64 bits'
-           ,arch => 'x86_64'
-            ,xml => 'xenial64-amd64.xml'
-     ,xml_volume => 'xenial64-volume.xml'
-            ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/18.3'
-        ,file_re => 'linuxmint-18.3-mate-64bit.iso'
-        ,md5_url => ''
-            ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
-            ,min_disk_size => '10'
-
-        }
+        
         ,mint20_64 => {
             name => 'Mint 20 Mate 64 bits'
     ,description => 'Mint Ulyana 20 with Mate Desktop 64 bits'
