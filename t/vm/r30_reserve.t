@@ -1348,6 +1348,11 @@ sub test_booking_host_devices($vm) {
         is($entry->_data('options')->{host_devices},1) or die Dumper($entry->_data('options'));
         $entry->change( local_groups => $GROUP_LOCAL->id );
     }
+    my ($entry) = $booking->entries;
+    $entry->change('options' => { host_devices => 2 });
+    my ($entry_changed) = $booking->entries;
+    is($entry_changed->_data('options')->{host_devices},2) or die Dumper($entry_changed->_data('options'));
+    $entry->change('options' => { host_devices => 1 });
 
     my $clone_yes = $base->clone(name => new_domain_name, user => $USER_LOCAL_YES_1);
     my $clone_hd_yes = $base_hd->clone(name => new_domain_name, user => $USER_LOCAL_YES_1);

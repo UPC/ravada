@@ -257,7 +257,10 @@ sub _open($self, $id) {
     eval {
     $row->{options} = decode_json($row->{options}) if $row->{options};
     };
-    warn $@ if $@;
+    if ($@) {
+        warn "Error decoding options $row->{options} ".$@;
+        $row->{options} = undef;
+    }
 
     $self->{_data} = $row;
 
@@ -287,6 +290,8 @@ sub change($self, %fields) {
         } elsif ($field eq 'bases') {
             $self->_change_bases($fields{$field});
             next;
+        } elsif ( ref($fields{$field})) {
+            $fields{$field} = encode_json($fields{$field});
         }
         next if !exists $self->{_data}->{$field};
         my $old_value = $self->_data($field);
