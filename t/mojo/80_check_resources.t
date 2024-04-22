@@ -140,10 +140,7 @@ remove_old_domains_req();
 
 $USERNAME = user_admin->name;
 $PASSWORD = "$$ $$";
-<<<<<<< HEAD
 my $old_value = rvd_back->setting("/backend/limits/startup_ram");
-=======
->>>>>>> main
 for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
     diag("Testing RAM limit in $vm_name");
 
@@ -156,11 +153,8 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
     ok($started_no_limit > $started_limit);
 }
 
-<<<<<<< HEAD
 rvd_back->setting("/backend/limits/startup_ram" => $old_value);
 
-=======
->>>>>>> main
 remove_old_domains_req(0); # 0=do not wait for them
 
 end();
