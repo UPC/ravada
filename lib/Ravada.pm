@@ -5695,8 +5695,11 @@ sub _cmd_shutdown_node($self, $request) {
 
 sub _cmd_start_node($self, $request) {
     my $id_node = $request->args('id_node');
-    my $node = Ravada::VM->open($id_node);
-    $node->start();
+    my $node;
+    eval{ $node = Ravada::VM->open($id_node);
+        $node->start() if$node;
+    };
+    Ravada::VM::_wake_on_lan($id_node) if !$node;
 }
 
 sub _cmd_connect_node($self, $request) {
@@ -6516,7 +6519,10 @@ sub search_vm {
     );
     $sth->execute($type, $host);
     my ($id) = $sth->fetchrow();
-    return Ravada::VM->open($id)    if $id;
+    my $vm;
+    $vm = Ravada::VM->open($id)    if $id;
+    return if $host eq 'localhost' && $vm && !$vm->vm;
+
     return if $host ne 'localhost';
 
     my $vms = $self->_create_vm($type);

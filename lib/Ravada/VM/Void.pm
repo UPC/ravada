@@ -471,7 +471,8 @@ sub create_network($self, $data, $id_owner=undef, $request=undef) {
 
 sub remove_network($self, $name) {
     my $file_out = $self->dir_img."/networks/$name.yml";
-    unlink $file_out or die "$! $file_out" if $self->file_exists($file_out);
+    return if !$self->file_exists($file_out);
+    $self->remove_file($file_out);
 }
 
 

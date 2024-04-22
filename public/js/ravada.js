@@ -355,6 +355,9 @@
             };
 
             $scope.topology_changed = function() {
+                if (!$scope.showmachine.hardware['cpu']) {
+                    return;
+                }
                 var cpu = $scope.showmachine.hardware.cpu[0];
                 var item = cpu.cpu.topology;
                 if(typeof(item) == undefined || !item) {

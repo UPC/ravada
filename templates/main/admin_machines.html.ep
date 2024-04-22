@@ -240,7 +240,7 @@
                                </div>
                                <div class="modal-footer">
                                  <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="cancel_modal(machine,'is_public')"><%=l 'No' %></button>
-                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();set_public(machine.id, machine.is_public)" data-dismiss="modal"><%=l 'Yes' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal();set_public(machine.id, machine.is_public, machine.show_clones)" data-dismiss="modal"><%=l 'Yes' %></button>
                                </div>
                              </div>
                            </div>
