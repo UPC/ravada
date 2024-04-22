@@ -2840,9 +2840,14 @@ get '/status.(#type)'=> sub($c) {
         }
     }
     return access_denied($c) unless $allowed{$remote_ip};
-
-    my $status = { backend => _ping_backend()};
-    my $sth = $RAVADA->_dbh->prepare("SELECT id,name,is_active "
+    my $backend = _ping_backend();
+    if ($backend) {
+        $backend='true';
+    } else {
+        $backend='false';
+    }
+    my $status = { backend => $backend, frontend => 'true' };
+    my $sth = $RAVADA->_dbh->prepare("SELECT name,is_active "
         ." FROM vms "
         ." ORDER BY 'name'"
     );
@@ -2855,6 +2860,12 @@ get '/status.(#type)'=> sub($c) {
     while ( my $row = $sth->fetchrow_hashref) {
         $sth_active->execute($row->{id});
         $row->{vms}=$sth_active->fetchrow;
+        if ($row->{is_active}) {
+            $row->{status} = 'active';
+        } else {
+            $row->{status} = 'disabled';
+        }
+        delete $row->{is_active};
         push@{$status->{nodes}},($row);
     }
     return $c->render(json => $status);
