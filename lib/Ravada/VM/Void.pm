@@ -358,9 +358,9 @@ sub list_routes {
 
 sub list_virtual_networks($self) {
 
-    my $dir_net = $self->dir_img."/networks/";
+    my $dir_net = $self->dir_img."/networks";
     if (!$self->file_exists($dir_net)) {
-        my ($out, $err) = $self->run_command("mkdir", $dir_net);
+        my ($out, $err) = $self->run_command("mkdir","-p", $dir_net);
         die $err if $err;
     }
     my @files = $self->list_files($dir_net,qr/.yml$/);
