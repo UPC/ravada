@@ -37,4 +37,9 @@
       ,file => '/var/log/ravada/rvd_front.log'
       ,level => 'debug'
   }
+  ,status => {
+      allowed => [
+        '127.0.0.1'
+      ]
+  }
 };
