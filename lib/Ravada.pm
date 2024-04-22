@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '2.2.0';
+our $VERSION = '2.2.1';
 
 use utf8;
 
@@ -2713,6 +2713,17 @@ sub _sql_insert_defaults($self){
                 ,name => 'time'
                 ,value => '21:00'
             }
+            ,{
+                id_parent => '/backend'
+                ,name => 'limits'
+                ,value => undef
+            }
+            ,{
+                id_parent => '/backend/limits'
+                ,name => 'startup_ram'
+                ,value => 1
+            }
+
 
         ]
     );
