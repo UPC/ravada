@@ -552,7 +552,6 @@ sub _mangle_dom_hd_void($domain) {
     $config->{hardware}->{host_devices}->[0]->{vendor_id} = $new_id;
     $domain->_store(hardware => $config->{hardware});
 
-    warn $device_name;
     $sth = connector->dbh->prepare("UPDATE host_devices_domain set name=?"
         ." WHERE id=?");
     $sth->execute($device_name, $id_hd);
@@ -805,11 +804,8 @@ sub test_templates($vm) {
 
         _fix_host_device($host_device) if $vm->type eq 'KVM';
 
-        warn 11;
         test_hd_in_domain($vm, $host_device);
-        warn 12;
         test_hd_dettach($vm, $host_device);
-        warn 13;
 
         my $req = Ravada::Request->list_host_devices(
             uid => user_admin->id
