@@ -1465,6 +1465,8 @@ sub _remove_old_isos {
 
         ,"DELETE FROM iso_images "
             ." WHERE name like 'Alpine%3.8%'"
+	,"DELETE FROM iso_images "
+	    ." WHERE name like 'Mint 18.1 Mate 64 bits'"
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute();
