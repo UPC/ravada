@@ -1305,6 +1305,23 @@ sub test_config {
     is(rvd_back->setting('/backend/bookings'),1);
 }
 
+sub _test_list_yes($user, @bases) {
+    my $list = rvd_front->list_machines_user($user);
+    for my $base ( @bases ) {
+        my ($found) = grep { $_->{name} eq $base->name} @$list;
+        ok($found,"Expecting ".$base->name." in ".Dumper($list));
+    }
+}
+
+sub _test_list_no($user, @bases) {
+    my $list = rvd_front->list_machines_user($user);
+    for my $base ( @bases ) {
+        my ($found) = grep { $_->{name} eq $base->name} @$list;
+        ok(!$found,"Expecting no ".$base->name." in ".Dumper($list));
+    }
+}
+
+
 sub _create_base_hd($vm, $id_hd) {
     my $base_hd = create_domain($vm);
     Ravada::Request->add_hardware(
@@ -1315,6 +1332,7 @@ sub _create_base_hd($vm, $id_hd) {
     wait_request(debug => 1);
     $base_hd->add_host_device($id_hd);
     $base_hd->prepare_base(user_admin);
+    $base_hd->is_public(1);
     return $base_hd;
 }
 
@@ -1338,8 +1356,13 @@ sub test_booking_host_devices($vm) {
 
     my $base = create_domain($vm);
     $base->prepare_base(user_admin);
+    $base->is_public(1);
 
     my $base_hd = _create_base_hd($vm, $id_hd);
+
+    _test_list_yes($USER_LOCAL_YES_1, $base, $base_hd);
+    _test_list_yes($USER_LOCAL_NO, $base, $base_hd);
+
     my $booking = _create_booking(undef , { host_devices => 1 } );
 
     for my $entry ( $booking->entries ) {
@@ -1353,6 +1376,20 @@ sub test_booking_host_devices($vm) {
     my ($entry_changed) = $booking->entries;
     is($entry_changed->_data('options')->{host_devices},2) or die Dumper($entry_changed->_data('options'));
     $entry->change('options' => { host_devices => 1 });
+
+    _test_list_yes($USER_LOCAL_YES_1, $base, $base_hd);
+    _test_list_yes($USER_LOCAL_NO, $base);
+    _test_list_no($USER_LOCAL_NO, $base_hd);
+    #####
+    #
+    # list yes
+
+    #####
+    #
+    # list no
+    my $list_no = rvd_front->list_machines_user($USER_LOCAL_NO);
+    ok(grep { $_->{name} eq $base->name} @$list_no) or die Dumper($list_no);
+    ok(!grep { $_->{name} eq $base_hd->name} @$list_no) or die Dumper($list_no);
 
     my $clone_yes = $base->clone(name => new_domain_name, user => $USER_LOCAL_YES_1);
     my $clone_hd_yes = $base_hd->clone(name => new_domain_name, user => $USER_LOCAL_YES_1);
@@ -1400,7 +1437,6 @@ sub test_booking_host_devices($vm) {
 
     is($clone_no->is_active,1) or die $clone_no->name;
     is($clone_hd_no->is_active,0);
-
 
     $booking->remove();
     remove_domain($base);

@@ -5996,6 +5996,7 @@ sub _refresh_active_vms ($self) {
 
     my %active_vm;
     for my $vm ($self->list_vms) {
+        next if !$vm;
         if ( !$vm->enabled() || !$vm->is_active ) {
             $vm->shutdown_domains();
             $active_vm{$vm->id} = 0;
@@ -6590,7 +6591,9 @@ sub vm($self) {
             warn $@;
             next;
         }
-        push @vms, ( $vm );
+        eval {
+            push @vms, ( $vm ) if $vm && $vm->vm;
+        };
     };
     return [@vms] if @vms;
     return $self->_create_vm();
