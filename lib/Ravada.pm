@@ -4390,7 +4390,10 @@ sub _cmd_manage_pools($self, $request) {
 sub _cmd_discover($self, $request) {
     my $id_vm = $request->args('id_vm');
     my $vm = Ravada::VM->open($id_vm);
-    my @list = $vm->discover();
+    my @list = ();
+
+    eval { @list = $vm->discover() if $vm && $vm->vm };
+
     $request->output(encode_json(\@list));
 }
 
