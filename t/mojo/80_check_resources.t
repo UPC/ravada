@@ -56,7 +56,7 @@ sub _import_base($vm_name) {
 
 }
 
-sub _remove_clones($time) {
+sub _remove_clones($time=0) {
     Ravada::Request->remove_clones(
             uid => user_admin->id
             ,id_domain => $BASE->id
@@ -74,16 +74,17 @@ sub _free_memory() {
     die;
 }
 
-sub test_ram($vm_name,$enable_check, $expected=undef) {
+sub test_ram($vm_name,$enable_check) {
 
     my $free_mem = _free_memory();
     my $limit = int($free_mem/1024/1024)+1 ;
     _remove_clones(time+300+$limit*2);
-    my $count = 0;
+    my $req = 0;
     for my $n ( 0 .. $limit*3 ) {
+        diag($n." ".int(_free_memory()/1024/1024));
         my $free = int(_free_memory()/1024/1024);
         my $name = new_domain_name();
-        my $req=Ravada::Request->clone(
+        $req=Ravada::Request->clone(
                     uid => user_admin->id
                     ,id_domain => $BASE->id
                     ,name => $name
@@ -107,15 +108,12 @@ sub test_ram($vm_name,$enable_check, $expected=undef) {
             diag($req->error);
             last;
         }
-        $count++;
-        last if defined $expected && $count > $expected;
         my $free2 = int(_free_memory()/1024/1024);
         redo if $vm_name eq 'KVM' && ($free2>=$free);
 
     }
-    _remove_clones(0);
     wait_request();
-    return $count;
+    return $req;
 }
 
 #########################################################
@@ -145,10 +143,15 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
     _import_base($vm_name);
 
     rvd_back->setting("/backend/limits/startup_ram" => 1);
-    my $started_limit =test_ram($vm_name,1);
+    my $req = test_ram($vm_name,1);
     rvd_back->setting("/backend/limits/startup_ram" => 0);
-    my $started_no_limit =test_ram($vm_name,0, $started_limit);
-    ok($started_no_limit > $started_limit);
+    $req->status('requested');
+    while ( $req->status ne 'done' ) {
+        wait_request(debug => 1);
+    }
+    is($req->status, 'done');
+    is($req->error, '');
+    _remove_clones();
 }
 
 remove_old_domains_req(0); # 0=do not wait for them
