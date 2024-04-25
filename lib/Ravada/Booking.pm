@@ -347,6 +347,7 @@ sub user_allowed($user,$id_base, $enable_host_devices=1) {
         $allowed = 0;
         next unless !scalar($entry->bases_id) || grep { $_ == $id_base } $entry->bases_id;
         # look no further if user is allowed
+
         return 1 if $entry->user_allowed($user_name);
         return 1 if $entry->options_allowed($id_base, $enable_host_devices);
     }

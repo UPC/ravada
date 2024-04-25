@@ -1329,7 +1329,7 @@ sub _create_base_hd($vm, $id_hd) {
         ,id_domain => $base_hd->id
         ,name => 'usb'
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     $base_hd->add_host_device($id_hd);
     $base_hd->prepare_base(user_admin);
     $base_hd->is_public(1);
@@ -1424,7 +1424,7 @@ sub test_booking_host_devices($vm) {
     my $req_start_hd_without = Ravada::Request->start_domain(uid => $clone_hd_no->id_owner, id_domain => $clone_hd_no->id, enable_host_devices => 0);
 
     Ravada::Request->enforce_limits(_force => 1);
-    wait_request(check_error => 0, debug => 1);
+    wait_request(check_error => 0, debug => 0);
     is($req_start_hd_without->error,'');
     is($clone_hd_no->is_active,1) or die $clone_hd_no->name;
 
